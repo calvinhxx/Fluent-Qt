@@ -60,6 +60,7 @@ from .catalog import (
 from .foundation_pages import populate_foundation_topic_page
 from .intro_tour import GalleryIntroTour, TourStep
 from .metrics import TITLE_BAR_HEIGHT
+from .motion import start_finite_transition
 from .samples import PreviewResult, build_sample
 from .settings import (
     NavigationStyle,
@@ -626,7 +627,9 @@ class _TypographyRampCard(fluentqt.Card):
         y = 20
         divider = (
             QColor(255, 255, 255, 20)
-            if fluentqt.current_theme() == fluentqt.Theme.Dark
+            if fluentqt.theme_uses_dark_appearance(
+                fluentqt.current_theme()
+            )
             else QColor(0, 0, 0, 20)
         )
         for index, (role, name, size, line_height, weight) in enumerate(self._ROWS):
@@ -1004,8 +1007,12 @@ def _build_sample_card(
 
 def _update_component_theme_button(page: fluentqt.ScrollView) -> None:
     theme = page._gallery_sample_theme
-    is_dark = theme == fluentqt.Theme.Dark
-    theme_name = "Dark" if is_dark else "Light"
+    is_dark = fluentqt.theme_uses_dark_appearance(theme)
+    theme_name = {
+        fluentqt.Theme.Light: "Light",
+        fluentqt.Theme.Dark: "Dark",
+        fluentqt.Theme.HighContrast: "High contrast",
+    }[theme]
     next_theme_name = "Light" if is_dark else "Dark"
     description = "Preview theme: {0}. Switch to {1}.".format(
         theme_name, next_theme_name
@@ -1041,7 +1048,7 @@ def _toggle_component_sample_theme(page: fluentqt.ScrollView) -> None:
     current = page._gallery_sample_theme
     target = (
         fluentqt.Theme.Light
-        if current == fluentqt.Theme.Dark
+        if fluentqt.theme_uses_dark_appearance(current)
         else fluentqt.Theme.Dark
     )
     for card in page._gallery_sample_cards:
@@ -1072,7 +1079,7 @@ def build_component_page(
     theme_button.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
     theme_button.setIconGlyph(
         "ic_fluent_weather_moon_16_regular"
-        if fluentqt.current_theme() == fluentqt.Theme.Dark
+        if fluentqt.theme_uses_dark_appearance(fluentqt.current_theme())
         else "\uE706",
         16,
     )
@@ -1308,7 +1315,9 @@ class _AccentColorControl(QWidget):
         from .foundation_pages import _radii, _theme_tokens
 
         tokens = _theme_tokens()
-        dark = fluentqt.current_theme() == fluentqt.Theme.Dark
+        dark = fluentqt.theme_uses_dark_appearance(
+            fluentqt.current_theme()
+        )
         control_radius, _overlay_radius = _radii()
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
@@ -1504,6 +1513,7 @@ def _settings_section(title: str, parent: QWidget) -> fluentqt.Label:
 
 def build_settings_page(
     set_theme_mode: Callable[[int], None],
+    set_motion_mode: Callable[[int], None],
     set_navigation_style: Callable[[int], None] | None = None,
     set_effect: Callable[[int], None] | None = None,
     set_close_behavior: Callable[[int], None] | None = None,
@@ -1540,8 +1550,14 @@ def build_settings_page(
 
     theme = _settings_choice(
         "gallerySettingsThemeChoice",
-        ("Use system setting", "Light", "Dark"),
+        ("Use system setting", "Light", "Dark", "High contrast"),
         int(settings.theme_mode),
+        content,
+    )
+    motion = _settings_choice(
+        "gallerySettingsMotionChoice",
+        ("Full", "Reduced", "Disabled"),
+        int(settings.motion_mode),
         content,
     )
     navigation = _settings_choice(
@@ -1563,6 +1579,8 @@ def build_settings_page(
         content,
     )
     theme.currentIndexChanged.connect(set_theme_mode)
+    motion.currentIndexChanged.connect(set_motion_mode)
+    settings.motionModeChanged.connect(motion.setCurrentIndex)
     if set_navigation_style is not None:
         navigation.currentIndexChanged.connect(set_navigation_style)
     if set_effect is not None:
@@ -1683,6 +1701,13 @@ def build_settings_page(
             content,
         ),
         _SettingsRow(
+            "\uE768",
+            "Motion",
+            "Choose full, reduced, or disabled interface motion",
+            motion,
+            content,
+        ),
+        _SettingsRow(
             "\uEA37",
             "Navigation style",
             "Choose how the navigation pane is presented",
@@ -1712,18 +1737,19 @@ def build_settings_page(
         ),
     )
     layout.addWidget(_settings_section("Appearance & behavior", content))
-    for row in rows[:4]:
+    for row in rows[:5]:
         layout.addWidget(row)
     layout.addSpacing(10)
     layout.addWidget(_settings_section("App behavior", content))
-    layout.addWidget(rows[4])
+    layout.addWidget(rows[5])
     layout.addSpacing(10)
     layout.addWidget(_settings_section("Updates", content))
-    layout.addWidget(rows[5])
+    layout.addWidget(rows[6])
     layout.addStretch(1)
     page._gallery_settings_rows = rows
     page._gallery_settings_choices = (
         theme,
+        motion,
         navigation,
         effect,
         close_behavior,
@@ -1821,10 +1847,8 @@ class _GalleryTitleContent(QWidget):
         self._chrome_visible = True
         self._chrome_reveal_opacity = 1.0
         self._back_animation = QVariantAnimation(self)
-        self._back_animation.setDuration(250)
         self._back_animation.valueChanged.connect(self._apply_back_reveal)
         self._chrome_animation = QVariantAnimation(self)
-        self._chrome_animation.setDuration(250)
         self._chrome_animation.setEasingCurve(QEasingCurve.OutCubic)
         self._chrome_animation.valueChanged.connect(
             self._set_chrome_reveal_opacity
@@ -1854,12 +1878,15 @@ class _GalleryTitleContent(QWidget):
             button._gallery_title_press_animation = animation
         animation.stop()
         button.setIconScale(1.0)
-        animation.setDuration(100)
         animation.setEasingCurve(QEasingCurve.OutCubic)
         animation.setStartValue(1.0)
         animation.setKeyValueAt(0.4, 0.86)
         animation.setEndValue(1.0)
-        animation.start()
+        start_finite_transition(
+            animation,
+            100,
+            complete_disabled=lambda: button.setIconScale(1.0),
+        )
 
     def _set_window_active(self, active: bool) -> None:
         self._window_active = bool(active)
@@ -1901,7 +1928,11 @@ class _GalleryTitleContent(QWidget):
         self._set_chrome_reveal_opacity(0.0)
         self._chrome_animation.setStartValue(0.0)
         self._chrome_animation.setEndValue(1.0)
-        self._chrome_animation.start()
+        start_finite_transition(
+            self._chrome_animation,
+            250,
+            complete_disabled=lambda: self._set_chrome_reveal_opacity(1.0),
+        )
 
     def _apply_chrome_opacity(self) -> None:
         if not self._chrome_visible:
@@ -1935,8 +1966,13 @@ class _GalleryTitleContent(QWidget):
             else QEasingCurve.Type.InOutSine
         )
         self._back_animation.setStartValue(self._back_reveal)
-        self._back_animation.setEndValue(1.0 if available else 0.0)
-        self._back_animation.start()
+        target_reveal = 1.0 if available else 0.0
+        self._back_animation.setEndValue(target_reveal)
+        start_finite_transition(
+            self._back_animation,
+            250,
+            complete_disabled=lambda: self._apply_back_reveal(target_reveal),
+        )
 
     def _apply_back_reveal(self, value: object) -> None:
         self._back_reveal = max(0.0, min(1.0, float(value)))
@@ -2392,6 +2428,7 @@ class GalleryWindow(fluentqt.Window):
         elif route.kind == "settings":
             page = build_settings_page(
                 self._set_theme_mode,
+                self._set_motion_mode,
                 self._set_navigation_style,
                 self._set_effect,
                 self._set_close_behavior,
@@ -2670,13 +2707,18 @@ class GalleryWindow(fluentqt.Window):
         self._refresh_route_visuals(self._current_route, force=True)
 
     def _toggle_theme(self) -> None:
-        dark = fluentqt.current_theme() != fluentqt.Theme.Dark
-        self._set_theme_mode(2 if dark else 1)
+        uses_dark_appearance = fluentqt.theme_uses_dark_appearance(
+            fluentqt.current_theme()
+        )
+        self._set_theme_mode(1 if uses_dark_appearance else 2)
 
     def _set_theme_mode(self, index: int) -> None:
         self._settings.set_theme_mode(index)
         self._gallery_visuals_changed()
         self._sync_component_sample_themes()
+
+    def _set_motion_mode(self, index: int) -> None:
+        self._settings.set_motion_mode(index)
 
     def _sync_component_sample_themes(self) -> None:
         for _index, page in self._pages.values():

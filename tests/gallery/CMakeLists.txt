@@ -51,8 +51,19 @@ target_compile_definitions(test_gallery_shell_framework PRIVATE
     FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH="$<TARGET_FILE:test_gallery_single_instance_probe>")
 add_dependencies(test_gallery_shell_framework test_gallery_single_instance_probe)
 
+add_qt_test_module(test_gallery_shell_motion_policy
+    TestGalleryShellMotionPolicy.cpp
+    ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
+    ${FLUENT_QT_GALLERY_RESOURCES}
+)
+target_include_directories(test_gallery_shell_motion_policy
+    PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_link_libraries(test_gallery_shell_motion_policy
+    PRIVATE FluentQtGalleryCore Qt${QT_VERSION_MAJOR}::Network)
+
 add_qt_test_module(test_gallery_content_pages
     TestGalleryContentPages.cpp
+    TestGallerySampleAccessibility.cpp
     TestGalleryPreview.cpp
     TestGalleryInspectorScenes.cpp
     ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
@@ -95,6 +106,7 @@ if(WIN32)
             test_gallery_single_instance_probe
             test_gallery_single_instance
             test_gallery_shell_framework
+            test_gallery_shell_motion_policy
             test_gallery_content_pages)
         target_link_libraries(${_gallery_test_target} PRIVATE user32)
     endforeach()

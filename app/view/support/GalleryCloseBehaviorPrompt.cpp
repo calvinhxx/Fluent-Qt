@@ -27,17 +27,11 @@ constexpr int kChoiceTextTop = 3;
 
 class CloseBehaviorChoiceRow final : public QWidget, public FluentElement {
 public:
-    CloseBehaviorChoiceRow(GallerySettings::CloseBehavior behavior,
-                           const QString& glyph,
-                           const QString& title,
-                           const QString& description,
-                           QWidget* parent)
-        : QWidget(parent)
-        , m_behavior(behavior)
-        , m_glyph(glyph)
+    CloseBehaviorChoiceRow(GallerySettings::CloseBehavior behavior, const QString& glyph,
+                           const QString& title, const QString& description, QWidget* parent)
+        : QWidget(parent), m_behavior(behavior), m_glyph(glyph)
     {
-        setObjectName(QStringLiteral("galleryCloseBehaviorRow%1")
-                          .arg(static_cast<int>(behavior)));
+        setObjectName(QStringLiteral("galleryCloseBehaviorRow%1").arg(static_cast<int>(behavior)));
         setAccessibleName(title);
         setAccessibleDescription(description);
         setCursor(Qt::PointingHandCursor);
@@ -125,7 +119,7 @@ protected:
         QColor fill = Qt::transparent;
         if (selected) {
             fill = colors.accentDefault;
-            fill.setAlpha(currentTheme() == Dark ? 28 : 16);
+            fill.setAlpha(themeUsesDarkAppearance(currentTheme()) ? 28 : 16);
         } else if (m_pressed) {
             fill = colors.subtleTertiary;
         } else if (m_hovered) {
@@ -171,8 +165,8 @@ protected:
 
     void mouseReleaseEvent(QMouseEvent* event) override
     {
-        const bool activate = event->button() == Qt::LeftButton
-            && m_pressed && rect().contains(event->pos());
+        const bool activate =
+            event->button() == Qt::LeftButton && m_pressed && rect().contains(event->pos());
         m_pressed = false;
         update();
         if (activate) {
@@ -198,9 +192,8 @@ private:
 
 } // namespace
 
-CloseBehaviorPromptContent::CloseBehaviorPromptContent(
-    GallerySettings::CloseBehavior current,
-    QWidget* parent)
+CloseBehaviorPromptContent::CloseBehaviorPromptContent(GallerySettings::CloseBehavior current,
+                                                       QWidget* parent)
     : QWidget(parent)
 {
     setObjectName(QStringLiteral("galleryCloseBehaviorPromptContent"));
@@ -212,26 +205,17 @@ CloseBehaviorPromptContent::CloseBehaviorPromptContent(
     root->setContentsMargins(0, 0, 0, 0);
     root->setSpacing(4);
 
-    addChoice(root,
-              GallerySettings::CloseBehavior::Minimize,
-              Typography::Icons::ChromeMinimize,
-              QStringLiteral("Minimize window"),
-              closebehaviorui::minimizeDescription());
-    addChoice(root,
-              GallerySettings::CloseBehavior::Tray,
-              Typography::Icons::Hide,
-              closebehaviorui::keepRunningChoice(),
-              closebehaviorui::keepRunningDescription());
-    addChoice(root,
-              GallerySettings::CloseBehavior::Quit,
-              Typography::Icons::Power,
-              QStringLiteral("Quit the app"),
-              QStringLiteral("Stop the Gallery completely."));
+    addChoice(root, GallerySettings::CloseBehavior::Minimize, Typography::Icons::ChromeMinimize,
+              QStringLiteral("Minimize window"), closebehaviorui::minimizeDescription());
+    addChoice(root, GallerySettings::CloseBehavior::Tray, Typography::Icons::Hide,
+              closebehaviorui::keepRunningChoice(), closebehaviorui::keepRunningDescription());
+    addChoice(root, GallerySettings::CloseBehavior::Quit, Typography::Icons::Power,
+              QStringLiteral("Quit the app"), QStringLiteral("Stop the Gallery completely."));
 
     root->activate();
     const int contentHeight = root->hasHeightForWidth()
-        ? root->heightForWidth(kCloseBehaviorContentWidth)
-        : root->sizeHint().height();
+                                  ? root->heightForWidth(kCloseBehaviorContentWidth)
+                                  : root->sizeHint().height();
     setFixedHeight(contentHeight);
 
     syncSelection();
@@ -254,8 +238,7 @@ void CloseBehaviorPromptContent::onThemeUpdated()
 
 void CloseBehaviorPromptContent::addChoice(QVBoxLayout* root,
                                            GallerySettings::CloseBehavior behavior,
-                                           const QString& glyph,
-                                           const QString& title,
+                                           const QString& glyph, const QString& title,
                                            const QString& description)
 {
     auto* row = new CloseBehaviorChoiceRow(behavior, glyph, title, description, this);

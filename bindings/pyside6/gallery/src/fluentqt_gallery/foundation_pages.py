@@ -43,6 +43,8 @@ from .visual import (
 
 _CARD_PADDING = 20
 _GRID_SPACING = 12
+_GLOBAL_THEME_TOKEN_CACHE_KEY: tuple[int, int] | None = None
+_GLOBAL_THEME_TOKEN_CACHE: dict[str, QColor] = {}
 
 
 def _show_gallery_toast(anchor: QWidget, message: str) -> None:
@@ -65,157 +67,24 @@ def _show_gallery_toast(anchor: QWidget, message: str) -> None:
         icon.setObjectName("galleryToastIcon")
 
 
-def _rgba(red: int, green: int, blue: int, alpha: int = 255) -> QColor:
-    return QColor(red, green, blue, alpha)
-
-
-def _parse_rgba(value: str) -> QColor:
-    """Parse the Fluent user-theme #RRGGBB/#RRGGBBAA convention."""
-
-    value = value.lstrip("#")
-    if len(value) == 8:
-        return QColor(
-            int(value[0:2], 16),
-            int(value[2:4], 16),
-            int(value[4:6], 16),
-            int(value[6:8], 16),
-        )
-    return QColor("#" + value)
-
-
 def _global_theme_tokens() -> dict[str, QColor]:
-    """Return the resolved built-in token palette used by the C++ topic page."""
+    """Return cached colors from the native runtime token registry."""
 
-    dark = fluentqt.current_theme() == fluentqt.Theme.Dark
-    if dark:
-        values: dict[str, QColor] = {
-            "accentDefault": QColor("#60CDFF"),
-            "accentSecondary": _rgba(96, 205, 255, 230),
-            "accentTertiary": _rgba(96, 205, 255, 204),
-            "accentDisabled": _rgba(255, 255, 255, 37),
-            "controlDefault": _rgba(255, 255, 255, 15),
-            "controlSecondary": _rgba(255, 255, 255, 23),
-            "controlTertiary": _rgba(255, 255, 255, 10),
-            "controlDisabled": _rgba(255, 255, 255, 6),
-            "controlAltSecondary": _rgba(255, 255, 255, 15),
-            "controlAltTertiary": _rgba(255, 255, 255, 20),
-            "subtleTransparent": _rgba(255, 255, 255, 0),
-            "subtleSecondary": _rgba(255, 255, 255, 15),
-            "subtleTertiary": _rgba(255, 255, 255, 10),
-            "strokeDefault": _rgba(255, 255, 255, 17),
-            "strokeSecondary": _rgba(255, 255, 255, 23),
-            "strokeStrong": _rgba(255, 255, 255, 138),
-            "strokeCard": _rgba(255, 255, 255, 10),
-            "strokeDivider": _rgba(255, 255, 255, 20),
-            "strokeSurface": _rgba(255, 255, 255, 30),
-            "strokeFocusOuter": _rgba(255, 255, 255, 230),
-            "strokeFocusInner": _rgba(0, 0, 0, 230),
-            "textPrimary": QColor("#FFFFFF"),
-            "textSecondary": _rgba(255, 255, 255, 199),
-            "textTertiary": _rgba(255, 255, 255, 138),
-            "textDisabled": _rgba(255, 255, 255, 92),
-            "textOnAccent": QColor("#000000"),
-            "textAccentPrimary": QColor("#99EBFF"),
-            "bgCanvas": QColor("#202020"),
-            "bgLayer": QColor("#2C2C2C"),
-            "bgLayerAlt": QColor("#3D3D3D"),
-            "bgLayerOverlay": _rgba(58, 58, 58, 76),
-            "bgSolid": QColor("#1C1C1C"),
-            "grey10": QColor("#FAF9F8"),
-            "grey20": QColor("#F3F2F1"),
-            "grey30": QColor("#EDEBE9"),
-            "grey40": QColor("#E1DFDD"),
-            "grey50": QColor("#D2D0CE"),
-            "grey60": QColor("#C8C6C4"),
-            "grey90": QColor("#A19F9D"),
-            "grey130": QColor("#605E5C"),
-            "grey160": QColor("#323130"),
-            "grey190": QColor("#201F1E"),
-            "systemCritical": QColor("#FF99A4"),
-            "systemCriticalBg": QColor("#442726"),
-            "systemCaution": QColor("#FCE100"),
-            "systemCautionBg": QColor("#433519"),
-            "systemInfo": QColor("#60CDFF"),
-            "systemInfoBg": QColor("#1F3150"),
-            "systemSuccess": QColor("#6CCB5F"),
-            "systemSuccessBg": QColor("#1E3C1F"),
-        }
-        charts = (
-            "#60CDFF", "#00BCF2", "#2B88D8", "#00AD56",
-            "#107C10", "#004B50", "#FF8C00", "#F7630C",
-            "#EA4300", "#E3008C", "#BF0077", "#C239B3",
-        )
-    else:
+    global _GLOBAL_THEME_TOKEN_CACHE_KEY, _GLOBAL_THEME_TOKEN_CACHE
+    key = (int(fluentqt.current_theme()), fluentqt.theme_revision())
+    if key != _GLOBAL_THEME_TOKEN_CACHE_KEY:
+        snapshot = dict(_native.themeTokensForWidgetForBinding(None))
+        colors = dict(snapshot["colors"])
         values = {
-            "accentDefault": QColor("#005FB8"),
-            "accentSecondary": _rgba(0, 95, 184, 230),
-            "accentTertiary": _rgba(0, 95, 184, 204),
-            "accentDisabled": _rgba(0, 0, 0, 37),
-            "controlDefault": QColor("#FFFFFF"),
-            "controlSecondary": _rgba(249, 249, 249, 242),
-            "controlTertiary": _rgba(249, 249, 249, 204),
-            "controlDisabled": _rgba(249, 249, 249, 77),
-            "controlAltSecondary": _rgba(0, 0, 0, 5),
-            "controlAltTertiary": _rgba(0, 0, 0, 15),
-            "subtleTransparent": _rgba(0, 0, 0, 0),
-            "subtleSecondary": _rgba(0, 0, 0, 9),
-            "subtleTertiary": _rgba(0, 0, 0, 6),
-            "strokeDefault": _rgba(0, 0, 0, 12),
-            "strokeSecondary": _rgba(0, 0, 0, 41),
-            "strokeStrong": _rgba(0, 0, 0, 112),
-            "strokeCard": _rgba(0, 0, 0, 13),
-            "strokeDivider": _rgba(0, 0, 0, 20),
-            "strokeSurface": QColor("#757575"),
-            "strokeFocusOuter": _rgba(0, 0, 0, 230),
-            "strokeFocusInner": QColor("#FFFFFF"),
-            "textPrimary": _rgba(0, 0, 0, 230),
-            "textSecondary": _rgba(0, 0, 0, 154),
-            "textTertiary": _rgba(0, 0, 0, 112),
-            "textDisabled": _rgba(0, 0, 0, 92),
-            "textOnAccent": QColor("#FFFFFF"),
-            "textAccentPrimary": QColor("#003E92"),
-            "bgCanvas": QColor("#F3F3F3"),
-            "bgLayer": QColor("#FFFFFF"),
-            "bgLayerAlt": QColor("#F9F9F9"),
-            "bgLayerOverlay": _rgba(255, 255, 255, 128),
-            "bgSolid": QColor("#EEEEEE"),
-            "grey10": QColor("#FAF9F8"),
-            "grey20": QColor("#F3F2F1"),
-            "grey30": QColor("#EDEBE9"),
-            "grey40": QColor("#E1DFDD"),
-            "grey50": QColor("#D2D0CE"),
-            "grey60": QColor("#C8C6C4"),
-            "grey90": QColor("#A19F9D"),
-            "grey130": QColor("#605E5C"),
-            "grey160": QColor("#323130"),
-            "grey190": QColor("#201F1E"),
-            "systemCritical": QColor("#C42B1C"),
-            "systemCriticalBg": QColor("#FDE7E9"),
-            "systemCaution": QColor("#9D5D00"),
-            "systemCautionBg": QColor("#FFF4CE"),
-            "systemInfo": QColor("#015CDA"),
-            "systemInfoBg": QColor("#F6F6F6"),
-            "systemSuccess": QColor("#0F7B0F"),
-            "systemSuccessBg": QColor("#DFF6DD"),
+            name: QColor(value)
+            for name, value in colors.items()
+            if name != "charts"
         }
-        charts = (
-            "#005FB8", "#00BCF2", "#2B88D8", "#004B50",
-            "#00AD56", "#007833", "#881798", "#B4009E",
-            "#E3008C", "#D83B01", "#EA4300", "#FF8C00",
-        )
-
-    active_accent = QColor(fluentqt.accent_color())
-    if active_accent.isValid():
-        values["accentDefault"] = active_accent
-        secondary = QColor(active_accent)
-        secondary.setAlpha(230)
-        tertiary = QColor(active_accent)
-        tertiary.setAlpha(204)
-        values["accentSecondary"] = secondary
-        values["accentTertiary"] = tertiary
-    for index, color in enumerate(charts, 1):
-        values["chart{0}".format(index)] = QColor(color)
-    return values
+        for index, color in enumerate(colors["charts"], 1):
+            values["chart{0}".format(index)] = QColor(color)
+        _GLOBAL_THEME_TOKEN_CACHE_KEY = key
+        _GLOBAL_THEME_TOKEN_CACHE = values
+    return _GLOBAL_THEME_TOKEN_CACHE
 
 
 def _theme_snapshot(context=None) -> dict[str, object]:

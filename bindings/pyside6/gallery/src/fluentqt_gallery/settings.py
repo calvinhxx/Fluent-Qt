@@ -28,6 +28,10 @@ class ThemeMode(IntEnum):
     System = 0
     Light = 1
     Dark = 2
+    HighContrast = 3
+
+
+MotionMode = fluentqt.MotionMode
 
 
 class NavigationStyle(IntEnum):
@@ -122,6 +126,7 @@ def _system_theme() -> fluentqt.Theme:
 
 class GallerySettings(QObject):
     themeModeChanged = Signal(int)
+    motionModeChanged = Signal(int)
     accentColorChanged = Signal(QColor)
     navigationStyleChanged = Signal(int)
     windowEffectChanged = Signal(int)
@@ -130,6 +135,7 @@ class GallerySettings(QObject):
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self.theme_mode = ThemeMode.System
+        self.motion_mode = MotionMode.Full
         self.navigation_style = NavigationStyle.Auto
         self.window_effect = 1
         self.close_behavior = CloseBehavior.Tray
@@ -139,6 +145,7 @@ class GallerySettings(QObject):
         self.close_behavior_confirmed = False
         self.intro_completed = False
         self._load()
+        self.apply_motion_mode()
         self.apply_user_theme()
         self.apply_theme_mode()
         app = QApplication.instance()
@@ -154,7 +161,10 @@ class GallerySettings(QObject):
             return
         settings = _config_settings()
         self.theme_mode = ThemeMode(
-            _bounded(settings.value("settings/themeMode", 0), 0, 2, 0)
+            _bounded(settings.value("settings/themeMode", 0), 0, 3, 0)
+        )
+        self.motion_mode = MotionMode(
+            _bounded(settings.value("settings/motionMode", 0), 0, 2, 0)
         )
         if settings.contains(_LEGACY_ACCENT_KEY) and not settings.contains(
             _ACCENT_KEY
@@ -207,10 +217,15 @@ class GallerySettings(QObject):
             theme = fluentqt.Theme.Light
         elif self.theme_mode == ThemeMode.Dark:
             theme = fluentqt.Theme.Dark
+        elif self.theme_mode == ThemeMode.HighContrast:
+            theme = fluentqt.Theme.HighContrast
         fluentqt.set_theme(theme)
 
+    def apply_motion_mode(self) -> None:
+        fluentqt.set_motion_mode(self.motion_mode)
+
     def set_theme_mode(self, mode: int | ThemeMode) -> None:
-        next_mode = ThemeMode(_bounded(mode, 0, 2, 0))
+        next_mode = ThemeMode(_bounded(mode, 0, 3, 0))
         if self.theme_mode == next_mode:
             self.apply_theme_mode()
             return
@@ -221,6 +236,18 @@ class GallerySettings(QObject):
             )
         self.apply_theme_mode()
         self.themeModeChanged.emit(int(self.theme_mode))
+
+    def set_motion_mode(self, mode: int | MotionMode) -> None:
+        next_mode = MotionMode(_bounded(mode, 0, 2, 0))
+        if self.motion_mode == next_mode:
+            return
+        self.motion_mode = next_mode
+        if persistence_available():
+            _config_settings().setValue(
+                "settings/motionMode", int(self.motion_mode)
+            )
+        self.apply_motion_mode()
+        self.motionModeChanged.emit(int(self.motion_mode))
 
     def set_accent_color(self, accent: QColor) -> None:
         if not accent.isValid():
@@ -337,6 +364,7 @@ def gallery_settings() -> GallerySettings:
 __all__ = [
     "CloseBehavior",
     "GallerySettings",
+    "MotionMode",
     "NavigationStyle",
     "ThemeMode",
     "config_file_path",

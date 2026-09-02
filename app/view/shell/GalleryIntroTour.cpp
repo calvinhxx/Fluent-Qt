@@ -16,6 +16,7 @@
 #include <QVBoxLayout>
 
 #include "components/basicinput/Button.h"
+#include "view/support/GalleryMotion.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/textfields/Label.h"
@@ -34,15 +35,12 @@ namespace {
 constexpr int kCardWidth = 330;
 constexpr int kCardHeight = 168;
 constexpr double kDimStrength = 0.40;
-constexpr int kSpotlightPadding = 1;  // tight breathing room around the highlighted target
-constexpr int kSpotlightRadius = 8;   // rounded corners of the cut-out
-}  // namespace
+constexpr int kSpotlightPadding = 1; // tight breathing room around the highlighted target
+constexpr int kSpotlightRadius = 8;  // rounded corners of the cut-out
+} // namespace
 
-GalleryIntroTour::GalleryIntroTour(QWidget* host, QObject* parent)
-    : QObject(parent)
-    , m_host(host)
-{
-}
+GalleryIntroTour::GalleryIntroTour(QWidget* host, QObject* parent) : QObject(parent), m_host(host)
+{}
 
 void GalleryIntroTour::build()
 {
@@ -76,7 +74,8 @@ void GalleryIntroTour::build()
     QFont glyphFont(Typography::FontFamily::FluentIcons);
     glyphFont.setPixelSize(22);
     m_glyph->setFont(glyphFont);
-    m_glyph->setStyleSheet(QStringLiteral("color: %1;").arg(m_card->themeColors().textAccentPrimary.name()));
+    m_glyph->setStyleSheet(
+        QStringLiteral("color: %1;").arg(m_card->themeColors().textAccentPrimary.name()));
     m_glyph->setFixedWidth(26);
     m_glyph->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
     header->addWidget(m_glyph, 0, Qt::AlignTop);
@@ -140,22 +139,24 @@ void GalleryIntroTour::build()
         if (!m_finished)
             finishTour();
     });
-    connect(m_card, &QObject::destroyed, this, [this]() {
-        m_card = nullptr;
-    });
+    connect(m_card, &QObject::destroyed, this, [this]() { m_card = nullptr; });
 
     win->installEventFilter(this);
 
+    const auto animation = m_card->themeAnimation();
+    m_animationDurationMs = animation.normal;
     m_dimAnim = new QPropertyAnimation(m_scrim, "progress", this);
-    m_dimAnim->setDuration(m_card->themeAnimation().normal);
-    m_dimAnim->setEasingCurve(m_card->themeAnimation().decelerate);
+    m_dimAnim->setObjectName(QStringLiteral("galleryIntroTourDimAnimation"));
+    m_dimAnim->setDuration(m_animationDurationMs);
+    m_dimAnim->setEasingCurve(animation.decelerate);
 
     m_scrim->setSpotlightRadius(kSpotlightRadius);
     // The spotlight cut-out glides between targets in lock-step with the CoachMark (same normal
     // duration + decelerate curve). zh_CN: 聚光挖空与 CoachMark 同步在目标间滑动(同样的 normal 时长 + decelerate 曲线)。
     m_spotAnim = new QPropertyAnimation(m_scrim, "spotlightRect", this);
-    m_spotAnim->setDuration(m_card->themeAnimation().normal);
-    m_spotAnim->setEasingCurve(m_card->themeAnimation().decelerate);
+    m_spotAnim->setObjectName(QStringLiteral("galleryIntroTourSpotlightAnimation"));
+    m_spotAnim->setDuration(m_animationDurationMs);
+    m_spotAnim->setEasingCurve(animation.decelerate);
 }
 
 QRect GalleryIntroTour::spotlightRectFor(QWidget* target) const
@@ -169,8 +170,9 @@ QRect GalleryIntroTour::spotlightRectFor(QWidget* target) const
 
     const QRect inWindow(target->mapTo(win, QPoint(0, 0)), target->size());
     const QRect inScrim = inWindow.translated(-surface.topLeft());
-    return inScrim.marginsAdded(QMargins(kSpotlightPadding, kSpotlightPadding,
-                                         kSpotlightPadding, kSpotlightPadding))
+    return inScrim
+        .marginsAdded(
+            QMargins(kSpotlightPadding, kSpotlightPadding, kSpotlightPadding, kSpotlightPadding))
         .intersected(QRect(QPoint(0, 0), surface.size()));
 }
 
@@ -193,7 +195,7 @@ void GalleryIntroTour::applyStepSpotlight(int index, bool animate)
     if (animate && m_haveSpot) {
         m_spotAnim->setStartValue(m_scrim->spotlightRect());
         m_spotAnim->setEndValue(target);
-        m_spotAnim->start();
+        ::fluent::gallery::motion::startFiniteTransition(m_spotAnim, m_animationDurationMs);
     } else {
         // First spotlight (coming from full dim) or a resize-follow: snap, don't glide from a stale rect.
         // zh_CN: 首个聚光(从全压暗而来)或跟随缩放:直接定位,不从过时矩形滑入。
@@ -237,11 +239,10 @@ void GalleryIntroTour::syncScrimSurfaceRadius()
 
 void GalleryIntroTour::start()
 {
-    m_steps.erase(std::remove_if(m_steps.begin(), m_steps.end(),
-                                 [](const Step& step) {
-                                     return !step.centered && step.target.isNull();
-                                 }),
-                  m_steps.end());
+    m_steps.erase(
+        std::remove_if(m_steps.begin(), m_steps.end(),
+                       [](const Step& step) { return !step.centered && step.target.isNull(); }),
+        m_steps.end());
     if (m_steps.isEmpty()) {
         emit finished();
         return;
@@ -259,11 +260,11 @@ void GalleryIntroTour::start()
     m_dimAnim->stop();
     m_dimAnim->setStartValue(0.0);
     m_dimAnim->setEndValue(1.0);
-    m_dimAnim->start();
+    ::fluent::gallery::motion::startFiniteTransition(m_dimAnim, m_animationDurationMs);
 
     m_index = 0;
     applyStep(0, /*animateSpotlight*/ false);
-    m_card->open();  // CoachMark positions + fades itself in
+    m_card->open(); // CoachMark positions + fades itself in
     m_card->raise();
     settleFocusForHostState();
     QTimer::singleShot(0, this, [this]() { settleFocusForHostState(); });
@@ -272,8 +273,8 @@ void GalleryIntroTour::start()
 void GalleryIntroTour::focusPrimaryActionIfActive()
 {
     QWidget* win = m_host ? m_host->window() : nullptr;
-    if (m_finished || !win || !win->isActiveWindow() || !m_card
-        || !m_card->isOpen() || !m_next || !m_next->isVisible()) {
+    if (m_finished || !win || !win->isActiveWindow() || !m_card || !m_card->isOpen() || !m_next ||
+        !m_next->isVisible()) {
         return;
     }
 
@@ -317,10 +318,7 @@ void GalleryIntroTour::applyStep(int index, bool animateSpotlight)
     m_next->setText(last ? QStringLiteral("Finish") : QStringLiteral("Next"));
     m_card->setAccessibleName(step.title);
     m_card->setAccessibleDescription(
-        QStringLiteral("%1 Step %2 of %3.")
-            .arg(step.body)
-            .arg(index + 1)
-            .arg(m_steps.size()));
+        QStringLiteral("%1 Step %2 of %3.").arg(step.body).arg(index + 1).arg(m_steps.size()));
 
     // CoachMark glides to the new target itself when retargeted while open.
     // zh_CN: 打开状态下重定向时,CoachMark 自己滑动到新目标。
@@ -357,14 +355,14 @@ void GalleryIntroTour::finishTour()
                 if (card)
                     card->deleteLater();
             });
-            m_card->close();  // fades out + hides
+            m_card->close(); // fades out + hides
         } else {
             m_card->deleteLater();
         }
     }
 
     if (m_spotAnim)
-        m_spotAnim->stop();  // freeze the cut-out; let the whole dim fade out uniformly
+        m_spotAnim->stop(); // freeze the cut-out; let the whole dim fade out uniformly
 
     if (m_scrim && m_dimAnim) {
         m_dimAnim->stop();
@@ -375,7 +373,7 @@ void GalleryIntroTour::finishTour()
             if (scrim)
                 scrim->deleteLater();
         });
-        m_dimAnim->start();
+        ::fluent::gallery::motion::startFiniteTransition(m_dimAnim, m_animationDurationMs);
     }
 
     m_focusBeforeStart.clear();
@@ -384,19 +382,17 @@ void GalleryIntroTour::finishTour()
 
 bool GalleryIntroTour::eventFilter(QObject* watched, QEvent* event)
 {
-    if (event && m_host && watched == m_host->window()
-        && (event->type() == QEvent::WindowActivate
-            || event->type() == QEvent::WindowDeactivate)) {
+    if (event && m_host && watched == m_host->window() &&
+        (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate)) {
         // Native compositors can settle first-launch activation after the tour
         // is visible. Defer until Qt has committed the new active top-level.
         QTimer::singleShot(0, this, [this]() { settleFocusForHostState(); });
     }
 
-    if (event && event->type() == QEvent::KeyPress
-        && (watched == m_close || watched == m_prev || watched == m_next)) {
+    if (event && event->type() == QEvent::KeyPress &&
+        (watched == m_close || watched == m_prev || watched == m_next)) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
-        if (keyEvent->key() == Qt::Key_Tab
-            || keyEvent->key() == Qt::Key_Backtab) {
+        if (keyEvent->key() == Qt::Key_Tab || keyEvent->key() == Qt::Key_Backtab) {
             QList<Button*> focusOrder;
             if (m_close && m_close->isVisible())
                 focusOrder.append(m_close);
@@ -405,16 +401,14 @@ bool GalleryIntroTour::eventFilter(QObject* watched, QEvent* event)
             if (m_next && m_next->isVisible())
                 focusOrder.append(m_next);
 
-            const int current = focusOrder.indexOf(
-                qobject_cast<Button*>(watched));
+            const int current = focusOrder.indexOf(qobject_cast<Button*>(watched));
             if (current >= 0 && !focusOrder.isEmpty()) {
-                const bool backward = keyEvent->key() == Qt::Key_Backtab
-                    || keyEvent->modifiers().testFlag(Qt::ShiftModifier);
+                const bool backward = keyEvent->key() == Qt::Key_Backtab ||
+                                      keyEvent->modifiers().testFlag(Qt::ShiftModifier);
                 const int delta = backward ? -1 : 1;
-                const int next = (current + delta + focusOrder.size())
-                    % focusOrder.size();
-                focusOrder.at(next)->setFocus(
-                    backward ? Qt::BacktabFocusReason : Qt::TabFocusReason);
+                const int next = (current + delta + focusOrder.size()) % focusOrder.size();
+                focusOrder.at(next)->setFocus(backward ? Qt::BacktabFocusReason
+                                                       : Qt::TabFocusReason);
                 event->accept();
                 return true;
             }
@@ -423,8 +417,8 @@ bool GalleryIntroTour::eventFilter(QObject* watched, QEvent* event)
 
     // The window is locked during the tour, but keep the scrim glued to it and on top as a safety net.
     // zh_CN: 引导期间窗口已锁定,但仍把遮罩贴住窗口并置顶,作为保险。
-    if (m_scrim && m_host && watched == m_host->window()
-        && (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
+    if (m_scrim && m_host && watched == m_host->window() &&
+        (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
         syncScrimGeometry();
         m_scrim->raise();
         if (m_card && m_card->isOpen())

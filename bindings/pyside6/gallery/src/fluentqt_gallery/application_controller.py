@@ -137,7 +137,11 @@ class _CloseBehaviorChoiceRow(QWidget):
         if self._selected:
             fill = QColor(colors["accentDefault"])
             fill.setAlpha(
-                28 if fluentqt.current_theme() == fluentqt.Theme.Dark else 16
+                28
+                if fluentqt.theme_uses_dark_appearance(
+                    fluentqt.current_theme()
+                )
+                else 16
             )
         elif self._pressed:
             fill = QColor(colors["subtleTertiary"])

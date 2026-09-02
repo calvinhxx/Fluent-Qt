@@ -487,7 +487,7 @@ class LivePreviewWindow(fluentqt.Window):
         self._scene_defaults = capture_widget_state(placeholder)
 
     def _refresh_theme_button(self) -> None:
-        dark = fluentqt.current_theme() == fluentqt.Theme.Dark
+        dark = fluentqt.theme_uses_dark_appearance(fluentqt.current_theme())
         self._theme_button.setText(
             "Use light theme" if dark else "Use dark theme"
         )
@@ -500,7 +500,7 @@ class LivePreviewWindow(fluentqt.Window):
     def _toggle_theme(self) -> None:
         next_theme = (
             fluentqt.Theme.Light
-            if fluentqt.current_theme() == fluentqt.Theme.Dark
+            if fluentqt.theme_uses_dark_appearance(fluentqt.current_theme())
             else fluentqt.Theme.Dark
         )
         fluentqt.set_theme(next_theme)
@@ -687,7 +687,9 @@ class LivePreviewWindow(fluentqt.Window):
                 ),
                 "theme": (
                     "dark"
-                    if fluentqt.current_theme() == fluentqt.Theme.Dark
+                    if fluentqt.theme_uses_dark_appearance(
+                        fluentqt.current_theme()
+                    )
                     else "light"
                 ),
             },

@@ -69,7 +69,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--theme",
-        choices=("system", "light", "dark"),
+        choices=("system", "light", "dark", "high-contrast"),
         default="system",
         help="Force a theme for deterministic visual parity snapshots.",
     )
@@ -190,6 +190,14 @@ def _normalize_snapshot_capture(
     return normalized
 
 
+def _snapshot_canvas_color(window: QWidget) -> QColor:
+    """Return the effective Fluent canvas token behind transparent pixels."""
+
+    from .foundation_pages import _theme_tokens
+
+    return QColor(_theme_tokens(window)["bgCanvas"])
+
+
 def save_snapshot(
     window: GalleryWindow,
     path: Path,
@@ -219,12 +227,7 @@ def save_snapshot(
     target_size = snapshot_size if snapshot_size is not None else window.size()
     captured = _normalize_snapshot_capture(pixmap.toImage(), target_size)
     image = QImage(captured.size(), QImage.Format_ARGB32_Premultiplied)
-    background = (
-        QColor("#202020")
-        if fluentqt.current_theme() == fluentqt.Theme.Dark
-        else QColor("#F3F3F3")
-    )
-    image.fill(background)
+    image.fill(_snapshot_canvas_color(window))
     painter = QPainter(image)
     painter.drawImage(0, 0, captured)
     painter.end()
@@ -369,6 +372,9 @@ def main(argv: list[str] | None = None) -> int:
     elif args.theme == "dark":
         settings.theme_mode = ThemeMode.Dark
         settings.apply_theme_mode()
+    elif args.theme == "high-contrast":
+        settings.theme_mode = ThemeMode.HighContrast
+        settings.apply_theme_mode()
 
     window = GalleryWindow(startup_visuals=not automated)
     placement = None
@@ -511,11 +517,12 @@ def main(argv: list[str] | None = None) -> int:
                     return
                 if args.snapshot_dir is not None and failure is None:
                     _reset_current_page_scroll(window)
-                    suffix = (
-                        "dark"
-                        if fluentqt.current_theme() == fluentqt.Theme.Dark
-                        else "light"
-                    )
+                    theme = fluentqt.current_theme()
+                    suffix = {
+                        fluentqt.Theme.Light: "light",
+                        fluentqt.Theme.Dark: "dark",
+                        fluentqt.Theme.HighContrast: "high-contrast",
+                    }[theme]
                     save_snapshot(
                         window,
                         args.snapshot_dir

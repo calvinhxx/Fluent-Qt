@@ -23,6 +23,7 @@ import shiboken6
 fluentqt.prepare_high_dpi_application()
 
 from PySide6.QtCore import (
+    QAbstractAnimation,
     QCoreApplication,
     QElapsedTimer,
     QEvent,
@@ -33,6 +34,7 @@ from PySide6.QtCore import (
     QPropertyAnimation,
     QRect,
     QRectF,
+    QSettings,
     QSize,
     Qt,
     QTimer,
@@ -66,7 +68,9 @@ from fluentqt_gallery.app import (
     _normalize_snapshot_capture,
     _pending_gallery_network_requests,
     _reset_current_page_scroll,
+    _snapshot_canvas_color,
     normalize_route,
+    parse_args,
     runtime_catalog_errors,
     save_snapshot,
 )
@@ -116,6 +120,7 @@ from fluentqt_gallery.samples import build_sample
 from fluentqt_gallery.visual import (
     GalleryCodeBlock,
     GalleryPageSkeleton,
+    GallerySplashScreen,
     _acrylic_noise_tile,
     _direct_icon_font,
     _direct_icon_glyph,
@@ -171,6 +176,7 @@ EXPECTED_SUPPORT_TYPES = frozenset(
         "FluentWidget",
         "Icons",
         "IconSize",
+        "MotionPolicy",
         "PivotItem",
         "ScrollViewZoomAwareWidget",
         "SelectorBarItem",
@@ -378,7 +384,7 @@ class PythonGalleryTest(unittest.TestCase):
 
     def test_contract_exactly_matches_the_public_binding(self):
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-        self.assertEqual(len(manifest["classes"]), 90)
+        self.assertEqual(len(manifest["classes"]), 91)
         self.assertEqual(catalog_coverage_errors(manifest["classes"]), [])
         self.assertEqual(runtime_catalog_errors(), [])
         self.assertEqual(len(ROUTES), 91)
@@ -395,7 +401,7 @@ class PythonGalleryTest(unittest.TestCase):
         self.assertEqual(SUPPORT_TYPES, EXPECTED_SUPPORT_TYPES)
         routed_types = {entry.name for entry in ENTRIES}
         self.assertTrue(routed_types.isdisjoint(SUPPORT_TYPES))
-        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 90)
+        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 91)
         for entry in ENTRIES:
             self.assertFalse(entry.support_type)
 
@@ -406,6 +412,27 @@ class PythonGalleryTest(unittest.TestCase):
         self.assertEqual(normalize_route("home"), "home")
         self.assertEqual(normalize_route("component/Button"), "button")
         self.assertEqual(normalize_route("category/basic-input"), "basic-input")
+
+    def test_high_contrast_cli_theme_uses_the_effective_canvas_token(self):
+        self.assertEqual(
+            parse_args(["--theme", "high-contrast"]).theme,
+            "high-contrast",
+        )
+        original_theme = fluentqt.current_theme()
+        self.addCleanup(fluentqt.set_theme, original_theme)
+        window = GalleryWindow(startup_visuals=False)
+        original_mode = int(window._settings.theme_mode)
+        try:
+            window._set_theme_mode(3)
+            self.assertEqual(
+                _snapshot_canvas_color(window),
+                QColor(_theme_tokens(window)["bgCanvas"]),
+            )
+            self.assertEqual(_snapshot_canvas_color(window).name(), "#000000")
+        finally:
+            window._set_theme_mode(original_mode)
+            window.close()
+            window.deleteLater()
 
     def test_navigation_icons_use_native_optical_alias_resolution(self):
         native_catalog_path = (
@@ -798,6 +825,19 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         self.assertEqual(len(expected), 208)
         self.assertEqual(ported_sample_keys(), expected)
 
+    def test_toggle_switch_state_sample_has_an_accessible_name(self):
+        result = build_sample("toggle-switch", "toggle-switch-state")
+        try:
+            toggle = result.widget.findChild(fluentqt.ToggleSwitch)
+            self.assertIsNotNone(toggle)
+            self.assertEqual(toggle.accessibleName(), "Feature toggle")
+            self.assertIn(
+                'toggle.setAccessibleName("Feature toggle")', result.source
+            )
+        finally:
+            result.widget.deleteLater()
+            QApplication.processEvents()
+
     def test_command_bar_action_icons_match_native_size_variants(self):
         result = build_sample(
             "command-bar", "command-bar-responsive-overflow"
@@ -982,7 +1022,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     previous_icon_key = action.icon().cacheKey()
                     target = (
                         fluentqt.Theme.Light
-                        if root.effective_theme() == fluentqt.Theme.Dark
+                        if fluentqt.theme_uses_dark_appearance(
+                            root.effective_theme()
+                        )
                         else fluentqt.Theme.Dark
                     )
                     root.setProperty("fluentThemeOverride", int(target))
@@ -1862,7 +1904,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             self.assertNotIn("<pre", code_label.text())
             expected_function = (
                 "#DCDCAA"
-                if fluentqt.current_theme() == fluentqt.Theme.Dark
+                if fluentqt.theme_uses_dark_appearance(
+                    fluentqt.current_theme()
+                )
                 else "#795E26"
             )
             self.assertIn(expected_function, code_label.text())
@@ -1871,7 +1915,11 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             initial_theme = page._gallery_sample_theme
             self.assertEqual(
                 theme_button.property("gallerySampleTheme"),
-                "Dark" if initial_theme == fluentqt.Theme.Dark else "Light",
+                {
+                    fluentqt.Theme.Light: "Light",
+                    fluentqt.Theme.Dark: "Dark",
+                    fluentqt.Theme.HighContrast: "High contrast",
+                }[initial_theme],
             )
             theme_button.click()
             QApplication.processEvents()
@@ -2147,7 +2195,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.deleteLater()
             QApplication.processEvents()
 
-    def test_home_section_headers_follow_a_light_to_dark_theme_switch(self):
+    def test_home_section_headers_follow_light_dark_and_high_contrast(self):
         window = GalleryWindow(startup_visuals=False)
         original_mode = int(window._settings.theme_mode)
         window.show()
@@ -2179,6 +2227,21 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             for header in headers:
                 self.assertIn(dark_color, header.styleSheet())
                 self.assertNotIn(light_color, header.styleSheet())
+
+            window._set_theme_mode(3)
+            QApplication.processEvents()
+            self.assertEqual(
+                fluentqt.current_theme(),
+                fluentqt.Theme.HighContrast,
+            )
+            self.assertEqual(
+                QColor(_theme_tokens()["bgCanvas"]),
+                QColor("#000000"),
+            )
+            self.assertEqual(
+                QColor(_theme_tokens()["strokeFocusOuter"]),
+                QColor("#1aebff"),
+            )
         finally:
             window._set_theme_mode(original_mode)
             window.close()
@@ -2210,7 +2273,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 
             target_mode = (
                 1
-                if fluentqt.current_theme() == fluentqt.Theme.Dark
+                if fluentqt.theme_uses_dark_appearance(
+                    fluentqt.current_theme()
+                )
                 else 2
             )
             window._set_theme_mode(target_mode)
@@ -2241,7 +2306,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             self.assertFalse(page._gallery_sample_theme_explicit)
             target = (
                 fluentqt.Theme.Light
-                if fluentqt.current_theme() == fluentqt.Theme.Dark
+                if fluentqt.theme_uses_dark_appearance(
+                    fluentqt.current_theme()
+                )
                 else fluentqt.Theme.Dark
             )
             window._set_theme_mode(2 if target == fluentqt.Theme.Dark else 1)
@@ -2269,6 +2336,37 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 )
         finally:
             fluentqt.set_theme(original_theme)
+            window.close()
+            window.deleteLater()
+            QApplication.processEvents()
+
+    def test_component_preview_labels_high_contrast_before_local_toggle(self):
+        window = GalleryWindow()
+        original_mode = int(window._settings.theme_mode)
+        window.show()
+        window.navigate("button", animated=False)
+        QApplication.processEvents()
+        try:
+            _index, page = window._pages["button"]
+            window._set_theme_mode(3)
+            QApplication.processEvents()
+
+            self.assertFalse(page._gallery_sample_theme_explicit)
+            self.assertEqual(
+                page._gallery_sample_theme,
+                fluentqt.Theme.HighContrast,
+            )
+            self.assertEqual(
+                page._gallery_theme_button.property("gallerySampleTheme"),
+                "High contrast",
+            )
+
+            page._gallery_theme_button.click()
+            QApplication.processEvents()
+            self.assertTrue(page._gallery_sample_theme_explicit)
+            self.assertEqual(page._gallery_sample_theme, fluentqt.Theme.Light)
+        finally:
+            window._set_theme_mode(original_mode)
             window.close()
             window.deleteLater()
             QApplication.processEvents()
@@ -3209,6 +3307,107 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.deleteLater()
             QApplication.processEvents()
 
+    def test_gallery_owned_splash_and_title_motion_follow_policy(self):
+        original_motion = fluentqt.current_motion_mode()
+        self.addCleanup(fluentqt.set_motion_mode, original_motion)
+        window = GalleryWindow(startup_visuals=False)
+        settings = window._settings
+        original_setting = settings.motion_mode
+        self.addCleanup(settings.set_motion_mode, original_setting)
+        window.show()
+        QApplication.processEvents()
+        try:
+            title = window._title_content
+            settings.set_motion_mode(fluentqt.MotionMode.Reduced)
+
+            title.set_back_available(True)
+            self.assertEqual(title._back_animation.duration(), 50)
+            title._back_animation.stop()
+            title.set_chrome_visible(False)
+            title.set_chrome_visible(True, animated=True)
+            self.assertEqual(title._chrome_animation.duration(), 50)
+            title._chrome_animation.stop()
+            title._start_button_press(window._back_button)
+            press = window._back_button._gallery_title_press_animation
+            self.assertEqual(press.duration(), 50)
+            press.stop()
+
+            splash = GallerySplashScreen(window.contentHost())
+            splash.show()
+            splash.dismiss()
+            self.assertEqual(splash._fade.duration(), 50)
+            splash._fade.stop()
+            splash.deleteLater()
+
+            settings.set_motion_mode(fluentqt.MotionMode.Full)
+            title.set_back_available(False)
+            self.assertEqual(title._back_animation.duration(), 250)
+            title._back_animation.setCurrentTime(100)
+            fluentqt.set_motion_mode(fluentqt.MotionMode.Reduced)
+            self.assertLessEqual(
+                title._back_animation.duration()
+                - title._back_animation.currentTime(),
+                50,
+            )
+            fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
+            self.assertEqual(title._back_animation.duration(), 250)
+
+            settings.set_motion_mode(fluentqt.MotionMode.Reduced)
+
+            settings.set_motion_mode(fluentqt.MotionMode.Full)
+            title.set_back_available(True)
+            dynamic_splash = GallerySplashScreen(window.contentHost())
+            dynamic_splash.show()
+            dynamic_splash.dismiss()
+            settings.set_motion_mode(fluentqt.MotionMode.Disabled)
+            self.assertAlmostEqual(title._back_reveal, 1.0, places=4)
+            self.assertAlmostEqual(
+                dynamic_splash.graphicsEffect().opacity(), 0.0, places=4
+            )
+            self.assertEqual(
+                dynamic_splash._fade.state(),
+                QAbstractAnimation.State.Stopped,
+            )
+
+            title.set_back_available(False)
+            self.assertAlmostEqual(title._back_reveal, 0.0, places=4)
+            self.assertEqual(
+                title._back_animation.state(),
+                QAbstractAnimation.State.Stopped,
+            )
+            title.set_chrome_visible(False)
+            title.set_chrome_visible(True, animated=True)
+            self.assertAlmostEqual(
+                title._chrome_reveal_opacity, 1.0, places=4
+            )
+            self.assertEqual(
+                title._chrome_animation.state(),
+                QAbstractAnimation.State.Stopped,
+            )
+            title._start_button_press(window._back_button)
+            self.assertAlmostEqual(
+                window._back_button.iconScale(), 1.0, places=4
+            )
+            self.assertEqual(
+                press.state(), QAbstractAnimation.State.Stopped
+            )
+
+            disabled_splash = GallerySplashScreen(window.contentHost())
+            disabled_splash.show()
+            disabled_splash.dismiss()
+            self.assertAlmostEqual(
+                disabled_splash.graphicsEffect().opacity(), 0.0, places=4
+            )
+            self.assertEqual(
+                disabled_splash._fade.state(),
+                QAbstractAnimation.State.Stopped,
+            )
+        finally:
+            window.close()
+            window.deleteLater()
+            QApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+            QApplication.processEvents()
+
     def test_first_launch_intro_tour_matches_native_steps(self):
         window = GalleryWindow(startup_visuals=False)
         original_intro_completed = window._settings.intro_completed
@@ -3245,6 +3444,106 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window._settings.set_intro_completed(original_intro_completed)
             window.close()
             window.deleteLater()
+            QApplication.processEvents()
+
+    def test_gallery_owned_intro_and_navigation_motion_follow_policy(self):
+        original_motion = fluentqt.current_motion_mode()
+        self.addCleanup(fluentqt.set_motion_mode, original_motion)
+        window = GalleryWindow(startup_visuals=False)
+        settings = window._settings
+        original_setting = settings.motion_mode
+        self.addCleanup(settings.set_motion_mode, original_setting)
+        original_navigation = settings.navigation_style
+        self.addCleanup(
+            settings.set_navigation_style, original_navigation
+        )
+        original_intro_completed = window._settings.intro_completed
+        window._settings.set_intro_completed(False)
+        window.setFixedSize(1440, 900)
+        window.show()
+        window._navigation_view.setAnimationEnabled(False)
+        QApplication.processEvents()
+        try:
+            settings.set_motion_mode(fluentqt.MotionMode.Reduced)
+            window._set_navigation_style(1)
+            QApplication.processEvents()
+            foundation = window._top_main_navigation_pane._buttons[
+                "foundation"
+            ]
+            foundation.click()
+            QApplication.processEvents()
+            popup = window._top_main_navigation_pane._child_flyout
+            entrance = popup.findChild(
+                QPropertyAnimation,
+                "galleryTopNavigationFlyoutEntranceAnimation",
+                Qt.FindDirectChildrenOnly,
+            )
+            self.assertIsNotNone(entrance)
+            self.assertLessEqual(entrance.duration(), 50)
+            entrance.stop()
+
+            settings_button = window._top_footer_navigation_pane._buttons[
+                "settings"
+            ]
+            window._top_footer_navigation_pane._start_settings_icon_rotation(
+                settings_button
+            )
+            rotation = settings_button._gallery_settings_rotation
+            self.assertLessEqual(rotation.duration(), 50)
+            rotation.stop()
+
+            settings.set_motion_mode(fluentqt.MotionMode.Disabled)
+            window._top_main_navigation_pane._close_child_flyout(False)
+            foundation.click()
+            disabled_popup = window._top_main_navigation_pane._child_flyout
+            disabled_entrance = disabled_popup.findChild(
+                QPropertyAnimation,
+                "galleryTopNavigationFlyoutEntranceAnimation",
+                Qt.FindDirectChildrenOnly,
+            )
+            self.assertIsNotNone(disabled_entrance)
+            self.assertEqual(disabled_popup.pos(), disabled_entrance.endValue())
+            self.assertEqual(
+                disabled_entrance.state(),
+                QAbstractAnimation.State.Stopped,
+            )
+            window._top_footer_navigation_pane._start_settings_icon_rotation(
+                settings_button
+            )
+            self.assertAlmostEqual(
+                settings_button.iconRotation(), 0.0, places=4
+            )
+            self.assertEqual(
+                rotation.state(), QAbstractAnimation.State.Stopped
+            )
+
+            window._maybe_start_intro_tour()
+            tour = window._intro_tour
+            self.assertIsNotNone(tour)
+            self.assertAlmostEqual(tour._scrim.progress, 1.0, places=4)
+            self.assertEqual(
+                tour._dim_animation.state(),
+                QAbstractAnimation.State.Stopped,
+            )
+            tour.go_to_step(1)
+            tour.go_to_step(2)
+            expected_spot = tour._spotlight_rect(
+                window._main_navigation_pane
+            )
+            self.assertEqual(tour._scrim.spotlightRect, expected_spot)
+            self.assertEqual(
+                tour._spot_animation.state(),
+                QAbstractAnimation.State.Stopped,
+            )
+            tour.finish_tour()
+            self.assertAlmostEqual(tour._scrim.progress, 0.0, places=4)
+        finally:
+            if window._intro_tour is not None:
+                window._intro_tour.finish_tour()
+            window._settings.set_intro_completed(original_intro_completed)
+            window.close()
+            window.deleteLater()
+            QApplication.sendPostedEvents(None, QEvent.DeferredDelete)
             QApplication.processEvents()
 
     def test_cold_route_uses_native_shimmer_handoff_without_page_motion(self):
@@ -4070,6 +4369,76 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.deleteLater()
             QApplication.processEvents()
 
+    def test_motion_setting_defaults_noops_persists_and_reloads(self):
+        self.assertEqual(int(fluentqt.MotionMode.Full), 0)
+        self.assertEqual(int(fluentqt.MotionMode.Reduced), 1)
+        self.assertEqual(int(fluentqt.MotionMode.Disabled), 2)
+        original_motion = fluentqt.current_motion_mode()
+        original_theme = fluentqt.current_theme()
+        self.addCleanup(fluentqt.set_motion_mode, original_motion)
+        self.addCleanup(fluentqt.set_theme, original_theme)
+        with TemporaryDirectory() as temporary_dir:
+            path = Path(temporary_dir) / "config.ini"
+            with (
+                patch.object(
+                    gallery_settings_module,
+                    "persistence_available",
+                    return_value=True,
+                ),
+                patch.object(
+                    gallery_settings_module,
+                    "config_file_path",
+                    return_value=path,
+                ),
+            ):
+                persisted = QSettings(str(path), QSettings.IniFormat)
+                persisted.clear()
+                persisted.sync()
+
+                first = gallery_settings_module.GallerySettings()
+                emitted: list[int] = []
+                first.motionModeChanged.connect(emitted.append)
+                try:
+                    self.assertEqual(
+                        first.motion_mode, fluentqt.MotionMode.Full
+                    )
+                    self.assertEqual(
+                        fluentqt.current_motion_mode(),
+                        fluentqt.MotionMode.Full,
+                    )
+                    first.set_motion_mode(fluentqt.MotionMode.Full)
+                    self.assertEqual(emitted, [])
+
+                    first.set_motion_mode(fluentqt.MotionMode.Reduced)
+                    self.assertEqual(emitted, [1])
+                    self.assertEqual(
+                        fluentqt.current_motion_mode(),
+                        fluentqt.MotionMode.Reduced,
+                    )
+                    persisted.sync()
+                    self.assertEqual(
+                        int(persisted.value("settings/motionMode")), 1
+                    )
+                finally:
+                    first._system_theme_poll.stop()
+                    first.deleteLater()
+                    QApplication.processEvents()
+
+                fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
+                reloaded = gallery_settings_module.GallerySettings()
+                try:
+                    self.assertEqual(
+                        reloaded.motion_mode, fluentqt.MotionMode.Reduced
+                    )
+                    self.assertEqual(
+                        fluentqt.current_motion_mode(),
+                        fluentqt.MotionMode.Reduced,
+                    )
+                finally:
+                    reloaded._system_theme_poll.stop()
+                    reloaded.deleteLater()
+                    QApplication.processEvents()
+
     def test_settings_page_matches_native_rows_and_choices(self):
         window = GalleryWindow()
         window.show()
@@ -4077,7 +4446,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         QApplication.processEvents()
         try:
             _index, page = window._pages["settings"]
-            self.assertEqual(len(page._gallery_settings_rows), 6)
+            self.assertEqual(len(page._gallery_settings_rows), 7)
             self.assertIsNone(
                 page.findChild(
                     fluentqt.ComboBox, "gallerySettingsStyleChoice"
@@ -4088,6 +4457,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 "Appearance & behavior",
                 "App theme",
                 "Accent color",
+                "Motion",
                 "Navigation style",
                 "Window background effect",
                 "App behavior",
@@ -4097,7 +4467,8 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             ):
                 self.assertIn(text, labels)
             expected_choices = (
-                ("Use system setting", "Light", "Dark"),
+                ("Use system setting", "Light", "Dark", "High contrast"),
+                ("Full", "Reduced", "Disabled"),
                 ("Left", "Top"),
                 ("Normal", "Mica", "Acrylic"),
                 ("Minimize window", keep_running_choice(), "Quit app"),

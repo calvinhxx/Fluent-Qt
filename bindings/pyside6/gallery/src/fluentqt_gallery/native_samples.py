@@ -3546,6 +3546,7 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             toggle = fluentqt.ToggleSwitch()
             toggle.setOnContent("On")
             toggle.setOffContent("Off")
+            toggle.setAccessibleName("Feature toggle")
             status = fluentqt.Label("State: Off")
             toggle.toggled.connect(
                 lambda on: status.setText(

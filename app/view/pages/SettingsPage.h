@@ -39,14 +39,11 @@ protected:
     void resizeEvent(QResizeEvent* event) override;
 
 private:
-    QWidget* createSettingsRow(const QString& icon,
-                               const QString& title,
-                               const QString& subtitle,
+    QWidget* createSettingsRow(const QString& icon, const QString& title, const QString& subtitle,
                                QWidget* trailing);
     QWidget* createSectionTitle(const QString& title);
     fluent::basicinput::ComboBox* createChoiceBox(const QString& objectName,
-                                                   const QStringList& choices,
-                                                   int currentIndex);
+                                                  const QStringList& choices, int currentIndex);
     QWidget* createUpdateCheckControl();
     void startUpdateCheck();
     void handleUpdateCheckFinished(const UpdateChecker::Result& result);
@@ -59,6 +56,7 @@ private:
     QVBoxLayout* m_contentLayout = nullptr;
     fluent::textfields::Label* m_titleLabel = nullptr;
     fluent::basicinput::ComboBox* m_themeChoice = nullptr;
+    fluent::basicinput::ComboBox* m_motionChoice = nullptr;
     AccentColorControl* m_accentControl = nullptr;
     fluent::basicinput::ComboBox* m_navigationChoice = nullptr;
     fluent::basicinput::ComboBox* m_effectChoice = nullptr;

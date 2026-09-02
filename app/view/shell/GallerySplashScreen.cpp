@@ -9,6 +9,7 @@
 #include <QTimer>
 
 #include "compatibility/QtCompat.h"
+#include "view/support/GalleryMotion.h"
 #include "components/status_info/ProgressRing.h"
 #include "design/Typography.h"
 #include "view/shell/AppIcon.h"
@@ -28,8 +29,7 @@ constexpr int kCaptionHeight = 20;
 
 } // namespace
 
-GallerySplashScreen::GallerySplashScreen(QWidget* parent)
-    : QWidget(parent)
+GallerySplashScreen::GallerySplashScreen(QWidget* parent) : QWidget(parent)
 {
     setObjectName(QStringLiteral("gallerySplashScreen"));
     // We paint a fully opaque background in paintEvent, so the surface still swallows
@@ -57,9 +57,8 @@ GallerySplashScreen::GallerySplashScreen(QWidget* parent)
 
 void GallerySplashScreen::setProgress(int done, int total)
 {
-    const QString next = total > 0
-        ? QStringLiteral("%1%").arg(qBound(0, done * 100 / total, 100))
-        : QString();
+    const QString next =
+        total > 0 ? QStringLiteral("%1%").arg(qBound(0, done * 100 / total, 100)) : QString();
     if (next == m_progressText)
         return;
     m_progressText = next;
@@ -78,12 +77,15 @@ void GallerySplashScreen::dismiss()
     auto* effect = new QGraphicsOpacityEffect(this);
     setGraphicsEffect(effect);
     auto* fade = new QPropertyAnimation(effect, "opacity", this);
+    fade->setObjectName(QStringLiteral("gallerySplashDismissAnimation"));
     fade->setStartValue(1.0);
     fade->setEndValue(0.0);
-    fade->setDuration(themeAnimation().normal);
-    fade->setEasingCurve(themeAnimation().decelerate);
+    const auto animation = themeAnimation();
+    fade->setDuration(animation.normal);
+    fade->setEasingCurve(animation.decelerate);
     connect(fade, &QPropertyAnimation::finished, this, &QObject::deleteLater);
-    fade->start(QAbstractAnimation::DeleteWhenStopped);
+    ::fluent::gallery::motion::startFiniteTransition(fade, animation.normal, true,
+                                                     QAbstractAnimation::DeleteWhenStopped);
 }
 
 void GallerySplashScreen::onThemeUpdated()
@@ -139,17 +141,16 @@ void GallerySplashScreen::paintEvent(QPaintEvent*)
     painter.fillRect(rect(), themeColors().bgCanvas);
 
     if (!m_logo.isNull()) {
-        const QRect logoRect(width() / 2 - kLogoSize / 2,
-                             height() / 2 - kLogoSize / 2,
-                             kLogoSize, kLogoSize);
+        const QRect logoRect(width() / 2 - kLogoSize / 2, height() / 2 - kLogoSize / 2, kLogoSize,
+                             kLogoSize);
         painter.drawPixmap(logoRect, m_logo);
     }
 
     // Explicit progress percentage, centered just below the spinner.
     // zh_CN: 明确的进度百分比，居中显示在转圈正下方。
     if (!m_progressText.isEmpty()) {
-        const int captionTop = height() / 2 + kSpinnerCenterOffsetBelow
-            + kSpinnerSize / 2 + kCaptionGap;
+        const int captionTop =
+            height() / 2 + kSpinnerCenterOffsetBelow + kSpinnerSize / 2 + kCaptionGap;
         painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
         painter.setPen(themeColors().textSecondary);
         painter.drawText(QRect(0, captionTop, width(), kCaptionHeight),

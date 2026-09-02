@@ -23,6 +23,7 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath
 from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 
 from .foundation_pages import _theme_tokens
+from .motion import start_finite_transition
 
 
 class _IntroScrim(QWidget):
@@ -218,11 +219,9 @@ class GalleryIntroTour(QObject):
         window.installEventFilter(self)
 
         dim = QPropertyAnimation(scrim, b"progress", self)
-        dim.setDuration(250)
         dim.setEasingCurve(QEasingCurve.OutCubic)
         self._dim_animation = dim
         spot = QPropertyAnimation(scrim, b"spotlightRect", self)
-        spot.setDuration(250)
         spot.setEasingCurve(QEasingCurve.OutCubic)
         self._spot_animation = spot
 
@@ -249,7 +248,13 @@ class GalleryIntroTour(QObject):
         self._dim_animation.stop()
         self._dim_animation.setStartValue(0.0)
         self._dim_animation.setEndValue(1.0)
-        self._dim_animation.start()
+        start_finite_transition(
+            self._dim_animation,
+            250,
+            complete_disabled=lambda: setattr(
+                self._scrim, "progress", 1.0
+            ),
+        )
         self._index = 0
         self._apply_step(0, False)
         self._card.open()
@@ -306,7 +311,13 @@ class GalleryIntroTour(QObject):
                 self._scrim.spotlightRect
             )
             self._spot_animation.setEndValue(target)
-            self._spot_animation.start()
+            start_finite_transition(
+                self._spot_animation,
+                250,
+                complete_disabled=lambda: setattr(
+                    self._scrim, "spotlightRect", target
+                ),
+            )
         else:
             self._scrim.spotlightRect = target
         self._have_spot = True
@@ -350,7 +361,16 @@ class GalleryIntroTour(QObject):
             self._dim_animation.setStartValue(scrim.progress)
             self._dim_animation.setEndValue(0.0)
             self._dim_animation.finished.connect(scrim.deleteLater)
-            self._dim_animation.start()
+
+            def complete_disabled() -> None:
+                scrim.progress = 0.0
+                scrim.deleteLater()
+
+            start_finite_transition(
+                self._dim_animation,
+                250,
+                complete_disabled=complete_disabled,
+            )
         self.finished.emit()
 
     def eventFilter(self, watched, event) -> bool:
