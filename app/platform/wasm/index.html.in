@@ -13,13 +13,23 @@
       return embedded;
     })();
     window.fluentQtHostTheme = (() => {
+      const normalizeTheme = value =>
+        value === 'light' || value === 'dark' || value === 'high-contrast'
+          ? value
+          : null;
       const requested = new URLSearchParams(window.location.search).get('host-theme');
-      window.fluentQtHostThemeFollowsSystem = requested !== 'dark' && requested !== 'light';
-      const theme = requested === 'dark' || requested === 'light'
-        ? requested
-        : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      const forcedColors = window.matchMedia('(forced-colors: active)');
+      const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+      const normalizedRequest = normalizeTheme(requested);
+      window.fluentQtHostThemeFollowsSystem = normalizedRequest === null;
+      window.fluentQtHostThemePreference = normalizedRequest
+        || (systemDark.matches ? 'dark' : 'light');
+      window.fluentQtHostThemeMedia = { forcedColors, systemDark };
+      const theme = forcedColors.matches
+        ? 'high-contrast'
+        : window.fluentQtHostThemePreference;
       document.documentElement.dataset.fluentQtTheme = theme;
-      document.documentElement.style.colorScheme = theme;
+      document.documentElement.style.colorScheme = theme === 'light' ? 'light' : 'dark';
       return theme;
     })();
     // Qt 6.9's WebAssembly platform reads window.devicePixelRatio directly
@@ -126,6 +136,19 @@
       border-color: #3b3b3b;
     }
     html[data-fluent-qt-theme="dark"] footer a { color: #60cdff; }
+    html[data-fluent-qt-theme="high-contrast"] body,
+    html[data-fluent-qt-theme="high-contrast"] #loading,
+    html[data-fluent-qt-theme="high-contrast"] #qt-container,
+    html[data-fluent-qt-theme="high-contrast"] footer {
+      color: #fff;
+      background: #000;
+    }
+    html[data-fluent-qt-theme="high-contrast"] footer { border-color: #fff; }
+    html[data-fluent-qt-theme="high-contrast"] footer a { color: #00ffff; }
+    html[data-fluent-qt-theme="high-contrast"] .spinner {
+      border-color: #fff;
+      border-top-color: #00ffff;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
   <link rel="preload" href="fluent_qt_gallery.wasm" as="fetch"
@@ -161,15 +184,36 @@
     const renderScaleToggle = document.getElementById('render-scale-toggle');
     const renderProfile = window.fluentQtRenderProfile;
     let wasmInstance = null;
-    const normalizeHostTheme = theme => theme === 'dark' ? 'dark' : 'light';
-    const applyHostTheme = theme => {
-      const normalized = normalizeHostTheme(theme);
-      window.fluentQtHostTheme = normalized;
-      document.documentElement.dataset.fluentQtTheme = normalized;
-      document.documentElement.style.colorScheme = normalized;
+    const normalizeHostTheme = theme =>
+      theme === 'light' || theme === 'dark' || theme === 'high-contrast'
+        ? theme
+        : null;
+    const listenForMediaChange = (query, handler) => {
+      if (typeof query.addEventListener === 'function')
+        query.addEventListener('change', handler);
+      else
+        query.addListener(handler);
+    };
+    const resolvedHostTheme = () => {
+      if (window.fluentQtHostThemeMedia.forcedColors.matches)
+        return 'high-contrast';
+      return normalizeHostTheme(window.fluentQtHostThemePreference)
+        || (window.fluentQtHostThemeMedia.systemDark.matches ? 'dark' : 'light');
+    };
+    const syncHostTheme = () => {
+      const effective = resolvedHostTheme();
+      window.fluentQtHostTheme = effective;
+      document.documentElement.dataset.fluentQtTheme = effective;
+      document.documentElement.style.colorScheme = effective === 'light' ? 'light' : 'dark';
       const applyToGallery = wasmInstance?._fluentQtGalleryApplyHostTheme;
       if (typeof applyToGallery === 'function')
-        applyToGallery(normalized === 'dark' ? 2 : 1);
+        applyToGallery(effective === 'high-contrast' ? 3 : (effective === 'dark' ? 2 : 1));
+    };
+    const applyHostTheme = theme => {
+      const normalized = normalizeHostTheme(theme);
+      if (!normalized) return;
+      window.fluentQtHostThemePreference = normalized;
+      syncHostTheme();
     };
     window.addEventListener('message', event => {
       if (!window.fluentQtEmbedded || event.source !== window.parent
@@ -180,14 +224,10 @@
       }
       applyHostTheme(event.data.theme);
     });
-    if (!window.fluentQtEmbedded && window.fluentQtHostThemeFollowsSystem) {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
-      const syncSystemTheme = event => applyHostTheme(event.matches ? 'dark' : 'light');
-      if (typeof systemTheme.addEventListener === 'function')
-        systemTheme.addEventListener('change', syncSystemTheme);
-      else
-        systemTheme.addListener(syncSystemTheme);
-    }
+    if (!window.fluentQtEmbedded && window.fluentQtHostThemeFollowsSystem)
+      listenForMediaChange(window.fluentQtHostThemeMedia.systemDark,
+        event => applyHostTheme(event.matches ? 'dark' : 'light'));
+    listenForMediaChange(window.fluentQtHostThemeMedia.forcedColors, syncHostTheme);
     const notifyHost = (state, detail = {}) => {
       if (!window.fluentQtEmbedded || window.parent === window) return;
       window.parent.postMessage({
@@ -253,7 +293,7 @@
             }
           }
         });
-        applyHostTheme(window.fluentQtHostTheme);
+        syncHostTheme();
       } catch (error) {
         console.error(error);
         document.documentElement.dataset.fluentQtError = String(error);

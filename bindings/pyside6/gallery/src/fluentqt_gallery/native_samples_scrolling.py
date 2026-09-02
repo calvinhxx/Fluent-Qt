@@ -265,7 +265,9 @@ _SCROLL_CANVAS_HELPER = dedent(
                 row = index // 6
                 tile = QRect(28 + col * 102, 76 + row * 96, 72, 64)
                 fill = QColor(swatches[index % len(swatches)])
-                dark = int(snapshot["theme"]) == int(fluentqt.Theme.Dark)
+                dark = fluentqt.theme_uses_dark_appearance(
+                    fluentqt.Theme(int(snapshot["theme"]))
+                )
                 fill.setAlphaF(0.72 if dark else 0.88)
                 painter.setBrush(fill)
                 painter.setPen(Qt.PenStyle.NoPen)
@@ -418,7 +420,9 @@ _ANNOTATED_SCROLLBAR_HELPER = dedent(
             font = fluentqt.font_for_role(fluentqt.FontRole.Caption)
             font.setWeight(QFont.Weight.DemiBold)
             painter.setFont(font)
-            dark = int(snapshot["theme"]) == int(fluentqt.Theme.Dark)
+            dark = fluentqt.theme_uses_dark_appearance(
+                fluentqt.Theme(int(snapshot["theme"]))
+            )
             per_row = items_per_row_for_width(self.width())
             item_index = 0
             for name, color, count in COLOR_SECTIONS:

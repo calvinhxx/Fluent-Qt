@@ -22,6 +22,7 @@ set(FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS
 
 set(FLUENT_QT_CI_FULL_CONTRACT_TARGETS
     test_foundation_contracts
+    test_motion_policy
     test_user_theme
     test_anchor_layout
     test_qml_plus
@@ -76,6 +77,7 @@ set(FLUENT_QT_CI_FULL_TARGETS
 if(FLUENT_QT_BUILD_GALLERY)
     list(APPEND FLUENT_QT_CI_FULL_TARGETS
         test_gallery_content_pages
+        test_gallery_shell_motion_policy
         test_gallery_preview_cli)
 endif()
 

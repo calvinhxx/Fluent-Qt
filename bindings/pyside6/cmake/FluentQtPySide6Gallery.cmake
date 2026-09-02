@@ -30,6 +30,7 @@ set(FLUENTQT_PYSIDE6_GALLERY_FILES
     identity.py
     intro_tour.py
     metrics.py
+    motion.py
     native_samples.py
     native_samples_basic.py
     native_samples_collections.py

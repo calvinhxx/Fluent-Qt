@@ -1218,6 +1218,7 @@ register_source_samples(
                 toggle = fluentqt.ToggleSwitch(root)
                 toggle.setOnContent("On")
                 toggle.setOffContent("Off")
+                toggle.setAccessibleName("Feature toggle")
                 status = fluentqt.Label("State: Off", root)
                 status.setFluentTypography(fluentqt.FontRole.Body)
                 status.setTextColorRole(fluentqt.Label.TextColorRole.Primary)

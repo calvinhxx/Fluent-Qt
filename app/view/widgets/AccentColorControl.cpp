@@ -60,9 +60,7 @@ bool sameRgb(const QColor& a, const QColor& b)
 class SwatchButton final : public QWidget, public fluent::FluentElement {
 public:
     SwatchButton(const QColor& color, std::function<void()> onClick, QWidget* parent)
-        : QWidget(parent)
-        , m_color(color)
-        , m_onClick(std::move(onClick))
+        : QWidget(parent), m_color(color), m_onClick(std::move(onClick))
     {
         setFixedSize(30, 30);
         setCursor(Qt::PointingHandCursor);
@@ -92,13 +90,15 @@ protected:
         if (m_selected) {
             p.setPen(QPen(colors.textPrimary, 2.0));
             p.setBrush(Qt::NoBrush);
-            p.drawRoundedRect(QRectF(rect()).adjusted(1.0, 1.0, -1.0, -1.0), kRad + 1.5, kRad + 1.5);
+            p.drawRoundedRect(QRectF(rect()).adjusted(1.0, 1.0, -1.0, -1.0), kRad + 1.5,
+                              kRad + 1.5);
             fill = QRectF(rect()).adjusted(4.5, 4.5, -4.5, -4.5);
         } else if (m_hovered) {
             QColor ring = colors.strokeStrong.isValid() ? colors.strokeStrong : colors.textTertiary;
             p.setPen(QPen(ring, 1.0));
             p.setBrush(Qt::NoBrush);
-            p.drawRoundedRect(QRectF(rect()).adjusted(1.0, 1.0, -1.0, -1.0), kRad + 1.5, kRad + 1.5);
+            p.drawRoundedRect(QRectF(rect()).adjusted(1.0, 1.0, -1.0, -1.0), kRad + 1.5,
+                              kRad + 1.5);
         }
 
         // Hairline so very light swatches stay visible on a light card. zh_CN: 细线,使极浅色块在浅色卡片上仍可见。
@@ -107,8 +107,16 @@ protected:
         p.drawRoundedRect(fill, kRad, kRad);
     }
 
-    void enterEvent(FluentEnterEvent*) override { m_hovered = true; update(); }
-    void leaveEvent(QEvent*) override { m_hovered = false; update(); }
+    void enterEvent(FluentEnterEvent*) override
+    {
+        m_hovered = true;
+        update();
+    }
+    void leaveEvent(QEvent*) override
+    {
+        m_hovered = false;
+        update();
+    }
 
     void mousePressEvent(QMouseEvent* event) override
     {
@@ -133,8 +141,7 @@ private:
 
 } // namespace
 
-AccentColorControl::AccentColorControl(QWidget* parent)
-    : QWidget(parent)
+AccentColorControl::AccentColorControl(QWidget* parent) : QWidget(parent)
 {
     setObjectName(QStringLiteral("gallerySettingsAccentControl"));
     setCursor(Qt::PointingHandCursor);
@@ -181,7 +188,8 @@ void AccentColorControl::paintEvent(QPaintEvent*)
     if (m_hovered) {
         // Theme-aware hover veil (darken light, lighten dark). zh_CN: 主题感知悬停遮罩(浅色变暗、深色变亮)。
         p.setPen(Qt::NoPen);
-        p.setBrush(effectiveTheme() == Dark ? QColor(255, 255, 255, 14) : QColor(0, 0, 0, 10));
+        p.setBrush(effectiveThemeUsesDarkAppearance() ? QColor(255, 255, 255, 14)
+                                                      : QColor(0, 0, 0, 10));
         p.drawRoundedRect(box, rad, rad);
     }
 
@@ -249,10 +257,13 @@ void AccentColorControl::openFlyout()
     constexpr int kCols = 4;
     for (int i = 0; i < swatches.size(); ++i) {
         const QColor c = swatches.at(i);
-        auto* sw = new SwatchButton(c, [settings, c, flyout]() {
-            settings->setAccentColor(c);
-            flyout->close();
-        }, flyout);
+        auto* sw = new SwatchButton(
+            c,
+            [settings, c, flyout]() {
+                settings->setAccentColor(c);
+                flyout->close();
+            },
+            flyout);
         sw->setSelected(sameRgb(c, current));
         grid->addWidget(sw, i / kCols, i % kCols);
     }
@@ -285,7 +296,7 @@ void AccentColorControl::openFlyout()
     if (platform::capabilities().editsThemeFiles) {
         auto* folder = new HyperlinkButton(QStringLiteral("Open themes folder"), flyout);
         folder->setFluentSize(Button::Small);
-        connect(folder, &Button::clicked, flyout, [ flyout]() {
+        connect(folder, &Button::clicked, flyout, [flyout]() {
             GalleryUserTheme::exportTemplate();
             QDesktopServices::openUrl(QUrl::fromLocalFile(GalleryUserTheme::directory()));
             flyout->close();
@@ -308,7 +319,7 @@ void AccentColorControl::openCustomPicker(QWidget* anchor)
     layout->setSpacing(12);
 
     auto* picker = new ColorPicker(flyout);
-    picker->setAlphaEnabled(false);  // Accent colors are opaque. zh_CN: 强调色不透明。
+    picker->setAlphaEnabled(false); // Accent colors are opaque. zh_CN: 强调色不透明。
     picker->setColor(settings->accentColor());
     layout->addWidget(picker);
 

@@ -7,6 +7,7 @@
 
 #include "components/basicinput/Button.h"
 #include "components/dialogs_flyouts/Popup.h"
+#include "view/support/GalleryMotion.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/status_info/ToolTip.h"
 #include "GalleryCompactFlyout.h"
@@ -22,11 +23,10 @@ constexpr int kBarHorizontalMargin = 8;
 constexpr int kFlyoutVerticalOffset = 8;
 constexpr int kFlyoutEntranceOffset = 8;
 constexpr int kFlyoutWindowMargin = 12;
-}
+} // namespace
 
-GalleryTopNavigationPane::GalleryTopNavigationPane(
-    const QVector<GalleryNavigationItem>& items,
-    QWidget* parent)
+GalleryTopNavigationPane::GalleryTopNavigationPane(const QVector<GalleryNavigationItem>& items,
+                                                   QWidget* parent)
     : QWidget(parent)
 {
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -51,23 +51,23 @@ GalleryTopNavigationPane::GalleryTopNavigationPane(
         button->setObjectName(QStringLiteral("galleryTopNavigationButton_%1").arg(item.id));
         button->setAccessibleName(item.title);
         fluent::status_info::ToolTip::attach(button, item.title,
-                                              fluent::status_info::ToolTip::Above);
+                                             fluent::status_info::ToolTip::Above);
         button->setFluentLayout(fluent::basicinput::Button::IconOnly);
         button->setFluentSize(fluent::basicinput::Button::Small);
         button->setFluentStyle(fluent::basicinput::Button::Subtle);
         button->setIconGlyph(item.iconGlyph, Typography::IconSize::Standard);
         button->setFixedSize(kButtonSize, kButtonSize);
-        connect(button, &fluent::basicinput::Button::clicked,
-                this, [this, button, routeId = item.id]() {
-            if (routeId == QStringLiteral("settings"))
-                startSettingsIconRotation(button);
-            setSelectedRouteId(routeId);
-            emit routeActivated(routeId);
-            if (m_childItems.contains(routeId))
-                showChildFlyout(routeId, button);
-            else
-                closeChildFlyout();
-        });
+        connect(button, &fluent::basicinput::Button::clicked, this,
+                [this, button, routeId = item.id]() {
+                    if (routeId == QStringLiteral("settings"))
+                        startSettingsIconRotation(button);
+                    setSelectedRouteId(routeId);
+                    emit routeActivated(routeId);
+                    if (m_childItems.contains(routeId))
+                        showChildFlyout(routeId, button);
+                    else
+                        closeChildFlyout();
+                });
         m_buttons.insert(item.id, button);
         m_parentRoutes.insert(item.id, item.parentId);
         layout->addWidget(button);
@@ -87,8 +87,8 @@ void GalleryTopNavigationPane::setSelectedRouteId(const QString& routeId)
 QSize GalleryTopNavigationPane::sizeHint() const
 {
     const int count = m_buttons.size();
-    return QSize(2 * kBarHorizontalMargin + count * kButtonSize
-                     + qMax(0, count - 1) * kButtonSpacing,
+    return QSize(2 * kBarHorizontalMargin + count * kButtonSize +
+                     qMax(0, count - 1) * kButtonSpacing,
                  kTopBarHeight);
 }
 
@@ -121,8 +121,8 @@ void GalleryTopNavigationPane::showChildFlyout(const QString& routeId,
     // zh_CN: 关闭时不播放退场动画,直接隐藏:共享的淡出在 macOS 原生 vibrancy 背景上表现异常;入场的上滑动画保留。
     m_childFlyout->setExitAnimationEnabled(false);
     m_childFlyout->setClosePolicy(fluent::dialogs_flyouts::Popup::ClosePolicy(
-        fluent::dialogs_flyouts::Popup::CloseOnPressOutside
-        | fluent::dialogs_flyouts::Popup::CloseOnEscape));
+        fluent::dialogs_flyouts::Popup::CloseOnPressOutside |
+        fluent::dialogs_flyouts::Popup::CloseOnEscape));
     // Light-dismiss consumes the outside press: clicking another top nav item first closes the
     // current flyout, and a second click is required to activate/open the target item.
     // zh_CN: 轻关闭会吞掉这次外部按下：点击另一个顶部导航项时先关闭当前浮窗，需要第二次点击才激活/打开目标项。
@@ -150,9 +150,7 @@ void GalleryTopNavigationPane::showChildFlyout(const QString& routeId,
     layout->setSpacing(2);
 
     for (const GalleryNavigationItem& child : children) {
-        auto* row = new CompactFlyoutRow(child.id,
-                                         child.title,
-                                         child.id == m_selectedRouteId,
+        auto* row = new CompactFlyoutRow(child.id, child.title, child.id == m_selectedRouteId,
                                          m_childFlyoutPanel);
         row->onActivated = [this](const QString& childRouteId) {
             closeChildFlyout(false);
@@ -164,22 +162,20 @@ void GalleryTopNavigationPane::showChildFlyout(const QString& routeId,
 
     QWidget* host = window();
     const QSize contentSize = m_childFlyoutPanel->sizeHint();
-    const QSize cardSize(contentSize.width() + kCompactFlyoutContentMargins.left()
-                             + kCompactFlyoutContentMargins.right(),
-                         contentSize.height() + kCompactFlyoutContentMargins.top()
-                             + kCompactFlyoutContentMargins.bottom());
+    const QSize cardSize(contentSize.width() + kCompactFlyoutContentMargins.left() +
+                             kCompactFlyoutContentMargins.right(),
+                         contentSize.height() + kCompactFlyoutContentMargins.top() +
+                             kCompactFlyoutContentMargins.bottom());
     const QPoint anchorTopLeft = anchor->mapTo(host, QPoint(0, 0));
     QPoint cardTopLeft(anchorTopLeft.x(),
                        anchorTopLeft.y() + anchor->height() + kFlyoutVerticalOffset);
-    cardTopLeft = fluent::overlay::clampCardTopLeft(cardTopLeft,
-                                                    cardSize,
-                                                    fluent::overlay::overlaySurfaceRect(host),
-                                                    kFlyoutWindowMargin);
+    cardTopLeft = fluent::overlay::clampCardTopLeft(
+        cardTopLeft, cardSize, fluent::overlay::overlaySurfaceRect(host), kFlyoutWindowMargin);
 
-    const QRect panelRect = fluent::overlay::visibleCardRect(
-                               QRect(QPoint(0, 0),
-                                     fluent::overlay::outerSizeForVisibleCard(cardSize)))
-                               .marginsRemoved(kCompactFlyoutContentMargins);
+    const QRect panelRect =
+        fluent::overlay::visibleCardRect(
+            QRect(QPoint(0, 0), fluent::overlay::outerSizeForVisibleCard(cardSize)))
+            .marginsRemoved(kCompactFlyoutContentMargins);
     m_childFlyout->resize(fluent::overlay::outerSizeForVisibleCard(cardSize));
     m_childFlyoutPanel->setGeometry(panelRect);
     m_childFlyoutPanel->show();
@@ -189,12 +185,14 @@ void GalleryTopNavigationPane::showChildFlyout(const QString& routeId,
     const QPoint endPosition = m_childFlyout->pos();
     auto* entrance = new QPropertyAnimation(m_childFlyout, "pos", m_childFlyout);
     entrance->setObjectName(QStringLiteral("galleryTopNavigationFlyoutEntranceAnimation"));
-    entrance->setDuration(themeAnimation().fast);
-    entrance->setEasingCurve(themeAnimation().decelerate);
+    const auto animation = themeAnimation();
+    entrance->setDuration(animation.fast);
+    entrance->setEasingCurve(animation.decelerate);
     entrance->setStartValue(endPosition - QPoint(0, kFlyoutEntranceOffset));
     entrance->setEndValue(endPosition);
     m_childFlyout->move(entrance->startValue().toPoint());
-    entrance->start(QAbstractAnimation::DeleteWhenStopped);
+    ::fluent::gallery::motion::startFiniteTransition(entrance, animation.fast, true,
+                                                     QAbstractAnimation::DeleteWhenStopped);
 }
 
 void GalleryTopNavigationPane::closeChildFlyout(bool animated)
@@ -206,34 +204,32 @@ void GalleryTopNavigationPane::closeChildFlyout(bool animated)
     m_childFlyoutPanel = nullptr;
     if (!animated)
         popup->setExitAnimationEnabled(false);
-    connect(popup, &fluent::dialogs_flyouts::Popup::closed,
-            popup, &QObject::deleteLater);
+    connect(popup, &fluent::dialogs_flyouts::Popup::closed, popup, &QObject::deleteLater);
     if (popup->isOpen() || popup->isVisible())
         popup->close();
     else
         popup->deleteLater();
 }
 
-void GalleryTopNavigationPane::startSettingsIconRotation(
-    fluent::basicinput::Button* button)
+void GalleryTopNavigationPane::startSettingsIconRotation(fluent::basicinput::Button* button)
 {
     if (!button)
         return;
     auto* animation = button->findChild<QPropertyAnimation*>(
-        QStringLiteral("galleryTopSettingsIconRotationAnimation"),
-        Qt::FindDirectChildrenOnly);
+        QStringLiteral("galleryTopSettingsIconRotationAnimation"), Qt::FindDirectChildrenOnly);
     if (!animation) {
         animation = new QPropertyAnimation(button, "iconRotation", button);
         animation->setObjectName(QStringLiteral("galleryTopSettingsIconRotationAnimation"));
-        connect(animation, &QPropertyAnimation::finished,
-                button, [button]() { button->setIconRotation(0.0); });
+        connect(animation, &QPropertyAnimation::finished, button,
+                [button]() { button->setIconRotation(0.0); });
     }
     animation->stop();
-    animation->setDuration(themeAnimation().slow);
-    animation->setEasingCurve(themeAnimation().decelerate);
+    const auto motion = themeAnimation();
+    animation->setDuration(motion.slow);
+    animation->setEasingCurve(motion.decelerate);
     animation->setStartValue(button->iconRotation());
     animation->setEndValue(button->iconRotation() + kSettingsIconRotationDegrees - 0.01);
-    animation->start();
+    ::fluent::gallery::motion::startFiniteTransition(animation, motion.slow);
 }
 
 } // namespace fluent::gallery

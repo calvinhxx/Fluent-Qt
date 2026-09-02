@@ -10,7 +10,9 @@ const translations = {
     "a11y.closeMenu": "关闭导航",
     "a11y.language": "语言",
     "a11y.useDarkTheme": "切换到深色主题",
+    "a11y.useHighContrastTheme": "切换到高对比度主题",
     "a11y.useLightTheme": "切换到浅色主题",
+    "a11y.systemHighContrastTheme": "系统高对比度主题已启用",
     "a11y.specs": "项目规格",
     "a11y.downloads": "平台下载",
     "a11y.componentModules": "组件模块",
@@ -157,7 +159,9 @@ const translations = {
     "a11y.closeMenu": "Close navigation",
     "a11y.language": "Language",
     "a11y.useDarkTheme": "Switch to dark theme",
+    "a11y.useHighContrastTheme": "Switch to high contrast theme",
     "a11y.useLightTheme": "Switch to light theme",
+    "a11y.systemHighContrastTheme": "System high contrast theme is active",
     "a11y.specs": "Project specifications",
     "a11y.downloads": "Platform downloads",
     "a11y.componentModules": "Component modules",
@@ -311,7 +315,9 @@ const menuButton = document.querySelector(".menu-button");
 const themeToggle = document.querySelector("[data-theme-toggle]");
 const copyAnnouncement = document.querySelector(".copy-announcement");
 const systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+const forcedColorsQuery = window.matchMedia("(forced-colors: active)");
 let followsSystemTheme = true;
+let preferredTheme = "light";
 
 const galleryRoot = document.querySelector("[data-live-gallery]");
 const galleryFrame = document.querySelector("[data-gallery-frame]");
@@ -515,7 +521,7 @@ async function hydrateLatestRelease() {
 function savedTheme() {
   try {
     const value = localStorage.getItem("fluent-qt-theme");
-    return value === "dark" || value === "light" ? value : null;
+    return normalizeTheme(value);
   } catch {
     return null;
   }
@@ -529,21 +535,43 @@ function storeTheme(theme) {
   }
 }
 
+function normalizeTheme(theme) {
+  return theme === "light" || theme === "dark" || theme === "high-contrast"
+    ? theme
+    : null;
+}
+
+function effectiveTheme(theme) {
+  return forcedColorsQuery.matches ? "high-contrast" : (normalizeTheme(theme) || "light");
+}
+
 function activeTheme() {
-  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  return normalizeTheme(document.documentElement.dataset.theme) || "light";
+}
+
+function nextTheme(theme) {
+  if (theme === "light") return "dark";
+  if (theme === "dark") return "high-contrast";
+  return "light";
 }
 
 function updateThemeToggle() {
   if (!themeToggle) return;
-  const isDark = activeTheme() === "dark";
-  const label = dictionary()[isDark ? "a11y.useLightTheme" : "a11y.useDarkTheme"];
-  themeToggle.setAttribute("aria-pressed", String(isDark));
+  const theme = activeTheme();
+  const forced = forcedColorsQuery.matches;
+  const label = dictionary()[forced
+    ? "a11y.systemHighContrastTheme"
+    : (theme === "light"
+      ? "a11y.useDarkTheme"
+      : (theme === "dark" ? "a11y.useHighContrastTheme" : "a11y.useLightTheme"))];
+  themeToggle.disabled = forced;
+  themeToggle.setAttribute("aria-pressed", theme === "high-contrast" ? "mixed" : String(theme === "dark"));
   themeToggle.setAttribute("aria-label", label);
   themeToggle.setAttribute("title", label);
 }
 
 function updateThemeMedia(theme) {
-  const suffix = theme === "dark" ? "Dark" : "Light";
+  const suffix = theme === "light" ? "Light" : "Dark";
 
   document.querySelectorAll("[data-theme-src-light][data-theme-src-dark]").forEach((image) => {
     const source = image.dataset[`themeSrc${suffix}`];
@@ -566,18 +594,27 @@ function syncGalleryTheme() {
 }
 
 function applyTheme(theme, shouldStore = false) {
-  const normalized = theme === "dark" ? "dark" : "light";
-  document.documentElement.dataset.theme = normalized;
-  document.documentElement.style.colorScheme = normalized;
-  metaThemeColor?.setAttribute("content", normalized === "dark" ? "#070c12" : "#eef3f7");
-  updateThemeMedia(normalized);
+  preferredTheme = normalizeTheme(theme) || "light";
+  const effective = effectiveTheme(preferredTheme);
+  document.documentElement.dataset.theme = effective;
+  document.documentElement.style.colorScheme = effective === "light" ? "light" : "dark";
+  metaThemeColor?.setAttribute(
+    "content",
+    effective === "high-contrast" ? "#000000" : (effective === "dark" ? "#070c12" : "#eef3f7")
+  );
+  updateThemeMedia(effective);
   updateThemeToggle();
   syncGalleryTheme();
 
   if (shouldStore) {
     followsSystemTheme = false;
-    storeTheme(normalized);
+    storeTheme(preferredTheme);
   }
+}
+
+function listenForMediaChange(query, handler) {
+  if (typeof query.addEventListener === "function") query.addEventListener("change", handler);
+  else query.addListener(handler);
 }
 
 function setupReveal() {
@@ -612,9 +649,10 @@ function initializeTheme() {
   const storedTheme = savedTheme();
   followsSystemTheme = storedTheme === null;
   applyTheme(storedTheme || (systemThemeQuery.matches ? "dark" : "light"));
-  systemThemeQuery.addEventListener?.("change", (event) => {
+  listenForMediaChange(systemThemeQuery, (event) => {
     if (followsSystemTheme) applyTheme(event.matches ? "dark" : "light");
   });
+  listenForMediaChange(forcedColorsQuery, () => applyTheme(preferredTheme));
 }
 
 function menuIsOpen() {
@@ -791,7 +829,7 @@ function setupLiveGallery() {
 
 function setupInteractions() {
   themeToggle?.addEventListener("click", () => {
-    applyTheme(activeTheme() === "dark" ? "light" : "dark", true);
+    if (!forcedColorsQuery.matches) applyTheme(nextTheme(preferredTheme), true);
   });
   document.querySelectorAll("[data-copy-target]").forEach((button) => {
     button.addEventListener("click", () => copyCode(button));

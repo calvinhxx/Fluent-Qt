@@ -71,6 +71,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .motion import start_finite_transition
+
 
 @dataclass(frozen=True)
 class GalleryColors:
@@ -967,11 +969,19 @@ class GallerySplashScreen(QWidget):
         fade = QPropertyAnimation(effect, b"opacity", self)
         fade.setStartValue(1.0)
         fade.setEndValue(0.0)
-        fade.setDuration(250)
         fade.setEasingCurve(QEasingCurve.OutCubic)
         fade.finished.connect(self.deleteLater)
         self._fade = fade
-        fade.start()
+
+        def complete_disabled() -> None:
+            effect.setOpacity(0.0)
+            self.deleteLater()
+
+        start_finite_transition(
+            fade,
+            250,
+            complete_disabled=complete_disabled,
+        )
 
     def refresh_theme(self) -> None:
         self.update()
@@ -1226,7 +1236,9 @@ class GalleryHeroLinkCard(QWidget):
     def paintEvent(self, event) -> None:
         del event
         colors = gallery_colors()
-        dark = fluentqt.current_theme() == fluentqt.Theme.Dark
+        dark = fluentqt.theme_uses_dark_appearance(
+            fluentqt.current_theme()
+        )
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setRenderHint(QPainter.TextAntialiasing)
@@ -1565,7 +1577,9 @@ class GalleryHomeHero(QWidget):
         artwork.fill(Qt.transparent)
         painter = QPainter(artwork)
         painter.setRenderHint(QPainter.Antialiasing)
-        dark = fluentqt.current_theme() == fluentqt.Theme.Dark
+        dark = fluentqt.theme_uses_dark_appearance(
+            fluentqt.current_theme()
+        )
         banner = QRectF(0, 0, self.width(), self.height())
         clip = QPainterPath()
         radius = 8.0
@@ -2080,7 +2094,9 @@ class GalleryCodeBlock(fluentqt.Expander):
         self._code_label.setText(
             self._highlight_python_to_html(
                 self._display_code,
-                fluentqt.current_theme() == fluentqt.Theme.Dark,
+                fluentqt.theme_uses_dark_appearance(
+                    fluentqt.current_theme()
+                ),
             )
         )
         self._highlighted = True
@@ -3046,13 +3062,16 @@ class GalleryNavigationPane(QWidget):
             self._tree.doItemsLayout()
             self._tree.viewport().update()
             return
-        self._compact_visual_animation.setDuration(250)
         self._compact_visual_animation.setEasingCurve(QEasingCurve.OutCubic)
         self._compact_visual_animation.setStartValue(
             self._compact_visual_progress
         )
         self._compact_visual_animation.setEndValue(end_value)
-        self._compact_visual_animation.start()
+        start_finite_transition(
+            self._compact_visual_animation,
+            250,
+            complete_disabled=self._finish_compact_visual_transition,
+        )
 
     def _finish_compact_visual_transition(self) -> None:
         self._set_compact_visual_progress(1.0 if self._compact else 0.0)
@@ -3189,14 +3208,22 @@ class GalleryNavigationPane(QWidget):
         from .foundation_pages import _theme_snapshot
 
         animation = _theme_snapshot(self._tree)["animation"]
-        entrance.setDuration(int(animation["duration"]["fast"]))
         entrance.setEasingCurve(animation["easing"]["decelerate"])
         entrance.setStartValue(
             end_position - QPoint(_COMPACT_FLYOUT_ENTRANCE_OFFSET, 0)
         )
         entrance.setEndValue(end_position)
         popup.move(entrance.startValue())
-        entrance.start(QPropertyAnimation.DeleteWhenStopped)
+
+        def complete_disabled() -> None:
+            popup.move(end_position)
+
+        start_finite_transition(
+            entrance,
+            int(animation["duration"]["fast"]),
+            complete_disabled=complete_disabled,
+            deletion_policy=QPropertyAnimation.DeleteWhenStopped,
+        )
 
     def _activate_compact_child(self, route_id: str) -> None:
         self._selected_route_id = route_id
@@ -3368,7 +3395,6 @@ class GalleryNavigationFooter(QWidget):
             self._set_settings_icon_rotation(0.0)
             return
         self._settings_rotation_animation.stop()
-        self._settings_rotation_animation.setDuration(400)
         self._settings_rotation_animation.setEasingCurve(
             QEasingCurve.OutCubic
         )
@@ -3378,7 +3404,11 @@ class GalleryNavigationFooter(QWidget):
         self._settings_rotation_animation.setEndValue(
             self._settings_icon_rotation + 359.99
         )
-        self._settings_rotation_animation.start()
+        start_finite_transition(
+            self._settings_rotation_animation,
+            400,
+            complete_disabled=lambda: self._set_settings_icon_rotation(0.0),
+        )
 
     def sync_selected(self, route_id: str) -> None:
         self._selected_route_id = route_id
@@ -3427,13 +3457,16 @@ class GalleryNavigationFooter(QWidget):
             self._tree.doItemsLayout()
             self._tree.viewport().update()
             return
-        self._compact_visual_animation.setDuration(250)
         self._compact_visual_animation.setEasingCurve(QEasingCurve.OutCubic)
         self._compact_visual_animation.setStartValue(
             self._compact_visual_progress
         )
         self._compact_visual_animation.setEndValue(end_value)
-        self._compact_visual_animation.start()
+        start_finite_transition(
+            self._compact_visual_animation,
+            250,
+            complete_disabled=self._finish_compact_visual_transition,
+        )
 
     def _finish_compact_visual_transition(self) -> None:
         self._set_compact_visual_progress(1.0 if self._compact else 0.0)
@@ -3741,14 +3774,22 @@ class GalleryTopNavigationPane(fluentqt.FluentWidget):
             "galleryTopNavigationFlyoutEntranceAnimation"
         )
         animation = self.theme_tokens()["animation"]
-        entrance.setDuration(int(animation["duration"]["fast"]))
         entrance.setEasingCurve(animation["easing"]["decelerate"])
         entrance.setStartValue(
             end_position - QPoint(0, _COMPACT_FLYOUT_ENTRANCE_OFFSET)
         )
         entrance.setEndValue(end_position)
         popup.move(entrance.startValue())
-        entrance.start(QPropertyAnimation.DeleteWhenStopped)
+
+        def complete_disabled() -> None:
+            popup.move(end_position)
+
+        start_finite_transition(
+            entrance,
+            int(animation["duration"]["fast"]),
+            complete_disabled=complete_disabled,
+            deletion_policy=QPropertyAnimation.DeleteWhenStopped,
+        )
 
     def _activate_child_route(self, route_id: str) -> None:
         self._close_child_flyout(False)
@@ -3782,11 +3823,14 @@ class GalleryTopNavigationPane(fluentqt.FluentWidget):
         animation.stop()
         start = float(button.iconRotation())
         motion = self.theme_tokens()["animation"]
-        animation.setDuration(int(motion["duration"]["slow"]))
         animation.setEasingCurve(motion["easing"]["decelerate"])
         animation.setStartValue(start)
         animation.setEndValue(start + 359.99)
-        animation.start()
+        start_finite_transition(
+            animation,
+            int(motion["duration"]["slow"]),
+            complete_disabled=lambda: button.setIconRotation(0.0),
+        )
 
 
 def refresh_gallery_visuals(

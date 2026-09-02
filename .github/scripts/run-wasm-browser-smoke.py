@@ -79,6 +79,147 @@ def require_files(root: Path) -> None:
         raise RuntimeError("Missing WebAssembly artifact(s): " + ", ".join(missing))
 
 
+def run_embedded_theme_contract(browser: object, base_url: str) -> None:
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+    try:
+        response = page.goto(
+            f"{base_url}/app/licenses.html", wait_until="domcontentloaded"
+        )
+        if response is None or not response.ok:
+            raise RuntimeError("Could not create the embedded-theme test host")
+        page.evaluate(
+            """baseUrl => {
+                const frame = document.createElement('iframe');
+                frame.id = 'theme-gallery';
+                frame.src = `${baseUrl}/app/index.html?embed=site&host-theme=high-contrast`;
+                frame.style.cssText = 'width:1280px;height:800px;border:0';
+                document.body.replaceChildren(frame);
+            }""",
+            base_url,
+        )
+
+        def wait_for_theme(expected: str) -> None:
+            page.wait_for_function(
+                """expected => {
+                    const root = document.querySelector('#theme-gallery')
+                        ?.contentDocument?.documentElement?.dataset;
+                    return root?.fluentQtLoaded === 'true'
+                        && root?.fluentQtTheme === expected
+                        && root?.fluentQtGalleryHostTheme === expected;
+                }""",
+                arg=expected,
+                timeout=180_000,
+            )
+
+        def post_theme(theme: str) -> None:
+            page.evaluate(
+                """theme => document.querySelector('#theme-gallery').contentWindow.postMessage({
+                    source: 'fluent-qt-site',
+                    type: 'theme',
+                    theme
+                }, window.location.origin)""",
+                theme,
+            )
+
+        wait_for_theme("high-contrast")
+        post_theme("light")
+        wait_for_theme("light")
+        post_theme("dark")
+        wait_for_theme("dark")
+        post_theme("high-contrast")
+        wait_for_theme("high-contrast")
+
+        post_theme("sepia")
+        page.wait_for_timeout(100)
+        invalid_state = page.evaluate(
+            """() => document.querySelector('#theme-gallery')
+                .contentDocument.documentElement.dataset.fluentQtTheme"""
+        )
+        if invalid_state != "high-contrast":
+            raise RuntimeError("Embedded Gallery accepted an invalid host theme")
+
+        post_theme("light")
+        wait_for_theme("light")
+        page.emulate_media(forced_colors="active")
+        wait_for_theme("high-contrast")
+        post_theme("dark")
+        page.wait_for_timeout(100)
+        forced_state = page.evaluate(
+            """() => document.querySelector('#theme-gallery')
+                .contentDocument.documentElement.dataset.fluentQtTheme"""
+        )
+        if forced_state != "high-contrast":
+            raise RuntimeError("forced-colors did not override the embedded host theme")
+        page.emulate_media(forced_colors="none")
+        wait_for_theme("dark")
+    finally:
+        page.close()
+
+
+def run_site_theme_contract(browser: object) -> None:
+    site_root = Path(__file__).resolve().parents[2] / "site"
+    handler = partial(QuietHandler, directory=str(site_root))
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+    try:
+        page.route("https://api.github.com/**", lambda route: route.abort())
+        page.emulate_media(color_scheme="light", forced_colors="none")
+        site_url = f"http://127.0.0.1:{server.server_port}/index.html"
+        response = page.goto(site_url, wait_until="domcontentloaded")
+        if response is None or not response.ok:
+            raise RuntimeError("Could not load the source website theme contract")
+        page.wait_for_selector("html[data-i18n-ready]", timeout=10_000)
+
+        def active_theme() -> str:
+            return page.evaluate("document.documentElement.dataset.theme")
+
+        def stored_theme() -> str | None:
+            return page.evaluate("localStorage.getItem('fluent-qt-theme')")
+
+        toggle = page.locator("[data-theme-toggle]")
+        if active_theme() != "light":
+            raise RuntimeError("Website did not start in the emulated light theme")
+        toggle.click()
+        if active_theme() != "dark" or stored_theme() != "dark":
+            raise RuntimeError("Website light-to-dark theme transition failed")
+        toggle.click()
+        if active_theme() != "high-contrast" or stored_theme() != "high-contrast":
+            raise RuntimeError("Website dark-to-high-contrast transition failed")
+        gallery_theme = page.evaluate(
+            "new URL(galleryUrl()).searchParams.get('host-theme')"
+        )
+        if gallery_theme != "high-contrast":
+            raise RuntimeError("Website Gallery URL omitted the high-contrast host theme")
+
+        page.reload(wait_until="domcontentloaded")
+        page.wait_for_selector("html[data-i18n-ready]", timeout=10_000)
+        if active_theme() != "high-contrast":
+            raise RuntimeError("Website did not restore the high-contrast preference")
+        page.locator("[data-theme-toggle]").click()
+        if active_theme() != "light" or stored_theme() != "light":
+            raise RuntimeError("Website high-contrast-to-light transition failed")
+
+        page.emulate_media(forced_colors="active")
+        page.wait_for_function(
+            "document.documentElement.dataset.theme === 'high-contrast'"
+        )
+        if not page.locator("[data-theme-toggle]").is_disabled():
+            raise RuntimeError("Website theme control stayed active during forced-colors")
+        if stored_theme() != "light":
+            raise RuntimeError("forced-colors overwrote the stored website preference")
+        page.emulate_media(forced_colors="none")
+        page.wait_for_function("document.documentElement.dataset.theme === 'light'")
+        if page.locator("[data-theme-toggle]").is_disabled():
+            raise RuntimeError("Website theme control did not recover after forced-colors")
+    finally:
+        page.close()
+        server.shutdown()
+        server.server_close()
+        server_thread.join(timeout=5)
+
+
 def run_smoke(
     root: Path,
     mode: str,
@@ -477,6 +618,9 @@ def run_smoke(
                     + " | ".join(local_request_failures)
                 )
 
+            run_embedded_theme_contract(browser, base_url)
+            run_site_theme_contract(browser)
+
             browser.close()
     except Exception:
         if console_messages:
@@ -496,7 +640,7 @@ def run_smoke(
         f"dpr={gallery_state['renderDpr']}/{gallery_state['nativeDpr']} "
         f"({gallery_state['renderMode']}), window={gallery_state['windowMode']}, "
         f"gallery={gallery_state['detail']}, "
-        "hello_world=windowed"
+        "hello_world=windowed, themes=light/dark/high-contrast/forced-colors"
     )
 
 

@@ -244,7 +244,7 @@
     {
       "route_id": "toggle-switch",
       "sample_id": "toggle-switch-state",
-      "source": "toggle = fluentqt.ToggleSwitch()\ntoggle.setOnContent(\"On\")\ntoggle.setOffContent(\"Off\")\nstatus = fluentqt.Label(\"State: Off\")\ntoggle.toggled.connect(\n    lambda on: status.setText(\"State: On\" if on else \"State: Off\")\n)\n"
+      "source": "toggle = fluentqt.ToggleSwitch()\ntoggle.setOnContent(\"On\")\ntoggle.setOffContent(\"Off\")\ntoggle.setAccessibleName(\"Feature toggle\")\nstatus = fluentqt.Label(\"State: Off\")\ntoggle.toggled.connect(\n    lambda on: status.setText(\"State: On\" if on else \"State: Off\")\n)\n"
     },
     {
       "route_id": "toggle-switch",

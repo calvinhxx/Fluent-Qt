@@ -13,11 +13,7 @@ class QWidget;
 
 namespace fluent::gallery::platform {
 
-enum class HostTheme {
-    System,
-    Light,
-    Dark
-};
+enum class HostTheme { System, Light, Dark, HighContrast };
 
 using HostThemeChangedHandler = std::function<void(HostTheme)>;
 
@@ -66,11 +62,8 @@ const Capabilities& capabilities();
 bool persistenceAvailable();
 QSettings createSettings();
 HostTheme hostTheme();
-void setHostThemeChangedHandler(QObject* context,
-                                HostThemeChangedHandler handler);
-void showTopLevelWindow(QWidget* window,
-                        const QRect& normalGeometry,
-                        bool maximized = false);
+void setHostThemeChangedHandler(QObject* context, HostThemeChangedHandler handler);
+void showTopLevelWindow(QWidget* window, const QRect& normalGeometry, bool maximized = false);
 int runApplication(int argc, char** argv);
 
 } // namespace fluent::gallery::platform

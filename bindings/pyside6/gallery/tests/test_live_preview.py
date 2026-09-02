@@ -228,6 +228,26 @@ class LivePreviewTest(unittest.TestCase):
             self.assertEqual(window.generation, generation)
             self.close_window(window)
 
+    def test_high_contrast_uses_dark_backed_binary_preview_contract(self):
+        with TemporaryDirectory() as temporary:
+            scene = Path(temporary) / "high-contrast.preview.py"
+            scene.write_text(scene_source("High contrast"), encoding="utf-8")
+            window = LivePreviewWindow(scene, watch=False)
+            window.show()
+            self.assertTrue(window.reload_scene())
+
+            fluentqt.set_theme(fluentqt.Theme.HighContrast)
+            QApplication.processEvents()
+            window._refresh_theme_button()
+
+            self.assertEqual(window._theme_button.text(), "Use light theme")
+            self.assertEqual(window.report_payload()["window"]["theme"], "dark")
+
+            window._toggle_theme()
+            QApplication.processEvents()
+            self.assertEqual(fluentqt.current_theme(), fluentqt.Theme.Light)
+            self.close_window(window)
+
     def test_file_polling_survives_atomic_save_and_reloads_in_process(self):
         with TemporaryDirectory() as temporary:
             scene = Path(temporary) / "watched.preview.py"

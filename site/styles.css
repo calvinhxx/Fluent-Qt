@@ -126,6 +126,67 @@
   --hero-icon-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
 }
 
+:root[data-theme="high-contrast"] {
+  color-scheme: dark;
+  --paper: #000000;
+  --white: #000000;
+  --ink: #ffffff;
+  --muted: #ffffff;
+  --soft-muted: #ffffff;
+  --line: #ffffff;
+  --soft-line: #ffffff;
+  --panel: #000000;
+  --charcoal: #000000;
+  --charcoal-soft: #000000;
+  --dark-ink: #ffffff;
+  --dark-line: #ffffff;
+  --dark-muted: #ffffff;
+  --accent: #00ffff;
+  --accent-hover: #ffff00;
+  --signal: #ffff00;
+  --green: #00ff00;
+  --cta-bg: #ffffff;
+  --cta-text: #000000;
+  --cta-hover: #00ffff;
+  --nav-text: #ffffff;
+  --hero-copy: #ffffff;
+  --section-copy: #ffffff;
+  --section-label: #ffffff;
+  --strong-line: #ffffff;
+  --section-number: #ffffff;
+  --section-text: #ffffff;
+  --image-border: #ffffff;
+  --image-surface: #000000;
+  --image-divider: #ffffff;
+  --image-caption: #ffffff;
+  --gallery-border: #ffffff;
+  --gallery-surface: #000000;
+  --gallery-divider: #ffffff;
+  --gallery-header: #000000;
+  --gallery-copy: #ffffff;
+  --workflow-line: #ffffff;
+  --workflow-number: #ffffff;
+  --workflow-copy: #ffffff;
+  --download-link: #ffffff;
+  --download-asset: #ffffff;
+  --download-hover: #000000;
+  --gallery-shadow: none;
+  --card-shadow: none;
+  --hero-field: #000000;
+  --hero-ink: #ffffff;
+  --hero-muted: #ffffff;
+  --hero-accent: #00ffff;
+  --hero-grid: rgba(255, 255, 255, 0.35);
+  --hero-aurora-a: transparent;
+  --hero-aurora-b: transparent;
+  --hero-aurora-c: transparent;
+  --hero-orbit: #ffffff;
+  --hero-beam: #00ffff;
+  --hero-window-border: #ffffff;
+  --hero-window-shadow: none;
+  --hero-icon-shadow: none;
+}
+
 *,
 *::before,
 *::after {
@@ -389,12 +450,23 @@ h3 {
 }
 
 .theme-icon-sun,
+.theme-icon-contrast,
 :root[data-theme="dark"] .theme-icon-moon {
   display: none;
 }
 
-:root[data-theme="dark"] .theme-icon-sun {
+:root[data-theme="dark"] .theme-icon-contrast,
+:root[data-theme="high-contrast"] .theme-icon-sun {
   display: block;
+}
+
+:root[data-theme="high-contrast"] .theme-icon-moon,
+:root[data-theme="high-contrast"] .theme-icon-contrast {
+  display: none;
+}
+
+.theme-toggle:disabled {
+  cursor: default;
 }
 
 .github-link {

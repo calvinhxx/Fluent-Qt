@@ -42,7 +42,8 @@ public:
         QString glyph;
         QString title;
         QString body;
-        fluent::dialogs_flyouts::CoachMark::Placement placement = fluent::dialogs_flyouts::CoachMark::Auto;
+        fluent::dialogs_flyouts::CoachMark::Placement placement =
+            fluent::dialogs_flyouts::CoachMark::Auto;
         bool centered = false;
     };
 
@@ -59,23 +60,25 @@ protected:
 
 private:
     void build();
-    void applyStep(int index, bool animateSpotlight);  // content + card target/placement + dim spotlight
+    void applyStep(int index,
+                   bool animateSpotlight); // content + card target/placement + dim spotlight
     void goToStep(int index);
     QRect scrimGeometryForWindow() const;
     void syncScrimGeometry();
     void syncScrimSurfaceRadius();
-    void applyStepSpotlight(int index, bool animate);   // glide / pop the dim cut-out onto the target
-    QRect spotlightRectFor(QWidget* target) const;      // target geometry in scrim-local coords + padding
+    void applyStepSpotlight(int index, bool animate); // glide / pop the dim cut-out onto the target
+    QRect
+    spotlightRectFor(QWidget* target) const; // target geometry in scrim-local coords + padding
     void focusPrimaryActionIfActive();
     void settleFocusForHostState();
     void finishTour();
 
     QWidget* m_host = nullptr;
-    fluent::overlay::OverlayScrim* m_scrim = nullptr;  // dim: child of the app window
-    fluent::dialogs_flyouts::CoachMark* m_card = nullptr;      // same-window card (owns fade + glide)
+    fluent::overlay::OverlayScrim* m_scrim = nullptr;     // dim: child of the app window
+    fluent::dialogs_flyouts::CoachMark* m_card = nullptr; // same-window card (owns fade + glide)
     QPropertyAnimation* m_dimAnim = nullptr;
-    QPropertyAnimation* m_spotAnim = nullptr;  // glides the spotlight cut-out between step targets
-    bool m_haveSpot = false;                   // a spotlight is currently shown (for glide-vs-pop)
+    QPropertyAnimation* m_spotAnim = nullptr; // glides the spotlight cut-out between step targets
+    bool m_haveSpot = false;                  // a spotlight is currently shown (for glide-vs-pop)
     fluent::textfields::Label* m_glyph = nullptr;
     fluent::textfields::Label* m_title = nullptr;
     fluent::textfields::Label* m_body = nullptr;
@@ -87,6 +90,7 @@ private:
 
     QVector<Step> m_steps;
     int m_index = -1;
+    int m_animationDurationMs = 0;
     bool m_finished = false;
 };
 

@@ -6,6 +6,7 @@
 #include <QRect>
 #include <QString>
 
+#include "components/foundation/MotionPolicy.h"
 #include "components/windowing/WindowBackdrop.h"
 
 class QEvent;
@@ -16,37 +17,28 @@ class GallerySettings final : public QObject {
     Q_OBJECT
 
 public:
-    enum class ThemeMode {
-        System,
-        Light,
-        Dark
-    };
+    enum class ThemeMode { System, Light, Dark, HighContrast };
     Q_ENUM(ThemeMode)
 
-    enum class NavigationStyle {
-        Auto,
-        Left,
-        LeftCompact,
-        LeftMinimal,
-        Top
-    };
+    enum class NavigationStyle { Auto, Left, LeftCompact, LeftMinimal, Top };
     Q_ENUM(NavigationStyle)
 
-    enum class CloseBehavior {
-        Minimize,
-        Tray,
-        Quit
-    };
+    enum class CloseBehavior { Minimize, Tray, Quit };
     Q_ENUM(CloseBehavior)
+
+    using MotionMode = fluent::MotionPolicy::Mode;
 
     static GallerySettings& instance();
 
     ThemeMode themeMode() const { return m_themeMode; }
     void setThemeMode(ThemeMode mode);
 
-    // Effective Fluent accent for the current Light/Dark mode. Custom values
+    MotionMode motionMode() const { return m_motionMode; }
+    void setMotionMode(MotionMode mode);
+
+    // Effective Fluent accent for the current visual mode. Custom values
     // persist through the selected platform backend.
-    // zh_CN: 当前明暗模式下的 Fluent 生效强调色；自定义值会持久化。
+    // zh_CN: 当前视觉模式下的 Fluent 生效强调色；自定义值会持久化。
     QColor accentColor() const;
     void setAccentColor(const QColor& accent);
     void resetAccentColor();
@@ -63,9 +55,7 @@ public:
     QRect windowNormalGeometry() const { return m_windowNormalGeometry; }
     QString windowScreenName() const { return m_windowScreenName; }
     bool windowMaximized() const { return m_windowMaximized; }
-    void setWindowPlacement(const QRect& normalGeometry,
-                            const QString& screenName,
-                            bool maximized);
+    void setWindowPlacement(const QRect& normalGeometry, const QString& screenName, bool maximized);
 
     bool closeBehaviorConfirmed() const { return m_closeBehaviorConfirmed; }
     void setCloseBehaviorConfirmed(bool confirmed);
@@ -76,6 +66,7 @@ public:
 
 signals:
     void themeModeChanged(ThemeMode mode);
+    void motionModeChanged(fluent::MotionPolicy::Mode mode);
     void accentColorChanged(QColor accent);
     void navigationStyleChanged(NavigationStyle style);
     void windowEffectChanged(fluent::windowing::BackdropEffect effect);
@@ -91,9 +82,9 @@ private:
     void load();
 
     ThemeMode m_themeMode = ThemeMode::System;
+    MotionMode m_motionMode = MotionMode::Full;
     NavigationStyle m_navigationStyle = NavigationStyle::Auto;
-    fluent::windowing::BackdropEffect m_windowEffect =
-        fluent::windowing::BackdropEffect::Mica;
+    fluent::windowing::BackdropEffect m_windowEffect = fluent::windowing::BackdropEffect::Mica;
     CloseBehavior m_closeBehavior = CloseBehavior::Tray;
     QRect m_windowNormalGeometry;
     QString m_windowScreenName;

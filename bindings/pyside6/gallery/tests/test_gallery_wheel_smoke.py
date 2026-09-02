@@ -93,7 +93,7 @@ def main():
         len(CATEGORIES) != 12
         or len(ENTRIES) != 70
         or len(ROUTES) != 91
-        or len(SUPPORT_TYPES) != 20
+        or len(SUPPORT_TYPES) != 21
         or sample_count != 208
         or len(ported_sample_keys()) != 208
     ):

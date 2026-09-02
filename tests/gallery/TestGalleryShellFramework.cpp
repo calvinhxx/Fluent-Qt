@@ -24,8 +24,10 @@
 #include <QRect>
 #include <QScrollArea>
 #include <QScrollBar>
+#include <QSettings>
 #include <QSignalSpy>
 #include <QSizePolicy>
+#include <QStandardPaths>
 #include <QStringList>
 #include <QTest>
 #include <QUrl>
@@ -43,6 +45,7 @@
 #include "components/dialogs_flyouts/Popup.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/FontIcon.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -58,6 +61,7 @@
 #include "components/windowing/TitleBar.h"
 #include "components/windowing/WindowBackdrop.h"
 #include "design/Typography.h"
+#include "platform/GalleryPlatform.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/SettingsPage.h"
 #include "view/shell/GalleryApplicationController.h"
@@ -111,18 +115,17 @@ namespace {
 class GallerySettingsRestorer {
 public:
     explicit GallerySettingsRestorer(GallerySettings& settings)
-        : m_settings(settings)
-        , m_themeMode(settings.themeMode())
-        , m_navigationStyle(settings.navigationStyle())
-        , m_closeBehavior(settings.closeBehavior())
-        , m_closeBehaviorConfirmed(settings.closeBehaviorConfirmed())
-    {
-    }
+        : m_settings(settings), m_themeMode(settings.themeMode()),
+          m_motionMode(settings.motionMode()), m_navigationStyle(settings.navigationStyle()),
+          m_closeBehavior(settings.closeBehavior()),
+          m_closeBehaviorConfirmed(settings.closeBehaviorConfirmed())
+    {}
 
     ~GallerySettingsRestorer()
     {
         m_settings.setNavigationStyle(m_navigationStyle);
         m_settings.setThemeMode(m_themeMode);
+        m_settings.setMotionMode(m_motionMode);
         m_settings.setCloseBehavior(m_closeBehavior);
         m_settings.setCloseBehaviorConfirmed(m_closeBehaviorConfirmed);
     }
@@ -130,6 +133,7 @@ public:
 private:
     GallerySettings& m_settings;
     GallerySettings::ThemeMode m_themeMode;
+    GallerySettings::MotionMode m_motionMode;
     GallerySettings::NavigationStyle m_navigationStyle;
     GallerySettings::CloseBehavior m_closeBehavior;
     bool m_closeBehaviorConfirmed = false;
@@ -149,13 +153,11 @@ QRect mappedGeometry(const QWidget* widget, const QWidget* ancestor)
     return QRect(widget->mapTo(const_cast<QWidget*>(ancestor), QPoint(0, 0)), widget->size());
 }
 
-::testing::AssertionResult centerYWithinAncestor(const QWidget* widget,
-                                                 const QWidget* ancestor,
+::testing::AssertionResult centerYWithinAncestor(const QWidget* widget, const QWidget* ancestor,
                                                  int tolerance = 1)
 {
     if (!widget || !ancestor) {
-        return ::testing::AssertionFailure()
-            << "Cannot compare mapped centerY with null widget";
+        return ::testing::AssertionFailure() << "Cannot compare mapped centerY with null widget";
     }
 
     const int actual = mappedGeometry(widget, ancestor).center().y();
@@ -163,10 +165,8 @@ QRect mappedGeometry(const QWidget* widget, const QWidget* ancestor)
     if (qAbs(actual - expected) <= qMax(0, tolerance))
         return ::testing::AssertionSuccess();
 
-    return ::testing::AssertionFailure()
-        << "Expected mapped centerY within " << tolerance
-        << " px. actual=" << actual
-        << " expected=" << expected;
+    return ::testing::AssertionFailure() << "Expected mapped centerY within " << tolerance
+                                         << " px. actual=" << actual << " expected=" << expected;
 }
 
 ::testing::AssertionResult visibleWithinAncestor(const QWidget* widget, const QWidget* ancestor)
@@ -174,7 +174,8 @@ QRect mappedGeometry(const QWidget* widget, const QWidget* ancestor)
     if (!widget || !ancestor)
         return ::testing::AssertionFailure() << "Cannot compare visible area with null widget";
     if (!widget->isVisibleTo(const_cast<QWidget*>(ancestor)))
-        return ::testing::AssertionFailure() << widget->objectName().toStdString() << " is not visible";
+        return ::testing::AssertionFailure()
+               << widget->objectName().toStdString() << " is not visible";
 
     const QRect mappedRect = mappedGeometry(widget, ancestor);
     const QRect visibleRect = mappedRect.intersected(ancestor->rect());
@@ -182,11 +183,10 @@ QRect mappedGeometry(const QWidget* widget, const QWidget* ancestor)
         return ::testing::AssertionSuccess();
 
     return ::testing::AssertionFailure()
-        << widget->objectName().toStdString()
-        << " is clipped outside ancestor. mapped="
-        << mappedRect.x() << "," << mappedRect.y() << " "
-        << mappedRect.width() << "x" << mappedRect.height()
-        << " ancestor=" << ancestor->rect().width() << "x" << ancestor->rect().height();
+           << widget->objectName().toStdString()
+           << " is clipped outside ancestor. mapped=" << mappedRect.x() << "," << mappedRect.y()
+           << " " << mappedRect.width() << "x" << mappedRect.height()
+           << " ancestor=" << ancestor->rect().width() << "x" << ancestor->rect().height();
 }
 
 TreeView* navigationTree(GalleryNavigationPane* pane)
@@ -235,9 +235,8 @@ void settleNavigationViewAnimation()
         return ::testing::AssertionSuccess();
 
     return ::testing::AssertionFailure()
-        << "Route is not visible: " << routeId.toStdString()
-        << " visual=" << visualRect.x() << "," << visualRect.y()
-        << " " << visualRect.width() << "x" << visualRect.height();
+           << "Route is not visible: " << routeId.toStdString() << " visual=" << visualRect.x()
+           << "," << visualRect.y() << " " << visualRect.width() << "x" << visualRect.height();
 }
 
 void clickNavigationRoute(GalleryNavigationPane* pane, const QString& routeId)
@@ -260,14 +259,65 @@ void clickNavigationRoute(GalleryNavigationPane* pane, const QString& routeId)
 
 } // namespace
 
+TEST(GalleryMotionPersistenceTest, ColdLoadProbe)
+{
+    const QString scenario = qEnvironmentVariable("FLUENTQT_GALLERY_MOTION_COLD_LOAD");
+    if (scenario.isEmpty())
+        GTEST_SKIP() << "Only exercised by the isolated cold-load parent test";
+
+    QStandardPaths::setTestModeEnabled(true);
+    QCoreApplication::setOrganizationName(QStringLiteral("Fluent-Qt"));
+    QCoreApplication::setApplicationName(fluent::gallery::platform::capabilities().applicationName);
+
+    QSettings storage = fluent::gallery::platform::createSettings();
+    storage.remove(QStringLiteral("settings/motionMode"));
+    if (scenario == QStringLiteral("reduced"))
+        storage.setValue(QStringLiteral("settings/motionMode"), 1);
+    storage.sync();
+
+    auto& settings = GallerySettings::instance();
+    const auto expected = scenario == QStringLiteral("reduced")
+                              ? GallerySettings::MotionMode::Reduced
+                              : GallerySettings::MotionMode::Full;
+    EXPECT_EQ(settings.motionMode(), expected);
+    EXPECT_EQ(fluent::MotionPolicy::instance().mode(), expected);
+
+    storage.remove(QStringLiteral("settings/motionMode"));
+    storage.sync();
+}
+
+TEST(GalleryMotionPersistenceTest, LegacyDefaultAndPersistedModeLoadInFreshProcess)
+{
+    EXPECT_EQ(static_cast<int>(GallerySettings::MotionMode::Full), 0);
+    EXPECT_EQ(static_cast<int>(GallerySettings::MotionMode::Reduced), 1);
+    EXPECT_EQ(static_cast<int>(GallerySettings::MotionMode::Disabled), 2);
+
+    for (const QString& scenario : {QStringLiteral("missing"), QStringLiteral("reduced")}) {
+        QProcess probe;
+        QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+        environment.insert(QStringLiteral("FLUENTQT_GALLERY_MOTION_COLD_LOAD"), scenario);
+        probe.setProcessEnvironment(environment);
+        probe.start(QCoreApplication::applicationFilePath(),
+                    {QStringLiteral("--gtest_filter=GalleryMotionPersistenceTest.ColdLoadProbe")});
+        ASSERT_TRUE(probe.waitForStarted(10000));
+        ASSERT_TRUE(probe.waitForFinished(60000));
+        EXPECT_EQ(probe.exitStatus(), QProcess::NormalExit);
+        EXPECT_EQ(probe.exitCode(), 0) << scenario.toStdString() << "\n"
+                                       << probe.readAllStandardOutput().toStdString()
+                                       << probe.readAllStandardError().toStdString();
+    }
+}
+
 class GalleryShellFrameworkTest : public ::testing::Test {
 protected:
     void SetUp() override
     {
         auto& settings = GallerySettings::instance();
         m_themeMode = settings.themeMode();
+        m_motionMode = settings.motionMode();
         m_navigationStyle = settings.navigationStyle();
         settings.setThemeMode(GallerySettings::ThemeMode::Light);
+        settings.setMotionMode(GallerySettings::MotionMode::Full);
         settings.setNavigationStyle(GallerySettings::NavigationStyle::Auto);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
@@ -277,11 +327,13 @@ protected:
         auto& settings = GallerySettings::instance();
         settings.setNavigationStyle(m_navigationStyle);
         settings.setThemeMode(m_themeMode);
+        settings.setMotionMode(m_motionMode);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
 
 private:
     GallerySettings::ThemeMode m_themeMode = GallerySettings::ThemeMode::System;
+    GallerySettings::MotionMode m_motionMode = GallerySettings::MotionMode::Full;
     GallerySettings::NavigationStyle m_navigationStyle = GallerySettings::NavigationStyle::Auto;
 };
 
@@ -293,15 +345,18 @@ TEST_F(GalleryShellFrameworkTest, WindowConstructsInitialHomeContentPage)
     EXPECT_EQ(window.windowTitle(), QStringLiteral("Fluent-Qt Gallery"));
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("home"));
     EXPECT_NE(window.findChild<QWidget*>(QStringLiteral("galleryNavigationView")), nullptr);
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
-    auto* footerPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* footerPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     ASSERT_NE(footerPane, nullptr);
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(mainPane), nullptr);
     EXPECT_EQ(mainPane->selectedRouteId(), QStringLiteral("home"));
     EXPECT_EQ(footerPane->selectedRouteId(), QStringLiteral("home"));
 
-    auto* searchBox = window.findChild<AutoSuggestBox*>(QStringLiteral("GalleryTitleBar.SearchBox"));
+    auto* searchBox =
+        window.findChild<AutoSuggestBox*>(QStringLiteral("GalleryTitleBar.SearchBox"));
     ASSERT_NE(searchBox, nullptr);
     EXPECT_EQ(searchBox->placeholderText(), QStringLiteral("Search components and examples..."));
 
@@ -321,8 +376,8 @@ TEST_F(GalleryShellFrameworkTest, TitleBarControllerSurvivesWatchedTitleBarTeard
     bar->resize(800, 48);
 
     fluent::gallery::GalleryTitleBarController::Callbacks callbacks;
-    auto* controller = new fluent::gallery::GalleryTitleBarController(
-        bar, {}, std::move(callbacks), host);
+    auto* controller =
+        new fluent::gallery::GalleryTitleBarController(bar, {}, std::move(callbacks), host);
     ASSERT_EQ(controller->parent(), host);
 
     // GalleryWindow's QWidget child teardown can destroy the title bar before
@@ -341,22 +396,17 @@ TEST_F(GalleryShellFrameworkTest, HomeHeroStartsWithFluentResourceCards)
 {
     GalleryWindow window;
 
-    auto* linkStrip = window.findChild<QAbstractItemView*>(
-        QStringLiteral("galleryHomeHeroLinksView"));
+    auto* linkStrip =
+        window.findChild<QAbstractItemView*>(QStringLiteral("galleryHomeHeroLinksView"));
     ASSERT_NE(linkStrip, nullptr);
     ASSERT_NE(linkStrip->model(), nullptr);
     ASSERT_GE(linkStrip->model()->rowCount(), 3);
     EXPECT_TRUE(linkStrip->property("fluentPreserveParentSurface").toBool());
     ASSERT_NE(linkStrip->viewport(), nullptr);
-    EXPECT_TRUE(linkStrip->viewport()
-                    ->property("fluentPreserveParentSurface")
-                    .toBool());
-    const QString externalLinkIconName =
-        linkStrip->property("externalLinkIconName").toString();
-    EXPECT_EQ(externalLinkIconName,
-              QStringLiteral("ic_fluent_open_16_regular"));
-    const QString externalLinkGlyph =
-        Typography::Icons::glyph(externalLinkIconName);
+    EXPECT_TRUE(linkStrip->viewport()->property("fluentPreserveParentSurface").toBool());
+    const QString externalLinkIconName = linkStrip->property("externalLinkIconName").toString();
+    EXPECT_EQ(externalLinkIconName, QStringLiteral("ic_fluent_open_16_regular"));
+    const QString externalLinkGlyph = Typography::Icons::glyph(externalLinkIconName);
     ASSERT_FALSE(externalLinkGlyph.isEmpty());
     EXPECT_NE(externalLinkGlyph, QString::fromUtf16(u"\uE8A7"));
 
@@ -366,15 +416,13 @@ TEST_F(GalleryShellFrameworkTest, HomeHeroStartsWithFluentResourceCards)
         QString imagePath;
     };
     const QVector<ExpectedLink> expectedLinks{
-        {QStringLiteral("Design"),
-         QUrl(QStringLiteral("https://aka.ms/WinUI/3.0-figma-toolkit")),
+        {QStringLiteral("Design"), QUrl(QStringLiteral("https://aka.ms/WinUI/3.0-figma-toolkit")),
          QStringLiteral(":/app/assets/home_header_tiles/Header-WindowsDesign.png")},
         {QStringLiteral("WinUI Gallery"),
          QUrl(QStringLiteral("https://github.com/microsoft/WinUI-Gallery")),
          QStringLiteral(":/app/assets/home_header_tiles/GitHub-Mark.png")},
         {QStringLiteral("Fluent UI"),
-         QUrl(QStringLiteral(
-           "https://developer.microsoft.com/en-us/fluentui#/controls/web")),
+         QUrl(QStringLiteral("https://developer.microsoft.com/en-us/fluentui#/controls/web")),
          QStringLiteral(":/app/assets/home_header_tiles/Header-Toolkit.png")},
     };
     constexpr int kHomeLinkUrlRole = Qt::UserRole + 3;
@@ -396,18 +444,17 @@ TEST_F(GalleryShellFrameworkTest, HomeHeroAndSectionHeadersKeepTheirContentHeigh
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr,
-        2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
 
     auto* hero = window.findChild<QWidget*>(QStringLiteral("galleryHomeHero"));
     auto* icon = window.findChild<QLabel*>(QStringLiteral("galleryHomeHeroIcon"));
-    auto* title = window.findChild<fluent::textfields::Label*>(
-        QStringLiteral("galleryHomeHeroTitle"));
-    auto* tagline = window.findChild<fluent::textfields::Label*>(
-        QStringLiteral("galleryHomeHeroTagline"));
+    auto* title =
+        window.findChild<fluent::textfields::Label*>(QStringLiteral("galleryHomeHeroTitle"));
+    auto* tagline =
+        window.findChild<fluent::textfields::Label*>(QStringLiteral("galleryHomeHeroTagline"));
     auto* links = window.findChild<QWidget*>(QStringLiteral("galleryHomeHeroLinksView"));
-    auto* featuredHeader = window.findChild<fluent::textfields::Label*>(
-        QStringLiteral("galleryHomeFeaturedHeader"));
+    auto* featuredHeader =
+        window.findChild<fluent::textfields::Label*>(QStringLiteral("galleryHomeFeaturedHeader"));
     auto* featuredGrid = window.findChild<QWidget*>(QStringLiteral("galleryHomeCards"));
     ASSERT_NE(hero, nullptr);
     ASSERT_NE(icon, nullptr);
@@ -465,8 +512,7 @@ TEST_F(GalleryShellFrameworkTest, IntroTourLocksAndRestoresWindowChrome)
     window.onThemeUpdated();
     QApplication::processEvents();
     EXPECT_FALSE(window.isChromeInteractive());
-    auto* closeButton = window.findChild<Button*>(
-        QStringLiteral("GalleryIntroTour.CloseButton"));
+    auto* closeButton = window.findChild<Button*>(QStringLiteral("GalleryIntroTour.CloseButton"));
     ASSERT_NE(closeButton, nullptr);
     QTest::mouseClick(closeButton, Qt::LeftButton);
     EXPECT_TRUE(window.isChromeInteractive());
@@ -506,25 +552,21 @@ TEST_F(GalleryShellFrameworkTest, IntroTourExposesStepTextAndTrapsActionFocus)
     tour.start();
 
     auto* coach = window.findChild<fluent::dialogs_flyouts::CoachMark*>();
-    auto* closeButton = window.findChild<Button*>(
-        QStringLiteral("GalleryIntroTour.CloseButton"));
-    auto* previousButton = window.findChild<Button*>(
-        QStringLiteral("GalleryIntroTour.PreviousButton"));
-    auto* nextButton = window.findChild<Button*>(
-        QStringLiteral("GalleryIntroTour.NextButton"));
+    auto* closeButton = window.findChild<Button*>(QStringLiteral("GalleryIntroTour.CloseButton"));
+    auto* previousButton =
+        window.findChild<Button*>(QStringLiteral("GalleryIntroTour.PreviousButton"));
+    auto* nextButton = window.findChild<Button*>(QStringLiteral("GalleryIntroTour.NextButton"));
     ASSERT_NE(coach, nullptr);
     ASSERT_NE(closeButton, nullptr);
     ASSERT_NE(previousButton, nullptr);
     ASSERT_NE(nextButton, nullptr);
 
-    QAccessibleInterface* accessibleCoach =
-        QAccessible::queryAccessibleInterface(coach);
+    QAccessibleInterface* accessibleCoach = QAccessible::queryAccessibleInterface(coach);
     ASSERT_NE(accessibleCoach, nullptr);
     EXPECT_EQ(accessibleCoach->role(), QAccessible::HelpBalloon);
-    EXPECT_EQ(accessibleCoach->text(QAccessible::Name),
-              QStringLiteral("Search"));
-    EXPECT_TRUE(accessibleCoach->text(QAccessible::Description)
-                    .contains(QStringLiteral("Step 1 of 2")));
+    EXPECT_EQ(accessibleCoach->text(QAccessible::Name), QStringLiteral("Search"));
+    EXPECT_TRUE(
+        accessibleCoach->text(QAccessible::Description).contains(QStringLiteral("Step 1 of 2")));
     EXPECT_EQ(closeButton->accessibleName(), QStringLiteral("Skip tour"));
     EXPECT_FALSE(previousButton->isVisible());
     EXPECT_EQ(QApplication::focusWidget(), nextButton);
@@ -535,10 +577,9 @@ TEST_F(GalleryShellFrameworkTest, IntroTourExposesStepTextAndTrapsActionFocus)
     EXPECT_EQ(QApplication::focusWidget(), nextButton);
 
     QTest::mouseClick(nextButton, Qt::LeftButton);
-    EXPECT_EQ(accessibleCoach->text(QAccessible::Name),
-              QStringLiteral("Browse"));
-    EXPECT_TRUE(accessibleCoach->text(QAccessible::Description)
-                    .contains(QStringLiteral("Step 2 of 2")));
+    EXPECT_EQ(accessibleCoach->text(QAccessible::Name), QStringLiteral("Browse"));
+    EXPECT_TRUE(
+        accessibleCoach->text(QAccessible::Description).contains(QStringLiteral("Step 2 of 2")));
     EXPECT_TRUE(previousButton->isVisible());
     EXPECT_EQ(nextButton->text(), QStringLiteral("Finish"));
 
@@ -547,9 +588,7 @@ TEST_F(GalleryShellFrameworkTest, IntroTourExposesStepTextAndTrapsActionFocus)
     QTest::keyClick(closeButton, Qt::Key_Escape);
     QTRY_VERIFY_WITH_TIMEOUT(window.isChromeInteractive(), 1000);
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<OverlayScrim*>(
-            QStringLiteral("GalleryIntroTour.Scrim")) == nullptr,
-        1500);
+        window.findChild<OverlayScrim*>(QStringLiteral("GalleryIntroTour.Scrim")) == nullptr, 1500);
 
     window.close();
 #endif
@@ -561,8 +600,7 @@ TEST_F(GalleryShellFrameworkTest, IntroTourRestoresPrimaryActionOnHostActivation
     window.resize(900, 700);
     QWidget foregroundWindow;
     foregroundWindow.resize(240, 120);
-    Button foregroundAction(QStringLiteral("Foreground action"),
-                            &foregroundWindow);
+    Button foregroundAction(QStringLiteral("Foreground action"), &foregroundWindow);
     foregroundAction.setGeometry(24, 24, 160, 32);
     window.show();
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
@@ -586,26 +624,22 @@ TEST_F(GalleryShellFrameworkTest, IntroTourRestoresPrimaryActionOnHostActivation
     tour.setSteps({step});
     tour.start();
 
-    auto* nextButton = window.findChild<Button*>(
-        QStringLiteral("GalleryIntroTour.NextButton"));
-    auto* closeButton = window.findChild<Button*>(
-        QStringLiteral("GalleryIntroTour.CloseButton"));
+    auto* nextButton = window.findChild<Button*>(QStringLiteral("GalleryIntroTour.NextButton"));
+    auto* closeButton = window.findChild<Button*>(QStringLiteral("GalleryIntroTour.CloseButton"));
     ASSERT_NE(nextButton, nullptr);
     ASSERT_NE(closeButton, nullptr);
 
     // Both immediate and queued startup focus passes must respect the inactive
     // host instead of stealing focus from whichever application is foreground.
-    QTRY_COMPARE_WITH_TIMEOUT(QApplication::activeWindow(), &foregroundWindow,
-                              1000);
+    QTRY_COMPARE_WITH_TIMEOUT(QApplication::activeWindow(), &foregroundWindow, 1000);
     const auto focusIsOutsideHost = [&]() {
         QWidget* focused = QApplication::focusWidget();
-        return !focused
-            || (focused != &window && !window.isAncestorOf(focused));
+        return !focused || (focused != &window && !window.isAncestorOf(focused));
     };
     QTRY_VERIFY_WITH_TIMEOUT(focusIsOutsideHost(), 1000);
     QWidget* focusedAfterStart = QApplication::focusWidget();
-    ASSERT_TRUE(!focusedAfterStart || focusedAfterStart == &foregroundAction
-                || foregroundWindow.isAncestorOf(focusedAfterStart));
+    ASSERT_TRUE(!focusedAfterStart || focusedAfterStart == &foregroundAction ||
+                foregroundWindow.isAncestorOf(focusedAfterStart));
 
     // Qt's logical activation emits the same WindowActivate event delivered
     // after a native compositor finally foregrounds the first-launch window.
@@ -638,7 +672,7 @@ TEST_F(GalleryShellFrameworkTest, IntroTourSpotlightsAnchoredTarget)
     anchored.title = QStringLiteral("Search");
     anchored.target = target;
     tour.setSteps({anchored});
-    tour.start();  // a single anchored step is applied immediately by start()
+    tour.start(); // a single anchored step is applied immediately by start()
 
     auto* scrim = window.findChild<OverlayScrim*>(QStringLiteral("GalleryIntroTour.Scrim"));
     ASSERT_NE(scrim, nullptr);
@@ -714,14 +748,13 @@ TEST_F(GalleryShellFrameworkTest, ClickingHomeFeaturedCardNavigatesWithoutUseAft
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr,
-        2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
 
     auto* featuredCards = window.findChild<QWidget*>(QStringLiteral("galleryHomeCards"));
     ASSERT_NE(featuredCards, nullptr);
     GalleryEntryCard* card = nullptr;
-    QTRY_VERIFY_WITH_TIMEOUT(
-        (card = featuredCards->findChild<GalleryEntryCard*>()) != nullptr, 2000);
+    QTRY_VERIFY_WITH_TIMEOUT((card = featuredCards->findChild<GalleryEntryCard*>()) != nullptr,
+                             2000);
     const QString targetRouteId = card->targetRouteId();
     ASSERT_FALSE(targetRouteId.isEmpty());
 
@@ -752,7 +785,8 @@ TEST_F(GalleryShellFrameworkTest, ClickingHomeFeaturedCardNavigatesWithoutUseAft
     EXPECT_EQ(newPage->routeId(), targetRouteId);
 
     // Navigating back to home reuses the cached page instance instead of constructing a new one.
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     clickNavigationRoute(mainPane, QStringLiteral("home"));
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("home"));
@@ -761,20 +795,16 @@ TEST_F(GalleryShellFrameworkTest, ClickingHomeFeaturedCardNavigatesWithoutUseAft
 
 TEST_F(GalleryShellFrameworkTest, TitleBarContentUsesAnchorsAndCentersControls)
 {
-    EXPECT_EQ(fluent::gallery::metrics::TitleBar::ButtonIconSize,
-              Typography::IconSize::Standard);
-    EXPECT_EQ(fluent::gallery::kRouteIconPixelSize,
-              Typography::IconSize::Standard);
-    EXPECT_EQ(fluent::gallery::kChevronIconPixelSize,
-              Typography::IconSize::Standard);
+    EXPECT_EQ(fluent::gallery::metrics::TitleBar::ButtonIconSize, Typography::IconSize::Standard);
+    EXPECT_EQ(fluent::gallery::kRouteIconPixelSize, Typography::IconSize::Standard);
+    EXPECT_EQ(fluent::gallery::kChevronIconPixelSize, Typography::IconSize::Standard);
 
     GalleryWindow window;
     window.resize(1180, 760);
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr,
-        2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
 
     TitleBar* titleBar = window.titleBar();
     ASSERT_NE(titleBar, nullptr);
@@ -783,19 +813,20 @@ TEST_F(GalleryShellFrameworkTest, TitleBarContentUsesAnchorsAndCentersControls)
     EXPECT_NE(qobject_cast<fluent::AnchorLayout*>(titleBar->layout()), nullptr);
 
     const QStringList centeredWidgetNames{
-        QStringLiteral("GalleryTitleBar.BackButton"),
-        QStringLiteral("GalleryTitleBar.MenuButton"),
-        QStringLiteral("GalleryTitleBar.AppIcon"),
-        QStringLiteral("GalleryTitleBar.Title"),
-        QStringLiteral("GalleryTitleBar.SearchBox")
-    };
+        QStringLiteral("GalleryTitleBar.BackButton"), QStringLiteral("GalleryTitleBar.MenuButton"),
+        QStringLiteral("GalleryTitleBar.AppIcon"), QStringLiteral("GalleryTitleBar.Title"),
+        QStringLiteral("GalleryTitleBar.SearchBox")};
     vg::maybeDumpNamedWidgets(titleBar, centeredWidgetNames);
 
-    auto* backButton = vg::findRequiredChild<Button>(titleBar, QStringLiteral("GalleryTitleBar.BackButton"));
-    auto* menuButton = vg::findRequiredChild<Button>(titleBar, QStringLiteral("GalleryTitleBar.MenuButton"));
-    auto* appIcon = vg::findRequiredChild<QLabel>(titleBar, QStringLiteral("GalleryTitleBar.AppIcon"));
+    auto* backButton =
+        vg::findRequiredChild<Button>(titleBar, QStringLiteral("GalleryTitleBar.BackButton"));
+    auto* menuButton =
+        vg::findRequiredChild<Button>(titleBar, QStringLiteral("GalleryTitleBar.MenuButton"));
+    auto* appIcon =
+        vg::findRequiredChild<QLabel>(titleBar, QStringLiteral("GalleryTitleBar.AppIcon"));
     auto* title = vg::findRequiredChild<QWidget>(titleBar, QStringLiteral("GalleryTitleBar.Title"));
-    auto* searchBox = vg::findRequiredChild<AutoSuggestBox>(titleBar, QStringLiteral("GalleryTitleBar.SearchBox"));
+    auto* searchBox = vg::findRequiredChild<AutoSuggestBox>(
+        titleBar, QStringLiteral("GalleryTitleBar.SearchBox"));
     ASSERT_NE(backButton, nullptr);
     ASSERT_NE(menuButton, nullptr);
     ASSERT_NE(appIcon, nullptr);
@@ -880,19 +911,17 @@ TEST_F(GalleryShellFrameworkTest, TitleBarAppIconRefreshesAfterDisplayScaleChang
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr,
-        2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
 
-    auto* appIcon = vg::findRequiredChild<QLabel>(
-        window.titleBar(), QStringLiteral("GalleryTitleBar.AppIcon"));
+    auto* appIcon =
+        vg::findRequiredChild<QLabel>(window.titleBar(), QStringLiteral("GalleryTitleBar.AppIcon"));
     ASSERT_NE(appIcon, nullptr);
     const QPixmap before = fluentLabelPixmapValue(appIcon);
     ASSERT_FALSE(before.isNull());
 
     QEvent screenChange(QEvent::ScreenChangeInternal);
     QApplication::sendEvent(&window, &screenChange);
-    QTRY_VERIFY_WITH_TIMEOUT(
-        fluentLabelPixmapValue(appIcon).cacheKey() != before.cacheKey(), 1000);
+    QTRY_VERIFY_WITH_TIMEOUT(fluentLabelPixmapValue(appIcon).cacheKey() != before.cacheKey(), 1000);
 
     const QPixmap refreshed = fluentLabelPixmapValue(appIcon);
     const qreal dpr = qMax<qreal>(1.0, appIcon->devicePixelRatioF());
@@ -908,17 +937,15 @@ TEST_F(GalleryShellFrameworkTest, TitleBarForegroundTracksWindowActivationWithou
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr,
-        2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
 
     TitleBar* titleBar = window.titleBar();
     ASSERT_NE(titleBar, nullptr);
-    auto* menuButton = vg::findRequiredChild<Button>(
-        titleBar, QStringLiteral("GalleryTitleBar.MenuButton"));
-    auto* appIcon = vg::findRequiredChild<QLabel>(
-        titleBar, QStringLiteral("GalleryTitleBar.AppIcon"));
-    auto* title = vg::findRequiredChild<QWidget>(
-        titleBar, QStringLiteral("GalleryTitleBar.Title"));
+    auto* menuButton =
+        vg::findRequiredChild<Button>(titleBar, QStringLiteral("GalleryTitleBar.MenuButton"));
+    auto* appIcon =
+        vg::findRequiredChild<QLabel>(titleBar, QStringLiteral("GalleryTitleBar.AppIcon"));
+    auto* title = vg::findRequiredChild<QWidget>(titleBar, QStringLiteral("GalleryTitleBar.Title"));
     auto* searchBox = vg::findRequiredChild<AutoSuggestBox>(
         titleBar, QStringLiteral("GalleryTitleBar.SearchBox"));
     ASSERT_NE(menuButton, nullptr);
@@ -962,9 +989,11 @@ TEST_F(GalleryShellFrameworkTest, MenuButtonTogglesLeftCompactNavigationMode)
     window.show();
     QApplication::processEvents();
 
-    auto* navigationView = window.findChild<NavigationView*>(QStringLiteral("galleryNavigationView"));
+    auto* navigationView =
+        window.findChild<NavigationView*>(QStringLiteral("galleryNavigationView"));
     ASSERT_NE(navigationView, nullptr);
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     TreeView* tree = navigationTree(mainPane);
     ASSERT_NE(tree, nullptr);
@@ -1018,8 +1047,8 @@ TEST_F(GalleryShellFrameworkTest, AutoNavigationCollapsesWhenNarrowedAndReexpand
     window.show();
     QApplication::processEvents();
 
-    auto* navigationView = window.findChild<NavigationView*>(
-        QStringLiteral("galleryNavigationView"));
+    auto* navigationView =
+        window.findChild<NavigationView*>(QStringLiteral("galleryNavigationView"));
     ASSERT_NE(navigationView, nullptr);
     using DisplayMode = NavigationView::DisplayMode;
 
@@ -1052,9 +1081,11 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationHidesHeadersAndInlineChil
     window.show();
     QApplication::processEvents();
 
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
-    auto* navigationView = window.findChild<NavigationView*>(QStringLiteral("galleryNavigationView"));
+    auto* navigationView =
+        window.findChild<NavigationView*>(QStringLiteral("galleryNavigationView"));
     ASSERT_NE(navigationView, nullptr);
     TreeView* tree = navigationTree(mainPane);
     ASSERT_NE(tree, nullptr);
@@ -1093,8 +1124,8 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsFluentToolTips)
     window.show();
     QApplication::processEvents();
 
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(
-        QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     TreeView* tree = navigationTree(mainPane);
     ASSERT_NE(tree, nullptr);
@@ -1103,39 +1134,35 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsFluentToolTips)
     const QRect expandedRect = tree->visualRect(homeIndex);
     ASSERT_FALSE(expandedRect.isEmpty());
 
-    QHelpEvent expandedHelp(QEvent::ToolTip,
-                            expandedRect.center(),
+    QHelpEvent expandedHelp(QEvent::ToolTip, expandedRect.center(),
                             tree->viewport()->mapToGlobal(expandedRect.center()));
     QApplication::sendEvent(tree->viewport(), &expandedHelp);
-    EXPECT_EQ(mainPane->findChild<ToolTip*>(
-                  QStringLiteral("galleryCompactNavigationToolTip")),
+    EXPECT_EQ(mainPane->findChild<ToolTip*>(QStringLiteral("galleryCompactNavigationToolTip")),
               nullptr);
 
-    auto* menuButton = vg::findRequiredChild<Button>(
-        window.titleBar(), QStringLiteral("GalleryTitleBar.MenuButton"));
+    auto* menuButton = vg::findRequiredChild<Button>(window.titleBar(),
+                                                     QStringLiteral("GalleryTitleBar.MenuButton"));
     ASSERT_NE(menuButton, nullptr);
     QTest::mouseClick(menuButton, Qt::LeftButton);
     settleNavigationViewAnimation();
 
     const QRect compactRect = tree->visualRect(homeIndex);
     ASSERT_FALSE(compactRect.isEmpty());
-    QHelpEvent compactHelp(QEvent::ToolTip,
-                           compactRect.center(),
+    QHelpEvent compactHelp(QEvent::ToolTip, compactRect.center(),
                            tree->viewport()->mapToGlobal(compactRect.center()));
     QApplication::sendEvent(tree->viewport(), &compactHelp);
     QApplication::processEvents();
 
-    auto* toolTip = mainPane->findChild<ToolTip*>(
-        QStringLiteral("galleryCompactNavigationToolTip"));
+    auto* toolTip =
+        mainPane->findChild<ToolTip*>(QStringLiteral("galleryCompactNavigationToolTip"));
     ASSERT_NE(toolTip, nullptr);
     EXPECT_EQ(toolTip->text(), QStringLiteral("Home"));
     EXPECT_TRUE(toolTip->isVisible());
 
     const QRect rowGlobal(tree->viewport()->mapToGlobal(compactRect.topLeft()), compactRect.size());
-    const QRect bubbleGlobal = toolTip->geometry().adjusted(toolTip->shadowMargin(),
-                                                            toolTip->shadowMargin(),
-                                                            -toolTip->shadowMargin(),
-                                                            -toolTip->shadowMargin());
+    const QRect bubbleGlobal =
+        toolTip->geometry().adjusted(toolTip->shadowMargin(), toolTip->shadowMargin(),
+                                     -toolTip->shadowMargin(), -toolTip->shadowMargin());
     EXPECT_NEAR(bubbleGlobal.center().x(), rowGlobal.center().x(), 1);
     EXPECT_EQ(rowGlobal.top() - bubbleGlobal.bottom() - 1, 4);
 
@@ -1151,9 +1178,11 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsChildrenInFlyout)
     window.show();
     QApplication::processEvents();
 
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
-    auto* navigationView = window.findChild<NavigationView*>(QStringLiteral("galleryNavigationView"));
+    auto* navigationView =
+        window.findChild<NavigationView*>(QStringLiteral("galleryNavigationView"));
     ASSERT_NE(navigationView, nullptr);
     TreeView* tree = navigationTree(mainPane);
     ASSERT_NE(tree, nullptr);
@@ -1180,7 +1209,8 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsChildrenInFlyout)
     ASSERT_NE(flyout, nullptr);
     QPointer<Popup> flyoutPointer(flyout);
     EXPECT_TRUE(flyout->isVisible());
-    auto* anchor = mainPane->findChild<QWidget*>(QStringLiteral("galleryCompactNavigationFlyoutAnchor"));
+    auto* anchor =
+        mainPane->findChild<QWidget*>(QStringLiteral("galleryCompactNavigationFlyoutAnchor"));
     ASSERT_NE(anchor, nullptr);
     EXPECT_EQ(anchor->geometry().left(), 0);
     EXPECT_EQ(anchor->geometry().width(), navigationView->compactPaneWidth());
@@ -1189,19 +1219,17 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsChildrenInFlyout)
     EXPECT_GE(flyoutCard.top(), mappedGeometry(tree, &window).top());
     EXPECT_LT(flyoutCard.top(), anchorInWindow.center().y());
     EXPECT_EQ(flyout->findChild<QScrollArea*>(), nullptr);
-    for (const QString& childRouteId : {QStringLiteral("info-badge"),
-                                        QStringLiteral("info-bar"),
-                                        QStringLiteral("progress-bar"),
-                                        QStringLiteral("progress-ring"),
-                                        QStringLiteral("shimmer"),
-                                        QStringLiteral("toast"),
-                                        QStringLiteral("tooltip")}) {
+    for (const QString& childRouteId :
+         {QStringLiteral("info-badge"), QStringLiteral("info-bar"), QStringLiteral("progress-bar"),
+          QStringLiteral("progress-ring"), QStringLiteral("shimmer"), QStringLiteral("toast"),
+          QStringLiteral("tooltip")}) {
         auto* childRow = flyout->findChild<QWidget*>(
             QStringLiteral("galleryCompactNavigationFlyoutRow_%1").arg(childRouteId));
         ASSERT_NE(childRow, nullptr);
         EXPECT_TRUE(childRow->isVisibleTo(flyout));
     }
-    auto* infoBadgeRow = flyout->findChild<QWidget*>(QStringLiteral("galleryCompactNavigationFlyoutRow_info-badge"));
+    auto* infoBadgeRow =
+        flyout->findChild<QWidget*>(QStringLiteral("galleryCompactNavigationFlyoutRow_info-badge"));
     ASSERT_NE(infoBadgeRow, nullptr);
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("status-info"));
 
@@ -1215,46 +1243,33 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsChildrenInFlyout)
 TEST_F(GalleryShellFrameworkTest, NavigationEntriesExposeRequiredGroups)
 {
     GalleryWindow window;
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
-    auto* footerPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* footerPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     ASSERT_NE(footerPane, nullptr);
 
     const QStringList titles = mainPane->visibleTitles();
-    EXPECT_TRUE(containsAll(titles, {
-        QStringLiteral("Home"),
-        QStringLiteral("Controls"),
-        QStringLiteral("Basic input"),
-        QStringLiteral("Collections"),
-        QStringLiteral("Date & time"),
-        QStringLiteral("Dialogs & flyouts"),
-        QStringLiteral("Layout"),
-        QStringLiteral("Menus & toolbars"),
-        QStringLiteral("Navigation"),
-        QStringLiteral("Scrolling"),
-        QStringLiteral("Status & info"),
-        QStringLiteral("Text fields"),
-        QStringLiteral("Windowing")
-    }));
+    EXPECT_TRUE(containsAll(
+        titles, {QStringLiteral("Home"), QStringLiteral("Controls"), QStringLiteral("Basic input"),
+                 QStringLiteral("Collections"), QStringLiteral("Date & time"),
+                 QStringLiteral("Dialogs & flyouts"), QStringLiteral("Layout"),
+                 QStringLiteral("Menus & toolbars"), QStringLiteral("Navigation"),
+                 QStringLiteral("Scrolling"), QStringLiteral("Status & info"),
+                 QStringLiteral("Text fields"), QStringLiteral("Windowing")}));
     EXPECT_TRUE(titles.contains(QStringLiteral("Foundation")));
     EXPECT_FALSE(titles.contains(QStringLiteral("Settings")));
     EXPECT_EQ(Typography::Icons::Message, QString::fromUtf16(u"\uE8BD"));
 
     const QStringList routeIds = mainPane->routeIds();
-    EXPECT_TRUE(containsAll(routeIds, {
-        QStringLiteral("all-controls"),
-        QStringLiteral("basic-input"),
-        QStringLiteral("collections"),
-        QStringLiteral("date-time"),
-        QStringLiteral("dialogs-flyouts"),
-        QStringLiteral("layout"),
-        QStringLiteral("menus-toolbars"),
-        QStringLiteral("navigation"),
-        QStringLiteral("scrolling"),
-        QStringLiteral("status-info"),
-        QStringLiteral("text-fields"),
-        QStringLiteral("windowing")
-    }));
+    EXPECT_TRUE(
+        containsAll(routeIds, {QStringLiteral("all-controls"), QStringLiteral("basic-input"),
+                               QStringLiteral("collections"), QStringLiteral("date-time"),
+                               QStringLiteral("dialogs-flyouts"), QStringLiteral("layout"),
+                               QStringLiteral("menus-toolbars"), QStringLiteral("navigation"),
+                               QStringLiteral("scrolling"), QStringLiteral("status-info"),
+                               QStringLiteral("text-fields"), QStringLiteral("windowing")}));
     EXPECT_TRUE(routeIds.contains(QStringLiteral("foundation")));
     EXPECT_FALSE(routeIds.contains(QStringLiteral("settings")));
     EXPECT_EQ(footerPane->routeIds(), QStringList{QStringLiteral("settings")});
@@ -1267,14 +1282,12 @@ TEST_F(GalleryShellFrameworkTest, MainNavigationRowsAreVisibleInPane)
     window.show();
     QApplication::processEvents();
 
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
 
-    const QStringList visibleRouteIds{
-        QStringLiteral("home"),
-        QStringLiteral("all-controls"),
-        QStringLiteral("basic-input")
-    };
+    const QStringList visibleRouteIds{QStringLiteral("home"), QStringLiteral("all-controls"),
+                                      QStringLiteral("basic-input")};
     for (const QString& routeId : visibleRouteIds) {
         EXPECT_TRUE(routeVisibleInTree(mainPane, routeId)) << routeId.toStdString();
     }
@@ -1293,7 +1306,8 @@ TEST_F(GalleryShellFrameworkTest, MainNavigationUsesWinUIGalleryRowMetrics)
     window.show();
     QApplication::processEvents();
 
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     TreeView* tree = navigationTree(mainPane);
     ASSERT_NE(tree, nullptr);
@@ -1322,7 +1336,8 @@ TEST_F(GalleryShellFrameworkTest, MainNavigationChildIndicatorAnchorsToTextColum
     window.show();
     QApplication::processEvents();
 
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     TreeView* tree = navigationTree(mainPane);
     ASSERT_NE(tree, nullptr);
@@ -1348,12 +1363,8 @@ TEST_F(GalleryShellFrameworkTest, MainNavigationChildIndicatorAnchorsToTextColum
     EXPECT_FALSE(categoryIndicator.isEmpty());
     EXPECT_FALSE(childIndicator.isEmpty());
     EXPECT_GT(childIndicator.left(), categoryIndicator.left() + 24.0);
-    EXPECT_NEAR(childIndicator.left(),
-                tree->visualRect(childIndex).left() + 36.0,
-                0.01);
-    EXPECT_NEAR(tree->visualRect(childIndex).left() + 47.0 - childIndicator.right(),
-                8.0,
-                0.01);
+    EXPECT_NEAR(childIndicator.left(), tree->visualRect(childIndex).left() + 36.0, 0.01);
+    EXPECT_NEAR(tree->visualRect(childIndex).left() + 47.0 - childIndicator.right(), 8.0, 0.01);
     EXPECT_NEAR(childIndicator.height(), 14.0, 0.01);
 }
 
@@ -1364,7 +1375,8 @@ TEST_F(GalleryShellFrameworkTest, MainNavigationRowClickTogglesCategory)
     window.show();
     QApplication::processEvents();
 
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     TreeView* tree = navigationTree(mainPane);
     ASSERT_NE(tree, nullptr);
@@ -1400,10 +1412,12 @@ TEST_F(GalleryShellFrameworkTest, FooterNavigationHasTopDivider)
     window.show();
     QApplication::processEvents();
 
-    auto* footerPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
+    auto* footerPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
     ASSERT_NE(footerPane, nullptr);
 
-    auto* divider = footerPane->findChild<QWidget*>(QStringLiteral("galleryFooterNavigationDivider"));
+    auto* divider =
+        footerPane->findChild<QWidget*>(QStringLiteral("galleryFooterNavigationDivider"));
     ASSERT_NE(divider, nullptr);
     EXPECT_EQ(divider->height(), 1);
     EXPECT_TRUE(divider->isVisibleTo(footerPane));
@@ -1416,7 +1430,8 @@ TEST_F(GalleryShellFrameworkTest, MainNavigationScrollbarUsesInsetOverlay)
     window.show();
     QApplication::processEvents();
 
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     TreeView* tree = navigationTree(mainPane);
     ASSERT_NE(tree, nullptr);
@@ -1448,7 +1463,8 @@ TEST_F(GalleryShellFrameworkTest, NavigationAutoScrollDoesNotRevealPaneScrollbar
     window.show();
     QApplication::processEvents();
 
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     TreeView* tree = navigationTree(mainPane);
     ASSERT_NE(tree, nullptr);
@@ -1480,7 +1496,8 @@ TEST_F(GalleryShellFrameworkTest, CurrentContentScrollbarStaysAtRightEdgeAfterNa
     window.show();
     QApplication::processEvents();
 
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     clickNavigationRoute(mainPane, QStringLiteral("combobox"));
     QApplication::processEvents();
@@ -1498,7 +1515,8 @@ TEST_F(GalleryShellFrameworkTest, CurrentContentScrollbarStaysAtRightEdgeAfterNa
 
     const QRect barGeometry = floatingBar->geometry();
     EXPECT_EQ(barGeometry.right(), scrollView->viewport()->rect().right());
-    EXPECT_EQ(barGeometry.left(), qMax(0, scrollView->viewport()->width() - floatingBar->thickness()));
+    EXPECT_EQ(barGeometry.left(),
+              qMax(0, scrollView->viewport()->width() - floatingBar->thickness()));
 }
 
 TEST_F(GalleryShellFrameworkTest, ComponentRoutesRetainParentCategories)
@@ -1520,8 +1538,7 @@ TEST_F(GalleryShellFrameworkTest, ComponentRoutesRetainParentCategories)
         {QStringLiteral("scroll-view"), QStringLiteral("scrolling")},
         {QStringLiteral("info-bar"), QStringLiteral("status-info")},
         {QStringLiteral("auto-suggest-box"), QStringLiteral("text-fields")},
-        {QStringLiteral("title-bar"), QStringLiteral("windowing")}
-    };
+        {QStringLiteral("title-bar"), QStringLiteral("windowing")}};
 
     for (const ExpectedRoute& expectedRoute : expectedRoutes) {
         const auto* item = model.itemById(expectedRoute.id);
@@ -1563,9 +1580,8 @@ TEST_F(GalleryShellFrameworkTest, ColdRouteSelectionKeepsPreparedSkeletonOffClic
 
     EXPECT_EQ(window.findChild<GalleryPageSkeleton*>(), preparedSkeleton);
     EXPECT_EQ(preparedSkeleton->findChildren<Shimmer*>().size(), 1);
-    EXPECT_LT(clickMs, 100)
-        << "Cold navigation should only swap in the prepared "
-                             "skeleton; page construction is deferred";
+    EXPECT_LT(clickMs, 100) << "Cold navigation should only swap in the prepared "
+                               "skeleton; page construction is deferred";
 }
 
 TEST_F(GalleryShellFrameworkTest, NavigationTimingCoversColdAndWarmTargetFirstPaint)
@@ -1621,9 +1637,7 @@ TEST_F(GalleryShellFrameworkTest, BoundedRouteCacheEvictsLeastRecentlyUsedPage)
             QTest::qWait(10);
         }
         EXPECT_FALSE(presentedSpy.isEmpty());
-        return presentedSpy.isEmpty()
-            ? QList<QVariant>()
-            : presentedSpy.takeLast();
+        return presentedSpy.isEmpty() ? QList<QVariant>() : presentedSpy.takeLast();
     };
 
     ASSERT_FALSE(navigate(QStringLiteral("home")).isEmpty());
@@ -1649,17 +1663,18 @@ TEST_F(GalleryShellFrameworkTest, StartupPrewarmPrioritizesHomeFeaturedTabView)
 
     ASSERT_TRUE(window.selectRoute(QStringLiteral("tab-view")));
     auto* page = window.currentContentPage();
-    ASSERT_NE(page, nullptr)
-        << "The Home-featured TabView route should be "
-                              "resident before the startup budget expires";
+    ASSERT_NE(page, nullptr) << "The Home-featured TabView route should be "
+                                "resident before the startup budget expires";
     EXPECT_EQ(page->routeId(), QStringLiteral("tab-view"));
 }
 
 TEST_F(GalleryShellFrameworkTest, SelectRouteSwitchesContentPages)
 {
     GalleryWindow window;
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
-    auto* footerPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* footerPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     ASSERT_NE(footerPane, nullptr);
     // Home is a concrete documentation page.
@@ -1672,28 +1687,25 @@ TEST_F(GalleryShellFrameworkTest, SelectRouteSwitchesContentPages)
     EXPECT_EQ(mainPane->selectedRouteId(), QStringLiteral("checkbox"));
     EXPECT_EQ(footerPane->selectedRouteId(), QStringLiteral("checkbox"));
     GalleryContentPage* checkboxPage = nullptr;
-    QTRY_VERIFY_WITH_TIMEOUT(
-        (checkboxPage = window.currentContentPage())
-            && checkboxPage->routeId() == QStringLiteral("checkbox"),
-        2000);
+    QTRY_VERIFY_WITH_TIMEOUT((checkboxPage = window.currentContentPage()) &&
+                                 checkboxPage->routeId() == QStringLiteral("checkbox"),
+                             2000);
     EXPECT_EQ(checkboxPage->routeId(), QStringLiteral("checkbox"));
     EXPECT_EQ(checkboxPage->title(), QStringLiteral("CheckBox"));
 
     ASSERT_TRUE(window.selectRoute(QStringLiteral("combobox")));
     GalleryContentPage* comboboxPage = nullptr;
-    QTRY_VERIFY_WITH_TIMEOUT(
-        (comboboxPage = window.currentContentPage())
-            && comboboxPage->routeId() == QStringLiteral("combobox"),
-        2000);
+    QTRY_VERIFY_WITH_TIMEOUT((comboboxPage = window.currentContentPage()) &&
+                                 comboboxPage->routeId() == QStringLiteral("combobox"),
+                             2000);
     EXPECT_EQ(comboboxPage->routeId(), QStringLiteral("combobox"));
 
     ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("button"));
     GalleryContentPage* buttonPage = nullptr;
-    QTRY_VERIFY_WITH_TIMEOUT(
-        (buttonPage = window.currentContentPage())
-            && buttonPage->routeId() == QStringLiteral("button"),
-        2000);
+    QTRY_VERIFY_WITH_TIMEOUT((buttonPage = window.currentContentPage()) &&
+                                 buttonPage->routeId() == QStringLiteral("button"),
+                             2000);
     EXPECT_EQ(buttonPage->routeId(), QStringLiteral("button"));
 
     EXPECT_FALSE(window.selectRoute(QStringLiteral("missing-route")));
@@ -1729,7 +1741,8 @@ TEST_F(GalleryShellFrameworkTest, SearchBoxNavigatesToMatchingRoute)
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("toast"));
 
     // The title-bar search box suggests every navigable route title.
-    auto* searchBox = window.findChild<AutoSuggestBox*>(QStringLiteral("GalleryTitleBar.SearchBox"));
+    auto* searchBox =
+        window.findChild<AutoSuggestBox*>(QStringLiteral("GalleryTitleBar.SearchBox"));
     ASSERT_NE(searchBox, nullptr);
     EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("CheckBox")));
     EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Card")));
@@ -1766,8 +1779,7 @@ TEST_F(GalleryShellFrameworkTest, BackButtonReturnsThroughNavigationHistory)
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr,
-        2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
 
     auto* backButton = vg::findRequiredChild<Button>(window.titleBar(),
                                                      QStringLiteral("GalleryTitleBar.BackButton"));
@@ -1801,7 +1813,8 @@ TEST_F(GalleryShellFrameworkTest, NavigationButtonActivationUpdatesRoute)
     window.show();
     QApplication::processEvents();
 
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     clickNavigationRoute(mainPane, QStringLiteral("button"));
     QApplication::processEvents();
@@ -1810,7 +1823,8 @@ TEST_F(GalleryShellFrameworkTest, NavigationButtonActivationUpdatesRoute)
     ASSERT_NE(window.currentContentPage(), nullptr);
     EXPECT_EQ(window.currentContentPage()->title(), QStringLiteral("Button"));
 
-    auto* footerPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
+    auto* footerPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
     ASSERT_NE(footerPane, nullptr);
     auto* settingsRotationAnimation = footerPane->findChild<QPropertyAnimation*>(
         QStringLiteral("gallerySettingsIconRotationAnimation"));
@@ -1832,7 +1846,8 @@ TEST_F(GalleryShellFrameworkTest, NavigationButtonActivationUpdatesRoute)
     EXPECT_EQ(settingsRotationAnimation->state(), QAbstractAnimation::Running);
     QTRY_VERIFY_WITH_TIMEOUT(footerPane->settingsIconRotation() > 0.0, 250);
     QTest::mouseRelease(footerTree->viewport(), Qt::LeftButton, Qt::NoModifier, settingsPoint);
-    QTRY_COMPARE_WITH_TIMEOUT(settingsRotationAnimation->state(), QAbstractAnimation::Stopped, 1000);
+    QTRY_COMPARE_WITH_TIMEOUT(settingsRotationAnimation->state(), QAbstractAnimation::Stopped,
+                              1000);
     EXPECT_NEAR(footerPane->settingsIconRotation(), 0.0, 0.001);
     ASSERT_NE(window.currentSettingsPage(), nullptr);
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(window.currentSettingsPage()), nullptr);
@@ -1846,11 +1861,10 @@ TEST_F(GalleryShellFrameworkTest, NavigationArrowKeysActivateCurrentRoute)
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr,
-        2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
 
-    auto* mainPane = window.findChild<GalleryNavigationPane*>(
-        QStringLiteral("galleryMainNavigationPane"));
+    auto* mainPane =
+        window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     TreeView* tree = navigationTree(mainPane);
     ASSERT_NE(tree, nullptr);
@@ -1875,23 +1889,18 @@ TEST_F(GalleryShellFrameworkTest, WindowPlacementUsesLogicalScreenBounds)
     EXPECT_EQ(recommendedInitialSize(QSize(1280, 720)), QSize(922, 600));
     EXPECT_EQ(recommendedInitialSize(QSize(640, 360)), QSize(640, 360));
     const QRect available(0, 0, 1280, 720);
-    EXPECT_EQ(constrainGeometry(QRect(-200, -100, 1600, 900),
-                                available, QSize(460, 500)),
+    EXPECT_EQ(constrainGeometry(QRect(-200, -100, 1600, 900), available, QSize(460, 500)),
               available);
-    EXPECT_EQ(constrainGeometry(QRect(1800, 1000, 900, 600),
-                                available, QSize(460, 500)),
+    EXPECT_EQ(constrainGeometry(QRect(1800, 1000, 900, 600), available, QSize(460, 500)),
               QRect(380, 120, 900, 600));
 
     const QRect saved(100, 80, 900, 600);
-    EXPECT_EQ(restoredGeometry(saved, available, QSize(460, 500)),
-              saved);
+    EXPECT_EQ(restoredGeometry(saved, available, QSize(460, 500)), saved);
 
     // Qt/Wayland can report its 640x480 pre-show placeholder as
     // normalGeometry(). A value below the current usable minimum is not a
     // deliberate restore size and must recover to the recommended geometry.
-    EXPECT_EQ(restoredGeometry(QRect(0, 0, 640, 480),
-                               QRect(0, 0, 1920, 1080),
-                               QSize(460, 500)),
+    EXPECT_EQ(restoredGeometry(QRect(0, 0, 640, 480), QRect(0, 0, 1920, 1080), QSize(460, 500)),
               QRect(349, 119, 1382, 842));
 }
 
@@ -1900,6 +1909,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     auto& settings = GallerySettings::instance();
     GallerySettingsRestorer restore(settings);
     settings.setThemeMode(GallerySettings::ThemeMode::Light);
+    settings.setMotionMode(GallerySettings::MotionMode::Full);
     settings.setNavigationStyle(GallerySettings::NavigationStyle::Auto);
 
     GalleryWindow window;
@@ -1911,19 +1921,18 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
 
     SettingsPage* page = window.currentSettingsPage();
     ASSERT_NE(page, nullptr);
-    auto* themeChoice = page->findChild<ComboBox*>(
-        QStringLiteral("gallerySettingsThemeChoice"));
-    auto* styleChoice = page->findChild<ComboBox*>(
-        QStringLiteral("gallerySettingsStyleChoice"));
-    auto* navigationChoice = page->findChild<ComboBox*>(
-        QStringLiteral("gallerySettingsNavigationChoice"));
-    auto* effectChoice = page->findChild<ComboBox*>(
-        QStringLiteral("gallerySettingsEffectChoice"));
-    auto* closeBehaviorChoice = page->findChild<ComboBox*>(
-        QStringLiteral("gallerySettingsCloseBehaviorChoice"));
-    auto* updateButton = page->findChild<Button*>(
-        QStringLiteral("gallerySettingsCheckUpdatesButton"));
+    auto* themeChoice = page->findChild<ComboBox*>(QStringLiteral("gallerySettingsThemeChoice"));
+    auto* motionChoice = page->findChild<ComboBox*>(QStringLiteral("gallerySettingsMotionChoice"));
+    auto* styleChoice = page->findChild<ComboBox*>(QStringLiteral("gallerySettingsStyleChoice"));
+    auto* navigationChoice =
+        page->findChild<ComboBox*>(QStringLiteral("gallerySettingsNavigationChoice"));
+    auto* effectChoice = page->findChild<ComboBox*>(QStringLiteral("gallerySettingsEffectChoice"));
+    auto* closeBehaviorChoice =
+        page->findChild<ComboBox*>(QStringLiteral("gallerySettingsCloseBehaviorChoice"));
+    auto* updateButton =
+        page->findChild<Button*>(QStringLiteral("gallerySettingsCheckUpdatesButton"));
     ASSERT_NE(themeChoice, nullptr);
+    ASSERT_NE(motionChoice, nullptr);
     EXPECT_EQ(styleChoice, nullptr);
     ASSERT_NE(navigationChoice, nullptr);
     ASSERT_NE(effectChoice, nullptr);
@@ -1931,17 +1940,18 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     ASSERT_NE(updateButton, nullptr);
     EXPECT_EQ(updateButton->text(), QStringLiteral("Check updates"));
     EXPECT_FALSE(page->autoFillBackground());
-    auto* settingsScroll = page->findChild<ScrollView*>(
-        QStringLiteral("gallerySettingsScrollArea"));
+    auto* settingsScroll =
+        page->findChild<ScrollView*>(QStringLiteral("gallerySettingsScrollArea"));
     ASSERT_NE(settingsScroll, nullptr);
     ASSERT_NE(settingsScroll->viewport(), nullptr);
     EXPECT_FALSE(settingsScroll->viewport()->autoFillBackground());
-    auto* settingsViewport = page->findChild<QWidget*>(
-        QStringLiteral("gallerySettingsViewport"));
+    auto* settingsViewport = page->findChild<QWidget*>(QStringLiteral("gallerySettingsViewport"));
     ASSERT_NE(settingsViewport, nullptr);
     EXPECT_FALSE(settingsViewport->autoFillBackground());
-    EXPECT_EQ(themeChoice->count(), 3);
+    EXPECT_EQ(themeChoice->count(), 4);
     EXPECT_EQ(themeChoice->currentText(), QStringLiteral("Light"));
+    EXPECT_EQ(motionChoice->count(), 3);
+    EXPECT_EQ(motionChoice->currentText(), QStringLiteral("Full"));
     // Navigation style mirrors the native WinUI Gallery: only "Left" and "Top" are offered. "Left"
     // is the responsive Auto mode, so the Auto config above shows as "Left" (index 0).
     EXPECT_EQ(navigationChoice->count(), 2);
@@ -1949,23 +1959,23 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     EXPECT_EQ(effectChoice->count(), 3);
     EXPECT_EQ(closeBehaviorChoice->count(), 3);
     EXPECT_EQ(closeBehaviorChoice->currentIndex(), static_cast<int>(settings.closeBehavior()));
-    for (auto* choice : {themeChoice, navigationChoice,
-                         effectChoice, closeBehaviorChoice}) {
+    for (auto* choice :
+         {themeChoice, motionChoice, navigationChoice, effectChoice, closeBehaviorChoice}) {
         EXPECT_EQ(choice->sizePolicy().horizontalPolicy(), QSizePolicy::Preferred);
         EXPECT_EQ(choice->maximumWidth(), QWIDGETSIZE_MAX);
         EXPECT_GE(choice->width(), choice->sizeHint().width());
-        const int availableTextWidth = choice->width() - choice->contentPaddingH()
-                                       - choice->chevronOffset().x()
-                                       - choice->chevronSize() - ::Spacing::Gap::Tight;
+        const int availableTextWidth = choice->width() - choice->contentPaddingH() -
+                                       choice->chevronOffset().x() - choice->chevronSize() -
+                                       ::Spacing::Gap::Tight;
         const QFontMetrics metrics(choice->font());
         for (int index = 0; index < choice->count(); ++index) {
             const QString item = choice->itemText(index);
             EXPECT_EQ(metrics.elidedText(item, Qt::ElideRight, availableTextWidth), item);
         }
     }
-    // Appearance & behavior (4 rows) + App behavior (1 row) + Updates (1 row) = 6 rows.
+    // Appearance & behavior (5 rows) + App behavior (1 row) + Updates (1 row) = 7 rows.
     EXPECT_NE(page->findChild<QWidget*>(QStringLiteral("gallerySettingsAccentControl")), nullptr);
-    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 6);
+    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 7);
 
     QStringList visibleText;
     for (auto* label : page->findChildren<fluent::textfields::Label*>())
@@ -1975,9 +1985,9 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     EXPECT_FALSE(visibleText.contains(QStringLiteral("About")));
     EXPECT_FALSE(visibleText.contains(QStringLiteral("Fluent-Qt Gallery")));
 
-    const auto iconViews = page->findChildren<fluent::FontIcon*>(
-        QStringLiteral("gallerySettingsRowIcon"));
-    ASSERT_EQ(iconViews.size(), 6);
+    const auto iconViews =
+        page->findChildren<fluent::FontIcon*>(QStringLiteral("gallerySettingsRowIcon"));
+    ASSERT_EQ(iconViews.size(), 7);
     for (auto* iconView : iconViews) {
         EXPECT_FALSE(iconView->glyph().isEmpty());
         EXPECT_EQ(iconView->iconSize(), Typography::IconSize::Standard);
@@ -1990,13 +2000,28 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     QTRY_COMPARE_WITH_TIMEOUT(settings.themeMode(), GallerySettings::ThemeMode::Dark, 1000);
     EXPECT_EQ(settings.themeMode(), GallerySettings::ThemeMode::Dark);
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark);
+    themeChoice->setCurrentIndex(3);
+    QTRY_COMPARE_WITH_TIMEOUT(settings.themeMode(), GallerySettings::ThemeMode::HighContrast, 1000);
+    EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::HighContrast);
+    themeChoice->setCurrentIndex(2);
+    QTRY_COMPARE_WITH_TIMEOUT(settings.themeMode(), GallerySettings::ThemeMode::Dark, 1000);
+    QSignalSpy motionSpy(&settings, &GallerySettings::motionModeChanged);
+    motionChoice->setCurrentIndex(1);
+    EXPECT_EQ(settings.motionMode(), GallerySettings::MotionMode::Reduced);
+    EXPECT_EQ(fluent::MotionPolicy::instance().mode(), fluent::MotionPolicy::Mode::Reduced);
+    ASSERT_EQ(motionSpy.count(), 1);
+    settings.setMotionMode(GallerySettings::MotionMode::Reduced);
+    EXPECT_EQ(motionSpy.count(), 1) << "Setting the active motion mode must be a no-op";
+    motionChoice->setCurrentIndex(2);
+    EXPECT_EQ(settings.motionMode(), GallerySettings::MotionMode::Disabled);
+    EXPECT_EQ(fluent::MotionPolicy::instance().mode(), fluent::MotionPolicy::Mode::Disabled);
     for (auto* iconView : iconViews)
         EXPECT_FALSE(iconView->glyph().isEmpty());
     window.resize(460, 760);
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(page->width() < 640, 1000);
-    for (auto* choice : {themeChoice, navigationChoice, effectChoice,
-                         closeBehaviorChoice}) {
+    for (auto* choice :
+         {themeChoice, motionChoice, navigationChoice, effectChoice, closeBehaviorChoice}) {
         auto* row = qobject_cast<QFrame*>(choice->parentWidget());
         ASSERT_NE(row, nullptr);
         EXPECT_GE(row->height(), 120);
@@ -2008,8 +2033,8 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     window.resize(1180, 760);
     QApplication::processEvents();
 
-    auto* navigationView = window.findChild<NavigationView*>(
-        QStringLiteral("galleryNavigationView"));
+    auto* navigationView =
+        window.findChild<NavigationView*>(QStringLiteral("galleryNavigationView"));
     ASSERT_NE(navigationView, nullptr);
     // Index 1 = "Top". (Index 0 = "Left" → Auto is exercised at the end of this test.) The finer
     // Left/LeftCompact/LeftMinimal modes are no longer user-selectable — Auto resolves them by width.
@@ -2031,11 +2056,10 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     ASSERT_NE(topDialogsButton, nullptr);
     EXPECT_GE(topFoundationButton->geometry().left() - topHomeButton->geometry().right() - 1, 4);
 
-    auto* topToolTip = topHomeButton->findChild<ToolTip*>(
-        QStringLiteral("FluentAttachedToolTip"), Qt::FindDirectChildrenOnly);
+    auto* topToolTip = topHomeButton->findChild<ToolTip*>(QStringLiteral("FluentAttachedToolTip"),
+                                                          Qt::FindDirectChildrenOnly);
     ASSERT_NE(topToolTip, nullptr);
-    QHelpEvent topHelp(QEvent::ToolTip,
-                       topHomeButton->rect().center(),
+    QHelpEvent topHelp(QEvent::ToolTip, topHomeButton->rect().center(),
                        topHomeButton->mapToGlobal(topHomeButton->rect().center()));
     QApplication::sendEvent(topHomeButton, &topHelp);
     QApplication::processEvents();
@@ -2048,10 +2072,9 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     ASSERT_TRUE(topFlyout->isVisible());
     const QRect foundationButtonInWindow(topFoundationButton->mapTo(&window, QPoint(0, 0)),
                                          topFoundationButton->size());
-    QTRY_VERIFY_WITH_TIMEOUT(
-        fluent::overlay::visibleCardRect(topFlyout->geometry()).top()
-            > foundationButtonInWindow.bottom(),
-        1000);
+    QTRY_VERIFY_WITH_TIMEOUT(fluent::overlay::visibleCardRect(topFlyout->geometry()).top() >
+                                 foundationButtonInWindow.bottom(),
+                             1000);
 
     QPointer<Popup> dismissedTopFlyout(topFlyout);
     QTest::mouseClick(topDialogsButton, Qt::LeftButton);
@@ -2075,16 +2098,23 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("dialogs-flyouts"));
     EXPECT_EQ(visiblePopupByName(&window, QStringLiteral("galleryTopNavigationFlyout")), nullptr);
     QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-    EXPECT_EQ(topSettingsButton->findChild<QPropertyAnimation*>(
-                  QStringLiteral("galleryTopSettingsIconRotationAnimation"), Qt::FindDirectChildrenOnly),
-              nullptr);
+    EXPECT_EQ(
+        topSettingsButton->findChild<QPropertyAnimation*>(
+            QStringLiteral("galleryTopSettingsIconRotationAnimation"), Qt::FindDirectChildrenOnly),
+        nullptr);
 
     QTest::mouseClick(topSettingsButton, Qt::LeftButton);
     auto* topSettingsAnimation = topSettingsButton->findChild<QPropertyAnimation*>(
         QStringLiteral("galleryTopSettingsIconRotationAnimation"), Qt::FindDirectChildrenOnly);
     ASSERT_NE(topSettingsAnimation, nullptr);
-    EXPECT_EQ(topSettingsAnimation->state(), QAbstractAnimation::Running);
+    EXPECT_EQ(topSettingsAnimation->state(), QAbstractAnimation::Stopped);
+    EXPECT_NEAR(topSettingsButton->iconRotation(), 0.0, 0.001);
     QTRY_COMPARE_WITH_TIMEOUT(window.currentRouteId(), QStringLiteral("settings"), 1000);
+
+    settings.setMotionMode(GallerySettings::MotionMode::Full);
+    EXPECT_EQ(motionChoice->currentIndex(), 0);
+    QTest::mouseClick(topSettingsButton, Qt::LeftButton);
+    EXPECT_EQ(topSettingsAnimation->state(), QAbstractAnimation::Running);
     QTRY_COMPARE_WITH_TIMEOUT(topSettingsAnimation->state(), QAbstractAnimation::Stopped, 1000);
     EXPECT_NEAR(topSettingsButton->iconRotation(), 0.0, 0.001);
     QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
@@ -2164,8 +2194,7 @@ TEST_F(GalleryShellFrameworkTest, CompositedMicaHeroDissolvesAtRetinaScale)
     window.setAttribute(Qt::WA_TranslucentBackground, true);
 
     const qreal dpr = qMax<qreal>(1.0, hero->devicePixelRatioF());
-    QImage image(qMax(1, qRound(hero->width() * dpr)),
-                 qMax(1, qRound(hero->height() * dpr)),
+    QImage image(qMax(1, qRound(hero->width() * dpr)), qMax(1, qRound(hero->height() * dpr)),
                  QImage::Format_ARGB32_Premultiplied);
     image.setDevicePixelRatio(dpr);
     image.fill(Qt::transparent);
@@ -2177,7 +2206,7 @@ TEST_F(GalleryShellFrameworkTest, CompositedMicaHeroDissolvesAtRetinaScale)
     EXPECT_GT(image.pixelColor(centerX, qMax(0, qRound(24 * dpr))).alpha(), 180);
     EXPECT_LT(image.pixelColor(centerX, image.height() - 2).alpha(), 16)
         << "The hero's device-scaled artwork must reach the transparent end of "
-         "its bottom dissolve";
+           "its bottom dissolve";
 }
 
 TEST_F(GalleryShellFrameworkTest, RapidRouteSwitchingKeepsCurrentPageScrollable)
@@ -2188,20 +2217,18 @@ TEST_F(GalleryShellFrameworkTest, RapidRouteSwitchingKeepsCurrentPageScrollable)
     QApplication::processEvents();
 
     ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
-    QTRY_VERIFY_WITH_TIMEOUT(
-        window.currentContentPage()
-            && window.currentContentPage()->routeId() == QStringLiteral("button"),
-        2000);
+    QTRY_VERIFY_WITH_TIMEOUT(window.currentContentPage() &&
+                                 window.currentContentPage()->routeId() == QStringLiteral("button"),
+                             2000);
     ASSERT_TRUE(window.selectRoute(QStringLiteral("combobox")));
-    QTRY_VERIFY_WITH_TIMEOUT(
-        window.currentContentPage()
-            && window.currentContentPage()->routeId() == QStringLiteral("combobox"),
-        2000);
+    QTRY_VERIFY_WITH_TIMEOUT(window.currentContentPage() &&
+                                 window.currentContentPage()->routeId() ==
+                                     QStringLiteral("combobox"),
+                             2000);
 
     for (int i = 0; i < 100; ++i) {
-        ASSERT_TRUE(window.selectRoute(i % 2 == 0
-                                          ? QStringLiteral("button")
-                                          : QStringLiteral("combobox")));
+        ASSERT_TRUE(
+            window.selectRoute(i % 2 == 0 ? QStringLiteral("button") : QStringLiteral("combobox")));
     }
     ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
     QApplication::processEvents();
@@ -2239,20 +2266,21 @@ TEST_F(GalleryShellFrameworkTest, SettingsThemeSwitchKeepsLabelsReadableInDarkMo
 
     SettingsPage* page = window.currentSettingsPage();
     ASSERT_NE(page, nullptr);
-    auto* themeChoice = page->findChild<ComboBox*>(
-        QStringLiteral("gallerySettingsThemeChoice"));
+    auto* themeChoice = page->findChild<ComboBox*>(QStringLiteral("gallerySettingsThemeChoice"));
     ASSERT_NE(themeChoice, nullptr);
 
     themeChoice->setCurrentIndex(2);
     QTRY_COMPARE_WITH_TIMEOUT(settings.themeMode(), GallerySettings::ThemeMode::Dark, 1000);
-    QTRY_COMPARE_WITH_TIMEOUT(fluent::FluentElement::currentTheme(),
-                              fluent::FluentElement::Dark,
+    QTRY_COMPARE_WITH_TIMEOUT(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark,
                               1000);
 
     const auto darkColors = page->themeColors();
     const auto cssRgba = [](const QColor& color) {
         return QStringLiteral("rgba(%1, %2, %3, %4)")
-            .arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha());
+            .arg(color.red())
+            .arg(color.green())
+            .arg(color.blue())
+            .arg(color.alpha());
     };
     const auto labels = page->findChildren<fluent::textfields::Label*>();
     ASSERT_FALSE(labels.isEmpty());
@@ -2261,9 +2289,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsThemeSwitchKeepsLabelsReadableInDarkMo
             label->textColorRole() == fluent::textfields::Label::TextColorRole::Secondary
                 ? darkColors.textSecondary
                 : darkColors.textPrimary;
-        QTRY_COMPARE_WITH_TIMEOUT(label->palette().color(QPalette::WindowText),
-                                  expected,
-                                  1000);
+        QTRY_COMPARE_WITH_TIMEOUT(label->palette().color(QPalette::WindowText), expected, 1000);
         QTRY_VERIFY_WITH_TIMEOUT(label->styleSheet().contains(cssRgba(expected)), 1000);
     }
 
@@ -2286,10 +2312,9 @@ TEST_F(GalleryShellFrameworkTest, FirstClosePromptsForBehaviorAndKeepsWindowOpen
     EXPECT_FALSE(window.close());
 
     ContentDialog* dialog = nullptr;
-    QTRY_VERIFY_WITH_TIMEOUT(
-        (dialog = window.findChild<ContentDialog*>(
-             QStringLiteral("galleryCloseBehaviorDialog"))) != nullptr,
-        1000);
+    QTRY_VERIFY_WITH_TIMEOUT((dialog = window.findChild<ContentDialog*>(
+                                  QStringLiteral("galleryCloseBehaviorDialog"))) != nullptr,
+                             1000);
     ASSERT_NE(dialog, nullptr);
     EXPECT_TRUE(dialog->isVisible());
     EXPECT_EQ(dialog->windowModality(), Qt::ApplicationModal);
@@ -2308,10 +2333,8 @@ TEST_F(GalleryShellFrameworkTest, FirstClosePromptsForBehaviorAndKeepsWindowOpen
     ASSERT_NE(promptContent, nullptr);
     EXPECT_EQ(promptContent->selectedBehavior(), GallerySettings::CloseBehavior::Tray);
 
-    auto* minimizeRow = dialog->findChild<QWidget*>(
-        QStringLiteral("galleryCloseBehaviorRow0"));
-    auto* quitRow = dialog->findChild<QWidget*>(
-        QStringLiteral("galleryCloseBehaviorRow2"));
+    auto* minimizeRow = dialog->findChild<QWidget*>(QStringLiteral("galleryCloseBehaviorRow0"));
+    auto* quitRow = dialog->findChild<QWidget*>(QStringLiteral("galleryCloseBehaviorRow2"));
     ASSERT_NE(minimizeRow, nullptr);
     ASSERT_NE(quitRow, nullptr);
     EXPECT_LE(minimizeRow->height(), 42);
@@ -2353,8 +2376,7 @@ TEST_F(GalleryShellFrameworkTest, ApplicationQuitAllowsWindowCloseInsteadOfTrayR
 
     EXPECT_TRUE(window.close());
     EXPECT_FALSE(window.isVisible());
-    EXPECT_TRUE(window.findChildren<ContentDialog*>(
-                             QStringLiteral("galleryCloseBehaviorDialog"))
+    EXPECT_TRUE(window.findChildren<ContentDialog*>(QStringLiteral("galleryCloseBehaviorDialog"))
                     .isEmpty());
 }
 
@@ -2367,13 +2389,12 @@ TEST_F(GalleryShellFrameworkTest, RestoreFromMinimizedRefreshesFrameBeforeActiva
     QApplication::processEvents();
 
     window.showMinimized();
-    QTRY_VERIFY_WITH_TIMEOUT(
-        window.windowState().testFlag(Qt::WindowMinimized), 1000);
+    QTRY_VERIFY_WITH_TIMEOUT(window.windowState().testFlag(Qt::WindowMinimized), 1000);
 
     applicationController.restoreWindow();
 
-    if (compatibility::WindowChromeCompat::currentPlatform()
-        == compatibility::WindowChromeCompat::Platform::Linux) {
+    if (compatibility::WindowChromeCompat::currentPlatform() ==
+        compatibility::WindowChromeCompat::Platform::Linux) {
         EXPECT_FALSE(window.isVisible())
             << "Linux restore must initially unmap the minimized surface";
 
@@ -2386,31 +2407,28 @@ TEST_F(GalleryShellFrameworkTest, RestoreFromMinimizedRefreshesFrameBeforeActiva
         QTRY_VERIFY_WITH_TIMEOUT(observedZeroTurn, 1000);
         EXPECT_FALSE(visibleAfterZeroTurn)
             << "The minimized surface must stay unmapped through the first "
-           "event-loop turn";
+               "event-loop turn";
     }
 
     QTRY_VERIFY_WITH_TIMEOUT(window.isVisible(), 1000);
-    QTRY_VERIFY_WITH_TIMEOUT(
-        !window.windowState().testFlag(Qt::WindowMinimized), 1000);
-    auto* captionHost = window.findChild<QWidget*>(
-        QStringLiteral("fluentWindowCaptionButtonHost"));
+    QTRY_VERIFY_WITH_TIMEOUT(!window.windowState().testFlag(Qt::WindowMinimized), 1000);
+    auto* captionHost = window.findChild<QWidget*>(QStringLiteral("fluentWindowCaptionButtonHost"));
     const auto platform = compatibility::WindowChromeCompat::currentPlatform();
     if (platform == compatibility::WindowChromeCompat::Platform::MacOS) {
-        EXPECT_EQ(captionHost, nullptr)
-            << "macOS must keep using its native "
-                                       "traffic-light controls after restore";
+        EXPECT_EQ(captionHost, nullptr) << "macOS must keep using its native "
+                                           "traffic-light controls after restore";
     } else {
         ASSERT_NE(captionHost, nullptr);
         ASSERT_NE(window.titleBar(), nullptr);
         EXPECT_TRUE(window.titleBar()->rect().contains(captionHost->geometry()))
             << "Restore must not leave the client caption strip outside its title "
-           "bar";
+               "bar";
     }
 
     if (platform == compatibility::WindowChromeCompat::Platform::Linux) {
         EXPECT_TRUE(window.windowFlags().testFlag(Qt::FramelessWindowHint))
             << "Linux restore must retain client-side chrome instead of exposing a "
-           "native title bar";
+               "native title bar";
     }
 
     window.close();
@@ -2431,15 +2449,14 @@ TEST_F(GalleryShellFrameworkTest, RestoreFromTrayHiddenKeepsClientSideChrome)
 
     QTRY_VERIFY_WITH_TIMEOUT(window.isVisible(), 1000);
     EXPECT_FALSE(window.windowState().testFlag(Qt::WindowMinimized));
-    if (compatibility::WindowChromeCompat::currentPlatform()
-        == compatibility::WindowChromeCompat::Platform::Linux) {
+    if (compatibility::WindowChromeCompat::currentPlatform() ==
+        compatibility::WindowChromeCompat::Platform::Linux) {
         EXPECT_TRUE(window.windowFlags().testFlag(Qt::FramelessWindowHint));
     }
 
-    auto* captionHost = window.findChild<QWidget*>(
-        QStringLiteral("fluentWindowCaptionButtonHost"));
-    if (compatibility::WindowChromeCompat::currentPlatform()
-        == compatibility::WindowChromeCompat::Platform::MacOS) {
+    auto* captionHost = window.findChild<QWidget*>(QStringLiteral("fluentWindowCaptionButtonHost"));
+    if (compatibility::WindowChromeCompat::currentPlatform() ==
+        compatibility::WindowChromeCompat::Platform::MacOS) {
         EXPECT_EQ(captionHost, nullptr);
     } else {
         ASSERT_NE(captionHost, nullptr);
@@ -2460,14 +2477,13 @@ TEST_F(GalleryShellFrameworkTest, SecondaryInstanceRestoresMinimizedWindow)
 
     GalleryWindow window;
     GalleryApplicationController applicationController(&window);
-    QObject::connect(&primary, &GallerySingleInstance::activationRequested,
-                     &applicationController, &GalleryApplicationController::restoreWindow);
+    QObject::connect(&primary, &GallerySingleInstance::activationRequested, &applicationController,
+                     &GalleryApplicationController::restoreWindow);
     window.resize(900, 700);
     window.show();
     QApplication::processEvents();
     window.showMinimized();
-    QTRY_VERIFY_WITH_TIMEOUT(
-        window.windowState().testFlag(Qt::WindowMinimized), 1000);
+    QTRY_VERIFY_WITH_TIMEOUT(window.windowState().testFlag(Qt::WindowMinimized), 1000);
 
     QProcess secondary;
     QProcessEnvironment secondaryEnvironment = QProcessEnvironment::systemEnvironment();
@@ -2478,12 +2494,10 @@ TEST_F(GalleryShellFrameworkTest, SecondaryInstanceRestoresMinimizedWindow)
     secondaryEnvironment.insert(QStringLiteral("FLUENT_QT_SINGLE_INSTANCE_TEST_ORGANIZATION"),
                                 QCoreApplication::organizationName());
     secondary.setProcessEnvironment(secondaryEnvironment);
-    secondary.setProgram(QString::fromLocal8Bit(
-        FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH));
+    secondary.setProgram(QString::fromLocal8Bit(FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH));
     secondary.setArguments({instanceKey});
     secondary.start();
-    ASSERT_TRUE(secondary.waitForStarted(2000))
-        << secondary.errorString().toStdString();
+    ASSERT_TRUE(secondary.waitForStarted(2000)) << secondary.errorString().toStdString();
 
     QTRY_VERIFY_WITH_TIMEOUT(secondary.state() == QProcess::NotRunning, 3000);
     const QByteArray secondaryOutput = secondary.readAllStandardOutput();
@@ -2492,15 +2506,14 @@ TEST_F(GalleryShellFrameworkTest, SecondaryInstanceRestoresMinimizedWindow)
     EXPECT_TRUE(secondaryOutput.contains("SECONDARY")) << secondaryOutput.constData();
 
     QTRY_VERIFY_WITH_TIMEOUT(window.isVisible(), 1000);
-    QTRY_VERIFY_WITH_TIMEOUT(
-        !window.windowState().testFlag(Qt::WindowMinimized), 1000);
+    QTRY_VERIFY_WITH_TIMEOUT(!window.windowState().testFlag(Qt::WindowMinimized), 1000);
     window.hide();
 }
 
 TEST_F(GalleryShellFrameworkTest, WaylandInactiveVisibleWindowUsesRemapFallback)
 {
     if (!QGuiApplication::platformName().startsWith(QStringLiteral("wayland"),
-                                                     Qt::CaseInsensitive)) {
+                                                    Qt::CaseInsensitive)) {
         GTEST_SKIP() << "Qt 5 Wayland stale-window-state fallback is Wayland-specific";
     }
 
@@ -2523,9 +2536,8 @@ TEST_F(GalleryShellFrameworkTest, WaylandInactiveVisibleWindowUsesRemapFallback)
 
     applicationController.restoreWindow();
 
-    EXPECT_FALSE(window.isVisible())
-        << "Inactive visible Wayland windows must "
-                                      "use the compositor-state fallback";
+    EXPECT_FALSE(window.isVisible()) << "Inactive visible Wayland windows must "
+                                        "use the compositor-state fallback";
     QTRY_VERIFY_WITH_TIMEOUT(window.isVisible(), 1000);
     EXPECT_FALSE(window.windowState().testFlag(Qt::WindowMinimized));
     competingWindow.hide();
@@ -2595,9 +2607,9 @@ TEST(GalleryUserThemePersistenceTest, LegacyFlatThemeIsAppliedAndMigratedOnExpli
 
     tc::apply();
     EXPECT_EQ(ThemeRegistry::instance().radius().control, 17);
-    EXPECT_EQ(ThemeRegistry::instance().colors(false).bgCanvas.rgb(),
+    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Light).bgCanvas.rgb(),
               QColor(QStringLiteral("#123456")).rgb());
-    EXPECT_EQ(ThemeRegistry::instance().colors(true).bgCanvas.rgb(),
+    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Dark).bgCanvas.rgb(),
               QColor(QStringLiteral("#654321")).rgb());
 
     const QColor picked(QStringLiteral("#4DA04D"));
@@ -2609,20 +2621,30 @@ TEST(GalleryUserThemePersistenceTest, LegacyFlatThemeIsAppliedAndMigratedOnExpli
     EXPECT_EQ(root.value(QStringLiteral("schemaVersion")).toInt(), 1);
     EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("fluent"));
     const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
-    EXPECT_EQ(overrides.value(QStringLiteral("radius")).toObject()
-                  .value(QStringLiteral("control")).toInt(),
+    EXPECT_EQ(overrides.value(QStringLiteral("radius"))
+                  .toObject()
+                  .value(QStringLiteral("control"))
+                  .toInt(),
               17);
-    EXPECT_EQ(overrides.value(QStringLiteral("light")).toObject()
-                  .value(QStringLiteral("bgCanvas")).toString(),
+    EXPECT_EQ(overrides.value(QStringLiteral("light"))
+                  .toObject()
+                  .value(QStringLiteral("bgCanvas"))
+                  .toString(),
               QStringLiteral("#123456"));
-    EXPECT_EQ(overrides.value(QStringLiteral("dark")).toObject()
-                  .value(QStringLiteral("bgCanvas")).toString(),
+    EXPECT_EQ(overrides.value(QStringLiteral("dark"))
+                  .toObject()
+                  .value(QStringLiteral("bgCanvas"))
+                  .toString(),
               QStringLiteral("#654321"));
-    EXPECT_EQ(overrides.value(QStringLiteral("light")).toObject()
-                  .value(QStringLiteral("accentDefault")).toString(),
+    EXPECT_EQ(overrides.value(QStringLiteral("light"))
+                  .toObject()
+                  .value(QStringLiteral("accentDefault"))
+                  .toString(),
               QStringLiteral("#4DA04D"));
-    EXPECT_EQ(overrides.value(QStringLiteral("dark")).toObject()
-                  .value(QStringLiteral("accentDefault")).toString(),
+    EXPECT_EQ(overrides.value(QStringLiteral("dark"))
+                  .toObject()
+                  .value(QStringLiteral("accentDefault"))
+                  .toString(),
               QStringLiteral("#4DA04D"));
 
     migratedFile.close();
@@ -2653,7 +2675,7 @@ TEST(GalleryUserThemePersistenceTest, UnsupportedSchemaIsIgnored)
 
     tc::apply();
 
-    EXPECT_EQ(ThemeRegistry::instance().colors(false).accentDefault.rgb(),
+    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Light).accentDefault.rgb(),
               tc::defaultAccent(false).rgb());
 
     tc::setAccent(QColor(QStringLiteral("#4DA04D")));
@@ -2699,7 +2721,8 @@ TEST(GalleryUserThemeAccentConsistencyTest, SetAccentWritesSparseOverrideAndReDe
 
     QFile::remove(tc::filePath());
 
-    const QColor picked(0x4D, 0xA0, 0x4D);  // the green that originally clashed with stale blue variants
+    const QColor picked(0x4D, 0xA0,
+                        0x4D); // the green that originally clashed with stale blue variants
     tc::setAccent(picked);
 
     QFile file(tc::filePath());
@@ -2719,19 +2742,23 @@ TEST(GalleryUserThemeAccentConsistencyTest, SetAccentWritesSparseOverrideAndReDe
     tc::apply();
 
     for (bool dark : {false, true}) {
-        const auto colors = ThemeRegistry::instance().colors(dark);
+        const auto colors = ThemeRegistry::instance().colors(dark ? fluent::FluentElement::Dark
+                                                                  : fluent::FluentElement::Light);
         // QColor::rgb() drops alpha, so a derived variant (same hue, lower alpha) compares equal to the
         // picked accent — and unequal to the stale preset blue if the bug regressed.
         EXPECT_EQ(colors.accentDefault.rgb(), picked.rgb()) << "dark=" << dark;
-        EXPECT_EQ(colors.accentSecondary.rgb(), picked.rgb()) << "accentSecondary stale; dark=" << dark;
-        EXPECT_EQ(colors.accentTertiary.rgb(), picked.rgb()) << "accentTertiary stale; dark=" << dark;
-        EXPECT_EQ(colors.textAccentPrimary.rgb(), picked.rgb()) << "textAccentPrimary stale; dark=" << dark;
+        EXPECT_EQ(colors.accentSecondary.rgb(), picked.rgb())
+            << "accentSecondary stale; dark=" << dark;
+        EXPECT_EQ(colors.accentTertiary.rgb(), picked.rgb())
+            << "accentTertiary stale; dark=" << dark;
+        EXPECT_EQ(colors.textAccentPrimary.rgb(), picked.rgb())
+            << "textAccentPrimary stale; dark=" << dark;
     }
 
     // Reset reverts cleanly to the preset accent (no half-override left behind).
     tc::clearAccent();
     tc::apply();
-    EXPECT_EQ(ThemeRegistry::instance().colors(false).accentDefault.rgb(),
+    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Light).accentDefault.rgb(),
               tc::defaultAccent(false).rgb());
 
     QFile::remove(tc::filePath());
@@ -2739,7 +2766,8 @@ TEST(GalleryUserThemeAccentConsistencyTest, SetAccentWritesSparseOverrideAndReDe
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
 }
 
-TEST(GalleryWindowingSamplesTest, TitleBarSampleReservesTrailingCaptionSpace) {
+TEST(GalleryWindowingSamplesTest, TitleBarSampleReservesTrailingCaptionSpace)
+{
 
     const auto samples = fluent::gallery::windowingSamples(QStringLiteral("title-bar"));
     ASSERT_FALSE(samples.isEmpty());
@@ -2773,7 +2801,8 @@ TEST_F(GalleryShellFrameworkTest, TopFlyoutRowClickDismissesAfterReopen)
     window.show();
     QApplication::processEvents();
 
-    auto* navigationView = window.findChild<NavigationView*>(QStringLiteral("galleryNavigationView"));
+    auto* navigationView =
+        window.findChild<NavigationView*>(QStringLiteral("galleryNavigationView"));
     ASSERT_NE(navigationView, nullptr);
     ASSERT_NE(navigationView->mainChromeWidget(), nullptr);
     auto* collectionsButton = navigationView->mainChromeWidget()->findChild<Button*>(
@@ -2783,7 +2812,7 @@ TEST_F(GalleryShellFrameworkTest, TopFlyoutRowClickDismissesAfterReopen)
     auto openCollectionsFlyout = [&]() -> Popup* {
         QTest::mouseClick(collectionsButton, Qt::LeftButton);
         QApplication::processEvents();
-        QTest::qWait(250);  // let the entrance settle
+        QTest::qWait(250); // let the entrance settle
         QApplication::processEvents();
         return visiblePopupByName(&window, QStringLiteral("galleryTopNavigationFlyout"));
     };
@@ -2806,8 +2835,8 @@ TEST_F(GalleryShellFrameworkTest, TopFlyoutRowClickDismissesAfterReopen)
     ASSERT_TRUE(secondPtr->isVisible());
 
     // 3) Click a child row — the flyout must collapse and the route must change.
-    auto* row = second->findChild<QWidget*>(
-        QStringLiteral("galleryCompactNavigationFlyoutRow_tree-view"));
+    auto* row =
+        second->findChild<QWidget*>(QStringLiteral("galleryCompactNavigationFlyoutRow_tree-view"));
     ASSERT_NE(row, nullptr);
     QTest::mouseClick(row, Qt::LeftButton, Qt::NoModifier, row->rect().center());
     QApplication::processEvents();
@@ -2817,7 +2846,7 @@ TEST_F(GalleryShellFrameworkTest, TopFlyoutRowClickDismissesAfterReopen)
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("tree-view"));
     EXPECT_TRUE(secondPtr.isNull() || !secondPtr->isVisible())
         << "flyout stayed open after row click following a light-dismiss + "
-         "reopen";
+           "reopen";
 
     QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     settings.setNavigationStyle(previousStyle);
