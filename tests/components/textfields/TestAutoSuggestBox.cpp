@@ -30,7 +30,8 @@ using fluent::collections::ListView;
 class AutoSuggestBoxTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& colors = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(colors.bgCanvas.name()));
     }
@@ -48,7 +49,8 @@ protected:
             "AutoSuggestBox::QueryButtonPlacement");
     }
 
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new AutoSuggestBoxTestWindow();
         window->setFixedSize(520, 360);
         layout = new AnchorLayout(window);
@@ -56,11 +58,10 @@ protected:
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
-    void showAndFocus(AutoSuggestBox* box) {
+    void showAndFocus(AutoSuggestBox* box)
+    {
         window->show();
         box->setFocus(Qt::OtherFocusReason);
         QApplication::processEvents();
@@ -77,13 +78,14 @@ QWheelEvent makeWheelEvent(QWidget* target, QPoint pixelDelta, QPoint angleDelta
 {
     const QPointF pos = target->rect().center();
     const QPointF globalPos = target->mapToGlobal(pos.toPoint());
-    return QWheelEvent(pos, globalPos, pixelDelta, angleDelta,
-                       Qt::NoButton, Qt::NoModifier, phase, false);
+    return QWheelEvent(pos, globalPos, pixelDelta, angleDelta, Qt::NoButton, Qt::NoModifier, phase,
+                       false);
 }
 
 } // namespace
 
-TEST_F(AutoSuggestBoxTest, DefaultsAndButtons) {
+TEST_F(AutoSuggestBoxTest, DefaultsAndButtons)
+{
     AutoSuggestBox box(window);
 
     EXPECT_TRUE(box.suggestions().isEmpty());
@@ -110,7 +112,8 @@ TEST_F(AutoSuggestBoxTest, DefaultsAndButtons) {
     EXPECT_EQ(popup->anchorOffset(), Spacing::XSmall);
 }
 
-TEST_F(AutoSuggestBoxTest, PropertySettersEmitSignals) {
+TEST_F(AutoSuggestBoxTest, PropertySettersEmitSignals)
+{
     AutoSuggestBox box(window);
     QSignalSpy suggestionsSpy(&box, &AutoSuggestBox::suggestionsChanged);
     QSignalSpy headerSpy(&box, &AutoSuggestBox::headerChanged);
@@ -181,7 +184,8 @@ TEST_F(AutoSuggestBoxTest, PropertySettersEmitSignals) {
     EXPECT_EQ(suggestionItemHeightSpy.count(), 1);
 }
 
-TEST_F(AutoSuggestBoxTest, CompactInputAndButtonSizes) {
+TEST_F(AutoSuggestBoxTest, CompactInputAndButtonSizes)
+{
     AutoSuggestBox box(window);
     box.setFontRole(Typography::FontRole::Caption);
     box.setSuggestionFontRole(Typography::FontRole::Caption);
@@ -213,7 +217,8 @@ TEST_F(AutoSuggestBoxTest, CompactInputAndButtonSizes) {
     EXPECT_LT(clearButton->geometry().right(), queryButton->geometry().left());
 }
 
-TEST_F(AutoSuggestBoxTest, ButtonsCenterWithinInputRectWhenHostHeightDiffers) {
+TEST_F(AutoSuggestBoxTest, ButtonsCenterWithinInputRectWhenHostHeightDiffers)
+{
     AutoSuggestBox box(window);
     box.setInputHeight(28);
     box.setQueryButtonSize(24);
@@ -232,7 +237,8 @@ TEST_F(AutoSuggestBoxTest, ButtonsCenterWithinInputRectWhenHostHeightDiffers) {
     EXPECT_LT(clearButton->geometry().right(), queryButton->geometry().left());
 }
 
-TEST_F(AutoSuggestBoxTest, QueryButtonPlacementSupportsLeftAndRight) {
+TEST_F(AutoSuggestBoxTest, QueryButtonPlacementSupportsLeftAndRight)
+{
     AutoSuggestBox box(window);
     box.resize(240, box.sizeHint().height());
     box.setText("Text");
@@ -265,7 +271,8 @@ TEST_F(AutoSuggestBoxTest, QueryButtonPlacementSupportsLeftAndRight) {
     EXPECT_EQ(box.contentMargins().left(), Spacing::Padding::TextFieldHorizontal);
 }
 
-TEST_F(AutoSuggestBoxTest, ProgrammaticAndUserTextReasons) {
+TEST_F(AutoSuggestBoxTest, ProgrammaticAndUserTextReasons)
+{
     AutoSuggestBox* box = new AutoSuggestBox(window);
     box->setFixedWidth(220);
     layout->addWidget(box);
@@ -283,7 +290,8 @@ TEST_F(AutoSuggestBoxTest, ProgrammaticAndUserTextReasons) {
               AutoSuggestBox::TextChangeReason::UserInput);
 }
 
-TEST_F(AutoSuggestBoxTest, UserInputOpensAndEscapeClosesSuggestions) {
+TEST_F(AutoSuggestBoxTest, UserInputOpensAndEscapeClosesSuggestions)
+{
     AutoSuggestBox* box = new AutoSuggestBox(window);
     box->setFixedWidth(220);
     box->setSuggestions({"Alpha", "Alpine", "Azure"});
@@ -297,9 +305,8 @@ TEST_F(AutoSuggestBoxTest, UserInputOpensAndEscapeClosesSuggestions) {
 
     EXPECT_TRUE(box->isSuggestionListOpen());
     EXPECT_EQ(QApplication::focusWidget(), box);
-    EXPECT_EQ(focusSpy.count(), 0)
-        << "Opening suggestions must not interrupt "
-                                    "IME composition with a focus transfer";
+    EXPECT_EQ(focusSpy.count(), 0) << "Opening suggestions must not interrupt "
+                                      "IME composition with a focus transfer";
     ASSERT_GE(openSpy.count(), 1);
     EXPECT_TRUE(openSpy.first().at(0).toBool());
 
@@ -309,7 +316,8 @@ TEST_F(AutoSuggestBoxTest, UserInputOpensAndEscapeClosesSuggestions) {
     EXPECT_FALSE(openSpy.last().at(0).toBool());
 }
 
-TEST_F(AutoSuggestBoxTest, SuggestionPopupIsRecreatedAfterOwnerMovesTopLevel) {
+TEST_F(AutoSuggestBoxTest, SuggestionPopupIsRecreatedAfterOwnerMovesTopLevel)
+{
     auto* firstWindow = window;
     auto* secondWindow = new AutoSuggestBoxTestWindow;
     secondWindow->setFixedSize(520, 360);
@@ -344,14 +352,14 @@ TEST_F(AutoSuggestBoxTest, SuggestionPopupIsRecreatedAfterOwnerMovesTopLevel) {
     QApplication::processEvents();
 
     EXPECT_TRUE(box->isSuggestionListOpen());
-    auto* recreatedPopup =
-        secondWindow->findChild<fluent::dialogs_flyouts::Flyout*>(
-            QStringLiteral("AutoSuggestBoxSuggestionPopup"));
+    auto* recreatedPopup = secondWindow->findChild<fluent::dialogs_flyouts::Flyout*>(
+        QStringLiteral("AutoSuggestBoxSuggestionPopup"));
     ASSERT_NE(recreatedPopup, nullptr);
     EXPECT_EQ(recreatedPopup->parentWidget(), secondWindow);
 }
 
-TEST_F(AutoSuggestBoxTest, KeyboardPreviewAndSubmitSuggestion) {
+TEST_F(AutoSuggestBoxTest, KeyboardPreviewAndSubmitSuggestion)
+{
     AutoSuggestBox* box = new AutoSuggestBox(window);
     box->setFixedWidth(220);
     box->setSuggestions({"Alpha", "Alpine", "Azure"});
@@ -392,7 +400,8 @@ TEST_F(AutoSuggestBoxTest, KeyboardPreviewAndSubmitSuggestion) {
     EXPECT_FALSE(box->isSuggestionListOpen());
 }
 
-TEST_F(AutoSuggestBoxTest, QueryAndClearButtons) {
+TEST_F(AutoSuggestBoxTest, QueryAndClearButtons)
+{
     AutoSuggestBox box(window);
     box.resize(240, box.sizeHint().height());
     QSignalSpy querySpy(&box, &AutoSuggestBox::querySubmitted);
@@ -427,7 +436,8 @@ TEST_F(AutoSuggestBoxTest, QueryAndClearButtons) {
               AutoSuggestBox::TextChangeReason::UserInput);
 }
 
-TEST_F(AutoSuggestBoxTest, ClearButtonReceivesMouseInputWhileSuggestionsOpen) {
+TEST_F(AutoSuggestBoxTest, ClearButtonReceivesMouseInputWhileSuggestionsOpen)
+{
     AutoSuggestBox* box = new AutoSuggestBox(window);
     box->setQueryIconVisible(false);
     box->setInputHeight(24);
@@ -469,7 +479,8 @@ TEST_F(AutoSuggestBoxTest, ClearButtonReceivesMouseInputWhileSuggestionsOpen) {
               AutoSuggestBox::TextChangeReason::UserInput);
 }
 
-TEST_F(AutoSuggestBoxTest, MouseClickSuggestionChoosesAndSubmits) {
+TEST_F(AutoSuggestBoxTest, MouseClickSuggestionChoosesAndSubmits)
+{
     AutoSuggestBox* box = new AutoSuggestBox(window);
     box->setFixedWidth(220);
     box->setSuggestions({"Alpha", "Alpine", "Azure"});
@@ -483,7 +494,8 @@ TEST_F(AutoSuggestBoxTest, MouseClickSuggestionChoosesAndSubmits) {
     QApplication::processEvents();
     ASSERT_TRUE(box->isSuggestionListOpen());
 
-    auto* popup = window->findChild<fluent::dialogs_flyouts::Flyout*>("AutoSuggestBoxSuggestionPopup");
+    auto* popup =
+        window->findChild<fluent::dialogs_flyouts::Flyout*>("AutoSuggestBoxSuggestionPopup");
     ASSERT_NE(popup, nullptr);
     auto* listView = popup->findChild<QListView*>("AutoSuggestBoxSuggestionList");
     ASSERT_NE(listView, nullptr);
@@ -503,11 +515,12 @@ TEST_F(AutoSuggestBoxTest, MouseClickSuggestionChoosesAndSubmits) {
     EXPECT_FALSE(box->isSuggestionListOpen());
 }
 
-TEST_F(AutoSuggestBoxTest, SuggestionsUseFluentScrollChromeAndContainBoundaryWheel) {
+TEST_F(AutoSuggestBoxTest, SuggestionsUseFluentScrollChromeAndContainBoundaryWheel)
+{
     AutoSuggestBox* box = new AutoSuggestBox(window);
     box->setFixedWidth(260);
-    box->setSuggestions({"Apple", "Apricot", "Banana", "Blueberry", "Cherry",
-                         "Grape", "Orange", "Strawberry", "Watermelon"});
+    box->setSuggestions({"Apple", "Apricot", "Banana", "Blueberry", "Cherry", "Grape", "Orange",
+                         "Strawberry", "Watermelon"});
     layout->addWidget(box);
     showAndFocus(box);
 
@@ -515,15 +528,14 @@ TEST_F(AutoSuggestBoxTest, SuggestionsUseFluentScrollChromeAndContainBoundaryWhe
     QApplication::processEvents();
     ASSERT_TRUE(box->isSuggestionListOpen());
 
-    auto* popup = window->findChild<fluent::dialogs_flyouts::Flyout*>("AutoSuggestBoxSuggestionPopup");
+    auto* popup =
+        window->findChild<fluent::dialogs_flyouts::Flyout*>("AutoSuggestBoxSuggestionPopup");
     ASSERT_NE(popup, nullptr);
     auto* listView = popup->findChild<ListView*>("AutoSuggestBoxSuggestionList");
     ASSERT_NE(listView, nullptr);
     EXPECT_TRUE(listView->property("fluentPreserveParentSurface").toBool());
     ASSERT_NE(listView->viewport(), nullptr);
-    EXPECT_TRUE(listView->viewport()
-                    ->property("fluentPreserveParentSurface")
-                    .toBool());
+    EXPECT_TRUE(listView->viewport()->property("fluentPreserveParentSurface").toBool());
     EXPECT_FALSE(listView->isScrollChainingEnabled());
 
     auto* fluentBar = listView->verticalFluentScrollBar();
@@ -545,7 +557,42 @@ TEST_F(AutoSuggestBoxTest, SuggestionsUseFluentScrollChromeAndContainBoundaryWhe
     EXPECT_EQ(listView->verticalScrollBar()->value(), listView->verticalScrollBar()->maximum());
 }
 
-TEST_F(AutoSuggestBoxTest, OutsidePressLightDismissesSuggestions) {
+TEST_F(AutoSuggestBoxTest, ReplacingScrolledSuggestionsMakesSingleResultVisibleImmediately)
+{
+    AutoSuggestBox* box = new AutoSuggestBox(window);
+    box->setFixedWidth(260);
+    box->setSuggestions({"Apple", "Apricot", "Banana", "Blueberry", "Cherry", "Grape", "Orange",
+                         "Strawberry", "Watermelon"});
+    layout->addWidget(box);
+    showAndFocus(box);
+
+    QTest::keyClicks(box, "a");
+    QApplication::processEvents();
+    ASSERT_TRUE(box->isSuggestionListOpen());
+
+    auto* popup =
+        window->findChild<fluent::dialogs_flyouts::Flyout*>("AutoSuggestBoxSuggestionPopup");
+    ASSERT_NE(popup, nullptr);
+    auto* listView = popup->findChild<ListView*>("AutoSuggestBoxSuggestionList");
+    ASSERT_NE(listView, nullptr);
+    listView->doItemsLayout();
+    QApplication::processEvents();
+
+    ASSERT_GT(listView->verticalScrollBar()->maximum(), listView->verticalScrollBar()->minimum());
+    listView->verticalScrollBar()->setValue(listView->verticalScrollBar()->maximum());
+
+    box->setSuggestions({"TreeView"});
+
+    ASSERT_EQ(listView->model()->rowCount(), 1);
+    EXPECT_EQ(listView->verticalScrollBar()->value(), listView->verticalScrollBar()->minimum());
+    const QRect itemRect =
+        static_cast<QListView*>(listView)->visualRect(listView->model()->index(0, 0));
+    EXPECT_TRUE(itemRect.isValid());
+    EXPECT_TRUE(listView->viewport()->rect().intersects(itemRect));
+}
+
+TEST_F(AutoSuggestBoxTest, OutsidePressLightDismissesSuggestions)
+{
     AutoSuggestBox* box = new AutoSuggestBox(window);
     box->setFixedWidth(220);
     box->setSuggestions({"Alpha", "Alpine", "Azure"});
@@ -556,8 +603,8 @@ TEST_F(AutoSuggestBoxTest, OutsidePressLightDismissesSuggestions) {
     QApplication::processEvents();
     ASSERT_TRUE(box->isSuggestionListOpen());
 
-    const QPoint outsideGlobal = window->mapToGlobal(QPoint(window->width() - 24,
-                                                           window->height() - 24));
+    const QPoint outsideGlobal =
+        window->mapToGlobal(QPoint(window->width() - 24, window->height() - 24));
     QWidget* hitWidget = QApplication::widgetAt(outsideGlobal);
     ASSERT_NE(hitWidget, nullptr);
     QTest::mouseClick(hitWidget, Qt::LeftButton, Qt::NoModifier,
@@ -567,8 +614,8 @@ TEST_F(AutoSuggestBoxTest, OutsidePressLightDismissesSuggestions) {
     EXPECT_FALSE(box->isSuggestionListOpen());
 }
 
-
-TEST_F(AutoSuggestBoxTest, VisualCheck) {
+TEST_F(AutoSuggestBoxTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -632,8 +679,10 @@ TEST_F(AutoSuggestBoxTest, VisualCheck) {
     layout->addWidget(themeButton);
 
     QObject::connect(themeButton, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-            ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     window->show();
