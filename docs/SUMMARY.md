@@ -78,6 +78,8 @@ standalone reading tasks.
     - [Python Publishing Runbook](../bindings/pyside6/PUBLISHING.md)
     - [PySide6 compatibility and coverage](../bindings/pyside6/ROADMAP.md)
 - [Releases](releases/README.md)
+  - **1.8**
+    - [Fluent-Qt 1.8.0](releases/v1.8.0.md)
   - **1.7**
     - [Fluent-Qt 1.7.6](releases/v1.7.6.md)
     - [Fluent-Qt 1.7.5](releases/v1.7.5.md)

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "project": {
     "name": "FluentQt",
-    "version": "1.7.6",
-    "api_version": "1.7",
+    "version": "1.8.0",
+    "api_version": "1.8",
     "cpp_standard": "C++17",
     "qt_versions": [
       "5.15+",
@@ -24,7 +24,7 @@
   ],
   "summary": {
     "components": 70,
-    "public_headers": 115,
+    "public_headers": 116,
     "categories": 12
   },
   "categories": [
@@ -3214,6 +3214,17 @@
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/FontIcon.h"
     },
     {
+      "include": "<FluentQt/components/foundation/MotionPolicy.h>",
+      "source": "src/components/foundation/MotionPolicy.h",
+      "summary": "Application-wide policy for Fluent transition and continuous motion.",
+      "declarations": [
+        "MotionPolicy",
+        "Mode",
+        "Kind"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/MotionPolicy.h"
+    },
+    {
       "include": "<FluentQt/components/foundation/QMLPlus.h>",
       "source": "src/components/foundation/QMLPlus.h",
       "summary": "Lightweight anchor-based layout for QWidget controls.",
@@ -3239,6 +3250,7 @@
       "declarations": [
         "ThemeRegistry",
         "Snapshot",
+        "ExtendedSnapshot",
         "UninitializedTag"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/ThemeRegistry.h"
