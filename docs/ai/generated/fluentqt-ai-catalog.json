@@ -2759,7 +2759,7 @@
           "id": "toggle-switch-state",
           "title": "ToggleSwitch state",
           "description": "The toggled signal mirrors the on/off state into surrounding UI.",
-          "cpp_snippet": "auto* toggle = new ToggleSwitch(this);\ntoggle->setOnContent(\"On\");\ntoggle->setOffContent(\"Off\");\nauto* status = new Label(\"State: Off\", this);\nconnect(toggle, &ToggleSwitch::toggled,\n        status, [status](bool on) {\n            status->setText(on ? \"State: On\" : \"State: Off\");\n        });",
+          "cpp_snippet": "auto* toggle = new ToggleSwitch(this);\ntoggle->setOnContent(\"On\");\ntoggle->setOffContent(\"Off\");\ntoggle->setAccessibleName(\"Feature toggle\");\nauto* status = new Label(\"State: Off\", this);\nconnect(toggle, &ToggleSwitch::toggled,\n        status, [status](bool on) {\n            status->setText(on ? \"State: On\" : \"State: Off\");\n        });",
           "preview_layout": {
             "orientation": "vertical",
             "spacing": 8
@@ -8883,6 +8883,7 @@
     "FluentWidget",
     "IconSize",
     "Icons",
+    "MotionPolicy",
     "PivotItem",
     "ScrollViewZoomAwareWidget",
     "SelectorBarItem",
