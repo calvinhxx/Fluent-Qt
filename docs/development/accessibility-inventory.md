@@ -39,6 +39,15 @@ contracts live in `tests/components/TestMotionPolicy.cpp`; focused component and
 Gallery-shell contracts cover active-transition convergence and local animation
 switches.
 
+`TextEdit` animates only its wrapper height; the native editor remains the value,
+selection, and focus surface. Reduced and Disabled modes preserve the same final
+line-count geometry without requiring an intermediate frame. Focused contracts
+cover focus retention, motion-policy timing, and final geometry in
+`tests/components/textfields/TestTextEditMotion.cpp`; they are not a claim of
+platform assistive-technology certification. Input-method preedit leaves the
+wrapper height stable until composition commits, so candidate exploration does
+not repeatedly reflow the surrounding form.
+
 `FluentElement::HighContrast` resolves a complete third semantic palette, so
 controls continue to expose the same roles, state, actions, and logical child
 trees while using opaque high-contrast foreground, background, focus, disabled,

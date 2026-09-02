@@ -1,4 +1,5 @@
 #include "TextEdit.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "components/scrolling/ScrollBar.h"
 #include <QAbstractTextDocumentLayout>
@@ -22,11 +23,54 @@
 #include <QTextLayout>
 #include <QTextOption>
 #include <QTimer>
+#include <QVariantAnimation>
 #include <QtMath>
 
 namespace fluent::textfields {
 
 // ── Helpers. zh_CN: 辅助函数 ───────────────────────────────────────────────────
+
+constexpr char kHeightAnimationObjectName[] = "fluentTextEditHeightAnimation";
+
+class TextEditHeightAnimation final : public QVariantAnimation {
+public:
+    explicit TextEditHeightAnimation(QObject* parent) : QVariantAnimation(parent) {}
+
+    int targetHeight = 0;
+    bool animateNextUpdate = false;
+    bool programmaticTextChange = false;
+    bool settleSynchronouslyNextUpdate = false;
+};
+
+static TextEditHeightAnimation* heightAnimationFor(TextEdit* edit)
+{
+    auto* animation =
+        edit ? edit->findChild<QVariantAnimation*>(QString::fromLatin1(kHeightAnimationObjectName),
+                                                   Qt::FindDirectChildrenOnly)
+             : nullptr;
+    return static_cast<TextEditHeightAnimation*>(animation);
+}
+
+static void requestSynchronousHeightSettlement(TextEdit* edit)
+{
+    if (auto* animation = heightAnimationFor(edit))
+        animation->settleSynchronouslyNextUpdate = true;
+}
+
+static void applyTextEditHeight(TextEdit* edit, int height)
+{
+    if (!edit)
+        return;
+
+    const int boundedHeight = qMax(1, height);
+    if (edit->height() == boundedHeight && edit->minimumHeight() == boundedHeight &&
+        edit->maximumHeight() == boundedHeight) {
+        return;
+    }
+
+    edit->setFixedHeight(boundedHeight);
+    edit->updateGeometry();
+}
 
 static int metricLineHeight(const QFont& font)
 {
@@ -131,6 +175,8 @@ public:
         setViewportMargins(left, top, right, bottom);
     }
 
+    bool hasActivePreedit() const { return m_hasPreedit; }
+
 protected:
     void contextMenuEvent(QContextMenuEvent* event) override
     {
@@ -186,11 +232,16 @@ protected:
 
     void inputMethodEvent(QInputMethodEvent* event) override
     {
-        QTextEdit::inputMethodEvent(event);
         const bool hasPreedit = event && !event->preeditString().isEmpty();
-        if (m_hasPreedit == hasPreedit)
-            return;
+        const bool preeditStateChanged = m_hasPreedit != hasPreedit;
+        // Update the state before QTextEdit emits textChanged/documentSizeChanged
+        // so the owner can keep composition geometry stable until commit.
+        // zh_CN: 在 QTextEdit 发出 textChanged/documentSizeChanged 前更新状态，
+        // 让外层在正式提交前保持组字期间的几何稳定。
         m_hasPreedit = hasPreedit;
+        QTextEdit::inputMethodEvent(event);
+        if (!preeditStateChanged)
+            return;
         if (viewport())
             viewport()->update();
     }
@@ -255,6 +306,16 @@ TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
     setFocusPolicy(m_editor->focusPolicy());
     setFocusProxy(m_editor);
 
+    auto* heightAnimation = new TextEditHeightAnimation(this);
+    heightAnimation->setObjectName(QString::fromLatin1(kHeightAnimationObjectName));
+    connect(heightAnimation, &QVariantAnimation::valueChanged, this,
+            [this](const QVariant& value) { applyTextEditHeight(this, value.toInt()); });
+    connect(heightAnimation, &QVariantAnimation::finished, this, [this, heightAnimation]() {
+        if (heightAnimation->targetHeight > 0)
+            applyTextEditHeight(this, heightAnimation->targetHeight);
+        heightAnimation->targetHeight = 0;
+    });
+
     // Remove the document's default padding; viewport margins and block line
     // spacing own the geometry.
     // zh_CN: 移除文档默认四周留白，由 viewport margin 与 block 行距统一控制。
@@ -274,8 +335,17 @@ TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
     connect(m_editor, &QTextEdit::textChanged, this, [this]() {
         if (m_updatingFormat)
             return;
+        const bool hasActivePreedit =
+            static_cast<const InnerTextEdit*>(m_editor)->hasActivePreedit();
+        auto* heightAnimation = heightAnimationFor(this);
+        if (heightAnimation) {
+            heightAnimation->animateNextUpdate = isVisible() && m_editor->hasFocus() &&
+                                                 !heightAnimation->programmaticTextChange &&
+                                                 !hasActivePreedit;
+        }
         applyBlockCenterFormat();
-        updateHeightForContent();
+        if (!hasActivePreedit)
+            scheduleHeightForContentUpdate();
         emit textChanged();
     });
     connect(m_editor, &QTextEdit::cursorPositionChanged, this, &TextEdit::cursorPositionChanged);
@@ -324,8 +394,13 @@ void TextEdit::setPlainText(const QString& text)
     if (m_editor) {
         if (m_editor->toPlainText() == text)
             return;
+        auto* heightAnimation = heightAnimationFor(this);
+        const bool previousProgrammaticState = heightAnimation->programmaticTextChange;
+        heightAnimation->programmaticTextChange = true;
         m_editor->setPlainText(text);
+        heightAnimation->programmaticTextChange = previousProgrammaticState;
         applyBlockCenterFormat();
+        requestSynchronousHeightSettlement(this);
         updateHeightForContent();
     }
 }
@@ -340,8 +415,13 @@ void TextEdit::clear()
     if (m_editor) {
         if (m_editor->toPlainText().isEmpty())
             return;
+        auto* heightAnimation = heightAnimationFor(this);
+        const bool previousProgrammaticState = heightAnimation->programmaticTextChange;
+        heightAnimation->programmaticTextChange = true;
         m_editor->clear();
+        heightAnimation->programmaticTextChange = previousProgrammaticState;
         applyBlockCenterFormat();
+        requestSynchronousHeightSettlement(this);
         updateHeightForContent();
     }
 }
@@ -409,7 +489,8 @@ void TextEdit::resizeEvent(QResizeEvent* event)
             int h = r.height() - 4;
             m_vScrollBar->setGeometry(x, y, m_vScrollBar->thickness(), h);
         }
-        scheduleHeightForContentUpdate();
+        if (event->oldSize().width() != event->size().width())
+            scheduleHeightForContentUpdate();
     }
 }
 
@@ -520,6 +601,7 @@ void TextEdit::setContentMargins(const QMargins& margins)
         return;
     m_contentMargins = margins;
     applyThemeStyle();
+    requestSynchronousHeightSettlement(this);
     updateHeightForContent();
     if (m_editor && m_editor->viewport())
         m_editor->viewport()->update();
@@ -532,6 +614,7 @@ void TextEdit::setFontRole(Typography::FontRole role)
         return;
     m_fontRole = role;
     applyThemeStyle();
+    requestSynchronousHeightSettlement(this);
     updateHeightForContent();
     if (m_editor && m_editor->viewport())
         m_editor->viewport()->update();
@@ -562,6 +645,7 @@ void TextEdit::setLineHeight(int height)
         return;
     m_lineHeight = height;
     applyBlockCenterFormat();
+    requestSynchronousHeightSettlement(this);
     updateHeightForContent();
     emit layoutMetricsChanged();
 }
@@ -576,6 +660,7 @@ void TextEdit::setMinVisibleLines(int lines)
     m_minVisibleLines = lines;
     if (maxChanged)
         m_maxVisibleLines = lines;
+    requestSynchronousHeightSettlement(this);
     updateHeightForContent();
     emit layoutMetricsChanged();
 }
@@ -590,6 +675,7 @@ void TextEdit::setMaxVisibleLines(int lines)
     m_maxVisibleLines = lines;
     if (minChanged)
         m_minVisibleLines = lines;
+    requestSynchronousHeightSettlement(this);
     updateHeightForContent();
     emit layoutMetricsChanged();
 }
@@ -622,6 +708,7 @@ void TextEdit::onThemeUpdated()
     const bool wasAtBottom = hadScrollableRange && previousValue >= innerScrollBar->maximum();
 
     applyThemeStyle();
+    requestSynchronousHeightSettlement(this);
     updateHeightForContent();
 
     // A parent Fluent surface may update its style sheet later in the same
@@ -645,6 +732,7 @@ void TextEdit::onThemeUpdated()
         if (!m_editor)
             return;
         m_editor->document()->documentLayout()->documentSize();
+        requestSynchronousHeightSettlement(this);
         updateHeightForContent();
         QScrollBar* bar = m_editor->verticalScrollBar();
         if (!bar || bar->maximum() <= bar->minimum())
@@ -797,6 +885,8 @@ void TextEdit::applyBlockCenterFormat()
 
 void TextEdit::scheduleHeightForContentUpdate()
 {
+    if (!m_editor || static_cast<const InnerTextEdit*>(m_editor)->hasActivePreedit())
+        return;
     if (m_heightUpdateScheduled)
         return;
     m_heightUpdateScheduled = true;
@@ -841,8 +931,6 @@ void TextEdit::updateHeightForContent()
     const int marginOverflow =
         verticalMarginOverflow(m_editor->font(), m_lineHeight, m_contentMargins);
     const int targetHeight = clamped * renderedLinePitch(m_editor, m_lineHeight) + marginOverflow;
-    if (minimumHeight() != targetHeight || maximumHeight() != targetHeight)
-        setFixedHeight(targetHeight);
 
     // The scroll bar only appears once content exceeds maxVisibleLines.
     // zh_CN: 滚动条仅在内容实际超过 maxVisibleLines 时显示。
@@ -854,8 +942,45 @@ void TextEdit::updateHeightForContent()
     if (!m_scrollEnabled && m_editor)
         m_editor->verticalScrollBar()->setValue(0);
 
+    TextEditHeightAnimation* heightAnimation = heightAnimationFor(this);
+    const bool animateHeight = heightAnimation && heightAnimation->animateNextUpdate;
+    const bool settleSynchronously =
+        heightAnimation && heightAnimation->settleSynchronouslyNextUpdate;
+    if (heightAnimation) {
+        heightAnimation->animateNextUpdate = false;
+        heightAnimation->settleSynchronouslyNextUpdate = false;
+    }
+
+    // Preserve an active user transition across its own same-target document
+    // relayout. Explicit text and metric setters still stop and settle
+    // synchronously, even when their target matches the transition.
+    // zh_CN: 动画自身触发同目标文档重排时继续当前用户过渡；显式文本与度量
+    // setter 即使目标相同，仍会停止动画并同步收敛。
+    if (!settleSynchronously && heightAnimation &&
+        heightAnimation->state() == QAbstractAnimation::Running &&
+        heightAnimation->targetHeight == targetHeight) {
+        m_updatingHeight = false;
+        return;
+    }
+
+    if (heightAnimation)
+        heightAnimation->stop();
+
+    if (!settleSynchronously && animateHeight && heightAnimation && targetHeight != height()) {
+        heightAnimation->setStartValue(height());
+        heightAnimation->setEndValue(targetHeight);
+        heightAnimation->setEasingCurve(themeAnimation().decelerate);
+        heightAnimation->targetHeight = targetHeight;
+        m_updatingHeight = false;
+        ::fluent::detail::startMotionTransition(heightAnimation, themeAnimation().fast);
+        return;
+    }
+
+    if (heightAnimation)
+        heightAnimation->targetHeight = 0;
+    applyTextEditHeight(this, targetHeight);
+
     m_updatingHeight = false;
-    updateGeometry();
 }
 
 } // namespace fluent::textfields
