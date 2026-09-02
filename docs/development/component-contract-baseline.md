@@ -90,6 +90,21 @@ Post-baseline status: AnchorLayout and overlay lifecycle/property semantics
 were resolved in 1.7. Theme transactions and persistence were not part of this
 baseline; any future public work requires its own scoped contract.
 
+## Addendum 2026-09-03
+
+`TXT-EDIT-005` is **Resolved** for the 1.8 line. A visible, focused `TextEdit`
+interpolates content-driven height changes, retargets an active transition when
+editing continues, and follows the application `MotionPolicy`. Programmatic
+text and metric setters settle synchronously. Layout-driven recomputation does
+not start a new transition and settles on its scheduled layout pass, so callers
+do not acquire an animation timing dependency. IME preedit keeps the current
+height stable until commit, and crossing the scrolling threshold does not
+interrupt the active height transition.
+
+| ID | Area | Accepted behavior | Active acceptance test | Status |
+|---|---|---|---|---|
+| `TXT-EDIT-005` | TextEdit | Focused content edits animate growth and collapse, in-flight edits retarget, IME preedit stays geometrically stable until commit, scrolling-threshold relayout preserves an active transition, Reduced/Disabled modes converge correctly, and programmatic sizing remains synchronous | `TextEditMotionTest.Contract_FocusedEditsAnimateRetargetAndCollapseVisibleLineHeight`, `Contract_ReducedAndDisabledMotionResolveEditedHeight`, `Contract_ProgrammaticHeightChangesRemainSynchronous`, `Contract_ProgrammaticSameTargetUpdateStopsActiveUserTransition`, `Contract_InputMethodPreeditKeepsHeightStableUntilCommit`, `Contract_CrossingVisibleLineLimitKeepsHeightTransitionRunning` | Resolved |
+
 ## Active Guardrails Added in Phases 0 and 1
 
 | Area | Guard |
@@ -100,7 +115,7 @@ baseline; any future public work requires its own scoped contract.
 | Overlay geometry | Normal cards clamp inside bounds and oversized cards use a stable usable origin |
 | Elevation | `None` paints no visible shadow in either theme |
 | Label | The derived setter, inherited getter, and derived meta-object writes stay coherent; caller style is preserved |
-| TextEdit | Meta-properties, focus forwarding, wrapping height, line-bound ordering, and undo-preserving no-ops are guarded |
+| TextEdit | Meta-properties, focus forwarding, wrapping height, line-bound ordering, undo-preserving no-ops, and MotionPolicy-aware focused editing transitions are guarded |
 | Resource startup | Resource catalogs are safe before `QApplication`; font initialization retries after the GUI application exists |
 | CI discovery | Contract and known-gap tests have separate CTest labels |
 | Memory safety | Linux contract tests have an opt-in ASan/UBSan preset and scheduled lane |
@@ -124,7 +139,7 @@ ownership, focus/input, locale/RTL/accessibility, DPI/painting, and tests.
 | Navigation | Breadcrumb, NavigationView, Pivot, SelectorBar, StackContentHost, TabView | NavigationView/StackContentHost page and chrome ownership is explicit; global event filters, RTL, and accessibility remain Phase 2/3 |
 | Scrolling | AnnotatedScrollBar, PipsPager, ScrollBar, ScrollView | Empty-selection policy is intentionally unchanged; inherited API coherence is Phase 2 |
 | Status and info | Avatar, InfoBadge, InfoBar, ProgressBar, ProgressRing, Shimmer, ToolTip, Toast | Avatar adds caller-owned identity/image content and composes InfoBadge for presence; historical Phase 4 removes per-frame ProgressBar animation-token reconstruction; Capability Phase 4 adds InfoBadge value/visibility accessibility plus Toast announcements, borrowed actions, hover pause, dismissal reasons, and keyed in-place updates while preserving managed stacking |
-| Text fields | AutoSuggestBox, EditingCommandRouter, Label, LineEdit, NumberBox, PasswordBox, TextEdit | Historical Phase 1 resolves Label/TextEdit coherence, focus, sizing, and no-op defects; Capability Phase 1 privately shares the Fluent editing menu, and Capability Phase 2 adds window-scoped semantic editing actions |
+| Text fields | AutoSuggestBox, EditingCommandRouter, Label, LineEdit, NumberBox, PasswordBox, TextEdit | Historical Phase 1 resolves Label/TextEdit coherence, focus, sizing, and no-op defects; Capability Phase 1 privately shares the Fluent editing menu, Capability Phase 2 adds window-scoped semantic editing actions, and the 1.8 addendum gives focused TextEdit auto-height changes interruptible MotionPolicy-aware transitions |
 | Windowing | TitleBar, Window, backdrop contracts | Current ownership, caption accessibility, and platform lifecycle rules live in the Window Chrome architecture contract |
 | Design | Animation, Breakpoints, CornerRadius, Elevation, IconCatalog, Spacing, ThemeColors, Typography | Fluent is the only visual contract; dynamic tokens avoid color snapshots in paint hot paths and FlowView uses DPI-aligned strokes |
 
@@ -148,7 +163,7 @@ contract. Later work resolved some of those questions:
 | Question at the 1.4 baseline | Later disposition |
 |---|---|
 | Zero-page `PipsPager` index | Not decided by this baseline; follow current component tests and compatibility policy |
-| TextEdit line-count sizing policy | Not decided by this baseline; current sizing behavior is guarded by focused tests |
+| TextEdit line-count sizing policy | Resolved in 1.8: focused user edits animate and retarget content-driven height, IME preedit stays stable until commit, scrolling-threshold relayout preserves active motion, programmatic text/metric setters settle synchronously, and other layout-driven recomputation starts no new transition |
 | Qt inheritance versus composition for existing controls | No broad migration was approved; changes remain component-specific compatibility decisions |
 | Common open-state semantics | Resolved in 1.7 for Popup, Flyout, Dialog, ContentDialog, and TeachingTip; menu-backed split/dropdown buttons keep their own boundary |
 | Ownership names for externally supplied widgets | `WidgetOwnership` is the reusable public direction for new hosted-widget APIs; existing APIs are not mechanically migrated |

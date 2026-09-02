@@ -160,6 +160,11 @@ their visual motion is suppressed. Changing a finite-transition component's loca
 from enabled to disabled while it is moving settles that transition immediately through the
 component's normal completion and cleanup path; this applies to Popup/Dialog/Toast presentation,
 Expander and DrawerView state changes, and StackView/StackContentHost page transitions.
+Focused `TextEdit` content growth and collapse use the same finite-transition policy: Full mode
+interpolates and retargets the height, Reduced mode caps it at 50 ms, and Disabled mode settles the
+new height immediately. Programmatic text and metric setters settle synchronously; layout-driven
+recomputation does not start a new animation and settles on its scheduled layout pass. IME preedit
+keeps the current shell height stable; committed composition then follows the selected policy.
 
 The brand's **acrylic / mica** materials are window-level backdrops (Win11 DWM Mica/Acrylic,
 macOS vibrancy, or a solid fallback elsewhere; Windows 10 uses the solid fallback) rather than
