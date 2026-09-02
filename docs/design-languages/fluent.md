@@ -16,7 +16,7 @@ the original measurement source and is kept as visual grounding (see
 
 > Fluent is **token-based**: controls read semantic `FluentElement::Colors`, `themeRadius()`,
 > and `themeFont()` at runtime. Those tokens **are** the seed —
-> `ThemeRegistry::seedDefaults()` copies `ThemeColors::{Light,Dark}` straight into `Colors`,
+> `ThemeRegistry::seedDefaults()` copies `ThemeColors::{Light,Dark,Contrast}` straight into `Colors`,
 > with optional user overrides layered on top.
 
 ---
@@ -64,15 +64,29 @@ These are the canonical Fluent swatches: `ThemeRegistry::seedDefaults()` assigns
 > the dark accent — because the dark accent is light enough to need dark text.
 
 The neutral `Grey10…Grey200` ramp (e.g. `Grey10 #FAF9F8`, `Grey130 #605E5C`, `Grey160 #323130`,
-`Grey190 #201F1E`) and the 12-swatch `Charts` list also live in this header. A third
-`ThemeColors::Contrast` namespace carries the high-contrast tokens (accent `#1AEBFF`, black
-canvas, yellow hyperlinks) but is not part of the Light/Dark runtime swap.
+`Grey190 #201F1E`) and the 12-swatch `Charts` list also live in this header.
+
+### High contrast theme (`ThemeColors::Contrast`)
+
+`FluentElement::HighContrast` is a third runtime theme, not a Dark alias. It resolves a complete
+semantic palette with a black canvas, white foreground and strokes, cyan focus/accent
+(`#1AEBFF`), yellow accent text, a neutral mid-grey disabled state, and opaque semantic status
+colors. Disabled tokens stay distinct from the green success role. Code choosing only between
+light- and dark-backed chrome uses `FluentElement::themeUsesDarkAppearance()`; token consumers
+continue to read `themeColors()` and do not branch on the theme enum.
+
+This built-in palette is deterministic across native platforms. Windows, macOS, and Linux builds
+do not currently auto-detect an operating-system high-contrast preference or import the user's
+system contrast colors; applications select `HighContrast` explicitly or provide `contrast`
+overrides through `fluent.json`. The WebAssembly host separately maps browser
+`(forced-colors: active)` into this explicit runtime theme.
 
 ### Why this is the seed
 
-`ThemeRegistry::defaultSnapshot()` returns these values directly. Calling
-`UserTheme::apply()` starts from that snapshot and then layers the
-optional user-editable `fluent.json` overrides.
+`ThemeRegistry::defaultSnapshot()` returns the compatible Light/Dark plus shared-token state;
+`ThemeRegistry::defaultExtendedSnapshot()` adds the High Contrast palette. Calling
+`UserTheme::apply()` starts from the extended snapshot and then layers the optional user-editable
+`fluent.json` overrides.
 
 ---
 
@@ -137,6 +151,15 @@ themes without a `.darker()`/`.lighter()` guess:
 - **Pressed motion:** Fluent nudges button content **down 0.5 px** while pressed.
 - **Focus:** a two-ring focus rect — `Stroke::FocusOuter` (a near-opaque ring) over
   `Stroke::FocusInner` (the opposite polarity), drawn inset.
+
+Application-wide motion is resolved through `MotionPolicy`. `Full` preserves component timing,
+`Reduced` caps transitions at 50 ms and stops continuous motion, and `Disabled` resolves all
+motion directly to its final state. A component's local `animationEnabled=false` remains the
+stricter choice. `Shimmer` and indeterminate progress indicators retain their busy semantics when
+their visual motion is suppressed. Changing a finite-transition component's local animation switch
+from enabled to disabled while it is moving settles that transition immediately through the
+component's normal completion and cleanup path; this applies to Popup/Dialog/Toast presentation,
+Expander and DrawerView state changes, and StackView/StackContentHost page transitions.
 
 The brand's **acrylic / mica** materials are window-level backdrops (Win11 DWM Mica/Acrylic,
 macOS vibrancy, or a solid fallback elsewhere; Windows 10 uses the solid fallback) rather than
@@ -218,13 +241,15 @@ Overview of the control family below.
 
 Everything above is the **default** the app boots into. Concretely:
 
-- `ThemeRegistry::seedDefaults()` copies `ThemeColors::{Light,Dark}` into `Colors` and installs
+- `ThemeRegistry::seedDefaults()` copies `ThemeColors::{Light,Dark,Contrast}` into `Colors` and installs
   radius **4 / 8** plus the FluentQt UI type scale.
 - `ThemeRegistry::resetToDefaults()` re-runs exactly that seed.
 - `UserTheme::apply()` resets to the seed and then loads optional
   `fluent.json` semantic-token overrides.
-- `ThemeRegistry::applySnapshot()` lets C++ applications commit a complete
-  branded Light/Dark Fluent token set atomically.
+- `ThemeRegistry::applySnapshot()` keeps its original five-member source contract, commits the
+  Light/Dark and shared-token portion atomically, and preserves the current High Contrast palette.
+- `ThemeRegistry::applyExtendedSnapshot()` atomically commits a complete branded
+  Light/Dark/High Contrast Fluent token set.
 
 <!-- docs-nav:bottom:start -->
 ---

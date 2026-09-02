@@ -27,6 +27,29 @@ All inventoried gaps are closed. `covered` means
 there is deterministic repository evidence for the component boundary; it is
 not a claim of platform assistive-technology certification.
 
+## Cross-cutting motion and contrast contract
+
+The component classifications above do not change when visual motion is
+reduced or disabled. `MotionPolicy::Reduced` keeps only short finite
+transitions and stops continuous motion; `MotionPolicy::Disabled` settles
+finite transitions at their final state and stops continuous motion. Logical
+open, selected, expanded, busy, value, focus, and action state therefore remain
+observable without depending on an intermediate animation frame. Shared policy
+contracts live in `tests/components/TestMotionPolicy.cpp`; focused component and
+Gallery-shell contracts cover active-transition convergence and local animation
+switches.
+
+`FluentElement::HighContrast` resolves a complete third semantic palette, so
+controls continue to expose the same roles, state, actions, and logical child
+trees while using opaque high-contrast foreground, background, focus, disabled,
+and status colors. Native applications currently select this deterministic
+theme explicitly; the WebAssembly host additionally maps browser
+`forced-colors` state to it. Palette completeness, contrast ratios, local theme
+overrides, and legacy theme-envelope compatibility are covered in
+`tests/components/TestHighContrastTheme.cpp`. This repository evidence is not
+a claim that native builds import or certify every operating-system custom
+contrast scheme.
+
 ## First focused gate: CalendarView
 
 `CalendarView` moved from **Gap** to **Adapter** in the first 1.7-Q slice. Its
