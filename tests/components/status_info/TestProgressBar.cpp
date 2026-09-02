@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <QAccessible>
 #include <QApplication>
 #include <QFont>
 #include <QFrame>
@@ -20,6 +21,7 @@
 #include "QtTestEnvironment.h"
 #include "components/basicinput/RepeatButton.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/status_info/ProgressBar.h"
 #include "components/textfields/NumberBox.h"
@@ -31,7 +33,8 @@ using fluent::textfields::NumberBox;
 class ProgressBarTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         QPalette pal = palette();
         pal.setColor(QPalette::Window, c.bgCanvas);
@@ -42,7 +45,9 @@ public:
 
 class ProgressBarTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
         window = new ProgressBarTestWindow();
         window->setWindowTitle("ProgressBar Visual Test");
@@ -50,13 +55,16 @@ protected:
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         delete window;
         window = nullptr;
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
 
-    QImage renderBar(ProgressBar& bar) {
+    QImage renderBar(ProgressBar& bar)
+    {
         bar.resize(bar.sizeHint());
         QImage image(bar.size(), QImage::Format_ARGB32_Premultiplied);
         image.fill(Qt::transparent);
@@ -67,7 +75,8 @@ protected:
     ProgressBarTestWindow* window = nullptr;
 };
 
-TEST_F(ProgressBarTest, DefaultPropertyValues) {
+TEST_F(ProgressBarTest, DefaultPropertyValues)
+{
     ProgressBar bar;
     EXPECT_FALSE(bar.isIndeterminate());
     EXPECT_DOUBLE_EQ(bar.minimum(), 0.0);
@@ -82,7 +91,8 @@ TEST_F(ProgressBarTest, DefaultPropertyValues) {
     EXPECT_FALSE(bar.isAnimationRunning());
 }
 
-TEST_F(ProgressBarTest, PropertySignalsAndSameValueNoSignal) {
+TEST_F(ProgressBarTest, PropertySignalsAndSameValueNoSignal)
+{
     ProgressBar bar;
 
     QSignalSpy indeterminateSpy(&bar, &ProgressBar::isIndeterminateChanged);
@@ -122,7 +132,8 @@ TEST_F(ProgressBarTest, PropertySignalsAndSameValueNoSignal) {
     EXPECT_EQ(railSpy.count(), 1);
 }
 
-TEST_F(ProgressBarTest, RangeAndValueClamp) {
+TEST_F(ProgressBarTest, RangeAndValueClamp)
+{
     ProgressBar bar;
     QSignalSpy valueSpy(&bar, &ProgressBar::valueChanged);
 
@@ -145,7 +156,8 @@ TEST_F(ProgressBarTest, RangeAndValueClamp) {
     EXPECT_EQ(valueSpy.count(), 3);
 }
 
-TEST_F(ProgressBarTest, ProgressRatioAndText) {
+TEST_F(ProgressBarTest, ProgressRatioAndText)
+{
     ProgressBar bar;
     bar.setValue(40);
 
@@ -158,7 +170,8 @@ TEST_F(ProgressBarTest, ProgressRatioAndText) {
     EXPECT_EQ(bar.progressText(), "67");
 }
 
-TEST_F(ProgressBarTest, SizeAndThicknessValidation) {
+TEST_F(ProgressBarTest, SizeAndThicknessValidation)
+{
     ProgressBar bar;
     EXPECT_EQ(bar.sizeHint(), QSize(220, 32));
     EXPECT_EQ(bar.minimumSizeHint().height(), 32);
@@ -186,7 +199,8 @@ TEST_F(ProgressBarTest, SizeAndThicknessValidation) {
     EXPECT_EQ(thicknessSpy.count(), 1);
 }
 
-TEST_F(ProgressBarTest, RailVisibleSignal) {
+TEST_F(ProgressBarTest, RailVisibleSignal)
+{
     ProgressBar bar;
     QSignalSpy spy(&bar, &ProgressBar::railVisibleChanged);
 
@@ -198,7 +212,8 @@ TEST_F(ProgressBarTest, RailVisibleSignal) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(ProgressBarTest, NonFiniteValueFallsBackToMinimum) {
+TEST_F(ProgressBarTest, NonFiniteValueFallsBackToMinimum)
+{
     ProgressBar bar;
     bar.setValue(55);
     EXPECT_DOUBLE_EQ(bar.value(), 55.0);
@@ -212,7 +227,8 @@ TEST_F(ProgressBarTest, NonFiniteValueFallsBackToMinimum) {
     EXPECT_DOUBLE_EQ(bar.value(), 0.0);
 }
 
-TEST_F(ProgressBarTest, ErrorRenderingHasPriorityOverPaused) {
+TEST_F(ProgressBarTest, ErrorRenderingHasPriorityOverPaused)
+{
     ProgressBar errorOnly;
     errorOnly.setValue(68);
     errorOnly.setShowError(true);
@@ -230,7 +246,8 @@ TEST_F(ProgressBarTest, ErrorRenderingHasPriorityOverPaused) {
     EXPECT_NE(renderBar(errorOnly), renderBar(pausedOnly));
 }
 
-TEST_F(ProgressBarTest, ThemeChangeUpdatesRendering) {
+TEST_F(ProgressBarTest, ThemeChangeUpdatesRendering)
+{
     ProgressBar bar;
     bar.setValue(50);
 
@@ -245,7 +262,8 @@ TEST_F(ProgressBarTest, ThemeChangeUpdatesRendering) {
     EXPECT_NE(light, dark);
 }
 
-TEST_F(ProgressBarTest, AnimationLifecycle) {
+TEST_F(ProgressBarTest, AnimationLifecycle)
+{
     ProgressBar bar;
     bar.setIsIndeterminate(true);
     bar.show();
@@ -284,7 +302,8 @@ TEST_F(ProgressBarTest, AnimationLifecycle) {
     EXPECT_FALSE(bar.isAnimationRunning());
 }
 
-TEST_F(ProgressBarTest, ThemeRefreshPreservesIndeterminateAnimationLifecycle) {
+TEST_F(ProgressBarTest, ThemeRefreshPreservesIndeterminateAnimationLifecycle)
+{
     ProgressBar bar;
     bar.setIsIndeterminate(true);
     bar.show();
@@ -301,7 +320,36 @@ TEST_F(ProgressBarTest, ThemeRefreshPreservesIndeterminateAnimationLifecycle) {
     EXPECT_FALSE(bar.isAnimationRunning());
 }
 
-TEST_F(ProgressBarTest, NumberBoxValueDrivesDeterminateBar) {
+TEST_F(ProgressBarTest, GlobalMotionConvergesLiveAndPreservesBusyState)
+{
+    ProgressBar bar;
+    bar.setIsIndeterminate(true);
+    bar.show();
+    QApplication::processEvents();
+    ASSERT_TRUE(bar.isAnimationRunning());
+
+    auto* accessible = QAccessible::queryAccessibleInterface(&bar);
+    ASSERT_NE(accessible, nullptr);
+    EXPECT_TRUE(accessible->state().busy);
+    EXPECT_TRUE(accessible->state().animated);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Reduced);
+    EXPECT_FALSE(bar.isAnimationRunning());
+    EXPECT_TRUE(accessible->state().busy);
+    EXPECT_FALSE(accessible->state().animated);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    EXPECT_FALSE(bar.isAnimationRunning());
+    EXPECT_TRUE(accessible->state().busy);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    EXPECT_TRUE(bar.isAnimationRunning());
+    EXPECT_TRUE(accessible->state().busy);
+    EXPECT_TRUE(accessible->state().animated);
+}
+
+TEST_F(ProgressBarTest, NumberBoxValueDrivesDeterminateBar)
+{
     window->resize(420, 120);
 
     auto* root = new QHBoxLayout(window);
@@ -319,9 +367,8 @@ TEST_F(ProgressBarTest, NumberBoxValueDrivesDeterminateBar) {
     progressBox->setDisplayPrecision(0);
     progressBox->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);
 
-    QObject::connect(progressBox, &NumberBox::valueChanged, bar, [bar](double value) {
-        bar->setValue(std::isfinite(value) ? value : 0.0);
-    });
+    QObject::connect(progressBox, &NumberBox::valueChanged, bar,
+                     [bar](double value) { bar->setValue(std::isfinite(value) ? value : 0.0); });
 
     progressBox->setValue(1);
     EXPECT_DOUBLE_EQ(bar->value(), 1.0);
@@ -359,12 +406,13 @@ TEST_F(ProgressBarTest, NumberBoxValueDrivesDeterminateBar) {
     EXPECT_EQ(barValueSpy.count(), 1);
 }
 
-
-TEST_F(ProgressBarTest, VisualCheck) {
+TEST_F(ProgressBarTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
+        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP() << "Skipping visual test in offscreen mode";
     }
 
@@ -387,15 +435,16 @@ TEST_F(ProgressBarTest, VisualCheck) {
     root->addLayout(header);
 
     auto* description = new QLabel("Indeterminate shows an ongoing operation. Determinate shows "
-                 "progress for a known amount of work.",
-        window);
+                                   "progress for a known amount of work.",
+                                   window);
     description->setWordWrap(true);
     root->addWidget(description);
 
     QObject::connect(themeButton, &QPushButton::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-            ? fluent::FluentElement::Dark
-            : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     auto makeSectionLabel = [this](const QString& text) {
@@ -443,9 +492,10 @@ TEST_F(ProgressBarTest, VisualCheck) {
     progressBox->setLargeChange(10);
     progressBox->setDisplayPrecision(0);
     progressBox->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);
-    QObject::connect(progressBox, &NumberBox::valueChanged, determinateBar, [determinateBar](double value) {
-        determinateBar->setValue(std::isfinite(value) ? value : 0.0);
-    });
+    QObject::connect(progressBox, &NumberBox::valueChanged, determinateBar,
+                     [determinateBar](double value) {
+                         determinateBar->setValue(std::isfinite(value) ? value : 0.0);
+                     });
     progressBox->setValue(32);
 
     determinateLayout->addWidget(determinateBar, 0, Qt::AlignLeft | Qt::AlignVCenter);
@@ -463,12 +513,8 @@ TEST_F(ProgressBarTest, VisualCheck) {
     root->addWidget(variantsPanel);
 
     auto addExample = [grid, variantsPanel](int row, int column, const QString& labelText,
-                                            bool indeterminate,
-                                            bool paused,
-                                            bool error,
-                                            double value,
-                                            int width,
-                                            bool railVisible,
+                                            bool indeterminate, bool paused, bool error,
+                                            double value, int width, bool railVisible,
                                             bool enabled) {
         auto* cell = new QWidget(variantsPanel);
         auto* cellLayout = new QVBoxLayout(cell);

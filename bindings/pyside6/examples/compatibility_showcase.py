@@ -343,7 +343,9 @@ def build_showcase(info: dict[str, str]) -> tuple[Window, list[QWidget]]:
         repeat_count.setText(f"Clicks: {click_count['value']}")
 
     def toggle_theme() -> None:
-        dark = fluentqt.current_theme() != fluentqt.Theme.Dark
+        dark = not fluentqt.theme_uses_dark_appearance(
+            fluentqt.current_theme()
+        )
         fluentqt.set_theme(
             fluentqt.Theme.Dark if dark else fluentqt.Theme.Light
         )

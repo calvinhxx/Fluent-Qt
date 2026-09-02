@@ -16,6 +16,7 @@
 
 #include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/basicinput/Button.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/scrolling/ScrollView.h"
@@ -34,7 +35,8 @@ class ScrollViewTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
 
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& colors = themeColors();
         QPalette pal = palette();
         pal.setColor(QPalette::Window, colors.bgCanvas);
@@ -46,28 +48,26 @@ public:
 class DemoCanvas : public QWidget, public fluent::FluentElement, public ScrollViewZoomAware {
 public:
     explicit DemoCanvas(const QSize& canvasSize, QWidget* parent = nullptr)
-        : QWidget(parent),
-          m_logicalSize(canvasSize) {
+        : QWidget(parent), m_logicalSize(canvasSize)
+    {
         setFixedSize(canvasSize);
     }
 
-    QSizeF scrollViewUnscaledSize() const override {
-        return QSizeF(m_logicalSize);
-    }
+    QSizeF scrollViewUnscaledSize() const override { return QSizeF(m_logicalSize); }
 
-    void setScrollViewZoomFactor(qreal factor) override {
+    void setScrollViewZoomFactor(qreal factor) override
+    {
         if (qFuzzyCompare(m_zoomFactor, factor))
             return;
         m_zoomFactor = factor;
         update();
     }
 
-    void onThemeUpdated() override {
-        update();
-    }
+    void onThemeUpdated() override { update(); }
 
 protected:
-    void paintEvent(QPaintEvent*) override {
+    void paintEvent(QPaintEvent*) override
+    {
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
 
@@ -83,12 +83,8 @@ protected:
         for (int y = 0; y < m_logicalSize.height(); y += 48)
             painter.drawLine(0, y, m_logicalSize.width(), y);
 
-        const QList<QColor> swatches = {
-            colors.accentDefault,
-            colors.systemSuccess,
-            colors.systemCaution,
-            colors.systemInfo
-        };
+        const QList<QColor> swatches = {colors.accentDefault, colors.systemSuccess,
+                                        colors.systemCaution, colors.systemInfo};
         for (int index = 0; index < 18; ++index) {
             const int col = index % 6;
             const int row = index / 6;
@@ -106,7 +102,8 @@ private:
     qreal m_zoomFactor = 1.0;
 };
 
-QWidget* createContent(const QSize& size) {
+QWidget* createContent(const QSize& size)
+{
     auto* content = new QWidget();
     content->setFixedSize(size);
     QPalette pal = content->palette();
@@ -116,12 +113,14 @@ QWidget* createContent(const QSize& size) {
     return content;
 }
 
-void showAndProcess(QWidget& widget) {
+void showAndProcess(QWidget& widget)
+{
     widget.show();
     QApplication::processEvents();
 }
 
-bool waitUntil(std::function<bool()> predicate, int timeoutMs = 1000) {
+bool waitUntil(std::function<bool()> predicate, int timeoutMs = 1000)
+{
     QElapsedTimer timer;
     timer.start();
     while (timer.elapsed() < timeoutMs) {
@@ -136,29 +135,30 @@ bool waitUntil(std::function<bool()> predicate, int timeoutMs = 1000) {
 
 class WheelScrollLinesGuard {
 public:
-    explicit WheelScrollLinesGuard(int lines)
-        : m_previous(QApplication::wheelScrollLines()) {
+    explicit WheelScrollLinesGuard(int lines) : m_previous(QApplication::wheelScrollLines())
+    {
         QApplication::setWheelScrollLines(lines);
     }
 
-    ~WheelScrollLinesGuard() {
-        QApplication::setWheelScrollLines(m_previous);
-    }
+    ~WheelScrollLinesGuard() { QApplication::setWheelScrollLines(m_previous); }
 
 private:
     int m_previous;
 };
 
-void sendWheel(QWidget* target, int angleDeltaY, Qt::KeyboardModifiers modifiers = Qt::NoModifier) {
+void sendWheel(QWidget* target, int angleDeltaY, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+{
     FLUENT_MAKE_WHEEL_EVENT(event, 64, 48, angleDeltaY, modifiers);
     QApplication::sendEvent(target, &event);
 }
 
-void sendCtrlWheel(QWidget* target, int angleDeltaY) {
+void sendCtrlWheel(QWidget* target, int angleDeltaY)
+{
     sendWheel(target, angleDeltaY, Qt::ControlModifier);
 }
 
-void sendNativeZoom(QWidget* target, Qt::NativeGestureType gestureType, qreal value) {
+void sendNativeZoom(QWidget* target, Qt::NativeGestureType gestureType, qreal value)
+{
     if (!fluentCanConstructNativeGestureEvent()) {
         Q_UNUSED(target);
         Q_UNUSED(gestureType);
@@ -174,16 +174,21 @@ void sendNativeZoom(QWidget* target, Qt::NativeGestureType gestureType, qreal va
 
 class ScrollViewTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
 };
 
-TEST_F(ScrollViewTest, DefaultScrollBarsAreCustomAndRangesReflectContent) {
+TEST_F(ScrollViewTest, DefaultScrollBarsAreCustomAndRangesReflectContent)
+{
     ScrollView view;
     view.resize(180, 140);
     view.setWidget(createContent(QSize(420, 360)));
@@ -262,8 +267,7 @@ TEST_F(ScrollViewTest, HostDestructionHonorsContentOwnershipPolicies)
     QPointer<QWidget> reparentedGuard = reparented;
     {
         ScrollView view;
-        ASSERT_TRUE(
-            view.setContentWidget(reparented, WidgetOwnership::Reparented));
+        ASSERT_TRUE(view.setContentWidget(reparented, WidgetOwnership::Reparented));
     }
     ASSERT_FALSE(reparentedGuard.isNull());
     EXPECT_EQ(reparented->parentWidget(), &originalParent);
@@ -274,8 +278,7 @@ TEST_F(ScrollViewTest, RepeatedOwnedHostDestructionIsStable)
     for (int iteration = 0; iteration < 50; ++iteration) {
         auto* view = new ScrollView;
         QPointer<QWidget> content = createContent(QSize(240, 180));
-        ASSERT_TRUE(
-            view->setContentWidget(content.data(), WidgetOwnership::Owned));
+        ASSERT_TRUE(view->setContentWidget(content.data(), WidgetOwnership::Owned));
 
         delete view;
 
@@ -301,7 +304,8 @@ TEST_F(ScrollViewTest, DirectQScrollAreaContentUsesOwnedContract)
     EXPECT_EQ(view.contentOwnership(), WidgetOwnership::Owned);
 }
 
-TEST_F(ScrollViewTest, HiddenScrollBarKeepsProgrammaticScrollEnabled) {
+TEST_F(ScrollViewTest, HiddenScrollBarKeepsProgrammaticScrollEnabled)
+{
     ScrollView view;
     view.resize(180, 120);
     view.setWidget(createContent(QSize(420, 100)));
@@ -319,7 +323,8 @@ TEST_F(ScrollViewTest, HiddenScrollBarKeepsProgrammaticScrollEnabled) {
     EXPECT_EQ(view.verticalOffset(), 0);
 }
 
-TEST_F(ScrollViewTest, DisabledDirectionPreventsProgrammaticScroll) {
+TEST_F(ScrollViewTest, DisabledDirectionPreventsProgrammaticScroll)
+{
     ScrollView view;
     view.resize(180, 120);
     view.setWidget(createContent(QSize(420, 360)));
@@ -332,7 +337,8 @@ TEST_F(ScrollViewTest, DisabledDirectionPreventsProgrammaticScroll) {
     EXPECT_FALSE(view.verticalScrollBar()->isEnabled());
 }
 
-TEST_F(ScrollViewTest, ScrollToAndScrollByClampToValidRange) {
+TEST_F(ScrollViewTest, ScrollToAndScrollByClampToValidRange)
+{
     ScrollView view;
     view.resize(180, 120);
     view.setWidget(createContent(QSize(420, 360)));
@@ -347,7 +353,8 @@ TEST_F(ScrollViewTest, ScrollToAndScrollByClampToValidRange) {
     EXPECT_EQ(view.verticalOffset(), 0);
 }
 
-TEST_F(ScrollViewTest, AnimatedScrollReachesTargetAndEmitsPositionChanges) {
+TEST_F(ScrollViewTest, AnimatedScrollReachesTargetAndEmitsPositionChanges)
+{
     ScrollView view;
     view.resize(180, 120);
     view.setWidget(createContent(QSize(420, 360)));
@@ -365,7 +372,31 @@ TEST_F(ScrollViewTest, AnimatedScrollReachesTargetAndEmitsPositionChanges) {
     EXPECT_GT(spy.count(), 0);
 }
 
-TEST_F(ScrollViewTest, DiscreteWheelAnimatesAndAccumulatesNotches) {
+TEST_F(ScrollViewTest, DisabledMotionPolicySettlesAnimatedScrollAndZoomSynchronously)
+{
+    ScrollView view;
+    view.resize(180, 120);
+    auto* content = createContent(QSize(420, 360));
+    view.setWidget(content);
+    view.setMinZoomFactor(0.5);
+    view.setMaxZoomFactor(2.0);
+    showAndProcess(view);
+
+    const int targetX = std::min(90, view.scrollableWidth());
+    const int targetY = std::min(80, view.scrollableHeight());
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+
+    view.scrollTo(targetX, targetY, true);
+    EXPECT_EQ(view.horizontalOffset(), targetX);
+    EXPECT_EQ(view.verticalOffset(), targetY);
+
+    view.zoomTo(1.5, true);
+    EXPECT_TRUE(qFuzzyCompare(view.zoomFactor(), 1.5));
+    EXPECT_EQ(content->size(), QSize(630, 540));
+}
+
+TEST_F(ScrollViewTest, DiscreteWheelAnimatesAndAccumulatesNotches)
+{
     WheelScrollLinesGuard wheelLines(3);
     ScrollView view;
     view.resize(180, 120);
@@ -379,16 +410,13 @@ TEST_F(ScrollViewTest, DiscreteWheelAnimatesAndAccumulatesNotches) {
     // The two native 60 px wheel steps are accumulated into one smooth 120 px
     // target instead of jumping the viewport synchronously.
     EXPECT_EQ(view.verticalOffset(), 0);
-    EXPECT_TRUE(waitUntil([&view]() {
-        return view.verticalOffset() > 0;
-    }));
+    EXPECT_TRUE(waitUntil([&view]() { return view.verticalOffset() > 0; }));
     EXPECT_LT(view.verticalOffset(), 120);
-    EXPECT_TRUE(waitUntil([&view]() {
-        return view.verticalOffset() == 120;
-    }));
+    EXPECT_TRUE(waitUntil([&view]() { return view.verticalOffset() == 120; }));
 }
 
-TEST_F(ScrollViewTest, PixelWheelInterruptsDiscreteAnimationAndRemainsNative) {
+TEST_F(ScrollViewTest, PixelWheelInterruptsDiscreteAnimationAndRemainsNative)
+{
     WheelScrollLinesGuard wheelLines(3);
     ScrollView view;
     view.resize(180, 120);
@@ -399,15 +427,9 @@ TEST_F(ScrollViewTest, PixelWheelInterruptsDiscreteAnimationAndRemainsNative) {
     sendWheel(view.viewport(), -120);
     EXPECT_EQ(view.verticalOffset(), 0);
 
-    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(pixelWheel,
-                                       QPoint(64, 48),
-                                       QPoint(64, 48),
-                                       QPoint(0, -30),
-                                       QPoint(0, -120),
-                                       Qt::NoButton,
-                                       Qt::NoModifier,
-                                       Qt::NoScrollPhase,
-                                       false);
+    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(pixelWheel, QPoint(64, 48), QPoint(64, 48), QPoint(0, -30),
+                                       QPoint(0, -120), Qt::NoButton, Qt::NoModifier,
+                                       Qt::NoScrollPhase, false);
     QApplication::sendEvent(view.viewport(), &pixelWheel);
 
     const int immediateOffset = view.verticalOffset();
@@ -417,7 +439,8 @@ TEST_F(ScrollViewTest, PixelWheelInterruptsDiscreteAnimationAndRemainsNative) {
     EXPECT_EQ(view.verticalOffset(), immediateOffset);
 }
 
-TEST_F(ScrollViewTest, VisibilityPoliciesMapToQtPolicies) {
+TEST_F(ScrollViewTest, VisibilityPoliciesMapToQtPolicies)
+{
     ScrollView view;
     view.resize(180, 120);
     view.setWidget(createContent(QSize(420, 360)));
@@ -432,7 +455,8 @@ TEST_F(ScrollViewTest, VisibilityPoliciesMapToQtPolicies) {
     EXPECT_FALSE(view.horizontalScrollBar()->isEnabled());
 }
 
-TEST_F(ScrollViewTest, BidirectionalCornerIsTransparent) {
+TEST_F(ScrollViewTest, BidirectionalCornerIsTransparent)
+{
     ScrollView view;
     view.resize(180, 120);
     view.setWidget(createContent(QSize(420, 360)));
@@ -447,7 +471,8 @@ TEST_F(ScrollViewTest, BidirectionalCornerIsTransparent) {
     EXPECT_FALSE(corner->testAttribute(Qt::WA_TranslucentBackground));
 }
 
-TEST_F(ScrollViewTest, FloatingVisibleVerticalBarTracksViewportRightEdgeAfterResize) {
+TEST_F(ScrollViewTest, FloatingVisibleVerticalBarTracksViewportRightEdgeAfterResize)
+{
     ScrollView view;
     view.resize(80, 120);
     view.setVerticalScrollBarVisibility(ScrollView::ScrollBarVisibility::Visible);
@@ -468,7 +493,8 @@ TEST_F(ScrollViewTest, FloatingVisibleVerticalBarTracksViewportRightEdgeAfterRes
               qMax(0, view.viewport()->width() - floatingBar->thickness()));
 }
 
-TEST_F(ScrollViewTest, ScrollChainingModeControlsBoundaryWheel) {
+TEST_F(ScrollViewTest, ScrollChainingModeControlsBoundaryWheel)
+{
     ScrollView view;
     view.resize(180, 140);
     view.setWidget(createContent(QSize(420, 360)));
@@ -496,7 +522,8 @@ TEST_F(ScrollViewTest, ScrollChainingModeControlsBoundaryWheel) {
     EXPECT_EQ(view.verticalOffset(), 0);
 }
 
-TEST_F(ScrollViewTest, ScrollChainingDisabledKeepsFittedContentTransparent) {
+TEST_F(ScrollViewTest, ScrollChainingDisabledKeepsFittedContentTransparent)
+{
     ScrollView view;
     view.resize(180, 140);
     view.setWidget(createContent(QSize(100, 80)));
@@ -514,7 +541,8 @@ TEST_F(ScrollViewTest, ScrollChainingDisabledKeepsFittedContentTransparent) {
     EXPECT_FALSE(wheel.isAccepted());
 }
 
-TEST_F(ScrollViewTest, ZoomToClampsAndUpdatesContentSizeAndRange) {
+TEST_F(ScrollViewTest, ZoomToClampsAndUpdatesContentSizeAndRange)
+{
     ScrollView view;
     view.resize(180, 120);
     auto* content = createContent(QSize(420, 360));
@@ -537,7 +565,8 @@ TEST_F(ScrollViewTest, ZoomToClampsAndUpdatesContentSizeAndRange) {
     EXPECT_EQ(content->size(), QSize(210, 180));
 }
 
-TEST_F(ScrollViewTest, CtrlWheelZoomRequiresEnabledZoomMode) {
+TEST_F(ScrollViewTest, CtrlWheelZoomRequiresEnabledZoomMode)
+{
     ScrollView view;
     view.resize(180, 120);
     auto* content = createContent(QSize(420, 360));
@@ -558,7 +587,8 @@ TEST_F(ScrollViewTest, CtrlWheelZoomRequiresEnabledZoomMode) {
     EXPECT_GT(content->width(), 420);
 }
 
-TEST_F(ScrollViewTest, ZoomAwareContentReceivesZoomFactor) {
+TEST_F(ScrollViewTest, ZoomAwareContentReceivesZoomFactor)
+{
     class ProbeContent : public QWidget, public ScrollViewZoomAware {
     public:
         QSizeF scrollViewUnscaledSize() const override { return QSizeF(320, 240); }
@@ -577,7 +607,8 @@ TEST_F(ScrollViewTest, ZoomAwareContentReceivesZoomFactor) {
     EXPECT_EQ(content->size(), QSize(480, 360));
 }
 
-TEST_F(ScrollViewTest, NativeTrackpadZoomPersistsAfterGestureEnd) {
+TEST_F(ScrollViewTest, NativeTrackpadZoomPersistsAfterGestureEnd)
+{
     if (!fluentCanConstructNativeGestureEvent())
         GTEST_SKIP() << fluentNativeGestureEventSkipReason();
 
@@ -598,7 +629,8 @@ TEST_F(ScrollViewTest, NativeTrackpadZoomPersistsAfterGestureEnd) {
     EXPECT_EQ(content->size(), QSize(qRound(420 * zoomAfterPinch), qRound(360 * zoomAfterPinch)));
 }
 
-TEST_F(ScrollViewTest, NativeTrackpadZoomSuppressesWheelScrollDuringPinch) {
+TEST_F(ScrollViewTest, NativeTrackpadZoomSuppressesWheelScrollDuringPinch)
+{
     if (!fluentCanConstructNativeGestureEvent())
         GTEST_SKIP() << fluentNativeGestureEventSkipReason();
 
@@ -624,7 +656,8 @@ TEST_F(ScrollViewTest, NativeTrackpadZoomSuppressesWheelScrollDuringPinch) {
     sendNativeZoom(content, Qt::EndNativeGesture, 0.0);
 }
 
-TEST_F(ScrollViewTest, NativeTrackpadZoomIgnoresStraySmartZoom) {
+TEST_F(ScrollViewTest, NativeTrackpadZoomIgnoresStraySmartZoom)
+{
     if (!fluentCanConstructNativeGestureEvent())
         GTEST_SKIP() << fluentNativeGestureEventSkipReason();
 
@@ -648,7 +681,8 @@ TEST_F(ScrollViewTest, NativeTrackpadZoomIgnoresStraySmartZoom) {
     sendNativeZoom(content, Qt::EndNativeGesture, 0.0);
 }
 
-TEST_F(ScrollViewTest, VisualCheck) {
+TEST_F(ScrollViewTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -677,7 +711,8 @@ TEST_F(ScrollViewTest, VisualCheck) {
     auto* row = new QHBoxLayout();
     row->setSpacing(16);
 
-    auto addExample = [&](const QString& label, const QSize& viewportSize, const QSize& contentSize) {
+    auto addExample = [&](const QString& label, const QSize& viewportSize,
+                          const QSize& contentSize) {
         auto* column = new QVBoxLayout();
         column->setSpacing(8);
         auto* text = new Label(label, window);
@@ -697,10 +732,10 @@ TEST_F(ScrollViewTest, VisualCheck) {
         auto* jumpButton = new Button(QStringLiteral("Scroll"), window);
         jumpButton->setFixedSize(96, 32);
         QObject::connect(jumpButton, &Button::clicked, scrollView, [scrollView]() {
-            const bool atStart = scrollView->horizontalOffset() == 0 && scrollView->verticalOffset() == 0;
+            const bool atStart =
+                scrollView->horizontalOffset() == 0 && scrollView->verticalOffset() == 0;
             scrollView->scrollTo(atStart ? scrollView->scrollableWidth() : 0,
-                                 atStart ? scrollView->scrollableHeight() : 0,
-                                 true);
+                                 atStart ? scrollView->scrollableHeight() : 0, true);
         });
         controls->addWidget(jumpButton);
 
@@ -722,9 +757,10 @@ TEST_F(ScrollViewTest, VisualCheck) {
     root->addStretch();
 
     QObject::connect(themeButton, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                                    ? fluent::FluentElement::Dark
-                                    : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     window->show();

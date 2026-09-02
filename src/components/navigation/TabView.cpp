@@ -23,6 +23,7 @@
 #include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/private/LogicalItemAccessibility_p.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/navigation/private/TabViewVisualGeometry_p.h"
 #include "components/navigation/private/NavigationSelectionAccessibility_p.h"
 #include "components/textfields/Label.h"
@@ -222,7 +223,7 @@ void TabStrip::revealTab(int index)
         update();
     });
     m_tabRevealAnimations[index] = animation;
-    animation->start();
+    ::fluent::detail::startMotionTransition(animation, themeAnimation().fast);
     invalidateLayout();
 }
 
@@ -1123,7 +1124,7 @@ void TabStrip::animateDragOffsets(const QHash<int, qreal>& startOffsets,
         update();
     });
     m_dragOffsetAnimation = animation;
-    animation->start();
+    ::fluent::detail::startMotionTransition(animation, qMax(90, themeAnimation().fast));
 }
 
 void TabStrip::stopDragOffsetAnimation()
@@ -1245,7 +1246,7 @@ void TabStrip::animateCompactExpansion(int index, qreal start, qreal end)
         invalidateLayout();
     });
     m_compactExpansionAnimations[index] = animation;
-    animation->start();
+    ::fluent::detail::startMotionTransition(animation, themeAnimation().fast);
 }
 
 void TabStrip::stopCompactExpansionAnimation(int index)
@@ -1441,7 +1442,7 @@ void TabStrip::animateIndicator(const QRect& from, const QRect& to)
     }
     m_indicatorAnimation->setStartValue(from);
     m_indicatorAnimation->setEndValue(to);
-    m_indicatorAnimation->start();
+    ::fluent::detail::startMotionTransition(m_indicatorAnimation, themeAnimation().fast);
 }
 
 void TabStrip::setOverflowScrollValue(int value)
@@ -1923,7 +1924,7 @@ QColor TabStrip::tabFillColor(const TabRecord& record) const
     const HitRecord closeHit{HitKind::Close, record.tabIndex};
     const bool pressed = sameHit(m_pressedHit, tabHit) || sameHit(m_pressedHit, closeHit);
     const bool hovered = sameHit(m_hoveredHit, tabHit) || sameHit(m_hoveredHit, closeHit);
-    const bool dark = effectiveTheme() == Dark;
+    const bool dark = effectiveThemeUsesDarkAppearance();
     if (selected)
         return themeColorsRef().bgLayer;
     if (pressed) {

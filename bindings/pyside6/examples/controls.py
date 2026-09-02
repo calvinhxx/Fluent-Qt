@@ -132,7 +132,7 @@ layout.addStretch()
 
 
 def toggle_theme():
-    dark = fluentqt.current_theme() != fluentqt.Theme.Dark
+    dark = not fluentqt.theme_uses_dark_appearance(fluentqt.current_theme())
     fluentqt.set_theme(fluentqt.Theme.Dark if dark else fluentqt.Theme.Light)
     theme_button.setText("Switch to Light" if dark else "Switch to Dark")
 

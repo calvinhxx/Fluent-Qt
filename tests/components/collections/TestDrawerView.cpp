@@ -14,6 +14,7 @@
 
 #include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayScrim.h"
@@ -48,8 +49,7 @@ public:
 
 class ContentPane : public QWidget, public fluent::FluentElement {
 public:
-    explicit ContentPane(const QString& title, QWidget* parent = nullptr)
-        : QWidget(parent)
+    explicit ContentPane(const QString& title, QWidget* parent = nullptr) : QWidget(parent)
     {
         setMinimumSize(80, 60);
         setAutoFillBackground(true);
@@ -76,8 +76,7 @@ public:
 
 class DrawerDemoContent : public QWidget {
 public:
-    explicit DrawerDemoContent(QWidget* parent = nullptr)
-        : QWidget(parent)
+    explicit DrawerDemoContent(QWidget* parent = nullptr) : QWidget(parent)
     {
         setMinimumSize(260, 210);
 
@@ -87,7 +86,8 @@ public:
         auto* title = new Label(QStringLiteral("Drawer actions"), this);
         title->setFluentTypography(Typography::FontRole::Subtitle);
 
-        auto* description = new Label(QStringLiteral("Adjust quick settings, then apply or reset the drawer state."), this);
+        auto* description = new Label(
+            QStringLiteral("Adjust quick settings, then apply or reset the drawer state."), this);
         description->setWordWrap(true);
         description->setTextElideMode(Qt::ElideRight);
 
@@ -162,20 +162,22 @@ public:
 
         auto updateStatus = [status, notificationSwitch, compactSwitch]() {
             status->setText(QStringLiteral("%1 / %2")
-                                .arg(notificationSwitch->isOn() ? QStringLiteral("Notify on") : QStringLiteral("Notify off"))
-                                .arg(compactSwitch->isOn() ? QStringLiteral("Compact") : QStringLiteral("Detailed")));
+                                .arg(notificationSwitch->isOn() ? QStringLiteral("Notify on")
+                                                                : QStringLiteral("Notify off"))
+                                .arg(compactSwitch->isOn() ? QStringLiteral("Compact")
+                                                           : QStringLiteral("Detailed")));
         };
 
         QObject::connect(notificationSwitch, &ToggleSwitch::toggled, status, updateStatus);
         QObject::connect(compactSwitch, &ToggleSwitch::toggled, status, updateStatus);
-        QObject::connect(applyButton, &Button::clicked, status, [status]() {
-            status->setText(QStringLiteral("Applied"));
-        });
-        QObject::connect(resetButton, &Button::clicked, status, [notificationSwitch, compactSwitch, updateStatus]() {
-            notificationSwitch->setIsOn(true);
-            compactSwitch->setIsOn(false);
-            updateStatus();
-        });
+        QObject::connect(applyButton, &Button::clicked, status,
+                         [status]() { status->setText(QStringLiteral("Applied")); });
+        QObject::connect(resetButton, &Button::clicked, status,
+                         [notificationSwitch, compactSwitch, updateStatus]() {
+                             notificationSwitch->setIsOn(true);
+                             compactSwitch->setIsOn(false);
+                             updateStatus();
+                         });
 
         updateStatus();
     }
@@ -223,7 +225,8 @@ void openWithoutAnimation(DrawerView& drawer)
     processEvents();
 }
 
-void sendMouse(QWidget* target, QEvent::Type type, const QPoint& localPos, Qt::MouseButton button, Qt::MouseButtons buttons)
+void sendMouse(QWidget* target, QEvent::Type type, const QPoint& localPos, Qt::MouseButton button,
+               Qt::MouseButtons buttons)
 {
     FLUENT_MAKE_MOUSE_EVENT(event, type, target, localPos, button, buttons, Qt::NoModifier);
     QApplication::sendEvent(target, &event);
@@ -265,10 +268,12 @@ protected:
     void SetUp() override
     {
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
     }
 
     void TearDown() override
     {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
 };
@@ -391,6 +396,99 @@ TEST_F(DrawerViewTest, AnimationDisabledOpenCloseLifecycleAndAttachment)
     EXPECT_FALSE(openChangedSpy.at(1).at(0).toBool());
 }
 
+TEST_F(DrawerViewTest, MotionPolicyDisabledSettlesOpenCloseAndLifecycleSynchronously)
+{
+    DrawerTestWindow window;
+    prepareWindow(window);
+    DrawerView drawer(&window);
+    drawer.setModal(false);
+    drawer.setDim(false);
+    ASSERT_TRUE(drawer.isAnimationEnabled());
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+
+    QSignalSpy openedSpy(&drawer, &DrawerView::opened);
+    QSignalSpy closedSpy(&drawer, &DrawerView::closed);
+
+    drawer.open();
+
+    EXPECT_TRUE(drawer.isOpen());
+    EXPECT_TRUE(drawer.isVisible());
+    EXPECT_EQ(drawer.position(), 1.0);
+    EXPECT_EQ(openedSpy.count(), 1);
+
+    drawer.close();
+
+    EXPECT_FALSE(drawer.isOpen());
+    EXPECT_FALSE(drawer.isVisible());
+    EXPECT_EQ(drawer.position(), 0.0);
+    EXPECT_EQ(closedSpy.count(), 1);
+}
+
+TEST_F(DrawerViewTest, DisabledMotionCompletionSignalsCanSynchronouslyDeleteDrawer)
+{
+    DrawerTestWindow window;
+    prepareWindow(window);
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+
+    auto* openingDrawer = new DrawerView(&window);
+    openingDrawer->setModal(false);
+    openingDrawer->setDim(false);
+    QPointer<DrawerView> openingGuard(openingDrawer);
+    QObject::connect(openingDrawer, &DrawerView::opened, &window,
+                     [openingDrawer]() { delete openingDrawer; });
+
+    openingDrawer->open();
+    EXPECT_TRUE(openingGuard.isNull());
+
+    auto* closingDrawer = new DrawerView(&window);
+    closingDrawer->setModal(false);
+    closingDrawer->setDim(false);
+    closingDrawer->open();
+    ASSERT_TRUE(closingDrawer->isOpen());
+    QPointer<DrawerView> closingGuard(closingDrawer);
+    QObject::connect(closingDrawer, &DrawerView::closed, &window,
+                     [closingDrawer]() { delete closingDrawer; });
+
+    closingDrawer->close();
+    EXPECT_TRUE(closingGuard.isNull());
+}
+
+TEST_F(DrawerViewTest, DisablingAnimationSettlesRunningOpenCloseAndScrimLifecycle)
+{
+    DrawerTestWindow window;
+    prepareWindow(window);
+    DrawerView drawer(&window);
+    drawer.setModal(true);
+    drawer.setDim(true);
+
+    QSignalSpy openedSpy(&drawer, &DrawerView::opened);
+    QSignalSpy closedSpy(&drawer, &DrawerView::closed);
+    QSignalSpy animationEnabledSpy(&drawer, &DrawerView::animationEnabledChanged);
+
+    drawer.open();
+    ASSERT_TRUE(drawer.isVisible());
+    drawer.setAnimationEnabled(false);
+
+    EXPECT_TRUE(drawer.isOpen());
+    EXPECT_TRUE(drawer.isVisible());
+    EXPECT_EQ(drawer.position(), 1.0);
+    EXPECT_EQ(openedSpy.count(), 1);
+    EXPECT_NE(window.findChild<QWidget*>(QStringLiteral("DrawerViewScrim")), nullptr);
+
+    drawer.setAnimationEnabled(true);
+    drawer.close();
+    drawer.setAnimationEnabled(false);
+
+    EXPECT_FALSE(drawer.isOpen());
+    EXPECT_FALSE(drawer.isVisible());
+    EXPECT_EQ(drawer.position(), 0.0);
+    EXPECT_EQ(closedSpy.count(), 1);
+    EXPECT_EQ(animationEnabledSpy.count(), 3);
+
+    processEvents();
+    EXPECT_EQ(window.findChild<QWidget*>(QStringLiteral("DrawerViewScrim")), nullptr);
+}
+
 TEST_F(DrawerViewTest, AboutToShowCannotRecursivelyOpenDrawer)
 {
     DrawerTestWindow window;
@@ -422,11 +520,8 @@ TEST_F(DrawerViewTest, PositionHandlerCanSynchronouslyDeleteDrawer)
     drawer->setDim(false);
     drawer->setAnimationEnabled(false);
     QPointer<DrawerView> guard(drawer);
-    QObject::connect(
-        drawer, &DrawerView::positionChanged, &window,
-        [drawer](qreal) {
-            delete drawer;
-        });
+    QObject::connect(drawer, &DrawerView::positionChanged, &window,
+                     [drawer](qreal) { delete drawer; });
 
     drawer->open();
 
@@ -699,11 +794,13 @@ TEST_F(DrawerViewTest, ModalDimAndClosePolicies)
     EXPECT_TRUE(scrim.isNull());
     drawer.setModal(false);
     drawer.setDim(false);
-    drawer.setClosePolicy(DrawerView::ClosePolicy(DrawerView::CloseOnPressOutside | DrawerView::CloseOnEscape));
+    drawer.setClosePolicy(
+        DrawerView::ClosePolicy(DrawerView::CloseOnPressOutside | DrawerView::CloseOnEscape));
     drawer.open();
     processEvents();
 
-    sendMouse(background, QEvent::MouseButtonPress, QPoint(500, 300), Qt::LeftButton, Qt::LeftButton);
+    sendMouse(background, QEvent::MouseButtonPress, QPoint(500, 300), Qt::LeftButton,
+              Qt::LeftButton);
     EXPECT_EQ(background->presses, 1);
     EXPECT_FALSE(drawer.isOpen());
 
@@ -717,7 +814,8 @@ TEST_F(DrawerViewTest, ModalDimAndClosePolicies)
     drawer.setClosePolicy(DrawerView::ClosePolicy(DrawerView::NoAutoClose));
     drawer.open();
     processEvents();
-    sendMouse(background, QEvent::MouseButtonPress, QPoint(500, 300), Qt::LeftButton, Qt::LeftButton);
+    sendMouse(background, QEvent::MouseButtonPress, QPoint(500, 300), Qt::LeftButton,
+              Qt::LeftButton);
     EXPECT_TRUE(drawer.isOpen());
     QKeyEvent secondEscape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
     QApplication::sendEvent(&window, &secondEscape);
@@ -744,8 +842,7 @@ TEST_F(DrawerViewTest, ModalScrimLightDismissClosesOnOutsidePress)
     auto* overlayScrim = qobject_cast<fluent::overlay::OverlayScrim*>(scrim);
     ASSERT_NE(overlayScrim, nullptr);
     QSignalSpy pressedSpy(overlayScrim, &fluent::overlay::OverlayScrim::pressed);
-    sendMouse(scrim, QEvent::MouseButtonPress, QPoint(20, 20),
-              Qt::LeftButton, Qt::LeftButton);
+    sendMouse(scrim, QEvent::MouseButtonPress, QPoint(20, 20), Qt::LeftButton, Qt::LeftButton);
 
     EXPECT_EQ(pressedSpy.count(), 1);
     EXPECT_FALSE(drawer.isOpen());
@@ -825,14 +922,16 @@ TEST_F(DrawerViewTest, DisabledBehaviorIgnoresPointerDismissAndDrag)
     openWithoutAnimation(drawer);
     drawer.setEnabled(false);
 
-    sendMouse(background, QEvent::MouseButtonPress, QPoint(500, 300), Qt::LeftButton, Qt::LeftButton);
+    sendMouse(background, QEvent::MouseButtonPress, QPoint(500, 300), Qt::LeftButton,
+              Qt::LeftButton);
     EXPECT_TRUE(drawer.isOpen());
 
     drawer.close();
     processEvents();
     sendMouse(background, QEvent::MouseButtonPress, QPoint(2, 120), Qt::LeftButton, Qt::LeftButton);
     sendMouse(background, QEvent::MouseMove, QPoint(220, 120), Qt::NoButton, Qt::LeftButton);
-    sendMouse(background, QEvent::MouseButtonRelease, QPoint(220, 120), Qt::LeftButton, Qt::NoButton);
+    sendMouse(background, QEvent::MouseButtonRelease, QPoint(220, 120), Qt::LeftButton,
+              Qt::NoButton);
     EXPECT_FALSE(drawer.isOpen());
     EXPECT_EQ(drawer.position(), 0.0);
 }
@@ -870,8 +969,7 @@ TEST_F(DrawerViewTest, WindowResizeBorderTakesPriorityOverClosedEdgeDrag)
 {
     DrawerTestWindow window;
     prepareWindow(window);
-    window.setProperty(
-        fluent::overlay::windowResizeBorderWidthPropertyName(), 8);
+    window.setProperty(fluent::overlay::windowResizeBorderWidthPropertyName(), 8);
 
     DrawerView drawer(&window);
     drawer.setEdge(DrawerView::DrawerEdge::Right);
@@ -881,21 +979,19 @@ TEST_F(DrawerViewTest, WindowResizeBorderTakesPriorityOverClosedEdgeDrag)
     drawer.setDrawerLength(320);
 
     const int right = window.rect().right();
-    sendMouse(&window, QEvent::MouseButtonPress, QPoint(right, 140),
-              Qt::LeftButton, Qt::LeftButton);
-    sendMouse(&window, QEvent::MouseMove, QPoint(right - 220, 140),
-              Qt::NoButton, Qt::LeftButton);
-    sendMouse(&window, QEvent::MouseButtonRelease, QPoint(right - 220, 140),
-              Qt::LeftButton, Qt::NoButton);
+    sendMouse(&window, QEvent::MouseButtonPress, QPoint(right, 140), Qt::LeftButton,
+              Qt::LeftButton);
+    sendMouse(&window, QEvent::MouseMove, QPoint(right - 220, 140), Qt::NoButton, Qt::LeftButton);
+    sendMouse(&window, QEvent::MouseButtonRelease, QPoint(right - 220, 140), Qt::LeftButton,
+              Qt::NoButton);
     EXPECT_FALSE(drawer.isOpen());
     EXPECT_EQ(drawer.position(), 0.0);
 
-    sendMouse(&window, QEvent::MouseButtonPress, QPoint(right - 9, 140),
-              Qt::LeftButton, Qt::LeftButton);
-    sendMouse(&window, QEvent::MouseMove, QPoint(right - 220, 140),
-              Qt::NoButton, Qt::LeftButton);
-    sendMouse(&window, QEvent::MouseButtonRelease, QPoint(right - 220, 140),
-              Qt::LeftButton, Qt::NoButton);
+    sendMouse(&window, QEvent::MouseButtonPress, QPoint(right - 9, 140), Qt::LeftButton,
+              Qt::LeftButton);
+    sendMouse(&window, QEvent::MouseMove, QPoint(right - 220, 140), Qt::NoButton, Qt::LeftButton);
+    sendMouse(&window, QEvent::MouseButtonRelease, QPoint(right - 220, 140), Qt::LeftButton,
+              Qt::NoButton);
     EXPECT_TRUE(drawer.isOpen());
 }
 
@@ -918,12 +1014,9 @@ TEST_F(DrawerViewTest, HiddenLogicalHostDoesNotReceiveTopLevelEdgeGestures)
     page.hide();
     processEvents();
 
-    sendMouse(&window, QEvent::MouseButtonPress, QPoint(2, 140),
-              Qt::LeftButton, Qt::LeftButton);
-    sendMouse(&window, QEvent::MouseMove, QPoint(220, 140),
-              Qt::NoButton, Qt::LeftButton);
-    sendMouse(&window, QEvent::MouseButtonRelease, QPoint(220, 140),
-              Qt::LeftButton, Qt::NoButton);
+    sendMouse(&window, QEvent::MouseButtonPress, QPoint(2, 140), Qt::LeftButton, Qt::LeftButton);
+    sendMouse(&window, QEvent::MouseMove, QPoint(220, 140), Qt::NoButton, Qt::LeftButton);
+    sendMouse(&window, QEvent::MouseButtonRelease, QPoint(220, 140), Qt::LeftButton, Qt::NoButton);
 
     EXPECT_FALSE(drawer.isOpen());
     EXPECT_FALSE(drawer.isVisible());
@@ -955,7 +1048,8 @@ TEST_F(DrawerViewTest, VisualCheck)
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
+        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP() << "Skipping visual test in offscreen mode";
     }
 
@@ -992,7 +1086,8 @@ TEST_F(DrawerViewTest, VisualCheck)
     auto* interactiveSwitch = new ToggleSwitch(window);
     interactiveSwitch->setIsOn(true);
 
-    auto* preview = new ContentPane(QStringLiteral("Use the buttons above or drag from an edge."), window);
+    auto* preview =
+        new ContentPane(QStringLiteral("Use the buttons above or drag from an edge."), window);
     auto* drawer = new DrawerView(window);
     drawer->setContentWidget(new DrawerDemoContent());
 
@@ -1063,23 +1158,31 @@ TEST_F(DrawerViewTest, VisualCheck)
     previewAnchors.bottom = {window, Edge::Bottom, -28};
     layout->addAnchoredWidget(preview, previewAnchors);
 
-    auto openDrawer = [drawer, modalSwitch, dimSwitch, interactiveSwitch](DrawerView::DrawerEdge edge) {
+    auto openDrawer = [drawer, modalSwitch, dimSwitch,
+                       interactiveSwitch](DrawerView::DrawerEdge edge) {
         drawer->setEdge(edge);
         drawer->setModal(modalSwitch->isOn());
         drawer->setDim(dimSwitch->isOn());
         drawer->setInteractive(interactiveSwitch->isOn());
-        drawer->setDrawerLength(edge == DrawerView::DrawerEdge::Top || edge == DrawerView::DrawerEdge::Bottom ? 260 : 340);
+        drawer->setDrawerLength(
+            edge == DrawerView::DrawerEdge::Top || edge == DrawerView::DrawerEdge::Bottom ? 260
+                                                                                          : 340);
         drawer->open();
     };
 
-    QObject::connect(leftButton, &Button::clicked, drawer, [openDrawer]() { openDrawer(DrawerView::DrawerEdge::Left); });
-    QObject::connect(rightButton, &Button::clicked, drawer, [openDrawer]() { openDrawer(DrawerView::DrawerEdge::Right); });
-    QObject::connect(topButton, &Button::clicked, drawer, [openDrawer]() { openDrawer(DrawerView::DrawerEdge::Top); });
-    QObject::connect(bottomButton, &Button::clicked, drawer, [openDrawer]() { openDrawer(DrawerView::DrawerEdge::Bottom); });
+    QObject::connect(leftButton, &Button::clicked, drawer,
+                     [openDrawer]() { openDrawer(DrawerView::DrawerEdge::Left); });
+    QObject::connect(rightButton, &Button::clicked, drawer,
+                     [openDrawer]() { openDrawer(DrawerView::DrawerEdge::Right); });
+    QObject::connect(topButton, &Button::clicked, drawer,
+                     [openDrawer]() { openDrawer(DrawerView::DrawerEdge::Top); });
+    QObject::connect(bottomButton, &Button::clicked, drawer,
+                     [openDrawer]() { openDrawer(DrawerView::DrawerEdge::Bottom); });
     QObject::connect(themeButton, &Button::clicked, window, [window]() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                                    ? fluent::FluentElement::Dark
-                                    : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
         window->onThemeUpdated();
     });
 

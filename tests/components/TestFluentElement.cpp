@@ -11,11 +11,9 @@
 class MockComponent : public QWidget, public fluent::FluentElement {
 public:
     explicit MockComponent(QWidget* parent = nullptr) : QWidget(parent) {}
-    
+
     int updateCount = 0;
-    void onThemeUpdated() override {
-        updateCount++;
-    }
+    void onThemeUpdated() override { updateCount++; }
 };
 
 #include "components/basicinput/Button.h"
@@ -45,18 +43,21 @@ class MaterialPreviewCard : public QWidget {
     Q_OBJECT
 public:
     explicit MaterialPreviewCard(const QString& name, QWidget* parent = nullptr)
-        : QWidget(parent), m_name(name) {
+        : QWidget(parent), m_name(name)
+    {
         setMinimumSize(160, 88);
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     }
 
-    void setMaterialColor(const QColor& color) {
+    void setMaterialColor(const QColor& color)
+    {
         m_color = color;
         update();
     }
 
 protected:
-    void paintEvent(QPaintEvent*) override {
+    void paintEvent(QPaintEvent*) override
+    {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
 
@@ -92,26 +93,27 @@ protected:
 
 private:
     QString m_name;
-    QColor  m_color = Qt::transparent;
+    QColor m_color = Qt::transparent;
 };
 
 // 一个全功能的设计元素预览组件，用于测试 src/design 中的所有 Token
 class VisualMockComponent : public QWidget, public fluent::FluentElement {
     Q_OBJECT
 public:
-    explicit VisualMockComponent(QWidget* parent = nullptr) : QWidget(parent) {
+    explicit VisualMockComponent(QWidget* parent = nullptr) : QWidget(parent)
+    {
         setWindowTitle("Fluent Design System Tokens Preview");
-        setMinimumSize(320, 500); 
+        setMinimumSize(320, 500);
         resize(800, 600);
-        
+
         QVBoxLayout* mainLayout = new QVBoxLayout(this);
-        
+
         // --- 顶部控制栏 ---
         QHBoxLayout* header = new QHBoxLayout();
         m_themeBtn = new fluent::basicinput::Button("Toggle Theme (Light/Dark)", this);
         header->addWidget(m_themeBtn);
         header->addStretch();
-        
+
         m_breakpointLabel = new QLabel(this);
         header->addWidget(m_breakpointLabel);
         mainLayout->addLayout(header);
@@ -120,40 +122,46 @@ public:
         scrollArea->setWidgetResizable(true);
         QWidget* container = new QWidget();
         m_contentLayout = new QVBoxLayout(container);
-        
+
         setupTypographySection();
         setupColorsSection();
         setupRadiusAndShadowSection();
         setupSpacingSection();
         setupMaterialSection();
         setupAnimationSection();
-        
+
         scrollArea->setWidget(container);
         mainLayout->addWidget(scrollArea);
-        
+
         // 绑定主题切换按钮
         connect(m_themeBtn, &QPushButton::clicked, []() {
-            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                    fluent::FluentElement::Light
                                                 ? fluent::FluentElement::Dark
                                                 : fluent::FluentElement::Light);
         });
 
         onThemeUpdated();
     }
-    
-    void onThemeUpdated() override {
+
+    void onThemeUpdated() override
+    {
         const auto& colors = themeColors();
-        
+
         // 辅助 lambda：将 QColor 转换为 QSS 兼容的 rgba 字符串
         auto toQss = [](const QColor& c) {
-            return QString("rgba(%1, %2, %3, %4)").arg(c.red()).arg(c.green()).arg(c.blue()).arg(c.alpha());
+            return QString("rgba(%1, %2, %3, %4)")
+                .arg(c.red())
+                .arg(c.green())
+                .arg(c.blue())
+                .arg(c.alpha());
         };
 
         // 更新整体背景
         setStyleSheet(QString("QWidget { background-color: %1; color: %2; }")
-                      .arg(colors.bgCanvas.name())
-                      .arg(colors.textPrimary.name()));
-        
+                          .arg(colors.bgCanvas.name())
+                          .arg(colors.textPrimary.name()));
+
         // 注意：m_themeBtn 作为一个继承自 fluent::FluentElement 的组件，
         // 它的 onThemeUpdated 会被全局管理器自动调用，这里无需手动处理。
 
@@ -168,37 +176,37 @@ public:
     }
 
 protected:
-    void resizeEvent(QResizeEvent* event) override {
+    void resizeEvent(QResizeEvent* event) override
+    {
         QWidget::resizeEvent(event);
         updateBreakpointInfo();
     }
 
 private:
-    void setupTypographySection() {
+    void setupTypographySection()
+    {
         QGroupBox* group = new QGroupBox("1. Typography (Typography.h)", this);
         QVBoxLayout* layout = new QVBoxLayout(group);
         const QVector<Typography::FontRole> roles = {
-            Typography::FontRole::Display,
-            Typography::FontRole::TitleLarge,
-            Typography::FontRole::Title,
-            Typography::FontRole::Subtitle,
-            Typography::FontRole::BodyStrong,
-            Typography::FontRole::Body,
-            Typography::FontRole::Caption
-        };
+            Typography::FontRole::Display,    Typography::FontRole::TitleLarge,
+            Typography::FontRole::Title,      Typography::FontRole::Subtitle,
+            Typography::FontRole::BodyStrong, Typography::FontRole::Body,
+            Typography::FontRole::Caption};
         for (Typography::FontRole role : roles) {
             const QString name = Typography::fontRoleKey(role);
-            QLabel* label = new QLabel(name + " - The quick brown fox jumps over the lazy dog", this);
+            QLabel* label =
+                new QLabel(name + " - The quick brown fox jumps over the lazy dog", this);
             m_typoLabels[role] = label;
             layout->addWidget(label);
         }
         m_contentLayout->addWidget(group);
     }
 
-    void setupColorsSection() {
+    void setupColorsSection()
+    {
         QGroupBox* group = new QGroupBox("2. Colors (ThemeColors.h)", this);
         QGridLayout* layout = new QGridLayout(group);
-        
+
         auto addColorBlock = [&](const QString& name, int row, int col) {
             QWidget* block = new QWidget(this);
             block->setFixedSize(100, 40);
@@ -215,14 +223,16 @@ private:
         addColorBlock("Grey50", 1, 0);
         addColorBlock("Grey90", 1, 1);
         addColorBlock("Chart0", 1, 2);
-        
+
         m_contentLayout->addWidget(group);
     }
 
-    void setupRadiusAndShadowSection() {
-        QGroupBox* group = new QGroupBox("3. Radius & Elevation (CornerRadius.h / Elevation.h)", this);
+    void setupRadiusAndShadowSection()
+    {
+        QGroupBox* group =
+            new QGroupBox("3. Radius & Elevation (CornerRadius.h / Elevation.h)", this);
         QHBoxLayout* layout = new QHBoxLayout(group);
-        
+
         auto addCard = [&](const QString& name) {
             QFrame* card = new QFrame(this);
             card->setFixedSize(150, 100);
@@ -237,11 +247,12 @@ private:
         addCard("Control + Low");
         addCard("Control + Med");
         addCard("Overlay + High");
-        
+
         m_contentLayout->addWidget(group);
     }
 
-    void setupSpacingSection() {
+    void setupSpacingSection()
+    {
         QGroupBox* group = new QGroupBox("4. Spacing (Spacing.h)", this);
         QVBoxLayout* layout = new QVBoxLayout(group);
         m_spacingFrame = new QFrame(this);
@@ -250,7 +261,8 @@ private:
         m_contentLayout->addWidget(group);
     }
 
-    void setupMaterialSection() {
+    void setupMaterialSection()
+    {
         QGroupBox* group = new QGroupBox("5. Materials (Material.h)", this);
         QHBoxLayout* layout = new QHBoxLayout(group);
         layout->setSpacing(12);
@@ -262,25 +274,26 @@ private:
         };
 
         m_acrylicCard = addCard("Acrylic");
-        m_micaCard    = addCard("Mica");
-        m_smokeCard   = addCard("Smoke");
+        m_micaCard = addCard("Mica");
+        m_smokeCard = addCard("Smoke");
         m_contentLayout->addWidget(group);
     }
 
-    void setupAnimationSection() {
+    void setupAnimationSection()
+    {
         QGroupBox* group = new QGroupBox("6. Animation (Animation.h)", this);
         QVBoxLayout* layout = new QVBoxLayout(group);
-        
+
         // --- 动画控制栏 ---
         QHBoxLayout* controls = new QHBoxLayout();
         m_durationCombo = new QComboBox(this);
         m_durationCombo->addItems({"Fast", "Normal", "Slow", "VerySlow"});
         m_durationCombo->setCurrentText("Normal");
-        
+
         m_easingCombo = new QComboBox(this);
         m_easingCombo->addItems({"Standard", "Entrance", "Exit", "Accelerate", "Decelerate"});
         m_easingCombo->setCurrentText("Entrance");
-        
+
         controls->addWidget(new QLabel("Duration:"));
         controls->addWidget(m_durationCombo);
         controls->addWidget(new QLabel("Easing:"));
@@ -291,33 +304,40 @@ private:
         m_animContainer->setMinimumHeight(150);
         m_animContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         m_animContainer->setStyleSheet("background: palette(dark); border-radius: 4px;");
-        
+
         m_animBox = new QFrame(m_animContainer);
         m_animBox->setFixedSize(50, 50);
         m_animBox->move(20, 50);
-        
+
         QPushButton* startBtn = new QPushButton("Play Animation", group);
         layout->addWidget(m_animContainer);
         layout->addWidget(startBtn);
-        
+
         connect(startBtn, &QPushButton::clicked, [this]() {
             QPropertyAnimation* anim = new QPropertyAnimation(m_animBox, "pos", this);
             const auto& a = themeAnimation();
-            
+
             // 获取选择的时长
             int duration = a.normal;
             QString dStr = m_durationCombo->currentText();
-            if (dStr == "Fast") duration = a.fast;
-            else if (dStr == "Slow") duration = a.slow;
-            else if (dStr == "VerySlow") duration = a.verySlow;
-            
+            if (dStr == "Fast")
+                duration = a.fast;
+            else if (dStr == "Slow")
+                duration = a.slow;
+            else if (dStr == "VerySlow")
+                duration = a.verySlow;
+
             // 获取选择的曲线
             QEasingCurve easing = a.entrance;
             QString eStr = m_easingCombo->currentText();
-            if (eStr == "Standard") easing = a.standard;
-            else if (eStr == "Exit") easing = a.exit;
-            else if (eStr == "Accelerate") easing = a.accelerate;
-            else if (eStr == "Decelerate") easing = a.decelerate;
+            if (eStr == "Standard")
+                easing = a.standard;
+            else if (eStr == "Exit")
+                easing = a.exit;
+            else if (eStr == "Accelerate")
+                easing = a.accelerate;
+            else if (eStr == "Decelerate")
+                easing = a.decelerate;
 
             anim->setDuration(duration);
             anim->setEasingCurve(easing);
@@ -329,81 +349,92 @@ private:
         m_contentLayout->addWidget(group);
     }
 
-    void updateTypography() {
+    void updateTypography()
+    {
         for (auto it = m_typoLabels.begin(); it != m_typoLabels.end(); ++it) {
             it.value()->setFont(themeFont(it.key()).toQFont());
         }
     }
 
-    void updateColors() {
+    void updateColors()
+    {
         const auto& c = themeColors();
         auto setStyle = [](QWidget* w, QColor color) {
-            w->setStyleSheet(QString("background-color: %1; border: 1px solid palette(mid);").arg(color.name()));
+            w->setStyleSheet(
+                QString("background-color: %1; border: 1px solid palette(mid);").arg(color.name()));
         };
         setStyle(m_colorBlocks["Accent"], c.accentDefault);
         setStyle(m_colorBlocks["Control"], c.controlDefault);
         setStyle(m_colorBlocks["Layer"], c.bgLayer);
         setStyle(m_colorBlocks["Grey50"], c.grey50);
         setStyle(m_colorBlocks["Grey90"], c.grey90);
-        if (!c.charts.isEmpty()) setStyle(m_colorBlocks["Chart0"], c.charts[0]);
+        if (!c.charts.isEmpty())
+            setStyle(m_colorBlocks["Chart0"], c.charts[0]);
     }
 
-    void updateRadiusAndShadow() {
+    void updateRadiusAndShadow()
+    {
         const auto& r = themeRadius();
         const auto& c = themeColors();
-        
+
         auto applyEffect = [&](const QString& key, int rad, Elevation::Level level) {
             QFrame* card = m_cards[key];
-            card->setStyleSheet(QString("background: %1; border-radius: %2px;").arg(c.bgLayer.name()).arg(rad));
-            
+            card->setStyleSheet(
+                QString("background: %1; border-radius: %2px;").arg(c.bgLayer.name()).arg(rad));
+
             auto shadow = themeShadow(level);
             QGraphicsDropShadowEffect* effect = new QGraphicsDropShadowEffect(this);
             effect->setBlurRadius(shadow.blurRadius);
             effect->setOffset(shadow.offsetX, shadow.offsetY);
-            QColor sc = shadow.color; 
+            QColor sc = shadow.color;
             sc.setAlphaF(shadow.opacity);
             effect->setColor(sc);
             card->setGraphicsEffect(effect);
         };
 
-        applyEffect("Control + Low",  r.control, Elevation::Low);
-        applyEffect("Control + Med",  r.control, Elevation::Medium);
+        applyEffect("Control + Low", r.control, Elevation::Low);
+        applyEffect("Control + Med", r.control, Elevation::Medium);
         applyEffect("Overlay + High", r.overlay, Elevation::High);
     }
 
-    void updateSpacing() {
+    void updateSpacing()
+    {
         const auto& s = themeSpacing();
-        m_spacingFrame->setStyleSheet(QString("background: palette(midlight); border: %1px solid %2; margin: "
-                "%3px;")
-            .arg(s.small)
-            .arg(themeColors().accentDefault.name())
-            .arg(s.standard));
+        m_spacingFrame->setStyleSheet(
+            QString("background: palette(midlight); border: %1px solid %2; margin: "
+                    "%3px;")
+                .arg(s.small)
+                .arg(themeColors().accentDefault.name())
+                .arg(s.standard));
     }
 
-    void updateMaterials() {
+    void updateMaterials()
+    {
         auto toColor = [](QColor base, double opacity) {
             base.setAlphaF(opacity);
             return base;
         };
         const auto acrylic = themeAcrylic();
-        const auto mica    = themeMica();
-        const auto smoke   = themeSmoke();
+        const auto mica = themeMica();
+        const auto smoke = themeSmoke();
 
         m_acrylicCard->setMaterialColor(toColor(acrylic.tintColor, acrylic.tintOpacity));
         m_micaCard->setMaterialColor(toColor(mica.baseColor, mica.opacity));
         m_smokeCard->setMaterialColor(toColor(smoke.baseColor, smoke.opacity));
     }
 
-    void updateAnimationPreview() {
-        m_animBox->setStyleSheet(QString("background: %1; border-radius: 4px;")
-            .arg(themeColors().accentDefault.name()));
+    void updateAnimationPreview()
+    {
+        m_animBox->setStyleSheet(
+            QString("background: %1; border-radius: 4px;").arg(themeColors().accentDefault.name()));
     }
 
-    void updateBreakpointInfo() {
+    void updateBreakpointInfo()
+    {
         int w = width();
         int small = themeBreakpoint(Breakpoints::Breakpoint::Small);
         int medium = themeBreakpoint(Breakpoints::Breakpoint::Medium);
-        
+
         QString name;
         QString color;
         if (w <= small) {
@@ -416,15 +447,19 @@ private:
             name = "Large (Expanded)";
             color = "#107C10"; // Windows Green
         }
-        
-        m_breakpointLabel->setText(QString(
-            "<html><body>"
-            "Current Width: <b style='font-size: 16px;'>%1 px</b> | "
-            "Breakpoint: <b style='color: %2; font-size: 16px;'>%3</b>"
-                "<br><small style='color: gray;'>Guide: Small &lt;= %4px | "
-                "Medium &lt;= %5px | Large &gt; %5px</small>"
-            "</body></html>"
-        ).arg(w).arg(color).arg(name).arg(small).arg(medium));
+
+        m_breakpointLabel->setText(
+            QString("<html><body>"
+                    "Current Width: <b style='font-size: 16px;'>%1 px</b> | "
+                    "Breakpoint: <b style='color: %2; font-size: 16px;'>%3</b>"
+                    "<br><small style='color: gray;'>Guide: Small &lt;= %4px | "
+                    "Medium &lt;= %5px | Large &gt; %5px</small>"
+                    "</body></html>")
+                .arg(w)
+                .arg(color)
+                .arg(name)
+                .arg(small)
+                .arg(medium));
     }
 
     QVBoxLayout* m_contentLayout;
@@ -433,8 +468,8 @@ private:
     QMap<QString, QFrame*> m_cards;
     QFrame* m_spacingFrame;
     MaterialPreviewCard* m_acrylicCard = nullptr;
-    MaterialPreviewCard* m_micaCard    = nullptr;
-    MaterialPreviewCard* m_smokeCard   = nullptr;
+    MaterialPreviewCard* m_micaCard = nullptr;
+    MaterialPreviewCard* m_smokeCard = nullptr;
 
     fluent::basicinput::Button* m_themeBtn;
     QLabel* m_breakpointLabel;
@@ -446,20 +481,21 @@ private:
 
 #include "TestFluentElement.moc"
 
-
 class FluentElementTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         // 每次测试前重置为 Light 主题
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
-        
+
         window = new QWidget();
         window->setWindowTitle("FluentElement Visual Preview");
         layout = new QVBoxLayout(window);
         window->setLayout(layout);
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         delete window;
         fluent::ThemeRegistry::instance().resetToDefaults();
     }
@@ -468,7 +504,8 @@ protected:
     QVBoxLayout* layout;
 };
 
-TEST_F(FluentElementTest, ThemeSwitching) {
+TEST_F(FluentElementTest, ThemeSwitching)
+{
     MockComponent component;
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Light);
     EXPECT_EQ(component.updateCount, 0);
@@ -484,7 +521,8 @@ TEST_F(FluentElementTest, ThemeSwitching) {
     EXPECT_EQ(component.updateCount, 2);
 }
 
-TEST_F(FluentElementTest, ThemeSnapshotCommitsOnceAndRefreshesOnce) {
+TEST_F(FluentElementTest, ThemeSnapshotCommitsOnceAndRefreshesOnce)
+{
     auto& registry = fluent::ThemeRegistry::instance();
     registry.resetToDefaults();
 
@@ -508,8 +546,10 @@ TEST_F(FluentElementTest, ThemeSnapshotCommitsOnceAndRefreshesOnce) {
     EXPECT_EQ(registry.revision(), initialRevision + 1);
     EXPECT_EQ(fluent::FluentElement::themeGeneration(), initialGeneration + 1);
     EXPECT_EQ(component->updateCount, initialUpdates + 1);
-    EXPECT_EQ(registry.colors(false).accentDefault, QColor(QStringLiteral("#A23BEC")));
-    EXPECT_EQ(registry.colors(false).bgLayerOverlay, QColor(0x12, 0x34, 0x56, 0x78));
+    EXPECT_EQ(registry.colors(fluent::FluentElement::Light).accentDefault,
+              QColor(QStringLiteral("#A23BEC")));
+    EXPECT_EQ(registry.colors(fluent::FluentElement::Light).bgLayerOverlay,
+              QColor(0x12, 0x34, 0x56, 0x78));
     EXPECT_EQ(registry.radius().control, 9);
     EXPECT_EQ(registry.fontFamilyOverride(), QStringLiteral("Theme Snapshot Test"));
     EXPECT_DOUBLE_EQ(registry.fontScale(), 1.25);
@@ -520,7 +560,8 @@ TEST_F(FluentElementTest, ThemeSnapshotCommitsOnceAndRefreshesOnce) {
     EXPECT_EQ(component->updateCount, initialUpdates + 1);
 }
 
-TEST_F(FluentElementTest, ThemeSnapshotRejectsInvalidScaleWithoutPartialMutation) {
+TEST_F(FluentElementTest, ThemeSnapshotRejectsInvalidScaleWithoutPartialMutation)
+{
     auto& registry = fluent::ThemeRegistry::instance();
     registry.resetToDefaults();
     const auto before = registry.snapshot();
@@ -532,11 +573,13 @@ TEST_F(FluentElementTest, ThemeSnapshotRejectsInvalidScaleWithoutPartialMutation
 
     EXPECT_FALSE(registry.applySnapshot(invalid));
     EXPECT_EQ(registry.revision(), initialRevision);
-    EXPECT_EQ(registry.colors(false).accentDefault, before.lightColors.accentDefault);
+    EXPECT_EQ(registry.colors(fluent::FluentElement::Light).accentDefault,
+              before.lightColors.accentDefault);
     EXPECT_DOUBLE_EQ(registry.fontScale(), before.fontScale);
 }
 
-TEST_F(FluentElementTest, DeferredThemeSwitchThemesVisibleSynchronouslyThenHidden) {
+TEST_F(FluentElementTest, DeferredThemeSwitchThemesVisibleSynchronouslyThenHidden)
+{
     auto* visibleComponent = new MockComponent(window);
     layout->addWidget(visibleComponent);
     window->show();
@@ -557,9 +600,10 @@ TEST_F(FluentElementTest, DeferredThemeSwitchThemesVisibleSynchronouslyThenHidde
     EXPECT_EQ(visibleComponent->updateCount, 1);
 }
 
-TEST_F(FluentElementTest, ColorTokenMapping) {
+TEST_F(FluentElementTest, ColorTokenMapping)
+{
     MockComponent component;
-    
+
     // Light 主题下的颜色
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     auto lightColors = component.themeColors();
@@ -599,7 +643,8 @@ TEST_F(FluentElementTest, WidgetThemeOverrideIsInheritedWithoutChangingGlobalThe
     EXPECT_EQ(child.themeColors().bgLayer, QColor("#FFFFFF"));
 }
 
-TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus) {
+TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus)
+{
     MockComponent component;
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
 
@@ -645,8 +690,7 @@ TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus) {
     QWidget micaHost;
     micaHost.setProperty("fluentWindowBackdropEffect", 2);
     micaHost.setProperty("fluentMicaBackdrop", true);
-    EXPECT_FALSE(
-        fluent::windowing::windowChromeBackdropFill(component, &micaHost, true).isValid());
+    EXPECT_FALSE(fluent::windowing::windowChromeBackdropFill(component, &micaHost, true).isValid());
     EXPECT_FALSE(
         fluent::windowing::windowChromeBackdropFill(component, &micaHost, false).isValid());
 
@@ -665,25 +709,24 @@ TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus) {
     EXPECT_EQ(authoritativePainted.alpha(), 255);
 }
 
-TEST_F(FluentElementTest, FontTokenMapping) {
+TEST_F(FluentElementTest, FontTokenMapping)
+{
     MockComponent component;
-    
+
     auto bodyFont = component.themeFont(Typography::FontRole::Body);
     EXPECT_EQ(bodyFont.size, 14);
     EXPECT_FALSE(bodyFont.family.isEmpty());
 
     auto titleFont = component.themeFont(Typography::FontRole::TitleLarge);
-    EXPECT_EQ(titleFont.size, Typography::FontSize::TitleLarge);  // 40px (Figma MCP 实测)
+    EXPECT_EQ(titleFont.size, Typography::FontSize::TitleLarge); // 40px (Figma MCP 实测)
     EXPECT_GT(titleFont.weight, bodyFont.weight);
 
     auto& registry = fluent::ThemeRegistry::instance();
     registry.setFontFamilyOverride(QStringLiteral("Theme Font Test"));
     registry.setFontScale(1.25);
 
-    const auto resolved =
-        registry.resolvedFontStyle(Typography::FontRole::BodyStrong);
-    const auto componentFont =
-        component.themeFont(Typography::FontRole::BodyStrong);
+    const auto resolved = registry.resolvedFontStyle(Typography::FontRole::BodyStrong);
+    const auto componentFont = component.themeFont(Typography::FontRole::BodyStrong);
     EXPECT_EQ(componentFont.family, QStringLiteral("Theme Font Test"));
     EXPECT_TRUE(componentFont.styleName.isEmpty());
     EXPECT_EQ(componentFont.size, 18);
@@ -695,11 +738,12 @@ TEST_F(FluentElementTest, FontTokenMapping) {
     EXPECT_EQ(componentFont.lineHeight, resolved.lineHeight);
 }
 
-TEST_F(FluentElementTest, RadiusAndSpacingMapping) {
+TEST_F(FluentElementTest, RadiusAndSpacingMapping)
+{
     MockComponent component;
-    
+
     auto radius = component.themeRadius();
-    EXPECT_EQ(radius.none,    0);
+    EXPECT_EQ(radius.none, 0);
     EXPECT_EQ(radius.control, CornerRadius::Control);
     EXPECT_EQ(radius.overlay, CornerRadius::Overlay);
 
@@ -708,16 +752,17 @@ TEST_F(FluentElementTest, RadiusAndSpacingMapping) {
     EXPECT_EQ(spacing.medium, 12);
 }
 
-TEST_F(FluentElementTest, AnimationTokenMapping) {
+TEST_F(FluentElementTest, AnimationTokenMapping)
+{
     MockComponent component;
-    
+
     auto anim = component.themeAnimation();
     // 验证持续时间
     EXPECT_EQ(anim.fast, 150);
     EXPECT_EQ(anim.normal, 250);
     EXPECT_EQ(anim.slow, 400);
     EXPECT_EQ(anim.verySlow, 700);
-    
+
     // 验证缓动曲线
     EXPECT_EQ(anim.standard.type(), QEasingCurve::InOutSine);
     EXPECT_EQ(anim.entrance.type(), QEasingCurve::OutBack);
@@ -726,7 +771,8 @@ TEST_F(FluentElementTest, AnimationTokenMapping) {
     EXPECT_EQ(anim.decelerate.type(), QEasingCurve::OutCubic);
 }
 
-TEST_F(FluentElementTest, MaterialAndShadow) {
+TEST_F(FluentElementTest, MaterialAndShadow)
+{
     MockComponent component;
 
     auto acrylic = component.themeAcrylic();
@@ -746,28 +792,31 @@ TEST_F(FluentElementTest, MaterialAndShadow) {
     EXPECT_GT(shadow.blurRadius, 0);
 }
 
-TEST_F(FluentElementTest, BreakpointMapping) {
+TEST_F(FluentElementTest, BreakpointMapping)
+{
     MockComponent component;
     EXPECT_EQ(component.themeBreakpoint(Breakpoints::Breakpoint::Small), 640);
     EXPECT_EQ(component.themeBreakpoint(Breakpoints::Breakpoint::Medium), 1007);
     EXPECT_EQ(component.themeBreakpoint(Breakpoints::Breakpoint::Large), 1920);
 }
 
-TEST_F(FluentElementTest, VisualExample) {
+TEST_F(FluentElementTest, VisualExample)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
     // 如果没有显示设备（如在某些沙盒/CI中），跳过可视化测试
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
+        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP() << "Skipping visual test in offscreen mode";
     }
 
     // 将预览组件放入固件管理的 layout 中
     VisualMockComponent* preview = new VisualMockComponent(window);
     layout->addWidget(preview);
-    
+
     window->show();
-    
+
     // 使用 qApp->exec() 保持窗口开启，直到手动关闭
     qApp->exec();
 }

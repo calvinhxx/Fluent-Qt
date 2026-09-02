@@ -20,14 +20,13 @@ QColor opaqueTextColor(const QColor& foreground, const QColor& background)
     const qreal alpha = foreground.alphaF();
     return QColor::fromRgbF(foreground.redF() * alpha + background.redF() * (1.0 - alpha),
                             foreground.greenF() * alpha + background.greenF() * (1.0 - alpha),
-                            foreground.blueF() * alpha + background.blueF() * (1.0 - alpha),
-                            1.0);
+                            foreground.blueF() * alpha + background.blueF() * (1.0 - alpha), 1.0);
 }
 
 } // namespace
 
-LineEdit::LineEdit(QWidget* parent)
-    : QLineEdit(parent) {
+LineEdit::LineEdit(QWidget* parent) : QLineEdit(parent)
+{
     setFrame(false);
     setAttribute(Qt::WA_Hover);
     setAutoFillBackground(false);
@@ -37,8 +36,7 @@ LineEdit::LineEdit(QWidget* parent)
     m_clearButton->setFluentStyle(::fluent::basicinput::Button::Subtle);
     m_clearButton->setFluentSize(::fluent::basicinput::Button::Small);
     m_clearButton->setFocusPolicy(Qt::NoFocus);
-    m_clearButton->setIconGlyph(::Typography::Icons::Dismiss,
-                                ::Typography::IconSize::Standard,
+    m_clearButton->setIconGlyph(::Typography::Icons::Dismiss, ::Typography::IconSize::Standard,
                                 ::Typography::FontFamily::FluentIcons);
     m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
     m_clearButton->hide();
@@ -47,14 +45,13 @@ LineEdit::LineEdit(QWidget* parent)
         clear();
         setFocus();
     });
-    connect(this, &QLineEdit::textChanged, this, [this]() {
-        updateClearButtonVisibility();
-    });
+    connect(this, &QLineEdit::textChanged, this, [this]() { updateClearButtonVisibility(); });
 
     applyThemeStyle();
 }
 
-void LineEdit::paintEvent(QPaintEvent* event) {
+void LineEdit::paintEvent(QPaintEvent* event)
+{
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
     if (m_frameVisible)
@@ -62,7 +59,8 @@ void LineEdit::paintEvent(QPaintEvent* event) {
     QLineEdit::paintEvent(event);
 }
 
-void LineEdit::resizeEvent(QResizeEvent* event) {
+void LineEdit::resizeEvent(QResizeEvent* event)
+{
     QLineEdit::resizeEvent(event);
     updateClearButtonGeometry();
 }
@@ -74,25 +72,25 @@ void LineEdit::contextMenuEvent(QContextMenuEvent* event)
 
     auto* standardMenu = createStandardContextMenu();
     if (!::fluent::menus_toolbars::detail::showTextEditingContextMenu(
-            this,
-            standardMenu,
-            event->globalPos(),
-            QStringLiteral("FluentLineEdit.ContextMenu"))) {
+            this, standardMenu, event->globalPos(), QStringLiteral("FluentLineEdit.ContextMenu"))) {
         event->ignore();
         return;
     }
     event->accept();
 }
 
-void LineEdit::updateClearButtonGeometry() {
-    if (!m_clearButton) return;
+void LineEdit::updateClearButtonGeometry()
+{
+    if (!m_clearButton)
+        return;
     m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
     int x = width() - m_clearButtonSize - m_clearButtonOffset.x();
     int y = (height() - m_clearButtonSize) / 2 + m_clearButtonOffset.y();
     m_clearButton->move(x, y);
 }
 
-void LineEdit::paintFrame(QPainter& painter) {
+void LineEdit::paintFrame(QPainter& painter)
+{
     const auto& colors = themeColorsRef();
     const auto& radius = themeRadius();
     const fluent::painting::DpiPaintMetrics paintMetrics(painter);
@@ -113,7 +111,7 @@ void LineEdit::paintFrame(QPainter& painter) {
         borderColor = colors.strokeDefault;
         bottomBorderColor = colors.strokeDivider;
     } else if (m_isFocused) {
-        bgColor = (effectiveTheme() == Dark) ? colors.bgSolid : colors.controlDefault;
+        bgColor = effectiveThemeUsesDarkAppearance() ? colors.bgSolid : colors.controlDefault;
         borderColor = colors.strokeSecondary;
         bottomBorderColor = colors.accentDefault;
         bottomBorderWidth = m_focusedBorderWidth;
@@ -138,8 +136,7 @@ void LineEdit::paintFrame(QPainter& painter) {
     painter.drawPath(framePath);
 
     if (isEnabled() && !isReadOnly()) {
-        const auto bottomStroke = paintMetrics.alignedStroke(
-            QRectF(rect()), bottomBorderWidth);
+        const auto bottomStroke = paintMetrics.alignedStroke(QRectF(rect()), bottomBorderWidth);
         QPen pen(bottomBorderColor, bottomStroke.width);
         pen.setCapStyle(Qt::RoundCap);
         painter.setPen(pen);
@@ -151,35 +148,40 @@ void LineEdit::paintFrame(QPainter& painter) {
     }
 }
 
-void LineEdit::enterEvent(FluentEnterEvent* event) {
+void LineEdit::enterEvent(FluentEnterEvent* event)
+{
     m_isHovered = true;
     update();
     updateClearButtonVisibility();
     QLineEdit::enterEvent(event);
 }
 
-void LineEdit::leaveEvent(QEvent* event) {
+void LineEdit::leaveEvent(QEvent* event)
+{
     m_isHovered = false;
     update();
     updateClearButtonVisibility();
     QLineEdit::leaveEvent(event);
 }
 
-void LineEdit::focusInEvent(QFocusEvent* event) {
+void LineEdit::focusInEvent(QFocusEvent* event)
+{
     m_isFocused = true;
     update();
     updateClearButtonVisibility();
     QLineEdit::focusInEvent(event);
 }
 
-void LineEdit::focusOutEvent(QFocusEvent* event) {
+void LineEdit::focusOutEvent(QFocusEvent* event)
+{
     m_isFocused = false;
     update();
     updateClearButtonVisibility();
     QLineEdit::focusOutEvent(event);
 }
 
-void LineEdit::setContentMargins(const QMargins& margins) {
+void LineEdit::setContentMargins(const QMargins& margins)
+{
     if (m_contentMargins == margins)
         return;
     m_contentMargins = margins;
@@ -187,7 +189,8 @@ void LineEdit::setContentMargins(const QMargins& margins) {
     emit contentMarginsChanged();
 }
 
-void LineEdit::setFontRole(Typography::FontRole role) {
+void LineEdit::setFontRole(Typography::FontRole role)
+{
     if (m_fontRole == role)
         return;
     m_fontRole = role;
@@ -195,7 +198,8 @@ void LineEdit::setFontRole(Typography::FontRole role) {
     emit fontRoleChanged();
 }
 
-void LineEdit::setClearButtonEnabled(bool enabled) {
+void LineEdit::setClearButtonEnabled(bool enabled)
+{
     if (m_clearButtonEnabled == enabled)
         return;
     m_clearButtonEnabled = enabled;
@@ -204,7 +208,8 @@ void LineEdit::setClearButtonEnabled(bool enabled) {
     emit clearButtonEnabledChanged();
 }
 
-void LineEdit::setClearButtonSize(int size) {
+void LineEdit::setClearButtonSize(int size)
+{
     if (m_clearButtonSize == size)
         return;
     m_clearButtonSize = size;
@@ -217,7 +222,8 @@ void LineEdit::setClearButtonSize(int size) {
     emit clearButtonSizeChanged();
 }
 
-void LineEdit::setClearButtonOffset(const QPoint& offset) {
+void LineEdit::setClearButtonOffset(const QPoint& offset)
+{
     if (m_clearButtonOffset == offset)
         return;
     m_clearButtonOffset = offset;
@@ -226,7 +232,8 @@ void LineEdit::setClearButtonOffset(const QPoint& offset) {
     emit clearButtonOffsetChanged();
 }
 
-void LineEdit::setFocusedBorderWidth(int width) {
+void LineEdit::setFocusedBorderWidth(int width)
+{
     if (m_focusedBorderWidth == width)
         return;
     m_focusedBorderWidth = width;
@@ -234,7 +241,8 @@ void LineEdit::setFocusedBorderWidth(int width) {
     emit focusedBorderWidthChanged();
 }
 
-void LineEdit::setUnfocusedBorderWidth(int width) {
+void LineEdit::setUnfocusedBorderWidth(int width)
+{
     if (m_unfocusedBorderWidth == width)
         return;
     m_unfocusedBorderWidth = width;
@@ -242,18 +250,22 @@ void LineEdit::setUnfocusedBorderWidth(int width) {
     emit unfocusedBorderWidthChanged();
 }
 
-void LineEdit::setFrameVisible(bool visible) {
-    if (m_frameVisible == visible) return;
+void LineEdit::setFrameVisible(bool visible)
+{
+    if (m_frameVisible == visible)
+        return;
     m_frameVisible = visible;
     update();
     emit frameVisibleChanged();
 }
 
-void LineEdit::onThemeUpdated() {
+void LineEdit::onThemeUpdated()
+{
     applyThemeStyle();
 }
 
-void LineEdit::applyThemeStyle() {
+void LineEdit::applyThemeStyle()
+{
     const auto& c = themeColorsRef();
     QPalette pal = palette();
     pal.setColor(QPalette::Base, Qt::transparent);
@@ -285,17 +297,17 @@ void LineEdit::applyThemeStyle() {
     // zh_CN: 不设置通用 QSS `color`；Qt 5/6.2 的 QStyleSheetStyle 会把它也用于
     // placeholder 并绕过 PlaceholderText。前景色统一交给 QPalette，兼容全部 Qt 版本。
     QString qss = QString("QLineEdit { background: transparent; "
-                         "selection-background-color: %5; "
-                         "selection-color: %6; "
-                         "padding-left: %1px; padding-right: %2px; "
-                         "padding-top: %3px; padding-bottom: %4px; "
-                         "border: none; }")
-                     .arg(m_contentMargins.left())
-                     .arg(rightPadding)
-                     .arg(m_contentMargins.top())
-                     .arg(m_contentMargins.bottom())
-                     .arg(c.accentDefault.name(QColor::HexArgb))
-                     .arg(c.textOnAccent.name(QColor::HexArgb));
+                          "selection-background-color: %5; "
+                          "selection-color: %6; "
+                          "padding-left: %1px; padding-right: %2px; "
+                          "padding-top: %3px; padding-bottom: %4px; "
+                          "border: none; }")
+                      .arg(m_contentMargins.left())
+                      .arg(rightPadding)
+                      .arg(m_contentMargins.top())
+                      .arg(m_contentMargins.bottom())
+                      .arg(c.accentDefault.name(QColor::HexArgb))
+                      .arg(c.textOnAccent.name(QColor::HexArgb));
     // Applying a style sheet repolishes the widget and QStyleSheetStyle may
     // replace palette roles with its default (black) foreground.  Install the
     // geometry-only sheet first, then restore the semantic palette.  This is
@@ -309,13 +321,12 @@ void LineEdit::applyThemeStyle() {
     setFont(themeFont(m_fontRole).toQFont());
 }
 
-void LineEdit::updateClearButtonVisibility() {
-    if (!m_clearButton) return;
+void LineEdit::updateClearButtonVisibility()
+{
+    if (!m_clearButton)
+        return;
     bool hasText = !text().isEmpty();
-    bool visible = m_clearButtonEnabled
-                   && hasText
-                   && !isReadOnly()
-                   && (m_isFocused || m_isHovered);
+    bool visible = m_clearButtonEnabled && hasText && !isReadOnly() && (m_isFocused || m_isHovered);
     m_clearButton->setVisible(visible);
 }
 

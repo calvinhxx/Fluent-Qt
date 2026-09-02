@@ -12,6 +12,7 @@
 #include <cmath>
 #include <limits>
 
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/private/ValueAccessibility_p.h"
 #include "components/status_info/private/ProgressAccessibility_p.h"
 
@@ -31,13 +32,24 @@ bool nearlyEqual(qreal left, qreal right)
 }
 } // namespace
 
-ProgressRing::ProgressRing(QWidget* parent)
-    : QWidget(parent)
+ProgressRing::ProgressRing(QWidget* parent) : QWidget(parent)
 {
     detail::ensureProgressAccessibilityFactory();
     setAttribute(Qt::WA_TranslucentBackground);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     updateThemeColors();
+
+    MotionPolicy& motionPolicy = MotionPolicy::instance();
+    connect(&motionPolicy, &MotionPolicy::modeChanged, this, [this](MotionPolicy::Mode) {
+        const bool wasRunning = isAnimationRunning();
+        updateAnimationState();
+        update();
+        if (wasRunning != isAnimationRunning()) {
+            QAccessible::State changed;
+            changed.animated = true;
+            accessibility::detail::notifyValueAccessibilityState(this, changed);
+        }
+    });
 }
 
 ProgressRing::~ProgressRing()
@@ -47,7 +59,8 @@ ProgressRing::~ProgressRing()
 
 void ProgressRing::setIsActive(bool active)
 {
-    if (m_isActive == active) return;
+    if (m_isActive == active)
+        return;
     m_isActive = active;
     updateAnimationState();
     update();
@@ -55,8 +68,7 @@ void ProgressRing::setIsActive(bool active)
     changed.busy = true;
     changed.animated = true;
     accessibility::detail::notifyValueAccessibilityState(this, changed);
-    accessibility::detail::notifyValueAccessibilityText(
-        this, QAccessible::DescriptionChanged);
+    accessibility::detail::notifyValueAccessibilityText(this, QAccessible::DescriptionChanged);
     emit isActiveChanged(m_isActive);
 }
 
@@ -77,7 +89,8 @@ void ProgressRing::setAnimationEnabled(bool enabled)
 
 void ProgressRing::setIsIndeterminate(bool indeterminate)
 {
-    if (m_isIndeterminate == indeterminate) return;
+    if (m_isIndeterminate == indeterminate)
+        return;
     m_isIndeterminate = indeterminate;
     updateAnimationState();
     update();
@@ -87,8 +100,7 @@ void ProgressRing::setIsIndeterminate(bool indeterminate)
     accessibility::detail::notifyValueAccessibilityState(this, changed);
     accessibility::detail::notifyValueAccessibilityValue(
         this, m_isIndeterminate ? QVariant() : QVariant(m_value));
-    accessibility::detail::notifyValueAccessibilityText(
-        this, QAccessible::DescriptionChanged);
+    accessibility::detail::notifyValueAccessibilityText(this, QAccessible::DescriptionChanged);
     emit isIndeterminateChanged(m_isIndeterminate);
 }
 
@@ -124,19 +136,24 @@ void ProgressRing::setRange(int minimum, int maximum)
     const bool maximumChangedNow = oldMaximum != m_maximum;
     const bool valueChangedNow = oldValue != m_value;
 
-    if (!minimumChangedNow && !maximumChangedNow && !valueChangedNow) return;
+    if (!minimumChangedNow && !maximumChangedNow && !valueChangedNow)
+        return;
 
     update();
     accessibility::detail::notifyValueAccessibilityValue(this, m_value);
-    if (minimumChangedNow) emit minimumChanged(m_minimum);
-    if (maximumChangedNow) emit maximumChanged(m_maximum);
-    if (valueChangedNow) emit valueChanged(m_value);
+    if (minimumChangedNow)
+        emit minimumChanged(m_minimum);
+    if (maximumChangedNow)
+        emit maximumChanged(m_maximum);
+    if (valueChangedNow)
+        emit valueChanged(m_value);
 }
 
 void ProgressRing::setValue(int value)
 {
     const int clampedValue = qBound(m_minimum, value, m_maximum);
-    if (m_value == clampedValue) return;
+    if (m_value == clampedValue)
+        return;
     m_value = clampedValue;
     update();
     accessibility::detail::notifyValueAccessibilityValue(this, m_value);
@@ -145,7 +162,8 @@ void ProgressRing::setValue(int value)
 
 void ProgressRing::setRingSize(ProgressRingSize size)
 {
-    if (m_ringSize == size) return;
+    if (m_ringSize == size)
+        return;
     m_ringSize = size;
     updateGeometry();
     update();
@@ -154,7 +172,8 @@ void ProgressRing::setRingSize(ProgressRingSize size)
 
 void ProgressRing::setStrokeWidth(qreal width)
 {
-    if (width <= 0.0 || nearlyEqual(m_strokeWidth, width)) return;
+    if (width <= 0.0 || nearlyEqual(m_strokeWidth, width))
+        return;
     m_strokeWidth = width;
     update();
     emit strokeWidthChanged(m_strokeWidth);
@@ -162,7 +181,8 @@ void ProgressRing::setStrokeWidth(qreal width)
 
 void ProgressRing::setStatus(ProgressRingStatus status)
 {
-    if (m_status == status) return;
+    if (m_status == status)
+        return;
     m_status = status;
     updateAnimationState();
     update();
@@ -170,14 +190,14 @@ void ProgressRing::setStatus(ProgressRingStatus status)
     changed.busy = true;
     changed.animated = true;
     accessibility::detail::notifyValueAccessibilityState(this, changed);
-    accessibility::detail::notifyValueAccessibilityText(
-        this, QAccessible::DescriptionChanged);
+    accessibility::detail::notifyValueAccessibilityText(this, QAccessible::DescriptionChanged);
     emit statusChanged(m_status);
 }
 
 void ProgressRing::setBackgroundVisible(bool visible)
 {
-    if (m_backgroundVisible == visible) return;
+    if (m_backgroundVisible == visible)
+        return;
     m_backgroundVisible = visible;
     update();
     emit backgroundVisibleChanged(m_backgroundVisible);
@@ -186,7 +206,8 @@ void ProgressRing::setBackgroundVisible(bool visible)
 double ProgressRing::progressRatio() const
 {
     const int range = m_maximum - m_minimum;
-    if (range <= 0) return 0.0;
+    if (range <= 0)
+        return 0.0;
     return static_cast<double>(m_value - m_minimum) / static_cast<double>(range);
 }
 
@@ -210,11 +231,13 @@ void ProgressRing::onThemeUpdated()
 void ProgressRing::paintEvent(QPaintEvent*)
 {
     const qreal side = qMin(width(), height());
-    if (side <= 0.0) return;
+    if (side <= 0.0)
+        return;
 
     const qreal effectiveStrokeWidth = qMin(m_strokeWidth, qMax<qreal>(1.0, side - 1.0));
     QRectF arcRect = ringRect(effectiveStrokeWidth);
-    if (!arcRect.isValid() || arcRect.isEmpty()) return;
+    if (!arcRect.isValid() || arcRect.isEmpty())
+        return;
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
@@ -229,7 +252,8 @@ void ProgressRing::paintEvent(QPaintEvent*)
         painter.drawArc(arcRect, 0, static_cast<int>(kFullCircleDegrees * 16));
     }
 
-    if (!m_isActive) return;
+    if (!m_isActive)
+        return;
 
     int spanAngle = 0;
     qreal startDegrees = 90.0;
@@ -240,7 +264,8 @@ void ProgressRing::paintEvent(QPaintEvent*)
         spanAngle = static_cast<int>(-kFullCircleDegrees * progressRatio() * 16.0);
     }
 
-    if (spanAngle == 0) return;
+    if (spanAngle == 0)
+        return;
 
     pen.setColor(indicatorColor());
     painter.setPen(pen);
@@ -259,9 +284,10 @@ void ProgressRing::timerEvent(QTimerEvent* event)
         return;
     }
 
-    m_animationPhase = std::fmod(
-        m_animationPhase + kFullCircleDegrees * static_cast<qreal>(kAnimationIntervalMs) / m_spinCycleMs,
-        kFullCircleDegrees);
+    m_animationPhase =
+        std::fmod(m_animationPhase +
+                      kFullCircleDegrees * static_cast<qreal>(kAnimationIntervalMs) / m_spinCycleMs,
+                  kFullCircleDegrees);
     update();
 }
 
@@ -294,10 +320,13 @@ void ProgressRing::showEvent(QShowEvent* event)
 int ProgressRing::diameterForSize() const
 {
     switch (m_ringSize) {
-        case ProgressRingSize::Small: return kSmallDiameter;
-        case ProgressRingSize::Large: return kLargeDiameter;
-        case ProgressRingSize::Medium:
-        default: return kMediumDiameter;
+    case ProgressRingSize::Small:
+        return kSmallDiameter;
+    case ProgressRingSize::Large:
+        return kLargeDiameter;
+    case ProgressRingSize::Medium:
+    default:
+        return kMediumDiameter;
     }
 }
 
@@ -311,13 +340,17 @@ QRectF ProgressRing::ringRect(qreal effectiveStrokeWidth) const
 
 QColor ProgressRing::indicatorColor() const
 {
-    if (!isEnabled()) return m_disabledColor;
+    if (!isEnabled())
+        return m_disabledColor;
 
     switch (m_status) {
-        case ProgressRingStatus::Paused: return m_pausedColor;
-        case ProgressRingStatus::Error: return m_errorColor;
-        case ProgressRingStatus::Running:
-        default: return m_runningColor;
+    case ProgressRingStatus::Paused:
+        return m_pausedColor;
+    case ProgressRingStatus::Error:
+        return m_errorColor;
+    case ProgressRingStatus::Running:
+    default:
+        return m_runningColor;
     }
 }
 
@@ -328,7 +361,8 @@ void ProgressRing::updateThemeColors()
     m_pausedColor = colors.systemCaution;
     m_errorColor = colors.systemCritical;
     m_disabledColor = colors.accentDisabled;
-    m_trackColor = effectiveTheme() == Dark ? colors.strokeSurface : colors.strokeSecondary;
+    m_trackColor =
+        effectiveThemeUsesDarkAppearance() ? colors.strokeSurface : colors.strokeSecondary;
     if (m_trackColor.alpha() < 64) {
         m_trackColor.setAlpha(64);
     }
@@ -350,12 +384,11 @@ void ProgressRing::updateAnimationState()
 
 bool ProgressRing::shouldAnimate() const
 {
-    return m_isActive
-        && m_animationEnabled
-        && m_isIndeterminate
-        && m_status == ProgressRingStatus::Running
-        && isEnabled()
-        && isVisible();
+    return m_isActive &&
+           MotionPolicy::instance().shouldAnimate(m_animationEnabled,
+                                                  MotionPolicy::Kind::Continuous) &&
+           m_isIndeterminate && m_status == ProgressRingStatus::Running && isEnabled() &&
+           isVisible();
 }
 
 } // namespace fluent::status_info

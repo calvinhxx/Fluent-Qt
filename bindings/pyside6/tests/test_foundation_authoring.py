@@ -25,6 +25,7 @@ class FoundationAuthoringTest(unittest.TestCase):
     def tearDown(self):
         fluentqt.reset_theme_tokens()
         fluentqt.set_theme(fluentqt.Theme.Light)
+        fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
         QApplication.processEvents()
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         QApplication.processEvents()
@@ -228,6 +229,89 @@ class FoundationAuthoringTest(unittest.TestCase):
         self.assertGreater(len(updates), initial_updates)
         self.assertEqual(card.effective_theme(), next_theme)
         self.assertTrue(all(ready for ready, _theme in updates))
+
+    def test_high_contrast_theme_round_trips_with_distinct_tokens(self):
+        card = fluentqt.FluentWidget()
+
+        self.assertFalse(
+            fluentqt.theme_uses_dark_appearance(fluentqt.Theme.Light)
+        )
+        self.assertTrue(
+            fluentqt.theme_uses_dark_appearance(fluentqt.Theme.Dark)
+        )
+        self.assertTrue(
+            fluentqt.theme_uses_dark_appearance(
+                fluentqt.Theme.HighContrast
+            )
+        )
+
+        fluentqt.set_theme(fluentqt.Theme.HighContrast)
+        QApplication.processEvents()
+
+        self.assertEqual(
+            fluentqt.current_theme(),
+            fluentqt.Theme.HighContrast,
+        )
+        self.assertEqual(
+            card.effective_theme(),
+            fluentqt.Theme.HighContrast,
+        )
+        self.assertEqual(card.theme_tokens().colors.bgCanvas.name(), "#000000")
+        self.assertEqual(card.theme_tokens().colors.textPrimary.name(), "#ffffff")
+        self.assertEqual(fluentqt.accent_color().name(), "#1aebff")
+
+    def test_motion_policy_facade_uses_native_rules_and_emits_once(self):
+        policy = fluentqt.motion_policy()
+        self.assertIs(policy, fluentqt.MotionPolicy())
+        self.assertIs(fluentqt.MotionPolicy.Mode, fluentqt.MotionMode)
+        self.assertIs(fluentqt.MotionPolicy.Kind, fluentqt.MotionKind)
+        self.assertEqual(
+            policy.mode(),
+            fluentqt.MotionMode.Full,
+        )
+        self.assertTrue(policy.shouldAnimate())
+        self.assertTrue(
+            policy.shouldAnimate(True, fluentqt.MotionKind.Continuous)
+        )
+        self.assertEqual(policy.resolvedDuration(250), 250)
+
+        emitted = []
+        handler = emitted.append
+        policy.modeChanged.connect(handler)
+        try:
+            fluentqt.set_motion_mode(fluentqt.MotionMode.Reduced)
+            self.assertEqual(emitted, [fluentqt.MotionMode.Reduced])
+            self.assertEqual(policy.mode(), fluentqt.MotionMode.Reduced)
+            self.assertTrue(policy.shouldAnimate())
+            self.assertFalse(
+                policy.shouldAnimate(True, fluentqt.MotionKind.Continuous)
+            )
+            self.assertEqual(policy.resolvedDuration(250), 50)
+            self.assertEqual(policy.resolvedDuration(30), 30)
+            self.assertEqual(policy.resolvedDuration(250, False), 0)
+
+            fluentqt.setMotionMode(fluentqt.MotionMode.Reduced)
+            self.assertEqual(emitted, [fluentqt.MotionMode.Reduced])
+
+            policy.setMode(fluentqt.MotionMode.Disabled)
+            self.assertEqual(
+                emitted,
+                [
+                    fluentqt.MotionMode.Reduced,
+                    fluentqt.MotionMode.Disabled,
+                ],
+            )
+            self.assertFalse(policy.shouldAnimate())
+            self.assertEqual(policy.resolvedDuration(250), 0)
+        finally:
+            policy.modeChanged.disconnect(handler)
+
+        with self.assertRaises(ValueError):
+            policy.setMode(99)
+        with self.assertRaises(ValueError):
+            policy.shouldAnimate(True, 99)
+        with self.assertRaises(TypeError):
+            policy.resolvedDuration(True)
 
 
 if __name__ == "__main__":

@@ -24,8 +24,8 @@ const QString kThemeKey = QStringLiteral("fluent");
 
 QString themesDir()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
-        + QStringLiteral("/themes");
+    return QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) +
+           QStringLiteral("/themes");
 }
 
 constexpr int kThemeSchemaVersion = 1;
@@ -79,8 +79,7 @@ QString colorToHex(const QColor& c)
 // Single source of truth for the JSON-overridable color tokens: the exact set applyColorSpec READS
 // is also what colorsToJson WRITES, so the parser and the exported template can never drift apart.
 // zh_CN: JSON 可覆盖颜色 token 的唯一字段表；读取与导出共享它，避免漂移。
-template <typename Fn>
-void forEachColorField(FluentElement::Colors& c, Fn&& fn)
+template <typename Fn> void forEachColorField(FluentElement::Colors& c, Fn&& fn)
 {
     fn("accentDefault", c.accentDefault);
     fn("accentSecondary", c.accentSecondary);
@@ -145,7 +144,8 @@ QJsonObject colorsToJson(const FluentElement::Colors& colors)
 // Apply color overrides to one mode. Missing accent variants are derived from
 // accentDefault so a sparse user file only needs to specify the primary accent.
 // zh_CN: 将颜色覆盖应用到单个模式；未指定的强调色变体由 accentDefault 派生。
-void applyColorSpec(FluentElement::Colors& c, const QJsonObject& obj)
+void applyColorSpec(FluentElement::Colors& c, const QJsonObject& obj,
+                    bool keepAccentVariantsOpaque = false)
 {
     forEachColorField(c, [&](const char* key, QColor& field) {
         const QJsonValue v = obj.value(QLatin1String(key));
@@ -159,63 +159,68 @@ void applyColorSpec(FluentElement::Colors& c, const QJsonObject& obj)
     // Derive variants not pinned by the spec.
     // zh_CN: 对 spec 未固定的强调色变体执行派生。
     if (obj.contains(QLatin1String("accentDefault"))) {
-        if (!obj.contains(QLatin1String("accentSecondary")))
-            c.accentSecondary = withAlpha(c.accentDefault, 230);
-        if (!obj.contains(QLatin1String("accentTertiary")))
-            c.accentTertiary = withAlpha(c.accentDefault, 204);
+        if (!obj.contains(QLatin1String("accentSecondary"))) {
+            c.accentSecondary =
+                keepAccentVariantsOpaque ? c.accentDefault : withAlpha(c.accentDefault, 230);
+        }
+        if (!obj.contains(QLatin1String("accentTertiary"))) {
+            c.accentTertiary =
+                keepAccentVariantsOpaque ? c.accentDefault : withAlpha(c.accentDefault, 204);
+        }
         if (!obj.contains(QLatin1String("textAccentPrimary")))
             c.textAccentPrimary = c.accentDefault;
         if (!obj.contains(QLatin1String("textOnAccent"))) {
-            c.textOnAccent = c.accentDefault.lightnessF() > 0.6 ? QColor(Qt::black)
-                                                                : QColor(Qt::white);
+            c.textOnAccent =
+                c.accentDefault.lightnessF() > 0.6 ? QColor(Qt::black) : QColor(Qt::white);
         }
     }
 }
 
-// Layer a spec ({ radius?, font?, light?, dark? }) onto a candidate snapshot.
+// Layer a spec ({ radius?, font?, light?, dark?, contrast? }) onto a candidate snapshot.
 // zh_CN: 将 spec 分层应用到候选主题快照。
-void applySpec(ThemeRegistry::Snapshot& snapshot, const QJsonObject& spec)
+void applySpec(ThemeRegistry::ExtendedSnapshot& snapshot, const QJsonObject& spec)
 {
     if (spec.contains(QLatin1String("radius"))) {
         const QJsonObject r = spec.value(QLatin1String("radius")).toObject();
-        const FluentElement::Radius base = snapshot.radius;
+        const FluentElement::Radius base = snapshot.base.radius;
         // Clamp user-file radii to a sane range: a malformed/hostile themes/*.json could otherwise set a
         // negative or absurd corner radius that flows into every control's drawRoundedRect. Qt would clamp
         // it at paint time, but bounding it here keeps the stored token sane.
         // zh_CN: 在入口约束用户圆角，避免异常值流入所有控件的绘制路径。
         constexpr int kMaxRadius = 64;
-        snapshot.radius = {
+        snapshot.base.radius = {
             qBound(0, r.value(QLatin1String("none")).toInt(base.none), kMaxRadius),
             qBound(0, r.value(QLatin1String("control")).toInt(base.control), kMaxRadius),
-            qBound(0, r.value(QLatin1String("overlay")).toInt(base.overlay), kMaxRadius)
-        };
+            qBound(0, r.value(QLatin1String("overlay")).toInt(base.overlay), kMaxRadius)};
     }
 
     if (spec.contains(QLatin1String("font"))) {
         const QJsonObject f = spec.value(QLatin1String("font")).toObject();
         if (f.contains(QLatin1String("family")))
-            snapshot.fontFamilyOverride = f.value(QLatin1String("family")).toString();
+            snapshot.base.fontFamilyOverride = f.value(QLatin1String("family")).toString();
         if (f.contains(QLatin1String("scale"))) {
             // Bound the font scale so a stray "scale": 100000 can't blow up every QFont pixel size and
             // text-layout allocation. zh_CN: 限制字号缩放，避免异常值放大字体与文本布局分配。
-            snapshot.fontScale =
+            snapshot.base.fontScale =
                 qBound(0.5, f.value(QLatin1String("scale")).toDouble(1.0), 4.0);
         }
     }
 
     if (spec.contains(QLatin1String("light"))) {
-        applyColorSpec(snapshot.lightColors,
-                       spec.value(QLatin1String("light")).toObject());
+        applyColorSpec(snapshot.base.lightColors, spec.value(QLatin1String("light")).toObject());
     }
     if (spec.contains(QLatin1String("dark"))) {
-        applyColorSpec(snapshot.darkColors,
-                       spec.value(QLatin1String("dark")).toObject());
+        applyColorSpec(snapshot.base.darkColors, spec.value(QLatin1String("dark")).toObject());
+    }
+    if (spec.contains(QLatin1String("contrast"))) {
+        applyColorSpec(snapshot.contrastColors, spec.value(QLatin1String("contrast")).toObject(),
+                       true);
     }
 }
 
-// Fluent is seeded directly by ThemeRegistry::defaultSnapshot(). User JSON is
+// Fluent is seeded directly by ThemeRegistry::defaultExtendedSnapshot(). User JSON is
 // layered on top, so there is no second built-in brand spec to maintain.
-// zh_CN: Fluent 直接由 defaultSnapshot() 提供，用户 JSON 再叠加其上。
+// zh_CN: Fluent 直接由 defaultExtendedSnapshot() 提供，用户 JSON 再叠加其上。
 
 // Build the full editable template exported only through the explicit API. It
 // snapshots the built-in Fluent tokens before user overrides are layered.
@@ -223,26 +228,22 @@ void applySpec(ThemeRegistry::Snapshot& snapshot, const QJsonObject& spec)
 // token 快照。
 QJsonObject resolvedPresetSpec()
 {
-    ThemeRegistry::Snapshot snapshot = ThemeRegistry::defaultSnapshot();
+    ThemeRegistry::ExtendedSnapshot snapshot = ThemeRegistry::defaultExtendedSnapshot();
 
     QJsonObject radius;
-    radius.insert(QStringLiteral("none"), snapshot.radius.none);
-    radius.insert(QStringLiteral("control"), snapshot.radius.control);
-    radius.insert(QStringLiteral("overlay"), snapshot.radius.overlay);
+    radius.insert(QStringLiteral("none"), snapshot.base.radius.none);
+    radius.insert(QStringLiteral("control"), snapshot.base.radius.control);
+    radius.insert(QStringLiteral("overlay"), snapshot.base.radius.overlay);
 
     QJsonObject spec;
     spec.insert(QStringLiteral("radius"), radius);
-    spec.insert(QStringLiteral("light"), colorsToJson(snapshot.lightColors));
-    spec.insert(QStringLiteral("dark"), colorsToJson(snapshot.darkColors));
+    spec.insert(QStringLiteral("light"), colorsToJson(snapshot.base.lightColors));
+    spec.insert(QStringLiteral("dark"), colorsToJson(snapshot.base.darkColors));
+    spec.insert(QStringLiteral("contrast"), colorsToJson(snapshot.contrastColors));
     return spec;
 }
 
-enum class UserSpecState {
-    Missing,
-    Current,
-    Legacy,
-    Rejected
-};
+enum class UserSpecState { Missing, Current, Legacy, Rejected };
 
 struct UserSpecResult {
     UserSpecState state = UserSpecState::Missing;
@@ -250,26 +251,21 @@ struct UserSpecResult {
 
     bool isUsable() const
     {
-        return state == UserSpecState::Current
-            || state == UserSpecState::Legacy;
+        return state == UserSpecState::Current || state == UserSpecState::Legacy;
     }
 
-    bool canModify() const
-    {
-        return state != UserSpecState::Rejected;
-    }
+    bool canModify() const { return state != UserSpecState::Rejected; }
 };
 
 bool isLegacyFlatSpec(const QJsonObject& root)
 {
-    if (root.contains(QLatin1String("schemaVersion"))
-        || root.contains(QLatin1String("theme"))
-        || root.contains(QLatin1String("overrides"))) {
+    if (root.contains(QLatin1String("schemaVersion")) || root.contains(QLatin1String("theme")) ||
+        root.contains(QLatin1String("overrides"))) {
         return false;
     }
 
     bool containsSpecSection = false;
-    for (const char* key : {"radius", "font", "light", "dark"}) {
+    for (const char* key : {"radius", "font", "light", "dark", "contrast"}) {
         const QLatin1String section(key);
         if (!root.contains(section))
             continue;
@@ -288,47 +284,40 @@ UserSpecResult readUserSpec()
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         if (!exists)
             return {};
-        logThemeWarning(
-            QStringLiteral("UserTheme preserving unreadable theme file %1").arg(path));
+        logThemeWarning(QStringLiteral("UserTheme preserving unreadable theme file %1").arg(path));
         return {UserSpecState::Rejected, {}};
     }
     if (file.size() > kMaxThemeFileBytes) {
-        logThemeWarning(
-            QStringLiteral("UserTheme ignoring oversized theme file %1").arg(path));
+        logThemeWarning(QStringLiteral("UserTheme ignoring oversized theme file %1").arg(path));
         return {UserSpecState::Rejected, {}};
     }
 
     QJsonParseError error{};
     const QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &error);
     if (error.error != QJsonParseError::NoError || !doc.isObject()) {
-        logThemeWarning(
-            QStringLiteral("UserTheme ignoring malformed theme file %1: %2")
-                .arg(path, error.errorString()));
+        logThemeWarning(QStringLiteral("UserTheme ignoring malformed theme file %1: %2")
+                            .arg(path, error.errorString()));
         return {UserSpecState::Rejected, {}};
     }
 
     const QJsonObject root = doc.object();
     if (isLegacyFlatSpec(root)) {
-        logThemeInfo(
-            QStringLiteral("UserTheme loaded legacy flat theme file %1; "
-                           "the next explicit edit will migrate it")
-                .arg(path));
+        logThemeInfo(QStringLiteral("UserTheme loaded legacy flat theme file %1; "
+                                    "the next explicit edit will migrate it")
+                         .arg(path));
         return {UserSpecState::Legacy, root};
     }
 
     if (root.value(QLatin1String("schemaVersion")).toInt(-1) != kThemeSchemaVersion) {
-        logThemeWarning(
-            QStringLiteral("UserTheme ignoring unsupported schema in %1").arg(path));
+        logThemeWarning(QStringLiteral("UserTheme ignoring unsupported schema in %1").arg(path));
         return {UserSpecState::Rejected, {}};
     }
-    if (root.value(QLatin1String("theme")).toString() != kThemeKey
-        || !root.value(QLatin1String("overrides")).isObject()) {
-        logThemeWarning(
-            QStringLiteral("UserTheme ignoring invalid theme envelope %1").arg(path));
+    if (root.value(QLatin1String("theme")).toString() != kThemeKey ||
+        !root.value(QLatin1String("overrides")).isObject()) {
+        logThemeWarning(QStringLiteral("UserTheme ignoring invalid theme envelope %1").arg(path));
         return {UserSpecState::Rejected, {}};
     }
-    return {UserSpecState::Current,
-            root.value(QLatin1String("overrides")).toObject()};
+    return {UserSpecState::Current, root.value(QLatin1String("overrides")).toObject()};
 }
 
 // Atomically write a pretty-printed user override.
@@ -349,8 +338,7 @@ bool writeUserSpec(const QJsonObject& spec)
 
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        logThemeWarning(
-            QStringLiteral("UserTheme could not write theme file %1").arg(path));
+        logThemeWarning(QStringLiteral("UserTheme could not write theme file %1").arg(path));
         return false;
     }
     if (file.write(payload) != payload.size() || !file.commit()) {
@@ -391,7 +379,7 @@ namespace UserTheme {
 void apply()
 {
     ThemeRegistry& reg = ThemeRegistry::instance();
-    ThemeRegistry::Snapshot next = ThemeRegistry::defaultSnapshot();
+    ThemeRegistry::ExtendedSnapshot next = ThemeRegistry::defaultExtendedSnapshot();
 
     // User overrides win over the built-in Fluent tokens.
     // zh_CN: 用户覆盖优先于内置 Fluent token。
@@ -399,17 +387,15 @@ void apply()
     if (userSpec.isUsable() && !userSpec.spec.isEmpty())
         applySpec(next, userSpec.spec);
 
-    reg.applySnapshot(next);
+    reg.applyExtendedSnapshot(next);
 
-    logThemeInfo(
-        QStringLiteral("UserTheme applied Fluent overrides key=%1 revision=%2")
-            .arg(kThemeKey)
-            .arg(reg.revision()));
+    logThemeInfo(QStringLiteral("UserTheme applied Fluent overrides key=%1 revision=%2")
+                     .arg(kThemeKey)
+                     .arg(reg.revision()));
 }
 
-const char* const kDerivedAccentKeys[] = {
-    "accentSecondary", "accentTertiary", "textAccentPrimary", "textOnAccent"
-};
+const char* const kDerivedAccentKeys[] = {"accentSecondary", "accentTertiary", "textAccentPrimary",
+                                          "textOnAccent"};
 
 void applyAccentOverride(const QColor& accent)
 {
@@ -425,9 +411,9 @@ void applyAccentOverride(const QColor& accent)
     }
 
     ThemeRegistry& registry = ThemeRegistry::instance();
-    ThemeRegistry::Snapshot next = registry.snapshot();
+    ThemeRegistry::ExtendedSnapshot next = registry.extendedSnapshot();
     applySpec(next, spec);
-    registry.applySnapshot(next);
+    registry.applyExtendedSnapshot(next);
 }
 
 QString filePath()
@@ -448,8 +434,7 @@ bool exportTemplate(bool overwrite)
 
     const bool written = writeUserSpec(resolvedPresetSpec());
     if (written) {
-        logThemeInfo(
-            QStringLiteral("UserTheme exported editable template %1").arg(path));
+        logThemeInfo(QStringLiteral("UserTheme exported editable template %1").arg(path));
     }
     return written;
 }
@@ -465,9 +450,8 @@ void setAccent(const QColor& accent)
     const QString hex = colorToHex(accent);
     const UserSpecResult userSpec = readUserSpec();
     if (!userSpec.canModify()) {
-        logThemeWarning(
-            QStringLiteral("UserTheme refused to overwrite existing theme file %1")
-                .arg(filePath()));
+        logThemeWarning(QStringLiteral("UserTheme refused to overwrite existing theme file %1")
+                            .arg(filePath()));
         return;
     }
 

@@ -59,15 +59,21 @@ MODULE_FUNCTION_SIGNATURES = {
         "target: PySide6.QtCore.QObject, target_property: str, "
         "mode: BindingMode = ...) -> None",
     ("fluentqt.foundation", "current_theme"): "() -> Theme",
+    ("fluentqt.foundation", "current_motion_mode"): "() -> MotionMode",
     ("fluentqt.foundation", "font_for_role"):
         "(role: FontRole = ...) -> PySide6.QtGui.QFont",
     ("fluentqt.foundation", "font_scale"): "() -> float",
+    ("fluentqt.foundation", "motion_policy"): "() -> MotionPolicy",
     ("fluentqt.foundation", "reset_theme_tokens"): "() -> None",
     ("fluentqt.foundation", "set_accent_color"):
         "(color: PySide6.QtGui.QColor) -> None",
     ("fluentqt.foundation", "set_font_scale"): "(scale: float) -> None",
+    ("fluentqt.foundation", "set_motion_mode"):
+        "(mode: MotionMode) -> None",
     ("fluentqt.foundation", "set_theme"): "(theme: Theme) -> None",
     ("fluentqt.foundation", "theme_revision"): "() -> int",
+    ("fluentqt.foundation", "theme_uses_dark_appearance"):
+        "(theme: Theme) -> bool",
 }
 MODULE_VARIABLE_TYPES = {
     ("fluentqt", "__api_version__"): "str",
@@ -82,6 +88,17 @@ CLASS_METHOD_SIGNATURES = {
         "(self, role: FontRole = ...) -> PySide6.QtGui.QFont",
     ("fluentqt.foundation", "FluentWidget", "theme_tokens"):
         "(self) -> ThemeTokens",
+    ("fluentqt.foundation", "MotionPolicy", "__init__"):
+        "(self) -> None",
+    ("fluentqt.foundation", "MotionPolicy", "mode"):
+        "(self) -> MotionMode",
+    ("fluentqt.foundation", "MotionPolicy", "resolvedDuration"):
+        "(self, full_duration_ms: int, local_animation_enabled: bool = ...) -> int",
+    ("fluentqt.foundation", "MotionPolicy", "setMode"):
+        "(self, mode: MotionMode) -> None",
+    ("fluentqt.foundation", "MotionPolicy", "shouldAnimate"):
+        "(self, local_animation_enabled: bool = ..., "
+        "kind: MotionKind = ...) -> bool",
     ("fluentqt.foundation", "StateGroup", "add"):
         "(self, name: str, changes: "
         "Mapping[PySide6.QtCore.QObject, Mapping[str, Any]]) -> StateGroup",
@@ -97,6 +114,12 @@ CLASS_METHOD_SIGNATURES = {
         "(self, name: str) -> Any",
 }
 CLASS_ATTRIBUTE_TYPES = {
+    ("fluentqt.foundation", "MotionPolicy", "Kind"):
+        "type[MotionKind]",
+    ("fluentqt.foundation", "MotionPolicy", "Mode"):
+        "type[MotionMode]",
+    ("fluentqt.foundation", "MotionPolicy", "modeChanged"):
+        "PySide6.QtCore.SignalInstance",
     ("fluentqt.foundation", "StateGroup", "state_changed"):
         "PySide6.QtCore.SignalInstance",
 }
@@ -361,17 +384,30 @@ def pure_python_class_stub(name, public_class, indent=""):
             continue
         if callable(value) and not inspect.isclass(value):
             continue
+        attribute_type = CLASS_ATTRIBUTE_TYPES.get(
+            (public_class.__module__, name, member_name)
+        )
         body.append(
             "{0}    {1}: {2}".format(
                 indent,
                 member_name,
-                pure_attribute_type(value),
+                attribute_type or pure_attribute_type(value),
             )
         )
 
     facade_members = python_facade_members(public_class)
     for member_name in sorted(facade_members):
         value = facade_members[member_name]
+        attribute_type = CLASS_ATTRIBUTE_TYPES.get(
+            (public_class.__module__, name, member_name)
+        )
+        if attribute_type is not None:
+            body.append(
+                "{0}    {1}: {2}".format(
+                    indent, member_name, attribute_type
+                )
+            )
+            continue
         signature = CLASS_METHOD_SIGNATURES.get(
             (public_class.__module__, name, member_name)
         )

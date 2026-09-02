@@ -6,21 +6,24 @@
 #include <QMouseEvent>
 #include <QPainter>
 
+#include "components/foundation/private/MotionPolicy_p.h"
+
 namespace fluent::scrolling {
 
-ScrollBar::ScrollBar(Qt::Orientation orientation, QWidget *parent)
-    : QScrollBar(orientation, parent) {
+ScrollBar::ScrollBar(Qt::Orientation orientation, QWidget* parent) : QScrollBar(orientation, parent)
+{
     init();
 }
 
-ScrollBar::ScrollBar(QWidget *parent)
-    : QScrollBar(Qt::Vertical, parent) {
+ScrollBar::ScrollBar(QWidget* parent) : QScrollBar(Qt::Vertical, parent)
+{
     init();
 }
 
 ScrollBar::~ScrollBar() = default;
 
-void ScrollBar::init() {
+void ScrollBar::init()
+{
     setAttribute(Qt::WA_Hover);
     // Keep normal Qt background propagation for the transparent resting state. Overlay scrollbars are
     // visible even while opacity is 0; WA_NoSystemBackground can expose stale black backing-store
@@ -44,7 +47,8 @@ void ScrollBar::init() {
     });
 }
 
-void ScrollBar::setThickness(int thickness) {
+void ScrollBar::setThickness(int thickness)
+{
     if (m_thickness == thickness)
         return;
     m_thickness = thickness;
@@ -53,7 +57,8 @@ void ScrollBar::setThickness(int thickness) {
     emit thicknessChanged();
 }
 
-void ScrollBar::setOpacity(qreal value) {
+void ScrollBar::setOpacity(qreal value)
+{
     value = std::clamp(value, 0.0, 1.0);
     if (qFuzzyCompare(m_opacity, value))
         return;
@@ -61,12 +66,15 @@ void ScrollBar::setOpacity(qreal value) {
     update();
 }
 
-void ScrollBar::ensureAnimation() {
+void ScrollBar::ensureAnimation()
+{
     if (!m_opacityAnim) {
         m_opacityAnim = new QPropertyAnimation(this, "opacity", this);
         const auto anim = themeAnimation();
-        m_opacityAnim->setDuration(anim.fast);              // Fluent fast-feedback duration. zh_CN: 使用 Fluent 快速反馈时长。
-        m_opacityAnim->setEasingCurve(anim.decelerate);     // Decelerate both ways, matching WinUI. zh_CN: 进入/退出都用减速曲线。
+        m_opacityAnim->setDuration(
+            anim.fast); // Fluent fast-feedback duration. zh_CN: 使用 Fluent 快速反馈时长。
+        m_opacityAnim->setEasingCurve(
+            anim.decelerate); // Decelerate both ways, matching WinUI. zh_CN: 进入/退出都用减速曲线。
         m_opacityAnim->setStartValue(0.0);
         m_opacityAnim->setEndValue(1.0);
     }
@@ -85,26 +93,29 @@ void ScrollBar::ensureAnimation() {
             m_opacityAnim->stop();
             m_opacityAnim->setStartValue(m_opacity);
             m_opacityAnim->setEndValue(0.0);
-            m_opacityAnim->start();
+            ::fluent::detail::startMotionTransition(m_opacityAnim, themeAnimation().fast);
         });
     }
 }
 
-void ScrollBar::showWithAutoHide() {
+void ScrollBar::showWithAutoHide()
+{
     ensureAnimation();
     m_autoHideTimer->stop();
     m_opacityAnim->stop();
     m_opacityAnim->setStartValue(m_opacity);
     m_opacityAnim->setEndValue(1.0);
-    m_opacityAnim->start();
+    ::fluent::detail::startMotionTransition(m_opacityAnim, themeAnimation().fast);
     m_autoHideTimer->start();
 }
 
-void ScrollBar::onThemeUpdated() {
+void ScrollBar::onThemeUpdated()
+{
     update();
 }
 
-QSize ScrollBar::sizeHint() const {
+QSize ScrollBar::sizeHint() const
+{
     QSize base = QScrollBar::sizeHint();
     if (orientation() == Qt::Vertical) {
         base.setWidth(m_thickness);
@@ -114,11 +125,13 @@ QSize ScrollBar::sizeHint() const {
     return base;
 }
 
-QSize ScrollBar::minimumSizeHint() const {
+QSize ScrollBar::minimumSizeHint() const
+{
     return sizeHint();
 }
 
-void ScrollBar::paintEvent(QPaintEvent *event) {
+void ScrollBar::paintEvent(QPaintEvent* event)
+{
     Q_UNUSED(event);
 
     QPainter p(this);
@@ -126,17 +139,15 @@ void ScrollBar::paintEvent(QPaintEvent *event) {
     p.setOpacity(m_opacity);
 
     const auto& colors = themeColorsRef();
-    const bool isDark = (effectiveTheme() == FluentElement::Dark);
+    const bool isDark = effectiveThemeUsesDarkAppearance();
 
     // Track: a light subtle fill rounded at half the thickness, with only a
     // tiny gap to the widget bounds (a separate trackPadding could come later).
     // zh_CN: 轨道——轻量 Subtle 填充，圆角为厚度一半；与外框只留极小间距
     // （可按需再引入独立 trackPadding）。
     const int trackInset = 0;
-    const QRectF trackRect = QRectF(rect()).adjusted(trackInset + 0.5,
-                                                     trackInset + 0.5,
-                                                     -trackInset - 0.5,
-                                                     -trackInset - 0.5);
+    const QRectF trackRect = QRectF(rect()).adjusted(trackInset + 0.5, trackInset + 0.5,
+                                                     -trackInset - 0.5, -trackInset - 0.5);
     QColor trackColor = colors.subtleSecondary;
     const qreal trackMaxAlpha = isDark ? 0.18 : 0.20;
     if (trackColor.alphaF() > trackMaxAlpha)
@@ -145,9 +156,8 @@ void ScrollBar::paintEvent(QPaintEvent *event) {
     if ((m_isHovered || m_isPressed) && trackColor.isValid() && trackColor.alpha() > 0) {
         p.setPen(Qt::NoPen);
         p.setBrush(trackColor);
-        const qreal r = (orientation() == Qt::Vertical
-                         ? trackRect.width() / 2.0
-                         : trackRect.height() / 2.0);
+        const qreal r =
+            (orientation() == Qt::Vertical ? trackRect.width() / 2.0 : trackRect.height() / 2.0);
         p.drawRoundedRect(trackRect, r, r);
     }
 
@@ -156,10 +166,8 @@ void ScrollBar::paintEvent(QPaintEvent *event) {
     // of being clipped by the widget bounds.
     // zh_CN: 自行计算 Thumb 绘制几何，交互仍由 QScrollBar 处理；极值位置端部
     // 保留完整抗锯齿空间，避免圆角被 widget 边界裁掉。
-    const QRectF thumbTrack = trackRect.adjusted(m_thumbPadding.left(),
-                                                 m_thumbPadding.top(),
-                                                 -m_thumbPadding.right(),
-                                                 -m_thumbPadding.bottom());
+    const QRectF thumbTrack = trackRect.adjusted(m_thumbPadding.left(), m_thumbPadding.top(),
+                                                 -m_thumbPadding.right(), -m_thumbPadding.bottom());
     const bool vertical = orientation() == Qt::Vertical;
     const qreal trackLength = vertical ? thumbTrack.height() : thumbTrack.width();
     if (trackLength <= 0.0)
@@ -168,26 +176,20 @@ void ScrollBar::paintEvent(QPaintEvent *event) {
     const qreal scrollRange = qMax<qreal>(0.0, maximum() - minimum());
     const qreal page = qMax<qreal>(1.0, pageStep());
     const qreal minThumbLength = qMin<qreal>(m_minThumbLength, trackLength);
-    const qreal proportionalLength = scrollRange > 0.0
-        ? trackLength * page / (scrollRange + page)
-        : trackLength;
+    const qreal proportionalLength =
+        scrollRange > 0.0 ? trackLength * page / (scrollRange + page) : trackLength;
     const qreal thumbLength = qBound(minThumbLength, proportionalLength, trackLength);
     const qreal travel = qMax<qreal>(0.0, trackLength - thumbLength);
-    const qreal ratio = scrollRange > 0.0
-        ? qBound<qreal>(0.0, (value() - minimum()) / scrollRange, 1.0)
-        : 0.0;
+    const qreal ratio =
+        scrollRange > 0.0 ? qBound<qreal>(0.0, (value() - minimum()) / scrollRange, 1.0) : 0.0;
     const qreal thumbOffset = travel * ratio;
 
     QRectF drawRect;
     if (vertical) {
-        drawRect = QRectF(thumbTrack.left(),
-                          thumbTrack.top() + thumbOffset,
-                          thumbTrack.width(),
+        drawRect = QRectF(thumbTrack.left(), thumbTrack.top() + thumbOffset, thumbTrack.width(),
                           thumbLength);
     } else {
-        drawRect = QRectF(thumbTrack.left() + thumbOffset,
-                          thumbTrack.top(),
-                          thumbLength,
+        drawRect = QRectF(thumbTrack.left() + thumbOffset, thumbTrack.top(), thumbLength,
                           thumbTrack.height());
     }
 
@@ -212,7 +214,8 @@ void ScrollBar::paintEvent(QPaintEvent *event) {
     p.drawRoundedRect(drawRect, radius, radius);
 }
 
-void ScrollBar::enterEvent(FluentEnterEvent *event) {
+void ScrollBar::enterEvent(FluentEnterEvent* event)
+{
     m_isHovered = true;
     // Only animate in when scrollable and enabled. zh_CN: 仅在可滚动且启用时触发显示动画。
     if (isEnabled() && maximum() > minimum()) {
@@ -221,13 +224,15 @@ void ScrollBar::enterEvent(FluentEnterEvent *event) {
     QScrollBar::enterEvent(event);
 }
 
-void ScrollBar::leaveEvent(QEvent *event) {
+void ScrollBar::leaveEvent(QEvent* event)
+{
     m_isHovered = false;
     update();
     QScrollBar::leaveEvent(event);
 }
 
-void ScrollBar::mousePressEvent(QMouseEvent *event) {
+void ScrollBar::mousePressEvent(QMouseEvent* event)
+{
     m_isPressed = true;
     // Only animate in when scrollable and enabled. zh_CN: 仅在可滚动且启用时触发显示动画。
     if (isEnabled() && maximum() > minimum()) {
@@ -236,13 +241,15 @@ void ScrollBar::mousePressEvent(QMouseEvent *event) {
     QScrollBar::mousePressEvent(event);
 }
 
-void ScrollBar::mouseReleaseEvent(QMouseEvent *event) {
+void ScrollBar::mouseReleaseEvent(QMouseEvent* event)
+{
     m_isPressed = false;
     update();
     QScrollBar::mouseReleaseEvent(event);
 }
 
-void ScrollBar::showEvent(QShowEvent *event) {
+void ScrollBar::showEvent(QShowEvent* event)
+{
     QScrollBar::showEvent(event);
 }
 

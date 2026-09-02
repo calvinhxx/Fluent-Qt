@@ -13,6 +13,7 @@
 #include "components/basicinput/Button.h"
 #include "components/dialogs_flyouts/Popup.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -29,7 +30,8 @@ using fluent::textfields::Label;
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -40,13 +42,15 @@ public:
     int presses = 0;
 
 protected:
-    void mousePressEvent(QMouseEvent* event) override {
+    void mousePressEvent(QMouseEvent* event) override
+    {
         ++presses;
         QWidget::mousePressEvent(event);
     }
 };
 
-void processEvents() {
+void processEvents()
+{
     QApplication::processEvents();
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     QApplication::processEvents();
@@ -58,11 +62,12 @@ protected:
     static void SetUpTestSuite()
     {
         fluentRegisterMetaTypeNames<fluent::dialogs_flyouts::Popup::CloseReason>(
-            "fluent::dialogs_flyouts::Popup::CloseReason",
-            "CloseReason");
+            "fluent::dialogs_flyouts::Popup::CloseReason", "CloseReason");
     }
 
-    void SetUp() override {
+    void SetUp() override
+    {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         window = new FluentTestWindow();
         window->setFixedSize(800, 600);
         window->setWindowTitle("Popup Test");
@@ -70,7 +75,11 @@ protected:
         window->show();
         ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
     }
-    void TearDown() override { delete window; }
+    void TearDown() override
+    {
+        delete window;
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    }
 
     FluentTestWindow* window = nullptr;
 };
@@ -79,7 +88,8 @@ protected:
 // 1. 默认属性
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(PopupTest, DefaultProperties) {
+TEST_F(PopupTest, DefaultProperties)
+{
     Popup p(window);
     EXPECT_FALSE(p.isOpen());
     EXPECT_FALSE(p.isModal());
@@ -90,8 +100,7 @@ TEST_F(PopupTest, DefaultProperties) {
     // 默认尺寸 320+32 × 160+32
     EXPECT_EQ(p.width(), 352);
     EXPECT_EQ(p.height(), 192);
-    const QColor publishedSurface =
-        p.property("fluentSurfaceColor").value<QColor>();
+    const QColor publishedSurface = p.property("fluentSurfaceColor").value<QColor>();
     EXPECT_TRUE(publishedSurface.isValid());
     EXPECT_EQ(publishedSurface, p.themeColorsRef().bgLayer);
 }
@@ -100,7 +109,8 @@ TEST_F(PopupTest, DefaultProperties) {
 // 2. open/close 信号顺序
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(PopupTest, OpenCloseSignals_AnimationDisabled) {
+TEST_F(PopupTest, OpenCloseSignals_AnimationDisabled)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
 
@@ -125,7 +135,8 @@ TEST_F(PopupTest, OpenCloseSignals_AnimationDisabled) {
     EXPECT_FALSE(p.isOpen());
 }
 
-TEST_F(PopupTest, ReentrantOpenDuringAboutToShowIsIgnored) {
+TEST_F(PopupTest, ReentrantOpenDuringAboutToShowIsIgnored)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
 
@@ -151,20 +162,20 @@ TEST_F(PopupTest, ReentrantOpenDuringAboutToShowIsIgnored) {
     p.close();
 }
 
-TEST_F(PopupTest, AboutToShowHandlerCanSynchronouslyDeletePopup) {
+TEST_F(PopupTest, AboutToShowHandlerCanSynchronouslyDeletePopup)
+{
     auto* popup = new Popup(window);
     popup->setAnimationEnabled(false);
     QPointer<Popup> guard(popup);
-    QObject::connect(popup, &Popup::aboutToShow, window, [popup] {
-        delete popup;
-    });
+    QObject::connect(popup, &Popup::aboutToShow, window, [popup] { delete popup; });
 
     popup->open();
 
     EXPECT_TRUE(guard.isNull());
 }
 
-TEST_F(PopupTest, OpenStateHandlerCanSynchronouslyDeletePopup) {
+TEST_F(PopupTest, OpenStateHandlerCanSynchronouslyDeletePopup)
+{
     auto* popup = new Popup(window);
     popup->setAnimationEnabled(false);
     QPointer<Popup> guard(popup);
@@ -178,22 +189,21 @@ TEST_F(PopupTest, OpenStateHandlerCanSynchronouslyDeletePopup) {
     EXPECT_TRUE(guard.isNull());
 }
 
-TEST_F(PopupTest, ProgressHandlerCanSynchronouslyDeletePopup) {
+TEST_F(PopupTest, ProgressHandlerCanSynchronouslyDeletePopup)
+{
     auto* popup = new Popup(window);
     popup->setAnimationEnabled(false);
     QPointer<Popup> guard(popup);
-    QObject::connect(
-        popup, &Popup::popupProgressChanged, window,
-        [popup](double) {
-            delete popup;
-        });
+    QObject::connect(popup, &Popup::popupProgressChanged, window,
+                     [popup](double) { delete popup; });
 
     popup->open();
 
     EXPECT_TRUE(guard.isNull());
 }
 
-TEST_F(PopupTest, SetIsOpen_DelegatesToOpenClose) {
+TEST_F(PopupTest, SetIsOpen_DelegatesToOpenClose)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
 
@@ -208,7 +218,8 @@ TEST_F(PopupTest, SetIsOpen_DelegatesToOpenClose) {
     EXPECT_FALSE(p.isOpen());
 }
 
-TEST_F(PopupTest, Contract_IsOpenIsLogicalRequestedState) {
+TEST_F(PopupTest, Contract_IsOpenIsLogicalRequestedState)
+{
     Popup p(window);
     QSignalSpy opened(&p, &Popup::opened);
     QSignalSpy closed(&p, &Popup::closed);
@@ -237,7 +248,8 @@ TEST_F(PopupTest, Contract_IsOpenIsLogicalRequestedState) {
     EXPECT_FALSE(p.isVisible());
 }
 
-TEST_F(PopupTest, Contract_AnimationDisabledSyncSettlesOpenState) {
+TEST_F(PopupTest, Contract_AnimationDisabledSyncSettlesOpenState)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
 
@@ -280,29 +292,30 @@ TEST_F(PopupTest, Contract_AnimationDisabledSyncSettlesOpenState) {
     EXPECT_TRUE(p.isVisible());
     EXPECT_DOUBLE_EQ(p.popupProgress(), 1.0);
     EXPECT_EQ(order, (QStringList{
-                          QStringLiteral("opening"),
-                          QStringLiteral("aboutToShow"),
-                          QStringLiteral("isOpenChanged(true)"),
-                          QStringLiteral("opened"),
-                      }));
+                         QStringLiteral("opening"),
+                         QStringLiteral("aboutToShow"),
+                         QStringLiteral("isOpenChanged(true)"),
+                         QStringLiteral("opened"),
+                     }));
 
     p.close();
     EXPECT_FALSE(p.isOpen());
     EXPECT_FALSE(p.isVisible());
     EXPECT_DOUBLE_EQ(p.popupProgress(), 0.0);
     EXPECT_EQ(order, (QStringList{
-                          QStringLiteral("opening"),
-                          QStringLiteral("aboutToShow"),
-                          QStringLiteral("isOpenChanged(true)"),
-                          QStringLiteral("opened"),
-                          QStringLiteral("closing"),
-                          QStringLiteral("aboutToHide"),
-                          QStringLiteral("isOpenChanged(false)"),
-                          QStringLiteral("closed"),
-                      }));
+                         QStringLiteral("opening"),
+                         QStringLiteral("aboutToShow"),
+                         QStringLiteral("isOpenChanged(true)"),
+                         QStringLiteral("opened"),
+                         QStringLiteral("closing"),
+                         QStringLiteral("aboutToHide"),
+                         QStringLiteral("isOpenChanged(false)"),
+                         QStringLiteral("closed"),
+                     }));
 }
 
-TEST_F(PopupTest, Contract_CloseWhileOpeningCancelsEntrance) {
+TEST_F(PopupTest, Contract_CloseWhileOpeningCancelsEntrance)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
 
@@ -323,11 +336,11 @@ TEST_F(PopupTest, Contract_CloseWhileOpeningCancelsEntrance) {
     EXPECT_FALSE(p.isOpen());
     EXPECT_FALSE(p.isVisible());
     EXPECT_EQ(order, (QStringList{
-                          QStringLiteral("opening"),
-                          QStringLiteral("closing"),
-                          QStringLiteral("aboutToHide"),
-                          QStringLiteral("closed"),
-                      }));
+                         QStringLiteral("opening"),
+                         QStringLiteral("closing"),
+                         QStringLiteral("aboutToHide"),
+                         QStringLiteral("closed"),
+                     }));
 
     cancelNextOpen = false;
     p.open();
@@ -350,7 +363,8 @@ TEST_F(PopupTest, Contract_CloseWhileOpeningCancelsEntrance) {
     EXPECT_EQ(opened.count(), 0);
 }
 
-TEST_F(PopupTest, Contract_OpenWhileOpeningIsIgnored) {
+TEST_F(PopupTest, Contract_OpenWhileOpeningIsIgnored)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
 
@@ -365,7 +379,8 @@ TEST_F(PopupTest, Contract_OpenWhileOpeningIsIgnored) {
     p.close();
 }
 
-TEST_F(PopupTest, Contract_CloseWhileClosingIsIgnored) {
+TEST_F(PopupTest, Contract_CloseWhileClosingIsIgnored)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
 
@@ -380,7 +395,8 @@ TEST_F(PopupTest, Contract_CloseWhileClosingIsIgnored) {
     EXPECT_FALSE(p.isOpen());
 }
 
-TEST_F(PopupTest, Contract_OpenWhileClosingReversesToOpen) {
+TEST_F(PopupTest, Contract_OpenWhileClosingReversesToOpen)
+{
     Popup p(window);
     QSignalSpy opened(&p, &Popup::opened);
     p.open();
@@ -399,7 +415,8 @@ TEST_F(PopupTest, Contract_OpenWhileClosingReversesToOpen) {
     ASSERT_TRUE(QTest::qWaitFor([&]() { return !p.isVisible(); }, 1000));
 }
 
-TEST_F(PopupTest, Contract_CloseReasonsAndNotifyNoOps) {
+TEST_F(PopupTest, Contract_CloseReasonsAndNotifyNoOps)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
 
@@ -448,7 +465,8 @@ TEST_F(PopupTest, Contract_CloseReasonsAndNotifyNoOps) {
     p.setIsOpen(false);
 }
 
-TEST_F(PopupTest, Contract_ModalDimClosePolicyAreOrthogonal) {
+TEST_F(PopupTest, Contract_ModalDimClosePolicyAreOrthogonal)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
     p.setClosePolicy(Popup::NoAutoClose);
@@ -456,8 +474,8 @@ TEST_F(PopupTest, Contract_ModalDimClosePolicyAreOrthogonal) {
     p.setModal(false);
     p.setDim(false);
     p.open();
-    EXPECT_EQ(window->findChild<fluent::overlay::OverlayScrim*>(
-                  QStringLiteral("PopupScrim"), Qt::FindDirectChildrenOnly),
+    EXPECT_EQ(window->findChild<fluent::overlay::OverlayScrim*>(QStringLiteral("PopupScrim"),
+                                                                Qt::FindDirectChildrenOnly),
               nullptr);
     p.close();
 
@@ -474,8 +492,8 @@ TEST_F(PopupTest, Contract_ModalDimClosePolicyAreOrthogonal) {
     p.setModal(false);
     p.setDim(true);
     p.open();
-    auto* dimScrim = window->findChild<fluent::overlay::OverlayScrim*>(
-        QStringLiteral("PopupScrim"), Qt::FindDirectChildrenOnly);
+    auto* dimScrim = window->findChild<fluent::overlay::OverlayScrim*>(QStringLiteral("PopupScrim"),
+                                                                       Qt::FindDirectChildrenOnly);
     ASSERT_NE(dimScrim, nullptr);
     EXPECT_TRUE(dimScrim->testAttribute(Qt::WA_TransparentForMouseEvents));
     p.close();
@@ -484,14 +502,15 @@ TEST_F(PopupTest, Contract_ModalDimClosePolicyAreOrthogonal) {
     p.setModal(true);
     p.setDim(true);
     p.open();
-    auto* both = window->findChild<fluent::overlay::OverlayScrim*>(
-        QStringLiteral("PopupScrim"), Qt::FindDirectChildrenOnly);
+    auto* both = window->findChild<fluent::overlay::OverlayScrim*>(QStringLiteral("PopupScrim"),
+                                                                   Qt::FindDirectChildrenOnly);
     ASSERT_NE(both, nullptr);
     EXPECT_FALSE(both->testAttribute(Qt::WA_TransparentForMouseEvents));
     p.close();
 }
 
-TEST_F(PopupTest, Contract_ThemeChangeDoesNotMutateOpenState) {
+TEST_F(PopupTest, Contract_ThemeChangeDoesNotMutateOpenState)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
     p.open();
@@ -519,7 +538,8 @@ TEST_F(PopupTest, Contract_ThemeChangeDoesNotMutateOpenState) {
 // 3. 挂载到 topLevelWidget
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(PopupTest, OpenReparentsToTopLevelWidget) {
+TEST_F(PopupTest, OpenReparentsToTopLevelWidget)
+{
     auto* mid = new QWidget(window);
     auto* leaf = new QWidget(mid);
 
@@ -536,7 +556,8 @@ TEST_F(PopupTest, OpenReparentsToTopLevelWidget) {
     p.close();
 }
 
-TEST_F(PopupTest, CloseRestoresFocusWhenItRemainsInsidePopup) {
+TEST_F(PopupTest, CloseRestoresFocusWhenItRemainsInsidePopup)
+{
     auto* trigger = new Button("Open", window);
     trigger->setGeometry(24, 24, 100, 36);
     trigger->show();
@@ -554,7 +575,8 @@ TEST_F(PopupTest, CloseRestoresFocusWhenItRemainsInsidePopup) {
     QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), trigger, 1000);
 }
 
-TEST_F(PopupTest, CloseDoesNotStealFocusMovedOutsidePopup) {
+TEST_F(PopupTest, CloseDoesNotStealFocusMovedOutsidePopup)
+{
     auto* trigger = new Button("Open", window);
     trigger->setGeometry(24, 24, 100, 36);
     trigger->show();
@@ -581,7 +603,8 @@ TEST_F(PopupTest, CloseDoesNotStealFocusMovedOutsidePopup) {
 // 4. x / y 定位
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(PopupTest, ExplicitPosition_RespectsXY) {
+TEST_F(PopupTest, ExplicitPosition_RespectsXY)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
     p.resize(120, 60);
@@ -593,7 +616,8 @@ TEST_F(PopupTest, ExplicitPosition_RespectsXY) {
     p.close();
 }
 
-TEST_F(PopupTest, RelativePositionTracksMovingAncestorAndClosesWhenClipped) {
+TEST_F(PopupTest, RelativePositionTracksMovingAncestorAndClosesWhenClipped)
+{
     auto* scrollingContent = new QWidget(window);
     scrollingContent->setGeometry(0, 0, window->width(), 1000);
     scrollingContent->show();
@@ -616,7 +640,8 @@ TEST_F(PopupTest, RelativePositionTracksMovingAncestorAndClosesWhenClipped) {
     QTRY_VERIFY_WITH_TIMEOUT(!p.isOpen(), 1000);
 }
 
-TEST_F(PopupTest, DefaultPosition_CentersInParent) {
+TEST_F(PopupTest, DefaultPosition_CentersInParent)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
     p.resize(200, 100);
@@ -628,7 +653,8 @@ TEST_F(PopupTest, DefaultPosition_CentersInParent) {
     p.close();
 }
 
-TEST_F(PopupTest, VisibleCardPressKeepsPopupOpen) {
+TEST_F(PopupTest, VisibleCardPressKeepsPopupOpen)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
     p.setPosition(window, QPoint(120, 140));
@@ -643,7 +669,8 @@ TEST_F(PopupTest, VisibleCardPressKeepsPopupOpen) {
     p.close();
 }
 
-TEST_F(PopupTest, ShadowMarginPressDismissesAsOutsideVisibleCard) {
+TEST_F(PopupTest, ShadowMarginPressDismissesAsOutsideVisibleCard)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
     p.setPosition(window, QPoint(120, 140));
@@ -657,7 +684,8 @@ TEST_F(PopupTest, ShadowMarginPressDismissesAsOutsideVisibleCard) {
     EXPECT_FALSE(p.isOpen());
 }
 
-TEST_F(PopupTest, RelativePosition_MapsWidgetLocalCoordinates) {
+TEST_F(PopupTest, RelativePosition_MapsWidgetLocalCoordinates)
+{
     auto* trigger = new QWidget(window);
     trigger->setGeometry(120, 220, 80, 36);
 
@@ -676,7 +704,8 @@ TEST_F(PopupTest, RelativePosition_MapsWidgetLocalCoordinates) {
 // 5. ClosePolicy
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(PopupTest, ExplicitPositionInheritsThemeOverrideFromRelativeWidget) {
+TEST_F(PopupTest, ExplicitPositionInheritsThemeOverrideFromRelativeWidget)
+{
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     window->onThemeUpdated();
 
@@ -700,7 +729,8 @@ TEST_F(PopupTest, ExplicitPositionInheritsThemeOverrideFromRelativeWidget) {
     p.close();
 }
 
-TEST_F(PopupTest, ThemeSourceInheritsOverrideWithoutAnchor) {
+TEST_F(PopupTest, ThemeSourceInheritsOverrideWithoutAnchor)
+{
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     window->onThemeUpdated();
 
@@ -723,7 +753,8 @@ TEST_F(PopupTest, ThemeSourceInheritsOverrideWithoutAnchor) {
     p.close();
 }
 
-TEST_F(PopupTest, NoAutoClose_PressOutsideKeepsOpen) {
+TEST_F(PopupTest, NoAutoClose_PressOutsideKeepsOpen)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
     p.setClosePolicy(Popup::NoAutoClose);
@@ -737,7 +768,8 @@ TEST_F(PopupTest, NoAutoClose_PressOutsideKeepsOpen) {
     p.close();
 }
 
-TEST_F(PopupTest, EscapeClosesFromOwningTopLevelContext) {
+TEST_F(PopupTest, EscapeClosesFromOwningTopLevelContext)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
     p.open();
@@ -749,7 +781,8 @@ TEST_F(PopupTest, EscapeClosesFromOwningTopLevelContext) {
     EXPECT_FALSE(p.isOpen());
 }
 
-TEST_F(PopupTest, NonModalOutsidePressClosesAndContinuesToBackgroundTarget) {
+TEST_F(PopupTest, NonModalOutsidePressClosesAndContinuesToBackgroundTarget)
+{
     auto* background = new PressProbe();
     background->setParent(window);
     background->setGeometry(window->rect());
@@ -769,7 +802,8 @@ TEST_F(PopupTest, NonModalOutsidePressClosesAndContinuesToBackgroundTarget) {
     EXPECT_FALSE(p.isOpen());
 }
 
-TEST_F(PopupTest, EscapeClosesPopupWhenPolicySet) {
+TEST_F(PopupTest, EscapeClosesPopupWhenPolicySet)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
     p.open();
@@ -781,7 +815,8 @@ TEST_F(PopupTest, EscapeClosesPopupWhenPolicySet) {
     EXPECT_FALSE(p.isOpen());
 }
 
-TEST_F(PopupTest, EscapeIgnoredWhenPolicyOmitsCloseOnEscape) {
+TEST_F(PopupTest, EscapeIgnoredWhenPolicyOmitsCloseOnEscape)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
     p.setClosePolicy(Popup::NoAutoClose);
@@ -799,7 +834,8 @@ TEST_F(PopupTest, EscapeIgnoredWhenPolicyOmitsCloseOnEscape) {
 // 6. Modal — Scrim
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(PopupTest, Modal_CreatesScrimOverTopLevel) {
+TEST_F(PopupTest, Modal_CreatesScrimOverTopLevel)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
     p.setModal(true);
@@ -808,8 +844,10 @@ TEST_F(PopupTest, Modal_CreatesScrimOverTopLevel) {
 
     bool foundScrim = false;
     for (auto* child : window->findChildren<QWidget*>()) {
-        if (child == &p) continue;
-        if (child->parent() == window && child->geometry() == window->rect() && child->isVisible()) {
+        if (child == &p)
+            continue;
+        if (child->parent() == window && child->geometry() == window->rect() &&
+            child->isVisible()) {
             foundScrim = true;
             break;
         }
@@ -820,7 +858,8 @@ TEST_F(PopupTest, Modal_CreatesScrimOverTopLevel) {
     QApplication::processEvents();
 }
 
-TEST_F(PopupTest, ModalScrimBlocksBackgroundInput) {
+TEST_F(PopupTest, ModalScrimBlocksBackgroundInput)
+{
     auto* background = new PressProbe();
     background->setParent(window);
     background->setGeometry(window->rect());
@@ -848,7 +887,8 @@ TEST_F(PopupTest, ModalScrimBlocksBackgroundInput) {
     p.close();
 }
 
-TEST_F(PopupTest, HostResizeSynchronizesScrimAndCenteredPlacement) {
+TEST_F(PopupTest, HostResizeSynchronizesScrimAndCenteredPlacement)
+{
     window->setMinimumSize(0, 0);
     window->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
 
@@ -859,26 +899,24 @@ TEST_F(PopupTest, HostResizeSynchronizesScrimAndCenteredPlacement) {
     p.resize(200, 100);
     p.open();
 
-    auto* scrim = window->findChild<fluent::overlay::OverlayScrim*>(
-        QStringLiteral("PopupScrim"), Qt::FindDirectChildrenOnly);
+    auto* scrim = window->findChild<fluent::overlay::OverlayScrim*>(QStringLiteral("PopupScrim"),
+                                                                    Qt::FindDirectChildrenOnly);
     ASSERT_NE(scrim, nullptr);
     EXPECT_EQ(scrim->geometry(), fluent::overlay::overlaySurfaceRect(window));
 
     window->resize(920, 680);
 
+    QTRY_COMPARE_WITH_TIMEOUT(scrim->geometry(), fluent::overlay::overlaySurfaceRect(window), 1000);
     QTRY_COMPARE_WITH_TIMEOUT(
-        scrim->geometry(), fluent::overlay::overlaySurfaceRect(window), 1000);
-    QTRY_COMPARE_WITH_TIMEOUT(
-        p.pos(),
-        QPoint((window->width() - p.width()) / 2,
-               (window->height() - p.height()) / 2),
+        p.pos(), QPoint((window->width() - p.width()) / 2, (window->height() - p.height()) / 2),
         1000);
     EXPECT_TRUE(scrim->isVisible());
     EXPECT_TRUE(p.isVisible());
     p.close();
 }
 
-TEST_F(PopupTest, NonModal_CreatesNoScrim) {
+TEST_F(PopupTest, NonModal_CreatesNoScrim)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
     p.setModal(false);
@@ -886,8 +924,10 @@ TEST_F(PopupTest, NonModal_CreatesNoScrim) {
 
     int candidateScrims = 0;
     for (auto* child : window->findChildren<QWidget*>()) {
-        if (child == &p) continue;
-        if (child->parent() == window && child->geometry() == window->rect() && child->isVisible()) {
+        if (child == &p)
+            continue;
+        if (child->parent() == window && child->geometry() == window->rect() &&
+            child->isVisible()) {
             ++candidateScrims;
         }
     }
@@ -896,7 +936,8 @@ TEST_F(PopupTest, NonModal_CreatesNoScrim) {
     p.close();
 }
 
-TEST_F(PopupTest, ParentDestructionDeletesOwnedPopupSafely) {
+TEST_F(PopupTest, ParentDestructionDeletesOwnedPopupSafely)
+{
     auto* top = new FluentTestWindow();
     top->setFixedSize(360, 240);
     top->onThemeUpdated();
@@ -919,7 +960,8 @@ TEST_F(PopupTest, ParentDestructionDeletesOwnedPopupSafely) {
 // 7. 动画
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(PopupTest, AnimationDisabled_OpenedEmittedSynchronously) {
+TEST_F(PopupTest, AnimationDisabled_OpenedEmittedSynchronously)
+{
     Popup p(window);
     p.setAnimationEnabled(false);
 
@@ -928,7 +970,81 @@ TEST_F(PopupTest, AnimationDisabled_OpenedEmittedSynchronously) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(PopupTest, AnimationProgress_DrivesUpdates) {
+TEST_F(PopupTest, MotionPolicyDisabledSettlesOpenAndCloseSynchronously)
+{
+    Popup popup(window);
+    QSignalSpy openedSpy(&popup, &Popup::opened);
+    QSignalSpy closedSpy(&popup, &Popup::closed);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    popup.open();
+
+    EXPECT_TRUE(popup.isOpen());
+    EXPECT_TRUE(popup.isVisible());
+    EXPECT_DOUBLE_EQ(popup.popupProgress(), 1.0);
+    EXPECT_EQ(openedSpy.count(), 1);
+
+    popup.close();
+
+    EXPECT_FALSE(popup.isOpen());
+    EXPECT_FALSE(popup.isVisible());
+    EXPECT_DOUBLE_EQ(popup.popupProgress(), 0.0);
+    EXPECT_EQ(closedSpy.count(), 1);
+}
+
+TEST_F(PopupTest, DisablingLocalAnimationSettlesActiveEntrance)
+{
+    Popup popup(window);
+    QSignalSpy openedSpy(&popup, &Popup::opened);
+    popup.open();
+    popup.setAnimationEnabled(false);
+
+    EXPECT_TRUE(popup.isOpen());
+    EXPECT_TRUE(popup.isVisible());
+    EXPECT_DOUBLE_EQ(popup.popupProgress(), 1.0);
+    EXPECT_EQ(openedSpy.count(), 1);
+
+    popup.close();
+}
+
+TEST_F(PopupTest, DisablingExitAnimationSettlesActiveExitThroughClosedCleanup)
+{
+    Popup popup(window);
+    QSignalSpy openedSpy(&popup, &Popup::opened);
+    QSignalSpy closedSpy(&popup, &Popup::closed);
+    QStringList order;
+    QObject::connect(&popup, &Popup::closing, &popup,
+                     [&](Popup::CloseReason) { order << QStringLiteral("closing"); });
+    QObject::connect(&popup, &Popup::aboutToHide, &popup,
+                     [&] { order << QStringLiteral("aboutToHide"); });
+    QObject::connect(&popup, &Popup::isOpenChanged, &popup, [&](bool open) {
+        if (!open)
+            order << QStringLiteral("isOpenChanged(false)");
+    });
+    QObject::connect(&popup, &Popup::closed, &popup, [&] { order << QStringLiteral("closed"); });
+
+    popup.open();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return openedSpy.count() == 1; }, 1000));
+
+    popup.close();
+    EXPECT_FALSE(popup.isOpen());
+    EXPECT_TRUE(popup.isVisible());
+    EXPECT_EQ(closedSpy.count(), 0);
+    EXPECT_EQ(order, QStringList({QStringLiteral("closing"), QStringLiteral("aboutToHide"),
+                                  QStringLiteral("isOpenChanged(false)")}));
+
+    popup.setExitAnimationEnabled(false);
+
+    EXPECT_FALSE(popup.isVisible());
+    EXPECT_DOUBLE_EQ(popup.popupProgress(), 0.0);
+    EXPECT_EQ(closedSpy.count(), 1);
+    EXPECT_EQ(order,
+              QStringList({QStringLiteral("closing"), QStringLiteral("aboutToHide"),
+                           QStringLiteral("isOpenChanged(false)"), QStringLiteral("closed")}));
+}
+
+TEST_F(PopupTest, AnimationProgress_DrivesUpdates)
+{
     Popup p(window);
 
     QSignalSpy spy(&p, &Popup::popupProgressChanged);
@@ -944,8 +1060,8 @@ TEST_F(PopupTest, AnimationProgress_DrivesUpdates) {
     p.close();
 }
 
-
-TEST_F(PopupTest, VisualCheck) {
+TEST_F(PopupTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -966,20 +1082,22 @@ TEST_F(PopupTest, VisualCheck) {
     // ── Theme toggle ─────────────────────────────────────────────
     auto* themeBtn = new Button("Toggle Theme", visual);
     themeBtn->setFixedSize(160, 32);
-    themeBtn->anchors()->top   = {visual, Edge::Top,   16};
+    themeBtn->anchors()->top = {visual, Edge::Top, 16};
     themeBtn->anchors()->right = {visual, Edge::Right, -16};
     layout->addWidget(themeBtn);
 
     QObject::connect(themeBtn, &Button::clicked, [visual]() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                                    ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
         visual->onThemeUpdated();
     });
 
     // ── 1. Info Popup — positioned (60, 130) ─────────────────────
     auto* btn1 = new Button("Info Popup", visual);
     btn1->setFixedSize(160, 36);
-    btn1->anchors()->top  = {visual, Edge::Top,  80};
+    btn1->anchors()->top = {visual, Edge::Top, 80};
     btn1->anchors()->left = {visual, Edge::Left, 60};
     layout->addWidget(btn1);
 
@@ -992,27 +1110,27 @@ TEST_F(PopupTest, VisualCheck) {
 
         auto* title = new Label("Information", p);
         title->setFluentTypography(Typography::FontRole::Subtitle);
-        title->anchors()->top  = {p, Edge::Top,  24};
+        title->anchors()->top = {p, Edge::Top, 24};
         title->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(title);
 
         auto* caption = new Label("Last updated: just now", p);
         caption->setFluentTypography(Typography::FontRole::Caption);
-        caption->anchors()->top  = {title, Edge::Bottom, 4};
+        caption->anchors()->top = {title, Edge::Bottom, 4};
         caption->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(caption);
 
-        auto* body = new Label(
-            "This popup demonstrates x/y positioning.\n"
-            "It appears at a fixed location relative\n"
-            "to the parent window.", p);
-        body->anchors()->top  = {caption, Edge::Bottom, 12};
+        auto* body = new Label("This popup demonstrates x/y positioning.\n"
+                               "It appears at a fixed location relative\n"
+                               "to the parent window.",
+                               p);
+        body->anchors()->top = {caption, Edge::Bottom, 12};
         body->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(body);
 
         auto* gotItBtn = new Button("Got it", p);
         gotItBtn->setFixedSize(80, 32);
-        gotItBtn->anchors()->top  = {body, Edge::Bottom, 16};
+        gotItBtn->anchors()->top = {body, Edge::Bottom, 16};
         gotItBtn->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(gotItBtn);
 
@@ -1024,7 +1142,7 @@ TEST_F(PopupTest, VisualCheck) {
     auto* btn2 = new Button("Center Popup", visual);
     btn2->setFixedSize(160, 36);
     btn2->anchors()->horizontalCenter = {visual, Edge::HCenter, 0};
-    btn2->anchors()->top              = {visual, Edge::Top, 80};
+    btn2->anchors()->top = {visual, Edge::Top, 80};
     layout->addWidget(btn2);
 
     {
@@ -1036,30 +1154,30 @@ TEST_F(PopupTest, VisualCheck) {
 
         auto* title = new Label("Quick Actions", p);
         title->setFluentTypography(Typography::FontRole::Subtitle);
-        title->anchors()->top  = {p, Edge::Top,  24};
+        title->anchors()->top = {p, Edge::Top, 24};
         title->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(title);
 
         auto* desc = new Label("Choose an action to perform:", p);
-        desc->anchors()->top  = {title, Edge::Bottom, 8};
+        desc->anchors()->top = {title, Edge::Bottom, 8};
         desc->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(desc);
 
         auto* actionA = new Button("Action A", p);
         actionA->setFixedSize(120, 32);
-        actionA->anchors()->top  = {desc, Edge::Bottom, 16};
+        actionA->anchors()->top = {desc, Edge::Bottom, 16};
         actionA->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(actionA);
 
         auto* actionB = new Button("Action B", p);
         actionB->setFixedSize(120, 32);
-        actionB->anchors()->top  = {desc, Edge::Bottom, 16};
+        actionB->anchors()->top = {desc, Edge::Bottom, 16};
         actionB->anchors()->left = {actionA, Edge::Right, 8};
         pl->addWidget(actionB);
 
         auto* hint = new Label("Press Escape to dismiss", p);
         hint->setFluentTypography(Typography::FontRole::Caption);
-        hint->anchors()->top  = {actionA, Edge::Bottom, 12};
+        hint->anchors()->top = {actionA, Edge::Bottom, 12};
         hint->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(hint);
 
@@ -1072,7 +1190,7 @@ TEST_F(PopupTest, VisualCheck) {
     auto* btn3 = new Button("Modal + Dim", visual);
     btn3->setFixedSize(160, 36);
     btn3->anchors()->horizontalCenter = {visual, Edge::HCenter, 0};
-    btn3->anchors()->verticalCenter   = {visual, Edge::VCenter, 0};
+    btn3->anchors()->verticalCenter = {visual, Edge::VCenter, 0};
     layout->addWidget(btn3);
 
     {
@@ -1086,26 +1204,26 @@ TEST_F(PopupTest, VisualCheck) {
 
         auto* title = new Label("Confirm Delete", p);
         title->setFluentTypography(Typography::FontRole::Subtitle);
-        title->anchors()->top  = {p, Edge::Top,  24};
+        title->anchors()->top = {p, Edge::Top, 24};
         title->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(title);
 
-        auto* body = new Label(
-            "Are you sure you want to delete this item?\n"
-            "This action cannot be undone.", p);
-        body->anchors()->top  = {title, Edge::Bottom, 12};
+        auto* body = new Label("Are you sure you want to delete this item?\n"
+                               "This action cannot be undone.",
+                               p);
+        body->anchors()->top = {title, Edge::Bottom, 12};
         body->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(body);
 
         auto* deleteBtn = new Button("Delete", p);
         deleteBtn->setFixedSize(100, 32);
-        deleteBtn->anchors()->top  = {body, Edge::Bottom, 20};
+        deleteBtn->anchors()->top = {body, Edge::Bottom, 20};
         deleteBtn->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(deleteBtn);
 
         auto* cancelBtn = new Button("Cancel", p);
         cancelBtn->setFixedSize(100, 32);
-        cancelBtn->anchors()->top  = {body, Edge::Bottom, 20};
+        cancelBtn->anchors()->top = {body, Edge::Bottom, 20};
         cancelBtn->anchors()->left = {deleteBtn, Edge::Right, 8};
         pl->addWidget(cancelBtn);
 
@@ -1118,7 +1236,7 @@ TEST_F(PopupTest, VisualCheck) {
     auto* btn4 = new Button("Notification", visual);
     btn4->setFixedSize(160, 36);
     btn4->anchors()->bottom = {visual, Edge::Bottom, -60};
-    btn4->anchors()->right  = {visual, Edge::Right,  -60};
+    btn4->anchors()->right = {visual, Edge::Right, -60};
     layout->addWidget(btn4);
 
     {
@@ -1130,26 +1248,26 @@ TEST_F(PopupTest, VisualCheck) {
 
         auto* title = new Label("New Messages", p);
         title->setFluentTypography(Typography::FontRole::BodyStrong);
-        title->anchors()->top  = {p, Edge::Top,  24};
+        title->anchors()->top = {p, Edge::Top, 24};
         title->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(title);
 
-        auto* body = new Label(
-            "You have 3 unread messages\n"
-            "from your team members.", p);
-        body->anchors()->top  = {title, Edge::Bottom, 8};
+        auto* body = new Label("You have 3 unread messages\n"
+                               "from your team members.",
+                               p);
+        body->anchors()->top = {title, Edge::Bottom, 8};
         body->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(body);
 
         auto* timestamp = new Label("2 minutes ago", p);
         timestamp->setFluentTypography(Typography::FontRole::Caption);
-        timestamp->anchors()->top  = {body, Edge::Bottom, 8};
+        timestamp->anchors()->top = {body, Edge::Bottom, 8};
         timestamp->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(timestamp);
 
         auto* dismissBtn = new Button("Dismiss", p);
         dismissBtn->setFixedSize(80, 32);
-        dismissBtn->anchors()->top  = {timestamp, Edge::Bottom, 12};
+        dismissBtn->anchors()->top = {timestamp, Edge::Bottom, 12};
         dismissBtn->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(dismissBtn);
 
@@ -1160,7 +1278,7 @@ TEST_F(PopupTest, VisualCheck) {
     // ── 5. Sticky Popup — NoAutoClose ────────────────────────────
     auto* btn5 = new Button("Sticky Popup", visual);
     btn5->setFixedSize(160, 36);
-    btn5->anchors()->top   = {visual, Edge::Top, 80};
+    btn5->anchors()->top = {visual, Edge::Top, 80};
     btn5->anchors()->right = {visual, Edge::Right, -60};
     layout->addWidget(btn5);
 
@@ -1174,21 +1292,21 @@ TEST_F(PopupTest, VisualCheck) {
 
         auto* title = new Label("Sticky Note", p);
         title->setFluentTypography(Typography::FontRole::Subtitle);
-        title->anchors()->top  = {p, Edge::Top,  24};
+        title->anchors()->top = {p, Edge::Top, 24};
         title->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(title);
 
-        auto* body = new Label(
-            "This popup won't close on outside\n"
-            "click or Escape key press.\n"
-            "You must click Close explicitly.", p);
-        body->anchors()->top  = {title, Edge::Bottom, 8};
+        auto* body = new Label("This popup won't close on outside\n"
+                               "click or Escape key press.\n"
+                               "You must click Close explicitly.",
+                               p);
+        body->anchors()->top = {title, Edge::Bottom, 8};
         body->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(body);
 
         auto* closeBtn = new Button("Close", p);
         closeBtn->setFixedSize(80, 32);
-        closeBtn->anchors()->top  = {body, Edge::Bottom, 16};
+        closeBtn->anchors()->top = {body, Edge::Bottom, 16};
         closeBtn->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(closeBtn);
 
@@ -1202,7 +1320,7 @@ TEST_F(PopupTest, VisualCheck) {
     auto* btn6 = new Button("Relative Pos", visual);
     btn6->setFixedSize(160, 36);
     btn6->anchors()->horizontalCenter = {visual, Edge::HCenter, 0};
-    btn6->anchors()->bottom           = {visual, Edge::Bottom, -60};
+    btn6->anchors()->bottom = {visual, Edge::Bottom, -60};
     layout->addWidget(btn6);
 
     {
@@ -1214,15 +1332,15 @@ TEST_F(PopupTest, VisualCheck) {
 
         auto* title = new Label("Relative Position", p);
         title->setFluentTypography(Typography::FontRole::BodyStrong);
-        title->anchors()->top  = {p, Edge::Top,  24};
+        title->anchors()->top = {p, Edge::Top, 24};
         title->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(title);
 
-        auto* body = new Label(
-            "This popup is positioned\n"
-            "relative to its trigger button\n"
-            "via setPosition(widget, localPos).", p);
-        body->anchors()->top  = {title, Edge::Bottom, 8};
+        auto* body = new Label("This popup is positioned\n"
+                               "relative to its trigger button\n"
+                               "via setPosition(widget, localPos).",
+                               p);
+        body->anchors()->top = {title, Edge::Bottom, 8};
         body->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(body);
 

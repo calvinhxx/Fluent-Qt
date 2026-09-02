@@ -9,6 +9,7 @@
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/overlay/OverlayWindow.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/foundation/private/SurfacePainter_p.h"
 #include <QAbstractAnimation>
 #include <QApplication>
@@ -41,14 +42,12 @@ void refreshFluentDescendants(QWidget* root)
 
 // ── Construction / destruction. zh_CN: 构造 / 析构 ───────────────────────────
 
-Popup::Popup(QWidget* parent) : QWidget(parent) {
+Popup::Popup(QWidget* parent) : QWidget(parent)
+{
     detail::ensureTransientSurfaceAccessibilityFactory();
     m_originalParent = parent;
-    m_overlayCoordinator =
-        new ::fluent::overlay::OverlayCoordinator(this, this);
-    connect(m_overlayCoordinator,
-            &::fluent::overlay::OverlayCoordinator::hostGeometryChanged,
-            this,
+    m_overlayCoordinator = new ::fluent::overlay::OverlayCoordinator(this, this);
+    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this,
             [this]() {
                 if ((!m_isOpen && !isVisible()) || m_isClosing)
                     return;
@@ -64,8 +63,10 @@ Popup::Popup(QWidget* parent) : QWidget(parent) {
 
     m_anim = new QPropertyAnimation(this, "popupProgress", this);
     connect(m_anim, &QPropertyAnimation::finished, this, [this]() {
-        if (m_isClosing) finalizeClosed();
-        else             finalizeOpened();
+        if (m_isClosing)
+            finalizeClosed();
+        else
+            finalizeOpened();
     });
 
     m_opacityEffect = new QGraphicsOpacityEffect(this);
@@ -82,37 +83,42 @@ Popup::Popup(QWidget* parent) : QWidget(parent) {
     onThemeUpdated();
 }
 
-Popup::~Popup() {
+Popup::~Popup()
+{
     if (qApp)
         qApp->removeEventFilter(this);
 }
 
 // ── Theme. zh_CN: 主题 ───────────────────────────────────────────────────────
 
-void Popup::onThemeUpdated() {
+void Popup::onThemeUpdated()
+{
     const QColor surfaceColor = themeColorsRef().bgLayer;
     if (property("fluentSurfaceColor").value<QColor>() != surfaceColor)
         setProperty("fluentSurfaceColor", surfaceColor);
     update();
     refreshFluentDescendants(this);
     if (m_overlayCoordinator->scrim()) {
-        if (auto* fe =
-                dynamic_cast<FluentElement*>(m_overlayCoordinator->scrim()))
+        if (auto* fe = dynamic_cast<FluentElement*>(m_overlayCoordinator->scrim()))
             fe->onThemeUpdated();
     }
 }
 
 // ── popupProgress ────────────────────────────────────────────────────────────
 
-void Popup::setPopupProgress(double p) {
-    if (qFuzzyCompare(m_popupProgress, p)) return;
+void Popup::setPopupProgress(double p)
+{
+    if (qFuzzyCompare(m_popupProgress, p))
+        return;
     m_popupProgress = p;
-    if (m_opacityEffect) m_opacityEffect->setOpacity(p);
+    if (m_opacityEffect)
+        m_opacityEffect->setOpacity(p);
     update();
     emit popupProgressChanged(p);
 }
 
-void Popup::setClosePolicy(ClosePolicy p) {
+void Popup::setClosePolicy(ClosePolicy p)
+{
     if (m_closePolicy == p)
         return;
     m_closePolicy = p;
@@ -122,7 +128,8 @@ void Popup::setClosePolicy(ClosePolicy p) {
         detail::notifyPopupAccessibilityActionsChanged(guard.data());
 }
 
-void Popup::setModal(bool m) {
+void Popup::setModal(bool m)
+{
     if (m_modal == m)
         return;
     m_modal = m;
@@ -133,7 +140,8 @@ void Popup::setModal(bool m) {
         detail::notifyPopupAccessibilityModalChanged(guard.data());
 }
 
-void Popup::setDim(bool d) {
+void Popup::setDim(bool d)
+{
     if (m_dim == d)
         return;
     m_dim = d;
@@ -141,30 +149,54 @@ void Popup::setDim(bool d) {
     emit dimChanged(m_dim);
 }
 
-void Popup::setAnimationEnabled(bool e) {
+void Popup::setAnimationEnabled(bool e)
+{
     if (m_animationEnabled == e)
         return;
     m_animationEnabled = e;
+    QPointer<Popup> guard(this);
     emit animationEnabledChanged(m_animationEnabled);
+    if (!guard || m_animationEnabled || m_anim->state() != QAbstractAnimation::Running)
+        return;
+
+    // The local switch has priority over the application policy and settles an
+    // active open/close transition through its normal finished path.
+    // zh_CN: 局部开关优先于应用策略，并通过正常 finished 路径收敛当前开关过渡。
+    m_anim->setCurrentTime(m_anim->duration());
 }
 
-void Popup::setExitAnimationEnabled(bool e) {
+void Popup::setExitAnimationEnabled(bool e)
+{
     if (m_exitAnimationEnabled == e)
         return;
     m_exitAnimationEnabled = e;
+    if (m_exitAnimationEnabled || !m_isClosing || m_anim->state() != QAbstractAnimation::Running) {
+        return;
+    }
+
+    // The granular exit switch has the same immediate-settle contract as the
+    // general animation switch, but only while an exit is active. Reaching the
+    // end keeps finalizeClosed() and its focus/scrim/closed cleanup on the
+    // animation's normal finished path.
+    // zh_CN: 细粒度退出开关仅在退出动画运行时即时收敛，并继续通过正常
+    // finished 路径执行 finalizeClosed() 的焦点、遮罩与 closed 清理。
+    m_anim->setCurrentTime(m_anim->duration());
 }
 
-void Popup::setPendingCloseReason(CloseReason reason) {
+void Popup::setPendingCloseReason(CloseReason reason)
+{
     m_pendingCloseReason = reason;
     m_closeReasonExplicit = true;
 }
 
-void Popup::resetPendingCloseReason() {
+void Popup::resetPendingCloseReason()
+{
     m_pendingCloseReason = Programmatic;
     m_closeReasonExplicit = false;
 }
 
-void Popup::setThemeSource(QWidget* source) {
+void Popup::setThemeSource(QWidget* source)
+{
     if (m_themeSource == source)
         return;
     m_themeSource = source;
@@ -172,20 +204,24 @@ void Popup::setThemeSource(QWidget* source) {
         onThemeUpdated();
 }
 
-void Popup::setFocusOnOpenEnabled(bool enabled) {
+void Popup::setFocusOnOpenEnabled(bool enabled)
+{
     m_overlayCoordinator->setFocusOnOpenEnabled(enabled);
 }
 
 // ── topLevelWidget resolution. zh_CN: topLevelWidget 推断 ────────────────────
 
-QWidget* Popup::originalParentTopLevel() const {
+QWidget* Popup::originalParentTopLevel() const
+{
     return ::fluent::overlay::resolveOwningTopLevel(m_originalParent, parentWidget());
 }
 
 // ── setPosition ──────────────────────────────────────────────────────────────
 
-void Popup::setPosition(QWidget* relativeTo, const QPoint& localPos) {
-    if (!relativeTo) return;
+void Popup::setPosition(QWidget* relativeTo, const QPoint& localPos)
+{
+    if (!relativeTo)
+        return;
     QWidget* top = relativeTo->window();
     m_targetPos = relativeTo->mapTo(top, localPos);
     m_positionRelativeTo = relativeTo;
@@ -195,34 +231,39 @@ void Popup::setPosition(QWidget* relativeTo, const QPoint& localPos) {
 
 // ── Position (centered by default; subclasses may override). zh_CN: 位置计算 ──
 
-QPoint Popup::computePosition() const {
+QPoint Popup::computePosition() const
+{
     QWidget* top = originalParentTopLevel();
-    if (!top) return pos();
+    if (!top)
+        return pos();
     // Default: center inside the topLevelWidget. zh_CN: 默认在 topLevelWidget 中居中。
     const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
     return QPoint(surface.left() + (surface.width() - width()) / 2,
                   surface.top() + (surface.height() - height()) / 2);
 }
 
-QPoint Popup::resolvedPosition() const {
+QPoint Popup::resolvedPosition() const
+{
     if (!m_positionSet)
         return computePosition();
 
     QPoint cardTopLeft = m_targetPos;
     if (m_positionRelativeTo && m_positionRelativeTo->window()) {
-        cardTopLeft = m_positionRelativeTo->mapTo(m_positionRelativeTo->window(),
-                                                  m_positionLocalPos);
+        cardTopLeft =
+            m_positionRelativeTo->mapTo(m_positionRelativeTo->window(), m_positionLocalPos);
     }
     return ::fluent::overlay::outerTopLeftForVisibleCard(cardTopLeft);
 }
 
-QWidget* Popup::trackedPositionAnchor() const {
+QWidget* Popup::trackedPositionAnchor() const
+{
     if (m_positionSet)
         return m_positionRelativeTo.data();
     return automaticPositionAnchor();
 }
 
-QWidget* Popup::themeOverrideSource() const {
+QWidget* Popup::themeOverrideSource() const
+{
     if (QWidget* anchor = trackedPositionAnchor())
         return anchor;
     if (m_themeSource)
@@ -232,19 +273,21 @@ QWidget* Popup::themeOverrideSource() const {
     return parentWidget();
 }
 
-bool Popup::syncThemeOverrideFromSource() {
-    const bool popupChanged = ::fluent::overlay::syncInheritedThemeOverride(
-        this, themeOverrideSource());
+bool Popup::syncThemeOverrideFromSource()
+{
+    const bool popupChanged =
+        ::fluent::overlay::syncInheritedThemeOverride(this, themeOverrideSource());
 
     bool scrimChanged = false;
     if (m_overlayCoordinator->scrim()) {
-        scrimChanged = ::fluent::overlay::syncInheritedThemeOverride(
-            m_overlayCoordinator->scrim(), this);
+        scrimChanged =
+            ::fluent::overlay::syncInheritedThemeOverride(m_overlayCoordinator->scrim(), this);
     }
     return popupChanged || scrimChanged;
 }
 
-void Popup::queuePositionSync() {
+void Popup::queuePositionSync()
+{
     if (m_positionSyncPending)
         return;
     m_positionSyncPending = true;
@@ -254,7 +297,8 @@ void Popup::queuePositionSync() {
     });
 }
 
-void Popup::syncPositionToAnchor() {
+void Popup::syncPositionToAnchor()
+{
     if ((!m_isOpen && !isVisible()) || m_isClosing)
         return;
     QWidget* anchor = trackedPositionAnchor();
@@ -272,7 +316,8 @@ void Popup::syncPositionToAnchor() {
 
 // ── open / close ─────────────────────────────────────────────────────────────
 
-void Popup::open() {
+void Popup::open()
+{
     if (m_openInProgress)
         return;
     if (m_isOpen && !m_isClosing)
@@ -324,7 +369,8 @@ void Popup::open() {
     }
 
     ensurePolished();
-    if (layout()) layout()->activate();
+    if (layout())
+        layout()->activate();
 
     // Layout drives the size. zh_CN: layout 驱动尺寸。
     if (layout()) {
@@ -362,15 +408,18 @@ void Popup::open() {
         m_openInProgress = false;
 }
 
-void Popup::close() {
+void Popup::close()
+{
     closeWithReason(m_closeReasonExplicit ? m_pendingCloseReason : Programmatic);
 }
 
-void Popup::closeWithReason(CloseReason reason) {
+void Popup::closeWithReason(CloseReason reason)
+{
     beginClose(reason);
 }
 
-void Popup::beginClose(CloseReason reason) {
+void Popup::beginClose(CloseReason reason)
+{
     if (m_isClosing)
         return;
     if (!m_isOpen && !isVisible() && !m_anim->state() && !m_openInProgress)
@@ -414,32 +463,38 @@ void Popup::beginClose(CloseReason reason) {
     startExitAnimation();
 }
 
-void Popup::setIsOpen(bool open) {
-    if (open) this->open();
-    else      this->close();
+void Popup::setIsOpen(bool open)
+{
+    if (open)
+        this->open();
+    else
+        this->close();
 }
 
 // ── Animation. zh_CN: 动画 ───────────────────────────────────────────────────
 
-void Popup::startEnterAnimation() {
+void Popup::startEnterAnimation()
+{
     const auto& a = themeAnimation();
-    m_anim->setDuration(a.normal);       // Matches Dialog: 250ms. zh_CN: 与 Dialog 一致。
+    m_anim->setDuration(a.normal); // Matches Dialog: 250ms. zh_CN: 与 Dialog 一致。
     m_anim->setStartValue(m_popupProgress);
     m_anim->setEndValue(1.0);
     m_anim->setEasingCurve(a.entrance); // Matches Dialog. zh_CN: 与 Dialog 一致。
-    m_anim->start();
+    ::fluent::detail::startMotionTransition(m_anim, a.normal, m_animationEnabled);
 }
 
-void Popup::startExitAnimation() {
+void Popup::startExitAnimation()
+{
     const auto& a = themeAnimation();
-    m_anim->setDuration(a.normal);       // Matches Dialog: 250ms. zh_CN: 与 Dialog 一致。
+    m_anim->setDuration(a.normal); // Matches Dialog: 250ms. zh_CN: 与 Dialog 一致。
     m_anim->setStartValue(m_popupProgress);
     m_anim->setEndValue(0.0);
-    m_anim->setEasingCurve(a.exit);     // Matches Dialog. zh_CN: 与 Dialog 一致。
-    m_anim->start();
+    m_anim->setEasingCurve(a.exit); // Matches Dialog. zh_CN: 与 Dialog 一致。
+    ::fluent::detail::startMotionTransition(m_anim, a.normal, m_animationEnabled);
 }
 
-void Popup::finalizeOpened() {
+void Popup::finalizeOpened()
+{
     if (m_isClosing || !m_isOpen)
         return;
     QPointer<Popup> guard(this);
@@ -448,7 +503,8 @@ void Popup::finalizeOpened() {
         m_openInProgress = false;
 }
 
-void Popup::finalizeClosed() {
+void Popup::finalizeClosed()
+{
     if (m_isOpen) {
         m_isClosing = false;
         return;
@@ -459,16 +515,13 @@ void Popup::finalizeClosed() {
     if (!m_openInProgress)
         m_isClosing = false;
     QWidget* focused = qApp ? QApplication::focusWidget() : nullptr;
-    const bool shouldRestoreFocus =
-        !focused || focused == this || isAncestorOf(focused);
+    const bool shouldRestoreFocus = !focused || focused == this || isAncestorOf(focused);
     QPointer<QWidget> focusRestoreTarget = m_focusRestoreTarget;
     m_focusRestoreTarget = nullptr;
     hide();
     destroyScrim();
-    if (shouldRestoreFocus && focusRestoreTarget
-        && focusRestoreTarget->isVisible()
-        && focusRestoreTarget->isEnabled()
-        && focusRestoreTarget->focusPolicy() != Qt::NoFocus) {
+    if (shouldRestoreFocus && focusRestoreTarget && focusRestoreTarget->isVisible() &&
+        focusRestoreTarget->isEnabled() && focusRestoreTarget->focusPolicy() != Qt::NoFocus) {
         focusRestoreTarget->setFocus(Qt::PopupFocusReason);
     }
     QPointer<Popup> guard(this);
@@ -479,7 +532,8 @@ void Popup::finalizeClosed() {
 
 // ── Scrim ────────────────────────────────────────────────────────────────────
 
-void Popup::updateScrimState() {
+void Popup::updateScrimState()
+{
     if (!m_isOpen && !isVisible()) {
         destroyScrim();
         return;
@@ -496,8 +550,7 @@ void Popup::updateScrimState() {
         return;
 
     m_overlayCoordinator->attachTo(top);
-    auto* scrim =
-        m_overlayCoordinator->ensureScrim(QStringLiteral("PopupScrim"));
+    auto* scrim = m_overlayCoordinator->ensureScrim(QStringLiteral("PopupScrim"));
     if (!scrim)
         return;
     scrim->setModalAndDim(m_modal, m_dim);
@@ -506,18 +559,20 @@ void Popup::updateScrimState() {
     m_overlayCoordinator->raiseStack();
 }
 
-void Popup::destroyScrim() {
+void Popup::destroyScrim()
+{
     m_overlayCoordinator->releaseScrim();
 }
 
 // ── Light-dismiss / Escape ──────────────────────────────────────────────────
 
-bool Popup::eventFilter(QObject* watched, QEvent* event) {
-    if (!m_isOpen && !isVisible()) return false;
+bool Popup::eventFilter(QObject* watched, QEvent* event)
+{
+    if (!m_isOpen && !isVisible())
+        return false;
 
     QWidget* positionAnchor = trackedPositionAnchor();
-    if (event && positionAnchor && event->type() == QEvent::Destroy
-        && watched == positionAnchor) {
+    if (event && positionAnchor && event->type() == QEvent::Destroy && watched == positionAnchor) {
         // The invocation target is already inside QObject destruction. Do not
         // let finalizeClosed() call setFocus() on it while closing the overlay.
         // zh_CN: 调用目标已进入 QObject 析构；关闭浮层时不能再向其归还焦点。
@@ -542,13 +597,16 @@ bool Popup::eventFilter(QObject* watched, QEvent* event) {
         return true;
     }
 
-    if (!::fluent::overlay::allowsImplicitClose(noAutoClose, m_closePolicy & CloseOnPressOutside)) return false;
-    if (!event || event->type() != QEvent::MouseButtonPress) return false;
+    if (!::fluent::overlay::allowsImplicitClose(noAutoClose, m_closePolicy & CloseOnPressOutside))
+        return false;
+    if (!event || event->type() != QEvent::MouseButtonPress)
+        return false;
 
     auto* me = static_cast<QMouseEvent*>(event);
     const QPoint globalPos = fluentMouseGlobalPos(me);
     const QPoint local = mapFromGlobal(globalPos);
-    if (::fluent::overlay::visibleCardContains(rect(), local)) return false;
+    if (::fluent::overlay::visibleCardContains(rect(), local))
+        return false;
 
     if (!m_closeReasonExplicit)
         setPendingCloseReason(LightDismiss);
@@ -570,10 +628,11 @@ bool Popup::eventFilter(QObject* watched, QEvent* event) {
         for (const QPointer<QWidget>& passthrough : m_lightDismissPassthrough) {
             if (!passthrough)
                 continue;
-            const bool byHierarchy = hit
-                && (hit == passthrough.data() || passthrough->isAncestorOf(hit));
-            const bool byGeometry = passthrough->isVisible()
-                && passthrough->rect().contains(passthrough->mapFromGlobal(globalPos));
+            const bool byHierarchy =
+                hit && (hit == passthrough.data() || passthrough->isAncestorOf(hit));
+            const bool byGeometry =
+                passthrough->isVisible() &&
+                passthrough->rect().contains(passthrough->mapFromGlobal(globalPos));
             if (byHierarchy || byGeometry)
                 return false;
         }
@@ -583,7 +642,8 @@ bool Popup::eventFilter(QObject* watched, QEvent* event) {
     return false;
 }
 
-void Popup::keyPressEvent(QKeyEvent* event) {
+void Popup::keyPressEvent(QKeyEvent* event)
+{
     if (event->key() == Qt::Key_Escape && (m_closePolicy & CloseOnEscape)) {
         if (!m_closeReasonExplicit)
             setPendingCloseReason(Escape);
@@ -596,7 +656,8 @@ void Popup::keyPressEvent(QKeyEvent* event) {
 
 // ── Painting. zh_CN: 绘制 ────────────────────────────────────────────────────
 
-void Popup::paintEvent(QPaintEvent*) {
+void Popup::paintEvent(QPaintEvent*)
+{
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
@@ -609,15 +670,14 @@ void Popup::paintEvent(QPaintEvent*) {
     // Shared layered card shadow.
     // zh_CN: 共享的分层卡片阴影。
     const int r = themeRadius().overlay;
-    ::fluent::overlay::paintLayeredShadow(painter, contentRect, r,
-                                          themeShadow(Elevation::High));
+    ::fluent::overlay::paintLayeredShadow(painter, contentRect, r, themeShadow(Elevation::High));
 
     // Background and border. zh_CN: 背景 + 边框。
     const auto& colors = themeColorsRef();
     fluent::painting::RoundedSurfacePaint surface;
     surface.fill = colors.bgLayer;
     surface.radius = r;
-        surface.border = colors.strokeDefault;
+    surface.border = colors.strokeDefault;
     fluent::painting::paintRoundedSurface(painter, QRectF(contentRect), surface);
 }
 

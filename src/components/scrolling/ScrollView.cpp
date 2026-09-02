@@ -16,6 +16,7 @@
 #include <QWidget>
 
 #include "compatibility/QtCompat.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 
 namespace fluent::scrolling {
 
@@ -25,16 +26,14 @@ constexpr qint64 NativeZoomPinchSuppressionMs = 350;
 
 bool shouldSyncFloatingScrollBarAfter(QEvent::Type type)
 {
-    return type == QEvent::Resize
-        || type == QEvent::Show
-        || type == QEvent::Move
-        || type == QEvent::LayoutRequest;
+    return type == QEvent::Resize || type == QEvent::Show || type == QEvent::Move ||
+           type == QEvent::LayoutRequest;
 }
 
 class TransparentCornerWidget : public QWidget {
 public:
-    explicit TransparentCornerWidget(QWidget* parent = nullptr)
-        : QWidget(parent) {
+    explicit TransparentCornerWidget(QWidget* parent = nullptr) : QWidget(parent)
+    {
         setObjectName(QStringLiteral("FluentScrollViewTransparentCorner"));
         setAutoFillBackground(false);
         setAttribute(Qt::WA_NoSystemBackground);
@@ -47,16 +46,18 @@ protected:
 
 } // namespace
 
-ScrollView::ScrollView(QWidget* parent)
-    : QScrollArea(parent) {
+ScrollView::ScrollView(QWidget* parent) : QScrollArea(parent)
+{
     init();
 }
 
-ScrollView::~ScrollView() {
+ScrollView::~ScrollView()
+{
     releaseContentWidget(true, true);
 }
 
-void ScrollView::init() {
+void ScrollView::init()
+{
     setFrameShape(QFrame::NoFrame);
     setWidgetResizable(false);
     setAutoFillBackground(false);
@@ -94,45 +95,48 @@ void ScrollView::init() {
     m_horizontalAnimation = new QPropertyAnimation(horizontalScrollBar(), "value", this);
     m_verticalAnimation = new QPropertyAnimation(verticalScrollBar(), "value", this);
     m_zoomAnimation = new QPropertyAnimation(this, "zoomFactor", this);
-    connect(m_zoomAnimation, &QPropertyAnimation::finished, this, [this]() {
-        m_zoomAnimationAnchor = QPointF(-1.0, -1.0);
-    });
+    connect(m_zoomAnimation, &QPropertyAnimation::finished, this,
+            [this]() { m_zoomAnimationAnchor = QPointF(-1.0, -1.0); });
 
-    connect(horizontalScrollBar(), &QScrollBar::valueChanged, this, [this](int) {
-        emit scrollPositionChanged(horizontalOffset(), verticalOffset());
-    });
-    connect(verticalScrollBar(), &QScrollBar::valueChanged, this, [this](int) {
-        emit scrollPositionChanged(horizontalOffset(), verticalOffset());
-    });
+    connect(horizontalScrollBar(), &QScrollBar::valueChanged, this,
+            [this](int) { emit scrollPositionChanged(horizontalOffset(), verticalOffset()); });
+    connect(verticalScrollBar(), &QScrollBar::valueChanged, this,
+            [this](int) { emit scrollPositionChanged(horizontalOffset(), verticalOffset()); });
 
     applyScrollPolicies();
     updateViewportPalette();
     updateCornerWidget();
 }
 
-void ScrollView::setWidget(QWidget* content) {
+void ScrollView::setWidget(QWidget* content)
+{
     setContentWidget(content, WidgetOwnership::Owned);
 }
 
-QWidget* ScrollView::takeWidget() {
+QWidget* ScrollView::takeWidget()
+{
     return takeContentWidget();
 }
 
-QWidget* ScrollView::contentWidget() const {
+QWidget* ScrollView::contentWidget() const
+{
     const_cast<ScrollView*>(this)->synchronizeContentWidget();
     return QScrollArea::widget();
 }
 
-WidgetOwnership ScrollView::contentOwnership() const {
+WidgetOwnership ScrollView::contentOwnership() const
+{
     const_cast<ScrollView*>(this)->synchronizeContentWidget();
     return m_contentOwnership;
 }
 
-void ScrollView::setContentWidget(QWidget* content) {
+void ScrollView::setContentWidget(QWidget* content)
+{
     setContentWidget(content, WidgetOwnership::Owned);
 }
 
-bool ScrollView::setContentWidget(QWidget* content, WidgetOwnership ownership) {
+bool ScrollView::setContentWidget(QWidget* content, WidgetOwnership ownership)
+{
     synchronizeContentWidget();
     QWidget* current = QScrollArea::widget();
     if (current == content) {
@@ -160,7 +164,8 @@ bool ScrollView::setContentWidget(QWidget* content, WidgetOwnership ownership) {
     return true;
 }
 
-QWidget* ScrollView::takeContentWidget() {
+QWidget* ScrollView::takeContentWidget()
+{
     synchronizeContentWidget();
     const WidgetOwnership previousOwnership = m_contentOwnership;
     QWidget* content = releaseContentWidget(false, false);
@@ -172,7 +177,8 @@ QWidget* ScrollView::takeContentWidget() {
     return content;
 }
 
-void ScrollView::synchronizeContentWidget(bool notify) {
+void ScrollView::synchronizeContentWidget(bool notify)
+{
     if (m_contentMutationInProgress)
         return;
     QWidget* content = QScrollArea::widget();
@@ -187,10 +193,9 @@ void ScrollView::synchronizeContentWidget(bool notify) {
     observeContentWidget(content, nullptr, WidgetOwnership::Owned, notify);
 }
 
-void ScrollView::observeContentWidget(QWidget* content,
-                                      QWidget* originalParent,
-                                      WidgetOwnership ownership,
-                                      bool notify) {
+void ScrollView::observeContentWidget(QWidget* content, QWidget* originalParent,
+                                      WidgetOwnership ownership, bool notify)
+{
     QWidget* previous = m_observedContentWidget.data();
     const WidgetOwnership previousOwnership = m_contentOwnership;
     if (previous)
@@ -217,7 +222,8 @@ void ScrollView::observeContentWidget(QWidget* content,
         emit contentOwnershipChanged(m_contentOwnership);
 }
 
-QWidget* ScrollView::releaseContentWidget(bool deleteOwned, bool restoreParent) {
+QWidget* ScrollView::releaseContentWidget(bool deleteOwned, bool restoreParent)
+{
     synchronizeContentWidget(false);
     QWidget* content = QScrollArea::widget();
     if (!content) {
@@ -254,7 +260,8 @@ QWidget* ScrollView::releaseContentWidget(bool deleteOwned, bool restoreParent) 
     return content;
 }
 
-void ScrollView::setHorizontalScrollMode(ScrollMode mode) {
+void ScrollView::setHorizontalScrollMode(ScrollMode mode)
+{
     if (m_horizontalScrollMode == mode)
         return;
     m_horizontalScrollMode = mode;
@@ -262,7 +269,8 @@ void ScrollView::setHorizontalScrollMode(ScrollMode mode) {
     emit horizontalScrollModeChanged();
 }
 
-void ScrollView::setVerticalScrollMode(ScrollMode mode) {
+void ScrollView::setVerticalScrollMode(ScrollMode mode)
+{
     if (m_verticalScrollMode == mode)
         return;
     m_verticalScrollMode = mode;
@@ -270,7 +278,8 @@ void ScrollView::setVerticalScrollMode(ScrollMode mode) {
     emit verticalScrollModeChanged();
 }
 
-void ScrollView::setHorizontalScrollBarVisibility(ScrollBarVisibility visibility) {
+void ScrollView::setHorizontalScrollBarVisibility(ScrollBarVisibility visibility)
+{
     if (m_horizontalScrollBarVisibility == visibility)
         return;
     m_horizontalScrollBarVisibility = visibility;
@@ -278,7 +287,8 @@ void ScrollView::setHorizontalScrollBarVisibility(ScrollBarVisibility visibility
     emit horizontalScrollBarVisibilityChanged();
 }
 
-void ScrollView::setVerticalScrollBarVisibility(ScrollBarVisibility visibility) {
+void ScrollView::setVerticalScrollBarVisibility(ScrollBarVisibility visibility)
+{
     if (m_verticalScrollBarVisibility == visibility)
         return;
     m_verticalScrollBarVisibility = visibility;
@@ -286,25 +296,29 @@ void ScrollView::setVerticalScrollBarVisibility(ScrollBarVisibility visibility) 
     emit verticalScrollBarVisibilityChanged();
 }
 
-void ScrollView::setZoomMode(ZoomMode mode) {
+void ScrollView::setZoomMode(ZoomMode mode)
+{
     if (m_zoomMode == mode)
         return;
     m_zoomMode = mode;
     emit zoomModeChanged();
 }
 
-void ScrollView::setScrollChainingEnabled(bool enabled) {
+void ScrollView::setScrollChainingEnabled(bool enabled)
+{
     if (m_scrollChainingEnabled == enabled)
         return;
     m_scrollChainingEnabled = enabled;
     emit scrollChainingEnabledChanged();
 }
 
-void ScrollView::setZoomFactor(qreal factor) {
+void ScrollView::setZoomFactor(qreal factor)
+{
     setZoomFactorAt(factor, effectiveZoomAnchor(m_zoomAnimationAnchor));
 }
 
-void ScrollView::setMinZoomFactor(qreal factor) {
+void ScrollView::setMinZoomFactor(qreal factor)
+{
     factor = std::max(0.01, factor);
     if (qFuzzyCompare(m_minZoomFactor, factor))
         return;
@@ -318,7 +332,8 @@ void ScrollView::setMinZoomFactor(qreal factor) {
     setZoomFactor(m_zoomFactor);
 }
 
-void ScrollView::setMaxZoomFactor(qreal factor) {
+void ScrollView::setMaxZoomFactor(qreal factor)
+{
     factor = std::max(0.01, factor);
     if (qFuzzyCompare(m_maxZoomFactor, factor))
         return;
@@ -332,28 +347,35 @@ void ScrollView::setMaxZoomFactor(qreal factor) {
     setZoomFactor(m_zoomFactor);
 }
 
-int ScrollView::horizontalOffset() const {
+int ScrollView::horizontalOffset() const
+{
     return horizontalScrollBar()->value();
 }
 
-int ScrollView::verticalOffset() const {
+int ScrollView::verticalOffset() const
+{
     return verticalScrollBar()->value();
 }
 
-int ScrollView::scrollableWidth() const {
+int ScrollView::scrollableWidth() const
+{
     return horizontalScrollBar()->maximum();
 }
 
-int ScrollView::scrollableHeight() const {
+int ScrollView::scrollableHeight() const
+{
     return verticalScrollBar()->maximum();
 }
 
-void ScrollView::scrollTo(int x, int y, bool animated) {
+void ScrollView::scrollTo(int x, int y, bool animated)
+{
     QScrollBar* horizontal = horizontalScrollBar();
     QScrollBar* vertical = verticalScrollBar();
 
-    const int targetX = isAxisEnabled(Axis::Horizontal) ? clampedTarget(horizontal, x) : horizontal->value();
-    const int targetY = isAxisEnabled(Axis::Vertical) ? clampedTarget(vertical, y) : vertical->value();
+    const int targetX =
+        isAxisEnabled(Axis::Horizontal) ? clampedTarget(horizontal, x) : horizontal->value();
+    const int targetY =
+        isAxisEnabled(Axis::Vertical) ? clampedTarget(vertical, y) : vertical->value();
 
     if (animated) {
         animateScrollBar(horizontal, m_horizontalAnimation, targetX);
@@ -366,11 +388,13 @@ void ScrollView::scrollTo(int x, int y, bool animated) {
     vertical->setValue(targetY);
 }
 
-void ScrollView::scrollBy(int dx, int dy, bool animated) {
+void ScrollView::scrollBy(int dx, int dy, bool animated)
+{
     scrollTo(horizontalOffset() + dx, verticalOffset() + dy, animated);
 }
 
-void ScrollView::zoomTo(qreal factor, bool animated) {
+void ScrollView::zoomTo(qreal factor, bool animated)
+{
     const QPointF anchor = defaultZoomAnchor();
     if (!animated) {
         stopZoomAnimation();
@@ -389,20 +413,23 @@ void ScrollView::zoomTo(qreal factor, bool animated) {
     m_zoomAnimation->setEasingCurve(anim.decelerate);
     m_zoomAnimation->setStartValue(m_zoomFactor);
     m_zoomAnimation->setEndValue(target);
-    m_zoomAnimation->start();
+    ::fluent::detail::startMotionTransition(m_zoomAnimation, anim.normal);
 }
 
-void ScrollView::zoomBy(qreal factorMultiplier, bool animated) {
+void ScrollView::zoomBy(qreal factorMultiplier, bool animated)
+{
     if (factorMultiplier <= 0.0)
         return;
     zoomTo(m_zoomFactor * factorMultiplier, animated);
 }
 
-void ScrollView::resetZoom(bool animated) {
+void ScrollView::resetZoom(bool animated)
+{
     zoomTo(1.0, animated);
 }
 
-void ScrollView::onThemeUpdated() {
+void ScrollView::onThemeUpdated()
+{
     updateViewportPalette();
     updateCornerWidget();
     update();
@@ -411,7 +438,8 @@ void ScrollView::onThemeUpdated() {
         m_cornerWidget->update();
 }
 
-bool ScrollView::event(QEvent* event) {
+bool ScrollView::event(QEvent* event)
+{
     synchronizeContentWidget();
     if (event->type() == QEvent::NativeGesture && handleNativeGesture(event, this))
         return true;
@@ -427,16 +455,15 @@ bool ScrollView::event(QEvent* event) {
     return handled;
 }
 
-bool ScrollView::eventFilter(QObject* watched, QEvent* event) {
+bool ScrollView::eventFilter(QObject* watched, QEvent* event)
+{
     synchronizeContentWidget();
-    const bool syncAfter = (watched == viewport()
-                            || (m_observedContentWidget
-                                && watched == m_observedContentWidget.data()))
-        && shouldSyncFloatingScrollBarAfter(event->type());
+    const bool syncAfter = (watched == viewport() || (m_observedContentWidget &&
+                                                      watched == m_observedContentWidget.data())) &&
+                           shouldSyncFloatingScrollBarAfter(event->type());
 
-    if (watched == this || watched == viewport()
-        || (m_observedContentWidget
-            && watched == m_observedContentWidget.data())) {
+    if (watched == this || watched == viewport() ||
+        (m_observedContentWidget && watched == m_observedContentWidget.data())) {
         if (event->type() == QEvent::Wheel) {
             auto* wheel = static_cast<QWheelEvent*>(event);
             if (handleZoomWheel(wheel, watched))
@@ -460,7 +487,8 @@ bool ScrollView::eventFilter(QObject* watched, QEvent* event) {
     return handled;
 }
 
-bool ScrollView::viewportEvent(QEvent* event) {
+bool ScrollView::viewportEvent(QEvent* event)
+{
     const bool syncAfter = shouldSyncFloatingScrollBarAfter(event->type());
 
     if (event->type() == QEvent::Wheel) {
@@ -485,7 +513,8 @@ bool ScrollView::viewportEvent(QEvent* event) {
     return handled;
 }
 
-void ScrollView::wheelEvent(QWheelEvent* event) {
+void ScrollView::wheelEvent(QWheelEvent* event)
+{
     if (handleZoomWheel(event, this))
         return;
 
@@ -517,20 +546,17 @@ void ScrollView::wheelEvent(QWheelEvent* event) {
         event->accept();
 }
 
-bool ScrollView::handleDiscreteWheel(QWheelEvent* event) {
-    if (!event
-        || fluentWheelInputKind(event) != FluentWheelInputKind::NoPhaseDiscrete
-        || event->angleDelta().isNull()) {
+bool ScrollView::handleDiscreteWheel(QWheelEvent* event)
+{
+    if (!event || fluentWheelInputKind(event) != FluentWheelInputKind::NoPhaseDiscrete ||
+        event->angleDelta().isNull()) {
         return false;
     }
 
-    const bool horizontal = qAbs(event->angleDelta().x())
-        > qAbs(event->angleDelta().y());
+    const bool horizontal = qAbs(event->angleDelta().x()) > qAbs(event->angleDelta().y());
     const Axis axis = horizontal ? Axis::Horizontal : Axis::Vertical;
-    QScrollBar* scrollBar = horizontal ? horizontalScrollBar()
-                                       : verticalScrollBar();
-    QPropertyAnimation* animation = horizontal ? m_horizontalAnimation
-                                               : m_verticalAnimation;
+    QScrollBar* scrollBar = horizontal ? horizontalScrollBar() : verticalScrollBar();
+    QPropertyAnimation* animation = horizontal ? m_horizontalAnimation : m_verticalAnimation;
 
     event->ignore();
     if (!scrollBar || !isAxisEnabled(axis)) {
@@ -556,27 +582,23 @@ bool ScrollView::handleDiscreteWheel(QWheelEvent* event) {
     if (wheelStep != 0) {
         int baseValue = currentValue;
         if (animation && animation->state() == QAbstractAnimation::Running) {
-            const int pendingValue = clampedTarget(
-                scrollBar, animation->endValue().toInt());
+            const int pendingValue = clampedTarget(scrollBar, animation->endValue().toInt());
             const int pendingStep = pendingValue - currentValue;
             const bool sameDirection =
-                (pendingStep > 0 && wheelStep > 0)
-                || (pendingStep < 0 && wheelStep < 0);
+                (pendingStep > 0 && wheelStep > 0) || (pendingStep < 0 && wheelStep < 0);
             if (sameDirection)
                 baseValue = pendingValue;
         }
 
-        const qint64 extendedTarget = static_cast<qint64>(baseValue)
-            + static_cast<qint64>(wheelStep);
-        const int targetValue = static_cast<int>(std::clamp<qint64>(
-            extendedTarget,
-            static_cast<qint64>(scrollBar->minimum()),
-            static_cast<qint64>(scrollBar->maximum())));
+        const qint64 extendedTarget =
+            static_cast<qint64>(baseValue) + static_cast<qint64>(wheelStep);
+        const int targetValue = static_cast<int>(
+            std::clamp<qint64>(extendedTarget, static_cast<qint64>(scrollBar->minimum()),
+                               static_cast<qint64>(scrollBar->maximum())));
 
-        const bool alreadyHeadingThere = animation
-            && animation->state() == QAbstractAnimation::Running
-            && clampedTarget(scrollBar, animation->endValue().toInt())
-                == targetValue;
+        const bool alreadyHeadingThere =
+            animation && animation->state() == QAbstractAnimation::Running &&
+            clampedTarget(scrollBar, animation->endValue().toInt()) == targetValue;
         if (targetValue != currentValue && !alreadyHeadingThere)
             animateScrollBar(scrollBar, animation, targetValue, true);
         event->accept();
@@ -585,28 +607,30 @@ bool ScrollView::handleDiscreteWheel(QWheelEvent* event) {
 
     // Match the existing ScrollView chaining contract at an edge while still
     // preserving QScrollBar's accepted state for fractional wheel deltas.
-    if (!m_scrollChainingEnabled && !event->isAccepted()
-        && hasScrollableRange()) {
+    if (!m_scrollChainingEnabled && !event->isAccepted() && hasScrollableRange()) {
         event->accept();
     }
     return true;
 }
 
-bool ScrollView::hasScrollableRange() const {
+bool ScrollView::hasScrollableRange() const
+{
     const QScrollBar* vertical = verticalScrollBar();
     const QScrollBar* horizontal = horizontalScrollBar();
-    return (isAxisEnabled(Axis::Vertical) && vertical
-            && vertical->maximum() > vertical->minimum())
-        || (isAxisEnabled(Axis::Horizontal) && horizontal
-            && horizontal->maximum() > horizontal->minimum());
+    return (isAxisEnabled(Axis::Vertical) && vertical &&
+            vertical->maximum() > vertical->minimum()) ||
+           (isAxisEnabled(Axis::Horizontal) && horizontal &&
+            horizontal->maximum() > horizontal->minimum());
 }
 
-void ScrollView::applyScrollPolicies() {
+void ScrollView::applyScrollPolicies()
+{
     applyAxisPolicy(Axis::Horizontal);
     applyAxisPolicy(Axis::Vertical);
 }
 
-void ScrollView::applyAxisPolicy(Axis axis) {
+void ScrollView::applyAxisPolicy(Axis axis)
+{
     const ScrollBarVisibility visibility = visibilityForAxis(axis);
     const bool enabled = isAxisEnabled(axis);
 
@@ -617,11 +641,12 @@ void ScrollView::applyAxisPolicy(Axis axis) {
     // The horizontal bar keeps the classic policies. zh_CN: 垂直“常显(Visible)”改为 WinUI 风格的浮动
     // 覆盖条：原生条不预留沟槽(AlwaysOff)，使视口（及首页 hero 等内容）铺满整宽，另用一条同步的半透明
     // ScrollBar 浮于右缘并自动隐藏。这消除了 hero 旁的不透明沟槽条带，以及滚动条显隐时的横向重排。水平条沿用经典策略。
-    const bool verticalOverlay = axis == Axis::Vertical && enabled
-        && visibility == ScrollBarVisibility::Visible;
+    const bool verticalOverlay =
+        axis == Axis::Vertical && enabled && visibility == ScrollBarVisibility::Visible;
 
     Qt::ScrollBarPolicy policy = Qt::ScrollBarAsNeeded;
-    if (!enabled || visibility == ScrollBarVisibility::Disabled || visibility == ScrollBarVisibility::Hidden) {
+    if (!enabled || visibility == ScrollBarVisibility::Disabled ||
+        visibility == ScrollBarVisibility::Hidden) {
         policy = Qt::ScrollBarAlwaysOff;
     } else if (visibility == ScrollBarVisibility::Visible) {
         policy = verticalOverlay ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAlwaysOn;
@@ -640,13 +665,14 @@ void ScrollView::applyAxisPolicy(Axis axis) {
     }
 }
 
-void ScrollView::syncFloatingScrollBar() {
+void ScrollView::syncFloatingScrollBar()
+{
     if (!m_floatingVerticalBar)
         return;
 
     QScrollBar* real = verticalScrollBar();
-    const bool overlay = isAxisEnabled(Axis::Vertical)
-        && visibilityForAxis(Axis::Vertical) == ScrollBarVisibility::Visible;
+    const bool overlay = isAxisEnabled(Axis::Vertical) &&
+                         visibilityForAxis(Axis::Vertical) == ScrollBarVisibility::Visible;
     const bool scrollable = real->maximum() > real->minimum();
 
     m_floatingVerticalBar->setRange(real->minimum(), real->maximum());
@@ -659,24 +685,23 @@ void ScrollView::syncFloatingScrollBar() {
     positionFloatingScrollBar();
 }
 
-void ScrollView::positionFloatingScrollBar() {
+void ScrollView::positionFloatingScrollBar()
+{
     if (!m_floatingVerticalBar)
         return;
     QWidget* area = viewport();
     if (!area)
         return;
     const int thickness = m_floatingVerticalBar->thickness();
-    const QRect target(qMax(0, area->width() - thickness),
-                       0,
-                       thickness,
-                       qMax(0, area->height()));
+    const QRect target(qMax(0, area->width() - thickness), 0, thickness, qMax(0, area->height()));
     if (m_floatingVerticalBar->geometry() != target)
         m_floatingVerticalBar->setGeometry(target);
     if (m_floatingVerticalBar->isVisible())
         m_floatingVerticalBar->raise();
 }
 
-void ScrollView::updateViewportPalette() {
+void ScrollView::updateViewportPalette()
+{
     QWidget* area = viewport();
     if (!area)
         return;
@@ -689,7 +714,8 @@ void ScrollView::updateViewportPalette() {
     area->setAutoFillBackground(true);
 }
 
-void ScrollView::updateCornerWidget() {
+void ScrollView::updateCornerWidget()
+{
     if (!m_cornerWidget)
         return;
 
@@ -698,23 +724,24 @@ void ScrollView::updateCornerWidget() {
     m_cornerWidget->update();
 }
 
-void ScrollView::stopAnimations() {
+void ScrollView::stopAnimations()
+{
     if (m_horizontalAnimation)
         m_horizontalAnimation->stop();
     if (m_verticalAnimation)
         m_verticalAnimation->stop();
 }
 
-void ScrollView::stopZoomAnimation() {
+void ScrollView::stopZoomAnimation()
+{
     if (m_zoomAnimation)
         m_zoomAnimation->stop();
     m_zoomAnimationAnchor = QPointF(-1.0, -1.0);
 }
 
-void ScrollView::animateScrollBar(QScrollBar* scrollBar,
-                                  QPropertyAnimation* animation,
-                                  int targetValue,
-                                  bool fast) {
+void ScrollView::animateScrollBar(QScrollBar* scrollBar, QPropertyAnimation* animation,
+                                  int targetValue, bool fast)
+{
     if (!scrollBar || !animation)
         return;
 
@@ -731,29 +758,35 @@ void ScrollView::animateScrollBar(QScrollBar* scrollBar,
     animation->setEasingCurve(anim.decelerate);
     animation->setStartValue(scrollBar->value());
     animation->setEndValue(targetValue);
-    animation->start();
+    ::fluent::detail::startMotionTransition(animation, fast ? anim.fast : anim.normal);
 }
 
-int ScrollView::clampedTarget(QScrollBar* scrollBar, int value) const {
+int ScrollView::clampedTarget(QScrollBar* scrollBar, int value) const
+{
     if (!scrollBar)
         return 0;
     return std::clamp(value, scrollBar->minimum(), scrollBar->maximum());
 }
 
-bool ScrollView::isAxisEnabled(Axis axis) const {
+bool ScrollView::isAxisEnabled(Axis axis) const
+{
     return modeForAxis(axis) != ScrollMode::Disabled &&
            visibilityForAxis(axis) != ScrollBarVisibility::Disabled;
 }
 
-ScrollView::ScrollMode ScrollView::modeForAxis(Axis axis) const {
+ScrollView::ScrollMode ScrollView::modeForAxis(Axis axis) const
+{
     return axis == Axis::Horizontal ? m_horizontalScrollMode : m_verticalScrollMode;
 }
 
-ScrollView::ScrollBarVisibility ScrollView::visibilityForAxis(Axis axis) const {
-    return axis == Axis::Horizontal ? m_horizontalScrollBarVisibility : m_verticalScrollBarVisibility;
+ScrollView::ScrollBarVisibility ScrollView::visibilityForAxis(Axis axis) const
+{
+    return axis == Axis::Horizontal ? m_horizontalScrollBarVisibility
+                                    : m_verticalScrollBarVisibility;
 }
 
-void ScrollView::captureContentBaseSize() {
+void ScrollView::captureContentBaseSize()
+{
     QWidget* content = QScrollArea::widget();
     if (!content) {
         m_unscaledContentSize = QSizeF();
@@ -763,8 +796,8 @@ void ScrollView::captureContentBaseSize() {
     if (m_zoomAwareContent) {
         const QSizeF size = m_zoomAwareContent->scrollViewUnscaledSize();
         if (size.isValid() && !size.isEmpty()) {
-            m_unscaledContentSize = QSizeF(std::max(1.0, size.width()),
-                                           std::max(1.0, size.height()));
+            m_unscaledContentSize =
+                QSizeF(std::max(1.0, size.width()), std::max(1.0, size.height()));
             return;
         }
     }
@@ -775,11 +808,11 @@ void ScrollView::captureContentBaseSize() {
     if (size.isEmpty())
         size = content->minimumSizeHint();
 
-    m_unscaledContentSize = QSizeF(std::max(1, size.width()),
-                                   std::max(1, size.height()));
+    m_unscaledContentSize = QSizeF(std::max(1, size.width()), std::max(1, size.height()));
 }
 
-void ScrollView::applyZoomToContent() {
+void ScrollView::applyZoomToContent()
+{
     QWidget* content = QScrollArea::widget();
     if (!content || m_unscaledContentSize.isEmpty())
         return;
@@ -799,7 +832,8 @@ void ScrollView::applyZoomToContent() {
     content->update();
 }
 
-void ScrollView::setZoomFactorAt(qreal factor, const QPointF& viewportAnchor) {
+void ScrollView::setZoomFactorAt(qreal factor, const QPointF& viewportAnchor)
+{
     const qreal target = clampedZoomFactor(factor);
     if (qFuzzyCompare(m_zoomFactor, target))
         return;
@@ -812,31 +846,35 @@ void ScrollView::setZoomFactorAt(qreal factor, const QPointF& viewportAnchor) {
     m_zoomFactor = target;
     applyZoomToContent();
 
-    horizontalScrollBar()->setValue(clampedTarget(horizontalScrollBar(),
-                                                 qRound(contentAnchor.x() * target - anchor.x())));
-    verticalScrollBar()->setValue(clampedTarget(verticalScrollBar(),
-                                               qRound(contentAnchor.y() * target - anchor.y())));
+    horizontalScrollBar()->setValue(
+        clampedTarget(horizontalScrollBar(), qRound(contentAnchor.x() * target - anchor.x())));
+    verticalScrollBar()->setValue(
+        clampedTarget(verticalScrollBar(), qRound(contentAnchor.y() * target - anchor.y())));
     emit zoomFactorChanged();
 }
 
-QPointF ScrollView::defaultZoomAnchor() const {
+QPointF ScrollView::defaultZoomAnchor() const
+{
     const QRect area = viewport() ? viewport()->rect() : rect();
     return QPointF(area.width() / 2.0, area.height() / 2.0);
 }
 
-QPointF ScrollView::effectiveZoomAnchor(const QPointF& viewportAnchor) const {
+QPointF ScrollView::effectiveZoomAnchor(const QPointF& viewportAnchor) const
+{
     if (viewportAnchor.x() >= 0.0 && viewportAnchor.y() >= 0.0)
         return viewportAnchor;
     return defaultZoomAnchor();
 }
 
-qreal ScrollView::clampedZoomFactor(qreal factor) const {
+qreal ScrollView::clampedZoomFactor(qreal factor) const
+{
     if (!std::isfinite(factor))
         return m_zoomFactor;
     return std::clamp(factor, m_minZoomFactor, m_maxZoomFactor);
 }
 
-bool ScrollView::handleZoomWheel(QWheelEvent* event, QObject* source) {
+bool ScrollView::handleZoomWheel(QWheelEvent* event, QObject* source)
+{
     if (!event || m_zoomMode != ZoomMode::Enabled)
         return false;
     if (!(event->modifiers() & Qt::ControlModifier))
@@ -858,7 +896,8 @@ bool ScrollView::handleZoomWheel(QWheelEvent* event, QObject* source) {
     return true;
 }
 
-bool ScrollView::shouldSuppressScrollWheel() const {
+bool ScrollView::shouldSuppressScrollWheel() const
+{
     if (m_zoomMode != ZoomMode::Enabled)
         return false;
     if (m_nativeZoomGestureActive && m_nativeZoomGestureHasZoomed)
@@ -867,7 +906,8 @@ bool ScrollView::shouldSuppressScrollWheel() const {
            m_lastNativeZoomGestureTime.elapsed() < NativeZoomPinchSuppressionMs;
 }
 
-bool ScrollView::handleNativeGesture(QEvent* event, QObject* source) {
+bool ScrollView::handleNativeGesture(QEvent* event, QObject* source)
+{
     if (!event || m_zoomMode != ZoomMode::Enabled)
         return false;
 
@@ -880,7 +920,8 @@ bool ScrollView::handleNativeGesture(QEvent* event, QObject* source) {
         gesture->accept();
         return true;
     case Qt::ZoomNativeGesture: {
-        const QPointF anchor = mapEventPositionToViewport(source, fluentNativeGesturePosition(gesture));
+        const QPointF anchor =
+            mapEventPositionToViewport(source, fluentNativeGesturePosition(gesture));
         m_lastNativeZoomGestureTime.restart();
         m_nativeZoomGestureActive = true;
         m_nativeZoomGestureHasZoomed = true;
@@ -908,7 +949,8 @@ bool ScrollView::handleNativeGesture(QEvent* event, QObject* source) {
     }
 }
 
-bool ScrollView::handlePinchGesture(QEvent* event, QObject* source) {
+bool ScrollView::handlePinchGesture(QEvent* event, QObject* source)
+{
     if (!event || m_zoomMode != ZoomMode::Enabled)
         return false;
 
@@ -939,13 +981,15 @@ bool ScrollView::handlePinchGesture(QEvent* event, QObject* source) {
         qreal scale = pinch->scaleFactor();
         if (pinch->lastScaleFactor() > 0.0)
             scale /= pinch->lastScaleFactor();
-        setZoomFactorAt(m_zoomFactor * scale, mapEventPositionToViewport(source, pinch->centerPoint()));
+        setZoomFactorAt(m_zoomFactor * scale,
+                        mapEventPositionToViewport(source, pinch->centerPoint()));
     }
     gestureEvent->accept(pinch);
     return true;
 }
 
-QPointF ScrollView::mapEventPositionToViewport(QObject* source, const QPointF& position) const {
+QPointF ScrollView::mapEventPositionToViewport(QObject* source, const QPointF& position) const
+{
     QWidget* area = viewport();
     if (!area)
         return position;

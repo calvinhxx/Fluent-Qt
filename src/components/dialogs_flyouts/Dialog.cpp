@@ -14,6 +14,7 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/overlay/OverlayWindow.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/foundation/private/SurfacePainter_p.h"
 #include "design/Material.h"
 
@@ -36,23 +37,17 @@ void refreshFluentDescendants(QWidget* root)
 
 } // namespace
 
-Dialog::Dialog(QWidget* parent)
-    : QDialog(parent),
-      m_originalParent(parent)
+Dialog::Dialog(QWidget* parent) : QDialog(parent), m_originalParent(parent)
 {
-    m_overlayCoordinator =
-        new ::fluent::overlay::OverlayCoordinator(this, this);
-    connect(m_overlayCoordinator,
-            &::fluent::overlay::OverlayCoordinator::hostGeometryChanged,
-            this,
+    m_overlayCoordinator = new ::fluent::overlay::OverlayCoordinator(this, this);
+    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this,
             [this]() {
                 if (!isVisible())
                     return;
                 positionInOwner();
                 if (auto* smoke = m_overlayCoordinator->scrim()) {
-                    smoke->setSurfaceRadius(qRound(
-                        ::fluent::overlay::overlaySurfaceRadius(
-                            m_overlayCoordinator->topLevelWidget())));
+                    smoke->setSurfaceRadius(qRound(::fluent::overlay::overlaySurfaceRadius(
+                        m_overlayCoordinator->topLevelWidget())));
                 }
                 m_overlayCoordinator->raiseStack();
             });
@@ -61,8 +56,8 @@ Dialog::Dialog(QWidget* parent)
     // child of the owning top-level. Never host Dialog as a native top-level window.
     // zh_CN: 同窗口浮层契约（WinUI ContentDialog / Popup / DrawerView）：保持为 owning top-level 的
     // Qt::Widget 子控件，绝不把 Dialog 做成原生顶层窗口。
-    setWindowFlags(Qt::Widget | Qt::FramelessWindowHint | Qt::CustomizeWindowHint
-                   | Qt::NoDropShadowWindowHint);
+    setWindowFlags(Qt::Widget | Qt::FramelessWindowHint | Qt::CustomizeWindowHint |
+                   Qt::NoDropShadowWindowHint);
     attachToOwner();
 
     setAttribute(Qt::WA_TranslucentBackground);
@@ -119,8 +114,7 @@ Dialog::~Dialog()
 QWidget* Dialog::ownerWidget() const
 {
     if (QWidget* owner =
-            ::fluent::overlay::resolveOwningTopLevel(m_originalParent,
-                                                     parentWidget())) {
+            ::fluent::overlay::resolveOwningTopLevel(m_originalParent, parentWidget())) {
         return owner;
     }
     return m_overlayCoordinator->topLevelWidget();
@@ -153,7 +147,19 @@ void Dialog::setAnimationEnabled(bool enabled)
     if (m_animationEnabled == enabled)
         return;
     m_animationEnabled = enabled;
+    QPointer<Dialog> guard(this);
     emit animationEnabledChanged(m_animationEnabled);
+    if (!guard || m_animationEnabled)
+        return;
+
+    // A local opt-out is authoritative even for transitions already in flight.
+    // Settle the scrim first because the dialog animation's finished handler may
+    // synchronously close and delete this object. zh_CN: 局部关闭动效时，运行中的
+    // 过渡也必须立即收敛；先收敛遮罩，因为对话框 finished 回调可能同步析构对象。
+    if (m_smokeAnim && m_smokeAnim->state() == QAbstractAnimation::Running)
+        m_smokeAnim->setCurrentTime(m_smokeAnim->duration());
+    if (m_animation && m_animation->state() == QAbstractAnimation::Running)
+        m_animation->setCurrentTime(m_animation->duration());
 }
 
 void Dialog::setModal(bool modal)
@@ -352,7 +358,7 @@ void Dialog::showEvent(QShowEvent* event)
     m_animation->setStartValue(0.0);
     m_animation->setEndValue(1.0);
     m_animation->setEasingCurve(anim.entrance);
-    m_animation->start();
+    ::fluent::detail::startMotionTransition(m_animation, anim.normal, m_animationEnabled);
 }
 
 void Dialog::hideEvent(QHideEvent* event)
@@ -528,7 +534,7 @@ void Dialog::done(int result)
     m_animation->setStartValue(m_animationProgress);
     m_animation->setEndValue(0.0);
     m_animation->setEasingCurve(anim.exit);
-    m_animation->start();
+    ::fluent::detail::startMotionTransition(m_animation, anim.normal, m_animationEnabled);
 }
 
 void Dialog::mousePressEvent(QMouseEvent* event)
@@ -580,8 +586,7 @@ void Dialog::showSmokeOverlay()
     const int surfaceRadius = qRound(::fluent::overlay::overlaySurfaceRadius(owner));
     m_overlayCoordinator->attachTo(owner);
     const bool creating = !m_overlayCoordinator->scrim();
-    auto* smoke = m_overlayCoordinator->ensureScrim(
-        QStringLiteral("DialogSmokeScrim"));
+    auto* smoke = m_overlayCoordinator->ensureScrim(QStringLiteral("DialogSmokeScrim"));
     if (!smoke)
         return;
     if (creating) {
@@ -609,7 +614,7 @@ void Dialog::showSmokeOverlay()
     m_smokeAnim->setStartValue(smoke->progress());
     m_smokeAnim->setEndValue(1.0);
     m_smokeAnim->setEasingCurve(anim.entrance);
-    m_smokeAnim->start();
+    ::fluent::detail::startMotionTransition(m_smokeAnim, anim.normal, m_animationEnabled);
 
     m_overlayCoordinator->raiseStack();
 }
@@ -654,7 +659,8 @@ void Dialog::paintEvent(QPaintEvent*)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    const QRect contentRect = rect().adjusted(m_shadowSize, m_shadowSize, -m_shadowSize, -m_shadowSize);
+    const QRect contentRect =
+        rect().adjusted(m_shadowSize, m_shadowSize, -m_shadowSize, -m_shadowSize);
     drawShadow(painter, contentRect);
 
     const auto& colors = themeColorsRef();
@@ -662,7 +668,7 @@ void Dialog::paintEvent(QPaintEvent*)
     fluent::painting::RoundedSurfacePaint surface;
     surface.fill = colors.bgLayer;
     surface.radius = themeRadius().overlay;
-        surface.border = colors.strokeDefault;
+    surface.border = colors.strokeDefault;
     fluent::painting::paintRoundedSurface(painter, QRectF(contentRect), surface);
 }
 

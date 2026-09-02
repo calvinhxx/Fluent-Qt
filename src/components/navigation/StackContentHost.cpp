@@ -11,6 +11,7 @@
 
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/windowing/WindowBackdrop.h"
 
 namespace fluent::navigation {
@@ -42,8 +43,7 @@ void refreshFluentTree(QWidget* root)
 } // namespace
 
 StackContentHost::StackContentHost(QWidget* parent)
-    : QWidget(parent)
-    , m_layout(new QStackedLayout())
+    : QWidget(parent), m_layout(new QStackedLayout())
 {
     m_layout->setContentsMargins(0, 0, 0, 0);
     m_layout->setStackingMode(QStackedLayout::StackOne);
@@ -68,15 +68,16 @@ StackContentHost::~StackContentHost()
     m_pages.clear();
 }
 
-void StackContentHost::setContentSurface(const QColor& fill, qreal topLeftRadius, const QColor& border)
+void StackContentHost::setContentSurface(const QColor& fill, qreal topLeftRadius,
+                                         const QColor& border)
 {
-    if (m_surfaceFill == fill && m_surfaceBorder == border
-        && qFuzzyCompare(m_surfaceTopLeftRadius + 1.0, topLeftRadius + 1.0))
+    if (m_surfaceFill == fill && m_surfaceBorder == border &&
+        qFuzzyCompare(m_surfaceTopLeftRadius + 1.0, topLeftRadius + 1.0))
         return;
     m_surfaceFill = fill;
     m_surfaceBorder = border;
     m_surfaceTopLeftRadius = qMax(0.0, topLeftRadius);
-    setAutoFillBackground(false);  // we paint the surface ourselves (or stay transparent)
+    setAutoFillBackground(false); // we paint the surface ourselves (or stay transparent)
     update();
 }
 
@@ -87,9 +88,9 @@ void StackContentHost::paintEvent(QPaintEvent* event)
     // Transparent widgets share the top-level backing store. Replace this region on every
     // backdrop frame so pixels from an outgoing page cannot survive a stack switch.
     // zh_CN: 透明控件共享顶层后备缓冲；每个背景帧都替换此区域，避免切页后保留旧页面像素。
-    const bool transparentBackdrop = window()
-        && window()->testAttribute(Qt::WA_TranslucentBackground)
-        && windowing::windowBackdropRequiresTransparentClear(window());
+    const bool transparentBackdrop = window() &&
+                                     window()->testAttribute(Qt::WA_TranslucentBackground) &&
+                                     windowing::windowBackdropRequiresTransparentClear(window());
     if (transparentBackdrop) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(event->rect(), Qt::transparent);
@@ -117,10 +118,11 @@ void StackContentHost::paintEvent(QPaintEvent* event)
     }
     const QRectF panelRect = stroke.rect;
     const bool rounded = m_surfaceTopLeftRadius > 0.0;
-    const QPainterPath panel = fluent::overlay::roundedCornerRectPath(
-        panelRect, m_surfaceTopLeftRadius, /*TL*/ rounded, /*TR*/ false, /*BR*/ false, /*BL*/ false);
+    const QPainterPath panel =
+        fluent::overlay::roundedCornerRectPath(panelRect, m_surfaceTopLeftRadius, /*TL*/ rounded,
+                                               /*TR*/ false, /*BR*/ false, /*BL*/ false);
 
-    painter.fillPath(panel, m_surfaceFill);  // Explicit surface, including a translucent overlay.
+    painter.fillPath(panel, m_surfaceFill); // Explicit surface, including a translucent overlay.
     if (hasBorder) {
         painter.setPen(QPen(m_surfaceBorder, stroke.width));
         painter.setBrush(Qt::NoBrush);
@@ -140,9 +142,7 @@ bool StackContentHost::insertPage(int index, QWidget* widget)
     return insertPage(index, widget, WidgetOwnership::Owned);
 }
 
-bool StackContentHost::insertPage(int index,
-                                  QWidget* widget,
-                                  WidgetOwnership ownership)
+bool StackContentHost::insertPage(int index, QWidget* widget, WidgetOwnership ownership)
 {
     if (index < 0 || index > m_pages.size() || !canHostPage(widget))
         return false;
@@ -159,28 +159,19 @@ bool StackContentHost::insertPage(int index,
 QWidget* StackContentHost::replacePage(int index, QWidget* widget)
 {
     QWidget* transferredPage = nullptr;
-    if (!replacePageImpl(index,
-                         widget,
-                         WidgetOwnership::Owned,
-                         false,
-                         &transferredPage)) {
+    if (!replacePageImpl(index, widget, WidgetOwnership::Owned, false, &transferredPage)) {
         return nullptr;
     }
     return transferredPage;
 }
 
-bool StackContentHost::replacePage(int index,
-                                   QWidget* widget,
-                                   WidgetOwnership ownership)
+bool StackContentHost::replacePage(int index, QWidget* widget, WidgetOwnership ownership)
 {
     return replacePageImpl(index, widget, ownership, true, nullptr);
 }
 
-bool StackContentHost::replacePageImpl(int index,
-                                       QWidget* widget,
-                                       WidgetOwnership ownership,
-                                       bool applyPreviousOwnership,
-                                       QWidget** transferredPage)
+bool StackContentHost::replacePageImpl(int index, QWidget* widget, WidgetOwnership ownership,
+                                       bool applyPreviousOwnership, QWidget** transferredPage)
 {
     if (index < 0 || index >= m_pages.size() || !canHostPage(widget))
         return false;
@@ -280,9 +271,8 @@ int StackContentHost::indexOf(QWidget* widget) const
 
 WidgetOwnership StackContentHost::pageOwnershipAt(int index) const
 {
-    return index >= 0 && index < m_pages.size()
-        ? m_pages.at(index).ownership
-        : WidgetOwnership::Borrowed;
+    return index >= 0 && index < m_pages.size() ? m_pages.at(index).ownership
+                                                : WidgetOwnership::Borrowed;
 }
 
 void StackContentHost::setCurrentIndex(int index, int direction, bool animated)
@@ -334,15 +324,19 @@ void StackContentHost::setCurrentIndex(int index, int direction, bool animated)
 
     setBusy(true);
     QPointer<QWidget> toPointer = toWidget;
-    connect(m_transitionGroup, &QParallelAnimationGroup::finished, this, [this, normalized, toPointer]() {
-        finishTransition(normalized, toPointer.data());
-    });
-    m_transitionGroup->start();
+    connect(m_transitionGroup, &QParallelAnimationGroup::finished, this,
+            [this, normalized, toPointer]() { finishTransition(normalized, toPointer.data()); });
+    ::fluent::detail::startMotionTransitionGroup(m_transitionGroup, m_transitionAnimationEnabled);
 }
 
 void StackContentHost::setTransitionAnimationEnabled(bool enabled)
 {
+    if (m_transitionAnimationEnabled == enabled)
+        return;
+
     m_transitionAnimationEnabled = enabled;
+    if (!m_transitionAnimationEnabled && m_transitionGroup)
+        finishTransition(m_currentIndex, stackWidgetAt(m_currentIndex));
 }
 
 void StackContentHost::setTransitionEffect(TransitionEffect effect)
@@ -374,13 +368,10 @@ void StackContentHost::resizeEvent(QResizeEvent* event)
 
 bool StackContentHost::canHostPage(QWidget* widget) const
 {
-    return !widget
-        || (widget != this && !widget->isAncestorOf(this) && indexOf(widget) < 0);
+    return !widget || (widget != this && !widget->isAncestorOf(this) && indexOf(widget) < 0);
 }
 
-StackContentHost::PageRecord StackContentHost::makePage(
-    QWidget* widget,
-    WidgetOwnership ownership)
+StackContentHost::PageRecord StackContentHost::makePage(QWidget* widget, WidgetOwnership ownership)
 {
     PageRecord page;
     if (widget) {
@@ -390,11 +381,8 @@ StackContentHost::PageRecord StackContentHost::makePage(
         page.originalParent = widget->parentWidget();
         page.ownership = ownership;
         page.placeholder = false;
-        page.destroyedConnection = connect(
-            widget,
-            &QObject::destroyed,
-            this,
-            [this, widget]() { handlePageDestroyed(widget); });
+        page.destroyedConnection = connect(widget, &QObject::destroyed, this,
+                                           [this, widget]() { handlePageDestroyed(widget); });
         widget->setParent(this);
     } else {
         auto* placeholder = new QWidget(this);
@@ -554,15 +542,9 @@ void StackContentHost::finishTransition(int targetIndex, QWidget* toWidget)
 
 bool StackContentHost::canAnimate(QWidget* fromWidget, QWidget* toWidget, bool requested) const
 {
-    return requested
-        && m_transitionAnimationEnabled
-        && isVisible()
-        && rect().isValid()
-        && rect().width() > 0
-        && rect().height() > 0
-        && fromWidget
-        && toWidget
-        && fromWidget != toWidget;
+    return requested && m_transitionAnimationEnabled && isVisible() && rect().isValid() &&
+           rect().width() > 0 && rect().height() > 0 && fromWidget && toWidget &&
+           fromWidget != toWidget;
 }
 
 QPoint StackContentHost::transitionStartOffset(const QRect& rect, int direction) const

@@ -14,6 +14,7 @@
 #include <cmath>
 
 #include "components/foundation/private/LogicalItemAccessibility_p.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/scrolling/private/PipsPagerAccessibility_p.h"
 #include "design/Typography.h"
 
@@ -36,8 +37,7 @@ int pressedDiameter(int restDiameter)
 }
 } // namespace
 
-PipsPager::PipsPager(QWidget* parent)
-    : QWidget(parent)
+PipsPager::PipsPager(QWidget* parent) : QWidget(parent)
 {
     detail::ensurePipsPagerAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
@@ -50,17 +50,13 @@ PipsPager::PipsPager(QWidget* parent)
     m_selectedVisualOffsetAnimation = new QVariantAnimation(this);
     m_selectedVisualOffsetAnimation->setDuration(m_selectionAnimationDuration);
     m_selectedVisualOffsetAnimation->setEasingCurve(themeAnimation().decelerate);
-    connect(m_selectedVisualOffsetAnimation, &QVariantAnimation::valueChanged,
-            this, [this](const QVariant& value) {
-                setSelectedVisualOffset(value.toReal());
-            });
+    connect(m_selectedVisualOffsetAnimation, &QVariantAnimation::valueChanged, this,
+            [this](const QVariant& value) { setSelectedVisualOffset(value.toReal()); });
     m_visibleWindowOffsetAnimation = new QVariantAnimation(this);
     m_visibleWindowOffsetAnimation->setDuration(m_selectionAnimationDuration);
     m_visibleWindowOffsetAnimation->setEasingCurve(themeAnimation().decelerate);
-    connect(m_visibleWindowOffsetAnimation, &QVariantAnimation::valueChanged,
-            this, [this](const QVariant& value) {
-                setVisibleWindowOffset(value.toReal());
-            });
+    connect(m_visibleWindowOffsetAnimation, &QVariantAnimation::valueChanged, this,
+            [this](const QVariant& value) { setVisibleWindowOffset(value.toReal()); });
     updateAccessibleText();
 }
 
@@ -75,7 +71,8 @@ void PipsPager::setNumberOfPages(int pages)
 
     const bool pagesChanged = oldPages != m_numberOfPages;
     const bool selectionChanged = oldSelectedIndex != m_selectedPageIndex;
-    if (!pagesChanged && !selectionChanged) return;
+    if (!pagesChanged && !selectionChanged)
+        return;
 
     clearInteractionState();
     syncSelectedVisualOffset();
@@ -85,13 +82,12 @@ void PipsPager::setNumberOfPages(int pages)
     update();
 
     if (pagesChanged) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(
-            this);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
         emit numberOfPagesChanged(m_numberOfPages);
     }
     if (selectionChanged) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
-            this, m_selectedPageIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this,
+                                                                               m_selectedPageIndex);
         emit selectedPageIndexChanged(m_selectedPageIndex);
         emit selectedIndexChanged(oldSelectedIndex, m_selectedPageIndex);
     }
@@ -100,7 +96,8 @@ void PipsPager::setNumberOfPages(int pages)
 void PipsPager::setSelectedPageIndex(int index)
 {
     const int nextIndex = clampedPageIndex(index);
-    if (m_selectedPageIndex == nextIndex) return;
+    if (m_selectedPageIndex == nextIndex)
+        return;
 
     const int oldIndex = m_selectedPageIndex;
     const qreal oldVisualOffset = m_selectedVisualOffset;
@@ -114,8 +111,8 @@ void PipsPager::setSelectedPageIndex(int index)
     animateVisibleWindowOffset(oldWindowOffset, nextWindowOffset);
     update();
 
-    fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
-        this, m_selectedPageIndex);
+    fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this,
+                                                                           m_selectedPageIndex);
     emit selectedPageIndexChanged(m_selectedPageIndex);
     emit selectedIndexChanged(oldIndex, m_selectedPageIndex);
 }
@@ -123,7 +120,8 @@ void PipsPager::setSelectedPageIndex(int index)
 void PipsPager::setMaxVisiblePips(int count)
 {
     const int normalizedCount = std::max(0, count);
-    if (m_maxVisiblePips == normalizedCount) return;
+    if (m_maxVisiblePips == normalizedCount)
+        return;
 
     m_maxVisiblePips = normalizedCount;
     clearInteractionState();
@@ -137,7 +135,8 @@ void PipsPager::setMaxVisiblePips(int count)
 
 void PipsPager::setOrientation(Qt::Orientation orientation)
 {
-    if (m_orientation == orientation) return;
+    if (m_orientation == orientation)
+        return;
 
     m_orientation = orientation;
     clearInteractionState();
@@ -151,7 +150,8 @@ void PipsPager::setOrientation(Qt::Orientation orientation)
 
 void PipsPager::setPreviousButtonVisibility(PipsPagerButtonVisibility visibility)
 {
-    if (m_previousButtonVisibility == visibility) return;
+    if (m_previousButtonVisibility == visibility)
+        return;
 
     m_previousButtonVisibility = visibility;
     clearInteractionState();
@@ -165,7 +165,8 @@ void PipsPager::setPreviousButtonVisibility(PipsPagerButtonVisibility visibility
 
 void PipsPager::setNextButtonVisibility(PipsPagerButtonVisibility visibility)
 {
-    if (m_nextButtonVisibility == visibility) return;
+    if (m_nextButtonVisibility == visibility)
+        return;
 
     m_nextButtonVisibility = visibility;
     clearInteractionState();
@@ -180,7 +181,8 @@ void PipsPager::setNextButtonVisibility(PipsPagerButtonVisibility visibility)
 void PipsPager::setPipCellSize(int size)
 {
     const int normalizedSize = normalizedMetric(size);
-    if (m_pipCellSize == normalizedSize) return;
+    if (m_pipCellSize == normalizedSize)
+        return;
 
     m_pipCellSize = normalizedSize;
     syncSelectedVisualOffset();
@@ -193,7 +195,8 @@ void PipsPager::setPipCellSize(int size)
 void PipsPager::setInactivePipDiameter(int diameter)
 {
     const int normalizedDiameter = normalizedMetric(diameter);
-    if (m_inactivePipDiameter == normalizedDiameter) return;
+    if (m_inactivePipDiameter == normalizedDiameter)
+        return;
 
     m_inactivePipDiameter = normalizedDiameter;
     update();
@@ -203,7 +206,8 @@ void PipsPager::setInactivePipDiameter(int diameter)
 void PipsPager::setSelectedPipDiameter(int diameter)
 {
     const int normalizedDiameter = normalizedMetric(diameter);
-    if (m_selectedPipDiameter == normalizedDiameter) return;
+    if (m_selectedPipDiameter == normalizedDiameter)
+        return;
 
     m_selectedPipDiameter = normalizedDiameter;
     update();
@@ -213,7 +217,8 @@ void PipsPager::setSelectedPipDiameter(int diameter)
 void PipsPager::setNavigationButtonSize(int size)
 {
     const int normalizedSize = normalizedMetric(size);
-    if (m_navigationButtonSize == normalizedSize) return;
+    if (m_navigationButtonSize == normalizedSize)
+        return;
 
     m_navigationButtonSize = normalizedSize;
     syncSelectedVisualOffset();
@@ -226,7 +231,8 @@ void PipsPager::setNavigationButtonSize(int size)
 void PipsPager::setNavigationIconSize(int size)
 {
     const int normalizedSize = normalizedMetric(size);
-    if (m_navigationIconSize == normalizedSize) return;
+    if (m_navigationIconSize == normalizedSize)
+        return;
 
     m_navigationIconSize = normalizedSize;
     update();
@@ -235,7 +241,8 @@ void PipsPager::setNavigationIconSize(int size)
 
 void PipsPager::setSelectionAnimationEnabled(bool enabled)
 {
-    if (m_selectionAnimationEnabled == enabled) return;
+    if (m_selectionAnimationEnabled == enabled)
+        return;
 
     m_selectionAnimationEnabled = enabled;
     if (!m_selectionAnimationEnabled) {
@@ -248,7 +255,8 @@ void PipsPager::setSelectionAnimationEnabled(bool enabled)
 void PipsPager::setSelectionAnimationDuration(int durationMs)
 {
     const int normalizedDuration = std::max(0, durationMs);
-    if (m_selectionAnimationDuration == normalizedDuration) return;
+    if (m_selectionAnimationDuration == normalizedDuration)
+        return;
 
     m_selectionAnimationDuration = normalizedDuration;
     if (m_selectedVisualOffsetAnimation) {
@@ -262,14 +270,16 @@ void PipsPager::setSelectionAnimationDuration(int durationMs)
 
 int PipsPager::visiblePipCount() const
 {
-    if (m_numberOfPages <= 0 || m_maxVisiblePips <= 0) return 0;
+    if (m_numberOfPages <= 0 || m_maxVisiblePips <= 0)
+        return 0;
     return std::min(m_numberOfPages, m_maxVisiblePips);
 }
 
 int PipsPager::firstVisiblePage() const
 {
     const int count = visiblePipCount();
-    if (count <= 0) return 0;
+    if (count <= 0)
+        return 0;
 
     const int maxFirst = m_numberOfPages - count;
     const int centeredFirst = m_selectedPageIndex - count / 2;
@@ -290,12 +300,13 @@ QRect PipsPager::pipHitRect(int pageIndex) const
 
 QRect PipsPager::previousButtonRect() const
 {
-    if (!reservesPreviousButton()) return QRect();
+    if (!reservesPreviousButton())
+        return QRect();
 
     const QRect bounds = controlRect();
     if (m_orientation == Qt::Horizontal) {
-        const QRect logicalRect(bounds.left(), bounds.top(),
-                                m_navigationButtonSize, m_navigationButtonSize);
+        const QRect logicalRect(bounds.left(), bounds.top(), m_navigationButtonSize,
+                                m_navigationButtonSize);
         return QStyle::visualRect(layoutDirection(), bounds, logicalRect);
     }
     return QRect(bounds.left(), bounds.top(), m_navigationButtonSize, m_navigationButtonSize);
@@ -303,20 +314,17 @@ QRect PipsPager::previousButtonRect() const
 
 QRect PipsPager::nextButtonRect() const
 {
-    if (!reservesNextButton()) return QRect();
+    if (!reservesNextButton())
+        return QRect();
 
     const QRect bounds = controlRect();
     if (m_orientation == Qt::Horizontal) {
-        const QRect logicalRect(bounds.right() - m_navigationButtonSize + 1,
-                                bounds.top(),
-                                m_navigationButtonSize,
-                                m_navigationButtonSize);
+        const QRect logicalRect(bounds.right() - m_navigationButtonSize + 1, bounds.top(),
+                                m_navigationButtonSize, m_navigationButtonSize);
         return QStyle::visualRect(layoutDirection(), bounds, logicalRect);
     }
-    return QRect(bounds.left(),
-                 bounds.bottom() - m_navigationButtonSize + 1,
-                 m_navigationButtonSize,
-                 m_navigationButtonSize);
+    return QRect(bounds.left(), bounds.bottom() - m_navigationButtonSize + 1,
+                 m_navigationButtonSize, m_navigationButtonSize);
 }
 
 bool PipsPager::hasPreviousPage() const
@@ -331,14 +339,16 @@ bool PipsPager::hasNextPage() const
 
 bool PipsPager::goToPreviousPage()
 {
-    if (!hasPreviousPage()) return false;
+    if (!hasPreviousPage())
+        return false;
     setSelectedPageIndex(m_selectedPageIndex - 1);
     return true;
 }
 
 bool PipsPager::goToNextPage()
 {
-    if (!hasNextPage()) return false;
+    if (!hasNextPage())
+        return false;
     setSelectedPageIndex(m_selectedPageIndex + 1);
     return true;
 }
@@ -375,9 +385,10 @@ void PipsPager::paintEvent(QPaintEvent* event)
     if (count > 0) {
         painter.save();
         painter.setClipRect(pipsClipRect());
-        const int firstPaintedPage = std::max(0, static_cast<int>(std::floor(m_visibleWindowOffset)) - 1);
-        const int lastPaintedPage = std::min(m_numberOfPages - 1,
-                                             static_cast<int>(std::ceil(m_visibleWindowOffset + count)) + 1);
+        const int firstPaintedPage =
+            std::max(0, static_cast<int>(std::floor(m_visibleWindowOffset)) - 1);
+        const int lastPaintedPage = std::min(
+            m_numberOfPages - 1, static_cast<int>(std::ceil(m_visibleWindowOffset + count)) + 1);
         for (int pageIndex = firstPaintedPage; pageIndex <= lastPaintedPage; ++pageIndex) {
             if (pageIndex == m_selectedPageIndex)
                 continue;
@@ -489,26 +500,24 @@ void PipsPager::keyPressEvent(QKeyEvent* event)
     switch (event->key()) {
     case Qt::Key_Left:
         if (m_orientation == Qt::Horizontal) {
-            layoutDirection() == Qt::RightToLeft
-                ? goToNextPage()
-                : goToPreviousPage();
+            layoutDirection() == Qt::RightToLeft ? goToNextPage() : goToPreviousPage();
         }
         handled = (m_orientation == Qt::Horizontal);
         break;
     case Qt::Key_Right:
         if (m_orientation == Qt::Horizontal) {
-            layoutDirection() == Qt::RightToLeft
-                ? goToPreviousPage()
-                : goToNextPage();
+            layoutDirection() == Qt::RightToLeft ? goToPreviousPage() : goToNextPage();
         }
         handled = (m_orientation == Qt::Horizontal);
         break;
     case Qt::Key_Up:
-        if (m_orientation == Qt::Vertical) goToPreviousPage();
+        if (m_orientation == Qt::Vertical)
+            goToPreviousPage();
         handled = (m_orientation == Qt::Vertical);
         break;
     case Qt::Key_Down:
-        if (m_orientation == Qt::Vertical) goToNextPage();
+        if (m_orientation == Qt::Vertical)
+            goToNextPage();
         handled = (m_orientation == Qt::Vertical);
         break;
     case Qt::Key_Home:
@@ -536,8 +545,8 @@ void PipsPager::focusInEvent(QFocusEvent* event)
     update();
     QWidget::focusInEvent(event);
     if (m_numberOfPages > 0) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-            this, m_selectedPageIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this,
+                                                                           m_selectedPageIndex);
     }
 }
 
@@ -554,8 +563,7 @@ void PipsPager::changeEvent(QEvent* event)
     if (event->type() == QEvent::EnabledChange) {
         clearInteractionState();
         update();
-        fluent::accessibility::detail::notifyLogicalItemAccessibilityState(
-            this, -1);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityState(this, -1);
     } else if (event->type() == QEvent::LayoutDirectionChange) {
         clearInteractionState();
         update();
@@ -564,7 +572,8 @@ void PipsPager::changeEvent(QEvent* event)
 
 int PipsPager::clampedPageIndex(int index) const
 {
-    if (m_numberOfPages <= 0) return 0;
+    if (m_numberOfPages <= 0)
+        return 0;
     return std::max(0, std::min(index, m_numberOfPages - 1));
 }
 
@@ -574,9 +583,8 @@ QSize PipsPager::controlSize() const
     const int nextSlot = reservesNextButton() ? m_navigationButtonSize : 0;
     const int pipLength = visiblePipCount() * m_pipCellSize;
     const int mainLength = previousSlot + pipLength + nextSlot;
-    const int crossLength = (previousSlot > 0 || nextSlot > 0)
-        ? m_navigationButtonSize
-        : m_pipCellSize;
+    const int crossLength =
+        (previousSlot > 0 || nextSlot > 0) ? m_navigationButtonSize : m_pipCellSize;
 
     if (m_orientation == Qt::Horizontal) {
         return QSize(mainLength, crossLength);
@@ -613,8 +621,10 @@ bool PipsPager::shouldPaintNextButton() const
 
 bool PipsPager::shouldPaintButton(PipsPagerButtonVisibility visibility, bool hasPage) const
 {
-    if (!hasPage) return false;
-    if (visibility == PipsPagerButtonVisibility::Visible) return true;
+    if (!hasPage)
+        return false;
+    if (visibility == PipsPagerButtonVisibility::Visible)
+        return true;
     if (visibility == PipsPagerButtonVisibility::VisibleOnPointerOver) {
         return m_controlHovered || hasFocus();
     }
@@ -631,7 +641,8 @@ PipsPager::HitTarget PipsPager::makeTarget(HitKind kind, int pageIndex)
 
 PipsPager::HitTarget PipsPager::hitTest(const QPoint& pos) const
 {
-    if (m_numberOfPages <= 0) return HitTarget();
+    if (m_numberOfPages <= 0)
+        return HitTarget();
 
     if (hasPreviousPage() && previousButtonRect().contains(pos)) {
         return makeTarget(HitKind::PreviousButton);
@@ -665,18 +676,14 @@ QRectF PipsPager::pipCellRectF(qreal visibleOffset) const
 
     if (m_orientation == Qt::Horizontal) {
         const qreal x = layoutDirection() == Qt::RightToLeft
-            ? bounds.right() + 1.0 - pipOffset - m_pipCellSize
-            : bounds.left() + pipOffset;
-        return QRectF(x,
-                      bounds.top() + (bounds.height() - m_pipCellSize) / 2.0,
-                      m_pipCellSize,
+                            ? bounds.right() + 1.0 - pipOffset - m_pipCellSize
+                            : bounds.left() + pipOffset;
+        return QRectF(x, bounds.top() + (bounds.height() - m_pipCellSize) / 2.0, m_pipCellSize,
                       m_pipCellSize);
     }
 
-    return QRectF(bounds.left() + (bounds.width() - m_pipCellSize) / 2.0,
-                  bounds.top() + pipOffset,
-                  m_pipCellSize,
-                  m_pipCellSize);
+    return QRectF(bounds.left() + (bounds.width() - m_pipCellSize) / 2.0, bounds.top() + pipOffset,
+                  m_pipCellSize, m_pipCellSize);
 }
 
 QRectF PipsPager::pipsClipRect() const
@@ -691,7 +698,8 @@ QRectF PipsPager::pipsClipRect() const
 void PipsPager::drawPip(QPainter& painter, int pageIndex) const
 {
     const QRect cell = pipHitRect(pageIndex);
-    if (!cell.isValid()) return;
+    if (!cell.isValid())
+        return;
 
     drawPipAtVisualOffset(painter, pageIndex, pageIndex - firstVisiblePage());
 }
@@ -699,13 +707,12 @@ void PipsPager::drawPip(QPainter& painter, int pageIndex) const
 void PipsPager::drawPipAtVisualOffset(QPainter& painter, int pageIndex, qreal visualOffset) const
 {
     const QRectF cell = pipCellRectF(visualOffset);
-    if (!cell.isValid()) return;
+    if (!cell.isValid())
+        return;
 
     const int diameter = pipDiameter(pageIndex, false);
     const QPointF center = cell.center();
-    const QRectF dotRect(center.x() - diameter / 2.0,
-                         center.y() - diameter / 2.0,
-                         diameter,
+    const QRectF dotRect(center.x() - diameter / 2.0, center.y() - diameter / 2.0, diameter,
                          diameter);
 
     painter.setPen(Qt::NoPen);
@@ -716,19 +723,17 @@ void PipsPager::drawPipAtVisualOffset(QPainter& painter, int pageIndex, qreal vi
 void PipsPager::drawSelectedPip(QPainter& painter) const
 {
     const int count = visiblePipCount();
-    if (count <= 0) return;
+    if (count <= 0)
+        return;
 
-    const qreal visualOffset = qBound(0.0,
-                                      m_selectedVisualOffset,
-                                      static_cast<qreal>(count - 1));
+    const qreal visualOffset = qBound(0.0, m_selectedVisualOffset, static_cast<qreal>(count - 1));
     const QRectF selectedCell = pipCellRectF(visualOffset);
-    if (!selectedCell.isValid()) return;
+    if (!selectedCell.isValid())
+        return;
     const QPointF center = selectedCell.center();
 
     const int diameter = pipDiameter(m_selectedPageIndex, true);
-    const QRectF dotRect(center.x() - diameter / 2.0,
-                         center.y() - diameter / 2.0,
-                         diameter,
+    const QRectF dotRect(center.x() - diameter / 2.0, center.y() - diameter / 2.0, diameter,
                          diameter);
 
     painter.setPen(Qt::NoPen);
@@ -738,7 +743,8 @@ void PipsPager::drawSelectedPip(QPainter& painter) const
 
 void PipsPager::drawButton(QPainter& painter, const QRect& buttonRect, bool previous) const
 {
-    if (!buttonRect.isValid()) return;
+    if (!buttonRect.isValid())
+        return;
 
     const HitTarget target = makeTarget(previous ? HitKind::PreviousButton : HitKind::NextButton);
     const QColor fill = buttonFillColor(target);
@@ -749,19 +755,15 @@ void PipsPager::drawButton(QPainter& painter, const QRect& buttonRect, bool prev
     }
 
     const bool mirroredHorizontal =
-        m_orientation == Qt::Horizontal
-        && layoutDirection() == Qt::RightToLeft;
-    const ushort codepoint = previous
-        ? (m_orientation == Qt::Horizontal
-               ? (mirroredHorizontal ? 0xEDDA : 0xEDD9)
-               : 0xEDDB)
-        : (m_orientation == Qt::Horizontal
-               ? (mirroredHorizontal ? 0xEDD9 : 0xEDDA)
-               : 0xEDDC);
+        m_orientation == Qt::Horizontal && layoutDirection() == Qt::RightToLeft;
+    const ushort codepoint =
+        previous
+            ? (m_orientation == Qt::Horizontal ? (mirroredHorizontal ? 0xEDDA : 0xEDD9) : 0xEDDB)
+            : (m_orientation == Qt::Horizontal ? (mirroredHorizontal ? 0xEDD9 : 0xEDDA) : 0xEDDC);
 
     painter.setPen(caretColor(target));
-    Typography::Icons::paintGlyph(
-        painter, QRectF(buttonRect), QString(QChar(codepoint)), m_navigationIconSize, Qt::AlignCenter);
+    Typography::Icons::paintGlyph(painter, QRectF(buttonRect), QString(QChar(codepoint)),
+                                  m_navigationIconSize, Qt::AlignCenter);
 }
 
 QColor PipsPager::pipColor(bool selected) const
@@ -776,20 +778,25 @@ QColor PipsPager::pipColor(bool selected) const
 QColor PipsPager::caretColor(const HitTarget& target) const
 {
     const auto& colors = themeColorsRef();
-    if (!isEnabled()) return colors.textDisabled;
-    if (m_pressedTarget == target || m_hoveredTarget == target) return colors.textPrimary;
+    if (!isEnabled())
+        return colors.textDisabled;
+    if (m_pressedTarget == target || m_hoveredTarget == target)
+        return colors.textPrimary;
     return colors.textSecondary;
 }
 
 QColor PipsPager::buttonFillColor(const HitTarget& target) const
 {
     const auto& colors = themeColorsRef();
-    if (!isEnabled()) return QColor(Qt::transparent);
+    if (!isEnabled())
+        return QColor(Qt::transparent);
 
     const bool hovered = (m_hoveredTarget == target);
     const bool pressed = (m_pressedTarget == target);
-    if (!hovered && !pressed) return QColor(Qt::transparent);
-    if (pressed) return colors.subtleTertiary;
+    if (!hovered && !pressed)
+        return QColor(Qt::transparent);
+    if (pressed)
+        return colors.subtleTertiary;
     return colors.subtleSecondary;
 }
 
@@ -801,10 +808,12 @@ int PipsPager::pipDiameter(int pageIndex, bool selected) const
 
     const HitTarget target = makeTarget(HitKind::Pip, pageIndex);
     if (m_pressedTarget == target) {
-        return selected ? pressedDiameter(m_selectedPipDiameter) : pressedDiameter(m_inactivePipDiameter);
+        return selected ? pressedDiameter(m_selectedPipDiameter)
+                        : pressedDiameter(m_inactivePipDiameter);
     }
     if (m_hoveredTarget == target) {
-        return selected ? hoveredDiameter(m_selectedPipDiameter) : hoveredDiameter(m_inactivePipDiameter);
+        return selected ? hoveredDiameter(m_selectedPipDiameter)
+                        : hoveredDiameter(m_inactivePipDiameter);
     }
     return selected ? m_selectedPipDiameter : m_inactivePipDiameter;
 }
@@ -812,10 +821,10 @@ int PipsPager::pipDiameter(int pageIndex, bool selected) const
 void PipsPager::setSelectedVisualOffset(qreal offset)
 {
     const int count = visiblePipCount();
-    const qreal normalizedOffset = count > 0
-        ? qBound(0.0, offset, static_cast<qreal>(count - 1))
-        : 0.0;
-    if (qFuzzyCompare(m_selectedVisualOffset + 1.0, normalizedOffset + 1.0)) return;
+    const qreal normalizedOffset =
+        count > 0 ? qBound(0.0, offset, static_cast<qreal>(count - 1)) : 0.0;
+    if (qFuzzyCompare(m_selectedVisualOffset + 1.0, normalizedOffset + 1.0))
+        return;
 
     m_selectedVisualOffset = normalizedOffset;
     update();
@@ -824,11 +833,11 @@ void PipsPager::setSelectedVisualOffset(qreal offset)
 void PipsPager::setVisibleWindowOffset(qreal offset)
 {
     const int count = visiblePipCount();
-    const qreal maxOffset = count > 0
-        ? static_cast<qreal>(std::max(0, m_numberOfPages - count))
-        : 0.0;
+    const qreal maxOffset =
+        count > 0 ? static_cast<qreal>(std::max(0, m_numberOfPages - count)) : 0.0;
     const qreal normalizedOffset = qBound(0.0, offset, maxOffset);
-    if (qFuzzyCompare(m_visibleWindowOffset + 1.0, normalizedOffset + 1.0)) return;
+    if (qFuzzyCompare(m_visibleWindowOffset + 1.0, normalizedOffset + 1.0))
+        return;
 
     m_visibleWindowOffset = normalizedOffset;
     update();
@@ -837,7 +846,8 @@ void PipsPager::setVisibleWindowOffset(qreal offset)
 qreal PipsPager::currentSelectedVisualOffset() const
 {
     const int count = visiblePipCount();
-    if (count <= 0) return 0.0;
+    if (count <= 0)
+        return 0.0;
 
     const int firstPage = firstVisiblePage();
     return static_cast<qreal>(qBound(0, m_selectedPageIndex - firstPage, count - 1));
@@ -871,9 +881,8 @@ void PipsPager::animateSelectedVisualOffset(qreal fromOffset, qreal toOffset)
         return;
     }
 
-    if (!m_selectionAnimationEnabled
-        || m_selectionAnimationDuration <= 0
-        || qFuzzyCompare(fromOffset + 1.0, toOffset + 1.0)) {
+    if (!m_selectionAnimationEnabled || m_selectionAnimationDuration <= 0 ||
+        qFuzzyCompare(fromOffset + 1.0, toOffset + 1.0)) {
         m_selectedVisualOffsetAnimation->stop();
         setSelectedVisualOffset(toOffset);
         return;
@@ -886,7 +895,8 @@ void PipsPager::animateSelectedVisualOffset(qreal fromOffset, qreal toOffset)
     m_selectedVisualOffsetAnimation->setStartValue(fromOffset);
     m_selectedVisualOffsetAnimation->setKeyValueAt(0.5, (fromOffset + toOffset) / 2.0);
     m_selectedVisualOffsetAnimation->setEndValue(toOffset);
-    m_selectedVisualOffsetAnimation->start();
+    ::fluent::detail::startMotionTransition(
+        m_selectedVisualOffsetAnimation, m_selectionAnimationDuration, m_selectionAnimationEnabled);
 }
 
 void PipsPager::animateVisibleWindowOffset(qreal fromOffset, qreal toOffset)
@@ -896,9 +906,8 @@ void PipsPager::animateVisibleWindowOffset(qreal fromOffset, qreal toOffset)
         return;
     }
 
-    if (!m_selectionAnimationEnabled
-        || m_selectionAnimationDuration <= 0
-        || qFuzzyCompare(fromOffset + 1.0, toOffset + 1.0)) {
+    if (!m_selectionAnimationEnabled || m_selectionAnimationDuration <= 0 ||
+        qFuzzyCompare(fromOffset + 1.0, toOffset + 1.0)) {
         m_visibleWindowOffsetAnimation->stop();
         setVisibleWindowOffset(toOffset);
         return;
@@ -911,7 +920,8 @@ void PipsPager::animateVisibleWindowOffset(qreal fromOffset, qreal toOffset)
     m_visibleWindowOffsetAnimation->setStartValue(fromOffset);
     m_visibleWindowOffsetAnimation->setKeyValueAt(0.5, (fromOffset + toOffset) / 2.0);
     m_visibleWindowOffsetAnimation->setEndValue(toOffset);
-    m_visibleWindowOffsetAnimation->start();
+    ::fluent::detail::startMotionTransition(
+        m_visibleWindowOffsetAnimation, m_selectionAnimationDuration, m_selectionAnimationEnabled);
 }
 
 void PipsPager::clearInteractionState()
@@ -923,11 +933,12 @@ void PipsPager::clearInteractionState()
 
 void PipsPager::updateAccessibleText()
 {
-    const QString description = m_numberOfPages > 0
-        ? QStringLiteral("%1 / %2").arg(m_selectedPageIndex + 1).arg(m_numberOfPages)
-        : QString();
-    if (accessibleDescription().isEmpty()
-        || accessibleDescription() == m_autoAccessibleDescription) {
+    const QString description =
+        m_numberOfPages > 0
+            ? QStringLiteral("%1 / %2").arg(m_selectedPageIndex + 1).arg(m_numberOfPages)
+            : QString();
+    if (accessibleDescription().isEmpty() ||
+        accessibleDescription() == m_autoAccessibleDescription) {
         setAccessibleDescription(description);
     }
     m_autoAccessibleDescription = description;

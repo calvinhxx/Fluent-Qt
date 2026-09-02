@@ -35,8 +35,7 @@ QColor withAlpha(QColor color, qreal alpha)
 }
 } // namespace
 
-AnnotatedScrollBar::AnnotatedScrollBar(QWidget* parent)
-    : QWidget(parent)
+AnnotatedScrollBar::AnnotatedScrollBar(QWidget* parent) : QWidget(parent)
 {
     init();
 }
@@ -284,29 +283,30 @@ void AnnotatedScrollBar::connectToScrollView(ScrollView* scrollView)
 
     QScrollBar* vertical = scrollView->verticalScrollBar();
     if (vertical) {
-        m_scrollConnections.append(connect(vertical, &QScrollBar::rangeChanged, this, [this](int, int) {
-            syncFromScrollBar();
-        }));
-        m_scrollConnections.append(connect(vertical, &QScrollBar::valueChanged, this, [this](int value) {
-            setValueFromExternal(value);
+        m_scrollConnections.append(connect(vertical, &QScrollBar::rangeChanged, this,
+                                           [this](int, int) { syncFromScrollBar(); }));
+        m_scrollConnections.append(
+            connect(vertical, &QScrollBar::valueChanged, this, [this](int value) {
+                setValueFromExternal(value);
+                if (m_scrollView && m_scrollView->verticalScrollBar())
+                    setPageStep(m_scrollView->verticalScrollBar()->pageStep());
+            }));
+    }
+
+    m_scrollConnections.append(connect(
+        scrollView, &ScrollView::scrollPositionChanged, this, [this](int, int verticalOffset) {
+            setValueFromExternal(verticalOffset);
             if (m_scrollView && m_scrollView->verticalScrollBar())
                 setPageStep(m_scrollView->verticalScrollBar()->pageStep());
         }));
-    }
-
-    m_scrollConnections.append(connect(scrollView, &ScrollView::scrollPositionChanged, this, [this](int, int verticalOffset) {
-        setValueFromExternal(verticalOffset);
-        if (m_scrollView && m_scrollView->verticalScrollBar())
-            setPageStep(m_scrollView->verticalScrollBar()->pageStep());
-    }));
-    m_scrollConnections.append(connect(this, &AnnotatedScrollBar::scrollRequested, scrollView, [this, scrollView](int offset) {
-        if (!m_scrollView || m_scrollView != scrollView)
-            return;
-        scrollView->scrollTo(scrollView->horizontalOffset(), offset, false);
-    }));
-    m_scrollConnections.append(connect(scrollView, &QObject::destroyed, this, [this]() {
-        disconnectScrollView();
-    }));
+    m_scrollConnections.append(connect(
+        this, &AnnotatedScrollBar::scrollRequested, scrollView, [this, scrollView](int offset) {
+            if (!m_scrollView || m_scrollView != scrollView)
+                return;
+            scrollView->scrollTo(scrollView->horizontalOffset(), offset, false);
+        }));
+    m_scrollConnections.append(
+        connect(scrollView, &QObject::destroyed, this, [this]() { disconnectScrollView(); }));
 }
 
 void AnnotatedScrollBar::disconnectScrollView()
@@ -384,10 +384,10 @@ void AnnotatedScrollBar::paintEvent(QPaintEvent*)
         painter.drawText(visible.rect, Qt::AlignRight | Qt::AlignVCenter, visible.label.text);
 
     painter.setPen(caretColor);
-    Typography::Icons::paintGlyph(
-        painter, QRectF(topCaretRect()), Typography::Icons::FlipViewPrevV, 8, Qt::AlignCenter);
-    Typography::Icons::paintGlyph(
-        painter, QRectF(bottomCaretRect()), Typography::Icons::FlipViewNextV, 8, Qt::AlignCenter);
+    Typography::Icons::paintGlyph(painter, QRectF(topCaretRect()), Typography::Icons::FlipViewPrevV,
+                                  8, Qt::AlignCenter);
+    Typography::Icons::paintGlyph(painter, QRectF(bottomCaretRect()),
+                                  Typography::Icons::FlipViewNextV, 8, Qt::AlignCenter);
 
     const QRectF indicator = indicatorRectForValue(m_value);
     painter.setPen(Qt::NoPen);
@@ -562,7 +562,7 @@ void AnnotatedScrollBar::onThemeUpdated()
 void AnnotatedScrollBar::updateColors()
 {
     const auto& colors = themeColorsRef();
-    const bool isDark = effectiveTheme() == FluentElement::Dark;
+    const bool isDark = effectiveThemeUsesDarkAppearance();
 
     m_labelColor = colors.textPrimary;
     m_caretColor = isDark ? withAlpha(QColor(Qt::white), 0.54) : withAlpha(QColor(Qt::black), 0.45);
@@ -595,16 +595,15 @@ void AnnotatedScrollBar::ensureLabelLayout() const
     for (int index = 0; index < m_labels.size(); ++index) {
         const AnnotatedScrollBarLabel& label = m_labels.at(index);
         const qreal y = yForOffset(label.offset);
-        QRect textRect(labelsRect.left(),
-                       qRound(y - m_labelLineHeight / 2.0),
-                       labelsRect.width(),
+        QRect textRect(labelsRect.left(), qRound(y - m_labelLineHeight / 2.0), labelsRect.width(),
                        m_labelLineHeight);
         candidates.append({label, index, y, textRect});
     }
 
-    std::stable_sort(candidates.begin(), candidates.end(), [](const Candidate& lhs, const Candidate& rhs) {
-        return lhs.label.offset < rhs.label.offset;
-    });
+    std::stable_sort(candidates.begin(), candidates.end(),
+                     [](const Candidate& lhs, const Candidate& rhs) {
+                         return lhs.label.offset < rhs.label.offset;
+                     });
 
     QVector<VisibleLabel> selected;
     auto canPlace = [this, &selected](const QRect& rect) {
@@ -617,7 +616,8 @@ void AnnotatedScrollBar::ensureLabelLayout() const
     auto place = [&selected, &canPlace](const Candidate& candidate, bool force = false) {
         if (!force && !canPlace(candidate.rect))
             return false;
-        selected.append({candidate.label, candidate.originalIndex, candidate.centerY, candidate.rect});
+        selected.append(
+            {candidate.label, candidate.originalIndex, candidate.centerY, candidate.rect});
         return true;
     };
 
@@ -629,11 +629,12 @@ void AnnotatedScrollBar::ensureLabelLayout() const
             place(candidates.at(index));
     }
 
-    std::sort(selected.begin(), selected.end(), [](const VisibleLabel& lhs, const VisibleLabel& rhs) {
-        if (qFuzzyCompare(lhs.centerY, rhs.centerY))
-            return lhs.originalIndex < rhs.originalIndex;
-        return lhs.centerY < rhs.centerY;
-    });
+    std::sort(selected.begin(), selected.end(),
+              [](const VisibleLabel& lhs, const VisibleLabel& rhs) {
+                  if (qFuzzyCompare(lhs.centerY, rhs.centerY))
+                      return lhs.originalIndex < rhs.originalIndex;
+                  return lhs.centerY < rhs.centerY;
+              });
 
     m_visibleLabels = selected;
     m_labelLayoutSize = size();
@@ -733,7 +734,8 @@ void AnnotatedScrollBar::showDetail(const QString& text, const QPoint& localAnch
         if (available.isValid()) {
             if (x + popupSize.width() > available.right())
                 x = globalAnchor.x() - popupSize.width() - kDetailGap;
-            y = std::clamp(y, available.top(), std::max(available.top(), available.bottom() - popupSize.height()));
+            y = std::clamp(y, available.top(),
+                           std::max(available.top(), available.bottom() - popupSize.height()));
         }
 
         m_detailPopup->resize(popupSize);
@@ -772,36 +774,29 @@ QRectF AnnotatedScrollBar::trackRect() const
 
 QRect AnnotatedScrollBar::labelColumnRect() const
 {
-    return QRect(0,
-                 qRound(trackRect().top()),
-                 std::min(m_labelColumnWidth, width()),
+    return QRect(0, qRound(trackRect().top()), std::min(m_labelColumnWidth, width()),
                  qRound(trackRect().height()));
 }
 
 QRect AnnotatedScrollBar::topCaretRect() const
 {
-    return QRect(std::max(0, width() - m_caretSize.width()),
-                 1,
-                 std::min(m_caretSize.width(), width()),
-                 m_caretSize.height());
+    return QRect(std::max(0, width() - m_caretSize.width()), 1,
+                 std::min(m_caretSize.width(), width()), m_caretSize.height());
 }
 
 QRect AnnotatedScrollBar::bottomCaretRect() const
 {
     return QRect(std::max(0, width() - m_caretSize.width()),
                  std::max(0, height() - m_caretSize.height() - 1),
-                 std::min(m_caretSize.width(), width()),
-                 m_caretSize.height());
+                 std::min(m_caretSize.width(), width()), m_caretSize.height());
 }
 
 QRectF AnnotatedScrollBar::indicatorRectForValue(int value) const
 {
     const QRectF track = trackRect();
     const qreal centerY = yForOffset(value);
-    return QRectF(track.right() - m_indicatorWidth,
-                  centerY - m_indicatorThickness / 2.0,
-                  m_indicatorWidth,
-                  m_indicatorThickness);
+    return QRectF(track.right() - m_indicatorWidth, centerY - m_indicatorThickness / 2.0,
+                  m_indicatorWidth, m_indicatorThickness);
 }
 
 qreal AnnotatedScrollBar::yForOffset(int offset) const

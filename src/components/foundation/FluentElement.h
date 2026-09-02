@@ -34,7 +34,7 @@ public:
      * @brief Global visual theme used when resolving design tokens.
      * zh_CN: 解析设计 token 时使用的全局视觉主题。
      */
-    enum Theme { Light, Dark };
+    enum Theme { Light = 0, Dark = 1, HighContrast = 2 };
 
     // Design token snapshots returned to components.
     // zh_CN: 返回给组件使用的设计 token 快照。
@@ -49,37 +49,42 @@ public:
         // Stroke Colors
         QColor strokeDefault, strokeSecondary, strokeStrong;
         QColor strokeCard, strokeDivider, strokeSurface;
-        QColor strokeFocusOuter, strokeFocusInner;  // Two-layer focus ring strokes. zh_CN: 焦点环双层描边。
+        QColor strokeFocusOuter,
+            strokeFocusInner; // Two-layer focus ring strokes. zh_CN: 焦点环双层描边。
 
         // Text Colors
         QColor textPrimary, textSecondary, textTertiary, textDisabled;
-        QColor textOnAccent;        // Text on accent backgrounds (white/black). zh_CN: 强调色背景上的文字。
-        QColor textAccentPrimary;   // Accent text on plain backgrounds (dark/light blue). zh_CN: 普通背景上的强调色文字。
+        QColor
+            textOnAccent; // Text on accent backgrounds (white/black). zh_CN: 强调色背景上的文字。
+        QColor
+            textAccentPrimary; // Accent text on plain backgrounds (dark/light blue). zh_CN: 普通背景上的强调色文字。
 
         // Backgrounds & Neutrals
         QColor bgCanvas, bgLayer, bgLayerAlt, bgSolid;
         QColor grey10, grey20, grey30, grey40, grey50, grey60, grey90, grey130, grey160, grey190;
 
         // System / Semantic Colors
-        QColor systemCritical,    systemCriticalBg;
-        QColor systemCaution,     systemCautionBg;
-        QColor systemInfo,        systemInfoBg;
-        QColor systemSuccess,     systemSuccessBg;
+        QColor systemCritical, systemCriticalBg;
+        QColor systemCaution, systemCautionBg;
+        QColor systemInfo, systemInfoBg;
+        QColor systemSuccess, systemSuccessBg;
 
         // Charts
         QList<QColor> charts;
 
         // Overlay / Translucent Layers
-        QColor bgLayerOverlay;  // layered content mask for translucent windows. zh_CN: 半透明窗口下的分层内容遮罩。
+        QColor
+            bgLayerOverlay; // layered content mask for translucent windows. zh_CN: 半透明窗口下的分层内容遮罩。
     };
 
     struct FontStyle {
         QString family;
-        QString styleName;   // Exact static face, e.g. "Regular" or "Semibold". zh_CN: 精确静态字体。
+        QString styleName; // Exact static face, e.g. "Regular" or "Semibold". zh_CN: 精确静态字体。
         int size;
         int weight;
-        int lineHeight;      // Absolute line height in px, measured from Figma. zh_CN: 绝对行高，Figma 实测值。
-        QFont toQFont() const {
+        int lineHeight; // Absolute line height in px, measured from Figma. zh_CN: 绝对行高，Figma 实测值。
+        QFont toQFont() const
+        {
             QFont font(family, -1, weight);
             font.setPixelSize(size);
             fluentApplyFontStyleName(font, styleName);
@@ -89,20 +94,24 @@ public:
     };
 
     struct Radius {
-        int none;     // 0: square corners. zh_CN: 直角。
-        int control;  // 4: in-page controls. zh_CN: 页面内控件。
-        int overlay;  // 8: overlay containers (Dialog, ToolTip, Flyout). zh_CN: 浮层容器。
+        int none;    // 0: square corners. zh_CN: 直角。
+        int control; // 4: in-page controls. zh_CN: 页面内控件。
+        int overlay; // 8: overlay containers (Dialog, ToolTip, Flyout). zh_CN: 浮层容器。
     };
 
     struct Spacing {
         struct {
             int controlH, controlV;
             int card, dialog;
-            int textFieldH, textFieldV;   // Text-field padding. zh_CN: 输入框内边距。
-            int listItemH, listItemV;     // List-item padding. zh_CN: 列表项内边距。
+            int textFieldH, textFieldV; // Text-field padding. zh_CN: 输入框内边距。
+            int listItemH, listItemV;   // List-item padding. zh_CN: 列表项内边距。
         } padding;
-        struct { int tight, normal, loose, section; } gap;
-        struct { int small, standard, large; } controlHeight;  // Standard control heights. zh_CN: 标准控件高度。
+        struct {
+            int tight, normal, loose, section;
+        } gap;
+        struct {
+            int small, standard, large;
+        } controlHeight; // Standard control heights. zh_CN: 标准控件高度。
         int xSmall, small, medium, standard, large, xLarge, xxLarge;
     };
 
@@ -132,10 +141,22 @@ public:
     static Theme currentTheme();
 
     /**
+     * @brief Returns whether a theme uses dark-backed chrome and material tokens.
+     * zh_CN: 返回指定主题是否使用暗色底的 chrome 与材质 token。
+     *
+     * HighContrast is a distinct semantic mode, but its built-in contract is a
+     * black canvas with light foregrounds. Callers that choose between light and
+     * dark chrome should use this helper instead of comparing only with Dark.
+     * zh_CN: HighContrast 是独立语义模式，但其内置合同为黑底亮色前景。需要在
+     * 明暗 chrome 间选择的调用方应使用此方法，而非仅与 Dark 比较。
+     */
+    static bool themeUsesDarkAppearance(Theme theme);
+
+    /**
      * @brief Re-broadcasts the current theme to repaint after a design-token change.
      * zh_CN: 在设计 token 变化后重新广播当前主题以触发重绘。
      *
-     * setThemeDeferred() early-outs when the Light/Dark mode is unchanged, so it cannot repaint a
+     * setThemeDeferred() early-outs when the theme mode is unchanged, so it cannot repaint a
      * pure token update while staying in the same mode. This forces the same atomic visible-first
      * refresh without changing the mode.
      * zh_CN: setThemeDeferred() 在明暗模式未变时会提前返回，无法重绘纯 token 更新。
@@ -158,12 +179,18 @@ public:
      * zh_CN: 解析此元素实际使用的主题，会优先读取 QWidget 父链上的局部主题覆盖。
      *
      * Gallery samples can set the dynamic property `fluentThemeOverride` on a container
-     * (value: `Light`/`Dark` enum integer or string) so only that subtree renders in the
+     * (value: `Light`/`Dark`/`HighContrast` enum integer or string) so only that subtree renders in the
      * requested theme while the application chrome keeps the global theme.
-     * zh_CN: Gallery 示例可在容器上设置 `fluentThemeOverride` 动态属性（值为 `Light`/`Dark`
+     * zh_CN: Gallery 示例可在容器上设置 `fluentThemeOverride` 动态属性（值为 `Light`/`Dark`/`HighContrast`
      * 枚举整数或字符串），从而只让该子树使用指定主题，应用外壳仍保持全局主题。
      */
     Theme effectiveTheme() const;
+
+    /**
+     * @brief Returns whether this element's effective theme uses dark-backed chrome.
+     * zh_CN: 返回此元素的实际主题是否使用暗色底 chrome。
+     */
+    bool effectiveThemeUsesDarkAppearance() const;
 
     // Component-facing token accessors.
     // zh_CN: 供组件侧访问的设计 token 接口。
@@ -189,12 +216,12 @@ public:
 
     Spacing themeSpacing() const;
     Animation themeAnimation() const;
-    
+
     // Material, elevation, and adaptive layout tokens.
     // zh_CN: 材质、阴影和自适应布局 token。
     Material::AcrylicToken themeAcrylic() const;
-    Material::MicaToken    themeMica()    const;
-    Material::SmokeToken   themeSmoke()   const;
+    Material::MicaToken themeMica() const;
+    Material::SmokeToken themeSmoke() const;
     Elevation::ShadowParams themeShadow(Elevation::Level level) const;
     int themeBreakpoint(Breakpoints::Breakpoint breakpoint = Breakpoints::Breakpoint::Medium) const;
 

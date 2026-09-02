@@ -8,18 +8,25 @@ from ._fluentqt import (
     FontRole,
     accentColor,
     applyUserTheme,
+    currentMotionMode as _nativeCurrentMotionMode,
     currentTheme,
     fontScale,
     fontForRole,
+    resolvedMotionDuration as _nativeResolvedMotionDuration,
     resetThemeTokens,
     setAccentColor,
     setFontScale,
+    setMotionMode as _nativeSetMotionMode,
     setTheme,
+    shouldAnimateMotion as _nativeShouldAnimateMotion,
     themeRevision,
+    themeUsesDarkAppearance,
 )
 from .design import ThemeTokens
 
 Theme = _native.fluent.Theme
+MotionMode = _native.fluent.MotionMode
+MotionKind = _native.fluent.MotionKind
 FontIcon = _native.fluent.FontIcon
 AnchorEdge = _native.fluent.AnchorEdge
 AnchorLayout = _native.fluent.AnchorLayout
@@ -27,6 +34,97 @@ AnchorSpec = _native.fluent.AnchorSpec
 BindingMode = _native.fluent.BindingMode
 _NativeFluentWidget = _native.fluent.FluentWidget
 _NativeStateGroup = _native.fluent.StateGroup
+
+
+class MotionPolicy(QObject):
+    """Observable Python facade over FluentQt's process-wide motion policy."""
+
+    Mode = MotionMode
+    Kind = MotionKind
+    modeChanged = Signal(object)
+    _instance = None
+    _initialized = False
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+        super().__init__()
+        self._initialized = True
+
+    def mode(self):
+        """Return the active Full, Reduced, or Disabled preference."""
+
+        return _nativeCurrentMotionMode()
+
+    def setMode(self, mode):
+        """Set the global preference and emit once when it changes."""
+
+        try:
+            normalized = MotionMode(mode)
+        except (TypeError, ValueError) as error:
+            raise ValueError("Unsupported FluentQt motion mode") from error
+        if normalized not in (
+            MotionMode.Full,
+            MotionMode.Reduced,
+            MotionMode.Disabled,
+        ):
+            raise ValueError("Unsupported FluentQt motion mode")
+        previous = self.mode()
+        _nativeSetMotionMode(normalized)
+        current = self.mode()
+        if current != previous:
+            self.modeChanged.emit(current)
+
+    def shouldAnimate(
+        self,
+        local_animation_enabled=True,
+        kind=MotionKind.Transition,
+    ):
+        """Return whether the requested transition or continuous motion may run."""
+
+        if not isinstance(local_animation_enabled, bool):
+            raise TypeError("local_animation_enabled must be bool")
+        try:
+            normalized_kind = MotionKind(kind)
+        except (TypeError, ValueError) as error:
+            raise ValueError("Unsupported FluentQt motion kind") from error
+        if normalized_kind not in (
+            MotionKind.Transition,
+            MotionKind.Continuous,
+        ):
+            raise ValueError("Unsupported FluentQt motion kind")
+        return _nativeShouldAnimateMotion(
+            local_animation_enabled,
+            normalized_kind,
+        )
+
+    def resolvedDuration(self, full_duration_ms, local_animation_enabled=True):
+        """Resolve a full transition duration through the native policy."""
+
+        if not isinstance(full_duration_ms, int) or isinstance(
+            full_duration_ms, bool
+        ):
+            raise TypeError("full_duration_ms must be int")
+        if not isinstance(local_animation_enabled, bool):
+            raise TypeError("local_animation_enabled must be bool")
+        return _nativeResolvedMotionDuration(
+            full_duration_ms,
+            local_animation_enabled,
+        )
+
+
+_MOTION_POLICY = MotionPolicy()
+
+
+def motion_policy():
+    """Return FluentQt's observable process-wide motion policy."""
+
+    return _MOTION_POLICY
 
 
 class FluentWidget(_NativeFluentWidget):
@@ -281,13 +379,40 @@ def font_for_role(role=FontRole.Body):
 
 
 def set_theme(theme):
-    """Set the global Light or Dark visual theme."""
+    """Set the global Light, Dark, or HighContrast visual theme."""
     setTheme(theme)
 
 
 def current_theme():
-    """Return the active global Light or Dark visual theme."""
+    """Return the active global visual theme."""
     return currentTheme()
+
+
+def theme_uses_dark_appearance(theme):
+    """Return whether a visual theme uses dark-backed chrome."""
+    return themeUsesDarkAppearance(theme)
+
+
+def set_motion_mode(mode):
+    """Set the global Full, Reduced, or Disabled motion preference."""
+    motion_policy().setMode(mode)
+
+
+def current_motion_mode():
+    """Return the active global motion preference."""
+    return motion_policy().mode()
+
+
+def setMotionMode(mode):
+    """Set the global motion preference using the Qt-style spelling."""
+
+    motion_policy().setMode(mode)
+
+
+def currentMotionMode():
+    """Return the global motion preference using the Qt-style spelling."""
+
+    return motion_policy().mode()
 
 
 def apply_user_theme():
@@ -301,12 +426,12 @@ def set_accent_color(color):
 
 
 def accent_color():
-    """Return the active Light or Dark accent color."""
+    """Return the accent color for the active visual theme."""
     return accentColor()
 
 
 def reset_theme_tokens():
-    """Restore built-in Fluent tokens without changing Light or Dark mode."""
+    """Restore built-in Fluent tokens without changing the visual mode."""
     resetThemeTokens()
 
 
@@ -333,6 +458,9 @@ __all__ = [
     "FluentWidget",
     "FontIcon",
     "FontRole",
+    "MotionKind",
+    "MotionMode",
+    "MotionPolicy",
     "StateGroup",
     "Theme",
     "accent_color",
@@ -341,20 +469,27 @@ __all__ = [
     "apply_user_theme",
     "applyUserTheme",
     "bind",
+    "current_motion_mode",
+    "currentMotionMode",
     "current_theme",
     "currentTheme",
     "font_scale",
     "font_for_role",
     "fontScale",
     "fontForRole",
+    "motion_policy",
     "reset_theme_tokens",
     "resetThemeTokens",
     "set_accent_color",
     "set_font_scale",
+    "set_motion_mode",
     "set_theme",
     "setAccentColor",
     "setFontScale",
+    "setMotionMode",
     "setTheme",
     "theme_revision",
     "themeRevision",
+    "theme_uses_dark_appearance",
+    "themeUsesDarkAppearance",
 ]

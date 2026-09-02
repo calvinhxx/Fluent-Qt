@@ -50,6 +50,11 @@
     <function signature="fontForRole(Typography::FontRole)"/>
     <function signature="setTheme(fluent::binding::Theme)"/>
     <function signature="currentTheme()"/>
+    <function signature="themeUsesDarkAppearance(fluent::binding::Theme)"/>
+    <function signature="setMotionMode(fluent::binding::MotionMode)"/>
+    <function signature="currentMotionMode()"/>
+    <function signature="shouldAnimateMotion(bool,fluent::binding::MotionKind)"/>
+    <function signature="resolvedMotionDuration(int,bool)"/>
     <function signature="applyUserTheme()"/>
     <function signature="setAccentColor(const QColor&amp;)"/>
     <function signature="accentColor()"/>
@@ -139,6 +144,8 @@
         <enum-type name="WidgetOwnership"/>
         <namespace-type name="binding" visible="no">
             <enum-type name="Theme"/>
+            <enum-type name="MotionMode"/>
+            <enum-type name="MotionKind"/>
             <enum-type name="SelectionMode"/>
             <enum-type name="BindingMode"/>
             <enum-type name="AnchorEdge"/>

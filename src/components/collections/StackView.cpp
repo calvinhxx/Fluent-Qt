@@ -10,6 +10,8 @@
 #include <QSet>
 #include <QSizePolicy>
 
+#include "components/foundation/private/MotionPolicy_p.h"
+
 namespace fluent::collections {
 
 namespace {
@@ -24,8 +26,7 @@ bool isBackKey(QKeyEvent* event)
 } // namespace
 
 StackView::OperationGuard::OperationGuard(StackView* owner)
-    : m_owner(owner),
-      m_ownsOperation(owner && !owner->m_operationInProgress)
+    : m_owner(owner), m_ownsOperation(owner && !owner->m_operationInProgress)
 {
     if (m_ownsOperation)
         owner->m_operationInProgress = true;
@@ -44,8 +45,7 @@ void StackView::OperationGuard::release()
     m_ownsOperation = false;
 }
 
-StackView::StackView(QWidget* parent)
-    : QStackedWidget(parent)
+StackView::StackView(QWidget* parent) : QStackedWidget(parent)
 {
     setFocusPolicy(Qt::StrongFocus);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -94,7 +94,14 @@ void StackView::setTransitionAnimationEnabled(bool enabled)
     if (m_transitionAnimationEnabled == enabled)
         return;
     m_transitionAnimationEnabled = enabled;
+
+    QPointer<StackView> guard(this);
     emit transitionAnimationEnabledChanged(m_transitionAnimationEnabled);
+    if (!guard || m_transitionAnimationEnabled || !m_transitionGroup)
+        return;
+
+    m_transitionGroup->stop();
+    completeTransition();
 }
 
 void StackView::setTransitionDuration(int durationMs)
@@ -150,8 +157,8 @@ bool StackView::setInitialItem(QWidget* item, WidgetOwnership ownership)
     prepareItem(itemGuard.data());
     if (!guard || !itemGuard)
         return true;
-    m_stack.append(makeEntry(itemGuard.data(), originalParent.data(), ownership,
-                             StackViewItemStatus::Active));
+    m_stack.append(
+        makeEntry(itemGuard.data(), originalParent.data(), ownership, StackViewItemStatus::Active));
     m_internalStackChange = true;
     QStackedWidget::setCurrentWidget(itemGuard.data());
     m_internalStackChange = false;
@@ -168,13 +175,17 @@ bool StackView::setInitialItem(QWidget* item, WidgetOwnership ownership)
         return true;
 
     emit itemPushed(itemGuard.data());
-    if (!guard || !itemGuard) return true;
+    if (!guard || !itemGuard)
+        return true;
     emitDepthIfChanged(oldDepth);
-    if (!guard || !itemGuard) return true;
+    if (!guard || !itemGuard)
+        return true;
     emitInitialIfChanged(oldInitial.data());
-    if (!guard || !itemGuard) return true;
+    if (!guard || !itemGuard)
+        return true;
     emitCurrentIfChanged(oldCurrent.data());
-    if (!guard || !itemGuard) return true;
+    if (!guard || !itemGuard)
+        return true;
     emit itemStatusChanged(itemGuard.data(), StackViewItemStatus::Active);
     return true;
 }
@@ -204,19 +215,25 @@ bool StackView::push(QWidget* item, WidgetOwnership ownership)
                              StackViewItemStatus::Inactive));
 
     emit itemPushed(itemGuard.data());
-    if (!guard || !itemGuard) return true;
+    if (!guard || !itemGuard)
+        return true;
     emitDepthIfChanged(oldDepth);
-    if (!guard || !itemGuard) return true;
+    if (!guard || !itemGuard)
+        return true;
     emitInitialIfChanged(oldInitial.data());
-    if (!guard || !itemGuard) return true;
+    if (!guard || !itemGuard)
+        return true;
     emitCurrentIfChanged(oldCurrent.data());
-    if (!guard || !itemGuard) return true;
+    if (!guard || !itemGuard)
+        return true;
 
     if (oldCurrent)
         setItemStatus(oldCurrent.data(), StackViewItemStatus::Deactivating);
-    if (!guard || !itemGuard) return true;
+    if (!guard || !itemGuard)
+        return true;
     setItemStatus(itemGuard.data(), StackViewItemStatus::Activating);
-    if (!guard || !itemGuard) return true;
+    if (!guard || !itemGuard)
+        return true;
 
     operationGuard.release();
     startTransition(StackViewTransitionOperation::Push, oldCurrent.data(), itemGuard.data(), {});
@@ -263,29 +280,34 @@ bool StackView::push(const QVector<QWidget*>& items, WidgetOwnership ownership)
         if (!itemGuard)
             continue;
         emit itemPushed(itemGuard.data());
-        if (!guard) return true;
+        if (!guard)
+            return true;
     }
 
     emitDepthIfChanged(oldDepth);
-    if (!guard) return true;
+    if (!guard)
+        return true;
     emitInitialIfChanged(oldInitial.data());
-    if (!guard) return true;
+    if (!guard)
+        return true;
     emitCurrentIfChanged(oldCurrent.data());
-    if (!guard) return true;
+    if (!guard)
+        return true;
 
     if (oldCurrent)
         setItemStatus(oldCurrent.data(), StackViewItemStatus::Deactivating);
-    if (!guard) return true;
+    if (!guard)
+        return true;
     QPointer<QWidget> topItem = currentItem();
-    const bool topWasRequested = std::any_of(
-        itemGuards.cbegin(), itemGuards.cend(),
-        [topItem](const QPointer<QWidget>& requestedItem) {
-            return requestedItem && requestedItem == topItem;
-        });
+    const bool topWasRequested = std::any_of(itemGuards.cbegin(), itemGuards.cend(),
+                                             [topItem](const QPointer<QWidget>& requestedItem) {
+                                                 return requestedItem && requestedItem == topItem;
+                                             });
     if (!topItem || !topWasRequested)
         return true;
     setItemStatus(topItem.data(), StackViewItemStatus::Activating);
-    if (!guard || !topItem) return true;
+    if (!guard || !topItem)
+        return true;
 
     operationGuard.release();
     startTransition(StackViewTransitionOperation::Push, oldCurrent.data(), topItem.data(), {});
@@ -324,9 +346,8 @@ bool StackView::replace(int index, QWidget* item, WidgetOwnership ownership)
     if (!guard || !itemGuard)
         return true;
 
-    PendingRemoval removal{oldEntry.item, oldEntry.rawItem,
-                           oldEntry.originalParent, oldEntry.ownership,
-                           oldEntry.destroyedConnection};
+    PendingRemoval removal{oldEntry.item, oldEntry.rawItem, oldEntry.originalParent,
+                           oldEntry.ownership, oldEntry.destroyedConnection};
     auto finishDeletedReplacement = [&] {
         cleanupPendingRemoval(removal);
         if (guard)
@@ -378,8 +399,8 @@ bool StackView::replace(int index, QWidget* item, WidgetOwnership ownership)
 
     if (replacesCurrent) {
         operationGuard.release();
-        startTransition(StackViewTransitionOperation::Replace,
-                        oldItem.data(), itemGuard.data(), {removal});
+        startTransition(StackViewTransitionOperation::Replace, oldItem.data(), itemGuard.data(),
+                        {removal});
     } else {
         cleanupPendingRemoval(removal);
         if (guard)
@@ -400,9 +421,8 @@ bool StackView::pop()
 
     const int oldDepth = depth();
     StackEntry oldEntry = m_stack.takeLast();
-    PendingRemoval removal{oldEntry.item, oldEntry.rawItem,
-                           oldEntry.originalParent, oldEntry.ownership,
-                           oldEntry.destroyedConnection};
+    PendingRemoval removal{oldEntry.item, oldEntry.rawItem, oldEntry.originalParent,
+                           oldEntry.ownership, oldEntry.destroyedConnection};
     QPointer<QWidget> target = currentItem();
     auto finishInterruptedPop = [&] {
         cleanupPendingRemoval(removal);
@@ -412,7 +432,8 @@ bool StackView::pop()
 
     if (oldCurrent)
         emitItemStatus(oldCurrent.data(), StackViewItemStatus::Deactivating);
-    if (!guard) return true;
+    if (!guard)
+        return true;
     if (target)
         setItemStatus(target.data(), StackViewItemStatus::Activating);
     if (!guard)
@@ -452,8 +473,7 @@ bool StackView::pop()
     }
 
     operationGuard.release();
-    startTransition(StackViewTransitionOperation::Pop,
-                    oldCurrent.data(), target.data(), {removal});
+    startTransition(StackViewTransitionOperation::Pop, oldCurrent.data(), target.data(), {removal});
     return true;
 }
 
@@ -497,13 +517,12 @@ bool StackView::popToItem(QWidget* item)
         layoutStackItems();
     };
 
-    while (targetGuard
-           && stackIndexOf(targetGuard.data()) >= 0
-           && stackIndexOf(targetGuard.data()) < m_stack.size() - 1) {
+    while (targetGuard && stackIndexOf(targetGuard.data()) >= 0 &&
+           stackIndexOf(targetGuard.data()) < m_stack.size() - 1) {
         StackEntry entry = m_stack.takeLast();
         QPointer<QWidget> removed = entry.item;
-        removals.append({entry.item, entry.rawItem, entry.originalParent,
-                         entry.ownership, entry.destroyedConnection});
+        removals.append({entry.item, entry.rawItem, entry.originalParent, entry.ownership,
+                         entry.destroyedConnection});
         if (removed)
             emitItemStatus(removed.data(), StackViewItemStatus::Deactivating);
         if (!guard)
@@ -575,8 +594,7 @@ bool StackView::popToItem(QWidget* item)
     }
 
     operationGuard.release();
-    startTransition(StackViewTransitionOperation::Pop,
-                    oldCurrent.data(), target.data(), removals);
+    startTransition(StackViewTransitionOperation::Pop, oldCurrent.data(), target.data(), removals);
     return true;
 }
 
@@ -604,34 +622,44 @@ bool StackView::clear()
         QPointer<QWidget> item = entry.item;
         if (item) {
             emitItemStatus(item.data(), StackViewItemStatus::Deactivating);
-            if (!guard) return true;
+            if (!guard)
+                return true;
             if (item)
                 emitItemStatus(item.data(), StackViewItemStatus::Inactive);
-            if (!guard) return true;
+            if (!guard)
+                return true;
             if (item)
                 emit itemPopped(item.data());
-            if (!guard) return true;
+            if (!guard)
+                return true;
         }
-        cleanupPendingRemoval({entry.item, entry.rawItem, entry.originalParent,
-                               entry.ownership, entry.destroyedConnection});
-        if (!guard) return true;
+        cleanupPendingRemoval({entry.item, entry.rawItem, entry.originalParent, entry.ownership,
+                               entry.destroyedConnection});
+        if (!guard)
+            return true;
     }
 
     emitDepthIfChanged(oldDepth);
-    if (!guard) return true;
+    if (!guard)
+        return true;
     emitInitialIfChanged(oldInitial.data());
-    if (!guard) return true;
+    if (!guard)
+        return true;
     emitCurrentIfChanged(oldCurrent.data());
-    if (!guard) return true;
+    if (!guard)
+        return true;
     setBusy(true);
-    if (!guard) return true;
+    if (!guard)
+        return true;
 
     operationGuard.release();
     emit transitionStarted(StackViewTransitionOperation::Clear, oldCurrent.data(), nullptr);
-    if (!guard) return true;
+    if (!guard)
+        return true;
     m_finishingTransition = true;
     setBusy(false);
-    if (!guard) return true;
+    if (!guard)
+        return true;
     m_finishingTransition = false;
     emit transitionFinished(StackViewTransitionOperation::Clear, oldCurrent.data(), nullptr);
     return true;
@@ -654,9 +682,9 @@ bool StackView::adoptWidget(QWidget* item, WidgetOwnership ownership)
     if (!guard || !itemGuard)
         return true;
     const bool becomesCurrent = !oldCurrent || QStackedWidget::currentWidget() == itemGuard;
-    m_stack.append(makeEntry(itemGuard.data(), originalParent.data(), ownership,
-                             becomesCurrent ? StackViewItemStatus::Active
-                                            : StackViewItemStatus::Inactive));
+    m_stack.append(
+        makeEntry(itemGuard.data(), originalParent.data(), ownership,
+                  becomesCurrent ? StackViewItemStatus::Active : StackViewItemStatus::Inactive));
     itemGuard->setVisible(becomesCurrent);
     if (!guard || !itemGuard)
         return true;
@@ -669,18 +697,20 @@ bool StackView::adoptWidget(QWidget* item, WidgetOwnership ownership)
     }
 
     emit itemPushed(itemGuard.data());
-    if (!guard || !itemGuard) return true;
+    if (!guard || !itemGuard)
+        return true;
     emitDepthIfChanged(oldDepth);
-    if (!guard || !itemGuard) return true;
+    if (!guard || !itemGuard)
+        return true;
     emitInitialIfChanged(oldInitial.data());
-    if (!guard || !itemGuard) return true;
+    if (!guard || !itemGuard)
+        return true;
     emitCurrentIfChanged(oldCurrent.data());
-    if (!guard || !itemGuard) return true;
-    const StackViewItemStatus finalStatus = currentItem() == itemGuard
-        ? StackViewItemStatus::Active
-        : StackViewItemStatus::Inactive;
-    emit itemStatusChanged(itemGuard.data(),
-                           finalStatus);
+    if (!guard || !itemGuard)
+        return true;
+    const StackViewItemStatus finalStatus =
+        currentItem() == itemGuard ? StackViewItemStatus::Active : StackViewItemStatus::Inactive;
+    emit itemStatusChanged(itemGuard.data(), finalStatus);
     return true;
 }
 
@@ -764,9 +794,8 @@ void StackView::setCurrentIndex(int index)
     for (const QPointer<QWidget>& stackItem : std::as_const(stackItems)) {
         if (!stackItem)
             continue;
-        setItemStatus(stackItem.data(),
-                      stackItem == item ? StackViewItemStatus::Active
-                                        : StackViewItemStatus::Inactive);
+        setItemStatus(stackItem.data(), stackItem == item ? StackViewItemStatus::Active
+                                                          : StackViewItemStatus::Inactive);
         if (!guard || !item)
             return;
     }
@@ -833,10 +862,8 @@ int StackView::stackIndexOf(QWidget* item) const
     return -1;
 }
 
-StackView::StackEntry StackView::makeEntry(QWidget* item,
-                                           QWidget* originalParent,
-                                           WidgetOwnership ownership,
-                                           StackViewItemStatus status)
+StackView::StackEntry StackView::makeEntry(QWidget* item, QWidget* originalParent,
+                                           WidgetOwnership ownership, StackViewItemStatus status)
 {
     StackEntry entry;
     entry.item = item;
@@ -844,9 +871,8 @@ StackView::StackEntry StackView::makeEntry(QWidget* item,
     entry.originalParent = originalParent;
     entry.ownership = ownership;
     entry.status = status;
-    entry.destroyedConnection = connect(item, &QObject::destroyed, this, [this](QObject* object) {
-        onItemDestroyed(object);
-    });
+    entry.destroyedConnection = connect(item, &QObject::destroyed, this,
+                                        [this](QObject* object) { onItemDestroyed(object); });
     return entry;
 }
 
@@ -917,10 +943,8 @@ void StackView::setBusy(bool busy)
     emit busyChanged(m_busy);
 }
 
-void StackView::startTransition(StackViewTransitionOperation operation,
-                                QWidget* fromItem,
-                                QWidget* toItem,
-                                const QVector<PendingRemoval>& removals)
+void StackView::startTransition(StackViewTransitionOperation operation, QWidget* fromItem,
+                                QWidget* toItem, const QVector<PendingRemoval>& removals)
 {
     m_transitionOperation = operation;
     m_transitionFrom = fromItem;
@@ -1013,7 +1037,8 @@ void StackView::startTransition(StackViewTransitionOperation operation,
                                  qRound(fullOffset.y() * kOutgoingTravelRatio));
 
         if (toGuard) {
-            toGuard->setGeometry(QRect(endRect.topLeft() + (isPop ? -smallOffset : fullOffset), endRect.size()));
+            toGuard->setGeometry(
+                QRect(endRect.topLeft() + (isPop ? -smallOffset : fullOffset), endRect.size()));
             setGraphicsOpacity(toGuard.data(), isPop ? 0.85 : 0.0, m_toOpacityEffect);
         }
         if (fromGuard) {
@@ -1033,8 +1058,9 @@ void StackView::startTransition(StackViewTransitionOperation operation,
     addOpacityAnimation(m_toOpacityEffect, toOpacityStart, 1.0);
     addOpacityAnimation(m_fromOpacityEffect, 1.0, 0.0);
 
-    connect(m_transitionGroup, &QParallelAnimationGroup::finished, this, &StackView::completeTransition);
-    m_transitionGroup->start();
+    connect(m_transitionGroup, &QParallelAnimationGroup::finished, this,
+            &StackView::completeTransition);
+    ::fluent::detail::startMotionTransitionGroup(m_transitionGroup, m_transitionAnimationEnabled);
 }
 
 void StackView::completeTransition()
@@ -1096,17 +1122,19 @@ void StackView::completeTransition()
         if (!stackItem)
             continue;
         const StackViewItemStatus status = stackItem == currentItem()
-            ? StackViewItemStatus::Active
-            : StackViewItemStatus::Inactive;
+                                               ? StackViewItemStatus::Active
+                                               : StackViewItemStatus::Inactive;
         setItemStatus(stackItem.data(), status);
         if (!guard)
             return;
     }
     activeItem = currentItem();
 
-    const bool fromIsPendingRemoval = std::any_of(m_transitionRemovals.cbegin(), m_transitionRemovals.cend(), [fromItem](const PendingRemoval& removal) {
-        return removal.item == fromItem || removal.rawItem == fromItem.data();
-    });
+    const bool fromIsPendingRemoval =
+        std::any_of(m_transitionRemovals.cbegin(), m_transitionRemovals.cend(),
+                    [fromItem](const PendingRemoval& removal) {
+                        return removal.item == fromItem || removal.rawItem == fromItem.data();
+                    });
     if (fromItem && fromItem != activeItem) {
         if (fromIsPendingRemoval)
             emitItemStatus(fromItem.data(), StackViewItemStatus::Inactive);
@@ -1171,8 +1199,8 @@ void StackView::cleanupAll(bool immediateDelete)
     m_stack.clear();
     QPointer<StackView> guard(this);
     for (const StackEntry& entry : entries) {
-        cleanupPendingRemoval({entry.item, entry.rawItem, entry.originalParent,
-                               entry.ownership, entry.destroyedConnection},
+        cleanupPendingRemoval({entry.item, entry.rawItem, entry.originalParent, entry.ownership,
+                               entry.destroyedConnection},
                               immediateDelete);
         if (!guard)
             return;
@@ -1220,12 +1248,8 @@ QPoint StackView::transitionOffset(StackViewTransitionOperation operation, bool 
 
 bool StackView::shouldAnimate(QWidget* fromItem, QWidget* toItem) const
 {
-    return m_transitionAnimationEnabled
-        && m_transitionType != StackViewTransitionType::Immediate
-        && m_transitionDuration > 0
-        && fromItem
-        && toItem
-        && fromItem != toItem;
+    return m_transitionAnimationEnabled && m_transitionType != StackViewTransitionType::Immediate &&
+           m_transitionDuration > 0 && fromItem && toItem && fromItem != toItem;
 }
 
 QRect StackView::scaledTransitionRect(const QRect& rect, qreal scale) const
@@ -1236,7 +1260,8 @@ QRect StackView::scaledTransitionRect(const QRect& rect, qreal scale) const
     return scaled;
 }
 
-void StackView::setGraphicsOpacity(QWidget* item, qreal opacity, QPointer<QGraphicsOpacityEffect>& effectStore)
+void StackView::setGraphicsOpacity(QWidget* item, qreal opacity,
+                                   QPointer<QGraphicsOpacityEffect>& effectStore)
 {
     if (!item)
         return;
@@ -1284,9 +1309,8 @@ void StackView::onCurrentChanged(int index)
     for (const QPointer<QWidget>& stackItem : std::as_const(stackItems)) {
         if (!stackItem)
             continue;
-        setItemStatus(stackItem.data(),
-                      stackItem == item ? StackViewItemStatus::Active
-                                        : StackViewItemStatus::Inactive);
+        setItemStatus(stackItem.data(), stackItem == item ? StackViewItemStatus::Active
+                                                          : StackViewItemStatus::Inactive);
         if (!guard || !item)
             return;
     }
@@ -1294,9 +1318,11 @@ void StackView::onCurrentChanged(int index)
     if (!guard || !item)
         return;
     emitDepthIfChanged(oldDepth);
-    if (!guard || !item) return;
+    if (!guard || !item)
+        return;
     emitInitialIfChanged(oldInitial.data());
-    if (!guard || !item) return;
+    if (!guard || !item)
+        return;
     emitCurrentIfChanged(oldCurrent.data());
 }
 
@@ -1323,14 +1349,18 @@ void StackView::onItemDestroyed(QObject* object)
             return;
         if (current)
             setItemStatus(current.data(), StackViewItemStatus::Active);
-        if (!guard) return;
+        if (!guard)
+            return;
     }
     layoutStackItems();
-    if (!guard) return;
+    if (!guard)
+        return;
     emitDepthIfChanged(oldDepth);
-    if (!guard) return;
+    if (!guard)
+        return;
     emitInitialIfChanged(oldInitial.data());
-    if (!guard) return;
+    if (!guard)
+        return;
     emitCurrentIfChanged(oldCurrent.data());
 }
 
@@ -1373,15 +1403,19 @@ void StackView::pruneRemovedWidgets()
                 return;
             if (current)
                 setItemStatus(current.data(), StackViewItemStatus::Active);
-            if (!guard) return;
+            if (!guard)
+                return;
         }
     }
     layoutStackItems();
-    if (!guard) return;
+    if (!guard)
+        return;
     emitDepthIfChanged(oldDepth);
-    if (!guard) return;
+    if (!guard)
+        return;
     emitInitialIfChanged(oldInitial.data());
-    if (!guard) return;
+    if (!guard)
+        return;
     emitCurrentIfChanged(oldCurrent.data());
 }
 

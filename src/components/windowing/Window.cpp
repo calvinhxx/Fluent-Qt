@@ -39,9 +39,8 @@ constexpr int VisibleFrameResizeBorderWidth = ResizeBorderWidth;
 
 bool requiresAlphaSurface(const BackdropCapabilities& capabilities, int frameMargin)
 {
-    return capabilities.supportsTransparentMaterial(BackdropEffect::Mica)
-        || capabilities.supportsTransparentMaterial(BackdropEffect::Acrylic)
-        || frameMargin > 0;
+    return capabilities.supportsTransparentMaterial(BackdropEffect::Mica) ||
+           capabilities.supportsTransparentMaterial(BackdropEffect::Acrylic) || frameMargin > 0;
 }
 
 bool usesFluentCaptionButtons(const compatibility::WindowChromeCompat& chrome)
@@ -87,9 +86,8 @@ QPoint pointerLocalPosForWindow(QWidget* source, QWidget* window, QMouseEvent* e
 } // namespace
 
 Window::Window(QWidget* parent)
-    : QWidget(parent),
-      m_chrome(this),
-      m_resizeSession(std::make_unique<WindowResizeSession>()) {
+    : QWidget(parent), m_chrome(this), m_resizeSession(std::make_unique<WindowResizeSession>())
+{
     registerBackdropMetaTypes();
     m_chrome.applyPlatformWindowFlags();
 
@@ -100,14 +98,14 @@ Window::Window(QWidget* parent)
     // changes update paint hints and requested backdrop type, not native flags.
     // zh_CN: 顶层半透明是平台级决策；运行时切换效果只更新绘制提示和请求的系统背景类型。
     refreshBackdropCapabilities();
-    m_windowTranslucent = requiresAlphaSurface(
-        m_backdropCapabilities, m_chrome.clientSideFrameMargin());
+    m_windowTranslucent =
+        requiresAlphaSurface(m_backdropCapabilities, m_chrome.clientSideFrameMargin());
     if (m_windowTranslucent)
         setAttribute(Qt::WA_TranslucentBackground, true);
-    setEffectiveBackdropState(paintedFallbackState(
-        m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect)
-            ? QStringLiteral("platform-backdrop-pending")
-            : QStringLiteral("painted-fallback")));
+    setEffectiveBackdropState(
+        paintedFallbackState(m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect)
+                                 ? QStringLiteral("platform-backdrop-pending")
+                                 : QStringLiteral("painted-fallback")));
 
     m_rootLayout = new QVBoxLayout(this);
     m_rootLayout->setContentsMargins(0, 0, 0, 0);
@@ -120,10 +118,9 @@ Window::Window(QWidget* parent)
     // 客户端窗框边距选择加入。Windows/macOS 继续使用原生直接绘制路径。
     QWidget* chromeParent = this;
     QVBoxLayout* chromeLayout = m_rootLayout;
-    const bool needsClientSideFrameHost =
-        compatibility::WindowChromeCompat::currentPlatform()
-            == compatibility::WindowChromeCompat::Platform::Linux
-        || m_chrome.clientSideFrameMargin() > 0;
+    const bool needsClientSideFrameHost = compatibility::WindowChromeCompat::currentPlatform() ==
+                                              compatibility::WindowChromeCompat::Platform::Linux ||
+                                          m_chrome.clientSideFrameMargin() > 0;
     if (needsClientSideFrameHost) {
         m_frameHost = new QWidget(this);
         m_frameHost->setObjectName(QStringLiteral("fluentWindowFrameHost"));
@@ -138,7 +135,8 @@ Window::Window(QWidget* parent)
 
     m_titleBar = new TitleBar(chromeParent);
     m_titleBar->setSystemReservedLeadingWidth(m_chrome.nativeTitleBarLeadingInset());
-    m_titleBar->setVisible(m_chrome.usesCustomWindowChrome() || m_chrome.prefersNativeMacControls());
+    m_titleBar->setVisible(m_chrome.usesCustomWindowChrome() ||
+                           m_chrome.prefersNativeMacControls());
     chromeLayout->addWidget(m_titleBar);
     setupCaptionButtons();
 
@@ -153,10 +151,9 @@ Window::Window(QWidget* parent)
     if (m_frameHost) {
         m_frameEdgeOverlay = new ClientSideFrameEdgeOverlay(this);
         m_frameEdgeOverlay->setObjectName(QStringLiteral("fluentWindowFrameEdgeOverlay"));
-        m_frameEdgeOverlay->setMouseEventHandler(
-            [this](QWidget* source, QMouseEvent* event) {
-                return handleResizeBorderMouseEvent(source, event);
-            });
+        m_frameEdgeOverlay->setMouseEventHandler([this](QWidget* source, QMouseEvent* event) {
+            return handleResizeBorderMouseEvent(source, event);
+        });
         m_frameEdgeOverlay->hide();
     }
 
@@ -165,7 +162,8 @@ Window::Window(QWidget* parent)
     connect(m_titleBar, &TitleBar::dragMoved, this, &Window::handleTitleBarDragMoved);
     connect(m_titleBar, &TitleBar::dragFinished, this, &Window::handleTitleBarDragFinished);
     connect(m_titleBar, &TitleBar::doubleClicked, this, &Window::handleTitleBarDoubleClicked);
-    connect(m_titleBar, &TitleBar::contextMenuRequested, this, &Window::handleTitleBarContextMenuRequested);
+    connect(m_titleBar, &TitleBar::contextMenuRequested, this,
+            &Window::handleTitleBarContextMenuRequested);
     connect(m_titleBar, &TitleBar::titleBarHeightChanged, this, &Window::syncCaptionButtons);
     connect(m_titleBar, &TitleBar::windowActiveChanged, this, &Window::syncCaptionButtonActivation);
 
@@ -176,7 +174,8 @@ Window::Window(QWidget* parent)
     updateChromeOptions();
 }
 
-Window::~Window() {
+Window::~Window()
+{
     // QWidget may deliver WindowDeactivate to child chrome while its base destructor tears the
     // hierarchy down. Disconnect derived-class slots before that phase so activation publishing
     // cannot re-enter an already-destroyed Window vtable.
@@ -187,7 +186,8 @@ Window::~Window() {
         releaseMouse();
 }
 
-void Window::setContentWidget(QWidget* widget) {
+void Window::setContentWidget(QWidget* widget)
+{
     if (m_contentWidget == widget)
         return;
 
@@ -205,7 +205,8 @@ void Window::setContentWidget(QWidget* widget) {
     }
 }
 
-void Window::setCustomWindowChromeEnabled(bool enabled) {
+void Window::setCustomWindowChromeEnabled(bool enabled)
+{
     compatibility::WindowChromeOptions options = m_chrome.options();
     if (options.useCustomWindowChrome == enabled)
         return;
@@ -215,8 +216,8 @@ void Window::setCustomWindowChromeEnabled(bool enabled) {
     m_chrome.applyPlatformWindowFlags();
 
     refreshBackdropCapabilities();
-    const bool resolvedTranslucency = requiresAlphaSurface(
-        m_backdropCapabilities, m_chrome.clientSideFrameMargin());
+    const bool resolvedTranslucency =
+        requiresAlphaSurface(m_backdropCapabilities, m_chrome.clientSideFrameMargin());
     // Once an alpha-capable native surface has been requested, keep it sticky.
     // Disabling it on a live QWidget can recreate the platform surface and
     // produce focus churn/black edges; opaque modes simply paint every pixel.
@@ -234,7 +235,8 @@ void Window::setCustomWindowChromeEnabled(bool enabled) {
     update();
 }
 
-bool Window::customWindowChromeEnabled() const {
+bool Window::customWindowChromeEnabled() const
+{
     return m_chrome.options().useCustomWindowChrome;
 }
 
@@ -281,9 +283,8 @@ void Window::setEffectiveBackdropState(const BackdropState& state)
     if (changed) {
         invalidatePaintedSurfaceCache();
         qCDebug(fluent::logging::windowingCategory).noquote()
-            << QStringLiteral(
-                   "Window backdrop resolved requested=%1 effective=%2 backend=%3 "
-                   "fidelity=%4 surface=%5 platformApplied=%6 provider=%7 reason=%8")
+            << QStringLiteral("Window backdrop resolved requested=%1 effective=%2 backend=%3 "
+                              "fidelity=%4 surface=%5 platformApplied=%6 provider=%7 reason=%8")
                    .arg(static_cast<int>(state.requestedEffect))
                    .arg(static_cast<int>(state.effectiveEffect))
                    .arg(static_cast<int>(state.backend))
@@ -316,9 +317,9 @@ void Window::scheduleBackdropResolution()
 
 void Window::scheduleNativeChromeRepair()
 {
-    if (compatibility::WindowChromeCompat::currentPlatform()
-            != compatibility::WindowChromeCompat::Platform::Windows
-        || m_nativeChromeRepairPending) {
+    if (compatibility::WindowChromeCompat::currentPlatform() !=
+            compatibility::WindowChromeCompat::Platform::Windows ||
+        m_nativeChromeRepairPending) {
         return;
     }
 
@@ -340,18 +341,15 @@ void Window::scheduleNativeChromeRepair()
 
 void Window::resolveBackdropState(bool applyPlatform, bool forceRecomposite)
 {
-    BackdropState next = paintedFallbackState(
-        m_backdropEffect == BackdropEffect::Solid
-            ? QStringLiteral("solid-requested")
-            : QStringLiteral("painted-fallback"));
+    BackdropState next = paintedFallbackState(m_backdropEffect == BackdropEffect::Solid
+                                                  ? QStringLiteral("solid-requested")
+                                                  : QStringLiteral("painted-fallback"));
 
-    const bool canUsePlatform = m_backdropCapabilities.supportsTransparentMaterial(
-        m_backdropEffect);
+    const bool canUsePlatform =
+        m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect);
     if (applyPlatform && (m_backdropEffect == BackdropEffect::Solid || canUsePlatform)) {
         const BackdropApplyResult applied = m_chrome.applySystemBackdropDetailed(
-            m_backdropEffect,
-            effectiveTheme() == Dark,
-            forceRecomposite);
+            m_backdropEffect, effectiveThemeUsesDarkAppearance(), forceRecomposite);
         if (applied.applied) {
             next.backend = applied.backend;
             next.fidelity = applied.fidelity;
@@ -364,15 +362,16 @@ void Window::resolveBackdropState(bool applyPlatform, bool forceRecomposite)
         }
     } else if (!applyPlatform && canUsePlatform) {
         next.reason = QStringLiteral("platform-backdrop-pending");
-    } else if (m_backdropEffect != BackdropEffect::Solid
-               && !m_backdropCapabilities.provider.isEmpty()) {
+    } else if (m_backdropEffect != BackdropEffect::Solid &&
+               !m_backdropCapabilities.provider.isEmpty()) {
         next.reason = QStringLiteral("%1-fallback").arg(m_backdropCapabilities.provider);
     }
 
     setEffectiveBackdropState(next);
 }
 
-void Window::onThemeUpdated() {
+void Window::onThemeUpdated()
+{
     invalidatePaintedSurfaceCache();
     // Keep the native backdrop tint in step with this window's effective theme.
     // zh_CN: 让原生背景着色跟随窗口的实际主题。
@@ -392,11 +391,12 @@ void Window::onThemeUpdated() {
     update();
 }
 
-void Window::reapplySystemBackdrop() {
+void Window::reapplySystemBackdrop()
+{
     if (!isVisible())
         return;
     refreshBackdropCapabilities();
-    updateChromeOptions();                                 // re-extend the sheet-of-glass
+    updateChromeOptions(); // re-extend the sheet-of-glass
     resolveBackdropState(/*applyPlatform*/ true, /*forceRecomposite*/ true);
     syncClientSideFrameMargins();
     syncClientSideFrameShape();
@@ -440,7 +440,7 @@ void Window::requestForegroundActivation()
     // 可见性由调用方的取消映射/重新映射保证；没有有效 XDG activation token 时，
     // 焦点仍由 compositor 决定。
     if (QGuiApplication::platformName().startsWith(QStringLiteral("wayland"),
-                                                    Qt::CaseInsensitive)) {
+                                                   Qt::CaseInsensitive)) {
         m_chrome.requestForegroundActivation();
         return;
     }
@@ -452,7 +452,8 @@ void Window::requestForegroundActivation()
     m_chrome.requestForegroundActivation();
 }
 
-void Window::setBackdropEffect(BackdropEffect effect) {
+void Window::setBackdropEffect(BackdropEffect effect)
+{
     if (m_backdropEffect == effect)
         return;
     m_backdropEffect = effect;
@@ -465,10 +466,10 @@ void Window::setBackdropEffect(BackdropEffect effect) {
     // zh_CN: 用户主动切换效果时先解析实际后端，再允许后代控件清除顶层后备缓冲。
     resolveBackdropState(isVisible(), /*forceRecomposite*/ isVisible());
     emit backdropEffectChanged(m_backdropEffect);
-
 }
 
-void Window::minimizeWindow() {
+void Window::minimizeWindow()
+{
     QPointer<Window> guard(this);
     emit minimizeRequested();
     if (!guard)
@@ -479,7 +480,8 @@ void Window::minimizeWindow() {
         guard->showMinimized();
 }
 
-void Window::toggleMaximizeRestore() {
+void Window::toggleMaximizeRestore()
+{
     QPointer<Window> guard(this);
     if (isEffectivelyMaximized()) {
         emit restoreRequested();
@@ -515,14 +517,16 @@ void Window::toggleMaximizeRestore() {
     guard->updateChromeOptions();
 }
 
-void Window::closeWindow() {
+void Window::closeWindow()
+{
     QPointer<Window> guard(this);
     emit closeRequested();
     if (guard)
         guard->close();
 }
 
-ClientSideFramePaintOptions Window::clientSideFramePaintOptions() const {
+ClientSideFramePaintOptions Window::clientSideFramePaintOptions() const
+{
     const auto& colors = themeColorsRef();
     const bool active = isEffectivelyActive();
     QColor fill = windowChromeBackdropFill(*this, this, active);
@@ -536,16 +540,13 @@ ClientSideFramePaintOptions Window::clientSideFramePaintOptions() const {
     options.stroke = colors.strokeDefault;
     options.radius = qMax<qreal>(themeRadius().overlay, themeRadius().control);
     options.shadow = themeShadow(Elevation::VeryHigh);
-    options.dark = effectiveTheme() == Dark;
+    options.dark = effectiveThemeUsesDarkAppearance();
     options.useTranslucentMaterial =
         m_backdropState.surfaceMode == BackdropSurfaceMode::CompositedTransparent;
-    options.usePaintedMaterial =
-        m_backdropState.surfaceMode == BackdropSurfaceMode::PaintedOpaque;
+    options.usePaintedMaterial = m_backdropState.surfaceMode == BackdropSurfaceMode::PaintedOpaque;
     options.effect = m_backdropEffect;
     options.material = WindowBackdropMaterialOptions::forTheme(
-        effectiveTheme() == Dark,
-        colors.bgCanvas,
-        colors.accentDefault);
+        effectiveThemeUsesDarkAppearance(), colors.bgCanvas, colors.accentDefault);
     options.material.effect = m_backdropEffect;
     options.material.active = active;
     options.material.devicePixelRatio = devicePixelRatioF();
@@ -567,26 +568,22 @@ void Window::paintPaintedSurface(QPainter& painter, bool includeClientFrame)
             paintClientSideFrame(target, options);
             return;
         }
-        WindowBackdropMaterial::paint(
-            target, QRectF(rect()), options.material);
+        WindowBackdropMaterial::paint(target, QRectF(rect()), options.material);
     };
 
     const bool cacheSurface =
-        compatibility::detail::runtimePlatformCapabilities()
-            .cachePaintedWindowSurfaces;
+        compatibility::detail::runtimePlatformCapabilities().cachePaintedWindowSurfaces;
     if (!cacheSurface) {
         renderSurface(painter);
         return;
     }
 
     const qreal dpr = qMax<qreal>(0.5, devicePixelRatioF());
-    const QSize pixelSize(
-        qMax(1, qCeil(width() * dpr)),
-        qMax(1, qCeil(height() * dpr)));
-    const bool cacheMatches = m_paintedSurfaceCache
-        && m_paintedSurfaceCachePixelSize == pixelSize
-        && qFuzzyCompare(m_paintedSurfaceCacheDpr, dpr)
-        && m_paintedSurfaceCacheIncludesFrame == includeClientFrame;
+    const QSize pixelSize(qMax(1, qCeil(width() * dpr)), qMax(1, qCeil(height() * dpr)));
+    const bool cacheMatches = m_paintedSurfaceCache &&
+                              m_paintedSurfaceCachePixelSize == pixelSize &&
+                              qFuzzyCompare(m_paintedSurfaceCacheDpr, dpr) &&
+                              m_paintedSurfaceCacheIncludesFrame == includeClientFrame;
     if (!cacheMatches) {
         auto cache = std::make_unique<QPixmap>(pixelSize);
         cache->setDevicePixelRatio(dpr);
@@ -599,15 +596,15 @@ void Window::paintPaintedSurface(QPainter& painter, bool includeClientFrame)
         m_paintedSurfaceCachePixelSize = pixelSize;
         m_paintedSurfaceCacheDpr = dpr;
         m_paintedSurfaceCacheIncludesFrame = includeClientFrame;
-        setProperty(
-            "fluentPaintedSurfaceCacheGeneration",
-            property("fluentPaintedSurfaceCacheGeneration").toInt() + 1);
+        setProperty("fluentPaintedSurfaceCacheGeneration",
+                    property("fluentPaintedSurfaceCacheGeneration").toInt() + 1);
     }
 
     painter.drawPixmap(QPointF(0.0, 0.0), *m_paintedSurfaceCache);
 }
 
-void Window::paintEvent(QPaintEvent*) {
+void Window::paintEvent(QPaintEvent*)
+{
     QPainter painter(this);
 
     const int frameMargin = activeClientSideFrameMargin();
@@ -647,32 +644,35 @@ void Window::paintEvent(QPaintEvent*) {
     }
 }
 
-void Window::mousePressEvent(QMouseEvent* event) {
+void Window::mousePressEvent(QMouseEvent* event)
+{
     if (handleResizeBorderMouseEvent(this, event))
         return;
 
     QWidget::mousePressEvent(event);
 }
 
-void Window::mouseMoveEvent(QMouseEvent* event) {
+void Window::mouseMoveEvent(QMouseEvent* event)
+{
     if (handleResizeBorderMouseEvent(this, event))
         return;
 
     QWidget::mouseMoveEvent(event);
 }
 
-void Window::mouseReleaseEvent(QMouseEvent* event) {
+void Window::mouseReleaseEvent(QMouseEvent* event)
+{
     if (handleResizeBorderMouseEvent(this, event))
         return;
 
     QWidget::mouseReleaseEvent(event);
 }
 
-void Window::resizeEvent(QResizeEvent* event) {
+void Window::resizeEvent(QResizeEvent* event)
+{
     invalidatePaintedSurfaceCache();
     QWidget::resizeEvent(event);
-    if (usesHostedWindowSurface() && parentWidget()
-        && geometry() != parentWidget()->rect()) {
+    if (usesHostedWindowSurface() && parentWidget() && geometry() != parentWidget()->rect()) {
         m_hostedRestoreGeometry = geometry();
     }
     syncClientSideFrameMargins();
@@ -681,7 +681,8 @@ void Window::resizeEvent(QResizeEvent* event) {
     updateChromeOptions();
 }
 
-void Window::showEvent(QShowEvent* event) {
+void Window::showEvent(QShowEvent* event)
+{
     QWidget::showEvent(event);
     m_chrome.applyPlatformWindowFlags();
     refreshBackdropCapabilities();
@@ -695,14 +696,14 @@ void Window::showEvent(QShowEvent* event) {
     // Re-assert the system backdrop after the first event-loop turn, once the
     // native window is realized and placed.
     // zh_CN: 首次显示后等原生窗口完成创建和定位，再重新施加系统背景。
-    if (m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect)
-        && !m_backdropPrimed) {
+    if (m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect) && !m_backdropPrimed) {
         m_backdropPrimed = true;
         scheduleBackdropResolution();
     }
 }
 
-void Window::changeEvent(QEvent* event) {
+void Window::changeEvent(QEvent* event)
+{
     QWidget::changeEvent(event);
 
     if (fluentIsWindowInsetChangeEvent(event)) {
@@ -736,8 +737,8 @@ bool Window::event(QEvent* event)
 
     const QEvent::Type type = event ? event->type() : QEvent::None;
     const bool handled = QWidget::event(event);
-    bool nativeSurfaceMayHaveChanged = type == QEvent::WinIdChange
-        || fluentIsDisplayScaleChangeEvent(event);
+    bool nativeSurfaceMayHaveChanged =
+        type == QEvent::WinIdChange || fluentIsDisplayScaleChangeEvent(event);
     if (nativeSurfaceMayHaveChanged && isVisible()) {
         invalidatePaintedSurfaceCache();
         scheduleBackdropResolution();
@@ -746,13 +747,14 @@ bool Window::event(QEvent* event)
     return handled;
 }
 
-bool Window::nativeEvent(const QByteArray& eventType,
-                         void* message,
-                         compatibility::FluentNativeEventResult* result) {
+bool Window::nativeEvent(const QByteArray& eventType, void* message,
+                         compatibility::FluentNativeEventResult* result)
+{
     return m_chrome.handleNativeEvent(eventType, message, result);
 }
 
-void Window::setChromeInteractive(bool interactive) {
+void Window::setChromeInteractive(bool interactive)
+{
     if (m_chromeInteractive == interactive)
         return;
     m_chromeInteractive = interactive;
@@ -765,9 +767,9 @@ void Window::setChromeInteractive(bool interactive) {
 }
 
 void Window::setCaptionButtonToolTips(const QString& minimizeTooltip,
-                                      const QString& maximizeTooltip,
-                                      const QString& closeTooltip,
-                                      const QString& restoreTooltip) {
+                                      const QString& maximizeTooltip, const QString& closeTooltip,
+                                      const QString& restoreTooltip)
+{
     m_minimizeTooltip = minimizeTooltip;
     m_maximizeTooltip = maximizeTooltip;
     m_closeTooltip = closeTooltip;
@@ -781,9 +783,9 @@ void Window::setCaptionButtonToolTips(const QString& minimizeTooltip,
 }
 
 void Window::setCaptionButtonAccessibleNames(const QString& minimizeName,
-                                             const QString& maximizeName,
-                                             const QString& closeName,
-                                             const QString& restoreName) {
+                                             const QString& maximizeName, const QString& closeName,
+                                             const QString& restoreName)
+{
     m_minimizeAccessibleName = minimizeName;
     m_maximizeAccessibleName = maximizeName;
     m_closeAccessibleName = closeName;
@@ -796,45 +798,49 @@ void Window::setCaptionButtonAccessibleNames(const QString& minimizeName,
     updateMaximizeButtonIcon();
 }
 
-void Window::updateChromeOptions() {
+void Window::updateChromeOptions()
+{
     if (!m_titleBar)
         return;
 
     compatibility::WindowChromeOptions options = m_chrome.options();
     options.titleBarRect = m_titleBar->isVisible()
-        ? QRect(m_titleBar->mapTo(this, QPoint(0, 0)), m_titleBar->size())
-        : QRect();
+                               ? QRect(m_titleBar->mapTo(this, QPoint(0, 0)), m_titleBar->size())
+                               : QRect();
     options.dragExclusionRects.clear();
     if (m_titleBar->isVisible()) {
         for (const QRect& rect : m_titleBar->dragExclusionRects()) {
-            options.dragExclusionRects << QRect(m_titleBar->mapTo(this, rect.topLeft()), rect.size());
+            options.dragExclusionRects
+                << QRect(m_titleBar->mapTo(this, rect.topLeft()), rect.size());
         }
     }
     options.resizeBorderWidth = ResizeBorderWidth;
     options.chromeInteractive = m_chromeInteractive;
     m_chrome.configure(options);
 
-    const int reservedResizeBorder = m_chrome.usesCustomWindowChrome()
-            && m_chromeInteractive && !isEffectivelyMaximized() && !isFullScreen()
-        ? ResizeBorderWidth
-        : 0;
-    const char* resizeBorderProperty =
-        ::fluent::overlay::windowResizeBorderWidthPropertyName();
+    const int reservedResizeBorder = m_chrome.usesCustomWindowChrome() && m_chromeInteractive &&
+                                             !isEffectivelyMaximized() && !isFullScreen()
+                                         ? ResizeBorderWidth
+                                         : 0;
+    const char* resizeBorderProperty = ::fluent::overlay::windowResizeBorderWidthPropertyName();
     if (property(resizeBorderProperty).toInt() != reservedResizeBorder)
         setProperty(resizeBorderProperty, reservedResizeBorder);
 }
 
-void Window::syncTitleBarSystemInsets() {
+void Window::syncTitleBarSystemInsets()
+{
     if (!m_titleBar)
         return;
 
     m_titleBar->setSystemReservedLeadingWidth(m_chrome.nativeTitleBarLeadingInset());
     syncCaptionButtons();
     m_titleBar->setSystemReservedTrailingWidth(captionButtonReservedWidth());
-    m_titleBar->setVisible(m_chrome.usesCustomWindowChrome() || m_chrome.prefersNativeMacControls());
+    m_titleBar->setVisible(m_chrome.usesCustomWindowChrome() ||
+                           m_chrome.prefersNativeMacControls());
 }
 
-void Window::setupCaptionButtons() {
+void Window::setupCaptionButtons()
+{
     if (!m_titleBar || !usesFluentCaptionButtons(m_chrome) || m_captionButtonHost)
         return;
 
@@ -847,10 +853,8 @@ void Window::setupCaptionButtons() {
     buttonLayout->setContentsMargins(0, 0, 0, 0);
     buttonLayout->setSpacing(0);
 
-    auto createCaptionButton = [this](const QString& objectName,
-                                      const QString& glyph,
-                                      const QString& tooltip,
-                                      const QString& accessibleName) {
+    auto createCaptionButton = [this](const QString& objectName, const QString& glyph,
+                                      const QString& tooltip, const QString& accessibleName) {
         auto* button = new fluent::basicinput::Button(m_captionButtonHost);
         button->setObjectName(objectName);
         fluent::status_info::ToolTip::attach(button, tooltip);
@@ -864,17 +868,14 @@ void Window::setupCaptionButtons() {
     };
 
     m_minimizeButton = createCaptionButton(QStringLiteral("fluentWindowMinimizeButton"),
-                                           Typography::Icons::ChromeMinimize,
-                                           m_minimizeTooltip,
+                                           Typography::Icons::ChromeMinimize, m_minimizeTooltip,
                                            m_minimizeAccessibleName);
     m_maximizeButton = createCaptionButton(QStringLiteral("fluentWindowMaximizeButton"),
-                                           Typography::Icons::ChromeMaximize,
-                                           m_maximizeTooltip,
+                                           Typography::Icons::ChromeMaximize, m_maximizeTooltip,
                                            m_maximizeAccessibleName);
-    m_closeButton = createCaptionButton(QStringLiteral("fluentWindowCloseButton"),
-                                        Typography::Icons::ChromeClose,
-                                        m_closeTooltip,
-                                        m_closeAccessibleName);
+    m_closeButton =
+        createCaptionButton(QStringLiteral("fluentWindowCloseButton"),
+                            Typography::Icons::ChromeClose, m_closeTooltip, m_closeAccessibleName);
     m_closeButton->setCriticalOnHover(true);
 
     // Linux leaves the caption surface square and lets the top-level frame
@@ -906,7 +907,8 @@ void Window::setupCaptionButtons() {
     syncCaptionButtonActivation(m_titleBar->isWindowActive());
 }
 
-void Window::syncCaptionButtons() {
+void Window::syncCaptionButtons()
+{
     if (!m_captionButtonHost || !m_titleBar)
         return;
 
@@ -928,7 +930,8 @@ void Window::syncCaptionButtons() {
     updateMaximizeButtonIcon();
 }
 
-void Window::syncCaptionButtonActivation(bool active) {
+void Window::syncCaptionButtonActivation(bool active)
+{
     // WinUI keeps caption-button geometry unchanged and softens only its foreground when the
     // window loses activation. Retaining the full hit target also avoids native hit-test churn.
     // zh_CN: WinUI 在窗口失活时保持标题按钮几何不变，仅弱化前景；完整命中区域也可避免原生命中测试抖动。
@@ -940,25 +943,25 @@ void Window::syncCaptionButtonActivation(bool active) {
     }
 }
 
-void Window::updateMaximizeButtonIcon() {
+void Window::updateMaximizeButtonIcon()
+{
     if (!m_maximizeButton)
         return;
 
-    fluent::status_info::ToolTip::attach(m_maximizeButton,
-                                         isEffectivelyMaximized() ? m_restoreTooltip : m_maximizeTooltip);
-    m_maximizeButton->setAccessibleName(
-        isEffectivelyMaximized() ? m_restoreAccessibleName : m_maximizeAccessibleName);
-    m_maximizeButton->setIconGlyph(isEffectivelyMaximized()
-                                       ? Typography::Icons::ChromeRestore
-                                       : Typography::Icons::ChromeMaximize,
+    fluent::status_info::ToolTip::attach(
+        m_maximizeButton, isEffectivelyMaximized() ? m_restoreTooltip : m_maximizeTooltip);
+    m_maximizeButton->setAccessibleName(isEffectivelyMaximized() ? m_restoreAccessibleName
+                                                                 : m_maximizeAccessibleName);
+    m_maximizeButton->setIconGlyph(isEffectivelyMaximized() ? Typography::Icons::ChromeRestore
+                                                            : Typography::Icons::ChromeMaximize,
                                    CaptionButtonIconSize);
 }
 
 bool Window::usesHostedWindowSurface() const
 {
     return compatibility::detail::runtimePlatformCapabilities()
-               .hostsApplicationWindowsInDesktopSurface
-        && parentWidget() && !isWindow();
+               .hostsApplicationWindowsInDesktopSurface &&
+           parentWidget() && !isWindow();
 }
 
 bool Window::isEffectivelyActive() const
@@ -968,29 +971,33 @@ bool Window::isEffectivelyActive() const
 
 bool Window::isEffectivelyMaximized() const
 {
-    return isMaximized()
-        || (usesHostedWindowSurface() && parentWidget()
-            && geometry() == parentWidget()->rect());
+    return isMaximized() ||
+           (usesHostedWindowSurface() && parentWidget() && geometry() == parentWidget()->rect());
 }
 
-int Window::captionButtonReservedWidth() const {
+int Window::captionButtonReservedWidth() const
+{
     if (m_captionButtonHost && usesFluentCaptionButtons(m_chrome))
-        return m_captionButtonHost->width() > 0 ? m_captionButtonHost->width() : CaptionButtonWidth * 3;
+        return m_captionButtonHost->width() > 0 ? m_captionButtonHost->width()
+                                                : CaptionButtonWidth * 3;
 
     return m_chrome.nativeTitleBarTrailingInset();
 }
 
-int Window::activeClientSideFrameMargin() const {
+int Window::activeClientSideFrameMargin() const
+{
     if (isEffectivelyMaximized() || isFullScreen())
         return 0;
     return m_chrome.clientSideFrameMargin();
 }
 
-QRect Window::windowFrameRect() const {
+QRect Window::windowFrameRect() const
+{
     return chromeFrameRect();
 }
 
-QRect Window::chromeFrameRect() const {
+QRect Window::chromeFrameRect() const
+{
     if (m_frameHost)
         return m_frameHost->geometry();
 
@@ -998,7 +1005,8 @@ QRect Window::chromeFrameRect() const {
     return rect().marginsRemoved(QMargins(margin, margin, margin, margin));
 }
 
-void Window::syncClientSideFrameMargins() {
+void Window::syncClientSideFrameMargins()
+{
     if (!m_rootLayout)
         return;
 
@@ -1013,7 +1021,8 @@ void Window::syncClientSideFrameMargins() {
     update();
 }
 
-void Window::syncClientSideFrameShape() {
+void Window::syncClientSideFrameShape()
+{
     const int frameMargin = activeClientSideFrameMargin();
     const QRect surface = (frameMargin > 0 ? chromeFrameRect() : rect()).intersected(rect());
     const QRect effectiveSurface = surface.isEmpty() ? rect() : surface;
@@ -1034,16 +1043,16 @@ void Window::syncClientSideFrameShape() {
     }
 
     const qreal radius = (frameMargin > 0 && !m_frameHost->rect().isEmpty())
-        ? qMax<qreal>(themeRadius().overlay, themeRadius().control)
-        : 0.0;
+                             ? qMax<qreal>(themeRadius().overlay, themeRadius().control)
+                             : 0.0;
     const char* radiusProperty = ::fluent::overlay::clientSideFrameRadiusPropertyName();
     if (!qFuzzyCompare(property(radiusProperty).toDouble() + 1.0, radius + 1.0))
         setProperty(radiusProperty, radius);
     if (!qFuzzyCompare(m_frameHost->property(radiusProperty).toDouble() + 1.0, radius + 1.0))
         m_frameHost->setProperty(radiusProperty, radius);
     if (radius > 0.0) {
-        const QRegion frameMask = ::fluent::overlay::roundedRectRegion(
-            m_frameHost->rect(), qCeil(radius));
+        const QRegion frameMask =
+            ::fluent::overlay::roundedRectRegion(m_frameHost->rect(), qCeil(radius));
         if (m_frameHost->mask() != frameMask)
             m_frameHost->setMask(frameMask);
     } else if (!m_frameHost->mask().isEmpty()) {
@@ -1055,8 +1064,8 @@ void Window::syncClientSideFrameShape() {
         m_frameEdgeOverlay->setFrameRadius(radius);
         m_frameEdgeOverlay->setFrameStroke(themeColorsRef().strokeDefault);
         m_frameEdgeOverlay->setVisible(radius > 0.0);
-        const bool acceptsResizeInput = usesClientSideResizeInput()
-            && m_chromeInteractive && radius > 0.0;
+        const bool acceptsResizeInput =
+            usesClientSideResizeInput() && m_chromeInteractive && radius > 0.0;
         if (acceptsResizeInput) {
             const QRect edgeRect = m_frameEdgeOverlay->rect();
             const int border = qMin(VisibleFrameResizeBorderWidth,
@@ -1073,13 +1082,15 @@ void Window::syncClientSideFrameShape() {
     syncCaptionButtons();
 }
 
-void Window::syncClientSideResizeInput() {
+void Window::syncClientSideResizeInput()
+{
     if (!usesClientSideResizeInput() && QWidget::mouseGrabber() == this)
         releaseMouse();
     syncClientSideFrameShape();
 }
 
-bool Window::usesClientSideResizeInput() const {
+bool Window::usesClientSideResizeInput() const
+{
     // Linux client-side chrome needs an application-owned edge surface on both
     // Wayland and X11. The press is offered to QWindow::startSystemResize()
     // first; only X11 falls back to manual geometry changes when the window
@@ -1089,8 +1100,9 @@ bool Window::usesClientSideResizeInput() const {
     return m_chrome.usesCustomWindowChrome() && m_chrome.clientSideFrameMargin() > 0;
 }
 
-void Window::handleTitleBarDragStarted(const QPoint& globalPos) {
-    if (!m_chromeInteractive)  // modal: no dragging (covers the Qt fallback path too)
+void Window::handleTitleBarDragStarted(const QPoint& globalPos)
+{
+    if (!m_chromeInteractive) // modal: no dragging (covers the Qt fallback path too)
         return;
     if (isEffectivelyMaximized())
         return;
@@ -1105,7 +1117,8 @@ void Window::handleTitleBarDragStarted(const QPoint& globalPos) {
     m_fallbackDragOffset = globalPos - mapToGlobal(QPoint(0, 0));
 }
 
-void Window::handleTitleBarDragMoved(const QPoint& globalPos) {
+void Window::handleTitleBarDragMoved(const QPoint& globalPos)
+{
     if (!m_fallbackDragging)
         return;
 
@@ -1116,11 +1129,13 @@ void Window::handleTitleBarDragMoved(const QPoint& globalPos) {
         move(globalTopLeft);
 }
 
-void Window::handleTitleBarDragFinished() {
+void Window::handleTitleBarDragFinished()
+{
     m_fallbackDragging = false;
 }
 
-void Window::handleTitleBarDoubleClicked(const QPoint& globalPos) {
+void Window::handleTitleBarDoubleClicked(const QPoint& globalPos)
+{
     Q_UNUSED(globalPos);
     m_fallbackDragging = false;
     if (!m_chromeInteractive)
@@ -1134,13 +1149,15 @@ void Window::handleTitleBarDoubleClicked(const QPoint& globalPos) {
     toggleMaximizeRestore();
 }
 
-void Window::handleTitleBarContextMenuRequested(const QPoint& globalPos) {
+void Window::handleTitleBarContextMenuRequested(const QPoint& globalPos)
+{
     if (!m_chromeInteractive)
         return;
     m_chrome.showSystemMenu(globalPos);
 }
 
-Qt::Edges Window::resizeEdgesAtLocalPos(const QPoint& localPos) const {
+Qt::Edges Window::resizeEdgesAtLocalPos(const QPoint& localPos) const
+{
     Qt::Edges edges = resizeEdgesForHitTest(m_chrome.hitTestLocal(localPos));
     if (edges != Qt::Edges() || activeClientSideFrameMargin() <= 0)
         return edges;
@@ -1169,8 +1186,8 @@ Qt::Edges Window::resizeEdgesAtLocalPos(const QPoint& localPos) const {
     if (!frame.contains(localPos))
         return Qt::Edges();
 
-    const int frameBorder = qMin(VisibleFrameResizeBorderWidth,
-                                 qMax(1, qMin(frame.width(), frame.height()) / 2));
+    const int frameBorder =
+        qMin(VisibleFrameResizeBorderWidth, qMax(1, qMin(frame.width(), frame.height()) / 2));
     const bool left = localPos.x() < frame.left() + frameBorder;
     const bool right = localPos.x() >= frame.right() - frameBorder + 1;
     const bool top = localPos.y() < frame.top() + frameBorder;
@@ -1187,7 +1204,8 @@ Qt::Edges Window::resizeEdgesAtLocalPos(const QPoint& localPos) const {
     return edges;
 }
 
-bool Window::handleResizeBorderMouseEvent(QWidget* source, QMouseEvent* event) {
+bool Window::handleResizeBorderMouseEvent(QWidget* source, QMouseEvent* event)
+{
     if (!source || !event || !usesClientSideResizeInput())
         return false;
 
@@ -1210,8 +1228,8 @@ bool Window::handleResizeBorderMouseEvent(QWidget* source, QMouseEvent* event) {
     }
 
     const bool overCaptionButton =
-        m_captionButtonHost
-        && (source == m_captionButtonHost || m_captionButtonHost->isAncestorOf(source));
+        m_captionButtonHost &&
+        (source == m_captionButtonHost || m_captionButtonHost->isAncestorOf(source));
     if (overCaptionButton) {
         return false;
     }
@@ -1250,7 +1268,8 @@ bool Window::handleResizeBorderMouseEvent(QWidget* source, QMouseEvent* event) {
     return true;
 }
 
-void Window::resizeFromGlobalPoint(const QPoint& globalPos) {
+void Window::resizeFromGlobalPoint(const QPoint& globalPos)
+{
     setGeometry(m_resizeSession->geometryForGlobalPoint(globalPos, minimumSize()));
 }
 

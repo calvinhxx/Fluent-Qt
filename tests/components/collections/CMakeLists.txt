@@ -1,5 +1,8 @@
 # ListView 仅为视图库组件；FluentListItemDelegate 与 model 组装放在测试中作为业务示例。
-add_qt_test_module(test_list_view TestListView.cpp FluentListItemDelegate.cpp)
+add_qt_test_module(test_list_view
+    TestListView.cpp
+    TestCollectionItemState.cpp
+    FluentListItemDelegate.cpp)
 target_link_libraries(test_list_view PRIVATE Qt${QT_VERSION_MAJOR}::Network)
 
 # GridView

@@ -31,12 +31,9 @@ protected:
 TEST_F(UserThemeTest, Contract_PathAndDefaultsAreFluentOnly)
 {
     EXPECT_EQ(fluent::UserTheme::filePath(),
-              QDir(fluent::UserTheme::directory()).filePath(
-                  QStringLiteral("fluent.json")));
-    EXPECT_EQ(fluent::UserTheme::defaultAccent(false),
-              QColor(QStringLiteral("#005FB8")));
-    EXPECT_EQ(fluent::UserTheme::defaultAccent(true),
-              QColor(QStringLiteral("#60CDFF")));
+              QDir(fluent::UserTheme::directory()).filePath(QStringLiteral("fluent.json")));
+    EXPECT_EQ(fluent::UserTheme::defaultAccent(false), QColor(QStringLiteral("#005FB8")));
+    EXPECT_EQ(fluent::UserTheme::defaultAccent(true), QColor(QStringLiteral("#60CDFF")));
 }
 
 TEST_F(UserThemeTest, Contract_ApplyDoesNotCreateUserFile)
@@ -61,8 +58,7 @@ TEST_F(UserThemeTest, Contract_ExportWritesVersionedEnvelopeAndPreservesIt)
     ASSERT_TRUE(document.isObject());
     const QJsonObject root = document.object();
     EXPECT_EQ(root.value(QStringLiteral("schemaVersion")).toInt(), 1);
-    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(),
-              QStringLiteral("fluent"));
+    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("fluent"));
     const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
     EXPECT_TRUE(overrides.value(QStringLiteral("radius")).isObject());
     EXPECT_TRUE(overrides.value(QStringLiteral("light")).isObject());
@@ -94,9 +90,9 @@ TEST_F(UserThemeTest, Contract_LegacyFlatThemeMigratesOnExplicitEdit)
 
     fluent::UserTheme::apply();
     EXPECT_EQ(ThemeRegistry::instance().radius().control, 17);
-    EXPECT_EQ(ThemeRegistry::instance().colors(false).bgCanvas.rgb(),
+    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Light).bgCanvas.rgb(),
               QColor(QStringLiteral("#123456")).rgb());
-    EXPECT_EQ(ThemeRegistry::instance().colors(true).bgCanvas.rgb(),
+    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Dark).bgCanvas.rgb(),
               QColor(QStringLiteral("#654321")).rgb());
 
     const QColor picked(QStringLiteral("#4DA04D"));
@@ -106,8 +102,7 @@ TEST_F(UserThemeTest, Contract_LegacyFlatThemeMigratesOnExplicitEdit)
     ASSERT_TRUE(migratedFile.open(QIODevice::ReadOnly | QIODevice::Text));
     const QJsonObject root = QJsonDocument::fromJson(migratedFile.readAll()).object();
     EXPECT_EQ(root.value(QStringLiteral("schemaVersion")).toInt(), 1);
-    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(),
-              QStringLiteral("fluent"));
+    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("fluent"));
     const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
     EXPECT_EQ(overrides.value(QStringLiteral("radius"))
                   .toObject()
@@ -157,7 +152,7 @@ TEST_F(UserThemeTest, Contract_UnsupportedSchemaIsIgnoredAndPreserved)
     file.close();
 
     fluent::UserTheme::apply();
-    EXPECT_EQ(ThemeRegistry::instance().colors(false).accentDefault.rgb(),
+    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Light).accentDefault.rgb(),
               fluent::UserTheme::defaultAccent(false).rgb());
 
     fluent::UserTheme::setAccent(QColor(QStringLiteral("#4DA04D")));
@@ -195,8 +190,7 @@ TEST_F(UserThemeTest, Contract_SetAccentPersistsSparseOverrideAndDerivesVariants
     const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
     file.close();
     const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
-    for (const QString& modeName : {QStringLiteral("light"),
-                                    QStringLiteral("dark")}) {
+    for (const QString& modeName : {QStringLiteral("light"), QStringLiteral("dark")}) {
         const QJsonObject mode = overrides.value(modeName).toObject();
         EXPECT_EQ(mode.size(), 1);
         EXPECT_EQ(mode.value(QStringLiteral("accentDefault")).toString(),
@@ -205,7 +199,8 @@ TEST_F(UserThemeTest, Contract_SetAccentPersistsSparseOverrideAndDerivesVariants
 
     fluent::UserTheme::apply();
     for (bool dark : {false, true}) {
-        const auto colors = ThemeRegistry::instance().colors(dark);
+        const auto colors = ThemeRegistry::instance().colors(dark ? fluent::FluentElement::Dark
+                                                                  : fluent::FluentElement::Light);
         EXPECT_EQ(colors.accentDefault.rgb(), picked.rgb()) << "dark=" << dark;
         EXPECT_EQ(colors.accentSecondary.rgb(), picked.rgb()) << "dark=" << dark;
         EXPECT_EQ(colors.accentTertiary.rgb(), picked.rgb()) << "dark=" << dark;
@@ -214,7 +209,7 @@ TEST_F(UserThemeTest, Contract_SetAccentPersistsSparseOverrideAndDerivesVariants
 
     fluent::UserTheme::clearAccent();
     fluent::UserTheme::apply();
-    EXPECT_EQ(ThemeRegistry::instance().colors(false).accentDefault.rgb(),
+    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Light).accentDefault.rgb(),
               fluent::UserTheme::defaultAccent(false).rgb());
 }
 
@@ -230,8 +225,8 @@ TEST_F(UserThemeTest, Contract_InMemoryAccentDoesNotWriteAndInvalidColorIsNoOp)
     fluent::UserTheme::applyAccentOverride(picked);
 
     EXPECT_FALSE(QFile::exists(fluent::UserTheme::filePath()));
-    EXPECT_EQ(registry.colors(false).accentDefault.rgb(), picked.rgb());
-    EXPECT_EQ(registry.colors(true).accentDefault.rgb(), picked.rgb());
+    EXPECT_EQ(registry.colors(fluent::FluentElement::Light).accentDefault.rgb(), picked.rgb());
+    EXPECT_EQ(registry.colors(fluent::FluentElement::Dark).accentDefault.rgb(), picked.rgb());
     EXPECT_GT(registry.revision(), initialRevision);
 }
 
@@ -260,9 +255,9 @@ TEST_F(UserThemeTest, Contract_CustomBgLayerOverlayAppliesThroughUserTheme)
     file.close();
 
     fluent::UserTheme::apply();
-    EXPECT_EQ(ThemeRegistry::instance().colors(false).bgLayerOverlay.rgba(),
+    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Light).bgLayerOverlay.rgba(),
               QColor(0x11, 0x22, 0x33, 0x44).rgba());
-    EXPECT_EQ(ThemeRegistry::instance().colors(true).bgLayerOverlay.rgba(),
+    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Dark).bgLayerOverlay.rgba(),
               QColor(0x55, 0x66, 0x77, 0x88).rgba());
 }
 

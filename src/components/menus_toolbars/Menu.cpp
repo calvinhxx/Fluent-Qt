@@ -20,16 +20,15 @@
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/foundation/private/SurfacePainter_p.h"
 #include "design/Typography.h"
 
 namespace fluent::menus_toolbars {
 
 namespace {
-constexpr char kEntranceAnimationName[] =
-    "fluentMenuEntranceAnimation";
-constexpr char kRestoreNativeMenuAnimationsProperty[] =
-    "_fluent_restoreNativeMenuAnimations";
+constexpr char kEntranceAnimationName[] = "fluentMenuEntranceAnimation";
+constexpr char kRestoreNativeMenuAnimationsProperty[] = "_fluent_restoreNativeMenuAnimations";
 
 QString menuLabelText(const QString& text)
 {
@@ -55,7 +54,7 @@ int maxLabelWidth(const FluentMenu* menu, const QFontMetrics& fontMetrics)
             continue;
         const QString text = menuLabelText(action->text());
         result = qMax(result, qMax(fontMetrics.horizontalAdvance(text),
-                                  fontMetrics.boundingRect(text).width()));
+                                   fontMetrics.boundingRect(text).width()));
     }
     return result > 0 ? result + 2 : 0;
 }
@@ -68,7 +67,7 @@ int maxShortcutWidth(const FluentMenu* menu, const QFontMetrics& fontMetrics)
             continue;
         const QString text = menu->shortcutTextForAction(action);
         result = qMax(result, qMax(fontMetrics.horizontalAdvance(text),
-                                  fontMetrics.boundingRect(text).width()));
+                                   fontMetrics.boundingRect(text).width()));
     }
     // Leave ink allowance on both sides: Windows font backends can render
     // antialiased bearings beyond both horizontalAdvance() and boundingRect().
@@ -103,8 +102,7 @@ bool supportsPopupRaise()
         return false;
 
     const QString platformName = QGuiApplication::platformName();
-    return platformName != QStringLiteral("offscreen")
-        && platformName != QStringLiteral("minimal");
+    return platformName != QStringLiteral("offscreen") && platformName != QStringLiteral("minimal");
 }
 
 bool hasMenuParent(const QWidget* widget)
@@ -142,37 +140,37 @@ void appendVisibleMenuChain(QVector<FluentMenu*>& menus, FluentMenu* menu)
 
 // =============================== FluentMenuItem ===============================
 
-FluentMenuItem::FluentMenuItem(const QString& text, QObject* parent)
-    : QWidgetAction(parent) {
+FluentMenuItem::FluentMenuItem(const QString& text, QObject* parent) : QWidgetAction(parent)
+{
     setText(text);
     setFont(themeFont(m_fontStyle).toQFont());
 }
 
-void FluentMenuItem::setFontStyle(Typography::FontRole role) {
-    if (m_fontStyle == role) return;
+void FluentMenuItem::setFontStyle(Typography::FontRole role)
+{
+    if (m_fontStyle == role)
+        return;
     m_fontStyle = role;
     onThemeUpdated();
     emit fontStyleChanged();
 }
 
-void FluentMenuItem::onThemeUpdated() {
+void FluentMenuItem::onThemeUpdated()
+{
     setFont(themeFont(m_fontStyle).toQFont());
 }
 
 // ================================ FluentMenu =================================
 
-FluentMenu::FluentMenu(const QString& title, QWidget* parent)
-    : QMenu(title, parent) {
+FluentMenu::FluentMenu(const QString& title, QWidget* parent) : QMenu(title, parent)
+{
     // Frameless top-level with system shadow disabled; shadow and rounding are
     // painted by the menu itself.
     // zh_CN: 顶层无边框并禁用系统阴影，阴影与圆角由自身绘制。
-    setWindowFlags((windowFlags() & ~Qt::WindowType_Mask)
-                   | Qt::Popup
-                   | Qt::FramelessWindowHint
-                   | Qt::NoDropShadowWindowHint);
+    setWindowFlags((windowFlags() & ~Qt::WindowType_Mask) | Qt::Popup | Qt::FramelessWindowHint |
+                   Qt::NoDropShadowWindowHint);
     m_translucentSurface =
-        compatibility::detail::runtimePlatformCapabilities()
-            .translucentPopupSurfaces;
+        compatibility::detail::runtimePlatformCapabilities().translucentPopupSurfaces;
     m_shadowSize = m_translucentSurface ? ::Spacing::Standard : 0;
     setAttribute(Qt::WA_TranslucentBackground, m_translucentSurface);
     setAttribute(Qt::WA_OpaquePaintEvent, !m_translucentSurface);
@@ -210,14 +208,17 @@ FluentMenu::FluentMenu(const QString& title, QWidget* parent)
     onThemeUpdated();
 }
 
-void FluentMenu::setFontStyle(Typography::FontRole role) {
-    if (m_fontStyle == role) return;
+void FluentMenu::setFontStyle(Typography::FontRole role)
+{
+    if (m_fontStyle == role)
+        return;
     m_fontStyle = role;
     onThemeUpdated();
     emit fontStyleChanged();
 }
 
-void FluentMenu::onThemeUpdated() {
+void FluentMenu::onThemeUpdated()
+{
     const auto& s = themeSpacing();
     const int vPadding = s.gap.tight;
 
@@ -229,7 +230,8 @@ void FluentMenu::onThemeUpdated() {
     // them and the popup window is large enough.
     // zh_CN: 用 margins 为阴影和内部 padding 预留空间，QMenu 的 sizeHint 会自动
     // 包含这些边距，确保窗口足够大。
-    setContentsMargins(m_shadowSize, m_shadowSize + vPadding, m_shadowSize, m_shadowSize + vPadding);
+    setContentsMargins(m_shadowSize, m_shadowSize + vPadding, m_shadowSize,
+                       m_shadowSize + vPadding);
     setItemLayoutMetrics(s.padding.listItemV, s.gap.normal + 1);
     setMinimumWidth(sizeHint().width());
     updateSurfaceMask();
@@ -237,23 +239,24 @@ void FluentMenu::onThemeUpdated() {
     update();
 }
 
-void FluentMenu::setItemLayoutMetrics(int verticalPadding,
-                                      int separatorHeight)
+void FluentMenu::setItemLayoutMetrics(int verticalPadding, int separatorHeight)
 {
     m_itemVerticalPadding = qMax(0, verticalPadding);
     m_separatorHeight = qMax(1, separatorHeight);
-    setStyleSheet(QStringLiteral(
-        "QMenu { background-color: transparent; border: 0px; padding: 0px; }"
-          "QMenu::item { background-color: transparent; padding: %1px 0px; "
-          "margin: 0px; }"
-        "QMenu::separator { height: %2px; }"
-    ).arg(m_itemVerticalPadding).arg(m_separatorHeight));
+    setStyleSheet(
+        QStringLiteral("QMenu { background-color: transparent; border: 0px; padding: 0px; }"
+                       "QMenu::item { background-color: transparent; padding: %1px 0px; "
+                       "margin: 0px; }"
+                       "QMenu::separator { height: %2px; }")
+            .arg(m_itemVerticalPadding)
+            .arg(m_separatorHeight));
 }
 
 void FluentMenu::actionEvent(QActionEvent* event)
 {
     QMenu::actionEvent(event);
-    if (event->type() == QEvent::ActionAdded && event->action() && !event->action()->isSeparator()) {
+    if (event->type() == QEvent::ActionAdded && event->action() &&
+        !event->action()->isSeparator()) {
         QAction* action = event->action();
         QObject::connect(action, &QAction::triggered, this, [this, action]() {
             if (!action || action->isSeparator() || action->menu())
@@ -265,7 +268,8 @@ void FluentMenu::actionEvent(QActionEvent* event)
         });
     }
 
-    if (event->type() == QEvent::ActionAdded || event->type() == QEvent::ActionRemoved || event->type() == QEvent::ActionChanged) {
+    if (event->type() == QEvent::ActionAdded || event->type() == QEvent::ActionRemoved ||
+        event->type() == QEvent::ActionChanged) {
         setMinimumWidth(sizeHint().width());
         updateGeometry();
         update();
@@ -277,9 +281,11 @@ void FluentMenu::keyPressEvent(QKeyEvent* event)
     if (event && event->key() != Qt::Key_unknown) {
         const QKeySequence pressed(fluentKeySequence(event));
         for (QAction* action : actions()) {
-            if (!action || action->isSeparator() || action->menu() || !action->isEnabled() || !action->isVisible())
+            if (!action || action->isSeparator() || action->menu() || !action->isEnabled() ||
+                !action->isVisible())
                 continue;
-            if (action->shortcut().isEmpty() || action->shortcut().matches(pressed) != QKeySequence::ExactMatch)
+            if (action->shortcut().isEmpty() ||
+                action->shortcut().matches(pressed) != QKeySequence::ExactMatch)
                 continue;
 
             setActiveAction(action);
@@ -344,15 +350,15 @@ QRect FluentMenu::itemShortcutGeometry(QAction* action) const
         return QRect();
 
     const auto& spacing = themeSpacing();
-    const int trailingColumn = hasSubmenuAction(this)
-        ? spacing.controlHeight.small
-        : ::Spacing::Small;
+    const int trailingColumn =
+        hasSubmenuAction(this) ? spacing.controlHeight.small : ::Spacing::Small;
     QRect rect = actionGeometry(action);
     rect.setLeft(m_shadowSize);
     rect.setWidth(width() - 2 * m_shadowSize);
     const int textPadding = spacing.padding.controlH;
     const int right = rect.right() - textPadding - trailingColumn;
-    return QRect(qMax(rect.left(), right - shortcutColumn + 1), rect.top(), shortcutColumn, rect.height());
+    return QRect(qMax(rect.left(), right - shortcutColumn + 1), rect.top(), shortcutColumn,
+                 rect.height());
 }
 
 QRect FluentMenu::itemSubmenuIndicatorGeometry(QAction* action) const
@@ -366,13 +372,12 @@ QRect FluentMenu::itemSubmenuIndicatorGeometry(QAction* action) const
     const auto& spacing = themeSpacing();
     const int side = spacing.controlHeight.small;
     const int textPadding = spacing.padding.controlH;
-    return QRect(rect.right() - textPadding - side + 1,
-                 rect.top() + (rect.height() - side) / 2,
-                 side,
-                 side);
+    return QRect(rect.right() - textPadding - side + 1, rect.top() + (rect.height() - side) / 2,
+                 side, side);
 }
 
-void FluentMenu::paintEvent(QPaintEvent* event) {
+void FluentMenu::paintEvent(QPaintEvent* event)
+{
     Q_UNUSED(event);
 
     QPainter p(this);
@@ -394,9 +399,7 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     // zh_CN: 仅对当前自绘过程应用透明度；在原生 QMenu popup 上安装
     // QGraphicsOpacityEffect 可能使 Wayland 的 QMenu::exec() 表面不可见，
     // 但模态事件循环仍继续阻塞输入。
-    p.setOpacity(m_translucentSurface
-        ? qBound<qreal>(0.0, m_revealProgress, 1.0)
-        : 1.0);
+    p.setOpacity(m_translucentSurface ? qBound<qreal>(0.0, m_revealProgress, 1.0) : 1.0);
 
     const auto& spacing = themeSpacing();
     const auto& radius = themeRadius();
@@ -409,7 +412,8 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
         }
     }
 
-    if (itemsRect.isEmpty()) return;
+    if (itemsRect.isEmpty())
+        return;
 
     // The card rect depends only on the final popup size, not on QMenu's
     // internal action widths.
@@ -434,7 +438,7 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     fluent::painting::RoundedSurfacePaint surface;
     surface.fill = colors.bgLayer;
     surface.radius = r;
-        surface.border = colors.strokeCard;
+    surface.border = colors.strokeCard;
     fluent::painting::paintRoundedSurface(p, QRectF(contentRect), surface);
 
     // 5. Paint the menu items.
@@ -444,18 +448,15 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     // zh_CN: 绘制菜单项。itemInset：高亮背景与分割线距底板边缘的统一水平缩进
     // （4px，与底板圆角视觉对齐）；textPadding：文字距底板边缘的水平内边距
     // （12px，ControlHorizontal）。
-    const int plateLeft    = contentRect.left();
-    const int plateWidth   = contentRect.width();
-    const int itemInset    = spacing.gap.tight;          // 4
-    const int textPadding  = spacing.padding.controlH;
-    const int leadingColumn = hasLeadingAction(this)
-        ? spacing.controlHeight.small
-        : 0;
+    const int plateLeft = contentRect.left();
+    const int plateWidth = contentRect.width();
+    const int itemInset = spacing.gap.tight; // 4
+    const int textPadding = spacing.padding.controlH;
+    const int leadingColumn = hasLeadingAction(this) ? spacing.controlHeight.small : 0;
     const QFontMetrics fontMetrics(font());
     const int shortcutColumn = maxShortcutWidth(this, fontMetrics);
-    const int trailingColumn = hasSubmenuAction(this)
-        ? spacing.controlHeight.small
-        : ::Spacing::Small;
+    const int trailingColumn =
+        hasSubmenuAction(this) ? spacing.controlHeight.small : ::Spacing::Small;
     const int shortcutGap = spacing.gap.section;
 
     // Set the paint font explicitly so the shadow pass cannot pollute it.
@@ -463,7 +464,8 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     p.setFont(font());
 
     for (QAction* action : actions()) {
-        if (!action->isVisible()) continue;
+        if (!action->isVisible())
+            continue;
 
         QRect itemRect = actionGeometry(action);
         // Normalize the horizontal span to the card bounds (actionGeometry may
@@ -472,7 +474,8 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
         itemRect.setLeft(plateLeft);
         itemRect.setWidth(plateWidth);
 
-        if (!contentRect.intersects(itemRect)) continue;
+        if (!contentRect.intersects(itemRect))
+            continue;
 
         if (action->isSeparator()) {
             p.setPen(colors.strokeDivider);
@@ -482,11 +485,9 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
         }
 
         bool isEnabled = action->isEnabled();
-        bool isActive  = (action == activeAction());
+        bool isActive = (action == activeAction());
         const bool highlighted = isEnabled && (action->isChecked() || isActive);
-        const QColor bg = highlighted
-            ? colors.subtleSecondary
-            : QColor(Qt::transparent);
+        const QColor bg = highlighted ? colors.subtleSecondary : QColor(Qt::transparent);
 
         // §2 invalid-QColor guard: only paint a valid, non-transparent fill. zh_CN: §2 无效 QColor 防护:
         // 仅在色值有效且非透明时绘制填充。
@@ -502,31 +503,24 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
         if (leadingColumn > 0) {
             const QRect leadingRect(itemRect.left() + itemInset,
                                     itemRect.top() + (itemRect.height() - leadingColumn) / 2,
-                                    leadingColumn,
-                                    leadingColumn);
+                                    leadingColumn, leadingColumn);
             if (action->isCheckable() && action->isChecked()) {
                 p.setPen(primaryText);
-                Typography::Icons::paintGlyph(
-                    p, QRectF(leadingRect), Typography::Icons::CheckMark,
-                    Typography::IconSize::Compact, Qt::AlignCenter);
+                Typography::Icons::paintGlyph(p, QRectF(leadingRect), Typography::Icons::CheckMark,
+                                              Typography::IconSize::Compact, Qt::AlignCenter);
             } else if (!action->icon().isNull()) {
-                const QIcon::Mode mode = !isEnabled ? QIcon::Disabled
-                                                    : (isActive ? QIcon::Active : QIcon::Normal);
+                const QIcon::Mode mode =
+                    !isEnabled ? QIcon::Disabled : (isActive ? QIcon::Active : QIcon::Normal);
                 const QIcon::State state = action->isChecked() ? QIcon::On : QIcon::Off;
                 // The leading column is 24 px for alignment, but WinUI menu
                 // command icons use a 16 px optical slot. Painting into the
                 // whole column lets QIcon upscale a 16 px source to 24 px,
                 // making editing glyphs visually dominate their labels.
-                const int iconSide = qMin(
-                    Typography::IconSize::Standard,
-                    qMin(leadingRect.width(), leadingRect.height()));
-                const QRect iconRect(
-                    leadingRect.center().x() - iconSide / 2,
-                    leadingRect.center().y() - iconSide / 2,
-                    iconSide,
-                    iconSide);
-                action->icon().paint(
-                    &p, iconRect, Qt::AlignCenter, mode, state);
+                const int iconSide = qMin(Typography::IconSize::Standard,
+                                          qMin(leadingRect.width(), leadingRect.height()));
+                const QRect iconRect(leadingRect.center().x() - iconSide / 2,
+                                     leadingRect.center().y() - iconSide / 2, iconSide, iconSide);
+                action->icon().paint(&p, iconRect, Qt::AlignCenter, mode, state);
             }
         }
 
@@ -535,9 +529,8 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
         const int shortcutReserve = shortcutColumn > 0 ? shortcutColumn + shortcutGap : 0;
         const int textRight = itemRect.right() - textPadding - trailingColumn - shortcutReserve;
         const int textLeft = itemRect.left() + textPadding + leadingColumn;
-        const int textBaseline = itemRect.top()
-            + (itemRect.height() - fontMetrics.height()) / 2
-            + fontMetrics.ascent();
+        const int textBaseline =
+            itemRect.top() + (itemRect.height() - fontMetrics.height()) / 2 + fontMetrics.ascent();
 
         p.setPen(primaryText);
         // Draw from a baseline instead of an exactly measured QRect. Some
@@ -553,29 +546,29 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
         if (!shortcutRect.isEmpty()) {
             p.setPen(secondaryText);
             constexpr int shortcutInkInset = 6;
-            const int shortcutX = shortcutRect.right()
-                - shortcutInkInset
-                - fontMetrics.horizontalAdvance(shortcutText) + 1;
+            const int shortcutX = shortcutRect.right() - shortcutInkInset -
+                                  fontMetrics.horizontalAdvance(shortcutText) + 1;
             p.drawText(QPoint(shortcutX, textBaseline), shortcutText);
         }
 
         if (action->menu()) {
             const QRect arrowRect = itemSubmenuIndicatorGeometry(action);
             p.setPen(secondaryText);
-            Typography::Icons::paintGlyph(
-                p, QRectF(arrowRect), Typography::Icons::ChevronRightMed,
-                Typography::IconSize::Compact, Qt::AlignCenter);
+            Typography::Icons::paintGlyph(p, QRectF(arrowRect), Typography::Icons::ChevronRightMed,
+                                          Typography::IconSize::Compact, Qt::AlignCenter);
         }
     }
     p.restore();
 }
 
-void FluentMenu::resizeEvent(QResizeEvent* event) {
+void FluentMenu::resizeEvent(QResizeEvent* event)
+{
     QMenu::resizeEvent(event);
     updateSurfaceMask();
 }
 
-void FluentMenu::updateSurfaceMask() {
+void FluentMenu::updateSurfaceMask()
+{
     if (m_translucentSurface || rect().isEmpty()) {
         // Do not clear a native/platform mask that QMenu may own. Only remove
         // the opaque fallback mask installed by this class.
@@ -596,8 +589,7 @@ void FluentMenu::updateSurfaceMask() {
     // zh_CN: 浏览器 popup 使用不透明后备表面以保证文字与动画稳定。通过控件/
     // 窗口边界遮罩裁掉矩形清屏的四角，避免覆盖后续绘制的圆角轮廓。QRegion 只
     // 用于不透明回退；桌面透明 popup 继续使用抗锯齿 alpha 边缘与自绘阴影。
-    const QRegion surfaceMask = ::fluent::overlay::roundedRectRegion(
-        rect(), themeRadius().overlay);
+    const QRegion surfaceMask = ::fluent::overlay::roundedRectRegion(rect(), themeRadius().overlay);
     if (mask() != surfaceMask)
         setMask(surfaceMask);
     m_surfaceMaskApplied = true;
@@ -612,19 +604,12 @@ QSize FluentMenu::sizeHint() const
     const int shortcutTextWidth = maxShortcutWidth(this, fontMetrics);
     const int shortcutGap = spacing.gap.section;
     const int shortcutColumn = shortcutTextWidth > 0 ? shortcutTextWidth + shortcutGap : 0;
-    const int trailingColumn = hasSubmenuAction(this)
-        ? spacing.controlHeight.small
-        : ::Spacing::Small;
-    const int leadingColumn = hasLeadingAction(this)
-        ? spacing.controlHeight.small
-        : 0;
+    const int trailingColumn =
+        hasSubmenuAction(this) ? spacing.controlHeight.small : ::Spacing::Small;
+    const int leadingColumn = hasLeadingAction(this) ? spacing.controlHeight.small : 0;
     const int textPadding = spacing.padding.controlH;
-    const int contentWidth = spacing.gap.tight * 2
-                           + textPadding * 2
-                           + leadingColumn
-                           + maxLabelWidth(this, fontMetrics)
-                           + shortcutColumn
-                           + trailingColumn;
+    const int contentWidth = spacing.gap.tight * 2 + textPadding * 2 + leadingColumn +
+                             maxLabelWidth(this, fontMetrics) + shortcutColumn + trailingColumn;
 
     // Qt WASM can report only one row from QMenu::sizeHint() for a popup with
     // several actions. Compute a backend-independent lower bound from the
@@ -634,22 +619,20 @@ QSize FluentMenu::sizeHint() const
     // 根据可见动作列表计算与后端无关的下界；随后 resize 会让 QMenu 为每一行重建
     // actionGeometry，原生平台仍保留其更大的 style hint。
     int contentHeight = contentsMargins().top() + contentsMargins().bottom();
-    const int itemContentHeight = qMax(fontMetrics.height(),
-                                       Typography::IconSize::Standard);
-    const int itemHeight = qMax(::Spacing::ControlHeight::Small,
-                                itemContentHeight + 2 * m_itemVerticalPadding);
+    const int itemContentHeight = qMax(fontMetrics.height(), Typography::IconSize::Standard);
+    const int itemHeight =
+        qMax(::Spacing::ControlHeight::Small, itemContentHeight + 2 * m_itemVerticalPadding);
     for (QAction* action : actions()) {
         if (!action || !action->isVisible())
             continue;
-        contentHeight += action->isSeparator()
-            ? m_separatorHeight
-            : itemHeight;
+        contentHeight += action->isSeparator() ? m_separatorHeight : itemHeight;
     }
     return QSize(qMax(base.width(), contentWidth + 2 * m_shadowSize),
                  qMax(base.height(), contentHeight));
 }
 
-void FluentMenu::showEvent(QShowEvent* event) {
+void FluentMenu::showEvent(QShowEvent* event)
+{
     QMenu::showEvent(event);
 
     if (property(kRestoreNativeMenuAnimationsProperty).toBool()) {
@@ -686,9 +669,8 @@ void FluentMenu::showEvent(QShowEvent* event) {
     // 避免父菜单阴影压到子菜单内容。
     const auto& spacing = themeSpacing();
     QPoint targetPos = pos();
-    const int horizontalOffset = hasMenuParent(this)
-        ? m_shadowSize - spacing.gap.tight
-        : m_shadowSize;
+    const int horizontalOffset =
+        hasMenuParent(this) ? m_shadowSize - spacing.gap.tight : m_shadowSize;
     targetPos.rx() -= horizontalOffset;
     targetPos.ry() -= (m_shadowSize - spacing.gap.tight);
     move(targetPos);
@@ -720,10 +702,8 @@ void FluentMenu::showEvent(QShowEvent* event) {
         update();
     });
 
-    if (auto* previousAnimation =
-            findChild<QVariantAnimation*>(
-                QString::fromLatin1(kEntranceAnimationName),
-                Qt::FindDirectChildrenOnly)) {
+    if (auto* previousAnimation = findChild<QVariantAnimation*>(
+            QString::fromLatin1(kEntranceAnimationName), Qt::FindDirectChildrenOnly)) {
         previousAnimation->stop();
         delete previousAnimation;
     }
@@ -748,23 +728,19 @@ void FluentMenu::showEvent(QShowEvent* event) {
     // zh_CN: 用同一时间线驱动高度揭示与自绘透明度，在保留 WinUI
     // PopupThemeTransition 的同时避开原生窗口透明度接口。
     auto* entranceAnimation = new QVariantAnimation(this);
-    entranceAnimation->setObjectName(
-        QString::fromLatin1(kEntranceAnimationName));
+    entranceAnimation->setObjectName(QString::fromLatin1(kEntranceAnimationName));
     entranceAnimation->setStartValue(0.0);
     entranceAnimation->setEndValue(1.0);
     entranceAnimation->setDuration(themeAnimation().fast);
     entranceAnimation->setEasingCurve(themeAnimation().decelerate);
-    connect(
-        entranceAnimation,
-        &QVariantAnimation::valueChanged,
-        this,
-        [this](const QVariant& value) {
-            const qreal progress = value.toReal();
-            m_revealProgress = progress;
-            update();
-        });
-    entranceAnimation->start(
-        QAbstractAnimation::DeleteWhenStopped);
+    connect(entranceAnimation, &QVariantAnimation::valueChanged, this,
+            [this](const QVariant& value) {
+                const qreal progress = value.toReal();
+                m_revealProgress = progress;
+                update();
+            });
+    ::fluent::detail::startMotionTransition(entranceAnimation, themeAnimation().fast, true,
+                                            QAbstractAnimation::DeleteWhenStopped);
 }
 
 void FluentMenu::normalizePopupLayering()
@@ -778,7 +754,8 @@ void FluentMenu::normalizePopupLayering()
         menu->raise();
 }
 
-void FluentMenu::drawShadow(QPainter& painter, const QRect& contentRect) {
+void FluentMenu::drawShadow(QPainter& painter, const QRect& contentRect)
+{
     // Menus float close to their anchor, so they carry a lighter shadow than
     // modal surfaces.
     // zh_CN: 菜单紧贴锚点浮动，阴影强度低于模态表面。

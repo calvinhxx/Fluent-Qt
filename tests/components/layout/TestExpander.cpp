@@ -3,12 +3,16 @@
 #include <QApplication>
 #include <QPointer>
 #include <QSignalSpy>
+#include <QTest>
+#include <QVariantAnimation>
 #include <QVBoxLayout>
 
 #include "components/basicinput/Button.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/layout/Divider.h"
 #include "components/layout/Expander.h"
 #include "components/textfields/Label.h"
+#include "design/Animation.h"
 
 using fluent::WidgetOwnership;
 using fluent::layout::Expander;
@@ -25,6 +29,19 @@ QWidget* makeBody(QWidget* parent = nullptr)
     layout->addWidget(child);
     return body;
 }
+
+class FullMotionScope {
+public:
+    FullMotionScope()
+    {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    }
+
+    ~FullMotionScope()
+    {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    }
+};
 
 } // namespace
 
@@ -45,24 +62,19 @@ TEST(ExpanderTest, Contract_DefaultsAndHeaderText)
     expander.setHeaderText(QStringLiteral("Details"));
     expander.setHeaderText(QStringLiteral("Details"));
     EXPECT_EQ(headerSpy.count(), 1);
-    EXPECT_EQ(expander.headerButton()->accessibleName(),
-              QStringLiteral("Details"));
-    auto* headerText = expander.findChild<fluent::textfields::Label*>(
-        QStringLiteral("fluentExpanderHeaderText"));
+    EXPECT_EQ(expander.headerButton()->accessibleName(), QStringLiteral("Details"));
+    auto* headerText =
+        expander.findChild<fluent::textfields::Label*>(QStringLiteral("fluentExpanderHeaderText"));
     ASSERT_NE(headerText, nullptr);
-    EXPECT_EQ(headerText->textColorRole(),
-              fluent::textfields::Label::TextColorRole::Primary);
+    EXPECT_EQ(headerText->textColorRole(), fluent::textfields::Label::TextColorRole::Primary);
 }
 
 TEST(ExpanderTest, Contract_ExpandedHandlerCanSynchronouslyDeleteExpander)
 {
     auto* expander = new Expander;
     QPointer<Expander> guard(expander);
-    QObject::connect(
-        expander, &Expander::expandedChanged, qApp,
-        [expander](bool) {
-            delete expander;
-        });
+    QObject::connect(expander, &Expander::expandedChanged, qApp,
+                     [expander](bool) { delete expander; });
 
     expander->setExpandedAnimated(true, false);
 
@@ -75,11 +87,8 @@ TEST(ExpanderTest, Contract_LayoutHeightHandlerCanSynchronouslyDeleteExpander)
     expander->resize(360, 44);
     expander->setContentWidget(makeBody(), WidgetOwnership::Owned);
     QPointer<Expander> guard(expander);
-    QObject::connect(
-        expander, &Expander::layoutHeightChanged, qApp,
-        [expander](int) {
-            delete expander;
-        });
+    QObject::connect(expander, &Expander::layoutHeightChanged, qApp,
+                     [expander](int) { delete expander; });
 
     expander->setExpandedAnimated(true, false);
 
@@ -97,13 +106,12 @@ TEST(ExpanderTest, Contract_ExpandedStateAndSignals)
     QSignalSpy startedSpy(&expander, &Expander::expansionTransitionStarted);
     QSignalSpy finishedSpy(&expander, &Expander::expansionTransitionFinished);
 
-    expander.setExpanded(true);
+    expander.setExpandedAnimated(true, true);
     EXPECT_TRUE(expander.isExpanded());
     EXPECT_GT(expander.height(), 44);
-    auto* divider = expander.findChild<fluent::layout::Divider*>(
-        QStringLiteral("fluentExpanderDivider"));
-    auto* clip = expander.findChild<QWidget*>(
-        QStringLiteral("fluentExpanderClip"));
+    auto* divider =
+        expander.findChild<fluent::layout::Divider*>(QStringLiteral("fluentExpanderDivider"));
+    auto* clip = expander.findChild<QWidget*>(QStringLiteral("fluentExpanderClip"));
     ASSERT_NE(divider, nullptr);
     ASSERT_NE(clip, nullptr);
     EXPECT_EQ(divider->geometry(), QRect(0, 44, expander.width(), 1));
@@ -124,13 +132,62 @@ TEST(ExpanderTest, Contract_ExpandedStateAndSignals)
     EXPECT_EQ(finishedSpy.count(), 2);
 }
 
+TEST(ExpanderTest, Contract_GlobalMotionConvergesActiveTransitions)
+{
+    FullMotionScope motionScope;
+    Expander expander;
+    expander.resize(360, 44);
+    expander.setContentWidget(makeBody(), WidgetOwnership::Owned);
+
+    auto* animation = expander.findChild<QVariantAnimation*>();
+    ASSERT_NE(animation, nullptr);
+    QSignalSpy finishedSpy(&expander, &Expander::expansionTransitionFinished);
+
+    expander.setExpanded(true);
+    ASSERT_EQ(animation->state(), QAbstractAnimation::Running);
+    EXPECT_EQ(animation->duration(), Animation::Duration::Normal);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Reduced);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
+    EXPECT_GT(animation->duration(), 0);
+    EXPECT_LT(animation->duration(), Animation::Duration::Normal);
+    QTRY_COMPARE(finishedSpy.count(), 1);
+    EXPECT_TRUE(expander.isExpanded());
+    EXPECT_GT(expander.height(), 44);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    expander.setExpanded(false);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+    EXPECT_FALSE(expander.isExpanded());
+    EXPECT_EQ(expander.height(), 44);
+    EXPECT_EQ(finishedSpy.count(), 2);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    expander.setExpanded(true);
+    ASSERT_EQ(animation->state(), QAbstractAnimation::Running);
+    EXPECT_EQ(animation->duration(), Animation::Duration::Normal);
+
+    expander.setAnimationEnabled(false);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+    EXPECT_TRUE(expander.isExpanded());
+    EXPECT_EQ(finishedSpy.count(), 3);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Reduced);
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+
+    expander.setExpanded(false);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+    EXPECT_EQ(expander.height(), 44);
+    EXPECT_EQ(finishedSpy.count(), 4);
+}
+
 TEST(ExpanderTest, Contract_BorrowedContentIsDetached)
 {
     QPointer<QWidget> body = makeBody();
     {
         Expander expander;
-        ASSERT_TRUE(expander.setContentWidget(
-            body, WidgetOwnership::Borrowed));
+        ASSERT_TRUE(expander.setContentWidget(body, WidgetOwnership::Borrowed));
         EXPECT_EQ(body->parentWidget(), expander.contentWidget()->parentWidget());
     }
 
@@ -145,8 +202,7 @@ TEST(ExpanderTest, Contract_ReparentedContentReturnsToOriginalParent)
     QWidget* body = makeBody(&owner);
     {
         Expander expander;
-        ASSERT_TRUE(expander.setContentWidget(
-            body, WidgetOwnership::Reparented));
+        ASSERT_TRUE(expander.setContentWidget(body, WidgetOwnership::Reparented));
         EXPECT_NE(body->parentWidget(), &owner);
     }
     EXPECT_EQ(body->parentWidget(), &owner);

@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <QApplication>
+#include <QAccessible>
 #include <QImage>
 #include <QPainter>
 #include <QPainterPath>
@@ -12,6 +13,7 @@
 
 #include "components/basicinput/Button.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/status_info/Shimmer.h"
 #include "components/textfields/Label.h"
@@ -64,11 +66,8 @@ QImage renderPainterPhase(qreal progress)
     palette.baseColor = QColor(0, 0, 0, 24);
     palette.highlightColor = QColor(255, 255, 255, 180);
     palette.borderColor = QColor(0, 0, 0, 20);
-    ShimmerPainter::paint(&painter,
-                          ShimmerPainter::imageCardElements(QRectF(10, 10, 160, 68), 6.0),
-                          palette,
-                          progress,
-                          true);
+    ShimmerPainter::paint(&painter, ShimmerPainter::imageCardElements(QRectF(10, 10, 160, 68), 6.0),
+                          palette, progress, true);
     return image;
 }
 
@@ -86,8 +85,7 @@ public:
 
 class SampleCard : public QWidget, public fluent::FluentElement, public fluent::QMLPlus {
 public:
-    explicit SampleCard(QWidget* parent = nullptr)
-        : QWidget(parent)
+    explicit SampleCard(QWidget* parent = nullptr) : QWidget(parent)
     {
         setAttribute(Qt::WA_StyledBackground, false);
         setAutoFillBackground(false);
@@ -112,8 +110,7 @@ protected:
     }
 };
 
-fluent::textfields::Label* makeLabel(const QString& text,
-                                     QWidget* parent,
+fluent::textfields::Label* makeLabel(const QString& text, QWidget* parent,
                                      Typography::FontRole typography)
 {
     auto* label = new fluent::textfields::Label(text, parent);
@@ -122,9 +119,7 @@ fluent::textfields::Label* makeLabel(const QString& text,
     return label;
 }
 
-SampleCard* makeCard(QWidget* parent,
-                     fluent::AnchorLayout* rootLayout,
-                     const QString& titleText,
+SampleCard* makeCard(QWidget* parent, fluent::AnchorLayout* rootLayout, const QString& titleText,
                      const QString& captionText)
 {
     auto* card = new SampleCard(parent);
@@ -188,11 +183,13 @@ class ShimmerTest : public ::testing::Test {
 protected:
     void SetUp() override
     {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
 
     void TearDown() override
     {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
 };
@@ -249,8 +246,7 @@ TEST_F(ShimmerTest, CustomElementsSwitchTemplateAndRender)
     Shimmer shimmer;
     const QVector<ShimmerPainter::Element> elements{
         {ShimmerPainter::Shape::Circle, QRectF(8, 8, 28, 28)},
-        {ShimmerPainter::Shape::Line, QRectF(48, 12, 96, 12)}
-    };
+        {ShimmerPainter::Shape::Line, QRectF(48, 12, 96, 12)}};
     QSignalSpy elementsSpy(&shimmer, &Shimmer::elementsChanged);
     shimmer.setElements(elements);
 
@@ -315,6 +311,39 @@ TEST_F(ShimmerTest, AnimationLifecycleTracksVisibilityAndActiveState)
     EXPECT_FALSE(shimmer.isAnimationRunning());
 }
 
+TEST_F(ShimmerTest, Contract_GlobalMotionStopsSweepButPreservesBusyState)
+{
+    Shimmer shimmer;
+    shimmer.resize(240, 72);
+    shimmer.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&shimmer));
+    ASSERT_TRUE(shimmer.isAnimationRunning());
+
+    auto* accessible = QAccessible::queryAccessibleInterface(&shimmer);
+    ASSERT_NE(accessible, nullptr);
+    EXPECT_TRUE(accessible->state().busy);
+    EXPECT_TRUE(accessible->state().animated);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Reduced);
+    EXPECT_FALSE(shimmer.isAnimationRunning());
+    EXPECT_TRUE(shimmer.isActive());
+    EXPECT_TRUE(accessible->state().busy);
+    EXPECT_FALSE(accessible->state().animated);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    EXPECT_FALSE(shimmer.isAnimationRunning());
+    EXPECT_TRUE(accessible->state().busy);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    EXPECT_TRUE(shimmer.isAnimationRunning());
+
+    shimmer.setAnimationEnabled(false);
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Reduced);
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    EXPECT_FALSE(shimmer.isAnimationRunning());
+    EXPECT_TRUE(accessible->state().busy);
+}
+
 TEST_F(ShimmerTest, VisualCheck)
 {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST"))
@@ -331,17 +360,18 @@ TEST_F(ShimmerTest, VisualCheck)
     auto* layout = new fluent::AnchorLayout(window);
     window->setLayout(layout);
 
-    auto* title = makeLabel(QStringLiteral("Shimmer loading states"), window, Typography::FontRole::Title);
+    auto* title =
+        makeLabel(QStringLiteral("Shimmer loading states"), window, Typography::FontRole::Title);
     title->setFluentTypography(Typography::FontRole::Title);
     title->anchors()->top = {window, Edge::Top, 24};
     title->anchors()->left = {window, Edge::Left, 32};
     title->anchors()->right = {window, Edge::Right, -220};
     layout->addWidget(title);
 
-    auto* description = makeLabel(
-        QStringLiteral("Use Shimmer while content is loading. The painter helper can also draw skeletons inside delegates."),
-        window,
-        Typography::FontRole::Body);
+    auto* description =
+        makeLabel(QStringLiteral("Use Shimmer while content is loading. The painter helper can "
+                                 "also draw skeletons inside delegates."),
+                  window, Typography::FontRole::Body);
     description->anchors()->top = {title, Edge::Bottom, 8};
     description->anchors()->left = {window, Edge::Left, 32};
     description->anchors()->right = {window, Edge::Right, -220};
@@ -354,16 +384,15 @@ TEST_F(ShimmerTest, VisualCheck)
     themeButton->anchors()->right = {window, Edge::Right, -32};
     layout->addWidget(themeButton);
     QObject::connect(themeButton, &fluent::basicinput::Button::clicked, []() {
-        fluent::FluentElement::setTheme(
-            fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                ? fluent::FluentElement::Dark
-                : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
-    auto* templatesCard = makeCard(window,
-                                   layout,
-                                   QStringLiteral("Built-in templates"),
-                                   QStringLiteral("Image card, avatar row, and text block templates."));
+    auto* templatesCard =
+        makeCard(window, layout, QStringLiteral("Built-in templates"),
+                 QStringLiteral("Image card, avatar row, and text block templates."));
     templatesCard->setFixedSize(404, 250);
     templatesCard->anchors()->top = {description, Edge::Bottom, 26};
     templatesCard->anchors()->left = {window, Edge::Left, 32};
@@ -389,9 +418,7 @@ TEST_F(ShimmerTest, VisualCheck)
     text->anchors()->left = {templatesCard, Edge::Left, 18};
     qobject_cast<fluent::AnchorLayout*>(templatesCard->layout())->addWidget(text);
 
-    auto* tileCard = makeCard(window,
-                              layout,
-                              QStringLiteral("Gallery card loading"),
+    auto* tileCard = makeCard(window, layout, QStringLiteral("Gallery card loading"),
                               QStringLiteral("A custom skeleton for remote image cards."));
     tileCard->setFixedSize(404, 250);
     tileCard->anchors()->top = {templatesCard, Edge::Top, 0};
@@ -403,10 +430,9 @@ TEST_F(ShimmerTest, VisualCheck)
     tile->anchors()->left = {tileCard, Edge::Left, 22};
     qobject_cast<fluent::AnchorLayout*>(tileCard->layout())->addWidget(tile);
 
-    auto* listCard = makeCard(window,
-                              layout,
-                              QStringLiteral("List rows"),
-                              QStringLiteral("Repeated row placeholders for async feeds or search results."));
+    auto* listCard =
+        makeCard(window, layout, QStringLiteral("List rows"),
+                 QStringLiteral("Repeated row placeholders for async feeds or search results."));
     listCard->setFixedSize(404, 246);
     listCard->anchors()->top = {templatesCard, Edge::Bottom, 24};
     listCard->anchors()->left = {window, Edge::Left, 32};
@@ -417,17 +443,16 @@ TEST_F(ShimmerTest, VisualCheck)
         skeleton->setShimmerTemplate(Shimmer::ShimmerTemplate::AvatarTextRow);
         skeleton->setFixedSize(348, 52);
         skeleton->anchors()->top = previousRow
-            ? fluent::AnchorLayout::Anchor{previousRow, Edge::Bottom, 6}
-            : fluent::AnchorLayout::Anchor{listCard, Edge::Top, 78};
+                                       ? fluent::AnchorLayout::Anchor{previousRow, Edge::Bottom, 6}
+                                       : fluent::AnchorLayout::Anchor{listCard, Edge::Top, 78};
         skeleton->anchors()->left = {listCard, Edge::Left, 22};
         qobject_cast<fluent::AnchorLayout*>(listCard->layout())->addWidget(skeleton);
         previousRow = skeleton;
     }
 
-    auto* dashboardCard = makeCard(window,
-                                   layout,
-                                   QStringLiteral("Dashboard section"),
-                                   QStringLiteral("Composed elements can represent metrics and charts."));
+    auto* dashboardCard =
+        makeCard(window, layout, QStringLiteral("Dashboard section"),
+                 QStringLiteral("Composed elements can represent metrics and charts."));
     dashboardCard->setFixedSize(404, 246);
     dashboardCard->anchors()->top = {tileCard, Edge::Bottom, 24};
     dashboardCard->anchors()->left = {tileCard, Edge::Left, 0};
@@ -438,7 +463,8 @@ TEST_F(ShimmerTest, VisualCheck)
     dashboard->anchors()->left = {dashboardCard, Edge::Left, 22};
     qobject_cast<fluent::AnchorLayout*>(dashboardCard->layout())->addWidget(dashboard);
 
-    auto* staticHint = makeLabel(QStringLiteral("Static preview"), dashboardCard, Typography::FontRole::Caption);
+    auto* staticHint =
+        makeLabel(QStringLiteral("Static preview"), dashboardCard, Typography::FontRole::Caption);
     staticHint->anchors()->bottom = {dashboardCard, Edge::Bottom, -18};
     staticHint->anchors()->right = {dashboardCard, Edge::Right, -22};
     qobject_cast<fluent::AnchorLayout*>(dashboardCard->layout())->addWidget(staticHint);

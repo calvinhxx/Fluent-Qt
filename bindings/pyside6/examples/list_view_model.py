@@ -142,7 +142,7 @@ class TaskDelegate(QStyledItemDelegate):
         painter.setRenderHint(QPainter.TextAntialiasing)
         painter.setClipRect(option.rect)
 
-        dark = fluentqt.current_theme() == fluentqt.Theme.Dark
+        dark = fluentqt.theme_uses_dark_appearance(fluentqt.current_theme())
         accent = QColor(fluentqt.accent_color())
         text_primary = QColor("#f5f5f5" if dark else "#1b1b1b")
         text_secondary = QColor("#c8c8c8" if dark else "#666666")

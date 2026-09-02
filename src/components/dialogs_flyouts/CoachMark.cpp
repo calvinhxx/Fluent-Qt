@@ -21,6 +21,7 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/overlay/OverlayWindow.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 
 namespace fluent::dialogs_flyouts {
 
@@ -44,16 +45,11 @@ constexpr int kTargetGap = 10;
 
 } // namespace
 
-CoachMark::CoachMark(QWidget* owner, SurfaceMode /*surfaceMode*/)
-    : QWidget(owner)
-    , m_owner(owner)
+CoachMark::CoachMark(QWidget* owner, SurfaceMode /*surfaceMode*/) : QWidget(owner), m_owner(owner)
 {
     detail::ensureTransientSurfaceAccessibilityFactory();
-    m_overlayCoordinator =
-        new ::fluent::overlay::OverlayCoordinator(this, this);
-    connect(m_overlayCoordinator,
-            &::fluent::overlay::OverlayCoordinator::hostGeometryChanged,
-            this,
+    m_overlayCoordinator = new ::fluent::overlay::OverlayCoordinator(this, this);
+    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this,
             [this]() {
                 if (m_open)
                     reposition(/*animated*/ false);
@@ -156,12 +152,12 @@ void CoachMark::open()
     m_fadeAnim->setEasingCurve(themeAnimation().decelerate);
     m_fadeAnim->setStartValue(0.0);
     m_fadeAnim->setEndValue(1.0);
-    m_fadeAnim->start();
     QPointer<CoachMark> guard(this);
     emit openChanged(true);
     if (!guard || !m_open)
         return;
     detail::notifyCoachMarkAccessibilityOpenChanged(this, true);
+    ::fluent::detail::startMotionTransition(m_fadeAnim, themeAnimation().normal);
 }
 
 void CoachMark::close()
@@ -177,12 +173,12 @@ void CoachMark::close()
     m_fadeAnim->setEasingCurve(themeAnimation().exit);
     m_fadeAnim->setStartValue(fadeOpacity());
     m_fadeAnim->setEndValue(0.0);
-    m_fadeAnim->start();
     QPointer<CoachMark> guard(this);
     emit openChanged(false);
     if (!guard || m_open)
         return;
     detail::notifyCoachMarkAccessibilityOpenChanged(this, false);
+    ::fluent::detail::startMotionTransition(m_fadeAnim, themeAnimation().normal);
 }
 
 void CoachMark::setOpen(bool open)
@@ -205,23 +201,20 @@ bool CoachMark::eventFilter(QObject* watched, QEvent* event)
         return false;
     }
 
-    if (event->type() == QEvent::KeyPress
-        && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
-        QWidget* ownerTopLevel = m_overlayCoordinator
-            ? m_overlayCoordinator->topLevelWidget() : nullptr;
+    if (event->type() == QEvent::KeyPress &&
+        static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
+        QWidget* ownerTopLevel =
+            m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : nullptr;
         if (!ownerTopLevel)
             ownerTopLevel = m_owner ? m_owner->window() : window();
-        if (!ownerTopLevel
-            || ::fluent::overlay::eventTopLevel(watched)
-                != ownerTopLevel) {
+        if (!ownerTopLevel || ::fluent::overlay::eventTopLevel(watched) != ownerTopLevel) {
             return QWidget::eventFilter(watched, event);
         }
 
         QWidget* eventWidget = qobject_cast<QWidget*>(watched);
         if (!eventWidget)
             eventWidget = QApplication::focusWidget();
-        QWidget* eventSurface =
-            ::fluent::overlay::enclosingOverlaySurface(eventWidget);
+        QWidget* eventSurface = ::fluent::overlay::enclosingOverlaySurface(eventWidget);
         if (eventSurface && eventSurface != this)
             return QWidget::eventFilter(watched, event);
 
@@ -230,9 +223,8 @@ bool CoachMark::eventFilter(QObject* watched, QEvent* event)
         return true;
     }
 
-    QWidget* trackingAnchor = m_target ? m_target.data()
-                                       : (m_owner ? m_owner.data()
-                                                  : parentWidget());
+    QWidget* trackingAnchor =
+        m_target ? m_target.data() : (m_owner ? m_owner.data() : parentWidget());
     if (::fluent::overlay::anchorGeometryMayChange(watched, event, trackingAnchor))
         queueTargetSync();
     return QWidget::eventFilter(watched, event);
@@ -320,7 +312,7 @@ void CoachMark::reposition(bool animated)
             m_moveAnim->setEasingCurve(themeAnimation().decelerate);
             m_moveAnim->setStartValue(pos());
             m_moveAnim->setEndValue(centered);
-            m_moveAnim->start();
+            ::fluent::detail::startMotionTransition(m_moveAnim, themeAnimation().normal);
         } else {
             move(centered);
         }
@@ -378,7 +370,7 @@ void CoachMark::reposition(bool animated)
         m_moveAnim->setEasingCurve(themeAnimation().decelerate);
         m_moveAnim->setStartValue(pos());
         m_moveAnim->setEndValue(topLeft);
-        m_moveAnim->start();
+        ::fluent::detail::startMotionTransition(m_moveAnim, themeAnimation().normal);
     } else {
         move(topLeft);
     }

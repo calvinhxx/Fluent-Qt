@@ -134,7 +134,7 @@ class FlowCardDelegate(QStyledItemDelegate):
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setRenderHint(QPainter.TextAntialiasing)
 
-        dark = fluentqt.current_theme() == fluentqt.Theme.Dark
+        dark = fluentqt.theme_uses_dark_appearance(fluentqt.current_theme())
         selected = bool(option.state & QStyle.State_Selected)
         hovered = bool(option.state & QStyle.State_MouseOver)
         accent = QColor(index.data(COLOR_ROLE))

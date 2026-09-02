@@ -1,4 +1,5 @@
 #include "Slider.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
 #include <QMouseEvent>
@@ -15,10 +16,10 @@ namespace fluent::basicinput {
 
 using namespace fluent::textfields;
 
-Slider::Slider(Qt::Orientation orientation, QWidget* parent)
-    : QSlider(orientation, parent) {
+Slider::Slider(Qt::Orientation orientation, QWidget* parent) : QSlider(orientation, parent)
+{
     setAttribute(Qt::WA_Hover);
-    
+
     // m_handleSize is initialized to 20 in header
 
     const auto& anim = themeAnimation();
@@ -32,31 +33,32 @@ Slider::Slider(Qt::Orientation orientation, QWidget* parent)
     m_pressAnim->setEasingCurve(anim.decelerate);
 }
 
-Slider::Slider(QWidget* parent)
-    : Slider(Qt::Horizontal, parent) {
-}
+Slider::Slider(QWidget* parent) : Slider(Qt::Horizontal, parent) {}
 
-Slider::~Slider() {
+Slider::~Slider()
+{
     if (m_toolTip) {
         delete m_toolTip;
     }
 }
 
-QSize Slider::sizeHint() const {
+QSize Slider::sizeHint() const
+{
     // Ensure enough space for the handle to avoid clipping
     // The thickness (height/width) should be at least m_handleSize + some margin
     int length = m_defaultLength;
     // Add small margin (e.g. 2 * m_visualMargin) to avoid anti-aliasing clipping
     int thickness = std::max(m_handleSize, m_trackHeight) + 2 * m_visualMargin;
-    
+
     if (orientation() == Qt::Horizontal) {
-        return QSize(length, thickness); 
+        return QSize(length, thickness);
     } else {
         return QSize(thickness, length);
     }
 }
 
-void Slider::paintEvent(QPaintEvent*) {
+void Slider::paintEvent(QPaintEvent*)
+{
     QStyleOptionSlider opt;
     initStyleOption(&opt);
 
@@ -71,23 +73,26 @@ void Slider::paintEvent(QPaintEvent*) {
     }
 }
 
-void Slider::enterEvent(FluentEnterEvent* event) {
+void Slider::enterEvent(FluentEnterEvent* event)
+{
     m_hoverAnim->stop();
     m_hoverAnim->setEndValue(1.0);
-    m_hoverAnim->start();
+    ::fluent::detail::startMotionTransition(m_hoverAnim, themeAnimation().normal);
     QSlider::enterEvent(event);
 }
 
-void Slider::leaveEvent(QEvent* event) {
+void Slider::leaveEvent(QEvent* event)
+{
     if (!m_isPressed) { // Only fade out if not currently dragging
         m_hoverAnim->stop();
         m_hoverAnim->setEndValue(0.0);
-        m_hoverAnim->start();
+        ::fluent::detail::startMotionTransition(m_hoverAnim, themeAnimation().normal);
     }
     QSlider::leaveEvent(event);
 }
 
-void Slider::mousePressEvent(QMouseEvent *event) {
+void Slider::mousePressEvent(QMouseEvent* event)
+{
     if (event->button() != Qt::LeftButton) {
         event->ignore();
         return;
@@ -95,30 +100,33 @@ void Slider::mousePressEvent(QMouseEvent *event) {
     event->accept();
     m_isPressed = true;
     setSliderDown(true);
-    
+
     // Animate Press
     m_pressAnim->stop();
     m_pressAnim->setEndValue(1.0);
-    m_pressAnim->start();
+    ::fluent::detail::startMotionTransition(m_pressAnim, themeAnimation().normal);
 
     // Show ToolTip
     showToolTip();
-    
-    int val = pixelPosToRangeValue(orientation() == Qt::Horizontal ? fluentMousePos(event).x() : fluentMousePos(event).y());
+
+    int val = pixelPosToRangeValue(orientation() == Qt::Horizontal ? fluentMousePos(event).x()
+                                                                   : fluentMousePos(event).y());
     setSliderPosition(val);
     updateToolTipPos(); // update after value change
-    
+
     triggerAction(SliderMove);
     update();
 }
 
-void Slider::mouseMoveEvent(QMouseEvent *event) {
+void Slider::mouseMoveEvent(QMouseEvent* event)
+{
     if (!m_isPressed) {
         event->ignore();
         return;
     }
     event->accept();
-    int val = pixelPosToRangeValue(orientation() == Qt::Horizontal ? fluentMousePos(event).x() : fluentMousePos(event).y());
+    int val = pixelPosToRangeValue(orientation() == Qt::Horizontal ? fluentMousePos(event).x()
+                                                                   : fluentMousePos(event).y());
     setSliderPosition(val);
     updateToolTipPos();
 
@@ -126,7 +134,8 @@ void Slider::mouseMoveEvent(QMouseEvent *event) {
     update();
 }
 
-void Slider::mouseReleaseEvent(QMouseEvent *event) {
+void Slider::mouseReleaseEvent(QMouseEvent* event)
+{
     if (event->button() != Qt::LeftButton) {
         event->ignore();
         return;
@@ -134,17 +143,17 @@ void Slider::mouseReleaseEvent(QMouseEvent *event) {
     event->accept();
     m_isPressed = false;
     setSliderDown(false);
-    
+
     // Animate Release
     m_pressAnim->stop();
     m_pressAnim->setEndValue(0.0);
-    m_pressAnim->start();
+    ::fluent::detail::startMotionTransition(m_pressAnim, themeAnimation().normal);
 
     // Reset Hover if mouse left during drag
     if (!rect().contains(mapFromGlobal(QCursor::pos()))) {
         m_hoverAnim->stop();
         m_hoverAnim->setEndValue(0.0);
-        m_hoverAnim->start();
+        ::fluent::detail::startMotionTransition(m_hoverAnim, themeAnimation().normal);
     }
 
     hideToolTip();
@@ -154,7 +163,8 @@ void Slider::mouseReleaseEvent(QMouseEvent *event) {
     emit sliderReleased();
 }
 
-void Slider::showToolTip() {
+void Slider::showToolTip()
+{
     if (!m_toolTip) {
         m_toolTip = new fluent::status_info::ToolTip(nullptr); // Top level window
     }
@@ -164,15 +174,18 @@ void Slider::showToolTip() {
     m_toolTip->raise();
 }
 
-void Slider::hideToolTip() {
+void Slider::hideToolTip()
+{
     if (m_toolTip) {
         m_toolTip->hide();
     }
 }
 
-void Slider::updateToolTipPos() {
-    if (!m_toolTip || !m_toolTip->isVisible()) return;
-    
+void Slider::updateToolTipPos()
+{
+    if (!m_toolTip || !m_toolTip->isVisible())
+        return;
+
     m_toolTip->setText(QString::number(value()));
 
     QPoint handlePos;
@@ -185,9 +198,9 @@ void Slider::updateToolTipPos() {
     } else {
         handlePos = QPoint(cx, pos);
     }
-    
+
     QPoint globalHandle = mapToGlobal(handlePos);
-    
+
     // Position tooltip above (Horiz) or Right (Vertical)
     int tipW = m_toolTip->width();
     int tipH = m_toolTip->height();
@@ -195,21 +208,24 @@ void Slider::updateToolTipPos() {
 
     QPoint tipPos;
     if (orientation() == Qt::Horizontal) {
-        tipPos = QPoint(globalHandle.x() - tipW / 2, globalHandle.y() - tipH - spacing - m_handleSize/2);
+        tipPos = QPoint(globalHandle.x() - tipW / 2,
+                        globalHandle.y() - tipH - spacing - m_handleSize / 2);
     } else {
-        // Vertical: Right side preferred, fallback to left if no space? 
+        // Vertical: Right side preferred, fallback to left if no space?
         // WinUI usually puts it to the side.
-        tipPos = QPoint(globalHandle.x() + m_handleSize/2 + spacing, globalHandle.y() - tipH / 2);
+        tipPos = QPoint(globalHandle.x() + m_handleSize / 2 + spacing, globalHandle.y() - tipH / 2);
     }
-    
+
     m_toolTip->move(tipPos);
 }
 
-int Slider::valueToPixelPos(int val) const {
-    const int padding = m_handleSize / 2 + m_visualMargin; // + m_visualMargin margin to match sizeHint
+int Slider::valueToPixelPos(int val) const
+{
+    const int padding =
+        m_handleSize / 2 + m_visualMargin; // + m_visualMargin margin to match sizeHint
     int available = 0;
     int start = 0;
-    
+
     if (orientation() == Qt::Horizontal) {
         available = width() - 2 * padding; // Use full symmetrical padding
         start = padding;
@@ -218,10 +234,11 @@ int Slider::valueToPixelPos(int val) const {
         start = height() - padding; // Start from bottom
     }
 
-    if (maximum() == minimum()) return start;
+    if (maximum() == minimum())
+        return start;
 
     double percent = (double)(val - minimum()) / (double)(maximum() - minimum());
-    
+
     if (orientation() == Qt::Horizontal) {
         return start + (int)(percent * available);
     } else {
@@ -229,8 +246,9 @@ int Slider::valueToPixelPos(int val) const {
     }
 }
 
-int Slider::pixelPosToRangeValue(int pos) const {
-    const int padding = m_handleSize / 2 + m_visualMargin; 
+int Slider::pixelPosToRangeValue(int pos) const
+{
+    const int padding = m_handleSize / 2 + m_visualMargin;
     int available = 0;
     int relPos = 0;
 
@@ -243,7 +261,8 @@ int Slider::pixelPosToRangeValue(int pos) const {
         relPos = bottom - pos;
     }
 
-    if (available <= 0) return minimum();
+    if (available <= 0)
+        return minimum();
 
     double percent = (double)relPos / (double)available;
     percent = std::clamp(percent, 0.0, 1.0);
@@ -251,7 +270,8 @@ int Slider::pixelPosToRangeValue(int pos) const {
     return minimum() + (int)(percent * (maximum() - minimum()));
 }
 
-void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt) {
+void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
+{
     const auto& colors = themeColorsRef();
 
     const int cy = height() / 2;
@@ -280,7 +300,7 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt) {
     // 4. Paint the filled track. zh_CN: 绘制已填充轨道。
     if (filledRect.width() > 0.0) {
         p.setBrush(trackFg);
-        p.drawRoundedRect(filledRect, trackThickness/2.0, trackThickness/2.0);
+        p.drawRoundedRect(filledRect, trackThickness / 2.0, trackThickness / 2.0);
     }
 
     // 5. Animated thumb geometry. zh_CN: 拇指动画几何计算。
@@ -302,7 +322,7 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt) {
 
     QColor outerFillColor = colors.bgSolid; // White in the light theme. zh_CN: 亮色主题下为白色。
     QColor outerBorderColor = colors.strokeStrong; // Thin light-grey ring. zh_CN: 浅灰色细环。
-    QColor innerColor = trackFg; // Accent color. zh_CN: Accent 颜色。
+    QColor innerColor = trackFg;                   // Accent color. zh_CN: Accent 颜色。
 
     if (!isEnabled()) {
         innerColor = colors.textDisabled;
@@ -330,21 +350,23 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt) {
 
     // 9. Paint the ticks. zh_CN: 绘制刻度线。
     if (opt.tickPosition != QSlider::NoTicks && m_hoverRatio > 0.1) {
-       int steps = (opt.maximum - opt.minimum) / opt.tickInterval;
+        int steps = (opt.maximum - opt.minimum) / opt.tickInterval;
         if (steps > 0 && steps < 100) {
-             QColor tickColor = colors.textSecondary; 
-             p.setPen(tickColor);
-             for (int i = 0; i <= steps; ++i) {
-                 int val = opt.minimum + i * opt.tickInterval;
-                 int x = valueToPixelPos(val);
-                 int ty = (opt.tickPosition == QSlider::TicksAbove) ? (trackRect.top() - 4) : (trackRect.bottom() + 4);
-                 p.drawLine(x, ty, x, ty + 2);
-             }
+            QColor tickColor = colors.textSecondary;
+            p.setPen(tickColor);
+            for (int i = 0; i <= steps; ++i) {
+                int val = opt.minimum + i * opt.tickInterval;
+                int x = valueToPixelPos(val);
+                int ty = (opt.tickPosition == QSlider::TicksAbove) ? (trackRect.top() - 4)
+                                                                   : (trackRect.bottom() + 4);
+                p.drawLine(x, ty, x, ty + 2);
+            }
         }
     }
 }
 
-void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt) {
+void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt)
+{
     const auto& colors = themeColorsRef();
 
     const int cx = width() / 2;
@@ -373,7 +395,7 @@ void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt) {
     // 4. Paint the filled track. zh_CN: 绘制已填充轨道。
     if (filledRect.height() > 0.0) {
         p.setBrush(trackFg);
-        p.drawRoundedRect(filledRect, trackThickness/2.0, trackThickness/2.0);
+        p.drawRoundedRect(filledRect, trackThickness / 2.0, trackThickness / 2.0);
     }
 
     // 5. Animated thumb geometry. zh_CN: 拇指动画几何计算。
@@ -412,5 +434,5 @@ void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt) {
     p.setBrush(innerColor);
     p.setPen(Qt::NoPen);
     p.drawEllipse(center, innerRadius, innerRadius);
-    }
+}
 } // namespace fluent::basicinput

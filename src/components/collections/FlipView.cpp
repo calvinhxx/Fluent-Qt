@@ -1,4 +1,5 @@
 #include "FlipView.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "design/Typography.h"
 #include "private/FlipViewAccessibility_p.h"
 #include <QKeyEvent>
@@ -14,40 +15,41 @@ namespace fluent::collections {
 
 // ── WinUI 3 FlipView metrics. zh_CN: WinUI 3 FlipView 尺寸常量 ──────────────
 namespace {
-    constexpr int kNavBtnW_H = 16;        // Nav button width, horizontal mode. zh_CN: 水平模式导航按钮宽度。
-    constexpr int kNavBtnH_H = 28;        // Nav button height, horizontal mode. zh_CN: 水平模式导航按钮高度。
-    constexpr int kNavBtnW_V = 28;        // Nav button width, vertical mode. zh_CN: 垂直模式导航按钮宽度。
-    constexpr int kNavBtnH_V = 16;        // Nav button height, vertical mode. zh_CN: 垂直模式导航按钮高度。
-    constexpr int kNavBtnMargin = 2;      // Nav button distance from the edge. zh_CN: 导航按钮到边缘距离。
-    constexpr int kNavBtnRadius = 3;      // Button corner radius. zh_CN: 按钮圆角。
-    constexpr int kIndicatorDotSize = 6;
-    constexpr int kIndicatorSpacing = 8;
-    constexpr int kIndicatorMargin = 12;
-    constexpr int kArrowFontSize = 10;    // Chevron icon size
-    constexpr int kGestureThreshold = 50;  // Accumulated trackpad pixel/angle threshold. zh_CN: trackpad 累积像素/角度阈值。
-    // NoScrollPhase cluster detection: gaps above this start a new gesture cluster.
-    // Windows precision trackpads emit every ~8-16ms with >100ms between gestures;
-    // RDP forwards at ~20-30ms and can spike to 60-100ms under network jitter.
-    // 120ms covers a single gesture's tail without mistaking RDP jitter for a new cluster.
-    // zh_CN: NoScrollPhase 事件 cluster 检测：事件间隔大于此值视为新手势。
-    // Windows 精密触控板事件间隔 ~8-16ms，手势间隔 >100ms；RDP 转发约 20-30ms，
-    // 网络抖动下可达 60-100ms。120ms 阈值覆盖单次手势尾巴，避免 RDP 抖动误判为新 cluster。
-    constexpr int kClusterGapMs = 120;
+constexpr int kNavBtnW_H = 16; // Nav button width, horizontal mode. zh_CN: 水平模式导航按钮宽度。
+constexpr int kNavBtnH_H = 28; // Nav button height, horizontal mode. zh_CN: 水平模式导航按钮高度。
+constexpr int kNavBtnW_V = 28; // Nav button width, vertical mode. zh_CN: 垂直模式导航按钮宽度。
+constexpr int kNavBtnH_V = 16; // Nav button height, vertical mode. zh_CN: 垂直模式导航按钮高度。
+constexpr int kNavBtnMargin = 2; // Nav button distance from the edge. zh_CN: 导航按钮到边缘距离。
+constexpr int kNavBtnRadius = 3; // Button corner radius. zh_CN: 按钮圆角。
+constexpr int kIndicatorDotSize = 6;
+constexpr int kIndicatorSpacing = 8;
+constexpr int kIndicatorMargin = 12;
+constexpr int kArrowFontSize = 10; // Chevron icon size
+constexpr int kGestureThreshold =
+    50; // Accumulated trackpad pixel/angle threshold. zh_CN: trackpad 累积像素/角度阈值。
+// NoScrollPhase cluster detection: gaps above this start a new gesture cluster.
+// Windows precision trackpads emit every ~8-16ms with >100ms between gestures;
+// RDP forwards at ~20-30ms and can spike to 60-100ms under network jitter.
+// 120ms covers a single gesture's tail without mistaking RDP jitter for a new cluster.
+// zh_CN: NoScrollPhase 事件 cluster 检测：事件间隔大于此值视为新手势。
+// Windows 精密触控板事件间隔 ~8-16ms，手势间隔 >100ms；RDP 转发约 20-30ms，
+// 网络抖动下可达 60-100ms。120ms 阈值覆盖单次手势尾巴，避免 RDP 抖动误判为新 cluster。
+constexpr int kClusterGapMs = 120;
 } // namespace
 
 // ── Overlay: paints nav buttons and the indicator above child pages. zh_CN: 覆盖层：在子页面之上绘制导航按钮和指示器 ──
 
 class FlipViewOverlay : public QWidget {
 public:
-    explicit FlipViewOverlay(FlipView* parent)
-        : QWidget(parent), m_fv(parent)
+    explicit FlipViewOverlay(FlipView* parent) : QWidget(parent), m_fv(parent)
     {
         setAttribute(Qt::WA_TranslucentBackground);
         setAttribute(Qt::WA_TransparentForMouseEvents);
     }
 
 protected:
-    void paintEvent(QPaintEvent*) override {
+    void paintEvent(QPaintEvent*) override
+    {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
 
@@ -90,11 +92,11 @@ protected:
         // Navigation buttons. zh_CN: 导航按钮。
         if (m_fv->m_showNavButtons && m_fv->m_isHovered && m_fv->m_pages.size() > 1) {
             if (m_fv->m_currentIndex > 0)
-                m_fv->drawNavButton(p, m_fv->prevButtonRect(), false,
-                                    m_fv->m_prevBtnHovered, m_fv->m_prevBtnPressed);
+                m_fv->drawNavButton(p, m_fv->prevButtonRect(), false, m_fv->m_prevBtnHovered,
+                                    m_fv->m_prevBtnPressed);
             if (m_fv->m_currentIndex < m_fv->m_pages.size() - 1)
-                m_fv->drawNavButton(p, m_fv->nextButtonRect(), true,
-                                    m_fv->m_nextBtnHovered, m_fv->m_nextBtnPressed);
+                m_fv->drawNavButton(p, m_fv->nextButtonRect(), true, m_fv->m_nextBtnHovered,
+                                    m_fv->m_nextBtnPressed);
         }
 
         // Page indicator. zh_CN: 页面指示器。
@@ -106,8 +108,7 @@ private:
     FlipView* m_fv;
 };
 
-FlipView::FlipView(QWidget* parent)
-    : QWidget(parent)
+FlipView::FlipView(QWidget* parent) : QWidget(parent)
 {
     detail::ensureFlipViewAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
@@ -121,7 +122,10 @@ FlipView::FlipView(QWidget* parent)
         if (m_pendingFlipDir != 0) {
             int dir = m_pendingFlipDir;
             m_pendingFlipDir = 0;
-            if (dir < 0) goPrevious(); else goNext();
+            if (dir < 0)
+                goPrevious();
+            else
+                goNext();
             m_wheelCooldown.start();
         }
     });
@@ -175,12 +179,9 @@ void FlipView::insertPage(int index, QWidget* page)
     insertPage(index, page, WidgetOwnership::Owned);
 }
 
-bool FlipView::insertPage(int index,
-                          QWidget* page,
-                          WidgetOwnership ownership)
+bool FlipView::insertPage(int index, QWidget* page, WidgetOwnership ownership)
 {
-    if (!page || page == this || page->isAncestorOf(this)
-        || indexOfPage(page) >= 0) {
+    if (!page || page == this || page->isAncestorOf(this) || indexOfPage(page) >= 0) {
         return false;
     }
 
@@ -192,11 +193,8 @@ bool FlipView::insertPage(int index,
     record.page = page;
     record.originalParent = page->parentWidget();
     record.ownership = ownership;
-    record.destroyedConnection = connect(
-        page,
-        &QObject::destroyed,
-        this,
-        [this, page]() { handlePageDestroyed(page); });
+    record.destroyedConnection =
+        connect(page, &QObject::destroyed, this, [this, page]() { handlePageDestroyed(page); });
 
     page->setParent(this);
     m_pages.insert(index, record);
@@ -210,8 +208,7 @@ bool FlipView::insertPage(int index,
     layoutPages();
     raiseOverlay();
     update();
-    detail::notifyFlipViewAccessibilityStructureChanged(
-        this, oldCount, oldIndex);
+    detail::notifyFlipViewAccessibilityStructureChanged(this, oldCount, oldIndex);
     return true;
 }
 
@@ -262,8 +259,7 @@ FlipView::PageRecord FlipView::extractPageRecord(int index)
     PageRecord record = m_pages.takeAt(index);
     QObject::disconnect(record.destroyedConnection);
     updateAfterPageRemoval(index);
-    detail::notifyFlipViewAccessibilityStructureChanged(
-        this, oldCount, oldIndex);
+    detail::notifyFlipViewAccessibilityStructureChanged(this, oldCount, oldIndex);
     return record;
 }
 
@@ -338,9 +334,11 @@ bool FlipView::isValidPageIndex(int index) const
 
 void FlipView::setCurrentIndex(int index)
 {
-    if (m_pages.isEmpty()) return;
+    if (m_pages.isEmpty())
+        return;
     index = qBound(0, index, m_pages.size() - 1);
-    if (m_currentIndex == index) return;
+    if (m_currentIndex == index)
+        return;
 
     int oldIndex = m_currentIndex;
     m_currentIndex = index;
@@ -351,7 +349,8 @@ void FlipView::setCurrentIndex(int index)
 
 void FlipView::setOrientation(Qt::Orientation orientation)
 {
-    if (m_orientation == orientation) return;
+    if (m_orientation == orientation)
+        return;
     m_orientation = orientation;
     layoutPages();
     update();
@@ -361,7 +360,8 @@ void FlipView::setOrientation(Qt::Orientation orientation)
 
 void FlipView::setShowNavigationButtons(bool show)
 {
-    if (m_showNavButtons == show) return;
+    if (m_showNavButtons == show)
+        return;
     m_showNavButtons = show;
     update();
     emit showNavigationButtonsChanged();
@@ -369,7 +369,8 @@ void FlipView::setShowNavigationButtons(bool show)
 
 void FlipView::setShowPageIndicator(bool show)
 {
-    if (m_showPageIndicator == show) return;
+    if (m_showPageIndicator == show)
+        return;
     m_showPageIndicator = show;
     update();
     emit showPageIndicatorChanged();
@@ -377,7 +378,8 @@ void FlipView::setShowPageIndicator(bool show)
 
 void FlipView::setSlideOffset(qreal offset)
 {
-    if (qFuzzyCompare(m_slideOffset, offset)) return;
+    if (qFuzzyCompare(m_slideOffset, offset))
+        return;
     m_slideOffset = offset;
     layoutPages();
     update();
@@ -442,7 +444,8 @@ QRect FlipView::pageIndicatorRect() const
 {
     QRect cr = contentRect();
     int dotCount = m_pages.size();
-    if (dotCount <= 0) return QRect();
+    if (dotCount <= 0)
+        return QRect();
 
     if (m_orientation == Qt::Horizontal) {
         int totalW = dotCount * kIndicatorDotSize + (dotCount - 1) * kIndicatorSpacing;
@@ -502,7 +505,7 @@ void FlipView::animateSlide(int fromIndex, int toIndex)
     qreal startOffset = (toIndex > fromIndex) ? 1.0 : -1.0;
     m_slideAnimation->setStartValue(startOffset);
     m_slideAnimation->setEndValue(0.0);
-    m_slideAnimation->start();
+    ::fluent::detail::startMotionTransition(m_slideAnimation, themeAnimation().normal);
 }
 
 // ── Painting. zh_CN: 绘制 ────────────────────────────────────────────────────
@@ -525,8 +528,8 @@ void FlipView::paintEvent(QPaintEvent*)
     // zh_CN: 导航按钮和指示器由 FlipViewOverlay 在子页面之上绘制。
 }
 
-void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext,
-                              bool hovered, bool pressed)
+void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext, bool hovered,
+                             bool pressed)
 {
     const auto& c = themeColorsRef();
 
@@ -566,9 +569,10 @@ void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext,
     const int arrowSize = pressed ? static_cast<int>(kArrowFontSize * 0.875) : kArrowFontSize;
     p.setPen(arrowColor);
 
-    const QString glyph = (m_orientation == Qt::Horizontal)
-        ? (isNext ? Typography::Icons::ChevronRight : Typography::Icons::ChevronLeft)
-        : (isNext ? Typography::Icons::ChevronDown : Typography::Icons::ChevronUp);
+    const QString glyph =
+        (m_orientation == Qt::Horizontal)
+            ? (isNext ? Typography::Icons::ChevronRight : Typography::Icons::ChevronLeft)
+            : (isNext ? Typography::Icons::ChevronDown : Typography::Icons::ChevronUp);
     Typography::Icons::paintGlyph(p, QRectF(btnRect), glyph, arrowSize, Qt::AlignCenter);
 }
 
@@ -576,13 +580,14 @@ void FlipView::drawPageIndicator(QPainter& p)
 {
     const auto& c = themeColorsRef();
     QRect indRect = pageIndicatorRect();
-    if (indRect.isNull()) return;
+    if (indRect.isNull())
+        return;
 
     // Fluent neutral pip colors. zh_CN: Fluent 中性分页指示点颜色。
     QColor selectedColor, unselectedColor;
     // Fluent neutral pips. zh_CN: Fluent 中性分页点。
-        selectedColor = c.textPrimary;
-        unselectedColor = c.textTertiary;
+    selectedColor = c.textPrimary;
+    unselectedColor = c.textTertiary;
 
     for (int i = 0; i < m_pages.size(); ++i) {
         QRect dotRect;
@@ -750,7 +755,10 @@ void FlipView::wheelEvent(QWheelEvent* event)
         return;
     }
     if (phase == Qt::ScrollUpdate) {
-        if (m_gestureConsumed) { event->accept(); return; }
+        if (m_gestureConsumed) {
+            event->accept();
+            return;
+        }
         // Always accumulate, even mid-animation. If the threshold is hit while the
         // animation still plays, store the direction in m_pendingFlipDir and flip
         // when it finishes. Fixes fast consecutive Windows swipes whose ScrollUpdates
@@ -759,14 +767,16 @@ void FlipView::wheelEvent(QWheelEvent* event)
         // m_pendingFlipDir，动画结束后自动执行；修复 Windows 快速连续滑动时
         // ScrollUpdate 全部落在上一次动画期间而被守卫丢弃的问题。
         int delta = !event->pixelDelta().isNull()
-            ? (m_orientation == Qt::Horizontal ? event->pixelDelta().x() : event->pixelDelta().y())
-            : (m_orientation == Qt::Horizontal
-                ? event->angleDelta().x() + event->angleDelta().y()
-                : event->angleDelta().y());
+                        ? (m_orientation == Qt::Horizontal ? event->pixelDelta().x()
+                                                           : event->pixelDelta().y())
+                        : (m_orientation == Qt::Horizontal
+                               ? event->angleDelta().x() + event->angleDelta().y()
+                               : event->angleDelta().y());
         m_gestureAccum += delta;
         if (qAbs(m_gestureAccum) >= kGestureThreshold) {
             m_gestureConsumed = true;
-            m_npConsumed = true; // Bridge: stop post-gesture NoScrollPhase inertia from flipping again. zh_CN: 桥接：防止手势结束后 NoScrollPhase 惯性事件再翻页。
+            m_npConsumed =
+                true; // Bridge: stop post-gesture NoScrollPhase inertia from flipping again. zh_CN: 桥接：防止手势结束后 NoScrollPhase 惯性事件再翻页。
             m_wheelCooldown.start();
             if (m_slideAnimation->state() == QAbstractAnimation::Running) {
                 m_pendingFlipDir = (m_gestureAccum > 0) ? -1 : 1;
@@ -847,18 +857,33 @@ void FlipView::wheelEvent(QWheelEvent* event)
     // Threshold reached → this cluster flips exactly once. zh_CN: 阈值达到 → 本 cluster 翻一次页。
     m_npConsumed = true;
     int dir = (m_npAccum > 0) ? -1 : 1;
-    if (dir < 0) goPrevious(); else goNext();
+    if (dir < 0)
+        goPrevious();
+    else
+        goNext();
     event->accept();
 }
 
 void FlipView::keyPressEvent(QKeyEvent* event)
 {
     if (m_orientation == Qt::Horizontal) {
-        if (event->key() == Qt::Key_Left) { goPrevious(); return; }
-        if (event->key() == Qt::Key_Right) { goNext(); return; }
+        if (event->key() == Qt::Key_Left) {
+            goPrevious();
+            return;
+        }
+        if (event->key() == Qt::Key_Right) {
+            goNext();
+            return;
+        }
     } else {
-        if (event->key() == Qt::Key_Up) { goPrevious(); return; }
-        if (event->key() == Qt::Key_Down) { goNext(); return; }
+        if (event->key() == Qt::Key_Up) {
+            goPrevious();
+            return;
+        }
+        if (event->key() == Qt::Key_Down) {
+            goNext();
+            return;
+        }
     }
     QWidget::keyPressEvent(event);
 }

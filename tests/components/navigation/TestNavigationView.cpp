@@ -16,6 +16,7 @@
 
 #include "design/Typography.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/basicinput/Button.h"
 #include "components/navigation/NavigationView.h"
@@ -71,11 +72,9 @@ public:
 
 class NavigationItemRow : public QWidget, public fluent::FluentElement {
 public:
-    NavigationItemRow(const QString& iconGlyph, const QString& text, bool selected, QWidget* parent = nullptr)
-        : QWidget(parent)
-        , m_iconGlyph(iconGlyph)
-        , m_text(text)
-        , m_selected(selected)
+    NavigationItemRow(const QString& iconGlyph, const QString& text, bool selected,
+                      QWidget* parent = nullptr)
+        : QWidget(parent), m_iconGlyph(iconGlyph), m_text(text), m_selected(selected)
     {
         setMouseTracking(true);
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -107,10 +106,7 @@ public:
         update();
     }
 
-    bool selectedIndicatorVisible() const
-    {
-        return m_selected && !m_compact;
-    }
+    bool selectedIndicatorVisible() const { return m_selected && !m_compact; }
 
     std::function<void()> onActivated;
 
@@ -138,10 +134,7 @@ protected:
         }
 
         if (selectedIndicatorVisible()) {
-            const QRectF indicator(itemRect.left() + 4,
-                                   itemRect.center().y() - 8,
-                                   3,
-                                   16);
+            const QRectF indicator(itemRect.left() + 4, itemRect.center().y() - 8, 3, 16);
             painter.setBrush(colors.accentDefault);
             painter.drawRoundedRect(indicator, 1.5, 1.5);
         }
@@ -156,12 +149,12 @@ protected:
 
         if (!m_compact) {
             QFont textFont = themeFont(m_selected ? Typography::FontRole::BodyStrong
-                                                  : Typography::FontRole::Body).toQFont();
+                                                  : Typography::FontRole::Body)
+                                 .toQFont();
             painter.setFont(textFont);
             painter.setPen(colors.textPrimary);
             painter.drawText(QRect(52, 0, qMax(0, width() - 64), height()),
-                             Qt::AlignVCenter | Qt::AlignLeft | Qt::TextSingleLine,
-                             m_text);
+                             Qt::AlignVCenter | Qt::AlignLeft | Qt::TextSingleLine, m_text);
         }
     }
 
@@ -221,9 +214,9 @@ public:
         bool selected = false;
     };
 
-    NavigationPaneSection(Qt::Orientation orientation, const QVector<Entry>& entries, QWidget* parent = nullptr)
-        : QWidget(parent)
-        , m_layout(new QBoxLayout(QBoxLayout::TopToBottom, this))
+    NavigationPaneSection(Qt::Orientation orientation, const QVector<Entry>& entries,
+                          QWidget* parent = nullptr)
+        : QWidget(parent), m_layout(new QBoxLayout(QBoxLayout::TopToBottom, this))
     {
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         m_layout->setContentsMargins(8, 8, 8, 8);
@@ -252,7 +245,8 @@ public:
                 widthValue += row->sizeHint().width() + 4;
             return QSize(widthValue, 48);
         }
-        return QSize(280, m_preferredVerticalHeight > 0 ? m_preferredVerticalHeight : 16 + m_rows.size() * 44);
+        return QSize(280, m_preferredVerticalHeight > 0 ? m_preferredVerticalHeight
+                                                        : 16 + m_rows.size() * 44);
     }
 
     QSize minimumSizeHint() const override
@@ -269,10 +263,10 @@ public:
             return;
         }
         m_orientation = orientation;
-        m_layout->setDirection(orientation == Qt::Vertical
-                                   ? QBoxLayout::TopToBottom
-                                   : QBoxLayout::LeftToRight);
-        m_layout->setContentsMargins(8, orientation == Qt::Vertical ? 8 : 4, 8, orientation == Qt::Vertical ? 8 : 4);
+        m_layout->setDirection(orientation == Qt::Vertical ? QBoxLayout::TopToBottom
+                                                           : QBoxLayout::LeftToRight);
+        m_layout->setContentsMargins(8, orientation == Qt::Vertical ? 8 : 4, 8,
+                                     orientation == Qt::Vertical ? 8 : 4);
         for (NavigationItemRow* row : m_rows) {
             row->setCompact(m_compact);
             row->setFixedHeight(orientation == Qt::Vertical ? 40 : 36);
@@ -304,10 +298,7 @@ public:
             m_rows.at(i)->setSelected(i == index);
     }
 
-    void clearSelection()
-    {
-        setSelectedIndex(-1);
-    }
+    void clearSelection() { setSelectedIndex(-1); }
 
     void onThemeUpdated() override
     {
@@ -331,28 +322,20 @@ public:
     explicit DashboardPage(QWidget* parent = nullptr)
         : DashboardPage(QStringLiteral("Home"),
                         QStringLiteral("Shell content supplied by the application layer"),
-                        {
-                            QStringLiteral("Navigation shell switched to lightweight composition"),
-                            QStringLiteral("Documents page opened from the side pane"),
-                            QStringLiteral("Settings footer item is available as app chrome")
-                        },
+                        {QStringLiteral("Navigation shell switched to lightweight composition"),
+                         QStringLiteral("Documents page opened from the side pane"),
+                         QStringLiteral("Settings footer item is available as app chrome")},
                         parent)
-    {
-    }
+    {}
 
-    DashboardPage(const QString& title, const QString& subtitle, const QStringList& activityRows, QWidget* parent = nullptr)
-        : QWidget(parent)
-        , m_title(title)
-        , m_subtitle(subtitle)
-        , m_activityRows(activityRows)
+    DashboardPage(const QString& title, const QString& subtitle, const QStringList& activityRows,
+                  QWidget* parent = nullptr)
+        : QWidget(parent), m_title(title), m_subtitle(subtitle), m_activityRows(activityRows)
     {
         setAutoFillBackground(false);
     }
 
-    void onThemeUpdated() override
-    {
-        update();
-    }
+    void onThemeUpdated() override { update(); }
 
 protected:
     void paintEvent(QPaintEvent*) override
@@ -367,14 +350,12 @@ protected:
 
         painter.setPen(colors.textPrimary);
         painter.setFont(themeFont(Typography::FontRole::Title).toQFont());
-        painter.drawText(QRect(pad, 28, width() - pad * 2, 42),
-                         Qt::AlignLeft | Qt::AlignVCenter,
+        painter.drawText(QRect(pad, 28, width() - pad * 2, 42), Qt::AlignLeft | Qt::AlignVCenter,
                          m_title);
 
         painter.setPen(colors.textSecondary);
         painter.setFont(themeFont(Typography::FontRole::Body).toQFont());
-        painter.drawText(QRect(pad, 68, width() - pad * 2, 26),
-                         Qt::AlignLeft | Qt::AlignVCenter,
+        painter.drawText(QRect(pad, 68, width() - pad * 2, 26), Qt::AlignLeft | Qt::AlignVCenter,
                          m_subtitle);
 
         const int gap = 16;
@@ -388,7 +369,8 @@ protected:
         drawCard(painter, QRect(pad + (cardWidth + gap) * 2, cardTop, cardWidth, cardHeight),
                  QStringLiteral("Sync status"), QStringLiteral("Ready"), colors.accentDefault);
 
-        const QRect panel(pad, cardTop + cardHeight + 24, width() - pad * 2, qMax(180, height() - cardTop - cardHeight - 64));
+        const QRect panel(pad, cardTop + cardHeight + 24, width() - pad * 2,
+                          qMax(180, height() - cardTop - cardHeight - 64));
         painter.setPen(colors.strokeCard);
         painter.setBrush(colors.bgCanvas);
         painter.drawRoundedRect(panel, themeRadius().overlay, themeRadius().overlay);
@@ -396,8 +378,7 @@ protected:
         painter.setPen(colors.textPrimary);
         painter.setFont(themeFont(Typography::FontRole::BodyStrong).toQFont());
         painter.drawText(panel.adjusted(20, 16, -20, -panel.height() + 48),
-                         Qt::AlignLeft | Qt::AlignVCenter,
-                         QStringLiteral("Recent activity"));
+                         Qt::AlignLeft | Qt::AlignVCenter, QStringLiteral("Recent activity"));
 
         painter.setFont(themeFont(Typography::FontRole::Body).toQFont());
         int y = panel.top() + 64;
@@ -416,7 +397,8 @@ private:
     QString m_subtitle;
     QStringList m_activityRows;
 
-    void drawCard(QPainter& painter, const QRect& rect, const QString& title, const QString& value, const QColor& accent)
+    void drawCard(QPainter& painter, const QRect& rect, const QString& title, const QString& value,
+                  const QColor& accent)
     {
         const auto& colors = themeColors();
         painter.setPen(colors.strokeCard);
@@ -430,7 +412,8 @@ private:
 
         painter.setPen(colors.textSecondary);
         painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
-        painter.drawText(rect.adjusted(32, 18, -16, -rect.height() + 44), Qt::AlignLeft | Qt::AlignVCenter, title);
+        painter.drawText(rect.adjusted(32, 18, -16, -rect.height() + 44),
+                         Qt::AlignLeft | Qt::AlignVCenter, title);
 
         painter.setPen(colors.textPrimary);
         painter.setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
@@ -487,6 +470,7 @@ protected:
     void SetUp() override
     {
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         window = new NavigationViewTestWindow();
         window->resize(920, 620);
         layout = new AnchorLayout(window);
@@ -497,6 +481,7 @@ protected:
     void TearDown() override
     {
         delete window;
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
 
@@ -1192,6 +1177,42 @@ TEST_F(NavigationViewTest, StackContentHostTransitionEffectControlsIncomingOffse
     EXPECT_EQ(second->geometry(), host.rect());
 }
 
+TEST_F(NavigationViewTest, StackContentHostLocalAndGlobalMotionPoliciesSettleTransitions)
+{
+    StackContentHost host;
+    host.resize(420, 320);
+
+    auto* first = new Label(QStringLiteral("First"));
+    auto* second = new Label(QStringLiteral("Second"));
+    ASSERT_TRUE(host.insertPage(0, first));
+    ASSERT_TRUE(host.insertPage(1, second));
+    host.setCurrentIndex(0, 0, false);
+    showAndProcess(host);
+
+    host.setCurrentIndex(1, 0, true);
+    ASSERT_TRUE(host.busy());
+    host.setTransitionAnimationEnabled(false);
+    EXPECT_FALSE(host.busy());
+    EXPECT_EQ(second->geometry(), host.rect());
+    EXPECT_TRUE(second->isVisible());
+    EXPECT_FALSE(first->isVisible());
+
+    host.setTransitionAnimationEnabled(true);
+    host.setCurrentIndex(0, 0, false);
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    QSignalSpy busySpy(&host, &StackContentHost::busyChanged);
+
+    host.setCurrentIndex(1, 0, true);
+
+    EXPECT_FALSE(host.busy());
+    EXPECT_EQ(second->geometry(), host.rect());
+    EXPECT_TRUE(second->isVisible());
+    EXPECT_FALSE(first->isVisible());
+    ASSERT_EQ(busySpy.count(), 2);
+    EXPECT_TRUE(busySpy.at(0).at(0).toBool());
+    EXPECT_FALSE(busySpy.at(1).at(0).toBool());
+}
+
 TEST_F(NavigationViewTest, ThemeRefreshKeepsShellAndSlotsStable)
 {
     NavigationView nav(window);
@@ -1220,18 +1241,21 @@ TEST_F(NavigationViewTest, ChromeSizeHintChangesRelayoutAfterLeftToTopSwitch)
 {
     NavigationView nav(window);
     nav.setAnimationEnabled(false);
-    auto* header = new NavigationPaneSection(Qt::Vertical, {
-        {Typography::Icons::Back, QStringLiteral("Back"), false},
-        {Typography::Icons::Search, QStringLiteral("Search"), false},
-    });
-    auto* main = new NavigationPaneSection(Qt::Vertical, {
-        {Typography::Icons::Home, QStringLiteral("Home"), true},
-        {Typography::Icons::Contact, QStringLiteral("Account"), false},
-    });
-    auto* footer = new NavigationPaneSection(Qt::Vertical, {
-        {Typography::Icons::Info, QStringLiteral("Help"), false},
-        {Typography::Icons::Settings, QStringLiteral("Settings"), false},
-    });
+    auto* header = new NavigationPaneSection(
+        Qt::Vertical, {
+                          {Typography::Icons::Back, QStringLiteral("Back"), false},
+                          {Typography::Icons::Search, QStringLiteral("Search"), false},
+                      });
+    auto* main = new NavigationPaneSection(
+        Qt::Vertical, {
+                          {Typography::Icons::Home, QStringLiteral("Home"), true},
+                          {Typography::Icons::Contact, QStringLiteral("Account"), false},
+                      });
+    auto* footer = new NavigationPaneSection(
+        Qt::Vertical, {
+                          {Typography::Icons::Info, QStringLiteral("Help"), false},
+                          {Typography::Icons::Settings, QStringLiteral("Settings"), false},
+                      });
     header->setPreferredVerticalHeight(88);
     footer->setPreferredVerticalHeight(96);
     nav.setHeaderChromeWidget(header);
@@ -1347,27 +1371,37 @@ TEST_F(NavigationViewTest, VisualCheck)
     themeButton->anchors()->right = {visual, Edge::Right, -32};
     addAnchored(visualLayout, themeButton);
 
-    auto* sideHeader = new NavigationPaneSection(Qt::Vertical, {
-        {Typography::Icons::Back, QStringLiteral("Back"), false},
-        {Typography::Icons::Search, QStringLiteral("Search"), false},
-    }, nav);
+    auto* sideHeader =
+        new NavigationPaneSection(Qt::Vertical,
+                                  {
+                                      {Typography::Icons::Back, QStringLiteral("Back"), false},
+                                      {Typography::Icons::Search, QStringLiteral("Search"), false},
+                                  },
+                                  nav);
     sideHeader->setPreferredVerticalHeight(88);
-    auto* sideMain = new NavigationPaneSection(Qt::Vertical, {
-        {Typography::Icons::Home, QStringLiteral("Home"), true},
-        {Typography::Icons::Contact, QStringLiteral("Account"), false},
-        {Typography::Icons::Document, QStringLiteral("Documents"), false},
-        {Typography::Icons::Download, QStringLiteral("Downloads"), false},
-    }, nav);
-    auto* sideFooter = new NavigationPaneSection(Qt::Vertical, {
-        {Typography::Icons::Info, QStringLiteral("Help"), false},
-        {Typography::Icons::Settings, QStringLiteral("Settings"), false},
-    }, nav);
+    auto* sideMain = new NavigationPaneSection(
+        Qt::Vertical,
+        {
+            {Typography::Icons::Home, QStringLiteral("Home"), true},
+            {Typography::Icons::Contact, QStringLiteral("Account"), false},
+            {Typography::Icons::Document, QStringLiteral("Documents"), false},
+            {Typography::Icons::Download, QStringLiteral("Downloads"), false},
+        },
+        nav);
+    auto* sideFooter = new NavigationPaneSection(
+        Qt::Vertical,
+        {
+            {Typography::Icons::Info, QStringLiteral("Help"), false},
+            {Typography::Icons::Settings, QStringLiteral("Settings"), false},
+        },
+        nav);
     sideFooter->setPreferredVerticalHeight(96);
     nav->setHeaderChromeWidget(sideHeader);
     nav->setMainChromeWidget(sideMain);
     nav->setFooterChromeWidget(sideFooter);
 
-    auto addPage = [nav](const QString& title, const QString& subtitle, const QStringList& activityRows) {
+    auto addPage = [nav](const QString& title, const QString& subtitle,
+                         const QStringList& activityRows) {
         auto* page = new DashboardPage(title, subtitle, activityRows);
         const int index = nav->contentHost()->count();
         EXPECT_TRUE(nav->contentHost()->insertPage(index, page));
@@ -1377,66 +1411,55 @@ TEST_F(NavigationViewTest, VisualCheck)
     QVector<DashboardPage*> pages;
     pages.append(addPage(QStringLiteral("Home"),
                          QStringLiteral("Shell content supplied by the application layer"),
-                         {
-                             QStringLiteral("Navigation shell switched to lightweight composition"),
-                             QStringLiteral("Documents page opened from the side pane"),
-                             QStringLiteral("Settings footer item is available as app chrome")
-                         }));
+                         {QStringLiteral("Navigation shell switched to lightweight composition"),
+                          QStringLiteral("Documents page opened from the side pane"),
+                          QStringLiteral("Settings footer item is available as app chrome")}));
     pages.append(addPage(QStringLiteral("Search"),
                          QStringLiteral("Find project files and recent navigation targets"),
-                         {
-                             QStringLiteral("Search opened from the header chrome"),
-                             QStringLiteral("Recent documents are ready for lookup"),
-                             QStringLiteral("Query results stay inside the content host")
-                         }));
+                         {QStringLiteral("Search opened from the header chrome"),
+                          QStringLiteral("Recent documents are ready for lookup"),
+                          QStringLiteral("Query results stay inside the content host")}));
     pages.append(addPage(QStringLiteral("Account"),
                          QStringLiteral("Profile and session state owned by the application layer"),
-                         {
-                             QStringLiteral("Account settings loaded from a content page"),
-                             QStringLiteral("NavigationView only assigns shell geometry"),
-                             QStringLiteral("Chrome selection remains decoupled from page widgets")
-                         }));
+                         {QStringLiteral("Account settings loaded from a content page"),
+                          QStringLiteral("NavigationView only assigns shell geometry"),
+                          QStringLiteral("Chrome selection remains decoupled from page widgets")}));
     pages.append(addPage(QStringLiteral("Documents"),
                          QStringLiteral("Document workspace rendered inside StackContentHost"),
-                         {
-                             QStringLiteral("Documents page opened from the side pane"),
-                             QStringLiteral("Pinned files are represented by page content"),
-                             QStringLiteral("Page transition effect follows the display mode")
-                         }));
+                         {QStringLiteral("Documents page opened from the side pane"),
+                          QStringLiteral("Pinned files are represented by page content"),
+                          QStringLiteral("Page transition effect follows the display mode")}));
     pages.append(addPage(QStringLiteral("Downloads"),
                          QStringLiteral("Download queue and transfer status"),
-                         {
-                             QStringLiteral("Download history switched through NavigationPaneSection"),
-                             QStringLiteral("Side modes slide content from the left"),
-                             QStringLiteral("Top mode slides content from the bottom")
-                         }));
+                         {QStringLiteral("Download history switched through NavigationPaneSection"),
+                          QStringLiteral("Side modes slide content from the left"),
+                          QStringLiteral("Top mode slides content from the bottom")}));
     pages.append(addPage(QStringLiteral("Help"),
                          QStringLiteral("Support resources surfaced from footer chrome"),
-                         {
-                             QStringLiteral("Help footer item switches the content host"),
-                             QStringLiteral("Keyboard and visual tests share the same shell"),
-                             QStringLiteral("Animation remains configured outside NavigationView")
-                         }));
+                         {QStringLiteral("Help footer item switches the content host"),
+                          QStringLiteral("Keyboard and visual tests share the same shell"),
+                          QStringLiteral("Animation remains configured outside NavigationView")}));
     pages.append(addPage(QStringLiteral("Settings"),
                          QStringLiteral("Application settings page supplied by the demo"),
-                         {
-                             QStringLiteral("Settings footer item is available as app chrome"),
-                             QStringLiteral("Content pages stay owned by StackContentHost"),
-                             QStringLiteral("Display mode buttons only change shell layout")
-                         }));
+                         {QStringLiteral("Settings footer item is available as app chrome"),
+                          QStringLiteral("Content pages stay owned by StackContentHost"),
+                          QStringLiteral("Display mode buttons only change shell layout")}));
     nav->contentHost()->setCurrentIndex(0, 0, false);
 
     auto applyContentTransitionEffect = [nav](NavigationView::DisplayMode mode) {
-        nav->contentHost()->setTransitionEffect(mode == NavigationView::DisplayMode::Top
-                                                    ? StackContentHost::TransitionEffect::SlideFromBottom
-                                                    : StackContentHost::TransitionEffect::SlideFromLeft);
+        nav->contentHost()->setTransitionEffect(
+            mode == NavigationView::DisplayMode::Top
+                ? StackContentHost::TransitionEffect::SlideFromBottom
+                : StackContentHost::TransitionEffect::SlideFromLeft);
     };
     applyContentTransitionEffect(nav->displayMode());
-    QObject::connect(nav, &NavigationView::effectiveDisplayModeChanged, [applyContentTransitionEffect](NavigationView::DisplayMode mode) {
-        applyContentTransitionEffect(mode);
-    });
+    QObject::connect(nav, &NavigationView::effectiveDisplayModeChanged,
+                     [applyContentTransitionEffect](NavigationView::DisplayMode mode) {
+                         applyContentTransitionEffect(mode);
+                     });
 
-    auto applyChromePresentation = [nav, sideHeader, sideMain, sideFooter](NavigationView::DisplayMode mode) {
+    auto applyChromePresentation = [nav, sideHeader, sideMain,
+                                    sideFooter](NavigationView::DisplayMode mode) {
         const bool topMode = mode == NavigationView::DisplayMode::Top;
         const bool compactChrome = !topMode && mode != NavigationView::DisplayMode::Left;
         const Qt::Orientation orientation = topMode ? Qt::Horizontal : Qt::Vertical;
@@ -1450,7 +1473,8 @@ TEST_F(NavigationViewTest, VisualCheck)
     };
     applyChromePresentation(nav->displayMode());
 
-    auto selectPage = [nav, sideHeader, sideMain, sideFooter](NavigationPaneSection* section, int rowIndex, int pageIndex) {
+    auto selectPage = [nav, sideHeader, sideMain, sideFooter](NavigationPaneSection* section,
+                                                              int rowIndex, int pageIndex) {
         sideHeader->clearSelection();
         sideMain->clearSelection();
         sideFooter->clearSelection();
@@ -1469,37 +1493,41 @@ TEST_F(NavigationViewTest, VisualCheck)
         selectPage(sideFooter, index, index + 5);
     };
 
-    auto setDisplayMode = [nav, applyChromePresentation, applyContentTransitionEffect](NavigationView::DisplayMode nextMode) {
+    auto setDisplayMode = [nav, applyChromePresentation,
+                           applyContentTransitionEffect](NavigationView::DisplayMode nextMode) {
         applyContentTransitionEffect(nextMode);
         applyChromePresentation(nextMode);
-        nav->setPaneOpen(nextMode == NavigationView::DisplayMode::Left || nextMode == NavigationView::DisplayMode::Top);
+        nav->setPaneOpen(nextMode == NavigationView::DisplayMode::Left ||
+                         nextMode == NavigationView::DisplayMode::Top);
         nav->setDisplayMode(nextMode);
     };
 
-    QObject::connect(topButton, &Button::clicked, [setDisplayMode]() {
-        setDisplayMode(NavigationView::DisplayMode::Top);
-    });
-    QObject::connect(leftButton, &Button::clicked, [setDisplayMode]() {
-        setDisplayMode(NavigationView::DisplayMode::Left);
-    });
+    QObject::connect(topButton, &Button::clicked,
+                     [setDisplayMode]() { setDisplayMode(NavigationView::DisplayMode::Top); });
+    QObject::connect(leftButton, &Button::clicked,
+                     [setDisplayMode]() { setDisplayMode(NavigationView::DisplayMode::Left); });
     QObject::connect(leftCompactButton, &Button::clicked, [setDisplayMode]() {
         setDisplayMode(NavigationView::DisplayMode::LeftCompact);
     });
     QObject::connect(leftMinimalButton, &Button::clicked, [setDisplayMode]() {
         setDisplayMode(NavigationView::DisplayMode::LeftMinimal);
     });
-    QObject::connect(themeButton, &Button::clicked, [visual, nav, themeButton, sideHeader, sideMain, sideFooter, pages]() {
-        const bool useDark = fluent::FluentElement::currentTheme() == fluent::FluentElement::Light;
-        fluent::FluentElement::setTheme(useDark ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
-        visual->onThemeUpdated();
-        nav->onThemeUpdated();
-        sideHeader->onThemeUpdated();
-        sideMain->onThemeUpdated();
-        sideFooter->onThemeUpdated();
-        for (DashboardPage* page : pages)
-            page->onThemeUpdated();
-        themeButton->setText(useDark ? QStringLiteral("Light") : QStringLiteral("Dark"));
-    });
+    QObject::connect(themeButton, &Button::clicked,
+                     [visual, nav, themeButton, sideHeader, sideMain, sideFooter, pages]() {
+                         const bool useDark =
+                             fluent::FluentElement::currentTheme() == fluent::FluentElement::Light;
+                         fluent::FluentElement::setTheme(useDark ? fluent::FluentElement::Dark
+                                                                 : fluent::FluentElement::Light);
+                         visual->onThemeUpdated();
+                         nav->onThemeUpdated();
+                         sideHeader->onThemeUpdated();
+                         sideMain->onThemeUpdated();
+                         sideFooter->onThemeUpdated();
+                         for (DashboardPage* page : pages)
+                             page->onThemeUpdated();
+                         themeButton->setText(useDark ? QStringLiteral("Light")
+                                                      : QStringLiteral("Dark"));
+                     });
 
     visual->show();
     qApp->exec();
