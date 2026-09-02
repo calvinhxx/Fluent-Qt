@@ -12,6 +12,7 @@
 
 #include "components/basicinput/Button.h"
 #include "components/foundation/FontIcon.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/layout/Divider.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
@@ -21,8 +22,7 @@ namespace {
 
 QScrollArea* enclosingScrollArea(QWidget* widget)
 {
-    for (QWidget* ancestor = widget ? widget->parentWidget() : nullptr;
-         ancestor;
+    for (QWidget* ancestor = widget ? widget->parentWidget() : nullptr; ancestor;
          ancestor = ancestor->parentWidget()) {
         if (auto* scrollArea = qobject_cast<QScrollArea*>(ancestor))
             return scrollArea;
@@ -32,8 +32,7 @@ QScrollArea* enclosingScrollArea(QWidget* widget)
 
 } // namespace
 
-Expander::Expander(QWidget* parent)
-    : Card(parent)
+Expander::Expander(QWidget* parent) : Card(parent)
 {
     setObjectName(QStringLiteral("fluentExpander"));
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -57,8 +56,7 @@ Expander::Expander(QWidget* parent)
     // sheets cannot leave the header stuck on a Light WindowText palette.
     // zh_CN: Primary 走标签自身样式表上色，避免祖先 Gallery/卡片样式表
     // 把标题卡在浅色 WindowText palette 上。
-    m_headerLabel->setTextColorRole(
-        textfields::Label::TextColorRole::Primary);
+    m_headerLabel->setTextColorRole(textfields::Label::TextColorRole::Primary);
     m_headerLabel->setTextElideMode(Qt::ElideRight);
 
     m_chevron = new FontIcon(Typography::Icons::ChevronDown, m_headerButton);
@@ -78,14 +76,11 @@ Expander::Expander(QWidget* parent)
     m_clip->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_clip->setFixedHeight(0);
 
-    connect(m_headerButton, &basicinput::Button::clicked,
-            this, &Expander::toggleExpanded);
+    connect(m_headerButton, &basicinput::Button::clicked, this, &Expander::toggleExpanded);
 
     m_animation = new QVariantAnimation(this);
-    connect(m_animation, &QVariantAnimation::valueChanged,
-            this, [this](const QVariant& value) {
-                applyFraction(value.toReal());
-            });
+    connect(m_animation, &QVariantAnimation::valueChanged, this,
+            [this](const QVariant& value) { applyFraction(value.toReal()); });
     connect(m_animation, &QVariantAnimation::finished, this, [this]() {
         QPointer<Expander> guard(this);
         applyFraction(m_expanded ? 1.0 : 0.0);
@@ -95,6 +90,10 @@ Expander::Expander(QWidget* parent)
         if (guard)
             guard->finishViewportTransition();
     });
+
+    MotionPolicy& motionPolicy = MotionPolicy::instance();
+    connect(&motionPolicy, &MotionPolicy::modeChanged, this,
+            [this](MotionPolicy::Mode) { handleMotionPolicyChanged(); });
 
     updateChildGeometry();
 }
@@ -145,10 +144,8 @@ bool Expander::setContentWidget(QWidget* widget, WidgetOwnership ownership)
         widget->setParent(m_clip);
         widget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
         widget->show();
-        m_contentDestroyedConnection = connect(
-            widget, &QObject::destroyed, this, [this]() {
-                handleContentDestroyed();
-            });
+        m_contentDestroyedConnection =
+            connect(widget, &QObject::destroyed, this, [this]() { handleContentDestroyed(); });
     }
 
     m_contentTargetHeight = m_expanded ? naturalContentHeight() : 0;
@@ -218,30 +215,7 @@ void Expander::setExpandedAnimated(bool expanded, bool animated)
     if (!guard)
         return;
 
-    const qreal target = expanded ? 1.0 : 0.0;
-    if (!animated) {
-        applyFraction(target);
-        if (!guard)
-            return;
-        emit expansionTransitionFinished(m_expanded);
-        if (guard)
-            guard->finishViewportTransition();
-        return;
-    }
-
-    const auto motion = themeAnimation();
-    const qreal distance = qAbs(target - m_fraction);
-    const int duration = qRound(motion.fast
-                                + (motion.normal - motion.fast) * distance);
-    {
-        const QSignalBlocker blocker(m_animation);
-        m_animation->setStartValue(m_fraction);
-        m_animation->setEndValue(target);
-        m_animation->setDuration(duration);
-        m_animation->setEasingCurve(motion.standard);
-        m_animation->setCurrentTime(0);
-    }
-    m_animation->start();
+    runTransitionTo(expanded ? 1.0 : 0.0, animated);
 }
 
 void Expander::toggleExpanded()
@@ -255,7 +229,56 @@ void Expander::setAnimationEnabled(bool enabled)
         return;
 
     m_animationEnabled = enabled;
+    QPointer<Expander> guard(this);
     emit animationEnabledChanged(m_animationEnabled);
+    if (!guard)
+        return;
+    handleMotionPolicyChanged();
+}
+
+void Expander::runTransitionTo(qreal target, bool animated)
+{
+    MotionPolicy& policy = MotionPolicy::instance();
+    const bool animationAllowed = m_animationEnabled && animated;
+    if (!policy.shouldAnimate(animationAllowed, MotionPolicy::Kind::Transition)) {
+        finishTransitionAt(target);
+        return;
+    }
+
+    const auto motion = themeAnimation();
+    const qreal distance = qAbs(target - m_fraction);
+    const int fullDuration = qRound(motion.fast + (motion.normal - motion.fast) * distance);
+    const int duration = policy.resolvedDuration(fullDuration, animationAllowed);
+    {
+        const QSignalBlocker blocker(m_animation);
+        m_animation->setStartValue(m_fraction);
+        m_animation->setEndValue(target);
+        m_animation->setDuration(duration);
+        m_animation->setEasingCurve(motion.standard);
+        m_animation->setCurrentTime(0);
+    }
+    m_animation->start();
+}
+
+void Expander::finishTransitionAt(qreal target)
+{
+    QPointer<Expander> guard(this);
+    applyFraction(target);
+    if (!guard)
+        return;
+    emit expansionTransitionFinished(m_expanded);
+    if (guard)
+        guard->finishViewportTransition();
+}
+
+void Expander::handleMotionPolicyChanged()
+{
+    if (m_animation->state() != QAbstractAnimation::Running)
+        return;
+
+    const qreal target = m_expanded ? 1.0 : 0.0;
+    m_animation->stop();
+    runTransitionTo(target, m_animationEnabled);
 }
 
 QSize Expander::sizeHint() const
@@ -289,8 +312,7 @@ void Expander::onThemeUpdated()
 void Expander::resizeEvent(QResizeEvent* event)
 {
     Card::resizeEvent(event);
-    if (event && event->oldSize().width() != event->size().width()
-        && m_contentWidget) {
+    if (event && event->oldSize().width() != event->size().width() && m_contentWidget) {
         m_contentTargetHeight = naturalContentHeight();
         QPointer<Expander> guard(this);
         applyFraction(m_fraction);
@@ -329,8 +351,7 @@ int Expander::currentContentHeight() const
 
 int Expander::totalHeightForContent(int contentHeight) const
 {
-    return HeaderHeight
-        + (contentHeight > 0 ? DividerExtent + contentHeight : 0);
+    return HeaderHeight + (contentHeight > 0 ? DividerExtent + contentHeight : 0);
 }
 
 void Expander::updateChildGeometry()
@@ -342,11 +363,9 @@ void Expander::updateChildGeometry()
     m_headerButton->setGeometry(0, 0, width(), HeaderHeight);
     m_divider->setGeometry(0, HeaderHeight, width(), DividerExtent);
     m_divider->setVisible(contentHeight > 0);
-    m_clip->setGeometry(
-        0, HeaderHeight + DividerExtent, width(), contentHeight);
+    m_clip->setGeometry(0, HeaderHeight + DividerExtent, width(), contentHeight);
     if (m_contentWidget) {
-        m_contentWidget->setGeometry(
-            0, 0, width(), qMax(0, m_contentTargetHeight));
+        m_contentWidget->setGeometry(0, 0, width(), qMax(0, m_contentTargetHeight));
     }
 }
 
@@ -426,24 +445,22 @@ void Expander::beginViewportTransition()
     clearViewportAnchor();
 
     m_transitionScrollArea = enclosingScrollArea(this);
-    m_transitionScrollBar = m_transitionScrollArea
-        ? m_transitionScrollArea->verticalScrollBar()
-        : nullptr;
-    if (!m_transitionScrollArea || !m_transitionScrollArea->viewport()
-        || !m_transitionScrollBar || !m_headerButton) {
+    m_transitionScrollBar =
+        m_transitionScrollArea ? m_transitionScrollArea->verticalScrollBar() : nullptr;
+    if (!m_transitionScrollArea || !m_transitionScrollArea->viewport() || !m_transitionScrollBar ||
+        !m_headerButton) {
         return;
     }
 
     m_viewportTransitionActive = true;
-    m_anchorViewportY = m_transitionScrollArea->viewport()->mapFromGlobal(
-        m_headerButton->mapToGlobal(QPoint(0, 0))).y();
+    m_anchorViewportY = m_transitionScrollArea->viewport()
+                            ->mapFromGlobal(m_headerButton->mapToGlobal(QPoint(0, 0)))
+                            .y();
 
-    m_scrollRangeConnection = connect(
-        m_transitionScrollBar, &QScrollBar::rangeChanged,
-        this, [this]() { restoreViewportAnchor(); });
-    m_scrollValueConnection = connect(
-        m_transitionScrollBar, &QScrollBar::valueChanged,
-        this, [this]() { restoreViewportAnchor(); });
+    m_scrollRangeConnection = connect(m_transitionScrollBar, &QScrollBar::rangeChanged, this,
+                                      [this]() { restoreViewportAnchor(); });
+    m_scrollValueConnection = connect(m_transitionScrollBar, &QScrollBar::valueChanged, this,
+                                      [this]() { restoreViewportAnchor(); });
 }
 
 void Expander::finishViewportTransition()
@@ -451,8 +468,7 @@ void Expander::finishViewportTransition()
     synchronizeViewportLayout();
     const quint64 generation = m_viewportTransitionGeneration;
     QTimer::singleShot(0, this, [this, generation]() {
-        if (!m_viewportTransitionActive
-            || generation != m_viewportTransitionGeneration) {
+        if (!m_viewportTransitionActive || generation != m_viewportTransitionGeneration) {
             return;
         }
         synchronizeViewportLayout();
@@ -462,8 +478,8 @@ void Expander::finishViewportTransition()
 
 void Expander::synchronizeViewportLayout()
 {
-    if (!m_viewportTransitionActive || !m_transitionScrollArea
-        || !m_transitionScrollArea->viewport()) {
+    if (!m_viewportTransitionActive || !m_transitionScrollArea ||
+        !m_transitionScrollArea->viewport()) {
         return;
     }
 
@@ -471,8 +487,7 @@ void Expander::synchronizeViewportLayout()
     if (!scrollContent)
         return;
 
-    for (QWidget* ancestor = parentWidget();
-         ancestor && ancestor != scrollContent;
+    for (QWidget* ancestor = parentWidget(); ancestor && ancestor != scrollContent;
          ancestor = ancestor->parentWidget()) {
         if (QLayout* ancestorLayout = ancestor->layout()) {
             ancestorLayout->invalidate();
@@ -483,9 +498,8 @@ void Expander::synchronizeViewportLayout()
     QLayout* pageLayout = scrollContent->layout();
     if (pageLayout) {
         pageLayout->invalidate();
-        const int contentHeight = qMax(
-            m_transitionScrollArea->viewport()->height(),
-            pageLayout->minimumSize().height());
+        const int contentHeight =
+            qMax(m_transitionScrollArea->viewport()->height(), pageLayout->minimumSize().height());
         if (scrollContent->height() != contentHeight)
             scrollContent->resize(scrollContent->width(), contentHeight);
         pageLayout->activate();
@@ -495,9 +509,8 @@ void Expander::synchronizeViewportLayout()
 
 void Expander::restoreViewportAnchor()
 {
-    if (!m_viewportTransitionActive || m_restoringViewportAnchor
-        || !m_transitionScrollArea || !m_transitionScrollArea->viewport()
-        || !m_transitionScrollBar || !m_headerButton) {
+    if (!m_viewportTransitionActive || m_restoringViewportAnchor || !m_transitionScrollArea ||
+        !m_transitionScrollArea->viewport() || !m_transitionScrollBar || !m_headerButton) {
         return;
     }
 
@@ -505,12 +518,10 @@ void Expander::restoreViewportAnchor()
     if (!scrollContent)
         return;
 
-    const int anchorContentY =
-        m_headerButton->mapTo(scrollContent, QPoint(0, 0)).y();
-    const int desiredValue = qBound(
-        m_transitionScrollBar->minimum(),
-        anchorContentY - m_anchorViewportY,
-        m_transitionScrollBar->maximum());
+    const int anchorContentY = m_headerButton->mapTo(scrollContent, QPoint(0, 0)).y();
+    const int desiredValue =
+        qBound(m_transitionScrollBar->minimum(), anchorContentY - m_anchorViewportY,
+               m_transitionScrollBar->maximum());
     if (m_transitionScrollBar->value() == desiredValue)
         return;
 

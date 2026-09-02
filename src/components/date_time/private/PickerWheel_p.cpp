@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "components/basicinput/Button.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "design/Typography.h"
 
 namespace fluent::date_time::detail {
@@ -462,7 +463,7 @@ void PickerWheelColumn::setColumnHovered(bool hovered)
     m_navButtonAnimation->stop();
     m_navButtonAnimation->setStartValue(m_navButtonOpacity);
     m_navButtonAnimation->setEndValue(target);
-    m_navButtonAnimation->start();
+    ::fluent::detail::startMotionTransition(m_navButtonAnimation, themeAnimation().fast);
     refreshProperties();
 }
 

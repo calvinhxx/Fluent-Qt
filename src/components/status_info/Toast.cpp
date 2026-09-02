@@ -20,6 +20,7 @@
 #include "components/foundation/FontIcon.h"
 #include "components/foundation/overlay/OverlayCoordinator.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/textfields/Label.h"
 #include "design/Elevation.h"
 #include "design/Typography.h"
@@ -44,11 +45,8 @@ quint64 g_stackOrder = 0;
 
 QMargins normalizedMargins(const QMargins& margins)
 {
-    return QMargins(
-        qMax(0, margins.left()),
-        qMax(0, margins.top()),
-        qMax(0, margins.right()),
-        qMax(0, margins.bottom()));
+    return QMargins(qMax(0, margins.left()), qMax(0, margins.top()), qMax(0, margins.right()),
+                    qMax(0, margins.bottom()));
 }
 
 QString actionCaption(const QAction* action)
@@ -56,10 +54,7 @@ QString actionCaption(const QAction* action)
     if (!action)
         return {};
 
-    const QString source =
-        action->iconText().isEmpty()
-        ? action->text()
-        : action->iconText();
+    const QString source = action->iconText().isEmpty() ? action->text() : action->iconText();
     QString caption;
     caption.reserve(source.size());
     for (int i = 0; i < source.size(); ++i) {
@@ -67,8 +62,7 @@ QString actionCaption(const QAction* action)
             caption.append(source.at(i));
             continue;
         }
-        if (i + 1 < source.size()
-            && source.at(i + 1) == QLatin1Char('&')) {
+        if (i + 1 < source.size() && source.at(i + 1) == QLatin1Char('&')) {
             caption.append(QLatin1Char('&'));
             ++i;
         }
@@ -84,22 +78,20 @@ QVector<Toast*> Toast::openToastsFor(QWidget* host, Placement placement)
     if (!host)
         return open;
 
-    const auto children =
-        host->findChildren<Toast*>(QString(), Qt::FindDirectChildrenOnly);
+    const auto children = host->findChildren<Toast*>(QString(), Qt::FindDirectChildrenOnly);
     open.reserve(children.size());
     for (Toast* toast : children) {
         if (toast && toast->isOpen() && toast->placement() == placement)
             open.append(toast);
     }
     std::sort(open.begin(), open.end(), [](Toast* left, Toast* right) {
-        return left->property(kStackOrderProperty).toULongLong()
-            < right->property(kStackOrderProperty).toULongLong();
+        return left->property(kStackOrderProperty).toULongLong() <
+               right->property(kStackOrderProperty).toULongLong();
     });
     return open;
 }
 
-QVector<Toast*> Toast::managedOpenToastsFor(
-    QWidget* host, Placement placement)
+QVector<Toast*> Toast::managedOpenToastsFor(QWidget* host, Placement placement)
 {
     QVector<Toast*> managed;
     for (Toast* toast : openToastsFor(host, placement)) {
@@ -125,24 +117,17 @@ void Toast::setMaximumVisible(int count)
     g_maximumVisible = qMax(1, count);
 }
 
-Toast::Toast(QWidget* parent)
-    : QWidget(parent)
+Toast::Toast(QWidget* parent) : QWidget(parent)
 {
     setObjectName(QStringLiteral("fluentToast"));
     setAttribute(Qt::WA_TransparentForMouseEvents);
     setAttribute(Qt::WA_NoSystemBackground);
     setAttribute(Qt::WA_TranslucentBackground);
 
-    m_overlayCoordinator =
-        new overlay::OverlayCoordinator(this, this);
-    connect(m_overlayCoordinator,
-            &overlay::OverlayCoordinator::hostGeometryChanged,
-            this,
+    m_overlayCoordinator = new overlay::OverlayCoordinator(this, this);
+    connect(m_overlayCoordinator, &overlay::OverlayCoordinator::hostGeometryChanged, this,
             &Toast::syncGeometry);
-    connect(m_overlayCoordinator,
-            &overlay::OverlayCoordinator::hostDestroyed,
-            this,
-            [this]() {
+    connect(m_overlayCoordinator, &overlay::OverlayCoordinator::hostDestroyed, this, [this]() {
         m_animation->stop();
         m_timer->stop();
         m_dismissInProgress = false;
@@ -153,8 +138,7 @@ Toast::Toast(QWidget* parent)
     });
 
     auto* outer = new QHBoxLayout(this);
-    outer->setContentsMargins(
-        overlay::uniformShadowMargins(kShadowMargin));
+    outer->setContentsMargins(overlay::uniformShadowMargins(kShadowMargin));
     outer->setSpacing(0);
     outer->setSizeConstraint(QLayout::SetFixedSize);
 
@@ -162,8 +146,7 @@ Toast::Toast(QWidget* parent)
     m_card->setObjectName(QStringLiteral("fluentToastCard"));
     m_card->setFrameShape(QFrame::NoFrame);
     m_card->setAttribute(Qt::WA_NoSystemBackground);
-    m_card->setSizePolicy(
-        QSizePolicy::Minimum, QSizePolicy::Fixed);
+    m_card->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
     auto* row = new QHBoxLayout(m_card);
     row->setContentsMargins(12, 10, 14, 10);
     row->setSpacing(10);
@@ -178,27 +161,19 @@ Toast::Toast(QWidget* parent)
     textColumn->setSpacing(2);
 
     m_titleLabel = new textfields::Label(m_card);
-    m_titleLabel->setObjectName(
-        QStringLiteral("fluentToastTitle"));
-    m_titleLabel->setFluentTypography(
-        Typography::FontRole::BodyStrong);
-    m_titleLabel->setTextColorRole(
-        textfields::Label::TextColorRole::Primary);
+    m_titleLabel->setObjectName(QStringLiteral("fluentToastTitle"));
+    m_titleLabel->setFluentTypography(Typography::FontRole::BodyStrong);
+    m_titleLabel->setTextColorRole(textfields::Label::TextColorRole::Primary);
     m_titleLabel->setWordWrap(false);
-    m_titleLabel->setSizePolicy(
-        QSizePolicy::Preferred, QSizePolicy::Preferred);
+    m_titleLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
     m_titleLabel->hide();
 
     m_messageLabel = new textfields::Label(m_card);
-    m_messageLabel->setObjectName(
-        QStringLiteral("fluentToastMessage"));
-    m_messageLabel->setFluentTypography(
-        Typography::FontRole::Body);
-    m_messageLabel->setTextColorRole(
-        textfields::Label::TextColorRole::Primary);
+    m_messageLabel->setObjectName(QStringLiteral("fluentToastMessage"));
+    m_messageLabel->setFluentTypography(Typography::FontRole::Body);
+    m_messageLabel->setTextColorRole(textfields::Label::TextColorRole::Primary);
     m_messageLabel->setWordWrap(false);
-    m_messageLabel->setSizePolicy(
-        QSizePolicy::Preferred, QSizePolicy::Preferred);
+    m_messageLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
 
     textColumn->addWidget(m_titleLabel);
     textColumn->addWidget(m_messageLabel);
@@ -206,18 +181,12 @@ Toast::Toast(QWidget* parent)
     row->addLayout(textColumn, 0);
 
     m_actionButton = new basicinput::Button(m_card);
-    m_actionButton->setObjectName(
-        QStringLiteral("fluentToastAction"));
-    m_actionButton->setFluentStyle(
-        basicinput::Button::Standard);
-    m_actionButton->setFluentSize(
-        basicinput::Button::Small);
+    m_actionButton->setObjectName(QStringLiteral("fluentToastAction"));
+    m_actionButton->setFluentStyle(basicinput::Button::Standard);
+    m_actionButton->setFluentSize(basicinput::Button::Small);
     m_actionButton->setFocusVisual(true);
     m_actionButton->hide();
-    connect(m_actionButton,
-            &basicinput::Button::clicked,
-            this,
-            [this]() {
+    connect(m_actionButton, &basicinput::Button::clicked, this, [this]() {
         QPointer<QAction> actionGuard = m_action;
         if (!actionGuard || !actionGuard->isEnabled())
             return;
@@ -237,13 +206,10 @@ Toast::Toast(QWidget* parent)
     m_opacityEffect->setOpacity(0.0);
     setGraphicsEffect(m_opacityEffect);
 
-    m_animation =
-        new QPropertyAnimation(this, "toastProgress", this);
+    m_animation = new QPropertyAnimation(this, "toastProgress", this);
     m_timer = new QTimer(this);
     m_timer->setSingleShot(true);
-    connect(m_timer, &QTimer::timeout, this, [this]() {
-        requestDismiss(TimedOut);
-    });
+    connect(m_timer, &QTimer::timeout, this, [this]() { requestDismiss(TimedOut); });
 
     hide();
     syncAccessibleName();
@@ -255,9 +221,8 @@ Toast::~Toast()
 {
     QObject::disconnect(m_animationFinishedConnection);
     if (m_isOpen) {
-        QWidget* host = m_overlayCoordinator
-            ? m_overlayCoordinator->topLevelWidget()
-            : parentWidget();
+        QWidget* host =
+            m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : parentWidget();
         const Placement placement = m_placement;
         m_isOpen = false;
         if (host)
@@ -274,11 +239,9 @@ void Toast::setTitle(const QString& title)
     m_titleLabel->setText(m_title);
     m_titleLabel->setVisible(!m_title.isEmpty());
     if (!m_title.isEmpty()) {
-        m_messageLabel->setTextColorRole(
-            textfields::Label::TextColorRole::Secondary);
+        m_messageLabel->setTextColorRole(textfields::Label::TextColorRole::Secondary);
     } else {
-        m_messageLabel->setTextColorRole(
-            textfields::Label::TextColorRole::Primary);
+        m_messageLabel->setTextColorRole(textfields::Label::TextColorRole::Primary);
     }
     updateMessageWrapping();
     syncGeometry();
@@ -314,9 +277,7 @@ void Toast::setPlacement(Placement placement)
     if (m_placement == placement)
         return;
 
-    QWidget* host = m_overlayCoordinator
-        ? m_overlayCoordinator->topLevelWidget()
-        : parentWidget();
+    QWidget* host = m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : parentWidget();
     const Placement previous = m_placement;
     m_placement = placement;
     if (m_isOpen && host) {
@@ -357,7 +318,15 @@ void Toast::setAnimationEnabled(bool enabled)
         return;
 
     m_animationEnabled = enabled;
+    QPointer<Toast> guard(this);
     emit animationEnabledChanged(m_animationEnabled);
+    if (!guard || m_animationEnabled || m_animation->state() != QAbstractAnimation::Running)
+        return;
+
+    // Preserve the regular finished/finalize path when a caller disables
+    // animation during an active presentation or dismissal.
+    // zh_CN: 展示或关闭过程中禁用动效时，仍沿正常 finished/finalize 路径收敛。
+    m_animation->setCurrentTime(m_animation->duration());
 }
 
 void Toast::setAction(QAction* action)
@@ -372,16 +341,9 @@ void Toast::setAction(QAction* action)
     m_action = action;
 
     if (m_action) {
-        m_actionChangedConnection = connect(
-            m_action.data(),
-            &QAction::changed,
-            this,
-            &Toast::syncActionButton);
-        m_actionDestroyedConnection = connect(
-            m_action.data(),
-            &QObject::destroyed,
-            this,
-            [this]() {
+        m_actionChangedConnection =
+            connect(m_action.data(), &QAction::changed, this, &Toast::syncActionButton);
+        m_actionDestroyedConnection = connect(m_action.data(), &QObject::destroyed, this, [this]() {
             m_action = nullptr;
             m_actionChangedConnection = QMetaObject::Connection();
             m_actionDestroyedConnection = QMetaObject::Connection();
@@ -484,19 +446,11 @@ bool Toast::present(QWidget* anchor)
 
 void Toast::dismiss()
 {
-    requestDismiss(
-        m_actionInvocationInProgress
-            ? ActionInvoked
-            : Programmatic);
+    requestDismiss(m_actionInvocationInProgress ? ActionInvoked : Programmatic);
 }
 
-Toast* Toast::showToast(
-    QWidget* anchor,
-    const QString& message,
-    Severity severity,
-    int durationMs,
-    Placement placement,
-    const QMargins& margins)
+Toast* Toast::showToast(QWidget* anchor, const QString& message, Severity severity, int durationMs,
+                        Placement placement, const QMargins& margins)
 {
     QWidget* host = anchor ? anchor->window() : nullptr;
     if (!host)
@@ -535,29 +489,17 @@ Toast* Toast::showToast(
     return toastGuard.data();
 }
 
-Toast* Toast::showOrUpdateToast(
-    QWidget* anchor,
-    const QString& updateKey,
-    const QString& message,
-    Severity severity,
-    int durationMs,
-    Placement placement,
-    const QMargins& margins)
+Toast* Toast::showOrUpdateToast(QWidget* anchor, const QString& updateKey, const QString& message,
+                                Severity severity, int durationMs, Placement placement,
+                                const QMargins& margins)
 {
     QWidget* host = anchor ? anchor->window() : nullptr;
     if (!host)
         return nullptr;
     if (updateKey.isEmpty())
-        return showToast(
-            anchor,
-            message,
-            severity,
-            durationMs,
-            placement,
-            margins);
+        return showToast(anchor, message, severity, durationMs, placement, margins);
 
-    const auto managed =
-        managedOpenToastsFor(host, placement);
+    const auto managed = managedOpenToastsFor(host, placement);
     for (auto it = managed.crbegin(); it != managed.crend(); ++it) {
         Toast* toast = *it;
         if (!toast || toast->updateKey() != updateKey)
@@ -586,13 +528,7 @@ Toast* Toast::showOrUpdateToast(
         return guard.data();
     }
 
-    QPointer<Toast> toast = showToast(
-        anchor,
-        message,
-        severity,
-        durationMs,
-        placement,
-        margins);
+    QPointer<Toast> toast = showToast(anchor, message, severity, durationMs, placement, margins);
     if (toast)
         toast->setUpdateKey(updateKey);
     return toast.data();
@@ -600,14 +536,12 @@ Toast* Toast::showOrUpdateToast(
 
 QSize Toast::sizeHint() const
 {
-    return overlay::outerSizeForVisibleCard(
-        visibleCardSizeHint(), kShadowMargin);
+    return overlay::outerSizeForVisibleCard(visibleCardSizeHint(), kShadowMargin);
 }
 
 QSize Toast::minimumSizeHint() const
 {
-    return overlay::outerSizeForVisibleCard(
-        QSize(120, 36), kShadowMargin);
+    return overlay::outerSizeForVisibleCard(QSize(120, 36), kShadowMargin);
 }
 
 void Toast::onThemeUpdated()
@@ -645,40 +579,29 @@ void Toast::paintEvent(QPaintEvent* event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setPen(Qt::NoPen);
-    const QRectF cardRect =
-        QRectF(overlay::visibleCardRect(rect(), kShadowMargin));
+    const QRectF cardRect = QRectF(overlay::visibleCardRect(rect(), kShadowMargin));
 
     for (int i = 0; i < kToastShadowLayers; ++i) {
-        const qreal ratio =
-            1.0 - static_cast<qreal>(i) / kToastShadowLayers;
+        const qreal ratio = 1.0 - static_cast<qreal>(i) / kToastShadowLayers;
         QColor shadow = m_shadowColor;
-        shadow.setAlphaF(
-            m_shadowOpacity * ratio * kToastShadowOpacityScale);
+        shadow.setAlphaF(m_shadowOpacity * ratio * kToastShadowOpacityScale);
         painter.setBrush(shadow);
         const qreal spread = 1.5 + i;
         const QRectF shadowRect =
-            cardRect
-                .adjusted(-spread, -spread * 0.15, spread, spread)
-                .translated(0, 2 + i * 0.4);
-        painter.drawRoundedRect(
-            shadowRect,
-            kCornerRadius + spread * 0.35,
-            kCornerRadius + spread * 0.35);
+            cardRect.adjusted(-spread, -spread * 0.15, spread, spread).translated(0, 2 + i * 0.4);
+        painter.drawRoundedRect(shadowRect, kCornerRadius + spread * 0.35,
+                                kCornerRadius + spread * 0.35);
     }
 
-    const QRectF fillRect =
-        cardRect.adjusted(0.5, 0.5, -0.5, -0.5);
+    const QRectF fillRect = cardRect.adjusted(0.5, 0.5, -0.5, -0.5);
     painter.setBrush(m_surfaceColor);
     painter.setPen(QPen(m_borderColor, 1.0));
-    painter.drawRoundedRect(
-        fillRect, kCornerRadius, kCornerRadius);
+    painter.drawRoundedRect(fillRect, kCornerRadius, kCornerRadius);
 }
 
 bool Toast::isTopPlacement() const
 {
-    return m_placement == TopStart
-        || m_placement == Top
-        || m_placement == TopEnd;
+    return m_placement == TopStart || m_placement == Top || m_placement == TopEnd;
 }
 
 bool Toast::isStartPlacement() const
@@ -699,8 +622,7 @@ void Toast::updateMessageWrapping()
     m_messageLabel->ensurePolished();
     const QFontMetrics metrics(m_messageLabel->font());
     const int naturalWidth = metrics.horizontalAdvance(m_message);
-    const bool wrap =
-        !m_message.isEmpty() && naturalWidth > kMaximumTextWidth;
+    const bool wrap = !m_message.isEmpty() && naturalWidth > kMaximumTextWidth;
     m_messageLabel->setWordWrap(wrap);
     if (wrap) {
         m_messageLabel->setFixedWidth(kMaximumTextWidth);
@@ -729,9 +651,7 @@ QSize Toast::visibleCardSizeHint() const
 
 int Toast::stackOffset() const
 {
-    QWidget* host = m_overlayCoordinator
-        ? m_overlayCoordinator->topLevelWidget()
-        : nullptr;
+    QWidget* host = m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : nullptr;
     if (!host)
         return 0;
 
@@ -746,34 +666,25 @@ int Toast::stackOffset() const
 
 QPoint Toast::resolvedEndPosition() const
 {
-    QWidget* host = m_overlayCoordinator
-        ? m_overlayCoordinator->topLevelWidget()
-        : nullptr;
+    QWidget* host = m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : nullptr;
     if (!host)
         return pos();
 
     const QRect surface = overlay::overlaySurfaceRect(host);
-    const QSize cardSize =
-        overlay::visibleCardSize(size(), kShadowMargin);
+    const QSize cardSize = overlay::visibleCardSize(size(), kShadowMargin);
     const int stackShift = stackOffset();
     const bool rtl = host->layoutDirection() == Qt::RightToLeft;
 
     int cardX = surface.center().x() - cardSize.width() / 2;
     if (isStartPlacement()) {
-        cardX = rtl
-            ? surface.right() - m_placementMargins.right()
-                  - cardSize.width() + 1
-            : surface.left() + m_placementMargins.left();
+        cardX = rtl ? surface.right() - m_placementMargins.right() - cardSize.width() + 1
+                    : surface.left() + m_placementMargins.left();
     } else if (isEndPlacement()) {
-        cardX = rtl
-            ? surface.left() + m_placementMargins.left()
-            : surface.right() - m_placementMargins.right()
-                  - cardSize.width() + 1;
+        cardX = rtl ? surface.left() + m_placementMargins.left()
+                    : surface.right() - m_placementMargins.right() - cardSize.width() + 1;
     } else {
         const int minX = surface.left() + m_placementMargins.left();
-        const int maxX =
-            surface.right() - m_placementMargins.right()
-            - cardSize.width() + 1;
+        const int maxX = surface.right() - m_placementMargins.right() - cardSize.width() + 1;
         cardX = maxX < minX ? minX : qBound(minX, cardX, maxX);
     }
 
@@ -781,18 +692,15 @@ QPoint Toast::resolvedEndPosition() const
     if (isTopPlacement()) {
         cardY = surface.top() + m_placementMargins.top() + stackShift;
     } else {
-        cardY = surface.bottom() - m_placementMargins.bottom()
-            - cardSize.height() + 1 - stackShift;
+        cardY = surface.bottom() - m_placementMargins.bottom() - cardSize.height() + 1 - stackShift;
     }
 
-    return overlay::outerTopLeftForVisibleCard(
-        QPoint(cardX, cardY), kShadowMargin);
+    return overlay::outerTopLeftForVisibleCard(QPoint(cardX, cardY), kShadowMargin);
 }
 
 void Toast::syncGeometry()
 {
-    if (!m_overlayCoordinator
-        || !m_overlayCoordinator->topLevelWidget())
+    if (!m_overlayCoordinator || !m_overlayCoordinator->topLevelWidget())
         return;
 
     updateMessageWrapping();
@@ -804,9 +712,7 @@ void Toast::syncGeometry()
 
     QPoint target = resolvedEndPosition();
     const int direction = isTopPlacement() ? -1 : 1;
-    target += QPoint(
-        0,
-        qRound(direction * kSlideDistance * (1.0 - m_progress)));
+    target += QPoint(0, qRound(direction * kSlideDistance * (1.0 - m_progress)));
     move(target);
     if (m_isOpen)
         m_overlayCoordinator->raiseStack();
@@ -821,22 +727,17 @@ void Toast::startAnimation(qreal endValue)
     const auto motion = themeAnimation();
     m_animation->setStartValue(m_progress);
     m_animation->setEndValue(endValue);
-    m_animation->setDuration(
-        endValue > m_progress ? motion.normal : motion.fast);
-    m_animation->setEasingCurve(
-        endValue > m_progress ? motion.decelerate : motion.exit);
+    m_animation->setDuration(endValue > m_progress ? motion.normal : motion.fast);
+    m_animation->setEasingCurve(endValue > m_progress ? motion.decelerate : motion.exit);
     if (qFuzzyIsNull(endValue)) {
-        m_animationFinishedConnection = connect(
-            m_animation,
-            &QPropertyAnimation::finished,
-            this,
-            &Toast::finalizeDismiss);
+        m_animationFinishedConnection =
+            connect(m_animation, &QPropertyAnimation::finished, this, &Toast::finalizeDismiss);
     }
-    m_animation->start();
+    ::fluent::detail::startMotionTransition(
+        m_animation, endValue > m_progress ? motion.normal : motion.fast, m_animationEnabled);
 }
 
-void Toast::requestDismiss(
-    DismissReason reason, bool immediate)
+void Toast::requestDismiss(DismissReason reason, bool immediate)
 {
     if (!m_isOpen)
         return;
@@ -875,9 +776,8 @@ void Toast::finalizeDismiss()
     m_hoverPaused = false;
     m_remainingDuration = 0;
     hide();
-    QPointer<QWidget> host = m_overlayCoordinator
-        ? m_overlayCoordinator->topLevelWidget()
-        : parentWidget();
+    QPointer<QWidget> host =
+        m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : parentWidget();
     const Placement placement = m_placement;
     m_overlayCoordinator->detach();
     const bool wasOpen = m_isOpen;
@@ -944,11 +844,8 @@ void Toast::resumeDurationTimer()
 
 void Toast::updatePointerInteraction()
 {
-    const bool hasVisibleAction =
-        m_action && m_actionButton && !m_actionButton->isHidden();
-    setAttribute(
-        Qt::WA_TransparentForMouseEvents,
-        !m_pauseOnHoverEnabled && !hasVisibleAction);
+    const bool hasVisibleAction = m_action && m_actionButton && !m_actionButton->isHidden();
+    setAttribute(Qt::WA_TransparentForMouseEvents, !m_pauseOnHoverEnabled && !hasVisibleAction);
 }
 
 void Toast::syncActionButton()
@@ -969,18 +866,14 @@ void Toast::syncActionButton()
 
     const QString caption = actionCaption(action);
     const QIcon icon = action->icon();
-    const bool presentable =
-        action->isVisible()
-        && (!caption.isEmpty() || !icon.isNull());
+    const bool presentable = action->isVisible() && (!caption.isEmpty() || !icon.isNull());
     m_actionButton->setText(caption);
     m_actionButton->setIcon(icon);
     m_actionButton->setEnabled(action->isEnabled());
     m_actionButton->setFluentLayout(
-        !caption.isEmpty() && !icon.isNull()
-        ? basicinput::Button::IconBefore
-        : caption.isEmpty() && !icon.isNull()
-            ? basicinput::Button::IconOnly
-            : basicinput::Button::TextOnly);
+        !caption.isEmpty() && !icon.isNull()  ? basicinput::Button::IconBefore
+        : caption.isEmpty() && !icon.isNull() ? basicinput::Button::IconOnly
+                                              : basicinput::Button::TextOnly);
     m_actionButton->setAccessibleName(caption);
     m_actionButton->setVisible(presentable);
     updatePointerInteraction();
@@ -1001,8 +894,7 @@ void Toast::syncAccessibleName()
 {
     const QString nextName = accessibleAnnouncementText();
     const bool tracksAutomaticName =
-        accessibleName().isEmpty()
-        || accessibleName() == m_autoAccessibleName;
+        accessibleName().isEmpty() || accessibleName() == m_autoAccessibleName;
     m_autoAccessibleName = nextName;
     if (tracksAutomaticName)
         setAccessibleName(m_autoAccessibleName);
@@ -1013,22 +905,19 @@ void Toast::announceAccessibility()
     const QString announcement = accessibleAnnouncementText();
     if (announcement.isEmpty())
         return;
-    fluentSendAccessibleAnnouncement(
-        this,
-        announcement,
-        m_severity == Error
-        ? FluentAccessibleAnnouncementPoliteness::Assertive
-        : FluentAccessibleAnnouncementPoliteness::Polite);
+    fluentSendAccessibleAnnouncement(this, announcement,
+                                     m_severity == Error
+                                         ? FluentAccessibleAnnouncementPoliteness::Assertive
+                                         : FluentAccessibleAnnouncementPoliteness::Polite);
 }
 
 void Toast::applyPalette()
 {
     const auto& colors = themeColorsRef();
     m_surfaceColor = colors.bgSolid.isValid() ? colors.bgSolid : colors.bgLayer;
-    m_surfaceColor.setAlpha(effectiveTheme() == Dark ? 245 : 250);
+    m_surfaceColor.setAlpha(effectiveThemeUsesDarkAppearance() ? 245 : 250);
     m_borderColor = colors.strokeCard;
-    const Elevation::ShadowParams shadow =
-        themeShadow(Elevation::Low);
+    const Elevation::ShadowParams shadow = themeShadow(Elevation::Low);
     m_shadowColor = shadow.color;
     m_shadowOpacity = shadow.opacity;
     if (m_icon) {

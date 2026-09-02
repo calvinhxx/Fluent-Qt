@@ -27,7 +27,8 @@ bool themeFromProperty(const QVariant& value, FluentElement::Theme& theme)
     bool ok = false;
     const int rawTheme = value.toInt(&ok);
     if (ok) {
-        if (rawTheme == FluentElement::Light || rawTheme == FluentElement::Dark) {
+        if (rawTheme == FluentElement::Light || rawTheme == FluentElement::Dark ||
+            rawTheme == FluentElement::HighContrast) {
             theme = static_cast<FluentElement::Theme>(rawTheme);
             return true;
         }
@@ -43,6 +44,10 @@ bool themeFromProperty(const QVariant& value, FluentElement::Theme& theme)
         theme = FluentElement::Dark;
         return true;
     }
+    if (text.compare(QStringLiteral("HighContrast"), Qt::CaseInsensitive) == 0) {
+        theme = FluentElement::HighContrast;
+        return true;
+    }
     return false;
 }
 
@@ -50,18 +55,21 @@ bool themeFromProperty(const QVariant& value, FluentElement::Theme& theme)
 
 // --- FluentElement lifetime management. zh_CN: FluentElement 生命周期管理。---
 
-FluentElement::FluentElement() : d_ptr(new FluentElementPrivate(this)) {
+FluentElement::FluentElement() : d_ptr(new FluentElementPrivate(this))
+{
     FluentThemeManager::instance()->elements.insert(this);
 }
 
-FluentElement::~FluentElement() {
+FluentElement::~FluentElement()
+{
     FluentThemeManager::instance()->elements.remove(this);
     delete d_ptr;
 }
 
 // --- Static global management. zh_CN: 静态全局管理。---
 
-void FluentElement::setTheme(Theme theme) {
+void FluentElement::setTheme(Theme theme)
+{
     auto* mgr = FluentThemeManager::instance();
     if (mgr->currentTheme != theme) {
         mgr->currentTheme = theme;
@@ -69,7 +77,8 @@ void FluentElement::setTheme(Theme theme) {
     }
 }
 
-void FluentElement::setThemeDeferred(Theme theme) {
+void FluentElement::setThemeDeferred(Theme theme)
+{
     auto* mgr = FluentThemeManager::instance();
     if (mgr->currentTheme != theme) {
         mgr->currentTheme = theme;
@@ -77,20 +86,35 @@ void FluentElement::setThemeDeferred(Theme theme) {
     }
 }
 
-
-FluentElement::Theme FluentElement::currentTheme() {
+FluentElement::Theme FluentElement::currentTheme()
+{
     return FluentThemeManager::instance()->currentTheme;
 }
 
-void FluentElement::refreshTheme() {
+bool FluentElement::themeUsesDarkAppearance(Theme theme)
+{
+    switch (theme) {
+    case Light:
+        return false;
+    case Dark:
+    case HighContrast:
+        return true;
+    }
+    return false;
+}
+
+void FluentElement::refreshTheme()
+{
     FluentThemeManager::instance()->notifyVisibleThenDeferred();
 }
 
-int FluentElement::themeGeneration() {
+int FluentElement::themeGeneration()
+{
     return FluentThemeManager::instance()->generation();
 }
 
-FluentElement::Theme FluentElement::effectiveTheme() const {
+FluentElement::Theme FluentElement::effectiveTheme() const
+{
     const auto* widget = dynamic_cast<const QWidget*>(this);
     for (const QWidget* node = widget; node; node = node->parentWidget()) {
         Theme overriddenTheme = currentTheme();
@@ -100,105 +124,120 @@ FluentElement::Theme FluentElement::effectiveTheme() const {
     return currentTheme();
 }
 
+bool FluentElement::effectiveThemeUsesDarkAppearance() const
+{
+    return themeUsesDarkAppearance(effectiveTheme());
+}
+
 // --- Token accessors. zh_CN: 数据获取实现。---
 
-FluentElement::Colors FluentElement::themeColors() const {
+FluentElement::Colors FluentElement::themeColors() const
+{
     // Colors now come from the runtime ThemeRegistry (seeded with the built-in Fluent palette, so the
     // default result is identical to the former compile-time construction). The app layer can install
     // user-file overrides without touching any control. effectiveTheme() still honors a per-subtree
     // fluentThemeOverride. zh_CN: 颜色改由运行时 ThemeRegistry 提供(以内置 Fluent 调色板播种,
     // 默认结果与原编译期构造完全一致)。应用层可安装用户文件覆盖而不动任何控件;effectiveTheme()
     // 仍尊重子树级 fluentThemeOverride。
-    return ThemeRegistry::instance().colors(effectiveTheme() == Dark);
+    return ThemeRegistry::instance().colors(effectiveTheme());
 }
 
-const FluentElement::Colors& FluentElement::themeColorsRef() const {
+const FluentElement::Colors& FluentElement::themeColorsRef() const
+{
     // Same source as themeColors() but hands back the registry's own const reference instead of a
     // by-value copy of the ~50-QColor struct — for paint hot paths that read colors per item/tab/frame.
     // zh_CN: 数据源同 themeColors(),但返回注册表自有的 const 引用而非整个结构体的值拷贝——供按项/帧读色的绘制热路径使用。
-    return ThemeRegistry::instance().colors(effectiveTheme() == Dark);
+    return ThemeRegistry::instance().colors(effectiveTheme());
 }
 
-FluentElement::FontStyle FluentElement::themeFont(Typography::FontRole role) const {
+FluentElement::FontStyle FluentElement::themeFont(Typography::FontRole role) const
+{
     return ThemeRegistry::instance().resolvedFontStyle(role);
 }
 
-FluentElement::Radius FluentElement::themeRadius() const {
+FluentElement::Radius FluentElement::themeRadius() const
+{
     return ThemeRegistry::instance().radius();
 }
 
-FluentElement::Spacing FluentElement::themeSpacing() const {
+FluentElement::Spacing FluentElement::themeSpacing() const
+{
     Spacing s;
-    s.padding = {
-        ::Spacing::Padding::ControlHorizontal,  ::Spacing::Padding::ControlVertical,
-        ::Spacing::Padding::Card,               ::Spacing::Padding::Dialog,
-        ::Spacing::Padding::TextFieldHorizontal, ::Spacing::Padding::TextFieldVertical,
-        ::Spacing::Padding::ListItemHorizontal,  ::Spacing::Padding::ListItemVertical
-    };
-    s.gap = {
-        ::Spacing::Gap::Tight,  ::Spacing::Gap::Normal,
-        ::Spacing::Gap::Loose,  ::Spacing::Gap::Section
-    };
-    s.controlHeight = {
-        ::Spacing::ControlHeight::Small,
-        ::Spacing::ControlHeight::Standard,
-        ::Spacing::ControlHeight::Large
-    };
-    s.xSmall   = ::Spacing::XSmall;
-    s.small    = ::Spacing::Small;
-    s.medium   = ::Spacing::Medium;
+    s.padding = {::Spacing::Padding::ControlHorizontal,
+                 ::Spacing::Padding::ControlVertical,
+                 ::Spacing::Padding::Card,
+                 ::Spacing::Padding::Dialog,
+                 ::Spacing::Padding::TextFieldHorizontal,
+                 ::Spacing::Padding::TextFieldVertical,
+                 ::Spacing::Padding::ListItemHorizontal,
+                 ::Spacing::Padding::ListItemVertical};
+    s.gap = {::Spacing::Gap::Tight, ::Spacing::Gap::Normal, ::Spacing::Gap::Loose,
+             ::Spacing::Gap::Section};
+    s.controlHeight = {::Spacing::ControlHeight::Small, ::Spacing::ControlHeight::Standard,
+                       ::Spacing::ControlHeight::Large};
+    s.xSmall = ::Spacing::XSmall;
+    s.small = ::Spacing::Small;
+    s.medium = ::Spacing::Medium;
     s.standard = ::Spacing::Standard;
-    s.large    = ::Spacing::Large;
-    s.xLarge   = ::Spacing::XLarge;
-    s.xxLarge  = ::Spacing::XXLarge;
+    s.large = ::Spacing::Large;
+    s.xLarge = ::Spacing::XLarge;
+    s.xxLarge = ::Spacing::XXLarge;
     return s;
 }
 
-FluentElement::Animation FluentElement::themeAnimation() const {
+FluentElement::Animation FluentElement::themeAnimation() const
+{
     using namespace ::Animation;
-    return {
-        Duration::Fast, Duration::Normal, Duration::Slow, Duration::VerySlow,
-        getEasing(EasingType::Standard),
-        getEasing(EasingType::Accelerate),
-        getEasing(EasingType::Decelerate),
-        getEasing(EasingType::Entrance),
-        getEasing(EasingType::Exit)
-    };
+    return {Duration::Fast,
+            Duration::Normal,
+            Duration::Slow,
+            Duration::VerySlow,
+            getEasing(EasingType::Standard),
+            getEasing(EasingType::Accelerate),
+            getEasing(EasingType::Decelerate),
+            getEasing(EasingType::Entrance),
+            getEasing(EasingType::Exit)};
 }
 
-Material::AcrylicToken FluentElement::themeAcrylic() const {
-    return Material::Acrylic::get(effectiveTheme() == Dark);
+Material::AcrylicToken FluentElement::themeAcrylic() const
+{
+    return Material::Acrylic::get(effectiveThemeUsesDarkAppearance());
 }
 
-Material::MicaToken FluentElement::themeMica() const {
-    return Material::Mica::get(effectiveTheme() == Dark);
+Material::MicaToken FluentElement::themeMica() const
+{
+    return Material::Mica::get(effectiveThemeUsesDarkAppearance());
 }
 
-Material::SmokeToken FluentElement::themeSmoke() const {
-    return Material::Smoke::get(effectiveTheme() == Dark);
+Material::SmokeToken FluentElement::themeSmoke() const
+{
+    return Material::Smoke::get(effectiveThemeUsesDarkAppearance());
 }
 
-Elevation::ShadowParams FluentElement::themeShadow(Elevation::Level level) const {
-    return Elevation::getShadow(level, effectiveTheme() == Dark);
+Elevation::ShadowParams FluentElement::themeShadow(Elevation::Level level) const
+{
+    return Elevation::getShadow(level, effectiveThemeUsesDarkAppearance());
 }
 
-int FluentElement::themeBreakpoint(Breakpoints::Breakpoint breakpoint) const {
+int FluentElement::themeBreakpoint(Breakpoints::Breakpoint breakpoint) const
+{
     return Breakpoints::value(breakpoint);
 }
 
-QColor FluentElement::themeBackdrop(bool active) const {
+QColor FluentElement::themeBackdrop(bool active) const
+{
     const Colors& c = themeColorsRef();
     if (active)
-        return c.bgCanvas;  // Standard chrome tint, consistent with the rest of the surfaces.
+        return c.bgCanvas; // Standard chrome tint, consistent with the rest of the surfaces.
     // Inactive: wash the canvas tint most of the way toward the content layer so the chrome
     // visibly flattens/lightens when the window loses focus (cross-platform stand-in for
     // Mica's inactive fallback — no wallpaper tint, but a clear active/inactive cue).
     // zh_CN: 非激活：把 canvas 色调大幅推向内容层，使窗口失焦时 chrome 明显变扁/变浅
     //（跨平台替代 Mica 非激活回退——没有壁纸着色，但有清晰的激活/非激活区分）。
     constexpr qreal t = 0.7;
-    return QColor::fromRgbF(c.bgCanvas.redF()   + (c.bgLayer.redF()   - c.bgCanvas.redF())   * t,
+    return QColor::fromRgbF(c.bgCanvas.redF() + (c.bgLayer.redF() - c.bgCanvas.redF()) * t,
                             c.bgCanvas.greenF() + (c.bgLayer.greenF() - c.bgCanvas.greenF()) * t,
-                            c.bgCanvas.blueF()  + (c.bgLayer.blueF()  - c.bgCanvas.blueF())  * t);
+                            c.bgCanvas.blueF() + (c.bgLayer.blueF() - c.bgCanvas.blueF()) * t);
 }
 
 } // namespace fluent

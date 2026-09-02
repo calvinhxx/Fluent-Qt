@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
 
 #include <QRegion>
+#include <QVariantAnimation>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
 #include "components/foundation/ThemeRegistry.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/menus_toolbars/Menu.h"
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "design/Spacing.h"
@@ -38,12 +40,15 @@ private:
 
 class MenuTest : public ::testing::Test {
 protected:
-    void TearDown() override {
+    void TearDown() override
+    {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         ThemeRegistry::instance().resetToDefaults();
     }
 };
 
-TEST_F(MenuTest, FontStylePropertiesNotifyOnlyOnChange) {
+TEST_F(MenuTest, FontStylePropertiesNotifyOnlyOnChange)
+{
     FluentMenu menu(QStringLiteral("Actions"));
     FluentMenuItem item(QStringLiteral("Open"), &menu);
     QSignalSpy menuSpy(&menu, &FluentMenu::fontStyleChanged);
@@ -67,7 +72,8 @@ TEST_F(MenuTest, FontStylePropertiesNotifyOnlyOnChange) {
     EXPECT_EQ(item.font(), item.themeFont(Typography::FontRole::Caption).toQFont());
 }
 
-TEST_F(MenuTest, MenuItemRetainsQActionTriggerSemantics) {
+TEST_F(MenuTest, MenuItemRetainsQActionTriggerSemantics)
+{
     FluentMenu menu(QStringLiteral("Actions"));
     auto* item = new FluentMenuItem(QStringLiteral("Open"), &menu);
     menu.addAction(item);
@@ -80,7 +86,27 @@ TEST_F(MenuTest, MenuItemRetainsQActionTriggerSemantics) {
     EXPECT_EQ(menu.actions().constFirst(), item);
 }
 
-TEST_F(MenuTest, MultipleVisibleActionsContributeIndependentRowsToSizeHint) {
+TEST_F(MenuTest, MotionPolicyDisabledSettlesEntranceTransition)
+{
+    auto capabilities = compatibility::detail::runtimePlatformCapabilities();
+    capabilities.translucentPopupSurfaces = true;
+    RuntimeCapabilitiesScope capabilityScope(capabilities);
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+
+    FluentMenu menu(QStringLiteral("Actions"));
+    menu.addAction(QStringLiteral("Open"));
+    menu.popup(QPoint(100, 100));
+
+    auto* animation = menu.findChild<QVariantAnimation*>(
+        QStringLiteral("fluentMenuEntranceAnimation"), Qt::FindDirectChildrenOnly);
+    ASSERT_NE(animation, nullptr);
+    EXPECT_EQ(animation->duration(), 0);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+    menu.hide();
+}
+
+TEST_F(MenuTest, MultipleVisibleActionsContributeIndependentRowsToSizeHint)
+{
     FluentMenu menu(QStringLiteral("Actions"));
     menu.addAction(QStringLiteral("First action"));
     menu.addAction(QStringLiteral("Second action"));
@@ -88,15 +114,14 @@ TEST_F(MenuTest, MultipleVisibleActionsContributeIndependentRowsToSizeHint) {
 
     const QMargins margins = menu.contentsMargins();
     const int minimumRowsHeight =
-        3 * Spacing::ControlHeight::Small
-        + margins.top() + margins.bottom();
+        3 * Spacing::ControlHeight::Small + margins.top() + margins.bottom();
     EXPECT_GE(menu.sizeHint().height(), minimumRowsHeight)
         << "A multi-action popup must never collapse to a single WASM row";
 }
 
-TEST_F(MenuTest, OpaquePopupSurfaceUsesRoundedWindowMask) {
-    auto capabilities =
-        compatibility::detail::runtimePlatformCapabilities();
+TEST_F(MenuTest, OpaquePopupSurfaceUsesRoundedWindowMask)
+{
+    auto capabilities = compatibility::detail::runtimePlatformCapabilities();
     capabilities.translucentPopupSurfaces = false;
     RuntimeCapabilitiesScope capabilityScope(capabilities);
 
@@ -117,7 +142,8 @@ TEST_F(MenuTest, OpaquePopupSurfaceUsesRoundedWindowMask) {
     menu.hide();
 }
 
-TEST_F(MenuTest, RepeatedPopupKeepsStableHeight) {
+TEST_F(MenuTest, RepeatedPopupKeepsStableHeight)
+{
     FluentMenu menu(QStringLiteral("Actions"));
     menu.addAction(QStringLiteral("Confirm selection"));
     menu.addAction(QStringLiteral("Review changes"));
@@ -150,8 +176,6 @@ TEST_F(MenuTest, RepeatedPopupKeepsStableHeight) {
         << "Repeated popup must not change the action layout";
     EXPECT_EQ(firstHeight, secondHeight)
         << "The first popup must use the same settled geometry as later opens"
-        << "; first hint=" << firstHintHeight
-        << ", second hint=" << secondHintHeight
-        << ", first row=" << firstRowHeight
-        << ", second row=" << secondRowHeight;
+        << "; first hint=" << firstHintHeight << ", second hint=" << secondHintHeight
+        << ", first row=" << firstRowHeight << ", second row=" << secondRowHeight;
 }

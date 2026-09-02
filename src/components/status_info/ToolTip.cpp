@@ -1,6 +1,7 @@
 #include "ToolTip.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/foundation/private/SurfacePainter_p.h"
 #include "components/status_info/private/ToolTipAccessibility_p.h"
 #include "components/textfields/Label.h"
@@ -33,10 +34,7 @@ constexpr char kAttachedToolTipName[] = "FluentAttachedToolTip";
 
 QGraphicsOpacityEffect* opacityEffectFor(const QWidget* widget)
 {
-    return widget
-        ? qobject_cast<QGraphicsOpacityEffect*>(
-              widget->graphicsEffect())
-        : nullptr;
+    return widget ? qobject_cast<QGraphicsOpacityEffect*>(widget->graphicsEffect()) : nullptr;
 }
 
 qreal visualOpacity(const QWidget* widget)
@@ -50,9 +48,10 @@ void setVisualOpacity(QWidget* widget, qreal opacity)
     if (auto* effect = opacityEffectFor(widget))
         effect->setOpacity(opacity);
 }
-}
+} // namespace
 
-ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
+ToolTip::ToolTip(QWidget* parent) : QWidget(parent)
+{
     detail::ensureToolTipAccessibilityFactory();
     setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
     setAttribute(Qt::WA_TranslucentBackground);
@@ -66,14 +65,14 @@ ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
     auto* opacityEffect = new QGraphicsOpacityEffect(this);
     opacityEffect->setOpacity(kHiddenOpacity);
     setGraphicsEffect(opacityEffect);
-    
+
     m_textBlock = new Label(this);
     // Keep the label background transparent so ToolTip::paintEvent owns it.
     // zh_CN: 确保标签背景透明，由 ToolTip 的 paintEvent 处理背景绘制。
-    
+
     // 1. Text style: Caption size, regular weight by default. zh_CN: 默认使用 Caption 字号，不加粗。
     QFont f = m_textBlock->font();
-    f.setBold(false); 
+    f.setBold(false);
     f.setPixelSize(Typography::FontSize::Caption);
     m_textBlock->setFont(f);
     m_textBlock->setAlignment(Qt::AlignCenter);
@@ -112,7 +111,8 @@ ToolTip* ToolTip::attach(QWidget* target, const QString& text, Placement placeme
     return toolTip;
 }
 
-void ToolTip::setText(const QString& text) {
+void ToolTip::setText(const QString& text)
+{
     const bool changed = m_textBlock->text() != text;
     m_textBlock->setText(text);
     if (m_target)
@@ -122,11 +122,13 @@ void ToolTip::setText(const QString& text) {
         detail::notifyToolTipAccessibilityTextChanged(this);
 }
 
-QString ToolTip::text() const {
+QString ToolTip::text() const
+{
     return m_textBlock->text();
 }
 
-void ToolTip::setMargins(const QMargins& margins) {
+void ToolTip::setMargins(const QMargins& margins)
+{
     if (m_margins != margins) {
         m_margins = margins;
         applyLayoutMargins();
@@ -135,11 +137,13 @@ void ToolTip::setMargins(const QMargins& margins) {
     }
 }
 
-int ToolTip::shadowMargin() const {
+int ToolTip::shadowMargin() const
+{
     return kShadowMargin;
 }
 
-void ToolTip::applyLayoutMargins() {
+void ToolTip::applyLayoutMargins()
+{
     // The layout margins fold the shadow inset together with the content padding so the
     // label sits inside the bubble and the bubble sits inside the transparent shadow band.
     // zh_CN: 布局边距把阴影内缩与内容内边距合并，使标签位于气泡内、气泡位于透明阴影带内。
@@ -147,7 +151,8 @@ void ToolTip::applyLayoutMargins() {
         l->setContentsMargins(m_margins + fluent::overlay::uniformShadowMargins(kShadowMargin));
 }
 
-void ToolTip::setFont(const QFont& font) {
+void ToolTip::setFont(const QFont& font)
+{
     QWidget::setFont(font);
     if (m_textBlock) {
         m_textBlock->setFont(font);
@@ -155,7 +160,8 @@ void ToolTip::setFont(const QFont& font) {
     adjustSize();
 }
 
-void ToolTip::setThemeSource(QWidget* source) {
+void ToolTip::setThemeSource(QWidget* source)
+{
     if (m_themeSource == source)
         return;
     m_themeSource = source;
@@ -163,8 +169,10 @@ void ToolTip::setThemeSource(QWidget* source) {
         onThemeUpdated();
 }
 
-void ToolTip::setAnimationEnabled(bool enabled) {
-    if (m_animationEnabled == enabled) return;
+void ToolTip::setAnimationEnabled(bool enabled)
+{
+    if (m_animationEnabled == enabled)
+        return;
 
     m_animationEnabled = enabled;
     if (!m_animationEnabled) {
@@ -174,18 +182,15 @@ void ToolTip::setAnimationEnabled(bool enabled) {
         if (m_hideOnAnimationFinished) {
             finishHideAnimation();
         } else {
-            setVisualOpacity(
-                this,
-                isVisible()
-                    ? kVisibleOpacity
-                    : kHiddenOpacity);
+            setVisualOpacity(this, isVisible() ? kVisibleOpacity : kHiddenOpacity);
         }
     }
 
     emit animationEnabledChanged(m_animationEnabled);
 }
 
-void ToolTip::setVisible(bool visible) {
+void ToolTip::setVisible(bool visible)
+{
     if (m_accessibilityVisible != visible) {
         m_accessibilityVisible = visible;
         detail::notifyToolTipAccessibilityVisibilityChanged(this);
@@ -198,9 +203,7 @@ void ToolTip::setVisible(bool visible) {
             m_opacityAnimation->stop();
         }
         m_hideOnAnimationFinished = false;
-        setVisualOpacity(
-            this,
-            visible ? kVisibleOpacity : kHiddenOpacity);
+        setVisualOpacity(this, visible ? kVisibleOpacity : kHiddenOpacity);
         QWidget::setVisible(visible);
         return;
     }
@@ -212,9 +215,11 @@ void ToolTip::setVisible(bool visible) {
     }
 }
 
-void ToolTip::onThemeUpdated() {
+void ToolTip::onThemeUpdated()
+{
     const auto& c = themeColorsRef();
-    m_bgColor = c.bgLayer;  // Figma tooltip surface is near-white (#FCFCFC); bgLayer matches in both themes.
+    m_bgColor =
+        c.bgLayer; // Figma tooltip surface is near-white (#FCFCFC); bgLayer matches in both themes.
     m_borderColor = c.strokeDivider;
     m_textColor = c.textPrimary;
     // Color via the label's OWN style sheet rather than its palette: a ToolTip can sit under an ancestor
@@ -222,9 +227,12 @@ void ToolTip::onThemeUpdated() {
     // palettes), which would drop a palette WindowText color and render the text near-black in dark
     // theme. A style-sheet color always wins. zh_CN: 用标签自身样式表上色而非 palette：ToolTip 可能位于带样式表的
     // 祖先下（画廊示例卡会安装 QStyleSheetStyle 并忽略子 palette），palette 颜色会被丢弃，深色主题里文字变近黑；样式表颜色始终生效。
-    m_textBlock->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
-                                   .arg(m_textColor.red()).arg(m_textColor.green())
-                                   .arg(m_textColor.blue()).arg(m_textColor.alpha()));
+    m_textBlock->setStyleSheet(
+        QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
+            .arg(m_textColor.red())
+            .arg(m_textColor.green())
+            .arg(m_textColor.blue())
+            .arg(m_textColor.alpha()));
     update();
 }
 
@@ -255,7 +263,8 @@ bool ToolTip::eventFilter(QObject* watched, QEvent* event)
     return QWidget::eventFilter(watched, event);
 }
 
-void ToolTip::paintEvent(QPaintEvent*) {
+void ToolTip::paintEvent(QPaintEvent*)
+{
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
 
@@ -299,8 +308,8 @@ void ToolTip::setTarget(QWidget* target, Placement placement)
 bool ToolTip::syncThemeOverrideFromSource()
 {
     QWidget* source = m_themeSource ? m_themeSource.data()
-                    : m_target ? m_target.data()
-                    : parentWidget();
+                      : m_target    ? m_target.data()
+                                    : parentWidget();
     return ::fluent::overlay::syncInheritedThemeOverride(this, source);
 }
 
@@ -354,26 +363,26 @@ void ToolTip::positionForTarget()
             if (available.contains(QRect(fallbackTopLeft, cardSize)))
                 visibleTopLeft = fallbackTopLeft;
         }
-        visibleTopLeft.setX(qBound(available.left(),
-                                   visibleTopLeft.x(),
-                                   qMax(available.left(), available.right() - cardSize.width() + 1)));
-        visibleTopLeft.setY(qBound(available.top(),
-                                   visibleTopLeft.y(),
-                                   qMax(available.top(), available.bottom() - cardSize.height() + 1)));
+        visibleTopLeft.setX(
+            qBound(available.left(), visibleTopLeft.x(),
+                   qMax(available.left(), available.right() - cardSize.width() + 1)));
+        visibleTopLeft.setY(
+            qBound(available.top(), visibleTopLeft.y(),
+                   qMax(available.top(), available.bottom() - cardSize.height() + 1)));
     }
     move(visibleTopLeft - QPoint(kShadowMargin, kShadowMargin));
 }
 
-void ToolTip::ensureOpacityAnimation() {
-    if (m_opacityAnimation) return;
+void ToolTip::ensureOpacityAnimation()
+{
+    if (m_opacityAnimation)
+        return;
 
     auto* opacityEffect = opacityEffectFor(this);
     if (!opacityEffect)
         return;
 
-    m_opacityAnimation =
-        new QPropertyAnimation(
-            opacityEffect, "opacity", this);
+    m_opacityAnimation = new QPropertyAnimation(opacityEffect, "opacity", this);
     connect(m_opacityAnimation, &QPropertyAnimation::finished, this, [this]() {
         if (m_hideOnAnimationFinished) {
             finishHideAnimation();
@@ -383,7 +392,8 @@ void ToolTip::ensureOpacityAnimation() {
     });
 }
 
-void ToolTip::startShowAnimation() {
+void ToolTip::startShowAnimation()
+{
     ensureOpacityAnimation();
 
     m_hideOnAnimationFinished = false;
@@ -393,8 +403,7 @@ void ToolTip::startShowAnimation() {
     }
     m_opacityAnimation->stop();
 
-    const qreal startOpacity =
-        isVisible() ? visualOpacity(this) : kHiddenOpacity;
+    const qreal startOpacity = isVisible() ? visualOpacity(this) : kHiddenOpacity;
     setVisualOpacity(this, startOpacity);
     QWidget::setVisible(true);
 
@@ -408,10 +417,11 @@ void ToolTip::startShowAnimation() {
     m_opacityAnimation->setEasingCurve(anim.decelerate);
     m_opacityAnimation->setStartValue(startOpacity);
     m_opacityAnimation->setEndValue(kVisibleOpacity);
-    m_opacityAnimation->start();
+    ::fluent::detail::startMotionTransition(m_opacityAnimation, anim.fast, m_animationEnabled);
 }
 
-void ToolTip::startHideAnimation() {
+void ToolTip::startHideAnimation()
+{
     if (!isVisible()) {
         if (m_opacityAnimation) {
             m_opacityAnimation->stop();
@@ -441,10 +451,11 @@ void ToolTip::startHideAnimation() {
     m_opacityAnimation->setEasingCurve(anim.accelerate);
     m_opacityAnimation->setStartValue(startOpacity);
     m_opacityAnimation->setEndValue(kHiddenOpacity);
-    m_opacityAnimation->start();
+    ::fluent::detail::startMotionTransition(m_opacityAnimation, anim.fast, m_animationEnabled);
 }
 
-void ToolTip::finishHideAnimation() {
+void ToolTip::finishHideAnimation()
+{
     m_hideOnAnimationFinished = false;
     setVisualOpacity(this, kHiddenOpacity);
     QWidget::setVisible(false);

@@ -1,12 +1,14 @@
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ToggleSwitch.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/textfields/Label.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include <QApplication>
+#include <QPropertyAnimation>
 #include <QSignalSpy>
 #include <QTest>
 #include <gtest/gtest.h>
@@ -18,7 +20,8 @@ using namespace fluent::basicinput;
 class ToggleSwitchTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -28,7 +31,9 @@ public:
 
 class ToggleSwitchTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         fluent::ThemeRegistry::instance().resetToDefaults();
         window = new ToggleSwitchTestWindow();
         window->setFixedSize(500, 500);
@@ -36,8 +41,10 @@ protected:
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         delete window;
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         fluent::ThemeRegistry::instance().resetToDefaults();
     }
 
@@ -46,7 +53,8 @@ protected:
 
 // ── 默认属性 ─────────────────────────────────────────────────────────────────
 
-TEST_F(ToggleSwitchTest, DefaultPropertyValues) {
+TEST_F(ToggleSwitchTest, DefaultPropertyValues)
+{
     ToggleSwitch ts;
     EXPECT_FALSE(ts.isOn());
     EXPECT_TRUE(ts.onContent().isEmpty());
@@ -57,7 +65,8 @@ TEST_F(ToggleSwitchTest, DefaultPropertyValues) {
 
 // ── IsOn 属性 ────────────────────────────────────────────────────────────────
 
-TEST_F(ToggleSwitchTest, SetIsOnEmitsToggled) {
+TEST_F(ToggleSwitchTest, SetIsOnEmitsToggled)
+{
     ToggleSwitch ts;
     QSignalSpy spy(&ts, &ToggleSwitch::toggled);
     ts.setIsOn(true);
@@ -66,7 +75,8 @@ TEST_F(ToggleSwitchTest, SetIsOnEmitsToggled) {
     EXPECT_TRUE(ts.isOn());
 }
 
-TEST_F(ToggleSwitchTest, SetSameIsOnNoSignal) {
+TEST_F(ToggleSwitchTest, SetSameIsOnNoSignal)
+{
     ToggleSwitch ts;
     ts.setIsOn(true);
     QSignalSpy spy(&ts, &ToggleSwitch::toggled);
@@ -74,7 +84,8 @@ TEST_F(ToggleSwitchTest, SetSameIsOnNoSignal) {
     EXPECT_EQ(spy.count(), 0);
 }
 
-TEST_F(ToggleSwitchTest, ToggleOffEmitsSignal) {
+TEST_F(ToggleSwitchTest, ToggleOffEmitsSignal)
+{
     ToggleSwitch ts;
     ts.setIsOn(true);
     QSignalSpy spy(&ts, &ToggleSwitch::toggled);
@@ -85,7 +96,8 @@ TEST_F(ToggleSwitchTest, ToggleOffEmitsSignal) {
 
 // ── OnContent / OffContent 属性 ──────────────────────────────────────────────
 
-TEST_F(ToggleSwitchTest, SetOnContentEmitsSignal) {
+TEST_F(ToggleSwitchTest, SetOnContentEmitsSignal)
+{
     ToggleSwitch ts;
     QSignalSpy spy(&ts, &ToggleSwitch::onContentChanged);
     ts.setOnContent("Working");
@@ -93,7 +105,8 @@ TEST_F(ToggleSwitchTest, SetOnContentEmitsSignal) {
     EXPECT_EQ(ts.onContent(), "Working");
 }
 
-TEST_F(ToggleSwitchTest, SetOffContentEmitsSignal) {
+TEST_F(ToggleSwitchTest, SetOffContentEmitsSignal)
+{
     ToggleSwitch ts;
     QSignalSpy spy(&ts, &ToggleSwitch::offContentChanged);
     ts.setOffContent("Do work");
@@ -101,21 +114,24 @@ TEST_F(ToggleSwitchTest, SetOffContentEmitsSignal) {
     EXPECT_EQ(ts.offContent(), "Do work");
 }
 
-TEST_F(ToggleSwitchTest, SetSameOnContentNoSignal) {
+TEST_F(ToggleSwitchTest, SetSameOnContentNoSignal)
+{
     ToggleSwitch ts;
     QSignalSpy spy(&ts, &ToggleSwitch::onContentChanged);
     ts.setOnContent(QString());
     EXPECT_EQ(spy.count(), 0);
 }
 
-TEST_F(ToggleSwitchTest, SetSameOffContentNoSignal) {
+TEST_F(ToggleSwitchTest, SetSameOffContentNoSignal)
+{
     ToggleSwitch ts;
     QSignalSpy spy(&ts, &ToggleSwitch::offContentChanged);
     ts.setOffContent(QString());
     EXPECT_EQ(spy.count(), 0);
 }
 
-TEST_F(ToggleSwitchTest, ApplicationTextDrivesAccessibilityWithoutOverwritingOverrides) {
+TEST_F(ToggleSwitchTest, ApplicationTextDrivesAccessibilityWithoutOverwritingOverrides)
+{
     ToggleSwitch ts;
     ts.setOnContent(QStringLiteral("Connected"));
     ts.setOffContent(QStringLiteral("Disconnected"));
@@ -132,7 +148,8 @@ TEST_F(ToggleSwitchTest, ApplicationTextDrivesAccessibilityWithoutOverwritingOve
 
 // ── FontRole 属性 ────────────────────────────────────────────────────────────
 
-TEST_F(ToggleSwitchTest, SetFontRoleEmitsSignal) {
+TEST_F(ToggleSwitchTest, SetFontRoleEmitsSignal)
+{
     ToggleSwitch ts;
     QSignalSpy spy(&ts, &ToggleSwitch::fontRoleChanged);
     ts.setFontRole(Typography::FontRole::Caption);
@@ -140,14 +157,16 @@ TEST_F(ToggleSwitchTest, SetFontRoleEmitsSignal) {
     EXPECT_EQ(ts.fontRole(), Typography::FontRole::Caption);
 }
 
-TEST_F(ToggleSwitchTest, SetSameFontRoleNoSignal) {
+TEST_F(ToggleSwitchTest, SetSameFontRoleNoSignal)
+{
     ToggleSwitch ts;
     QSignalSpy spy(&ts, &ToggleSwitch::fontRoleChanged);
-    ts.setFontRole(Typography::FontRole::Body);  // same as default
+    ts.setFontRole(Typography::FontRole::Body); // same as default
     EXPECT_EQ(spy.count(), 0);
 }
 
-TEST_F(ToggleSwitchTest, RoleFontTracksThemeAndExplicitFontTakesPrecedence) {
+TEST_F(ToggleSwitchTest, RoleFontTracksThemeAndExplicitFontTakesPrecedence)
+{
     ToggleSwitch ts;
     ts.setAttribute(Qt::WA_DontShowOnScreen);
     ts.setOnContent(QStringLiteral("On"));
@@ -185,7 +204,8 @@ TEST_F(ToggleSwitchTest, RoleFontTracksThemeAndExplicitFontTakesPrecedence) {
 
 // ── KnobPosition 属性 ────────────────────────────────────────────────────────
 
-TEST_F(ToggleSwitchTest, KnobPositionClamped) {
+TEST_F(ToggleSwitchTest, KnobPositionClamped)
+{
     ToggleSwitch ts;
     ts.setKnobPosition(2.0);
     EXPECT_DOUBLE_EQ(ts.knobPosition(), 1.0);
@@ -195,14 +215,16 @@ TEST_F(ToggleSwitchTest, KnobPositionClamped) {
 
 // ── SizeHint ─────────────────────────────────────────────────────────────────
 
-TEST_F(ToggleSwitchTest, SizeHintIncludesTrackAndContent) {
+TEST_F(ToggleSwitchTest, SizeHintIncludesTrackAndContent)
+{
     ToggleSwitch ts;
     QSize hint = ts.sizeHint();
-    EXPECT_GE(hint.width(), 40);  // at least track width
+    EXPECT_GE(hint.width(), 40); // at least track width
     EXPECT_GE(hint.height(), Spacing::ControlHeight::Small);
 }
 
-TEST_F(ToggleSwitchTest, SizeHintReflectsContentWidth) {
+TEST_F(ToggleSwitchTest, SizeHintReflectsContentWidth)
+{
     ToggleSwitch ts;
     QSize shortHint = ts.sizeHint();
     ts.setOnContent("A much longer switch state");
@@ -211,7 +233,8 @@ TEST_F(ToggleSwitchTest, SizeHintReflectsContentWidth) {
     EXPECT_EQ(longHint.height(), shortHint.height());
 }
 
-TEST_F(ToggleSwitchTest, MinimumSizeHintPreservesTrackAndHitHeight) {
+TEST_F(ToggleSwitchTest, MinimumSizeHintPreservesTrackAndHitHeight)
+{
     ToggleSwitch ts;
     QSize minHint = ts.minimumSizeHint();
     EXPECT_EQ(minHint.width(), 40);
@@ -220,7 +243,8 @@ TEST_F(ToggleSwitchTest, MinimumSizeHintPreservesTrackAndHitHeight) {
 
 // ── Disabled 状态 ────────────────────────────────────────────────────────────
 
-TEST_F(ToggleSwitchTest, DisabledState) {
+TEST_F(ToggleSwitchTest, DisabledState)
+{
     ToggleSwitch ts;
     ts.setIsOn(true);
     ts.setEnabled(false);
@@ -228,7 +252,8 @@ TEST_F(ToggleSwitchTest, DisabledState) {
     EXPECT_TRUE(ts.isOn());
 }
 
-TEST_F(ToggleSwitchTest, DisabledDoesNotToggle) {
+TEST_F(ToggleSwitchTest, DisabledDoesNotToggle)
+{
     ToggleSwitch ts;
     ts.setEnabled(false);
     QSignalSpy spy(&ts, &ToggleSwitch::toggled);
@@ -239,7 +264,8 @@ TEST_F(ToggleSwitchTest, DisabledDoesNotToggle) {
     EXPECT_EQ(spy.count(), 0);
 }
 
-TEST_F(ToggleSwitchTest, MouseActivationTakesFocusAndToggles) {
+TEST_F(ToggleSwitchTest, MouseActivationTakesFocusAndToggles)
+{
     ToggleSwitch ts(window);
     ts.setGeometry(20, 20, ts.sizeHint().width(), ts.sizeHint().height());
     window->show();
@@ -254,14 +280,61 @@ TEST_F(ToggleSwitchTest, MouseActivationTakesFocusAndToggles) {
 
 // ── 初始 Knob 位置 ──────────────────────────────────────────────────────────
 
-TEST_F(ToggleSwitchTest, InitialKnobPositionOff) {
+TEST_F(ToggleSwitchTest, InitialKnobPositionOff)
+{
     ToggleSwitch ts;
     EXPECT_DOUBLE_EQ(ts.knobPosition(), 0.0);
 }
 
+TEST_F(ToggleSwitchTest, GlobalMotionDisabledAppliesKnobFinalState)
+{
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    ToggleSwitch ts;
+
+    ts.setIsOn(true);
+
+    auto* animation = ts.findChild<QPropertyAnimation*>();
+    ASSERT_NE(animation, nullptr);
+    EXPECT_TRUE(ts.isOn());
+    EXPECT_DOUBLE_EQ(ts.knobPosition(), 1.0);
+    EXPECT_EQ(animation->duration(), 0);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+}
+
+TEST_F(ToggleSwitchTest, GlobalMotionReducedCapsKnobTransition)
+{
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Reduced);
+    ToggleSwitch ts;
+
+    ts.setIsOn(true);
+
+    auto* animation = ts.findChild<QPropertyAnimation*>();
+    ASSERT_NE(animation, nullptr);
+    EXPECT_GT(animation->duration(), 0);
+    EXPECT_LE(animation->duration(), 50);
+    QTRY_VERIFY_WITH_TIMEOUT(qFuzzyCompare(ts.knobPosition(), 1.0), 300);
+}
+
+TEST_F(ToggleSwitchTest, ActiveKnobTransitionConvergesWhenMotionIsDisabled)
+{
+    ToggleSwitch ts;
+    auto* animation = ts.findChild<QPropertyAnimation*>();
+    ASSERT_NE(animation, nullptr);
+
+    ts.setIsOn(true);
+    ASSERT_EQ(animation->state(), QAbstractAnimation::Running);
+    EXPECT_LT(ts.knobPosition(), 1.0);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+    EXPECT_DOUBLE_EQ(ts.knobPosition(), 1.0);
+}
+
 // ── VisualCheck ──────────────────────────────────────────────────────────────
 
-TEST_F(ToggleSwitchTest, VisualCheck) {
+TEST_F(ToggleSwitchTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -359,9 +432,10 @@ TEST_F(ToggleSwitchTest, VisualCheck) {
     themeBtn->anchors()->right = {window, Edge::Right, -30};
     layout->addWidget(themeBtn);
     QObject::connect(themeBtn, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                                ? fluent::FluentElement::Dark
-                                : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     window->show();

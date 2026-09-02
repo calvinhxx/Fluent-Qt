@@ -21,6 +21,7 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/foundation/private/SurfacePainter_p.h"
 #include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "components/scrolling/ScrollBar.h"
@@ -735,7 +736,7 @@ void ComboBox::mousePressEvent(QMouseEvent* event)
         m_pressAnimation->stop();
         m_pressAnimation->setStartValue(0.0);
         m_pressAnimation->setEndValue(1.0);
-        m_pressAnimation->start();
+        ::fluent::detail::startMotionTransition(m_pressAnimation, themeAnimation().slow);
 
         // Toggle popup ourselves — base class has its own popup management
         // that conflicts with our custom popup

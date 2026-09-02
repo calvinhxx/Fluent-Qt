@@ -1,4 +1,5 @@
 #include "RadioButton.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "design/Typography.h"
 #include <QFocusEvent>
 #include <QKeyEvent>
@@ -9,8 +10,8 @@
 
 namespace fluent::basicinput {
 
-RadioButton::RadioButton(const QString& text, QWidget* parent)
-    : QRadioButton(text, parent) {
+RadioButton::RadioButton(const QString& text, QWidget* parent) : QRadioButton(text, parent)
+{
     setAttribute(Qt::WA_Hover);
     setCursor(Qt::ArrowCursor);
 
@@ -19,35 +20,35 @@ RadioButton::RadioButton(const QString& text, QWidget* parent)
     initAnimation();
 }
 
-RadioButton::RadioButton(QWidget* parent)
-    : RadioButton("", parent) {
-}
+RadioButton::RadioButton(QWidget* parent) : RadioButton("", parent) {}
 
-void RadioButton::initAnimation() {
-    m_checkAnimation = new QPropertyAnimation(
-        this, "checkProgress", this);
+void RadioButton::initAnimation()
+{
+    m_checkAnimation = new QPropertyAnimation(this, "checkProgress", this);
     m_checkAnimation->setDuration(themeAnimation().fast);
     m_checkAnimation->setEasingCurve(themeAnimation().decelerate);
 
-    m_dotScaleAnimation = new QPropertyAnimation(
-        this, "dotScale", this);
+    m_dotScaleAnimation = new QPropertyAnimation(this, "dotScale", this);
     m_dotScaleAnimation->setDuration(themeAnimation().fast);
     m_dotScaleAnimation->setEasingCurve(themeAnimation().decelerate);
 }
 
-void RadioButton::setCheckProgress(qreal progress) {
+void RadioButton::setCheckProgress(qreal progress)
+{
     m_checkProgress = progress;
     update();
 }
 
-void RadioButton::setDotScale(qreal scale) {
+void RadioButton::setDotScale(qreal scale)
+{
     if (!qFuzzyCompare(m_dotScale, scale)) {
         m_dotScale = scale;
         update();
     }
 }
 
-void RadioButton::setCircleSize(int size) {
+void RadioButton::setCircleSize(int size)
+{
     if (m_circleSize != size) {
         m_circleSize = size;
         updateGeometry();
@@ -56,7 +57,8 @@ void RadioButton::setCircleSize(int size) {
     }
 }
 
-void RadioButton::setTextGap(int gap) {
+void RadioButton::setTextGap(int gap)
+{
     if (m_textGap != gap) {
         m_textGap = gap;
         updateGeometry();
@@ -65,7 +67,8 @@ void RadioButton::setTextGap(int gap) {
     }
 }
 
-void RadioButton::setTextFont(const QFont& font) {
+void RadioButton::setTextFont(const QFont& font)
+{
     if (m_textFont != font) {
         m_textFont = font;
         setFont(m_textFont);
@@ -75,7 +78,8 @@ void RadioButton::setTextFont(const QFont& font) {
     }
 }
 
-void RadioButton::nextCheckState() {
+void RadioButton::nextCheckState()
+{
     QRadioButton::nextCheckState();
     // Reset the hover scale. zh_CN: 重置 hover 缩放。
     m_dotScale = 1.0;
@@ -83,16 +87,18 @@ void RadioButton::nextCheckState() {
         m_checkAnimation->stop();
         m_checkAnimation->setStartValue(0.0);
         m_checkAnimation->setEndValue(1.0);
-        m_checkAnimation->start();
+        ::fluent::detail::startMotionTransition(m_checkAnimation, themeAnimation().fast);
     }
 }
 
-void RadioButton::onThemeUpdated() {
+void RadioButton::onThemeUpdated()
+{
     updateGeometry();
     update();
 }
 
-QSize RadioButton::sizeHint() const {
+QSize RadioButton::sizeHint() const
+{
     QFontMetrics fm(m_textFont);
     int w = m_circleSize;
     if (!text().isEmpty()) {
@@ -102,11 +108,13 @@ QSize RadioButton::sizeHint() const {
     return QSize(w, h);
 }
 
-QSize RadioButton::minimumSizeHint() const {
+QSize RadioButton::minimumSizeHint() const
+{
     return sizeHint();
 }
 
-void RadioButton::paintEvent(QPaintEvent*) {
+void RadioButton::paintEvent(QPaintEvent*)
+{
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::TextAntialiasing);
@@ -119,60 +127,56 @@ void RadioButton::paintEvent(QPaintEvent*) {
     bool checked = isChecked();
 
     // ── 1. Outer ring. zh_CN: 外圈 ───────────────────────────────
-    const QRect logicalCircleRect(0, (height() - m_circleSize) / 2,
-                                  m_circleSize, m_circleSize);
-    const QRectF circleRect =
-        QStyle::visualRect(layoutDirection(), rect(), logicalCircleRect);
-        QColor outerBg, outerBorder;
+    const QRect logicalCircleRect(0, (height() - m_circleSize) / 2, m_circleSize, m_circleSize);
+    const QRectF circleRect = QStyle::visualRect(layoutDirection(), rect(), logicalCircleRect);
+    QColor outerBg, outerBorder;
 
-        if (!enabled) {
-            outerBg = colors.controlDisabled;
-            outerBorder = colors.strokeDivider;
-        } else if (checked) {
-            // WinUI 3: the checked ring fills with accent and has no outline.
-            // zh_CN: 选中态外圈用 Accent 填充，无独立描边。
-            outerBg = isPressed ? colors.accentTertiary
-                                : (isHover ? colors.accentSecondary : colors.accentDefault);
-            outerBorder = Qt::transparent;
-        } else {
-            // Unchecked: standard control fill plus outline. zh_CN: 未选中——普通控件底色 + 描边。
-            outerBg = isPressed ? colors.controlTertiary
-                                : (isHover ? colors.controlSecondary : colors.controlDefault);
-            outerBorder = isHover ? colors.strokeStrong : colors.strokeDefault;
-        }
+    if (!enabled) {
+        outerBg = colors.controlDisabled;
+        outerBorder = colors.strokeDivider;
+    } else if (checked) {
+        // WinUI 3: the checked ring fills with accent and has no outline.
+        // zh_CN: 选中态外圈用 Accent 填充，无独立描边。
+        outerBg = isPressed ? colors.accentTertiary
+                            : (isHover ? colors.accentSecondary : colors.accentDefault);
+        outerBorder = Qt::transparent;
+    } else {
+        // Unchecked: standard control fill plus outline. zh_CN: 未选中——普通控件底色 + 描边。
+        outerBg = isPressed ? colors.controlTertiary
+                            : (isHover ? colors.controlSecondary : colors.controlDefault);
+        outerBorder = isHover ? colors.strokeStrong : colors.strokeDefault;
+    }
 
-        // Paint the ring fill (circle). zh_CN: 绘制外圈底色（圆形）。
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(outerBg);
-        painter.drawEllipse(circleRect);
+    // Paint the ring fill (circle). zh_CN: 绘制外圈底色（圆形）。
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(outerBg);
+    painter.drawEllipse(circleRect);
 
-        // Paint the ring outline (unchecked only). zh_CN: 绘制外圈描边（仅未选中态）。
-        if (outerBorder != Qt::transparent) {
-            painter.setBrush(Qt::NoBrush);
-            painter.setPen(QPen(outerBorder, 1.0));
-            painter.drawEllipse(circleRect.adjusted(0.5, 0.5, -0.5, -0.5));
-        }
+    // Paint the ring outline (unchecked only). zh_CN: 绘制外圈描边（仅未选中态）。
+    if (outerBorder != Qt::transparent) {
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(outerBorder, 1.0));
+        painter.drawEllipse(circleRect.adjusted(0.5, 0.5, -0.5, -0.5));
+    }
 
-        // ── 2. Inner dot (checked). zh_CN: 内圆点（选中态）──────────
-        if (checked || m_checkProgress < 1.0) {
-            QColor dotColor = enabled ? colors.textOnAccent : colors.textDisabled;
+    // ── 2. Inner dot (checked). zh_CN: 内圆点（选中态）──────────
+    if (checked || m_checkProgress < 1.0) {
+        QColor dotColor = enabled ? colors.textOnAccent : colors.textDisabled;
 
-            // Dot diameter ≈ 50% of the ring, the typical WinUI 3 ratio.
-            // zh_CN: 内圆点直径约为外圈的 50%，WinUI 3 典型比例。
-            const qreal dotDiameter = m_circleSize * 0.5;
+        // Dot diameter ≈ 50% of the ring, the typical WinUI 3 ratio.
+        // zh_CN: 内圆点直径约为外圈的 50%，WinUI 3 典型比例。
+        const qreal dotDiameter = m_circleSize * 0.5;
 
-            // checkProgress drives check/uncheck; dotScale drives hover scaling.
-            // zh_CN: checkProgress 驱动选中/取消动画，dotScale 驱动 hover 缩放。
-            qreal scale = checked ? m_checkProgress : (1.0 - m_checkProgress);
-            scale *= m_dotScale;
-            if (scale > 0.0) {
-                qreal d = dotDiameter * scale;
-                QRectF dotRect(circleRect.center().x() - d / 2,
-                               circleRect.center().y() - d / 2,
-                               d, d);
-                painter.setPen(Qt::NoPen);
-                painter.setBrush(dotColor);
-                painter.drawEllipse(dotRect);
+        // checkProgress drives check/uncheck; dotScale drives hover scaling.
+        // zh_CN: checkProgress 驱动选中/取消动画，dotScale 驱动 hover 缩放。
+        qreal scale = checked ? m_checkProgress : (1.0 - m_checkProgress);
+        scale *= m_dotScale;
+        if (scale > 0.0) {
+            qreal d = dotDiameter * scale;
+            QRectF dotRect(circleRect.center().x() - d / 2, circleRect.center().y() - d / 2, d, d);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(dotColor);
+            painter.drawEllipse(dotRect);
         }
     }
 
@@ -180,14 +184,11 @@ void RadioButton::paintEvent(QPaintEvent*) {
     if (!text().isEmpty()) {
         painter.setFont(m_textFont);
         painter.setPen(enabled ? colors.textPrimary : colors.textDisabled);
-        const QRect logicalTextRect =
-            rect().adjusted(m_circleSize + m_textGap, 0, 0, 0);
-        const QRect textRect =
-            QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
-        painter.drawText(textRect,
-                         QStyle::visualAlignment(layoutDirection(),
-                                                 Qt::AlignVCenter | Qt::AlignLeft),
-                         text());
+        const QRect logicalTextRect = rect().adjusted(m_circleSize + m_textGap, 0, 0, 0);
+        const QRect textRect = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
+        painter.drawText(
+            textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
+            text());
     }
 
     if (enabled && hasFocus() && m_keyboardFocusVisible) {
@@ -195,29 +196,31 @@ void RadioButton::paintEvent(QPaintEvent*) {
         focusColor.setAlpha(120);
         painter.setPen(QPen(focusColor, 1.0));
         painter.setBrush(Qt::NoBrush);
-        painter.drawRoundedRect(rect().adjusted(1, 1, -1, -1),
-                                themeRadius().control,
+        painter.drawRoundedRect(rect().adjusted(1, 1, -1, -1), themeRadius().control,
                                 themeRadius().control);
     }
 }
 
-void RadioButton::enterEvent(FluentEnterEvent* event) {
+void RadioButton::enterEvent(FluentEnterEvent* event)
+{
     QRadioButton::enterEvent(event);
     if (isChecked() && isEnabled()) {
         m_dotScaleAnimation->stop();
         m_dotScaleAnimation->setStartValue(m_dotScale);
-        m_dotScaleAnimation->setEndValue(1.2); // The dot grows 20% on hover. zh_CN: hover 时内圆点放大 20%。
-        m_dotScaleAnimation->start();
+        m_dotScaleAnimation->setEndValue(
+            1.2); // The dot grows 20% on hover. zh_CN: hover 时内圆点放大 20%。
+        ::fluent::detail::startMotionTransition(m_dotScaleAnimation, themeAnimation().fast);
     }
 }
 
-void RadioButton::leaveEvent(QEvent* event) {
+void RadioButton::leaveEvent(QEvent* event)
+{
     QRadioButton::leaveEvent(event);
     if (isEnabled()) {
         m_dotScaleAnimation->stop();
         m_dotScaleAnimation->setStartValue(m_dotScale);
         m_dotScaleAnimation->setEndValue(1.0);
-        m_dotScaleAnimation->start();
+        ::fluent::detail::startMotionTransition(m_dotScaleAnimation, themeAnimation().fast);
     }
 }
 
@@ -226,9 +229,8 @@ void RadioButton::focusInEvent(QFocusEvent* event)
     QRadioButton::focusInEvent(event);
     if (event->reason() == Qt::MouseFocusReason)
         m_keyboardFocusVisible = false;
-    else if (event->reason() == Qt::TabFocusReason
-             || event->reason() == Qt::BacktabFocusReason
-             || event->reason() == Qt::ShortcutFocusReason)
+    else if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason ||
+             event->reason() == Qt::ShortcutFocusReason)
         m_keyboardFocusVisible = true;
     update();
 }

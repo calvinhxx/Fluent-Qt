@@ -16,6 +16,7 @@
 
 #include "compatibility/QtCompat.h"
 #include "components/foundation/private/LogicalItemAccessibility_p.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/navigation/private/NavigationSelectionAccessibility_p.h"
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
@@ -35,30 +36,18 @@ QRect collapsedIndicatorRect(const QRect& rect)
 }
 } // namespace
 
-SelectorBarItem::SelectorBarItem(const QString& itemText)
-    : text(itemText)
-{
-}
+SelectorBarItem::SelectorBarItem(const QString& itemText) : text(itemText) {}
 
-SelectorBarItem::SelectorBarItem(const QString& itemText,
-                                 const QString& itemIconGlyph,
-                                 bool itemEnabled,
-                                 bool itemVisible,
-                                 const QVariant& itemData,
+SelectorBarItem::SelectorBarItem(const QString& itemText, const QString& itemIconGlyph,
+                                 bool itemEnabled, bool itemVisible, const QVariant& itemData,
                                  const QString& itemAccessibleName)
-    : text(itemText)
-    , iconGlyph(itemIconGlyph)
-    , enabled(itemEnabled)
-    , visible(itemVisible)
-    , data(itemData)
-    , accessibleName(itemAccessibleName)
-{
-}
+    : text(itemText), iconGlyph(itemIconGlyph), enabled(itemEnabled), visible(itemVisible),
+      data(itemData), accessibleName(itemAccessibleName)
+{}
 
 SelectorBar::SelectorBar(QWidget* parent)
-    : QWidget(parent)
-    , m_iconFontFamily(Typography::FontFamily::FluentIcons)
-    , m_indicatorAnimation(new QVariantAnimation(this))
+    : QWidget(parent), m_iconFontFamily(Typography::FontFamily::FluentIcons),
+      m_indicatorAnimation(new QVariantAnimation(this))
 {
     detail::ensureNavigationSelectionAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
@@ -66,9 +55,8 @@ SelectorBar::SelectorBar(QWidget* parent)
     setFocusPolicy(Qt::StrongFocus);
     m_indicatorAnimation->setDuration(themeAnimation().fast);
     m_indicatorAnimation->setEasingCurve(themeAnimation().decelerate);
-    connect(m_indicatorAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
-        setAnimatedIndicatorRect(value.toRect());
-    });
+    connect(m_indicatorAnimation, &QVariantAnimation::valueChanged, this,
+            [this](const QVariant& value) { setAnimatedIndicatorRect(value.toRect()); });
     updateAccessibleText();
 }
 
@@ -128,8 +116,8 @@ bool SelectorBar::insertItem(int index, const SelectorBarItem& item)
     updateAccessibleText();
     fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (m_selectedIndex != previousIndex) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
-            this, m_selectedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this,
+                                                                               m_selectedIndex);
         emit selectedIndexChanged(m_selectedIndex);
         emit currentChanged(m_selectedIndex);
         emit selectionChanged(m_selectedIndex, selectedItem());
@@ -166,8 +154,8 @@ bool SelectorBar::removeItem(int index)
     updateAccessibleText();
     fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (m_selectedIndex != previousIndex) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
-            this, m_selectedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this,
+                                                                               m_selectedIndex);
         emit selectedIndexChanged(m_selectedIndex);
         emit currentChanged(m_selectedIndex);
         emit selectionChanged(m_selectedIndex, selectedItem());
@@ -193,8 +181,7 @@ void SelectorBar::clearItems()
     updateAccessibleText();
     fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (hadSelection) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
-            this, -1);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this, -1);
         emit selectedIndexChanged(-1);
         emit currentChanged(-1);
         emit selectionChanged(-1, SelectorBarItem());
@@ -210,8 +197,7 @@ bool SelectorBar::setItemText(int index, const QString& text)
     m_items[index].text = text;
     invalidateLayout();
     updateAccessibleText();
-    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(
-        this, index);
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(this, index);
     emit itemsChanged();
     return true;
 }
@@ -244,8 +230,7 @@ bool SelectorBar::setItemEnabled(int index, bool enabled)
 
     invalidateLayout();
     updateAccessibleText();
-    fluent::accessibility::detail::notifyLogicalItemAccessibilityState(
-        this, index);
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityState(this, index);
     if (m_selectedIndex != previousIndex) {
         emit selectedIndexChanged(m_selectedIndex);
         emit currentChanged(m_selectedIndex);
@@ -273,8 +258,7 @@ bool SelectorBar::setItemVisible(int index, bool visible)
 
     invalidateLayout();
     updateAccessibleText();
-    fluent::accessibility::detail::notifyLogicalItemAccessibilityState(
-        this, index);
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityState(this, index);
     if (m_selectedIndex != previousIndex) {
         emit selectedIndexChanged(m_selectedIndex);
         emit currentChanged(m_selectedIndex);
@@ -299,8 +283,7 @@ bool SelectorBar::setItemAccessibleName(int index, const QString& accessibleName
         return false;
     m_items[index].accessibleName = accessibleName;
     updateAccessibleText();
-    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(
-        this, index);
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(this, index);
     emit itemsChanged();
     return true;
 }
@@ -442,9 +425,11 @@ void SelectorBar::paintEvent(QPaintEvent*)
         paintItem(painter, record);
     paintSelectedIndicator(painter);
 
-    const bool canBack = !m_overflowBackRect.isEmpty() && !m_visibleIndexes.isEmpty() && m_visibleIndexes.first() != allVisibleItemIndexes().value(0, -1);
+    const bool canBack = !m_overflowBackRect.isEmpty() && !m_visibleIndexes.isEmpty() &&
+                         m_visibleIndexes.first() != allVisibleItemIndexes().value(0, -1);
     const QVector<int> candidates = allVisibleItemIndexes();
-    const bool canForward = !m_overflowForwardRect.isEmpty() && !m_visibleIndexes.isEmpty() && !candidates.isEmpty() && m_visibleIndexes.last() != candidates.last();
+    const bool canForward = !m_overflowForwardRect.isEmpty() && !m_visibleIndexes.isEmpty() &&
+                            !candidates.isEmpty() && m_visibleIndexes.last() != candidates.last();
     const bool rightToLeft = layoutDirection() == Qt::RightToLeft;
     paintOverflowButton(painter, m_overflowBackRect,
                         rightToLeft ? Typography::Icons::ChevronRightMed
@@ -454,7 +439,8 @@ void SelectorBar::paintEvent(QPaintEvent*)
                         rightToLeft ? Typography::Icons::ChevronLeftMed
                                     : Typography::Icons::ChevronRightMed,
                         HitRecord{HitKind::OverflowForward, -1}, canForward);
-    paintOverflowButton(painter, m_overflowMoreRect, Typography::Icons::More, HitRecord{HitKind::OverflowMore, -1}, !m_hiddenIndexes.isEmpty());
+    paintOverflowButton(painter, m_overflowMoreRect, Typography::Icons::More,
+                        HitRecord{HitKind::OverflowMore, -1}, !m_hiddenIndexes.isEmpty());
 }
 
 void SelectorBar::changeEvent(QEvent* event)
@@ -539,15 +525,13 @@ void SelectorBar::keyPressEvent(QKeyEvent* event)
 
     switch (event->key()) {
     case Qt::Key_Left:
-        focusItem(nextSelectableIndex(
-            m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex,
-            layoutDirection() == Qt::RightToLeft ? 1 : -1));
+        focusItem(nextSelectableIndex(m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex,
+                                      layoutDirection() == Qt::RightToLeft ? 1 : -1));
         event->accept();
         return;
     case Qt::Key_Right:
-        focusItem(nextSelectableIndex(
-            m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex,
-            layoutDirection() == Qt::RightToLeft ? -1 : 1));
+        focusItem(nextSelectableIndex(m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex,
+                                      layoutDirection() == Qt::RightToLeft ? -1 : 1));
         event->accept();
         return;
     case Qt::Key_Home:
@@ -580,8 +564,7 @@ void SelectorBar::focusInEvent(QFocusEvent* event)
     if (!isSelectableIndex(m_focusedIndex)) {
         focusItem(m_selectedIndex >= 0 ? m_selectedIndex : firstSelectableIndex());
     } else {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-            this, m_focusedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, m_focusedIndex);
     }
     update();
 }
@@ -686,7 +669,8 @@ void SelectorBar::updateLayout()
     }
 
     m_visibleIndexes = computeVisibleIndexes(candidates, availableForItems, widths, overflow);
-    if (overflow && isValidIndex(m_selectedIndex) && m_items.at(m_selectedIndex).visible && !m_visibleIndexes.contains(m_selectedIndex)) {
+    if (overflow && isValidIndex(m_selectedIndex) && m_items.at(m_selectedIndex).visible &&
+        !m_visibleIndexes.contains(m_selectedIndex)) {
         m_firstVisibleIndex = m_selectedIndex;
         m_visibleIndexes = computeVisibleIndexes(candidates, availableForItems, widths, overflow);
     }
@@ -698,16 +682,16 @@ void SelectorBar::updateLayout()
 
     int x = m_rowRect.left();
     if (overflow && m_overflowBehavior == OverflowBehavior::ScrollButtons) {
-        m_overflowBackRect = QRect(x,
-                                   m_rowRect.top() + (m_rowRect.height() - currentMetrics.itemVisualHeight) / 2,
-                                   currentMetrics.overflowButtonWidth,
-                                   currentMetrics.itemVisualHeight);
+        m_overflowBackRect =
+            QRect(x, m_rowRect.top() + (m_rowRect.height() - currentMetrics.itemVisualHeight) / 2,
+                  currentMetrics.overflowButtonWidth, currentMetrics.itemVisualHeight);
         x += currentMetrics.overflowButtonWidth;
     }
 
-    const int rightReserve = overflow
-        ? (m_overflowBehavior == OverflowBehavior::ScrollButtons ? currentMetrics.overflowButtonWidth : currentMetrics.overflowButtonWidth)
-        : 0;
+    const int rightReserve = overflow ? (m_overflowBehavior == OverflowBehavior::ScrollButtons
+                                             ? currentMetrics.overflowButtonWidth
+                                             : currentMetrics.overflowButtonWidth)
+                                      : 0;
     const int rightLimit = m_rowRect.right() + 1 - rightReserve;
     for (int index : std::as_const(m_visibleIndexes)) {
         const int preferredWidth = widths.value(index, currentMetrics.minItemWidth);
@@ -717,44 +701,44 @@ void SelectorBar::updateLayout()
 
         ItemRecord record;
         record.itemIndex = index;
-        record.rect = QRect(x,
-                            m_rowRect.top() + (m_rowRect.height() - currentMetrics.itemVisualHeight) / 2,
-                            recordWidth,
-                            currentMetrics.itemVisualHeight);
+        record.rect =
+            QRect(x, m_rowRect.top() + (m_rowRect.height() - currentMetrics.itemVisualHeight) / 2,
+                  recordWidth, currentMetrics.itemVisualHeight);
         record.enabled = m_items.at(index).enabled;
 
         int contentX = record.rect.left() + currentMetrics.horizontalPadding;
         if (!m_items.at(index).iconGlyph.isEmpty()) {
-            record.iconRect = QRect(contentX,
-                                    record.rect.top() + (record.rect.height() - currentMetrics.iconSize) / 2,
-                                    currentMetrics.iconSize,
-                                    currentMetrics.iconSize);
+            record.iconRect = QRect(
+                contentX, record.rect.top() + (record.rect.height() - currentMetrics.iconSize) / 2,
+                currentMetrics.iconSize, currentMetrics.iconSize);
             contentX = record.iconRect.right() + 1 + currentMetrics.iconGap;
         }
-        record.textRect = QRect(contentX,
-                                record.rect.top(),
-                                qMax(0, record.rect.right() - currentMetrics.horizontalPadding - contentX + 1),
-                                record.rect.height());
-        const int availableIndicatorWidth = qMax(0, record.rect.width() - currentMetrics.horizontalPadding * 2);
-        const int indicatorWidth = qMin(currentMetrics.selectedIndicatorWidth, availableIndicatorWidth);
-        record.indicatorRect = QRect(record.rect.center().x() - indicatorWidth / 2,
-                                     record.rect.bottom() - currentMetrics.selectedIndicatorHeight + 1,
-                                     indicatorWidth,
-                                     currentMetrics.selectedIndicatorHeight);
+        record.textRect =
+            QRect(contentX, record.rect.top(),
+                  qMax(0, record.rect.right() - currentMetrics.horizontalPadding - contentX + 1),
+                  record.rect.height());
+        const int availableIndicatorWidth =
+            qMax(0, record.rect.width() - currentMetrics.horizontalPadding * 2);
+        const int indicatorWidth =
+            qMin(currentMetrics.selectedIndicatorWidth, availableIndicatorWidth);
+        record.indicatorRect =
+            QRect(record.rect.center().x() - indicatorWidth / 2,
+                  record.rect.bottom() - currentMetrics.selectedIndicatorHeight + 1, indicatorWidth,
+                  currentMetrics.selectedIndicatorHeight);
         m_itemRecords.append(record);
         x += recordWidth;
     }
 
     if (overflow && m_overflowBehavior == OverflowBehavior::ScrollButtons) {
-        m_overflowForwardRect = QRect(m_rowRect.right() + 1 - currentMetrics.overflowButtonWidth,
-                                      m_rowRect.top() + (m_rowRect.height() - currentMetrics.itemVisualHeight) / 2,
-                                      currentMetrics.overflowButtonWidth,
-                                      currentMetrics.itemVisualHeight);
+        m_overflowForwardRect =
+            QRect(m_rowRect.right() + 1 - currentMetrics.overflowButtonWidth,
+                  m_rowRect.top() + (m_rowRect.height() - currentMetrics.itemVisualHeight) / 2,
+                  currentMetrics.overflowButtonWidth, currentMetrics.itemVisualHeight);
     } else if (overflow) {
-        m_overflowMoreRect = QRect(m_rowRect.right() + 1 - currentMetrics.overflowButtonWidth,
-                                   m_rowRect.top() + (m_rowRect.height() - currentMetrics.itemVisualHeight) / 2,
-                                   currentMetrics.overflowButtonWidth,
-                                   currentMetrics.itemVisualHeight);
+        m_overflowMoreRect =
+            QRect(m_rowRect.right() + 1 - currentMetrics.overflowButtonWidth,
+                  m_rowRect.top() + (m_rowRect.height() - currentMetrics.itemVisualHeight) / 2,
+                  currentMetrics.overflowButtonWidth, currentMetrics.itemVisualHeight);
     }
 
     if (layoutDirection() == Qt::RightToLeft) {
@@ -783,13 +767,15 @@ int SelectorBar::naturalItemWidth(int index, const QFontMetrics& fontMetrics) co
     if (!isValidIndex(index) || !m_items.at(index).visible)
         return 0;
     const Metrics currentMetrics = metrics();
-    int width = currentMetrics.horizontalPadding * 2 + fontMetrics.horizontalAdvance(m_items.at(index).text);
+    int width = currentMetrics.horizontalPadding * 2 +
+                fontMetrics.horizontalAdvance(m_items.at(index).text);
     if (!m_items.at(index).iconGlyph.isEmpty())
         width += currentMetrics.iconSize + currentMetrics.iconGap;
     return qBound(currentMetrics.minItemWidth, width, currentMetrics.maxItemWidth);
 }
 
-QVector<int> SelectorBar::computeVisibleIndexes(const QVector<int>& candidates, int availableWidth, const QVector<int>& widths, bool overflow) const
+QVector<int> SelectorBar::computeVisibleIndexes(const QVector<int>& candidates, int availableWidth,
+                                                const QVector<int>& widths, bool overflow) const
 {
     QVector<int> result;
     if (candidates.isEmpty())
@@ -914,11 +900,9 @@ void SelectorBar::setSelectedIndexInternal(int index, bool emitSignals)
     ensureLayout();
     animateIndicator(oldIndicator, indicatorRectForItem(m_selectedIndex));
     updateAccessibleText();
-    fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
-        this, m_selectedIndex);
+    fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this, m_selectedIndex);
     if (hasFocus() && m_focusedIndex != previousIndex) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-            this, m_focusedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, m_focusedIndex);
     }
     if (emitSignals) {
         emit selectedIndexChanged(m_selectedIndex);
@@ -936,10 +920,12 @@ void SelectorBar::syncSelectedFlags()
 void SelectorBar::updateAccessibleText()
 {
     const QString selectedText = isValidIndex(m_selectedIndex)
-        ? (m_items.at(m_selectedIndex).accessibleName.isEmpty() ? m_items.at(m_selectedIndex).text : m_items.at(m_selectedIndex).accessibleName)
-        : QString();
-    if (accessibleDescription().isEmpty()
-        || accessibleDescription() == m_autoAccessibleDescription) {
+                                     ? (m_items.at(m_selectedIndex).accessibleName.isEmpty()
+                                            ? m_items.at(m_selectedIndex).text
+                                            : m_items.at(m_selectedIndex).accessibleName)
+                                     : QString();
+    if (accessibleDescription().isEmpty() ||
+        accessibleDescription() == m_autoAccessibleDescription) {
         setAccessibleDescription(selectedText);
     }
     m_autoAccessibleDescription = selectedText;
@@ -977,7 +963,7 @@ void SelectorBar::animateIndicator(const QRect& from, const QRect& to)
     m_indicatorAnimation->setStartValue(collapsedFrom);
     m_indicatorAnimation->setKeyValueAt(0.55, collapsedTo);
     m_indicatorAnimation->setEndValue(to);
-    m_indicatorAnimation->start();
+    ::fluent::detail::startMotionTransition(m_indicatorAnimation, themeAnimation().fast);
 }
 
 const SelectorBar::ItemRecord* SelectorBar::recordForItem(int index) const
@@ -1020,9 +1006,11 @@ bool SelectorBar::isInteractiveHit(const HitRecord& hit) const
     case HitKind::Item:
         return isSelectableIndex(hit.itemIndex);
     case HitKind::OverflowBack:
-        return !m_overflowBackRect.isEmpty() && !m_visibleIndexes.isEmpty() && !candidates.isEmpty() && m_visibleIndexes.first() != candidates.first();
+        return !m_overflowBackRect.isEmpty() && !m_visibleIndexes.isEmpty() &&
+               !candidates.isEmpty() && m_visibleIndexes.first() != candidates.first();
     case HitKind::OverflowForward:
-        return !m_overflowForwardRect.isEmpty() && !m_visibleIndexes.isEmpty() && !candidates.isEmpty() && m_visibleIndexes.last() != candidates.last();
+        return !m_overflowForwardRect.isEmpty() && !m_visibleIndexes.isEmpty() &&
+               !candidates.isEmpty() && m_visibleIndexes.last() != candidates.last();
     case HitKind::OverflowMore:
         return !m_overflowMoreRect.isEmpty() && !m_hiddenIndexes.isEmpty();
     case HitKind::None:
@@ -1057,8 +1045,7 @@ void SelectorBar::focusItem(int index)
     m_focusedIndex = index;
     ensureIndexVisible(index);
     if (hasFocus()) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-            this, m_focusedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, m_focusedIndex);
     }
     update();
 }
@@ -1125,20 +1112,20 @@ void SelectorBar::paintItem(QPainter& painter, const ItemRecord& record) const
     if (!record.iconRect.isEmpty()) {
         painter.setPen(textColorValue);
         if (m_iconFontFamily == Typography::FontFamily::FluentIcons) {
-            Typography::Icons::paintGlyph(
-                painter, QRectF(record.iconRect), m_items.at(record.itemIndex).iconGlyph,
-                currentMetrics.iconSize, Qt::AlignCenter);
+            Typography::Icons::paintGlyph(painter, QRectF(record.iconRect),
+                                          m_items.at(record.itemIndex).iconGlyph,
+                                          currentMetrics.iconSize, Qt::AlignCenter);
         } else {
             painter.setFont(iconFont(currentMetrics.iconSize));
-            painter.drawText(record.iconRect, Qt::AlignCenter, m_items.at(record.itemIndex).iconGlyph);
+            painter.drawText(record.iconRect, Qt::AlignCenter,
+                             m_items.at(record.itemIndex).iconGlyph);
         }
     }
 
     painter.setFont(itemFont());
     painter.setPen(textColorValue);
     painter.drawText(record.textRect,
-                     QStyle::visualAlignment(layoutDirection(),
-                                             Qt::AlignVCenter | Qt::AlignLeft),
+                     QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
                      m_items.at(record.itemIndex).text);
 
     painter.restore();
@@ -1151,12 +1138,13 @@ void SelectorBar::paintSelectedIndicator(QPainter& painter) const
     painter.save();
     painter.setPen(Qt::NoPen);
     painter.setBrush(themeColorsRef().accentDefault);
-    painter.drawRoundedRect(m_animatedIndicatorRect,
-                            ::CornerRadius::Indicator, ::CornerRadius::Indicator);
+    painter.drawRoundedRect(m_animatedIndicatorRect, ::CornerRadius::Indicator,
+                            ::CornerRadius::Indicator);
     painter.restore();
 }
 
-void SelectorBar::paintOverflowButton(QPainter& painter, const QRect& rect, const QString& glyph, const HitRecord& hit, bool enabled) const
+void SelectorBar::paintOverflowButton(QPainter& painter, const QRect& rect, const QString& glyph,
+                                      const HitRecord& hit, bool enabled) const
 {
     if (rect.isEmpty())
         return;
@@ -1166,8 +1154,8 @@ void SelectorBar::paintOverflowButton(QPainter& painter, const QRect& rect, cons
     painter.setPen(enabled ? (highlighted ? colors.textPrimary : colors.textSecondary)
                            : colors.textDisabled);
     if (m_iconFontFamily == Typography::FontFamily::FluentIcons) {
-        Typography::Icons::paintGlyph(
-            painter, QRectF(rect), glyph, metrics().iconSize, Qt::AlignCenter);
+        Typography::Icons::paintGlyph(painter, QRectF(rect), glyph, metrics().iconSize,
+                                      Qt::AlignCenter);
     } else {
         painter.setFont(iconFont(metrics().iconSize));
         painter.drawText(rect, Qt::AlignCenter, glyph);

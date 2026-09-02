@@ -28,6 +28,7 @@
 #include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/collections/CollectionViewBackdrop_p.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 
 namespace fluent::collections {
 
@@ -37,15 +38,15 @@ namespace {
 // wheel feel matches ListView. zh_CN: 每个滚轮刻度（delta 120）滚动的像素数，与 ListView 统一手感。
 constexpr qreal kDiscreteWheelStepPx = ::Spacing::ControlHeight::Large;
 
-bool dragPointsEqual(const QPointF& lhs, const QPointF& rhs) {
-    return std::abs(lhs.x() - rhs.x()) < 0.01 &&
-           std::abs(lhs.y() - rhs.y()) < 0.01;
+bool dragPointsEqual(const QPointF& lhs, const QPointF& rhs)
+{
+    return std::abs(lhs.x() - rhs.x()) < 0.01 && std::abs(lhs.y() - rhs.y()) < 0.01;
 }
 
 } // namespace
 
-GridView::GridView(QWidget* parent)
-    : QListView(parent) {
+GridView::GridView(QWidget* parent) : QListView(parent)
+{
 
     m_fontRole = Typography::FontRole::Body;
 
@@ -61,7 +62,8 @@ GridView::GridView(QWidget* parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setMouseTracking(true);
-    setDragEnabled(false);           // Disable QListView's built-in drag; reorder is custom. zh_CN: 禁用内置拖拽（自行实现）。
+    setDragEnabled(
+        false); // Disable QListView's built-in drag; reorder is custom. zh_CN: 禁用内置拖拽（自行实现）。
     setDefaultDropAction(Qt::IgnoreAction);
 
     QListView::setSelectionMode(QAbstractItemView::SingleSelection);
@@ -72,9 +74,8 @@ GridView::GridView(QWidget* parent)
     //（与 ListView 一致），而非 ScrollPerItem 的整行跳动。
     setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
-    connect(this, &QAbstractItemView::clicked, this, [this](const QModelIndex& idx) {
-        emit itemClicked(idx.row());
-    });
+    connect(this, &QAbstractItemView::clicked, this,
+            [this](const QModelIndex& idx) { emit itemClicked(idx.row()); });
 
     // --- Header label ---
     m_headerLabel = new QLabel(this);
@@ -83,10 +84,8 @@ GridView::GridView(QWidget* parent)
 
     // --- Fluent scroll bar ---
     m_vScrollBar = ::fluent::scrolling::createOverlayScrollBar(
-        Qt::Vertical, this, verticalScrollBar(),
-        QStringLiteral("fluentGridViewScrollBar"));
-    connect(verticalScrollBar(), &QScrollBar::rangeChanged,
-            this, &GridView::syncFluentScrollBar);
+        Qt::Vertical, this, verticalScrollBar(), QStringLiteral("fluentGridViewScrollBar"));
+    connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &GridView::syncFluentScrollBar);
 
     // --- Overscroll bounce (shared controller) ---
     fluent::scrolling::OverscrollController::Hooks hooks;
@@ -101,8 +100,8 @@ GridView::GridView(QWidget* parent)
     };
     hooks.onOverscrollChanged = [this] { viewport()->update(); };
     hooks.fallbackWheel = [this](QWheelEvent* e) { QListView::wheelEvent(e); };
-    m_overscroll = new fluent::scrolling::OverscrollController(
-        viewport(), kDiscreteWheelStepPx, std::move(hooks), this);
+    m_overscroll = new fluent::scrolling::OverscrollController(viewport(), kDiscreteWheelStepPx,
+                                                               std::move(hooks), this);
 
     updateGridSize();
     syncFluentScrollBar();
@@ -122,8 +121,10 @@ GridView::~GridView()
 
 // ── Selection mode ────────────────────────────────────────────────────────────
 
-void GridView::setSelectionMode(SelectionMode mode) {
-    if (m_selectionMode == mode) return;
+void GridView::setSelectionMode(SelectionMode mode)
+{
+    if (m_selectionMode == mode)
+        return;
     m_selectionMode = mode;
 
     switch (mode) {
@@ -145,29 +146,38 @@ void GridView::setSelectionMode(SelectionMode mode) {
 
 // ── Appearance properties ────────────────────────────────────────────────────
 
-void GridView::setFontRole(Typography::FontRole role) {
-    if (m_fontRole == role) return;
+void GridView::setFontRole(Typography::FontRole role)
+{
+    if (m_fontRole == role)
+        return;
     m_fontRole = role;
     applyThemeStyle();
     emit fontRoleChanged();
 }
 
-void GridView::setBorderVisible(bool visible) {
-    if (m_borderVisible == visible) return;
+void GridView::setBorderVisible(bool visible)
+{
+    if (m_borderVisible == visible)
+        return;
     m_borderVisible = visible;
     update();
     emit borderVisibleChanged();
 }
 
-void GridView::setBackgroundVisible(bool visible) {
-    if (m_backgroundVisible == visible) return;
+void GridView::setBackgroundVisible(bool visible)
+{
+    if (m_backgroundVisible == visible)
+        return;
     m_backgroundVisible = visible;
-    if (viewport()) viewport()->update();
+    if (viewport())
+        viewport()->update();
     emit backgroundVisibleChanged();
 }
 
-void GridView::setHeaderText(const QString& text) {
-    if (m_headerText == text) return;
+void GridView::setHeaderText(const QString& text)
+{
+    if (m_headerText == text)
+        return;
     m_headerText = text;
     if (m_headerLabel) {
         m_headerLabel->setText(text);
@@ -178,69 +188,91 @@ void GridView::setHeaderText(const QString& text) {
     emit headerTextChanged();
 }
 
-void GridView::setPlaceholderText(const QString& text) {
-    if (m_placeholderText == text) return;
+void GridView::setPlaceholderText(const QString& text)
+{
+    if (m_placeholderText == text)
+        return;
     m_placeholderText = text;
-    if (viewport()) viewport()->update();
+    if (viewport())
+        viewport()->update();
     emit placeholderTextChanged();
 }
 
 // ── Grid layout properties ────────────────────────────────────────────────────
 
-void GridView::setCellSize(const QSize& size) {
-    if (m_cellSize == size) return;
+void GridView::setCellSize(const QSize& size)
+{
+    if (m_cellSize == size)
+        return;
     m_cellSize = size;
     updateGridSize();
     emit cellSizeChanged();
 }
 
-void GridView::setHorizontalSpacing(int spacing) {
-    if (m_hSpacing == spacing) return;
+void GridView::setHorizontalSpacing(int spacing)
+{
+    if (m_hSpacing == spacing)
+        return;
     m_hSpacing = spacing;
     updateGridSize();
     emit horizontalSpacingChanged();
 }
 
-void GridView::setVerticalSpacing(int spacing) {
-    if (m_vSpacing == spacing) return;
+void GridView::setVerticalSpacing(int spacing)
+{
+    if (m_vSpacing == spacing)
+        return;
     m_vSpacing = spacing;
     updateGridSize();
     emit verticalSpacingChanged();
 }
 
-void GridView::setMaxColumns(int maxCols) {
-    if (m_maxColumns == maxCols) return;
+void GridView::setMaxColumns(int maxCols)
+{
+    if (m_maxColumns == maxCols)
+        return;
     m_maxColumns = maxCols;
     updateGridSize();
     emit maxColumnsChanged();
 }
 
-bool GridView::isScrollChainingEnabled() const { return m_overscroll->isScrollChainingEnabled(); }
+bool GridView::isScrollChainingEnabled() const
+{
+    return m_overscroll->isScrollChainingEnabled();
+}
 
-void GridView::setScrollChainingEnabled(bool enabled) {
-    if (m_overscroll->isScrollChainingEnabled() == enabled) return;
+void GridView::setScrollChainingEnabled(bool enabled)
+{
+    if (m_overscroll->isScrollChainingEnabled() == enabled)
+        return;
     m_overscroll->setScrollChainingEnabled(enabled);
     emit scrollChainingEnabledChanged();
 }
 
-bool GridView::isOverscrollEnabled() const { return m_overscroll->isOverscrollEnabled(); }
+bool GridView::isOverscrollEnabled() const
+{
+    return m_overscroll->isOverscrollEnabled();
+}
 
-void GridView::setOverscrollEnabled(bool enabled) {
-    if (m_overscroll->isOverscrollEnabled() == enabled) return;
+void GridView::setOverscrollEnabled(bool enabled)
+{
+    if (m_overscroll->isOverscrollEnabled() == enabled)
+        return;
     m_overscroll->setOverscrollEnabled(enabled);
     emit overscrollEnabledChanged();
 }
 
-void GridView::updateGridSize() {
+void GridView::updateGridSize()
+{
     // gridSize covers cell + spacing; QListView lays out IconMode slots with it.
     // zh_CN: gridSize 包含 cell + spacing（QListView 以此布局 IconMode 每格）。
-    setGridSize(QSize(m_cellSize.width() + m_hSpacing,
-                      m_cellSize.height() + m_vSpacing));
+    setGridSize(QSize(m_cellSize.width() + m_hSpacing, m_cellSize.height() + m_vSpacing));
 }
 
 // ── Selection API ─────────────────────────────────────────────────────────────
 
-int GridView::selectedIndex() const {
+int GridView::selectedIndex() const
+{
     const QItemSelectionModel* selection = selectionModel();
     if (!selection)
         return -1;
@@ -248,7 +280,8 @@ int GridView::selectedIndex() const {
     return idxList.isEmpty() ? -1 : idxList.first().row();
 }
 
-QList<int> GridView::selectedRows() const {
+QList<int> GridView::selectedRows() const
+{
     QSet<int> seen;
     const QItemSelectionModel* selection = selectionModel();
     if (!selection)
@@ -260,7 +293,8 @@ QList<int> GridView::selectedRows() const {
     return rows;
 }
 
-void GridView::setSelectedIndex(int index) {
+void GridView::setSelectedIndex(int index)
+{
     const QAbstractItemModel* m = model();
     if (!m || index < 0 || index >= m->rowCount()) {
         if (selectionModel())
@@ -270,13 +304,15 @@ void GridView::setSelectedIndex(int index) {
     setCurrentIndex(m->index(index, 0));
 }
 
-::fluent::scrolling::ScrollBar* GridView::verticalFluentScrollBar() const {
+::fluent::scrolling::ScrollBar* GridView::verticalFluentScrollBar() const
+{
     return m_vScrollBar;
 }
 
 // ── Paint ─────────────────────────────────────────────────────────────────────
 
-void GridView::paintEvent(QPaintEvent* event) {
+void GridView::paintEvent(QPaintEvent* event)
+{
     const auto& c = themeColorsRef();
     const int r = CornerRadius::Control;
     // --- 1. Container background. zh_CN: 绘制容器背景。---
@@ -340,7 +376,8 @@ void GridView::paintEvent(QPaintEvent* event) {
         const QSet<int> srcSet(m_dragSourceIndices.begin(), m_dragSourceIndices.end());
         QList<int> remaining;
         for (int i = 0; i < model()->rowCount(); ++i)
-            if (!srcSet.contains(i)) remaining.append(i);
+            if (!srcSet.contains(i))
+                remaining.append(i);
 
         QRect targetRect;
         if (m_dropTargetIndex < remaining.size()) {
@@ -377,8 +414,9 @@ void GridView::paintEvent(QPaintEvent* event) {
         QPainter fp(viewport());
         fp.setRenderHint(QPainter::Antialiasing);
         fp.setOpacity(0.85);
-        QPoint pixPos = m_dragCurrentPos - QPoint(m_dragPixmap.width() / (2 * m_dragPixmap.devicePixelRatio()),
-                                                   m_dragPixmap.height() / (2 * m_dragPixmap.devicePixelRatio()));
+        QPoint pixPos = m_dragCurrentPos -
+                        QPoint(m_dragPixmap.width() / (2 * m_dragPixmap.devicePixelRatio()),
+                               m_dragPixmap.height() / (2 * m_dragPixmap.devicePixelRatio()));
         fp.drawPixmap(pixPos, m_dragPixmap);
         fp.end();
     }
@@ -420,43 +458,50 @@ void GridView::paintEvent(QPaintEvent* event) {
 
 // ── Layout ────────────────────────────────────────────────────────────────────
 
-void GridView::resizeEvent(QResizeEvent* event) {
+void GridView::resizeEvent(QResizeEvent* event)
+{
     QListView::resizeEvent(event);
     syncFluentScrollBar();
     layoutHeader();
 }
 
-void GridView::showEvent(QShowEvent* event) {
+void GridView::showEvent(QShowEvent* event)
+{
     QListView::showEvent(event);
     syncFluentScrollBar();
     layoutHeader();
     QTimer::singleShot(0, this, &GridView::syncFluentScrollBar);
 }
 
-void GridView::enterEvent(FluentEnterEvent* event) {
+void GridView::enterEvent(FluentEnterEvent* event)
+{
     setViewportHovered(true);
     QListView::enterEvent(event);
 }
 
-void GridView::leaveEvent(QEvent* event) {
+void GridView::leaveEvent(QEvent* event)
+{
     setViewportHovered(false);
     QListView::leaveEvent(event);
 }
 
 // ── Overscroll bounce ─────────────────────────────────────────────────────────
 
-void GridView::wheelEvent(QWheelEvent* event) {
+void GridView::wheelEvent(QWheelEvent* event)
+{
     m_overscroll->handleWheel(event);
 }
 
-int GridView::verticalOffset() const {
+int GridView::verticalOffset() const
+{
     // m_overscroll may be null while QListView's base setup queries the offset during
     // construction. zh_CN: 构造期间 QListView 基类会查询偏移，此时 m_overscroll 可能尚未创建。
     const qreal overscroll = m_overscroll ? m_overscroll->value() : 0.0;
     return QListView::verticalOffset() - qRound(overscroll);
 }
 
-QRect GridView::visualRect(const QModelIndex& index) const {
+QRect GridView::visualRect(const QModelIndex& index) const
+{
     QRect r = QListView::visualRect(index);
     if (m_paintingWithOffsets && index.isValid()) {
         const QPointF off = m_dragOffsets.value(index.row(), QPointF(0.0, 0.0));
@@ -465,7 +510,8 @@ QRect GridView::visualRect(const QModelIndex& index) const {
     return r;
 }
 
-void GridView::setViewportHovered(bool hovered) {
+void GridView::setViewportHovered(bool hovered)
+{
     if (m_viewportHovered == hovered)
         return;
     m_viewportHovered = hovered;
@@ -474,11 +520,13 @@ void GridView::setViewportHovered(bool hovered) {
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
-void GridView::onThemeUpdated() {
+void GridView::onThemeUpdated()
+{
     applyThemeStyle();
 }
 
-void GridView::applyThemeStyle() {
+void GridView::applyThemeStyle()
+{
     const auto& c = themeColorsRef();
 
     QPalette pal = palette();
@@ -506,9 +554,12 @@ void GridView::applyThemeStyle() {
         // and ignores child palettes) — e.g. the gallery sample card, where the header then renders
         // near-black in dark theme. A style-sheet color always wins. zh_CN: 用 label 自身样式表上色而非
         // palette：任何祖先设置样式表时会安装 QStyleSheetStyle 并忽略子 palette，header 在深色主题里变近黑；样式表颜色始终生效。
-        m_headerLabel->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
-                                         .arg(c.textPrimary.red()).arg(c.textPrimary.green())
-                                         .arg(c.textPrimary.blue()).arg(c.textPrimary.alpha()));
+        m_headerLabel->setStyleSheet(
+            QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
+                .arg(c.textPrimary.red())
+                .arg(c.textPrimary.green())
+                .arg(c.textPrimary.blue())
+                .arg(c.textPrimary.alpha()));
     }
 
     update();
@@ -516,8 +567,10 @@ void GridView::applyThemeStyle() {
 
 // ── Internal layout helpers ───────────────────────────────────────────────────
 
-void GridView::layoutHeader() {
-    if (!m_headerLabel) return;
+void GridView::layoutHeader()
+{
+    if (!m_headerLabel)
+        return;
     if (m_headerText.isEmpty()) {
         m_headerLabel->hide();
         return;
@@ -530,7 +583,8 @@ void GridView::layoutHeader() {
     m_headerLabel->raise();
 }
 
-void GridView::updateViewportMargins() {
+void GridView::updateViewportMargins()
+{
     if (m_headerLabel && !m_headerText.isEmpty()) {
         const int headerH = m_headerLabel->sizeHint().height() + ::Spacing::Gap::Normal;
         setViewportMargins(0, headerH, 0, 0);
@@ -539,9 +593,11 @@ void GridView::updateViewportMargins() {
     }
 }
 
-void GridView::syncFluentScrollBar() {
+void GridView::syncFluentScrollBar()
+{
     ::fluent::scrolling::suppressNativeScrollBars(verticalScrollBar(), horizontalScrollBar());
-    if (!m_vScrollBar) return;
+    if (!m_vScrollBar)
+        return;
     if (!::fluent::scrolling::mirrorNativeScrollBar(m_vScrollBar, verticalScrollBar()))
         return;
 
@@ -553,14 +609,17 @@ void GridView::syncFluentScrollBar() {
                                                 /*rightInset=*/0, /*bottomInset=*/2);
 }
 
-void GridView::refreshFluentScrollChrome() {
+void GridView::refreshFluentScrollChrome()
+{
     syncFluentScrollBar();
 }
 
 // ── Drag reorder ──────────────────────────────────────────────────────────────
 
-void GridView::setCanReorderItems(bool enabled) {
-    if (m_canReorderItems == enabled) return;
+void GridView::setCanReorderItems(bool enabled)
+{
+    if (m_canReorderItems == enabled)
+        return;
     m_canReorderItems = enabled;
     if (!m_canReorderItems && m_isDragging) {
         m_isDragging = false;
@@ -572,7 +631,8 @@ void GridView::setCanReorderItems(bool enabled) {
     emit canReorderItemsChanged();
 }
 
-void GridView::mousePressEvent(QMouseEvent* event) {
+void GridView::mousePressEvent(QMouseEvent* event)
+{
     m_dragPressIntercepted = false;
     if (m_canReorderItems && event->button() == Qt::LeftButton) {
         QModelIndex idx = indexAt(event->pos());
@@ -596,10 +656,12 @@ void GridView::mousePressEvent(QMouseEvent* event) {
     QListView::mousePressEvent(event);
 }
 
-void GridView::mouseMoveEvent(QMouseEvent* event) {
+void GridView::mouseMoveEvent(QMouseEvent* event)
+{
     if (m_canReorderItems && m_dragSourceIndex >= 0 && (event->buttons() & Qt::LeftButton)) {
         if (!m_isDragging) {
-            if ((event->pos() - m_dragStartPos).manhattanLength() >= QApplication::startDragDistance()) {
+            if ((event->pos() - m_dragStartPos).manhattanLength() >=
+                QApplication::startDragDistance()) {
                 m_isDragging = true;
 
                 // Collect dragged indices: multi-drag only when pressed on
@@ -607,8 +669,8 @@ void GridView::mouseMoveEvent(QMouseEvent* event) {
                 // Pressing on an unselected item drags only that item,
                 // same behavior as Extended mode.
                 m_dragSourceIndices.clear();
-                if (m_dragPressIntercepted && selectionModel()
-                    && !selectionModel()->selectedIndexes().isEmpty()) {
+                if (m_dragPressIntercepted && selectionModel() &&
+                    !selectionModel()->selectedIndexes().isEmpty()) {
                     for (const auto& idx : selectionModel()->selectedIndexes())
                         m_dragSourceIndices.append(idx.row());
                 }
@@ -642,7 +704,8 @@ void GridView::mouseMoveEvent(QMouseEvent* event) {
     // Selection only needs click events; our custom drag handles all move logic.
 }
 
-void GridView::mouseReleaseEvent(QMouseEvent* event) {
+void GridView::mouseReleaseEvent(QMouseEvent* event)
+{
     if (m_isDragging && event->button() == Qt::LeftButton) {
         const int dst = m_dropTargetIndex;
         const QList<int> srcs = m_dragSourceIndices;
@@ -674,15 +737,14 @@ void GridView::mouseReleaseEvent(QMouseEvent* event) {
                 selectionModel()->clearSelection();
                 for (int r = 0; r < sim->rowCount(); ++r) {
                     if (selectedItems.contains(sim->item(r)))
-                        selectionModel()->select(sim->index(r, 0),
-                                                 QItemSelectionModel::Select);
+                        selectionModel()->select(sim->index(r, 0), QItemSelectionModel::Select);
                 }
 
                 int firstInserted = qMin(dst, sim->rowCount() - (int)srcs.size());
                 // Use NoUpdate to avoid setCurrentIndex clearing selection
                 // (Extended mode's selectionCommand returns ClearAndSelect)
-                selectionModel()->setCurrentIndex(
-                    sim->index(firstInserted, 0), QItemSelectionModel::NoUpdate);
+                selectionModel()->setCurrentIndex(sim->index(firstInserted, 0),
+                                                  QItemSelectionModel::NoUpdate);
 
                 QPointer<GridView> guard(this);
                 emit itemReordered(srcs.first(), firstInserted);
@@ -722,13 +784,15 @@ void GridView::mouseReleaseEvent(QMouseEvent* event) {
     QListView::mouseReleaseEvent(event);
 }
 
-QPixmap GridView::renderItemPixmap(int row) const {
+QPixmap GridView::renderItemPixmap(int row) const
+{
     if (!model() || row < 0 || row >= model()->rowCount())
         return {};
 
     QModelIndex idx = model()->index(row, 0);
     QRect rect = QListView::visualRect(idx);
-    if (rect.isEmpty()) return {};
+    if (rect.isEmpty())
+        return {};
 
     const qreal dpr = devicePixelRatioF();
     QPixmap pix(rect.size() * dpr);
@@ -747,15 +811,19 @@ QPixmap GridView::renderItemPixmap(int row) const {
     return pix;
 }
 
-QPixmap GridView::renderDragPixmap() const {
-    if (m_dragSourceIndices.isEmpty()) return {};
+QPixmap GridView::renderDragPixmap() const
+{
+    if (m_dragSourceIndices.isEmpty())
+        return {};
 
     // Render the primary item
     QPixmap primary = renderItemPixmap(m_dragSourceIndex);
-    if (primary.isNull()) return {};
+    if (primary.isNull())
+        return {};
 
     const int count = m_dragSourceIndices.size();
-    if (count == 1) return primary;
+    if (count == 1)
+        return primary;
 
     // Stack effect: offset each layer by a few pixels
     const int stackOffset = 4;
@@ -782,19 +850,28 @@ QPixmap GridView::renderDragPixmap() const {
         if (layer > 0 && layer < count) {
             int picked = 0;
             for (int s : m_dragSourceIndices) {
-                if (s != m_dragSourceIndex) { srcIdx = s; picked++; if (picked >= layer) break; }
+                if (s != m_dragSourceIndex) {
+                    srcIdx = s;
+                    picked++;
+                    if (picked >= layer)
+                        break;
+                }
             }
         }
-        if (srcIdx < 0) continue;
+        if (srcIdx < 0)
+            continue;
 
         QPixmap layerPix = (srcIdx == m_dragSourceIndex) ? primary : renderItemPixmap(srcIdx);
-        if (layerPix.isNull()) continue;
+        if (layerPix.isNull())
+            continue;
 
         int x = stackOffset * layer;
         int y = stackOffset * layer;
 
-        if (layer > 0) p.setOpacity(0.6);
-        else p.setOpacity(1.0);
+        if (layer > 0)
+            p.setOpacity(0.6);
+        else
+            p.setOpacity(1.0);
         p.drawPixmap(x, y, layerPix);
     }
 
@@ -813,15 +890,17 @@ QPixmap GridView::renderDragPixmap() const {
     badgeFont.setBold(true);
     p.setFont(badgeFont);
     p.setPen(Qt::white);
-    p.drawText(QRect(badgeX, badgeY, badgeSize, badgeSize),
-               Qt::AlignCenter, QString::number(count));
+    p.drawText(QRect(badgeX, badgeY, badgeSize, badgeSize), Qt::AlignCenter,
+               QString::number(count));
 
     p.end();
     return composite;
 }
 
-int GridView::dropIndicatorIndex(const QPoint& pos) const {
-    if (!model()) return 0;
+int GridView::dropIndicatorIndex(const QPoint& pos) const
+{
+    if (!model())
+        return 0;
 
     const QSet<int> srcSet(m_dragSourceIndices.begin(), m_dragSourceIndices.end());
     const int count = model()->rowCount();
@@ -831,7 +910,8 @@ int GridView::dropIndicatorIndex(const QPoint& pos) const {
     qreal bestDist = std::numeric_limits<qreal>::max();
 
     for (int i = 0; i < count; ++i) {
-        if (srcSet.contains(i)) continue;
+        if (srcSet.contains(i))
+            continue;
         QRect r = QListView::visualRect(model()->index(i, 0));
 
         // Distance to left edge (insert before this item)
@@ -853,7 +933,8 @@ int GridView::dropIndicatorIndex(const QPoint& pos) const {
     return bestSlot;
 }
 
-int GridView::stabilizedDropIndicatorIndex(const QPoint& pos) const {
+int GridView::stabilizedDropIndicatorIndex(const QPoint& pos) const
+{
     const int candidate = dropIndicatorIndex(pos);
     if (!model() || m_dropTargetIndex < 0 || candidate == m_dropTargetIndex)
         return candidate;
@@ -871,30 +952,32 @@ int GridView::stabilizedDropIndicatorIndex(const QPoint& pos) const {
     if (!std::isfinite(currentDistance) || !std::isfinite(candidateDistance))
         return candidate;
 
-    return (candidateDistance + dropTargetHysteresis() < currentDistance)
-               ? candidate
-               : m_dropTargetIndex;
+    return (candidateDistance + dropTargetHysteresis() < currentDistance) ? candidate
+                                                                          : m_dropTargetIndex;
 }
 
-qreal GridView::dropIndicatorDistance(const QPoint& pos, int slot) const {
-    if (!model()) return std::numeric_limits<qreal>::max();
+qreal GridView::dropIndicatorDistance(const QPoint& pos, int slot) const
+{
+    if (!model())
+        return std::numeric_limits<qreal>::max();
 
     const QSet<int> srcSet(m_dragSourceIndices.begin(), m_dragSourceIndices.end());
     qreal bestDistance = std::numeric_limits<qreal>::max();
     int currentSlot = 0;
 
     for (int row = 0; row < model()->rowCount(); ++row) {
-        if (srcSet.contains(row)) continue;
+        if (srcSet.contains(row))
+            continue;
         const QRect rect = QListView::visualRect(model()->index(row, 0));
 
         if (slot == currentSlot) {
-            bestDistance = qMin(bestDistance,
-                                std::hypot(pos.x() - rect.left(), pos.y() - rect.center().y()));
+            bestDistance =
+                qMin(bestDistance, std::hypot(pos.x() - rect.left(), pos.y() - rect.center().y()));
         }
 
         if (slot == currentSlot + 1) {
-            bestDistance = qMin(bestDistance,
-                                std::hypot(pos.x() - rect.right(), pos.y() - rect.center().y()));
+            bestDistance =
+                qMin(bestDistance, std::hypot(pos.x() - rect.right(), pos.y() - rect.center().y()));
         }
 
         ++currentSlot;
@@ -903,18 +986,21 @@ qreal GridView::dropIndicatorDistance(const QPoint& pos, int slot) const {
     return bestDistance;
 }
 
-qreal GridView::dropTargetHysteresis() const {
+qreal GridView::dropTargetHysteresis() const
+{
     const int basis = qMax(1, qMin(m_cellSize.width(), m_cellSize.height()));
     return qBound<qreal>(4.0, basis * 0.06, 10.0);
 }
 
-void GridView::resetDragReorderFeedback() {
+void GridView::resetDragReorderFeedback()
+{
     m_dropTargetIndex = -1;
     m_dragPixmap = QPixmap();
     clearDragAnimations();
 }
 
-void GridView::updateDragDisplacement() {
+void GridView::updateDragDisplacement()
+{
     if (m_dragSourceIndices.isEmpty() || m_dropTargetIndex < 0 || !model()) {
         clearDragAnimations();
         return;
@@ -930,8 +1016,10 @@ void GridView::updateDragDisplacement() {
     // Calculate columns from viewport width
     const int vpW = viewport()->width();
     int cols = vpW / cell.width();
-    if (cols < 1) cols = 1;
-    if (m_maxColumns > 0 && cols > m_maxColumns) cols = m_maxColumns;
+    if (cols < 1)
+        cols = 1;
+    if (m_maxColumns > 0 && cols > m_maxColumns)
+        cols = m_maxColumns;
 
     // Helper: compute grid position for a given flat index
     auto gridPos = [&](int idx) -> QPointF {
@@ -944,7 +1032,8 @@ void GridView::updateDragDisplacement() {
     QList<int> remaining;
     remaining.reserve(itemCount - dragCount);
     for (int i = 0; i < itemCount; ++i) {
-        if (!srcSet.contains(i)) remaining.append(i);
+        if (!srcSet.contains(i))
+            remaining.append(i);
     }
 
     const int dst = qBound(0, m_dropTargetIndex, remaining.size());
@@ -1004,11 +1093,12 @@ void GridView::updateDragDisplacement() {
             viewport()->update();
         });
         m_dragAnims[i] = anim;
-        anim->start();
+        ::fluent::detail::startMotionTransition(anim, themeAnimation().fast);
     }
 }
 
-void GridView::clearDragAnimations() {
+void GridView::clearDragAnimations()
+{
     for (auto it = m_dragAnims.begin(); it != m_dragAnims.end(); ++it) {
         if (it.value()) {
             it.value()->stop();

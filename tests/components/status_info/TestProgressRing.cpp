@@ -1,9 +1,11 @@
 #include "components/basicinput/RepeatButton.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/status_info/ProgressRing.h"
 #include "components/textfields/NumberBox.h"
 #include <QApplication>
+#include <QAccessible>
 #include <QFont>
 #include <QFrame>
 #include <QGridLayout>
@@ -24,7 +26,8 @@ using fluent::textfields::NumberBox;
 class ProgressRingTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         QPalette pal = palette();
         pal.setColor(QPalette::Window, c.bgCanvas);
@@ -35,7 +38,9 @@ public:
 
 class ProgressRingTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
         window = new ProgressRingTestWindow();
         window->setWindowTitle("ProgressRing Visual Test");
@@ -43,16 +48,19 @@ protected:
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         delete window;
         window = nullptr;
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
 
     ProgressRingTestWindow* window = nullptr;
 };
 
-TEST_F(ProgressRingTest, DefaultPropertyValues) {
+TEST_F(ProgressRingTest, DefaultPropertyValues)
+{
     ProgressRing ring;
     EXPECT_FALSE(ring.isActive());
     EXPECT_TRUE(ring.isAnimationEnabled());
@@ -68,7 +76,8 @@ TEST_F(ProgressRingTest, DefaultPropertyValues) {
     EXPECT_FALSE(ring.isAnimationRunning());
 }
 
-TEST_F(ProgressRingTest, PropertySignalsAndSameValueNoSignal) {
+TEST_F(ProgressRingTest, PropertySignalsAndSameValueNoSignal)
+{
     ProgressRing ring;
 
     QSignalSpy activeSpy(&ring, &ProgressRing::isActiveChanged);
@@ -105,7 +114,8 @@ TEST_F(ProgressRingTest, PropertySignalsAndSameValueNoSignal) {
     EXPECT_EQ(statusSpy.count(), 1);
 }
 
-TEST_F(ProgressRingTest, RangeAndValueClamp) {
+TEST_F(ProgressRingTest, RangeAndValueClamp)
+{
     ProgressRing ring;
     QSignalSpy valueSpy(&ring, &ProgressRing::valueChanged);
 
@@ -128,7 +138,8 @@ TEST_F(ProgressRingTest, RangeAndValueClamp) {
     EXPECT_EQ(valueSpy.count(), 3);
 }
 
-TEST_F(ProgressRingTest, DeterminateProgressRatio) {
+TEST_F(ProgressRingTest, DeterminateProgressRatio)
+{
     ProgressRing ring;
     ring.setIsIndeterminate(false);
     ring.setValue(40);
@@ -137,7 +148,8 @@ TEST_F(ProgressRingTest, DeterminateProgressRatio) {
     EXPECT_DOUBLE_EQ(ring.progressRatio(), 0.4);
 }
 
-TEST_F(ProgressRingTest, SizeHintsReflectRingSize) {
+TEST_F(ProgressRingTest, SizeHintsReflectRingSize)
+{
     ProgressRing ring;
 
     ring.setRingSize(ProgressRing::ProgressRingSize::Small);
@@ -151,7 +163,8 @@ TEST_F(ProgressRingTest, SizeHintsReflectRingSize) {
     EXPECT_EQ(ring.sizeHint(), QSize(64, 64));
 }
 
-TEST_F(ProgressRingTest, StrokeWidthValidation) {
+TEST_F(ProgressRingTest, StrokeWidthValidation)
+{
     ProgressRing ring;
     QSignalSpy spy(&ring, &ProgressRing::strokeWidthChanged);
 
@@ -165,7 +178,8 @@ TEST_F(ProgressRingTest, StrokeWidthValidation) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(ProgressRingTest, BackgroundVisibleSignal) {
+TEST_F(ProgressRingTest, BackgroundVisibleSignal)
+{
     ProgressRing ring;
     QSignalSpy spy(&ring, &ProgressRing::backgroundVisibleChanged);
 
@@ -178,7 +192,8 @@ TEST_F(ProgressRingTest, BackgroundVisibleSignal) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(ProgressRingTest, AnimationLifecycle) {
+TEST_F(ProgressRingTest, AnimationLifecycle)
+{
     ProgressRing ring;
     ring.show();
     QApplication::processEvents();
@@ -224,7 +239,41 @@ TEST_F(ProgressRingTest, AnimationLifecycle) {
     EXPECT_FALSE(ring.isAnimationRunning());
 }
 
-TEST_F(ProgressRingTest, NumberBoxValueDrivesDeterminateRing) {
+TEST_F(ProgressRingTest, Contract_GlobalMotionStopsVisibleContinuousAnimation)
+{
+    ProgressRing ring;
+    ring.show();
+    QApplication::processEvents();
+    ring.setIsActive(true);
+    ASSERT_TRUE(ring.isAnimationRunning());
+
+    auto* accessible = QAccessible::queryAccessibleInterface(&ring);
+    ASSERT_NE(accessible, nullptr);
+    EXPECT_TRUE(accessible->state().busy);
+    EXPECT_TRUE(accessible->state().animated);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Reduced);
+    EXPECT_FALSE(ring.isAnimationRunning());
+    EXPECT_TRUE(ring.isActive());
+    EXPECT_TRUE(accessible->state().busy);
+    EXPECT_FALSE(accessible->state().animated);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    EXPECT_FALSE(ring.isAnimationRunning());
+    EXPECT_TRUE(accessible->state().busy);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    EXPECT_TRUE(ring.isAnimationRunning());
+
+    ring.setAnimationEnabled(false);
+    EXPECT_FALSE(ring.isAnimationRunning());
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Reduced);
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    EXPECT_FALSE(ring.isAnimationRunning());
+}
+
+TEST_F(ProgressRingTest, NumberBoxValueDrivesDeterminateRing)
+{
     window->resize(360, 120);
 
     auto* root = new QHBoxLayout(window);
@@ -244,9 +293,8 @@ TEST_F(ProgressRingTest, NumberBoxValueDrivesDeterminateRing) {
     progressBox->setLargeChange(10);
     progressBox->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);
 
-    QObject::connect(progressBox, &NumberBox::valueChanged, ring, [ring](double value) {
-        ring->setValue(static_cast<int>(value));
-    });
+    QObject::connect(progressBox, &NumberBox::valueChanged, ring,
+                     [ring](double value) { ring->setValue(static_cast<int>(value)); });
 
     progressBox->setValue(32);
     EXPECT_EQ(ring->value(), 32);
@@ -282,11 +330,13 @@ TEST_F(ProgressRingTest, NumberBoxValueDrivesDeterminateRing) {
     EXPECT_DOUBLE_EQ(ring->progressRatio(), 0.0);
 }
 
-TEST_F(ProgressRingTest, VisualCheck) {
+TEST_F(ProgressRingTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
+        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP() << "Skipping visual test in offscreen mode";
     }
 
@@ -315,20 +365,20 @@ TEST_F(ProgressRingTest, VisualCheck) {
     actions->addStretch();
     root->addLayout(actions);
 
-    auto* description = new QLabel(
-        "The ProgressRing has two different visual representations:\n"
-                 "Indeterminate - shows that a task is ongoing, but blocks "
-                 "user interaction.\n"
-                 "Determinate - shows how much progress has been made on a "
-                 "known amount of work.",
-        window);
+    auto* description = new QLabel("The ProgressRing has two different visual representations:\n"
+                                   "Indeterminate - shows that a task is ongoing, but blocks "
+                                   "user interaction.\n"
+                                   "Determinate - shows how much progress has been made on a "
+                                   "known amount of work.",
+                                   window);
     description->setWordWrap(true);
     root->addWidget(description);
 
     QObject::connect(themeButton, &QPushButton::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-            ? fluent::FluentElement::Dark
-            : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     auto makeSectionLabel = [this](const QString& text) {
@@ -381,9 +431,9 @@ TEST_F(ProgressRingTest, VisualCheck) {
     progressBox->setLargeChange(10);
     progressBox->setDisplayPrecision(0);
     progressBox->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);
-    QObject::connect(progressBox, &NumberBox::valueChanged, determinateRing, [determinateRing](double value) {
-        determinateRing->setValue(static_cast<int>(value));
-    });
+    QObject::connect(
+        progressBox, &NumberBox::valueChanged, determinateRing,
+        [determinateRing](double value) { determinateRing->setValue(static_cast<int>(value)); });
     progressBox->setValue(32);
 
     determinateLayout->addWidget(determinateRing, 0, Qt::AlignLeft | Qt::AlignVCenter);
@@ -401,10 +451,8 @@ TEST_F(ProgressRingTest, VisualCheck) {
     root->addWidget(variantsPanel);
 
     auto addExample = [grid, variantsPanel](int row, int column, const QString& labelText,
-                                            ProgressRing::ProgressRingSize size,
-                                            bool indeterminate,
-                                            ProgressRing::ProgressRingStatus status,
-                                            int value,
+                                            ProgressRing::ProgressRingSize size, bool indeterminate,
+                                            ProgressRing::ProgressRingStatus status, int value,
                                             bool backgroundVisible) {
         auto* cell = new QWidget(variantsPanel);
         auto* cellLayout = new QVBoxLayout(cell);
@@ -427,12 +475,18 @@ TEST_F(ProgressRingTest, VisualCheck) {
         grid->addWidget(cell, row, column);
     };
 
-    addExample(0, 0, "Small Indeterminate", ProgressRing::ProgressRingSize::Small, true, ProgressRing::ProgressRingStatus::Running, 0, false);
-    addExample(0, 1, "Medium Indeterminate", ProgressRing::ProgressRingSize::Medium, true, ProgressRing::ProgressRingStatus::Running, 0, true);
-    addExample(0, 2, "Large Indeterminate", ProgressRing::ProgressRingSize::Large, true, ProgressRing::ProgressRingStatus::Running, 0, true);
-    addExample(1, 0, "Determinate 40%", ProgressRing::ProgressRingSize::Medium, false, ProgressRing::ProgressRingStatus::Running, 40, true);
-    addExample(1, 1, "Paused", ProgressRing::ProgressRingSize::Medium, false, ProgressRing::ProgressRingStatus::Paused, 68, true);
-    addExample(1, 2, "Error", ProgressRing::ProgressRingSize::Medium, false, ProgressRing::ProgressRingStatus::Error, 68, true);
+    addExample(0, 0, "Small Indeterminate", ProgressRing::ProgressRingSize::Small, true,
+               ProgressRing::ProgressRingStatus::Running, 0, false);
+    addExample(0, 1, "Medium Indeterminate", ProgressRing::ProgressRingSize::Medium, true,
+               ProgressRing::ProgressRingStatus::Running, 0, true);
+    addExample(0, 2, "Large Indeterminate", ProgressRing::ProgressRingSize::Large, true,
+               ProgressRing::ProgressRingStatus::Running, 0, true);
+    addExample(1, 0, "Determinate 40%", ProgressRing::ProgressRingSize::Medium, false,
+               ProgressRing::ProgressRingStatus::Running, 40, true);
+    addExample(1, 1, "Paused", ProgressRing::ProgressRingSize::Medium, false,
+               ProgressRing::ProgressRingStatus::Paused, 68, true);
+    addExample(1, 2, "Error", ProgressRing::ProgressRingSize::Medium, false,
+               ProgressRing::ProgressRingStatus::Error, 68, true);
 
     window->show();
     qApp->exec();

@@ -16,6 +16,7 @@
 #include "components/dialogs_flyouts/CoachMark.h"
 #include "components/dialogs_flyouts/Popup.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -29,13 +30,14 @@ using fluent::basicinput::Button;
 using fluent::textfields::Label;
 
 // Shadow margin baked into the outer window size by CoachMark (see OverlayGeometry).
-static constexpr int kShadowMargin = ::fluent::overlay::defaultShadowMargin();  // 16
+static constexpr int kShadowMargin = ::fluent::overlay::defaultShadowMargin(); // 16
 
 // ── FluentTestWindow ─────────────────────────────────────────────────────────
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -44,7 +46,9 @@ public:
 // ── Fixture ──────────────────────────────────────────────────────────────────
 class CoachMarkTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         // Centre the host on screen so a coach mark fits on every side without clamping.
         // zh_CN: 把宿主窗口放在屏幕中央，使 coach mark 在任意方向都放得下、不被裁剪。
         const QRect avail = QGuiApplication::primaryScreen()->availableGeometry();
@@ -57,12 +61,15 @@ protected:
         ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         delete window;
         window = nullptr;
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
     }
 
-    Button* makeTarget(const QPoint& pos, const QSize& size = QSize(120, 32)) {
+    Button* makeTarget(const QPoint& pos, const QSize& size = QSize(120, 32))
+    {
         auto* btn = new Button("Target", window);
         btn->setFixedSize(size);
         btn->move(pos);
@@ -70,12 +77,14 @@ protected:
         return btn;
     }
 
-    QRect targetGlobalRect(QWidget* target) const {
+    QRect targetGlobalRect(QWidget* target) const
+    {
         return QRect(target->mapToGlobal(QPoint(0, 0)), target->size());
     }
 
     // Visible card rect of the coach mark in global coordinates.
-    QRect cardGlobalRect(CoachMark* coach) const {
+    QRect cardGlobalRect(CoachMark* coach) const
+    {
         const QRect card = ::fluent::overlay::visibleCardRect(coach->rect());
         return QRect(coach->mapToGlobal(card.topLeft()), card.size());
     }
@@ -84,7 +93,8 @@ protected:
 };
 
 // ── 1. Default property values match the documented contract ─────────────────
-TEST_F(CoachMarkTest, DefaultProperties) {
+TEST_F(CoachMarkTest, DefaultProperties)
+{
     CoachMark coach(window);
 
     EXPECT_FALSE(coach.isOpen());
@@ -99,7 +109,8 @@ TEST_F(CoachMarkTest, DefaultProperties) {
 }
 
 // ── 2. cardSize resizes the outer window and is a no-op when unchanged ────────
-TEST_F(CoachMarkTest, CardSizeResizesOuterWindowAndIsIdempotent) {
+TEST_F(CoachMarkTest, CardSizeResizesOuterWindowAndIsIdempotent)
+{
     CoachMark coach(window);
 
     coach.setCardSize(QSize(300, 160));
@@ -116,7 +127,8 @@ TEST_F(CoachMarkTest, CardSizeResizesOuterWindowAndIsIdempotent) {
 }
 
 // ── 3. open()/close() flip isOpen and emit the state signals once ────────────
-TEST_F(CoachMarkTest, OpenCloseToggleStateAndEmitOnce) {
+TEST_F(CoachMarkTest, OpenCloseToggleStateAndEmitOnce)
+{
     auto* target = makeTarget(QPoint(260, 220));
 
     CoachMark coach(window);
@@ -130,8 +142,7 @@ TEST_F(CoachMarkTest, OpenCloseToggleStateAndEmitOnce) {
     EXPECT_TRUE(coach.isOpen());
     ASSERT_EQ(openChangedSpy.count(), 1);
     EXPECT_TRUE(openChangedSpy.last().at(0).toBool());
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&]() { return openedSpy.count() == 1; }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&]() { return openedSpy.count() == 1; }, 1000));
 
     // Opening again while open is a no-op — no duplicate signals.
     coach.open();
@@ -143,8 +154,7 @@ TEST_F(CoachMarkTest, OpenCloseToggleStateAndEmitOnce) {
     ASSERT_EQ(openChangedSpy.count(), 2);
     EXPECT_FALSE(openChangedSpy.last().at(0).toBool());
     EXPECT_EQ(closedSpy.count(), 0);
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&]() { return closedSpy.count() == 1; }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&]() { return closedSpy.count() == 1; }, 1000));
 
     // Closing again while closed is a no-op.
     coach.close();
@@ -152,24 +162,49 @@ TEST_F(CoachMarkTest, OpenCloseToggleStateAndEmitOnce) {
     EXPECT_EQ(openChangedSpy.count(), 2);
 }
 
+TEST_F(CoachMarkTest, MotionPolicyDisabledSettlesOpenAndCloseSynchronously)
+{
+    auto* target = makeTarget(QPoint(260, 220));
+    CoachMark coach(window);
+    coach.setTarget(target);
+    QSignalSpy openChangedSpy(&coach, &CoachMark::openChanged);
+    QSignalSpy openedSpy(&coach, &CoachMark::opened);
+    QSignalSpy closedSpy(&coach, &CoachMark::closed);
+
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    coach.open();
+
+    EXPECT_TRUE(coach.isOpen());
+    EXPECT_EQ(openChangedSpy.count(), 1);
+    EXPECT_EQ(openedSpy.count(), 1);
+
+    coach.close();
+
+    EXPECT_FALSE(coach.isOpen());
+    EXPECT_FALSE(coach.isVisible());
+    EXPECT_EQ(openChangedSpy.count(), 2);
+    EXPECT_EQ(closedSpy.count(), 1);
+}
+
 // ── 4. setOpen() delegates to open()/close() ─────────────────────────────────
-TEST_F(CoachMarkTest, OpenChangedHandlerCanSynchronouslyDeleteCoachMark) {
+TEST_F(CoachMarkTest, OpenChangedHandlerCanSynchronouslyDeleteCoachMark)
+{
     auto* target = makeTarget(QPoint(260, 220));
     auto* coach = new CoachMark(window);
     coach->setTarget(target);
     QPointer<CoachMark> guard(coach);
-    QObject::connect(coach, &CoachMark::openChanged, window,
-                     [coach](bool open) {
-                         if (open)
-                             delete coach;
-                     });
+    QObject::connect(coach, &CoachMark::openChanged, window, [coach](bool open) {
+        if (open)
+            delete coach;
+    });
 
     coach->open();
 
     EXPECT_TRUE(guard.isNull());
 }
 
-TEST_F(CoachMarkTest, SetOpenDelegates) {
+TEST_F(CoachMarkTest, SetOpenDelegates)
+{
     auto* target = makeTarget(QPoint(260, 220));
 
     CoachMark coach(window);
@@ -181,7 +216,8 @@ TEST_F(CoachMarkTest, SetOpenDelegates) {
     EXPECT_FALSE(coach.isOpen());
 }
 
-TEST_F(CoachMarkTest, EscapeInUnrelatedWindowDoesNotDismiss) {
+TEST_F(CoachMarkTest, EscapeInUnrelatedWindowDoesNotDismiss)
+{
     auto* target = makeTarget(QPoint(260, 220));
     target->setFocus(Qt::OtherFocusReason);
 
@@ -203,7 +239,8 @@ TEST_F(CoachMarkTest, EscapeInUnrelatedWindowDoesNotDismiss) {
     coach.close();
 }
 
-TEST_F(CoachMarkTest, ActiveMenuHandlesEscapeBeforeCoachMark) {
+TEST_F(CoachMarkTest, ActiveMenuHandlesEscapeBeforeCoachMark)
+{
     auto* target = makeTarget(QPoint(260, 220));
     target->setFocus(Qt::OtherFocusReason);
 
@@ -214,20 +251,19 @@ TEST_F(CoachMarkTest, ActiveMenuHandlesEscapeBeforeCoachMark) {
     QMenu menu(target);
     menu.addAction(QStringLiteral("Action"));
     menu.popup(target->mapToGlobal(QPoint(0, target->height())));
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&menu]() { return menu.isVisible(); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&menu]() { return menu.isVisible(); }, 1000));
 
     QTest::keyClick(&menu, Qt::Key_Escape);
 
-    EXPECT_TRUE(QTest::qWaitFor(
-        [&menu]() { return !menu.isVisible(); }, 1000));
+    EXPECT_TRUE(QTest::qWaitFor([&menu]() { return !menu.isVisible(); }, 1000));
     EXPECT_TRUE(coach.isOpen());
 
     QTest::keyClick(target, Qt::Key_Escape);
     EXPECT_FALSE(coach.isOpen());
 }
 
-TEST_F(CoachMarkTest, RaisedSameWindowPopupHandlesEscapeBeforeCoachMark) {
+TEST_F(CoachMarkTest, RaisedSameWindowPopupHandlesEscapeBeforeCoachMark)
+{
     auto* target = makeTarget(QPoint(260, 220));
     target->setFocus(Qt::OtherFocusReason);
 
@@ -248,7 +284,8 @@ TEST_F(CoachMarkTest, RaisedSameWindowPopupHandlesEscapeBeforeCoachMark) {
     coach.close();
 }
 
-TEST_F(CoachMarkTest, HostsAsChildOfOwnerTopLevel) {
+TEST_F(CoachMarkTest, HostsAsChildOfOwnerTopLevel)
+{
     auto* target = makeTarget(QPoint(260, 220));
 
     CoachMark coach(window);
@@ -263,7 +300,8 @@ TEST_F(CoachMarkTest, HostsAsChildOfOwnerTopLevel) {
     coach.close();
 }
 
-TEST_F(CoachMarkTest, DoesNotPromoteOwnerContentToNative) {
+TEST_F(CoachMarkTest, DoesNotPromoteOwnerContentToNative)
+{
     // Same-window CoachMark must not sticky-promote overlapping owner content to WA_NativeWindow.
     // zh_CN: 同窗口 CoachMark 不得把重叠宿主内容粘性提升为 WA_NativeWindow。
     auto* content = new QWidget(window);
@@ -285,7 +323,8 @@ TEST_F(CoachMarkTest, DoesNotPromoteOwnerContentToNative) {
 }
 
 // ── 5. Bottom placement: card sits below the target, horizontally centred ────
-TEST_F(CoachMarkTest, BottomPlacementSitsBelowTarget) {
+TEST_F(CoachMarkTest, BottomPlacementSitsBelowTarget)
+{
     auto* target = makeTarget(QPoint(260, 180));
 
     CoachMark coach(window);
@@ -303,7 +342,8 @@ TEST_F(CoachMarkTest, BottomPlacementSitsBelowTarget) {
 }
 
 // ── 6. Right placement: card sits to the right of the target, vert. centred ──
-TEST_F(CoachMarkTest, RightPlacementSitsRightOfTarget) {
+TEST_F(CoachMarkTest, RightPlacementSitsRightOfTarget)
+{
     auto* target = makeTarget(QPoint(180, 200));
 
     CoachMark coach(window);
@@ -321,7 +361,8 @@ TEST_F(CoachMarkTest, RightPlacementSitsRightOfTarget) {
 }
 
 // ── 7. No target → centred over the owner window ─────────────────────────────
-TEST_F(CoachMarkTest, NoTargetCentersOverOwner) {
+TEST_F(CoachMarkTest, NoTargetCentersOverOwner)
+{
     CoachMark coach(window);
     coach.setCardSize(QSize(300, 140));
     coach.open();
@@ -331,7 +372,8 @@ TEST_F(CoachMarkTest, NoTargetCentersOverOwner) {
     EXPECT_NEAR(coach.geometry().center().y(), window->rect().center().y(), 2);
 }
 
-TEST_F(CoachMarkTest, SameWindowSurfaceCentersInsideOwnerAndTracksResize) {
+TEST_F(CoachMarkTest, SameWindowSurfaceCentersInsideOwnerAndTracksResize)
+{
     window->setMinimumSize(0, 0);
     window->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
 
@@ -350,15 +392,16 @@ TEST_F(CoachMarkTest, SameWindowSurfaceCentersInsideOwnerAndTracksResize) {
     window->resize(760, 560);
     const bool recentered = QTest::qWaitFor(
         [&]() {
-            return std::abs(coach.geometry().center().x() - window->rect().center().x()) <= 2
-                && std::abs(coach.geometry().center().y() - window->rect().center().y()) <= 2;
+            return std::abs(coach.geometry().center().x() - window->rect().center().x()) <= 2 &&
+                   std::abs(coach.geometry().center().y() - window->rect().center().y()) <= 2;
         },
         1000);
     EXPECT_TRUE(recentered);
 }
 
 // ── 8. Retargeting while open keeps it open and glides to the new target ─────
-TEST_F(CoachMarkTest, RetargetWhileOpenGlidesToNewTarget) {
+TEST_F(CoachMarkTest, RetargetWhileOpenGlidesToNewTarget)
+{
     auto* first = makeTarget(QPoint(160, 200));
     auto* second = makeTarget(QPoint(420, 200));
 
@@ -385,7 +428,8 @@ TEST_F(CoachMarkTest, RetargetWhileOpenGlidesToNewTarget) {
 }
 
 // ── 9. Destroyed target is handled safely (QPointer auto-clears) ─────────────
-TEST_F(CoachMarkTest, TracksMovingTargetAncestorAndClosesWhenClipped) {
+TEST_F(CoachMarkTest, TracksMovingTargetAncestorAndClosesWhenClipped)
+{
     auto* scrollingContent = new QWidget(window);
     scrollingContent->setGeometry(0, 0, window->width(), 900);
     scrollingContent->show();
@@ -409,7 +453,8 @@ TEST_F(CoachMarkTest, TracksMovingTargetAncestorAndClosesWhenClipped) {
     QTRY_VERIFY_WITH_TIMEOUT(!coach.isOpen(), 1000);
 }
 
-TEST_F(CoachMarkTest, TargetDestroyedClearsPointer) {
+TEST_F(CoachMarkTest, TargetDestroyedClearsPointer)
+{
     auto* target = makeTarget(QPoint(260, 220));
 
     CoachMark coach(window);
@@ -426,7 +471,8 @@ TEST_F(CoachMarkTest, TargetDestroyedClearsPointer) {
 }
 
 // ── 10. The Placement enum is registered for the meta-object / QML ───────────
-TEST_F(CoachMarkTest, OpenInheritsThemeOverrideFromTarget) {
+TEST_F(CoachMarkTest, OpenInheritsThemeOverrideFromTarget)
+{
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     window->onThemeUpdated();
 
@@ -450,7 +496,8 @@ TEST_F(CoachMarkTest, OpenInheritsThemeOverrideFromTarget) {
     coach.close();
 }
 
-TEST_F(CoachMarkTest, PlacementEnumIsRegistered) {
+TEST_F(CoachMarkTest, PlacementEnumIsRegistered)
+{
     const int index = CoachMark::staticMetaObject.indexOfEnumerator("Placement");
     ASSERT_GE(index, 0);
     const QMetaEnum meta = CoachMark::staticMetaObject.enumerator(index);
@@ -460,11 +507,14 @@ TEST_F(CoachMarkTest, PlacementEnumIsRegistered) {
     const int surfaceIndex = CoachMark::staticMetaObject.indexOfEnumerator("SurfaceMode");
     ASSERT_GE(surfaceIndex, 0);
     const QMetaEnum surfaceMeta = CoachMark::staticMetaObject.enumerator(surfaceIndex);
-    EXPECT_EQ(surfaceMeta.keyToValue("TopLevelSurface"), static_cast<int>(CoachMark::TopLevelSurface));
-    EXPECT_EQ(surfaceMeta.keyToValue("SameWindowSurface"), static_cast<int>(CoachMark::SameWindowSurface));
+    EXPECT_EQ(surfaceMeta.keyToValue("TopLevelSurface"),
+              static_cast<int>(CoachMark::TopLevelSurface));
+    EXPECT_EQ(surfaceMeta.keyToValue("SameWindowSurface"),
+              static_cast<int>(CoachMark::SameWindowSurface));
 }
 
-TEST_F(CoachMarkTest, VisualCheck) {
+TEST_F(CoachMarkTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -487,7 +537,8 @@ TEST_F(CoachMarkTest, VisualCheck) {
         title->setFluentTypography(Typography::FontRole::BodyStrong);
         layout->addWidget(title);
         auto* body = new Label("The tail points back at the control you clicked. "
-                               "Pick another target to watch it glide.", host);
+                               "Pick another target to watch it glide.",
+                               host);
         body->setFluentTypography(Typography::FontRole::Body);
         body->setWordWrap(true);
         layout->addWidget(body);
@@ -497,8 +548,7 @@ TEST_F(CoachMarkTest, VisualCheck) {
         QObject::connect(gotIt, &Button::clicked, coach, [coach]() { coach->close(); });
         layout->addWidget(gotIt, 0, Qt::AlignRight);
 
-        auto addTarget = [&](const QString& label, CoachMark::Placement placement,
-                             int x, int y) {
+        auto addTarget = [&](const QString& label, CoachMark::Placement placement, int x, int y) {
             auto* btn = new Button(label, visual);
             btn->setFixedSize(140, 32);
             btn->move(x, y);

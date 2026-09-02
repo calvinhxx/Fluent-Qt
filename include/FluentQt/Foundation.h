@@ -3,6 +3,7 @@
 
 #include <components/foundation/FontIcon.h>
 #include <components/foundation/FluentElement.h>
+#include <components/foundation/MotionPolicy.h>
 #include <components/foundation/QMLPlus.h>
 #include <components/foundation/ThemeRegistry.h>
 #include <components/foundation/UserTheme.h>

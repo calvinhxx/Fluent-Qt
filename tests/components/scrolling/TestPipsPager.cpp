@@ -17,6 +17,7 @@
 
 #include "components/collections/FlipView.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/scrolling/PipsPager.h"
 #include "design/Typography.h"
@@ -30,7 +31,8 @@ class PipsPagerTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
 
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& colors = themeColors();
         QPalette pal = palette();
         pal.setColor(QPalette::Window, colors.bgCanvas);
@@ -41,16 +43,14 @@ public:
 
 class PipsPagerFlipPage : public QWidget {
 public:
-    PipsPagerFlipPage(const QColor& accent, const QColor& fill, const QString& title, QWidget* parent = nullptr)
-        : QWidget(parent)
-        , m_accent(accent)
-        , m_fill(fill)
-        , m_title(title)
-    {
-    }
+    PipsPagerFlipPage(const QColor& accent, const QColor& fill, const QString& title,
+                      QWidget* parent = nullptr)
+        : QWidget(parent), m_accent(accent), m_fill(fill), m_title(title)
+    {}
 
 protected:
-    void paintEvent(QPaintEvent*) override {
+    void paintEvent(QPaintEvent*) override
+    {
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
 
@@ -88,22 +88,22 @@ void showAndProcess(QWidget& widget)
 // resulting Accessibility permission dialog that QTest::mouse*/keyClick cause.
 void simulateMouseMove(QWidget* w, QPoint pt)
 {
-    QMouseEvent ev(QEvent::MouseMove, QPointF(pt), QPointF(w->mapToGlobal(pt)),
-                   Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+    QMouseEvent ev(QEvent::MouseMove, QPointF(pt), QPointF(w->mapToGlobal(pt)), Qt::NoButton,
+                   Qt::NoButton, Qt::NoModifier);
     QApplication::sendEvent(w, &ev);
 }
 
 void simulateMousePress(QWidget* w, Qt::MouseButton btn, Qt::KeyboardModifiers mod, QPoint pt)
 {
-    QMouseEvent ev(QEvent::MouseButtonPress, QPointF(pt), QPointF(w->mapToGlobal(pt)),
-                   btn, btn, mod);
+    QMouseEvent ev(QEvent::MouseButtonPress, QPointF(pt), QPointF(w->mapToGlobal(pt)), btn, btn,
+                   mod);
     QApplication::sendEvent(w, &ev);
 }
 
 void simulateMouseRelease(QWidget* w, Qt::MouseButton btn, Qt::KeyboardModifiers mod, QPoint pt)
 {
-    QMouseEvent ev(QEvent::MouseButtonRelease, QPointF(pt), QPointF(w->mapToGlobal(pt)),
-                   btn, Qt::NoButton, mod);
+    QMouseEvent ev(QEvent::MouseButtonRelease, QPointF(pt), QPointF(w->mapToGlobal(pt)), btn,
+                   Qt::NoButton, mod);
     QApplication::sendEvent(w, &ev);
 }
 
@@ -154,7 +154,8 @@ QRect paintedBounds(const QImage& image, QRect clip)
 
     for (int y = clip.top(); y <= clip.bottom(); ++y) {
         for (int x = clip.left(); x <= clip.right(); ++x) {
-            if (qAlpha(image.pixel(x, y)) <= 0) continue;
+            if (qAlpha(image.pixel(x, y)) <= 0)
+                continue;
             if (!found) {
                 bounds = QRect(QPoint(x, y), QSize(1, 1));
                 found = true;
@@ -178,16 +179,21 @@ protected:
         qRegisterMetaType<Qt::Orientation>("Qt::Orientation");
     }
 
-    void SetUp() override {
+    void SetUp() override
+    {
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
 };
 
-TEST_F(PipsPagerTest, DefaultPropertyValues) {
+TEST_F(PipsPagerTest, DefaultPropertyValues)
+{
     PipsPager pager;
 
     EXPECT_EQ(pager.numberOfPages(), 5);
@@ -213,14 +219,16 @@ TEST_F(PipsPagerTest, DefaultPropertyValues) {
     EXPECT_EQ(pager.accessibleDescription(), QStringLiteral("1 / 5"));
 }
 
-TEST_F(PipsPagerTest, AnimationOffsetsRemainInTheMetaObject) {
+TEST_F(PipsPagerTest, AnimationOffsetsRemainInTheMetaObject)
+{
     PipsPager pager;
 
     EXPECT_GE(pager.metaObject()->indexOfProperty("selectedVisualOffset"), 0);
     EXPECT_GE(pager.metaObject()->indexOfProperty("visibleWindowOffset"), 0);
 }
 
-TEST_F(PipsPagerTest, PropertySignalsSkipDuplicateValues) {
+TEST_F(PipsPagerTest, PropertySignalsSkipDuplicateValues)
+{
     PipsPager pager;
 
     QSignalSpy selectedSpy(&pager, &PipsPager::selectedPageIndexChanged);
@@ -295,7 +303,8 @@ TEST_F(PipsPagerTest, PropertySignalsSkipDuplicateValues) {
     EXPECT_EQ(animationDurationSpy.count(), 1);
 }
 
-TEST_F(PipsPagerTest, PageCountClampsSelectionAndZeroPagesDisableNavigation) {
+TEST_F(PipsPagerTest, PageCountClampsSelectionAndZeroPagesDisableNavigation)
+{
     PipsPager pager;
     pager.setSelectedPageIndex(4);
     EXPECT_EQ(pager.selectedPageIndex(), 4);
@@ -318,7 +327,8 @@ TEST_F(PipsPagerTest, PageCountClampsSelectionAndZeroPagesDisableNavigation) {
     EXPECT_EQ(pager.numberOfPages(), 0);
 }
 
-TEST_F(PipsPagerTest, VisiblePipWindowCentersSelectedPageWhenPossible) {
+TEST_F(PipsPagerTest, VisiblePipWindowCentersSelectedPageWhenPossible)
+{
     PipsPager pager;
     pager.setNumberOfPages(10);
     pager.setMaxVisiblePips(5);
@@ -339,7 +349,8 @@ TEST_F(PipsPagerTest, VisiblePipWindowCentersSelectedPageWhenPossible) {
     EXPECT_TRUE(pager.pipHitRect(9).isNull());
 }
 
-TEST_F(PipsPagerTest, SizeHintAndHitRectsFollowOrientationAndButtonSlots) {
+TEST_F(PipsPagerTest, SizeHintAndHitRectsFollowOrientationAndButtonSlots)
+{
     PipsPager pager;
     pager.setNumberOfPages(5);
     pager.setSelectedPageIndex(2);
@@ -362,7 +373,8 @@ TEST_F(PipsPagerTest, SizeHintAndHitRectsFollowOrientationAndButtonSlots) {
     EXPECT_EQ(pager.pipHitRect(4), QRect(6, 72, 12, 12));
 }
 
-TEST_F(PipsPagerTest, ConfigurableMetricsUpdateLayoutAndRendering) {
+TEST_F(PipsPagerTest, ConfigurableMetricsUpdateLayoutAndRendering)
+{
     PipsPager pager;
     pager.setNumberOfPages(5);
     pager.setPipCellSize(16);
@@ -388,7 +400,8 @@ TEST_F(PipsPagerTest, ConfigurableMetricsUpdateLayoutAndRendering) {
     EXPECT_GE(inactiveBounds.width(), 5);
 }
 
-TEST_F(PipsPagerTest, PointerCanSelectPipsAndNavigateButtonsWithoutWrapping) {
+TEST_F(PipsPagerTest, PointerCanSelectPipsAndNavigateButtonsWithoutWrapping)
+{
     PipsPager pager;
     pager.setNumberOfPages(5);
     pager.setFixedSize(pager.sizeHint());
@@ -419,7 +432,8 @@ TEST_F(PipsPagerTest, PointerCanSelectPipsAndNavigateButtonsWithoutWrapping) {
     EXPECT_EQ(pager.selectedPageIndex(), 4);
 }
 
-TEST_F(PipsPagerTest, KeyboardNavigationMatchesOrientationAndDoesNotWrap) {
+TEST_F(PipsPagerTest, KeyboardNavigationMatchesOrientationAndDoesNotWrap)
+{
     PipsPager pager;
     pager.setNumberOfPages(5);
     pager.setSelectedPageIndex(2);
@@ -444,8 +458,7 @@ TEST_F(PipsPagerTest, KeyboardNavigationMatchesOrientationAndDoesNotWrap) {
     pager.setLayoutDirection(Qt::RightToLeft);
     pager.setSelectedPageIndex(2);
     pager.setFixedSize(pager.sizeHint());
-    EXPECT_GT(pager.pipHitRect(0).center().x(),
-              pager.pipHitRect(1).center().x());
+    EXPECT_GT(pager.pipHitRect(0).center().x(), pager.pipHitRect(1).center().x());
     simulateKeyClick(&pager, Qt::Key_Left);
     EXPECT_EQ(pager.selectedPageIndex(), 3);
     simulateKeyClick(&pager, Qt::Key_Right);
@@ -460,7 +473,8 @@ TEST_F(PipsPagerTest, KeyboardNavigationMatchesOrientationAndDoesNotWrap) {
     EXPECT_EQ(pager.selectedPageIndex(), 4);
 }
 
-TEST_F(PipsPagerTest, ApplicationAccessibilityOverrideIsPreserved) {
+TEST_F(PipsPagerTest, ApplicationAccessibilityOverrideIsPreserved)
+{
     PipsPager pager;
     pager.setNumberOfPages(5);
     pager.setAccessibleDescription(QStringLiteral("Onboarding step"));
@@ -469,7 +483,8 @@ TEST_F(PipsPagerTest, ApplicationAccessibilityOverrideIsPreserved) {
     EXPECT_EQ(pager.accessibleDescription(), QStringLiteral("Onboarding step"));
 }
 
-TEST_F(PipsPagerTest, DisabledStateBlocksPointerAndKeyboardInput) {
+TEST_F(PipsPagerTest, DisabledStateBlocksPointerAndKeyboardInput)
+{
     PipsPager pager;
     pager.setNumberOfPages(5);
     pager.setFixedSize(pager.sizeHint());
@@ -485,7 +500,8 @@ TEST_F(PipsPagerTest, DisabledStateBlocksPointerAndKeyboardInput) {
     EXPECT_GT(paintedPixelCount(image), 0);
 }
 
-TEST_F(PipsPagerTest, RenderingUsesExpectedPipStateSizesAndThemeColors) {
+TEST_F(PipsPagerTest, RenderingUsesExpectedPipStateSizesAndThemeColors)
+{
     PipsPager pager;
     pager.setNumberOfPages(5);
     pager.setFixedSize(pager.sizeHint());
@@ -518,7 +534,8 @@ TEST_F(PipsPagerTest, RenderingUsesExpectedPipStateSizesAndThemeColors) {
     EXPECT_NE(lightCenter.rgb(), darkCenter.rgb());
 }
 
-TEST_F(PipsPagerTest, SelectionAnimationMovesActivePipBetweenVisibleCells) {
+TEST_F(PipsPagerTest, SelectionAnimationMovesActivePipBetweenVisibleCells)
+{
     PipsPager pager;
     pager.setNumberOfPages(5);
     pager.setSelectionAnimationDuration(80);
@@ -544,7 +561,8 @@ TEST_F(PipsPagerTest, SelectionAnimationMovesActivePipBetweenVisibleCells) {
     EXPECT_GE(secondEndBounds.width(), 5);
 }
 
-TEST_F(PipsPagerTest, SelectionAnimationShowsMotionWhenVisibleWindowRecenters) {
+TEST_F(PipsPagerTest, SelectionAnimationShowsMotionWhenVisibleWindowRecenters)
+{
     PipsPager pager;
     pager.setNumberOfPages(7);
     pager.setMaxVisiblePips(5);
@@ -571,7 +589,8 @@ TEST_F(PipsPagerTest, SelectionAnimationShowsMotionWhenVisibleWindowRecenters) {
     EXPECT_GT(paintedPixelCount(midImage), paintedPixelCount(endImage));
 }
 
-TEST_F(PipsPagerTest, SelectionAnimationCanBeDisabled) {
+TEST_F(PipsPagerTest, SelectionAnimationCanBeDisabled)
+{
     PipsPager pager;
     pager.setNumberOfPages(5);
     pager.setSelectionAnimationEnabled(false);
@@ -587,12 +606,32 @@ TEST_F(PipsPagerTest, SelectionAnimationCanBeDisabled) {
     EXPECT_GE(paintedBounds(image, secondCell).width(), 5);
 }
 
+TEST_F(PipsPagerTest, DisabledMotionPolicyConvergesSelectionToItsFinalCell)
+{
+    PipsPager pager;
+    pager.setNumberOfPages(10);
+    pager.setMaxVisiblePips(5);
+    pager.setSelectionAnimationDuration(400);
+    pager.setFixedSize(pager.sizeHint());
+    showAndProcess(pager);
 
-TEST_F(PipsPagerTest, VisualCheck) {
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    pager.setSelectedPageIndex(9);
+
+    EXPECT_DOUBLE_EQ(pager.property("selectedVisualOffset").toDouble(), 4.0);
+    EXPECT_DOUBLE_EQ(pager.property("visibleWindowOffset").toDouble(), 5.0);
+    const QImage image = renderPager(pager);
+    EXPECT_LE(paintedBounds(image, pager.pipHitRect(5)).width(), 5);
+    EXPECT_GE(paintedBounds(image, pager.pipHitRect(9)).width(), 5);
+}
+
+TEST_F(PipsPagerTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
+        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP() << "Skipping visual test in offscreen mode";
     }
 
@@ -618,9 +657,10 @@ TEST_F(PipsPagerTest, VisualCheck) {
     root->addLayout(header);
 
     QObject::connect(themeButton, &QPushButton::clicked, [&window]() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-            ? fluent::FluentElement::Dark
-            : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
         window.onThemeUpdated();
     });
 
@@ -640,13 +680,20 @@ TEST_F(PipsPagerTest, VisualCheck) {
     auto* flipView = new FlipView(flipFrame);
     flipView->setFixedSize(520, 292);
     flipView->setShowPageIndicator(false);
-    flipView->addPage(new PipsPagerFlipPage(QColor("#375f90"), QColor("#b9d7ea"), "Coastal route", flipView));
-    flipView->addPage(new PipsPagerFlipPage(QColor("#3f7b52"), QColor("#c8e3b4"), "Forest trail", flipView));
-    flipView->addPage(new PipsPagerFlipPage(QColor("#9a6339"), QColor("#f0cf9a"), "Desert light", flipView));
-    flipView->addPage(new PipsPagerFlipPage(QColor("#7b4f91"), QColor("#d9c2ea"), "Evening ridge", flipView));
-    flipView->addPage(new PipsPagerFlipPage(QColor("#4b6d73"), QColor("#c7e6e4"), "Harbor morning", flipView));
-    flipView->addPage(new PipsPagerFlipPage(QColor("#8c4f4f"), QColor("#e9c7c7"), "Mountain dusk", flipView)); 
-    flipView->addPage(new PipsPagerFlipPage(QColor("#5a5a5a"), QColor("#dcdcdc"), "City skyline", flipView));   
+    flipView->addPage(
+        new PipsPagerFlipPage(QColor("#375f90"), QColor("#b9d7ea"), "Coastal route", flipView));
+    flipView->addPage(
+        new PipsPagerFlipPage(QColor("#3f7b52"), QColor("#c8e3b4"), "Forest trail", flipView));
+    flipView->addPage(
+        new PipsPagerFlipPage(QColor("#9a6339"), QColor("#f0cf9a"), "Desert light", flipView));
+    flipView->addPage(
+        new PipsPagerFlipPage(QColor("#7b4f91"), QColor("#d9c2ea"), "Evening ridge", flipView));
+    flipView->addPage(
+        new PipsPagerFlipPage(QColor("#4b6d73"), QColor("#c7e6e4"), "Harbor morning", flipView));
+    flipView->addPage(
+        new PipsPagerFlipPage(QColor("#8c4f4f"), QColor("#e9c7c7"), "Mountain dusk", flipView));
+    flipView->addPage(
+        new PipsPagerFlipPage(QColor("#5a5a5a"), QColor("#dcdcdc"), "City skyline", flipView));
     flipLayout->addWidget(flipView, 0, Qt::AlignHCenter);
 
     auto* flipPager = new PipsPager(flipFrame);
@@ -655,10 +702,10 @@ TEST_F(PipsPagerTest, VisualCheck) {
     flipPager->setSelectionAnimationDuration(220);
     flipLayout->addWidget(flipPager, 0, Qt::AlignHCenter);
 
-    QObject::connect(flipPager, &PipsPager::selectedPageIndexChanged,
-                     flipView, &FlipView::setCurrentIndex);
-    QObject::connect(flipView, &FlipView::currentIndexChanged,
-                     flipPager, &PipsPager::setSelectedPageIndex);
+    QObject::connect(flipPager, &PipsPager::selectedPageIndexChanged, flipView,
+                     &FlipView::setCurrentIndex);
+    QObject::connect(flipView, &FlipView::currentIndexChanged, flipPager,
+                     &PipsPager::setSelectedPageIndex);
 
     root->addWidget(flipFrame);
 
@@ -691,7 +738,8 @@ TEST_F(PipsPagerTest, VisualCheck) {
     auto* hoverPager = new PipsPager(&window);
     hoverPager->setNumberOfPages(8);
     hoverPager->setSelectedPageIndex(4);
-    hoverPager->setPreviousButtonVisibility(PipsPager::PipsPagerButtonVisibility::VisibleOnPointerOver);
+    hoverPager->setPreviousButtonVisibility(
+        PipsPager::PipsPagerButtonVisibility::VisibleOnPointerOver);
     hoverPager->setNextButtonVisibility(PipsPager::PipsPagerButtonVisibility::VisibleOnPointerOver);
     addRow("Carets on pointer", hoverPager);
 
@@ -725,10 +773,11 @@ TEST_F(PipsPagerTest, VisualCheck) {
     bindingPager->setNextButtonVisibility(PipsPager::PipsPagerButtonVisibility::Visible);
     auto* contentLabel = new QLabel(bindingFrame);
     auto updateContent = [bindingPager, contentLabel]() {
-        contentLabel->setText(QStringLiteral("Page %1 content")
-            .arg(bindingPager->selectedPageIndex() + 1));
+        contentLabel->setText(
+            QStringLiteral("Page %1 content").arg(bindingPager->selectedPageIndex() + 1));
     };
-    QObject::connect(bindingPager, &PipsPager::selectedPageIndexChanged, contentLabel, updateContent);
+    QObject::connect(bindingPager, &PipsPager::selectedPageIndexChanged, contentLabel,
+                     updateContent);
     updateContent();
     bindingRow->addWidget(bindingLabel);
     bindingRow->addWidget(bindingPager, 0, Qt::AlignCenter);

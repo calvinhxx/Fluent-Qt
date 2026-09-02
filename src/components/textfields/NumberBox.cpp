@@ -25,49 +25,62 @@ namespace {
 
 constexpr double kNumberEpsilon = 1e-12;
 
-bool isNan(double value) {
+bool isNan(double value)
+{
     return std::isnan(value);
 }
 
-bool isFiniteNumber(double value) {
+bool isFiniteNumber(double value)
+{
     return std::isfinite(value);
 }
 
-bool numbersEqual(double left, double right) {
-    if (isNan(left) && isNan(right)) return true;
-    if (left == right) return true;
-    if (!isFiniteNumber(left) || !isFiniteNumber(right)) return false;
+bool numbersEqual(double left, double right)
+{
+    if (isNan(left) && isNan(right))
+        return true;
+    if (left == right)
+        return true;
+    if (!isFiniteNumber(left) || !isFiniteNumber(right))
+        return false;
     return std::abs(left - right) <= kNumberEpsilon;
 }
 
 class ExpressionParser {
 public:
-    explicit ExpressionParser(const QString& text)
-        : m_text(text) {}
+    explicit ExpressionParser(const QString& text) : m_text(text) {}
 
-    bool parse(double* result) {
-        if (!result) return false;
+    bool parse(double* result)
+    {
+        if (!result)
+            return false;
         m_pos = 0;
         double value = 0.0;
-        if (!parseAddSub(value)) return false;
+        if (!parseAddSub(value))
+            return false;
         skipSpaces();
-        if (m_pos != m_text.size() || !isFiniteNumber(value)) return false;
+        if (m_pos != m_text.size() || !isFiniteNumber(value))
+            return false;
         *result = value;
         return true;
     }
 
 private:
-    bool parseAddSub(double& value) {
-        if (!parseMulDiv(value)) return false;
+    bool parseAddSub(double& value)
+    {
+        if (!parseMulDiv(value))
+            return false;
         while (true) {
             skipSpaces();
             if (match('+')) {
                 double rhs = 0.0;
-                if (!parseMulDiv(rhs)) return false;
+                if (!parseMulDiv(rhs))
+                    return false;
                 value += rhs;
             } else if (match('-')) {
                 double rhs = 0.0;
-                if (!parseMulDiv(rhs)) return false;
+                if (!parseMulDiv(rhs))
+                    return false;
                 value -= rhs;
             } else {
                 return true;
@@ -75,17 +88,21 @@ private:
         }
     }
 
-    bool parseMulDiv(double& value) {
-        if (!parsePower(value)) return false;
+    bool parseMulDiv(double& value)
+    {
+        if (!parsePower(value))
+            return false;
         while (true) {
             skipSpaces();
             if (match('*')) {
                 double rhs = 0.0;
-                if (!parsePower(rhs)) return false;
+                if (!parsePower(rhs))
+                    return false;
                 value *= rhs;
             } else if (match('/')) {
                 double rhs = 0.0;
-                if (!parsePower(rhs) || std::abs(rhs) <= kNumberEpsilon) return false;
+                if (!parsePower(rhs) || std::abs(rhs) <= kNumberEpsilon)
+                    return false;
                 value /= rhs;
             } else {
                 return true;
@@ -93,39 +110,49 @@ private:
         }
     }
 
-    bool parsePower(double& value) {
-        if (!parseUnary(value)) return false;
+    bool parsePower(double& value)
+    {
+        if (!parseUnary(value))
+            return false;
         skipSpaces();
-        if (!match('^')) return true;
+        if (!match('^'))
+            return true;
 
         double exponent = 0.0;
-        if (!parsePower(exponent)) return false;
+        if (!parsePower(exponent))
+            return false;
         value = std::pow(value, exponent);
         return isFiniteNumber(value);
     }
 
-    bool parseUnary(double& value) {
+    bool parseUnary(double& value)
+    {
         skipSpaces();
-        if (match('+')) return parseUnary(value);
+        if (match('+'))
+            return parseUnary(value);
         if (match('-')) {
-            if (!parseUnary(value)) return false;
+            if (!parseUnary(value))
+                return false;
             value = -value;
             return true;
         }
         return parsePrimary(value);
     }
 
-    bool parsePrimary(double& value) {
+    bool parsePrimary(double& value)
+    {
         skipSpaces();
         if (match('(')) {
-            if (!parseAddSub(value)) return false;
+            if (!parseAddSub(value))
+                return false;
             skipSpaces();
             return match(')');
         }
         return parseNumber(value);
     }
 
-    bool parseNumber(double& value) {
+    bool parseNumber(double& value)
+    {
         skipSpaces();
         const int start = m_pos;
         bool sawDigit = false;
@@ -141,18 +168,21 @@ private:
                 ++m_pos;
             }
         }
-        if (!sawDigit) return false;
+        if (!sawDigit)
+            return false;
 
         if (m_pos < m_text.size() && (m_text.at(m_pos) == 'e' || m_text.at(m_pos) == 'E')) {
             const int exponentStart = m_pos;
             ++m_pos;
-            if (m_pos < m_text.size() && (m_text.at(m_pos) == '+' || m_text.at(m_pos) == '-')) ++m_pos;
+            if (m_pos < m_text.size() && (m_text.at(m_pos) == '+' || m_text.at(m_pos) == '-'))
+                ++m_pos;
             bool sawExponentDigit = false;
             while (m_pos < m_text.size() && m_text.at(m_pos).isDigit()) {
                 sawExponentDigit = true;
                 ++m_pos;
             }
-            if (!sawExponentDigit) m_pos = exponentStart;
+            if (!sawExponentDigit)
+                m_pos = exponentStart;
         }
 
         bool ok = false;
@@ -160,12 +190,16 @@ private:
         return ok && isFiniteNumber(value);
     }
 
-    void skipSpaces() {
-        while (m_pos < m_text.size() && m_text.at(m_pos).isSpace()) ++m_pos;
+    void skipSpaces()
+    {
+        while (m_pos < m_text.size() && m_text.at(m_pos).isSpace())
+            ++m_pos;
     }
 
-    bool match(QChar value) {
-        if (m_pos >= m_text.size() || m_text.at(m_pos) != value) return false;
+    bool match(QChar value)
+    {
+        if (m_pos >= m_text.size() || m_text.at(m_pos) != value)
+            return false;
         ++m_pos;
         return true;
     }
@@ -177,10 +211,10 @@ private:
 } // namespace
 
 NumberBox::NumberBox(QWidget* parent)
-    : LineEdit(parent),
-      m_value(std::numeric_limits<double>::quiet_NaN()),
+    : LineEdit(parent), m_value(std::numeric_limits<double>::quiet_NaN()),
       m_minimum(-std::numeric_limits<double>::infinity()),
-      m_maximum(std::numeric_limits<double>::infinity()) {
+      m_maximum(std::numeric_limits<double>::infinity())
+{
     detail::ensureNumberBoxAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
     setFrameVisible(false);
@@ -194,23 +228,31 @@ NumberBox::NumberBox(QWidget* parent)
     connect(this, &QLineEdit::editingFinished, this, [this]() { commitInput(); });
 }
 
-void NumberBox::setValue(double value) {
+void NumberBox::setValue(double value)
+{
     setValueInternal(value, true, false);
 }
 
-void NumberBox::setMinimum(double minimum) {
-    if (isNan(minimum) || numbersEqual(m_minimum, minimum)) return;
+void NumberBox::setMinimum(double minimum)
+{
+    if (isNan(minimum) || numbersEqual(m_minimum, minimum))
+        return;
     setRange(minimum, m_maximum);
 }
 
-void NumberBox::setMaximum(double maximum) {
-    if (isNan(maximum) || numbersEqual(m_maximum, maximum)) return;
+void NumberBox::setMaximum(double maximum)
+{
+    if (isNan(maximum) || numbersEqual(m_maximum, maximum))
+        return;
     setRange(m_minimum, maximum);
 }
 
-void NumberBox::setRange(double minimum, double maximum) {
-    if (isNan(minimum) || isNan(maximum)) return;
-    if (maximum < minimum) maximum = minimum;
+void NumberBox::setRange(double minimum, double maximum)
+{
+    if (isNan(minimum) || isNan(maximum))
+        return;
+    if (maximum < minimum)
+        maximum = minimum;
 
     const double oldMinimum = m_minimum;
     const double oldMaximum = m_maximum;
@@ -221,51 +263,63 @@ void NumberBox::setRange(double minimum, double maximum) {
     const bool minimumChangedNow = !numbersEqual(oldMinimum, m_minimum);
     const bool maximumChangedNow = !numbersEqual(oldMaximum, m_maximum);
 
-    if (!minimumChangedNow && !maximumChangedNow && !valueChangedNow) return;
+    if (!minimumChangedNow && !maximumChangedNow && !valueChangedNow)
+        return;
     updateSpinnerState();
     if (!valueChangedNow) {
         accessibility::detail::notifyValueAccessibilityValue(
             this, isNan(m_value) ? QVariant() : QVariant(m_value));
     }
-    if (minimumChangedNow) emit minimumChanged(m_minimum);
-    if (maximumChangedNow) emit maximumChanged(m_maximum);
+    if (minimumChangedNow)
+        emit minimumChanged(m_minimum);
+    if (maximumChangedNow)
+        emit maximumChanged(m_maximum);
 }
 
-void NumberBox::setSmallChange(double change) {
-    if (!(change > 0.0) || !isFiniteNumber(change) || numbersEqual(m_smallChange, change)) return;
+void NumberBox::setSmallChange(double change)
+{
+    if (!(change > 0.0) || !isFiniteNumber(change) || numbersEqual(m_smallChange, change))
+        return;
     m_smallChange = change;
-    accessibility::detail::notifyValueAccessibilityValue(
-        this, isNan(m_value) ? QVariant() : QVariant(m_value));
+    accessibility::detail::notifyValueAccessibilityValue(this, isNan(m_value) ? QVariant()
+                                                                              : QVariant(m_value));
     emit smallChangeChanged(m_smallChange);
 }
 
-void NumberBox::setLargeChange(double change) {
-    if (!(change > 0.0) || !isFiniteNumber(change) || numbersEqual(m_largeChange, change)) return;
+void NumberBox::setLargeChange(double change)
+{
+    if (!(change > 0.0) || !isFiniteNumber(change) || numbersEqual(m_largeChange, change))
+        return;
     m_largeChange = change;
     emit largeChangeChanged(m_largeChange);
 }
 
-void NumberBox::setHeader(const QString& header) {
-    if (m_header == header) return;
+void NumberBox::setHeader(const QString& header)
+{
+    if (m_header == header)
+        return;
     m_header = header;
     setFixedHeight(totalPreferredHeight());
     updateHeaderTextMargins();
     updateChildGeometry();
     updateGeometry();
     update();
-    accessibility::detail::notifyValueAccessibilityText(
-        this, QAccessible::NameChanged);
+    accessibility::detail::notifyValueAccessibilityText(this, QAccessible::NameChanged);
     emit headerChanged();
 }
 
-void NumberBox::setAcceptsExpression(bool accepts) {
-    if (m_acceptsExpression == accepts) return;
+void NumberBox::setAcceptsExpression(bool accepts)
+{
+    if (m_acceptsExpression == accepts)
+        return;
     m_acceptsExpression = accepts;
     emit acceptsExpressionChanged(m_acceptsExpression);
 }
 
-void NumberBox::setSpinButtonPlacementMode(SpinButtonPlacementMode mode) {
-    if (m_spinButtonPlacementMode == mode) return;
+void NumberBox::setSpinButtonPlacementMode(SpinButtonPlacementMode mode)
+{
+    if (m_spinButtonPlacementMode == mode)
+        return;
     m_spinButtonPlacementMode = mode;
     updateSpinnerState();
     updateTextMarginsForChrome();
@@ -274,8 +328,10 @@ void NumberBox::setSpinButtonPlacementMode(SpinButtonPlacementMode mode) {
     emit spinButtonPlacementModeChanged(m_spinButtonPlacementMode);
 }
 
-void NumberBox::setSpinButtonSize(const QSize& size) {
-    if (size.width() <= 0 || size.height() <= 0 || m_spinButtonSize == size) return;
+void NumberBox::setSpinButtonSize(const QSize& size)
+{
+    if (size.width() <= 0 || size.height() <= 0 || m_spinButtonSize == size)
+        return;
     m_spinButtonSize = size;
     updateTextMarginsForChrome();
     updateChildGeometry();
@@ -283,8 +339,10 @@ void NumberBox::setSpinButtonSize(const QSize& size) {
     emit spinButtonSizeChanged(m_spinButtonSize);
 }
 
-void NumberBox::setInlineSpinButtonSize(const QSize& size) {
-    if (size.width() <= 0 || size.height() <= 0 || m_inlineSpinButtonSize == size) return;
+void NumberBox::setInlineSpinButtonSize(const QSize& size)
+{
+    if (size.width() <= 0 || size.height() <= 0 || m_inlineSpinButtonSize == size)
+        return;
     m_inlineSpinButtonSize = size;
     updateTextMarginsForChrome();
     updateChildGeometry();
@@ -292,9 +350,11 @@ void NumberBox::setInlineSpinButtonSize(const QSize& size) {
     emit inlineSpinButtonSizeChanged(m_inlineSpinButtonSize);
 }
 
-void NumberBox::setSpinButtonRightMargin(int margin) {
+void NumberBox::setSpinButtonRightMargin(int margin)
+{
     const int normalized = qMax(0, margin);
-    if (m_spinButtonRightMargin == normalized) return;
+    if (m_spinButtonRightMargin == normalized)
+        return;
     m_spinButtonRightMargin = normalized;
     updateTextMarginsForChrome();
     updateChildGeometry();
@@ -302,18 +362,22 @@ void NumberBox::setSpinButtonRightMargin(int margin) {
     emit spinButtonRightMarginChanged(m_spinButtonRightMargin);
 }
 
-void NumberBox::setCompactSpinButtonReservedWidth(int width) {
+void NumberBox::setCompactSpinButtonReservedWidth(int width)
+{
     const int normalized = qMax(0, width);
-    if (m_compactSpinButtonReservedWidth == normalized) return;
+    if (m_compactSpinButtonReservedWidth == normalized)
+        return;
     m_compactSpinButtonReservedWidth = normalized;
     updateTextMarginsForChrome();
     update();
     emit compactSpinButtonReservedWidthChanged(m_compactSpinButtonReservedWidth);
 }
 
-void NumberBox::setSpinButtonSpacing(int spacing) {
+void NumberBox::setSpinButtonSpacing(int spacing)
+{
     const int normalized = qMax(0, spacing);
-    if (m_spinButtonSpacing == normalized) return;
+    if (m_spinButtonSpacing == normalized)
+        return;
     m_spinButtonSpacing = normalized;
     updateTextMarginsForChrome();
     updateChildGeometry();
@@ -321,100 +385,123 @@ void NumberBox::setSpinButtonSpacing(int spacing) {
     emit spinButtonSpacingChanged(m_spinButtonSpacing);
 }
 
-void NumberBox::setSpinButtonTextGap(int gap) {
+void NumberBox::setSpinButtonTextGap(int gap)
+{
     const int normalized = qMax(0, gap);
-    if (m_spinButtonTextGap == normalized) return;
+    if (m_spinButtonTextGap == normalized)
+        return;
     m_spinButtonTextGap = normalized;
     updateTextMarginsForChrome();
     update();
     emit spinButtonTextGapChanged(m_spinButtonTextGap);
 }
 
-void NumberBox::setSpinButtonIconSize(int size) {
-    if (size <= 0 || m_spinButtonIconSize == size) return;
+void NumberBox::setSpinButtonIconSize(int size)
+{
+    if (size <= 0 || m_spinButtonIconSize == size)
+        return;
     m_spinButtonIconSize = size;
     updateSpinButtonIcons();
     update();
     emit spinButtonIconSizeChanged(m_spinButtonIconSize);
 }
 
-void NumberBox::setDisplayPrecision(int precision) {
+void NumberBox::setDisplayPrecision(int precision)
+{
     const int normalized = qMax(-1, precision);
-    if (m_displayPrecision == normalized) return;
+    if (m_displayPrecision == normalized)
+        return;
     m_displayPrecision = normalized;
-    if (!isNan(m_value)) setText(formatValue(m_value));
+    if (!isNan(m_value))
+        setText(formatValue(m_value));
     emit displayPrecisionChanged(m_displayPrecision);
 }
 
-void NumberBox::setFormatStep(double step) {
+void NumberBox::setFormatStep(double step)
+{
     const double normalized = (step > 0.0 && isFiniteNumber(step)) ? step : 0.0;
-    if (numbersEqual(m_formatStep, normalized)) return;
+    if (numbersEqual(m_formatStep, normalized))
+        return;
     m_formatStep = normalized;
-    if (!isNan(m_value)) setValueInternal(m_value, true, false);
+    if (!isNan(m_value))
+        setValueInternal(m_value, true, false);
     emit formatStepChanged(m_formatStep);
 }
 
-QSize NumberBox::sizeHint() const {
+QSize NumberBox::sizeHint() const
+{
     QSize hint = LineEdit::sizeHint();
     hint.setHeight(totalPreferredHeight());
     hint.setWidth(qMax(hint.width(), kMinimumWidth));
     return hint;
 }
 
-QSize NumberBox::minimumSizeHint() const {
+QSize NumberBox::minimumSizeHint() const
+{
     QSize hint = sizeHint();
     hint.setWidth(qMax(hint.width(), kMinimumWidth));
     return hint;
 }
 
-void NumberBox::onThemeUpdated() {
+void NumberBox::onThemeUpdated()
+{
     LineEdit::onThemeUpdated();
-    if (m_spinUpButton) m_spinUpButton->onThemeUpdated();
-    if (m_spinDownButton) m_spinDownButton->onThemeUpdated();
+    if (m_spinUpButton)
+        m_spinUpButton->onThemeUpdated();
+    if (m_spinDownButton)
+        m_spinDownButton->onThemeUpdated();
     update();
 }
 
-void NumberBox::paintEvent(QPaintEvent* event) {
+void NumberBox::paintEvent(QPaintEvent* event)
+{
     {
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
-        if (!m_header.isEmpty()) paintHeader(painter);
+        if (!m_header.isEmpty())
+            paintHeader(painter);
         paintInputFrame(painter);
     }
     LineEdit::paintEvent(event);
 }
 
-void NumberBox::resizeEvent(QResizeEvent* event) {
+void NumberBox::resizeEvent(QResizeEvent* event)
+{
     LineEdit::resizeEvent(event);
     updateChildGeometry();
 }
 
-void NumberBox::focusInEvent(QFocusEvent* event) {
+void NumberBox::focusInEvent(QFocusEvent* event)
+{
     m_focused = true;
     LineEdit::focusInEvent(event);
     update();
 }
 
-void NumberBox::focusOutEvent(QFocusEvent* event) {
+void NumberBox::focusOutEvent(QFocusEvent* event)
+{
     commitInput();
     m_focused = false;
     LineEdit::focusOutEvent(event);
     update();
 }
 
-void NumberBox::enterEvent(FluentEnterEvent* event) {
+void NumberBox::enterEvent(FluentEnterEvent* event)
+{
     m_hovered = true;
     LineEdit::enterEvent(event);
     update();
 }
 
-void NumberBox::leaveEvent(QEvent* event) {
+void NumberBox::leaveEvent(QEvent* event)
+{
     m_hovered = false;
     LineEdit::leaveEvent(event);
     update();
 }
 
-void NumberBox::mousePressEvent(QMouseEvent* event) {
+void NumberBox::mousePressEvent(QMouseEvent* event)
+{
     if (event && event->button() == Qt::LeftButton && isEnabled() && !isReadOnly()) {
         m_pressed = inputRect().contains(event->pos());
         update();
@@ -422,7 +509,8 @@ void NumberBox::mousePressEvent(QMouseEvent* event) {
     LineEdit::mousePressEvent(event);
 }
 
-void NumberBox::mouseReleaseEvent(QMouseEvent* event) {
+void NumberBox::mouseReleaseEvent(QMouseEvent* event)
+{
     if (m_pressed) {
         m_pressed = false;
         update();
@@ -430,7 +518,8 @@ void NumberBox::mouseReleaseEvent(QMouseEvent* event) {
     LineEdit::mouseReleaseEvent(event);
 }
 
-void NumberBox::keyPressEvent(QKeyEvent* event) {
+void NumberBox::keyPressEvent(QKeyEvent* event)
+{
     if (!event) {
         LineEdit::keyPressEvent(event);
         return;
@@ -464,9 +553,11 @@ void NumberBox::keyPressEvent(QKeyEvent* event) {
     LineEdit::keyPressEvent(event);
 }
 
-void NumberBox::changeEvent(QEvent* event) {
+void NumberBox::changeEvent(QEvent* event)
+{
     LineEdit::changeEvent(event);
-    if (!event) return;
+    if (!event)
+        return;
     if (event->type() == QEvent::EnabledChange || event->type() == QEvent::ReadOnlyChange) {
         updateSpinnerState();
         updateTextMarginsForChrome();
@@ -479,15 +570,16 @@ void NumberBox::changeEvent(QEvent* event) {
     }
 }
 
-bool NumberBox::eventFilter(QObject* watched, QEvent* event) {
+bool NumberBox::eventFilter(QObject* watched, QEvent* event)
+{
     if ((watched == m_spinUpButton || watched == m_spinDownButton) && event) {
         switch (event->type()) {
         case QEvent::Enter:
             m_spinnerHovered = true;
             break;
         case QEvent::Leave:
-            m_spinnerHovered = (m_spinUpButton && m_spinUpButton->underMouse())
-                || (m_spinDownButton && m_spinDownButton->underMouse());
+            m_spinnerHovered = (m_spinUpButton && m_spinUpButton->underMouse()) ||
+                               (m_spinDownButton && m_spinDownButton->underMouse());
             break;
         case QEvent::MouseButtonPress:
             m_spinnerPressed = true;
@@ -504,24 +596,27 @@ bool NumberBox::eventFilter(QObject* watched, QEvent* event) {
     return LineEdit::eventFilter(watched, event);
 }
 
-QRect NumberBox::inputRect() const {
+QRect NumberBox::inputRect() const
+{
     return QRect(0, inputTop(), width(), kInputHeight);
 }
 
-int NumberBox::inputTop() const {
+int NumberBox::inputTop() const
+{
     return m_header.isEmpty() ? 0 : kHeaderHeight + kHeaderGap;
 }
 
-int NumberBox::totalPreferredHeight() const {
+int NumberBox::totalPreferredHeight() const
+{
     return inputTop() + kInputHeight;
 }
 
-void NumberBox::initializeSpinnerButtons() {
+void NumberBox::initializeSpinnerButtons()
+{
     m_spinUpButton = new ::fluent::basicinput::RepeatButton(this);
     m_spinDownButton = new ::fluent::basicinput::RepeatButton(this);
 
-    auto configureButton = [this](::fluent::basicinput::RepeatButton* button,
-                                  const QString& glyph,
+    auto configureButton = [this](::fluent::basicinput::RepeatButton* button, const QString& glyph,
                                   const QString& objectName) {
         button->setObjectName(objectName);
         button->setFluentStyle(::fluent::basicinput::Button::Standard);
@@ -534,8 +629,10 @@ void NumberBox::initializeSpinnerButtons() {
         button->hide();
     };
 
-    configureButton(m_spinUpButton, Typography::Icons::ChevronUp, QStringLiteral("NumberBoxSpinUpButton"));
-    configureButton(m_spinDownButton, Typography::Icons::ChevronDown, QStringLiteral("NumberBoxSpinDownButton"));
+    configureButton(m_spinUpButton, Typography::Icons::ChevronUp,
+                    QStringLiteral("NumberBoxSpinUpButton"));
+    configureButton(m_spinDownButton, Typography::Icons::ChevronDown,
+                    QStringLiteral("NumberBoxSpinDownButton"));
 
     connect(m_spinUpButton, &::fluent::basicinput::RepeatButton::clicked, this, [this]() {
         setFocus(Qt::MouseFocusReason);
@@ -549,21 +646,22 @@ void NumberBox::initializeSpinnerButtons() {
     updateChildGeometry();
 }
 
-void NumberBox::updateSpinButtonIcons() {
+void NumberBox::updateSpinButtonIcons()
+{
     if (m_spinUpButton) {
-        m_spinUpButton->setIconGlyph(Typography::Icons::ChevronUp,
-                                     m_spinButtonIconSize,
+        m_spinUpButton->setIconGlyph(Typography::Icons::ChevronUp, m_spinButtonIconSize,
                                      Typography::FontFamily::FluentIcons);
     }
     if (m_spinDownButton) {
-        m_spinDownButton->setIconGlyph(Typography::Icons::ChevronDown,
-                                       m_spinButtonIconSize,
+        m_spinDownButton->setIconGlyph(Typography::Icons::ChevronDown, m_spinButtonIconSize,
                                        Typography::FontFamily::FluentIcons);
     }
 }
 
-void NumberBox::updateChildGeometry() {
-    if (!m_spinUpButton || !m_spinDownButton) return;
+void NumberBox::updateChildGeometry()
+{
+    if (!m_spinUpButton || !m_spinDownButton)
+        return;
     const QRect input = inputRect();
 
     if (m_spinButtonPlacementMode == SpinButtonPlacementMode::Inline) {
@@ -586,14 +684,17 @@ void NumberBox::updateChildGeometry() {
     setClearButtonOffset(QPoint(::Spacing::XSmall, inputTop() / 2));
 }
 
-void NumberBox::updateSpinnerState() {
+void NumberBox::updateSpinnerState()
+{
     const bool spinnerMode = m_spinButtonPlacementMode != SpinButtonPlacementMode::Hidden;
     setClearButtonEnabled(!spinnerMode);
 
     const bool visible = hasSpinnerButtonsVisible();
     const bool enabled = visible && isEnabled() && !isReadOnly();
-    const bool atMinimum = !isNan(m_value) && (m_value <= m_minimum || numbersEqual(m_value, m_minimum));
-    const bool atMaximum = !isNan(m_value) && (m_value >= m_maximum || numbersEqual(m_value, m_maximum));
+    const bool atMinimum =
+        !isNan(m_value) && (m_value <= m_minimum || numbersEqual(m_value, m_minimum));
+    const bool atMaximum =
+        !isNan(m_value) && (m_value >= m_maximum || numbersEqual(m_value, m_maximum));
     if (m_spinUpButton) {
         m_spinUpButton->setVisible(visible);
         m_spinUpButton->setEnabled(enabled && !atMaximum);
@@ -605,12 +706,14 @@ void NumberBox::updateSpinnerState() {
     updateChildGeometry();
 }
 
-void NumberBox::updateTextMarginsForChrome() {
+void NumberBox::updateTextMarginsForChrome()
+{
     int rightMargin = ::Spacing::Padding::TextFieldHorizontal;
     if (m_spinButtonPlacementMode == SpinButtonPlacementMode::Inline) {
         rightMargin += m_spinButtonRightMargin + inlineSpinnerWidth() + m_spinButtonTextGap;
     } else if (m_spinButtonPlacementMode == SpinButtonPlacementMode::Compact) {
-        rightMargin += m_spinButtonRightMargin + compactExpandedSpinnerWidth() + m_spinButtonTextGap;
+        rightMargin +=
+            m_spinButtonRightMargin + compactExpandedSpinnerWidth() + m_spinButtonTextGap;
     }
 
     QMargins margins = contentMargins();
@@ -621,11 +724,13 @@ void NumberBox::updateTextMarginsForChrome() {
     setContentMargins(margins);
 }
 
-void NumberBox::updateHeaderTextMargins() {
+void NumberBox::updateHeaderTextMargins()
+{
     setTextMargins(0, inputTop(), 0, 0);
 }
 
-void NumberBox::commitInput() {
+void NumberBox::commitInput()
+{
     const QString trimmed = text().trimmed();
     if (trimmed.isEmpty()) {
         setInvalidValueFromText();
@@ -641,9 +746,11 @@ void NumberBox::commitInput() {
     setValueInternal(parsed, true, false);
 }
 
-void NumberBox::setInvalidValueFromText() {
+void NumberBox::setInvalidValueFromText()
+{
     const double nan = std::numeric_limits<double>::quiet_NaN();
-    if (numbersEqual(m_value, nan)) return;
+    if (numbersEqual(m_value, nan))
+        return;
     m_value = nan;
     updateSpinnerState();
     accessibility::detail::notifyValueAccessibilityValue(this, QVariant());
@@ -653,40 +760,57 @@ void NumberBox::setInvalidValueFromText() {
     emit valueChanged(m_value);
 }
 
-void NumberBox::stepBy(double delta) {
-    if (!isEnabled() || isReadOnly()) return;
+void NumberBox::stepBy(double delta)
+{
+    if (!isEnabled() || isReadOnly())
+        return;
     const double base = isNan(m_value) ? normalizedStepStart() : m_value;
     setValueInternal(base + delta, true, false);
 }
 
-double NumberBox::normalizedStepStart() const {
-    if (m_minimum <= 0.0 && m_maximum >= 0.0) return 0.0;
-    if (m_minimum > 0.0) return m_minimum;
-    if (m_maximum < 0.0) return m_maximum;
+double NumberBox::normalizedStepStart() const
+{
+    if (m_minimum <= 0.0 && m_maximum >= 0.0)
+        return 0.0;
+    if (m_minimum > 0.0)
+        return m_minimum;
+    if (m_maximum < 0.0)
+        return m_maximum;
     return 0.0;
 }
 
-double NumberBox::normalizeValue(double value) const {
-    if (isNan(value) || !isFiniteNumber(value)) return std::numeric_limits<double>::quiet_NaN();
+double NumberBox::normalizeValue(double value) const
+{
+    if (isNan(value) || !isFiniteNumber(value))
+        return std::numeric_limits<double>::quiet_NaN();
     value = applyFormatStep(value);
-    if (value < m_minimum) value = m_minimum;
-    if (value > m_maximum) value = m_maximum;
+    if (value < m_minimum)
+        value = m_minimum;
+    if (value > m_maximum)
+        value = m_maximum;
     return value;
 }
 
-double NumberBox::applyFormatStep(double value) const {
-    if (!(m_formatStep > 0.0) || !isFiniteNumber(m_formatStep)) return value;
+double NumberBox::applyFormatStep(double value) const
+{
+    if (!(m_formatStep > 0.0) || !isFiniteNumber(m_formatStep))
+        return value;
     return std::floor(value / m_formatStep + 0.5 + kNumberEpsilon) * m_formatStep;
 }
 
-QString NumberBox::formatValue(double value) const {
-    if (isNan(value)) return QString();
-    if (m_displayPrecision >= 0) return QLocale::c().toString(value, 'f', m_displayPrecision);
+QString NumberBox::formatValue(double value) const
+{
+    if (isNan(value))
+        return QString();
+    if (m_displayPrecision >= 0)
+        return QLocale::c().toString(value, 'f', m_displayPrecision);
     return QString::number(value, 'g', 15);
 }
 
-bool NumberBox::parseInputText(const QString& input, double* result) const {
-    if (!result) return false;
+bool NumberBox::parseInputText(const QString& input, double* result) const
+{
+    if (!result)
+        return false;
     if (m_acceptsExpression) {
         ExpressionParser parser(input);
         return parser.parse(result);
@@ -694,34 +818,38 @@ bool NumberBox::parseInputText(const QString& input, double* result) const {
 
     bool ok = false;
     const double parsed = QLocale::c().toDouble(input, &ok);
-    if (!ok || !isFiniteNumber(parsed)) return false;
+    if (!ok || !isFiniteNumber(parsed))
+        return false;
     *result = parsed;
     return true;
 }
 
-bool NumberBox::setValueInternal(double value, bool updateText, bool keepUserTextWhenNaN) {
+bool NumberBox::setValueInternal(double value, bool updateText, bool keepUserTextWhenNaN)
+{
     const double normalized = normalizeValue(value);
     const bool wasInvalid = isNan(m_value);
     const bool changed = !numbersEqual(m_value, normalized);
     m_value = normalized;
 
-    if (updateText && !(keepUserTextWhenNaN && isNan(m_value))) setText(formatValue(m_value));
-    if (changed) updateSpinnerState();
+    if (updateText && !(keepUserTextWhenNaN && isNan(m_value)))
+        setText(formatValue(m_value));
+    if (changed)
+        updateSpinnerState();
     if (changed) {
         accessibility::detail::notifyValueAccessibilityValue(
             this, isNan(m_value) ? QVariant() : QVariant(m_value));
         if (wasInvalid != isNan(m_value)) {
             QAccessible::State changedState;
             changedState.invalid = true;
-            accessibility::detail::notifyValueAccessibilityState(
-                this, changedState);
+            accessibility::detail::notifyValueAccessibilityState(this, changedState);
         }
         emit valueChanged(m_value);
     }
     return changed;
 }
 
-void NumberBox::paintInputFrame(QPainter& painter) {
+void NumberBox::paintInputFrame(QPainter& painter)
+{
     const auto& colors = themeColorsRef();
     const QRectF frameRect = QRectF(inputRect()).adjusted(0.5, 0.5, -0.5, -0.5);
 
@@ -739,7 +867,7 @@ void NumberBox::paintInputFrame(QPainter& painter) {
         borderColor = colors.strokeDefault;
         bottomColor = colors.strokeDivider;
     } else if (m_focused) {
-        bgColor = (effectiveTheme() == Dark) ? colors.bgSolid : colors.controlDefault;
+        bgColor = effectiveThemeUsesDarkAppearance() ? colors.bgSolid : colors.controlDefault;
         borderColor = colors.strokeSecondary;
         bottomColor = colors.accentDefault;
         bottomWidth = ::Spacing::Border::Focused;
@@ -779,25 +907,31 @@ void NumberBox::paintInputFrame(QPainter& painter) {
     }
 }
 
-void NumberBox::paintHeader(QPainter& painter) {
-    if (m_header.isEmpty()) return;
+void NumberBox::paintHeader(QPainter& painter)
+{
+    if (m_header.isEmpty())
+        return;
     painter.setFont(themeFont(Typography::FontRole::Body).toQFont());
     const auto& colors = themeColorsRef();
     painter.setPen(isEnabled() ? colors.textPrimary : colors.textDisabled);
     const QRect headerRect(0, 0, width(), kHeaderHeight);
-    painter.drawText(headerRect, Qt::AlignLeft | Qt::AlignVCenter,
-                     painter.fontMetrics().elidedText(m_header, Qt::ElideRight, headerRect.width()));
+    painter.drawText(
+        headerRect, Qt::AlignLeft | Qt::AlignVCenter,
+        painter.fontMetrics().elidedText(m_header, Qt::ElideRight, headerRect.width()));
 }
 
-bool NumberBox::hasSpinnerButtonsVisible() const {
+bool NumberBox::hasSpinnerButtonsVisible() const
+{
     return m_spinButtonPlacementMode != SpinButtonPlacementMode::Hidden;
 }
 
-int NumberBox::inlineSpinnerWidth() const {
+int NumberBox::inlineSpinnerWidth() const
+{
     return m_inlineSpinButtonSize.width() * 2 + m_spinButtonSpacing;
 }
 
-int NumberBox::compactExpandedSpinnerWidth() const {
+int NumberBox::compactExpandedSpinnerWidth() const
+{
     return m_spinButtonSize.width();
 }
 

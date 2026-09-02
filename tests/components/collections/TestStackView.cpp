@@ -11,6 +11,7 @@
 #include <QTest>
 
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/collections/StackView.h"
 #include "components/scrolling/PipsPager.h"
@@ -39,10 +40,9 @@ public:
 
 class StackPage : public QWidget {
 public:
-    explicit StackPage(const QString& title, const QColor& color = QColor("#DDEAF7"), QWidget* parent = nullptr)
-        : QWidget(parent),
-          m_title(title),
-          m_color(color)
+    explicit StackPage(const QString& title, const QColor& color = QColor("#DDEAF7"),
+                       QWidget* parent = nullptr)
+        : QWidget(parent), m_title(title), m_color(color)
     {
         setAutoFillBackground(true);
         QPalette pal = palette();
@@ -96,7 +96,8 @@ void processDeferredDeletes()
 
 StackView::StackViewItemStatus statusAt(const QSignalSpy& spy, int index)
 {
-    return static_cast<StackView::StackViewItemStatus>(spy.at(index).at(1).value<StackView::StackViewItemStatus>());
+    return static_cast<StackView::StackViewItemStatus>(
+        spy.at(index).at(1).value<StackView::StackViewItemStatus>());
 }
 
 } // namespace
@@ -106,27 +107,26 @@ protected:
     static void SetUpTestSuite()
     {
         fluentRegisterMetaTypeNames<fluent::collections::StackView::StackViewItemStatus>(
-            "fluent::collections::StackView::StackViewItemStatus",
-            "StackViewItemStatus");
+            "fluent::collections::StackView::StackViewItemStatus", "StackViewItemStatus");
         fluentRegisterMetaTypeNames<fluent::collections::StackView::StackViewTransitionOperation>(
             "fluent::collections::StackView::StackViewTransitionOperation",
             "StackViewTransitionOperation");
         fluentRegisterMetaTypeNames<fluent::collections::StackView::StackViewTransitionType>(
-            "fluent::collections::StackView::StackViewTransitionType",
-            "StackViewTransitionType");
-        fluentRegisterMetaTypeNames<fluent::WidgetOwnership>(
-            "fluent::WidgetOwnership",
-            "WidgetOwnership");
+            "fluent::collections::StackView::StackViewTransitionType", "StackViewTransitionType");
+        fluentRegisterMetaTypeNames<fluent::WidgetOwnership>("fluent::WidgetOwnership",
+                                                             "WidgetOwnership");
         qRegisterMetaType<Qt::Orientation>("Qt::Orientation");
     }
 
     void SetUp() override
     {
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
     }
 
     void TearDown() override
     {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
 };
@@ -159,7 +159,8 @@ TEST_F(StackViewTest, TransitionTypeIsConfigurable)
     stack.setTransitionType(StackView::StackViewTransitionType::ScaleFade);
     EXPECT_EQ(stack.transitionType(), StackView::StackViewTransitionType::ScaleFade);
     ASSERT_EQ(spy.count(), 1);
-    EXPECT_EQ(spy.at(0).at(0).value<StackView::StackViewTransitionType>(), StackView::StackViewTransitionType::ScaleFade);
+    EXPECT_EQ(spy.at(0).at(0).value<StackView::StackViewTransitionType>(),
+              StackView::StackViewTransitionType::ScaleFade);
 
     stack.setTransitionType(StackView::StackViewTransitionType::ScaleFade);
     EXPECT_EQ(spy.count(), 1);
@@ -354,14 +355,13 @@ TEST_F(StackViewTest, Contract_TransitionStartedSeesBusyAndRejectsReentrantPush)
     auto* rejected = new StackPage("Rejected");
     bool busyDuringSignal = false;
     bool reentrantPushResult = true;
-    QObject::connect(
-        &stack, &StackView::transitionStarted, &stack,
-        [&](StackView::StackViewTransitionOperation operation, QWidget*, QWidget*) {
-                if (operation != StackView::StackViewTransitionOperation::Push)
-                    return;
-                busyDuringSignal = stack.busy();
-                reentrantPushResult = stack.push(rejected);
-        });
+    QObject::connect(&stack, &StackView::transitionStarted, &stack,
+                     [&](StackView::StackViewTransitionOperation operation, QWidget*, QWidget*) {
+                         if (operation != StackView::StackViewTransitionOperation::Push)
+                             return;
+                         busyDuringSignal = stack.busy();
+                         reentrantPushResult = stack.push(rejected);
+                     });
 
     ASSERT_TRUE(stack.push(new StackPage("Second")));
 
@@ -382,12 +382,10 @@ TEST_F(StackViewTest, Contract_ItemPushedHandlerCanSynchronouslyDeletePushedPage
 
     auto* victim = new StackPage("Victim");
     QPointer<QWidget> victimGuard = victim;
-    QObject::connect(
-        &stack, &StackView::itemPushed, &stack,
-        [victim](QWidget* item) {
-            if (item == victim)
-                delete item;
-        });
+    QObject::connect(&stack, &StackView::itemPushed, &stack, [victim](QWidget* item) {
+        if (item == victim)
+            delete item;
+    });
 
     EXPECT_TRUE(stack.push(victim));
     EXPECT_TRUE(victimGuard.isNull());
@@ -406,12 +404,10 @@ TEST_F(StackViewTest, Contract_ItemPushedRejectsReentrantNavigationBeforeTransit
     auto* second = new StackPage("Second");
     auto* rejected = new StackPage("Rejected");
     bool reentrantPushResult = true;
-    QObject::connect(
-        &stack, &StackView::itemPushed, &stack,
-        [&](QWidget* item) {
-            if (item == second)
-                reentrantPushResult = stack.push(rejected);
-        });
+    QObject::connect(&stack, &StackView::itemPushed, &stack, [&](QWidget* item) {
+        if (item == second)
+            reentrantPushResult = stack.push(rejected);
+    });
 
     ASSERT_TRUE(stack.push(second));
     EXPECT_FALSE(reentrantPushResult);
@@ -432,12 +428,10 @@ TEST_F(StackViewTest, Contract_MultiPushRecoversWhenHandlerDeletesPreviousCurren
 
     auto* first = new StackPage("First");
     auto* second = new StackPage("Second");
-    QObject::connect(
-        &stack, &StackView::itemPushed, &stack,
-        [root, first](QWidget* item) {
-            if (item == first)
-                delete root;
-        });
+    QObject::connect(&stack, &StackView::itemPushed, &stack, [root, first](QWidget* item) {
+        if (item == first)
+            delete root;
+    });
 
     EXPECT_TRUE(stack.push(QVector<QWidget*>{first, second}));
     EXPECT_TRUE(rootGuard.isNull());
@@ -460,8 +454,7 @@ TEST_F(StackViewTest, Contract_TransitionStartedHandlerCanSynchronouslyDeleteTar
     QObject::connect(
         &stack, &StackView::transitionStarted, &stack,
         [victim](StackView::StackViewTransitionOperation operation, QWidget*, QWidget* toItem) {
-            if (operation == StackView::StackViewTransitionOperation::Push
-                && toItem == victim) {
+            if (operation == StackView::StackViewTransitionOperation::Push && toItem == victim) {
                 delete toItem;
             }
         });
@@ -484,12 +477,11 @@ TEST_F(StackViewTest, Contract_ItemReplacedHandlerCanSynchronouslyDeleteReplacem
 
     auto* replacement = new StackPage("Replacement");
     QPointer<QWidget> replacementGuard = replacement;
-    QObject::connect(
-        &stack, &StackView::itemReplaced, &stack,
-        [replacement](QWidget*, QWidget* newItem) {
-            if (newItem == replacement)
-                delete newItem;
-        });
+    QObject::connect(&stack, &StackView::itemReplaced, &stack,
+                     [replacement](QWidget*, QWidget* newItem) {
+                         if (newItem == replacement)
+                             delete newItem;
+                     });
 
     EXPECT_TRUE(stack.replace(replacement));
     EXPECT_TRUE(replacementGuard.isNull());
@@ -511,12 +503,10 @@ TEST_F(StackViewTest, Contract_ItemPoppedHandlerCanSynchronouslyDeleteRevealedPa
     ASSERT_TRUE(stack.push(root));
     ASSERT_TRUE(stack.push(top));
 
-    QObject::connect(
-        &stack, &StackView::itemPopped, &stack,
-        [root, top](QWidget* item) {
-            if (item == top)
-                delete root;
-        });
+    QObject::connect(&stack, &StackView::itemPopped, &stack, [root, top](QWidget* item) {
+        if (item == top)
+            delete root;
+    });
 
     EXPECT_TRUE(stack.pop());
     EXPECT_TRUE(rootGuard.isNull());
@@ -702,12 +692,77 @@ TEST_F(StackViewTest, AnimatedTransitionFinishesWithCorrectVisibility)
     EXPECT_FALSE(first->isVisible());
 }
 
+TEST_F(StackViewTest, MotionPolicyDisabledCompletesTransitionAndCleanupSynchronously)
+{
+    StackView stack;
+    stack.resize(340, 220);
+    showAndProcess(stack);
+    ASSERT_TRUE(stack.transitionAnimationEnabled());
+
+    auto* first = new StackPage("First");
+    auto* second = new StackPage("Second");
+    ASSERT_TRUE(stack.push(first));
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    QSignalSpy finishedSpy(&stack, &StackView::transitionFinished);
+
+    ASSERT_TRUE(stack.push(second));
+
+    EXPECT_FALSE(stack.busy());
+    EXPECT_EQ(stack.currentItem(), second);
+    EXPECT_TRUE(second->isVisible());
+    EXPECT_FALSE(first->isVisible());
+    EXPECT_EQ(finishedSpy.count(), 1);
+}
+
+TEST_F(StackViewTest, DisablingTransitionAnimationSettlesRunningPopAndCleanupSynchronously)
+{
+    StackView stack;
+    stack.resize(340, 220);
+    stack.setTransitionDuration(500);
+    showAndProcess(stack);
+
+    auto* first = new StackPage("First");
+    auto* second = new StackPage("Second");
+    QPointer<QWidget> secondGuard = second;
+    ASSERT_TRUE(stack.push(first));
+    stack.setTransitionAnimationEnabled(false);
+    ASSERT_TRUE(stack.push(second));
+    stack.setTransitionAnimationEnabled(true);
+
+    QSignalSpy busySpy(&stack, &StackView::busyChanged);
+    QSignalSpy finishedSpy(&stack, &StackView::transitionFinished);
+    QSignalSpy animationEnabledSpy(&stack, &StackView::transitionAnimationEnabledChanged);
+    ASSERT_TRUE(stack.pop());
+    ASSERT_TRUE(stack.busy());
+
+    stack.setTransitionAnimationEnabled(false);
+
+    EXPECT_FALSE(stack.transitionAnimationEnabled());
+    EXPECT_FALSE(stack.busy());
+    EXPECT_EQ(stack.currentItem(), first);
+    EXPECT_EQ(stack.depth(), 1);
+    EXPECT_EQ(first->geometry(), stack.rect());
+    EXPECT_TRUE(first->isVisible());
+    EXPECT_FALSE(second->isVisible());
+    EXPECT_EQ(first->graphicsEffect(), nullptr);
+    EXPECT_EQ(second->graphicsEffect(), nullptr);
+    ASSERT_EQ(busySpy.count(), 2);
+    EXPECT_TRUE(busySpy.at(0).at(0).toBool());
+    EXPECT_FALSE(busySpy.at(1).at(0).toBool());
+    EXPECT_EQ(finishedSpy.count(), 1);
+    EXPECT_EQ(animationEnabledSpy.count(), 1);
+
+    processDeferredDeletes();
+    EXPECT_TRUE(secondGuard.isNull());
+}
+
 TEST_F(StackViewTest, VisualCheck)
 {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
+        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP() << "Skipping visual test in offscreen mode";
     }
 
@@ -736,7 +791,7 @@ TEST_F(StackViewTest, VisualCheck)
 
     auto* pager = new PipsPager(window);
     pager->setMaxVisiblePips(7);
-    
+
     auto* controls = new QWidget(window);
     controls->setFixedHeight(36);
     auto* controlsLayout = new fluent::AnchorLayout();
@@ -806,14 +861,8 @@ TEST_F(StackViewTest, VisualCheck)
     statusAnchors.verticalCenter = {controls, Edge::VCenter, 0};
     controlsLayout->addAnchoredWidget(statusLabel, statusAnchors);
 
-    const QList<QColor> pageColors = {
-        QColor("#D7E8F7"),
-        QColor("#F7D7DB"),
-        QColor("#DDF0D1"),
-        QColor("#F3E5B5"),
-        QColor("#E4D7F7"),
-        QColor("#D8F2EF")
-    };
+    const QList<QColor> pageColors = {QColor("#D7E8F7"), QColor("#F7D7DB"), QColor("#DDF0D1"),
+                                      QColor("#F3E5B5"), QColor("#E4D7F7"), QColor("#D8F2EF")};
     int nextPageNumber = 1;
     auto createPage = [&pageColors, &nextPageNumber](const QString& prefix) {
         const int pageNumber = nextPageNumber++;
@@ -824,13 +873,13 @@ TEST_F(StackViewTest, VisualCheck)
     stack->push(new StackPage(QStringLiteral("Home"), pageColors.first()));
 
     bool syncingPager = false;
-    auto syncNavigation = [stack, pager, pushButton, popButton, replaceButton, statusLabel, window, &syncingPager]() {
+    auto syncNavigation = [stack, pager, pushButton, popButton, replaceButton, statusLabel, window,
+                           &syncingPager]() {
         syncingPager = true;
         const int depth = stack->depth();
         const int pageCount = stack->count();
-        const int currentIndex = pageCount > 0
-            ? qBound(0, stack->currentIndex(), pageCount - 1)
-            : 0;
+        const int currentIndex =
+            pageCount > 0 ? qBound(0, stack->currentIndex(), pageCount - 1) : 0;
         pager->setNumberOfPages(pageCount);
         pager->setSelectedPageIndex(currentIndex);
         pager->setEnabled(depth > 0 && !stack->busy());
@@ -838,9 +887,8 @@ TEST_F(StackViewTest, VisualCheck)
         popButton->setEnabled(!stack->busy() && stack->canPop());
         replaceButton->setEnabled(!stack->busy() && depth > 0);
 
-        const QString currentName = stack->currentItem()
-            ? stack->currentItem()->objectName()
-            : QStringLiteral("None");
+        const QString currentName =
+            stack->currentItem() ? stack->currentItem()->objectName() : QStringLiteral("None");
         statusLabel->setText(QStringLiteral("%1 · index %2 · depth %3%4")
                                  .arg(currentName)
                                  .arg(currentIndex)
@@ -857,12 +905,13 @@ TEST_F(StackViewTest, VisualCheck)
     QObject::connect(stack, &StackView::busyChanged, statusLabel, syncNavigation);
     syncNavigation();
 
-    QObject::connect(pager, &PipsPager::selectedPageIndexChanged, stack, [stack, &syncingPager](int index) {
-        if (syncingPager || stack->busy())
-            return;
-        if (index >= 0 && index < stack->count() && index != stack->currentIndex())
-            stack->setCurrentIndex(index);
-    });
+    QObject::connect(pager, &PipsPager::selectedPageIndexChanged, stack,
+                     [stack, &syncingPager](int index) {
+                         if (syncingPager || stack->busy())
+                             return;
+                         if (index >= 0 && index < stack->count() && index != stack->currentIndex())
+                             stack->setCurrentIndex(index);
+                     });
     QObject::connect(pushButton, &QPushButton::clicked, stack, [stack, createPage]() mutable {
         stack->push(createPage(QStringLiteral("Page")));
     });
@@ -871,12 +920,14 @@ TEST_F(StackViewTest, VisualCheck)
         stack->replace(createPage(QStringLiteral("Replacement")));
     });
     QObject::connect(orientationButton, &QPushButton::clicked, stack, [stack]() {
-        stack->setOrientation(stack->orientation() == Qt::Horizontal ? Qt::Vertical : Qt::Horizontal);
+        stack->setOrientation(stack->orientation() == Qt::Horizontal ? Qt::Vertical
+                                                                     : Qt::Horizontal);
     });
     QObject::connect(themeButton, &QPushButton::clicked, window, [window]() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                                    ? fluent::FluentElement::Dark
-                                    : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
         window->onThemeUpdated();
     });
 

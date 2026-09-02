@@ -15,6 +15,7 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/windowing/WindowBackdrop.h"
 #include "compatibility/QtCompat.h"
@@ -72,8 +73,7 @@ QRect horizontallyInterpolatedRect(QRect from, QRect to, qreal progress)
         return QRect();
 
     const QRect& verticalSource = toEmpty ? from : to;
-    return QRect(interpolatedInt(from.x(), to.x(), progress),
-                 verticalSource.y(),
+    return QRect(interpolatedInt(from.x(), to.x(), progress), verticalSource.y(),
                  qMax(0, interpolatedInt(from.width(), to.width(), progress)),
                  qMax(0, verticalSource.height()));
 }
@@ -84,9 +84,7 @@ QRect offsetRevealRect(const QRect& target, const QPoint& startOffset, qreal pro
         return QRect();
     const QRect from = target.translated(startOffset);
     return QRect(interpolatedInt(from.x(), target.x(), progress),
-                 interpolatedInt(from.y(), target.y(), progress),
-                 target.width(),
-                 target.height());
+                 interpolatedInt(from.y(), target.y(), progress), target.width(), target.height());
 }
 
 // A thin, click-through overlay drawn on top of the (opaque) content panel. It carves the
@@ -96,11 +94,10 @@ QRect offsetRevealRect(const QRect& target, const QPoint& startOffset, qreal pro
 // 圆角让窗格背景/Mica 露出，并描出框边。画在「上面」（而非后面）才能越过不透明内容与半透明窗口存活。
 class ContentFrameOverlay : public QWidget {
 public:
-    explicit ContentFrameOverlay(QWidget* parent)
-        : QWidget(parent)
+    explicit ContentFrameOverlay(QWidget* parent) : QWidget(parent)
     {
         setAttribute(Qt::WA_TransparentForMouseEvents, true);
-        setAttribute(Qt::WA_NoSystemBackground, true);  // do not clear: keep the content beneath
+        setAttribute(Qt::WA_NoSystemBackground, true); // do not clear: keep the content beneath
     }
 
     void configure(qreal radius, const QColor& border)
@@ -130,9 +127,9 @@ protected:
         // zh_CN: 把左上角（圆弧之外）挖透明，让系统背景透出圆角缺口——但仅在真实背景（Mica/Acrylic）下。支持背景的
         // Windows 构建顶层始终半透明，故 Normal 下这里的 Clear 会在不透明 chrome 背板上写 (0,0,0,0)，在角上渲染出杂块（dark 黑 / light 白）
         // 而非 chrome 色。按强类型 CompositedTransparent 门控，绝不用裸的 WA_TranslucentBackground——与 TreeView/导航栏缝同一规则。
-        const bool realBackdrop = window()
-            && window()->testAttribute(Qt::WA_TranslucentBackground)
-            && windowing::windowBackdropRequiresTransparentClear(window());
+        const bool realBackdrop = window() &&
+                                  window()->testAttribute(Qt::WA_TranslucentBackground) &&
+                                  windowing::windowBackdropRequiresTransparentClear(window());
         if (realBackdrop) {
             QPainterPath cornerCut;
             cornerCut.moveTo(0.0, 0.0);
@@ -146,8 +143,7 @@ protected:
 
         if (m_border.isValid() && m_border.alpha() > 0) {
             const fluent::painting::DeviceAlignedStroke stroke =
-                fluent::painting::DpiPaintMetrics(painter).alignedStroke(
-                    QRectF(rect()), 1.0);
+                fluent::painting::DpiPaintMetrics(painter).alignedStroke(QRectF(rect()), 1.0);
             const QPainterPath frame = fluent::overlay::roundedCornerRectPath(
                 stroke.rect, m_radius,
                 /*TL*/ true, /*TR*/ false, /*BR*/ false, /*BL*/ false);
@@ -172,8 +168,7 @@ private:
 // header/main/footer 窗格控件被叠在此底之上——无需再维护一份同步的“抽屉”窗格。
 class PaneFlyoutOverlay : public QWidget {
 public:
-    explicit PaneFlyoutOverlay(QWidget* parent)
-        : QWidget(parent)
+    explicit PaneFlyoutOverlay(QWidget* parent) : QWidget(parent)
     {
         // Like ContentFrameOverlay: WA_NoSystemBackground and DON'T clear our backing — the content
         // we don't paint keeps showing the content host beneath (which already painted into the
@@ -188,8 +183,8 @@ public:
         setFocusPolicy(Qt::StrongFocus);
     }
 
-    void configure(const QRect& paneRect, qreal radius, const QColor& fill,
-                   const QColor& stroke, const Elevation::ShadowParams& shadow, qreal shadowIntensity)
+    void configure(const QRect& paneRect, qreal radius, const QColor& fill, const QColor& stroke,
+                   const Elevation::ShadowParams& shadow, qreal shadowIntensity)
     {
         m_paneRect = paneRect;
         m_radius = qMax(0.0, radius);
@@ -228,8 +223,7 @@ protected:
         // 实时背景，结果内联窗格各子区域（头部留白、页脚间隙、TreeView 视口）各自合成 → 出现可见的材质拼缝（“奇怪的图层”）。
         // 现在其上绘制的内联窗格被切到透明的「surface」模式（fluentNavPaneFloating），故这张卡片均匀透出、无缝。
         const fluent::painting::DeviceAlignedStroke stroke =
-            fluent::painting::DpiPaintMetrics(painter).alignedStroke(
-                QRectF(m_paneRect), 1.0);
+            fluent::painting::DpiPaintMetrics(painter).alignedStroke(QRectF(m_paneRect), 1.0);
         const QPainterPath panel = fluent::overlay::roundedCornerRectPath(
             stroke.rect, m_radius,
             /*TL*/ false, /*TR*/ true, /*BR*/ true, /*BL*/ false);
@@ -275,21 +269,20 @@ private:
     Elevation::ShadowParams m_shadow;
     qreal m_shadowIntensity = 0.3;
 };
-}
+} // namespace
 
 NavigationView::NavigationView(QWidget* parent)
-    : QWidget(parent)
-    , m_layoutAnimation(new QPropertyAnimation(this, "layoutTransitionProgress", this))
-    , m_contentHost(new StackContentHost(this))
+    : QWidget(parent),
+      m_layoutAnimation(new QPropertyAnimation(this, "layoutTransitionProgress", this)),
+      m_contentHost(new StackContentHost(this))
 {
     setAttribute(Qt::WA_Hover);
     setFocusPolicy(Qt::StrongFocus);
     setMinimumSize(minimumSizeHint());
     m_contentHost->setTransitionAnimationEnabled(true);
 
-    connect(m_layoutAnimation, &QPropertyAnimation::finished, this, [this]() {
-        finishLayoutTransition();
-    });
+    connect(m_layoutAnimation, &QPropertyAnimation::finished, this,
+            [this]() { finishLayoutTransition(); });
 }
 
 NavigationView::~NavigationView()
@@ -541,9 +534,9 @@ void NavigationView::paintEvent(QPaintEvent*)
     // is handled separately so the one continuous root material is not covered by a flat color.
     // zh_CN: windowChromeBackdropFill() 是与标题栏共用的单一背景决策：有效色为纯色回退；无效色表示有真实系统背景（画透明）。
     const bool paintedMaterial = windowing::windowBackdropUsesPaintedMaterial(window());
-    const QColor backdrop = paintedMaterial ? QColor()
-                                             : windowing::windowChromeBackdropFill(
-                                                   *this, window(), isActiveWindow());
+    const QColor backdrop =
+        paintedMaterial ? QColor()
+                        : windowing::windowChromeBackdropFill(*this, window(), isActiveWindow());
     if (paintedMaterial) {
         // The Window owns the continuous software material; do not cover this
         // chrome segment with a second, independently aligned fill.
@@ -551,8 +544,8 @@ void NavigationView::paintEvent(QPaintEvent*)
         painter.fillRect(rect(), backdrop);
         if (!visual.chromeRect.isEmpty())
             painter.fillRect(visual.chromeRect, backdrop);
-    } else if (!visual.chromeRect.isEmpty()
-               && window() && window()->testAttribute(Qt::WA_TranslucentBackground)) {
+    } else if (!visual.chromeRect.isEmpty() && window() &&
+               window()->testAttribute(Qt::WA_TranslucentBackground)) {
         // Erase the chrome (pane) region to transparent each paint so the OS backdrop shows
         // cleanly. Under a translucent top-level macOS doesn't auto-clear the backing, so a frame
         // painted before the native vibrancy had composited (a startup race) would otherwise
@@ -583,7 +576,7 @@ bool NavigationView::event(QEvent* event)
     if (event->type() == QEvent::LayoutRequest)
         invalidateLayout(false);
     else if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate)
-        update();  // backdrop tracks window focus
+        update(); // backdrop tracks window focus
     return QWidget::event(event);
 }
 
@@ -672,19 +665,22 @@ void NavigationView::setLayoutTransitionProgress(qreal progress)
     update();
 }
 
-bool NavigationView::shouldAnimateLayoutTransition(const LayoutState& from, const LayoutState& to) const
+bool NavigationView::shouldAnimateLayoutTransition(const LayoutState& from,
+                                                   const LayoutState& to) const
 {
     if (!m_animationEnabled || !isVisible() || !window() || !window()->isVisible())
         return false;
-    if (m_inResize)  // responsive changes while live-resizing snap; see resizeEvent. zh_CN: live-resize 中的响应式切换直接吸附。
+    if (m_inResize) // responsive changes while live-resizing snap; see resizeEvent. zh_CN: live-resize 中的响应式切换直接吸附。
         return false;
     if (from.bounds.isEmpty() || to.bounds.isEmpty() || from.bounds != to.bounds)
         return false;
-    return transitionKind(from.effectiveMode, to.effectiveMode) != LayoutTransitionKind::None
-        || (isSideMode(from.effectiveMode) && isSideMode(to.effectiveMode) && from.chromeRect != to.chromeRect);
+    return transitionKind(from.effectiveMode, to.effectiveMode) != LayoutTransitionKind::None ||
+           (isSideMode(from.effectiveMode) && isSideMode(to.effectiveMode) &&
+            from.chromeRect != to.chromeRect);
 }
 
-NavigationView::LayoutTransitionKind NavigationView::transitionKind(DisplayMode from, DisplayMode to) const
+NavigationView::LayoutTransitionKind NavigationView::transitionKind(DisplayMode from,
+                                                                    DisplayMode to) const
 {
     if (from == to)
         return LayoutTransitionKind::None;
@@ -697,7 +693,8 @@ NavigationView::LayoutTransitionKind NavigationView::transitionKind(DisplayMode 
     return LayoutTransitionKind::None;
 }
 
-void NavigationView::startLayoutTransition(const LayoutState& from, const LayoutState& to, LayoutTransitionKind kind)
+void NavigationView::startLayoutTransition(const LayoutState& from, const LayoutState& to,
+                                           LayoutTransitionKind kind)
 {
     if (!m_layoutAnimation || kind == LayoutTransitionKind::None) {
         stopLayoutTransition();
@@ -717,7 +714,8 @@ void NavigationView::startLayoutTransition(const LayoutState& from, const Layout
     m_layoutAnimation->setEasingCurve(animation.decelerate);
     m_layoutAnimation->setStartValue(0.0);
     m_layoutAnimation->setEndValue(1.0);
-    m_layoutAnimation->start();
+    ::fluent::detail::startMotionTransition(m_layoutAnimation, animation.normal,
+                                            m_animationEnabled);
 }
 
 void NavigationView::finishLayoutTransition()
@@ -742,28 +740,35 @@ NavigationView::LayoutState NavigationView::currentVisualLayout() const
 {
     if (m_layoutTransitionKind == LayoutTransitionKind::None || m_layoutTransitionProgress >= 1.0)
         return m_layout;
-    return interpolatedLayout(m_layoutTransitionFrom, m_layoutTransitionTo, m_layoutTransitionProgress, m_layoutTransitionKind);
+    return interpolatedLayout(m_layoutTransitionFrom, m_layoutTransitionTo,
+                              m_layoutTransitionProgress, m_layoutTransitionKind);
 }
 
-NavigationView::LayoutState NavigationView::interpolatedLayout(const LayoutState& from, const LayoutState& to, qreal progress, LayoutTransitionKind kind) const
+NavigationView::LayoutState NavigationView::interpolatedLayout(const LayoutState& from,
+                                                               const LayoutState& to,
+                                                               qreal progress,
+                                                               LayoutTransitionKind kind) const
 {
     LayoutState visual;
     visual.bounds = to.bounds;
     if (kind == LayoutTransitionKind::TopSide) {
         visual.effectiveMode = to.effectiveMode;
         const QPoint chromeStartOffset = to.effectiveMode == DisplayMode::Top
-            ? QPoint(0, -to.chromeRect.height())
-            : QPoint(-to.chromeRect.width(), 0);
+                                             ? QPoint(0, -to.chromeRect.height())
+                                             : QPoint(-to.chromeRect.width(), 0);
         visual.chromeRect = offsetRevealRect(to.chromeRect, chromeStartOffset, progress);
-        visual.headerChromeRect = offsetRevealRect(to.headerChromeRect, chromeStartOffset, progress);
+        visual.headerChromeRect =
+            offsetRevealRect(to.headerChromeRect, chromeStartOffset, progress);
         visual.mainChromeRect = offsetRevealRect(to.mainChromeRect, chromeStartOffset, progress);
-        visual.footerChromeRect = offsetRevealRect(to.footerChromeRect, chromeStartOffset, progress);
+        visual.footerChromeRect =
+            offsetRevealRect(to.footerChromeRect, chromeStartOffset, progress);
         visual.contentRect = interpolatedRect(from.contentRect, to.contentRect, progress);
         return visual;
     }
 
     visual.effectiveMode = progress < 0.5 ? from.effectiveMode : to.effectiveMode;
-    const auto interpolate = kind == LayoutTransitionKind::Side ? horizontallyInterpolatedRect : interpolatedRect;
+    const auto interpolate =
+        kind == LayoutTransitionKind::Side ? horizontallyInterpolatedRect : interpolatedRect;
     visual.chromeRect = interpolate(from.chromeRect, to.chromeRect, progress);
     visual.contentRect = interpolate(from.contentRect, to.contentRect, progress);
     visual.headerChromeRect = interpolate(from.headerChromeRect, to.headerChromeRect, progress);
@@ -795,7 +800,8 @@ void NavigationView::updateLayout()
     LayoutState next;
     const QRect bounds = rect();
     next.bounds = bounds;
-    next.effectiveMode = resolveDisplayMode(bounds.width() > 0 ? bounds.width() : sizeHint().width());
+    next.effectiveMode =
+        resolveDisplayMode(bounds.width() > 0 ? bounds.width() : sizeHint().width());
 
     // Auto-managed pane open state (matches WinUI) after the control is visible: when
     // adaptive layout drops to compact or minimal, collapse the pane; when it returns to
@@ -803,11 +809,10 @@ void NavigationView::updateLayout()
     // paneOpen state before callers can observe or configure it.
     // zh_CN: 控件可见后的自适应窗格开合（对齐 WinUI）：降到紧凑或最小模式时收起窗格，回到展开
     // 模式时打开。隐藏构造/布局阶段不能在调用方观察或配置前改写公开的 paneOpen 状态。
-    if (hadResolvedLayout
-        && isVisible()
-        && m_displayMode == DisplayMode::Auto
-        && next.effectiveMode != m_lastEffectiveDisplayMode) {
-        if (next.effectiveMode == DisplayMode::LeftCompact || next.effectiveMode == DisplayMode::LeftMinimal)
+    if (hadResolvedLayout && isVisible() && m_displayMode == DisplayMode::Auto &&
+        next.effectiveMode != m_lastEffectiveDisplayMode) {
+        if (next.effectiveMode == DisplayMode::LeftCompact ||
+            next.effectiveMode == DisplayMode::LeftMinimal)
             m_paneOpen = false;
         else if (next.effectiveMode == DisplayMode::Left)
             m_paneOpen = true;
@@ -818,7 +823,8 @@ void NavigationView::updateLayout()
     else
         buildTopLayout(next, bounds);
 
-    const LayoutTransitionKind kind = transitionKind(previousVisual.effectiveMode, next.effectiveMode);
+    const LayoutTransitionKind kind =
+        transitionKind(previousVisual.effectiveMode, next.effectiveMode);
     const bool animateTransition = shouldAnimateLayoutTransition(previousVisual, next);
 
     m_layout = next;
@@ -832,15 +838,17 @@ void NavigationView::updateLayout()
     // zh_CN: 若已经在向这个确切目标（模式 + 边界）过渡，就让它跑完而不是重启。每次重排都重启
     //（如 effectiveDisplayModeChanged 处理器重排窗格时）会把动画钉在进度 0、留下半过渡的 chrome。
     // 这个反馈环正是紧凑图标栏始终收不成 LeftMinimal 的原因。
-    const bool sameTargetInFlight =
-        m_layoutTransitionKind != LayoutTransitionKind::None
-        && m_layoutAnimation && m_layoutAnimation->state() == QAbstractAnimation::Running
-        && m_layoutTransitionTo.effectiveMode == next.effectiveMode
-        && m_layoutTransitionTo.bounds == next.bounds;
+    const bool sameTargetInFlight = m_layoutTransitionKind != LayoutTransitionKind::None &&
+                                    m_layoutAnimation &&
+                                    m_layoutAnimation->state() == QAbstractAnimation::Running &&
+                                    m_layoutTransitionTo.effectiveMode == next.effectiveMode &&
+                                    m_layoutTransitionTo.bounds == next.bounds;
     if (sameTargetInFlight) {
-        m_layoutTransitionTo = next;  // refresh target geometry, keep the running animation
+        m_layoutTransitionTo = next; // refresh target geometry, keep the running animation
     } else if (animateTransition) {
-        startLayoutTransition(previousVisual, m_layout, kind == LayoutTransitionKind::None ? LayoutTransitionKind::Side : kind);
+        startLayoutTransition(previousVisual, m_layout,
+                              kind == LayoutTransitionKind::None ? LayoutTransitionKind::Side
+                                                                 : kind);
     } else {
         m_layoutTransitionKind = LayoutTransitionKind::None;
         m_layoutTransitionProgress = 1.0;
@@ -858,9 +866,15 @@ void NavigationView::updateLayout()
 void NavigationView::buildSideLayout(LayoutState& state, const QRect& bounds)
 {
     const int chromeWidth = qMin(chromeWidthForMode(state.effectiveMode), bounds.width());
-    state.chromeRect = chromeWidth > 0 ? QRect(bounds.left(), bounds.top(), chromeWidth, bounds.height()) : QRect();
-    const int contentLeft = state.effectiveMode == DisplayMode::Left ? chromeWidth : (state.effectiveMode == DisplayMode::LeftCompact ? m_compactPaneWidth : 0);
-    state.contentRect = QRect(contentLeft, bounds.top(), qMax(0, bounds.width() - contentLeft), bounds.height());
+    state.chromeRect = chromeWidth > 0
+                           ? QRect(bounds.left(), bounds.top(), chromeWidth, bounds.height())
+                           : QRect();
+    const int contentLeft =
+        state.effectiveMode == DisplayMode::Left
+            ? chromeWidth
+            : (state.effectiveMode == DisplayMode::LeftCompact ? m_compactPaneWidth : 0);
+    state.contentRect =
+        QRect(contentLeft, bounds.top(), qMax(0, bounds.width() - contentLeft), bounds.height());
     if (state.effectiveMode == DisplayMode::LeftMinimal && m_paneOpen)
         state.contentRect = bounds;
 
@@ -868,37 +882,50 @@ void NavigationView::buildSideLayout(LayoutState& state, const QRect& bounds)
         return;
 
     const int headerHeight = qMin(preferredHeight(headerChromeWidget()), state.chromeRect.height());
-    const int footerHeight = qMin(preferredHeight(footerChromeWidget()), qMax(0, state.chromeRect.height() - headerHeight));
+    const int footerHeight = qMin(preferredHeight(footerChromeWidget()),
+                                  qMax(0, state.chromeRect.height() - headerHeight));
     const int mainHeight = qMax(0, state.chromeRect.height() - headerHeight - footerHeight);
 
     int y = state.chromeRect.top();
     if (headerChromeWidget())
-        state.headerChromeRect = QRect(state.chromeRect.left(), y, state.chromeRect.width(), headerHeight);
+        state.headerChromeRect =
+            QRect(state.chromeRect.left(), y, state.chromeRect.width(), headerHeight);
     y += headerHeight;
     if (mainChromeWidget())
-        state.mainChromeRect = QRect(state.chromeRect.left(), y, state.chromeRect.width(), mainHeight);
+        state.mainChromeRect =
+            QRect(state.chromeRect.left(), y, state.chromeRect.width(), mainHeight);
     if (footerChromeWidget())
-        state.footerChromeRect = QRect(state.chromeRect.left(), state.chromeRect.bottom() + 1 - footerHeight, state.chromeRect.width(), footerHeight);
+        state.footerChromeRect =
+            QRect(state.chromeRect.left(), state.chromeRect.bottom() + 1 - footerHeight,
+                  state.chromeRect.width(), footerHeight);
 }
 
 void NavigationView::buildTopLayout(LayoutState& state, const QRect& bounds)
 {
-    state.chromeRect = QRect(bounds.left(), bounds.top(), bounds.width(), qMin(m_topBarHeight, bounds.height()));
-    state.contentRect = QRect(bounds.left(), state.chromeRect.bottom() + 1, bounds.width(), qMax(0, bounds.height() - state.chromeRect.height()));
+    state.chromeRect =
+        QRect(bounds.left(), bounds.top(), bounds.width(), qMin(m_topBarHeight, bounds.height()));
+    state.contentRect = QRect(bounds.left(), state.chromeRect.bottom() + 1, bounds.width(),
+                              qMax(0, bounds.height() - state.chromeRect.height()));
 
     const int headerWidth = qMin(preferredWidth(headerChromeWidget()), state.chromeRect.width());
-    const int footerWidth = qMin(preferredWidth(footerChromeWidget()), qMax(0, state.chromeRect.width() - headerWidth));
+    const int footerWidth =
+        qMin(preferredWidth(footerChromeWidget()), qMax(0, state.chromeRect.width() - headerWidth));
     const int remainingAfterFixed = qMax(0, state.chromeRect.width() - headerWidth - footerWidth);
-    const int mainWidth = qMin(preferredWidth(mainChromeWidget(), remainingAfterFixed), remainingAfterFixed);
+    const int mainWidth =
+        qMin(preferredWidth(mainChromeWidget(), remainingAfterFixed), remainingAfterFixed);
 
     int x = state.chromeRect.left();
     if (headerChromeWidget())
-        state.headerChromeRect = QRect(x, state.chromeRect.top(), headerWidth, state.chromeRect.height());
+        state.headerChromeRect =
+            QRect(x, state.chromeRect.top(), headerWidth, state.chromeRect.height());
     x += headerWidth;
     if (mainChromeWidget())
-        state.mainChromeRect = QRect(x, state.chromeRect.top(), mainWidth, state.chromeRect.height());
+        state.mainChromeRect =
+            QRect(x, state.chromeRect.top(), mainWidth, state.chromeRect.height());
     if (footerChromeWidget())
-        state.footerChromeRect = QRect(state.chromeRect.right() + 1 - footerWidth, state.chromeRect.top(), footerWidth, state.chromeRect.height());
+        state.footerChromeRect =
+            QRect(state.chromeRect.right() + 1 - footerWidth, state.chromeRect.top(), footerWidth,
+                  state.chromeRect.height());
 }
 
 void NavigationView::applyChildGeometries()
@@ -910,9 +937,8 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
 {
     // A pane to the content's left means a framed side mode: the content gets a rounded top-left
     // corner + border. zh_CN: 内容左侧有窗格即带框侧边模式：内容获得左上圆角 + 边框。
-    const bool framed = isSideMode(state.effectiveMode)
-                        && !state.contentRect.isEmpty()
-                        && state.contentRect.left() > 0;
+    const bool framed = isSideMode(state.effectiveMode) && !state.contentRect.isEmpty() &&
+                        state.contentRect.left() > 0;
     // When the pane opens as a flyout over the content (compact / minimal), the content's rounded
     // frame would peek out from under the floating pane — so suppress it for the flyout.
     // zh_CN: 窗格以浮层覆盖内容（紧凑/最小）时，内容圆角框会从浮动窗格下露出——故浮层期间抑制它。
@@ -923,8 +949,7 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
         // Configure this layout's content overlay.
         // zh_CN: 配置当前布局的内容覆盖层。
         m_contentHost->setContentSurface(themeColorsRef().bgLayerOverlay,
-                                         framed ? themeRadius().overlay : 0.0,
-                                         QColor());
+                                         framed ? themeRadius().overlay : 0.0, QColor());
         m_contentHost->show();
         m_contentHost->lower();
     }
@@ -971,8 +996,8 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
 
 bool NavigationView::isPaneFlyoutVisible(const LayoutState& state) const
 {
-    if (state.effectiveMode != DisplayMode::LeftCompact
-        && state.effectiveMode != DisplayMode::LeftMinimal)
+    if (state.effectiveMode != DisplayMode::LeftCompact &&
+        state.effectiveMode != DisplayMode::LeftMinimal)
         return false;
     // The pane is a flyout once it has opened past its inline rail (compact rail width, or 0 for
     // minimal) — true at rest when open AND throughout the slide animation.
@@ -1008,7 +1033,7 @@ void NavigationView::updatePaneFlyout(const LayoutState& state)
     //（setChromeWidgetsFloating），使这张卡片均匀透出、各区域无材质拼缝。
     setChromeWidgetsFloating(true);
     const auto& colors = themeColorsRef();
-    const bool dark = currentTheme() == Dark;
+    const bool dark = effectiveThemeUsesDarkAppearance();
     QColor fill = colors.bgLayer;
     fill.setAlpha(255);
     // A clearly visible drawer border (the user wants "一个比较明显的边框色"). The theme strokeDefault is
@@ -1066,9 +1091,8 @@ bool NavigationView::canHostChromeWidget(ChromeSlot slot, QWidget* widget) const
 {
     if (!widget)
         return true;
-    if (widget == this || widget->isAncestorOf(this)
-        || widget == m_contentHost || widget == m_contentFrameOverlay
-        || widget == m_paneFlyoutOverlay) {
+    if (widget == this || widget->isAncestorOf(this) || widget == m_contentHost ||
+        widget == m_contentFrameOverlay || widget == m_paneFlyoutOverlay) {
         return false;
     }
 
@@ -1079,9 +1103,7 @@ bool NavigationView::canHostChromeWidget(ChromeSlot slot, QWidget* widget) const
     return true;
 }
 
-bool NavigationView::assignChromeWidget(ChromeSlot slot,
-                                        QWidget* widget,
-                                        WidgetOwnership ownership,
+bool NavigationView::assignChromeWidget(ChromeSlot slot, QWidget* widget, WidgetOwnership ownership,
                                         bool applyPreviousOwnership)
 {
     ChromeRecord& destination = chromeRecord(slot);
@@ -1102,11 +1124,9 @@ bool NavigationView::assignChromeWidget(ChromeSlot slot,
         destination.identity = widget;
         destination.originalParent = widget->parentWidget();
         destination.ownership = ownership;
-        destination.destroyedConnection = connect(
-            widget,
-            &QObject::destroyed,
-            this,
-            [this, slot, widget]() { handleChromeWidgetDestroyed(slot, widget); });
+        destination.destroyedConnection =
+            connect(widget, &QObject::destroyed, this,
+                    [this, slot, widget]() { handleChromeWidgetDestroyed(slot, widget); });
         widget->setParent(this);
         widget->show();
     }

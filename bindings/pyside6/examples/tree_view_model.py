@@ -119,7 +119,7 @@ class WorkspaceTreeDelegate(QStyledItemDelegate):
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setRenderHint(QPainter.TextAntialiasing)
 
-        dark = fluentqt.current_theme() == fluentqt.Theme.Dark
+        dark = fluentqt.theme_uses_dark_appearance(fluentqt.current_theme())
         accent = QColor(fluentqt.accent_color())
         primary = QColor("#f5f5f5" if dark else "#1b1b1b")
         secondary = QColor("#c8c8c8" if dark else "#666666")

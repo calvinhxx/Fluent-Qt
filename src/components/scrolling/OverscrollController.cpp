@@ -10,6 +10,7 @@
 #include <QWheelEvent>
 #include <QWidget>
 
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "design/Animation.h"
 
 namespace fluent::scrolling {
@@ -19,29 +20,29 @@ namespace {
 // bounces back, and the discrete boundary-bounce overshoot range. zh_CN: 橡皮筋位移上限、成簇
 // 间隔、静止鼠标滚轮回弹前的延迟，以及离散边界回弹的过冲范围。
 constexpr qreal kMaxOverscrollPx = 100.0;
-constexpr int   kClusterGapMs = 120;
-constexpr int   kNoPhaseBoundaryBounceDelayMs = 16;
+constexpr int kClusterGapMs = 120;
+constexpr int kNoPhaseBoundaryBounceDelayMs = 16;
 // Some backends deliver pixel/phase updates without a terminal ScrollEnd.
 // Settle after a short quiet period while still honoring an explicit end event.
 // zh_CN: 部分后端只发送 pixel/phase 更新而没有最终 ScrollEnd；在短暂无输入后
 // 自动回弹，同时继续优先响应明确的结束事件。
-constexpr int   kGestureBounceFallbackMs = 120;
+constexpr int kGestureBounceFallbackMs = 120;
 constexpr qreal kDiscreteBoundaryOverscrollMinPx = 12.0;
 constexpr qreal kDiscreteBoundaryOverscrollMaxPx = 48.0;
 
-int scrollSign(qreal value) {
-    if (value > 0.0) return 1;
-    if (value < 0.0) return -1;
+int scrollSign(qreal value)
+{
+    if (value > 0.0)
+        return 1;
+    if (value < 0.0)
+        return -1;
     return 0;
 }
 } // namespace
 
 OverscrollController::OverscrollController(QWidget* viewport, qreal discreteStepPx, Hooks hooks,
-                                          QObject* parent)
-    : QObject(parent)
-    , m_viewport(viewport)
-    , m_step(discreteStepPx)
-    , m_hooks(std::move(hooks))
+                                           QObject* parent)
+    : QObject(parent), m_viewport(viewport), m_step(discreteStepPx), m_hooks(std::move(hooks))
 {
     m_bounceAnim = new QVariantAnimation(this);
     m_bounceAnim->setDuration(::Animation::Duration::Normal);
@@ -64,11 +65,13 @@ OverscrollController::OverscrollController(QWidget* viewport, qreal discreteStep
     });
 }
 
-bool OverscrollController::horizontal() const {
+bool OverscrollController::horizontal() const
+{
     return m_hooks.isHorizontal && m_hooks.isHorizontal();
 }
 
-void OverscrollController::setOverscrollEnabled(bool enabled) {
+void OverscrollController::setOverscrollEnabled(bool enabled)
+{
     if (m_overscrollEnabled == enabled)
         return;
     m_overscrollEnabled = enabled;
@@ -76,7 +79,8 @@ void OverscrollController::setOverscrollEnabled(bool enabled) {
         cancel();
 }
 
-void OverscrollController::setScrollChainingEnabled(bool enabled) {
+void OverscrollController::setScrollChainingEnabled(bool enabled)
+{
     if (m_chaining == enabled)
         return;
     m_chaining = enabled;
@@ -84,7 +88,8 @@ void OverscrollController::setScrollChainingEnabled(bool enabled) {
         cancel();
 }
 
-void OverscrollController::cancel() {
+void OverscrollController::cancel()
+{
     m_bounceTimer->stop();
     m_bounceAnim->stop();
     resetNoPhaseCluster();
@@ -95,23 +100,27 @@ void OverscrollController::cancel() {
     }
 }
 
-void OverscrollController::notifyChanged() {
+void OverscrollController::notifyChanged()
+{
     if (m_hooks.onOverscrollChanged)
         m_hooks.onOverscrollChanged();
 }
 
-void OverscrollController::resetNoPhaseCluster() {
+void OverscrollController::resetNoPhaseCluster()
+{
     m_lastNoPhaseTs = 0;
     m_clusterAccum = 0.0;
     m_clusterDir = 0;
 }
 
-void OverscrollController::resetNoPhaseBoundaryBounce() {
+void OverscrollController::resetNoPhaseBoundaryBounce()
+{
     m_noPhaseBoundaryDir = 0;
     m_noPhaseBounceArmed = false;
 }
 
-void OverscrollController::startBounceBack() {
+void OverscrollController::startBounceBack()
+{
     m_bounceTimer->stop();
     if (qFuzzyIsNull(m_overscroll)) {
         resetNoPhaseBoundaryBounce();
@@ -121,25 +130,27 @@ void OverscrollController::startBounceBack() {
     m_bounceAnim->stop();
     m_bounceAnim->setStartValue(m_overscroll);
     m_bounceAnim->setEndValue(0.0);
-    m_bounceAnim->start();
+    ::fluent::detail::startMotionTransition(m_bounceAnim, ::Animation::Duration::Normal);
 }
 
-void OverscrollController::handleWheel(QWheelEvent* event) {
+void OverscrollController::handleWheel(QWheelEvent* event)
+{
     enum class WheelKind { PhaseBased, NoPhasePixel, NoPhaseDiscrete };
     const auto phase = event->phase();
     const bool hasPixelDelta = !event->pixelDelta().isNull();
-    const WheelKind kind = (phase != Qt::NoScrollPhase) ? WheelKind::PhaseBased
-                         : (hasPixelDelta             ? WheelKind::NoPhasePixel
-                                                      : WheelKind::NoPhaseDiscrete);
+    const WheelKind kind =
+        (phase != Qt::NoScrollPhase)
+            ? WheelKind::PhaseBased
+            : (hasPixelDelta ? WheelKind::NoPhasePixel : WheelKind::NoPhaseDiscrete);
 
     const bool h = horizontal();
 
     // For horizontal flow, pick the dominant axis (trackpad users often swipe vertically even
     // on a horizontal list). zh_CN: 横向流动时取主轴（即便横向列表，触控板也常纵向滑）。
-    const int delta = h
-        ? (qAbs(event->angleDelta().y()) >= qAbs(event->angleDelta().x())
-               ? event->angleDelta().y() : event->angleDelta().x())
-        : event->angleDelta().y();
+    const int delta = h ? (qAbs(event->angleDelta().y()) >= qAbs(event->angleDelta().x())
+                               ? event->angleDelta().y()
+                               : event->angleDelta().x())
+                        : event->angleDelta().y();
 
     // Zero-delta (e.g. ScrollEnd on a Windows touchpad with no residual).
     if (delta == 0 && !hasPixelDelta) {
@@ -156,24 +167,23 @@ void OverscrollController::handleWheel(QWheelEvent* event) {
         return;
     }
 
-    const qreal scrollPx = hasPixelDelta
-        ? static_cast<qreal>(h
-              ? (qAbs(event->pixelDelta().y()) >= qAbs(event->pixelDelta().x())
-                     ? event->pixelDelta().y() : event->pixelDelta().x())
-              : event->pixelDelta().y())
-        : delta / 120.0 * m_step;
+    const qreal scrollPx =
+        hasPixelDelta
+            ? static_cast<qreal>(h ? (qAbs(event->pixelDelta().y()) >= qAbs(event->pixelDelta().x())
+                                          ? event->pixelDelta().y()
+                                          : event->pixelDelta().x())
+                                   : event->pixelDelta().y())
+            : delta / 120.0 * m_step;
 
     auto startNoPhaseBoundaryBounce = [&]() {
         const int boundaryDir = scrollSign(scrollPx);
         if (boundaryDir == 0)
             return;
         if (m_noPhaseBoundaryDir == boundaryDir &&
-            (m_noPhaseBounceArmed ||
-             m_bounceAnim->state() == QAbstractAnimation::Running)) {
+            (m_noPhaseBounceArmed || m_bounceAnim->state() == QAbstractAnimation::Running)) {
             return;
         }
-        const qreal amount = qBound(kDiscreteBoundaryOverscrollMinPx,
-                                    qAbs(scrollPx) * 0.5,
+        const qreal amount = qBound(kDiscreteBoundaryOverscrollMinPx, qAbs(scrollPx) * 0.5,
                                     kDiscreteBoundaryOverscrollMaxPx);
         m_overscroll = (scrollPx > 0.0) ? amount : -amount;
         m_noPhaseBoundaryDir = boundaryDir;
@@ -189,10 +199,8 @@ void OverscrollController::handleWheel(QWheelEvent* event) {
     if (kind == WheelKind::NoPhaseDiscrete) {
         const qint64 now = QDateTime::currentMSecsSinceEpoch();
         const int dir = scrollSign(scrollPx);
-        const bool clusterExpired =
-            m_lastNoPhaseTs != 0 && now - m_lastNoPhaseTs > kClusterGapMs;
-        const bool directionChanged =
-            m_clusterDir != 0 && dir != 0 && m_clusterDir != dir;
+        const bool clusterExpired = m_lastNoPhaseTs != 0 && now - m_lastNoPhaseTs > kClusterGapMs;
+        const bool directionChanged = m_clusterDir != 0 && dir != 0 && m_clusterDir != dir;
         if (m_lastNoPhaseTs == 0 || clusterExpired || directionChanged) {
             resetNoPhaseCluster();
             if (clusterExpired || directionChanged)
@@ -205,8 +213,7 @@ void OverscrollController::handleWheel(QWheelEvent* event) {
 
         if (!qFuzzyIsNull(m_overscroll)) {
             const bool sameBoundaryDirection =
-                (m_overscroll > 0.0 && scrollPx > 0.0) ||
-                (m_overscroll < 0.0 && scrollPx < 0.0);
+                (m_overscroll > 0.0 && scrollPx > 0.0) || (m_overscroll < 0.0 && scrollPx < 0.0);
             if (sameBoundaryDirection) {
                 notifyChanged();
                 event->accept();
@@ -229,9 +236,8 @@ void OverscrollController::handleWheel(QWheelEvent* event) {
 
         const int before = sb->value();
         const bool atStart = before <= sb->minimum();
-        const bool atEnd   = before >= sb->maximum();
-        const bool boundaryTail =
-            (atStart && scrollPx > 0.0) || (atEnd && scrollPx < 0.0);
+        const bool atEnd = before >= sb->maximum();
+        const bool boundaryTail = (atStart && scrollPx > 0.0) || (atEnd && scrollPx < 0.0);
 
         if (boundaryTail) {
             if (m_chaining) {
@@ -307,7 +313,7 @@ void OverscrollController::handleWheel(QWheelEvent* event) {
     }
 
     const bool atStart = sb->value() <= sb->minimum();
-    const bool atEnd   = sb->value() >= sb->maximum();
+    const bool atEnd = sb->value() >= sb->maximum();
     const bool wantsEnter = (atStart && scrollPx > 0.0) || (atEnd && scrollPx < 0.0);
 
     if (wantsEnter) {

@@ -21,6 +21,7 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/foundation/overlay/OverlayWindow.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/collections/private/DrawerViewAccessibility_p.h"
 
 namespace fluent::collections {
@@ -39,8 +40,10 @@ class DrawerAlphaEffect : public QGraphicsEffect {
 public:
     explicit DrawerAlphaEffect(QObject* parent = nullptr) : QGraphicsEffect(parent) {}
     QRectF boundingRectFor(const QRectF& rect) const override { return rect; }
+
 protected:
-    void draw(QPainter* painter) override {
+    void draw(QPainter* painter) override
+    {
         QPoint offset;
         const QPixmap pixmap = sourcePixmap(Qt::LogicalCoordinates, &offset);
         if (!pixmap.isNull())
@@ -49,16 +52,11 @@ protected:
 };
 } // namespace
 
-DrawerView::DrawerView(QWidget* parent)
-    : QWidget(parent),
-      m_originalParent(parent)
+DrawerView::DrawerView(QWidget* parent) : QWidget(parent), m_originalParent(parent)
 {
     detail::ensureDrawerViewAccessibilityFactory();
-    m_overlayCoordinator =
-        new ::fluent::overlay::OverlayCoordinator(this, this);
-    connect(m_overlayCoordinator,
-            &::fluent::overlay::OverlayCoordinator::hostGeometryChanged,
-            this,
+    m_overlayCoordinator = new ::fluent::overlay::OverlayCoordinator(this, this);
+    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this,
             [this]() {
                 if (!isVisible() && !m_isOpen && !m_drag.active)
                     return;
@@ -68,12 +66,9 @@ DrawerView::DrawerView(QWidget* parent)
                 }
                 updateOverlayGeometry();
             });
-    connect(m_overlayCoordinator,
-            &::fluent::overlay::OverlayCoordinator::scrimPressed,
-            this,
+    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::scrimPressed, this,
             [this](const QPoint& globalPos) {
-                if (isVisible() && shouldCloseOnOutsidePress()
-                    && !isPointInsidePanel(globalPos)) {
+                if (isVisible() && shouldCloseOnOutsidePress() && !isPointInsidePanel(globalPos)) {
                     close();
                 }
             });
@@ -93,11 +88,14 @@ DrawerView::DrawerView(QWidget* parent)
 
     m_positionAnimation = new QPropertyAnimation(this, "position", this);
     connect(m_positionAnimation, &QPropertyAnimation::finished, this, [this]() {
-        if (m_transitionTarget == TransitionTarget::Open)
+        const TransitionTarget target = m_transitionTarget;
+        QPointer<DrawerView> guard(this);
+        if (target == TransitionTarget::Open)
             finalizeOpened();
-        else if (m_transitionTarget == TransitionTarget::Closed)
+        else if (target == TransitionTarget::Closed)
             finalizeClosed();
-        m_transitionTarget = TransitionTarget::None;
+        if (guard && m_transitionTarget == target)
+            m_transitionTarget = TransitionTarget::None;
     });
 
     ensureApplicationEventFilter();
@@ -116,8 +114,7 @@ DrawerView::~DrawerView()
 void DrawerView::onThemeUpdated()
 {
     update();
-    if (auto* scrimElement =
-            dynamic_cast<FluentElement*>(m_overlayCoordinator->scrim()))
+    if (auto* scrimElement = dynamic_cast<FluentElement*>(m_overlayCoordinator->scrim()))
         scrimElement->onThemeUpdated();
 }
 
@@ -167,10 +164,8 @@ void DrawerView::setDrawerLength(int length)
 
 void DrawerView::setAvailableMargins(const QMargins& margins)
 {
-    const QMargins normalized(qMax(0, margins.left()),
-                              qMax(0, margins.top()),
-                              qMax(0, margins.right()),
-                              qMax(0, margins.bottom()));
+    const QMargins normalized(qMax(0, margins.left()), qMax(0, margins.top()),
+                              qMax(0, margins.right()), qMax(0, margins.bottom()));
     if (m_availableMargins == normalized)
         return;
 
@@ -252,7 +247,22 @@ void DrawerView::setAnimationEnabled(bool enabled)
         return;
 
     m_animationEnabled = enabled;
+
+    QPointer<DrawerView> guard(this);
     emit animationEnabledChanged(m_animationEnabled);
+    if (!guard || m_animationEnabled || !m_positionAnimation ||
+        m_positionAnimation->state() != QAbstractAnimation::Running) {
+        return;
+    }
+
+    const TransitionTarget target = m_transitionTarget;
+    m_positionAnimation->stop();
+    if (target == TransitionTarget::Open)
+        finalizeOpened();
+    else if (target == TransitionTarget::Closed)
+        finalizeClosed();
+    if (guard && m_transitionTarget == target)
+        m_transitionTarget = TransitionTarget::None;
 }
 
 void DrawerView::setContentWidget(QWidget* widget)
@@ -341,8 +351,7 @@ QWidget* DrawerView::releaseContentWidget(bool deleteOwned, bool restoreParent)
     return content;
 }
 
-void DrawerView::observeContentWidget(QWidget* widget,
-                                      QWidget* originalParent,
+void DrawerView::observeContentWidget(QWidget* widget, QWidget* originalParent,
                                       WidgetOwnership ownership)
 {
     m_contentWidget = widget;
@@ -351,35 +360,38 @@ void DrawerView::observeContentWidget(QWidget* widget,
     if (!widget)
         return;
 
-    m_contentDestroyedConnection =
-        connect(widget, &QObject::destroyed, this, [this]() {
-            const WidgetOwnership previousOwnership = m_contentOwnership;
-            m_contentWidget = nullptr;
-            m_originalContentParent = nullptr;
-            m_contentOwnership = WidgetOwnership::Borrowed;
-            m_contentDestroyedConnection = {};
-            updateContentGeometry();
-            detail::notifyDrawerViewAccessibilityContentChanged(this);
-            emit contentWidgetChanged(nullptr);
-            if (previousOwnership != m_contentOwnership)
-                emit contentOwnershipChanged(m_contentOwnership);
-        });
+    m_contentDestroyedConnection = connect(widget, &QObject::destroyed, this, [this]() {
+        const WidgetOwnership previousOwnership = m_contentOwnership;
+        m_contentWidget = nullptr;
+        m_originalContentParent = nullptr;
+        m_contentOwnership = WidgetOwnership::Borrowed;
+        m_contentDestroyedConnection = {};
+        updateContentGeometry();
+        detail::notifyDrawerViewAccessibilityContentChanged(this);
+        emit contentWidgetChanged(nullptr);
+        if (previousOwnership != m_contentOwnership)
+            emit contentOwnershipChanged(m_contentOwnership);
+    });
 }
 
 QSize DrawerView::sizeHint() const
 {
     const QSize contentHint = m_contentWidget ? m_contentWidget->sizeHint() : QSize();
     if (m_edge == DrawerEdge::Top || m_edge == DrawerEdge::Bottom)
-        return QSize(std::max(kDefaultCrossAxis, contentHint.width()), std::max(m_drawerLength, contentHint.height()));
-    return QSize(std::max(m_drawerLength, contentHint.width()), std::max(kDefaultCrossAxis, contentHint.height()));
+        return QSize(std::max(kDefaultCrossAxis, contentHint.width()),
+                     std::max(m_drawerLength, contentHint.height()));
+    return QSize(std::max(m_drawerLength, contentHint.width()),
+                 std::max(kDefaultCrossAxis, contentHint.height()));
 }
 
 QSize DrawerView::minimumSizeHint() const
 {
     const QSize contentMinimum = m_contentWidget ? m_contentWidget->minimumSizeHint() : QSize();
     if (m_edge == DrawerEdge::Top || m_edge == DrawerEdge::Bottom)
-        return QSize(std::max(120, contentMinimum.width()), std::max(48, std::min(m_drawerLength, 120)));
-    return QSize(std::max(48, std::min(m_drawerLength, 120)), std::max(120, contentMinimum.height()));
+        return QSize(std::max(120, contentMinimum.width()),
+                     std::max(48, std::min(m_drawerLength, 120)));
+    return QSize(std::max(48, std::min(m_drawerLength, 120)),
+                 std::max(120, contentMinimum.height()));
 }
 
 void DrawerView::open()
@@ -482,7 +494,8 @@ bool DrawerView::eventFilter(QObject* watched, QEvent* event)
             return false;
         }
 
-        if (!isEnabled() || !m_interactive || m_positionAnimation->state() == QAbstractAnimation::Running)
+        if (!isEnabled() || !m_interactive ||
+            m_positionAnimation->state() == QAbstractAnimation::Running)
             return false;
 
         if (isVisible() && isPointInsidePanel(globalPos)) {
@@ -553,7 +566,8 @@ void DrawerView::resizeEvent(QResizeEvent* event)
 
 void DrawerView::mousePressEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton && isEnabled() && m_interactive && m_positionAnimation->state() != QAbstractAnimation::Running) {
+    if (event->button() == Qt::LeftButton && isEnabled() && m_interactive &&
+        m_positionAnimation->state() != QAbstractAnimation::Running) {
         beginDrag(fluentMouseGlobalPos(event), false);
         event->accept();
         return;
@@ -583,9 +597,7 @@ void DrawerView::mouseReleaseEvent(QMouseEvent* event)
 
 QWidget* DrawerView::resolveTopLevelWidget() const
 {
-    if (QWidget* top =
-            ::fluent::overlay::resolveOwningTopLevel(m_originalParent,
-                                                     parentWidget())) {
+    if (QWidget* top = ::fluent::overlay::resolveOwningTopLevel(m_originalParent, parentWidget())) {
         return top;
     }
     return m_overlayCoordinator->topLevelWidget();
@@ -620,15 +632,13 @@ bool DrawerView::eventHidesInteractionHost(QObject* watched, QEvent* event) cons
     if (!event || event->type() != QEvent::Hide || !m_originalParent)
         return false;
     auto* hiddenWidget = qobject_cast<QWidget*>(watched);
-    return hiddenWidget
-        && (hiddenWidget == m_originalParent
-            || hiddenWidget->isAncestorOf(m_originalParent));
+    return hiddenWidget &&
+           (hiddenWidget == m_originalParent || hiddenWidget->isAncestorOf(m_originalParent));
 }
 
 void DrawerView::deactivateForHiddenHost()
 {
-    if (m_hostDeactivationInProgress
-        || (!isVisible() && !m_isOpen && !m_drag.active))
+    if (m_hostDeactivationInProgress || (!isVisible() && !m_isOpen && !m_drag.active))
         return;
 
     // finalizeClosed() hides this widget, which itself produces another Hide
@@ -721,8 +731,7 @@ void DrawerView::finalizeClosed()
     if (!guard)
         return;
     QWidget* focused = qApp ? QApplication::focusWidget() : nullptr;
-    const bool shouldRestoreFocus =
-        !focused || focused == this || isAncestorOf(focused);
+    const bool shouldRestoreFocus = !focused || focused == this || isAncestorOf(focused);
     QPointer<QWidget> focusRestoreTarget = m_focusRestoreTarget;
     m_focusRestoreTarget = nullptr;
     hide();
@@ -736,10 +745,8 @@ void DrawerView::finalizeClosed()
         if (!guard || m_isOpen || isVisible())
             return;
     }
-    if (shouldRestoreFocus && focusRestoreTarget
-        && focusRestoreTarget->isVisible()
-        && focusRestoreTarget->isEnabled()
-        && focusRestoreTarget->focusPolicy() != Qt::NoFocus) {
+    if (shouldRestoreFocus && focusRestoreTarget && focusRestoreTarget->isVisible() &&
+        focusRestoreTarget->isEnabled() && focusRestoreTarget->focusPolicy() != Qt::NoFocus) {
         focusRestoreTarget->setFocus(Qt::PopupFocusReason);
     }
     emit closed();
@@ -750,10 +757,12 @@ void DrawerView::startPositionAnimation(qreal endPosition, TransitionTarget targ
     const auto animation = themeAnimation();
     m_transitionTarget = target;
     m_positionAnimation->setDuration(animation.normal);
-    m_positionAnimation->setEasingCurve(target == TransitionTarget::Open ? animation.decelerate : animation.accelerate);
+    m_positionAnimation->setEasingCurve(target == TransitionTarget::Open ? animation.decelerate
+                                                                         : animation.accelerate);
     m_positionAnimation->setStartValue(m_position);
     m_positionAnimation->setEndValue(endPosition);
-    m_positionAnimation->start();
+    ::fluent::detail::startMotionTransition(m_positionAnimation, animation.normal,
+                                            m_animationEnabled);
 }
 
 void DrawerView::stopAnimation()
@@ -766,8 +775,8 @@ void DrawerView::stopAnimation()
 QRect DrawerView::availableRect() const
 {
     QWidget* top = resolveTopLevelWidget();
-    const QRect topRect = top ? ::fluent::overlay::overlaySurfaceRect(top)
-                              : QRect(QPoint(0, 0), sizeHint());
+    const QRect topRect =
+        top ? ::fluent::overlay::overlaySurfaceRect(top) : QRect(QPoint(0, 0), sizeHint());
     if (topRect.isEmpty())
         return topRect;
 
@@ -781,13 +790,15 @@ QRect DrawerView::availableRect() const
 int DrawerView::availableAxisLength() const
 {
     const QRect area = availableRect();
-    return (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? area.height() : area.width();
+    return (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? area.height()
+                                                                       : area.width();
 }
 
 int DrawerView::effectiveDrawerLength() const
 {
     const QRect area = availableRect();
-    const int axisLength = (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? area.width() : area.height();
+    const int axisLength =
+        (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? area.width() : area.height();
     return qBound(kMinimumDrawerLength, m_drawerLength, std::max(kMinimumDrawerLength, axisLength));
 }
 
@@ -812,7 +823,9 @@ QRect DrawerView::openPanelRect() const
 QRect DrawerView::panelRectForPosition(qreal position) const
 {
     const QRect openRect = openPanelRect();
-    const int length = (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? openRect.width() : openRect.height();
+    const int length = (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right)
+                           ? openRect.width()
+                           : openRect.height();
     const int visibleLength = qRound(length * normalizedPosition(position));
 
     switch (m_edge) {
@@ -835,11 +848,8 @@ QPainterPath DrawerView::outerRoundedPanelPath(const QRectF& rect) const
     const bool roundTopRight = m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Bottom;
     const bool roundBottomRight = m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Top;
     const bool roundBottomLeft = m_edge == DrawerEdge::Right || m_edge == DrawerEdge::Top;
-    return ::fluent::overlay::roundedCornerRectPath(rect, radius,
-                                                  roundTopLeft,
-                                                  roundTopRight,
-                                                  roundBottomRight,
-                                                  roundBottomLeft);
+    return ::fluent::overlay::roundedCornerRectPath(rect, radius, roundTopLeft, roundTopRight,
+                                                    roundBottomRight, roundBottomLeft);
 }
 
 void DrawerView::updateClipMask()
@@ -872,7 +882,8 @@ void DrawerView::updateOverlayGeometry()
 void DrawerView::updateContentGeometry()
 {
     QRect nextGeometry = rect();
-    if (m_contentGeometry == nextGeometry && (!m_contentWidget || m_contentWidget->geometry() == nextGeometry))
+    if (m_contentGeometry == nextGeometry &&
+        (!m_contentWidget || m_contentWidget->geometry() == nextGeometry))
         return;
 
     m_contentGeometry = nextGeometry;
@@ -909,8 +920,7 @@ void DrawerView::updateScrimState()
     }
 
     m_overlayCoordinator->attachTo(top);
-    auto* scrim = m_overlayCoordinator->ensureScrim(
-        QStringLiteral("DrawerViewScrim"));
+    auto* scrim = m_overlayCoordinator->ensureScrim(QStringLiteral("DrawerViewScrim"));
     if (!scrim)
         return;
     scrim->setModalAndDim(m_modal, m_dim);
@@ -960,22 +970,18 @@ bool DrawerView::isPointInEdgeDragArea(const QPoint& globalPos) const
     // otherwise one press can resize the window and open a drawer at once.
     // zh_CN: 无边框窗口最靠近可见边缘的像素优先用于原生缩放；抽屉手势从该区域
     // 内侧开始，避免一次按下同时触发窗口缩放和抽屉展开。
-    const int resizeBorder = qMin(
-        m_dragMargin, ::fluent::overlay::windowResizeBorderWidth(top));
+    const int resizeBorder = qMin(m_dragMargin, ::fluent::overlay::windowResizeBorderWidth(top));
 
     switch (m_edge) {
     case DrawerEdge::Left:
-        return local.x() >= area.left() + resizeBorder
-            && local.x() < area.left() + m_dragMargin;
+        return local.x() >= area.left() + resizeBorder && local.x() < area.left() + m_dragMargin;
     case DrawerEdge::Right:
-        return local.x() <= area.right() - resizeBorder
-            && local.x() > area.right() - m_dragMargin;
+        return local.x() <= area.right() - resizeBorder && local.x() > area.right() - m_dragMargin;
     case DrawerEdge::Top:
-        return local.y() >= area.top() + resizeBorder
-            && local.y() < area.top() + m_dragMargin;
+        return local.y() >= area.top() + resizeBorder && local.y() < area.top() + m_dragMargin;
     case DrawerEdge::Bottom:
-        return local.y() <= area.bottom() - resizeBorder
-            && local.y() > area.bottom() - m_dragMargin;
+        return local.y() <= area.bottom() - resizeBorder &&
+               local.y() > area.bottom() - m_dragMargin;
     }
     return false;
 }

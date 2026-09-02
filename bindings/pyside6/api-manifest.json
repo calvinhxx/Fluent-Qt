@@ -56,6 +56,7 @@
     "LineEdit",
     "ListView",
     "MultiSelectComboBox",
+    "MotionPolicy",
     "NavigationView",
     "NumberBox",
     "PasswordBox",
@@ -107,6 +108,8 @@
     "BindingMode",
     "ContentDialogButton",
     "FontRole",
+    "MotionKind",
+    "MotionMode",
     "SelectionMode",
     "Theme",
     "WidgetOwnership"
@@ -117,17 +120,21 @@
     "apply_user_theme",
     "bind",
     "binding_build_info",
+    "current_motion_mode",
     "current_theme",
     "font_for_role",
     "font_scale",
     "initialize_resources",
     "inspect_widget",
+    "motion_policy",
     "prepare_high_dpi_application",
     "reset_theme_tokens",
     "set_accent_color",
     "set_font_scale",
+    "set_motion_mode",
     "set_theme",
-    "theme_revision"
+    "theme_revision",
+    "theme_uses_dark_appearance"
   ],
   "methods": {
     "AnchorLayout": [
@@ -142,6 +149,12 @@
       "on_theme_updated",
       "theme_font",
       "theme_tokens"
+    ],
+    "MotionPolicy": [
+      "mode",
+      "resolvedDuration",
+      "setMode",
+      "shouldAnimate"
     ],
     "StateGroup": [
       "add",

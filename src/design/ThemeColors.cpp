@@ -88,12 +88,10 @@ const QColor Grey170("#292827");
 const QColor Grey180("#252423");
 const QColor Grey190("#201F1E");
 const QColor Grey200("#11100F");
-const std::vector<QColor> Charts = {
-    QColor("#005FB8"), QColor("#00BCF2"), QColor("#2B88D8"),
-    QColor("#004B50"), QColor("#00AD56"), QColor("#007833"),
-    QColor("#881798"), QColor("#B4009E"), QColor("#E3008C"),
-    QColor("#D83B01"), QColor("#EA4300"), QColor("#FF8C00")
-};
+const std::vector<QColor> Charts = {QColor("#005FB8"), QColor("#00BCF2"), QColor("#2B88D8"),
+                                    QColor("#004B50"), QColor("#00AD56"), QColor("#007833"),
+                                    QColor("#881798"), QColor("#B4009E"), QColor("#E3008C"),
+                                    QColor("#D83B01"), QColor("#EA4300"), QColor("#FF8C00")};
 
 } // namespace ThemeColors::Light
 
@@ -176,20 +174,29 @@ const QColor Grey90("#A19F9D");
 const QColor Grey130("#605E5C");
 const QColor Grey160("#323130");
 const QColor Grey190("#201F1E");
-const std::vector<QColor> Charts = {
-    QColor("#60CDFF"), QColor("#00BCF2"), QColor("#2B88D8"),
-    QColor("#00AD56"), QColor("#107C10"), QColor("#004B50"),
-    QColor("#FF8C00"), QColor("#F7630C"), QColor("#EA4300"),
-    QColor("#E3008C"), QColor("#BF0077"), QColor("#C239B3")
-};
+const std::vector<QColor> Charts = {QColor("#60CDFF"), QColor("#00BCF2"), QColor("#2B88D8"),
+                                    QColor("#00AD56"), QColor("#107C10"), QColor("#004B50"),
+                                    QColor("#FF8C00"), QColor("#F7630C"), QColor("#EA4300"),
+                                    QColor("#E3008C"), QColor("#BF0077"), QColor("#C239B3")};
 
 } // namespace ThemeColors::Dark
 
 namespace ThemeColors::Contrast::Fill {
 
 const QColor AccentDefault("#1AEBFF");
+const QColor AccentSecondary("#65F2FF");
+const QColor AccentTertiary("#00B7C7");
+const QColor AccentDisabled("#C0C0C0");
 const QColor AccentSelected("#000000");
 const QColor ControlDefault("#000000");
+const QColor ControlSecondary("#202020");
+const QColor ControlTertiary("#404040");
+const QColor ControlDisabled("#000000");
+const QColor ControlAltSecondary("#202020");
+const QColor ControlAltTertiary("#404040");
+const QColor SubtleTransparent(0, 0, 0, 0);
+const QColor SubtleSecondary("#202020");
+const QColor SubtleTertiary("#404040");
 const QColor ControlFocus("#000000");
 const QColor ButtonText("#FFFFFF");
 
@@ -198,6 +205,13 @@ const QColor ButtonText("#FFFFFF");
 namespace ThemeColors::Contrast::Stroke {
 
 const QColor ControlDefault("#FFFFFF");
+const QColor ControlSecondary("#FFFFFF");
+const QColor ControlStrong("#FFFFFF");
+const QColor CardDefault("#FFFFFF");
+const QColor DividerDefault("#FFFFFF");
+const QColor SurfaceDefault("#FFFFFF");
+const QColor FocusOuter("#1AEBFF");
+const QColor FocusInner("#000000");
 const QColor ControlFocused("#1AEBFF");
 const QColor ButtonBorder("#FFFFFF");
 
@@ -207,15 +221,47 @@ namespace ThemeColors::Contrast::Text {
 
 const QColor Primary("#FFFFFF");
 const QColor Secondary("#FFFFFF");
-const QColor Disabled("#3FF23F");
+const QColor Tertiary("#FFFFFF");
+const QColor Disabled("#C0C0C0");
 const QColor OnAccent("#000000");
+const QColor AccentPrimary("#FFFF00");
 const QColor Hyperlink("#FFFF00");
 
 } // namespace ThemeColors::Contrast::Text
+
+namespace ThemeColors::Contrast::System {
+
+const QColor Critical("#FF99A4");
+const QColor CriticalBackground("#000000");
+const QColor Caution("#FFFF00");
+const QColor CautionBackground("#000000");
+const QColor Informational("#1AEBFF");
+const QColor InfoBackground("#000000");
+const QColor Success("#3FF23F");
+const QColor SuccessBackground("#000000");
+
+} // namespace ThemeColors::Contrast::System
 
 namespace ThemeColors::Contrast {
 
 const QColor BackgroundCanvas("#000000");
 const QColor BackgroundLayer("#000000");
+const QColor BackgroundLayerAlt("#000000");
+const QColor BackgroundLayerOverlay("#000000");
+const QColor BackgroundSolid("#000000");
+const QColor Grey10("#FFFFFF");
+const QColor Grey20("#FFFFFF");
+const QColor Grey30("#FFFFFF");
+const QColor Grey40("#FFFFFF");
+const QColor Grey50("#FFFFFF");
+const QColor Grey60("#FFFFFF");
+const QColor Grey90("#FFFFFF");
+const QColor Grey130("#FFFFFF");
+const QColor Grey160("#000000");
+const QColor Grey190("#000000");
+const std::vector<QColor> Charts = {QColor("#1AEBFF"), QColor("#FFFF00"), QColor("#3FF23F"),
+                                    QColor("#FF99A4"), QColor("#FF8C00"), QColor("#FFFFFF"),
+                                    QColor("#00FFFF"), QColor("#FFD700"), QColor("#7FFF00"),
+                                    QColor("#FF69B4"), QColor("#FFA500"), QColor("#F5F5F5")};
 
 } // namespace ThemeColors::Contrast

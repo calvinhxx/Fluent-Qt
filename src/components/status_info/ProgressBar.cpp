@@ -13,6 +13,7 @@
 #include <cmath>
 #include <limits>
 
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/private/ValueAccessibility_p.h"
 #include "components/status_info/private/ProgressAccessibility_p.h"
 
@@ -37,14 +38,25 @@ bool nearlyEqual(double left, double right)
 }
 } // namespace
 
-ProgressBar::ProgressBar(QWidget* parent)
-    : QWidget(parent)
+ProgressBar::ProgressBar(QWidget* parent) : QWidget(parent)
 {
     detail::ensureProgressAccessibilityFactory();
     setAttribute(Qt::WA_TranslucentBackground);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     updateThemeColors();
     m_animationCycleMs = qMax(1, themeAnimation().normal * 4);
+
+    MotionPolicy& motionPolicy = MotionPolicy::instance();
+    connect(&motionPolicy, &MotionPolicy::modeChanged, this, [this](MotionPolicy::Mode) {
+        const bool wasRunning = isAnimationRunning();
+        updateAnimationState();
+        update();
+        if (wasRunning != isAnimationRunning()) {
+            QAccessible::State changed;
+            changed.animated = true;
+            accessibility::detail::notifyValueAccessibilityState(this, changed);
+        }
+    });
 }
 
 ProgressBar::~ProgressBar()
@@ -54,7 +66,8 @@ ProgressBar::~ProgressBar()
 
 void ProgressBar::setIsIndeterminate(bool indeterminate)
 {
-    if (m_isIndeterminate == indeterminate) return;
+    if (m_isIndeterminate == indeterminate)
+        return;
     m_isIndeterminate = indeterminate;
     updateAnimationState();
     update();
@@ -64,8 +77,7 @@ void ProgressBar::setIsIndeterminate(bool indeterminate)
     accessibility::detail::notifyValueAccessibilityState(this, changed);
     accessibility::detail::notifyValueAccessibilityValue(
         this, m_isIndeterminate ? QVariant() : QVariant(m_value));
-    accessibility::detail::notifyValueAccessibilityText(
-        this, QAccessible::DescriptionChanged);
+    accessibility::detail::notifyValueAccessibilityText(this, QAccessible::DescriptionChanged);
     emit isIndeterminateChanged(m_isIndeterminate);
 }
 
@@ -81,7 +93,8 @@ void ProgressBar::setMaximum(double maximum)
 
 void ProgressBar::setRange(double minimum, double maximum)
 {
-    if (!isFiniteNumber(minimum) || !isFiniteNumber(maximum)) return;
+    if (!isFiniteNumber(minimum) || !isFiniteNumber(maximum))
+        return;
     if (maximum <= minimum) {
         maximum = minimum + 1.0;
         if (!isFiniteNumber(maximum) || maximum <= minimum) {
@@ -101,19 +114,24 @@ void ProgressBar::setRange(double minimum, double maximum)
     const bool maximumChangedNow = !nearlyEqual(oldMaximum, m_maximum);
     const bool valueChangedNow = !nearlyEqual(oldValue, m_value);
 
-    if (!minimumChangedNow && !maximumChangedNow && !valueChangedNow) return;
+    if (!minimumChangedNow && !maximumChangedNow && !valueChangedNow)
+        return;
 
     update();
     accessibility::detail::notifyValueAccessibilityValue(this, m_value);
-    if (minimumChangedNow) emit minimumChanged(m_minimum);
-    if (maximumChangedNow) emit maximumChanged(m_maximum);
-    if (valueChangedNow) emit valueChanged(m_value);
+    if (minimumChangedNow)
+        emit minimumChanged(m_minimum);
+    if (maximumChangedNow)
+        emit maximumChanged(m_maximum);
+    if (valueChangedNow)
+        emit valueChanged(m_value);
 }
 
 void ProgressBar::setValue(double value)
 {
     const double clampedValue = normalizedValue(value);
-    if (nearlyEqual(m_value, clampedValue)) return;
+    if (nearlyEqual(m_value, clampedValue))
+        return;
     m_value = clampedValue;
     update();
     accessibility::detail::notifyValueAccessibilityValue(this, m_value);
@@ -122,7 +140,8 @@ void ProgressBar::setValue(double value)
 
 void ProgressBar::setShowPaused(bool paused)
 {
-    if (m_showPaused == paused) return;
+    if (m_showPaused == paused)
+        return;
     m_showPaused = paused;
     updateAnimationState();
     update();
@@ -130,14 +149,14 @@ void ProgressBar::setShowPaused(bool paused)
     changed.busy = true;
     changed.animated = true;
     accessibility::detail::notifyValueAccessibilityState(this, changed);
-    accessibility::detail::notifyValueAccessibilityText(
-        this, QAccessible::DescriptionChanged);
+    accessibility::detail::notifyValueAccessibilityText(this, QAccessible::DescriptionChanged);
     emit showPausedChanged(m_showPaused);
 }
 
 void ProgressBar::setShowError(bool error)
 {
-    if (m_showError == error) return;
+    if (m_showError == error)
+        return;
     m_showError = error;
     updateAnimationState();
     update();
@@ -145,14 +164,14 @@ void ProgressBar::setShowError(bool error)
     changed.busy = true;
     changed.animated = true;
     accessibility::detail::notifyValueAccessibilityState(this, changed);
-    accessibility::detail::notifyValueAccessibilityText(
-        this, QAccessible::DescriptionChanged);
+    accessibility::detail::notifyValueAccessibilityText(this, QAccessible::DescriptionChanged);
     emit showErrorChanged(m_showError);
 }
 
 void ProgressBar::setBarWidth(int width)
 {
-    if (width <= 0 || m_barWidth == width) return;
+    if (width <= 0 || m_barWidth == width)
+        return;
     m_barWidth = width;
     updateGeometry();
     update();
@@ -161,7 +180,8 @@ void ProgressBar::setBarWidth(int width)
 
 void ProgressBar::setTrackThickness(qreal thickness)
 {
-    if (thickness <= 0.0 || !std::isfinite(thickness) || nearlyEqual(m_trackThickness, thickness)) return;
+    if (thickness <= 0.0 || !std::isfinite(thickness) || nearlyEqual(m_trackThickness, thickness))
+        return;
     m_trackThickness = thickness;
     update();
     emit trackThicknessChanged(m_trackThickness);
@@ -169,7 +189,8 @@ void ProgressBar::setTrackThickness(qreal thickness)
 
 void ProgressBar::setRailVisible(bool visible)
 {
-    if (m_railVisible == visible) return;
+    if (m_railVisible == visible)
+        return;
     m_railVisible = visible;
     update();
     emit railVisibleChanged(m_railVisible);
@@ -178,7 +199,8 @@ void ProgressBar::setRailVisible(bool visible)
 double ProgressBar::progressRatio() const
 {
     const double range = m_maximum - m_minimum;
-    if (range <= 0.0 || !isFiniteNumber(range)) return 0.0;
+    if (range <= 0.0 || !isFiniteNumber(range))
+        return 0.0;
     return (m_value - m_minimum) / range;
 }
 
@@ -207,7 +229,8 @@ void ProgressBar::onThemeUpdated()
 void ProgressBar::paintEvent(QPaintEvent*)
 {
     const QRectF bounds = barRect();
-    if (!bounds.isValid() || bounds.isEmpty()) return;
+    if (!bounds.isValid() || bounds.isEmpty())
+        return;
 
     const qreal effectiveTrackThickness = qMin(m_trackThickness, qMax<qreal>(1.0, bounds.height()));
     const qreal centerY = bounds.center().y();
@@ -216,7 +239,8 @@ void ProgressBar::paintEvent(QPaintEvent*)
     painter.setRenderHint(QPainter::Antialiasing);
 
     if (m_railVisible) {
-        const QRectF railRect(bounds.left(), centerY - kRailThickness / 2.0, bounds.width(), kRailThickness);
+        const QRectF railRect(bounds.left(), centerY - kRailThickness / 2.0, bounds.width(),
+                              kRailThickness);
         painter.setPen(Qt::NoPen);
         painter.setBrush(m_railColor);
         painter.drawRoundedRect(railRect, kRailThickness / 2.0, kRailThickness / 2.0);
@@ -224,30 +248,39 @@ void ProgressBar::paintEvent(QPaintEvent*)
 
     const QColor color = indicatorColor();
     const qreal radius = effectiveTrackThickness / 2.0;
-    const QRectF trackBounds(bounds.left(), centerY - radius, bounds.width(), effectiveTrackThickness);
+    const QRectF trackBounds(bounds.left(), centerY - radius, bounds.width(),
+                             effectiveTrackThickness);
 
     painter.setPen(Qt::NoPen);
     painter.setBrush(color);
 
     if (m_isIndeterminate) {
-        const qreal segmentWidth = qBound(effectiveTrackThickness, bounds.width() * kIndeterminateSegmentRatio, bounds.width());
+        const qreal segmentWidth = qBound(
+            effectiveTrackThickness, bounds.width() * kIndeterminateSegmentRatio, bounds.width());
         qreal segmentLeft = bounds.left() + (bounds.width() - segmentWidth) / 2.0;
         if (isRunningState()) {
-            segmentLeft = bounds.left() - segmentWidth + (bounds.width() + segmentWidth) * m_animationPhase;
+            segmentLeft =
+                bounds.left() - segmentWidth + (bounds.width() + segmentWidth) * m_animationPhase;
         }
 
         painter.save();
         painter.setClipRect(trackBounds.adjusted(0.0, -1.0, 0.0, 1.0));
-        painter.drawRoundedRect(QRectF(segmentLeft, trackBounds.top(), segmentWidth, trackBounds.height()), radius, radius);
+        painter.drawRoundedRect(
+            QRectF(segmentLeft, trackBounds.top(), segmentWidth, trackBounds.height()), radius,
+            radius);
         painter.restore();
         return;
     }
 
     const qreal ratio = qBound(0.0, progressRatio(), 1.0);
-    if (ratio <= 0.0) return;
+    if (ratio <= 0.0)
+        return;
 
-    const qreal filledWidth = qMin(bounds.width(), qMax(effectiveTrackThickness, bounds.width() * ratio));
-    painter.drawRoundedRect(QRectF(trackBounds.left(), trackBounds.top(), filledWidth, trackBounds.height()), radius, radius);
+    const qreal filledWidth =
+        qMin(bounds.width(), qMax(effectiveTrackThickness, bounds.width() * ratio));
+    painter.drawRoundedRect(
+        QRectF(trackBounds.left(), trackBounds.top(), filledWidth, trackBounds.height()), radius,
+        radius);
 }
 
 void ProgressBar::timerEvent(QTimerEvent* event)
@@ -263,9 +296,7 @@ void ProgressBar::timerEvent(QTimerEvent* event)
     }
 
     m_animationPhase = std::fmod(
-        m_animationPhase
-            + static_cast<qreal>(kAnimationIntervalMs) / m_animationCycleMs,
-        1.0);
+        m_animationPhase + static_cast<qreal>(kAnimationIntervalMs) / m_animationCycleMs, 1.0);
     update();
 }
 
@@ -307,9 +338,12 @@ QRectF ProgressBar::barRect() const
 
 QColor ProgressBar::indicatorColor() const
 {
-    if (!isEnabled()) return m_disabledColor;
-    if (m_showError) return m_errorColor;
-    if (m_showPaused) return m_pausedColor;
+    if (!isEnabled())
+        return m_disabledColor;
+    if (m_showError)
+        return m_errorColor;
+    if (m_showPaused)
+        return m_pausedColor;
     return m_runningColor;
 }
 
@@ -321,7 +355,7 @@ void ProgressBar::updateThemeColors()
     m_errorColor = colors.systemCritical;
     m_disabledColor = colors.accentDisabled;
     m_railColor = colors.strokeStrong;
-    if (effectiveTheme() == Dark) {
+    if (effectiveThemeUsesDarkAppearance()) {
         m_railColor.setAlpha(qMax(m_railColor.alpha(), 138));
     } else {
         m_railColor.setAlpha(qMax(m_railColor.alpha(), 112));
@@ -342,11 +376,8 @@ void ProgressBar::updateAnimationState()
 
 bool ProgressBar::shouldAnimate() const
 {
-    return m_isIndeterminate
-        && !m_showPaused
-        && !m_showError
-        && isEnabled()
-        && isVisible();
+    return MotionPolicy::instance().shouldAnimate(true, MotionPolicy::Kind::Continuous) &&
+           m_isIndeterminate && !m_showPaused && !m_showError && isEnabled() && isVisible();
 }
 
 bool ProgressBar::isRunningState() const
@@ -356,7 +387,8 @@ bool ProgressBar::isRunningState() const
 
 double ProgressBar::normalizedValue(double value) const
 {
-    if (!isFiniteNumber(value)) return m_minimum;
+    if (!isFiniteNumber(value))
+        return m_minimum;
     return std::min(std::max(value, m_minimum), m_maximum);
 }
 

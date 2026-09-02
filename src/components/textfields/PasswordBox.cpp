@@ -15,8 +15,8 @@
 
 namespace fluent::textfields {
 
-PasswordBox::PasswordBox(QWidget* parent)
-    : LineEdit(parent) {
+PasswordBox::PasswordBox(QWidget* parent) : LineEdit(parent)
+{
     setAttribute(Qt::WA_Hover);
     setClearButtonEnabled(false);
     setFrameVisible(false);
@@ -26,7 +26,8 @@ PasswordBox::PasswordBox(QWidget* parent)
     initializeRevealButton();
 
     connect(this, &QLineEdit::textChanged, this, [this](const QString& value) {
-        if (value.isEmpty()) setPeekActive(false);
+        if (value.isEmpty())
+            setPeekActive(false);
         updateRevealButtonState();
         updateTextMargins();
         emit passwordChanged(value);
@@ -38,12 +39,15 @@ PasswordBox::PasswordBox(QWidget* parent)
     updateEchoMode();
 }
 
-void PasswordBox::setPassword(const QString& password) {
+void PasswordBox::setPassword(const QString& password)
+{
     setText(password);
 }
 
-void PasswordBox::setHeader(const QString& header) {
-    if (m_header == header) return;
+void PasswordBox::setHeader(const QString& header)
+{
+    if (m_header == header)
+        return;
     m_header = header;
     setFixedHeight(totalPreferredHeight());
     updateHeaderTextMargins();
@@ -53,10 +57,13 @@ void PasswordBox::setHeader(const QString& header) {
     emit headerChanged();
 }
 
-void PasswordBox::setPasswordRevealMode(PasswordRevealMode mode) {
-    if (m_revealMode == mode) return;
+void PasswordBox::setPasswordRevealMode(PasswordRevealMode mode)
+{
+    if (m_revealMode == mode)
+        return;
     m_revealMode = mode;
-    if (m_revealMode != PasswordRevealMode::Peek) setPeekActive(false);
+    if (m_revealMode != PasswordRevealMode::Peek)
+        setPeekActive(false);
     updateEchoMode();
     updateRevealButtonState();
     updateTextMargins();
@@ -64,72 +71,85 @@ void PasswordBox::setPasswordRevealMode(PasswordRevealMode mode) {
     emit passwordRevealModeChanged();
 }
 
-QSize PasswordBox::sizeHint() const {
+QSize PasswordBox::sizeHint() const
+{
     QSize hint = LineEdit::sizeHint();
     hint.setHeight(totalPreferredHeight());
     hint.setWidth(qMax(hint.width(), 160));
     return hint;
 }
 
-QSize PasswordBox::minimumSizeHint() const {
+QSize PasswordBox::minimumSizeHint() const
+{
     QSize hint = sizeHint();
     hint.setWidth(qMax(hint.width(), 120));
     return hint;
 }
 
-void PasswordBox::onThemeUpdated() {
+void PasswordBox::onThemeUpdated()
+{
     LineEdit::onThemeUpdated();
-    if (m_revealButton) m_revealButton->onThemeUpdated();
+    if (m_revealButton)
+        m_revealButton->onThemeUpdated();
     update();
 }
 
-void PasswordBox::paintEvent(QPaintEvent* event) {
+void PasswordBox::paintEvent(QPaintEvent* event)
+{
     {
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
-        if (!m_header.isEmpty()) paintHeader(painter);
+        if (!m_header.isEmpty())
+            paintHeader(painter);
         paintInputFrame(painter);
     }
     LineEdit::paintEvent(event);
 }
 
-void PasswordBox::resizeEvent(QResizeEvent* event) {
+void PasswordBox::resizeEvent(QResizeEvent* event)
+{
     LineEdit::resizeEvent(event);
     updateRevealButtonGeometry();
 }
 
-void PasswordBox::focusInEvent(QFocusEvent* event) {
+void PasswordBox::focusInEvent(QFocusEvent* event)
+{
     m_focused = true;
     LineEdit::focusInEvent(event);
     update();
 }
 
-void PasswordBox::focusOutEvent(QFocusEvent* event) {
+void PasswordBox::focusOutEvent(QFocusEvent* event)
+{
     m_focused = false;
     setPeekActive(false);
     LineEdit::focusOutEvent(event);
     update();
 }
 
-void PasswordBox::enterEvent(FluentEnterEvent* event) {
+void PasswordBox::enterEvent(FluentEnterEvent* event)
+{
     m_hovered = true;
     LineEdit::enterEvent(event);
     update();
 }
 
-void PasswordBox::leaveEvent(QEvent* event) {
+void PasswordBox::leaveEvent(QEvent* event)
+{
     m_hovered = false;
     LineEdit::leaveEvent(event);
     update();
 }
 
-void PasswordBox::contextMenuEvent(QContextMenuEvent* event) {
+void PasswordBox::contextMenuEvent(QContextMenuEvent* event)
+{
     if (m_revealMode != PasswordRevealMode::Visible)
         setPeekActive(false);
     LineEdit::contextMenuEvent(event);
 }
 
-void PasswordBox::mousePressEvent(QMouseEvent* event) {
+void PasswordBox::mousePressEvent(QMouseEvent* event)
+{
     if (event && event->button() == Qt::LeftButton && isEnabled() && !isReadOnly()) {
         m_pressed = true;
         update();
@@ -137,7 +157,8 @@ void PasswordBox::mousePressEvent(QMouseEvent* event) {
     LineEdit::mousePressEvent(event);
 }
 
-void PasswordBox::mouseReleaseEvent(QMouseEvent* event) {
+void PasswordBox::mouseReleaseEvent(QMouseEvent* event)
+{
     if (m_pressed) {
         m_pressed = false;
         update();
@@ -145,11 +166,14 @@ void PasswordBox::mouseReleaseEvent(QMouseEvent* event) {
     LineEdit::mouseReleaseEvent(event);
 }
 
-void PasswordBox::changeEvent(QEvent* event) {
+void PasswordBox::changeEvent(QEvent* event)
+{
     LineEdit::changeEvent(event);
-    if (!event) return;
+    if (!event)
+        return;
     if (event->type() == QEvent::EnabledChange || event->type() == QEvent::ReadOnlyChange) {
-        if (!canPeekReveal()) setPeekActive(false);
+        if (!canPeekReveal())
+            setPeekActive(false);
         updateRevealButtonState();
         updateTextMargins();
         updateEchoMode();
@@ -157,7 +181,8 @@ void PasswordBox::changeEvent(QEvent* event) {
     }
 }
 
-bool PasswordBox::eventFilter(QObject* watched, QEvent* event) {
+bool PasswordBox::eventFilter(QObject* watched, QEvent* event)
+{
     if (watched == m_revealButton && event) {
         switch (event->type()) {
         case QEvent::Leave:
@@ -174,19 +199,23 @@ bool PasswordBox::eventFilter(QObject* watched, QEvent* event) {
     return LineEdit::eventFilter(watched, event);
 }
 
-QRect PasswordBox::inputRect() const {
+QRect PasswordBox::inputRect() const
+{
     return QRect(0, inputTop(), width(), kInputHeight);
 }
 
-int PasswordBox::inputTop() const {
+int PasswordBox::inputTop() const
+{
     return m_header.isEmpty() ? 0 : kHeaderHeight + kHeaderGap;
 }
 
-int PasswordBox::totalPreferredHeight() const {
+int PasswordBox::totalPreferredHeight() const
+{
     return inputTop() + kInputHeight;
 }
 
-void PasswordBox::initializeRevealButton() {
+void PasswordBox::initializeRevealButton()
+{
     m_buttonLayout = new ::fluent::AnchorLayout(this);
 
     m_revealButton = new ::fluent::basicinput::Button(this);
@@ -196,14 +225,14 @@ void PasswordBox::initializeRevealButton() {
     m_revealButton->setFluentSize(::fluent::basicinput::Button::Small);
     m_revealButton->setFocusPolicy(Qt::NoFocus);
     m_revealButton->setFixedSize(kButtonWidth, kButtonHeight);
-    m_revealButton->setIconGlyph(Typography::Icons::View,
-                                 Typography::IconSize::Standard,
+    m_revealButton->setIconGlyph(Typography::Icons::View, Typography::IconSize::Standard,
                                  Typography::FontFamily::FluentIcons);
     m_revealButton->installEventFilter(this);
     m_buttonLayout->addWidget(m_revealButton);
 
     connect(m_revealButton, &::fluent::basicinput::Button::pressed, this, [this]() {
-        if (!canPeekReveal()) return;
+        if (!canPeekReveal())
+            return;
         setFocus(Qt::MouseFocusReason);
         setPeekActive(true);
     });
@@ -215,8 +244,10 @@ void PasswordBox::initializeRevealButton() {
     updateRevealButtonGeometry();
 }
 
-void PasswordBox::updateRevealButtonGeometry() {
-    if (!m_revealButton) return;
+void PasswordBox::updateRevealButtonGeometry()
+{
+    if (!m_revealButton)
+        return;
 
     using Edge = ::fluent::AnchorLayout::Edge;
     const int centerOffset = inputTop() / 2;
@@ -231,19 +262,21 @@ void PasswordBox::updateRevealButtonGeometry() {
     }
 }
 
-void PasswordBox::updateRevealButtonState() {
-    if (!m_revealButton) return;
+void PasswordBox::updateRevealButtonState()
+{
+    if (!m_revealButton)
+        return;
     const bool visible = m_revealMode == PasswordRevealMode::Peek && canPeekReveal();
     m_revealButton->setVisible(visible);
     m_revealButton->setEnabled(visible);
-    m_revealButton->setIconGlyph(m_peekActive ? Typography::Icons::Hide
-                                 : Typography::Icons::View,
+    m_revealButton->setIconGlyph(m_peekActive ? Typography::Icons::Hide : Typography::Icons::View,
                                  Typography::IconSize::Standard,
                                  Typography::FontFamily::FluentIcons);
     updateRevealButtonGeometry();
 }
 
-void PasswordBox::updateTextMargins() {
+void PasswordBox::updateTextMargins()
+{
     int rightMargin = ::Spacing::Padding::TextFieldHorizontal;
     if (m_revealMode == PasswordRevealMode::Peek && canPeekReveal()) {
         rightMargin += kButtonRightMargin + kButtonWidth + kTextButtonGap;
@@ -257,17 +290,21 @@ void PasswordBox::updateTextMargins() {
     setContentMargins(margins);
 }
 
-void PasswordBox::updateHeaderTextMargins() {
+void PasswordBox::updateHeaderTextMargins()
+{
     setTextMargins(0, inputTop(), 0, 0);
 }
 
-void PasswordBox::updateEchoMode() {
-    const bool revealVisible = m_revealMode == PasswordRevealMode::Visible
-        || (m_revealMode == PasswordRevealMode::Peek && m_peekActive && canPeekReveal());
+void PasswordBox::updateEchoMode()
+{
+    const bool revealVisible =
+        m_revealMode == PasswordRevealMode::Visible ||
+        (m_revealMode == PasswordRevealMode::Peek && m_peekActive && canPeekReveal());
     setEchoMode(revealVisible ? QLineEdit::Normal : QLineEdit::Password);
 }
 
-void PasswordBox::setPeekActive(bool active) {
+void PasswordBox::setPeekActive(bool active)
+{
     const bool nextActive = active && m_revealMode == PasswordRevealMode::Peek && canPeekReveal();
     if (m_peekActive == nextActive) {
         updateEchoMode();
@@ -280,11 +317,13 @@ void PasswordBox::setPeekActive(bool active) {
     update();
 }
 
-bool PasswordBox::canPeekReveal() const {
+bool PasswordBox::canPeekReveal() const
+{
     return isEnabled() && !isReadOnly() && !text().isEmpty();
 }
 
-void PasswordBox::paintInputFrame(QPainter& painter) {
+void PasswordBox::paintInputFrame(QPainter& painter)
+{
     const auto& colors = themeColorsRef();
     const QRectF frameRect = QRectF(inputRect()).adjusted(0.5, 0.5, -0.5, -0.5);
 
@@ -302,7 +341,7 @@ void PasswordBox::paintInputFrame(QPainter& painter) {
         borderColor = colors.strokeDefault;
         bottomColor = colors.strokeDivider;
     } else if (m_focused) {
-        bgColor = (effectiveTheme() == Dark) ? colors.bgSolid : colors.controlDefault;
+        bgColor = effectiveThemeUsesDarkAppearance() ? colors.bgSolid : colors.controlDefault;
         borderColor = colors.strokeSecondary;
         bottomColor = colors.accentDefault;
         bottomWidth = ::Spacing::Border::Focused;
@@ -342,14 +381,17 @@ void PasswordBox::paintInputFrame(QPainter& painter) {
     }
 }
 
-void PasswordBox::paintHeader(QPainter& painter) {
-    if (m_header.isEmpty()) return;
+void PasswordBox::paintHeader(QPainter& painter)
+{
+    if (m_header.isEmpty())
+        return;
     painter.setFont(themeFont(Typography::FontRole::Body).toQFont());
     const auto& colors = themeColorsRef();
     painter.setPen(isEnabled() ? colors.textPrimary : colors.textDisabled);
     const QRect headerRect(0, 0, width(), kHeaderHeight);
-    painter.drawText(headerRect, Qt::AlignLeft | Qt::AlignVCenter,
-                     painter.fontMetrics().elidedText(m_header, Qt::ElideRight, headerRect.width()));
+    painter.drawText(
+        headerRect, Qt::AlignLeft | Qt::AlignVCenter,
+        painter.fontMetrics().elidedText(m_header, Qt::ElideRight, headerRect.width()));
 }
 
 } // namespace fluent::textfields

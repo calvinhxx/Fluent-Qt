@@ -68,6 +68,7 @@ set(FLUENT_QT_INSTALL_HEADERS
 
     src/components/foundation/FluentElement.h
     src/components/foundation/FontIcon.h
+    src/components/foundation/MotionPolicy.h
     src/components/foundation/QMLPlus.h
     src/components/foundation/ThemeRegistry.h
     src/components/foundation/UserTheme.h

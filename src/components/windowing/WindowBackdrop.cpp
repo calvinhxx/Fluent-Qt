@@ -69,20 +69,16 @@ bool BackdropCapabilities::supportsCompositor(BackdropEffect effect) const
 
 bool BackdropCapabilities::supportsTransparentMaterial(BackdropEffect effect) const
 {
-    return effect != BackdropEffect::Solid
-        && alphaSurfaceSupported
-        && (supportsNative(effect) || supportsCompositor(effect));
+    return effect != BackdropEffect::Solid && alphaSurfaceSupported &&
+           (supportsNative(effect) || supportsCompositor(effect));
 }
 
 bool BackdropState::operator==(const BackdropState& other) const
 {
-    return requestedEffect == other.requestedEffect
-        && effectiveEffect == other.effectiveEffect
-        && backend == other.backend
-        && fidelity == other.fidelity
-        && surfaceMode == other.surfaceMode
-        && platformApplied == other.platformApplied
-        && reason == other.reason;
+    return requestedEffect == other.requestedEffect && effectiveEffect == other.effectiveEffect &&
+           backend == other.backend && fidelity == other.fidelity &&
+           surfaceMode == other.surfaceMode && platformApplied == other.platformApplied &&
+           reason == other.reason;
 }
 
 BackdropState windowBackdropState(const QWidget* widget)
@@ -115,8 +111,7 @@ void publishWindowBackdropState(QWidget* window, const BackdropState& state)
 
 bool windowBackdropRequiresTransparentClear(const QWidget* widget)
 {
-    return windowBackdropState(widget).surfaceMode
-        == BackdropSurfaceMode::CompositedTransparent;
+    return windowBackdropState(widget).surfaceMode == BackdropSurfaceMode::CompositedTransparent;
 }
 
 bool windowBackdropUsesPaintedMaterial(const QWidget* widget)
@@ -129,27 +124,25 @@ bool windowHasMaterialBackdrop(const QWidget* widget)
     return windowBackdropState(widget).effectiveEffect != BackdropEffect::Solid;
 }
 
-QColor windowChromeBackdropFill(const FluentElement& themeHost,
-                                const QWidget* hostWindow,
+QColor windowChromeBackdropFill(const FluentElement& themeHost, const QWidget* hostWindow,
                                 bool active)
 {
     BackdropState typedState;
     const bool hasTypedState = tryWindowBackdropState(hostWindow, &typedState);
-    if (hasTypedState
-        && typedState.surfaceMode == BackdropSurfaceMode::CompositedTransparent) {
+    if (hasTypedState && typedState.surfaceMode == BackdropSurfaceMode::CompositedTransparent) {
         return QColor();
     }
-    if (!hasTypedState
-        && hostWindow && hostWindow->property("fluentMicaBackdrop").toBool()) {
+    if (!hasTypedState && hostWindow && hostWindow->property("fluentMicaBackdrop").toBool()) {
         return QColor();
     }
 
-    const int requestedEffect = hasTypedState
-        ? static_cast<int>(typedState.requestedEffect)
-        : (hostWindow
-               ? backdropEffectFromProperty(hostWindow->property(kWindowBackdropEffectProperty))
-               : kBackdropEffectSolid);
-    const bool dark = themeHost.effectiveTheme() == FluentElement::Dark;
+    const int requestedEffect =
+        hasTypedState
+            ? static_cast<int>(typedState.requestedEffect)
+            : (hostWindow
+                   ? backdropEffectFromProperty(hostWindow->property(kWindowBackdropEffectProperty))
+                   : kBackdropEffectSolid);
+    const bool dark = themeHost.effectiveThemeUsesDarkAppearance();
     const auto& colors = themeHost.themeColorsRef();
 
     if (requestedEffect == kBackdropEffectMica) {

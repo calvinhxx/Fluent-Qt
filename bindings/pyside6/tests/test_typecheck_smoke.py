@@ -20,11 +20,28 @@ assert_type(fluentqt.__api_version__, str)
 assert_type(fluentqt.initialize_resources(), bool)
 assert_type(fluentqt.binding_build_info(), dict[str, object])
 assert_type(fluentqt.inspect_widget(QWidget()), dict[str, object])
+assert_type(fluentqt.current_motion_mode(), fluentqt.MotionMode)
+assert_type(fluentqt.motion_policy(), fluentqt.MotionPolicy)
 assert_type(fluentqt.current_theme(), fluentqt.Theme)
 assert_type(fluentqt.accent_color(), QColor)
 assert_type(fluentqt.font_for_role(fluentqt.FontRole.Body), QFont)
 assert_type(fluentqt.font_scale(), float)
 assert_type(fluentqt.theme_revision(), int)
+assert_type(
+    fluentqt.theme_uses_dark_appearance(fluentqt.Theme.HighContrast),
+    bool,
+)
+assert_type(fluentqt.set_motion_mode(fluentqt.MotionMode.Reduced), None)
+assert_type(fluentqt.set_theme(fluentqt.Theme.HighContrast), None)
+
+motion_policy = fluentqt.motion_policy()
+assert_type(motion_policy.mode(), fluentqt.MotionMode)
+assert_type(motion_policy.resolvedDuration(250), int)
+assert_type(
+    motion_policy.shouldAnimate(True, fluentqt.MotionKind.Continuous),
+    bool,
+)
+assert_type(motion_policy.setMode(fluentqt.MotionMode.Full), None)
 
 fluent_widget = fluentqt.FluentWidget()
 assert_type(fluent_widget.effective_theme(), fluentqt.Theme)

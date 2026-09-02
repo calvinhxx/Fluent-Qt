@@ -28,6 +28,8 @@
 #include "compatibility/QtCompat.h"
 #include "compatibility/TextPaintCompat.h"
 #include "components/collections/CollectionViewBackdrop_p.h"
+#include "components/collections/private/CollectionItemState_p.h"
+#include "components/foundation/private/MotionPolicy_p.h"
 #include "components/scrolling/OverlayScrollChrome.h"
 #include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
@@ -42,9 +44,10 @@ namespace {
 // machine now lives in fluent::scrolling::OverscrollController.
 // zh_CN: 每个滚轮刻度（delta 120）滚动的像素数；跨平台滚轮/回弹状态机现位于 OverscrollController。
 constexpr qreal kDiscreteWheelStepPx = ::Spacing::ControlHeight::Large;
-constexpr int   kScrollBarEdgeInset = ::Spacing::XSmall / 2;
+constexpr int kScrollBarEdgeInset = ::Spacing::XSmall / 2;
 
-qreal lerp(qreal from, qreal to, qreal progress) {
+qreal lerp(qreal from, qreal to, qreal progress)
+{
     return from + (to - from) * progress;
 }
 
@@ -54,42 +57,25 @@ qreal lerp(qreal from, qreal to, qreal progress) {
 // renders near-black in dark theme. A style-sheet color always wins. zh_CN: 用 label 自身样式表上色而非
 // palette。任何祖先设置样式表时(安装 QStyleSheetStyle 并忽略子 palette),palette 的 WindowText 会被丢弃
 // ——如画廊示例卡,header/footer 文案在深色主题里变近黑。样式表颜色始终生效。
-QString cssRgba(const QColor& c) {
+QString cssRgba(const QColor& c)
+{
     return QStringLiteral("rgba(%1, %2, %3, %4)")
-        .arg(c.red()).arg(c.green()).arg(c.blue()).arg(c.alpha());
+        .arg(c.red())
+        .arg(c.green())
+        .arg(c.blue())
+        .arg(c.alpha());
 }
 
-qreal indicatorLeadingProgress(qreal progress) {
+qreal indicatorLeadingProgress(qreal progress)
+{
     return qBound(0.0, progress * 1.35, 1.0);
 }
 
-qreal indicatorTrailingProgress(qreal progress) {
+qreal indicatorTrailingProgress(qreal progress)
+{
     return qBound(0.0, (progress - 0.18) / 0.82, 1.0);
 }
 
-struct RowSelectionFill {
-    QColor color = Qt::transparent;
-    bool textOnAccent = false;
-};
-
-RowSelectionFill defaultRowSelectionFill(
-    const QStyleOptionViewItem& option,
-    const FluentElement::Colors& colors)
-{
-    RowSelectionFill fill;
-    if (!(option.state & QStyle::State_Enabled))
-        return fill;
-
-    const bool hovered = option.state & QStyle::State_MouseOver;
-    const bool pressed = (option.state & QStyle::State_Sunken) && hovered;
-    const bool selected = option.state & QStyle::State_Selected;
-
-    if (pressed)
-        fill.color = colors.subtleTertiary;
-    else if (selected || hovered)
-        fill.color = colors.subtleSecondary;
-    return fill;
-}
 } // namespace
 
 // Default text/icon rows must remain usable without an application-supplied
@@ -100,8 +86,7 @@ class DefaultListItemDelegate final : public QStyledItemDelegate {
 public:
     explicit DefaultListItemDelegate(ListView* listView)
         : QStyledItemDelegate(listView), m_listView(listView)
-    {
-    }
+    {}
 
     void paint(QPainter* painter, const QStyleOptionViewItem& option,
                const QModelIndex& index) const override
@@ -116,16 +101,14 @@ public:
         const auto& colors = m_listView->themeColorsRef();
         const auto radius = m_listView->themeRadius();
         const bool selected = option.state & QStyle::State_Selected;
-        const bool enabled = option.state & QStyle::State_Enabled;
         const QRectF background = QRectF(option.rect).adjusted(2.0, 1.0, -2.0, -1.0);
 
-        const RowSelectionFill fill = defaultRowSelectionFill(
-            option, colors);
-        if (fill.color.isValid() && fill.color.alpha() > 0) {
+        const auto visual = detail::collectionItemVisualStyle(option.state, colors);
+        if (visual.background.isValid() && visual.background.alpha() > 0) {
             QPainterPath path;
             path.addRoundedRect(background, radius.control, radius.control);
             painter->setPen(Qt::NoPen);
-            painter->setBrush(fill.color);
+            painter->setBrush(visual.background);
             painter->drawPath(path);
         }
 
@@ -147,28 +130,23 @@ public:
             const QIcon icon = decoration.value<QIcon>();
             if (!icon.isNull()) {
                 const qreal dpr = painter->device()
-                    ? qMax<qreal>(1.0, painter->device()->devicePixelRatioF())
-                    : 1.0;
+                                      ? qMax<qreal>(1.0, painter->device()->devicePixelRatioF())
+                                      : 1.0;
                 iconPixmap = fluentIconPixmapForLogicalExtent(
                     icon, iconExtent, dpr,
-                    m_listView->window() ? m_listView->window()->windowHandle()
-                                         : nullptr);
+                    m_listView->window() ? m_listView->window()->windowHandle() : nullptr);
             }
         }
 
         if (!iconPixmap.isNull()) {
             const QRect iconRect(qRound(cursorX),
-                                 qRound(background.center().y()
-                                        - iconExtent.height() / 2.0),
+                                 qRound(background.center().y() - iconExtent.height() / 2.0),
                                  iconExtent.width(), iconExtent.height());
             painter->drawPixmap(iconRect, iconPixmap);
             cursorX = iconRect.right() + 12.0;
         }
 
-        QColor textColor = enabled ? colors.textPrimary : colors.textDisabled;
-        if (enabled && fill.textOnAccent && colors.textOnAccent.isValid())
-            textColor = colors.textOnAccent;
-        painter->setPen(textColor);
+        painter->setPen(visual.foreground);
 
         QFont font = option.font;
         if (selected)
@@ -180,21 +158,18 @@ public:
                               qMax<qreal>(0.0, background.right() - cursorX - 8.0),
                               background.height());
         const QFontMetricsF metrics(font);
-        const QString elided = metrics.elidedText(
-            text, Qt::ElideRight, qRound(textSlot.width()));
-        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
-            textSlot, metrics, elided);
+        const QString elided = metrics.elidedText(text, Qt::ElideRight, qRound(textSlot.width()));
+        const QRectF textRect =
+            fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elided);
         painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elided);
         painter->restore();
     }
 
-    QSize sizeHint(const QStyleOptionViewItem& option,
-                   const QModelIndex& index) const override
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         QSize hint = QStyledItemDelegate::sizeHint(option, index);
-        hint.setHeight(qMax(hint.height(),
-                            ::Spacing::ControlHeight::Standard
-                                + ::Spacing::Gap::Tight));
+        hint.setHeight(
+            qMax(hint.height(), ::Spacing::ControlHeight::Standard + ::Spacing::Gap::Tight));
         hint.setWidth(hint.width() + 26);
         return hint;
     }
@@ -210,31 +185,40 @@ private:
 class SectionProxyDelegate : public QStyledItemDelegate {
 public:
     SectionProxyDelegate(ListView* listView, QObject* parent = nullptr)
-        : QStyledItemDelegate(parent), m_listView(listView) {}
+        : QStyledItemDelegate(parent), m_listView(listView)
+    {}
 
     void setInnerDelegate(QAbstractItemDelegate* d) { m_inner = d; }
     QAbstractItemDelegate* innerDelegate() const { return m_inner; }
 
-    int sectionHeaderHeight() const {
+    int sectionHeaderHeight() const
+    {
         const QFont titleFont = m_listView->themeFont(Typography::FontRole::Title).toQFont();
         const QFontMetrics fm(titleFont);
         return fm.height() + 4; // text + separator(1px) + padding(3px)
     }
 
-    bool isSectionStart(int row) const {
-        if (!m_listView->sectionEnabled() || !m_listView->m_sectionKeyFunc) return false;
-        if (row == 0) return true;
+    bool isSectionStart(int row) const
+    {
+        if (!m_listView->sectionEnabled() || !m_listView->m_sectionKeyFunc)
+            return false;
+        if (row == 0)
+            return true;
         auto* model = m_listView->model();
-        if (!model || row >= model->rowCount()) return false;
+        if (!model || row >= model->rowCount())
+            return false;
         return m_listView->m_sectionKeyFunc(row) != m_listView->m_sectionKeyFunc(row - 1);
     }
 
-    QString sectionKey(int row) const {
-        if (!m_listView->m_sectionKeyFunc) return {};
+    QString sectionKey(int row) const
+    {
+        if (!m_listView->m_sectionKeyFunc)
+            return {};
         return m_listView->m_sectionKeyFunc(row);
     }
 
-    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override {
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
         QSize s = m_inner ? m_inner->sizeHint(option, index)
                           : QStyledItemDelegate::sizeHint(option, index);
         if (isSectionStart(index.row())) {
@@ -244,7 +228,8 @@ public:
     }
 
     void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override {
+               const QModelIndex& index) const override
+    {
         const int row = index.row();
         const bool isStart = isSectionStart(row);
         const int headerH = isStart ? sectionHeaderHeight() : 0;
@@ -266,8 +251,7 @@ public:
             // 表面隐藏时(如画廊扁平预览,列表直接坐在示例面板上),viewport 透明、行让父面板透出;填 bgLayer
             // 会变成更暗的嵌套块,而 viewport backing store 无 alpha,CompositionMode_Clear 会写成纯黑——
             // 故此时不绘制任何底色,让分组标题像普通行一样坐在已合成的父面板上。
-            QRect headerArea(option.rect.left(), option.rect.top(),
-                             option.rect.width(), headerH);
+            QRect headerArea(option.rect.left(), option.rect.top(), option.rect.width(), headerH);
             painter->save();
             painter->setRenderHint(QPainter::Antialiasing);
             if (m_listView->isBackgroundVisible()) {
@@ -284,8 +268,7 @@ public:
             // Separator line below text
             const int lineY = option.rect.top() + textH + 2;
             painter->setPen(QPen(c.strokeDefault, 1.0));
-            painter->drawLine(option.rect.left() + hPad, lineY,
-                              option.rect.right() - hPad, lineY);
+            painter->drawLine(option.rect.left() + hPad, lineY, option.rect.right() - hPad, lineY);
 
             painter->restore();
         }
@@ -316,8 +299,8 @@ private:
     QAbstractItemDelegate* m_inner = nullptr;
 };
 
-ListView::ListView(QWidget* parent)
-    : QListView(parent) {
+ListView::ListView(QWidget* parent) : QListView(parent)
+{
 
     m_fontRole = Typography::FontRole::Body;
 
@@ -325,7 +308,8 @@ ListView::ListView(QWidget* parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setMouseTracking(true);
-    setSpacing(2);  // 2px around each item, also spacing first/last from the border. zh_CN: item 四周留 2px，兼顾首尾与边框的间隙。
+    setSpacing(
+        2); // 2px around each item, also spacing first/last from the border. zh_CN: item 四周留 2px，兼顾首尾与边框的间隙。
 
     // Keep the no-configuration path Fluent and reserve room for the selection
     // indicator. Applications can replace this delegate for richer rows.
@@ -338,25 +322,21 @@ ListView::ListView(QWidget* parent)
     setEditTriggers(QAbstractItemView::NoEditTriggers);
     setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
-    connect(this, &QAbstractItemView::clicked, this, [this](const QModelIndex& idx) {
-        emit itemClicked(idx.row());
-    });
+    connect(this, &QAbstractItemView::clicked, this,
+            [this](const QModelIndex& idx) { emit itemClicked(idx.row()); });
 
     // Header/footer start empty; setHeader()/setHeaderText() create them on demand.
     // zh_CN: Header/footer 初始为空 —— 由 setHeader() / setHeaderText() 按需创建。
 
     // --- Fluent scroll bars ---
     m_vScrollBar = ::fluent::scrolling::createOverlayScrollBar(
-        Qt::Vertical, this, verticalScrollBar(),
-        QStringLiteral("fluentListViewScrollBar"));
-    connect(verticalScrollBar(), &QScrollBar::rangeChanged,
-            this, &ListView::syncFluentScrollBar);
+        Qt::Vertical, this, verticalScrollBar(), QStringLiteral("fluentListViewScrollBar"));
+    connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &ListView::syncFluentScrollBar);
 
     m_hScrollBar = ::fluent::scrolling::createOverlayScrollBar(
-        Qt::Horizontal, this, horizontalScrollBar(),
-        QStringLiteral("fluentListViewHScrollBar"));
-    connect(horizontalScrollBar(), &QScrollBar::rangeChanged,
-            this, &ListView::syncFluentHScrollBar);
+        Qt::Horizontal, this, horizontalScrollBar(), QStringLiteral("fluentListViewHScrollBar"));
+    connect(horizontalScrollBar(), &QScrollBar::rangeChanged, this,
+            &ListView::syncFluentHScrollBar);
 
     // --- Overscroll bounce (shared controller) ---
     fluent::scrolling::OverscrollController::Hooks hooks;
@@ -377,8 +357,8 @@ ListView::ListView(QWidget* parent)
         syncFluentHScrollBar();
     };
     hooks.fallbackWheel = [this](QWheelEvent* e) { QListView::wheelEvent(e); };
-    m_overscroll = new fluent::scrolling::OverscrollController(
-        viewport(), kDiscreteWheelStepPx, std::move(hooks), this);
+    m_overscroll = new fluent::scrolling::OverscrollController(viewport(), kDiscreteWheelStepPx,
+                                                               std::move(hooks), this);
 
     // --- Selected indicator motion ---
     m_selectedIndicatorAnimation = new QVariantAnimation(this);
@@ -386,11 +366,12 @@ ListView::ListView(QWidget* parent)
     m_selectedIndicatorAnimation->setEasingCurve(themeAnimation().decelerate);
     m_selectedIndicatorAnimation->setStartValue(0.0);
     m_selectedIndicatorAnimation->setEndValue(1.0);
-    connect(m_selectedIndicatorAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
-        setSelectedIndicatorProgress(value.toReal());
-        if (viewport())
-            viewport()->update();
-    });
+    connect(m_selectedIndicatorAnimation, &QVariantAnimation::valueChanged, this,
+            [this](const QVariant& value) {
+                setSelectedIndicatorProgress(value.toReal());
+                if (viewport())
+                    viewport()->update();
+            });
     connect(m_selectedIndicatorAnimation, &QVariantAnimation::finished, this, [this]() {
         setSelectedIndicatorProgress(1.0);
         if (viewport())
@@ -402,11 +383,13 @@ ListView::ListView(QWidget* parent)
     onThemeUpdated();
 }
 
-ListView::~ListView() {
+ListView::~ListView()
+{
     // Stop animations before destruction so no pending tick fires on a half-destroyed object.
     // The overscroll controller owns its own bounce anim/timer and stops them as a child.
     // zh_CN: 析构前停止动画，避免半销毁对象上仍有回调；overscroll 控制器作为子对象自行停止其回弹动画/定时器。
-    if (m_selectedIndicatorAnimation) m_selectedIndicatorAnimation->stop();
+    if (m_selectedIndicatorAnimation)
+        m_selectedIndicatorAnimation->stop();
     clearMultiSelectedIndicatorState();
 
     // Detach caller-owned Python model/delegate objects before QListView's
@@ -419,7 +402,8 @@ ListView::~ListView() {
     QListView::setModel(nullptr);
 }
 
-void ListView::setModel(QAbstractItemModel* model) {
+void ListView::setModel(QAbstractItemModel* model)
+{
     disconnectSelectedIndicatorModel();
     clearSelectedIndicatorState();
     QListView::setModel(model);
@@ -428,7 +412,8 @@ void ListView::setModel(QAbstractItemModel* model) {
         updateSelectedIndicatorFromSelection();
 }
 
-void ListView::setSelectionModel(QItemSelectionModel* selectionModel) {
+void ListView::setSelectionModel(QItemSelectionModel* selectionModel)
+{
     clearSelectedIndicatorState();
     QListView::setSelectionModel(selectionModel);
     if (usesMovingSelectedIndicator())
@@ -437,8 +422,10 @@ void ListView::setSelectionModel(QItemSelectionModel* selectionModel) {
 
 // ── Selection mode ────────────────────────────────────────────────────────────
 
-void ListView::setSelectionMode(SelectionMode mode) {
-    if (m_selectionMode == mode) return;
+void ListView::setSelectionMode(SelectionMode mode)
+{
+    if (m_selectionMode == mode)
+        return;
     m_selectionMode = mode;
 
     switch (mode) {
@@ -465,15 +452,19 @@ void ListView::setSelectionMode(SelectionMode mode) {
 
 // ── Flow ──────────────────────────────────────────────────────────────────────
 
-ListView::Flow ListView::flow() const {
+ListView::Flow ListView::flow() const
+{
     return QListView::flow();
 }
 
-void ListView::setFlow(Flow f) {
-    if (QListView::flow() == f) return;
+void ListView::setFlow(Flow f)
+{
+    if (QListView::flow() == f)
+        return;
     // The scroll axis is changing; drop any active overscroll on the old axis.
     // zh_CN: 滚动轴即将改变，清掉旧轴上的 overscroll。
-    if (m_overscroll) m_overscroll->cancel();
+    if (m_overscroll)
+        m_overscroll->cancel();
     QListView::setFlow(f);
     // Horizontal flow: scrollbar values must be in pixels so wheelEvent pixelDelta maps correctly.
     // Default ScrollPerItem makes scrollbar unit = item index, causing huge jumps.
@@ -489,29 +480,38 @@ void ListView::setFlow(Flow f) {
 
 // ── Appearance properties ────────────────────────────────────────────────────
 
-void ListView::setFontRole(Typography::FontRole role) {
-    if (m_fontRole == role) return;
+void ListView::setFontRole(Typography::FontRole role)
+{
+    if (m_fontRole == role)
+        return;
     m_fontRole = role;
     applyThemeStyle();
     emit fontRoleChanged();
 }
 
-void ListView::setBorderVisible(bool visible) {
-    if (m_borderVisible == visible) return;
+void ListView::setBorderVisible(bool visible)
+{
+    if (m_borderVisible == visible)
+        return;
     m_borderVisible = visible;
     update();
     emit borderVisibleChanged();
 }
 
-void ListView::setBackgroundVisible(bool visible) {
-    if (m_backgroundVisible == visible) return;
+void ListView::setBackgroundVisible(bool visible)
+{
+    if (m_backgroundVisible == visible)
+        return;
     m_backgroundVisible = visible;
-    if (viewport()) viewport()->update();
+    if (viewport())
+        viewport()->update();
     emit backgroundVisibleChanged();
 }
 
-void ListView::setHeader(QWidget* widget) {
-    if (m_header == widget) return;
+void ListView::setHeader(QWidget* widget)
+{
+    if (m_header == widget)
+        return;
 
     // Tear down the old header. zh_CN: 清理旧 header。
     if (m_header) {
@@ -534,8 +534,10 @@ void ListView::setHeader(QWidget* widget) {
     emit headerChanged();
 }
 
-void ListView::setFooter(QWidget* widget) {
-    if (m_footer == widget) return;
+void ListView::setFooter(QWidget* widget)
+{
+    if (m_footer == widget)
+        return;
 
     // Tear down the old footer. zh_CN: 清理旧 footer。
     if (m_footer) {
@@ -558,8 +560,10 @@ void ListView::setFooter(QWidget* widget) {
     emit footerChanged();
 }
 
-void ListView::setHeaderText(const QString& text) {
-    if (m_headerText == text) return;
+void ListView::setHeaderText(const QString& text)
+{
+    if (m_headerText == text)
+        return;
     m_headerText = text;
 
     if (text.isEmpty()) {
@@ -579,13 +583,15 @@ void ListView::setHeaderText(const QString& text) {
             m_ownsHeader = true;
         }
         lbl->setText(text);
-        applyThemeStyle();    // Fonts must be set for an accurate sizeHint. zh_CN: 确保字体已设置，sizeHint 准确。
+        applyThemeStyle(); // Fonts must be set for an accurate sizeHint. zh_CN: 确保字体已设置，sizeHint 准确。
     }
     emit headerTextChanged();
 }
 
-void ListView::setFooterText(const QString& text) {
-    if (m_footerText == text) return;
+void ListView::setFooterText(const QString& text)
+{
+    if (m_footerText == text)
+        return;
     m_footerText = text;
 
     if (text.isEmpty()) {
@@ -607,46 +613,62 @@ void ListView::setFooterText(const QString& text) {
     emit footerTextChanged();
 }
 
-void ListView::setPlaceholderText(const QString& text) {
-    if (m_placeholderText == text) return;
+void ListView::setPlaceholderText(const QString& text)
+{
+    if (m_placeholderText == text)
+        return;
     m_placeholderText = text;
-    if (viewport()) viewport()->update();
+    if (viewport())
+        viewport()->update();
     emit placeholderTextChanged();
 }
 
 // ── Drag reorder ──────────────────────────────────────────────────────────────
 
-void ListView::setCanReorderItems(bool enabled) {
-    if (m_canReorderItems == enabled) return;
+void ListView::setCanReorderItems(bool enabled)
+{
+    if (m_canReorderItems == enabled)
+        return;
     m_canReorderItems = enabled;
     emit canReorderItemsChanged();
 }
 
-bool ListView::isScrollChainingEnabled() const { return m_overscroll->isScrollChainingEnabled(); }
+bool ListView::isScrollChainingEnabled() const
+{
+    return m_overscroll->isScrollChainingEnabled();
+}
 
-void ListView::setScrollChainingEnabled(bool enabled) {
-    if (m_overscroll->isScrollChainingEnabled() == enabled) return;
+void ListView::setScrollChainingEnabled(bool enabled)
+{
+    if (m_overscroll->isScrollChainingEnabled() == enabled)
+        return;
     m_overscroll->setScrollChainingEnabled(enabled);
     emit scrollChainingEnabledChanged();
 }
 
 // ── Section ───────────────────────────────────────────────────────────────────
 
-void ListView::setSectionEnabled(bool enabled) {
-    if (m_sectionEnabled == enabled) return;
+void ListView::setSectionEnabled(bool enabled)
+{
+    if (m_sectionEnabled == enabled)
+        return;
     m_sectionEnabled = enabled;
     installSectionProxy();
-    if (viewport()) viewport()->update();
+    if (viewport())
+        viewport()->update();
     emit sectionEnabledChanged();
 }
 
-void ListView::setSectionKeyFunction(SectionKeyFunc func) {
+void ListView::setSectionKeyFunction(SectionKeyFunc func)
+{
     m_sectionKeyFunc = std::move(func);
     installSectionProxy();
-    if (m_sectionEnabled && viewport()) viewport()->update();
+    if (m_sectionEnabled && viewport())
+        viewport()->update();
 }
 
-void ListView::installSectionProxy() {
+void ListView::installSectionProxy()
+{
     const bool need = m_sectionEnabled && m_sectionKeyFunc;
 
     if (need) {
@@ -671,14 +693,16 @@ void ListView::installSectionProxy() {
 
 // ── Selection API ─────────────────────────────────────────────────────────────
 
-int ListView::selectedIndex() const {
+int ListView::selectedIndex() const
+{
     if (!selectionModel())
         return -1;
     auto idxList = selectionModel()->selectedIndexes();
     return idxList.isEmpty() ? -1 : idxList.first().row();
 }
 
-QList<int> ListView::selectedRows() const {
+QList<int> ListView::selectedRows() const
+{
     QSet<int> seen;
     if (!selectionModel())
         return {};
@@ -689,7 +713,8 @@ QList<int> ListView::selectedRows() const {
     return rows;
 }
 
-void ListView::setSelectedIndex(int index) {
+void ListView::setSelectedIndex(int index)
+{
     const QAbstractItemModel* m = model();
     if (!m || index < 0 || index >= m->rowCount()) {
         clearSelection();
@@ -703,8 +728,9 @@ void ListView::setSelectedIndex(int index) {
         // Skip scrollTo before showing; the viewport is not laid out yet and
         // would scroll wrongly.
         // zh_CN: 未显示前不触发 scrollTo，避免 viewport 未布局时产生错误滚动。
-        selectionModel()->setCurrentIndex(idx,
-            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Current | QItemSelectionModel::Rows);
+        selectionModel()->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect |
+                                                   QItemSelectionModel::Current |
+                                                   QItemSelectionModel::Rows);
     }
 }
 
@@ -713,9 +739,8 @@ void ListView::applyPointerSelection(const QModelIndex& index, QMouseEvent* even
     if (!selectionModel() || !index.isValid())
         return;
     const Qt::ItemFlags flags = index.flags();
-    if (!flags.testFlag(Qt::ItemIsEnabled) ||
-        !flags.testFlag(Qt::ItemIsSelectable)) {
-      return;
+    if (!flags.testFlag(Qt::ItemIsEnabled) || !flags.testFlag(Qt::ItemIsSelectable)) {
+        return;
     }
 
     switch (m_selectionMode) {
@@ -728,8 +753,7 @@ void ListView::applyPointerSelection(const QModelIndex& index, QMouseEvent* even
                                                      QItemSelectionModel::Rows);
         return;
     case SelectionMode::Multiple:
-        selectionModel()->select(index, QItemSelectionModel::Toggle |
-                                        QItemSelectionModel::Rows);
+        selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
         selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
         return;
     case SelectionMode::Extended:
@@ -737,8 +761,8 @@ void ListView::applyPointerSelection(const QModelIndex& index, QMouseEvent* even
     }
 
     const Qt::KeyboardModifiers modifiers = event ? event->modifiers() : Qt::NoModifier;
-    const bool toggle = modifiers.testFlag(Qt::ControlModifier) ||
-                        modifiers.testFlag(Qt::MetaModifier);
+    const bool toggle =
+        modifiers.testFlag(Qt::ControlModifier) || modifiers.testFlag(Qt::MetaModifier);
     const bool range = modifiers.testFlag(Qt::ShiftModifier);
 
     if (range && model()) {
@@ -747,27 +771,26 @@ void ListView::applyPointerSelection(const QModelIndex& index, QMouseEvent* even
         const int lastRow = qMax(anchor.row(), index.row());
         QItemSelection selection(model()->index(firstRow, index.column(), index.parent()),
                                  model()->index(lastRow, index.column(), index.parent()));
-        selectionModel()->select(selection,
-                                 (toggle ? QItemSelectionModel::Select
-                                         : QItemSelectionModel::ClearAndSelect) |
-                                     QItemSelectionModel::Rows);
+        selectionModel()->select(selection, (toggle ? QItemSelectionModel::Select
+                                                    : QItemSelectionModel::ClearAndSelect) |
+                                                QItemSelectionModel::Rows);
         selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
         return;
     }
 
     if (toggle) {
-        selectionModel()->select(index, QItemSelectionModel::Toggle |
-                                        QItemSelectionModel::Rows);
+        selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
         selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
         return;
     }
 
     selectionModel()->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect |
-                                             QItemSelectionModel::Current |
-                                             QItemSelectionModel::Rows);
+                                                 QItemSelectionModel::Current |
+                                                 QItemSelectionModel::Rows);
 }
 
-void ListView::setSelectedIndicatorAnimationEnabled(bool enabled) {
+void ListView::setSelectedIndicatorAnimationEnabled(bool enabled)
+{
     if (m_selectedIndicatorAnimationEnabled == enabled)
         return;
     m_selectedIndicatorAnimationEnabled = enabled;
@@ -782,7 +805,8 @@ void ListView::setSelectedIndicatorAnimationEnabled(bool enabled) {
     emit selectedIndicatorAnimationEnabledChanged();
 }
 
-void ListView::setSelectionIndicatorVisible(bool visible) {
+void ListView::setSelectionIndicatorVisible(bool visible)
+{
     if (m_selectionIndicatorVisible == visible)
         return;
     m_selectionIndicatorVisible = visible;
@@ -793,11 +817,13 @@ void ListView::setSelectionIndicatorVisible(bool visible) {
     emit selectionIndicatorVisibleChanged();
 }
 
-QRectF ListView::selectedIndicatorRect() const {
+QRectF ListView::selectedIndicatorRect() const
+{
     return selectedIndicatorRect(m_selectedIndicatorProgress);
 }
 
-QRectF ListView::selectedIndicatorRect(qreal progress) const {
+QRectF ListView::selectedIndicatorRect(qreal progress) const
+{
     if (!m_selectionIndicatorVisible || !usesMovingSelectedIndicator())
         return {};
     if (!m_currentIndicatorIndex.isValid())
@@ -824,7 +850,8 @@ QRectF ListView::selectedIndicatorRect(qreal progress) const {
     return interpolatedSelectedIndicatorRect(previous, target, clamped);
 }
 
-QRectF ListView::selectedIndicatorRectForRow(int row) const {
+QRectF ListView::selectedIndicatorRectForRow(int row) const
+{
     if (!m_selectionIndicatorVisible)
         return {};
     if (usesMovingSelectedIndicator())
@@ -836,9 +863,9 @@ QRectF ListView::selectedIndicatorRectForRow(int row) const {
     return selectedIndicatorRectForRow(row, multiSelectedIndicatorProgress(index));
 }
 
-QRectF ListView::selectedIndicatorRectForRow(int row, qreal progress) const {
-    if (!m_selectionIndicatorVisible
-        || !model() || row < 0 || row >= model()->rowCount())
+QRectF ListView::selectedIndicatorRectForRow(int row, qreal progress) const
+{
+    if (!m_selectionIndicatorVisible || !model() || row < 0 || row >= model()->rowCount())
         return {};
 
     const QModelIndex index = model()->index(row, 0);
@@ -850,29 +877,34 @@ QRectF ListView::selectedIndicatorRectForRow(int row, qreal progress) const {
         return {};
 
     if (usesMovingSelectedIndicator())
-        return index == QModelIndex(m_currentIndicatorIndex) ? selectedIndicatorRect(progress) : QRectF();
+        return index == QModelIndex(m_currentIndicatorIndex) ? selectedIndicatorRect(progress)
+                                                             : QRectF();
     if (!usesRevealSelectedIndicators())
         return {};
     return revealedSelectedIndicatorRect(baseRect, progress);
 }
 
-::fluent::scrolling::ScrollBar* ListView::verticalFluentScrollBar() const {
+::fluent::scrolling::ScrollBar* ListView::verticalFluentScrollBar() const
+{
     return m_vScrollBar;
 }
 
-::fluent::scrolling::ScrollBar* ListView::horizontalFluentScrollBar() const {
+::fluent::scrolling::ScrollBar* ListView::horizontalFluentScrollBar() const
+{
     return m_hScrollBar;
 }
 
 // ── Drag reorder events ───────────────────────────────────────────────────────
 
-QPixmap ListView::renderItemPixmap(int row) const {
+QPixmap ListView::renderItemPixmap(int row) const
+{
     if (!model() || row < 0 || row >= model()->rowCount())
         return {};
 
     QModelIndex idx = model()->index(row, 0);
     QRect rect = QListView::visualRect(idx);
-    if (rect.isEmpty()) return {};
+    if (rect.isEmpty())
+        return {};
 
     // Use full viewport width for the snapshot so it looks like the real row.
     // If a SectionProxyDelegate is active, use the inner delegate directly
@@ -923,16 +955,20 @@ QPixmap ListView::renderItemPixmap(int row) const {
     return pix;
 }
 
-int ListView::dropIndicatorRow(const QPoint& pos) const {
-    if (!model()) return 0;
+int ListView::dropIndicatorRow(const QPoint& pos) const
+{
+    if (!model())
+        return 0;
     const int count = model()->rowCount();
-    if (count == 0) return 0;
+    if (count == 0)
+        return 0;
 
     // During drag, use displaced visual positions for hit testing
     // so the indicator follows the actual visual layout.
     if (m_isDragging) {
         for (int i = 0; i < count; ++i) {
-            if (i == m_dragSourceRow) continue;
+            if (i == m_dragSourceRow)
+                continue;
             QRect rect = QListView::visualRect(model()->index(i, 0));
             rect.translate(0, qRound(m_dragOffsets.value(i, 0.0)));
             if (pos.y() < rect.center().y())
@@ -943,15 +979,18 @@ int ListView::dropIndicatorRow(const QPoint& pos) const {
 
     // Non-drag: standard hit test
     QModelIndex idx = indexAt(pos);
-    if (!idx.isValid()) return count;
+    if (!idx.isValid())
+        return count;
     QRect rect = visualRect(idx);
-    if (pos.y() > rect.center().y()) return idx.row() + 1;
+    if (pos.y() > rect.center().y())
+        return idx.row() + 1;
     return idx.row();
 }
 
 // ── Paint ─────────────────────────────────────────────────────────────────────
 
-void ListView::paintEvent(QPaintEvent* event) {
+void ListView::paintEvent(QPaintEvent* event)
+{
     const auto& c = themeColorsRef();
     const int r = CornerRadius::Control;
     // --- 1. Container background. zh_CN: 绘制容器背景。---
@@ -1030,7 +1069,8 @@ void ListView::paintEvent(QPaintEvent* event) {
         dp.setBrush(clr.accentDefault);
         dp.setPen(Qt::NoPen);
         dp.drawEllipse(QPoint(::Spacing::Padding::ListItemHorizontal, y), circleR, circleR);
-        dp.drawEllipse(QPoint(viewport()->width() - ::Spacing::Padding::ListItemHorizontal, y), circleR, circleR);
+        dp.drawEllipse(QPoint(viewport()->width() - ::Spacing::Padding::ListItemHorizontal, y),
+                       circleR, circleR);
         m_paintingWithOffsets = false;
         dp.end();
     }
@@ -1085,7 +1125,8 @@ void ListView::paintEvent(QPaintEvent* event) {
 
 // ── Layout ────────────────────────────────────────────────────────────────────
 
-void ListView::resizeEvent(QResizeEvent* event) {
+void ListView::resizeEvent(QResizeEvent* event)
+{
     QListView::resizeEvent(event);
     syncFluentScrollBar();
     syncFluentHScrollBar();
@@ -1097,7 +1138,8 @@ void ListView::resizeEvent(QResizeEvent* event) {
         viewport()->update();
 }
 
-void ListView::showEvent(QShowEvent* event) {
+void ListView::showEvent(QShowEvent* event)
+{
     QListView::showEvent(event);
     updateViewportMargins();
     syncFluentScrollBar();
@@ -1126,16 +1168,21 @@ void ListView::showEvent(QShowEvent* event) {
     });
 }
 
-bool ListView::isPointInSectionHeader(const QPoint& viewportPos) const {
-    if (!m_sectionEnabled || !m_sectionProxy) return false;
+bool ListView::isPointInSectionHeader(const QPoint& viewportPos) const
+{
+    if (!m_sectionEnabled || !m_sectionProxy)
+        return false;
 
     auto* proxy = static_cast<SectionProxyDelegate*>(m_sectionProxy);
-    if (!proxy) return false;
+    if (!proxy)
+        return false;
 
     QModelIndex idx = indexAt(viewportPos);
-    if (!idx.isValid()) return false;
+    if (!idx.isValid())
+        return false;
 
-    if (!proxy->isSectionStart(idx.row())) return false;
+    if (!proxy->isSectionStart(idx.row()))
+        return false;
 
     // The section header occupies the top portion of the visual rect
     QRect vr = visualRect(idx);
@@ -1143,14 +1190,15 @@ bool ListView::isPointInSectionHeader(const QPoint& viewportPos) const {
     return viewportPos.y() < vr.top() + headerH;
 }
 
-void ListView::mousePressEvent(QMouseEvent* event) {
+void ListView::mousePressEvent(QMouseEvent* event)
+{
     m_pressedRow = -1;
     updatePressedHoverRow(-1);
     m_dragSourceRow = -1;
 
     if (isPointInSectionHeader(event->pos())) {
         event->accept();
-        return;  // Swallow click on section header area
+        return; // Swallow click on section header area
     }
 
     if (event->button() == Qt::LeftButton) {
@@ -1170,10 +1218,12 @@ void ListView::mousePressEvent(QMouseEvent* event) {
     QListView::mousePressEvent(event);
 }
 
-void ListView::mouseMoveEvent(QMouseEvent* event) {
+void ListView::mouseMoveEvent(QMouseEvent* event)
+{
     if (m_canReorderItems && m_dragSourceRow >= 0 && (event->buttons() & Qt::LeftButton)) {
         if (!m_isDragging) {
-            if ((event->pos() - m_dragStartPos).manhattanLength() >= QApplication::startDragDistance()) {
+            if ((event->pos() - m_dragStartPos).manhattanLength() >=
+                QApplication::startDragDistance()) {
                 // Grab snapshot BEFORE setting m_isDragging to avoid capturing ghost overlay
                 m_dragPixmap = renderItemPixmap(m_dragSourceRow);
                 m_isDragging = true;
@@ -1210,13 +1260,15 @@ void ListView::mouseMoveEvent(QMouseEvent* event) {
     QListView::mouseMoveEvent(event);
 }
 
-void ListView::mouseReleaseEvent(QMouseEvent* event) {
+void ListView::mouseReleaseEvent(QMouseEvent* event)
+{
     if (m_isDragging && event->button() == Qt::LeftButton) {
         int src = m_dragSourceRow;
         int dst = m_dropTargetRow;
 
         if (dst >= 0 && src >= 0 && model()) {
-            if (src < dst) dst--;
+            if (src < dst)
+                dst--;
             if (src != dst && src < model()->rowCount()) {
                 int destRow = (src < dst) ? dst + 1 : dst;
                 bool moved = model()->moveRow(QModelIndex(), src, QModelIndex(), destRow);
@@ -1256,8 +1308,7 @@ void ListView::mouseReleaseEvent(QMouseEvent* event) {
 
     if (event->button() == Qt::LeftButton && m_pressedRow >= 0) {
         const QModelIndex released = indexAt(event->pos());
-        const bool clickOnPressedItem =
-            released.isValid() && released.row() == m_pressedRow;
+        const bool clickOnPressedItem = released.isValid() && released.row() == m_pressedRow;
         if (clickOnPressedItem) {
             applyPointerSelection(released, event);
             QPointer<ListView> guard(this);
@@ -1280,12 +1331,14 @@ void ListView::mouseReleaseEvent(QMouseEvent* event) {
     QListView::mouseReleaseEvent(event);
 }
 
-void ListView::enterEvent(FluentEnterEvent* event) {
+void ListView::enterEvent(FluentEnterEvent* event)
+{
     setViewportHovered(true);
     QListView::enterEvent(event);
 }
 
-void ListView::leaveEvent(QEvent* event) {
+void ListView::leaveEvent(QEvent* event)
+{
     setViewportHovered(false);
     if (m_pressedRow >= 0)
         updatePressedHoverRow(-1);
@@ -1305,18 +1358,21 @@ void ListView::leaveEvent(QEvent* event) {
 // overscroll). NoPhaseDiscrete uses pixel scrolling first, then starts a bounded one-shot
 // boundary bounce while consuming same-direction tails to prevent RDP flap.
 
-void ListView::wheelEvent(QWheelEvent* event) {
+void ListView::wheelEvent(QWheelEvent* event)
+{
     m_overscroll->handleWheel(event);
 }
 
-void ListView::currentChanged(const QModelIndex& current, const QModelIndex& previous) {
+void ListView::currentChanged(const QModelIndex& current, const QModelIndex& previous)
+{
     QListView::currentChanged(current, previous);
     Q_UNUSED(current)
     if (usesMovingSelectedIndicator())
         updateSelectedIndicatorFromSelection(previous);
 }
 
-void ListView::selectionChanged(const QItemSelection& selected, const QItemSelection& deselected) {
+void ListView::selectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
+{
     QListView::selectionChanged(selected, deselected);
     if (usesMovingSelectedIndicator())
         updateSelectedIndicatorFromSelection();
@@ -1324,7 +1380,8 @@ void ListView::selectionChanged(const QItemSelection& selected, const QItemSelec
         syncMultiSelectedIndicators(selected, deselected);
 }
 
-void ListView::scrollContentsBy(int dx, int dy) {
+void ListView::scrollContentsBy(int dx, int dy)
+{
     QListView::scrollContentsBy(dx, dy);
     if (usesMovingSelectedIndicator())
         refreshSelectedIndicatorGeometry(false);
@@ -1332,7 +1389,8 @@ void ListView::scrollContentsBy(int dx, int dy) {
         viewport()->update();
 }
 
-int ListView::verticalOffset() const {
+int ListView::verticalOffset() const
+{
     // The controller tracks one overscroll value for the active scroll axis; apply it to the
     // matching offset. m_overscroll may be null during base construction. zh_CN: 控制器只跟踪当前
     // 滚动轴的一个 overscroll 值，按轴应用到对应偏移；构造期间 m_overscroll 可能尚未创建。
@@ -1340,12 +1398,14 @@ int ListView::verticalOffset() const {
     return QListView::verticalOffset() - qRound(overscroll);
 }
 
-int ListView::horizontalOffset() const {
+int ListView::horizontalOffset() const
+{
     const qreal overscroll = (m_overscroll && flow() == LeftToRight) ? m_overscroll->value() : 0.0;
     return QListView::horizontalOffset() - qRound(overscroll);
 }
 
-QRect ListView::visualRect(const QModelIndex& index) const {
+QRect ListView::visualRect(const QModelIndex& index) const
+{
     QRect r = QListView::visualRect(index);
     if (m_paintingWithOffsets && index.isValid()) {
         if (m_isDragging && index.row() == m_dragSourceRow) {
@@ -1358,35 +1418,38 @@ QRect ListView::visualRect(const QModelIndex& index) const {
     return r;
 }
 
-void ListView::connectSelectedIndicatorModel(QAbstractItemModel* model) {
+void ListView::connectSelectedIndicatorModel(QAbstractItemModel* model)
+{
     if (!model)
         return;
 
-    m_indicatorModelAboutToResetConnection = connect(model, &QAbstractItemModel::modelAboutToBeReset,
-                                                     this, &ListView::clearSelectedIndicatorState);
-    m_indicatorModelResetConnection = connect(model, &QAbstractItemModel::modelReset,
-                                             this, &ListView::clearSelectedIndicatorState);
-    m_indicatorRowsAboutToBeRemovedConnection = connect(model, &QAbstractItemModel::rowsAboutToBeRemoved,
-                                                        this, [this](const QModelIndex&, int, int) {
-                                                            clearSelectedIndicatorState();
-                                                        });
-    m_indicatorRowsMovedConnection = connect(model, &QAbstractItemModel::rowsMoved,
-                                             this, [this](const QModelIndex&, int, int, const QModelIndex&, int) {
-                                                 if (usesMovingSelectedIndicator())
-                                                     refreshSelectedIndicatorGeometry(true);
-                                                 else if (viewport())
-                                                     viewport()->update();
-                                             });
-    m_indicatorLayoutChangedConnection = connect(model, &QAbstractItemModel::layoutChanged,
-                                                this, [this]() {
-                                                    if (usesMovingSelectedIndicator())
-                                                        refreshSelectedIndicatorGeometry(true);
-                                                    else if (viewport())
-                                                        viewport()->update();
-                                                });
+    m_indicatorModelAboutToResetConnection =
+        connect(model, &QAbstractItemModel::modelAboutToBeReset, this,
+                &ListView::clearSelectedIndicatorState);
+    m_indicatorModelResetConnection = connect(model, &QAbstractItemModel::modelReset, this,
+                                              &ListView::clearSelectedIndicatorState);
+    m_indicatorRowsAboutToBeRemovedConnection =
+        connect(model, &QAbstractItemModel::rowsAboutToBeRemoved, this,
+                [this](const QModelIndex&, int, int) { clearSelectedIndicatorState(); });
+    m_indicatorRowsMovedConnection =
+        connect(model, &QAbstractItemModel::rowsMoved, this,
+                [this](const QModelIndex&, int, int, const QModelIndex&, int) {
+                    if (usesMovingSelectedIndicator())
+                        refreshSelectedIndicatorGeometry(true);
+                    else if (viewport())
+                        viewport()->update();
+                });
+    m_indicatorLayoutChangedConnection =
+        connect(model, &QAbstractItemModel::layoutChanged, this, [this]() {
+            if (usesMovingSelectedIndicator())
+                refreshSelectedIndicatorGeometry(true);
+            else if (viewport())
+                viewport()->update();
+        });
 }
 
-void ListView::disconnectSelectedIndicatorModel() {
+void ListView::disconnectSelectedIndicatorModel()
+{
     QObject::disconnect(m_indicatorModelAboutToResetConnection);
     QObject::disconnect(m_indicatorModelResetConnection);
     QObject::disconnect(m_indicatorRowsAboutToBeRemovedConnection);
@@ -1399,7 +1462,8 @@ void ListView::disconnectSelectedIndicatorModel() {
     m_indicatorLayoutChangedConnection = QMetaObject::Connection();
 }
 
-void ListView::clearSelectedIndicatorState() {
+void ListView::clearSelectedIndicatorState()
+{
     if (m_selectedIndicatorAnimation)
         m_selectedIndicatorAnimation->stop();
     clearMultiSelectedIndicatorState();
@@ -1411,8 +1475,10 @@ void ListView::clearSelectedIndicatorState() {
         viewport()->update();
 }
 
-void ListView::clearMultiSelectedIndicatorState() {
-    for (auto it = m_multiIndicatorAnimations.begin(); it != m_multiIndicatorAnimations.end(); ++it) {
+void ListView::clearMultiSelectedIndicatorState()
+{
+    for (auto it = m_multiIndicatorAnimations.begin(); it != m_multiIndicatorAnimations.end();
+         ++it) {
         if (it.value()) {
             it.value()->stop();
             it.value()->deleteLater();
@@ -1421,11 +1487,14 @@ void ListView::clearMultiSelectedIndicatorState() {
     m_multiIndicatorAnimations.clear();
 }
 
-void ListView::updateSelectedIndicatorFromSelection(const QModelIndex& previous) {
+void ListView::updateSelectedIndicatorFromSelection(const QModelIndex& previous)
+{
     updateSelectedIndicatorForIndex(normalizedSelectedModelIndex(), previous);
 }
 
-void ListView::updateSelectedIndicatorForIndex(const QModelIndex& current, const QModelIndex& previous) {
+void ListView::updateSelectedIndicatorForIndex(const QModelIndex& current,
+                                               const QModelIndex& previous)
+{
     if (!current.isValid() || !isSelectedIndicatorEndpointUsable(current)) {
         clearSelectedIndicatorState();
         return;
@@ -1446,12 +1515,14 @@ void ListView::updateSelectedIndicatorForIndex(const QModelIndex& current, const
         return;
     }
 
-    const bool hasUsablePrevious = previousIndex.isValid() && isSelectedIndicatorEndpointUsable(previousIndex);
+    const bool hasUsablePrevious =
+        previousIndex.isValid() && isSelectedIndicatorEndpointUsable(previousIndex);
 
     const auto direction = hasUsablePrevious
                                ? classifySelectedIndicatorDirection(previousIndex, current)
                                : IndicatorMotionDirection::None;
-    const bool canAnimate = hasUsablePrevious && direction != IndicatorMotionDirection::None && !m_isDragging;
+    const bool canAnimate =
+        hasUsablePrevious && direction != IndicatorMotionDirection::None && !m_isDragging;
 
     m_previousIndicatorIndex = canAnimate ? previousIndex : QPersistentModelIndex();
     m_currentIndicatorIndex = QPersistentModelIndex(current);
@@ -1459,7 +1530,8 @@ void ListView::updateSelectedIndicatorForIndex(const QModelIndex& current, const
     startSelectedIndicatorAnimation(canAnimate && m_selectedIndicatorAnimationEnabled);
 }
 
-QModelIndex ListView::normalizedSelectedModelIndex() const {
+QModelIndex ListView::normalizedSelectedModelIndex() const
+{
     const QAbstractItemModel* m = model();
     const int row = selectedIndex();
     if (!m || row < 0 || row >= m->rowCount())
@@ -1467,7 +1539,8 @@ QModelIndex ListView::normalizedSelectedModelIndex() const {
     return m->index(row, 0);
 }
 
-bool ListView::isSelectedIndicatorEndpointUsable(const QModelIndex& index) const {
+bool ListView::isSelectedIndicatorEndpointUsable(const QModelIndex& index) const
+{
     if (!index.isValid() || index.model() != model())
         return false;
     if (isRowHidden(index.row()))
@@ -1475,16 +1548,18 @@ bool ListView::isSelectedIndicatorEndpointUsable(const QModelIndex& index) const
     return !selectedIndicatorBaseRect(index).isEmpty();
 }
 
-bool ListView::usesMovingSelectedIndicator() const {
+bool ListView::usesMovingSelectedIndicator() const
+{
     return m_selectionMode == SelectionMode::Single;
 }
 
-bool ListView::usesRevealSelectedIndicators() const {
-    return m_selectionMode == SelectionMode::Multiple ||
-           m_selectionMode == SelectionMode::Extended;
+bool ListView::usesRevealSelectedIndicators() const
+{
+    return m_selectionMode == SelectionMode::Multiple || m_selectionMode == SelectionMode::Extended;
 }
 
-QRectF ListView::selectedIndicatorBaseRect(const QModelIndex& index) const {
+QRectF ListView::selectedIndicatorBaseRect(const QModelIndex& index) const
+{
     if (!index.isValid() || index.model() != model() || !viewport())
         return {};
 
@@ -1511,7 +1586,8 @@ QRectF ListView::selectedIndicatorBaseRect(const QModelIndex& index) const {
     return QRectF(indicatorX, indicatorY, indicatorW, indicatorH);
 }
 
-QRectF ListView::revealedSelectedIndicatorRect(const QRectF& baseRect, qreal progress) const {
+QRectF ListView::revealedSelectedIndicatorRect(const QRectF& baseRect, qreal progress) const
+{
     if (baseRect.isEmpty())
         return {};
 
@@ -1519,20 +1595,17 @@ QRectF ListView::revealedSelectedIndicatorRect(const QRectF& baseRect, qreal pro
     const qreal scale = 0.35 + 0.65 * clamped;
     if (flow() == LeftToRight) {
         const qreal width = baseRect.width() * scale;
-        return QRectF(baseRect.center().x() - width / 2.0,
-                      baseRect.top(),
-                      width,
+        return QRectF(baseRect.center().x() - width / 2.0, baseRect.top(), width,
                       baseRect.height());
     }
 
     const qreal height = baseRect.height() * scale;
-    return QRectF(baseRect.left(),
-                  baseRect.center().y() - height / 2.0,
-                  baseRect.width(),
-                  height);
+    return QRectF(baseRect.left(), baseRect.center().y() - height / 2.0, baseRect.width(), height);
 }
 
-QRectF ListView::interpolatedSelectedIndicatorRect(const QRectF& previous, const QRectF& target, qreal progress) const {
+QRectF ListView::interpolatedSelectedIndicatorRect(const QRectF& previous, const QRectF& target,
+                                                   qreal progress) const
+{
     const qreal leading = indicatorLeadingProgress(progress);
     const qreal trailing = indicatorTrailingProgress(progress);
 
@@ -1574,10 +1647,14 @@ QRectF ListView::interpolatedSelectedIndicatorRect(const QRectF& previous, const
     const qreal normalizedTop = qMin(top, bottom);
     const qreal normalizedRight = qMax(left, right);
     const qreal normalizedBottom = qMax(top, bottom);
-    return QRectF(QPointF(normalizedLeft, normalizedTop), QPointF(normalizedRight, normalizedBottom));
+    return QRectF(QPointF(normalizedLeft, normalizedTop),
+                  QPointF(normalizedRight, normalizedBottom));
 }
 
-ListView::IndicatorMotionDirection ListView::classifySelectedIndicatorDirection(const QModelIndex& previous, const QModelIndex& current) const {
+ListView::IndicatorMotionDirection
+ListView::classifySelectedIndicatorDirection(const QModelIndex& previous,
+                                             const QModelIndex& current) const
+{
     if (!previous.isValid() || !current.isValid() || previous == current)
         return IndicatorMotionDirection::None;
 
@@ -1593,27 +1670,25 @@ ListView::IndicatorMotionDirection ListView::classifySelectedIndicatorDirection(
                        : IndicatorMotionDirection::Left;
         }
         if (current.row() != previous.row()) {
-            return current.row() > previous.row()
-                       ? IndicatorMotionDirection::Right
-                       : IndicatorMotionDirection::Left;
+            return current.row() > previous.row() ? IndicatorMotionDirection::Right
+                                                  : IndicatorMotionDirection::Left;
         }
         return IndicatorMotionDirection::None;
     }
 
     if (!qFuzzyCompare(previousRect.center().y() + 1.0, currentRect.center().y() + 1.0)) {
-        return currentRect.center().y() > previousRect.center().y()
-                   ? IndicatorMotionDirection::Down
-                   : IndicatorMotionDirection::Up;
+        return currentRect.center().y() > previousRect.center().y() ? IndicatorMotionDirection::Down
+                                                                    : IndicatorMotionDirection::Up;
     }
     if (current.row() != previous.row()) {
-        return current.row() > previous.row()
-                   ? IndicatorMotionDirection::Down
-                   : IndicatorMotionDirection::Up;
+        return current.row() > previous.row() ? IndicatorMotionDirection::Down
+                                              : IndicatorMotionDirection::Up;
     }
     return IndicatorMotionDirection::None;
 }
 
-void ListView::startSelectedIndicatorAnimation(bool animated) {
+void ListView::startSelectedIndicatorAnimation(bool animated)
+{
     if (!m_selectedIndicatorAnimation)
         return;
 
@@ -1628,10 +1703,13 @@ void ListView::startSelectedIndicatorAnimation(bool animated) {
     setSelectedIndicatorProgress(0.0);
     m_selectedIndicatorAnimation->setStartValue(0.0);
     m_selectedIndicatorAnimation->setEndValue(1.0);
-    m_selectedIndicatorAnimation->start();
+    ::fluent::detail::startMotionTransition(m_selectedIndicatorAnimation, themeAnimation().normal,
+                                            m_selectedIndicatorAnimationEnabled);
 }
 
-void ListView::syncMultiSelectedIndicators(const QItemSelection& selected, const QItemSelection& deselected) {
+void ListView::syncMultiSelectedIndicators(const QItemSelection& selected,
+                                           const QItemSelection& deselected)
+{
     if (!usesRevealSelectedIndicators() || !selectionModel()) {
         clearMultiSelectedIndicatorState();
         return;
@@ -1670,7 +1748,8 @@ void ListView::syncMultiSelectedIndicators(const QItemSelection& selected, const
         viewport()->update();
 }
 
-void ListView::startMultiSelectedIndicatorReveal(const QModelIndex& index) {
+void ListView::startMultiSelectedIndicatorReveal(const QModelIndex& index)
+{
     if (!index.isValid() || index.column() != 0)
         return;
 
@@ -1694,15 +1773,18 @@ void ListView::startMultiSelectedIndicatorReveal(const QModelIndex& index) {
         if (viewport())
             viewport()->update();
     });
-    animation->start();
+    ::fluent::detail::startMotionTransition(animation, themeAnimation().fast,
+                                            m_selectedIndicatorAnimationEnabled);
 }
 
-qreal ListView::multiSelectedIndicatorProgress(const QModelIndex& index) const {
+qreal ListView::multiSelectedIndicatorProgress(const QModelIndex& index) const
+{
     const auto it = m_multiIndicatorAnimations.find(QPersistentModelIndex(index));
     return it == m_multiIndicatorAnimations.end() ? 1.0 : it.value()->currentValue().toReal();
 }
 
-void ListView::setSelectedIndicatorProgress(qreal progress) {
+void ListView::setSelectedIndicatorProgress(qreal progress)
+{
     const qreal clamped = qBound(0.0, progress, 1.0);
     if (qFuzzyCompare(m_selectedIndicatorProgress + 1.0, clamped + 1.0))
         return;
@@ -1710,14 +1792,16 @@ void ListView::setSelectedIndicatorProgress(qreal progress) {
     emit selectedIndicatorProgressChanged();
 }
 
-void ListView::setSelectedIndicatorMotionDirection(IndicatorMotionDirection direction) {
+void ListView::setSelectedIndicatorMotionDirection(IndicatorMotionDirection direction)
+{
     if (m_selectedIndicatorMotionDirection == direction)
         return;
     m_selectedIndicatorMotionDirection = direction;
     emit selectedIndicatorMotionDirectionChanged();
 }
 
-void ListView::refreshSelectedIndicatorGeometry(bool snapToTarget) {
+void ListView::refreshSelectedIndicatorGeometry(bool snapToTarget)
+{
     if (!m_currentIndicatorIndex.isValid()) {
         const QModelIndex selected = normalizedSelectedModelIndex();
         if (selected.isValid())
@@ -1751,9 +1835,10 @@ void ListView::refreshSelectedIndicatorGeometry(bool snapToTarget) {
         viewport()->update();
 }
 
-void ListView::paintSelectedIndicator(QPainter& painter) const {
-    if (!m_selectionIndicatorVisible
-        || !themeColorsRef().accentDefault.isValid() || !selectionModel())
+void ListView::paintSelectedIndicator(QPainter& painter) const
+{
+    if (!m_selectionIndicatorVisible || !themeColorsRef().accentDefault.isValid() ||
+        !selectionModel())
         return;
 
     if (usesMovingSelectedIndicator()) {
@@ -1774,14 +1859,15 @@ void ListView::paintSelectedIndicator(QPainter& painter) const {
     }
 }
 
-void ListView::paintIndicatorRect(QPainter& painter, const QRectF& indicatorRect, qreal opacity) const {
+void ListView::paintIndicatorRect(QPainter& painter, const QRectF& indicatorRect,
+                                  qreal opacity) const
+{
     if (indicatorRect.isEmpty() || !themeColorsRef().accentDefault.isValid())
         return;
 
     const bool horizontalIndicator = flow() == LeftToRight;
-    const qreal radius = horizontalIndicator
-                             ? indicatorRect.height() / 2.0
-                             : indicatorRect.width() / 2.0;
+    const qreal radius =
+        horizontalIndicator ? indicatorRect.height() / 2.0 : indicatorRect.width() / 2.0;
     QPainterPath path;
     path.addRoundedRect(indicatorRect, radius, radius);
     QColor accent = themeColorsRef().accentDefault;
@@ -1793,14 +1879,16 @@ void ListView::paintIndicatorRect(QPainter& painter, const QRectF& indicatorRect
 
 // paintSectionHeaders() removed — section headers are now painted by SectionProxyDelegate
 
-void ListView::setViewportHovered(bool hovered) {
+void ListView::setViewportHovered(bool hovered)
+{
     if (m_viewportHovered == hovered)
         return;
     m_viewportHovered = hovered;
     emit viewportHoveredChanged();
 }
 
-void ListView::updatePressedHoverRow(int row) {
+void ListView::updatePressedHoverRow(int row)
+{
     if (m_pressedHoverRow == row)
         return;
     m_pressedHoverRow = row;
@@ -1808,7 +1896,8 @@ void ListView::updatePressedHoverRow(int row) {
         viewport()->update();
 }
 
-void ListView::paintPressedHoverFeedback(QPainter& painter) const {
+void ListView::paintPressedHoverFeedback(QPainter& painter) const
+{
     if (!model() || m_pressedHoverRow < 0 || m_pressedHoverRow >= model()->rowCount())
         return;
 
@@ -1825,29 +1914,22 @@ void ListView::paintPressedHoverFeedback(QPainter& painter) const {
     option.rect = rect;
     option.widget = viewport();
     option.font = font();
-    option.state |= QStyle::State_MouseOver;
-    if (isEnabled()) {
-        option.state |= QStyle::State_Enabled;
-    } else {
-        option.state &= ~QStyle::State_Enabled;
-    }
-    if (hasFocus())
-        option.state |= QStyle::State_Active;
-    if (selectionModel() && selectionModel()->isSelected(index))
-        option.state |= QStyle::State_Selected;
-    if (m_pressedHoverRow == m_pressedRow)
-        option.state |= QStyle::State_Sunken;
+    detail::applyCollectionItemState(option.state, isEnabled(),
+                                     selectionModel() && selectionModel()->isSelected(index), true,
+                                     m_pressedHoverRow == m_pressedRow, hasFocus());
 
     itemDelegate()->paint(&painter, option, index);
 }
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
-void ListView::onThemeUpdated() {
+void ListView::onThemeUpdated()
+{
     applyThemeStyle();
 }
 
-void ListView::applyThemeStyle() {
+void ListView::applyThemeStyle()
+{
     const auto& c = themeColorsRef();
 
     QPalette pal = palette();
@@ -1873,8 +1955,8 @@ void ListView::applyThemeStyle() {
     if (m_ownsHeader) {
         if (auto* lbl = qobject_cast<QLabel*>(m_header)) {
             lbl->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
-            lbl->setStyleSheet(QStringLiteral("color: %1; background: transparent;")
-                                   .arg(cssRgba(c.textPrimary)));
+            lbl->setStyleSheet(
+                QStringLiteral("color: %1; background: transparent;").arg(cssRgba(c.textPrimary)));
         }
     }
 
@@ -1897,23 +1979,28 @@ void ListView::applyThemeStyle() {
 
 // ── Internal layout helpers ───────────────────────────────────────────────────
 
-void ListView::layoutHeader() {
-    if (!m_header || !m_header->isVisible()) return;
+void ListView::layoutHeader()
+{
+    if (!m_header || !m_header->isVisible())
+        return;
 
     const int headerH = m_header->sizeHint().height() + ::Spacing::Gap::Normal;
     m_header->setGeometry(0, 0, width(), headerH);
     m_header->raise();
 }
 
-void ListView::layoutFooter() {
-    if (!m_footer || !m_footer->isVisible()) return;
+void ListView::layoutFooter()
+{
+    if (!m_footer || !m_footer->isVisible())
+        return;
 
     const int footerH = m_footer->sizeHint().height() + ::Spacing::Gap::Normal;
     m_footer->setGeometry(0, height() - footerH, width(), footerH);
     m_footer->raise();
 }
 
-void ListView::updateViewportMargins() {
+void ListView::updateViewportMargins()
+{
     int top = 0, bottom = 0;
     if (m_header && m_header->isVisible()) {
         top = m_header->sizeHint().height() + ::Spacing::Gap::Normal;
@@ -1934,23 +2021,26 @@ void ListView::updateViewportMargins() {
  * zh_CN: 平台/样式可能在 show/resize 后重新显示原生条，因此需反复调用。
  * 共享步骤收敛在 OverlayScrollChrome，这里只保留感知 header 的锚点计算。
  */
-void ListView::syncFluentScrollBar() {
+void ListView::syncFluentScrollBar()
+{
     ::fluent::scrolling::suppressNativeScrollBars(verticalScrollBar(), horizontalScrollBar());
-    if (!m_vScrollBar) return;
+    if (!m_vScrollBar)
+        return;
     if (!::fluent::scrolling::mirrorNativeScrollBar(m_vScrollBar, verticalScrollBar()))
         return;
 
     const QRect r = rect();
-    const int top = (m_header && m_header->isVisible())
-                        ? m_header->geometry().bottom() + 2
-                        : r.top() + 2;
-    ::fluent::scrolling::placeVerticalScrollBar(m_vScrollBar, r, top,
-                                                kScrollBarEdgeInset, /*bottomInset=*/2);
+    const int top =
+        (m_header && m_header->isVisible()) ? m_header->geometry().bottom() + 2 : r.top() + 2;
+    ::fluent::scrolling::placeVerticalScrollBar(m_vScrollBar, r, top, kScrollBarEdgeInset,
+                                                /*bottomInset=*/2);
 }
 
-void ListView::syncFluentHScrollBar() {
+void ListView::syncFluentHScrollBar()
+{
     ::fluent::scrolling::suppressNativeScrollBars(verticalScrollBar(), horizontalScrollBar());
-    if (!m_hScrollBar) return;
+    if (!m_hScrollBar)
+        return;
     if (!::fluent::scrolling::mirrorNativeScrollBar(m_hScrollBar, horizontalScrollBar()))
         return;
 
@@ -1959,14 +2049,16 @@ void ListView::syncFluentHScrollBar() {
                                                   /*bottomInset=*/0);
 }
 
-void ListView::refreshFluentScrollChrome() {
+void ListView::refreshFluentScrollChrome()
+{
     syncFluentScrollBar();
     syncFluentHScrollBar();
 }
 
 // ── Drag displacement animation ───────────────────────────────────────────────
 
-void ListView::updateDragDisplacement() {
+void ListView::updateDragDisplacement()
+{
     if (m_dragSourceRow < 0 || m_dropTargetRow < 0 || !model()) {
         clearDragAnimations();
         return;
@@ -1978,7 +2070,8 @@ void ListView::updateDragDisplacement() {
 
     // Use the actual source row height for displacement amount
     const int srcH = QListView::visualRect(model()->index(src, 0)).height();
-    if (srcH <= 0) return;
+    if (srcH <= 0)
+        return;
 
     for (int i = 0; i < itemCount; ++i) {
         qreal target = 0.0;
@@ -2025,11 +2118,13 @@ void ListView::updateDragDisplacement() {
             }
         });
         m_dragAnims[i] = anim;
-        anim->start(QAbstractAnimation::DeleteWhenStopped);
+        ::fluent::detail::startMotionTransition(anim, themeAnimation().fast, true,
+                                                QAbstractAnimation::DeleteWhenStopped);
     }
 }
 
-void ListView::clearDragAnimations() {
+void ListView::clearDragAnimations()
+{
     for (auto it = m_dragAnims.begin(); it != m_dragAnims.end(); ++it) {
         if (it.value()) {
             it.value()->stop();

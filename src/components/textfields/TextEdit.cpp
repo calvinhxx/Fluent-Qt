@@ -28,11 +28,13 @@ namespace fluent::textfields {
 
 // ── Helpers. zh_CN: 辅助函数 ───────────────────────────────────────────────────
 
-static int metricLineHeight(const QFont& font) {
+static int metricLineHeight(const QFont& font)
+{
     return qMax(1, qCeil(QFontMetricsF(font).lineSpacing()));
 }
 
-static int renderedLineHeight(QTextEdit* editor) {
+static int renderedLineHeight(QTextEdit* editor)
+{
     if (!editor)
         return 1;
 
@@ -53,54 +55,52 @@ static int renderedLineHeight(QTextEdit* editor) {
     if (!firstBlock.isValid())
         return qMax(1, height);
 
-    if (QTextLayout* layout = firstBlock.layout();
-        layout && layout->lineCount() > 0) {
+    if (QTextLayout* layout = firstBlock.layout(); layout && layout->lineCount() > 0) {
         height = qMax(height, qCeil(layout->lineAt(0).height()));
     }
-    height = qMax(height,
-                  editor->cursorRect(QTextCursor(firstBlock)).height());
+    height = qMax(height, editor->cursorRect(QTextCursor(firstBlock)).height());
     return qMax(1, height);
 }
 
-static int effectiveLineHeight(const QFont& font, int requestedLineHeight) {
+static int effectiveLineHeight(const QFont& font, int requestedLineHeight)
+{
     return qMax(requestedLineHeight, metricLineHeight(font));
 }
 
-static int verticalMarginOverflow(const QFont& font,
-                                  int lineHeight,
-                                  const QMargins& margins) {
+static int verticalMarginOverflow(const QFont& font, int lineHeight, const QMargins& margins)
+{
     const int fontLh = metricLineHeight(font);
     const int slotSlack = effectiveLineHeight(font, lineHeight) - fontLh;
     return qMax(0, margins.top() + margins.bottom() - slotSlack);
 }
 
-static QMargins calcContentViewportMargins(const QFont& font,
-                                           int lineHeight,
-                                           const QMargins& margins) {
+static QMargins calcContentViewportMargins(const QFont& font, int lineHeight,
+                                           const QMargins& margins)
+{
     const int fontLh = metricLineHeight(font);
     const int slotSlack = effectiveLineHeight(font, lineHeight) - fontLh;
     const int requestedTop = qMax(0, margins.top());
     const int requestedBottom = qMax(0, margins.bottom());
-    const int centeredSlack = qMax(
-        0, slotSlack - requestedTop - requestedBottom);
+    const int centeredSlack = qMax(0, slotSlack - requestedTop - requestedBottom);
     const int top = requestedTop + centeredSlack / 2;
     const int bottom = requestedBottom + centeredSlack - centeredSlack / 2;
-    return QMargins(qMax(0, margins.left()), top,
-                    qMax(0, margins.right()), bottom);
+    return QMargins(qMax(0, margins.left()), top, qMax(0, margins.right()), bottom);
 }
 
-static int calcBotPad(const QFont& font, int lineHeight) {
+static int calcBotPad(const QFont& font, int lineHeight)
+{
     return effectiveLineHeight(font, lineHeight) - metricLineHeight(font);
 }
 
-static int renderedLinePitch(QTextEdit* editor, int requestedLineHeight) {
+static int renderedLinePitch(QTextEdit* editor, int requestedLineHeight)
+{
     if (!editor)
         return qMax(1, requestedLineHeight);
-    return renderedLineHeight(editor)
-        + calcBotPad(editor->font(), requestedLineHeight);
+    return renderedLineHeight(editor) + calcBotPad(editor->font(), requestedLineHeight);
 }
 
-static bool formatMetricEquals(qreal lhs, qreal rhs) {
+static bool formatMetricEquals(qreal lhs, qreal rhs)
+{
     return qAbs(lhs - rhs) < 0.01;
 }
 
@@ -121,16 +121,19 @@ static bool formatMetricEquals(qreal lhs, qreal rhs) {
 class InnerTextEdit : public QTextEdit {
 public:
     explicit InnerTextEdit(TextEdit* owner, QWidget* parent = nullptr)
-        : QTextEdit(parent), m_owner(owner) {
+        : QTextEdit(parent), m_owner(owner)
+    {
         setAcceptRichText(false);
     }
 
-    void setContentViewportMargins(int left, int top, int right, int bottom) {
+    void setContentViewportMargins(int left, int top, int right, int bottom)
+    {
         setViewportMargins(left, top, right, bottom);
     }
 
 protected:
-    void contextMenuEvent(QContextMenuEvent* event) override {
+    void contextMenuEvent(QContextMenuEvent* event) override
+    {
         if (!event)
             return;
 
@@ -143,9 +146,7 @@ protected:
         // 与 Win11 对该透明调色板的回退绘制并不一致。
         auto* standardMenu = createStandardContextMenu(event->pos());
         if (!::fluent::menus_toolbars::detail::showTextEditingContextMenu(
-                this,
-                standardMenu,
-                event->globalPos(),
+                this, standardMenu, event->globalPos(),
                 QStringLiteral("FluentTextEdit.ContextMenu"))) {
             event->ignore();
             return;
@@ -153,7 +154,8 @@ protected:
         event->accept();
     }
 
-    void wheelEvent(QWheelEvent* event) override {
+    void wheelEvent(QWheelEvent* event) override
+    {
         if (m_owner && handleBoundaryWheel(event))
             return;
         QTextEdit::wheelEvent(event);
@@ -161,15 +163,18 @@ protected:
             event->accept();
     }
 
-    void paintEvent(QPaintEvent* e) override {
+    void paintEvent(QPaintEvent* e) override
+    {
         QTextEdit::paintEvent(e);
         // Paint the placeholder on the same viewport and font metrics as real
         // text so empty and populated states keep identical alignment.
         // zh_CN: placeholder 与真实文本共用 viewport 和字体度量，自绘以保证
         // 空态与有内容状态对齐一致。
-        if (!m_owner || !document()->isEmpty() || m_hasPreedit) return;
+        if (!m_owner || !document()->isEmpty() || m_hasPreedit)
+            return;
         const QString ph = m_owner->placeholderText();
-        if (ph.isEmpty()) return;
+        if (ph.isEmpty())
+            return;
 
         QPainter painter(viewport());
         const int fontLh = renderedLineHeight(this);
@@ -179,7 +184,8 @@ protected:
         painter.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, ph);
     }
 
-    void inputMethodEvent(QInputMethodEvent* event) override {
+    void inputMethodEvent(QInputMethodEvent* event) override
+    {
         QTextEdit::inputMethodEvent(event);
         const bool hasPreedit = event && !event->preeditString().isEmpty();
         if (m_hasPreedit == hasPreedit)
@@ -190,12 +196,14 @@ protected:
     }
 
 private:
-    bool hasScrollableRange() const {
+    bool hasScrollableRange() const
+    {
         const QScrollBar* bar = verticalScrollBar();
         return bar && bar->maximum() > bar->minimum();
     }
 
-    bool handleBoundaryWheel(QWheelEvent* event) {
+    bool handleBoundaryWheel(QWheelEvent* event)
+    {
         if (!event)
             return false;
         QScrollBar* bar = verticalScrollBar();
@@ -205,15 +213,14 @@ private:
         }
 
         const qreal scrollPx = !event->pixelDelta().isNull()
-            ? static_cast<qreal>(event->pixelDelta().y())
-            : static_cast<qreal>(event->angleDelta().y());
+                                   ? static_cast<qreal>(event->pixelDelta().y())
+                                   : static_cast<qreal>(event->angleDelta().y());
         if (qFuzzyIsNull(scrollPx))
             return false;
 
         const bool atTop = bar->value() <= bar->minimum();
         const bool atBottom = bar->value() >= bar->maximum();
-        const bool boundaryTail = (atTop && scrollPx > 0.0) ||
-                                  (atBottom && scrollPx < 0.0);
+        const bool boundaryTail = (atTop && scrollPx > 0.0) || (atBottom && scrollPx < 0.0);
         if (!boundaryTail)
             return false;
 
@@ -232,8 +239,8 @@ private:
 
 // ── Construction. zh_CN: 构造 ───────────────────────────────────────────────────
 
-TextEdit::TextEdit(QWidget* parent)
-    : QWidget(parent) {
+TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
+{
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_Hover);
 
@@ -271,15 +278,11 @@ TextEdit::TextEdit(QWidget* parent)
         updateHeightForContent();
         emit textChanged();
     });
-    connect(m_editor, &QTextEdit::cursorPositionChanged,
-            this, &TextEdit::cursorPositionChanged);
-    connect(m_editor, &QTextEdit::selectionChanged,
-            this, &TextEdit::selectionChanged);
+    connect(m_editor, &QTextEdit::cursorPositionChanged, this, &TextEdit::cursorPositionChanged);
+    connect(m_editor, &QTextEdit::selectionChanged, this, &TextEdit::selectionChanged);
     connect(m_editor->document()->documentLayout(),
-            &QAbstractTextDocumentLayout::documentSizeChanged,
-            this, [this](const QSizeF&) {
-                scheduleHeightForContentUpdate();
-            });
+            &QAbstractTextDocumentLayout::documentSizeChanged, this,
+            [this](const QSizeF&) { scheduleHeightForContentUpdate(); });
     m_editor->installEventFilter(this);
 
     // Custom fluent scroll bar. zh_CN: 自定义 Fluent 滚动条。
@@ -291,24 +294,23 @@ TextEdit::TextEdit(QWidget* parent)
     m_vScrollBar->setPageStep(innerVBar->pageStep());
     m_vScrollBar->setValue(innerVBar->value());
 
-    connect(innerVBar, &QScrollBar::rangeChanged,
-            this, [this, innerVBar](int /*min*/, int /*max*/) {
-                if (!m_vScrollBar) return;
+    connect(innerVBar, &QScrollBar::rangeChanged, this,
+            [this, innerVBar](int /*min*/, int /*max*/) {
+                if (!m_vScrollBar)
+                    return;
                 m_vScrollBar->setRange(innerVBar->minimum(), innerVBar->maximum());
                 m_vScrollBar->setPageStep(innerVBar->pageStep());
                 // Scroll bar visibility is owned by updateHeightForContent.
                 // zh_CN: 滚动条可见性由 updateHeightForContent 统一管理。
             });
-    connect(innerVBar, &QScrollBar::valueChanged,
-            this, [this](int v) {
-                if (m_vScrollBar && m_vScrollBar->value() != v)
-                    m_vScrollBar->setValue(v);
-            });
-    connect(m_vScrollBar, &QScrollBar::valueChanged,
-            this, [innerVBar](int v) {
-                if (innerVBar->value() != v)
-                    innerVBar->setValue(v);
-            });
+    connect(innerVBar, &QScrollBar::valueChanged, this, [this](int v) {
+        if (m_vScrollBar && m_vScrollBar->value() != v)
+            m_vScrollBar->setValue(v);
+    });
+    connect(m_vScrollBar, &QScrollBar::valueChanged, this, [innerVBar](int v) {
+        if (innerVBar->value() != v)
+            innerVBar->setValue(v);
+    });
 
     // Initial theme, line format, then height (order matters). zh_CN: 初始主题 + 行格式 + 高度（顺序重要）。
     onThemeUpdated();
@@ -317,7 +319,8 @@ TextEdit::TextEdit(QWidget* parent)
 
 // ── Text API. zh_CN: 文本 API ───────────────────────────────────────────────────
 
-void TextEdit::setPlainText(const QString& text) {
+void TextEdit::setPlainText(const QString& text)
+{
     if (m_editor) {
         if (m_editor->toPlainText() == text)
             return;
@@ -327,11 +330,13 @@ void TextEdit::setPlainText(const QString& text) {
     }
 }
 
-QString TextEdit::toPlainText() const {
+QString TextEdit::toPlainText() const
+{
     return m_editor ? m_editor->toPlainText() : QString();
 }
 
-void TextEdit::clear() {
+void TextEdit::clear()
+{
     if (m_editor) {
         if (m_editor->toPlainText().isEmpty())
             return;
@@ -341,45 +346,58 @@ void TextEdit::clear() {
     }
 }
 
-void TextEdit::setPlaceholderText(const QString& text) {
+void TextEdit::setPlaceholderText(const QString& text)
+{
     m_placeholderText = text;
-    if (m_editor && m_editor->viewport()) m_editor->viewport()->update();
+    if (m_editor && m_editor->viewport())
+        m_editor->viewport()->update();
 }
 
-QString TextEdit::placeholderText() const {
+QString TextEdit::placeholderText() const
+{
     return m_placeholderText;
 }
 
-void TextEdit::setReadOnly(bool readOnly) {
-    if (m_editor) m_editor->setReadOnly(readOnly);
+void TextEdit::setReadOnly(bool readOnly)
+{
+    if (m_editor)
+        m_editor->setReadOnly(readOnly);
 }
 
-bool TextEdit::isReadOnly() const {
+bool TextEdit::isReadOnly() const
+{
     return m_editor ? m_editor->isReadOnly() : false;
 }
 
-::fluent::scrolling::ScrollBar* TextEdit::verticalScrollBar() const {
+::fluent::scrolling::ScrollBar* TextEdit::verticalScrollBar() const
+{
     return m_vScrollBar;
 }
 
-void TextEdit::setFocus() {
-    if (m_editor) m_editor->setFocus(Qt::OtherFocusReason);
+void TextEdit::setFocus()
+{
+    if (m_editor)
+        m_editor->setFocus(Qt::OtherFocusReason);
 }
 
-void TextEdit::setFocus(Qt::FocusReason reason) {
-    if (m_editor) m_editor->setFocus(reason);
+void TextEdit::setFocus(Qt::FocusReason reason)
+{
+    if (m_editor)
+        m_editor->setFocus(reason);
 }
 
 // ── Events. zh_CN: 事件 ─────────────────────────────────────────────────────────
 
-void TextEdit::paintEvent(QPaintEvent* event) {
+void TextEdit::paintEvent(QPaintEvent* event)
+{
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
     paintFrame(p);
     QWidget::paintEvent(event);
 }
 
-void TextEdit::resizeEvent(QResizeEvent* event) {
+void TextEdit::resizeEvent(QResizeEvent* event)
+{
     QWidget::resizeEvent(event);
     if (m_editor) {
         QRect r = rect();
@@ -395,7 +413,8 @@ void TextEdit::resizeEvent(QResizeEvent* event) {
     }
 }
 
-void TextEdit::paintFrame(QPainter& painter) {
+void TextEdit::paintFrame(QPainter& painter)
+{
     const auto& colors = themeColorsRef();
     const auto& radius = themeRadius();
 
@@ -414,7 +433,7 @@ void TextEdit::paintFrame(QPainter& painter) {
         borderColor = colors.strokeDefault;
         bottomBorderColor = colors.strokeDivider;
     } else if (m_isFocused) {
-        bgColor = (effectiveTheme() == Dark) ? colors.bgSolid : colors.controlDefault;
+        bgColor = effectiveThemeUsesDarkAppearance() ? colors.bgSolid : colors.controlDefault;
         borderColor = colors.strokeSecondary;
         bottomBorderColor = colors.accentDefault;
         bottomBorderWidth = m_focusedBorderWidth;
@@ -442,7 +461,8 @@ void TextEdit::paintFrame(QPainter& painter) {
         QPen pen(bottomBorderColor, bottomBorderWidth);
         pen.setCapStyle(Qt::RoundCap);
         painter.setPen(pen);
-        qreal bottomY = bgRect.bottom() - (bottomBorderWidth > 1 ? (bottomBorderWidth - 1) / 2.0 : 0);
+        qreal bottomY =
+            bgRect.bottom() - (bottomBorderWidth > 1 ? (bottomBorderWidth - 1) / 2.0 : 0);
         QPainterPath bottomPath;
         bottomPath.moveTo(bgRect.left() + r, bottomY);
         bottomPath.lineTo(bgRect.right() - r, bottomY);
@@ -450,28 +470,43 @@ void TextEdit::paintFrame(QPainter& painter) {
     }
 }
 
-void TextEdit::enterEvent(FluentEnterEvent* event) {
-    m_isHovered = true; update(); QWidget::enterEvent(event);
+void TextEdit::enterEvent(FluentEnterEvent* event)
+{
+    m_isHovered = true;
+    update();
+    QWidget::enterEvent(event);
 }
 
-void TextEdit::leaveEvent(QEvent* event) {
-    m_isHovered = false; update(); QWidget::leaveEvent(event);
+void TextEdit::leaveEvent(QEvent* event)
+{
+    m_isHovered = false;
+    update();
+    QWidget::leaveEvent(event);
 }
 
-void TextEdit::focusInEvent(QFocusEvent* event) {
-    m_isFocused = true; update(); QWidget::focusInEvent(event);
+void TextEdit::focusInEvent(QFocusEvent* event)
+{
+    m_isFocused = true;
+    update();
+    QWidget::focusInEvent(event);
 }
 
-void TextEdit::focusOutEvent(QFocusEvent* event) {
-    m_isFocused = false; update(); QWidget::focusOutEvent(event);
+void TextEdit::focusOutEvent(QFocusEvent* event)
+{
+    m_isFocused = false;
+    update();
+    QWidget::focusOutEvent(event);
 }
 
-bool TextEdit::eventFilter(QObject* obj, QEvent* event) {
+bool TextEdit::eventFilter(QObject* obj, QEvent* event)
+{
     if (obj == m_editor) {
         if (event->type() == QEvent::FocusIn) {
-            m_isFocused = true; update();
+            m_isFocused = true;
+            update();
         } else if (event->type() == QEvent::FocusOut) {
-            m_isFocused = false; update();
+            m_isFocused = false;
+            update();
         }
     }
     return QWidget::eventFilter(obj, event);
@@ -479,8 +514,10 @@ bool TextEdit::eventFilter(QObject* obj, QEvent* event) {
 
 // ── Property setters. zh_CN: 属性 setter ────────────────────────────────────────
 
-void TextEdit::setContentMargins(const QMargins& margins) {
-    if (m_contentMargins == margins) return;
+void TextEdit::setContentMargins(const QMargins& margins)
+{
+    if (m_contentMargins == margins)
+        return;
     m_contentMargins = margins;
     applyThemeStyle();
     updateHeightForContent();
@@ -489,8 +526,10 @@ void TextEdit::setContentMargins(const QMargins& margins) {
     emit contentMarginsChanged();
 }
 
-void TextEdit::setFontRole(Typography::FontRole role) {
-    if (m_fontRole == role) return;
+void TextEdit::setFontRole(Typography::FontRole role)
+{
+    if (m_fontRole == role)
+        return;
     m_fontRole = role;
     applyThemeStyle();
     updateHeightForContent();
@@ -499,29 +538,36 @@ void TextEdit::setFontRole(Typography::FontRole role) {
     emit fontRoleChanged();
 }
 
-void TextEdit::setFocusedBorderWidth(int width) {
-    if (m_focusedBorderWidth == width) return;
+void TextEdit::setFocusedBorderWidth(int width)
+{
+    if (m_focusedBorderWidth == width)
+        return;
     m_focusedBorderWidth = width;
     update();
     emit focusedBorderWidthChanged();
 }
 
-void TextEdit::setUnfocusedBorderWidth(int width) {
-    if (m_unfocusedBorderWidth == width) return;
+void TextEdit::setUnfocusedBorderWidth(int width)
+{
+    if (m_unfocusedBorderWidth == width)
+        return;
     m_unfocusedBorderWidth = width;
     update();
     emit unfocusedBorderWidthChanged();
 }
 
-void TextEdit::setLineHeight(int height) {
-    if (height <= 0 || m_lineHeight == height) return;
+void TextEdit::setLineHeight(int height)
+{
+    if (height <= 0 || m_lineHeight == height)
+        return;
     m_lineHeight = height;
     applyBlockCenterFormat();
     updateHeightForContent();
     emit layoutMetricsChanged();
 }
 
-void TextEdit::setMinVisibleLines(int lines) {
+void TextEdit::setMinVisibleLines(int lines)
+{
     if (lines <= 0)
         return;
     const bool maxChanged = m_maxVisibleLines < lines;
@@ -534,7 +580,8 @@ void TextEdit::setMinVisibleLines(int lines) {
     emit layoutMetricsChanged();
 }
 
-void TextEdit::setMaxVisibleLines(int lines) {
+void TextEdit::setMaxVisibleLines(int lines)
+{
     if (lines <= 0)
         return;
     const bool minChanged = m_minVisibleLines > lines;
@@ -547,7 +594,8 @@ void TextEdit::setMaxVisibleLines(int lines) {
     emit layoutMetricsChanged();
 }
 
-void TextEdit::setTabChangesFocus(bool enabled) {
+void TextEdit::setTabChangesFocus(bool enabled)
+{
     if (m_tabChangesFocus == enabled)
         return;
     m_tabChangesFocus = enabled;
@@ -556,21 +604,22 @@ void TextEdit::setTabChangesFocus(bool enabled) {
     emit tabChangesFocusChanged();
 }
 
-void TextEdit::setScrollChainingEnabled(bool enabled) {
-    if (m_scrollChainingEnabled == enabled) return;
+void TextEdit::setScrollChainingEnabled(bool enabled)
+{
+    if (m_scrollChainingEnabled == enabled)
+        return;
     m_scrollChainingEnabled = enabled;
     emit scrollChainingEnabledChanged();
 }
 
-void TextEdit::onThemeUpdated() {
+void TextEdit::onThemeUpdated()
+{
     QScrollBar* innerScrollBar = m_editor ? m_editor->verticalScrollBar() : nullptr;
-    const bool hadScrollableRange = innerScrollBar
-        && innerScrollBar->maximum() > innerScrollBar->minimum();
+    const bool hadScrollableRange =
+        innerScrollBar && innerScrollBar->maximum() > innerScrollBar->minimum();
     const int previousValue = innerScrollBar ? innerScrollBar->value() : 0;
-    const bool wasAtTop = hadScrollableRange
-        && previousValue <= innerScrollBar->minimum();
-    const bool wasAtBottom = hadScrollableRange
-        && previousValue >= innerScrollBar->maximum();
+    const bool wasAtTop = hadScrollableRange && previousValue <= innerScrollBar->minimum();
+    const bool wasAtBottom = hadScrollableRange && previousValue >= innerScrollBar->maximum();
 
     applyThemeStyle();
     updateHeightForContent();
@@ -614,26 +663,29 @@ void TextEdit::onThemeUpdated() {
 
 // ── Core internals. zh_CN: 核心私有方法 ─────────────────────────────────────────
 
-void TextEdit::applyEditorPalette() {
+void TextEdit::applyEditorPalette()
+{
     if (!m_editor)
         return;
     const auto& c = themeColorsRef();
     QPalette pal = palette();
-    pal.setColor(QPalette::Base,             Qt::transparent);
-    pal.setColor(QPalette::Window,           Qt::transparent);
-    pal.setColor(QPalette::Text,             c.textPrimary);
-    pal.setColor(QPalette::PlaceholderText,  c.textSecondary);
-    pal.setColor(QPalette::Highlight,        c.accentDefault);
-    pal.setColor(QPalette::HighlightedText,  c.textOnAccent);
-    pal.setColor(QPalette::Inactive, QPalette::Highlight,        c.accentDefault);
-    pal.setColor(QPalette::Inactive, QPalette::HighlightedText,  c.textOnAccent);
-    pal.setColor(QPalette::Disabled, QPalette::Text,             c.textDisabled);
-    pal.setColor(QPalette::Disabled, QPalette::PlaceholderText,  c.textDisabled);
+    pal.setColor(QPalette::Base, Qt::transparent);
+    pal.setColor(QPalette::Window, Qt::transparent);
+    pal.setColor(QPalette::Text, c.textPrimary);
+    pal.setColor(QPalette::PlaceholderText, c.textSecondary);
+    pal.setColor(QPalette::Highlight, c.accentDefault);
+    pal.setColor(QPalette::HighlightedText, c.textOnAccent);
+    pal.setColor(QPalette::Inactive, QPalette::Highlight, c.accentDefault);
+    pal.setColor(QPalette::Inactive, QPalette::HighlightedText, c.textOnAccent);
+    pal.setColor(QPalette::Disabled, QPalette::Text, c.textDisabled);
+    pal.setColor(QPalette::Disabled, QPalette::PlaceholderText, c.textDisabled);
     m_editor->setPalette(pal);
 }
 
-void TextEdit::applyThemeStyle() {
-    if (!m_editor) return;
+void TextEdit::applyThemeStyle()
+{
+    if (!m_editor)
+        return;
 
     applyEditorPalette();
     const QFont roleFont = themeFont(m_fontRole).toQFont();
@@ -645,19 +697,18 @@ void TextEdit::applyThemeStyle() {
     // QTextDocument to rebuild otherwise unchanged line geometry.
     // zh_CN: 影响几何的 QSS 与主题无关；文本和选区颜色完全由 QPalette
     // 提供，避免 Light/Dark 切换重建未变化的 QTextDocument 行布局。
-    const QString editorQss = QStringLiteral(
-        "QTextEdit { background: transparent; border: none; }");
+    const QString editorQss =
+        QStringLiteral("QTextEdit { background: transparent; border: none; }");
     if (m_editor->styleSheet() != editorQss)
         m_editor->setStyleSheet(editorQss);
 
     if (auto* vp = m_editor->viewport()) {
         vp->setAutoFillBackground(false);
         QPalette vpal = vp->palette();
-        vpal.setColor(QPalette::Base,   Qt::transparent);
+        vpal.setColor(QPalette::Base, Qt::transparent);
         vpal.setColor(QPalette::Window, Qt::transparent);
         vp->setPalette(vpal);
-        const QString viewportQss = QStringLiteral(
-            "background: transparent; border: none;");
+        const QString viewportQss = QStringLiteral("background: transparent; border: none;");
         if (vp->styleSheet() != viewportQss)
             vp->setStyleSheet(viewportQss);
     }
@@ -667,8 +718,10 @@ void TextEdit::applyThemeStyle() {
     applyBlockCenterFormat();
 }
 
-void TextEdit::applyBlockCenterFormat() {
-    if (!m_editor) return;
+void TextEdit::applyBlockCenterFormat()
+{
+    if (!m_editor)
+        return;
 
     m_updatingFormat = true;
 
@@ -685,11 +738,10 @@ void TextEdit::applyBlockCenterFormat() {
     QTextFrame* rootFrame = m_editor->document()->rootFrame();
     QTextFrameFormat rff = rootFrame->frameFormat();
     const qreal trailingLineDistance = -static_cast<qreal>(botPad);
-    const bool frameFormatChanged =
-        !formatMetricEquals(rff.topMargin(), 0)
-        || !formatMetricEquals(rff.bottomMargin(), trailingLineDistance)
-        || !formatMetricEquals(rff.leftMargin(), 0)
-        || !formatMetricEquals(rff.rightMargin(), 0);
+    const bool frameFormatChanged = !formatMetricEquals(rff.topMargin(), 0) ||
+                                    !formatMetricEquals(rff.bottomMargin(), trailingLineDistance) ||
+                                    !formatMetricEquals(rff.leftMargin(), 0) ||
+                                    !formatMetricEquals(rff.rightMargin(), 0);
     if (frameFormatChanged) {
         rff.setTopMargin(0);
         rff.setBottomMargin(trailingLineDistance);
@@ -713,13 +765,11 @@ void TextEdit::applyBlockCenterFormat() {
     // zh_CN: QTextCursor 的格式操作即使数值未变化也会进入撤销栈；先判断现有
     // block 格式，避免主题/调色板刷新吞掉用户下一次 Undo。
     bool blockFormatChanged = false;
-    for (QTextBlock block = m_editor->document()->begin();
-         block.isValid();
-         block = block.next()) {
+    for (QTextBlock block = m_editor->document()->begin(); block.isValid(); block = block.next()) {
         const QTextBlockFormat current = block.blockFormat();
-        if (current.lineHeightType() != fmt.lineHeightType()
-            || !formatMetricEquals(current.lineHeight(), fmt.lineHeight())
-            || !formatMetricEquals(current.bottomMargin(), fmt.bottomMargin())) {
+        if (current.lineHeightType() != fmt.lineHeightType() ||
+            !formatMetricEquals(current.lineHeight(), fmt.lineHeight()) ||
+            !formatMetricEquals(current.bottomMargin(), fmt.bottomMargin())) {
             blockFormatChanged = true;
             break;
         }
@@ -737,16 +787,16 @@ void TextEdit::applyBlockCenterFormat() {
     // therefore contains whole visual lines at both scroll boundaries.
     // zh_CN: viewport margin 承担外部 inset，并分配满足 inset 后剩余的行槽
     // 余量，因此滚动顶部和尾部都只显示完整视觉行。
-    const QMargins viewportMargins = calcContentViewportMargins(
-        f, m_lineHeight, m_contentMargins);
+    const QMargins viewportMargins = calcContentViewportMargins(f, m_lineHeight, m_contentMargins);
     static_cast<InnerTextEdit*>(m_editor)->setContentViewportMargins(
-        viewportMargins.left(), viewportMargins.top(),
-        viewportMargins.right(), viewportMargins.bottom());
+        viewportMargins.left(), viewportMargins.top(), viewportMargins.right(),
+        viewportMargins.bottom());
 
     m_updatingFormat = false;
 }
 
-void TextEdit::scheduleHeightForContentUpdate() {
+void TextEdit::scheduleHeightForContentUpdate()
+{
     if (m_heightUpdateScheduled)
         return;
     m_heightUpdateScheduled = true;
@@ -756,7 +806,8 @@ void TextEdit::scheduleHeightForContentUpdate() {
     });
 }
 
-void TextEdit::updateHeightForContent() {
+void TextEdit::updateHeightForContent()
+{
     if (!m_editor || m_updatingHeight)
         return;
     m_updatingHeight = true;
@@ -775,7 +826,8 @@ void TextEdit::updateHeightForContent() {
         visualLines += (lc > 0) ? lc : 1;
         block = block.next();
     }
-    if (visualLines < 1) visualLines = 1;
+    if (visualLines < 1)
+        visualLines = 1;
 
     const int minimumLines = qMax(1, m_minVisibleLines);
     const int maximumLines = qMax(minimumLines, m_maxVisibleLines);
@@ -786,10 +838,9 @@ void TextEdit::updateHeightForContent() {
     // vertical insets add only the overflow required to keep both edges real.
     // zh_CN: 默认 Fluent 内边距包含在行槽中，因此单行编辑器仍与 32px 控件等高；
     // 调用方设置更大的上下内边距时，仅补足超出行槽余量的高度。
-    const int marginOverflow = verticalMarginOverflow(
-        m_editor->font(), m_lineHeight, m_contentMargins);
-    const int targetHeight = clamped * renderedLinePitch(
-        m_editor, m_lineHeight) + marginOverflow;
+    const int marginOverflow =
+        verticalMarginOverflow(m_editor->font(), m_lineHeight, m_contentMargins);
+    const int targetHeight = clamped * renderedLinePitch(m_editor, m_lineHeight) + marginOverflow;
     if (minimumHeight() != targetHeight || maximumHeight() != targetHeight)
         setFixedHeight(targetHeight);
 
