@@ -177,7 +177,14 @@ public:
         m_suggestionClickedHandler = std::move(handler);
     }
 
-    void setSuggestions(const QStringList& suggestions) { m_model->setStringList(suggestions); }
+    void setSuggestions(const QStringList& suggestions)
+    {
+        m_model->setStringList(suggestions);
+        m_listView->scrollToTop();
+        m_listView->doItemsLayout();
+        if (m_listView->viewport())
+            m_listView->viewport()->update();
+    }
 
     void setSuggestionMetrics(Typography::FontRole fontRole, int itemHeight)
     {
@@ -234,6 +241,9 @@ public:
 
         resize(contentWidth + shadow * 2, listHeight + shadow * 2);
         m_listView->setGeometry(shadow, shadow + listPadY, contentWidth, listHeight - listPadY * 2);
+        m_listView->doItemsLayout();
+        if (m_listView->viewport())
+            m_listView->viewport()->update();
         m_listView->refreshFluentScrollChrome();
         setAnchor(m_owner);
 
