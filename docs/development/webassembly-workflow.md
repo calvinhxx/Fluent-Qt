@@ -130,6 +130,27 @@ only the browser stage and presentation request. `FluentQt::WebAssembly` owns
 the single Qt desktop surface plus hosted QWidget geometry, move/resize, and
 maximize/restore behavior; `GalleryWindow` remains the actual visible window.
 
+### Embedded theme protocol
+
+The website and an embedded Gallery share the same three-value theme wire
+format: `light`, `dark`, and `high-contrast`. The initial value is passed as
+`?embed=site&host-theme=<value>`. Later changes use a same-origin message:
+
+```js
+galleryFrame.contentWindow.postMessage({
+  source: "fluent-qt-site",
+  type: "theme",
+  theme: "high-contrast"
+}, window.location.origin);
+```
+
+Existing `light` and `dark` hosts remain compatible. Browser
+`(forced-colors: active)` always takes precedence without overwriting the
+stored host preference; when forced colors ends, the most recent host or system
+preference is restored. The website theme button also cycles through all three
+values, so an embedded Gallery can enter high contrast without relying on an OS
+setting.
+
 ### Simplified Chinese font fallback
 
 WebAssembly builds embed
@@ -160,6 +181,9 @@ The Gallery owns condition-driven browser checks selected by a query parameter:
   PasswordBox editing menu, physical browser-key delivery into a real Fluent
   LineEdit, opaque active client chrome, the painted-surface cache, and the
   selected render profile;
+- both tiers verify the embedded `light` / `dark` / `high-contrast` query and
+  message contract, forced-colors precedence and restoration, and the website
+  theme cycle/persistence behavior;
 - browser smoke records WebAssembly heap capacity and program-break watermarks;
 - both tiers verify the Simplified Chinese fallback and launch the independently
   staged minimal UILib app.

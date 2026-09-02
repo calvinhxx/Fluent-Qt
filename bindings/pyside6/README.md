@@ -145,6 +145,31 @@ QT_QPA_PLATFORM=offscreen \
 Native backdrop, title-bar, drag, and compositor behavior still require a real
 Windows, macOS, X11, or Wayland session.
 
+Theme and motion preferences use the same native runtime as C++:
+
+```python
+import fluentqt
+
+fluentqt.set_theme(fluentqt.Theme.HighContrast)
+fluentqt.set_motion_mode(fluentqt.MotionMode.Reduced)
+```
+
+`Reduced` keeps short transitions while stopping continuous motion;
+`Disabled` resolves all motion to its final state. A component whose local
+animation switch is off never animates in any global mode.
+
+Application-owned animations can use the same native decisions and observe
+runtime preference changes through the process-wide policy:
+
+```python
+policy = fluentqt.motion_policy()
+policy.modeChanged.connect(lambda mode: print("motion mode:", mode))
+duration = policy.resolvedDuration(250)  # 50 ms in Reduced mode
+animate_spinner = policy.shouldAnimate(
+    True, fluentqt.MotionKind.Continuous
+)
+```
+
 ## Public API and ownership
 
 Python uses the same native FluentQt implementation rather than a second widget
