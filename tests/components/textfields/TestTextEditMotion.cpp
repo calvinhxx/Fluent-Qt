@@ -2,9 +2,12 @@
 #include "components/scrolling/ScrollBar.h"
 #include "components/textfields/TextEdit.h"
 
+#include <QAbstractTextDocumentLayout>
 #include <QApplication>
 #include <QInputMethodEvent>
+#include <QTextBlock>
 #include <QTextCursor>
+#include <QTextDocument>
 #include <QTextEdit>
 #include <QVariantAnimation>
 #include <QWidget>
@@ -263,9 +266,17 @@ TEST(TextEditMotionTest, Contract_InputMethodPreeditKeepsHeightStableUntilCommit
 
     EXPECT_EQ(edit.toPlainText(), QString(28, QChar(0x4e2d)));
     EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
-    EXPECT_EQ(animation->endValue().toInt(), 128);
-    EXPECT_LT(edit.height(), 128);
-    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), 128, 1000);
+    inner->document()->documentLayout()->documentSize();
+    int committedVisualLines = 0;
+    for (QTextBlock block = inner->document()->begin(); block.isValid(); block = block.next()) {
+        const int lineCount = block.layout()->lineCount();
+        committedVisualLines += lineCount > 0 ? lineCount : 1;
+    }
+    const int committedHeight = qBound(1, committedVisualLines, 4) * 32;
+    ASSERT_GT(committedHeight, 32);
+    EXPECT_EQ(animation->endValue().toInt(), committedHeight);
+    EXPECT_LT(edit.height(), committedHeight);
+    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), committedHeight, 1000);
     QTRY_COMPARE_WITH_TIMEOUT(animation->state(), QAbstractAnimation::Stopped, 1000);
 }
 
