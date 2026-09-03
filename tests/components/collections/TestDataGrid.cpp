@@ -530,6 +530,26 @@ TEST_F(DataGridTest, Contract_PublicPropertiesNotifyOnlyOnChanges)
     EXPECT_EQ(chainingSpy.count(), 1);
 }
 
+TEST_F(DataGridTest, Contract_PointerClickPreservesInheritedSignal)
+{
+    QStandardItemModel model(2, 2);
+    DataGrid view;
+    view.setModel(&model);
+    showOffscreen(&view, QSize(420, 220));
+
+    QSignalSpy pressSpy(&view, &QAbstractItemView::pressed);
+    QSignalSpy clickSpy(&view, &QAbstractItemView::clicked);
+    const QModelIndex index = model.index(1, 1);
+    const QPoint point = view.visualRect(index).center();
+    QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, point);
+    processEvents();
+
+    ASSERT_EQ(pressSpy.count(), 1);
+    EXPECT_EQ(pressSpy.at(0).at(0).value<QModelIndex>(), index);
+    ASSERT_EQ(clickSpy.count(), 1);
+    EXPECT_EQ(clickSpy.at(0).at(0).value<QModelIndex>(), index);
+}
+
 TEST_F(DataGridTest, Contract_LargeModelInitialShowQueriesOnlyViewportBoundedCells)
 {
     constexpr int kRows = 100000;

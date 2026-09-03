@@ -435,6 +435,8 @@ TEST_F(ListViewTest, MousePressDefersSelectionUntilRelease) {
     auto* lv = new IndicatorListView(window);
     lv->setGeometry(10, 10, 240, 160);
     attachStringListModel(lv, {"A", "B", "C"});
+    QSignalSpy inheritedPressSpy(lv, &QAbstractItemView::pressed);
+    QSignalSpy inheritedClickSpy(lv, &QAbstractItemView::clicked);
     QSignalSpy clickSpy(lv, SIGNAL(itemClicked(int)));
     window->show();
     QTest::qWait(50);
@@ -444,12 +446,19 @@ TEST_F(ListViewTest, MousePressDefersSelectionUntilRelease) {
     QApplication::processEvents();
 
     EXPECT_EQ(lv->selectedIndex(), -1);
+    ASSERT_EQ(inheritedPressSpy.count(), 1);
+    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedPressSpy.at(0).at(0)),
+              lv->model()->index(1, 0));
+    EXPECT_EQ(inheritedClickSpy.count(), 0);
     EXPECT_EQ(clickSpy.count(), 0);
 
     QTest::mouseRelease(lv->viewport(), Qt::LeftButton, Qt::NoModifier, point);
     QApplication::processEvents();
 
     EXPECT_EQ(lv->selectedIndex(), 1);
+    ASSERT_EQ(inheritedClickSpy.count(), 1);
+    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedClickSpy.at(0).at(0)),
+              lv->model()->index(1, 0));
     ASSERT_EQ(clickSpy.count(), 1);
     EXPECT_EQ(clickSpy.at(0).at(0).toInt(), 1);
 }
