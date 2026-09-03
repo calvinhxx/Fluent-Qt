@@ -1163,14 +1163,17 @@ TEST_F(TreeViewTest, ItemClickedSignalEmitted) {
 
     showOffscreen(window);
 
-    QSignalSpy spy(tv, &TreeView::itemClicked);
+    QSignalSpy inheritedClickSpy(tv, &QAbstractItemView::clicked);
+    QSignalSpy itemClickSpy(tv, &TreeView::itemClicked);
 
     QModelIndex idx = model->index(0, 0);
     QRect rect = tv->visualRect(idx);
     QTest::mouseClick(tv->viewport(), Qt::LeftButton, Qt::NoModifier, rect.center());
 
-    EXPECT_GE(spy.count(), 1);
-    QModelIndex clickedIdx = spy.at(0).at(0).value<QModelIndex>();
+    ASSERT_EQ(inheritedClickSpy.count(), 1);
+    EXPECT_EQ(inheritedClickSpy.at(0).at(0).value<QModelIndex>(), idx);
+    ASSERT_EQ(itemClickSpy.count(), 1);
+    QModelIndex clickedIdx = itemClickSpy.at(0).at(0).value<QModelIndex>();
     EXPECT_EQ(clickedIdx, idx);
 }
 
@@ -1181,15 +1184,18 @@ TEST_F(TreeViewTest, ItemPressedSignalEmittedOnMousePress) {
 
     showOffscreen(window);
 
-    QSignalSpy spy(tv, &TreeView::itemPressed);
+    QSignalSpy inheritedPressSpy(tv, &QAbstractItemView::pressed);
+    QSignalSpy itemPressSpy(tv, &TreeView::itemPressed);
 
     const QModelIndex idx = model->index(0, 0);
     const QRect rect = tv->visualRect(idx);
     QTest::mousePress(tv->viewport(), Qt::LeftButton, Qt::NoModifier, rect.center());
     QApplication::processEvents();
 
-    EXPECT_GE(spy.count(), 1);
-    const QModelIndex pressedIdx = spy.at(0).at(0).value<QModelIndex>();
+    ASSERT_EQ(inheritedPressSpy.count(), 1);
+    EXPECT_EQ(inheritedPressSpy.at(0).at(0).value<QModelIndex>(), idx);
+    ASSERT_EQ(itemPressSpy.count(), 1);
+    const QModelIndex pressedIdx = itemPressSpy.at(0).at(0).value<QModelIndex>();
     EXPECT_EQ(pressedIdx, idx);
     QTest::mouseRelease(tv->viewport(), Qt::LeftButton, Qt::NoModifier, rect.center());
 }

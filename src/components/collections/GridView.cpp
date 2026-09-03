@@ -648,6 +648,11 @@ void GridView::mousePressEvent(QMouseEvent* event)
                 selectionModel() && selectionModel()->isSelected(idx)) {
                 // Don't pass to QListView — preserve selection for drag
                 m_dragPressIntercepted = true;
+                setFocus(Qt::MouseFocusReason);
+                QPointer<GridView> guard(this);
+                emit pressed(idx);
+                if (!guard)
+                    return;
                 event->accept();
                 return;
             }
@@ -765,6 +770,8 @@ void GridView::mouseReleaseEvent(QMouseEvent* event)
 
     if (m_canReorderItems) {
         // No drag happened — apply deferred selection only if we intercepted the press
+        const bool interceptedPress = m_dragPressIntercepted;
+        QModelIndex interceptedClickIndex;
         if (m_dragPressIntercepted && m_dragSourceIndex >= 0 && model()) {
             QModelIndex idx = model()->index(m_dragSourceIndex, 0);
             if (m_selectionMode == SelectionMode::Multiple) {
@@ -775,10 +782,29 @@ void GridView::mouseReleaseEvent(QMouseEvent* event)
                 else
                     selectionModel()->select(idx, QItemSelectionModel::ClearAndSelect);
             }
+
+            const QModelIndex released = indexAt(event->pos());
+            if (event->button() == Qt::LeftButton && released.isValid() && released == idx)
+                interceptedClickIndex = idx;
         }
         m_dragSourceIndex = -1;
         m_dragSourceIndices.clear();
         m_dragPressIntercepted = false;
+
+        if (interceptedPress) {
+            m_pressedOnBlank = false;
+            if (interceptedClickIndex.isValid()) {
+                QPointer<GridView> guard(this);
+                // The matching press was intentionally not sent to QListView,
+                // so complete the inherited click contract here as well.
+                // zh_CN: 对应按下事件未交给 QListView，因此这里显式完成继承的点击契约。
+                emit clicked(interceptedClickIndex);
+                if (!guard)
+                    return;
+            }
+            event->accept();
+            return;
+        }
     }
     m_pressedOnBlank = false;
     QListView::mouseReleaseEvent(event);

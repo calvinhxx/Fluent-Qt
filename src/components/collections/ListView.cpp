@@ -1210,6 +1210,10 @@ void ListView::mousePressEvent(QMouseEvent* event)
             if (m_canReorderItems)
                 m_dragSourceRow = idx.row();
             setFocus(Qt::MouseFocusReason);
+            QPointer<ListView> guard(this);
+            emit pressed(idx);
+            if (!guard)
+                return;
             event->accept();
             return;
         }
@@ -1312,7 +1316,11 @@ void ListView::mouseReleaseEvent(QMouseEvent* event)
         if (clickOnPressedItem) {
             applyPointerSelection(released, event);
             QPointer<ListView> guard(this);
-            emit itemClicked(released.row());
+            // Preserve QListView's inherited click contract. The constructor's
+            // clicked -> itemClicked bridge keeps the convenience signal in sync.
+            // zh_CN: 保留 QListView 继承的点击契约；构造函数中的转接会同步发送
+            // itemClicked 便捷信号。
+            emit clicked(released);
             if (!guard)
                 return;
         }
