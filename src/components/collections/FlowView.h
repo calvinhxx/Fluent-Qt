@@ -20,7 +20,10 @@ class QTimer;
 class QWheelEvent;
 class QVariantAnimation;
 
-namespace fluent::scrolling { class ScrollBar; class OverscrollController; }
+namespace fluent::scrolling {
+class ScrollBar;
+class OverscrollController;
+} // namespace fluent::scrolling
 
 namespace fluent::collections {
 
@@ -43,7 +46,8 @@ public:
      * @brief Selection mode used by the collection view.
      * zh_CN: 集合视图使用的选择模式。
      */
-    Q_PROPERTY(SelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY selectionModeChanged)
+    Q_PROPERTY(SelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY
+                   selectionModeChanged)
     /**
      * @brief Fluent typography role used for text rendering.
      * zh_CN: 文本绘制使用的 Fluent 排版角色。
@@ -53,7 +57,8 @@ public:
      * @brief Whether the control frame border is painted.
      * zh_CN: 是否绘制控件外框边线。
      */
-    Q_PROPERTY(bool borderVisible READ borderVisible WRITE setBorderVisible NOTIFY borderVisibleChanged)
+    Q_PROPERTY(
+        bool borderVisible READ borderVisible WRITE setBorderVisible NOTIFY borderVisibleChanged)
     /**
      * @brief Convenience text displayed in the header area.
      * zh_CN: 显示在头部区域的便捷标题文本。
@@ -63,22 +68,26 @@ public:
      * @brief Text shown when the flow model has no items to present.
      * zh_CN: 流式 model 没有可展示 item 时显示的占位文本。
      */
-    Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY placeholderTextChanged)
+    Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY
+                   placeholderTextChanged)
     /**
      * @brief Default item size used when the model does not provide one.
      * zh_CN: model 未提供尺寸时使用的默认条目尺寸。
      */
-    Q_PROPERTY(QSize defaultItemSize READ defaultItemSize WRITE setDefaultItemSize NOTIFY defaultItemSizeChanged)
+    Q_PROPERTY(QSize defaultItemSize READ defaultItemSize WRITE setDefaultItemSize NOTIFY
+                   defaultItemSizeChanged)
     /**
      * @brief Minimum item size allowed by the flow layout.
      * zh_CN: 流式布局允许的最小条目尺寸。
      */
-    Q_PROPERTY(QSize minimumItemSize READ minimumItemSize WRITE setMinimumItemSize NOTIFY minimumItemSizeChanged)
+    Q_PROPERTY(QSize minimumItemSize READ minimumItemSize WRITE setMinimumItemSize NOTIFY
+                   minimumItemSizeChanged)
     /**
      * @brief Maximum item size allowed by the flow layout.
      * zh_CN: 流式布局允许的最大条目尺寸。
      */
-    Q_PROPERTY(QSize maximumItemSize READ maximumItemSize WRITE setMaximumItemSize NOTIFY maximumItemSizeChanged)
+    Q_PROPERTY(QSize maximumItemSize READ maximumItemSize WRITE setMaximumItemSize NOTIFY
+                   maximumItemSizeChanged)
     /**
      * @brief Model role used to resolve per-item size.
      * zh_CN: 用于解析单个条目尺寸的 model role。
@@ -88,17 +97,20 @@ public:
      * @brief Horizontal spacing between items.
      * zh_CN: 条目之间的水平间距。
      */
-    Q_PROPERTY(int horizontalSpacing READ horizontalSpacing WRITE setHorizontalSpacing NOTIFY horizontalSpacingChanged)
+    Q_PROPERTY(int horizontalSpacing READ horizontalSpacing WRITE setHorizontalSpacing NOTIFY
+                   horizontalSpacingChanged)
     /**
      * @brief Vertical spacing between items.
      * zh_CN: 条目之间的垂直间距。
      */
-    Q_PROPERTY(int verticalSpacing READ verticalSpacing WRITE setVerticalSpacing NOTIFY verticalSpacingChanged)
+    Q_PROPERTY(int verticalSpacing READ verticalSpacing WRITE setVerticalSpacing NOTIFY
+                   verticalSpacingChanged)
     /**
      * @brief Margins applied around the control content area.
      * zh_CN: 控件内容区域周围的边距。
      */
-    Q_PROPERTY(QMargins contentMargins READ contentMargins WRITE setContentMargins NOTIFY contentMarginsChanged)
+    Q_PROPERTY(QMargins contentMargins READ contentMargins WRITE setContentMargins NOTIFY
+                   contentMarginsChanged)
     /**
      * @brief Whether the item-view viewport is currently hovered.
      * zh_CN: item-view viewport 当前是否处于悬停状态。
@@ -108,18 +120,21 @@ public:
      * @brief Whether drag reordering is enabled.
      * zh_CN: 是否启用拖拽重排。
      */
-    Q_PROPERTY(bool canReorderItems READ canReorderItems WRITE setCanReorderItems NOTIFY canReorderItemsChanged)
+    Q_PROPERTY(bool canReorderItems READ canReorderItems WRITE setCanReorderItems NOTIFY
+                   canReorderItemsChanged)
     /**
      * @brief Whether boundary wheel input may continue to an enclosing scroller.
      * zh_CN: 边界滚轮输入是否允许继续传递给外层滚动容器。
      */
-    Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
+    Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE
+                   setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
     /**
      * @brief Whether the view shows an elastic overscroll/bounce at the scroll boundary.
      * Enabled by default; disable for chrome that should stop cleanly at the edge.
      * zh_CN: 滚动到边界时是否显示弹性回弹。默认开启；不希望回弹的 chrome 可关闭，使其在边界干脆停住。
      */
-    Q_PROPERTY(bool overscrollEnabled READ isOverscrollEnabled WRITE setOverscrollEnabled NOTIFY overscrollEnabledChanged)
+    Q_PROPERTY(bool overscrollEnabled READ isOverscrollEnabled WRITE setOverscrollEnabled NOTIFY
+                   overscrollEnabledChanged)
 
     explicit FlowView(QWidget* parent = nullptr);
     ~FlowView() override;
@@ -253,7 +268,8 @@ private:
     void invalidateFlowLayout();
     void syncFluentScrollBar();
     void ensureLayout() const;
-    void computeLayoutForRows(const QList<int>& rows, QHash<int, QRect>* rects, QSize* contentSize) const;
+    void computeLayoutForRows(const QList<int>& rows, QHash<int, QRect>* rects,
+                              QSize* contentSize) const;
     QSize itemSizeForIndex(const QModelIndex& index) const;
     QSize clampedItemSize(const QSize& size) const;
     QRect contentToViewport(const QRect& rect) const;

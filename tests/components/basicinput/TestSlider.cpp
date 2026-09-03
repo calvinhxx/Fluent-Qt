@@ -28,7 +28,8 @@ class SliderFluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
 
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -36,7 +37,8 @@ public:
 
 class SliderTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         scrollArea = new QScrollArea();
         scrollArea->setWindowTitle("Slider Visual Test (WinUI 3 Inspired)");
         scrollArea->resize(850, 600);
@@ -44,7 +46,7 @@ protected:
         window = new SliderFluentTestWindow();
         // Make window tall enough to show all content without being cut off
         window->setFixedSize(800, 950);
-        
+
         layout = new AnchorLayout(window);
         window->setLayout(layout);
         window->onThemeUpdated();
@@ -52,9 +54,7 @@ protected:
         scrollArea->setWidget(window);
     }
 
-    void TearDown() override {
-        delete scrollArea;
-    }
+    void TearDown() override { delete scrollArea; }
 
     QScrollArea* scrollArea = nullptr;
     SliderFluentTestWindow* window = nullptr;
@@ -106,8 +106,7 @@ TEST(SliderContractTest, Contract_PointerInteractionPreservesInheritedSignalsExa
 
 TEST(SliderContractTest, Contract_LightAndDarkRangeExtremesPaintDistinctly)
 {
-    const FluentElement::Theme themes[]{FluentElement::Light,
-                                        FluentElement::Dark};
+    const FluentElement::Theme themes[]{FluentElement::Light, FluentElement::Dark};
     for (const auto theme : themes) {
         FluentElement::setTheme(theme);
         Slider slider(Qt::Horizontal);
@@ -128,7 +127,8 @@ TEST(SliderContractTest, Contract_LightAndDarkRangeExtremesPaintDistinctly)
     FluentElement::setTheme(FluentElement::Light);
 }
 
-TEST_F(SliderTest, VisualSliderGalleryLike) {
+TEST_F(SliderTest, VisualSliderGalleryLike)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -154,10 +154,10 @@ TEST_F(SliderTest, VisualSliderGalleryLike) {
     layout->addWidget(pageTitle);
 
     Label* pageDesc = new Label("Use a Slider when you want your users to be able to set "
-                "defined, contiguous values "
-                "(such as volume or brightness) or a range of discrete values "
-                "(such as screen resolution settings).",
-        window);
+                                "defined, contiguous values "
+                                "(such as volume or brightness) or a range of discrete values "
+                                "(such as screen resolution settings).",
+                                window);
     pageDesc->setWordWrap(true);
     pageDesc->anchors()->top = {pageTitle, Edge::Bottom, 8};
     pageDesc->anchors()->left = {window, Edge::Left, 40};
@@ -192,7 +192,7 @@ TEST_F(SliderTest, VisualSliderGalleryLike) {
 
     Slider* rangeSlider = new Slider(Qt::Horizontal, window);
     rangeSlider->setRange(500, 1000);
-    rangeSlider->setSingleStep(10);  // SmallChange
+    rangeSlider->setSingleStep(10); // SmallChange
     rangeSlider->setPageStep(50);
     rangeSlider->setValue(800);
     rangeSlider->setFixedWidth(260);
@@ -233,14 +233,14 @@ TEST_F(SliderTest, VisualSliderGalleryLike) {
     QSpinBox* stepSpin = createSpinRow("StepFrequency:", rangeSlider->singleStep(), 2);
     QSpinBox* smallSpin = createSpinRow("SmallChange:", rangeSlider->singleStep(), 3);
 
-    QObject::connect(minSpin, qOverload<int>(&QSpinBox::valueChanged),
-                     rangeSlider, &QSlider::setMinimum);
-    QObject::connect(maxSpin, qOverload<int>(&QSpinBox::valueChanged),
-                     rangeSlider, &QSlider::setMaximum);
-    QObject::connect(stepSpin, qOverload<int>(&QSpinBox::valueChanged),
-                     rangeSlider, &QSlider::setTickInterval);
-    QObject::connect(smallSpin, qOverload<int>(&QSpinBox::valueChanged),
-                     rangeSlider, &QSlider::setSingleStep);
+    QObject::connect(minSpin, qOverload<int>(&QSpinBox::valueChanged), rangeSlider,
+                     &QSlider::setMinimum);
+    QObject::connect(maxSpin, qOverload<int>(&QSpinBox::valueChanged), rangeSlider,
+                     &QSlider::setMaximum);
+    QObject::connect(stepSpin, qOverload<int>(&QSpinBox::valueChanged), rangeSlider,
+                     &QSlider::setTickInterval);
+    QObject::connect(smallSpin, qOverload<int>(&QSpinBox::valueChanged), rangeSlider,
+                     &QSlider::setSingleStep);
 
     // --- 3. Slider with tick marks ---
     // Fix: Anchor to smallSpin because the property panel on the right is taller than the slider itself
@@ -295,7 +295,8 @@ TEST_F(SliderTest, VisualSliderGalleryLike) {
     QObject::connect(snapsTicks, &QRadioButton::toggled, [tickSlider](bool on) {
         if (on) {
             int interval = tickSlider->tickInterval();
-            if (interval <= 0) interval = 1;
+            if (interval <= 0)
+                interval = 1;
             tickSlider->setSingleStep(interval);
         }
     });
@@ -328,9 +329,10 @@ TEST_F(SliderTest, VisualSliderGalleryLike) {
     layout->addWidget(themeBtn);
 
     QObject::connect(themeBtn, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                                    ? fluent::FluentElement::Dark
-                                    : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     scrollArea->show();
