@@ -2938,6 +2938,8 @@
         "QTimer",
         "QWheelEvent",
         "QVariantAnimation",
+        "ScrollBar",
+        "OverscrollController",
         "FlowView",
         "LayoutBand"
       ],
@@ -2956,6 +2958,8 @@
         "QTimer",
         "QVariantAnimation",
         "QWheelEvent",
+        "ScrollBar",
+        "OverscrollController",
         "GridView"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/GridView.h"
@@ -2976,6 +2980,8 @@
         "QVariantAnimation",
         "QWheelEvent",
         "QPropertyAnimation",
+        "ScrollBar",
+        "OverscrollController",
         "ListView",
         "IndicatorMotionDirection"
       ],
@@ -3038,6 +3044,8 @@
         "QVariantAnimation",
         "QWheelEvent",
         "QTimer",
+        "ScrollBar",
+        "OverscrollController",
         "TreeView",
         "SelectionIndicatorStyle",
         "IndicatorVerticalDirection",
