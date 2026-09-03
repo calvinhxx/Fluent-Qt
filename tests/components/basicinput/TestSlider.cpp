@@ -3,9 +3,11 @@
 #include <QLabel>
 #include <QRadioButton>
 #include <QScrollArea>
+#include <QSignalSpy>
 
 #include <QSpinBox>
 #include <QStyle>
+#include <QTest>
 #include <QTimer>
 #include <gtest/gtest.h>
 #include "components/basicinput/Button.h"
@@ -81,6 +83,25 @@ TEST(SliderContractTest, Contract_DefaultMetricsAndQSliderSemantics)
     EXPECT_EQ(slider.trackHeight(), 6);
     EXPECT_DOUBLE_EQ(slider.hoverRatio(), 0.5);
     EXPECT_DOUBLE_EQ(slider.pressRatio(), 0.75);
+}
+
+TEST(SliderContractTest, Contract_PointerInteractionPreservesInheritedSignalsExactlyOnce)
+{
+    Slider slider(Qt::Horizontal);
+    slider.setRange(0, 100);
+    slider.resize(240, 40);
+
+    QSignalSpy pressedSpy(&slider, &QAbstractSlider::sliderPressed);
+    QSignalSpy releasedSpy(&slider, &QAbstractSlider::sliderReleased);
+
+    const QPoint center = slider.rect().center();
+    QTest::mousePress(&slider, Qt::LeftButton, Qt::NoModifier, center);
+    EXPECT_EQ(pressedSpy.count(), 1);
+    EXPECT_EQ(releasedSpy.count(), 0);
+
+    QTest::mouseRelease(&slider, Qt::LeftButton, Qt::NoModifier, center);
+    EXPECT_EQ(pressedSpy.count(), 1);
+    EXPECT_EQ(releasedSpy.count(), 1);
 }
 
 TEST(SliderContractTest, Contract_LightAndDarkRangeExtremesPaintDistinctly)
