@@ -10,6 +10,39 @@
 [← System capability delivery record](system-capability-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
 <!-- docs-nav:top:end -->
 
+## 2026-09-03 inherited input-signal addendum
+
+- The five public `QAbstractItemView`-derived collection controls were audited
+  against their inherited pointer-signal contract: `ListView`, `GridView`,
+  `FlowView`, `TreeView`, and `DataGrid`.
+- `ListView` and `FlowView` intercepted ordinary left-button input for custom
+  release-time selection but only emitted their row-based `itemClicked`
+  convenience signal. Their inherited `pressed(QModelIndex)` and
+  `clicked(QModelIndex)` signals were therefore silent.
+- `GridView`'s reorder path also intercepted presses on already-selected items.
+  It omitted inherited `pressed(QModelIndex)` and delegated release to
+  `QListView` even though the matching press had not reached the base class.
+  Consequently `clicked(QModelIndex)` depended on stale Qt press state and was
+  absent when the item had been selected programmatically before its first
+  pointer click. The intercepted path now completes both signals explicitly.
+- `TreeView` and `DataGrid` continue through their Qt base event chains and
+  already preserve both inherited signals. Focused tests now guard all five
+  components, including exact-once delivery and the GridView reorder branch.
+- A wider review of public Qt control subclasses found one additional exact-once
+  defect: `Slider` called `setSliderDown(false)`, which already emits inherited
+  `sliderReleased()`, and then emitted the same signal explicitly. The redundant
+  emission was removed and a real-pointer contract test now covers one press and
+  one release. Button, CheckBox, RadioButton, and ScrollBar already preserve
+  their Qt base input paths; split/menu button secondary hit zones remain
+  deliberate, separately tested activation surfaces.
+- The ListView Gallery cards did not expose the defect because they demonstrate
+  visible selection changes and do not connect the inherited signal to a
+  business action. Earlier ListView and GridView forwarding tests also invoked
+  `clicked(...)` synthetically instead of exercising the real pointer path.
+- The compatible repair restores the inherited signals without changing
+  release-time selection, drag suppression, row-based convenience signals, or
+  visible rendering. No new public API was added.
+
 ## 2026-08-29 static governance addendum
 
 The deferred component API static check is now implemented by
@@ -369,6 +402,8 @@ platform contracts.
 | API-010 | Low | Open setter alias | `src/components/basicinput/DropDownButton.h` | `DropDownButton` exposes `isOpen()` but only had `setOpen(bool)`, while other open-state components expose `setIsOpen(bool)`. | Applied compatible `setIsOpen(bool)` alias and focused test. Existing `setOpen(bool)` remains public. |
 | API-011 | Medium | Popup property notify gaps | `src/components/dialogs_flyouts/Popup.h`, `src/components/dialogs_flyouts/TeachingTip.h`, `src/components/dialogs_flyouts/ContentDialog.h` | Some overlay properties do not expose NOTIFY signals, but adding these signals should be paired with overlay-state semantics and binding tests rather than rushed into an API audit sweep. | Applied in 1.7-A with overlay-state semantics: NOTIFY + no-op on overlay bindable properties; focused `Contract_*` tests. |
 | API-012 | Medium | Typography precedence | `src/components/basicinput/Button.h`, `src/components/basicinput/ToggleSwitch.h`, `src/components/date_time/DatePicker.h`, `src/components/date_time/TimePicker.h` | Direct font initialization bypassed the semantic role property and left theme refresh versus caller `setFont(...)` precedence implicit; ToggleSwitch overwrote explicit fonts during refresh. | Added a source-compatible `Button::fontRole` contract and aligned ToggleSwitch precedence: theme-managed by default, explicit per-control font until the next `setFontRole(...)`; pickers and PySide6 inherit the Button contract. |
+| API-013 | High | Inherited item-view input signals | `src/components/collections/ListView.cpp`, `src/components/collections/GridView.cpp`, `src/components/collections/FlowView.cpp` | Custom pointer paths silently omitted inherited `pressed(QModelIndex)` and `clicked(QModelIndex)` despite public `QAbstractItemView` inheritance. GridView's intercepted release could appear to work only when Qt retained press state from an earlier base-class click. | Restored deterministic exact-once inherited signal delivery and added real-pointer contract coverage across all five public item-view collection controls, including programmatic preselection. |
+| API-014 | High | Inherited slider input signals | `src/components/basicinput/Slider.cpp` | The custom release path called `setSliderDown(false)`, which emits `sliderReleased()`, and then emitted `sliderReleased()` a second time. | Removed the redundant emission and added a real-pointer exact-once contract test. |
 
 ## Intentional Deviations
 
@@ -405,6 +440,16 @@ platform contracts.
   PySide6. `ToggleSwitch` now follows the same precedence with its existing
   `fontRole` API.
 - Added focused tests for the new aliases in DropDownButton, ListView, GridView, FlowView, TreeView, FlipView, TabView, and ProgressRing.
+- Restored inherited `pressed(QModelIndex)` and `clicked(QModelIndex)` delivery
+  across custom ListView and FlowView pointer paths and the intercepted GridView
+  reorder path. GridView now completes the click explicitly instead of relying
+  on unmatched `QListView::mouseReleaseEvent()` state. Real-pointer tests cover
+  ListView, GridView, FlowView, TreeView, and DataGrid, including a
+  programmatically preselected GridView item, and require exact-once delivery
+  alongside existing convenience signals.
+- Restored exact-once `QAbstractSlider::sliderReleased()` delivery in `Slider`;
+  the custom visual and tooltip release work now relies on the signal emitted by
+  `setSliderDown(false)` instead of emitting a duplicate.
 - Published the durable checklist as [Component API Conventions](component-api-conventions.md) so future work can use it without depending on an agent skill path.
 
 ## Deferred Follow-Ups
@@ -418,6 +463,16 @@ platform contracts.
 
 ## Validation Notes
 
+- The 2026-09-03 inherited input-signal repairs passed six focused component
+  targets on macOS Qt 6.9.3: 300 executed tests passed and 15 existing
+  manual/platform-dependent cases were skipped (nine GridView drag cases and
+  six VisualCheck cases). Eight direct pointer-signal contracts passed across
+  ListView, GridView, FlowView, TreeView, DataGrid, and Slider. The changes do
+  not alter rendered pixels, and no skipped VisualCheck is claimed as visual
+  approval.
+- The same working tree built `fluent_qt_gallery` and passed the component API,
+  accessibility inventory, visual evidence inventory, documentation
+  navigation, and documentation validation gates.
 - Date/time picker code changes were validated with focused builds and direct test binaries.
 - Alias sweep code changes were validated with focused builds and CTest label filters for `test_dropdown_button`, `test_list_view`, `test_grid_view`, `test_flow_view`, `test_tree_view`, `test_flip_view`, `test_tab_view`, and `test_progress_ring`: 289 tests passed, 0 failed, 8 VisualCheck tests skipped through `SKIP_VISUAL_TEST`.
 - Split/menu lifecycle changes were validated with the focused DropDownButton,
