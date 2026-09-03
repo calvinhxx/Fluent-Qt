@@ -269,6 +269,10 @@ signals:
     void selectedIndicatorMotionDirectionChanged();
     void selectedIndicatorAnimationEnabledChanged();
     void selectionIndicatorVisibleChanged();
+    /**
+     * @brief Emits the row once for the same pointer action as inherited clicked().
+     * zh_CN: 与继承的 clicked() 对应，在同一次指针点击中发送一次行号。
+     */
     void itemClicked(int index);
     void itemReordered(int fromRow, int toRow);
 

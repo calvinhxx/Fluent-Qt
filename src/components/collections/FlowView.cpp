@@ -72,6 +72,12 @@ FlowView::FlowView(QWidget* parent) : QAbstractItemView(parent)
     setDragEnabled(false);
     setDefaultDropAction(Qt::IgnoreAction);
 
+    // Keep the row-based convenience signal aligned with the inherited Qt
+    // item-view click contract.
+    // zh_CN: 让按行编号的便捷信号与继承的 Qt item-view 点击契约保持一致。
+    connect(this, &QAbstractItemView::clicked, this,
+            [this](const QModelIndex& index) { emit itemClicked(index.row()); });
+
     m_headerLabel = new QLabel(this);
     m_headerLabel->hide();
     m_headerLabel->setIndent(::Spacing::Padding::ListItemHorizontal);
@@ -524,9 +530,14 @@ void FlowView::mousePressEvent(QMouseEvent* event)
     }
 
     if (event->button() == Qt::LeftButton) {
+        setFocus(Qt::MouseFocusReason);
         const QModelIndex index = indexAt(fluentMousePos(event));
         if (index.isValid()) {
             m_pressedRow = index.row();
+            QPointer<FlowView> guard(this);
+            emit pressed(index);
+            if (!guard)
+                return;
             if (m_canReorderItems) {
                 m_dragStartPos = fluentMousePos(event);
                 m_dragSourceIndex = index.row();
@@ -539,7 +550,6 @@ void FlowView::mousePressEvent(QMouseEvent* event)
                 }
             }
         }
-        setFocus(Qt::MouseFocusReason);
         event->accept();
         return;
     }
@@ -673,7 +683,7 @@ void FlowView::mouseReleaseEvent(QMouseEvent* event)
 
     if (clickOnPressedItem) {
         QPointer<FlowView> guard(this);
-        emit itemClicked(releasedRow);
+        emit clicked(indexForRow(releasedRow));
         if (!guard)
             return;
     }

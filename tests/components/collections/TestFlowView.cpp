@@ -536,11 +536,19 @@ TEST_F(FlowViewTest, PointerSelectionKeyboardNavigationAndDisabledState)
     flow->setModel(createModel(flow, {"A", "B", "C"}, {QSize(100, 40), QSize(100, 40), QSize(100, 40)}));
 
     showOffscreen(window);
+    QSignalSpy inheritedPressSpy(flow, &QAbstractItemView::pressed);
+    QSignalSpy inheritedClickSpy(flow, &QAbstractItemView::clicked);
     QSignalSpy clickSpy(flow, &FlowView::itemClicked);
     const QRect r1 = flow->visualRect(flow->model()->index(1, 0));
     QTest::mouseClick(flow->viewport(), Qt::LeftButton, Qt::NoModifier, r1.center());
     processEvents();
     EXPECT_EQ(flow->selectedIndex(), 1);
+    ASSERT_EQ(inheritedPressSpy.count(), 1);
+    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedPressSpy.takeFirst().at(0)),
+              flow->model()->index(1, 0));
+    ASSERT_EQ(inheritedClickSpy.count(), 1);
+    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedClickSpy.takeFirst().at(0)),
+              flow->model()->index(1, 0));
     ASSERT_EQ(clickSpy.count(), 1);
     EXPECT_EQ(clickSpy.takeFirst().at(0).toInt(), 1);
 
@@ -556,6 +564,8 @@ TEST_F(FlowViewTest, PointerSelectionKeyboardNavigationAndDisabledState)
     const QRect r2 = flow->visualRect(flow->model()->index(2, 0));
     QTest::mouseClick(flow->viewport(), Qt::LeftButton, Qt::NoModifier, r2.center());
     processEvents();
+    EXPECT_EQ(inheritedPressSpy.count(), 0);
+    EXPECT_EQ(inheritedClickSpy.count(), 0);
     EXPECT_EQ(clickSpy.count(), 0);
 }
 

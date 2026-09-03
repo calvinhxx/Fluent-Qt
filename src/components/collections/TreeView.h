@@ -272,7 +272,15 @@ signals:
     void backgroundVisibleChanged();
     void headerTextChanged();
     void placeholderTextChanged();
+    /**
+     * @brief Mirrors the inherited pressed() signal for the same model index.
+     * zh_CN: 使用同一模型索引镜像继承的 pressed() 信号。
+     */
     void itemPressed(const QModelIndex& index);
+    /**
+     * @brief Mirrors the inherited clicked() signal for the same model index.
+     * zh_CN: 使用同一模型索引镜像继承的 clicked() 信号。
+     */
     void itemClicked(const QModelIndex& index);
     void canReorderItemsChanged();
     void scrollChainingEnabledChanged();

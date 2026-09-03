@@ -566,6 +566,78 @@ TEST_F(GridViewTest, ItemClickedSignal) {
     EXPECT_EQ(spy.at(0).at(0).toInt(), 0);
 }
 
+TEST_F(GridViewTest, ReorderEnabledPointerClicksPreserveInheritedSignal) {
+    window->setAttribute(Qt::WA_DontShowOnScreen, true);
+    auto* gv = new GridView(window);
+    gv->setGeometry(0, 0, 600, 400);
+    gv->setSelectionMode(SelectionMode::Multiple);
+    gv->setCanReorderItems(true);
+    attachStringListModel(gv, {"A", "B", "C"});
+    window->show();
+    QTest::qWait(50);
+
+    QSignalSpy inheritedPressSpy(gv, &QAbstractItemView::pressed);
+    QSignalSpy inheritedClickSpy(gv, &QAbstractItemView::clicked);
+    QSignalSpy itemClickSpy(gv, &GridView::itemClicked);
+    const QModelIndex index = gv->model()->index(1, 0);
+    const QPoint point = gv->visualRect(index).center();
+
+    // The first click uses QListView's normal path.
+    QTest::mouseClick(gv->viewport(), Qt::LeftButton, Qt::NoModifier, point);
+    QApplication::processEvents();
+    ASSERT_EQ(inheritedPressSpy.count(), 1);
+    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedPressSpy.at(0).at(0)), index);
+    ASSERT_EQ(inheritedClickSpy.count(), 1);
+    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedClickSpy.at(0).at(0)), index);
+    ASSERT_EQ(itemClickSpy.count(), 1);
+    EXPECT_EQ(itemClickSpy.at(0).at(0).toInt(), index.row());
+
+    inheritedPressSpy.clear();
+    inheritedClickSpy.clear();
+    itemClickSpy.clear();
+
+    // The second click is intercepted to preserve the selected set for a
+    // potential multi-item drag, but it is still a click when no drag occurs.
+    QTest::mouseClick(gv->viewport(), Qt::LeftButton, Qt::NoModifier, point);
+    QApplication::processEvents();
+    ASSERT_EQ(inheritedPressSpy.count(), 1);
+    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedPressSpy.at(0).at(0)), index);
+    ASSERT_EQ(inheritedClickSpy.count(), 1);
+    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedClickSpy.at(0).at(0)), index);
+    ASSERT_EQ(itemClickSpy.count(), 1);
+    EXPECT_EQ(itemClickSpy.at(0).at(0).toInt(), index.row());
+}
+
+TEST_F(GridViewTest, ReorderEnabledProgrammaticSelectionPreservesInheritedClick) {
+    window->setAttribute(Qt::WA_DontShowOnScreen, true);
+    auto* gv = new GridView(window);
+    gv->setGeometry(0, 0, 600, 400);
+    gv->setSelectionMode(SelectionMode::Multiple);
+    gv->setCanReorderItems(true);
+    attachStringListModel(gv, {"A", "B", "C"});
+    window->show();
+    QTest::qWait(50);
+
+    const QModelIndex index = gv->model()->index(1, 0);
+    gv->selectionModel()->select(index, QItemSelectionModel::Select);
+    ASSERT_TRUE(gv->selectionModel()->isSelected(index));
+
+    QSignalSpy inheritedPressSpy(gv, &QAbstractItemView::pressed);
+    QSignalSpy inheritedClickSpy(gv, &QAbstractItemView::clicked);
+    QSignalSpy itemClickSpy(gv, &GridView::itemClicked);
+
+    QTest::mouseClick(gv->viewport(), Qt::LeftButton, Qt::NoModifier,
+                      gv->visualRect(index).center());
+    QApplication::processEvents();
+
+    ASSERT_EQ(inheritedPressSpy.count(), 1);
+    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedPressSpy.at(0).at(0)), index);
+    ASSERT_EQ(inheritedClickSpy.count(), 1);
+    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedClickSpy.at(0).at(0)), index);
+    ASSERT_EQ(itemClickSpy.count(), 1);
+    EXPECT_EQ(itemClickSpy.at(0).at(0).toInt(), index.row());
+}
+
 TEST_F(GridViewTest, FluentScrollBarExists) {
     GridView* gv = new GridView(window);
     EXPECT_NE(gv->verticalFluentScrollBar(), nullptr);
