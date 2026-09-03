@@ -39,7 +39,8 @@ class PaintRegionTreeView : public TreeView {
 public:
     using TreeView::TreeView;
 
-    void resetAnimatedPaintObservations() {
+    void resetAnimatedPaintObservations()
+    {
         observedAnimatedPaint = false;
         observedFullViewportAnimatedPaint = false;
     }
@@ -48,32 +49,35 @@ public:
     bool observedFullViewportAnimatedPaint = false;
 
 protected:
-    void paintEvent(QPaintEvent* event) override {
+    void paintEvent(QPaintEvent* event) override
+    {
         const qreal progress = indicatorMotionProgress();
         if (progress > 0.0 && progress < 1.0) {
             observedAnimatedPaint = true;
             observedFullViewportAnimatedPaint =
-                observedFullViewportAnimatedPaint
-                || event->region().contains(viewport()->rect());
+                observedFullViewportAnimatedPaint || event->region().contains(viewport()->rect());
         }
         TreeView::paintEvent(event);
     }
 };
 
-int defaultTreeRowHeight() {
+int defaultTreeRowHeight()
+{
     return Spacing::ControlHeight::Standard + Spacing::Gap::Tight;
 }
 
 /** 业务组装：为 TreeView 挂上 Fluent 行代理 */
-void attachFluentDelegate(TreeView* tv, int rowHeight = defaultTreeRowHeight()) {
+void attachFluentDelegate(TreeView* tv, int rowHeight = defaultTreeRowHeight())
+{
     tv->setItemDelegate(new treeview_test::FluentTreeItemDelegate(
         static_cast<fluent::FluentElement*>(tv), rowHeight, tv, tv));
 }
 
 /** 挂上带 CheckBox 可见的代理 */
-treeview_test::FluentTreeItemDelegate* attachCheckableDelegate(TreeView* tv) {
-    auto* d = new treeview_test::FluentTreeItemDelegate(
-        static_cast<fluent::FluentElement*>(tv), defaultTreeRowHeight(), tv, tv);
+treeview_test::FluentTreeItemDelegate* attachCheckableDelegate(TreeView* tv)
+{
+    auto* d = new treeview_test::FluentTreeItemDelegate(static_cast<fluent::FluentElement*>(tv),
+                                                        defaultTreeRowHeight(), tv, tv);
     d->setCheckBoxVisible(true);
     tv->setItemDelegate(d);
     return d;
@@ -90,7 +94,8 @@ treeview_test::FluentTreeItemDelegate* attachCheckableDelegate(TreeView* tv) {
  *         └─ Paint Color Scheme
  *   Pictures
  */
-QStandardItemModel* createSampleTreeModel(QObject* parent = nullptr) {
+QStandardItemModel* createSampleTreeModel(QObject* parent = nullptr)
+{
     auto* model = new QStandardItemModel(parent);
 
     auto* work = new QStandardItem("Work Documents");
@@ -111,43 +116,49 @@ QStandardItemModel* createSampleTreeModel(QObject* parent = nullptr) {
 }
 
 /** 绑定 sample model + delegate */
-QStandardItemModel* attachSampleModel(TreeView* tv) {
+QStandardItemModel* attachSampleModel(TreeView* tv)
+{
     auto* model = createSampleTreeModel(tv);
     tv->setModel(model);
     attachFluentDelegate(tv);
     return model;
 }
 
-int topLevelCount(TreeView* tv) {
+int topLevelCount(TreeView* tv)
+{
     return tv->model() ? tv->model()->rowCount() : 0;
 }
 
-QString itemText(TreeView* tv, const QModelIndex& index) {
+QString itemText(TreeView* tv, const QModelIndex& index)
+{
     return index.isValid() ? index.data(Qt::DisplayRole).toString() : QString();
 }
 
 /** 离屏显示: 触发布局计算但不弹出可见窗口 */
-void showOffscreen(QWidget* w) {
+void showOffscreen(QWidget* w)
+{
     w->setAttribute(Qt::WA_DontShowOnScreen, true);
     w->show();
     QApplication::processEvents();
 }
 
-void processEvents() {
+void processEvents()
+{
     QApplication::processEvents();
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     QApplication::processEvents();
 }
 
-bool isAccentLike(const QColor& color, const QColor& accent) {
+bool isAccentLike(const QColor& color, const QColor& accent)
+{
     constexpr int kTolerance = 42;
-    return color.alpha() > 160
-        && qAbs(color.red() - accent.red()) <= kTolerance
-        && qAbs(color.green() - accent.green()) <= kTolerance
-        && qAbs(color.blue() - accent.blue()) <= kTolerance;
+    return color.alpha() > 160 && qAbs(color.red() - accent.red()) <= kTolerance &&
+           qAbs(color.green() - accent.green()) <= kTolerance &&
+           qAbs(color.blue() - accent.blue()) <= kTolerance;
 }
 
-QImage renderWidget(QWidget* widget) {
+QImage renderWidget(QWidget* widget)
+{
     QImage image(widget->size(), QImage::Format_ARGB32_Premultiplied);
     image.fill(Qt::transparent);
     QPainter painter(&image);
@@ -156,7 +167,8 @@ QImage renderWidget(QWidget* widget) {
     return image;
 }
 
-int leftMostAccentPixelX(QWidget* widget, const QRect& rowRect, const QColor& accent) {
+int leftMostAccentPixelX(QWidget* widget, const QRect& rowRect, const QColor& accent)
+{
     const QImage image = renderWidget(widget);
     const int top = qBound(0, rowRect.top(), image.height() - 1);
     const int bottom = qBound(0, rowRect.bottom(), image.height() - 1);
@@ -169,7 +181,8 @@ int leftMostAccentPixelX(QWidget* widget, const QRect& rowRect, const QColor& ac
     return -1;
 }
 
-bool hasAccentPixelInRect(QWidget* widget, const QRect& rect, const QColor& accent) {
+bool hasAccentPixelInRect(QWidget* widget, const QRect& rect, const QColor& accent)
+{
     const QImage image = renderWidget(widget);
     const QRect bounded = rect.intersected(QRect(0, 0, image.width(), image.height()));
     for (int y = bounded.top(); y <= bounded.bottom(); ++y) {
@@ -181,7 +194,8 @@ bool hasAccentPixelInRect(QWidget* widget, const QRect& rect, const QColor& acce
     return false;
 }
 
-bool hasAccentPixelInImage(const QImage& image, const QRect& rect, const QColor& accent) {
+bool hasAccentPixelInImage(const QImage& image, const QRect& rect, const QColor& accent)
+{
     const QRect bounded = rect.intersected(QRect(0, 0, image.width(), image.height()));
     for (int y = bounded.top(); y <= bounded.bottom(); ++y) {
         for (int x = bounded.left(); x <= bounded.right(); ++x) {
@@ -195,7 +209,8 @@ bool hasAccentPixelInImage(const QImage& image, const QRect& rect, const QColor&
 /**
  * 创建一个带 CheckStateRole 的可勾选树模型 (WinUI Multi-selection 模式)
  */
-QStandardItemModel* createCheckableTreeModel(QObject* parent = nullptr) {
+QStandardItemModel* createCheckableTreeModel(QObject* parent = nullptr)
+{
     auto* model = new QStandardItemModel(parent);
 
     auto makeCheckable = [](QStandardItem* item, Qt::CheckState state) {
@@ -220,7 +235,8 @@ QStandardItemModel* createCheckableTreeModel(QObject* parent = nullptr) {
     return model;
 }
 
-void selectCheckedRows(TreeView* tv, const QModelIndex& parent = QModelIndex()) {
+void selectCheckedRows(TreeView* tv, const QModelIndex& parent = QModelIndex())
+{
     if (!tv || !tv->model() || !tv->selectionModel())
         return;
 
@@ -228,7 +244,8 @@ void selectCheckedRows(TreeView* tv, const QModelIndex& parent = QModelIndex()) 
         const QModelIndex index = tv->model()->index(row, 0, parent);
         const QVariant checkState = index.data(Qt::CheckStateRole);
         if (checkState.isValid() && static_cast<Qt::CheckState>(checkState.toInt()) == Qt::Checked)
-            tv->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+            tv->selectionModel()->select(index,
+                                         QItemSelectionModel::Select | QItemSelectionModel::Rows);
         selectCheckedRows(tv, index);
     }
 }
@@ -237,7 +254,8 @@ void selectCheckedRows(TreeView* tv, const QModelIndex& parent = QModelIndex()) 
  * 创建带图标字形的树模型 (WinUI ItemTemplateSelector 模式)
  * 文件夹使用 Folder 图标，文档使用 Document 图标
  */
-QStandardItemModel* createIconTreeModel(QObject* parent = nullptr) {
+QStandardItemModel* createIconTreeModel(QObject* parent = nullptr)
+{
     auto* model = new QStandardItemModel(parent);
 
     auto makeFolder = [](const QString& text) {
@@ -272,7 +290,8 @@ QStandardItemModel* createIconTreeModel(QObject* parent = nullptr) {
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -280,14 +299,16 @@ public:
 
 class TreeViewTest : public ::testing::Test {
 protected:
-    static void SetUpTestSuite() {
+    static void SetUpTestSuite()
+    {
         qRegisterMetaType<fluent::collections::TreeView::IndicatorVerticalDirection>(
             "fluent::collections::TreeView::IndicatorVerticalDirection");
         qRegisterMetaType<fluent::collections::TreeView::IndicatorHierarchyTransition>(
             "fluent::collections::TreeView::IndicatorHierarchyTransition");
     }
 
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new FluentTestWindow();
         window->setFixedSize(500, 500);
         window->setWindowTitle("Fluent TreeView Test");
@@ -296,9 +317,7 @@ protected:
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     FluentTestWindow* window;
     AnchorLayout* layout;
@@ -308,13 +327,15 @@ protected:
 // Model & Data
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, EmptyTreeView) {
+TEST_F(TreeViewTest, EmptyTreeView)
+{
     TreeView* tv = new TreeView(window);
     EXPECT_EQ(topLevelCount(tv), 0);
     EXPECT_FALSE(tv->selectedItem().isValid());
 }
 
-TEST_F(TreeViewTest, SampleModelStructure) {
+TEST_F(TreeViewTest, SampleModelStructure)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
 
@@ -327,7 +348,8 @@ TEST_F(TreeViewTest, SampleModelStructure) {
     EXPECT_EQ(model->item(2)->rowCount(), 0);
 }
 
-TEST_F(TreeViewTest, DeepNesting) {
+TEST_F(TreeViewTest, DeepNesting)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
 
@@ -345,12 +367,14 @@ TEST_F(TreeViewTest, DeepNesting) {
 // Selection
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, DefaultSelectionMode) {
+TEST_F(TreeViewTest, DefaultSelectionMode)
+{
     TreeView* tv = new TreeView(window);
     EXPECT_EQ(tv->selectionMode(), SelectionMode::Single);
 }
 
-TEST_F(TreeViewTest, SelectionModeSwitch) {
+TEST_F(TreeViewTest, SelectionModeSwitch)
+{
     TreeView* tv = new TreeView(window);
     attachSampleModel(tv);
 
@@ -369,7 +393,8 @@ TEST_F(TreeViewTest, SelectionModeSwitch) {
     EXPECT_EQ(spy.count(), 3);
 }
 
-TEST_F(TreeViewTest, SelectionModeDuplicateIgnored) {
+TEST_F(TreeViewTest, SelectionModeDuplicateIgnored)
+{
     TreeView* tv = new TreeView(window);
     QSignalSpy spy(tv, &TreeView::selectionModeChanged);
 
@@ -377,7 +402,8 @@ TEST_F(TreeViewTest, SelectionModeDuplicateIgnored) {
     EXPECT_EQ(spy.count(), 0);
 }
 
-TEST_F(TreeViewTest, SetSelectedItem) {
+TEST_F(TreeViewTest, SetSelectedItem)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
 
@@ -385,7 +411,8 @@ TEST_F(TreeViewTest, SetSelectedItem) {
     EXPECT_EQ(tv->selectedItem(), model->index(0, 0));
 }
 
-TEST_F(TreeViewTest, ClearSelectionOnInvalidIndex) {
+TEST_F(TreeViewTest, ClearSelectionOnInvalidIndex)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
 
@@ -396,7 +423,8 @@ TEST_F(TreeViewTest, ClearSelectionOnInvalidIndex) {
     EXPECT_FALSE(tv->selectedItem().isValid());
 }
 
-TEST_F(TreeViewTest, IndicatorMotionDefaultsAndAnimationToggle) {
+TEST_F(TreeViewTest, IndicatorMotionDefaultsAndAnimationToggle)
+{
     TreeView* tv = new TreeView(window);
 
     EXPECT_DOUBLE_EQ(tv->indicatorMotionProgress(), 1.0);
@@ -414,7 +442,8 @@ TEST_F(TreeViewTest, IndicatorMotionDefaultsAndAnimationToggle) {
     EXPECT_DOUBLE_EQ(tv->indicatorMotionProgress(), 1.0);
 }
 
-TEST_F(TreeViewTest, IndicatorMotionClassifiesInitialUpwardDownwardAndSameLevel) {
+TEST_F(TreeViewTest, IndicatorMotionClassifiesInitialUpwardDownwardAndSameLevel)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setIndicatorMotionAnimationEnabled(false);
@@ -437,16 +466,19 @@ TEST_F(TreeViewTest, IndicatorMotionClassifiesInitialUpwardDownwardAndSameLevel)
     EXPECT_EQ(tv->indicatorMotionPreviousIndex(), work);
     EXPECT_EQ(tv->indicatorMotionCurrentIndex(), pictures);
     EXPECT_EQ(tv->indicatorMotionDirection(), TreeView::IndicatorVerticalDirection::Down);
-    EXPECT_EQ(tv->indicatorHierarchyTransition(), TreeView::IndicatorHierarchyTransition::SameLevel);
+    EXPECT_EQ(tv->indicatorHierarchyTransition(),
+              TreeView::IndicatorHierarchyTransition::SameLevel);
 
     tv->setSelectedItem(personal);
     processEvents();
     EXPECT_EQ(tv->indicatorMotionDirection(), TreeView::IndicatorVerticalDirection::Up);
-    EXPECT_EQ(tv->indicatorHierarchyTransition(), TreeView::IndicatorHierarchyTransition::SameLevel);
+    EXPECT_EQ(tv->indicatorHierarchyTransition(),
+              TreeView::IndicatorHierarchyTransition::SameLevel);
     EXPECT_DOUBLE_EQ(tv->selectedIndicatorProgress(personal), 1.0);
 }
 
-TEST_F(TreeViewTest, IndicatorMotionClassifiesHierarchyTransitions) {
+TEST_F(TreeViewTest, IndicatorMotionClassifiesHierarchyTransitions)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setIndicatorMotionAnimationEnabled(false);
@@ -468,7 +500,8 @@ TEST_F(TreeViewTest, IndicatorMotionClassifiesHierarchyTransitions) {
     tv->setSelectedItem(workChild1);
     processEvents();
     EXPECT_EQ(tv->indicatorMotionDirection(), TreeView::IndicatorVerticalDirection::Down);
-    EXPECT_EQ(tv->indicatorHierarchyTransition(), TreeView::IndicatorHierarchyTransition::SameLevel);
+    EXPECT_EQ(tv->indicatorHierarchyTransition(),
+              TreeView::IndicatorHierarchyTransition::SameLevel);
 
     tv->setSelectedItem(work);
     processEvents();
@@ -476,7 +509,8 @@ TEST_F(TreeViewTest, IndicatorMotionClassifiesHierarchyTransitions) {
     EXPECT_EQ(tv->indicatorHierarchyTransition(), TreeView::IndicatorHierarchyTransition::Outward);
 }
 
-TEST_F(TreeViewTest, IndicatorMotionClearsOnInvalidResetSelectionModelAndCollapse) {
+TEST_F(TreeViewTest, IndicatorMotionClearsOnInvalidResetSelectionModelAndCollapse)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setIndicatorMotionAnimationEnabled(false);
@@ -520,7 +554,8 @@ TEST_F(TreeViewTest, IndicatorMotionClearsOnInvalidResetSelectionModelAndCollaps
     EXPECT_FALSE(tv->indicatorMotionCurrentIndex().isValid());
 }
 
-TEST_F(TreeViewTest, IndicatorMotionSuppressesDuplicateSelectionAndSnapsWhenAnimationDisabled) {
+TEST_F(TreeViewTest, IndicatorMotionSuppressesDuplicateSelectionAndSnapsWhenAnimationDisabled)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setIndicatorMotionAnimationEnabled(false);
@@ -548,7 +583,8 @@ TEST_F(TreeViewTest, IndicatorMotionSuppressesDuplicateSelectionAndSnapsWhenAnim
     tv->setSelectedItem(personal);
     processEvents();
     EXPECT_EQ(tv->indicatorMotionDirection(), TreeView::IndicatorVerticalDirection::Down);
-    EXPECT_EQ(tv->indicatorHierarchyTransition(), TreeView::IndicatorHierarchyTransition::SameLevel);
+    EXPECT_EQ(tv->indicatorHierarchyTransition(),
+              TreeView::IndicatorHierarchyTransition::SameLevel);
     EXPECT_DOUBLE_EQ(tv->indicatorMotionProgress(), 1.0);
     const int directionAfterMove = directionSpy.count();
     const int hierarchyAfterMove = hierarchySpy.count();
@@ -561,7 +597,8 @@ TEST_F(TreeViewTest, IndicatorMotionSuppressesDuplicateSelectionAndSnapsWhenAnim
     EXPECT_EQ(progressSpy.count(), progressAfterMove);
 }
 
-TEST_F(TreeViewTest, IndicatorMotionProgressAnimatesWhenEnabled) {
+TEST_F(TreeViewTest, IndicatorMotionProgressAnimatesWhenEnabled)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(350, 400);
@@ -584,7 +621,8 @@ TEST_F(TreeViewTest, IndicatorMotionProgressAnimatesWhenEnabled) {
     EXPECT_DOUBLE_EQ(tv->selectedIndicatorProgress(personal), 1.0);
 }
 
-TEST_F(TreeViewTest, IndicatorMotionRepaintsWholeTransparentViewportDuringAnimation) {
+TEST_F(TreeViewTest, IndicatorMotionRepaintsWholeTransparentViewportDuringAnimation)
+{
     auto* tv = new PaintRegionTreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setBackgroundVisible(false);
@@ -610,7 +648,8 @@ TEST_F(TreeViewTest, IndicatorMotionRepaintsWholeTransparentViewportDuringAnimat
     EXPECT_TRUE(tv->observedFullViewportAnimatedPaint);
 }
 
-TEST_F(TreeViewTest, SelectionIndicatorVisibilityAndStyleSetters) {
+TEST_F(TreeViewTest, SelectionIndicatorVisibilityAndStyleSetters)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
 
@@ -659,12 +698,11 @@ TEST_F(TreeViewTest, SelectionIndicatorVisibilityAndStyleSetters) {
     model->item(0)->setData(42.0, kIndicatorInsetRole);
     tv->setSelectedItem(work);
     processEvents();
-    EXPECT_NEAR(tv->selectedIndicatorRect(1.0).left(),
-                tv->visualRect(work).left() + 42.0,
-                0.01);
+    EXPECT_NEAR(tv->selectedIndicatorRect(1.0).left(), tv->visualRect(work).left() + 42.0, 0.01);
 }
 
-TEST_F(TreeViewTest, NativeRowPanelIsSuppressedForDelegateOwnedBackgrounds) {
+TEST_F(TreeViewTest, NativeRowPanelIsSuppressedForDelegateOwnedBackgrounds)
+{
     TreeView tv;
     QImage image(120, defaultTreeRowHeight(), QImage::Format_ARGB32_Premultiplied);
     image.fill(Qt::transparent);
@@ -672,13 +710,11 @@ TEST_F(TreeViewTest, NativeRowPanelIsSuppressedForDelegateOwnedBackgrounds) {
     QStyleOptionViewItem option;
     option.initFrom(&tv);
     option.rect = image.rect();
-    option.state |= QStyle::State_Enabled | QStyle::State_Selected
-        | QStyle::State_MouseOver;
+    option.state |= QStyle::State_Enabled | QStyle::State_Selected | QStyle::State_MouseOver;
     option.palette.setColor(QPalette::Highlight, QColor(255, 0, 0, 255));
 
     QPainter painter(&image);
-    tv.style()->drawPrimitive(QStyle::PE_PanelItemViewRow,
-                              &option, &painter, &tv);
+    tv.style()->drawPrimitive(QStyle::PE_PanelItemViewRow, &option, &painter, &tv);
     painter.end();
 
     for (int y = 0; y < image.height(); ++y) {
@@ -687,7 +723,8 @@ TEST_F(TreeViewTest, NativeRowPanelIsSuppressedForDelegateOwnedBackgrounds) {
     }
 }
 
-TEST_F(TreeViewTest, SelectionIndicatorPaintsAccentPillNearLeftOfSelectedRow) {
+TEST_F(TreeViewTest, SelectionIndicatorPaintsAccentPillNearLeftOfSelectedRow)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setSelectionIndicatorVisible(true);
@@ -710,7 +747,8 @@ TEST_F(TreeViewTest, SelectionIndicatorPaintsAccentPillNearLeftOfSelectedRow) {
     EXPECT_FALSE(hasAccentPixelInRect(tv->viewport(), rightProbe, accent));
 }
 
-TEST_F(TreeViewTest, AnimatedCollapseDefersModelCollapseUntilFinished) {
+TEST_F(TreeViewTest, AnimatedCollapseDefersModelCollapseUntilFinished)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(350, 400);
@@ -732,7 +770,8 @@ TEST_F(TreeViewTest, AnimatedCollapseDefersModelCollapseUntilFinished) {
     EXPECT_FALSE(tv->isExpanded(work));
 }
 
-TEST_F(TreeViewTest, AnimatedCollapseReversesBackToExpandedOnRetoggle) {
+TEST_F(TreeViewTest, AnimatedCollapseReversesBackToExpandedOnRetoggle)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(350, 400);
@@ -742,20 +781,21 @@ TEST_F(TreeViewTest, AnimatedCollapseReversesBackToExpandedOnRetoggle) {
     tv->toggleExpanded(work);
     for (int i = 0; i < 60 && !tv->isExpanded(work); ++i)
         QTest::qWait(10);
-    QTest::qWait(300);   // settle the expand reveal
+    QTest::qWait(300); // settle the expand reveal
     processEvents();
     ASSERT_TRUE(tv->isExpanded(work));
 
     // Begin an animated collapse, then immediately re-toggle to reverse it.
-    tv->toggleExpanded(work);   // start deferred collapse
-    QTest::qWait(40);           // let it run partway
-    tv->toggleExpanded(work);   // reverse → expand again
+    tv->toggleExpanded(work); // start deferred collapse
+    QTest::qWait(40);         // let it run partway
+    tv->toggleExpanded(work); // reverse → expand again
     QTest::qWait(320);
     processEvents();
-    EXPECT_TRUE(tv->isExpanded(work));   // never actually collapsed
+    EXPECT_TRUE(tv->isExpanded(work)); // never actually collapsed
 }
 
-TEST_F(TreeViewTest, ExpandRevealCommitsWhenAnotherParentToggles) {
+TEST_F(TreeViewTest, ExpandRevealCommitsWhenAnotherParentToggles)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(350, 400);
@@ -778,7 +818,8 @@ TEST_F(TreeViewTest, ExpandRevealCommitsWhenAnotherParentToggles) {
     EXPECT_DOUBLE_EQ(tv->chevronRotation(work), 1.0);
 }
 
-TEST_F(TreeViewTest, CollapseRevealFinalizesWhenAnotherParentToggles) {
+TEST_F(TreeViewTest, CollapseRevealFinalizesWhenAnotherParentToggles)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(350, 400);
@@ -806,7 +847,8 @@ TEST_F(TreeViewTest, CollapseRevealFinalizesWhenAnotherParentToggles) {
     EXPECT_FALSE(tv->isExpanded(personal));
 }
 
-TEST_F(TreeViewTest, AnimatedCollapseHitTestingFollowsVisualRows) {
+TEST_F(TreeViewTest, AnimatedCollapseHitTestingFollowsVisualRows)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(350, 400);
@@ -822,7 +864,8 @@ TEST_F(TreeViewTest, AnimatedCollapseHitTestingFollowsVisualRows) {
     processEvents();
     ASSERT_TRUE(tv->isExpanded(work));
 
-    const qreal subtreeHeight = tv->visualRect(firstChild).height() + tv->visualRect(secondChild).height();
+    const qreal subtreeHeight =
+        tv->visualRect(firstChild).height() + tv->visualRect(secondChild).height();
     const QRect personalRect = tv->visualRect(personal);
     ASSERT_FALSE(personalRect.isEmpty());
 
@@ -834,8 +877,8 @@ TEST_F(TreeViewTest, AnimatedCollapseHitTestingFollowsVisualRows) {
     ASSERT_GT(progress, 0.0);
     ASSERT_LT(progress, 1.0);
 
-    const QPoint visualPersonalCenter = personalRect.center()
-        - QPoint(0, qRound(subtreeHeight * (1.0 - progress)));
+    const QPoint visualPersonalCenter =
+        personalRect.center() - QPoint(0, qRound(subtreeHeight * (1.0 - progress)));
     EXPECT_EQ(tv->indexAt(visualPersonalCenter), personal);
 
     QTest::mouseClick(tv->viewport(), Qt::LeftButton, Qt::NoModifier, visualPersonalCenter);
@@ -847,7 +890,8 @@ TEST_F(TreeViewTest, AnimatedCollapseHitTestingFollowsVisualRows) {
 // Expand / Collapse
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, ExpandCollapseTopLevel) {
+TEST_F(TreeViewTest, ExpandCollapseTopLevel)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
 
@@ -865,7 +909,8 @@ TEST_F(TreeViewTest, ExpandCollapseTopLevel) {
     EXPECT_FALSE(tv->isExpanded(workIdx));
 }
 
-TEST_F(TreeViewTest, ToggleExpanded) {
+TEST_F(TreeViewTest, ToggleExpanded)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
 
@@ -878,7 +923,8 @@ TEST_F(TreeViewTest, ToggleExpanded) {
     EXPECT_FALSE(tv->isExpanded(workIdx));
 }
 
-TEST_F(TreeViewTest, ExpandAll) {
+TEST_F(TreeViewTest, ExpandAll)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
 
@@ -890,7 +936,8 @@ TEST_F(TreeViewTest, ExpandAll) {
     EXPECT_TRUE(tv->isExpanded(model->item(1)->child(0)->index()));
 }
 
-TEST_F(TreeViewTest, CollapseAll) {
+TEST_F(TreeViewTest, CollapseAll)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
 
@@ -901,7 +948,8 @@ TEST_F(TreeViewTest, CollapseAll) {
     EXPECT_FALSE(tv->isExpanded(model->index(1, 0)));
 }
 
-TEST_F(TreeViewTest, ToggleInvalidIndexNoOp) {
+TEST_F(TreeViewTest, ToggleInvalidIndexNoOp)
+{
     TreeView* tv = new TreeView(window);
     attachSampleModel(tv);
 
@@ -913,7 +961,8 @@ TEST_F(TreeViewTest, ToggleInvalidIndexNoOp) {
 // Expand Animation
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, ExpandAnimationTriggered) {
+TEST_F(TreeViewTest, ExpandAnimationTriggered)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->resize(300, 400);
@@ -928,7 +977,8 @@ TEST_F(TreeViewTest, ExpandAnimationTriggered) {
     EXPECT_TRUE(tv->isExpanded(workIdx));
 }
 
-TEST_F(TreeViewTest, ExpandAnimationExposesChildrenDuringReveal) {
+TEST_F(TreeViewTest, ExpandAnimationExposesChildrenDuringReveal)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->resize(300, 400);
@@ -947,7 +997,8 @@ TEST_F(TreeViewTest, ExpandAnimationExposesChildrenDuringReveal) {
     EXPECT_FALSE(tv->visualRect(childIdx).isEmpty());
 }
 
-TEST_F(TreeViewTest, ExpandAnimationCompletesCleanly) {
+TEST_F(TreeViewTest, ExpandAnimationCompletesCleanly)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->resize(300, 400);
@@ -966,7 +1017,8 @@ TEST_F(TreeViewTest, ExpandAnimationCompletesCleanly) {
     EXPECT_GT(model->rowCount(workIdx), 0);
 }
 
-TEST_F(TreeViewTest, RapidToggleNoCrash) {
+TEST_F(TreeViewTest, RapidToggleNoCrash)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->resize(300, 400);
@@ -984,7 +1036,8 @@ TEST_F(TreeViewTest, RapidToggleNoCrash) {
     SUCCEED();
 }
 
-TEST_F(TreeViewTest, ExpandAllSkipsAnimation) {
+TEST_F(TreeViewTest, ExpandAllSkipsAnimation)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->resize(300, 400);
@@ -999,7 +1052,8 @@ TEST_F(TreeViewTest, ExpandAllSkipsAnimation) {
     EXPECT_TRUE(tv->isExpanded(model->index(1, 0)));
 }
 
-TEST_F(TreeViewTest, CollapseStopsExpandAnimation) {
+TEST_F(TreeViewTest, CollapseStopsExpandAnimation)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->resize(300, 400);
@@ -1023,13 +1077,15 @@ TEST_F(TreeViewTest, CollapseStopsExpandAnimation) {
 // Appearance Properties
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, DefaultBorderVisible) {
+TEST_F(TreeViewTest, DefaultBorderVisible)
+{
     TreeView* tv = new TreeView(window);
     EXPECT_TRUE(tv->borderVisible());
     EXPECT_TRUE(tv->isBorderVisible());
 }
 
-TEST_F(TreeViewTest, SetBorderVisible) {
+TEST_F(TreeViewTest, SetBorderVisible)
+{
     TreeView* tv = new TreeView(window);
     QSignalSpy spy(tv, &TreeView::borderVisibleChanged);
 
@@ -1042,13 +1098,15 @@ TEST_F(TreeViewTest, SetBorderVisible) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(TreeViewTest, DefaultBackgroundVisible) {
+TEST_F(TreeViewTest, DefaultBackgroundVisible)
+{
     TreeView* tv = new TreeView(window);
     EXPECT_TRUE(tv->backgroundVisible());
     EXPECT_TRUE(tv->isBackgroundVisible());
 }
 
-TEST_F(TreeViewTest, SetBackgroundVisible) {
+TEST_F(TreeViewTest, SetBackgroundVisible)
+{
     TreeView* tv = new TreeView(window);
     QSignalSpy spy(tv, &TreeView::backgroundVisibleChanged);
 
@@ -1058,7 +1116,8 @@ TEST_F(TreeViewTest, SetBackgroundVisible) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(TreeViewTest, HeaderText) {
+TEST_F(TreeViewTest, HeaderText)
+{
     TreeView* tv = new TreeView(window);
     QSignalSpy spy(tv, &TreeView::headerTextChanged);
 
@@ -1072,7 +1131,8 @@ TEST_F(TreeViewTest, HeaderText) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(TreeViewTest, PlaceholderText) {
+TEST_F(TreeViewTest, PlaceholderText)
+{
     TreeView* tv = new TreeView(window);
     QSignalSpy spy(tv, &TreeView::placeholderTextChanged);
 
@@ -1081,7 +1141,8 @@ TEST_F(TreeViewTest, PlaceholderText) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(TreeViewTest, FontRole) {
+TEST_F(TreeViewTest, FontRole)
+{
     TreeView* tv = new TreeView(window);
     QSignalSpy spy(tv, &TreeView::fontRoleChanged);
 
@@ -1099,17 +1160,20 @@ TEST_F(TreeViewTest, FontRole) {
 // Tree-specific
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, IndentationDefault) {
+TEST_F(TreeViewTest, IndentationDefault)
+{
     TreeView* tv = new TreeView(window);
     EXPECT_EQ(tv->indentation(), 16);
 }
 
-TEST_F(TreeViewTest, RootIsDecoratedOff) {
+TEST_F(TreeViewTest, RootIsDecoratedOff)
+{
     TreeView* tv = new TreeView(window);
     EXPECT_FALSE(tv->rootIsDecorated());
 }
 
-TEST_F(TreeViewTest, HeaderHiddenByDefault) {
+TEST_F(TreeViewTest, HeaderHiddenByDefault)
+{
     TreeView* tv = new TreeView(window);
     EXPECT_TRUE(tv->isHeaderHidden());
 }
@@ -1118,16 +1182,18 @@ TEST_F(TreeViewTest, HeaderHiddenByDefault) {
 // Fluent Scroll Bar
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, FluentScrollBarExists) {
+TEST_F(TreeViewTest, FluentScrollBarExists)
+{
     TreeView* tv = new TreeView(window);
     EXPECT_NE(tv->verticalFluentScrollBar(), nullptr);
     EXPECT_NE(tv->horizontalFluentScrollBar(), nullptr);
 }
 
-TEST_F(TreeViewTest, FluentScrollBarHiddenWhenShort) {
+TEST_F(TreeViewTest, FluentScrollBarHiddenWhenShort)
+{
     TreeView* tv = new TreeView(window);
     tv->setFixedSize(300, 400);
-    attachSampleModel(tv);  // only 3 top-level items, should fit
+    attachSampleModel(tv); // only 3 top-level items, should fit
 
     showOffscreen(window);
 
@@ -1135,9 +1201,10 @@ TEST_F(TreeViewTest, FluentScrollBarHiddenWhenShort) {
     EXPECT_FALSE(tv->verticalFluentScrollBar()->isVisible());
 }
 
-TEST_F(TreeViewTest, FluentScrollBarVisibleWhenTall) {
+TEST_F(TreeViewTest, FluentScrollBarVisibleWhenTall)
+{
     TreeView* tv = new TreeView(window);
-    tv->setFixedSize(300, 60);  // very small → will need scrolling
+    tv->setFixedSize(300, 60); // very small → will need scrolling
 
     auto* model = new QStandardItemModel(tv);
     for (int i = 0; i < 20; ++i) {
@@ -1156,7 +1223,8 @@ TEST_F(TreeViewTest, FluentScrollBarVisibleWhenTall) {
 // itemClicked signal
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, ItemClickedSignalEmitted) {
+TEST_F(TreeViewTest, ItemClickedSignalEmitted)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(300, 400);
@@ -1177,7 +1245,8 @@ TEST_F(TreeViewTest, ItemClickedSignalEmitted) {
     EXPECT_EQ(clickedIdx, idx);
 }
 
-TEST_F(TreeViewTest, ItemPressedSignalEmittedOnMousePress) {
+TEST_F(TreeViewTest, ItemPressedSignalEmittedOnMousePress)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(300, 400);
@@ -1204,7 +1273,8 @@ TEST_F(TreeViewTest, ItemPressedSignalEmittedOnMousePress) {
 // Chevron-only expand & checkbox click
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, ClickRowBodyDoesNotExpand) {
+TEST_F(TreeViewTest, ClickRowBodyDoesNotExpand)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(350, 400);
@@ -1221,7 +1291,8 @@ TEST_F(TreeViewTest, ClickRowBodyDoesNotExpand) {
     EXPECT_FALSE(tv->isExpanded(workIdx));
 }
 
-TEST_F(TreeViewTest, ClickChevronAreaExpands) {
+TEST_F(TreeViewTest, ClickChevronAreaExpands)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(350, 400);
@@ -1246,7 +1317,8 @@ TEST_F(TreeViewTest, ClickChevronAreaExpands) {
     EXPECT_FALSE(tv->isExpanded(workIdx));
 }
 
-TEST_F(TreeViewTest, CheckBoxClickTogglesState) {
+TEST_F(TreeViewTest, CheckBoxClickTogglesState)
+{
     TreeView* tv = new TreeView(window);
     auto* model = createCheckableTreeModel(tv);
     tv->setModel(model);
@@ -1273,7 +1345,8 @@ TEST_F(TreeViewTest, CheckBoxClickTogglesState) {
     EXPECT_EQ(model->item(2)->checkState(), Qt::Unchecked);
 }
 
-TEST_F(TreeViewTest, ParentCheckCascadesToChildren) {
+TEST_F(TreeViewTest, ParentCheckCascadesToChildren)
+{
     TreeView* tv = new TreeView(window);
     auto* model = createCheckableTreeModel(tv);
     tv->setModel(model);
@@ -1305,7 +1378,8 @@ TEST_F(TreeViewTest, ParentCheckCascadesToChildren) {
     EXPECT_EQ(model->item(0)->child(1)->checkState(), Qt::Unchecked);
 }
 
-TEST_F(TreeViewTest, ChildCheckUpdatesParentTriState) {
+TEST_F(TreeViewTest, ChildCheckUpdatesParentTriState)
+{
     TreeView* tv = new TreeView(window);
     auto* model = createCheckableTreeModel(tv);
     tv->setModel(model);
@@ -1336,7 +1410,8 @@ TEST_F(TreeViewTest, ChildCheckUpdatesParentTriState) {
     EXPECT_EQ(personal->checkState(), Qt::Checked);
 }
 
-TEST_F(TreeViewTest, DeepCascadeGrandchildren) {
+TEST_F(TreeViewTest, DeepCascadeGrandchildren)
+{
     TreeView* tv = new TreeView(window);
     auto* model = createCheckableTreeModel(tv);
     tv->setModel(model);
@@ -1368,7 +1443,8 @@ TEST_F(TreeViewTest, DeepCascadeGrandchildren) {
     EXPECT_EQ(remodel->child(1)->checkState(), Qt::Checked);
 }
 
-TEST_F(TreeViewTest, ChevronRotationApi) {
+TEST_F(TreeViewTest, ChevronRotationApi)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(300, 400);
@@ -1392,12 +1468,14 @@ TEST_F(TreeViewTest, ChevronRotationApi) {
 // Drag reorder (file-manager style)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, DefaultCanReorderItems) {
+TEST_F(TreeViewTest, DefaultCanReorderItems)
+{
     TreeView* tv = new TreeView(window);
     EXPECT_FALSE(tv->canReorderItems());
 }
 
-TEST_F(TreeViewTest, SetCanReorderItems) {
+TEST_F(TreeViewTest, SetCanReorderItems)
+{
     TreeView* tv = new TreeView(window);
     QSignalSpy spy(tv, &TreeView::canReorderItemsChanged);
     tv->setCanReorderItems(true);
@@ -1405,7 +1483,8 @@ TEST_F(TreeViewTest, SetCanReorderItems) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(TreeViewTest, CanReorderItemsSignalNotDuplicate) {
+TEST_F(TreeViewTest, CanReorderItemsSignalNotDuplicate)
+{
     TreeView* tv = new TreeView(window);
     QSignalSpy spy(tv, &TreeView::canReorderItemsChanged);
     tv->setCanReorderItems(true);
@@ -1413,7 +1492,8 @@ TEST_F(TreeViewTest, CanReorderItemsSignalNotDuplicate) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(TreeViewTest, ScrollChainingPropertyControlsBoundaryWheel) {
+TEST_F(TreeViewTest, ScrollChainingPropertyControlsBoundaryWheel)
+{
     auto* tv = new TreeView(window);
     tv->setGeometry(0, 0, 260, 140);
     auto* model = new QStandardItemModel(tv);
@@ -1450,7 +1530,8 @@ TEST_F(TreeViewTest, ScrollChainingPropertyControlsBoundaryWheel) {
     EXPECT_TRUE(containedWheel.isAccepted());
 }
 
-TEST_F(TreeViewTest, WheelPassesThroughWhenContentFits) {
+TEST_F(TreeViewTest, WheelPassesThroughWhenContentFits)
+{
     auto* tv = new TreeView(window);
     tv->setGeometry(0, 0, 300, 220);
     auto* model = new QStandardItemModel(tv);
@@ -1471,7 +1552,8 @@ TEST_F(TreeViewTest, WheelPassesThroughWhenContentFits) {
     EXPECT_FALSE(wheel.isAccepted());
 }
 
-TEST_F(TreeViewTest, DragReorderTopLevelSiblings) {
+TEST_F(TreeViewTest, DragReorderTopLevelSiblings)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setCanReorderItems(true);
@@ -1491,7 +1573,8 @@ TEST_F(TreeViewTest, DragReorderTopLevelSiblings) {
     EXPECT_EQ(model->item(2)->text(), "Pictures");
 }
 
-TEST_F(TreeViewTest, DragReorderChildSiblings) {
+TEST_F(TreeViewTest, DragReorderChildSiblings)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setCanReorderItems(true);
@@ -1511,7 +1594,8 @@ TEST_F(TreeViewTest, DragReorderChildSiblings) {
     EXPECT_EQ(work->child(1)->text(), "XYZ Functional Spec");
 }
 
-TEST_F(TreeViewTest, DragReorderEmitsSignal) {
+TEST_F(TreeViewTest, DragReorderEmitsSignal)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setCanReorderItems(true);
@@ -1533,14 +1617,14 @@ TEST_F(TreeViewTest, DragReorderEmitsSignal) {
     QTest::mousePress(tv->viewport(), Qt::LeftButton, Qt::NoModifier, start);
     // Move past drag distance
     QPoint moved(start.x(), start.y() + QApplication::startDragDistance() + 5);
-    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved),
-                           Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton,
+                           Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent1);
     QApplication::processEvents();
 
     // Move to target
-    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end),
-                           Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end), Qt::LeftButton,
+                           Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent2);
     QApplication::processEvents();
 
@@ -1555,7 +1639,8 @@ TEST_F(TreeViewTest, DragReorderEmitsSignal) {
     EXPECT_EQ(model->item(2)->text(), "Pictures");
 }
 
-TEST_F(TreeViewTest, DragDisabledDoesNotReorder) {
+TEST_F(TreeViewTest, DragDisabledDoesNotReorder)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setCanReorderItems(false);
@@ -1572,8 +1657,8 @@ TEST_F(TreeViewTest, DragDisabledDoesNotReorder) {
 
     QTest::mousePress(tv->viewport(), Qt::LeftButton, Qt::NoModifier, start);
     QPoint moved(start.x(), start.y() + QApplication::startDragDistance() + 5);
-    QMouseEvent moveEvent(QEvent::MouseMove, QPointF(moved), QPointF(moved),
-                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton,
+                          Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent);
     QApplication::processEvents();
     QTest::mouseRelease(tv->viewport(), Qt::LeftButton, Qt::NoModifier, end);
@@ -1585,7 +1670,8 @@ TEST_F(TreeViewTest, DragDisabledDoesNotReorder) {
     EXPECT_EQ(model->item(2)->text(), "Pictures");
 }
 
-TEST_F(TreeViewTest, DragPreservesChildHierarchy) {
+TEST_F(TreeViewTest, DragPreservesChildHierarchy)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setCanReorderItems(true);
@@ -1605,7 +1691,8 @@ TEST_F(TreeViewTest, DragPreservesChildHierarchy) {
     EXPECT_EQ(work->child(1)->text(), "Feature Schedule");
 }
 
-TEST_F(TreeViewTest, DragDropOntoFolder) {
+TEST_F(TreeViewTest, DragDropOntoFolder)
+{
     // File-manager style: drag an item onto a folder (item with children)
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
@@ -1630,12 +1717,12 @@ TEST_F(TreeViewTest, DragDropOntoFolder) {
 
     QTest::mousePress(tv->viewport(), Qt::LeftButton, Qt::NoModifier, start);
     QPoint moved(start.x(), start.y() - QApplication::startDragDistance() - 5);
-    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved),
-                           Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton,
+                           Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent1);
     QApplication::processEvents();
-    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end),
-                           Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end), Qt::LeftButton,
+                           Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent2);
     QApplication::processEvents();
     QTest::mouseRelease(tv->viewport(), Qt::LeftButton, Qt::NoModifier, end);
@@ -1647,7 +1734,8 @@ TEST_F(TreeViewTest, DragDropOntoFolder) {
     EXPECT_EQ(work->child(work->rowCount() - 1)->text(), "Pictures");
 }
 
-TEST_F(TreeViewTest, DragCrossParentBetween) {
+TEST_F(TreeViewTest, DragCrossParentBetween)
+{
     // File-manager style: drag child item to root level (between root items)
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
@@ -1672,24 +1760,25 @@ TEST_F(TreeViewTest, DragCrossParentBetween) {
 
     QTest::mousePress(tv->viewport(), Qt::LeftButton, Qt::NoModifier, start);
     QPoint moved(start.x(), start.y() + QApplication::startDragDistance() + 5);
-    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved),
-                           Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton,
+                           Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent1);
     QApplication::processEvents();
-    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end),
-                           Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end), Qt::LeftButton,
+                           Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent2);
     QApplication::processEvents();
     QTest::mouseRelease(tv->viewport(), Qt::LeftButton, Qt::NoModifier, end);
     QApplication::processEvents();
 
     // "XYZ Functional Spec" removed from Work Documents, inserted at root level
-    EXPECT_EQ(work->rowCount(), 1);    // only 1 child left
-    EXPECT_EQ(model->rowCount(), 4);   // 4 root items now
+    EXPECT_EQ(work->rowCount(), 1);  // only 1 child left
+    EXPECT_EQ(model->rowCount(), 4); // 4 root items now
     EXPECT_EQ(model->item(1)->text(), "XYZ Functional Spec");
 }
 
-TEST_F(TreeViewTest, DragCannotDropAncestorOntoDescendant) {
+TEST_F(TreeViewTest, DragCannotDropAncestorOntoDescendant)
+{
     // Cycle prevention: dragging a parent onto its own child should be ignored
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
@@ -1712,12 +1801,12 @@ TEST_F(TreeViewTest, DragCannotDropAncestorOntoDescendant) {
 
     QTest::mousePress(tv->viewport(), Qt::LeftButton, Qt::NoModifier, start);
     QPoint moved(start.x(), start.y() + QApplication::startDragDistance() + 5);
-    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved),
-                           Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton,
+                           Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent1);
     QApplication::processEvents();
-    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end),
-                           Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end), Qt::LeftButton,
+                           Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent2);
     QApplication::processEvents();
     QTest::mouseRelease(tv->viewport(), Qt::LeftButton, Qt::NoModifier, end);
@@ -1733,7 +1822,8 @@ TEST_F(TreeViewTest, DragCannotDropAncestorOntoDescendant) {
 // Theme
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, ThemeSwitchDoesNotCrash) {
+TEST_F(TreeViewTest, ThemeSwitchDoesNotCrash)
+{
     TreeView* tv = new TreeView(window);
     attachSampleModel(tv);
 
@@ -1752,7 +1842,8 @@ TEST_F(TreeViewTest, ThemeSwitchDoesNotCrash) {
 // Dynamic model changes
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, AddRemoveTopLevelItems) {
+TEST_F(TreeViewTest, AddRemoveTopLevelItems)
+{
     TreeView* tv = new TreeView(window);
     auto* model = new QStandardItemModel(tv);
     tv->setModel(model);
@@ -1771,7 +1862,8 @@ TEST_F(TreeViewTest, AddRemoveTopLevelItems) {
     EXPECT_EQ(model->item(0)->text(), "Root 2");
 }
 
-TEST_F(TreeViewTest, AddChildrenDynamically) {
+TEST_F(TreeViewTest, AddChildrenDynamically)
+{
     TreeView* tv = new TreeView(window);
     auto* model = new QStandardItemModel(tv);
     tv->setModel(model);
@@ -1794,7 +1886,8 @@ TEST_F(TreeViewTest, AddChildrenDynamically) {
 // Delegate
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, DelegateSizeHint) {
+TEST_F(TreeViewTest, DelegateSizeHint)
+{
     TreeView* tv = new TreeView(window);
     attachSampleModel(tv);
 
@@ -1803,7 +1896,8 @@ TEST_F(TreeViewTest, DelegateSizeHint) {
     EXPECT_EQ(delegate->rowHeight(), defaultTreeRowHeight());
 }
 
-TEST_F(TreeViewTest, DelegateCustomRowHeight) {
+TEST_F(TreeViewTest, DelegateCustomRowHeight)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
 
@@ -1817,7 +1911,8 @@ TEST_F(TreeViewTest, DelegateCustomRowHeight) {
     EXPECT_EQ(hint.height(), 48);
 }
 
-TEST_F(TreeViewTest, DelegateConsumesIndicatorMotionWithoutChangingRowMetrics) {
+TEST_F(TreeViewTest, DelegateConsumesIndicatorMotionWithoutChangingRowMetrics)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     auto* delegate = qobject_cast<treeview_test::FluentTreeItemDelegate*>(tv->itemDelegate());
@@ -1850,7 +1945,8 @@ TEST_F(TreeViewTest, DelegateConsumesIndicatorMotionWithoutChangingRowMetrics) {
     EXPECT_DOUBLE_EQ(tv->selectedIndicatorProgress(personal), 1.0);
 }
 
-TEST_F(TreeViewTest, DelegateSkipsAccentBarWhenTreeViewOverlayIndicatorVisible) {
+TEST_F(TreeViewTest, DelegateSkipsAccentBarWhenTreeViewOverlayIndicatorVisible)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     auto* delegate = qobject_cast<treeview_test::FluentTreeItemDelegate*>(tv->itemDelegate());
@@ -1887,7 +1983,8 @@ TEST_F(TreeViewTest, DelegateSkipsAccentBarWhenTreeViewOverlayIndicatorVisible) 
     EXPECT_FALSE(hasAccentPixelInImage(renderDelegateRow(), indicatorProbe, accent));
 }
 
-TEST_F(TreeViewTest, DelegateSelectedIndicatorFollowsHierarchicalRowLocalPosition) {
+TEST_F(TreeViewTest, DelegateSelectedIndicatorFollowsHierarchicalRowLocalPosition)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setIndicatorMotionAnimationEnabled(false);
@@ -1916,7 +2013,8 @@ TEST_F(TreeViewTest, DelegateSelectedIndicatorFollowsHierarchicalRowLocalPositio
     EXPECT_GT(childAccentX, parentAccentX);
 }
 
-TEST_F(TreeViewTest, SelectedIndicatorAnchorsToTargetDuringHierarchyTransitions) {
+TEST_F(TreeViewTest, SelectedIndicatorAnchorsToTargetDuringHierarchyTransitions)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(350, 400);
@@ -1958,7 +2056,8 @@ TEST_F(TreeViewTest, SelectedIndicatorAnchorsToTargetDuringHierarchyTransitions)
     EXPECT_NEAR(outwardMid.height(), outwardTarget.height(), 0.01);
 }
 
-TEST_F(TreeViewTest, CollapsingParentAfterChildToParentSelectionKeepsParentIndicator) {
+TEST_F(TreeViewTest, CollapsingParentAfterChildToParentSelectionKeepsParentIndicator)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(350, 400);
@@ -1994,7 +2093,8 @@ TEST_F(TreeViewTest, CollapsingParentAfterChildToParentSelectionKeepsParentIndic
 // paint / render (no crash)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, PaintWithExpandedItems) {
+TEST_F(TreeViewTest, PaintWithExpandedItems)
+{
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
     tv->setFixedSize(300, 400);
@@ -2010,7 +2110,8 @@ TEST_F(TreeViewTest, PaintWithExpandedItems) {
     EXPECT_TRUE(true);
 }
 
-TEST_F(TreeViewTest, PaintEmptyWithPlaceholder) {
+TEST_F(TreeViewTest, PaintEmptyWithPlaceholder)
+{
     TreeView* tv = new TreeView(window);
     tv->setPlaceholderText("Empty tree");
     tv->setFixedSize(300, 400);
@@ -2024,14 +2125,16 @@ TEST_F(TreeViewTest, PaintEmptyWithPlaceholder) {
 // CheckBox delegate
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, CheckBoxVisibleDefault) {
+TEST_F(TreeViewTest, CheckBoxVisibleDefault)
+{
     TreeView* tv = new TreeView(window);
     attachSampleModel(tv);
     auto* d = qobject_cast<treeview_test::FluentTreeItemDelegate*>(tv->itemDelegate());
     EXPECT_FALSE(d->checkBoxVisible());
 }
 
-TEST_F(TreeViewTest, CheckBoxVisibleToggle) {
+TEST_F(TreeViewTest, CheckBoxVisibleToggle)
+{
     TreeView* tv = new TreeView(window);
     attachSampleModel(tv);
     auto* d = qobject_cast<treeview_test::FluentTreeItemDelegate*>(tv->itemDelegate());
@@ -2041,7 +2144,8 @@ TEST_F(TreeViewTest, CheckBoxVisibleToggle) {
     EXPECT_FALSE(d->checkBoxVisible());
 }
 
-TEST_F(TreeViewTest, CheckableModelPaintNoCrash) {
+TEST_F(TreeViewTest, CheckableModelPaintNoCrash)
+{
     TreeView* tv = new TreeView(window);
     auto* model = createCheckableTreeModel(tv);
     tv->setModel(model);
@@ -2054,7 +2158,8 @@ TEST_F(TreeViewTest, CheckableModelPaintNoCrash) {
     EXPECT_TRUE(true);
 }
 
-TEST_F(TreeViewTest, CheckStateTracksMultiSelectionChanges) {
+TEST_F(TreeViewTest, CheckStateTracksMultiSelectionChanges)
+{
     TreeView* tv = new TreeView(window);
     auto* model = createCheckableTreeModel(tv);
     tv->setModel(model);
@@ -2104,7 +2209,8 @@ TEST_F(TreeViewTest, CheckStateTracksMultiSelectionChanges) {
     EXPECT_EQ(model->item(0)->child(1)->checkState(), Qt::Unchecked);
 }
 
-TEST_F(TreeViewTest, CheckBoxClickSyncsMultiSelection) {
+TEST_F(TreeViewTest, CheckBoxClickSyncsMultiSelection)
+{
     TreeView* tv = new TreeView(window);
     auto* model = createCheckableTreeModel(tv);
     tv->setModel(model);
@@ -2128,7 +2234,8 @@ TEST_F(TreeViewTest, CheckBoxClickSyncsMultiSelection) {
     EXPECT_EQ(model->item(2)->checkState(), Qt::Unchecked);
 }
 
-TEST_F(TreeViewTest, CheckBoxParentAndChildClicksKeepTriStateSelection) {
+TEST_F(TreeViewTest, CheckBoxParentAndChildClicksKeepTriStateSelection)
+{
     TreeView* tv = new TreeView(window);
     auto* model = createCheckableTreeModel(tv);
     tv->setModel(model);
@@ -2181,7 +2288,8 @@ TEST_F(TreeViewTest, CheckBoxParentAndChildClicksKeepTriStateSelection) {
     EXPECT_EQ(model->item(0)->child(1)->checkState(), Qt::Unchecked);
 }
 
-TEST_F(TreeViewTest, CheckableSelectionDoesNotPaintIndicator) {
+TEST_F(TreeViewTest, CheckableSelectionDoesNotPaintIndicator)
+{
     TreeView* tv = new TreeView(window);
     auto* model = createCheckableTreeModel(tv);
     tv->setModel(model);
@@ -2205,7 +2313,8 @@ TEST_F(TreeViewTest, CheckableSelectionDoesNotPaintIndicator) {
     EXPECT_TRUE(hasAccentPixelInRect(tv->viewport(), checkboxArea, accent));
 }
 
-TEST_F(TreeViewTest, CheckStateRoleRead) {
+TEST_F(TreeViewTest, CheckStateRoleRead)
+{
     auto* model = createCheckableTreeModel(nullptr);
     // Work Documents → PartiallyChecked
     EXPECT_EQ(model->item(0)->checkState(), Qt::PartiallyChecked);
@@ -2220,7 +2329,8 @@ TEST_F(TreeViewTest, CheckStateRoleRead) {
 // Icon glyph delegate
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, IconGlyphRoleRead) {
+TEST_F(TreeViewTest, IconGlyphRoleRead)
+{
     auto* model = createIconTreeModel(nullptr);
     // Work Documents → Folder icon
     EXPECT_EQ(model->item(0)->data(treeview_test::IconGlyphRole).toString(),
@@ -2231,7 +2341,8 @@ TEST_F(TreeViewTest, IconGlyphRoleRead) {
     delete model;
 }
 
-TEST_F(TreeViewTest, IconModelPaintNoCrash) {
+TEST_F(TreeViewTest, IconModelPaintNoCrash)
+{
     TreeView* tv = new TreeView(window);
     auto* model = createIconTreeModel(tv);
     tv->setModel(model);
@@ -2247,7 +2358,8 @@ TEST_F(TreeViewTest, IconModelPaintNoCrash) {
 // VisualCheck
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, VisualCheck) {
+TEST_F(TreeViewTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -2267,15 +2379,16 @@ TEST_F(TreeViewTest, VisualCheck) {
     auto* fluentVBar = new fluent::scrolling::ScrollBar(Qt::Vertical, scrollArea);
     fluentVBar->setObjectName("fluentScrollAreaVBar");
     auto* nativeVBar = scrollArea->verticalScrollBar();
-    QObject::connect(nativeVBar,  &QScrollBar::valueChanged, fluentVBar, &QScrollBar::setValue);
-    QObject::connect(fluentVBar, &QScrollBar::valueChanged, nativeVBar,  &QScrollBar::setValue);
+    QObject::connect(nativeVBar, &QScrollBar::valueChanged, fluentVBar, &QScrollBar::setValue);
+    QObject::connect(fluentVBar, &QScrollBar::valueChanged, nativeVBar, &QScrollBar::setValue);
 
     auto syncFluentBar = [scrollArea, fluentVBar, nativeVBar]() {
         fluentVBar->setRange(nativeVBar->minimum(), nativeVBar->maximum());
         fluentVBar->setPageStep(nativeVBar->pageStep());
         const bool need = nativeVBar->maximum() > nativeVBar->minimum();
         fluentVBar->setVisible(need);
-        if (!need) return;
+        if (!need)
+            return;
         const QRect r = scrollArea->rect();
         const int x = r.right() - fluentVBar->thickness() + 1;
         fluentVBar->setGeometry(x, r.top() + 2, fluentVBar->thickness(), r.height() - 4);
@@ -2375,21 +2488,21 @@ TEST_F(TreeViewTest, VisualCheck) {
         auto* model = createSampleTreeModel(tv1);
         tv1->setModel(model);
         attachFluentDelegate(tv1);
-        tv1->expand(model->index(0, 0));  // Work Documents
-        tv1->expand(model->index(1, 0));  // Personal Documents
-        tv1->expand(model->item(1)->child(0)->index()); // Home Remodel
+        tv1->expand(model->index(0, 0));                         // Work Documents
+        tv1->expand(model->index(1, 0));                         // Personal Documents
+        tv1->expand(model->item(1)->child(0)->index());          // Home Remodel
         tv1->setSelectedItem(model->item(0)->child(0)->index()); // XYZ Functional Spec
     }
     tv1->setFixedHeight(300);
-    tv1->anchors()->top   = {motionTree, Edge::Bottom,  16};
-    tv1->anchors()->left  = {content, Edge::Left, 20};
+    tv1->anchors()->top = {motionTree, Edge::Bottom, 16};
+    tv1->anchors()->left = {content, Edge::Left, 20};
     tv1->anchors()->right = {content, Edge::Right, -20};
     innerLayout->addWidget(tv1);
 
     // ── TreeView 2: Multi-selection with CheckBox ────────────────────────
     Label* header2 = new Label("A TreeView with Multi-selection enabled.", content);
     header2->setFluentTypography(Typography::FontRole::BodyStrong);
-    header2->anchors()->top  = {tv1, Edge::Bottom, 16};
+    header2->anchors()->top = {tv1, Edge::Bottom, 16};
     header2->anchors()->left = {content, Edge::Left, 20};
     innerLayout->addWidget(header2);
 
@@ -2403,21 +2516,21 @@ TEST_F(TreeViewTest, VisualCheck) {
             static_cast<fluent::FluentElement*>(tv2), defaultTreeRowHeight(), tv2, tv2);
         d->setCheckBoxVisible(true);
         tv2->setItemDelegate(d);
-        tv2->expand(model->index(0, 0));  // Work Documents
-        tv2->expand(model->index(1, 0));  // Personal Documents
+        tv2->expand(model->index(0, 0));                // Work Documents
+        tv2->expand(model->index(1, 0));                // Personal Documents
         tv2->expand(model->item(1)->child(0)->index()); // Home Remodel
         selectCheckedRows(tv2);
     }
     tv2->setFixedHeight(300);
-    tv2->anchors()->top   = {header2, Edge::Bottom, 8};
-    tv2->anchors()->left  = {content, Edge::Left, 20};
+    tv2->anchors()->top = {header2, Edge::Bottom, 8};
+    tv2->anchors()->left = {content, Edge::Left, 20};
     tv2->anchors()->right = {content, Edge::Right, -20};
     innerLayout->addWidget(tv2);
 
     // ── TreeView 3: DataBinding using ItemSource ─────────────────────────
     Label* header3 = new Label("A TreeView with DataBinding Using ItemSource.", content);
     header3->setFluentTypography(Typography::FontRole::BodyStrong);
-    header3->anchors()->top  = {tv2, Edge::Bottom, 16};
+    header3->anchors()->top = {tv2, Edge::Bottom, 16};
     header3->anchors()->left = {content, Edge::Left, 20};
     innerLayout->addWidget(header3);
 
@@ -2453,18 +2566,18 @@ TEST_F(TreeViewTest, VisualCheck) {
 
         tv3->setModel(model);
         attachFluentDelegate(tv3);
-        tv3->expand(model->index(1, 0));  // Documents
+        tv3->expand(model->index(1, 0)); // Documents
     }
     tv3->setFixedHeight(280);
-    tv3->anchors()->top   = {header3, Edge::Bottom, 8};
-    tv3->anchors()->left  = {content, Edge::Left, 20};
+    tv3->anchors()->top = {header3, Edge::Bottom, 8};
+    tv3->anchors()->left = {content, Edge::Left, 20};
     tv3->anchors()->right = {content, Edge::Right, -20};
     innerLayout->addWidget(tv3);
 
     // ── TreeView 4: ItemTemplateSelector (folder/document icons) ─────────
     Label* header4 = new Label("A TreeView with ItemTemplateSelector.", content);
     header4->setFluentTypography(Typography::FontRole::BodyStrong);
-    header4->anchors()->top  = {tv3, Edge::Bottom, 16};
+    header4->anchors()->top = {tv3, Edge::Bottom, 16};
     header4->anchors()->left = {content, Edge::Left, 20};
     innerLayout->addWidget(header4);
 
@@ -2474,13 +2587,13 @@ TEST_F(TreeViewTest, VisualCheck) {
         auto* model = createIconTreeModel(tv4);
         tv4->setModel(model);
         attachFluentDelegate(tv4);
-        tv4->expand(model->index(0, 0));  // Work Documents
-        tv4->expand(model->index(1, 0));  // Personal Documents
+        tv4->expand(model->index(0, 0));                // Work Documents
+        tv4->expand(model->index(1, 0));                // Personal Documents
         tv4->expand(model->item(1)->child(0)->index()); // Home Remodel
     }
     tv4->setFixedHeight(300);
-    tv4->anchors()->top   = {header4, Edge::Bottom, 8};
-    tv4->anchors()->left  = {content, Edge::Left, 20};
+    tv4->anchors()->top = {header4, Edge::Bottom, 8};
+    tv4->anchors()->left = {content, Edge::Left, 20};
     tv4->anchors()->right = {content, Edge::Right, -20};
     innerLayout->addWidget(tv4);
 
@@ -2488,7 +2601,7 @@ TEST_F(TreeViewTest, VisualCheck) {
     Button* themeBtn = new Button("Switch Theme", content);
     themeBtn->setFluentStyle(Button::Accent);
     themeBtn->setFixedSize(120, 32);
-    themeBtn->anchors()->top  = {tv4, Edge::Bottom, 24};
+    themeBtn->anchors()->top = {tv4, Edge::Bottom, 24};
     themeBtn->anchors()->right = {content, Edge::Right, -20};
     innerLayout->addWidget(themeBtn);
 
@@ -2496,9 +2609,10 @@ TEST_F(TreeViewTest, VisualCheck) {
     content->setMinimumHeight(1660);
 
     QObject::connect(themeBtn, &Button::clicked, [scrollArea, content]() {
-        fluent::FluentElement::setTheme(
-            fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
         content->onThemeUpdated();
         scrollArea->setStyleSheet(content->styleSheet());
     });

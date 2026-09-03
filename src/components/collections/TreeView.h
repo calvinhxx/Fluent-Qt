@@ -19,7 +19,10 @@ class QVariantAnimation;
 class QWheelEvent;
 class QTimer;
 
-namespace fluent::scrolling { class ScrollBar; class OverscrollController; }
+namespace fluent::scrolling {
+class ScrollBar;
+class OverscrollController;
+} // namespace fluent::scrolling
 
 namespace fluent::collections {
 
@@ -38,19 +41,10 @@ class TreeView : public QTreeView, public FluentElement, public QMLPlus {
 public:
     using SelectionMode = ::fluent::collections::SelectionMode;
 
-    enum class IndicatorVerticalDirection {
-        None,
-        Up,
-        Down
-    };
+    enum class IndicatorVerticalDirection { None, Up, Down };
     Q_ENUM(IndicatorVerticalDirection)
 
-    enum class IndicatorHierarchyTransition {
-        None,
-        SameLevel,
-        Inward,
-        Outward
-    };
+    enum class IndicatorHierarchyTransition { None, SameLevel, Inward, Outward };
     Q_ENUM(IndicatorHierarchyTransition)
 
     /**
@@ -68,7 +62,8 @@ public:
      * @brief Selection mode used by the collection view.
      * zh_CN: 集合视图使用的选择模式。
      */
-    Q_PROPERTY(SelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY selectionModeChanged)
+    Q_PROPERTY(SelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY
+                   selectionModeChanged)
     /**
      * @brief Fluent typography role used for text rendering.
      * zh_CN: 文本绘制使用的 Fluent 排版角色。
@@ -83,38 +78,45 @@ public:
      * @brief Animated progress of the tree selection indicator.
      * zh_CN: 树选中指示器的动画进度。
      */
-    Q_PROPERTY(qreal indicatorMotionProgress READ indicatorMotionProgress NOTIFY indicatorMotionProgressChanged)
+    Q_PROPERTY(qreal indicatorMotionProgress READ indicatorMotionProgress NOTIFY
+                   indicatorMotionProgressChanged)
     /**
      * @brief Vertical direction used by tree indicator motion.
      * zh_CN: 树指示器动效使用的垂直方向。
      */
-    Q_PROPERTY(IndicatorVerticalDirection indicatorMotionDirection READ indicatorMotionDirection NOTIFY indicatorMotionDirectionChanged)
+    Q_PROPERTY(IndicatorVerticalDirection indicatorMotionDirection READ indicatorMotionDirection
+                   NOTIFY indicatorMotionDirectionChanged)
     /**
      * @brief Hierarchy transition mode used by tree indicator motion.
      * zh_CN: 树指示器动效使用的层级转场模式。
      */
-    Q_PROPERTY(IndicatorHierarchyTransition indicatorHierarchyTransition READ indicatorHierarchyTransition NOTIFY indicatorHierarchyTransitionChanged)
+    Q_PROPERTY(IndicatorHierarchyTransition indicatorHierarchyTransition READ
+                   indicatorHierarchyTransition NOTIFY indicatorHierarchyTransitionChanged)
     /**
      * @brief Whether tree indicator motion animation is enabled.
      * zh_CN: 是否启用树指示器动效动画。
      */
-    Q_PROPERTY(bool indicatorMotionAnimationEnabled READ isIndicatorMotionAnimationEnabled WRITE setIndicatorMotionAnimationEnabled NOTIFY indicatorMotionAnimationEnabledChanged)
+    Q_PROPERTY(bool indicatorMotionAnimationEnabled READ isIndicatorMotionAnimationEnabled WRITE
+                   setIndicatorMotionAnimationEnabled NOTIFY indicatorMotionAnimationEnabledChanged)
     /**
      * @brief Whether the Fluent horizontal scroll overlay is allowed to appear.
      * zh_CN: 控制 Fluent 水平滚动条覆盖层是否允许显示。
      */
-    Q_PROPERTY(bool horizontalFluentScrollBarEnabled READ isHorizontalFluentScrollBarEnabled WRITE setHorizontalFluentScrollBarEnabled)
+    Q_PROPERTY(bool horizontalFluentScrollBarEnabled READ isHorizontalFluentScrollBarEnabled WRITE
+                   setHorizontalFluentScrollBarEnabled)
 
     /**
      * @brief Whether the control frame border is painted.
      * zh_CN: 是否绘制控件外框边线。
      */
-    Q_PROPERTY(bool borderVisible READ borderVisible WRITE setBorderVisible NOTIFY borderVisibleChanged)
+    Q_PROPERTY(
+        bool borderVisible READ borderVisible WRITE setBorderVisible NOTIFY borderVisibleChanged)
     /**
      * @brief Whether the control background is painted.
      * zh_CN: 是否绘制控件背景。
      */
-    Q_PROPERTY(bool backgroundVisible READ backgroundVisible WRITE setBackgroundVisible NOTIFY backgroundVisibleChanged)
+    Q_PROPERTY(bool backgroundVisible READ backgroundVisible WRITE setBackgroundVisible NOTIFY
+                   backgroundVisibleChanged)
     /**
      * @brief Convenience text displayed in the header area.
      * zh_CN: 显示在头部区域的便捷标题文本。
@@ -124,18 +126,21 @@ public:
      * @brief Text shown when the tree model has no rows to present.
      * zh_CN: 树形 model 没有可展示行时显示的占位文本。
      */
-    Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY placeholderTextChanged)
+    Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY
+                   placeholderTextChanged)
 
     /**
      * @brief Whether drag reordering is enabled.
      * zh_CN: 是否启用拖拽重排。
      */
-    Q_PROPERTY(bool canReorderItems READ canReorderItems WRITE setCanReorderItems NOTIFY canReorderItemsChanged)
+    Q_PROPERTY(bool canReorderItems READ canReorderItems WRITE setCanReorderItems NOTIFY
+                   canReorderItemsChanged)
     /**
      * @brief Whether boundary wheel input may continue to an enclosing scroller.
      * zh_CN: 边界滚轮输入是否允许继续传递给外层滚动容器。
      */
-    Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
+    Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE
+                   setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
     /**
      * @brief Whether the view shows an elastic overscroll/bounce at the scroll boundary.
      * Enabled by default; disable for chrome (e.g. a navigation pane) that should stop
@@ -143,7 +148,8 @@ public:
      * zh_CN: 滚动到边界时是否显示弹性回弹。默认开启；用于不希望回弹的 chrome（如导航窗格）时关闭，
      * 使其在边界干脆停住、反向滚动立即响应。
      */
-    Q_PROPERTY(bool overscrollEnabled READ isOverscrollEnabled WRITE setOverscrollEnabled NOTIFY overscrollEnabledChanged)
+    Q_PROPERTY(bool overscrollEnabled READ isOverscrollEnabled WRITE setOverscrollEnabled NOTIFY
+                   overscrollEnabledChanged)
 
     explicit TreeView(QWidget* parent = nullptr);
     ~TreeView() override;
@@ -199,8 +205,14 @@ public:
 
     // --- Selected indicator motion API ---
     qreal indicatorMotionProgress() const { return m_indicatorMotionProgress; }
-    IndicatorVerticalDirection indicatorMotionDirection() const { return m_indicatorMotionDirection; }
-    IndicatorHierarchyTransition indicatorHierarchyTransition() const { return m_indicatorHierarchyTransition; }
+    IndicatorVerticalDirection indicatorMotionDirection() const
+    {
+        return m_indicatorMotionDirection;
+    }
+    IndicatorHierarchyTransition indicatorHierarchyTransition() const
+    {
+        return m_indicatorHierarchyTransition;
+    }
     bool isIndicatorMotionAnimationEnabled() const { return m_indicatorMotionAnimationEnabled; }
     void setIndicatorMotionAnimationEnabled(bool enabled);
     qreal selectedIndicatorProgress(const QModelIndex& index) const;
@@ -285,8 +297,8 @@ signals:
     void canReorderItemsChanged();
     void scrollChainingEnabledChanged();
     void overscrollEnabledChanged();
-    void itemReordered(const QModelIndex& srcParent, int srcRow,
-                       const QModelIndex& dstParent, int dstRow);
+    void itemReordered(const QModelIndex& srcParent, int srcRow, const QModelIndex& dstParent,
+                       int dstRow);
     void indicatorMotionProgressChanged();
     void indicatorMotionDirectionChanged();
     void indicatorHierarchyTransitionChanged();
@@ -305,10 +317,13 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     void currentChanged(const QModelIndex& current, const QModelIndex& previous) override;
-    void selectionChanged(const QItemSelection& selected, const QItemSelection& deselected) override;
+    void selectionChanged(const QItemSelection& selected,
+                          const QItemSelection& deselected) override;
     int verticalOffset() const override;
-    void drawRow(QPainter* painter, const QStyleOptionViewItem& options, const QModelIndex& index) const override;
-    void drawBranches(QPainter* painter, const QRect& rect, const QModelIndex& index) const override;
+    void drawRow(QPainter* painter, const QStyleOptionViewItem& options,
+                 const QModelIndex& index) const override;
+    void drawBranches(QPainter* painter, const QRect& rect,
+                      const QModelIndex& index) const override;
 
     void onThemeUpdated() override;
 
@@ -327,8 +342,11 @@ private:
     void startIndicatorMotionAnimation(bool animated);
     bool isIndicatorEndpointUsable(const QModelIndex& index) const;
     int indicatorHierarchyDepth(const QModelIndex& index) const;
-    IndicatorVerticalDirection classifyIndicatorVerticalDirection(const QModelIndex& previous, const QModelIndex& current) const;
-    IndicatorHierarchyTransition classifyIndicatorHierarchyTransition(const QModelIndex& previous, const QModelIndex& current) const;
+    IndicatorVerticalDirection classifyIndicatorVerticalDirection(const QModelIndex& previous,
+                                                                  const QModelIndex& current) const;
+    IndicatorHierarchyTransition
+    classifyIndicatorHierarchyTransition(const QModelIndex& previous,
+                                         const QModelIndex& current) const;
     void setIndicatorMotionProgress(qreal progress);
     void setIndicatorMotionDirection(IndicatorVerticalDirection direction);
     void setIndicatorHierarchyTransition(IndicatorHierarchyTransition transition);
@@ -341,7 +359,8 @@ private:
     // need full viewport recomposition; opaque views keep the smaller motion band.
     // zh_CN: 隐藏背景时需要整块重组父级表面；不透明视图仍只重绘动画经过的窄带。
     QRect indicatorMotionDirtyRect() const;
-    void syncCheckStatesWithSelection(const QItemSelection& selected, const QItemSelection& deselected);
+    void syncCheckStatesWithSelection(const QItemSelection& selected,
+                                      const QItemSelection& deselected);
     bool shouldSyncCheckStateWithSelection(const QModelIndex& index) const;
     void applyCheckStateToSubtree(const QModelIndex& index, Qt::CheckState state);
     void updateAncestorCheckStates(const QModelIndex& index);
@@ -385,7 +404,8 @@ private:
     QVariantAnimation* m_indicatorMotionAnim = nullptr;
     qreal m_indicatorMotionProgress = 1.0;
     IndicatorVerticalDirection m_indicatorMotionDirection = IndicatorVerticalDirection::None;
-    IndicatorHierarchyTransition m_indicatorHierarchyTransition = IndicatorHierarchyTransition::None;
+    IndicatorHierarchyTransition m_indicatorHierarchyTransition =
+        IndicatorHierarchyTransition::None;
     bool m_indicatorMotionAnimationEnabled = true;
     bool m_syncingCheckStateWithSelection = false;
 
@@ -402,16 +422,16 @@ private:
     QPoint m_dragCurrentPos;
     QPixmap m_dragPixmap;
     DropMode m_dropMode = DropMode::None;
-    QPersistentModelIndex m_dropTargetParent;  // parent for Between, unused for OnItem
-    int m_dropTargetRow = -1;                  // row index for Between, -1 for OnItem
-    QPersistentModelIndex m_dropOnIndex;       // target item for OnItem (re-parent)
+    QPersistentModelIndex m_dropTargetParent; // parent for Between, unused for OnItem
+    int m_dropTargetRow = -1;                 // row index for Between, -1 for OnItem
+    QPersistentModelIndex m_dropOnIndex;      // target item for OnItem (re-parent)
 
     // --- Expand animation ---
     QVariantAnimation* m_expandRevealAnim = nullptr;
     QPersistentModelIndex m_animParent;
     bool m_animEnabled = true;
-    bool m_animExpanding = true;   // true=expand, false=collapse
-    qreal m_animSubtreeHeight = 0.0;       // pixel height of the animating subtree
+    bool m_animExpanding = true;            // true=expand, false=collapse
+    qreal m_animSubtreeHeight = 0.0;        // pixel height of the animating subtree
     bool m_pendingCollapseFinalize = false; // deferred collapse: actually collapse on finish
 
 public:
