@@ -142,6 +142,8 @@ void Slider::mouseReleaseEvent(QMouseEvent* event)
     }
     event->accept();
     m_isPressed = false;
+    // QAbstractSlider emits sliderReleased() when sliderDown transitions to false.
+    // zh_CN: sliderDown 切换为 false 时，QAbstractSlider 会发送 sliderReleased()。
     setSliderDown(false);
 
     // Animate Release
@@ -160,7 +162,6 @@ void Slider::mouseReleaseEvent(QMouseEvent* event)
 
     triggerAction(SliderMove);
     update();
-    emit sliderReleased();
 }
 
 void Slider::showToolTip()
