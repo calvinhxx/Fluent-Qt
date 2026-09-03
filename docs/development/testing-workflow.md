@@ -146,6 +146,15 @@ to the pushed remote's `main` ref, even when it is not the currently checked
 out branch. Both hooks are read-only and never format files. Fork workflows can
 set `FLUENTQT_FORMAT_BASE` to a different local base ref.
 
+Public-header and site changes must also keep the committed generated outputs
+current. Run these deterministic checks locally; the CI planning job repeats
+them before any pull request can merge, while Pages repeats them before deploy:
+
+```bash
+python3 tools/site/generate_localized_site.py --check
+python3 tools/site/generate_api_reference.py --check
+```
+
 ## Validation Tiers
 
 The public [CI workflow](../../.github/workflows/ci.yml) is an orchestration

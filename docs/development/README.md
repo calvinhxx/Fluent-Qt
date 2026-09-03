@@ -19,7 +19,7 @@ so a dated roadmap cannot be mistaken for current guidance.
 | Add or edit a Gallery sample | [App sample optimization](app-sample-optimization.md) | [Live Scene and native preview](gallery-preview-workflow.md), [AI-assisted GUI verification](gui-verification-workflow.md) |
 | Add a Gallery card image | [Gallery control images](gallery-control-images.md) | qrc registration and Gallery build |
 | Build the repository locally | [Build workflow](build-workflow.md) | The selected job count printed by the adaptive wrapper |
-| Prepare a commit or pull request | [Testing workflow: local static gate](testing-workflow.md#local-static-gate) | Staged and branch-relative formatting checks |
+| Prepare a commit or pull request | [Testing workflow: local static gate](testing-workflow.md#local-static-gate) | Staged formatting and generated-output freshness checks |
 | Write or update a test | [Testing workflow](testing-workflow.md) | [Qt component test conventions](qt-component-test-conventions.md) |
 | Diagnose behavior | [Logging workflow](logging-workflow.md) | Focused component tests |
 | Change Linux or WebAssembly support | [Linux](linux-workflow.md) or [WebAssembly](webassembly-workflow.md) | The matching preset and CI lane |

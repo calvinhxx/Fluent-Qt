@@ -79,9 +79,12 @@ also follow the [PySide6](bindings/pyside6/README.md) or
 
 Before requesting review, run
 `python3 tools/quality/check_cpp_format.py --changed-from origin/main` and
-`git diff --check`, describe what you tested, and call out any platform or
-surface you could not verify. Full cross-platform CI is expected on the pull
-request; contributors do not need every toolchain on one machine.
+`git diff --check`. When public headers or site inputs change, also run
+`python3 tools/site/generate_api_reference.py --check` and
+`python3 tools/site/generate_localized_site.py --check`. Describe what you
+tested and call out any platform or surface you could not verify. Full
+cross-platform CI is expected on the pull request; contributors do not need
+every toolchain on one machine.
 
 <!-- docs-nav:bottom:start -->
 ---

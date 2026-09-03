@@ -78,6 +78,19 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
     def test_repository_workflow_boundaries_are_valid(self):
         self.assertEqual(MODULE.validate_boundaries(), [])
 
+    def test_ci_plan_requires_generated_site_freshness_checks(self):
+        commands = (
+            "          python3 tools/site/generate_localized_site.py --check\n",
+            "          python3 tools/site/generate_api_reference.py --check\n",
+        )
+        for command in commands:
+            with self.subTest(command=command.strip()):
+                errors = self.workflow_errors_with_replacement("ci.yml", command, "")
+                self.assertTrue(
+                    any("missing orchestration contract" in error for error in errors),
+                    "ci.yml accepted a missing generated-site freshness check",
+                )
+
     def test_audited_third_party_actions_require_immutable_revisions(self):
         cases = (
             (
