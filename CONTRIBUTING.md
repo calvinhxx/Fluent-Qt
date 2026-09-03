@@ -51,6 +51,17 @@ or `fix(windowing): ...`; see [release governance](docs/development/release-gove
 
 ## Validate the smallest relevant surface
 
+Enable the repository's read-only local gates once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+The hooks run whitespace checks and the same changed-file C++ formatting
+contract used by CI before commits and pushes. See the
+[local static gate](docs/development/testing-workflow.md#local-static-gate) for
+manual check, fix, formatter-version, and fork-base commands.
+
 Configure with a supported preset, then build in parallel. On macOS arm64:
 
 ```bash
@@ -66,10 +77,11 @@ manual or snapshot runs. Changes that affect bindings or browser builds should
 also follow the [PySide6](bindings/pyside6/README.md) or
 [WebAssembly](docs/development/webassembly-workflow.md) workflow.
 
-Before requesting review, run `git diff --check`, describe what you tested, and
-call out any platform or surface you could not verify. Full cross-platform CI
-is expected on the pull request; contributors do not need every toolchain on
-one machine.
+Before requesting review, run
+`python3 tools/quality/check_cpp_format.py --changed-from origin/main` and
+`git diff --check`, describe what you tested, and call out any platform or
+surface you could not verify. Full cross-platform CI is expected on the pull
+request; contributors do not need every toolchain on one machine.
 
 <!-- docs-nav:bottom:start -->
 ---

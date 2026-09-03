@@ -21,6 +21,8 @@
 - [ ] Gallery examples, source snippets, installed headers, catalogs, and
       documentation remain aligned or are not applicable.
 - [ ] PySide6 support is included in this slice or an intentional C++-only boundary is documented.
+- [ ] I ran `python3 tools/quality/check_cpp_format.py --changed-from origin/main`
+      when the pull request changes C++ files.
 - [ ] I ran `git diff --check` and removed credentials, customer data, and private paths from the change and evidence.
 
 ## Screenshots or recordings
