@@ -6,6 +6,7 @@ from enum import IntEnum
 import hashlib
 import sys
 
+import shiboken6
 from PySide6.QtCore import (
     QByteArray,
     QDir,
@@ -15,6 +16,7 @@ from PySide6.QtCore import (
     QObject,
     QStandardPaths,
     QThread,
+    QTimer,
     Signal,
 )
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
@@ -25,6 +27,7 @@ _ACTIVATED_REPLY = b"activated/1\n"
 _EXISTING_INSTANCE_TIMEOUT_MS = 2000
 _CONNECT_ATTEMPT_MS = 100
 _CONNECT_RETRY_DELAY_MS = 20
+_DISCONNECTED_SOCKET_DRAIN_MS = 20
 _MAXIMUM_COMMAND_BYTES = 256
 
 
@@ -114,6 +117,7 @@ class GallerySingleInstance(QObject):
         self._error_string = ""
         self._lock_file: QLockFile | None = None
         self._server: QLocalServer | None = None
+        self._accepted_sockets: dict[int, QLocalSocket] = {}
         self._start_result = StartResult.Error
         self._started = False
 
@@ -237,20 +241,47 @@ class GallerySingleInstance(QObject):
             if socket is None:
                 continue
             socket.setParent(self)
+            self._accepted_sockets[id(socket)] = socket
             socket.readyRead.connect(
                 lambda current=socket: self._process_socket(current)
             )
             socket.disconnected.connect(
                 lambda current=socket: self._socket_disconnected(current)
             )
-            if socket.bytesAvailable() > 0:
-                self._process_socket(socket)
+            # Drain once immediately: on Windows named pipes the peer can
+            # disconnect before PySide delivers the queued readyRead callback.
+            self._process_socket(socket)
 
     def _socket_disconnected(self, socket: QLocalSocket) -> None:
+        if not shiboken6.isValid(socket):
+            self._accepted_sockets.pop(id(socket), None)
+            return
         self._process_socket(socket)
-        socket.deleteLater()
+        if not shiboken6.isValid(socket):
+            self._accepted_sockets.pop(id(socket), None)
+            return
+        if socket.property("galleryInstanceCleanupScheduled"):
+            return
+        socket.setProperty("galleryInstanceCleanupScheduled", True)
+        # Keep the wrapper and native socket alive for one short drain window.
+        # Windows ARM64 can queue readyRead after disconnected; deleting here
+        # would make that callback observe an already-destroyed C++ object.
+        QTimer.singleShot(
+            _DISCONNECTED_SOCKET_DRAIN_MS,
+            lambda current=socket: self._finish_disconnected_socket(current),
+        )
+
+    def _finish_disconnected_socket(self, socket: QLocalSocket) -> None:
+        if shiboken6.isValid(socket):
+            self._process_socket(socket)
+        self._accepted_sockets.pop(id(socket), None)
+        if shiboken6.isValid(socket):
+            socket.deleteLater()
 
     def _process_socket(self, socket: QLocalSocket) -> None:
+        if not shiboken6.isValid(socket):
+            self._accepted_sockets.pop(id(socket), None)
+            return
         if socket.property("galleryInstanceHandled"):
             return
         previous = socket.property("galleryInstanceCommand")
@@ -283,6 +314,21 @@ class GallerySingleInstance(QObject):
             self._server.close()
             self._server.deleteLater()
             self._server = None
+        accepted_sockets = tuple(self._accepted_sockets.values())
+        self._accepted_sockets.clear()
+        for socket in accepted_sockets:
+            if not shiboken6.isValid(socket):
+                continue
+            try:
+                socket.readyRead.disconnect()
+            except (RuntimeError, TypeError):
+                pass
+            try:
+                socket.disconnected.disconnect()
+            except (RuntimeError, TypeError):
+                pass
+            socket.abort()
+            socket.deleteLater()
         if self._server_name and lock_file is not None and lock_file.isLocked():
             QLocalServer.removeServer(self._server_name)
         if lock_file is not None and lock_file.isLocked():
