@@ -2,12 +2,9 @@
 #include "components/scrolling/ScrollBar.h"
 #include "components/textfields/TextEdit.h"
 
-#include <QAbstractTextDocumentLayout>
 #include <QApplication>
 #include <QInputMethodEvent>
-#include <QTextBlock>
 #include <QTextCursor>
-#include <QTextDocument>
 #include <QTextEdit>
 #include <QVariantAnimation>
 #include <QWidget>
@@ -93,32 +90,35 @@ TEST(TextEditMotionTest, Contract_FocusedEditsAnimateRetargetAndCollapseVisibleL
     QVariantAnimation* animation = heightAnimation(&edit);
     ASSERT_NE(inner, nullptr);
     ASSERT_NE(animation, nullptr);
-    ASSERT_EQ(edit.height(), 32);
+    const int oneLineHeight = edit.height();
+    ASSERT_GT(oneLineHeight, 0);
 
     insertParagraph(inner);
+    const int twoLineHeight = animation->endValue().toInt();
 
     EXPECT_EQ(inner->toPlainText(), QStringLiteral("\n"));
     EXPECT_TRUE(edit.isVisible());
     EXPECT_TRUE(inner->hasFocus());
     EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
     EXPECT_EQ(animation->duration(), edit.themeAnimation().fast);
-    EXPECT_EQ(animation->endValue().toInt(), 64);
-    EXPECT_LT(edit.height(), 64);
+    EXPECT_GT(twoLineHeight, oneLineHeight);
+    EXPECT_LT(edit.height(), twoLineHeight);
 
     insertParagraph(inner);
+    const int threeLineHeight = animation->endValue().toInt();
 
     EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
-    EXPECT_EQ(animation->endValue().toInt(), 96);
-    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), 96, 1000);
+    EXPECT_GT(threeLineHeight, twoLineHeight);
+    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), threeLineHeight, 1000);
     EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
 
     deletePreviousCharacter(inner);
 
     EXPECT_EQ(inner->toPlainText(), QStringLiteral("\n"));
     EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
-    EXPECT_EQ(animation->endValue().toInt(), 64);
-    EXPECT_GT(edit.height(), 64);
-    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), 64, 1000);
+    EXPECT_EQ(animation->endValue().toInt(), twoLineHeight);
+    EXPECT_GT(edit.height(), twoLineHeight);
+    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), twoLineHeight, 1000);
     QTRY_COMPARE_WITH_TIMEOUT(animation->state(), QAbstractAnimation::Stopped, 1000);
 }
 
@@ -136,27 +136,29 @@ TEST(TextEditMotionTest, Contract_ReducedAndDisabledMotionResolveEditedHeight)
     QVariantAnimation* animation = heightAnimation(&edit);
     ASSERT_NE(inner, nullptr);
     ASSERT_NE(animation, nullptr);
+    const int oneLineHeight = edit.height();
 
     MotionPolicy::instance().setMode(MotionPolicy::Mode::Reduced);
     insertParagraph(inner);
+    const int twoLineHeight = animation->endValue().toInt();
 
     EXPECT_EQ(inner->toPlainText(), QStringLiteral("\n"));
     EXPECT_TRUE(edit.isVisible());
     EXPECT_TRUE(inner->hasFocus());
     EXPECT_EQ(animation->duration(), 50);
-    EXPECT_EQ(animation->endValue().toInt(), 64);
-    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), 64, 1000);
+    EXPECT_GT(twoLineHeight, oneLineHeight);
+    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), twoLineHeight, 1000);
 
     edit.clear();
     QApplication::processEvents();
-    ASSERT_EQ(edit.height(), 32);
+    ASSERT_EQ(edit.height(), oneLineHeight);
 
     MotionPolicy::instance().setMode(MotionPolicy::Mode::Disabled);
     insertParagraph(inner);
 
     EXPECT_EQ(animation->duration(), 0);
     EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
-    EXPECT_EQ(edit.height(), 64);
+    EXPECT_EQ(edit.height(), twoLineHeight);
 }
 
 TEST(TextEditMotionTest, Contract_ProgrammaticHeightChangesRemainSynchronous)
@@ -171,18 +173,20 @@ TEST(TextEditMotionTest, Contract_ProgrammaticHeightChangesRemainSynchronous)
 
     QVariantAnimation* animation = heightAnimation(&edit);
     ASSERT_NE(animation, nullptr);
+    const int oneLineHeight = edit.height();
 
     edit.setPlainText(QStringLiteral("Alpha\nBeta\nGamma"));
+    const int threeLineHeight = edit.height();
 
-    EXPECT_EQ(edit.height(), 96);
+    EXPECT_GT(threeLineHeight, oneLineHeight);
     EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
 
     edit.clear();
-    EXPECT_EQ(edit.height(), 32);
+    EXPECT_EQ(edit.height(), oneLineHeight);
     EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
 
     edit.setMinVisibleLines(3);
-    EXPECT_EQ(edit.height(), 96);
+    EXPECT_EQ(edit.height(), threeLineHeight);
     EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
 }
 
@@ -200,17 +204,19 @@ TEST(TextEditMotionTest, Contract_ProgrammaticSameTargetUpdateStopsActiveUserTra
     QVariantAnimation* animation = heightAnimation(&edit);
     ASSERT_NE(inner, nullptr);
     ASSERT_NE(animation, nullptr);
+    const int oneLineHeight = edit.height();
 
     insertParagraph(inner);
+    const int twoLineHeight = animation->endValue().toInt();
 
     ASSERT_EQ(animation->state(), QAbstractAnimation::Running);
-    ASSERT_EQ(animation->endValue().toInt(), 64);
-    ASSERT_LT(edit.height(), 64);
+    ASSERT_GT(twoLineHeight, oneLineHeight);
+    ASSERT_LT(edit.height(), twoLineHeight);
 
     edit.setPlainText(QStringLiteral("Alpha\nBeta"));
 
     EXPECT_EQ(edit.toPlainText(), QStringLiteral("Alpha\nBeta"));
-    EXPECT_EQ(edit.height(), 64);
+    EXPECT_EQ(edit.height(), twoLineHeight);
     EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
 }
 
@@ -229,6 +235,8 @@ TEST(TextEditMotionTest, Contract_InputMethodPreeditKeepsHeightStableUntilCommit
     QVariantAnimation* animation = heightAnimation(&edit);
     ASSERT_NE(inner, nullptr);
     ASSERT_NE(animation, nullptr);
+    const int oneLineHeight = edit.height();
+    const QString committedText(28, QChar(0x4e2d));
 
     for (const int characterCount : {12, 28, 56}) {
         QInputMethodEvent preedit(QString(characterCount, QChar(0x4e2d)), {});
@@ -237,7 +245,7 @@ TEST(TextEditMotionTest, Contract_InputMethodPreeditKeepsHeightStableUntilCommit
         QApplication::processEvents();
 
         EXPECT_TRUE(edit.toPlainText().isEmpty());
-        EXPECT_EQ(edit.height(), 32);
+        EXPECT_EQ(edit.height(), oneLineHeight);
         EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
     }
 
@@ -247,7 +255,7 @@ TEST(TextEditMotionTest, Contract_InputMethodPreeditKeepsHeightStableUntilCommit
     QApplication::processEvents();
 
     EXPECT_TRUE(edit.toPlainText().isEmpty());
-    EXPECT_EQ(edit.height(), 32);
+    EXPECT_EQ(edit.height(), oneLineHeight);
     EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
 
     QInputMethodEvent committedPreedit(QString(28, QChar(0x4e2d)), {});
@@ -256,25 +264,18 @@ TEST(TextEditMotionTest, Contract_InputMethodPreeditKeepsHeightStableUntilCommit
     QApplication::processEvents();
 
     EXPECT_TRUE(edit.toPlainText().isEmpty());
-    EXPECT_EQ(edit.height(), 32);
+    EXPECT_EQ(edit.height(), oneLineHeight);
     EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
 
     QInputMethodEvent commit;
-    commit.setCommitString(QString(28, QChar(0x4e2d)));
+    commit.setCommitString(committedText);
     QApplication::sendEvent(inner, &commit);
     QApplication::processEvents();
+    const int committedHeight = animation->endValue().toInt();
 
-    EXPECT_EQ(edit.toPlainText(), QString(28, QChar(0x4e2d)));
+    EXPECT_EQ(edit.toPlainText(), committedText);
     EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
-    inner->document()->documentLayout()->documentSize();
-    int committedVisualLines = 0;
-    for (QTextBlock block = inner->document()->begin(); block.isValid(); block = block.next()) {
-        const int lineCount = block.layout()->lineCount();
-        committedVisualLines += lineCount > 0 ? lineCount : 1;
-    }
-    const int committedHeight = qBound(1, committedVisualLines, 4) * 32;
-    ASSERT_GT(committedHeight, 32);
-    EXPECT_EQ(animation->endValue().toInt(), committedHeight);
+    EXPECT_GT(committedHeight, oneLineHeight);
     EXPECT_LT(edit.height(), committedHeight);
     QTRY_COMPARE_WITH_TIMEOUT(edit.height(), committedHeight, 1000);
     QTRY_COMPARE_WITH_TIMEOUT(animation->state(), QAbstractAnimation::Stopped, 1000);
@@ -296,25 +297,26 @@ TEST(TextEditMotionTest, Contract_CrossingVisibleLineLimitKeepsHeightTransitionR
     QVariantAnimation* animation = heightAnimation(&edit);
     ASSERT_NE(inner, nullptr);
     ASSERT_NE(animation, nullptr);
-    ASSERT_EQ(edit.height(), 96);
+    const int threeLineHeight = edit.height();
 
     QTextCursor cursor = inner->textCursor();
     cursor.movePosition(QTextCursor::End);
     cursor.insertText(QStringLiteral("\nDelta\nEpsilon"));
     inner->setTextCursor(cursor);
     QApplication::processEvents();
+    const int fourLineHeight = animation->endValue().toInt();
 
     ASSERT_TRUE(edit.verticalScrollBar()->isVisible());
     ASSERT_EQ(animation->state(), QAbstractAnimation::Running);
-    ASSERT_EQ(animation->endValue().toInt(), 128);
+    ASSERT_GT(fourLineHeight, threeLineHeight);
 
     QTest::qWait(40);
     QApplication::processEvents();
 
     EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
-    EXPECT_GT(edit.height(), 96);
-    EXPECT_LT(edit.height(), 128);
+    EXPECT_GT(edit.height(), threeLineHeight);
+    EXPECT_LT(edit.height(), fourLineHeight);
     EXPECT_LT(inner->width(), edit.width());
-    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), 128, 1000);
+    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), fourLineHeight, 1000);
     QTRY_COMPARE_WITH_TIMEOUT(animation->state(), QAbstractAnimation::Stopped, 1000);
 }

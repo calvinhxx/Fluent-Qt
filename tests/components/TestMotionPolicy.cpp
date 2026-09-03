@@ -1,7 +1,8 @@
 #include <gtest/gtest.h>
 
-#include <QPointer>
+#include <QMetaType>
 #include <QParallelAnimationGroup>
+#include <QPointer>
 #include <QPropertyAnimation>
 #include <QSignalSpy>
 #include <QTest>
@@ -17,6 +18,13 @@ using fluent::MotionPolicy;
 
 class MotionPolicyTest : public ::testing::Test {
 protected:
+    static void SetUpTestSuite()
+    {
+        // Qt 5 records the nested signal argument as the short name "Mode".
+        // Register that alias so QSignalSpy can preserve the enum value.
+        qRegisterMetaType<MotionPolicy::Mode>("Mode");
+    }
+
     void SetUp() override { MotionPolicy::instance().setMode(MotionPolicy::Mode::Full); }
 
     void TearDown() override { MotionPolicy::instance().setMode(MotionPolicy::Mode::Full); }
