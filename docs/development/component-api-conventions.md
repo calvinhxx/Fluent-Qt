@@ -109,6 +109,14 @@ APIs under `src/components/**`.
 - Light-dismiss behavior should be tested separately from programmatic close
   behavior.
 
+## Inherited Qt Interaction Contracts
+
+- Public components derived from an interactive Qt control must preserve the
+  base class's observable input signals with the same meaning and exact-once
+  delivery. An event override may call the Qt base implementation or reproduce
+  its signal contract explicitly; deliberate hit-zone exceptions must be
+  documented and covered by focused pointer tests.
+
 ## Selection and Current Item Naming
 
 - Selection APIs should distinguish selected item(s), current item, activation,
@@ -117,6 +125,12 @@ APIs under `src/components/**`.
   component-specific.
 - Signals named `activated`, `clicked`, `currentChanged`, or `selectionChanged`
   should match their Qt meaning where practical.
+- Public collection views derived from `QAbstractItemView` must preserve the
+  inherited `pressed(QModelIndex)` and `clicked(QModelIndex)` signals exactly
+  once on valid non-drag pointer paths, even when custom selection visuals,
+  release-time selection, or reorder handling intercepts the Qt event chain.
+  Component-specific `itemPressed` or `itemClicked` signals supplement those
+  inherited signals; they do not replace them.
 - Collection views should not own business item composition when model/delegate
   ownership is caller-provided.
 - Large item views must scale through `QAbstractItemModel`, views, and delegates.
