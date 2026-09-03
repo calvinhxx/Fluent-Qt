@@ -1467,6 +1467,9 @@ def validate_boundaries() -> list[str]:
         "release_max_parallel: 4",
         "Require a current main base for release pull requests",
         ".github/scripts/check-release-branch-freshness.py",
+        "name: Validate generated site outputs",
+        "python3 tools/site/generate_localized_site.py --check",
+        "python3 tools/site/generate_api_reference.py --check",
         "actions: read",
     ):
         if required not in active_orchestrator:

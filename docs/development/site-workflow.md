@@ -43,20 +43,30 @@ the Pages layout so links from older posts and bookmarks continue to work.
 The generator owns `site/index.html`, `site/zh-CN/index.html`, and
 `site/sitemap.xml`. Do not edit those files directly.
 
+The API Explorer catalog is generated from the installed-header allowlist,
+installed public headers, and the generated AI catalog. After any of those
+inputs change, regenerate it instead of editing the JSON directly:
+
+```bash
+python3 tools/site/generate_api_reference.py
+```
+
 ## Validation
 
 Run the same freshness check used by the Pages workflow:
 
 ```bash
 python3 tools/site/generate_localized_site.py --check
+python3 tools/site/generate_api_reference.py --check
 ```
 
 The check requires matching translation keys, static localized text and
 attributes, valid JSON-LD and sitemap XML, canonical URLs, reciprocal
 `hreflang` links, the URL-owned 404 language contract, the legacy Gallery
 redirect, and the current CMake project version in structured data.
-The Pages workflow also verifies that both localized pages and `sitemap.xml`
-are present before deployment.
+The pull-request planning job runs both freshness checks before merge. The
+Pages workflow repeats them and also verifies that both localized pages and
+`sitemap.xml` are present before deployment.
 
 After deployment, verify both language URLs and submit `sitemap.xml` to the
 configured search-engine webmaster tools. Search Console ownership and sitemap

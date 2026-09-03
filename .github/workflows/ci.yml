@@ -62,6 +62,10 @@ jobs:
           python3 tools/onboarding/test_fluentqt_create.py
           python3 tools/onboarding/test_fluentqt_trial.py
           python3 -m unittest discover -s tools/dev -p 'test_fluent_qt_*.py'
+      - name: Validate generated site outputs
+        run: |
+          python3 tools/site/generate_localized_site.py --check
+          python3 tools/site/generate_api_reference.py --check
       - name: Require a current main base for release pull requests
         if: >-
           ${{
