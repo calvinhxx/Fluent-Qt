@@ -106,6 +106,46 @@ Run the affected component labels and `visual_gate` after the extraction.
 VisualCheck remains a separate manual review surface; it does not replace
 automated state and pixel invariants.
 
+## Local static gate
+
+Run the C++ format contract before committing or pushing, rather than using
+pull-request CI as the first formatter. The check uses clang-format 15.0.0 and
+formats incrementally by complete touched file, so a legacy file may produce a
+larger mechanical diff the first time it is changed.
+
+Check the current working tree before staging, the exact staged snapshots
+before committing, or the committed pull-request diff before pushing:
+
+```bash
+python3 tools/quality/check_cpp_format.py --working-tree
+python3 tools/quality/check_cpp_format.py --staged
+git fetch origin main
+python3 tools/quality/check_cpp_format.py --changed-from origin/main
+```
+
+Use `--working-tree --fix` on the affected branch to update the working-tree
+copies, then review and stage the result. Keep a large mechanical rewrite in a
+separate `style` commit. `--staged` checks the index blobs and `--changed-from`
+checks the selected committed blobs, so unrelated unstaged edits cannot make
+either check pass.
+
+The formatter must report exactly `clang-format 15.0.0`. Set
+`FLUENTQT_CLANG_FORMAT=/absolute/path/to/clang-format` or pass
+`--clang-format PATH` when that executable is not the default on `PATH`.
+
+Enable the repository hooks once per clone to run the same checker
+automatically:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+The pre-commit hook checks staged whitespace and C++ snapshots. The pre-push
+hook checks whitespace and C++ files in every revision being pushed relative
+to the pushed remote's `main` ref, even when it is not the currently checked
+out branch. Both hooks are read-only and never format files. Fork workflows can
+set `FLUENTQT_FORMAT_BASE` to a different local base ref.
+
 ## Validation Tiers
 
 The public [CI workflow](../../.github/workflows/ci.yml) is an orchestration

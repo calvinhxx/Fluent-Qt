@@ -43,6 +43,7 @@ ctest --preset vcpkg-osx --output-on-failure
   test_<name>` on Linux or `python3 tools/dev/fluent_qt_build.py --preset
   vcpkg-osx --target test_<name>` on macOS.
 - Prefer anchored CTest label filters, for example `ctest --preset vcpkg-linux -L '^test_<name>$' --output-on-failure`; see [docs/development/testing-workflow.md](docs/development/testing-workflow.md).
+- Before committing or pushing C++ changes, run the read-only local static gate documented in [docs/development/testing-workflow.md](docs/development/testing-workflow.md#local-static-gate); pull-request CI must remain the final gate, not the first formatter check.
 - VisualCheck tests are interactive by design. Automated CTest runs set `SKIP_VISUAL_TEST=1`; run binaries directly with `--gtest_filter="*VisualCheck*"` for manual review or `VISUAL_SNAPSHOT=1` for snapshots.
 
 ## Architecture Map
