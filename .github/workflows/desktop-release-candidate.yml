@@ -31,7 +31,7 @@ jobs:
       package_matrix: ${{ steps.plan.outputs.package_matrix }}
     steps:
       - name: Checkout selected source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.source_ref }}
           fetch-depth: 0
@@ -95,7 +95,7 @@ jobs:
       VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
     steps:
       - name: Checkout candidate source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.source_ref }}
           fetch-depth: 0
@@ -111,7 +111,7 @@ jobs:
         run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
 
       - name: Cache vcpkg binary packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .vcpkg-binary-cache
           key: release-vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
@@ -325,7 +325,7 @@ jobs:
       - name: Upload package artifact
         id: upload-package
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-desktop-package-${{ matrix.id }}
           if-no-files-found: error
@@ -341,7 +341,7 @@ jobs:
 
       - name: Retry package artifact upload
         if: ${{ steps.upload-package.outcome == 'failure' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-desktop-package-${{ matrix.id }}
           if-no-files-found: error
@@ -353,7 +353,7 @@ jobs:
       - name: Upload packaging diagnostics
         if: ${{ failure() && steps.upload-package.outcome != 'failure' }}
         timeout-minutes: 3
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: diagnostics-desktop-release-${{ matrix.id }}-${{ github.run_attempt }}
           if-no-files-found: ignore
@@ -375,12 +375,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout candidate source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.source_ref }}
 
       - name: Download desktop package artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: fluentqt-desktop-package-*
           merge-multiple: false
@@ -403,7 +403,7 @@ jobs:
             --commit "${{ inputs.source_commit }}"
 
       - name: Upload canonical desktop release candidate
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-desktop-release-candidate
           path: ${{ runner.temp }}/fluentqt-desktop-release-candidate

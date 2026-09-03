@@ -22,7 +22,7 @@ jobs:
       EMSDK_REPOSITORY_REVISION: 2514ec738de72cebbba7f4fdba0cf2fabcb779a5
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -42,7 +42,7 @@ jobs:
           esac
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
 
@@ -55,7 +55,7 @@ jobs:
 
       - name: Cache Qt WebAssembly and host kits
         id: qt-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/Qt
           key: fluentqt-qt-wasm-${{ runner.os }}-${{ runner.arch }}-6.9.3
@@ -89,7 +89,7 @@ jobs:
           "$qt_host_cmake" --version
 
       - name: Cache Emscripten SDK
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/emsdk
           key: fluentqt-emsdk-${{ runner.os }}-${{ runner.arch }}-3.1.70-2514ec738de72cebbba7f4fdba0cf2fabcb779a5
@@ -123,7 +123,7 @@ jobs:
           "$EMSDK_ROOT/emsdk" activate "$EMSCRIPTEN_VERSION"
 
       - name: Cache Emscripten system libraries
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/emscripten-cache
           key: fluentqt-em-cache-${{ runner.os }}-${{ runner.arch }}-3.1.70-2514ec738de72cebbba7f4fdba0cf2fabcb779a5
@@ -154,7 +154,7 @@ jobs:
           test -f build/wasm-installed-consumer/fluentqt_hello_world.wasm
 
       - name: Cache Chromium
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: fluentqt-playwright-${{ runner.os }}-${{ runner.arch }}-1.58.0
@@ -189,7 +189,7 @@ jobs:
             --commit "$GITHUB_SHA"
 
       - name: Upload WebAssembly Pages payload
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: fluentqt-wasm-pages
           path: build/wasm-pages
