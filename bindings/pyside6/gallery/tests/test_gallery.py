@@ -742,38 +742,51 @@ print(int(result), flush=True)
 print(instance.error_string, flush=True)
 instance.close()
 """
-        worker = subprocess.Popen(
-            (
-                sys.executable,
-                "-c",
-                probe,
-                instance_id,
-                runtime.name,
-                QCoreApplication.applicationName(),
-                QCoreApplication.organizationName(),
-            ),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
+        callback_errors: list[tuple[object, ...]] = []
+        previous_excepthook = sys.excepthook
+        sys.excepthook = lambda *error: callback_errors.append(error)
         try:
-            for _attempt in range(250):
-                if worker.poll() is not None:
-                    break
-                _qwait(10)
-            stdout, stderr = worker.communicate(timeout=1.0)
-            _qwait(200)
-            output = stdout.splitlines()
-            self.assertEqual(worker.returncode, 0, stderr)
-            self.assertEqual(
-                int(output[0]), int(StartResult.ExistingInstanceNotified)
-            )
-            self.assertEqual(output[1:] or [""], [""])
-            self.assertEqual(activated, [True])
+            for expected_activation_count in range(1, 4):
+                worker = subprocess.Popen(
+                    (
+                        sys.executable,
+                        "-c",
+                        probe,
+                        instance_id,
+                        runtime.name,
+                        QCoreApplication.applicationName(),
+                        QCoreApplication.organizationName(),
+                    ),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
+                try:
+                    for _attempt in range(250):
+                        if worker.poll() is not None:
+                            break
+                        _qwait(10)
+                    stdout, stderr = worker.communicate(timeout=1.0)
+                    _qwait(200)
+                    output = stdout.splitlines()
+                    self.assertEqual(worker.returncode, 0, stderr)
+                    self.assertEqual(
+                        int(output[0]),
+                        int(StartResult.ExistingInstanceNotified),
+                    )
+                    self.assertEqual(output[1:] or [""], [""])
+                    self.assertEqual(
+                        activated,
+                        [True] * expected_activation_count,
+                    )
+                    self.assertEqual(primary._accepted_sockets, {})
+                finally:
+                    if worker.poll() is None:
+                        worker.kill()
+                        worker.wait(timeout=1.0)
+            self.assertEqual(callback_errors, [])
         finally:
-            if worker.poll() is None:
-                worker.kill()
-                worker.wait(timeout=1.0)
+            sys.excepthook = previous_excepthook
             primary.close()
 
     def test_python_and_native_galleries_have_independent_runtime_identity(self):
