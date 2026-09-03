@@ -34,7 +34,8 @@ using namespace fluent;
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -42,7 +43,8 @@ public:
 
 class TextEditTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new FluentTestWindow();
         window->setFixedSize(500, 400);
         window->setWindowTitle("Fluent TextEdit Test");
@@ -51,9 +53,7 @@ protected:
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     FluentTestWindow* window;
     AnchorLayout* layout;
@@ -66,8 +66,8 @@ QWheelEvent makeWheelEvent(QWidget* target, QPoint pixelDelta, QPoint angleDelta
 {
     const QPointF pos = target->rect().center();
     const QPointF globalPos = target->mapToGlobal(pos.toPoint());
-    return QWheelEvent(pos, globalPos, pixelDelta, angleDelta,
-                       Qt::NoButton, Qt::NoModifier, phase, false);
+    return QWheelEvent(pos, globalPos, pixelDelta, angleDelta, Qt::NoButton, Qt::NoModifier, phase,
+                       false);
 }
 
 QTextEdit* innerTextEdit(TextEdit* edit)
@@ -84,9 +84,8 @@ bool actionMatchesStandardKey(const QAction* action, QKeySequence::StandardKey s
     if (shortcuts.isEmpty()) {
         const int tabIndex = action->text().indexOf(QLatin1Char('\t'));
         if (tabIndex >= 0) {
-            const QKeySequence embedded(
-                action->text().mid(tabIndex + 1).trimmed(),
-                QKeySequence::NativeText);
+            const QKeySequence embedded(action->text().mid(tabIndex + 1).trimmed(),
+                                        QKeySequence::NativeText);
             if (!embedded.isEmpty())
                 shortcuts.append(embedded);
         }
@@ -109,8 +108,8 @@ bool triggerContextAction(QTextEdit* inner, QKeySequence::StandardKey standardKe
 
     bool triggered = false;
     QTimer::singleShot(0, [&]() {
-        auto* menu = qobject_cast<fluent::menus_toolbars::FluentMenu*>(
-            QApplication::activePopupWidget());
+        auto* menu =
+            qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
         if (!menu)
             return;
 
@@ -161,7 +160,8 @@ int differingPixels(const QImage& lhs, const QImage& rhs, const QRect& area)
 
 } // namespace
 
-TEST_F(TextEditTest, TextAndPlaceholder) {
+TEST_F(TextEditTest, TextAndPlaceholder)
+{
     TextEdit* edit = new TextEdit(window);
     edit->setPlaceholderText("Multi-line placeholder");
     EXPECT_EQ(edit->placeholderText(), "Multi-line placeholder");
@@ -170,7 +170,8 @@ TEST_F(TextEditTest, TextAndPlaceholder) {
     EXPECT_EQ(edit->toPlainText(), "line1\nline2");
 }
 
-TEST_F(TextEditTest, PlaceholderIsHiddenDuringInputMethodPreedit) {
+TEST_F(TextEditTest, PlaceholderIsHiddenDuringInputMethodPreedit)
+{
     auto* edit = new TextEdit(window);
     edit->setFixedSize(360, edit->lineHeight());
     edit->move(20, 20);
@@ -197,23 +198,22 @@ TEST_F(TextEditTest, PlaceholderIsHiddenDuringInputMethodPreedit) {
     EXPECT_TRUE(edit->toPlainText().isEmpty());
     const QImage duringPreedit = renderWidget(inner->viewport());
 
-    const QRect placeholderTail(64, 0,
-                                qMax(0, inner->viewport()->width() - 64),
+    const QRect placeholderTail(64, 0, qMax(0, inner->viewport()->width() - 64),
                                 inner->viewport()->height());
     EXPECT_GT(differingPixels(withPlaceholder, blank, placeholderTail), 20)
         << "The fixture must contain visible placeholder glyphs in the tail "
-         "region";
+           "region";
     EXPECT_LT(differingPixels(duringPreedit, blank, placeholderTail), 8)
         << "IME preedit text must replace, not overlap, the placeholder";
 }
 
-TEST_F(TextEditTest, Contract_LayoutPropertiesAreAvailableThroughQtMetaObject) {
+TEST_F(TextEditTest, Contract_LayoutPropertiesAreAvailableThroughQtMetaObject)
+{
     TextEdit* edit = new TextEdit(window);
     const QMetaObject* metaObject = edit->metaObject();
 
-    for (const char* propertyName : {
-             "lineHeight", "minVisibleLines", "maxVisibleLines",
-             "tabChangesFocus"}) {
+    for (const char* propertyName :
+         {"lineHeight", "minVisibleLines", "maxVisibleLines", "tabChangesFocus"}) {
         const int propertyIndex = metaObject->indexOfProperty(propertyName);
         ASSERT_GE(propertyIndex, 0) << propertyName;
         const QMetaProperty property = metaObject->property(propertyIndex);
@@ -223,7 +223,8 @@ TEST_F(TextEditTest, Contract_LayoutPropertiesAreAvailableThroughQtMetaObject) {
     }
 }
 
-TEST_F(TextEditTest, Contract_TabChangesFocusIsOptInAndForwardsToEditor) {
+TEST_F(TextEditTest, Contract_TabChangesFocusIsOptInAndForwardsToEditor)
+{
     TextEdit* edit = new TextEdit(window);
     auto* next = new fluent::basicinput::Button(QStringLiteral("Next"), window);
     QTextEdit* inner = innerTextEdit(edit);
@@ -268,11 +269,13 @@ TEST_F(TextEditTest, Contract_TabChangesFocusIsOptInAndForwardsToEditor) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(TextEditTest, Contract_MaxLineViewportDoesNotRevealPartialOverflowLine) {
+TEST_F(TextEditTest, Contract_MaxLineViewportDoesNotRevealPartialOverflowLine)
+{
     const FluentElement::Theme previousTheme = FluentElement::currentTheme();
     struct ThemeRestorer {
         FluentElement::Theme theme;
-        ~ThemeRestorer() {
+        ~ThemeRestorer()
+        {
             FluentElement::setTheme(theme);
             QApplication::processEvents();
         }
@@ -289,14 +292,13 @@ TEST_F(TextEditTest, Contract_MaxLineViewportDoesNotRevealPartialOverflowLine) {
     edit->setContentMargins(QMargins(12, 6, 12, 6));
     QTextEdit* inner = innerTextEdit(edit);
     ASSERT_NE(inner, nullptr);
-    const QString fullText = QStringLiteral(
-        "请检查这个仓库中 JSON-RPC 运行时的关闭流程。\n"
-        "确认 stdin、terminate 和 kill 的顺序。\n"
-        "说明启动阶段失败时如何重试。\n"
-        "检查非常长的工作区路径是否会截断。\n"
-        "给出最小且安全的修改建议。\n"
-        "同时列出需要保留的兼容行为。\n"
-        "这一行用于验证超过最大可见行数后的内部滚动。");
+    const QString fullText = QStringLiteral("请检查这个仓库中 JSON-RPC 运行时的关闭流程。\n"
+                                            "确认 stdin、terminate 和 kill 的顺序。\n"
+                                            "说明启动阶段失败时如何重试。\n"
+                                            "检查非常长的工作区路径是否会截断。\n"
+                                            "给出最小且安全的修改建议。\n"
+                                            "同时列出需要保留的兼容行为。\n"
+                                            "这一行用于验证超过最大可见行数后的内部滚动。");
     // Use the real editing/accessibility surface. This deliberately bypasses
     // TextEdit::setPlainText(), just as typing and AX value replacement do.
     inner->setPlainText(fullText);
@@ -339,9 +341,7 @@ TEST_F(TextEditTest, Contract_MaxLineViewportDoesNotRevealPartialOverflowLine) {
         QTextBlock block = inner->document()->begin();
         for (int index = 0; index < blockIndex && block.isValid(); ++index)
             block = block.next();
-        return block.isValid()
-            ? inner->cursorRect(QTextCursor(block))
-            : QRect();
+        return block.isValid() ? inner->cursorRect(QTextCursor(block)) : QRect();
     };
     const auto sixthCaretBottom = [inner]() {
         QTextBlock sixth = inner->document()->begin();
@@ -401,8 +401,7 @@ TEST_F(TextEditTest, Contract_MaxLineViewportDoesNotRevealPartialOverflowLine) {
         << "the sixth line must fit after the Light-to-Dark transition";
     EXPECT_LT(returnedLightSixthBottom, inner->viewport()->height())
         << "the sixth line must remain fitted after Dark-to-Light";
-    const auto expectWholeTail = [inner](const char* phase,
-                                         const QRect& firstVisible,
+    const auto expectWholeTail = [inner](const char* phase, const QRect& firstVisible,
                                          const QRect& lastVisible) {
         EXPECT_TRUE(firstVisible.isValid()) << phase;
         EXPECT_TRUE(lastVisible.isValid()) << phase;
@@ -410,23 +409,22 @@ TEST_F(TextEditTest, Contract_MaxLineViewportDoesNotRevealPartialOverflowLine) {
             << phase << " must not clip the first visible line at the top";
         EXPECT_LT(firstVisible.top(), inner->viewport()->height())
             << phase << " must keep the first tail line visible";
-        EXPECT_GE(lastVisible.top(), 0)
-            << phase << " must keep the final line inside the viewport";
+        EXPECT_GE(lastVisible.top(), 0) << phase << " must keep the final line inside the viewport";
         EXPECT_LT(lastVisible.bottom(), inner->viewport()->height())
             << phase << " must not clip the final line at the bottom";
     };
     expectWholeTail("Light tail", lightSecondAtTail, lightSeventhAtTail);
     expectWholeTail("Dark tail", darkSecondAtTail, darkSeventhAtTail);
-    expectWholeTail("returned Light tail",
-                    returnedLightSecondAtTail,
-                    returnedLightSeventhAtTail);
+    expectWholeTail("returned Light tail", returnedLightSecondAtTail, returnedLightSeventhAtTail);
 }
 
-TEST_F(TextEditTest, Contract_SelectionPaletteTracksTheme) {
+TEST_F(TextEditTest, Contract_SelectionPaletteTracksTheme)
+{
     const FluentElement::Theme previousTheme = FluentElement::currentTheme();
     struct ThemeRestorer {
         FluentElement::Theme theme;
-        ~ThemeRestorer() {
+        ~ThemeRestorer()
+        {
             FluentElement::setTheme(theme);
             QApplication::processEvents();
         }
@@ -439,24 +437,15 @@ TEST_F(TextEditTest, Contract_SelectionPaletteTracksTheme) {
     const auto expectSelectionPalette = [edit, inner](const char* phase) {
         const QPalette palette = inner->palette();
         const auto& colors = edit->themeColorsRef();
-        EXPECT_EQ(
-            palette.color(QPalette::Active, QPalette::Highlight),
-            colors.accentDefault)
+        EXPECT_EQ(palette.color(QPalette::Active, QPalette::Highlight), colors.accentDefault)
             << phase;
-        EXPECT_EQ(
-            palette.color(QPalette::Active, QPalette::HighlightedText),
-            colors.textOnAccent)
+        EXPECT_EQ(palette.color(QPalette::Active, QPalette::HighlightedText), colors.textOnAccent)
             << phase;
-        EXPECT_EQ(
-            palette.color(QPalette::Inactive, QPalette::Highlight),
-            colors.accentDefault)
+        EXPECT_EQ(palette.color(QPalette::Inactive, QPalette::Highlight), colors.accentDefault)
             << phase;
-        EXPECT_EQ(
-            palette.color(QPalette::Inactive, QPalette::HighlightedText),
-            colors.textOnAccent)
+        EXPECT_EQ(palette.color(QPalette::Inactive, QPalette::HighlightedText), colors.textOnAccent)
             << phase;
-        EXPECT_FALSE(inner->styleSheet().contains(QStringLiteral("selection-")))
-            << phase;
+        EXPECT_FALSE(inner->styleSheet().contains(QStringLiteral("selection-"))) << phase;
     };
 
     FluentElement::setTheme(FluentElement::Light);
@@ -468,15 +457,14 @@ TEST_F(TextEditTest, Contract_SelectionPaletteTracksTheme) {
     expectSelectionPalette("Dark");
 }
 
-TEST_F(TextEditTest, Contract_ScopedThemeTransitionPreservesTailAnchor) {
-    window->setProperty("fluentThemeOverride",
-                        static_cast<int>(FluentElement::Light));
+TEST_F(TextEditTest, Contract_ScopedThemeTransitionPreservesTailAnchor)
+{
+    window->setProperty("fluentThemeOverride", static_cast<int>(FluentElement::Light));
 
     auto* edit = new TextEdit(window);
     edit->setMinVisibleLines(2);
     edit->setMaxVisibleLines(3);
-    edit->setPlainText(QStringLiteral(
-        "Alpha\nBeta\nGamma\nDelta\nEpsilon\nZeta"));
+    edit->setPlainText(QStringLiteral("Alpha\nBeta\nGamma\nDelta\nEpsilon\nZeta"));
     edit->setGeometry(20, 20, 360, edit->height());
     window->show();
     edit->show();
@@ -494,26 +482,29 @@ TEST_F(TextEditTest, Contract_ScopedThemeTransitionPreservesTailAnchor) {
         QTextBlock block = inner->document()->begin();
         for (int index = 0; index < blockIndex && block.isValid(); ++index)
             block = block.next();
-        return block.isValid()
-            ? inner->cursorRect(QTextCursor(block))
-            : QRect();
+        return block.isValid() ? inner->cursorRect(QTextCursor(block)) : QRect();
     };
     const auto expectWholeTail = [edit, inner, bar, &caretRectForBlock](const char* phase) {
         const QRect firstVisible = caretRectForBlock(3);
         const QRect finalVisible = caretRectForBlock(5);
-        const QString geometry = QStringLiteral(
-            "%1 value=%2 max=%3 page=%4 viewport=%5 lineHeight=%6 fontLine=%7 first=%8,%9,%10,%11 final=%12,%13,%14,%15")
-            .arg(QString::fromLatin1(phase))
-            .arg(bar->value())
-            .arg(bar->maximum())
-            .arg(bar->pageStep())
-            .arg(inner->viewport()->height())
-            .arg(edit->lineHeight())
-            .arg(QFontMetrics(inner->font()).lineSpacing())
-            .arg(firstVisible.x()).arg(firstVisible.y())
-            .arg(firstVisible.width()).arg(firstVisible.height())
-            .arg(finalVisible.x()).arg(finalVisible.y())
-            .arg(finalVisible.width()).arg(finalVisible.height());
+        const QString geometry =
+            QStringLiteral("%1 value=%2 max=%3 page=%4 viewport=%5 lineHeight=%6 fontLine=%7 "
+                           "first=%8,%9,%10,%11 final=%12,%13,%14,%15")
+                .arg(QString::fromLatin1(phase))
+                .arg(bar->value())
+                .arg(bar->maximum())
+                .arg(bar->pageStep())
+                .arg(inner->viewport()->height())
+                .arg(edit->lineHeight())
+                .arg(QFontMetrics(inner->font()).lineSpacing())
+                .arg(firstVisible.x())
+                .arg(firstVisible.y())
+                .arg(firstVisible.width())
+                .arg(firstVisible.height())
+                .arg(finalVisible.x())
+                .arg(finalVisible.y())
+                .arg(finalVisible.width())
+                .arg(finalVisible.height());
         EXPECT_EQ(bar->value(), bar->maximum()) << geometry.toStdString();
         EXPECT_GE(firstVisible.top(), 0)
             << geometry.toStdString() << " must not clip Delta at the top";
@@ -522,16 +513,14 @@ TEST_F(TextEditTest, Contract_ScopedThemeTransitionPreservesTailAnchor) {
     };
     expectWholeTail("Light tail");
 
-    window->setProperty("fluentThemeOverride",
-                        static_cast<int>(FluentElement::Dark));
+    window->setProperty("fluentThemeOverride", static_cast<int>(FluentElement::Dark));
     edit->onThemeUpdated();
     QApplication::processEvents();
     QTest::qWait(1);
     QApplication::processEvents();
     expectWholeTail("Dark tail");
 
-    window->setProperty("fluentThemeOverride",
-                        static_cast<int>(FluentElement::Light));
+    window->setProperty("fluentThemeOverride", static_cast<int>(FluentElement::Light));
     edit->onThemeUpdated();
     QApplication::processEvents();
     QTest::qWait(1);
@@ -539,7 +528,8 @@ TEST_F(TextEditTest, Contract_ScopedThemeTransitionPreservesTailAnchor) {
     expectWholeTail("returned Light tail");
 }
 
-TEST_F(TextEditTest, Contract_WidthReflowRecomputesVisibleLineHeight) {
+TEST_F(TextEditTest, Contract_WidthReflowRecomputesVisibleLineHeight)
+{
     TextEdit* edit = new TextEdit(window);
     edit->setLineHeight(24);
     edit->setMinVisibleLines(1);
@@ -556,7 +546,8 @@ TEST_F(TextEditTest, Contract_WidthReflowRecomputesVisibleLineHeight) {
     EXPECT_GT(edit->height(), wideHeight);
 }
 
-TEST_F(TextEditTest, Contract_BaseWidgetFocusForwardsToInnerEditor) {
+TEST_F(TextEditTest, Contract_BaseWidgetFocusForwardsToInnerEditor)
+{
     TextEdit* edit = new TextEdit(window);
     layout->addWidget(edit);
     window->show();
@@ -572,7 +563,8 @@ TEST_F(TextEditTest, Contract_BaseWidgetFocusForwardsToInnerEditor) {
     EXPECT_EQ(edit->focusProxy(), inner);
 }
 
-TEST_F(TextEditTest, Contract_ReapplyingCurrentTextPreservesUndoHistory) {
+TEST_F(TextEditTest, Contract_ReapplyingCurrentTextPreservesUndoHistory)
+{
     TextEdit* edit = new TextEdit(window);
     edit->setPlainText(QStringLiteral("Alpha"));
     QTextEdit* inner = innerTextEdit(edit);
@@ -589,7 +581,8 @@ TEST_F(TextEditTest, Contract_ReapplyingCurrentTextPreservesUndoHistory) {
     EXPECT_EQ(edit->toPlainText(), QStringLiteral("Alpha"));
 }
 
-TEST_F(TextEditTest, Contract_VisibleLineBoundsRemainOrdered) {
+TEST_F(TextEditTest, Contract_VisibleLineBoundsRemainOrdered)
+{
     TextEdit* edit = new TextEdit(window);
 
     edit->setMinVisibleLines(8);
@@ -602,14 +595,16 @@ TEST_F(TextEditTest, Contract_VisibleLineBoundsRemainOrdered) {
     EXPECT_EQ(edit->height(), 3 * edit->lineHeight());
 }
 
-TEST_F(TextEditTest, ContentMargins) {
+TEST_F(TextEditTest, ContentMargins)
+{
     TextEdit* edit = new TextEdit(window);
     QMargins margins(12, 4, 12, 4);
     edit->setContentMargins(margins);
     EXPECT_EQ(edit->contentMargins(), margins);
 }
 
-TEST_F(TextEditTest, ContentMarginsOwnPaintedTextInsetsWithoutInflatingDefaults) {
+TEST_F(TextEditTest, ContentMarginsOwnPaintedTextInsetsWithoutInflatingDefaults)
+{
     auto* edit = new TextEdit(window);
     edit->setLineHeight(32);
     edit->setMinVisibleLines(2);
@@ -626,15 +621,13 @@ TEST_F(TextEditTest, ContentMarginsOwnPaintedTextInsetsWithoutInflatingDefaults)
     QTextCursor cursor(inner->document());
     cursor.movePosition(QTextCursor::Start);
     inner->setTextCursor(cursor);
-    const QPoint firstCaret = inner->viewport()->mapTo(
-        edit, inner->cursorRect().topLeft());
+    const QPoint firstCaret = inner->viewport()->mapTo(edit, inner->cursorRect().topLeft());
     EXPECT_GE(firstCaret.x(), 11);
     EXPECT_GE(firstCaret.y(), 9);
 
     cursor.movePosition(QTextCursor::End);
     inner->setTextCursor(cursor);
-    const QPoint lastBottom = inner->viewport()->mapTo(
-        edit, inner->cursorRect().bottomRight());
+    const QPoint lastBottom = inner->viewport()->mapTo(edit, inner->cursorRect().bottomRight());
     EXPECT_GE(edit->height() - lastBottom.y(), 7);
 
     TextEdit compact;
@@ -642,23 +635,24 @@ TEST_F(TextEditTest, ContentMarginsOwnPaintedTextInsetsWithoutInflatingDefaults)
         << "default margins must remain inside the standard line slot";
 }
 
-TEST_F(TextEditTest, FluentPropertiesDefaultsAndSetters) {
+TEST_F(TextEditTest, FluentPropertiesDefaultsAndSetters)
+{
     TextEdit* edit = new TextEdit(window);
 
     EXPECT_EQ(edit->contentMargins(),
               QMargins(Spacing::Padding::TextFieldHorizontal, Spacing::Padding::TextFieldVertical,
                        Spacing::Padding::TextFieldHorizontal, Spacing::Padding::TextFieldVertical));
     EXPECT_EQ(edit->fontRole(), Typography::FontRole::Body);
-    EXPECT_EQ(edit->focusedBorderWidth(),   Spacing::Border::Focused);
+    EXPECT_EQ(edit->focusedBorderWidth(), Spacing::Border::Focused);
     EXPECT_EQ(edit->unfocusedBorderWidth(), Spacing::Border::Normal);
     EXPECT_EQ(edit->lineHeight(), Spacing::ControlHeight::Standard);
     EXPECT_EQ(edit->minVisibleLines(), 1);
     EXPECT_EQ(edit->maxVisibleLines(), 4);
 
-    QSignalSpy spyFocused(edit,   SIGNAL(focusedBorderWidthChanged()));
+    QSignalSpy spyFocused(edit, SIGNAL(focusedBorderWidthChanged()));
     QSignalSpy spyUnfocused(edit, SIGNAL(unfocusedBorderWidthChanged()));
-    QSignalSpy spyLayout(edit,    SIGNAL(layoutMetricsChanged()));
-    QSignalSpy spyFont(edit,      SIGNAL(fontRoleChanged()));
+    QSignalSpy spyLayout(edit, SIGNAL(layoutMetricsChanged()));
+    QSignalSpy spyFont(edit, SIGNAL(fontRoleChanged()));
 
     edit->setFocusedBorderWidth(3);
     EXPECT_EQ(edit->focusedBorderWidth(), 3);
@@ -689,7 +683,8 @@ TEST_F(TextEditTest, FluentPropertiesDefaultsAndSetters) {
     EXPECT_EQ(spyLayout.count(), 2);
 }
 
-TEST_F(TextEditTest, MinVisibleLinesClampsBelowContent) {
+TEST_F(TextEditTest, MinVisibleLinesClampsBelowContent)
+{
     TextEdit* edit = new TextEdit(window);
     edit->setLineHeight(32);
     edit->setMinVisibleLines(2);
@@ -705,7 +700,8 @@ TEST_F(TextEditTest, MinVisibleLinesClampsBelowContent) {
     EXPECT_EQ(edit->height(), 2 * 32);
 }
 
-TEST_F(TextEditTest, MaxVisibleLinesClampsAboveContent) {
+TEST_F(TextEditTest, MaxVisibleLinesClampsAboveContent)
+{
     TextEdit* edit = new TextEdit(window);
     edit->setLineHeight(32);
     edit->setMinVisibleLines(1);
@@ -716,13 +712,15 @@ TEST_F(TextEditTest, MaxVisibleLinesClampsAboveContent) {
     EXPECT_EQ(edit->height(), 3 * 32);
 }
 
-TEST_F(TextEditTest, SingleLineDefaultHeight) {
+TEST_F(TextEditTest, SingleLineDefaultHeight)
+{
     // 默认 minVisibleLines=1：空控件高度应与单行 TextBox 等高（lineHeight = 32）
     TextEdit* edit = new TextEdit(window);
     EXPECT_EQ(edit->height(), Spacing::ControlHeight::Standard);
 }
 
-TEST_F(TextEditTest, ReadOnly) {
+TEST_F(TextEditTest, ReadOnly)
+{
     TextEdit* edit = new TextEdit(window);
     edit->setPlainText("read only content");
     edit->setReadOnly(true);
@@ -731,7 +729,8 @@ TEST_F(TextEditTest, ReadOnly) {
     EXPECT_FALSE(edit->isReadOnly());
 }
 
-TEST_F(TextEditTest, StandardEditingActionsUseFluentContextMenu) {
+TEST_F(TextEditTest, StandardEditingActionsUseFluentContextMenu)
+{
     TextEdit* edit = new TextEdit(window);
     edit->setPlainText(QStringLiteral("Alpha Beta"));
     layout->addWidget(edit);
@@ -748,54 +747,38 @@ TEST_F(TextEditTest, StandardEditingActionsUseFluentContextMenu) {
     bool sawDeleteGlyph = false;
     bool sawSelectAllGlyph = false;
     QTimer::singleShot(0, [&]() {
-        auto* menu = qobject_cast<fluent::menus_toolbars::FluentMenu*>(
-            QApplication::activePopupWidget());
+        auto* menu =
+            qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
         sawFluentMenu = menu != nullptr;
         if (!menu)
             return;
 
         EXPECT_EQ(menu->objectName(), QStringLiteral("FluentTextEdit.ContextMenu"));
         EXPECT_EQ(menu->fontStyle(), Typography::FontRole::Caption);
-        EXPECT_EQ(
-            menu->font().pixelSize(),
-            Typography::FontSize::Caption);
-        EXPECT_FALSE(
-            menu->property(
-                    "_fluentqt_menuQuietSeparators")
-                .toBool());
+        EXPECT_EQ(menu->font().pixelSize(), Typography::FontSize::Caption);
+        EXPECT_FALSE(menu->property("_fluentqt_menuQuietSeparators").toBool());
         for (QAction* action : menu->actions()) {
             if (!action->isSeparator()) {
-                EXPECT_LT(
-                    menu->actionGeometry(action).height(),
-                    ::Spacing::ControlHeight::Standard);
+                EXPECT_LT(menu->actionGeometry(action).height(),
+                          ::Spacing::ControlHeight::Standard);
             }
             const QString text = action->text();
             const bool isCopy = text.contains(QStringLiteral("Copy"), Qt::CaseInsensitive);
-            const bool isSelectAll = text.contains(QStringLiteral("Select"), Qt::CaseInsensitive)
-                && text.contains(QStringLiteral("All"), Qt::CaseInsensitive);
+            const bool isSelectAll = text.contains(QStringLiteral("Select"), Qt::CaseInsensitive) &&
+                                     text.contains(QStringLiteral("All"), Qt::CaseInsensitive);
             const bool isDelete = text.contains(QStringLiteral("Delete"), Qt::CaseInsensitive);
             sawCopy = sawCopy || isCopy;
             sawSelectAll = sawSelectAll || isSelectAll;
-            sawCopyGlyph = sawCopyGlyph
-                || (isCopy && !action->icon().isNull());
-            sawDeleteGlyph = sawDeleteGlyph
-                || (isDelete && !action->icon().isNull());
-            sawSelectAllGlyph = sawSelectAllGlyph
-                || (isSelectAll && !action->icon().isNull());
+            sawCopyGlyph = sawCopyGlyph || (isCopy && !action->icon().isNull());
+            sawDeleteGlyph = sawDeleteGlyph || (isDelete && !action->icon().isNull());
+            sawSelectAllGlyph = sawSelectAllGlyph || (isSelectAll && !action->icon().isNull());
             if (!action->icon().isNull()) {
-                const QSize iconSize =
-                    action->icon().actualSize(QSize(64, 64));
-                const int maximumBackingExtent = qCeil(
-                    Typography::IconSize::Standard
-                    * qMax<qreal>(
-                        1.0, menu->devicePixelRatioF()));
+                const QSize iconSize = action->icon().actualSize(QSize(64, 64));
+                const int maximumBackingExtent = qCeil(Typography::IconSize::Standard *
+                                                       qMax<qreal>(1.0, menu->devicePixelRatioF()));
                 EXPECT_GT(iconSize.width(), 0);
-                EXPECT_LE(
-                    iconSize.width(),
-                    maximumBackingExtent);
-                EXPECT_LE(
-                    iconSize.height(),
-                    maximumBackingExtent);
+                EXPECT_LE(iconSize.width(), maximumBackingExtent);
+                EXPECT_LE(iconSize.height(), maximumBackingExtent);
             }
         }
         menu->close();
@@ -823,14 +806,12 @@ TEST_F(TextEditTest, StandardEditingActionsReceiveIconsAndShortcutTextWithoutPla
 
     auto* standardMenu = new QMenu(window);
     standardMenu->addAction(QStringLiteral("Undo"));
-    auto* disabledRedo =
-        standardMenu->addAction(QStringLiteral("Redo"));
+    auto* disabledRedo = standardMenu->addAction(QStringLiteral("Redo"));
     disabledRedo->setEnabled(false);
     standardMenu->addSeparator();
     standardMenu->addAction(QStringLiteral("Cut"));
     standardMenu->addAction(QStringLiteral("Copy"));
-    auto* disabledPaste =
-        standardMenu->addAction(QStringLiteral("Paste"));
+    auto* disabledPaste = standardMenu->addAction(QStringLiteral("Paste"));
     disabledPaste->setEnabled(false);
     standardMenu->addAction(QStringLiteral("Delete"));
     standardMenu->addSeparator();
@@ -846,25 +827,19 @@ TEST_F(TextEditTest, StandardEditingActionsReceiveIconsAndShortcutTextWithoutPla
     int disabledShortcutCount = 0;
     QTimer::singleShot(0, [&]() {
         QWidget* popup = QApplication::activePopupWidget();
-        auto* menu =
-            qobject_cast<fluent::menus_toolbars::FluentMenu*>(
-                popup);
+        auto* menu = qobject_cast<fluent::menus_toolbars::FluentMenu*>(popup);
         sawFluentMenu = menu != nullptr;
         if (menu) {
             EXPECT_FALSE(standardMenu->isVisible());
             EXPECT_TRUE(standardMenu->isHidden());
-            EXPECT_TRUE(
-                standardMenu->testAttribute(
-                    Qt::WA_DontShowOnScreen));
+            EXPECT_TRUE(standardMenu->testAttribute(Qt::WA_DontShowOnScreen));
             for (QAction* action : menu->actions()) {
                 if (action->isSeparator())
                     continue;
                 ++editingActionCount;
-                const QString shortcutText =
-                    menu->shortcutTextForAction(action);
+                const QString shortcutText = menu->shortcutTextForAction(action);
                 EXPECT_FALSE(shortcutText.isEmpty());
-                EXPECT_FALSE(
-                    menu->itemShortcutGeometry(action).isEmpty());
+                EXPECT_FALSE(menu->itemShortcutGeometry(action).isEmpty());
                 if (action->isEnabled()) {
                     ++enabledActionCount;
                     if (!shortcutText.isEmpty())
@@ -876,18 +851,10 @@ TEST_F(TextEditTest, StandardEditingActionsReceiveIconsAndShortcutTextWithoutPla
                 }
                 if (!action->icon().isNull()) {
                     ++iconCount;
-                    const QImage image =
-                        action->icon()
-                            .pixmap(QSize(16, 16))
-                            .toImage();
+                    const QImage image = action->icon().pixmap(QSize(16, 16)).toImage();
                     bool hasVisiblePixel = false;
-                    for (int y = 0;
-                         y < image.height()
-                         && !hasVisiblePixel;
-                         ++y) {
-                        for (int x = 0;
-                             x < image.width();
-                             ++x) {
+                    for (int y = 0; y < image.height() && !hasVisiblePixel; ++y) {
+                        for (int x = 0; x < image.width(); ++x) {
                             if (image.pixelColor(x, y).alpha() > 0) {
                                 hasVisiblePixel = true;
                                 break;
@@ -903,14 +870,9 @@ TEST_F(TextEditTest, StandardEditingActionsReceiveIconsAndShortcutTextWithoutPla
             popup->close();
     });
 
-    EXPECT_TRUE(
-        fluent::menus_toolbars::detail::
-            showTextEditingContextMenu(
-                window,
-                standardMenu,
-                window->mapToGlobal(QPoint(40, 40)),
-                QStringLiteral(
-                    "FluentTextEdit.PlatformFallbackMenu")));
+    EXPECT_TRUE(fluent::menus_toolbars::detail::showTextEditingContextMenu(
+        window, standardMenu, window->mapToGlobal(QPoint(40, 40)),
+        QStringLiteral("FluentTextEdit.PlatformFallbackMenu")));
     QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
     EXPECT_TRUE(sawFluentMenu);
     EXPECT_EQ(editingActionCount, 7);
@@ -922,7 +884,8 @@ TEST_F(TextEditTest, StandardEditingActionsReceiveIconsAndShortcutTextWithoutPla
     EXPECT_EQ(disabledShortcutCount, disabledActionCount);
 }
 
-TEST_F(TextEditTest, UndoRedoRemainFunctionalFromKeyboardAndContextMenu) {
+TEST_F(TextEditTest, UndoRedoRemainFunctionalFromKeyboardAndContextMenu)
+{
     TextEdit* edit = new TextEdit(window);
     edit->setPlainText(QStringLiteral("Alpha"));
     layout->addWidget(edit);
@@ -956,7 +919,8 @@ TEST_F(TextEditTest, UndoRedoRemainFunctionalFromKeyboardAndContextMenu) {
     EXPECT_EQ(inner->toPlainText(), editedText);
 }
 
-TEST_F(TextEditTest, ContextMenuVisualCheck) {
+TEST_F(TextEditTest, ContextMenuVisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -1001,8 +965,7 @@ TEST_F(TextEditTest, ContextMenuVisualCheck) {
 
         QContextMenuEvent event(QContextMenuEvent::Mouse, localPos, globalPos);
         QApplication::sendEvent(inner->viewport(), &event);
-        QTRY_VERIFY_WITH_TIMEOUT(
-            snapshotSaved || !snapshotError.isEmpty(), 1000);
+        QTRY_VERIFY_WITH_TIMEOUT(snapshotSaved || !snapshotError.isEmpty(), 1000);
         ASSERT_TRUE(snapshotSaved) << snapshotError.toStdString();
         return;
     }
@@ -1014,7 +977,8 @@ TEST_F(TextEditTest, ContextMenuVisualCheck) {
     qApp->exec();
 }
 
-TEST_F(TextEditTest, ScrollChainingPropertyControlsBoundaryWheel) {
+TEST_F(TextEditTest, ScrollChainingPropertyControlsBoundaryWheel)
+{
     TextEdit* edit = new TextEdit(window);
     edit->setMinVisibleLines(3);
     edit->setMaxVisibleLines(3);
@@ -1055,7 +1019,8 @@ TEST_F(TextEditTest, ScrollChainingPropertyControlsBoundaryWheel) {
     EXPECT_EQ(inner->verticalScrollBar()->value(), inner->verticalScrollBar()->maximum());
 }
 
-TEST_F(TextEditTest, WheelPassesThroughWhenContentFits) {
+TEST_F(TextEditTest, WheelPassesThroughWhenContentFits)
+{
     TextEdit* edit = new TextEdit(window);
     edit->setMinVisibleLines(3);
     edit->setMaxVisibleLines(3);
@@ -1077,8 +1042,8 @@ TEST_F(TextEditTest, WheelPassesThroughWhenContentFits) {
     EXPECT_FALSE(wheel.isAccepted());
 }
 
-
-TEST_F(TextEditTest, VisualCheck) {
+TEST_F(TextEditTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -1086,27 +1051,27 @@ TEST_F(TextEditTest, VisualCheck) {
     using Edge = AnchorLayout::Edge;
 
     Label* header = new Label("TextEdit - 自适应行高 + 垂直居中:", window);
-    header->anchors()->top  = {window, Edge::Top,  30};
+    header->anchors()->top = {window, Edge::Top, 30};
     header->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(header);
 
     // 默认 1 行（同 LineEdit 高度），自动居中
     TextEdit* edit1 = new TextEdit(window);
     edit1->setPlaceholderText("Type here... (auto grows up to 4 lines)");
-    edit1->anchors()->top   = {header, Edge::Bottom, 8};
-    edit1->anchors()->left  = {window, Edge::Left, 40};
+    edit1->anchors()->top = {header, Edge::Bottom, 8};
+    edit1->anchors()->left = {window, Edge::Left, 40};
     edit1->anchors()->right = {window, Edge::Right, -40};
     layout->addWidget(edit1);
 
     Label* header2 = new Label("预填 2 行（选区应使用强调色）:", window);
-    header2->anchors()->top  = {edit1, Edge::Bottom, 12};
+    header2->anchors()->top = {edit1, Edge::Bottom, 12};
     header2->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(header2);
 
     TextEdit* edit2 = new TextEdit(window);
     edit2->setPlainText("First line\nSecond line");
-    edit2->anchors()->top   = {header2, Edge::Bottom, 8};
-    edit2->anchors()->left  = {window, Edge::Left, 40};
+    edit2->anchors()->top = {header2, Edge::Bottom, 8};
+    edit2->anchors()->left = {window, Edge::Left, 40};
     edit2->anchors()->right = {window, Edge::Right, -40};
     layout->addWidget(edit2);
 
@@ -1114,21 +1079,21 @@ TEST_F(TextEditTest, VisualCheck) {
     themeBtn->setFluentStyle(Button::Accent);
     themeBtn->setFixedSize(120, 32);
     themeBtn->anchors()->bottom = {window, Edge::Bottom, -30};
-    themeBtn->anchors()->right  = {window, Edge::Right,  -30};
+    themeBtn->anchors()->right = {window, Edge::Right, -30};
     layout->addWidget(themeBtn);
 
     QObject::connect(themeBtn, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                                    ? fluent::FluentElement::Dark
-                                    : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     window->show();
     if (QTextEdit* inner = innerTextEdit(edit2)) {
         QTextCursor cursor = inner->textCursor();
         cursor.setPosition(0);
-        cursor.setPosition(QStringLiteral("First line").size(),
-                           QTextCursor::KeepAnchor);
+        cursor.setPosition(QStringLiteral("First line").size(), QTextCursor::KeepAnchor);
         inner->setTextCursor(cursor);
         inner->setFocus(Qt::OtherFocusReason);
     }
