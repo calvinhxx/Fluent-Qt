@@ -89,19 +89,27 @@ Window::Window(QWidget* parent)
     : QWidget(parent), m_chrome(this), m_resizeSession(std::make_unique<WindowResizeSession>())
 {
     registerBackdropMetaTypes();
-    m_chrome.applyPlatformWindowFlags();
 
-    setAutoFillBackground(false);
-    setMinimumSize(Breakpoints::MinWindowWidth, Breakpoints::MinWindowHeight);
-
-    // Keep top-level translucency as a platform-level decision. Runtime effect
-    // changes update paint hints and requested backdrop type, not native flags.
-    // zh_CN: 顶层半透明是平台级决策；运行时切换效果只更新绘制提示和请求的系统背景类型。
+    // Resolve the alpha-surface requirement before any platform adapter can call winId() and
+    // create the native window. Some platform backends derive native opacity from this initial
+    // surface format; setting WA_TranslucentBackground after handle creation can leave an opaque
+    // backing store even though later paint code writes transparent pixels.
+    // zh_CN: 必须在平台适配器调用 winId() 创建原生窗口前确定 alpha surface。部分平台后端会从
+    // 首次 surface format 推导原生不透明状态；句柄创建后再设置 WA_TranslucentBackground，可能
+    // 留下“原生 backing store 声明不透明、绘制却写透明像素”的错误组合。
     refreshBackdropCapabilities();
     m_windowTranslucent =
         requiresAlphaSurface(m_backdropCapabilities, m_chrome.clientSideFrameMargin());
     if (m_windowTranslucent)
         setAttribute(Qt::WA_TranslucentBackground, true);
+    m_chrome.applyPlatformWindowFlags();
+
+    setAutoFillBackground(false);
+    setMinimumSize(Breakpoints::MinWindowWidth, Breakpoints::MinWindowHeight);
+
+    // Keep top-level translucency as a platform-level decision. Runtime effect changes update paint
+    // hints and requested backdrop type, not native flags.
+    // zh_CN: 顶层半透明是平台级决策；运行时切换效果只更新绘制提示和请求的系统背景类型。
     setEffectiveBackdropState(
         paintedFallbackState(m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect)
                                  ? QStringLiteral("platform-backdrop-pending")
@@ -724,6 +732,13 @@ void Window::changeEvent(QEvent* event)
         syncClientSideFrameShape();
         syncTitleBarSystemInsets();
         updateChromeOptions();
+        // macOS can replace the material host during a fullscreen transition. Keep this repair
+        // platform-local: the shared scheduler also requests Windows' first-show activation nudge.
+        // zh_CN: macOS 全屏切换可能替换材质宿主；此修复仅限 macOS，避免触发 Windows 首屏激活补偿。
+        if (compatibility::WindowChromeCompat::currentPlatform() ==
+                compatibility::WindowChromeCompat::Platform::MacOS &&
+            m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect))
+            scheduleBackdropResolution();
         scheduleNativeChromeRepair();
     }
 }
