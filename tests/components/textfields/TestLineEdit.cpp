@@ -9,6 +9,7 @@
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include <QAction>
+#include <QAccessible>
 #include <QApplication>
 #include <QContextMenuEvent>
 #include <QIntValidator>
@@ -285,7 +286,7 @@ TEST_F(LineEditTest, FluentPropertiesDefaultsAndSetters)
 
     // 默认值验证（引用 Spacing/Typography 常量）
     EXPECT_TRUE(edit->isClearButtonEnabled());
-    EXPECT_EQ(edit->clearButtonSize(), 22);
+    EXPECT_EQ(edit->clearButtonSize(), 24);
     EXPECT_EQ(edit->clearButtonOffset(), QPoint(Spacing::XSmall, 0));
     EXPECT_EQ(edit->focusedBorderWidth(), Spacing::Border::Focused);
     EXPECT_EQ(edit->unfocusedBorderWidth(), Spacing::Border::Normal);
@@ -314,6 +315,32 @@ TEST_F(LineEditTest, FluentPropertiesDefaultsAndSetters)
     EXPECT_EQ(spyOffset.count(), 1);
     EXPECT_EQ(spyFocused.count(), 1);
     EXPECT_EQ(spyUnfocused.count(), 1);
+}
+
+TEST_F(LineEditTest, Contract_ClearButtonIsNamedAndUsable)
+{
+    auto* edit = new LineEdit(window);
+    layout->addWidget(edit);
+    edit->setText(QStringLiteral("Editable text"));
+    window->show();
+    QApplication::setActiveWindow(window);
+    edit->setFocus();
+    QApplication::processEvents();
+
+    auto* clearButton = edit->findChild<Button*>(QStringLiteral("fluentLineEditClearButton"));
+    ASSERT_NE(clearButton, nullptr);
+    ASSERT_TRUE(clearButton->isVisible());
+    EXPECT_EQ(clearButton->size(), QSize(24, 24));
+    EXPECT_TRUE(edit->rect().contains(clearButton->geometry()));
+    auto* accessible = QAccessible::queryAccessibleInterface(clearButton);
+    ASSERT_NE(accessible, nullptr);
+    EXPECT_EQ(accessible->text(QAccessible::Name), clearButton->accessibleName());
+    EXPECT_FALSE(accessible->text(QAccessible::Name).isEmpty());
+
+    QTest::mouseClick(clearButton, Qt::LeftButton);
+    EXPECT_TRUE(edit->text().isEmpty());
+    EXPECT_TRUE(edit->hasFocus());
+    EXPECT_FALSE(clearButton->isVisible());
 }
 
 TEST_F(LineEditTest, ClearButtonOffsetAffectsGeometry)
