@@ -16,6 +16,7 @@
 #include <QPaintEvent>
 #include <QPointer>
 #include <QResizeEvent>
+#include <QScopedValueRollback>
 #include <QScrollBar>
 #include <QShowEvent>
 #include <QStandardItemModel>
@@ -379,7 +380,9 @@ void FlowView::scrollTo(const QModelIndex& index, ScrollHint hint)
 {
     if (!index.isValid() || index.row() < 0 || index.row() >= modelRowCount())
         return;
-    ensureLayout();
+    syncFluentScrollBar();
+    if (index.row() >= m_itemRects.size())
+        return;
     const QRect rect = m_itemRects.at(index.row());
     QScrollBar* bar = verticalScrollBar();
     int value = bar->value();
@@ -419,6 +422,7 @@ void FlowView::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event);
     ensureLayout();
+    const QScopedValueRollback<bool> painting(m_painting, true);
 
     const auto& colors = themeColorsRef();
     const int radius = CornerRadius::Control;
@@ -489,6 +493,8 @@ void FlowView::paintEvent(QPaintEvent* event)
         painter.setBrush(Qt::NoBrush);
         painter.drawPath(borderPath);
     }
+    if (m_layoutDirty)
+        scheduleLayoutUpdate();
 }
 
 void FlowView::resizeEvent(QResizeEvent* event)
@@ -808,14 +814,9 @@ void FlowView::applyPointerSelection(const QModelIndex& index, Qt::KeyboardModif
 
 void FlowView::rowsInserted(const QModelIndex& parent, int start, int end)
 {
+    if (parent == rootIndex())
+        invalidateFlowLayout(end == modelRowCount() - 1 ? start : 0);
     QAbstractItemView::rowsInserted(parent, start, end);
-    invalidateFlowLayout();
-}
-
-void FlowView::rowsAboutToBeRemoved(const QModelIndex& parent, int start, int end)
-{
-    QAbstractItemView::rowsAboutToBeRemoved(parent, start, end);
-    invalidateFlowLayout();
 }
 
 void FlowView::dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight,
@@ -922,28 +923,47 @@ void FlowView::setViewportHovered(bool hovered)
     emit viewportHoveredChanged();
 }
 
-void FlowView::invalidateFlowLayout()
+void FlowView::invalidateFlowLayout(int firstChangedRow)
 {
+    ++m_layoutRevision;
     m_layoutDirty = true;
-    m_layoutBands.clear();
+    m_layoutValidRowCount = qMin(m_layoutValidRowCount, firstChangedRow);
     m_dropIndicatorRects.clear();
-    syncFluentScrollBar();
+    scheduleLayoutUpdate();
     viewport()->update();
+}
+
+void FlowView::scheduleLayoutUpdate()
+{
+    if (!m_layoutUpdatePending) {
+        m_layoutUpdatePending = true;
+        QTimer::singleShot(0, this, [this]() {
+            m_layoutUpdatePending = false;
+            syncFluentScrollBar();
+        });
+    }
 }
 
 void FlowView::syncFluentScrollBar()
 {
+    if (m_layoutInProgress || m_painting || m_syncingScrollBar)
+        return;
+    const QScopedValueRollback<bool> syncing(m_syncingScrollBar, true);
     ::fluent::scrolling::suppressNativeScrollBars(verticalScrollBar(), horizontalScrollBar());
 
     // FlowView owns its scroll model: derive the native range from the laid-out
     // content height before mirroring it onto the overlay bar.
     // zh_CN: FlowView 自管滚动模型：先按排版后的内容高度推导原生范围，再镜像到覆盖条。
     ensureLayout();
+    if (m_layoutDirty)
+        return;
     QScrollBar* native = verticalScrollBar();
     const int maxValue = qMax(0, m_contentSize.height() - viewport()->height());
     native->setRange(0, maxValue);
     native->setPageStep(qMax(1, viewport()->height()));
     native->setSingleStep(24);
+    if (m_layoutDirty)
+        scheduleLayoutUpdate();
 
     if (!m_vScrollBar)
         return;
@@ -962,8 +982,10 @@ void FlowView::syncFluentScrollBar()
 
 void FlowView::ensureLayout() const
 {
-    if (!m_layoutDirty)
+    if (!m_layoutDirty || m_layoutInProgress || m_painting)
         return;
+    const QScopedValueRollback<bool> layingOut(m_layoutInProgress, true);
+    const quint64 revision = m_layoutRevision;
 
     const int count = modelRowCount();
     const int left = m_contentMargins.left();
@@ -971,20 +993,43 @@ void FlowView::ensureLayout() const
     const int availableWidth =
         qMax(1, viewport()->width() - m_contentMargins.left() - m_contentMargins.right());
 
-    m_itemRects.resize(count);
-    m_layoutBands.clear();
-    m_layoutBands.reserve(count);
-
     int x = left;
     int y = top;
     int rowHeight = 0;
     int maxRight = left;
     int bandFirstRow = 0;
+    int firstRow = 0;
+    int preservedBands = 0;
 
-    for (int row = 0; row < count; ++row) {
+    // A tail append preserves every existing item rectangle, including an unfinished band.
+    // zh_CN: 尾部追加复用已有条目矩形，并从最后一排继续排版。
+    if (m_layoutValidRowCount > 0 && m_layoutValidRowCount == m_itemRects.size() &&
+        m_layoutValidRowCount <= count && !m_layoutBands.isEmpty()) {
+        const LayoutBand lastBand = m_layoutBands.last();
+        preservedBands = m_layoutBands.size() - 1;
+        firstRow = m_layoutValidRowCount;
+        x = m_itemRects.last().right() + 1 + m_hSpacing;
+        y = lastBand.top;
+        rowHeight = lastBand.bottom - lastBand.top + 1;
+        bandFirstRow = lastBand.firstRow;
+        maxRight = m_contentSize.width() - m_contentMargins.right();
+    }
+
+    // Delegate/model callbacks may query geometry. Publish only a complete layout,
+    // and stage only the suffix so repeated tail appends remain amortized linear.
+    // zh_CN: delegate/model 回调可能重入几何查询；完整排版后再发布，仅暂存尾部追加的数据。
+    QVector<QRect> addedRects;
+    QVector<LayoutBand> addedBands;
+    addedRects.reserve(count - firstRow);
+
+    for (int row = firstRow; row < count; ++row) {
         const QSize size = itemSizeForIndex(indexForRow(row));
+        if (m_layoutRevision != revision) {
+            const_cast<FlowView*>(this)->scheduleLayoutUpdate();
+            return;
+        }
         if (x != left && x + size.width() > left + availableWidth) {
-            m_layoutBands.append(LayoutBand{bandFirstRow, row, y, y + rowHeight - 1});
+            addedBands.append(LayoutBand{bandFirstRow, row, y, y + rowHeight - 1});
             x = left;
             y += rowHeight + m_vSpacing;
             rowHeight = 0;
@@ -992,20 +1037,38 @@ void FlowView::ensureLayout() const
         }
 
         const QRect rect(x, y, size.width(), size.height());
-        m_itemRects[row] = rect;
+        addedRects.append(rect);
         x += size.width() + m_hSpacing;
         rowHeight = qMax(rowHeight, size.height());
         maxRight = qMax(maxRight, rect.right() + 1);
     }
 
     if (count > 0)
-        m_layoutBands.append(LayoutBand{bandFirstRow, count, y, y + rowHeight - 1});
+        addedBands.append(LayoutBand{bandFirstRow, count, y, y + rowHeight - 1});
+
+    if (m_layoutRevision != revision) {
+        const_cast<FlowView*>(this)->scheduleLayoutUpdate();
+        return;
+    }
+    if (firstRow == 0)
+        m_itemRects = std::move(addedRects);
+    else
+        m_itemRects += addedRects;
+    if (preservedBands == 0) {
+        m_layoutBands = std::move(addedBands);
+    } else {
+        m_layoutBands.resize(preservedBands);
+        m_layoutBands += addedBands;
+    }
 
     const int totalHeight = count == 0 ? m_contentMargins.top() + m_contentMargins.bottom()
                                        : y + rowHeight + m_contentMargins.bottom();
     const int totalWidth = qMax(viewport()->width(), maxRight + m_contentMargins.right());
     m_contentSize = QSize(totalWidth, qMax(totalHeight, viewport()->height()));
     m_layoutDirty = false;
+    m_layoutValidRowCount = count;
+    if (!m_syncingScrollBar)
+        const_cast<FlowView*>(this)->scheduleLayoutUpdate();
 }
 
 int FlowView::firstLayoutBandIntersectingY(int contentY) const
@@ -1185,6 +1248,11 @@ void FlowView::connectModelSignals(QAbstractItemModel* newModel)
                                       [this]() { invalidateFlowLayout(); }));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsMoved, this,
                                       [this]() { invalidateFlowLayout(); }));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsRemoved, this,
+                                      [this](const QModelIndex& parent) {
+                                          if (parent == rootIndex())
+                                              invalidateFlowLayout();
+                                      }));
 }
 
 int FlowView::rowAt(const QPoint& point) const
