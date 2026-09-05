@@ -22,11 +22,11 @@ INSTALL_BLOCK = re.compile(
 )
 BRIEF = re.compile(r"@brief\s+([^\n*]+)")
 TYPE_DECLARATION = re.compile(
-    r"^\s*(?:class|struct)\s+(?:[A-Z][A-Z0-9_]*\s+)?([A-Za-z_]\w*)\b",
+    r"^\s*(?:class|struct)\s+(?:[A-Z][A-Z0-9_]*\s+)?([A-Za-z_]\w*)\b[^;{}]*\{",
     re.MULTILINE,
 )
 ENUM_DECLARATION = re.compile(
-    r"^\s*enum(?:\s+class)?\s+([A-Za-z_]\w*)\b", re.MULTILINE
+    r"^\s*enum(?:\s+class)?\s+([A-Za-z_]\w*)\b[^;{}]*\{", re.MULTILINE
 )
 
 

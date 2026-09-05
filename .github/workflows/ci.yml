@@ -57,6 +57,7 @@ jobs:
           python3 .github/scripts/test_validate_ci_workflow_boundaries.py
           python3 scripts/release/test_preflight.py
           python3 tools/docs/validate_documentation.py --project-root . --self-test
+          python3 tools/site/test_generate_api_reference.py
           python3 tools/ai/validate_ai_assets.py --project-root .
           python3 tools/onboarding/test_fluentqt_doctor.py
           python3 tools/onboarding/test_fluentqt_create.py

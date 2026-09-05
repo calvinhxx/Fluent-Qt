@@ -2652,8 +2652,6 @@
       "source": "include/FluentQt/WebAssembly.h",
       "summary": "Initial presentation for a browser-hosted top-level widget.",
       "declarations": [
-        "QRect",
-        "QWidget",
         "WindowPresentation"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/WebAssembly.h"
@@ -2713,10 +2711,6 @@
       "source": "src/components/basicinput/CheckBox.h",
       "summary": "Fluent checkbox with animated check-state painting.",
       "declarations": [
-        "QPropertyAnimation",
-        "QFocusEvent",
-        "QKeyEvent",
-        "QMouseEvent",
         "CheckBox"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/CheckBox.h"
@@ -2726,7 +2720,6 @@
       "source": "src/components/basicinput/ColorPicker.h",
       "summary": "Fluent color picker for RGB, HSV, hex, and optional alpha editing.",
       "declarations": [
-        "Slider",
         "ColorPicker"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ColorPicker.h"
@@ -2736,15 +2729,8 @@
       "source": "src/components/basicinput/ComboBox.h",
       "summary": "Delegate that paints ComboBox popup rows with Fluent metrics.",
       "declarations": [
-        "QAbstractItemView",
-        "QPropertyAnimation",
-        "QKeyEvent",
-        "QLineEdit",
-        "QWheelEvent",
-        "LineEdit",
         "ComboBoxItemDelegate",
-        "ComboBox",
-        "ComboBoxPopup"
+        "ComboBox"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ComboBox.h"
     },
@@ -2762,8 +2748,6 @@
       "source": "src/components/basicinput/DropDownButton.h",
       "summary": "Fluent button that opens an attached dropdown or flyout.",
       "declarations": [
-        "QPropertyAnimation",
-        "QKeyEvent",
         "DropDownButton"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/DropDownButton.h"
@@ -2782,12 +2766,6 @@
       "source": "src/components/basicinput/MultiSelectComboBox.h",
       "summary": "Model-backed Fluent dropdown for selecting several rows.",
       "declarations": [
-        "QEvent",
-        "QFocusEvent",
-        "QKeyEvent",
-        "MultiSelectComboBoxPopup",
-        "MultiSelectComboBoxTrigger",
-        "MultiSelectComboBoxAccessible",
         "MultiSelectComboBox"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/MultiSelectComboBox.h"
@@ -2797,10 +2775,6 @@
       "source": "src/components/basicinput/RadioButton.h",
       "summary": "Fluent radio button with animated selection feedback.",
       "declarations": [
-        "QPropertyAnimation",
-        "QFocusEvent",
-        "QKeyEvent",
-        "QMouseEvent",
         "RadioButton"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/RadioButton.h"
@@ -2810,8 +2784,6 @@
       "source": "src/components/basicinput/RatingControl.h",
       "summary": "Fluent rating selector with pointer-driven value selection.",
       "declarations": [
-        "QKeyEvent",
-        "QFocusEvent",
         "RatingControl"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/RatingControl.h"
@@ -2830,8 +2802,6 @@
       "source": "src/components/basicinput/Slider.h",
       "summary": "Fluent slider with custom track, handle, and animated feedback metrics.",
       "declarations": [
-        "QPainter",
-        "QStyleOptionSlider",
         "Slider"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/Slider.h"
@@ -2841,8 +2811,6 @@
       "source": "src/components/basicinput/SplitButton.h",
       "summary": "Button with separate primary action and secondary menu regions.",
       "declarations": [
-        "QVariantAnimation",
-        "QKeyEvent",
         "SplitButton",
         "SplitPart"
       ],
@@ -2871,8 +2839,6 @@
       "source": "src/components/basicinput/ToggleSwitch.h",
       "summary": "Fluent switch for binary on/off settings.",
       "declarations": [
-        "QPropertyAnimation",
-        "QFocusEvent",
         "ToggleSwitch"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ToggleSwitch.h"
@@ -2882,17 +2848,6 @@
       "source": "src/components/collections/DataGrid.h",
       "summary": "Fluent two-dimensional item view for large model-backed data sets.",
       "declarations": [
-        "QAbstractItemModel",
-        "QEvent",
-        "QItemSelectionModel",
-        "QKeyEvent",
-        "QMouseEvent",
-        "QPaintEvent",
-        "QResizeEvent",
-        "QShowEvent",
-        "QWheelEvent",
-        "ScrollBar",
-        "DataGridCellDelegate",
         "DataGrid"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/DataGrid.h"
@@ -2902,10 +2857,6 @@
       "source": "src/components/collections/DrawerView.h",
       "summary": "Same-window drawer overlay with modal, dim, and drag behavior.",
       "declarations": [
-        "QMouseEvent",
-        "QPaintEvent",
-        "QPropertyAnimation",
-        "OverlayCoordinator",
         "DrawerView",
         "DragState",
         "DrawerEdge",
@@ -2919,7 +2870,6 @@
       "source": "src/components/collections/FlipView.h",
       "summary": "Fluent carousel that presents one item at a time.",
       "declarations": [
-        "QPropertyAnimation",
         "FlipView",
         "PageRecord"
       ],
@@ -2930,16 +2880,6 @@
       "source": "src/components/collections/FlowView.h",
       "summary": "Fluent collection view that wraps items across rows or columns.",
       "declarations": [
-        "QLabel",
-        "QMouseEvent",
-        "QPaintEvent",
-        "QResizeEvent",
-        "QShowEvent",
-        "QTimer",
-        "QWheelEvent",
-        "QVariantAnimation",
-        "ScrollBar",
-        "OverscrollController",
         "FlowView",
         "LayoutBand"
       ],
@@ -2950,16 +2890,6 @@
       "source": "src/components/collections/GridView.h",
       "summary": "Fluent grid collection view with configurable cell metrics.",
       "declarations": [
-        "QLabel",
-        "QMouseEvent",
-        "QPaintEvent",
-        "QResizeEvent",
-        "QShowEvent",
-        "QTimer",
-        "QVariantAnimation",
-        "QWheelEvent",
-        "ScrollBar",
-        "OverscrollController",
         "GridView"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/GridView.h"
@@ -2969,19 +2899,6 @@
       "source": "src/components/collections/ListView.h",
       "summary": "Fluent list collection view with header, footer, sections, and indicator motion.",
       "declarations": [
-        "QLabel",
-        "QItemSelection",
-        "QItemSelectionModel",
-        "QPaintEvent",
-        "QPainter",
-        "QResizeEvent",
-        "QShowEvent",
-        "QTimer",
-        "QVariantAnimation",
-        "QWheelEvent",
-        "QPropertyAnimation",
-        "ScrollBar",
-        "OverscrollController",
         "ListView",
         "IndicatorMotionDirection"
       ],
@@ -3001,10 +2918,6 @@
       "source": "src/components/collections/SplitView.h",
       "summary": "Resizable multi-pane container with Fluent splitter handles.",
       "declarations": [
-        "QMouseEvent",
-        "QPaintEvent",
-        "QResizeEvent",
-        "SplitViewHandle",
         "SplitViewPaneOptions",
         "SplitView",
         "PaneRecord",
@@ -3018,10 +2931,6 @@
       "source": "src/components/collections/StackView.h",
       "summary": "Stacked page host with push/pop navigation semantics.",
       "declarations": [
-        "QGraphicsOpacityEffect",
-        "QKeyEvent",
-        "QParallelAnimationGroup",
-        "QResizeEvent",
         "StackView",
         "StackEntry",
         "PendingRemoval",
@@ -3037,15 +2946,6 @@
       "source": "src/components/collections/TreeView.h",
       "summary": "Fluent tree collection view with hierarchy-aware selection visuals.",
       "declarations": [
-        "QLabel",
-        "QPaintEvent",
-        "QResizeEvent",
-        "QShowEvent",
-        "QVariantAnimation",
-        "QWheelEvent",
-        "QTimer",
-        "ScrollBar",
-        "OverscrollController",
         "TreeView",
         "SelectionIndicatorStyle",
         "IndicatorVerticalDirection",
@@ -3059,8 +2959,6 @@
       "source": "src/components/date_time/CalendarDatePicker.h",
       "summary": "Button-like date entry that opens a CalendarView popup.",
       "declarations": [
-        "CalendarDatePickerPopup",
-        "CalendarView",
         "CalendarDatePicker"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/date_time/CalendarDatePicker.h"
@@ -3070,10 +2968,6 @@
       "source": "src/components/date_time/CalendarView.h",
       "summary": "Fluent calendar surface for browsing and selecting dates across levels.",
       "declarations": [
-        "QPainter",
-        "QVariantAnimation",
-        "QWheelEvent",
-        "CalendarViewAccessible",
         "CalendarView",
         "DayPageKey",
         "MonthPageKey",
@@ -3088,7 +2982,6 @@
       "source": "src/components/date_time/DatePicker.h",
       "summary": "Button-like date picker with nullable selected-date semantics.",
       "declarations": [
-        "DatePickerFlyout",
         "DatePicker",
         "FieldSegment",
         "DateField",
@@ -3103,7 +2996,6 @@
       "source": "src/components/date_time/TimePicker.h",
       "summary": "Button-like time picker with nullable selected-time semantics.",
       "declarations": [
-        "TimePickerFlyout",
         "TimePicker",
         "FieldSegment",
         "TimeField",
@@ -3116,12 +3008,6 @@
       "source": "src/components/dialogs_flyouts/CoachMark.h",
       "summary": "Same-window teaching tip with a tail aimed at a target.",
       "declarations": [
-        "QPaintEvent",
-        "QEvent",
-        "QGraphicsOpacityEffect",
-        "QPropertyAnimation",
-        "QResizeEvent",
-        "OverlayCoordinator",
         "CoachMark",
         "SurfaceMode",
         "Placement"
@@ -3143,15 +3029,6 @@
       "source": "src/components/dialogs_flyouts/Dialog.h",
       "summary": "Same-window Fluent dialog shell with optional smoke scrim and enter/exit fade.",
       "declarations": [
-        "QEvent",
-        "QGraphicsOpacityEffect",
-        "QHideEvent",
-        "QKeyEvent",
-        "QMouseEvent",
-        "QPaintEvent",
-        "QPainter",
-        "QShowEvent",
-        "OverlayCoordinator",
         "Dialog",
         "CloseFlag"
       ],
@@ -3172,8 +3049,6 @@
       "source": "src/components/dialogs_flyouts/Popup.h",
       "summary": "Base same-window popup surface with open state and close policy control.",
       "declarations": [
-        "QGraphicsOpacityEffect",
-        "OverlayCoordinator",
         "Popup",
         "CloseFlag",
         "CloseReason"
@@ -3185,10 +3060,6 @@
       "source": "src/components/dialogs_flyouts/TeachingTip.h",
       "summary": "Contextual teaching flyout with target placement and optional tail.",
       "declarations": [
-        "QKeyEvent",
-        "QPaintEvent",
-        "QResizeEvent",
-        "QWidget",
         "TeachingTip",
         "PreferredPlacement",
         "CloseReason"
@@ -3200,8 +3071,6 @@
       "source": "src/components/foundation/FluentElement.h",
       "summary": "Provides shared Fluent design tokens and theme callbacks to QWidget-based components.",
       "declarations": [
-        "QWidget",
-        "FluentElementPrivate",
         "FluentElement",
         "Colors",
         "FontStyle",
@@ -3298,9 +3167,6 @@
       "source": "src/components/foundation/overlay/OverlayScrim.h",
       "summary": "Same-window dim/scrim used behind modal overlays, drawers, and spotlights.",
       "declarations": [
-        "QMouseEvent",
-        "QPaintEvent",
-        "QWheelEvent",
         "OverlayScrim"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/overlay/OverlayScrim.h"
@@ -3324,9 +3190,6 @@
       "source": "src/components/layout/Accordion.h",
       "summary": "Vertical group of Expander items with coordinated expansion and keyboard focus.",
       "declarations": [
-        "QEvent",
-        "QVBoxLayout",
-        "Expander",
         "Accordion",
         "ItemRecord",
         "ExpansionMode"
@@ -3357,14 +3220,6 @@
       "source": "src/components/layout/Expander.h",
       "summary": "Fluent disclosure surface with an animated, caller-supplied body.",
       "declarations": [
-        "QResizeEvent",
-        "QScrollArea",
-        "QScrollBar",
-        "QVariantAnimation",
-        "FontIcon",
-        "Button",
-        "Divider",
-        "Label",
         "Expander"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Expander.h"
@@ -3374,8 +3229,6 @@
       "source": "src/components/layout/Field.h",
       "summary": "Composition shell that labels an existing editor and presents helper",
       "declarations": [
-        "Label",
-        "FontIcon",
         "Field",
         "ValidationState"
       ],
@@ -3386,9 +3239,6 @@
       "source": "src/components/menus_toolbars/CommandBar.h",
       "summary": "Hosts ordered primary and secondary application commands.",
       "declarations": [
-        "QAction",
-        "QActionEvent",
-        "CommandBarPrivate",
         "CommandBar",
         "LabelPosition"
       ],
@@ -3399,9 +3249,6 @@
       "source": "src/components/menus_toolbars/CommandBarFlyout.h",
       "summary": "Contextual command surface with collapsed and expanded show modes.",
       "declarations": [
-        "QAction",
-        "QActionEvent",
-        "CommandBarFlyoutPrivate",
         "CommandBarFlyout",
         "ShowMode"
       ],
@@ -3412,10 +3259,6 @@
       "source": "src/components/menus_toolbars/Menu.h",
       "summary": "Menu item action with Fluent typography metadata.",
       "declarations": [
-        "QActionEvent",
-        "QKeyEvent",
-        "QMouseEvent",
-        "QResizeEvent",
         "FluentMenuItem",
         "FluentMenu"
       ],
@@ -3426,15 +3269,6 @@
       "source": "src/components/menus_toolbars/MenuBar.h",
       "summary": "Fluent-styled menu bar with configurable font role.",
       "declarations": [
-        "QAction",
-        "QActionEvent",
-        "QEvent",
-        "QFocusEvent",
-        "QKeyEvent",
-        "QMouseEvent",
-        "QPaintEvent",
-        "QResizeEvent",
-        "FluentMenu",
         "FluentMenuBar",
         "Metrics"
       ],
@@ -3445,12 +3279,6 @@
       "source": "src/components/navigation/Breadcrumb.h",
       "summary": "Breadcrumb navigation control with overflow handling and item sizing.",
       "declarations": [
-        "QFocusEvent",
-        "QKeyEvent",
-        "QMouseEvent",
-        "QPaintEvent",
-        "QResizeEvent",
-        "BreadcrumbAccessible",
         "BreadcrumbItem",
         "Breadcrumb",
         "Metrics",
@@ -3466,12 +3294,6 @@
       "source": "src/components/navigation/NavigationView.h",
       "summary": "Lightweight navigation shell with pane display modes and content hosting.",
       "declarations": [
-        "QPaintEvent",
-        "QEvent",
-        "QPropertyAnimation",
-        "QResizeEvent",
-        "QShowEvent",
-        "StackContentHost",
         "NavigationView",
         "ChromeRecord",
         "LayoutState",
@@ -3486,16 +3308,6 @@
       "source": "src/components/navigation/Pivot.h",
       "summary": "Pivot-style horizontal navigation selector.",
       "declarations": [
-        "QFocusEvent",
-        "QColor",
-        "QFont",
-        "QFontMetrics",
-        "QKeyEvent",
-        "QMouseEvent",
-        "QPaintEvent",
-        "QPainter",
-        "QResizeEvent",
-        "PivotAccessible",
         "PivotItem",
         "Pivot",
         "HeaderRecord",
@@ -3511,17 +3323,6 @@
       "source": "src/components/navigation/SelectorBar.h",
       "summary": "Horizontal selector bar for mutually exclusive navigation items.",
       "declarations": [
-        "QFocusEvent",
-        "QColor",
-        "QFont",
-        "QFontMetrics",
-        "QKeyEvent",
-        "QMouseEvent",
-        "QPaintEvent",
-        "QPainter",
-        "QResizeEvent",
-        "QVariantAnimation",
-        "SelectorBarAccessible",
         "SelectorBarItem",
         "SelectorBar",
         "ItemRecord",
@@ -3537,9 +3338,6 @@
       "source": "src/components/navigation/StackContentHost.h",
       "summary": "Content host that switches stacked pages with configurable transitions.",
       "declarations": [
-        "QParallelAnimationGroup",
-        "QResizeEvent",
-        "QStackedLayout",
         "StackContentHost",
         "PageRecord",
         "TransitionEffect"
@@ -3551,25 +3349,6 @@
       "source": "src/components/navigation/TabView.h",
       "summary": "Internal tab strip that paints tab chrome and indicator geometry.",
       "declarations": [
-        "QColor",
-        "QEvent",
-        "QFocusEvent",
-        "QFont",
-        "QFontMetrics",
-        "QGraphicsOpacityEffect",
-        "QKeyEvent",
-        "QMouseEvent",
-        "QObject",
-        "QPainter",
-        "QPaintEvent",
-        "QPropertyAnimation",
-        "QResizeEvent",
-        "QScrollBar",
-        "QVariantAnimation",
-        "QWheelEvent",
-        "Button",
-        "Label",
-        "TabViewAccessible",
         "TabViewItem",
         "TabStrip",
         "Metrics",
@@ -3589,13 +3368,6 @@
       "source": "src/components/scrolling/AnnotatedScrollBar.h",
       "summary": "Label metadata rendered beside an AnnotatedScrollBar offset.",
       "declarations": [
-        "QKeyEvent",
-        "QMouseEvent",
-        "QPaintEvent",
-        "QResizeEvent",
-        "QWheelEvent",
-        "ToolTip",
-        "ScrollView",
         "AnnotatedScrollBarLabel",
         "AnnotatedScrollBar",
         "VisibleLabel"
@@ -3607,13 +3379,6 @@
       "source": "src/components/scrolling/PipsPager.h",
       "summary": "Fluent page indicator with selectable pips and navigation buttons.",
       "declarations": [
-        "QFocusEvent",
-        "QKeyEvent",
-        "QMouseEvent",
-        "QPaintEvent",
-        "QPainter",
-        "QVariantAnimation",
-        "PipsPagerAccessible",
         "PipsPager",
         "HitTarget",
         "PipsPagerButtonVisibility",
@@ -3635,10 +3400,6 @@
       "source": "src/components/scrolling/ScrollView.h",
       "summary": "Helper content widget that exposes ScrollView zoom state to layout code.",
       "declarations": [
-        "QScrollBar",
-        "QWheelEvent",
-        "QObject",
-        "ScrollBar",
         "ScrollViewZoomAware",
         "ScrollView",
         "ScrollMode",
@@ -3653,9 +3414,6 @@
       "source": "src/components/status_info/Avatar.h",
       "summary": "Fluent identity image with initials fallback and optional presence status.",
       "declarations": [
-        "QPaintEvent",
-        "QResizeEvent",
-        "InfoBadge",
         "Avatar",
         "AvatarShape",
         "AvatarSize",
@@ -3668,10 +3426,6 @@
       "source": "src/components/status_info/InfoBadge.h",
       "summary": "Compact Fluent badge for value, icon, status, or attention signals.",
       "declarations": [
-        "QPainter",
-        "QRectF",
-        "QHideEvent",
-        "QShowEvent",
         "InfoBadge",
         "InfoBadgeDisplayMode",
         "InfoBadgeStatus"
@@ -3683,11 +3437,6 @@
       "source": "src/components/status_info/InfoBar.h",
       "summary": "Fluent inline notification bar with severity, actions, and close behavior.",
       "declarations": [
-        "QResizeEvent",
-        "QEvent",
-        "QPainter",
-        "Button",
-        "Label",
         "InfoBar",
         "InfoBarSeverity"
       ],
@@ -3718,12 +3467,6 @@
       "source": "src/components/status_info/Shimmer.h",
       "summary": "Painter helper for Fluent skeleton loading visuals.",
       "declarations": [
-        "QPainter",
-        "QPaintEvent",
-        "QHideEvent",
-        "QResizeEvent",
-        "QShowEvent",
-        "QTimerEvent",
         "ShimmerPainter",
         "Palette",
         "Element",
@@ -3738,16 +3481,6 @@
       "source": "src/components/status_info/Toast.h",
       "summary": "Transient same-window notification with severity and edge placement.",
       "declarations": [
-        "QEvent",
-        "QFrame",
-        "QGraphicsOpacityEffect",
-        "QPaintEvent",
-        "QPropertyAnimation",
-        "QTimer",
-        "OverlayCoordinator",
-        "FontIcon",
-        "Button",
-        "Label",
         "Toast",
         "Severity",
         "Placement",
@@ -3760,7 +3493,6 @@
       "source": "src/components/status_info/ToolTip.h",
       "summary": "Fluent tooltip bubble with margin and animation controls.",
       "declarations": [
-        "QPropertyAnimation",
         "ToolTip",
         "Placement"
       ],
@@ -3771,10 +3503,6 @@
       "source": "src/components/textfields/AutoSuggestBox.h",
       "summary": "LineEdit-based input box with query affordance and suggestion flyout.",
       "declarations": [
-        "QKeyEvent",
-        "QMoveEvent",
-        "QPainter",
-        "SuggestionListPopup",
         "AutoSuggestBox",
         "TextChangeReason",
         "QueryButtonPlacement"
@@ -3786,9 +3514,6 @@
       "source": "src/components/textfields/EditingCommandRouter.h",
       "summary": "Provides window-scoped semantic actions for the focused Fluent editor.",
       "declarations": [
-        "QAction",
-        "QWidget",
-        "EditingCommandRouterPrivate",
         "EditingCommandRouter",
         "Command"
       ],
@@ -3799,7 +3524,6 @@
       "source": "src/components/textfields/Label.h",
       "summary": "Fluent typography label with optional text elision.",
       "declarations": [
-        "QContextMenuEvent",
         "Label",
         "TextColorRole"
       ],
@@ -3810,10 +3534,6 @@
       "source": "src/components/textfields/LineEdit.h",
       "summary": "Fluent single-line text input with clear button and focus underline.",
       "declarations": [
-        "QPainter",
-        "QPaintEvent",
-        "QResizeEvent",
-        "QContextMenuEvent",
         "LineEdit"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/LineEdit.h"
@@ -3823,12 +3543,6 @@
       "source": "src/components/textfields/NumberBox.h",
       "summary": "Numeric LineEdit with value bounds, expression input, and spin",
       "declarations": [
-        "QFocusEvent",
-        "QKeyEvent",
-        "QMouseEvent",
-        "QPaintEvent",
-        "QPainter",
-        "QResizeEvent",
         "NumberBox",
         "SpinButtonPlacementMode"
       ],
@@ -3839,12 +3553,6 @@
       "source": "src/components/textfields/PasswordBox.h",
       "summary": "Password text field with header and reveal-mode support.",
       "declarations": [
-        "QContextMenuEvent",
-        "QFocusEvent",
-        "QMouseEvent",
-        "QPaintEvent",
-        "QPainter",
-        "QResizeEvent",
         "PasswordBox",
         "PasswordRevealMode"
       ],
@@ -3855,9 +3563,6 @@
       "source": "src/components/textfields/TextEdit.h",
       "summary": "Fluent multi-line text input with line-count based sizing.",
       "declarations": [
-        "QTextEdit",
-        "QPainter",
-        "QPaintEvent",
         "TextEdit"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/TextEdit.h"
@@ -3876,18 +3581,6 @@
       "source": "src/components/windowing/Window.h",
       "summary": "Application shell window with title-bar and content hosting.",
       "declarations": [
-        "QMouseEvent",
-        "QPaintEvent",
-        "QPainter",
-        "QPixmap",
-        "QResizeEvent",
-        "QShowEvent",
-        "QVBoxLayout",
-        "Button",
-        "ClientSideFrameEdgeOverlay",
-        "ClientSideFramePaintOptions",
-        "TitleBar",
-        "WindowResizeSession",
         "Window"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/windowing/Window.h"
@@ -3897,8 +3590,6 @@
       "source": "src/components/windowing/WindowBackdrop.h",
       "summary": "Logical background material requested for a Fluent window.",
       "declarations": [
-        "QWidget",
-        "FluentElement",
         "BackdropCapabilities",
         "BackdropApplyResult",
         "BackdropState",
@@ -3914,7 +3605,6 @@
       "source": "src/components/windowing/WindowBackdropMaterial.h",
       "summary": "Parameters for the app-painted Fluent window backdrop.",
       "declarations": [
-        "QPainter",
         "WindowBackdropMaterialOptions",
         "WindowBackdropMaterial"
       ],
@@ -4005,7 +3695,6 @@
       "source": "src/utils/Inspector.h",
       "summary": "Configures the read-only checks performed by Inspector.",
       "declarations": [
-        "QWidget",
         "InspectorOptions",
         "Inspector"
       ],
