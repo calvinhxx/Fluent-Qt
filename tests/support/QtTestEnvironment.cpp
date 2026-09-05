@@ -27,10 +27,6 @@
 #define FLUENT_QT_TEST_BINARY_DIR ""
 #endif
 
-#ifndef FLUENT_QT_TEST_TARGET
-#define FLUENT_QT_TEST_TARGET "unknown_test"
-#endif
-
 #ifndef FLUENT_QT_VISUAL_BASELINE_DIR
 #define FLUENT_QT_VISUAL_BASELINE_DIR ""
 #endif
@@ -58,7 +54,8 @@ QString configuredBinaryDir()
 QString snapshotIdentityFileName(const QString& variant)
 {
     QStringList parts;
-    parts << sanitizeSnapshotPart(QString::fromUtf8(FLUENT_QT_TEST_TARGET));
+    parts << sanitizeSnapshotPart(
+        QFileInfo(QCoreApplication::applicationFilePath()).completeBaseName());
 
     if (const auto* info = ::testing::UnitTest::GetInstance()->current_test_info()) {
         parts << sanitizeSnapshotPart(QString::fromUtf8(info->test_suite_name()));
