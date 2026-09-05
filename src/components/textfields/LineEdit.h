@@ -15,7 +15,9 @@ class QPaintEvent;
 class QResizeEvent;
 class QContextMenuEvent;
 
-namespace fluent::basicinput { class Button; }
+namespace fluent::basicinput {
+class Button;
+}
 
 namespace fluent::textfields {
 
@@ -34,7 +36,8 @@ class LineEdit : public QLineEdit, public FluentElement, public QMLPlus {
      * @brief Margins applied around the control content area.
      * zh_CN: 控件内容区域周围的边距。
      */
-    Q_PROPERTY(QMargins contentMargins READ contentMargins WRITE setContentMargins NOTIFY contentMarginsChanged)
+    Q_PROPERTY(QMargins contentMargins READ contentMargins WRITE setContentMargins NOTIFY
+                   contentMarginsChanged)
     /**
      * @brief Fluent typography role used for text rendering.
      * zh_CN: 文本绘制使用的 Fluent 排版角色。
@@ -44,32 +47,38 @@ class LineEdit : public QLineEdit, public FluentElement, public QMLPlus {
      * @brief Whether the trailing clear button is enabled.
      * zh_CN: 尾部清除按钮是否启用。
      */
-    Q_PROPERTY(bool clearButtonEnabled READ isClearButtonEnabled WRITE setClearButtonEnabled NOTIFY clearButtonEnabledChanged)
+    Q_PROPERTY(bool clearButtonEnabled READ isClearButtonEnabled WRITE setClearButtonEnabled NOTIFY
+                   clearButtonEnabledChanged)
     /**
      * @brief Size of the clear button.
      * zh_CN: 清除按钮尺寸。
      */
-    Q_PROPERTY(int clearButtonSize READ clearButtonSize WRITE setClearButtonSize NOTIFY clearButtonSizeChanged)
+    Q_PROPERTY(int clearButtonSize READ clearButtonSize WRITE setClearButtonSize NOTIFY
+                   clearButtonSizeChanged)
     /**
      * @brief Pixel offset applied to the clear button.
      * zh_CN: 清除按钮应用的像素偏移。
      */
-    Q_PROPERTY(QPoint clearButtonOffset READ clearButtonOffset WRITE setClearButtonOffset NOTIFY clearButtonOffsetChanged)
+    Q_PROPERTY(QPoint clearButtonOffset READ clearButtonOffset WRITE setClearButtonOffset NOTIFY
+                   clearButtonOffsetChanged)
     /**
      * @brief Bottom border width while focused.
      * zh_CN: 聚焦时底部边框宽度。
      */
-    Q_PROPERTY(int focusedBorderWidth READ focusedBorderWidth WRITE setFocusedBorderWidth NOTIFY focusedBorderWidthChanged)
+    Q_PROPERTY(int focusedBorderWidth READ focusedBorderWidth WRITE setFocusedBorderWidth NOTIFY
+                   focusedBorderWidthChanged)
     /**
      * @brief Bottom border width while not focused.
      * zh_CN: 未聚焦时底部边框宽度。
      */
-    Q_PROPERTY(int unfocusedBorderWidth READ unfocusedBorderWidth WRITE setUnfocusedBorderWidth NOTIFY unfocusedBorderWidthChanged)
+    Q_PROPERTY(int unfocusedBorderWidth READ unfocusedBorderWidth WRITE setUnfocusedBorderWidth
+                   NOTIFY unfocusedBorderWidthChanged)
     /**
      * @brief Whether LineEdit paints its input frame and focus underline.
      * zh_CN: LineEdit 是否绘制输入框外框和焦点下划线。
      */
-    Q_PROPERTY(bool frameVisible READ isFrameVisible WRITE setFrameVisible NOTIFY frameVisibleChanged)
+    Q_PROPERTY(
+        bool frameVisible READ isFrameVisible WRITE setFrameVisible NOTIFY frameVisibleChanged)
 
 public:
     explicit LineEdit(QWidget* parent = nullptr);
@@ -125,20 +134,19 @@ private:
     void updateClearButtonVisibility();
     void updateClearButtonGeometry();
 
-    QMargins m_contentMargins  = QMargins(::Spacing::Padding::TextFieldHorizontal,
-                                          ::Spacing::Padding::TextFieldVertical,
-                                          ::Spacing::Padding::TextFieldHorizontal,
-                                          ::Spacing::Padding::TextFieldVertical);
+    QMargins m_contentMargins =
+        QMargins(::Spacing::Padding::TextFieldHorizontal, ::Spacing::Padding::TextFieldVertical,
+                 ::Spacing::Padding::TextFieldHorizontal, ::Spacing::Padding::TextFieldVertical);
     Typography::FontRole m_fontRole = Typography::FontRole::Body;
     ::fluent::basicinput::Button* m_clearButton = nullptr;
-    bool     m_clearButtonEnabled = true;
-    int      m_clearButtonSize    = 22;
-    QPoint   m_clearButtonOffset  = QPoint(::Spacing::XSmall, 0);
-    int      m_focusedBorderWidth   = ::Spacing::Border::Focused;
-    int      m_unfocusedBorderWidth = ::Spacing::Border::Normal;
-    bool     m_frameVisible = true;
-    bool     m_isHovered = false;
-    bool     m_isFocused = false;
+    bool m_clearButtonEnabled = true;
+    int m_clearButtonSize = 22;
+    QPoint m_clearButtonOffset = QPoint(::Spacing::XSmall, 0);
+    int m_focusedBorderWidth = ::Spacing::Border::Focused;
+    int m_unfocusedBorderWidth = ::Spacing::Border::Normal;
+    bool m_frameVisible = true;
+    bool m_isHovered = false;
+    bool m_isFocused = false;
 };
 
 } // namespace fluent::textfields

@@ -12,7 +12,9 @@ class QPaintEvent;
 class QPainter;
 class QResizeEvent;
 
-namespace fluent::basicinput { class RepeatButton; }
+namespace fluent::basicinput {
+class RepeatButton;
+}
 
 namespace fluent::textfields {
 
@@ -61,52 +63,62 @@ class NumberBox : public LineEdit {
      * @brief Whether typed arithmetic expressions are evaluated before commit.
      * zh_CN: 输入的算术表达式是否在提交前求值。
      */
-    Q_PROPERTY(bool acceptsExpression READ acceptsExpression WRITE setAcceptsExpression NOTIFY acceptsExpressionChanged)
+    Q_PROPERTY(bool acceptsExpression READ acceptsExpression WRITE setAcceptsExpression NOTIFY
+                   acceptsExpressionChanged)
     /**
      * @brief Placement mode for hidden, compact, or inline spin buttons.
      * zh_CN: 步进按钮的隐藏、紧凑或内联布局模式。
      */
-    Q_PROPERTY(SpinButtonPlacementMode spinButtonPlacementMode READ spinButtonPlacementMode WRITE setSpinButtonPlacementMode NOTIFY spinButtonPlacementModeChanged)
+    Q_PROPERTY(SpinButtonPlacementMode spinButtonPlacementMode READ spinButtonPlacementMode WRITE
+                   setSpinButtonPlacementMode NOTIFY spinButtonPlacementModeChanged)
     /**
      * @brief Button size used when spin buttons are rendered outside the text
    * field. zh_CN: 步进按钮绘制在文本框外侧时使用的按钮尺寸。
      */
-    Q_PROPERTY(QSize spinButtonSize READ spinButtonSize WRITE setSpinButtonSize NOTIFY spinButtonSizeChanged)
+    Q_PROPERTY(QSize spinButtonSize READ spinButtonSize WRITE setSpinButtonSize NOTIFY
+                   spinButtonSizeChanged)
     /**
      * @brief Button size used when spin buttons are rendered inside the text
    * field. zh_CN: 步进按钮绘制在文本框内部时使用的按钮尺寸。
      */
-    Q_PROPERTY(QSize inlineSpinButtonSize READ inlineSpinButtonSize WRITE setInlineSpinButtonSize NOTIFY inlineSpinButtonSizeChanged)
+    Q_PROPERTY(QSize inlineSpinButtonSize READ inlineSpinButtonSize WRITE setInlineSpinButtonSize
+                   NOTIFY inlineSpinButtonSizeChanged)
     /**
      * @brief Right-side inset reserved between inline spin buttons and the frame.
      * zh_CN: 内联步进按钮与输入框右边框之间预留的间距。
      */
-    Q_PROPERTY(int spinButtonRightMargin READ spinButtonRightMargin WRITE setSpinButtonRightMargin NOTIFY spinButtonRightMarginChanged)
+    Q_PROPERTY(int spinButtonRightMargin READ spinButtonRightMargin WRITE setSpinButtonRightMargin
+                   NOTIFY spinButtonRightMarginChanged)
     /**
      * @brief Width reserved for compact spin buttons inside the input surface.
      * zh_CN: 紧凑模式下输入表面为步进按钮预留的宽度。
      */
-    Q_PROPERTY(int compactSpinButtonReservedWidth READ compactSpinButtonReservedWidth WRITE setCompactSpinButtonReservedWidth NOTIFY compactSpinButtonReservedWidthChanged)
+    Q_PROPERTY(int compactSpinButtonReservedWidth READ compactSpinButtonReservedWidth WRITE
+                   setCompactSpinButtonReservedWidth NOTIFY compactSpinButtonReservedWidthChanged)
     /**
      * @brief Spacing between adjacent spin buttons.
      * zh_CN: 相邻步进按钮之间的间距。
      */
-    Q_PROPERTY(int spinButtonSpacing READ spinButtonSpacing WRITE setSpinButtonSpacing NOTIFY spinButtonSpacingChanged)
+    Q_PROPERTY(int spinButtonSpacing READ spinButtonSpacing WRITE setSpinButtonSpacing NOTIFY
+                   spinButtonSpacingChanged)
     /**
      * @brief Gap between text content and inline spin-button chrome.
      * zh_CN: 文本内容与内联步进按钮外观之间的间距。
      */
-    Q_PROPERTY(int spinButtonTextGap READ spinButtonTextGap WRITE setSpinButtonTextGap NOTIFY spinButtonTextGapChanged)
+    Q_PROPERTY(int spinButtonTextGap READ spinButtonTextGap WRITE setSpinButtonTextGap NOTIFY
+                   spinButtonTextGapChanged)
     /**
      * @brief Icon glyph size used by spin-button chevrons.
      * zh_CN: 步进按钮箭头图标使用的字符尺寸。
      */
-    Q_PROPERTY(int spinButtonIconSize READ spinButtonIconSize WRITE setSpinButtonIconSize NOTIFY spinButtonIconSizeChanged)
+    Q_PROPERTY(int spinButtonIconSize READ spinButtonIconSize WRITE setSpinButtonIconSize NOTIFY
+                   spinButtonIconSizeChanged)
     /**
      * @brief Number of fractional digits used when formatting the value.
      * zh_CN: 格式化数值时保留的小数位数。
      */
-    Q_PROPERTY(int displayPrecision READ displayPrecision WRITE setDisplayPrecision NOTIFY displayPrecisionChanged)
+    Q_PROPERTY(int displayPrecision READ displayPrecision WRITE setDisplayPrecision NOTIFY
+                   displayPrecisionChanged)
     /**
      * @brief Step used to normalize display rounding after value changes.
      * zh_CN: 数值变化后用于规范显示舍入的步长。

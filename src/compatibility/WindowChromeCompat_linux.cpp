@@ -47,16 +47,15 @@ struct X11Api {
     using XInternAtomFn = XAtom (*)(XDisplay*, const char*, int);
     using XGetSelectionOwnerFn = XWindow (*)(XDisplay*, XAtom);
     using XListPropertiesFn = XAtom* (*)(XDisplay*, XWindow, int*);
-    using XGetWindowPropertyFn = int (*)(XDisplay*, XWindow, XAtom, long, long, int,
-                                         XAtom, XAtom*, int*, unsigned long*, unsigned long*,
-                                         unsigned char**);
+    using XGetWindowPropertyFn = int (*)(XDisplay*, XWindow, XAtom, long, long, int, XAtom, XAtom*,
+                                         int*, unsigned long*, unsigned long*, unsigned char**);
     using XChangePropertyFn = int (*)(XDisplay*, XWindow, XAtom, XAtom, int, int,
                                       const unsigned char*, int);
     using XDeletePropertyFn = int (*)(XDisplay*, XWindow, XAtom);
     using XFlushFn = int (*)(XDisplay*);
     using XFreeFn = int (*)(void*);
-    using XGetGeometryFn = int (*)(XDisplay*, XDrawable, XWindow*, int*, int*,
-                                   unsigned int*, unsigned int*, unsigned int*, unsigned int*);
+    using XGetGeometryFn = int (*)(XDisplay*, XDrawable, XWindow*, int*, int*, unsigned int*,
+                                   unsigned int*, unsigned int*, unsigned int*);
     using XMapRaisedFn = int (*)(XDisplay*, XWindow);
     using XRaiseWindowFn = int (*)(XDisplay*, XWindow);
     using XSetInputFocusFn = int (*)(XDisplay*, XWindow, int, unsigned long);
@@ -103,10 +102,10 @@ struct X11Api {
         mapRaised = reinterpret_cast<XMapRaisedFn>(library.resolve("XMapRaised"));
         raiseWindow = reinterpret_cast<XRaiseWindowFn>(library.resolve("XRaiseWindow"));
         setInputFocus = reinterpret_cast<XSetInputFocusFn>(library.resolve("XSetInputFocus"));
-        return openDisplay && closeDisplay && defaultScreen && screenCount && rootWindow && internAtom
-            && getSelectionOwner && listProperties && getWindowProperty
-            && changeProperty && deleteProperty
-            && flush && freeData && getGeometry && mapRaised && raiseWindow && setInputFocus;
+        return openDisplay && closeDisplay && defaultScreen && screenCount && rootWindow &&
+               internAtom && getSelectionOwner && listProperties && getWindowProperty &&
+               changeProperty && deleteProperty && flush && freeData && getGeometry && mapRaised &&
+               raiseWindow && setInputFocus;
     }
 };
 
@@ -124,7 +123,7 @@ bool isXcbPlatform()
 bool isWaylandPlatform()
 {
     return QGuiApplication::platformName().startsWith(QStringLiteral("wayland"),
-                                                       Qt::CaseInsensitive);
+                                                      Qt::CaseInsensitive);
 }
 
 bool closeX11Display(X11Api* api, XDisplay* display)
@@ -155,18 +154,15 @@ bool validX11Screen(X11Api* api, XDisplay* display, int* screen)
     return true;
 }
 
-bool windowHasPropertyAtom(X11Api* api,
-                           XDisplay* display,
-                           XWindow window,
-                           XAtom expectedAtom)
+bool windowHasPropertyAtom(X11Api* api, XDisplay* display, XWindow window, XAtom expectedAtom)
 {
     if (!api || !display || !window || !expectedAtom)
         return false;
 
     int propertyCount = 0;
     XAtom* properties = api->listProperties(display, window, &propertyCount);
-    const bool listResultValid = propertyCount >= 0
-        && (propertyCount == 0 || properties != nullptr);
+    const bool listResultValid =
+        propertyCount >= 0 && (propertyCount == 0 || properties != nullptr);
 
     bool found = false;
     for (int i = 0; listResultValid && properties && i < propertyCount; ++i) {
@@ -188,8 +184,8 @@ struct LinuxBackdropCapabilities {
 
     bool nativeBlurAvailable() const
     {
-        return xcbPlatform && x11LibraryAvailable && compositorActive
-            && alphaCompositionAvailable && blurProtocolAdvertised;
+        return xcbPlatform && x11LibraryAvailable && compositorActive &&
+               alphaCompositionAvailable && blurProtocolAdvertised;
     }
 };
 
@@ -220,9 +216,8 @@ LinuxBackdropCapabilities queryLinuxBackdropCapabilities()
     const XAtom compositorSelection =
         api->internAtom(display, compositorSelectionName.constData(), X11True);
     const XAtom blurAtom = api->internAtom(display, KWinBlurAtomName, X11True);
-    const XWindow compositorOwner = compositorSelection
-        ? api->getSelectionOwner(display, compositorSelection)
-        : X11None;
+    const XWindow compositorOwner =
+        compositorSelection ? api->getSelectionOwner(display, compositorSelection) : X11None;
     capabilities.compositorActive = compositorOwner != X11None;
     // On X11, an active compositing manager is what makes an ARGB visual useful;
     // the concrete window visual is probed separately before applying blur.
@@ -232,8 +227,7 @@ LinuxBackdropCapabilities queryLinuxBackdropCapabilities()
     if (capabilities.compositorActive && root && blurAtom) {
         // KWindowEffects advertises blur availability by publishing the blur
         // property on the root window, so inspect the root property list.
-        capabilities.blurProtocolAdvertised =
-            windowHasPropertyAtom(api, display, root, blurAtom);
+        capabilities.blurProtocolAdvertised = windowHasPropertyAtom(api, display, root, blurAtom);
     }
 
     if (!closeX11Display(api, display))
@@ -243,8 +237,7 @@ LinuxBackdropCapabilities queryLinuxBackdropCapabilities()
 
 bool x11WindowHasAlphaSurface(QWidget* window)
 {
-    if (!window || !isXcbPlatform()
-        || !window->testAttribute(Qt::WA_TranslucentBackground)) {
+    if (!window || !isXcbPlatform() || !window->testAttribute(Qt::WA_TranslucentBackground)) {
         return false;
     }
 
@@ -267,18 +260,11 @@ bool x11WindowHasAlphaSurface(QWidget* window)
     unsigned int height = 0;
     unsigned int borderWidth = 0;
     unsigned int depth = 0;
-    const bool geometryAvailable = api->getGeometry(display,
-                                                    xWindow,
-                                                    &root,
-                                                    &x,
-                                                    &y,
-                                                    &width,
-                                                    &height,
-                                                    &borderWidth,
-                                                    &depth) != 0;
+    const bool geometryAvailable = api->getGeometry(display, xWindow, &root, &x, &y, &width,
+                                                    &height, &borderWidth, &depth) != 0;
     const bool closeSucceeded = closeX11Display(api, display);
-    return geometryAvailable && root != X11None && width > 0 && height > 0
-        && depth == 32 && closeSucceeded;
+    return geometryAvailable && root != X11None && width > 0 && height > 0 && depth == 32 &&
+           closeSucceeded;
 }
 
 QRect backdropSurfaceRect(QWidget* window)
@@ -298,10 +284,8 @@ QRect backdropSurfaceRect(QWidget* window)
     // Preserve a safe fallback for direct WindowChromeCompat users that have
     // not published the richer surface-geometry property yet.
     if (window->windowFlags().testFlag(Qt::FramelessWindowHint)) {
-        const QRect inset = windowRect.adjusted(LinuxClientFrameMargin,
-                                                LinuxClientFrameMargin,
-                                                -LinuxClientFrameMargin,
-                                                -LinuxClientFrameMargin);
+        const QRect inset = windowRect.adjusted(LinuxClientFrameMargin, LinuxClientFrameMargin,
+                                                -LinuxClientFrameMargin, -LinuxClientFrameMargin);
         if (!inset.isEmpty())
             return inset;
     }
@@ -314,8 +298,7 @@ int backdropSurfaceRadius(QWidget* window, const QRect& surface)
         return 0;
     const QVariant configured = window->property(BackdropSurfaceRadiusPropertyName);
     if (configured.isValid())
-        return qBound(0, qCeil(configured.toDouble()),
-                      qMin(surface.width(), surface.height()) / 2);
+        return qBound(0, qCeil(configured.toDouble()), qMin(surface.width(), surface.height()) / 2);
     return surface == window->rect() ? 0 : 8;
 }
 
@@ -332,14 +315,13 @@ QRegion roundedRectRegion(const QRect& rect, int radius)
     QRegion region(rect.adjusted(radius, 0, -radius, 0));
     region += QRegion(rect.adjusted(0, radius, 0, -radius));
     region += QRegion(QRect(rect.topLeft(), QSize(diameter, diameter)), QRegion::Ellipse);
-    region += QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.top()),
-                            QSize(diameter, diameter)),
-                      QRegion::Ellipse);
-    region += QRegion(QRect(QPoint(rect.left(), rect.bottom() - diameter + 1),
-                            QSize(diameter, diameter)),
-                      QRegion::Ellipse);
-    region += QRegion(QRect(QPoint(rect.right() - diameter + 1,
-                                   rect.bottom() - diameter + 1),
+    region +=
+        QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.top()), QSize(diameter, diameter)),
+                QRegion::Ellipse);
+    region +=
+        QRegion(QRect(QPoint(rect.left(), rect.bottom() - diameter + 1), QSize(diameter, diameter)),
+                QRegion::Ellipse);
+    region += QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.bottom() - diameter + 1),
                             QSize(diameter, diameter)),
                       QRegion::Ellipse);
     return region;
@@ -367,40 +349,26 @@ QVector<unsigned long> kwinBlurRegionValues(QWidget* window)
     return values;
 }
 
-bool verifyKWinBlurProperty(X11Api* api,
-                            XDisplay* display,
-                            XWindow window,
-                            XAtom blurAtom,
-                            XAtom cardinalAtom,
-                            const QVector<unsigned long>* expectedValues)
+bool verifyKWinBlurProperty(X11Api* api, XDisplay* display, XWindow window, XAtom blurAtom,
+                            XAtom cardinalAtom, const QVector<unsigned long>* expectedValues)
 {
     XAtom actualType = X11None;
     int actualFormat = 0;
     unsigned long itemCount = 0;
     unsigned long bytesAfter = 0;
     unsigned char* data = nullptr;
-    const unsigned long expectedCount = expectedValues
-        ? static_cast<unsigned long>(expectedValues->size())
-        : 0;
-    const long requestedLength = expectedValues
-        ? qMax<long>(1, static_cast<long>(expectedCount))
-        : 1;
-    const int status = api->getWindowProperty(display,
-                                              window,
-                                              blurAtom,
-                                              0,
-                                              requestedLength,
-                                              X11False,
-                                              expectedValues ? cardinalAtom : X11None,
-                                              &actualType,
-                                              &actualFormat,
-                                              &itemCount,
-                                              &bytesAfter,
-                                              &data);
+    const unsigned long expectedCount =
+        expectedValues ? static_cast<unsigned long>(expectedValues->size()) : 0;
+    const long requestedLength =
+        expectedValues ? qMax<long>(1, static_cast<long>(expectedCount)) : 1;
+    const int status =
+        api->getWindowProperty(display, window, blurAtom, 0, requestedLength, X11False,
+                               expectedValues ? cardinalAtom : X11None, &actualType, &actualFormat,
+                               &itemCount, &bytesAfter, &data);
     bool matches = status == X11Success && bytesAfter == 0;
     if (expectedValues) {
-        matches = matches && actualType == cardinalAtom && actualFormat == 32
-            && itemCount == expectedCount && data;
+        matches = matches && actualType == cardinalAtom && actualFormat == 32 &&
+                  itemCount == expectedCount && data;
         if (matches) {
             const auto* actualValues = reinterpret_cast<const unsigned long*>(data);
             for (unsigned long i = 0; i < itemCount; ++i) {
@@ -411,23 +379,20 @@ bool verifyKWinBlurProperty(X11Api* api,
             }
         }
     } else {
-        matches = matches && actualType == X11None && actualFormat == 0
-            && itemCount == 0;
+        matches = matches && actualType == X11None && actualFormat == 0 && itemCount == 0;
     }
     if (!freeX11Data(api, data))
         matches = false;
     return matches;
 }
 
-bool applyKWinBlurBehindNow(QWidget* window,
-                            bool enabled,
-                            bool validateEnvironment = true)
+bool applyKWinBlurBehindNow(QWidget* window, bool enabled, bool validateEnvironment = true)
 {
     if (!window || !isXcbPlatform())
         return false;
-    if (enabled && validateEnvironment
-        && (!queryLinuxBackdropCapabilities().nativeBlurAvailable()
-            || !x11WindowHasAlphaSurface(window))) {
+    if (enabled && validateEnvironment &&
+        (!queryLinuxBackdropCapabilities().nativeBlurAvailable() ||
+         !x11WindowHasAlphaSurface(window))) {
         return false;
     }
 
@@ -452,41 +417,27 @@ bool applyKWinBlurBehindNow(QWidget* window,
     bool requestAccepted = false;
     if (enabled) {
         const QVector<unsigned long> values = kwinBlurRegionValues(window);
-        if (values.isEmpty()
-            || values.size() > std::numeric_limits<int>::max()) {
+        if (values.isEmpty() || values.size() > std::numeric_limits<int>::max()) {
             closeX11Display(api, display);
             return false;
         }
-        requestAccepted = api->changeProperty(
-            display,
-            xWindow,
-            blurAtom,
-            cardinalAtom,
-            32,
-            X11PropModeReplace,
-            reinterpret_cast<const unsigned char*>(values.constData()),
-            static_cast<int>(values.size())) != 0;
+        requestAccepted =
+            api->changeProperty(display, xWindow, blurAtom, cardinalAtom, 32, X11PropModeReplace,
+                                reinterpret_cast<const unsigned char*>(values.constData()),
+                                static_cast<int>(values.size())) != 0;
         if (requestAccepted)
             requestAccepted = api->flush(display) != 0;
         if (requestAccepted && validateEnvironment) {
-            requestAccepted = verifyKWinBlurProperty(api,
-                                                     display,
-                                                     xWindow,
-                                                     blurAtom,
-                                                     cardinalAtom,
-                                                     &values);
+            requestAccepted =
+                verifyKWinBlurProperty(api, display, xWindow, blurAtom, cardinalAtom, &values);
         }
     } else {
         requestAccepted = api->deleteProperty(display, xWindow, blurAtom) != 0;
         if (requestAccepted)
             requestAccepted = api->flush(display) != 0;
         if (requestAccepted) {
-            requestAccepted = verifyKWinBlurProperty(api,
-                                                     display,
-                                                     xWindow,
-                                                     blurAtom,
-                                                     cardinalAtom,
-                                                     nullptr);
+            requestAccepted =
+                verifyKWinBlurProperty(api, display, xWindow, blurAtom, cardinalAtom, nullptr);
         }
     }
 
@@ -496,8 +447,7 @@ bool applyKWinBlurBehindNow(QWidget* window,
 
 class KWinBlurRegionUpdater final : public QObject {
 public:
-    explicit KWinBlurRegionUpdater(QWidget* window)
-        : QObject(window), m_window(window)
+    explicit KWinBlurRegionUpdater(QWidget* window) : QObject(window), m_window(window)
     {
         setObjectName(QString::fromLatin1(KWinBlurUpdaterObjectName));
         window->installEventFilter(this);
@@ -506,8 +456,8 @@ public:
         QObject::connect(&m_capabilityProbe, &QTimer::timeout, this, [this] {
             if (!m_blurEnabled || !m_window || !m_window->isVisible())
                 return;
-            if (!queryLinuxBackdropCapabilities().nativeBlurAvailable()
-                || !x11WindowHasAlphaSurface(m_window)) {
+            if (!queryLinuxBackdropCapabilities().nativeBlurAvailable() ||
+                !x11WindowHasAlphaSurface(m_window)) {
                 disableBlurAndRequestReevaluation();
             }
         });
@@ -531,25 +481,23 @@ protected:
             return QObject::eventFilter(watched, event);
 
         const QEvent::Type eventType = event->type();
-        bool geometryMayHaveChanged = eventType == QEvent::Resize
-            || eventType == QEvent::Show
-            || eventType == QEvent::WindowStateChange
-            || eventType == QEvent::WinIdChange
-            || eventType == QEvent::ScreenChangeInternal;
-        bool fullValidate = eventType == QEvent::Show
-            || eventType == QEvent::WindowStateChange
-            || eventType == QEvent::WinIdChange
-            || eventType == QEvent::ScreenChangeInternal;
+        bool geometryMayHaveChanged = eventType == QEvent::Resize || eventType == QEvent::Show ||
+                                      eventType == QEvent::WindowStateChange ||
+                                      eventType == QEvent::WinIdChange ||
+                                      eventType == QEvent::ScreenChangeInternal;
+        bool fullValidate = eventType == QEvent::Show || eventType == QEvent::WindowStateChange ||
+                            eventType == QEvent::WinIdChange ||
+                            eventType == QEvent::ScreenChangeInternal;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
-        geometryMayHaveChanged = geometryMayHaveChanged
-            || eventType == QEvent::DevicePixelRatioChange;
+        geometryMayHaveChanged =
+            geometryMayHaveChanged || eventType == QEvent::DevicePixelRatioChange;
         fullValidate = fullValidate || eventType == QEvent::DevicePixelRatioChange;
 #endif
         if (eventType == QEvent::DynamicPropertyChange) {
             const auto* propertyEvent = static_cast<QDynamicPropertyChangeEvent*>(event);
             geometryMayHaveChanged =
-                propertyEvent->propertyName() == BackdropSurfaceRectPropertyName
-                || propertyEvent->propertyName() == BackdropSurfaceRadiusPropertyName;
+                propertyEvent->propertyName() == BackdropSurfaceRectPropertyName ||
+                propertyEvent->propertyName() == BackdropSurfaceRadiusPropertyName;
         }
         if (geometryMayHaveChanged)
             scheduleRefresh(fullValidate);
@@ -568,8 +516,7 @@ private:
             const bool fullValidate = m_fullValidationPending;
             m_fullValidationPending = false;
             if (m_blurEnabled && m_window && m_window->isVisible()) {
-                const bool refreshed = applyKWinBlurBehindNow(
-                    m_window, true, fullValidate);
+                const bool refreshed = applyKWinBlurBehindNow(m_window, true, fullValidate);
                 if (!refreshed)
                     disableBlurAndRequestReevaluation();
             }
@@ -580,8 +527,8 @@ private:
     {
         m_blurEnabled = false;
         m_capabilityProbe.stop();
-        const bool stalePropertyRemoved = applyKWinBlurBehindNow(
-            m_window, false, /*validateEnvironment*/ false);
+        const bool stalePropertyRemoved =
+            applyKWinBlurBehindNow(m_window, false, /*validateEnvironment*/ false);
         Q_UNUSED(stalePropertyRemoved);
         fluent::windowing::requestWindowBackdropReevaluation(m_window);
     }
@@ -650,10 +597,8 @@ void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& option
         window->setAttribute(Qt::WA_ContentsMarginsRespectsSafeArea, false);
 }
 
-bool handlePlatformNativeEvent(QWidget* window,
-                               const WindowChromeOptions& options,
-                               const QByteArray& eventType,
-                               void* message,
+bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& options,
+                               const QByteArray& eventType, void* message,
                                FluentNativeEventResult* result)
 {
     Q_UNUSED(window);
@@ -763,10 +708,7 @@ bool requestPlatformForegroundActivation(QWidget* window)
     const bool raised = api->raiseWindow(display, xWindow) != 0;
     constexpr int RevertToParent = 2;
     constexpr unsigned long CurrentTime = 0;
-    const bool focused = api->setInputFocus(display,
-                                            xWindow,
-                                            RevertToParent,
-                                            CurrentTime) != 0;
+    const bool focused = api->setInputFocus(display, xWindow, RevertToParent, CurrentTime) != 0;
     const bool flushed = api->flush(display) != 0;
     const bool closed = closeX11Display(api, display);
     return mapped && raised && focused && flushed && closed;
@@ -777,10 +719,8 @@ bool platformSupportsSystemBackdrop()
     return platformBackdropCapabilities().compositorBlur;
 }
 
-BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window,
-                                                 BackdropEffect effect,
-                                                 bool dark,
-                                                 bool forceRecomposite)
+BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
+                                                bool forceRecomposite)
 {
     Q_UNUSED(dark);
     Q_UNUSED(forceRecomposite);
@@ -804,9 +744,8 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window,
         return result;
     }
     if (!isXcbPlatform()) {
-        result.reason = isWaylandPlatform()
-            ? QStringLiteral("wayland-compositor-blur-unavailable")
-            : QStringLiteral("linux-compositor-blur-unavailable");
+        result.reason = isWaylandPlatform() ? QStringLiteral("wayland-compositor-blur-unavailable")
+                                            : QStringLiteral("linux-compositor-blur-unavailable");
         return result;
     }
     if (effect == BackdropEffect::Mica) {

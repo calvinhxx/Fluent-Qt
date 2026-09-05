@@ -26,7 +26,8 @@ using namespace fluent::textfields;
 class NumberBoxTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& colors = themeColors();
         QPalette pal = palette();
         pal.setColor(QPalette::Window, colors.bgCanvas);
@@ -43,7 +44,8 @@ protected:
             "fluent::textfields::NumberBox::SpinButtonPlacementMode");
     }
 
-    void SetUp() override {
+    void SetUp() override
+    {
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
         window = new NumberBoxTestWindow();
         window->setFixedSize(620, 520);
@@ -52,18 +54,21 @@ protected:
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         delete window;
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
 
-    void showAndFocus(NumberBox* box) {
+    void showAndFocus(NumberBox* box)
+    {
         window->show();
         box->setFocus(Qt::OtherFocusReason);
         QApplication::processEvents();
     }
 
-    void commit(NumberBox* box, const QString& text) {
+    void commit(NumberBox* box, const QString& text)
+    {
         box->setText(text);
         showAndFocus(box);
         QTest::keyClick(box, Qt::Key_Return);
@@ -74,7 +79,8 @@ protected:
     AnchorLayout* layout = nullptr;
 };
 
-TEST_F(NumberBoxTest, DefaultsAndSizeHint) {
+TEST_F(NumberBoxTest, DefaultsAndSizeHint)
+{
     NumberBox box(window);
 
     EXPECT_TRUE(std::isnan(box.value()));
@@ -100,7 +106,8 @@ TEST_F(NumberBoxTest, DefaultsAndSizeHint) {
     EXPECT_GE(box.minimumSizeHint().width(), 124);
 }
 
-TEST_F(NumberBoxTest, PropertySignalsAndNaNDedupe) {
+TEST_F(NumberBoxTest, PropertySignalsAndNaNDedupe)
+{
     NumberBox box(window);
     QSignalSpy valueSpy(&box, &NumberBox::valueChanged);
     QSignalSpy minimumSpy(&box, &NumberBox::minimumChanged);
@@ -137,7 +144,8 @@ TEST_F(NumberBoxTest, PropertySignalsAndNaNDedupe) {
     EXPECT_EQ(modeSpy.count(), 1);
 }
 
-TEST_F(NumberBoxTest, RangeClampAndInvalidSteps) {
+TEST_F(NumberBoxTest, RangeClampAndInvalidSteps)
+{
     NumberBox box(window);
     box.setMinimum(10);
     box.setValue(5);
@@ -162,7 +170,8 @@ TEST_F(NumberBoxTest, RangeClampAndInvalidSteps) {
     EXPECT_DOUBLE_EQ(box.largeChange(), 40);
 }
 
-TEST_F(NumberBoxTest, ParsesNumbersAndExpressions) {
+TEST_F(NumberBoxTest, ParsesNumbersAndExpressions)
+{
     auto* box = new NumberBox(window);
     box->setFixedWidth(220);
     layout->addWidget(box);
@@ -197,7 +206,8 @@ TEST_F(NumberBoxTest, ParsesNumbersAndExpressions) {
     EXPECT_EQ(box->text(), "(1 + 2");
 }
 
-TEST_F(NumberBoxTest, KeyboardAndSpinnerStep) {
+TEST_F(NumberBoxTest, KeyboardAndSpinnerStep)
+{
     auto* box = new NumberBox(window);
     box->setFixedWidth(220);
     box->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);
@@ -228,7 +238,8 @@ TEST_F(NumberBoxTest, KeyboardAndSpinnerStep) {
     EXPECT_TRUE(box->hasFocus());
 }
 
-TEST_F(NumberBoxTest, SpinButtonsDisableAtRangeEdges) {
+TEST_F(NumberBoxTest, SpinButtonsDisableAtRangeEdges)
+{
     auto* box = new NumberBox(window);
     box->resize(240, box->sizeHint().height());
     box->setRange(0, 2);
@@ -282,7 +293,8 @@ TEST_F(NumberBoxTest, SpinButtonsDisableAtRangeEdges) {
     EXPECT_FALSE(downButton->isEnabled());
 }
 
-TEST_F(NumberBoxTest, NaNStepStartUsesZeroOrNearestBoundary) {
+TEST_F(NumberBoxTest, NaNStepStartUsesZeroOrNearestBoundary)
+{
     NumberBox box(window);
     box.setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);
 
@@ -296,7 +308,8 @@ TEST_F(NumberBoxTest, NaNStepStartUsesZeroOrNearestBoundary) {
     EXPECT_DOUBLE_EQ(box.value(), 10);
 }
 
-TEST_F(NumberBoxTest, SpinButtonPlacementAndMargins) {
+TEST_F(NumberBoxTest, SpinButtonPlacementAndMargins)
+{
     auto* box = new NumberBox(window);
     box->resize(240, box->sizeHint().height());
     layout->addWidget(box);
@@ -326,7 +339,8 @@ TEST_F(NumberBoxTest, SpinButtonPlacementAndMargins) {
     EXPECT_FALSE(downButton->isEnabled());
 }
 
-TEST_F(NumberBoxTest, InlineSpinButtonsAreLaidOutHorizontally) {
+TEST_F(NumberBoxTest, InlineSpinButtonsAreLaidOutHorizontally)
+{
     auto* box = new NumberBox(window);
     box->resize(260, box->sizeHint().height());
     box->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);
@@ -348,12 +362,15 @@ TEST_F(NumberBoxTest, InlineSpinButtonsAreLaidOutHorizontally) {
     EXPECT_EQ(upButton->x(), downButton->x() + downButton->width() + box->spinButtonSpacing());
     EXPECT_EQ(upButton->geometry().right(), box->width() - box->spinButtonRightMargin() - 1);
 
-    const int expectedMargin = ::Spacing::Padding::TextFieldHorizontal + box->spinButtonRightMargin()
-        + box->inlineSpinButtonSize().width() * 2 + box->spinButtonSpacing() + box->spinButtonTextGap();
+    const int expectedMargin = ::Spacing::Padding::TextFieldHorizontal +
+                               box->spinButtonRightMargin() +
+                               box->inlineSpinButtonSize().width() * 2 + box->spinButtonSpacing() +
+                               box->spinButtonTextGap();
     EXPECT_EQ(box->contentMargins().right(), expectedMargin);
 }
 
-TEST_F(NumberBoxTest, CompactSpinButtonsAreVisibleByDefault) {
+TEST_F(NumberBoxTest, CompactSpinButtonsAreVisibleByDefault)
+{
     auto* box = new NumberBox(window);
     box->resize(260, box->sizeHint().height());
     box->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Compact);
@@ -375,8 +392,9 @@ TEST_F(NumberBoxTest, CompactSpinButtonsAreVisibleByDefault) {
     EXPECT_GT(upButton->y(), 0);
     EXPECT_LT(downButton->geometry().bottom(), box->height() - 1);
 
-    const int expectedMargin = ::Spacing::Padding::TextFieldHorizontal + box->spinButtonRightMargin()
-        + box->spinButtonSize().width() + box->spinButtonTextGap();
+    const int expectedMargin = ::Spacing::Padding::TextFieldHorizontal +
+                               box->spinButtonRightMargin() + box->spinButtonSize().width() +
+                               box->spinButtonTextGap();
     EXPECT_EQ(box->contentMargins().right(), expectedMargin);
 
     showAndFocus(box);
@@ -386,7 +404,8 @@ TEST_F(NumberBoxTest, CompactSpinButtonsAreVisibleByDefault) {
     EXPECT_FALSE(downButton->isHidden());
 }
 
-TEST_F(NumberBoxTest, ConfigurableSpinButtonMetrics) {
+TEST_F(NumberBoxTest, ConfigurableSpinButtonMetrics)
+{
     auto* box = new NumberBox(window);
     box->resize(260, box->sizeHint().height());
     box->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);
@@ -413,8 +432,9 @@ TEST_F(NumberBoxTest, ConfigurableSpinButtonMetrics) {
     EXPECT_EQ(upButton->y(), downButton->y());
     EXPECT_EQ(upButton->x(), downButton->x() + downButton->width() + box->spinButtonSpacing());
 
-    int expectedMargin = ::Spacing::Padding::TextFieldHorizontal + box->spinButtonRightMargin()
-        + box->inlineSpinButtonSize().width() * 2 + box->spinButtonSpacing() + box->spinButtonTextGap();
+    int expectedMargin = ::Spacing::Padding::TextFieldHorizontal + box->spinButtonRightMargin() +
+                         box->inlineSpinButtonSize().width() * 2 + box->spinButtonSpacing() +
+                         box->spinButtonTextGap();
     EXPECT_EQ(box->contentMargins().right(), expectedMargin);
 
     box->setSpinButtonSize(QSize(28, 12));
@@ -454,7 +474,8 @@ TEST_F(NumberBoxTest, ConfigurableSpinButtonMetrics) {
     EXPECT_EQ(iconSpy.count(), 1);
 }
 
-TEST_F(NumberBoxTest, FormattingPrecisionAndFormatStep) {
+TEST_F(NumberBoxTest, FormattingPrecisionAndFormatStep)
+{
     auto* box = new NumberBox(window);
     box->setFixedWidth(220);
     layout->addWidget(box);
@@ -473,7 +494,8 @@ TEST_F(NumberBoxTest, FormattingPrecisionAndFormatStep) {
     EXPECT_DOUBLE_EQ(box->formatStep(), 0.0);
 }
 
-TEST_F(NumberBoxTest, HeaderSizeHint) {
+TEST_F(NumberBoxTest, HeaderSizeHint)
+{
     NumberBox box(window);
     EXPECT_EQ(box.sizeHint().height(), 32);
     box.setHeader("Amount");
@@ -481,8 +503,8 @@ TEST_F(NumberBoxTest, HeaderSizeHint) {
     EXPECT_EQ(box.minimumSizeHint().height(), 60);
 }
 
-
-TEST_F(NumberBoxTest, VisualCheck) {
+TEST_F(NumberBoxTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -551,8 +573,10 @@ TEST_F(NumberBoxTest, VisualCheck) {
     layout->addWidget(themeButton);
 
     QObject::connect(themeButton, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-            ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     window->show();

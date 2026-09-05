@@ -19,11 +19,7 @@ Q_NAMESPACE
  * @brief Logical background material requested for a Fluent window.
  * zh_CN: Fluent 窗口请求的逻辑背景材质。
  */
-enum class BackdropEffect {
-    Solid,
-    Mica,
-    Acrylic
-};
+enum class BackdropEffect { Solid, Mica, Acrylic };
 Q_ENUM_NS(BackdropEffect)
 
 /**
@@ -43,23 +39,14 @@ Q_ENUM_NS(BackdropBackend)
  * @brief Fidelity of the effective background relative to the requested material.
  * zh_CN: 当前实际背景相对请求材质的保真层级。
  */
-enum class BackdropFidelity {
-    Solid,
-    Emulated,
-    Composited,
-    Native
-};
+enum class BackdropFidelity { Solid, Emulated, Composited, Native };
 Q_ENUM_NS(BackdropFidelity)
 
 /**
  * @brief Painting contract used by widgets sharing the top-level backing store.
  * zh_CN: 共享顶层后备缓冲的控件所使用的绘制契约。
  */
-enum class BackdropSurfaceMode {
-    SolidOpaque,
-    PaintedOpaque,
-    CompositedTransparent
-};
+enum class BackdropSurfaceMode { SolidOpaque, PaintedOpaque, CompositedTransparent };
 Q_ENUM_NS(BackdropSurfaceMode)
 
 /**
@@ -167,8 +154,7 @@ bool windowHasMaterialBackdrop(const QWidget* widget);
  * software fallback for the requested effect and activation state.
  * zh_CN: 无效颜色表示应透明擦除以露出真实合成背景；否则返回请求效果和激活状态对应的不透明软件回退色。
  */
-QColor windowChromeBackdropFill(const FluentElement& themeHost,
-                                const QWidget* hostWindow,
+QColor windowChromeBackdropFill(const FluentElement& themeHost, const QWidget* hostWindow,
                                 bool active);
 
 } // namespace fluent::windowing
