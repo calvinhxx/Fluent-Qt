@@ -15,16 +15,25 @@ capabilities. Gallery selects and persists a requested effect, but it does not
 decide which platform backend is usable and it does not infer transparency from
 an operating-system name.
 
-The implementation is split into three layers:
+The implementation separates the shared protocol from widgets and platform code:
 
-1. `components/windowing/WindowBackdrop.*` defines the typed request, resolved
-   state, capability model, and descendant-widget query helpers.
+1. `compatibility/WindowBackdropTypes.*` defines requests, resolved states, and
+   capabilities. The types retain their `fluent::windowing` names and Qt metadata.
 2. `compatibility/WindowChromeCompat*` probes and applies native compositor
    facilities. Each platform file implements the same capability/result
    contract.
-3. `components/windowing/WindowBackdropMaterial.*` provides the portable,
+3. `components/windowing/WindowBackdrop.*` publishes states, queries descendant
+   widgets, and resolves chrome fills. Its public header also exposes the shared
+   types, so existing component includes remain valid.
+4. `components/windowing/WindowBackdropMaterial.*` provides the portable,
    app-painted material used when a native/compositor backdrop is unavailable or
    fails to apply.
+
+Platform code does not include component headers. It posts backdrop reevaluation
+requests through `compatibility/private/WindowBackdropEvents_p.h`; `Window`
+coalesces those requests before resolving the state. This private transport is
+excluded from installed headers. Run
+`python3 .github/scripts/validate-gallery-boundary.py` to check the source boundaries.
 
 `Window` owns resolution and publishes the effective state. Application code may
 call `Window::setBackdropEffect()` and observe `backdropStateChanged`, but should

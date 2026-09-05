@@ -55,6 +55,8 @@ jobs:
           python3 .github/scripts/test_classify_ci_changes.py
           python3 .github/scripts/test_check_release_branch_freshness.py
           python3 .github/scripts/test_validate_ci_workflow_boundaries.py
+          python3 .github/scripts/validate-gallery-boundary.py
+          python3 .github/scripts/test_validate_gallery_boundary.py
           python3 scripts/release/test_preflight.py
           python3 tools/docs/validate_documentation.py --project-root . --self-test
           python3 tools/site/test_generate_api_reference.py

@@ -24,6 +24,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/compatibility/FontCompat.h
     src/compatibility/QtCompat.h
     src/compatibility/TextPaintCompat.h
+    src/compatibility/WindowBackdropTypes.h
     src/compatibility/WindowChromeCompat.h
 
     src/components/basicinput/Button.h
