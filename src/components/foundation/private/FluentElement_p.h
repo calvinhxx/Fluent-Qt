@@ -38,7 +38,7 @@ public:
 
     void notifyAll()
     {
-        ++notificationGeneration;
+        const int generation = ++notificationGeneration;
         deferredElements.clear();
         deferredIndex = 0;
         // Iterate over a copy: callbacks may destroy elements and invalidate iterators.
@@ -47,6 +47,8 @@ public:
         for (auto* e : copy) {
             if (elements.contains(e)) {
                 e->onThemeUpdated();
+                if (generation != notificationGeneration)
+                    return;
             }
         }
     }
@@ -79,8 +81,11 @@ public:
         // 合并为一次重绘，而非分散到多个定时器 tick。开销受可见元素数（数十个）限制，而非整棵预热树（数千个）。
         // 隐藏元素延后刷新，并在显示时再刷新（见 StackContentHost），导航到预热页绝不会露出过期主题。
         for (auto* element : visibleElements) {
-            if (elements.contains(element))
+            if (elements.contains(element)) {
                 element->onThemeUpdated();
+                if (generation != notificationGeneration)
+                    return;
+            }
         }
 
         if (!deferredElements.isEmpty()) {
@@ -102,10 +107,14 @@ private:
         // 的最终一致性兜底;被导航到的分页会在显示时重刷。批次保持小,使单个 tick 远低于一帧。
         constexpr int batchSize = 8;
         const int end = qMin(deferredIndex + batchSize, deferredElements.size());
-        for (; deferredIndex < end; ++deferredIndex) {
-            auto* element = deferredElements.at(deferredIndex);
+        while (deferredIndex < end) {
+            auto* element = deferredElements.at(deferredIndex++);
             if (elements.contains(element))
                 element->onThemeUpdated();
+            // A callback can replace the pending queue with a newer theme change.
+            // zh_CN: 回调可能发起新的主题切换并替换待处理队列。
+            if (generation != notificationGeneration)
+                return;
         }
 
         if (deferredIndex < deferredElements.size()) {
@@ -119,20 +128,6 @@ private:
     QVector<FluentElement*> deferredElements;
     int deferredIndex = 0;
     int notificationGeneration = 0;
-};
-
-/**
- * @brief Private storage for FluentElement theme registration state.
- * zh_CN: 保存 FluentElement 主题注册状态的私有数据。
- *
- * FluentElementPrivate keeps implementation details out of the public mixin
- * header while preserving the lightweight PImpl-style ownership contract.
- * zh_CN: FluentElementPrivate 将实现细节从公共 mixin 头文件中移出，同时保持轻量 PImpl 风格所有权契约。
- */
-class FluentElementPrivate {
-public:
-    explicit FluentElementPrivate(FluentElement* q) : q_ptr(q) {}
-    FluentElement* q_ptr;
 };
 
 } // namespace fluent

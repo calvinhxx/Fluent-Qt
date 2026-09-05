@@ -6,6 +6,7 @@
 #include <QTest>
 #include <QWidget>
 #include <gtest/gtest.h>
+#include <functional>
 
 // 模拟一个继承自 fluent::FluentElement 的组件
 class MockComponent : public QWidget, public fluent::FluentElement {
@@ -14,6 +15,22 @@ public:
 
     int updateCount = 0;
     void onThemeUpdated() override { updateCount++; }
+};
+
+class ReentrantThemeComponent : public MockComponent {
+public:
+    using MockComponent::MockComponent;
+    int lightUpdates = 0;
+    std::function<void()> themeCallback;
+
+    void onThemeUpdated() override
+    {
+        MockComponent::onThemeUpdated();
+        if (currentTheme() == Light)
+            ++lightUpdates;
+        if (themeCallback)
+            themeCallback();
+    }
 };
 
 #include "components/basicinput/Button.h"
@@ -598,6 +615,67 @@ TEST_F(FluentElementTest, DeferredThemeSwitchThemesVisibleSynchronouslyThenHidde
     // zh_CN: 延后的隐藏元素在之后的 tick 补刷；可见元素恰好刷新一次。
     QTRY_COMPARE_WITH_TIMEOUT(hiddenComponent.updateCount, 1, 1000);
     EXPECT_EQ(visibleComponent->updateCount, 1);
+}
+
+TEST_F(FluentElementTest, Contract_DeferredThemeCallbackCanSwitchSynchronously)
+{
+    ReentrantThemeComponent components[3];
+    bool switched = false;
+    for (auto& component : components) {
+        component.themeCallback = [&]() {
+            if (!switched) {
+                switched = true;
+                fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+            }
+        };
+    }
+    fluent::FluentElement::setThemeDeferred(fluent::FluentElement::Dark);
+    QTRY_VERIFY_WITH_TIMEOUT(switched, 1000);
+    QApplication::processEvents();
+    for (const auto& component : components)
+        EXPECT_EQ(component.lightUpdates, 1);
+}
+
+TEST_F(FluentElementTest, Contract_DeferredThemeCallbackPreservesNewDeferredQueue)
+{
+    ReentrantThemeComponent components[20];
+    bool switched = false;
+    for (auto& component : components) {
+        component.themeCallback = [&]() {
+            if (!switched) {
+                switched = true;
+                fluent::FluentElement::setThemeDeferred(fluent::FluentElement::Light);
+            }
+        };
+    }
+    fluent::FluentElement::setThemeDeferred(fluent::FluentElement::Dark);
+    for (const auto& component : components)
+        QTRY_COMPARE_WITH_TIMEOUT(component.lightUpdates, 1, 1000);
+    QApplication::processEvents();
+    for (const auto& component : components)
+        EXPECT_EQ(component.lightUpdates, 1);
+}
+
+TEST_F(FluentElementTest, Contract_VisibleThemeCallbackStopsSupersededNotification)
+{
+    ReentrantThemeComponent components[3];
+    for (auto& component : components)
+        component.show();
+    QApplication::processEvents();
+
+    bool switched = false;
+    for (auto& component : components) {
+        component.themeCallback = [&]() {
+            if (!switched) {
+                switched = true;
+                fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+            }
+        };
+    }
+    fluent::FluentElement::setThemeDeferred(fluent::FluentElement::Dark);
+    EXPECT_TRUE(switched);
+    for (const auto& component : components)
+        EXPECT_EQ(component.lightUpdates, 1);
 }
 
 TEST_F(FluentElementTest, ColorTokenMapping)

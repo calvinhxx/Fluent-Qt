@@ -252,7 +252,8 @@ protected:
     FluentElement();
     virtual ~FluentElement();
 
-    FluentElementPrivate* d_ptr; // PImpl pointer. zh_CN: PImpl 指针。
+    FluentElementPrivate*
+        d_ptr; // Reserved for 1.x source compatibility. zh_CN: 为 1.x 源码兼容保留。
 
 private:
     Q_DISABLE_COPY(FluentElement)
