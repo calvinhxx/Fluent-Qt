@@ -128,7 +128,7 @@ applications explain the actual fidelity without changing the requested setting.
 | --- | --- | --- | --- |
 | Windows 11 22H2+ with successful DWM call | `DwmSystemBackdrop` | `Native / CompositedTransparent` | Uses `DWMWA_SYSTEMBACKDROP_TYPE`; Mica maps to main-window material and Acrylic to transient-window material. A first-show recomposition nudge handles the observed DWM activation race. |
 | Windows 10, older Windows 11, unavailable DWM entry point, or failed DWM call | `PaintedMaterial` | `Emulated / PaintedOpaque` | Legacy Win10 Acrylic is intentionally not used for a whole Qt Widgets window because transparent backing-store regions can render black, especially in VMs. |
-| macOS Cocoa with a successfully installed `NSVisualEffectView` | `MacVibrancy` | `Native / CompositedTransparent` | Mica and Acrylic use distinct vibrancy material/tint mappings; native traffic lights and unified title-bar behavior remain in the mac backend. |
+| macOS Cocoa with a successfully installed `NSVisualEffectView` | `MacVibrancy` | `Native / CompositedTransparent` | One native effect view lives in the same `NSWindow`, immediately below Qt's original `QNSView`; the tint is a child of that effect view. The top-level alpha format is selected before Cocoa creates the native handle, repeated applies reuse the same views, and fullscreen/state transitions re-resolve their native host. Mica and Acrylic use distinct material/tint mappings; the native title-bar separator is disabled. |
 | macOS host/view resolution or vibrancy installation failure | `PaintedMaterial` | `Emulated / PaintedOpaque` | Apply failure is authoritative even if the class was discovered during capability probing. |
 | Linux X11 with active compositor, ARGB window, advertised `_KDE_NET_WM_BLUR_BEHIND_REGION`, and successful property update | Acrylic: `LinuxCompositor`; Mica: `PaintedMaterial` | Acrylic: `Composited / CompositedTransparent`; Mica: `Emulated / PaintedOpaque` | KWin blur-behind represents Acrylic's live background sampling. Mica deliberately keeps the stable UILib-painted material. Detection is capability-based; it is not gated only by desktop-environment environment variables. |
 | Linux Wayland, X11 without an active/supported blur compositor, missing alpha visual, or failed blur-property update | `PaintedMaterial` | `Emulated / PaintedOpaque` | Qt Widgets has no stable cross-compositor Wayland blur API, so UILib paints the full material instead of degrading to a flat color. |
@@ -187,6 +187,26 @@ Several bugs established the current contract:
   gated strictly by `CompositedTransparent`. Page switches request a coalesced
   replacement frame with `update()`; they must not synchronously re-enter Cocoa
   painting with `repaint()` from inside a navigation input handler.
+- On macOS, setting `WA_TranslucentBackground` after a platform helper had
+  already called `winId()` was too late: Cocoa had created an opaque `QNSWindow`
+  from the initial surface format while Qt later painted transparent pixels.
+  Backdrop capabilities and the alpha requirement must therefore be resolved
+  before any native-handle creation. The alpha-capable surface remains sticky;
+  Solid mode becomes opaque by painting every pixel rather than recreating the
+  native window.
+- A later attempt to put vibrancy in a companion `NSWindow` looked correct in a
+  Qt/app-local capture but retained stale foreground samples in a full
+  WindowServer capture after repeated Normal/Mica/Acrylic and page switches.
+  Text, dividers, and card borders then appeared darker even though their tokens
+  had not changed. The material now stays in the same native window, below the
+  sole Qt backing store; repeated effect application must reuse one effect and
+  one tint view, and no companion window may be created.
+- Qt owns `NSWindow.contentView`, and AppKit exposes no public slot behind that
+  view. The Cocoa adapter therefore validates the current content view, window,
+  frame host, z-order, and applied geometry every time it installs or re-resolves
+  the material. If any relationship cannot be established, native apply fails and
+  the typed backdrop resolver selects the painted fallback instead of clearing
+  an invalid surface.
 - Treating support detection as apply success could clear over a rejected DWM,
   Cocoa, or X11 operation. Capability probing and structured apply results are
   now separate stages.
@@ -194,6 +214,9 @@ Several bugs established the current contract:
   DPI, or window-state transition. Custom chrome reasserts its Win32 style after
   those transitions and verifies `WS_THICKFRAME` again when serving
   `WM_NCHITTEST`, so resize cannot remain disabled until the next process start.
+  Cocoa's window-state material-host repair is macOS-only: maximizing or
+  restoring a Windows window must not retrigger the first-show DWM activation
+  compensation. Linux retains its existing compositor-update paths.
 
 These lead to one hard rule: **only `CompositedTransparent` may clear pixels to
 reveal a system/compositor background. `PaintedOpaque` must remain opaque from

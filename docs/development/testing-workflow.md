@@ -31,6 +31,13 @@ with README, CMake, and agent instructions.
 - `manual_visual` identifies tests that must be reviewed by running the binary
   directly. `local_desktop` identifies tests that need a real windowing desktop
   rather than the CI offscreen platform.
+- The `native_window` desktop checks are excluded from `local_full`:
+  they can change Spaces or window activation. They use a native QPA plugin,
+  run serially, and close their test windows automatically. Build
+  `test_window_mac` on macOS or `test_window_win` on Windows, then select
+  `ctest --preset <host-preset> -L '^native_window$' --output-on-failure`
+  in a real desktop session. Unfiltered CTest still selects these checks; use
+  the documented tier filters for unattended runs.
 - `visual_gate` is the opt-in representative Light/Dark/RTL snapshot compare
   (three checked-in PNGs). It is not part of `ci_fast`, `ci_full`, or
   `local_full`.
