@@ -134,11 +134,6 @@ define_property(GLOBAL PROPERTY FLUENT_QT_CONTRACT_TEST_TARGETS
     FULL_DOCS "Qt/GTest targets that contain at least one contract test"
 )
 
-set(FLUENT_QT_QT_GTEST_SUPPORT_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/support/QtGTestMain.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/support/QtTestEnvironment.cpp
-)
-
 add_library(FluentQtVisualComparison STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/support/VisualComparison.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/support/VisualComparison.h
@@ -168,11 +163,25 @@ foreach(_fluent_qt_visual_compare_config Debug Release RelWithDebInfo MinSizeRel
         "${CMAKE_BINARY_DIR}/tools/dev")
 endforeach()
 
+add_library(FluentQtTestSupport STATIC
+    support/QtGTestMain.cpp
+    support/QtTestEnvironment.cpp
+)
+fluent_qt_configure_cpp_target(FluentQtTestSupport)
+fluent_qt_enable_sanitizers(FluentQtTestSupport)
+target_include_directories(FluentQtTestSupport PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/support)
+target_link_libraries(FluentQtTestSupport PUBLIC
+    FluentQt::FluentQt FluentQtLoggingSupport FluentQtVisualComparison
+    Qt${QT_VERSION_MAJOR}::Test GTest::gtest)
+target_compile_definitions(FluentQtTestSupport PRIVATE
+    FLUENT_QT_TEST_BINARY_DIR="${CMAKE_BINARY_DIR}"
+    FLUENT_QT_VISUAL_BASELINE_DIR="${CMAKE_SOURCE_DIR}/tests/visual-baselines")
+
 # 定义一个便捷的宏：添加一个新的 Qt GTest 模块（可在子目录中调用）
 # 可执行文件输出到当前 CMake 子目录，便于按目录结构归类。
 # 发现到的测试会带有 qt/unit/<目录>/<组件> 标签，便于用 ctest -L 分层筛选。
 macro(add_qt_test_module module_name source_file)
-    add_executable(${module_name} ${source_file} ${ARGN} ${FLUENT_QT_QT_GTEST_SUPPORT_SOURCES})
+    add_executable(${module_name} ${source_file} ${ARGN})
     fluent_qt_configure_cpp_target(${module_name})
     fluent_qt_enable_sanitizers(${module_name})
     set_property(GLOBAL APPEND PROPERTY FLUENT_QT_TEST_TARGETS ${module_name})
@@ -197,22 +206,12 @@ macro(add_qt_test_module module_name source_file)
 
     target_link_libraries(${module_name}
         PRIVATE
-        FluentQt::FluentQt
-        FluentQtLoggingSupport
-        Qt${QT_VERSION_MAJOR}::Widgets
-        Qt${QT_VERSION_MAJOR}::Test
-        FluentQtVisualComparison
-        GTest::gtest
+        FluentQtTestSupport
     )
     target_include_directories(${module_name} PRIVATE
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/tests/support
-    )
-    target_compile_definitions(${module_name} PRIVATE
-        FLUENT_QT_TEST_BINARY_DIR="${CMAKE_BINARY_DIR}"
-        FLUENT_QT_TEST_TARGET="${module_name}"
-        FLUENT_QT_VISUAL_BASELINE_DIR="${CMAKE_SOURCE_DIR}/tests/visual-baselines"
     )
     set_target_properties(${module_name} PROPERTIES LABELS "${_test_labels}")
 

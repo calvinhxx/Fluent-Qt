@@ -15,6 +15,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLabel>
+#include <QLockFile>
 #include <QPainter>
 #include <QPixmap>
 #include <QPointer>
@@ -265,11 +266,19 @@ TEST(GalleryMotionPersistenceTest, ColdLoadProbe)
     if (scenario.isEmpty())
         GTEST_SKIP() << "Only exercised by the isolated cold-load parent test";
 
-    QStandardPaths::setTestModeEnabled(true);
+    // Persistence deliberately requires the Gallery identity. Serialize this one fixed-identity
+    // probe inside QStandardPaths test mode; all ordinary tests keep their per-process identity.
+    ASSERT_TRUE(QStandardPaths::isTestModeEnabled());
     QCoreApplication::setOrganizationName(QStringLiteral("Fluent-Qt"));
     QCoreApplication::setApplicationName(fluent::gallery::platform::capabilities().applicationName);
+    const QString dataPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    ASSERT_TRUE(QDir().mkpath(dataPath));
+    QLockFile persistenceLock(QDir(dataPath).filePath(QStringLiteral("motion-cold-load.lock")));
+    ASSERT_TRUE(persistenceLock.tryLock(10000));
 
     QSettings storage = fluent::gallery::platform::createSettings();
+    const bool hadMotionMode = storage.contains(QStringLiteral("settings/motionMode"));
+    const QVariant previousMotionMode = storage.value(QStringLiteral("settings/motionMode"));
     storage.remove(QStringLiteral("settings/motionMode"));
     if (scenario == QStringLiteral("reduced"))
         storage.setValue(QStringLiteral("settings/motionMode"), 1);
@@ -282,7 +291,10 @@ TEST(GalleryMotionPersistenceTest, ColdLoadProbe)
     EXPECT_EQ(settings.motionMode(), expected);
     EXPECT_EQ(fluent::MotionPolicy::instance().mode(), expected);
 
-    storage.remove(QStringLiteral("settings/motionMode"));
+    if (hadMotionMode)
+        storage.setValue(QStringLiteral("settings/motionMode"), previousMotionMode);
+    else
+        storage.remove(QStringLiteral("settings/motionMode"));
     storage.sync();
 }
 

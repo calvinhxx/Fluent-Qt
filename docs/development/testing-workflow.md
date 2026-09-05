@@ -15,6 +15,16 @@ with README, CMake, and agent instructions.
 
 ## CTest Labels
 
+Qt/GTest executables link the shared `FluentQtTestSupport` library. Its entry
+point initializes Qt, logging, fonts, and resources once per process. Each run
+uses an independent temporary application-data directory and removes it on
+exit, so parallel instances of the same test binary do not share themes or
+settings. Snapshot names use the executable name and remain stable across runs.
+Persistence probes should keep this test identity unless their contract
+explicitly requires another scope. The Gallery cold-load probe needs the real
+application identity to enable persistence; it uses a process lock inside Qt's
+test-data directory and restores the setting it changes.
+
 - Register Qt component tests with `add_qt_test_module(test_<name> Test<Name>.cpp
   [extra sources...])`.
 - The helper applies these labels to discovered tests: `qt`, `unit`,
