@@ -68,9 +68,12 @@ UpdateChecker::UpdateChecker(QObject* parent) : QObject(parent)
 UpdateChecker::~UpdateChecker()
 {
     if (m_reply) {
-        m_reply->abort();
-        m_reply->deleteLater();
+        QNetworkReply* reply = m_reply;
         m_reply = nullptr;
+        // abort() may emit finished synchronously; destruction must not deliver a result.
+        disconnect(reply, nullptr, this, nullptr);
+        reply->abort();
+        reply->deleteLater();
     }
 }
 
@@ -188,6 +191,8 @@ QUrl UpdateChecker::selectPlatformAsset(const QJsonArray& assets, QString* asset
 void UpdateChecker::handleReplyFinished()
 {
     QNetworkReply* reply = m_reply;
+    if (!reply)
+        return;
     m_reply = nullptr;
 
     Result result;

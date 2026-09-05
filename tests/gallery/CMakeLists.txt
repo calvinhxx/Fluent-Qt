@@ -40,6 +40,7 @@ add_dependencies(test_gallery_single_instance test_gallery_single_instance_probe
 
 add_qt_test_module(test_gallery_shell_framework
     TestGalleryShellFramework.cpp
+    TestUpdateChecker.cpp
     ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
     ${FLUENT_QT_GALLERY_RESOURCES}
     ${CMAKE_SOURCE_DIR}/tests/support/VisualGeometryTestUtils.cpp
