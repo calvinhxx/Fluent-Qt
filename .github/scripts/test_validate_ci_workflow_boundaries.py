@@ -139,6 +139,28 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                         f"workflow validator accepted mutable action {action}",
                     )
 
+    def test_all_remote_actions_require_full_immutable_references(self):
+        for ref in (
+            "actions/checkout@v6", "example/action@main", "example/action@abcdef1",
+            "docker://alpine:latest", "example/action",
+        ):
+            with self.subTest(ref=ref):
+                for value in (ref, f'"{ref}"', f"'{ref}'"):
+                    self.assertTrue(
+                        MODULE.immutable_action_errors("fixture.yml", f"  - uses: {value}\n")
+                    )
+        for ref in (
+            "./.github/workflows/local.yml", "./.github/actions/build",
+            "example/action@" + "a" * 40,
+            "example/repo/.github/workflows/build.yml@" + "b" * 40,
+            "docker://alpine@sha256:" + "c" * 64,
+        ):
+            with self.subTest(ref=ref):
+                self.assertEqual(
+                    MODULE.immutable_action_errors("fixture.yml", f"  - uses: {ref} # version\n"),
+                    [],
+                )
+
     def test_pages_pipeline_rejects_an_unaudited_remote_action(self):
         pages = MODULE.read_workflow("pages.yml")
         errors = MODULE.required_action_revision_errors(

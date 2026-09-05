@@ -172,6 +172,10 @@ python3 tools/site/generate_localized_site.py --check
 python3 tools/site/generate_api_reference.py --check
 ```
 
+External GitHub Actions must use full commit SHAs with readable version
+comments; container actions use image digests. The workflow-boundary validator
+checks workflows and starter templates, and Dependabot maintains the revisions.
+
 ## Validation Tiers
 
 The public [CI workflow](../../.github/workflows/ci.yml) is an orchestration
