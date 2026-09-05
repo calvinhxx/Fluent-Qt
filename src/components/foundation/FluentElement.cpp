@@ -55,7 +55,7 @@ bool themeFromProperty(const QVariant& value, FluentElement::Theme& theme)
 
 // --- FluentElement lifetime management. zh_CN: FluentElement 生命周期管理。---
 
-FluentElement::FluentElement() : d_ptr(new FluentElementPrivate(this))
+FluentElement::FluentElement() : d_ptr(nullptr)
 {
     FluentThemeManager::instance()->elements.insert(this);
 }
@@ -63,7 +63,6 @@ FluentElement::FluentElement() : d_ptr(new FluentElementPrivate(this))
 FluentElement::~FluentElement()
 {
     FluentThemeManager::instance()->elements.remove(this);
-    delete d_ptr;
 }
 
 // --- Static global management. zh_CN: 静态全局管理。---
