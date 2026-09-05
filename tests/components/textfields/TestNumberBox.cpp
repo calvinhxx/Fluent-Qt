@@ -2,7 +2,10 @@
 
 #include <QApplication>
 #include <QImage>
+#include <QIntValidator>
 #include <QPalette>
+#include <QPointer>
+#include <QSignalBlocker>
 #include <QTimer>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
@@ -78,6 +81,170 @@ protected:
     NumberBoxTestWindow* window = nullptr;
     AnchorLayout* layout = nullptr;
 };
+
+TEST_F(NumberBoxTest, Contract_ExpressionDepthIsBounded)
+{
+    NumberBox box;
+    box.setAcceptsExpression(true);
+    const QStringList invalid = {
+        QString(box.maxLength(), '('), QString(129, '(') + "1" + QString(129, ')'),
+        QString("1^").repeated(129) + "1",
+        QString("(").repeated(64) + QString("1^").repeated(65) + "1" + QString(64, ')')};
+    for (const QString& input : invalid) {
+        box.setValue(7);
+        box.setText(input);
+        ASSERT_TRUE(QMetaObject::invokeMethod(&box, "editingFinished", Qt::DirectConnection));
+        EXPECT_TRUE(std::isnan(box.value()));
+        EXPECT_EQ(box.text(), input);
+    }
+
+    box.setText(QString(128, '(') + "2 + 3 * 4" + QString(128, ')'));
+    ASSERT_TRUE(QMetaObject::invokeMethod(&box, "editingFinished", Qt::DirectConnection));
+    EXPECT_DOUBLE_EQ(box.value(), 14);
+    box.setText(QString("1^").repeated(128) + "1");
+    ASSERT_TRUE(QMetaObject::invokeMethod(&box, "editingFinished", Qt::DirectConnection));
+    EXPECT_DOUBLE_EQ(box.value(), 1);
+    box.setText(QString(box.maxLength() - 2, '-') + "1");
+    ASSERT_TRUE(QMetaObject::invokeMethod(&box, "editingFinished", Qt::DirectConnection));
+    EXPECT_DOUBLE_EQ(box.value(), -1);
+}
+
+TEST_F(NumberBoxTest, Contract_TextChangedMayDestroyControlDuringValueAndFormatSetters)
+{
+    for (int operation = 0; operation < 4; ++operation) {
+        SCOPED_TRACE(operation);
+        QPointer<NumberBox> box = new NumberBox;
+        box->setValue(1.25);
+        QObject::connect(box, &QLineEdit::textChanged, qApp, [box]() { delete box.data(); });
+        switch (operation) {
+        case 0:
+            box->setValue(2);
+            break;
+        case 1:
+            box->setRange(2, 5);
+            break;
+        case 2:
+            box->setDisplayPrecision(1);
+            break;
+        case 3:
+            box->setFormatStep(1);
+            break;
+        }
+        EXPECT_TRUE(box.isNull());
+    }
+}
+
+TEST_F(NumberBoxTest, Contract_RangeNotificationsMayDestroyControl)
+{
+    for (bool destroyOnValue : {false, true}) {
+        QPointer<NumberBox> box = new NumberBox;
+        box->setValue(1);
+        const auto destroy = [box]() { delete box.data(); };
+        if (destroyOnValue)
+            QObject::connect(box, &NumberBox::valueChanged, qApp, destroy);
+        else
+            QObject::connect(box, &NumberBox::minimumChanged, qApp, destroy);
+        box->setRange(2, 5);
+        EXPECT_TRUE(box.isNull());
+    }
+}
+
+TEST_F(NumberBoxTest, Contract_ReentrantTextChangeDoesNotNotifySupersededValue)
+{
+    NumberBox box;
+    box.setValue(1);
+    QSignalSpy values(&box, &NumberBox::valueChanged);
+    QObject::connect(&box, &QLineEdit::textChanged, &box, [&box]() {
+        if (box.value() == 2)
+            box.setValue(3);
+    });
+    box.setValue(2);
+    EXPECT_DOUBLE_EQ(box.value(), 3);
+    EXPECT_EQ(box.text(), QStringLiteral("3"));
+    ASSERT_EQ(values.count(), 1);
+    EXPECT_DOUBLE_EQ(values.front().front().toDouble(), 3);
+}
+
+TEST_F(NumberBoxTest, Contract_FormattingPreservesQtTextSelectionAndCursorSignals)
+{
+    NumberBox box;
+    QLineEdit reference;
+    box.setValue(1234);
+    reference.setText(QStringLiteral("1234"));
+    box.selectAll();
+    reference.selectAll();
+
+    QStringList actual;
+    QStringList expected;
+    const auto observe = [](QLineEdit* edit, QStringList* events) {
+        QObject::connect(edit, &QLineEdit::textChanged, edit,
+                         [events]() { events->append(QStringLiteral("text")); });
+        QObject::connect(edit, &QLineEdit::selectionChanged, edit,
+                         [events]() { events->append(QStringLiteral("selection")); });
+        QObject::connect(edit, &QLineEdit::cursorPositionChanged, edit,
+                         [events]() { events->append(QStringLiteral("cursor")); });
+        QObject::connect(edit, &QLineEdit::inputRejected, edit,
+                         [events]() { events->append(QStringLiteral("rejected")); });
+    };
+    observe(&box, &actual);
+    observe(&reference, &expected);
+    box.setValue(12);
+    reference.setText(QStringLiteral("12"));
+    EXPECT_EQ(actual, expected);
+    EXPECT_EQ(box.cursorPosition(), reference.cursorPosition());
+    EXPECT_EQ(box.selectedText(), reference.selectedText());
+
+    QIntValidator validator(0, 20);
+    box.setValidator(&validator);
+    reference.setValidator(&validator);
+    actual.clear();
+    expected.clear();
+    box.setValue(123);
+    reference.setText(QStringLiteral("123"));
+    EXPECT_EQ(actual, expected);
+
+    actual.clear();
+    box.setValue(123);
+    EXPECT_TRUE(actual.isEmpty());
+    {
+        const QSignalBlocker blocker(&box);
+        box.setValue(7);
+    }
+    EXPECT_TRUE(actual.isEmpty());
+}
+
+TEST_F(NumberBoxTest, Contract_FormattingPreservesQtModifiedAndUndoState)
+{
+    NumberBox box;
+    QLineEdit reference;
+    QList<bool> actualModified;
+    QList<bool> expectedModified;
+    QObject::connect(&box, &QLineEdit::textChanged, &box,
+                     [&]() { actualModified.append(box.isModified()); });
+    QObject::connect(&reference, &QLineEdit::textChanged, &reference,
+                     [&]() { expectedModified.append(reference.isModified()); });
+
+    for (double value : {12.0, 12.0, 34.0}) {
+        box.setModified(true);
+        reference.setModified(true);
+        box.setValue(value);
+        reference.setText(QString::number(value));
+        EXPECT_EQ(box.isModified(), reference.isModified());
+        EXPECT_FALSE(box.isModified());
+        EXPECT_EQ(actualModified, expectedModified);
+    }
+
+    box.insert(QStringLiteral("5"));
+    reference.insert(QStringLiteral("5"));
+    ASSERT_TRUE(box.isModified());
+    ASSERT_TRUE(box.isUndoAvailable());
+    box.setValue(7);
+    reference.setText(QStringLiteral("7"));
+    EXPECT_EQ(box.isModified(), reference.isModified());
+    EXPECT_EQ(box.isUndoAvailable(), reference.isUndoAvailable());
+    EXPECT_EQ(box.isRedoAvailable(), reference.isRedoAvailable());
+    EXPECT_EQ(actualModified, expectedModified);
+}
 
 TEST_F(NumberBoxTest, DefaultsAndSizeHint)
 {

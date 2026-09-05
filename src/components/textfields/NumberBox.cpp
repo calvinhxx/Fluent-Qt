@@ -8,7 +8,10 @@
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPointer>
 #include <QResizeEvent>
+#include <QSignalBlocker>
+#include <QValidator>
 
 #include <cmath>
 #include <limits>
@@ -66,20 +69,24 @@ public:
     }
 
 private:
-    bool parseAddSub(double& value)
+    // Bound nested parentheses and right-associative powers independently of input length.
+    // zh_CN: 限制括号和右结合幂运算的嵌套深度，避免长输入耗尽调用栈。
+    static constexpr int kMaximumDepth = 128;
+
+    bool parseAddSub(double& value, int depth = 0)
     {
-        if (!parseMulDiv(value))
+        if (depth > kMaximumDepth || !parseMulDiv(value, depth))
             return false;
         while (true) {
             skipSpaces();
             if (match('+')) {
                 double rhs = 0.0;
-                if (!parseMulDiv(rhs))
+                if (!parseMulDiv(rhs, depth))
                     return false;
                 value += rhs;
             } else if (match('-')) {
                 double rhs = 0.0;
-                if (!parseMulDiv(rhs))
+                if (!parseMulDiv(rhs, depth))
                     return false;
                 value -= rhs;
             } else {
@@ -88,20 +95,20 @@ private:
         }
     }
 
-    bool parseMulDiv(double& value)
+    bool parseMulDiv(double& value, int depth)
     {
-        if (!parsePower(value))
+        if (!parsePower(value, depth))
             return false;
         while (true) {
             skipSpaces();
             if (match('*')) {
                 double rhs = 0.0;
-                if (!parsePower(rhs))
+                if (!parsePower(rhs, depth))
                     return false;
                 value *= rhs;
             } else if (match('/')) {
                 double rhs = 0.0;
-                if (!parsePower(rhs) || std::abs(rhs) <= kNumberEpsilon)
+                if (!parsePower(rhs, depth) || std::abs(rhs) <= kNumberEpsilon)
                     return false;
                 value /= rhs;
             } else {
@@ -110,40 +117,45 @@ private:
         }
     }
 
-    bool parsePower(double& value)
+    bool parsePower(double& value, int depth)
     {
-        if (!parseUnary(value))
+        if (depth > kMaximumDepth || !parseUnary(value, depth))
             return false;
         skipSpaces();
         if (!match('^'))
             return true;
 
         double exponent = 0.0;
-        if (!parsePower(exponent))
+        if (!parsePower(exponent, depth + 1))
             return false;
         value = std::pow(value, exponent);
         return isFiniteNumber(value);
     }
 
-    bool parseUnary(double& value)
+    bool parseUnary(double& value, int depth)
     {
-        skipSpaces();
-        if (match('+'))
-            return parseUnary(value);
-        if (match('-')) {
-            if (!parseUnary(value))
-                return false;
-            value = -value;
-            return true;
+        bool negative = false;
+        while (true) {
+            skipSpaces();
+            if (match('+'))
+                continue;
+            if (match('-'))
+                negative = !negative;
+            else
+                break;
         }
-        return parsePrimary(value);
+        if (!parsePrimary(value, depth))
+            return false;
+        if (negative)
+            value = -value;
+        return true;
     }
 
-    bool parsePrimary(double& value)
+    bool parsePrimary(double& value, int depth)
     {
         skipSpaces();
         if (match('(')) {
-            if (!parseAddSub(value))
+            if (!parseAddSub(value, depth + 1))
                 return false;
             skipSpaces();
             return match(')');
@@ -259,19 +271,28 @@ void NumberBox::setRange(double minimum, double maximum)
     m_minimum = minimum;
     m_maximum = maximum;
 
+    const QPointer<NumberBox> guard(this);
     const bool valueChangedNow = !isNan(m_value) && setValueInternal(m_value, true, false);
+    if (!guard || !numbersEqual(m_minimum, minimum) || !numbersEqual(m_maximum, maximum))
+        return;
     const bool minimumChangedNow = !numbersEqual(oldMinimum, m_minimum);
     const bool maximumChangedNow = !numbersEqual(oldMaximum, m_maximum);
 
     if (!minimumChangedNow && !maximumChangedNow && !valueChangedNow)
         return;
     updateSpinnerState();
+    if (!guard)
+        return;
     if (!valueChangedNow) {
         accessibility::detail::notifyValueAccessibilityValue(
             this, isNan(m_value) ? QVariant() : QVariant(m_value));
+        if (!guard)
+            return;
     }
     if (minimumChangedNow)
         emit minimumChanged(m_minimum);
+    if (!guard || !numbersEqual(m_minimum, minimum) || !numbersEqual(m_maximum, maximum))
+        return;
     if (maximumChangedNow)
         emit maximumChanged(m_maximum);
 }
@@ -281,8 +302,11 @@ void NumberBox::setSmallChange(double change)
     if (!(change > 0.0) || !isFiniteNumber(change) || numbersEqual(m_smallChange, change))
         return;
     m_smallChange = change;
+    const QPointer<NumberBox> guard(this);
     accessibility::detail::notifyValueAccessibilityValue(this, isNan(m_value) ? QVariant()
                                                                               : QVariant(m_value));
+    if (!guard || !numbersEqual(m_smallChange, change))
+        return;
     emit smallChangeChanged(m_smallChange);
 }
 
@@ -304,8 +328,10 @@ void NumberBox::setHeader(const QString& header)
     updateChildGeometry();
     updateGeometry();
     update();
+    const QPointer<NumberBox> guard(this);
     accessibility::detail::notifyValueAccessibilityText(this, QAccessible::NameChanged);
-    emit headerChanged();
+    if (guard)
+        emit headerChanged();
 }
 
 void NumberBox::setAcceptsExpression(bool accepts)
@@ -412,9 +438,11 @@ void NumberBox::setDisplayPrecision(int precision)
     if (m_displayPrecision == normalized)
         return;
     m_displayPrecision = normalized;
+    const QPointer<NumberBox> guard(this);
     if (!isNan(m_value))
-        setText(formatValue(m_value));
-    emit displayPrecisionChanged(m_displayPrecision);
+        setFormattedText(formatValue(m_value));
+    if (guard && m_displayPrecision == normalized)
+        emit displayPrecisionChanged(m_displayPrecision);
 }
 
 void NumberBox::setFormatStep(double step)
@@ -423,9 +451,11 @@ void NumberBox::setFormatStep(double step)
     if (numbersEqual(m_formatStep, normalized))
         return;
     m_formatStep = normalized;
+    const QPointer<NumberBox> guard(this);
     if (!isNan(m_value))
         setValueInternal(m_value, true, false);
-    emit formatStepChanged(m_formatStep);
+    if (guard && numbersEqual(m_formatStep, normalized))
+        emit formatStepChanged(m_formatStep);
 }
 
 QSize NumberBox::sizeHint() const
@@ -480,10 +510,14 @@ void NumberBox::focusInEvent(QFocusEvent* event)
 
 void NumberBox::focusOutEvent(QFocusEvent* event)
 {
+    const QPointer<NumberBox> guard(this);
     commitInput();
+    if (!guard)
+        return;
     m_focused = false;
     LineEdit::focusOutEvent(event);
-    update();
+    if (guard)
+        update();
 }
 
 void NumberBox::enterEvent(FluentEnterEvent* event)
@@ -748,16 +782,7 @@ void NumberBox::commitInput()
 
 void NumberBox::setInvalidValueFromText()
 {
-    const double nan = std::numeric_limits<double>::quiet_NaN();
-    if (numbersEqual(m_value, nan))
-        return;
-    m_value = nan;
-    updateSpinnerState();
-    accessibility::detail::notifyValueAccessibilityValue(this, QVariant());
-    QAccessible::State changed;
-    changed.invalid = true;
-    accessibility::detail::notifyValueAccessibilityState(this, changed);
-    emit valueChanged(m_value);
+    setValueInternal(std::numeric_limits<double>::quiet_NaN(), false, true);
 }
 
 void NumberBox::stepBy(double delta)
@@ -824,6 +849,44 @@ bool NumberBox::parseInputText(const QString& input, double* result) const
     return true;
 }
 
+void NumberBox::setFormattedText(const QString& value)
+{
+    const QString oldText = text();
+    const int oldCursor = cursorPosition();
+    const bool hadSelection = hasSelectedText();
+    const bool blocked = signalsBlocked();
+    // Finish Qt's text mutation before user callbacks can destroy its line control.
+    // zh_CN: 先完成 Qt 文本赋值，再通知外部回调，避免回调销毁仍在执行的 line control。
+    {
+        const QSignalBlocker blocker(this);
+        QLineEdit::setText(value);
+    }
+    if (blocked)
+        return;
+
+    const QPointer<NumberBox> guard(this);
+    const QString updatedText = text();
+    const int updatedCursor = cursorPosition();
+    if (const QValidator* inputValidator = oldText != updatedText ? validator() : nullptr) {
+        QString validatedText = updatedText;
+        int validatedCursor = updatedCursor;
+        if (inputValidator->validate(validatedText, validatedCursor) == QValidator::Invalid)
+            emit inputRejected();
+        if (!guard || text() != updatedText)
+            return;
+    }
+    if (oldText != updatedText)
+        emit textChanged(updatedText);
+    if (!guard || text() != updatedText)
+        return;
+    if (hadSelection && !hasSelectedText())
+        emit selectionChanged();
+    if (!guard || text() != updatedText || cursorPosition() != updatedCursor)
+        return;
+    if (oldCursor != updatedCursor)
+        emit cursorPositionChanged(oldCursor, updatedCursor);
+}
+
 bool NumberBox::setValueInternal(double value, bool updateText, bool keepUserTextWhenNaN)
 {
     const double normalized = normalizeValue(value);
@@ -831,17 +894,28 @@ bool NumberBox::setValueInternal(double value, bool updateText, bool keepUserTex
     const bool changed = !numbersEqual(m_value, normalized);
     m_value = normalized;
 
+    const QPointer<NumberBox> guard(this);
+    const auto isCurrent = [&]() { return guard && numbersEqual(m_value, normalized); };
     if (updateText && !(keepUserTextWhenNaN && isNan(m_value)))
-        setText(formatValue(m_value));
-    if (changed)
-        updateSpinnerState();
+        setFormattedText(formatValue(m_value));
+    // textChanged can destroy this control or commit another value synchronously.
+    // zh_CN: textChanged 回调可能同步销毁控件或提交新值。
+    if (!isCurrent())
+        return changed;
     if (changed) {
+        updateSpinnerState();
+        if (!isCurrent())
+            return changed;
         accessibility::detail::notifyValueAccessibilityValue(
             this, isNan(m_value) ? QVariant() : QVariant(m_value));
+        if (!isCurrent())
+            return changed;
         if (wasInvalid != isNan(m_value)) {
             QAccessible::State changedState;
             changedState.invalid = true;
             accessibility::detail::notifyValueAccessibilityState(this, changedState);
+            if (!isCurrent())
+                return changed;
         }
         emit valueChanged(m_value);
     }
