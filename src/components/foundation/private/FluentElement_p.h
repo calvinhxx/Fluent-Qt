@@ -22,11 +22,12 @@ namespace fluent {
 class FluentThemeManager : public QObject {
     Q_OBJECT
 public:
-    static FluentThemeManager* instance() {
+    static FluentThemeManager* instance()
+    {
         static FluentThemeManager inst;
         return &inst;
     }
-    
+
     FluentElement::Theme currentTheme = FluentElement::Light;
     QSet<FluentElement*> elements;
 
@@ -35,7 +36,8 @@ public:
     // zh_CN: 每次主题变化时自增。切换期间处于隐藏（因而被延后）的子树，可用自己上次刷新的代次与此比较，决定显示时是否需刷新。
     int generation() const { return notificationGeneration; }
 
-    void notifyAll() {
+    void notifyAll()
+    {
         ++notificationGeneration;
         deferredElements.clear();
         deferredIndex = 0;
@@ -49,7 +51,8 @@ public:
         }
     }
 
-    void notifyVisibleThenDeferred() {
+    void notifyVisibleThenDeferred()
+    {
         const int generation = ++notificationGeneration;
         deferredElements.clear();
         deferredIndex = 0;
@@ -63,9 +66,9 @@ public:
                 continue;
             auto* widget = dynamic_cast<QWidget*>(element);
             if (widget && !widget->isVisible())
-                deferredElements.append(element);   // off-screen → themed lazily (backstop)
+                deferredElements.append(element); // off-screen → themed lazily (backstop)
             else
-                visibleElements.append(element);    // on-screen → themed now
+                visibleElements.append(element); // on-screen → themed now
         }
 
         // Theme the on-screen elements synchronously so the visible switch is ATOMIC: every update()
@@ -81,14 +84,13 @@ public:
         }
 
         if (!deferredElements.isEmpty()) {
-            QTimer::singleShot(0, this, [this, generation]() {
-                notifyDeferredBatch(generation);
-            });
+            QTimer::singleShot(0, this, [this, generation]() { notifyDeferredBatch(generation); });
         }
     }
 
 private:
-    void notifyDeferredBatch(int generation) {
+    void notifyDeferredBatch(int generation)
+    {
         if (generation != notificationGeneration)
             return;
 
@@ -107,9 +109,7 @@ private:
         }
 
         if (deferredIndex < deferredElements.size()) {
-            QTimer::singleShot(1, this, [this, generation]() {
-                notifyDeferredBatch(generation);
-            });
+            QTimer::singleShot(1, this, [this, generation]() { notifyDeferredBatch(generation); });
         } else {
             deferredElements.clear();
             deferredIndex = 0;

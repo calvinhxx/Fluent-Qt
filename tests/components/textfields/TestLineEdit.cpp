@@ -26,7 +26,8 @@ using namespace fluent;
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -34,7 +35,8 @@ public:
 
 class LineEditTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new FluentTestWindow();
         window->setFixedSize(500, 400);
         window->setWindowTitle("Fluent LineEdit Test");
@@ -43,9 +45,7 @@ protected:
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     FluentTestWindow* window;
     AnchorLayout* layout;
@@ -53,8 +53,7 @@ protected:
 
 namespace {
 
-bool actionMatchesStandardKey(const QAction* action,
-                              QKeySequence::StandardKey standardKey)
+bool actionMatchesStandardKey(const QAction* action, QKeySequence::StandardKey standardKey)
 {
     if (!action)
         return false;
@@ -63,16 +62,14 @@ bool actionMatchesStandardKey(const QAction* action,
     if (shortcuts.isEmpty()) {
         const int tabIndex = action->text().indexOf(QLatin1Char('\t'));
         if (tabIndex >= 0) {
-            const QKeySequence embedded(
-                action->text().mid(tabIndex + 1).trimmed(),
-                QKeySequence::NativeText);
+            const QKeySequence embedded(action->text().mid(tabIndex + 1).trimmed(),
+                                        QKeySequence::NativeText);
             if (!embedded.isEmpty())
                 shortcuts.append(embedded);
         }
     }
 
-    const QList<QKeySequence> bindings =
-        QKeySequence::keyBindings(standardKey);
+    const QList<QKeySequence> bindings = QKeySequence::keyBindings(standardKey);
     for (const QKeySequence& shortcut : shortcuts) {
         for (const QKeySequence& binding : bindings) {
             if (shortcut.matches(binding) == QKeySequence::ExactMatch)
@@ -82,8 +79,7 @@ bool actionMatchesStandardKey(const QAction* action,
     return false;
 }
 
-bool triggerContextAction(LineEdit* edit,
-                          QKeySequence::StandardKey standardKey)
+bool triggerContextAction(LineEdit* edit, QKeySequence::StandardKey standardKey)
 {
     if (!edit)
         return false;
@@ -91,8 +87,7 @@ bool triggerContextAction(LineEdit* edit,
     bool triggered = false;
     QTimer::singleShot(0, [&]() {
         auto* menu =
-            qobject_cast<fluent::menus_toolbars::FluentMenu*>(
-                QApplication::activePopupWidget());
+            qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
         if (!menu)
             return;
 
@@ -111,8 +106,7 @@ bool triggerContextAction(LineEdit* edit,
 
     const QPoint localPos = edit->rect().center();
     const QPoint globalPos = edit->mapToGlobal(localPos);
-    QContextMenuEvent event(
-        QContextMenuEvent::Mouse, localPos, globalPos);
+    QContextMenuEvent event(QContextMenuEvent::Mouse, localPos, globalPos);
     QApplication::sendEvent(edit, &event);
     QTest::qWait(1);
     return triggered;
@@ -120,7 +114,8 @@ bool triggerContextAction(LineEdit* edit,
 
 } // namespace
 
-TEST_F(LineEditTest, TextAndPlaceholder) {
+TEST_F(LineEditTest, TextAndPlaceholder)
+{
     LineEdit* edit = new LineEdit(window);
     edit->setPlaceholderText("Enter value");
     EXPECT_EQ(edit->placeholderText(), "Enter value");
@@ -129,14 +124,14 @@ TEST_F(LineEditTest, TextAndPlaceholder) {
     EXPECT_EQ(edit->text(), "hello");
 }
 
-TEST_F(LineEditTest, PlaceholderPaletteUsesResolvedOpaqueToken) {
+TEST_F(LineEditTest, PlaceholderPaletteUsesResolvedOpaqueToken)
+{
     const auto previousTheme = fluent::FluentElement::currentTheme();
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
 
     LineEdit edit(window);
     edit.onThemeUpdated();
-    const QColor placeholder = edit.palette().color(QPalette::Active,
-                                                     QPalette::PlaceholderText);
+    const QColor placeholder = edit.palette().color(QPalette::Active, QPalette::PlaceholderText);
 
     EXPECT_EQ(placeholder.alpha(), 255);
     EXPECT_GT(placeholder.red(), 130);
@@ -147,7 +142,8 @@ TEST_F(LineEditTest, PlaceholderPaletteUsesResolvedOpaqueToken) {
     fluent::FluentElement::setTheme(previousTheme);
 }
 
-TEST_F(LineEditTest, StyledAncestorDoesNotReplaceDarkThemeTextPalette) {
+TEST_F(LineEditTest, StyledAncestorDoesNotReplaceDarkThemeTextPalette)
+{
     const auto previousTheme = fluent::FluentElement::currentTheme();
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     window->onThemeUpdated();
@@ -157,25 +153,24 @@ TEST_F(LineEditTest, StyledAncestorDoesNotReplaceDarkThemeTextPalette) {
     edit.onThemeUpdated();
 
     const auto colors = edit.themeColors();
-    EXPECT_EQ(edit.palette().color(QPalette::Active, QPalette::Text),
-              colors.textPrimary);
-    EXPECT_EQ(edit.palette().color(QPalette::Inactive, QPalette::Text),
-              colors.textPrimary);
-    EXPECT_EQ(edit.palette().color(QPalette::Disabled, QPalette::Text),
-              colors.textDisabled);
+    EXPECT_EQ(edit.palette().color(QPalette::Active, QPalette::Text), colors.textPrimary);
+    EXPECT_EQ(edit.palette().color(QPalette::Inactive, QPalette::Text), colors.textPrimary);
+    EXPECT_EQ(edit.palette().color(QPalette::Disabled, QPalette::Text), colors.textDisabled);
 
     fluent::FluentElement::setTheme(previousTheme);
     window->onThemeUpdated();
 }
 
-TEST_F(LineEditTest, ContentMargins) {
+TEST_F(LineEditTest, ContentMargins)
+{
     LineEdit* edit = new LineEdit(window);
     QMargins margins(10, 2, 10, 2);
     edit->setContentMargins(margins);
     EXPECT_EQ(edit->contentMargins(), margins);
 }
 
-TEST_F(LineEditTest, ReadOnly) {
+TEST_F(LineEditTest, ReadOnly)
+{
     LineEdit* edit = new LineEdit(window);
     edit->setText("read only");
     edit->setReadOnly(true);
@@ -184,7 +179,8 @@ TEST_F(LineEditTest, ReadOnly) {
     EXPECT_FALSE(edit->isReadOnly());
 }
 
-TEST_F(LineEditTest, Validator) {
+TEST_F(LineEditTest, Validator)
+{
     LineEdit* edit = new LineEdit(window);
     auto* validator = new QIntValidator(0, 100, edit);
     edit->setValidator(validator);
@@ -208,59 +204,36 @@ TEST_F(LineEditTest, Contract_StandardEditingActionsUseFluentContextMenu)
     bool sawSelectAllGlyph = false;
     QTimer::singleShot(0, [&]() {
         auto* menu =
-            qobject_cast<fluent::menus_toolbars::FluentMenu*>(
-                QApplication::activePopupWidget());
+            qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
         sawFluentMenu = menu != nullptr;
         if (!menu)
             return;
 
-        EXPECT_EQ(
-            menu->objectName(),
-            QStringLiteral("FluentLineEdit.ContextMenu"));
+        EXPECT_EQ(menu->objectName(), QStringLiteral("FluentLineEdit.ContextMenu"));
         EXPECT_EQ(menu->fontStyle(), Typography::FontRole::Caption);
-        EXPECT_EQ(
-            menu->font().pixelSize(),
-            Typography::FontSize::Caption);
-        EXPECT_FALSE(
-            menu->property(
-                    "_fluentqt_menuQuietSeparators")
-                .toBool());
+        EXPECT_EQ(menu->font().pixelSize(), Typography::FontSize::Caption);
+        EXPECT_FALSE(menu->property("_fluentqt_menuQuietSeparators").toBool());
         for (QAction* action : menu->actions()) {
             if (!action->isSeparator()) {
-                EXPECT_LT(
-                    menu->actionGeometry(action).height(),
-                    ::Spacing::ControlHeight::Standard);
+                EXPECT_LT(menu->actionGeometry(action).height(),
+                          ::Spacing::ControlHeight::Standard);
             }
-            const bool isCopy =
-                actionMatchesStandardKey(action, QKeySequence::Copy);
-            const bool isSelectAll =
-                actionMatchesStandardKey(action, QKeySequence::SelectAll);
+            const bool isCopy = actionMatchesStandardKey(action, QKeySequence::Copy);
+            const bool isSelectAll = actionMatchesStandardKey(action, QKeySequence::SelectAll);
             const bool isDelete =
-                action->text().contains(
-                    QStringLiteral("Delete"), Qt::CaseInsensitive);
+                action->text().contains(QStringLiteral("Delete"), Qt::CaseInsensitive);
             sawCopy = sawCopy || isCopy;
             sawSelectAll = sawSelectAll || isSelectAll;
-            sawCopyGlyph =
-                sawCopyGlyph || (isCopy && !action->icon().isNull());
-            sawDeleteGlyph =
-                sawDeleteGlyph || (isDelete && !action->icon().isNull());
-            sawSelectAllGlyph =
-                sawSelectAllGlyph
-                || (isSelectAll && !action->icon().isNull());
+            sawCopyGlyph = sawCopyGlyph || (isCopy && !action->icon().isNull());
+            sawDeleteGlyph = sawDeleteGlyph || (isDelete && !action->icon().isNull());
+            sawSelectAllGlyph = sawSelectAllGlyph || (isSelectAll && !action->icon().isNull());
             if (!action->icon().isNull()) {
-                const QSize iconSize =
-                    action->icon().actualSize(QSize(64, 64));
-                const int maximumBackingExtent = qCeil(
-                    Typography::IconSize::Standard
-                    * qMax<qreal>(
-                        1.0, menu->devicePixelRatioF()));
+                const QSize iconSize = action->icon().actualSize(QSize(64, 64));
+                const int maximumBackingExtent = qCeil(Typography::IconSize::Standard *
+                                                       qMax<qreal>(1.0, menu->devicePixelRatioF()));
                 EXPECT_GT(iconSize.width(), 0);
-                EXPECT_LE(
-                    iconSize.width(),
-                    maximumBackingExtent);
-                EXPECT_LE(
-                    iconSize.height(),
-                    maximumBackingExtent);
+                EXPECT_LE(iconSize.width(), maximumBackingExtent);
+                EXPECT_LE(iconSize.height(), maximumBackingExtent);
             }
         }
         menu->close();
@@ -268,8 +241,7 @@ TEST_F(LineEditTest, Contract_StandardEditingActionsUseFluentContextMenu)
 
     const QPoint localPos = edit->rect().center();
     const QPoint globalPos = edit->mapToGlobal(localPos);
-    QContextMenuEvent event(
-        QContextMenuEvent::Mouse, localPos, globalPos);
+    QContextMenuEvent event(QContextMenuEvent::Mouse, localPos, globalPos);
     QApplication::sendEvent(edit, &event);
 
     EXPECT_TRUE(event.isAccepted());
@@ -307,7 +279,8 @@ TEST_F(LineEditTest, Contract_UndoRedoRemainFunctionalFromContextMenu)
     EXPECT_EQ(edit->text(), editedText);
 }
 
-TEST_F(LineEditTest, FluentPropertiesDefaultsAndSetters) {
+TEST_F(LineEditTest, FluentPropertiesDefaultsAndSetters)
+{
     LineEdit* edit = new LineEdit(window);
 
     // 默认值验证（引用 Spacing/Typography 常量）
@@ -343,7 +316,8 @@ TEST_F(LineEditTest, FluentPropertiesDefaultsAndSetters) {
     EXPECT_EQ(spyUnfocused.count(), 1);
 }
 
-TEST_F(LineEditTest, ClearButtonOffsetAffectsGeometry) {
+TEST_F(LineEditTest, ClearButtonOffsetAffectsGeometry)
+{
     LineEdit* edit = new LineEdit(window);
     edit->setClearButtonEnabled(true);
     edit->setText("x");
@@ -363,8 +337,8 @@ TEST_F(LineEditTest, ClearButtonOffsetAffectsGeometry) {
     EXPECT_EQ(clearBtn->pos(), QPoint(expectedX, expectedY));
 }
 
-
-TEST_F(LineEditTest, VisualCheck) {
+TEST_F(LineEditTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -427,7 +401,10 @@ TEST_F(LineEditTest, VisualCheck) {
     layout->addWidget(themeBtn);
 
     QObject::connect(themeBtn, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     window->show();

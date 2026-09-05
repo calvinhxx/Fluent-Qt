@@ -81,8 +81,7 @@ QString visualDiffFilePath(const QString& actualPath)
 
 bool envFlagIsOn(const char* name)
 {
-    return qEnvironmentVariableIsSet(name)
-        && qEnvironmentVariable(name) == QStringLiteral("1");
+    return qEnvironmentVariableIsSet(name) && qEnvironmentVariable(name) == QStringLiteral("1");
 }
 } // namespace
 
@@ -96,12 +95,12 @@ void configureOffscreenPlatformForAutomation()
     // 每个 exe 的 AppData)。必须在任何路径解析(下方日志初始化 + QApplication)之前调用。
     QStandardPaths::setTestModeEnabled(true);
 
-    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST") && qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM"))
+    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST") &&
+        qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM"))
         qputenv("QT_QPA_PLATFORM", QByteArray("offscreen"));
 
-    if (isVisualSnapshotMode()
-        && qEnvironmentVariableIsEmpty("QT_SCALE_FACTOR")
-        && qEnvironmentVariableIsEmpty("QT_SCREEN_SCALE_FACTORS")) {
+    if (isVisualSnapshotMode() && qEnvironmentVariableIsEmpty("QT_SCALE_FACTOR") &&
+        qEnvironmentVariableIsEmpty("QT_SCREEN_SCALE_FACTORS")) {
         qputenv("QT_SCALE_FACTOR", QByteArray("1"));
     }
 }
@@ -117,8 +116,7 @@ void initializeQtTestEnvironment()
 bool canCaptureAccessibilityEvents()
 {
 #if QT_CONFIG(accessibility)
-    return FLUENT_HAS_UNCONDITIONAL_ACCESSIBLE_UPDATE_HANDLER
-        || QAccessible::isActive();
+    return FLUENT_HAS_UNCONDITIONAL_ACCESSIBLE_UPDATE_HANDLER || QAccessible::isActive();
 #else
     return false;
 #endif
@@ -157,28 +155,23 @@ bool shouldCaptureVisualSnapshot()
 
 bool shouldRunVisualGate()
 {
-    return !shouldSkipVisualTest()
-        && (isVisualSnapshotMode() || isVisualCompareMode() || shouldUpdateVisualBaseline());
+    return !shouldSkipVisualTest() &&
+           (isVisualSnapshotMode() || isVisualCompareMode() || shouldUpdateVisualBaseline());
 }
 
 bool isVisualGateApprovalHost()
 {
 #if defined(Q_OS_MACOS) && defined(Q_PROCESSOR_ARM_64)
-    if (isHeadlessPlatform()
-        || QGuiApplication::platformName() != QLatin1String("cocoa")) {
+    if (isHeadlessPlatform() || QGuiApplication::platformName() != QLatin1String("cocoa")) {
         return false;
     }
 
     const QStyle* style = QApplication::style();
-    const bool fusionStyle = style
-        && style->objectName().compare(QStringLiteral("fusion"),
-                                       Qt::CaseInsensitive) == 0;
-    const bool fixedScale = qEnvironmentVariable("QT_SCALE_FACTOR")
-        == QLatin1String("1");
-    const bool fixedFontDpi = qEnvironmentVariable("QT_FONT_DPI")
-        == QLatin1String("96");
-    const bool noPerScreenOverride =
-        qEnvironmentVariableIsEmpty("QT_SCREEN_SCALE_FACTORS");
+    const bool fusionStyle =
+        style && style->objectName().compare(QStringLiteral("fusion"), Qt::CaseInsensitive) == 0;
+    const bool fixedScale = qEnvironmentVariable("QT_SCALE_FACTOR") == QLatin1String("1");
+    const bool fixedFontDpi = qEnvironmentVariable("QT_FONT_DPI") == QLatin1String("96");
+    const bool noPerScreenOverride = qEnvironmentVariableIsEmpty("QT_SCREEN_SCALE_FACTORS");
     return fusionStyle && fixedScale && fixedFontDpi && noPerScreenOverride;
 #else
     return false;
@@ -218,8 +211,7 @@ QString visualBaselineFilePath(const QString& variant)
     const VisualComparisonResult comparison = analyzeVisualDifference(expected, actual);
     if (comparison.passed)
         return ::testing::AssertionSuccess();
-    return ::testing::AssertionFailure()
-           << visualComparisonSummary(comparison).toStdString();
+    return ::testing::AssertionFailure() << visualComparisonSummary(comparison).toStdString();
 }
 
 ::testing::AssertionResult compareVisualSnapshotToBaseline(const QString& actualPath,
@@ -251,8 +243,7 @@ QString visualBaselineFilePath(const QString& variant)
         }
         return ::testing::AssertionFailure()
                << comparison.message() << "; actual=" << actualPath.toStdString()
-               << " baseline=" << baselinePath.toStdString()
-               << " diff=" << diffPath.toStdString();
+               << " baseline=" << baselinePath.toStdString() << " diff=" << diffPath.toStdString();
     }
 
     return ::testing::AssertionFailure()
@@ -260,14 +251,15 @@ QString visualBaselineFilePath(const QString& variant)
            << " baseline=" << baselinePath.toStdString();
 }
 
-::testing::AssertionResult captureVisualSnapshot(QWidget* window, const VisualSnapshotOptions& options)
+::testing::AssertionResult captureVisualSnapshot(QWidget* window,
+                                                 const VisualSnapshotOptions& options)
 {
     if (!window)
         return ::testing::AssertionFailure() << "Cannot capture a null VisualCheck window";
 
     const QSize snapshotSize = options.windowSize.isValid() ? options.windowSize
-                               : window->size().isValid()  ? window->size()
-                                                           : kDefaultSnapshotSize;
+                               : window->size().isValid()   ? window->size()
+                                                            : kDefaultSnapshotSize;
     if (snapshotSize.isEmpty())
         return ::testing::AssertionFailure() << "Visual snapshot window size is empty";
 
@@ -286,13 +278,11 @@ QString visualBaselineFilePath(const QString& variant)
     }
 
     if (!options.focusObjectName.isEmpty()) {
-        QWidget* focusWidget = window->findChild<QWidget*>(
-            options.focusObjectName);
+        QWidget* focusWidget = window->findChild<QWidget*>(options.focusObjectName);
         if (!focusWidget) {
             fluent::FluentElement::setTheme(previousTheme);
-            return ::testing::AssertionFailure()
-                   << "Visual snapshot focus target was not found: "
-                   << options.focusObjectName.toStdString();
+            return ::testing::AssertionFailure() << "Visual snapshot focus target was not found: "
+                                                 << options.focusObjectName.toStdString();
         }
         // CTest may launch the Cocoa process without making its first window
         // active. setActiveWindow() gives the capture a deterministic Qt focus
@@ -342,8 +332,8 @@ QString visualBaselineFilePath(const QString& variant)
 
     QImage snapshotImage = snapshot.toImage();
     if (snapshotImage.size() != snapshotSize) {
-        snapshotImage = snapshotImage.scaled(
-            snapshotSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        snapshotImage =
+            snapshotImage.scaled(snapshotSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     }
 
     const QString outputDir = visualSnapshotDirectory();
@@ -369,15 +359,13 @@ QString visualBaselineFilePath(const QString& variant)
         const QString baselineDir = visualBaselineDirectory();
         if (!QDir().mkpath(baselineDir)) {
             return ::testing::AssertionFailure()
-                   << "Failed to create visual baseline directory: "
-                   << baselineDir.toStdString();
+                   << "Failed to create visual baseline directory: " << baselineDir.toStdString();
         }
         const QString baselinePath = visualBaselineFilePath(options.variant);
         QFile::remove(baselinePath);
         if (!QFile::copy(outputPath, baselinePath)) {
             return ::testing::AssertionFailure()
-                   << "Failed to copy visual snapshot to baseline: "
-                   << baselinePath.toStdString();
+                   << "Failed to copy visual snapshot to baseline: " << baselinePath.toStdString();
         }
         return ::testing::AssertionSuccess()
                << "Updated visual baseline: " << baselinePath.toStdString();
@@ -386,8 +374,7 @@ QString visualBaselineFilePath(const QString& variant)
     if (isVisualCompareMode())
         return compareVisualSnapshotToBaseline(outputPath, options.variant);
 
-    return ::testing::AssertionSuccess()
-           << "Saved visual snapshot: " << outputPath.toStdString();
+    return ::testing::AssertionSuccess() << "Saved visual snapshot: " << outputPath.toStdString();
 }
 
 } // namespace tests::support

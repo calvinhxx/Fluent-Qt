@@ -16,8 +16,8 @@ namespace {
 constexpr const char* kLatestReleaseApi =
     "https://api.github.com/repos/calvinhxx/Fluent-Qt/releases/latest";
 
-bool assetNameMatchesPlatform(const QString& assetName,
-                              const QString& platformKey) {
+bool assetNameMatchesPlatform(const QString& assetName, const QString& platformKey)
+{
     const QString name = assetName.toLower();
 
     if (name.contains(QStringLiteral(".sha256"))) {
@@ -31,8 +31,7 @@ bool assetNameMatchesPlatform(const QString& assetName,
 
     if (platformKey == QStringLiteral("windows-x64")) {
         return name.contains(QStringLiteral("windows-x64")) &&
-               name.endsWith(QStringLiteral(".exe")) &&
-               !name.contains(QStringLiteral("qt5.15"));
+               name.endsWith(QStringLiteral(".exe")) && !name.contains(QStringLiteral("qt5.15"));
     }
 
     if (platformKey == QStringLiteral("macos-arm64")) {
@@ -42,8 +41,7 @@ bool assetNameMatchesPlatform(const QString& assetName,
 
     if (platformKey == QStringLiteral("macos-x64")) {
         return name.contains(QStringLiteral("darwin-x86_64")) &&
-               name.endsWith(QStringLiteral(".dmg")) &&
-               !name.contains(QStringLiteral("qt5.15"));
+               name.endsWith(QStringLiteral(".dmg")) && !name.contains(QStringLiteral("qt5.15"));
     }
 
     if (platformKey == QStringLiteral("linux-arm64")) {
@@ -58,15 +56,17 @@ bool assetNameMatchesPlatform(const QString& assetName,
 
     return false;
 }
-}  // namespace
+} // namespace
 
-UpdateChecker::UpdateChecker(QObject* parent) : QObject(parent) {
+UpdateChecker::UpdateChecker(QObject* parent) : QObject(parent)
+{
     qRegisterMetaType<fluent::gallery::UpdateChecker::Result>(
         "fluent::gallery::UpdateChecker::Result");
     m_network = new QNetworkAccessManager(this);
 }
 
-UpdateChecker::~UpdateChecker() {
+UpdateChecker::~UpdateChecker()
+{
     if (m_reply) {
         m_reply->abort();
         m_reply->deleteLater();
@@ -74,36 +74,42 @@ UpdateChecker::~UpdateChecker() {
     }
 }
 
-bool UpdateChecker::isChecking() const { return m_reply != nullptr; }
+bool UpdateChecker::isChecking() const
+{
+    return m_reply != nullptr;
+}
 
-QString UpdateChecker::currentVersion() const {
+QString UpdateChecker::currentVersion() const
+{
     const QString version = QCoreApplication::applicationVersion().trimmed();
     return version.isEmpty() ? QStringLiteral("0.0.0") : version;
 }
 
-QString UpdateChecker::platformLabel() const { return platformDisplayName(); }
+QString UpdateChecker::platformLabel() const
+{
+    return platformDisplayName();
+}
 
-void UpdateChecker::checkForUpdates() {
+void UpdateChecker::checkForUpdates()
+{
     if (m_reply) {
         return;
     }
 
     QNetworkRequest request{QUrl(QString::fromLatin1(kLatestReleaseApi))};
     request.setHeader(QNetworkRequest::UserAgentHeader,
-                      QStringLiteral("Fluent-Qt-Gallery/%1")
-                          .arg(currentVersion()));
+                      QStringLiteral("Fluent-Qt-Gallery/%1").arg(currentVersion()));
     request.setRawHeader("Accept", "application/vnd.github+json");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
 
     m_reply = m_network->get(request);
-    connect(m_reply, &QNetworkReply::finished, this,
-            &UpdateChecker::handleReplyFinished);
+    connect(m_reply, &QNetworkReply::finished, this, &UpdateChecker::handleReplyFinished);
     emit checkStarted();
 }
 
-UpdateChecker::Result UpdateChecker::parseReleasePayload(
-    const QByteArray& payload) const {
+UpdateChecker::Result UpdateChecker::parseReleasePayload(const QByteArray& payload) const
+{
     Result result;
     result.currentVersion = currentVersion();
 
@@ -126,12 +132,10 @@ UpdateChecker::Result UpdateChecker::parseReleasePayload(
         return result;
     }
 
-    const int comparison =
-        compareVersions(result.latestVersion, result.currentVersion);
+    const int comparison = compareVersions(result.latestVersion, result.currentVersion);
     if (comparison <= 0) {
         result.status = Result::Status::UpToDate;
-        result.message = tr("You are on the latest version (%1).")
-                             .arg(result.currentVersion);
+        result.message = tr("You are on the latest version (%1).").arg(result.currentVersion);
         return result;
     }
 
@@ -141,19 +145,17 @@ UpdateChecker::Result UpdateChecker::parseReleasePayload(
 
     if (result.assetUrl.isValid()) {
         result.message =
-            tr("Version %1 is available for %2.")
-                .arg(result.latestVersion, platformDisplayName());
+            tr("Version %1 is available for %2.").arg(result.latestVersion, platformDisplayName());
     } else {
-        result.message =
-            tr("Version %1 is available. Open the release page to download it.")
-                .arg(result.latestVersion);
+        result.message = tr("Version %1 is available. Open the release page to download it.")
+                             .arg(result.latestVersion);
     }
 
     return result;
 }
 
-QUrl UpdateChecker::selectPlatformAsset(const QJsonArray& assets,
-                                        QString* assetName) const {
+QUrl UpdateChecker::selectPlatformAsset(const QJsonArray& assets, QString* assetName) const
+{
     const QString key = platformKey();
     for (const QJsonValue& value : assets) {
         if (!value.isObject()) {
@@ -166,8 +168,7 @@ QUrl UpdateChecker::selectPlatformAsset(const QJsonArray& assets,
             continue;
         }
 
-        const QUrl url{
-            asset.value(QStringLiteral("browser_download_url")).toString()};
+        const QUrl url{asset.value(QStringLiteral("browser_download_url")).toString()};
         if (!url.isValid()) {
             continue;
         }
@@ -184,21 +185,20 @@ QUrl UpdateChecker::selectPlatformAsset(const QJsonArray& assets,
     return {};
 }
 
-void UpdateChecker::handleReplyFinished() {
+void UpdateChecker::handleReplyFinished()
+{
     QNetworkReply* reply = m_reply;
     m_reply = nullptr;
 
     Result result;
     result.currentVersion = currentVersion();
 
-    const QVariant statusCode =
-        reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+    const QVariant statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
     const int httpStatus = statusCode.isValid() ? statusCode.toInt() : 0;
     if (reply->error() != QNetworkReply::NoError) {
         result.message = reply->errorString();
     } else if (httpStatus >= 400) {
-        result.message =
-            tr("GitHub release request failed with HTTP %1.").arg(httpStatus);
+        result.message = tr("GitHub release request failed with HTTP %1.").arg(httpStatus);
     } else {
         result = parseReleasePayload(reply->readAll());
     }
@@ -207,15 +207,14 @@ void UpdateChecker::handleReplyFinished() {
     emit checkFinished(result);
 }
 
-int UpdateChecker::compareVersions(const QString& left, const QString& right) {
+int UpdateChecker::compareVersions(const QString& left, const QString& right)
+{
     const QStringList leftParts = normalizedVersion(left).split('.');
     const QStringList rightParts = normalizedVersion(right).split('.');
 
     for (int index = 0; index < 3; ++index) {
-        const int leftValue =
-            index < leftParts.size() ? leftParts.at(index).toInt() : 0;
-        const int rightValue =
-            index < rightParts.size() ? rightParts.at(index).toInt() : 0;
+        const int leftValue = index < leftParts.size() ? leftParts.at(index).toInt() : 0;
+        const int rightValue = index < rightParts.size() ? rightParts.at(index).toInt() : 0;
 
         if (leftValue < rightValue) {
             return -1;
@@ -228,10 +227,10 @@ int UpdateChecker::compareVersions(const QString& left, const QString& right) {
     return 0;
 }
 
-QString UpdateChecker::normalizedVersion(const QString& version) {
+QString UpdateChecker::normalizedVersion(const QString& version)
+{
     QString normalized = version.trimmed();
-    if (normalized.startsWith(QLatin1Char('v')) ||
-        normalized.startsWith(QLatin1Char('V'))) {
+    if (normalized.startsWith(QLatin1Char('v')) || normalized.startsWith(QLatin1Char('V'))) {
         normalized.remove(0, 1);
     }
 
@@ -240,14 +239,13 @@ QString UpdateChecker::normalizedVersion(const QString& version) {
         normalized.truncate(suffixIndex);
     }
 
-    static const QRegularExpression validVersionPattern{
-        QStringLiteral(R"(^\d+(?:\.\d+){0,2})")};
-    const QRegularExpressionMatch match =
-        validVersionPattern.match(normalized);
+    static const QRegularExpression validVersionPattern{QStringLiteral(R"(^\d+(?:\.\d+){0,2})")};
+    const QRegularExpressionMatch match = validVersionPattern.match(normalized);
     return match.hasMatch() ? match.captured(0) : QString();
 }
 
-QString UpdateChecker::platformKey() {
+QString UpdateChecker::platformKey()
+{
 #if defined(Q_OS_WIN)
 #if defined(Q_PROCESSOR_ARM_64)
     return QStringLiteral("windows-arm64");
@@ -271,7 +269,8 @@ QString UpdateChecker::platformKey() {
 #endif
 }
 
-QString UpdateChecker::platformDisplayName() {
+QString UpdateChecker::platformDisplayName()
+{
     const QString key = platformKey();
     if (key == QStringLiteral("windows-arm64")) {
         return QStringLiteral("Windows ARM64");
@@ -294,4 +293,4 @@ QString UpdateChecker::platformDisplayName() {
     return QStringLiteral("this platform");
 }
 
-}  // namespace fluent::gallery
+} // namespace fluent::gallery
