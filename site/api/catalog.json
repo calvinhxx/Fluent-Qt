@@ -24,7 +24,7 @@
   ],
   "summary": {
     "components": 70,
-    "public_headers": 116,
+    "public_headers": 117,
     "categories": 12
   },
   "categories": [
@@ -2682,6 +2682,21 @@
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/TextPaintCompat.h"
     },
     {
+      "include": "<FluentQt/compatibility/WindowBackdropTypes.h>",
+      "source": "src/compatibility/WindowBackdropTypes.h",
+      "summary": "Logical background material requested for a Fluent window.",
+      "declarations": [
+        "BackdropCapabilities",
+        "BackdropApplyResult",
+        "BackdropState",
+        "BackdropEffect",
+        "BackdropBackend",
+        "BackdropFidelity",
+        "BackdropSurfaceMode"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/WindowBackdropTypes.h"
+    },
+    {
       "include": "<FluentQt/compatibility/WindowChromeCompat.h>",
       "source": "src/compatibility/WindowChromeCompat.h",
       "summary": "Native-event result type used by QWidget::nativeEvent() across Qt versions.",
@@ -3588,16 +3603,8 @@
     {
       "include": "<FluentQt/components/windowing/WindowBackdrop.h>",
       "source": "src/components/windowing/WindowBackdrop.h",
-      "summary": "Logical background material requested for a Fluent window.",
-      "declarations": [
-        "BackdropCapabilities",
-        "BackdropApplyResult",
-        "BackdropState",
-        "BackdropEffect",
-        "BackdropBackend",
-        "BackdropFidelity",
-        "BackdropSurfaceMode"
-      ],
+      "summary": "Returns the published backdrop state for a widget's top-level window.",
+      "declarations": [],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/windowing/WindowBackdrop.h"
     },
     {

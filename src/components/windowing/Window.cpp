@@ -17,7 +17,7 @@
 #include "TitleBar.h"
 #include "WindowBackdropMaterial.h"
 #include "WindowChromeFrame.h"
-#include "components/windowing/private/WindowBackdrop_p.h"
+#include "compatibility/private/WindowBackdropEvents_p.h"
 #include "design/Breakpoints.h"
 #include "design/Typography.h"
 #include "compatibility/QtCompat.h"
@@ -745,7 +745,7 @@ void Window::changeEvent(QEvent* event)
 
 bool Window::event(QEvent* event)
 {
-    if (isWindowBackdropReevaluationEvent(event)) {
+    if (compatibility::detail::isWindowBackdropReevaluationEvent(event)) {
         scheduleBackdropResolution();
         return true;
     }

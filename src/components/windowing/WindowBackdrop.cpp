@@ -1,11 +1,8 @@
 #include "WindowBackdrop.h"
 #include "components/foundation/FluentElement.h"
-#include "components/windowing/private/WindowBackdrop_p.h"
 #include "design/Material.h"
 
 #include <algorithm>
-#include <QCoreApplication>
-#include <QEvent>
 #include <QVariant>
 #include <QWidget>
 
@@ -21,12 +18,6 @@ constexpr int kBackdropEffectAcrylic = 2;
 const QWidget* topLevelFor(const QWidget* widget)
 {
     return widget ? widget->window() : nullptr;
-}
-
-QEvent::Type reevaluationEventType()
-{
-    static const int type = QEvent::registerEventType();
-    return static_cast<QEvent::Type>(type);
 }
 
 QColor blendRgb(const QColor& from, const QColor& to, qreal amount)
@@ -49,37 +40,6 @@ int backdropEffectFromProperty(const QVariant& value)
 }
 
 } // namespace
-
-bool BackdropCapabilities::supportsNative(BackdropEffect effect) const
-{
-    if (effect == BackdropEffect::Mica)
-        return nativeMica;
-    if (effect == BackdropEffect::Acrylic)
-        return nativeAcrylic;
-    return true;
-}
-
-bool BackdropCapabilities::supportsCompositor(BackdropEffect effect) const
-{
-    // A generic blur-behind protocol represents Acrylic's live background
-    // sampling, not Mica's stable wallpaper-tinted material. Platforms with a
-    // real Mica implementation advertise it through nativeMica instead.
-    return effect == BackdropEffect::Acrylic && compositorBlur;
-}
-
-bool BackdropCapabilities::supportsTransparentMaterial(BackdropEffect effect) const
-{
-    return effect != BackdropEffect::Solid && alphaSurfaceSupported &&
-           (supportsNative(effect) || supportsCompositor(effect));
-}
-
-bool BackdropState::operator==(const BackdropState& other) const
-{
-    return requestedEffect == other.requestedEffect && effectiveEffect == other.effectiveEffect &&
-           backend == other.backend && fidelity == other.fidelity &&
-           surfaceMode == other.surfaceMode && platformApplied == other.platformApplied &&
-           reason == other.reason;
-}
 
 BackdropState windowBackdropState(const QWidget* widget)
 {
@@ -158,19 +118,6 @@ QColor windowChromeBackdropFill(const FluentElement& themeHost, const QWidget* h
     }
 
     return themeHost.themeBackdrop(active);
-}
-
-void requestWindowBackdropReevaluation(QWidget* widget)
-{
-    QWidget* topLevel = widget ? widget->window() : nullptr;
-    if (!topLevel || !QCoreApplication::instance())
-        return;
-    QCoreApplication::postEvent(topLevel, new QEvent(reevaluationEventType()));
-}
-
-bool isWindowBackdropReevaluationEvent(const QEvent* event)
-{
-    return event && event->type() == reevaluationEventType();
 }
 
 } // namespace fluent::windowing

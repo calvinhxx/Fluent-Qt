@@ -13,7 +13,7 @@
 #include <QWindow>
 #include <QtMath>
 
-#include "components/windowing/private/WindowBackdrop_p.h"
+#include "compatibility/private/WindowBackdropEvents_p.h"
 
 #include <limits>
 
@@ -530,7 +530,7 @@ private:
         const bool stalePropertyRemoved =
             applyKWinBlurBehindNow(m_window, false, /*validateEnvironment*/ false);
         Q_UNUSED(stalePropertyRemoved);
-        fluent::windowing::requestWindowBackdropReevaluation(m_window);
+        compatibility::detail::requestWindowBackdropReevaluation(m_window);
     }
 
     QWidget* m_window = nullptr;
