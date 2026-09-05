@@ -62,6 +62,8 @@ class NumberBox : public LineEdit {
     /**
      * @brief Whether typed arithmetic expressions are evaluated before commit.
      * zh_CN: 输入的算术表达式是否在提交前求值。
+     * @note Combined parenthesis and power nesting is limited to 128 levels.
+     * zh_CN: 括号和幂运算的合计嵌套深度最多为 128 层。
      */
     Q_PROPERTY(bool acceptsExpression READ acceptsExpression WRITE setAcceptsExpression NOTIFY
                    acceptsExpressionChanged)
@@ -72,14 +74,14 @@ class NumberBox : public LineEdit {
     Q_PROPERTY(SpinButtonPlacementMode spinButtonPlacementMode READ spinButtonPlacementMode WRITE
                    setSpinButtonPlacementMode NOTIFY spinButtonPlacementModeChanged)
     /**
-     * @brief Button size used when spin buttons are rendered outside the text
-   * field. zh_CN: 步进按钮绘制在文本框外侧时使用的按钮尺寸。
+     * @brief Size of external spin buttons.
+     * zh_CN: 外部步进按钮的尺寸。
      */
     Q_PROPERTY(QSize spinButtonSize READ spinButtonSize WRITE setSpinButtonSize NOTIFY
                    spinButtonSizeChanged)
     /**
-     * @brief Button size used when spin buttons are rendered inside the text
-   * field. zh_CN: 步进按钮绘制在文本框内部时使用的按钮尺寸。
+     * @brief Size of inline spin buttons.
+     * zh_CN: 内联步进按钮的尺寸。
      */
     Q_PROPERTY(QSize inlineSpinButtonSize READ inlineSpinButtonSize WRITE setInlineSpinButtonSize
                    NOTIFY inlineSpinButtonSizeChanged)
@@ -238,6 +240,7 @@ private:
     double normalizeValue(double value) const;
     double applyFormatStep(double value) const;
     QString formatValue(double value) const;
+    void setFormattedText(const QString& text);
     bool parseInputText(const QString& input, double* result) const;
     bool setValueInternal(double value, bool updateText, bool keepUserTextWhenNaN);
     void paintInputFrame(QPainter& painter);
