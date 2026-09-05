@@ -10,6 +10,36 @@
 [← System capability delivery record](system-capability-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
 <!-- docs-nav:top:end -->
 
+## 2026-09-05 callback and model-update addendum
+
+Theme notifications stop when a callback starts a newer change, including
+deferred batches. `FluentElement` retains its protected 1.x pointer slot but
+no longer allocates empty private storage.
+
+NumberBox limits combined parenthesis and power nesting to 128. Excessive
+nesting follows the invalid-input contract: preserve the text and expose NaN.
+Unary signs are parsed iteratively. Programmatic formatting finishes Qt's
+text mutation before delivering text, selection, and cursor notifications;
+value/range setters stop when callbacks destroy the control or supersede the
+value. Focused contracts compare inherited notifications with QLineEdit and
+exercise destruction from text and value callbacks.
+
+FlowView invalidates its cache after row removal and coalesces layout work
+during insertion bursts. Tail appends reuse existing rectangles; explicit
+geometry queries and scrolling still resolve pending layout immediately.
+Contracts cover removal, hit testing, scroll ranges, variable-size wrapping,
+resize, scroll anchors, and model-access counts.
+
+LineEdit's clear button now exposes a translated accessible name and defaults
+to a 24 by 24 logical-pixel target. Explicit `clearButtonSize` overrides still
+apply. The inherited change also covers NumberBox and AutoSuggestBox.
+
+The regression sources are [FluentElement](../../tests/components/TestFluentElement.cpp),
+[LineEdit](../../tests/components/textfields/TestLineEdit.cpp),
+[NumberBox](../../tests/components/textfields/TestNumberBox.cpp), and
+[FlowView](../../tests/components/collections/TestFlowView.cpp). Public component
+names and properties are unchanged; platform visual acceptance remains separate.
+
 ## 2026-09-03 inherited input-signal addendum
 
 - The five public `QAbstractItemView`-derived collection controls were audited
