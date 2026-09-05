@@ -33,6 +33,8 @@ LineEdit::LineEdit(QWidget* parent) : QLineEdit(parent)
 
     // Built-in fluent clear button. zh_CN: 内置 Fluent 清除按钮。
     m_clearButton = new ::fluent::basicinput::Button(this);
+    m_clearButton->setObjectName(QStringLiteral("fluentLineEditClearButton"));
+    m_clearButton->setAccessibleName(tr("Clear text"));
     m_clearButton->setFluentStyle(::fluent::basicinput::Button::Subtle);
     m_clearButton->setFluentSize(::fluent::basicinput::Button::Small);
     m_clearButton->setFocusPolicy(Qt::NoFocus);

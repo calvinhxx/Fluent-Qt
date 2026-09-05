@@ -74,8 +74,8 @@
 
     {"id":"auto-suggest-box","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/textfields/private/AutoSuggestBoxAccessibility_p.cpp","tests/components/TestComplexInputAccessibility.cpp"],"gap":""},
     {"id":"label","classification":"native","risk":"low","status":"covered","evidence":["src/components/textfields/Label.h"],"gap":""},
-    {"id":"line-edit","classification":"native","risk":"low","status":"covered","evidence":["src/components/textfields/LineEdit.h"],"gap":""},
-    {"id":"number-box","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/textfields/private/NumberBoxAccessibility_p.cpp","tests/components/TestValueAccessibility.cpp"],"gap":""},
+    {"id":"line-edit","classification":"native","risk":"low","status":"covered","evidence":["src/components/textfields/LineEdit.h","tests/components/textfields/TestLineEdit.cpp"],"gap":""},
+    {"id":"number-box","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/textfields/private/NumberBoxAccessibility_p.cpp","tests/components/TestValueAccessibility.cpp","tests/components/textfields/TestNumberBox.cpp"],"gap":""},
     {"id":"password-box","classification":"native","risk":"low","status":"covered","evidence":["src/components/textfields/PasswordBox.h"],"gap":""},
     {"id":"text-edit","classification":"native","risk":"medium","status":"covered","evidence":["src/components/textfields/TextEdit.h","tests/components/textfields/TestTextEdit.cpp","tests/components/textfields/TestTextEditMotion.cpp"],"gap":""},
 

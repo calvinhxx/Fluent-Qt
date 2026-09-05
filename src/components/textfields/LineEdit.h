@@ -50,8 +50,8 @@ class LineEdit : public QLineEdit, public FluentElement, public QMLPlus {
     Q_PROPERTY(bool clearButtonEnabled READ isClearButtonEnabled WRITE setClearButtonEnabled NOTIFY
                    clearButtonEnabledChanged)
     /**
-     * @brief Size of the clear button.
-     * zh_CN: 清除按钮尺寸。
+     * @brief Size of the clear button, defaulting to 24 logical pixels.
+     * zh_CN: 清除按钮尺寸，默认为 24 个逻辑像素。
      */
     Q_PROPERTY(int clearButtonSize READ clearButtonSize WRITE setClearButtonSize NOTIFY
                    clearButtonSizeChanged)
@@ -140,7 +140,7 @@ private:
     Typography::FontRole m_fontRole = Typography::FontRole::Body;
     ::fluent::basicinput::Button* m_clearButton = nullptr;
     bool m_clearButtonEnabled = true;
-    int m_clearButtonSize = 22;
+    int m_clearButtonSize = 24;
     QPoint m_clearButtonOffset = QPoint(::Spacing::XSmall, 0);
     int m_focusedBorderWidth = ::Spacing::Border::Focused;
     int m_unfocusedBorderWidth = ::Spacing::Border::Normal;
