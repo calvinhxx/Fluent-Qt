@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <functional>
+
 #include <QAbstractAnimation>
 #include <QApplication>
 #include <QCoreApplication>
@@ -128,10 +130,21 @@ public:
             return {};
         if (role == Qt::DisplayRole)
             return QString::number(index.row());
-        if (role == Qt::SizeHintRole)
+        if (role == Qt::SizeHintRole) {
+            ++sizeQueries;
             return QSize(96, 36);
+        }
         return {};
     }
+
+    void appendRow()
+    {
+        beginInsertRows({}, m_rowCount, m_rowCount);
+        ++m_rowCount;
+        endInsertRows();
+    }
+
+    mutable int sizeQueries = 0;
 
 private:
     int m_rowCount = 0;
@@ -151,6 +164,29 @@ public:
 
 private:
     mutable int m_paintCount = 0;
+};
+
+class ReentrantFlowDelegate final : public QStyledItemDelegate {
+public:
+    mutable std::function<void()> onSizeHint;
+    mutable std::function<void()> onPaint;
+    mutable QHash<int, int> paintCalls;
+
+    QSize sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const override
+    {
+        auto callback = std::move(onSizeHint);
+        if (callback)
+            callback();
+        return QSize(100, 40);
+    }
+
+    void paint(QPainter*, const QStyleOptionViewItem&, const QModelIndex& index) const override
+    {
+        ++paintCalls[index.row()];
+        auto callback = std::move(onPaint);
+        if (callback)
+            callback();
+    }
 };
 
 void processEvents()
@@ -233,6 +269,185 @@ protected:
 
     FlowTestWindow* window = nullptr;
 };
+
+TEST_F(FlowViewTest, Contract_RemovingRowsUpdatesGeometryHitTestingAndScrollRange)
+{
+    FlowView flow;
+    flow.resize(140, 100);
+    auto* model = createModel(&flow, {"A", "B", "C", "D"},
+                              {QSize(100, 100), QSize(100, 40), QSize(100, 60), QSize(100, 80)});
+    flow.setModel(model);
+    showOffscreen(&flow);
+
+    // Even a geometry query during the about-to-remove notification must not cache old rows.
+    QObject::connect(model, &QAbstractItemModel::rowsAboutToBeRemoved, &flow,
+                     [&]() { flow.visualRect(model->index(0, 0)); });
+    for (int row : {0, 1, 1}) {
+        ASSERT_TRUE(model->removeRow(row));
+        flow.scrollTo(model->index(0, 0), QAbstractItemView::PositionAtTop);
+        const QRect first = flow.visualRect(model->index(0, 0));
+        EXPECT_EQ(first.size(), QSize(100, 40));
+        EXPECT_EQ(flow.indexAt(first.center()), model->index(0, 0));
+        const QRect last = flow.visualRect(model->index(model->rowCount() - 1, 0));
+        const int contentBottom =
+            last.bottom() + 1 + flow.verticalScrollBar()->value() + flow.contentMargins().bottom();
+        EXPECT_EQ(flow.verticalScrollBar()->maximum(),
+                  qMax(0, contentBottom - flow.viewport()->height()));
+    }
+    ASSERT_TRUE(model->removeRow(0));
+    processEvents();
+    EXPECT_EQ(flow.verticalScrollBar()->maximum(), 0);
+    EXPECT_FALSE(flow.indexAt(QPoint(10, 10)).isValid());
+}
+
+TEST_F(FlowViewTest, Contract_AppendBurstDoesNotVisitExistingRows)
+{
+    LargeFlowModel model(0);
+    FlowView flow;
+    flow.setModel(&model);
+    for (int row = 0; row < 10000; ++row)
+        model.appendRow();
+    EXPECT_EQ(model.sizeQueries, 0) << "A hidden append burst should defer layout";
+    EXPECT_FALSE(flow.visualRect(model.index(9999, 0)).isEmpty());
+    EXPECT_EQ(model.sizeQueries, 10000);
+
+    const QRect first = flow.visualRect(model.index(0, 0));
+    const int previousQueries = model.sizeQueries;
+    for (int row = 0; row < 100; ++row) {
+        model.appendRow();
+        EXPECT_FALSE(flow.visualRect(model.index(model.rowCount() - 1, 0)).isEmpty());
+    }
+    EXPECT_EQ(model.sizeQueries - previousQueries, 100);
+    EXPECT_EQ(flow.visualRect(model.index(0, 0)), first);
+}
+
+TEST_F(FlowViewTest, Contract_AppendSizeHintReentrySeesCommittedLayout)
+{
+    FlowView flow;
+    flow.resize(140, 280);
+    auto* model = createModel(&flow, {"A", "B", "C"});
+    ReentrantFlowDelegate delegate;
+    flow.setItemDelegate(&delegate);
+    flow.setModel(model);
+    showOffscreen(&flow);
+    const QRect first = flow.visualRect(model->index(0, 0));
+    const QRect last = flow.visualRect(model->index(2, 0));
+
+    bool reentered = false;
+    delegate.onSizeHint = [&]() {
+        reentered = true;
+        EXPECT_EQ(flow.visualRect(model->index(0, 0)), first);
+        EXPECT_EQ(flow.visualRect(model->index(2, 0)), last);
+        EXPECT_EQ(flow.indexAt(last.center()), model->index(2, 0));
+    };
+    model->appendRow(new QStandardItem("D"));
+    const QRect appended = flow.visualRect(model->index(3, 0));
+    ASSERT_TRUE(reentered);
+    EXPECT_EQ(appended.top(), last.bottom() + 1 + flow.verticalSpacing());
+    for (int row = 0; row < model->rowCount(); ++row) {
+        const QRect rect = flow.visualRect(model->index(row, 0));
+        EXPECT_EQ(flow.indexAt(rect.center()), model->index(row, 0)) << row;
+    }
+    delegate.paintCalls.clear();
+    QImage image(flow.size(), QImage::Format_ARGB32_Premultiplied);
+    flow.render(&image);
+    for (int row = 0; row < model->rowCount(); ++row)
+        EXPECT_EQ(delegate.paintCalls.value(row), 1) << row;
+}
+
+TEST_F(FlowViewTest, Contract_GeometryQueryDuringPaintDefersScrollRangeChanges)
+{
+    FlowView flow;
+    flow.resize(140, 100);
+    auto* model = createModel(&flow, {"A", "B", "C"});
+    ReentrantFlowDelegate delegate;
+    flow.setItemDelegate(&delegate);
+    flow.setModel(model);
+    showOffscreen(&flow);
+
+    bool inDelegatePaint = false;
+    bool repainted = false;
+    QObject::connect(flow.verticalScrollBar(), &QScrollBar::rangeChanged, &flow,
+                     [&]() { EXPECT_FALSE(inDelegatePaint); });
+    delegate.onPaint = [&]() {
+        repainted = true;
+        inDelegatePaint = true;
+        model->item(0)->setSizeHint(QSize(100, 180));
+        flow.visualRect(model->index(0, 0));
+        flow.refreshFluentScrollChrome();
+        inDelegatePaint = false;
+    };
+    QImage image(flow.size(), QImage::Format_ARGB32_Premultiplied);
+    flow.render(&image);
+    ASSERT_TRUE(repainted);
+    processEvents();
+    EXPECT_EQ(flow.visualRect(model->index(0, 0)).height(), 180);
+    EXPECT_GT(flow.verticalScrollBar()->maximum(), 100);
+}
+
+TEST_F(FlowViewTest, Contract_SizeHintInvalidationDoesNotPublishStaleLayout)
+{
+    FlowView flow;
+    flow.resize(140, 280);
+    auto* model = createModel(&flow, {"A", "B", "C"});
+    ReentrantFlowDelegate delegate;
+    flow.setItemDelegate(&delegate);
+    flow.setModel(model);
+    showOffscreen(&flow);
+
+    delegate.onSizeHint = [&]() {
+        model->item(0)->setSizeHint(QSize(100, 180));
+        QCoreApplication::processEvents();
+    };
+    model->appendRow(new QStandardItem("D"));
+    flow.visualRect(model->index(3, 0));
+    processEvents();
+    EXPECT_EQ(flow.visualRect(model->index(0, 0)).height(), 180);
+    for (int row = 1; row < model->rowCount(); ++row) {
+        const QRect previous = flow.visualRect(model->index(row - 1, 0));
+        const QRect current = flow.visualRect(model->index(row, 0));
+        EXPECT_EQ(current.top(), previous.bottom() + 1 + flow.verticalSpacing());
+    }
+    EXPECT_GT(flow.verticalScrollBar()->maximum(), 0);
+}
+
+TEST_F(FlowViewTest, Contract_IncrementalLayoutMatchesFullLayoutAfterWrapAndResize)
+{
+    for (int width : {140, 320, 640}) {
+        FlowView incremental;
+        FlowView reference;
+        incremental.resize(width, 160);
+        reference.resize(width, 160);
+        QStandardItemModel model;
+        incremental.setModel(&model);
+        reference.setModel(&model);
+        showOffscreen(&incremental);
+        showOffscreen(&reference);
+        for (int row = 0; row < 25; ++row) {
+            auto* item = new QStandardItem(QString::number(row));
+            item->setSizeHint(QSize(40 + row % 5 * 28, 32 + row % 3 * 20));
+            model.appendRow(item);
+            const QRect appended = incremental.visualRect(model.index(row, 0));
+            static_cast<QAbstractItemView&>(reference).reset();
+            EXPECT_EQ(appended, reference.visualRect(model.index(row, 0)));
+            EXPECT_EQ(incremental.verticalScrollBar()->maximum(),
+                      reference.verticalScrollBar()->maximum());
+        }
+        incremental.scrollTo(model.index(10, 0), QAbstractItemView::PositionAtTop);
+        const QRect anchor = incremental.visualRect(model.index(10, 0));
+        model.appendRow(new QStandardItem("tail"));
+        incremental.visualRect(model.index(25, 0));
+        EXPECT_EQ(incremental.visualRect(model.index(10, 0)), anchor);
+        incremental.resize(width + 50, 160);
+        reference.resize(width + 50, 160);
+        processEvents();
+        incremental.scrollTo(model.index(0, 0), QAbstractItemView::PositionAtTop);
+        reference.scrollTo(model.index(0, 0), QAbstractItemView::PositionAtTop);
+        for (int row = 0; row < model.rowCount(); ++row)
+            EXPECT_EQ(incremental.visualRect(model.index(row, 0)),
+                      reference.visualRect(model.index(row, 0)));
+    }
+}
 
 TEST_F(FlowViewTest, DefaultsPropertiesAndGridViewRemainSeparate)
 {

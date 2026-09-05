@@ -659,6 +659,47 @@
             "narrow"
           ],
           "execution": "registered-only"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "FlowViewTest.Contract_RemovingRowsUpdatesGeometryHitTestingAndScrollRange",
+          "states": [
+            "scroll-end"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "FlowViewTest.Contract_IncrementalLayoutMatchesFullLayoutAfterWrapAndResize",
+          "states": [
+            "scroll-end",
+            "narrow"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "FlowViewTest.Contract_AppendSizeHintReentrySeesCommittedLayout",
+          "states": [
+            "narrow"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "FlowViewTest.Contract_GeometryQueryDuringPaintDefersScrollRangeChanges",
+          "states": [
+            "scroll-end"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "FlowViewTest.Contract_SizeHintInvalidationDoesNotPublishStaleLayout",
+          "states": [
+            "narrow"
+          ],
+          "execution": "ci"
         }
       ],
       "manual_evidence": {

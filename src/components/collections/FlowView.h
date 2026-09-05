@@ -245,7 +245,6 @@ protected:
     QRegion visualRegionForSelection(const QItemSelection& selection) const override;
 
     void rowsInserted(const QModelIndex& parent, int start, int end) override;
-    void rowsAboutToBeRemoved(const QModelIndex& parent, int start, int end) override;
     void dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight,
                      const FluentItemDataRoles& roles = FluentItemDataRoles()) override;
     void reset() override;
@@ -265,7 +264,8 @@ private:
     void updateViewportMargins();
     void refreshAccessibleName();
     void setViewportHovered(bool hovered);
-    void invalidateFlowLayout();
+    void invalidateFlowLayout(int firstChangedRow = 0);
+    void scheduleLayoutUpdate();
     void syncFluentScrollBar();
     void ensureLayout() const;
     void computeLayoutForRows(const QList<int>& rows, QHash<int, QRect>* rects,
@@ -321,6 +321,12 @@ private:
     int m_pressedRow = -1;
 
     mutable bool m_layoutDirty = true;
+    mutable bool m_layoutInProgress = false;
+    quint64 m_layoutRevision = 0;
+    mutable int m_layoutValidRowCount = 0;
+    bool m_layoutUpdatePending = false;
+    bool m_painting = false;
+    bool m_syncingScrollBar = false;
     mutable QVector<QRect> m_itemRects;
     mutable QVector<LayoutBand> m_layoutBands;
     mutable QSize m_contentSize;
