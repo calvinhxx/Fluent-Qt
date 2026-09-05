@@ -43,7 +43,7 @@ cp tools/dev/gui-verification.example.json \
 ```
 
 The recipe is checked against the executable contract in
-`tools/dev/fluent_qt_gui_verify.py`; editor tooling can also use
+`tools/dev/gui_verification/recipe.py`; editor tooling can also use
 `tools/dev/gui-verification-recipe.schema.json`. `path_base` makes relative
 paths explicit: use `repository` for checked-in baselines and repository-owned
 action files, or `recipe` for a self-contained portable recipe directory.
@@ -200,6 +200,28 @@ can prove that the declarations and artifacts were not changed without
 invalidating their digests; it cannot authenticate a person or service. Use a
 repository review, signed record, or trusted service identity when release
 policy requires that stronger provenance.
+
+## Implementation map
+
+`tools/dev/fluent_qt_gui_verify.py` owns the `run`, `approve`, and `finalize`
+commands, build/capture execution, and approval provenance. The internal
+`tools/dev/gui_verification/` package contains:
+
+| Module | Responsibility |
+|---|---|
+| `common.py` | Limits, scalar validation, and check results |
+| `artifacts.py` | JSON/PNG validation, digests, paths, and atomic writes |
+| `recipe.py` | Recipe fields, coverage, actions, and policy validation |
+| `reports.py` | Capture, interaction, Inspector, and baseline report validation |
+| `comparison.py` | Geometry contracts and pixel-comparator result validation |
+| `presentation.py` | HTML review pages |
+
+These modules do not import the command runner or invoke builds, captures, or
+approval commands. Run the tool regression suite with:
+
+```bash
+python3 -m unittest discover -s tools/dev -p 'test_fluent_qt_*.py'
+```
 
 ## Boundaries
 

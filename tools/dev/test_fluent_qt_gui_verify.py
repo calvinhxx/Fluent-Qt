@@ -25,6 +25,10 @@ MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
 
+from gui_verification import common as COMMON
+from gui_verification import comparison as COMPARISON
+from gui_verification import reports as REPORTS
+
 
 def png_chunk(kind: bytes, payload: bytes) -> bytes:
     return (
@@ -214,7 +218,7 @@ def comparison_report(
             "pixel_limits_pass": True,
             "translation_limit_pass": True,
         },
-        "policy": MODULE.expected_comparator_policy(policy),
+        "policy": COMPARISON.expected_comparator_policy(policy),
         "metrics": {
             "total_pixels": total_pixels,
             "different_pixels": 0,
@@ -238,7 +242,7 @@ def comparison_report(
             "baseline_sha256": MODULE.sha256_file(baseline),
             "actual": str(actual.resolve()),
             "actual_sha256": MODULE.sha256_file(actual),
-            "region": MODULE.expected_region(region),
+            "region": COMPARISON.expected_region(region),
         },
         "artifacts": {"diff": None},
     }
@@ -504,19 +508,19 @@ class FluentQtGuiVerifyTest(unittest.TestCase):
         definitions = schema["$defs"]
         self.assertEqual(
             definitions["pixel"]["properties"]["channel_threshold"]["maximum"],
-            MODULE.MAX_CHANNEL_THRESHOLD,
+            COMMON.MAX_CHANNEL_THRESHOLD,
         )
         self.assertEqual(
             definitions["pixel"]["properties"]["max_different_ratio"]["maximum"],
-            MODULE.MAX_DIFFERENT_RATIO,
+            COMMON.MAX_DIFFERENT_RATIO,
         )
         self.assertEqual(
             definitions["geometry"]["properties"]["tolerance"]["maximum"],
-            MODULE.MAX_GEOMETRY_TOLERANCE,
+            COMMON.MAX_GEOMETRY_TOLERANCE,
         )
         self.assertEqual(
             definitions["inspector"]["properties"]["max_findings"]["maximum"],
-            MODULE.MAX_INSPECTOR_BUDGET,
+            COMMON.MAX_INSPECTOR_BUDGET,
         )
         self.assertEqual(
             definitions["action_script"]["properties"]["steps"]["minItems"],
@@ -1155,7 +1159,7 @@ class FluentQtGuiVerifyTest(unittest.TestCase):
         widget["visible_rect"] = copy.deepcopy(widget["rect"])
         widget["clipped"] = False
 
-        self.assertEqual(MODULE.geometry_report_errors(report["geometry_report"]), [])
+        self.assertEqual(REPORTS.geometry_report_errors(report["geometry_report"]), [])
         result = MODULE.geometry_contract_check(
             report, {"required": ["probe"]}
         )
