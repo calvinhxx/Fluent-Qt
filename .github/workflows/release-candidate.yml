@@ -24,7 +24,7 @@ jobs:
       version: ${{ steps.plan.outputs.version }}
     steps:
       - name: Checkout candidate source
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
 
@@ -135,18 +135,18 @@ jobs:
           fi
 
       - name: Checkout candidate source
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ needs.plan.outputs.source_commit }}
 
       - name: Download desktop candidate
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: fluentqt-desktop-release-candidate
           path: ${{ runner.temp }}/fluentqt-desktop-release-candidate
 
       - name: Download Python candidate
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: fluentqt-python-release-bundle
           path: ${{ runner.temp }}/fluentqt-python-release-bundle
@@ -228,7 +228,7 @@ jobs:
             }' > "${RUNNER_TEMP}/release-candidate-receipt.json"
 
       - name: Upload release candidate receipt
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: fluentqt-release-candidate-receipt
           path: ${{ runner.temp }}/release-candidate-receipt.json

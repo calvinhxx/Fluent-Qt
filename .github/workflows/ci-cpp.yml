@@ -35,7 +35,7 @@ jobs:
       mode: ${{ steps.matrix.outputs.mode }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 2
 
@@ -163,7 +163,7 @@ jobs:
       VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
       - name: Smoke adaptive build parallelism
         shell: pwsh
@@ -200,7 +200,7 @@ jobs:
         run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
 
       - name: Cache vcpkg binary packages
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: .vcpkg-binary-cache
           key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.vcpkg_triplet }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
@@ -484,7 +484,7 @@ jobs:
 
       - name: Upload Linux Gallery package
         if: ${{ matrix.package == true }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: fluent-qt-gallery-linux-${{ matrix.package_arch }}-deb
           retention-days: 14
@@ -523,7 +523,7 @@ jobs:
 
       - name: Upload Windows ARM64 Gallery installer
         if: ${{ matrix.windows_package == true }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: fluent-qt-gallery-windows-arm64-installer
           retention-days: 14
@@ -572,7 +572,7 @@ jobs:
 
       - name: Upload C++ first-window report
         if: ${{ always() && matrix.first_window_trial == true }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: fluentqt-first-window-${{ needs.plan.outputs.mode }}-${{ matrix.id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/fluentqt-first-window-cpp.json
@@ -581,7 +581,7 @@ jobs:
 
       - name: Upload diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ci-${{ needs.plan.outputs.mode }}-${{ matrix.id }}-diagnostics-${{ github.run_attempt }}
           if-no-files-found: ignore
@@ -612,7 +612,7 @@ jobs:
             qt_source: apt6
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
       - name: Install Qt and build tools
         shell: bash
@@ -675,7 +675,7 @@ jobs:
           fi
           for header in \
             components/foundation/private/FluentElement_p.h \
-            components/windowing/private/WindowBackdrop_p.h \
+            compatibility/private/WindowBackdropEvents_p.h \
             utils/private/Inspector_p.h \
             utils/private/FluentQtLogging_p.h \
             utils/private/FluentQtResources_p.h; do
@@ -910,7 +910,7 @@ jobs:
 
       - name: Upload integration first-window report
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: fluentqt-first-window-integration-${{ matrix.qt_source }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/fluentqt-first-window-integration.json

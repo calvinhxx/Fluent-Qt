@@ -66,6 +66,8 @@ EMSDK_REPOSITORY_REVISION = "2514ec738de72cebbba7f4fdba0cf2fabcb779a5"
 ACTION_TEMPLATE_PATHS = (
     ROOT / "tools/onboarding/starters/cpp-existing-qt/.github/workflows/ci.yml.in",
     ROOT / "tools/onboarding/starters/cpp-workbench/.github/workflows/ci.yml.in",
+    ROOT / "tools/onboarding/starters/pyside6-existing-qt/.github/workflows/ci.yml.in",
+    ROOT / "tools/onboarding/starters/pyside6-workbench/.github/workflows/ci.yml.in",
 )
 CANONICAL_WORKFLOW_LEVEL_ENTRY = re.compile(
     r"^(?P<name>[a-z][a-z0-9-]*):(?P<value>.*)$"
@@ -198,6 +200,24 @@ def pinned_action_errors(name: str, contents: str) -> list[str]:
                 errors.append(
                     f"{name} must pin {action} to {expected_revision}"
                 )
+    return errors
+
+
+def immutable_action_errors(name: str, contents: str) -> list[str]:
+    """Reject mutable remote references, including actions outside the audited allowlists."""
+    errors: list[str] = []
+    for raw in re.findall(r"^\s*(?:-\s+)?uses:\s*([^\n]+)$", contents, re.MULTILINE):
+        value = raw.split(" #", 1)[0].strip().strip("\"'")
+        if value.startswith("./"):
+            continue
+        if value.startswith("docker://"):
+            valid = re.fullmatch(r"docker://[^\s@]+@sha256:[0-9a-f]{64}", value)
+        else:
+            valid = re.fullmatch(r"[^\s@]+/[^\s@]+@[0-9a-fA-F]{40}", value)
+        if not valid:
+            errors.append(
+                f"{name} must pin remote action to a full commit SHA or image digest: {value}"
+            )
     return errors
 
 
@@ -988,7 +1008,7 @@ def validate_cpp_plan_contract(cpp: str) -> list[str]:
     checkout_lines = uncommented_workflow_lines(checkout)
     if checkout_lines != [
         "      - name: Checkout",
-        "        uses: actions/checkout@v6",
+        "        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
         "        with:",
         "          fetch-depth: 2",
     ]:
@@ -1402,7 +1422,10 @@ def validate_boundaries() -> list[str]:
             workflow_job_map_errors(name, contents[name], expected_jobs)
         )
 
-    action_paths = tuple(sorted(WORKFLOWS.glob("*.yml"))) + ACTION_TEMPLATE_PATHS
+    action_paths = (
+        tuple(sorted((*WORKFLOWS.glob("*.yml"), *WORKFLOWS.glob("*.yaml"))))
+        + ACTION_TEMPLATE_PATHS
+    )
     for path in action_paths:
         name = str(path.relative_to(ROOT))
         try:
@@ -1411,6 +1434,7 @@ def validate_boundaries() -> list[str]:
             errors.append(f"unable to read {name}: {error}")
             continue
         errors.extend(pinned_action_errors(name, action_contents))
+        errors.extend(immutable_action_errors(name, action_contents))
 
     for name in PAGES_PIPELINE_ACTION_REVISIONS:
         if name in contents:
