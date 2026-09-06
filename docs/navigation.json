@@ -67,6 +67,7 @@
             "development/build-workflow.md",
             "development/testing-workflow.md",
             "development/qt-component-test-conventions.md",
+            "development/ci-workflow.md",
             "development/logging-workflow.md",
             "development/visual-review.md",
             "development/app-visual-geometry-verification.md",
@@ -137,6 +138,12 @@
             "../bindings/pyside6/MANYLINUX.md",
             "../bindings/pyside6/PUBLISHING.md",
             "../bindings/pyside6/ROADMAP.md"
+          ]
+        },
+        {
+          "title": "Historical records",
+          "pages": [
+            "../bindings/pyside6/publication-history.md"
           ]
         }
       ]

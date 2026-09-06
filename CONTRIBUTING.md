@@ -62,11 +62,12 @@ contract used by CI before commits and pushes. See the
 [local static gate](docs/development/testing-workflow.md#local-static-gate) for
 manual check, fix, formatter-version, and fork-base commands.
 
-Configure with a supported preset, then build in parallel. On macOS arm64:
+Complete the [local build setup](docs/development/build-workflow.md#first-use-setup),
+then build the owning test target with the adaptive wrapper. On macOS arm64:
 
 ```bash
 cmake --preset vcpkg-osx
-cmake --build --preset vcpkg-osx --target test_NAME --parallel
+python3 tools/dev/fluent_qt_build.py --preset vcpkg-osx --target test_NAME
 ctest --preset vcpkg-osx -L '^test_NAME$' --output-on-failure
 ```
 
@@ -77,14 +78,13 @@ manual or snapshot runs. Changes that affect bindings or browser builds should
 also follow the [PySide6](bindings/pyside6/README.md) or
 [WebAssembly](docs/development/webassembly-workflow.md) workflow.
 
-Before requesting review, run
-`python3 tools/quality/check_cpp_format.py --changed-from origin/main` and
-`git diff --check`. When public headers or site inputs change, also run
-`python3 tools/site/generate_api_reference.py --check` and
-`python3 tools/site/generate_localized_site.py --check`. Describe what you
-tested and call out any platform or surface you could not verify. Full
-cross-platform CI is expected on the pull request; contributors do not need
-every toolchain on one machine.
+Before requesting review, run `git diff --check` and the
+[local static gate](docs/development/testing-workflow.md#local-static-gate) for
+C++ changes. Public header and site changes also require the generated-output
+checks in that guide. Describe what you tested and any platform or surface you
+could not verify. Pull requests use fast CI; pushes to `main` and scheduled runs use
+full CI. See the [CI workflow](docs/development/ci-workflow.md) for path filters
+and manual validation. Contributors do not need every toolchain on one machine.
 
 <!-- docs-nav:bottom:start -->
 ---

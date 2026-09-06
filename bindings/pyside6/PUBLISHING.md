@@ -13,22 +13,22 @@ This document is the release contract for the `FluentQt` and
 [release governance](../../docs/development/release-governance.md), the
 [wheel matrix](wheel-matrix.json), and the [manylinux policy](MANYLINUX.md).
 
-M6 is not complete merely because all wheel lanes compile. Completion requires
-one immutable CI bundle to pass TestPyPI, stable-tag, PyPI, attestation, and
-clean public-install verification without rebuilding any wheel.
+A release is complete when one immutable candidate bundle passes TestPyPI,
+PyPI, attestation, and clean public-install verification. Published files must
+match the candidate hashes; no wheel is rebuilt during promotion.
 
 ## Immutable release bundle
 
 The automatic Release Candidate workflow builds one artifact named
-`fluentqt-python-release-bundle` while the nine desktop packages build in
+`fluentqt-python-release-bundle` while desktop packages build in
 parallel. The stable Release workflow promotes that exact artifact instead of
 rebuilding wheels after the tag. Scheduled or manual full CI can still build
 the same bundle by setting `python_release_bundle=true` for isolated checks.
 
 ```text
 python-release-bundle/
-├── dist/                         # 17 FluentQt + 1 FluentQt-Gallery wheel
-├── audits/                       # five manylinux audit reports
+├── dist/                         # wheels declared by wheel-matrix.json
+├── audits/                       # required manylinux audit reports
 ├── PYTHON_SHA256SUMS.txt
 └── python-release-manifest.json
 ```
@@ -36,9 +36,9 @@ python-release-bundle/
 `.github/scripts/assemble-pyside-release-bundle.py` rejects compatibility-only
 CPython 3.10 wheels, raw `linux_*` wheels, missing or extra matrix entries,
 wrong package metadata, missing PyPI Markdown descriptions or project links,
-mismatched manylinux evidence, and non-identical Gallery wheels. The 17 build
-lanes must produce a byte-identical Gallery wheel; the bundle retains exactly
-one copy.
+mismatched manylinux evidence, and non-identical Gallery wheels. Every build
+lane must produce a byte-identical Gallery wheel; the bundle retains one copy.
+The wheel matrix, rather than prose totals, defines the required file set.
 
 The manifest records the project version, source commit, originating workflow
 run and attempt, every wheel hash, and every audit hash. TestPyPI and PyPI must
@@ -96,8 +96,8 @@ Use pending publishers when a project does not yet exist. Do not add a PyPI or
 TestPyPI API token to repository, organization, or environment secrets. Only
 the two matrix upload job definitions receive `id-token: write`; each expands
 to package-scoped Core and Gallery jobs. They do not checkout source or execute
-repository scripts. Both jobs download subsets of the same verified 18-wheel
-candidate: Core receives 17 wheels and Gallery receives one.
+repository scripts. Both jobs download package-specific subsets of the same
+verified candidate; neither job may build or substitute artifacts.
 
 ## Prepare a release candidate
 
@@ -109,7 +109,7 @@ candidate: Core receives 17 wheels and Gallery receives one.
 4. Require the automatic `CI full` and `Release Candidate` runs on the final
    `main` commit to pass `Release ready` and `Release Candidate ready`.
 
-The normal main-push CI intentionally omits the 18-wheel publication bundle.
+The normal main-push CI intentionally omits the publication bundle.
 The separate candidate workflow builds it once before tagging, in parallel
 with desktop packages and normal validation. Its receipt binds both candidate
 manifests to the exact repository, commit, run, and producing attempts.
@@ -204,9 +204,11 @@ or bypass TestPyPI.
 bundle-enabled release-branch CI run. It is not part of the standard release
 path and never moves a ref or rebuilds a wheel.
 
-## M6 closure evidence
+<a id="m6-closure-evidence"></a>
 
-Record the following in both roadmaps before marking M6 complete:
+## Release evidence
+
+Record the following in the release evidence:
 
 - Release Candidate run ID, artifact-producing attempts, and source commit;
 - promoting Release run ID;
@@ -215,67 +217,17 @@ Record the following in both roadmaps before marking M6 complete:
 - SHA-256 of `python-release-manifest.json`;
 - successful public-index clean-install and attestation verification.
 
-After reviewing the final release content, the repository maintainer explicitly
-authorizes and performs synchronization of the tagged release commit to `main`
-following release governance. The Qt 6.2.4 / CPython 3.10 lanes remain
-non-published compatibility gates.
+The stable tag is cut from the validated `main` commit. After publication,
+merge that tagged `main` commit back into the matching `release/X.Y.x` branch
+before the next patch, following release governance. Compatibility-only wheels
+remain validation artifacts and must not enter the publication bundle.
 
-### v1.6.0 closure record
+<a id="v160-closure-record"></a>
+<a id="v161-standard-publication-record"></a>
 
-M6 closed with this immutable release chain:
-
-- source commit: `e2523ded0d0ae664321b0f2d1d8dd59a1cf0be7c`;
-- full CI: [run 31251091780](https://github.com/calvinhxx/Fluent-Qt/actions/runs/31251091780),
-  producing 17 Core wheels, one Gallery wheel, and five Linux audit reports;
-- release-manifest SHA-256:
-  `b015b48abe1a43955530f2e5c6f0046c3c136a78f55694ed0981385155585f94`;
-- TestPyPI: [run 31252283807](https://github.com/calvinhxx/Fluent-Qt/actions/runs/31252283807),
-  with all 17+1 files hash-verified before tag creation in
-  [FluentQt 1.6.0](https://test.pypi.org/project/FluentQt/1.6.0/) and
-  [FluentQt-Gallery 1.6.0](https://test.pypi.org/project/FluentQt-Gallery/1.6.0/);
-- annotated tag and non-draft GitHub Release:
-  [`v1.6.0`](https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.6.0),
-  published by [run 31252452593](https://github.com/calvinhxx/Fluent-Qt/actions/runs/31252452593);
-- reviewer-approved PyPI Trusted Publishing:
-  [run 31252873846](https://github.com/calvinhxx/Fluent-Qt/actions/runs/31252873846);
-- public projects: [FluentQt 1.6.0](https://pypi.org/project/FluentQt/1.6.0/)
-  and [FluentQt-Gallery 1.6.0](https://pypi.org/project/FluentQt-Gallery/1.6.0/).
-
-The production workflow verified exact public-index file hashes, all 18
-repository-bound attestations, and a clean Linux CPython 3.11 installation of
-both distributions. An independent macOS ARM64 CPython 3.11 installation from
-public PyPI also passed `pip check`, UILib wheel smoke, and standalone Gallery
-wheel smoke. Synchronization to `main` remains a separate, explicit maintainer
-action; the release workflow did not perform it.
-
-### v1.6.1 standard publication record
-
-The metadata-corrected standard release repeated the complete publication
-contract rather than reusing or replacing the `1.6.0` files:
-
-- source commit: `fd4ce4b4a05671b01fcb3e88da0015c9011f5240`;
-- full CI: [run 31269181384](https://github.com/calvinhxx/Fluent-Qt/actions/runs/31269181384),
-  with all 43 jobs successful and a new 17+1 wheel bundle;
-- release-manifest SHA-256:
-  `f766d5214a2073f0f59710e9c306187594060b48bd7540623d548405d1b729de`;
-- TestPyPI: [run 31270655830](https://github.com/calvinhxx/Fluent-Qt/actions/runs/31270655830),
-  completed on attempt 3 after package-index propagation and verified all 18
-  immutable files;
-- annotated tag and non-draft GitHub Release:
-  [`v1.6.1`](https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.6.1),
-  published by [run 31271042718](https://github.com/calvinhxx/Fluent-Qt/actions/runs/31271042718)
-  with nine desktop packages, the source archive, and checksums;
-- reviewer-approved PyPI Trusted Publishing:
-  [run 31271530901](https://github.com/calvinhxx/Fluent-Qt/actions/runs/31271530901);
-- public projects: [FluentQt 1.6.1](https://pypi.org/project/FluentQt/1.6.1/)
-  and [FluentQt-Gallery 1.6.1](https://pypi.org/project/FluentQt-Gallery/1.6.1/).
-
-Production verification matched all 18 public hashes, verified all 18
-repository-bound attestations, and passed clean Linux CPython 3.11 installation
-and wheel smoke. An independent macOS ARM64 installation from public PyPI also
-passed `pip check`, UILib smoke, Gallery smoke, and the 67-component/88-route
-catalog walk. The tagged commit is synchronized to both `main` and
-`release/1.6.x`.
+The [v1.6.0 closure](publication-history.md#v160-closure-record) and
+[v1.6.1 publication](publication-history.md#v161-standard-publication-record)
+records preserve the former M6 evidence separately from this current runbook.
 
 <!-- docs-nav:bottom:start -->
 ---
