@@ -64,6 +64,23 @@ generated source instead:
 - PySide6 exports: `bindings/pyside6/api-manifest.json`;
 - binary support: `bindings/pyside6/wheel-matrix.json`.
 
+## Keep agent instructions task-specific
+
+Use `AGENTS.md` for the repository map, non-obvious constraints, and links to
+owning guides. A Skill description should identify when the Skill applies;
+its entry file should route tasks to the relevant references. Keep detailed
+procedures with their owner rather than repeating them in every entry point.
+
+Distinguish application design, focused repairs, and library maintenance.
+State the completion evidence and actual approval boundaries for each. Do not
+turn a routine fix into a new design selection, or substitute a generic
+instruction to "test thoroughly" for the project's named gates. Preserve
+existing session authorization and task scope.
+
+Keep repository guidance portable across agents and model versions. Treat
+prompting advice as something to evaluate, not a reason to weaken API,
+security, lifecycle, or visual acceptance contracts.
+
 ## Review checklist
 
 - [ ] The title and status describe what the document is now.

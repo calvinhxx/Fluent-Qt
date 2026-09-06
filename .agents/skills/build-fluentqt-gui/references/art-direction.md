@@ -2,8 +2,9 @@
 
 Lock the visual direction before implementation so a technically correct
 FluentQt shell does not become the default design. This gate applies to every
-new GUI and major redesign. A focused correction using the lite profile may
-keep its existing direction, but it must not use lite to disguise a new shell.
+new GUI and major redesign. A focused correction keeps its accepted
+direction without a new concept-selection cycle. A new shell or major
+redesign still follows this contract.
 
 The initializer emits design-brief contract v4. Contracts v2/v3 remain readable
 as legacy inputs, but they do not pass the current direct design gate for new

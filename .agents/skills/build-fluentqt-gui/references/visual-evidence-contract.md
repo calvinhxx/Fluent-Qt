@@ -4,6 +4,12 @@ Use this contract to prevent a visually plausible default screenshot from
 hiding clipping, density, alignment, and dynamic-layout defects. Keep the
 manifest task-local unless it is useful project documentation.
 
+This is the formal consumer-application acceptance contract. Routine repairs
+use the existing project's focused tests and applicable UI evidence; they do
+not require a new design brief. FluentQt library and Gallery work uses
+[maintainer gates](fluentqt-maintainer-gates.md). When a task does create a
+manifest under this contract, all of its version and approval rules apply.
+
 ## Contents
 
 - Build identity and evidence rules
