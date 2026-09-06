@@ -19,6 +19,9 @@ set(FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS
     test_list_view
     test_flip_view
 )
+if(WIN32)
+    list(APPEND FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS test_window_win)
+endif()
 
 set(FLUENT_QT_CI_FULL_CONTRACT_TARGETS
     test_foundation_contracts
