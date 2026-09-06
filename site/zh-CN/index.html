@@ -4,10 +4,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Fluent-Qt — 无需重写 QML 的 Qt Widgets Fluent 控件库</title>
+    <title>Fluent-Qt — Qt Widgets 的 Fluent 控件库</title>
     <meta
       name="description"
-      content="无需重写 QML，用原生 C++17 Fluent 控件升级现有 Qt Widgets 应用；支持 Qt 5/6、PySide6，并可在线体验 WebAssembly Gallery。"
+      content="面向 Qt Widgets 的原生 C++17 Fluent 控件，支持 Qt 5/6、可选 PySide6 绑定和 WebAssembly。在线体验 Gallery，查看 API 与接入示例。"
     >
     <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="theme-color" content="#eef3f7">
@@ -16,10 +16,10 @@
     <link rel="alternate" hreflang="zh-CN" href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/">
     <link rel="alternate" hreflang="x-default" href="https://calvinhxx.github.io/Fluent-Qt/">
     <meta property="og:site_name" content="Fluent-Qt">
-    <meta property="og:title" content="Fluent-Qt — 无需重写 QML 的 Qt Widgets Fluent 控件库">
+    <meta property="og:title" content="Fluent-Qt — Qt Widgets 的 Fluent 控件库">
     <meta
       property="og:description"
-      content="无需重写 QML，用原生 C++17 Fluent 控件升级现有 Qt Widgets 应用；支持 Qt 5/6、PySide6，并可在线体验 WebAssembly Gallery。"
+      content="面向 Qt Widgets 的原生 C++17 Fluent 控件，支持 Qt 5/6、可选 PySide6 绑定和 WebAssembly。在线体验 Gallery，查看 API 与接入示例。"
     >
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://calvinhxx.github.io/Fluent-Qt/zh-CN/">
@@ -31,10 +31,10 @@
     <meta property="og:image:height" content="909">
     <meta property="og:image:alt" content="Fluent-Qt Gallery 项目预览，展示原生 Qt Widgets 控件。">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Fluent-Qt — 无需重写 QML 的 Qt Widgets Fluent 控件库">
+    <meta name="twitter:title" content="Fluent-Qt — Qt Widgets 的 Fluent 控件库">
     <meta
       name="twitter:description"
-      content="无需重写 QML，用原生 C++17 Fluent 控件升级现有 Qt Widgets 应用；支持 Qt 5/6、PySide6，并可在线体验 WebAssembly Gallery。"
+      content="面向 Qt Widgets 的原生 C++17 Fluent 控件，支持 Qt 5/6、可选 PySide6 绑定和 WebAssembly。在线体验 Gallery，查看 API 与接入示例。"
     >
     <meta name="twitter:image" content="https://calvinhxx.github.io/Fluent-Qt/assets/og.png">
     <meta name="twitter:image:alt" content="Fluent-Qt Gallery 项目预览，展示原生 Qt Widgets 控件。">
@@ -49,7 +49,7 @@
             "@id": "https://calvinhxx.github.io/Fluent-Qt/#project",
             "name": "Fluent-Qt",
             "url": "https://calvinhxx.github.io/Fluent-Qt/zh-CN/",
-            "description": "无需重写 QML，用原生 C++17 Fluent 控件升级现有 Qt Widgets 应用；支持 Qt 5/6、PySide6，并可在线体验 WebAssembly Gallery。",
+            "description": "面向 Qt Widgets 的原生 C++17 Fluent 控件，支持 Qt 5/6、可选 PySide6 绑定和 WebAssembly。在线体验 Gallery，查看 API 与接入示例。",
             "codeRepository": "https://github.com/calvinhxx/Fluent-Qt",
             "programmingLanguage": "C++",
             "runtimePlatform": [
@@ -103,8 +103,8 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="../styles.css?v=20260903-1">
-    <script src="../site.js?v=20260903-1" defer></script>
+    <link rel="stylesheet" href="../styles.css?v=20260906-4">
+    <script src="../site.js?v=20260906-4" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content" data-i18n="a11y.skip">跳到主要内容</a>
@@ -176,9 +176,7 @@
         <div class="hero-field" aria-hidden="true">
           <div class="hero-grid"></div>
           <div class="hero-aurora"></div>
-          <div class="hero-orbit hero-orbit-a"></div>
-          <div class="hero-orbit hero-orbit-b"></div>
-          <div class="hero-beam"></div>
+          <canvas class="hero-particles"></canvas>
           <div class="hero-noise"></div>
         </div>
 
@@ -186,7 +184,7 @@
           <div class="hero-message">
             <img class="hero-app-icon" src="../assets/app-icon.png" alt="" width="96" height="96">
             <h1 id="hero-title">Fluent-Qt</h1>
-            <p class="hero-tagline" data-i18n="hero.tagline">无需重写 QML，升级现有 Qt Widgets 应用</p>
+            <p class="hero-tagline" data-i18n="hero.tagline">面向 Qt Widgets 的 Fluent 控件</p>
             <p class="hero-value-detail" data-i18n="hero.detail">原生 C++17 控件，可继续使用现有的 signals、slots、布局和工程结构。</p>
             <p class="hero-techline" aria-label="C++17、Qt 5.15 或 Qt 6.2 及以上、MIT" data-i18n-aria-label="a11y.heroTech">
               <strong>C++17</strong>
@@ -209,7 +207,7 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
               </a>
             </div>
-            <p class="hero-action-note" data-i18n="hero.actionNote">在线 Gallery 在浏览器中运行，无需在本机配置 Qt；接入项目仍需 Qt 5.15+ 或 6.2+ 开发环境。</p>
+            <p class="hero-action-note" data-i18n="hero.actionNote">在线 Gallery 无需安装 Qt。</p>
             <div class="hero-python-callout">
               <span class="hero-python-label" data-i18n="hero.pythonLabel">Python / PySide6</span>
               <span class="hero-python-copy" data-i18n="hero.pythonCopy">Python 项目可通过 PySide6 使用同一套控件</span>
@@ -241,6 +239,14 @@
             </a>
             <figcaption class="visually-hidden" data-i18n="hero.visualCaption">Gallery 实际界面</figcaption>
           </figure>
+        </div>
+
+        <div class="page-shell hero-motion-controls">
+          <button class="hero-motion-toggle" type="button" data-particle-toggle hidden aria-pressed="true" aria-label="粒子动效" data-i18n-aria-label="motion.label">
+            <svg class="motion-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10"/></svg>
+            <svg class="motion-play" viewBox="0 0 16 16" aria-hidden="true"><path d="m5 3 7 5-7 5Z"/></svg>
+            <span data-i18n="motion.label">粒子动效</span>
+          </button>
         </div>
 
         <div class="page-shell spec-strip" aria-label="项目规格" data-i18n-aria-label="a11y.specs">
@@ -318,7 +324,7 @@
               <div class="live-gallery-brand">
                 <span class="live-indicator" aria-hidden="true"></span>
                 <strong>C++ Web Gallery</strong>
-                <span class="live-gallery-status" data-gallery-status data-i18n="gallery.liveStateWaiting">等待进入视口</span>
+                <span class="live-gallery-status" data-gallery-status data-i18n="gallery.liveStateWaiting">待加载</span>
               </div>
               <div class="live-gallery-actions">
                 <button type="button" class="live-toolbar-button" data-gallery-load>
@@ -352,7 +358,7 @@
               <div class="live-gallery-overlay" data-gallery-overlay role="status" aria-live="polite">
                 <span class="gallery-loader" aria-hidden="true"></span>
                 <strong data-gallery-message data-i18n="gallery.waitingTitle">滚动到这里后自动启动</strong>
-                <p data-gallery-detail data-i18n="gallery.waitingDetail">首屏不会请求 WebAssembly 文件；也可以现在手动加载。</p>
+                <p data-gallery-detail data-i18n="gallery.waitingDetail">也可以点击“立即加载”提前启动。</p>
                 <div class="live-gallery-overlay-actions">
                   <button type="button" class="button button-primary" data-gallery-load>
                     <span data-i18n="gallery.loadAction">启动实时体验</span>
@@ -374,7 +380,7 @@
         <div class="page-shell ai-build-grid">
           <div class="ai-build-copy" data-reveal>
             <p class="section-index">03 / GUI SKILL</p>
-            <h2 id="ai-build-title" data-i18n="aiBuild.title">构建桌面 GUI</h2>
+            <h2 id="ai-build-title" data-i18n="aiBuild.title">用 AI 开发桌面 GUI</h2>
 
             <ul class="ai-build-points" aria-label="Skill 能力" data-i18n-aria-label="a11y.aiBuildCapabilities">
               <li><strong data-i18n="aiBuild.structureTitle">工程</strong><span data-i18n="aiBuild.structureCopy">C++ / PySide6 项目结构</span></li>
@@ -448,8 +454,8 @@
           <div class="positioning-lead" data-reveal>
             <p class="section-index">04 / POSITIONING</p>
             <h2 id="positioning-title">
-              <span data-i18n="positioning.titleLine1">独立控件</span>
-              <span data-i18n="positioning.titleLine2">不止主题皮肤</span>
+              <span data-i18n="positioning.titleLine1">原生控件</span>
+              <span data-i18n="positioning.titleLine2">C++ 接口</span>
             </h2>
             <p data-i18n="positioning.copy">每个控件都有独立的 C++ API、状态与布局行为</p>
           </div>
@@ -472,8 +478,8 @@
             <li>
               <span class="principle-number">03</span>
               <div>
-                <h3 data-i18n="positioning.shipTitle">清晰的公共边界</h3>
-                <p data-i18n="positioning.shipCopy">业务代码只依赖统一入口头文件与 FluentQt::FluentQt</p>
+                <h3 data-i18n="positioning.shipTitle">CMake 接入</h3>
+                <p data-i18n="positioning.shipCopy">包含 FluentQt/FluentQt.h，链接 FluentQt::FluentQt</p>
               </div>
             </li>
           </ol>
@@ -551,8 +557,7 @@
           </div>
 
           <div class="family-line" data-reveal>
-            <span data-i18n="components.familiesLabel">11 个控件家族</span>
-            <p data-i18n="components.families">基础输入 · 集合视图 · 日期与时间 · 对话框 · 布局 · 菜单 · 导航 · 滚动 · 状态信息 · 文本输入 · 窗口系统</p>
+            <a class="text-link" href="../api/" data-i18n="components.familiesLabel">查看完整 API 目录</a>
           </div>
 
           <div class="component-directory" aria-label="组件模块" data-i18n-aria-label="a11y.componentModules" data-reveal>
@@ -577,7 +582,7 @@
           <div class="quick-start-copy" data-reveal>
             <p class="section-index">06 / QUICK START</p>
             <h2 id="quick-start-title"><span data-i18n="quickStart.title">快速接入</span></h2>
-            <p data-i18n="quickStart.copy">复制 CMake 片段即可接入现有工程；也支持 add_subdirectory 与 find_package。</p>
+            <p data-i18n="quickStart.copy">将片段放在 add_executable(my_app ...) 之后。新建工程可参考完整的 hello_world 示例。</p>
             <ul class="quick-start-checks">
               <li><span aria-hidden="true">✓</span><span data-i18n="quickStart.keepProject">保留现有 Widgets 工程与事件循环</span></li>
               <li><span aria-hidden="true">✓</span><span data-i18n="quickStart.libraryOnly">库目标只依赖 Qt Widgets</span></li>
@@ -708,7 +713,7 @@ target_link_libraries(
           </div>
         </div>
       </div>
-      <div class="page-shell footer-meta"><span>© 2026 Fluent-Qt</span><span>Built for desktop and browser software</span></div>
+      <div class="page-shell footer-meta"><span>© 2026 Fluent-Qt</span></div>
     </footer>
   </body>
 </html>

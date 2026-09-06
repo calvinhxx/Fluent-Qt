@@ -51,13 +51,22 @@ inputs change, regenerate it instead of editing the JSON directly:
 python3 tools/site/generate_api_reference.py
 ```
 
+The hero's optional Canvas effect lives in
+[`site/hero-particles.js`](../../site/hero-particles.js). Keep the animation
+confined to the hero and its colors in `site/styles.css`. It pauses outside the
+viewport, in hidden tabs, and when the user pauses it. Reduced motion retains a
+static frame; High Contrast and forced colors remove the decoration. The page
+must remain usable if the module or Canvas is unavailable.
+
 ## Validation
 
-Run the same freshness check used by the Pages workflow:
+Check the generated pages and scripts:
 
 ```bash
 python3 tools/site/generate_localized_site.py --check
 python3 tools/site/generate_api_reference.py --check
+node --check site/site.js
+node --test tools/site/test_hero_particles.mjs
 ```
 
 The check requires matching translation keys, static localized text and
@@ -67,6 +76,12 @@ redirect, and the current CMake project version in structured data.
 The pull-request planning job runs both freshness checks before merge. The
 Pages workflow repeats them and also verifies that both localized pages and
 `sitemap.xml` are present before deployment.
+
+The motion tests use Node's built-in test runner (Node 20+) and cover visibility,
+pause persistence, system preferences, pointer input, resize limits, and page
+cleanup. They do not replace browser review: inspect both languages in Light,
+Dark, and High Contrast, check the mobile layout, and operate the pause control
+with the keyboard.
 
 After deployment, verify both language URLs and submit `sitemap.xml` to the
 configured search-engine webmaster tools. Search Console ownership and sitemap
