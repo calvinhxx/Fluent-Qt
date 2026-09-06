@@ -6,14 +6,16 @@
 #include <QWindow>
 #include <QWindowStateChangeEvent>
 
+#include "compatibility/WindowChromeCompat.h"
+#include "components/windowing/Window.h"
+#include "components/windowing/WindowBackdrop.h"
+
+// Windows headers define small as a macro; include them after FluentQt declarations.
+// zh_CN: Windows 头文件将 small 定义为宏，应在 FluentQt 声明之后包含。
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 #include <windows.h>
-
-#include "compatibility/WindowChromeCompat.h"
-#include "components/windowing/Window.h"
-#include "components/windowing/WindowBackdrop.h"
 
 using fluent::windowing::BackdropBackend;
 using fluent::windowing::BackdropEffect;

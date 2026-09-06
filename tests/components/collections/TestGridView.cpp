@@ -39,6 +39,15 @@ using namespace fluent;
 
 namespace {
 
+void sendDragMove(QWidget* target, const QPoint& position)
+{
+    // QWidget QTest moves may use the native cursor, losing the synthetic held button.
+    // zh_CN: QWidget 的 QTest 移动可能走原生光标路径，丢失合成的按键按住状态。
+    FLUENT_MAKE_MOUSE_EVENT(event, QEvent::MouseMove, target, position, Qt::NoButton,
+                            Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(target, &event);
+}
+
 /** 业务组装：为 GridView 挂上 Fluent 网格项代理。 */
 void attachFluentDelegate(GridView* gv)
 {
@@ -1067,11 +1076,11 @@ TEST_F(GridViewTest, DragReorderSingleMode)
 
     // Move beyond manhattan distance threshold
     QPoint dragStart = r0.center() + QPoint(QApplication::startDragDistance() + 2, 0);
-    QTest::mouseMove(gv->viewport(), dragStart);
+    sendDragMove(gv->viewport(), dragStart);
     QTest::qWait(20);
 
     // Move to target item center
-    QTest::mouseMove(gv->viewport(), r2.center());
+    sendDragMove(gv->viewport(), r2.center());
     QTest::qWait(20);
 
     QTest::mouseRelease(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r2.center());
@@ -1107,12 +1116,12 @@ TEST_F(GridViewTest, DragReorderBoundaryJitterKeepsStableTargetUntilRelease)
 
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, sourceRect.center());
     QTest::qWait(10);
-    QTest::mouseMove(gv->viewport(),
-                     sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
+    sendDragMove(gv->viewport(),
+                 sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
     QTest::qWait(10);
 
     const QPoint stablePoint = boundaryCenter - QPoint(10, 0);
-    QTest::mouseMove(gv->viewport(), stablePoint);
+    sendDragMove(gv->viewport(), stablePoint);
     QTest::qWait(10);
 
     const QStringList beforeRelease = modelTexts(mdl);
@@ -1121,7 +1130,7 @@ TEST_F(GridViewTest, DragReorderBoundaryJitterKeepsStableTargetUntilRelease)
                                      boundaryCenter + QPoint(3, 0)};
 
     for (const QPoint& point : jitterPoints) {
-        QTest::mouseMove(gv->viewport(), point);
+        sendDragMove(gv->viewport(), point);
         QTest::qWait(5);
         EXPECT_EQ(modelTexts(mdl), beforeRelease);
         EXPECT_EQ(reorderSpy.count(), 0);
@@ -1154,17 +1163,17 @@ TEST_F(GridViewTest, DragReorderClearThresholdCrossingChangesTarget)
 
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, sourceRect.center());
     QTest::qWait(10);
-    QTest::mouseMove(gv->viewport(),
-                     sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
+    sendDragMove(gv->viewport(),
+                 sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
     QTest::qWait(10);
 
-    QTest::mouseMove(gv->viewport(), boundaryCenter - QPoint(10, 0));
+    sendDragMove(gv->viewport(), boundaryCenter - QPoint(10, 0));
     QTest::qWait(10);
 
     const QPoint clearPoint = boundaryCenter + QPoint(20, 0);
 
     const QStringList beforeRelease = modelTexts(mdl);
-    QTest::mouseMove(gv->viewport(), clearPoint);
+    sendDragMove(gv->viewport(), clearPoint);
     QTest::qWait(10);
 
     EXPECT_EQ(modelTexts(mdl), beforeRelease);
@@ -1194,14 +1203,14 @@ TEST_F(GridViewTest, DragDisplacementRepeatedStableMoveKeepsRunningAnimations)
     const QPoint stablePoint = targetRect.center() - QPoint(10, 0);
 
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, sourceRect.center());
-    QTest::mouseMove(gv->viewport(),
-                     sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
-    QTest::mouseMove(gv->viewport(), stablePoint);
+    sendDragMove(gv->viewport(),
+                 sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
+    sendDragMove(gv->viewport(), stablePoint);
 
     const QList<QVariantAnimation*> firstAnimations = activeDragAnimations(gv);
     ASSERT_FALSE(firstAnimations.isEmpty());
 
-    QTest::mouseMove(gv->viewport(), stablePoint + QPoint(1, 0));
+    sendDragMove(gv->viewport(), stablePoint + QPoint(1, 0));
     const QList<QVariantAnimation*> repeatedMoveAnimations = activeDragAnimations(gv);
 
     for (auto* animation : firstAnimations)
@@ -1248,9 +1257,9 @@ TEST_F(GridViewTest, DragReorderMultipleMode)
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r0.center());
     QTest::qWait(20);
     QPoint mid = r0.center() + QPoint(QApplication::startDragDistance() + 2, 0);
-    QTest::mouseMove(gv->viewport(), mid);
+    sendDragMove(gv->viewport(), mid);
     QTest::qWait(20);
-    QTest::mouseMove(gv->viewport(), r3.center());
+    sendDragMove(gv->viewport(), r3.center());
     QTest::qWait(20);
     QTest::mouseRelease(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r3.center());
     QTest::qWait(50);
@@ -1289,12 +1298,12 @@ TEST_F(GridViewTest, DragReorderSelectedItemsMoveAsGroupInMultipleMode)
 
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, sourceRect.center());
     QTest::qWait(10);
-    QTest::mouseMove(gv->viewport(),
-                     sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
+    sendDragMove(gv->viewport(),
+                 sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
     QTest::qWait(10);
 
     const QStringList beforeRelease = modelTexts(mdl);
-    QTest::mouseMove(gv->viewport(), dropPoint);
+    sendDragMove(gv->viewport(), dropPoint);
     QTest::qWait(10);
     EXPECT_EQ(modelTexts(mdl), beforeRelease);
     EXPECT_EQ(reorderSpy.count(), 0);
@@ -1348,9 +1357,9 @@ TEST_F(GridViewTest, DragReorderExtendedMode)
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, rSrc.center());
     QTest::qWait(20);
     QPoint mid = rSrc.center() + QPoint(QApplication::startDragDistance() + 2, 0);
-    QTest::mouseMove(gv->viewport(), mid);
+    sendDragMove(gv->viewport(), mid);
     QTest::qWait(20);
-    QTest::mouseMove(gv->viewport(), rDst.center());
+    sendDragMove(gv->viewport(), rDst.center());
     QTest::qWait(20);
     QTest::mouseRelease(gv->viewport(), Qt::LeftButton, Qt::NoModifier, rDst.center());
     QTest::qWait(50);
@@ -1391,9 +1400,9 @@ TEST_F(GridViewTest, DragReorderNoneSelectionDisablesDrag)
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r0.center());
     QTest::qWait(20);
     QPoint mid = r0.center() + QPoint(QApplication::startDragDistance() + 2, 0);
-    QTest::mouseMove(gv->viewport(), mid);
+    sendDragMove(gv->viewport(), mid);
     QTest::qWait(20);
-    QTest::mouseMove(gv->viewport(), r2.center());
+    sendDragMove(gv->viewport(), r2.center());
     QTest::qWait(20);
     QTest::mouseRelease(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r2.center());
     QTest::qWait(50);
@@ -1427,9 +1436,9 @@ TEST_F(GridViewTest, DragReorderDisabledWhenFlagOff)
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r0.center());
     QTest::qWait(20);
     QPoint mid = r0.center() + QPoint(QApplication::startDragDistance() + 2, 0);
-    QTest::mouseMove(gv->viewport(), mid);
+    sendDragMove(gv->viewport(), mid);
     QTest::qWait(20);
-    QTest::mouseMove(gv->viewport(), r2.center());
+    sendDragMove(gv->viewport(), r2.center());
     QTest::qWait(20);
     QTest::mouseRelease(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r2.center());
     QTest::qWait(50);
@@ -1463,9 +1472,9 @@ TEST_F(GridViewTest, DragReorderPreservesSelectionInMultipleMode)
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r0.center());
     QTest::qWait(20);
     QPoint mid = r0.center() + QPoint(QApplication::startDragDistance() + 2, 0);
-    QTest::mouseMove(gv->viewport(), mid);
+    sendDragMove(gv->viewport(), mid);
     QTest::qWait(20);
-    QTest::mouseMove(gv->viewport(), r2.center());
+    sendDragMove(gv->viewport(), r2.center());
     QTest::qWait(20);
     QTest::mouseRelease(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r2.center());
     QTest::qWait(50);
@@ -1507,11 +1516,11 @@ TEST_F(GridViewTest, ReorderStandardItemModelTakeRowFallback)
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r2.center());
     QTest::qWait(20);
     QPoint mid = r2.center() + QPoint(QApplication::startDragDistance() + 2, 0);
-    QTest::mouseMove(gv->viewport(), mid);
+    sendDragMove(gv->viewport(), mid);
     QTest::qWait(20);
     // Move to left edge of item 0 to trigger "insert before"
     QPoint leftOf0(r0.left() + 5, r0.center().y());
-    QTest::mouseMove(gv->viewport(), leftOf0);
+    sendDragMove(gv->viewport(), leftOf0);
     QTest::qWait(20);
     QTest::mouseRelease(gv->viewport(), Qt::LeftButton, Qt::NoModifier, leftOf0);
     QTest::qWait(50);
@@ -1545,9 +1554,9 @@ TEST_F(GridViewTest, DragReorderItemReorderedSignalArgs)
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r0.center());
     QTest::qWait(20);
     QPoint mid = r0.center() + QPoint(QApplication::startDragDistance() + 2, 0);
-    QTest::mouseMove(gv->viewport(), mid);
+    sendDragMove(gv->viewport(), mid);
     QTest::qWait(20);
-    QTest::mouseMove(gv->viewport(), r3.center());
+    sendDragMove(gv->viewport(), r3.center());
     QTest::qWait(20);
     QTest::mouseRelease(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r3.center());
     QTest::qWait(50);
