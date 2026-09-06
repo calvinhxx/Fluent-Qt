@@ -463,6 +463,7 @@ def pages_deployment_boundary_errors(contents: str) -> list[str]:
         "        run: |",
         "          python3 tools/site/generate_localized_site.py --check",
         "          python3 tools/site/generate_api_reference.py --check",
+        "          node --test tools/site/test_hero_particles.mjs",
     ]
     if localized_validation != expected_localized_validation:
         errors.append(

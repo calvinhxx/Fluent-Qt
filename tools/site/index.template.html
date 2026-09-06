@@ -64,8 +64,8 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260903-1">
-    <script src="site.js?v=20260903-1" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260906-4">
+    <script src="site.js?v=20260906-4" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content" data-i18n="a11y.skip">跳到主要内容</a>
@@ -137,9 +137,7 @@
         <div class="hero-field" aria-hidden="true">
           <div class="hero-grid"></div>
           <div class="hero-aurora"></div>
-          <div class="hero-orbit hero-orbit-a"></div>
-          <div class="hero-orbit hero-orbit-b"></div>
-          <div class="hero-beam"></div>
+          <canvas class="hero-particles"></canvas>
           <div class="hero-noise"></div>
         </div>
 
@@ -202,6 +200,14 @@
             </a>
             <figcaption class="visually-hidden" data-i18n="hero.visualCaption">Gallery 实际界面</figcaption>
           </figure>
+        </div>
+
+        <div class="page-shell hero-motion-controls">
+          <button class="hero-motion-toggle" type="button" data-particle-toggle hidden aria-pressed="true" aria-label="粒子动效" data-i18n-aria-label="motion.label">
+            <svg class="motion-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10"/></svg>
+            <svg class="motion-play" viewBox="0 0 16 16" aria-hidden="true"><path d="m5 3 7 5-7 5Z"/></svg>
+            <span data-i18n="motion.label">粒子动效</span>
+          </button>
         </div>
 
         <div class="page-shell spec-strip" aria-label="项目规格" data-i18n-aria-label="a11y.specs">
@@ -512,8 +518,7 @@
           </div>
 
           <div class="family-line" data-reveal>
-            <span data-i18n="components.familiesLabel">11 个控件家族</span>
-            <p data-i18n="components.families">基础输入 · 集合视图 · 日期与时间 · 对话框 · 布局 · 菜单 · 导航 · 滚动 · 状态信息 · 文本输入 · 窗口系统</p>
+            <a class="text-link" href="api/" data-i18n="components.familiesLabel">查看完整 API 目录</a>
           </div>
 
           <div class="component-directory" aria-label="组件模块" data-i18n-aria-label="a11y.componentModules" data-reveal>
@@ -669,7 +674,7 @@ target_link_libraries(
           </div>
         </div>
       </div>
-      <div class="page-shell footer-meta"><span>© 2026 Fluent-Qt</span><span>Built for desktop and browser software</span></div>
+      <div class="page-shell footer-meta"><span>© 2026 Fluent-Qt</span></div>
     </footer>
   </body>
 </html>

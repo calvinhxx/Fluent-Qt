@@ -76,6 +76,7 @@ jobs:
         run: |
           python3 tools/site/generate_localized_site.py --check
           python3 tools/site/generate_api_reference.py --check
+          node --test tools/site/test_hero_particles.mjs
 
       - name: Configure Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
