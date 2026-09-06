@@ -1,6 +1,6 @@
-#include <FluentQt/compatibility/WindowBackdropTypes.h>
-#include <FluentQt/compatibility/WindowChromeCompat.h>
-#include <FluentQt/components/windowing/WindowBackdrop.h>
+#include <compatibility/WindowBackdropTypes.h>
+#include <compatibility/WindowChromeCompat.h>
+#include <components/windowing/WindowBackdrop.h>
 
 #include <QMetaEnum>
 #include <QVariant>
@@ -9,7 +9,7 @@
 static_assert(std::is_same<compatibility::BackdropEffect, fluent::windowing::BackdropEffect>::value,
               "The compatibility layer and Window must share one backdrop protocol");
 
-// Link the moved implementations and namespace metaobject through installed headers.
+// Link the moved implementations and namespace metaobject through public headers.
 void verifyBackdropHeaders()
 {
     const fluent::windowing::BackdropCapabilities capabilities;
