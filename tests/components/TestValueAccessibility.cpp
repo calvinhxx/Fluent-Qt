@@ -42,16 +42,14 @@ QVector<AccessibleEventRecord> g_accessibilityEvents;
 void captureAccessibilityEvent(QAccessibleEvent* event)
 {
     if (event) {
-        g_accessibilityEvents.append(
-            AccessibleEventRecord{event->object(), event->type()});
+        g_accessibilityEvents.append(AccessibleEventRecord{event->object(), event->type()});
     }
 }
 
 class ScopedAccessibilityEventCapture {
 public:
     ScopedAccessibilityEventCapture()
-        : m_previous(
-              QAccessible::installUpdateHandler(captureAccessibilityEvent))
+        : m_previous(QAccessible::installUpdateHandler(captureAccessibilityEvent))
     {
         g_accessibilityEvents.clear();
     }
@@ -103,28 +101,32 @@ TEST(ValueAccessibilityTest, Contract_AccessibilityToggleSwitchIsCheckableAndTog
     ASSERT_NE(root, nullptr);
     EXPECT_EQ(root->role(), QAccessible::CheckBox);
     EXPECT_EQ(root->text(QAccessible::Name), QStringLiteral("Wi-Fi"));
-    EXPECT_EQ(root->text(QAccessible::Description),
-              QStringLiteral("Network state"));
+    EXPECT_EQ(root->text(QAccessible::Description), QStringLiteral("Network state"));
     EXPECT_TRUE(root->state().checkable);
     EXPECT_FALSE(root->state().checked);
 
+    toggle.setVisualScale(3.0);
+    toggle.resize(toggle.sizeHint());
+    QCoreApplication::processEvents();
+    EXPECT_EQ(root->rect(), QRect(toggle.mapToGlobal(QPoint()), toggle.size()));
+    EXPECT_EQ(root->role(), QAccessible::CheckBox);
+    EXPECT_FALSE(root->state().checked);
+    EXPECT_EQ(root->text(QAccessible::Name), QStringLiteral("Wi-Fi"));
+    EXPECT_EQ(root->text(QAccessible::Description), QStringLiteral("Network state"));
+
     QAccessibleActionInterface* actions = root->actionInterface();
     ASSERT_NE(actions, nullptr);
-    EXPECT_TRUE(actions->actionNames().contains(
-        QAccessibleActionInterface::toggleAction()));
-    EXPECT_EQ(actions->keyBindingsForAction(
-                  QAccessibleActionInterface::toggleAction()),
+    EXPECT_TRUE(actions->actionNames().contains(QAccessibleActionInterface::toggleAction()));
+    EXPECT_EQ(actions->keyBindingsForAction(QAccessibleActionInterface::toggleAction()),
               QStringList{QStringLiteral("Space")});
 
     actions->doAction(QAccessibleActionInterface::toggleAction());
     EXPECT_TRUE(toggle.isOn());
     EXPECT_TRUE(root->state().checked);
-    EXPECT_EQ(root->text(QAccessible::Description),
-              QStringLiteral("Network state"));
+    EXPECT_EQ(root->text(QAccessible::Description), QStringLiteral("Network state"));
 
     toggle.setEnabled(false);
-    EXPECT_FALSE(actions->actionNames().contains(
-        QAccessibleActionInterface::toggleAction()));
+    EXPECT_FALSE(actions->actionNames().contains(QAccessibleActionInterface::toggleAction()));
 #endif
 }
 
@@ -141,12 +143,9 @@ TEST(ValueAccessibilityTest, Contract_AccessibilityRatingExposesBoundedValueAndA
     QAccessibleInterface* root = accessible(&rating);
     ASSERT_NE(root, nullptr);
     EXPECT_EQ(root->role(), QAccessible::Slider);
-    EXPECT_EQ(root->text(QAccessible::Name),
-              QStringLiteral("Experience"));
-    EXPECT_EQ(root->text(QAccessible::Description),
-              QStringLiteral("Optional rating"));
-    EXPECT_EQ(root->text(QAccessible::Value),
-              QStringLiteral("No rating"));
+    EXPECT_EQ(root->text(QAccessible::Name), QStringLiteral("Experience"));
+    EXPECT_EQ(root->text(QAccessible::Description), QStringLiteral("Optional rating"));
+    EXPECT_EQ(root->text(QAccessible::Value), QStringLiteral("No rating"));
 
     QAccessibleValueInterface* value = root->valueInterface();
     ASSERT_NE(value, nullptr);
@@ -165,13 +164,11 @@ TEST(ValueAccessibilityTest, Contract_AccessibilityRatingExposesBoundedValueAndA
 
     rating.setAccessibleDescription(QStringLiteral("Caller description"));
     rating.setCaption(QStringLiteral("Changed caption"));
-    EXPECT_EQ(root->text(QAccessible::Description),
-              QStringLiteral("Caller description"));
+    EXPECT_EQ(root->text(QAccessible::Description), QStringLiteral("Caller description"));
 
     rating.setIsReadOnly(true);
     EXPECT_TRUE(root->state().readOnly);
-    EXPECT_FALSE(actions->actionNames().contains(
-        QAccessibleActionInterface::increaseAction()));
+    EXPECT_FALSE(actions->actionNames().contains(QAccessibleActionInterface::increaseAction()));
     value->setCurrentValue(4.0);
     EXPECT_DOUBLE_EQ(rating.value(), -1.0);
 #endif
@@ -192,14 +189,12 @@ TEST(ValueAccessibilityTest, Contract_AccessibilityNumberBoxRetainsTextAndAddsNu
     QAccessibleInterface* root = accessible(&box);
     ASSERT_NE(root, nullptr);
     EXPECT_EQ(root->role(), QAccessible::SpinBox);
-    EXPECT_EQ(root->text(QAccessible::Name),
-              QStringLiteral("Quantity"));
+    EXPECT_EQ(root->text(QAccessible::Name), QStringLiteral("Quantity"));
     EXPECT_EQ(root->text(QAccessible::Value), QStringLiteral("2.5"));
 
     QAccessibleValueInterface* value = root->valueInterface();
     QAccessibleTextInterface* text = root->textInterface();
-    QAccessibleEditableTextInterface* editable =
-        root->editableTextInterface();
+    QAccessibleEditableTextInterface* editable = root->editableTextInterface();
     QAccessibleActionInterface* actions = root->actionInterface();
     ASSERT_NE(value, nullptr);
     ASSERT_NE(text, nullptr);
@@ -209,8 +204,7 @@ TEST(ValueAccessibilityTest, Contract_AccessibilityNumberBoxRetainsTextAndAddsNu
     EXPECT_DOUBLE_EQ(value->minimumValue().toDouble(), -10.0);
     EXPECT_DOUBLE_EQ(value->maximumValue().toDouble(), 10.0);
     EXPECT_DOUBLE_EQ(value->minimumStepSize().toDouble(), 0.5);
-    EXPECT_EQ(text->text(0, text->characterCount()),
-              QStringLiteral("2.5"));
+    EXPECT_EQ(text->text(0, text->characterCount()), QStringLiteral("2.5"));
 
     text->addSelection(0, 1);
     int start = -1;
@@ -227,8 +221,7 @@ TEST(ValueAccessibilityTest, Contract_AccessibilityNumberBoxRetainsTextAndAddsNu
     box.setReadOnly(true);
     EXPECT_TRUE(root->state().readOnly);
     EXPECT_FALSE(root->state().editable);
-    EXPECT_FALSE(actions->actionNames().contains(
-        QAccessibleActionInterface::increaseAction()));
+    EXPECT_FALSE(actions->actionNames().contains(QAccessibleActionInterface::increaseAction()));
     editable->replaceText(0, box.text().size(), QStringLiteral("7"));
     EXPECT_DOUBLE_EQ(box.value(), 4.0);
 
@@ -271,13 +264,11 @@ TEST(ValueAccessibilityTest, Contract_AccessibilityProgressExposesDeterminateAnd
     EXPECT_FALSE(barValue->currentValue().isValid());
     EXPECT_TRUE(barRoot->state().busy);
     EXPECT_TRUE(barRoot->state().animated);
-    EXPECT_EQ(barRoot->text(QAccessible::Description),
-              QStringLiteral("In progress"));
+    EXPECT_EQ(barRoot->text(QAccessible::Description), QStringLiteral("In progress"));
     bar.setShowPaused(true);
     EXPECT_FALSE(barRoot->state().busy);
     EXPECT_FALSE(barRoot->state().animated);
-    EXPECT_EQ(barRoot->text(QAccessible::Description),
-              QStringLiteral("Paused"));
+    EXPECT_EQ(barRoot->text(QAccessible::Description), QStringLiteral("Paused"));
 
     ProgressRing ring;
     ring.setAccessibleDescription(QStringLiteral("Sync status"));
@@ -289,8 +280,7 @@ TEST(ValueAccessibilityTest, Contract_AccessibilityProgressExposesDeterminateAnd
     EXPECT_TRUE(ringRoot->state().readOnly);
     EXPECT_TRUE(ringRoot->state().busy);
     EXPECT_TRUE(ringRoot->state().animated);
-    EXPECT_EQ(ringRoot->text(QAccessible::Description),
-              QStringLiteral("Sync status"));
+    EXPECT_EQ(ringRoot->text(QAccessible::Description), QStringLiteral("Sync status"));
     QAccessibleValueInterface* ringValue = ringRoot->valueInterface();
     ASSERT_NE(ringValue, nullptr);
     EXPECT_FALSE(ringValue->currentValue().isValid());

@@ -3,7 +3,7 @@
   "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
   "summary": {
     "component_count": 70,
-    "sample_count": 208
+    "sample_count": 209
   },
   "samples": [
     {
@@ -250,6 +250,11 @@
       "route_id": "toggle-switch",
       "sample_id": "toggle-switch-content",
       "source": "label = fluentqt.Label(\"Wi-Fi\")\ntoggle = fluentqt.ToggleSwitch()\ntoggle.setOnContent(\"Connected\")\ntoggle.setOffContent(\"Disconnected\")\ntoggle.setIsOn(True)\n"
+    },
+    {
+      "route_id": "toggle-switch",
+      "sample_id": "toggle-switch-scale",
+      "source": "toggle = fluentqt.ToggleSwitch()\ntoggle.setObjectName(\"scaledToggleSwitch\")\ntoggle.setAccessibleName(\"Scaled switch\")\ntoggle.setOnContent(\"On\")\ntoggle.setOffContent(\"Off\")\ntoggle.setIsOn(True)\ntoggle.setVisualScale(2.0)\ntoggle.setFixedSize(300, 100)\n"
     },
     {
       "route_id": "toggle-switch",

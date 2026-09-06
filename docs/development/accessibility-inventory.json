@@ -17,7 +17,7 @@
     {"id":"split-button","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/basicinput/private/MenuButtonAccessibility_p.cpp","tests/components/basicinput/TestSplitButtonAccessibility.cpp"],"gap":""},
     {"id":"toggle-button","classification":"native","risk":"low","status":"covered","evidence":["src/components/basicinput/ToggleButton.h"],"gap":""},
     {"id":"toggle-split-button","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/basicinput/private/MenuButtonAccessibility_p.cpp","tests/components/basicinput/TestSplitButtonAccessibility.cpp"],"gap":""},
-    {"id":"toggle-switch","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/basicinput/private/BasicValueAccessibility_p.cpp","tests/components/TestValueAccessibility.cpp"],"gap":""},
+    {"id":"toggle-switch","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/basicinput/private/BasicValueAccessibility_p.cpp","tests/components/TestValueAccessibility.cpp","tests/components/basicinput/TestToggleSwitch.cpp"],"gap":""},
 
     {"id":"drawer-view","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/collections/private/DrawerViewAccessibility_p.cpp","tests/components/TestAuxiliarySurfaceAccessibility.cpp"],"gap":""},
     {"id":"data-grid","classification":"adapter","risk":"high","status":"covered","evidence":["tests/components/collections/TestDataGrid.cpp"],"gap":""},

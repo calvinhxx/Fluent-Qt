@@ -392,7 +392,7 @@ class PythonGalleryTest(unittest.TestCase):
         self.assertEqual(len(CATEGORIES), 12)
         self.assertEqual(
             sum(len(entry.samples) for entry in ENTRIES),
-            208,
+            209,
         )
         self.assertEqual(len({route.id for route in ROUTES}), 91)
         self.assertEqual(len({entry.route_id for entry in ENTRIES}), 70)
@@ -835,7 +835,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 
     def test_every_native_sample_has_an_exact_python_port(self):
         expected = _contract_sample_keys()
-        self.assertEqual(len(expected), 208)
+        self.assertEqual(len(expected), 209)
         self.assertEqual(ported_sample_keys(), expected)
 
     def test_toggle_switch_state_sample_has_an_accessible_name(self):
@@ -3130,7 +3130,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     namespace.clear()
                     QApplication.processEvents()
 
-    def test_window_builds_all_91_routes_and_208_sample_cards(self):
+    def test_window_builds_all_91_routes_and_209_sample_cards(self):
         window = GalleryWindow()
         window.show()
         QApplication.processEvents()
@@ -3176,7 +3176,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     "sample surface".format(entry.route_id),
                 )
                 built_sample_count += len(results)
-            self.assertEqual(built_sample_count, 208)
+            self.assertEqual(built_sample_count, 209)
         finally:
             window.close()
             window.deleteLater()

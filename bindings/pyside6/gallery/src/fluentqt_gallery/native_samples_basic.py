@@ -1253,6 +1253,21 @@ register_source_samples(
                 _WIDGETS,
             ),
         ),
+        "toggle-switch-scale": (
+            "toggle",
+            _script(
+                """
+                toggle = fluentqt.ToggleSwitch()
+                toggle.setObjectName("scaledToggleSwitch")
+                toggle.setAccessibleName("Scaled switch")
+                toggle.setOnContent("On")
+                toggle.setOffContent("Off")
+                toggle.setIsOn(True)
+                toggle.setVisualScale(2.0)  # 80 x 40 track
+                toggle.setFixedSize(300, 100)
+                """
+            ),
+        ),
         "toggle-switch-disabled": (
             "root",
             _script(

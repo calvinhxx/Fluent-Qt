@@ -214,6 +214,25 @@ Overview of the control family below.
 - **OFF**: track fill = `controlAltSecondary` with a `strokeStrong` outline (hover
   `controlAltTertiary`, pressed `controlTertiary`); knob = `textSecondary`.
 
+`setFixedSize()` sets the widget and hit area, without stretching the graphics.
+Use `setVisualScale()` to scale the track, knob, strokes, focus frame, and content
+gap together; strokes retain a minimum width of one logical pixel. Its default
+is `1.0`; finite values clamp to `0.5–10.0`, and
+non-finite values are ignored. Text keeps its font, independently configurable
+with `setFontRole()` or `setFont()`. Layout hints include the scaled track and
+preserve at least a 24 px interactive height. A caller-imposed fixed size must
+still leave enough room for the track and any state text.
+
+```cpp
+auto* toggle = new fluent::basicinput::ToggleSwitch(parent);
+toggle->setVisualScale(2.0);       // 80 x 40 logical-pixel track
+toggle->setFixedSize(300, 100);    // independent widget / hit area
+```
+
+PySide6 exposes the same API: `toggle.setVisualScale(2.0)` and
+`toggle.visualScaleChanged`. The Gallery's **Visual size** card demonstrates
+both C++ and Python usage.
+
 ### CheckBox (`CheckBox.cpp`, default branch)
 - **~4 px box** (`radius.control`); the inner glyph is FluentQt Icons — CheckMark when
   checked, Hyphen when indeterminate — with an animated scale-in (`checkProgress`).

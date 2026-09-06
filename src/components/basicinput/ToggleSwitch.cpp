@@ -12,6 +12,7 @@
 #include <QPropertyAnimation>
 #include <QScopedValueRollback>
 #include <QStyle>
+#include <QtMath>
 
 namespace fluent::basicinput {
 
@@ -109,6 +110,19 @@ void ToggleSwitch::setFont(const QFont& font)
     QWidget::setFont(font);
 }
 
+void ToggleSwitch::setVisualScale(qreal scale)
+{
+    if (!qIsFinite(scale))
+        return;
+    scale = qBound(qreal(0.5), scale, qreal(10.0));
+    if (qFuzzyCompare(m_visualScale, scale))
+        return;
+    m_visualScale = scale;
+    updateGeometry();
+    update();
+    emit visualScaleChanged(m_visualScale);
+}
+
 void ToggleSwitch::changeEvent(QEvent* event)
 {
     QWidget::changeEvent(event);
@@ -144,24 +158,25 @@ void ToggleSwitch::setKnobPosition(qreal pos)
 
 int ToggleSwitch::contentAreaX() const
 {
-    return kTrackW + kContentGap;
+    return qCeil((kTrackW + kContentGap) * m_visualScale);
 }
 
 QRectF ToggleSwitch::trackRect() const
 {
-    // Keep the WinUI 20 px visual track centred inside the larger interactive
-    // surface. The extra vertical space improves pointer and touch targeting
-    // without changing the painted control metric.
-    // zh_CN: 保持 WinUI 20 px 可视轨道不变，仅在更大的交互区域内垂直居中，
-    // 从而改善鼠标和触控命中而不改变绘制尺寸。
-    const int trackY = (height() - kTrackH) / 2;
-    return QStyle::visualRect(layoutDirection(), rect(), QRect(0, trackY, kTrackW, kTrackH));
+    // Widget size owns the hit area; only visualScale changes the track metrics.
+    // Preserve the default integer-aligned vertical placement when rows are odd-sized.
+    // zh_CN: 控件大小决定命中区域，仅 visualScale 改变轨道尺寸；保留默认整像素垂直定位。
+    const qreal trackW = kTrackW * m_visualScale;
+    const qreal trackH = kTrackH * m_visualScale;
+    const qreal trackX = layoutDirection() == Qt::RightToLeft ? width() - trackW : 0.0;
+    const int trackY = qFloor((height() - trackH) / 2.0);
+    return QRectF(trackX, trackY, trackW, trackH);
 }
 
 QRectF ToggleSwitch::knobRect() const
 {
     QRectF track = trackRect();
-    int knobW, knobH;
+    qreal knobW, knobH;
     if (m_isPressed) {
         knobW = kKnobPressedW;
         knobH = kKnobPressedH;
@@ -172,12 +187,14 @@ QRectF ToggleSwitch::knobRect() const
         knobW = kKnobNormal;
         knobH = kKnobNormal;
     }
+    knobW *= m_visualScale;
+    knobH *= m_visualScale;
 
     // Knob center Y equals the track center. zh_CN: knob 中心 Y = track 中心。
     qreal cy = track.center().y();
     // knob X travel: from left to right inside track
-    qreal offX = track.left() + (kTrackH - knobW) / 2.0;
-    qreal onX = track.right() - (kTrackH - knobW) / 2.0 - knobW;
+    qreal offX = track.left() + (track.height() - knobW) / 2.0;
+    qreal onX = track.right() - (track.height() - knobW) / 2.0 - knobW;
     const qreal visualPosition =
         layoutDirection() == Qt::RightToLeft ? 1.0 - m_knobPosition : m_knobPosition;
     qreal x = offX + (onX - offX) * visualPosition;
@@ -189,15 +206,16 @@ QSize ToggleSwitch::sizeHint() const
 {
     QFontMetrics fm(font());
     int contentTextW = qMax(fm.horizontalAdvance(m_onContent), fm.horizontalAdvance(m_offContent));
-    int w = kTrackW + kContentGap + contentTextW;
-    int h = qMax(::Spacing::ControlHeight::Small, qMax(kTrackH, fm.height()));
+    int w = contentAreaX() + contentTextW;
+    int h = qMax(minimumSizeHint().height(), fm.height());
 
     return QSize(w, h);
 }
 
 QSize ToggleSwitch::minimumSizeHint() const
 {
-    return QSize(kTrackW, ::Spacing::ControlHeight::Small);
+    return QSize(qCeil(kTrackW * m_visualScale),
+                 qMax(::Spacing::ControlHeight::Small, qCeil(kTrackH * m_visualScale)));
 }
 
 // ── Animation. zh_CN: 动画 ───────────────────────────────────────────────────
@@ -240,6 +258,8 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
 
     // ── Track ──
     QRectF track = trackRect();
+    const qreal strokeWidth = qMax(qreal(1.0), m_visualScale);
+    const qreal trackRadius = kTrackRadius * m_visualScale;
 
     // Fluent treatment. zh_CN: Fluent 样式。
     QColor trackFill, trackStroke;
@@ -280,13 +300,15 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
 
     // Paint the track fill. zh_CN: 绘制 track 背景。
     QPainterPath trackPath;
-    trackPath.addRoundedRect(track.adjusted(0.5, 0.5, -0.5, -0.5), kTrackRadius, kTrackRadius);
+    const qreal inset = strokeWidth / 2.0;
+    trackPath.addRoundedRect(track.adjusted(inset, inset, -inset, -inset), trackRadius,
+                             trackRadius);
     p.setPen(Qt::NoPen);
     p.setBrush(trackFill);
     p.drawPath(trackPath);
     // Paint the track outline. zh_CN: 绘制 track 描边。
     p.setBrush(Qt::NoBrush);
-    p.setPen(QPen(trackStroke, 1.0));
+    p.setPen(QPen(trackStroke, strokeWidth));
     p.drawPath(trackPath);
 
     // ── Knob ──
@@ -309,8 +331,8 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
         p.setFont(font());
         p.setPen(enabled ? c.textPrimary : c.textDisabled);
         int textX = contentAreaX();
-        int textY = static_cast<int>(track.top());
-        int textH = static_cast<int>(track.height());
+        int textH = qMax(qCeil(track.height()), QFontMetrics(font()).height());
+        int textY = (height() - textH) / 2;
         const QRect logicalTextRect(textX, textY, width() - textX, textH);
         const QRect textRect = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
         p.drawText(textRect,
@@ -321,10 +343,12 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
     if (enabled && hasFocus() && m_keyboardFocusVisible) {
         QColor focusColor = c.textSecondary;
         focusColor.setAlpha(120);
-        p.setPen(QPen(focusColor, 1.0));
+        p.setPen(QPen(focusColor, strokeWidth));
         p.setBrush(Qt::NoBrush);
-        p.drawRoundedRect(track.adjusted(1.5, 1.5, -1.5, -1.5), kTrackRadius - 1.0,
-                          kTrackRadius - 1.0);
+        const qreal focusInset = 1.5 * m_visualScale;
+        const qreal focusRadius = trackRadius - m_visualScale;
+        p.drawRoundedRect(track.adjusted(focusInset, focusInset, -focusInset, -focusInset),
+                          focusRadius, focusRadius);
     }
 }
 
