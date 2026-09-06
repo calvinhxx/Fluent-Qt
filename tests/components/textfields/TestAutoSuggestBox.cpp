@@ -10,6 +10,7 @@
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
+#include "QtTestEnvironment.h"
 #include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/collections/ListView.h"
@@ -60,11 +61,24 @@ protected:
 
     void TearDown() override { delete window; }
 
-    void showAndFocus(AutoSuggestBox* box)
+    bool showAndFocus(AutoSuggestBox* box)
     {
-        window->show();
+        QWidget* host = box->window();
+        host->show();
+        if (!tests::support::isHeadlessPlatform()) {
+            if (!QTest::qWaitForWindowExposed(host))
+                return false;
+            if (!QGuiApplication::platformName().startsWith(QStringLiteral("wayland"),
+                                                            Qt::CaseInsensitive)) {
+                host->activateWindow();
+                if (!QTest::qWaitForWindowActive(host))
+                    return false;
+            }
+        }
         box->setFocus(Qt::OtherFocusReason);
-        QApplication::processEvents();
+        // Wayland can deliver focus after exposing a window without supporting activation requests.
+        // zh_CN: Wayland 不支持主动激活请求，窗口显示后焦点仍可能稍后才到达。
+        return QTest::qWaitFor([box] { return box->hasFocus(); });
     }
 
     AutoSuggestBoxTestWindow* window = nullptr;
@@ -283,7 +297,7 @@ TEST_F(AutoSuggestBoxTest, ProgrammaticAndUserTextReasons)
     EXPECT_EQ(textSpy.takeFirst().at(1).value<AutoSuggestBox::TextChangeReason>(),
               AutoSuggestBox::TextChangeReason::ProgrammaticChange);
 
-    showAndFocus(box);
+    ASSERT_TRUE(showAndFocus(box));
     QTest::keyClicks(box, "x");
     ASSERT_GE(textSpy.count(), 1);
     EXPECT_EQ(textSpy.last().at(1).value<AutoSuggestBox::TextChangeReason>(),
@@ -296,7 +310,7 @@ TEST_F(AutoSuggestBoxTest, UserInputOpensAndEscapeClosesSuggestions)
     box->setFixedWidth(220);
     box->setSuggestions({"Alpha", "Alpine", "Azure"});
     layout->addWidget(box);
-    showAndFocus(box);
+    ASSERT_TRUE(showAndFocus(box));
 
     QSignalSpy openSpy(box, &AutoSuggestBox::suggestionListOpenChanged);
     QSignalSpy focusSpy(qApp, &QApplication::focusChanged);
@@ -328,7 +342,7 @@ TEST_F(AutoSuggestBoxTest, SuggestionPopupIsRecreatedAfterOwnerMovesTopLevel)
     box->setSuggestions({QStringLiteral("Alpha"), QStringLiteral("Beta")});
     box->resize(240, box->height());
     host->show();
-    showAndFocus(box);
+    ASSERT_TRUE(showAndFocus(box));
     QTest::keyClicks(box, QStringLiteral("a"));
     QApplication::processEvents();
     ASSERT_TRUE(box->isSuggestionListOpen());
@@ -347,7 +361,7 @@ TEST_F(AutoSuggestBoxTest, SuggestionPopupIsRecreatedAfterOwnerMovesTopLevel)
     ASSERT_TRUE(firstPopup.isNull());
 
     box->clear();
-    showAndFocus(box);
+    ASSERT_TRUE(showAndFocus(box));
     QTest::keyClicks(box, QStringLiteral("b"));
     QApplication::processEvents();
 
@@ -364,7 +378,7 @@ TEST_F(AutoSuggestBoxTest, KeyboardPreviewAndSubmitSuggestion)
     box->setFixedWidth(220);
     box->setSuggestions({"Alpha", "Alpine", "Azure"});
     layout->addWidget(box);
-    showAndFocus(box);
+    ASSERT_TRUE(showAndFocus(box));
 
     QSignalSpy textSpy(box, &AutoSuggestBox::textChangedWithReason);
     QSignalSpy chosenSpy(box, &AutoSuggestBox::suggestionChosen);
@@ -447,7 +461,7 @@ TEST_F(AutoSuggestBoxTest, ClearButtonReceivesMouseInputWhileSuggestionsOpen)
     box->setFixedSize(220, 24);
     box->setSuggestions({"TitleBar", "WindowChromeCompat", "AutoSuggestBox"});
     layout->addWidget(box);
-    showAndFocus(box);
+    ASSERT_TRUE(showAndFocus(box));
 
     QSignalSpy textSpy(box, &AutoSuggestBox::textChangedWithReason);
 
@@ -485,7 +499,7 @@ TEST_F(AutoSuggestBoxTest, MouseClickSuggestionChoosesAndSubmits)
     box->setFixedWidth(220);
     box->setSuggestions({"Alpha", "Alpine", "Azure"});
     layout->addWidget(box);
-    showAndFocus(box);
+    ASSERT_TRUE(showAndFocus(box));
 
     QSignalSpy chosenSpy(box, &AutoSuggestBox::suggestionChosen);
     QSignalSpy querySpy(box, &AutoSuggestBox::querySubmitted);
@@ -522,7 +536,7 @@ TEST_F(AutoSuggestBoxTest, SuggestionsUseFluentScrollChromeAndContainBoundaryWhe
     box->setSuggestions({"Apple", "Apricot", "Banana", "Blueberry", "Cherry", "Grape", "Orange",
                          "Strawberry", "Watermelon"});
     layout->addWidget(box);
-    showAndFocus(box);
+    ASSERT_TRUE(showAndFocus(box));
 
     QTest::keyClicks(box, "a");
     QApplication::processEvents();
@@ -564,7 +578,7 @@ TEST_F(AutoSuggestBoxTest, ReplacingScrolledSuggestionsMakesSingleResultVisibleI
     box->setSuggestions({"Apple", "Apricot", "Banana", "Blueberry", "Cherry", "Grape", "Orange",
                          "Strawberry", "Watermelon"});
     layout->addWidget(box);
-    showAndFocus(box);
+    ASSERT_TRUE(showAndFocus(box));
 
     QTest::keyClicks(box, "a");
     QApplication::processEvents();
@@ -597,7 +611,7 @@ TEST_F(AutoSuggestBoxTest, OutsidePressLightDismissesSuggestions)
     box->setFixedWidth(220);
     box->setSuggestions({"Alpha", "Alpine", "Azure"});
     layout->addWidget(box);
-    showAndFocus(box);
+    ASSERT_TRUE(showAndFocus(box));
 
     QTest::keyClicks(box, "a");
     QApplication::processEvents();

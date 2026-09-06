@@ -1535,6 +1535,9 @@ TEST_F(WindowTest, LinuxCloseCaptionHoverReachesRoundedOuterCorner)
 
     auto* closeButton = window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
     ASSERT_NE(closeButton, nullptr);
+    // Test corner coverage independently of the compositor's activation-dependent fade.
+    // zh_CN: 以不透明表面检查圆角覆盖，避免合成器的窗口激活时序影响颜色断言。
+    closeButton->setContentOpacity(1.0);
     closeButton->setInteractionState(Button::Hover);
     QApplication::processEvents();
 
@@ -1661,6 +1664,9 @@ TEST_F(WindowTest, ClientSideFrameCompositeKeepsPartialAlphaAtEveryCorner)
 TEST_F(WindowTest, ClientSideFrameOverlayDoesNotClearHostBackingPixels)
 {
     SquareSurfaceWidget host;
+    // Native decorations can enforce a minimum width and move the sampled color patch.
+    // zh_CN: 原生装饰可能强制最小窗口宽度，导致被采样的色块发生偏移。
+    host.setWindowFlag(Qt::FramelessWindowHint);
     host.setAttribute(Qt::WA_TranslucentBackground, true);
     host.resize(64, 64);
 
@@ -1682,6 +1688,8 @@ TEST_F(WindowTest, ClientSideFrameOverlayDoesNotClearHostBackingPixels)
     host.show();
     overlay.show();
     QApplication::processEvents();
+
+    ASSERT_EQ(host.size(), QSize(64, 64));
 
     QImage image(host.size(), QImage::Format_ARGB32_Premultiplied);
     image.fill(Qt::transparent);
