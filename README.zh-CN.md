@@ -39,7 +39,7 @@ Fluent-Qt 是面向 Qt Widgets 的跨平台 Fluent UI 组件库，提供输入�
 
 ## 🤖 使用 Agent 构建
 
-在 Codex、Claude Code 或 Cursor 中调用 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md)，直接描述要构建的桌面应用。[查看效果](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#ai-build) · [安装与用法](docs/ai/README.md)
+在 Codex、Claude Code 或 Cursor 中使用 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md)，创建桌面应用、给现有工程添加 GUI 或修复界面。[查看效果](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#ai-build) · [安装与用法](docs/ai/README.md)
 
 调整 Gallery 示例时，可以先在 Live Scene 里边改边看，再用编译后的 C++ 示例确认最终效果。[查看用法](docs/development/gallery-preview-workflow.md)
 
@@ -51,7 +51,7 @@ Fluent-Qt 是面向 Qt Widgets 的跨平台 Fluent UI 组件库，提供输入�
 | C++ Gallery | FluentQt、Qt Network、spdlog/fmt |
 | C++ WebAssembly | Qt 6.9.3 `wasm_singlethread`、Emscripten 3.1.70 |
 | 测试 | FluentQt、Qt Test/Network、GTest、spdlog/fmt |
-| 可选 PySide6 绑定 | Qt 6.2+；源码构建支持 Python 3.10+ |
+| 可选 PySide6 绑定 | Qt/PySide6/Shiboken6 6.2.4+；源码构建支持 Python 3.10+ |
 
 ## 🚀 快速开始
 
@@ -154,7 +154,7 @@ PySide6 兼容层通过 Shiboken6 将 Fluent-Qt 的原生 C++ 控件提供给 Py
 python -m pip install FluentQt
 ```
 
-先阅读 [Python 包使用指南](bindings/pyside6/PYPI.md)及其 [Hello World 示例](bindings/pyside6/examples/hello_world/README.md)。源码构建、兼容边界和维护者工作流统一收录在 [PySide6 绑定指南](bindings/pyside6/README.md)中。
+安装、示例、兼容信息和源码构建见 [Python 指南](bindings/pyside6/README.md)。
 
 ## 🛠 构建
 
@@ -164,19 +164,19 @@ python -m pip install FluentQt
 cmake -S . -B build/fluentqt \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_PREFIX_PATH=/path/to/Qt
-cmake --build build/fluentqt --config Release --target FluentQt --parallel
+python3 tools/dev/fluent_qt_build.py build/fluentqt --config Release --target FluentQt
 cmake --install build/fluentqt --config Release \
   --component Development --prefix /path/to/install
 ```
 
-本地仓库开发可使用[构建工作流](docs/development/build-workflow.md)提供的包装脚本。它根据当前可用 CPU 和内存余量选择并发数，不写死全局并发上限。
+构建脚本根据可用 CPU 和内存选择并行任务数，配置方法见[构建工作流](docs/development/build-workflow.md)。
 
 ### 源码包
 
 生成用于离线或源码集成的精简组件库源码包：
 
 ```bash
-cmake --build build/fluentqt --target fluent_qt_source_package
+python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_package
 ```
 
 ### WebAssembly
@@ -196,6 +196,8 @@ Gallery 用于浏览、演示和验证 FluentQt 组件。
 从 [GitHub Releases](https://github.com/calvinhxx/Fluent-Qt/releases/latest) 下载当前 Windows、macOS 或 Linux Gallery 安装包。持续维护的构建与打包矩阵见[打包工作流](docs/development/packaging-workflow.md)。
 
 ### 本地运行 C++ Gallery
+
+仓库预设需要 CMake 3.25+ 和 `VCPKG_ROOT`。本机 Qt kit 的配置方法见[首次配置](docs/development/build-workflow.md#first-use-setup)。
 
 先查看当前平台可用的构建配置：
 
@@ -247,7 +249,7 @@ python -m fluentqt_gallery
 | 目标 | 入口 |
 |---|---|
 | 体验和查找控件 | [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/) |
-| 构建应用 | [AI 辅助开发](docs/ai/README.md) · [环境检查与项目模板](tools/onboarding/README.md) · [PySide6](bindings/pyside6/README.md) |
+| 构建应用 | [AI 辅助开发](docs/ai/README.md) · [环境检查与项目模板](tools/onboarding/README.md) |
 | 参与 FluentQt 开发 | [开发文档树](docs/development/README.md) · [架构约定](docs/architecture/README.md) · [Fluent 设计](docs/design-languages/README.md) |
 | 打包或发布 | [打包工作流](docs/development/packaging-workflow.md) · [发布治理](docs/development/release-governance.md) · [版本记录](docs/releases/README.md) |
 | 提问或报告问题 | [社区入口](docs/community/README.md) · [支持](SUPPORT.md) · [安全报告](SECURITY.md) |

@@ -39,7 +39,7 @@ Fluent-Qt is a cross-platform Fluent UI component library for Qt Widgets. It pro
 
 ## 🤖 Build with AI
 
-Use [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) in Codex, Claude Code, or Cursor, then describe the desktop app you want. [Example](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [Install and use](docs/ai/README.md)
+Use [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) in Codex, Claude Code, or Cursor to build a desktop app, add a GUI to a project, or fix an interface. [Example](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [Install and use](docs/ai/README.md)
 
 When tuning a Gallery sample, use Live Scene to see each saved change, then check the result in the compiled C++ sample. [How it works](docs/development/gallery-preview-workflow.md)
 
@@ -51,7 +51,7 @@ When tuning a Gallery sample, use Live Scene to see each saved change, then chec
 | C++ Gallery | FluentQt, Qt Network, spdlog/fmt |
 | C++ WebAssembly | Qt 6.9.3 `wasm_singlethread`, Emscripten 3.1.70 |
 | Tests | FluentQt, Qt Test/Network, GTest, spdlog/fmt |
-| Optional PySide6 bindings | Qt 6.2+; Python 3.10+ for source builds |
+| Optional PySide6 bindings | Qt/PySide6/Shiboken6 6.2.4+; Python 3.10+ for source builds |
 
 ## 🚀 Quick Start
 
@@ -156,10 +156,8 @@ Python through Shiboken6.
 python -m pip install FluentQt
 ```
 
-Start with the [Python package guide](bindings/pyside6/PYPI.md) and its
-[Hello World example](bindings/pyside6/examples/hello_world/README.md). Source
-builds, compatibility boundaries, and maintainer workflows are indexed by the
-[PySide6 binding guide](bindings/pyside6/README.md).
+See the [Python guide](bindings/pyside6/README.md) for installation,
+examples, compatibility, and source builds.
 
 ## 🛠 Build
 
@@ -169,21 +167,20 @@ builds, compatibility boundaries, and maintainer workflows are indexed by the
 cmake -S . -B build/fluentqt \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_PREFIX_PATH=/path/to/Qt
-cmake --build build/fluentqt --config Release --target FluentQt --parallel
+python3 tools/dev/fluent_qt_build.py build/fluentqt --config Release --target FluentQt
 cmake --install build/fluentqt --config Release \
   --component Development --prefix /path/to/install
 ```
 
-For local repository development, the [build workflow](docs/development/build-workflow.md)
-provides a wrapper that selects parallelism from current CPU and memory
-headroom instead of using a fixed job count.
+The build script selects parallelism from available CPU and memory.
+See the [build workflow](docs/development/build-workflow.md) for configuration.
 
 ### Source package
 
 Create the reduced library source package for offline or source integration:
 
 ```bash
-cmake --build build/fluentqt --target fluent_qt_source_package
+python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_package
 ```
 
 ### WebAssembly
@@ -209,6 +206,9 @@ The maintained build and package matrix lives in the
 [packaging workflow](docs/development/packaging-workflow.md).
 
 ### Run the C++ Gallery locally
+
+Repository presets require CMake 3.25+ and `VCPKG_ROOT`. Configure your Qt kit
+using the [first-use setup](docs/development/build-workflow.md#first-use-setup).
 
 List the presets available on the current host:
 
@@ -262,7 +262,7 @@ Start with the [documentation map](docs/README.md), or choose a path:
 | Goal | Entry point |
 |---|---|
 | Evaluate controls | [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/) |
-| Build an application | [AI-assisted development](docs/ai/README.md) · [Onboarding tools](tools/onboarding/README.md) · [PySide6](bindings/pyside6/README.md) |
+| Build an application | [AI-assisted development](docs/ai/README.md) · [Onboarding tools](tools/onboarding/README.md) |
 | Contribute to FluentQt | [Development tree](docs/development/README.md) · [Architecture](docs/architecture/README.md) · [Fluent design](docs/design-languages/README.md) |
 | Package or release | [Packaging](docs/development/packaging-workflow.md) · [Release governance](docs/development/release-governance.md) · [Release notes](docs/releases/README.md) |
 | Get help or report a problem | [Community](docs/community/README.md) · [Support](SUPPORT.md) · [Security](SECURITY.md) |
