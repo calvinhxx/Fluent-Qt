@@ -73,8 +73,7 @@ constexpr int TitleBarSearchHeight = 28;
 #ifdef Q_OS_WIN
 class NativeEventTestWindow final : public Window {
 public:
-    bool dispatchNativeMessage(MSG* message,
-                               compatibility::FluentNativeEventResult* result)
+    bool dispatchNativeMessage(MSG* message, compatibility::FluentNativeEventResult* result)
     {
         return nativeEvent(QByteArrayLiteral("windows_generic_MSG"), message, result);
     }
@@ -104,15 +103,14 @@ private:
     compatibility::detail::RuntimePlatformCapabilities m_previous;
 };
 
-QImage renderBackdropMaterial(BackdropEffect effect, bool dark = false) {
+QImage renderBackdropMaterial(BackdropEffect effect, bool dark = false)
+{
     const QSize size(160, 96);
     QImage image(size, QImage::Format_ARGB32_Premultiplied);
     image.fill(Qt::transparent);
 
     WindowBackdropMaterialOptions options = WindowBackdropMaterialOptions::forTheme(
-        dark,
-        dark ? QColor(32, 32, 32) : QColor(243, 243, 243),
-        QColor(0, 120, 212));
+        dark, dark ? QColor(32, 32, 32) : QColor(243, 243, 243), QColor(0, 120, 212));
     options.effect = effect;
     options.active = true;
     options.devicePixelRatio = 1.0;
@@ -123,7 +121,8 @@ QImage renderBackdropMaterial(BackdropEffect effect, bool dark = false) {
     return image;
 }
 
-bool imageIsFullyOpaque(const QImage& image) {
+bool imageIsFullyOpaque(const QImage& image)
+{
     for (int y = 0; y < image.height(); ++y) {
         for (int x = 0; x < image.width(); ++x) {
             if (image.pixelColor(x, y).alpha() != 255)
@@ -133,7 +132,8 @@ bool imageIsFullyOpaque(const QImage& image) {
     return true;
 }
 
-int differingPixelCount(const QImage& first, const QImage& second) {
+int differingPixelCount(const QImage& first, const QImage& second)
+{
     if (first.size() != second.size())
         return -1;
 
@@ -149,14 +149,16 @@ int differingPixelCount(const QImage& first, const QImage& second) {
 
 class SquareSurfaceWidget : public QWidget {
 protected:
-    void paintEvent(QPaintEvent*) override {
+    void paintEvent(QPaintEvent*) override
+    {
         QPainter painter(this);
         painter.fillRect(rect(), Qt::white);
         painter.fillRect(QRect(width() - 24, 0, 24, 24), QColor(196, 43, 28));
     }
 };
 
-Button* createTitleBarIconButton(const QString& glyph, QWidget* parent) {
+Button* createTitleBarIconButton(const QString& glyph, QWidget* parent)
+{
     auto* button = new Button(parent);
     button->setFluentStyle(Button::Subtle);
     button->setFluentLayout(Button::IconOnly);
@@ -166,10 +168,10 @@ Button* createTitleBarIconButton(const QString& glyph, QWidget* parent) {
     return button;
 }
 
-QIcon createWindowAppIcon() {
-    const qreal dpr = qApp && qApp->primaryScreen()
-                          ? qApp->primaryScreen()->devicePixelRatio()
-                          : qreal(1);
+QIcon createWindowAppIcon()
+{
+    const qreal dpr =
+        qApp && qApp->primaryScreen() ? qApp->primaryScreen()->devicePixelRatio() : qreal(1);
 
     QPixmap pixmap(QSize(qRound(TitleBarAppIconSize * dpr), qRound(TitleBarAppIconSize * dpr)));
     pixmap.setDevicePixelRatio(dpr);
@@ -179,44 +181,39 @@ QIcon createWindowAppIcon() {
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setPen(Qt::NoPen);
     painter.setBrush(QColor("#0078D4"));
-    painter.drawRoundedRect(QRectF(0.75, 0.75, TitleBarAppIconSize - 1.5, TitleBarAppIconSize - 1.5), 2.5, 2.5);
+    painter.drawRoundedRect(
+        QRectF(0.75, 0.75, TitleBarAppIconSize - 1.5, TitleBarAppIconSize - 1.5), 2.5, 2.5);
 
     QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(8);
     painter.setFont(iconFont);
     painter.setPen(Qt::white);
-    painter.drawText(QRectF(0, 0, TitleBarAppIconSize, TitleBarAppIconSize),
-                     Qt::AlignCenter,
+    painter.drawText(QRectF(0, 0, TitleBarAppIconSize, TitleBarAppIconSize), Qt::AlignCenter,
                      Typography::Icons::AppIconDefault);
 
     return QIcon(pixmap);
 }
 
-void anchorFromLeft(AnchorLayout* layout,
-                    QWidget* widget,
-                    TitleBar* titleBar,
-                    QWidget* target,
-                    Edge edge,
-                    int offset) {
+void anchorFromLeft(AnchorLayout* layout, QWidget* widget, TitleBar* titleBar, QWidget* target,
+                    Edge edge, int offset)
+{
     AnchorLayout::Anchors anchors;
     anchors.left = {target, edge, offset};
     anchors.verticalCenter = {titleBar, Edge::VCenter, 0};
     layout->addAnchoredWidget(widget, anchors);
 }
 
-void anchorFromRight(AnchorLayout* layout,
-                     QWidget* widget,
-                     TitleBar* titleBar,
-                     QWidget* target,
-                     Edge edge,
-                     int offset) {
+void anchorFromRight(AnchorLayout* layout, QWidget* widget, TitleBar* titleBar, QWidget* target,
+                     Edge edge, int offset)
+{
     AnchorLayout::Anchors anchors;
     anchors.right = {target, edge, offset};
     anchors.verticalCenter = {titleBar, Edge::VCenter, 0};
     layout->addAnchoredWidget(widget, anchors);
 }
 
-Label* createTitleBarTitle(TitleBar* titleBar) {
+Label* createTitleBarTitle(TitleBar* titleBar)
+{
     auto* title = new Label("Fluent Window", titleBar);
     title->setObjectName(QStringLiteral("titleBarWindowTitle"));
     title->setFluentTypography(Typography::FontRole::Caption);
@@ -225,14 +222,13 @@ Label* createTitleBarTitle(TitleBar* titleBar) {
     return title;
 }
 
-AutoSuggestBox* createTitleBarSearch(TitleBar* titleBar) {
+AutoSuggestBox* createTitleBarSearch(TitleBar* titleBar)
+{
     auto* search = new AutoSuggestBox(titleBar);
     search->setPlaceholderText("Search...");
-    search->setSuggestions(QStringList{
-        QStringLiteral("TitleBar"),
-        QStringLiteral("WindowChromeCompat"),
-        QStringLiteral("AutoSuggestBox")
-    });
+    search->setSuggestions(QStringList{QStringLiteral("TitleBar"),
+                                       QStringLiteral("WindowChromeCompat"),
+                                       QStringLiteral("AutoSuggestBox")});
     search->setQueryIconVisible(false);
     search->setFontRole(Typography::FontRole::Caption);
     search->setSuggestionFontRole(Typography::FontRole::Caption);
@@ -244,16 +240,19 @@ AutoSuggestBox* createTitleBarSearch(TitleBar* titleBar) {
     return search;
 }
 
-Label* createTitleBarAvatar(TitleBar* titleBar) {
+Label* createTitleBarAvatar(TitleBar* titleBar)
+{
     auto* avatar = new Label("JD", titleBar);
     avatar->setObjectName(QStringLiteral("titleBarAvatar"));
     avatar->setAlignment(Qt::AlignCenter);
     avatar->setFixedSize(TitleBarAvatarSize, TitleBarAvatarSize);
-    avatar->setStyleSheet("#titleBarAvatar { background: #E1DFDD; color: #323130; border-radius: 12px; font-weight: 600; font-size: 11px; }");
+    avatar->setStyleSheet("#titleBarAvatar { background: #E1DFDD; color: #323130; border-radius: "
+                          "12px; font-weight: 600; font-size: 11px; }");
     return avatar;
 }
 
-void createTitleBarContent(Window* window) {
+void createTitleBarContent(Window* window)
+{
     window->setCustomWindowChromeEnabled(true);
     auto* titleBar = window->titleBar();
     auto* layout = qobject_cast<AnchorLayout*>(titleBar->layout());
@@ -262,8 +261,10 @@ void createTitleBarContent(Window* window) {
 
     auto* appIcon = new Label(titleBar);
     appIcon->setFixedSize(TitleBarAppIconSize, TitleBarAppIconSize);
-    appIcon->setPixmap(createWindowAppIcon().pixmap(QSize(TitleBarAppIconSize, TitleBarAppIconSize)));
-    anchorFromLeft(layout, appIcon, titleBar, titleBar, Edge::Left, titleBar->systemReservedLeadingWidth() + 8);
+    appIcon->setPixmap(
+        createWindowAppIcon().pixmap(QSize(TitleBarAppIconSize, TitleBarAppIconSize)));
+    anchorFromLeft(layout, appIcon, titleBar, titleBar, Edge::Left,
+                   titleBar->systemReservedLeadingWidth() + 8);
 
     auto* pane = createTitleBarIconButton(Typography::Icons::GlobalNav, titleBar);
     anchorFromLeft(layout, pane, titleBar, appIcon, Edge::Right, 10);
@@ -278,11 +279,7 @@ void createTitleBarContent(Window* window) {
     anchorFromLeft(layout, search, titleBar, title, Edge::Right, 12);
 
     auto* avatar = createTitleBarAvatar(titleBar);
-    anchorFromRight(layout,
-                    avatar,
-                    titleBar,
-                    titleBar,
-                    Edge::Right,
+    anchorFromRight(layout, avatar, titleBar, titleBar, Edge::Right,
                     -(titleBar->systemReservedTrailingWidth() + 8));
 
     auto* favorite = createTitleBarIconButton(Typography::Icons::FavoriteStar, titleBar);
@@ -295,7 +292,8 @@ void createTitleBarContent(Window* window) {
     anchorFromRight(layout, link, titleBar, share, Edge::Left, -6);
 }
 
-QWidget* createWindowContent() {
+QWidget* createWindowContent()
+{
     auto* content = new QWidget();
     auto* contentLayout = new QVBoxLayout(content);
     contentLayout->setContentsMargins(24, 28, 24, 24);
@@ -305,12 +303,12 @@ QWidget* createWindowContent() {
     heading->setFluentTypography(Typography::FontRole::Title);
     contentLayout->addWidget(heading);
 
-    auto* body = new Label(
-        "On macOS, native traffic lights stay on the left; repeatedly drag the empty "
-        "title-bar area with the built-in trackpad to verify native system movement. "
-        "On Windows, the caption buttons are drawn by Qt while DWM still provides "
-        "resize, Snap, shadow, and maximize geometry.",
-        content);
+    auto* body =
+        new Label("On macOS, native traffic lights stay on the left; repeatedly drag the empty "
+                  "title-bar area with the built-in trackpad to verify native system movement. "
+                  "On Windows, the caption buttons are drawn by Qt while DWM still provides "
+                  "resize, Snap, shadow, and maximize geometry.",
+                  content);
     body->setFluentTypography(Typography::FontRole::Body);
     body->setWordWrap(true);
     contentLayout->addWidget(body);
@@ -319,7 +317,8 @@ QWidget* createWindowContent() {
     return content;
 }
 
-WindowVisualLauncher createWindowVisualLauncher() {
+WindowVisualLauncher createWindowVisualLauncher()
+{
     WindowVisualLauncher ui;
 
     auto* launcher = new QWidget();
@@ -342,7 +341,8 @@ WindowVisualLauncher createWindowVisualLauncher() {
     return ui;
 }
 
-void showOrActivateVisualWindow(QPointer<Window>& appWindow, QWidget* launcher) {
+void showOrActivateVisualWindow(QPointer<Window>& appWindow, QWidget* launcher)
+{
     if (!appWindow) {
         appWindow = new Window();
         appWindow->setAttribute(Qt::WA_DeleteOnClose);
@@ -364,31 +364,30 @@ class WindowTest : public ::testing::Test {
 protected:
 };
 
-TEST_F(WindowTest, RequestHandlerCanSynchronouslyDeleteWindow) {
+TEST_F(WindowTest, RequestHandlerCanSynchronouslyDeleteWindow)
+{
     auto* window = new Window;
     QPointer<Window> guard(window);
-    QObject::connect(window, &Window::minimizeRequested, qApp, [window] {
-        delete window;
-    });
+    QObject::connect(window, &Window::minimizeRequested, qApp, [window] { delete window; });
 
     window->minimizeWindow();
 
     EXPECT_TRUE(guard.isNull());
 }
 
-TEST_F(WindowTest, MaximizeRequestHandlerCanSynchronouslyDeleteWindow) {
+TEST_F(WindowTest, MaximizeRequestHandlerCanSynchronouslyDeleteWindow)
+{
     auto* window = new Window;
     QPointer<Window> guard(window);
-    QObject::connect(window, &Window::maximizeRequested, qApp, [window] {
-        delete window;
-    });
+    QObject::connect(window, &Window::maximizeRequested, qApp, [window] { delete window; });
 
     window->toggleMaximizeRestore();
 
     EXPECT_TRUE(guard.isNull());
 }
 
-TEST_F(WindowTest, DefaultConstructionCreatesChromeAndContentHost) {
+TEST_F(WindowTest, DefaultConstructionCreatesChromeAndContentHost)
+{
     Window window;
 
     ASSERT_NE(window.titleBar(), nullptr);
@@ -400,15 +399,16 @@ TEST_F(WindowTest, DefaultConstructionCreatesChromeAndContentHost) {
     EXPECT_EQ(window.titleBar()->sizeHint().height(), window.titleBar()->titleBarHeight());
     EXPECT_EQ(window.graphicsEffect(), nullptr);
 
-    const bool linuxPlatform = WindowChromeCompat::currentPlatform()
-        == WindowChromeCompat::Platform::Linux;
+    const bool linuxPlatform =
+        WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::Linux;
     EXPECT_EQ(window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameHost")) != nullptr,
               linuxPlatform);
     EXPECT_EQ(window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameEdgeOverlay")) != nullptr,
               linuxPlatform);
 }
 
-TEST_F(WindowTest, RuntimeCanUseOpaqueTitleBarAndCachedPaintedSurface) {
+TEST_F(WindowTest, RuntimeCanUseOpaqueTitleBarAndCachedPaintedSurface)
+{
     auto capabilities = compatibility::detail::runtimePlatformCapabilities();
     capabilities.customWindowChromePreferred = true;
     capabilities.hostsApplicationWindowsInDesktopSurface = true;
@@ -422,8 +422,7 @@ TEST_F(WindowTest, RuntimeCanUseOpaqueTitleBarAndCachedPaintedSurface) {
     if (window.layout())
         window.layout()->activate();
 
-    ASSERT_EQ(window.backdropState().surfaceMode,
-              BackdropSurfaceMode::PaintedOpaque);
+    ASSERT_EQ(window.backdropState().surfaceMode, BackdropSurfaceMode::PaintedOpaque);
     ASSERT_NE(window.titleBar(), nullptr);
     EXPECT_TRUE(window.titleBar()->testAttribute(Qt::WA_OpaquePaintEvent));
     EXPECT_TRUE(window.titleBar()->isWindowActive());
@@ -432,8 +431,7 @@ TEST_F(WindowTest, RuntimeCanUseOpaqueTitleBarAndCachedPaintedSurface) {
     QApplication::sendEvent(window.titleBar(), &deactivateEvent);
     EXPECT_TRUE(window.titleBar()->isWindowActive());
 
-    QImage titleImage(window.titleBar()->size(),
-                      QImage::Format_ARGB32_Premultiplied);
+    QImage titleImage(window.titleBar()->size(), QImage::Format_ARGB32_Premultiplied);
     titleImage.fill(Qt::transparent);
     window.titleBar()->render(&titleImage);
     EXPECT_TRUE(imageIsFullyOpaque(titleImage));
@@ -441,16 +439,13 @@ TEST_F(WindowTest, RuntimeCanUseOpaqueTitleBarAndCachedPaintedSurface) {
     QImage firstFrame(window.size(), QImage::Format_ARGB32_Premultiplied);
     firstFrame.fill(Qt::transparent);
     window.render(&firstFrame);
-    const int firstGeneration =
-        window.property("fluentPaintedSurfaceCacheGeneration").toInt();
+    const int firstGeneration = window.property("fluentPaintedSurfaceCacheGeneration").toInt();
     EXPECT_GT(firstGeneration, 0);
 
     QImage secondFrame(window.size(), QImage::Format_ARGB32_Premultiplied);
     secondFrame.fill(Qt::transparent);
     window.render(&secondFrame);
-    EXPECT_EQ(
-        window.property("fluentPaintedSurfaceCacheGeneration").toInt(),
-        firstGeneration);
+    EXPECT_EQ(window.property("fluentPaintedSurfaceCacheGeneration").toInt(), firstGeneration);
 
     window.resize(560, 360);
     if (window.layout())
@@ -458,19 +453,15 @@ TEST_F(WindowTest, RuntimeCanUseOpaqueTitleBarAndCachedPaintedSurface) {
     QImage resizedFrame(window.size(), QImage::Format_ARGB32_Premultiplied);
     resizedFrame.fill(Qt::transparent);
     window.render(&resizedFrame);
-    EXPECT_GT(
-        window.property("fluentPaintedSurfaceCacheGeneration").toInt(),
-        firstGeneration);
+    EXPECT_GT(window.property("fluentPaintedSurfaceCacheGeneration").toInt(), firstGeneration);
 }
 
-TEST_F(WindowTest, ApplicationSuppliesCaptionButtonAccessibleNames) {
+TEST_F(WindowTest, ApplicationSuppliesCaptionButtonAccessibleNames)
+{
     Window window;
-    auto* minimizeButton =
-        window.findChild<Button*>(QStringLiteral("fluentWindowMinimizeButton"));
-    auto* maximizeButton =
-        window.findChild<Button*>(QStringLiteral("fluentWindowMaximizeButton"));
-    auto* closeButton =
-        window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
+    auto* minimizeButton = window.findChild<Button*>(QStringLiteral("fluentWindowMinimizeButton"));
+    auto* maximizeButton = window.findChild<Button*>(QStringLiteral("fluentWindowMaximizeButton"));
+    auto* closeButton = window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
 
     if (!minimizeButton || !maximizeButton || !closeButton)
         GTEST_SKIP() << "The current platform uses native caption buttons";
@@ -480,16 +471,15 @@ TEST_F(WindowTest, ApplicationSuppliesCaptionButtonAccessibleNames) {
     EXPECT_TRUE(closeButton->accessibleName().isEmpty());
 
     window.setCaptionButtonAccessibleNames(
-        QStringLiteral("Minimize window"),
-        QStringLiteral("Maximize window"),
-        QStringLiteral("Close window"),
-        QStringLiteral("Restore window"));
+        QStringLiteral("Minimize window"), QStringLiteral("Maximize window"),
+        QStringLiteral("Close window"), QStringLiteral("Restore window"));
     EXPECT_EQ(minimizeButton->accessibleName(), QStringLiteral("Minimize window"));
     EXPECT_EQ(maximizeButton->accessibleName(), QStringLiteral("Maximize window"));
     EXPECT_EQ(closeButton->accessibleName(), QStringLiteral("Close window"));
 }
 
-TEST_F(WindowTest, TitleBarHeightIsConfigurable) {
+TEST_F(WindowTest, TitleBarHeightIsConfigurable)
+{
     TitleBar titleBar;
     QSignalSpy heightSpy(&titleBar, &TitleBar::titleBarHeightChanged);
     QSignalSpy chromeSpy(&titleBar, &TitleBar::chromeGeometryChanged);
@@ -515,10 +505,12 @@ TEST_F(WindowTest, TitleBarHeightIsConfigurable) {
     EXPECT_EQ(chromeSpy.count(), 2);
 }
 
-TEST_F(WindowTest, NativeMacModeUsesUnifiedTitleBar) {
+TEST_F(WindowTest, NativeMacModeUsesUnifiedTitleBar)
+{
     Window window;
     const bool customChrome = WindowChromeCompat::platformPrefersCustomWindowChrome();
-    const bool macPlatform = (WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::MacOS);
+    const bool macPlatform =
+        (WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::MacOS);
     const bool cocoaRuntime = QGuiApplication::platformName() == QStringLiteral("cocoa");
 
     if (macPlatform) {
@@ -545,7 +537,8 @@ TEST_F(WindowTest, NativeMacModeUsesUnifiedTitleBar) {
     }
 }
 
-TEST_F(WindowTest, TitleBarPublishesWindowActivationState) {
+TEST_F(WindowTest, TitleBarPublishesWindowActivationState)
+{
     TitleBar titleBar;
     QSignalSpy activeSpy(&titleBar, &TitleBar::windowActiveChanged);
 
@@ -567,7 +560,8 @@ TEST_F(WindowTest, TitleBarPublishesWindowActivationState) {
     EXPECT_FALSE(activeSpy.takeFirst().at(0).toBool());
 }
 
-TEST_F(WindowTest, ClientCaptionForegroundTracksWindowActivation) {
+TEST_F(WindowTest, ClientCaptionForegroundTracksWindowActivation)
+{
     Window window;
     auto* closeButton = window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
     if (!closeButton)
@@ -585,7 +579,8 @@ TEST_F(WindowTest, ClientCaptionForegroundTracksWindowActivation) {
     EXPECT_DOUBLE_EQ(closeButton->contentOpacity(), 1.0);
 }
 
-TEST_F(WindowTest, TopLevelShowSmoke) {
+TEST_F(WindowTest, TopLevelShowSmoke)
+{
     Window window;
     window.resize(520, 560);
     window.show();
@@ -597,7 +592,8 @@ TEST_F(WindowTest, TopLevelShowSmoke) {
     window.close();
 }
 
-TEST_F(WindowTest, BackdropBackingStoreMatchesResolvedSurface) {
+TEST_F(WindowTest, BackdropBackingStoreMatchesResolvedSurface)
+{
     Window window;
 #ifdef Q_OS_LINUX
     window.setCustomWindowChromeEnabled(true);
@@ -609,10 +605,8 @@ TEST_F(WindowTest, BackdropBackingStoreMatchesResolvedSurface) {
     const int clientFrameMargin = window.chromeFrameRect().left();
     const BackdropState state = window.backdropState();
     const bool hasBackdropSurface =
-        state.surfaceMode == BackdropSurfaceMode::CompositedTransparent
-        || clientFrameMargin > 0;
-    if (!window.testAttribute(Qt::WA_TranslucentBackground)
-        || !hasBackdropSurface) {
+        state.surfaceMode == BackdropSurfaceMode::CompositedTransparent || clientFrameMargin > 0;
+    if (!window.testAttribute(Qt::WA_TranslucentBackground) || !hasBackdropSurface) {
         SCOPED_TRACE(QStringLiteral("provider=%1 reason=%2")
                          .arg(window.backdropCapabilities().provider, state.reason)
                          .toStdString());
@@ -677,7 +671,8 @@ TEST_F(WindowTest, BackdropBackingStoreMatchesResolvedSurface) {
     window.close();
 }
 
-TEST_F(WindowTest, BackdropEffectSwitchesModes) {
+TEST_F(WindowTest, BackdropEffectSwitchesModes)
+{
     Window window;
     const bool platformTranslucent = window.testAttribute(Qt::WA_TranslucentBackground);
     EXPECT_TRUE(fluentMetaTypeNameIsRegistered("BackdropEffect"));
@@ -687,8 +682,7 @@ TEST_F(WindowTest, BackdropEffectSwitchesModes) {
     ASSERT_TRUE(effectSpy.isValid());
     ASSERT_TRUE(stateSpy.isValid());
 
-    const auto expectState = [&](BackdropEffect effect,
-                                 BackdropSurfaceMode expectedSurfaceMode) {
+    const auto expectState = [&](BackdropEffect effect, BackdropSurfaceMode expectedSurfaceMode) {
         window.setBackdropEffect(effect);
         const BackdropState state = window.backdropState();
 
@@ -709,12 +703,13 @@ TEST_F(WindowTest, BackdropEffectSwitchesModes) {
     expectState(BackdropEffect::Solid, BackdropSurfaceMode::SolidOpaque);
     expectState(BackdropEffect::Mica, BackdropSurfaceMode::PaintedOpaque);
     expectState(BackdropEffect::Acrylic, BackdropSurfaceMode::PaintedOpaque);
-    window.setBackdropEffect(BackdropEffect::Acrylic);  // no-op must not notify
+    window.setBackdropEffect(BackdropEffect::Acrylic); // no-op must not notify
     EXPECT_EQ(effectSpy.count(), 3);
     EXPECT_EQ(stateSpy.count(), 3);
 }
 
-TEST_F(WindowTest, BackdropCapabilityHelpersResolvePerEffect) {
+TEST_F(WindowTest, BackdropCapabilityHelpersResolvePerEffect)
+{
     BackdropCapabilities nativeMica;
     nativeMica.alphaSurfaceSupported = true;
     nativeMica.nativeMica = true;
@@ -741,7 +736,8 @@ TEST_F(WindowTest, BackdropCapabilityHelpersResolvePerEffect) {
     EXPECT_FALSE(compositor.supportsTransparentMaterial(BackdropEffect::Acrylic));
 }
 
-TEST_F(WindowTest, TypedBackdropStatePublishesToDescendants) {
+TEST_F(WindowTest, TypedBackdropStatePublishesToDescendants)
+{
     QWidget topLevel;
     QWidget child(&topLevel);
 
@@ -779,7 +775,8 @@ TEST_F(WindowTest, TypedBackdropStatePublishesToDescendants) {
     EXPECT_TRUE(fluent::windowing::windowHasMaterialBackdrop(&child));
 }
 
-TEST_F(WindowTest, PaintedBackdropMaterialsAreOpaqueDistinctAndDeterministic) {
+TEST_F(WindowTest, PaintedBackdropMaterialsAreOpaqueDistinctAndDeterministic)
+{
     for (bool dark : {false, true}) {
         const QImage solid = renderBackdropMaterial(BackdropEffect::Solid, dark);
         const QImage mica = renderBackdropMaterial(BackdropEffect::Mica, dark);
@@ -800,7 +797,8 @@ TEST_F(WindowTest, PaintedBackdropMaterialsAreOpaqueDistinctAndDeterministic) {
     }
 }
 
-TEST_F(WindowTest, PaintedAcrylicKeepsBroadAccentGlassField) {
+TEST_F(WindowTest, PaintedAcrylicKeepsBroadAccentGlassField)
+{
     const QImage acrylic = renderBackdropMaterial(BackdropEffect::Acrylic, false);
     const QColor upperLeft = acrylic.pixelColor(12, 12);
     const QColor upperRight = acrylic.pixelColor(acrylic.width() - 12, 12);
@@ -811,7 +809,8 @@ TEST_F(WindowTest, PaintedAcrylicKeepsBroadAccentGlassField) {
     EXPECT_GT(rightCoolChroma, leftCoolChroma + 10);
 }
 
-TEST_F(WindowTest, WindowsCustomChromeSuppressesNativeCaption) {
+TEST_F(WindowTest, WindowsCustomChromeSuppressesNativeCaption)
+{
 #ifdef Q_OS_WIN
     Window window;
     window.resize(520, 360);
@@ -856,7 +855,8 @@ TEST_F(WindowTest, WindowsCustomChromeSuppressesNativeCaption) {
 #endif
 }
 
-TEST_F(WindowTest, WindowsNativeHitTestRepairsLostResizeStyle) {
+TEST_F(WindowTest, WindowsNativeHitTestRepairsLostResizeStyle)
+{
 #ifdef Q_OS_WIN
     NativeEventTestWindow window;
     window.resize(520, 360);
@@ -864,8 +864,8 @@ TEST_F(WindowTest, WindowsNativeHitTestRepairsLostResizeStyle) {
     QApplication::processEvents();
 
     const QString platformName = QGuiApplication::platformName().toLower();
-    if (platformName.contains(QStringLiteral("offscreen"))
-        || platformName.contains(QStringLiteral("minimal"))) {
+    if (platformName.contains(QStringLiteral("offscreen")) ||
+        platformName.contains(QStringLiteral("minimal"))) {
         window.close();
         GTEST_SKIP() << "Native Win32 hit testing requires the Windows platform plugin";
     }
@@ -881,8 +881,7 @@ TEST_F(WindowTest, WindowsNativeHitTestRepairsLostResizeStyle) {
 
     RECT clientRect = {};
     ASSERT_TRUE(GetClientRect(hwnd, &clientRect));
-    POINT nativeEdge = {clientRect.left + 1,
-                        (clientRect.top + clientRect.bottom) / 2};
+    POINT nativeEdge = {clientRect.left + 1, (clientRect.top + clientRect.bottom) / 2};
     ASSERT_TRUE(ClientToScreen(hwnd, &nativeEdge));
     MSG message = {};
     message.hwnd = hwnd;
@@ -895,8 +894,7 @@ TEST_F(WindowTest, WindowsNativeHitTestRepairsLostResizeStyle) {
     EXPECT_NE(GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_THICKFRAME, 0)
         << "Win10/Qt 6.2 must repair a resize style lost during a native transition";
 
-    nativeEdge = {clientRect.right - 2,
-                  (clientRect.top + clientRect.bottom) / 2};
+    nativeEdge = {clientRect.right - 2, (clientRect.top + clientRect.bottom) / 2};
     ASSERT_TRUE(ClientToScreen(hwnd, &nativeEdge));
     message.lParam = MAKELPARAM(nativeEdge.x, nativeEdge.y);
     result = HTCLIENT;
@@ -910,7 +908,8 @@ TEST_F(WindowTest, WindowsNativeHitTestRepairsLostResizeStyle) {
 #endif
 }
 
-TEST_F(WindowTest, WindowsStateTransitionRepairsLostResizeStyle) {
+TEST_F(WindowTest, WindowsStateTransitionRepairsLostResizeStyle)
+{
 #ifdef Q_OS_WIN
     Window window;
     window.resize(520, 360);
@@ -918,8 +917,8 @@ TEST_F(WindowTest, WindowsStateTransitionRepairsLostResizeStyle) {
     QApplication::processEvents();
 
     const QString platformName = QGuiApplication::platformName().toLower();
-    if (platformName.contains(QStringLiteral("offscreen"))
-        || platformName.contains(QStringLiteral("minimal"))) {
+    if (platformName.contains(QStringLiteral("offscreen")) ||
+        platformName.contains(QStringLiteral("minimal"))) {
         window.close();
         GTEST_SKIP() << "Native Win32 style recovery requires the Windows platform plugin";
     }
@@ -946,7 +945,8 @@ TEST_F(WindowTest, WindowsStateTransitionRepairsLostResizeStyle) {
 #endif
 }
 
-TEST_F(WindowTest, WindowsCustomTitleBarSharesNativeCaptionRow) {
+TEST_F(WindowTest, WindowsCustomTitleBarSharesNativeCaptionRow)
+{
 #ifdef Q_OS_WIN
     const QString platformName = QGuiApplication::platformName().toLower();
     if (platformName.contains(QStringLiteral("offscreen")) ||
@@ -979,7 +979,8 @@ TEST_F(WindowTest, WindowsCustomTitleBarSharesNativeCaptionRow) {
 #endif
 }
 
-TEST_F(WindowTest, WindowsWinUiLayoutUsesSelfDrawnCaptionButtons) {
+TEST_F(WindowTest, WindowsWinUiLayoutUsesSelfDrawnCaptionButtons)
+{
 #ifdef Q_OS_WIN
     Window window;
     window.setWindowTitle("Fluent Window");
@@ -1015,7 +1016,8 @@ TEST_F(WindowTest, WindowsWinUiLayoutUsesSelfDrawnCaptionButtons) {
 #endif
 }
 
-TEST_F(WindowTest, WindowsCloseCaptionButtonHoverUsesCriticalRed) {
+TEST_F(WindowTest, WindowsCloseCaptionButtonHoverUsesCriticalRed)
+{
 #ifdef Q_OS_WIN
     Window window;
     window.resize(640, 420);
@@ -1043,7 +1045,8 @@ TEST_F(WindowTest, WindowsCloseCaptionButtonHoverUsesCriticalRed) {
 #endif
 }
 
-TEST_F(WindowTest, PrepareForNativeRestoreClearsCaptionButtonPointerState) {
+TEST_F(WindowTest, PrepareForNativeRestoreClearsCaptionButtonPointerState)
+{
     Window window;
     window.setCustomWindowChromeEnabled(true);
     window.resize(640, 420);
@@ -1066,7 +1069,8 @@ TEST_F(WindowTest, PrepareForNativeRestoreClearsCaptionButtonPointerState) {
     EXPECT_FALSE(closeButton->underMouse());
 }
 
-TEST_F(WindowTest, WindowsSelfDrawnCaptionButtonsDriveWindowSlots) {
+TEST_F(WindowTest, WindowsSelfDrawnCaptionButtonsDriveWindowSlots)
+{
 #ifdef Q_OS_WIN
     Window window;
     window.resize(640, 420);
@@ -1103,7 +1107,8 @@ TEST_F(WindowTest, WindowsSelfDrawnCaptionButtonsDriveWindowSlots) {
 #endif
 }
 
-TEST_F(WindowTest, WindowsSelfDrawnCaptionButtonsAreHitTestExclusions) {
+TEST_F(WindowTest, WindowsSelfDrawnCaptionButtonsAreHitTestExclusions)
+{
 #ifdef Q_OS_WIN
     Window window;
     window.resize(640, 420);
@@ -1113,20 +1118,18 @@ TEST_F(WindowTest, WindowsSelfDrawnCaptionButtonsAreHitTestExclusions) {
     auto* closeButton = window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
     ASSERT_NE(closeButton, nullptr);
 
-    const QRect closeButtonRect(closeButton->mapTo(window.titleBar(), QPoint(0, 0)), closeButton->size());
+    const QRect closeButtonRect(closeButton->mapTo(window.titleBar(), QPoint(0, 0)),
+                                closeButton->size());
     compatibility::WindowChromeOptions options;
     options.useCustomWindowChrome = true;
     options.titleBarRect = window.titleBar()->geometry();
     options.resizeBorderWidth = 8;
     options.dragExclusionRects = window.titleBar()->dragExclusionRects();
 
-    EXPECT_EQ(WindowChromeCompat::classifyHitTest(options,
-                                                  window.size(),
-                                                  closeButtonRect.center()),
+    EXPECT_EQ(WindowChromeCompat::classifyHitTest(options, window.size(), closeButtonRect.center()),
               WindowChromeCompat::HitTest::Client);
-    EXPECT_EQ(WindowChromeCompat::classifyHitTest(options,
-                                                  window.size(),
-                                                  QPoint(120, window.titleBar()->titleBarHeight() / 2)),
+    EXPECT_EQ(WindowChromeCompat::classifyHitTest(
+                  options, window.size(), QPoint(120, window.titleBar()->titleBarHeight() / 2)),
               WindowChromeCompat::HitTest::Caption);
 
     window.close();
@@ -1135,7 +1138,8 @@ TEST_F(WindowTest, WindowsSelfDrawnCaptionButtonsAreHitTestExclusions) {
 #endif
 }
 
-TEST_F(WindowTest, ContentWidgetInsertionAndReplacement) {
+TEST_F(WindowTest, ContentWidgetInsertionAndReplacement)
+{
     Window window;
     auto* first = new Label("first");
     auto* second = new Label("second");
@@ -1155,7 +1159,8 @@ TEST_F(WindowTest, ContentWidgetInsertionAndReplacement) {
     delete first;
 }
 
-TEST_F(WindowTest, TitleBarHostsExternalContentAfterSystemArea) {
+TEST_F(WindowTest, TitleBarHostsExternalContentAfterSystemArea)
+{
     TitleBar titleBar;
     titleBar.resize(720, titleBar.titleBarHeight());
 
@@ -1204,7 +1209,8 @@ TEST_F(WindowTest, TitleBarHostsExternalContentAfterSystemArea) {
     EXPECT_GE(titleBar.dragExclusionRects().size(), 2);
 }
 
-TEST_F(WindowTest, TitleBarAutoSuggestClearButtonWorksWhilePopupOpen) {
+TEST_F(WindowTest, TitleBarAutoSuggestClearButtonWorksWhilePopupOpen)
+{
     Window window;
     window.resize(860, 420);
     window.setWindowTitle("Fluent Window");
@@ -1229,9 +1235,8 @@ TEST_F(WindowTest, TitleBarAutoSuggestClearButtonWorksWhilePopupOpen) {
     const QPoint clearCenterGlobal = clearButton->mapToGlobal(clearButton->rect().center());
     QWidget* hitWidget = QApplication::widgetAt(clearCenterGlobal);
 #if !defined(Q_OS_WIN) && !defined(Q_OS_MAC)
-    if (!hitWidget
-        && QGuiApplication::platformName().compare(QStringLiteral("xcb"),
-                                                   Qt::CaseInsensitive) == 0) {
+    if (!hitWidget &&
+        QGuiApplication::platformName().compare(QStringLiteral("xcb"), Qt::CaseInsensitive) == 0) {
         hitWidget = clearButton;
     }
 #endif
@@ -1252,31 +1257,36 @@ TEST_F(WindowTest, TitleBarAutoSuggestClearButtonWorksWhilePopupOpen) {
     window.close();
 }
 
-TEST_F(WindowTest, TitleBarDoubleClickEmitsFromNonInteractiveArea) {
+TEST_F(WindowTest, TitleBarDoubleClickEmitsFromNonInteractiveArea)
+{
     TitleBar titleBar;
     titleBar.resize(720, titleBar.titleBarHeight());
     titleBar.show();
     QApplication::processEvents();
 
     QSignalSpy doubleClickSpy(&titleBar, &TitleBar::doubleClicked);
-    QTest::mouseDClick(&titleBar, Qt::LeftButton, Qt::NoModifier, QPoint(320, titleBar.titleBarHeight() / 2));
+    QTest::mouseDClick(&titleBar, Qt::LeftButton, Qt::NoModifier,
+                       QPoint(320, titleBar.titleBarHeight() / 2));
 
     EXPECT_EQ(doubleClickSpy.count(), 1);
 }
 
-TEST_F(WindowTest, WindowTitleBarDoubleClickDoesNotCrash) {
+TEST_F(WindowTest, WindowTitleBarDoubleClickDoesNotCrash)
+{
     Window window;
     window.resize(640, 420);
     window.show();
     QApplication::processEvents();
 
-    QTest::mouseDClick(window.titleBar(), Qt::LeftButton, Qt::NoModifier, QPoint(320, window.titleBar()->titleBarHeight() / 2));
+    QTest::mouseDClick(window.titleBar(), Qt::LeftButton, Qt::NoModifier,
+                       QPoint(320, window.titleBar()->titleBarHeight() / 2));
     QApplication::processEvents();
 
     SUCCEED();
 }
 
-TEST_F(WindowTest, WindowsTitleBarDoubleClickTogglesNativeMaximizeRestore) {
+TEST_F(WindowTest, WindowsTitleBarDoubleClickTogglesNativeMaximizeRestore)
+{
 #ifdef Q_OS_WIN
     const QString platformName = QGuiApplication::platformName().toLower();
     if (platformName.contains(QStringLiteral("offscreen")) ||
@@ -1289,15 +1299,11 @@ TEST_F(WindowTest, WindowsTitleBarDoubleClickTogglesNativeMaximizeRestore) {
     window.show();
     QApplication::processEvents();
 
-    QTest::mouseDClick(window.titleBar(),
-                       Qt::LeftButton,
-                       Qt::NoModifier,
+    QTest::mouseDClick(window.titleBar(), Qt::LeftButton, Qt::NoModifier,
                        QPoint(320, window.titleBar()->titleBarHeight() / 2));
     QTRY_VERIFY_WITH_TIMEOUT(window.isMaximized(), 3000);
 
-    QTest::mouseDClick(window.titleBar(),
-                       Qt::LeftButton,
-                       Qt::NoModifier,
+    QTest::mouseDClick(window.titleBar(), Qt::LeftButton, Qt::NoModifier,
                        QPoint(320, window.titleBar()->titleBarHeight() / 2));
     QTRY_VERIFY_WITH_TIMEOUT(!window.isMaximized(), 3000);
 
@@ -1307,7 +1313,8 @@ TEST_F(WindowTest, WindowsTitleBarDoubleClickTogglesNativeMaximizeRestore) {
 #endif
 }
 
-TEST_F(WindowTest, ThemeSwitchNoCrash) {
+TEST_F(WindowTest, ThemeSwitchNoCrash)
+{
     Window window;
 
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
@@ -1318,7 +1325,8 @@ TEST_F(WindowTest, ThemeSwitchNoCrash) {
     SUCCEED();
 }
 
-TEST_F(WindowTest, LocalThemeOverrideRefreshesTitleBarAndContent) {
+TEST_F(WindowTest, LocalThemeOverrideRefreshesTitleBarAndContent)
+{
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
 
     Window window;
@@ -1347,7 +1355,8 @@ TEST_F(WindowTest, LocalThemeOverrideRefreshesTitleBarAndContent) {
     EXPECT_EQ(body->palette().color(QPalette::WindowText), body->themeColors().textPrimary);
 }
 
-TEST_F(WindowTest, ExternalTitleBarActionsCanDriveWindowSlots) {
+TEST_F(WindowTest, ExternalTitleBarActionsCanDriveWindowSlots)
+{
     Window window;
     auto* content = new QWidget();
     auto* layout = new QHBoxLayout(content);
@@ -1366,7 +1375,8 @@ TEST_F(WindowTest, ExternalTitleBarActionsCanDriveWindowSlots) {
     QSignalSpy closeSpy(&window, &Window::closeRequested);
 
     QObject::connect(minimizeButton, &QPushButton::clicked, &window, &Window::minimizeWindow);
-    QObject::connect(maximizeButton, &QPushButton::clicked, &window, &Window::toggleMaximizeRestore);
+    QObject::connect(maximizeButton, &QPushButton::clicked, &window,
+                     &Window::toggleMaximizeRestore);
     QObject::connect(closeButton, &QPushButton::clicked, &window, &Window::closeWindow);
 
     minimizeButton->click();
@@ -1382,7 +1392,8 @@ TEST_F(WindowTest, ExternalTitleBarActionsCanDriveWindowSlots) {
     EXPECT_EQ(closeSpy.count(), 1);
 }
 
-TEST_F(WindowTest, TitleBarInteractiveChildrenCreateDragExclusions) {
+TEST_F(WindowTest, TitleBarInteractiveChildrenCreateDragExclusions)
+{
     TitleBar titleBar;
     auto* content = new QWidget();
     auto* layout = new QHBoxLayout(content);
@@ -1398,25 +1409,27 @@ TEST_F(WindowTest, TitleBarInteractiveChildrenCreateDragExclusions) {
     EXPECT_FALSE(exclusions.isEmpty());
 }
 
-TEST_F(WindowTest, WindowingSourcesDoNotContainPlatformMacrosOrNativeHeaders) {
+TEST_F(WindowTest, WindowingSourcesDoNotContainPlatformMacrosOrNativeHeaders)
+{
 #ifndef PROJECT_SOURCE_DIR
 #error PROJECT_SOURCE_DIR must be defined for this test target
 #endif
 
     const QString sourceDir = QString::fromUtf8(PROJECT_SOURCE_DIR) + "/src/components/windowing";
-    const QStringList forbidden = {
-        "Q_OS_WIN",
-        "Q_OS_MAC",
-        "_WIN32",
-        "__APPLE__",
-        QStringLiteral("QT") + QStringLiteral("_VERSION") + QStringLiteral("_CHECK"),
-        "windows.h",
-        "dwmapi.h",
-        "Cocoa",
-        "AppKit"
-    };
+    const QStringList forbidden = {"Q_OS_WIN",
+                                   "Q_OS_MAC",
+                                   "_WIN32",
+                                   "__APPLE__",
+                                   QStringLiteral("QT") + QStringLiteral("_VERSION") +
+                                       QStringLiteral("_CHECK"),
+                                   "windows.h",
+                                   "dwmapi.h",
+                                   "Cocoa",
+                                   "AppKit"};
 
-    QDirIterator it(sourceDir, QStringList() << "*.h" << "*.cpp",
+    QDirIterator it(sourceDir,
+                    QStringList() << "*.h"
+                                  << "*.cpp",
                     QDir::Files, QDirIterator::Subdirectories);
     while (it.hasNext()) {
         QFile file(it.next());
@@ -1430,7 +1443,8 @@ TEST_F(WindowTest, WindowingSourcesDoNotContainPlatformMacrosOrNativeHeaders) {
     }
 }
 
-TEST_F(WindowTest, WindowChromeCompatClassifiesHitTestAreas) {
+TEST_F(WindowTest, WindowChromeCompatClassifiesHitTestAreas)
+{
     compatibility::WindowChromeOptions options;
     options.titleBarRect = QRect(0, 0, 500, 48);
     options.resizeBorderWidth = 8;
@@ -1446,7 +1460,8 @@ TEST_F(WindowTest, WindowChromeCompatClassifiesHitTestAreas) {
               WindowChromeCompat::HitTest::Right);
 }
 
-TEST_F(WindowTest, WindowChromeCompatFallbackIsSafe) {
+TEST_F(WindowTest, WindowChromeCompatFallbackIsSafe)
+{
     QWidget widget;
     WindowChromeCompat chrome(&widget);
     compatibility::FluentNativeEventResult result = 0;
@@ -1457,7 +1472,8 @@ TEST_F(WindowTest, WindowChromeCompatFallbackIsSafe) {
     EXPECT_FALSE(chrome.beginSystemResize(Qt::Edges(), QPoint(0, 0)));
 }
 
-TEST_F(WindowTest, WindowChromeCompatLinuxIsFirstClassPlatform) {
+TEST_F(WindowTest, WindowChromeCompatLinuxIsFirstClassPlatform)
+{
 #ifdef Q_OS_LINUX
     QWidget widget;
     WindowChromeCompat chrome(&widget);
@@ -1475,7 +1491,8 @@ TEST_F(WindowTest, WindowChromeCompatLinuxIsFirstClassPlatform) {
 #endif
 }
 
-TEST_F(WindowTest, LinuxClientSideResizeInputCoversX11AndWayland) {
+TEST_F(WindowTest, LinuxClientSideResizeInputCoversX11AndWayland)
+{
 #ifdef Q_OS_LINUX
     Window window;
     window.setCustomWindowChromeEnabled(true);
@@ -1483,7 +1500,8 @@ TEST_F(WindowTest, LinuxClientSideResizeInputCoversX11AndWayland) {
     window.show();
     QApplication::processEvents();
 
-    auto* frameEdgeOverlay = window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameEdgeOverlay"));
+    auto* frameEdgeOverlay =
+        window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameEdgeOverlay"));
     ASSERT_NE(frameEdgeOverlay, nullptr);
     ASSERT_TRUE(frameEdgeOverlay->isVisible());
     EXPECT_TRUE(frameEdgeOverlay->testAttribute(Qt::WA_TransparentForMouseEvents));
@@ -1506,7 +1524,8 @@ TEST_F(WindowTest, LinuxClientSideResizeInputCoversX11AndWayland) {
 #endif
 }
 
-TEST_F(WindowTest, LinuxCloseCaptionHoverReachesRoundedOuterCorner) {
+TEST_F(WindowTest, LinuxCloseCaptionHoverReachesRoundedOuterCorner)
+{
 #ifdef Q_OS_LINUX
     Window window;
     window.setCustomWindowChromeEnabled(true);
@@ -1526,10 +1545,9 @@ TEST_F(WindowTest, LinuxCloseCaptionHoverReachesRoundedOuterCorner) {
     painter.end();
 
     const QRect frame = window.chromeFrameRect();
-    const int radius = qRound(qMax<qreal>(window.themeRadius().overlay,
-                                         window.themeRadius().control));
-    const QColor cornerHover = image.pixelColor(frame.right() - 1,
-                                                 frame.top() + radius);
+    const int radius =
+        qRound(qMax<qreal>(window.themeRadius().overlay, window.themeRadius().control));
+    const QColor cornerHover = image.pixelColor(frame.right() - 1, frame.top() + radius);
     EXPECT_GT(cornerHover.red(), cornerHover.green() * 2);
     EXPECT_GT(cornerHover.red(), cornerHover.blue() * 2);
     const int topLeftAlpha = image.pixelColor(frame.topLeft()).alpha();
@@ -1547,7 +1565,8 @@ TEST_F(WindowTest, LinuxCloseCaptionHoverReachesRoundedOuterCorner) {
 #endif
 }
 
-TEST_F(WindowTest, ClientSideFrameRoutesMouseInputThroughEdgeZones) {
+TEST_F(WindowTest, ClientSideFrameRoutesMouseInputThroughEdgeZones)
+{
     QWidget host;
     host.resize(320, 240);
     ClientSideFrameEdgeOverlay overlay(&host);
@@ -1576,7 +1595,8 @@ TEST_F(WindowTest, ClientSideFrameRoutesMouseInputThroughEdgeZones) {
 
     const QRect visualRect(16, 16, 288, 208);
     EXPECT_TRUE(topEdge->geometry().contains(QPoint(visualRect.center().x(), visualRect.top())));
-    EXPECT_TRUE(rightEdge->geometry().contains(QPoint(visualRect.right(), visualRect.center().y())));
+    EXPECT_TRUE(
+        rightEdge->geometry().contains(QPoint(visualRect.right(), visualRect.center().y())));
     EXPECT_TRUE(overlay.testAttribute(Qt::WA_TransparentForMouseEvents));
     EXPECT_TRUE(overlay.mask().isEmpty());
 
@@ -1592,7 +1612,8 @@ TEST_F(WindowTest, ClientSideFrameRoutesMouseInputThroughEdgeZones) {
     host.close();
 }
 
-TEST_F(WindowTest, ClientSideFrameCompositeKeepsPartialAlphaAtEveryCorner) {
+TEST_F(WindowTest, ClientSideFrameCompositeKeepsPartialAlphaAtEveryCorner)
+{
     QImage image(QSize(64, 64), QImage::Format_ARGB32_Premultiplied);
     image.fill(Qt::transparent);
 
@@ -1627,9 +1648,9 @@ TEST_F(WindowTest, ClientSideFrameCompositeKeepsPartialAlphaAtEveryCorner) {
                          QSize(cornerSize, cornerSize));
     const QRect bottomLeft(QPoint(frameRect.left(), frameRect.bottom() - cornerSize + 1),
                            QSize(cornerSize, cornerSize));
-    const QRect bottomRight(QPoint(frameRect.right() - cornerSize + 1,
-                                   frameRect.bottom() - cornerSize + 1),
-                            QSize(cornerSize, cornerSize));
+    const QRect bottomRight(
+        QPoint(frameRect.right() - cornerSize + 1, frameRect.bottom() - cornerSize + 1),
+        QSize(cornerSize, cornerSize));
 
     EXPECT_TRUE(hasPartialAlpha(topLeft));
     EXPECT_TRUE(hasPartialAlpha(topRight));
@@ -1637,7 +1658,8 @@ TEST_F(WindowTest, ClientSideFrameCompositeKeepsPartialAlphaAtEveryCorner) {
     EXPECT_TRUE(hasPartialAlpha(bottomRight));
 }
 
-TEST_F(WindowTest, ClientSideFrameOverlayDoesNotClearHostBackingPixels) {
+TEST_F(WindowTest, ClientSideFrameOverlayDoesNotClearHostBackingPixels)
+{
     SquareSurfaceWidget host;
     host.setAttribute(Qt::WA_TranslucentBackground, true);
     host.resize(64, 64);
@@ -1672,15 +1694,16 @@ TEST_F(WindowTest, ClientSideFrameOverlayDoesNotClearHostBackingPixels) {
     EXPECT_EQ(image.pixelColor(frameRect.bottomLeft()).alpha(), 255);
     EXPECT_EQ(image.pixelColor(frameRect.bottomRight()).alpha(), 255);
 
-    const QColor topRightFill = image.pixelColor(frameRect.right() - 1,
-                                                 frameRect.top() + qRound(options.radius));
+    const QColor topRightFill =
+        image.pixelColor(frameRect.right() - 1, frameRect.top() + qRound(options.radius));
     EXPECT_GT(topRightFill.red(), topRightFill.green() * 2);
     EXPECT_GT(topRightFill.red(), topRightFill.blue() * 2);
 
     host.close();
 }
 
-TEST_F(WindowTest, WindowChromeCompatRejectsIneligibleWidgets) {
+TEST_F(WindowTest, WindowChromeCompatRejectsIneligibleWidgets)
+{
     QWidget parent;
     QWidget child(&parent);
     parent.resize(240, 160);
@@ -1698,7 +1721,8 @@ TEST_F(WindowTest, WindowChromeCompatRejectsIneligibleWidgets) {
     parent.close();
 }
 
-TEST_F(WindowTest, WindowsHitTestClassificationSkippedOffWindows) {
+TEST_F(WindowTest, WindowsHitTestClassificationSkippedOffWindows)
+{
 #ifdef Q_OS_WIN
     compatibility::WindowChromeOptions options;
     options.titleBarRect = QRect(0, 0, 640, 48);
@@ -1715,7 +1739,8 @@ TEST_F(WindowTest, WindowsHitTestClassificationSkippedOffWindows) {
 #endif
 }
 
-TEST_F(WindowTest, WindowsMaximizedCustomChromeFillsAvailableGeometry) {
+TEST_F(WindowTest, WindowsMaximizedCustomChromeFillsAvailableGeometry)
+{
 #ifdef Q_OS_WIN
     if (!WindowChromeCompat::platformPrefersCustomWindowChrome())
         GTEST_SKIP() << "Windows custom chrome is disabled";
@@ -1764,7 +1789,8 @@ TEST_F(WindowTest, WindowsMaximizedCustomChromeFillsAvailableGeometry) {
 #endif
 }
 
-TEST_F(WindowTest, VisualCheck) {
+TEST_F(WindowTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -1772,9 +1798,8 @@ TEST_F(WindowTest, VisualCheck) {
     const WindowVisualLauncher launcher = createWindowVisualLauncher();
     QPointer<Window> appWindow;
 
-    QObject::connect(launcher.showButton, &QPushButton::clicked, launcher.window, [&]() {
-        showOrActivateVisualWindow(appWindow, launcher.window);
-    });
+    QObject::connect(launcher.showButton, &QPushButton::clicked, launcher.window,
+                     [&]() { showOrActivateVisualWindow(appWindow, launcher.window); });
 
     QObject::connect(launcher.window, &QObject::destroyed, qApp, [&]() {
         if (appWindow)
