@@ -36,6 +36,7 @@ standalone reading tasks.
     - [Build Workflow](development/build-workflow.md)
     - [Testing Workflow](development/testing-workflow.md)
     - [Qt Component Test Conventions](development/qt-component-test-conventions.md)
+    - [CI workflow](development/ci-workflow.md)
     - [Logging Workflow](development/logging-workflow.md)
     - [Visual Review](development/visual-review.md)
     - [App Visual Geometry Verification](development/app-visual-geometry-verification.md)
@@ -77,6 +78,8 @@ standalone reading tasks.
     - [PySide6 manylinux build and audit policy](../bindings/pyside6/MANYLINUX.md)
     - [Python Publishing Runbook](../bindings/pyside6/PUBLISHING.md)
     - [PySide6 compatibility and coverage](../bindings/pyside6/ROADMAP.md)
+  - **Historical records**
+    - [Python publication history](../bindings/pyside6/publication-history.md)
 - [Releases](releases/README.md)
   - **1.8**
     - [Fluent-Qt 1.8.0](releases/v1.8.0.md)

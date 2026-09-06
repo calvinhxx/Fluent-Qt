@@ -21,6 +21,7 @@ so a dated roadmap cannot be mistaken for current guidance.
 | Build the repository locally | [Build workflow](build-workflow.md) | The selected job count printed by the adaptive wrapper |
 | Prepare a commit or pull request | [Testing workflow: local static gate](testing-workflow.md#local-static-gate) | Staged formatting and generated-output freshness checks |
 | Write or update a test | [Testing workflow](testing-workflow.md) | [Qt component test conventions](qt-component-test-conventions.md) |
+| Change CI classification, matrices, or workflow ownership | [CI workflow](ci-workflow.md) | Classifier, matrix, and workflow boundary checks |
 | Diagnose behavior | [Logging workflow](logging-workflow.md) | Focused component tests |
 | Change Linux or WebAssembly support | [Linux](linux-workflow.md) or [WebAssembly](webassembly-workflow.md) | The matching preset and CI lane |
 | Package desktop artifacts | [Packaging workflow](packaging-workflow.md) | Package smoke tests |
@@ -40,6 +41,7 @@ so a dated roadmap cannot be mistaken for current guidance.
 - [Build workflow](build-workflow.md)
 - [Testing workflow](testing-workflow.md)
 - [Qt component test conventions](qt-component-test-conventions.md)
+- [CI workflow](ci-workflow.md)
 - [Logging workflow](logging-workflow.md)
 - [Visual review](visual-review.md)
 - [App visual geometry verification](app-visual-geometry-verification.md)
@@ -110,6 +112,7 @@ new guidance.
 - [WebAssembly delivery record](webassembly-roadmap.md)
 - [System capability delivery record](system-capability-roadmap.md)
 - [Component API audit](component-api-audit.md)
+- [Python publication history](../../bindings/pyside6/publication-history.md)
 - [Release notes](../releases/README.md)
 
 ## Documentation maintenance

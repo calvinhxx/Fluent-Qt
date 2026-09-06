@@ -8,9 +8,56 @@
 [Contents](../SUMMARY.md) · [Development index](README.md) · [Testing Workflow →](testing-workflow.md)
 <!-- docs-nav:top:end -->
 
-Use the adaptive build wrapper for local repository builds. It selects a
-bounded parallel job count from the resources available to the current process
-instead of imposing one repository-wide value:
+Run commands from the repository root. Reuse an existing configured build
+when its toolchain and options still match the task.
+
+## First-use setup
+
+The public [CMake presets](../../CMakePresets.json) require CMake 3.25+; the
+library's direct CMake build still supports 3.16+. Install a C++17 toolchain,
+Python 3, vcpkg, and a supported desktop Qt Widgets kit (5.15+ or 6.2+). The
+Gallery and test dependencies are selected by the preset's vcpkg features;
+Qt is discovered from your installed kit.
+
+Set `VCPKG_ROOT` to the vcpkg checkout containing
+`scripts/buildsystems/vcpkg.cmake`. Select a preset for the actual host and
+toolchain: `vcpkg-osx` for macOS arm64, `vcpkg-windows` for Windows x64, or
+`vcpkg-linux` for Linux x64. Architecture variants are listed in
+`CMakePresets.json`; use `cmake --list-presets` to see those available locally.
+
+If Qt is not found automatically, put its installation prefix in an ignored
+`CMakeUserPresets.json`. For example, replace the path below with the directory
+containing your Qt kit's `lib/cmake`:
+
+```json
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "local-osx",
+      "inherits": "vcpkg-osx",
+      "cacheVariables": {"CMAKE_PREFIX_PATH": "/path/to/Qt/kit"}
+    }
+  ],
+  "buildPresets": [
+    {"name": "local-osx", "inherits": "vcpkg-osx", "configurePreset": "local-osx"}
+  ],
+  "testPresets": [
+    {"name": "local-osx", "inherits": "vcpkg-osx", "configurePreset": "local-osx"}
+  ]
+}
+```
+
+Use `local-osx` for configure, build, and CTest with this example; otherwise use
+the public preset. Keep Qt, Ninja, compiler, and IDE paths out of shared
+presets. Windows requires an environment initialized for its selected MSVC
+kit. See [Linux workflow](linux-workflow.md) for distro dependencies and native
+desktop setup.
+
+## Configure and build
+
+The adaptive wrapper chooses build parallelism from the current process's CPU
+and memory resources:
 
 ```bash
 cmake --preset vcpkg-osx
@@ -30,6 +77,34 @@ python3 tools/dev/fluent_qt_build.py \
   --config Release \
   --target FluentQt
 ```
+
+## Install the library or create a source package
+
+For a standalone library build, Qt is the only external dependency. From a
+fresh build directory, configure without the vcpkg preset:
+
+```bash
+cmake -S . -B build/fluentqt \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH=/path/to/Qt/kit
+python3 tools/dev/fluent_qt_build.py build/fluentqt --config Release --target FluentQt
+cmake --install build/fluentqt --config Release \
+  --component Development --prefix /path/to/install
+```
+
+The development component contains the library, public headers, and CMake
+package files. Consumers use `find_package(FluentQt CONFIG REQUIRED)` and link
+`FluentQt::FluentQt`. Point `CMAKE_PREFIX_PATH` at the install prefix when it is
+outside the system search path.
+
+Create the reduced library source package for offline or source integration:
+
+```bash
+python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_package
+```
+
+Use [packaging workflow](packaging-workflow.md) for desktop Gallery installers
+and [WebAssembly workflow](webassembly-workflow.md) for browser artifacts.
 
 ## Selection policy
 

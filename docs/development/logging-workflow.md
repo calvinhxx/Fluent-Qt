@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Development](README.md) › Build, tests, and diagnostics
 
-[← Qt Component Test Conventions](qt-component-test-conventions.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Visual Review →](visual-review.md)
+[← CI workflow](ci-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Visual Review →](visual-review.md)
 <!-- docs-nav:top:end -->
 
 Use this workflow when adding, reviewing, or debugging logs in the reusable
@@ -131,5 +131,5 @@ same sinks and retain their category name. Validate bridge behavior through
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Qt Component Test Conventions](qt-component-test-conventions.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Visual Review →](visual-review.md)
+[← CI workflow](ci-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Visual Review →](visual-review.md)
 <!-- docs-nav:bottom:end -->

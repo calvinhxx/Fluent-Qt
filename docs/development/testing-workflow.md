@@ -13,6 +13,13 @@ tests by CTest labels, running or skipping VisualCheck tests, adding test
 targets with `add_qt_test_module`, or synchronizing new component directories
 with README, CMake, and agent instructions.
 
+For an ordinary fix, build the owning target and run its anchored CTest label.
+Add regression coverage for the changed behavior, then expand to dependent
+components or a broader tier when the affected contract requires it. Once the
+relevant checks pass, repeat them only after another change or a new concern.
+Documentation-only changes use the [documentation checks](documentation-style.md),
+plus AI asset checks when their sources change; they do not require a C++ build.
+
 ## CTest Labels
 
 Qt/GTest executables link the shared `FluentQtTestSupport` library. Its entry
@@ -89,7 +96,7 @@ ctest --preset vcpkg-linux-arm64-local-desktop -N
   the anchored label on any host:
 
 ```bash
-cmake --build --preset vcpkg-linux --target test_high_dpi
+python3 tools/dev/fluent_qt_build.py --preset vcpkg-linux --target test_high_dpi
 ctest --preset vcpkg-linux -L '^high_dpi$' --output-on-failure
 ```
 
@@ -172,98 +179,15 @@ python3 tools/site/generate_localized_site.py --check
 python3 tools/site/generate_api_reference.py --check
 ```
 
-External GitHub Actions must use full commit SHAs with readable version
-comments; container actions use image digests. The workflow-boundary validator
-checks workflows and starter templates, and Dependabot maintains the revisions.
-
 ## Validation Tiers
 
-The public [CI workflow](../../.github/workflows/ci.yml) is an orchestration
-layer. It classifies changed paths, selects `fast` or `full`, invokes three
-reusable validation modules, and owns only the stable `CI Gate` and
-`Release ready` checks:
+Use the [CI workflow](ci-workflow.md) for fast/full triggers, reusable module
+ownership, matrix sources, and release candidate routing. CI-full is a curated
+subset; local-full runs the non-manual tests for the current host.
 
-- [C++ CI module](../../.github/workflows/ci-cpp.yml) owns native Qt builds,
-  CTest, CMake consumer integration, native packages, and the validated
-  [C++ matrix catalog](../../.github/ci-cpp-matrix.json).
-- [PySide6 CI module](../../.github/workflows/ci-python.yml) owns binding
-  generation, compatibility baselines, native Python wheels, clean-environment
-  tests, and the optional publishable wheel matrix. Fast CI clean-installs the
-  core wheel on its Qt 6.2 compatibility lanes. Standard full CI adds Gallery,
-  typing, visible-example, and native-window acceptance on representative
-  lanes. On an untagged release-ready `main` commit, Release Candidate owns the
-  macOS ARM64 CPython 3.11 representative so full CI does not compile it twice.
-  Scheduled and manual full runs keep that lane. `python_release_bundle=true`
-  additionally builds every declared release wheel, runs the complete binding
-  suite on the six extended-acceptance representatives, and clean-installs and
-  smoke-tests every other ABI wheel. It then runs manylinux repair and audit,
-  assembles the immutable 18-wheel bundle, and reports six explicit
-  platform/architecture checks in the Actions UI. The module also owns
-  [the wheel matrix](../../bindings/pyside6/wheel-matrix.json).
-  Python release scenarios are queued critical-path first: Windows ARM64 with
-  CPython 3.11 precedes the other extended-acceptance representatives, and
-  secondary CPython rows fill runner capacity afterward. This changes only
-  scheduling order; it does not reduce the supported or validated matrix.
-- [WebAssembly CI module](../../.github/workflows/ci-wasm.yml) owns the pinned
-  Qt 6.9.3 `wasm_singlethread` and Emscripten 3.1.70 toolchain, builds Hello
-  World and the C++ Gallery, runs the fast/full Chromium smoke, and stages the
-  Pages payload consumed by [the Pages workflow](../../.github/workflows/pages.yml).
-  A `main` CI run passes that artifact directly to the reusable Pages deploy;
-  the manual Pages entry rebuilds it only for recovery.
-
-Do not add compiler, SDK, package-manager, wheel, or platform steps to the
-orchestrator. Add them to the owning reusable workflow and update its catalog.
-`.github/scripts/validate-ci-workflow-boundaries.py` enforces that separation.
-All three modules upload artifacts into the caller's workflow run. Standard
-desktop releases therefore remain independent of PyPI publishing, while an
-opted-in full run exposes the immutable bundle to the Python release workflow.
-The separate [Release Candidate workflow](../../.github/workflows/release-candidate.yml)
-runs for an untagged version on `main`: it invokes the reusable desktop
-packaging module and bundle-enabled PySide6 module in parallel, then emits
-`Release Candidate ready` only after both commit-bound manifests pass. The tag
-workflow promotes those artifacts; it does not rebuild them. On an untagged
-release-ready `main` commit, the candidate also owns the fixed macOS ARM64
-Python representative omitted from the simultaneous full CI run.
-
-- GitHub Actions `matrix=fast` is the default pull-request and manual validation
-  tier. It runs
-  the narrow `ci_fast` set on Linux x64 and Windows x64, then compiles the
-  library on macOS arm64. Native Linux and Windows ARM64 execution stays in the
-  scheduled/manual full tier instead of running for every pull request.
-- Pull requests that change only Markdown, `docs/`, `site/`, license, or issue
-  template files skip the native build matrix. The stable `CI Gate` job still
-  reports success, so branch protection can require one check for every pull
-  request without spending hosted-runner time on documentation-only changes.
-- GitHub Actions `matrix=full` runs automatically after pushes to `main` and on
-  the weekly schedule, and is available manually. Weekly runs also enable the
-  complete Python release bundle; ordinary `main` and manual full runs keep it
-  disabled unless `python_release_bundle=true` is selected. The automatic
-  Release Candidate run owns the pre-tag publication bundle instead. It also
-  owns the macOS ARM64 Python representative for that release commit; manual
-  and scheduled full runs retain the representative themselves. macOS arm64
-  remains the broadest native C++ lane for the curated `ci_full` subset; Linux
-  covers Ubuntu 22.04 x64 and ARM64 with distro Qt 6.2.x plus official Qt
-  5.15.2 `gcc_64` on x64; macOS x64 is a Gallery build smoke; Windows lanes
-  cover targeted x64 and native ARM64 platform tests, Qt 5.15 API, and the
-  established ARM64 cross-built installer package. The full run uploads both
-  `fluent-qt-gallery-windows-arm64-installer` and
-  `fluent-qt-gallery-linux-arm64-deb` for VM review.
-- The macOS arm64 full lane uses a limited build parallelism to avoid runner
-  memory pressure while compiling and linking multiple Qt/GTest binaries.
-- CI build target selection is centralized in CMake:
-  `fluent_qt_ci_fast_tests` builds only the fast API/environment test binaries,
-  `fluent_qt_ci_full_tests` builds the selected CI-full test binaries, and
-  `fluent_qt_ci_windows_platform_tests` builds the focused Windows platform set;
-  `fluent_qt_contract_tests` builds the focused component-contract binaries, and
-  `fluent_qt_all_tests` builds every registered Qt/GTest binary for local host
-  validation. Keep workflow YAML on these aggregate targets instead of
-  duplicating long target lists there.
-- When adding a new `add_qt_test_module` target, decide whether it belongs in
-  `FLUENT_QT_CI_FAST_TARGETS`, `FLUENT_QT_CI_FULL_TARGETS`, or local-only
-  `fluent_qt_all_tests`.
-- Local host full validation means configuring, building, and running all CTest
-  non-manual tests for the current host preset. VisualCheck tests stay in
-  `manual_visual`; use `-LE '^local_desktop$'` when running on a headless host:
+Local host full validation means configuring, building, and running all CTest
+non-manual tests for the current host preset. VisualCheck tests stay in
+`manual_visual`; use `-LE '^local_desktop$'` when running on a headless host:
 
 ```bash
 cmake --preset vcpkg-osx
@@ -321,8 +245,8 @@ official-kit validation, and optional WSL2 filesystem guidance.
 Tests whose names contain `Contract` receive the `contract` label. A desired
 behavior that is not yet implemented is named `DISABLED_Contract_*` and also
 receives `known_contract_gap`. Known gaps are excluded from `local_full`,
-`ci_fast`, and `ci_full`. The current Phase 1 suite has no disabled contract
-test; the naming and label remain available for future target-behavior work.
+`ci_fast`, and `ci_full`. List `known_contract_gap` to inspect the current gaps; the dated Phase 1
+results are recorded in the component contract baseline.
 
 ```bash
 python3 tools/dev/fluent_qt_build.py --preset vcpkg-linux --target fluent_qt_contract_tests
@@ -467,10 +391,11 @@ subjective visual review.
 
 ## Validation Defaults
 
-- Configure with `cmake --preset vcpkg-osx` when CMake structure or test
-  discovery changes.
-- Build focused targets with `cmake --build --preset vcpkg-osx --target
-  <test_target>`.
+- Configure with `cmake --preset <host-preset>` when CMake structure or test
+  discovery changes. Follow [build setup](build-workflow.md#first-use-setup)
+  on a fresh checkout.
+- Build focused targets with `python3 tools/dev/fluent_qt_build.py
+  --preset <host-preset> --target <test_target>`.
 - Prefer focused CTest label runs after changing a test target:
 
 ```bash

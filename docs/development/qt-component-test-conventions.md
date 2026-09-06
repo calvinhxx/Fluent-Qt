@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Development](README.md) › Build, tests, and diagnostics
 
-[← Testing Workflow](testing-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Logging Workflow →](logging-workflow.md)
+[← Testing Workflow](testing-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [CI workflow →](ci-workflow.md)
 <!-- docs-nav:top:end -->
 
 Apply these rules whenever adding or editing components under `src/components/` or
@@ -88,5 +88,5 @@ synchronization, use [Testing Workflow](testing-workflow.md).
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Testing Workflow](testing-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Logging Workflow →](logging-workflow.md)
+[← Testing Workflow](testing-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [CI workflow →](ci-workflow.md)
 <!-- docs-nav:bottom:end -->
