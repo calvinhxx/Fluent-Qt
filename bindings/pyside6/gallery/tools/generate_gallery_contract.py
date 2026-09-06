@@ -502,9 +502,9 @@ def generate_contract(project_root: Path) -> dict[str, object]:
             "native component route count changed from 70 to {0}; review the contract"
             .format(component_count)
         )
-    if sample_count != 208:
+    if sample_count != 209:
         raise ValueError(
-            "native sample count changed from 208 to {0}; review the contract".format(
+            "native sample count changed from 209 to {0}; review the contract".format(
                 sample_count
             )
         )

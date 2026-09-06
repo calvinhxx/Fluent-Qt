@@ -94,8 +94,8 @@ def main():
         or len(ENTRIES) != 70
         or len(ROUTES) != 91
         or len(SUPPORT_TYPES) != 21
-        or sample_count != 208
-        or len(ported_sample_keys()) != 208
+        or sample_count != 209
+        or len(ported_sample_keys()) != 209
     ):
         raise AssertionError("Standalone Gallery catalog has wrong coverage")
 

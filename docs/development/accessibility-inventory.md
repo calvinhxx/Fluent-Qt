@@ -77,6 +77,10 @@ The table lists the semantic boundary and its focused regression source.
 | HyperlinkButton, InfoBar, Shimmer | Link/visited state, notification severity and dismissal, loading/busy state independent of animation | [Presentation](../../tests/components/TestSemanticPresentationAccessibility.cpp) |
 | MultiSelectComboBox | Button-menu root, selected labels, expanded state, popup relation and named trigger/search/list | [Multi-selection](../../tests/components/basicinput/TestMultiSelectComboBox.cpp) |
 
+`ToggleSwitch` keeps a minimum interactive height of 24 logical pixels.
+`visualScale` changes its graphics while the accessible rectangle continues to
+cover the whole widget; the default scale retains the 40 × 20 Fluent track.
+
 Each family checks effective-change events and no-op silence. New or changed
 visible components need an inventory classification and a focused contract
 before release. Native screen-reader acceptance remains a separate gate in the

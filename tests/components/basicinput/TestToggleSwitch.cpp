@@ -8,12 +8,38 @@
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include <QApplication>
+#include <QImage>
+#include <QLayout>
 #include <QPropertyAnimation>
 #include <QSignalSpy>
 #include <QTest>
 #include <gtest/gtest.h>
+#include <limits>
 
 using namespace fluent::basicinput;
+
+namespace {
+QImage renderSwitch(ToggleSwitch& toggle)
+{
+    toggle.ensurePolished();
+    QImage image(toggle.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    toggle.render(&image, QPoint(), QRegion(), QWidget::DrawChildren);
+    return image;
+}
+
+QRect paintedBounds(const QImage& image)
+{
+    QRect result;
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            if (qAlpha(image.pixel(x, y)))
+                result = result.united(QRect(x, y, 1, 1));
+        }
+    }
+    return result;
+}
+} // namespace
 
 // ── 测试窗口 ─────────────────────────────────────────────────────────────────
 
@@ -239,6 +265,123 @@ TEST_F(ToggleSwitchTest, MinimumSizeHintPreservesTrackAndHitHeight)
     QSize minHint = ts.minimumSizeHint();
     EXPECT_EQ(minHint.width(), 40);
     EXPECT_EQ(minHint.height(), Spacing::ControlHeight::Small);
+}
+
+TEST_F(ToggleSwitchTest, VisualScaleNormalizesAndNotifiesWithoutChangingFontOrFixedSize)
+{
+    ToggleSwitch ts;
+    EXPECT_DOUBLE_EQ(ts.visualScale(), 1.0);
+    ts.setFixedSize(300, 100);
+    const QFont originalFont = ts.font();
+    QSignalSpy scales(&ts, &ToggleSwitch::visualScaleChanged);
+    QSignalSpy toggles(&ts, &ToggleSwitch::toggled);
+    ASSERT_TRUE(ts.setProperty("visualScale", 2.5));
+    EXPECT_DOUBLE_EQ(ts.visualScale(), 2.5);
+    ASSERT_EQ(scales.count(), 1);
+    EXPECT_DOUBLE_EQ(scales.first().first().toDouble(), 2.5);
+    ts.setVisualScale(2.5);
+    ts.setVisualScale(std::numeric_limits<qreal>::quiet_NaN());
+    ts.setVisualScale(std::numeric_limits<qreal>::infinity());
+    ts.setVisualScale(-std::numeric_limits<qreal>::infinity());
+    EXPECT_EQ(scales.count(), 1);
+    ts.setVisualScale(-1.0);
+    EXPECT_DOUBLE_EQ(ts.visualScale(), 0.5);
+    ts.setVisualScale(0.0);
+    EXPECT_EQ(scales.count(), 2);
+    ts.setVisualScale(100.0);
+    EXPECT_DOUBLE_EQ(ts.visualScale(), 10.0);
+    ts.setVisualScale(std::numeric_limits<qreal>::max());
+    EXPECT_EQ(scales.count(), 3);
+    EXPECT_EQ(ts.size(), QSize(300, 100));
+    EXPECT_EQ(ts.font(), originalFont);
+    EXPECT_EQ(toggles.count(), 0);
+}
+
+TEST_F(ToggleSwitchTest, VisualScaleUpdatesLayoutHintsAndPreservesMinimumHitHeight)
+{
+    ToggleSwitch ts(window);
+    ts.setOffContent(QStringLiteral("Disconnected"));
+    const QSize original = ts.sizeHint();
+    QWidgetItem item(&ts);
+    const QSize itemHint = item.sizeHint();
+    ts.setVisualScale(2.0);
+    EXPECT_EQ(ts.sizeHint().width(), original.width() + 50);
+    EXPECT_EQ(ts.minimumSizeHint(), QSize(80, 40));
+    EXPECT_GE(item.sizeHint().width(), itemHint.width() + 50);
+    EXPECT_GE(item.sizeHint().height(), 40);
+    ts.setVisualScale(0.5);
+    EXPECT_EQ(ts.minimumSizeHint(), QSize(20, Spacing::ControlHeight::Small));
+    EXPECT_GE(ts.sizeHint().height(), QFontMetrics(ts.font()).height());
+    ts.setVisualScale(1.0);
+    EXPECT_EQ(ts.sizeHint(), original);
+}
+
+TEST_F(ToggleSwitchTest, WidgetResizePreservesDefaultTrackPixels)
+{
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    ToggleSwitch ts;
+    for (bool on : {false, true}) {
+        ts.setIsOn(on);
+        ts.setFixedSize(ts.sizeHint());
+        const QImage normal = renderSwitch(ts);
+        const QRect normalBounds = paintedBounds(normal);
+        ts.setFixedSize(300, 100);
+        const QImage enlarged = renderSwitch(ts);
+        const QRect enlargedBounds = paintedBounds(enlarged);
+        EXPECT_EQ(normalBounds.size(), QSize(40, 20));
+        EXPECT_EQ(enlargedBounds, QRect(0, 40, 40, 20));
+        EXPECT_EQ(normal.copy(normalBounds), enlarged.copy(enlargedBounds));
+    }
+}
+
+TEST_F(ToggleSwitchTest, VisualScalePaintsProportionalTrackInBothDirections)
+{
+    ToggleSwitch ts;
+    ts.resize(500, 220);
+    for (qreal scale : {0.5, 1.25, 2.0, 5.0}) {
+        ts.setVisualScale(scale);
+        const int trackW = qRound(40 * scale);
+        const int trackH = qRound(20 * scale);
+        for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+            ts.setLayoutDirection(direction);
+            const QRect expected(direction == Qt::LeftToRight ? 0 : ts.width() - trackW,
+                                 (ts.height() - trackH) / 2, trackW, trackH);
+            EXPECT_EQ(paintedBounds(renderSwitch(ts)), expected);
+        }
+    }
+}
+
+TEST_F(ToggleSwitchTest, VisualScalePreservesAnimationProgressAndInput)
+{
+    ToggleSwitch ts(window);
+    ts.setFixedSize(300, 100);
+    window->show();
+    ts.show();
+    QApplication::processEvents();
+    ts.setIsOn(true);
+    auto* animation = ts.findChild<QPropertyAnimation*>();
+    ASSERT_NE(animation, nullptr);
+    animation->setCurrentTime(animation->duration() / 2);
+    const qreal progress = ts.knobPosition();
+    QSignalSpy toggles(&ts, &ToggleSwitch::toggled);
+    ts.setVisualScale(3.0);
+    EXPECT_DOUBLE_EQ(ts.knobPosition(), progress);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
+    EXPECT_EQ(toggles.count(), 0);
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    EXPECT_DOUBLE_EQ(ts.knobPosition(), 1.0);
+    for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        ts.setLayoutDirection(direction);
+        const bool before = ts.isOn();
+        QTest::mouseClick(&ts, Qt::LeftButton, Qt::NoModifier, QPoint(150, 90));
+        EXPECT_NE(ts.isOn(), before);
+        QTest::keyClick(&ts, Qt::Key_Space);
+        EXPECT_EQ(ts.isOn(), before);
+    }
+    ts.setEnabled(false);
+    QTest::mouseClick(&ts, Qt::LeftButton);
+    QTest::keyClick(&ts, Qt::Key_Space);
+    EXPECT_TRUE(ts.isOn());
 }
 
 // ── Disabled 状态 ────────────────────────────────────────────────────────────

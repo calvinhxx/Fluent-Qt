@@ -1433,6 +1433,22 @@ class FluentQtBindingTest(unittest.TestCase):
                 gc.collect()
                 self.assertIsNone(picker_ref())
 
+    def test_toggle_switch_visual_scale_preserves_fixed_size_and_font(self):
+        toggle = fluentqt.ToggleSwitch()
+        changes = []
+        toggle.visualScaleChanged.connect(changes.append)
+        toggle.setFixedSize(300, 100)
+        original_font = toggle.font()
+        self.assertEqual(toggle.visualScale(), 1.0)
+        toggle.setVisualScale(2.0)
+        toggle.setVisualScale(2.0)
+        toggle.setVisualScale(float("nan"))
+        self.assertEqual(changes, [2.0])
+        self.assertEqual(toggle.visualScale(), 2.0)
+        self.assertEqual(toggle.size(), QSize(300, 100))
+        self.assertEqual(toggle.minimumSizeHint(), QSize(80, 40))
+        self.assertEqual(toggle.font(), original_font)
+
     def test_phase_one_component_properties_and_signals(self):
         radio = fluentqt.RadioButton("Option")
         radio.setChecked(True)

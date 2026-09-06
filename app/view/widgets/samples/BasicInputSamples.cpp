@@ -1506,6 +1506,28 @@ QVector<GallerySample> toggleSwitchSamples()
                 group->layout()->addWidget(toggle);
                 return group;
             }),
+        makeSample(QStringLiteral("toggle-switch-scale"), QStringLiteral("Visual size"),
+                   QStringLiteral("visualScale enlarges the switch graphics and content gap. "
+                                  "setFixedSize controls the hit area; text keeps its font size."),
+                   QStringLiteral("auto* toggle = new ToggleSwitch(this);\n"
+                                  "toggle->setObjectName(\"scaledToggleSwitch\");\n"
+                                  "toggle->setAccessibleName(\"Scaled switch\");\n"
+                                  "toggle->setOnContent(\"On\");\n"
+                                  "toggle->setOffContent(\"Off\");\n"
+                                  "toggle->setIsOn(true);\n"
+                                  "toggle->setVisualScale(2.0); // 80 x 40 track\n"
+                                  "toggle->setFixedSize(300, 100);"),
+                   [](QWidget* parent) {
+                       auto* toggle = new ToggleSwitch(parent);
+                       toggle->setObjectName(QStringLiteral("scaledToggleSwitch"));
+                       toggle->setAccessibleName(QStringLiteral("Scaled switch"));
+                       toggle->setOnContent(QStringLiteral("On"));
+                       toggle->setOffContent(QStringLiteral("Off"));
+                       toggle->setIsOn(true);
+                       toggle->setVisualScale(2.0);
+                       toggle->setFixedSize(300, 100);
+                       return toggle;
+                   }),
         makeSample(
             QStringLiteral("toggle-switch-disabled"), QStringLiteral("Disabled ToggleSwitch"),
             QStringLiteral(

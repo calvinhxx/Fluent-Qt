@@ -137,6 +137,10 @@
     "theme_uses_dark_appearance"
   ],
   "methods": {
+    "ToggleSwitch": [
+      "setVisualScale",
+      "visualScale"
+    ],
     "AnchorLayout": [
       "addWidget"
     ],

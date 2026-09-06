@@ -40,6 +40,23 @@ The regression sources are [FluentElement](../../tests/components/TestFluentElem
 [FlowView](../../tests/components/collections/TestFlowView.cpp). Public component
 names and properties are unchanged; platform visual acceptance remains separate.
 
+## 2026-09-05 ToggleSwitch visual-scale addendum
+
+- Issue #61 exposed the distinction between the widget's hit area and its
+  fixed 40 × 20 visual track. `setFixedSize()` retains its existing meaning.
+- `visualScale`, `setVisualScale()`, and `visualScaleChanged(qreal)` provide
+  explicit proportional graphics sizing, with default `1.0`, finite-value
+  clamping to `0.5–10.0`, and non-finite/no-op silence. Text fonts remain separate.
+- Layout hints grow with the track and preserve a minimum interactive height.
+  Geometry changes retain the accessible role, name, state, and whole-widget
+  bounds; state transitions and keyboard/pointer behavior keep their contracts.
+- C++ and PySide6 expose the same API in this slice, with a shared Gallery
+  sample, binding manifest entry, and runtime/typing checks. The existing
+  installed-header allowlist already includes `ToggleSwitch.h`.
+- Focused contracts in `TestToggleSwitch.cpp` cover pixel preservation on widget
+  resize, proportional LTR/RTL geometry, normalization, layout hints, animation,
+  and input. `TestValueAccessibility.cpp` covers accessible bounds after scaling.
+
 ## 2026-09-03 inherited input-signal addendum
 
 - The five public `QAbstractItemView`-derived collection controls were audited

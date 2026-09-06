@@ -54,6 +54,9 @@ assert_type(fluentqt.Spacing.Border.Focused, int)
 assert_type(fluentqt.CornerRadius.Control, int)
 
 button = Button("Typed button")
+toggle_switch = fluentqt.ToggleSwitch()
+assert_type(toggle_switch.visualScale(), float)
+assert_type(toggle_switch.setVisualScale(2.0), None)
 button.setFluentStyle(Button.ButtonStyle.Accent)
 assert_type(fluentqt.bind(button, "enabled", fluent_widget, "enabled"), None)
 
