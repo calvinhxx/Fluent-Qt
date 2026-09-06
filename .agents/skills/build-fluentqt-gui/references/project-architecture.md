@@ -1,10 +1,13 @@
 # Project architecture
 
-Use this contract for a new FluentQt application, a full-profile GUI, or an
-existing GUI whose shell owns unrelated workflow, process, settings, theme, and
-presentation responsibilities. It applies to both C++ and PySide6. Adapt names
-to the product vocabulary; preserve the dependency direction and ownership
-boundaries.
+Use this contract for a new FluentQt application or an architecture migration,
+including a shell that owns unrelated workflow, process, settings, theme, and
+presentation responsibilities. A focused repair preserves the existing
+structure unless that structure causes the defect; it does not need a new
+manifest solely because it touches async work or a collection.
+
+The contract applies to both C++ and PySide6. Adapt names to the product
+vocabulary; preserve the dependency direction and ownership boundaries.
 
 ## Select the smallest honest structure
 

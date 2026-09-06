@@ -11,8 +11,10 @@ and `.agents/skills/build-fluentqt-gui/`. Otherwise use `create`, `integrate`,
 or `improve` mode and the target project's own instructions.
 
 Read the target root's `AGENTS.md` first. Select only rows that match the
-changed files and behavior; read each named guide completely before editing.
+changed files and behavior; read the relevant sections of their owning guides.
 A passing unrelated global suite never replaces the focused owner gate.
+Library fixes use these repository gates; they do not require a consumer
+design brief, application architecture manifest, or lite/full design profile.
 
 ## Select gates from the change
 
@@ -24,7 +26,7 @@ A passing unrelated global suite never replaces the focused owner gate.
 | PySide6 Gallery or generated Python source | `bindings/pyside6/gallery/README.md`, `docs/development/gallery-preview-workflow.md` | Configured Gallery binding tests, generated snippet check, contract generator, Python acceptance |
 | WebAssembly Gallery or shared Gallery code | `docs/development/webassembly-workflow.md` | `wasm` build and the applicable fast/full browser smoke |
 | Skill, AI catalog, guidance, or reader docs | `docs/ai/README.md`, `docs/development/documentation-style.md` | AI catalog/asset gates, Skill package inspection, documentation navigation/validation |
-| CI classifier, matrix, module, or final gate | `docs/development/testing-workflow.md` | Focused classifier/matrix/workflow unit tests and fail-closed boundary validator |
+| CI classifier, matrix, module, or final gate | `docs/development/ci-workflow.md` | Focused classifier/matrix/workflow unit tests and fail-closed boundary validator |
 
 Use the adaptive wrapper and anchored labels for native focused work:
 
@@ -124,7 +126,7 @@ Python, or WebAssembly boundary explicitly.
 
 Before finishing, require:
 
-- a recorded delivery mode and lite/full profile;
+- a stated change scope and its selected repository gates;
 - a focused owner test for every changed public or visible surface;
 - semantic alignment between Gallery UI and displayed source;
 - deterministic or explicitly `human-required` evidence for high-risk visuals;
