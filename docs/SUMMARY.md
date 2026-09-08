@@ -21,6 +21,7 @@ standalone reading tasks.
 - [Fluent design](design-languages/README.md)
   - **Design references**
     - [Fluent (Windows) — Design Reference](design-languages/fluent.md)
+    - [自定义主题与组件局部覆盖](design-languages/custom-themes.md)
     - [Fluent Design Kit Source](design-languages/figma-sources.md)
 - [Development](development/README.md)
   - **API, policy, and writing**

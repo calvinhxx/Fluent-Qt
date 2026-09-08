@@ -2,6 +2,7 @@
 #define FLUENT_USER_THEME_H
 
 #include <QColor>
+#include <QJsonObject>
 #include <QString>
 
 #include "components/foundation/FluentElement.h"
@@ -17,6 +18,17 @@ namespace UserTheme {
 /// Install built-in Fluent tokens plus user JSON overrides into ThemeRegistry.
 /// zh_CN: 安装内置 Fluent token 与用户 JSON 覆盖。
 void apply();
+
+/**
+ * @brief Applies sparse in-memory overrides to the current global theme without writing files.
+ * zh_CN: 将稀疏内存配置叠加到当前全局主题，不写入文件。
+ * @return true if state changed; false for invalid or unchanged overrides.
+ * zh_CN: 状态改变返回 true；无效或未改变的配置返回 false。
+ * Accepts light/dark/contrast color objects, radius and font (family/scale).
+ * Invalid keys or values reject the complete update. Missing fields remain unchanged.
+ * zh_CN: 支持三套颜色、圆角和字体族/缩放；无效字段拒绝整次更新，缺省字段保持不变。
+ */
+bool applyOverrides(const QJsonObject& overrides);
 
 /// Apply an in-memory accent override to current ThemeRegistry colors. zh_CN:
 /// 对当前 ThemeRegistry 颜色应用内存态强调色覆盖。

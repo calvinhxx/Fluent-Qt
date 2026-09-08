@@ -415,6 +415,30 @@ def currentMotionMode():
     return motion_policy().mode()
 
 
+def apply_theme_overrides(overrides):
+    """Patch global color/radius/font tokens in memory; return whether changed.
+
+    Accepts the bare UserTheme overrides mapping, with color strings.
+    Invalid keys/values reject the whole update. No files are written.
+    """
+    return _native.applyThemeOverridesForBinding(overrides)
+
+
+def set_widget_theme_overrides(widget, overrides):
+    """Replace one Fluent widget's sparse overrides; children do not inherit them.
+
+    Empty input restores global tokens. Returns False for unsupported widgets,
+    invalid input or an unchanged mapping. Explicit setFont remains authoritative
+    on components supporting the explicit-font contract.
+    """
+    return _native.setWidgetThemeOverridesForBinding(widget, overrides)
+
+
+def widget_theme_overrides(widget):
+    """Return a copy of one widget's authored overrides, or an empty mapping."""
+    return _native.widgetThemeOverridesForBinding(widget)
+
+
 def apply_user_theme():
     """Load the user-editable Fluent token overrides, if present."""
     applyUserTheme()
@@ -466,6 +490,9 @@ __all__ = [
     "accent_color",
     "accentColor",
     "anchors",
+    "apply_theme_overrides",
+    "set_widget_theme_overrides",
+    "widget_theme_overrides",
     "apply_user_theme",
     "applyUserTheme",
     "bind",

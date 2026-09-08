@@ -65,6 +65,9 @@ MODULE_FUNCTION_SIGNATURES = {
     ("fluentqt.foundation", "font_scale"): "() -> float",
     ("fluentqt.foundation", "motion_policy"): "() -> MotionPolicy",
     ("fluentqt.foundation", "reset_theme_tokens"): "() -> None",
+    ("fluentqt.foundation", "apply_theme_overrides"): "(overrides: dict[str, Any]) -> bool",
+    ("fluentqt.foundation", "set_widget_theme_overrides"): "(widget: PySide6.QtWidgets.QWidget, overrides: dict[str, Any]) -> bool",
+    ("fluentqt.foundation", "widget_theme_overrides"): "(widget: PySide6.QtWidgets.QWidget) -> dict[str, Any]",
     ("fluentqt.foundation", "set_accent_color"):
         "(color: PySide6.QtGui.QColor) -> None",
     ("fluentqt.foundation", "set_font_scale"): "(scale: float) -> None",

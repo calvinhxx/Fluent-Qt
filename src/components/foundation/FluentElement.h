@@ -3,6 +3,7 @@
 
 #include <QColor>
 #include <QFont>
+#include <QJsonObject>
 #include <QString>
 #include <QEasingCurve>
 #include "compatibility/FontCompat.h"
@@ -194,6 +195,25 @@ public:
 
     // Component-facing token accessors.
     // zh_CN: 供组件侧访问的设计 token 接口。
+    /**
+     * @brief Replaces this element's sparse color, radius and font token overrides.
+     * zh_CN: 替换当前元素的稀疏颜色、圆角和字体 token 覆盖。
+     * Missing fields follow the current global theme; overrides survive theme changes.
+     * This is per element, not inherited by child widgets. Empty input clears overrides.
+     * Invalid keys or values reject the complete update without changing state.
+     * zh_CN: 未覆盖字段跟随全局主题；覆盖跨主题切换保留，仅作用于当前元素，不向子控件继承。
+     * 空对象清除覆盖；无效字段或值拒绝整次更新并保留原状态。
+     * @return true if the override object changed; false for invalid or identical input.
+     * zh_CN: 覆盖对象改变返回 true；无效或相同输入返回 false。
+     */
+    bool setThemeOverrides(const QJsonObject& overrides);
+
+    /** @brief Returns this element's authored overrides. zh_CN: 返回当前元素的覆盖配置。 */
+    QJsonObject themeOverrides() const;
+
+    /** @brief Restores all token fields to global theme defaults. zh_CN: 恢复全部 token 跟随全局主题。 */
+    void clearThemeOverrides();
+
     Colors themeColors() const;
 
     /**
@@ -202,12 +222,12 @@ public:
      *
      * themeColors() returns the full ~50-QColor Colors struct BY VALUE; a delegate or tab strip that
      * calls it per item/tab/frame pays that copy (plus the QList<QColor> charts refcount) every time.
-     * This returns the ThemeRegistry's own const reference instead — identical data, no copy. The
-     * reference is owned by the registry singleton and stays valid until the next theme/registry change,
+     * This returns a cached const reference to the resolved colors, without copying. The
+     * reference is owned by the registry or this element and stays valid until its next token change,
      * so use it within a single paint() and do NOT cache it across a theme switch.
      * zh_CN: themeColors() 按值返回整个 ~50 个 QColor 的结构体;在每项/每帧绘制里调用会反复付出该拷贝
-     *（外加 charts QList 引用计数)。此方法改为返回 ThemeRegistry 自有的 const 引用——数据相同、零拷贝。
-     * 该引用归注册表单例所有,在下次主题/注册表变化前一直有效,故应在单次 paint() 内使用,切勿跨主题切换缓存。
+     *（外加 charts QList 引用计数)。此方法返回解析后色板的 const 引用，避免拷贝。
+     * 该引用归注册表或当前元素所有，在下次 token 变化前有效,故应在单次 paint() 内使用,切勿跨主题切换缓存。
      */
     const Colors& themeColorsRef() const;
 
@@ -256,6 +276,7 @@ protected:
         d_ptr; // Reserved for 1.x source compatibility. zh_CN: 为 1.x 源码兼容保留。
 
 private:
+    void resolveThemeOverrides() const;
     Q_DISABLE_COPY(FluentElement)
 };
 

@@ -12,6 +12,7 @@
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
+#include "components/foundation/private/ThemeSpec_p.h"
 #include "utils/private/FluentQtLogging_p.h"
 
 namespace fluent {
@@ -237,6 +238,9 @@ QJsonObject resolvedPresetSpec()
 
     QJsonObject spec;
     spec.insert(QStringLiteral("radius"), radius);
+    spec.insert(QStringLiteral("font"),
+                QJsonObject{{QStringLiteral("family"), snapshot.base.fontFamilyOverride},
+                            {QStringLiteral("scale"), snapshot.base.fontScale}});
     spec.insert(QStringLiteral("light"), colorsToJson(snapshot.base.lightColors));
     spec.insert(QStringLiteral("dark"), colorsToJson(snapshot.base.darkColors));
     spec.insert(QStringLiteral("contrast"), colorsToJson(snapshot.contrastColors));
@@ -374,7 +378,75 @@ void removeNestedColor(QJsonObject& obj, const char* mode, const char* key)
 
 } // namespace
 
+namespace detail {
+
+bool validateThemeSpec(const QJsonObject& spec)
+{
+    for (auto it = spec.begin(); it != spec.end(); ++it) {
+        if (!it.value().isObject())
+            return false;
+        const QJsonObject section = it.value().toObject();
+        if (it.key() == QLatin1String("light") || it.key() == QLatin1String("dark") ||
+            it.key() == QLatin1String("contrast")) {
+            FluentElement::Colors colors{};
+            for (auto field = section.begin(); field != section.end(); ++field) {
+                bool known = false;
+                forEachColorField(colors, [&](const char* name, QColor&) {
+                    known |= field.key() == QLatin1String(name);
+                });
+                if (!known || !field.value().isString() ||
+                    !parseColor(field.value().toString()).isValid())
+                    return false;
+            }
+        } else if (it.key() == QLatin1String("radius")) {
+            for (auto field = section.begin(); field != section.end(); ++field) {
+                if (field.key() != QLatin1String("none") &&
+                    field.key() != QLatin1String("control") &&
+                    field.key() != QLatin1String("overlay"))
+                    return false;
+                const double value = field.value().toDouble(-1);
+                if (!field.value().isDouble() || value < 0 || value > 64 ||
+                    value != static_cast<int>(value))
+                    return false;
+            }
+        } else if (it.key() == QLatin1String("font")) {
+            for (auto field = section.begin(); field != section.end(); ++field) {
+                if (field.key() == QLatin1String("family")) {
+                    if (!field.value().isString())
+                        return false;
+                } else if (field.key() == QLatin1String("scale")) {
+                    const double value = field.value().toDouble(-1);
+                    if (!field.value().isDouble() || value < 0.5 || value > 4.0)
+                        return false;
+                } else {
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
+void applyThemeSpec(ThemeRegistry::ExtendedSnapshot& snapshot, const QJsonObject& spec)
+{
+    applySpec(snapshot, spec);
+}
+
+} // namespace detail
+
 namespace UserTheme {
+
+bool applyOverrides(const QJsonObject& overrides)
+{
+    if (!detail::validateThemeSpec(overrides))
+        return false;
+    auto& registry = ThemeRegistry::instance();
+    auto next = registry.extendedSnapshot();
+    applySpec(next, overrides);
+    return registry.applyExtendedSnapshot(next);
+}
 
 void apply()
 {
