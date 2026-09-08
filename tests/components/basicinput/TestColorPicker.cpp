@@ -72,7 +72,7 @@ protected:
     ColorPickerTestWindow* window = nullptr;
 };
 
-TEST(ColorPickerContractTest, InternalColumnsResolveAsAnAcyclicGrid)
+TEST(ColorPickerContractTest, Contract_InternalColumnsResolveAsAnAcyclicGrid)
 {
     ColorPicker picker;
     picker.resize(520, 520);
@@ -107,7 +107,7 @@ TEST(ColorPickerContractTest, InternalColumnsResolveAsAnAcyclicGrid)
     EXPECT_GT(spectrum->height(), 0);
 }
 
-TEST(ColorPickerContractTest, InternalLabelsUseOwnPrimaryThemeColor)
+TEST(ColorPickerContractTest, Contract_InternalLabelsUseOwnPrimaryThemeColor)
 {
     QWidget styledHost;
     styledHost.setStyleSheet(QStringLiteral("QWidget { background: #202020; }"));

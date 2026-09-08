@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "components/textfields/LineEdit.h"
+#include "components/textfields/Label.h"
 
 #include <QAction>
 #include <QApplication>
@@ -35,6 +36,7 @@
 #include "components/menus_toolbars/Menu.h"
 #include "components/scrolling/ScrollBar.h"
 #include "design/Typography.h"
+#include "QtTestEnvironment.h"
 
 using namespace fluent;
 using namespace fluent::basicinput;
@@ -44,7 +46,8 @@ using namespace fluent::basicinput;
 class ComboBoxTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -54,21 +57,21 @@ public:
 
 class ComboBoxTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new ComboBoxTestWindow;
         window->onThemeUpdated();
         window->resize(600, 500);
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     ComboBoxTestWindow* window = nullptr;
 };
 
 namespace {
-fluent::dialogs_flyouts::Flyout* openPopupFor(ComboBox* comboBox, ComboBoxTestWindow* window) {
+fluent::dialogs_flyouts::Flyout* openPopupFor(ComboBox* comboBox, ComboBoxTestWindow* window)
+{
     window->show();
     comboBox->show();
     QApplication::processEvents();
@@ -77,20 +80,22 @@ fluent::dialogs_flyouts::Flyout* openPopupFor(ComboBox* comboBox, ComboBoxTestWi
     return window->findChild<fluent::dialogs_flyouts::Flyout*>("ComboBoxPopup");
 }
 
-QRect popupCardRect(QWidget* popup) {
+QRect popupCardRect(QWidget* popup)
+{
     return popup->geometry().adjusted(::Spacing::Standard, ::Spacing::Standard,
                                       -::Spacing::Standard, -::Spacing::Standard);
 }
 
-bool isAccentLike(const QColor& pixel, const QColor& accent) {
+bool isAccentLike(const QColor& pixel, const QColor& accent)
+{
     if (pixel.alpha() < 120)
         return false;
-    return qAbs(pixel.red() - accent.red()) <= 10 &&
-           qAbs(pixel.green() - accent.green()) <= 10 &&
+    return qAbs(pixel.red() - accent.red()) <= 10 && qAbs(pixel.green() - accent.green()) <= 10 &&
            qAbs(pixel.blue() - accent.blue()) <= 10;
 }
 
-qreal accentSpanWidthInViewport(fluent::collections::ListView* listView, const QColor& accent) {
+qreal accentSpanWidthInViewport(fluent::collections::ListView* listView, const QColor& accent)
+{
     const QPixmap pixmap = listView->viewport()->grab();
     const QImage image = pixmap.toImage().convertToFormat(QImage::Format_ARGB32);
     const qreal dpr = pixmap.devicePixelRatioF();
@@ -109,18 +114,20 @@ qreal accentSpanWidthInViewport(fluent::collections::ListView* listView, const Q
     return maxX >= minX ? (maxX - minX + 1) / dpr : 0.0;
 }
 
-void sendWheel(QWidget* target, int angleDeltaY) {
+void sendWheel(QWidget* target, int angleDeltaY)
+{
     const QPoint local = target->rect().center();
-    QWheelEvent event(QPointF(local), QPointF(target->mapToGlobal(local)),
-                      QPoint(), QPoint(0, angleDeltaY), Qt::NoButton,
-                      Qt::NoModifier, Qt::NoScrollPhase, false);
+    QWheelEvent event(QPointF(local), QPointF(target->mapToGlobal(local)), QPoint(),
+                      QPoint(0, angleDeltaY), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
+                      false);
     QApplication::sendEvent(target, &event);
 }
 } // namespace
 
 // ─── 基础功能测试 ────────────────────────────────────────────────────────────
 
-TEST_F(ComboBoxTest, DefaultProperties) {
+TEST_F(ComboBoxTest, DefaultProperties)
+{
     ComboBox cb(window);
     EXPECT_GE(cb.metaObject()->indexOfProperty("pressProgress"), 0);
     EXPECT_EQ(cb.fontRole(), Typography::FontRole::Body);
@@ -129,14 +136,14 @@ TEST_F(ComboBoxTest, DefaultProperties) {
     EXPECT_EQ(cb.chevronGlyph(), Typography::Icons::ChevronDownMed);
     EXPECT_EQ(cb.chevronSize(), Typography::IconSize::Compact);
     EXPECT_EQ(Typography::Icons::glyphForSize(cb.chevronGlyph(), cb.chevronSize()),
-              Typography::Icons::glyph(
-                  QStringLiteral("ic_fluent_chevron_down_12_regular")));
+              Typography::Icons::glyph(QStringLiteral("ic_fluent_chevron_down_12_regular")));
     EXPECT_EQ(cb.chevronOffset(), QPoint(Spacing::Padding::ComboBoxHorizontal, 0));
     EXPECT_EQ(cb.popupOffset(), Spacing::Small);
     EXPECT_DOUBLE_EQ(cb.pressProgress(), 0.0);
 }
 
-TEST_F(ComboBoxTest, SetFontRole) {
+TEST_F(ComboBoxTest, SetFontRole)
+{
     ComboBox cb(window);
     QSignalSpy spy(&cb, &ComboBox::fontRoleChanged);
     cb.setFontRole(Typography::FontRole::Caption);
@@ -148,7 +155,196 @@ TEST_F(ComboBoxTest, SetFontRole) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(ComboBoxTest, SetContentPadding) {
+TEST_F(ComboBoxTest, Contract_ExplicitFontReachesPopupAndSurvivesThemeRefresh)
+{
+    ComboBox cb(window);
+    cb.addItems({"Alpha", "Beta", "Gamma"});
+    QFont custom = cb.font();
+    custom.setPixelSize(27);
+    cb.setFont(custom);
+    auto* popup = openPopupFor(&cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* list = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+    ASSERT_NE(list, nullptr);
+    EXPECT_EQ(list->font(), cb.font());
+
+    // Exercise child refresh after the owner: theme broadcast order must not
+    // replace the font of the separately registered popup ListView.
+    static_cast<FluentElement*>(&cb)->onThemeUpdated();
+    static_cast<FluentElement*>(list)->onThemeUpdated();
+    popup->onThemeUpdated();
+    EXPECT_EQ(cb.font().pixelSize(), 27);
+    EXPECT_EQ(list->font(), cb.font());
+    cb.hidePopup();
+    cb.showPopup();
+    EXPECT_EQ(list->font(), cb.font());
+}
+
+TEST_F(ComboBoxTest, Contract_FontChangeUpdatesOpenPopupWithoutResettingSelection)
+{
+    ComboBox cb(window);
+    cb.addItems({"Alpha", "Beta", "Gamma"});
+    auto* popup = openPopupFor(&cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* list = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+    ASSERT_NE(list, nullptr);
+    list->setCurrentIndex(list->model()->index(2, 0));
+    QSignalSpy closed(popup, &fluent::dialogs_flyouts::Flyout::closed);
+    const QSize originalSize = popup->size();
+    QFont custom = cb.font();
+    custom.setPixelSize(42);
+    // Also honor the inherited QWidget setter / Qt font property path.
+    static_cast<QWidget*>(&cb)->setFont(custom);
+    QApplication::processEvents();
+    EXPECT_EQ(list->font(), cb.font());
+    EXPECT_EQ(list->currentIndex().row(), 2);
+    EXPECT_TRUE(popup->isOpen());
+    EXPECT_EQ(closed.count(), 0);
+    EXPECT_GT(popup->height(), originalSize.height());
+    const QRect row = static_cast<QAbstractItemView*>(list)->visualRect(list->model()->index(1, 0));
+    EXPECT_GE(row.height(), QFontMetrics(custom).height());
+    EXPECT_GE(cb.height() - 2 * cb.contentPaddingV(), QFontMetrics(custom).height());
+    QTest::mouseClick(list->viewport(), Qt::LeftButton, Qt::NoModifier, row.center());
+    EXPECT_EQ(cb.currentIndex(), 1);
+    EXPECT_FALSE(popup->isOpen());
+}
+
+TEST_F(ComboBoxTest, Contract_EditableFontAndSameRoleRestore)
+{
+    ComboBox cb(window);
+    cb.addItems({"Alpha", "Beta"});
+    cb.setEditable(true);
+    cb.lineEdit()->setText("Uncommitted text");
+    QFont custom = cb.font();
+    custom.setPointSizeF(19.5);
+    cb.setFont(custom);
+    ASSERT_NE(cb.fluentLineEdit(), nullptr);
+    cb.fluentLineEdit()->onThemeUpdated();
+    EXPECT_EQ(cb.lineEdit()->font(), cb.font());
+    EXPECT_EQ(cb.lineEdit()->text(), "Uncommitted text");
+
+    QSignalSpy roleChanges(&cb, &ComboBox::fontRoleChanged);
+    cb.setFontRole(cb.fontRole());
+    EXPECT_EQ(cb.font(), cb.themeFont(cb.fontRole()).toQFont());
+    EXPECT_EQ(cb.lineEdit()->font(), cb.font());
+    EXPECT_EQ(roleChanges.count(), 0);
+    EXPECT_EQ(cb.lineEdit()->text(), "Uncommitted text");
+
+    // A setter call with the already-resolved font still pins that font.
+    cb.setFont(cb.font());
+    const QFont pinned = cb.font();
+    const auto saved = ThemeRegistry::instance().snapshot();
+    ThemeRegistry::instance().setFontScale(saved.fontScale * 1.25);
+    const QFont afterRefresh = cb.font();
+    ThemeRegistry::instance().applySnapshot(saved);
+    EXPECT_EQ(afterRefresh, pinned);
+}
+
+TEST_F(ComboBoxTest, Contract_LargeFontPopupFitsHostAndHonorsFieldConstraint)
+{
+    ComboBox cb(window);
+    cb.move(20, 20);
+    for (int i = 0; i < 12; ++i)
+        cb.addItem(QStringLiteral("Item %1").arg(i));
+    cb.setFixedHeight(36);
+    QFont custom = cb.font();
+    custom.setPixelSize(42);
+    cb.setFont(custom);
+    cb.setEditable(true);
+    EXPECT_EQ(cb.lineEdit()->font(), cb.font());
+    EXPECT_EQ(cb.height(), 36);
+    auto* popup = openPopupFor(&cb, window);
+    ASSERT_NE(popup, nullptr);
+    EXPECT_TRUE(window->rect().contains(popupCardRect(popup)));
+    auto* list = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+    ASSERT_NE(list, nullptr);
+    EXPECT_GT(list->verticalScrollBar()->maximum(), 0);
+    list->scrollToBottom();
+    const QModelIndex last = list->model()->index(11, 0);
+    const QRect lastRow = static_cast<QAbstractItemView*>(list)->visualRect(last);
+    EXPECT_TRUE(list->viewport()->rect().contains(lastRow.center()));
+    QTest::mouseClick(list->viewport(), Qt::LeftButton, Qt::NoModifier, lastRow.center());
+    EXPECT_EQ(cb.currentIndex(), 11);
+}
+
+TEST_F(ComboBoxTest, Contract_ThemeFontUpdatesOpenPopupAndEditor)
+{
+    ComboBox cb(window);
+    cb.addItems({"Alpha", "Beta"});
+    cb.setEditable(true);
+    auto* popup = openPopupFor(&cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* list = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+    ASSERT_NE(list, nullptr);
+    cb.setFontRole(Typography::FontRole::Subtitle);
+    EXPECT_EQ(cb.font(), cb.themeFont(cb.fontRole()).toQFont());
+    EXPECT_EQ(list->font(), cb.font());
+    EXPECT_EQ(cb.lineEdit()->font(), cb.font());
+    cb.setFontRole(Typography::FontRole::Body);
+    const auto saved = ThemeRegistry::instance().snapshot();
+    ThemeRegistry::instance().setFontScale(saved.fontScale * 1.5);
+    QApplication::processEvents();
+    const bool ownerMatchesTheme = cb.font() == cb.themeFont(cb.fontRole()).toQFont();
+    const bool listMatchesOwner = list->font() == cb.font();
+    const bool editorMatchesOwner = cb.lineEdit()->font() == cb.font();
+    ThemeRegistry::instance().applySnapshot(saved);
+    EXPECT_TRUE(ownerMatchesTheme);
+    EXPECT_TRUE(listMatchesOwner);
+    EXPECT_TRUE(editorMatchesOwner);
+    EXPECT_TRUE(popup->isOpen());
+}
+
+TEST_F(ComboBoxTest, VisualCheckCustomFont)
+{
+    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST"))
+        GTEST_SKIP() << "Visual review is opt-in";
+    const bool dark = qEnvironmentVariableIntValue("COMBO_FONT_DARK") != 0;
+    const bool narrow = qEnvironmentVariableIntValue("COMBO_FONT_NARROW") != 0;
+    const int fontSize = qEnvironmentVariableIntValue("COMBO_FONT_LARGE") ? 42 : 22;
+    const auto savedTheme = FluentElement::currentTheme();
+    FluentElement::setTheme(dark ? FluentElement::Dark : FluentElement::Light);
+    window->resize(narrow ? 360 : 640, 600);
+    auto* layout = new fluent::AnchorLayout(window);
+    auto* title = new fluent::textfields::Label("Custom ComboBox font", window);
+    layout->addWidget(title);
+    title->setFluentTypography(Typography::FontRole::Subtitle);
+    title->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
+    title->anchors()->top = {window, fluent::AnchorLayout::Edge::Top, 24};
+    title->anchors()->left = {window, fluent::AnchorLayout::Edge::Left, 24};
+    title->anchors()->right = {window, fluent::AnchorLayout::Edge::Right, -24};
+    auto* combo = new ComboBox(window);
+    layout->addWidget(combo);
+    combo->addItems({"Alpha 文字", "Beta 选项", "Gamma", "Delta", "Epsilon", "Zeta", "Eta"});
+    combo->setObjectName("CustomFontComboBox");
+    combo->setEditable(true);
+    QFont custom = combo->font();
+    custom.setPixelSize(fontSize);
+    combo->setFont(custom);
+    combo->anchors()->top = {title, fluent::AnchorLayout::Edge::Bottom, 16};
+    combo->anchors()->left = {window, fluent::AnchorLayout::Edge::Left, 24};
+    combo->anchors()->right = {window, fluent::AnchorLayout::Edge::Right, -24};
+    window->show();
+    QApplication::processEvents();
+    combo->showPopup();
+    if (tests::support::isVisualSnapshotMode()) {
+        tests::support::VisualSnapshotOptions options;
+        options.windowSize = window->size();
+        options.variant = QStringLiteral("font-%1-%2-%3")
+                              .arg(fontSize)
+                              .arg(dark ? "dark" : "light")
+                              .arg(narrow ? "narrow" : "normal");
+        options.theme = dark ? tests::support::VisualSnapshotTheme::Dark
+                             : tests::support::VisualSnapshotTheme::Light;
+        EXPECT_TRUE(tests::support::captureVisualSnapshot(window, options));
+        FluentElement::setTheme(savedTheme);
+        return;
+    }
+    qApp->exec();
+    FluentElement::setTheme(savedTheme);
+}
+
+TEST_F(ComboBoxTest, SetContentPadding)
+{
     ComboBox cb(window);
     QSignalSpy spy(&cb, &ComboBox::layoutChanged);
     cb.setContentPaddingH(20);
@@ -160,7 +356,8 @@ TEST_F(ComboBoxTest, SetContentPadding) {
     EXPECT_EQ(spy.count(), 2);
 }
 
-TEST_F(ComboBoxTest, SetChevron) {
+TEST_F(ComboBoxTest, SetChevron)
+{
     ComboBox cb(window);
     QSignalSpy spy(&cb, &ComboBox::chevronChanged);
     cb.setChevronGlyph(Typography::Icons::ChevronDown);
@@ -172,7 +369,8 @@ TEST_F(ComboBoxTest, SetChevron) {
     EXPECT_EQ(spy.count(), 2);
 }
 
-TEST_F(ComboBoxTest, AddItemsAndSelect) {
+TEST_F(ComboBoxTest, AddItemsAndSelect)
+{
     ComboBox cb(window);
     cb.addItems({"Yellow", "Green", "Blue", "Red"});
     EXPECT_EQ(cb.count(), 4);
@@ -182,7 +380,8 @@ TEST_F(ComboBoxTest, AddItemsAndSelect) {
     EXPECT_EQ(cb.currentText(), "Blue");
 }
 
-TEST_F(ComboBoxTest, WheelAndArrowKeysRequireFocusToChangeSelection) {
+TEST_F(ComboBoxTest, WheelAndArrowKeysRequireFocusToChangeSelection)
+{
     ComboBox cb(window);
     EXPECT_EQ(cb.focusPolicy(), Qt::StrongFocus);
     cb.setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
@@ -211,7 +410,8 @@ TEST_F(ComboBoxTest, WheelAndArrowKeysRequireFocusToChangeSelection) {
     EXPECT_EQ(cb.currentIndex(), 2);
 }
 
-TEST_F(ComboBoxTest, SizeHintMinWidth) {
+TEST_F(ComboBoxTest, SizeHintMinWidth)
+{
     ComboBox cb(window);
     QSize sh = cb.sizeHint();
     // Height should be ControlHeight::Standard (32)
@@ -220,7 +420,8 @@ TEST_F(ComboBoxTest, SizeHintMinWidth) {
     EXPECT_GE(sh.width(), 80);
 }
 
-TEST_F(ComboBoxTest, SizeHintGrowsWithItems) {
+TEST_F(ComboBoxTest, SizeHintGrowsWithItems)
+{
     ComboBox cb(window);
     QSize emptySize = cb.sizeHint();
 
@@ -229,14 +430,14 @@ TEST_F(ComboBoxTest, SizeHintGrowsWithItems) {
     EXPECT_GT(withItems.width(), emptySize.width());
 }
 
-TEST_F(ComboBoxTest, SizeHintKeepsWidestItemClearOfElisionBoundary) {
+TEST_F(ComboBoxTest, SizeHintKeepsWidestItemClearOfElisionBoundary)
+{
     ComboBox cb(window);
     const QString widest = QStringLiteral("Keep in system tray");
     cb.addItems({QStringLiteral("Use system setting"), widest, QStringLiteral("Light")});
     cb.resize(cb.sizeHint());
 
-    const int chevronArea = cb.chevronOffset().x() + cb.chevronSize()
-                            + ::Spacing::Gap::Tight;
+    const int chevronArea = cb.chevronOffset().x() + cb.chevronSize() + ::Spacing::Gap::Tight;
     const int availableTextWidth = cb.width() - cb.contentPaddingH() - chevronArea;
     const QFontMetrics metrics(cb.font());
 
@@ -244,12 +445,14 @@ TEST_F(ComboBoxTest, SizeHintKeepsWidestItemClearOfElisionBoundary) {
     EXPECT_EQ(metrics.elidedText(widest, Qt::ElideRight, availableTextWidth), widest);
 }
 
-TEST_F(ComboBoxTest, FixedHeight) {
+TEST_F(ComboBoxTest, FixedHeight)
+{
     ComboBox cb(window);
     EXPECT_EQ(cb.height(), Spacing::ControlHeight::Standard);
 }
 
-TEST_F(ComboBoxTest, EditableFieldGeometryMirrorsInRightToLeftLayouts) {
+TEST_F(ComboBoxTest, EditableFieldGeometryMirrorsInRightToLeftLayouts)
+{
     ComboBox cb(window);
     cb.setEditable(true);
     cb.resize(220, Spacing::ControlHeight::Standard);
@@ -268,7 +471,8 @@ TEST_F(ComboBoxTest, EditableFieldGeometryMirrorsInRightToLeftLayouts) {
     EXPECT_EQ(leftToRight.left() + rightToLeft.right(), cb.width() - 1);
 }
 
-TEST_F(ComboBoxTest, DisabledState) {
+TEST_F(ComboBoxTest, DisabledState)
+{
     ComboBox cb(window);
     cb.addItems({"Item1", "Item2"});
     cb.setEnabled(false);
@@ -281,7 +485,8 @@ TEST_F(ComboBoxTest, DisabledState) {
 
 // ─── 主题切换测试 ────────────────────────────────────────────────────────────
 
-TEST_F(ComboBoxTest, ThemeSwitchLight) {
+TEST_F(ComboBoxTest, ThemeSwitchLight)
+{
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     ComboBox cb(window);
     cb.addItems({"Test"});
@@ -290,7 +495,8 @@ TEST_F(ComboBoxTest, ThemeSwitchLight) {
     // Should not crash / assert on theme switch
 }
 
-TEST_F(ComboBoxTest, ThemeSwitchDark) {
+TEST_F(ComboBoxTest, ThemeSwitchDark)
+{
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     ComboBox cb(window);
     cb.addItems({"Test"});
@@ -303,7 +509,8 @@ TEST_F(ComboBoxTest, ThemeSwitchDark) {
 
 // ─── 可编辑模式测试 ──────────────────────────────────────────────────────────────
 
-TEST_F(ComboBoxTest, SetEditableCreatesLineEdit) {
+TEST_F(ComboBoxTest, SetEditableCreatesLineEdit)
+{
     ComboBox cb(window);
     cb.addItems({"Item1", "Item2", "Item3"});
     cb.setEditable(true);
@@ -316,9 +523,7 @@ TEST_F(ComboBoxTest, SetEditableCreatesLineEdit) {
     EXPECT_EQ(cb.fluentLineEdit(), lineEdit);
     EXPECT_FALSE(lineEdit->isHidden());
     EXPECT_FALSE(lineEdit->isClearButtonEnabled());
-    EXPECT_EQ(
-        lineEdit->contextMenuPolicy(),
-        Qt::DefaultContextMenu);
+    EXPECT_EQ(lineEdit->contextMenuPolicy(), Qt::DefaultContextMenu);
 }
 
 TEST_F(ComboBoxTest, CallerSuppliedQtEditorUsesFluentContextMenu)
@@ -329,9 +534,7 @@ TEST_F(ComboBoxTest, CallerSuppliedQtEditorUsesFluentContextMenu)
     cb.setLineEdit(editor);
     ASSERT_EQ(cb.lineEdit(), editor);
     ASSERT_EQ(cb.fluentLineEdit(), nullptr);
-    ASSERT_EQ(
-        editor->contextMenuPolicy(),
-        Qt::DefaultContextMenu);
+    ASSERT_EQ(editor->contextMenuPolicy(), Qt::DefaultContextMenu);
     editor->setText(QStringLiteral("Caller supplied value"));
     editor->selectAll();
     cb.setGeometry(20, 20, 220, 32);
@@ -341,51 +544,33 @@ TEST_F(ComboBoxTest, CallerSuppliedQtEditorUsesFluentContextMenu)
     bool sawFluentMenu = false;
     QTimer::singleShot(0, [&]() {
         auto* menu =
-            qobject_cast<fluent::menus_toolbars::FluentMenu*>(
-                QApplication::activePopupWidget());
+            qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
         sawFluentMenu = menu != nullptr;
         if (!menu) {
             QWidget* popup = QApplication::activePopupWidget();
-            ADD_FAILURE()
-                << "Expected FluentMenu, active popup is "
-                << (popup
-                        ? popup->metaObject()->className()
-                        : "<none>");
+            ADD_FAILURE() << "Expected FluentMenu, active popup is "
+                          << (popup ? popup->metaObject()->className() : "<none>");
             return;
         }
 
-        EXPECT_EQ(
-            menu->objectName(),
-            QStringLiteral(
-                "FluentComboBox.LineEdit.ContextMenu"));
-        EXPECT_EQ(
-            menu->font().pixelSize(),
-            Typography::FontSize::Caption);
+        EXPECT_EQ(menu->objectName(), QStringLiteral("FluentComboBox.LineEdit.ContextMenu"));
+        EXPECT_EQ(menu->font().pixelSize(), Typography::FontSize::Caption);
         for (QAction* action : menu->actions()) {
-            if (!action || action->isSeparator()
-                || action->icon().isNull()) {
+            if (!action || action->isSeparator() || action->icon().isNull()) {
                 continue;
             }
-            const QSize iconSize =
-                action->icon().actualSize(QSize(64, 64));
-            const int maximumBackingExtent = qCeil(
-                Typography::IconSize::Standard
-                * qMax<qreal>(1.0, menu->devicePixelRatioF()));
-            EXPECT_LE(
-                iconSize.width(),
-                maximumBackingExtent);
-            EXPECT_LE(
-                iconSize.height(),
-                maximumBackingExtent);
+            const QSize iconSize = action->icon().actualSize(QSize(64, 64));
+            const int maximumBackingExtent =
+                qCeil(Typography::IconSize::Standard * qMax<qreal>(1.0, menu->devicePixelRatioF()));
+            EXPECT_LE(iconSize.width(), maximumBackingExtent);
+            EXPECT_LE(iconSize.height(), maximumBackingExtent);
         }
         menu->close();
     });
 
     const QPoint localPosition = editor->rect().center();
-    QContextMenuEvent event(
-        QContextMenuEvent::Mouse,
-        localPosition,
-        editor->mapToGlobal(localPosition));
+    QContextMenuEvent event(QContextMenuEvent::Mouse, localPosition,
+                            editor->mapToGlobal(localPosition));
     QApplication::sendEvent(editor, &event);
 
     EXPECT_TRUE(event.isAccepted());
@@ -393,7 +578,8 @@ TEST_F(ComboBoxTest, CallerSuppliedQtEditorUsesFluentContextMenu)
     EXPECT_TRUE(sawFluentMenu);
 }
 
-TEST_F(ComboBoxTest, EditableModePreservesQComboBoxTextContract) {
+TEST_F(ComboBoxTest, EditableModePreservesQComboBoxTextContract)
+{
     ComboBox cb(window);
     cb.addItems({"Alpha", "Beta"});
     QSignalSpy editSpy(&cb, &QComboBox::editTextChanged);
@@ -409,7 +595,8 @@ TEST_F(ComboBoxTest, EditableModePreservesQComboBoxTextContract) {
     EXPECT_EQ(cb.currentText(), QStringLiteral("Caller supplied value"));
 }
 
-TEST_F(ComboBoxTest, DirectBaseEditableCallsRemainCoherent) {
+TEST_F(ComboBoxTest, DirectBaseEditableCallsRemainCoherent)
+{
     ComboBox cb(window);
     cb.addItems({"Alpha", "Beta"});
     QComboBox* base = &cb;
@@ -425,7 +612,8 @@ TEST_F(ComboBoxTest, DirectBaseEditableCallsRemainCoherent) {
     EXPECT_EQ(cb.lineEdit(), nullptr);
 }
 
-TEST_F(ComboBoxTest, EditableLineEditKeepsDarkThemeTextPaletteInsideStyledHost) {
+TEST_F(ComboBoxTest, EditableLineEditKeepsDarkThemeTextPaletteInsideStyledHost)
+{
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     window->onThemeUpdated();
 
@@ -437,14 +625,14 @@ TEST_F(ComboBoxTest, EditableLineEditKeepsDarkThemeTextPaletteInsideStyledHost) 
     auto* lineEdit = cb.findChild<fluent::textfields::LineEdit*>();
     ASSERT_NE(lineEdit, nullptr);
     const auto colors = lineEdit->themeColors();
-    EXPECT_EQ(lineEdit->palette().color(QPalette::Active, QPalette::Text),
-              colors.textPrimary);
+    EXPECT_EQ(lineEdit->palette().color(QPalette::Active, QPalette::Text), colors.textPrimary);
 
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     window->onThemeUpdated();
 }
 
-TEST_F(ComboBoxTest, SetEditableFalseRemovesLineEdit) {
+TEST_F(ComboBoxTest, SetEditableFalseRemovesLineEdit)
+{
     ComboBox cb(window);
     cb.setEditable(true);
     ASSERT_NE(cb.findChild<fluent::textfields::LineEdit*>(), nullptr);
@@ -453,7 +641,8 @@ TEST_F(ComboBoxTest, SetEditableFalseRemovesLineEdit) {
     EXPECT_EQ(cb.findChild<fluent::textfields::LineEdit*>(), nullptr);
 }
 
-TEST_F(ComboBoxTest, EditableSelectUpdatesLineEdit) {
+TEST_F(ComboBoxTest, EditableSelectUpdatesLineEdit)
+{
     ComboBox cb(window);
     cb.addItems({"Alpha", "Beta", "Gamma"});
     cb.setEditable(true);
@@ -470,7 +659,8 @@ TEST_F(ComboBoxTest, EditableSelectUpdatesLineEdit) {
 
 // ─── Flyout 弹层行为测试 ────────────────────────────────────────────────────
 
-TEST_F(ComboBoxTest, PopupOpensAsFlyoutAndClosesThroughLifecycle) {
+TEST_F(ComboBoxTest, PopupOpensAsFlyoutAndClosesThroughLifecycle)
+{
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
     cb->addItems({"Alpha", "Beta", "Gamma"});
@@ -495,9 +685,7 @@ TEST_F(ComboBoxTest, PopupOpensAsFlyoutAndClosesThroughLifecycle) {
     EXPECT_FALSE(listView->backgroundVisible());
     EXPECT_TRUE(listView->property("fluentPreserveParentSurface").toBool());
     ASSERT_NE(listView->viewport(), nullptr);
-    EXPECT_TRUE(listView->viewport()
-                    ->property("fluentPreserveParentSurface")
-                    .toBool());
+    EXPECT_TRUE(listView->viewport()->property("fluentPreserveParentSurface").toBool());
 
     cb->hidePopup();
     QApplication::processEvents();
@@ -505,7 +693,8 @@ TEST_F(ComboBoxTest, PopupOpensAsFlyoutAndClosesThroughLifecycle) {
     EXPECT_FALSE(popup->isVisible());
 }
 
-TEST_F(ComboBoxTest, PopupIsRecreatedAfterOwnerMovesToAnotherTopLevel) {
+TEST_F(ComboBoxTest, PopupIsRecreatedAfterOwnerMovesToAnotherTopLevel)
+{
     auto* firstWindow = window;
     auto* secondWindow = new ComboBoxTestWindow;
     secondWindow->resize(600, 500);
@@ -530,14 +719,14 @@ TEST_F(ComboBoxTest, PopupIsRecreatedAfterOwnerMovesToAnotherTopLevel) {
     comboBox->showPopup();
     QApplication::processEvents();
     auto* recreatedPopup =
-        secondWindow->findChild<fluent::dialogs_flyouts::Flyout*>(
-            QStringLiteral("ComboBoxPopup"));
+        secondWindow->findChild<fluent::dialogs_flyouts::Flyout*>(QStringLiteral("ComboBoxPopup"));
     ASSERT_NE(recreatedPopup, nullptr);
     EXPECT_TRUE(recreatedPopup->isVisible());
     EXPECT_EQ(recreatedPopup->parentWidget(), secondWindow);
 }
 
-TEST_F(ComboBoxTest, PopupInheritsThemeOverrideFromComboBox) {
+TEST_F(ComboBoxTest, PopupInheritsThemeOverrideFromComboBox)
+{
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     window->onThemeUpdated();
 
@@ -564,7 +753,8 @@ TEST_F(ComboBoxTest, PopupInheritsThemeOverrideFromComboBox) {
     cb->hidePopup();
 }
 
-TEST_F(ComboBoxTest, SelectingPopupItemUpdatesIndexAndCloses) {
+TEST_F(ComboBoxTest, SelectingPopupItemUpdatesIndexAndCloses)
+{
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
     cb->addItems({"Alpha", "Beta", "Gamma", "Delta"});
@@ -576,7 +766,8 @@ TEST_F(ComboBoxTest, SelectingPopupItemUpdatesIndexAndCloses) {
     ASSERT_NE(listView, nullptr);
     EXPECT_EQ(listView->spacing(), 0);
 
-    const QPoint rowTwoCenter(24, Spacing::ControlHeight::Large * 2 + Spacing::ControlHeight::Large / 2);
+    const QPoint rowTwoCenter(24, Spacing::ControlHeight::Large * 2 +
+                                      Spacing::ControlHeight::Large / 2);
     QTest::mouseClick(listView->viewport(), Qt::LeftButton, Qt::NoModifier, rowTwoCenter);
     QApplication::processEvents();
 
@@ -585,7 +776,8 @@ TEST_F(ComboBoxTest, SelectingPopupItemUpdatesIndexAndCloses) {
     EXPECT_FALSE(popup->isOpen());
 }
 
-TEST_F(ComboBoxTest, PopupUsesConfiguredModelColumnAndRootIndex) {
+TEST_F(ComboBoxTest, PopupUsesConfiguredModelColumnAndRootIndex)
+{
     QStandardItemModel model;
     auto* group = new QStandardItem(QStringLiteral("Group"));
     group->appendRow({new QStandardItem(QStringLiteral("First key")),
@@ -603,21 +795,20 @@ TEST_F(ComboBoxTest, PopupUsesConfiguredModelColumnAndRootIndex) {
 
     auto* popup = openPopupFor(cb, window);
     ASSERT_NE(popup, nullptr);
-    auto* listView = popup->findChild<fluent::collections::ListView*>(
-        "ComboBoxPopupListView");
+    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
     ASSERT_NE(listView, nullptr);
     EXPECT_EQ(listView->rootIndex(), group->index());
     EXPECT_EQ(listView->modelColumn(), 1);
-    EXPECT_EQ(listView->model()->index(0, 1, listView->rootIndex())
-                  .data(Qt::DisplayRole)
-                  .toString(),
-              QStringLiteral("First label"));
+    EXPECT_EQ(
+        listView->model()->index(0, 1, listView->rootIndex()).data(Qt::DisplayRole).toString(),
+        QStringLiteral("First label"));
     EXPECT_EQ(cb->currentText(), QStringLiteral("First label"));
 
     cb->hidePopup();
 }
 
-TEST_F(ComboBoxTest, EditableSelectionMirrorsLineEditText) {
+TEST_F(ComboBoxTest, EditableSelectionMirrorsLineEditText)
+{
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
     cb->addItems({"Alpha", "Beta", "Gamma"});
@@ -632,7 +823,8 @@ TEST_F(ComboBoxTest, EditableSelectionMirrorsLineEditText) {
     auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
     ASSERT_NE(listView, nullptr);
 
-    const QPoint rowOneCenter(24, Spacing::ControlHeight::Large + Spacing::ControlHeight::Large / 2);
+    const QPoint rowOneCenter(24,
+                              Spacing::ControlHeight::Large + Spacing::ControlHeight::Large / 2);
     QTest::mouseClick(listView->viewport(), Qt::LeftButton, Qt::NoModifier, rowOneCenter);
     QApplication::processEvents();
 
@@ -641,7 +833,8 @@ TEST_F(ComboBoxTest, EditableSelectionMirrorsLineEditText) {
     EXPECT_FALSE(popup->isOpen());
 }
 
-TEST_F(ComboBoxTest, PopupAlignsBelowWithComboBoxWidth) {
+TEST_F(ComboBoxTest, PopupAlignsBelowWithComboBoxWidth)
+{
     window->resize(420, 360);
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(40, 40, 184, Spacing::ControlHeight::Standard);
@@ -663,7 +856,8 @@ TEST_F(ComboBoxTest, PopupAlignsBelowWithComboBoxWidth) {
     EXPECT_EQ(listGeometry.left(), Spacing::Standard + popupContentInset);
     EXPECT_EQ(listGeometry.right(), popup->rect().right() - Spacing::Standard - popupContentInset);
     EXPECT_EQ(listGeometry.top(), Spacing::Standard + popupContentInset);
-    EXPECT_EQ(listGeometry.bottom(), popup->rect().bottom() - Spacing::Standard - popupContentInset);
+    EXPECT_EQ(listGeometry.bottom(),
+              popup->rect().bottom() - Spacing::Standard - popupContentInset);
 
     auto* scrollBar = listView->verticalFluentScrollBar();
     ASSERT_NE(scrollBar, nullptr);
@@ -673,7 +867,8 @@ TEST_F(ComboBoxTest, PopupAlignsBelowWithComboBoxWidth) {
     EXPECT_EQ(popup->rect().right() - Spacing::Standard - scrollBarRightInPopup, Spacing::XSmall);
 }
 
-TEST_F(ComboBoxTest, PopupFlipsAboveNearBottomEdge) {
+TEST_F(ComboBoxTest, PopupFlipsAboveNearBottomEdge)
+{
     window->resize(420, 320);
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(40, 270, 184, Spacing::ControlHeight::Standard);
@@ -687,14 +882,14 @@ TEST_F(ComboBoxTest, PopupFlipsAboveNearBottomEdge) {
     EXPECT_LT(card.bottom(), cb->geometry().top());
 }
 
-TEST_F(ComboBoxTest, PopupFitIncludesAnchorGapAndSurfaceMargin) {
+TEST_F(ComboBoxTest, PopupFitIncludesAnchorGapAndSurfaceMargin)
+{
     window->resize(520, 600);
     ComboBox* cb = new ComboBox(window);
     // Six visible rows fit below by card height alone, but not once the popup
     // gap and window margin are included. There is ample room above.
     cb->setGeometry(40, 317, 184, Spacing::ControlHeight::Standard);
-    cb->addItems({"Follow system (100%)", "110%", "125%", "150%", "175%",
-                  "200%", "250%", "300%"});
+    cb->addItems({"Follow system (100%)", "110%", "125%", "150%", "175%", "200%", "250%", "300%"});
 
     auto* popup = openPopupFor(cb, window);
     ASSERT_NE(popup, nullptr);
@@ -703,17 +898,16 @@ TEST_F(ComboBoxTest, PopupFitIncludesAnchorGapAndSurfaceMargin) {
     EXPECT_LT(card.bottom(), cb->geometry().top());
 }
 
-TEST_F(ComboBoxTest, ScrollingPopupWidensForItsLongestLabel) {
+TEST_F(ComboBoxTest, ScrollingPopupWidensForItsLongestLabel)
+{
     window->resize(520, 600);
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(40, 40, 150, Spacing::ControlHeight::Standard);
-    cb->addItems({"Follow system (100%)", "110%", "125%", "150%", "175%",
-                  "200%", "250%", "300%"});
+    cb->addItems({"Follow system (100%)", "110%", "125%", "150%", "175%", "200%", "250%", "300%"});
 
     auto* popup = openPopupFor(cb, window);
     ASSERT_NE(popup, nullptr);
-    auto* listView = popup->findChild<fluent::collections::ListView*>(
-        "ComboBoxPopupListView");
+    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
     ASSERT_NE(listView, nullptr);
     const QModelIndex longest = listView->model()->index(0, 0);
     const QRect row = static_cast<QListView*>(listView)->visualRect(longest);
@@ -722,9 +916,7 @@ TEST_F(ComboBoxTest, ScrollingPopupWidensForItsLongestLabel) {
     int rightInset = 5;
     if (auto* scrollBar = listView->verticalFluentScrollBar())
         rightInset += scrollBar->thickness();
-    const int textWidth = row.adjusted(5, 3, -rightInset, -3)
-                              .adjusted(16, 0, -8, 0)
-                              .width();
+    const int textWidth = row.adjusted(5, 3, -rightInset, -3).adjusted(16, 0, -8, 0).width();
     const QString label = longest.data(Qt::DisplayRole).toString();
     const QFontMetrics metrics(listView->font());
 
@@ -732,7 +924,8 @@ TEST_F(ComboBoxTest, ScrollingPopupWidensForItsLongestLabel) {
     EXPECT_EQ(metrics.elidedText(label, Qt::ElideRight, textWidth), label);
 }
 
-TEST_F(ComboBoxTest, PopupClampsNearRightEdge) {
+TEST_F(ComboBoxTest, PopupClampsNearRightEdge)
+{
     window->resize(300, 240);
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(230, 40, 120, Spacing::ControlHeight::Standard);
@@ -746,7 +939,8 @@ TEST_F(ComboBoxTest, PopupClampsNearRightEdge) {
     EXPECT_NE(card.left(), cb->geometry().left());
 }
 
-TEST_F(ComboBoxTest, EscapeAndOutsidePressDismissPopup) {
+TEST_F(ComboBoxTest, EscapeAndOutsidePressDismissPopup)
+{
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(80, 80, 180, Spacing::ControlHeight::Standard);
     cb->addItems({"Alpha", "Beta", "Gamma"});
@@ -764,7 +958,8 @@ TEST_F(ComboBoxTest, EscapeAndOutsidePressDismissPopup) {
     EXPECT_FALSE(popup->isOpen());
 }
 
-TEST_F(ComboBoxTest, PopupShadowMarginPressDismissesAsOutsideVisibleCard) {
+TEST_F(ComboBoxTest, PopupShadowMarginPressDismissesAsOutsideVisibleCard)
+{
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(80, 80, 180, Spacing::ControlHeight::Standard);
     cb->addItems({"Alpha", "Beta", "Gamma"});
@@ -780,7 +975,8 @@ TEST_F(ComboBoxTest, PopupShadowMarginPressDismissesAsOutsideVisibleCard) {
     EXPECT_FALSE(popup->isOpen());
 }
 
-TEST_F(ComboBoxTest, OwnerPressDismissesWithoutImmediateReopen) {
+TEST_F(ComboBoxTest, OwnerPressDismissesWithoutImmediateReopen)
+{
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(80, 80, 180, Spacing::ControlHeight::Standard);
     cb->addItems({"Alpha", "Beta", "Gamma"});
@@ -794,7 +990,8 @@ TEST_F(ComboBoxTest, OwnerPressDismissesWithoutImmediateReopen) {
     EXPECT_FALSE(popup->isOpen());
 }
 
-TEST_F(ComboBoxTest, PopupSelectedIndicatorPaintsSinglePill) {
+TEST_F(ComboBoxTest, PopupSelectedIndicatorPaintsSinglePill)
+{
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(40, 40, 184, Spacing::ControlHeight::Standard);
     cb->addItems({"Yellow", "Green", "Blue", "Red"});
@@ -812,10 +1009,11 @@ TEST_F(ComboBoxTest, PopupSelectedIndicatorPaintsSinglePill) {
     EXPECT_GT(accentWidth, 0.0);
     EXPECT_LE(accentWidth, 4.5)
         << "ComboBox popup selected indicator should be painted once, not by "
-         "both ListView and the item delegate";
+           "both ListView and the item delegate";
 }
 
-TEST_F(ComboBoxTest, PopupIndicatorAndTextShareOpticalCenterline) {
+TEST_F(ComboBoxTest, PopupIndicatorAndTextShareOpticalCenterline)
+{
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(40, 40, 184, Spacing::ControlHeight::Standard);
     cb->addItems({"Auto", "Left", "Top"});
@@ -833,39 +1031,33 @@ TEST_F(ComboBoxTest, PopupIndicatorAndTextShareOpticalCenterline) {
     const QRectF textSlot = rowRect.adjusted(5, 3, -5, -3);
     const QFontMetricsF metrics(listView->font());
     const QString text = index.data(Qt::DisplayRole).toString();
-    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
-        textSlot, metrics, text);
-    const qreal textInkCenter = fluent::painting::alignedTextInkCenterY(
-        textRect, metrics, text);
+    const QRectF textRect =
+        fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, text);
+    const qreal textInkCenter = fluent::painting::alignedTextInkCenterY(textRect, metrics, text);
 
     constexpr qreal kOpticalCenterTolerance = 0.01;
-    EXPECT_NEAR(listView->selectedIndicatorRect().center().y(),
-                textInkCenter,
+    EXPECT_NEAR(listView->selectedIndicatorRect().center().y(), textInkCenter,
                 kOpticalCenterTolerance);
 }
 
-TEST_F(ComboBoxTest, TextInkCenteringAdaptsToRepresentativeGlyphProfiles) {
+TEST_F(ComboBoxTest, TextInkCenteringAdaptsToRepresentativeGlyphProfiles)
+{
     const QRectF textSlot(0.0, 0.0, 180.0, Spacing::ControlHeight::Large);
     const QFontMetricsF metrics(window->font());
-    const QStringList samples{
-        QStringLiteral("Mica"),
-        QStringLiteral("gyp"),
-        QStringLiteral("2026"),
-        QString::fromUtf8("中文")
-    };
+    const QStringList samples{QStringLiteral("Mica"), QStringLiteral("gyp"), QStringLiteral("2026"),
+                              QString::fromUtf8("中文")};
 
     for (const QString& text : samples) {
         SCOPED_TRACE(text.toStdString());
-        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
-            textSlot, metrics, text);
+        const QRectF textRect =
+            fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, text);
         EXPECT_NEAR(textSlot.center().y(),
-                    fluent::painting::alignedTextInkCenterY(textRect, metrics, text),
-                    0.01);
+                    fluent::painting::alignedTextInkCenterY(textRect, metrics, text), 0.01);
     }
 }
 
-
-TEST_F(ComboBoxTest, VisualCheck) {
+TEST_F(ComboBoxTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -901,8 +1093,8 @@ TEST_F(ComboBoxTest, VisualCheck) {
         mainLayout->addWidget(label);
 
         auto* combo = new ComboBox(window);
-        combo->addItems({"Arial", "Comic Sans MS", "Courier New",
-                         Typography::FontFamily::UIText, "Times New Roman"});
+        combo->addItems({"Arial", "Comic Sans MS", "Courier New", Typography::FontFamily::UIText,
+                         "Times New Roman"});
         combo->setCurrentIndex(3); // Bundled FluentQt UI face
         combo->setFixedWidth(200);
         mainLayout->addWidget(combo);
@@ -945,8 +1137,8 @@ TEST_F(ComboBoxTest, VisualCheck) {
         mainLayout->addWidget(label);
 
         auto* combo = new ComboBox(window);
-        combo->addItems({"8", "9", "10", "11", "12", "14", "16", "18",
-                         "20", "24", "28", "36", "48", "72"});
+        combo->addItems(
+            {"8", "9", "10", "11", "12", "14", "16", "18", "20", "24", "28", "36", "48", "72"});
         combo->setEditable(true);
         combo->setCurrentIndex(4); // 12
         combo->setFixedWidth(200);
@@ -963,9 +1155,10 @@ TEST_F(ComboBoxTest, VisualCheck) {
     themeBtn->anchors()->right = {window, fluent::AnchorLayout::Edge::Right, -20};
     mainLayout->addWidget(themeBtn);
     QObject::connect(themeBtn, &fluent::basicinput::Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                                ? fluent::FluentElement::Dark
-                                : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     window->show();

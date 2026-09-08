@@ -334,35 +334,6 @@ TEST_F(TreeViewTest, EmptyTreeView)
     EXPECT_FALSE(tv->selectedItem().isValid());
 }
 
-TEST_F(TreeViewTest, SampleModelStructure)
-{
-    TreeView* tv = new TreeView(window);
-    auto* model = attachSampleModel(tv);
-
-    EXPECT_EQ(topLevelCount(tv), 3);
-    EXPECT_EQ(model->item(0)->text(), "Work Documents");
-    EXPECT_EQ(model->item(0)->rowCount(), 2);
-    EXPECT_EQ(model->item(1)->text(), "Personal Documents");
-    EXPECT_EQ(model->item(1)->rowCount(), 1);
-    EXPECT_EQ(model->item(2)->text(), "Pictures");
-    EXPECT_EQ(model->item(2)->rowCount(), 0);
-}
-
-TEST_F(TreeViewTest, DeepNesting)
-{
-    TreeView* tv = new TreeView(window);
-    auto* model = attachSampleModel(tv);
-
-    // Personal Documents → Home Remodel → children
-    auto* personal = model->item(1);
-    auto* remodel = personal->child(0);
-    ASSERT_NE(remodel, nullptr);
-    EXPECT_EQ(remodel->text(), "Home Remodel");
-    EXPECT_EQ(remodel->rowCount(), 2);
-    EXPECT_EQ(remodel->child(0)->text(), "Contractor Contact Info");
-    EXPECT_EQ(remodel->child(1)->text(), "Paint Color Scheme");
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // Selection
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2313,33 +2284,9 @@ TEST_F(TreeViewTest, CheckableSelectionDoesNotPaintIndicator)
     EXPECT_TRUE(hasAccentPixelInRect(tv->viewport(), checkboxArea, accent));
 }
 
-TEST_F(TreeViewTest, CheckStateRoleRead)
-{
-    auto* model = createCheckableTreeModel(nullptr);
-    // Work Documents → PartiallyChecked
-    EXPECT_EQ(model->item(0)->checkState(), Qt::PartiallyChecked);
-    // Work Documents → child 0 → Checked
-    EXPECT_EQ(model->item(0)->child(0)->checkState(), Qt::Checked);
-    // Pictures → Unchecked
-    EXPECT_EQ(model->item(2)->checkState(), Qt::Unchecked);
-    delete model;
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // Icon glyph delegate
 // ═══════════════════════════════════════════════════════════════════════════════
-
-TEST_F(TreeViewTest, IconGlyphRoleRead)
-{
-    auto* model = createIconTreeModel(nullptr);
-    // Work Documents → Folder icon
-    EXPECT_EQ(model->item(0)->data(treeview_test::IconGlyphRole).toString(),
-              Typography::Icons::Folder);
-    // Work Documents → child 0 → Document icon
-    EXPECT_EQ(model->item(0)->child(0)->data(treeview_test::IconGlyphRole).toString(),
-              Typography::Icons::Document);
-    delete model;
-}
 
 TEST_F(TreeViewTest, IconModelPaintNoCrash)
 {

@@ -2,7 +2,7 @@
 #include "design/CornerRadius.h"
 
 #include <QPainter>
-#include <QScopedValueRollback>
+#include <QPointer>
 
 namespace fluent::basicinput {
 
@@ -34,16 +34,31 @@ Qt::CheckState ToggleButton::checkState() const
 
 void ToggleButton::setCheckState(Qt::CheckState state)
 {
-    if (m_checkState != state) {
-        m_checkState = state;
-        const bool checked = m_checkState != Qt::Unchecked;
-        if (isChecked() != checked) {
-            const QScopedValueRollback<bool> syncingGuard(m_syncingCheckedState, true);
-            setChecked(checked);
+    if (m_checkState == state)
+        return;
+
+    m_checkState = state;
+    const bool checked = state != Qt::Unchecked;
+    if (isChecked() != checked) {
+        const bool wasSyncing = m_syncingCheckedState;
+        m_syncingCheckedState = true;
+        QPointer<ToggleButton> guard(this);
+        setChecked(checked);
+        if (!guard)
+            return;
+        m_syncingCheckedState = wasSyncing;
+
+        // A toggled callback may replace either the tri-state value or Qt's checked state.
+        // zh_CN: toggled 回调可能替换三态值或 Qt 的选中状态。
+        if (isChecked() != (m_checkState != Qt::Unchecked)) {
+            setCheckState(isChecked() ? Qt::Checked : Qt::Unchecked);
+            return;
         }
-        update();
-        emit checkStateChanged(m_checkState);
+        if (m_checkState != state)
+            return;
     }
+    update();
+    emit checkStateChanged(m_checkState);
 }
 
 void ToggleButton::nextCheckState()

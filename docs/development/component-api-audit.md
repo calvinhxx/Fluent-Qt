@@ -33,6 +33,28 @@ See [Custom themes](../design-languages/custom-themes.md) for schema and example
 `TestThemeOverrides.cpp` covers atomicity, reset, scope, font precedence and
 weight matching, and synchronous destruction during local updates.
 
+## 2026-09-08 callback, painting, and range addendum
+
+Dialog guards its lifetime before `open()` invokes callbacks. Synchronous
+closure returns the final result; an ongoing visible exit still waits for
+completion. ToggleButton stops after destruction and reconciles reentrant
+changes to its tri-state value and Qt checked state without duplicate notices.
+
+TabView notifies a selected-index shift when an earlier tab is removed.
+DropDownButton passes its menu-open appearance to a protected Button painting
+helper, so painting no longer changes `interactionState` or emits its signal.
+The existing font and content painting paths remain shared.
+
+Slider and ScrollBar widen range arithmetic before subtraction. Their painted
+positions follow Qt orientation, right-to-left, and inverted-appearance
+semantics. Slider also handles automatic tick intervals without dividing by
+zero and bounds tick rendering for large ranges.
+
+The owning tests cover synchronous callbacks, inherited signal counts, pointer
+input, full integer ranges, wide tracks, direction changes, and painted states.
+Public properties and existing methods remain source compatible. Native
+platform visual acceptance remains separate from these automated contracts.
+
 ## 2026-09-05 callback and model-update addendum
 
 Theme notifications stop when a callback starts a newer change, including

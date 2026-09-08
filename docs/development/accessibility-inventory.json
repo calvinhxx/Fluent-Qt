@@ -6,7 +6,7 @@
     {"id":"compound-button","classification":"augmented","risk":"low","status":"covered","evidence":["tests/components/basicinput/TestCompoundButton.cpp"],"gap":""},
     {"id":"checkbox","classification":"native","risk":"low","status":"covered","evidence":["src/components/basicinput/CheckBox.h"],"gap":""},
     {"id":"color-picker","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/basicinput/private/ColorPickerAccessibility_p.cpp","tests/components/TestComplexInputAccessibility.cpp"],"gap":""},
-    {"id":"combobox","classification":"native","risk":"medium","status":"covered","evidence":["src/components/basicinput/ComboBox.h"],"gap":""},
+    {"id":"combobox","classification":"native","risk":"medium","status":"covered","evidence":["src/components/basicinput/ComboBox.h","tests/components/basicinput/TestComboBox.cpp"],"gap":""},
     {"id":"dropdown-button","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/basicinput/private/MenuButtonAccessibility_p.cpp","tests/components/TestAuxiliarySurfaceAccessibility.cpp"],"gap":""},
     {"id":"hyperlink-button","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/basicinput/private/HyperlinkButtonAccessibility_p.cpp","tests/components/TestSemanticPresentationAccessibility.cpp"],"gap":""},
     {"id":"multi-select-combobox","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/basicinput/private/MultiSelectComboBoxAccessibility_p.cpp","tests/components/basicinput/TestMultiSelectComboBox.cpp"],"gap":""},

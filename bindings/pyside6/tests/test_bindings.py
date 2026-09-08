@@ -3838,6 +3838,41 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(index_changes[-1:], [1])
         self.assertEqual(text_changes[-1:], ["Beta"])
 
+    def test_combo_box_explicit_font_reaches_editor_and_dropdown(self):
+        previous_theme = fluentqt.current_theme()
+        host = QWidget()
+        host.resize(600, 500)
+        combo = fluentqt.ComboBox(host)
+        combo.addItems(["Alpha", "Beta", "Gamma"])
+        combo.setEditable(True)
+        custom = combo.font()
+        custom.setPixelSize(27)
+        combo.setFont(custom)
+        try:
+            host.show()
+            combo.showPopup()
+            QCoreApplication.processEvents()
+            popup = host.findChild(QWidget, "ComboBoxPopup")
+            self.assertIsNotNone(popup)
+            view = popup.findChild(QListView, "ComboBoxPopupListView")
+            self.assertIsNotNone(view)
+            for theme in (fluentqt.Theme.Dark, fluentqt.Theme.Light):
+                fluentqt.set_theme(theme)
+                QCoreApplication.processEvents()
+                self.assertEqual(combo.font().pixelSize(), 27)
+                self.assertEqual(combo.lineEdit().font(), combo.font())
+                self.assertEqual(view.font(), combo.font())
+                self.assertTrue(popup.isVisible())
+            combo.setFontRole(combo.fontRole())
+            QCoreApplication.processEvents()
+            self.assertNotEqual(combo.font().pixelSize(), 27)
+            self.assertEqual(view.font(), combo.font())
+            self.assertEqual(combo.lineEdit().font(), combo.font())
+        finally:
+            combo.hidePopup()
+            host.close()
+            fluentqt.set_theme(previous_theme)
+
     def test_combo_box_dropdown_lifecycle_selection_and_subclassing(self):
         class PythonComboBox(fluentqt.ComboBox):
             def __init__(self, parent=None):

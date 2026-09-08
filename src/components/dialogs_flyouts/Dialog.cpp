@@ -309,8 +309,13 @@ void Dialog::open()
 
 int Dialog::exec()
 {
-    open();
     QPointer<Dialog> guard(this);
+    open();
+    if (!guard)
+        return QDialog::Rejected;
+    if (!m_isOpen && !isVisible())
+        return result();
+
     const int result = QDialog::exec();
     if (guard)
         guard->hideSmokeOverlay();

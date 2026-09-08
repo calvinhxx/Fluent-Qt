@@ -328,6 +328,45 @@ TEST_F(TabViewTest, ItemManagementPreservesOrderMetadataAndInvalidIndexes)
     EXPECT_GE(selectionSpy.count(), 1);
 }
 
+TEST_F(TabViewTest, Contract_RemovingTabsNotifiesSelectionIndexAndItemChangesExactlyOnce)
+{
+    struct RemovalCase {
+        int count;
+        int selected;
+        int removed;
+        int expectedIndex;
+        const char* expectedText;
+        bool selectionChanged;
+    };
+    const RemovalCase cases[] = {
+        {3, 2, 0, 1, "C", true}, {3, 0, 2, 0, "A", false}, {3, 1, 1, 1, "C", true},
+        {3, 2, 2, 1, "B", true}, {1, 0, 0, -1, "", true},
+    };
+    for (const auto& item : cases) {
+        SCOPED_TRACE(::testing::Message()
+                     << "selected=" << item.selected << ", removed=" << item.removed);
+        TabView tabs;
+        for (int index = 0; index < item.count; ++index)
+            tabs.addTab(QString(QChar('A' + index)));
+        tabs.setSelectedIndex(item.selected);
+
+        QSignalSpy selectionSpy(&tabs, &TabView::selectedIndexChanged);
+        QSignalSpy currentSpy(&tabs, &TabView::currentChanged);
+        QSignalSpy tabsSpy(&tabs, &TabView::tabsChanged);
+
+        ASSERT_TRUE(tabs.removeTab(item.removed));
+        EXPECT_EQ(tabs.selectedIndex(), item.expectedIndex);
+        EXPECT_EQ(tabs.tabAt(tabs.selectedIndex()).text, QString::fromLatin1(item.expectedText));
+        ASSERT_EQ(selectionSpy.count(), item.selectionChanged ? 1 : 0);
+        ASSERT_EQ(currentSpy.count(), item.selectionChanged ? 1 : 0);
+        EXPECT_EQ(tabsSpy.count(), 1);
+        if (item.selectionChanged) {
+            EXPECT_EQ(selectionSpy.at(0).at(0).toInt(), item.expectedIndex);
+            EXPECT_EQ(currentSpy.at(0).at(0).toInt(), item.expectedIndex);
+        }
+    }
+}
+
 TEST_F(TabViewTest, PropertySignalsEmitOnlyForEffectiveChanges)
 {
     TabView tabs;

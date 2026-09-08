@@ -396,11 +396,11 @@
       "automated_evidence": [
         {
           "kind": "geometry",
-          "test_case": "ColorPickerContractTest.InternalLabelsUseOwnPrimaryThemeColor",
+          "test_case": "ColorPickerContractTest.Contract_InternalLabelsUseOwnPrimaryThemeColor",
           "states": [
             "normal-light"
           ],
-          "execution": "registered-only"
+          "execution": "ci"
         }
       ],
       "manual_evidence": {
@@ -414,6 +414,15 @@
       "id": "combobox",
       "family": "transient-overlay",
       "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "ComboBoxTest.Contract_LargeFontPopupFitsHostAndHonorsFieldConstraint",
+          "states": [
+            "open",
+            "placement"
+          ],
+          "execution": "ci"
+        },
         {
           "kind": "geometry",
           "test_case": "ComboBoxTest.PopupFitIncludesAnchorGapAndSurfaceMargin",

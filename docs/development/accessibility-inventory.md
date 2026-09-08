@@ -81,6 +81,7 @@ The table lists the semantic boundary and its focused regression source.
 | FlipView, SplitView | Ordered pages and navigation; native pane subtrees and keyboard-operable splitter grips with value bounds | [Collections](../../tests/components/TestCollectionSurfaceAccessibility.cpp) |
 | HyperlinkButton, InfoBar, Shimmer | Link/visited state, notification severity and dismissal, loading/busy state independent of animation | [Presentation](../../tests/components/TestSemanticPresentationAccessibility.cpp) |
 | MultiSelectComboBox | Button-menu root, selected labels, expanded state, popup relation and named trigger/search/list | [Multi-selection](../../tests/components/basicinput/TestMultiSelectComboBox.cpp) |
+| ComboBox | Explicit fonts reach the field, editor and dropdown; rows grow with text while selection and popup state remain intact | [ComboBox](../../tests/components/basicinput/TestComboBox.cpp) |
 
 `ToggleSwitch` keeps a minimum interactive height of 24 logical pixels.
 `visualScale` changes its graphics while the accessible rectangle continues to

@@ -2368,7 +2368,7 @@
           "id": "slider-live-value",
           "title": "Slider live value",
           "description": "Drag the handle to select a value and mirror it in external UI.",
-          "cpp_snippet": "auto* slider = new Slider(Qt::Horizontal, this);\nslider->setRange(0, 100);\nslider->setValue(32);\nconnect(slider, &Slider::valueChanged,\n        status, [status](int value) {\n            status->setText(QString(\"Value: %1\").arg(value));\n        });",
+          "cpp_snippet": "auto* slider = new Slider(Qt::Horizontal, this);\nslider->setAccessibleName(\"Value\");\nslider->setRange(0, 100);\nslider->setValue(32);\nconnect(slider, &Slider::valueChanged,\n        status, [status](int value) {\n            status->setText(QString(\"Value: %1\").arg(value));\n        });",
           "preview_layout": {
             "orientation": "horizontal",
             "spacing": 16
@@ -4604,11 +4604,12 @@
         "flyouts",
         "glide",
         "glides",
-        "lives",
         "mark",
         "new",
         "open.",
+        "overlays",
         "own",
+        "owning",
         "points",
         "retargeted",
         "standalone",
@@ -4618,7 +4619,6 @@
         "teaching",
         "them.",
         "tip",
-        "top-level",
         "transient-surfaces",
         "when",
         "while",
@@ -4652,8 +4652,8 @@
         {
           "id": "coach-mark-targeted-glide",
           "title": "Targeted coach mark with glide",
-          "description": "CoachMark lives in its own top-level window, points a tail at a target, and glides to a new target when retargeted while open.",
-          "cpp_snippet": "auto* coach = new CoachMark(window());\ncoach->setCardSize(QSize(320, 150));\ncoach->setPlacement(CoachMark::Bottom);\ncoach->setTarget(targetButton);  // glides if already open\nconnect(closeButton, &Button::clicked, coach, &CoachMark::close);\ncoach->open();"
+          "description": "CoachMark overlays its owning window, points a tail at a target, and glides to a new target when retargeted while open.",
+          "cpp_snippet": "auto* coach = new CoachMark(window());\nconnect(this, &QObject::destroyed, coach, &QObject::deleteLater);\ncoach->setCardSize(QSize(320, 150));\ncoach->setPlacement(CoachMark::Bottom);\ncoach->setTarget(targetButton);  // glides if already open\ncloseButton->setAccessibleName(\"Close\");\nconnect(closeButton, &Button::clicked, coach, &CoachMark::close);\ncoach->open();"
         }
       ]
     },
@@ -5712,7 +5712,7 @@
           "id": "navigation-view-display-modes",
           "title": "DisplayMode and chrome presentation",
           "description": "Switching display mode changes shell geometry; the app also updates chrome orientation and content transition semantics.",
-          "cpp_snippet": "auto* navView = new NavigationView(this);\nnavView->setMinimumWidth(440);\nnavView->setMaximumWidth(620);\nnavView->setFixedHeight(340);\nnavView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\nnavView->setAnimationEnabled(true);\nnavView->setExpandedPaneWidth(180);\nnavView->setCompactPaneWidth(52);\nnavView->setTopBarHeight(48);\nauto applyDisplayMode = [&](NavigationView::DisplayMode mode) {\n    const bool top = mode == NavigationView::DisplayMode::Top;\n    const bool compact = mode != NavigationView::DisplayMode::Left;\n    const auto orientation = top ? Qt::Horizontal : Qt::Vertical;\n    headerSection->setOrientation(orientation);\n    mainSection->setOrientation(orientation);\n    footerSection->setOrientation(orientation);\n    headerSection->setCompact(compact);\n    mainSection->setCompact(compact);\n    footerSection->setCompact(compact);\n    navView->contentHost()->setTransitionEffect(\n        top ? StackContentHost::TransitionEffect::SlideFromBottom\n            : StackContentHost::TransitionEffect::SlideFromLeft);\n    navView->setPaneOpen(mode == NavigationView::DisplayMode::Left || top);\n    navView->setDisplayMode(mode);\n};\nauto routeToPage = [host = navView->contentHost()](int pageIndex) {\n    const int direction = pageIndex >= host->currentIndex() ? 1 : -1;\n    host->setCurrentIndex(pageIndex, direction, true);\n};\nheaderSection->onActivated = routeToPage;\nmainSection->onActivated = routeToPage;\nfooterSection->onActivated = routeToPage;\nQObject::connect(leftButton, &Button::clicked, navView, [&] {\n    applyDisplayMode(NavigationView::DisplayMode::Left);\n});\nQObject::connect(compactButton, &Button::clicked, navView, [&] {\n    applyDisplayMode(NavigationView::DisplayMode::LeftCompact);\n});\nQObject::connect(minimalButton, &Button::clicked, navView, [&] {\n    applyDisplayMode(NavigationView::DisplayMode::LeftMinimal);\n});\nQObject::connect(topButton, &Button::clicked, navView, [&] {\n    applyDisplayMode(NavigationView::DisplayMode::Top);\n});",
+          "cpp_snippet": "auto* navView = new NavigationView(this);\nnavView->setMinimumWidth(440);\nnavView->setMaximumWidth(620);\nnavView->setFixedHeight(340);\nnavView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\nnavView->setAnimationEnabled(true);\nnavView->setExpandedPaneWidth(180);\nnavView->setCompactPaneWidth(52);\nnavView->setTopBarHeight(48);\nauto applyDisplayMode = [navView, headerSection, mainSection, footerSection](\n                            NavigationView::DisplayMode mode) {\n    const bool top = mode == NavigationView::DisplayMode::Top;\n    const bool compact = mode != NavigationView::DisplayMode::Left;\n    const auto orientation = top ? Qt::Horizontal : Qt::Vertical;\n    headerSection->setOrientation(orientation);\n    mainSection->setOrientation(orientation);\n    footerSection->setOrientation(orientation);\n    headerSection->setCompact(compact);\n    mainSection->setCompact(compact);\n    footerSection->setCompact(compact);\n    navView->contentHost()->setTransitionEffect(\n        top ? StackContentHost::TransitionEffect::SlideFromBottom\n            : StackContentHost::TransitionEffect::SlideFromLeft);\n    navView->setPaneOpen(mode == NavigationView::DisplayMode::Left || top);\n    navView->setDisplayMode(mode);\n};\nauto routeToPage = [host = navView->contentHost()](int pageIndex) {\n    const int direction = pageIndex >= host->currentIndex() ? 1 : -1;\n    host->setCurrentIndex(pageIndex, direction, true);\n};\nheaderSection->onActivated = routeToPage;\nmainSection->onActivated = routeToPage;\nfooterSection->onActivated = routeToPage;\nQObject::connect(leftButton, &Button::clicked, navView, [applyDisplayMode] {\n    applyDisplayMode(NavigationView::DisplayMode::Left);\n});\nQObject::connect(compactButton, &Button::clicked, navView, [applyDisplayMode] {\n    applyDisplayMode(NavigationView::DisplayMode::LeftCompact);\n});\nQObject::connect(minimalButton, &Button::clicked, navView, [applyDisplayMode] {\n    applyDisplayMode(NavigationView::DisplayMode::LeftMinimal);\n});\nQObject::connect(topButton, &Button::clicked, navView, [applyDisplayMode] {\n    applyDisplayMode(NavigationView::DisplayMode::Top);\n});",
           "preview_layout": {
             "orientation": "vertical",
             "spacing": 8

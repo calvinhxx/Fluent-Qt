@@ -911,13 +911,15 @@ QVector<GallerySample> coachMarkSamples()
     return {makeSample(
         QStringLiteral("coach-mark-targeted-glide"),
         QStringLiteral("Targeted coach mark with glide"),
-        QStringLiteral("CoachMark lives in its own top-level window, points a "
-                       "tail at a target, and glides to a new target when "
+        QStringLiteral("CoachMark overlays its owning window, points a tail "
+                       "at a target, and glides to a new target when "
                        "retargeted while open."),
         QStringLiteral("auto* coach = new CoachMark(window());\n"
+                       "connect(this, &QObject::destroyed, coach, &QObject::deleteLater);\n"
                        "coach->setCardSize(QSize(320, 150));\n"
                        "coach->setPlacement(CoachMark::Bottom);\n"
                        "coach->setTarget(targetButton);  // glides if already open\n"
+                       "closeButton->setAccessibleName(\"Close\");\n"
                        "connect(closeButton, &Button::clicked, coach, "
                        "&CoachMark::close);\n"
                        "coach->open();"),
@@ -925,21 +927,25 @@ QVector<GallerySample> coachMarkSamples()
             auto* surface = sampleSurface(parent);
             auto* row = horizontalGroup(surface, 8);
             auto* bottom = sampleButton(row, QStringLiteral("Bottom"));
+            bottom->setObjectName(QStringLiteral("galleryCoachMarkBottom"));
             auto* right = sampleButton(row, QStringLiteral("Right"));
+            right->setObjectName(QStringLiteral("galleryCoachMarkRight"));
             auto* top = sampleButton(row, QStringLiteral("Top"));
+            top->setObjectName(QStringLiteral("galleryCoachMarkTop"));
             auto* status = makeStatusLabel(surface, QStringLiteral("Coach mark: closed"));
 
             // One shared coach mark drives all three buttons: retargeting it
-            // while open glides the same top-level window, and nothing stacks.
+            // while open glides the same overlay, and nothing stacks.
             // zh_CN: 三个按钮共用一个 coach mark：打开状态下重定向会让同一个
-            // 顶层窗口滑动过去，不会堆叠。
+            // 浮层滑动过去，不会堆叠。
             auto coachRef = std::make_shared<QPointer<CoachMark>>();
             auto titleRef = std::make_shared<QPointer<Label>>();
 
-            auto showCoach = [coachRef, titleRef, status](Button* target,
-                                                          CoachMark::Placement placement) {
+            auto showCoach = [coachRef, titleRef, surface, status](Button* target,
+                                                                   CoachMark::Placement placement) {
                 if (!*coachRef) {
                     auto* coach = new CoachMark(target->window());
+                    QObject::connect(surface, &QObject::destroyed, coach, &QObject::deleteLater);
                     coach->setCardSize(QSize(320, 150));
 
                     auto* host = coach->contentHost();
@@ -953,6 +959,8 @@ QVector<GallerySample> coachMarkSamples()
                     titleRow->addWidget(title);
                     titleRow->addStretch(1);
                     auto* closeButton = new Button(QString(), host);
+                    closeButton->setObjectName(QStringLiteral("galleryCoachMarkDismiss"));
+                    closeButton->setAccessibleName(QStringLiteral("Close"));
                     closeButton->setFluentLayout(Button::IconOnly);
                     closeButton->setFluentStyle(Button::Subtle);
                     closeButton->setIconGlyph(Typography::Icons::ChromeClose,
@@ -970,6 +978,7 @@ QVector<GallerySample> coachMarkSamples()
                     layout->addStretch(1);
 
                     auto* gotIt = sampleButton(host, QStringLiteral("Got it"));
+                    gotIt->setObjectName(QStringLiteral("galleryCoachMarkClose"));
                     gotIt->setFluentStyle(Button::Accent);
                     QObject::connect(gotIt, &Button::clicked, coach, [coach]() { coach->close(); });
                     layout->addWidget(gotIt, 0, Qt::AlignRight);
