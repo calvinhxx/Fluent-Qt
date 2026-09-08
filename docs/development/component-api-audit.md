@@ -39,6 +39,19 @@ Dialog guards its lifetime before `open()` invokes callbacks. Synchronous
 closure returns the final result; an ongoing visible exit still waits for
 completion. ToggleButton stops after destruction and reconciles reentrant
 changes to its tri-state value and Qt checked state without duplicate notices.
+For ungrouped, non-auto-exclusive buttons, `setCheckState()` and activation
+finish Qt's internal checked-state update before synchronously delivering
+`toggled`, so deletion in that callback is safe on Qt 5.15 and Qt 6.2 too.
+Grouped buttons preserve Qt's native notification order. Inherited
+`QAbstractButton::setChecked()` / `toggle()` and group callbacks retain Qt's
+lifetime rules; use `deleteLater()` when deleting from those callbacks on older
+Qt versions. `Qt::CheckState` is registered for queued notifications.
+
+An embedded StackContentHost without an explicit surface preserves its
+parent's painted background under native translucent window backdrops. The
+parent can therefore supply a local Light/Dark surface without having it
+erased by a child page host. Top-level clear and explicit overlay contracts
+remain covered by `TestNavigationView.cpp`.
 
 TabView notifies a selected-index shift when an earlier tab is removed.
 DropDownButton passes its menu-open appearance to a protected Button painting

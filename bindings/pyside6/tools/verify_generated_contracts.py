@@ -3512,20 +3512,25 @@ def verify_contracts(generated_dir, check_backdrop_converter):
     )
 
 
-def parse_args():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--generated-dir", type=Path, required=True)
     parser.add_argument("--check-backdrop-converter", action="store_true")
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
-if __name__ == "__main__":
+def main(argv=None):
     try:
-        arguments = parse_args()
+        arguments = parse_args(argv)
         verify_contracts(
             arguments.generated_dir.resolve(),
             arguments.check_backdrop_converter,
         )
     except Exception as error:
         sys.stderr.write("Generated binding contract check failed: {0}\n".format(error))
-        sys.exit(1)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

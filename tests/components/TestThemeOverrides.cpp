@@ -4,6 +4,7 @@
 #include <QJsonObject>
 #include <QPointer>
 #include <QWidget>
+#include "QtFontComparison.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
@@ -119,7 +120,8 @@ TEST_F(ThemeOverridesTest, Contract_ButtonFontPrecedenceAndPerElementBoundary)
     button.setFontRole(button.fontRole());
     EXPECT_EQ(button.font().pixelSize(), 28);
     button.clearThemeOverrides();
-    EXPECT_EQ(button.font(), other.font());
+    EXPECT_EQ(tests::support::normalizedFontFamilies(button.font()),
+              tests::support::normalizedFontFamilies(other.font()));
 }
 
 TEST_F(ThemeOverridesTest, Contract_LocalUpdateMayDestroyElement)

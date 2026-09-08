@@ -12,6 +12,7 @@
 
 #include <gtest/gtest.h>
 
+#include "QtTestEnvironment.h"
 #include "components/foundation/FluentElement.h"
 #include "view/preview/GalleryPreviewActions.h"
 #include "view/preview/GalleryPreviewApplication.h"
@@ -80,6 +81,14 @@ TEST(GalleryPreviewTest, ExecutesInputAndStateInteractionStepsWithAssertions)
     QLineEdit editor(&editorHost);
     editor.setGeometry(0, 0, 150, 32);
     root.show();
+    if (!tests::support::isHeadlessPlatform()) {
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&root));
+        if (!QGuiApplication::platformName().startsWith(QStringLiteral("wayland")))
+            root.activateWindow();
+        // Qt 6.2's Wayland qWaitForWindowActive falls back to exposure alone.
+        // Wait for the compositor's actual activation before exercising focus actions.
+        ASSERT_TRUE(QTest::qWaitFor([&root] { return root.isActiveWindow(); }, 3000));
+    }
     QApplication::processEvents();
 
     const QJsonObject script{

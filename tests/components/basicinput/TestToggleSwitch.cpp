@@ -1,4 +1,5 @@
 #include "components/basicinput/Button.h"
+#include "QtTestEnvironment.h"
 #include "components/basicinput/ToggleSwitch.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/MotionPolicy.h"
@@ -411,13 +412,23 @@ TEST_F(ToggleSwitchTest, MouseActivationTakesFocusAndToggles)
 {
     ToggleSwitch ts(window);
     ts.setGeometry(20, 20, ts.sizeHint().width(), ts.sizeHint().height());
+    Button focusSink(QStringLiteral("Focus sink"), window);
+    focusSink.setGeometry(20, 80, 120, 32);
     window->show();
     ts.show();
-    QApplication::processEvents();
+    focusSink.show();
+    if (!tests::support::isHeadlessPlatform()) {
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
+        if (!QGuiApplication::platformName().startsWith(QStringLiteral("wayland")))
+            window->activateWindow();
+    }
+    focusSink.setFocus(Qt::OtherFocusReason);
+    ASSERT_TRUE(QTest::qWaitFor([&focusSink] { return focusSink.hasFocus(); }, 1000));
+    ASSERT_FALSE(ts.hasFocus());
 
     QTest::mouseClick(&ts, Qt::LeftButton, Qt::NoModifier, ts.rect().center());
 
-    EXPECT_TRUE(ts.hasFocus());
+    ASSERT_TRUE(QTest::qWaitFor([&ts] { return ts.hasFocus(); }, 1000));
     EXPECT_TRUE(ts.isOn());
 }
 

@@ -25,6 +25,7 @@
 #include "design/ThemeColors.h"
 #include "design/Typography.h"
 #include "QtTestEnvironment.h"
+#include "QtFontComparison.h"
 
 using namespace fluent;
 using namespace fluent::basicinput;
@@ -592,11 +593,39 @@ TEST_F(TypographyTest, PaintGlyphPreservesCallerFontForCompoundControls)
     QPainter painter(&image);
     const QFont textFont = Typography::Styles::BodyStrong.toQFont();
     painter.setFont(textFont);
+    // QPainter may resolve Qt 5's family-list metadata in setFont(). Restore
+    // the exact font present before painting, including that resolved metadata.
+    const QFont previousFont = painter.font();
     Typography::Icons::paintGlyph(painter, QRectF(0, 0, 32, 32), Typography::Icons::GlobalNav,
                                   Typography::IconSize::Standard);
 
-    EXPECT_EQ(painter.font(), textFont)
+    EXPECT_EQ(painter.font(), previousFont)
         << "Icon painting must not leak the icon face into adjacent labels";
+}
+
+TEST_F(TypographyTest, FontFamilyNormalizationPreservesFallbacksAndRenderingProperties)
+{
+    const QFont font = Typography::Styles::Body.toQFont();
+    QFont explicitFamily = font;
+    explicitFamily.setFamilies({font.family()});
+    const QFont normalized = tests::support::normalizedFontFamilies(font);
+    EXPECT_EQ(normalized, tests::support::normalizedFontFamilies(explicitFamily));
+
+    const std::function<void(QFont&)> changes[] = {
+        [](QFont& value) {
+            value.setFamilies({value.family(), QStringLiteral("Fallback")});
+        },
+        [](QFont& value) { value.setPixelSize(value.pixelSize() + 1); },
+        [](QFont& value) { value.setWeight(QFont::Black); },
+        [](QFont& value) { value.setItalic(true); },
+        [](QFont& value) { value.setStyleStrategy(QFont::NoAntialias); },
+        [](QFont& value) { value.setLetterSpacing(QFont::AbsoluteSpacing, 2); },
+    };
+    for (const auto& change : changes) {
+        QFont different = font;
+        change(different);
+        EXPECT_NE(tests::support::normalizedFontFamilies(different), normalized);
+    }
 }
 
 TEST_F(TypographyTest, ApplicationDefaultUsesBundledTextRegular)

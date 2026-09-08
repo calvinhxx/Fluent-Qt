@@ -1,5 +1,8 @@
 """Tests for the generated-wrapper contract verifier."""
 
+from contextlib import redirect_stderr, redirect_stdout
+import importlib.util
+import io
 from pathlib import Path
 import subprocess
 import sys
@@ -13,6 +16,11 @@ VERIFIER = (
     / "tools"
     / "verify_generated_contracts.py"
 )
+VERIFIER_SPEC = importlib.util.spec_from_file_location(
+    "fluentqt_generated_contract_verifier", VERIFIER
+)
+VERIFIER_MODULE = importlib.util.module_from_spec(VERIFIER_SPEC)
+VERIFIER_SPEC.loader.exec_module(VERIFIER_MODULE)
 WINDOW_WRAPPER = "fluent_windowing_window_wrapper.cpp"
 TITLE_BAR_WRAPPER = "fluent_windowing_titlebar_wrapper.cpp"
 WINDOWING_NAMESPACE_WRAPPER = "fluent_windowing_wrapper.cpp"
@@ -3459,6 +3467,21 @@ class GeneratedContractVerifierTest(unittest.TestCase):
         )
 
     def run_verifier(self, *extra_arguments):
+        arguments = ["--generated-dir", str(self.generated_dir), *extra_arguments]
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        # Exercise every malformed-wrapper case without restarting Python for
+        # each subtest. Separate subprocess checks retain the CLI boundary.
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            returncode = VERIFIER_MODULE.main(arguments)
+        return subprocess.CompletedProcess(
+            [sys.executable, str(VERIFIER), *arguments],
+            returncode,
+            stdout.getvalue(),
+            stderr.getvalue(),
+        )
+
+    def run_verifier_subprocess(self, *extra_arguments):
         return subprocess.run(
             [
                 sys.executable,
@@ -3471,6 +3494,21 @@ class GeneratedContractVerifierTest(unittest.TestCase):
             capture_output=True,
             text=True,
         )
+
+    def test_cli_accepts_valid_wrappers_and_backdrop_converter(self):
+        result = self.run_verifier_subprocess("--check-backdrop-converter")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Verified generated", result.stdout)
+        self.assertIn("BackdropEffect", result.stdout)
+        self.assertEqual(result.stderr, "")
+
+    def test_cli_reports_contract_failure_on_stderr(self):
+        (self.generated_dir / WINDOW_WRAPPER).unlink()
+        result = self.run_verifier_subprocess()
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("Generated binding contract check failed:", result.stderr)
+        self.assertIn(WINDOW_WRAPPER, result.stderr)
 
     def test_safe_native_event_and_single_converter_pass(self):
         result = self.run_verifier("--check-backdrop-converter")

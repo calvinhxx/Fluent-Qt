@@ -53,7 +53,7 @@
     {"id":"command-bar-flyout","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/menus_toolbars/private/CommandAccessibility_p.cpp"],"gap":""},
 
     {"id":"breadcrumb","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/navigation/private/NavigationSelectionAccessibility_p.cpp","tests/components/navigation/TestNavigationAccessibility.cpp"],"gap":""},
-    {"id":"navigation-view","classification":"native","risk":"medium","status":"covered","evidence":["src/components/navigation/NavigationView.h"],"gap":""},
+    {"id":"navigation-view","classification":"native","risk":"medium","status":"covered","evidence":["src/components/navigation/NavigationView.h","tests/components/navigation/TestNavigationView.cpp"],"gap":""},
     {"id":"pivot","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/navigation/private/NavigationSelectionAccessibility_p.cpp","tests/components/navigation/TestNavigationAccessibility.cpp"],"gap":""},
     {"id":"selector-bar","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/navigation/private/NavigationSelectionAccessibility_p.cpp","tests/components/navigation/TestNavigationAccessibility.cpp"],"gap":""},
     {"id":"tab-view","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/navigation/private/NavigationSelectionAccessibility_p.cpp","tests/components/navigation/TestNavigationAccessibility.cpp"],"gap":""},

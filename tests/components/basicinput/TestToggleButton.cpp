@@ -2,6 +2,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
 #include <QApplication>
+#include <QButtonGroup>
 #include <QHBoxLayout>
 #include <QImage>
 #include <QLabel>
@@ -197,6 +198,140 @@ TEST_F(ToggleButtonTest, Contract_ToggledCallbackCanReplaceCheckState)
     toggle.setChecked(false);
     EXPECT_EQ(toggle.checkState(), Qt::Unchecked);
     EXPECT_EQ(checkStateSpy.count(), 2);
+}
+
+TEST_F(ToggleButtonTest, Contract_ClickToggledCallbackCanDeleteButton)
+{
+    for (const bool threeState : {false, true}) {
+        SCOPED_TRACE(threeState);
+        auto* toggle = new ToggleButton(QStringLiteral("Toggle"));
+        toggle->setThreeState(threeState);
+        QPointer<ToggleButton> guard(toggle);
+        int notifications = 0;
+        QObject::connect(toggle, &QPushButton::toggled, window,
+                         [toggle, &notifications](bool checked) {
+                             EXPECT_TRUE(checked);
+                             ++notifications;
+                             delete toggle;
+                         });
+
+        toggle->click();
+
+        EXPECT_TRUE(guard.isNull());
+        EXPECT_EQ(notifications, 1);
+    }
+}
+
+TEST_F(ToggleButtonTest, Contract_CheckStateCallbackCanDeleteButton)
+{
+    auto* toggle = new ToggleButton(QStringLiteral("Toggle"));
+    QPointer<ToggleButton> guard(toggle);
+    QObject::connect(toggle, &ToggleButton::checkStateChanged, window,
+                     [toggle](Qt::CheckState) { delete toggle; });
+
+    toggle->setCheckState(Qt::Checked);
+
+    EXPECT_TRUE(guard.isNull());
+}
+
+TEST_F(ToggleButtonTest, Contract_BlockedCheckStateUpdatesRemainSilent)
+{
+    ToggleButton toggle(QStringLiteral("Toggle"));
+    QSignalSpy toggledSpy(&toggle, &QPushButton::toggled);
+    QSignalSpy stateSpy(&toggle, &ToggleButton::checkStateChanged);
+    toggle.blockSignals(true);
+
+    toggle.setCheckState(Qt::PartiallyChecked);
+
+    EXPECT_TRUE(toggle.signalsBlocked());
+    EXPECT_TRUE(toggle.isChecked());
+    EXPECT_EQ(toggle.checkState(), Qt::PartiallyChecked);
+    EXPECT_TRUE(toggledSpy.isEmpty());
+    EXPECT_TRUE(stateSpy.isEmpty());
+    toggle.blockSignals(false);
+    toggle.setCheckState(Qt::Unchecked);
+    ASSERT_EQ(toggledSpy.count(), 1);
+    ASSERT_EQ(stateSpy.count(), 1);
+    EXPECT_EQ(stateSpy.first().first().value<Qt::CheckState>(), Qt::Unchecked);
+}
+
+TEST_F(ToggleButtonTest, Contract_CheckStateSupportsQueuedConnections)
+{
+    ToggleButton toggle(QStringLiteral("Toggle"));
+    Qt::CheckState received = Qt::Unchecked;
+    int notifications = 0;
+    QObject::connect(
+        &toggle, &ToggleButton::checkStateChanged, window,
+        [&](Qt::CheckState state) {
+            received = state;
+            ++notifications;
+        },
+        Qt::QueuedConnection);
+
+    toggle.setCheckState(Qt::PartiallyChecked);
+
+    EXPECT_EQ(notifications, 0);
+    QCoreApplication::sendPostedEvents(window, QEvent::MetaCall);
+    EXPECT_EQ(notifications, 1);
+    EXPECT_EQ(received, Qt::PartiallyChecked);
+}
+
+TEST_F(ToggleButtonTest, Contract_GroupNotificationOrderAndReentryArePreserved)
+{
+    ToggleButton toggle(QStringLiteral("Grouped"));
+    QButtonGroup group;
+    group.setExclusive(false);
+    group.addButton(&toggle, 7);
+    QStringList events;
+    QObject::connect(&toggle, &QPushButton::toggled, &toggle, [&](bool checked) {
+        events.append(checked ? QStringLiteral("toggled:on") : QStringLiteral("toggled:off"));
+    });
+    QObject::connect(&group, &QButtonGroup::idToggled, &toggle, [&](int id, bool checked) {
+        EXPECT_EQ(id, 7);
+        events.append(checked ? QStringLiteral("group:on") : QStringLiteral("group:off"));
+        if (checked)
+            toggle.setCheckState(Qt::PartiallyChecked);
+    });
+    QObject::connect(&toggle, &ToggleButton::checkStateChanged, &toggle, [&](Qt::CheckState state) {
+        events.append(QStringLiteral("state:%1").arg(state));
+    });
+
+    toggle.setCheckState(Qt::Checked);
+
+    EXPECT_EQ(toggle.checkState(), Qt::PartiallyChecked);
+    EXPECT_EQ(events, (QStringList{QStringLiteral("toggled:on"), QStringLiteral("group:on"),
+                                   QStringLiteral("state:1")}));
+    events.clear();
+    toggle.setCheckState(Qt::Unchecked);
+    EXPECT_EQ(events, (QStringList{QStringLiteral("toggled:off"), QStringLiteral("group:off"),
+                                   QStringLiteral("state:0")}));
+}
+
+TEST_F(ToggleButtonTest, Contract_ExclusiveButtonsKeepQtSelectionRules)
+{
+    for (const bool useGroup : {false, true}) {
+        SCOPED_TRACE(useGroup);
+        ToggleButton first(QStringLiteral("First"), window);
+        ToggleButton second(QStringLiteral("Second"), window);
+        QButtonGroup group;
+        if (useGroup) {
+            group.addButton(&first);
+            group.addButton(&second);
+        } else {
+            first.setAutoExclusive(true);
+            second.setAutoExclusive(true);
+        }
+        first.setCheckState(Qt::Checked);
+        first.click();
+        EXPECT_TRUE(first.isChecked());
+        EXPECT_EQ(first.checkState(), Qt::Checked);
+
+        second.click();
+        EXPECT_FALSE(first.isChecked());
+        EXPECT_TRUE(second.isChecked());
+        EXPECT_EQ(first.checkState(), Qt::Unchecked);
+        EXPECT_EQ(second.checkState(), Qt::Checked);
+    }
 }
 
 TEST_F(ToggleButtonTest, Contract_ToggledCallbackCanReverseCheckedState)
