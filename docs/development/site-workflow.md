@@ -58,6 +58,50 @@ viewport, in hidden tabs, and when the user pauses it. Reduced motion retains a
 static frame; High Contrast and forced colors remove the decoration. The page
 must remain usable if the module or Canvas is unavailable.
 
+The ribbons use three depth layers, fading trails, and local pointer deflection.
+Primary clicks on the background add a short pulse; links, controls, and touch
+scrolling do not trigger it. Keep at most three pulses alive, cap the canvas at
+2.5 million pixels, and use fewer particles with a 30 fps draw limit below 700 px.
+Desktop drawing is capped at 60 fps. Avoid pairwise particle links or per-dot
+blur filters: their cost grows quickly with density.
+
+## Gallery screenshots
+
+Use the current native Gallery for product images. Build `test_gallery_content_pages`
+using the [build workflow](build-workflow.md), then capture each route in Light
+and Dark. On macOS, for example:
+
+```bash
+env -u SKIP_VISUAL_TEST QT_QPA_PLATFORM=cocoa VISUAL_SNAPSHOT=1 \
+  QT_SCALE_FACTOR=1 QT_FONT_DPI=96 GALLERY_PARITY_ROUTE=home GALLERY_PARITY_THEME=dark \
+  ./build/vcpkg-osx/tests/gallery/test_gallery_content_pages \
+  --gtest_filter=GalleryContentPagesTest.PythonParityVisualCheck
+```
+
+Use `home`, `button`, and `collections` for the website images. The shared helper
+writes 1440×900 PNGs to `build/vcpkg-osx/visual/`. Review the captures before
+replacing the matching Light/Dark assets in `site/assets/gallery/`.
+
+The README, Gallery loading poster, and sharing card use designed compositions.
+Keep the README's frame, spacing, and shadow; keep the sharing card's brand,
+background, and angled window. Update their Gallery content through
+[`promo-assets.html`](../../tools/site/promo-assets.html), then render:
+
+```bash
+python3 -m pip install "playwright==1.58.0"
+python3 -m playwright install chromium
+python3 tools/site/generate_promo_assets.py
+```
+
+The renderer uses the Light home capture and bundled Inter fonts. It produces
+the 1600×900 README image and matching loading poster, plus a separate
+1731×909 `site/assets/og.png`. Use `--output-root /tmp/fluentqt-promo-review`
+to preview them before replacement. Do not copy a raw screenshot over these
+outputs. Keep HTML dimensions and OG metadata aligned, and review the exported
+artwork as well as its placement on the site. Run `generate_localized_site.py`
+after rendering: it versions Gallery and sharing image URLs from their content,
+so browsers and sharing previews fetch the updated assets.
+
 ## Validation
 
 Check the generated pages and scripts:
