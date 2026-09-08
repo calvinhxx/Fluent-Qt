@@ -411,20 +411,31 @@ TEST_F(CoachMarkTest, RetargetWhileOpenGlidesToNewTarget)
     coach.setTarget(first);
     coach.open();
     ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
+    ASSERT_TRUE(QTest::qWaitFor([&coach] { return coach.isVisible(); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [this, &coach, first] {
+            return std::abs(cardGlobalRect(&coach).center().x() -
+                            targetGlobalRect(first).center().x()) <= 2;
+        },
+        1000));
+    const QPoint initialPosition = coach.pos();
 
     coach.setTarget(second);
     EXPECT_TRUE(coach.isOpen());
     EXPECT_EQ(coach.target(), second);
 
     // The move is animated; wait for the card to settle under the new target.
-    const QRect secondGlobal = targetGlobalRect(second);
     const bool glided = QTest::qWaitFor(
         [&]() {
             const QRect card = cardGlobalRect(&coach);
-            return std::abs(card.center().x() - secondGlobal.center().x()) <= 2;
+            // A compositor may finish placing the owner after exposure. Compare both
+            // objects in the same current coordinate frame, not a startup snapshot.
+            // zh_CN: 合成器可在曝光后继续放置宿主；比较当前坐标，避免使用启动时的旧全局位置。
+            return std::abs(card.center().x() - targetGlobalRect(second).center().x()) <= 2;
         },
         1500);
     EXPECT_TRUE(glided);
+    EXPECT_NE(coach.pos(), initialPosition);
 }
 
 // ── 9. Destroyed target is handled safely (QPointer auto-clears) ─────────────

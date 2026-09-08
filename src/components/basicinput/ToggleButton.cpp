@@ -1,6 +1,7 @@
 #include "ToggleButton.h"
 #include "design/CornerRadius.h"
 
+#include <QMetaType>
 #include <QPainter>
 #include <QPointer>
 
@@ -8,6 +9,7 @@ namespace fluent::basicinput {
 
 ToggleButton::ToggleButton(const QString& text, QWidget* parent) : Button(text, parent)
 {
+    qRegisterMetaType<Qt::CheckState>("Qt::CheckState");
     setCheckable(true);
     // Keep m_checkState in sync via the toggled signal. zh_CN: 连接 toggled 信号同步 m_checkState。
     connect(this, &QPushButton::toggled, this, [this](bool checked) {
@@ -43,9 +45,24 @@ void ToggleButton::setCheckState(Qt::CheckState state)
         const bool wasSyncing = m_syncingCheckedState;
         m_syncingCheckedState = true;
         QPointer<ToggleButton> guard(this);
+
+        // Older Qt versions access the button after emitting toggled. Finish their setter
+        // before notifying callers that may delete us. Groups retain Qt's notification order.
+        // zh_CN: 旧版 Qt 在 toggled 后仍访问按钮；无组时先完成底层设置，再同步通知。
+        const bool stageToggled = !group() && !autoExclusive();
+        const bool wasBlocked = signalsBlocked();
+        if (stageToggled)
+            blockSignals(true);
         setChecked(checked);
         if (!guard)
             return;
+        if (stageToggled) {
+            blockSignals(wasBlocked);
+            if (isChecked() == checked)
+                emit toggled(checked);
+            if (!guard)
+                return;
+        }
         m_syncingCheckedState = wasSyncing;
 
         // A toggled callback may replace either the tri-state value or Qt's checked state.
@@ -72,7 +89,10 @@ void ToggleButton::nextCheckState()
         else
             setCheckState(Qt::Unchecked);
     } else {
-        Button::nextCheckState();
+        if (group() || autoExclusive())
+            Button::nextCheckState();
+        else if (isCheckable())
+            setCheckState(isChecked() ? Qt::Unchecked : Qt::Checked);
     }
 }
 

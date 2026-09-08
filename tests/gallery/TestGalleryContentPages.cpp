@@ -1930,6 +1930,12 @@ TEST_F(GalleryContentPagesTest, EditingCommandSampleReusesRouterActions)
     GallerySampleCard card(sample);
     card.resize(640, card.sizeHint().height());
     card.show();
+    if (!tests::support::isHeadlessPlatform()) {
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&card));
+        if (!QGuiApplication::platformName().startsWith(QStringLiteral("wayland")))
+            card.activateWindow();
+        ASSERT_TRUE(QTest::qWaitFor([&card] { return card.isActiveWindow(); }, 3000));
+    }
     QApplication::processEvents();
 
     auto* router = card.findChild<EditingCommandRouter*>();
@@ -1948,12 +1954,12 @@ TEST_F(GalleryContentPagesTest, EditingCommandSampleReusesRouterActions)
 
     lineEdit->selectAll();
     lineEdit->setFocus(Qt::OtherFocusReason);
-    QApplication::processEvents();
+    ASSERT_TRUE(QTest::qWaitFor([lineEdit] { return lineEdit->hasFocus(); }, 1000));
     EXPECT_TRUE(router->hasActiveTarget());
     EXPECT_TRUE(router->canExecute(Command::Copy));
 
     textEdit->setFocus(Qt::OtherFocusReason);
-    QApplication::processEvents();
+    ASSERT_TRUE(QTest::qWaitFor([textEdit] { return textEdit->hasFocus(); }, 1000));
     EXPECT_TRUE(router->hasActiveTarget());
     EXPECT_EQ(router->scopeWindow(), card.window());
 }
@@ -2248,6 +2254,13 @@ TEST_F(GalleryContentPagesTest, CommandBarRoutesExposePublicSamplesAndBundledArt
     GallerySampleCard alwaysExpandedCard(alwaysExpandedSample);
     alwaysExpandedCard.resize(720, alwaysExpandedCard.sizeHint().height());
     alwaysExpandedCard.show();
+    if (!tests::support::isHeadlessPlatform()) {
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&alwaysExpandedCard));
+        if (!QGuiApplication::platformName().startsWith(QStringLiteral("wayland")))
+            alwaysExpandedCard.activateWindow();
+        ASSERT_TRUE(QTest::qWaitFor(
+            [&alwaysExpandedCard] { return alwaysExpandedCard.isActiveWindow(); }, 3000));
+    }
     QApplication::processEvents();
     auto* alwaysExpandedFlyout = alwaysExpandedCard.findChild<CommandBarFlyout*>(
         QStringLiteral("Gallery.CommandBarFlyout.AlwaysExpanded"));
@@ -2260,6 +2273,8 @@ TEST_F(GalleryContentPagesTest, CommandBarRoutesExposePublicSamplesAndBundledArt
     alwaysExpandedFlyout->setAnimationEnabled(false);
     EXPECT_TRUE(alwaysExpandedFlyout->isAlwaysExpanded());
     openActions->setFocus(Qt::OtherFocusReason);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [openActions] { return QApplication::focusWidget() == openActions; }, 1000));
     openActions->click();
     QApplication::processEvents();
     EXPECT_TRUE(alwaysExpandedFlyout->isOpen());

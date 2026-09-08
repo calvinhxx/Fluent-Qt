@@ -50,12 +50,35 @@ public:
     }
 };
 
-void showAndProcess(QWidget& widget)
+bool showAndProcess(QWidget& widget)
 {
     if (widget.window() && widget.window() != &widget)
         widget.window()->show();
     widget.show();
+    if (!tests::support::isHeadlessPlatform() && !QTest::qWaitForWindowExposed(widget.window()))
+        return false;
     QApplication::processEvents();
+    return true;
+}
+
+void sendMouseMove(QWidget* target, const QPoint& position, Qt::MouseButtons buttons = Qt::NoButton)
+{
+    // Keep synthetic pointer state in this widget event stream. QWidget QTest moves can
+    // instead warp the native cursor, lose held buttons, or target a child in another window.
+    // zh_CN: 保持控件事件流中的合成指针状态，避免原生光标移动丢失按键或命中其他窗口的子控件。
+    QPoint localPosition = position;
+    if (buttons == Qt::NoButton && qobject_cast<TabView*>(target)) {
+        // The strip owns mouse tracking; QApplication filters unpressed moves sent to
+        // the outer TabView, which does not request tracking.
+        auto* strip = target->findChild<fluent::navigation::TabStrip*>();
+        if (strip && strip->geometry().contains(position)) {
+            localPosition = strip->mapFrom(target, position);
+            target = strip;
+        }
+    }
+    FLUENT_MAKE_MOUSE_EVENT(event, QEvent::MouseMove, target, localPosition, Qt::NoButton, buttons,
+                            Qt::NoModifier);
+    QApplication::sendEvent(target, &event);
 }
 
 void addAnchored(AnchorLayout* layout, QWidget* widget)
@@ -234,7 +257,7 @@ TEST_F(TabViewTest, CompletedTabRevealDisablesOpacityEffects)
     tabs->addTab(TabViewItem(QStringLiteral("Details"), Typography::Icons::Document));
     tabs->addTab(TabViewItem(QStringLiteral("Activity"), Typography::Icons::Calendar));
 
-    showAndProcess(*tabs);
+    ASSERT_TRUE(showAndProcess(*tabs));
 
     const auto allEffectsDisabled = [tabs]() {
         const auto effects = tabs->findChildren<QGraphicsOpacityEffect*>();
@@ -258,8 +281,10 @@ TEST_F(TabViewTest, SizeToContentLeavesEnoughRoomForFullLabels)
     tabs->addTab(TabViewItem(QStringLiteral("Details"), Typography::Icons::Document));
     tabs->addTab(TabViewItem(QStringLiteral("Activity"), Typography::Icons::Calendar));
 
-    showAndProcess(*tabs);
+    ASSERT_TRUE(showAndProcess(*tabs));
 
+    ASSERT_TRUE(QTest::qWaitFor(
+        [tabs] { return tabs->findChildren<Label*>().size() == tabs->tabCount(); }, 1000));
     const auto labels = tabs->findChildren<Label*>();
     ASSERT_EQ(labels.size(), tabs->tabCount());
     for (const Label* label : labels) {
@@ -437,7 +462,7 @@ TEST_F(TabViewTest, SelectionCanDriveExternalStackContentHostPages)
     QObject::connect(tabs, &TabView::tabMoved, host,
                      [host](int from, int to) { host->movePage(from, to); });
     host->setCurrentIndex(tabs->selectedIndex(), 0, false);
-    showAndProcess(*window);
+    ASSERT_TRUE(showAndProcess(*window));
 
     EXPECT_EQ(first->parentWidget(), host);
     EXPECT_EQ(second->parentWidget(), host);
@@ -476,7 +501,7 @@ TEST_F(TabViewTest, GeometryWidthModesCloseModesAndOverflowAreDeterministic)
     tabs.addTab(QStringLiteral("One"));
     tabs.addTab(QStringLiteral("Two"));
     tabs.addTab(QStringLiteral("Three"));
-    showAndProcess(tabs);
+    ASSERT_TRUE(showAndProcess(tabs));
 
     EXPECT_EQ(tabs.tabGeometry(0).height(), 32);
     EXPECT_EQ(tabs.addButtonGeometry().size(), QSize(40, 32));
@@ -498,12 +523,12 @@ TEST_F(TabViewTest, GeometryWidthModesCloseModesAndOverflowAreDeterministic)
     QApplication::processEvents();
     EXPECT_FALSE(tabs.closeButtonGeometry(0).isEmpty());
     tabs.setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::OnHover);
-    QTest::mouseMove(&tabs, tabs.addButtonGeometry().center());
+    sendMouseMove(&tabs, tabs.addButtonGeometry().center());
     QApplication::processEvents();
     EXPECT_TRUE(tabs.closeButtonGeometry(0).isEmpty());
 
     const int compactCollapsedWidth = tabs.tabGeometry(0).width();
-    QTest::mouseMove(&tabs, tabs.tabGeometry(0).center());
+    sendMouseMove(&tabs, tabs.tabGeometry(0).center());
     QApplication::processEvents();
     EXPECT_GE(tabs.tabGeometry(0).width(), compactCollapsedWidth);
     QTRY_VERIFY_WITH_TIMEOUT(tabs.tabGeometry(0).width() > compactCollapsedWidth, 500);
@@ -512,7 +537,7 @@ TEST_F(TabViewTest, GeometryWidthModesCloseModesAndOverflowAreDeterministic)
     const QRect compactHoverClose = tabs.closeButtonGeometry(0);
     EXPECT_GT(compactHoverTab.width(), compactCollapsedWidth);
     EXPECT_GT(compactHoverClose.left(), compactHoverTab.left() + 36);
-    QTest::mouseMove(&tabs, compactHoverClose.center());
+    sendMouseMove(&tabs, compactHoverClose.center());
     QApplication::processEvents();
     EXPECT_FALSE(tabs.closeButtonGeometry(0).isEmpty());
     EXPECT_GE(tabs.tabGeometry(0).width(), compactHoverTab.width() - 1);
@@ -555,7 +580,7 @@ TEST_F(TabViewTest, GeometryWidthModesCloseModesAndOverflowAreDeterministic)
     for (int index = 0; index < 8; ++index)
         scrollTabs.addTab(
             TabViewItem(QStringLiteral("Doc %1").arg(index), Typography::Icons::Document));
-    showAndProcess(scrollTabs);
+    ASSERT_TRUE(showAndProcess(scrollTabs));
     scrollTabs.setSelectedIndex(6);
     QApplication::processEvents();
     const QVector<int> visibleBeforeSelect = scrollTabs.visibleTabIndexes();
@@ -579,7 +604,7 @@ TEST_F(TabViewTest, VisibleIconButtonsExposeAccessibleNames)
     for (int index = 0; index < 8; ++index)
         tabs.addTab(QStringLiteral("Very long document %1").arg(index));
     tabs.setSelectedIndex(6);
-    showAndProcess(tabs);
+    ASSERT_TRUE(showAndProcess(tabs));
 
     bool sawAdd = false;
     bool sawBack = false;
@@ -611,7 +636,7 @@ TEST_F(TabViewTest, SeparatorsOnlyAppearBetweenUnselectedTabs)
     tabs.addTab(QStringLiteral("Two"));
     tabs.addTab(QStringLiteral("Three"));
     tabs.addTab(QStringLiteral("Four"));
-    showAndProcess(tabs);
+    ASSERT_TRUE(showAndProcess(tabs));
 
     auto separatorItems = [&tabs]() {
         QVector<fluent::navigation::detail::TabSeparatorGeometryItem> items;
@@ -651,7 +676,8 @@ TEST_F(TabViewTest, RealTabStripSuppressesSelectedAndFilledSeparators)
                     TabViewItem(QStringLiteral("Three")), TabViewItem(QStringLiteral("Four")),
                     TabViewItem(QStringLiteral("Five"))});
     strip.setSelectedIndex(0);
-    showAndProcess(strip);
+    ASSERT_TRUE(showAndProcess(strip));
+    sendMouseMove(&strip, QPoint(strip.width() - 1, strip.height() - 1));
 
     auto separatorPoint = [&strip](int rightIndex) {
         const QRect rightTab = strip.tabGeometry(rightIndex);
@@ -673,7 +699,7 @@ TEST_F(TabViewTest, RealTabStripSuppressesSelectedAndFilledSeparators)
     EXPECT_NE(dividerColor, resting.pixelColor(neutralBoundary + QPoint(2, 0)));
     EXPECT_NE(resting.pixelColor(selectedBoundary), dividerColor);
 
-    QTest::mouseMove(&strip, strip.tabGeometry(3).center());
+    sendMouseMove(&strip, strip.tabGeometry(3).center());
     QApplication::processEvents();
     const QImage hovered = renderStrip();
     EXPECT_NE(hovered.pixelColor(neutralBoundary), dividerColor);
@@ -687,7 +713,7 @@ TEST_F(TabViewTest, SelectedTabUsesFluentCornerProfile)
     tabs.addTab(QStringLiteral("Two"));
     tabs.addTab(QStringLiteral("Three"));
     tabs.setSelectedIndex(1);
-    showAndProcess(tabs);
+    ASSERT_TRUE(showAndProcess(tabs));
 
     QWidget* strip = tabs.findChild<QWidget*>(QStringLiteral("TabViewTabStrip"));
     ASSERT_NE(strip, nullptr);
@@ -753,7 +779,8 @@ TEST_F(TabViewTest, DarkHoverAndSelectedFillsKeepOrderedContrast)
     tabs.addTab(QStringLiteral("Three"));
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     tabs.onThemeUpdated();
-    showAndProcess(tabs);
+    ASSERT_TRUE(showAndProcess(tabs));
+    sendMouseMove(&tabs, QPoint(tabs.width() - 1, tabs.height() - 1));
     const auto revealSettled = [&tabs]() {
         const auto effects = tabs.findChildren<QGraphicsOpacityEffect*>();
         return effects.size() >= tabs.tabCount() &&
@@ -777,7 +804,7 @@ TEST_F(TabViewTest, DarkHoverAndSelectedFillsKeepOrderedContrast)
     const int restValue = qGray(stateSample(restImage, 2).rgb());
     const int selectedValue = qGray(stateSample(restImage, 0).rgb());
 
-    QTest::mouseMove(&tabs, tabs.tabGeometry(1).center());
+    sendMouseMove(&tabs, tabs.tabGeometry(1).center());
     QApplication::processEvents();
     const int hoverValue = qGray(stateSample(renderTabs(), 1).rgb());
 
@@ -797,7 +824,7 @@ TEST_F(TabViewTest, PointerAddCloseSelectDisabledAndReorderBehavior)
     tabs.addTab(QStringLiteral("Two"));
     tabs.addTab(QStringLiteral("Three"));
     tabs.setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);
-    showAndProcess(tabs);
+    ASSERT_TRUE(showAndProcess(tabs));
 
     QSignalSpy selectedSpy(&tabs, &TabView::selectedIndexChanged);
     QTest::mouseClick(&tabs, Qt::LeftButton, Qt::NoModifier, tabs.tabGeometry(1).center());
@@ -842,8 +869,9 @@ TEST_F(TabViewTest, PointerAddCloseSelectDisabledAndReorderBehavior)
     const QPoint beforeSecondMidpoint =
         QPoint(tabs.tabGeometry(1).left() + 6, tabs.tabGeometry(1).center().y());
     QTest::mousePress(&tabs, Qt::LeftButton, Qt::NoModifier, firstTabCenter);
-    QTest::mouseMove(&tabs, firstTabCenter + QPoint(QApplication::startDragDistance() + 4, 0), 50);
-    QTest::mouseMove(&tabs, beforeSecondMidpoint, 50);
+    sendMouseMove(&tabs, firstTabCenter + QPoint(QApplication::startDragDistance() + 4, 0),
+                  Qt::LeftButton);
+    sendMouseMove(&tabs, beforeSecondMidpoint, Qt::LeftButton);
     QTest::mouseRelease(&tabs, Qt::LeftButton, Qt::NoModifier, beforeSecondMidpoint);
     EXPECT_EQ(movedSpy.count(), 0);
     EXPECT_EQ(tabs.tabAt(0).text, QStringLiteral("A"));
@@ -851,17 +879,17 @@ TEST_F(TabViewTest, PointerAddCloseSelectDisabledAndReorderBehavior)
     const QPoint from = tabs.tabGeometry(0).center();
     const QPoint to = QPoint(tabs.tabGeometry(2).right() + 36, tabs.tabGeometry(2).center().y());
     QTest::mousePress(&tabs, Qt::LeftButton, Qt::NoModifier, from);
-    QTest::mouseMove(&tabs, from + QPoint(QApplication::startDragDistance() + 4, 0), 50);
+    sendMouseMove(&tabs, from + QPoint(QApplication::startDragDistance() + 4, 0), Qt::LeftButton);
     QApplication::processEvents();
     EXPECT_EQ(movedSpy.count(), 0);
-    QTest::mouseMove(&tabs, to, 50);
+    sendMouseMove(&tabs, to, Qt::LeftButton);
     QTest::mouseRelease(&tabs, Qt::LeftButton, Qt::NoModifier, to);
     ASSERT_EQ(movedSpy.count(), 1);
     EXPECT_EQ(tabs.tabAt(2).text, QStringLiteral("A"));
 
     tabs.setTabReorderEnabled(false);
     QTest::mousePress(&tabs, Qt::LeftButton, Qt::NoModifier, tabs.tabGeometry(0).center());
-    QTest::mouseMove(&tabs, tabs.tabGeometry(1).center(), 50);
+    sendMouseMove(&tabs, tabs.tabGeometry(1).center(), Qt::LeftButton);
     QTest::mouseRelease(&tabs, Qt::LeftButton, Qt::NoModifier, tabs.tabGeometry(1).center());
     EXPECT_EQ(movedSpy.count(), 1);
 }
@@ -873,7 +901,7 @@ TEST_F(TabViewTest, KeyboardAcceleratorsFocusAndThemeAccessibilityStayStable)
     tabs.addTab(QStringLiteral("One"));
     tabs.addTab(QStringLiteral("Two"));
     tabs.addTab(QStringLiteral("Three"));
-    showAndProcess(tabs);
+    ASSERT_TRUE(showAndProcess(tabs));
 
     QSignalSpy addSpy(&tabs, &TabView::addTabRequested);
     QSignalSpy closeSpy(&tabs, &TabView::tabCloseRequested);
@@ -916,7 +944,7 @@ TEST_F(TabViewTest, KeyboardAcceleratorsFocusAndThemeAccessibilityStayStable)
     shortcutTabs.addTab(TabViewItem(QStringLiteral("Shortcut A"), Typography::Icons::Document));
     shortcutTabs.addTab(TabViewItem(QStringLiteral("Shortcut B"), Typography::Icons::Document));
     shortcutTabs.addTab(TabViewItem(QStringLiteral("Shortcut C"), Typography::Icons::Document));
-    showAndProcess(shortcutTabs);
+    ASSERT_TRUE(showAndProcess(shortcutTabs));
     QSignalSpy shortcutAddSpy(&shortcutTabs, &TabView::addTabRequested);
     QSignalSpy shortcutCloseSpy(&shortcutTabs, &TabView::tabCloseRequested);
     QObject::connect(&shortcutTabs, &TabView::addTabRequested, &shortcutTabs, [&shortcutTabs]() {
@@ -937,7 +965,7 @@ TEST_F(TabViewTest, KeyboardAcceleratorsFocusAndThemeAccessibilityStayStable)
 
     auto* focusSink = new Button(QStringLiteral("Focus sink"), window);
     focusSink->setFixedSize(120, 32);
-    showAndProcess(*focusSink);
+    ASSERT_TRUE(showAndProcess(*focusSink));
     focusSink->setFocus();
     QApplication::processEvents();
     QTest::keyClick(focusSink, Qt::Key_T, Qt::ControlModifier);

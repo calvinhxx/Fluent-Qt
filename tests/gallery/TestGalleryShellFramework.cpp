@@ -1134,6 +1134,7 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsFluentToolTips)
     GalleryWindow window;
     window.resize(1180, 760);
     window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
     QApplication::processEvents();
 
     auto* mainPane =
@@ -1156,15 +1157,20 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsFluentToolTips)
                                                      QStringLiteral("GalleryTitleBar.MenuButton"));
     ASSERT_NE(menuButton, nullptr);
     QTest::mouseClick(menuButton, Qt::LeftButton);
-    settleNavigationViewAnimation();
+    ASSERT_TRUE(QTest::qWaitFor(
+        [mainPane] { return mainPane->isCompact() && mainPane->compactVisualProgress() >= 0.999; },
+        1000));
+    QApplication::processEvents();
 
     const QRect compactRect = tree->visualRect(homeIndex);
     ASSERT_FALSE(compactRect.isEmpty());
     QHelpEvent compactHelp(QEvent::ToolTip, compactRect.center(),
                            tree->viewport()->mapToGlobal(compactRect.center()));
     QApplication::sendEvent(tree->viewport(), &compactHelp);
-    QApplication::processEvents();
 
+    // Showing is synchronous with the help event. Do not interleave unrelated native
+    // Leave/Resize events before checking it; dismissal is exercised explicitly below.
+    // zh_CN: 帮助事件同步显示提示；检查前不插入原生离开/调整大小事件，下面单独验证关闭。
     auto* toolTip =
         mainPane->findChild<ToolTip*>(QStringLiteral("galleryCompactNavigationToolTip"));
     ASSERT_NE(toolTip, nullptr);

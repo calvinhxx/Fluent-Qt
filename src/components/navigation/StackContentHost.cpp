@@ -85,19 +85,22 @@ void StackContentHost::paintEvent(QPaintEvent* event)
 {
     QPainter painter(this);
 
-    // Transparent widgets share the top-level backing store. Replace this region on every
-    // backdrop frame so pixels from an outgoing page cannot survive a stack switch.
-    // zh_CN: 透明控件共享顶层后备缓冲；每个背景帧都替换此区域，避免切页后保留旧页面像素。
+    // A nested host without its own surface inherits the parent's paint. Clearing the shared
+    // backing store here would erase that surface too (including a locally themed preview).
+    // Top-level hosts and explicit material overlays still replace outgoing page pixels.
+    // zh_CN: 未指定表面的嵌套宿主继承父级绘制，擦除共享缓冲会同时抹掉父级（含局部主题）底色；
+    // 顶层宿主和显式材质覆盖层仍需替换离开页面的像素。
     const bool transparentBackdrop = window() &&
                                      window()->testAttribute(Qt::WA_TranslucentBackground) &&
                                      windowing::windowBackdropRequiresTransparentClear(window());
-    if (transparentBackdrop) {
+    const bool hasSurface = m_surfaceFill.isValid() && m_surfaceFill.alpha() > 0;
+    if (transparentBackdrop && (isWindow() || hasSurface)) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(event->rect(), Qt::transparent);
         painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     }
 
-    if (!m_surfaceFill.isValid() || m_surfaceFill.alpha() == 0) {
+    if (!hasSurface) {
         // Material backdrops belong to the parent; regular windows retain the legacy layer.
         // zh_CN: 材质背景由父级提供；普通窗口保留原有的默认内容层。
         if (transparentBackdrop || windowing::windowBackdropUsesPaintedMaterial(window()))

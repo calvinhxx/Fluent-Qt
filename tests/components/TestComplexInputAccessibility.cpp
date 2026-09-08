@@ -34,8 +34,7 @@ void showAndProcess(QWidget& widget, const QSize& size)
     QApplication::processEvents();
 }
 
-void sendKey(QWidget* widget, Qt::Key key,
-             Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+void sendKey(QWidget* widget, Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
 {
     QKeyEvent press(QEvent::KeyPress, key, modifiers);
     QApplication::sendEvent(widget, &press);
@@ -56,16 +55,14 @@ QVector<AccessibleEventRecord> g_accessibilityEvents;
 void captureAccessibilityEvent(QAccessibleEvent* event)
 {
     if (event) {
-        g_accessibilityEvents.append(
-            AccessibleEventRecord{event->object(), event->type()});
+        g_accessibilityEvents.append(AccessibleEventRecord{event->object(), event->type()});
     }
 }
 
 class ScopedAccessibilityEventCapture {
 public:
     ScopedAccessibilityEventCapture()
-        : m_previous(
-              QAccessible::installUpdateHandler(captureAccessibilityEvent))
+        : m_previous(QAccessible::installUpdateHandler(captureAccessibilityEvent))
     {
         g_accessibilityEvents.clear();
     }
@@ -103,8 +100,7 @@ bool hasControllerRelation(QAccessibleInterface* root, QWidget* target)
         return false;
     QAccessibleInterface* expected = accessible(target);
     for (const auto& relation : root->relations(QAccessible::Controller)) {
-        if (relation.first == expected
-            && relation.second.testFlag(QAccessible::Controller)) {
+        if (relation.first == expected && relation.second.testFlag(QAccessible::Controller)) {
             return true;
         }
     }
@@ -115,7 +111,9 @@ bool hasControllerRelation(QAccessibleInterface* root, QWidget* target)
 
 } // namespace
 
+// clang-format off
 TEST(ComplexInputAccessibilityTest, Contract_AccessibilityColorPickerExposesColorAndAdjustableRegions)
+// clang-format on
 {
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";
@@ -127,17 +125,12 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityColorPickerExposesColo
     QAccessibleInterface* root = accessible(&picker);
     ASSERT_NE(root, nullptr);
     EXPECT_EQ(root->role(), QAccessible::ColorChooser);
-    EXPECT_EQ(root->text(QAccessible::Name),
-              QStringLiteral("Brand color"));
-    EXPECT_EQ(root->text(QAccessible::Value),
-              QStringLiteral("#FFFFFFFF"));
+    EXPECT_EQ(root->text(QAccessible::Name), QStringLiteral("Brand color"));
+    EXPECT_EQ(root->text(QAccessible::Value), QStringLiteral("#FFFFFFFF"));
 
-    QWidget* spectrum = picker.findChild<QWidget*>(
-        QStringLiteral("ColorPicker.Spectrum"));
-    QWidget* hue = picker.findChild<QWidget*>(
-        QStringLiteral("ColorPicker.HueBar"));
-    QWidget* preview = picker.findChild<QWidget*>(
-        QStringLiteral("ColorPicker.PreviewPane"));
+    QWidget* spectrum = picker.findChild<QWidget*>(QStringLiteral("ColorPicker.Spectrum"));
+    QWidget* hue = picker.findChild<QWidget*>(QStringLiteral("ColorPicker.HueBar"));
+    QWidget* preview = picker.findChild<QWidget*>(QStringLiteral("ColorPicker.PreviewPane"));
     ASSERT_NE(spectrum, nullptr);
     ASSERT_NE(hue, nullptr);
     ASSERT_NE(preview, nullptr);
@@ -154,8 +147,7 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityColorPickerExposesColo
     EXPECT_TRUE(spectrumInterface->state().focusable);
     EXPECT_TRUE(hueInterface->state().focusable);
     EXPECT_FALSE(spectrumInterface->text(QAccessible::Value).isEmpty());
-    EXPECT_EQ(previewInterface->text(QAccessible::Value),
-              root->text(QAccessible::Value));
+    EXPECT_EQ(previewInterface->text(QAccessible::Value), root->text(QAccessible::Value));
 
     QAccessibleValueInterface* hueValue = hueInterface->valueInterface();
     ASSERT_NE(hueValue, nullptr);
@@ -174,12 +166,13 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityColorPickerExposesColo
     EXPECT_EQ(capture.count(&picker, QAccessible::ValueChanged), 0);
     picker.setColor(QColor(12, 34, 56, 78));
     EXPECT_EQ(capture.count(&picker, QAccessible::ValueChanged), 1);
-    EXPECT_EQ(root->text(QAccessible::Value),
-              QStringLiteral("#0C22384E"));
+    EXPECT_EQ(root->text(QAccessible::Value), QStringLiteral("#0C22384E"));
 #endif
 }
 
+// clang-format off
 TEST(ComplexInputAccessibilityTest, Contract_AccessibilityDateAndTimePickersSeparatePendingAndCommittedValues)
+// clang-format on
 {
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";
@@ -198,28 +191,23 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityDateAndTimePickersSepa
 
     QAccessibleActionInterface* dateActions = dateRoot->actionInterface();
     ASSERT_NE(dateActions, nullptr);
-    EXPECT_TRUE(dateActions->actionNames().contains(
-        QAccessibleActionInterface::showMenuAction()));
+    EXPECT_TRUE(dateActions->actionNames().contains(QAccessibleActionInterface::showMenuAction()));
     dateActions->doAction(QAccessibleActionInterface::showMenuAction());
     QApplication::processEvents();
     EXPECT_TRUE(date.isDropDownOpen());
     EXPECT_TRUE(dateRoot->state().expanded);
 
-    QWidget* dateFlyout = date.findChild<QWidget*>(
-        QStringLiteral("DatePickerFlyout"));
-    QWidget* month = date.findChild<QWidget*>(
-        QStringLiteral("DatePickerMonthColumn"));
+    QWidget* dateFlyout = date.findChild<QWidget*>(QStringLiteral("DatePickerFlyout"));
+    QWidget* month = date.findChild<QWidget*>(QStringLiteral("DatePickerMonthColumn"));
     ASSERT_NE(dateFlyout, nullptr);
     ASSERT_NE(month, nullptr);
     EXPECT_TRUE(hasControllerRelation(dateRoot, dateFlyout));
     QAccessibleInterface* monthInterface = accessible(month);
     ASSERT_NE(monthInterface, nullptr);
     EXPECT_EQ(monthInterface->role(), QAccessible::SpinBox);
-    EXPECT_EQ(monthInterface->text(QAccessible::Name),
-              QStringLiteral("Month"));
+    EXPECT_EQ(monthInterface->text(QAccessible::Name), QStringLiteral("Month"));
     ASSERT_NE(monthInterface->valueInterface(), nullptr);
-    QAccessibleActionInterface* monthActions =
-        monthInterface->actionInterface();
+    QAccessibleActionInterface* monthActions = monthInterface->actionInterface();
     ASSERT_NE(monthActions, nullptr);
 
     const QDate selectedBefore = date.selectedDate();
@@ -227,10 +215,8 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityDateAndTimePickersSepa
     EXPECT_EQ(date.selectedDate(), selectedBefore);
     EXPECT_EQ(dateRoot->text(QAccessible::Value), committedDate);
 
-    Button* dateConfirm = date.findChild<Button*>(
-        QStringLiteral("DatePickerConfirmButton"));
-    Button* dateCancel = date.findChild<Button*>(
-        QStringLiteral("DatePickerCancelButton"));
+    Button* dateConfirm = date.findChild<Button*>(QStringLiteral("DatePickerConfirmButton"));
+    Button* dateCancel = date.findChild<Button*>(QStringLiteral("DatePickerCancelButton"));
     ASSERT_NE(dateConfirm, nullptr);
     ASSERT_NE(dateCancel, nullptr);
     EXPECT_EQ(dateConfirm->accessibleName(), QStringLiteral("Confirm date"));
@@ -246,31 +232,25 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityDateAndTimePickersSepa
     ASSERT_NE(timeRoot, nullptr);
     EXPECT_EQ(timeRoot->role(), QAccessible::ButtonMenu);
     const QString committedTime = timeRoot->text(QAccessible::Value);
-    timeRoot->actionInterface()->doAction(
-        QAccessibleActionInterface::showMenuAction());
+    timeRoot->actionInterface()->doAction(QAccessibleActionInterface::showMenuAction());
     QApplication::processEvents();
 
-    QWidget* timeFlyout = time.findChild<QWidget*>(
-        QStringLiteral("TimePickerFlyout"));
-    QWidget* minute = time.findChild<QWidget*>(
-        QStringLiteral("TimePickerMinuteColumn"));
+    QWidget* timeFlyout = time.findChild<QWidget*>(QStringLiteral("TimePickerFlyout"));
+    QWidget* minute = time.findChild<QWidget*>(QStringLiteral("TimePickerMinuteColumn"));
     ASSERT_NE(timeFlyout, nullptr);
     ASSERT_NE(minute, nullptr);
     EXPECT_TRUE(hasControllerRelation(timeRoot, timeFlyout));
     QAccessibleInterface* minuteInterface = accessible(minute);
     ASSERT_NE(minuteInterface, nullptr);
-    QAccessibleValueInterface* minuteValue =
-        minuteInterface->valueInterface();
+    QAccessibleValueInterface* minuteValue = minuteInterface->valueInterface();
     ASSERT_NE(minuteValue, nullptr);
     EXPECT_EQ(minuteValue->minimumStepSize().toInt(), 15);
     const QTime selectedTimeBefore = time.selectedTime();
-    minuteInterface->actionInterface()->doAction(
-        QAccessibleActionInterface::increaseAction());
+    minuteInterface->actionInterface()->doAction(QAccessibleActionInterface::increaseAction());
     EXPECT_EQ(time.selectedTime(), selectedTimeBefore);
     EXPECT_EQ(timeRoot->text(QAccessible::Value), committedTime);
 
-    Button* timeConfirm = time.findChild<Button*>(
-        QStringLiteral("TimePickerConfirmButton"));
+    Button* timeConfirm = time.findChild<Button*>(QStringLiteral("TimePickerConfirmButton"));
     ASSERT_NE(timeConfirm, nullptr);
     EXPECT_EQ(timeConfirm->accessibleName(), QStringLiteral("Confirm time"));
     time.closePicker();
@@ -285,7 +265,9 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityDateAndTimePickersSepa
 #endif
 }
 
+// clang-format off
 TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAnnotatedScrollBarKeepsFilteredLabelsOperable)
+// clang-format on
 {
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";
@@ -294,20 +276,17 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAnnotatedScrollBarKeep
     bar.setAccessibleName(QStringLiteral("Document sections"));
     bar.setRange(0, 100);
     bar.setPageStep(20);
-    bar.setLabels({
-        AnnotatedScrollBarLabel(QStringLiteral("Intro"), 0,
-                                QStringLiteral("Opening")),
-        AnnotatedScrollBarLabel(QStringLiteral("Methods"), 25),
-        AnnotatedScrollBarLabel(QStringLiteral("Results"), 50),
-        AnnotatedScrollBarLabel(QStringLiteral("Discussion"), 75),
-        AnnotatedScrollBarLabel(QStringLiteral("Appendix"), 100)});
+    bar.setLabels({AnnotatedScrollBarLabel(QStringLiteral("Intro"), 0, QStringLiteral("Opening")),
+                   AnnotatedScrollBarLabel(QStringLiteral("Methods"), 25),
+                   AnnotatedScrollBarLabel(QStringLiteral("Results"), 50),
+                   AnnotatedScrollBarLabel(QStringLiteral("Discussion"), 75),
+                   AnnotatedScrollBarLabel(QStringLiteral("Appendix"), 100)});
     showAndProcess(bar, QSize(110, 90));
 
     QAccessibleInterface* root = accessible(&bar);
     ASSERT_NE(root, nullptr);
     EXPECT_EQ(root->role(), QAccessible::ScrollBar);
-    EXPECT_EQ(root->text(QAccessible::Name),
-              QStringLiteral("Document sections"));
+    EXPECT_EQ(root->text(QAccessible::Name), QStringLiteral("Document sections"));
     ASSERT_NE(root->valueInterface(), nullptr);
     EXPECT_EQ(root->valueInterface()->minimumValue().toInt(), 0);
     EXPECT_EQ(root->valueInterface()->maximumValue().toInt(), 100);
@@ -328,8 +307,7 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAnnotatedScrollBarKeep
     QSignalSpy activated(&bar, &AnnotatedScrollBar::labelActivated);
     QAccessibleInterface* results = root->child(2);
     ASSERT_NE(results, nullptr);
-    results->actionInterface()->doAction(
-        QAccessibleActionInterface::pressAction());
+    results->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
     EXPECT_EQ(bar.value(), 50);
     EXPECT_EQ(activated.count(), 1);
 
@@ -348,43 +326,48 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAnnotatedScrollBarKeep
 #endif
 }
 
+// clang-format off
 TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAutoSuggestRetainsTextAndControlsSuggestionList)
+// clang-format on
 {
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";
 #else
-    AutoSuggestBox box;
+    QWidget host;
+    AutoSuggestBox box(&host);
     box.setHeader(QStringLiteral("Search files"));
     box.setSuggestions({QStringLiteral("Alpha"), QStringLiteral("Beta")});
     box.setText(QStringLiteral("a"));
-    showAndProcess(box, QSize(260, box.sizeHint().height()));
+    box.resize(260, box.sizeHint().height());
+    showAndProcess(host, box.size());
+    if (!tests::support::isHeadlessPlatform()) {
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+        if (!QGuiApplication::platformName().startsWith(QStringLiteral("wayland")))
+            host.activateWindow();
+    }
     box.setFocus(Qt::OtherFocusReason);
-    QApplication::processEvents();
+    ASSERT_TRUE(QTest::qWaitFor([&box] { return box.hasFocus(); }, 1000));
 
     QAccessibleInterface* root = accessible(&box);
     ASSERT_NE(root, nullptr);
     EXPECT_EQ(root->role(), QAccessible::EditableText);
-    EXPECT_EQ(root->text(QAccessible::Name),
-              QStringLiteral("Search files"));
+    EXPECT_EQ(root->text(QAccessible::Name), QStringLiteral("Search files"));
     EXPECT_EQ(root->text(QAccessible::Value), QStringLiteral("a"));
     EXPECT_TRUE(root->state().supportsAutoCompletion);
     EXPECT_TRUE(root->state().hasPopup);
     EXPECT_TRUE(root->state().expandable);
     ASSERT_NE(root->textInterface(), nullptr);
     ASSERT_NE(root->editableTextInterface(), nullptr);
-    EXPECT_EQ(root->textInterface()->text(
-                  0, root->textInterface()->characterCount()),
+    EXPECT_EQ(root->textInterface()->text(0, root->textInterface()->characterCount()),
               QStringLiteral("a"));
 
-    QWidget* list = box.findChild<QWidget*>(
-        QStringLiteral("AutoSuggestBoxSuggestionList"));
+    QWidget* list = box.findChild<QWidget*>(QStringLiteral("AutoSuggestBoxSuggestionList"));
     ASSERT_NE(list, nullptr);
     EXPECT_TRUE(hasControllerRelation(root, list));
 
     QAccessibleActionInterface* actions = root->actionInterface();
     ASSERT_NE(actions, nullptr);
-    EXPECT_TRUE(actions->actionNames().contains(
-        QAccessibleActionInterface::showMenuAction()));
+    EXPECT_TRUE(actions->actionNames().contains(QAccessibleActionInterface::showMenuAction()));
     actions->doAction(QAccessibleActionInterface::showMenuAction());
     QApplication::processEvents();
     EXPECT_TRUE(box.isSuggestionListOpen());
@@ -394,8 +377,7 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAutoSuggestRetainsText
     FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture capture;
     sendKey(&box, Qt::Key_Down);
-    EXPECT_EQ(capture.count(
-                  &box, QAccessible::ActiveDescendantChanged), 1);
+    EXPECT_EQ(capture.count(&box, QAccessible::ActiveDescendantChanged), 1);
 
     capture.clear();
     box.setSuggestions(box.suggestions());
@@ -403,10 +385,8 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAutoSuggestRetainsText
     box.setSuggestions({QStringLiteral("Gamma")});
     EXPECT_EQ(capture.count(&box, QAccessible::StateChanged), 1);
 
-    auto* queryButton = box.findChild<Button*>(
-        QStringLiteral("AutoSuggestBoxQueryButton"));
-    auto* clearButton = box.findChild<Button*>(
-        QStringLiteral("AutoSuggestBoxClearButton"));
+    auto* queryButton = box.findChild<Button*>(QStringLiteral("AutoSuggestBoxQueryButton"));
+    auto* clearButton = box.findChild<Button*>(QStringLiteral("AutoSuggestBoxClearButton"));
     ASSERT_NE(queryButton, nullptr);
     ASSERT_NE(clearButton, nullptr);
     EXPECT_EQ(queryButton->accessibleName(), QStringLiteral("Submit query"));
@@ -414,7 +394,6 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAutoSuggestRetainsText
 
     box.setAccessibleName(QStringLiteral("Project search"));
     box.setHeader(QStringLiteral("Changed header"));
-    EXPECT_EQ(root->text(QAccessible::Name),
-              QStringLiteral("Project search"));
+    EXPECT_EQ(root->text(QAccessible::Name), QStringLiteral("Project search"));
 #endif
 }

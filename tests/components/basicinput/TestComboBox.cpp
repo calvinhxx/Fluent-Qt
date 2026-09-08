@@ -37,6 +37,7 @@
 #include "components/scrolling/ScrollBar.h"
 #include "design/Typography.h"
 #include "QtTestEnvironment.h"
+#include "QtFontComparison.h"
 
 using namespace fluent;
 using namespace fluent::basicinput;
@@ -225,7 +226,8 @@ TEST_F(ComboBoxTest, Contract_EditableFontAndSameRoleRestore)
 
     QSignalSpy roleChanges(&cb, &ComboBox::fontRoleChanged);
     cb.setFontRole(cb.fontRole());
-    EXPECT_EQ(cb.font(), cb.themeFont(cb.fontRole()).toQFont());
+    EXPECT_EQ(tests::support::normalizedFontFamilies(cb.font()),
+              tests::support::normalizedFontFamilies(cb.themeFont(cb.fontRole()).toQFont()));
     EXPECT_EQ(cb.lineEdit()->font(), cb.font());
     EXPECT_EQ(roleChanges.count(), 0);
     EXPECT_EQ(cb.lineEdit()->text(), "Uncommitted text");
@@ -277,14 +279,17 @@ TEST_F(ComboBoxTest, Contract_ThemeFontUpdatesOpenPopupAndEditor)
     auto* list = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
     ASSERT_NE(list, nullptr);
     cb.setFontRole(Typography::FontRole::Subtitle);
-    EXPECT_EQ(cb.font(), cb.themeFont(cb.fontRole()).toQFont());
+    EXPECT_EQ(tests::support::normalizedFontFamilies(cb.font()),
+              tests::support::normalizedFontFamilies(cb.themeFont(cb.fontRole()).toQFont()));
     EXPECT_EQ(list->font(), cb.font());
     EXPECT_EQ(cb.lineEdit()->font(), cb.font());
     cb.setFontRole(Typography::FontRole::Body);
     const auto saved = ThemeRegistry::instance().snapshot();
     ThemeRegistry::instance().setFontScale(saved.fontScale * 1.5);
     QApplication::processEvents();
-    const bool ownerMatchesTheme = cb.font() == cb.themeFont(cb.fontRole()).toQFont();
+    const bool ownerMatchesTheme =
+        tests::support::normalizedFontFamilies(cb.font()) ==
+        tests::support::normalizedFontFamilies(cb.themeFont(cb.fontRole()).toQFont());
     const bool listMatchesOwner = list->font() == cb.font();
     const bool editorMatchesOwner = cb.lineEdit()->font() == cb.font();
     ThemeRegistry::instance().applySnapshot(saved);
@@ -391,8 +396,13 @@ TEST_F(ComboBoxTest, WheelAndArrowKeysRequireFocusToChangeSelection)
     Button other(QStringLiteral("Other"), window);
     other.setGeometry(40, 100, 100, Spacing::ControlHeight::Standard);
     window->show();
+    if (!tests::support::isHeadlessPlatform()) {
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
+        if (!QGuiApplication::platformName().startsWith(QStringLiteral("wayland")))
+            window->activateWindow();
+    }
     other.setFocus(Qt::OtherFocusReason);
-    QApplication::processEvents();
+    ASSERT_TRUE(QTest::qWaitFor([&other] { return other.hasFocus(); }, 1000));
     ASSERT_FALSE(cb.hasFocus());
 
     sendWheel(&cb, -120);
@@ -400,8 +410,7 @@ TEST_F(ComboBoxTest, WheelAndArrowKeysRequireFocusToChangeSelection)
     EXPECT_EQ(cb.currentIndex(), 1);
 
     cb.setFocus(Qt::OtherFocusReason);
-    QApplication::processEvents();
-    ASSERT_TRUE(cb.hasFocus());
+    ASSERT_TRUE(QTest::qWaitFor([&cb] { return cb.hasFocus(); }, 1000));
     QTest::keyClick(&cb, Qt::Key_Down);
     EXPECT_EQ(cb.currentIndex(), 2);
 

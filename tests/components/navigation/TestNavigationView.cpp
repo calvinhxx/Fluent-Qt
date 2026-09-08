@@ -1067,6 +1067,47 @@ TEST_F(NavigationViewTest, StackContentHostLeavesPaintedBackdropUncoveredWithout
         << "A host without an explicit surface must not cover the parent material";
 }
 
+TEST_F(NavigationViewTest, NestedStackContentHostPreservesLocallyThemedParentSurface)
+{
+    class ThemedSurface : public QWidget, public fluent::FluentElement {
+    public:
+        using QWidget::QWidget;
+
+    protected:
+        void paintEvent(QPaintEvent*) override
+        {
+            QPainter painter(this);
+            painter.fillRect(rect(), themeColorsRef().bgCanvas);
+        }
+    };
+
+    QWidget window;
+    window.setAttribute(Qt::WA_TranslucentBackground, true);
+    publishCompositedBackdrop(&window);
+    window.resize(280, 200);
+    ThemedSurface surface(&window);
+    surface.setGeometry(10, 10, 260, 180);
+    StackContentHost host(&surface);
+    host.setGeometry(10, 10, 240, 160);
+    ASSERT_TRUE(host.insertPage(0, new QWidget));
+    ASSERT_TRUE(host.insertPage(1, new QWidget));
+    host.setCurrentIndex(0, 0, false);
+
+    for (const char* theme : {"Light", "Dark", "Light"}) {
+        surface.setProperty("fluentThemeOverride", theme);
+        for (int page : {0, 1}) {
+            host.setCurrentIndex(page, 0, false);
+            QImage image(window.size(), QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::magenta);
+            window.render(&image);
+            EXPECT_EQ(image.pixelColor(host.mapTo(&window, host.rect().center())),
+                      surface.themeColorsRef().bgCanvas)
+                << "An embedded transparent host must preserve its parent's local " << theme
+                << " surface when switching pages";
+        }
+    }
+}
+
 TEST_F(NavigationViewTest, StackContentHostUsesDefaultLayerOutsideMaterialBackdrops)
 {
     StackContentHost host;
@@ -1129,6 +1170,8 @@ TEST_F(NavigationViewTest, StackContentHostCoalescesBackdropClearAcrossRapidSwit
     ASSERT_TRUE(host.insertPage(1, second));
     host.setCurrentIndex(0, 0, false);
     showAndProcess(host);
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+    ASSERT_TRUE(QTest::qWaitFor([&host] { return host.paintCount() > 0; }));
 
     const int paintsBeforeSwitch = host.paintCount();
     for (int i = 0; i < 100; ++i)
@@ -1137,9 +1180,9 @@ TEST_F(NavigationViewTest, StackContentHostCoalescesBackdropClearAcrossRapidSwit
     EXPECT_EQ(host.paintCount(), paintsBeforeSwitch)
         << "Rapid navigation must not synchronously re-enter backing-store painting";
     EXPECT_FALSE(host.busy());
-    QApplication::processEvents();
-    EXPECT_GT(host.paintCount(), paintsBeforeSwitch)
-        << "The coalesced frame must still replace the composited backdrop";
+    EXPECT_TRUE(QTest::qWaitFor([&host, paintsBeforeSwitch] {
+        return host.paintCount() > paintsBeforeSwitch;
+    })) << "The coalesced frame must still replace the composited backdrop";
     EXPECT_EQ(host.currentIndex(), 1);
     EXPECT_TRUE(second->isVisible());
     EXPECT_FALSE(first->isVisible());
