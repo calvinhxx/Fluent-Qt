@@ -22,7 +22,8 @@ class InspectableDropDownButton : public DropDownButton {
 public:
     using DropDownButton::DropDownButton;
 
-    QRectF exposedContentPaintRect(const QRectF& surfaceRect) const {
+    QRectF exposedContentPaintRect(const QRectF& surfaceRect) const
+    {
         return contentPaintRect(surfaceRect);
     }
 };
@@ -30,7 +31,8 @@ public:
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -38,7 +40,8 @@ public:
 
 class DropDownButtonTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new FluentTestWindow();
         window->setFixedSize(550, 450);
         window->setWindowTitle("DropDownButton Visual Test");
@@ -47,15 +50,14 @@ protected:
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     FluentTestWindow* window;
     AnchorLayout* layout;
 };
 
-TEST_F(DropDownButtonTest, OpenSetterAliasTracksStateAndSignals) {
+TEST_F(DropDownButtonTest, OpenSetterAliasTracksStateAndSignals)
+{
     DropDownButton button;
     QSignalSpy spy(&button, &DropDownButton::openChanged);
 
@@ -72,7 +74,8 @@ TEST_F(DropDownButtonTest, OpenSetterAliasTracksStateAndSignals) {
     EXPECT_EQ(spy.count(), 2);
 }
 
-TEST_F(DropDownButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestruction) {
+TEST_F(DropDownButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestruction)
+{
     DropDownButton button(QStringLiteral("Options"));
     auto* firstMenu = new QMenu(QStringLiteral("First"));
     auto* secondMenu = new QMenu(QStringLiteral("Second"));
@@ -89,11 +92,9 @@ TEST_F(DropDownButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestructio
     button.resize(140, 36);
     button.show();
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&button));
-    QObject::connect(firstMenu, &QMenu::aboutToShow, firstMenu, [firstMenu]() {
-        QTimer::singleShot(0, firstMenu, &QMenu::close);
-    });
-    QTest::mouseClick(&button, Qt::LeftButton, Qt::NoModifier,
-                      button.rect().center());
+    QObject::connect(firstMenu, &QMenu::aboutToShow, firstMenu,
+                     [firstMenu]() { QTimer::singleShot(0, firstMenu, &QMenu::close); });
+    QTest::mouseClick(&button, Qt::LeftButton, Qt::NoModifier, button.rect().center());
     QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
     EXPECT_EQ(openSpy.count(), 2);
 
@@ -101,8 +102,7 @@ TEST_F(DropDownButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestructio
     EXPECT_EQ(button.menu(), secondMenu);
     EXPECT_EQ(menuSpy.count(), 2);
 
-    ASSERT_TRUE(QMetaObject::invokeMethod(firstMenu, "aboutToShow",
-                                          Qt::DirectConnection));
+    ASSERT_TRUE(QMetaObject::invokeMethod(firstMenu, "aboutToShow", Qt::DirectConnection));
     EXPECT_FALSE(button.isOpen());
 
     delete secondMenu;
@@ -113,7 +113,8 @@ TEST_F(DropDownButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestructio
     delete firstMenu;
 }
 
-TEST_F(DropDownButtonTest, Contract_ParentOwnedMenuTearsDownSafely) {
+TEST_F(DropDownButtonTest, Contract_ParentOwnedMenuTearsDownSafely)
+{
     auto* button = new DropDownButton(QStringLiteral("Options"));
     auto* menu = new QMenu(QStringLiteral("Owned"), button);
     button->setMenu(menu);
@@ -121,7 +122,8 @@ TEST_F(DropDownButtonTest, Contract_ParentOwnedMenuTearsDownSafely) {
     delete button;
 }
 
-TEST_F(DropDownButtonTest, PressAnimationCompletesSmoothProgress) {
+TEST_F(DropDownButtonTest, PressAnimationCompletesSmoothProgress)
+{
     DropDownButton button("Options");
     button.resize(140, 32);
     button.show();
@@ -135,7 +137,8 @@ TEST_F(DropDownButtonTest, PressAnimationCompletesSmoothProgress) {
     QTest::mouseRelease(&button, Qt::LeftButton, Qt::NoModifier, button.rect().center());
 }
 
-TEST_F(DropDownButtonTest, SizeHintReservesChevronAffordance) {
+TEST_F(DropDownButtonTest, SizeHintReservesChevronAffordance)
+{
     Button plain("Email");
     DropDownButton dropdown("Email");
 
@@ -150,14 +153,15 @@ TEST_F(DropDownButtonTest, SizeHintReservesChevronAffordance) {
     EXPECT_GT(dropdown.sizeHint().width(), initialWidth);
 }
 
-TEST_F(DropDownButtonTest, ContentPaintRectExcludesChevronReserve) {
+TEST_F(DropDownButtonTest, ContentPaintRectExcludesChevronReserve)
+{
     InspectableDropDownButton button("Email");
     const QSize hinted = button.sizeHint();
     const QRectF surfaceRect(0, 0, hinted.width(), hinted.height());
     const QRectF contentRect = button.exposedContentPaintRect(surfaceRect);
 
-    const int expectedReserve = ::Spacing::Gap::Normal + button.chevronSize()
-                                + button.chevronOffset().x();
+    const int expectedReserve =
+        ::Spacing::Gap::Normal + button.chevronSize() + button.chevronOffset().x();
     EXPECT_DOUBLE_EQ(contentRect.left(), surfaceRect.left());
     EXPECT_DOUBLE_EQ(contentRect.top(), surfaceRect.top());
     EXPECT_DOUBLE_EQ(contentRect.right(), surfaceRect.right() - expectedReserve);
@@ -168,22 +172,24 @@ TEST_F(DropDownButtonTest, ContentPaintRectExcludesChevronReserve) {
     EXPECT_GT(tighterContentRect.width(), contentRect.width());
 }
 
-TEST_F(DropDownButtonTest, ContentPaintRectMirrorsChevronReserveInRightToLeft) {
+TEST_F(DropDownButtonTest, ContentPaintRectMirrorsChevronReserveInRightToLeft)
+{
     InspectableDropDownButton button("Email");
     button.setLayoutDirection(Qt::RightToLeft);
     const QSize hinted = button.sizeHint();
     const QRectF surfaceRect(0, 0, hinted.width(), hinted.height());
     const QRectF contentRect = button.exposedContentPaintRect(surfaceRect);
 
-    const int expectedReserve = ::Spacing::Gap::Normal + button.chevronSize()
-                                + button.chevronOffset().x();
+    const int expectedReserve =
+        ::Spacing::Gap::Normal + button.chevronSize() + button.chevronOffset().x();
     EXPECT_DOUBLE_EQ(contentRect.left(), surfaceRect.left() + expectedReserve);
     EXPECT_DOUBLE_EQ(contentRect.top(), surfaceRect.top());
     EXPECT_DOUBLE_EQ(contentRect.right(), surfaceRect.right());
     EXPECT_DOUBLE_EQ(contentRect.bottom(), surfaceRect.bottom());
 }
 
-TEST_F(DropDownButtonTest, MenuInheritsThemeOverrideFromButtonParent) {
+TEST_F(DropDownButtonTest, MenuInheritsThemeOverrideFromButtonParent)
+{
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     window->onThemeUpdated();
 
@@ -207,8 +213,8 @@ TEST_F(DropDownButtonTest, MenuInheritsThemeOverrideFromButtonParent) {
     menu.hide();
 }
 
-
-TEST_F(DropDownButtonTest, VisualCheck) {
+TEST_F(DropDownButtonTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -311,11 +317,10 @@ TEST_F(DropDownButtonTest, VisualCheck) {
     layout->addWidget(lbl4);
 
     DropDownButton* iconOnly = new DropDownButton("", window);
-    iconOnly->setFluentLayout(Button::IconOnly);  // 使用 IconOnly 布局
-    iconOnly->setIconGlyph(Typography::Icons::Send,  // 左侧 iconfont（Button 的 icon）
-                           Typography::FontSize::Caption,
-                           Typography::FontFamily::FluentIcons);
-    iconOnly->setChevronSize(Typography::FontSize::Caption);  // 右侧 chevron
+    iconOnly->setFluentLayout(Button::IconOnly);    // 使用 IconOnly 布局
+    iconOnly->setIconGlyph(Typography::Icons::Send, // 左侧 iconfont（Button 的 icon）
+                           Typography::FontSize::Caption, Typography::FontFamily::FluentIcons);
+    iconOnly->setChevronSize(Typography::FontSize::Caption); // 右侧 chevron
     iconOnly->setChevronOffset(QPoint(10, 0));
     iconOnly->setFixedSize(56, 32);
     iconOnly->anchors()->top = {lbl4, Edge::Bottom, 8};
@@ -333,8 +338,7 @@ TEST_F(DropDownButtonTest, VisualCheck) {
     iconWithText->setFixedSize(170, 32);
     iconWithText->setChevronSize(Typography::FontSize::Caption);
     iconWithText->setChevronOffset(QPoint(16, 0));
-    iconWithText->setIconGlyph(Typography::Icons::More,
-                               Typography::FontSize::Caption,
+    iconWithText->setIconGlyph(Typography::Icons::More, Typography::FontSize::Caption,
                                Typography::FontFamily::FluentIcons);
     iconWithText->anchors()->top = {lbl5, Edge::Bottom, 8};
     iconWithText->anchors()->left = {window, Edge::Left, 40};
@@ -348,7 +352,10 @@ TEST_F(DropDownButtonTest, VisualCheck) {
     layout->addWidget(themeBtn);
 
     QObject::connect(themeBtn, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     window->show();

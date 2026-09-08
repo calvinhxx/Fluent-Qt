@@ -132,16 +132,12 @@ namespace {
 
 class ResizablePreview final : public QWidget {
 public:
-    explicit ResizablePreview(QWidget* parent = nullptr)
-        : QWidget(parent)
+    explicit ResizablePreview(QWidget* parent = nullptr) : QWidget(parent)
     {
         setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     }
 
-    QSize sizeHint() const override
-    {
-        return QSize(180, m_preferredHeight);
-    }
+    QSize sizeHint() const override { return QSize(180, m_preferredHeight); }
 
     void setPreferredHeight(int height)
     {
@@ -186,8 +182,7 @@ Button* buttonWithText(QWidget* root, const QString& text)
     return nullptr;
 }
 
-bool findSampleById(const QString& route,
-                    const QString& sampleId,
+bool findSampleById(const QString& route, const QString& sampleId,
                     fluent::gallery::GallerySample* outSample)
 {
     const auto samples = fluent::gallery::gallerySamplesForRoute(route);
@@ -201,18 +196,14 @@ bool findSampleById(const QString& route,
     return false;
 }
 
-bool actionUsesStandardKey(
-    const QAction* action,
-    QKeySequence::StandardKey key)
+bool actionUsesStandardKey(const QAction* action, QKeySequence::StandardKey key)
 {
     if (!action)
         return false;
-    const QList<QKeySequence> bindings =
-        QKeySequence::keyBindings(key);
+    const QList<QKeySequence> bindings = QKeySequence::keyBindings(key);
     for (const QKeySequence& shortcut : action->shortcuts()) {
         for (const QKeySequence& binding : bindings) {
-            if (shortcut.matches(binding)
-                == QKeySequence::ExactMatch) {
+            if (shortcut.matches(binding) == QKeySequence::ExactMatch) {
                 return true;
             }
         }
@@ -222,8 +213,9 @@ bool actionUsesStandardKey(
 
 QList<Button*> directButtonsLeftToRight(QWidget* root)
 {
-    QList<Button*> buttons = root ? root->findChildren<Button*>(QString(), Qt::FindDirectChildrenOnly)
-                                  : QList<Button*>();
+    QList<Button*> buttons =
+        root ? root->findChildren<Button*>(QString(), Qt::FindDirectChildrenOnly)
+             : QList<Button*>();
     std::sort(buttons.begin(), buttons.end(), [root](Button* left, Button* right) {
         return mappedRectInAncestor(left, root).x() < mappedRectInAncestor(right, root).x();
     });
@@ -241,8 +233,7 @@ bool isContainedIn(const QWidget* child, const QWidget* parent, int tolerance = 
 {
     if (!child || !parent)
         return false;
-    const QRect bounds = parent->rect().adjusted(
-        -tolerance, -tolerance, tolerance, tolerance);
+    const QRect bounds = parent->rect().adjusted(-tolerance, -tolerance, tolerance, tolerance);
     return bounds.contains(mappedRectInAncestor(child, parent));
 }
 
@@ -266,8 +257,8 @@ QWidget* firstFocusableWidget(QWidget* root)
     QList<QWidget*> candidates{root};
     candidates.append(root->findChildren<QWidget*>());
     for (QWidget* candidate : candidates) {
-        if (candidate && candidate->isEnabled() && candidate->isVisibleTo(root)
-            && candidate->focusPolicy() != Qt::NoFocus) {
+        if (candidate && candidate->isEnabled() && candidate->isVisibleTo(root) &&
+            candidate->focusPolicy() != Qt::NoFocus) {
             return candidate;
         }
     }
@@ -292,33 +283,19 @@ PageType* waitForCurrentPage(GalleryWindow& window, int timeoutMs = 1000)
 
 class GalleryContentPagesTest : public ::testing::Test {
 protected:
-    void SetUp() override
-    {
-        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
-    }
+    void SetUp() override { fluent::FluentElement::setTheme(fluent::FluentElement::Light); }
 
-    void TearDown() override
-    {
-        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
-    }
+    void TearDown() override { fluent::FluentElement::setTheme(fluent::FluentElement::Light); }
 };
 
 class ExposedGalleryContentPage final : public GalleryContentPage {
 public:
-    ExposedGalleryContentPage()
-        : GalleryContentPage(QStringLiteral("test"), QStringLiteral("Test"))
-    {
-    }
+    ExposedGalleryContentPage() : GalleryContentPage(QStringLiteral("test"), QStringLiteral("Test"))
+    {}
 
-    fluent::textfields::Label* addBody(const QString& text)
-    {
-        return addBodyText(text);
-    }
+    fluent::textfields::Label* addBody(const QString& text) { return addBodyText(text); }
 
-    fluent::textfields::Label* addHeader(const QString& text)
-    {
-        return addSectionHeader(text);
-    }
+    fluent::textfields::Label* addHeader(const QString& text) { return addSectionHeader(text); }
 
     void trackSecondary(fluent::textfields::Label* label)
     {
@@ -339,17 +316,13 @@ TEST_F(GalleryContentPagesTest, ContentTextRolesAreAppliedBeforeFirstPaint)
     ASSERT_NE(section, nullptr);
     EXPECT_EQ(page.titleLabel()->textColorRole(),
               fluent::textfields::Label::TextColorRole::Primary);
-    EXPECT_EQ(section->textColorRole(),
-              fluent::textfields::Label::TextColorRole::Primary);
-    EXPECT_EQ(body->textColorRole(),
-              fluent::textfields::Label::TextColorRole::Secondary);
-    EXPECT_EQ(status->textColorRole(),
-              fluent::textfields::Label::TextColorRole::Secondary);
+    EXPECT_EQ(section->textColorRole(), fluent::textfields::Label::TextColorRole::Primary);
+    EXPECT_EQ(body->textColorRole(), fluent::textfields::Label::TextColorRole::Secondary);
+    EXPECT_EQ(status->textColorRole(), fluent::textfields::Label::TextColorRole::Secondary);
 
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     page.onThemeUpdated();
-    EXPECT_EQ(body->textColorRole(),
-              fluent::textfields::Label::TextColorRole::Secondary);
+    EXPECT_EQ(body->textColorRole(), fluent::textfields::Label::TextColorRole::Secondary);
 }
 
 // Task 6.1: seeded content routes resolve and stay consistent with navigation routes.
@@ -357,15 +330,10 @@ TEST_F(GalleryContentPagesTest, ContentCatalogSeededRoutesMatchNavigation)
 {
     GalleryNavigationViewModel navigationViewModel;
 
-    const QStringList seededRouteIds{
-        QStringLiteral("home"),
-        QStringLiteral("basic-input"),
-        QStringLiteral("collections"),
-        QStringLiteral("navigation"),
-        QStringLiteral("button"),
-        QStringLiteral("tree-view"),
-        QStringLiteral("tab-view")
-    };
+    const QStringList seededRouteIds{QStringLiteral("home"),        QStringLiteral("basic-input"),
+                                     QStringLiteral("collections"), QStringLiteral("navigation"),
+                                     QStringLiteral("button"),      QStringLiteral("tree-view"),
+                                     QStringLiteral("tab-view")};
 
     for (const QString& routeId : seededRouteIds) {
         const auto* entry = galleryContentEntry(routeId);
@@ -430,26 +398,24 @@ TEST_F(GalleryContentPagesTest, FoundationTopicsExposeFullIconCatalogAndSeparate
     ASSERT_TRUE(window.selectRoute(QStringLiteral("foundation-iconography")));
     auto* iconPage = waitForCurrentPage<GalleryFoundationTopicPage>(window);
     ASSERT_NE(iconPage, nullptr);
-    auto* browser = iconPage->findChild<GalleryIconBrowser*>(
-        QStringLiteral("galleryIconBrowser"));
+    auto* browser = iconPage->findChild<GalleryIconBrowser*>(QStringLiteral("galleryIconBrowser"));
     ASSERT_NE(browser, nullptr);
     EXPECT_EQ(browser->iconCount(), 9558);
     EXPECT_EQ(browser->visibleIconCount(), browser->iconCount());
-    auto* countLabel = browser->findChild<fluent::textfields::Label*>(
-        QStringLiteral("galleryIconCount"));
+    auto* countLabel =
+        browser->findChild<fluent::textfields::Label*>(QStringLiteral("galleryIconCount"));
     ASSERT_NE(countLabel, nullptr);
     EXPECT_TRUE(countLabel->text().contains(QStringLiteral("icons")));
     EXPECT_EQ(browser->findChild<QAbstractScrollArea*>(), nullptr);
     auto* iconGrid = browser->findChild<QWidget*>(QStringLiteral("galleryIconGrid"));
     ASSERT_NE(iconGrid, nullptr);
-    auto* pagination = browser->findChild<QWidget*>(
-        QStringLiteral("galleryIconPagination"));
-    auto* pageLabel = browser->findChild<fluent::textfields::Label*>(
-        QStringLiteral("galleryIconPageLabel"));
-    auto* pager = browser->findChild<fluent::scrolling::PipsPager*>(
-        QStringLiteral("galleryIconPager"));
-    auto* hoverTip = browser->findChild<fluent::status_info::ToolTip*>(
-        QStringLiteral("galleryIconHoverTip"));
+    auto* pagination = browser->findChild<QWidget*>(QStringLiteral("galleryIconPagination"));
+    auto* pageLabel =
+        browser->findChild<fluent::textfields::Label*>(QStringLiteral("galleryIconPageLabel"));
+    auto* pager =
+        browser->findChild<fluent::scrolling::PipsPager*>(QStringLiteral("galleryIconPager"));
+    auto* hoverTip =
+        browser->findChild<fluent::status_info::ToolTip*>(QStringLiteral("galleryIconHoverTip"));
     ASSERT_NE(pagination, nullptr);
     ASSERT_NE(pageLabel, nullptr);
     ASSERT_NE(pager, nullptr);
@@ -532,8 +498,8 @@ TEST_F(GalleryContentPagesTest, FoundationTopicsExposeFullIconCatalogAndSeparate
     window.resize(1180, 760);
     window.show();
     QApplication::processEvents();
-    FLUENT_MAKE_MOUSE_EVENT(hoverMove, QEvent::MouseMove, iconGrid, QPoint(22, 22),
-                            Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+    FLUENT_MAKE_MOUSE_EVENT(hoverMove, QEvent::MouseMove, iconGrid, QPoint(22, 22), Qt::NoButton,
+                            Qt::NoButton, Qt::NoModifier);
     QApplication::sendEvent(iconGrid, &hoverMove);
     QTest::qWait(360);
     QApplication::processEvents();
@@ -544,8 +510,9 @@ TEST_F(GalleryContentPagesTest, FoundationTopicsExposeFullIconCatalogAndSeparate
     QGuiApplication::clipboard()->clear();
     QTest::mouseClick(iconGrid, Qt::LeftButton, Qt::NoModifier, QPoint(22, 22));
     const QString copiedLookup = QGuiApplication::clipboard()->text();
-    EXPECT_EQ(copiedLookup,
-              QStringLiteral("Typography::Icons::glyph(QStringLiteral(\"ic_fluent_add_20_regular\"))"));
+    EXPECT_EQ(
+        copiedLookup,
+        QStringLiteral("Typography::Icons::glyph(QStringLiteral(\"ic_fluent_add_20_regular\"))"));
     EXPECT_NE(window.findChild<QWidget*>(QStringLiteral("galleryToast")), nullptr);
 
     // Copy and search are one round trip: the generated C++ expression can be
@@ -590,8 +557,8 @@ TEST_F(GalleryContentPagesTest, FoundationVisualCheck)
         // zh_CN: 首张截图前等待启动预热和 splash 淡出完成。
         QElapsedTimer startupTimer;
         startupTimer.start();
-        while (window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen"))
-               && startupTimer.elapsed() < 7000) {
+        while (window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) &&
+               startupTimer.elapsed() < 7000) {
             QApplication::processEvents(QEventLoop::AllEvents, 25);
             QTest::qWait(20);
         }
@@ -633,12 +600,11 @@ TEST_F(GalleryContentPagesTest, FoundationVisualCheck)
 
         for (const SnapshotCase& snapshot : snapshots) {
             const bool dark = snapshot.theme == tests::support::VisualSnapshotTheme::Dark;
-            settings.setThemeMode(dark
-                                      ? fluent::gallery::GallerySettings::ThemeMode::Dark
-                                      : fluent::gallery::GallerySettings::ThemeMode::Light);
+            settings.setThemeMode(dark ? fluent::gallery::GallerySettings::ThemeMode::Dark
+                                       : fluent::gallery::GallerySettings::ThemeMode::Light);
             ASSERT_TRUE(window.selectRoute(snapshot.routeId));
             ASSERT_TRUE(waitForRoute(snapshot.routeId)) << snapshot.routeId.toStdString();
-            QTest::qWait(250);  // Let the navigation selection indicator settle.
+            QTest::qWait(250); // Let the navigation selection indicator settle.
             QApplication::processEvents(QEventLoop::AllEvents, 25);
             ASSERT_EQ(fluent::FluentElement::currentTheme(),
                       dark ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
@@ -676,16 +642,11 @@ TEST_F(GalleryContentPagesTest, PythonParityVisualCheck)
         QString version;
         ~ApplicationVersionRestore() { QCoreApplication::setApplicationVersion(version); }
     } restoreApplicationVersion{previousApplicationVersion};
-    QCoreApplication::setApplicationVersion(
-        QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
-    const QVariant previousAutomatedProperty =
-        qApp->property("fluentqtGalleryAutomated");
+    QCoreApplication::setApplicationVersion(QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
+    const QVariant previousAutomatedProperty = qApp->property("fluentqtGalleryAutomated");
     struct AutomatedPropertyRestore final {
         QVariant value;
-        ~AutomatedPropertyRestore()
-        {
-            qApp->setProperty("fluentqtGalleryAutomated", value);
-        }
+        ~AutomatedPropertyRestore() { qApp->setProperty("fluentqtGalleryAutomated", value); }
     } restoreAutomatedProperty{previousAutomatedProperty};
     qApp->setProperty("fluentqtGalleryAutomated", true);
 
@@ -697,8 +658,8 @@ TEST_F(GalleryContentPagesTest, PythonParityVisualCheck)
 
         QElapsedTimer startupTimer;
         startupTimer.start();
-        while (window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen"))
-               && startupTimer.elapsed() < 7000) {
+        while (window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) &&
+               startupTimer.elapsed() < 7000) {
             QApplication::processEvents(QEventLoop::AllEvents, 25);
             QTest::qWait(20);
         }
@@ -718,14 +679,10 @@ TEST_F(GalleryContentPagesTest, PythonParityVisualCheck)
 
         settings.setThemeMode(fluent::gallery::GallerySettings::ThemeMode::Light);
         QStringList routes = {
-            QStringLiteral("home"),
-            QStringLiteral("settings"),
-            QStringLiteral("foundation"),
-            QStringLiteral("basic-input"),
-            QStringLiteral("button"),
+            QStringLiteral("home"),        QStringLiteral("settings"), QStringLiteral("foundation"),
+            QStringLiteral("basic-input"), QStringLiteral("button"),
         };
-        const QString requestedRoute =
-            qEnvironmentVariable("GALLERY_PARITY_ROUTE").trimmed();
+        const QString requestedRoute = qEnvironmentVariable("GALLERY_PARITY_ROUTE").trimmed();
         if (!requestedRoute.isEmpty()) {
             routes.clear();
             routes.append(requestedRoute);
@@ -736,12 +693,10 @@ TEST_F(GalleryContentPagesTest, PythonParityVisualCheck)
             ASSERT_TRUE(window.selectRoute(routeId));
             ASSERT_TRUE(waitForRoute(routeId)) << routeId.toStdString();
             QTest::qWait(500);
-            for (auto* ring :
-                 window.findChildren<fluent::status_info::ProgressRing*>()) {
+            for (auto* ring : window.findChildren<fluent::status_info::ProgressRing*>()) {
                 ring->setAnimationEnabled(false);
             }
-            for (auto* shimmer :
-                 window.findChildren<fluent::status_info::Shimmer*>()) {
+            for (auto* shimmer : window.findChildren<fluent::status_info::Shimmer*>()) {
                 shimmer->setAnimationEnabled(false);
                 shimmer->setShimmerProgress(0.42);
             }
@@ -773,17 +728,15 @@ TEST_F(GalleryContentPagesTest, ComponentReferencesMatchPublicIntegrationSurface
             EXPECT_NE(reference.header, QStringLiteral("<FluentQt/FluentQt.h>"));
             EXPECT_EQ(reference.cmakeTarget, QStringLiteral("FluentQt::FluentQt"));
             EXPECT_TRUE(reference.hasPythonReference());
-            EXPECT_EQ(reference.pythonInstall,
-                      QStringLiteral("python -m pip install FluentQt"));
-            EXPECT_EQ(reference.pythonImport,
-                      QStringLiteral("import fluentqt"));
-            EXPECT_TRUE(reference.pythonType.startsWith(
-                QStringLiteral("fluentqt.")));
-            const QString expectedNamespace = component.apiNamespace.isEmpty()
-                ? QStringLiteral("fluent::%1").arg(category.sourceDirectory)
-                : component.apiNamespace;
-            EXPECT_TRUE(reference.qualifiedType.startsWith(
-                expectedNamespace + QStringLiteral("::")));
+            EXPECT_EQ(reference.pythonInstall, QStringLiteral("python -m pip install FluentQt"));
+            EXPECT_EQ(reference.pythonImport, QStringLiteral("import fluentqt"));
+            EXPECT_TRUE(reference.pythonType.startsWith(QStringLiteral("fluentqt.")));
+            const QString expectedNamespace =
+                component.apiNamespace.isEmpty()
+                    ? QStringLiteral("fluent::%1").arg(category.sourceDirectory)
+                    : component.apiNamespace;
+            EXPECT_TRUE(
+                reference.qualifiedType.startsWith(expectedNamespace + QStringLiteral("::")));
             referencedHeaders.append(reference.header);
         }
     }
@@ -843,8 +796,7 @@ TEST_F(GalleryContentPagesTest, GalleryAcceptanceMatrixCoversEveryComponentRoute
 
             for (GallerySampleCard* card : page->sampleCards()) {
                 ASSERT_NE(card, nullptr);
-                ASSERT_NE(card->previewWidget(), nullptr)
-                    << card->sampleId().toStdString();
+                ASSERT_NE(card->previewWidget(), nullptr) << card->sampleId().toStdString();
                 card->setPreviewThemeOverride(fluent::FluentElement::Dark);
                 card->previewWidget()->setLayoutDirection(Qt::RightToLeft);
                 card->previewWidget()->setEnabled(false);
@@ -854,17 +806,14 @@ TEST_F(GalleryContentPagesTest, GalleryAcceptanceMatrixCoversEveryComponentRoute
 
             for (GallerySampleCard* card : page->sampleCards()) {
                 QWidget* preview = card->previewWidget();
-                auto* surface = card->findChild<QWidget*>(
-                    QStringLiteral("gallerySampleCardPreview"));
+                auto* surface =
+                    card->findChild<QWidget*>(QStringLiteral("gallerySampleCardPreview"));
                 ASSERT_NE(surface, nullptr) << card->sampleId().toStdString();
                 EXPECT_EQ(preview->layoutDirection(), Qt::RightToLeft)
                     << card->sampleId().toStdString();
-                EXPECT_FALSE(preview->isEnabled())
-                    << card->sampleId().toStdString();
-                EXPECT_TRUE(isContainedIn(preview, surface, 1))
-                    << card->sampleId().toStdString();
-                EXPECT_TRUE(isContainedIn(surface, card, 1))
-                    << card->sampleId().toStdString();
+                EXPECT_FALSE(preview->isEnabled()) << card->sampleId().toStdString();
+                EXPECT_TRUE(isContainedIn(preview, surface, 1)) << card->sampleId().toStdString();
+                EXPECT_TRUE(isContainedIn(surface, card, 1)) << card->sampleId().toStdString();
 
                 if (auto* element = firstFluentElement(preview))
                     EXPECT_EQ(element->effectiveTheme(), fluent::FluentElement::Dark)
@@ -874,8 +823,7 @@ TEST_F(GalleryContentPagesTest, GalleryAcceptanceMatrixCoversEveryComponentRoute
             GallerySampleCard* representative = page->sampleCards().first();
             const QPixmap darkRtlDisabled = representative->grab();
             ASSERT_FALSE(darkRtlDisabled.isNull());
-            EXPECT_EQ(fluentPixmapLogicalSize(darkRtlDisabled),
-                      representative->size());
+            EXPECT_EQ(fluentPixmapLogicalSize(darkRtlDisabled), representative->size());
 
             QWidget* focusTarget = nullptr;
             for (GallerySampleCard* card : page->sampleCards()) {
@@ -891,9 +839,9 @@ TEST_F(GalleryContentPagesTest, GalleryAcceptanceMatrixCoversEveryComponentRoute
                 focusTarget->setFocus(Qt::TabFocusReason);
                 QApplication::processEvents();
                 QWidget* focused = QApplication::focusWidget();
-                EXPECT_TRUE(focused == focusTarget
-                            || (focused && focusTarget->isAncestorOf(focused))
-                            || (focused && focused->isAncestorOf(focusTarget)));
+                EXPECT_TRUE(focused == focusTarget ||
+                            (focused && focusTarget->isAncestorOf(focused)) ||
+                            (focused && focused->isAncestorOf(focusTarget)));
             }
             ++reviewedRoutes;
         }
@@ -917,8 +865,7 @@ TEST_F(GalleryContentPagesTest, GalleryAcceptanceMatrixHonorsProcessScale)
 
     auto* page = waitForCurrentPage<GalleryComponentPage>(window);
     ASSERT_NE(page, nullptr);
-    GallerySampleCard* card = sampleCardById(
-        page, QStringLiteral("button-interaction-state"));
+    GallerySampleCard* card = sampleCardById(page, QStringLiteral("button-interaction-state"));
     ASSERT_NE(card, nullptr);
     ASSERT_NE(card->previewWidget(), nullptr);
 
@@ -937,8 +884,7 @@ TEST_F(GalleryContentPagesTest, GalleryAcceptanceMatrixHonorsProcessScale)
     else
         EXPECT_GE(capture.devicePixelRatioF(), 1.0);
 
-    auto* surface = card->findChild<QWidget*>(
-        QStringLiteral("gallerySampleCardPreview"));
+    auto* surface = card->findChild<QWidget*>(QStringLiteral("gallerySampleCardPreview"));
     ASSERT_NE(surface, nullptr);
     EXPECT_TRUE(isContainedIn(card->previewWidget(), surface, 1));
     EXPECT_TRUE(isContainedIn(surface, card, 1));
@@ -947,8 +893,7 @@ TEST_F(GalleryContentPagesTest, GalleryAcceptanceMatrixHonorsProcessScale)
 TEST_F(GalleryContentPagesTest, TreeViewRtlCheckBoxHitTargetUsesLeadingEdge)
 {
     fluent::gallery::GallerySample sample;
-    ASSERT_TRUE(findSampleById(QStringLiteral("tree-view"),
-                               QStringLiteral("tree-view-checkboxes"),
+    ASSERT_TRUE(findSampleById(QStringLiteral("tree-view"), QStringLiteral("tree-view-checkboxes"),
                                &sample));
     GallerySampleCard card(sample);
     card.resize(760, card.sizeHint().height());
@@ -970,11 +915,9 @@ TEST_F(GalleryContentPagesTest, TreeViewRtlCheckBoxHitTargetUsesLeadingEdge)
     ASSERT_FALSE(rowRect.isEmpty());
     constexpr int cursorStart = 12;
     constexpr int checkBoxHalfWidth = 11;
-    const QPoint rtlCheckBoxCenter(
-        rowRect.x() + rowRect.width() - cursorStart - checkBoxHalfWidth,
-        rowRect.center().y());
-    QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      rtlCheckBoxCenter);
+    const QPoint rtlCheckBoxCenter(rowRect.x() + rowRect.width() - cursorStart - checkBoxHalfWidth,
+                                   rowRect.center().y());
+    QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, rtlCheckBoxCenter);
     QApplication::processEvents();
 
     EXPECT_EQ(root.data(Qt::CheckStateRole).toInt(), int(Qt::Checked));
@@ -990,8 +933,7 @@ TEST_F(GalleryContentPagesTest, ComponentStateMatrixVisualCheck)
     if (tests::support::shouldCaptureVisualSnapshot()) {
         fluent::gallery::GallerySample buttonSample;
         ASSERT_TRUE(findSampleById(QStringLiteral("button"),
-                                   QStringLiteral("button-interaction-state"),
-                                   &buttonSample));
+                                   QStringLiteral("button-interaction-state"), &buttonSample));
         GallerySampleCard buttonCard(buttonSample);
         buttonCard.resize(760, buttonCard.sizeHint().height());
         QApplication::processEvents();
@@ -1012,8 +954,7 @@ TEST_F(GalleryContentPagesTest, ComponentStateMatrixVisualCheck)
         ASSERT_TRUE(tests::support::captureVisualSnapshot(&buttonCard, options));
 
         fluent::gallery::GallerySample treeSample;
-        ASSERT_TRUE(findSampleById(QStringLiteral("tree-view"),
-                                   QStringLiteral("tree-view-basic"),
+        ASSERT_TRUE(findSampleById(QStringLiteral("tree-view"), QStringLiteral("tree-view-basic"),
                                    &treeSample));
         GallerySampleCard treeCard(treeSample);
         treeCard.resize(760, treeCard.sizeHint().height());
@@ -1055,11 +996,10 @@ TEST_F(GalleryContentPagesTest, EntryGridExpandsCardsForWrappedDescriptions)
 {
     GalleryEntryGrid grid;
     grid.resize(480, 100);
-    grid.setEntries({{QStringLiteral("foundation-qmlplus"),
-                      QStringLiteral("QML+"),
-                      QStringLiteral("QML+ brings anchors, reactive property binding, and named states to plain QWidget controls."),
-                      QPixmap(),
-                      QString()}});
+    grid.setEntries({{QStringLiteral("foundation-qmlplus"), QStringLiteral("QML+"),
+                      QStringLiteral("QML+ brings anchors, reactive property binding, and named "
+                                     "states to plain QWidget controls."),
+                      QPixmap(), QString()}});
     grid.show();
     QApplication::processEvents();
     const int wideHeight = grid.sizeHint().height();
@@ -1075,56 +1015,37 @@ TEST_F(GalleryContentPagesTest, EntryGridExpandsCardsForWrappedDescriptions)
 TEST_F(GalleryContentPagesTest, EntryGridExpandsOnlyRowsThatNeedWrappedDescriptions)
 {
     const GalleryEntryGrid::Entry wrappedEntry{
-        QStringLiteral("wrapped"),
-        QStringLiteral("Wrapped"),
-        QStringLiteral(
-            "A deliberately long description that wraps across several "
-            "lines in one card without stretching every later row in the "
-            "catalog grid."),
-        QPixmap(),
-        QString()};
-    const GalleryEntryGrid::Entry compactEntry{
-        QStringLiteral("compact"),
-        QStringLiteral("Compact"),
-        QString(),
-        QPixmap(),
-        QString()};
+        QStringLiteral("wrapped"), QStringLiteral("Wrapped"),
+        QStringLiteral("A deliberately long description that wraps across several "
+                       "lines in one card without stretching every later row in the "
+                       "catalog grid."),
+        QPixmap(), QString()};
+    const GalleryEntryGrid::Entry compactEntry{QStringLiteral("compact"), QStringLiteral("Compact"),
+                                               QString(), QPixmap(), QString()};
 
     GalleryEntryGrid wrappedRow;
     wrappedRow.resize(1000, 100);
     wrappedRow.setEntries({wrappedEntry});
-    const int wrappedRowHeight =
-        wrappedRow.sizeHint().height();
+    const int wrappedRowHeight = wrappedRow.sizeHint().height();
     ASSERT_GT(wrappedRowHeight, 86);
 
     GalleryEntryGrid mixedRows;
     mixedRows.resize(1000, 100);
-    mixedRows.setEntries(
-        {wrappedEntry,
-         compactEntry,
-         compactEntry,
-         compactEntry,
-         compactEntry});
+    mixedRows.setEntries({wrappedEntry, compactEntry, compactEntry, compactEntry, compactEntry});
 
-    EXPECT_EQ(
-        mixedRows.sizeHint().height(),
-        wrappedRowHeight + 12 + 86);
-    EXPECT_LT(
-        mixedRows.sizeHint().height(),
-        wrappedRowHeight * 2 + 12);
+    EXPECT_EQ(mixedRows.sizeHint().height(), wrappedRowHeight + 12 + 86);
+    EXPECT_LT(mixedRows.sizeHint().height(), wrappedRowHeight * 2 + 12);
 }
 
 TEST_F(GalleryContentPagesTest, ComponentCardsUseBundledImagesOrCatalogGlyphs)
 {
-    const QString placeholder =
-        QStringLiteral(":/app/assets/control_images/Placeholder.png");
+    const QString placeholder = QStringLiteral(":/app/assets/control_images/Placeholder.png");
 
     for (const auto& category : galleryComponentCatalog()) {
         for (const auto& component : category.components) {
             const QString resource = galleryControlImageResource(component.title);
             if (resource.isEmpty()) {
-                EXPECT_FALSE(component.iconGlyph.isEmpty())
-                    << component.title.toStdString();
+                EXPECT_FALSE(component.iconGlyph.isEmpty()) << component.title.toStdString();
                 continue;
             }
             EXPECT_NE(resource, placeholder) << component.title.toStdString();
@@ -1135,8 +1056,7 @@ TEST_F(GalleryContentPagesTest, ComponentCardsUseBundledImagesOrCatalogGlyphs)
 
 TEST_F(GalleryContentPagesTest, ControlImageAssetsMeetPixelContract)
 {
-    const QString placeholder =
-        QStringLiteral(":/app/assets/control_images/Placeholder.png");
+    const QString placeholder = QStringLiteral(":/app/assets/control_images/Placeholder.png");
     QSet<QString> expected{placeholder};
     for (const auto& category : galleryComponentCatalog()) {
         for (const auto& component : category.components) {
@@ -1146,14 +1066,9 @@ TEST_F(GalleryContentPagesTest, ControlImageAssetsMeetPixelContract)
             expected.insert(resource);
         }
     }
-    const QStringList foundationTopics{
-        QStringLiteral("QML+"),
-        QStringLiteral("Typography"),
-        QStringLiteral("Color"),
-        QStringLiteral("Iconography"),
-        QStringLiteral("Geometry"),
-        QStringLiteral("Spacing")
-    };
+    const QStringList foundationTopics{QStringLiteral("QML+"),     QStringLiteral("Typography"),
+                                       QStringLiteral("Color"),    QStringLiteral("Iconography"),
+                                       QStringLiteral("Geometry"), QStringLiteral("Spacing")};
     for (const QString& title : foundationTopics) {
         const QString resource = galleryControlImageResource(title);
         ASSERT_FALSE(resource.isEmpty()) << title.toStdString();
@@ -1162,11 +1077,9 @@ TEST_F(GalleryContentPagesTest, ControlImageAssetsMeetPixelContract)
     }
 
     QSet<QString> actual;
-    QDirIterator resources(
-        QStringLiteral(":/app/assets/control_images"),
-        QStringList{QStringLiteral("*.png")},
-        QDir::Files,
-        QDirIterator::Subdirectories);
+    QDirIterator resources(QStringLiteral(":/app/assets/control_images"),
+                           QStringList{QStringLiteral("*.png")}, QDir::Files,
+                           QDirIterator::Subdirectories);
     while (resources.hasNext())
         actual.insert(resources.next());
 
@@ -1177,13 +1090,10 @@ TEST_F(GalleryContentPagesTest, ControlImageAssetsMeetPixelContract)
         EXPECT_EQ(image.size(), QSize(72, 72)) << resource.toStdString();
         EXPECT_TRUE(image.hasAlphaChannel()) << resource.toStdString();
         EXPECT_EQ(qAlpha(image.pixel(0, 0)), 0) << resource.toStdString();
-        EXPECT_EQ(qAlpha(image.pixel(image.width() - 1, 0)), 0)
+        EXPECT_EQ(qAlpha(image.pixel(image.width() - 1, 0)), 0) << resource.toStdString();
+        EXPECT_EQ(qAlpha(image.pixel(0, image.height() - 1)), 0) << resource.toStdString();
+        EXPECT_EQ(qAlpha(image.pixel(image.width() - 1, image.height() - 1)), 0)
             << resource.toStdString();
-        EXPECT_EQ(qAlpha(image.pixel(0, image.height() - 1)), 0)
-            << resource.toStdString();
-        EXPECT_EQ(
-            qAlpha(image.pixel(image.width() - 1, image.height() - 1)),
-            0) << resource.toStdString();
     }
 }
 
@@ -1196,11 +1106,9 @@ TEST_F(GalleryContentPagesTest, CategoryRoutesCreateCategoryPages)
         QString routeId;
         QString seededComponentRouteId;
     };
-    const QVector<CategoryCase> cases{
-        {QStringLiteral("basic-input"), QStringLiteral("button")},
-        {QStringLiteral("collections"), QStringLiteral("tree-view")},
-        {QStringLiteral("navigation"), QStringLiteral("tab-view")}
-    };
+    const QVector<CategoryCase> cases{{QStringLiteral("basic-input"), QStringLiteral("button")},
+                                      {QStringLiteral("collections"), QStringLiteral("tree-view")},
+                                      {QStringLiteral("navigation"), QStringLiteral("tab-view")}};
 
     for (const CategoryCase& categoryCase : cases) {
         ASSERT_TRUE(window.selectRoute(categoryCase.routeId)) << categoryCase.routeId.toStdString();
@@ -1239,11 +1147,11 @@ TEST_F(GalleryContentPagesTest, ComponentRoutesCreateComponentPages)
         {QStringLiteral("info-badge"), QStringLiteral("InfoBadge"), 4},
         {QStringLiteral("toast"), QStringLiteral("Toast"), 5},
         {QStringLiteral("tree-view"), QStringLiteral("TreeView"), 1},
-        {QStringLiteral("tab-view"), QStringLiteral("TabView"), 1}
-    };
+        {QStringLiteral("tab-view"), QStringLiteral("TabView"), 1}};
 
     for (const ComponentCase& componentCase : cases) {
-        ASSERT_TRUE(window.selectRoute(componentCase.routeId)) << componentCase.routeId.toStdString();
+        ASSERT_TRUE(window.selectRoute(componentCase.routeId))
+            << componentCase.routeId.toStdString();
         auto* page = waitForCurrentPage<GalleryComponentPage>(window);
         ASSERT_NE(page, nullptr) << componentCase.routeId.toStdString();
         EXPECT_EQ(page->routeId(), componentCase.routeId);
@@ -1277,8 +1185,7 @@ TEST_F(GalleryContentPagesTest, ExtractedComponentsHaveDedicatedLiveSamples)
 
     for (const SampleCase& sampleCase : cases) {
         fluent::gallery::GallerySample sample;
-        ASSERT_TRUE(findSampleById(
-            sampleCase.routeId, sampleCase.sampleId, &sample))
+        ASSERT_TRUE(findSampleById(sampleCase.routeId, sampleCase.sampleId, &sample))
             << sampleCase.routeId.toStdString();
         ASSERT_TRUE(static_cast<bool>(sample.createPreview));
         std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
@@ -1287,14 +1194,10 @@ TEST_F(GalleryContentPagesTest, ExtractedComponentsHaveDedicatedLiveSamples)
     }
 
     fluent::gallery::GallerySample expanderSample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("expander"),
-        QStringLiteral("expander-state-signal"),
-        &expanderSample));
-    std::unique_ptr<QWidget> expanderPreview(
-        expanderSample.createPreview(nullptr));
-    auto* expander =
-        expanderPreview->findChild<fluent::layout::Expander*>();
+    ASSERT_TRUE(findSampleById(QStringLiteral("expander"), QStringLiteral("expander-state-signal"),
+                               &expanderSample));
+    std::unique_ptr<QWidget> expanderPreview(expanderSample.createPreview(nullptr));
+    auto* expander = expanderPreview->findChild<fluent::layout::Expander*>();
     auto* stateLabel = expanderPreview->findChild<fluent::textfields::Label*>(
         QStringLiteral("galleryExpanderStateLabel"));
     ASSERT_NE(expander, nullptr);
@@ -1303,14 +1206,10 @@ TEST_F(GalleryContentPagesTest, ExtractedComponentsHaveDedicatedLiveSamples)
     EXPECT_EQ(stateLabel->text(), QStringLiteral("Expanded"));
 
     fluent::gallery::GallerySample accordionSample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("accordion"),
-        QStringLiteral("accordion-single-expansion"),
-        &accordionSample));
-    std::unique_ptr<QWidget> accordionPreview(
-        accordionSample.createPreview(nullptr));
-    auto* accordion =
-        accordionPreview->findChild<fluent::layout::Accordion*>();
+    ASSERT_TRUE(findSampleById(QStringLiteral("accordion"),
+                               QStringLiteral("accordion-single-expansion"), &accordionSample));
+    std::unique_ptr<QWidget> accordionPreview(accordionSample.createPreview(nullptr));
+    auto* accordion = accordionPreview->findChild<fluent::layout::Accordion*>();
     ASSERT_NE(accordion, nullptr);
     ASSERT_EQ(accordion->count(), 3);
     accordion->itemAt(1)->setExpandedAnimated(true, false);
@@ -1318,27 +1217,18 @@ TEST_F(GalleryContentPagesTest, ExtractedComponentsHaveDedicatedLiveSamples)
     EXPECT_TRUE(accordion->itemAt(1)->isExpanded());
 
     fluent::gallery::GallerySample avatarSample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("avatar"),
-        QStringLiteral("avatar-image-presence"),
-        &avatarSample));
-    std::unique_ptr<QWidget> avatarPreview(
-        avatarSample.createPreview(nullptr));
-    auto* avatar =
-        avatarPreview->findChild<fluent::status_info::Avatar*>();
+    ASSERT_TRUE(findSampleById(QStringLiteral("avatar"), QStringLiteral("avatar-image-presence"),
+                               &avatarSample));
+    std::unique_ptr<QWidget> avatarPreview(avatarSample.createPreview(nullptr));
+    auto* avatar = avatarPreview->findChild<fluent::status_info::Avatar*>();
     ASSERT_NE(avatar, nullptr);
-    EXPECT_NE(avatar->presence(),
-              fluent::status_info::Avatar::PresenceStatus::None);
+    EXPECT_NE(avatar->presence(), fluent::status_info::Avatar::PresenceStatus::None);
 
     fluent::gallery::GallerySample compoundSample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("compound-button"),
-        QStringLiteral("compound-button-content"),
-        &compoundSample));
-    std::unique_ptr<QWidget> compoundPreview(
-        compoundSample.createPreview(nullptr));
-    auto* compoundButton =
-        compoundPreview->findChild<fluent::basicinput::CompoundButton*>();
+    ASSERT_TRUE(findSampleById(QStringLiteral("compound-button"),
+                               QStringLiteral("compound-button-content"), &compoundSample));
+    std::unique_ptr<QWidget> compoundPreview(compoundSample.createPreview(nullptr));
+    auto* compoundButton = compoundPreview->findChild<fluent::basicinput::CompoundButton*>();
     ASSERT_NE(compoundButton, nullptr);
     EXPECT_FALSE(compoundButton->secondaryText().isEmpty());
 }
@@ -1346,12 +1236,9 @@ TEST_F(GalleryContentPagesTest, ExtractedComponentsHaveDedicatedLiveSamples)
 TEST_F(GalleryContentPagesTest, MultiSelectStatusWrapsCompleteSelection)
 {
     fluent::gallery::GallerySample sample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("multi-select-combobox"),
-        QStringLiteral("multi-select-combobox-selection"),
-        &sample));
-    EXPECT_TRUE(sample.codeSnippet.contains(
-        QStringLiteral("status->setWordWrap(true)")));
+    ASSERT_TRUE(findSampleById(QStringLiteral("multi-select-combobox"),
+                               QStringLiteral("multi-select-combobox-selection"), &sample));
+    EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("status->setWordWrap(true)")));
 
     std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
     ASSERT_NE(preview, nullptr);
@@ -1369,13 +1256,10 @@ TEST_F(GalleryContentPagesTest, MultiSelectStatusWrapsCompleteSelection)
 
     box->selectAll();
     QApplication::processEvents();
-    EXPECT_EQ(status->text(),
-              QStringLiteral(
-                  "Selected: Design, Engineering, Research, Support"));
+    EXPECT_EQ(status->text(), QStringLiteral("Selected: Design, Engineering, Research, Support"));
     EXPECT_TRUE(status->wordWrap());
     EXPECT_EQ(status->width(), box->width());
-    EXPECT_GT(status->heightForWidth(status->width()),
-              status->fontMetrics().height());
+    EXPECT_GT(status->heightForWidth(status->width()), status->fontMetrics().height());
 }
 
 TEST_F(GalleryContentPagesTest, NarrowCardsKeepNavigationPreviewsInsideTheirSurface)
@@ -1386,18 +1270,15 @@ TEST_F(GalleryContentPagesTest, NarrowCardsKeepNavigationPreviewsInsideTheirSurf
         QString childObjectName;
     };
     const QVector<SampleCase> cases{
-        {QStringLiteral("navigation-view"),
-         QStringLiteral("navigation-view-display-modes"),
+        {QStringLiteral("navigation-view"), QStringLiteral("navigation-view-display-modes"),
          QStringLiteral("navigationViewDisplayModesPreview")},
-        {QStringLiteral("tab-view"),
-         QStringLiteral("tab-view-hosted-pages"),
+        {QStringLiteral("tab-view"), QStringLiteral("tab-view-hosted-pages"),
          QStringLiteral("tabViewHostedPagesSurface")},
     };
 
     for (const SampleCase& sampleCase : cases) {
         fluent::gallery::GallerySample sample;
-        ASSERT_TRUE(findSampleById(sampleCase.routeId, sampleCase.sampleId,
-                                   &sample));
+        ASSERT_TRUE(findSampleById(sampleCase.routeId, sampleCase.sampleId, &sample));
         GallerySampleCard card(sample);
         card.resize(600, card.sizeHint().height());
         card.show();
@@ -1405,14 +1286,10 @@ TEST_F(GalleryContentPagesTest, NarrowCardsKeepNavigationPreviewsInsideTheirSurf
         QApplication::processEvents();
         QApplication::processEvents();
 
-        auto* previewSurface = card.findChild<QWidget*>(
-            QStringLiteral("gallerySampleCardPreview"));
-        auto* responsiveChild = card.findChild<QWidget*>(
-            sampleCase.childObjectName);
-        ASSERT_NE(previewSurface, nullptr)
-            << sampleCase.sampleId.toStdString();
-        ASSERT_NE(responsiveChild, nullptr)
-            << sampleCase.sampleId.toStdString();
+        auto* previewSurface = card.findChild<QWidget*>(QStringLiteral("gallerySampleCardPreview"));
+        auto* responsiveChild = card.findChild<QWidget*>(sampleCase.childObjectName);
+        ASSERT_NE(previewSurface, nullptr) << sampleCase.sampleId.toStdString();
+        ASSERT_NE(responsiveChild, nullptr) << sampleCase.sampleId.toStdString();
         EXPECT_TRUE(isContainedIn(responsiveChild, previewSurface, 1))
             << sampleCase.sampleId.toStdString();
     }
@@ -1420,37 +1297,31 @@ TEST_F(GalleryContentPagesTest, NarrowCardsKeepNavigationPreviewsInsideTheirSurf
 
 TEST_F(GalleryContentPagesTest, ListSamplesStartOnCompleteRows)
 {
-    for (const QString& sampleId : {
-             QStringLiteral("list-view-basic"),
-             QStringLiteral("list-view-multi-select")}) {
+    for (const QString& sampleId :
+         {QStringLiteral("list-view-basic"), QStringLiteral("list-view-multi-select")}) {
         fluent::gallery::GallerySample sample;
-        ASSERT_TRUE(findSampleById(QStringLiteral("list-view"), sampleId,
-                                   &sample));
+        ASSERT_TRUE(findSampleById(QStringLiteral("list-view"), sampleId, &sample));
         std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
         ASSERT_NE(preview, nullptr);
-        auto* listView = qobject_cast<fluent::collections::ListView*>(
-            preview.get());
+        auto* listView = qobject_cast<fluent::collections::ListView*>(preview.get());
         if (!listView) {
             listView = preview->findChild<fluent::collections::ListView*>();
         }
         ASSERT_NE(listView, nullptr) << sampleId.toStdString();
         ASSERT_NE(listView->model(), nullptr);
-        EXPECT_FALSE(listView->accessibleName().isEmpty())
-            << sampleId.toStdString();
+        EXPECT_FALSE(listView->accessibleName().isEmpty()) << sampleId.toStdString();
 
         listView->show();
         QApplication::processEvents();
         const QRect viewportRect = listView->viewport()->rect();
         int visibleRows = 0;
         for (int row = 0; row < listView->model()->rowCount(); ++row) {
-            const QRect rowRect = static_cast<QAbstractItemView*>(listView)
-                                      ->visualRect(
-                                          listView->model()->index(row, 0));
+            const QRect rowRect = static_cast<QAbstractItemView*>(listView)->visualRect(
+                listView->model()->index(row, 0));
             if (!viewportRect.intersects(rowRect))
                 continue;
             ++visibleRows;
-            EXPECT_TRUE(viewportRect.contains(rowRect))
-                << sampleId.toStdString() << " row=" << row;
+            EXPECT_TRUE(viewportRect.contains(rowRect)) << sampleId.toStdString() << " row=" << row;
         }
         EXPECT_EQ(visibleRows, 5) << sampleId.toStdString();
     }
@@ -1467,55 +1338,43 @@ TEST_F(GalleryContentPagesTest, ChangedSampleSnippetsMatchPreviewSemantics)
     const QVector<SnippetCase> cases{
         {QStringLiteral("list-view"),
          QStringLiteral("list-view-basic"),
-         {QStringLiteral("setBackgroundVisible(false)"),
-          QStringLiteral("setBorderVisible(false)"),
-          QStringLiteral("fluentPreserveParentSurface"),
-          QStringLiteral("setFixedSize(320, 234)"),
+         {QStringLiteral("setBackgroundVisible(false)"), QStringLiteral("setBorderVisible(false)"),
+          QStringLiteral("fluentPreserveParentSurface"), QStringLiteral("setFixedSize(320, 234)"),
           QStringLiteral("setIconSize(QSize(28, 28))"),
-          QStringLiteral("setAccessibleName(\"Contacts\")"),
-          QStringLiteral("accentPalette().at("),
+          QStringLiteral("setAccessibleName(\"Contacts\")"), QStringLiteral("accentPalette().at("),
           QStringLiteral("setSelectedIndex(0)")},
          {QStringLiteral("initialsAvatar(contact)")}},
         {QStringLiteral("list-view"),
          QStringLiteral("list-view-multi-select"),
-         {QStringLiteral("setBackgroundVisible(false)"),
-          QStringLiteral("setBorderVisible(false)"),
-          QStringLiteral("fluentPreserveParentSurface"),
-          QStringLiteral("setFixedSize(320, 234)"),
+         {QStringLiteral("setBackgroundVisible(false)"), QStringLiteral("setBorderVisible(false)"),
+          QStringLiteral("fluentPreserveParentSurface"), QStringLiteral("setFixedSize(320, 234)"),
           QStringLiteral("setHeaderText(\"Filters\")"),
-          QStringLiteral("setIconSize(QSize(24, 24))"),
-          QStringLiteral("setSelectionMode("),
+          QStringLiteral("setIconSize(QSize(24, 24))"), QStringLiteral("setSelectionMode("),
           QStringLiteral("selectionModel()->select("),
           QStringLiteral("{\"Archived\", Typography::Icons::Folder}")},
          {}},
         {QStringLiteral("navigation-view"),
          QStringLiteral("navigation-view-chrome-slots"),
-         {QStringLiteral("setMinimumWidth(440)"),
-          QStringLiteral("setMaximumWidth(620)"),
+         {QStringLiteral("setMinimumWidth(440)"), QStringLiteral("setMaximumWidth(620)"),
           QStringLiteral("setFixedHeight(340)"),
           QStringLiteral("QSizePolicy::Expanding, QSizePolicy::Fixed")},
          {}},
         {QStringLiteral("navigation-view"),
          QStringLiteral("navigation-view-display-modes"),
-         {QStringLiteral("setMinimumWidth(440)"),
-          QStringLiteral("setMaximumWidth(620)"),
-          QStringLiteral("setFixedHeight(340)"),
-          QStringLiteral("setTopBarHeight(48)")},
+         {QStringLiteral("setMinimumWidth(440)"), QStringLiteral("setMaximumWidth(620)"),
+          QStringLiteral("setFixedHeight(340)"), QStringLiteral("setTopBarHeight(48)")},
          {}},
         {QStringLiteral("navigation-view"),
          QStringLiteral("navigation-view-content-host"),
-         {QStringLiteral("setMinimumWidth(440)"),
-          QStringLiteral("setMaximumWidth(620)"),
-          QStringLiteral("setFixedHeight(320)"),
-          QStringLiteral("setAnimationEnabled(true)")},
+         {QStringLiteral("setMinimumWidth(440)"), QStringLiteral("setMaximumWidth(620)"),
+          QStringLiteral("setFixedHeight(320)"), QStringLiteral("setAnimationEnabled(true)")},
          {}},
         {QStringLiteral("tab-view"),
          QStringLiteral("tab-view-hosted-pages"),
          {QStringLiteral("auto* surface = new QWidget(this)"),
           QStringLiteral("surface->setMinimumWidth(360)"),
           QStringLiteral("surface->setMaximumWidth(560)"),
-          QStringLiteral("tabs->setFixedHeight(40)"),
-          QStringLiteral("host->setFixedHeight(146)"),
+          QStringLiteral("tabs->setFixedHeight(40)"), QStringLiteral("host->setFixedHeight(146)"),
           QStringLiteral("host->setCurrentIndex(index, 0, true)"),
           QStringLiteral("layout->addWidget(host)")},
          {QStringLiteral("setCloseButtonOverlayMode")}},
@@ -1533,12 +1392,10 @@ TEST_F(GalleryContentPagesTest, ChangedSampleSnippetsMatchPreviewSemantics)
 
     for (const SnippetCase& sampleCase : cases) {
         fluent::gallery::GallerySample sample;
-        ASSERT_TRUE(findSampleById(sampleCase.routeId, sampleCase.sampleId,
-                                   &sample));
+        ASSERT_TRUE(findSampleById(sampleCase.routeId, sampleCase.sampleId, &sample));
         for (const QString& fragment : sampleCase.required) {
             EXPECT_TRUE(sample.codeSnippet.contains(fragment))
-                << sampleCase.sampleId.toStdString()
-                << " missing: " << fragment.toStdString();
+                << sampleCase.sampleId.toStdString() << " missing: " << fragment.toStdString();
         }
         for (const QString& fragment : sampleCase.forbidden) {
             EXPECT_FALSE(sample.codeSnippet.contains(fragment))
@@ -1554,20 +1411,15 @@ TEST_F(GalleryContentPagesTest, ChangedSampleSnippetsMatchPreviewSemantics)
         QSize iconSize;
         int selectedRows;
     };
-    for (const ListPreviewCase& listCase : {
-             ListPreviewCase{QStringLiteral("list-view-basic"),
-                             QStringLiteral("Contacts"),
-                             QStringLiteral("Contacts"), QSize(28, 28), 1},
-             ListPreviewCase{QStringLiteral("list-view-multi-select"),
-                             QStringLiteral("Filters"),
-                             QStringLiteral("Message filters"), QSize(24, 24),
-                             2}}) {
+    for (const ListPreviewCase& listCase :
+         {ListPreviewCase{QStringLiteral("list-view-basic"), QStringLiteral("Contacts"),
+                          QStringLiteral("Contacts"), QSize(28, 28), 1},
+          ListPreviewCase{QStringLiteral("list-view-multi-select"), QStringLiteral("Filters"),
+                          QStringLiteral("Message filters"), QSize(24, 24), 2}}) {
         fluent::gallery::GallerySample sample;
-        ASSERT_TRUE(findSampleById(QStringLiteral("list-view"),
-                                   listCase.sampleId, &sample));
+        ASSERT_TRUE(findSampleById(QStringLiteral("list-view"), listCase.sampleId, &sample));
         std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
-        auto* listView = qobject_cast<fluent::collections::ListView*>(
-            preview.get());
+        auto* listView = qobject_cast<fluent::collections::ListView*>(preview.get());
         if (!listView)
             listView = preview->findChild<fluent::collections::ListView*>();
         ASSERT_NE(listView, nullptr);
@@ -1578,55 +1430,40 @@ TEST_F(GalleryContentPagesTest, ChangedSampleSnippetsMatchPreviewSemantics)
         EXPECT_EQ(listView->iconSize(), listCase.iconSize);
         EXPECT_FALSE(listView->isBackgroundVisible());
         EXPECT_FALSE(listView->isBorderVisible());
-        EXPECT_TRUE(listView->property(
-                                "fluentPreserveParentSurface")
-                        .toBool());
+        EXPECT_TRUE(listView->property("fluentPreserveParentSurface").toBool());
         ASSERT_NE(listView->viewport(), nullptr);
-        EXPECT_TRUE(listView->viewport()
-                        ->property("fluentPreserveParentSurface")
-                        .toBool());
-        EXPECT_EQ(listView->selectionModel()->selectedRows().size(),
-                  listCase.selectedRows);
+        EXPECT_TRUE(listView->viewport()->property("fluentPreserveParentSurface").toBool());
+        EXPECT_EQ(listView->selectionModel()->selectedRows().size(), listCase.selectedRows);
     }
 
-    for (const auto& navigationCase : {
-             std::make_tuple(QStringLiteral("navigation-view-chrome-slots"),
-                             QStringLiteral("navigationViewChromeSlotsPreview"),
-                             340),
-             std::make_tuple(QStringLiteral("navigation-view-display-modes"),
-                             QStringLiteral("navigationViewDisplayModesPreview"),
-                             340),
-             std::make_tuple(QStringLiteral("navigation-view-content-host"),
-                             QStringLiteral("navigationViewContentHostPreview"),
-                             320)}) {
+    for (const auto& navigationCase :
+         {std::make_tuple(QStringLiteral("navigation-view-chrome-slots"),
+                          QStringLiteral("navigationViewChromeSlotsPreview"), 340),
+          std::make_tuple(QStringLiteral("navigation-view-display-modes"),
+                          QStringLiteral("navigationViewDisplayModesPreview"), 340),
+          std::make_tuple(QStringLiteral("navigation-view-content-host"),
+                          QStringLiteral("navigationViewContentHostPreview"), 320)}) {
         fluent::gallery::GallerySample sample;
-        ASSERT_TRUE(findSampleById(QStringLiteral("navigation-view"),
-                                   std::get<0>(navigationCase), &sample));
+        ASSERT_TRUE(findSampleById(QStringLiteral("navigation-view"), std::get<0>(navigationCase),
+                                   &sample));
         std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
-        auto* navigation = preview->findChild<QWidget*>(
-            std::get<1>(navigationCase));
+        auto* navigation = preview->findChild<QWidget*>(std::get<1>(navigationCase));
         ASSERT_NE(navigation, nullptr);
         EXPECT_EQ(navigation->minimumWidth(), 440);
         EXPECT_EQ(navigation->maximumWidth(), 620);
         EXPECT_EQ(navigation->minimumHeight(), std::get<2>(navigationCase));
         EXPECT_EQ(navigation->maximumHeight(), std::get<2>(navigationCase));
-        EXPECT_EQ(navigation->sizePolicy().horizontalPolicy(),
-                  QSizePolicy::Expanding);
-        EXPECT_EQ(navigation->sizePolicy().verticalPolicy(),
-                  QSizePolicy::Fixed);
+        EXPECT_EQ(navigation->sizePolicy().horizontalPolicy(), QSizePolicy::Expanding);
+        EXPECT_EQ(navigation->sizePolicy().verticalPolicy(), QSizePolicy::Fixed);
     }
 
     fluent::gallery::GallerySample tabSample;
-    ASSERT_TRUE(findSampleById(QStringLiteral("tab-view"),
-                               QStringLiteral("tab-view-hosted-pages"),
+    ASSERT_TRUE(findSampleById(QStringLiteral("tab-view"), QStringLiteral("tab-view-hosted-pages"),
                                &tabSample));
     std::unique_ptr<QWidget> tabPreview(tabSample.createPreview(nullptr));
-    auto* tabSurface = tabPreview->findChild<QWidget*>(
-        QStringLiteral("tabViewHostedPagesSurface"));
-    auto* tabStrip = tabPreview->findChild<QWidget*>(
-        QStringLiteral("tabViewHostedPagesTabs"));
-    auto* tabHost = tabPreview->findChild<QWidget*>(
-        QStringLiteral("tabViewHostedPagesHost"));
+    auto* tabSurface = tabPreview->findChild<QWidget*>(QStringLiteral("tabViewHostedPagesSurface"));
+    auto* tabStrip = tabPreview->findChild<QWidget*>(QStringLiteral("tabViewHostedPagesTabs"));
+    auto* tabHost = tabPreview->findChild<QWidget*>(QStringLiteral("tabViewHostedPagesHost"));
     ASSERT_NE(tabSurface, nullptr);
     ASSERT_NE(tabStrip, nullptr);
     ASSERT_NE(tabHost, nullptr);
@@ -1643,20 +1480,17 @@ TEST_F(GalleryContentPagesTest, ChangedSampleSnippetsMatchPreviewSemantics)
 TEST_F(GalleryContentPagesTest, InteractiveSampleRootsHaveAccessibleNames)
 {
     fluent::gallery::GallerySample multiSelectSample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("multi-select-combobox"),
-        QStringLiteral("multi-select-combobox-selection"),
-        &multiSelectSample));
-    std::unique_ptr<QWidget> multiSelectPreview(
-        multiSelectSample.createPreview(nullptr));
+    ASSERT_TRUE(findSampleById(QStringLiteral("multi-select-combobox"),
+                               QStringLiteral("multi-select-combobox-selection"),
+                               &multiSelectSample));
+    std::unique_ptr<QWidget> multiSelectPreview(multiSelectSample.createPreview(nullptr));
     auto* multiSelect = multiSelectPreview->findChild<MultiSelectComboBox*>();
     ASSERT_NE(multiSelect, nullptr);
     EXPECT_EQ(multiSelect->accessibleName(), QStringLiteral("Teams"));
 
     fluent::gallery::GallerySample treeSample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("tree-view"), QStringLiteral("tree-view-checkboxes"),
-        &treeSample));
+    ASSERT_TRUE(findSampleById(QStringLiteral("tree-view"), QStringLiteral("tree-view-checkboxes"),
+                               &treeSample));
     std::unique_ptr<QWidget> treePreview(treeSample.createPreview(nullptr));
     auto* tree = qobject_cast<TreeView*>(treePreview.get());
     if (!tree)
@@ -1665,56 +1499,33 @@ TEST_F(GalleryContentPagesTest, InteractiveSampleRootsHaveAccessibleNames)
     EXPECT_EQ(tree->accessibleName(), QStringLiteral("Sync settings"));
 
     fluent::gallery::GallerySample teachingTipSample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("teaching-tip"),
-        QStringLiteral("teaching-tip-placement-tail"),
-        &teachingTipSample));
-    std::unique_ptr<QWidget> teachingTipPreview(
-        teachingTipSample.createPreview(nullptr));
-    auto* tail = teachingTipPreview->findChild<
-        fluent::basicinput::ToggleSwitch*>(
+    ASSERT_TRUE(findSampleById(QStringLiteral("teaching-tip"),
+                               QStringLiteral("teaching-tip-placement-tail"), &teachingTipSample));
+    std::unique_ptr<QWidget> teachingTipPreview(teachingTipSample.createPreview(nullptr));
+    auto* tail = teachingTipPreview->findChild<fluent::basicinput::ToggleSwitch*>(
         QStringLiteral("teachingTipTailToggle"));
     ASSERT_NE(tail, nullptr);
-    EXPECT_EQ(tail->accessibleName(),
-              QStringLiteral("Show TeachingTip tail"));
-    EXPECT_GE(tail->minimumSizeHint().height(),
-              Spacing::ControlHeight::Small);
+    EXPECT_EQ(tail->accessibleName(), QStringLiteral("Show TeachingTip tail"));
+    EXPECT_GE(tail->minimumSizeHint().height(), Spacing::ControlHeight::Small);
 }
 
 TEST_F(GalleryContentPagesTest, NotificationLifecycleSamplesMatchPreviewBehavior)
 {
     fluent::gallery::GallerySample badgeSample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("info-badge"),
-        QStringLiteral("info-badge-accessibility"),
-        &badgeSample));
-    EXPECT_TRUE(badgeSample.codeSnippet.contains(
-        QStringLiteral("setAccessibleName")));
-    EXPECT_TRUE(badgeSample.codeSnippet.contains(
-        QStringLiteral("setVisible")));
+    ASSERT_TRUE(findSampleById(QStringLiteral("info-badge"),
+                               QStringLiteral("info-badge-accessibility"), &badgeSample));
+    EXPECT_TRUE(badgeSample.codeSnippet.contains(QStringLiteral("setAccessibleName")));
+    EXPECT_TRUE(badgeSample.codeSnippet.contains(QStringLiteral("setVisible")));
 
-    std::unique_ptr<QWidget> badgePreview(
-        badgeSample.createPreview(nullptr));
-    auto* badge =
-        badgePreview->findChild<
-            fluent::status_info::InfoBadge*>(
-            QStringLiteral(
-                "galleryInfoBadgeAccessibleValue"));
-    auto* increment =
-        badgePreview->findChild<
-            fluent::basicinput::Button*>(
-            QStringLiteral(
-                "galleryInfoBadgeAccessibleIncrement"));
-    auto* toggle =
-        badgePreview->findChild<
-            fluent::basicinput::Button*>(
-            QStringLiteral(
-                "galleryInfoBadgeAccessibleToggle"));
-    auto* badgeStatus =
-        badgePreview->findChild<
-            fluent::textfields::Label*>(
-            QStringLiteral(
-                "galleryInfoBadgeAccessibleStatus"));
+    std::unique_ptr<QWidget> badgePreview(badgeSample.createPreview(nullptr));
+    auto* badge = badgePreview->findChild<fluent::status_info::InfoBadge*>(
+        QStringLiteral("galleryInfoBadgeAccessibleValue"));
+    auto* increment = badgePreview->findChild<fluent::basicinput::Button*>(
+        QStringLiteral("galleryInfoBadgeAccessibleIncrement"));
+    auto* toggle = badgePreview->findChild<fluent::basicinput::Button*>(
+        QStringLiteral("galleryInfoBadgeAccessibleToggle"));
+    auto* badgeStatus = badgePreview->findChild<fluent::textfields::Label*>(
+        QStringLiteral("galleryInfoBadgeAccessibleStatus"));
     ASSERT_NE(badge, nullptr);
     ASSERT_NE(increment, nullptr);
     ASSERT_NE(toggle, nullptr);
@@ -1722,142 +1533,87 @@ TEST_F(GalleryContentPagesTest, NotificationLifecycleSamplesMatchPreviewBehavior
     EXPECT_EQ(badge->value(), 3);
     increment->click();
     EXPECT_EQ(badge->value(), 4);
-    EXPECT_EQ(
-        badgeStatus->text(),
-        QStringLiteral("Unread value: 4"));
+    EXPECT_EQ(badgeStatus->text(), QStringLiteral("Unread value: 4"));
     toggle->click();
     EXPECT_TRUE(badge->isHidden());
-    EXPECT_EQ(
-        badgeStatus->text(),
-        QStringLiteral("Badge hidden"));
+    EXPECT_EQ(badgeStatus->text(), QStringLiteral("Badge hidden"));
 
     fluent::gallery::GallerySample updateSample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("toast"),
-        QStringLiteral("toast-update-key"),
-        &updateSample));
-    EXPECT_TRUE(updateSample.codeSnippet.contains(
-        QStringLiteral("showOrUpdateToast")));
-    EXPECT_TRUE(updateSample.codeSnippet.contains(
-        QStringLiteral("\"upload\"")));
+    ASSERT_TRUE(
+        findSampleById(QStringLiteral("toast"), QStringLiteral("toast-update-key"), &updateSample));
+    EXPECT_TRUE(updateSample.codeSnippet.contains(QStringLiteral("showOrUpdateToast")));
+    EXPECT_TRUE(updateSample.codeSnippet.contains(QStringLiteral("\"upload\"")));
 
-    std::unique_ptr<QWidget> toastPreview(
-        updateSample.createPreview(nullptr));
-    auto* advance =
-        toastPreview->findChild<
-            fluent::basicinput::Button*>(
-            QStringLiteral("galleryToastUpdateTrigger"));
-    auto* toastStatus =
-        toastPreview->findChild<
-            fluent::textfields::Label*>(
-            QStringLiteral("galleryToastUpdateStatus"));
+    std::unique_ptr<QWidget> toastPreview(updateSample.createPreview(nullptr));
+    auto* advance = toastPreview->findChild<fluent::basicinput::Button*>(
+        QStringLiteral("galleryToastUpdateTrigger"));
+    auto* toastStatus = toastPreview->findChild<fluent::textfields::Label*>(
+        QStringLiteral("galleryToastUpdateStatus"));
     ASSERT_NE(advance, nullptr);
     ASSERT_NE(toastStatus, nullptr);
 
     advance->click();
-    auto* firstToast =
-        toastPreview->findChild<
-            fluent::status_info::Toast*>();
+    auto* firstToast = toastPreview->findChild<fluent::status_info::Toast*>();
     ASSERT_NE(firstToast, nullptr);
-    EXPECT_EQ(
-        firstToast->updateKey(),
-        QStringLiteral("upload"));
-    EXPECT_EQ(
-        firstToast->message(),
-        QStringLiteral("Uploading: 25%"));
+    EXPECT_EQ(firstToast->updateKey(), QStringLiteral("upload"));
+    EXPECT_EQ(firstToast->message(), QStringLiteral("Uploading: 25%"));
 
     advance->click();
-    auto* updatedToast =
-        toastPreview->findChild<
-            fluent::status_info::Toast*>();
+    auto* updatedToast = toastPreview->findChild<fluent::status_info::Toast*>();
     EXPECT_EQ(updatedToast, firstToast);
-    EXPECT_EQ(
-        updatedToast->message(),
-        QStringLiteral("Uploading: 50%"));
-    EXPECT_EQ(
-        toastStatus->text(),
-        QStringLiteral("Progress: 50%"));
+    EXPECT_EQ(updatedToast->message(), QStringLiteral("Uploading: 50%"));
+    EXPECT_EQ(toastStatus->text(), QStringLiteral("Progress: 50%"));
 
     int openToastCount = 0;
-    for (auto* toast :
-         toastPreview->findChildren<
-             fluent::status_info::Toast*>()) {
+    for (auto* toast : toastPreview->findChildren<fluent::status_info::Toast*>()) {
         if (toast->isOpen())
             ++openToastCount;
     }
     EXPECT_EQ(openToastCount, 1);
     updatedToast->setAnimationEnabled(false);
     updatedToast->dismiss();
-    QCoreApplication::sendPostedEvents(
-        nullptr, QEvent::DeferredDelete);
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     QCoreApplication::processEvents();
 }
 
 TEST_F(GalleryContentPagesTest, EditableComboBoxSampleMakesCustomValueContractVisible)
 {
     fluent::gallery::GallerySample sample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("combobox"),
-        QStringLiteral("combobox-editable"),
-        &sample));
-    EXPECT_TRUE(
-        sample.description.contains(
-            QStringLiteral("Type any value")));
+    ASSERT_TRUE(
+        findSampleById(QStringLiteral("combobox"), QStringLiteral("combobox-editable"), &sample));
+    EXPECT_TRUE(sample.description.contains(QStringLiteral("Type any value")));
     for (const QString& sourceFragment :
          {QStringLiteral("setEditable(true)"),
-          QStringLiteral(
-              "setInsertPolicy(QComboBox::NoInsert)"),
-          QStringLiteral("QComboBox::editTextChanged"),
-          QStringLiteral("findText("),
-          QStringLiteral("Suggested"),
-          QStringLiteral("Custom")}) {
-        EXPECT_TRUE(
-            sample.codeSnippet.contains(sourceFragment))
-            << sourceFragment.toStdString();
+          QStringLiteral("setInsertPolicy(QComboBox::NoInsert)"),
+          QStringLiteral("QComboBox::editTextChanged"), QStringLiteral("findText("),
+          QStringLiteral("Suggested"), QStringLiteral("Custom")}) {
+        EXPECT_TRUE(sample.codeSnippet.contains(sourceFragment)) << sourceFragment.toStdString();
     }
 
-    std::unique_ptr<QWidget> preview(
-        sample.createPreview(nullptr));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
     ASSERT_NE(preview, nullptr);
-    auto* comboBox = preview->findChild<ComboBox*>(
-        QStringLiteral("galleryEditableComboBox"));
-    auto* status =
-        preview->findChild<fluent::textfields::Label*>(
-            QStringLiteral(
-                "galleryEditableComboBoxStatus"));
+    auto* comboBox = preview->findChild<ComboBox*>(QStringLiteral("galleryEditableComboBox"));
+    auto* status = preview->findChild<fluent::textfields::Label*>(
+        QStringLiteral("galleryEditableComboBoxStatus"));
     ASSERT_NE(comboBox, nullptr);
     ASSERT_NE(status, nullptr);
     EXPECT_TRUE(comboBox->isEditable());
     EXPECT_EQ(comboBox->width(), 200);
     EXPECT_EQ(status->width(), 200);
-    EXPECT_EQ(
-        comboBox->insertPolicy(),
-        QComboBox::NoInsert);
-    EXPECT_EQ(
-        status->text(),
-        QStringLiteral("Suggested value: 12"));
+    EXPECT_EQ(comboBox->insertPolicy(), QComboBox::NoInsert);
+    EXPECT_EQ(status->text(), QStringLiteral("Suggested value: 12"));
 
     const int originalCount = comboBox->count();
-    comboBox->setEditText(
-        QStringLiteral("13.5"));
-    EXPECT_EQ(
-        comboBox->currentText(),
-        QStringLiteral("13.5"));
+    comboBox->setEditText(QStringLiteral("13.5"));
+    EXPECT_EQ(comboBox->currentText(), QStringLiteral("13.5"));
     EXPECT_EQ(comboBox->count(), originalCount);
     EXPECT_EQ(
-        comboBox->findText(
-            QStringLiteral("13.5"),
-            Qt::MatchFixedString
-                | Qt::MatchCaseSensitive),
+        comboBox->findText(QStringLiteral("13.5"), Qt::MatchFixedString | Qt::MatchCaseSensitive),
         -1);
-    EXPECT_EQ(
-        status->text(),
-        QStringLiteral("Custom value: 13.5"));
+    EXPECT_EQ(status->text(), QStringLiteral("Custom value: 13.5"));
 
     comboBox->setEditText(QStringLiteral("14"));
-    EXPECT_EQ(
-        status->text(),
-        QStringLiteral("Suggested value: 14"));
+    EXPECT_EQ(status->text(), QStringLiteral("Suggested value: 14"));
 }
 
 // Task 6.4: sample cards host a live preview widget and expose code snippets where defined.
@@ -1881,32 +1637,26 @@ TEST_F(GalleryContentPagesTest, SampleCardsHostLivePreviewAndCode)
 TEST_F(GalleryContentPagesTest, LinkedAnnotatedScrollContentCoversItsViewport)
 {
     fluent::gallery::GallerySample sample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("annotated-scrollbar"),
-        QStringLiteral("annotated-scrollbar-scrollview"),
-        &sample));
+    ASSERT_TRUE(findSampleById(QStringLiteral("annotated-scrollbar"),
+                               QStringLiteral("annotated-scrollbar-scrollview"), &sample));
 
     GallerySampleCard card(sample);
     card.resize(760, card.sizeHint().height());
     card.show();
     QApplication::processEvents();
 
-    auto* scrollView =
-        card.previewWidget()->findChild<fluent::scrolling::ScrollView*>();
+    auto* scrollView = card.previewWidget()->findChild<fluent::scrolling::ScrollView*>();
     ASSERT_NE(scrollView, nullptr);
     ASSERT_NE(scrollView->contentWidget(), nullptr);
     ASSERT_NE(scrollView->viewport(), nullptr);
-    EXPECT_EQ(scrollView->contentWidget()->width(),
-              scrollView->viewport()->width());
+    EXPECT_EQ(scrollView->contentWidget()->width(), scrollView->viewport()->width());
 }
 
 TEST_F(GalleryContentPagesTest, AnnotatedScrollDensityKeepsPreviewGeometryStable)
 {
     fluent::gallery::GallerySample sample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("annotated-scrollbar"),
-        QStringLiteral("annotated-scrollbar-label-density"),
-        &sample));
+    ASSERT_TRUE(findSampleById(QStringLiteral("annotated-scrollbar"),
+                               QStringLiteral("annotated-scrollbar-label-density"), &sample));
 
     GallerySampleCard card(sample);
     card.resize(760, card.sizeHint().height());
@@ -1995,9 +1745,8 @@ TEST_F(GalleryContentPagesTest, HorizontalSampleGroupKeepsSpacingThroughQBoxLayo
 TEST_F(GalleryContentPagesTest, StackViewSampleButtonsUseRequestedSpacing)
 {
     fluent::gallery::GallerySample sample;
-    ASSERT_TRUE(findSampleById(QStringLiteral("stack-view"),
-                               QStringLiteral("stack-view-basic"),
-                               &sample));
+    ASSERT_TRUE(
+        findSampleById(QStringLiteral("stack-view"), QStringLiteral("stack-view-basic"), &sample));
     ASSERT_TRUE(static_cast<bool>(sample.createPreview));
 
     GallerySampleCard card(sample);
@@ -2062,8 +1811,7 @@ TEST_F(GalleryContentPagesTest, StackViewTransitionButtonsUseRequestedSpacing)
 {
     fluent::gallery::GallerySample sample;
     ASSERT_TRUE(findSampleById(QStringLiteral("stack-view"),
-                               QStringLiteral("stack-view-transition-type"),
-                               &sample));
+                               QStringLiteral("stack-view-transition-type"), &sample));
     ASSERT_TRUE(static_cast<bool>(sample.createPreview));
 
     GallerySampleCard card(sample);
@@ -2100,8 +1848,7 @@ TEST_F(GalleryContentPagesTest, EditingCommandSampleReusesRouterActions)
 
     fluent::gallery::GallerySample sample;
     ASSERT_TRUE(findSampleById(QStringLiteral("line-edit"),
-                               QStringLiteral("line-edit-editing-commands"),
-                               &sample));
+                               QStringLiteral("line-edit-editing-commands"), &sample));
     ASSERT_TRUE(static_cast<bool>(sample.createPreview));
 
     GallerySampleCard card(sample);
@@ -2139,37 +1886,25 @@ TEST_F(GalleryContentPagesTest, EditingCommandSamplesShareOneRouterPerGalleryWin
 {
     fluent::gallery::GallerySample menuSample;
     fluent::gallery::GallerySample barSample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("line-edit"),
-        QStringLiteral("line-edit-editing-commands"),
-        &menuSample));
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("command-bar"),
-        QStringLiteral("command-bar-editing-router"),
-        &barSample));
+    ASSERT_TRUE(findSampleById(QStringLiteral("line-edit"),
+                               QStringLiteral("line-edit-editing-commands"), &menuSample));
+    ASSERT_TRUE(findSampleById(QStringLiteral("command-bar"),
+                               QStringLiteral("command-bar-editing-router"), &barSample));
 
     QWidget host;
-    auto* menuCard =
-        new GallerySampleCard(menuSample, &host);
-    auto* barCard =
-        new GallerySampleCard(barSample, &host);
+    auto* menuCard = new GallerySampleCard(menuSample, &host);
+    auto* barCard = new GallerySampleCard(barSample, &host);
 
-    const auto routers =
-        host.findChildren<EditingCommandRouter*>(
-            QStringLiteral("Gallery.WindowEditingCommandRouter"),
-            Qt::FindDirectChildrenOnly);
+    const auto routers = host.findChildren<EditingCommandRouter*>(
+        QStringLiteral("Gallery.WindowEditingCommandRouter"), Qt::FindDirectChildrenOnly);
     ASSERT_EQ(routers.size(), 1);
-    auto* bar =
-        barCard->findChild<CommandBar*>(
-            QStringLiteral(
-                "Gallery.CommandBar.EditingRouter"));
+    auto* bar = barCard->findChild<CommandBar*>(QStringLiteral("Gallery.CommandBar.EditingRouter"));
     auto* menu = menuCard->findChild<FluentMenu*>();
     ASSERT_NE(bar, nullptr);
     ASSERT_NE(menu, nullptr);
     for (QAction* action : routers.first()->actions()) {
-        EXPECT_TRUE(
-            bar->primaryActions().contains(action)
-            || bar->secondaryActions().contains(action));
+        EXPECT_TRUE(bar->primaryActions().contains(action) ||
+                    bar->secondaryActions().contains(action));
         EXPECT_TRUE(menu->actions().contains(action));
     }
 }
@@ -2177,58 +1912,38 @@ TEST_F(GalleryContentPagesTest, EditingCommandSamplesShareOneRouterPerGalleryWin
 TEST_F(GalleryContentPagesTest, ParentedPrewarmSampleUsesGalleryWindowRouter)
 {
     fluent::gallery::GallerySample sample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("command-bar"),
-        QStringLiteral("command-bar-editing-router"),
-        &sample));
+    ASSERT_TRUE(findSampleById(QStringLiteral("command-bar"),
+                               QStringLiteral("command-bar-editing-router"), &sample));
 
     GalleryWindow window;
-    auto* router =
-        window.findChild<EditingCommandRouter*>(
-            QStringLiteral(
-                "Gallery.WindowEditingCommandRouter"),
-            Qt::FindDirectChildrenOnly);
+    auto* router = window.findChild<EditingCommandRouter*>(
+        QStringLiteral("Gallery.WindowEditingCommandRouter"), Qt::FindDirectChildrenOnly);
     ASSERT_NE(router, nullptr);
 
     GallerySampleCard prewarmedCard(sample, &window);
     auto* bar =
-        prewarmedCard.findChild<CommandBar*>(
-            QStringLiteral(
-                "Gallery.CommandBar.EditingRouter"));
+        prewarmedCard.findChild<CommandBar*>(QStringLiteral("Gallery.CommandBar.EditingRouter"));
     ASSERT_NE(bar, nullptr);
-    EXPECT_EQ(
-        prewarmedCard.findChild<EditingCommandRouter*>(),
-        nullptr);
+    EXPECT_EQ(prewarmedCard.findChild<EditingCommandRouter*>(), nullptr);
     for (QAction* action : router->actions()) {
-        EXPECT_TRUE(
-            bar->primaryActions().contains(action)
-            || bar->secondaryActions().contains(action));
+        EXPECT_TRUE(bar->primaryActions().contains(action) ||
+                    bar->secondaryActions().contains(action));
     }
 }
 
 TEST_F(GalleryContentPagesTest, CommandBarRoutesExposePublicSamplesAndBundledArtwork)
 {
-    const auto barReference =
-        galleryComponentReference(QStringLiteral("command-bar"));
-    const auto flyoutReference =
-        galleryComponentReference(
-            QStringLiteral("command-bar-flyout"));
+    const auto barReference = galleryComponentReference(QStringLiteral("command-bar"));
+    const auto flyoutReference = galleryComponentReference(QStringLiteral("command-bar-flyout"));
     ASSERT_TRUE(barReference.isValid());
     ASSERT_TRUE(flyoutReference.isValid());
-    EXPECT_EQ(
-        barReference.qualifiedType,
-        QStringLiteral(
-            "fluent::menus_toolbars::CommandBar"));
-    EXPECT_EQ(
-        flyoutReference.qualifiedType,
-        QStringLiteral(
-            "fluent::menus_toolbars::CommandBarFlyout"));
+    EXPECT_EQ(barReference.qualifiedType, QStringLiteral("fluent::menus_toolbars::CommandBar"));
+    EXPECT_EQ(flyoutReference.qualifiedType,
+              QStringLiteral("fluent::menus_toolbars::CommandBarFlyout"));
 
     for (const QString& title :
-         {QStringLiteral("CommandBar"),
-          QStringLiteral("CommandBarFlyout")}) {
-        const QString resource =
-            galleryControlImageResource(title);
+         {QStringLiteral("CommandBar"), QStringLiteral("CommandBarFlyout")}) {
+        const QString resource = galleryControlImageResource(title);
         ASSERT_FALSE(resource.isEmpty());
         ASSERT_TRUE(QFile::exists(resource));
         const QImage image(resource);
@@ -2239,42 +1954,26 @@ TEST_F(GalleryContentPagesTest, CommandBarRoutesExposePublicSamplesAndBundledArt
     }
 
     fluent::gallery::GallerySample responsive;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("command-bar"),
-        QStringLiteral(
-            "command-bar-responsive-overflow"),
-        &responsive));
-    EXPECT_TRUE(
-        responsive.codeSnippet.contains(
-            QStringLiteral("QAction::HighPriority")));
-    EXPECT_TRUE(
-        responsive.codeSnippet.contains(
-            QStringLiteral(":/icons/add.svg")));
+    ASSERT_TRUE(findSampleById(QStringLiteral("command-bar"),
+                               QStringLiteral("command-bar-responsive-overflow"), &responsive));
+    EXPECT_TRUE(responsive.codeSnippet.contains(QStringLiteral("QAction::HighPriority")));
+    EXPECT_TRUE(responsive.codeSnippet.contains(QStringLiteral(":/icons/add.svg")));
     for (const QString& sourceFragment :
-         {QStringLiteral("new CommandBar(barHost)"),
-          QStringLiteral("barHost->setFixedWidth(536)"),
-          QStringLiteral("setBackgroundVisible(false)"),
-          QStringLiteral(":/icons/settings.svg"),
+         {QStringLiteral("new CommandBar(barHost)"), QStringLiteral("barHost->setFixedWidth(536)"),
+          QStringLiteral("setBackgroundVisible(false)"), QStringLiteral(":/icons/settings.svg"),
           QStringLiteral(":/icons/help.svg")}) {
-        EXPECT_TRUE(
-            responsive.codeSnippet.contains(sourceFragment))
+        EXPECT_TRUE(responsive.codeSnippet.contains(sourceFragment))
             << sourceFragment.toStdString();
     }
     GallerySampleCard responsiveCard(responsive);
     responsiveCard.resize(720, responsiveCard.sizeHint().height());
     responsiveCard.show();
     QApplication::processEvents();
-    auto* bar = responsiveCard.findChild<CommandBar*>(
-        QStringLiteral("Gallery.CommandBar.Responsive"));
-    Button* compact =
-        buttonWithText(
-            &responsiveCard, QStringLiteral("Compact view"));
-    Button* labels =
-        buttonWithText(
-            &responsiveCard, QStringLiteral("Labels: Right"));
-    Button* background =
-        buttonWithText(
-            &responsiveCard, QStringLiteral("Show background"));
+    auto* bar =
+        responsiveCard.findChild<CommandBar*>(QStringLiteral("Gallery.CommandBar.Responsive"));
+    Button* compact = buttonWithText(&responsiveCard, QStringLiteral("Compact view"));
+    Button* labels = buttonWithText(&responsiveCard, QStringLiteral("Labels: Right"));
+    Button* background = buttonWithText(&responsiveCard, QStringLiteral("Show background"));
     ASSERT_NE(bar, nullptr);
     ASSERT_NE(compact, nullptr);
     ASSERT_NE(labels, nullptr);
@@ -2286,140 +1985,87 @@ TEST_F(GalleryContentPagesTest, CommandBarRoutesExposePublicSamplesAndBundledArt
             primaryTexts.append(action->text());
         }
     }
-    EXPECT_EQ(
-        primaryTexts,
-        (QStringList{
-            QStringLiteral("Add"),
-            QStringLiteral("Edit"),
-            QStringLiteral("Share"),
-            QStringLiteral("Sync"),
-            QStringLiteral("Pin")}));
+    EXPECT_EQ(primaryTexts,
+              (QStringList{QStringLiteral("Add"), QStringLiteral("Edit"), QStringLiteral("Share"),
+                           QStringLiteral("Sync"), QStringLiteral("Pin")}));
     QStringList secondaryTexts;
     for (QAction* action : bar->secondaryActions()) {
         ASSERT_NE(action, nullptr);
         secondaryTexts.append(action->text());
     }
-    EXPECT_EQ(
-        secondaryTexts,
-        (QStringList{
-            QStringLiteral("Settings"),
-            QStringLiteral("Help")}));
+    EXPECT_EQ(secondaryTexts, (QStringList{QStringLiteral("Settings"), QStringLiteral("Help")}));
     compact->click();
     QApplication::processEvents();
     EXPECT_FALSE(bar->overflowedPrimaryActions().isEmpty());
     labels->click();
-    EXPECT_EQ(
-        bar->labelPosition(),
-        CommandBar::LabelPosition::Collapsed);
+    EXPECT_EQ(bar->labelPosition(), CommandBar::LabelPosition::Collapsed);
     background->click();
     EXPECT_TRUE(bar->backgroundVisible());
 
     fluent::gallery::GallerySample integration;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("command-bar"),
-        QStringLiteral("command-bar-editing-router"),
-        &integration));
-    EXPECT_TRUE(
-        integration.codeSnippet.contains(
-            QStringLiteral("EditingCommandRouter")));
+    ASSERT_TRUE(findSampleById(QStringLiteral("command-bar"),
+                               QStringLiteral("command-bar-editing-router"), &integration));
+    EXPECT_TRUE(integration.codeSnippet.contains(QStringLiteral("EditingCommandRouter")));
     for (const QString& sourceFragment :
-         {QStringLiteral(
-              "CommandBar::LabelPosition::Right"),
-          QStringLiteral(
-              "router->action(command)"),
-          QStringLiteral(":/icons/undo.svg"),
-          QStringLiteral(":/icons/redo.svg"),
-          QStringLiteral(":/icons/cut.svg"),
-          QStringLiteral(":/icons/copy.svg"),
-          QStringLiteral(":/icons/paste.svg"),
-          QStringLiteral(":/icons/delete.svg"),
-          QStringLiteral(":/icons/select-all.svg"),
-          QStringLiteral(
-              "QTimer::singleShot(0, editor")}) {
-        EXPECT_TRUE(
-            integration.codeSnippet.contains(sourceFragment))
+         {QStringLiteral("CommandBar::LabelPosition::Right"),
+          QStringLiteral("router->action(command)"), QStringLiteral(":/icons/undo.svg"),
+          QStringLiteral(":/icons/redo.svg"), QStringLiteral(":/icons/cut.svg"),
+          QStringLiteral(":/icons/copy.svg"), QStringLiteral(":/icons/paste.svg"),
+          QStringLiteral(":/icons/delete.svg"), QStringLiteral(":/icons/select-all.svg"),
+          QStringLiteral("QTimer::singleShot(0, editor")}) {
+        EXPECT_TRUE(integration.codeSnippet.contains(sourceFragment))
             << sourceFragment.toStdString();
     }
     GallerySampleCard integrationCard(integration);
-    integrationCard.resize(
-        720, integrationCard.sizeHint().height());
+    integrationCard.resize(720, integrationCard.sizeHint().height());
     integrationCard.show();
     QApplication::processEvents();
-    auto* router =
-        integrationCard.findChild<EditingCommandRouter*>();
+    auto* router = integrationCard.findChild<EditingCommandRouter*>();
     auto* integrationBar =
-        integrationCard.findChild<CommandBar*>(
-            QStringLiteral(
-                "Gallery.CommandBar.EditingRouter"));
+        integrationCard.findChild<CommandBar*>(QStringLiteral("Gallery.CommandBar.EditingRouter"));
     auto* editor =
-        integrationCard.findChild<LineEdit*>(
-            QStringLiteral(
-                "Gallery.CommandBar.EditingTarget"));
-    Button* selectText =
-        buttonWithText(
-            &integrationCard, QStringLiteral("Select text"));
-    Button* clearSelection =
-        buttonWithText(
-            &integrationCard, QStringLiteral("Clear selection"));
-    Button* readOnly =
-        buttonWithText(
-            &integrationCard, QStringLiteral("Read-only: Off"));
+        integrationCard.findChild<LineEdit*>(QStringLiteral("Gallery.CommandBar.EditingTarget"));
+    Button* selectText = buttonWithText(&integrationCard, QStringLiteral("Select text"));
+    Button* clearSelection = buttonWithText(&integrationCard, QStringLiteral("Clear selection"));
+    Button* readOnly = buttonWithText(&integrationCard, QStringLiteral("Read-only: Off"));
     ASSERT_NE(router, nullptr);
     ASSERT_NE(integrationBar, nullptr);
     ASSERT_NE(editor, nullptr);
     ASSERT_NE(selectText, nullptr);
     ASSERT_NE(clearSelection, nullptr);
     ASSERT_NE(readOnly, nullptr);
-    EXPECT_EQ(
-        integrationBar->labelPosition(),
-        CommandBar::LabelPosition::Right);
-    EXPECT_NE(
-        buttonWithText(
-            &integrationCard, QStringLiteral("Undo")),
-        nullptr);
-    EXPECT_NE(
-        buttonWithText(
-            &integrationCard, QStringLiteral("Redo")),
-        nullptr);
+    EXPECT_EQ(integrationBar->labelPosition(), CommandBar::LabelPosition::Right);
+    EXPECT_NE(buttonWithText(&integrationCard, QStringLiteral("Undo")), nullptr);
+    EXPECT_NE(buttonWithText(&integrationCard, QStringLiteral("Redo")), nullptr);
     EXPECT_FALSE(integrationBar->backgroundVisible());
     for (QAction* action : router->actions()) {
-        EXPECT_TRUE(
-            integrationBar->primaryActions().contains(action)
-            || integrationBar->secondaryActions().contains(action));
+        EXPECT_TRUE(integrationBar->primaryActions().contains(action) ||
+                    integrationBar->secondaryActions().contains(action));
         EXPECT_FALSE(action->icon().isNull());
     }
     QApplication::clipboard()->clear();
     QTest::mouseClick(selectText, Qt::LeftButton);
-    QTRY_VERIFY(router->canExecute(
-        EditingCommandRouter::Command::Cut));
-    EXPECT_TRUE(router->canExecute(
-        EditingCommandRouter::Command::Copy));
+    QTRY_VERIFY(router->canExecute(EditingCommandRouter::Command::Cut));
+    EXPECT_TRUE(router->canExecute(EditingCommandRouter::Command::Copy));
 
-    const auto visibleCommandButton =
-        [integrationBar](const QString& text) -> Button* {
-            for (Button* button :
-                 integrationBar->findChildren<Button*>()) {
-                if (button && button->text() == text
-                    && button->isVisibleTo(integrationBar)) {
-                    return button;
-                }
+    const auto visibleCommandButton = [integrationBar](const QString& text) -> Button* {
+        for (Button* button : integrationBar->findChildren<Button*>()) {
+            if (button && button->text() == text && button->isVisibleTo(integrationBar)) {
+                return button;
             }
-            return nullptr;
-        };
-    Button* copy =
-        visibleCommandButton(QStringLiteral("Copy"));
+        }
+        return nullptr;
+    };
+    Button* copy = visibleCommandButton(QStringLiteral("Copy"));
     ASSERT_NE(copy, nullptr);
     copy->setFocus(Qt::MouseFocusReason);
     editor->deselect();
     QApplication::processEvents();
-    EXPECT_TRUE(router->canExecute(
-        EditingCommandRouter::Command::Copy));
+    EXPECT_TRUE(router->canExecute(EditingCommandRouter::Command::Copy));
     ASSERT_TRUE(copy->isEnabled());
     QTest::mouseClick(copy, Qt::LeftButton);
-    QTRY_COMPARE(
-        QApplication::clipboard()->text(),
-        QStringLiteral(
-            "Review the release notes before Friday"));
+    QTRY_COMPARE(QApplication::clipboard()->text(),
+                 QStringLiteral("Review the release notes before Friday"));
 
     editor->setText(QStringLiteral("Cut this text"));
     editor->setFocus(Qt::OtherFocusReason);
@@ -2430,68 +2076,46 @@ TEST_F(GalleryContentPagesTest, CommandBarRoutesExposePublicSamplesAndBundledArt
     cut->setFocus(Qt::MouseFocusReason);
     editor->deselect();
     QApplication::processEvents();
-    EXPECT_TRUE(router->canExecute(
-        EditingCommandRouter::Command::Cut));
+    EXPECT_TRUE(router->canExecute(EditingCommandRouter::Command::Cut));
     ASSERT_TRUE(cut->isEnabled());
     QTest::mouseClick(cut, Qt::LeftButton);
     QTRY_COMPARE(editor->text(), QString());
-    EXPECT_EQ(
-        QApplication::clipboard()->text(),
-        QStringLiteral("Cut this text"));
+    EXPECT_EQ(QApplication::clipboard()->text(), QStringLiteral("Cut this text"));
 
-    editor->setText(
-        QStringLiteral(
-            "Review the release notes before Friday"));
+    editor->setText(QStringLiteral("Review the release notes before Friday"));
     editor->setFocus(Qt::OtherFocusReason);
     editor->selectAll();
     router->refresh();
     QApplication::processEvents();
     QTest::mouseClick(readOnly, Qt::LeftButton);
     QTRY_VERIFY(editor->isReadOnly());
-    EXPECT_FALSE(router->canExecute(
-        EditingCommandRouter::Command::Cut));
-    EXPECT_TRUE(router->canExecute(
-        EditingCommandRouter::Command::Copy));
+    EXPECT_FALSE(router->canExecute(EditingCommandRouter::Command::Cut));
+    EXPECT_TRUE(router->canExecute(EditingCommandRouter::Command::Copy));
     QTest::mouseClick(clearSelection, Qt::LeftButton);
-    QTRY_VERIFY(!router->canExecute(
-        EditingCommandRouter::Command::Copy));
+    QTRY_VERIFY(!router->canExecute(EditingCommandRouter::Command::Copy));
 
     fluent::gallery::GallerySample modes;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("command-bar-flyout"),
-        QStringLiteral(
-            "command-bar-flyout-show-modes"),
-        &modes));
+    ASSERT_TRUE(findSampleById(QStringLiteral("command-bar-flyout"),
+                               QStringLiteral("command-bar-flyout-show-modes"), &modes));
     EXPECT_TRUE(
-        modes.codeSnippet.contains(
-            QStringLiteral(
-                "CommandBarFlyout::ShowMode::Transient")));
+        modes.codeSnippet.contains(QStringLiteral("CommandBarFlyout::ShowMode::Transient")));
     for (const QString& sourceFragment :
-         {QStringLiteral(":/icons/share.svg"),
-          QStringLiteral(":/icons/save.svg"),
-          QStringLiteral(":/icons/delete.svg"),
-          QStringLiteral(":/icons/resize.svg"),
-          QStringLiteral(":/icons/move.svg"),
-          QStringLiteral("QAbstractButton::clicked"),
-          QStringLiteral(
-              "Qt::CustomContextMenu"),
-          QStringLiteral(
-              "QWidget::customContextMenuRequested"),
-          QStringLiteral(
-              "CommandBarFlyout::ShowMode::Standard")}) {
-        EXPECT_TRUE(modes.codeSnippet.contains(sourceFragment))
-            << sourceFragment.toStdString();
+         {QStringLiteral(":/icons/share.svg"), QStringLiteral(":/icons/save.svg"),
+          QStringLiteral(":/icons/delete.svg"), QStringLiteral(":/icons/resize.svg"),
+          QStringLiteral(":/icons/move.svg"), QStringLiteral("QAbstractButton::clicked"),
+          QStringLiteral("Qt::CustomContextMenu"),
+          QStringLiteral("QWidget::customContextMenuRequested"),
+          QStringLiteral("CommandBarFlyout::ShowMode::Standard")}) {
+        EXPECT_TRUE(modes.codeSnippet.contains(sourceFragment)) << sourceFragment.toStdString();
     }
     GallerySampleCard flyoutCard(modes);
     flyoutCard.resize(720, flyoutCard.sizeHint().height());
     flyoutCard.show();
     QApplication::processEvents();
     auto* flyout =
-        flyoutCard.findChild<CommandBarFlyout*>(
-            QStringLiteral("Gallery.CommandBarFlyout"));
-    QWidget* tile = flyoutCard.findChild<QWidget*>(
-        QStringLiteral(
-            "Gallery.CommandBarFlyout.ContextTile"));
+        flyoutCard.findChild<CommandBarFlyout*>(QStringLiteral("Gallery.CommandBarFlyout"));
+    QWidget* tile =
+        flyoutCard.findChild<QWidget*>(QStringLiteral("Gallery.CommandBarFlyout.ContextTile"));
     ASSERT_NE(flyout, nullptr);
     ASSERT_NE(tile, nullptr);
     EXPECT_EQ(flyout->primaryActions().size(), 3);
@@ -2501,94 +2125,59 @@ TEST_F(GalleryContentPagesTest, CommandBarRoutesExposePublicSamplesAndBundledArt
         ASSERT_NE(action, nullptr);
         flyoutPrimaryTexts.append(action->text());
     }
-    EXPECT_EQ(
-        flyoutPrimaryTexts,
-        (QStringList{
-            QStringLiteral("Share"),
-            QStringLiteral("Save"),
-            QStringLiteral("Delete")}));
+    EXPECT_EQ(flyoutPrimaryTexts, (QStringList{QStringLiteral("Share"), QStringLiteral("Save"),
+                                               QStringLiteral("Delete")}));
     QStringList flyoutSecondaryTexts;
     for (QAction* action : flyout->secondaryActions()) {
         ASSERT_NE(action, nullptr);
         flyoutSecondaryTexts.append(action->text());
     }
-    EXPECT_EQ(
-        flyoutSecondaryTexts,
-        (QStringList{
-            QStringLiteral("Resize"),
-            QStringLiteral("Move")}));
-    for (QAction* action :
-         flyout->primaryActions()
-             + flyout->secondaryActions()) {
+    EXPECT_EQ(flyoutSecondaryTexts,
+              (QStringList{QStringLiteral("Resize"), QStringLiteral("Move")}));
+    for (QAction* action : flyout->primaryActions() + flyout->secondaryActions()) {
         ASSERT_NE(action, nullptr);
         EXPECT_FALSE(action->icon().isNull());
     }
     flyout->setAnimationEnabled(false);
     const QPoint contextPosition = tile->rect().center();
-    QContextMenuEvent contextEvent(
-        QContextMenuEvent::Mouse,
-        contextPosition,
-        tile->mapToGlobal(contextPosition));
+    QContextMenuEvent contextEvent(QContextMenuEvent::Mouse, contextPosition,
+                                   tile->mapToGlobal(contextPosition));
     QApplication::sendEvent(tile, &contextEvent);
     QApplication::processEvents();
     EXPECT_TRUE(flyout->isOpen());
-    EXPECT_EQ(
-        flyout->showMode(),
-        CommandBarFlyout::ShowMode::Standard);
+    EXPECT_EQ(flyout->showMode(), CommandBarFlyout::ShowMode::Standard);
     EXPECT_TRUE(flyout->isExpanded());
     flyout->close();
-    QTest::mouseClick(
-        tile,
-        Qt::LeftButton,
-        Qt::NoModifier,
-        tile->rect().center());
+    QTest::mouseClick(tile, Qt::LeftButton, Qt::NoModifier, tile->rect().center());
     QApplication::processEvents();
     EXPECT_TRUE(flyout->isOpen());
-    EXPECT_EQ(
-        flyout->showMode(),
-        CommandBarFlyout::ShowMode::Transient);
+    EXPECT_EQ(flyout->showMode(), CommandBarFlyout::ShowMode::Transient);
     EXPECT_FALSE(flyout->isAlwaysExpanded());
     EXPECT_FALSE(flyout->isExpanded());
     flyout->close();
 
     fluent::gallery::GallerySample alwaysExpandedSample;
-    ASSERT_TRUE(findSampleById(
-        QStringLiteral("command-bar-flyout"),
-        QStringLiteral(
-            "command-bar-flyout-always-expanded"),
-        &alwaysExpandedSample));
+    ASSERT_TRUE(findSampleById(QStringLiteral("command-bar-flyout"),
+                               QStringLiteral("command-bar-flyout-always-expanded"),
+                               &alwaysExpandedSample));
     for (const QString& sourceFragment :
          {QStringLiteral("setAlwaysExpanded(true)"),
-          QStringLiteral(
-              "CommandBarFlyout::ShowMode::Transient"),
-          QStringLiteral("favoriteAction->setCheckable(true)"),
-          QStringLiteral(":/icons/link.svg"),
-          QStringLiteral(":/icons/favorite.svg"),
-          QStringLiteral(":/icons/edit.svg"),
+          QStringLiteral("CommandBarFlyout::ShowMode::Transient"),
+          QStringLiteral("favoriteAction->setCheckable(true)"), QStringLiteral(":/icons/link.svg"),
+          QStringLiteral(":/icons/favorite.svg"), QStringLiteral(":/icons/edit.svg"),
           QStringLiteral(":/icons/info.svg")}) {
-        EXPECT_TRUE(
-            alwaysExpandedSample.codeSnippet.contains(
-                sourceFragment))
+        EXPECT_TRUE(alwaysExpandedSample.codeSnippet.contains(sourceFragment))
             << sourceFragment.toStdString();
     }
-    GallerySampleCard alwaysExpandedCard(
-        alwaysExpandedSample);
-    alwaysExpandedCard.resize(
-        720, alwaysExpandedCard.sizeHint().height());
+    GallerySampleCard alwaysExpandedCard(alwaysExpandedSample);
+    alwaysExpandedCard.resize(720, alwaysExpandedCard.sizeHint().height());
     alwaysExpandedCard.show();
     QApplication::processEvents();
-    auto* alwaysExpandedFlyout =
-        alwaysExpandedCard.findChild<CommandBarFlyout*>(
-            QStringLiteral(
-                "Gallery.CommandBarFlyout.AlwaysExpanded"));
-    Button* openActions =
-        buttonWithText(
-            &alwaysExpandedCard,
-            QStringLiteral("Open actions"));
+    auto* alwaysExpandedFlyout = alwaysExpandedCard.findChild<CommandBarFlyout*>(
+        QStringLiteral("Gallery.CommandBarFlyout.AlwaysExpanded"));
+    Button* openActions = buttonWithText(&alwaysExpandedCard, QStringLiteral("Open actions"));
     Button* alwaysExpandedToggle =
-        buttonWithText(
-            &alwaysExpandedCard,
-            QStringLiteral("Always expanded: On"));
+        buttonWithText(&alwaysExpandedCard, QStringLiteral("Always expanded: On"));
     ASSERT_NE(alwaysExpandedFlyout, nullptr);
     ASSERT_NE(openActions, nullptr);
     ASSERT_NE(alwaysExpandedToggle, nullptr);
@@ -2598,9 +2187,7 @@ TEST_F(GalleryContentPagesTest, CommandBarRoutesExposePublicSamplesAndBundledArt
     openActions->click();
     QApplication::processEvents();
     EXPECT_TRUE(alwaysExpandedFlyout->isOpen());
-    EXPECT_EQ(
-        alwaysExpandedFlyout->showMode(),
-        CommandBarFlyout::ShowMode::Transient);
+    EXPECT_EQ(alwaysExpandedFlyout->showMode(), CommandBarFlyout::ShowMode::Transient);
     EXPECT_TRUE(alwaysExpandedFlyout->isExpanded());
     EXPECT_EQ(QApplication::focusWidget(), openActions);
     alwaysExpandedFlyout->close();
@@ -2658,8 +2245,7 @@ TEST_F(GalleryContentPagesTest, TreeViewIndicatorMotionStatusLabelReservesLonges
     // label never grows the shared row.
     for (const QString& text : transitions) {
         status->setText(text);
-        EXPECT_GE(status->minimumWidth(), status->sizeHint().width())
-            << text.toStdString();
+        EXPECT_GE(status->minimumWidth(), status->sizeHint().width()) << text.toStdString();
     }
 
     // End-to-end: cycling the status text (what a selection does) must not change the tree's width.
@@ -2682,8 +2268,7 @@ TEST_F(GalleryContentPagesTest, TreeViewIndicatorTargetsDoNotAutoScrollThePrevie
 {
     fluent::gallery::GallerySample sample;
     ASSERT_TRUE(findSampleById(QStringLiteral("tree-view"),
-                               QStringLiteral("tree-view-indicator-motion"),
-                               &sample));
+                               QStringLiteral("tree-view-indicator-motion"), &sample));
 
     GallerySampleCard card(sample);
     card.resize(640, card.sizeHint().height());
@@ -2697,15 +2282,13 @@ TEST_F(GalleryContentPagesTest, TreeViewIndicatorTargetsDoNotAutoScrollThePrevie
     QApplication::processEvents();
     const int baseline = tree->verticalScrollBar()->value();
 
-    for (const QString& caption : {QStringLiteral("Parent"),
-                                   QStringLiteral("Child"),
-                                   QStringLiteral("Sibling")}) {
+    for (const QString& caption :
+         {QStringLiteral("Parent"), QStringLiteral("Child"), QStringLiteral("Sibling")}) {
         Button* button = buttonWithText(&card, caption);
         ASSERT_NE(button, nullptr) << caption.toStdString();
         button->click();
         QApplication::processEvents();
-        EXPECT_EQ(tree->verticalScrollBar()->value(), baseline)
-            << caption.toStdString();
+        EXPECT_EQ(tree->verticalScrollBar()->value(), baseline) << caption.toStdString();
     }
 }
 
@@ -2716,8 +2299,7 @@ TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSourc
         for (const auto& component : category.components) {
             const auto reference = galleryComponentReference(component.id);
             ASSERT_TRUE(reference.isValid()) << component.id.toStdString();
-            const QString expectedType = reference.qualifiedType.section(
-                QStringLiteral("::"), -1);
+            const QString expectedType = reference.qualifiedType.section(QStringLiteral("::"), -1);
             ASSERT_FALSE(expectedType.isEmpty()) << component.id.toStdString();
 
             const auto samples = fluent::gallery::gallerySamplesForRoute(component.id);
@@ -2733,9 +2315,9 @@ TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSourc
                 EXPECT_TRUE(sample.codeSnippet.contains(QLatin1Char(';')))
                     << "Gallery source blocks are C++ statements, not pseudocode or QML";
                 EXPECT_FALSE(sample.codeSnippet.contains(QStringLiteral("import QtQuick")));
-                EXPECT_FALSE(sample.codeSnippet.contains(QStringLiteral("import QtQuick.Controls")));
-                const QString pythonSource =
-                    galleryPythonSnippet(component.id, sample.id);
+                EXPECT_FALSE(
+                    sample.codeSnippet.contains(QStringLiteral("import QtQuick.Controls")));
+                const QString pythonSource = galleryPythonSnippet(component.id, sample.id);
                 EXPECT_FALSE(pythonSource.isEmpty());
 
                 std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
@@ -2758,13 +2340,12 @@ TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSourc
                 // carry their public component in the initial live preview tree.
                 // zh_CN: 对话框、浮层、提示以及托管 Toast 堆叠示例会在触发后创建瞬态表面；
                 // Window 示例使用嵌入式 chrome 模拟，避免嵌套顶层窗口。
-                const bool deferredPreview = category.id == QStringLiteral("dialogs-flyouts")
-                    || component.id == QStringLiteral("tooltip")
-                    || (component.id == QStringLiteral("toast")
-                        && (sample.id == QStringLiteral("toast-stacking")
-                            || sample.id
-                                == QStringLiteral("toast-update-key")))
-                    || component.id == QStringLiteral("window");
+                const bool deferredPreview = category.id == QStringLiteral("dialogs-flyouts") ||
+                                             component.id == QStringLiteral("tooltip") ||
+                                             (component.id == QStringLiteral("toast") &&
+                                              (sample.id == QStringLiteral("toast-stacking") ||
+                                               sample.id == QStringLiteral("toast-update-key"))) ||
+                                             component.id == QStringLiteral("window");
                 if (!deferredPreview) {
                     EXPECT_TRUE(previewContainsType)
                         << "The live preview must instantiate the component named by its route";
@@ -2778,13 +2359,11 @@ TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSourc
                 codeSampleIds.append(sample.id);
                 ++auditedSamples;
             }
-            EXPECT_TRUE(galleryPythonSnippetsAvailable(
-                component.id, codeSampleIds));
+            EXPECT_TRUE(galleryPythonSnippetsAvailable(component.id, codeSampleIds));
         }
     }
 
-    EXPECT_GT(auditedSamples, 100)
-        << "The audit must cover the complete component sample catalog";
+    EXPECT_GT(auditedSamples, 100) << "The audit must cover the complete component sample catalog";
     EXPECT_EQ(galleryPythonSnippetCount(), auditedSamples);
 }
 
@@ -2799,13 +2378,11 @@ TEST_F(GalleryContentPagesTest, PythonSnippetCatalogToleratesStaleSummaryCounts)
         ]
     })json";
 
-    const GalleryPythonSnippetCatalog catalog =
-        GalleryPythonSnippetCatalog::fromJson(payload);
+    const GalleryPythonSnippetCatalog catalog = GalleryPythonSnippetCatalog::fromJson(payload);
     ASSERT_TRUE(catalog.isLoaded());
     EXPECT_EQ(catalog.snippetCount(), 2);
-    EXPECT_TRUE(catalog.hasCompleteRoute(
-        QStringLiteral("button"),
-        {QStringLiteral("styles"), QStringLiteral("sizes")}));
+    EXPECT_TRUE(catalog.hasCompleteRoute(QStringLiteral("button"),
+                                         {QStringLiteral("styles"), QStringLiteral("sizes")}));
 }
 
 TEST_F(GalleryContentPagesTest, PythonSnippetCatalogIsolatesAnInvalidRoute)
@@ -2820,15 +2397,11 @@ TEST_F(GalleryContentPagesTest, PythonSnippetCatalogIsolatesAnInvalidRoute)
         ]
     })json";
 
-    const GalleryPythonSnippetCatalog catalog =
-        GalleryPythonSnippetCatalog::fromJson(payload);
+    const GalleryPythonSnippetCatalog catalog = GalleryPythonSnippetCatalog::fromJson(payload);
     ASSERT_TRUE(catalog.isLoaded());
-    EXPECT_FALSE(catalog.hasCompleteRoute(
-        QStringLiteral("button"), {QStringLiteral("styles")}));
-    EXPECT_TRUE(catalog.snippet(
-        QStringLiteral("button"), QStringLiteral("styles")).isEmpty());
-    EXPECT_TRUE(catalog.hasCompleteRoute(
-        QStringLiteral("slider"), {QStringLiteral("range")}));
+    EXPECT_FALSE(catalog.hasCompleteRoute(QStringLiteral("button"), {QStringLiteral("styles")}));
+    EXPECT_TRUE(catalog.snippet(QStringLiteral("button"), QStringLiteral("styles")).isEmpty());
+    EXPECT_TRUE(catalog.hasCompleteRoute(QStringLiteral("slider"), {QStringLiteral("range")}));
 }
 
 TEST_F(GalleryContentPagesTest, SampleCardRefreshesWhenPreviewSizeHintChanges)
@@ -2926,8 +2499,7 @@ TEST_F(GalleryContentPagesTest, CollectionAndNavigationSamplesHostLivePreviews)
 TEST_F(GalleryContentPagesTest, BackgroundlessCollectionSamplesPreservePreviewSurface)
 {
     int checkedViews = 0;
-    for (const QString& routeId : {QStringLiteral("list-view"),
-                                   QStringLiteral("tree-view")}) {
+    for (const QString& routeId : {QStringLiteral("list-view"), QStringLiteral("tree-view")}) {
         const auto samples = fluent::gallery::gallerySamplesForRoute(routeId);
         ASSERT_FALSE(samples.isEmpty()) << routeId.toStdString();
         for (const auto& sample : samples) {
@@ -2945,9 +2517,7 @@ TEST_F(GalleryContentPagesTest, BackgroundlessCollectionSamplesPreservePreviewSu
                 EXPECT_TRUE(view->property("fluentPreserveParentSurface").toBool())
                     << routeId.toStdString() << ":" << sample.id.toStdString();
                 ASSERT_NE(view->viewport(), nullptr);
-                EXPECT_TRUE(view->viewport()
-                                ->property("fluentPreserveParentSurface")
-                                .toBool())
+                EXPECT_TRUE(view->viewport()->property("fluentPreserveParentSurface").toBool())
                     << routeId.toStdString() << ":" << sample.id.toStdString();
                 ++checkedViews;
             }
@@ -2974,7 +2544,8 @@ TEST_F(GalleryContentPagesTest, ContentPageAndSampleCardRefreshOnThemeChange)
     EXPECT_FALSE(page->autoFillBackground());
     EXPECT_TRUE(page->styleSheet().contains(QStringLiteral("background: transparent")));
     ASSERT_NE(page->titleLabel(), nullptr);
-    EXPECT_TRUE(page->titleLabel()->styleSheet().contains(QStringLiteral("rgba(255, 255, 255, 255)")));
+    EXPECT_TRUE(
+        page->titleLabel()->styleSheet().contains(QStringLiteral("rgba(255, 255, 255, 255)")));
     EXPECT_TRUE(card->styleSheet().contains(QStringLiteral("rgba(44, 44, 44, 255)")));
 
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
@@ -2992,40 +2563,27 @@ TEST_F(GalleryContentPagesTest, ComponentThemeButtonSwitchesOnlySamplePreviewThe
     ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
     GalleryComponentPage* page = nullptr;
     QTRY_VERIFY_WITH_TIMEOUT(
-        (page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage())) != nullptr,
-        1000);
+        (page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage())) != nullptr, 1000);
     ASSERT_NE(page, nullptr);
     ASSERT_GE(page->sampleCards().size(), 1);
 
-    auto* themeButton = page->findChild<Button*>(
-        QStringLiteral("galleryComponentPageThemeButton"));
+    auto* themeButton = page->findChild<Button*>(QStringLiteral("galleryComponentPageThemeButton"));
     ASSERT_NE(themeButton, nullptr);
-    const QString moonGlyph = Typography::Icons::glyph(
-        QStringLiteral(
-            "ic_fluent_weather_moon_16_regular"));
+    const QString moonGlyph =
+        Typography::Icons::glyph(QStringLiteral("ic_fluent_weather_moon_16_regular"));
     ASSERT_FALSE(moonGlyph.isEmpty());
     EXPECT_EQ(themeButton->property("gallerySampleTheme").toString(), QStringLiteral("Light"));
-    EXPECT_EQ(
-        themeButton->property(
-            "gallerySampleThemeGlyph").toString(),
-        Typography::Icons::Sunny);
-    EXPECT_TRUE(
-        themeButton->accessibleName().contains(
-            QStringLiteral("Preview theme: Light")));
-    EXPECT_TRUE(
-        themeButton->accessibleName().contains(
-            QStringLiteral("Switch to Dark")));
-    EXPECT_EQ(
-        themeButton->toolTip(),
-        themeButton->accessibleName());
+    EXPECT_EQ(themeButton->property("gallerySampleThemeGlyph").toString(),
+              Typography::Icons::Sunny);
+    EXPECT_TRUE(themeButton->accessibleName().contains(QStringLiteral("Preview theme: Light")));
+    EXPECT_TRUE(themeButton->accessibleName().contains(QStringLiteral("Switch to Dark")));
+    EXPECT_EQ(themeButton->toolTip(), themeButton->accessibleName());
 
     GallerySampleCard* card = page->sampleCards().first();
     ASSERT_NE(card, nullptr);
-    auto* previewSurface = card->findChild<QWidget*>(
-        QStringLiteral("gallerySampleCardPreview"));
+    auto* previewSurface = card->findChild<QWidget*>(QStringLiteral("gallerySampleCardPreview"));
     ASSERT_NE(previewSurface, nullptr);
-    auto* previewCard =
-        dynamic_cast<fluent::layout::Card*>(previewSurface);
+    auto* previewCard = dynamic_cast<fluent::layout::Card*>(previewSurface);
     ASSERT_NE(previewCard, nullptr);
     EXPECT_FALSE(previewSurface->property("fluentThemeOverride").isValid());
     EXPECT_EQ(previewSurface->property("fluentSurfaceColor").value<QColor>(),
@@ -3042,19 +2600,10 @@ TEST_F(GalleryContentPagesTest, ComponentThemeButtonSwitchesOnlySamplePreviewThe
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Light);
     EXPECT_EQ(page->titleLabel()->effectiveTheme(), fluent::FluentElement::Light);
     EXPECT_EQ(themeButton->property("gallerySampleTheme").toString(), QStringLiteral("Dark"));
-    EXPECT_EQ(
-        themeButton->property(
-            "gallerySampleThemeGlyph").toString(),
-        moonGlyph);
-    EXPECT_TRUE(
-        themeButton->accessibleName().contains(
-            QStringLiteral("Preview theme: Dark")));
-    EXPECT_TRUE(
-        themeButton->accessibleName().contains(
-            QStringLiteral("Switch to Light")));
-    EXPECT_EQ(
-        themeButton->toolTip(),
-        themeButton->accessibleName());
+    EXPECT_EQ(themeButton->property("gallerySampleThemeGlyph").toString(), moonGlyph);
+    EXPECT_TRUE(themeButton->accessibleName().contains(QStringLiteral("Preview theme: Dark")));
+    EXPECT_TRUE(themeButton->accessibleName().contains(QStringLiteral("Switch to Light")));
+    EXPECT_EQ(themeButton->toolTip(), themeButton->accessibleName());
     EXPECT_EQ(previewSurface->property("fluentThemeOverride").toInt(),
               static_cast<int>(fluent::FluentElement::Dark));
     EXPECT_EQ(previewSurface->property("fluentSurfaceColor").value<QColor>(),
@@ -3069,12 +2618,10 @@ TEST_F(GalleryContentPagesTest, ComponentThemeButtonUpdatesTreeViewPreviewTheme)
     ASSERT_TRUE(window.selectRoute(QStringLiteral("tree-view")));
     GalleryComponentPage* page = nullptr;
     QTRY_VERIFY_WITH_TIMEOUT(
-        (page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage())) != nullptr,
-        1000);
+        (page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage())) != nullptr, 1000);
     ASSERT_NE(page, nullptr);
 
-    auto* themeButton = page->findChild<Button*>(
-        QStringLiteral("galleryComponentPageThemeButton"));
+    auto* themeButton = page->findChild<Button*>(QStringLiteral("galleryComponentPageThemeButton"));
     ASSERT_NE(themeButton, nullptr);
     EXPECT_EQ(themeButton->property("gallerySampleTheme").toString(), QStringLiteral("Light"));
 
@@ -3111,36 +2658,29 @@ TEST_F(GalleryContentPagesTest, NavigationViewDisplayModeButtonsKeepContentScrol
 
     auto* page = waitForCurrentPage<GalleryComponentPage>(window);
     ASSERT_NE(page, nullptr);
-    auto* scrollView = page->findChild<fluent::scrolling::ScrollView*>(
-        QStringLiteral("galleryContentScrollArea"));
+    auto* scrollView =
+        page->findChild<fluent::scrolling::ScrollView*>(QStringLiteral("galleryContentScrollArea"));
     ASSERT_NE(scrollView, nullptr);
     ASSERT_NE(scrollView->verticalScrollBar(), nullptr);
 
-    GallerySampleCard* card = sampleCardById(
-        page, QStringLiteral("navigation-view-display-modes"));
+    GallerySampleCard* card = sampleCardById(page, QStringLiteral("navigation-view-display-modes"));
     ASSERT_NE(card, nullptr);
     ASSERT_NE(card->previewWidget(), nullptr);
 
     const int cardTop = card->mapTo(scrollView->widget(), QPoint(0, 0)).y();
-    scrollView->verticalScrollBar()->setValue(
-        qBound(scrollView->verticalScrollBar()->minimum(),
-               cardTop - 28,
-               scrollView->verticalScrollBar()->maximum()));
+    scrollView->verticalScrollBar()->setValue(qBound(scrollView->verticalScrollBar()->minimum(),
+                                                     cardTop - 28,
+                                                     scrollView->verticalScrollBar()->maximum()));
     QApplication::processEvents();
 
-    const QStringList modeButtons{
-        QStringLiteral("Compact"),
-        QStringLiteral("Minimal"),
-        QStringLiteral("Top"),
-        QStringLiteral("Left")
-    };
+    const QStringList modeButtons{QStringLiteral("Compact"), QStringLiteral("Minimal"),
+                                  QStringLiteral("Top"), QStringLiteral("Left")};
 
     for (const QString& buttonText : modeButtons) {
         Button* button = buttonWithText(card->previewWidget(), buttonText);
         ASSERT_NE(button, nullptr) << buttonText.toStdString();
         const int before = scrollView->verticalScrollBar()->value();
-        QTest::mouseClick(button, Qt::LeftButton, Qt::NoModifier,
-                          button->rect().center());
+        QTest::mouseClick(button, Qt::LeftButton, Qt::NoModifier, button->rect().center());
         QTest::qWait(360);
         QApplication::processEvents();
         EXPECT_LE(qAbs(scrollView->verticalScrollBar()->value() - before), 2)
@@ -3154,8 +2694,8 @@ TEST_F(GalleryContentPagesTest, NavigationViewDisplayModeButtonsKeepContentScrol
 TEST_F(GalleryContentPagesTest, ContentScrollSurfaceStaysTransparentAcrossThemeRefresh)
 {
     GalleryContentPage page(QStringLiteral("test"), QStringLiteral("Test"));
-    auto* scrollView = page.findChild<fluent::scrolling::ScrollView*>(
-        QStringLiteral("galleryContentScrollArea"));
+    auto* scrollView =
+        page.findChild<fluent::scrolling::ScrollView*>(QStringLiteral("galleryContentScrollArea"));
     ASSERT_NE(scrollView, nullptr);
     ASSERT_NE(scrollView->viewport(), nullptr);
 
@@ -3179,8 +2719,8 @@ TEST_F(GalleryContentPagesTest, CodeBlockCollapsesAndExpands)
 
     auto* header = block.findChild<QWidget*>(QStringLiteral("galleryCodeBlockHeader"));
     auto* content = block.findChild<QWidget*>(QStringLiteral("galleryCodeBlockContent"));
-    auto* divider = block.findChild<fluent::layout::Divider*>(
-        QStringLiteral("fluentExpanderDivider"));
+    auto* divider =
+        block.findChild<fluent::layout::Divider*>(QStringLiteral("fluentExpanderDivider"));
     auto* copyButton = block.findChild<QWidget*>(QStringLiteral("galleryCodeBlockCopyButton"));
     ASSERT_NE(header, nullptr);
     ASSERT_NE(content, nullptr);
@@ -3189,7 +2729,8 @@ TEST_F(GalleryContentPagesTest, CodeBlockCollapsesAndExpands)
     // Copy now lives inside the collapsible content (top-right of the code area), so it is
     // revealed/clipped together with the code rather than fading independently.
     // zh_CN: Copy 现在位于可折叠内容里（代码区右上角），随代码一起被揭示/裁剪，而非独立淡入淡出。
-    EXPECT_EQ(copyButton->parentWidget()->objectName(), QStringLiteral("galleryCodeBlockContentInner"));
+    EXPECT_EQ(copyButton->parentWidget()->objectName(),
+              QStringLiteral("galleryCodeBlockContentInner"));
 
     // Collapsed by default: the code area remains in the layout but is clipped to zero height.
     // zh_CN: 默认折叠时内容区保留在布局中，但被裁剪到 0 高，避免 show/hide 带来的布局抖动。
@@ -3231,27 +2772,23 @@ TEST_F(GalleryContentPagesTest, CodeBlockUsesBodySizedNativeMonospaceFont)
     GalleryCodeBlock block(QStringLiteral("auto value = compute();"));
     auto* code = block.findChild<QLabel*>(QStringLiteral("galleryCodeBlockText"));
     ASSERT_NE(code, nullptr);
-    EXPECT_EQ(code->font().family(),
-              QFontDatabase::systemFont(QFontDatabase::FixedFont).family());
+    EXPECT_EQ(code->font().family(), QFontDatabase::systemFont(QFontDatabase::FixedFont).family());
     EXPECT_EQ(code->font().pixelSize(), Typography::FontSize::Body);
 }
 
 TEST_F(GalleryContentPagesTest, DualLanguageCodeBlockSwitchesAndCopiesCurrentSource)
 {
-    const QString cppSource =
-        QStringLiteral("auto* button = new Button();");
-    const QString pythonSource =
-        QStringLiteral("import fluentqt\n\nbutton = fluentqt.Button()\n");
+    const QString cppSource = QStringLiteral("auto* button = new Button();");
+    const QString pythonSource = QStringLiteral("import fluentqt\n\nbutton = fluentqt.Button()\n");
     GalleryCodeBlock block(cppSource, pythonSource);
     ASSERT_NE(block.languageSelector(), nullptr);
     EXPECT_EQ(block.codeLanguage(), GalleryCodeLanguage::Cpp);
     EXPECT_EQ(block.code(), cppSource);
 
-    auto* codeLabel = block.findChild<fluent::textfields::Label*>(
-        QStringLiteral("galleryCodeBlockText"));
+    auto* codeLabel =
+        block.findChild<fluent::textfields::Label*>(QStringLiteral("galleryCodeBlockText"));
     ASSERT_NE(codeLabel, nullptr);
-    EXPECT_TRUE(codeLabel->text().isEmpty())
-        << "Collapsed source must remain lazily highlighted";
+    EXPECT_TRUE(codeLabel->text().isEmpty()) << "Collapsed source must remain lazily highlighted";
 
     block.languageSelector()->pythonButton()->click();
     EXPECT_EQ(block.codeLanguage(), GalleryCodeLanguage::Python);
@@ -3274,12 +2811,11 @@ TEST_F(GalleryContentPagesTest, DualLanguageCodeBlockSwitchesAndCopiesCurrentSou
 TEST_F(GalleryContentPagesTest, DualLanguageCodeBlockRemeasuresExpandedContent)
 {
     const QString cppSource = QStringLiteral("Button button;");
-    const QString pythonSource = QStringLiteral(
-        "import fluentqt\n\n"
-        "button = fluentqt.Button()\n"
-        "button.setText(\"One\")\n"
-        "button.setEnabled(True)\n"
-        "button.setMinimumWidth(160)\n");
+    const QString pythonSource = QStringLiteral("import fluentqt\n\n"
+                                                "button = fluentqt.Button()\n"
+                                                "button.setText(\"One\")\n"
+                                                "button.setEnabled(True)\n"
+                                                "button.setMinimumWidth(160)\n");
     GalleryCodeBlock block(cppSource, pythonSource);
     block.resize(520, block.sizeHint().height());
     block.show();
@@ -3301,8 +2837,7 @@ TEST_F(GalleryContentPagesTest, BilingualReferenceCardSwitchesTeachingLanguage)
 {
     const auto reference = galleryComponentReference(QStringLiteral("button"));
     ASSERT_TRUE(reference.hasPythonReference());
-    GalleryComponentReferenceCard card(
-        reference, /*showLanguageSelector=*/true);
+    GalleryComponentReferenceCard card(reference, /*showLanguageSelector=*/true);
     ASSERT_NE(card.languageSelector(), nullptr);
 
     card.languageSelector()->pythonButton()->click();
@@ -3336,14 +2871,12 @@ TEST_F(GalleryContentPagesTest, BilingualComponentPageSynchronizesUseAndSources)
 
     page.referenceCard()->languageSelector()->pythonButton()->click();
     EXPECT_EQ(page.codeLanguage(), GalleryCodeLanguage::Python);
-    EXPECT_EQ(page.referenceCard()->codeLanguage(),
-              GalleryCodeLanguage::Python);
+    EXPECT_EQ(page.referenceCard()->codeLanguage(), GalleryCodeLanguage::Python);
     for (GallerySampleCard* card : page.sampleCards()) {
         ASSERT_NE(card, nullptr);
         ASSERT_NE(card->codeBlock(), nullptr);
         ASSERT_NE(card->codeBlock()->languageSelector(), nullptr);
-        EXPECT_EQ(card->codeBlock()->codeLanguage(),
-                  GalleryCodeLanguage::Python);
+        EXPECT_EQ(card->codeBlock()->codeLanguage(), GalleryCodeLanguage::Python);
     }
 
     GalleryCodeBlock* sourceBlock = page.sampleCards().last()->codeBlock();
@@ -3354,46 +2887,40 @@ TEST_F(GalleryContentPagesTest, BilingualComponentPageSynchronizesUseAndSources)
     for (GallerySampleCard* card : page.sampleCards()) {
         ASSERT_NE(card, nullptr);
         ASSERT_NE(card->codeBlock(), nullptr);
-        EXPECT_EQ(card->codeBlock()->codeLanguage(),
-                  GalleryCodeLanguage::Cpp);
+        EXPECT_EQ(card->codeBlock()->codeLanguage(), GalleryCodeLanguage::Cpp);
     }
 }
 
 TEST_F(GalleryContentPagesTest, NativeComponentPageKeepsCppOnlyPresentation)
 {
-    EXPECT_FALSE(fluent::gallery::platform::capabilities()
-                     .showsBilingualDocumentation);
+    EXPECT_FALSE(fluent::gallery::platform::capabilities().showsBilingualDocumentation);
     GalleryWindow window;
     ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
     auto* page = waitForCurrentPage<GalleryComponentPage>(window);
     ASSERT_NE(page, nullptr);
     ASSERT_NE(page->referenceCard(), nullptr);
     EXPECT_EQ(page->referenceCard()->languageSelector(), nullptr);
-    EXPECT_EQ(page->referenceCard()->codeLanguage(),
-              GalleryCodeLanguage::Cpp);
+    EXPECT_EQ(page->referenceCard()->codeLanguage(), GalleryCodeLanguage::Cpp);
     ASSERT_FALSE(page->sampleCards().isEmpty());
 
     for (GallerySampleCard* card : page->sampleCards()) {
         ASSERT_NE(card->codeBlock(), nullptr);
         EXPECT_FALSE(card->codeBlock()->hasPythonCode());
         EXPECT_EQ(card->codeBlock()->languageSelector(), nullptr);
-        EXPECT_EQ(card->codeBlock()->codeLanguage(),
-                  GalleryCodeLanguage::Cpp);
+        EXPECT_EQ(card->codeBlock()->codeLanguage(), GalleryCodeLanguage::Cpp);
     }
 }
 
 TEST_F(GalleryContentPagesTest, CodeBlockUsesFluentReadOnlyContextMenu)
 {
-    const QString source =
-        QStringLiteral("auto value = compute();");
+    const QString source = QStringLiteral("auto value = compute();");
     GalleryCodeBlock block(source);
     block.setExpanded(true, /*animated=*/false);
     block.resize(520, block.sizeHint().height());
     block.show();
     QApplication::processEvents();
 
-    auto* code = block.findChild<QLabel*>(
-        QStringLiteral("galleryCodeBlockText"));
+    auto* code = block.findChild<QLabel*>(QStringLiteral("galleryCodeBlockText"));
     ASSERT_NE(code, nullptr);
     code->setSelection(0, 4);
     ASSERT_TRUE(code->hasSelectedText());
@@ -3404,51 +2931,33 @@ TEST_F(GalleryContentPagesTest, CodeBlockUsesFluentReadOnlyContextMenu)
     bool sawCopyIcon = false;
     bool sawSelectAllIcon = false;
     QTimer::singleShot(0, [&]() {
-        auto* menu =
-            qobject_cast<FluentMenu*>(
-                QApplication::activePopupWidget());
+        auto* menu = qobject_cast<FluentMenu*>(QApplication::activePopupWidget());
         sawFluentMenu = menu != nullptr;
         if (!menu)
             return;
 
-        EXPECT_EQ(
-            menu->objectName(),
-            QStringLiteral("FluentLabel.ContextMenu"));
-        EXPECT_EQ(
-            menu->fontStyle(),
-            Typography::FontRole::Caption);
-        EXPECT_EQ(
-            menu->font().pixelSize(),
-            Typography::FontSize::Caption);
+        EXPECT_EQ(menu->objectName(), QStringLiteral("FluentLabel.ContextMenu"));
+        EXPECT_EQ(menu->fontStyle(), Typography::FontRole::Caption);
+        EXPECT_EQ(menu->font().pixelSize(), Typography::FontSize::Caption);
         for (QAction* action : menu->actions()) {
             ASSERT_NE(action, nullptr);
             if (!action->isSeparator()) {
-                EXPECT_LT(
-                    menu->actionGeometry(action).height(),
-                    ::Spacing::ControlHeight::Standard);
+                EXPECT_LT(menu->actionGeometry(action).height(),
+                          ::Spacing::ControlHeight::Standard);
             }
             if (!action->icon().isNull()) {
-                const QSize iconSize =
-                    action->icon().actualSize(QSize(64, 64));
-                const int maximumBackingExtent = qCeil(
-                    Typography::IconSize::Standard
-                    * qMax<qreal>(
-                        1.0, menu->devicePixelRatioF()));
-                EXPECT_LE(
-                    iconSize.width(),
-                    maximumBackingExtent);
-                EXPECT_LE(
-                    iconSize.height(),
-                    maximumBackingExtent);
+                const QSize iconSize = action->icon().actualSize(QSize(64, 64));
+                const int maximumBackingExtent = qCeil(Typography::IconSize::Standard *
+                                                       qMax<qreal>(1.0, menu->devicePixelRatioF()));
+                EXPECT_LE(iconSize.width(), maximumBackingExtent);
+                EXPECT_LE(iconSize.height(), maximumBackingExtent);
             }
-            if (actionUsesStandardKey(
-                    action, QKeySequence::Copy)) {
+            if (actionUsesStandardKey(action, QKeySequence::Copy)) {
                 sawCopy = true;
                 sawCopyIcon = !action->icon().isNull();
                 EXPECT_TRUE(action->isEnabled());
                 action->trigger();
-            } else if (actionUsesStandardKey(
-                           action, QKeySequence::SelectAll)) {
+            } else if (actionUsesStandardKey(action, QKeySequence::SelectAll)) {
                 sawSelectAll = true;
                 sawSelectAllIcon = !action->icon().isNull();
                 EXPECT_TRUE(action->isEnabled());
@@ -3458,10 +2967,8 @@ TEST_F(GalleryContentPagesTest, CodeBlockUsesFluentReadOnlyContextMenu)
     });
 
     const QPoint localPosition = code->rect().center();
-    QContextMenuEvent event(
-        QContextMenuEvent::Mouse,
-        localPosition,
-        code->mapToGlobal(localPosition));
+    QContextMenuEvent event(QContextMenuEvent::Mouse, localPosition,
+                            code->mapToGlobal(localPosition));
     QApplication::sendEvent(code, &event);
 
     EXPECT_TRUE(event.isAccepted());
@@ -3472,53 +2979,40 @@ TEST_F(GalleryContentPagesTest, CodeBlockUsesFluentReadOnlyContextMenu)
     EXPECT_TRUE(sawCopyIcon);
     EXPECT_TRUE(sawSelectAllIcon);
     ASSERT_NE(QApplication::clipboard(), nullptr);
-    EXPECT_EQ(
-        QApplication::clipboard()->text(),
-        QStringLiteral("auto"));
+    EXPECT_EQ(QApplication::clipboard()->text(), QStringLiteral("auto"));
 }
 
 TEST_F(GalleryContentPagesTest, ComponentReferenceValuesUseSharedFluentContextMenu)
 {
     const fluent::gallery::GalleryComponentReference reference{
         QStringLiteral("<FluentQt/MenusToolbars.h>"),
-        QStringLiteral(
-            "fluent::menus_toolbars::CommandBar"),
-        QStringLiteral("FluentQt::FluentQt")};
+        QStringLiteral("fluent::menus_toolbars::CommandBar"), QStringLiteral("FluentQt::FluentQt")};
     GalleryComponentReferenceCard card(reference);
     card.resize(620, card.sizeHint().height());
     card.show();
     QApplication::processEvents();
 
-    auto* value =
-        card.findChild<fluent::textfields::Label*>(
-            QStringLiteral(
-                "galleryComponentReferenceHeader"));
+    auto* value = card.findChild<fluent::textfields::Label*>(
+        QStringLiteral("galleryComponentReferenceHeader"));
     ASSERT_NE(value, nullptr);
     value->setSelection(0, 9);
     ASSERT_TRUE(value->hasSelectedText());
 
     bool sawFluentMenu = false;
     QTimer::singleShot(0, [&]() {
-        auto* menu = qobject_cast<FluentMenu*>(
-            QApplication::activePopupWidget());
+        auto* menu = qobject_cast<FluentMenu*>(QApplication::activePopupWidget());
         sawFluentMenu = menu != nullptr;
         if (!menu)
             return;
 
-        EXPECT_EQ(
-            menu->objectName(),
-            QStringLiteral("FluentLabel.ContextMenu"));
-        EXPECT_EQ(
-            menu->font().pixelSize(),
-            Typography::FontSize::Caption);
+        EXPECT_EQ(menu->objectName(), QStringLiteral("FluentLabel.ContextMenu"));
+        EXPECT_EQ(menu->font().pixelSize(), Typography::FontSize::Caption);
         menu->close();
     });
 
     const QPoint localPosition = value->rect().center();
-    QContextMenuEvent event(
-        QContextMenuEvent::Mouse,
-        localPosition,
-        value->mapToGlobal(localPosition));
+    QContextMenuEvent event(QContextMenuEvent::Mouse, localPosition,
+                            value->mapToGlobal(localPosition));
     QApplication::sendEvent(value, &event);
 
     EXPECT_TRUE(event.isAccepted());
@@ -3538,8 +3032,7 @@ TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsFoundationPageGeometrySta
     ASSERT_NE(page, nullptr);
     auto* codeBlock = page->findChild<GalleryCodeBlock*>();
     ASSERT_NE(codeBlock, nullptr);
-    auto* codeHeader = codeBlock->findChild<QWidget*>(
-        QStringLiteral("galleryCodeBlockHeader"));
+    auto* codeHeader = codeBlock->findChild<QWidget*>(QStringLiteral("galleryCodeBlockHeader"));
     ASSERT_NE(codeHeader, nullptr);
     auto* scrollView = page->findChild<fluent::scrolling::ScrollView*>();
     ASSERT_NE(scrollView, nullptr);
@@ -3578,8 +3071,7 @@ TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsFoundationPageGeometrySta
     const QRect radiusGeometry = radiusCard->geometry();
     const QRect strokeGeometry = strokeHeader->geometry();
     const auto codeHeaderViewportY = [&]() {
-        return scrollView->viewport()->mapFromGlobal(
-            codeHeader->mapToGlobal(QPoint(0, 0))).y();
+        return scrollView->viewport()->mapFromGlobal(codeHeader->mapToGlobal(QPoint(0, 0))).y();
     };
     const int anchoredHeaderY = codeHeaderViewportY();
 
@@ -3591,8 +3083,8 @@ TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsFoundationPageGeometrySta
         sampledRadiusHeights.append(radiusCard->height());
         sampledStrokeTops.append(strokeHeader->y());
         sampledHeaderYs.append(codeHeaderViewportY());
-        const int requiredHeight = qMax(scrollView->viewport()->height(),
-                                        pageLayout->minimumSize().height());
+        const int requiredHeight =
+            qMax(scrollView->viewport()->height(), pageLayout->minimumSize().height());
         sampledContentDeficits.append(requiredHeight - scrollContent->height());
     };
 
@@ -3658,7 +3150,8 @@ TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsSampleChromeStable)
     ASSERT_NE(codeBlock, nullptr);
     auto* content = codeBlock->findChild<QWidget*>(QStringLiteral("galleryCodeBlockContent"));
     ASSERT_NE(content, nullptr);
-    auto* contentInner = codeBlock->findChild<QWidget*>(QStringLiteral("galleryCodeBlockContentInner"));
+    auto* contentInner =
+        codeBlock->findChild<QWidget*>(QStringLiteral("galleryCodeBlockContentInner"));
     ASSERT_NE(contentInner, nullptr);
     auto* header = codeBlock->findChild<QWidget*>(QStringLiteral("galleryCodeBlockHeader"));
     ASSERT_NE(header, nullptr);
@@ -3696,12 +3189,10 @@ TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsSampleChromeStable)
     EXPECT_GT(anchoredScrollValue, 0);
 
     const auto headerViewportY = [&]() {
-        return scrollView->viewport()->mapFromGlobal(
-            header->mapToGlobal(QPoint(0, 0))).y();
+        return scrollView->viewport()->mapFromGlobal(header->mapToGlobal(QPoint(0, 0))).y();
     };
     const int anchoredHeaderY = headerViewportY();
-    const int followingGap = followingWidget->geometry().top()
-        - (card->geometry().bottom() + 1);
+    const int followingGap = followingWidget->geometry().top() - (card->geometry().bottom() + 1);
 
     const QRect titleGeometry = card->titleLabel()->geometry();
     const QRect previewGeometry = preview->geometry();
@@ -3713,8 +3204,8 @@ TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsSampleChromeStable)
     QVector<int> sampledFollowingGaps;
     auto capturePaintableGeometry = [&]() {
         sampledHeaderYs.append(headerViewportY());
-        sampledFollowingGaps.append(followingWidget->geometry().top()
-                                    - (card->geometry().bottom() + 1));
+        sampledFollowingGaps.append(followingWidget->geometry().top() -
+                                    (card->geometry().bottom() + 1));
     };
     auto captureAnimationHeight = [&]() {
         sampledBlockHeights.append(codeBlock->height());
@@ -3757,7 +3248,7 @@ TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsSampleChromeStable)
             QTest::qWait(2);
         }
         QApplication::processEvents(QEventLoop::AllEvents, 5);
-        QTest::qWait(2);  // run the card's queued final anchor correction
+        QTest::qWait(2); // run the card's queued final anchor correction
         QApplication::processEvents(QEventLoop::AllEvents, 5);
         capturePaintableGeometry();
         ASSERT_EQ(finishedTransitions, 1);
@@ -3772,10 +3263,9 @@ TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsSampleChromeStable)
     for (int value : sampledHeaderYs)
         EXPECT_NEAR(value, anchoredHeaderY, 1);
     for (int gap : sampledFollowingGaps)
-        EXPECT_EQ(gap, followingGap)
-            << "gaps=" << samplesText(sampledFollowingGaps)
-            << " blockHeights=" << samplesText(sampledBlockHeights)
-            << " cardHeights=" << samplesText(sampledCardHeights);
+        EXPECT_EQ(gap, followingGap) << "gaps=" << samplesText(sampledFollowingGaps)
+                                     << " blockHeights=" << samplesText(sampledBlockHeights)
+                                     << " cardHeights=" << samplesText(sampledCardHeights);
     EXPECT_TRUE(std::is_sorted(sampledBlockHeights.cbegin(), sampledBlockHeights.cend()))
         << "block heights must grow monotonically: " << samplesText(sampledBlockHeights);
     EXPECT_TRUE(std::is_sorted(sampledCardHeights.cbegin(), sampledCardHeights.cend()))
@@ -3823,28 +3313,21 @@ TEST_F(GalleryContentPagesTest, GalleryToastUsesOverlayMarginAndSuccessBadge)
     auto* toast = host.findChild<QWidget*>(QStringLiteral("galleryToast"));
     ASSERT_NE(toast, nullptr);
     ASSERT_NE(toast->layout(), nullptr);
-    EXPECT_EQ(toast->layout()->contentsMargins(),
-              fluent::overlay::uniformShadowMargins());
+    EXPECT_EQ(toast->layout()->contentsMargins(), fluent::overlay::uniformShadowMargins());
 
     auto* card = toast->findChild<QFrame*>(QStringLiteral("galleryToastCard"));
     ASSERT_NE(card, nullptr);
-    EXPECT_EQ(toast->size(),
-              fluent::overlay::outerSizeForVisibleCard(card->sizeHint()));
+    EXPECT_EQ(toast->size(), fluent::overlay::outerSizeForVisibleCard(card->sizeHint()));
 
-    auto* icon = toast->findChild<fluent::FontIcon*>(
-        QStringLiteral("galleryToastIcon"));
+    auto* icon = toast->findChild<fluent::FontIcon*>(QStringLiteral("galleryToastIcon"));
     ASSERT_NE(icon, nullptr);
-    EXPECT_EQ(icon->size(), QSize(Typography::IconSize::Standard,
-                                  Typography::IconSize::Standard));
+    EXPECT_EQ(icon->size(), QSize(Typography::IconSize::Standard, Typography::IconSize::Standard));
     EXPECT_EQ(icon->glyph(), Typography::Icons::Success);
 
-    auto* reusableToast =
-        qobject_cast<fluent::status_info::Toast*>(toast);
+    auto* reusableToast = qobject_cast<fluent::status_info::Toast*>(toast);
     ASSERT_NE(reusableToast, nullptr);
-    EXPECT_EQ(reusableToast->severity(),
-              fluent::status_info::Toast::Success);
-    EXPECT_EQ(reusableToast->placementMargins(),
-              QMargins(16, 36 + 14, 16, 16));
+    EXPECT_EQ(reusableToast->severity(), fluent::status_info::Toast::Success);
+    EXPECT_EQ(reusableToast->placementMargins(), QMargins(16, 36 + 14, 16, 16));
 
     auto* opacity = qobject_cast<QGraphicsOpacityEffect*>(toast->graphicsEffect());
     ASSERT_NE(opacity, nullptr);

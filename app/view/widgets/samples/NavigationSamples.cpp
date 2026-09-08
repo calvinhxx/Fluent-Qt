@@ -45,7 +45,8 @@ Label* makeStatusLabel(QWidget* parent, const QString& text)
     auto* label = new Label(text, parent);
     label->setFluentTypography(Typography::FontRole::Body);
     label->setWordWrap(true);
-    label->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
+    label->setTextColorRole(
+        Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
     return label;
 }
 
@@ -56,7 +57,8 @@ QWidget* makeHostPage(QWidget* parent, const QString& title, const QString& body
 
     auto* heading = new Label(title, page);
     heading->setFluentTypography(Typography::FontRole::BodyStrong);
-    heading->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
+    heading->setTextColorRole(
+        Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
     auto* summary = makeStatusLabel(page, body);
     summary->setFluentTypography(Typography::FontRole::Caption);
 
@@ -92,9 +94,7 @@ QString navigationDisplayModeName(NavigationView::DisplayMode mode)
 class NavigationDemoRow : public QWidget, public fluent::FluentElement {
 public:
     NavigationDemoRow(const QString& iconGlyph, const QString& text, QWidget* parent = nullptr)
-        : QWidget(parent)
-        , m_iconGlyph(iconGlyph)
-        , m_text(text)
+        : QWidget(parent), m_iconGlyph(iconGlyph), m_text(text)
     {
         setMouseTracking(true);
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -164,11 +164,11 @@ protected:
 
         if (!m_compact) {
             painter.setFont(themeFont(m_selected ? Typography::FontRole::BodyStrong
-                                                 : Typography::FontRole::Body).toQFont());
+                                                 : Typography::FontRole::Body)
+                                .toQFont());
             painter.setPen(colors.textPrimary);
             painter.drawText(QRect(52, 0, qMax(0, width() - 64), height()),
-                             Qt::AlignVCenter | Qt::AlignLeft | Qt::TextSingleLine,
-                             m_text);
+                             Qt::AlignVCenter | Qt::AlignLeft | Qt::TextSingleLine, m_text);
         }
     }
 
@@ -229,9 +229,8 @@ public:
     };
 
     explicit NavigationDemoSection(const QVector<Entry>& entries, QWidget* parent = nullptr)
-        : QWidget(parent)
-        , m_layout(new QBoxLayout(QBoxLayout::TopToBottom, this))
-        , m_entries(entries)
+        : QWidget(parent), m_layout(new QBoxLayout(QBoxLayout::TopToBottom, this)),
+          m_entries(entries)
     {
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         m_layout->setContentsMargins(8, 8, 8, 8);
@@ -257,7 +256,8 @@ public:
                 widthValue += row->sizeHint().width() + m_layout->spacing();
             return QSize(widthValue, 48);
         }
-        return QSize(220, m_preferredVerticalHeight > 0 ? m_preferredVerticalHeight : 16 + m_rows.size() * 44);
+        return QSize(220, m_preferredVerticalHeight > 0 ? m_preferredVerticalHeight
+                                                        : 16 + m_rows.size() * 44);
     }
 
     QSize minimumSizeHint() const override
@@ -268,12 +268,9 @@ public:
     void setOrientation(Qt::Orientation orientation)
     {
         m_orientation = orientation;
-        m_layout->setDirection(orientation == Qt::Vertical
-                                   ? QBoxLayout::TopToBottom
-                                   : QBoxLayout::LeftToRight);
-        m_layout->setContentsMargins(8,
-                                     orientation == Qt::Vertical ? 8 : 4,
-                                     8,
+        m_layout->setDirection(orientation == Qt::Vertical ? QBoxLayout::TopToBottom
+                                                           : QBoxLayout::LeftToRight);
+        m_layout->setContentsMargins(8, orientation == Qt::Vertical ? 8 : 4, 8,
                                      orientation == Qt::Vertical ? 8 : 4);
         for (NavigationDemoRow* row : m_rows) {
             row->setFixedHeight(orientation == Qt::Vertical ? 40 : 36);
@@ -296,10 +293,7 @@ public:
         updateGeometry();
     }
 
-    void clearSelection()
-    {
-        setSelectedIndex(-1);
-    }
+    void clearSelection() { setSelectedIndex(-1); }
 
     void setSelectedIndex(int index)
     {
@@ -333,36 +327,26 @@ protected:
         painter.setRenderHint(QPainter::Antialiasing);
         painter.setPen(themeColors().strokeCard);
         painter.setBrush(themeColors().bgCanvas);
-        painter.drawRoundedRect(rect().adjusted(0, 0, -1, -1), themeRadius().overlay, themeRadius().overlay);
+        painter.drawRoundedRect(rect().adjusted(0, 0, -1, -1), themeRadius().overlay,
+                                themeRadius().overlay);
     }
 };
 
 class NavigationDashboardPage : public QWidget, public fluent::FluentElement {
 public:
-    NavigationDashboardPage(const QString& title,
-                            const QString& subtitle,
-                            const QString& firstMetricTitle,
-                            const QString& firstMetricValue,
-                            const QString& secondMetricTitle,
-                            const QString& secondMetricValue,
-                            const QStringList& activityRows,
-                            QWidget* parent = nullptr)
-        : QWidget(parent)
-        , m_title(title)
-        , m_subtitle(subtitle)
-        , m_firstMetricTitle(firstMetricTitle)
-        , m_firstMetricValue(firstMetricValue)
-        , m_secondMetricTitle(secondMetricTitle)
-        , m_secondMetricValue(secondMetricValue)
-        , m_activityRows(activityRows)
+    NavigationDashboardPage(const QString& title, const QString& subtitle,
+                            const QString& firstMetricTitle, const QString& firstMetricValue,
+                            const QString& secondMetricTitle, const QString& secondMetricValue,
+                            const QStringList& activityRows, QWidget* parent = nullptr)
+        : QWidget(parent), m_title(title), m_subtitle(subtitle),
+          m_firstMetricTitle(firstMetricTitle), m_firstMetricValue(firstMetricValue),
+          m_secondMetricTitle(secondMetricTitle), m_secondMetricValue(secondMetricValue),
+          m_activityRows(activityRows)
     {
         setAutoFillBackground(false);
     }
 
-    void onThemeUpdated() override
-    {
-        update();
-    }
+    void onThemeUpdated() override { update(); }
 
     void setContentLeftInset(int inset)
     {
@@ -389,30 +373,22 @@ protected:
 
         painter.setPen(colors.textPrimary);
         painter.setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
-        painter.drawText(QRect(leftPad, 12, contentWidth, 28),
-                         Qt::AlignLeft | Qt::AlignVCenter,
+        painter.drawText(QRect(leftPad, 12, contentWidth, 28), Qt::AlignLeft | Qt::AlignVCenter,
                          m_title);
 
         painter.setPen(colors.textSecondary);
         painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
         painter.drawText(QRect(leftPad, 42, contentWidth, 30),
-                         Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
-                         m_subtitle);
+                         Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, m_subtitle);
 
         const int gap = 12;
         const int cardTop = 82;
         const int cardHeight = 56;
         const int cardWidth = qMax(96, (contentWidth - gap) / 2);
-        drawCard(painter,
-                 QRect(leftPad, cardTop, cardWidth, cardHeight),
-                 m_firstMetricTitle,
-                 m_firstMetricValue,
-                 colors.accentDefault);
-        drawCard(painter,
-                 QRect(leftPad + cardWidth + gap, cardTop, cardWidth, cardHeight),
-                 m_secondMetricTitle,
-                 m_secondMetricValue,
-                 colors.systemInfo);
+        drawCard(painter, QRect(leftPad, cardTop, cardWidth, cardHeight), m_firstMetricTitle,
+                 m_firstMetricValue, colors.accentDefault);
+        drawCard(painter, QRect(leftPad + cardWidth + gap, cardTop, cardWidth, cardHeight),
+                 m_secondMetricTitle, m_secondMetricValue, colors.systemInfo);
 
         const int panelTop = cardTop + cardHeight + 14;
         const int panelHeight = qMax(72, height() - panelTop - 14);
@@ -424,8 +400,7 @@ protected:
         painter.setPen(colors.textPrimary);
         painter.setFont(themeFont(Typography::FontRole::BodyStrong).toQFont());
         painter.drawText(panel.adjusted(16, 10, -16, -panel.height() + 34),
-                         Qt::AlignLeft | Qt::AlignVCenter,
-                         QStringLiteral("Recent activity"));
+                         Qt::AlignLeft | Qt::AlignVCenter, QStringLiteral("Recent activity"));
 
         painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
         int y = panel.top() + 38;
@@ -435,8 +410,7 @@ protected:
             painter.drawLine(rowRect.topLeft(), rowRect.topRight());
             painter.setPen(colors.textSecondary);
             painter.drawText(rowRect.adjusted(2, 0, -2, 0),
-                             Qt::AlignVCenter | Qt::AlignLeft | Qt::TextWordWrap,
-                             row);
+                             Qt::AlignVCenter | Qt::AlignLeft | Qt::TextWordWrap, row);
             y += 40;
             if (y > panel.bottom() - 16)
                 break;
@@ -453,11 +427,8 @@ private:
     QStringList m_activityRows;
     int m_contentLeftInset = 0;
 
-    void drawCard(QPainter& painter,
-                  const QRect& rectValue,
-                  const QString& title,
-                  const QString& value,
-                  const QColor& accent)
+    void drawCard(QPainter& painter, const QRect& rectValue, const QString& title,
+                  const QString& value, const QColor& accent)
     {
         const auto colors = themeColors();
         painter.setPen(colors.strokeCard);
@@ -466,19 +437,18 @@ private:
 
         painter.setPen(Qt::NoPen);
         painter.setBrush(accent);
-        painter.drawRoundedRect(QRect(rectValue.left() + 12, rectValue.top() + 12, 3, 30), 1.5, 1.5);
+        painter.drawRoundedRect(QRect(rectValue.left() + 12, rectValue.top() + 12, 3, 30), 1.5,
+                                1.5);
 
         painter.setPen(colors.textSecondary);
         painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
         painter.drawText(rectValue.adjusted(26, 8, -12, -rectValue.height() + 30),
-                         Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
-                         title);
+                         Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine, title);
 
         painter.setPen(colors.textPrimary);
         painter.setFont(themeFont(Typography::FontRole::BodyStrong).toQFont());
         painter.drawText(rectValue.adjusted(26, 28, -12, -8),
-                         Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
-                         value);
+                         Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine, value);
     }
 };
 
@@ -493,8 +463,7 @@ NavigationSampleSurface* makeNavigationPreviewSurface(QWidget* parent, int spaci
     return surface;
 }
 
-void configureResponsiveNavigationPreview(NavigationView* navigationView,
-                                          int height,
+void configureResponsiveNavigationPreview(NavigationView* navigationView, int height,
                                           const QString& objectName)
 {
     navigationView->setObjectName(objectName);
@@ -545,7 +514,8 @@ QVector<NavigationPageSpec> navigationPageSpecs()
           QStringLiteral("The content transition follows the shell mode"),
           QStringLiteral("Pane width does not change page ownership")}},
         {QStringLiteral("Downloads"),
-         QStringLiteral("Downloads keeps working across expanded, compact, and minimal pane modes."),
+         QStringLiteral(
+             "Downloads keeps working across expanded, compact, and minimal pane modes."),
          QStringLiteral("Page"),
          QStringLiteral("3"),
          QStringLiteral("Queue"),
@@ -570,8 +540,7 @@ QVector<NavigationPageSpec> navigationPageSpecs()
          QStringLiteral("Current"),
          {QStringLiteral("Settings row activated page index 5"),
           QStringLiteral("Routing is shared across NavigationView samples"),
-          QStringLiteral("NavigationView does not own a menu model")}}
-    };
+          QStringLiteral("NavigationView does not own a menu model")}}};
 }
 
 QString navigationPageTitle(int index)
@@ -588,14 +557,9 @@ QVector<NavigationDashboardPage*> populateNavigationPages(StackContentHost* host
     const auto specs = navigationPageSpecs();
     for (int i = 0; i < specs.size(); ++i) {
         const auto& spec = specs.at(i);
-        auto* page = new NavigationDashboardPage(spec.title,
-                                                 spec.subtitle,
-                                                 spec.firstMetricTitle,
-                                                 spec.firstMetricValue,
-                                                 spec.secondMetricTitle,
-                                                 spec.secondMetricValue,
-                                                 spec.activityRows,
-                                                 host);
+        auto* page = new NavigationDashboardPage(spec.title, spec.subtitle, spec.firstMetricTitle,
+                                                 spec.firstMetricValue, spec.secondMetricTitle,
+                                                 spec.secondMetricValue, spec.activityRows, host);
         host->insertPage(i, page);
         pages.append(page);
     }
@@ -605,11 +569,11 @@ QVector<NavigationDashboardPage*> populateNavigationPages(StackContentHost* host
 
 void connectNavigationRoutes(NavigationDemoSection* headerSection,
                              NavigationDemoSection* mainSection,
-                             NavigationDemoSection* footerSection,
-                             StackContentHost* host,
+                             NavigationDemoSection* footerSection, StackContentHost* host,
                              Label* status)
 {
-    auto routeToPage = [headerSection, mainSection, footerSection, host, status](NavigationDemoSection* source, int pageIndex) {
+    auto routeToPage = [headerSection, mainSection, footerSection, host,
+                        status](NavigationDemoSection* source, int pageIndex) {
         if (pageIndex < 0 || pageIndex >= host->count())
             return;
         if (headerSection && source != headerSection)
@@ -643,13 +607,8 @@ void connectNavigationRoutes(NavigationDemoSection* headerSection,
 
 QStringList breadcrumbDemoPath()
 {
-    return {
-        QStringLiteral("Home"),
-        QStringLiteral("Projects"),
-        QStringLiteral("Fluent"),
-        QStringLiteral("Controls"),
-        QStringLiteral("Breadcrumb")
-    };
+    return {QStringLiteral("Home"), QStringLiteral("Projects"), QStringLiteral("Fluent"),
+            QStringLiteral("Controls"), QStringLiteral("Breadcrumb")};
 }
 
 QString hiddenIndexesText(const QVector<int>& indexes)
@@ -665,1374 +624,1468 @@ QString hiddenIndexesText(const QVector<int>& indexes)
 QVector<GallerySample> breadcrumbSamples()
 {
     return {
-        makeSample(QStringLiteral("breadcrumb-size"),
-                   QStringLiteral("BreadcrumbSize"),
-                   QStringLiteral("Standard uses the compact 20 px row; Large uses the 40 px row and larger item padding."),
-                   QStringLiteral("const QStringList path{\"Home\", \"Documents\", \"Images\"};\n\n"
-                                  "auto* standard = new Breadcrumb(this);\n"
-                                  "standard->setItems(path);\n"
-                                  "standard->setBreadcrumbSize(Breadcrumb::BreadcrumbSize::Standard);\n"
-                                  "standard->setFixedHeight(20);\n\n"
-                                  "auto* large = new Breadcrumb(this);\n"
-                                  "large->setItems(path);\n"
-                                  "large->setBreadcrumbSize(Breadcrumb::BreadcrumbSize::Large);\n"
-                                  "large->setFixedHeight(40);"),
-                   [](QWidget* parent) {
-                       auto* group = verticalGroup(parent, 10);
-                       const QStringList path{
-                           QStringLiteral("Home"),
-                           QStringLiteral("Documents"),
-                           QStringLiteral("Images")
-                       };
+        makeSample(
+            QStringLiteral("breadcrumb-size"), QStringLiteral("BreadcrumbSize"),
+            QStringLiteral("Standard uses the compact 20 px row; Large uses the 40 px row and "
+                           "larger item padding."),
+            QStringLiteral("const QStringList path{\"Home\", \"Documents\", \"Images\"};\n\n"
+                           "auto* standard = new Breadcrumb(this);\n"
+                           "standard->setItems(path);\n"
+                           "standard->setBreadcrumbSize(Breadcrumb::BreadcrumbSize::Standard);\n"
+                           "standard->setFixedHeight(20);\n\n"
+                           "auto* large = new Breadcrumb(this);\n"
+                           "large->setItems(path);\n"
+                           "large->setBreadcrumbSize(Breadcrumb::BreadcrumbSize::Large);\n"
+                           "large->setFixedHeight(40);"),
+            [](QWidget* parent) {
+                auto* group = verticalGroup(parent, 10);
+                const QStringList path{QStringLiteral("Home"), QStringLiteral("Documents"),
+                                       QStringLiteral("Images")};
 
-                       auto* standardRow = horizontalGroup(group, 10);
-                       auto* standardLabel = new Label(QStringLiteral("Standard"), standardRow);
-                       standardLabel->setFluentTypography(Typography::FontRole::Caption);
-                       standardLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
-                       standardLabel->setFixedWidth(72);
-                       auto* standard = new Breadcrumb(standardRow);
-                       standard->setItems(path);
-                       standard->setBreadcrumbSize(Breadcrumb::BreadcrumbSize::Standard);
-                       standard->setFixedSize(360, 20);
-                       standardRow->layout()->addWidget(standardLabel);
-                       standardRow->layout()->addWidget(standard);
+                auto* standardRow = horizontalGroup(group, 10);
+                auto* standardLabel = new Label(QStringLiteral("Standard"), standardRow);
+                standardLabel->setFluentTypography(Typography::FontRole::Caption);
+                standardLabel->setTextColorRole(
+                    Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
+                standardLabel->setFixedWidth(72);
+                auto* standard = new Breadcrumb(standardRow);
+                standard->setItems(path);
+                standard->setBreadcrumbSize(Breadcrumb::BreadcrumbSize::Standard);
+                standard->setFixedSize(360, 20);
+                standardRow->layout()->addWidget(standardLabel);
+                standardRow->layout()->addWidget(standard);
 
-                       auto* largeRow = horizontalGroup(group, 10);
-                       auto* largeLabel = new Label(QStringLiteral("Large"), largeRow);
-                       largeLabel->setFluentTypography(Typography::FontRole::Caption);
-                       largeLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
-                       largeLabel->setFixedWidth(72);
-                       auto* large = new Breadcrumb(largeRow);
-                       large->setItems(path);
-                       large->setBreadcrumbSize(Breadcrumb::BreadcrumbSize::Large);
-                       large->setFixedSize(430, 40);
-                       largeRow->layout()->addWidget(largeLabel);
-                       largeRow->layout()->addWidget(large);
+                auto* largeRow = horizontalGroup(group, 10);
+                auto* largeLabel = new Label(QStringLiteral("Large"), largeRow);
+                largeLabel->setFluentTypography(Typography::FontRole::Caption);
+                largeLabel->setTextColorRole(
+                    Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
+                largeLabel->setFixedWidth(72);
+                auto* large = new Breadcrumb(largeRow);
+                large->setItems(path);
+                large->setBreadcrumbSize(Breadcrumb::BreadcrumbSize::Large);
+                large->setFixedSize(430, 40);
+                largeRow->layout()->addWidget(largeLabel);
+                largeRow->layout()->addWidget(large);
 
-                       group->layout()->addWidget(standardRow);
-                       group->layout()->addWidget(largeRow);
-                       return group;
-                   }),
-        makeSample(QStringLiteral("breadcrumb-overflow-mode"),
-                   QStringLiteral("OverflowMode"),
-                   QStringLiteral("Beginning keeps the leaf visible; Middle keeps root and leaf visible; None never creates an overflow button."),
-                   QStringLiteral("const QStringList path{\"Home\", \"Projects\", \"Fluent\", \"Controls\", \"Breadcrumb\"};\n\n"
-                                  "auto* none = new Breadcrumb(this);\n"
-                                  "none->setItems(path);\n"
-                                  "none->setOverflowMode(Breadcrumb::OverflowMode::None);\n\n"
-                                  "auto* beginning = new Breadcrumb(this);\n"
-                                  "beginning->setItems(path);\n"
-                                  "beginning->setOverflowMode(Breadcrumb::OverflowMode::Beginning);\n\n"
-                                  "auto* middle = new Breadcrumb(this);\n"
-                                  "middle->setItems(path);\n"
-                                  "middle->setOverflowMode(Breadcrumb::OverflowMode::Middle);\n"
-                                  "// Give Beginning and Middle less width so the overflow button appears.\n"
-                                  "none->setFixedWidth(520);\n"
-                                  "beginning->setFixedWidth(260);\n"
-                                  "middle->setFixedWidth(260);\n\n"
-                                  "connect(middle, &Breadcrumb::overflowActivated,\n"
-                                  "        this, [](const QVector<int>& hiddenIndexes) {\n"
-                                  "            // hiddenIndexes are the path segments behind the overflow button.\n"
-                                  "        });"),
-                   [](QWidget* parent) {
-                       auto* group = verticalGroup(parent, 10);
-                       const QStringList path = breadcrumbDemoPath();
-                       auto* status = makeStatusLabel(group, QStringLiteral("Hidden indexes: none"));
-                       status->setFluentTypography(Typography::FontRole::Caption);
+                group->layout()->addWidget(standardRow);
+                group->layout()->addWidget(largeRow);
+                return group;
+            }),
+        makeSample(
+            QStringLiteral("breadcrumb-overflow-mode"), QStringLiteral("OverflowMode"),
+            QStringLiteral("Beginning keeps the leaf visible; Middle keeps root and leaf visible; "
+                           "None never creates an overflow button."),
+            QStringLiteral(
+                "const QStringList path{\"Home\", \"Projects\", \"Fluent\", \"Controls\", "
+                "\"Breadcrumb\"};\n\n"
+                "auto* none = new Breadcrumb(this);\n"
+                "none->setItems(path);\n"
+                "none->setOverflowMode(Breadcrumb::OverflowMode::None);\n\n"
+                "auto* beginning = new Breadcrumb(this);\n"
+                "beginning->setItems(path);\n"
+                "beginning->setOverflowMode(Breadcrumb::OverflowMode::Beginning);\n\n"
+                "auto* middle = new Breadcrumb(this);\n"
+                "middle->setItems(path);\n"
+                "middle->setOverflowMode(Breadcrumb::OverflowMode::Middle);\n"
+                "// Give Beginning and Middle less width so the overflow button appears.\n"
+                "none->setFixedWidth(520);\n"
+                "beginning->setFixedWidth(260);\n"
+                "middle->setFixedWidth(260);\n\n"
+                "connect(middle, &Breadcrumb::overflowActivated,\n"
+                "        this, [](const QVector<int>& hiddenIndexes) {\n"
+                "            // hiddenIndexes are the path segments behind the overflow button.\n"
+                "        });"),
+            [](QWidget* parent) {
+                auto* group = verticalGroup(parent, 10);
+                const QStringList path = breadcrumbDemoPath();
+                auto* status = makeStatusLabel(group, QStringLiteral("Hidden indexes: none"));
+                status->setFluentTypography(Typography::FontRole::Caption);
 
-                       auto addModeRow = [group, path, status](const QString& label,
-                                                               Breadcrumb::OverflowMode mode,
-                                                               int width) {
-                           auto* row = horizontalGroup(group, 10);
-                           auto* rowLabel = new Label(label, row);
-                           rowLabel->setFluentTypography(Typography::FontRole::Caption);
-                           rowLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
-                           rowLabel->setFixedWidth(72);
-                           auto* breadcrumb = new Breadcrumb(row);
-                           breadcrumb->setItems(path);
-                           breadcrumb->setOverflowMode(mode);
-                           breadcrumb->setFixedSize(width, 20);
-                           QObject::connect(breadcrumb, &Breadcrumb::overflowActivated,
-                                            status, [status, label](const QVector<int>& hiddenIndexes) {
-                                                status->setText(QStringLiteral("%1 hidden indexes: %2")
-                                                                    .arg(label, hiddenIndexesText(hiddenIndexes)));
-                                            });
-                           row->layout()->addWidget(rowLabel);
-                           row->layout()->addWidget(breadcrumb);
-                           group->layout()->addWidget(row);
-                       };
+                auto addModeRow = [group, path, status](const QString& label,
+                                                        Breadcrumb::OverflowMode mode, int width) {
+                    auto* row = horizontalGroup(group, 10);
+                    auto* rowLabel = new Label(label, row);
+                    rowLabel->setFluentTypography(Typography::FontRole::Caption);
+                    rowLabel->setTextColorRole(
+                        Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
+                    rowLabel->setFixedWidth(72);
+                    auto* breadcrumb = new Breadcrumb(row);
+                    breadcrumb->setItems(path);
+                    breadcrumb->setOverflowMode(mode);
+                    breadcrumb->setFixedSize(width, 20);
+                    QObject::connect(breadcrumb, &Breadcrumb::overflowActivated, status,
+                                     [status, label](const QVector<int>& hiddenIndexes) {
+                                         status->setText(
+                                             QStringLiteral("%1 hidden indexes: %2")
+                                                 .arg(label, hiddenIndexesText(hiddenIndexes)));
+                                     });
+                    row->layout()->addWidget(rowLabel);
+                    row->layout()->addWidget(breadcrumb);
+                    group->layout()->addWidget(row);
+                };
 
-                       addModeRow(QStringLiteral("None"), Breadcrumb::OverflowMode::None, 520);
-                       addModeRow(QStringLiteral("Beginning"), Breadcrumb::OverflowMode::Beginning, 260);
-                       addModeRow(QStringLiteral("Middle"), Breadcrumb::OverflowMode::Middle, 260);
-                       group->layout()->addWidget(status);
-                       return group;
-                   }),
-        makeSample(QStringLiteral("breadcrumb-item-state"),
-                   QStringLiteral("BreadcrumbItem state and data"),
-                   QStringLiteral("Items can carry data and accessible names; disabled segments stay in the trail but do not activate."),
-                   QStringLiteral("QVector<BreadcrumbItem> items{\n"
-                                  "    BreadcrumbItem(\"Home\", \"home\"),\n"
-                                  "    BreadcrumbItem(\"Archive\", \"archive\", false, \"Archive folder\"),\n"
-                                  "    BreadcrumbItem(\"Reports\", \"reports\"),\n"
-                                  "    BreadcrumbItem(\"Current\", \"current\")\n"
-                                  "};\n\n"
-                                  "auto* breadcrumb = new Breadcrumb(this);\n"
-                                  "breadcrumb->setItems(items);\n"
-                                  "connect(breadcrumb, &Breadcrumb::itemActivated,\n"
-                                  "        this, [](int index, const BreadcrumbItem& item) {\n"
-                                  "            const auto routeKey = item.data.toString();\n"
-                                  "            // Disabled items remain visible but never reach this handler.\n"
-                                  "        });"),
-                   [](QWidget* parent) {
-                       auto* group = verticalGroup(parent, 8);
-                       QVector<BreadcrumbItem> items{
-                           BreadcrumbItem(QStringLiteral("Home"), QStringLiteral("home")),
-                           BreadcrumbItem(QStringLiteral("Archive"),
-                                          QStringLiteral("archive"),
-                                          false,
-                                          QStringLiteral("Archive folder")),
-                           BreadcrumbItem(QStringLiteral("Reports"), QStringLiteral("reports")),
-                           BreadcrumbItem(QStringLiteral("Current"), QStringLiteral("current"))
-                       };
+                addModeRow(QStringLiteral("None"), Breadcrumb::OverflowMode::None, 520);
+                addModeRow(QStringLiteral("Beginning"), Breadcrumb::OverflowMode::Beginning, 260);
+                addModeRow(QStringLiteral("Middle"), Breadcrumb::OverflowMode::Middle, 260);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(
+            QStringLiteral("breadcrumb-item-state"),
+            QStringLiteral("BreadcrumbItem state and data"),
+            QStringLiteral("Items can carry data and accessible names; disabled segments stay in "
+                           "the trail but do not activate."),
+            QStringLiteral(
+                "QVector<BreadcrumbItem> items{\n"
+                "    BreadcrumbItem(\"Home\", \"home\"),\n"
+                "    BreadcrumbItem(\"Archive\", \"archive\", false, \"Archive folder\"),\n"
+                "    BreadcrumbItem(\"Reports\", \"reports\"),\n"
+                "    BreadcrumbItem(\"Current\", \"current\")\n"
+                "};\n\n"
+                "auto* breadcrumb = new Breadcrumb(this);\n"
+                "breadcrumb->setItems(items);\n"
+                "connect(breadcrumb, &Breadcrumb::itemActivated,\n"
+                "        this, [](int index, const BreadcrumbItem& item) {\n"
+                "            const auto routeKey = item.data.toString();\n"
+                "            // Disabled items remain visible but never reach this handler.\n"
+                "        });"),
+            [](QWidget* parent) {
+                auto* group = verticalGroup(parent, 8);
+                QVector<BreadcrumbItem> items{
+                    BreadcrumbItem(QStringLiteral("Home"), QStringLiteral("home")),
+                    BreadcrumbItem(QStringLiteral("Archive"), QStringLiteral("archive"), false,
+                                   QStringLiteral("Archive folder")),
+                    BreadcrumbItem(QStringLiteral("Reports"), QStringLiteral("reports")),
+                    BreadcrumbItem(QStringLiteral("Current"), QStringLiteral("current"))};
 
-                       auto* breadcrumb = new Breadcrumb(group);
-                       breadcrumb->setItems(items);
-                       breadcrumb->setFixedSize(520, 20);
+                auto* breadcrumb = new Breadcrumb(group);
+                breadcrumb->setItems(items);
+                breadcrumb->setFixedSize(520, 20);
 
-                       auto* status = makeStatusLabel(
-                           group,
-                           QStringLiteral("Archive is disabled; activated item data appears here."));
-                       status->setFluentTypography(Typography::FontRole::Caption);
-                       QObject::connect(breadcrumb, &Breadcrumb::itemActivated,
-                                        status, [status](int index, const BreadcrumbItem& item) {
-                                            status->setText(QStringLiteral("Activated %1, data: %2, index: %3")
-                                                                .arg(item.text, item.data.toString())
-                                                                .arg(index));
-                                        });
+                auto* status = makeStatusLabel(
+                    group,
+                    QStringLiteral("Archive is disabled; activated item data appears here."));
+                status->setFluentTypography(Typography::FontRole::Caption);
+                QObject::connect(breadcrumb, &Breadcrumb::itemActivated, status,
+                                 [status](int index, const BreadcrumbItem& item) {
+                                     status->setText(
+                                         QStringLiteral("Activated %1, data: %2, index: %3")
+                                             .arg(item.text, item.data.toString())
+                                             .arg(index));
+                                 });
 
-                       group->layout()->addWidget(breadcrumb);
-                       group->layout()->addWidget(status);
-                       return group;
-                   }),
-        makeSample(QStringLiteral("breadcrumb-auto-truncate"),
-                   QStringLiteral("autoTruncateOnItemClick"),
-                   QStringLiteral("When enabled, activating an ancestor removes all items after it."),
-                   QStringLiteral("const QStringList fullPath{\"This PC\", \"Local Disk\", \"Users\", \"Public\", \"Pictures\"};\n\n"
-                                  "auto* breadcrumb = new Breadcrumb(this);\n"
-                                  "breadcrumb->setItems(fullPath);\n"
-                                  "breadcrumb->setAutoTruncateOnItemClick(true);\n\n"
-                                  "auto* resetButton = new Button(\"Reset\", this);\n"
-                                  "auto* statusLabel = new Label(\"Items: 5\", this);\n"
-                                  "connect(breadcrumb, &Breadcrumb::itemActivated,\n"
-                                  "        statusLabel, [statusLabel](int index, const BreadcrumbItem& item) {\n"
-                                  "            statusLabel->setText(QString(\"Activated %1 at index %2\")\n"
-                                  "                                     .arg(item.text)\n"
-                                  "                                     .arg(index));\n"
-                                  "        });\n"
-                                  "connect(breadcrumb, &Breadcrumb::itemsChanged,\n"
-                                  "        statusLabel, [breadcrumb, statusLabel] {\n"
-                                  "            statusLabel->setText(QString(\"Items: %1, current: %2\")\n"
-                                  "                                     .arg(breadcrumb->itemCount())\n"
-                                  "                                     .arg(breadcrumb->itemAt(breadcrumb->itemCount() - 1).text));\n"
-                                  "        });\n"
-                                  "connect(resetButton, &Button::clicked,\n"
-                                  "        breadcrumb, [breadcrumb, fullPath, statusLabel] {\n"
-                                  "            breadcrumb->setItems(fullPath);\n"
-                                  "            statusLabel->setText(\"Items: 5\");\n"
-                                  "        });"),
-                   [](QWidget* parent) {
-                       auto* group = verticalGroup(parent, 10);
-                       const QStringList fullPath{
-                           QStringLiteral("This PC"),
-                           QStringLiteral("Local Disk"),
-                           QStringLiteral("Users"),
-                           QStringLiteral("Public"),
-                           QStringLiteral("Pictures")
-                       };
+                group->layout()->addWidget(breadcrumb);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(
+            QStringLiteral("breadcrumb-auto-truncate"), QStringLiteral("autoTruncateOnItemClick"),
+            QStringLiteral("When enabled, activating an ancestor removes all items after it."),
+            QStringLiteral(
+                "const QStringList fullPath{\"This PC\", \"Local Disk\", \"Users\", \"Public\", "
+                "\"Pictures\"};\n\n"
+                "auto* breadcrumb = new Breadcrumb(this);\n"
+                "breadcrumb->setItems(fullPath);\n"
+                "breadcrumb->setAutoTruncateOnItemClick(true);\n\n"
+                "auto* resetButton = new Button(\"Reset\", this);\n"
+                "auto* statusLabel = new Label(\"Items: 5\", this);\n"
+                "connect(breadcrumb, &Breadcrumb::itemActivated,\n"
+                "        statusLabel, [statusLabel](int index, const BreadcrumbItem& item) {\n"
+                "            statusLabel->setText(QString(\"Activated %1 at index %2\")\n"
+                "                                     .arg(item.text)\n"
+                "                                     .arg(index));\n"
+                "        });\n"
+                "connect(breadcrumb, &Breadcrumb::itemsChanged,\n"
+                "        statusLabel, [breadcrumb, statusLabel] {\n"
+                "            statusLabel->setText(QString(\"Items: %1, current: %2\")\n"
+                "                                     .arg(breadcrumb->itemCount())\n"
+                "                                     "
+                ".arg(breadcrumb->itemAt(breadcrumb->itemCount() - 1).text));\n"
+                "        });\n"
+                "connect(resetButton, &Button::clicked,\n"
+                "        breadcrumb, [breadcrumb, fullPath, statusLabel] {\n"
+                "            breadcrumb->setItems(fullPath);\n"
+                "            statusLabel->setText(\"Items: 5\");\n"
+                "        });"),
+            [](QWidget* parent) {
+                auto* group = verticalGroup(parent, 10);
+                const QStringList fullPath{QStringLiteral("This PC"), QStringLiteral("Local Disk"),
+                                           QStringLiteral("Users"), QStringLiteral("Public"),
+                                           QStringLiteral("Pictures")};
 
-                       auto* breadcrumb = new Breadcrumb(group);
-                       breadcrumb->setItems(fullPath);
-                       breadcrumb->setAutoTruncateOnItemClick(true);
-                       breadcrumb->setFixedSize(520, 20);
+                auto* breadcrumb = new Breadcrumb(group);
+                breadcrumb->setItems(fullPath);
+                breadcrumb->setAutoTruncateOnItemClick(true);
+                breadcrumb->setFixedSize(520, 20);
 
-                       auto* controls = horizontalGroup(group, 8);
-                       auto* resetButton = makeControlButton(controls, QStringLiteral("Reset"));
-                       controls->layout()->addWidget(resetButton);
-                       auto* status = makeStatusLabel(group, QStringLiteral("Items: 5"));
-                       status->setFluentTypography(Typography::FontRole::Caption);
+                auto* controls = horizontalGroup(group, 8);
+                auto* resetButton = makeControlButton(controls, QStringLiteral("Reset"));
+                controls->layout()->addWidget(resetButton);
+                auto* status = makeStatusLabel(group, QStringLiteral("Items: 5"));
+                status->setFluentTypography(Typography::FontRole::Caption);
 
-                       QObject::connect(breadcrumb, &Breadcrumb::itemActivated,
-                                        status, [status](int index, const BreadcrumbItem& item) {
-                                            status->setText(QStringLiteral("Activated %1 at index %2")
-                                                                .arg(item.text)
-                                                                .arg(index));
-                                        });
-                       QObject::connect(breadcrumb, &Breadcrumb::itemsChanged,
-                                        status, [status, breadcrumb]() {
-                                            if (breadcrumb->itemCount() == 0) {
-                                                status->setText(QStringLiteral("Items: 0"));
-                                                return;
-                                            }
-                                            status->setText(QStringLiteral("Items: %1, current: %2")
-                                                                .arg(breadcrumb->itemCount())
-                                                                .arg(breadcrumb->itemAt(breadcrumb->itemCount() - 1).text));
-                                        });
-                       QObject::connect(resetButton, &Button::clicked,
-                                        breadcrumb, [breadcrumb, fullPath, status]() {
-                                            breadcrumb->setItems(fullPath);
-                                            status->setText(QStringLiteral("Items: 5"));
-                                        });
+                QObject::connect(
+                    breadcrumb, &Breadcrumb::itemActivated, status,
+                    [status](int index, const BreadcrumbItem& item) {
+                        status->setText(
+                            QStringLiteral("Activated %1 at index %2").arg(item.text).arg(index));
+                    });
+                QObject::connect(
+                    breadcrumb, &Breadcrumb::itemsChanged, status, [status, breadcrumb]() {
+                        if (breadcrumb->itemCount() == 0) {
+                            status->setText(QStringLiteral("Items: 0"));
+                            return;
+                        }
+                        status->setText(
+                            QStringLiteral("Items: %1, current: %2")
+                                .arg(breadcrumb->itemCount())
+                                .arg(breadcrumb->itemAt(breadcrumb->itemCount() - 1).text));
+                    });
+                QObject::connect(resetButton, &Button::clicked, breadcrumb,
+                                 [breadcrumb, fullPath, status]() {
+                                     breadcrumb->setItems(fullPath);
+                                     status->setText(QStringLiteral("Items: 5"));
+                                 });
 
-                       group->layout()->addWidget(breadcrumb);
-                       group->layout()->addWidget(controls);
-                       group->layout()->addWidget(status);
-                       return group;
-                   }),
-        makeSample(QStringLiteral("breadcrumb-activation"),
-                   QStringLiteral("itemActivated with hosted pages"),
-                   QStringLiteral("A full, non-overflowing breadcrumb can jump to any ancestor without changing the trail."),
-                   QStringLiteral("const QStringList fullPath{\"Home\", \"Projects\", \"Fluent\", \"Controls\", \"Breadcrumb\"};\n\n"
-                                  "auto* breadcrumb = new Breadcrumb(this);\n"
-                                  "breadcrumb->setItems(fullPath);\n"
-                                  "breadcrumb->setOverflowMode(Breadcrumb::OverflowMode::None);\n\n"
-                                  "auto* host = new StackContentHost(this);\n"
-                                  "for (int i = 0; i < fullPath.size(); ++i)\n"
-                                  "    host->insertPage(i, createPage(fullPath.at(i)));\n\n"
-                                  "connect(breadcrumb, &Breadcrumb::itemActivated,\n"
-                                  "        host, [host](int index, const BreadcrumbItem&) {\n"
-                                  "            host->setCurrentIndex(index, 0, true);\n"
-                                  "        });"),
-                   [](QWidget* parent) {
-                       auto* group = verticalGroup(parent, 10);
+                group->layout()->addWidget(breadcrumb);
+                group->layout()->addWidget(controls);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(
+            QStringLiteral("breadcrumb-activation"),
+            QStringLiteral("itemActivated with hosted pages"),
+            QStringLiteral("A full, non-overflowing breadcrumb can jump to any ancestor without "
+                           "changing the trail."),
+            QStringLiteral("const QStringList fullPath{\"Home\", \"Projects\", \"Fluent\", "
+                           "\"Controls\", \"Breadcrumb\"};\n\n"
+                           "auto* breadcrumb = new Breadcrumb(this);\n"
+                           "breadcrumb->setItems(fullPath);\n"
+                           "breadcrumb->setOverflowMode(Breadcrumb::OverflowMode::None);\n\n"
+                           "auto* host = new StackContentHost(this);\n"
+                           "for (int i = 0; i < fullPath.size(); ++i)\n"
+                           "    host->insertPage(i, createPage(fullPath.at(i)));\n\n"
+                           "connect(breadcrumb, &Breadcrumb::itemActivated,\n"
+                           "        host, [host](int index, const BreadcrumbItem&) {\n"
+                           "            host->setCurrentIndex(index, 0, true);\n"
+                           "        });"),
+            [](QWidget* parent) {
+                auto* group = verticalGroup(parent, 10);
 
-                       auto* breadcrumb = new Breadcrumb(group);
-                       const QStringList fullPath = breadcrumbDemoPath();
-                       breadcrumb->setItems(fullPath);
-                       breadcrumb->setOverflowMode(Breadcrumb::OverflowMode::None);
-                       breadcrumb->setFixedSize(540, 20);
+                auto* breadcrumb = new Breadcrumb(group);
+                const QStringList fullPath = breadcrumbDemoPath();
+                breadcrumb->setItems(fullPath);
+                breadcrumb->setOverflowMode(Breadcrumb::OverflowMode::None);
+                breadcrumb->setFixedSize(540, 20);
 
-                       auto* host = new StackContentHost(group);
-                       host->setFixedSize(540, 126);
-                       host->setTransitionAnimationEnabled(true);
-                       for (int i = 0; i < fullPath.size(); ++i) {
-                           host->insertPage(i, makeHostPage(
-                               host,
-                               fullPath.at(i),
-                               QStringLiteral("StackContentHost page %1 selected from a full breadcrumb trail.")
-                                   .arg(i + 1)));
-                       }
-                       host->setCurrentIndex(fullPath.size() - 1, 0, false);
+                auto* host = new StackContentHost(group);
+                host->setFixedSize(540, 126);
+                host->setTransitionAnimationEnabled(true);
+                for (int i = 0; i < fullPath.size(); ++i) {
+                    host->insertPage(
+                        i,
+                        makeHostPage(
+                            host, fullPath.at(i),
+                            QStringLiteral(
+                                "StackContentHost page %1 selected from a full breadcrumb trail.")
+                                .arg(i + 1)));
+                }
+                host->setCurrentIndex(fullPath.size() - 1, 0, false);
 
-                       auto* status = makeStatusLabel(group, QStringLiteral("Current: Breadcrumb"));
-                       status->setFluentTypography(Typography::FontRole::Caption);
-                       auto jumpTo = [host, status, fullPath](int index) {
-                           const int bounded = qBound(0, index, fullPath.size() - 1);
-                           host->setCurrentIndex(bounded, bounded >= host->currentIndex() ? 1 : -1, true);
-                           status->setText(QStringLiteral("Current: %1").arg(fullPath.at(bounded)));
-                       };
-                       QObject::connect(breadcrumb, &Breadcrumb::itemActivated,
-                                        host, [jumpTo](int index, const BreadcrumbItem&) {
-                                            jumpTo(index);
-                                        });
+                auto* status = makeStatusLabel(group, QStringLiteral("Current: Breadcrumb"));
+                status->setFluentTypography(Typography::FontRole::Caption);
+                auto jumpTo = [host, status, fullPath](int index) {
+                    const int bounded = qBound(0, index, fullPath.size() - 1);
+                    host->setCurrentIndex(bounded, bounded >= host->currentIndex() ? 1 : -1, true);
+                    status->setText(QStringLiteral("Current: %1").arg(fullPath.at(bounded)));
+                };
+                QObject::connect(breadcrumb, &Breadcrumb::itemActivated, host,
+                                 [jumpTo](int index, const BreadcrumbItem&) { jumpTo(index); });
 
-                       group->layout()->addWidget(breadcrumb);
-                       group->layout()->addWidget(host);
-                       group->layout()->addWidget(status);
-                       return group;
-                   })
-    };
+                group->layout()->addWidget(breadcrumb);
+                group->layout()->addWidget(host);
+                group->layout()->addWidget(status);
+                return group;
+            })};
 }
 
 QVector<GallerySample> navigationViewSamples()
 {
     return {
-        makeSample(QStringLiteral("navigation-view-chrome-slots"),
-                   QStringLiteral("Chrome slots"),
-                   QStringLiteral("Header, main, and footer chrome are caller-owned widgets; NavigationView only assigns their shell geometry."),
-                   QStringLiteral("auto* navView = new NavigationView(this);\n"
-                                  "navView->setMinimumWidth(440);\n"
-                                  "navView->setMaximumWidth(620);\n"
-                                  "navView->setFixedHeight(340);\n"
-                                  "navView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
-                                  "navView->setDisplayMode(NavigationView::DisplayMode::Left);\n"
-                                  "navView->setExpandedPaneWidth(180);\n"
-                                  "navView->setHeaderChromeWidget(headerSection);\n"
-                                  "navView->setMainChromeWidget(mainSection);\n"
-                                  "navView->setFooterChromeWidget(footerSection);\n"
-                                  "populateNavigationPages(navView->contentHost());\n"
-                                  "auto routeToPage = [host = navView->contentHost()](int pageIndex) {\n"
-                                  "    const int direction = pageIndex >= host->currentIndex() ? 1 : -1;\n"
-                                  "    host->setCurrentIndex(pageIndex, direction, true);\n"
-                                  "};\n"
-                                  "headerSection->onActivated = routeToPage;\n"
-                                  "mainSection->onActivated = routeToPage;\n"
-                                  "footerSection->onActivated = routeToPage;"),
-                   [](QWidget* parent) {
-                       QWidget* group = verticalGroup(parent, 8);
-                       auto* surface = makeNavigationPreviewSurface(group);
+        makeSample(
+            QStringLiteral("navigation-view-chrome-slots"), QStringLiteral("Chrome slots"),
+            QStringLiteral("Header, main, and footer chrome are caller-owned widgets; "
+                           "NavigationView only assigns their shell geometry."),
+            QStringLiteral("auto* navView = new NavigationView(this);\n"
+                           "navView->setMinimumWidth(440);\n"
+                           "navView->setMaximumWidth(620);\n"
+                           "navView->setFixedHeight(340);\n"
+                           "navView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
+                           "navView->setDisplayMode(NavigationView::DisplayMode::Left);\n"
+                           "navView->setExpandedPaneWidth(180);\n"
+                           "navView->setHeaderChromeWidget(headerSection);\n"
+                           "navView->setMainChromeWidget(mainSection);\n"
+                           "navView->setFooterChromeWidget(footerSection);\n"
+                           "populateNavigationPages(navView->contentHost());\n"
+                           "auto routeToPage = [host = navView->contentHost()](int pageIndex) {\n"
+                           "    const int direction = pageIndex >= host->currentIndex() ? 1 : -1;\n"
+                           "    host->setCurrentIndex(pageIndex, direction, true);\n"
+                           "};\n"
+                           "headerSection->onActivated = routeToPage;\n"
+                           "mainSection->onActivated = routeToPage;\n"
+                           "footerSection->onActivated = routeToPage;"),
+            [](QWidget* parent) {
+                QWidget* group = verticalGroup(parent, 8);
+                auto* surface = makeNavigationPreviewSurface(group);
 
-                       auto* navView = new NavigationView(surface);
-                       configureResponsiveNavigationPreview(
-                           navView, 340,
-                           QStringLiteral("navigationViewChromeSlotsPreview"));
-                       navView->setDisplayMode(NavigationView::DisplayMode::Left);
-                       navView->setExpandedPaneWidth(180);
+                auto* navView = new NavigationView(surface);
+                configureResponsiveNavigationPreview(
+                    navView, 340, QStringLiteral("navigationViewChromeSlotsPreview"));
+                navView->setDisplayMode(NavigationView::DisplayMode::Left);
+                navView->setExpandedPaneWidth(180);
 
-                       auto* headerSection = new NavigationDemoSection({
-                           {Typography::Icons::Back, QStringLiteral("Back"), 0},
-                           {Typography::Icons::Search, QStringLiteral("Search"), 1},
-                       }, navView);
-                       headerSection->setPreferredVerticalHeight(88);
+                auto* headerSection = new NavigationDemoSection(
+                    {
+                        {Typography::Icons::Back, QStringLiteral("Back"), 0},
+                        {Typography::Icons::Search, QStringLiteral("Search"), 1},
+                    },
+                    navView);
+                headerSection->setPreferredVerticalHeight(88);
 
-                       auto* mainSection = new NavigationDemoSection({
-                           {Typography::Icons::Home, QStringLiteral("Home"), 0},
-                           {Typography::Icons::Document, QStringLiteral("Documents"), 2},
-                           {Typography::Icons::Download, QStringLiteral("Downloads"), 3},
-                       }, navView);
-                       mainSection->setSelectedIndex(0);
+                auto* mainSection = new NavigationDemoSection(
+                    {
+                        {Typography::Icons::Home, QStringLiteral("Home"), 0},
+                        {Typography::Icons::Document, QStringLiteral("Documents"), 2},
+                        {Typography::Icons::Download, QStringLiteral("Downloads"), 3},
+                    },
+                    navView);
+                mainSection->setSelectedIndex(0);
 
-                       auto* footerSection = new NavigationDemoSection({
-                           {Typography::Icons::Info, QStringLiteral("Help"), 4},
-                           {Typography::Icons::Settings, QStringLiteral("Settings"), 5},
-                       }, navView);
-                       footerSection->setPreferredVerticalHeight(88);
+                auto* footerSection = new NavigationDemoSection(
+                    {
+                        {Typography::Icons::Info, QStringLiteral("Help"), 4},
+                        {Typography::Icons::Settings, QStringLiteral("Settings"), 5},
+                    },
+                    navView);
+                footerSection->setPreferredVerticalHeight(88);
 
-                       navView->setHeaderChromeWidget(headerSection);
-                       navView->setMainChromeWidget(mainSection);
-                       navView->setFooterChromeWidget(footerSection);
+                navView->setHeaderChromeWidget(headerSection);
+                navView->setMainChromeWidget(mainSection);
+                navView->setFooterChromeWidget(footerSection);
 
-                       populateNavigationPages(navView->contentHost());
-                       auto* status = makeStatusLabel(surface, QStringLiteral("Current page: Home"));
-                       status->setFluentTypography(Typography::FontRole::Caption);
-                       connectNavigationRoutes(headerSection, mainSection, footerSection, navView->contentHost(), status);
+                populateNavigationPages(navView->contentHost());
+                auto* status = makeStatusLabel(surface, QStringLiteral("Current page: Home"));
+                status->setFluentTypography(Typography::FontRole::Caption);
+                connectNavigationRoutes(headerSection, mainSection, footerSection,
+                                        navView->contentHost(), status);
 
-                       surface->layout()->addWidget(navView);
-                       surface->layout()->addWidget(status);
-                       group->layout()->addWidget(surface);
-                       return group;
-                   }),
+                surface->layout()->addWidget(navView);
+                surface->layout()->addWidget(status);
+                group->layout()->addWidget(surface);
+                return group;
+            }),
 
-        makeSample(QStringLiteral("navigation-view-display-modes"),
-                   QStringLiteral("DisplayMode and chrome presentation"),
-                   QStringLiteral("Switching display mode changes shell geometry; the app also updates chrome orientation and content transition semantics."),
-                   QStringLiteral("auto* navView = new NavigationView(this);\n"
-                                  "navView->setMinimumWidth(440);\n"
-                                  "navView->setMaximumWidth(620);\n"
-                                  "navView->setFixedHeight(340);\n"
-                                  "navView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
-                                  "navView->setAnimationEnabled(true);\n"
-                                  "navView->setExpandedPaneWidth(180);\n"
-                                  "navView->setCompactPaneWidth(52);\n"
-                                  "navView->setTopBarHeight(48);\n"
-                                  "auto applyDisplayMode = [&](NavigationView::DisplayMode mode) {\n"
-                                  "    const bool top = mode == NavigationView::DisplayMode::Top;\n"
-                                  "    const bool compact = mode != NavigationView::DisplayMode::Left;\n"
-                                  "    const auto orientation = top ? Qt::Horizontal : Qt::Vertical;\n"
-                                  "    headerSection->setOrientation(orientation);\n"
-                                  "    mainSection->setOrientation(orientation);\n"
-                                  "    footerSection->setOrientation(orientation);\n"
-                                  "    headerSection->setCompact(compact);\n"
-                                  "    mainSection->setCompact(compact);\n"
-                                  "    footerSection->setCompact(compact);\n"
-                                  "    navView->contentHost()->setTransitionEffect(\n"
-                                  "        top ? StackContentHost::TransitionEffect::SlideFromBottom\n"
-                                  "            : StackContentHost::TransitionEffect::SlideFromLeft);\n"
-                                  "    navView->setPaneOpen(mode == NavigationView::DisplayMode::Left || top);\n"
-                                  "    navView->setDisplayMode(mode);\n"
-                                  "};\n"
-                                  "auto routeToPage = [host = navView->contentHost()](int pageIndex) {\n"
-                                  "    const int direction = pageIndex >= host->currentIndex() ? 1 : -1;\n"
-                                  "    host->setCurrentIndex(pageIndex, direction, true);\n"
-                                  "};\n"
-                                  "headerSection->onActivated = routeToPage;\n"
-                                  "mainSection->onActivated = routeToPage;\n"
-                                  "footerSection->onActivated = routeToPage;\n"
-                                  "QObject::connect(leftButton, &Button::clicked, navView, [&] {\n"
-                                  "    applyDisplayMode(NavigationView::DisplayMode::Left);\n"
-                                  "});\n"
-                                  "QObject::connect(compactButton, &Button::clicked, navView, [&] {\n"
-                                  "    applyDisplayMode(NavigationView::DisplayMode::LeftCompact);\n"
-                                  "});\n"
-                                  "QObject::connect(minimalButton, &Button::clicked, navView, [&] {\n"
-                                  "    applyDisplayMode(NavigationView::DisplayMode::LeftMinimal);\n"
-                                  "});\n"
-                                  "QObject::connect(topButton, &Button::clicked, navView, [&] {\n"
-                                  "    applyDisplayMode(NavigationView::DisplayMode::Top);\n"
-                                  "});"),
-                   [](QWidget* parent) {
-                       QWidget* group = verticalGroup(parent, 8);
-                       auto* surface = makeNavigationPreviewSurface(group);
-                       auto* controls = horizontalGroup(surface, 6);
-                       auto* leftButton = makeControlButton(controls, QStringLiteral("Left"));
-                       auto* compactButton = makeControlButton(controls, QStringLiteral("Compact"));
-                       auto* minimalButton = makeControlButton(controls, QStringLiteral("Minimal"));
-                       auto* topButton = makeControlButton(controls, QStringLiteral("Top"));
-                       leftButton->setIconGlyph(Typography::Icons::List, Typography::IconSize::Standard);
-                       compactButton->setIconGlyph(Typography::Icons::GlobalNav, Typography::IconSize::Standard);
-                       minimalButton->setIconGlyph(Typography::Icons::GlobalNav, Typography::IconSize::Standard);
-                       topButton->setIconGlyph(Typography::Icons::AllApps, Typography::IconSize::Standard);
-                       for (Button* button : {leftButton, compactButton, minimalButton, topButton}) {
-                           button->setFluentLayout(Button::IconBefore);
-                           controls->layout()->addWidget(button);
-                       }
+        makeSample(
+            QStringLiteral("navigation-view-display-modes"),
+            QStringLiteral("DisplayMode and chrome presentation"),
+            QStringLiteral("Switching display mode changes shell geometry; the app also updates "
+                           "chrome orientation and content transition semantics."),
+            QStringLiteral(
+                "auto* navView = new NavigationView(this);\n"
+                "navView->setMinimumWidth(440);\n"
+                "navView->setMaximumWidth(620);\n"
+                "navView->setFixedHeight(340);\n"
+                "navView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
+                "navView->setAnimationEnabled(true);\n"
+                "navView->setExpandedPaneWidth(180);\n"
+                "navView->setCompactPaneWidth(52);\n"
+                "navView->setTopBarHeight(48);\n"
+                "auto applyDisplayMode = [&](NavigationView::DisplayMode mode) {\n"
+                "    const bool top = mode == NavigationView::DisplayMode::Top;\n"
+                "    const bool compact = mode != NavigationView::DisplayMode::Left;\n"
+                "    const auto orientation = top ? Qt::Horizontal : Qt::Vertical;\n"
+                "    headerSection->setOrientation(orientation);\n"
+                "    mainSection->setOrientation(orientation);\n"
+                "    footerSection->setOrientation(orientation);\n"
+                "    headerSection->setCompact(compact);\n"
+                "    mainSection->setCompact(compact);\n"
+                "    footerSection->setCompact(compact);\n"
+                "    navView->contentHost()->setTransitionEffect(\n"
+                "        top ? StackContentHost::TransitionEffect::SlideFromBottom\n"
+                "            : StackContentHost::TransitionEffect::SlideFromLeft);\n"
+                "    navView->setPaneOpen(mode == NavigationView::DisplayMode::Left || top);\n"
+                "    navView->setDisplayMode(mode);\n"
+                "};\n"
+                "auto routeToPage = [host = navView->contentHost()](int pageIndex) {\n"
+                "    const int direction = pageIndex >= host->currentIndex() ? 1 : -1;\n"
+                "    host->setCurrentIndex(pageIndex, direction, true);\n"
+                "};\n"
+                "headerSection->onActivated = routeToPage;\n"
+                "mainSection->onActivated = routeToPage;\n"
+                "footerSection->onActivated = routeToPage;\n"
+                "QObject::connect(leftButton, &Button::clicked, navView, [&] {\n"
+                "    applyDisplayMode(NavigationView::DisplayMode::Left);\n"
+                "});\n"
+                "QObject::connect(compactButton, &Button::clicked, navView, [&] {\n"
+                "    applyDisplayMode(NavigationView::DisplayMode::LeftCompact);\n"
+                "});\n"
+                "QObject::connect(minimalButton, &Button::clicked, navView, [&] {\n"
+                "    applyDisplayMode(NavigationView::DisplayMode::LeftMinimal);\n"
+                "});\n"
+                "QObject::connect(topButton, &Button::clicked, navView, [&] {\n"
+                "    applyDisplayMode(NavigationView::DisplayMode::Top);\n"
+                "});"),
+            [](QWidget* parent) {
+                QWidget* group = verticalGroup(parent, 8);
+                auto* surface = makeNavigationPreviewSurface(group);
+                auto* controls = horizontalGroup(surface, 6);
+                auto* leftButton = makeControlButton(controls, QStringLiteral("Left"));
+                auto* compactButton = makeControlButton(controls, QStringLiteral("Compact"));
+                auto* minimalButton = makeControlButton(controls, QStringLiteral("Minimal"));
+                auto* topButton = makeControlButton(controls, QStringLiteral("Top"));
+                leftButton->setIconGlyph(Typography::Icons::List, Typography::IconSize::Standard);
+                compactButton->setIconGlyph(Typography::Icons::GlobalNav,
+                                            Typography::IconSize::Standard);
+                minimalButton->setIconGlyph(Typography::Icons::GlobalNav,
+                                            Typography::IconSize::Standard);
+                topButton->setIconGlyph(Typography::Icons::AllApps, Typography::IconSize::Standard);
+                for (Button* button : {leftButton, compactButton, minimalButton, topButton}) {
+                    button->setFluentLayout(Button::IconBefore);
+                    controls->layout()->addWidget(button);
+                }
 
-                       auto* navView = new NavigationView(surface);
-                       configureResponsiveNavigationPreview(
-                           navView, 340,
-                           QStringLiteral("navigationViewDisplayModesPreview"));
-                       navView->setAnimationEnabled(true);
-                       navView->setExpandedPaneWidth(180);
-                       navView->setCompactPaneWidth(52);
-                       navView->setTopBarHeight(48);
+                auto* navView = new NavigationView(surface);
+                configureResponsiveNavigationPreview(
+                    navView, 340, QStringLiteral("navigationViewDisplayModesPreview"));
+                navView->setAnimationEnabled(true);
+                navView->setExpandedPaneWidth(180);
+                navView->setCompactPaneWidth(52);
+                navView->setTopBarHeight(48);
 
-                       auto* headerSection = new NavigationDemoSection({
-                           {Typography::Icons::Back, QStringLiteral("Back"), 0},
-                           {Typography::Icons::Search, QStringLiteral("Search"), 1},
-                       }, navView);
-                       headerSection->setPreferredVerticalHeight(88);
-                       auto* mainSection = new NavigationDemoSection({
-                           {Typography::Icons::Home, QStringLiteral("Home"), 0},
-                           {Typography::Icons::Document, QStringLiteral("Documents"), 2},
-                           {Typography::Icons::Download, QStringLiteral("Downloads"), 3},
-                       }, navView);
-                       mainSection->setSelectedIndex(0);
-                       auto* footerSection = new NavigationDemoSection({
-                           {Typography::Icons::Info, QStringLiteral("Help"), 4},
-                           {Typography::Icons::Settings, QStringLiteral("Settings"), 5},
-                       }, navView);
-                       footerSection->setPreferredVerticalHeight(88);
-                       navView->setHeaderChromeWidget(headerSection);
-                       navView->setMainChromeWidget(mainSection);
-                       navView->setFooterChromeWidget(footerSection);
+                auto* headerSection = new NavigationDemoSection(
+                    {
+                        {Typography::Icons::Back, QStringLiteral("Back"), 0},
+                        {Typography::Icons::Search, QStringLiteral("Search"), 1},
+                    },
+                    navView);
+                headerSection->setPreferredVerticalHeight(88);
+                auto* mainSection = new NavigationDemoSection(
+                    {
+                        {Typography::Icons::Home, QStringLiteral("Home"), 0},
+                        {Typography::Icons::Document, QStringLiteral("Documents"), 2},
+                        {Typography::Icons::Download, QStringLiteral("Downloads"), 3},
+                    },
+                    navView);
+                mainSection->setSelectedIndex(0);
+                auto* footerSection = new NavigationDemoSection(
+                    {
+                        {Typography::Icons::Info, QStringLiteral("Help"), 4},
+                        {Typography::Icons::Settings, QStringLiteral("Settings"), 5},
+                    },
+                    navView);
+                footerSection->setPreferredVerticalHeight(88);
+                navView->setHeaderChromeWidget(headerSection);
+                navView->setMainChromeWidget(mainSection);
+                navView->setFooterChromeWidget(footerSection);
 
-                       populateNavigationPages(navView->contentHost());
+                populateNavigationPages(navView->contentHost());
 
-                       auto* modeStatus = makeStatusLabel(surface, QStringLiteral("Display mode: Left"));
-                       modeStatus->setFluentTypography(Typography::FontRole::Caption);
-                       auto* routeStatus = makeStatusLabel(surface, QStringLiteral("Current page: Home"));
-                       routeStatus->setFluentTypography(Typography::FontRole::Caption);
-                       connectNavigationRoutes(headerSection, mainSection, footerSection, navView->contentHost(), routeStatus);
+                auto* modeStatus = makeStatusLabel(surface, QStringLiteral("Display mode: Left"));
+                modeStatus->setFluentTypography(Typography::FontRole::Caption);
+                auto* routeStatus = makeStatusLabel(surface, QStringLiteral("Current page: Home"));
+                routeStatus->setFluentTypography(Typography::FontRole::Caption);
+                connectNavigationRoutes(headerSection, mainSection, footerSection,
+                                        navView->contentHost(), routeStatus);
 
-                       auto updateStatus = [modeStatus, navView]() {
-                           modeStatus->setText(QStringLiteral("Display mode: %1")
-                                               .arg(navigationDisplayModeName(navView->displayMode())));
-                       };
+                auto updateStatus = [modeStatus, navView]() {
+                    modeStatus->setText(
+                        QStringLiteral("Display mode: %1")
+                            .arg(navigationDisplayModeName(navView->displayMode())));
+                };
 
-                       auto setMode = [navView, headerSection, mainSection, footerSection,
-                                       leftButton, compactButton, minimalButton, topButton,
-                                       updateStatus](NavigationView::DisplayMode mode) {
-                           const bool top = mode == NavigationView::DisplayMode::Top;
-                           const bool compactChrome = mode != NavigationView::DisplayMode::Left;
-                           const Qt::Orientation orientation = top ? Qt::Horizontal : Qt::Vertical;
-                           headerSection->setOrientation(orientation);
-                           mainSection->setOrientation(orientation);
-                           footerSection->setOrientation(orientation);
-                           headerSection->setCompact(compactChrome);
-                           mainSection->setCompact(compactChrome);
-                           footerSection->setCompact(compactChrome);
-                           navView->contentHost()->setTransitionEffect(
-                               top ? StackContentHost::TransitionEffect::SlideFromBottom
-                                   : StackContentHost::TransitionEffect::SlideFromLeft);
-                           navView->setPaneOpen(mode == NavigationView::DisplayMode::Left || top);
-                           navView->setDisplayMode(mode);
-                           leftButton->setFluentStyle(mode == NavigationView::DisplayMode::Left ? Button::Accent : Button::Standard);
-                           compactButton->setFluentStyle(mode == NavigationView::DisplayMode::LeftCompact ? Button::Accent : Button::Standard);
-                           minimalButton->setFluentStyle(mode == NavigationView::DisplayMode::LeftMinimal ? Button::Accent : Button::Standard);
-                           topButton->setFluentStyle(mode == NavigationView::DisplayMode::Top ? Button::Accent : Button::Standard);
-                           updateStatus();
-                       };
-                       setMode(NavigationView::DisplayMode::Left);
-                       QObject::connect(leftButton, &Button::clicked,
-                                        navView, [setMode]() { setMode(NavigationView::DisplayMode::Left); });
-                       QObject::connect(compactButton, &Button::clicked,
-                                        navView, [setMode]() { setMode(NavigationView::DisplayMode::LeftCompact); });
-                       QObject::connect(minimalButton, &Button::clicked,
-                                        navView, [setMode]() { setMode(NavigationView::DisplayMode::LeftMinimal); });
-                       QObject::connect(topButton, &Button::clicked,
-                                        navView, [setMode]() { setMode(NavigationView::DisplayMode::Top); });
+                auto setMode = [navView, headerSection, mainSection, footerSection, leftButton,
+                                compactButton, minimalButton, topButton,
+                                updateStatus](NavigationView::DisplayMode mode) {
+                    const bool top = mode == NavigationView::DisplayMode::Top;
+                    const bool compactChrome = mode != NavigationView::DisplayMode::Left;
+                    const Qt::Orientation orientation = top ? Qt::Horizontal : Qt::Vertical;
+                    headerSection->setOrientation(orientation);
+                    mainSection->setOrientation(orientation);
+                    footerSection->setOrientation(orientation);
+                    headerSection->setCompact(compactChrome);
+                    mainSection->setCompact(compactChrome);
+                    footerSection->setCompact(compactChrome);
+                    navView->contentHost()->setTransitionEffect(
+                        top ? StackContentHost::TransitionEffect::SlideFromBottom
+                            : StackContentHost::TransitionEffect::SlideFromLeft);
+                    navView->setPaneOpen(mode == NavigationView::DisplayMode::Left || top);
+                    navView->setDisplayMode(mode);
+                    leftButton->setFluentStyle(mode == NavigationView::DisplayMode::Left
+                                                   ? Button::Accent
+                                                   : Button::Standard);
+                    compactButton->setFluentStyle(mode == NavigationView::DisplayMode::LeftCompact
+                                                      ? Button::Accent
+                                                      : Button::Standard);
+                    minimalButton->setFluentStyle(mode == NavigationView::DisplayMode::LeftMinimal
+                                                      ? Button::Accent
+                                                      : Button::Standard);
+                    topButton->setFluentStyle(mode == NavigationView::DisplayMode::Top
+                                                  ? Button::Accent
+                                                  : Button::Standard);
+                    updateStatus();
+                };
+                setMode(NavigationView::DisplayMode::Left);
+                QObject::connect(leftButton, &Button::clicked, navView,
+                                 [setMode]() { setMode(NavigationView::DisplayMode::Left); });
+                QObject::connect(compactButton, &Button::clicked, navView, [setMode]() {
+                    setMode(NavigationView::DisplayMode::LeftCompact);
+                });
+                QObject::connect(minimalButton, &Button::clicked, navView, [setMode]() {
+                    setMode(NavigationView::DisplayMode::LeftMinimal);
+                });
+                QObject::connect(topButton, &Button::clicked, navView,
+                                 [setMode]() { setMode(NavigationView::DisplayMode::Top); });
 
-                       surface->layout()->addWidget(controls);
-                       surface->layout()->addWidget(navView);
-                       surface->layout()->addWidget(modeStatus);
-                       surface->layout()->addWidget(routeStatus);
-                       group->layout()->addWidget(surface);
-                       return group;
-                   }),
+                surface->layout()->addWidget(controls);
+                surface->layout()->addWidget(navView);
+                surface->layout()->addWidget(modeStatus);
+                surface->layout()->addWidget(routeStatus);
+                group->layout()->addWidget(surface);
+                return group;
+            }),
 
-        makeSample(QStringLiteral("navigation-view-content-host"),
-                   QStringLiteral("StackContentHost page routing"),
-                   QStringLiteral("Navigation rows are app-owned; item activation selects pages inserted into NavigationView::contentHost()."),
-                   QStringLiteral("auto* navView = new NavigationView(this);\n"
-                                  "navView->setMinimumWidth(440);\n"
-                                  "navView->setMaximumWidth(620);\n"
-                                  "navView->setFixedHeight(320);\n"
-                                  "navView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
-                                  "navView->setAnimationEnabled(true);\n"
-                                  "navView->setDisplayMode(NavigationView::DisplayMode::Left);\n"
-                                  "StackContentHost* host = navView->contentHost();\n"
-                                  "navView->setExpandedPaneWidth(180);\n"
-                                  "populateNavigationPages(host);\n"
-                                  "host->setTransitionEffect(StackContentHost::TransitionEffect::SlideFromLeft);\n"
-                                  "mainSection->onActivated = [host](int pageIndex) {\n"
-                                  "    const int direction = pageIndex >= host->currentIndex() ? 1 : -1;\n"
-                                  "    host->setCurrentIndex(pageIndex, direction, true);\n"
-                                  "};"),
-                   [](QWidget* parent) {
-                       QWidget* group = verticalGroup(parent, 8);
-                       auto* surface = makeNavigationPreviewSurface(group);
+        makeSample(
+            QStringLiteral("navigation-view-content-host"),
+            QStringLiteral("StackContentHost page routing"),
+            QStringLiteral("Navigation rows are app-owned; item activation selects pages inserted "
+                           "into NavigationView::contentHost()."),
+            QStringLiteral(
+                "auto* navView = new NavigationView(this);\n"
+                "navView->setMinimumWidth(440);\n"
+                "navView->setMaximumWidth(620);\n"
+                "navView->setFixedHeight(320);\n"
+                "navView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
+                "navView->setAnimationEnabled(true);\n"
+                "navView->setDisplayMode(NavigationView::DisplayMode::Left);\n"
+                "StackContentHost* host = navView->contentHost();\n"
+                "navView->setExpandedPaneWidth(180);\n"
+                "populateNavigationPages(host);\n"
+                "host->setTransitionEffect(StackContentHost::TransitionEffect::SlideFromLeft);\n"
+                "mainSection->onActivated = [host](int pageIndex) {\n"
+                "    const int direction = pageIndex >= host->currentIndex() ? 1 : -1;\n"
+                "    host->setCurrentIndex(pageIndex, direction, true);\n"
+                "};"),
+            [](QWidget* parent) {
+                QWidget* group = verticalGroup(parent, 8);
+                auto* surface = makeNavigationPreviewSurface(group);
 
-                       auto* navView = new NavigationView(surface);
-                       configureResponsiveNavigationPreview(
-                           navView, 320,
-                           QStringLiteral("navigationViewContentHostPreview"));
-                       navView->setAnimationEnabled(true);
-                       navView->setDisplayMode(NavigationView::DisplayMode::Left);
-                       navView->setExpandedPaneWidth(180);
+                auto* navView = new NavigationView(surface);
+                configureResponsiveNavigationPreview(
+                    navView, 320, QStringLiteral("navigationViewContentHostPreview"));
+                navView->setAnimationEnabled(true);
+                navView->setDisplayMode(NavigationView::DisplayMode::Left);
+                navView->setExpandedPaneWidth(180);
 
-                       auto* mainSection = new NavigationDemoSection({
-                           {Typography::Icons::Home, QStringLiteral("Home"), 0},
-                           {Typography::Icons::Document, QStringLiteral("Documents"), 2},
-                           {Typography::Icons::Settings, QStringLiteral("Settings"), 5},
-                       }, navView);
-                       mainSection->setSelectedIndex(0);
-                       navView->setMainChromeWidget(mainSection);
+                auto* mainSection = new NavigationDemoSection(
+                    {
+                        {Typography::Icons::Home, QStringLiteral("Home"), 0},
+                        {Typography::Icons::Document, QStringLiteral("Documents"), 2},
+                        {Typography::Icons::Settings, QStringLiteral("Settings"), 5},
+                    },
+                    navView);
+                mainSection->setSelectedIndex(0);
+                navView->setMainChromeWidget(mainSection);
 
-                       StackContentHost* host = navView->contentHost();
-                       populateNavigationPages(host);
-                       host->setTransitionEffect(StackContentHost::TransitionEffect::SlideFromLeft);
+                StackContentHost* host = navView->contentHost();
+                populateNavigationPages(host);
+                host->setTransitionEffect(StackContentHost::TransitionEffect::SlideFromLeft);
 
-                       auto* status = makeStatusLabel(surface, QStringLiteral("Current page: Home"));
-                       status->setFluentTypography(Typography::FontRole::Caption);
-                       connectNavigationRoutes(nullptr, mainSection, nullptr, host, status);
+                auto* status = makeStatusLabel(surface, QStringLiteral("Current page: Home"));
+                status->setFluentTypography(Typography::FontRole::Caption);
+                connectNavigationRoutes(nullptr, mainSection, nullptr, host, status);
 
-                       surface->layout()->addWidget(navView);
-                       surface->layout()->addWidget(status);
-                       group->layout()->addWidget(surface);
-                       return group;
-                   })
-    };
+                surface->layout()->addWidget(navView);
+                surface->layout()->addWidget(status);
+                group->layout()->addWidget(surface);
+                return group;
+            })};
 }
 
 QVector<GallerySample> pivotSamples()
 {
     return {
-        makeSample(QStringLiteral("pivot-basic"),
-                   QStringLiteral("Pivot with hosted pages"),
-                   QStringLiteral("Selecting a pivot item changes the external StackContentHost page; disabled items stay visible but cannot be selected."),
-                   QStringLiteral("auto* pivot = new Pivot(this);\n"
-                                  "pivot->addItem({\"All\", Typography::Icons::Mail});\n"
-                                  "pivot->addItem({\"Unread\", Typography::Icons::Filter});\n"
-                                  "pivot->addItem({\"Flagged\", Typography::Icons::Flag});\n"
-                                  "pivot->addItem({\"Locked\", Typography::Icons::Lock, false});\n"
-                                  "pivot->addItem({\"Mentions\", Typography::Icons::Contact});\n\n"
-                                  "auto* host = new StackContentHost(this);\n"
-                                  "for (int i = 0; i < pivot->itemCount(); ++i)\n"
-                                  "    host->insertPage(i, createPage(pivot->itemAt(i).header));\n\n"
-                                  "connect(pivot, &Pivot::currentChanged,\n"
-                                  "        host, [host](int index) { host->setCurrentIndex(index, 0, true); });"),
-                   [](QWidget* parent) {
-                       QWidget* group = verticalGroup(parent, 8);
-                       auto* pivot = new Pivot(group);
-                       pivot->setFixedSize(540, 44);
-                       const QVector<PivotItem> items{
-                           PivotItem(QStringLiteral("All"), Typography::Icons::Mail),
-                           PivotItem(QStringLiteral("Unread"), Typography::Icons::Filter),
-                           PivotItem(QStringLiteral("Flagged"), Typography::Icons::Flag),
-                           PivotItem(QStringLiteral("Locked"), Typography::Icons::Lock, false),
-                           PivotItem(QStringLiteral("Mentions"), Typography::Icons::Contact)
-                       };
-                       for (const PivotItem& item : items)
-                           pivot->addItem(item);
-                       pivot->setSelectedIndex(0);
+        makeSample(
+            QStringLiteral("pivot-basic"), QStringLiteral("Pivot with hosted pages"),
+            QStringLiteral("Selecting a pivot item changes the external StackContentHost page; "
+                           "disabled items stay visible but cannot be selected."),
+            QStringLiteral(
+                "auto* pivot = new Pivot(this);\n"
+                "pivot->addItem({\"All\", Typography::Icons::Mail});\n"
+                "pivot->addItem({\"Unread\", Typography::Icons::Filter});\n"
+                "pivot->addItem({\"Flagged\", Typography::Icons::Flag});\n"
+                "pivot->addItem({\"Locked\", Typography::Icons::Lock, false});\n"
+                "pivot->addItem({\"Mentions\", Typography::Icons::Contact});\n\n"
+                "auto* host = new StackContentHost(this);\n"
+                "for (int i = 0; i < pivot->itemCount(); ++i)\n"
+                "    host->insertPage(i, createPage(pivot->itemAt(i).header));\n\n"
+                "connect(pivot, &Pivot::currentChanged,\n"
+                "        host, [host](int index) { host->setCurrentIndex(index, 0, true); });"),
+            [](QWidget* parent) {
+                QWidget* group = verticalGroup(parent, 8);
+                auto* pivot = new Pivot(group);
+                pivot->setFixedSize(540, 44);
+                const QVector<PivotItem> items{
+                    PivotItem(QStringLiteral("All"), Typography::Icons::Mail),
+                    PivotItem(QStringLiteral("Unread"), Typography::Icons::Filter),
+                    PivotItem(QStringLiteral("Flagged"), Typography::Icons::Flag),
+                    PivotItem(QStringLiteral("Locked"), Typography::Icons::Lock, false),
+                    PivotItem(QStringLiteral("Mentions"), Typography::Icons::Contact)};
+                for (const PivotItem& item : items)
+                    pivot->addItem(item);
+                pivot->setSelectedIndex(0);
 
-                       auto* host = new StackContentHost(group);
-                       host->setFixedSize(540, 128);
-                       for (int i = 0; i < items.size(); ++i) {
-                           host->insertPage(i, makeHostPage(
-                               host,
-                               items.at(i).header,
-                               i == 3
-                                   ? QStringLiteral("This disabled pivot item remains visible but cannot be selected.")
-                                   : QStringLiteral("CurrentChanged drives this StackContentHost page.")));
-                       }
-                       host->setCurrentIndex(0, 0, false);
+                auto* host = new StackContentHost(group);
+                host->setFixedSize(540, 128);
+                for (int i = 0; i < items.size(); ++i) {
+                    host->insertPage(
+                        i, makeHostPage(
+                               host, items.at(i).header,
+                               i == 3 ? QStringLiteral("This disabled pivot item remains visible "
+                                                       "but cannot be selected.")
+                                      : QStringLiteral(
+                                            "CurrentChanged drives this StackContentHost page.")));
+                }
+                host->setCurrentIndex(0, 0, false);
 
-                       Label* status = makeStatusLabel(group, QStringLiteral("Showing: All"));
-                       QObject::connect(pivot, &Pivot::currentChanged,
-                                        status, [status, pivot, host](int index) {
-                                            if (index >= 0 && index < host->count())
-                                                host->setCurrentIndex(index, index >= host->currentIndex() ? 1 : -1, true);
-                                            status->setText(QStringLiteral("Showing: %1")
-                                                                .arg(pivot->itemAt(index).header));
-                                        });
-                       group->layout()->addWidget(pivot);
-                       group->layout()->addWidget(host);
-                       group->layout()->addWidget(status);
-                       return group;
-                   }),
-        makeSample(QStringLiteral("pivot-item-state"),
-                   QStringLiteral("PivotItem state and metadata"),
-                   QStringLiteral("Item metadata can be updated independently from selection; disabled items stay visible until re-enabled."),
-                   QStringLiteral("auto* pivot = new Pivot(this);\n"
-                                  "pivot->addItem(PivotItem(\"Inbox\", Typography::Icons::Mail,\n"
-                                  "                         true, \"inbox\", \"Inbox view\"));\n"
-                                  "pivot->addItem(PivotItem(\"Flagged\", Typography::Icons::Flag,\n"
-                                  "                         true, \"flagged\", \"Flagged mail\"));\n"
-                                  "pivot->addItem(PivotItem(\"Locked\", Typography::Icons::Lock,\n"
-                                  "                         false, \"locked\", \"Locked view\"));\n"
-                                  "pivot->setSelectedIndex(0);\n\n"
-                                  "connect(renameButton, &Button::clicked,\n"
-                                  "        pivot, [pivot] {\n"
-                                  "            pivot->setItemHeader(1, \"Priority\");\n"
-                                  "            pivot->setItemIconGlyph(1, Typography::Icons::ImportantBadge12);\n"
-                                  "            pivot->setItemData(1, \"priority\");\n"
-                                  "        });\n"
-                                  "connect(unlockButton, &Button::clicked,\n"
-                                  "        pivot, [pivot] { pivot->setItemEnabled(2, true); });\n"
-                                  "connect(pivot, &Pivot::currentChanged,\n"
-                                  "        this, [pivot](int index) {\n"
-                                  "            const auto routeKey = pivot->itemAt(index).data.toString();\n"
-                                  "        });"),
-                   [](QWidget* parent) {
-                       auto* group = verticalGroup(parent, 8);
-                       auto* pivot = new Pivot(group);
-                       pivot->setFixedSize(540, 44);
-                       pivot->addItem(PivotItem(QStringLiteral("Inbox"),
-                                                Typography::Icons::Mail,
-                                                true,
-                                                QStringLiteral("inbox"),
-                                                QStringLiteral("Inbox view")));
-                       pivot->addItem(PivotItem(QStringLiteral("Flagged"),
-                                                Typography::Icons::Flag,
-                                                true,
-                                                QStringLiteral("flagged"),
-                                                QStringLiteral("Flagged mail")));
-                       pivot->addItem(PivotItem(QStringLiteral("Locked"),
-                                                Typography::Icons::Lock,
-                                                false,
-                                                QStringLiteral("locked"),
-                                                QStringLiteral("Locked view")));
-                       pivot->setSelectedIndex(0);
+                Label* status = makeStatusLabel(group, QStringLiteral("Showing: All"));
+                QObject::connect(
+                    pivot, &Pivot::currentChanged, status, [status, pivot, host](int index) {
+                        if (index >= 0 && index < host->count())
+                            host->setCurrentIndex(index, index >= host->currentIndex() ? 1 : -1,
+                                                  true);
+                        status->setText(
+                            QStringLiteral("Showing: %1").arg(pivot->itemAt(index).header));
+                    });
+                group->layout()->addWidget(pivot);
+                group->layout()->addWidget(host);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(
+            QStringLiteral("pivot-item-state"), QStringLiteral("PivotItem state and metadata"),
+            QStringLiteral("Item metadata can be updated independently from selection; disabled "
+                           "items stay visible until re-enabled."),
+            QStringLiteral(
+                "auto* pivot = new Pivot(this);\n"
+                "pivot->addItem(PivotItem(\"Inbox\", Typography::Icons::Mail,\n"
+                "                         true, \"inbox\", \"Inbox view\"));\n"
+                "pivot->addItem(PivotItem(\"Flagged\", Typography::Icons::Flag,\n"
+                "                         true, \"flagged\", \"Flagged mail\"));\n"
+                "pivot->addItem(PivotItem(\"Locked\", Typography::Icons::Lock,\n"
+                "                         false, \"locked\", \"Locked view\"));\n"
+                "pivot->setSelectedIndex(0);\n\n"
+                "connect(renameButton, &Button::clicked,\n"
+                "        pivot, [pivot] {\n"
+                "            pivot->setItemHeader(1, \"Priority\");\n"
+                "            pivot->setItemIconGlyph(1, Typography::Icons::ImportantBadge12);\n"
+                "            pivot->setItemData(1, \"priority\");\n"
+                "        });\n"
+                "connect(unlockButton, &Button::clicked,\n"
+                "        pivot, [pivot] { pivot->setItemEnabled(2, true); });\n"
+                "connect(pivot, &Pivot::currentChanged,\n"
+                "        this, [pivot](int index) {\n"
+                "            const auto routeKey = pivot->itemAt(index).data.toString();\n"
+                "        });"),
+            [](QWidget* parent) {
+                auto* group = verticalGroup(parent, 8);
+                auto* pivot = new Pivot(group);
+                pivot->setFixedSize(540, 44);
+                pivot->addItem(PivotItem(QStringLiteral("Inbox"), Typography::Icons::Mail, true,
+                                         QStringLiteral("inbox"), QStringLiteral("Inbox view")));
+                pivot->addItem(PivotItem(QStringLiteral("Flagged"), Typography::Icons::Flag, true,
+                                         QStringLiteral("flagged"),
+                                         QStringLiteral("Flagged mail")));
+                pivot->addItem(PivotItem(QStringLiteral("Locked"), Typography::Icons::Lock, false,
+                                         QStringLiteral("locked"), QStringLiteral("Locked view")));
+                pivot->setSelectedIndex(0);
 
-                       auto* controls = horizontalGroup(group, 8);
-                       auto* renameButton = makeControlButton(controls, QStringLiteral("Rename Flagged"));
-                       auto* unlockButton = makeControlButton(controls, QStringLiteral("Unlock Locked"));
-                       controls->layout()->addWidget(renameButton);
-                       controls->layout()->addWidget(unlockButton);
+                auto* controls = horizontalGroup(group, 8);
+                auto* renameButton = makeControlButton(controls, QStringLiteral("Rename Flagged"));
+                auto* unlockButton = makeControlButton(controls, QStringLiteral("Unlock Locked"));
+                controls->layout()->addWidget(renameButton);
+                controls->layout()->addWidget(unlockButton);
 
-                       auto* status = makeStatusLabel(group, QStringLiteral("Selected Inbox, data: inbox"));
-                       status->setFluentTypography(Typography::FontRole::Caption);
-                       auto updateStatus = [pivot, status](const QString& prefix = QString()) {
-                           const int index = pivot->selectedIndex();
-                           if (index < 0)
-                               return;
-                           const PivotItem item = pivot->itemAt(index);
-                           const QString state = QStringLiteral("Selected %1, data: %2")
-                                                     .arg(item.header, item.data.toString());
-                           status->setText(prefix.isEmpty() ? state : QStringLiteral("%1; %2").arg(prefix, state));
-                       };
+                auto* status =
+                    makeStatusLabel(group, QStringLiteral("Selected Inbox, data: inbox"));
+                status->setFluentTypography(Typography::FontRole::Caption);
+                auto updateStatus = [pivot, status](const QString& prefix = QString()) {
+                    const int index = pivot->selectedIndex();
+                    if (index < 0)
+                        return;
+                    const PivotItem item = pivot->itemAt(index);
+                    const QString state = QStringLiteral("Selected %1, data: %2")
+                                              .arg(item.header, item.data.toString());
+                    status->setText(prefix.isEmpty() ? state
+                                                     : QStringLiteral("%1; %2").arg(prefix, state));
+                };
 
-                       QObject::connect(renameButton, &Button::clicked,
-                                        pivot, [pivot, renameButton, updateStatus]() {
-                                            pivot->setItemHeader(1, QStringLiteral("Priority"));
-                                            pivot->setItemIconGlyph(1, Typography::Icons::ImportantBadge12);
-                                            pivot->setItemData(1, QStringLiteral("priority"));
-                                            renameButton->setEnabled(false);
-                                            updateStatus(QStringLiteral("Updated item 2"));
-                                        });
-                       QObject::connect(unlockButton, &Button::clicked,
-                                        pivot, [pivot, unlockButton, updateStatus]() {
-                                            pivot->setItemEnabled(2, true);
-                                            unlockButton->setEnabled(false);
-                                            updateStatus(QStringLiteral("Locked is now enabled"));
-                                        });
-                       QObject::connect(pivot, &Pivot::currentChanged,
-                                        status, [updateStatus](int) { updateStatus(); });
+                QObject::connect(
+                    renameButton, &Button::clicked, pivot, [pivot, renameButton, updateStatus]() {
+                        pivot->setItemHeader(1, QStringLiteral("Priority"));
+                        pivot->setItemIconGlyph(1, Typography::Icons::ImportantBadge12);
+                        pivot->setItemData(1, QStringLiteral("priority"));
+                        renameButton->setEnabled(false);
+                        updateStatus(QStringLiteral("Updated item 2"));
+                    });
+                QObject::connect(unlockButton, &Button::clicked, pivot,
+                                 [pivot, unlockButton, updateStatus]() {
+                                     pivot->setItemEnabled(2, true);
+                                     unlockButton->setEnabled(false);
+                                     updateStatus(QStringLiteral("Locked is now enabled"));
+                                 });
+                QObject::connect(pivot, &Pivot::currentChanged, status,
+                                 [updateStatus](int) { updateStatus(); });
 
-                       group->layout()->addWidget(pivot);
-                       group->layout()->addWidget(controls);
-                       group->layout()->addWidget(status);
-                       return group;
-                   }),
-        makeSample(QStringLiteral("pivot-overflow-behavior"),
-                   QStringLiteral("OverflowBehavior"),
-                   QStringLiteral("ScrollButtons pages through hidden headers with arrows; MoreButton collapses hidden headers behind the ... button and emits their indexes."),
-                   QStringLiteral("const QVector<PivotItem> items{\n"
-                                  "    {\"All\", Typography::Icons::Mail},\n"
-                                  "    {\"Unread\", Typography::Icons::Filter},\n"
-                                  "    {\"Flagged\", Typography::Icons::Flag},\n"
-                                  "    {\"Mentions\", Typography::Icons::Contact},\n"
-                                  "    {\"Archive\", Typography::Icons::Storage},\n"
-                                  "    {\"Long category\", Typography::Icons::Folder}\n"
-                                  "};\n\n"
-                                  "auto* scrollButtons = new Pivot(this);\n"
-                                  "for (const PivotItem& item : items)\n"
-                                  "    scrollButtons->addItem(item);\n"
-                                  "scrollButtons->setOverflowBehavior(Pivot::OverflowBehavior::ScrollButtons);\n"
-                                  "scrollButtons->setFixedWidth(420);\n"
-                                  "// Hidden headers are reached with the left and right overflow arrows.\n\n"
-                                  "auto* moreButton = new Pivot(this);\n"
-                                  "for (const PivotItem& item : items)\n"
-                                  "    moreButton->addItem(item);\n"
-                                  "moreButton->setOverflowBehavior(Pivot::OverflowBehavior::MoreButton);\n"
-                                  "moreButton->setFixedWidth(420);\n"
-                                  "// Hidden headers are grouped behind the ... overflow button.\n"
-                                  "connect(moreButton, &Pivot::overflowActivated,\n"
-                                  "        this, [](const QVector<int>& hiddenIndexes) {\n"
-                                  "            // hiddenIndexes are the headers behind the ... button.\n"
-                                  "        });"),
-                   [](QWidget* parent) {
-                       auto* group = verticalGroup(parent, 10);
-                       const QVector<PivotItem> items{
-                           PivotItem(QStringLiteral("All"), Typography::Icons::Mail),
-                           PivotItem(QStringLiteral("Unread"), Typography::Icons::Filter),
-                           PivotItem(QStringLiteral("Flagged"), Typography::Icons::Flag),
-                           PivotItem(QStringLiteral("Mentions"), Typography::Icons::Contact),
-                           PivotItem(QStringLiteral("Archive"), Typography::Icons::Storage),
-                           PivotItem(QStringLiteral("Long category"), Typography::Icons::Folder),
-                           PivotItem(QStringLiteral("Settings"), Typography::Icons::Settings),
-                           PivotItem(QStringLiteral("History"), Typography::Icons::History)
-                       };
+                group->layout()->addWidget(pivot);
+                group->layout()->addWidget(controls);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(
+            QStringLiteral("pivot-overflow-behavior"), QStringLiteral("OverflowBehavior"),
+            QStringLiteral(
+                "ScrollButtons pages through hidden headers with arrows; MoreButton collapses "
+                "hidden headers behind the ... button and emits their indexes."),
+            QStringLiteral(
+                "const QVector<PivotItem> items{\n"
+                "    {\"All\", Typography::Icons::Mail},\n"
+                "    {\"Unread\", Typography::Icons::Filter},\n"
+                "    {\"Flagged\", Typography::Icons::Flag},\n"
+                "    {\"Mentions\", Typography::Icons::Contact},\n"
+                "    {\"Archive\", Typography::Icons::Storage},\n"
+                "    {\"Long category\", Typography::Icons::Folder}\n"
+                "};\n\n"
+                "auto* scrollButtons = new Pivot(this);\n"
+                "for (const PivotItem& item : items)\n"
+                "    scrollButtons->addItem(item);\n"
+                "scrollButtons->setOverflowBehavior(Pivot::OverflowBehavior::ScrollButtons);\n"
+                "scrollButtons->setFixedWidth(420);\n"
+                "// Hidden headers are reached with the left and right overflow arrows.\n\n"
+                "auto* moreButton = new Pivot(this);\n"
+                "for (const PivotItem& item : items)\n"
+                "    moreButton->addItem(item);\n"
+                "moreButton->setOverflowBehavior(Pivot::OverflowBehavior::MoreButton);\n"
+                "moreButton->setFixedWidth(420);\n"
+                "// Hidden headers are grouped behind the ... overflow button.\n"
+                "connect(moreButton, &Pivot::overflowActivated,\n"
+                "        this, [](const QVector<int>& hiddenIndexes) {\n"
+                "            // hiddenIndexes are the headers behind the ... button.\n"
+                "        });"),
+            [](QWidget* parent) {
+                auto* group = verticalGroup(parent, 10);
+                const QVector<PivotItem> items{
+                    PivotItem(QStringLiteral("All"), Typography::Icons::Mail),
+                    PivotItem(QStringLiteral("Unread"), Typography::Icons::Filter),
+                    PivotItem(QStringLiteral("Flagged"), Typography::Icons::Flag),
+                    PivotItem(QStringLiteral("Mentions"), Typography::Icons::Contact),
+                    PivotItem(QStringLiteral("Archive"), Typography::Icons::Storage),
+                    PivotItem(QStringLiteral("Long category"), Typography::Icons::Folder),
+                    PivotItem(QStringLiteral("Settings"), Typography::Icons::Settings),
+                    PivotItem(QStringLiteral("History"), Typography::Icons::History)};
 
-                       auto* status = makeStatusLabel(
-                           group,
-                           QStringLiteral("MoreButton groups hidden headers behind the ... button."));
-                       status->setFluentTypography(Typography::FontRole::Caption);
+                auto* status = makeStatusLabel(
+                    group,
+                    QStringLiteral("MoreButton groups hidden headers behind the ... button."));
+                status->setFluentTypography(Typography::FontRole::Caption);
 
-                       auto addOverflowRow = [group, items, status](const QString& label,
-                                                                    Pivot::OverflowBehavior behavior) {
-                           auto* row = horizontalGroup(group, 10);
-                           auto* rowLabel = new Label(label, row);
-                           rowLabel->setFluentTypography(Typography::FontRole::Caption);
-                           rowLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
-                           rowLabel->setFixedWidth(96);
+                auto addOverflowRow = [group, items, status](const QString& label,
+                                                             Pivot::OverflowBehavior behavior) {
+                    auto* row = horizontalGroup(group, 10);
+                    auto* rowLabel = new Label(label, row);
+                    rowLabel->setFluentTypography(Typography::FontRole::Caption);
+                    rowLabel->setTextColorRole(
+                        Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
+                    rowLabel->setFixedWidth(96);
 
-                           auto* pivot = new Pivot(row);
-                           pivot->setFixedSize(420, 44);
-                           pivot->setOverflowBehavior(behavior);
-                           for (const PivotItem& item : items)
-                               pivot->addItem(item);
-                           pivot->setSelectedIndex(0);
+                    auto* pivot = new Pivot(row);
+                    pivot->setFixedSize(420, 44);
+                    pivot->setOverflowBehavior(behavior);
+                    for (const PivotItem& item : items)
+                        pivot->addItem(item);
+                    pivot->setSelectedIndex(0);
 
-                           if (behavior == Pivot::OverflowBehavior::MoreButton) {
-                               QObject::connect(pivot, &Pivot::overflowActivated,
-                                                status, [status, pivot](const QVector<int>& hiddenIndexes) {
-                                                    QStringList headers;
-                                                    for (int index : hiddenIndexes)
-                                                        headers.append(pivot->itemAt(index).header);
-                                                    status->setText(QStringLiteral("MoreButton contains: %1")
-                                                                        .arg(headers.join(QStringLiteral(", "))));
-                                                });
-                           }
+                    if (behavior == Pivot::OverflowBehavior::MoreButton) {
+                        QObject::connect(pivot, &Pivot::overflowActivated, status,
+                                         [status, pivot](const QVector<int>& hiddenIndexes) {
+                                             QStringList headers;
+                                             for (int index : hiddenIndexes)
+                                                 headers.append(pivot->itemAt(index).header);
+                                             status->setText(
+                                                 QStringLiteral("MoreButton contains: %1")
+                                                     .arg(headers.join(QStringLiteral(", "))));
+                                         });
+                    }
 
-                           row->layout()->addWidget(rowLabel);
-                           row->layout()->addWidget(pivot);
-                           group->layout()->addWidget(row);
-                       };
+                    row->layout()->addWidget(rowLabel);
+                    row->layout()->addWidget(pivot);
+                    group->layout()->addWidget(row);
+                };
 
-                       addOverflowRow(QStringLiteral("ScrollButtons"), Pivot::OverflowBehavior::ScrollButtons);
-                       addOverflowRow(QStringLiteral("MoreButton"), Pivot::OverflowBehavior::MoreButton);
-                       group->layout()->addWidget(status);
-                       return group;
-                   })
-    };
+                addOverflowRow(QStringLiteral("ScrollButtons"),
+                               Pivot::OverflowBehavior::ScrollButtons);
+                addOverflowRow(QStringLiteral("MoreButton"), Pivot::OverflowBehavior::MoreButton);
+                group->layout()->addWidget(status);
+                return group;
+            })};
 }
 
 QVector<GallerySample> selectorBarSamples()
 {
     return {
-        makeSample(QStringLiteral("selector-bar-basic"),
-                   QStringLiteral("SelectorBar with hosted pages"),
-                   QStringLiteral("currentChanged swaps the external page; selectionChanged exposes the selected item's data payload."),
-                   QStringLiteral("auto* selector = new SelectorBar(this);\n"
-                                  "selector->addItem(SelectorBarItem(\"Inbox\", Typography::Icons::Mail,\n"
-                                  "                                 true, true, \"inbox\"));\n"
-                                  "selector->addItem(SelectorBarItem(\"Calendar\", Typography::Icons::Calendar,\n"
-                                  "                                 true, true, \"calendar\"));\n"
-                                  "selector->addItem(SelectorBarItem(\"Settings\", Typography::Icons::Settings,\n"
-                                  "                                 true, true, \"settings\"));\n\n"
-                                  "auto* host = new StackContentHost(this);\n"
-                                  "for (int i = 0; i < selector->itemCount(); ++i)\n"
-                                  "    host->insertPage(i, createPage(selector->itemAt(i).text));\n\n"
-                                  "connect(selector, &SelectorBar::currentChanged,\n"
-                                  "        host, [host](int index) { host->setCurrentIndex(index, 0, true); });\n"
-                                  "connect(selector, &SelectorBar::selectionChanged,\n"
-                                  "        this, [](int, const SelectorBarItem& item) {\n"
-                                  "            const auto key = item.data.toString();\n"
-                                  "        });"),
-                   [](QWidget* parent) {
-                       QWidget* group = verticalGroup(parent, 8);
-                       auto* selector = new SelectorBar(group);
-                       selector->setFixedSize(540, 44);
-                       selector->addItem(SelectorBarItem(QStringLiteral("Inbox"), Typography::Icons::Mail,
-                                                         true, true, QStringLiteral("inbox")));
-                       selector->addItem(SelectorBarItem(QStringLiteral("Calendar"), Typography::Icons::Calendar,
-                                                         true, true, QStringLiteral("calendar")));
-                       selector->addItem(SelectorBarItem(QStringLiteral("Settings"), Typography::Icons::Settings,
-                                                         true, true, QStringLiteral("settings")));
-                       selector->setSelectedIndex(0);
+        makeSample(
+            QStringLiteral("selector-bar-basic"), QStringLiteral("SelectorBar with hosted pages"),
+            QStringLiteral("currentChanged swaps the external page; selectionChanged exposes the "
+                           "selected item's data payload."),
+            QStringLiteral(
+                "auto* selector = new SelectorBar(this);\n"
+                "selector->addItem(SelectorBarItem(\"Inbox\", Typography::Icons::Mail,\n"
+                "                                 true, true, \"inbox\"));\n"
+                "selector->addItem(SelectorBarItem(\"Calendar\", Typography::Icons::Calendar,\n"
+                "                                 true, true, \"calendar\"));\n"
+                "selector->addItem(SelectorBarItem(\"Settings\", Typography::Icons::Settings,\n"
+                "                                 true, true, \"settings\"));\n\n"
+                "auto* host = new StackContentHost(this);\n"
+                "for (int i = 0; i < selector->itemCount(); ++i)\n"
+                "    host->insertPage(i, createPage(selector->itemAt(i).text));\n\n"
+                "connect(selector, &SelectorBar::currentChanged,\n"
+                "        host, [host](int index) { host->setCurrentIndex(index, 0, true); });\n"
+                "connect(selector, &SelectorBar::selectionChanged,\n"
+                "        this, [](int, const SelectorBarItem& item) {\n"
+                "            const auto key = item.data.toString();\n"
+                "        });"),
+            [](QWidget* parent) {
+                QWidget* group = verticalGroup(parent, 8);
+                auto* selector = new SelectorBar(group);
+                selector->setFixedSize(540, 44);
+                selector->addItem(SelectorBarItem(QStringLiteral("Inbox"), Typography::Icons::Mail,
+                                                  true, true, QStringLiteral("inbox")));
+                selector->addItem(SelectorBarItem(QStringLiteral("Calendar"),
+                                                  Typography::Icons::Calendar, true, true,
+                                                  QStringLiteral("calendar")));
+                selector->addItem(SelectorBarItem(QStringLiteral("Settings"),
+                                                  Typography::Icons::Settings, true, true,
+                                                  QStringLiteral("settings")));
+                selector->setSelectedIndex(0);
 
-                       auto* host = new StackContentHost(group);
-                       host->setFixedSize(540, 128);
-                       for (int i = 0; i < selector->itemCount(); ++i) {
-                           const SelectorBarItem item = selector->itemAt(i);
-                           host->insertPage(i, makeHostPage(
-                               host,
-                               item.text,
-                               QStringLiteral("selectionChanged carries data key \"%1\".")
-                                   .arg(item.data.toString())));
-                       }
-                       host->setCurrentIndex(0, 0, false);
+                auto* host = new StackContentHost(group);
+                host->setFixedSize(540, 128);
+                for (int i = 0; i < selector->itemCount(); ++i) {
+                    const SelectorBarItem item = selector->itemAt(i);
+                    host->insertPage(
+                        i, makeHostPage(host, item.text,
+                                        QStringLiteral("selectionChanged carries data key \"%1\".")
+                                            .arg(item.data.toString())));
+                }
+                host->setCurrentIndex(0, 0, false);
 
-                       Label* status = makeStatusLabel(group, QStringLiteral("View: Inbox, data: inbox"));
-                       QObject::connect(selector, &SelectorBar::currentChanged,
-                                        host, [host](int index) {
-                                            if (index >= 0 && index < host->count())
-                                                host->setCurrentIndex(index, index >= host->currentIndex() ? 1 : -1, true);
-                                        });
-                       QObject::connect(selector, &SelectorBar::selectionChanged,
-                                        status, [status](int, const SelectorBarItem& item) {
-                                            status->setText(QStringLiteral("View: %1, data: %2")
-                                                                .arg(item.text, item.data.toString()));
-                                        });
+                Label* status = makeStatusLabel(group, QStringLiteral("View: Inbox, data: inbox"));
+                QObject::connect(selector, &SelectorBar::currentChanged, host, [host](int index) {
+                    if (index >= 0 && index < host->count())
+                        host->setCurrentIndex(index, index >= host->currentIndex() ? 1 : -1, true);
+                });
+                QObject::connect(selector, &SelectorBar::selectionChanged, status,
+                                 [status](int, const SelectorBarItem& item) {
+                                     status->setText(QStringLiteral("View: %1, data: %2")
+                                                         .arg(item.text, item.data.toString()));
+                                 });
 
-                       group->layout()->addWidget(selector);
-                       group->layout()->addWidget(host);
-                       group->layout()->addWidget(status);
-                       return group;
-                   }),
-        makeSample(QStringLiteral("selector-bar-item-state"),
-                   QStringLiteral("SelectorBar item state"),
-                   QStringLiteral("Items can be disabled, hidden, selected, and carry data without owning the page content."),
-                   QStringLiteral("auto* selector = new SelectorBar(this);\n"
-                                  "selector->addItem(SelectorBarItem(\"Overview\", Typography::Icons::Home,\n"
-                                  "                                 true, true, \"overview\"));\n"
-                                  "selector->addItem(SelectorBarItem(\"Sample code\", Typography::Icons::Document,\n"
-                                  "                                 true, false, \"code\"));\n"
-                                  "selector->addItem(SelectorBarItem(\"Disabled\", Typography::Icons::Lock,\n"
-                                  "                                 false, true, \"disabled\"));\n"
-                                  "selector->addItem(SelectorBarItem(\"Settings\", Typography::Icons::Settings,\n"
-                                  "                                 true, true, \"settings\"));\n\n"
-                                  "selector->setItemVisible(1, false);  // hidden until the button reveals it\n"
-                                  "selector->setItemEnabled(2, false);  // visible but not selectable\n"
-                                  "selector->setItemSelected(0, true);\n\n"
-                                  "connect(showCodeButton, &Button::clicked,\n"
-                                  "        selector, [selector] { selector->setItemVisible(1, true); });"),
-                   [](QWidget* parent) {
-                       auto* group = verticalGroup(parent, 8);
-                       auto* selector = new SelectorBar(group);
-                       selector->setFixedSize(540, 44);
-                       selector->addItem(SelectorBarItem(QStringLiteral("Overview"), Typography::Icons::Home,
-                                                         true, true, QStringLiteral("overview")));
-                       selector->addItem(SelectorBarItem(QStringLiteral("Sample code"), Typography::Icons::Document,
-                                                         true, false, QStringLiteral("code")));
-                       selector->addItem(SelectorBarItem(QStringLiteral("Disabled"), Typography::Icons::Lock,
-                                                         false, true, QStringLiteral("disabled")));
-                       selector->addItem(SelectorBarItem(QStringLiteral("Settings"), Typography::Icons::Settings,
-                                                         true, true, QStringLiteral("settings")));
-                       selector->setItemSelected(0, true);
+                group->layout()->addWidget(selector);
+                group->layout()->addWidget(host);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(
+            QStringLiteral("selector-bar-item-state"), QStringLiteral("SelectorBar item state"),
+            QStringLiteral("Items can be disabled, hidden, selected, and carry data without owning "
+                           "the page content."),
+            QStringLiteral(
+                "auto* selector = new SelectorBar(this);\n"
+                "selector->addItem(SelectorBarItem(\"Overview\", Typography::Icons::Home,\n"
+                "                                 true, true, \"overview\"));\n"
+                "selector->addItem(SelectorBarItem(\"Sample code\", Typography::Icons::Document,\n"
+                "                                 true, false, \"code\"));\n"
+                "selector->addItem(SelectorBarItem(\"Disabled\", Typography::Icons::Lock,\n"
+                "                                 false, true, \"disabled\"));\n"
+                "selector->addItem(SelectorBarItem(\"Settings\", Typography::Icons::Settings,\n"
+                "                                 true, true, \"settings\"));\n\n"
+                "selector->setItemVisible(1, false);  // hidden until the button reveals it\n"
+                "selector->setItemEnabled(2, false);  // visible but not selectable\n"
+                "selector->setItemSelected(0, true);\n\n"
+                "connect(showCodeButton, &Button::clicked,\n"
+                "        selector, [selector] { selector->setItemVisible(1, true); });"),
+            [](QWidget* parent) {
+                auto* group = verticalGroup(parent, 8);
+                auto* selector = new SelectorBar(group);
+                selector->setFixedSize(540, 44);
+                selector->addItem(SelectorBarItem(QStringLiteral("Overview"),
+                                                  Typography::Icons::Home, true, true,
+                                                  QStringLiteral("overview")));
+                selector->addItem(SelectorBarItem(QStringLiteral("Sample code"),
+                                                  Typography::Icons::Document, true, false,
+                                                  QStringLiteral("code")));
+                selector->addItem(SelectorBarItem(QStringLiteral("Disabled"),
+                                                  Typography::Icons::Lock, false, true,
+                                                  QStringLiteral("disabled")));
+                selector->addItem(SelectorBarItem(QStringLiteral("Settings"),
+                                                  Typography::Icons::Settings, true, true,
+                                                  QStringLiteral("settings")));
+                selector->setItemSelected(0, true);
 
-                       auto* controls = horizontalGroup(group, 8);
-                       auto* showCodeButton = makeControlButton(controls, QStringLiteral("Show code"));
-                       controls->layout()->addWidget(showCodeButton);
-                       auto* status = makeStatusLabel(group, QStringLiteral("Sample code is hidden; Disabled is visible but not selectable."));
-                       status->setFluentTypography(Typography::FontRole::Caption);
+                auto* controls = horizontalGroup(group, 8);
+                auto* showCodeButton = makeControlButton(controls, QStringLiteral("Show code"));
+                controls->layout()->addWidget(showCodeButton);
+                auto* status = makeStatusLabel(
+                    group, QStringLiteral(
+                               "Sample code is hidden; Disabled is visible but not selectable."));
+                status->setFluentTypography(Typography::FontRole::Caption);
 
-                       QObject::connect(showCodeButton, &Button::clicked,
-                                        selector, [selector, showCodeButton, status, codeVisible = false]() mutable {
-                                            codeVisible = !codeVisible;
-                                            selector->setItemVisible(1, codeVisible);
-                                            showCodeButton->setText(codeVisible ? QStringLiteral("Hide code")
-                                                                                : QStringLiteral("Show code"));
-                                            status->setText(codeVisible
-                                                                ? QStringLiteral("Sample code is visible and selectable.")
-                                                                : QStringLiteral("Sample code is hidden; Disabled is visible but not selectable."));
-                                        });
-                       QObject::connect(selector, &SelectorBar::selectionChanged,
-                                        status, [status](int, const SelectorBarItem& item) {
-                                            status->setText(QStringLiteral("Selected %1, data: %2")
-                                                                .arg(item.text, item.data.toString()));
-                                        });
+                QObject::connect(
+                    showCodeButton, &Button::clicked, selector,
+                    [selector, showCodeButton, status, codeVisible = false]() mutable {
+                        codeVisible = !codeVisible;
+                        selector->setItemVisible(1, codeVisible);
+                        showCodeButton->setText(codeVisible ? QStringLiteral("Hide code")
+                                                            : QStringLiteral("Show code"));
+                        status->setText(
+                            codeVisible ? QStringLiteral("Sample code is visible and selectable.")
+                                        : QStringLiteral("Sample code is hidden; Disabled is "
+                                                         "visible but not selectable."));
+                    });
+                QObject::connect(selector, &SelectorBar::selectionChanged, status,
+                                 [status](int, const SelectorBarItem& item) {
+                                     status->setText(QStringLiteral("Selected %1, data: %2")
+                                                         .arg(item.text, item.data.toString()));
+                                 });
 
-                       group->layout()->addWidget(selector);
-                       group->layout()->addWidget(controls);
-                       group->layout()->addWidget(status);
-                       return group;
-                   }),
-        makeSample(QStringLiteral("selector-bar-overflow-behavior"),
-                   QStringLiteral("SelectorBar OverflowBehavior"),
-                   QStringLiteral("ScrollButtons pages through hidden items with arrows; MoreButton groups hidden items behind the ... button."),
-                   QStringLiteral("const QVector<SelectorBarItem> items{\n"
-                                  "    {\"Category 1\", Typography::Icons::Folder},\n"
-                                  "    {\"Category 2\", Typography::Icons::Document},\n"
-                                  "    {\"Category 3\", Typography::Icons::Folder},\n"
-                                  "    {\"Category 4\", Typography::Icons::Document},\n"
-                                  "    {\"Category 5\", Typography::Icons::Folder},\n"
-                                  "    {\"Category 6\", Typography::Icons::Document}\n"
-                                  "};\n\n"
-                                  "auto* scrollButtons = new SelectorBar(this);\n"
-                                  "for (const SelectorBarItem& item : items)\n"
-                                  "    scrollButtons->addItem(item);\n"
-                                  "scrollButtons->setOverflowBehavior(SelectorBar::OverflowBehavior::ScrollButtons);\n"
-                                  "scrollButtons->setFixedWidth(360);\n\n"
-                                  "auto* moreButton = new SelectorBar(this);\n"
-                                  "for (const SelectorBarItem& item : items)\n"
-                                  "    moreButton->addItem(item);\n"
-                                  "moreButton->setOverflowBehavior(SelectorBar::OverflowBehavior::MoreButton);\n"
-                                  "moreButton->setFixedWidth(360);\n"
-                                  "connect(moreButton, &SelectorBar::overflowActivated,\n"
-                                  "        this, [](const QVector<int>& hiddenIndexes) {\n"
-                                  "            // hiddenIndexes are the items behind the ... button.\n"
-                                  "        });"),
-                   [](QWidget* parent) {
-                       auto* group = verticalGroup(parent, 10);
-                       QVector<SelectorBarItem> items;
-                       for (int i = 0; i < 6; ++i) {
-                           items.append(SelectorBarItem(
-                               QStringLiteral("Category %1").arg(i + 1),
-                               i % 2 == 0 ? Typography::Icons::Folder : Typography::Icons::Document));
-                       }
+                group->layout()->addWidget(selector);
+                group->layout()->addWidget(controls);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(
+            QStringLiteral("selector-bar-overflow-behavior"),
+            QStringLiteral("SelectorBar OverflowBehavior"),
+            QStringLiteral("ScrollButtons pages through hidden items with arrows; MoreButton "
+                           "groups hidden items behind the ... button."),
+            QStringLiteral(
+                "const QVector<SelectorBarItem> items{\n"
+                "    {\"Category 1\", Typography::Icons::Folder},\n"
+                "    {\"Category 2\", Typography::Icons::Document},\n"
+                "    {\"Category 3\", Typography::Icons::Folder},\n"
+                "    {\"Category 4\", Typography::Icons::Document},\n"
+                "    {\"Category 5\", Typography::Icons::Folder},\n"
+                "    {\"Category 6\", Typography::Icons::Document}\n"
+                "};\n\n"
+                "auto* scrollButtons = new SelectorBar(this);\n"
+                "for (const SelectorBarItem& item : items)\n"
+                "    scrollButtons->addItem(item);\n"
+                "scrollButtons->setOverflowBehavior(SelectorBar::OverflowBehavior::ScrollButtons);"
+                "\n"
+                "scrollButtons->setFixedWidth(360);\n\n"
+                "auto* moreButton = new SelectorBar(this);\n"
+                "for (const SelectorBarItem& item : items)\n"
+                "    moreButton->addItem(item);\n"
+                "moreButton->setOverflowBehavior(SelectorBar::OverflowBehavior::MoreButton);\n"
+                "moreButton->setFixedWidth(360);\n"
+                "connect(moreButton, &SelectorBar::overflowActivated,\n"
+                "        this, [](const QVector<int>& hiddenIndexes) {\n"
+                "            // hiddenIndexes are the items behind the ... button.\n"
+                "        });"),
+            [](QWidget* parent) {
+                auto* group = verticalGroup(parent, 10);
+                QVector<SelectorBarItem> items;
+                for (int i = 0; i < 6; ++i) {
+                    items.append(SelectorBarItem(QStringLiteral("Category %1").arg(i + 1),
+                                                 i % 2 == 0 ? Typography::Icons::Folder
+                                                            : Typography::Icons::Document));
+                }
 
-                       auto* status = makeStatusLabel(group, QStringLiteral("Click the MoreButton row's ... to list hidden items."));
-                       status->setFluentTypography(Typography::FontRole::Caption);
+                auto* status = makeStatusLabel(
+                    group, QStringLiteral("Click the MoreButton row's ... to list hidden items."));
+                status->setFluentTypography(Typography::FontRole::Caption);
 
-                       auto addOverflowRow = [group, items, status](const QString& label,
-                                                                    SelectorBar::OverflowBehavior behavior) {
-                           auto* row = horizontalGroup(group, 10);
-                           auto* rowLabel = new Label(label, row);
-                           rowLabel->setFluentTypography(Typography::FontRole::Caption);
-                           rowLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
-                           rowLabel->setFixedWidth(96);
+                auto addOverflowRow = [group, items,
+                                       status](const QString& label,
+                                               SelectorBar::OverflowBehavior behavior) {
+                    auto* row = horizontalGroup(group, 10);
+                    auto* rowLabel = new Label(label, row);
+                    rowLabel->setFluentTypography(Typography::FontRole::Caption);
+                    rowLabel->setTextColorRole(
+                        Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
+                    rowLabel->setFixedWidth(96);
 
-                           auto* selector = new SelectorBar(row);
-                           selector->setFixedSize(360, 44);
-                           selector->setOverflowBehavior(behavior);
-                           for (const SelectorBarItem& item : items)
-                               selector->addItem(item);
-                           selector->setSelectedIndex(0);
+                    auto* selector = new SelectorBar(row);
+                    selector->setFixedSize(360, 44);
+                    selector->setOverflowBehavior(behavior);
+                    for (const SelectorBarItem& item : items)
+                        selector->addItem(item);
+                    selector->setSelectedIndex(0);
 
-                           if (behavior == SelectorBar::OverflowBehavior::MoreButton) {
-                               QObject::connect(selector, &SelectorBar::overflowActivated,
-                                                status, [status, selector](const QVector<int>& hiddenIndexes) {
-                                                    QStringList itemTexts;
-                                                    for (int index : hiddenIndexes)
-                                                        itemTexts.append(selector->itemAt(index).text);
-                                                    status->setText(QStringLiteral("MoreButton contains: %1")
-                                                                        .arg(itemTexts.join(QStringLiteral(", "))));
-                                                });
-                           }
+                    if (behavior == SelectorBar::OverflowBehavior::MoreButton) {
+                        QObject::connect(selector, &SelectorBar::overflowActivated, status,
+                                         [status, selector](const QVector<int>& hiddenIndexes) {
+                                             QStringList itemTexts;
+                                             for (int index : hiddenIndexes)
+                                                 itemTexts.append(selector->itemAt(index).text);
+                                             status->setText(
+                                                 QStringLiteral("MoreButton contains: %1")
+                                                     .arg(itemTexts.join(QStringLiteral(", "))));
+                                         });
+                    }
 
-                           row->layout()->addWidget(rowLabel);
-                           row->layout()->addWidget(selector);
-                           group->layout()->addWidget(row);
-                       };
+                    row->layout()->addWidget(rowLabel);
+                    row->layout()->addWidget(selector);
+                    group->layout()->addWidget(row);
+                };
 
-                       addOverflowRow(QStringLiteral("ScrollButtons"), SelectorBar::OverflowBehavior::ScrollButtons);
-                       addOverflowRow(QStringLiteral("MoreButton"), SelectorBar::OverflowBehavior::MoreButton);
-                       group->layout()->addWidget(status);
-                       return group;
-                   })
-    };
+                addOverflowRow(QStringLiteral("ScrollButtons"),
+                               SelectorBar::OverflowBehavior::ScrollButtons);
+                addOverflowRow(QStringLiteral("MoreButton"),
+                               SelectorBar::OverflowBehavior::MoreButton);
+                group->layout()->addWidget(status);
+                return group;
+            })};
 }
 
 QVector<GallerySample> tabViewSamples()
 {
     return {
-        makeSample(QStringLiteral("tab-view-hosted-pages"),
-                   QStringLiteral("TabView with hosted pages"),
-                   QStringLiteral("currentChanged selects the external StackContentHost page; tabMoved keeps tab order and page order aligned."),
-                   QStringLiteral("auto* surface = new QWidget(this);\n"
-                                  "surface->setMinimumWidth(360);\n"
-                                  "surface->setMaximumWidth(560);\n"
-                                  "surface->setFixedHeight(186);\n"
-                                  "surface->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
-                                  "auto* layout = new QVBoxLayout(surface);\n"
-                                  "layout->setContentsMargins(0, 0, 0, 0);\n"
-                                  "layout->setSpacing(0);\n\n"
-                                  "auto* tabs = new TabView(surface);\n"
-                                  "tabs->setFixedHeight(40);\n"
-                                  "tabs->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
-                                  "tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);\n"
-                                  "tabs->setTabReorderEnabled(true);\n"
-                                  "tabs->setTabsClosable(false);\n"
-                                  "tabs->setAddTabButtonVisible(false);\n"
-                                  "tabs->addTab(TabViewItem(\"Home\", Typography::Icons::Home));\n"
-                                  "tabs->addTab(TabViewItem(\"Details\", Typography::Icons::Document));\n"
-                                  "tabs->addTab(TabViewItem(\"Activity\", Typography::Icons::Calendar));\n\n"
-                                  "auto* host = new StackContentHost(surface);\n"
-                                  "host->setFixedHeight(146);\n"
-                                  "host->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
-                                  "for (int i = 0; i < tabs->tabCount(); ++i)\n"
-                                  "    host->insertPage(i, createPage(tabs->tabAt(i).text));\n\n"
-                                  "connect(tabs, &TabView::currentChanged,\n"
-                                  "        host, [host](int index) { host->setCurrentIndex(index, 0, true); });\n"
-                                  "connect(tabs, &TabView::tabMoved,\n"
-                                  "        host, [host](int from, int to) { host->movePage(from, to); });\n"
-                                  "layout->addWidget(tabs);\n"
-                                  "layout->addWidget(host);"),
-                   [](QWidget* parent) {
-                       auto* container = verticalGroup(parent, 8);
-                       auto* surface = new NavigationSampleSurface(container);
-                       surface->setObjectName(QStringLiteral("tabViewHostedPagesSurface"));
-                       surface->setMinimumWidth(360);
-                       surface->setMaximumWidth(560);
-                       surface->setFixedHeight(186);
-                       surface->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-                       auto* surfaceLayout = new QVBoxLayout(surface);
-                       surfaceLayout->setContentsMargins(0, 0, 0, 0);
-                       surfaceLayout->setSpacing(0);
+        makeSample(
+            QStringLiteral("tab-view-hosted-pages"), QStringLiteral("TabView with hosted pages"),
+            QStringLiteral("currentChanged selects the external StackContentHost page; tabMoved "
+                           "keeps tab order and page order aligned."),
+            QStringLiteral(
+                "auto* surface = new QWidget(this);\n"
+                "surface->setMinimumWidth(360);\n"
+                "surface->setMaximumWidth(560);\n"
+                "surface->setFixedHeight(186);\n"
+                "surface->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
+                "auto* layout = new QVBoxLayout(surface);\n"
+                "layout->setContentsMargins(0, 0, 0, 0);\n"
+                "layout->setSpacing(0);\n\n"
+                "auto* tabs = new TabView(surface);\n"
+                "tabs->setFixedHeight(40);\n"
+                "tabs->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
+                "tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);\n"
+                "tabs->setTabReorderEnabled(true);\n"
+                "tabs->setTabsClosable(false);\n"
+                "tabs->setAddTabButtonVisible(false);\n"
+                "tabs->addTab(TabViewItem(\"Home\", Typography::Icons::Home));\n"
+                "tabs->addTab(TabViewItem(\"Details\", Typography::Icons::Document));\n"
+                "tabs->addTab(TabViewItem(\"Activity\", Typography::Icons::Calendar));\n\n"
+                "auto* host = new StackContentHost(surface);\n"
+                "host->setFixedHeight(146);\n"
+                "host->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
+                "for (int i = 0; i < tabs->tabCount(); ++i)\n"
+                "    host->insertPage(i, createPage(tabs->tabAt(i).text));\n\n"
+                "connect(tabs, &TabView::currentChanged,\n"
+                "        host, [host](int index) { host->setCurrentIndex(index, 0, true); });\n"
+                "connect(tabs, &TabView::tabMoved,\n"
+                "        host, [host](int from, int to) { host->movePage(from, to); });\n"
+                "layout->addWidget(tabs);\n"
+                "layout->addWidget(host);"),
+            [](QWidget* parent) {
+                auto* container = verticalGroup(parent, 8);
+                auto* surface = new NavigationSampleSurface(container);
+                surface->setObjectName(QStringLiteral("tabViewHostedPagesSurface"));
+                surface->setMinimumWidth(360);
+                surface->setMaximumWidth(560);
+                surface->setFixedHeight(186);
+                surface->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+                auto* surfaceLayout = new QVBoxLayout(surface);
+                surfaceLayout->setContentsMargins(0, 0, 0, 0);
+                surfaceLayout->setSpacing(0);
 
-                       auto* tabView = new TabView(surface);
-                       tabView->setObjectName(QStringLiteral("tabViewHostedPagesTabs"));
-                       tabView->setFixedHeight(40);
-                       tabView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-                       tabView->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
-                       tabView->setTabReorderEnabled(true);
-                       tabView->setAddTabButtonVisible(false);
-                       tabView->setTabsClosable(false);
+                auto* tabView = new TabView(surface);
+                tabView->setObjectName(QStringLiteral("tabViewHostedPagesTabs"));
+                tabView->setFixedHeight(40);
+                tabView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+                tabView->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
+                tabView->setTabReorderEnabled(true);
+                tabView->setAddTabButtonVisible(false);
+                tabView->setTabsClosable(false);
 
-                       auto* contentHost = new StackContentHost(surface);
-                       contentHost->setObjectName(QStringLiteral("tabViewHostedPagesHost"));
-                       contentHost->setFixedHeight(146);
-                       contentHost->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-                       auto makePage = [contentHost](const QString& title) {
-                           return makeHostPage(
-                               contentHost,
-                               title,
-                               QStringLiteral("%1 content hosted by the selected tab.").arg(title));
-                       };
-                       const QVector<TabViewItem> initialTabs{
-                           TabViewItem(QStringLiteral("Home"), Typography::Icons::Home),
-                           TabViewItem(QStringLiteral("Details"), Typography::Icons::Document),
-                           TabViewItem(QStringLiteral("Activity"), Typography::Icons::Calendar)
-                       };
-                       int pageIndex = 0;
-                       for (const TabViewItem& tab : initialTabs) {
-                           tabView->addTab(tab);
-                           contentHost->insertPage(pageIndex, makePage(tab.text));
-                           ++pageIndex;
-                       }
-                       tabView->setSelectedIndex(0);
-                       contentHost->setCurrentIndex(0, 0, false);
-                       auto* status = makeStatusLabel(container, QStringLiteral("Selected tab: Home"));
-                       QObject::connect(tabView, &TabView::currentChanged,
-                                        contentHost, [contentHost, status, tabView](int index) {
-                                            if (index >= 0 && index < contentHost->count())
-                                                contentHost->setCurrentIndex(index, 0, true);
-                                            if (index >= 0)
-                                                status->setText(QStringLiteral("Selected tab: %1")
-                                                                    .arg(tabView->tabAt(index).text));
-                                        });
-                       QObject::connect(tabView, &TabView::tabMoved,
-                                        contentHost, [contentHost, status, tabView](int from, int to) {
-                                            contentHost->movePage(from, to);
-                                            const int current = tabView->selectedIndex();
-                                            if (current >= 0 && current < contentHost->count())
-                                                contentHost->setCurrentIndex(current, 0, false);
-                                            status->setText(QStringLiteral("Moved tab %1 to %2")
-                                                                .arg(from + 1)
-                                                                .arg(to + 1));
-                                        });
+                auto* contentHost = new StackContentHost(surface);
+                contentHost->setObjectName(QStringLiteral("tabViewHostedPagesHost"));
+                contentHost->setFixedHeight(146);
+                contentHost->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+                auto makePage = [contentHost](const QString& title) {
+                    return makeHostPage(
+                        contentHost, title,
+                        QStringLiteral("%1 content hosted by the selected tab.").arg(title));
+                };
+                const QVector<TabViewItem> initialTabs{
+                    TabViewItem(QStringLiteral("Home"), Typography::Icons::Home),
+                    TabViewItem(QStringLiteral("Details"), Typography::Icons::Document),
+                    TabViewItem(QStringLiteral("Activity"), Typography::Icons::Calendar)};
+                int pageIndex = 0;
+                for (const TabViewItem& tab : initialTabs) {
+                    tabView->addTab(tab);
+                    contentHost->insertPage(pageIndex, makePage(tab.text));
+                    ++pageIndex;
+                }
+                tabView->setSelectedIndex(0);
+                contentHost->setCurrentIndex(0, 0, false);
+                auto* status = makeStatusLabel(container, QStringLiteral("Selected tab: Home"));
+                QObject::connect(
+                    tabView, &TabView::currentChanged, contentHost,
+                    [contentHost, status, tabView](int index) {
+                        if (index >= 0 && index < contentHost->count())
+                            contentHost->setCurrentIndex(index, 0, true);
+                        if (index >= 0)
+                            status->setText(
+                                QStringLiteral("Selected tab: %1").arg(tabView->tabAt(index).text));
+                    });
+                QObject::connect(
+                    tabView, &TabView::tabMoved, contentHost,
+                    [contentHost, status, tabView](int from, int to) {
+                        contentHost->movePage(from, to);
+                        const int current = tabView->selectedIndex();
+                        if (current >= 0 && current < contentHost->count())
+                            contentHost->setCurrentIndex(current, 0, false);
+                        status->setText(
+                            QStringLiteral("Moved tab %1 to %2").arg(from + 1).arg(to + 1));
+                    });
 
-                       surfaceLayout->addWidget(tabView);
-                       surfaceLayout->addWidget(contentHost);
-                       container->layout()->addWidget(surface);
-                       container->layout()->addWidget(status);
-                       return container;
-                   }),
-        makeSample(QStringLiteral("tab-view-add-close"),
-                   QStringLiteral("Add, close, and tab state"),
-                   QStringLiteral("The add button raises addTabRequested; close buttons raise tabCloseRequested; per-tab closable and enabled state still apply."),
-                   QStringLiteral("auto* tabs = new TabView(this);\n"
-                                  "tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);\n"
-                                  "tabs->setAddTabButtonVisible(true);\n"
-                                  "tabs->setTabsClosable(true);\n"
-                                  "tabs->addTab(TabViewItem(\"Home\", Typography::Icons::Home, false));\n"
-                                  "tabs->addTab(TabViewItem(\"Draft\", Typography::Icons::Document));\n"
-                                  "tabs->addTab(TabViewItem(\"Review\", Typography::Icons::Edit));\n"
-                                  "tabs->addTab(TabViewItem(\"Disabled\", Typography::Icons::Lock, true, false));\n\n"
-                                  "connect(tabs, &TabView::addTabRequested,\n"
-                                  "        tabs, [tabs] {\n"
-                                  "            const int index = tabs->addTab(TabViewItem(\"Document\", Typography::Icons::Document));\n"
-                                  "            tabs->setSelectedIndex(index);\n"
-                                  "        });\n"
-                                  "connect(tabs, &TabView::tabCloseRequested,\n"
-                                  "        tabs, [tabs](int index) { tabs->closeTab(index); });"),
-                   [](QWidget* parent) {
-                       auto* container = verticalGroup(parent, 8);
-                       auto* tabView = new TabView(container);
-                       tabView->setFixedSize(560, 40);
-                       tabView->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
-                       tabView->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);
-                       tabView->setAddTabButtonVisible(true);
-                       tabView->setTabsClosable(true);
-                       tabView->addTab(TabViewItem(QStringLiteral("Home"), Typography::Icons::Home, false));
-                       tabView->addTab(TabViewItem(QStringLiteral("Draft"), Typography::Icons::Document));
-                       tabView->addTab(TabViewItem(QStringLiteral("Review"), Typography::Icons::Edit));
-                       tabView->addTab(TabViewItem(QStringLiteral("Disabled"), Typography::Icons::Lock, true, false));
-                       tabView->setSelectedIndex(0);
+                surfaceLayout->addWidget(tabView);
+                surfaceLayout->addWidget(contentHost);
+                container->layout()->addWidget(surface);
+                container->layout()->addWidget(status);
+                return container;
+            }),
+        makeSample(
+            QStringLiteral("tab-view-add-close"), QStringLiteral("Add, close, and tab state"),
+            QStringLiteral("The add button raises addTabRequested; close buttons raise "
+                           "tabCloseRequested; per-tab closable and enabled state still apply."),
+            QStringLiteral(
+                "auto* tabs = new TabView(this);\n"
+                "tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);\n"
+                "tabs->setAddTabButtonVisible(true);\n"
+                "tabs->setTabsClosable(true);\n"
+                "tabs->addTab(TabViewItem(\"Home\", Typography::Icons::Home, false));\n"
+                "tabs->addTab(TabViewItem(\"Draft\", Typography::Icons::Document));\n"
+                "tabs->addTab(TabViewItem(\"Review\", Typography::Icons::Edit));\n"
+                "tabs->addTab(TabViewItem(\"Disabled\", Typography::Icons::Lock, true, false));\n\n"
+                "connect(tabs, &TabView::addTabRequested,\n"
+                "        tabs, [tabs] {\n"
+                "            const int index = tabs->addTab(TabViewItem(\"Document\", "
+                "Typography::Icons::Document));\n"
+                "            tabs->setSelectedIndex(index);\n"
+                "        });\n"
+                "connect(tabs, &TabView::tabCloseRequested,\n"
+                "        tabs, [tabs](int index) { tabs->closeTab(index); });"),
+            [](QWidget* parent) {
+                auto* container = verticalGroup(parent, 8);
+                auto* tabView = new TabView(container);
+                tabView->setFixedSize(560, 40);
+                tabView->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
+                tabView->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);
+                tabView->setAddTabButtonVisible(true);
+                tabView->setTabsClosable(true);
+                tabView->addTab(
+                    TabViewItem(QStringLiteral("Home"), Typography::Icons::Home, false));
+                tabView->addTab(TabViewItem(QStringLiteral("Draft"), Typography::Icons::Document));
+                tabView->addTab(TabViewItem(QStringLiteral("Review"), Typography::Icons::Edit));
+                tabView->addTab(
+                    TabViewItem(QStringLiteral("Disabled"), Typography::Icons::Lock, true, false));
+                tabView->setSelectedIndex(0);
 
-                       auto* status = makeStatusLabel(container, QStringLiteral("Home is pinned; Disabled is not selectable."));
-                       status->setFluentTypography(Typography::FontRole::Caption);
-                       QObject::connect(tabView, &TabView::addTabRequested,
-                                        tabView, [tabView, status]() {
-                                            static int documentNumber = 0;
-                                            const QString title = QStringLiteral("Document %1").arg(++documentNumber);
-                                            const int index = tabView->addTab(TabViewItem(title, Typography::Icons::Document));
-                                            tabView->setSelectedIndex(index);
-                                            status->setText(QStringLiteral("Added %1").arg(title));
-                                        });
-                       QObject::connect(tabView, &TabView::tabCloseRequested,
-                                        tabView, [tabView, status](int index) {
-                                            const QString title = tabView->tabAt(index).text;
-                                            if (tabView->closeTab(index))
-                                                status->setText(QStringLiteral("Closed %1").arg(title));
-                                            else
-                                                status->setText(QStringLiteral("%1 cannot be closed").arg(title));
-                                        });
-                       QObject::connect(tabView, &TabView::currentChanged,
-                                        status, [status, tabView](int index) {
-                                            if (index >= 0)
-                                                status->setText(QStringLiteral("Selected %1").arg(tabView->tabAt(index).text));
-                                        });
+                auto* status = makeStatusLabel(
+                    container, QStringLiteral("Home is pinned; Disabled is not selectable."));
+                status->setFluentTypography(Typography::FontRole::Caption);
+                QObject::connect(tabView, &TabView::addTabRequested, tabView, [tabView, status]() {
+                    static int documentNumber = 0;
+                    const QString title = QStringLiteral("Document %1").arg(++documentNumber);
+                    const int index =
+                        tabView->addTab(TabViewItem(title, Typography::Icons::Document));
+                    tabView->setSelectedIndex(index);
+                    status->setText(QStringLiteral("Added %1").arg(title));
+                });
+                QObject::connect(
+                    tabView, &TabView::tabCloseRequested, tabView, [tabView, status](int index) {
+                        const QString title = tabView->tabAt(index).text;
+                        if (tabView->closeTab(index))
+                            status->setText(QStringLiteral("Closed %1").arg(title));
+                        else
+                            status->setText(QStringLiteral("%1 cannot be closed").arg(title));
+                    });
+                QObject::connect(
+                    tabView, &TabView::currentChanged, status, [status, tabView](int index) {
+                        if (index >= 0)
+                            status->setText(
+                                QStringLiteral("Selected %1").arg(tabView->tabAt(index).text));
+                    });
 
-                       container->layout()->addWidget(tabView);
-                       container->layout()->addWidget(status);
-                       return container;
-                   }),
-        makeSample(QStringLiteral("tab-view-keyboard-accelerators"),
-                   QStringLiteral("keyboardAcceleratorsEnabled"),
-                   QStringLiteral("TabView can own keyboard tab actions such as add, close, and index selection, and those accelerators can be disabled."),
-                   QStringLiteral("auto* tabs = new TabView(this);\n"
-                                  "tabs->setAddTabButtonVisible(true);\n"
-                                  "tabs->setTabsClosable(true);\n"
-                                  "tabs->setKeyboardAcceleratorsEnabled(true);\n"
-                                  "tabs->addTab(TabViewItem(\"Shortcut A\", Typography::Icons::Document));\n"
-                                  "tabs->addTab(TabViewItem(\"Shortcut B\", Typography::Icons::Document));\n"
-                                  "tabs->addTab(TabViewItem(\"Shortcut C\", Typography::Icons::Document));\n\n"
-                                  "connect(tabs, &TabView::addTabRequested,\n"
-                                  "        tabs, [tabs] {\n"
-                                  "            const int index = tabs->addTab(TabViewItem(\"Added\",\n"
-                                  "                                                     Typography::Icons::Document));\n"
-                                  "            tabs->setSelectedIndex(index);\n"
-                                  "        });\n"
-                                  "connect(tabs, &TabView::tabCloseRequested,\n"
-                                  "        tabs, [tabs](int index) { tabs->closeTab(index); });\n"
-                                  "connect(disableButton, &Button::clicked,\n"
-                                  "        tabs, [tabs] { tabs->setKeyboardAcceleratorsEnabled(false); });\n"
-                                  "connect(enableButton, &Button::clicked,\n"
-                                  "        tabs, [tabs] { tabs->setKeyboardAcceleratorsEnabled(true); });"),
-                   [](QWidget* parent) {
-                       auto* container = verticalGroup(parent, 8);
-                       auto* controls = horizontalGroup(container, 8);
-                       auto* enableButton = makeControlButton(controls, QStringLiteral("Enable"));
-                       auto* disableButton = makeControlButton(controls, QStringLiteral("Disable"));
-                       controls->layout()->addWidget(enableButton);
-                       controls->layout()->addWidget(disableButton);
+                container->layout()->addWidget(tabView);
+                container->layout()->addWidget(status);
+                return container;
+            }),
+        makeSample(
+            QStringLiteral("tab-view-keyboard-accelerators"),
+            QStringLiteral("keyboardAcceleratorsEnabled"),
+            QStringLiteral("TabView can own keyboard tab actions such as add, close, and index "
+                           "selection, and those accelerators can be disabled."),
+            QStringLiteral(
+                "auto* tabs = new TabView(this);\n"
+                "tabs->setAddTabButtonVisible(true);\n"
+                "tabs->setTabsClosable(true);\n"
+                "tabs->setKeyboardAcceleratorsEnabled(true);\n"
+                "tabs->addTab(TabViewItem(\"Shortcut A\", Typography::Icons::Document));\n"
+                "tabs->addTab(TabViewItem(\"Shortcut B\", Typography::Icons::Document));\n"
+                "tabs->addTab(TabViewItem(\"Shortcut C\", Typography::Icons::Document));\n\n"
+                "connect(tabs, &TabView::addTabRequested,\n"
+                "        tabs, [tabs] {\n"
+                "            const int index = tabs->addTab(TabViewItem(\"Added\",\n"
+                "                                                     "
+                "Typography::Icons::Document));\n"
+                "            tabs->setSelectedIndex(index);\n"
+                "        });\n"
+                "connect(tabs, &TabView::tabCloseRequested,\n"
+                "        tabs, [tabs](int index) { tabs->closeTab(index); });\n"
+                "connect(disableButton, &Button::clicked,\n"
+                "        tabs, [tabs] { tabs->setKeyboardAcceleratorsEnabled(false); });\n"
+                "connect(enableButton, &Button::clicked,\n"
+                "        tabs, [tabs] { tabs->setKeyboardAcceleratorsEnabled(true); });"),
+            [](QWidget* parent) {
+                auto* container = verticalGroup(parent, 8);
+                auto* controls = horizontalGroup(container, 8);
+                auto* enableButton = makeControlButton(controls, QStringLiteral("Enable"));
+                auto* disableButton = makeControlButton(controls, QStringLiteral("Disable"));
+                controls->layout()->addWidget(enableButton);
+                controls->layout()->addWidget(disableButton);
 
-                       auto* tabView = new TabView(container);
-                       tabView->setFixedSize(560, 40);
-                       tabView->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
-                       tabView->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);
-                       tabView->setAddTabButtonVisible(true);
-                       tabView->setTabsClosable(true);
-                       tabView->setKeyboardAcceleratorsEnabled(true);
-                       tabView->addTab(TabViewItem(QStringLiteral("Shortcut A"), Typography::Icons::Document));
-                       tabView->addTab(TabViewItem(QStringLiteral("Shortcut B"), Typography::Icons::Document));
-                       tabView->addTab(TabViewItem(QStringLiteral("Shortcut C"), Typography::Icons::Document));
-                       tabView->setSelectedIndex(0);
+                auto* tabView = new TabView(container);
+                tabView->setFixedSize(560, 40);
+                tabView->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
+                tabView->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);
+                tabView->setAddTabButtonVisible(true);
+                tabView->setTabsClosable(true);
+                tabView->setKeyboardAcceleratorsEnabled(true);
+                tabView->addTab(
+                    TabViewItem(QStringLiteral("Shortcut A"), Typography::Icons::Document));
+                tabView->addTab(
+                    TabViewItem(QStringLiteral("Shortcut B"), Typography::Icons::Document));
+                tabView->addTab(
+                    TabViewItem(QStringLiteral("Shortcut C"), Typography::Icons::Document));
+                tabView->setSelectedIndex(0);
 
-                       auto* status = makeStatusLabel(container, QStringLiteral("Accelerators enabled, tabs: 3, selected: Shortcut A"));
-                       status->setFluentTypography(Typography::FontRole::Caption);
-                       auto updateStatus = [tabView, status, enableButton, disableButton]() {
-                           const int index = tabView->selectedIndex();
-                           const QString selected = index >= 0 ? tabView->tabAt(index).text : QStringLiteral("none");
-                           const bool enabled = tabView->keyboardAcceleratorsEnabled();
-                           enableButton->setFluentStyle(enabled ? Button::Standard : Button::Accent);
-                           disableButton->setFluentStyle(enabled ? Button::Accent : Button::Standard);
-                           status->setText(QStringLiteral("Accelerators %1, tabs: %2, selected: %3")
-                                               .arg(enabled ? QStringLiteral("enabled") : QStringLiteral("disabled"))
-                                               .arg(tabView->tabCount())
-                                               .arg(selected));
-                       };
+                auto* status = makeStatusLabel(
+                    container,
+                    QStringLiteral("Accelerators enabled, tabs: 3, selected: Shortcut A"));
+                status->setFluentTypography(Typography::FontRole::Caption);
+                auto updateStatus = [tabView, status, enableButton, disableButton]() {
+                    const int index = tabView->selectedIndex();
+                    const QString selected =
+                        index >= 0 ? tabView->tabAt(index).text : QStringLiteral("none");
+                    const bool enabled = tabView->keyboardAcceleratorsEnabled();
+                    enableButton->setFluentStyle(enabled ? Button::Standard : Button::Accent);
+                    disableButton->setFluentStyle(enabled ? Button::Accent : Button::Standard);
+                    status->setText(
+                        QStringLiteral("Accelerators %1, tabs: %2, selected: %3")
+                            .arg(enabled ? QStringLiteral("enabled") : QStringLiteral("disabled"))
+                            .arg(tabView->tabCount())
+                            .arg(selected));
+                };
 
-                       QObject::connect(tabView, &TabView::addTabRequested,
-                                        tabView, [tabView, updateStatus]() {
-                                            static int shortcutNumber = 0;
-                                            const QString title = QStringLiteral("Added %1").arg(++shortcutNumber);
-                                            const int index = tabView->addTab(TabViewItem(title, Typography::Icons::Document));
-                                            tabView->setSelectedIndex(index);
-                                            updateStatus();
-                                        });
-                       QObject::connect(tabView, &TabView::tabCloseRequested,
-                                        tabView, [tabView, updateStatus](int index) {
-                                            tabView->closeTab(index);
-                                            updateStatus();
-                                        });
-                       QObject::connect(tabView, &TabView::currentChanged,
-                                        status, [updateStatus](int) { updateStatus(); });
-                       QObject::connect(enableButton, &Button::clicked,
-                                        tabView, [tabView, updateStatus]() {
-                                            tabView->setKeyboardAcceleratorsEnabled(true);
-                                            updateStatus();
-                                        });
-                       QObject::connect(disableButton, &Button::clicked,
-                                        tabView, [tabView, updateStatus]() {
-                                            tabView->setKeyboardAcceleratorsEnabled(false);
-                                            updateStatus();
-                                        });
-                       updateStatus();
+                QObject::connect(
+                    tabView, &TabView::addTabRequested, tabView, [tabView, updateStatus]() {
+                        static int shortcutNumber = 0;
+                        const QString title = QStringLiteral("Added %1").arg(++shortcutNumber);
+                        const int index =
+                            tabView->addTab(TabViewItem(title, Typography::Icons::Document));
+                        tabView->setSelectedIndex(index);
+                        updateStatus();
+                    });
+                QObject::connect(tabView, &TabView::tabCloseRequested, tabView,
+                                 [tabView, updateStatus](int index) {
+                                     tabView->closeTab(index);
+                                     updateStatus();
+                                 });
+                QObject::connect(tabView, &TabView::currentChanged, status,
+                                 [updateStatus](int) { updateStatus(); });
+                QObject::connect(enableButton, &Button::clicked, tabView,
+                                 [tabView, updateStatus]() {
+                                     tabView->setKeyboardAcceleratorsEnabled(true);
+                                     updateStatus();
+                                 });
+                QObject::connect(disableButton, &Button::clicked, tabView,
+                                 [tabView, updateStatus]() {
+                                     tabView->setKeyboardAcceleratorsEnabled(false);
+                                     updateStatus();
+                                 });
+                updateStatus();
 
-                       container->layout()->addWidget(controls);
-                       container->layout()->addWidget(tabView);
-                       container->layout()->addWidget(status);
-                       return container;
-                   }),
-        makeSample(QStringLiteral("tab-view-width-modes"),
-                   QStringLiteral("TabWidthMode"),
-                   QStringLiteral("Equal gives tabs the same width; SizeToContent follows header text; Compact collapses inactive tabs."),
-                   QStringLiteral("auto addTabs = [](TabView* tabs) {\n"
-                                  "    tabs->addTab(TabViewItem(\"Home\", Typography::Icons::Home));\n"
-                                  "    tabs->addTab(TabViewItem(\"Long document\", Typography::Icons::Document));\n"
-                                  "    tabs->addTab(TabViewItem(\"Activity\", Typography::Icons::Calendar));\n"
-                                  "    tabs->setTabsClosable(false);\n"
-                                  "    tabs->setAddTabButtonVisible(false);\n"
-                                  "};\n\n"
-                                  "auto* equal = new TabView(this);\n"
-                                  "addTabs(equal);\n"
-                                  "equal->setTabWidthMode(TabView::TabWidthMode::Equal);\n"
-                                  "auto* sizeToContent = new TabView(this);\n"
-                                  "addTabs(sizeToContent);\n"
-                                  "sizeToContent->setTabWidthMode(TabView::TabWidthMode::SizeToContent);\n"
-                                  "auto* compact = new TabView(this);\n"
-                                  "addTabs(compact);\n"
-                                  "compact->setTabWidthMode(TabView::TabWidthMode::Compact);\n"
-                                  "compact->setSelectedIndex(1);"),
-                   [](QWidget* parent) {
-                       auto* group = verticalGroup(parent, 10);
-                       auto addModeRow = [group](const QString& label,
-                                                 TabView::TabWidthMode mode,
-                                                 int selectedIndex = 0) {
-                           auto* row = horizontalGroup(group, 10);
-                           auto* rowLabel = new Label(label, row);
-                           rowLabel->setFluentTypography(Typography::FontRole::Caption);
-                           rowLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
-                           rowLabel->setFixedWidth(104);
+                container->layout()->addWidget(controls);
+                container->layout()->addWidget(tabView);
+                container->layout()->addWidget(status);
+                return container;
+            }),
+        makeSample(
+            QStringLiteral("tab-view-width-modes"), QStringLiteral("TabWidthMode"),
+            QStringLiteral("Equal gives tabs the same width; SizeToContent follows header text; "
+                           "Compact collapses inactive tabs."),
+            QStringLiteral(
+                "auto addTabs = [](TabView* tabs) {\n"
+                "    tabs->addTab(TabViewItem(\"Home\", Typography::Icons::Home));\n"
+                "    tabs->addTab(TabViewItem(\"Long document\", Typography::Icons::Document));\n"
+                "    tabs->addTab(TabViewItem(\"Activity\", Typography::Icons::Calendar));\n"
+                "    tabs->setTabsClosable(false);\n"
+                "    tabs->setAddTabButtonVisible(false);\n"
+                "};\n\n"
+                "auto* equal = new TabView(this);\n"
+                "addTabs(equal);\n"
+                "equal->setTabWidthMode(TabView::TabWidthMode::Equal);\n"
+                "auto* sizeToContent = new TabView(this);\n"
+                "addTabs(sizeToContent);\n"
+                "sizeToContent->setTabWidthMode(TabView::TabWidthMode::SizeToContent);\n"
+                "auto* compact = new TabView(this);\n"
+                "addTabs(compact);\n"
+                "compact->setTabWidthMode(TabView::TabWidthMode::Compact);\n"
+                "compact->setSelectedIndex(1);"),
+            [](QWidget* parent) {
+                auto* group = verticalGroup(parent, 10);
+                auto addModeRow = [group](const QString& label, TabView::TabWidthMode mode,
+                                          int selectedIndex = 0) {
+                    auto* row = horizontalGroup(group, 10);
+                    auto* rowLabel = new Label(label, row);
+                    rowLabel->setFluentTypography(Typography::FontRole::Caption);
+                    rowLabel->setTextColorRole(
+                        Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
+                    rowLabel->setFixedWidth(104);
 
-                           auto* tabs = new TabView(row);
-                           tabs->setFixedSize(430, 40);
-                           tabs->setTabWidthMode(mode);
-                           tabs->setTabsClosable(false);
-                           tabs->setAddTabButtonVisible(false);
-                           tabs->addTab(TabViewItem(QStringLiteral("Home"), Typography::Icons::Home));
-                           tabs->addTab(TabViewItem(QStringLiteral("Long document"), Typography::Icons::Document));
-                           tabs->addTab(TabViewItem(QStringLiteral("Activity"), Typography::Icons::Calendar));
-                           tabs->setSelectedIndex(selectedIndex);
+                    auto* tabs = new TabView(row);
+                    tabs->setFixedSize(430, 40);
+                    tabs->setTabWidthMode(mode);
+                    tabs->setTabsClosable(false);
+                    tabs->setAddTabButtonVisible(false);
+                    tabs->addTab(TabViewItem(QStringLiteral("Home"), Typography::Icons::Home));
+                    tabs->addTab(
+                        TabViewItem(QStringLiteral("Long document"), Typography::Icons::Document));
+                    tabs->addTab(
+                        TabViewItem(QStringLiteral("Activity"), Typography::Icons::Calendar));
+                    tabs->setSelectedIndex(selectedIndex);
 
-                           row->layout()->addWidget(rowLabel);
-                           row->layout()->addWidget(tabs);
-                           group->layout()->addWidget(row);
-                       };
+                    row->layout()->addWidget(rowLabel);
+                    row->layout()->addWidget(tabs);
+                    group->layout()->addWidget(row);
+                };
 
-                       addModeRow(QStringLiteral("Equal"), TabView::TabWidthMode::Equal);
-                       addModeRow(QStringLiteral("SizeToContent"), TabView::TabWidthMode::SizeToContent);
-                       addModeRow(QStringLiteral("Compact"), TabView::TabWidthMode::Compact, 1);
-                       return group;
-                   }),
-        makeSample(QStringLiteral("tab-view-close-button-modes"),
-                   QStringLiteral("CloseButtonOverlayMode"),
-                   QStringLiteral("Auto follows the selected tab, OnHover reveals close buttons on hover, and Always reserves close affordances."),
-                   QStringLiteral("auto addTabs = [](TabView* tabs) {\n"
-                                  "    tabs->setAddTabButtonVisible(false);\n"
-                                  "    tabs->addTab(TabViewItem(\"Primary\", Typography::Icons::AppIconDefault));\n"
-                                  "    tabs->addTab(TabViewItem(\"Reference\", Typography::Icons::Document));\n"
-                                  "    tabs->addTab(TabViewItem(\"Pinned\", Typography::Icons::Pin, false));\n"
-                                  "};\n\n"
-                                  "auto* autoClose = new TabView(this);\n"
-                                  "addTabs(autoClose);\n"
-                                  "autoClose->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Auto);\n\n"
-                                  "auto* hoverClose = new TabView(this);\n"
-                                  "addTabs(hoverClose);\n"
-                                  "hoverClose->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::OnHover);\n\n"
-                                  "auto* alwaysClose = new TabView(this);\n"
-                                  "addTabs(alwaysClose);\n"
-                                  "alwaysClose->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);"),
-                   [](QWidget* parent) {
-                       auto* group = verticalGroup(parent, 10);
-                       auto addCloseModeRow = [group](const QString& label,
-                                                      TabView::CloseButtonOverlayMode mode) {
-                           auto* row = horizontalGroup(group, 10);
-                           auto* rowLabel = new Label(label, row);
-                           rowLabel->setFluentTypography(Typography::FontRole::Caption);
-                           rowLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
-                           rowLabel->setFixedWidth(104);
+                addModeRow(QStringLiteral("Equal"), TabView::TabWidthMode::Equal);
+                addModeRow(QStringLiteral("SizeToContent"), TabView::TabWidthMode::SizeToContent);
+                addModeRow(QStringLiteral("Compact"), TabView::TabWidthMode::Compact, 1);
+                return group;
+            }),
+        makeSample(
+            QStringLiteral("tab-view-close-button-modes"), QStringLiteral("CloseButtonOverlayMode"),
+            QStringLiteral("Auto follows the selected tab, OnHover reveals close buttons on hover, "
+                           "and Always reserves close affordances."),
+            QStringLiteral(
+                "auto addTabs = [](TabView* tabs) {\n"
+                "    tabs->setAddTabButtonVisible(false);\n"
+                "    tabs->addTab(TabViewItem(\"Primary\", Typography::Icons::AppIconDefault));\n"
+                "    tabs->addTab(TabViewItem(\"Reference\", Typography::Icons::Document));\n"
+                "    tabs->addTab(TabViewItem(\"Pinned\", Typography::Icons::Pin, false));\n"
+                "};\n\n"
+                "auto* autoClose = new TabView(this);\n"
+                "addTabs(autoClose);\n"
+                "autoClose->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Auto);\n\n"
+                "auto* hoverClose = new TabView(this);\n"
+                "addTabs(hoverClose);\n"
+                "hoverClose->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::OnHover);"
+                "\n\n"
+                "auto* alwaysClose = new TabView(this);\n"
+                "addTabs(alwaysClose);\n"
+                "alwaysClose->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);"),
+            [](QWidget* parent) {
+                auto* group = verticalGroup(parent, 10);
+                auto addCloseModeRow = [group](const QString& label,
+                                               TabView::CloseButtonOverlayMode mode) {
+                    auto* row = horizontalGroup(group, 10);
+                    auto* rowLabel = new Label(label, row);
+                    rowLabel->setFluentTypography(Typography::FontRole::Caption);
+                    rowLabel->setTextColorRole(
+                        Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
+                    rowLabel->setFixedWidth(104);
 
-                           auto* tabs = new TabView(row);
-                           tabs->setFixedSize(430, 40);
-                           tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
-                           tabs->setCloseButtonOverlayMode(mode);
-                           tabs->setAddTabButtonVisible(false);
-                           tabs->addTab(TabViewItem(QStringLiteral("Primary"), Typography::Icons::AppIconDefault));
-                           tabs->addTab(TabViewItem(QStringLiteral("Reference"), Typography::Icons::Document));
-                           tabs->addTab(TabViewItem(QStringLiteral("Pinned"), Typography::Icons::Pin, false));
+                    auto* tabs = new TabView(row);
+                    tabs->setFixedSize(430, 40);
+                    tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
+                    tabs->setCloseButtonOverlayMode(mode);
+                    tabs->setAddTabButtonVisible(false);
+                    tabs->addTab(
+                        TabViewItem(QStringLiteral("Primary"), Typography::Icons::AppIconDefault));
+                    tabs->addTab(
+                        TabViewItem(QStringLiteral("Reference"), Typography::Icons::Document));
+                    tabs->addTab(
+                        TabViewItem(QStringLiteral("Pinned"), Typography::Icons::Pin, false));
 
-                           row->layout()->addWidget(rowLabel);
-                           row->layout()->addWidget(tabs);
-                           group->layout()->addWidget(row);
-                       };
+                    row->layout()->addWidget(rowLabel);
+                    row->layout()->addWidget(tabs);
+                    group->layout()->addWidget(row);
+                };
 
-                       addCloseModeRow(QStringLiteral("Auto"), TabView::CloseButtonOverlayMode::Auto);
-                       addCloseModeRow(QStringLiteral("OnHover"), TabView::CloseButtonOverlayMode::OnHover);
-                       addCloseModeRow(QStringLiteral("Always"), TabView::CloseButtonOverlayMode::Always);
-                       return group;
-                   }),
-        makeSample(QStringLiteral("tab-view-overflow-reorder"),
-                   QStringLiteral("Overflow and reordering"),
-                   QStringLiteral("SizeToContent tabs overflow into arrow buttons; enabling reordering emits tabMoved when tabs are dragged."),
-                   QStringLiteral("auto* tabs = new TabView(this);\n"
-                                  "tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);\n"
-                                  "tabs->setTabReorderEnabled(true);\n"
-                                  "tabs->setTabsClosable(false);\n"
-                                  "tabs->setAddTabButtonVisible(false);\n"
-                                  "tabs->setFixedWidth(360);\n"
-                                  "for (int i = 1; i <= 8; ++i)\n"
-                                  "    tabs->addTab(TabViewItem(QString(\"Document %1 with longer title\").arg(i),\n"
-                                  "                             Typography::Icons::Document));\n"
-                                  "connect(tabs, &TabView::tabMoved,\n"
-                                  "        this, [](int from, int to) { /* keep external page order aligned */ });"),
-                   [](QWidget* parent) {
-                       auto* group = verticalGroup(parent, 8);
-                       auto* tabs = new TabView(group);
-                       tabs->setFixedSize(360, 40);
-                       tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
-                       tabs->setTabReorderEnabled(true);
-                       tabs->setTabsClosable(false);
-                       tabs->setAddTabButtonVisible(false);
-                       for (int i = 1; i <= 8; ++i) {
-                           tabs->addTab(TabViewItem(QStringLiteral("Document %1 with longer title").arg(i),
-                                                    Typography::Icons::Document));
-                       }
-                       tabs->setSelectedIndex(5);
-                       auto* status = makeStatusLabel(group, QStringLiteral("Selected: Document 6 with longer title"));
-                       status->setFluentTypography(Typography::FontRole::Caption);
-                       QObject::connect(tabs, &TabView::currentChanged,
-                                        status, [status, tabs](int index) {
-                                            if (index >= 0)
-                                                status->setText(QStringLiteral("Selected: %1").arg(tabs->tabAt(index).text));
-                                        });
-                       QObject::connect(tabs, &TabView::tabMoved,
-                                        status, [status](int from, int to) {
-                                            status->setText(QStringLiteral("Moved tab %1 to %2")
-                                                                .arg(from + 1)
-                                                                .arg(to + 1));
-                                        });
+                addCloseModeRow(QStringLiteral("Auto"), TabView::CloseButtonOverlayMode::Auto);
+                addCloseModeRow(QStringLiteral("OnHover"),
+                                TabView::CloseButtonOverlayMode::OnHover);
+                addCloseModeRow(QStringLiteral("Always"), TabView::CloseButtonOverlayMode::Always);
+                return group;
+            }),
+        makeSample(
+            QStringLiteral("tab-view-overflow-reorder"), QStringLiteral("Overflow and reordering"),
+            QStringLiteral("SizeToContent tabs overflow into arrow buttons; enabling reordering "
+                           "emits tabMoved when tabs are dragged."),
+            QStringLiteral(
+                "auto* tabs = new TabView(this);\n"
+                "tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);\n"
+                "tabs->setTabReorderEnabled(true);\n"
+                "tabs->setTabsClosable(false);\n"
+                "tabs->setAddTabButtonVisible(false);\n"
+                "tabs->setFixedWidth(360);\n"
+                "for (int i = 1; i <= 8; ++i)\n"
+                "    tabs->addTab(TabViewItem(QString(\"Document %1 with longer title\").arg(i),\n"
+                "                             Typography::Icons::Document));\n"
+                "connect(tabs, &TabView::tabMoved,\n"
+                "        this, [](int from, int to) { /* keep external page order aligned */ });"),
+            [](QWidget* parent) {
+                auto* group = verticalGroup(parent, 8);
+                auto* tabs = new TabView(group);
+                tabs->setFixedSize(360, 40);
+                tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
+                tabs->setTabReorderEnabled(true);
+                tabs->setTabsClosable(false);
+                tabs->setAddTabButtonVisible(false);
+                for (int i = 1; i <= 8; ++i) {
+                    tabs->addTab(TabViewItem(QStringLiteral("Document %1 with longer title").arg(i),
+                                             Typography::Icons::Document));
+                }
+                tabs->setSelectedIndex(5);
+                auto* status = makeStatusLabel(
+                    group, QStringLiteral("Selected: Document 6 with longer title"));
+                status->setFluentTypography(Typography::FontRole::Caption);
+                QObject::connect(tabs, &TabView::currentChanged, status, [status, tabs](int index) {
+                    if (index >= 0)
+                        status->setText(
+                            QStringLiteral("Selected: %1").arg(tabs->tabAt(index).text));
+                });
+                QObject::connect(tabs, &TabView::tabMoved, status, [status](int from, int to) {
+                    status->setText(QStringLiteral("Moved tab %1 to %2").arg(from + 1).arg(to + 1));
+                });
 
-                       group->layout()->addWidget(tabs);
-                       group->layout()->addWidget(status);
-                       return group;
-                   })
-    };
+                group->layout()->addWidget(tabs);
+                group->layout()->addWidget(status);
+                return group;
+            })};
 }
 
 } // namespace
