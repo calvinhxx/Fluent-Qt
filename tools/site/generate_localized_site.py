@@ -23,7 +23,14 @@ ERROR_PAGE_PATH = SITE_ROOT / "404.html"
 LEGACY_GALLERY_REDIRECT_PATH = SITE_ROOT / "app" / "index.html"
 BASE_URL = "https://calvinhxx.github.io/Fluent-Qt/"
 REPOSITORY_URL = "https://github.com/calvinhxx/Fluent-Qt"
-OG_IMAGE_URL = f"{BASE_URL}assets/og.png"
+
+
+def versioned_image_url(path: str) -> str:
+    digest = hashlib.sha256((SITE_ROOT / path).read_bytes()).hexdigest()[:12]
+    return f"{path}?v={digest}"
+
+
+OG_IMAGE_URL = f"{BASE_URL}{versioned_image_url('assets/og.png')}"
 
 TEXT_PATTERN = re.compile(
     r'(?P<open><(?P<tag>[A-Za-z][A-Za-z0-9]*)[^>]*data-i18n="(?P<key>[^"]+)"[^>]*>)'
@@ -186,9 +193,6 @@ def localize_text(page: str, values: dict[str, str], locale: Locale) -> str:
 
 
 def prefix_resources(page: str, prefix: str) -> str:
-    if not prefix:
-        return page
-
     attributes = (
         "src",
         "href",
@@ -201,9 +205,13 @@ def prefix_resources(page: str, prefix: str) -> str:
         rf'(?P<head>\b(?:{attribute_names})=")'
         r'(?P<url>(?:assets/|styles\.css|site\.js|gallery/|api/)[^"]*)'
     )
-    return pattern.sub(
-        lambda match: f'{match.group("head")}{prefix}{match.group("url")}', page
-    )
+    def replace(match: re.Match[str]) -> str:
+        url = match.group("url")
+        if url.startswith("assets/gallery/") and url.endswith(".png"):
+            url = versioned_image_url(url)
+        return f'{match.group("head")}{prefix}{url}'
+
+    return pattern.sub(replace, page)
 
 
 def structured_data(locale: Locale, values: dict[str, str], version: str) -> str:
@@ -264,6 +272,7 @@ def render_page(
         "CANONICAL_URL": locale.canonical_url,
         "OG_LOCALE": locale.og_locale,
         "OG_ALTERNATE_LOCALE": locale.alternate_og_locale,
+        "OG_IMAGE_URL": OG_IMAGE_URL,
         "OG_IMAGE_ALT": locale.image_alt,
         "STRUCTURED_DATA": structured_data(locale, values, version),
         "EN_URL": locale.english_url,

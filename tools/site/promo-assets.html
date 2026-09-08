@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Fluent-Qt promotional assets</title>
+    <style>
+      @font-face {
+        font-family: "Inter";
+        src: url("../../third_party/fonts/inter/Inter-Regular.ttf");
+        font-weight: 400;
+      }
+
+      @font-face {
+        font-family: "Inter Display";
+        src: url("../../third_party/fonts/inter/InterDisplay-SemiBold.ttf");
+        font-weight: 600;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      img { display: block; max-width: 100%; }
+
+      /* Keep the README's original framed-window composition. */
+      .readme {
+        width: 1600px;
+        height: 900px;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background: linear-gradient(115deg, #f9fcff, #edf5fa);
+      }
+
+      .readme-window {
+        width: 1280px;
+        padding: 23px;
+        margin: 0 0 20px;
+        border: 1px solid #d9e4ed;
+        border-radius: 36px;
+        background: #fff;
+        box-shadow: 0 22px 4px -4px #193248, 0 35px 18px -10px #17304780;
+      }
+
+      .readme-window img {
+        width: 1232px;
+        height: 770px;
+        border-radius: 24px;
+        outline: 1px solid #dbe4eb;
+      }
+
+      /* The sharing image has its own brand and product composition. */
+      .social {
+        position: relative;
+        width: 1731px;
+        height: 909px;
+        overflow: hidden;
+        isolation: isolate;
+        font-family: "Inter", sans-serif;
+        color: #0a1114;
+        background:
+          radial-gradient(ellipse 43% 68% at 103% -10%, #deed6dbf, transparent 72%),
+          radial-gradient(ellipse 46% 62% at -7% 109%, #37a4fcb3, transparent 72%),
+          radial-gradient(ellipse 32% 37% at 22% 105%, #77dbb380, transparent 74%),
+          radial-gradient(ellipse 67% 54% at 65% -8%, #dce9f7, transparent 74%),
+          #f8fbfd;
+      }
+
+      .social::before,
+      .social::after {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        border: 2px solid #ffffffb3;
+        border-radius: 50%;
+      }
+
+      .social::before {
+        width: 1400px;
+        height: 700px;
+        top: -465px;
+        right: -80px;
+        transform: rotate(13deg);
+        background: #dcecf54d;
+      }
+
+      .social::after {
+        width: 1310px;
+        height: 650px;
+        left: -600px;
+        bottom: -395px;
+        transform: rotate(19deg);
+        background: #73cae81f;
+      }
+
+      .brand {
+        position: absolute;
+        z-index: 1;
+        top: 184px;
+        left: 76px;
+        width: 610px;
+      }
+
+      .brand-icon { width: 148px; height: 148px; border-radius: 24%; }
+
+      .brand h1 {
+        margin: 32px 0 0;
+        font-family: "Inter Display", sans-serif;
+        font-size: 124px;
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+
+      .tagline {
+        margin: 28px 0 0;
+        color: #525e63;
+        font-size: 37px;
+        line-height: 1.3;
+        letter-spacing: -0.025em;
+        white-space: nowrap;
+      }
+
+      .requirements {
+        display: flex;
+        align-items: baseline;
+        gap: 13px;
+        margin: 28px 0 0;
+        color: #525e63;
+        font-size: 30px;
+        line-height: 1.3;
+      }
+
+      .requirements strong {
+        font-family: "Inter Display", sans-serif;
+        font-weight: 600;
+        color: #0667bd;
+      }
+
+      .requirements .separator { color: #0667bd; }
+
+      .product {
+        position: absolute;
+        top: 50%;
+        right: 65px;
+        width: 1120px;
+        perspective: 1800px;
+        transform: translateY(-47%);
+      }
+
+      .product-window {
+        margin: 0;
+        overflow: hidden;
+        border: 6px solid #ffffffeb;
+        border-radius: 26px;
+        background: #fff;
+        box-shadow: 0 30px 36px #1e3f4b4d, 0 10px 18px #1e3f4b29;
+        transform: rotateY(-22deg) rotateZ(0.7deg);
+        transform-origin: 88% 50%;
+      }
+
+      .product-window img { width: 100%; height: auto; }
+    </style>
+  </head>
+  <body>
+    <section class="readme" id="readme" aria-label="Gallery preview">
+      <figure class="readme-window">
+        <img src="../../site/assets/gallery/gallery-home-real.png" width="1440" height="900" alt="Fluent-Qt Gallery home">
+      </figure>
+    </section>
+    <section class="social" id="social" aria-label="Fluent-Qt">
+      <div class="brand">
+        <img class="brand-icon" src="../../site/assets/app-icon.png" width="148" height="148" alt="">
+        <h1>Fluent-Qt</h1>
+        <p class="tagline">Fluent controls for Qt Widgets</p>
+        <p class="requirements"><strong>C++17</strong><span class="separator">·</span><span>Qt 5.15+ / 6.2+</span><span class="separator">·</span><strong>MIT</strong></p>
+      </div>
+      <div class="product">
+        <figure class="product-window">
+          <img src="../../site/assets/gallery/gallery-home-real.png" width="1440" height="900" alt="Fluent-Qt Gallery home">
+        </figure>
+      </div>
+    </section>
+  </body>
+</html>

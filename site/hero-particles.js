@@ -1,5 +1,14 @@
 const TAU = Math.PI * 2;
 const MAX_PIXELS = 2_500_000;
+const MAX_PULSES = 3;
+const PULSE_SECONDS = 1.6;
+const RIBBON_STROKES = [[18, 0.025], [5, 0.08], [0.8, 0.3]];
+
+// Stable seeds avoid visual jumps when the page is resized or restored.
+function seed(index) {
+  const value = Math.sin(index * 127.1 + 311.7) * 43758.5453;
+  return value - Math.floor(value);
+}
 
 // The decoration is optional; the page and its links never depend on Canvas.
 export function createHeroParticles(hero) {
@@ -19,6 +28,9 @@ export function createHeroParticles(hero) {
   let height = 0;
   let colors = [];
   let particles = [];
+  let dust = [];
+  let pulses = [];
+  const point = { x: 0, y: 0, depth: 0 };
   let frame = 0;
   let previousTime = 0;
   let elapsed = 0;
@@ -47,70 +59,130 @@ export function createHeroParticles(hero) {
     return !paused && !reducedMotion.matches && !highContrast();
   }
 
+  // Three woven ribbons frame the Gallery. Reuse the projected point rather
+  // than allocating an object for every dot and trail segment on every frame.
   function position(angle, lane, spread = 0) {
     const mobile = width < 700;
-    const radiusX = width * (mobile ? 0.87 : 0.52);
-    const radiusY = height * (mobile ? 0.25 : 0.34);
-    const x = Math.cos(angle) * (radiusX + spread * 28);
-    const y = Math.sin(angle) * (radiusY + spread * 22);
-    const tilt = -0.3 + lane * 0.12;
-    return {
-      x: width * (mobile ? 0.7 : 0.79) + x * Math.cos(tilt) - y * Math.sin(tilt),
-      y: height * (mobile ? 0.59 : 0.4) + x * Math.sin(tilt) + y * Math.cos(tilt)
-        + Math.sin(angle * 3 + elapsed * 0.18 + lane) * height * 0.025
-    };
+    const weave = Math.sin(angle * 2 + elapsed * 0.22 + lane * 1.8);
+    const radiusX = width * (mobile ? 0.85 : 0.51);
+    const radiusY = height * (mobile ? 0.24 : 0.33);
+    const x = Math.cos(angle) * (radiusX + spread * 19);
+    const y = Math.sin(angle) * (radiusY + spread * 14) + weave * height * 0.06;
+    const tilt = -0.36 + lane * 0.16;
+    point.x = width * (mobile ? 0.66 : 0.78) + x * Math.cos(tilt) - y * Math.sin(tilt);
+    point.y = height * (mobile ? 0.63 : 0.42) + x * Math.sin(tilt) + y * Math.cos(tilt);
+    point.depth = (Math.sin(angle + lane * 0.7) + 1) / 2;
+    return point;
+  }
+
+  function displacePoint() {
+    if (pointer.strength > 0.01) {
+      const dx = point.x - pointer.x;
+      const dy = point.y - pointer.y;
+      const influence = Math.exp(-(dx * dx + dy * dy) / 26000) * pointer.strength;
+      point.x += (dx * 0.24 - dy * 0.32) * influence;
+      point.y += (dy * 0.24 + dx * 0.32) * influence;
+    }
+    for (const pulse of pulses) {
+      const dx = point.x - pulse.x;
+      const dy = point.y - pulse.y;
+      const distance = Math.hypot(dx, dy);
+      const age = elapsed - pulse.started;
+      const offset = (distance - age * 280) / 38;
+      const force = Math.exp(-offset * offset) * (1 - age / PULSE_SECONDS) * 24;
+      if (distance > 1) {
+        point.x += dx / distance * force;
+        point.y += dy / distance * force;
+      }
+    }
+  }
+
+  function drawRibbon(lane) {
+    const steps = width < 700 ? 72 : 120;
+    context.beginPath();
+    for (let step = 0; step <= steps; step += 1) {
+      position(step / steps * TAU, lane);
+      displacePoint();
+      if (step === 0) context.moveTo(point.x, point.y);
+      else context.lineTo(point.x, point.y);
+    }
+    // Layered strokes keep the light soft without per-particle blur filters.
+    for (const [lineWidth, alpha] of RIBBON_STROKES) {
+      context.lineWidth = lineWidth;
+      context.globalAlpha = alpha;
+      context.stroke();
+    }
+  }
+
+  function drawParticles(lane) {
+    for (let layer = 0; layer < 3; layer += 1) {
+      context.globalAlpha = 0.32 + layer * 0.28;
+      context.beginPath();
+      for (const particle of particles[lane][layer]) {
+        const angle = particle.phase + elapsed * (0.09 + lane * 0.025 + layer * 0.008);
+        position(angle, lane, particle.spread);
+        displacePoint();
+        const radius = particle.size * (0.7 + point.depth * 0.55);
+        context.moveTo(point.x + radius, point.y);
+        context.arc(point.x, point.y, radius, 0, TAU);
+      }
+      context.fill();
+    }
+  }
+
+  function drawTrails(lane) {
+    // Staggered, fading segments read as travel rather than blinking. The cost
+    // is linear and fixed; there is no all-pairs particle connection search.
+    for (let tail = 3; tail >= 0; tail -= 1) {
+      context.beginPath();
+      for (let spark = 0; spark < 6; spark += 1) {
+        const angle = spark / 6 * TAU + elapsed * (0.22 + lane * 0.035) + lane;
+        for (let step = 0; step <= 4; step += 1) {
+          position(angle - (tail * 4 + step) * 0.009, lane);
+          displacePoint();
+          if (step === 0) context.moveTo(point.x, point.y);
+          else context.lineTo(point.x, point.y);
+        }
+      }
+      context.lineWidth = 9 - tail;
+      context.globalAlpha = 0.09 - tail * 0.02;
+      context.stroke();
+      context.lineWidth = 2.6 - tail * 0.5;
+      context.globalAlpha = 0.95 - tail * 0.22;
+      context.stroke();
+    }
   }
 
   function draw() {
     context.clearRect(0, 0, width, height);
     if (highContrast() || !width || !height) return;
 
+    context.fillStyle = colors[1];
+    context.globalAlpha = 0.24;
+    context.beginPath();
+    for (const mote of dust) {
+      const x = (mote.x * width + elapsed * mote.speed) % width;
+      const y = mote.y * height + Math.sin(elapsed * 0.2 + mote.x * TAU) * 8;
+      context.moveTo(x + mote.size, y);
+      context.arc(x, y, mote.size, 0, TAU);
+    }
+    context.fill();
+
     for (let lane = 0; lane < 3; lane += 1) {
       context.strokeStyle = colors[lane];
       context.fillStyle = colors[lane];
-      context.lineWidth = 0.8;
-      context.globalAlpha = 0.32;
+      drawRibbon(lane);
+      drawParticles(lane);
+      drawTrails(lane);
+    }
+    for (const pulse of pulses) {
+      const age = elapsed - pulse.started;
+      const radius = Math.max(1, age * 280);
+      context.strokeStyle = colors[2];
+      context.lineWidth = 1;
+      context.globalAlpha = 0.35 * (1 - age / PULSE_SECONDS) ** 2;
       context.beginPath();
-      for (let step = 0; step <= 100; step += 1) {
-        const point = position(step / 100 * TAU, lane);
-        if (step === 0) context.moveTo(point.x, point.y);
-        else context.lineTo(point.x, point.y);
-      }
-      context.stroke();
-
-      context.globalAlpha = 0.85;
-      context.beginPath();
-      for (const particle of particles[lane]) {
-        const angle = particle.phase + elapsed * (0.1 + lane * 0.025);
-        const point = position(angle, lane, particle.spread);
-        if (pointer.strength > 0.01) {
-          const dx = point.x - pointer.x;
-          const dy = point.y - pointer.y;
-          const influence = Math.exp(-(dx * dx + dy * dy) / 24000) * pointer.strength;
-          point.x += (dx * 0.2 - dy * 0.12) * influence;
-          point.y += (dy * 0.2 + dx * 0.12) * influence;
-        }
-        const radius = particle.size * (0.75 + (Math.sin(angle) + 1) * 0.25);
-        context.moveTo(point.x + radius, point.y);
-        context.arc(point.x, point.y, radius, 0, TAU);
-      }
-      context.fill();
-
-      // Short highlights travel along each ribbon; no pairwise particle links.
-      context.beginPath();
-      for (let spark = 0; spark < 7; spark += 1) {
-        const angle = spark / 7 * TAU + elapsed * (0.18 + lane * 0.035) + lane;
-        for (let step = 0; step <= 6; step += 1) {
-          const point = position(angle - step * 0.006, lane);
-          if (step === 0) context.moveTo(point.x, point.y);
-          else context.lineTo(point.x, point.y);
-        }
-      }
-      context.lineWidth = 6;
-      context.globalAlpha = 0.1;
-      context.stroke();
-      context.lineWidth = 1.8;
-      context.globalAlpha = 1;
+      context.arc(pulse.x, pulse.y, radius, 0, TAU);
       context.stroke();
     }
     context.globalAlpha = 1;
@@ -124,7 +196,8 @@ export function createHeroParticles(hero) {
     if (delta >= interval - 0.5) {
       elapsed += Math.min(delta, 50) / 1000;
       previousTime = time;
-      pointer.strength += ((pointer.active ? 1 : 0) - pointer.strength) * 0.12;
+      pointer.strength += ((pointer.active ? 1 : 0) - pointer.strength) * (1 - Math.exp(-delta / 140));
+      while (pulses.length && elapsed - pulses[0].started >= PULSE_SECONDS) pulses.shift();
       draw();
     }
     frame = window.requestAnimationFrame(tick);
@@ -136,11 +209,12 @@ export function createHeroParticles(hero) {
     previousTime = 0;
     pointer.active = false;
     pointer.strength = 0;
+    pulses = [];
   }
 
   function sync() {
     if (destroyed) return;
-    const running = enabled() && visible && !document.hidden && pageActive;
+    const running = enabled() && visible && width > 0 && height > 0 && !document.hidden && pageActive;
     hero.dataset.particleState = highContrast() ? "hidden" :
       (!enabled() ? "paused" : (running ? "running" : "suspended"));
     toggle.disabled = reducedMotion.matches || highContrast();
@@ -162,15 +236,21 @@ export function createHeroParticles(hero) {
     canvas.width = Math.floor(width * scale);
     canvas.height = Math.floor(height * scale);
     context.setTransform(scale, 0, 0, scale, 0, 0);
-    const count = width < 700 ? 90 : 190;
+    const count = width < 700 ? 42 : 110;
     particles = Array.from({ length: 3 }, (_, lane) =>
-      Array.from({ length: count }, (_, index) => ({
-        phase: index / count * TAU + lane * 0.43,
-        spread: Math.sin(index * 127.1 + lane * 31.7) * 1.8,
-        size: 0.9 + ((index * 17) % 11) / 11 * 1.3
-      })));
+      Array.from({ length: 3 }, (_, layer) =>
+        Array.from({ length: count }, (_, index) => ({
+          phase: index / count * TAU + lane * 0.43 + layer * 0.17,
+          spread: (seed(index + lane * count) - 0.5) * (1.2 + layer * 2.1),
+          size: 0.55 + layer * 0.35 + seed(index + 19) * 0.8
+        }))));
+    dust = Array.from({ length: width < 700 ? 24 : 60 }, (_, index) => ({
+      x: seed(index), y: seed(index + 81), size: 0.5 + seed(index + 17),
+      speed: 1 + seed(index + 41) * 3
+    }));
     pointer.active = false;
     pointer.strength = 0;
+    pulses = [];
     draw();
     sync();
   }
@@ -207,6 +287,13 @@ export function createHeroParticles(hero) {
     pointer.active = true;
   });
   listen(hero, "pointerleave", () => { pointer.active = false; });
+  listen(hero, "pointerdown", (event) => {
+    if (!enabled() || !visible || event.pointerType === "touch" || event.button !== 0) return;
+    if (event.target.closest("a, button, input, select, textarea, label")) return;
+    const bounds = canvas.getBoundingClientRect();
+    if (pulses.length === MAX_PULSES) pulses.shift();
+    pulses.push({ x: event.clientX - bounds.left, y: event.clientY - bounds.top, started: elapsed });
+  });
   listen(document, "visibilitychange", sync);
   listen(reducedMotion, "change", sync);
   listen(forcedColors, "change", updateTheme);

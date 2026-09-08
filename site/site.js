@@ -852,7 +852,7 @@ setupLiveGallery();
 setupReveal();
 releaseState.platform = detectPlatform();
 initializeTheme();
-import("./hero-particles.js?v=20260906-4")
+import("./hero-particles.js?v=20260908-1")
   .then(({ createHeroParticles }) => createHeroParticles(document.querySelector(".hero")))
   .catch(() => { /* Keep the static hero if the optional decoration cannot load. */ });
 hydrateLatestRelease();

@@ -66,6 +66,7 @@ function fixture({ width = 1280, height = 950, reduced = false, stored = "", can
     getBoundingClientRect: () => ({ width, height, top: 80, left: 0 })
   };
   hero.ownerDocument = document;
+  hero.closest = () => null;
   document.defaultView = window;
   hero.querySelector = (selector) => selector === ".hero-particles" ? canvas : toggle;
   const controller = createHeroParticles(hero);
@@ -158,11 +159,11 @@ test("reduced motion keeps a static image; contrast preferences remove decoratio
 test("mobile particle count and canvas pixel memory stay bounded through resize", () => {
   const f = fixture();
   const desktopDots = f.context.dots;
-  assert.ok(desktopDots <= 600);
+  assert.ok(desktopDots <= 1_100);
   assert.ok(f.canvas.width * f.canvas.height <= 2_500_000);
   f.resize(390, 1200);
   assert.ok(f.context.dots < desktopDots);
-  assert.ok(f.context.dots <= 300);
+  assert.ok(f.context.dots <= 450);
   f.visible(true);
   let draws = f.context.draws;
   for (let n = 0; n < 120; n += 1) f.advance(1000 / 120);
@@ -189,6 +190,45 @@ test("pointer interaction changes the ribbon locally and ignores touch scrolling
   assert.notDeepEqual(f.context.coordinates, baseline.context.coordinates);
   f.controller.destroy();
   baseline.controller.destroy();
+});
+
+test("background clicks emit bounded, short-lived pulses without hijacking links or touch", () => {
+  const f = fixture();
+  f.visible(true);
+  const dots = f.context.dots;
+  const click = { clientX: 900, clientY: 400, pointerType: "mouse", button: 0, target: f.hero };
+  f.hero.emit("pointerdown", { ...click, pointerType: "touch" });
+  f.hero.emit("pointerdown", { ...click, button: 2 });
+  f.hero.emit("pointerdown", { ...click, target: { closest: () => ({ tagName: "A" }) } });
+  f.advance();
+  assert.equal(f.context.dots, dots);
+
+  for (let n = 0; n < 50; n += 1) f.hero.emit("pointerdown", click);
+  f.advance();
+  assert.equal(f.context.dots, dots + 3, "rapid clicks retain at most three pulses");
+  for (let n = 0; n < 90; n += 1) f.advance();
+  assert.equal(f.context.dots, dots, "pulses expire instead of accumulating");
+
+  f.toggle.emit("click");
+  f.hero.emit("pointerdown", click);
+  assert.equal(f.frames.size, 0);
+  f.toggle.emit("click");
+  f.advance();
+  assert.equal(f.context.dots, dots, "clicks while paused do not queue a pulse for resume");
+  f.controller.destroy();
+});
+
+test("a collapsed hero does not schedule frames and can resume after layout", () => {
+  const f = fixture({ width: 0, height: 0 });
+  f.visible(true);
+  assert.equal(f.frames.size, 0);
+  assert.equal(f.context.dots, 0);
+  f.resize(1280, 950);
+  assert.equal(f.frames.size, 1);
+  f.resize(0, 0);
+  assert.equal(f.frames.size, 0);
+  assert.equal(f.context.dots, 0);
+  f.controller.destroy();
 });
 
 test("page cache restoration resumes; navigation tears down observers, listeners, and frames", () => {
