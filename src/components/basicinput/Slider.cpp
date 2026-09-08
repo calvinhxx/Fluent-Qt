@@ -222,53 +222,34 @@ void Slider::updateToolTipPos()
 
 int Slider::valueToPixelPos(int val) const
 {
-    const int padding =
-        m_handleSize / 2 + m_visualMargin; // + m_visualMargin margin to match sizeHint
-    int available = 0;
-    int start = 0;
+    QStyleOptionSlider opt;
+    initStyleOption(&opt);
+    const int padding = m_handleSize / 2 + m_visualMargin;
+    const int length = orientation() == Qt::Horizontal ? width() : height();
+    const int available = qMax(0, length - 2 * padding);
+    const qint64 range = static_cast<qint64>(maximum()) - minimum();
+    if (range == 0)
+        return padding + (opt.upsideDown ? available : 0);
 
-    if (orientation() == Qt::Horizontal) {
-        available = width() - 2 * padding; // Use full symmetrical padding
-        start = padding;
-    } else {
-        available = height() - 2 * padding;
-        start = height() - padding; // Start from bottom
-    }
-
-    if (maximum() == minimum())
-        return start;
-
-    double percent = (double)(val - minimum()) / (double)(maximum() - minimum());
-
-    if (orientation() == Qt::Horizontal) {
-        return start + (int)(percent * available);
-    } else {
-        return start - (int)(percent * available);
-    }
+    // Widen before subtraction and multiplication, including tracks wider than 4096 px.
+    // zh_CN: 减法和乘法前提升位宽，兼容完整 int 范围和超过 4096 像素的轨道。
+    const int boundedValue = qBound(minimum(), val, maximum());
+    const qint64 offset = opt.upsideDown ? static_cast<qint64>(maximum()) - boundedValue
+                                         : static_cast<qint64>(boundedValue) - minimum();
+    return padding + static_cast<int>((offset * available + range / 2) / range);
 }
 
 int Slider::pixelPosToRangeValue(int pos) const
 {
+    QStyleOptionSlider opt;
+    initStyleOption(&opt);
     const int padding = m_handleSize / 2 + m_visualMargin;
-    int available = 0;
-    int relPos = 0;
-
-    if (orientation() == Qt::Horizontal) {
-        available = width() - 2 * padding;
-        relPos = pos - padding;
-    } else {
-        available = height() - 2 * padding;
-        int bottom = height() - padding;
-        relPos = bottom - pos;
-    }
-
+    const int length = orientation() == Qt::Horizontal ? width() : height();
+    const int available = qMax(0, length - 2 * padding);
     if (available <= 0)
         return minimum();
-
-    double percent = (double)relPos / (double)available;
-    percent = std::clamp(percent, 0.0, 1.0);
-
-    return minimum() + (int)(percent * (maximum() - minimum()));
+    return QStyle::sliderValueFromPosition(minimum(), maximum(), pos - padding, available,
+                                           opt.upsideDown);
 }
 
 void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
@@ -286,8 +267,9 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
     int handleX = valueToPixelPos(opt.sliderPosition);
     QPointF center(handleX, cy);
 
-    qreal filledWidth = handleX - padding;
-    QRectF filledRect(padding, cy - trackThickness / 2, filledWidth, trackThickness);
+    const int minimumX = valueToPixelPos(opt.minimum);
+    QRectF filledRect(qMin(minimumX, handleX), cy - trackThickness / 2, qAbs(handleX - minimumX),
+                      trackThickness);
 
     // 2. State colors. zh_CN: 确定状态颜色。
     QColor trackBg = isEnabled() ? colors.controlAltSecondary : colors.controlDisabled;
@@ -351,12 +333,19 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
 
     // 9. Paint the ticks. zh_CN: 绘制刻度线。
     if (opt.tickPosition != QSlider::NoTicks && m_hoverRatio > 0.1) {
-        int steps = (opt.maximum - opt.minimum) / opt.tickInterval;
+        const qint64 range = static_cast<qint64>(opt.maximum) - opt.minimum;
+        qint64 interval = opt.tickInterval;
+        if (interval <= 0) {
+            interval = qMax(1, opt.singleStep);
+            if (range / interval >= 100 && opt.pageStep > 0)
+                interval = opt.pageStep;
+        }
+        const qint64 steps = range / interval;
         if (steps > 0 && steps < 100) {
             QColor tickColor = colors.textSecondary;
             p.setPen(tickColor);
             for (int i = 0; i <= steps; ++i) {
-                int val = opt.minimum + i * opt.tickInterval;
+                const int val = static_cast<int>(static_cast<qint64>(opt.minimum) + i * interval);
                 int x = valueToPixelPos(val);
                 int ty = (opt.tickPosition == QSlider::TicksAbove) ? (trackRect.top() - 4)
                                                                    : (trackRect.bottom() + 4);
@@ -381,8 +370,9 @@ void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt)
     int handleY = valueToPixelPos(opt.sliderPosition);
     QPointF center(cx, handleY);
 
-    qreal filledHeight = trackRect.bottom() - handleY;
-    QRectF filledRect(cx - trackThickness / 2, handleY, trackThickness, filledHeight);
+    const int minimumY = valueToPixelPos(opt.minimum);
+    QRectF filledRect(cx - trackThickness / 2, qMin(minimumY, handleY), trackThickness,
+                      qAbs(handleY - minimumY));
 
     // 2. State colors. zh_CN: 确定状态颜色。
     QColor trackBg = isEnabled() ? colors.controlAltSecondary : colors.controlDisabled;

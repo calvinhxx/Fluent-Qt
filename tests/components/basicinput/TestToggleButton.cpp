@@ -5,6 +5,7 @@
 #include <QHBoxLayout>
 #include <QImage>
 #include <QLabel>
+#include <QPointer>
 #include <QSignalSpy>
 #include <QVBoxLayout>
 
@@ -159,6 +160,66 @@ TEST_F(ToggleButtonTest, Contract_ProgrammaticPartialCheckStateIsPreserved)
     EXPECT_TRUE(toggle.isChecked());
     EXPECT_EQ(toggledCount, 1);
     EXPECT_TRUE(lastChecked);
+}
+
+TEST_F(ToggleButtonTest, Contract_ToggledCallbackCanDeleteButton)
+{
+    auto* toggle = new ToggleButton(QStringLiteral("Toggle"));
+    QPointer<ToggleButton> guard(toggle);
+    int checkStateNotifications = 0;
+    QObject::connect(toggle, &ToggleButton::checkStateChanged, window,
+                     [&] { ++checkStateNotifications; });
+    QObject::connect(toggle, &QPushButton::toggled, window, [toggle] { delete toggle; });
+
+    toggle->setCheckState(Qt::Checked);
+
+    EXPECT_TRUE(guard.isNull());
+    EXPECT_EQ(checkStateNotifications, 0);
+}
+
+TEST_F(ToggleButtonTest, Contract_ToggledCallbackCanReplaceCheckState)
+{
+    ToggleButton toggle(QStringLiteral("Toggle"));
+    toggle.setThreeState(true);
+    QSignalSpy checkStateSpy(&toggle, &ToggleButton::checkStateChanged);
+    QObject::connect(&toggle, &QPushButton::toggled, &toggle, [&](bool checked) {
+        if (checked)
+            toggle.setCheckState(Qt::PartiallyChecked);
+    });
+
+    toggle.setCheckState(Qt::Checked);
+
+    EXPECT_TRUE(toggle.isChecked());
+    EXPECT_EQ(toggle.checkState(), Qt::PartiallyChecked);
+    ASSERT_EQ(checkStateSpy.count(), 1);
+    EXPECT_EQ(checkStateSpy.at(0).at(0).toInt(), Qt::PartiallyChecked);
+
+    toggle.setChecked(false);
+    EXPECT_EQ(toggle.checkState(), Qt::Unchecked);
+    EXPECT_EQ(checkStateSpy.count(), 2);
+}
+
+TEST_F(ToggleButtonTest, Contract_ToggledCallbackCanReverseCheckedState)
+{
+    for (const bool replaceTriState : {false, true}) {
+        SCOPED_TRACE(replaceTriState);
+        ToggleButton toggle(QStringLiteral("Toggle"));
+        QSignalSpy checkStateSpy(&toggle, &ToggleButton::checkStateChanged);
+        QObject::connect(&toggle, &QPushButton::toggled, &toggle, [&](bool checked) {
+            if (checked) {
+                if (replaceTriState)
+                    toggle.setCheckState(Qt::PartiallyChecked);
+                toggle.setChecked(false);
+            }
+        });
+
+        toggle.setCheckState(Qt::Checked);
+
+        EXPECT_FALSE(toggle.isChecked());
+        EXPECT_EQ(toggle.checkState(), Qt::Unchecked);
+        ASSERT_EQ(checkStateSpy.count(), replaceTriState ? 2 : 1);
+        EXPECT_EQ(checkStateSpy.last().at(0).toInt(), Qt::Unchecked);
+    }
 }
 
 TEST_F(ToggleButtonTest, Contract_LightAndDarkCheckedStatePaintsDistinctly)

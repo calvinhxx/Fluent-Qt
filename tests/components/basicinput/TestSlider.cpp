@@ -18,6 +18,7 @@
 #include "components/textfields/Label.h"
 
 #include <QImage>
+#include <limits>
 
 using namespace fluent::basicinput;
 using namespace fluent::textfields;
@@ -102,6 +103,126 @@ TEST(SliderContractTest, Contract_PointerInteractionPreservesInheritedSignalsExa
     QTest::mouseRelease(&slider, Qt::LeftButton, Qt::NoModifier, center);
     EXPECT_EQ(pressedSpy.count(), 1);
     EXPECT_EQ(releasedSpy.count(), 1);
+}
+
+TEST(SliderContractTest, Contract_PointerAndFilledTrackRespectQtDirectionSemantics)
+{
+    struct DirectionCase {
+        Qt::Orientation orientation;
+        Qt::LayoutDirection direction;
+        bool inverted;
+        bool minimumAtStart;
+    };
+    const DirectionCase cases[] = {
+        {Qt::Horizontal, Qt::LeftToRight, false, true},
+        {Qt::Horizontal, Qt::LeftToRight, true, false},
+        {Qt::Horizontal, Qt::RightToLeft, false, false},
+        {Qt::Horizontal, Qt::RightToLeft, true, true},
+        {Qt::Vertical, Qt::LeftToRight, false, false},
+        {Qt::Vertical, Qt::LeftToRight, true, true},
+        {Qt::Vertical, Qt::RightToLeft, false, false},
+        {Qt::Vertical, Qt::RightToLeft, true, true},
+    };
+    for (const auto& item : cases) {
+        SCOPED_TRACE(::testing::Message() << "orientation=" << item.orientation << ", direction="
+                                          << item.direction << ", inverted=" << item.inverted);
+        Slider slider(item.orientation);
+        QSlider reference(item.orientation);
+        for (QSlider* target : {static_cast<QSlider*>(&slider), &reference}) {
+            target->setRange(-50, 150);
+            target->setLayoutDirection(item.direction);
+            target->setInvertedAppearance(item.inverted);
+        }
+        const bool horizontal = item.orientation == Qt::Horizontal;
+        slider.resize(horizontal ? QSize(240, 40) : QSize(40, 240));
+        const auto point = [horizontal](int position) {
+            return horizontal ? QPoint(position, 20) : QPoint(20, position);
+        };
+
+        QTest::mouseClick(&slider, Qt::LeftButton, Qt::NoModifier, point(0));
+        EXPECT_EQ(slider.value(), item.minimumAtStart ? -50 : 150);
+        QTest::mouseClick(&slider, Qt::LeftButton, Qt::NoModifier, point(239));
+        EXPECT_EQ(slider.value(), item.minimumAtStart ? 150 : -50);
+        QTest::mouseClick(&slider, Qt::LeftButton, Qt::NoModifier, point(120));
+        ASSERT_EQ(slider.value(), 50);
+
+        slider.setHoverRatio(0.0);
+        slider.setPressRatio(0.0);
+        const QImage image = slider.grab().toImage();
+        const auto sample = [&](int position) {
+            const QPoint pixel = point(position) * image.devicePixelRatio();
+            return image.pixelColor(pixel);
+        };
+        EXPECT_EQ(sample(item.minimumAtStart ? 60 : 180), slider.themeColors().accentDefault);
+        EXPECT_NE(sample(item.minimumAtStart ? 180 : 60), slider.themeColors().accentDefault);
+
+        reference.setValue(50);
+        const Qt::Key key = horizontal ? Qt::Key_Right : Qt::Key_Up;
+        QTest::keyClick(&slider, key);
+        QTest::keyClick(&reference, key);
+        EXPECT_EQ(slider.value(), reference.value());
+    }
+}
+
+TEST(SliderContractTest, Contract_FullIntegerRangePaintAndPointerMappingRemainStable)
+{
+    const int low = std::numeric_limits<int>::min();
+    const int high = std::numeric_limits<int>::max();
+    for (const int length : {240, 4200}) {
+        SCOPED_TRACE(length);
+        Slider slider(Qt::Horizontal);
+        slider.setRange(low, high);
+        slider.resize(length, 40);
+        Slider normalized(Qt::Horizontal);
+        normalized.setRange(0, 100);
+        normalized.resize(length, 40);
+
+        const int values[] = {low, 0, high};
+        const int percentages[] = {0, 50, 100};
+        for (int index = 0; index < 3; ++index) {
+            slider.setValue(values[index]);
+            normalized.setValue(percentages[index]);
+            EXPECT_EQ(slider.grab().toImage(), normalized.grab().toImage());
+        }
+
+        QTest::mouseClick(&slider, Qt::LeftButton, Qt::NoModifier, QPoint(0, 20));
+        EXPECT_EQ(slider.value(), low);
+        QTest::mouseClick(&slider, Qt::LeftButton, Qt::NoModifier, QPoint(length / 2, 20));
+        EXPECT_GE(slider.value(), -1);
+        EXPECT_LE(slider.value(), 1);
+        QTest::mouseClick(&slider, Qt::LeftButton, Qt::NoModifier, QPoint(length - 1, 20));
+        EXPECT_EQ(slider.value(), high);
+    }
+}
+
+TEST(SliderContractTest, Contract_AutomaticTicksHandleZeroStepsAndFullIntegerRanges)
+{
+    Slider slider(Qt::Horizontal);
+    slider.resize(240, 40);
+    slider.setRange(0, 100);
+    slider.setValue(50);
+    slider.setHoverRatio(1.0);
+    slider.setTickPosition(QSlider::TicksBelow);
+    slider.setTickInterval(10);
+    const QImage pageStepTicks = slider.grab().toImage();
+    slider.setTickInterval(0);
+    EXPECT_EQ(slider.grab().toImage(), pageStepTicks);
+
+    slider.setRange(0, 2);
+    slider.setSingleStep(0);
+    slider.setPageStep(0);
+    const QImage zeroStepTicks = slider.grab().toImage();
+    slider.setTickPosition(QSlider::NoTicks);
+    EXPECT_NE(slider.grab().toImage(), zeroStepTicks);
+
+    slider.setRange(std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
+    slider.setValue(0);
+    const QImage noTicks = slider.grab().toImage();
+    slider.setTickPosition(QSlider::TicksBelow);
+    slider.setTickInterval(std::numeric_limits<int>::max());
+    EXPECT_NE(slider.grab().toImage(), noTicks);
+    slider.setTickInterval(1);
+    EXPECT_EQ(slider.grab().toImage(), noTicks);
 }
 
 TEST(SliderContractTest, Contract_LightAndDarkRangeExtremesPaintDistinctly)

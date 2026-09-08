@@ -137,6 +137,36 @@ TEST_F(DropDownButtonTest, PressAnimationCompletesSmoothProgress)
     QTest::mouseRelease(&button, Qt::LeftButton, Qt::NoModifier, button.rect().center());
 }
 
+TEST_F(DropDownButtonTest, Contract_OpenPaintingPreservesInteractionStateAndExplicitFont)
+{
+    DropDownButton button(QStringLiteral("Options"));
+    button.resize(180, 40);
+    QFont explicitFont = button.font();
+    explicitFont.setPixelSize(23);
+    explicitFont.setBold(true);
+    button.setFont(explicitFont);
+
+    for (const bool enabled : {true, false}) {
+        button.setEnabled(enabled);
+        button.setOpen(false);
+        button.setInteractionState(Button::Pressed);
+        const QImage pressed = button.grab().toImage();
+        ASSERT_FALSE(pressed.isNull());
+
+        for (const auto state : {Button::Rest, Button::Hover, Button::Pressed}) {
+            button.setInteractionState(state);
+            button.setOpen(true);
+            QSignalSpy stateSpy(&button, &Button::interactionStateChanged);
+            for (int frame = 0; frame < 3; ++frame) {
+                EXPECT_EQ(button.grab().toImage(), pressed);
+                EXPECT_EQ(button.interactionState(), state);
+            }
+            EXPECT_EQ(stateSpy.count(), 0);
+            EXPECT_EQ(button.font(), explicitFont);
+        }
+    }
+}
+
 TEST_F(DropDownButtonTest, SizeHintReservesChevronAffordance)
 {
     Button plain("Email");

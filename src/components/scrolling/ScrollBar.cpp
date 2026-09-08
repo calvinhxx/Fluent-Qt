@@ -5,6 +5,7 @@
 #include <QColor>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QStyleOptionSlider>
 
 #include "components/foundation/private/MotionPolicy_p.h"
 
@@ -173,15 +174,24 @@ void ScrollBar::paintEvent(QPaintEvent* event)
     if (trackLength <= 0.0)
         return;
 
-    const qreal scrollRange = qMax<qreal>(0.0, maximum() - minimum());
+    QStyleOptionSlider opt;
+    initStyleOption(&opt);
+    const qreal scrollRange = static_cast<qreal>(opt.maximum) - opt.minimum;
     const qreal page = qMax<qreal>(1.0, pageStep());
     const qreal minThumbLength = qMin<qreal>(m_minThumbLength, trackLength);
     const qreal proportionalLength =
         scrollRange > 0.0 ? trackLength * page / (scrollRange + page) : trackLength;
     const qreal thumbLength = qBound(minThumbLength, proportionalLength, trackLength);
     const qreal travel = qMax<qreal>(0.0, trackLength - thumbLength);
-    const qreal ratio =
-        scrollRange > 0.0 ? qBound<qreal>(0.0, (value() - minimum()) / scrollRange, 1.0) : 0.0;
+    qreal ratio =
+        scrollRange > 0.0
+            ? qBound<qreal>(
+                  0.0, (static_cast<qreal>(opt.sliderPosition) - opt.minimum) / scrollRange, 1.0)
+            : 0.0;
+    // QScrollBar leaves horizontal RTL mirroring to QStyle's geometry.
+    // zh_CN: QScrollBar 将水平 RTL 镜像交给 QStyle 的几何计算，自绘时需保持一致。
+    if (opt.upsideDown != (!vertical && opt.direction == Qt::RightToLeft))
+        ratio = 1.0 - ratio;
     const qreal thumbOffset = travel * ratio;
 
     QRectF drawRect;

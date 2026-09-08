@@ -26,6 +26,7 @@
 #include <QLineEdit>
 #include <QMargins>
 #include <QPoint>
+#include <QPointer>
 #include <QPixmap>
 #include <QScrollBar>
 #include <QSet>
@@ -47,6 +48,7 @@
 #include "compatibility/QtCompat.h"
 #include "components/collections/ListView.h"
 #include "components/collections/TreeView.h"
+#include "components/dialogs_flyouts/CoachMark.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/FontIcon.h"
 #include "components/foundation/QMLPlus.h"
@@ -82,6 +84,7 @@
 #include "view/pages/GalleryComponentPage.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/GalleryFoundationTopicPage.h"
+#include "view/pages/SettingsPage.h"
 #include "view/widgets/GalleryComponentReferenceCard.h"
 #include "view/widgets/GalleryEntryGrid.h"
 #include "view/widgets/GalleryIconBrowser.h"
@@ -669,7 +672,11 @@ TEST_F(GalleryContentPagesTest, PythonParityVisualCheck)
             QElapsedTimer timer;
             timer.start();
             while (timer.elapsed() < 5000) {
-                if (window.currentRouteId() == routeId)
+                QWidget* page = routeId == QStringLiteral("settings")
+                                    ? static_cast<QWidget*>(window.currentSettingsPage())
+                                    : window.currentContentPage();
+                if (window.currentRouteId() == routeId && page && page->isVisible() &&
+                    page->property("galleryRouteId").toString() == routeId)
                     return true;
                 QApplication::processEvents(QEventLoop::AllEvents, 25);
                 QTest::qWait(20);
@@ -677,7 +684,14 @@ TEST_F(GalleryContentPagesTest, PythonParityVisualCheck)
             return false;
         };
 
-        settings.setThemeMode(fluent::gallery::GallerySettings::ThemeMode::Light);
+        const QString requestedTheme =
+            qEnvironmentVariable("GALLERY_PARITY_THEME", QStringLiteral("light")).trimmed();
+        ASSERT_TRUE(requestedTheme == QStringLiteral("light") ||
+                    requestedTheme == QStringLiteral("dark"))
+            << "GALLERY_PARITY_THEME must be light or dark";
+        const bool dark = requestedTheme == QStringLiteral("dark");
+        settings.setThemeMode(dark ? fluent::gallery::GallerySettings::ThemeMode::Dark
+                                   : fluent::gallery::GallerySettings::ThemeMode::Light);
         QStringList routes = {
             QStringLiteral("home"),        QStringLiteral("settings"), QStringLiteral("foundation"),
             QStringLiteral("basic-input"), QStringLiteral("button"),
@@ -704,8 +718,9 @@ TEST_F(GalleryContentPagesTest, PythonParityVisualCheck)
 
             tests::support::VisualSnapshotOptions options;
             options.windowSize = QSize(1440, 900);
-            options.variant = QStringLiteral("parity-%1-light").arg(routeId);
-            options.theme = tests::support::VisualSnapshotTheme::Light;
+            options.variant = QStringLiteral("parity-%1-%2").arg(routeId, requestedTheme);
+            options.theme = dark ? tests::support::VisualSnapshotTheme::Dark
+                                 : tests::support::VisualSnapshotTheme::Light;
             ASSERT_TRUE(tests::support::captureVisualSnapshot(&window, options));
         }
         return;
@@ -1295,6 +1310,59 @@ TEST_F(GalleryContentPagesTest, NarrowCardsKeepNavigationPreviewsInsideTheirSurf
     }
 }
 
+TEST_F(GalleryContentPagesTest, CoachMarkSampleReleasesOverlayWhenCardIsDestroyed)
+{
+    using fluent::dialogs_flyouts::CoachMark;
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("coach-mark"),
+                               QStringLiteral("coach-mark-targeted-glide"), &sample));
+
+    for (const bool closeBeforeDestroy : {false, true}) {
+        SCOPED_TRACE(closeBeforeDestroy ? "closed overlay" : "open overlay");
+        QWidget window;
+        auto* layout = new QVBoxLayout(&window);
+        auto card = std::make_unique<GallerySampleCard>(sample, &window);
+        layout->addWidget(card.get());
+        window.resize(800, 500);
+        window.show();
+        QApplication::processEvents();
+
+        auto* open = card->findChild<Button*>(QStringLiteral("galleryCoachMarkBottom"));
+        ASSERT_NE(open, nullptr);
+        QTest::mouseClick(open, Qt::LeftButton);
+        QPointer<CoachMark> coach = window.findChild<CoachMark*>();
+        ASSERT_NE(coach, nullptr);
+        ASSERT_TRUE(coach->isOpen());
+        EXPECT_EQ(coach->parentWidget(), &window);
+
+        auto* dismiss = coach->findChild<Button*>(QStringLiteral("galleryCoachMarkDismiss"));
+        ASSERT_NE(dismiss, nullptr);
+        EXPECT_EQ(dismiss->accessibleName(), QStringLiteral("Close"));
+
+        auto* close = coach->findChild<Button*>(QStringLiteral("galleryCoachMarkClose"));
+        ASSERT_NE(close, nullptr);
+        QTest::mouseClick(close, Qt::LeftButton);
+        ASSERT_FALSE(coach->isOpen());
+        ASSERT_TRUE(QTest::qWaitFor([coach]() { return coach && !coach->isVisible(); }, 1000));
+        QTest::mouseClick(open, Qt::LeftButton);
+        ASSERT_TRUE(coach->isOpen());
+        EXPECT_EQ(window.findChildren<CoachMark*>().size(), 1);
+        EXPECT_EQ(window.findChild<CoachMark*>(), coach.data());
+
+        if (closeBeforeDestroy) {
+            QTest::mouseClick(close, Qt::LeftButton);
+            ASSERT_FALSE(coach->isOpen());
+            ASSERT_TRUE(QTest::qWaitFor([coach]() { return coach && !coach->isVisible(); }, 1000));
+        }
+
+        card.reset();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        EXPECT_TRUE(coach.isNull())
+            << "A removed Gallery card must not retain its overlay in the window";
+        EXPECT_TRUE(window.findChildren<CoachMark*>().isEmpty());
+    }
+}
+
 TEST_F(GalleryContentPagesTest, ListSamplesStartOnCompleteRows)
 {
     for (const QString& sampleId :
@@ -1479,6 +1547,14 @@ TEST_F(GalleryContentPagesTest, ChangedSampleSnippetsMatchPreviewSemantics)
 
 TEST_F(GalleryContentPagesTest, InteractiveSampleRootsHaveAccessibleNames)
 {
+    fluent::gallery::GallerySample sliderSample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("slider"), QStringLiteral("slider-live-value"),
+                               &sliderSample));
+    std::unique_ptr<QWidget> sliderPreview(sliderSample.createPreview(nullptr));
+    auto* slider = sliderPreview->findChild<fluent::basicinput::Slider*>();
+    ASSERT_NE(slider, nullptr);
+    EXPECT_EQ(slider->accessibleName(), QStringLiteral("Value"));
+
     fluent::gallery::GallerySample multiSelectSample;
     ASSERT_TRUE(findSampleById(QStringLiteral("multi-select-combobox"),
                                QStringLiteral("multi-select-combobox-selection"),

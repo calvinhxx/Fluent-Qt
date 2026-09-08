@@ -167,28 +167,3 @@ TEST(QtTestEnvironmentTest, VisualCompareToBaselineDetectsMismatch)
     EXPECT_FALSE(
         tests::support::compareVisualSnapshotToBaseline(actualPath, QStringLiteral("mismatch")));
 }
-
-TEST(QtTestEnvironmentLabelMetadata, SlowMetadataLabel)
-{
-    SUCCEED();
-}
-
-TEST(QtTestEnvironmentLabelMetadata, WindowsMetadataLabel)
-{
-    SUCCEED();
-}
-
-TEST(QtTestEnvironmentLabelMetadata, MacOSMetadataLabel)
-{
-    SUCCEED();
-}
-
-TEST(QtTestEnvironmentLabelMetadata, AnimationMetadataLabel)
-{
-    SUCCEED();
-}
-
-TEST(QtTestEnvironmentLabelMetadata, InteractiveMetadataLabel)
-{
-    SUCCEED();
-}

@@ -7,7 +7,6 @@ target_link_libraries(test_list_view PRIVATE Qt${QT_VERSION_MAJOR}::Network)
 
 # GridView
 add_qt_test_module(test_grid_view TestGridView.cpp FluentGridItemDelegate.cpp)
-target_link_libraries(test_grid_view PRIVATE Qt${QT_VERSION_MAJOR}::Network)
 
 # FlowView
 add_qt_test_module(test_flow_view TestFlowView.cpp)

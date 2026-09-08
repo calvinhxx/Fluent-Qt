@@ -5,10 +5,12 @@
 #include <QPixmap>
 #include <QScrollArea>
 #include <QStyle>
+#include <QStyleOptionSlider>
 #include <QTest>
 #include <QTimer>
 #include <QWidget>
 #include <gtest/gtest.h>
+#include <limits>
 #include "components/basicinput/Button.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
@@ -23,6 +25,19 @@ using namespace fluent::basicinput;
 using namespace fluent;
 
 namespace {
+
+class NativeScrollBarGeometry : public QScrollBar {
+public:
+    using QScrollBar::QScrollBar;
+
+    QRect thumbRect() const
+    {
+        QStyleOptionSlider option;
+        initStyleOption(&option);
+        return style()->subControlRect(QStyle::CC_ScrollBar, &option, QStyle::SC_ScrollBarSlider,
+                                       this);
+    }
+};
 
 QImage renderScrollBarImage(ScrollBar* scrollBar)
 {
@@ -119,6 +134,90 @@ TEST_F(ScrollBarTest, VerticalThumbKeepsRoundedCapsAtExtremes)
     EXPECT_GT(pixelAlpha(bottomImage, bottomBounds.center().x(), bottomBounds.bottom()), 0);
     EXPECT_EQ(pixelAlpha(bottomImage, bottomBounds.left(), bottomBounds.bottom()), 0);
     EXPECT_EQ(pixelAlpha(bottomImage, bottomBounds.right(), bottomBounds.bottom()), 0);
+}
+
+TEST_F(ScrollBarTest, Contract_ThumbDirectionMatchesQtInversionAndLayoutDirection)
+{
+    for (const auto orientation : {Qt::Horizontal, Qt::Vertical}) {
+        for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+            for (const bool inverted : {false, true}) {
+                SCOPED_TRACE(::testing::Message() << "orientation=" << orientation << ", direction="
+                                                  << direction << ", inverted=" << inverted);
+                ScrollBar scrollBar(orientation);
+                NativeScrollBarGeometry reference(orientation);
+                const bool vertical = orientation == Qt::Vertical;
+                for (QScrollBar* target :
+                     {static_cast<QScrollBar*>(&scrollBar), static_cast<QScrollBar*>(&reference)}) {
+                    target->resize(vertical ? QSize(9, 240) : QSize(240, 9));
+                    target->setRange(0, 100);
+                    target->setPageStep(20);
+                    target->setLayoutDirection(direction);
+                    target->setInvertedAppearance(inverted);
+                }
+                scrollBar.setOpacity(1.0);
+                const QRect minimumBounds = alphaBounds(renderScrollBarImage(&scrollBar));
+                const QRect nativeMinimum = reference.thumbRect();
+                scrollBar.setValue(100);
+                reference.setValue(100);
+                const QRect maximumBounds = alphaBounds(renderScrollBarImage(&scrollBar));
+                const QRect nativeMaximum = reference.thumbRect();
+                ASSERT_TRUE(minimumBounds.isValid());
+                ASSERT_TRUE(maximumBounds.isValid());
+                ASSERT_TRUE(nativeMinimum.isValid());
+                ASSERT_TRUE(nativeMaximum.isValid());
+                const auto position = [vertical](const QRect& bounds) {
+                    return vertical ? bounds.center().y() : bounds.center().x();
+                };
+                EXPECT_NE(position(minimumBounds), position(maximumBounds));
+                EXPECT_EQ(position(minimumBounds) < position(maximumBounds),
+                          position(nativeMinimum) < position(nativeMaximum));
+            }
+        }
+    }
+}
+
+TEST_F(ScrollBarTest, Contract_FullIntegerRangePreservesThumbSizeAndPosition)
+{
+    const int values[] = {std::numeric_limits<int>::min(), 0, std::numeric_limits<int>::max()};
+    const int percentages[] = {0, 50, 100};
+    for (const auto orientation : {Qt::Horizontal, Qt::Vertical}) {
+        ScrollBar scrollBar(orientation);
+        ScrollBar normalized(orientation);
+        scrollBar.setRange(values[0], values[2]);
+        normalized.setRange(0, 100);
+        for (ScrollBar* target : {&scrollBar, &normalized}) {
+            target->resize(orientation == Qt::Vertical ? QSize(9, 240) : QSize(240, 9));
+            target->setPageStep(1);
+            target->setOpacity(1.0);
+        }
+        for (int index = 0; index < 3; ++index) {
+            SCOPED_TRACE(::testing::Message()
+                         << "orientation=" << orientation << ", value=" << values[index]);
+            scrollBar.setValue(values[index]);
+            normalized.setValue(percentages[index]);
+            EXPECT_EQ(renderScrollBarImage(&scrollBar), renderScrollBarImage(&normalized));
+        }
+    }
+}
+
+TEST_F(ScrollBarTest, Contract_TrackingDisabledPaintsPendingSliderPosition)
+{
+    ScrollBar scrollBar(Qt::Horizontal);
+    scrollBar.resize(240, 9);
+    scrollBar.setRange(0, 100);
+    scrollBar.setPageStep(20);
+    scrollBar.setOpacity(1.0);
+    scrollBar.setValue(75);
+    const QImage atSeventyFive = renderScrollBarImage(&scrollBar);
+
+    scrollBar.setValue(25);
+    scrollBar.setTracking(false);
+    scrollBar.setSliderDown(true);
+    scrollBar.setSliderPosition(75);
+    EXPECT_EQ(scrollBar.value(), 25);
+    EXPECT_EQ(scrollBar.sliderPosition(), 75);
+    EXPECT_EQ(renderScrollBarImage(&scrollBar), atSeventyFive);
+    scrollBar.setSliderDown(false);
 }
 
 TEST_F(ScrollBarTest, HiddenInitializationPreservesPinnedOpacity)

@@ -4210,9 +4210,11 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
     if key == ("coach-mark", "coach-mark-targeted-glide"):
         return _source(
             "coach = fluentqt.CoachMark(window)",
+            "page.destroyed.connect(coach.deleteLater)",
             "coach.setCardSize(QSize(320, 150))",
             "coach.setPlacement(fluentqt.CoachMark.Placement.Bottom)",
             "coach.setTarget(target_button)",
+            'close_button.setAccessibleName("Close")',
             "close_button.clicked.connect(coach.close)",
             "coach.open()",
             imports="from PySide6.QtCore import QSize",

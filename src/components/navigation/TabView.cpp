@@ -2044,16 +2044,15 @@ bool TabView::removeTab(int index)
     if (!isValidIndex(index))
         return false;
 
+    const int previousIndex = m_selectedIndex;
     m_items.removeAt(index);
 
-    bool selectionChanged = false;
     if (m_selectedIndex == index) {
         m_selectedIndex = -1;
         if (!m_items.isEmpty()) {
             const int candidate = qMin(index, m_items.size() - 1);
             m_selectedIndex = isSelectableIndex(candidate) ? candidate : firstEnabledIndex();
         }
-        selectionChanged = true;
     } else if (m_selectedIndex > index) {
         --m_selectedIndex;
     }
@@ -2061,7 +2060,7 @@ bool TabView::removeTab(int index)
     syncTabStrip();
     updateAccessibleText();
     fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
-    if (selectionChanged) {
+    if (previousIndex == index || m_selectedIndex != previousIndex) {
         fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this,
                                                                                m_selectedIndex);
         QPointer<TabView> guard(this);

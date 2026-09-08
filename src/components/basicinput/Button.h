@@ -220,6 +220,12 @@ protected:
     void changeEvent(QEvent* event) override;
 
     /**
+     * @brief Paints a visual state without changing the interaction-state property.
+     * zh_CN: 按指定视觉状态绘制，不修改 interactionState 属性。
+     */
+    void paintButton(InteractionState state);
+
+    /**
      * @brief Returns the rectangle used to lay out painted icon and text content.
      * zh_CN: 返回用于布局自绘图标与文本内容的区域。
      */

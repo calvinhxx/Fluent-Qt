@@ -23,6 +23,10 @@ ToggleSwitch = _native.fluent.ToggleSwitch
 class ComboBox(_NativeComboBox):
     """Fluent text dropdown with native QComboBox model semantics.
 
+    ``setFont(QFont)`` customizes field, editor and dropdown text together.
+    Explicit fonts survive theme changes; ``setFontRole(combo.fontRole())``
+    restores theme typography. Dropdown rows grow to accommodate large fonts.
+
     The native popup owns its Fluent ``ListView`` and row delegate. Replacing
     the inherited QComboBox view or delegate would only mutate Qt's unused
     fallback popup, so those customization entry points fail explicitly.

@@ -930,6 +930,7 @@ register_source_samples(
                 root = QWidget()
                 layout = QVBoxLayout(root)
                 slider = fluentqt.Slider(Qt.Orientation.Horizontal, root)
+                slider.setAccessibleName("Value")
                 slider.setRange(0, 100)
                 slider.setValue(32)
                 slider.setFixedWidth(260)

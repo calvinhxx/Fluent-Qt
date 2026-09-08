@@ -184,7 +184,7 @@
     {
       "route_id": "slider",
       "sample_id": "slider-live-value",
-      "source": "from PySide6.QtCore import Qt\n\nslider = fluentqt.Slider(Qt.Orientation.Horizontal)\nslider.setRange(0, 100)\nslider.setValue(32)\nslider.valueChanged.connect(lambda value: status.setText(f'Value: {value}'))\n"
+      "source": "from PySide6.QtCore import Qt\n\nslider = fluentqt.Slider(Qt.Orientation.Horizontal)\nslider.setAccessibleName('Value')\nslider.setRange(0, 100)\nslider.setValue(32)\nslider.valueChanged.connect(lambda value: status.setText(f'Value: {value}'))\n"
     },
     {
       "route_id": "slider",
@@ -519,7 +519,7 @@
     {
       "route_id": "coach-mark",
       "sample_id": "coach-mark-targeted-glide",
-      "source": "from PySide6.QtCore import QSize\n\ncoach = fluentqt.CoachMark(window)\ncoach.setCardSize(QSize(320, 150))\ncoach.setPlacement(fluentqt.CoachMark.Placement.Bottom)\ncoach.setTarget(target_button)\nclose_button.clicked.connect(coach.close)\ncoach.open()\n"
+      "source": "from PySide6.QtCore import QSize\n\ncoach = fluentqt.CoachMark(window)\npage.destroyed.connect(coach.deleteLater)\ncoach.setCardSize(QSize(320, 150))\ncoach.setPlacement(fluentqt.CoachMark.Placement.Bottom)\ncoach.setTarget(target_button)\nclose_button.setAccessibleName(\"Close\")\nclose_button.clicked.connect(coach.close)\ncoach.open()\n"
     },
     {
       "route_id": "accordion",

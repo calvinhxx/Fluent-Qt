@@ -387,6 +387,11 @@ QRectF Button::contentPaintRect(const QRectF& surfaceRect) const
 
 void Button::paintEvent(QPaintEvent*)
 {
+    paintButton(m_interactionState);
+}
+
+void Button::paintButton(InteractionState state)
+{
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::SmoothPixmapTransform);
@@ -398,7 +403,6 @@ void Button::paintEvent(QPaintEvent*)
     const auto& spacing = themeSpacing();
 
     // 1. Resolve the interaction state. zh_CN: 确定交互状态。
-    InteractionState state = m_interactionState;
     if (!isEnabled()) {
         state = Disabled;
     } else if (state == Rest) {

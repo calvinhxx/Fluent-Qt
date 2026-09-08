@@ -10,6 +10,7 @@
 #include <QProxyStyle>
 #include <QResizeEvent>
 #include <QScrollBar>
+#include <QScopedValueRollback>
 #include <QStringListModel>
 #include <QStyle>
 #include <QWheelEvent>
@@ -36,10 +37,17 @@ static constexpr int kPopupWindowMargin = 4;
 static constexpr int kPopupItemOuterInset = 5;
 static constexpr int kPopupItemTextLeftInset = 16;
 static constexpr int kPopupItemTextRightInset = 8;
+static constexpr int kPopupItemVerticalPadding = ::Spacing::Small;
 static constexpr int kClosedFieldTextFitClearance = ::Spacing::XSmall;
 static constexpr qreal kPopupShadowIntensity = 0.18;
 static constexpr int kPopupShadowLayerCount = 6;
 static constexpr int kPopupShadowVerticalOffset = 1;
+
+int popupRowHeight(const QFont& font)
+{
+    return qMax(::Spacing::ControlHeight::Large,
+                QFontMetrics(font).height() + 2 * kPopupItemVerticalPadding);
+}
 
 // Suppress QStyle's PE_PanelLineEdit native panel — ComboBox paints its own bg
 class TransparentLineEditStyle : public QProxyStyle {
@@ -63,6 +71,7 @@ public:
     explicit ComboBoxPopup(ComboBox* comboBox);
 
     void showForComboBox();
+    void refreshFont();
     void onThemeUpdated() override;
 
 protected:
@@ -71,6 +80,7 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    void updateLayout();
     ComboBox* m_comboBox;
     fluent::collections::ListView* m_listView;
     ComboBoxItemDelegate* m_delegate;
@@ -161,9 +171,9 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     painter->restore();
 }
 
-QSize ComboBoxItemDelegate::sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const
+QSize ComboBoxItemDelegate::sizeHint(const QStyleOptionViewItem& option, const QModelIndex&) const
 {
-    return QSize(0, ::Spacing::ControlHeight::Large);
+    return QSize(0, popupRowHeight(option.font));
 }
 
 // ─── ComboBoxPopup implementation. zh_CN: ComboBoxPopup 实现 ────────────────
@@ -203,7 +213,8 @@ ComboBox::ComboBoxPopup::ComboBoxPopup(ComboBox* comboBox) : Flyout(comboBox), m
 
     m_delegate = new ComboBoxItemDelegate(comboBox, m_listView, this);
     m_listView->setItemDelegate(m_delegate);
-    m_listView->setFont(comboBox->themeFont(comboBox->fontRole()).toQFont());
+    m_listView->setFont(comboBox->font());
+    m_listView->installEventFilter(this);
 
     m_listView->setMouseTracking(true);
     m_listView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -226,25 +237,59 @@ void ComboBox::ComboBoxPopup::showForComboBox()
     m_listView->setModel(m_comboBox->model());
     m_listView->setRootIndex(m_comboBox->rootModelIndex());
     m_listView->setModelColumn(m_comboBox->modelColumn());
-    m_listView->setFont(m_comboBox->themeFont(m_comboBox->fontRole()).toQFont());
+    m_listView->setFont(m_comboBox->font());
 
     if (m_comboBox->currentIndex() >= 0) {
         m_listView->setSelectedIndex(m_comboBox->currentIndex());
     }
 
+    updateLayout();
+    if (isOpen() || isVisible()) {
+        show();
+        raise();
+    } else {
+        showAt(m_comboBox);
+    }
+
+    if (m_comboBox->currentIndex() >= 0) {
+        m_listView->scrollTo(m_listView->model()->index(m_comboBox->currentIndex(),
+                                                        m_comboBox->modelColumn(),
+                                                        m_comboBox->rootModelIndex()),
+                             QAbstractItemView::PositionAtCenter);
+    }
+}
+
+void ComboBox::ComboBoxPopup::refreshFont()
+{
+    m_listView->setFont(m_comboBox->font());
+    if (isOpen())
+        updateLayout();
+    m_listView->viewport()->update();
+}
+
+void ComboBox::ComboBoxPopup::updateLayout()
+{
+
     const int itemCount = m_comboBox->count();
-    const int itemH = ::Spacing::ControlHeight::Large;
+    const int itemH = popupRowHeight(m_listView->font());
     const int maxVisible = qMin(itemCount, 6);
-    const int rowsH = maxVisible * itemH;
+    int rowsH = maxVisible * itemH;
     const int sSize = kPopupShadowMargin;
     const int cardInset = kPopupContentInset;
+    QWidget* top = m_comboBox->window();
+    const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
+    const QRect anchor(m_comboBox->mapTo(top, QPoint()), m_comboBox->size());
+    const int availableHeight =
+        qMax(surface.bottom() - anchor.bottom(), anchor.top() - surface.top());
+    rowsH = qMin(rowsH, qMax(1, availableHeight - m_comboBox->popupOffset() - kPopupWindowMargin -
+                                    2 * cardInset));
     int widestText = 0;
     const QFontMetrics popupMetrics(m_listView->font());
     for (int index = 0; index < itemCount; ++index)
         widestText = qMax(widestText, popupMetrics.horizontalAdvance(m_comboBox->itemText(index)));
 
     int scrollClearance = 0;
-    if (itemCount > maxVisible) {
+    if (itemCount > rowsH / itemH) {
         scrollClearance = ::Spacing::XSmall;
         if (auto* scrollBar = m_listView->verticalFluentScrollBar())
             scrollClearance = qMax(scrollClearance, scrollBar->thickness());
@@ -262,20 +307,10 @@ void ComboBox::ComboBoxPopup::showForComboBox()
     const QRect cardRect = ::fluent::overlay::visibleCardRect(rect(), sSize);
     m_listView->setGeometry(cardRect.adjusted(cardInset, cardInset, -cardInset, -cardInset));
     m_listView->clearMask();
+    m_listView->doItemsLayout();
     m_listView->refreshFluentScrollChrome();
-
-    if (isOpen() || isVisible()) {
+    if (isOpen() || isVisible())
         move(computePosition());
-        show();
-        raise();
-    } else {
-        showAt(m_comboBox);
-    }
-
-    if (m_comboBox->currentIndex() >= 0) {
-        m_listView->scrollTo(m_listView->model()->index(m_comboBox->currentIndex(), 0),
-                             QAbstractItemView::PositionAtCenter);
-    }
 }
 
 void ComboBox::ComboBoxPopup::onThemeUpdated()
@@ -286,7 +321,7 @@ void ComboBox::ComboBoxPopup::onThemeUpdated()
     setPalette(pal);
 
     if (m_comboBox) {
-        m_listView->setFont(m_comboBox->themeFont(m_comboBox->fontRole()).toQFont());
+        refreshFont();
     }
     if (m_listView && m_listView->viewport())
         m_listView->viewport()->update();
@@ -354,6 +389,13 @@ QPoint ComboBox::ComboBoxPopup::computePosition() const
 
 bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event)
 {
+    // ListView is independently registered for theme updates. Keep the owner's
+    // effective font regardless of the theme broadcast order.
+    // zh_CN: ListView 独立接收主题更新；无论广播顺序如何都保持所属 ComboBox 的字体。
+    if (watched == m_listView && event->type() == QEvent::FontChange &&
+        m_listView->font() != m_comboBox->font()) {
+        m_listView->setFont(m_comboBox->font());
+    }
     if (event && event->type() == QEvent::MouseButtonPress && m_comboBox) {
         auto* mouseEvent = static_cast<QMouseEvent*>(event);
         const QPoint comboLocal = m_comboBox->mapFromGlobal(fluentMouseGlobalPos(mouseEvent));
@@ -378,7 +420,7 @@ ComboBox::ComboBox(QWidget* parent) : QComboBox(parent)
     // after deliberate click/tab focus. zh_CN: QComboBox 默认 WheelFocus，会在 wheelEvent 前先抢
     // 焦点，导致仅悬停滚轮就切换选项；Fluent ComboBox 只接受点击/Tab 明确取得焦点后的滚轮输入。
     setFocusPolicy(Qt::StrongFocus);
-    setFont(themeFont(m_fontRole).toQFont());
+    applyFontRole();
     setFixedHeight(::Spacing::ControlHeight::Standard);
 
     initAnimation();
@@ -399,12 +441,52 @@ void ComboBox::initAnimation()
 
 void ComboBox::setFontRole(Typography::FontRole role)
 {
-    if (m_fontRole == role)
+    const bool roleChanged = m_fontRole != role;
+    if (!roleChanged && !m_hasExplicitFont)
         return;
     m_fontRole = role;
-    setFont(themeFont(m_fontRole).toQFont());
+    m_hasExplicitFont = false;
+    applyFontRole();
+    synchronizeFont();
+    if (roleChanged)
+        emit fontRoleChanged();
+}
+
+void ComboBox::setFont(const QFont& font)
+{
+    m_hasExplicitFont = true;
+    QComboBox::setFont(font);
+}
+
+void ComboBox::applyFontRole()
+{
+    const QScopedValueRollback<bool> applying(m_applyingFontRole, true);
+    QComboBox::setFont(themeFont(m_fontRole).toQFont());
+}
+
+void ComboBox::changeEvent(QEvent* event)
+{
+    QComboBox::changeEvent(event);
+    if (event->type() == QEvent::FontChange) {
+        if (!m_applyingFontRole)
+            m_hasExplicitFont = true;
+        synchronizeFont();
+    }
+}
+
+void ComboBox::synchronizeFont()
+{
+    // Preserve a height explicitly constrained by the application.
+    // zh_CN: 保留应用主动设置的高度约束。
+    if (minimumHeight() == m_autoHeight && maximumHeight() == m_autoHeight) {
+        m_autoHeight = sizeHint().height();
+        setFixedHeight(m_autoHeight);
+    }
+    applyLineEditStyle();
+    layoutLineEdit();
+    if (m_popup)
+        m_popup->refreshFont();
     updateGeometry();
-    emit fontRoleChanged();
     update();
 }
 
@@ -423,6 +505,7 @@ void ComboBox::setContentPaddingV(int px)
     if (m_contentPaddingV == px)
         return;
     m_contentPaddingV = px;
+    synchronizeFont();
     updateGeometry();
     emit layoutChanged();
     update();
@@ -471,7 +554,9 @@ void ComboBox::setPressProgress(qreal p)
 
 void ComboBox::onThemeUpdated()
 {
-    setFont(themeFont(m_fontRole).toQFont());
+    if (!m_hasExplicitFont)
+        applyFontRole();
+    synchronizeFont();
     if (m_popup) {
         m_popup->onThemeUpdated();
     }
@@ -499,7 +584,7 @@ QSize ComboBox::sizeHint() const
     // that nominally fits cross the elision boundary on another platform.
     // zh_CN: 为字形逻辑宽度预留少量余量，避免不同平台的整数布局和栅格化舍入触发省略号。
     const int w = m_contentPaddingH + maxTextW + kClosedFieldTextFitClearance + chevronArea;
-    const int h = sp.controlHeight.standard;
+    const int h = qMax(sp.controlHeight.standard, fm.height() + 2 * m_contentPaddingV);
     return QSize(w, h);
 }
 
@@ -616,11 +701,11 @@ void ComboBox::applyLineEditStyle()
     QLineEdit* editor = m_observedLineEdit.data();
     if (!editor)
         return;
-    editor->setFont(themeFont(m_fontRole).toQFont());
     if (auto* fluentEditor = qobject_cast<fluent::textfields::LineEdit*>(editor)) {
         fluentEditor->setFontRole(m_fontRole);
         fluentEditor->onThemeUpdated();
     }
+    editor->setFont(font());
 }
 
 bool ComboBox::event(QEvent* event)
@@ -776,7 +861,11 @@ void ComboBox::mouseMoveEvent(QMouseEvent* event)
 bool ComboBox::eventFilter(QObject* watched, QEvent* event)
 {
     if (watched == m_observedLineEdit) {
-        if (event->type() == QEvent::FocusIn) {
+        if (event->type() == QEvent::FontChange && m_observedLineEdit->font() != font()) {
+            // The embedded Fluent editor also refreshes independently.
+            // zh_CN: 内嵌 Fluent 编辑框也独立刷新主题，字体始终跟随 ComboBox。
+            m_observedLineEdit->setFont(font());
+        } else if (event->type() == QEvent::FocusIn) {
             m_observedLineEdit->selectAll();
             update();
         } else if (event->type() == QEvent::FocusOut) {

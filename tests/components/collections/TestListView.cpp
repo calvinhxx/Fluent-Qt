@@ -1562,25 +1562,6 @@ TEST_F(ListViewTest, CanReorderItemsSignalNotDuplicate)
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(ListViewTest, ReorderMoveRowInModel)
-{
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    ListView* lv = new ListView(window);
-    lv->setGeometry(10, 10, 300, 250);
-    lv->setCanReorderItems(true);
-
-    auto* mdl = new QStringListModel(QStringList{"A", "B", "C", "D"}, lv);
-    lv->setModel(mdl);
-    attachFluentDelegate(lv);
-    window->show();
-    QTest::qWait(50);
-
-    // Simulate model move: move row 0 to row 2 (A -> after C)
-    bool moved = mdl->moveRow(QModelIndex(), 0, QModelIndex(), 3);
-    EXPECT_TRUE(moved);
-    EXPECT_EQ(mdl->stringList(), (QStringList{"B", "C", "A", "D"}));
-}
-
 // ── Section tests ─────────────────────────────────────────────────────────────
 
 TEST_F(ListViewTest, DefaultSectionEnabled)
@@ -1629,7 +1610,6 @@ TEST_F(ListViewTest, SetSectionKeyFunction)
 
 // ── 跨平台 wheelEvent 测试 ─────────────────────────────────────────────────
 // 覆盖 PhaseBased / NoPhasePixel / NoPhaseDiscrete 三种事件路径，以及 cluster 节流。
-// 详见 openspec listview-cross-platform-input/.
 
 namespace {
 
@@ -1638,6 +1618,24 @@ public:
     using ListView::ListView;
     int exposedVerticalOffset() const { return verticalOffset(); }
 };
+
+void prepareWheelLayout(ListView* lv)
+{
+    lv->window()->setAttribute(Qt::WA_DontShowOnScreen, true);
+    lv->window()->show();
+    lv->show();
+    lv->doItemsLayout();
+    QApplication::processEvents();
+}
+
+::testing::AssertionResult hasScrollRange(QScrollBar* bar)
+{
+    if (QTest::qWaitFor([bar] { return bar->maximum() > bar->minimum(); }, 1000))
+        return ::testing::AssertionSuccess();
+    return ::testing::AssertionFailure()
+           << "Expected populated view to scroll after layout; range=" << bar->minimum() << ".."
+           << bar->maximum() << ", pageStep=" << bar->pageStep();
+}
 
 ListView* makeScrollableListView(QWidget* parent, int rowCount = 100)
 {
@@ -1648,11 +1646,7 @@ ListView* makeScrollableListView(QWidget* parent, int rowCount = 100)
     for (int i = 0; i < rowCount; ++i)
         items << QStringLiteral("Item %1").arg(i);
     attachStringListModel(lv, items);
-    lv->show();
-    QTest::qWait(50);
-    // Force layout so scrollbar maximum > 0
-    lv->doItemsLayout();
-    QTest::qWait(20);
+    prepareWheelLayout(lv);
     return lv;
 }
 
@@ -1665,10 +1659,7 @@ InspectableListView* makeInspectableScrollableListView(QWidget* parent, int rowC
     for (int i = 0; i < rowCount; ++i)
         items << QStringLiteral("Item %1").arg(i);
     attachStringListModel(lv, items);
-    lv->show();
-    QTest::qWait(50);
-    lv->doItemsLayout();
-    QTest::qWait(20);
+    prepareWheelLayout(lv);
     return lv;
 }
 
@@ -1685,10 +1676,7 @@ ListView* makeHorizontalScrollableListView(QWidget* parent, int rowCount = 40)
         items << QStringLiteral("Wide Item %1").arg(i);
     attachStringListModel(lv, items);
 
-    lv->show();
-    QTest::qWait(50);
-    lv->doItemsLayout();
-    QTest::qWait(20);
+    prepareWheelLayout(lv);
     return lv;
 }
 
@@ -1725,9 +1713,7 @@ void sendWheel(QWidget* target, QPoint pixelDelta, QPoint angleDelta, Qt::Scroll
 TEST_F(ListViewTest, MouseWheelDiscreteScroll)
 {
     auto* lv = makeScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     const int before = lv->verticalScrollBar()->value();
 
     // 单次 ±120 angleDelta，无 pixelDelta，NoScrollPhase（NoPhaseDiscrete）
@@ -1743,9 +1729,7 @@ TEST_F(ListViewTest, MouseWheelDiscreteScroll)
 TEST_F(ListViewTest, MouseWheelHalfTickStillScrolls)
 {
     auto* lv = makeScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     const int before = lv->verticalScrollBar()->value();
 
     sendWheel(lv->viewport(), QPoint(0, 0), QPoint(0, -60), Qt::NoScrollPhase);
@@ -1759,9 +1743,7 @@ TEST_F(ListViewTest, MouseWheelHalfTickStillScrolls)
 TEST_F(ListViewTest, ScrollChainingPropertyControlsBoundaryWheel)
 {
     auto* lv = makeScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     scrollToBottom(lv);
     const int maxValue = lv->verticalScrollBar()->maximum();
     EXPECT_FALSE(lv->isScrollChainingEnabled());
@@ -1808,9 +1790,7 @@ TEST_F(ListViewTest, WheelPassesThroughWhenContentFits)
 TEST_F(ListViewTest, WindowsTouchpadClusterScroll)
 {
     auto* lv = makeScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     const int before = lv->verticalScrollBar()->value();
 
     // 5 个连续 ±120 事件，间隔 20ms < kClusterGapMs(120)
@@ -1827,9 +1807,7 @@ TEST_F(ListViewTest, WindowsTouchpadClusterScroll)
 TEST_F(ListViewTest, RdpHighFreqNoBounceFlap)
 {
     auto* lv = makeScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     scrollToBottom(lv);
     const int sbVal = lv->verticalScrollBar()->value();
     EXPECT_EQ(sbVal, lv->verticalScrollBar()->maximum()) << "Pre-condition: scrolled to bottom";
@@ -1850,9 +1828,7 @@ TEST_F(ListViewTest, RdpHighFreqNoBounceFlap)
 TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailStartsBounceAndSettles)
 {
     auto* lv = makeInspectableScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     scrollToBottom(lv);
     const int beforeOffset = lv->exposedVerticalOffset();
 
@@ -1872,9 +1848,7 @@ TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailStartsBounceAndSettles)
 TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailDoesNotExtendActiveBounce)
 {
     auto* lv = makeInspectableScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     scrollToBottom(lv);
     const int beforeOffset = lv->exposedVerticalOffset();
 
@@ -1901,9 +1875,7 @@ TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailDoesNotExtendActiveBounce)
 TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailAllowsReverseRecovery)
 {
     auto* lv = makeScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     scrollToBottom(lv);
     const int maxValue = lv->verticalScrollBar()->maximum();
 
@@ -1927,9 +1899,7 @@ TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailAllowsReverseRecovery)
 TEST_F(ListViewTest, RdpClusterReachingBoundaryRecoversOnReverseTick)
 {
     auto* lv = makeScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     const int maxValue = lv->verticalScrollBar()->maximum();
     lv->verticalScrollBar()->setValue(qMax(lv->verticalScrollBar()->minimum(), maxValue - 1));
     QTest::qWait(10);
@@ -1954,9 +1924,7 @@ TEST_F(ListViewTest, RdpClusterReachingBoundaryRecoversOnReverseTick)
 TEST_F(ListViewTest, BounceConsumesNoPhaseEvents)
 {
     auto* lv = makeScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     scrollToBottom(lv);
 
     // 触发 overscroll：直接发起 NoPhasePixel 事件（pixelDelta 非零），向下越界
@@ -1978,9 +1946,7 @@ TEST_F(ListViewTest, BounceConsumesNoPhaseEvents)
 TEST_F(ListViewTest, MacOsTrackpadOverscrollNoRegression)
 {
     auto* lv = makeScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     scrollToBottom(lv);
 
     // ScrollBegin → ScrollUpdate（向下越界）→ ScrollEnd
@@ -1999,9 +1965,7 @@ TEST_F(ListViewTest, MacOsTrackpadOverscrollNoRegression)
 TEST_F(ListViewTest, PhaseBasedOverscrollSettlesWhenBackendOmitsScrollEnd)
 {
     auto* lv = makeInspectableScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     scrollToBottom(lv);
     const int beforeOffset = lv->exposedVerticalOffset();
 
@@ -2017,9 +1981,7 @@ TEST_F(ListViewTest, PhaseBasedOverscrollSettlesWhenBackendOmitsScrollEnd)
 TEST_F(ListViewTest, NoPhasePixelOverscrollSettlesAfterInputBecomesIdle)
 {
     auto* lv = makeInspectableScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     scrollToBottom(lv);
     const int beforeOffset = lv->exposedVerticalOffset();
 
@@ -2036,9 +1998,7 @@ TEST_F(ListViewTest, NoPhasePixelOverscrollSettlesAfterInputBecomesIdle)
 TEST_F(ListViewTest, NoPhasePixelDirectScroll)
 {
     auto* lv = makeScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     const int before = lv->verticalScrollBar()->value();
 
     // NoScrollPhase + pixelDelta = -50 → 应当直接按像素滚动
@@ -2052,31 +2012,36 @@ TEST_F(ListViewTest, NoPhasePixelDirectScroll)
 // 5.6 PhaseBased 事件可打断 bounce
 TEST_F(ListViewTest, BounceInterruptedByPhaseBased)
 {
-    auto* lv = makeScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    auto* lv = makeInspectableScrollableListView(window);
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     scrollToBottom(lv);
+    const int restingOffset = lv->exposedVerticalOffset();
 
-    // 触发 overscroll + bounce
     sendWheel(lv->viewport(), QPoint(0, -50), QPoint(0, -120), Qt::NoScrollPhase);
-    QTest::qWait(20);
-    QTest::qWait(180); // bounce-back animating
+    const int overshotOffset = lv->exposedVerticalOffset();
+    ASSERT_GT(overshotOffset, restingOffset);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            const int offset = lv->exposedVerticalOffset();
+            return offset > restingOffset && offset < overshotOffset;
+        },
+        1000))
+        << "The idle wheel stream must start bouncing back before interruption";
 
-    // PhaseBased ScrollUpdate 应当能停止 bounce 并继续后续逻辑（不被吞）
+    // Reverse input first clears the elastic offset, then scrolls inside the content.
+    sendWheel(lv->viewport(), QPoint(0, 100), QPoint(0, 0), Qt::ScrollUpdate);
+    ASSERT_EQ(lv->exposedVerticalOffset(), restingOffset);
+    ASSERT_EQ(lv->verticalScrollBar()->value(), lv->verticalScrollBar()->maximum());
+
     sendWheel(lv->viewport(), QPoint(0, 30), QPoint(0, 0), Qt::ScrollUpdate);
-    QTest::qWait(20);
-
-    // bounce 已被停止；后续状态应归零或反向移动 — 不强求精确值，只验证不 crash
-    SUCCEED() << "PhaseBased event during bounce did not crash";
+    EXPECT_LT(lv->verticalScrollBar()->value(), lv->verticalScrollBar()->maximum());
+    EXPECT_EQ(lv->exposedVerticalOffset(), lv->verticalScrollBar()->value());
 }
 
 TEST_F(ListViewTest, HorizontalNoPhaseDiscreteUsesDominantAxis)
 {
     auto* lv = makeHorizontalScrollableListView(window);
-    if (lv->horizontalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not horizontally scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->horizontalScrollBar()));
     const int before = lv->horizontalScrollBar()->value();
 
     sendWheel(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
@@ -2090,9 +2055,7 @@ TEST_F(ListViewTest, HorizontalNoPhaseDiscreteUsesDominantAxis)
 TEST_F(ListViewTest, KeyboardSelectionWorksAfterNoPhaseDiscreteWheel)
 {
     auto* lv = makeScrollableListView(window);
-    if (lv->verticalScrollBar()->maximum() <= 0) {
-        GTEST_SKIP() << "Layout not scrollable in this environment";
-    }
+    ASSERT_TRUE(hasScrollRange(lv->verticalScrollBar()));
     lv->setFocusPolicy(Qt::StrongFocus);
     lv->setSelectedIndex(0);
     lv->setCurrentIndex(lv->model()->index(0, 0));

@@ -1161,6 +1161,7 @@ QVector<GallerySample> sliderSamples()
             QStringLiteral("slider-live-value"), QStringLiteral("Slider live value"),
             QStringLiteral("Drag the handle to select a value and mirror it in external UI."),
             QStringLiteral("auto* slider = new Slider(Qt::Horizontal, this);\n"
+                           "slider->setAccessibleName(\"Value\");\n"
                            "slider->setRange(0, 100);\n"
                            "slider->setValue(32);\n"
                            "connect(slider, &Slider::valueChanged,\n"
@@ -1170,6 +1171,7 @@ QVector<GallerySample> sliderSamples()
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 16);
                 auto* slider = new Slider(Qt::Horizontal, group);
+                slider->setAccessibleName(QStringLiteral("Value"));
                 slider->setRange(0, 100);
                 slider->setValue(32);
                 slider->setFixedWidth(260);

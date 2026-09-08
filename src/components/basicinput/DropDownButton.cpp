@@ -189,23 +189,13 @@ void DropDownButton::keyPressEvent(QKeyEvent* event)
     Button::keyPressEvent(event);
 }
 
-void DropDownButton::paintEvent(QPaintEvent* event)
+void DropDownButton::paintEvent(QPaintEvent*)
 {
-    // 1. Lock the pressed look while the menu is open. zh_CN: 菜单开启时锁定为按下状态。
-    InteractionState oldState = interactionState();
-    if (m_isOpen) {
-        const_cast<DropDownButton*>(this)->setInteractionState(Pressed);
-    }
+    // Keep the menu-open appearance local to painting, without emitting state changes.
+    // zh_CN: 菜单开启时的按下外观只用于绘制，不发送交互状态变化信号。
+    paintButton(m_isOpen ? Pressed : interactionState());
 
-    // 2. Let the base class paint the plain button. zh_CN: 调用基类绘制基础按钮。
-    Button::paintEvent(event);
-
-    // 3. Restore the state. zh_CN: 恢复状态。
-    if (m_isOpen) {
-        const_cast<DropDownButton*>(this)->setInteractionState(oldState);
-    }
-
-    // 4. Paint the chevron glyph. zh_CN: 绘制 Chevron 图标。
+    // Paint the chevron glyph. zh_CN: 绘制 Chevron 图标。
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::TextAntialiasing);

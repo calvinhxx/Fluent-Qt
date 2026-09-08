@@ -7,8 +7,9 @@
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QMetaEnum>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
+#include <QPainter>
+#include <QPixmap>
+#include <QPolygon>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QStandardItemModel>
@@ -810,27 +811,27 @@ TEST_F(GridViewTest, CellSizeAffectsColumns)
 
 namespace {
 
-constexpr int kMinimumShimmerVisibleMs = 1200;
-
-/** 异步加载网络图片到 QStandardItem 的 ImageRole */
-void loadNetworkImage(QStandardItem* item, const QUrl& url)
+QPixmap sampleImage(int variant)
 {
-    item->setData(true, gridview_test::ImageLoadingRole);
-    QTimer::singleShot(kMinimumShimmerVisibleMs, qApp, [item, url]() {
-        auto* nam = new QNetworkAccessManager(qApp);
-        auto* reply = nam->get(QNetworkRequest(url));
-        QObject::connect(reply, &QNetworkReply::finished, qApp, [item, reply, nam]() {
-            QPixmap pix;
-            if (reply->error() == QNetworkReply::NoError)
-                pix.loadFromData(reply->readAll());
-            reply->deleteLater();
-            nam->deleteLater();
-
-            if (!pix.isNull())
-                item->setData(pix, gridview_test::ImageRole);
-            item->setData(false, gridview_test::ImageLoadingRole);
-        });
-    });
+    const QColor skies[] = {QColor("#7bbde8"), QColor("#e6ad8c"), QColor("#a6c6bd"),
+                            QColor("#a8b4d8")};
+    const QColor hills[] = {QColor("#39746b"), QColor("#8e655a"), QColor("#507958"),
+                            QColor("#59678e")};
+    const int palette = variant % 4;
+    QPixmap image(320, 240);
+    image.fill(skies[palette]);
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor("#fff1c1"));
+    painter.drawEllipse(QPoint(60 + (variant % 3) * 80, 60), 24, 24);
+    painter.setBrush(hills[palette]);
+    QPolygon ridge;
+    ridge << QPoint(0, 240) << QPoint(0, 170) << QPoint(110, 90) << QPoint(190, 170)
+          << QPoint(270, 120) << QPoint(320, 160) << QPoint(320, 240);
+    painter.drawPolygon(ridge);
+    painter.end();
+    return image;
 }
 
 } // namespace
@@ -867,25 +868,6 @@ TEST_F(GridViewTest, CanReorderItemsSignalNotDuplicate)
     gv->setCanReorderItems(true);
     gv->setCanReorderItems(true); // same
     EXPECT_EQ(spy.count(), 1);
-}
-
-TEST_F(GridViewTest, ReorderMoveRowInModel)
-{
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    GridView* gv = new GridView(window);
-    gv->setGeometry(10, 10, 400, 300);
-    gv->setCanReorderItems(true);
-
-    auto* mdl = new QStringListModel(QStringList{"A", "B", "C", "D"}, gv);
-    gv->setModel(mdl);
-    attachFluentDelegate(gv);
-    window->show();
-    QTest::qWait(50);
-
-    // Simulate model move: move row 0 to row 2 (A -> after C)
-    bool moved = mdl->moveRow(QModelIndex(), 0, QModelIndex(), 3);
-    EXPECT_TRUE(moved);
-    EXPECT_EQ(mdl->stringList(), (QStringList{"B", "C", "A", "D"}));
 }
 
 // ── Selection mode enum mapping to Qt ─────────────────────────────────────────
@@ -1656,19 +1638,17 @@ TEST_F(GridViewTest, VisualCheck)
     struct ItemInfo {
         QString name;
         QString likes;
-        QString seed;
     };
     QList<ItemInfo> items1 = {
-        {"Item 1", "90 Likes", "red-forest"}, {"Item 2", "84 Likes", "carousel"},
-        {"Item 3", "96 Likes", "waterfall"},  {"Item 4", "79 Likes", "green-valley"},
-        {"Item 5", "32 Likes", "lake-pier"},  {"Item 6", "34 Likes", "blue-sky"},
-        {"Item 7", "48 Likes", "stone-arch"}, {"Item 8", "90 Likes", "mountain-snow"},
+        {"Item 1", "90 Likes"}, {"Item 2", "84 Likes"}, {"Item 3", "96 Likes"},
+        {"Item 4", "79 Likes"}, {"Item 5", "32 Likes"}, {"Item 6", "34 Likes"},
+        {"Item 7", "48 Likes"}, {"Item 8", "90 Likes"},
     };
-    for (const auto& info : items1) {
+    for (int i = 0; i < items1.size(); ++i) {
+        const auto& info = items1[i];
         auto* item = new QStandardItem(info.name);
         item->setData(info.likes, Qt::ToolTipRole);
-        loadNetworkImage(item,
-                         QUrl(QString("https://picsum.photos/seed/%1/280/200").arg(info.seed)));
+        item->setData(sampleImage(i), gridview_test::ImageRole);
         model1->appendRow(item);
     }
     gv1->setModel(model1);
@@ -1695,12 +1675,9 @@ TEST_F(GridViewTest, VisualCheck)
     gv2->setBorderVisible(false);
 
     auto* model2 = new QStandardItemModel(gv2);
-    QStringList seeds2 = {"autumn-leaves", "merry-go-round", "bicycle-field", "green-meadow",
-                          "harbor-boats",  "beach-run",      "castle-gate",   "mountain-range"};
-    for (int i = 0; i < seeds2.size(); ++i) {
-        auto* item = new QStandardItem(QString("Photo %1").arg(i + 1));
-        loadNetworkImage(item,
-                         QUrl(QString("https://picsum.photos/seed/%1/320/240").arg(seeds2[i])));
+    for (int i = 0; i < 8; ++i) {
+        auto* item = new QStandardItem(QString("Image %1").arg(i + 1));
+        item->setData(sampleImage(i), gridview_test::ImageRole);
         model2->appendRow(item);
     }
     gv2->setModel(model2);
@@ -1745,12 +1722,9 @@ TEST_F(GridViewTest, VisualCheck)
     gv4->setBorderVisible(true);
 
     auto* model4 = new QStandardItemModel(gv4);
-    QStringList seeds4 = {"sunset-bay", "forest-path", "city-lights",  "ocean-wave", "desert-dune",
-                          "snowy-peak", "river-bend",  "flower-field", "night-sky"};
-    for (int i = 0; i < seeds4.size(); ++i) {
+    for (int i = 0; i < 9; ++i) {
         auto* item = new QStandardItem(QString("Tile %1").arg(i + 1));
-        loadNetworkImage(item,
-                         QUrl(QString("https://picsum.photos/seed/%1/240/180").arg(seeds4[i])));
+        item->setData(sampleImage(i), gridview_test::ImageRole);
         model4->appendRow(item);
     }
     gv4->setModel(model4);
@@ -1866,12 +1840,9 @@ TEST_F(GridViewTest, VisualCheck)
     gvMultiDrag->setVerticalSpacing(4);
     {
         auto* mdl = new QStandardItemModel(gvMultiDrag);
-        QStringList seeds = {"alpine-lake",  "bamboo-grove", "coral-reef",  "desert-bloom",
-                             "emerald-isle", "frozen-fjord", "golden-gate", "highland-mist"};
-        for (int i = 0; i < seeds.size(); ++i) {
+        for (int i = 0; i < 8; ++i) {
             auto* item = new QStandardItem(QString("Tile %1").arg(i + 1));
-            loadNetworkImage(item,
-                             QUrl(QString("https://picsum.photos/seed/%1/180/140").arg(seeds[i])));
+            item->setData(sampleImage(i), gridview_test::ImageRole);
             mdl->appendRow(item);
         }
         gvMultiDrag->setModel(mdl);
@@ -1892,12 +1863,9 @@ TEST_F(GridViewTest, VisualCheck)
     gvExtDrag->setVerticalSpacing(4);
     {
         auto* mdl = new QStandardItemModel(gvExtDrag);
-        QStringList seeds = {"ivory-tower", "jade-garden", "karst-peaks", "lavender-row",
-                             "marble-arch", "nordic-wood", "opal-cave",   "prairie-wind"};
-        for (int i = 0; i < seeds.size(); ++i) {
+        for (int i = 0; i < 8; ++i) {
             auto* item = new QStandardItem(QString("Tile %1").arg(i + 1));
-            loadNetworkImage(item,
-                             QUrl(QString("https://picsum.photos/seed/%1/180/140").arg(seeds[i])));
+            item->setData(sampleImage(i), gridview_test::ImageRole);
             mdl->appendRow(item);
         }
         gvExtDrag->setModel(mdl);

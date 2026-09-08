@@ -79,7 +79,7 @@ but no unrelated system symbol font is substituted.
 
 ## Component font precedence
 
-`Button` and `ToggleSwitch` start in theme-managed mode with `fontRole` set to
+`Button`, `ToggleSwitch`, and `ComboBox` start in theme-managed mode with `fontRole` set to
 `Body`. In this mode, the resolved font follows `ThemeRegistry`, including
 family overrides and font scaling. `setFontRole(...)` selects another semantic
 role while preserving that automatic theme refresh behavior.
@@ -97,6 +97,22 @@ Their entry text and an open picker flyout follow the resolved button font, so
 theme-managed updates and explicit per-control overrides remain synchronized.
 The PySide6 bindings expose the inherited `fontRole` property and
 `setFontRole(...)` method with the same behavior.
+
+`ComboBox` applies its effective `font()` to the closed field, editable text,
+and dropdown rows, including an already-open dropdown. Set a custom size with
+the ordinary Qt font API:
+
+```cpp
+QFont textFont = comboBox->font();
+textFont.setPixelSize(22); // Or setPointSizeF(...) for point units.
+comboBox->setFont(textFont);
+```
+
+Dropdown rows grow above their default 40 logical pixels when needed to fit
+the font. The field's automatic height grows with its font and vertical padding;
+an application-supplied height constraint remains authoritative. Calling
+`setFontRole(comboBox->fontRole())` restores theme-managed typography. This
+does not provide separate dropdown-font or touch-spacing properties.
 
 ## Regeneration
 

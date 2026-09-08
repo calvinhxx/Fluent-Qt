@@ -386,6 +386,72 @@ TEST_F(DialogTest, ExecWithoutAnimation)
     EXPECT_EQ(result, QDialog::Accepted);
 }
 
+TEST_F(DialogTest, Contract_ExecPreservesSynchronousCloseResult)
+{
+    for (const int result : {QDialog::Accepted, QDialog::Rejected}) {
+        for (const bool closeOnOpened : {false, true}) {
+            SCOPED_TRACE(::testing::Message()
+                         << "result=" << result << ", closeOnOpened=" << closeOnOpened);
+            Dialog dialog(window);
+            dialog.setAnimationEnabled(false);
+            QObject::connect(&dialog, closeOnOpened ? &Dialog::opened : &Dialog::opening, &dialog,
+                             [&] { dialog.done(result); });
+
+            bool enteredEventLoop = false;
+            QTimer::singleShot(0, &dialog, [&] {
+                enteredEventLoop = true;
+                dialog.QDialog::done(QDialog::Rejected);
+            });
+
+            EXPECT_EQ(dialog.exec(), result);
+            EXPECT_FALSE(enteredEventLoop);
+            EXPECT_FALSE(dialog.isOpen());
+            EXPECT_FALSE(dialog.isVisible());
+        }
+    }
+}
+
+TEST_F(DialogTest, Contract_ExecOpeningCallbackCanDeleteDialog)
+{
+    auto* dialog = new Dialog(window);
+    QPointer<Dialog> guard(dialog);
+    QObject::connect(dialog, &Dialog::opening, window, [dialog] { delete dialog; });
+
+    EXPECT_EQ(dialog->exec(), QDialog::Rejected);
+    EXPECT_TRUE(guard.isNull());
+}
+
+TEST_F(DialogTest, Contract_ExecReturnsFinalResultAfterSynchronousClose)
+{
+    Dialog dialog(window);
+    QObject::connect(&dialog, &Dialog::opening, &dialog, [&] { dialog.done(QDialog::Accepted); });
+    QObject::connect(&dialog, &QDialog::finished, &dialog, [&] { dialog.setResult(42); });
+    bool enteredEventLoop = false;
+    QTimer::singleShot(0, &dialog, [&] {
+        enteredEventLoop = true;
+        dialog.QDialog::done(QDialog::Rejected);
+    });
+
+    EXPECT_EQ(dialog.exec(), 42);
+    EXPECT_EQ(dialog.result(), 42);
+    EXPECT_FALSE(enteredEventLoop);
+}
+
+TEST_F(DialogTest, Contract_ExecWaitsForVisibleDialogClosingAnimation)
+{
+    window->show();
+    Dialog dialog(window);
+    dialog.show();
+    ASSERT_TRUE(dialog.isVisible());
+    QSignalSpy finished(&dialog, &QDialog::finished);
+    QObject::connect(&dialog, &Dialog::opening, &dialog, [&] { dialog.done(QDialog::Accepted); });
+    QTimer::singleShot(2000, &dialog, [&] { dialog.QDialog::done(QDialog::Rejected); });
+
+    EXPECT_EQ(dialog.exec(), QDialog::Accepted);
+    EXPECT_EQ(finished.count(), 1);
+    EXPECT_FALSE(dialog.isVisible());
+}
+
 TEST_F(DialogTest, FinishedHandlerCanSynchronouslyDeleteDialogWithoutAnimation)
 {
     auto* dialog = new Dialog(window);

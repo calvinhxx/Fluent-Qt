@@ -2076,6 +2076,61 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.deleteLater()
             QApplication.processEvents()
 
+    def test_coach_mark_sample_reuses_overlay_until_preview_is_destroyed(self):
+        for close_before_destroy in (False, True):
+            with self.subTest(close_before_destroy=close_before_destroy):
+                window = QWidget()
+                layout = QVBoxLayout(window)
+                result = build_sample(
+                    "coach-mark", "coach-mark-targeted-glide", window
+                )
+                layout.addWidget(result.widget)
+                window.resize(800, 500)
+                window.show()
+                QApplication.processEvents()
+                try:
+                    bottom = result.widget.findChild(
+                        fluentqt.Button, "galleryCoachMarkBottom"
+                    )
+                    self.assertIsNotNone(bottom)
+                    QTest.mouseClick(bottom, Qt.MouseButton.LeftButton)
+                    coach = window.findChild(fluentqt.CoachMark)
+                    self.assertIsNotNone(coach)
+                    self.assertTrue(coach.isOpen())
+                    self.assertIs(coach.parentWidget(), window)
+                    dismiss = coach.findChild(
+                        fluentqt.Button, "galleryCoachMarkDismiss"
+                    )
+                    self.assertIsNotNone(dismiss)
+                    self.assertEqual(dismiss.accessibleName(), "Close")
+                    got_it = coach.findChild(
+                        fluentqt.Button, "galleryCoachMarkClose"
+                    )
+                    self.assertIsNotNone(got_it)
+
+                    QTest.mouseClick(got_it, Qt.MouseButton.LeftButton)
+                    self.assertFalse(coach.isOpen())
+                    self.assertTrue(_wait_until(lambda: not coach.isVisible()))
+                    self.assertTrue(shiboken6.isValid(coach))
+                    QTest.mouseClick(bottom, Qt.MouseButton.LeftButton)
+                    self.assertTrue(coach.isOpen())
+                    self.assertEqual(window.findChildren(fluentqt.CoachMark), [coach])
+
+                    if close_before_destroy:
+                        QTest.mouseClick(got_it, Qt.MouseButton.LeftButton)
+                        self.assertFalse(coach.isOpen())
+                        self.assertTrue(_wait_until(lambda: not coach.isVisible()))
+
+                    result.widget.deleteLater()
+                    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+                    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+                    self.assertFalse(shiboken6.isValid(coach))
+                    self.assertEqual(window.findChildren(fluentqt.CoachMark), [])
+                finally:
+                    window.close()
+                    window.deleteLater()
+                    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+
     def test_python_snippets_follow_cpp_semantic_wrap_boundaries(self):
         cases = (
             (

@@ -880,8 +880,11 @@ register_source_samples(
                 root = SampleSurface(globals().get("gallery_parent"))
                 controls = horizontal_group(root, 8)
                 bottom = sample_button(controls, "Bottom")
+                bottom.setObjectName("galleryCoachMarkBottom")
                 right = sample_button(controls, "Right")
+                right.setObjectName("galleryCoachMarkRight")
                 top = sample_button(controls, "Top")
+                top.setObjectName("galleryCoachMarkTop")
                 controls.layout().addWidget(bottom)
                 controls.layout().addWidget(right)
                 controls.layout().addWidget(top)
@@ -894,6 +897,7 @@ register_source_samples(
                     coach = state["coach"]
                     if coach is None:
                         coach = fluentqt.CoachMark(target.window())
+                        root.destroyed.connect(coach.deleteLater)
                         coach.setCardSize(QSize(320, 150))
                         host = coach.contentHost()
                         host_layout = QVBoxLayout(host)
@@ -905,6 +909,8 @@ register_source_samples(
                         title_row.addWidget(title)
                         title_row.addStretch(1)
                         close_button = fluentqt.Button("", host)
+                        close_button.setObjectName("galleryCoachMarkDismiss")
+                        close_button.setAccessibleName("Close")
                         close_button.setFluentLayout(
                             fluentqt.Button.ButtonLayout.IconOnly
                         )
@@ -926,6 +932,7 @@ register_source_samples(
                         )
                         host_layout.addStretch(1)
                         got_it = sample_button(host, "Got it")
+                        got_it.setObjectName("galleryCoachMarkClose")
                         got_it.setFluentStyle(
                             fluentqt.Button.ButtonStyle.Accent
                         )

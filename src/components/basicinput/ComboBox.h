@@ -109,7 +109,16 @@ public:
 
     // --- Appearance ---
     Typography::FontRole fontRole() const { return m_fontRole; }
+    /**
+     * @brief Restores theme-managed typography, even when the role is unchanged.
+     * zh_CN: 恢复主题排版；角色未变化时也会清除显式字体覆盖。
+     */
     void setFontRole(Typography::FontRole role);
+    /**
+     * @brief Sets the field, editor and dropdown font independently of theme refreshes.
+     * zh_CN: 设置闭合框、编辑框和下拉列表的字体，主题刷新后仍保留。
+     */
+    void setFont(const QFont& font);
 
     int contentPaddingH() const { return m_contentPaddingH; }
     void setContentPaddingH(int px);
@@ -162,6 +171,7 @@ signals:
 
 protected:
     bool event(QEvent* event) override;
+    void changeEvent(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void enterEvent(FluentEnterEvent* event) override;
@@ -182,9 +192,14 @@ private:
     void synchronizeLineEdit();
     void layoutLineEdit();
     void applyLineEditStyle();
+    void applyFontRole();
+    void synchronizeFont();
 
     // --- Configurable design tokens ---
     Typography::FontRole m_fontRole = Typography::FontRole::Body;
+    bool m_hasExplicitFont = false;
+    bool m_applyingFontRole = false;
+    int m_autoHeight = ::Spacing::ControlHeight::Standard;
     int m_contentPaddingH = ::Spacing::Padding::ComboBoxHorizontal;
     int m_contentPaddingV = ::Spacing::Padding::ComboBoxVertical;
     QString m_chevronGlyph = Typography::Icons::ChevronDownMed;
