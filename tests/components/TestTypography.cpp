@@ -49,14 +49,16 @@ class IconModel : public QAbstractListModel {
 public:
     explicit IconModel(QObject* parent = nullptr) : QAbstractListModel(parent) {}
 
-    void setIcons(const QVector<IconData>& icons) {
+    void setIcons(const QVector<IconData>& icons)
+    {
         beginResetModel();
         m_allIcons = icons;
         m_displayIcons = icons;
         endResetModel();
     }
 
-    void filter(const QString& text) {
+    void filter(const QString& text)
+    {
         beginResetModel();
         if (text.isEmpty()) {
             m_displayIcons = m_allIcons;
@@ -71,16 +73,21 @@ public:
         endResetModel();
     }
 
-    int rowCount(const QModelIndex& parent = QModelIndex()) const override {
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override
+    {
         return m_displayIcons.size();
     }
 
-    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override {
-        if (!index.isValid() || index.row() >= m_displayIcons.size()) return {};
-        
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override
+    {
+        if (!index.isValid() || index.row() >= m_displayIcons.size())
+            return {};
+
         const auto& icon = m_displayIcons[index.row()];
-        if (role == Qt::DisplayRole) return icon.name;
-        if (role == Qt::UserRole) return icon.glyph;
+        if (role == Qt::DisplayRole)
+            return icon.name;
+        if (role == Qt::UserRole)
+            return icon.glyph;
         return {};
     }
 
@@ -91,10 +98,13 @@ private:
 
 class IconDelegate : public QStyledItemDelegate {
 public:
-    IconDelegate(const QString& iconFamily, QObject* parent = nullptr) 
-        : QStyledItemDelegate(parent), m_iconFamily(iconFamily) {}
+    IconDelegate(const QString& iconFamily, QObject* parent = nullptr)
+        : QStyledItemDelegate(parent), m_iconFamily(iconFamily)
+    {}
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override {
+    void paint(QPainter* painter, const QStyleOptionViewItem& option,
+               const QModelIndex& index) const override
+    {
         painter->save();
         painter->setRenderHint(QPainter::Antialiasing);
         painter->setRenderHint(QPainter::TextAntialiasing);
@@ -117,10 +127,10 @@ public:
         QFont iconFont(m_iconFamily);
         iconFont.setPixelSize(28);
         painter->setFont(iconFont);
-        
+
         QColor iconColor = isHovered ? QColor(0, 120, 212) : painter->pen().color();
         painter->setPen(iconColor);
-        
+
         QRect iconRect = option.rect.adjusted(0, 10, 0, -30);
         painter->drawText(iconRect, Qt::AlignCenter, glyph);
 
@@ -129,14 +139,15 @@ public:
         textFont.setPixelSize(11);
         painter->setFont(textFont);
         painter->setPen(QColor(128, 128, 128));
-        
+
         QRect textRect = option.rect.adjusted(5, 50, -5, -5);
         painter->drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, name);
 
         painter->restore();
     }
 
-    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override {
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
         return QSize(120, 90);
     }
 
@@ -150,8 +161,9 @@ private:
 
 class TypographyTestWidget : public QWidget, public fluent::FluentElement {
 public:
-    TypographyTestWidget(const QString& uiFamily, QWidget* parent = nullptr) 
-        : QWidget(parent), m_uiFamily(uiFamily) {
+    TypographyTestWidget(const QString& uiFamily, QWidget* parent = nullptr)
+        : QWidget(parent), m_uiFamily(uiFamily)
+    {
         auto* mainLayout = new QVBoxLayout(this);
         mainLayout->setContentsMargins(40, 30, 40, 30);
         mainLayout->setSpacing(30);
@@ -170,31 +182,27 @@ public:
         scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         scrollArea->setFrameShape(QFrame::NoFrame);
         scrollArea->setStyleSheet("background: transparent; border: none;");
-        
+
         auto* contentWidget = new QWidget();
         auto* contentLayout = new QVBoxLayout(contentWidget);
         contentLayout->setContentsMargins(20, 20, 20, 20);
         contentLayout->setSpacing(40);
 
         // 1. Fluent Typography 样式展示
-        addSection(contentLayout, "Fluent Typography Styles", [this]() {
-            return createTypographyStylesSection();
-        });
+        addSection(contentLayout, "Fluent Typography Styles",
+                   [this]() { return createTypographyStylesSection(); });
 
         // 2. 字体粗细对比
-        addSection(contentLayout, "Font Weight Comparison", [this]() {
-            return createFontWeightSection();
-        });
+        addSection(contentLayout, "Font Weight Comparison",
+                   [this]() { return createFontWeightSection(); });
 
         // 3. 字体大小对比
-        addSection(contentLayout, "Font Size Comparison", [this]() {
-            return createFontSizeSection();
-        });
+        addSection(contentLayout, "Font Size Comparison",
+                   [this]() { return createFontSizeSection(); });
 
         // 4. 原生字体 vs FluentQt 内置字体
-        addSection(contentLayout, "Native Font vs FluentQt UI", [this]() {
-            return createFontComparisonSection();
-        });
+        addSection(contentLayout, "Native Font vs FluentQt UI",
+                   [this]() { return createFontComparisonSection(); });
 
         contentLayout->addStretch();
         scrollArea->setWidget(contentWidget);
@@ -203,16 +211,19 @@ public:
         onThemeUpdated();
     }
 
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1; color: %2;")
-            .arg(c.bgCanvas.name()).arg(c.textPrimary.name()));
+                          .arg(c.bgCanvas.name())
+                          .arg(c.textPrimary.name()));
     }
 
 private:
     QString m_uiFamily;
 
-    void addSection(QVBoxLayout* layout, const QString& title, std::function<QWidget*()> factory) {
+    void addSection(QVBoxLayout* layout, const QString& title, std::function<QWidget*()> factory)
+    {
         // 分组标题
         auto* sectionTitle = new QLabel(title, this);
         QFont sectionFont(m_uiFamily);
@@ -236,7 +247,8 @@ private:
         layout->addSpacing(20);
     }
 
-    QWidget* createTypographyStylesSection() {
+    QWidget* createTypographyStylesSection()
+    {
         auto* widget = new QWidget();
         auto* layout = new QVBoxLayout(widget);
         layout->setSpacing(20);
@@ -248,14 +260,20 @@ private:
         };
 
         QVector<StyleInfo> styles = {
-            {"Display", Typography::FontRole::Display, "The quick brown fox jumps over the lazy dog"},
-            {"Title Large", Typography::FontRole::TitleLarge, "The quick brown fox jumps over the lazy dog"},
+            {"Display", Typography::FontRole::Display,
+             "The quick brown fox jumps over the lazy dog"},
+            {"Title Large", Typography::FontRole::TitleLarge,
+             "The quick brown fox jumps over the lazy dog"},
             {"Title", Typography::FontRole::Title, "The quick brown fox jumps over the lazy dog"},
-            {"Subtitle", Typography::FontRole::Subtitle, "The quick brown fox jumps over the lazy dog"},
-            {"Body Strong", Typography::FontRole::BodyStrong, "The quick brown fox jumps over the lazy dog"},
-            {"Body", Typography::FontRole::Body, "The quick brown fox jumps over the lazy dog. This is standard body text used for most content."},
-            {"Caption", Typography::FontRole::Caption, "The quick brown fox jumps over the lazy dog"}
-        };
+            {"Subtitle", Typography::FontRole::Subtitle,
+             "The quick brown fox jumps over the lazy dog"},
+            {"Body Strong", Typography::FontRole::BodyStrong,
+             "The quick brown fox jumps over the lazy dog"},
+            {"Body", Typography::FontRole::Body,
+             "The quick brown fox jumps over the lazy dog. This is standard body text used for "
+             "most content."},
+            {"Caption", Typography::FontRole::Caption,
+             "The quick brown fox jumps over the lazy dog"}};
 
         for (const auto& style : styles) {
             auto* label = new Label(style.sampleText, widget);
@@ -264,12 +282,15 @@ private:
             layout->addWidget(label);
 
             // 显示样式信息
-            auto* infoLabel = new QLabel(QString("  (%1 - %2px, %3)")
-                .arg(style.name)
-                .arg(label->font().pixelSize())
-                .arg(label->font().weight() == QFont::Bold ? "Bold" :
-                     label->font().weight() == QFont::DemiBold ? "SemiBold" :
-                     label->font().weight() == QFont::Medium ? "Medium" : "Regular"), widget);
+            auto* infoLabel =
+                new QLabel(QString("  (%1 - %2px, %3)")
+                               .arg(style.name)
+                               .arg(label->font().pixelSize())
+                               .arg(label->font().weight() == QFont::Bold       ? "Bold"
+                                    : label->font().weight() == QFont::DemiBold ? "SemiBold"
+                                    : label->font().weight() == QFont::Medium   ? "Medium"
+                                                                                : "Regular"),
+                           widget);
             QFont infoFont(m_uiFamily);
             infoFont.setPixelSize(11);
             infoLabel->setFont(infoFont);
@@ -280,7 +301,8 @@ private:
         return widget;
     }
 
-    QWidget* createFontWeightSection() {
+    QWidget* createFontWeightSection()
+    {
         auto* widget = new QWidget();
         auto* layout = new QVBoxLayout(widget);
         layout->setSpacing(15);
@@ -293,12 +315,10 @@ private:
             QFont::Weight weight;
         };
 
-        QVector<WeightInfo> weights = {
-            {"Regular (400)", QFont::Normal},
-            {"Medium (500)", QFont::Medium},
-            {"SemiBold (600)", QFont::DemiBold},
-            {"Bold (700)", QFont::Bold}
-        };
+        QVector<WeightInfo> weights = {{"Regular (400)", QFont::Normal},
+                                       {"Medium (500)", QFont::Medium},
+                                       {"SemiBold (600)", QFont::DemiBold},
+                                       {"Bold (700)", QFont::Bold}};
 
         for (const auto& w : weights) {
             auto* label = new QLabel(sampleText, widget);
@@ -318,7 +338,8 @@ private:
         return widget;
     }
 
-    QWidget* createFontSizeSection() {
+    QWidget* createFontSizeSection()
+    {
         auto* widget = new QWidget();
         auto* layout = new QVBoxLayout(widget);
         layout->setSpacing(15);
@@ -344,7 +365,8 @@ private:
         return widget;
     }
 
-    QWidget* createFontComparisonSection() {
+    QWidget* createFontComparisonSection()
+    {
         auto* widget = new QWidget();
         auto* layout = new QVBoxLayout(widget);
         layout->setSpacing(20);
@@ -390,7 +412,8 @@ private:
 
 class TypographyVisualCheckWindow : public QWidget, public fluent::FluentElement {
 public:
-    TypographyVisualCheckWindow(const QString& iconFamily, const QString& uiFamily) {
+    TypographyVisualCheckWindow(const QString& iconFamily, const QString& uiFamily)
+    {
         setFixedSize(1200, 800);
         setWindowTitle("FluentQt Typography & Icon Test Suite");
 
@@ -400,10 +423,8 @@ public:
 
         // Tab 控件
         m_tabs = new QTabWidget(this);
-        m_tabs->setStyleSheet(
-            "QTabWidget::pane { border: none; background: transparent; }"
-            "QTabBar::tab { padding: 8px 20px; }"
-        );
+        m_tabs->setStyleSheet("QTabWidget::pane { border: none; background: transparent; }"
+                              "QTabBar::tab { padding: 8px 20px; }");
 
         // Tab 1: IconFont GridView
         m_iconWidget = createIconFontTab(iconFamily);
@@ -422,27 +443,29 @@ public:
         m_themeBtn->move(width() - 160, 10);
 
         connect(m_themeBtn, &Button::clicked, []() {
-            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == Light ? Dark : Light);
+            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == Light ? Dark
+                                                                                           : Light);
         });
 
         onThemeUpdated();
     }
 
-    void setCurrentTab(int index) {
-        m_tabs->setCurrentIndex(index);
-    }
+    void setCurrentTab(int index) { m_tabs->setCurrentIndex(index); }
 
-    void resizeEvent(QResizeEvent* event) override {
+    void resizeEvent(QResizeEvent* event) override
+    {
         QWidget::resizeEvent(event);
         if (m_themeBtn) {
             m_themeBtn->move(width() - 160, 10);
         }
     }
 
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1; color: %2;")
-            .arg(c.bgCanvas.name()).arg(c.textPrimary.name()));
+                          .arg(c.bgCanvas.name())
+                          .arg(c.textPrimary.name()));
     }
 
 private:
@@ -451,7 +474,8 @@ private:
     TypographyTestWidget* m_typographyWidget;
     Button* m_themeBtn;
 
-    QWidget* createIconFontTab(const QString& iconFamily) {
+    QWidget* createIconFontTab(const QString& iconFamily)
+    {
         auto* widget = new QWidget();
         auto* layout = new QVBoxLayout(widget);
         layout->setContentsMargins(30, 30, 30, 30);
@@ -461,7 +485,8 @@ private:
         auto* searchEdit = new QLineEdit(widget);
         searchEdit->setPlaceholderText("Search icons...");
         searchEdit->setFixedHeight(35);
-        searchEdit->setStyleSheet("padding: 0 10px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.2);");
+        searchEdit->setStyleSheet(
+            "padding: 0 10px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.2);");
         layout->addWidget(searchEdit);
 
         // GridView
@@ -471,13 +496,13 @@ private:
         m_iconView->setSpacing(10);
         m_iconView->setFrameShape(QFrame::NoFrame);
         m_iconView->setStyleSheet("background: transparent;");
-        
+
         m_iconModel = new IconModel(widget);
         m_iconView->setModel(m_iconModel);
-        
+
         m_iconDelegate = new IconDelegate(iconFamily, widget);
         m_iconView->setItemDelegate(m_iconDelegate);
-        
+
         layout->addWidget(m_iconView);
 
         // Fill the same complete catalog used by the Gallery browser.
@@ -505,16 +530,17 @@ private:
 
 class TypographyTest : public ::testing::Test {};
 
-TEST_F(TypographyTest, DynamicTokensHaveOneLinkedDefinition) {
+TEST_F(TypographyTest, DynamicTokensHaveOneLinkedDefinition)
+{
     EXPECT_EQ(typographyProbeUiFamilyAddress(), &Typography::FontFamily::UI);
     EXPECT_EQ(typographyProbeBackIconAddress(), &Typography::Icons::Back);
     EXPECT_EQ(typographyProbeBodyStyleAddress(), &Typography::Styles::Body);
-    EXPECT_EQ(themeColorProbeLightAccentAddress(),
-              &ThemeColors::Light::Fill::AccentDefault);
+    EXPECT_EQ(themeColorProbeLightAccentAddress(), &ThemeColors::Light::Fill::AccentDefault);
     EXPECT_EQ(themeColorProbeDarkChartsAddress(), &ThemeColors::Dark::Charts);
 }
 
-TEST_F(TypographyTest, BundledTypographyRolesResolveExactStaticFaces) {
+TEST_F(TypographyTest, BundledTypographyRolesResolveExactStaticFaces)
+{
     struct ExpectedRole {
         Typography::FontStyle style;
         QString family;
@@ -522,26 +548,16 @@ TEST_F(TypographyTest, BundledTypographyRolesResolveExactStaticFaces) {
         int weight;
     };
     const QList<ExpectedRole> roles = {
-        {Typography::Styles::Caption,
-         fluent::fontcompat::UITextFamily,
-         QStringLiteral("Regular"),
+        {Typography::Styles::Caption, fluent::fontcompat::UITextFamily, QStringLiteral("Regular"),
          QFont::Normal},
-        {Typography::Styles::Body,
-         fluent::fontcompat::UITextFamily,
-         QStringLiteral("Regular"),
+        {Typography::Styles::Body, fluent::fontcompat::UITextFamily, QStringLiteral("Regular"),
          QFont::Normal},
-        {Typography::Styles::BodyStrong,
-         fluent::fontcompat::UITextFamily,
-         QStringLiteral("Semibold"),
+        {Typography::Styles::BodyStrong, fluent::fontcompat::UITextFamily,
+         QStringLiteral("Semibold"), QFont::DemiBold},
+        {Typography::Styles::Title, fluent::fontcompat::UIHeadingFamily, QStringLiteral("Semibold"),
          QFont::DemiBold},
-        {Typography::Styles::Title,
-         fluent::fontcompat::UIHeadingFamily,
-         QStringLiteral("Semibold"),
-         QFont::DemiBold},
-        {Typography::Styles::Display,
-         fluent::fontcompat::UIDisplayFamily,
-         QStringLiteral("Semibold"),
-         QFont::DemiBold},
+        {Typography::Styles::Display, fluent::fontcompat::UIDisplayFamily,
+         QStringLiteral("Semibold"), QFont::DemiBold},
     };
 
     for (const ExpectedRole& role : roles) {
@@ -556,7 +572,8 @@ TEST_F(TypographyTest, BundledTypographyRolesResolveExactStaticFaces) {
     }
 }
 
-TEST_F(TypographyTest, SnapIconPixelSizePrefersCrispOpticalSlots) {
+TEST_F(TypographyTest, SnapIconPixelSizePrefersCrispOpticalSlots)
+{
     EXPECT_EQ(Typography::Icons::snapIconPixelSize(10), 10);
     EXPECT_EQ(Typography::Icons::snapIconPixelSize(12), Typography::IconSize::Compact);
     EXPECT_EQ(Typography::Icons::snapIconPixelSize(13), Typography::IconSize::Compact);
@@ -567,35 +584,34 @@ TEST_F(TypographyTest, SnapIconPixelSizePrefersCrispOpticalSlots) {
     EXPECT_EQ(Typography::Icons::font(21).pixelSize(), Typography::IconSize::Large);
 }
 
-TEST_F(TypographyTest, PaintGlyphPreservesCallerFontForCompoundControls) {
+TEST_F(TypographyTest, PaintGlyphPreservesCallerFontForCompoundControls)
+{
     QImage image(QSize(64, 32), QImage::Format_ARGB32_Premultiplied);
     image.fill(Qt::transparent);
 
     QPainter painter(&image);
     const QFont textFont = Typography::Styles::BodyStrong.toQFont();
     painter.setFont(textFont);
-    Typography::Icons::paintGlyph(
-        painter,
-        QRectF(0, 0, 32, 32),
-        Typography::Icons::GlobalNav,
-        Typography::IconSize::Standard);
+    Typography::Icons::paintGlyph(painter, QRectF(0, 0, 32, 32), Typography::Icons::GlobalNav,
+                                  Typography::IconSize::Standard);
 
     EXPECT_EQ(painter.font(), textFont)
         << "Icon painting must not leak the icon face into adjacent labels";
 }
 
-TEST_F(TypographyTest, ApplicationDefaultUsesBundledTextRegular) {
+TEST_F(TypographyTest, ApplicationDefaultUsesBundledTextRegular)
+{
     const QFontInfo resolved(qApp->font());
     EXPECT_EQ(resolved.family(), fluent::fontcompat::UITextFamily);
     EXPECT_EQ(resolved.styleName(), QStringLiteral("Regular"));
     EXPECT_EQ(resolved.weight(), static_cast<int>(QFont::Normal));
 }
 
-TEST_F(TypographyTest, BundledIconFaceContainsCompleteCatalogAndSemanticAliases) {
+TEST_F(TypographyTest, BundledIconFaceContainsCompleteCatalogAndSemanticAliases)
+{
     const auto& catalog = Typography::Icons::catalog();
     ASSERT_EQ(catalog.size(), 9558);
-    EXPECT_FALSE(Typography::Icons::glyph(
-        QStringLiteral("ic_fluent_add_20_regular")).isEmpty());
+    EXPECT_FALSE(Typography::Icons::glyph(QStringLiteral("ic_fluent_add_20_regular")).isEmpty());
 
     const QFont font = Typography::Icons::font(24);
     const QFontInfo resolved(font);
@@ -631,78 +647,74 @@ TEST_F(TypographyTest, BundledIconFaceContainsCompleteCatalogAndSemanticAliases)
         EXPECT_TRUE(metrics.inFont(glyph.front()));
     }
 
-    const auto supplementary = std::find_if(
-        catalog.cbegin(), catalog.cend(),
-        [](const Typography::Icons::IconInfo& icon) { return icon.codepoint > 0xFFFF; });
+    const auto supplementary =
+        std::find_if(catalog.cbegin(), catalog.cend(), [](const Typography::Icons::IconInfo& icon) {
+            return icon.codepoint > 0xFFFF;
+        });
     ASSERT_NE(supplementary, catalog.cend());
     EXPECT_TRUE(metrics.inFontUcs4(supplementary->codepoint));
 }
 
-TEST_F(TypographyTest, SemanticIconsResolveToNativeOpticalVariants) {
-    const QString add12 = Typography::Icons::glyph(
-        QStringLiteral("ic_fluent_add_12_regular"));
-    const QString add16 = Typography::Icons::glyph(
-        QStringLiteral("ic_fluent_add_16_regular"));
-    const QString add20 = Typography::Icons::glyph(
-        QStringLiteral("ic_fluent_add_20_regular"));
+TEST_F(TypographyTest, SemanticIconsResolveToNativeOpticalVariants)
+{
+    const QString add12 = Typography::Icons::glyph(QStringLiteral("ic_fluent_add_12_regular"));
+    const QString add16 = Typography::Icons::glyph(QStringLiteral("ic_fluent_add_16_regular"));
+    const QString add20 = Typography::Icons::glyph(QStringLiteral("ic_fluent_add_20_regular"));
     ASSERT_FALSE(add12.isEmpty());
     ASSERT_FALSE(add16.isEmpty());
     ASSERT_FALSE(add20.isEmpty());
 
-    EXPECT_EQ(Typography::Icons::glyphForSize(
-                  Typography::Icons::Add, Typography::IconSize::Compact),
-              add12);
-    EXPECT_EQ(Typography::Icons::glyphForSize(
-                  Typography::Icons::Add, Typography::IconSize::Standard),
-              add16);
-    EXPECT_EQ(Typography::Icons::glyphForSize(
-                  Typography::Icons::Add, Typography::IconSize::Large),
+    EXPECT_EQ(
+        Typography::Icons::glyphForSize(Typography::Icons::Add, Typography::IconSize::Compact),
+        add12);
+    EXPECT_EQ(
+        Typography::Icons::glyphForSize(Typography::Icons::Add, Typography::IconSize::Standard),
+        add16);
+    EXPECT_EQ(Typography::Icons::glyphForSize(Typography::Icons::Add, Typography::IconSize::Large),
               add20);
 
     // Catalog names and catalog glyph values follow the same variant path as
     // the stable semantic aliases.
-    EXPECT_EQ(Typography::Icons::glyphForSize(
-                  QStringLiteral("ic_fluent_add_20_regular"),
-                  Typography::IconSize::Standard),
+    EXPECT_EQ(Typography::Icons::glyphForSize(QStringLiteral("ic_fluent_add_20_regular"),
+                                              Typography::IconSize::Standard),
               add16);
-    EXPECT_EQ(Typography::Icons::glyphForSize(add20, Typography::IconSize::Standard),
-              add16);
+    EXPECT_EQ(Typography::Icons::glyphForSize(add20, Typography::IconSize::Standard), add16);
 }
 
-TEST_F(TypographyTest, MissingOpticalSizeUsesNearestNativeVariant) {
-    const QString more16 = Typography::Icons::glyph(
-        QStringLiteral("ic_fluent_more_horizontal_16_regular"));
+TEST_F(TypographyTest, MissingOpticalSizeUsesNearestNativeVariant)
+{
+    const QString more16 =
+        Typography::Icons::glyph(QStringLiteral("ic_fluent_more_horizontal_16_regular"));
     ASSERT_FALSE(more16.isEmpty());
-    EXPECT_EQ(Typography::Icons::glyphForSize(
-                  Typography::Icons::More, Typography::IconSize::Compact),
-              more16);
+    EXPECT_EQ(
+        Typography::Icons::glyphForSize(Typography::Icons::More, Typography::IconSize::Compact),
+        more16);
 }
 
-TEST_F(TypographyTest, BadgeAndCaptionAliasesResolveToCompactInnerGlyphs) {
+TEST_F(TypographyTest, BadgeAndCaptionAliasesResolveToCompactInnerGlyphs)
+{
     // InfoBar paints Badge12 semantics inside a filled circle — circle-family
     // aliases would double-ring. Caption back uses the 16 px slot.
     // zh_CN: InfoBar 在填充圆内绘制 Badge12；带圈族别名会双环。标题栏返回键用 16 px 槽。
-    EXPECT_EQ(Typography::Icons::glyphForSize(
-                  Typography::Icons::CheckmarkBadge12, 10),
+    EXPECT_EQ(Typography::Icons::glyphForSize(Typography::Icons::CheckmarkBadge12, 10),
               Typography::Icons::glyph(QStringLiteral("ic_fluent_checkmark_12_regular")));
-    EXPECT_EQ(Typography::Icons::glyphForSize(
-                  Typography::Icons::ErrorBadge12, 10),
+    EXPECT_EQ(Typography::Icons::glyphForSize(Typography::Icons::ErrorBadge12, 10),
               Typography::Icons::glyph(QStringLiteral("ic_fluent_dismiss_12_regular")));
-    EXPECT_EQ(Typography::Icons::glyphForSize(
-                  Typography::Icons::ImportantBadge12, 10),
+    EXPECT_EQ(Typography::Icons::glyphForSize(Typography::Icons::ImportantBadge12, 10),
               Typography::Icons::glyph(QStringLiteral("ic_fluent_important_12_regular")));
-    EXPECT_EQ(Typography::Icons::glyphForSize(
-                  Typography::Icons::TitleBarBack, Typography::IconSize::Standard),
+    EXPECT_EQ(Typography::Icons::glyphForSize(Typography::Icons::TitleBarBack,
+                                              Typography::IconSize::Standard),
               Typography::Icons::glyph(QStringLiteral("ic_fluent_arrow_left_16_regular")));
-    EXPECT_EQ(Typography::Icons::glyphForSize(
-                  Typography::Icons::ChromeMinimize, Typography::IconSize::Standard),
+    EXPECT_EQ(Typography::Icons::glyphForSize(Typography::Icons::ChromeMinimize,
+                                              Typography::IconSize::Standard),
               Typography::Icons::glyph(QStringLiteral("ic_fluent_subtract_16_regular")));
-    EXPECT_EQ(Typography::Icons::glyphForSize(
-                  Typography::Icons::ChevronDownMed, Typography::IconSize::Compact),
+    EXPECT_EQ(Typography::Icons::glyphForSize(Typography::Icons::ChevronDownMed,
+                                              Typography::IconSize::Compact),
               Typography::Icons::glyph(QStringLiteral("ic_fluent_chevron_down_12_regular")));
 }
 
-TEST_F(TypographyTest, BundledTextFacesRetainHintingTablesAndRenderingPolicy) {
+TEST_F(TypographyTest, BundledTextFacesRetainHintingTablesAndRenderingPolicy)
+{
     const QList<Typography::FontStyle> roles = {
         Typography::Styles::Caption,
         Typography::Styles::BodyStrong,
@@ -735,7 +747,8 @@ TEST_F(TypographyTest, BundledTextFacesRetainHintingTablesAndRenderingPolicy) {
     }
 }
 
-TEST_F(TypographyTest, RegularAndSemiboldRenderDifferentRealFaces) {
+TEST_F(TypographyTest, RegularAndSemiboldRenderDifferentRealFaces)
+{
     const auto render = [](QFont font) {
         font.setPixelSize(40);
         QImage image(QSize(420, 80), QImage::Format_ARGB32_Premultiplied);
@@ -763,11 +776,13 @@ TEST_F(TypographyTest, RegularAndSemiboldRenderDifferentRealFaces) {
     EXPECT_GT(inkCount(semibold), inkCount(regular));
 }
 
-TEST_F(TypographyTest, VisualCheck) {
+TEST_F(TypographyTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
+        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP();
     }
     TypographyVisualCheckWindow window(Typography::FontFamily::FluentIcons,
