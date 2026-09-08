@@ -535,6 +535,23 @@ void applyUserTheme()
     fluent::UserTheme::apply();
 }
 
+bool applyThemeOverridesForBinding(const QVariantMap& overrides)
+{
+    return fluent::UserTheme::applyOverrides(QJsonObject::fromVariantMap(overrides));
+}
+
+bool setWidgetThemeOverridesForBinding(QWidget* widget, const QVariantMap& overrides)
+{
+    auto* element = dynamic_cast<fluent::FluentElement*>(widget);
+    return element && element->setThemeOverrides(QJsonObject::fromVariantMap(overrides));
+}
+
+QVariantMap widgetThemeOverridesForBinding(const QWidget* widget)
+{
+    const auto* element = dynamic_cast<const fluent::FluentElement*>(widget);
+    return element ? element->themeOverrides().toVariantMap() : QVariantMap();
+}
+
 void setAccentColor(const QColor& color)
 {
     fluent::UserTheme::applyAccentOverride(color);

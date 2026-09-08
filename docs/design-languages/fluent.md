@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Fluent design](README.md) › Design references
 
-[Contents](../SUMMARY.md) · [Fluent design index](README.md) · [Fluent Design Kit Source →](figma-sources.md)
+[Contents](../SUMMARY.md) · [Fluent design index](README.md) · [自定义主题与组件局部覆盖 →](custom-themes.md)
 <!-- docs-nav:top:end -->
 
 Source of truth: **Windows UI kit (Community)** — file `qpecbg7hOfos9DcHWeKlfw`.
@@ -277,5 +277,5 @@ Everything above is the **default** the app boots into. Concretely:
 
 <!-- docs-nav:bottom:start -->
 ---
-[Contents](../SUMMARY.md) · [Fluent design index](README.md) · [Fluent Design Kit Source →](figma-sources.md)
+[Contents](../SUMMARY.md) · [Fluent design index](README.md) · [自定义主题与组件局部覆盖 →](custom-themes.md)
 <!-- docs-nav:bottom:end -->

@@ -1,5 +1,6 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
+#include "components/foundation/private/ThemeSpec_p.h"
 #include "components/foundation/private/FluentElement_p.h"
 #include "design/Animation.h"
 #include "design/Breakpoints.h"
@@ -14,6 +15,13 @@
 #include <QWidget>
 
 namespace fluent {
+
+class FluentElementPrivate {
+public:
+    QJsonObject overrides;
+    ThemeRegistry::ExtendedSnapshot resolved;
+    int registryRevision = -1;
+};
 
 namespace {
 
@@ -63,6 +71,7 @@ FluentElement::FluentElement() : d_ptr(nullptr)
 FluentElement::~FluentElement()
 {
     FluentThemeManager::instance()->elements.remove(this);
+    delete d_ptr;
 }
 
 // --- Static global management. zh_CN: 静态全局管理。---
@@ -132,31 +141,79 @@ bool FluentElement::effectiveThemeUsesDarkAppearance() const
 
 FluentElement::Colors FluentElement::themeColors() const
 {
-    // Colors now come from the runtime ThemeRegistry (seeded with the built-in Fluent palette, so the
-    // default result is identical to the former compile-time construction). The app layer can install
-    // user-file overrides without touching any control. effectiveTheme() still honors a per-subtree
-    // fluentThemeOverride. zh_CN: 颜色改由运行时 ThemeRegistry 提供(以内置 Fluent 调色板播种,
-    // 默认结果与原编译期构造完全一致)。应用层可安装用户文件覆盖而不动任何控件;effectiveTheme()
-    // 仍尊重子树级 fluentThemeOverride。
-    return ThemeRegistry::instance().colors(effectiveTheme());
+    return themeColorsRef();
+}
+
+bool FluentElement::setThemeOverrides(const QJsonObject& overrides)
+{
+    if (!detail::validateThemeSpec(overrides) || themeOverrides() == overrides)
+        return false;
+    if (!d_ptr)
+        d_ptr = new FluentElementPrivate;
+    d_ptr->overrides = overrides;
+    d_ptr->registryRevision = -1;
+    // Callbacks may destroy this element; do not access members afterwards.
+    // zh_CN: 回调可能销毁当前元素，调用后不再访问成员。
+    if (auto* widget = dynamic_cast<QWidget*>(this)) {
+        widget->updateGeometry();
+        widget->update();
+    }
+    onThemeUpdated();
+    return true;
+}
+
+QJsonObject FluentElement::themeOverrides() const
+{
+    return d_ptr ? d_ptr->overrides : QJsonObject();
+}
+
+void FluentElement::clearThemeOverrides()
+{
+    setThemeOverrides({});
+}
+
+void FluentElement::resolveThemeOverrides() const
+{
+    const auto& registry = ThemeRegistry::instance();
+    if (d_ptr->registryRevision == registry.revision())
+        return;
+    d_ptr->resolved = registry.extendedSnapshot();
+    detail::applyThemeSpec(d_ptr->resolved, d_ptr->overrides);
+    d_ptr->registryRevision = registry.revision();
 }
 
 const FluentElement::Colors& FluentElement::themeColorsRef() const
 {
-    // Same source as themeColors() but hands back the registry's own const reference instead of a
-    // by-value copy of the ~50-QColor struct — for paint hot paths that read colors per item/tab/frame.
-    // zh_CN: 数据源同 themeColors(),但返回注册表自有的 const 引用而非整个结构体的值拷贝——供按项/帧读色的绘制热路径使用。
-    return ThemeRegistry::instance().colors(effectiveTheme());
+    const Theme theme = effectiveTheme();
+    if (!d_ptr || d_ptr->overrides.isEmpty())
+        return ThemeRegistry::instance().colors(theme);
+    resolveThemeOverrides();
+    if (theme == Dark)
+        return d_ptr->resolved.base.darkColors;
+    if (theme == HighContrast)
+        return d_ptr->resolved.contrastColors;
+    return d_ptr->resolved.base.lightColors;
 }
 
 FluentElement::FontStyle FluentElement::themeFont(Typography::FontRole role) const
 {
-    return ThemeRegistry::instance().resolvedFontStyle(role);
+    if (!d_ptr || d_ptr->overrides.isEmpty())
+        return ThemeRegistry::instance().resolvedFontStyle(role);
+    resolveThemeOverrides();
+    const auto& snapshot = d_ptr->resolved.base;
+    const auto& base = Typography::fontStyle(role);
+    const bool defaultFamily = snapshot.fontFamilyOverride.isEmpty();
+    return {defaultFamily ? base.family : snapshot.fontFamilyOverride,
+            defaultFamily ? base.styleName : QString(), qRound(base.size * snapshot.fontScale),
+            base.weight, qRound(base.lineHeight * snapshot.fontScale)};
 }
 
 FluentElement::Radius FluentElement::themeRadius() const
 {
-    return ThemeRegistry::instance().radius();
+    if (!d_ptr || d_ptr->overrides.isEmpty())
+        return ThemeRegistry::instance().radius();
+    resolveThemeOverrides();
+    return d_ptr->resolved.base.radius;
 }
 
 FluentElement::Spacing FluentElement::themeSpacing() const

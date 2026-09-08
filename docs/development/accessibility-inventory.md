@@ -59,6 +59,11 @@ overrides, and legacy theme-envelope compatibility are covered in
 a claim that native builds import or certify every operating-system custom
 contrast scheme.
 
+Custom global and per-element theme token overrides preserve the existing accessible
+roles and actions. Typography and per-mode color resolution are covered by
+`tests/components/TestThemeOverrides.cpp`; caller-defined colors still require
+contrast review. See [custom themes](../design-languages/custom-themes.md).
+
 ## Component contracts
 
 Private adapters preserve caller-owned content and the existing public APIs.

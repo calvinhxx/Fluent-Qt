@@ -39,6 +39,7 @@
           "title": "Design references",
           "pages": [
             "design-languages/fluent.md",
+            "design-languages/custom-themes.md",
             "design-languages/figma-sources.md"
           ]
         }

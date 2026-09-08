@@ -117,6 +117,7 @@
   "functions": [
     "accent_color",
     "anchors",
+    "apply_theme_overrides",
     "apply_user_theme",
     "bind",
     "binding_build_info",
@@ -133,8 +134,10 @@
     "set_font_scale",
     "set_motion_mode",
     "set_theme",
+    "set_widget_theme_overrides",
     "theme_revision",
-    "theme_uses_dark_appearance"
+    "theme_uses_dark_appearance",
+    "widget_theme_overrides"
   ],
   "methods": {
     "ToggleSwitch": [

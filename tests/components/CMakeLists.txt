@@ -2,7 +2,7 @@
 add_qt_test_module(test_anchor_layout TestAnchorLayout.cpp)
 add_qt_test_module(test_foundation_contracts TestFoundationContracts.cpp)
 add_qt_test_module(test_motion_policy TestMotionPolicy.cpp)
-add_qt_test_module(test_fluent_element TestFluentElement.cpp TestHighContrastTheme.cpp)
+add_qt_test_module(test_fluent_element TestFluentElement.cpp TestHighContrastTheme.cpp TestThemeOverrides.cpp)
 add_qt_test_module(test_user_theme TestUserTheme.cpp)
 add_qt_test_module(test_font_icon TestFontIcon.cpp)
 add_qt_test_module(test_qml_plus TestQMLPlus.cpp)

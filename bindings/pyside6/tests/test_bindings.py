@@ -2655,6 +2655,35 @@ class FluentQtBindingTest(unittest.TestCase):
             fluentqt.reset_theme_tokens()
             fluentqt.set_theme(previous_theme)
 
+    def test_global_and_widget_theme_overrides(self):
+        previous_theme = fluentqt.current_theme()
+        fluentqt.reset_theme_tokens()
+        button = fluentqt.Button("Local")
+        other = fluentqt.Button("Global")
+        try:
+            self.assertTrue(fluentqt.apply_theme_overrides({"font": {"scale": 1.25}}))
+            spec = {"font": {"scale": 1.5}, "radius": {"control": 12},
+                    "light": {"textPrimary": "#123456"},
+                    "dark": {"textPrimary": "#FEDCBA"}}
+            self.assertTrue(fluentqt.set_widget_theme_overrides(button, spec))
+            self.assertEqual(fluentqt.widget_theme_overrides(button), spec)
+            self.assertFalse(fluentqt.set_widget_theme_overrides(button, spec))
+            self.assertFalse(fluentqt.set_widget_theme_overrides(button, {"font": {"scale": 99}}))
+            self.assertEqual(fluentqt.widget_theme_overrides(button), spec)
+            for theme in (fluentqt.Theme.Dark, fluentqt.Theme.Light):
+                fluentqt.set_theme(theme)
+                QCoreApplication.processEvents()
+                self.assertEqual(button.font().pixelSize(), 21)
+                self.assertNotEqual(button.font(), other.font())
+            self.assertTrue(fluentqt.set_widget_theme_overrides(button, {}))
+            self.assertEqual(button.font(), other.font())
+            self.assertEqual(fluentqt.widget_theme_overrides(button), {})
+            self.assertFalse(fluentqt.apply_theme_overrides({"font": {"scale": "2"}}))
+            self.assertFalse(fluentqt.set_widget_theme_overrides(QWidget(), spec))
+        finally:
+            fluentqt.reset_theme_tokens()
+            fluentqt.set_theme(previous_theme)
+
     def test_python_virtual_override(self):
         class EventButton(fluentqt.Button):
             def __init__(self):

@@ -10,6 +10,29 @@
 [← System capability delivery record](system-capability-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
 <!-- docs-nav:top:end -->
 
+## 2026-09-08 theme token override addendum
+
+`UserTheme::applyOverrides()` adds an atomic, validated patch to the current
+global color, radius, and font tokens. It does not read or write a theme file.
+`FluentElement::setThemeOverrides()`, `themeOverrides()`, and
+`clearThemeOverrides()` add per-element sparse configuration. Unspecified fields
+follow the current registry; local fields survive global updates and theme
+switches. Invalid input and identical updates leave state unchanged.
+
+The default path retains the null private pointer and existing registry lookup.
+Overrides do not inherit into children or independently composed popups.
+Local font scale replaces the global scale relative to built-in role sizes;
+an explicit widget font retains precedence. A custom family clears the bundled
+face name while preserving the role's numeric weight. Spacing, motion, and
+material tokens remain outside this API.
+
+PySide6 exposes `apply_theme_overrides()`, `set_widget_theme_overrides()`, and
+`widget_theme_overrides()` with matching validation and scope. The existing
+installed public headers own the API; `ThemeSpec_p.h` remains private.
+See [Custom themes](../design-languages/custom-themes.md) for schema and examples.
+`TestThemeOverrides.cpp` covers atomicity, reset, scope, font precedence and
+weight matching, and synchronous destruction during local updates.
+
 ## 2026-09-05 callback and model-update addendum
 
 Theme notifications stop when a callback starts a newer change, including
