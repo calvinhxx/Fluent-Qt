@@ -24,7 +24,8 @@ using namespace fluent;
 
 namespace {
 
-QImage renderScrollBarImage(ScrollBar* scrollBar) {
+QImage renderScrollBarImage(ScrollBar* scrollBar)
+{
     QPixmap pixmap(scrollBar->size());
     pixmap.fill(Qt::transparent);
     scrollBar->render(&pixmap);
@@ -44,7 +45,8 @@ QImage renderScrollBarImage(ScrollBar* scrollBar) {
     return image;
 }
 
-QRect alphaBounds(const QImage& image) {
+QRect alphaBounds(const QImage& image)
+{
     QRect bounds;
     for (int y = 0; y < image.height(); ++y) {
         for (int x = 0; x < image.width(); ++x) {
@@ -55,7 +57,8 @@ QRect alphaBounds(const QImage& image) {
     return bounds;
 }
 
-int pixelAlpha(const QImage& image, int x, int y) {
+int pixelAlpha(const QImage& image, int x, int y)
+{
     return QColor::fromRgba(image.pixel(x, y)).alpha();
 }
 
@@ -65,7 +68,8 @@ int pixelAlpha(const QImage& image, int x, int y) {
 class FluentTestScrollWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -73,7 +77,8 @@ public:
 
 class ScrollBarTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new FluentTestScrollWindow();
         window->setFixedSize(600, 800);
         window->setWindowTitle("ScrollBar Visual Test");
@@ -82,15 +87,14 @@ protected:
         window->onThemeUpdated(); // Apply initial theme
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     FluentTestScrollWindow* window;
     AnchorLayout* layout;
 };
 
-TEST_F(ScrollBarTest, VerticalThumbKeepsRoundedCapsAtExtremes) {
+TEST_F(ScrollBarTest, VerticalThumbKeepsRoundedCapsAtExtremes)
+{
     ScrollBar scrollBar(Qt::Vertical);
     scrollBar.setThickness(9);
     scrollBar.setFixedSize(9, 96);
@@ -117,7 +121,8 @@ TEST_F(ScrollBarTest, VerticalThumbKeepsRoundedCapsAtExtremes) {
     EXPECT_EQ(pixelAlpha(bottomImage, bottomBounds.right(), bottomBounds.bottom()), 0);
 }
 
-TEST_F(ScrollBarTest, HiddenInitializationPreservesPinnedOpacity) {
+TEST_F(ScrollBarTest, HiddenInitializationPreservesPinnedOpacity)
+{
     ScrollBar scrollBar(Qt::Horizontal);
     scrollBar.setRange(0, 1000);
     scrollBar.setPageStep(100);
@@ -128,8 +133,8 @@ TEST_F(ScrollBarTest, HiddenInitializationPreservesPinnedOpacity) {
     EXPECT_DOUBLE_EQ(scrollBar.opacity(), 0.45);
 }
 
-
-TEST_F(ScrollBarTest, TransparentRestingOverlayPreservesParentSurface) {
+TEST_F(ScrollBarTest, TransparentRestingOverlayPreservesParentSurface)
+{
     QWidget parent;
     parent.resize(72, 144);
     parent.setAutoFillBackground(true);
@@ -159,11 +164,13 @@ TEST_F(ScrollBarTest, TransparentRestingOverlayPreservesParentSurface) {
     EXPECT_NEAR(sample.blue(), parentColor.blue(), 1);
 }
 
-TEST_F(ScrollBarTest, VisualPropertyVerification) {
+TEST_F(ScrollBarTest, VisualPropertyVerification)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
+        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP() << "Skipping visual test in offscreen mode";
     }
 
@@ -173,11 +180,12 @@ TEST_F(ScrollBarTest, VisualPropertyVerification) {
     auto createLabel = [&](const QString& text, QObject* anchorTop, int topMargin = 20) {
         Label* l = new Label(text, window);
         if (anchorTop == window) {
-             l->anchors()->top = {window, Edge::Top, topMargin};
+            l->anchors()->top = {window, Edge::Top, topMargin};
         } else {
-             // Basic casting for layout logic
-             auto* w = qobject_cast<QWidget*>(anchorTop);
-             if (w) l->anchors()->top = {w, Edge::Bottom, topMargin};
+            // Basic casting for layout logic
+            auto* w = qobject_cast<QWidget*>(anchorTop);
+            if (w)
+                l->anchors()->top = {w, Edge::Bottom, topMargin};
         }
         l->anchors()->left = {window, Edge::Left, 40};
         layout->addWidget(l);
@@ -230,7 +238,7 @@ TEST_F(ScrollBarTest, VisualPropertyVerification) {
     sbV2->anchors()->top = {lblVert, Edge::Bottom, 10};
     sbV2->anchors()->left = {sbV1, Edge::Right, 20};
     layout->addWidget(sbV2);
-    
+
     // --- 3. Interaction Test ---
     Label* lblInteraction = createLabel("3. Try Hover and Drag:", sbV1, 30);
     // ensure alignment for next label
@@ -244,30 +252,29 @@ TEST_F(ScrollBarTest, VisualPropertyVerification) {
     sbInteract->anchors()->top = {lblInteraction, Edge::Bottom, 10};
     sbInteract->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(sbInteract);
-    
+
     // Label to show value
     Label* lblValue = new Label("Value: 0", window);
     lblValue->anchors()->verticalCenter = {sbInteract, Edge::VCenter, 0};
     lblValue->anchors()->left = {sbInteract, Edge::Right, 20};
     layout->addWidget(lblValue);
-    
-    QObject::connect(sbInteract, &ScrollBar::valueChanged, [lblValue](int val){
-        lblValue->setText(QString("Value: %1").arg(val));
-    });
+
+    QObject::connect(sbInteract, &ScrollBar::valueChanged,
+                     [lblValue](int val) { lblValue->setText(QString("Value: %1").arg(val)); });
 
     // --- 4. Integration with QScrollArea Example ---
     // This is tricky because QScrollArea manages its own scrollbars usually.
     // Ideally we'd setVerticalScrollBar(new ScrollBar(...)) but let's just show it works locally.
-    
-class FluentScrollArea : public QScrollArea, public QMLPlus {
-public:
-    using QScrollArea::QScrollArea; 
-};
 
-// ...
+    class FluentScrollArea : public QScrollArea, public QMLPlus {
+    public:
+        using QScrollArea::QScrollArea;
+    };
+
+    // ...
 
     Label* lblIntegration = createLabel("4. Integrated in ScrollArea:", sbInteract, 30);
-    
+
     FluentScrollArea* scrollArea = new FluentScrollArea(window);
     scrollArea->setFixedSize(200, 150);
     // Replace default scrollbars
@@ -279,13 +286,12 @@ public:
     content->setFixedSize(400, 400); // larger than viewport
     // subtle gradient to see scrolling
     content->setStyleSheet("background: qlineargradient(x1:0, y1:0, x2:1, y2:1, "
-                         "stop:0 #eee, stop:1 #ccc);");
+                           "stop:0 #eee, stop:1 #ccc);");
     scrollArea->setWidget(content);
 
     scrollArea->anchors()->top = {lblIntegration, Edge::Bottom, 10};
     scrollArea->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(scrollArea);
-
 
     // --- Theme Switcher ---
     Button* themeBtn = new Button("Switch Theme", window);
@@ -295,7 +301,10 @@ public:
     layout->addWidget(themeBtn);
 
     QObject::connect(themeBtn, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     window->show();

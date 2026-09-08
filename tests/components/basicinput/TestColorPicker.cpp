@@ -14,7 +14,8 @@ class ColorPickerTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
 
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -22,7 +23,8 @@ public:
 
 class ColorPickerTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new ColorPickerTestWindow();
         window->setFixedSize(520, 620);
         window->setWindowTitle("Fluent ColorPicker Visual Test");
@@ -36,7 +38,7 @@ protected:
         root->addWidget(title);
 
         auto* picker = new ColorPicker(window);
-        picker->setAlphaEnabled(true);  // UT 默认开启 Alpha 通道
+        picker->setAlphaEnabled(true); // UT 默认开启 Alpha 通道
         root->addWidget(picker, 1);
 
         auto* status = new QLabel("Color: #FFFFFFFF", window);
@@ -48,44 +50,42 @@ protected:
                                 .arg(c.red(), 2, 16, QLatin1Char('0'))
                                 .arg(c.green(), 2, 16, QLatin1Char('0'))
                                 .arg(c.blue(), 2, 16, QLatin1Char('0'))
-                                .arg(c.alpha(), 2, 16, QLatin1Char('0')).toUpper());
+                                .arg(c.alpha(), 2, 16, QLatin1Char('0'))
+                                .toUpper());
         });
 
         auto* themeBtn = new Button("Switch Theme", window);
         themeBtn->setFixedSize(120, 32);
         root->addWidget(themeBtn, 0, Qt::AlignLeft);
         QObject::connect(themeBtn, &Button::clicked, []() {
-            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                                        ? fluent::FluentElement::Dark
-                                        : fluent::FluentElement::Light);
+            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                    fluent::FluentElement::Light
+                                                ? fluent::FluentElement::Dark
+                                                : fluent::FluentElement::Light);
         });
 
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     ColorPickerTestWindow* window = nullptr;
 };
 
-TEST(ColorPickerContractTest, InternalColumnsResolveAsAnAcyclicGrid) {
+TEST(ColorPickerContractTest, InternalColumnsResolveAsAnAcyclicGrid)
+{
     ColorPicker picker;
     picker.resize(520, 520);
     picker.ensurePolished();
     ASSERT_NE(picker.layout(), nullptr);
     picker.layout()->setGeometry(picker.rect());
 
-    auto* spectrum = picker.findChild<QWidget*>(
-        QStringLiteral("ColorPicker.Spectrum"),
-        Qt::FindDirectChildrenOnly);
-    auto* hueBar = picker.findChild<QWidget*>(
-        QStringLiteral("ColorPicker.HueBar"),
-        Qt::FindDirectChildrenOnly);
-    auto* preview = picker.findChild<QWidget*>(
-        QStringLiteral("ColorPicker.PreviewPane"),
-        Qt::FindDirectChildrenOnly);
+    auto* spectrum = picker.findChild<QWidget*>(QStringLiteral("ColorPicker.Spectrum"),
+                                                Qt::FindDirectChildrenOnly);
+    auto* hueBar = picker.findChild<QWidget*>(QStringLiteral("ColorPicker.HueBar"),
+                                              Qt::FindDirectChildrenOnly);
+    auto* preview = picker.findChild<QWidget*>(QStringLiteral("ColorPicker.PreviewPane"),
+                                               Qt::FindDirectChildrenOnly);
     ASSERT_NE(spectrum, nullptr);
     ASSERT_NE(hueBar, nullptr);
     ASSERT_NE(preview, nullptr);
@@ -107,26 +107,23 @@ TEST(ColorPickerContractTest, InternalColumnsResolveAsAnAcyclicGrid) {
     EXPECT_GT(spectrum->height(), 0);
 }
 
-TEST(ColorPickerContractTest, InternalLabelsUseOwnPrimaryThemeColor) {
+TEST(ColorPickerContractTest, InternalLabelsUseOwnPrimaryThemeColor)
+{
     QWidget styledHost;
-    styledHost.setStyleSheet(QStringLiteral(
-        "QWidget { background: #202020; }"));
+    styledHost.setStyleSheet(QStringLiteral("QWidget { background: #202020; }"));
     ColorPicker picker(&styledHost);
 
-    const auto labels =
-        picker.findChildren<fluent::textfields::Label*>();
+    const auto labels = picker.findChildren<fluent::textfields::Label*>();
     ASSERT_EQ(labels.size(), 7);
     for (const auto* label : labels) {
         ASSERT_NE(label, nullptr);
-        EXPECT_EQ(
-            label->textColorRole(),
-            fluent::textfields::Label::TextColorRole::Primary);
-        EXPECT_TRUE(label->styleSheet().contains(
-            QStringLiteral("color:")));
+        EXPECT_EQ(label->textColorRole(), fluent::textfields::Label::TextColorRole::Primary);
+        EXPECT_TRUE(label->styleSheet().contains(QStringLiteral("color:")));
     }
 }
 
-TEST_F(ColorPickerTest, VisualCheck) {
+TEST_F(ColorPickerTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }

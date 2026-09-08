@@ -30,12 +30,13 @@ namespace fluent::basicinput {
  */
 class Button : public QPushButton, public FluentElement, public QMLPlus {
     Q_OBJECT
-    
+
     /**
      * @brief Visual treatment: Standard, Accent, or Subtle.
      * zh_CN: 按钮视觉风格：Standard(标准)、Accent(强调色)、Subtle(透明)。
      */
-    Q_PROPERTY(ButtonStyle fluentStyle READ fluentStyle WRITE setFluentStyle NOTIFY fluentStyleChanged)
+    Q_PROPERTY(
+        ButtonStyle fluentStyle READ fluentStyle WRITE setFluentStyle NOTIFY fluentStyleChanged)
     /**
      * @brief Density token that controls height and padding, not typography.
      * zh_CN: 按钮密度 token，仅控制高度与内边距；字体由 fontRole 或 setFont() 管理。
@@ -50,7 +51,8 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      * @brief Content layout for text and icon placement.
      * zh_CN: 文本与图标的内容排列方式。
      */
-    Q_PROPERTY(ButtonLayout fluentLayout READ fluentLayout WRITE setFluentLayout NOTIFY fluentLayoutChanged)
+    Q_PROPERTY(ButtonLayout fluentLayout READ fluentLayout WRITE setFluentLayout NOTIFY
+                   fluentLayoutChanged)
     /**
      * @brief Controls whether the focus visual frame is painted.
      * zh_CN: 控制是否绘制焦点视觉框。
@@ -60,17 +62,20 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      * @brief Overrides the interaction state for guided demos or visual checks.
      * zh_CN: 强制交互状态，主要用于引导、演示或 VisualCheck。
      */
-    Q_PROPERTY(InteractionState interactionState READ interactionState WRITE setInteractionState NOTIFY interactionStateChanged)
+    Q_PROPERTY(InteractionState interactionState READ interactionState WRITE setInteractionState
+                   NOTIFY interactionStateChanged)
     /**
      * @brief Uses the critical semantic color while hovered or pressed.
      * zh_CN: Hover/Pressed 状态使用 Critical 语义色，适合关闭、删除等危险操作。
      */
-    Q_PROPERTY(bool criticalOnHover READ criticalOnHover WRITE setCriticalOnHover NOTIFY criticalOnHoverChanged)
+    Q_PROPERTY(bool criticalOnHover READ criticalOnHover WRITE setCriticalOnHover NOTIFY
+                   criticalOnHoverChanged)
     /**
      * @brief Per-corner radii; left/top/right/bottom map to top-left/top-right/bottom-right/bottom-left.
      * zh_CN: 四角圆角；left/top/right/bottom 分别对应左上、右上、右下、左下。
      */
-    Q_PROPERTY(QMargins cornerRadii READ cornerRadii WRITE setCornerRadii RESET resetCornerRadii NOTIFY cornerRadiiChanged)
+    Q_PROPERTY(QMargins cornerRadii READ cornerRadii WRITE setCornerRadii RESET resetCornerRadii
+                   NOTIFY cornerRadiiChanged)
     /**
      * @brief Pixel offset applied to iconfont drawing; positive values move right/down.
      * zh_CN: iconfont 绘制偏移量，正值表示向右/向下移动，用于精细视觉对齐。
@@ -115,24 +120,14 @@ public:
      * @brief Text/icon composition mode.
      * zh_CN: 文本与图标的组合模式。
      */
-    enum ButtonLayout { 
-        TextOnly,       
-        IconBefore,     
-        IconOnly,       
-        IconAfter       
-    };
+    enum ButtonLayout { TextOnly, IconBefore, IconOnly, IconAfter };
     Q_ENUM(ButtonLayout)
 
     /**
      * @brief Paint-state override used before falling back to real hover/press state.
      * zh_CN: 绘制状态覆盖值；为 Rest 时再回退到真实 hover/press 状态。
      */
-    enum InteractionState { 
-        Rest,           
-        Hover,          
-        Pressed,        
-        Disabled        
-    };
+    enum InteractionState { Rest, Hover, Pressed, Disabled };
     Q_ENUM(InteractionState)
 
     explicit Button(const QString& text, QWidget* parent = nullptr);
@@ -199,13 +194,12 @@ public:
      * WinUI's standard 16 px control icon.
      * @param family Icon font family; defaults to FluentQt Icons.
      */
-    void setIconGlyph(const QString& glyph,
-                      int pixelSize = Typography::IconSize::Standard,
+    void setIconGlyph(const QString& glyph, int pixelSize = Typography::IconSize::Standard,
                       const QString& family = Typography::FontFamily::FluentIcons);
 
-    void setIconGlyph(QChar glyph,
-                      int pixelSize = Typography::IconSize::Standard,
-                      const QString& family = Typography::FontFamily::FluentIcons) {
+    void setIconGlyph(QChar glyph, int pixelSize = Typography::IconSize::Standard,
+                      const QString& family = Typography::FontFamily::FluentIcons)
+    {
         setIconGlyph(QString(glyph), pixelSize, family);
     }
 
@@ -239,11 +233,27 @@ protected:
 
     // State changes only invalidate painting; QPushButton keeps interaction semantics.
     // zh_CN: 状态变化只触发重绘；交互语义仍由 QPushButton 保持。
-    void focusInEvent(QFocusEvent* event) override { QPushButton::focusInEvent(event); update(); }
-    void focusOutEvent(QFocusEvent* event) override { QPushButton::focusOutEvent(event); update(); }
+    void focusInEvent(QFocusEvent* event) override
+    {
+        QPushButton::focusInEvent(event);
+        update();
+    }
+    void focusOutEvent(QFocusEvent* event) override
+    {
+        QPushButton::focusOutEvent(event);
+        update();
+    }
 
-    void enterEvent(FluentEnterEvent* event) override { QPushButton::enterEvent(event); update(); }
-    void leaveEvent(QEvent* event) override { QPushButton::leaveEvent(event); update(); }
+    void enterEvent(FluentEnterEvent* event) override
+    {
+        QPushButton::enterEvent(event);
+        update();
+    }
+    void leaveEvent(QEvent* event) override
+    {
+        QPushButton::leaveEvent(event);
+        update();
+    }
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
 
@@ -261,16 +271,16 @@ private:
     bool m_applyingFontRole = false;
     bool m_hasCustomCornerRadii = false;
     QMargins m_cornerRadii;
-    QPoint m_iconOffset {0, 0}; // Fine-tunes iconfont centering for glyphs with uneven metrics.
+    QPoint m_iconOffset{0, 0}; // Fine-tunes iconfont centering for glyphs with uneven metrics.
     qreal m_iconRotation = 0.0;
-    qreal m_iconScale = 1.0;    // Press-feedback scale for the painted glyph; 1.0 = no scaling.
+    qreal m_iconScale = 1.0;      // Press-feedback scale for the painted glyph; 1.0 = no scaling.
     qreal m_contentOpacity = 1.0; // Painter-level fade for the whole surface; 1.0 = opaque.
-    
+
     // Iconfont state used for crisp text rendering instead of pixmap conversion.
     // zh_CN: iconfont 状态用于直接文本绘制，避免 pixmap 转换导致模糊。
-    QString m_iconGlyph;        // iconfont 字符
-    QString m_iconFontFamily;   // iconfont 字体家族
-    int m_iconPixelSize = 0;    // iconfont 像素大小
+    QString m_iconGlyph;      // iconfont 字符
+    QString m_iconFontFamily; // iconfont 字体家族
+    int m_iconPixelSize = 0;  // iconfont 像素大小
 };
 
 } // namespace fluent::basicinput

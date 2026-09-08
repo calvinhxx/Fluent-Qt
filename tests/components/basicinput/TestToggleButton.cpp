@@ -17,7 +17,8 @@ class ToggleButtonTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
 
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -25,7 +26,8 @@ public:
 
 class ToggleButtonTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new ToggleButtonTestWindow();
         window->setFixedSize(600, 600);
         window->setWindowTitle("Fluent ToggleButton Visual Test");
@@ -39,7 +41,7 @@ protected:
         auto* hLayout1 = new QHBoxLayout();
         auto* toggle1 = new ToggleButton("ToggleButton", window);
         auto* label1 = new QLabel("Output: Off", window);
-        
+
         QObject::connect(toggle1, &ToggleButton::toggled, [label1](bool checked) {
             label1->setText(QString("Output: %1").arg(checked ? "On" : "Off"));
         });
@@ -78,16 +80,19 @@ protected:
         layout->addLayout(hLayout3);
 
         // 4. ThreeState ToggleButton
-        layout->addWidget(new QLabel("4. ThreeState ToggleButton (Unchecked -> Checked -> Indeterminate):", window));
+        layout->addWidget(new QLabel(
+            "4. ThreeState ToggleButton (Unchecked -> Checked -> Indeterminate):", window));
         auto* hLayout4 = new QHBoxLayout();
         auto* toggle4 = new ToggleButton("ThreeState", window);
         toggle4->setThreeState(true);
         auto* label4 = new QLabel("State: Unchecked", window);
-        
+
         QObject::connect(toggle4, &ToggleButton::checkStateChanged, [label4](Qt::CheckState state) {
             QString stateStr = "Unchecked";
-            if (state == Qt::Checked) stateStr = "Checked";
-            else if (state == Qt::PartiallyChecked) stateStr = "Indeterminate";
+            if (state == Qt::Checked)
+                stateStr = "Checked";
+            else if (state == Qt::PartiallyChecked)
+                stateStr = "Indeterminate";
             label4->setText(QString("State: %1").arg(stateStr));
         });
 
@@ -102,17 +107,16 @@ protected:
         auto* themeBtn = new QPushButton("Switch Theme", window);
         layout->addWidget(themeBtn);
         QObject::connect(themeBtn, &QPushButton::clicked, []() {
-            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light 
-                                    ? fluent::FluentElement::Dark 
-                                    : fluent::FluentElement::Light);
+            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                    fluent::FluentElement::Light
+                                                ? fluent::FluentElement::Dark
+                                                : fluent::FluentElement::Light);
         });
 
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     ToggleButtonTestWindow* window = nullptr;
 };
@@ -144,11 +148,10 @@ TEST_F(ToggleButtonTest, Contract_ProgrammaticPartialCheckStateIsPreserved)
 
     int toggledCount = 0;
     bool lastChecked = false;
-    QObject::connect(&toggle, &QPushButton::toggled,
-                     [&toggledCount, &lastChecked](bool checked) {
-                         ++toggledCount;
-                         lastChecked = checked;
-                     });
+    QObject::connect(&toggle, &QPushButton::toggled, [&toggledCount, &lastChecked](bool checked) {
+        ++toggledCount;
+        lastChecked = checked;
+    });
 
     toggle.setCheckState(Qt::PartiallyChecked);
 
@@ -160,8 +163,7 @@ TEST_F(ToggleButtonTest, Contract_ProgrammaticPartialCheckStateIsPreserved)
 
 TEST_F(ToggleButtonTest, Contract_LightAndDarkCheckedStatePaintsDistinctly)
 {
-    const FluentElement::Theme themes[]{FluentElement::Light,
-                                        FluentElement::Dark};
+    const FluentElement::Theme themes[]{FluentElement::Light, FluentElement::Dark};
     for (const auto theme : themes) {
         FluentElement::setTheme(theme);
 
@@ -183,7 +185,8 @@ TEST_F(ToggleButtonTest, Contract_LightAndDarkCheckedStatePaintsDistinctly)
     FluentElement::setTheme(FluentElement::Light);
 }
 
-TEST_F(ToggleButtonTest, VisualCheck) {
+TEST_F(ToggleButtonTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
