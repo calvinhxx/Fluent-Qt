@@ -136,6 +136,43 @@ protocol reads only the origin-root `https://calvinhxx.github.io/robots.txt`.
 This repository therefore does not publish a misleading project-path
 `robots.txt`; manage the origin-root file in the owning user-site repository.
 
+## Search discovery
+
+Use `Fluent-Qt` as the display name and `FluentQt` as its searchable alias.
+Keep both spellings in the English and Chinese page metadata and README
+introductions; the generated project JSON-LD declares `FluentQt` as
+`alternateName`. Keep repository URLs and package identifiers unchanged.
+
+GitHub repository search normally searches the name, description, and topics,
+not the README. Keep `FluentQt (Fluent-Qt)` in the repository About description
+and `fluentqt` in Topics. When the topic limit is reached, replace a redundant
+generic topic instead of removing language or framework identifiers.
+After updating About or Topics, compare these repository searches:
+
+- `fluentqt user:calvinhxx`
+- `fluent-qt user:calvinhxx`
+- `fluentqt in:readme user:calvinhxx`
+
+All three should include `calvinhxx/Fluent-Qt` once the search index refreshes.
+See [GitHub repository search](https://docs.github.com/en/search-github/searching-on-github/searching-for-repositories).
+
+After a Pages deployment, use the site's verified Google Search Console
+property to inspect the English home, Chinese home, and API Explorer URLs.
+Check the fetched page, indexing status, and Google's selected canonical;
+submit `https://calvinhxx.github.io/Fluent-Qt/sitemap.xml` in the Sitemaps report.
+Record the actual result rather than treating a checked-in sitemap as proof of
+submission or indexing. Ownership verification requires the site's account;
+do not invent verification tokens or assume that missing HTML verification
+means the property is unverified.
+
+Use the Performance report to distinguish brand queries (`FluentQt`,
+`Fluent-Qt`) from discovery queries such as `Qt Widgets UI library` and
+`PySide6 控件库`. Compare impressions and clicks over the same date range,
+then review Gallery and installation-link activity in the configured site
+analytics. Link clicks indicate interest, not completed installation or adoption.
+See [Google's sitemap submission guide](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap);
+submission does not guarantee indexing or ranking.
+
 <!-- docs-nav:bottom:start -->
 ---
 [← Tooltip Usage](tooltip-usage.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
