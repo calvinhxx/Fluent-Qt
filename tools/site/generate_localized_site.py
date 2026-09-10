@@ -227,6 +227,7 @@ def structured_data(locale: Locale, values: dict[str, str], version: str) -> str
                 "@type": "SoftwareSourceCode",
                 "@id": f"{BASE_URL}#project",
                 "name": "Fluent-Qt",
+                "alternateName": "FluentQt",
                 "url": locale.canonical_url,
                 "description": values["meta.description"],
                 "codeRepository": REPOSITORY_URL,

@@ -1,7 +1,7 @@
 const translations = {
   zh: {
-    "meta.title": "Fluent-Qt — Qt Widgets 的 Fluent 控件库",
-    "meta.description": "面向 Qt Widgets 的原生 C++17 Fluent 控件，支持 Qt 5/6、可选 PySide6 绑定和 WebAssembly。在线体验 Gallery，查看 API 与接入示例。",
+    "meta.title": "FluentQt (Fluent-Qt) — Qt Widgets 的 Fluent UI 控件库",
+    "meta.description": "FluentQt（Fluent-Qt）是面向 Qt Widgets 的 C++17 Fluent UI 控件库，支持 Qt 5/6、可选 PySide6 绑定和 WebAssembly。在线体验 Gallery，查看 API 与接入示例。",
     "a11y.skip": "跳到主要内容",
     "a11y.primaryNav": "主导航",
     "a11y.home": "Fluent-Qt 首页",
@@ -149,8 +149,8 @@ const translations = {
     "motion.label": "粒子动效"
   },
   en: {
-    "meta.title": "Fluent-Qt — Fluent controls for Qt Widgets",
-    "meta.description": "Native C++17 Fluent controls for Qt Widgets, with Qt 5/6 support, optional PySide6 bindings, and WebAssembly. Try the Gallery and find APIs and setup examples.",
+    "meta.title": "FluentQt (Fluent-Qt) — Fluent UI library for Qt Widgets",
+    "meta.description": "FluentQt (Fluent-Qt) is a C++17 Fluent UI library for Qt Widgets, with Qt 5/6, optional PySide6 bindings, and WebAssembly. Try the Gallery and setup examples.",
     "a11y.skip": "Skip to main content",
     "a11y.primaryNav": "Primary navigation",
     "a11y.home": "Fluent-Qt home",
