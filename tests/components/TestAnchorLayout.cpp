@@ -13,7 +13,8 @@ using namespace fluent;
 
 class AnchorLayoutTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new QWidget();
         window->setFixedSize(600, 600);
         window->setWindowTitle("AnchorLayout UT Visual Check");
@@ -21,15 +22,14 @@ protected:
         window->setLayout(layout);
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     QWidget* window;
     AnchorLayout* layout;
 };
 
-TEST_F(AnchorLayoutTest, Contract_AnchorsResolveDeterministicallyWithoutVisualSession) {
+TEST_F(AnchorLayoutTest, Contract_AnchorsResolveDeterministicallyWithoutVisualSession)
+{
     QWidget* child = new QWidget(window);
     child->setFixedSize(80, 40);
 
@@ -43,7 +43,8 @@ TEST_F(AnchorLayoutTest, Contract_AnchorsResolveDeterministicallyWithoutVisualSe
     EXPECT_EQ(child->geometry(), QRect(12, 16, 80, 40));
 }
 
-TEST_F(AnchorLayoutTest, Contract_RightAndBottomEdgesUseExactVisualBoundaries) {
+TEST_F(AnchorLayoutTest, Contract_RightAndBottomEdgesUseExactVisualBoundaries)
+{
     QWidget* source = new QWidget(window);
     source->setFixedSize(80, 40);
     AnchorLayout::Anchors sourceAnchors;
@@ -71,7 +72,8 @@ TEST_F(AnchorLayoutTest, Contract_RightAndBottomEdgesUseExactVisualBoundaries) {
     EXPECT_EQ(trailing->geometry(), QRect(559, 567, 30, 20));
 }
 
-TEST_F(AnchorLayoutTest, Contract_FillOverridesWidgetSizePolicy) {
+TEST_F(AnchorLayoutTest, Contract_FillOverridesWidgetSizePolicy)
+{
     QPushButton* fill = new QPushButton(window);
     ASSERT_EQ(fill->sizePolicy().verticalPolicy(), QSizePolicy::Fixed);
 
@@ -85,9 +87,9 @@ TEST_F(AnchorLayoutTest, Contract_FillOverridesWidgetSizePolicy) {
     EXPECT_EQ(fill->geometry(), QRect(10, 20, 560, 540));
 }
 
-TEST_F(AnchorLayoutTest, Contract_NonWidgetLayoutItemsDoNotCrashGeometryPass) {
-    auto* spacer = new QSpacerItem(
-        20, 10, QSizePolicy::Fixed, QSizePolicy::Fixed);
+TEST_F(AnchorLayoutTest, Contract_NonWidgetLayoutItemsDoNotCrashGeometryPass)
+{
+    auto* spacer = new QSpacerItem(20, 10, QSizePolicy::Fixed, QSizePolicy::Fixed);
     layout->addItem(spacer);
 
     layout->setGeometry(window->rect());
@@ -97,7 +99,8 @@ TEST_F(AnchorLayoutTest, Contract_NonWidgetLayoutItemsDoNotCrashGeometryPass) {
     EXPECT_EQ(spacer->geometry(), QRect(0, 0, 20, 10));
 }
 
-TEST_F(AnchorLayoutTest, Contract_SizeHintsComeFromAnchoredItemChain) {
+TEST_F(AnchorLayoutTest, Contract_SizeHintsComeFromAnchoredItemChain)
+{
     QWidget* source = new QWidget(window);
     source->setFixedSize(80, 40);
     AnchorLayout::Anchors sourceAnchors;
@@ -116,7 +119,8 @@ TEST_F(AnchorLayoutTest, Contract_SizeHintsComeFromAnchoredItemChain) {
     EXPECT_EQ(layout->minimumSize(), QSize(129, 81));
 }
 
-TEST_F(AnchorLayoutTest, Contract_SizeHintPreservesNaturalSizeBetweenOpposingAnchors) {
+TEST_F(AnchorLayoutTest, Contract_SizeHintPreservesNaturalSizeBetweenOpposingAnchors)
+{
     QWidget* header = new QWidget(window);
     header->setFixedSize(80, 20);
     AnchorLayout::Anchors headerAnchors;
@@ -143,7 +147,8 @@ TEST_F(AnchorLayoutTest, Contract_SizeHintPreservesNaturalSizeBetweenOpposingAnc
     EXPECT_EQ(content->geometry(), QRect(0, 35, 80, 40));
 }
 
-TEST_F(AnchorLayoutTest, Contract_LongReverseOrderDependencyChainResolvesOnce) {
+TEST_F(AnchorLayoutTest, Contract_LongReverseOrderDependencyChainResolvesOnce)
+{
     constexpr int itemCount = 8;
     QVector<QWidget*> widgets;
     widgets.reserve(itemCount);
@@ -156,12 +161,8 @@ TEST_F(AnchorLayoutTest, Contract_LongReverseOrderDependencyChainResolvesOnce) {
 
     for (int i = itemCount - 1; i >= 0; --i) {
         AnchorLayout::Anchors anchors;
-        anchors.left =
-            i == 0
-                ? AnchorLayout::Anchor(window, AnchorLayout::Edge::Left, 10)
-                : AnchorLayout::Anchor(widgets[i - 1],
-                                       AnchorLayout::Edge::Right,
-                                       3);
+        anchors.left = i == 0 ? AnchorLayout::Anchor(window, AnchorLayout::Edge::Left, 10)
+                              : AnchorLayout::Anchor(widgets[i - 1], AnchorLayout::Edge::Right, 3);
         anchors.top = {window, AnchorLayout::Edge::Top, 5};
         layout->addAnchoredWidget(widgets[i], anchors);
     }
@@ -173,7 +174,8 @@ TEST_F(AnchorLayoutTest, Contract_LongReverseOrderDependencyChainResolvesOnce) {
     EXPECT_EQ(layout->sizeHint(), QSize(191, 15));
 }
 
-TEST_F(AnchorLayoutTest, Contract_CyclicSiblingAnchorsUseStableFallback) {
+TEST_F(AnchorLayoutTest, Contract_CyclicSiblingAnchorsUseStableFallback)
+{
     QWidget* first = new QWidget(window);
     first->setObjectName(QStringLiteral("CycleA"));
     first->setFixedSize(30, 20);
@@ -201,7 +203,8 @@ TEST_F(AnchorLayoutTest, Contract_CyclicSiblingAnchorsUseStableFallback) {
     EXPECT_EQ(second->geometry(), secondGeometry);
 }
 
-TEST_F(AnchorLayoutTest, Contract_DestroyedAnchorTargetIsSafelyIgnored) {
+TEST_F(AnchorLayoutTest, Contract_DestroyedAnchorTargetIsSafelyIgnored)
+{
     QWidget* unmanagedTarget = new QWidget(window);
     unmanagedTarget->setGeometry(100, 80, 40, 30);
     QWidget* child = new QWidget(window);
@@ -218,7 +221,8 @@ TEST_F(AnchorLayoutTest, Contract_DestroyedAnchorTargetIsSafelyIgnored) {
     EXPECT_EQ(child->geometry(), QRect(0, 12, 50, 20));
 }
 
-TEST_F(AnchorLayoutTest, FullScenarioVisualCheck) {
+TEST_F(AnchorLayoutTest, FullScenarioVisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -230,7 +234,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck) {
     btn1->setFixedSize(100, 100);
     AnchorLayout::Anchors a1;
     a1.left = {window, Edge::Left, 10};
-    a1.top  = {window, Edge::Top, 10};
+    a1.top = {window, Edge::Top, 10};
     layout->addAnchoredWidget(btn1, a1);
     new DebugOverlay(btn1, Qt::red, window);
 
@@ -238,8 +242,8 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck) {
     QPushButton* btn2 = new QPushButton("右侧 +20", window);
     btn2->setFixedSize(100, 100);
     AnchorLayout::Anchors a2;
-    a2.left = {btn1, Edge::Right, 20}; 
-    a2.top  = {window, Edge::Top, 10};
+    a2.left = {btn1, Edge::Right, 20};
+    a2.top = {window, Edge::Top, 10};
     layout->addAnchoredWidget(btn2, a2);
     new DebugOverlay(btn2, Qt::blue, window);
 
@@ -248,7 +252,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck) {
     btn3->setFixedSize(100, 100);
     AnchorLayout::Anchors a3;
     a3.horizontalCenter = {window, Edge::HCenter, 0};
-    a3.verticalCenter   = {window, Edge::VCenter, 0};
+    a3.verticalCenter = {window, Edge::VCenter, 0};
     layout->addAnchoredWidget(btn3, a3);
     new DebugOverlay(btn3, Qt::magenta, window);
 
@@ -265,7 +269,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck) {
     QPushButton* btn4 = new QPushButton("填充区域", window);
     AnchorLayout::Anchors a4;
     a4.fill = true;
-    a4.fillMargins = QMargins(0, 200, 400, 200); 
+    a4.fillMargins = QMargins(0, 200, 400, 200);
     layout->addAnchoredWidget(btn4, a4);
     new DebugOverlay(btn4, Qt::darkYellow, window);
 
@@ -273,7 +277,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck) {
     QPushButton* btn5 = new QPushButton("右下", window);
     btn5->setFixedSize(100, 100);
     AnchorLayout::Anchors a5;
-    a5.right  = {window, Edge::Right, -16};
+    a5.right = {window, Edge::Right, -16};
     a5.bottom = {window, Edge::Bottom, -16};
     layout->addAnchoredWidget(btn5, a5);
     new DebugOverlay(btn5, Qt::black, window);
@@ -283,7 +287,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck) {
     labelDynamic->setStyleSheet("background-color: #3498db; color: white; padding: 5px;");
     AnchorLayout::Anchors aDyn;
     aDyn.left = {window, Edge::Left, 20};
-    aDyn.top  = {btn1, Edge::Bottom, 20};
+    aDyn.top = {btn1, Edge::Bottom, 20};
     layout->addAnchoredWidget(labelDynamic, aDyn);
     new DebugOverlay(labelDynamic, Qt::red, window);
 
@@ -296,14 +300,14 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck) {
     btnA->setFixedSize(100, 40);
     AnchorLayout::Anchors aA;
     aA.left = {window, Edge::Left, 20};
-    aA.top  = {labelDynamic, Edge::Bottom, 40};
+    aA.top = {labelDynamic, Edge::Bottom, 40};
     layout->addAnchoredWidget(btnA, aA);
 
     QPushButton* btnB = new QPushButton("控件 B (锚定 A 右侧)", window);
     btnB->setFixedSize(150, 40);
     AnchorLayout::Anchors aB;
     aB.left = {btnA, Edge::Right, 10}; // 锚定到 A 的右侧 10px
-    aB.top  = {btnA, Edge::Top, 0};
+    aB.top = {btnA, Edge::Top, 0};
     layout->addAnchoredWidget(btnB, aB);
 
     QLabel* statusLabel = new QLabel("A 可见, B 锚定 A 右侧", window);
@@ -338,7 +342,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck) {
     // 验证初始位置
     EXPECT_EQ(btn1->pos(), QPoint(10, 10));
     EXPECT_EQ(btn2->x(), 130);
-    
+
     int W = window->width();
     int H = window->height();
     EXPECT_EQ(btn3->pos(), QPoint((W - 100) / 2, (H - 100) / 2));
