@@ -71,7 +71,10 @@ owning guides. A Skill description should identify when the Skill applies;
 its entry file should route tasks to the relevant references. Keep detailed
 procedures with their owner rather than repeating them in every entry point.
 Supporting references may link to scripts and assets; the entry file need not
-list every resource directly.
+list every resource directly. Keep descriptive fields proportional to the
+decision. Use fixed counts only when they protect a specific comparison or
+correctness requirement, and keep templates and validators aligned with that
+requirement.
 
 Distinguish application design, focused repairs, and library maintenance.
 State the completion evidence and actual approval boundaries for each. Do not

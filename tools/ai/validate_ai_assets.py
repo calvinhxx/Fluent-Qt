@@ -1078,6 +1078,45 @@ def _validate_design_and_review_tooling(project_root: Path) -> None:
                 + brief_ok.stderr.strip()
             )
 
+        for impressions, anti_goals in (
+            (["calm technical review"], ["Decorative status cards"]),
+            (
+                ["precise", "calm", "readable", "responsive"],
+                ["Decorative status cards", "Unbounded transcript chrome"],
+            ),
+        ):
+            concise_brief = json.loads(json.dumps(brief))
+            concise_brief["art_direction"]["desired_impression"] = impressions
+            concise_brief["art_direction"]["anti_goals"] = anti_goals
+            brief_path.write_text(json.dumps(concise_brief), encoding="utf-8")
+            for tool in (render_design, validate_brief):
+                result = subprocess.run(
+                    [sys.executable, str(tool), str(brief_path)],
+                    check=False, capture_output=True, text=True,
+                )
+                if result.returncode != 0:
+                    raise AssertionError(
+                        "Design tools reject task-sized descriptive lists: "
+                        + result.stderr.strip()
+                    )
+
+        for field, value in (
+            ("desired_impression", []),
+            ("anti_goals", []),
+            ("desired_impression", ["REPLACE"]),
+            ("anti_goals", ["REPLACE"]),
+            ("desired_impression", ["calm", "CALM"]),
+        ):
+            incomplete_brief = json.loads(json.dumps(brief))
+            incomplete_brief["art_direction"][field] = value
+            brief_path.write_text(json.dumps(incomplete_brief), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(validate_brief), str(brief_path)],
+                check=False, capture_output=True, text=True,
+            )
+            if result.returncode == 0 or f"art_direction.{field}" not in result.stderr:
+                raise AssertionError(f"Design validator accepts invalid {field}: {value}")
+
         missing_risk_guard = json.loads(json.dumps(brief))
         missing_risk_guard["concepts"][0]["visual_direction"].pop("risk_guard")
         brief_path.write_text(json.dumps(missing_risk_guard), encoding="utf-8")

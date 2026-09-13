@@ -294,8 +294,6 @@ def _validate_art_direction(
     impressions = _require_string_list(
         direction, "desired_impression", "art_direction", errors
     )
-    if len(impressions) != 3:
-        errors.append("art_direction.desired_impression must contain exactly three words")
     if len({item.casefold() for item in impressions}) != len(impressions):
         errors.append("art_direction.desired_impression values must be distinct")
     for field in (
@@ -306,9 +304,7 @@ def _validate_art_direction(
         "motion_voice",
     ):
         _require_text(direction, field, "art_direction", errors)
-    anti_goals = _require_string_list(direction, "anti_goals", "art_direction", errors)
-    if len(anti_goals) < 3:
-        errors.append("art_direction.anti_goals needs at least three concrete entries")
+    _require_string_list(direction, "anti_goals", "art_direction", errors)
 
     if contract_version >= 4:
         risk = direction.get("aesthetic_risk")

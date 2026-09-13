@@ -38,15 +38,20 @@ name recent generic or repeated patterns that must not recur.
 
 Record one `art_direction` object in the design brief:
 
-- exactly three desired-impression words;
+- concise, distinct desired impressions grounded in the product;
 - a domain-specific visual world, expressed as a short scene or relationship
   rather than a style label such as “modern” or “premium”;
 - one signature element recognizable without the logo or accent color;
 - typography, palette, and motion voices;
 - one `aesthetic_risk` with evidence, a quiet zone, usability guard, and
   fallback;
-- at least three concrete anti-goals;
+- concrete visual patterns this product should avoid;
 - one representative-content fixture shared by all concepts.
+
+`desired_impression` and `anti_goals` are non-empty lists of concrete text.
+Their length follows the design decision; add entries only when they express
+another useful constraint. The three comparable concepts remain required for
+full-profile human selection.
 
 The visual world should make tradeoffs. “Precise, calm, and capable; like a
 live technical notebook whose active run leaves a clear trace” is actionable.

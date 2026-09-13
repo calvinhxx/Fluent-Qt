@@ -147,9 +147,7 @@ def build_brief(
         },
         "art_direction": {
             "desired_impression": [
-                "REPLACE with a precise impression word",
-                "REPLACE with a second impression word",
-                "REPLACE with a third impression word",
+                "REPLACE with a product-specific impression; add distinct entries as needed",
             ],
             "visual_world": "REPLACE with a domain-specific visual world, not a UI style label",
             "signature_element": "REPLACE with the element recognizable without logo or accent",
@@ -164,9 +162,7 @@ def build_brief(
                 "fallback": "REPLACE with the safe alternative if evidence rejects the risk",
             },
             "anti_goals": [
-                "REPLACE with a generic visual pattern this product must avoid",
-                "REPLACE with a second concrete anti-goal",
-                "REPLACE with a third concrete anti-goal",
+                "REPLACE with a visual pattern this product must avoid; add entries as needed",
             ],
             "content_fixture": {
                 "id": "REPLACE-content-fixture-id",
