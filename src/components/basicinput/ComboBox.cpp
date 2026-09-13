@@ -19,6 +19,7 @@
 #include <QtMath>
 #include "compatibility/QtCompat.h"
 #include "compatibility/TextPaintCompat.h"
+#include "compatibility/private/ComboBoxCompat_p.h"
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -307,15 +308,7 @@ void ComboBox::ComboBoxPopup::commitIndex(const QModelIndex& index)
     emit comboBox->activated(row);
     if (!comboBox)
         return;
-    emit comboBox->textActivated(text);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0) && QT_DEPRECATED_SINCE(5, 15)
-    if (!comboBox)
-        return;
-    QT_WARNING_PUSH
-    QT_WARNING_DISABLE_DEPRECATED
-    emit comboBox->activated(text);
-    QT_WARNING_POP
-#endif
+    fluent::compatibility::emitComboBoxTextActivated(comboBox.data(), text);
 }
 
 void ComboBox::ComboBoxPopup::refreshFont()

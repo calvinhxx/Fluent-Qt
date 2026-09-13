@@ -10,6 +10,7 @@
 #include <QPointer>
 #include <QPolygonF>
 #include <QTimer>
+#include <QtMath>
 #include <algorithm>
 #include <array>
 #include <cmath>
