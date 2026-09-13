@@ -1,5 +1,6 @@
 #include <FluentQt/WebAssembly.h>
 
+#include <QAccessible>
 #include <QApplication>
 #include <QEvent>
 #include <QPointer>
@@ -45,6 +46,36 @@ QRect constrainedGeometry(const QRect& requested, const QWidget* desktop)
     return QRect(QPoint(x, y), size);
 }
 
+void configureAccessibleProxyPresentation()
+{
+    // Qt 6.9.3 may create accessibility proxies on focus/name events before
+    // ObjectShow supplies their geometry. Its negative-z a11y layer is visible
+    // through our transparent desktop canvas, exposing native HTML form chrome.
+    // Keep proxy semantics, geometry and events intact; only Qt paints the UI.
+    // Exclude the screen-reader enable button, and never target the independent
+    // document-body input used by Qt's keyboard/IME context.
+    // zh_CN: Qt 6.9.3 的焦点/名称事件可能先于 ObjectShow 创建无几何的语义代理。
+    // 负 z 层仍会透过透明桌面画布，露出原生 HTML 表单；这里只关闭代理绘制，
+    // 保留语义、几何和事件，并排除读屏启用按钮及独立的键盘/IME 输入节点。
+    EM_ASM({
+        const containers = Module['qtContainerElements'];
+        if (!Array.isArray(containers))
+            return;
+        for (const container of containers) {
+            if (!container)
+                continue;
+            const shadow = container.querySelector('#qt-shadow-container') ?.shadowRoot;
+            if (!shadow || shadow.getElementById('fluentqt-accessible-proxy-presentation'))
+                continue;
+            const style = container.ownerDocument.createElement('style');
+            style.id = 'fluentqt-accessible-proxy-presentation';
+            style.textContent = '.qt-window-a11y-container > [id]:not(' +
+                                '.hidden-visually-read-by-screen-reader) { opacity: 0; }';
+            shadow.appendChild(style);
+        }
+    });
+}
+
 void publishPrimaryWindowGeometry()
 {
     QWidget* window = primaryHostedWindow();
@@ -53,23 +84,32 @@ void publishPrimaryWindowGeometry()
 
     const QRect geometry = window->geometry();
     const bool maximized = geometry == window->parentWidget()->rect();
-    EM_ASM({
-        const root = document.documentElement;
-        root.dataset.fluentQtWindowX = String($0);
-        root.dataset.fluentQtWindowY = String($1);
-        root.dataset.fluentQtWindowWidth = String($2);
-        root.dataset.fluentQtWindowHeight = String($3);
-        root.dataset.fluentQtWindowMaximized = $4 ? 'true' : 'false';
-    }, geometry.x(), geometry.y(), geometry.width(), geometry.height(), maximized);
+    EM_ASM(
+        {
+            const root = document.documentElement;
+            root.dataset.fluentQtWindowX = String($0);
+            root.dataset.fluentQtWindowY = String($1);
+            root.dataset.fluentQtWindowWidth = String($2);
+            root.dataset.fluentQtWindowHeight = String($3);
+            root.dataset.fluentQtWindowMaximized = $4 ? 'true' : 'false';
+        },
+        geometry.x(), geometry.y(), geometry.width(), geometry.height(), maximized);
 }
 
 class BrowserDesktopSurface final : public QWidget {
 public:
     using QWidget::QWidget;
 
-    void hostWindow(QWidget* window,
-                    const QRect& normalGeometry,
-                    WindowPresentation presentation)
+    ~BrowserDesktopSurface() override
+    {
+#if QT_CONFIG(accessibility)
+        // Qt WASM retains a raw root pointer; clear it before the widgets die.
+        // zh_CN: Qt WASM 保存原始根指针，需在控件销毁前清除。
+        QAccessible::setRootObject(nullptr);
+#endif
+    }
+
+    void hostWindow(QWidget* window, const QRect& normalGeometry, WindowPresentation presentation)
     {
         if (!window)
             return;
@@ -78,9 +118,7 @@ public:
         window->installEventFilter(this);
         if (!primaryHostedWindow()) {
             primaryHostedWindow() = window;
-            connect(window, &QObject::destroyed, this, [] {
-                primaryHostedWindow().clear();
-            });
+            connect(window, &QObject::destroyed, this, [] { primaryHostedWindow().clear(); });
         }
 
         // Apply the normal geometry first so Fluent Window can retain a
@@ -133,19 +171,32 @@ protected:
 
 void ensureDesktopSurface()
 {
-    if (desktopSurface() || !qApp)
+    if (!qApp)
+        return;
+
+    // QApplication has now created the Qt screen shadow trees. Scope the
+    // stylesheet to this module's screens and reuse it for later proxy nodes.
+    // zh_CN: QApplication 已创建 Qt screen 的 shadow tree；样式仅作用于当前
+    // 模块的屏幕，后续新增代理节点也复用同一规则。
+    configureAccessibleProxyPresentation();
+    if (desktopSurface())
         return;
 
     auto* surface = new BrowserDesktopSurface();
     surface->setObjectName(QStringLiteral("fluentQtBrowserDesktopSurface"));
-    surface->setWindowFlags(
-        Qt::Window
-        | Qt::FramelessWindowHint);
+    surface->setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
     surface->setAttribute(Qt::WA_TranslucentBackground);
     surface->setAutoFillBackground(false);
     desktopSurface() = surface;
-    QObject::connect(qApp, &QCoreApplication::aboutToQuit,
-                     surface, &QObject::deleteLater);
+#if QT_CONFIG(accessibility)
+    // Browser launchers return to JavaScript instead of entering QApplication::exec(),
+    // which normally registers the accessible root. This single desktop owns
+    // every hosted window, so enabling a screen reader can traverse their tree.
+    // zh_CN: 浏览器启动器直接返回 JavaScript，不进入通常负责注册无障碍根的
+    // QApplication::exec()。单一桌面拥有所有承载窗口，读屏启用后可遍历完整树。
+    QAccessible::setRootObject(surface);
+#endif
+    QObject::connect(qApp, &QCoreApplication::aboutToQuit, surface, &QObject::deleteLater);
     // Qt WASM assigns a browser-sized canvas to every top-level QWidget. Own
     // exactly one such surface and host Fluent application windows inside it;
     // this preserves real widget move/resize geometry without a fake HTML
@@ -190,9 +241,7 @@ void configureRuntime()
     compatibility::detail::setRuntimePlatformCapabilities(capabilities);
 }
 
-void showWindow(QWidget* window,
-                const QRect& normalGeometry,
-                WindowPresentation presentation)
+void showWindow(QWidget* window, const QRect& normalGeometry, WindowPresentation presentation)
 {
     if (!window)
         return;
@@ -216,8 +265,8 @@ void showWindow(QWidget* window,
     QTimer::singleShot(100, window, [guard, surfaceGuard, normalGeometry, presentation]() {
         if (guard && surfaceGuard) {
             const QRect geometry = presentation == WindowPresentation::Maximized
-                ? surfaceGuard->rect()
-                : constrainedGeometry(normalGeometry, surfaceGuard);
+                                       ? surfaceGuard->rect()
+                                       : constrainedGeometry(normalGeometry, surfaceGuard);
             guard->setGeometry(geometry);
             guard->raise();
             publishPrimaryWindowGeometry();

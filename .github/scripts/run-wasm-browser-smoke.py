@@ -79,6 +79,201 @@ def require_files(root: Path) -> None:
         raise RuntimeError("Missing WebAssembly artifact(s): " + ", ".join(missing))
 
 
+def run_screen_reader_proxy_contract(page: object, app_name: str) -> None:
+    """Activate Qt accessibility without hiding its semantics or its canvas."""
+    container = page.locator(
+        "#qt-shadow-container .qt-window-a11y-container"
+    ).first
+    container.wait_for(state="attached", timeout=10_000)
+    activation = container.locator(
+        ":scope > button.hidden-visually-read-by-screen-reader"
+    )
+    if activation.count() != 1:
+        raise RuntimeError(f"{app_name} is missing Qt's screen-reader activation button")
+
+    read_state = """container => {
+        const suppressed = element => {
+            for (let current = element; current;
+                 current = current.parentElement || current.getRootNode().host) {
+                const style = getComputedStyle(current);
+                if (style.display === 'none' || style.visibility === 'hidden'
+                    || style.visibility === 'collapse' || current.inert
+                    || current.hasAttribute('inert')
+                    || current.getAttribute('aria-hidden') === 'true')
+                    return true;
+            }
+            return false;
+        };
+        const inspect = element => ({
+            opacity: Number(getComputedStyle(element).opacity),
+            suppressed: suppressed(element)
+        });
+        const activation = container.querySelector(
+            ':scope > button.hidden-visually-read-by-screen-reader'
+        );
+        const canvas = container.parentElement.querySelector('canvas.qt-window-canvas');
+        const canvasStyle = canvas && getComputedStyle(canvas);
+        return {
+            container: inspect(container),
+            activation: activation && inspect(activation),
+            canvas: canvasStyle && {
+                opacity: Number(canvasStyle.opacity),
+                painted: canvasStyle.display !== 'none'
+                    && canvasStyle.visibility === 'visible'
+            },
+            proxies: Array.from(container.querySelectorAll(
+                ':scope > [id]:not(.hidden-visually-read-by-screen-reader)'
+            ), element => ({
+                id: element.id,
+                ...inspect(element),
+                semantic: Boolean(element.getAttribute('role')
+                    || element.getAttribute('aria-label')
+                    || element.getAttribute('aria-labelledby')
+                    || element.textContent.trim()
+                    || /^(BUTTON|INPUT|TEXTAREA|SELECT)$/.test(element.tagName))
+            }))
+        };
+    }"""
+    before = container.evaluate(read_state)
+    button = before["activation"]
+    button_snapshot = activation.aria_snapshot().lower()
+    if (
+        button is None
+        or button["opacity"] != 1
+        or button["suppressed"]
+        or "button" not in button_snapshot
+        or "enable screen reader" not in button_snapshot
+    ):
+        raise RuntimeError(f"{app_name} screen-reader activation was hidden: {before}")
+
+    # Focus and physical Enter exercise Qt's actual activation listener. Do not
+    # alter proxy attributes/styles or the independent body-level IME input.
+    activation.focus()
+    if not activation.evaluate(
+        "button => button.getRootNode().activeElement === button"
+    ):
+        raise RuntimeError(f"{app_name} screen-reader activation did not receive focus")
+    page.keyboard.press("Enter")
+    activation.wait_for(state="detached", timeout=10_000)
+    # The runtime must register the existing widget root: activation alone
+    # should populate it, without relying on later focus/name-change events.
+    page.wait_for_function(
+        """({container, count}) => container.querySelectorAll(
+            ':scope > [id]:not(.hidden-visually-read-by-screen-reader)'
+        ).length > count""",
+        arg={"container": container.element_handle(), "count": len(before["proxies"])},
+        timeout=10_000,
+    )
+    after = container.evaluate(read_state)
+    proxies = after["proxies"]
+    if len(proxies) <= len(before["proxies"]):
+        raise RuntimeError(f"{app_name} activation did not create accessibility proxies")
+    if any(proxy["opacity"] != 0 for proxy in proxies):
+        raise RuntimeError(f"{app_name} accessibility proxies can paint over Qt: {after}")
+    if (
+        after["container"]["opacity"] != 1
+        or after["container"]["suppressed"]
+        or after["canvas"] is None
+        or after["canvas"]["opacity"] != 1
+        or not after["canvas"]["painted"]
+    ):
+        raise RuntimeError(f"{app_name} proxy styling also hid the Qt surface: {after}")
+    # Individual Qt controls may legitimately be hidden. Reject blanket hiding
+    # and require a nonempty scoped accessibility snapshot, not perfect Qt roles.
+    if not any(proxy["semantic"] and not proxy["suppressed"] for proxy in proxies):
+        raise RuntimeError(f"{app_name} accessibility proxies lost their semantics: {after}")
+    if not container.aria_snapshot().strip():
+        raise RuntimeError(f"{app_name} accessibility snapshot is empty after activation")
+    print(f"{app_name} screen-reader proxy contract passed: proxies={len(proxies)}")
+
+
+def run_source_selection_clipboard_contract(page: object, base_url: str) -> None:
+    """Copy two real canvas selections after priming Qt with the whole source."""
+    expected_lines = (
+        'auto* standard = new Button("Standard", this);',
+        "standard->setFluentStyle(Button::Standard);",
+    )
+    full_source = "\n".join((*expected_lines, "",
+        'auto* accent = new Button("Accent", this);',
+        "accent->setFluentStyle(Button::Accent);", "",
+        'auto* subtle = new Button("Subtle", this);',
+        "subtle->setFluentStyle(Button::Subtle);",
+    ))
+    previous_viewport = page.viewport_size
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=base_url)
+
+    def click_canvas_rect(rect: dict) -> None:
+        page.mouse.click(rect["x"] + rect["width"] / 2, rect["y"] + rect["height"] / 2)
+
+    def expect_clipboard(expected: str, label: str) -> None:
+        deadline = time.monotonic() + 5
+        actual = ""
+        while time.monotonic() < deadline:
+            # Read Chromium's platform clipboard, never Qt's cached QClipboard.
+            actual = page.evaluate("navigator.clipboard.readText()").replace("\r\n", "\n")
+            if actual == expected:
+                return
+            page.wait_for_timeout(25)
+        raise RuntimeError(f"Gallery {label} clipboard mismatch: {actual!r}; expected {expected!r}")
+
+    try:
+        # Keep both short source lines onscreen without depending on scrollbars.
+        page.set_viewport_size({"width": 1280, "height": 1200})
+        source_url = f"{base_url}/app/index.html?route=button"
+        page.goto(source_url, wait_until="domcontentloaded")
+        page.wait_for_function("document.documentElement.dataset.fluentQtLoaded === 'true'")
+        run_screen_reader_proxy_contract(page, "Gallery source coordinate discovery")
+        proxies = page.locator("#qt-shadow-container .qt-window-a11y-container").first
+        page.wait_for_function(
+            """e => !e.querySelector(
+                '[id$=".gallerySplashScreen"]:not([aria-hidden="true"])')""",
+            arg=proxies.element_handle(), timeout=10_000,
+        )
+        header = page.get_by_role("button", name="Source code", exact=True).first.bounding_box()
+        if header is None:
+            raise RuntimeError("Gallery source header has no canvas geometry")
+        page.bring_to_front()
+        click_canvas_rect(header)
+        source = proxies.locator('textarea[id$=".galleryCodeBlockText"]').first
+        page.wait_for_function("e => e.value.startsWith('auto* standard =')",
+                               arg=source.element_handle(), timeout=5_000)
+        code_rect = source.bounding_box()
+        copy_rect = proxies.locator('[id$=".galleryCodeBlockCopyButton"]').first.bounding_box()
+        if code_rect is None or copy_rect is None:
+            raise RuntimeError("Gallery source/copy button has no canvas geometry")
+
+        # Reload the ordinary runtime: accessibility was only a read-only geometry
+        # source. No proxy focus/click, Qt calls, or DOM mutations drive this case.
+        page.goto(source_url, wait_until="domcontentloaded")
+        page.wait_for_function("document.documentElement.dataset.fluentQtLoaded === 'true'")
+        page.bring_to_front()
+        # Without screen-reader proxies the QWidget transitions have no DOM idle
+        # signal. Allow the 1400 ms branded hold + 700 ms exit, then the expander.
+        page.wait_for_timeout(2500)
+        click_canvas_rect(header)
+        page.wait_for_timeout(500)
+        if proxies.locator(":scope > [id]").count() != 0:
+            raise RuntimeError("Gallery clipboard input case unexpectedly enabled accessibility")
+        page.evaluate("navigator.clipboard.writeText('fluentqt-source-copy-sentinel')")
+        click_canvas_rect(copy_rect)
+        expect_clipboard(full_source, "whole-source button")
+        # These positions lie inside the first two short, unwrapped lines. The
+        # exact source assertions also reject synthetic U+200B wrapping markers.
+        for offset, expected in zip((9, 31), expected_lines):
+            y = code_rect["y"] + offset
+            page.mouse.move(code_rect["x"] + 1, y)
+            page.mouse.down()
+            page.mouse.move(code_rect["x"] + code_rect["width"] - 2, y, steps=15)
+            page.mouse.up()
+            page.keyboard.press("Control+c")
+            expect_clipboard(expected, "selected source line")
+        print("Gallery source clipboard contract passed: whole source, then two exact lines; "
+              "raw Chromium keyboard, screen reader disabled")
+    finally:
+        if previous_viewport is not None:
+            page.set_viewport_size(previous_viewport)
+
+
 def run_embedded_theme_contract(browser: object, base_url: str) -> None:
     page = browser.new_page(viewport={"width": 1280, "height": 800})
     try:
@@ -538,6 +733,10 @@ def run_smoke(
                     f"{gallery_state}"
                 )
 
+            if mode == "full":
+                run_screen_reader_proxy_contract(page, "Gallery")
+                run_source_selection_clipboard_contract(page, base_url)
+
             licenses = page.goto(
                 f"{base_url}/app/licenses.html", wait_until="domcontentloaded"
             )
@@ -609,6 +808,9 @@ def run_smoke(
                     "Minimal UILib app is not a visible windowed consumer: "
                     f"{hello_state}"
                 )
+
+            if mode == "full":
+                run_screen_reader_proxy_contract(page, "Hello World")
 
             if page_errors:
                 raise RuntimeError("Browser page error(s): " + " | ".join(page_errors))

@@ -1928,7 +1928,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 for width in (880, 400):
                     card.resize(width, 650)
                     card.show()
-                    QTest.qWait(30)
+                    _qwait(30)
                     preview = result.widget
                     self.assertEqual(
                         preview.width(), preview.parentWidget().width() - 40
@@ -1943,11 +1943,16 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     self.assertFalse(backdrop.isAnimationEnabled())
                     self.assertEqual(pause.text(), "Resume motion")
                     self.assertEqual(backdrop.effect(), fluentqt.ParticleBackdrop.Effect.Starfield)
-                    for index, preset in enumerate(fluentqt.ParticleBackdrop.Effect):
+                    presets = (
+                        ("FlowingRibbons", fluentqt.ParticleBackdrop.Effect.FlowingRibbons),
+                        ("FloatingDots", fluentqt.ParticleBackdrop.Effect.FloatingDots),
+                        ("Starfield", fluentqt.ParticleBackdrop.Effect.Starfield),
+                    )
+                    for index, (identifier, preset) in enumerate(presets):
                         effect.setCurrentIndex(index)
                         self.assertEqual(backdrop.effect(), preset)
                         self.assertFalse(backdrop.isAnimationEnabled())
-                        self.assertIn(preset.name, sample.cpp_snippet)
+                        self.assertIn(identifier, sample.cpp_snippet)
                     speed.setValue(150)
                     self.assertEqual(backdrop.speed(), 1.5)
                     QTest.mouseClick(pause, Qt.LeftButton)
@@ -3491,8 +3496,60 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.deleteLater()
             QApplication.processEvents()
 
+    def test_home_particle_effect_settings_normalize_legacy_enum_names(self):
+        self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())
+        self.addCleanup(fluentqt.set_theme, fluentqt.current_theme())
+        identifiers = ("FlowingRibbons", "FloatingDots", "Starfield")
+        cases = tuple(
+            (value, identifier)
+            for identifier in identifiers
+            for value in (
+                identifier,
+                identifier.encode("ascii"),
+                repr(identifier.encode("ascii")),
+                f'b"{identifier}"',
+            )
+        ) + (("retired-effect", ""), (b"\xff", ""), ("", ""))
+        with TemporaryDirectory() as temporary_dir:
+            path = Path(temporary_dir) / "config.ini"
+            with (
+                patch.object(
+                    gallery_settings_module, "persistence_available", return_value=True
+                ),
+                patch.object(gallery_settings_module, "config_file_path", return_value=path),
+            ):
+                persisted = QSettings(str(path), QSettings.IniFormat)
+                key = "home/lastParticleEffect"
+                for saved, expected in cases:
+                    with self.subTest(saved=saved):
+                        persisted.setValue(key, saved)
+                        persisted.sync()
+                        settings = gallery_settings_module.GallerySettings()
+                        try:
+                            self.assertEqual(settings.last_home_particle_effect, expected)
+                            persisted.sync()
+                            if expected:
+                                self.assertIsInstance(persisted.value(key), str)
+                                self.assertEqual(persisted.value(key), expected)
+                            # Also normalize direct writes of old enum names.
+                            settings.set_last_home_particle_effect("FlowingRibbons")
+                            settings.set_last_home_particle_effect("FloatingDots")
+                            settings.set_last_home_particle_effect(saved)
+                            self.assertEqual(settings.last_home_particle_effect, expected)
+                            persisted.sync()
+                            self.assertIsInstance(persisted.value(key), str)
+                            self.assertEqual(persisted.value(key), expected)
+                        finally:
+                            settings._system_theme_poll.stop()
+                            settings.deleteLater()
+                            QApplication.processEvents()
+        for invalid in (None, 42, "ParticleBackdrop.Effect.FlowingRibbons"):
+            with self.subTest(invalid=invalid):
+                self.assertEqual(gallery_settings_module._home_particle_effect_id(invalid), "")
+
     def test_home_particle_effect_does_not_repeat_across_launches(self):
         probe = r'''
+import json
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -3504,55 +3561,84 @@ QStandardPaths.setTestModeEnabled(True)
 app = QApplication([])
 fluentqt.initialize_resources()
 import fluentqt_gallery.settings as settings_module
-from fluentqt_gallery.visual import GalleryHomeHero
+import fluentqt_gallery.visual as visual_module
+identifiers = ("FlowingRibbons", "FloatingDots", "Starfield")
 with (
     patch.object(settings_module, "persistence_available", return_value=True),
     patch.object(settings_module, "config_file_path", return_value=Path(sys.argv[1])),
+    patch.object(visual_module, "QRandomGenerator") as random,
 ):
-    first = GalleryHomeHero()
-    second = GalleryHomeHero()
+    random.global_.return_value.bounded.return_value = 0
     settings = settings_module.gallery_settings()
+    previous = settings.last_home_particle_effect
+    first = visual_module.GalleryHomeHero()
+    second = visual_module.GalleryHomeHero()
     enabled = settings.home_particles_enabled
     assert first._particles.effect() == second._particles.effect()
     assert first._particles.isAnimationEnabled() == enabled
     assert first._particles.isHidden() != enabled
-    chosen = first._particles.effect().name if enabled else settings.last_home_particle_effect
+    chosen = settings.last_home_particle_effect
     if enabled:
+        candidates = tuple(name for name in identifiers if name != previous)
+        assert chosen == candidates[0]
+        assert first._particles.effect() == getattr(fluentqt.ParticleBackdrop.Effect, chosen)
+        random.global_.return_value.bounded.assert_called_once_with(len(candidates))
         settings.set_home_particles_enabled(False)
         assert first._particles.isHidden() and second._particles.isHidden()
         assert not settings_module._config_settings().value("home/particlesEnabled", True, type=bool)
         settings.set_home_particles_enabled(True)
-        assert first._particles.effect().name == chosen
-    print(chosen)
+        assert first._particles.effect() == getattr(fluentqt.ParticleBackdrop.Effect, chosen)
+        assert settings.last_home_particle_effect == chosen
+        random.global_.return_value.bounded.assert_called_once()
+    else:
+        assert chosen == previous
+        random.global_.assert_not_called()
+    print(json.dumps({"previous": previous, "chosen": chosen}))
 '''
         effects = ("FlowingRibbons", "FloatingDots", "Starfield")
+        launches = (
+            ("fresh", "", "", True),
+            *((name, name, name, True) for name in effects),
+            *(("bytes-" + name, name.encode("ascii"), name, True) for name in effects),
+            *(("repr-" + name, repr(name.encode("ascii")), name, True) for name in effects),
+            ("double-quoted-bytes", 'b"FlowingRibbons"', "FlowingRibbons", True),
+            ("unknown", "retired-effect", "", True),
+            ("saved-by-previous-process", None, None, True),
+            ("disabled-legacy-bytes", b"Starfield", "Starfield", False),
+            ("re-enabled-next-process", None, None, True),
+        )
         with TemporaryDirectory() as temporary_dir:
             path = Path(temporary_dir) / "config.ini"
             persisted = QSettings(str(path), QSettings.IniFormat)
             key = "home/lastParticleEffect"
-            for launch in range(8):
+            previous_chosen = ""
+            for launch, saved, previous, enabled in launches:
                 with self.subTest(launch=launch):
-                    if 1 <= launch <= 3:
-                        persisted.setValue(key, effects[launch - 1])
-                    elif launch == 4:
-                        persisted.setValue(key, "retired-effect")
-                    if launch > 0:
-                        persisted.setValue("home/particlesEnabled", launch != 6)
+                    if saved is not None:
+                        persisted.setValue(key, saved)
+                    else:
+                        previous = previous_chosen
+                    persisted.setValue("home/particlesEnabled", enabled)
                     persisted.sync()
-                    previous = persisted.value(key, "")
                     result = subprocess.run(
                         [sys.executable, "-c", probe, str(path)],
                         capture_output=True, text=True, timeout=30,
                     )
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                    chosen = result.stdout.strip().splitlines()[-1]
+                    report = json.loads(result.stdout.strip().splitlines()[-1])
+                    self.assertEqual(report["previous"], previous)
+                    chosen = report["chosen"]
                     self.assertIn(chosen, effects)
-                    if launch == 6:
-                        self.assertEqual(chosen, previous)
-                    else:
+                    if enabled:
+                        expected = next(name for name in effects if name != previous)
+                        self.assertEqual(chosen, expected)
                         self.assertNotEqual(chosen, previous)
+                    else:
+                        self.assertEqual(chosen, previous)
                     persisted.sync()
+                    self.assertIsInstance(persisted.value(key), str)
                     self.assertEqual(persisted.value(key), chosen)
+                    previous_chosen = chosen
 
     def test_opt_in_startup_splash_matches_native_chrome_handoff(self):
         self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())

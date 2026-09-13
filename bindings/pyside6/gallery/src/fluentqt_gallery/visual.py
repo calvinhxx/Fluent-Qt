@@ -75,7 +75,7 @@ from PySide6.QtWidgets import (
 )
 
 from .motion import start_finite_transition
-from .settings import gallery_settings
+from .settings import HOME_PARTICLE_EFFECT_IDS, gallery_settings
 
 
 @dataclass(frozen=True)
@@ -1272,17 +1272,14 @@ class GalleryHeroLinkCard(QWidget):
 def _home_particle_effect() -> fluentqt.ParticleBackdrop.Effect:
     """Choose once per launch, excluding the previous launch's saved effect."""
     settings = gallery_settings()
-    effects = (
-        fluentqt.ParticleBackdrop.Effect.FlowingRibbons,
-        fluentqt.ParticleBackdrop.Effect.FloatingDots,
-        fluentqt.ParticleBackdrop.Effect.Starfield,
-    )
     candidates = tuple(
-        effect for effect in effects if effect.name != settings.last_home_particle_effect
+        identifier
+        for identifier in HOME_PARTICLE_EFFECT_IDS
+        if identifier != settings.last_home_particle_effect
     )
     chosen = candidates[QRandomGenerator.global_().bounded(len(candidates))]
-    settings.set_last_home_particle_effect(chosen.name)
-    return chosen
+    settings.set_last_home_particle_effect(chosen)
+    return getattr(fluentqt.ParticleBackdrop.Effect, chosen)
 
 
 class GalleryHomeHero(QWidget):

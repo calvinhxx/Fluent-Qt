@@ -52,6 +52,23 @@ _ACCENT_KEY = "appearance/accent/fluent"
 _LEGACY_ACCENT_KEY = "settings/accent/0"
 _LAST_HOME_PARTICLE_EFFECT_KEY = "home/lastParticleEffect"
 _HOME_PARTICLES_ENABLED_KEY = "home/particlesEnabled"
+# Stable on-disk identifiers, independent of Shiboken's enum representation.
+HOME_PARTICLE_EFFECT_IDS = ("FlowingRibbons", "FloatingDots", "Starfield")
+
+
+def _home_particle_effect_id(value: object) -> str:
+    """Accept names saved by both the old bytes enums and newer Python enums."""
+    if isinstance(value, bytes):
+        try:
+            value = value.decode("ascii")
+        except UnicodeDecodeError:
+            return ""
+    if not isinstance(value, str):
+        return ""
+    for identifier in HOME_PARTICLE_EFFECT_IDS:
+        if value in (identifier, f"b'{identifier}'", f'b"{identifier}"'):
+            return identifier
+    return ""
 
 
 def persistence_available() -> bool:
@@ -207,9 +224,16 @@ class GallerySettings(QObject):
         self.intro_completed = bool(
             settings.value("intro/completed", False, type=bool)
         )
-        self.last_home_particle_effect = str(
-            settings.value(_LAST_HOME_PARTICLE_EFFECT_KEY, "") or ""
-        )
+        saved_effect = settings.value(_LAST_HOME_PARTICLE_EFFECT_KEY, "")
+        self.last_home_particle_effect = _home_particle_effect_id(saved_effect)
+        if (
+            self.last_home_particle_effect
+            and saved_effect != self.last_home_particle_effect
+        ):
+            settings.setValue(
+                _LAST_HOME_PARTICLE_EFFECT_KEY, self.last_home_particle_effect
+            )
+            settings.sync()
         self.home_particles_enabled = bool(
             settings.value(_HOME_PARTICLES_ENABLED_KEY, True, type=bool)
         )
@@ -345,7 +369,8 @@ class GallerySettings(QObject):
             settings.sync()
         self.homeParticlesEnabledChanged.emit(enabled)
 
-    def set_last_home_particle_effect(self, effect: str) -> None:
+    def set_last_home_particle_effect(self, effect: str | bytes) -> None:
+        effect = _home_particle_effect_id(effect)
         if self.last_home_particle_effect == effect:
             return
         self.last_home_particle_effect = effect

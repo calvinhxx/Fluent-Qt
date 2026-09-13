@@ -2,10 +2,12 @@
 #include <QApplication>
 #include <QContextMenuEvent>
 #include <QFontMetrics>
+#include <QItemSelectionModel>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPersistentModelIndex>
 #include <QPropertyAnimation>
 #include <QProxyStyle>
 #include <QResizeEvent>
@@ -80,6 +82,7 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    void commitIndex(const QModelIndex& index);
     void updateLayout();
     ComboBox* m_comboBox;
     fluent::collections::ListView* m_listView;
@@ -219,10 +222,7 @@ ComboBox::ComboBoxPopup::ComboBoxPopup(ComboBox* comboBox) : Flyout(comboBox), m
     m_listView->setMouseTracking(true);
     m_listView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    connect(m_listView, &fluent::collections::ListView::itemClicked, this, [this](int index) {
-        m_comboBox->setCurrentIndex(index);
-        m_comboBox->hidePopup();
-    });
+    connect(m_listView, &QAbstractItemView::clicked, this, &ComboBoxPopup::commitIndex);
 
     connect(this, &ComboBoxPopup::closed, this, [this]() {
         if (m_comboBox)
@@ -234,14 +234,16 @@ ComboBox::ComboBoxPopup::ComboBoxPopup(ComboBox* comboBox) : Flyout(comboBox), m
 
 void ComboBox::ComboBoxPopup::showForComboBox()
 {
+    QPointer<ComboBoxPopup> guard(this);
     m_listView->setModel(m_comboBox->model());
     m_listView->setRootIndex(m_comboBox->rootModelIndex());
     m_listView->setModelColumn(m_comboBox->modelColumn());
     m_listView->setFont(m_comboBox->font());
 
-    if (m_comboBox->currentIndex() >= 0) {
-        m_listView->setSelectedIndex(m_comboBox->currentIndex());
-    }
+    const QModelIndex current = m_comboBox->model()->index(
+        m_comboBox->currentIndex(), m_comboBox->modelColumn(), m_comboBox->rootModelIndex());
+    m_listView->selectionModel()->setCurrentIndex(current, QItemSelectionModel::ClearAndSelect |
+                                                               QItemSelectionModel::Rows);
 
     updateLayout();
     if (isOpen() || isVisible()) {
@@ -250,13 +252,70 @@ void ComboBox::ComboBoxPopup::showForComboBox()
     } else {
         showAt(m_comboBox);
     }
+    if (!guard || !isOpen())
+        return;
+
+    // The Flyout initially focuses its surface. Keyboard navigation belongs to
+    // the list, while its pending item stays separate from the committed value.
+    // zh_CN: Flyout 先聚焦弹层；随后把焦点交给列表，待选项与已提交值保持分离。
+    m_listView->setFocus(Qt::PopupFocusReason);
+    if (!guard)
+        return;
 
     if (m_comboBox->currentIndex() >= 0) {
         m_listView->scrollTo(m_listView->model()->index(m_comboBox->currentIndex(),
                                                         m_comboBox->modelColumn(),
                                                         m_comboBox->rootModelIndex()),
                              QAbstractItemView::PositionAtCenter);
+    } else {
+        // Focus entry must not revive a previously selected row for a placeholder.
+        // zh_CN: 占位状态取得焦点时，不得恢复上一次弹层遗留的选中行。
+        m_listView->selectionModel()->clear();
     }
+}
+
+void ComboBox::ComboBoxPopup::commitIndex(const QModelIndex& index)
+{
+    if (!isOpen() || !m_comboBox || !m_comboBox->m_popupVisible || !m_comboBox->isEnabled() ||
+        !index.isValid() || index.model() != m_comboBox->model() ||
+        index.parent() != m_comboBox->rootModelIndex() ||
+        index.column() != m_comboBox->modelColumn() || !index.flags().testFlag(Qt::ItemIsEnabled) ||
+        !index.flags().testFlag(Qt::ItemIsSelectable)) {
+        return;
+    }
+
+    QPointer<ComboBox> comboBox(m_comboBox);
+    const QPersistentModelIndex selected(index);
+    // hidePopup clears the owner's visible flag before Flyout emits closing,
+    // when isOpen() is still true. The entry guard rejects reentrant commits.
+    // zh_CN: hidePopup 先清除所属控件的展开标记，再由 Flyout 发出 closing；
+    // 此时 isOpen() 仍为 true，入口检查可阻止重入提交。
+    comboBox->hidePopup();
+    if (!comboBox || !comboBox->isEnabled() || !selected.isValid() ||
+        selected.model() != comboBox->model() || selected.parent() != comboBox->rootModelIndex() ||
+        selected.column() != comboBox->modelColumn() ||
+        !selected.flags().testFlag(Qt::ItemIsEnabled) ||
+        !selected.flags().testFlag(Qt::ItemIsSelectable)) {
+        return;
+    }
+
+    const int row = selected.row();
+    const QString text = comboBox->itemText(row);
+    comboBox->setCurrentIndex(row);
+    if (!comboBox)
+        return;
+    emit comboBox->activated(row);
+    if (!comboBox)
+        return;
+    emit comboBox->textActivated(text);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0) && QT_DEPRECATED_SINCE(5, 15)
+    if (!comboBox)
+        return;
+    QT_WARNING_PUSH
+    QT_WARNING_DISABLE_DEPRECATED
+    emit comboBox->activated(text);
+    QT_WARNING_POP
+#endif
 }
 
 void ComboBox::ComboBoxPopup::refreshFont()
@@ -389,6 +448,14 @@ QPoint ComboBox::ComboBoxPopup::computePosition() const
 
 bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event)
 {
+    if (watched == m_listView && event->type() == QEvent::KeyPress && isOpen()) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
+            keyEvent->accept();
+            commitIndex(m_listView->currentIndex());
+            return true;
+        }
+    }
     // ListView is independently registered for theme updates. Keep the owner's
     // effective font regardless of the theme broadcast order.
     // zh_CN: ListView 独立接收主题更新；无论广播顺序如何都保持所属 ComboBox 的字体。
@@ -729,15 +796,17 @@ void ComboBox::resizeEvent(QResizeEvent* event)
 
 void ComboBox::showPopup()
 {
-    if (m_popupVisible && m_popup)
+    if (!isEnabled() || count() == 0 || (m_popupVisible && m_popup))
         return;
     m_popupVisible = true;
 
     if (!m_popup)
         m_popup = new ComboBoxPopup(this);
 
+    QPointer<ComboBox> guard(this);
     m_popup->showForComboBox();
-    update();
+    if (guard)
+        update();
 }
 
 void ComboBox::hidePopup()
@@ -747,8 +816,11 @@ void ComboBox::hidePopup()
     m_popupVisible = false;
     m_pressed = false;
 
+    QPointer<ComboBox> guard(this);
     if (m_popup)
         m_popup->close();
+    if (!guard)
+        return;
 
     update();
     QComboBox::hidePopup();

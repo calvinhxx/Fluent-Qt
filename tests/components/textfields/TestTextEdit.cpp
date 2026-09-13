@@ -306,6 +306,13 @@ TEST_F(TextEditTest, Contract_MaxLineViewportDoesNotRevealPartialOverflowLine)
     window->show();
     QApplication::processEvents();
 
+    // Initial height settlement must not retain the temporary scroll needed
+    // when a fallback-font caret was taller than the empty editor viewport.
+    EXPECT_EQ(inner->verticalScrollBar()->value(), inner->verticalScrollBar()->minimum());
+    const QRect firstCaret = inner->cursorRect(QTextCursor(inner->document()->begin()));
+    EXPECT_GE(firstCaret.top(), 0);
+    EXPECT_LT(firstCaret.bottom(), inner->viewport()->height());
+
     QTextBlock sixthBlock = inner->document()->begin();
     for (int index = 0; index < 5; ++index)
         sixthBlock = sixthBlock.next();
@@ -419,6 +426,67 @@ TEST_F(TextEditTest, Contract_MaxLineViewportDoesNotRevealPartialOverflowLine)
     expectWholeTail("Light tail", lightSecondAtTail, lightSeventhAtTail);
     expectWholeTail("Dark tail", darkSecondAtTail, darkSeventhAtTail);
     expectWholeTail("returned Light tail", returnedLightSecondAtTail, returnedLightSeventhAtTail);
+}
+
+TEST_F(TextEditTest, Contract_HeightGrowthRestoresOversizedCaretVisibility)
+{
+    auto* edit = new TextEdit(window);
+    edit->setMaxVisibleLines(2);
+    edit->setPlainText(QStringLiteral("Alpha\nBeta\nGamma\nDelta\nEpsilon\nZeta"));
+    edit->setGeometry(0, 0, 475, edit->height());
+    window->show();
+    QApplication::processEvents();
+
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+    const int caretHeight = inner->cursorRect().height();
+    ASSERT_GT(caretHeight, 1);
+    const int viewportInsets = edit->height() - inner->viewport()->height();
+    // Reproduce the undersized intermediate viewport independently of the
+    // platform's fallback-font metrics, then let the public line limit settle it.
+    edit->setFixedHeight(viewportInsets + caretHeight - 1);
+    inner->ensureCursorVisible();
+    ASSERT_LT(inner->viewport()->height(), caretHeight);
+    ASSERT_LT(inner->cursorRect().top(), 0);
+    ASSERT_TRUE(inner->cursorRect().intersects(inner->viewport()->rect()));
+
+    edit->setMaxVisibleLines(4);
+    QApplication::processEvents();
+
+    EXPECT_EQ(inner->verticalScrollBar()->value(), inner->verticalScrollBar()->minimum());
+    EXPECT_GE(inner->cursorRect().top(), 0);
+    EXPECT_LT(inner->cursorRect().bottom(), inner->viewport()->height());
+    EXPECT_EQ(inner->textCursor().position(), 0);
+}
+
+TEST_F(TextEditTest, Contract_HeightGrowthPreservesUserScrollOffset)
+{
+    auto* edit = new TextEdit(window);
+    edit->setMaxVisibleLines(2);
+    edit->setPlainText(QStringLiteral("Alpha\nBeta\nGamma\nDelta\nEpsilon\nZeta"));
+    edit->setGeometry(0, 0, 475, edit->height());
+    window->show();
+    QApplication::processEvents();
+
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+    QScrollBar* bar = inner->verticalScrollBar();
+    const int caretHeight = inner->cursorRect().height();
+    ASSERT_GT(inner->viewport()->height(), caretHeight);
+    const int userOffset = qMax(1, caretHeight / 2);
+    bar->setValue(userOffset);
+    ASSERT_EQ(bar->value(), userOffset);
+    ASSERT_LT(inner->cursorRect().top(), 0);
+    ASSERT_TRUE(inner->cursorRect().intersects(inner->viewport()->rect()));
+    const int previousHeight = edit->height();
+
+    edit->setMaxVisibleLines(4);
+    QApplication::processEvents();
+
+    EXPECT_GT(edit->height(), previousHeight);
+    EXPECT_EQ(bar->value(), userOffset)
+        << "growing a viewport that already fit the caret must preserve manual scrolling";
+    EXPECT_EQ(inner->textCursor().position(), 0);
 }
 
 TEST_F(TextEditTest, Contract_SelectionPaletteTracksTheme)

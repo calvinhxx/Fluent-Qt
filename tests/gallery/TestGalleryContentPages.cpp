@@ -33,6 +33,7 @@
 #include <QSizePolicy>
 #include <QStringList>
 #include <QTest>
+#include <QTextDocument>
 #include <QTimer>
 #include <QVector>
 #include <QVariantAnimation>
@@ -96,9 +97,11 @@
 #include "view/widgets/samples/SampleBuilders.h"
 #include "view/shell/GalleryWindow.h"
 #include "view/support/GalleryToast.h"
+#include "view/support/GalleryCodeHighlighter.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "viewmodel/GallerySettings.h"
 #include "QtTestEnvironment.h"
+#include "VisualGeometryTestUtils.h"
 
 using fluent::gallery::GalleryCategoryPage;
 using fluent::gallery::GalleryCodeBlock;
@@ -2934,6 +2937,247 @@ TEST_F(GalleryContentPagesTest, CodeBlockUsesBodySizedNativeMonospaceFont)
     ASSERT_NE(code, nullptr);
     EXPECT_EQ(code->font().family(), QFontDatabase::systemFont(QFontDatabase::FixedFont).family());
     EXPECT_EQ(code->font().pixelSize(), Typography::FontSize::Body);
+}
+
+TEST_F(GalleryContentPagesTest, Contract_CodeHighlightingPreservesWhitespaceWhileWrapping)
+{
+    const QString source = QStringLiteral("    value = Type::Nested::Value;\r\n"
+                                          "\t// keep  two spaces & < >\r\n"
+                                          "next();");
+    const QString expected = QStringLiteral("    value = Type::Nested::Value;\n"
+                                            "    // keep  two spaces & < >\n"
+                                            "next();");
+    for (bool dark : {false, true}) {
+        const QString cpp = fluent::gallery::highlightCppToHtml(source, dark);
+        const QString python = fluent::gallery::highlightPythonToHtml(source, dark);
+        for (const QString& html : {cpp, python}) {
+            QTextDocument document;
+            document.setHtml(html);
+            QString plain = document.toPlainText();
+            plain.remove(QChar(0x200b));
+            EXPECT_EQ(plain, expected);
+            EXPECT_TRUE(html.contains(QStringLiteral("&nbsp;&nbsp;&nbsp;&nbsp;")));
+            EXPECT_TRUE(html.contains(QStringLiteral("keep&nbsp; two spaces")));
+            EXPECT_FALSE(html.contains(QStringLiteral("keep&nbsp;&nbsp;two&nbsp;spaces")));
+        }
+        EXPECT_TRUE(cpp.contains(QStringLiteral("::&#8203;")));
+        const QString dotted = fluent::gallery::highlightPythonToHtml(
+            QStringLiteral("fluentqt.Button.ButtonStyle.Accent, value"), dark);
+        EXPECT_TRUE(dotted.contains(QStringLiteral(".&#8203;")));
+        EXPECT_TRUE(dotted.contains(QStringLiteral(",&#8203;")));
+        EXPECT_FALSE(dotted.contains(QStringLiteral("fluentqt.&#8203;")));
+    }
+}
+
+TEST_F(GalleryContentPagesTest, Contract_CodeBlockWrapsBothLanguagesAndRemeasuresOnResize)
+{
+    namespace vg = fluent::testutils::visual_geometry;
+    const QString cppSource = QStringLiteral(
+        "    const auto presentation = fluent::status_info::SplashScreen::Presentation::Simple;\n"
+        "    splash->setText(QStringLiteral(\"Loading all resources and restoring the destination "
+        "icon\"));");
+    const QString pythonSource = QStringLiteral(
+        "    presentation = fluentqt.SplashScreen.Presentation.Simple\n"
+        "    splash.setText(\"Loading all resources and restoring the destination icon\")");
+    GalleryCodeBlock block(cppSource, pythonSource);
+    block.resize(760, block.height());
+    block.show();
+    block.setExpanded(true, /*animated=*/false);
+    auto* label = vg::findRequiredChild<QLabel>(&block, QStringLiteral("galleryCodeBlockText"));
+    auto* content =
+        vg::findRequiredChild<QWidget>(&block, QStringLiteral("galleryCodeBlockContentInner"));
+    ASSERT_NE(label, nullptr);
+    ASSERT_NE(content, nullptr);
+
+    for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        fluent::FluentElement::setTheme(theme);
+        for (const auto language : {GalleryCodeLanguage::Cpp, GalleryCodeLanguage::Python}) {
+            block.setCodeLanguage(language);
+            block.resize(760, block.height());
+            QApplication::processEvents();
+            const int wideHeight = block.height();
+            EXPECT_TRUE(label->wordWrap());
+            EXPECT_TRUE(label->hasHeightForWidth());
+            EXPECT_GT(label->heightForWidth(170), label->heightForWidth(700));
+            for (int width : {300, 460, 760}) {
+                block.resize(width, block.height());
+                QApplication::processEvents();
+                EXPECT_EQ(block.width(), width);
+                EXPECT_TRUE(vg::containedIn(label, content));
+                EXPECT_TRUE(vg::containedIn(content, &block));
+                EXPECT_GE(label->height(), label->heightForWidth(label->width()));
+                EXPECT_EQ(block.code(),
+                          language == GalleryCodeLanguage::Cpp ? cppSource : pythonSource);
+                if (width == 300)
+                    EXPECT_GT(block.height(), wideHeight);
+                if (width == 760)
+                    EXPECT_EQ(block.height(), wideHeight);
+            }
+        }
+    }
+}
+
+TEST_F(GalleryContentPagesTest, Contract_CodeHighlightingMapsRenderedCharactersToExactSource)
+{
+    const QString source =
+        QStringLiteral("\tType::Nested::Value, fluentqt.Button.Style.Accent;  \r\n"
+                       "    // keep  spaces\r\n\t\"real\u200bvalue\"\r\n");
+    for (bool dark : {false, true}) {
+        for (const auto language : {GalleryCodeLanguage::Cpp, GalleryCodeLanguage::Python}) {
+            fluent::gallery::CodeSourceMap map;
+            const QString html = language == GalleryCodeLanguage::Cpp
+                                     ? fluent::gallery::highlightCppToHtml(source, dark, &map)
+                                     : fluent::gallery::highlightPythonToHtml(source, dark, &map);
+            QTextDocument document;
+            document.setHtml(html);
+            const QString rendered = document.toPlainText();
+            ASSERT_EQ(map.size(), rendered.size());
+            QString reconstructed;
+            int sourceEnd = 0;
+            int syntheticBreaks = 0;
+            int originalBreaks = 0;
+            for (int i = 0; i < map.size(); ++i) {
+                const auto& span = map.at(i);
+                ASSERT_GE(span.start, 0);
+                ASSERT_GE(span.end, span.start);
+                ASSERT_LE(span.end, source.size());
+                if (span.start == span.end) {
+                    EXPECT_EQ(rendered.at(i), QChar(0x200b));
+                    ++syntheticBreaks;
+                    continue;
+                }
+                if (source.at(span.start) == QChar(0x200b))
+                    ++originalBreaks;
+                if (span.end > sourceEnd) {
+                    EXPECT_EQ(span.start, sourceEnd);
+                    reconstructed += source.mid(span.start, span.end - span.start);
+                    sourceEnd = span.end;
+                }
+            }
+            EXPECT_GT(syntheticBreaks, 0);
+            EXPECT_EQ(originalBreaks, 1);
+            EXPECT_EQ(reconstructed, source);
+        }
+    }
+}
+
+TEST_F(GalleryContentPagesTest, Contract_CodeBlockSelectionCopiesExactSourceAcrossLanguages)
+{
+    const QString cppSource =
+        QStringLiteral("prefix\tType::Nested::Value, \"real\u200bvalue\";  \r\n"
+                       "\t// keep  spaces\r\nsuffix");
+    const QString pythonSource =
+        QStringLiteral("prefix\tfluentqt.Button.Style.Accent, \"real\u200bvalue\"  \r\n"
+                       "\t# keep  spaces\r\nsuffix");
+    GalleryCodeBlock block(cppSource, pythonSource);
+    block.setExpanded(true, /*animated=*/false);
+    block.resize(520, block.sizeHint().height());
+    block.show();
+    auto* label = block.findChild<QLabel*>(QStringLiteral("galleryCodeBlockText"));
+    ASSERT_NE(label, nullptr);
+    ASSERT_NE(QApplication::clipboard(), nullptr);
+    for (const auto language :
+         {GalleryCodeLanguage::Cpp, GalleryCodeLanguage::Python, GalleryCodeLanguage::Cpp}) {
+        block.setCodeLanguage(language);
+        QApplication::processEvents();
+        const QString source = block.code();
+        QTextDocument document;
+        document.setHtml(label->text());
+        const QString rendered = document.toPlainText();
+        const int selectionStart = QStringLiteral("prefix").size();
+        const int selectionEnd = rendered.indexOf(QStringLiteral("suffix"));
+        ASSERT_GT(selectionEnd, selectionStart);
+        label->setSelection(selectionStart, selectionEnd - selectionStart);
+        QTest::keySequence(label, QKeySequence(QKeySequence::Copy));
+        const QString expected =
+            source.mid(selectionStart, source.indexOf(QStringLiteral("suffix")) - selectionStart);
+        EXPECT_EQ(QApplication::clipboard()->text(), expected);
+        EXPECT_TRUE(QApplication::clipboard()->text().contains(QChar(0x200b)));
+
+        QApplication::clipboard()->clear();
+        QContextMenuEvent contextEvent(QContextMenuEvent::Mouse, label->rect().center(),
+                                       label->mapToGlobal(label->rect().center()));
+        QApplication::sendEvent(label, &contextEvent);
+        auto* menu = qobject_cast<FluentMenu*>(QApplication::activePopupWidget());
+        ASSERT_NE(menu, nullptr);
+        QAction* copy = nullptr;
+        for (QAction* action : menu->actions()) {
+            if (actionUsesStandardKey(action, QKeySequence::Copy))
+                copy = action;
+        }
+        ASSERT_NE(copy, nullptr);
+        copy->trigger();
+        EXPECT_EQ(QApplication::clipboard()->text(), expected);
+        menu->close();
+
+        QTest::keySequence(label, QKeySequence(QKeySequence::SelectAll));
+        QTest::keySequence(label, QKeySequence(QKeySequence::Copy));
+        EXPECT_EQ(QApplication::clipboard()->text(), source);
+        block.copyButton()->click();
+        EXPECT_EQ(QApplication::clipboard()->text(), source);
+
+        // Even a single cell of an expanded tab maps back to that source tab.
+        label->setSelection(selectionStart + 1, 1);
+        QTest::keySequence(label, QKeySequence(QKeySequence::Copy));
+        EXPECT_EQ(QApplication::clipboard()->text(), QStringLiteral("\t"));
+        const int syntheticBreak = rendered.indexOf(QChar(0x200b));
+        const int originalBreak = rendered.lastIndexOf(QChar(0x200b));
+        ASSERT_GE(syntheticBreak, 0);
+        ASSERT_GT(originalBreak, syntheticBreak);
+        label->setSelection(syntheticBreak, 1);
+        QTest::keySequence(label, QKeySequence(QKeySequence::Copy));
+        EXPECT_TRUE(QApplication::clipboard()->text().isEmpty());
+        label->setSelection(originalBreak, 1);
+        QTest::keySequence(label, QKeySequence(QKeySequence::Copy));
+        EXPECT_EQ(QApplication::clipboard()->text(), QString(QChar(0x200b)));
+    }
+}
+
+TEST_F(GalleryContentPagesTest, Contract_CodeBlockSelectionOverridesWindowEditingShortcuts)
+{
+    const QString source = QStringLiteral("auto value = Type::Nested::Value;\r\n");
+    GalleryCodeBlock block(source);
+    block.setExpanded(true, /*animated=*/false);
+    block.resize(520, block.sizeHint().height());
+    block.show();
+    block.activateWindow();
+    auto* label = block.findChild<QLabel*>(QStringLiteral("galleryCodeBlockText"));
+    ASSERT_NE(label, nullptr);
+    ASSERT_NE(block.windowHandle(), nullptr);
+    ASSERT_NE(QApplication::clipboard(), nullptr);
+    label->setFocus(Qt::OtherFocusReason);
+    QTRY_VERIFY(label->hasFocus());
+
+    int competingCopies = 0;
+    int competingSelections = 0;
+    QAction windowCopy(QStringLiteral("Window copy"), &block);
+    windowCopy.setShortcut(QKeySequence::Copy);
+    windowCopy.setShortcutContext(Qt::WindowShortcut);
+    block.addAction(&windowCopy);
+    QObject::connect(&windowCopy, &QAction::triggered, &block, [&]() { ++competingCopies; });
+    QAction windowSelectAll(QStringLiteral("Window select all"), &block);
+    windowSelectAll.setShortcut(QKeySequence::SelectAll);
+    windowSelectAll.setShortcutContext(Qt::WindowShortcut);
+    block.addAction(&windowSelectAll);
+    QObject::connect(&windowSelectAll, &QAction::triggered, &block,
+                     [&]() { ++competingSelections; });
+
+    label->setSelection(0, 4);
+    QApplication::clipboard()->setText(QStringLiteral("unchanged until Copy"));
+    QKeyEvent shortcutProbe(QEvent::ShortcutOverride, Qt::Key_C, Qt::ControlModifier);
+    QApplication::sendEvent(label, &shortcutProbe);
+    EXPECT_TRUE(shortcutProbe.isAccepted());
+    EXPECT_EQ(QApplication::clipboard()->text(), QStringLiteral("unchanged until Copy"));
+
+    // Deliver through the window so Qt's shortcut map runs before KeyPress.
+    QTest::keySequence(block.windowHandle(), QKeySequence(QKeySequence::Copy));
+    EXPECT_EQ(QApplication::clipboard()->text(), QStringLiteral("auto"));
+    EXPECT_EQ(competingCopies, 0);
+    QTest::keySequence(block.windowHandle(), QKeySequence(QKeySequence::SelectAll));
+    QTest::keySequence(block.windowHandle(), QKeySequence(QKeySequence::Copy));
+    EXPECT_EQ(QApplication::clipboard()->text(), source);
+    EXPECT_EQ(competingCopies, 0);
+    EXPECT_EQ(competingSelections, 0);
 }
 
 TEST_F(GalleryContentPagesTest, DualLanguageCodeBlockSwitchesAndCopiesCurrentSource)

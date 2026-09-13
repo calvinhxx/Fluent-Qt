@@ -10,6 +10,8 @@
 #include <QFontMetricsF>
 #include <QHBoxLayout>
 #include <QImage>
+#include <QItemSelectionModel>
+#include <QKeyEvent>
 #include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
@@ -79,6 +81,26 @@ fluent::dialogs_flyouts::Flyout* openPopupFor(ComboBox* comboBox, ComboBoxTestWi
     comboBox->showPopup();
     QApplication::processEvents();
     return window->findChild<fluent::dialogs_flyouts::Flyout*>("ComboBoxPopup");
+}
+
+bool focusComboBoxForPopupInput(ComboBox* comboBox, ComboBoxTestWindow* window)
+{
+    window->show();
+    comboBox->show();
+    QApplication::processEvents();
+    if (!tests::support::isHeadlessPlatform()) {
+        if (!QTest::qWaitForWindowExposed(window))
+            return false;
+        if (!QGuiApplication::platformName().startsWith(QStringLiteral("wayland")))
+            window->activateWindow();
+    }
+    comboBox->setFocus(Qt::OtherFocusReason);
+    return QTest::qWaitFor(
+        [comboBox] {
+            return comboBox->hasFocus() ||
+                   (comboBox->lineEdit() && comboBox->lineEdit()->hasFocus());
+        },
+        1000);
 }
 
 QRect popupCardRect(QWidget* popup)
@@ -768,6 +790,9 @@ TEST_F(ComboBoxTest, SelectingPopupItemUpdatesIndexAndCloses)
     cb->setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
     cb->addItems({"Alpha", "Beta", "Gamma", "Delta"});
     cb->setCurrentIndex(0);
+    QSignalSpy changed(cb, SIGNAL(currentIndexChanged(int)));
+    QSignalSpy activated(cb, SIGNAL(activated(int)));
+    QSignalSpy textActivated(cb, &QComboBox::textActivated);
 
     auto* popup = openPopupFor(cb, window);
     ASSERT_NE(popup, nullptr);
@@ -783,6 +808,307 @@ TEST_F(ComboBoxTest, SelectingPopupItemUpdatesIndexAndCloses)
     EXPECT_EQ(cb->currentIndex(), 2);
     EXPECT_EQ(cb->currentText(), "Gamma");
     EXPECT_FALSE(popup->isOpen());
+    ASSERT_EQ(changed.count(), 1);
+    ASSERT_EQ(activated.count(), 1);
+    ASSERT_EQ(textActivated.count(), 1);
+    EXPECT_EQ(activated.at(0).at(0).toInt(), 2);
+    EXPECT_EQ(textActivated.at(0).at(0).toString(), QStringLiteral("Gamma"));
+
+    cb->showPopup();
+    QTest::mouseClick(listView->viewport(), Qt::LeftButton, Qt::NoModifier, rowTwoCenter);
+    EXPECT_FALSE(popup->isOpen());
+    EXPECT_EQ(changed.count(), 1);
+    EXPECT_EQ(activated.count(), 2);
+    EXPECT_EQ(textActivated.count(), 2);
+}
+
+TEST_F(ComboBoxTest, Contract_AccessibilityPopupKeyboardNavigationCommitsOnce)
+{
+    for (const Qt::Key commitKey : {Qt::Key_Return, Qt::Key_Enter}) {
+        SCOPED_TRACE(static_cast<int>(commitKey));
+        ComboBox cb(window);
+        cb.setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
+        cb.addItems({"Alpha", "Beta", "Gamma"});
+        cb.setCurrentIndex(1);
+        ASSERT_TRUE(focusComboBoxForPopupInput(&cb, window));
+        QSignalSpy changed(&cb, SIGNAL(currentIndexChanged(int)));
+        QSignalSpy activated(&cb, SIGNAL(activated(int)));
+        QSignalSpy textActivated(&cb, &QComboBox::textActivated);
+
+        QTest::mouseClick(&cb, Qt::LeftButton);
+        auto* popup = window->findChild<fluent::dialogs_flyouts::Flyout*>("ComboBoxPopup");
+        ASSERT_NE(popup, nullptr);
+        auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+        ASSERT_NE(listView, nullptr);
+        ASSERT_TRUE(QTest::qWaitFor([listView] { return listView->hasFocus(); }, 1000));
+        EXPECT_EQ(listView->currentIndex(), cb.model()->index(1, 0));
+
+        QTest::keyClick(listView, Qt::Key_Down);
+        EXPECT_EQ(listView->currentIndex().row(), 2);
+        QTest::keyClick(listView, Qt::Key_Up);
+        QTest::keyClick(listView, Qt::Key_Up);
+        EXPECT_EQ(listView->currentIndex().row(), 0);
+        EXPECT_EQ(cb.currentIndex(), 1);
+        EXPECT_EQ(changed.count(), 0);
+        EXPECT_EQ(activated.count(), 0);
+
+        QTest::keyClick(listView, commitKey);
+        EXPECT_EQ(cb.currentIndex(), 0);
+        EXPECT_EQ(cb.currentText(), QStringLiteral("Alpha"));
+        EXPECT_FALSE(popup->isOpen());
+        ASSERT_EQ(changed.count(), 1);
+        ASSERT_EQ(activated.count(), 1);
+        ASSERT_EQ(textActivated.count(), 1);
+        EXPECT_EQ(activated.at(0).at(0).toInt(), 0);
+        EXPECT_EQ(textActivated.at(0).at(0).toString(), QStringLiteral("Alpha"));
+        EXPECT_TRUE(cb.hasFocus());
+
+        cb.showPopup();
+        QTest::keyClick(listView, commitKey);
+        EXPECT_FALSE(popup->isOpen());
+        EXPECT_EQ(changed.count(), 1);
+        EXPECT_EQ(activated.count(), 2);
+        EXPECT_EQ(textActivated.count(), 2);
+        cb.setCurrentIndex(2);
+        EXPECT_EQ(changed.count(), 2);
+        EXPECT_EQ(activated.count(), 2);
+    }
+}
+
+TEST_F(ComboBoxTest, Contract_AccessibilityPopupEscapeCancelsPendingSelection)
+{
+    ComboBox cb(window);
+    cb.setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
+    cb.addItems({"Alpha", "Beta", "Gamma"});
+    cb.setCurrentIndex(1);
+    ASSERT_TRUE(focusComboBoxForPopupInput(&cb, window));
+    QSignalSpy changed(&cb, SIGNAL(currentIndexChanged(int)));
+    QSignalSpy activated(&cb, SIGNAL(activated(int)));
+    auto* popup = openPopupFor(&cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+    ASSERT_NE(listView, nullptr);
+
+    QTest::keyClick(listView, Qt::Key_Down);
+    EXPECT_EQ(listView->currentIndex().row(), 2);
+    QTest::keyClick(listView, Qt::Key_Escape);
+    EXPECT_FALSE(popup->isOpen());
+    EXPECT_EQ(cb.currentIndex(), 1);
+    EXPECT_EQ(changed.count(), 0);
+    EXPECT_EQ(activated.count(), 0);
+    EXPECT_TRUE(cb.hasFocus());
+
+    cb.showPopup();
+    EXPECT_EQ(listView->currentIndex().row(), 1);
+    EXPECT_EQ(listView->selectedIndex(), 1);
+    cb.hidePopup();
+}
+
+TEST_F(ComboBoxTest, Contract_PopupKeyboardUsesConfiguredRootAndModelColumn)
+{
+    QStandardItemModel model;
+    auto* group = new QStandardItem(QStringLiteral("Group"));
+    group->appendRow({new QStandardItem(QStringLiteral("First key")),
+                      new QStandardItem(QStringLiteral("First label"))});
+    group->appendRow({new QStandardItem(QStringLiteral("Second key")),
+                      new QStandardItem(QStringLiteral("Second label"))});
+    model.appendRow(group);
+    ComboBox cb(window);
+    cb.setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
+    cb.setModel(&model);
+    cb.setRootModelIndex(group->index());
+    cb.setModelColumn(1);
+    cb.setCurrentIndex(1);
+    auto* popup = openPopupFor(&cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+    ASSERT_NE(listView, nullptr);
+    EXPECT_EQ(listView->currentIndex(), model.index(1, 1, group->index()));
+
+    QTest::keyClick(listView, Qt::Key_Up);
+    EXPECT_EQ(listView->currentIndex(), model.index(0, 1, group->index()));
+    QTest::keyClick(listView, Qt::Key_Return);
+    EXPECT_EQ(cb.currentIndex(), 0);
+    EXPECT_EQ(cb.currentText(), QStringLiteral("First label"));
+    EXPECT_FALSE(popup->isOpen());
+    EXPECT_EQ(cb.model(), &model);
+}
+
+TEST_F(ComboBoxTest, Contract_PopupKeyboardUpdatesEditableText)
+{
+    ComboBox cb(window);
+    cb.setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
+    cb.addItems({"Alpha", "Beta", "Gamma"});
+    cb.setEditable(true);
+    ASSERT_TRUE(focusComboBoxForPopupInput(&cb, window));
+    auto* editor = cb.lineEdit();
+    ASSERT_NE(editor, nullptr);
+    editor->setFocus(Qt::OtherFocusReason);
+    ASSERT_TRUE(QTest::qWaitFor([editor] { return editor->hasFocus(); }, 1000));
+    auto* popup = openPopupFor(&cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+    ASSERT_NE(listView, nullptr);
+    EXPECT_TRUE(listView->hasFocus());
+
+    QTest::keyClick(listView, Qt::Key_Down);
+    EXPECT_EQ(editor->text(), QStringLiteral("Alpha"));
+    QTest::keyClick(listView, Qt::Key_Return);
+    EXPECT_EQ(cb.currentIndex(), 1);
+    EXPECT_EQ(cb.currentText(), QStringLiteral("Beta"));
+    EXPECT_EQ(editor->text(), QStringLiteral("Beta"));
+    EXPECT_FALSE(popup->isOpen());
+    EXPECT_TRUE(editor->hasFocus());
+}
+
+TEST_F(ComboBoxTest, Contract_PopupWithoutCurrentItemDoesNotCommitStaleSelection)
+{
+    ComboBox cb(window);
+    cb.setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
+    cb.addItems({"Alpha", "Beta", "Gamma"});
+    cb.setCurrentIndex(2);
+    auto* popup = openPopupFor(&cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+    ASSERT_NE(listView, nullptr);
+    cb.hidePopup();
+    cb.setCurrentIndex(-1);
+    QSignalSpy activated(&cb, SIGNAL(activated(int)));
+
+    cb.showPopup();
+    EXPECT_FALSE(listView->currentIndex().isValid());
+    EXPECT_TRUE(listView->selectionModel()->selectedIndexes().isEmpty());
+    QTest::keyClick(listView, Qt::Key_Return);
+    EXPECT_EQ(cb.currentIndex(), -1);
+    EXPECT_EQ(activated.count(), 0);
+    EXPECT_TRUE(popup->isOpen());
+    QTest::keyClick(listView, Qt::Key_Down);
+    EXPECT_EQ(listView->currentIndex().row(), 0);
+    QTest::keyClick(listView, Qt::Key_Enter);
+    EXPECT_EQ(cb.currentIndex(), 0);
+    EXPECT_EQ(activated.count(), 1);
+    EXPECT_FALSE(popup->isOpen());
+}
+
+TEST_F(ComboBoxTest, Contract_PopupDoesNotOpenWhenDisabledOrEmpty)
+{
+    ComboBox cb(window);
+    window->show();
+    cb.show();
+    cb.showPopup();
+    EXPECT_EQ(window->findChild<fluent::dialogs_flyouts::Flyout*>("ComboBoxPopup"), nullptr);
+    cb.addItems({"Alpha", "Beta"});
+    cb.setEnabled(false);
+    cb.showPopup();
+    EXPECT_EQ(window->findChild<fluent::dialogs_flyouts::Flyout*>("ComboBoxPopup"), nullptr);
+    cb.setEnabled(true);
+    auto* popup = openPopupFor(&cb, window);
+    ASSERT_NE(popup, nullptr);
+    EXPECT_TRUE(popup->isOpen());
+    cb.hidePopup();
+}
+
+TEST_F(ComboBoxTest, Contract_PopupRejectsDisabledAndUnselectableItems)
+{
+    ComboBox cb(window);
+    cb.setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
+    cb.addItems({"Alpha", "Disabled", "Gamma", "Delta"});
+    auto* model = qobject_cast<QStandardItemModel*>(cb.model());
+    ASSERT_NE(model, nullptr);
+    model->item(1)->setEnabled(false);
+    QSignalSpy changed(&cb, SIGNAL(currentIndexChanged(int)));
+    QSignalSpy activated(&cb, SIGNAL(activated(int)));
+    auto* popup = openPopupFor(&cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+    ASSERT_NE(listView, nullptr);
+
+    QTest::keyClick(listView, Qt::Key_Down);
+    EXPECT_EQ(listView->currentIndex().row(), 2);
+    model->item(2)->setSelectable(false);
+    QTest::keyClick(listView, Qt::Key_Return);
+    EXPECT_TRUE(popup->isOpen());
+    EXPECT_EQ(cb.currentIndex(), 0);
+    for (const int row : {1, 2}) {
+        const QRect itemRect = static_cast<QListView*>(listView)->visualRect(model->index(row, 0));
+        ASSERT_FALSE(itemRect.isEmpty());
+        QTest::mouseClick(listView->viewport(), Qt::LeftButton, Qt::NoModifier, itemRect.center());
+        EXPECT_TRUE(popup->isOpen());
+        EXPECT_EQ(cb.currentIndex(), 0);
+    }
+    EXPECT_EQ(changed.count(), 0);
+    EXPECT_EQ(activated.count(), 0);
+
+    listView->setCurrentIndex(model->index(3, 0));
+    QTest::keyClick(listView, Qt::Key_Enter);
+    EXPECT_EQ(cb.currentIndex(), 3);
+    EXPECT_EQ(changed.count(), 1);
+    EXPECT_EQ(activated.count(), 1);
+    EXPECT_FALSE(popup->isOpen());
+}
+
+TEST_F(ComboBoxTest, Contract_PopupActivationCanDestroyOwner)
+{
+    auto* cb = new ComboBox(window);
+    cb->setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
+    cb->addItems({"Alpha", "Beta"});
+    auto* popup = openPopupFor(cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+    ASSERT_NE(listView, nullptr);
+    QPointer<ComboBox> ownerGuard(cb);
+    QPointer<fluent::dialogs_flyouts::Flyout> popupGuard(popup);
+    QObject::connect(cb, qOverload<int>(&QComboBox::activated), window, [cb](int) { delete cb; });
+    QTest::keyClick(listView, Qt::Key_Down);
+    QKeyEvent event(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(listView, &event);
+    EXPECT_TRUE(ownerGuard.isNull());
+    EXPECT_TRUE(popupGuard.isNull());
+}
+
+TEST_F(ComboBoxTest, Contract_PopupClosingReentrantInputCommitsOnce)
+{
+    ComboBox cb(window);
+    cb.setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
+    cb.addItems({"Alpha", "Beta", "Gamma"});
+    auto* popup = openPopupFor(&cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+    ASSERT_NE(listView, nullptr);
+    QSignalSpy closing(popup, &fluent::dialogs_flyouts::Popup::closing);
+    QSignalSpy changed(&cb, SIGNAL(currentIndexChanged(int)));
+    QSignalSpy activated(&cb, SIGNAL(activated(int)));
+    QSignalSpy textActivated(&cb, &QComboBox::textActivated);
+    QObject::connect(popup, &fluent::dialogs_flyouts::Popup::closing, &cb,
+                     [listView](fluent::dialogs_flyouts::Popup::CloseReason) {
+                         // Exercise input while closing is being delivered, not
+                         // after the popup's public isOpen state has changed.
+                         QKeyEvent reentrant(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                         QApplication::sendEvent(listView, &reentrant);
+                     });
+
+    QTest::keyClick(listView, Qt::Key_Down);
+    QTest::keyClick(listView, Qt::Key_Return);
+    EXPECT_FALSE(popup->isOpen());
+    EXPECT_EQ(cb.currentIndex(), 1);
+    ASSERT_EQ(closing.count(), 1);
+    ASSERT_EQ(changed.count(), 1);
+    ASSERT_EQ(activated.count(), 1);
+    ASSERT_EQ(textActivated.count(), 1);
+    EXPECT_EQ(activated.at(0).at(0).toInt(), 1);
+    EXPECT_EQ(textActivated.at(0).at(0).toString(), QStringLiteral("Beta"));
+
+    cb.showPopup();
+    QTest::keyClick(listView, Qt::Key_Down);
+    QTest::keyClick(listView, Qt::Key_Enter);
+    EXPECT_FALSE(popup->isOpen());
+    EXPECT_EQ(cb.currentIndex(), 2);
+    ASSERT_EQ(closing.count(), 2);
+    ASSERT_EQ(changed.count(), 2);
+    ASSERT_EQ(activated.count(), 2);
+    ASSERT_EQ(textActivated.count(), 2);
+    EXPECT_EQ(activated.at(1).at(0).toInt(), 2);
+    EXPECT_EQ(textActivated.at(1).at(0).toString(), QStringLiteral("Gamma"));
 }
 
 TEST_F(ComboBoxTest, PopupUsesConfiguredModelColumnAndRootIndex)

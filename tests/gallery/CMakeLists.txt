@@ -68,6 +68,7 @@ add_qt_test_module(test_gallery_content_pages
     TestGallerySampleAccessibility.cpp
     TestGalleryPreview.cpp
     TestGalleryInspectorScenes.cpp
+    ${CMAKE_SOURCE_DIR}/tests/support/VisualGeometryTestUtils.cpp
     ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
     ${FLUENT_QT_GALLERY_RESOURCES}
     ${FLUENT_QT_GALLERY_WEB_RESOURCES}

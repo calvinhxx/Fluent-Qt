@@ -48,6 +48,11 @@ platform assistive-technology certification. Input-method preedit leaves the
 wrapper height stable until composition commits, so candidate exploration does
 not repeatedly reflow the surrounding form.
 
+When the initial editor viewport is shorter than a fallback-font caret, height
+growth restores the whole caret instead of retaining Qt's temporary scroll
+offset. Later resizing preserves an ordinary user scroll position. These
+contracts are covered in `tests/components/textfields/TestTextEdit.cpp`.
+
 `FluentElement::HighContrast` resolves a complete third semantic palette, so
 controls continue to expose the same roles, state, actions, and logical child
 trees while using opaque high-contrast foreground, background, focus, disabled,
@@ -63,6 +68,15 @@ Custom global and per-element theme token overrides preserve the existing access
 roles and actions. Typography and per-mode color resolution are covered by
 `tests/components/TestThemeOverrides.cpp`; caller-defined colors still require
 contrast review. See [custom themes](../design-languages/custom-themes.md).
+
+The [WebAssembly runtime](../../platforms/webassembly/Runtime.cpp) keeps Qt's HTML
+accessibility proxies readable and focusable without painting a second control
+surface through the transparent desktop canvas. A stylesheet scoped to each
+application Qt screen makes only identified proxy nodes transparent; it excludes
+the screen-reader enable button and leaves the separate keyboard/IME input,
+ARIA state, geometry, and event handlers unchanged. This presentation adaptation
+does not repair upstream accessibility geometry updates or replace native
+screen-reader and IME acceptance.
 
 ## Component contracts
 
@@ -81,7 +95,7 @@ The table lists the semantic boundary and its focused regression source.
 | FlipView, SplitView | Ordered pages and navigation; native pane subtrees and keyboard-operable splitter grips with value bounds | [Collections](../../tests/components/TestCollectionSurfaceAccessibility.cpp) |
 | HyperlinkButton, InfoBar, Shimmer | Link/visited state, notification severity and dismissal, loading/busy state independent of animation | [Presentation](../../tests/components/TestSemanticPresentationAccessibility.cpp) |
 | MultiSelectComboBox | Button-menu root, selected labels, expanded state, popup relation and named trigger/search/list | [Multi-selection](../../tests/components/basicinput/TestMultiSelectComboBox.cpp) |
-| ComboBox | Explicit fonts reach the field, editor and dropdown; rows grow with text while selection and popup state remain intact | [ComboBox](../../tests/components/basicinput/TestComboBox.cpp) |
+| ComboBox | Explicit fonts reach the field, editor and dropdown; rows grow with text. The popup list takes focus; arrows stage selection, Enter/Return commits once and Escape cancels with focus return. Disabled items and an unselected placeholder cannot activate | [ComboBox](../../tests/components/basicinput/TestComboBox.cpp) |
 
 `ToggleSwitch` keeps a minimum interactive height of 24 logical pixels.
 `visualScale` changes its graphics while the accessible rectangle continues to

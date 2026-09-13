@@ -480,9 +480,23 @@ void TextEdit::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
     if (m_editor) {
+        const QRect previousCaret = m_editor->cursorRect();
+        const QRect previousViewport = m_editor->viewport()->rect();
+        const bool hadOversizedVisibleCaret = previousCaret.height() > previousViewport.height() &&
+                                              previousCaret.intersects(previousViewport);
         QRect r = rect();
         int sbw = (m_vScrollBar && m_vScrollBar->isVisible()) ? m_vScrollBar->thickness() : 0;
         m_editor->setGeometry(r.adjusted(0, 0, -sbw, 0));
+        // A fallback glyph can make the caret taller than the old viewport.
+        // Qt scrolls its bottom into view before our queued height settles;
+        // restore the whole caret once it fits, without following an ordinary
+        // user-scrolled caret during later resizes.
+        // zh_CN: 回退字形可能让光标高于旧视口，Qt 会在异步高度收敛前滚动到
+        // 光标底部。视口增高后恢复完整光标，但不改变普通手动滚动的偏移。
+        if (hadOversizedVisibleCaret &&
+            m_editor->cursorRect().height() <= m_editor->viewport()->height()) {
+            m_editor->ensureCursorVisible();
+        }
         if (m_vScrollBar) {
             int x = r.right() - m_vScrollBar->thickness() + 1;
             int y = r.top() + 2;
