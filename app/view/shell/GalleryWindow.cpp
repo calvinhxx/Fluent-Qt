@@ -4,9 +4,11 @@
 
 #include <QMoveEvent>
 #include <QResizeEvent>
+#include <QShowEvent>
 #include <QTimer>
 
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
 #include "compatibility/WindowChromeCompat.h"
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/StackContentHost.h"
@@ -36,9 +38,12 @@ using AppWindowMetrics = metrics::AppWindow;
 using NavigationMetrics = metrics::Navigation;
 using TitleBarMetrics = metrics::TitleBar;
 
-// Brief hold after the initial route is on screen before dismissing the splash: long enough
-// for the window to composite a few frames (so DWM applies Mica), short enough to feel instant.
-// zh_CN: 首个路由上屏后到消除 splash 之间的短暂停留：足够窗口合成几帧（使 DWM 施加 Mica），又短到感觉即时。
+// Loading counts towards the brand's presentation time; fast machines still get the full reveal.
+// zh_CN: 加载时间计入品牌展示时长，快机器也能看到完整显影；减少动效和简洁模式不增加展示等待。
+constexpr int kStartupSplashMinimumMs = 1400;
+constexpr int kStartupBrandReadyHoldMs = 250;
+// Allow a few compositor frames after loading, including the DWM first-show backdrop setup.
+// zh_CN: 加载完成后留出数帧合成时间，包括 DWM 首次显示时的背景设置。
 constexpr int kStartupSplashHoldMs = 120;
 
 // Delay from splash dismissal to the first-launch intro tour, so the chrome fade-in finishes and
@@ -215,25 +220,74 @@ void GalleryWindow::installSplashScreen()
     // Cover the content area with the splash from the very first frame; the real title
     // bar stays live above it. zh_CN: 从第一帧起用 splash 盖住内容区；真实标题栏仍在其上方可用。
     m_splashScreen = new GallerySplashScreen(contentHost());
+    if (m_titleBar) {
+        m_splashScreen->setTransitionTarget(m_titleBar->appIconWidget());
+        m_titleBar->setAppIconRevealed(false);
+    }
+    connect(m_splashScreen, &GallerySplashScreen::dismissed, this, [this]() {
+        if (m_titleBar)
+            m_titleBar->setAppIconRevealed(true);
+        LOG_DEBUG(QStringLiteral("GalleryWindow startup dismissed visibleMs=%1")
+                      .arg(m_startupVisibleTimer.elapsed()));
+        // Schedule from actual completion so the tour never covers a travelling logo.
+        // zh_CN: 从实际退场完成时计时，避免首启引导盖住仍在移动的图标。
+        if (platform::capabilities().showsIntroTour &&
+            !GallerySettings::instance().introCompleted())
+            QTimer::singleShot(kIntroTourDelayMs, this, [this]() { maybeStartIntroTour(); });
+    });
+    connect(m_splashScreen, &GallerySplashScreen::replaced, this, [this]() {
+        finishStartup();
+        if (m_titleBar)
+            m_titleBar->setAppIconRevealed(true);
+    });
+    m_startupFinishTimer = new QTimer(this);
+    m_startupFinishTimer->setSingleShot(true);
+    m_startupFinishTimer->setTimerType(Qt::PreciseTimer);
+    connect(m_startupFinishTimer, &QTimer::timeout, this, &GalleryWindow::finishStartup);
+    connect(&MotionPolicy::instance(), &MotionPolicy::modeChanged, this,
+            [this]() { scheduleStartupFinish(); });
     m_splashScreen->show();
     m_splashScreen->raise();
 
-    // Dismiss the splash as soon as the initial route (Home) is built and on screen — no
-    // Dismiss the splash once splash-phase prewarm finishes — either the time budget elapsed or
-    // the queue drained. Pages warmed in time become instant; the un-warmed tail builds lazily
-    // behind a shimmer skeleton on first visit. zh_CN: splash 期预热一结束（时间预算到点或队列排空）就消除
-    // splash。及时预热的页瞬时显示；没预热到的尾部在首次访问时于 shimmer 骨架屏背后懒构建。
+    // Prewarm completion marks content ready; presentation timing belongs to the Gallery shell.
+    // zh_CN: 预热完成表示内容已就绪；展示节奏由 Gallery 外壳控制，公共组件仍可随时 dismiss。
     connect(m_contentPresenter, &GalleryContentPresenter::prewarmProgress, this,
             [this](int done, int total) {
                 if (m_splashScreen)
                     m_splashScreen->setProgress(done, total);
             });
     connect(m_contentPresenter, &GalleryContentPresenter::prewarmFinished, this, [this]() {
-        // Let the window composite a few frames before finishing, so DWM has applied
-        // Mica and reapplySystemBackdrop() reinforces it past the first-show race.
-        // zh_CN: 收尾前先让窗口合成几帧，使 DWM 施加 Mica，reapplySystemBackdrop() 再强化一遍，越过首屏竞争。
-        QTimer::singleShot(kStartupSplashHoldMs, this, [this]() { finishStartup(); });
+        if (!m_startupReadyTimer.isValid()) {
+            m_startupReadyTimer.start();
+            LOG_DEBUG(
+                QStringLiteral("GalleryWindow startup ready visibleMs=%1")
+                    .arg(m_startupVisibleTimer.isValid() ? m_startupVisibleTimer.elapsed() : 0));
+        }
+        scheduleStartupFinish();
     });
+}
+
+void GalleryWindow::showEvent(QShowEvent* event)
+{
+    fluent::windowing::Window::showEvent(event);
+    if (m_splashScreen && !m_startupVisibleTimer.isValid())
+        m_startupVisibleTimer.start();
+    scheduleStartupFinish();
+}
+
+void GalleryWindow::scheduleStartupFinish()
+{
+    if (m_startupFinished || !m_startupFinishTimer || !m_splashScreen ||
+        !m_startupReadyTimer.isValid() || !m_startupVisibleTimer.isValid())
+        return;
+    const bool branded =
+        MotionPolicy::instance().mode() == MotionPolicy::Mode::Full &&
+        m_splashScreen->presentation() == fluent::status_info::SplashScreen::Presentation::Branded;
+    const qint64 presentationLeft =
+        (branded ? kStartupSplashMinimumMs : 0) - m_startupVisibleTimer.elapsed();
+    const qint64 readyHoldLeft =
+        (branded ? kStartupBrandReadyHoldMs : kStartupSplashHoldMs) - m_startupReadyTimer.elapsed();
+    m_startupFinishTimer->start(int(qMax(qint64(0), qMax(presentationLeft, readyHoldLeft))));
 }
 
 void GalleryWindow::prewarmRemainingRoutes()
@@ -284,7 +338,7 @@ void GalleryWindow::resizeEvent(QResizeEvent* event)
 
 void GalleryWindow::deferPrewarmDuringInteraction()
 {
-    if (!m_contentPresenter)
+    if (!m_contentPresenter || m_startupReadyTimer.isValid())
         return;
     // A top-level move/resize means the user is manipulating the window (or we just placed it at
     // startup). Pause page warming so a synchronous build can't stutter the gesture, then (re)arm a
@@ -297,7 +351,7 @@ void GalleryWindow::deferPrewarmDuringInteraction()
         m_prewarmResumeTimer = new QTimer(this);
         m_prewarmResumeTimer->setSingleShot(true);
         connect(m_prewarmResumeTimer, &QTimer::timeout, this, [this]() {
-            if (m_contentPresenter)
+            if (m_contentPresenter && !m_startupReadyTimer.isValid())
                 m_contentPresenter->setPrewarmPaused(false);
         });
     }
@@ -306,6 +360,13 @@ void GalleryWindow::deferPrewarmDuringInteraction()
 
 void GalleryWindow::finishStartup()
 {
+    if (m_startupFinished || !m_splashScreen)
+        return;
+    m_startupFinished = true;
+    m_startupFinishTimer->stop();
+    LOG_DEBUG(QStringLiteral("GalleryWindow startup dismiss visibleMs=%1 readyMs=%2")
+                  .arg(m_startupVisibleTimer.elapsed())
+                  .arg(m_startupReadyTimer.elapsed()));
     if (m_titleBar)
         m_titleBar->setChromeVisible(true, /*animated*/ true);
     // The window has composited several frames, so we're past the DWM first-show race that can
@@ -315,11 +376,7 @@ void GalleryWindow::finishStartup()
     // 在内容从 splash 后浮现时强制施加背景。
     reapplySystemBackdrop();
     if (m_splashScreen)
-        m_splashScreen->dismiss(); // fades out, then self-deletes
-
-    // First launch only: once the chrome has settled, run the intro tour. zh_CN: 仅首次启动：chrome 稳定后跑引导。
-    if (platform::capabilities().showsIntroTour && !GallerySettings::instance().introCompleted())
-        QTimer::singleShot(kIntroTourDelayMs, this, [this]() { maybeStartIntroTour(); });
+        m_splashScreen->dismiss(); // connects the logo to the title bar, then self-deletes
 }
 
 void GalleryWindow::maybeStartIntroTour()

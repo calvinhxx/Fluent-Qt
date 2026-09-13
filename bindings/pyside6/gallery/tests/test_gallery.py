@@ -384,24 +384,24 @@ class PythonGalleryTest(unittest.TestCase):
 
     def test_contract_exactly_matches_the_public_binding(self):
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-        self.assertEqual(len(manifest["classes"]), 92)
+        self.assertEqual(len(manifest["classes"]), 93)
         self.assertEqual(catalog_coverage_errors(manifest["classes"]), [])
         self.assertEqual(runtime_catalog_errors(), [])
-        self.assertEqual(len(ROUTES), 92)
-        self.assertEqual(len(ENTRIES), 71)
+        self.assertEqual(len(ROUTES), 93)
+        self.assertEqual(len(ENTRIES), 72)
         self.assertEqual(len(CATEGORIES), 12)
         self.assertEqual(
             sum(len(entry.samples) for entry in ENTRIES),
-            212,
+            213,
         )
-        self.assertEqual(len({route.id for route in ROUTES}), 92)
-        self.assertEqual(len({entry.route_id for entry in ENTRIES}), 71)
+        self.assertEqual(len({route.id for route in ROUTES}), 93)
+        self.assertEqual(len({entry.route_id for entry in ENTRIES}), 72)
 
     def test_support_types_are_explicit_and_embedded_in_real_samples(self):
         self.assertEqual(SUPPORT_TYPES, EXPECTED_SUPPORT_TYPES)
         routed_types = {entry.name for entry in ENTRIES}
         self.assertTrue(routed_types.isdisjoint(SUPPORT_TYPES))
-        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 92)
+        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 93)
         for entry in ENTRIES:
             self.assertFalse(entry.support_type)
 
@@ -835,8 +835,96 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 
     def test_every_native_sample_has_an_exact_python_port(self):
         expected = _contract_sample_keys()
-        self.assertEqual(len(expected), 212)
+        self.assertEqual(len(expected), 213)
         self.assertEqual(ported_sample_keys(), expected)
+
+    def test_splash_preview_handles_host_teardown_after_namespace_cleanup(self):
+        host = QWidget()
+        result = build_sample("splash-screen", "splash-screen-startup", host)
+        root = result.widget
+        namespace = _detach_sample_namespace(root)
+        retained = dict(namespace)
+        try:
+            # Sample cleanup can release globals before Qt destroys its host layout.
+            namespace.clear()
+            self.assertFalse(root.eventFilter(host, QEvent(QEvent.Type.ChildRemoved)))
+            host.deleteLater()
+            QCoreApplication.sendPostedEvents(host, QEvent.Type.DeferredDelete)
+            self.assertFalse(shiboken6.isValid(root))
+        finally:
+            namespace.update(retained)
+            if shiboken6.isValid(host):
+                host.deleteLater()
+                QCoreApplication.sendPostedEvents(host, QEvent.Type.DeferredDelete)
+
+    def test_splash_preview_defaults_to_branded_and_selects_simple(self):
+        host = QWidget()
+        result = build_sample("splash-screen", "splash-screen-startup", host)
+        root = result.widget
+        try:
+            splash = root.findChild(fluentqt.SplashScreen, "sampleSplash")
+            presentation = root.findChild(fluentqt.ComboBox, "splashPresentation")
+            target = root.findChild(QWidget, "splashDestinationIcon")
+            self.assertEqual(splash.presentation(), fluentqt.SplashScreen.Presentation.Branded)
+            self.assertIs(splash.transitionTarget(), target)
+            self.assertEqual(splash.title(), "FluentQt")
+            presentation.setCurrentIndex(1)
+            self.assertEqual(splash.presentation(), fluentqt.SplashScreen.Presentation.Simple)
+            presentation.setCurrentIndex(0)
+            self.assertEqual(splash.presentation(), fluentqt.SplashScreen.Presentation.Branded)
+        finally:
+            host.deleteLater()
+            QCoreApplication.sendPostedEvents(host, QEvent.Type.DeferredDelete)
+
+    def test_startup_replacement_releases_python_owner(self):
+        self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())
+        window = GalleryWindow(startup_visuals=True)
+        window.show()
+        fluentqt.set_motion_mode(fluentqt.MotionMode.Disabled)
+        original = window._splash
+        self.assertIsNotNone(original)
+        replacement = fluentqt.SplashScreen(window.contentHost())
+        try:
+            replacement.show()
+            QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+            self.assertFalse(shiboken6.isValid(original))
+            self.assertIsNone(window._splash)
+            self.assertTrue(window._startup_finished)
+            self.assertTrue(replacement.isVisible())
+            self.assertIsNone(window._intro_tour)
+        finally:
+            window.close()
+            window.deleteLater()
+            QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+    def test_splash_connected_transition_survives_window_close(self):
+        self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())
+        fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
+        for _ in range(8):
+            window = fluentqt.Window()
+            window.resize(640, 480)
+            target = fluentqt.Label(window)
+            target.setGeometry(20, 12, 24, 24)
+            splash = fluentqt.SplashScreen(window.contentHost())
+            splash.setIcon(app_icon())
+            splash.setTransitionTarget(target)
+            try:
+                window.show()
+                splash.show()
+                splash.dismiss()
+                moving = window.findChild(QWidget, "splashLogoTransition")
+                self.assertIsNotNone(moving)
+                later_sibling = QWidget(window)
+                later_sibling.show()
+                window.close()
+                self.assertFalse(window.isVisible())
+                if shiboken6.isValid(moving):
+                    self.assertFalse(moving.isVisible())
+                QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+                self.assertFalse(shiboken6.isValid(moving))
+            finally:
+                window.deleteLater()
+                QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
     def test_toggle_switch_state_sample_has_an_accessible_name(self):
         result = build_sample("toggle-switch", "toggle-switch-state")
@@ -3234,14 +3322,14 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     namespace.clear()
                     QApplication.processEvents()
 
-    def test_window_builds_all_92_routes_and_212_sample_cards(self):
+    def test_window_builds_all_93_routes_and_213_sample_cards(self):
         window = GalleryWindow()
         window.show()
         QApplication.processEvents()
         try:
             self.assertEqual(window.all_route_ids(), tuple(route.id for route in ROUTES))
             self.assertEqual(window.visit_all_routes(), [])
-            self.assertEqual(len(window._pages), 92)
+            self.assertEqual(len(window._pages), 93)
             built_sample_count = 0
             for entry in ENTRIES:
                 _index, page = window._pages[entry.route_id]
@@ -3280,7 +3368,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     "sample surface".format(entry.route_id),
                 )
                 built_sample_count += len(results)
-            self.assertEqual(built_sample_count, 212)
+            self.assertEqual(built_sample_count, 213)
         finally:
             window.close()
             window.deleteLater()
@@ -3392,7 +3480,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             QApplication.processEvents()
 
     def test_opt_in_startup_splash_matches_native_chrome_handoff(self):
+        self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())
         window = GalleryWindow(startup_visuals=True)
+        fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
         try:
             splash = window._splash
             self.assertIsNotNone(splash)
@@ -3404,25 +3494,60 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             )
             self.assertIsNotNone(
                 splash.findChild(
-                    fluentqt.ProgressRing, "gallerySplashSpinner"
+                    fluentqt.ProgressRing, "splashProgressRing"
                 )
             )
             self.assertTrue(window._menu_button.isHidden())
-            window._prewarm_paused = True
+            # Finish loading while hidden: only visible time pays for presentation.
+            window._prewarm_queue.clear()
+            window._prewarm_paused = False
+            window._prewarm_next_route()
+            _qwait(300)
+            visible = QElapsedTimer()
+            visible.start()
             window.show()
             QApplication.processEvents()
             self.assertTrue(splash.isVisible())
             self.assertEqual(splash.geometry(), window.contentHost().rect())
-            window._prewarm_queue.clear()
-            window._prewarm_paused = False
-            window._prewarm_next_route()
-            _qwait(500)
+            _qwait(350)
+            self.assertIs(window._splash, splash)
+            self.assertIsNone(window.findChild(QWidget, "splashLogoTransition"))
+            self.assertTrue(_wait_until(lambda: window._splash is None))
+            self.assertGreaterEqual(visible.elapsed(), 1400)
             self.assertIsNone(window._splash)
             self.assertTrue(window._menu_button.isVisible())
+            _qwait(500)
+            self.assertIsNone(window._intro_tour)
+            self.assertTrue(_wait_until(lambda: not shiboken6.isValid(splash)))
+            self.assertGreaterEqual(visible.elapsed(), 2000)
         finally:
             window.close()
             window.deleteLater()
             QApplication.processEvents()
+
+    def test_pending_startup_presentation_respects_reduced_motion(self):
+        self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())
+        for mode in (fluentqt.MotionMode.Reduced, fluentqt.MotionMode.Disabled):
+            with self.subTest(mode=mode):
+                window = GalleryWindow(startup_visuals=True)
+                fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
+                try:
+                    splash = window._splash
+                    window._prewarm_queue.clear()
+                    window._prewarm_paused = False
+                    window._prewarm_next_route()
+                    window.show()
+                    _qwait(200)
+                    self.assertIs(window._splash, splash)
+                    fluentqt.set_motion_mode(mode)
+                    self.assertTrue(_wait_until(
+                        lambda: not shiboken6.isValid(splash), 400
+                    ))
+                    self.assertIsNone(window.findChild(QWidget, "splashLogoTransition"))
+                finally:
+                    window.close()
+                    window.deleteLater()
+                    QApplication.processEvents()
 
     def test_gallery_owned_splash_and_title_motion_follow_policy(self):
         original_motion = fluentqt.current_motion_mode()
@@ -3452,8 +3577,8 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             splash = GallerySplashScreen(window.contentHost())
             splash.show()
             splash.dismiss()
-            self.assertEqual(splash._fade.duration(), 50)
-            splash._fade.stop()
+            self.assertEqual(splash.findChild(QPropertyAnimation, "splashDismissAnimation").duration(), 50)
+            splash.findChild(QPropertyAnimation, "splashDismissAnimation").stop()
             splash.deleteLater()
 
             settings.set_motion_mode(fluentqt.MotionMode.Full)
@@ -3482,7 +3607,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 dynamic_splash.graphicsEffect().opacity(), 0.0, places=4
             )
             self.assertEqual(
-                dynamic_splash._fade.state(),
+                dynamic_splash.findChild(QPropertyAnimation, "splashDismissAnimation").state(),
                 QAbstractAnimation.State.Stopped,
             )
 
@@ -3516,7 +3641,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 disabled_splash.graphicsEffect().opacity(), 0.0, places=4
             )
             self.assertEqual(
-                disabled_splash._fade.state(),
+                disabled_splash.findChild(QPropertyAnimation, "splashDismissAnimation").state(),
                 QAbstractAnimation.State.Stopped,
             )
         finally:

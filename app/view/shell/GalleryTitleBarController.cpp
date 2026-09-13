@@ -405,6 +405,19 @@ QWidget* GalleryTitleBarController::searchBox() const
     return m_searchBox.data();
 }
 
+QWidget* GalleryTitleBarController::appIconWidget() const
+{
+    return m_appIcon.data();
+}
+
+void GalleryTitleBarController::setAppIconRevealed(bool revealed)
+{
+    if (m_appIconRevealed == revealed)
+        return;
+    m_appIconRevealed = revealed;
+    applyChromeOpacity();
+}
+
 void GalleryTitleBarController::applyBackButtonReveal(qreal reveal)
 {
     m_backReveal = reveal;
@@ -444,7 +457,8 @@ void GalleryTitleBarController::applyChromeOpacity()
         if (!widget->objectName().startsWith(QStringLiteral("GalleryTitleBar.")))
             continue;
 
-        if (qFuzzyCompare(opacity, 1.0)) {
+        const qreal widgetOpacity = widget == m_appIcon && !m_appIconRevealed ? 0.0 : opacity;
+        if (qFuzzyCompare(widgetOpacity, 1.0)) {
             widget->setGraphicsEffect(nullptr);
             continue;
         }
@@ -454,7 +468,7 @@ void GalleryTitleBarController::applyChromeOpacity()
             effect = new QGraphicsOpacityEffect(widget);
             widget->setGraphicsEffect(effect);
         }
-        effect->setOpacity(opacity);
+        effect->setOpacity(widgetOpacity);
     }
 }
 

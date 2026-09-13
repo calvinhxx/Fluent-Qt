@@ -4,6 +4,7 @@
 #include <functional>
 
 #include <QAction>
+#include <QApplication>
 #include <QBoxLayout>
 #include <QEvent>
 #include <QFont>
@@ -14,14 +15,18 @@
 #include <QPoint>
 #include <QSizePolicy>
 #include <QVBoxLayout>
+#include <QVariantAnimation>
 
 #include "components/basicinput/Button.h"
+#include "components/basicinput/ComboBox.h"
+#include "components/layout/Card.h"
 #include "components/status_info/Avatar.h"
 #include "components/status_info/InfoBadge.h"
 #include "components/status_info/InfoBar.h"
 #include "components/status_info/ProgressBar.h"
 #include "components/status_info/ProgressRing.h"
 #include "components/status_info/Shimmer.h"
+#include "components/status_info/SplashScreen.h"
 #include "components/status_info/Toast.h"
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
@@ -40,6 +45,7 @@ using fluent::status_info::InfoBar;
 using fluent::status_info::ProgressBar;
 using fluent::status_info::ProgressRing;
 using fluent::status_info::Shimmer;
+using fluent::status_info::SplashScreen;
 using fluent::status_info::ShimmerPainter;
 using fluent::status_info::Toast;
 using fluent::status_info::ToolTip;
@@ -69,6 +75,37 @@ protected:
         painter.setBrush(themeColors().bgCanvas);
         painter.drawRoundedRect(rect().adjusted(0, 0, -1, -1), themeRadius().overlay,
                                 themeRadius().overlay);
+    }
+};
+
+// The startup scene uses the card's available width, including in an isolated preview.
+// zh_CN: 启动场景铺满卡片可用宽度，独立预览和窄窗口采用同一布局。
+class SplashScreenSampleSurface final : public QWidget {
+public:
+    explicit SplashScreenSampleSurface(QWidget* parent) : QWidget(parent)
+    {
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        if (parent)
+            parent->installEventFilter(this);
+    }
+
+    QSize sizeHint() const override
+    {
+        QSize result = QWidget::sizeHint();
+        if (parentWidget() && parentWidget()->layout()) {
+            const QMargins margins = parentWidget()->layout()->contentsMargins();
+            result.setWidth(qMax(minimumSizeHint().width(),
+                                 parentWidget()->width() - margins.left() - margins.right()));
+        }
+        return result;
+    }
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (watched == parentWidget() && event->type() == QEvent::Resize)
+            updateGeometry();
+        return QWidget::eventFilter(watched, event);
     }
 };
 
@@ -998,6 +1035,165 @@ QVector<GallerySample> progressRingSamples()
             })};
 }
 
+QVector<GallerySample> splashScreenSamples()
+{
+    return {makeSample(
+        QStringLiteral("splash-screen-startup"), QStringLiteral("Application startup"),
+        QStringLiteral("Branded is the default light reveal. Select Simple for the centered "
+                       "loading ring, or replay the transition."),
+        QStringLiteral(
+            "auto* root = new QWidget(this);\n"
+            "auto* layout = new QVBoxLayout(root);\n"
+            "layout->setContentsMargins(0, 0, 0, 0);\n"
+            "layout->setSpacing(12);\n"
+            "const QIcon appIcon(\":/app/assets/app-icon.png\");\n"
+            "auto* host = new fluent::layout::Card(root);\n"
+            "host->setObjectName(\"splashPreviewHost\");\n"
+            "host->setAppearance(fluent::layout::Card::Canvas);\n"
+            "host->setBorderVisible(false);\n"
+            "host->setFixedHeight(400);\n"
+            "auto* contentLayout = new QVBoxLayout(host);\n"
+            "contentLayout->setContentsMargins(24, 24, 24, 24);\n"
+            "auto* header = new QHBoxLayout;\n"
+            "auto* logo = new Label(host);\n"
+            "logo->setObjectName(\"splashDestinationIcon\");\n"
+            "logo->setFixedSize(28, 28);\n"
+            "header->addWidget(logo);\n"
+            "header->addWidget(new Label(\"FluentQt Gallery\", host));\n"
+            "contentLayout->addLayout(header);\n"
+            "contentLayout->addStretch();\n"
+            "auto* splash = new SplashScreen(host);\n"
+            "splash->setObjectName(\"sampleSplash\");\n"
+            "splash->setIcon(appIcon);\n"
+            "splash->setTitle(\"FluentQt\");\n"
+            "splash->setSubtitle(\"Small details. Fluent experiences.\");\n"
+            "splash->setText(\"Starting FluentQt Gallery\");\n"
+            "splash->setTransitionTarget(logo);\n"
+            "QObject::connect(splash, &SplashScreen::dismissed, logo,\n"
+            "                 [logo, appIcon]() { logo->setPixmap(appIcon.pixmap(28, 28)); });\n"
+            "splash->show();\n"
+            "// Demo timing only; applications report actual work and call dismiss when ready.\n"
+            "auto* loading = new QVariantAnimation(splash);\n"
+            "loading->setObjectName(\"sampleSplashLoading\");\n"
+            "loading->setDuration(3600);\n"
+            "loading->setStartValue(0);\n"
+            "loading->setEndValue(120);\n"
+            "QObject::connect(loading, &QVariantAnimation::valueChanged, splash, [splash](const "
+            "QVariant& value) {\n"
+            "    const int step = value.toInt();\n"
+            "    splash->setProgress(qMax(0, step - 20), 100);\n"
+            "    splash->setIndeterminate(step < 20);\n"
+            "    splash->setText(step < 100 ? \"Loading resources\" : \"Opening Gallery\");\n"
+            "});\n"
+            "QObject::connect(loading, &QVariantAnimation::finished, splash, "
+            "&SplashScreen::dismiss);\n"
+            "auto restart = [splash, loading, logo]() {\n"
+            "    loading->stop();\n"
+            "    splash->hide();\n"
+            "    logo->clear();\n"
+            "    splash->setIndeterminate(true);\n"
+            "    splash->show();\n"
+            "    loading->start();\n"
+            "};\n"
+            "auto* presentation = new fluent::basicinput::ComboBox(root);\n"
+            "presentation->setObjectName(\"splashPresentation\");\n"
+            "presentation->setAccessibleName(\"Splash presentation\");\n"
+            "presentation->addItems({\"Branded\", \"Simple\"});\n"
+            "QObject::connect(presentation, QOverload<int>::of(&QComboBox::currentIndexChanged), "
+            "splash,\n"
+            "    [splash, restart](int index) {\n"
+            "        splash->setPresentation(index == 0 ? SplashScreen::Presentation::Branded\n"
+            "                                           : SplashScreen::Presentation::Simple);\n"
+            "        restart();\n"
+            "    });\n"
+            "auto* replay = new Button(\"Replay startup\", root);\n"
+            "replay->setObjectName(\"replaySplashButton\");\n"
+            "replay->setFluentStyle(Button::ButtonStyle::Accent);\n"
+            "QObject::connect(replay, &Button::clicked, splash, restart);\n"
+            "auto* controls = new QHBoxLayout;\n"
+            "controls->addWidget(presentation);\n"
+            "controls->addStretch();\n"
+            "controls->addWidget(replay);\n"
+            "layout->addWidget(host);\n"
+            "layout->addLayout(controls);\n"),
+        [](QWidget* parent) {
+            auto* root = new SplashScreenSampleSurface(parent);
+            auto* layout = new QVBoxLayout(root);
+            layout->setContentsMargins(0, 0, 0, 0);
+            layout->setSpacing(12);
+            const QIcon appIcon(":/app/assets/app-icon.png");
+            auto* host = new fluent::layout::Card(root);
+            host->setObjectName("splashPreviewHost");
+            host->setAppearance(fluent::layout::Card::Canvas);
+            host->setBorderVisible(false);
+            host->setFixedHeight(400);
+            auto* contentLayout = new QVBoxLayout(host);
+            contentLayout->setContentsMargins(24, 24, 24, 24);
+            auto* header = new QHBoxLayout;
+            auto* logo = new Label(host);
+            logo->setObjectName("splashDestinationIcon");
+            logo->setFixedSize(28, 28);
+            header->addWidget(logo);
+            header->addWidget(new Label("FluentQt Gallery", host));
+            contentLayout->addLayout(header);
+            contentLayout->addStretch();
+            auto* splash = new SplashScreen(host);
+            splash->setObjectName("sampleSplash");
+            splash->setIcon(appIcon);
+            splash->setTitle("FluentQt");
+            splash->setSubtitle("Small details. Fluent experiences.");
+            splash->setText("Starting FluentQt Gallery");
+            splash->setTransitionTarget(logo);
+            QObject::connect(splash, &SplashScreen::dismissed, logo,
+                             [logo, appIcon]() { logo->setPixmap(appIcon.pixmap(28, 28)); });
+            splash->show();
+            // Demo timing only; applications report actual work and call dismiss when ready.
+            auto* loading = new QVariantAnimation(splash);
+            loading->setObjectName("sampleSplashLoading");
+            loading->setDuration(3600);
+            loading->setStartValue(0);
+            loading->setEndValue(120);
+            QObject::connect(
+                loading, &QVariantAnimation::valueChanged, splash, [splash](const QVariant& value) {
+                    const int step = value.toInt();
+                    splash->setProgress(qMax(0, step - 20), 100);
+                    splash->setIndeterminate(step < 20);
+                    splash->setText(step < 100 ? "Loading resources" : "Opening Gallery");
+                });
+            QObject::connect(loading, &QVariantAnimation::finished, splash, &SplashScreen::dismiss);
+            auto restart = [splash, loading, logo]() {
+                loading->stop();
+                splash->hide();
+                logo->clear();
+                splash->setIndeterminate(true);
+                splash->show();
+                loading->start();
+            };
+            auto* presentation = new fluent::basicinput::ComboBox(root);
+            presentation->setObjectName("splashPresentation");
+            presentation->setAccessibleName("Splash presentation");
+            presentation->addItems({"Branded", "Simple"});
+            QObject::connect(presentation, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                             splash, [splash, restart](int index) {
+                                 splash->setPresentation(index == 0
+                                                             ? SplashScreen::Presentation::Branded
+                                                             : SplashScreen::Presentation::Simple);
+                                 restart();
+                             });
+            auto* replay = new Button("Replay startup", root);
+            replay->setObjectName("replaySplashButton");
+            replay->setFluentStyle(Button::ButtonStyle::Accent);
+            QObject::connect(replay, &Button::clicked, splash, restart);
+            auto* controls = new QHBoxLayout;
+            controls->addWidget(presentation);
+            controls->addStretch();
+            controls->addWidget(replay);
+            layout->addWidget(host);
+            layout->addLayout(controls);
+            return root;
+        })};
+}
+
 QVector<GallerySample> shimmerSamples()
 {
     return {
@@ -1455,6 +1651,8 @@ QVector<GallerySample> statusInfoSamples(const QString& routeId)
         return progressBarSamples();
     if (routeId == QStringLiteral("progress-ring"))
         return progressRingSamples();
+    if (routeId == QStringLiteral("splash-screen"))
+        return splashScreenSamples();
     if (routeId == QStringLiteral("shimmer"))
         return shimmerSamples();
     if (routeId == QStringLiteral("toast"))

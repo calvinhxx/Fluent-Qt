@@ -29,6 +29,7 @@
         "flyout",
         "multi-select-combobox",
         "popup",
+        "splash-screen",
         "split-button",
         "teaching-tip",
         "time-picker",
@@ -1013,6 +1014,55 @@
         "coverage": "all-required-states",
         "surface": "visual-check",
         "test_case": "SelectorBarTest.VisualCheck"
+      }
+    },
+    {
+      "id": "splash-screen",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "SplashScreenTest.Contract_BrandedNarrowLayoutAndHighContrast",
+          "states": [
+            "normal-light",
+            "normal-dark",
+            "narrow"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "SplashScreenTest.Contract_ConnectedDismissalBorrowsTargetAcrossHostBoundary",
+          "states": [
+            "placement",
+            "dismissed"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "SplashScreenTest.Contract_KeyboardShortcutAndFocusRestoration",
+          "states": [
+            "open",
+            "keyboard-focus",
+            "dismissed"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "SplashScreenTest.Contract_TargetDeletionAndCancelledTransitionAreSafe",
+          "states": [
+            "dismissed"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "SplashScreenTest.VisualCheck"
       }
     },
     {

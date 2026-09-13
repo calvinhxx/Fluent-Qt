@@ -456,7 +456,7 @@ TEST_F(GalleryShellFrameworkTest, HomeHeroAndSectionHeadersKeepTheirContentHeigh
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 6000);
 
     auto* hero = window.findChild<QWidget*>(QStringLiteral("galleryHomeHero"));
     auto* icon = window.findChild<QLabel*>(QStringLiteral("galleryHomeHeroIcon"));
@@ -760,7 +760,7 @@ TEST_F(GalleryShellFrameworkTest, ClickingHomeFeaturedCardNavigatesWithoutUseAft
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 6000);
 
     auto* featuredCards = window.findChild<QWidget*>(QStringLiteral("galleryHomeCards"));
     ASSERT_NE(featuredCards, nullptr);
@@ -816,7 +816,7 @@ TEST_F(GalleryShellFrameworkTest, TitleBarContentUsesAnchorsAndCentersControls)
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 6000);
 
     TitleBar* titleBar = window.titleBar();
     ASSERT_NE(titleBar, nullptr);
@@ -923,7 +923,7 @@ TEST_F(GalleryShellFrameworkTest, TitleBarAppIconRefreshesAfterDisplayScaleChang
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 6000);
 
     auto* appIcon =
         vg::findRequiredChild<QLabel>(window.titleBar(), QStringLiteral("GalleryTitleBar.AppIcon"));
@@ -949,7 +949,7 @@ TEST_F(GalleryShellFrameworkTest, TitleBarForegroundTracksWindowActivationWithou
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 6000);
 
     TitleBar* titleBar = window.titleBar();
     ASSERT_NE(titleBar, nullptr);
@@ -1195,6 +1195,8 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsChildrenInFlyout)
     window.resize(1180, 760);
     window.show();
     QApplication::processEvents();
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 6000);
 
     auto* mainPane =
         window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
@@ -1392,6 +1394,8 @@ TEST_F(GalleryShellFrameworkTest, MainNavigationRowClickTogglesCategory)
     window.resize(1180, 760);
     window.show();
     QApplication::processEvents();
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 6000);
 
     auto* mainPane =
         window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
@@ -1513,6 +1517,8 @@ TEST_F(GalleryShellFrameworkTest, CurrentContentScrollbarStaysAtRightEdgeAfterNa
     window.resize(1180, 500);
     window.show();
     QApplication::processEvents();
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 6000);
 
     auto* mainPane =
         window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
@@ -1797,7 +1803,7 @@ TEST_F(GalleryShellFrameworkTest, BackButtonReturnsThroughNavigationHistory)
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 6000);
 
     auto* backButton = vg::findRequiredChild<Button>(window.titleBar(),
                                                      QStringLiteral("GalleryTitleBar.BackButton"));
@@ -1830,6 +1836,8 @@ TEST_F(GalleryShellFrameworkTest, NavigationButtonActivationUpdatesRoute)
     window.resize(1180, 760);
     window.show();
     QApplication::processEvents();
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 6000);
 
     auto* mainPane =
         window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
@@ -1879,7 +1887,7 @@ TEST_F(GalleryShellFrameworkTest, NavigationArrowKeysActivateCurrentRoute)
     window.show();
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(
-        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 2000);
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 6000);
 
     auto* mainPane =
         window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
@@ -1934,6 +1942,8 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     window.resize(1180, 760);
     window.show();
     QApplication::processEvents();
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 6000);
     ASSERT_TRUE(window.selectRoute(QStringLiteral("settings")));
     QTRY_VERIFY_WITH_TIMEOUT(window.currentSettingsPage() != nullptr, 2000);
 
@@ -2818,6 +2828,8 @@ TEST_F(GalleryShellFrameworkTest, TopFlyoutRowClickDismissesAfterReopen)
     window.resize(1180, 760);
     window.show();
     QApplication::processEvents();
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 6000);
 
     auto* navigationView =
         window.findChild<NavigationView*>(QStringLiteral("galleryNavigationView"));

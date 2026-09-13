@@ -51,6 +51,7 @@ RISK_FAMILY_RULES = {
                 "drawer-view",
                 "dropdown-button",
                 "multi-select-combobox",
+                "splash-screen",
                 "split-button",
                 "time-picker",
                 "toast",

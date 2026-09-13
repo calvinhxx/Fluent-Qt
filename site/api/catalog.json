@@ -23,8 +23,8 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 71,
-    "public_headers": 118,
+    "components": 72,
+    "public_headers": 119,
     "categories": 12
   },
   "categories": [
@@ -71,7 +71,7 @@
     {
       "id": "status-info",
       "title": "Status & info",
-      "component_count": 8
+      "component_count": 9
     },
     {
       "id": "text-fields",
@@ -2156,6 +2156,41 @@
       "sample_count": 3
     },
     {
+      "id": "splash-screen",
+      "title": "SplashScreen",
+      "category_id": "status-info",
+      "description": "Cover a content area during startup, report progress, and dismiss when ready.",
+      "capabilities": [
+        "status-and-identity"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/StatusInfo.h>",
+        "installed_declaration_header": "<FluentQt/components/status_info/SplashScreen.h>",
+        "qualified_type": "fluent::status_info::SplashScreen",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/SplashScreen.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.status_info",
+        "type": "SplashScreen",
+        "import_statement": "from fluentqt.status_info import SplashScreen"
+      },
+      "gallery": {
+        "route_id": "splash-screen",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=splash-screen",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/StatusInfoSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_splash_screen",
+          "ctest_label": "test_splash_screen",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/status_info/TestSplashScreen.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
       "id": "shimmer",
       "title": "Shimmer",
       "category_id": "status-info",
@@ -3536,6 +3571,16 @@
         "ShimmerTemplate"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/Shimmer.h"
+    },
+    {
+      "include": "<FluentQt/components/status_info/SplashScreen.h>",
+      "source": "src/components/status_info/SplashScreen.h",
+      "summary": "Reusable startup surface covering its parent widget's content area.",
+      "declarations": [
+        "SplashScreen",
+        "Presentation"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/SplashScreen.h"
     },
     {
       "include": "<FluentQt/components/status_info/Toast.h>",

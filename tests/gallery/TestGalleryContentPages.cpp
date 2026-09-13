@@ -35,6 +35,7 @@
 #include <QTest>
 #include <QTimer>
 #include <QVector>
+#include <QVariantAnimation>
 #include <QWidget>
 #include <QtMath>
 
@@ -67,6 +68,7 @@
 #include "components/status_info/InfoBadge.h"
 #include "components/status_info/ProgressRing.h"
 #include "components/status_info/Shimmer.h"
+#include "components/status_info/SplashScreen.h"
 #include "components/status_info/ToolTip.h"
 #include "components/status_info/Toast.h"
 #include "components/textfields/EditingCommandRouter.h"
@@ -501,6 +503,10 @@ TEST_F(GalleryContentPagesTest, FoundationTopicsExposeFullIconCatalogAndSeparate
     window.resize(1180, 760);
     window.show();
     QApplication::processEvents();
+    // Content input starts after the startup cover has actually finished.
+    // zh_CN: 启动遮罩完成退场后再操作内容，避免绕过真实输入隔离。
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 10000);
     FLUENT_MAKE_MOUSE_EVENT(hoverMove, QEvent::MouseMove, iconGrid, QPoint(22, 22), Qt::NoButton,
                             Qt::NoButton, Qt::NoModifier);
     QApplication::sendEvent(iconGrid, &hoverMove);
@@ -798,6 +804,10 @@ TEST_F(GalleryContentPagesTest, GalleryAcceptanceMatrixCoversEveryComponentRoute
     window.resize(1180, 760);
     window.show();
     QApplication::processEvents();
+    // Content input starts after the startup cover has actually finished.
+    // zh_CN: 启动遮罩完成退场后再操作内容，避免绕过真实输入隔离。
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr, 10000);
 
     int reviewedRoutes = 0;
     int focusableRoutes = 0;
@@ -1275,6 +1285,65 @@ TEST_F(GalleryContentPagesTest, MultiSelectStatusWrapsCompleteSelection)
     EXPECT_TRUE(status->wordWrap());
     EXPECT_EQ(status->width(), box->width());
     EXPECT_GT(status->heightForWidth(status->width()), status->fontMetrics().height());
+}
+
+TEST_F(GalleryContentPagesTest, SplashPreviewScalesAndReplaysTheStartupSequence)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("splash-screen"),
+                               QStringLiteral("splash-screen-startup"), &sample));
+    GallerySampleCard card(sample);
+    card.resize(800, card.sizeHint().height());
+    card.show();
+    QApplication::processEvents();
+    auto* splash = card.findChild<fluent::status_info::SplashScreen*>();
+    auto* replay = card.findChild<Button*>(QStringLiteral("replaySplashButton"));
+    auto* loading = card.findChild<QVariantAnimation*>(QStringLiteral("sampleSplashLoading"));
+    auto* surface = card.findChild<QWidget*>(QStringLiteral("gallerySampleCardPreview"));
+    ASSERT_NE(splash, nullptr);
+    ASSERT_NE(replay, nullptr);
+    ASSERT_NE(loading, nullptr);
+    ASSERT_NE(surface, nullptr);
+    // Isolated previews cannot rely on QApplication::windowIcon being configured.
+    EXPECT_FALSE(splash->icon().isNull());
+    EXPECT_EQ(splash->presentation(), fluent::status_info::SplashScreen::Presentation::Branded);
+    EXPECT_EQ(splash->title(), QStringLiteral("FluentQt"));
+    EXPECT_EQ(splash->transitionTarget(),
+              card.findChild<QWidget*>(QStringLiteral("splashDestinationIcon")));
+    EXPECT_TRUE(splash->isIndeterminate());
+    for (int width : {800, 480}) {
+        card.resize(width, card.height());
+        QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QApplication::processEvents();
+        QApplication::processEvents();
+        EXPECT_TRUE(isContainedIn(splash, surface, 1));
+        EXPECT_GE(splash->width(), surface->width() - 42);
+    }
+    replay->click();
+    ASSERT_EQ(loading->state(), QAbstractAnimation::Running);
+    loading->setCurrentTime(1800);
+    EXPECT_FALSE(splash->isIndeterminate());
+    EXPECT_GT(splash->progress(), 0);
+    EXPECT_LT(splash->progress(), 100);
+    loading->setCurrentTime(loading->duration());
+    QTRY_VERIFY_WITH_TIMEOUT(!splash->isVisible(), 2000);
+    replay->click();
+    EXPECT_TRUE(splash->isVisible());
+    EXPECT_TRUE(splash->isIndeterminate());
+    // Replaying during the fade cancels that fade instead of hiding the new run.
+    loading->setCurrentTime(loading->duration());
+    replay->click();
+    EXPECT_TRUE(splash->isVisible());
+    EXPECT_TRUE(splash->isIndeterminate());
+    EXPECT_EQ(loading->state(), QAbstractAnimation::Running);
+    auto* presentation = card.findChild<ComboBox*>(QStringLiteral("splashPresentation"));
+    ASSERT_NE(presentation, nullptr);
+    presentation->setCurrentIndex(1);
+    EXPECT_EQ(splash->presentation(), fluent::status_info::SplashScreen::Presentation::Simple);
+    EXPECT_TRUE(splash->isVisible());
+    presentation->setCurrentIndex(0);
+    EXPECT_EQ(splash->presentation(), fluent::status_info::SplashScreen::Presentation::Branded);
+    EXPECT_TRUE(splash->isVisible());
 }
 
 TEST_F(GalleryContentPagesTest, NarrowCardsKeepNavigationPreviewsInsideTheirSurface)

@@ -33,6 +33,54 @@ OpenGL module dependency. `TestParticleBackdrop.cpp` covers clipping, reparentin
 motion policy, transparent fading, setter normalization and child input.
 Native appearance and timing remain host-specific verification boundaries.
 
+## 2026-09-12 SplashScreen extraction
+
+`fluent::status_info::SplashScreen` adds a parent-owned startup surface with
+application-supplied `QIcon`, preferred icon size, plain status text, and
+clamped determinate or indeterminate progress. `setProgress(done, total)` uses
+wide arithmetic and switches to indeterminate mode for a non-positive total.
+Reaching 100% does not dismiss the surface.
+
+`Presentation::Branded` is the default: intact artwork reveals over soft accent
+light, optional `title` / `subtitle` labels identify the application, and a
+linear indicator presents progress. `Presentation::Simple` explicitly retains
+the centered artwork and loading ring. Both presentations share progress,
+input, theme and lifecycle contracts. This changes the new component's default
+presentation and the Gallery startup; it does not add a design language.
+
+`transitionTarget` borrows a same-window icon holder for the Branded dismissal.
+Full motion moves an input-transparent private icon child into that target,
+including a title-bar sibling outside the covered host. The target keeps its
+parent, visibility and graphics effect. An unavailable target falls back to a
+fade; destruction clears the borrowed pointer. Hide, reuse and destruction
+remove the private transition child. Reduced motion uses a short fade,
+Disabled completes immediately, and decorative entrance never delays dismissal.
+The enum, properties and target setter have matching PySide6 bindings.
+
+`dismiss()` follows MotionPolicy, hides, and emits `dismissed()` exactly once.
+It does not destroy the widget. Direct `hide()` cancels a transition without a
+completion signal; `show()` after hiding restores opacity and activity.
+Spontaneous window minimization preserves an ongoing dismissal. A newly shown
+cover hides older covers on overlapping hosts, preventing focus and stacking
+recursion; separate hosts may keep independent covers. Once the new cover is
+ready, each replaced cover emits `replaced()` without `dismissed()` or automatic
+deletion. Replacement callbacks may delete the old cover or display another one.
+The visible surface filters input in its covered host and restores prior
+focus where possible. Controls outside the host and other windows remain
+available. Brand/status labels and the visible progress indicator retain their accessible
+semantics; the root exposes a busy pane and caller-owned accessible text.
+
+The installed C++ header, category umbrella, PySide6 export, and Gallery sample
+ship together. Both Gallery startup wrappers supply artwork and brand text,
+and connect dismissal and replacement to `deleteLater()`. Brand text animates
+paint opacity while retaining Label elision and accessibility; per-frame updates
+do not rewrite theme overrides or invalidate text geometry.
+Page warm-up, title-bar icon reveal, and
+startup completion remain application responsibilities.
+`TestSplashScreen.cpp` and the binding/Gallery tests own lifecycle, progress,
+input, accessibility and geometry coverage. Native captures are host-specific;
+Windows/Linux input, compositor and assistive-technology review remain manual.
+
 ## 2026-09-08 theme token override addendum
 
 `UserTheme::applyOverrides()` adds an atomic, validated patch to the current

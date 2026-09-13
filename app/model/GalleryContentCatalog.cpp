@@ -221,6 +221,9 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("Shows determinate or indeterminate progress along a line.")},
         {QStringLiteral("progress-ring"),
          QStringLiteral("Shows determinate or indeterminate progress around a ring.")},
+        {QStringLiteral("splash-screen"),
+         QStringLiteral(
+             "Cover a content area during startup, report progress, and dismiss when ready.")},
         {QStringLiteral("shimmer"),
          QStringLiteral("Shows a skeleton placeholder while content is loading.")},
         {QStringLiteral("toast"), QStringLiteral("Shows a brief same-window notification without "

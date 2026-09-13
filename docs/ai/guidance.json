@@ -795,6 +795,11 @@
           "avoid_when": "Users need precise progress comparison across a long operation."
         },
         {
+          "component_id": "splash-screen",
+          "choose_when": "A startup surface must cover a host's content with artwork, title, status and progress. Branded is the default reveal; Simple retains the centered ring. An optional same-window transitionTarget connects dismissal to an application icon holder.",
+          "avoid_when": "Content should remain interactive during background loading, or the component would need to own startup tasks."
+        },
+        {
           "component_id": "shimmer",
           "choose_when": "A skeleton placeholder should preserve content geometry while data loads.",
           "avoid_when": "The operation has explicit measurable progress or failed."

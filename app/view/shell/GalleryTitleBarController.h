@@ -75,6 +75,10 @@ public:
     /// Search box widget the first-launch intro tour anchors a coach mark to.
     /// zh_CN: 首次启动引导用来锚定提示的搜索框控件。
     QWidget* searchBox() const;
+    /// Destination geometry for the connected startup transition. zh_CN: 启动连续转场的目标图标。
+    QWidget* appIconWidget() const;
+    /// Holds the icon pixels until startup arrives; preserves layout. zh_CN: 保留布局，暂缓显示目标图标。
+    void setAppIconRevealed(bool revealed);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -106,6 +110,7 @@ private:
     bool m_windowActive = false;
     bool m_backRevealed = false;
     bool m_chromeVisible = true;
+    bool m_appIconRevealed = true;
 };
 
 } // namespace fluent::gallery

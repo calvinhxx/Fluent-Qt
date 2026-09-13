@@ -7,6 +7,7 @@
 #include <components/status_info/ProgressBar.h>
 #include <components/status_info/ProgressRing.h>
 #include <components/status_info/Shimmer.h>
+#include <components/status_info/SplashScreen.h>
 #include <components/status_info/Toast.h>
 #include <components/status_info/ToolTip.h>
 

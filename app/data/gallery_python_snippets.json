@@ -2,8 +2,8 @@
   "schema_version": 1,
   "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
   "summary": {
-    "component_count": 71,
-    "sample_count": 212
+    "component_count": 72,
+    "sample_count": 213
   },
   "samples": [
     {
@@ -895,6 +895,11 @@
       "route_id": "progress-ring",
       "sample_id": "progress-ring-status",
       "source": "running = fluentqt.ProgressRing()\nrunning.setIsIndeterminate(False)\nrunning.setIsActive(True)\nrunning.setRingSize(fluentqt.ProgressRing.ProgressRingSize.Large)\nrunning.setValue(65)\nrunning.setStatus(fluentqt.ProgressRing.ProgressRingStatus.Running)\nrunning.setBackgroundVisible(True)\n\npaused = fluentqt.ProgressRing()\npaused.setIsIndeterminate(False)\npaused.setIsActive(True)\npaused.setRingSize(fluentqt.ProgressRing.ProgressRingSize.Large)\npaused.setValue(65)\npaused.setStatus(fluentqt.ProgressRing.ProgressRingStatus.Paused)\npaused.setBackgroundVisible(True)\n\nerror = fluentqt.ProgressRing()\nerror.setIsIndeterminate(False)\nerror.setIsActive(True)\nerror.setRingSize(fluentqt.ProgressRing.ProgressRingSize.Large)\nerror.setValue(65)\nerror.setStatus(fluentqt.ProgressRing.ProgressRingStatus.Error)\nerror.setBackgroundVisible(True)\n"
+    },
+    {
+      "route_id": "splash-screen",
+      "sample_id": "splash-screen-startup",
+      "source": "from PySide6.QtCore import QVariantAnimation\nfrom PySide6.QtGui import QIcon\nfrom PySide6.QtWidgets import QHBoxLayout, QVBoxLayout\nfrom importlib.resources import files\n\n# Gallery-only preview drawing/model helpers are omitted.\n\nroot = SplashScreenSampleSurface()\nlayout = QVBoxLayout(root)\nlayout.setContentsMargins(0, 0, 0, 0)\nlayout.setSpacing(12)\napp_icon = QIcon(str(files(\"fluentqt_gallery\") / \"assets\" / \"app-icon.png\"))\nhost = fluentqt.Card(root)\nhost.setObjectName(\"splashPreviewHost\")\nhost.setAppearance(fluentqt.Card.Appearance.Canvas)\nhost.setBorderVisible(False)\nhost.setFixedHeight(400)\ncontent_layout = QVBoxLayout(host)\ncontent_layout.setContentsMargins(24, 24, 24, 24)\nheader = QHBoxLayout()\nlogo = fluentqt.Label(host)\nlogo.setObjectName(\"splashDestinationIcon\")\nlogo.setFixedSize(28, 28)\nheader.addWidget(logo)\nheader.addWidget(fluentqt.Label(\"FluentQt Gallery\", host))\ncontent_layout.addLayout(header)\ncontent_layout.addStretch()\nsplash = fluentqt.SplashScreen(host)\nsplash.setObjectName(\"sampleSplash\")\nsplash.setIcon(app_icon)\nsplash.setTitle(\"FluentQt\")\nsplash.setSubtitle(\"Small details. Fluent experiences.\")\nsplash.setText(\"Starting FluentQt Gallery\")\nsplash.setTransitionTarget(logo)\nsplash.dismissed.connect(lambda: logo.setPixmap(app_icon.pixmap(28, 28)))\nsplash.show()\n# Demo timing only; applications report actual work and call dismiss when ready.\nloading = QVariantAnimation(splash)\nloading.setObjectName(\"sampleSplashLoading\")\nloading.setDuration(3600)\nloading.setStartValue(0)\nloading.setEndValue(120)\n\ndef update_progress(value):\n    splash.setProgress(max(0, int(value) - 20), 100)\n    splash.setIndeterminate(value < 20)\n    splash.setText(\"Loading resources\" if value < 100 else \"Opening Gallery\")\n\nloading.valueChanged.connect(update_progress)\nloading.finished.connect(splash.dismiss)\n\ndef replay_startup():\n    loading.stop()\n    splash.hide()\n    logo.clear()\n    splash.setIndeterminate(True)\n    splash.show()\n    loading.start()\n\npresentation = fluentqt.ComboBox(root)\npresentation.setObjectName(\"splashPresentation\")\npresentation.setAccessibleName(\"Splash presentation\")\npresentation.addItems([\"Branded\", \"Simple\"])\n\ndef change_presentation(index):\n    mode = fluentqt.SplashScreen.Presentation\n    splash.setPresentation(mode(index))\n    replay_startup()\n\npresentation.currentIndexChanged.connect(change_presentation)\nreplay = fluentqt.Button(\"Replay startup\", root)\nreplay.setObjectName(\"replaySplashButton\")\nreplay.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)\nreplay.clicked.connect(replay_startup)\ncontrols = QHBoxLayout()\ncontrols.addWidget(presentation)\ncontrols.addStretch()\ncontrols.addWidget(replay)\nlayout.addWidget(host)\nlayout.addLayout(controls)\n"
     },
     {
       "route_id": "shimmer",

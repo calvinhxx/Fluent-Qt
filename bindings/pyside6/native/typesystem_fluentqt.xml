@@ -1417,6 +1417,9 @@ Shiboken::Object::keepReference(
                 <enum-type name="ProgressRingSize"/>
                 <enum-type name="ProgressRingStatus"/>
             </object-type>
+            <object-type name="SplashScreen">
+                <enum-type name="Presentation"/>
+            </object-type>
             <object-type name="Shimmer">
                 <enum-type name="ShimmerTemplate"/>
                 <!-- Shiboken omits elements()/setElements() because

@@ -110,6 +110,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/status_info/ProgressBar.h
     src/components/status_info/ProgressRing.h
     src/components/status_info/Shimmer.h
+    src/components/status_info/SplashScreen.h
     src/components/status_info/Toast.h
     src/components/status_info/ToolTip.h
 

@@ -14,6 +14,7 @@ InfoBadge = _native.fluent.InfoBadge
 _NativeInfoBar = _native.fluent.InfoBar
 ProgressBar = _native.fluent.ProgressBar
 ProgressRing = _native.fluent.ProgressRing
+SplashScreen = _native.fluent.SplashScreen
 _NativeShimmer = _native.fluent.Shimmer
 _NativeToast = _native.fluent.Toast
 ToolTip = _native.fluent.ToolTip
@@ -248,6 +249,7 @@ __all__ = [
     "InfoBar",
     "ProgressBar",
     "ProgressRing",
+    "SplashScreen",
     "Shimmer",
     "Toast",
     "ToolTip",

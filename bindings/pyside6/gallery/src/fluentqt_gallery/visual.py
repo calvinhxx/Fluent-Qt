@@ -921,138 +921,28 @@ def _hero_link_pixmap(
     return pixmap
 
 
-class GallerySplashScreen(QWidget):
-    """Startup overlay matching the native Gallery splash specification."""
-
-    _LOGO_SIZE = 96
-    _SPINNER_SIZE = 32
-    _SPINNER_CENTER_OFFSET = 144
-    _CAPTION_GAP = 12
-    _CAPTION_HEIGHT = 20
+class GallerySplashScreen(fluentqt.SplashScreen):
+    """Gallery branding and one-shot ownership for the shared native surface."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("gallerySplashScreen")
-        self._logo = QPixmap()
-        self._progress_text = ""
-        self._dismissing = False
-        self._fade: QPropertyAnimation | None = None
-        self._spinner = fluentqt.ProgressRing(self)
-        self._spinner.setObjectName("gallerySplashSpinner")
-        self._spinner.setFixedSize(self._SPINNER_SIZE, self._SPINNER_SIZE)
-        self._spinner.setIsIndeterminate(True)
-        self._spinner.setIsActive(True)
-        if parent is not None:
-            parent.installEventFilter(self)
-            self.setGeometry(parent.rect())
-        self.raise_()
-        self._layout_content()
-        self.refresh_display_scale()
+        self.setIcon(app_icon())
+        self.setIconSize(QSize(112, 112))
+        self.setTitle("FluentQt")
+        self.setSubtitle("Small details. Fluent experiences.")
+        self.setText("Preparing your workspace")
+        self.dismissed.connect(self.deleteLater)
+        self.replaced.connect(self.deleteLater)
 
     def set_progress(self, done: int, total: int) -> None:
-        next_text = (
-            "{0}%".format(max(0, min(done * 100 // total, 100)))
-            if total > 0
-            else ""
-        )
-        if self._progress_text == next_text:
-            return
-        self._progress_text = next_text
-        self.update()
-
-    def dismiss(self) -> None:
-        if self._dismissing:
-            return
-        self._dismissing = True
-        self._spinner.setIsActive(False)
-        effect = QGraphicsOpacityEffect(self)
-        self.setGraphicsEffect(effect)
-        fade = QPropertyAnimation(effect, b"opacity", self)
-        fade.setStartValue(1.0)
-        fade.setEndValue(0.0)
-        fade.setEasingCurve(QEasingCurve.OutCubic)
-        fade.finished.connect(self.deleteLater)
-        self._fade = fade
-
-        def complete_disabled() -> None:
-            effect.setOpacity(0.0)
-            self.deleteLater()
-
-        start_finite_transition(
-            fade,
-            250,
-            complete_disabled=complete_disabled,
-        )
+        self.setProgress(done, total)
 
     def refresh_theme(self) -> None:
         self.update()
 
     def refresh_display_scale(self) -> None:
-        self._logo = app_icon_pixmap(
-            self._LOGO_SIZE,
-            self.devicePixelRatioF(),
-        )
         self.update()
-
-    def showEvent(self, event) -> None:
-        super().showEvent(event)
-        self.refresh_display_scale()
-
-    def eventFilter(self, watched, event) -> bool:
-        if (
-            watched is self.parentWidget()
-            and event.type() == QEvent.Type.Resize
-        ):
-            self.setGeometry(self.parentWidget().rect())
-            self.raise_()
-        return super().eventFilter(watched, event)
-
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
-        self._layout_content()
-
-    def _layout_content(self) -> None:
-        center_x = self.width() // 2
-        center_y = self.height() // 2
-        self._spinner.move(
-            center_x - self._SPINNER_SIZE // 2,
-            center_y
-            + self._SPINNER_CENTER_OFFSET
-            - self._SPINNER_SIZE // 2,
-        )
-
-    def paintEvent(self, event) -> None:
-        del event
-        from .foundation_pages import _theme_tokens
-
-        tokens = _theme_tokens()
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.SmoothPixmapTransform)
-        painter.fillRect(self.rect(), tokens["bgCanvas"])
-        if not self._logo.isNull():
-            logo_rect = QRect(
-                self.width() // 2 - self._LOGO_SIZE // 2,
-                self.height() // 2 - self._LOGO_SIZE // 2,
-                self._LOGO_SIZE,
-                self._LOGO_SIZE,
-            )
-            painter.drawPixmap(logo_rect, self._logo)
-        if self._progress_text:
-            caption_top = (
-                self.height() // 2
-                + self._SPINNER_CENTER_OFFSET
-                + self._SPINNER_SIZE // 2
-                + self._CAPTION_GAP
-            )
-            painter.setFont(
-                fluentqt.font_for_role(fluentqt.FontRole.Caption)
-            )
-            painter.setPen(tokens["textSecondary"])
-            painter.drawText(
-                QRect(0, caption_top, self.width(), self._CAPTION_HEIGHT),
-                Qt.AlignHCenter | Qt.AlignTop,
-                self._progress_text,
-            )
 
 
 class GalleryPageSkeleton(QWidget):

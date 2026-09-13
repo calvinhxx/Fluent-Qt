@@ -132,6 +132,8 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
            Typography::Icons::Refresh},
           {QStringLiteral("progress-ring"), QStringLiteral("ProgressRing"),
            Typography::Icons::Refresh},
+          {QStringLiteral("splash-screen"), QStringLiteral("SplashScreen"),
+           Typography::Icons::Refresh},
           {QStringLiteral("shimmer"), QStringLiteral("Shimmer"), Typography::Icons::Refresh},
           {QStringLiteral("toast"), QStringLiteral("Toast"), Typography::Icons::Message},
           {QStringLiteral("tooltip"), QStringLiteral("ToolTip"), Typography::Icons::Info}}},

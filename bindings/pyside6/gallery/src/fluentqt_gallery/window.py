@@ -1847,6 +1847,7 @@ class _GalleryTitleContent(QWidget):
             self._bar is not None and self._bar.isWindowActive()
         )
         self._chrome_visible = True
+        self._app_icon_revealed = True
         self._chrome_reveal_opacity = 1.0
         self._back_animation = QVariantAnimation(self)
         self._back_animation.valueChanged.connect(self._apply_back_reveal)
@@ -1942,14 +1943,25 @@ class _GalleryTitleContent(QWidget):
         activation_opacity = 1.0 if self._window_active else 0.55
         opacity = self._chrome_reveal_opacity * activation_opacity
         for widget in self._chrome_widgets:
-            if abs(opacity - 1.0) <= 0.0001:
+            widget_opacity = (
+                0.0 if widget is self._icon and not self._app_icon_revealed else opacity
+            )
+            if abs(widget_opacity - 1.0) <= 0.0001:
                 widget.setGraphicsEffect(None)
                 continue
             effect = widget.graphicsEffect()
             if not isinstance(effect, QGraphicsOpacityEffect):
                 effect = QGraphicsOpacityEffect(widget)
                 widget.setGraphicsEffect(effect)
-            effect.setOpacity(opacity)
+            effect.setOpacity(widget_opacity)
+
+    @property
+    def app_icon_widget(self) -> QWidget:
+        return self._icon
+
+    def set_app_icon_revealed(self, revealed: bool) -> None:
+        self._app_icon_revealed = bool(revealed)
+        self._apply_chrome_opacity()
 
     @property
     def search_box(self) -> fluentqt.AutoSuggestBox:
@@ -2106,6 +2118,15 @@ class GalleryWindow(fluentqt.Window):
         self._skeleton: tuple[int, GalleryPageSkeleton] | None = None
         self._intro_tour: GalleryIntroTour | None = None
         self._startup_finished = not self._startup_visuals
+        self._startup_visible_timer = QElapsedTimer()
+        self._startup_ready_timer = QElapsedTimer()
+        self._startup_finish_timer = QTimer(self)
+        self._startup_finish_timer.setSingleShot(True)
+        self._startup_finish_timer.setTimerType(Qt.PreciseTimer)
+        self._startup_finish_timer.timeout.connect(self._finish_startup)
+        fluentqt.motion_policy().modeChanged.connect(
+            self._schedule_startup_finish
+        )
         self._navigation_request_id = 0
         self._prewarm_queue: list[str] = []
         self._prewarm_total = 0
@@ -2138,6 +2159,10 @@ class GalleryWindow(fluentqt.Window):
         # NavigationView content host is only the right-hand page surface and
         # would leave the navigation pane visibly loaded beside the spinner.
         splash = GallerySplashScreen(self.contentHost())
+        splash.setTransitionTarget(self._title_content.app_icon_widget)
+        self._title_content.set_app_icon_revealed(False)
+        splash.dismissed.connect(self._startup_dismissed)
+        splash.replaced.connect(self._startup_replaced)
         splash.show()
         splash.raise_()
         self._splash = splash
@@ -2155,7 +2180,7 @@ class GalleryWindow(fluentqt.Window):
         _single_shot(0, self, self._prewarm_next_route)
 
     def _prewarm_next_route(self) -> None:
-        if self._splash is None:
+        if self._splash is None or self._startup_ready_timer.isValid():
             return
         if self._prewarm_paused:
             return
@@ -2165,7 +2190,8 @@ class GalleryWindow(fluentqt.Window):
         ):
             self._prewarm_queue.clear()
             self._splash.set_progress(100, 100)
-            _single_shot(120, self, self._finish_startup)
+            self._startup_ready_timer.start()
+            self._schedule_startup_finish()
             return
         route_id = self._prewarm_queue.pop(0)
         self._ensure_page(route_id)
@@ -2179,8 +2205,36 @@ class GalleryWindow(fluentqt.Window):
         )
         _single_shot(0, self, self._prewarm_next_route)
 
+    def _schedule_startup_finish(self) -> None:
+        if (
+            self._startup_finished
+            or self._splash is None
+            or not self._startup_ready_timer.isValid()
+            or not self._startup_visible_timer.isValid()
+        ):
+            return
+        branded = (
+            fluentqt.current_motion_mode() == fluentqt.MotionMode.Full
+            and self._splash.presentation()
+            == fluentqt.SplashScreen.Presentation.Branded
+        )
+        # Match the C++ shell: loading counts towards presentation time.
+        # Reduced motion and Simple retain the brief compositor hold.
+        remaining = max(
+            0,
+            (1400 if branded else 0) - self._startup_visible_timer.elapsed(),
+            (250 if branded else 120) - self._startup_ready_timer.elapsed(),
+        )
+        self._startup_finish_timer.start(remaining)
+
     def _finish_startup(self) -> None:
+        if (
+            self._startup_finished
+            or self._splash is None
+        ):
+            return
         self._startup_finished = True
+        self._startup_finish_timer.stop()
         self._prewarm_paused = False
         self._title_content.set_chrome_visible(True, animated=True)
         reapply = getattr(self, "reapplySystemBackdrop", None)
@@ -2190,6 +2244,12 @@ class GalleryWindow(fluentqt.Window):
         self._splash = None
         if splash is not None:
             splash.dismiss()
+    def _startup_replaced(self) -> None:
+        self._finish_startup()
+        self._title_content.set_app_icon_revealed(True)
+
+    def _startup_dismissed(self) -> None:
+        self._title_content.set_app_icon_revealed(True)
         if not self._settings.intro_completed:
             _single_shot(480, self, self._maybe_start_intro_tour)
 
@@ -2240,7 +2300,10 @@ class GalleryWindow(fluentqt.Window):
         self._settings.set_intro_completed(True)
 
     def _defer_prewarm_during_interaction(self) -> None:
-        if getattr(self, "_splash", None) is None:
+        if (
+            getattr(self, "_splash", None) is None
+            or self._startup_ready_timer.isValid()
+        ):
             return
         self._prewarm_paused = True
         self._prewarm_resume_timer.start()
@@ -2277,6 +2340,13 @@ class GalleryWindow(fluentqt.Window):
     def moveEvent(self, event) -> None:
         super().moveEvent(event)
         self._defer_prewarm_during_interaction()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if getattr(self, "_splash", None) is not None:
+            if not self._startup_visible_timer.isValid():
+                self._startup_visible_timer.start()
+            self._schedule_startup_finish()
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)

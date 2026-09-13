@@ -839,6 +839,11 @@
           "avoid_when": "Users need precise progress comparison across a long operation."
         },
         {
+          "component_id": "splash-screen",
+          "choose_when": "A startup surface must cover a host's content with artwork, title, status and progress. Branded is the default reveal; Simple retains the centered ring. An optional same-window transitionTarget connects dismissal to an application icon holder.",
+          "avoid_when": "Content should remain interactive during background loading, or the component would need to own startup tasks."
+        },
+        {
           "component_id": "shimmer",
           "choose_when": "A skeleton placeholder should preserve content geometry while data loads.",
           "avoid_when": "The operation has explicit measurable progress or failed."
@@ -1041,6 +1046,7 @@
         "info-bar",
         "progress-bar",
         "progress-ring",
+        "splash-screen",
         "shimmer",
         "toast",
         "tooltip"
@@ -7215,6 +7221,77 @@
       ]
     },
     {
+      "id": "splash-screen",
+      "title": "SplashScreen",
+      "category_id": "status-info",
+      "description": "Cover a content area during startup, report progress, and dismiss when ready.",
+      "capabilities": [
+        "status-and-identity"
+      ],
+      "search_terms": [
+        "application",
+        "area",
+        "branded",
+        "centered",
+        "content",
+        "cover",
+        "default",
+        "dismiss",
+        "during",
+        "info",
+        "light",
+        "loading",
+        "progress",
+        "ready.",
+        "replay",
+        "report",
+        "reveal.",
+        "ring",
+        "select",
+        "simple",
+        "splash-screen",
+        "splash-screen-startup",
+        "splashscreen",
+        "startup",
+        "status",
+        "status-and-identity",
+        "transition.",
+        "when"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/StatusInfo.h>",
+        "declaration": "src/components/status_info/SplashScreen.h",
+        "qualified_type": "fluent::status_info::SplashScreen",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.status_info",
+        "type": "SplashScreen",
+        "import_statement": "from fluentqt.status_info import SplashScreen"
+      },
+      "tests": [
+        {
+          "target": "test_splash_screen",
+          "source": "tests/components/status_info/TestSplashScreen.cpp",
+          "ctest_label": "test_splash_screen"
+        }
+      ],
+      "gallery": {
+        "route_id": "splash-screen",
+        "sample_source": "app/view/widgets/samples/StatusInfoSamples.cpp",
+        "control_image": "app/assets/control_images/status-info/SplashScreen.png"
+      },
+      "samples": [
+        {
+          "id": "splash-screen-startup",
+          "title": "Application startup",
+          "description": "Branded is the default light reveal. Select Simple for the centered loading ring, or replay the transition.",
+          "cpp_snippet": "auto* root = new QWidget(this);\nauto* layout = new QVBoxLayout(root);\nlayout->setContentsMargins(0, 0, 0, 0);\nlayout->setSpacing(12);\nconst QIcon appIcon(\":/app/assets/app-icon.png\");\nauto* host = new fluent::layout::Card(root);\nhost->setObjectName(\"splashPreviewHost\");\nhost->setAppearance(fluent::layout::Card::Canvas);\nhost->setBorderVisible(false);\nhost->setFixedHeight(400);\nauto* contentLayout = new QVBoxLayout(host);\ncontentLayout->setContentsMargins(24, 24, 24, 24);\nauto* header = new QHBoxLayout;\nauto* logo = new Label(host);\nlogo->setObjectName(\"splashDestinationIcon\");\nlogo->setFixedSize(28, 28);\nheader->addWidget(logo);\nheader->addWidget(new Label(\"FluentQt Gallery\", host));\ncontentLayout->addLayout(header);\ncontentLayout->addStretch();\nauto* splash = new SplashScreen(host);\nsplash->setObjectName(\"sampleSplash\");\nsplash->setIcon(appIcon);\nsplash->setTitle(\"FluentQt\");\nsplash->setSubtitle(\"Small details. Fluent experiences.\");\nsplash->setText(\"Starting FluentQt Gallery\");\nsplash->setTransitionTarget(logo);\nQObject::connect(splash, &SplashScreen::dismissed, logo,\n                 [logo, appIcon]() { logo->setPixmap(appIcon.pixmap(28, 28)); });\nsplash->show();\n// Demo timing only; applications report actual work and call dismiss when ready.\nauto* loading = new QVariantAnimation(splash);\nloading->setObjectName(\"sampleSplashLoading\");\nloading->setDuration(3600);\nloading->setStartValue(0);\nloading->setEndValue(120);\nQObject::connect(loading, &QVariantAnimation::valueChanged, splash, [splash](const QVariant& value) {\n    const int step = value.toInt();\n    splash->setProgress(qMax(0, step - 20), 100);\n    splash->setIndeterminate(step < 20);\n    splash->setText(step < 100 ? \"Loading resources\" : \"Opening Gallery\");\n});\nQObject::connect(loading, &QVariantAnimation::finished, splash, &SplashScreen::dismiss);\nauto restart = [splash, loading, logo]() {\n    loading->stop();\n    splash->hide();\n    logo->clear();\n    splash->setIndeterminate(true);\n    splash->show();\n    loading->start();\n};\nauto* presentation = new fluent::basicinput::ComboBox(root);\npresentation->setObjectName(\"splashPresentation\");\npresentation->setAccessibleName(\"Splash presentation\");\npresentation->addItems({\"Branded\", \"Simple\"});\nQObject::connect(presentation, QOverload<int>::of(&QComboBox::currentIndexChanged), splash,\n    [splash, restart](int index) {\n        splash->setPresentation(index == 0 ? SplashScreen::Presentation::Branded\n                                           : SplashScreen::Presentation::Simple);\n        restart();\n    });\nauto* replay = new Button(\"Replay startup\", root);\nreplay->setObjectName(\"replaySplashButton\");\nreplay->setFluentStyle(Button::ButtonStyle::Accent);\nQObject::connect(replay, &Button::clicked, splash, restart);\nauto* controls = new QHBoxLayout;\ncontrols->addWidget(presentation);\ncontrols->addStretch();\ncontrols->addWidget(replay);\nlayout->addWidget(host);\nlayout->addLayout(controls);\n"
+        }
+      ]
+    },
+    {
       "id": "shimmer",
       "title": "Shimmer",
       "category_id": "status-info",
@@ -8920,6 +8997,13 @@
       "description": "Shows determinate or indeterminate progress around a ring."
     },
     {
+      "id": "splash-screen",
+      "title": "SplashScreen",
+      "kind": "component",
+      "parent_id": "status-info",
+      "description": "Cover a content area during startup, report progress, and dismiss when ready."
+    },
+    {
       "id": "shimmer",
       "title": "Shimmer",
       "kind": "component",
@@ -9042,12 +9126,12 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 92,
-    "component_count": 71,
-    "sample_count": 212,
+    "route_count": 93,
+    "component_count": 72,
+    "sample_count": 213,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 12,
-    "guided_component_count": 71
+    "guided_component_count": 72
   }
 }

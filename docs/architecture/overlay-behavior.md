@@ -12,6 +12,60 @@
 
 相关 helper 的 canonical 位置是 `src/components/foundation/overlay/`，命名空间是 `fluent::overlay`。`OverlayCoordinator` 是 UILib 内部协调器，集中处理 top-level 挂载、宿主 resize、scrim 生命周期与 stacking；它不会进入安装头文件或成为应用层 API。
 
+## Startup content cover
+
+`fluent::status_info::SplashScreen` 是父控件内容区的启动遮罩。它跟随父控件尺寸，不管理任务、标题栏或启动流程。将它放在 `Window::contentHost()` 上可保留窗口按钮；也可以覆盖应用选定的局部容器。
+
+默认 `Presentation::Branded` 使用完整图标显影、柔和背景光、可选品牌文字和底部进度条。`Presentation::Simple` 保留居中图标、加载环和状态文字的简洁效果，供应用显式选配。Gallery 启动使用默认效果，组件示例可切换两种模式并重播。
+
+```cpp
+#include <FluentQt/FluentQt.h>
+
+// host is the QWidget content area; appIcon is supplied by the application.
+auto* splash = new fluent::status_info::SplashScreen(host);
+splash->setIcon(appIcon);
+splash->setIconSize(QSize(96, 96));
+splash->setTitle(QStringLiteral("My App"));
+splash->setSubtitle(QStringLiteral("Your workspace, ready to go"));
+splash->setText(QStringLiteral("正在加载工作区"));
+// Optional: an application-owned icon holder in the same window.
+splash->setTransitionTarget(titleBarIcon);
+splash->show();
+
+// Deliver worker progress on the GUI thread.
+splash->setProgress(3, 5);
+// The application calls this when startup has actually finished.
+splash->dismiss();
+```
+
+```python
+splash = fluentqt.SplashScreen(host)
+splash.setIcon(app_icon)
+splash.setTitle("My App")
+splash.setSubtitle("Your workspace, ready to go")
+splash.setText("正在加载工作区")
+splash.setTransitionTarget(title_bar_icon)
+splash.show()
+splash.setProgress(3, 5)
+splash.dismiss()
+```
+
+选用简洁效果时，C++ 调用 `splash->setPresentation(SplashScreen::Presentation::Simple)`，Python 调用 `splash.setPresentation(fluentqt.SplashScreen.Presentation.Simple)`。切换模式保留当前状态文字和进度。
+
+`setProgress(done, total)` 切换为确定进度并归一化到 0–100%；`total <= 0` 或 `setIndeterminate(true)` 显示不确定进度并隐藏百分比。Branded 使用进度条，Simple 使用加载环。状态文字独立保留。达到 100% 不自动关闭，避免把任务计数当成启动完成。长文字显示省略，辅助功能可读取完整文本；小窗口会缩小图标并压缩间隔。
+
+`setTransitionTarget(QWidget*)` 借用应用的图标容器。Full 动效退场时，完整图标缩小并移入该控件的内容矩形；目标可以位于内容宿主外的同窗口标题栏。组件不改变目标的所有权、外观或可见性，目标图标的显示时机由应用协调。没有目标、目标不可见或不在同一窗口时使用淡出；目标销毁后指针归零，进行中的图标从最后有效位置淡出。传入遮罩自身或其子控件会被忽略。
+
+`dismiss()` 遵循 Full/Reduced/Disabled 动效策略，隐藏后发送一次 `dismissed()`，默认不销毁。完成后可以再次 `show()` 复用；直接 `hide()` 会取消退场且不发送完成信号。一次性使用可连接 `dismissed` 到 `deleteLater`。隐藏状态下或退场中的重复 `dismiss()` 不触发额外信号。窗口最小化不会取消已发起的退场，恢复窗口时不会重新显示已关闭的遮罩。
+
+Reduced 使用短淡出，Disabled 立即完成；两者都不播放图标位移或装饰性入场。HighContrast 不绘制背景光。任务完成后可立即 `dismiss()`，无需等待入场动画结束。
+
+Gallery 外壳单独控制启动节奏：Full 动效下的 Branded 至少展示 1400 ms，加载时间计入其中；预热完成后至少保留 250 ms，再以 700 ms 的平滑起落曲线连接标题栏图标。长加载只补足就绪停留，不重复等待整段展示时间。Simple、Reduced 和 Disabled 保留 120 ms 的合成等待；首启引导从 `dismissed()` 后开始计时。公共组件不附加最短展示等待，示例中的 3600 ms 是可重播的模拟加载时间。
+
+同一窗口内，新显示的遮罩会直接隐藏同宿主或嵌套重叠宿主上已有的遮罩；互不重叠的容器可以各自显示。新遮罩就绪后，旧遮罩发送一次 `replaced()`，不发送 `dismissed()`，也不自动销毁。一次性使用应将 `dismissed` 和 `replaced` 都连接到 `deleteLater`；可复用的遮罩可以保留对象，稍后重新显示。直接 `hide()` 和窗口最小化不发送 `replaced()`。
+
+显示及退场期间，遮罩拦截宿主内容内的鼠标和键盘输入，接管内容区焦点并阻止底层快捷键通过该焦点触发；隐藏后尽可能恢复之前的焦点。宿主外的标题栏、控件和其他窗口继续正常工作。独立弹层及宿主外命令仍由应用协调。加载工作应分批调度或在工作线程执行，不能阻塞 GUI 线程，否则动画和窗口操作也会停止。
+
 ## Geometry
 
 Overlay 实现必须区分三层几何：

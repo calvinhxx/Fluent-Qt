@@ -89,6 +89,9 @@ The six Layout-family tiles are deterministic assets. Regenerate them with
 `python tools/gallery/generate_layout_control_images.py` so their coral fill,
 line weight, radius, and alpha treatment stay identical.
 
+The SplashScreen tile uses the Status & info teal family. Regenerate it with
+`python tools/gallery/generate_splash_control_image.py`.
+
 ## Verification
 
 Quick alpha sanity check for a candidate icon:

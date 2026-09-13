@@ -933,3 +933,122 @@ register_source_samples(
         ),
     },
 )
+
+
+register_source_samples(
+    "splash-screen",
+    ("SplashScreen", "Label", "Card", "Button"),
+    {
+        "splash-screen-startup": (
+            "root",
+            _script(
+                """
+                class SplashScreenSampleSurface(QWidget):
+                    _resize_event = QEvent.Type.Resize
+
+                    def __init__(self, parent):
+                        super().__init__(parent)
+                        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+                        if parent is not None:
+                            parent.installEventFilter(self)
+
+                    def sizeHint(self):
+                        result = super().sizeHint()
+                        parent = self.parentWidget()
+                        if parent is not None and parent.layout() is not None:
+                            margins = parent.layout().contentsMargins()
+                            result.setWidth(max(
+                                self.minimumSizeHint().width(),
+                                parent.width() - margins.left() - margins.right(),
+                            ))
+                        return result
+
+                    def eventFilter(self, watched, event):
+                        # Ignore teardown events before accessing the parent's QWidget API.
+                        if event.type() == self._resize_event and watched is self.parentWidget():
+                            self.updateGeometry()
+                        return False
+
+
+                root = SplashScreenSampleSurface(globals().get("gallery_parent"))
+                layout = QVBoxLayout(root)
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(12)
+                app_icon = QIcon(str(files("fluentqt_gallery") / "assets" / "app-icon.png"))
+                host = fluentqt.Card(root)
+                host.setObjectName("splashPreviewHost")
+                host.setAppearance(fluentqt.Card.Appearance.Canvas)
+                host.setBorderVisible(False)
+                host.setFixedHeight(400)
+                content_layout = QVBoxLayout(host)
+                content_layout.setContentsMargins(24, 24, 24, 24)
+                header = QHBoxLayout()
+                logo = fluentqt.Label(host)
+                logo.setObjectName("splashDestinationIcon")
+                logo.setFixedSize(28, 28)
+                header.addWidget(logo)
+                header.addWidget(fluentqt.Label("FluentQt Gallery", host))
+                content_layout.addLayout(header)
+                content_layout.addStretch()
+                splash = fluentqt.SplashScreen(host)
+                splash.setObjectName("sampleSplash")
+                splash.setIcon(app_icon)
+                splash.setTitle("FluentQt")
+                splash.setSubtitle("Small details. Fluent experiences.")
+                splash.setText("Starting FluentQt Gallery")
+                splash.setTransitionTarget(logo)
+                splash.dismissed.connect(lambda: logo.setPixmap(app_icon.pixmap(28, 28)))
+                splash.show()
+                # Demo timing only; applications report actual work and call dismiss when ready.
+                loading = QVariantAnimation(splash)
+                loading.setObjectName("sampleSplashLoading")
+                loading.setDuration(3600)
+                loading.setStartValue(0)
+                loading.setEndValue(120)
+
+                def update_progress(value):
+                    splash.setProgress(max(0, int(value) - 20), 100)
+                    splash.setIndeterminate(value < 20)
+                    splash.setText("Loading resources" if value < 100 else "Opening Gallery")
+
+                loading.valueChanged.connect(update_progress)
+                loading.finished.connect(splash.dismiss)
+
+                def replay_startup():
+                    loading.stop()
+                    splash.hide()
+                    logo.clear()
+                    splash.setIndeterminate(True)
+                    splash.show()
+                    loading.start()
+
+                presentation = fluentqt.ComboBox(root)
+                presentation.setObjectName("splashPresentation")
+                presentation.setAccessibleName("Splash presentation")
+                presentation.addItems(["Branded", "Simple"])
+
+                def change_presentation(index):
+                    mode = fluentqt.SplashScreen.Presentation
+                    splash.setPresentation(mode(index))
+                    replay_startup()
+
+                presentation.currentIndexChanged.connect(change_presentation)
+                replay = fluentqt.Button("Replay startup", root)
+                replay.setObjectName("replaySplashButton")
+                replay.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
+                replay.clicked.connect(replay_startup)
+                controls = QHBoxLayout()
+                controls.addWidget(presentation)
+                controls.addStretch()
+                controls.addWidget(replay)
+                layout.addWidget(host)
+                layout.addLayout(controls)
+                """,
+                "from PySide6.QtCore import QEvent, Qt, QVariantAnimation\n"
+                "from PySide6.QtGui import QIcon\n"
+                "from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n"
+                "from importlib.resources import files",
+            ),
+        ),
+    },
+)

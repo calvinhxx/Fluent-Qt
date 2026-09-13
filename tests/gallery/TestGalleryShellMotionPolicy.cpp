@@ -3,6 +3,7 @@
 #include <QAbstractAnimation>
 #include <QApplication>
 #include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QPointer>
 #include <QPropertyAnimation>
 #include <QSignalSpy>
@@ -19,10 +20,12 @@
 #include "components/windowing/TitleBar.h"
 #include "model/GalleryNavigationItem.h"
 #include "view/shell/GalleryIntroTour.h"
+#include "view/shell/GalleryContentPresenter.h"
 #include "view/shell/GalleryNavigationPane.h"
 #include "view/shell/GallerySplashScreen.h"
 #include "view/shell/GalleryTitleBarController.h"
 #include "view/shell/GalleryTopNavigationPane.h"
+#include "view/shell/GalleryWindow.h"
 #include "view/support/GalleryMotion.h"
 
 namespace {
@@ -99,8 +102,7 @@ TEST_F(GalleryShellMotionPolicyTest, ReducedMotionCapsSplashDismissAndKeepsClean
 
     splash->dismiss();
 
-    auto* fade =
-        splash->findChild<QPropertyAnimation*>(QStringLiteral("gallerySplashDismissAnimation"));
+    auto* fade = splash->findChild<QPropertyAnimation*>(QStringLiteral("splashDismissAnimation"));
     ASSERT_NE(fade, nullptr);
     EXPECT_EQ(fade->state(), QAbstractAnimation::Running);
     EXPECT_GT(fade->duration(), 0);
@@ -122,12 +124,83 @@ TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesSplashDismissSynchrono
 
     splash->dismiss();
 
-    auto* fade =
-        splash->findChild<QPropertyAnimation*>(QStringLiteral("gallerySplashDismissAnimation"));
+    auto* fade = splash->findChild<QPropertyAnimation*>(QStringLiteral("splashDismissAnimation"));
     if (fade)
         EXPECT_EQ(fade->state(), QAbstractAnimation::Stopped);
     processDeferredDeletes();
     EXPECT_TRUE(splashGuard.isNull());
+}
+
+TEST_F(GalleryShellMotionPolicyTest, StartupReplacementCleansUpWithoutStartingTour)
+{
+    fluent::gallery::GalleryWindow window;
+    auto* presenter = window.findChild<fluent::gallery::GalleryContentPresenter*>();
+    ASSERT_NE(presenter, nullptr);
+    presenter->setPrewarmPaused(true);
+    QPointer<GallerySplashScreen> original = window.findChild<GallerySplashScreen*>();
+    ASSERT_TRUE(original);
+    showAndProcess(window);
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    fluent::status_info::SplashScreen replacement(window.contentHost());
+    replacement.show();
+    processDeferredDeletes();
+    EXPECT_TRUE(original.isNull());
+    EXPECT_TRUE(replacement.isVisible());
+    EXPECT_EQ(window.findChild<GalleryIntroTour*>(), nullptr);
+    replacement.dismiss();
+    EXPECT_TRUE(replacement.isHidden());
+}
+
+TEST_F(GalleryShellMotionPolicyTest, FastStartupPreservesPresentationFromWindowShow)
+{
+    fluent::gallery::GalleryWindow window;
+    window.resize(960, 680);
+    auto* presenter = window.findChild<fluent::gallery::GalleryContentPresenter*>();
+    ASSERT_NE(presenter, nullptr);
+    presenter->setPrewarmPaused(true);
+    QPointer<GallerySplashScreen> splash = window.findChild<GallerySplashScreen*>();
+    ASSERT_TRUE(splash);
+    QSignalSpy dismissed(splash, &GallerySplashScreen::dismissed);
+    // Model content finishing before the top-level window has appeared.
+    presenter->prewarmFinished();
+    QTest::qWait(300);
+    EXPECT_EQ(dismissed.count(), 0);
+
+    QElapsedTimer visible;
+    visible.start();
+    showAndProcess(window);
+    QTest::qWait(350);
+    ASSERT_TRUE(splash);
+    EXPECT_TRUE(splash->isVisible());
+    EXPECT_EQ(window.findChild<QWidget*>("splashLogoTransition"), nullptr);
+    QTRY_VERIFY_WITH_TIMEOUT(window.findChild<QWidget*>("splashLogoTransition"), 2000);
+    EXPECT_GE(visible.elapsed(), 1400);
+    // The first-run tour must also wait for the complete connected transition.
+    QTest::qWait(500);
+    EXPECT_EQ(window.findChild<GalleryIntroTour*>(), nullptr);
+    QTRY_COMPARE_WITH_TIMEOUT(dismissed.count(), 1, 1200);
+    EXPECT_GE(visible.elapsed(), 2000);
+}
+
+TEST_F(GalleryShellMotionPolicyTest, ReducedPreferenceReleasesPendingStartupPresentation)
+{
+    for (auto mode : {fluent::MotionPolicy::Mode::Reduced, fluent::MotionPolicy::Mode::Disabled}) {
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+        fluent::gallery::GalleryWindow window;
+        auto* presenter = window.findChild<fluent::gallery::GalleryContentPresenter*>();
+        ASSERT_NE(presenter, nullptr);
+        presenter->setPrewarmPaused(true);
+        QPointer<GallerySplashScreen> splash = window.findChild<GallerySplashScreen*>();
+        ASSERT_TRUE(splash);
+        QSignalSpy dismissed(splash, &GallerySplashScreen::dismissed);
+        presenter->prewarmFinished();
+        showAndProcess(window);
+        QTest::qWait(200);
+        EXPECT_EQ(dismissed.count(), 0);
+        fluent::MotionPolicy::instance().setMode(mode);
+        QTRY_COMPARE_WITH_TIMEOUT(dismissed.count(), 1, 400);
+        EXPECT_EQ(window.findChild<QWidget*>("splashLogoTransition"), nullptr);
+    }
 }
 
 TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesIntroTourSpotlightAndCleanup)

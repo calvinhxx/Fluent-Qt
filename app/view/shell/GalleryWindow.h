@@ -1,6 +1,7 @@
 #ifndef GALLERYWINDOW_H
 #define GALLERYWINDOW_H
 
+#include <QElapsedTimer>
 #include <QPointer>
 #include <QStringList>
 
@@ -11,6 +12,7 @@
 
 class QMoveEvent;
 class QResizeEvent;
+class QShowEvent;
 class QTimer;
 class QWidget;
 
@@ -69,6 +71,7 @@ public:
     SettingsPage* currentSettingsPage() const;
 
 protected:
+    void showEvent(QShowEvent* event) override;
     // Pause splash-phase page warming while the user is moving/resizing the window so a synchronous
     // build never stutters the drag; a short debounce resumes once they stop. zh_CN: 用户移动/缩放窗口期间
     // 暂停 splash 期建页，使同步构建绝不卡顿拖拽；停止后经短防抖恢复。
@@ -84,6 +87,7 @@ private:
     void installSplashScreen();
     void showInitialRouteContent();
     void prewarmRemainingRoutes();
+    void scheduleStartupFinish();
     void finishStartup();
     void maybeStartIntroTour();
     void handleSelectedRouteChanged(const QString& routeId);
@@ -123,6 +127,10 @@ private:
     // Startup splash overlay; self-deletes after its fade-out once the initial route is shown.
     // zh_CN: 启动 splash 覆盖层；首个路由上屏后淡出并自销毁。
     QPointer<GallerySplashScreen> m_splashScreen;
+    QElapsedTimer m_startupVisibleTimer;
+    QElapsedTimer m_startupReadyTimer;
+    QTimer* m_startupFinishTimer = nullptr;
+    bool m_startupFinished = false;
 };
 
 } // namespace fluent::gallery
