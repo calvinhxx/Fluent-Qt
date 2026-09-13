@@ -409,7 +409,7 @@ TEST_F(TeachingTipTest, VisualCheck)
 
     auto* visual = new FluentTestWindow();
     visual->setFixedSize(960, 720);
-    visual->setWindowTitle("TeachingTip VisualCheck — 点击按钮触发各款式");
+    visual->setWindowTitle("TeachingTip VisualCheck — Click a button to open a tip");
     visual->onThemeUpdated();
 
     auto* layout = new AnchorLayout(visual);

@@ -1533,8 +1533,7 @@ TEST_F(DataGridTest, VisualCheck_ReadOnlyCore)
     grid->setObjectName(QStringLiteral("DataGridVisualCheck.Grid"));
     grid->setModel(model);
     grid->setPlaceholderText(
-        QStringLiteral("No records yet. Use Show data to restore the read-only table.\n"
-                       "暂无记录，可切回密集数据继续检查。"));
+        QStringLiteral("No records yet.\nUse Show data to restore the read-only table."));
     grid->setSelectionBehavior(QAbstractItemView::SelectRows);
     grid->setSelectionMode(fluent::collections::SelectionMode::Single);
     grid->setScrollChainingEnabled(true);

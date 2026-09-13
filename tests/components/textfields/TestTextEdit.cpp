@@ -1053,7 +1053,7 @@ TEST_F(TextEditTest, VisualCheck)
 
     using Edge = AnchorLayout::Edge;
 
-    Label* header = new Label("TextEdit - 自适应行高 + 垂直居中:", window);
+    Label* header = new Label("TextEdit - Automatic height and vertical centering:", window);
     header->anchors()->top = {window, Edge::Top, 30};
     header->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(header);
@@ -1066,7 +1066,7 @@ TEST_F(TextEditTest, VisualCheck)
     edit1->anchors()->right = {window, Edge::Right, -40};
     layout->addWidget(edit1);
 
-    Label* header2 = new Label("预填 2 行（选区应使用强调色）:", window);
+    Label* header2 = new Label("Two prefilled lines (accent selection):", window);
     header2->anchors()->top = {edit1, Edge::Bottom, 12};
     header2->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(header2);

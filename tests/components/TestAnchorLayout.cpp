@@ -230,7 +230,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck)
     using Edge = AnchorLayout::Edge;
 
     // 1) 左上：锚定到父控件 (10, 10)
-    QPushButton* btn1 = new QPushButton("左上", window);
+    QPushButton* btn1 = new QPushButton("Top left", window);
     btn1->setFixedSize(100, 100);
     AnchorLayout::Anchors a1;
     a1.left = {window, Edge::Left, 10};
@@ -239,7 +239,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck)
     new DebugOverlay(btn1, Qt::red, window);
 
     // 2) btn2 放在 btn1 右侧 (+20)
-    QPushButton* btn2 = new QPushButton("右侧 +20", window);
+    QPushButton* btn2 = new QPushButton("Right +20", window);
     btn2->setFixedSize(100, 100);
     AnchorLayout::Anchors a2;
     a2.left = {btn1, Edge::Right, 20};
@@ -248,7 +248,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck)
     new DebugOverlay(btn2, Qt::blue, window);
 
     // 3) 全居中 (250, 250)
-    QPushButton* btn3 = new QPushButton("全居中", window);
+    QPushButton* btn3 = new QPushButton("Centered", window);
     btn3->setFixedSize(100, 100);
     AnchorLayout::Anchors a3;
     a3.horizontalCenter = {window, Edge::HCenter, 0};
@@ -257,7 +257,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck)
     new DebugOverlay(btn3, Qt::magenta, window);
 
     // 4) 仅水平居中 (位于底部 -20)
-    QPushButton* btn6 = new QPushButton("仅水平居中", window);
+    QPushButton* btn6 = new QPushButton("Center X", window);
     btn6->setFixedSize(120, 40);
     AnchorLayout::Anchors a6;
     a6.bottom = {window, Edge::Bottom, -20};
@@ -266,7 +266,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck)
     new DebugOverlay(btn6, Qt::cyan, window);
 
     // 5) 填充区域 (Margins: 0, 200, 400, 200)
-    QPushButton* btn4 = new QPushButton("填充区域", window);
+    QPushButton* btn4 = new QPushButton("Fill area", window);
     AnchorLayout::Anchors a4;
     a4.fill = true;
     a4.fillMargins = QMargins(0, 200, 400, 200);
@@ -274,7 +274,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck)
     new DebugOverlay(btn4, Qt::darkYellow, window);
 
     // 6) 右下锚定 (-16, -16)
-    QPushButton* btn5 = new QPushButton("右下", window);
+    QPushButton* btn5 = new QPushButton("Bottom right", window);
     btn5->setFixedSize(100, 100);
     AnchorLayout::Anchors a5;
     a5.right = {window, Edge::Right, -16};
@@ -283,7 +283,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck)
     new DebugOverlay(btn5, Qt::black, window);
 
     // 7) 动态 Resize 测试：QLabel 内容在 3 秒后改变
-    QLabel* labelDynamic = new QLabel("等待 3 秒后文字会变长...", window);
+    QLabel* labelDynamic = new QLabel("Text will grow after 3 seconds...", window);
     labelDynamic->setStyleSheet("background-color: #3498db; color: white; padding: 5px;");
     AnchorLayout::Anchors aDyn;
     aDyn.left = {window, Edge::Left, 20};
@@ -292,25 +292,25 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck)
     new DebugOverlay(labelDynamic, Qt::red, window);
 
     QTimer::singleShot(3000, [labelDynamic]() {
-        labelDynamic->setText("成功！文字变长了，布局和 DebugLine 应该自动跟随。");
+        labelDynamic->setText("The text is longer now; layout and debug outlines should follow.");
     });
 
     // 8) 兄弟控件可见性变化测试
-    QPushButton* btnA = new QPushButton("控件 A (点我隐藏)", window);
+    QPushButton* btnA = new QPushButton("A: hide", window);
     btnA->setFixedSize(100, 40);
     AnchorLayout::Anchors aA;
     aA.left = {window, Edge::Left, 20};
     aA.top = {labelDynamic, Edge::Bottom, 40};
     layout->addAnchoredWidget(btnA, aA);
 
-    QPushButton* btnB = new QPushButton("控件 B (锚定 A 右侧)", window);
+    QPushButton* btnB = new QPushButton("B: right of A", window);
     btnB->setFixedSize(150, 40);
     AnchorLayout::Anchors aB;
     aB.left = {btnA, Edge::Right, 10}; // 锚定到 A 的右侧 10px
     aB.top = {btnA, Edge::Top, 0};
     layout->addAnchoredWidget(btnB, aB);
 
-    QLabel* statusLabel = new QLabel("A 可见, B 锚定 A 右侧", window);
+    QLabel* statusLabel = new QLabel("A visible; B anchored to its right.", window);
     AnchorLayout::Anchors aStatus;
     aStatus.left = {btnB, Edge::Left, 0};
     aStatus.top = {btnB, Edge::Bottom, 5};
@@ -322,11 +322,11 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck)
     // 点击 A 隐藏 A
     QObject::connect(btnA, &QPushButton::clicked, [btnA, statusLabel]() {
         btnA->hide();
-        statusLabel->setText("A 已隐藏, B 位置应保持不变 (符合 Anchor 规范)");
+        statusLabel->setText("A hidden; B should stay in place.");
     });
 
     // 增加一个重置按钮
-    QPushButton* resetBtn = new QPushButton("显示 A", window);
+    QPushButton* resetBtn = new QPushButton("Show A", window);
     resetBtn->setFixedSize(80, 30);
     AnchorLayout::Anchors aReset;
     aReset.right = {window, Edge::Right, -10};
@@ -334,7 +334,7 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck)
     layout->addAnchoredWidget(resetBtn, aReset);
     QObject::connect(resetBtn, &QPushButton::clicked, [btnA, statusLabel]() {
         btnA->show();
-        statusLabel->setText("A 已恢复, B 锚定 A 右侧");
+        statusLabel->setText("A restored; B anchored to its right.");
     });
 
     window->show();
