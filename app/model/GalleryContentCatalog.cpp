@@ -68,6 +68,9 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("Controls for entering and editing text, numbers, and passwords.")},
         {QStringLiteral("windowing"),
          QStringLiteral("Window chrome building blocks: title bars and top-level windows.")},
+        {QStringLiteral("particle-backdrop"),
+         QStringLiteral("Flowing ribbons, floating dots and a starfield with pointer ripples, "
+                        "theme-aware colors, and controls for motion and density.")},
         // Basic input
         {QStringLiteral("button"),
          QStringLiteral("A control that responds to user input and raises a click event.")},

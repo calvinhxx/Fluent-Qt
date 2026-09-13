@@ -757,6 +757,10 @@
                     </modify-argument>
                 </modify-function>
             </object-type>
+            <object-type name="ParticleBackdrop">
+                <enum-type name="Effect"/>
+                <enum-type name="BackgroundMode"/>
+            </object-type>
             <object-type name="Card">
                 <enum-type name="Appearance"/>
             </object-type>

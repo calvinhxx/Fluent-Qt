@@ -384,24 +384,24 @@ class PythonGalleryTest(unittest.TestCase):
 
     def test_contract_exactly_matches_the_public_binding(self):
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-        self.assertEqual(len(manifest["classes"]), 91)
+        self.assertEqual(len(manifest["classes"]), 92)
         self.assertEqual(catalog_coverage_errors(manifest["classes"]), [])
         self.assertEqual(runtime_catalog_errors(), [])
-        self.assertEqual(len(ROUTES), 91)
-        self.assertEqual(len(ENTRIES), 70)
+        self.assertEqual(len(ROUTES), 92)
+        self.assertEqual(len(ENTRIES), 71)
         self.assertEqual(len(CATEGORIES), 12)
         self.assertEqual(
             sum(len(entry.samples) for entry in ENTRIES),
-            209,
+            212,
         )
-        self.assertEqual(len({route.id for route in ROUTES}), 91)
-        self.assertEqual(len({entry.route_id for entry in ENTRIES}), 70)
+        self.assertEqual(len({route.id for route in ROUTES}), 92)
+        self.assertEqual(len({entry.route_id for entry in ENTRIES}), 71)
 
     def test_support_types_are_explicit_and_embedded_in_real_samples(self):
         self.assertEqual(SUPPORT_TYPES, EXPECTED_SUPPORT_TYPES)
         routed_types = {entry.name for entry in ENTRIES}
         self.assertTrue(routed_types.isdisjoint(SUPPORT_TYPES))
-        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 91)
+        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 92)
         for entry in ENTRIES:
             self.assertFalse(entry.support_type)
 
@@ -835,7 +835,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 
     def test_every_native_sample_has_an_exact_python_port(self):
         expected = _contract_sample_keys()
-        self.assertEqual(len(expected), 209)
+        self.assertEqual(len(expected), 212)
         self.assertEqual(ported_sample_keys(), expected)
 
     def test_toggle_switch_state_sample_has_an_accessible_name(self):
@@ -1829,6 +1829,55 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 0x80123456,
             ),
         )
+
+    def test_particle_sample_cards_fill_width_and_controls_change_motion(self):
+        entry = ENTRY_BY_ROUTE_ID["particle-backdrop"]
+        for sample in entry.samples:
+            self.assertTrue(sample.fill_available_width)
+            card, result = _build_sample_card(entry, sample, None)
+            try:
+                for width in (880, 400):
+                    card.resize(width, 650)
+                    card.show()
+                    QTest.qWait(30)
+                    preview = result.widget
+                    self.assertEqual(
+                        preview.width(), preview.parentWidget().width() - 40
+                    )
+                    self.assertLessEqual(preview.parentWidget().width(), card.width())
+                if sample.id == "particle-backdrop-interaction":
+                    backdrop = preview.findChild(fluentqt.ParticleBackdrop)
+                    effect = preview.findChild(fluentqt.ComboBox, "particleEffect")
+                    pause = preview.findChild(fluentqt.Button, "particlePause")
+                    speed = preview.findChild(fluentqt.Slider, "particleSpeed")
+                    QTest.mouseClick(pause, Qt.LeftButton)
+                    self.assertFalse(backdrop.isAnimationEnabled())
+                    self.assertEqual(pause.text(), "Resume motion")
+                    self.assertEqual(backdrop.effect(), fluentqt.ParticleBackdrop.Effect.Starfield)
+                    for index, preset in enumerate(fluentqt.ParticleBackdrop.Effect):
+                        effect.setCurrentIndex(index)
+                        self.assertEqual(backdrop.effect(), preset)
+                        self.assertFalse(backdrop.isAnimationEnabled())
+                        self.assertIn(preset.name, sample.cpp_snippet)
+                    speed.setValue(150)
+                    self.assertEqual(backdrop.speed(), 1.5)
+                    QTest.mouseClick(pause, Qt.LeftButton)
+                    self.assertTrue(backdrop.isAnimationEnabled())
+            finally:
+                card.close()
+
+    def test_existing_samples_keep_preview_row_spacing(self):
+        for route in ("button", "slider", "tab-view", "navigation-view"):
+            entry = ENTRY_BY_ROUTE_ID[route]
+            for sample in entry.samples:
+                self.assertFalse(sample.fill_available_width)
+                card, result = _build_sample_card(entry, sample, None)
+                try:
+                    row = result.widget.parentWidget().layout()
+                    self.assertEqual(row.stretch(0), 0)
+                    self.assertIsNotNone(row.itemAt(1).spacerItem())
+                finally:
+                    card.close()
 
     def test_sample_card_and_code_block_match_native_shell_behavior(self):
         window = GalleryWindow()
@@ -3185,14 +3234,14 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     namespace.clear()
                     QApplication.processEvents()
 
-    def test_window_builds_all_91_routes_and_209_sample_cards(self):
+    def test_window_builds_all_92_routes_and_212_sample_cards(self):
         window = GalleryWindow()
         window.show()
         QApplication.processEvents()
         try:
             self.assertEqual(window.all_route_ids(), tuple(route.id for route in ROUTES))
             self.assertEqual(window.visit_all_routes(), [])
-            self.assertEqual(len(window._pages), 91)
+            self.assertEqual(len(window._pages), 92)
             built_sample_count = 0
             for entry in ENTRIES:
                 _index, page = window._pages[entry.route_id]
@@ -3231,7 +3280,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     "sample surface".format(entry.route_id),
                 )
                 built_sample_count += len(results)
-            self.assertEqual(built_sample_count, 209)
+            self.assertEqual(built_sample_count, 212)
         finally:
             window.close()
             window.deleteLater()

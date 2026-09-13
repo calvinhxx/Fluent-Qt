@@ -110,7 +110,7 @@ from .foundation import (
     theme_uses_dark_appearance,
     themeUsesDarkAppearance,
 )
-from .layout import Accordion, Card, Divider, Expander, Field
+from .layout import Accordion, Card, Divider, Expander, Field, ParticleBackdrop
 from .menus_toolbars import (
     CommandBar,
     CommandBarFlyout,
@@ -276,6 +276,7 @@ __all__ = [
     "CalendarDatePicker",
     "CalendarView",
     "Card",
+    "ParticleBackdrop",
     "CheckBox",
     "ColorPicker",
     "ComboBox",

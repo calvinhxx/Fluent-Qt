@@ -718,6 +718,11 @@
           "component_id": "split-view",
           "choose_when": "Two or more persistent regions need draggable size allocation.",
           "avoid_when": "The secondary region is temporary or modal."
+        },
+        {
+          "component_id": "particle-backdrop",
+          "choose_when": "A bounded hero or panel needs CPU-painted ribbons, floating dots or a starfield behind normal child controls, with shared motion and density controls.",
+          "avoid_when": "The animation communicates essential information or a large collection would create many continuously animating instances."
         }
       ]
     },
@@ -984,6 +989,7 @@
         "card",
         "divider",
         "expander",
+        "particle-backdrop",
         "field"
       ],
       "cpp_header": "<FluentQt/Layout.h>",
@@ -5005,6 +5011,118 @@
       ]
     },
     {
+      "id": "particle-backdrop",
+      "title": "ParticleBackdrop",
+      "category_id": "layout",
+      "description": "Flowing ribbons, floating dots and a starfield with pointer ripples, theme-aware colors, and controls for motion and density.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "search_terms": [
+        "adjust",
+        "animated",
+        "any",
+        "behavior.",
+        "behind",
+        "between",
+        "colors",
+        "content",
+        "content.",
+        "controls",
+        "create",
+        "current",
+        "density.",
+        "dots",
+        "drifting",
+        "effect.",
+        "effects",
+        "explore",
+        "floating",
+        "flowing",
+        "follows",
+        "input",
+        "layout",
+        "layout-surfaces",
+        "leave",
+        "lights",
+        "motion",
+        "move",
+        "native",
+        "normal",
+        "particle",
+        "particle-backdrop",
+        "particle-backdrop-basic",
+        "particle-backdrop-content",
+        "particle-backdrop-interaction",
+        "particlebackdrop",
+        "pause",
+        "pointer",
+        "preference.",
+        "quiet",
+        "retain",
+        "ribbons",
+        "ripple",
+        "ripples",
+        "room",
+        "soft",
+        "speed",
+        "starfield",
+        "starfield.",
+        "surface",
+        "switch",
+        "their",
+        "theme",
+        "theme-aware"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "declaration": "src/components/layout/ParticleBackdrop.h",
+        "qualified_type": "fluent::layout::ParticleBackdrop",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "ParticleBackdrop",
+        "import_statement": "from fluentqt.layout import ParticleBackdrop"
+      },
+      "tests": [
+        {
+          "target": "test_particle_backdrop",
+          "source": "tests/components/layout/TestParticleBackdrop.cpp",
+          "ctest_label": "test_particle_backdrop"
+        }
+      ],
+      "gallery": {
+        "route_id": "particle-backdrop",
+        "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
+        "control_image": "app/assets/control_images/layout/ParticleBackdrop.png"
+      },
+      "samples": [
+        {
+          "id": "particle-backdrop-basic",
+          "title": "Flowing ribbons",
+          "description": "A quiet animated surface follows the current theme and motion preference.",
+          "cpp_snippet": "auto* backdrop = new ParticleBackdrop(this);\nbackdrop->setEffect(ParticleBackdrop::FlowingRibbons);\nbackdrop->setBackgroundMode(ParticleBackdrop::Solid);\nbackdrop->setParticleCount(240);\nbackdrop->setMaximumFrameRate(30);\nbackdrop->setMinimumHeight(240);\nbackdrop->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "particle-backdrop-content",
+          "title": "Floating dots behind content",
+          "description": "Soft drifting lights leave room for content. Native controls retain their normal input behavior.",
+          "cpp_snippet": "auto* backdrop = new ParticleBackdrop(this);\nbackdrop->setEffect(ParticleBackdrop::FloatingDots);\nbackdrop->setBackgroundMode(ParticleBackdrop::Solid);\nbackdrop->setMaximumFrameRate(30);\nbackdrop->setFadeMargins(QMarginsF(260, 0, 0, 0));\nbackdrop->setMinimumHeight(280);\nbackdrop->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);\nauto* layout = new QVBoxLayout(backdrop);\nlayout->setContentsMargins(24, 24, 24, 24);\nauto* title = new Label(QStringLiteral(\"Make room for a little motion\"), backdrop);\ntitle->setFluentTypography(Typography::FontRole::Subtitle);\ntitle->setWordWrap(true);\nlayout->addWidget(title);\nlayout->addStretch();\nauto* ripple = new Button(QStringLiteral(\"Create a ripple\"), backdrop);\nripple->setObjectName(QStringLiteral(\"particleRipple\"));\nripple->setFluentStyle(Button::Accent);\nlayout->addWidget(ripple, 0, Qt::AlignLeft);\nQObject::connect(ripple, &Button::clicked, backdrop, [backdrop] {\n    backdrop->triggerRipple(QPointF(backdrop->width() * .72, backdrop->height() * .42));\n});\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "particle-backdrop-interaction",
+          "title": "Explore particle effects",
+          "description": "Switch between ribbons, floating dots and a starfield. Move the pointer, create a ripple, adjust the speed or pause any effect.",
+          "cpp_snippet": "auto* panel = new QWidget(this);\npanel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);\nauto* layout = new QVBoxLayout(panel);\nlayout->setContentsMargins(0, 0, 0, 0);\nlayout->setSpacing(12);\nauto* backdrop = new ParticleBackdrop(panel);\nbackdrop->setEffect(ParticleBackdrop::Starfield);\nbackdrop->setBackgroundMode(ParticleBackdrop::Solid);\nbackdrop->setInteractive(true);\nbackdrop->setObjectName(QStringLiteral(\"particleBackdrop\"));\nbackdrop->setMinimumHeight(300);\nlayout->addWidget(backdrop);\nauto* effect = new ComboBox(panel);\neffect->setObjectName(QStringLiteral(\"particleEffect\"));\neffect->setAccessibleName(QStringLiteral(\"Particle effect\"));\neffect->addItem(QStringLiteral(\"Flowing ribbons\"), int(ParticleBackdrop::FlowingRibbons));\neffect->addItem(QStringLiteral(\"Floating dots\"), int(ParticleBackdrop::FloatingDots));\neffect->addItem(QStringLiteral(\"Starfield\"), int(ParticleBackdrop::Starfield));\neffect->setCurrentIndex(2);\nlayout->addWidget(effect);\nQObject::connect(effect, qOverload<int>(&ComboBox::currentIndexChanged), backdrop,\n                 [backdrop, effect](int) {\n    backdrop->setEffect(static_cast<ParticleBackdrop::Effect>(effect->currentData().toInt()));\n});\nauto* speed = new Slider(Qt::Horizontal, panel);\nspeed->setObjectName(QStringLiteral(\"particleSpeed\"));\nspeed->setRange(25, 200);\nspeed->setValue(100);\nspeed->setAccessibleName(QStringLiteral(\"Particle speed\"));\nlayout->addWidget(speed);\nQObject::connect(speed, &QSlider::valueChanged, backdrop,\n                 [backdrop](int value) { backdrop->setSpeed(value / 100.0); });\nauto* pause = new Button(QStringLiteral(\"Pause motion\"), panel);\npause->setObjectName(QStringLiteral(\"particlePause\"));\nlayout->addWidget(pause, 0, Qt::AlignLeft);\nQObject::connect(pause, &Button::clicked, backdrop, [backdrop, pause] {\n    backdrop->setAnimationEnabled(!backdrop->isAnimationEnabled());\n    pause->setText(backdrop->isAnimationEnabled() ? QStringLiteral(\"Pause motion\")\n                                                 : QStringLiteral(\"Resume motion\"));\n});\n",
+          "fill_available_width": true
+        }
+      ]
+    },
+    {
       "id": "field",
       "title": "Field",
       "category_id": "layout",
@@ -8634,6 +8752,13 @@
       "description": "A disclosure surface that reveals caller-supplied content with an optional animation."
     },
     {
+      "id": "particle-backdrop",
+      "title": "ParticleBackdrop",
+      "kind": "component",
+      "parent_id": "layout",
+      "description": "Flowing ribbons, floating dots and a starfield with pointer ripples, theme-aware colors, and controls for motion and density."
+    },
+    {
       "id": "field",
       "title": "Field",
       "kind": "component",
@@ -8917,12 +9042,12 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 91,
-    "component_count": 70,
-    "sample_count": 209,
+    "route_count": 92,
+    "component_count": 71,
+    "sample_count": 212,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 12,
-    "guided_component_count": 70
+    "guided_component_count": 71
   }
 }

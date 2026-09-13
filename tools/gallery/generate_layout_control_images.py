@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from math import cos, sin, tau
 
 try:
     from PIL import Image, ImageDraw
@@ -117,6 +118,19 @@ def _field(draw: ImageDraw.ImageDraw) -> None:
     _line(draw, (50, 52, 53, 48), width=1)
 
 
+def _particles(draw: ImageDraw.ImageDraw) -> None:
+    for tilt in (-0.45, 0.45):
+        points = []
+        for index in range(81):
+            angle = index * tau / 80
+            x, y = 22 * cos(angle), 8 * sin(angle)
+            points.append(((36 + x * cos(tilt) - y * sin(tilt)) * SCALE,
+                           (36 + x * sin(tilt) + y * cos(tilt)) * SCALE))
+        draw.line(points, fill=SECONDARY, width=SCALE, joint="curve")
+    for x, y in ((16, 27), (31, 25), (51, 39), (27, 44), (53, 27)):
+        draw.ellipse(_scaled((x - 2, y - 2, x + 2, y + 2)), fill=GLYPH)
+
+
 def _write(name: str, painter) -> None:
     image, draw = _canvas()
     painter(draw)
@@ -143,9 +157,10 @@ def main() -> int:
         ("Divider", _divider),
         ("Expander", _expander),
         ("Field", _field),
+        ("ParticleBackdrop", _particles),
     ):
         _write(name, painter)
-    print("generated 5 Layout control images")
+    print("generated 6 Layout control images")
     return 0
 
 

@@ -25,6 +25,7 @@
 #include <QPainterPath>
 
 #include "components/basicinput/Button.h"
+#include "components/layout/ParticleBackdrop.h"
 #include "components/collections/ListView.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/scrolling/ScrollBar.h"
@@ -596,6 +597,14 @@ public:
         // 两者之间不再有不透明硬缝。Normal 模式下不透明 wash 会完全覆盖它，等同无操作。
         setAttribute(Qt::WA_TranslucentBackground);
 
+        m_particles = new fluent::layout::ParticleBackdrop(this);
+        m_particles->setObjectName(QStringLiteral("galleryHomeParticles"));
+        m_particles->setParticleCount(240);
+        m_particles->setSpeed(.6);
+        m_particles->setMaximumFrameRate(30);
+        m_particles->setAttribute(Qt::WA_TransparentForMouseEvents);
+        m_particles->lower();
+
         auto* layout = new QVBoxLayout(this);
         // The floating link ListView occupies the lower half of the hero, so keep the
         // text block in the upper band and let the card strip sit on the artwork.
@@ -634,6 +643,7 @@ public:
 
     void onThemeUpdated() override
     {
+        m_artwork = {};
         applyTextPalette();
         if (m_titleLabel)
             m_titleLabel->onThemeUpdated();
@@ -648,6 +658,8 @@ protected:
     void resizeEvent(QResizeEvent* event) override
     {
         QWidget::resizeEvent(event);
+        m_particles->setGeometry(rect());
+        m_particles->setFadeMargins(QMarginsF(width() * .45, 0, 0, kHeroBottomFade));
         if (!m_linkStrip)
             return;
         const int stripX = qMax(0, kHeroLinkStripInsetX);
@@ -673,6 +685,17 @@ protected:
         // DestinationIn，会连同父级已绘制的像素一起清除；这会在 Linux 的
         // PaintedOpaque Mica 后端上把窗口真正打穿。
         const qreal dpr = qMax<qreal>(1.0, devicePixelRatioF());
+        const QSize pixels(qMax(1, qRound(width() * dpr)), qMax(1, qRound(height() * dpr)));
+        const bool material = usesWindowMaterialBackdrop(this);
+        const bool composited = usesCompositedWindowBackdrop(this);
+        if (m_artwork.size() == pixels && m_artwork.devicePixelRatio() == dpr &&
+            m_cachedMaterial == material && m_cachedComposited == composited) {
+            QPainter target(this);
+            target.setCompositionMode(composited ? QPainter::CompositionMode_Source
+                                                 : QPainter::CompositionMode_SourceOver);
+            target.drawImage(QPointF(0, 0), m_artwork);
+            return;
+        }
         QImage artwork(qMax(1, qRound(width() * dpr)), qMax(1, qRound(height() * dpr)),
                        QImage::Format_ARGB32_Premultiplied);
         artwork.setDevicePixelRatio(dpr);
@@ -823,6 +846,9 @@ protected:
         painter.restore();
         painter.end();
 
+        m_artwork = artwork;
+        m_cachedMaterial = material;
+        m_cachedComposited = composited;
         QPainter target(this);
         // Native/compositor material needs the alpha layer to replace this
         // region; app-painted material must remain underneath it.
@@ -848,6 +874,9 @@ private:
         }
     }
 
+    fluent::layout::ParticleBackdrop* m_particles = nullptr;
+    QImage m_artwork;
+    bool m_cachedMaterial = false, m_cachedComposited = false;
     QLabel* m_iconLabel = nullptr;
     fluent::textfields::Label* m_titleLabel = nullptr;
     fluent::textfields::Label* m_taglineLabel = nullptr;

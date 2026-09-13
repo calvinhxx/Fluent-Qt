@@ -674,6 +674,11 @@
           "component_id": "split-view",
           "choose_when": "Two or more persistent regions need draggable size allocation.",
           "avoid_when": "The secondary region is temporary or modal."
+        },
+        {
+          "component_id": "particle-backdrop",
+          "choose_when": "A bounded hero or panel needs CPU-painted ribbons, floating dots or a starfield behind normal child controls, with shared motion and density controls.",
+          "avoid_when": "The animation communicates essential information or a large collection would create many continuously animating instances."
         }
       ]
     },

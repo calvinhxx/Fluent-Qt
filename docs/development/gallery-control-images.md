@@ -85,7 +85,7 @@ control.
    are centered without enlarging their artwork, while oversized canvases are
    proportionally reduced.
 
-The five Layout-family tiles are deterministic assets. Regenerate them with
+The six Layout-family tiles are deterministic assets. Regenerate them with
 `python tools/gallery/generate_layout_control_images.py` so their coral fill,
 line weight, radius, and alpha treatment stay identical.
 

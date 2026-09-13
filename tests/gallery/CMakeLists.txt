@@ -64,6 +64,7 @@ target_link_libraries(test_gallery_shell_motion_policy
 
 add_qt_test_module(test_gallery_content_pages
     TestGalleryContentPages.cpp
+    TestGalleryParticleBackdrop.cpp
     TestGallerySampleAccessibility.cpp
     TestGalleryPreview.cpp
     TestGalleryInspectorScenes.cpp

@@ -156,7 +156,7 @@ QPixmap makeCanvas(const QSize& size)
 
 GallerySample makeSample(const QString& id, const QString& title, const QString& description,
                          const QString& codeSnippet,
-                         std::function<QWidget*(QWidget*)> createPreview)
+                         std::function<QWidget*(QWidget*)> createPreview, bool fillAvailableWidth)
 {
     GallerySample sample;
     sample.id = id;
@@ -164,6 +164,7 @@ GallerySample makeSample(const QString& id, const QString& title, const QString&
     sample.description = description;
     sample.codeSnippet = codeSnippet;
     sample.createPreview = std::move(createPreview);
+    sample.fillAvailableWidth = fillAvailableWidth;
     return sample;
 }
 

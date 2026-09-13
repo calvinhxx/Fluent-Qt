@@ -21,6 +21,7 @@ from PySide6.QtCore import (
     QEvent,
     QModelIndex,
     QMargins,
+    QMarginsF,
     QObject,
     QPersistentModelIndex,
     QPoint,
@@ -1418,6 +1419,16 @@ class GalleryHomeHero(QWidget):
         self.setFixedHeight(self.HEIGHT)
         self.setAttribute(Qt.WA_TranslucentBackground)
 
+        self._particles = fluentqt.ParticleBackdrop(self)
+        self._particles.setObjectName("galleryHomeParticles")
+        self._particles.setParticleCount(240)
+        self._particles.setSpeed(0.6)
+        self._particles.setMaximumFrameRate(30)
+        self._particles.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self._particles.lower()
+        self._artwork_key = None
+        self._artwork = QImage()
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 202)
         layout.setSpacing(0)
@@ -1516,6 +1527,8 @@ class GalleryHomeHero(QWidget):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
+        self._particles.setGeometry(self.rect())
+        self._particles.setFadeMargins(QMarginsF(self.width() * 0.45, 0, 0, 184))
         self._strip.setGeometry(16, 200, max(0, self.width() - 40), 182)
         self._update_scroll_buttons()
 
@@ -1568,6 +1581,14 @@ class GalleryHomeHero(QWidget):
     def paintEvent(self, event) -> None:
         del event
         dpr = max(1.0, self.devicePixelRatioF())
+        backdrop_getter = getattr(self.window(), "backdropEffect", None)
+        backdrop = backdrop_getter() if callable(backdrop_getter) else None
+        cache_key = (self.width(), self.height(), dpr, fluentqt.theme_revision(), backdrop)
+        if cache_key == self._artwork_key:
+            target = QPainter(self)
+            target.drawImage(QPointF(0, 0), self._artwork)
+            target.end()
+            return
         artwork = QImage(
             max(1, round(self.width() * dpr)),
             max(1, round(self.height() * dpr)),
@@ -1720,11 +1741,14 @@ class GalleryHomeHero(QWidget):
             painter.fillRect(fade_rect, fade)
         painter.end()
 
+        self._artwork = artwork
+        self._artwork_key = cache_key
         target = QPainter(self)
         target.drawImage(QPointF(0, 0), artwork)
         target.end()
 
     def refresh_theme(self) -> None:
+        self._artwork_key = None
         colors = gallery_colors()
         self._title.setStyleSheet(
             "color: {0}; background: transparent;".format(

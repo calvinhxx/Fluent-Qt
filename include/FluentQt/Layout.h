@@ -6,5 +6,6 @@
 #include <components/layout/Divider.h>
 #include <components/layout/Expander.h>
 #include <components/layout/Field.h>
+#include <components/layout/ParticleBackdrop.h>
 
 #endif // FLUENTQT_LAYOUT_H

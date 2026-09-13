@@ -976,8 +976,10 @@ def _build_sample_card(
     result = build_sample(entry.route_id, sample.id, preview_surface)
     _preserve_backgroundless_collection_surfaces(result.widget)
     result.widget.setObjectName("gallerySamplePreviewWidget")
-    preview_layout.addWidget(result.widget)
-    preview_layout.addStretch(1)
+    expanding_preview = sample.fill_available_width
+    preview_layout.addWidget(result.widget, 1 if expanding_preview else 0)
+    if not expanding_preview:
+        preview_layout.addStretch(1)
     preview_layout.activate()
     card_layout.addWidget(preview_surface)
 

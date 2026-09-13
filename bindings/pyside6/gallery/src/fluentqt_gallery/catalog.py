@@ -19,6 +19,7 @@ class GallerySampleEntry:
     cpp_snippet: str
     preview_orientation: str | None
     preview_spacing: int | None
+    fill_available_width: bool = False
 
 
 @dataclass(frozen=True)
@@ -75,9 +76,9 @@ def _load_contract() -> dict[str, object]:
         )
     summary = contract.get("summary", {})
     expected = {
-        "route_count": 91,
-        "component_count": 70,
-        "sample_count": 209,
+        "route_count": 92,
+        "component_count": 71,
+        "sample_count": 212,
     }
     if summary != expected:
         raise RuntimeError(
@@ -115,6 +116,7 @@ ENTRIES = tuple(
                     "orientation"
                 ),
                 preview_spacing=(sample.get("preview_layout") or {}).get("spacing"),
+                fill_available_width=sample.get("fill_available_width", False),
             )
             for sample in component["samples"]
         ),

@@ -281,6 +281,11 @@ def _samples_in_body(body: str) -> list[dict[str, object]]:
             "description": _cpp_string_expression(arguments[2]),
             "cpp_snippet": _cpp_string_expression(arguments[3]),
         }
+        if len(arguments) > 5:
+            if len(arguments) != 6 or arguments[5].strip() not in {"true", "false"}:
+                raise ValueError("makeSample fillAvailableWidth must be a boolean literal")
+            if arguments[5].strip() == "true":
+                sample["fill_available_width"] = True
         preview_layout = _preview_layout(arguments[4])
         if preview_layout is not None:
             sample["preview_layout"] = preview_layout
@@ -497,20 +502,20 @@ def generate_contract(project_root: Path) -> dict[str, object]:
             .format(", ".join(missing_bindings))
         )
     support_types = sorted(manifest_classes - routed_types)
-    if component_count != 70:
+    if component_count != 71:
         raise ValueError(
-            "native component route count changed from 70 to {0}; review the contract"
+            "native component route count changed from 71 to {0}; review the contract"
             .format(component_count)
         )
-    if sample_count != 209:
+    if sample_count != 212:
         raise ValueError(
-            "native sample count changed from 209 to {0}; review the contract".format(
+            "native sample count changed from 212 to {0}; review the contract".format(
                 sample_count
             )
         )
-    if len(routes) != 91:
+    if len(routes) != 92:
         raise ValueError(
-            "native navigation route count changed from 91 to {0}; review the contract"
+            "native navigation route count changed from 92 to {0}; review the contract"
             .format(len(routes))
         )
 

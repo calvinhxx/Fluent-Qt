@@ -6452,6 +6452,7 @@ def ported_sample_keys() -> frozenset[tuple[str, str]]:
 from . import native_samples_basic as _native_samples_basic  # noqa: E402,F401
 from . import native_samples_collections as _native_samples_collections  # noqa: E402,F401
 from . import native_samples_dialogs as _native_samples_dialogs  # noqa: E402,F401
+from . import native_samples_layout as _native_samples_layout  # noqa: E402,F401
 from . import native_samples_navigation as _native_samples_navigation  # noqa: E402,F401
 from . import native_samples_scrolling as _native_samples_scrolling  # noqa: E402,F401
 from . import native_samples_status as _native_samples_status  # noqa: E402,F401

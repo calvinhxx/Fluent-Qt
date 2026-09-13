@@ -88,15 +88,17 @@ GallerySampleCard::GallerySampleCard(const QString& routeId, const GallerySample
     previewLayout->setContentsMargins(20, 20, 20, 20);
     previewLayout->setSpacing(16);
 
+    const bool expandingPreview = sample.fillAvailableWidth;
     if (sample.createPreview) {
         m_preview = sample.createPreview(m_previewSurface);
         if (m_preview) {
             m_preview->setObjectName(QStringLiteral("gallerySamplePreviewWidget"));
             m_preview->installEventFilter(this);
-            previewLayout->addWidget(m_preview);
+            previewLayout->addWidget(m_preview, expandingPreview ? 1 : 0);
         }
     }
-    previewLayout->addStretch(1);
+    if (!expandingPreview)
+        previewLayout->addStretch(1);
 
     if (sample.createOptions) {
         m_options = sample.createOptions(m_previewSurface);

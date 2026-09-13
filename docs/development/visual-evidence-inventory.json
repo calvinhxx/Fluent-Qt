@@ -232,6 +232,7 @@
       "label",
       "line-edit",
       "number-box",
+      "particle-backdrop",
       "password-box",
       "progress-bar",
       "progress-ring",

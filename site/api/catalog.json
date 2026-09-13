@@ -23,8 +23,8 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 70,
-    "public_headers": 117,
+    "components": 71,
+    "public_headers": 118,
     "categories": 12
   },
   "categories": [
@@ -51,7 +51,7 @@
     {
       "id": "layout",
       "title": "Layout",
-      "component_count": 5
+      "component_count": 6
     },
     {
       "id": "menus-toolbars",
@@ -1454,6 +1454,41 @@
         }
       ],
       "sample_count": 2
+    },
+    {
+      "id": "particle-backdrop",
+      "title": "ParticleBackdrop",
+      "category_id": "layout",
+      "description": "Flowing ribbons, floating dots and a starfield with pointer ripples, theme-aware colors, and controls for motion and density.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "installed_declaration_header": "<FluentQt/components/layout/ParticleBackdrop.h>",
+        "qualified_type": "fluent::layout::ParticleBackdrop",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/ParticleBackdrop.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "ParticleBackdrop",
+        "import_statement": "from fluentqt.layout import ParticleBackdrop"
+      },
+      "gallery": {
+        "route_id": "particle-backdrop",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=particle-backdrop",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/LayoutSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_particle_backdrop",
+          "ctest_label": "test_particle_backdrop",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/layout/TestParticleBackdrop.cpp"
+        }
+      ],
+      "sample_count": 3
     },
     {
       "id": "field",
@@ -3248,6 +3283,17 @@
         "ValidationState"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Field.h"
+    },
+    {
+      "include": "<FluentQt/components/layout/ParticleBackdrop.h>",
+      "source": "src/components/layout/ParticleBackdrop.h",
+      "summary": "CPU-painted particle presets behind caller-composed content.",
+      "declarations": [
+        "ParticleBackdrop",
+        "Effect",
+        "BackgroundMode"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/ParticleBackdrop.h"
     },
     {
       "include": "<FluentQt/components/menus_toolbars/CommandBar.h>",

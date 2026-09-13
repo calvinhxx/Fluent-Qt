@@ -220,7 +220,8 @@
         "title": { "$ref": "#/$defs/nonEmptyString" },
         "description": { "$ref": "#/$defs/nonEmptyString" },
         "cpp_snippet": { "$ref": "#/$defs/nonEmptyString" },
-        "preview_layout": { "$ref": "#/$defs/previewLayout" }
+        "preview_layout": { "$ref": "#/$defs/previewLayout" },
+        "fill_available_width": { "type": "boolean" }
       }
     },
     "component": {

@@ -10,6 +10,29 @@
 [← System capability delivery record](system-capability-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
 <!-- docs-nav:top:end -->
 
+## 2026-09-13 ParticleBackdrop extraction
+
+`fluent::layout::ParticleBackdrop` is a CPU-painted decorative surface using
+normal QWidget child composition, with flowing ribbons, floating dots and
+starfield presets. Animation speed, density, maximum frame rate,
+optional pointer interaction, solid/transparent background and edge fades are
+public properties with normalized, idempotent setters. `isAnimating()` reports
+the effective timer state; `animationEnabled` remains the caller's preference.
+The default budget is 240 particles at at most 30 scheduled frames per
+second; applications can explicitly raise either limit. Gallery samples opt in
+to filling the preview row, preserving existing samples' right-hand spacing.
+Hidden or fully clipped surfaces, zero speed, disabled controls, HighContrast,
+and Reduced/Disabled Motion stop continuous updates. Application deactivation
+also pauses by default. Reparenting refreshes ancestor visibility observation.
+
+The installed header and PySide6 class ship together. Gallery Home and the three
+Layout samples compose the same public component.
+Masks affect isolated particle pixels; transparent mode preserves parent window
+materials. The component owns no content model or business action and adds no
+OpenGL module dependency. `TestParticleBackdrop.cpp` covers clipping, reparenting,
+motion policy, transparent fading, setter normalization and child input.
+Native appearance and timing remain host-specific verification boundaries.
+
 ## 2026-09-08 theme token override addendum
 
 `UserTheme::applyOverrides()` adds an atomic, validated patch to the current

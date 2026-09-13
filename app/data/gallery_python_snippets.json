@@ -2,8 +2,8 @@
   "schema_version": 1,
   "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
   "summary": {
-    "component_count": 70,
-    "sample_count": 209
+    "component_count": 71,
+    "sample_count": 212
   },
   "samples": [
     {
@@ -560,6 +560,21 @@
       "route_id": "expander",
       "sample_id": "expander-state-signal",
       "source": "from PySide6.QtWidgets import QVBoxLayout, QWidget\n\nstatus = fluentqt.Label(\"Collapsed\")\n\noptions = QWidget()\noptions_layout = QVBoxLayout(options)\noptions_layout.setContentsMargins(16, 12, 16, 14)\noptions_layout.addWidget(\n    fluentqt.Label(\"Additional details\", options)\n)\noptions_layout.addWidget(\n    fluentqt.Label(\"Diagnostic logging and retry behavior.\", options)\n)\n\nexpander = fluentqt.Expander()\nexpander.setHeaderText(\"Advanced options\")\nexpander.setOwnedContentWidget(options)\nexpander.expandedChanged.connect(\n    lambda expanded: status.setText(\"Expanded\" if expanded else \"Collapsed\")\n)\n"
+    },
+    {
+      "route_id": "particle-backdrop",
+      "sample_id": "particle-backdrop-basic",
+      "source": "from PySide6.QtWidgets import QSizePolicy\n\nbackdrop = fluentqt.ParticleBackdrop()\nbackdrop.setEffect(fluentqt.ParticleBackdrop.Effect.FlowingRibbons)\nbackdrop.setBackgroundMode(fluentqt.ParticleBackdrop.BackgroundMode.Solid)\nbackdrop.setParticleCount(240)\nbackdrop.setMaximumFrameRate(30)\nbackdrop.setMinimumHeight(240)\nbackdrop.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)\n"
+    },
+    {
+      "route_id": "particle-backdrop",
+      "sample_id": "particle-backdrop-content",
+      "source": "from PySide6.QtCore import QMarginsF, QPointF, Qt\nfrom PySide6.QtWidgets import QSizePolicy, QVBoxLayout\n\nbackdrop = fluentqt.ParticleBackdrop()\nbackdrop.setEffect(fluentqt.ParticleBackdrop.Effect.FloatingDots)\nbackdrop.setBackgroundMode(fluentqt.ParticleBackdrop.BackgroundMode.Solid)\nbackdrop.setMaximumFrameRate(30)\nbackdrop.setFadeMargins(QMarginsF(260, 0, 0, 0))\nbackdrop.setMinimumHeight(280)\nbackdrop.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)\nlayout = QVBoxLayout(backdrop)\nlayout.setContentsMargins(24, 24, 24, 24)\ntitle = fluentqt.Label(\"Make room for a little motion\", backdrop)\ntitle.setFluentTypography(fluentqt.FontRole.Subtitle)\ntitle.setWordWrap(True)\nlayout.addWidget(title)\nlayout.addStretch()\nripple = fluentqt.Button(\"Create a ripple\", backdrop)\nripple.setObjectName(\"particleRipple\")\nripple.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)\nlayout.addWidget(ripple, 0, Qt.AlignLeft)\nripple.clicked.connect(\n    lambda: backdrop.triggerRipple(\n        QPointF(backdrop.width() * .72, backdrop.height() * .42)\n    )\n)\n"
+    },
+    {
+      "route_id": "particle-backdrop",
+      "sample_id": "particle-backdrop-interaction",
+      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget\n\npanel = QWidget()\npanel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)\nlayout = QVBoxLayout(panel)\nlayout.setContentsMargins(0, 0, 0, 0)\nlayout.setSpacing(12)\nbackdrop = fluentqt.ParticleBackdrop(panel)\nbackdrop.setEffect(fluentqt.ParticleBackdrop.Effect.Starfield)\nbackdrop.setBackgroundMode(fluentqt.ParticleBackdrop.BackgroundMode.Solid)\nbackdrop.setInteractive(True)\nbackdrop.setObjectName(\"particleBackdrop\")\nbackdrop.setMinimumHeight(300)\nlayout.addWidget(backdrop)\neffect = fluentqt.ComboBox(panel)\neffect.setObjectName(\"particleEffect\")\neffect.setAccessibleName(\"Particle effect\")\neffect.addItem(\"Flowing ribbons\", fluentqt.ParticleBackdrop.Effect.FlowingRibbons)\neffect.addItem(\"Floating dots\", fluentqt.ParticleBackdrop.Effect.FloatingDots)\neffect.addItem(\"Starfield\", fluentqt.ParticleBackdrop.Effect.Starfield)\neffect.setCurrentIndex(2)\nlayout.addWidget(effect)\neffect.currentIndexChanged.connect(\n    lambda _index: backdrop.setEffect(effect.currentData())\n)\nspeed = fluentqt.Slider(Qt.Horizontal, panel)\nspeed.setObjectName(\"particleSpeed\")\nspeed.setRange(25, 200)\nspeed.setValue(100)\nspeed.setAccessibleName(\"Particle speed\")\nlayout.addWidget(speed)\nspeed.valueChanged.connect(lambda value: backdrop.setSpeed(value / 100.0))\npause = fluentqt.Button(\"Pause motion\", panel)\npause.setObjectName(\"particlePause\")\nlayout.addWidget(pause, 0, Qt.AlignLeft)\n\ndef toggle_motion():\n    backdrop.setAnimationEnabled(not backdrop.isAnimationEnabled())\n    pause.setText(\n        \"Pause motion\" if backdrop.isAnimationEnabled() else \"Resume motion\"\n    )\n\npause.clicked.connect(toggle_motion)\n"
     },
     {
       "route_id": "field",

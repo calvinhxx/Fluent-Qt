@@ -38,6 +38,8 @@ from PySide6.QtCore import (
     QItemSelectionModel,
     QLocale,
     QMargins,
+    QMarginsF,
+    QPointF,
     QModelIndex,
     QPoint,
     QPersistentModelIndex,
@@ -142,6 +144,50 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertIsNone(delegate_ref())
             self.assertIsNone(selection_ref())
             self.assertIsNone(model_ref())
+
+    def test_particle_backdrop_public_api_and_child_ownership(self):
+        host = QWidget()
+        host.resize(360, 220)
+        backdrop = fluentqt.ParticleBackdrop(host)
+        self.assertIs(layout.ParticleBackdrop, fluentqt.ParticleBackdrop)
+        self.assertIs(backdrop.parentWidget(), host)
+        self.assertFalse(backdrop.isAnimating())
+        self.assertTrue(backdrop.isPauseWhenInactive())
+        self.assertEqual(backdrop.particleCount(), 240)
+        self.assertEqual(backdrop.maximumFrameRate(), 30)
+        self.assertEqual(backdrop.effect(), fluentqt.ParticleBackdrop.Effect.FlowingRibbons)
+        backdrop.setAnimationEnabled(False)
+        effects = QSignalSpy(backdrop.effectChanged)
+        for effect in (fluentqt.ParticleBackdrop.Effect.FloatingDots,
+                       fluentqt.ParticleBackdrop.Effect.Starfield,
+                       fluentqt.ParticleBackdrop.Effect.FlowingRibbons):
+            backdrop.setEffect(effect)
+            backdrop.setEffect(effect)
+            self.assertEqual(backdrop.effect(), effect)
+            self.assertFalse(backdrop.isAnimationEnabled())
+            self.assertEqual(backdrop.particleCount(), 240)
+        self.assertEqual(effects.count(), 3)
+        backdrop.setBackgroundMode(fluentqt.ParticleBackdrop.BackgroundMode.Solid)
+        backdrop.setFadeMargins(QMarginsF(100, 0, 0, 50))
+        self.assertEqual(backdrop.fadeMargins(), QMarginsF(100, 0, 0, 50))
+        count = QSignalSpy(backdrop.particleCountChanged)
+        backdrop.setParticleCount(480)
+        backdrop.setParticleCount(480)
+        self.assertEqual(count.count(), 1)
+        backdrop.setSpeed(0.6)
+        backdrop.setMaximumFrameRate(30)
+        backdrop.setInteractive(True)
+        self.assertAlmostEqual(backdrop.speed(), 0.6)
+        self.assertEqual(backdrop.maximumFrameRate(), 30)
+        self.assertTrue(backdrop.isInteractive())
+        child = fluentqt.Button("Action", backdrop)
+        reference = weakref.ref(child)
+        del child
+        gc.collect()
+        self.assertIsNotNone(reference())
+        backdrop.triggerRipple(QPointF(160, 80))
+        self.assertFalse(backdrop.isAnimating())
+        host.close()
 
     def test_public_types_and_build_versions(self):
         self.assertTrue(issubclass(fluentqt.Accordion, QWidget))

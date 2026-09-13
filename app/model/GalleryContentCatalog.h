@@ -39,6 +39,9 @@ struct GallerySample {
     QString codeSnippet;
     std::function<QWidget*(QWidget*)> createPreview;
     std::function<QWidget*(QWidget*)> createOptions;
+    // Opt in to using the complete preview row; existing samples retain their right spacer.
+    // zh_CN: 显式选择铺满预览行；既有示例保留右侧留白。
+    bool fillAvailableWidth = false;
 };
 
 /**
