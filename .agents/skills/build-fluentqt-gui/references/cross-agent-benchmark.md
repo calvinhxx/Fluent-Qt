@@ -1,7 +1,9 @@
 # Cross-agent benchmark
 
 Use this only when evaluating the Skill itself. It is not part of the normal
-GUI build workflow.
+GUI build workflow. The [workspace prompt](../assets/benchmarks/agent-run-workspace.json),
+[run schema](../assets/benchmarks/agent-run.schema.json), and
+[benchmark_run.py](../scripts/benchmark_run.py) keep inputs and evidence comparable.
 
 ## Fixed inputs
 

@@ -9,13 +9,36 @@ manifest solely because it touches async work or a collection.
 The contract applies to both C++ and PySide6. Adapt names to the product
 vocabulary; preserve the dependency direction and ownership boundaries.
 
+## Choose the integration boundary
+
+For GUI integration, read this section first. The remaining architecture
+manifest workflow applies to new applications or architecture migrations.
+Inspect the entry points, reusable APIs, runtime, persistence, and delivery
+constraints that the GUI will touch, then select a pattern from code evidence:
+
+| Pattern | Use it when | Preserve |
+|---|---|---|
+| `direct-library` | Stable behavior is callable in-process | Thread affinity, ownership, cancellation |
+| `service-api` | A service already owns the operation | Transport types outside widgets |
+| `structured-process` | An executable is the reusable surface | Structured I/O and stable errors |
+| `plugin-extension` | The host supports embedded frontends | Host event loop, ABI/API, lifecycle, unload |
+| `extract-core` | Behavior is trapped in another interface | A small, tested UI-independent service |
+| `greenfield` | No application layer exists | Use cases and state defined before the view |
+
+Apply the catalog pattern's `window_ownership`: `host-owned` returns an
+embedded surface, never a second application window or event loop. Preserve
+existing CLI, TUI, service, plugin, and library entry points unless replacement
+is requested. When the boundary is uncertain, test a narrow adapter first.
+
 ## Select the smallest honest structure
 
 Use the lite template only for a bounded utility with one finite surface and no
 background process, network boundary, growing collection, persistence, or
 transient lifetime. Use full for every other application.
 
-Initialize the layout before production UI code:
+The [structure templates](../assets/project-structure-templates.json) and
+[initializer](../scripts/init_project_structure.py) record real responsibilities
+in `.fluentqt/architecture.json`. Initialize before production UI code:
 
 ```bash
 python3 <skill-root>/scripts/init_project_structure.py \
@@ -192,7 +215,8 @@ the real shell, list its implementation and header relative to `source_root`:
 Use `allowed_source_root_files` only for compatibility files that genuinely
 cannot move. Do not use it to bless a flat tree.
 
-Validate before visual acceptance:
+Run [validate_project_structure.py](../scripts/validate_project_structure.py)
+before visual acceptance:
 
 ```bash
 python3 <skill-root>/scripts/validate_project_structure.py \

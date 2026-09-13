@@ -137,6 +137,21 @@ def _zip_info(archive_path: str, *, executable: bool) -> zipfile.ZipInfo:
     return info
 
 
+def packaged_onboarding_readme(contents: str) -> str:
+    """Generate local navigation for the independently installed Skill."""
+    destinations = {
+        "../../docs/README.md": "../../SKILL.md",
+        "../../docs/ai/README.md": "../../SKILL.md",
+        "../../docs/SUMMARY.md": "../../SKILL.md#choose-the-task",
+        "../../docs/ai/add-gui-to-project.md": (
+            "../../references/project-architecture.md#choose-the-integration-boundary"
+        ),
+    }
+    for original, destination in destinations.items():
+        contents = contents.replace(f"]({original})", f"]({destination})")
+    return contents
+
+
 def build_skill_package(
     project_root: Path, output_dir: Path, version: str | None = None
 ) -> Path:
@@ -168,12 +183,17 @@ def build_skill_package(
             )
         for source in onboarding_files(onboarding_root):
             relative = source.relative_to(onboarding_root).as_posix()
+            contents = source.read_bytes()
+            if relative == "README.md":
+                contents = packaged_onboarding_readme(
+                    contents.decode("utf-8")
+                ).encode("utf-8")
             package.writestr(
                 _zip_info(
                     f"{SKILL_NAME}/tools/onboarding/{relative}",
                     executable=source.suffix == ".py" or source.name == "fluentqt",
                 ),
-                source.read_bytes(),
+                contents,
             )
     return archive
 

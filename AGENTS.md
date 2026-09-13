@@ -2,17 +2,17 @@
 
 ## Start with the task
 
-Use [README.md](README.md) for supported versions and entry points,
-[docs/README.md](docs/README.md) for the reader tree, and
-[docs/development/README.md](docs/development/README.md) to find the workflow
-for the change. Read the relevant sections and owning code first; follow
-dependencies as needed. Keep workflow details in their canonical guides.
+Read the owning code and the guide sections relevant to the task below.
+[README.md](README.md) owns supported versions and entry points;
+[docs/README.md](docs/README.md) owns the reader tree. Use the
+[development index](docs/development/README.md) for workflows not listed here.
 
 | Task | Read |
 |---|---|
 | Local setup and builds | [Build workflow](docs/development/build-workflow.md); [Linux workflow](docs/development/linux-workflow.md) for Linux |
 | C++ or test changes | [Testing workflow](docs/development/testing-workflow.md), including the local static gate; [test conventions](docs/development/qt-component-test-conventions.md) when authoring tests |
-| Public API or baseline change | [API conventions](docs/development/component-api-conventions.md), [compatibility policy](docs/development/compatibility-policy.md), [API audit](docs/development/component-api-audit.md) |
+| Public API change | [API conventions](docs/development/component-api-conventions.md), [compatibility policy](docs/development/compatibility-policy.md) |
+| Trace an earlier API decision or audit a baseline | [Historical API audit](docs/development/component-api-audit.md); its dated addenda are evidence, not current rules |
 | Runtime ownership or overlays | [Architecture](docs/architecture/README.md); [overlay behavior](docs/architecture/overlay-behavior.md) for popups, flyouts, dropdowns, and drawers |
 | Visible component change | [Accessibility inventory](docs/development/accessibility-inventory.md), [visual review](docs/development/visual-review.md) |
 | Cross-cutting maintenance or high-risk visual work | [Technical debt roadmap](docs/development/technical-debt-roadmap.md) and its [visual evidence inventory](docs/development/visual-evidence-inventory.json) |
@@ -64,20 +64,14 @@ python3 tools/dev/fluent_qt_build.py --preset vcpkg-osx --target test_<name>
 ctest --preset vcpkg-osx -L '^test_<name>$' --output-on-failure
 ```
 
-Public presets require CMake 3.25+ and `VCPKG_ROOT`; the library CMake baseline
-remains 3.16. Keep machine paths in ignored `CMakeUserPresets.json`. Setup,
-parallelism overrides, and platform presets belong to the build guide.
-
 Run focused checks and required owner gates, then broaden only for changed
 dependencies or unresolved risks. Before committing or pushing C++ changes,
 run the read-only [local static gate](docs/development/testing-workflow.md#local-static-gate).
 
-VisualCheck uses `SKIP_VISUAL_TEST` for automated skips and otherwise shows the
-window and blocks with `qApp->exec()`; use the shared helper for
-`VISUAL_SNAPSHOT=1`. Do not substitute `QTest::qWait()`. Use `fluent::AnchorLayout`
-for primary VisualCheck layouts. A skipped test, registered scenario, or
-offscreen result is not native visual approval. Close maintenance phases only
-with the roadmap's checked-in exit condition and evidence.
+Follow the [VisualCheck contract](docs/development/testing-workflow.md#visualcheck)
+for window lifetime, layout, skips, and snapshots. A skipped test, registered
+scenario, or offscreen result is not native visual approval. Close maintenance
+phases only with the roadmap's checked-in exit condition and evidence.
 
 After adding, removing, or reordering reader-facing Markdown, update
 `docs/navigation.json` and run:

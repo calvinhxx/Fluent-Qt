@@ -36,26 +36,12 @@ that exchange structured analysis can use
 
 ## Choose the boundary
 
-Query a candidate pattern from the repository root:
-
-```bash
-python3 tools/ai/query_ai_catalog.py --pattern direct-library --json
-```
-
-| Pattern | Use it when | Preserve |
-|---|---|---|
-| `direct-library` | Stable behavior is callable in-process | Thread affinity, ownership, cancellation |
-| `service-api` | A service already owns the operation | Transport types outside widgets |
-| `structured-process` | An executable is the reusable surface | Structured I/O and stable errors |
-| `plugin-extension` | The host supports embedded frontends | Host event loop, ABI/API, lifecycle, unload |
-| `extract-core` | Behavior is trapped in another interface | A small, tested UI-independent service |
-| `greenfield` | No application layer exists | Use cases and state defined before the view |
-
-Apply the pattern's `window_ownership` field. A host-owned integration returns
-an embedded surface rather than creating another application window or event
-loop. When the boundary is uncertain, test a narrow adapter first. Preserve
-existing CLI, TUI, service, plugin, and library entry points unless replacement
-is requested.
+Use the portable Skill's
+[integration boundary table](../../.agents/skills/build-fluentqt-gui/references/project-architecture.md#choose-the-integration-boundary)
+to select among an in-process API, service, structured process, host extension,
+extracted core, or new application. That section owns the pattern ids,
+window-ownership rules, and adapter checks. The [AI tools index](README.md#find-a-component)
+provides catalog queries.
 
 ## Deliver one complete workflow
 
@@ -83,10 +69,9 @@ retention or pagination boundary. Create one-shot surfaces on demand and
 verify cleanup.
 
 For a new GUI or major redesign, follow the Skill's
-[design workflow](../../.agents/skills/build-fluentqt-gui/SKILL.md#new-or-redesigned-interfaces):
-compare three concepts using the same real content, record a human selection,
-then implement that direction. Increased engineering risk alone does not
-require new concepts for an otherwise unchanged interface.
+[design workflow](../../.agents/skills/build-fluentqt-gui/SKILL.md#new-or-redesigned-interfaces)
+for concept comparison and human selection. Reuse an accepted direction for
+focused repairs.
 
 Select components using public headers or Python imports, Gallery examples,
 and focused tests. The [AI tools index](README.md) provides setup, catalog

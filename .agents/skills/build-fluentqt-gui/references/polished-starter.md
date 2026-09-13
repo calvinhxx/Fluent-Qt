@@ -3,6 +3,22 @@
 Use the bundled `workbench` starter for a new standalone C++ or PySide6
 application. It is a production-shaped starting point, not a product concept.
 
+## Prepare a new environment
+
+Resolve `<onboarding>` to `<skill-root>/tools/onboarding/fluentqt` in an
+installed archive. In a checkout, including a symlinked Skill installation,
+use `<FluentQt-root>/tools/onboarding/fluentqt`; locate the checkout from the
+resolved Skill directory. Run the read-only preflight before scaffolding:
+
+```bash
+python3 <onboarding> doctor --profile cpp --format json
+python3 <onboarding> create /path/to/new-app --language cpp --starter workbench
+```
+
+Use `python` / `pyside6` for the Python profile/language and `existing-qt` for a
+host-owned panel. Resolve blocking findings; a warning alone does not justify
+replacing the target's build system. Reuse a working setup for ordinary edits.
+
 ## What the starter guarantees
 
 - a thin composition-root window;

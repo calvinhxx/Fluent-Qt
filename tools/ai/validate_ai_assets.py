@@ -8,10 +8,12 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
 from typing import Iterable
+from urllib.parse import unquote, urlsplit
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -204,48 +206,77 @@ def _project_analysis_fixture() -> dict[str, object]:
     }
 
 
+def _reachable_skill_resources(
+    skill_root: Path, entrypoint: str = "SKILL.md"
+) -> set[str]:
+    """Follow local Markdown links so mode-specific resources can stay nested."""
+    skill_root = skill_root.resolve()
+    pending = [skill_root / entrypoint]
+    reached: set[str] = set()
+    while pending:
+        source = pending.pop()
+        relative = source.relative_to(skill_root).as_posix()
+        if relative in reached:
+            continue
+        if not source.is_file():
+            raise AssertionError(f"Skill resource does not exist: {relative}")
+        reached.add(relative)
+        if source.suffix != ".md":
+            continue
+        contents = source.read_text(encoding="utf-8")
+        for raw_link in re.findall(r"\[[^\]]*\]\(([^)]+)\)", contents):
+            link = urlsplit(raw_link.strip().removeprefix("<").removesuffix(">"))
+            if link.scheme or link.netloc or not link.path:
+                continue
+            target = (source.parent / unquote(link.path)).resolve()
+            if not target.is_relative_to(skill_root):
+                raise AssertionError(
+                    f"Skill link escapes the package in {relative}: {raw_link}"
+                )
+            pending.append(target)
+    return reached
+
+
+def _validate_skill_routing() -> None:
+    with tempfile.TemporaryDirectory(prefix="fluentqt-skill-routing-") as temp:
+        root = Path(temp)
+        (root / "references").mkdir()
+        (root / "scripts").mkdir()
+        (root / "SKILL.md").write_text(
+            "[Workflow](references/workflow.md#tools)\n"
+            "[External](https://example.org/docs)\n", encoding="utf-8"
+        )
+        reference = root / "references/workflow.md"
+        reference.write_text(
+            "[Tool](../scripts/check.py)\n[Home](../SKILL.md)\n", encoding="utf-8"
+        )
+        (root / "scripts/check.py").write_text("pass\n", encoding="utf-8")
+        (root / "scripts/unlinked.py").write_text("pass\n", encoding="utf-8")
+        if _reachable_skill_resources(root) != {
+            "SKILL.md", "references/workflow.md", "scripts/check.py"
+        }:
+            raise AssertionError("Skill routing must follow nested links and cycles")
+        for broken_link in ("../scripts/missing.py", "../../outside.md"):
+            reference.write_text(f"[Broken]({broken_link})\n", encoding="utf-8")
+            try:
+                _reachable_skill_resources(root)
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError(f"Skill routing accepts {broken_link}")
+
+
 def _validate_skill(project_root: Path) -> None:
+    _validate_skill_routing()
     skill_path = project_root / ".agents/skills/build-fluentqt-gui/SKILL.md"
     contents = skill_path.read_text(encoding="utf-8")
     if "TODO" in contents:
         raise AssertionError("FluentQt GUI Skill still contains TODO placeholders")
     if not contents.startswith("---\nname: build-fluentqt-gui\ndescription:"):
         raise AssertionError("FluentQt GUI Skill has invalid frontmatter")
-    for required in (
-        "assets/benchmarks/agent-run.schema.json",
-        "assets/benchmarks/agent-run-workspace.json",
-        "assets/composition-recipes.json",
-        "assets/fluentqt-ai-catalog.json",
-        "assets/project-structure-templates.json",
-        "references/art-direction.md",
-        "references/cross-agent-benchmark.md",
-        "references/design-intelligence.md",
-        "references/fluentqt-maintainer-gates.md",
-        "references/iconography.md",
-        "references/product-copy.md",
-        "references/component-selection.md",
-        "references/experience-differentiation.md",
-        "references/performance-lifecycle.md",
-        "references/polished-starter.md",
-        "references/premium-shell.md",
-        "references/product-reference-patterns.md",
-        "references/project-architecture.md",
-        "references/signature-surface.md",
-        "references/theme-system.md",
-        "references/visual-evidence-contract.md",
-        "references/visual-refinement.md",
-        "scripts/init_design_brief.py",
-        "scripts/benchmark_run.py",
-        "scripts/init_project_structure.py",
-        "scripts/init_visual_evidence.py",
-        "scripts/query_catalog.py",
-        "scripts/render_design_board.py",
-        "scripts/render_visual_review.py",
-        "scripts/validate_design_brief.py",
-        "scripts/validate_project_structure.py",
-        "scripts/validate_visual_evidence.py",
-    ):
-        if required not in contents:
+    reached = _reachable_skill_resources(skill_path.parent)
+    for required in REQUIRED_SKILL_FILES:
+        if required not in {"LICENSE.txt", "agents/openai.yaml"} and required not in reached:
             raise AssertionError(f"FluentQt GUI Skill does not route to {required}")
     for forbidden in (".claude/skills", "fluentqt_root.py", "../../../docs"):
         if forbidden in contents:
@@ -253,134 +284,6 @@ def _validate_skill(project_root: Path) -> None:
                 f"Installable FluentQt GUI Skill contains repository coupling: {forbidden}"
             )
 
-    reference_requirements = {
-        "references/art-direction.md": (
-            "Define the visual world",
-            "Use representative product content",
-            "Produce three high-fidelity comps",
-            "Require a human decision",
-            "Art-direction acceptance gate",
-        ),
-        "references/cross-agent-benchmark.md": (
-            "Fixed inputs",
-            "Initialize one run",
-            "Record the run",
-            "Seal the terminal manifest",
-            "Summarize the two runs",
-            "awaiting-preference",
-        ),
-        "references/design-intelligence.md": (
-            "Ground the design in the product's world",
-            "Spend one controlled aesthetic risk",
-            "Critique genericity before human review",
-            "Extract an implementation design system",
-            "Design-intelligence gate",
-        ),
-        "references/iconography.md": (
-            "Choose one source and record provenance",
-            "Decide when to reuse, repair, or generate",
-            "Define grid and optical sizes",
-            "Optimize the application identity assets",
-            "Derive a palette seed from the approved identity",
-            "Make icon-only actions accessible",
-            "Implement with FluentQt and Qt",
-            "Iconography acceptance gate",
-        ),
-        "references/product-copy.md": (
-            "Establish the product register",
-            "Rewrite by interface job",
-            "Remove assistant narration",
-            "Run the copy audit",
-            "Product-copy acceptance gate",
-        ),
-        "references/experience-differentiation.md": (
-            "Define the product signature",
-            "Generate structurally distinct concepts",
-            "Scan semantic component opportunities",
-            "Differentiation acceptance gate",
-        ),
-        "references/fluentqt-maintainer-gates.md": (
-            "Confirm maintainer mode",
-            "Select gates from the change",
-            "Use repository GUI evidence",
-            "Keep platform claims separate",
-            "Maintainer acceptance gate",
-        ),
-        "references/product-reference-patterns.md": (
-            "Reference-synthesis protocol",
-            "Fast selection matrix",
-            "Acceptance gate",
-        ),
-        "references/project-architecture.md": (
-            "Select the smallest honest structure",
-            "Responsibility contracts",
-            "Architecture manifest",
-            "Refactor an existing God window safely",
-        ),
-        "references/performance-lifecycle.md": (
-            "Classify the data before choosing a viewport",
-            "Preserve item-view virtualization",
-            "Choose transient lifetime deliberately",
-            "Acceptance gate",
-        ),
-        "references/polished-starter.md": (
-            "What the starter guarantees",
-            "Replace the sample, keep the invariants",
-            "Review the first replacement",
-            "WorkbenchShell",
-            "WorkspacePage",
-        ),
-        "references/premium-shell.md": (
-            "Default window material",
-            "Reveal the window material",
-            "Reject these first-render patterns",
-            "Premium-shell acceptance gate",
-        ),
-        "references/signature-surface.md": (
-            "Finish the product object, not the shell",
-            "Conversation and run timeline",
-            "Composer and command dock",
-            "Reject these unfinished surfaces",
-            "Signature-surface acceptance gate",
-        ),
-        "references/theme-system.md": (
-            "ThemeRegistry::defaultSnapshot()",
-            "apply_user_theme",
-            "Audit raw Qt widgets",
-            "Install window material with the theme",
-            "Theme acceptance gate",
-        ),
-        "references/component-selection.md": (
-            "Produce a decision table",
-            "Raw Qt exception rule",
-            "Component acceptance gate",
-        ),
-        "references/visual-refinement.md": (
-            "Gallery-equivalent quality bar",
-            "Start with window material, then density",
-            "normal window, Light",
-            "minimum supported window",
-            "Record actionable findings",
-            "Visual acceptance gate",
-        ),
-        "references/visual-evidence-contract.md": (
-            "Cover mandatory states",
-            "Verify dynamic convergence",
-            "picture-in-picture crops",
-            "contract_version",
-            "window_backdrop",
-            "signature_finish",
-            "Require independent visual review",
-            "Visual acceptance requires",
-        ),
-    }
-    for relative_path, anchors in reference_requirements.items():
-        reference = (skill_path.parent / relative_path).read_text(encoding="utf-8")
-        for anchor in anchors:
-            if anchor not in reference:
-                raise AssertionError(
-                    f"FluentQt GUI Skill reference {relative_path} is missing {anchor!r}"
-                )
     metadata = (
         project_root
         / ".agents/skills/build-fluentqt-gui/agents/openai.yaml"
@@ -1911,6 +1814,15 @@ def _validate_installable_skill(project_root: Path) -> None:
             if any(".claude/" in entry for entry in entries):
                 raise AssertionError("Skill archive contains an agent-specific copy")
             packaged_skill.extractall(temp_root / "installed")
+
+        installed_root = temp_root / "installed/build-fluentqt-gui"
+        onboarding_routes = _reachable_skill_resources(
+            installed_root, "tools/onboarding/README.md"
+        )
+        if not {"SKILL.md", "references/project-architecture.md"} <= onboarding_routes:
+            raise AssertionError(
+                "Packaged onboarding documentation cannot reach its Skill workflows"
+            )
 
         installed_query = (
             temp_root

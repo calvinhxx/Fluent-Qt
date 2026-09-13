@@ -18,14 +18,10 @@ validation workflow.
 | Maintain FluentQt components, Gallery, or bindings | Repository `AGENTS.md` and [maintainer gates](../../.agents/skills/build-fluentqt-gui/references/fluentqt-maintainer-gates.md) |
 | Edit docs, catalogs, or Skill guidance | [Documentation style](../development/documentation-style.md) and asset checks below |
 
-New interfaces and major redesigns need a human design selection. A focused
-fix preserves the accepted design and verifies the affected behavior; async
-or collection work adds engineering checks without reopening visual direction.
-
 ## Set up a consumer project
 
-For a new environment, run the read-only preflight from a FluentQt checkout or
-packaged Skill:
+From a FluentQt checkout or packaged Skill, run the read-only `doctor` first.
+Then use `create` when a new project directory is needed:
 
 ```bash
 python3 tools/onboarding/fluentqt doctor --profile cpp
@@ -55,15 +51,10 @@ ownership, event loop, cancellation, or persistence behavior.
 
 ## Inspect the result
 
-Generated Workbench applications expose Inspector through `--quality-report`.
-Other C++ applications include `<FluentQt/Diagnostics.h>` and call
-`fluent::diagnostics::Inspector::report(rootWidget)`; Python applications use
-`fluentqt.inspect_widget(root_widget)`.
-
-Inspector is read-only. Its [contract](../architecture/inspector-report.md)
-defines the layout, text, input, scrolling, and accessibility rules. Findings
-need review; a zero-finding report does not replace inspection of the real UI.
-The Skill owns consumer acceptance; the
+Use the [Inspector contract](../architecture/inspector-report.md) for commands
+and diagnostic rules. The Skill's
+[completion workflow](../../.agents/skills/build-fluentqt-gui/SKILL.md#validate-and-finish)
+owns consumer acceptance; the
 [repository verifier](../development/gui-verification-workflow.md) owns named
 FluentQt component and Gallery scenarios.
 
@@ -77,8 +68,13 @@ onboarding tools, starters, references, and validators:
 python3 tools/ai/package_fluentqt_skill.py --project-root . --output-dir dist
 ```
 
-Keep one canonical Skill rather than per-agent copies. Package checks verify
-portability and asset contracts; cross-agent quality claims require the
+For local development, a personal Skill installation can symlink to the
+checkout's `.agents/skills/build-fluentqt-gui` directory. This keeps its
+instructions, scripts, and catalog current together. Use the archive when an
+installation must work independently of that checkout; refresh the whole
+package after updates. Avoid separately edited copies under the same name.
+
+Package checks verify portability and asset contracts; quality claims require the
 [benchmark](../../.agents/skills/build-fluentqt-gui/references/cross-agent-benchmark.md).
 
 | Information | Source of truth |
@@ -91,12 +87,17 @@ portability and asset contracts; cross-agent quality claims require the
 | Optional project analysis exchange | [Project analysis schema](project-analysis.schema.json) |
 
 Do not hand-edit generated catalogs or the Skill snapshot. Regenerate after
-component, sample, binding, test, or guidance changes; validate after Skill or
-AI documentation changes:
+component, sample, binding, test, or guidance changes:
 
 ```bash
 python3 tools/ai/generate_ai_catalog.py --project-root .
-python3 tools/ai/evaluate_ai_catalog.py --project-root .
+```
+
+After Skill or AI documentation changes, run the asset gate. It checks catalog
+freshness and evaluation cases, reachable Skill resources, design/review
+validators, and package portability:
+
+```bash
 python3 tools/ai/validate_ai_assets.py --project-root .
 ```
 

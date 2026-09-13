@@ -88,6 +88,12 @@ not use lorem ipsum, control names, raw protocol labels, or empty rectangles.
 
 ## Produce three high-fidelity comps
 
+Use [init_design_brief.py](../scripts/init_design_brief.py) to initialize the
+brief, [render_design_board.py](../scripts/render_design_board.py) for the
+comparison board, and [validate_design_brief.py](../scripts/validate_design_brief.py)
+with `--stage concepts` before presenting it. The default approved-stage gate
+is described under human selection below.
+
 Create three concepts before writing or rearranging production GUI code. The
 bundled recipes provide different information architectures; they do not
 provide the art direction. For each concept, define:

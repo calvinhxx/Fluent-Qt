@@ -13,6 +13,7 @@ manifest under this contract, all of its version and approval rules apply.
 ## Contents
 
 - Build identity and evidence rules
+- Evidence tools and Inspector
 - Contract version and legacy migration
 - Mandatory state and region coverage
 - Painted geometry checks
@@ -20,6 +21,22 @@ manifest under this contract, all of its version and approval rules apply.
 - Independent review
 - Severity and acceptance
 - Manifest shape
+
+## Evidence tools and Inspector
+
+Use [init_visual_evidence.py](../scripts/init_visual_evidence.py) to initialize
+the manifest from the validated design brief and
+[render_visual_review.py](../scripts/render_visual_review.py) to render the
+review board. After final-build review, run
+[validate_visual_evidence.py](../scripts/validate_visual_evidence.py) with
+`--require-current`. The sections below define the fields and acceptance rules.
+
+When the consuming FluentQt version provides Inspector, inspect the settled
+window: generated Workbench apps expose `--quality-report`; other C++ apps use
+`<FluentQt/Diagnostics.h>` and `fluent::diagnostics::Inspector::report(rootWidget)`;
+Python uses `fluentqt.inspect_widget(root_widget)`. Resolve findings or explain
+their scene-specific cause. Record unsupported versions; do not copy private
+Inspector heuristics. A clean report does not judge visual composition.
 
 ## Identify the reviewed build
 
