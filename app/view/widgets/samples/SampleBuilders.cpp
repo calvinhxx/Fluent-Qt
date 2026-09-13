@@ -24,9 +24,7 @@ namespace {
 class ExplicitSpacerBoxLayout final : public QBoxLayout {
 public:
     ExplicitSpacerBoxLayout(Direction direction, int spacing, QWidget* parent)
-        : QBoxLayout(direction, parent)
-        , m_direction(direction)
-        , m_spacing(qMax(0, spacing))
+        : QBoxLayout(direction, parent), m_direction(direction), m_spacing(qMax(0, spacing))
     {
         setContentsMargins(0, 0, 0, 0);
         setSpacing(0);
@@ -120,7 +118,8 @@ private:
         m_insertingSpacer = true;
         for (int i = 1; i < count(); ++i) {
             if (isContentItem(itemAt(i - 1)) && isContentItem(itemAt(i))) {
-                QBoxLayout::insertWidget(i, createSpacingWidget(spacingBetween(itemAt(i - 1), itemAt(i))));
+                QBoxLayout::insertWidget(
+                    i, createSpacingWidget(spacingBetween(itemAt(i - 1), itemAt(i))));
                 ++i;
             }
         }
@@ -146,8 +145,8 @@ qreal samplePixmapDevicePixelRatio()
 QPixmap makeCanvas(const QSize& size)
 {
     const qreal dpr = samplePixmapDevicePixelRatio();
-    QPixmap pixmap(QSize(qMax(1, qRound(size.width() * dpr)),
-                         qMax(1, qRound(size.height() * dpr))));
+    QPixmap pixmap(
+        QSize(qMax(1, qRound(size.width() * dpr)), qMax(1, qRound(size.height() * dpr))));
     pixmap.setDevicePixelRatio(dpr);
     pixmap.fill(Qt::transparent);
     return pixmap;
@@ -155,9 +154,7 @@ QPixmap makeCanvas(const QSize& size)
 
 } // namespace
 
-GallerySample makeSample(const QString& id,
-                         const QString& title,
-                         const QString& description,
+GallerySample makeSample(const QString& id, const QString& title, const QString& description,
                          const QString& codeSnippet,
                          std::function<QWidget*(QWidget*)> createPreview)
 {
@@ -232,9 +229,7 @@ QPixmap initialsAvatar(const QString& name, const QColor& background, int size)
     return pixmap;
 }
 
-QPixmap gradientPixmap(const QSize& size,
-                       const QColor& from,
-                       const QColor& to,
+QPixmap gradientPixmap(const QSize& size, const QColor& from, const QColor& to,
                        const QString& caption)
 {
     QPixmap pixmap = makeCanvas(size);
@@ -257,8 +252,8 @@ QPixmap gradientPixmap(const QSize& size,
         font.setWeight(QFont::DemiBold);
         painter.setFont(font);
         painter.setPen(QColor(255, 255, 255, 230));
-        painter.drawText(surface.adjusted(16, 12, -16, -12),
-                         Qt::AlignLeft | Qt::AlignBottom, caption);
+        painter.drawText(surface.adjusted(16, 12, -16, -12), Qt::AlignLeft | Qt::AlignBottom,
+                         caption);
     }
     return pixmap;
 }

@@ -55,33 +55,28 @@ constexpr int kPrewarmInteractionResumeMs = 200;
 } // namespace
 
 GalleryWindow::GalleryWindow(QWidget* parent)
-    : fluent::windowing::Window(parent)
-    , m_navigationState(this)
+    : fluent::windowing::Window(parent), m_navigationState(this)
 {
     setObjectName(QStringLiteral("galleryWindow"));
     setWindowTitle(platform::capabilities().windowTitle);
     setWindowIcon(appicon::icon());
     const auto chromePlatform = compatibility::WindowChromeCompat::currentPlatform();
     const bool useClientTitleBar =
-        platform::capabilities().usesClientSideTitleBar
-        || chromePlatform == compatibility::WindowChromeCompat::Platform::Windows
-        || chromePlatform == compatibility::WindowChromeCompat::Platform::Linux;
-    const bool useCaptionButtons = useClientTitleBar
-        && chromePlatform != compatibility::WindowChromeCompat::Platform::MacOS;
+        platform::capabilities().usesClientSideTitleBar ||
+        chromePlatform == compatibility::WindowChromeCompat::Platform::Windows ||
+        chromePlatform == compatibility::WindowChromeCompat::Platform::Linux;
+    const bool useCaptionButtons =
+        useClientTitleBar && chromePlatform != compatibility::WindowChromeCompat::Platform::MacOS;
     setCustomWindowChromeEnabled(useClientTitleBar);
     // Application-owned chrome includes caption controls on desktop Linux,
     // Windows, and browser-hosted windows. macOS keeps native traffic lights.
     // zh_CN: Windows、Linux 与浏览器宿主窗口的应用自绘 chrome 包含标题栏按钮；
     // macOS 保留原生 traffic lights。
     if (useCaptionButtons) {
-        setCaptionButtonToolTips(QStringLiteral("Minimize"),
-                                 QStringLiteral("Maximize"),
-                                 QStringLiteral("Close"),
-                                 QStringLiteral("Restore"));
-        setCaptionButtonAccessibleNames(QStringLiteral("Minimize"),
-                                        QStringLiteral("Maximize"),
-                                        QStringLiteral("Close"),
-                                        QStringLiteral("Restore"));
+        setCaptionButtonToolTips(QStringLiteral("Minimize"), QStringLiteral("Maximize"),
+                                 QStringLiteral("Close"), QStringLiteral("Restore"));
+        setCaptionButtonAccessibleNames(QStringLiteral("Minimize"), QStringLiteral("Maximize"),
+                                        QStringLiteral("Close"), QStringLiteral("Restore"));
     }
     // Allow narrow windows so the adaptive nav can collapse to its compact / minimal
     // modes; a 980 floor would pin the layout above the 640 breakpoint.
@@ -93,12 +88,8 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     // zh_CN: 在构建并显示 chrome 之前施加持久化的窗口背景效果，使导航栏/标题栏从第一帧就按正确背景绘制。
     setBackdropEffect(GallerySettings::instance().windowEffect());
 
-    m_editingCommandRouter =
-        new fluent::textfields::EditingCommandRouter(
-            this, this);
-    m_editingCommandRouter->setObjectName(
-        QStringLiteral(
-            "Gallery.WindowEditingCommandRouter"));
+    m_editingCommandRouter = new fluent::textfields::EditingCommandRouter(this, this);
+    m_editingCommandRouter->setObjectName(QStringLiteral("Gallery.WindowEditingCommandRouter"));
 
     createTitleBarContent();
     buildNavigationShell();
@@ -128,26 +119,27 @@ QStringList GalleryWindow::visibleNavigationTitles() const
 bool GalleryWindow::selectRoute(const QString& routeId)
 {
     if (!m_navigationView) {
-        LOG_WARN(QStringLiteral("GalleryWindow selectRoute rejected routeId=%1 reason=missing-navigation-view")
+        LOG_WARN(QStringLiteral(
+                     "GalleryWindow selectRoute rejected routeId=%1 reason=missing-navigation-view")
                      .arg(routeId));
         return false;
     }
 
     if (!m_navigationViewModel.itemById(routeId)) {
-        LOG_WARN(QStringLiteral("GalleryWindow selectRoute rejected routeId=%1 reason=missing-route")
-                     .arg(routeId));
+        LOG_WARN(
+            QStringLiteral("GalleryWindow selectRoute rejected routeId=%1 reason=missing-route")
+                .arg(routeId));
         return false;
     }
 
     if (m_navigationState.selectedRouteId() != routeId) {
-        LOG_DEBUG(QStringLiteral("GalleryWindow selectRoute routeId=%1 state=change")
-                      .arg(routeId));
+        LOG_DEBUG(QStringLiteral("GalleryWindow selectRoute routeId=%1 state=change").arg(routeId));
         m_navigationState.setSelectedRouteId(routeId);
         return true;
     }
 
-    LOG_TRACE(QStringLiteral("GalleryWindow selectRoute routeId=%1 state=show-current")
-                  .arg(routeId));
+    LOG_TRACE(
+        QStringLiteral("GalleryWindow selectRoute routeId=%1 state=show-current").arg(routeId));
     return m_contentPresenter && m_contentPresenter->presentRoute(routeId);
 }
 
@@ -179,8 +171,8 @@ bool GalleryWindow::navigateToSearchResult(const QString& searchText)
         else if (item.title.startsWith(needle, Qt::CaseInsensitive))
             score = 1;
 
-        if (score < bestScore
-            || (score == bestScore && item.title.compare(bestTitle, Qt::CaseInsensitive) < 0)) {
+        if (score < bestScore ||
+            (score == bestScore && item.title.compare(bestTitle, Qt::CaseInsensitive) < 0)) {
             bestScore = score;
             bestRouteId = item.id;
             bestTitle = item.title;
@@ -231,18 +223,17 @@ void GalleryWindow::installSplashScreen()
     // the queue drained. Pages warmed in time become instant; the un-warmed tail builds lazily
     // behind a shimmer skeleton on first visit. zh_CN: splash 期预热一结束（时间预算到点或队列排空）就消除
     // splash。及时预热的页瞬时显示；没预热到的尾部在首次访问时于 shimmer 骨架屏背后懒构建。
-    connect(m_contentPresenter, &GalleryContentPresenter::prewarmProgress,
-            this, [this](int done, int total) {
+    connect(m_contentPresenter, &GalleryContentPresenter::prewarmProgress, this,
+            [this](int done, int total) {
                 if (m_splashScreen)
                     m_splashScreen->setProgress(done, total);
             });
-    connect(m_contentPresenter, &GalleryContentPresenter::prewarmFinished,
-            this, [this]() {
-                // Let the window composite a few frames before finishing, so DWM has applied
-                // Mica and reapplySystemBackdrop() reinforces it past the first-show race.
-                // zh_CN: 收尾前先让窗口合成几帧，使 DWM 施加 Mica，reapplySystemBackdrop() 再强化一遍，越过首屏竞争。
-                QTimer::singleShot(kStartupSplashHoldMs, this, [this]() { finishStartup(); });
-            });
+    connect(m_contentPresenter, &GalleryContentPresenter::prewarmFinished, this, [this]() {
+        // Let the window composite a few frames before finishing, so DWM has applied
+        // Mica and reapplySystemBackdrop() reinforces it past the first-show race.
+        // zh_CN: 收尾前先让窗口合成几帧，使 DWM 施加 Mica，reapplySystemBackdrop() 再强化一遍，越过首屏竞争。
+        QTimer::singleShot(kStartupSplashHoldMs, this, [this]() { finishStartup(); });
+    });
 }
 
 void GalleryWindow::prewarmRemainingRoutes()
@@ -262,8 +253,8 @@ void GalleryWindow::prewarmRemainingRoutes()
             if (!routeId.isEmpty() && !routeIds.contains(routeId))
                 routeIds.append(routeId);
         };
-        if (const GalleryContentEntry* home = galleryContentEntry(
-                m_navigationViewModel.defaultRouteId())) {
+        if (const GalleryContentEntry* home =
+                galleryContentEntry(m_navigationViewModel.defaultRouteId())) {
             for (const QString& routeId : home->relatedRouteIds)
                 appendUnique(routeId);
         }
@@ -324,17 +315,16 @@ void GalleryWindow::finishStartup()
     // 在内容从 splash 后浮现时强制施加背景。
     reapplySystemBackdrop();
     if (m_splashScreen)
-        m_splashScreen->dismiss();  // fades out, then self-deletes
+        m_splashScreen->dismiss(); // fades out, then self-deletes
 
     // First launch only: once the chrome has settled, run the intro tour. zh_CN: 仅首次启动：chrome 稳定后跑引导。
-    if (platform::capabilities().showsIntroTour
-        && !GallerySettings::instance().introCompleted())
+    if (platform::capabilities().showsIntroTour && !GallerySettings::instance().introCompleted())
         QTimer::singleShot(kIntroTourDelayMs, this, [this]() { maybeStartIntroTour(); });
 }
 
 void GalleryWindow::maybeStartIntroTour()
 {
-    if (m_introTour)  // already started this session
+    if (m_introTour) // already started this session
         return;
 
     using Tip = fluent::dialogs_flyouts::CoachMark;
@@ -342,51 +332,48 @@ void GalleryWindow::maybeStartIntroTour()
     QVector<GalleryIntroTour::Step> steps;
     // Centered opener (no target/tail), then anchored coach marks. Each carries a leading glyph.
     // zh_CN: 居中开场(无目标/尾巴),随后是锚定的操作提示;每步带一个前导字形。
-    steps.append({nullptr, Icons::Emoji,
-                  QStringLiteral("Welcome to Fluent Gallery"),
+    steps.append({nullptr, Icons::Emoji, QStringLiteral("Welcome to Fluent Gallery"),
                   QStringLiteral("A live catalog of Fluent controls for Qt, with runnable samples. "
                                  "Here's a 15-second tour of the essentials."),
                   Tip::Auto,
                   /*centered*/ true});
     if (m_titleBar && m_titleBar->searchBox())
-        steps.append({m_titleBar->searchBox(), Icons::Search,
-                      QStringLiteral("Search"),
+        steps.append({m_titleBar->searchBox(), Icons::Search, QStringLiteral("Search"),
                       QStringLiteral("Find any control or sample by name — just start typing."),
                       Tip::Bottom});
     if (m_mainNavigationPane)
-        steps.append({m_mainNavigationPane, Icons::AllApps,
-                      QStringLiteral("Browse by category"),
-                      QStringLiteral("Controls are grouped by category here. Expand one to explore its samples."),
-                      Tip::Right});
+        steps.append(
+            {m_mainNavigationPane, Icons::AllApps, QStringLiteral("Browse by category"),
+             QStringLiteral(
+                 "Controls are grouped by category here. Expand one to explore its samples."),
+             Tip::Right});
     if (m_footerNavigationPane)
-        steps.append({m_footerNavigationPane, Icons::Settings,
-                      QStringLiteral("Make it yours"),
-                      QStringLiteral("Switch between light and dark theme and adjust preferences in Settings."),
-                      Tip::Right});
+        steps.append(
+            {m_footerNavigationPane, Icons::Settings, QStringLiteral("Make it yours"),
+             QStringLiteral(
+                 "Switch between light and dark theme and adjust preferences in Settings."),
+             Tip::Right});
 
     if (steps.isEmpty())
         return;
 
     m_introTour = new GalleryIntroTour(this, this);
     m_introTour->setSteps(steps);
-    connect(m_introTour, &GalleryIntroTour::finished, this, []() {
-        GallerySettings::instance().setIntroCompleted(true);
-    });
+    connect(m_introTour, &GalleryIntroTour::finished, this,
+            []() { GallerySettings::instance().setIntroCompleted(true); });
     m_introTour->start();
 }
 
 GalleryContentPage* GalleryWindow::currentContentPage() const
 {
-    return m_contentPresenter
-        ? dynamic_cast<GalleryContentPage*>(m_contentPresenter->currentPage())
-        : nullptr;
+    return m_contentPresenter ? dynamic_cast<GalleryContentPage*>(m_contentPresenter->currentPage())
+                              : nullptr;
 }
 
 SettingsPage* GalleryWindow::currentSettingsPage() const
 {
-    return m_contentPresenter
-        ? dynamic_cast<SettingsPage*>(m_contentPresenter->currentPage())
-        : nullptr;
+    return m_contentPresenter ? dynamic_cast<SettingsPage*>(m_contentPresenter->currentPage())
+                              : nullptr;
 }
 
 void GalleryWindow::buildNavigationShell()
@@ -406,86 +393,79 @@ void GalleryWindow::buildNavigationShell()
     m_navigationView->setAnimationEnabled(true);
     m_navigationCompactReleaseTimer = new QTimer(this);
     m_navigationCompactReleaseTimer->setSingleShot(true);
-    connect(m_navigationCompactReleaseTimer, &QTimer::timeout,
-            this, [this]() {
-                // The widen animation has finished: if the pane is still open (inline or flyout),
-                // reveal its full labels now. zh_CN: 加宽动画结束：若窗格仍打开（内联或浮层），此刻显示完整标签。
-                if (m_navigationView && m_navigationView->isPaneOpen())
-                    setNavigationPanesCompact(false);
-            });
+    connect(m_navigationCompactReleaseTimer, &QTimer::timeout, this, [this]() {
+        // The widen animation has finished: if the pane is still open (inline or flyout),
+        // reveal its full labels now. zh_CN: 加宽动画结束：若窗格仍打开（内联或浮层），此刻显示完整标签。
+        if (m_navigationView && m_navigationView->isPaneOpen())
+            setNavigationPanesCompact(false);
+    });
 
-    m_mainNavigationPane = new GalleryNavigationPane(m_navigationViewModel.mainPaneItems(), m_navigationView);
+    m_mainNavigationPane =
+        new GalleryNavigationPane(m_navigationViewModel.mainPaneItems(), m_navigationView);
     m_mainNavigationPane->setObjectName(QStringLiteral("galleryMainNavigationPane"));
-    m_footerNavigationPane = new GalleryNavigationPane(m_navigationViewModel.footerPaneItems(), m_navigationView);
+    m_footerNavigationPane =
+        new GalleryNavigationPane(m_navigationViewModel.footerPaneItems(), m_navigationView);
     m_footerNavigationPane->setObjectName(QStringLiteral("galleryFooterNavigationPane"));
-    m_topMainNavigationPane = new GalleryTopNavigationPane(m_navigationViewModel.mainPaneItems(),
-                                                           m_navigationView);
+    m_topMainNavigationPane =
+        new GalleryTopNavigationPane(m_navigationViewModel.mainPaneItems(), m_navigationView);
     m_topMainNavigationPane->setObjectName(QStringLiteral("galleryTopMainNavigationPane"));
-    m_topFooterNavigationPane = new GalleryTopNavigationPane(m_navigationViewModel.footerPaneItems(),
-                                                             m_navigationView);
+    m_topFooterNavigationPane =
+        new GalleryTopNavigationPane(m_navigationViewModel.footerPaneItems(), m_navigationView);
     m_topFooterNavigationPane->setObjectName(QStringLiteral("galleryTopFooterNavigationPane"));
     m_topMainNavigationPane->hide();
     m_topFooterNavigationPane->hide();
 
-    m_mainNavigationPane->bind("selectedRouteId",
-                               &m_navigationState,
-                               "selectedRouteId",
+    m_mainNavigationPane->bind("selectedRouteId", &m_navigationState, "selectedRouteId",
                                fluent::PropertyBinder::TwoWay);
-    m_footerNavigationPane->bind("selectedRouteId",
-                                 &m_navigationState,
-                                 "selectedRouteId",
+    m_footerNavigationPane->bind("selectedRouteId", &m_navigationState, "selectedRouteId",
                                  fluent::PropertyBinder::TwoWay);
-    m_topMainNavigationPane->bind("selectedRouteId",
-                                  &m_navigationState,
-                                  "selectedRouteId",
+    m_topMainNavigationPane->bind("selectedRouteId", &m_navigationState, "selectedRouteId",
                                   fluent::PropertyBinder::TwoWay);
-    m_topFooterNavigationPane->bind("selectedRouteId",
-                                    &m_navigationState,
-                                    "selectedRouteId",
+    m_topFooterNavigationPane->bind("selectedRouteId", &m_navigationState, "selectedRouteId",
                                     fluent::PropertyBinder::TwoWay);
-    connect(&m_navigationState, &GalleryNavigationState::selectedRouteIdChanged,
-            this, [this](const QString& routeId) {
-                handleSelectedRouteChanged(routeId);
-            });
-    connect(m_navigationView, &fluent::navigation::NavigationView::effectiveDisplayModeChanged,
-            this, [this](fluent::navigation::NavigationView::DisplayMode mode) {
-                // Title-bar content adapts with the layout (WinUI Gallery): the app title+icon
-                // only show when the pane is expanded or a compact rail; in the hidden minimal
-                // layout they are dropped so the search box keeps its room. updateLayout() also
-                // re-flows the search box for the new leading-group width.
-                // zh_CN: 标题栏内容随布局自适应（对齐 WinUI Gallery）：应用标题+图标只在窗格展开或紧凑栏时显示；
-                // 在隐藏的最小布局里去掉它们，给搜索框让位。updateLayout() 也会按新的前导组宽度重排搜索框。
-                if (m_titleBar)
-                    m_titleBar->updateLayout();
-                // Auto-expand when the layout reaches the Left rail and auto-collapse otherwise, like
-                // WinUI: the inline pane is open only in Left. The signal fires only on an actual mode
-                // change, so a manual pane toggle within Left (which leaves the mode untouched) is not
-                // overridden. zh_CN: 到达 Left 栏时自动展开、否则自动收起，与 WinUI 一致：内联窗格仅在 Left 打开。
-                // 该信号仅在模式真正变化时触发，故 Left 内的手动开合（模式不变）不会被覆盖。
-                m_navigationView->setPaneOpen(
-                    mode == fluent::navigation::NavigationView::DisplayMode::Left);
-                applyNavigationPaneDensity();
-            });
+    connect(&m_navigationState, &GalleryNavigationState::selectedRouteIdChanged, this,
+            [this](const QString& routeId) { handleSelectedRouteChanged(routeId); });
+    connect(
+        m_navigationView, &fluent::navigation::NavigationView::effectiveDisplayModeChanged, this,
+        [this](fluent::navigation::NavigationView::DisplayMode mode) {
+            // Title-bar content adapts with the layout (WinUI Gallery): the app title+icon
+            // only show when the pane is expanded or a compact rail; in the hidden minimal
+            // layout they are dropped so the search box keeps its room. updateLayout() also
+            // re-flows the search box for the new leading-group width.
+            // zh_CN: 标题栏内容随布局自适应（对齐 WinUI Gallery）：应用标题+图标只在窗格展开或紧凑栏时显示；
+            // 在隐藏的最小布局里去掉它们，给搜索框让位。updateLayout() 也会按新的前导组宽度重排搜索框。
+            if (m_titleBar)
+                m_titleBar->updateLayout();
+            // Auto-expand when the layout reaches the Left rail and auto-collapse otherwise, like
+            // WinUI: the inline pane is open only in Left. The signal fires only on an actual mode
+            // change, so a manual pane toggle within Left (which leaves the mode untouched) is not
+            // overridden. zh_CN: 到达 Left 栏时自动展开、否则自动收起，与 WinUI 一致：内联窗格仅在 Left 打开。
+            // 该信号仅在模式真正变化时触发，故 Left 内的手动开合（模式不变）不会被覆盖。
+            m_navigationView->setPaneOpen(mode ==
+                                          fluent::navigation::NavigationView::DisplayMode::Left);
+            applyNavigationPaneDensity();
+        });
     // The inline rail vs full-label density is purely a function of the pane's open state now —
     // the same in every side mode — so drive it off paneOpenChanged (NavigationView presents the
     // open pane inline when expanded, or as a flyout when compact / minimal).
     // zh_CN: 内联栏 vs 完整标签的密度现在只取决于窗格开合——各侧边模式一致——故由 paneOpenChanged 驱动
     //（NavigationView 展开时内联呈现打开的窗格，紧凑/最小时呈现为浮层）。
-    connect(m_navigationView, &fluent::navigation::NavigationView::paneOpenChanged,
-            this, [this](bool) { applyNavigationPaneDensity(); });
+    connect(m_navigationView, &fluent::navigation::NavigationView::paneOpenChanged, this,
+            [this](bool) { applyNavigationPaneDensity(); });
 
     m_navigationView->setMainChromeWidget(m_mainNavigationPane);
     m_navigationView->setFooterChromeWidget(m_footerNavigationPane);
     setNavigationPanesCompact(false);
     setContentWidget(m_navigationView);
     auto& settings = GallerySettings::instance();
-    connect(&settings, &GallerySettings::navigationStyleChanged,
-            this, &GalleryWindow::applyNavigationStyle);
-    connect(&settings, &GallerySettings::windowEffectChanged,
-            this, &GalleryWindow::setBackdropEffect);
+    connect(&settings, &GallerySettings::navigationStyleChanged, this,
+            &GalleryWindow::applyNavigationStyle);
+    connect(&settings, &GallerySettings::windowEffectChanged, this,
+            &GalleryWindow::setBackdropEffect);
     applyNavigationStyle(settings.navigationStyle());
     updateNavigationCommands();
-    LOG_DEBUG(QStringLiteral("GalleryWindow navigationShell built mainRoutes=%1 footerRoutes=%2 expandedPaneWidth=%3 compactPaneWidth=%4")
+    LOG_DEBUG(QStringLiteral("GalleryWindow navigationShell built mainRoutes=%1 footerRoutes=%2 "
+                             "expandedPaneWidth=%3 compactPaneWidth=%4")
                   .arg(m_mainNavigationPane->routeIds().size())
                   .arg(m_footerNavigationPane->routeIds().size())
                   .arg(m_navigationView->expandedPaneWidth())
@@ -498,14 +478,11 @@ void GalleryWindow::buildContentPresenter()
     // content host; in-page navigation flows back through routeActivated.
     // zh_CN: presenter 负责在导航视图 content host 内完成路由 → 页面的替换；
     // 页面内导航经 routeActivated 回流。
-    m_contentPresenter = new GalleryContentPresenter(m_navigationView->contentHost(),
-                                                     m_navigationViewModel,
-                                                     this,
-                                                     platform::capabilities().maxResidentRoutes);
-    connect(m_contentPresenter, &GalleryContentPresenter::routeActivated,
-            this, [this](const QString& routeId) {
-                selectRoute(routeId);
-            });
+    m_contentPresenter =
+        new GalleryContentPresenter(m_navigationView->contentHost(), m_navigationViewModel, this,
+                                    platform::capabilities().maxResidentRoutes);
+    connect(m_contentPresenter, &GalleryContentPresenter::routeActivated, this,
+            [this](const QString& routeId) { selectRoute(routeId); });
 }
 
 void GalleryWindow::createTitleBarContent()
@@ -525,8 +502,8 @@ void GalleryWindow::createTitleBarContent()
     callbacks.onToggleNav = [this]() { toggleNavigationDisplayMode(); };
     callbacks.onSearch = [this](const QString& text) { navigateToSearchResult(text); };
     callbacks.isMinimalNavLayout = [this]() {
-        return m_navigationView
-            && m_navigationView->effectiveDisplayMode() == DisplayMode::LeftMinimal;
+        return m_navigationView &&
+               m_navigationView->effectiveDisplayMode() == DisplayMode::LeftMinimal;
     };
     auto* chrome = titleBar();
     // The controller must die before the title bar's widget children. Parenting
@@ -534,14 +511,12 @@ void GalleryWindow::createTitleBarContent()
     // host-window event filters while both watched objects are still valid.
     // zh_CN: 控制器必须先于标题栏的控件子对象析构。以 chrome 为父对象可建立
     // 该顺序，并让析构函数在两个监听对象仍有效时解除宿主窗口事件过滤器。
-    m_titleBar = new GalleryTitleBarController(chrome, searchTitles,
-                                               std::move(callbacks), chrome);
+    m_titleBar = new GalleryTitleBarController(chrome, searchTitles, std::move(callbacks), chrome);
 }
 
 void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)
 {
-    LOG_TRACE(QStringLiteral("GalleryWindow selectedRouteSignal routeId=%1")
-                  .arg(routeId));
+    LOG_TRACE(QStringLiteral("GalleryWindow selectedRouteSignal routeId=%1").arg(routeId));
 
     // Present synchronously: the presenter itself decides whether this is an instant swap
     // (warm, resident page) or a shimmer-skeleton-then-lazy-build (cold page), so there is
@@ -571,8 +546,7 @@ void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)
         // 点击刚展开的内容。
         const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
         const bool isCategory = item && item->kind == GalleryNavigationItem::Kind::CategoryRoute;
-        if (!isCategory
-            && (mode == DisplayMode::LeftCompact || mode == DisplayMode::LeftMinimal))
+        if (!isCategory && (mode == DisplayMode::LeftCompact || mode == DisplayMode::LeftMinimal))
             m_navigationView->setPaneOpen(false);
     }
 }
@@ -624,8 +598,8 @@ bool GalleryWindow::navigateBack()
 GalleryWindow::AppWindowWidthState GalleryWindow::appWindowWidthState() const
 {
     using DisplayMode = fluent::navigation::NavigationView::DisplayMode;
-    const DisplayMode mode = m_navigationView ? m_navigationView->effectiveDisplayMode()
-                                              : DisplayMode::Left;
+    const DisplayMode mode =
+        m_navigationView ? m_navigationView->effectiveDisplayMode() : DisplayMode::Left;
     switch (mode) {
     case DisplayMode::Left:
         return AppWindowWidthState::Expanded;
@@ -710,7 +684,8 @@ void GalleryWindow::setTopNavigationChrome(bool top)
 void GalleryWindow::toggleNavigationDisplayMode()
 {
     if (!m_navigationView) {
-        LOG_TRACE(QStringLiteral("GalleryWindow toggleNavigationDisplayMode skipped reason=missing-navigation-view"));
+        LOG_TRACE(QStringLiteral(
+            "GalleryWindow toggleNavigationDisplayMode skipped reason=missing-navigation-view"));
         return;
     }
 
@@ -722,10 +697,12 @@ void GalleryWindow::toggleNavigationDisplayMode()
     // 紧凑/最小时为轻关闭浮层（自带表面+阴影+外部/Esc 关闭）——故此处不再需要单独的抽屉。
     // 图标/标签密度经 applyNavigationPaneDensity()（paneOpenChanged）跟随。
     m_navigationView->setPaneOpen(!m_navigationView->isPaneOpen());
-    LOG_DEBUG(QStringLiteral("GalleryWindow navigationPaneToggled paneOpen=%1 effectiveMode=%2 chromeWidth=%3")
-                  .arg(m_navigationView->isPaneOpen() ? QStringLiteral("true") : QStringLiteral("false"))
-                  .arg(static_cast<int>(m_navigationView->effectiveDisplayMode()))
-                  .arg(m_navigationView->chromeGeometry().width()));
+    LOG_DEBUG(
+        QStringLiteral(
+            "GalleryWindow navigationPaneToggled paneOpen=%1 effectiveMode=%2 chromeWidth=%3")
+            .arg(m_navigationView->isPaneOpen() ? QStringLiteral("true") : QStringLiteral("false"))
+            .arg(static_cast<int>(m_navigationView->effectiveDisplayMode()))
+            .arg(m_navigationView->chromeGeometry().width()));
 }
 
 void GalleryWindow::applyNavigationPaneDensity()
@@ -742,8 +719,8 @@ void GalleryWindow::applyNavigationPaneDensity()
     }
     // Opening: reveal full labels, but only once the widen animation has settled so they are not
     // clipped mid-slide. zh_CN: 展开：显示完整标签，但仅在加宽动画稳定后，避免标签在滑动中途被裁剪。
-    const bool animating = m_navigationView->isAnimationEnabled()
-        && m_navigationView->property("layoutTransitionProgress").toDouble() < 1.0;
+    const bool animating = m_navigationView->isAnimationEnabled() &&
+                           m_navigationView->property("layoutTransitionProgress").toDouble() < 1.0;
     if (animating && m_navigationCompactReleaseTimer)
         m_navigationCompactReleaseTimer->start(qMax(1, m_navigationView->themeAnimation().normal));
     else
@@ -762,9 +739,9 @@ void GalleryWindow::updateNavigationCommands()
 {
     if (m_titleBar) {
         m_titleBar->setBackAvailable(!m_backRouteStack.isEmpty());
-        m_titleBar->setMenuEnabled(m_navigationView
-                                   && m_navigationView->effectiveDisplayMode()
-                                       != fluent::navigation::NavigationView::DisplayMode::Top);
+        m_titleBar->setMenuEnabled(m_navigationView &&
+                                   m_navigationView->effectiveDisplayMode() !=
+                                       fluent::navigation::NavigationView::DisplayMode::Top);
     }
 }
 

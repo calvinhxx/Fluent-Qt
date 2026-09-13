@@ -31,8 +31,7 @@ constexpr char kThemeOverrideProperty[] = "fluentThemeOverride";
 
 class SamplePreviewSurface final : public fluent::layout::Card {
 public:
-    explicit SamplePreviewSurface(QWidget* parent = nullptr)
-        : Card(parent)
+    explicit SamplePreviewSurface(QWidget* parent = nullptr) : Card(parent)
     {
         setObjectName(QStringLiteral("gallerySampleCardPreview"));
         setAppearance(Card::LayerAlt);
@@ -55,18 +54,15 @@ void refreshFluentSubtree(QWidget* root)
             refreshFluentSubtree(childWidget);
     }
 }
-}
+} // namespace
 
 GallerySampleCard::GallerySampleCard(const GallerySample& sample, QWidget* parent)
     : GallerySampleCard(QString(), sample, parent)
-{
-}
+{}
 
-GallerySampleCard::GallerySampleCard(const QString& routeId,
-                                     const GallerySample& sample,
+GallerySampleCard::GallerySampleCard(const QString& routeId, const GallerySample& sample,
                                      QWidget* parent)
-    : QFrame(parent)
-    , m_sampleId(sample.id)
+    : QFrame(parent), m_sampleId(sample.id)
 {
     setObjectName(QStringLiteral("gallerySampleCard"));
     setProperty("gallerySampleId", m_sampleId);
@@ -112,11 +108,9 @@ GallerySampleCard::GallerySampleCard(const QString& routeId,
     }
 
     if (!sample.codeSnippet.isEmpty()) {
-        const QString pythonCode = routeId.isEmpty()
-            ? QString()
-            : galleryPythonSnippet(routeId, sample.id);
-        m_codeBlock = new GalleryCodeBlock(
-            sample.codeSnippet, pythonCode, this);
+        const QString pythonCode =
+            routeId.isEmpty() ? QString() : galleryPythonSnippet(routeId, sample.id);
+        m_codeBlock = new GalleryCodeBlock(sample.codeSnippet, pythonCode, this);
         connect(m_codeBlock, &GalleryCodeBlock::layoutHeightChanged, this,
                 [this]() { updateCodeBlockTransitionLayout(); });
     }
@@ -205,8 +199,8 @@ QSize GallerySampleCard::minimumSizeHint() const
 
 bool GallerySampleCard::eventFilter(QObject* watched, QEvent* event)
 {
-    if ((watched == m_previewSurface || watched == m_preview || watched == m_options)
-        && event->type() == QEvent::LayoutRequest) {
+    if ((watched == m_previewSurface || watched == m_preview || watched == m_options) &&
+        event->type() == QEvent::LayoutRequest) {
         queueAnchoredLayoutUpdate();
     }
     return QFrame::eventFilter(watched, event);
@@ -324,11 +318,11 @@ int GallerySampleCard::contentWidthForCardWidth(int width) const
 void GallerySampleCard::applyPalette()
 {
     const Colors colors = themeColors();
-    const QString cardStyle = QStringLiteral(
-                                  "#gallerySampleCard { background: %1; border: 1px solid %2; border-radius: %3px; }")
-                                  .arg(cssColor(colors.bgLayer),
-                                       cssColor(colors.strokeCard))
-                                  .arg(::CornerRadius::Overlay);
+    const QString cardStyle =
+        QStringLiteral(
+            "#gallerySampleCard { background: %1; border: 1px solid %2; border-radius: %3px; }")
+            .arg(cssColor(colors.bgLayer), cssColor(colors.strokeCard))
+            .arg(::CornerRadius::Overlay);
     if (styleSheet() != cardStyle)
         setStyleSheet(cardStyle);
     // Color the text via each label's OWN style sheet, not the palette: this card sets a style sheet
@@ -340,8 +334,8 @@ void GallerySampleCard::applyPalette()
     // 使子 Label 基于 palette 的 WindowText 颜色（Label::onThemeUpdated）被忽略——于是标题/描述在深色卡片上渲染成近黑。
     // 直接给标签设颜色（与 GalleryEntryCard 一致）则无视祖先样式表生效。
     if (m_titleLabel) {
-        const QString titleStyle = QStringLiteral("color: %1; background: transparent;")
-                                       .arg(cssColor(colors.textPrimary));
+        const QString titleStyle =
+            QStringLiteral("color: %1; background: transparent;").arg(cssColor(colors.textPrimary));
         if (m_titleLabel->styleSheet() != titleStyle)
             m_titleLabel->setStyleSheet(titleStyle);
     }

@@ -21,7 +21,7 @@ class Button;
 namespace fluent::textfields {
 class AutoSuggestBox;
 class Label;
-}
+} // namespace fluent::textfields
 namespace fluent::status_info {
 class ToolTip;
 }
@@ -44,18 +44,17 @@ class GalleryTitleBarController : public QObject {
     Q_OBJECT
 public:
     struct Callbacks {
-        std::function<void()> onBack;                ///< Back button clicked. zh_CN: 点击返回。
-        std::function<void()> onToggleNav;           ///< Menu button clicked. zh_CN: 点击菜单。
-        std::function<void(const QString&)> onSearch; ///< Search submitted/chosen. zh_CN: 搜索提交/选中。
+        std::function<void()> onBack;      ///< Back button clicked. zh_CN: 点击返回。
+        std::function<void()> onToggleNav; ///< Menu button clicked. zh_CN: 点击菜单。
+        std::function<void(const QString&)>
+            onSearch; ///< Search submitted/chosen. zh_CN: 搜索提交/选中。
         /// True when the nav pane is in its minimal layout, where the app title/icon give way to
         /// the search box. zh_CN: 导航处于最小布局时为真，此时应用标题/图标让位给搜索框。
         std::function<bool()> isMinimalNavLayout;
     };
 
-    GalleryTitleBarController(fluent::windowing::TitleBar* bar,
-                              const QStringList& searchTitles,
-                              Callbacks callbacks,
-                              QObject* parent = nullptr);
+    GalleryTitleBarController(fluent::windowing::TitleBar* bar, const QStringList& searchTitles,
+                              Callbacks callbacks, QObject* parent = nullptr);
     ~GalleryTitleBarController() override;
 
     /// Reflows the leading group + search box for the current width / nav layout.
@@ -102,7 +101,7 @@ private:
 
     QVariantAnimation* m_backRevealAnimation = nullptr;
     QVariantAnimation* m_chromeRevealAnimation = nullptr;
-    qreal m_backReveal = 0.0;   // 0=hidden, 1=fully shown. zh_CN: 0=隐藏，1=完全显示。
+    qreal m_backReveal = 0.0; // 0=hidden, 1=fully shown. zh_CN: 0=隐藏，1=完全显示。
     qreal m_chromeRevealOpacity = 1.0;
     bool m_windowActive = false;
     bool m_backRevealed = false;

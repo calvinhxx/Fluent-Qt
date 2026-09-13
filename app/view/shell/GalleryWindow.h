@@ -76,11 +76,7 @@ protected:
     void resizeEvent(QResizeEvent* event) override;
 
 private:
-    enum class AppWindowWidthState {
-        Expanded,
-        Compact,
-        Minimal
-    };
+    enum class AppWindowWidthState { Expanded, Compact, Minimal };
 
     void createTitleBarContent();
     void buildNavigationShell();
@@ -115,13 +111,12 @@ private:
     GalleryNavigationPane* m_footerNavigationPane = nullptr;
     GalleryTopNavigationPane* m_topMainNavigationPane = nullptr;
     GalleryTopNavigationPane* m_topFooterNavigationPane = nullptr;
-    fluent::textfields::EditingCommandRouter*
-        m_editingCommandRouter = nullptr;
+    fluent::textfields::EditingCommandRouter* m_editingCommandRouter = nullptr;
     GalleryContentPresenter* m_contentPresenter = nullptr;
     GalleryTitleBarController* m_titleBar = nullptr;
     GalleryIntroTour* m_introTour = nullptr;
     QTimer* m_navigationCompactReleaseTimer = nullptr;
-    QTimer* m_prewarmResumeTimer = nullptr;  // Idle debounce that resumes prewarm after interaction.
+    QTimer* m_prewarmResumeTimer = nullptr; // Idle debounce that resumes prewarm after interaction.
     QStringList m_backRouteStack;
     bool m_isNavigatingHistory = false;
 
