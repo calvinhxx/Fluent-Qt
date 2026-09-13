@@ -1562,6 +1562,14 @@ def build_settings_page(
         int(settings.motion_mode),
         content,
     )
+    home_particles = fluentqt.ToggleSwitch(content)
+    home_particles.setObjectName("gallerySettingsHomeParticlesToggle")
+    home_particles.setAccessibleName("Home particle effects")
+    home_particles.setAccessibleDescription("Show animated particles in the home banner")
+    home_particles.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+    home_particles.setIsOn(settings.home_particles_enabled)
+    home_particles.toggled.connect(settings.set_home_particles_enabled)
+    settings.homeParticlesEnabledChanged.connect(home_particles.setIsOn)
     navigation = _settings_choice(
         "gallerySettingsNavigationChoice",
         ("Left", "Top"),
@@ -1710,6 +1718,13 @@ def build_settings_page(
             content,
         ),
         _SettingsRow(
+            "\uE734",
+            "Home particle effects",
+            "Show animated particles in the home banner",
+            home_particles,
+            content,
+        ),
+        _SettingsRow(
             "\uEA37",
             "Navigation style",
             "Choose how the navigation pane is presented",
@@ -1739,14 +1754,14 @@ def build_settings_page(
         ),
     )
     layout.addWidget(_settings_section("Appearance & behavior", content))
-    for row in rows[:5]:
+    for row in rows[:6]:
         layout.addWidget(row)
     layout.addSpacing(10)
     layout.addWidget(_settings_section("App behavior", content))
-    layout.addWidget(rows[5])
+    layout.addWidget(rows[6])
     layout.addSpacing(10)
     layout.addWidget(_settings_section("Updates", content))
-    layout.addWidget(rows[6])
+    layout.addWidget(rows[7])
     layout.addStretch(1)
     page._gallery_settings_rows = rows
     page._gallery_settings_choices = (

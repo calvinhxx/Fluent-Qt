@@ -1,5 +1,7 @@
 #include "GalleryHomePage.h"
 
+#include <array>
+
 #include <QAbstractItemView>
 #include <QDesktopServices>
 #include <QEvent>
@@ -7,6 +9,7 @@
 #include <QImage>
 #include <QLabel>
 #include <QLinearGradient>
+#include <QMetaEnum>
 #include <QPainter>
 #include <QPixmap>
 #include <QRandomGenerator>
@@ -40,6 +43,7 @@
 #include "view/support/GalleryStyleSupport.h"
 #include "view/widgets/GalleryEntryGrid.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
+#include "viewmodel/GallerySettings.h"
 
 namespace fluent::gallery {
 namespace {
@@ -80,6 +84,28 @@ enum HomeLinkRole {
     LinkUrlRole,
     LinkImageRole
 };
+
+fluent::layout::ParticleBackdrop::Effect homeParticleEffect()
+{
+    using fluent::layout::ParticleBackdrop;
+    // Keep the launch's choice when navigation or theme changes recreate the home page.
+    static const auto effect = [] {
+        auto& settings = GallerySettings::instance();
+        const auto names = QMetaEnum::fromType<ParticleBackdrop::Effect>();
+        const QString previous = settings.lastHomeParticleEffect();
+        std::array<ParticleBackdrop::Effect, 3> candidates{};
+        int count = 0;
+        for (const auto candidate : {ParticleBackdrop::FlowingRibbons,
+                                     ParticleBackdrop::FloatingDots, ParticleBackdrop::Starfield}) {
+            if (previous != QString::fromLatin1(names.valueToKey(candidate)))
+                candidates[count++] = candidate;
+        }
+        const auto chosen = candidates[QRandomGenerator::global()->bounded(count)];
+        settings.setLastHomeParticleEffect(QString::fromLatin1(names.valueToKey(chosen)));
+        return chosen;
+    }();
+    return effect;
+}
 
 QRect visibleAlphaBounds(const QImage& image)
 {
@@ -604,6 +630,10 @@ public:
         m_particles->setMaximumFrameRate(30);
         m_particles->setAttribute(Qt::WA_TransparentForMouseEvents);
         m_particles->lower();
+        auto& settings = GallerySettings::instance();
+        connect(&settings, &GallerySettings::homeParticlesEnabledChanged, this,
+                &GalleryHomeHeroBanner::setParticlesEnabled);
+        setParticlesEnabled(settings.homeParticlesEnabled());
 
         auto* layout = new QVBoxLayout(this);
         // The floating link ListView occupies the lower half of the hero, so keep the
@@ -639,6 +669,15 @@ public:
         m_linkStrip->raise();
 
         applyTextPalette();
+    }
+
+    void setParticlesEnabled(bool enabled)
+    {
+        // A disabled launch must not consume the next random effect.
+        if (enabled)
+            m_particles->setEffect(homeParticleEffect());
+        m_particles->setAnimationEnabled(enabled);
+        m_particles->setVisible(enabled);
     }
 
     void onThemeUpdated() override

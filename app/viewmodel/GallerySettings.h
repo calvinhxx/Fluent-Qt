@@ -64,6 +64,15 @@ public:
     bool introCompleted() const { return m_introCompleted; }
     void setIntroCompleted(bool completed);
 
+    // Stable preset name from the previous launch. zh_CN: 上次启动使用的特效预设名称。
+    QString lastHomeParticleEffect() const { return m_lastHomeParticleEffect; }
+    void setLastHomeParticleEffect(const QString& effect);
+
+    // Show home decoration; other particle demos keep their own controls.
+    // zh_CN: 显示首页粒子装饰，其他粒子示例仍由各自控件控制。
+    bool homeParticlesEnabled() const { return m_homeParticlesEnabled; }
+    void setHomeParticlesEnabled(bool enabled);
+
 signals:
     void themeModeChanged(ThemeMode mode);
     void motionModeChanged(fluent::MotionPolicy::Mode mode);
@@ -71,6 +80,7 @@ signals:
     void navigationStyleChanged(NavigationStyle style);
     void windowEffectChanged(fluent::windowing::BackdropEffect effect);
     void closeBehaviorChanged(CloseBehavior behavior);
+    void homeParticlesEnabledChanged(bool enabled);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -91,6 +101,8 @@ private:
     bool m_windowMaximized = false;
     bool m_closeBehaviorConfirmed = false;
     bool m_introCompleted = false;
+    QString m_lastHomeParticleEffect;
+    bool m_homeParticlesEnabled = true;
 };
 
 } // namespace fluent::gallery

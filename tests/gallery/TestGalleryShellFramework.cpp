@@ -47,6 +47,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/FontIcon.h"
 #include "components/foundation/MotionPolicy.h"
+#include "components/basicinput/ToggleSwitch.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -119,7 +120,8 @@ public:
         : m_settings(settings), m_themeMode(settings.themeMode()),
           m_motionMode(settings.motionMode()), m_navigationStyle(settings.navigationStyle()),
           m_closeBehavior(settings.closeBehavior()),
-          m_closeBehaviorConfirmed(settings.closeBehaviorConfirmed())
+          m_closeBehaviorConfirmed(settings.closeBehaviorConfirmed()),
+          m_homeParticlesEnabled(settings.homeParticlesEnabled())
     {}
 
     ~GallerySettingsRestorer()
@@ -129,6 +131,7 @@ public:
         m_settings.setMotionMode(m_motionMode);
         m_settings.setCloseBehavior(m_closeBehavior);
         m_settings.setCloseBehaviorConfirmed(m_closeBehaviorConfirmed);
+        m_settings.setHomeParticlesEnabled(m_homeParticlesEnabled);
     }
 
 private:
@@ -138,6 +141,7 @@ private:
     GallerySettings::NavigationStyle m_navigationStyle;
     GallerySettings::CloseBehavior m_closeBehavior;
     bool m_closeBehaviorConfirmed = false;
+    bool m_homeParticlesEnabled = true;
 };
 
 bool containsAll(const QStringList& values, const QStringList& expectedValues)
@@ -1934,6 +1938,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
 {
     auto& settings = GallerySettings::instance();
     GallerySettingsRestorer restore(settings);
+    settings.setHomeParticlesEnabled(true);
     settings.setThemeMode(GallerySettings::ThemeMode::Light);
     settings.setMotionMode(GallerySettings::MotionMode::Full);
     settings.setNavigationStyle(GallerySettings::NavigationStyle::Auto);
@@ -1961,6 +1966,20 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
         page->findChild<Button*>(QStringLiteral("gallerySettingsCheckUpdatesButton"));
     ASSERT_NE(themeChoice, nullptr);
     ASSERT_NE(motionChoice, nullptr);
+    auto* homeParticles = page->findChild<fluent::basicinput::ToggleSwitch*>(
+        QStringLiteral("gallerySettingsHomeParticlesToggle"));
+    ASSERT_NE(homeParticles, nullptr);
+    EXPECT_TRUE(homeParticles->isOn());
+    EXPECT_EQ(homeParticles->accessibleName(), QStringLiteral("Home particle effects"));
+    QSignalSpy particlesSpy(&settings, &GallerySettings::homeParticlesEnabledChanged);
+    homeParticles->setFocus(Qt::OtherFocusReason);
+    QTest::keyClick(homeParticles, Qt::Key_Space);
+    EXPECT_FALSE(settings.homeParticlesEnabled());
+    EXPECT_EQ(particlesSpy.count(), 1);
+    settings.setHomeParticlesEnabled(false);
+    EXPECT_EQ(particlesSpy.count(), 1);
+    settings.setHomeParticlesEnabled(true);
+    EXPECT_TRUE(homeParticles->isOn());
     EXPECT_EQ(styleChoice, nullptr);
     ASSERT_NE(navigationChoice, nullptr);
     ASSERT_NE(effectChoice, nullptr);
@@ -2001,9 +2020,9 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
             EXPECT_EQ(metrics.elidedText(item, Qt::ElideRight, availableTextWidth), item);
         }
     }
-    // Appearance & behavior (5 rows) + App behavior (1 row) + Updates (1 row) = 7 rows.
+    // Appearance & behavior (6 rows) + App behavior (1 row) + Updates (1 row) = 8 rows.
     EXPECT_NE(page->findChild<QWidget*>(QStringLiteral("gallerySettingsAccentControl")), nullptr);
-    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 7);
+    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 8);
 
     QStringList visibleText;
     for (auto* label : page->findChildren<fluent::textfields::Label*>())
@@ -2015,7 +2034,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
 
     const auto iconViews =
         page->findChildren<fluent::FontIcon*>(QStringLiteral("gallerySettingsRowIcon"));
-    ASSERT_EQ(iconViews.size(), 7);
+    ASSERT_EQ(iconViews.size(), 8);
     for (auto* iconView : iconViews) {
         EXPECT_FALSE(iconView->glyph().isEmpty());
         EXPECT_EQ(iconView->iconSize(), Typography::IconSize::Standard);

@@ -119,6 +119,7 @@ from fluentqt_gallery.native_samples import (
 from fluentqt_gallery.samples import build_sample
 from fluentqt_gallery.visual import (
     GalleryCodeBlock,
+    GalleryHomeHero,
     GalleryPageSkeleton,
     GallerySplashScreen,
     _acrylic_noise_tile,
@@ -3422,6 +3423,12 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         window.show()
         QApplication.processEvents()
         try:
+            launch_effect = window._pages["home"][1]._gallery_hero._particles.effect()
+            self.assertIn(launch_effect, (
+                fluentqt.ParticleBackdrop.Effect.FlowingRibbons,
+                fluentqt.ParticleBackdrop.Effect.FloatingDots,
+                fluentqt.ParticleBackdrop.Effect.Starfield,
+            ))
             self.assertEqual(window.windowTitle(), "Fluent-Qt Gallery")
             self.assertEqual(window.titleBar().titleBarHeight(), 42)
             self.assertEqual(window._search.objectName(), "GalleryTitleBar.SearchBox")
@@ -3465,6 +3472,11 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             self.assertEqual(main_tree.selectedIndicatorRect().x(), 7.0)
 
             _index, home = window._pages["home"]
+            self.assertEqual(home._gallery_hero._particles.effect(), launch_effect)
+            home._gallery_hero.refresh_theme()
+            self.assertEqual(home._gallery_hero._particles.effect(), launch_effect)
+            recreated_hero = GalleryHomeHero(home)
+            self.assertEqual(recreated_hero._particles.effect(), launch_effect)
             self.assertEqual(home._gallery_hero.height(), 390)
             self.assertEqual(
                 home._gallery_hero._tagline.text(),
@@ -3478,6 +3490,69 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.close()
             window.deleteLater()
             QApplication.processEvents()
+
+    def test_home_particle_effect_does_not_repeat_across_launches(self):
+        probe = r'''
+import sys
+from pathlib import Path
+from unittest.mock import patch
+import fluentqt
+fluentqt.prepare_high_dpi_application()
+from PySide6.QtCore import QStandardPaths
+from PySide6.QtWidgets import QApplication
+QStandardPaths.setTestModeEnabled(True)
+app = QApplication([])
+fluentqt.initialize_resources()
+import fluentqt_gallery.settings as settings_module
+from fluentqt_gallery.visual import GalleryHomeHero
+with (
+    patch.object(settings_module, "persistence_available", return_value=True),
+    patch.object(settings_module, "config_file_path", return_value=Path(sys.argv[1])),
+):
+    first = GalleryHomeHero()
+    second = GalleryHomeHero()
+    settings = settings_module.gallery_settings()
+    enabled = settings.home_particles_enabled
+    assert first._particles.effect() == second._particles.effect()
+    assert first._particles.isAnimationEnabled() == enabled
+    assert first._particles.isHidden() != enabled
+    chosen = first._particles.effect().name if enabled else settings.last_home_particle_effect
+    if enabled:
+        settings.set_home_particles_enabled(False)
+        assert first._particles.isHidden() and second._particles.isHidden()
+        assert not settings_module._config_settings().value("home/particlesEnabled", True, type=bool)
+        settings.set_home_particles_enabled(True)
+        assert first._particles.effect().name == chosen
+    print(chosen)
+'''
+        effects = ("FlowingRibbons", "FloatingDots", "Starfield")
+        with TemporaryDirectory() as temporary_dir:
+            path = Path(temporary_dir) / "config.ini"
+            persisted = QSettings(str(path), QSettings.IniFormat)
+            key = "home/lastParticleEffect"
+            for launch in range(8):
+                with self.subTest(launch=launch):
+                    if 1 <= launch <= 3:
+                        persisted.setValue(key, effects[launch - 1])
+                    elif launch == 4:
+                        persisted.setValue(key, "retired-effect")
+                    if launch > 0:
+                        persisted.setValue("home/particlesEnabled", launch != 6)
+                    persisted.sync()
+                    previous = persisted.value(key, "")
+                    result = subprocess.run(
+                        [sys.executable, "-c", probe, str(path)],
+                        capture_output=True, text=True, timeout=30,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    chosen = result.stdout.strip().splitlines()[-1]
+                    self.assertIn(chosen, effects)
+                    if launch == 6:
+                        self.assertEqual(chosen, previous)
+                    else:
+                        self.assertNotEqual(chosen, previous)
+                    persisted.sync()
+                    self.assertEqual(persisted.value(key), chosen)
 
     def test_opt_in_startup_splash_matches_native_chrome_handoff(self):
         self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())
@@ -4688,7 +4763,25 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         QApplication.processEvents()
         try:
             _index, page = window._pages["settings"]
-            self.assertEqual(len(page._gallery_settings_rows), 7)
+            self.assertEqual(len(page._gallery_settings_rows), 8)
+            particles = page.findChild(
+                fluentqt.ToggleSwitch, "gallerySettingsHomeParticlesToggle"
+            )
+            self.assertIsNotNone(particles)
+            self.assertEqual(particles.accessibleName(), "Home particle effects")
+            settings = window._settings
+            original_particles = settings.home_particles_enabled
+            self.addCleanup(settings.set_home_particles_enabled, original_particles)
+            settings.set_home_particles_enabled(True)
+            self.assertTrue(particles.isOn())
+            particles.setFocus(Qt.OtherFocusReason)
+            QTest.keyClick(particles, Qt.Key_Space)
+            self.assertFalse(settings.home_particles_enabled)
+            _index, home = window._pages["home"]
+            self.assertTrue(home._gallery_hero._particles.isHidden())
+            self.assertFalse(home._gallery_hero._particles.isAnimating())
+            settings.set_home_particles_enabled(True)
+            self.assertTrue(particles.isOn())
             self.assertIsNone(
                 page.findChild(
                     fluentqt.ComboBox, "gallerySettingsStyleChoice"
@@ -4700,6 +4793,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 "App theme",
                 "Accent color",
                 "Motion",
+                "Home particle effects",
                 "Navigation style",
                 "Window background effect",
                 "App behavior",

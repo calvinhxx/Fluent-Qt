@@ -50,6 +50,8 @@ class CloseBehavior(IntEnum):
 
 _ACCENT_KEY = "appearance/accent/fluent"
 _LEGACY_ACCENT_KEY = "settings/accent/0"
+_LAST_HOME_PARTICLE_EFFECT_KEY = "home/lastParticleEffect"
+_HOME_PARTICLES_ENABLED_KEY = "home/particlesEnabled"
 
 
 def persistence_available() -> bool:
@@ -131,6 +133,7 @@ class GallerySettings(QObject):
     navigationStyleChanged = Signal(int)
     windowEffectChanged = Signal(int)
     closeBehaviorChanged = Signal(int)
+    homeParticlesEnabledChanged = Signal(bool)
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -144,6 +147,8 @@ class GallerySettings(QObject):
         self.window_maximized = False
         self.close_behavior_confirmed = False
         self.intro_completed = False
+        self.last_home_particle_effect = ""
+        self.home_particles_enabled = True
         self._load()
         self.apply_motion_mode()
         self.apply_user_theme()
@@ -201,6 +206,12 @@ class GallerySettings(QObject):
         )
         self.intro_completed = bool(
             settings.value("intro/completed", False, type=bool)
+        )
+        self.last_home_particle_effect = str(
+            settings.value(_LAST_HOME_PARTICLE_EFFECT_KEY, "") or ""
+        )
+        self.home_particles_enabled = bool(
+            settings.value(_HOME_PARTICLES_ENABLED_KEY, True, type=bool)
         )
 
     def apply_user_theme(self) -> None:
@@ -322,6 +333,27 @@ class GallerySettings(QObject):
         self.intro_completed = completed
         if persistence_available():
             _config_settings().setValue("intro/completed", completed)
+
+    def set_home_particles_enabled(self, enabled: bool) -> None:
+        enabled = bool(enabled)
+        if self.home_particles_enabled == enabled:
+            return
+        self.home_particles_enabled = enabled
+        if persistence_available():
+            settings = _config_settings()
+            settings.setValue(_HOME_PARTICLES_ENABLED_KEY, enabled)
+            settings.sync()
+        self.homeParticlesEnabledChanged.emit(enabled)
+
+    def set_last_home_particle_effect(self, effect: str) -> None:
+        if self.last_home_particle_effect == effect:
+            return
+        self.last_home_particle_effect = effect
+        if persistence_available():
+            settings = _config_settings()
+            settings.setValue(_LAST_HOME_PARTICLE_EFFECT_KEY, effect)
+            # Persist immediately so a quick restart cannot repeat this choice.
+            settings.sync()
 
     def set_window_placement(
         self, geometry: QRect, screen_name: str, maximized: bool

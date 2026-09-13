@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 import html
 import io
 import json
@@ -27,6 +28,7 @@ from PySide6.QtCore import (
     QPoint,
     QPointF,
     QPropertyAnimation,
+    QRandomGenerator,
     QRect,
     QRectF,
     QSize,
@@ -73,6 +75,7 @@ from PySide6.QtWidgets import (
 )
 
 from .motion import start_finite_transition
+from .settings import gallery_settings
 
 
 @dataclass(frozen=True)
@@ -1265,6 +1268,23 @@ class GalleryHeroLinkCard(QWidget):
         self.refresh_display_scale()
 
 
+@lru_cache(maxsize=1)
+def _home_particle_effect() -> fluentqt.ParticleBackdrop.Effect:
+    """Choose once per launch, excluding the previous launch's saved effect."""
+    settings = gallery_settings()
+    effects = (
+        fluentqt.ParticleBackdrop.Effect.FlowingRibbons,
+        fluentqt.ParticleBackdrop.Effect.FloatingDots,
+        fluentqt.ParticleBackdrop.Effect.Starfield,
+    )
+    candidates = tuple(
+        effect for effect in effects if effect.name != settings.last_home_particle_effect
+    )
+    chosen = candidates[QRandomGenerator.global_().bounded(len(candidates))]
+    settings.set_last_home_particle_effect(chosen.name)
+    return chosen
+
+
 class GalleryHomeHero(QWidget):
     """Full-width native-style gradient hero and external link strip."""
 
@@ -1316,6 +1336,9 @@ class GalleryHomeHero(QWidget):
         self._particles.setMaximumFrameRate(30)
         self._particles.setAttribute(Qt.WA_TransparentForMouseEvents)
         self._particles.lower()
+        settings = gallery_settings()
+        settings.homeParticlesEnabledChanged.connect(self._set_particles_enabled)
+        self._set_particles_enabled(settings.home_particles_enabled)
         self._artwork_key = None
         self._artwork = QImage()
 
@@ -1414,6 +1437,13 @@ class GalleryHomeHero(QWidget):
         self._tagline = tagline
         self.refresh_display_scale()
         self.refresh_theme()
+
+    def _set_particles_enabled(self, enabled: bool) -> None:
+        # A disabled launch keeps the previous effect until decoration is enabled.
+        if enabled:
+            self._particles.setEffect(_home_particle_effect())
+        self._particles.setAnimationEnabled(enabled)
+        self._particles.setVisible(enabled)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)

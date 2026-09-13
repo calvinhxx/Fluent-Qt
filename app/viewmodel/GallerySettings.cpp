@@ -27,6 +27,8 @@ constexpr char kWindowNormalGeometryKey[] = "window/normalGeometry";
 constexpr char kWindowScreenNameKey[] = "window/screenName";
 constexpr char kWindowMaximizedKey[] = "window/maximized";
 constexpr char kIntroCompletedKey[] = "intro/completed";
+constexpr char kLastHomeParticleEffectKey[] = "home/lastParticleEffect";
+constexpr char kHomeParticlesEnabledKey[] = "home/particlesEnabled";
 
 using BackdropEffect = fluent::windowing::BackdropEffect;
 
@@ -128,6 +130,32 @@ GallerySettings::GallerySettings(QObject* parent) : QObject(parent)
             applyThemeMode();
     });
     applyThemeMode();
+}
+
+void GallerySettings::setHomeParticlesEnabled(bool enabled)
+{
+    if (m_homeParticlesEnabled == enabled)
+        return;
+    m_homeParticlesEnabled = enabled;
+    if (platform::persistenceAvailable()) {
+        auto settings = platform::createSettings();
+        settings.setValue(QString::fromLatin1(kHomeParticlesEnabledKey), enabled);
+        settings.sync();
+    }
+    emit homeParticlesEnabledChanged(enabled);
+}
+
+void GallerySettings::setLastHomeParticleEffect(const QString& effect)
+{
+    if (m_lastHomeParticleEffect == effect)
+        return;
+    m_lastHomeParticleEffect = effect;
+    if (platform::persistenceAvailable()) {
+        auto settings = platform::createSettings();
+        settings.setValue(QString::fromLatin1(kLastHomeParticleEffectKey), effect);
+        // Save at selection time so even a quick restart sees the current choice.
+        settings.sync();
+    }
 }
 
 void GallerySettings::setMotionMode(MotionMode mode)
@@ -363,6 +391,10 @@ void GallerySettings::load()
     m_closeBehaviorConfirmed =
         settings.value(QString::fromLatin1(kCloseBehaviorConfirmedKey), false).toBool();
     m_introCompleted = settings.value(QString::fromLatin1(kIntroCompletedKey), false).toBool();
+    m_lastHomeParticleEffect =
+        settings.value(QString::fromLatin1(kLastHomeParticleEffectKey)).toString();
+    m_homeParticlesEnabled =
+        settings.value(QString::fromLatin1(kHomeParticlesEnabledKey), true).toBool();
 }
 
 } // namespace fluent::gallery

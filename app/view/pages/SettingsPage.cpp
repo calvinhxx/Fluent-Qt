@@ -16,6 +16,7 @@
 
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ComboBox.h"
+#include "components/basicinput/ToggleSwitch.h"
 #include "components/foundation/FontIcon.h"
 #include "components/layout/Card.h"
 #include "components/scrolling/ScrollView.h"
@@ -205,6 +206,17 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
         QStringLiteral("gallerySettingsMotionChoice"),
         {QStringLiteral("Full"), QStringLiteral("Reduced"), QStringLiteral("Disabled")},
         static_cast<int>(settings->motionMode()));
+    auto* homeParticles = new fluent::basicinput::ToggleSwitch(this);
+    homeParticles->setObjectName(QStringLiteral("gallerySettingsHomeParticlesToggle"));
+    homeParticles->setAccessibleName(QStringLiteral("Home particle effects"));
+    homeParticles->setAccessibleDescription(
+        QStringLiteral("Show animated particles in the home banner"));
+    homeParticles->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    homeParticles->setIsOn(settings->homeParticlesEnabled());
+    connect(homeParticles, &fluent::basicinput::ToggleSwitch::toggled, settings,
+            &GallerySettings::setHomeParticlesEnabled);
+    connect(settings, &GallerySettings::homeParticlesEnabledChanged, homeParticles,
+            &fluent::basicinput::ToggleSwitch::setIsOn);
     // Match the native WinUI Gallery, which exposes only two navigation styles: "Left" and "Top".
     // "Left" maps to the responsive Auto mode (expanded → compact → minimal by width, just like
     // WinUI's PaneDisplayMode.Auto); "Top" is the horizontal bar. The richer internal enum
@@ -295,6 +307,9 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
     m_contentLayout->addWidget(createSettingsRow(
         Typography::Icons::Play, QStringLiteral("Motion"),
         QStringLiteral("Choose full, reduced, or disabled interface motion"), m_motionChoice));
+    m_contentLayout->addWidget(createSettingsRow(
+        Typography::Icons::FavoriteStar, QStringLiteral("Home particle effects"),
+        QStringLiteral("Show animated particles in the home banner"), homeParticles));
     m_contentLayout->addWidget(createSettingsRow(
         Typography::Icons::List, QStringLiteral("Navigation style"),
         QStringLiteral("Choose how the navigation pane is presented"), m_navigationChoice));
