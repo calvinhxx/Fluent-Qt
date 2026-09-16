@@ -7,6 +7,7 @@
 #include <QHideEvent>
 #include <QImage>
 #include <QPainter>
+#include <QPaintEvent>
 #include <QPropertyAnimation>
 #include <QResizeEvent>
 #include <QShowEvent>
@@ -192,14 +193,16 @@ SplashScreen::SplashScreen(QWidget* parent) : QWidget(parent)
     m_intro->setStartValue(0.0);
     m_intro->setEndValue(1.0);
     connect(m_intro, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        const QRect previous = revealUpdateRect(m_reveal);
         m_reveal = value.toReal();
         refreshBrandOpacity();
-        update();
+        update(previous.united(revealUpdateRect(m_reveal)));
     });
-    // An opaque-paint attribute would turn the opacity-effect fade black.
-    // zh_CN: 不设置不透明绘制属性，避免透明度特效退场时出现黑色背景。
+    // Enable subtree compositing only during dismissal, so child updates stay local while loading.
+    // zh_CN: 仅退场时启用子树合成，让加载期间的子控件更新保持局部重绘。
     m_opacity = new QGraphicsOpacityEffect(this);
     m_opacity->setOpacity(1.0);
+    m_opacity->setEnabled(false);
     setGraphicsEffect(m_opacity);
     m_fade = new QPropertyAnimation(m_opacity, "opacity", this);
     m_fade->setObjectName(QStringLiteral("splashDismissAnimation"));
@@ -244,6 +247,7 @@ void SplashScreen::setPresentation(Presentation presentation)
         m_presentation == presentation)
         return;
     m_presentation = presentation;
+    m_backgroundCache = QPixmap();
     m_intro->stop();
     m_reveal = 1.0;
     refreshBrandOpacity();
@@ -366,7 +370,7 @@ void SplashScreen::setText(const QString& text)
     emit textChanged(text);
 }
 
-void SplashScreen::refreshProgress()
+void SplashScreen::refreshProgress(bool relayout)
 {
     m_ring->setIsIndeterminate(m_indeterminate);
     m_ring->setValue(m_progress);
@@ -374,7 +378,8 @@ void SplashScreen::refreshProgress()
     m_bar->setValue(m_progress);
     m_percentage->setText(m_indeterminate ? QString()
                                           : QString::number(m_progress) + QLatin1Char('%'));
-    layoutContent();
+    if (relayout)
+        layoutContent();
 }
 
 void SplashScreen::setProgress(int done, int total)
@@ -390,7 +395,7 @@ void SplashScreen::setProgress(int done, int total)
         return;
     m_indeterminate = false;
     m_progress = next;
-    refreshProgress();
+    refreshProgress(modeChanged);
     QPointer<SplashScreen> guard(this);
     if (modeChanged)
         emit indeterminateChanged(false);
@@ -412,6 +417,10 @@ void SplashScreen::dismiss()
     if (m_dismissing || !isVisible())
         return;
     m_dismissing = true;
+    // An opaque-paint attribute would turn the opacity-effect fade black.
+    // zh_CN: 淡出前恢复透明合成，避免不透明绘制属性使退场背景变黑。
+    setAttribute(Qt::WA_OpaquePaintEvent, false);
+    m_opacity->setEnabled(true);
     m_intro->stop();
     m_ring->setIsActive(false);
     m_bar->setIsIndeterminate(false);
@@ -442,6 +451,8 @@ QSize SplashScreen::minimumSizeHint() const
 
 void SplashScreen::onThemeUpdated()
 {
+    m_backgroundCache = QPixmap();
+    setAttribute(Qt::WA_OpaquePaintEvent, !m_dismissing && themeColors().bgCanvas.alpha() == 255);
     const QFont caption = themeFont(Typography::FontRole::Caption).toQFont();
     const QColor color = themeColors().textSecondary;
     const QString rgba = color.name(QColor::HexRgb) +
@@ -532,7 +543,9 @@ void SplashScreen::showEvent(QShowEvent* event)
     m_dismissing = false;
     clearLogoTransition();
     m_fade->stop();
+    m_opacity->setEnabled(false);
     m_opacity->setOpacity(1.0);
+    setAttribute(Qt::WA_OpaquePaintEvent, themeColors().bgCanvas.alpha() == 255);
     if (parentWidget())
         setGeometry(parentWidget()->rect());
     raise();
@@ -569,6 +582,8 @@ void SplashScreen::hideEvent(QHideEvent* event)
     m_fade->stop();
     m_intro->stop();
     clearLogoTransition();
+    m_backgroundCache = QPixmap();
+    m_reflection = QImage();
     m_dismissing = false;
     m_ring->setIsActive(false);
     releaseInput();
@@ -743,25 +758,54 @@ void SplashScreen::layoutBrandedContent()
     update();
 }
 
-void SplashScreen::paintEvent(QPaintEvent*)
+QRect SplashScreen::revealUpdateRect(qreal reveal) const
+{
+    const qreal radius = qMax(m_iconRect.width() * 2, 1);
+    const QPointF center = m_iconRect.center() + QPointF((reveal - 0.5) * 120, 0);
+    const QRect glow = QRectF(center - QPointF(radius, radius), QSizeF(radius * 2, radius * 2))
+                           .toAlignedRect()
+                           .adjusted(-1, -1, 1, 1);
+    return glow.united(m_iconRect).intersected(rect());
+}
+
+void SplashScreen::refreshBackgroundCache()
+{
+    const qreal dpr = devicePixelRatioF();
+    const QSize pixels(qCeil(width() * dpr), qCeil(height() * dpr));
+    if (m_backgroundCache.size() == pixels && m_backgroundCache.devicePixelRatioF() == dpr)
+        return;
+    // Keep the original gradients at the exact backing-store resolution, including fractional DPR.
+    // zh_CN: 按实际 backing store 分辨率缓存原始渐变，保留分数缩放下的绘制效果。
+    m_backgroundCache = QPixmap(pixels);
+    m_backgroundCache.setDevicePixelRatio(dpr);
+    m_backgroundCache.fill(Qt::transparent);
+    QPainter painter(&m_backgroundCache);
+    const auto colors = themeColors();
+    painter.fillRect(rect(), colors.bgCanvas);
+    const qreal radius = qMax(width(), height()) * 0.65;
+    paintGlow(painter, QPointF(width() * 0.08, -height() * 0.16), radius, colors.accentDefault,
+              0.16);
+    paintGlow(painter, QPointF(width() * 1.04, height() * 1.1), radius, colors.accentDefault, 0.1);
+}
+
+void SplashScreen::paintEvent(QPaintEvent* event)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::SmoothPixmapTransform);
     const auto colors = themeColors();
-    painter.fillRect(rect(), colors.bgCanvas);
     const bool branded = m_presentation == Presentation::Branded;
     const bool lighting = branded && effectiveTheme() != HighContrast;
     if (lighting) {
-        const qreal radius = qMax(width(), height()) * 0.65;
-        paintGlow(painter, QPointF(width() * 0.08, -height() * 0.16), radius, colors.accentDefault,
-                  0.16);
-        paintGlow(painter, QPointF(width() * 1.04, height() * 1.1), radius, colors.accentDefault,
-                  0.1);
+        refreshBackgroundCache();
+        painter.drawPixmap(0, 0, m_backgroundCache);
         const qreal illumination = qSin(qBound<qreal>(0.0, m_reveal, 1.0) * M_PI);
         paintGlow(painter, m_iconRect.center() + QPointF((m_reveal - 0.5) * 120, 0),
                   qMax(m_iconRect.width() * 2, 1), colors.accentDefault, illumination * 0.12);
+    } else {
+        painter.fillRect(rect(), colors.bgCanvas);
     }
-    if (!m_icon.isNull() && !m_iconRect.isEmpty() && !m_logoTransition) {
+    if (!m_icon.isNull() && !m_iconRect.isEmpty() && !m_logoTransition &&
+        event->region().intersects(m_iconRect)) {
         const qreal reveal = lighting ? smoothStep(m_reveal) : 1.0;
         painter.setOpacity((branded ? 0.12 + reveal * 0.88 : 1.0));
         m_icon.paint(&painter, m_iconRect, Qt::AlignCenter, QIcon::Normal, QIcon::Off);
@@ -769,18 +813,19 @@ void SplashScreen::paintEvent(QPaintEvent*)
             const qreal dpr = devicePixelRatioF();
             const QSize pixels(qMax(1, qCeil(m_iconRect.width() * dpr)),
                                qMax(1, qCeil(m_iconRect.height() * dpr)));
-            QImage reflection(pixels, QImage::Format_ARGB32_Premultiplied);
-            reflection.fill(Qt::transparent);
-            QPainter light(&reflection);
+            if (m_reflection.size() != pixels)
+                m_reflection = QImage(pixels, QImage::Format_ARGB32_Premultiplied);
+            m_reflection.fill(Qt::transparent);
+            QPainter light(&m_reflection);
             light.drawPixmap(QRect(QPoint(), pixels), m_icon.pixmap(pixels));
             light.setCompositionMode(QPainter::CompositionMode_SourceIn);
             const qreal center = pixels.width() * (m_reveal * 2.0 - 0.5);
             QRadialGradient glow(QPointF(center, pixels.height() * 0.3), pixels.width());
             glow.setColorAt(0.0, QColor(255, 255, 255, 38));
             glow.setColorAt(1.0, Qt::transparent);
-            light.fillRect(reflection.rect(), glow);
+            light.fillRect(m_reflection.rect(), glow);
             light.end();
-            painter.drawImage(m_iconRect, reflection);
+            painter.drawImage(m_iconRect, m_reflection);
         }
     }
 }
