@@ -265,7 +265,7 @@ def run_source_selection_clipboard_contract(page: object, base_url: str) -> None
             page.mouse.down()
             page.mouse.move(code_rect["x"] + code_rect["width"] - 2, y, steps=15)
             page.mouse.up()
-            page.keyboard.press("Control+c")
+            page.keyboard.press("ControlOrMeta+c")
             expect_clipboard(expected, "selected source line")
         print("Gallery source clipboard contract passed: whole source, then two exact lines; "
               "raw Chromium keyboard, screen reader disabled")
