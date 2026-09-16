@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QGraphicsOpacityEffect>
 #include <QLabel>
+#include <QPaintEvent>
 #include <QPropertyAnimation>
 #include <QShortcut>
 #include <QSignalSpy>
@@ -664,6 +665,95 @@ TEST_F(SplashScreenTest, Contract_BrandedNarrowLayoutAndHighContrast)
                           QAbstractAnimation::Stopped);
         }
         splash.hide();
+    }
+}
+
+TEST_F(SplashScreenTest, Contract_LoadingAnimationRepaintsOnlyChangingRegions)
+{
+    class PaintProbe final : public SplashScreen {
+    public:
+        using SplashScreen::SplashScreen;
+        QRegion painted;
+
+    protected:
+        void paintEvent(QPaintEvent* event) override
+        {
+            painted += event->region();
+            SplashScreen::paintEvent(event);
+        }
+    };
+
+    MotionPolicy::instance().setMode(MotionPolicy::Mode::Full);
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    QWidget host;
+    host.resize(1280, 800);
+    PaintProbe splash(&host);
+    QPixmap artwork(112, 112);
+    artwork.fill(Qt::blue);
+    splash.setIcon(QIcon(artwork));
+    splash.setIconSize(artwork.size());
+    splash.setTitle("Workspace");
+    splash.setProgress(0, 100);
+    host.show();
+    splash.show();
+    auto* intro = splash.findChild<QVariantAnimation*>("splashRevealAnimation");
+    ASSERT_NE(intro, nullptr);
+    intro->pause();
+    intro->setCurrentTime(intro->duration() / 3);
+    QApplication::processEvents();
+    QApplication::processEvents();
+    splash.painted = QRegion();
+    intro->setCurrentTime(intro->duration() / 2);
+    QApplication::processEvents();
+    EXPECT_FALSE(splash.painted.isEmpty());
+    EXPECT_FALSE(splash.painted.contains(QPoint(4, 4)));
+    EXPECT_FALSE(splash.painted.contains(QPoint(host.width() - 4, 4)));
+
+    intro->setCurrentTime(intro->duration());
+    QApplication::processEvents();
+    splash.painted = QRegion();
+    splash.setProgress(50, 100);
+    QApplication::processEvents();
+    EXPECT_FALSE(splash.painted.contains(host.rect().center()));
+    EXPECT_FALSE(splash.painted.contains(QPoint(4, 4)));
+    EXPECT_EQ(splash.findChild<Label*>("splashPercentage")->text(), "50%");
+}
+
+TEST_F(SplashScreenTest, Contract_CachedBackgroundTracksThemeSizeAndPresentation)
+{
+    MotionPolicy::instance().setMode(MotionPolicy::Mode::Disabled);
+    SplashScreen splash;
+    splash.setProgress(40, 100);
+    splash.resize(640, 480);
+    splash.show();
+    splash.grab(); // Populate the cache before changing any of its inputs.
+
+    for (auto theme : {fluent::FluentElement::Dark, fluent::FluentElement::HighContrast,
+                       fluent::FluentElement::Light}) {
+        fluent::FluentElement::setTheme(theme);
+        for (auto presentation :
+             {SplashScreen::Presentation::Simple, SplashScreen::Presentation::Branded}) {
+            splash.setPresentation(presentation);
+            for (const QSize size : {QSize(320, 240), QSize(900, 600)}) {
+                splash.resize(size);
+                SplashScreen fresh;
+                fresh.setPresentation(presentation);
+                fresh.setProgress(40, 100);
+                fresh.resize(size);
+                fresh.show();
+                QApplication::processEvents();
+                const QImage actual = splash.grab().toImage();
+                const QImage expected = fresh.grab().toImage();
+                ASSERT_EQ(actual.size(), expected.size());
+                const qreal dpr = actual.devicePixelRatio();
+                for (const QPoint point :
+                     {QPoint(4, 4), QPoint(size.width() / 2, size.height() / 2),
+                      QPoint(size.width() - 5, size.height() - 5)}) {
+                    const QPoint pixel(qRound(point.x() * dpr), qRound(point.y() * dpr));
+                    EXPECT_EQ(actual.pixelColor(pixel), expected.pixelColor(pixel));
+                }
+            }
+        }
     }
 }
 

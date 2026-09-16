@@ -94,6 +94,7 @@ The table lists the semantic boundary and its focused regression source.
 | DropDownButton, DrawerView, ToolTip | Menu actions, drawer content and focus return, tooltip text/target relations and logical visibility | [Auxiliary surfaces](../../tests/components/TestAuxiliarySurfaceAccessibility.cpp) |
 | FlipView, SplitView | Ordered pages and navigation; native pane subtrees and keyboard-operable splitter grips with value bounds | [Collections](../../tests/components/TestCollectionSurfaceAccessibility.cpp) |
 | HyperlinkButton, InfoBar, Shimmer | Link/visited state, notification severity and dismissal, loading/busy state independent of animation | [Presentation](../../tests/components/TestSemanticPresentationAccessibility.cpp) |
+| SplashScreen | Covered-host input and focus restoration, busy state and progress; cached painting preserves live child controls and motion-policy behavior | [SplashScreen](../../tests/components/status_info/TestSplashScreen.cpp) |
 | MultiSelectComboBox | Button-menu root, selected labels, expanded state, popup relation and named trigger/search/list | [Multi-selection](../../tests/components/basicinput/TestMultiSelectComboBox.cpp) |
 | ComboBox | Explicit fonts reach the field, editor and dropdown; rows grow with text. The popup list takes focus; arrows stage selection, Enter/Return commits once and Escape cancels with focus return. Disabled items and an unselected placeholder cannot activate | [ComboBox](../../tests/components/basicinput/TestComboBox.cpp) |
 

@@ -2,6 +2,8 @@
 #define FLUENTQT_SPLASHSCREEN_H
 
 #include <QIcon>
+#include <QImage>
+#include <QPixmap>
 #include <QPointer>
 #include <QWidget>
 
@@ -153,11 +155,15 @@ private:
     void refreshBrandOpacity();
     void clearLogoTransition();
     bool hasTransitionTarget() const;
-    void refreshProgress();
+    void refreshProgress(bool relayout = true);
+    QRect revealUpdateRect(qreal reveal) const;
+    void refreshBackgroundCache();
     void releaseInput();
     bool covers(const QWidget* widget) const;
 
     QIcon m_icon;
+    QPixmap m_backgroundCache;
+    QImage m_reflection;
     QSize m_iconSize{96, 96};
     QRect m_iconRect;
     ProgressRing* m_ring = nullptr;
