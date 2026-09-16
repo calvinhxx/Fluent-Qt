@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#top"><img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery 预览"></a>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#top"><img src="docs/assets/readme/hero.png" alt="Windows 下使用 Mica 效果的 Fluent-Qt Gallery"></a>
 </p>
 
 <p align="center">

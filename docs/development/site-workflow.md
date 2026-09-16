@@ -67,20 +67,33 @@ blur filters: their cost grows quickly with density.
 
 ## Gallery screenshots
 
-Use the current native Gallery for product images. Build `test_gallery_content_pages`
-using the [build workflow](build-workflow.md), then capture each route in Light
-and Dark. On macOS, for example:
+Use the current **Windows native Gallery with Mica** for README and first-party
+website product images. Build `fluent_qt_gallery` using the
+[build workflow](build-workflow.md). Capture the real composed window in Light
+and Dark at 1440×900, with the Windows caption buttons visible. Keep third-party
+case-study images in their original platform and do not add simulated window
+chrome or a painted Mica background.
 
-```bash
-env -u SKIP_VISUAL_TEST QT_QPA_PLATFORM=cocoa VISUAL_SNAPSHOT=1 \
-  QT_SCALE_FACTOR=1 QT_FONT_DPI=96 GALLERY_PARITY_ROUTE=home GALLERY_PARITY_THEME=dark \
-  ./build/vcpkg-osx/tests/gallery/test_gallery_content_pages \
-  --gtest_filter=GalleryContentPagesTest.PythonParityVisualCheck
-```
+In Gallery Settings, select Mica as the window effect and choose the required
+theme. Keep the window active and unmaximized, wait for the splash and navigation
+animations to finish, and move the pointer outside the captured window. Use
+Windows Graphics Capture (for example, Computer Use's native window capture),
+not `QWidget::grab()`: Mica is supplied by the desktop compositor. The
+`PythonParityVisualCheck` and `FoundationVisualCheck` fixtures deliberately use
+`BackdropEffect::Solid` for deterministic test snapshots; they are not the source
+for these marketing images. Restore any capture-only changes to local Gallery
+preferences afterward.
 
-Use `home`, `button`, and `collections` for the website images. The shared helper
-writes 1440×900 PNGs to `build/vcpkg-osx/visual/`. Review the captures before
-replacing the matching Light/Dark assets in `site/assets/gallery/`.
+Review `home`, `button`, and `collections` in both themes for the website. Also
+refresh the stored `slider` and `toggle-switch` material so the Gallery asset set
+stays on the same platform. Save the reviewed frames under the existing names in
+`site/assets/gallery/`: `*-real.png` is Light and `*-dark.png` is Dark. Keep the
+home JPEGs at `docs/assets/readme/gallery-home.jpg` and
+`site/assets/gallery-home.jpg` synchronized with the Light home capture. Preserve
+the captured pixels when converting formats; do not retouch native controls.
+
+The current set was captured on Windows with Qt 6.9.3 from revision `8dfba78f`
+on 2026-09-16. Both Home captures use the Gallery's Starfield particle effect.
 
 The README, Gallery loading poster, and sharing card use designed compositions.
 Keep the README's frame, spacing, and shadow; keep the sharing card's brand,

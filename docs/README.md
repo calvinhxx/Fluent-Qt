@@ -6,7 +6,7 @@ FluentQt documentation is organized by task. Start with the Gallery when you
 want to evaluate the library, the API Explorer when you know the component you
 need, and the development tree when you are changing the project itself.
 
-![FluentQt Gallery showing navigation, component cards, and live samples](assets/readme/gallery-home.jpg)
+![FluentQt Gallery on Windows with Mica, showing navigation, component cards, and live samples](assets/readme/gallery-home.jpg)
 
 ## Choose a path
 
