@@ -24,12 +24,11 @@ on run argv
             -- CPack copies CPACK_DMG_BACKGROUND_IMAGE into the image as .background/background.<ext>,
             -- always renamed to "background" regardless of the source filename.
             set background picture of theOptions to file ".background:background.tiff"
-            -- Finder renders an icon's graphic centered ~50px BELOW its position value (the label
-            -- sits under the icon), so to line the icons up with the arrow baked at y~200 in the
-            -- background image we set y to ~150. zh_CN: Finder 实际把图标画在 position 值下方约 50px
-            -- 处(标签在图标下面),所以要和背景里 y≈200 的箭头对齐,这里把 y 设成约 150。
-            set position of item "Fluent-Qt Gallery.app" of theWindow to {160, 150}
-            set position of item "Applications" of theWindow to {480, 150}
+            -- Finder positions the icon graphic by its center in content coordinates. Align both
+            -- centers with the background arrow at y=198; the labels sit below the icons.
+            -- zh_CN: Finder 的 position 对应图标图形中心；两侧中心与背景箭头的 y=198 对齐。
+            set position of item "Fluent-Qt Gallery.app" of theWindow to {160, 198}
+            set position of item "Applications" of theWindow to {480, 198}
             -- Park the .background folder far off-canvas so it is not visible even for users who
             -- have enabled "show all files" in Finder (the invisible flag below only hides it for
             -- default Finder settings). zh_CN: 把 .background 挪到画布外,即使用户开了"显示所有文件"
