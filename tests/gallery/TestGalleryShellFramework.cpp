@@ -66,6 +66,7 @@
 #include "platform/GalleryPlatform.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/SettingsPage.h"
+#include "view/shell/AppIcon.h"
 #include "view/shell/GalleryApplicationController.h"
 #include "view/shell/GalleryContentPresenter.h"
 #include "view/shell/GalleryIntroTour.h"
@@ -440,6 +441,8 @@ TEST_F(GalleryShellFrameworkTest, HomeHeroStartsWithFluentResourceCards)
         {QStringLiteral("Fluent UI"),
          QUrl(QStringLiteral("https://developer.microsoft.com/en-us/fluentui#/controls/web")),
          QStringLiteral(":/app/assets/home_header_tiles/Header-Toolkit.png")},
+        {QStringLiteral("FluentQt"), QUrl(QStringLiteral("https://github.com/calvinhxx/Fluent-Qt")),
+         QStringLiteral(":/app/assets/app-icon.png")},
     };
     constexpr int kHomeLinkUrlRole = Qt::UserRole + 3;
     constexpr int kHomeLinkImageRole = Qt::UserRole + 4;
@@ -918,6 +921,16 @@ TEST_F(GalleryShellFrameworkTest, TitleBarContentUsesAnchorsAndCentersControls)
     ASSERT_FALSE(iconPixmap.isNull());
     const QSize logicalPixmapSize = fluentPixmapLogicalSize(iconPixmap);
     EXPECT_EQ(logicalPixmapSize, QSize(18, 18));
+}
+
+TEST_F(GalleryShellFrameworkTest, ApplicationIconRetainsResolutionForRetinaDockSizes)
+{
+    const QIcon icon = fluent::gallery::appicon::icon();
+    ASSERT_FALSE(icon.isNull());
+    for (const int size : {256, 512, 1024}) {
+        const QSize requestedSize(size, size);
+        EXPECT_EQ(icon.actualSize(requestedSize), requestedSize);
+    }
 }
 
 TEST_F(GalleryShellFrameworkTest, TitleBarAppIconRefreshesAfterDisplayScaleChange)

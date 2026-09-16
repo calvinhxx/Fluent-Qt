@@ -207,7 +207,9 @@ def prefix_resources(page: str, prefix: str) -> str:
     )
     def replace(match: re.Match[str]) -> str:
         url = match.group("url")
-        if url.startswith("assets/gallery/") and url.endswith(".png"):
+        if url.endswith(".png") and (
+            url.startswith("assets/gallery/") or url == "assets/app-icon.png"
+        ):
             url = versioned_image_url(url)
         return f'{match.group("head")}{prefix}{url}'
 

@@ -58,23 +58,23 @@ try {
     $welcomeParts = New-GradientBitmap `
         164 314 `
         ([Drawing.ColorTranslator]::FromHtml('#F7FAFF')) `
-        ([Drawing.ColorTranslator]::FromHtml('#EDF8F3'))
+        ([Drawing.ColorTranslator]::FromHtml('#EEF0FF'))
     $welcome = $welcomeParts[0]
     $welcomeGraphics = $welcomeParts[1]
     try {
         $blueOrb = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(184, 217, 233, 255))
-        $greenOrb = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(196, 210, 246, 224))
-        $cyanOrb = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(130, 190, 232, 240))
+        $violetOrb = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(196, 226, 219, 255))
+        $cyanOrb = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(130, 190, 218, 255))
         $borderPen = [Drawing.Pen]::new([Drawing.ColorTranslator]::FromHtml('#D8E2EE'))
         try {
             $welcomeGraphics.FillEllipse($blueOrb, -86, 168, 224, 224)
-            $welcomeGraphics.FillEllipse($greenOrb, 48, 214, 166, 166)
+            $welcomeGraphics.FillEllipse($violetOrb, 48, 214, 166, 166)
             $welcomeGraphics.FillEllipse($cyanOrb, 76, -54, 146, 146)
             $welcomeGraphics.DrawImage($icon, [Drawing.Rectangle]::new(34, 38, 96, 96))
             $welcomeGraphics.DrawLine($borderPen, 163, 0, 163, 314)
         } finally {
             $blueOrb.Dispose()
-            $greenOrb.Dispose()
+            $violetOrb.Dispose()
             $cyanOrb.Dispose()
             $borderPen.Dispose()
         }
@@ -87,21 +87,21 @@ try {
     $headerParts = New-GradientBitmap `
         150 57 `
         ([Drawing.ColorTranslator]::FromHtml('#F9FBFF')) `
-        ([Drawing.ColorTranslator]::FromHtml('#F0F8F4'))
+        ([Drawing.ColorTranslator]::FromHtml('#F1F2FF'))
     $header = $headerParts[0]
     $headerGraphics = $headerParts[1]
     try {
         $blueOrb = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(150, 214, 231, 255))
-        $greenOrb = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(145, 201, 244, 218))
+        $violetOrb = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(145, 218, 211, 255))
         $borderPen = [Drawing.Pen]::new([Drawing.ColorTranslator]::FromHtml('#D8E2EE'))
         try {
             $headerGraphics.FillEllipse($blueOrb, 62, -46, 112, 112)
-            $headerGraphics.FillEllipse($greenOrb, 112, 15, 80, 80)
+            $headerGraphics.FillEllipse($violetOrb, 112, 15, 80, 80)
             $headerGraphics.DrawImage($icon, [Drawing.Rectangle]::new(101, 8, 40, 40))
             $headerGraphics.DrawLine($borderPen, 0, 56, 150, 56)
         } finally {
             $blueOrb.Dispose()
-            $greenOrb.Dispose()
+            $violetOrb.Dispose()
             $borderPen.Dispose()
         }
         Save-Bitmap24 $header (Join-Path $resolvedOutputDirectory 'installer-header.bmp')

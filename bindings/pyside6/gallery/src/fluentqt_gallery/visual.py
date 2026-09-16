@@ -185,7 +185,7 @@ def _macos_dock_icon_pixmap(source: QPixmap) -> QPixmap:
 
     if source.isNull():
         return source
-    canvas_size = 256
+    canvas_size = max(source.width(), source.height())
     content_fraction = 0.88
     inner_size = _qround(canvas_size * content_fraction)
     offset = (canvas_size - inner_size) // 2
@@ -888,7 +888,12 @@ def _hero_link_pixmap(
     cached = _HERO_LINK_PIXMAP_CACHE.get(key)
     if cached is not None:
         return cached
-    image = QImage(str(asset_path("home_header_tiles", image_name)))
+    image_path = (
+        asset_path(image_name)
+        if image_name == "app-icon.png"
+        else asset_path("home_header_tiles", image_name)
+    )
+    image = QImage(str(image_path))
     if image.isNull():
         return QPixmap()
     image = image.convertToFormat(QImage.Format_ARGB32)
@@ -1310,7 +1315,7 @@ class GalleryHomeHero(QWidget):
             "FluentQt",
             "FluentQt UI component library source on GitHub.",
             "https://github.com/calvinhxx/Fluent-Qt",
-            "Header-WinUI.png",
+            "app-icon.png",
         ),
         (
             "Qt Quick Controls",

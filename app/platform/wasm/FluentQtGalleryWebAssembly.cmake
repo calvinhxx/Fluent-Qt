@@ -16,6 +16,10 @@ function(fluent_qt_configure_gallery_webassembly target source_dir)
         QT_WASM_INITIAL_MEMORY "128MB"
         QT_WASM_MAXIMUM_MEMORY "512MB")
 
+    file(SHA256 "${source_dir}/assets/app-icon.png" FLUENT_QT_GALLERY_ICON_HASH)
+    string(SUBSTRING "${FLUENT_QT_GALLERY_ICON_HASH}" 0 12 FLUENT_QT_GALLERY_ICON_HASH)
+    configure_file("${source_dir}/assets/app-icon.png"
+        "${CMAKE_CURRENT_BINARY_DIR}/app-icon.png" COPYONLY)
     configure_file("${_adapter_dir}/index.html.in"
         "${CMAKE_CURRENT_BINARY_DIR}/index.html" @ONLY)
     configure_file("${_adapter_dir}/licenses.html.in"

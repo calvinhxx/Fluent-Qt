@@ -2336,20 +2336,21 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             QApplication.processEvents()
 
     def test_macos_dock_icon_matches_native_gallery_visual_padding(self):
-        source = QPixmap(64, 64)
+        source = QPixmap(1024, 1024)
         source.fill(QColor("#0078D4"))
         padded = _macos_dock_icon_pixmap(source)
-        self.assertEqual(padded.size(), QSize(256, 256))
+        self.assertEqual(padded.size(), QSize(1024, 1024))
         image = padded.toImage()
-        self.assertEqual(image.pixelColor(14, 128).alpha(), 0)
-        self.assertGreater(image.pixelColor(15, 128).alpha(), 0)
-        self.assertGreater(image.pixelColor(239, 128).alpha(), 0)
-        self.assertEqual(image.pixelColor(240, 128).alpha(), 0)
+        self.assertEqual(image.pixelColor(60, 512).alpha(), 0)
+        self.assertGreater(image.pixelColor(61, 512).alpha(), 0)
+        self.assertGreater(image.pixelColor(961, 512).alpha(), 0)
+        self.assertEqual(image.pixelColor(962, 512).alpha(), 0)
 
         icon = app_icon()
         self.assertFalse(icon.isNull())
-        if sys.platform == "darwin":
-            self.assertEqual(icon.actualSize(QSize(256, 256)), QSize(256, 256))
+        for size in (256, 512, 1024):
+            with self.subTest(size=size):
+                self.assertEqual(icon.actualSize(QSize(size, size)), QSize(size, size))
 
     def test_content_labels_match_native_tracked_style_sheet_contract(self):
         window = GalleryWindow(startup_visuals=False)
