@@ -26,10 +26,8 @@ namespace fluent::gallery::platform {
 int runApplication(int argc, char** argv)
 {
     QCoreApplication::setApplicationName(capabilities().applicationName);
-    QCoreApplication::setOrganizationName(
-        QStringLiteral(FLUENT_QT_GALLERY_ORGANIZATION_NAME));
-    QCoreApplication::setApplicationVersion(
-        QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
+    QCoreApplication::setOrganizationName(QStringLiteral(FLUENT_QT_GALLERY_ORGANIZATION_NAME));
+    QCoreApplication::setApplicationVersion(QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
     fluent::prepareHighDpiApplication();
 
     QApplication app(argc, argv);
@@ -37,8 +35,7 @@ int runApplication(int argc, char** argv)
     QGuiApplication::setDesktopFileName(QStringLiteral(FLUENT_QT_GALLERY_APP_ID));
 #endif
 
-    const GalleryPreviewParseResult preview =
-        parseGalleryPreviewArguments(app.arguments());
+    const GalleryPreviewParseResult preview = parseGalleryPreviewArguments(app.arguments());
     if (preview.options.requested && preview.options.helpRequested) {
         const QByteArray help = preview.helpText.toLocal8Bit();
         std::fputs(help.constData(), stdout);
@@ -52,6 +49,7 @@ int runApplication(int argc, char** argv)
 
     fluent::initializeResources();
     app.setFont(Typography::Styles::Body.toQFont());
+    app.setWindowIcon(appicon::icon());
 
     if (preview.options.requested) {
         fluent::support::logging::InitializationOptions previewLogging;
@@ -69,13 +67,9 @@ int runApplication(int argc, char** argv)
     loggingOptions.logFilePath = fluent::support::logging::defaultLogFilePath();
     fluent::support::logging::initialize(loggingOptions);
     LOG_INFO(QStringLiteral("GalleryApp startup appName=%1 organization=%2 logFile=%3")
-                 .arg(QApplication::applicationName(),
-                      QApplication::organizationName(),
+                 .arg(QApplication::applicationName(), QApplication::organizationName(),
                       loggingOptions.logFilePath));
-    app.setWindowIcon(appicon::icon());
-
-    GallerySingleInstance singleInstance(
-        QStringLiteral(FLUENT_QT_GALLERY_APP_ID), &app);
+    GallerySingleInstance singleInstance(QStringLiteral(FLUENT_QT_GALLERY_APP_ID), &app);
     const auto instanceResult = singleInstance.start();
     if (instanceResult == GallerySingleInstance::StartResult::ExistingInstanceNotified)
         return 0;
@@ -88,10 +82,8 @@ int runApplication(int argc, char** argv)
     GalleryWindow window;
     GalleryWindowPlacement placement(&window, &settings);
     GalleryApplicationController applicationController(&window, &app);
-    QObject::connect(&singleInstance,
-                     &GallerySingleInstance::activationRequested,
-                     &applicationController,
-                     &GalleryApplicationController::restoreWindow);
+    QObject::connect(&singleInstance, &GallerySingleInstance::activationRequested,
+                     &applicationController, &GalleryApplicationController::restoreWindow);
 
     if (placement.restore())
         window.showMaximized();
