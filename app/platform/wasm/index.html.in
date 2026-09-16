@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
   <title>Fluent-Qt C++ Web Gallery</title>
+  <link rel="icon" type="image/png" href="app-icon.png?v=@FLUENT_QT_GALLERY_ICON_HASH@">
   <script>
     document.documentElement.dataset.fluentQtLoadStartedAt = String(Date.now());
     window.fluentQtEmbedded = (() => {

@@ -470,7 +470,7 @@ public:
         append(QStringLiteral("FluentQt"),
                QStringLiteral("FluentQt UI component library source on GitHub."),
                QStringLiteral("https://github.com/calvinhxx/Fluent-Qt"),
-               QStringLiteral(":/app/assets/home_header_tiles/Header-WinUI.png"));
+               QStringLiteral(":/app/assets/app-icon.png"));
         append(QStringLiteral("Qt Quick Controls"),
                QStringLiteral("Qt Quick Controls reference on doc.qt.io."),
                QStringLiteral("https://doc.qt.io/qt-6/qtquickcontrols-index.html"),

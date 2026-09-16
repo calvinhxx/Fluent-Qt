@@ -31,9 +31,9 @@ QPixmap fallbackPixmap(int logicalSize, qreal devicePixelRatio)
 
     painter.setPen(Qt::NoPen);
     painter.setBrush(Qt::white);
-    painter.drawRoundedRect(QRectF(logicalSize * 0.30, logicalSize * 0.34,
-                                   logicalSize * 0.40, logicalSize * 0.32),
-                            2.0, 2.0);
+    painter.drawRoundedRect(
+        QRectF(logicalSize * 0.30, logicalSize * 0.34, logicalSize * 0.40, logicalSize * 0.32), 2.0,
+        2.0);
     return pixmap;
 }
 
@@ -49,20 +49,18 @@ QIcon icon()
     }
 
 #ifdef Q_OS_MAC
-    // macOS Dock icon spec: content should occupy ~80% of the canvas (~10% padding each side).
-    // The raw PNG has only ~5% padding, making it appear larger than system icons in the Dock.
-    // Add extra padding here so the visual footprint matches the platform standard.
-    constexpr int kCanvasSize = 256;
+    // Preserve the source resolution so Retina Dock sizes do not upscale a 256px raster.
+    // Keep the existing padding around the app tile.
+    const int canvasSize = qMax(source.width(), source.height());
     constexpr double kContentFraction = 0.88; // 88% content, 6% pad each side
-    const int innerSize = qRound(kCanvasSize * kContentFraction);
-    const int offset = (kCanvasSize - innerSize) / 2;
-    QPixmap padded(kCanvasSize, kCanvasSize);
+    const int innerSize = qRound(canvasSize * kContentFraction);
+    const int offset = (canvasSize - innerSize) / 2;
+    QPixmap padded(canvasSize, canvasSize);
     padded.fill(Qt::transparent);
     {
         QPainter p(&padded);
         p.setRenderHint(QPainter::SmoothPixmapTransform);
-        p.drawPixmap(QRect(offset, offset, innerSize, innerSize),
-                     source, source.rect());
+        p.drawPixmap(QRect(offset, offset, innerSize, innerSize), source, source.rect());
     }
     return QIcon(padded);
 #else
@@ -78,16 +76,16 @@ QPixmap pixmap(int logicalSize, qreal devicePixelRatio)
 
     QPixmap source(QString::fromLatin1(kIconResourcePath));
     if (source.isNull()) {
-        LOG_WARN(QStringLiteral("AppIcon fallback caller=pixmap reason=missing-resource path=%1 logicalSize=%2 devicePixelRatio=%3")
+        LOG_WARN(QStringLiteral("AppIcon fallback caller=pixmap reason=missing-resource path=%1 "
+                                "logicalSize=%2 devicePixelRatio=%3")
                      .arg(QString::fromLatin1(kIconResourcePath))
                      .arg(normalizedLogicalSize)
                      .arg(normalizedDevicePixelRatio));
         return fallbackPixmap(normalizedLogicalSize, normalizedDevicePixelRatio);
     }
 
-    QPixmap scaled = source.scaled(QSize(targetSize, targetSize),
-                                   Qt::KeepAspectRatio,
-                                   Qt::SmoothTransformation);
+    QPixmap scaled =
+        source.scaled(QSize(targetSize, targetSize), Qt::KeepAspectRatio, Qt::SmoothTransformation);
     scaled.setDevicePixelRatio(normalizedDevicePixelRatio);
     return scaled;
 }

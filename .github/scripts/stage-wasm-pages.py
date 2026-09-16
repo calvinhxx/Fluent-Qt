@@ -18,6 +18,7 @@ PROJECT_VERSION_PATTERN = re.compile(
 )
 PAYLOAD_FILES = (
     "index.html",
+    "app-icon.png",
     "fluent_qt_gallery.js",
     "fluent_qt_gallery.wasm",
     "qtloader.js",
@@ -71,7 +72,7 @@ def stage(args: argparse.Namespace) -> None:
         raise RuntimeError("Missing Pages payload file(s): " + ", ".join(missing))
 
     index = (source / "index.html").read_text(encoding="utf-8")
-    for reference in ("qtloader.js", "fluent_qt_gallery.js", "licenses.html"):
+    for reference in ("qtloader.js", "fluent_qt_gallery.js", "licenses.html", "app-icon.png"):
         if reference not in index:
             raise RuntimeError(f"index.html does not reference {reference}")
 
