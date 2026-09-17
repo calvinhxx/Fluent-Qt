@@ -110,6 +110,7 @@ from .foundation import (
     theme_uses_dark_appearance,
     themeUsesDarkAppearance,
 )
+from .charts import ChartData, ChartModel, ChartView, LineChart, AreaChart, BarChart, HorizontalBarChart, PieChart, DonutChart, ScatterChart, Sparkline
 from .layout import Accordion, Card, Divider, Expander, Field, ParticleBackdrop
 from .menus_toolbars import (
     CommandBar,
@@ -278,6 +279,17 @@ __all__ = [
     "CalendarView",
     "Card",
     "ParticleBackdrop",
+    "ChartData",
+    "ChartModel",
+    "ChartView",
+    "LineChart",
+    "AreaChart",
+    "BarChart",
+    "HorizontalBarChart",
+    "PieChart",
+    "DonutChart",
+    "ScatterChart",
+    "Sparkline",
     "CheckBox",
     "ColorPicker",
     "ComboBox",

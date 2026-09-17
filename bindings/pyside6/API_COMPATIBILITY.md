@@ -94,6 +94,15 @@ same-major removals. Stub generation verifies the version variables and the
 rest of the manifest, while build-tree and clean-wheel tests require runtime,
 native, metadata, and typing versions to agree.
 
+
+## Charts
+
+`ChartData`, `ChartModel`, and `ChartView` are exported by `fluentqt` and
+`fluentqt.charts`. The native model remains caller-owned; the Python view
+retains model wrappers for borrowed series. Snapshot, batch append, all eight
+presentations, viewport, cursor, and aggregation APIs match C++. See the
+[Charts contract](../../docs/architecture/charts.md) for costs and limits.
+
 <!-- docs-nav:bottom:start -->
 ---
 [Contents](../../docs/SUMMARY.md) · [Python bindings index](README.md) · [PySide6 manylinux build and audit policy →](MANYLINUX.md)

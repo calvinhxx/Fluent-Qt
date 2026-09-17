@@ -2,6 +2,7 @@
   "schema_version": 1,
   "source_catalog": "docs/ai/generated/fluentqt-ai-catalog.json",
   "components": [
+    {"id":"chart-view","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
     {"id":"button","classification":"native","risk":"low","status":"covered","evidence":["src/components/basicinput/Button.h"],"gap":""},
     {"id":"compound-button","classification":"augmented","risk":"low","status":"covered","evidence":["tests/components/basicinput/TestCompoundButton.cpp"],"gap":""},
     {"id":"checkbox","classification":"native","risk":"low","status":"covered","evidence":["src/components/basicinput/CheckBox.h"],"gap":""},
@@ -18,7 +19,6 @@
     {"id":"toggle-button","classification":"native","risk":"low","status":"covered","evidence":["src/components/basicinput/ToggleButton.h"],"gap":""},
     {"id":"toggle-split-button","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/basicinput/private/MenuButtonAccessibility_p.cpp","tests/components/basicinput/TestSplitButtonAccessibility.cpp"],"gap":""},
     {"id":"toggle-switch","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/basicinput/private/BasicValueAccessibility_p.cpp","tests/components/TestValueAccessibility.cpp","tests/components/basicinput/TestToggleSwitch.cpp"],"gap":""},
-
     {"id":"drawer-view","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/collections/private/DrawerViewAccessibility_p.cpp","tests/components/TestAuxiliarySurfaceAccessibility.cpp"],"gap":""},
     {"id":"data-grid","classification":"adapter","risk":"high","status":"covered","evidence":["tests/components/collections/TestDataGrid.cpp"],"gap":""},
     {"id":"flip-view","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/collections/private/FlipViewAccessibility_p.cpp","tests/components/TestCollectionSurfaceAccessibility.cpp"],"gap":""},
@@ -28,42 +28,35 @@
     {"id":"split-view","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/collections/private/SplitViewAccessibility_p.cpp","tests/components/TestCollectionSurfaceAccessibility.cpp"],"gap":""},
     {"id":"stack-view","classification":"native","risk":"low","status":"covered","evidence":["src/components/collections/StackView.h"],"gap":""},
     {"id":"tree-view","classification":"native","risk":"medium","status":"covered","evidence":["src/components/collections/TreeView.h"],"gap":""},
-
     {"id":"calendar-date-picker","classification":"augmented","risk":"medium","status":"covered","evidence":["tests/components/date_time/TestCalendarDatePicker.cpp"],"gap":""},
     {"id":"calendar-view","classification":"adapter","risk":"high","status":"covered","evidence":["tests/components/date_time/TestCalendarView.cpp"],"gap":""},
     {"id":"date-picker","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/date_time/private/PickerAccessibility_p.cpp","tests/components/TestComplexInputAccessibility.cpp","tests/components/date_time/TestDatePicker.cpp"],"gap":""},
     {"id":"time-picker","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/date_time/private/PickerAccessibility_p.cpp","tests/components/TestComplexInputAccessibility.cpp","tests/components/date_time/TestTimePicker.cpp"],"gap":""},
-
     {"id":"content-dialog","classification":"native","risk":"medium","status":"covered","evidence":["src/components/dialogs_flyouts/ContentDialog.h"],"gap":""},
     {"id":"dialog","classification":"native","risk":"medium","status":"covered","evidence":["src/components/dialogs_flyouts/Dialog.h"],"gap":""},
     {"id":"flyout","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.cpp","tests/components/dialogs_flyouts/TestTransientAccessibility.cpp"],"gap":""},
     {"id":"popup","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.cpp","tests/components/dialogs_flyouts/TestTransientAccessibility.cpp"],"gap":""},
     {"id":"teaching-tip","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.cpp","tests/components/dialogs_flyouts/TestTransientAccessibility.cpp"],"gap":""},
     {"id":"coach-mark","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.cpp","tests/components/dialogs_flyouts/TestTransientAccessibility.cpp","tests/gallery/TestGalleryShellFramework.cpp"],"gap":""},
-
     {"id":"accordion","classification":"augmented","risk":"medium","status":"covered","evidence":["src/components/layout/Accordion.h","src/components/layout/Expander.cpp"],"gap":""},
     {"id":"particle-backdrop","classification":"not-applicable","risk":"low","status":"not-applicable","evidence":["src/components/layout/ParticleBackdrop.h","tests/components/layout/TestParticleBackdrop.cpp","tests/gallery/TestGalleryParticleBackdrop.cpp"],"gap":"All three CPU presets are decorative; contained controls own semantics and optional pointer effects convey no information. Effect switching preserves paused motion; MotionPolicy stops every preset and HighContrast suppresses decoration. Gallery uses a named keyboard-operable ComboBox for effect selection and a persisted, default-on ToggleSwitch to hide and stop home decoration."},
     {"id":"card","classification":"not-applicable","risk":"low","status":"not-applicable","evidence":["src/components/layout/Card.h"],"gap":"Presentation surface; semantics belong to contained content."},
     {"id":"divider","classification":"not-applicable","risk":"low","status":"not-applicable","evidence":["src/components/layout/Divider.h"],"gap":"Presentation separator; no interactive state."},
     {"id":"expander","classification":"augmented","risk":"medium","status":"covered","evidence":["src/components/layout/Expander.cpp"],"gap":""},
     {"id":"field","classification":"augmented","risk":"medium","status":"covered","evidence":["tests/components/layout/TestField.cpp"],"gap":""},
-
     {"id":"menu","classification":"native","risk":"medium","status":"covered","evidence":["src/components/menus_toolbars/Menu.h"],"gap":""},
     {"id":"menu-bar","classification":"native","risk":"medium","status":"covered","evidence":["src/components/menus_toolbars/MenuBar.h"],"gap":""},
     {"id":"command-bar","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/menus_toolbars/private/CommandAccessibility_p.cpp"],"gap":""},
     {"id":"command-bar-flyout","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/menus_toolbars/private/CommandAccessibility_p.cpp"],"gap":""},
-
     {"id":"breadcrumb","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/navigation/private/NavigationSelectionAccessibility_p.cpp","tests/components/navigation/TestNavigationAccessibility.cpp"],"gap":""},
     {"id":"navigation-view","classification":"native","risk":"medium","status":"covered","evidence":["src/components/navigation/NavigationView.h","tests/components/navigation/TestNavigationView.cpp"],"gap":""},
     {"id":"pivot","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/navigation/private/NavigationSelectionAccessibility_p.cpp","tests/components/navigation/TestNavigationAccessibility.cpp"],"gap":""},
     {"id":"selector-bar","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/navigation/private/NavigationSelectionAccessibility_p.cpp","tests/components/navigation/TestNavigationAccessibility.cpp"],"gap":""},
     {"id":"tab-view","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/navigation/private/NavigationSelectionAccessibility_p.cpp","tests/components/navigation/TestNavigationAccessibility.cpp"],"gap":""},
-
     {"id":"annotated-scrollbar","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/scrolling/private/AnnotatedScrollBarAccessibility_p.cpp","tests/components/TestComplexInputAccessibility.cpp"],"gap":""},
     {"id":"pips-pager","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/scrolling/private/PipsPagerAccessibility_p.cpp","tests/components/navigation/TestNavigationAccessibility.cpp"],"gap":""},
     {"id":"scrollbar","classification":"native","risk":"low","status":"covered","evidence":["src/components/scrolling/ScrollBar.h"],"gap":""},
     {"id":"scroll-view","classification":"native","risk":"low","status":"covered","evidence":["src/components/scrolling/ScrollView.h"],"gap":""},
-
     {"id":"avatar","classification":"augmented","risk":"low","status":"covered","evidence":["tests/components/status_info/TestAvatar.cpp"],"gap":""},
     {"id":"info-badge","classification":"adapter","risk":"medium","status":"covered","evidence":["tests/components/status_info/TestInfoBadge.cpp"],"gap":""},
     {"id":"info-bar","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/status_info/private/StatusPresentationAccessibility_p.cpp","tests/components/TestSemanticPresentationAccessibility.cpp"],"gap":""},
@@ -73,16 +66,22 @@
     {"id":"shimmer","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/status_info/private/StatusPresentationAccessibility_p.cpp","tests/components/TestSemanticPresentationAccessibility.cpp"],"gap":""},
     {"id":"toast","classification":"augmented","risk":"medium","status":"covered","evidence":["tests/components/status_info/TestToast.cpp"],"gap":""},
     {"id":"tooltip","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/status_info/private/ToolTipAccessibility_p.cpp","tests/components/TestAuxiliarySurfaceAccessibility.cpp"],"gap":""},
-
     {"id":"auto-suggest-box","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/textfields/private/AutoSuggestBoxAccessibility_p.cpp","tests/components/TestComplexInputAccessibility.cpp"],"gap":""},
     {"id":"label","classification":"native","risk":"low","status":"covered","evidence":["src/components/textfields/Label.h"],"gap":""},
     {"id":"line-edit","classification":"native","risk":"low","status":"covered","evidence":["src/components/textfields/LineEdit.h","tests/components/textfields/TestLineEdit.cpp"],"gap":""},
     {"id":"number-box","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/textfields/private/NumberBoxAccessibility_p.cpp","tests/components/TestValueAccessibility.cpp","tests/components/textfields/TestNumberBox.cpp"],"gap":""},
     {"id":"password-box","classification":"native","risk":"low","status":"covered","evidence":["src/components/textfields/PasswordBox.h"],"gap":""},
     {"id":"text-edit","classification":"native","risk":"medium","status":"covered","evidence":["src/components/textfields/TextEdit.h","tests/components/textfields/TestTextEdit.cpp","tests/components/textfields/TestTextEditMotion.cpp"],"gap":""},
-
     {"id":"title-bar","classification":"not-applicable","risk":"low","status":"not-applicable","evidence":["src/components/windowing/TitleBar.h"],"gap":"Drag surface semantics are owned by Window and its caption controls."},
     {"id":"window","classification":"augmented","risk":"medium","status":"covered","evidence":["tests/components/windowing/TestWindow.cpp"],"gap":""},
-    {"id":"font-icon","classification":"not-applicable","risk":"low","status":"not-applicable","evidence":["src/components/foundation/FontIcon.h"],"gap":"Presentation glyph; semantic meaning belongs to its containing control."}
+    {"id":"font-icon","classification":"not-applicable","risk":"low","status":"not-applicable","evidence":["src/components/foundation/FontIcon.h"],"gap":"Presentation glyph; semantic meaning belongs to its containing control."},
+    {"id":"line-chart","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
+    {"id":"area-chart","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
+    {"id":"bar-chart","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
+    {"id":"horizontal-bar-chart","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
+    {"id":"pie-chart","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
+    {"id":"donut-chart","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
+    {"id":"scatter-chart","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
+    {"id":"sparkline","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""}
   ]
 }

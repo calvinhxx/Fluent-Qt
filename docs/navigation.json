@@ -26,7 +26,8 @@
             "architecture/window-chrome.md",
             "architecture/overlay-behavior.md",
             "architecture/typography-resolution.md",
-            "architecture/inspector-report.md"
+            "architecture/inspector-report.md",
+            "architecture/charts.md"
           ]
         }
       ]

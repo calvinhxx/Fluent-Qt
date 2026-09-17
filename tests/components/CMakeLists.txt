@@ -43,6 +43,7 @@ add_custom_target(fluent_qt_visual_gate
     VERBATIM)
 
 add_subdirectory(basicinput)
+add_subdirectory(charts)
 add_subdirectory(layout)
 add_subdirectory(menus_toolbars)
 add_subdirectory(textfields)

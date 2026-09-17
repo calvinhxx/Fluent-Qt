@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
 
-[← Typography Resolution](typography-resolution.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md)
+[← Typography Resolution](typography-resolution.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Charts →](charts.md)
 <!-- docs-nav:top:end -->
 
 The FluentQt Inspector is an opt-in, read-only diagnostic pass over a built
@@ -109,5 +109,5 @@ which currently exercises both Gallery pages and the generated C++ Workbench.
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Typography Resolution](typography-resolution.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md)
+[← Typography Resolution](typography-resolution.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Charts →](charts.md)
 <!-- docs-nav:bottom:end -->

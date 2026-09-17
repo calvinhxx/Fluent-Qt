@@ -10,6 +10,48 @@
 [← System capability delivery record](system-capability-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
 <!-- docs-nav:top:end -->
 
+## 2026-09-16 Charts addition and input review
+
+This unreleased addition is reviewed against the v1.8.4 synchronization point.
+`fluent::charts` adds `ChartData`, caller-owned `ChartModel`, the shared
+`ChartView` host, and fixed `LineChart`, `AreaChart`, `BarChart`,
+`HorizontalBarChart`, `PieChart`, `DonutChart`, `ScatterChart`, and `Sparkline`
+components. Each fixed component owns a renderer translation unit. Public
+headers, PySide6 exports, Gallery routes, and accessibility inventory are
+included together; private geometry and chart-token headers are not installed.
+The module uses existing Qt Core, Gui, and Widgets dependencies.
+
+Views borrow models without reparenting; Python retains model wrappers.
+Ordered-X snapshots provide indexed viewport queries and bounded projections.
+Ordinary repaints reuse the projection, streaming updates coalesce, and hidden
+views stop scheduling projection work. The model owns O(N) storage and indexing
+costs; applications prepare large snapshots and control retention. These
+budgets are not a universal frame-time guarantee.
+
+Intentional limits are explicit in the [Charts contract](../architecture/charts.md):
+Pie and Donut render only the first attached model; their class comments and
+`addSeries()` documentation direct callers to `setModel()`. Extra models remain
+attached for generic presentation changes. Scatter shows representative points,
+dense bars show means, and large radial datasets combine a tail into `Other`.
+Log axes, stacked bars, density plots, and GPU rendering remain outside this
+initial module.
+
+The input review found that ChartView consumed Escape even with automatic
+bounds, preventing parent dialogs from handling the key. Escape now consumes
+only an explicit Cartesian X-range reset; otherwise Qt propagates the event to
+the parent. Pie and Donut always propagate it, and Fluent Dialog retains its
+own close policy. `Charts.h` is grouped with the other category umbrella headers.
+Existing component implementations are unchanged.
+
+`test_chart_model` and `test_chart_view` cover ownership, indexed large data,
+projection budgets, and input. The Escape regressions cover ordinary QDialog,
+Fluent Dialog close policies, repeated Escape after reset, and radial charts
+with a stored X range. On macOS with Qt 6.9.3, 21 automated checks passed and
+one interactive VisualCheck was skipped. The three Escape regressions also
+passed with the native Cocoa platform. API, format, generated-catalog, and
+documentation checks passed. Native appearance, Windows/Linux input behavior,
+and Qt 5 execution retain their separate platform-review boundaries.
+
 ## 2026-09-13 ParticleBackdrop extraction
 
 `fluent::layout::ParticleBackdrop` is a CPU-painted decorative surface using

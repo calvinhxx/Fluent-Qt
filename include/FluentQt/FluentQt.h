@@ -37,6 +37,7 @@ bool initializeResources();
 } // namespace fluent
 
 #include <FluentQt/BasicInput.h>
+#include <FluentQt/Charts.h>
 #include <FluentQt/Collections.h>
 #include <FluentQt/DateTime.h>
 #include <FluentQt/Design.h>

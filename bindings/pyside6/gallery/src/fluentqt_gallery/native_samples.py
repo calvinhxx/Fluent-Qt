@@ -6450,6 +6450,7 @@ def ported_sample_keys() -> frozenset[tuple[str, str]]:
 
 # Registration modules are imported only after the registry API is complete.
 from . import native_samples_basic as _native_samples_basic  # noqa: E402,F401
+from . import native_samples_charts as _native_samples_charts  # noqa: E402,F401
 from . import native_samples_collections as _native_samples_collections  # noqa: E402,F401
 from . import native_samples_dialogs as _native_samples_dialogs  # noqa: E402,F401
 from . import native_samples_layout as _native_samples_layout  # noqa: E402,F401

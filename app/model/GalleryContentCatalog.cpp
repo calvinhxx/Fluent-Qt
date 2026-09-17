@@ -40,6 +40,36 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("The 4 px spacing scale, component padding, gaps, and "
                         "standard control heights.")},
         // Categories
+        {QStringLiteral("charts"),
+         QStringLiteral(
+             "Model-backed charts for trends, comparisons, distributions and proportions.")},
+        {QStringLiteral("line-chart"),
+         QStringLiteral(
+             "LineChart shares indexed, caller-owned models with a dedicated bounded renderer.")},
+        {QStringLiteral("area-chart"),
+         QStringLiteral(
+             "AreaChart shares indexed, caller-owned models with a dedicated bounded renderer.")},
+        {QStringLiteral("bar-chart"),
+         QStringLiteral(
+             "BarChart shares indexed, caller-owned models with a dedicated bounded renderer.")},
+        {QStringLiteral("horizontal-bar-chart"),
+         QStringLiteral("HorizontalBarChart shares indexed, caller-owned models with a dedicated "
+                        "bounded renderer.")},
+        {QStringLiteral("pie-chart"),
+         QStringLiteral(
+             "PieChart shares indexed, caller-owned models with a dedicated bounded renderer.")},
+        {QStringLiteral("donut-chart"),
+         QStringLiteral(
+             "DonutChart shares indexed, caller-owned models with a dedicated bounded renderer.")},
+        {QStringLiteral("scatter-chart"),
+         QStringLiteral("ScatterChart shares indexed, caller-owned models with a dedicated bounded "
+                        "renderer.")},
+        {QStringLiteral("sparkline"),
+         QStringLiteral(
+             "Sparkline shares indexed, caller-owned models with a dedicated bounded renderer.")},
+        {QStringLiteral("chart-view"),
+         QStringLiteral("Native charts share caller-owned models, preserve extrema and keep "
+                        "projections bounded by the viewport.")},
         {QStringLiteral("all-controls"),
          QStringLiteral("Browse the full set of FluentQt components in one place.")},
         {QStringLiteral("basic-input"),

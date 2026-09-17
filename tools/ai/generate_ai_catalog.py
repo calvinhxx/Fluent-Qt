@@ -17,6 +17,13 @@ from typing import Iterable
 
 
 CATEGORY_API = {
+    "charts": {
+        "cpp_header": "Charts.h",
+        "cpp_namespace": "fluent::charts",
+        "python_module": "charts",
+        "source_directory": "charts",
+        "sample_source": "ChartsSamples.cpp",
+    },
     "basic-input": {
         "cpp_header": "BasicInput.h",
         "cpp_namespace": "fluent::basicinput",
@@ -105,6 +112,14 @@ CATEGORY_API = {
 
 TEST_SOURCE_OVERRIDES = {
     "title-bar": "TestWindow.cpp",
+    "line-chart": "TestChartView.cpp",
+    "area-chart": "TestChartView.cpp",
+    "bar-chart": "TestChartView.cpp",
+    "horizontal-bar-chart": "TestChartView.cpp",
+    "pie-chart": "TestChartView.cpp",
+    "donut-chart": "TestChartView.cpp",
+    "scatter-chart": "TestChartView.cpp",
+    "sparkline": "TestChartView.cpp",
 }
 
 SAMPLE_SOURCE_OVERRIDES = {

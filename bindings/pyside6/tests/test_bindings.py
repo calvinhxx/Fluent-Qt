@@ -145,6 +145,64 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertIsNone(selection_ref())
             self.assertIsNone(model_ref())
 
+    def test_charts_snapshots_shared_models_and_wrapper_lifetime(self):
+        from fluentqt import charts
+        self.assertIs(charts.ChartView, fluentqt.ChartView)
+        model = fluentqt.ChartModel()
+        snapshot = fluentqt.ChartData.fromPoints([QPointF(i, i * 2) for i in range(10000)])
+        self.assertTrue(snapshot.isValid())
+        self.assertTrue(model.setDataSnapshot(snapshot))
+        first, second = fluentqt.ChartView(), fluentqt.ChartView()
+        first.setModel(model)
+        second.setModel(model)
+        first.resize(600, 320)
+        first.grab()
+        self.assertLessEqual(first.renderedPointCount(), first.maximumPointCount())
+        self.assertTrue(model.appendPoints([QPointF(10000, 20000)]))
+        self.assertEqual(snapshot.size(), 10000)
+        self.assertEqual(second.model().rowCount(), 10001)
+        first.setCurrentPoint(0, 9999)
+        self.assertEqual(first.currentRow(), 9999)
+        for presentation in fluentqt.ChartView.ChartType:
+            first.setChartType(presentation)
+            first.grab()
+        reference = weakref.ref(model)
+        del model
+        gc.collect()
+        self.assertIs(first.model(), reference())
+        first.clearSeries()
+        gc.collect()
+        self.assertIsNotNone(reference())
+        second.clearSeries()
+        gc.collect()
+        self.assertIsNone(reference())
+        del first, second
+
+    def test_dedicated_charts_retain_models_without_transferring_ownership(self):
+        from fluentqt import charts
+        for index, name in enumerate(("LineChart", "AreaChart", "BarChart", "HorizontalBarChart",
+                                      "PieChart", "DonutChart", "ScatterChart", "Sparkline")):
+            with self.subTest(chart=name):
+                chart = getattr(charts, name)()
+                model = charts.ChartModel()
+                model.setPoints([QPointF(0, 20), QPointF(1, 40)])
+                chart.setModel(model)
+                self.assertIsNone(model.parent())
+                self.assertEqual(chart.chartType(), charts.ChartView.ChartType(index))
+                chart.setChartType(charts.ChartView.ChartType((index + 1) % 8))
+                self.assertEqual(chart.chartType(), charts.ChartView.ChartType(index))
+                chart.setYRange(0, 100)
+                self.assertEqual(chart.maximumY(), 100)
+                reference = weakref.ref(model)
+                del model
+                gc.collect()
+                self.assertIs(chart.model(), reference())
+                chart_reference = weakref.ref(chart)
+                del chart
+                gc.collect()
+                self.assertIsNone(chart_reference())
+                self.assertIsNone(reference())
+
     def test_particle_backdrop_public_api_and_child_ownership(self):
         host = QWidget()
         host.resize(360, 220)

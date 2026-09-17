@@ -26,6 +26,7 @@ class CategorySource:
 
 
 CATEGORY_SOURCES = (
+    CategorySource("charts", "Charts", "ChartsSamples.cpp"),
     CategorySource("basic-input", "Basic input", "BasicInputSamples.cpp"),
     CategorySource("collections", "Collections", "CollectionsSamples.cpp"),
     CategorySource("date-time", "Date & time", "DateTimeSamples.cpp"),
@@ -502,20 +503,20 @@ def generate_contract(project_root: Path) -> dict[str, object]:
             .format(", ".join(missing_bindings))
         )
     support_types = sorted(manifest_classes - routed_types)
-    if component_count != 72:
+    if component_count != 81:
         raise ValueError(
-            "native component route count changed from 72 to {0}; review the contract"
+            "native component route count changed from 81 to {0}; review the contract"
             .format(component_count)
         )
-    if sample_count != 213:
+    if sample_count != 224:
         raise ValueError(
-            "native sample count changed from 213 to {0}; review the contract".format(
+            "native sample count changed from 224 to {0}; review the contract".format(
                 sample_count
             )
         )
-    if len(routes) != 93:
+    if len(routes) != 103:
         raise ValueError(
-            "native navigation route count changed from 93 to {0}; review the contract"
+            "native navigation route count changed from 103 to {0}; review the contract"
             .format(len(routes))
         )
 

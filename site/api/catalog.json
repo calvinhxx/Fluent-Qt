@@ -23,11 +23,16 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 72,
-    "public_headers": 119,
-    "categories": 12
+    "components": 81,
+    "public_headers": 130,
+    "categories": 13
   },
   "categories": [
+    {
+      "id": "charts",
+      "title": "Charts",
+      "component_count": 9
+    },
     {
       "id": "basic-input",
       "title": "Basic input",
@@ -90,6 +95,321 @@
     }
   ],
   "components": [
+    {
+      "id": "chart-view",
+      "title": "ChartView",
+      "category_id": "charts",
+      "description": "Native charts share caller-owned models, preserve extrema and keep projections bounded by the viewport.",
+      "capabilities": [
+        "charts"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Charts.h>",
+        "installed_declaration_header": "<FluentQt/components/charts/ChartView.h>",
+        "qualified_type": "fluent::charts::ChartView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/ChartView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.charts",
+        "type": "ChartView",
+        "import_statement": "from fluentqt.charts import ChartView"
+      },
+      "gallery": {
+        "route_id": "chart-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=chart-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ChartsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_chart_view",
+          "ctest_label": "test_chart_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/charts/TestChartView.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "line-chart",
+      "title": "LineChart",
+      "category_id": "charts",
+      "description": "LineChart shares indexed, caller-owned models with a dedicated bounded renderer.",
+      "capabilities": [
+        "charts"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Charts.h>",
+        "installed_declaration_header": "<FluentQt/components/charts/LineChart.h>",
+        "qualified_type": "fluent::charts::LineChart",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/LineChart.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.charts",
+        "type": "LineChart",
+        "import_statement": "from fluentqt.charts import LineChart"
+      },
+      "gallery": {
+        "route_id": "line-chart",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=line-chart",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ChartsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_chart_view",
+          "ctest_label": "test_chart_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/charts/TestChartView.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
+      "id": "area-chart",
+      "title": "AreaChart",
+      "category_id": "charts",
+      "description": "AreaChart shares indexed, caller-owned models with a dedicated bounded renderer.",
+      "capabilities": [
+        "charts"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Charts.h>",
+        "installed_declaration_header": "<FluentQt/components/charts/AreaChart.h>",
+        "qualified_type": "fluent::charts::AreaChart",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/AreaChart.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.charts",
+        "type": "AreaChart",
+        "import_statement": "from fluentqt.charts import AreaChart"
+      },
+      "gallery": {
+        "route_id": "area-chart",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=area-chart",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ChartsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_chart_view",
+          "ctest_label": "test_chart_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/charts/TestChartView.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
+      "id": "bar-chart",
+      "title": "BarChart",
+      "category_id": "charts",
+      "description": "BarChart shares indexed, caller-owned models with a dedicated bounded renderer.",
+      "capabilities": [
+        "charts"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Charts.h>",
+        "installed_declaration_header": "<FluentQt/components/charts/BarChart.h>",
+        "qualified_type": "fluent::charts::BarChart",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/BarChart.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.charts",
+        "type": "BarChart",
+        "import_statement": "from fluentqt.charts import BarChart"
+      },
+      "gallery": {
+        "route_id": "bar-chart",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=bar-chart",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ChartsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_chart_view",
+          "ctest_label": "test_chart_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/charts/TestChartView.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
+      "id": "horizontal-bar-chart",
+      "title": "HorizontalBarChart",
+      "category_id": "charts",
+      "description": "HorizontalBarChart shares indexed, caller-owned models with a dedicated bounded renderer.",
+      "capabilities": [
+        "charts"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Charts.h>",
+        "installed_declaration_header": "<FluentQt/components/charts/HorizontalBarChart.h>",
+        "qualified_type": "fluent::charts::HorizontalBarChart",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/HorizontalBarChart.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.charts",
+        "type": "HorizontalBarChart",
+        "import_statement": "from fluentqt.charts import HorizontalBarChart"
+      },
+      "gallery": {
+        "route_id": "horizontal-bar-chart",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=horizontal-bar-chart",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ChartsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_chart_view",
+          "ctest_label": "test_chart_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/charts/TestChartView.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
+      "id": "pie-chart",
+      "title": "PieChart",
+      "category_id": "charts",
+      "description": "PieChart shares indexed, caller-owned models with a dedicated bounded renderer.",
+      "capabilities": [
+        "charts"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Charts.h>",
+        "installed_declaration_header": "<FluentQt/components/charts/PieChart.h>",
+        "qualified_type": "fluent::charts::PieChart",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/PieChart.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.charts",
+        "type": "PieChart",
+        "import_statement": "from fluentqt.charts import PieChart"
+      },
+      "gallery": {
+        "route_id": "pie-chart",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=pie-chart",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ChartsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_chart_view",
+          "ctest_label": "test_chart_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/charts/TestChartView.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
+      "id": "donut-chart",
+      "title": "DonutChart",
+      "category_id": "charts",
+      "description": "DonutChart shares indexed, caller-owned models with a dedicated bounded renderer.",
+      "capabilities": [
+        "charts"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Charts.h>",
+        "installed_declaration_header": "<FluentQt/components/charts/DonutChart.h>",
+        "qualified_type": "fluent::charts::DonutChart",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/DonutChart.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.charts",
+        "type": "DonutChart",
+        "import_statement": "from fluentqt.charts import DonutChart"
+      },
+      "gallery": {
+        "route_id": "donut-chart",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=donut-chart",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ChartsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_chart_view",
+          "ctest_label": "test_chart_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/charts/TestChartView.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
+      "id": "scatter-chart",
+      "title": "ScatterChart",
+      "category_id": "charts",
+      "description": "ScatterChart shares indexed, caller-owned models with a dedicated bounded renderer.",
+      "capabilities": [
+        "charts"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Charts.h>",
+        "installed_declaration_header": "<FluentQt/components/charts/ScatterChart.h>",
+        "qualified_type": "fluent::charts::ScatterChart",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/ScatterChart.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.charts",
+        "type": "ScatterChart",
+        "import_statement": "from fluentqt.charts import ScatterChart"
+      },
+      "gallery": {
+        "route_id": "scatter-chart",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=scatter-chart",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ChartsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_chart_view",
+          "ctest_label": "test_chart_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/charts/TestChartView.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
+      "id": "sparkline",
+      "title": "Sparkline",
+      "category_id": "charts",
+      "description": "Sparkline shares indexed, caller-owned models with a dedicated bounded renderer.",
+      "capabilities": [
+        "charts"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Charts.h>",
+        "installed_declaration_header": "<FluentQt/components/charts/Sparkline.h>",
+        "qualified_type": "fluent::charts::Sparkline",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/Sparkline.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.charts",
+        "type": "Sparkline",
+        "import_statement": "from fluentqt.charts import Sparkline"
+      },
+      "gallery": {
+        "route_id": "sparkline",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=sparkline",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ChartsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_chart_view",
+          "ctest_label": "test_chart_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/charts/TestChartView.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
     {
       "id": "button",
       "title": "Button",
@@ -2620,6 +2940,13 @@
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/BasicInput.h"
     },
     {
+      "include": "<FluentQt/Charts.h>",
+      "source": "include/FluentQt/Charts.h",
+      "summary": "Public declarations provided by Charts.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/Charts.h"
+    },
+    {
       "include": "<FluentQt/Collections.h>",
       "source": "include/FluentQt/Collections.h",
       "summary": "Public declarations provided by Collections.",
@@ -2927,6 +3254,98 @@
         "ToggleSwitch"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ToggleSwitch.h"
+    },
+    {
+      "include": "<FluentQt/components/charts/ChartModel.h>",
+      "source": "src/components/charts/ChartModel.h",
+      "summary": "An implicitly shared, indexed XY snapshot; safe to prepare away from the GUI thread.",
+      "declarations": [
+        "ChartData",
+        "ChartModel"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/ChartModel.h"
+    },
+    {
+      "include": "<FluentQt/components/charts/ChartView.h>",
+      "source": "src/components/charts/ChartView.h",
+      "summary": "A bounded, native chart projection of caller-owned models.",
+      "declarations": [
+        "ChartView",
+        "ChartType"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/ChartView.h"
+    },
+    {
+      "include": "<FluentQt/components/charts/LineChart.h>",
+      "source": "src/components/charts/LineChart.h",
+      "summary": "A dedicated line chart with its own bounded renderer.",
+      "declarations": [
+        "LineChart"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/LineChart.h"
+    },
+    {
+      "include": "<FluentQt/components/charts/AreaChart.h>",
+      "source": "src/components/charts/AreaChart.h",
+      "summary": "A dedicated area chart with its own bounded renderer.",
+      "declarations": [
+        "AreaChart"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/AreaChart.h"
+    },
+    {
+      "include": "<FluentQt/components/charts/BarChart.h>",
+      "source": "src/components/charts/BarChart.h",
+      "summary": "A dedicated bar chart with its own bounded renderer.",
+      "declarations": [
+        "BarChart"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/BarChart.h"
+    },
+    {
+      "include": "<FluentQt/components/charts/HorizontalBarChart.h>",
+      "source": "src/components/charts/HorizontalBarChart.h",
+      "summary": "A dedicated horizontalbar chart with its own bounded renderer.",
+      "declarations": [
+        "HorizontalBarChart"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/HorizontalBarChart.h"
+    },
+    {
+      "include": "<FluentQt/components/charts/PieChart.h>",
+      "source": "src/components/charts/PieChart.h",
+      "summary": "A dedicated pie chart with its own bounded renderer.",
+      "declarations": [
+        "PieChart"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/PieChart.h"
+    },
+    {
+      "include": "<FluentQt/components/charts/DonutChart.h>",
+      "source": "src/components/charts/DonutChart.h",
+      "summary": "A dedicated donut chart with its own bounded renderer.",
+      "declarations": [
+        "DonutChart"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/DonutChart.h"
+    },
+    {
+      "include": "<FluentQt/components/charts/ScatterChart.h>",
+      "source": "src/components/charts/ScatterChart.h",
+      "summary": "A dedicated scatter chart with its own bounded renderer.",
+      "declarations": [
+        "ScatterChart"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/ScatterChart.h"
+    },
+    {
+      "include": "<FluentQt/components/charts/Sparkline.h>",
+      "source": "src/components/charts/Sparkline.h",
+      "summary": "A dedicated sparkline chart with its own bounded renderer.",
+      "declarations": [
+        "Sparkline"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/charts/Sparkline.h"
     },
     {
       "include": "<FluentQt/components/collections/DataGrid.h>",

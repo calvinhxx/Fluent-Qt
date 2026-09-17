@@ -727,6 +727,36 @@
             </object-type>
         </namespace-type>
 
+        <namespace-type name="charts" visible="no">
+            <value-type name="ChartData"/>
+            <object-type name="ChartModel"/>
+            <object-type name="ChartView">
+                <enum-type name="ChartType"/>
+                <!-- Models are borrowed; getters must not apply Shiboken's
+                     return-value parent heuristic. The Python facade retains
+                     the installed series without changing QObject parents. -->
+                <modify-function signature="model()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="seriesModel(int)const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="onThemeUpdated()" remove="all"/>
+            </object-type>
+            <object-type name="LineChart"/>
+            <object-type name="AreaChart"/>
+            <object-type name="BarChart"/>
+            <object-type name="HorizontalBarChart"/>
+            <object-type name="PieChart"/>
+            <object-type name="DonutChart"/>
+            <object-type name="ScatterChart"/>
+            <object-type name="Sparkline"/>
+        </namespace-type>
+
         <namespace-type name="layout" visible="no">
             <object-type name="Accordion">
                 <enum-type name="ExpansionMode"/>

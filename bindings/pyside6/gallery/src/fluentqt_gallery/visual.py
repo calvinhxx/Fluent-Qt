@@ -271,10 +271,11 @@ def _draw_pixmap_in_logical_rect(
 
 ROUTE_ICON_NAMES = {
     "home": chr(0xE80F),
-    "foundation": chr(0xE80A),
+    "foundation": "ic_fluent_cube_20_regular",
     "all-controls": chr(0xE890),
     "basic-input": chr(0xE73E),
     "collections": chr(0xE80A),
+    "charts": "ic_fluent_data_bar_vertical_20_regular",
     "date-time": chr(0xE787),
     "dialogs-flyouts": chr(0xE8BD),
     "layout": chr(0xE8E4),
@@ -1690,6 +1691,7 @@ class GalleryHomeHero(QWidget):
 _REFERENCE_MODULES = {
     "basic-input": "basicinput",
     "collections": "collections",
+    "charts": "charts",
     "date-time": "date_time",
     "dialogs-flyouts": "dialogs_flyouts",
     "foundation": "foundation",
