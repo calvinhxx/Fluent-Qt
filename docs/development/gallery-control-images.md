@@ -65,6 +65,7 @@ high-contrast (usually white) on that family:
 | `scrolling` | yellow / amber |
 | `menus-toolbars` | purple |
 | `collections` | purple |
+| `charts` | steel blue |
 | `text-fields` | blue |
 
 When adding an icon to an existing category, sample neighboring icons in that
@@ -88,6 +89,9 @@ control.
 The six Layout-family tiles are deterministic assets. Regenerate them with
 `python tools/gallery/generate_layout_control_images.py` so their coral fill,
 line weight, radius, and alpha treatment stay identical.
+
+The ChartView tile uses the Charts steel-blue family. Regenerate it with
+`python tools/gallery/generate_charts_control_image.py`.
 
 The SplashScreen tile uses the Status & info teal family. Regenerate it with
 `python tools/gallery/generate_splash_control_image.py`.

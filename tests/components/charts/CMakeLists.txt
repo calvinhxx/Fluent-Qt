@@ -1,0 +1,2 @@
+add_qt_test_module(test_chart_model TestChartModel.cpp)
+add_qt_test_module(test_chart_view TestChartView.cpp)

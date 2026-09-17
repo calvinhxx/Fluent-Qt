@@ -5,6 +5,7 @@
 
 set(FLUENT_QT_INSTALL_HEADERS
     include/FluentQt/BasicInput.h
+    include/FluentQt/Charts.h
     include/FluentQt/Collections.h
     include/FluentQt/DateTime.h
     include/FluentQt/Design.h
@@ -43,6 +44,17 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/basicinput/ToggleButton.h
     src/components/basicinput/ToggleSplitButton.h
     src/components/basicinput/ToggleSwitch.h
+
+    src/components/charts/ChartModel.h
+    src/components/charts/ChartView.h
+    src/components/charts/LineChart.h
+    src/components/charts/AreaChart.h
+    src/components/charts/BarChart.h
+    src/components/charts/HorizontalBarChart.h
+    src/components/charts/PieChart.h
+    src/components/charts/DonutChart.h
+    src/components/charts/ScatterChart.h
+    src/components/charts/Sparkline.h
 
     src/components/collections/DataGrid.h
     src/components/collections/DrawerView.h

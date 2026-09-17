@@ -120,6 +120,21 @@ When Python 3.10+ is available, CTest registers
 or unknown component IDs, invalid classifications, missing evidence paths, and
 open gaps without a next gate.
 
+## Charts
+
+`ChartView` and its eight dedicated chart subclasses expose a Chart role, a caller-owned name/description, and a raw-data
+cursor with value-change events and next/previous actions. Arrow keys navigate
+original rows, including rows omitted from the visual projection. Attach a Qt
+table view to the same `ChartModel` when a tabular alternative is needed.
+The outer focus ring is visible for Tab or keyboard interaction; mouse clicks
+hide it while retaining focus and the selected data point.
+Readouts reuse a passive `Popup` with `Label` children. Pointer exit and focus
+loss dismiss the readout while preserving selection and the accessible value;
+keyboard navigation shows it again without moving focus into the popup.
+Escape resets an explicit Cartesian X range once; otherwise it propagates to
+the parent, preserving dialog close policies. Pie and Donut always propagate
+Escape because their rendering ignores X ranges.
+
 <!-- docs-nav:bottom:start -->
 ---
 [← Accessibility Contract](accessibility-contract.md) · [Contents](../SUMMARY.md) · [Development index](README.md)

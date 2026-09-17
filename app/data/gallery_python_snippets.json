@@ -2,10 +2,65 @@
   "schema_version": 1,
   "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
   "summary": {
-    "component_count": 72,
-    "sample_count": 213
+    "component_count": 81,
+    "sample_count": 224
   },
   "samples": [
+    {
+      "route_id": "chart-view",
+      "sample_id": "chart-view-basic",
+      "source": "from PySide6.QtCore import QPointF\n\nchart = fluentqt.ChartView()\nchart.setMinimumHeight(420)\nchart.setTitle(\"Sample response times\")\nprimary = fluentqt.ChartModel(chart)\nprimary.setName(\"Primary\")\nprimary.setPoints(\n    [QPointF(x, y) for x, y in enumerate([18, 32, 24, 48, 36, 54, 42])]\n)\nsecondary = fluentqt.ChartModel(chart)\nsecondary.setName(\"Secondary\")\nsecondary.setPoints(\n    [QPointF(x, y) for x, y in enumerate([12, 20, 18, 32, 28, 38, 30])]\n)\nchart.setModel(primary)\nchart.addSeries(secondary)\n"
+    },
+    {
+      "route_id": "chart-view",
+      "sample_id": "chart-view-types",
+      "source": "from PySide6.QtCore import QPointF\nfrom PySide6.QtWidgets import QVBoxLayout\n\nlayout = QVBoxLayout(panel)\nlayout.setContentsMargins(0, 0, 0, 0)\nmodel = fluentqt.ChartModel()\nmodel.setName('Sample activity')\nmodel.setPoints(\n    [QPointF(x, y) for x, y in enumerate([18, 32, 24, 48, 36, 54, 42])],\n    [\"Mon\", \"Tue\", \"Wed\", \"Thu\", \"Fri\", \"Sat\", \"Sun\"]\n)\nchart = fluentqt.ChartView()\nchart.setModel(model)\nchart.setMinimumHeight(420)\nchart.setChartType(fluentqt.ChartView.ChartType.Bar)\npresentation = fluentqt.ComboBox()\npresentation.setAccessibleName('Chart presentation')\npresentation.addItems(['Line', 'Area', 'Bar', 'Horizontal bar'])\npresentation.addItems(['Pie', 'Donut', 'Scatter', 'Sparkline'])\npresentation.setCurrentIndex(2)\npresentation.currentIndexChanged.connect(\n    lambda index: chart.setChartType(fluentqt.ChartView.ChartType(index))\n)\nlayout.addWidget(presentation)\nlayout.addWidget(chart)\n"
+    },
+    {
+      "route_id": "chart-view",
+      "sample_id": "chart-view-shared-model",
+      "source": "from PySide6.QtCore import QPointF, Qt\nfrom PySide6.QtWidgets import QVBoxLayout\n\nlayout = QVBoxLayout(panel)\nlayout.setContentsMargins(0, 0, 0, 0)\nmodel = fluentqt.ChartModel()\nmodel.setName('Sample signal')\nmodel.setPoints([QPointF(x, y) for x, y in enumerate([18, 32, 24, 48, 36, 54, 42])])\ndetail = fluentqt.ChartView()\ndetail.setChartType(fluentqt.ChartView.ChartType.Area)\ndetail.setModel(model)\ndetail.setMinimumHeight(420)\ntrend = fluentqt.Sparkline()\ntrend.setModel(model)\ntrend.setFixedSize(220, 52)\nappend = fluentqt.Button('Append sample batch')\ndef append_batch():\n    x = model.maximumX()\n    model.appendPoints([QPointF(x + 1, 30), QPointF(x + 2, 58), QPointF(x + 3, 40)])\nappend.clicked.connect(append_batch)\nlayout.addWidget(detail)\nlayout.addWidget(trend)\nlayout.addWidget(append, 0, Qt.AlignLeft)\n"
+    },
+    {
+      "route_id": "line-chart",
+      "sample_id": "line-chart-basic",
+      "source": "from PySide6.QtCore import QPointF\n\nchart = fluentqt.LineChart()\nchart.setObjectName(\"chartPresentation\")\nchart.setMinimumHeight(420)\nchart.setTitle('Response time')\nchart.setSubtitle('Milliseconds · last 7 days')\nmodel = fluentqt.ChartModel(chart)\nmodel.setName(\"Primary\")\nvalues = [27, 32, 28, 34, 30, 36, 34, 32, 41, 39, 37, 42, 46, 43, 40,\n 46, 42, 47, 52, 48, 54, 59, 56, 61, 57, 60, 58, 64, 59, 66,\n 62]\nlabels = ['Mon', 'Mon, 04:48', 'Mon, 09:36', 'Mon, 14:24',\n 'Mon, 19:12', 'Tue', 'Tue, 04:48', 'Tue, 09:36',\n 'Tue, 14:24', 'Tue, 19:12', 'Wed', 'Wed, 04:48',\n 'Wed, 09:36', 'Wed, 14:24', 'Wed, 19:12', 'Thu',\n 'Thu, 04:48', 'Thu, 09:36', 'Thu, 14:24', 'Thu, 19:12',\n 'Fri', 'Fri, 04:48', 'Fri, 09:36', 'Fri, 14:24',\n 'Fri, 19:12', 'Sat', 'Sat, 04:48', 'Sat, 09:36',\n 'Sat, 14:24', 'Sat, 19:12', 'Sun']\nmodel.setPoints(\n    [QPointF(i, y) for i, y in enumerate(values)],\n    labels\n)\nchart.setModel(model)\nsecondary = fluentqt.ChartModel(chart)\nsecondary.setName(\"Secondary\")\nsecondary_values = [14, 18, 16, 20, 17, 22, 20, 18, 25, 23, 22, 26, 29, 27, 25,\n 28, 26, 31, 34, 30, 35, 41, 38, 42, 39, 43, 40, 44, 41, 46,\n 43]\nsecondary.setPoints(\n    [QPointF(i, y) for i, y in enumerate(secondary_values)],\n    labels\n)\nchart.addSeries(secondary)\nchart.setValueSuffix(\" ms\")\nchart.setYRange(0, 80)\n"
+    },
+    {
+      "route_id": "area-chart",
+      "sample_id": "area-chart-basic",
+      "source": "from PySide6.QtCore import QPointF\n\nchart = fluentqt.AreaChart()\nchart.setObjectName(\"chartPresentation\")\nchart.setMinimumHeight(420)\nchart.setTitle('Active sessions')\nchart.setSubtitle('Sessions · last 7 days')\nmodel = fluentqt.ChartModel(chart)\nmodel.setName(\"Primary\")\nvalues = [27, 32, 28, 34, 30, 36, 34, 32, 41, 39, 37, 42, 46, 43, 40,\n 46, 42, 47, 52, 48, 54, 59, 56, 61, 57, 60, 58, 64, 59, 66,\n 62]\nlabels = ['Mon', 'Mon, 04:48', 'Mon, 09:36', 'Mon, 14:24',\n 'Mon, 19:12', 'Tue', 'Tue, 04:48', 'Tue, 09:36',\n 'Tue, 14:24', 'Tue, 19:12', 'Wed', 'Wed, 04:48',\n 'Wed, 09:36', 'Wed, 14:24', 'Wed, 19:12', 'Thu',\n 'Thu, 04:48', 'Thu, 09:36', 'Thu, 14:24', 'Thu, 19:12',\n 'Fri', 'Fri, 04:48', 'Fri, 09:36', 'Fri, 14:24',\n 'Fri, 19:12', 'Sat', 'Sat, 04:48', 'Sat, 09:36',\n 'Sat, 14:24', 'Sat, 19:12', 'Sun']\nmodel.setPoints(\n    [QPointF(i, y) for i, y in enumerate(values)],\n    labels\n)\nchart.setModel(model)\nsecondary = fluentqt.ChartModel(chart)\nsecondary.setName(\"Secondary\")\nsecondary_values = [14, 18, 16, 20, 17, 22, 20, 18, 25, 23, 22, 26, 29, 27, 25,\n 28, 26, 31, 34, 30, 35, 41, 38, 42, 39, 43, 40, 44, 41, 46,\n 43]\nsecondary.setPoints(\n    [QPointF(i, y) for i, y in enumerate(secondary_values)],\n    labels\n)\nchart.addSeries(secondary)\n"
+    },
+    {
+      "route_id": "bar-chart",
+      "sample_id": "bar-chart-basic",
+      "source": "from PySide6.QtCore import QPointF\n\nchart = fluentqt.BarChart()\nchart.setObjectName(\"chartPresentation\")\nchart.setMinimumHeight(420)\nchart.setTitle('Weekly activity')\nchart.setSubtitle('Events · last 7 days')\nmodel = fluentqt.ChartModel(chart)\nmodel.setName(\"Primary\")\nvalues = [32, 44, 38, 58, 46, 66, 54]\nlabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']\nmodel.setPoints([QPointF(i, y) for i, y in enumerate(values)], labels)\nchart.setModel(model)\nsecondary = fluentqt.ChartModel(chart)\nsecondary.setName(\"Secondary\")\nsecondary.setPoints(\n    [QPointF(i, y) for i, y in enumerate([22, 32, 28, 42, 34, 48, 40])]\n)\nchart.addSeries(secondary)\n"
+    },
+    {
+      "route_id": "horizontal-bar-chart",
+      "sample_id": "horizontal-bar-chart-basic",
+      "source": "from PySide6.QtCore import QPointF\n\nchart = fluentqt.HorizontalBarChart()\nchart.setObjectName(\"chartPresentation\")\nchart.setMinimumHeight(420)\nchart.setTitle('Traffic sources')\nchart.setSubtitle('Share of sessions')\nmodel = fluentqt.ChartModel(chart)\nmodel.setName(\"Primary\")\nvalues = [48.2, 26.8, 16.4, 8.6]\nlabels = ['Direct', 'Search', 'Referral', 'Campaign']\nmodel.setPoints([QPointF(i, y) for i, y in enumerate(values)], labels)\nchart.setModel(model)\nchart.setYRange(0, 100)\nchart.setValueSuffix(\"%\")\n"
+    },
+    {
+      "route_id": "pie-chart",
+      "sample_id": "pie-chart-basic",
+      "source": "from PySide6.QtCore import QPointF\n\nchart = fluentqt.PieChart()\nchart.setObjectName(\"chartPresentation\")\nchart.setMinimumHeight(420)\nchart.setTitle('Traffic sources')\nchart.setSubtitle('Share of sessions')\nmodel = fluentqt.ChartModel(chart)\nmodel.setName(\"Primary\")\nvalues = [48.2, 26.8, 16.4, 8.6]\nlabels = ['Direct', 'Search', 'Referral', 'Campaign']\nmodel.setPoints([QPointF(i, y) for i, y in enumerate(values)], labels)\nchart.setModel(model)\n"
+    },
+    {
+      "route_id": "donut-chart",
+      "sample_id": "donut-chart-basic",
+      "source": "from PySide6.QtCore import QPointF\n\nchart = fluentqt.DonutChart()\nchart.setObjectName(\"chartPresentation\")\nchart.setMinimumHeight(420)\nchart.setTitle('Traffic sources')\nchart.setSubtitle('Share of sessions')\nmodel = fluentqt.ChartModel(chart)\nmodel.setName(\"Primary\")\nvalues = [48.2, 26.8, 16.4, 8.6]\nlabels = ['Direct', 'Search', 'Referral', 'Campaign']\nmodel.setPoints([QPointF(i, y) for i, y in enumerate(values)], labels)\nchart.setModel(model)\nchart.setCenterText(\"28,640\")\nchart.setCenterCaption(\"sessions\")\n"
+    },
+    {
+      "route_id": "scatter-chart",
+      "sample_id": "scatter-chart-basic",
+      "source": "from PySide6.QtCore import QPointF\n\nchart = fluentqt.ScatterChart()\nchart.setObjectName(\"chartPresentation\")\nchart.setMinimumHeight(420)\nchart.setXRange(0, 600)\nchart.setYRange(0, 80)\nchart.setTitle('Request distribution')\nchart.setSubtitle('Response time (ms) by payload (KB)')\nmodel = fluentqt.ChartModel(chart)\nmodel.setName(\"Primary\")\nvalues = [22, 31, 26, 42, 37, 50, 45, 58, 52, 62, 56, 68, 60, 70, 64]\nmodel.setPoints([QPointF(i * 40, y) for i, y in enumerate(values)])\nchart.setModel(model)\nsecondary = fluentqt.ChartModel(chart)\nsecondary.setName(\"Secondary\")\nsecondary_values = [18, 26, 21, 33, 29, 40, 35, 45, 39, 49, 43, 53, 48, 58, 51]\nsecondary.setPoints(\n    [QPointF(i * 40 + 12, y) for i, y in enumerate(secondary_values)]\n)\nchart.addSeries(secondary)\n"
+    },
+    {
+      "route_id": "sparkline",
+      "sample_id": "sparkline-basic",
+      "source": "from PySide6.QtCore import QPointF\n\nchart = fluentqt.Sparkline()\nchart.setObjectName(\"chartPresentation\")\nchart.setFixedSize(220, 56)\nchart.setAccessibleName(\"Recent trend\")\nmodel = fluentqt.ChartModel(chart)\nmodel.setName(\"Primary\")\nvalues = [20, 26, 22, 32, 28, 36, 33, 42, 38, 47, 42, 50]\nmodel.setPoints([QPointF(i, y) for i, y in enumerate(values)])\nchart.setModel(model)\n"
+    },
     {
       "route_id": "button",
       "sample_id": "button-styles",

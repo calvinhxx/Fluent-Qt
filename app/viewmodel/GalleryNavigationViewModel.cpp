@@ -65,9 +65,8 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
     m_items.append(node(
         GalleryNavigationItem::Kind::CategoryRoute, QStringLiteral("foundation"),
         QStringLiteral("Foundation"), QStringLiteral("Foundation"),
-        // Grid matches other mono nav glyphs; Color looked like a palette tile.
-        // zh_CN: Grid 与其他单色导航字形一致；原先 Color 看起来像调色板块。
-        Typography::Icons::Grid, QColor(QStringLiteral("#F3F1FB")),
+        Typography::Icons::glyph(QStringLiteral("ic_fluent_cube_20_regular")),
+        QColor(QStringLiteral("#F3F1FB")),
         QString(), // top-level category: no parent (not itself). zh_CN: 顶级分类，无父项（不是自己）。
         0, true));
     const struct {

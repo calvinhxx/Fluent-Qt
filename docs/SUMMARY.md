@@ -18,6 +18,7 @@ standalone reading tasks.
     - [Overlay Behavior Contract](architecture/overlay-behavior.md)
     - [Typography Resolution](architecture/typography-resolution.md)
     - [Inspector Report Contract](architecture/inspector-report.md)
+    - [Charts](architecture/charts.md)
 - [Fluent design](design-languages/README.md)
   - **Design references**
     - [Fluent (Windows) — Design Reference](design-languages/fluent.md)

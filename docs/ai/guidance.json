@@ -872,6 +872,57 @@
           "avoid_when": "A product-specific illustration or arbitrary image is required."
         }
       ]
+    },
+    {
+      "id": "charts",
+      "question": "How should indexed numerical data be plotted?",
+      "candidates": [
+        {
+          "component_id": "chart-view",
+          "choose_when": "A runtime-selectable chart host is needed. Prefer a dedicated chart component for a fixed presentation.",
+          "avoid_when": "GPU density plots, stacked series, logarithmic axes, or financial charting are required. Build large ChartData snapshots off the GUI thread rather than resetting raw data every frame."
+        },
+        {
+          "component_id": "line-chart",
+          "choose_when": "Compare indexed time or XY series with bounded extrema-preserving projection.",
+          "avoid_when": "Do not pass full histories per frame; prepare indexed ChartData snapshots off the GUI thread."
+        },
+        {
+          "component_id": "area-chart",
+          "choose_when": "Show trend magnitude with a restrained filled baseline.",
+          "avoid_when": "Do not pass full histories per frame; prepare indexed ChartData snapshots off the GUI thread."
+        },
+        {
+          "component_id": "bar-chart",
+          "choose_when": "Compare grouped categories; dense buckets expose their mean and source range.",
+          "avoid_when": "Do not pass full histories per frame; prepare indexed ChartData snapshots off the GUI thread."
+        },
+        {
+          "component_id": "horizontal-bar-chart",
+          "choose_when": "Compare named categories horizontally; setYRange(0, 100) for percent data.",
+          "avoid_when": "Do not pass full histories per frame; prepare indexed ChartData snapshots off the GUI thread."
+        },
+        {
+          "component_id": "pie-chart",
+          "choose_when": "Compare a small set of positive contributions as a full disk.",
+          "avoid_when": "Do not pass full histories per frame; prepare indexed ChartData snapshots off the GUI thread."
+        },
+        {
+          "component_id": "donut-chart",
+          "choose_when": "Compare positive contributions with optional center text and a responsive legend.",
+          "avoid_when": "Do not pass full histories per frame; prepare indexed ChartData snapshots off the GUI thread."
+        },
+        {
+          "component_id": "scatter-chart",
+          "choose_when": "Show representative XY samples; this is not a density estimator.",
+          "avoid_when": "Do not pass full histories per frame; prepare indexed ChartData snapshots off the GUI thread."
+        },
+        {
+          "component_id": "sparkline",
+          "choose_when": "Embed a compact trend with no axes, card or metric ownership.",
+          "avoid_when": "Do not pass full histories per frame; prepare indexed ChartData snapshots off the GUI thread."
+        }
+      ]
     }
   ]
 }

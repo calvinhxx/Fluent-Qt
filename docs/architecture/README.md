@@ -29,6 +29,7 @@ flowchart TD
 
 | Contract | Use it when changing |
 |---|---|
+| [Charts](charts.md) | Model ownership, indexed projections, streaming, chart aggregation, or accessibility |
 | [Overlay behavior](overlay-behavior.md) | Popup, Flyout, Dialog, TeachingTip, dropdown, drawer, or another same-window transient surface |
 | [Window chrome](window-chrome.md) | Title bars, native move/resize, backdrops, hit testing, or platform window behavior |
 | [Typography resolution](typography-resolution.md) | Fonts, inherited application typography, role resolution, or text scaling |
