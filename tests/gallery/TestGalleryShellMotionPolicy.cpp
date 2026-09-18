@@ -4,6 +4,8 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QElapsedTimer>
+#include <QGraphicsOpacityEffect>
+#include <QImage>
 #include <QPointer>
 #include <QPropertyAnimation>
 #include <QSignalSpy>
@@ -17,8 +19,12 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/MotionPolicy.h"
 #include "components/foundation/overlay/OverlayScrim.h"
+#include "components/layout/ParticleBackdrop.h"
+#include "components/navigation/StackContentHost.h"
+#include "components/textfields/Label.h"
 #include "components/windowing/TitleBar.h"
 #include "model/GalleryNavigationItem.h"
+#include "view/pages/GalleryContentPage.h"
 #include "view/shell/GalleryIntroTour.h"
 #include "view/shell/GalleryContentPresenter.h"
 #include "view/shell/GalleryNavigationPane.h"
@@ -129,6 +135,148 @@ TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesSplashDismissSynchrono
         EXPECT_EQ(fade->state(), QAbstractAnimation::Stopped);
     processDeferredDeletes();
     EXPECT_TRUE(splashGuard.isNull());
+}
+
+TEST_F(GalleryShellMotionPolicyTest, StartupPrewarmCompletesHiddenPageLayoutBeforeHandoff)
+{
+    fluent::navigation::StackContentHost host;
+    host.resize(960, 680);
+    fluent::gallery::GalleryNavigationViewModel model;
+    fluent::gallery::GalleryContentPresenter presenter(&host, model);
+    ASSERT_TRUE(presenter.presentRoute(QStringLiteral("home")));
+    showAndProcess(host);
+    QSignalSpy finished(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmFinished);
+    presenter.prewarmRoutes(
+        {QStringLiteral("button"), QStringLiteral("slider"), QStringLiteral("tab-view")});
+    QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 4000);
+    EXPECT_EQ(presenter.currentRouteId(), QStringLiteral("home"));
+
+    class ResizeWatch final : public QObject {
+    public:
+        int count = 0;
+        bool eventFilter(QObject*, QEvent* event) override
+        {
+            if (event->type() == QEvent::Resize)
+                ++count;
+            return false;
+        }
+    } watch;
+    int warmedPages = 0;
+    for (auto* page : host.findChildren<fluent::gallery::GalleryContentPage*>()) {
+        if (page == presenter.currentPage())
+            continue;
+        EXPECT_TRUE(page->isHidden());
+        page->installEventFilter(&watch);
+        ++warmedPages;
+    }
+    ASSERT_EQ(warmedPages, 3);
+    // Opacity effects render a QWidget subtree. That must not deliver the warmed pages'
+    // first resize in the middle of the logo's flight.
+    host.grab();
+    EXPECT_EQ(watch.count, 0);
+}
+
+TEST_F(GalleryShellMotionPolicyTest, SplashHandoffCachesContentAndRestoresLivePainting)
+{
+    class PaintCounter final : public fluent::textfields::Label {
+    public:
+        using Label::Label;
+        int paints = 0;
+        void paintEvent(QPaintEvent* event) override
+        {
+            ++paints;
+            Label::paintEvent(event);
+        }
+    };
+    QWidget host;
+    host.resize(640, 480);
+    PaintCounter content(QStringLiteral("Ready"), &host);
+    content.setGeometry(host.rect());
+    content.setAutoFillBackground(true);
+    auto* splash = new GallerySplashScreen(&host);
+    showAndProcess(host);
+    splash->show();
+    const QImage liveFrame = content.grab().toImage().convertToFormat(QImage::Format_ARGB32);
+    splash->cacheDismissalContent(&content);
+    ASSERT_NE(content.graphicsEffect(), nullptr);
+    EXPECT_EQ(content.grab().toImage().convertToFormat(QImage::Format_ARGB32), liveFrame);
+    splash->dismiss();
+    auto* fade = splash->findChild<QPropertyAnimation*>("splashDismissAnimation");
+    ASSERT_NE(fade, nullptr);
+    fade->pause();
+    fade->setCurrentTime(fade->duration() / 4);
+    host.grab();
+    const int capturedPaints = content.paints;
+    ASSERT_GT(capturedPaints, 0);
+    for (int percent : {35, 50, 65}) {
+        content.update(); // A live background may request a new frame throughout the handoff.
+        fade->setCurrentTime(fade->duration() * percent / 100);
+        host.grab();
+        EXPECT_EQ(content.paints, capturedPaints);
+    }
+    content.resize(600, 440);
+    host.grab();
+    EXPECT_GT(content.paints, capturedPaints);
+    const int resizedPaints = content.paints;
+    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
+    host.grab();
+    EXPECT_GT(content.paints, resizedPaints);
+
+    fade->setCurrentTime(fade->duration());
+    EXPECT_TRUE(splash->isHidden());
+    EXPECT_EQ(content.graphicsEffect(), nullptr);
+    const int beforeLivePaint = content.paints;
+    host.grab();
+    EXPECT_GT(content.paints, beforeLivePaint);
+}
+
+TEST_F(GalleryShellMotionPolicyTest, SplashContentCacheRespectsEffectsCancellationAndMotion)
+{
+    QWidget host;
+    host.resize(640, 480);
+    QWidget content(&host);
+    content.setGeometry(host.rect());
+    fluent::layout::ParticleBackdrop background(&content);
+    background.setGeometry(content.rect());
+    fluent::layout::ParticleBackdrop disabledBackground(&content);
+    disabledBackground.setAnimationEnabled(false);
+    fluent::layout::ParticleBackdrop hiddenBackground(&content);
+    hiddenBackground.hide();
+    auto* splash = new GallerySplashScreen(&host);
+    showAndProcess(host);
+    splash->show();
+    auto* existing = new QGraphicsOpacityEffect(&content);
+    content.setGraphicsEffect(existing);
+    splash->cacheDismissalContent(&content);
+    EXPECT_EQ(content.graphicsEffect(), existing);
+    splash->clearDismissalContent();
+    EXPECT_EQ(content.graphicsEffect(), existing);
+    content.setGraphicsEffect(nullptr);
+    splash->cacheDismissalContent(&host);
+    EXPECT_EQ(host.graphicsEffect(), nullptr);
+
+    splash->cacheDismissalContent(&content);
+    ASSERT_NE(content.graphicsEffect(), nullptr);
+    EXPECT_FALSE(background.isAnimationEnabled());
+    EXPECT_FALSE(disabledBackground.isAnimationEnabled());
+    EXPECT_TRUE(hiddenBackground.isAnimationEnabled());
+    splash->dismiss();
+    splash->hide();
+    EXPECT_EQ(content.graphicsEffect(), nullptr);
+    EXPECT_TRUE(background.isAnimationEnabled());
+    EXPECT_FALSE(disabledBackground.isAnimationEnabled());
+    splash->show();
+    for (auto mode : {fluent::MotionPolicy::Mode::Reduced, fluent::MotionPolicy::Mode::Disabled}) {
+        fluent::MotionPolicy::instance().setMode(mode);
+        splash->cacheDismissalContent(&content);
+        EXPECT_EQ(content.graphicsEffect(), nullptr);
+    }
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    splash->cacheDismissalContent(&content);
+    ASSERT_NE(content.graphicsEffect(), nullptr);
+    delete splash;
+    EXPECT_EQ(content.graphicsEffect(), nullptr);
+    EXPECT_TRUE(background.isAnimationEnabled());
 }
 
 TEST_F(GalleryShellMotionPolicyTest, StartupReplacementCleansUpWithoutStartingTour)
