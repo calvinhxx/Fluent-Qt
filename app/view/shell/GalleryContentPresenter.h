@@ -37,8 +37,7 @@ class GalleryContentPresenter : public QObject {
 public:
     GalleryContentPresenter(fluent::navigation::StackContentHost* contentHost,
                             const GalleryNavigationViewModel& navigationViewModel,
-                            QObject* parent = nullptr,
-                            int maxResidentRoutes = 0);
+                            QObject* parent = nullptr, int maxResidentRoutes = 0);
 
     QString currentRouteId() const { return m_currentRouteId; }
     QWidget* currentPage() const;
@@ -93,10 +92,7 @@ signals:
      * @brief Reports request-to-first-paint navigation timing for diagnostics and regression tests.
      * zh_CN: 上报从导航请求到目标页首帧绘制的耗时，供诊断与回归测试使用。
      */
-    void navigationPresented(const QString& routeId,
-                             bool cold,
-                             qint64 buildMs,
-                             qint64 switchMs,
+    void navigationPresented(const QString& routeId, bool cold, qint64 buildMs, qint64 switchMs,
                              qint64 totalMs);
 
     /** @brief Splash-phase prewarm warmed `done` of `total` queued pages; drives the splash caption. */
@@ -151,10 +147,11 @@ private:
     QQueue<QString> m_prewarmQueue;
     QElapsedTimer m_prewarmBudget;
     bool m_prewarmScheduled = false;
-    bool m_prewarmPaused = false;  // Set while the user moves/resizes the window; blocks page builds.
+    bool m_prewarmPaused =
+        false; // Set while the user moves/resizes the window; blocks page builds.
 
-    int m_prewarmTotal = 0;   // Pages queued for splash-phase warm; denominator of the caption.
-    int m_prewarmDone = 0;    // Pages warmed so far; numerator of the caption.
+    int m_prewarmTotal = 0; // Pages queued for splash-phase warm; denominator of the caption.
+    int m_prewarmDone = 0;  // Pages warmed so far; numerator of the caption.
 
     quint64 m_navigationRequestId = 0;
     quint64 m_pendingRequestId = 0;
