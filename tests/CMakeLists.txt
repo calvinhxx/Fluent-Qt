@@ -413,8 +413,9 @@ get_property(FLUENT_QT_CI_FULL_TEST_TARGETS GLOBAL PROPERTY FLUENT_QT_CI_FULL_TE
 get_property(FLUENT_QT_CONTRACT_TEST_TARGETS GLOBAL PROPERTY FLUENT_QT_CONTRACT_TEST_TARGETS)
 if(FLUENT_QT_ALL_TEST_TARGETS)
     # Category aggregates let PR CI build affected test binaries without a second target catalog.
-    foreach(_fluent_qt_component_group
+    set(_fluent_qt_component_groups
             basicinput
+            charts
             collections
             date_time
             dialogs_flyouts
@@ -425,6 +426,10 @@ if(FLUENT_QT_ALL_TEST_TARGETS)
             status_info
             textfields
             windowing)
+    if(FLUENT_QT_BUILD_GALLERY)
+        list(APPEND _fluent_qt_component_groups gallery)
+    endif()
+    foreach(_fluent_qt_component_group IN LISTS _fluent_qt_component_groups)
         set(_fluent_qt_component_targets)
         foreach(_fluent_qt_test_target IN LISTS FLUENT_QT_ALL_TEST_TARGETS)
             get_target_property(_fluent_qt_target_labels

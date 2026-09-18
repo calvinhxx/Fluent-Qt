@@ -100,7 +100,7 @@ foreach(_gallery_acceptance_scale 1.25 2 3)
             ENVIRONMENT
                 "SKIP_VISUAL_TEST=1;QT_QPA_PLATFORM=offscreen;QT_FONT_DPI=96;QT_SCALE_FACTOR=${_gallery_acceptance_scale}"
             LABELS
-                "qt;unit;test_gallery_content_pages;gallery_acceptance;high_dpi;ci_full;local_full"
+                "qt;unit;test_gallery_content_pages;gallery;gallery_acceptance;high_dpi;ci_full;local_full"
             TIMEOUT 60)
 endforeach()
 

@@ -118,6 +118,7 @@ CPP_COMPONENT_TEST_GROUPS = frozenset(
         "windowing",
     }
 )
+CPP_TEST_GROUPS = CPP_COMPONENT_TEST_GROUPS | {"gallery"}
 
 CPP_COMPONENT_PATH_PREFIXES = (
     "src/components/",
@@ -127,7 +128,6 @@ CPP_COMPONENT_PATH_PREFIXES = (
 CPP_TEST_IRRELEVANT_PREFIXES = (
     ".agents/",
     ".github/ISSUE_TEMPLATE/",
-    "app/",
     "bindings/",
     "docs/",
     "examples/",
@@ -180,7 +180,7 @@ class CppTestSelection:
         if self.scope == "selected" and (
             not self.groups
             or list(self.groups) != sorted(set(self.groups))
-            or any(group not in CPP_COMPONENT_TEST_GROUPS for group in self.groups)
+            or any(group not in CPP_TEST_GROUPS for group in self.groups)
         ):
             raise ValueError("Selected C++ test groups are not allowlisted")
 
@@ -228,7 +228,7 @@ def _all_cpp_tests() -> CppTestSelection:
 
 def _cpp_tests_for_groups(groups: set[str]) -> CppTestSelection:
     """Resolve trusted component groups to static targets and a label regex."""
-    unknown_groups = groups.difference(CPP_COMPONENT_TEST_GROUPS)
+    unknown_groups = groups.difference(CPP_TEST_GROUPS)
     if unknown_groups:
         raise ValueError(
             "Unknown C++ component test groups: "
@@ -282,6 +282,9 @@ def select_cpp_tests(paths: list[str]) -> CppTestSelection:
         if not isinstance(path, str) or _has_unsafe_path_syntax(path):
             return _all_cpp_tests()
         if is_documentation_path(path):
+            continue
+        if path.startswith(("app/", "tests/gallery/")):
+            groups.add("gallery")
             continue
         if path in CPP_TEST_IRRELEVANT_ROOT_FILES or path.startswith(
             CPP_TEST_IRRELEVANT_PREFIXES

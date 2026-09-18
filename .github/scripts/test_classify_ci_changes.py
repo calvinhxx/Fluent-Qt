@@ -344,6 +344,37 @@ class ClassifyCiChangesTest(unittest.TestCase):
         registered = set(re.findall(r"add_subdirectory\(([a-z_]+)\)", contents))
         self.assertEqual(registered, set(MODULE.CPP_COMPONENT_TEST_GROUPS))
 
+    def test_source_categories_cannot_be_omitted_from_both_test_lists(self):
+        source_groups = {
+            path.name for path in (PROJECT_ROOT / "src/components").iterdir()
+            if path.is_dir()
+        }
+        # Foundation owns the tests registered directly in tests/components.
+        self.assertEqual(
+            source_groups - {"foundation"}, set(MODULE.CPP_COMPONENT_TEST_GROUPS),
+            "Register each new component category in tests and CI selection",
+        )
+
+    def test_selected_categories_have_cmake_aggregate_targets(self):
+        contents = (PROJECT_ROOT / "tests/CMakeLists.txt").read_text(encoding="utf-8")
+        groups = re.search(r"set\(_fluent_qt_component_groups\s+([^)]*)\)", contents).group(1).split()
+        self.assertEqual(set(groups), set(MODULE.CPP_COMPONENT_TEST_GROUPS))
+        self.assertIn("list(APPEND _fluent_qt_component_groups gallery)", contents)
+
+    def test_gallery_uses_its_own_tests_instead_of_all_components(self):
+        for path in ("app/view/ContentPresenter.cpp", "app/assets/app-icon.png",
+                     "tests/gallery/TestGalleryShellFramework.cpp"):
+            with self.subTest(path=path):
+                self.assert_cpp_selection([path], scope="selected", labels="^(gallery)$",
+                                          targets=["fluent_qt_gallery_tests"])
+
+    def test_gallery_and_component_changes_combine_without_losing_either(self):
+        self.assert_cpp_selection(
+            ["app/view/widgets/samples/ChartsSamples.cpp", "src/components/charts/ChartView.cpp"],
+            scope="selected", labels="^(charts|gallery)$",
+            targets=["fluent_qt_charts_tests", "fluent_qt_gallery_tests"],
+        )
+
     def test_component_test_path_selects_its_own_group(self):
         self.assert_cpp_selection(
             ["tests/components/date_time/TestDatePicker.cpp"],
@@ -394,7 +425,6 @@ class ClassifyCiChangesTest(unittest.TestCase):
         paths = (
             "README.md",
             "docs/development/testing-workflow.md",
-            "app/pages/basicinput_page.py",
             "bindings/pyside6/native/typesystem_fluentqt.xml",
             "site/api/catalog.json",
             "tools/docs/validate_documentation.py",
@@ -408,7 +438,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
     def test_irrelevant_path_does_not_widen_a_precise_component_change(self):
         self.assert_cpp_selection(
             [
-                "app/pages/basicinput_page.py",
+                "docs/components/button.md",
                 "src/components/basicinput/Button.cpp",
             ],
             scope="selected",
