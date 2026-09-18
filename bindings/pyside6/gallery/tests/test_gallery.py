@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
+import traceback
 import unittest
 from unittest.mock import patch
 import uuid
@@ -5216,5 +5217,17 @@ with (
         self.assertEqual(image.pixelColor(79, 39), expected)
 
 
+class _GalleryTestResult(unittest.TextTestResult):
+    def addError(self, test, err):
+        super().addError(test, err)
+        # A native teardown failure must not swallow the preceding Python error.
+        traceback.print_exception(*err, file=self.stream)
+        self.stream.flush()
+
+
+class _GalleryTestRunner(unittest.TextTestRunner):
+    resultclass = _GalleryTestResult
+
+
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(testRunner=_GalleryTestRunner, verbosity=2)
