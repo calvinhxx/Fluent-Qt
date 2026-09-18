@@ -3812,7 +3812,11 @@ with (
             self.assertIsNone(content.graphicsEffect())
             fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
             splash.cache_dismissal_content(content)
+            self.assertTrue(shiboken6.isValid(host))
+            self.assertTrue(shiboken6.isValid(content))
             shiboken6.delete(splash)
+            self.assertTrue(shiboken6.isValid(host))
+            self.assertTrue(shiboken6.isValid(content))
             self.assertIsNone(content.graphicsEffect())
             self.assertTrue(visible.isAnimationEnabled())
         finally:
