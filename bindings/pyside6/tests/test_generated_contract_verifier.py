@@ -2188,6 +2188,7 @@ def fluent_namespace_source(
     selection_converter_count=1,
     unstable_collections_converter=False,
     leaked_menus_enum_helper=False,
+    leaked_charts_enum_helper=None,
 ):
     converter = textwrap.dedent(
         """
@@ -2208,6 +2209,10 @@ def fluent_namespace_source(
     if leaked_menus_enum_helper:
         source += (
             "::fluent::menus_toolbars::qt_getEnumMetaObject(cppArg0);\n"
+        )
+    if leaked_charts_enum_helper:
+        source += "::fluent::charts::{0}(cppArg0);\n".format(
+            leaked_charts_enum_helper
         )
     return source
 
@@ -3324,12 +3329,14 @@ class GeneratedContractVerifierTest(unittest.TestCase):
         selection_converter_count=1,
         unstable_collections_converter=False,
         leaked_menus_enum_helper=False,
+        leaked_charts_enum_helper=None,
     ):
         (self.generated_dir / FLUENT_NAMESPACE_WRAPPER).write_text(
             fluent_namespace_source(
                 selection_converter_count,
                 unstable_collections_converter,
                 leaked_menus_enum_helper,
+                leaked_charts_enum_helper,
             ),
             encoding="utf-8",
         )
@@ -4488,6 +4495,15 @@ class GeneratedContractVerifierTest(unittest.TestCase):
             "invalid menus_toolbars Q_ENUM helper",
             result.stderr,
         )
+
+    def test_charts_q_enum_helpers_are_rejected(self):
+        for helper_name in ("qt_getEnumMetaObject", "qt_getEnumName"):
+            with self.subTest(helper=helper_name):
+                self.write_fluent_namespace(leaked_charts_enum_helper=helper_name)
+                result = self.run_verifier()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("invalid charts Q_ENUM helper", result.stderr)
+                self.assertIn(helper_name, result.stderr)
 
     def test_command_bar_flyout_anchor_retention_is_required(self):
         self.write_command_surfaces(
