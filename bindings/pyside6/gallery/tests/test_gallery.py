@@ -3812,7 +3812,16 @@ with (
             self.assertIsNone(content.graphicsEffect())
             fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
             splash.cache_dismissal_content(content)
-            shiboken6.delete(splash)
+            self.assertTrue(shiboken6.isValid(host))
+            self.assertTrue(shiboken6.isValid(content))
+            # Shiboken 6.2 leaves isQAppSingleton uninitialized: its delete()
+            # can destroy QApplication. Flush Qt's native deferred deletion.
+            splash.deleteLater()
+            QCoreApplication.sendPostedEvents(splash, QEvent.DeferredDelete)
+            self.assertFalse(shiboken6.isValid(splash))
+            self.assertIs(QApplication.instance(), self.app)
+            self.assertTrue(shiboken6.isValid(host))
+            self.assertTrue(shiboken6.isValid(content))
             self.assertIsNone(content.graphicsEffect())
             self.assertTrue(visible.isAnimationEnabled())
         finally:

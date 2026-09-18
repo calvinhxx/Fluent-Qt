@@ -955,7 +955,9 @@ class _StartupContentEffect(QGraphicsEffect):
 
     def draw(self, painter: QPainter) -> None:
         bounds = self.sourceBoundingRect(Qt.LogicalCoordinates)
-        dpr = painter.device().devicePixelRatioF()
+        # PySide 6.2 can adopt device()'s widget wrapper into the temporary
+        # painter. Read the content's native DPR without changing ownership.
+        dpr = self.parent().devicePixelRatioF()
         theme = (fluentqt.current_theme(), fluentqt.theme_revision())
         if (
             self._frame.isNull() or bounds != self._bounds
@@ -976,7 +978,7 @@ class _StartupContentCache:
         self.effect: _StartupContentEffect | None = None
         self.paused_backdrops: list[fluentqt.ParticleBackdrop] = []
 
-    def clear(self, *_unused) -> None:
+    def clear(self) -> None:
         content, effect = self.content, self.effect
         paused = self.paused_backdrops
         self.content = self.effect = None
@@ -1004,6 +1006,8 @@ class GallerySplashScreen(fluentqt.SplashScreen):
         self.setSubtitle("Small details. Fluent experiences.")
         self.setText("Preparing your workspace")
         self._dismissal_cache = _StartupContentCache()
+        # A zero-argument slot avoids wrapping the QObject already in native
+        # teardown for destroyed(QObject*) on PySide 6.2.
         self.destroyed.connect(self._dismissal_cache.clear)
         self.dismissed.connect(self.deleteLater)
         self.replaced.connect(self.deleteLater)

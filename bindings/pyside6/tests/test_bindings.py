@@ -370,6 +370,24 @@ class FluentQtBindingTest(unittest.TestCase):
             host.deleteLater()
             QApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
+    def test_splash_screen_transition_target_getter_borrows_native_host(self):
+        window = fluentqt.Window()
+        host = window.contentHost()
+        splash = fluentqt.SplashScreen(host)
+        try:
+            splash.setTransitionTarget(host)
+            self.assertIs(splash.transitionTarget(), host)
+            # Avoid Shiboken 6.2's uninitialized isQAppSingleton delete() flag.
+            splash.deleteLater()
+            QCoreApplication.sendPostedEvents(splash, QEvent.DeferredDelete)
+            self.assertFalse(shiboken6.isValid(splash))
+            self.assertIs(QApplication.instance(), self.app)
+            self.assertTrue(shiboken6.isValid(host))
+            self.assertIs(window.contentHost(), host)
+        finally:
+            window.deleteLater()
+            QCoreApplication.sendPostedEvents(window, QEvent.DeferredDelete)
+
     def test_public_types_and_build_versions(self):
         self.assertTrue(issubclass(fluentqt.Accordion, QWidget))
         self.assertTrue(issubclass(fluentqt.Avatar, QWidget))
