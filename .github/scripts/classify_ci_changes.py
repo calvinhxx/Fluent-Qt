@@ -105,6 +105,7 @@ GITHUB_PULL_FILES_LIMIT = 3000
 CPP_COMPONENT_TEST_GROUPS = frozenset(
     {
         "basicinput",
+        "charts",
         "collections",
         "date_time",
         "dialogs_flyouts",
