@@ -377,11 +377,16 @@ class FluentQtBindingTest(unittest.TestCase):
         try:
             splash.setTransitionTarget(host)
             self.assertIs(splash.transitionTarget(), host)
-            shiboken6.delete(splash)
+            # Avoid Shiboken 6.2's uninitialized isQAppSingleton delete() flag.
+            splash.deleteLater()
+            QCoreApplication.sendPostedEvents(splash, QEvent.DeferredDelete)
+            self.assertFalse(shiboken6.isValid(splash))
+            self.assertIs(QApplication.instance(), self.app)
             self.assertTrue(shiboken6.isValid(host))
             self.assertIs(window.contentHost(), host)
         finally:
-            shiboken6.delete(window)
+            window.deleteLater()
+            QCoreApplication.sendPostedEvents(window, QEvent.DeferredDelete)
 
     def test_public_types_and_build_versions(self):
         self.assertTrue(issubclass(fluentqt.Accordion, QWidget))
