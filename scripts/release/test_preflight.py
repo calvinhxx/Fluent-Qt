@@ -86,6 +86,15 @@ class ReleasePreflightTest(unittest.TestCase):
         self.assertEqual(checks[-1][0], "curated changelog")
         self.assertIn("--require-curated", checks[-1][1])
 
+    def test_release_reuses_the_local_integration_gates(self):
+        temporary, root = make_repository()
+        self.addCleanup(temporary.cleanup)
+        context = MODULE.collect_release_context(root, "main")
+        shared = MODULE.integration_checks(root)
+        checks = MODULE.lightweight_checks(context, root / "notes.md")
+        self.assertEqual(checks[:len(shared)], shared)
+        self.assertEqual(sum(label == "Gallery wheel builder" for label, _ in checks), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

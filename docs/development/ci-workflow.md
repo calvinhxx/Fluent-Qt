@@ -56,6 +56,14 @@ host and focused contract validation.
 CI may pin build parallelism to its measured runner capacity. Local builds use
 the [adaptive wrapper](build-workflow.md).
 
+Run the [local integration preflight](testing-workflow.md#local-integration-preflight)
+before pushing. Its Qt-free source/packaging gates are also the first checks in
+the CI planning job, so inventory mistakes fail before allocating native
+runners. For a runtime failure, reproduce the failing test with the same
+Qt/PySide line and rerun that job before requesting another full matrix. A
+same-commit retry can reuse the failed job; a code change needs new validation.
+Keep full validation on the final release commit.
+
 ## Build release artifacts once
 
 For an untagged release version on `main`,

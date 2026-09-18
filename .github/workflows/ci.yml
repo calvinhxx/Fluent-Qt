@@ -52,7 +52,7 @@ jobs:
       - name: Validate CI orchestration contracts
         shell: bash
         run: |
-          python3 .github/scripts/test_classify_ci_changes.py
+          python3 tools/dev/fluent_qt_preflight.py --checks-only
           python3 .github/scripts/test_check_release_branch_freshness.py
           python3 .github/scripts/test_validate_ci_workflow_boundaries.py
           python3 .github/scripts/validate-gallery-boundary.py

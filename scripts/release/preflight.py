@@ -136,11 +136,26 @@ def collect_release_context(root: Path, base_ref: str) -> ReleaseContext:
     )
 
 
+def integration_checks(output_dir: Path) -> list[tuple[str, list[str]]]:
+    """Run source/packaging contracts without a Qt SDK or an installed wheel."""
+    python = sys.executable
+    contract = str(output_dir / "gallery-contract.json")
+    return [
+        ("CI component registration", [python, ".github/scripts/test_classify_ci_changes.py"]),
+        ("core wheel inventory", [python, "bindings/pyside6/tests/test_wheel_builder.py"]),
+        ("binding verifier tests", [python, "bindings/pyside6/tests/test_generated_contract_verifier.py"]),
+        ("Gallery wheel builder", [python, "bindings/pyside6/gallery/tests/test_wheel_builder.py"]),
+        ("Gallery smoke contracts", [python, "bindings/pyside6/gallery/tests/test_gallery_wheel_smoke_contracts.py"]),
+        ("native Gallery contract", [python, "bindings/pyside6/gallery/tools/generate_gallery_contract.py", "--project-root", ".", "--output", contract]),
+        ("Gallery contract coverage", [python, "bindings/pyside6/gallery/tests/test_gallery_contract_generator.py", "--project-root", ".", "--contract", contract]),
+    ]
+
+
 def lightweight_checks(
     context: ReleaseContext, output_path: Path
 ) -> list[tuple[str, list[str]]]:
     python = sys.executable
-    return [
+    return integration_checks(output_path.parent) + [
         ("project metadata", [python, ".github/scripts/validate-project-metadata.py"]),
         ("desktop package matrix", [python, ".github/scripts/validate-package-matrix.py"]),
         ("Python wheel matrix", [python, ".github/scripts/validate-pyside-wheel-matrix.py"]),
@@ -151,7 +166,6 @@ def lightweight_checks(
         ("onboarding doctor", [python, "tools/onboarding/test_fluentqt_doctor.py"]),
         ("onboarding create", [python, "tools/onboarding/test_fluentqt_create.py"]),
         ("onboarding trial", [python, "tools/onboarding/test_fluentqt_trial.py"]),
-        ("Gallery wheel builder", [python, "bindings/pyside6/gallery/tests/test_wheel_builder.py"]),
         (
             "curated changelog",
             [

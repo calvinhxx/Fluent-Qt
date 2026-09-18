@@ -179,6 +179,63 @@ python3 tools/site/generate_localized_site.py --check
 python3 tools/site/generate_api_reference.py --check
 ```
 
+## Local integration preflight
+
+Catch component-selection, wheel-file, generated-wrapper verifier, and Gallery
+contract omissions before compiling Qt or pushing a pull request:
+
+```bash
+python3 tools/dev/fluent_qt_preflight.py --checks-only
+```
+
+The same source/packaging checks run in CI's planning job and the release
+preflight. They require no Qt installation. This command does not verify
+runtime ownership or compatibility; the generated-wrapper verifier's unit
+tests are distinct from checking an actual generated binding.
+
+For runtime checks, use the CI path classifier with the branch diff plus staged,
+unstaged, and untracked changes. Renames include both paths. Preview the selected
+tests, then supply existing configured builds:
+
+```bash
+python3 tools/dev/fluent_qt_preflight.py --base-ref origin/main --plan
+python3 tools/dev/fluent_qt_preflight.py --base-ref origin/main \
+  --build-dir build/vcpkg-osx --pyside-build-dir build/pyside6-local
+```
+
+Both local and CI selection map `app/` and `tests/gallery/` changes to
+`fluent_qt_gallery_tests` and the `gallery` label. Mixed component/Gallery
+changes combine their groups; shared library or build changes still select
+the full host set. Gallery selection requires `FLUENT_QT_BUILD_GALLERY=ON`.
+
+Build directory names are examples; use the directories configured for your
+host. Native builds need `BUILD_TESTING` and `FLUENT_QT_BUILD_TESTS`; bindings
+builds need `BUILD_TESTING`, `FLUENT_QT_BUILD_PYSIDE6_BINDINGS`, and
+`FLUENT_QT_BUILD_PYSIDE6_GALLERY`. Repeat either build-directory option to test
+other SDKs. Use `--config Debug` for a multi-configuration Debug build. The
+runner reuses the adaptive build wrapper and CTest labels, excludes manual
+desktop checks, defaults CTest to offscreen, and fails if no tests are selected.
+It refreshes CMake generation with the existing cache before building, so newly
+registered targets are available with Makefile generators as well as Ninja.
+It stops at the first failure; it does not install SDKs or launch remote CI.
+
+`build/local-preflight/report.json` records the changed paths, commit, host,
+configured Qt SDKs, Python runtime versions, commands, results, and log paths.
+Use `--report PATH` to retain separate runs. Exit `1` means a failed check;
+exit `2` means required version coverage remains incomplete. A newer SDK pass
+does not count as a minimum-version pass. The required native minimum lines
+and Python compatibility/release lines come from the existing CI matrices.
+Missing environments remain explicit work for another host or the matching CI
+lane. A plan, cheap-check result, or local runtime result does not replace
+installed-wheel, platform, or exact-commit release validation.
+
+The Gallery wheel smoke script can also run from outside the checkout in a
+clean environment containing the installed wheels. It checks the installed
+wheel's `RECORD`, contract, and live routes without consulting source files.
+Pass `--project-root /path/to/Fluent-QT` to additionally compare the package
+with native Gallery sources and images. CI and publication always pass this
+option; an invalid source root fails instead of skipping the comparison.
+
 ## Validation Tiers
 
 Use the [CI workflow](ci-workflow.md) for fast/full triggers, reusable module
