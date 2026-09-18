@@ -240,6 +240,7 @@ def main():
         "__init__.pyi",
         "_fluentqt.pyi",
         "basicinput.pyi",
+        "charts.pyi",
         "collections.pyi",
         "date_time.pyi",
         "design.pyi",

@@ -53,6 +53,8 @@ REQUIRED_PACKAGE_FILES = {
     "_fluentqt.pyi",
     "basicinput.py",
     "basicinput.pyi",
+    "charts.py",
+    "charts.pyi",
     "collections.pyi",
     "date_time.pyi",
     "design.py",
