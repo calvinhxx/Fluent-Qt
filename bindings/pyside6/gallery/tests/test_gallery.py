@@ -3831,11 +3831,47 @@ with (
                     "window", "parentWidget", "graphicsEffect", "setGraphicsEffect",
                 )
             }
+            dynamic_properties = {
+                name: [bytes(key).decode() for key in widget.dynamicPropertyNames()]
+                for name, widget in (
+                    ("host", host), ("content", content),
+                    ("cover", cover_host), ("splash", splash),
+                )
+            }
+            lifetime = []
+
+            def record_lifetime(stage):
+                lifetime.append((stage, {
+                    name: shiboken6.isValid(widget)
+                    for name, widget in (
+                        ("host", host), ("content", content),
+                        ("cover", cover_host), ("splash", splash),
+                    )
+                }))
+
+            cache = splash._dismissal_cache
+            cache_effect = content.graphicsEffect()
+            splash.destroyed.disconnect(cache.clear)
+            splash.destroyed.connect(lambda: record_lifetime("before cache cleanup"))
+            splash.destroyed.connect(cache.clear)
+            splash.destroyed.connect(lambda: record_lifetime("after cache cleanup"))
+            cache_effect.destroyed.connect(
+                lambda: record_lifetime("cache effect destroyed")
+            )
             shiboken6.delete(splash)
+            after_ownership = "\n".join(
+                f"{name}: {shiboken6.dump(widget)}"
+                for name, widget in (
+                    ("host", host), ("content", content),
+                    ("cover", cover_host), ("splash", splash),
+                    ("effect", cache_effect),
+                )
+            )
             self.assertTrue(
                 shiboken6.isValid(host),
                 f"Native destruction: {destroyed}\nInherited accessors: {accessors}"
-                f"\nBefore deletion:\n{ownership}",
+                f"\nDynamic properties: {dynamic_properties}\nLifecycle: {lifetime}"
+                f"\nBefore deletion:\n{ownership}\nAfter deletion:\n{after_ownership}",
             )
             self.assertTrue(shiboken6.isValid(content))
             self.assertIsNone(content.graphicsEffect())
