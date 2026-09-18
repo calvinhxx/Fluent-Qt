@@ -1012,7 +1012,9 @@
       "showToast",
       "sizeHint",
       "title",
-      "updateKey"
+      "updateKey",
+      "isClosable",
+      "setClosable"
     ],
     "ToolTip": [
       "attach",

@@ -5,10 +5,13 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QEvent>
+#include <QGraphicsOpacityEffect>
 #include <QPointer>
+#include <QPropertyAnimation>
 #include <QSignalSpy>
 #include <QTest>
 #include <QVector>
+#include <QVariantAnimation>
 
 #include <algorithm>
 
@@ -17,6 +20,7 @@
 #include "components/foundation/FontIcon.h"
 #include "components/foundation/MotionPolicy.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/layout/Card.h"
 #include "components/status_info/Toast.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
@@ -114,6 +118,7 @@ TEST(ToastTest, Contract_DefaultsAndNoOpSetters)
     EXPECT_EQ(toast.duration(), 2200);
     EXPECT_TRUE(toast.isAnimationEnabled());
     EXPECT_EQ(toast.action(), nullptr);
+    EXPECT_FALSE(toast.isClosable());
     EXPECT_FALSE(toast.isPauseOnHoverEnabled());
     EXPECT_TRUE(toast.updateKey().isEmpty());
     EXPECT_FALSE(toast.isOpen());
@@ -246,9 +251,71 @@ TEST(ToastTest, Contract_ShortMessageDoesNotWrap)
     ASSERT_NE(message, nullptr);
     EXPECT_FALSE(message->wordWrap());
     EXPECT_EQ(message->text().count(QLatin1Char('\n')), 0);
+    EXPECT_EQ(message->fluentTypography(), Typography::FontRole::BodyStrong);
 
     const QRect card = fluent::overlay::visibleCardGeometry(toast.geometry());
-    EXPECT_LT(card.height(), 72);
+    EXPECT_GE(card.width(), 220);
+    EXPECT_LT(card.width(), 300);
+    EXPECT_EQ(card.height(), 52);
+}
+
+TEST(ToastTest, Contract_ContentChangesCanShrinkBackToCompactSize)
+{
+    QWidget host;
+    host.resize(800, 600);
+    Toast toast(&host);
+    toast.setMessage(QStringLiteral("Saved"));
+    toast.setDuration(0);
+    toast.setAnimationEnabled(false);
+    ASSERT_TRUE(toast.present(&host));
+    const QSize compact = toast.size();
+
+    QAction retry(QStringLiteral("Try again"), &host);
+    toast.setTitle(QStringLiteral("Upload interrupted"));
+    toast.setMessage(QStringLiteral("Your connection was lost. Try again to resume the file."));
+    toast.setAction(&retry);
+    toast.setClosable(true);
+    EXPECT_GT(toast.width(), compact.width());
+    EXPECT_GT(toast.height(), compact.height());
+
+    toast.setTitle(QString());
+    toast.setAction(nullptr);
+    toast.setClosable(false);
+    toast.setMessage(QStringLiteral("Saved"));
+    EXPECT_EQ(toast.size(), compact);
+}
+
+TEST(ToastTest, Contract_ContentResizeKeepsCornerVisibleDuringReflow)
+{
+    MotionPolicyScope policyScope(fluent::MotionPolicy::Mode::Full);
+    QWidget host;
+    host.resize(640, 480);
+    host.show();
+    QApplication::processEvents();
+
+    for (const auto placement : {Toast::TopEnd, Toast::BottomEnd}) {
+        Toast toast(&host);
+        toast.setPlacement(placement);
+        toast.setDuration(0);
+        toast.setMessage(QStringLiteral("Saved"));
+        toast.setClosable(true);
+        toast.setAnimationEnabled(false);
+        ASSERT_TRUE(toast.present(&host));
+        toast.setAnimationEnabled(true);
+        for (const QString& message :
+             {QStringLiteral("Your changes are saved. This longer confirmation wraps onto several "
+                             "lines while the close button stays inside the window."),
+              QStringLiteral("Saved")}) {
+            toast.setMessage(message);
+            const QRect card = fluent::overlay::visibleCardGeometry(toast.geometry());
+            EXPECT_TRUE(host.rect().contains(card));
+            EXPECT_EQ(card.right(), host.rect().right() - toast.placementMargins().right());
+            if (placement == Toast::TopEnd)
+                EXPECT_EQ(card.top(), toast.placementMargins().top());
+            else
+                EXPECT_EQ(card.bottom(), host.rect().bottom() - toast.placementMargins().bottom());
+        }
+    }
 }
 
 TEST(ToastTest, Contract_PresentUsesTopLevelAndTracksResize)
@@ -382,6 +449,294 @@ TEST(ToastTest, Contract_ActionIsBorrowedAndReportsDismissReason)
     EXPECT_TRUE(toast.testAttribute(Qt::WA_TransparentForMouseEvents));
 }
 
+TEST(ToastTest, Contract_ActionReusesFluentButtonWithLocalNeutralStyling)
+{
+    for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        SCOPED_TRACE(theme == fluent::FluentElement::Light ? "Light" : "Dark");
+        QWidget host;
+        host.setProperty(fluent::overlay::themeOverridePropertyName(), int(theme));
+        fluent::basicinput::Button sibling(&host);
+        const QColor siblingFill = sibling.themeColorsRef().controlDefault;
+        Toast toast(&host);
+        QAction retry(QStringLiteral("Try again"), &host);
+        toast.setMessage(QStringLiteral("Upload interrupted"));
+        toast.setAction(&retry);
+        toast.onThemeUpdated();
+
+        auto* button =
+            toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastAction"));
+        ASSERT_NE(button, nullptr);
+        EXPECT_EQ(button->fluentStyle(), fluent::basicinput::Button::Standard);
+        EXPECT_FALSE(button->themeOverrides().isEmpty());
+        EXPECT_EQ(button->fontRole(), Typography::FontRole::BodyStrong);
+        EXPECT_TRUE(button->hasFocusVisual());
+        EXPECT_EQ(button->themeColorsRef().textPrimary, toast.themeColorsRef().textPrimary);
+        EXPECT_TRUE(sibling.themeOverrides().isEmpty());
+        EXPECT_EQ(sibling.themeColorsRef().controlDefault, siblingFill);
+    }
+}
+
+TEST(ToastTest, Contract_CloseButtonIsOptionalAndReportsOneDismissal)
+{
+    QWidget host;
+    host.resize(640, 480);
+    host.show();
+    Toast toast(&host);
+    toast.setMessage(QStringLiteral("Changes saved"));
+    toast.setDuration(0);
+    toast.setAnimationEnabled(false);
+
+    QSignalSpy closableSpy(&toast, &Toast::closableChanged);
+    QSignalSpy reasonSpy(&toast, &Toast::dismissedWithReason);
+    toast.setClosable(true);
+    toast.setClosable(true);
+    EXPECT_EQ(closableSpy.count(), 1);
+    EXPECT_FALSE(toast.testAttribute(Qt::WA_TransparentForMouseEvents));
+    ASSERT_TRUE(toast.present(&host));
+
+    auto* close = toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastClose"));
+    ASSERT_NE(close, nullptr);
+    EXPECT_TRUE(close->isVisible());
+    EXPECT_EQ(close->size(), QSize(24, 24));
+    EXPECT_EQ(fluent::overlay::visibleCardGeometry(toast.geometry()).height(), 52);
+    const auto expectTopCorner = [&toast, close]() {
+        const QRect card = fluent::overlay::visibleCardRect(toast.rect());
+        const QRect button(close->mapTo(&toast, QPoint()), close->size());
+        EXPECT_EQ(button.top() - card.top(), 8);
+        EXPECT_EQ(card.right() - button.right(), 8);
+    };
+    expectTopCorner();
+    toast.setMessage(
+        QStringLiteral("Your changes are saved. This longer confirmation wraps "
+                       "onto several lines while the close button stays in its corner."));
+    QApplication::processEvents();
+    EXPECT_GT(fluent::overlay::visibleCardGeometry(toast.geometry()).height(), 52);
+    expectTopCorner();
+    toast.setMessage(QStringLiteral("Changes saved"));
+    QApplication::processEvents();
+    EXPECT_EQ(fluent::overlay::visibleCardGeometry(toast.geometry()).height(), 52);
+    expectTopCorner();
+    EXPECT_FALSE(close->accessibleName().isEmpty());
+    close->setFocus(Qt::TabFocusReason);
+    QTest::keyClick(close, Qt::Key_Space);
+    ASSERT_EQ(reasonSpy.count(), 1);
+    EXPECT_EQ(reasonSpy.at(0).at(0).value<Toast::DismissReason>(), Toast::CloseButton);
+    EXPECT_FALSE(toast.isOpen());
+    toast.dismiss();
+    EXPECT_EQ(reasonSpy.count(), 1);
+
+    toast.setClosable(false);
+    EXPECT_TRUE(toast.testAttribute(Qt::WA_TransparentForMouseEvents));
+}
+
+TEST(ToastTest, Contract_NarrowHostWrapsFullTextWithActionBelow)
+{
+    QWidget host;
+    host.resize(320, 640);
+    host.show();
+    QAction action(QStringLiteral("Try again"), &host);
+    Toast toast(&host);
+    toast.setTitle(QStringLiteral("The connection was interrupted while uploading your files"));
+    toast.setMessage(
+        QStringLiteral("Your connection was lost. Try again to resume product-shot.png."));
+    toast.setClosable(true);
+    toast.setAction(&action);
+    toast.setDuration(0);
+    toast.setAnimationEnabled(false);
+    ASSERT_TRUE(toast.present(&host));
+    QApplication::processEvents();
+
+    auto* title = toast.findChild<fluent::textfields::Label*>(QStringLiteral("fluentToastTitle"));
+    auto* message =
+        toast.findChild<fluent::textfields::Label*>(QStringLiteral("fluentToastMessage"));
+    auto* button =
+        toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastAction"));
+    auto* close = toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastClose"));
+    ASSERT_NE(title, nullptr);
+    ASSERT_NE(message, nullptr);
+    ASSERT_NE(button, nullptr);
+    ASSERT_NE(close, nullptr);
+    const auto geometryInToast = [&toast](const QWidget* widget) {
+        return QRect(widget->mapTo(&toast, QPoint()), widget->size());
+    };
+    EXPECT_EQ(title->text(), toast.title());
+    EXPECT_EQ(message->text(), toast.message());
+    EXPECT_EQ(title->fluentTypography(), Typography::FontRole::BodyStrong);
+    EXPECT_EQ(message->fluentTypography(), Typography::FontRole::Body);
+    EXPECT_EQ(message->textColorRole(), fluent::textfields::Label::TextColorRole::Secondary);
+    EXPECT_TRUE(title->wordWrap());
+    EXPECT_TRUE(message->wordWrap());
+    EXPECT_FALSE(title->isTextElided());
+    EXPECT_FALSE(message->isTextElided());
+    EXPECT_GE(title->height(), title->heightForWidth(title->width()));
+    EXPECT_GE(message->height(), message->heightForWidth(message->width()));
+    EXPECT_EQ(button->height(), 32);
+    EXPECT_EQ(button->text(), action.text());
+    EXPECT_GE(button->width(), button->sizeHint().width());
+    EXPECT_GE(geometryInToast(button).top() - geometryInToast(message).bottom() - 1, 8);
+    EXPECT_EQ(geometryInToast(button).left(), geometryInToast(message).left());
+    EXPECT_LT(geometryInToast(message).right(), geometryInToast(close).left());
+    const QRect localCard = fluent::overlay::visibleCardRect(toast.rect());
+    EXPECT_EQ(geometryInToast(close).top() - localCard.top(), 8);
+    EXPECT_EQ(localCard.right() - geometryInToast(close).right(), 8);
+    const QRect card = fluent::overlay::visibleCardGeometry(toast.geometry());
+    EXPECT_EQ(card.width(), 288);
+    EXPECT_GE(card.left(), 16);
+    EXPECT_LE(card.right(), host.width() - 17);
+
+    host.resize(800, 640);
+    QApplication::processEvents();
+    EXPECT_LE(fluent::overlay::visibleCardGeometry(toast.geometry()).width(), 380);
+    EXPECT_GT(fluent::overlay::visibleCardGeometry(toast.geometry()).width(), card.width());
+    EXPECT_EQ(title->text(), toast.title());
+
+    host.setLayoutDirection(Qt::RightToLeft);
+    QApplication::processEvents();
+    const QRect rtlCard = fluent::overlay::visibleCardRect(toast.rect());
+    EXPECT_EQ(geometryInToast(close).top() - rtlCard.top(), 8);
+    EXPECT_EQ(geometryInToast(close).left() - rtlCard.left(), 8);
+    EXPECT_LT(geometryInToast(close).right(), geometryInToast(message).left());
+    EXPECT_EQ(geometryInToast(button).right(), geometryInToast(message).right());
+    EXPECT_GE(geometryInToast(button).top() - geometryInToast(message).bottom() - 1, 8);
+}
+
+TEST(ToastTest, Contract_NarrowHostKeepsLongActionCaptionReadable)
+{
+    QWidget host;
+    host.resize(320, 640);
+    host.show();
+    QAction action(QStringLiteral("Review connection settings and resume the upload"), &host);
+    Toast toast(&host);
+    toast.setTitle(QStringLiteral("Upload paused"));
+    toast.setMessage(QStringLiteral("Check your connection before continuing."));
+    toast.setClosable(true);
+    toast.setAction(&action);
+    toast.setDuration(0);
+    toast.setAnimationEnabled(false);
+    ASSERT_TRUE(toast.present(&host));
+    QApplication::processEvents();
+
+    auto* message =
+        toast.findChild<fluent::textfields::Label*>(QStringLiteral("fluentToastMessage"));
+    auto* button =
+        toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastAction"));
+    ASSERT_NE(message, nullptr);
+    ASSERT_NE(button, nullptr);
+    QString displayedCaption = button->text();
+    displayedCaption.replace(QLatin1Char('\n'), QLatin1Char(' '));
+    EXPECT_EQ(displayedCaption, action.text());
+    EXPECT_EQ(button->accessibleName(), action.text());
+    const auto lines = button->text().split(QLatin1Char('\n'));
+    ASSERT_GT(lines.size(), 1);
+    for (const QString& line : lines)
+        EXPECT_LE(button->fontMetrics().horizontalAdvance(line), button->width());
+    EXPECT_GT(button->height(), 32);
+    EXPECT_GE(button->height(), button->fontMetrics().lineSpacing() * lines.size());
+
+    const QRect buttonRect(button->mapTo(&toast, QPoint()), button->size());
+    const QRect messageRect(message->mapTo(&toast, QPoint()), message->size());
+    EXPECT_GT(buttonRect.top(), messageRect.bottom());
+    EXPECT_TRUE(fluent::overlay::visibleCardRect(toast.rect()).contains(buttonRect));
+
+    host.resize(800, 640);
+    QApplication::processEvents();
+    displayedCaption = button->text();
+    displayedCaption.replace(QLatin1Char('\n'), QLatin1Char(' '));
+    EXPECT_EQ(displayedCaption, action.text());
+    EXPECT_LE(fluent::overlay::visibleCardGeometry(toast.geometry()).width(), 380);
+}
+
+TEST(ToastTest, Contract_StackReflowsContinuouslyAndLocalDisableSettlesPosition)
+{
+    MotionPolicyScope policyScope(fluent::MotionPolicy::Mode::Full);
+    QWidget host;
+    host.resize(640, 480);
+    host.show();
+    Toast first(&host);
+    Toast second(&host);
+    for (Toast* toast : {&first, &second}) {
+        toast->setMessage(QStringLiteral("Changes saved"));
+        toast->setDuration(0);
+        toast->setAnimationEnabled(false);
+        ASSERT_TRUE(toast->present(&host));
+    }
+    second.setAnimationEnabled(true);
+    const QPoint before = second.pos();
+    first.dismiss();
+    EXPECT_EQ(second.pos(), before);
+    auto* animation =
+        second.findChild<QVariantAnimation*>(QStringLiteral("fluentToastPositionAnimation"));
+    ASSERT_NE(animation, nullptr);
+    ASSERT_EQ(animation->state(), QAbstractAnimation::Running);
+    animation->setCurrentTime(animation->duration() / 2);
+    EXPECT_LT(second.y(), before.y());
+    EXPECT_GT(fluent::overlay::visibleCardGeometry(second.geometry()).top(), 16);
+    second.setAnimationEnabled(false);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+    EXPECT_EQ(fluent::overlay::visibleCardGeometry(second.geometry()).top(), 16);
+}
+
+TEST(ToastTest, Contract_ReversingDismissalKeepsPresentationContinuous)
+{
+    MotionPolicyScope policyScope(fluent::MotionPolicy::Mode::Full);
+    QWidget host;
+    host.resize(640, 480);
+    host.show();
+    Toast toast(&host);
+    toast.setMessage(QStringLiteral("Changes saved"));
+    toast.setDuration(0);
+    QSignalSpy dismissedSpy(&toast, &Toast::dismissed);
+    ASSERT_TRUE(toast.present(&host));
+    auto* animation =
+        toast.findChild<QPropertyAnimation*>(QStringLiteral("fluentToastPresentationAnimation"));
+    ASSERT_NE(animation, nullptr);
+    animation->setCurrentTime(animation->duration() / 2);
+    const qreal visibleProgress = toast.toastProgress();
+    const QPoint visiblePosition = toast.pos();
+    toast.dismiss();
+    EXPECT_DOUBLE_EQ(toast.toastProgress(), visibleProgress);
+    EXPECT_EQ(toast.pos(), visiblePosition);
+    animation->setCurrentTime(animation->duration() / 2);
+    const qreal dismissProgress = toast.toastProgress();
+    const QPoint dismissPosition = toast.pos();
+    EXPECT_EQ(dismissPosition, visiblePosition);
+    ASSERT_TRUE(toast.present(&host));
+    EXPECT_DOUBLE_EQ(toast.toastProgress(), dismissProgress);
+    EXPECT_EQ(toast.pos(), dismissPosition);
+    animation->setCurrentTime(animation->duration());
+    EXPECT_DOUBLE_EQ(toast.toastProgress(), 1.0);
+    EXPECT_EQ(dismissedSpy.count(), 0);
+    auto* opacity = qobject_cast<QGraphicsOpacityEffect*>(toast.graphicsEffect());
+    ASSERT_NE(opacity, nullptr);
+    EXPECT_FALSE(opacity->isEnabled());
+    toast.setAnimationEnabled(false);
+    toast.dismiss();
+    EXPECT_EQ(dismissedSpy.count(), 1);
+}
+
+TEST(ToastTest, Contract_ReducedMotionFadesWithoutTranslationAndHiddenMotionSettles)
+{
+    MotionPolicyScope policyScope(fluent::MotionPolicy::Mode::Reduced);
+    QWidget host;
+    host.resize(640, 480);
+    host.show();
+    Toast toast(&host);
+    toast.setMessage(QStringLiteral("Changes saved"));
+    toast.setDuration(0);
+    ASSERT_TRUE(toast.present(&host));
+    auto* animation =
+        toast.findChild<QPropertyAnimation*>(QStringLiteral("fluentToastPresentationAnimation"));
+    ASSERT_NE(animation, nullptr);
+    EXPECT_LE(animation->duration(), 50);
+    EXPECT_EQ(fluent::overlay::visibleCardGeometry(toast.geometry()).top(), 16);
+    host.hide();
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+    EXPECT_DOUBLE_EQ(toast.toastProgress(), 1.0);
+    host.show();
+    EXPECT_TRUE(toast.isVisible());
+    EXPECT_EQ(fluent::overlay::visibleCardGeometry(toast.geometry()).top(), 16);
+}
+
 TEST(ToastTest, Contract_HoverPausePreservesRemainingDuration)
 {
     QWidget host;
@@ -459,9 +814,16 @@ TEST(ToastTest, Contract_SeverityUsesFontIcon)
 {
     Toast toast;
     toast.setSeverity(Toast::Success);
-    auto* icon = toast.findChild<fluent::FontIcon*>();
+    auto* badge = toast.findChild<fluent::layout::Card*>(QStringLiteral("fluentToastStatusBadge"));
+    ASSERT_NE(badge, nullptr);
+    EXPECT_EQ(badge->size(), QSize(28, 28));
+    auto* icon = badge->findChild<fluent::FontIcon*>(QStringLiteral("fluentToastIcon"));
     ASSERT_NE(icon, nullptr);
-    EXPECT_EQ(icon->glyph(), Typography::Icons::Success);
+    EXPECT_EQ(icon->size(), QSize(16, 16));
+    const QString successGlyph =
+        Typography::Icons::glyph(QStringLiteral("ic_fluent_checkmark_circle_16_regular"));
+    ASSERT_FALSE(successGlyph.isEmpty());
+    EXPECT_EQ(icon->glyph(), successGlyph);
 
     toast.setSeverity(Toast::Error);
     EXPECT_EQ(icon->glyph(), Typography::Icons::ErrorIcon);

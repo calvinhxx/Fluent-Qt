@@ -83,6 +83,13 @@ screen-reader and IME acceptance.
 Private adapters preserve caller-owned content and the existing public APIs.
 The table lists the semantic boundary and its focused regression source.
 
+Toast sizes short messages to their content and wraps complete titles and messages
+within the host. Actions sit below the message, wrap long captions, and retain
+native Button keyboard semantics. The optional close button keeps its accessible
+name, keyboard focus, and 24-pixel target at the top trailing corner. Semantic
+icons, announcements, dismissal reasons, and
+reduced-motion behavior remain available in both compact and detailed layouts.
+
 | Components | Contract | Tests |
 | --- | --- | --- |
 | CalendarView | Day, month, and year tables; locale-aware names; paging, selection, range, focus, and no-op events | [CalendarView](../../tests/components/date_time/TestCalendarView.cpp) |

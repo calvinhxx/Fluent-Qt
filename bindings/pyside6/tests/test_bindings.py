@@ -145,6 +145,14 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertIsNone(selection_ref())
             self.assertIsNone(model_ref())
 
+    def test_toast_close_is_opt_in(self):
+        toast = fluentqt.Toast()
+        self.assertFalse(toast.isClosable())
+        toast.setClosable(True)
+        self.assertTrue(toast.isClosable())
+        self.assertTrue(hasattr(fluentqt.Toast.DismissReason, "CloseButton"))
+        toast.close()
+
     def test_charts_snapshots_shared_models_and_wrapper_lifetime(self):
         from fluentqt import charts
         self.assertIs(charts.ChartView, fluentqt.ChartView)
