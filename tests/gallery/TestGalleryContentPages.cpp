@@ -41,6 +41,8 @@
 #include <QtMath>
 
 #include "components/basicinput/Button.h"
+#include "components/basicinput/FileDropZone.h"
+#include "components/collections/FileListView.h"
 #include "components/basicinput/ComboBox.h"
 #include "components/basicinput/CompoundButton.h"
 #include "components/basicinput/MultiSelectComboBox.h"
@@ -2455,6 +2457,28 @@ TEST_F(GalleryContentPagesTest, TreeViewIndicatorTargetsDoNotAutoScrollThePrevie
     }
 }
 
+TEST_F(GalleryContentPagesTest, FileSamplesKeepEntryAndModelIndependent)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("file-drop-zone"),
+                               QStringLiteral("file-drop-zone-workspace"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* drop = preview->findChild<fluent::basicinput::FileDropZone*>();
+    auto* files = preview->findChild<fluent::collections::FileListView*>();
+    ASSERT_NE(drop, nullptr);
+    ASSERT_NE(files, nullptr);
+    EXPECT_TRUE(files->property("fluentPreserveParentSurface").toBool());
+    EXPECT_TRUE(files->viewport()->property("fluentPreserveParentSurface").toBool());
+    ASSERT_NE(files->model(), nullptr);
+    EXPECT_NE(files->model()->parent(), files);
+    EXPECT_NE(files->model()->parent(), drop);
+    EXPECT_EQ(files->model()->rowCount(), 3);
+    files->removeRequested(files->model()->index(0, 0));
+    EXPECT_EQ(files->model()->rowCount(), 2);
+    EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("browseRequested")));
+    EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("filesDropped")));
+}
+
 TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSource)
 {
     int auditedSamples = 0;
@@ -2485,6 +2509,18 @@ TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSourc
 
                 std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
                 ASSERT_NE(preview, nullptr);
+                if (component.id == QStringLiteral("toast") &&
+                    sample.id == QStringLiteral("toast-feedback")) {
+                    auto* trigger = preview->findChild<Button*>(QStringLiteral("feedback0"));
+                    ASSERT_NE(trigger, nullptr);
+                    trigger->click();
+                    auto* toast = preview->findChild<fluent::status_info::Toast*>(
+                        QStringLiteral("feedbackToast"));
+                    ASSERT_NE(toast, nullptr);
+                    EXPECT_TRUE(toast->isOpen());
+                    EXPECT_TRUE(toast->isClosable());
+                    EXPECT_EQ(toast->message(), QStringLiteral("Changes saved"));
+                }
                 const QByteArray qualifiedType = reference.qualifiedType.toUtf8();
                 bool previewContainsType = preview->inherits(qualifiedType.constData());
                 if (!previewContainsType) {
@@ -2662,7 +2698,8 @@ TEST_F(GalleryContentPagesTest, CollectionAndNavigationSamplesHostLivePreviews)
 TEST_F(GalleryContentPagesTest, BackgroundlessCollectionSamplesPreservePreviewSurface)
 {
     int checkedViews = 0;
-    for (const QString& routeId : {QStringLiteral("list-view"), QStringLiteral("tree-view")}) {
+    for (const QString& routeId : {QStringLiteral("list-view"), QStringLiteral("tree-view"),
+                                   QStringLiteral("file-list-view")}) {
         const auto samples = fluent::gallery::gallerySamplesForRoute(routeId);
         ASSERT_FALSE(samples.isEmpty()) << routeId.toStdString();
         for (const auto& sample : samples) {

@@ -34,6 +34,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/basicinput/ComboBox.h
     src/components/basicinput/CompoundButton.h
     src/components/basicinput/DropDownButton.h
+    src/components/basicinput/FileDropZone.h
     src/components/basicinput/HyperlinkButton.h
     src/components/basicinput/MultiSelectComboBox.h
     src/components/basicinput/RadioButton.h
@@ -58,6 +59,7 @@ set(FLUENT_QT_INSTALL_HEADERS
 
     src/components/collections/DataGrid.h
     src/components/collections/DrawerView.h
+    src/components/collections/FileListView.h
     src/components/collections/FlipView.h
     src/components/collections/FlowView.h
     src/components/collections/GridView.h

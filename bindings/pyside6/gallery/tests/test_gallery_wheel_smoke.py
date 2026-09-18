@@ -91,7 +91,7 @@ def main():
     sample_count = sum(len(entry.samples) for entry in ENTRIES)
     if (
         len(CATEGORIES) != 13
-        or len(ENTRIES) != 81
+        or len(ENTRIES) != 83
         or len(ROUTES) != 103
         or len(SUPPORT_TYPES) != 23
         or sample_count != 224

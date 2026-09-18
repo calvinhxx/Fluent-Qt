@@ -101,6 +101,12 @@ const QHash<QString, QString>& routeDescriptions()
         {QStringLiteral("particle-backdrop"),
          QStringLiteral("Flowing ribbons, floating dots and a starfield with pointer ripples, "
                         "theme-aware colors, and controls for motion and density.")},
+        {QStringLiteral("file-drop-zone"),
+         QStringLiteral("A file entry surface with drag feedback, keyboard access, and a separate "
+                        "browse action.")},
+        {QStringLiteral("file-list-view"),
+         QStringLiteral("A model-backed file list with complete names, transfer progress, and "
+                        "recovery actions.")},
         // Basic input
         {QStringLiteral("button"),
          QStringLiteral("A control that responds to user input and raises a click event.")},

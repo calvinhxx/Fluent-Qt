@@ -145,6 +145,51 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertIsNone(selection_ref())
             self.assertIsNone(model_ref())
 
+    def test_file_entry_and_list_keep_application_model_alive(self):
+        drop = fluentqt.FileDropZone()
+        drop.setErrorMessage("Choose a smaller file")
+        self.assertEqual(drop.errorMessage(), "Choose a smaller file")
+        drop.clearError()
+        self.assertEqual(drop.errorMessage(), "")
+        self.assertFalse(drop.isDragActive())
+        browse = QSignalSpy(drop.browseRequested)
+        button = drop.findChild(fluentqt.Button)
+        self.assertIsNotNone(button)
+        button.click()
+        self.assertEqual(browse.count(), 1)
+
+        view = fluentqt.FileListView(
+            selectionMode=fluentqt.FileListView.SelectionMode.Multiple,
+        )
+        self.assertEqual(view.selectionMode(), fluentqt.SelectionMode.Multiple)
+        view.setSelectionMode(fluentqt.SelectionMode.Single)
+        self.assertEqual(view.selectionMode(), fluentqt.SelectionMode.Single)
+        self.assertIsInstance(view.verticalFluentScrollBar(), fluentqt.ScrollBar)
+        self.assertIsInstance(view.horizontalFluentScrollBar(), fluentqt.ScrollBar)
+        model = QStandardItemModel()
+        item = QStandardItem("Complete file name.pdf")
+        item.setData("Ready to use", fluentqt.FileListView.DataRole.MetadataRole)
+        item.setData(fluentqt.FileListView.Status.Ready,
+                     fluentqt.FileListView.DataRole.StatusRole)
+        model.appendRow(item)
+        reference = weakref.ref(model)
+        view.setModel(model)
+        self.assertIsNone(model.parent())
+        del model
+        gc.collect()
+        self.assertIsNotNone(reference())
+        self.assertEqual(view.model().index(0, 0).data(), "Complete file name.pdf")
+        removed = QSignalSpy(view.removeRequested)
+        view.setCurrentIndex(view.model().index(0, 0))
+        QTest.keyClick(view, Qt.Key.Key_Delete)
+        self.assertEqual(removed.count(), 1)
+        self.assertEqual(view.model().rowCount(), 1)
+        view.setAnimationEnabled(False)
+        self.assertFalse(view.isAnimationEnabled())
+        view.setModel(None)
+        view.close()
+        drop.close()
+
     def test_toast_close_is_opt_in(self):
         toast = fluentqt.Toast()
         self.assertFalse(toast.isClosable())

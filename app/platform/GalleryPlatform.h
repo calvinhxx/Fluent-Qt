@@ -58,6 +58,18 @@ struct Capabilities {
     QUrl distributionActionUrl;
 };
 
+/**
+ * @brief Opens the host file picker and reports each chosen name and size.
+ * zh_CN: 打开宿主文件选择器，逐个报告所选文件名称和大小。
+ *
+ * This Gallery adapter owns no transfer. Browser content is released after
+ * metadata is reported. Destroying context cancels callback delivery.
+ * zh_CN: 此 Gallery 适配器不执行传输；浏览器内容在报告元数据后释放，context
+ * 销毁后不再发送回调。
+ */
+void chooseFiles(QWidget* context, const QString& filter,
+                 std::function<void(const QString&, qint64)> selected);
+
 const Capabilities& capabilities();
 bool persistenceAvailable();
 QSettings createSettings();

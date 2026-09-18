@@ -74,6 +74,8 @@
     {"id":"text-edit","classification":"native","risk":"medium","status":"covered","evidence":["src/components/textfields/TextEdit.h","tests/components/textfields/TestTextEdit.cpp","tests/components/textfields/TestTextEditMotion.cpp"],"gap":""},
     {"id":"title-bar","classification":"not-applicable","risk":"low","status":"not-applicable","evidence":["src/components/windowing/TitleBar.h"],"gap":"Drag surface semantics are owned by Window and its caption controls."},
     {"id":"window","classification":"augmented","risk":"medium","status":"covered","evidence":["tests/components/windowing/TestWindow.cpp"],"gap":""},
+    {"id":"file-drop-zone","classification":"augmented","risk":"medium","status":"covered","evidence":["src/components/basicinput/FileDropZone.cpp","tests/components/basicinput/TestFileDropZone.cpp"],"gap":""},
+    {"id":"file-list-view","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/collections/FileListView.cpp","tests/components/collections/TestFileListView.cpp"],"gap":""},
     {"id":"font-icon","classification":"not-applicable","risk":"low","status":"not-applicable","evidence":["src/components/foundation/FontIcon.h"],"gap":"Presentation glyph; semantic meaning belongs to its containing control."},
     {"id":"line-chart","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
     {"id":"area-chart","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},

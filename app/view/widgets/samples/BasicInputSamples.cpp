@@ -1,4 +1,5 @@
 #include "BasicInputSamples.h"
+#include "FilesSamples.h"
 
 #include <QLayout>
 #include <QLineEdit>
@@ -1560,6 +1561,8 @@ QVector<GallerySample> toggleSwitchSamples()
 
 QVector<GallerySample> basicInputSamples(const QString& routeId)
 {
+    if (routeId == QStringLiteral("file-drop-zone"))
+        return fileDropZoneSamples();
     if (routeId == QStringLiteral("button"))
         return buttonSamples();
     if (routeId == QStringLiteral("compound-button"))

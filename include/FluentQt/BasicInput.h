@@ -7,6 +7,7 @@
 #include <components/basicinput/ComboBox.h>
 #include <components/basicinput/CompoundButton.h>
 #include <components/basicinput/DropDownButton.h>
+#include <components/basicinput/FileDropZone.h>
 #include <components/basicinput/HyperlinkButton.h>
 #include <components/basicinput/MultiSelectComboBox.h>
 #include <components/basicinput/RadioButton.h>

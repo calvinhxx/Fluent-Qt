@@ -142,6 +142,15 @@ Escape resets an explicit Cartesian X range once; otherwise it propagates to
 the parent, preserving dialog close policies. Pie and Donut always propagate
 Escape because their rendering ignores X ranges.
 
+
+FileDropZone retains a native browse Button as its single tab stop and exposes
+full application validation feedback. FileListView exposes complete row text,
+status, and guarded remove/retry actions through a private accessible adapter;
+its model remains caller-owned. Their focused owner tests cover these boundaries.
+FileListView keeps status beside its supporting text and retains 32-pixel action
+targets in compact rows. Long text still wraps fully, and keyboard focus remains
+visible independently of hover.
+
 <!-- docs-nav:bottom:start -->
 ---
 [← Accessibility Contract](accessibility-contract.md) · [Contents](../SUMMARY.md) · [Development index](README.md)

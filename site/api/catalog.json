@@ -23,8 +23,8 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 81,
-    "public_headers": 130,
+    "components": 83,
+    "public_headers": 132,
     "categories": 13
   },
   "categories": [
@@ -36,12 +36,12 @@
     {
       "id": "basic-input",
       "title": "Basic input",
-      "component_count": 16
+      "component_count": 17
     },
     {
       "id": "collections",
       "title": "Collections",
-      "component_count": 9
+      "component_count": 10
     },
     {
       "id": "date-time",
@@ -409,6 +409,41 @@
         }
       ],
       "sample_count": 1
+    },
+    {
+      "id": "file-drop-zone",
+      "title": "FileDropZone",
+      "category_id": "basic-input",
+      "description": "A file entry surface with drag feedback, keyboard access, and a separate browse action.",
+      "capabilities": [
+        "actions"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/FileDropZone.h>",
+        "qualified_type": "fluent::basicinput::FileDropZone",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/FileDropZone.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "FileDropZone",
+        "import_statement": "from fluentqt.basicinput import FileDropZone"
+      },
+      "gallery": {
+        "route_id": "file-drop-zone",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=file-drop-zone",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_file_drop_zone",
+          "ctest_label": "test_file_drop_zone",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestFileDropZone.cpp"
+        }
+      ],
+      "sample_count": 2
     },
     {
       "id": "button",
@@ -969,6 +1004,41 @@
         }
       ],
       "sample_count": 4
+    },
+    {
+      "id": "file-list-view",
+      "title": "FileListView",
+      "category_id": "collections",
+      "description": "A model-backed file list with complete names, transfer progress, and recovery actions.",
+      "capabilities": [
+        "collections"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "installed_declaration_header": "<FluentQt/components/collections/FileListView.h>",
+        "qualified_type": "fluent::collections::FileListView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/FileListView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "FileListView",
+        "import_statement": "from fluentqt.collections import FileListView"
+      },
+      "gallery": {
+        "route_id": "file-list-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=file-list-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/CollectionsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_file_list_view",
+          "ctest_label": "test_file_list_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestFileListView.cpp"
+        }
+      ],
+      "sample_count": 1
     },
     {
       "id": "drawer-view",
@@ -2578,7 +2648,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/status_info/TestToast.cpp"
         }
       ],
-      "sample_count": 5
+      "sample_count": 6
     },
     {
       "id": "tooltip",
@@ -3165,6 +3235,15 @@
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/DropDownButton.h"
     },
     {
+      "include": "<FluentQt/components/basicinput/FileDropZone.h>",
+      "source": "src/components/basicinput/FileDropZone.h",
+      "summary": "File entry surface with local-URL drop and application-owned browsing.",
+      "declarations": [
+        "FileDropZone"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/FileDropZone.h"
+    },
+    {
       "include": "<FluentQt/components/basicinput/HyperlinkButton.h>",
       "source": "src/components/basicinput/HyperlinkButton.h",
       "summary": "Button-styled hyperlink entry with URL and underline control.",
@@ -3368,6 +3447,17 @@
         "TransitionTarget"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/DrawerView.h"
+    },
+    {
+      "include": "<FluentQt/components/collections/FileListView.h>",
+      "source": "src/components/collections/FileListView.h",
+      "summary": "Presents file names, transfer status, and commands from a caller-owned model.",
+      "declarations": [
+        "FileListView",
+        "Status",
+        "DataRole"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/FileListView.h"
     },
     {
       "include": "<FluentQt/components/collections/FlipView.h>",

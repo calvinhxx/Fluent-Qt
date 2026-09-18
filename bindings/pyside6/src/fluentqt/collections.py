@@ -15,6 +15,7 @@ _NativeFlipView = _native.fluent.FlipView
 _NativeFlowView = _native.fluent.FlowView
 _NativeGridView = _native.fluent.GridView
 _NativeListView = _native.fluent.ListView
+_NativeFileListView = _native.fluent.FileListView
 _NativeSplitView = _native.fluent.SplitView
 SplitViewPaneOptions = _native.fluent.SplitViewPaneOptions
 _NativeStackView = _native.fluent.StackView
@@ -844,6 +845,34 @@ class GridView(_NativeGridView):
         return super().itemDelegate(*args)
 
 
+class FileListView(_NativeFileListView):
+    """File rows with the shared Fluent selection and scrollbar contract.
+
+    The native view retains its private file delegate. Application models and
+    transfer work remain caller-owned.
+    """
+
+    SelectionMode = SelectionMode
+
+    def __init__(self, *args, **kwargs):
+        selection_mode = kwargs.pop("selectionMode", None)
+        super().__init__(*args, **kwargs)
+        if selection_mode is not None:
+            self.setSelectionMode(selection_mode)
+
+    def selectionMode(self):
+        return _native.listViewSelectionMode(self)
+
+    def setSelectionMode(self, mode):
+        _native.setListViewSelectionMode(self, mode)
+
+    def verticalFluentScrollBar(self):
+        return _native.listViewVerticalFluentScrollBar(self)
+
+    def horizontalFluentScrollBar(self):
+        return _native.listViewHorizontalFluentScrollBar(self)
+
+
 class ListView(_NativeListView):
     """Fluent item view with Python-callable section grouping.
 
@@ -1484,6 +1513,7 @@ __all__ = [
     "FlowView",
     "GridView",
     "ListView",
+    "FileListView",
     "SelectionMode",
     "SplitView",
     "SplitViewPaneOptions",

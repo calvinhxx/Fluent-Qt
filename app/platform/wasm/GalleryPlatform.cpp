@@ -3,6 +3,9 @@
 #include <FluentQt/WebAssembly.h>
 
 #include <QCoreApplication>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QWidget>
 #include <QObject>
 #include <QPointer>
 #include <QRect>
@@ -53,6 +56,19 @@ EM_JS(void, fluentQtGalleryPublishHostTheme, (int value), {
 // clang-format on
 
 } // namespace
+
+void chooseFiles(QWidget* context, const QString& filter,
+                 std::function<void(const QString&, qint64)> selected)
+{
+    if (!context || !selected)
+        return;
+    const QPointer<QWidget> guard(context);
+    QFileDialog::getOpenFileContent(
+        filter, [guard, selected](const QString& name, const QByteArray& content) {
+            if (guard && !name.isEmpty())
+                selected(QFileInfo(name).fileName(), content.size());
+        });
+}
 
 const Capabilities& capabilities()
 {
