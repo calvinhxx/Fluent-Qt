@@ -327,6 +327,61 @@ TEST_F(ButtonTest, IconFontRenderingIsVisuallyCenteredByDefault)
     EXPECT_NEAR(menuCenterY, expectedCenterY, 0.75);
 }
 
+TEST_F(ButtonTest, MultilineCaptionKeepsRegularIconAndBothLinesInsidePreferredSize)
+{
+    QPixmap iconPixmap(16, 16);
+    iconPixmap.fill(QColor(235, 34, 197));
+    Button button(QStringLiteral("Review connection"));
+    button.setAttribute(Qt::WA_DontShowOnScreen);
+    button.setFluentStyle(Button::Subtle);
+    button.setFluentLayout(Button::IconBefore);
+    button.setIcon(QIcon(iconPixmap));
+    button.setIconSize(iconPixmap.size());
+    button.ensurePolished();
+    const QSize firstLineSize = button.sizeHint();
+    button.setText(QStringLiteral("settings and resume"));
+    const QSize secondLineSize = button.sizeHint();
+    button.setText(QStringLiteral("Review connection\nsettings and resume"));
+    const QSize preferredSize = button.sizeHint();
+    EXPECT_LE(preferredSize.width(), qMax(firstLineSize.width(), secondLineSize.width()) + 1);
+    EXPECT_GT(preferredSize.height(), qMax(firstLineSize.height(), secondLineSize.height()));
+    button.resize(preferredSize);
+    const QImage compact = renderButtonToImage(button);
+
+    QRect iconBounds;
+    int iconPixels = 0;
+    for (int y = 0; y < compact.height(); ++y) {
+        for (int x = 0; x < compact.width(); ++x) {
+            const QColor pixel = QColor::fromRgba(compact.pixel(x, y));
+            if (pixel.alpha() > 128 && pixel.red() > 180 && pixel.green() < 80 &&
+                pixel.blue() > 140) {
+                iconBounds = iconBounds.united(QRect(x, y, 1, 1));
+                ++iconPixels;
+            }
+        }
+    }
+    ASSERT_GE(iconPixels, 15 * 15);
+    EXPECT_GT(iconBounds.left(), 0);
+    EXPECT_LT(iconBounds.right(), compact.width() - 1);
+    EXPECT_GT(iconBounds.top(), 0);
+    EXPECT_LT(iconBounds.bottom(), compact.height() - 1);
+
+    const auto visiblePixels = [](const QImage& image) {
+        int count = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if (qAlpha(image.pixel(x, y)) > 16)
+                    ++count;
+            }
+        }
+        return count;
+    };
+    button.resize(preferredSize + QSize(48, 48));
+    const QImage spacious = renderButtonToImage(button);
+    EXPECT_EQ(visiblePixels(compact), visiblePixels(spacious))
+        << "The preferred size must paint the same complete content as a larger surface";
+}
+
 TEST_F(ButtonTest, DisabledSubtleButtonKeepsTransparentSurface)
 {
     Button button;

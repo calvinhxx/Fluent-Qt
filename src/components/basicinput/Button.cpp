@@ -358,15 +358,20 @@ QSize Button::sizeHint() const
     // Icon gap: Small(4px), Standard(8px). zh_CN: 图标间距。
     int iconGap = (m_size == Small) ? spacing.gap.tight : spacing.gap.normal;
 
-    // 2. Dynamic height: font height plus vertical padding. zh_CN: 高度 = 字体高度 + 上下内边距。
-    int dynamicHeight = fm.height() + vPadding * 2;
+    const QString txt = text();
+    const QSize textSize = txt.contains(QLatin1Char('\n'))
+                               ? fm.size(0, txt)
+                               : QSize(fm.horizontalAdvance(txt), fm.height());
+
+    // 2. Include every explicit text line in the preferred height.
+    // zh_CN: 建议高度包含全部显式换行的文本。
+    int dynamicHeight = textSize.height() + vPadding * 2;
 
     // 3. Total width required by the content. zh_CN: 计算内容所需的总宽度。
-    QString txt = text();
     // Prefer the icon font, falling back to the regular icon. zh_CN: 优先使用 iconfont，否则使用普通图标。
     bool hasIconFont = !m_iconGlyph.isEmpty();
     QSize icSize = hasIconFont ? QSize(m_iconPixelSize, m_iconPixelSize) : iconSize();
-    int contentWidth = fm.horizontalAdvance(txt);
+    int contentWidth = textSize.width();
     if (!txt.isEmpty() && (hasIconFont || !icon().isNull()))
         contentWidth += iconGap;
     if (hasIconFont || !icon().isNull())
@@ -515,7 +520,10 @@ void Button::paintButton(InteractionState state)
     int gap = (m_size == Small) ? spacing.gap.tight : spacing.gap.normal;
 
     QFontMetrics fm = painter.fontMetrics();
-    int txtWidth = txt.isEmpty() ? 0 : fm.horizontalAdvance(txt);
+    // horizontalAdvance treats newlines as part of one line, displacing adjacent icons.
+    // zh_CN: horizontalAdvance 将换行文本按一行测量，会把相邻图标挤出按钮。
+    int txtWidth =
+        txt.contains(QLatin1Char('\n')) ? fm.size(0, txt).width() : fm.horizontalAdvance(txt);
 
     // Icon width: prefer the icon font, else the regular icon. zh_CN: 优先使用 iconfont，否则使用普通图标。
     int iconWidth = 0;
