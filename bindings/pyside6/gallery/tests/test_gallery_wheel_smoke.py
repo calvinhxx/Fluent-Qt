@@ -64,9 +64,9 @@ def main():
     control_images = tuple(
         (package_dir / "assets" / "control_images").rglob("*.png")
     )
-    if len(control_images) != 79:
+    if len(control_images) != 90:
         raise AssertionError(
-            "Standalone Gallery control-image count: expected 79, found {0}".format(
+            "Standalone Gallery control-image count: expected 90, found {0}".format(
                 len(control_images)
             )
         )
@@ -92,10 +92,10 @@ def main():
     if (
         len(CATEGORIES) != 13
         or len(ENTRIES) != 83
-        or len(ROUTES) != 103
+        or len(ROUTES) != 105
         or len(SUPPORT_TYPES) != 23
-        or sample_count != 224
-        or len(ported_sample_keys()) != 224
+        or sample_count != 228
+        or len(ported_sample_keys()) != 228
     ):
         raise AssertionError("Standalone Gallery catalog has wrong coverage")
 
