@@ -25,17 +25,15 @@ using namespace fluent;
 
 namespace {
 
-qreal renderedDarkPixelCenterY(int iconOffsetY,
-                               const QSize& buttonSize = QSize(48, 48),
+qreal renderedDarkPixelCenterY(int iconOffsetY, const QSize& buttonSize = QSize(48, 48),
                                int iconPixelSize = Typography::IconSize::Standard,
-                               const QString& iconGlyph = Typography::Icons::GlobalNav) {
+                               const QString& iconGlyph = Typography::Icons::GlobalNav)
+{
     Button button;
     button.setAttribute(Qt::WA_DontShowOnScreen);
     button.setFluentStyle(Button::Subtle);
     button.setFluentLayout(Button::IconOnly);
-    button.setIconGlyph(iconGlyph,
-                        iconPixelSize,
-                        Typography::FontFamily::FluentIcons);
+    button.setIconGlyph(iconGlyph, iconPixelSize, Typography::FontFamily::FluentIcons);
     button.setIconOffset(QPoint(0, iconOffsetY));
     button.setFixedSize(buttonSize);
     button.ensurePolished();
@@ -55,7 +53,8 @@ qreal renderedDarkPixelCenterY(int iconOffsetY,
         for (int x = 0; x < image.width(); ++x) {
             const QColor pixel = QColor::fromRgba(image.pixel(x, y));
             const int alpha = pixel.alpha();
-            const int luminance = (pixel.red() * 299 + pixel.green() * 587 + pixel.blue() * 114) / 1000;
+            const int luminance =
+                (pixel.red() * 299 + pixel.green() * 587 + pixel.blue() * 114) / 1000;
             if (alpha <= 16 || luminance >= 128)
                 continue;
 
@@ -127,7 +126,8 @@ void expectFontMatchesRole(const Button& button, Typography::FontRole role)
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -135,7 +135,8 @@ public:
 
 class ButtonTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         ThemeRegistry::instance().resetToDefaults();
         window = new FluentTestWindow();
         window->setFixedSize(600, 850); // 增加高度以容纳新内容
@@ -145,7 +146,8 @@ protected:
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         delete window;
         ThemeRegistry::instance().resetToDefaults();
     }
@@ -154,7 +156,8 @@ protected:
     AnchorLayout* layout;
 };
 
-TEST_F(ButtonTest, DefaultFontRoleUsesBodyTypography) {
+TEST_F(ButtonTest, DefaultFontRoleUsesBodyTypography)
+{
     Button emptyButton;
     Button textButton(QStringLiteral("Default"));
 
@@ -164,7 +167,8 @@ TEST_F(ButtonTest, DefaultFontRoleUsesBodyTypography) {
     expectFontMatchesRole(textButton, Typography::FontRole::Body);
 }
 
-TEST_F(ButtonTest, SetFontRoleEmitsOnlyWhenRoleChanges) {
+TEST_F(ButtonTest, SetFontRoleEmitsOnlyWhenRoleChanges)
+{
     Button button;
     QSignalSpy spy(&button, &Button::fontRoleChanged);
 
@@ -180,7 +184,8 @@ TEST_F(ButtonTest, SetFontRoleEmitsOnlyWhenRoleChanges) {
     expectFontMatchesRole(button, Typography::FontRole::Caption);
 }
 
-TEST_F(ButtonTest, RoleFontTracksThemeRegistryFamilyAndScale) {
+TEST_F(ButtonTest, RoleFontTracksThemeRegistryFamilyAndScale)
+{
     Button button(QStringLiteral("Theme typography"));
     button.setAttribute(Qt::WA_DontShowOnScreen);
     button.setFontRole(Typography::FontRole::BodyStrong);
@@ -197,11 +202,11 @@ TEST_F(ButtonTest, RoleFontTracksThemeRegistryFamilyAndScale) {
     EXPECT_EQ(button.fontRole(), Typography::FontRole::BodyStrong);
     expectFontMatchesRole(button, Typography::FontRole::BodyStrong);
     EXPECT_EQ(button.font().family(), themed.fontFamilyOverride);
-    EXPECT_EQ(button.font().pixelSize(),
-              qRound(Typography::FontSize::Body * themed.fontScale));
+    EXPECT_EQ(button.font().pixelSize(), qRound(Typography::FontSize::Body * themed.fontScale));
 }
 
-TEST_F(ButtonTest, ExplicitFontSurvivesThemeRegistryRefresh) {
+TEST_F(ButtonTest, ExplicitFontSurvivesThemeRegistryRefresh)
+{
     Button button(QStringLiteral("Explicit typography"));
     button.setAttribute(Qt::WA_DontShowOnScreen);
     button.show();
@@ -224,7 +229,8 @@ TEST_F(ButtonTest, ExplicitFontSurvivesThemeRegistryRefresh) {
     EXPECT_EQ(button.fontRole(), Typography::FontRole::Body);
 }
 
-TEST_F(ButtonTest, BaseClassAndPropertyFontOverridesSurviveThemeRefresh) {
+TEST_F(ButtonTest, BaseClassAndPropertyFontOverridesSurviveThemeRefresh)
+{
     Button baseOverride(QStringLiteral("Base override"));
     Button propertyOverride(QStringLiteral("Property override"));
     baseOverride.setAttribute(Qt::WA_DontShowOnScreen);
@@ -251,7 +257,8 @@ TEST_F(ButtonTest, BaseClassAndPropertyFontOverridesSurviveThemeRefresh) {
     EXPECT_EQ(propertyOverride.font(), appliedPropertyFont);
 }
 
-TEST_F(ButtonTest, SetSameFontRoleRestoresRoleModeAfterExplicitFont) {
+TEST_F(ButtonTest, SetSameFontRoleRestoresRoleModeAfterExplicitFont)
+{
     Button button(QStringLiteral("Restore role typography"));
     button.setAttribute(Qt::WA_DontShowOnScreen);
     button.setFontRole(Typography::FontRole::Caption);
@@ -278,7 +285,8 @@ TEST_F(ButtonTest, SetSameFontRoleRestoresRoleModeAfterExplicitFont) {
     expectFontMatchesRole(button, Typography::FontRole::Caption);
 }
 
-TEST_F(ButtonTest, MouseClickHandlerCanSynchronouslyDeleteButtonOwner) {
+TEST_F(ButtonTest, MouseClickHandlerCanSynchronouslyDeleteButtonOwner)
+{
     auto* owner = new QWidget;
     auto* button = new Button(owner);
     button->resize(120, 36);
@@ -286,16 +294,15 @@ TEST_F(ButtonTest, MouseClickHandlerCanSynchronouslyDeleteButtonOwner) {
     owner->show();
     QPointer<Button> buttonGuard(button);
 
-    QObject::connect(button, &Button::clicked, window, [owner] {
-        delete owner;
-    });
+    QObject::connect(button, &Button::clicked, window, [owner] { delete owner; });
 
     QTest::mouseClick(button, Qt::LeftButton);
 
     EXPECT_TRUE(buttonGuard.isNull());
 }
 
-TEST_F(ButtonTest, IconOffsetYMovesIconFontRendering) {
+TEST_F(ButtonTest, IconOffsetYMovesIconFontRendering)
+{
     const qreal baselineCenterY = renderedDarkPixelCenterY(0);
     const qreal shiftedCenterY = renderedDarkPixelCenterY(6);
 
@@ -304,18 +311,15 @@ TEST_F(ButtonTest, IconOffsetYMovesIconFontRendering) {
     EXPECT_GT(shiftedCenterY - baselineCenterY, 4.0);
 }
 
-TEST_F(ButtonTest, IconFontRenderingIsVisuallyCenteredByDefault) {
+TEST_F(ButtonTest, IconFontRenderingIsVisuallyCenteredByDefault)
+{
     const QSize titleBarButtonSize(24, 24);
     const qreal expectedCenterY = (titleBarButtonSize.height() - 1) / 2.0;
 
-    const qreal backCenterY = renderedDarkPixelCenterY(0,
-                                                       titleBarButtonSize,
-                                                       Typography::IconSize::Standard,
-                                                       Typography::Icons::TitleBarBack);
-    const qreal menuCenterY = renderedDarkPixelCenterY(0,
-                                                       titleBarButtonSize,
-                                                       Typography::IconSize::Standard,
-                                                       Typography::Icons::GlobalNav);
+    const qreal backCenterY = renderedDarkPixelCenterY(
+        0, titleBarButtonSize, Typography::IconSize::Standard, Typography::Icons::TitleBarBack);
+    const qreal menuCenterY = renderedDarkPixelCenterY(
+        0, titleBarButtonSize, Typography::IconSize::Standard, Typography::Icons::GlobalNav);
 
     ASSERT_GE(backCenterY, 0.0);
     ASSERT_GE(menuCenterY, 0.0);
@@ -323,7 +327,8 @@ TEST_F(ButtonTest, IconFontRenderingIsVisuallyCenteredByDefault) {
     EXPECT_NEAR(menuCenterY, expectedCenterY, 0.75);
 }
 
-TEST_F(ButtonTest, DisabledSubtleButtonKeepsTransparentSurface) {
+TEST_F(ButtonTest, DisabledSubtleButtonKeepsTransparentSurface)
+{
     Button button;
     button.setAttribute(Qt::WA_DontShowOnScreen);
     button.setFluentStyle(Button::Subtle);
@@ -343,7 +348,8 @@ TEST_F(ButtonTest, DisabledSubtleButtonKeepsTransparentSurface) {
     EXPECT_EQ(visiblePixels, 0);
 }
 
-TEST_F(ButtonTest, CustomPaintedButtonSuppressesNativeMacFocusRing) {
+TEST_F(ButtonTest, CustomPaintedButtonSuppressesNativeMacFocusRing)
+{
     Button button;
 #ifdef Q_OS_MAC
     EXPECT_FALSE(button.testAttribute(Qt::WA_MacShowFocusRect));
@@ -352,11 +358,13 @@ TEST_F(ButtonTest, CustomPaintedButtonSuppressesNativeMacFocusRing) {
 #endif
 }
 
-TEST_F(ButtonTest, VisualPropertyVerification) {
+TEST_F(ButtonTest, VisualPropertyVerification)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
+        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP() << "Skipping visual test in offscreen mode";
     }
 
@@ -399,7 +407,7 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
 
     // --- 2. Size Test (Small, Standard, Large) ---
     Label* lblSize = createLabel("2. Button Sizes:", btnStd);
-    
+
     Button* btnSmall = new Button("Small", window);
     btnSmall->setFluentSize(Button::Small);
     btnSmall->anchors()->top = {lblSize, Edge::Bottom, 10};
@@ -430,8 +438,7 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     // IconBefore + IconFont
     Button* l2 = new Button("Icon Before", window);
     l2->setFluentLayout(Button::IconBefore);
-    l2->setIconGlyph(Typography::Icons::GlobalNav,
-                     Typography::IconSize::Standard,
+    l2->setIconGlyph(Typography::Icons::GlobalNav, Typography::IconSize::Standard,
                      Typography::FontFamily::FluentIcons);
     l2->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l2->anchors()->left = {l1, Edge::Right, 20};
@@ -441,8 +448,7 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     Button* l3 = new Button("", window);
     l3->setFluentLayout(Button::IconOnly);
     l3->setFixedSize(40, 40);
-    l3->setIconGlyph(Typography::Icons::More,
-                     Typography::IconSize::Standard,
+    l3->setIconGlyph(Typography::Icons::More, Typography::IconSize::Standard,
                      Typography::FontFamily::FluentIcons);
     l3->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l3->anchors()->left = {l2, Edge::Right, 20};
@@ -451,8 +457,7 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     // IconAfter + IconFont
     Button* l4 = new Button("Icon After", window);
     l4->setFluentLayout(Button::IconAfter);
-    l4->setIconGlyph(Typography::Icons::ChevronRight,
-                     Typography::IconSize::Standard,
+    l4->setIconGlyph(Typography::Icons::ChevronRight, Typography::IconSize::Standard,
                      Typography::FontFamily::FluentIcons);
     l4->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l4->anchors()->left = {l3, Edge::Right, 20};
@@ -462,15 +467,15 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     Button* l5 = new Button("", window);
     l5->setFluentLayout(Button::IconOnly);
     l5->setFixedSize(40, 40);
-    l5->setIconGlyph(Typography::Icons::More,
-                     Typography::IconSize::Standard,
+    l5->setIconGlyph(Typography::Icons::More, Typography::IconSize::Standard,
                      Typography::FontFamily::FluentIcons);
     l5->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l5->anchors()->left = {l4, Edge::Right, 20};
     layout->addWidget(l5);
 
     // --- 3.5. Layout Test with Regular Icons (对比 iconfont) ---
-    Label* lblRegularIcons = createLabel("3.5. Content Layouts (with Regular Icons - for comparison):", l5, 40);
+    Label* lblRegularIcons =
+        createLabel("3.5. Content Layouts (with Regular Icons - for comparison):", l5, 40);
 
     // 创建一些简单的图标用于对比
     auto createSimpleIcon = [](const QColor& color, int size = 16) -> QIcon {
@@ -506,8 +511,7 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
         p.setPen(QPen(color, 2));
         p.setBrush(Qt::NoBrush);
         QPolygonF arrow;
-        arrow << QPointF(size * 0.3, size * 0.3)
-              << QPointF(size * 0.7, size * 0.5)
+        arrow << QPointF(size * 0.3, size * 0.3) << QPointF(size * 0.7, size * 0.5)
               << QPointF(size * 0.3, size * 0.7);
         p.drawPolyline(arrow);
         return QIcon(pm);
@@ -611,11 +615,9 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
 
     QMLState active;
     active.name = "active";
-    active.changes = {
-        { stateToggle, "text", "ACTIVE STATE" },
-        { stateToggle, "fluentStyle", Button::Accent },
-        { stateToggle, "focusVisual", true }
-    };
+    active.changes = {{stateToggle, "text", "ACTIVE STATE"},
+                      {stateToggle, "fluentStyle", Button::Accent},
+                      {stateToggle, "focusVisual", true}};
     stateToggle->addState(active);
 
     QObject::connect(stateToggle, &Button::clicked, [stateToggle]() {
@@ -630,14 +632,18 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     layout->addWidget(themeBtn);
 
     QObject::connect(themeBtn, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     window->show();
     qApp->exec();
 }
 
-TEST_F(ButtonTest, CriticalHoverAndCornerRadiiProperties) {
+TEST_F(ButtonTest, CriticalHoverAndCornerRadiiProperties)
+{
     Button button("Danger", window);
     QSignalSpy criticalSpy(&button, &Button::criticalOnHoverChanged);
     QSignalSpy cornerSpy(&button, &Button::cornerRadiiChanged);
@@ -652,7 +658,8 @@ TEST_F(ButtonTest, CriticalHoverAndCornerRadiiProperties) {
     EXPECT_EQ(criticalSpy.count(), 1);
 
     const int defaultRadius = button.themeRadius().control;
-    EXPECT_EQ(button.cornerRadii(), QMargins(defaultRadius, defaultRadius, defaultRadius, defaultRadius));
+    EXPECT_EQ(button.cornerRadii(),
+              QMargins(defaultRadius, defaultRadius, defaultRadius, defaultRadius));
 
     button.setCornerRadii(QMargins(0, 4, 0, 0));
     EXPECT_EQ(button.cornerRadii(), QMargins(0, 4, 0, 0));
@@ -666,7 +673,8 @@ TEST_F(ButtonTest, CriticalHoverAndCornerRadiiProperties) {
     EXPECT_EQ(cornerSpy.count(), 2);
 
     button.resetCornerRadii();
-    EXPECT_EQ(button.cornerRadii(), QMargins(defaultRadius, defaultRadius, defaultRadius, defaultRadius));
+    EXPECT_EQ(button.cornerRadii(),
+              QMargins(defaultRadius, defaultRadius, defaultRadius, defaultRadius));
     EXPECT_EQ(cornerSpy.count(), 3);
 }
 
