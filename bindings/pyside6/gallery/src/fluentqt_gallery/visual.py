@@ -17,6 +17,7 @@ import tokenize
 from typing import Callable, Iterable
 
 import fluentqt
+import shiboken6
 from PySide6.QtCore import (
     QEasingCurve,
     QEvent,
@@ -63,6 +64,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QGridLayout,
+    QGraphicsEffect,
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
@@ -930,6 +932,66 @@ def _hero_link_pixmap(
     return pixmap
 
 
+class _StartupContentEffect(QGraphicsEffect):
+    """Reuse native pixels during the short Gallery startup handoff."""
+
+    def __init__(self, content: QWidget) -> None:
+        super().__init__(content)
+        self.setObjectName("galleryStartupContentEffect")
+        self._frame = QPixmap()
+        self._offset = QPoint()
+        self._bounds = QRectF()
+        self._dpr = 0.0
+        self._theme = None
+        content.installEventFilter(self)
+
+    def eventFilter(self, watched, event) -> bool:
+        if event.type() in (
+            QEvent.Resize, QEvent.LayoutRequest, QEvent.StyleChange,
+            QEvent.PaletteChange, QEvent.FontChange,
+        ):
+            self._frame = QPixmap()
+        return super().eventFilter(watched, event)
+
+    def draw(self, painter: QPainter) -> None:
+        bounds = self.sourceBoundingRect(Qt.LogicalCoordinates)
+        dpr = painter.device().devicePixelRatioF()
+        theme = (fluentqt.current_theme(), fluentqt.theme_revision())
+        if (
+            self._frame.isNull() or bounds != self._bounds
+            or dpr != self._dpr or theme != self._theme
+        ):
+            self._frame = self.sourcePixmap(
+                Qt.LogicalCoordinates, self._offset, QGraphicsEffect.NoPad
+            )
+            self._bounds, self._dpr, self._theme = bounds, dpr, theme
+        painter.drawPixmap(self._offset, self._frame)
+
+
+class _StartupContentCache:
+    """Cleanup also works after the splash's native QObject is destroyed."""
+
+    def __init__(self) -> None:
+        self.content: QWidget | None = None
+        self.effect: _StartupContentEffect | None = None
+        self.paused_backdrops: list[fluentqt.ParticleBackdrop] = []
+
+    def clear(self, *_unused) -> None:
+        content, effect = self.content, self.effect
+        paused = self.paused_backdrops
+        self.content = self.effect = None
+        self.paused_backdrops = []
+        if (
+            content is not None and shiboken6.isValid(content)
+            and effect is not None and shiboken6.isValid(effect)
+            and content.graphicsEffect() is effect
+        ):
+            content.setGraphicsEffect(None)
+        for backdrop in paused:
+            if shiboken6.isValid(backdrop):
+                backdrop.setAnimationEnabled(True)
+
+
 class GallerySplashScreen(fluentqt.SplashScreen):
     """Gallery branding and one-shot ownership for the shared native surface."""
 
@@ -941,8 +1003,41 @@ class GallerySplashScreen(fluentqt.SplashScreen):
         self.setTitle("FluentQt")
         self.setSubtitle("Small details. Fluent experiences.")
         self.setText("Preparing your workspace")
+        self._dismissal_cache = _StartupContentCache()
+        self.destroyed.connect(self._dismissal_cache.clear)
         self.dismissed.connect(self.deleteLater)
         self.replaced.connect(self.deleteLater)
+
+    def cache_dismissal_content(self, content: QWidget | None) -> None:
+        self.clear_dismissal_content()
+        if (
+            not self.isVisible() or content is None
+            or not shiboken6.isValid(content) or not content.isVisible()
+            or content.graphicsEffect() is not None
+            or content.window() is not self.window()
+            or content is self or content.isAncestorOf(self)
+            or self.isAncestorOf(content)
+            or fluentqt.current_motion_mode() != fluentqt.MotionMode.Full
+        ):
+            return
+        cache = self._dismissal_cache
+        cache.content = content
+        for backdrop in content.findChildren(fluentqt.ParticleBackdrop):
+            if backdrop.isVisible() and backdrop.isAnimationEnabled():
+                cache.paused_backdrops.append(backdrop)
+                backdrop.setAnimationEnabled(False)
+        cache.effect = _StartupContentEffect(content)
+        content.setGraphicsEffect(cache.effect)
+        # Prime through a real paint context before either handoff animation.
+        # The effect retains the full source; only the discarded result is clipped.
+        content.grab(QRect(0, 0, 1, 1))
+
+    def clear_dismissal_content(self) -> None:
+        self._dismissal_cache.clear()
+
+    def hideEvent(self, event) -> None:
+        self.clear_dismissal_content()
+        super().hideEvent(event)
 
     def set_progress(self, done: int, total: int) -> None:
         self.setProgress(done, total)
