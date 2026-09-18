@@ -1,6 +1,7 @@
 #include <QAbstractListModel>
 #include <QAccessible>
 #include <QApplication>
+#include <QEventLoop>
 #include <QImage>
 #include <QMouseEvent>
 #include <QPaintEvent>
@@ -13,6 +14,7 @@
 #include <QStyledItemDelegate>
 #include <QTest>
 #include <QTextLayout>
+#include <QTimer>
 #include <QtMath>
 #include <QtTest/QSignalSpy>
 
@@ -557,6 +559,38 @@ TEST(FileListViewTest, Performance_UnchangedHoverDoesNotRepaint)
     EXPECT_GT(view.paintCount, retryPaints);
 }
 
+TEST(FileListViewTest, Performance_VisibleHeightChangesCoalesceIntoOneLayout)
+{
+    QStandardItemModel model;
+    for (int row = 0; row < 3; ++row)
+        addFile(model, QStringLiteral("file-%1.pdf").arg(row));
+    InspectableFileListView view;
+    view.setAnimationEnabled(false);
+    view.setModel(&model);
+    showView(view);
+    const int originalHeight = view.visualRect(model.index(0, 0)).height();
+    const int layoutsBefore = view.layoutCount;
+
+    for (int row = 0; row < model.rowCount(); ++row)
+        model.setData(model.index(row, 0),
+                      QStringLiteral("Supporting details wrap without truncation. ").repeated(6),
+                      FileListView::MetadataRole);
+    view.viewport()->grab();
+    ASSERT_GT(view.sizeHintForIndex(model.index(0, 0)).height(), originalHeight);
+    // Deliver the coalesced height notification and any layout calls it posts.
+    // zh_CN: 处理合并后的高度通知，以及它排入事件队列的布局调用。
+    QApplication::sendPostedEvents(&view, QEvent::MetaCall);
+    QApplication::sendPostedEvents(&view, QEvent::MetaCall);
+    QApplication::processEvents();
+
+    for (int row = 0; row < model.rowCount(); ++row)
+        EXPECT_GT(view.visualRect(model.index(row, 0)).height(), originalHeight);
+    EXPECT_EQ(view.layoutCount, layoutsBefore + 1);
+    view.viewport()->grab();
+    QApplication::processEvents();
+    EXPECT_EQ(view.layoutCount, layoutsBefore + 1);
+}
+
 TEST(FileListViewTest, Performance_HundredThousandRowsReadOnlyVisibleDataAndCreateNoRowWidgets)
 {
     CountingFileModel model(100000);
@@ -565,6 +599,34 @@ TEST(FileListViewTest, Performance_HundredThousandRowsReadOnlyVisibleDataAndCrea
     const int widgetsBefore = view.findChildren<QWidget*>().size();
     view.setModel(&model);
     showView(view, QSize(640, 320));
+    // Batched layout needs a running event loop on some Qt event dispatchers.
+    // Begin measuring only after painted heights reach adjacent row positions.
+    // zh_CN: 某些 Qt 事件分发器需要运行事件循环才能推进分批布局；首屏实测高度
+    // 反映到相邻行位置后再开始测量，不能让尚未绘制的空视口通过性能断言。
+    QEventLoop initialLayout;
+    QTimer layoutProbe;
+    bool layoutReady = false;
+    QObject::connect(&layoutProbe, &QTimer::timeout, &initialLayout, [&] {
+        view.viewport()->grab();
+        const auto queriedRows = model.queriedRows;
+        if (queriedRows.size() < 2)
+            return;
+        for (int row : queriedRows) {
+            if (row == 0)
+                continue;
+            const QRect previous = view.visualRect(model.index(row - 1, 0));
+            const QRect current = view.visualRect(model.index(row, 0));
+            if (!current.isValid() || current.top() != previous.bottom() + 1)
+                return;
+        }
+        layoutReady = true;
+        initialLayout.quit();
+    });
+    QTimer::singleShot(1000, &initialLayout, &QEventLoop::quit);
+    layoutProbe.start(1);
+    initialLayout.exec();
+    layoutProbe.stop();
+    ASSERT_TRUE(layoutReady);
     EXPECT_LT(model.queriedRows.size(), 100);
     EXPECT_EQ(view.findChildren<QWidget*>().size(), widgetsBefore);
     EXPECT_EQ(view.indexWidget(model.index(0, 0)), nullptr);
