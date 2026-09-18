@@ -375,8 +375,10 @@ void GalleryWindow::finishStartup()
     // zh_CN: 窗口已合成数帧，已过那个可能让 Mica 未生效（停在扁平中性表面、要等下次激活）的 DWM 首屏竞争；
     // 在内容从 splash 后浮现时强制施加背景。
     reapplySystemBackdrop();
-    if (m_splashScreen)
+    if (m_splashScreen) {
+        m_splashScreen->cacheDismissalContent(m_navigationView);
         m_splashScreen->dismiss(); // connects the logo to the title bar, then self-deletes
+    }
 }
 
 void GalleryWindow::maybeStartIntroTour()
@@ -573,6 +575,8 @@ void GalleryWindow::createTitleBarContent()
 
 void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)
 {
+    if (m_splashScreen)
+        m_splashScreen->clearDismissalContent();
     LOG_TRACE(QStringLiteral("GalleryWindow selectedRouteSignal routeId=%1").arg(routeId));
 
     // Present synchronously: the presenter itself decides whether this is an instant swap

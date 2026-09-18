@@ -58,9 +58,10 @@ public:
     bool presentRoute(const QString& routeId);
 
     /**
-     * @brief Warms the listed routes' pages up front (one per event-loop tick) behind the
-     * splash, capped by a time budget, then emits prewarmFinished.
-     * zh_CN: 在 splash 背后提前预热列出的路由页面（每帧一个），受时间预算限制，随后发出 prewarmFinished。
+     * @brief Builds and prepares the first layout of the listed pages (one per event-loop tick)
+     * behind the splash, capped by a time budget, then emits prewarmFinished.
+     * zh_CN: 在 splash 背后逐页完成构建和首次布局（每个事件循环一个），受时间预算限制，
+     * 随后发出 prewarmFinished。
      *
      * Building pages freezes the GUI thread, so we only ever do it while the splash hides the
      * jank. The budget bounds how long startup waits: whatever warmed in time becomes an

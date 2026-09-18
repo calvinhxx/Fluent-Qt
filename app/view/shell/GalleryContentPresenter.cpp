@@ -2,6 +2,7 @@
 
 #include <QElapsedTimer>
 #include <QEvent>
+#include <QPixmap>
 #include <QTimer>
 #include <QWidget>
 
@@ -296,7 +297,16 @@ void GalleryContentPresenter::scheduleNextPrewarm()
             emit prewarmFinished();
             return;
         }
-        ensurePageBuilt(m_prewarmQueue.dequeue());
+        const int index = ensurePageBuilt(m_prewarmQueue.dequeue());
+        if (auto* page = m_contentHost->pageWidget(index)) {
+            // Hidden pages defer resize delivery. Include their first layout in this page's
+            // warm-up, rather than flushing every resident page when an opacity effect renders
+            // the window at dismissal. Only one pixel is painted; no full-page image is kept.
+            // zh_CN: 隐藏页会延迟分发 resize；逐页预热时完成首次布局，避免退场透明度合成时
+            // 集中处理所有常驻页。仅绘制一个像素，不保留整页截图，也不显示页面或启动其动画。
+            page->resize(m_contentHost->contentsRect().size());
+            page->grab(QRect(0, 0, 1, 1));
+        }
         ++m_prewarmDone;
         // Show whichever is further along — pages warmed, or time spent against the budget — so
         // the caption climbs smoothly to ~100% whether the budget caps it (Debug) or the queue
