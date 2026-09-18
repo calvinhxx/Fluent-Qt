@@ -277,7 +277,7 @@ jobs:
             QT_QPA_PLATFORM=offscreen \
             FLUENTQT_EXPECTED_VERSION="$wheel_version" \
             "$clean_venv/bin/python" \
-            bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
+            bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py --project-root .
           "$clean_venv/bin/python" -m pip check
           "$clean_venv/bin/python" -m pip install mypy==2.3.0
           env -u PYTHONPATH \
@@ -662,7 +662,7 @@ jobs:
           $env:QT_QPA_PLATFORM = "offscreen"
           $env:FLUENTQT_EXPECTED_VERSION = $wheelVersion.Trim()
           & $cleanPython bindings/pyside6/tests/test_wheel_smoke.py
-          & $cleanPython bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
+          & $cleanPython bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py --project-root .
           & $cleanPython -m pip check
 
       - name: Run extended compatibility acceptance
@@ -959,7 +959,7 @@ jobs:
             QT_QPA_PLATFORM=offscreen \
             FLUENTQT_EXPECTED_VERSION="$wheel_version" \
             "$clean_venv/bin/python" \
-            bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
+            bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py --project-root .
           "$clean_venv/bin/python" -m pip check
           "$clean_venv/bin/python" -m pip install mypy==2.3.0
           env -u PYTHONPATH \
@@ -1348,7 +1348,7 @@ jobs:
           $env:QT_QPA_PLATFORM = "offscreen"
           $env:FLUENTQT_EXPECTED_VERSION = $wheelVersion.Trim()
           & $cleanPython bindings/pyside6/tests/test_wheel_smoke.py
-          & $cleanPython bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
+          & $cleanPython bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py --project-root .
           & $cleanPython -m pip check
 
       - name: Run extended installed-wheel acceptance
@@ -1528,7 +1528,7 @@ jobs:
             QT_QPA_PLATFORM=offscreen \
             FLUENTQT_EXPECTED_VERSION="$wheel_version" \
             "$clean_venv/bin/python" \
-            bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
+            bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py --project-root .
           "$clean_venv/bin/python" -m pip check
           if [[ "${{ matrix.extended_acceptance }}" == "true" ]]; then
             "$clean_venv/bin/python" -m pip install mypy==2.3.0

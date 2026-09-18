@@ -1,5 +1,6 @@
 """Tests for FluentQt wheel metadata helpers."""
 
+import ast
 import importlib.util
 from email.parser import Parser
 from pathlib import Path
@@ -21,6 +22,25 @@ WHEEL_BUILDER_SPEC.loader.exec_module(WHEEL_BUILDER)
 
 
 class WheelBuilderTest(unittest.TestCase):
+    def test_wheel_and_smoke_inventories_cover_every_source_facade(self):
+        # Do not import fluentqt: this gate must run before Qt is installed.
+        binding_root = WHEEL_BUILDER_PATH.parents[1]
+        facades = {path.stem for path in (binding_root / "src/fluentqt").glob("*.py")}
+        expected_stubs = {name + ".pyi" for name in facades} | {"_fluentqt.pyi"}
+        expected_files = {name + ".py" for name in facades} | expected_stubs
+        self.assertFalse(
+            expected_files - WHEEL_BUILDER.REQUIRED_PACKAGE_FILES,
+            "Update the core wheel inventory when adding a facade",
+        )
+        smoke = ast.parse((binding_root / "tests/test_wheel_smoke.py").read_text(encoding="utf-8"))
+        declarations = [
+            ast.literal_eval(node.value)
+            for node in ast.walk(smoke)
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "expected_stubs" for target in node.targets)
+        ]
+        self.assertEqual(declarations, [expected_stubs], "Installed-wheel smoke inventory is stale")
+
     def test_native_and_facade_stubs_are_required_in_wheel(self):
         for name in (
             "__init__.pyi",

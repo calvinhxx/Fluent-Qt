@@ -545,7 +545,7 @@ jobs:
             -u QT_QPA_PLATFORM_PLUGIN_PATH \
             QT_QPA_PLATFORM=offscreen \
             FLUENTQT_EXPECTED_VERSION="$version" \
-            "$smoke_python" bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
+            "$smoke_python" bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py --project-root .
 
       - name: Upload TestPyPI evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -690,7 +690,7 @@ jobs:
             -u QT_QPA_PLATFORM_PLUGIN_PATH \
             QT_QPA_PLATFORM=offscreen \
             FLUENTQT_EXPECTED_VERSION="$version" \
-            "$smoke_python" bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
+            "$smoke_python" bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py --project-root .
 
       - name: Upload PyPI publication evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

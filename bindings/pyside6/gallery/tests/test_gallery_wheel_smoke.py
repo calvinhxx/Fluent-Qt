@@ -1,15 +1,10 @@
 """Smoke-test the standalone FluentQt Gallery wheel in a clean environment."""
 
+import argparse
 from importlib import metadata, util
 import os
 from pathlib import Path
 import sys
-
-import fluentqt
-import fluentqt_gallery
-from fluentqt_gallery.catalog import CATEGORIES, ENTRIES, ROUTES, SUPPORT_TYPES
-from fluentqt_gallery.native_samples import ported_sample_keys
-
 
 def require_installed_below_prefix(path):
     prefix = Path(sys.prefix).resolve()
@@ -24,7 +19,61 @@ def require_installed_below_prefix(path):
         )
 
 
-def main():
+def verify_control_images(package_dir, recorded_files):
+    """Validate the installed wheel's own RECORD without a source checkout."""
+    prefix = ("fluentqt_gallery", "assets", "control_images")
+    expected = {
+        Path(*path.parts[len(prefix):])
+        for path in (recorded_files or ())
+        if path.parts[:len(prefix)] == prefix and path.suffix == ".png"
+    }
+    image_root = package_dir / "assets/control_images"
+    actual = {path.relative_to(image_root) for path in image_root.rglob("*.png")}
+    if not expected or actual != expected:
+        raise AssertionError(
+            "Installed Gallery images differ from wheel RECORD: missing={0}, extra={1}".format(
+                sorted(expected - actual), sorted(actual - expected)
+            )
+        )
+
+
+def native_contract(project_root):
+    generator_path = project_root / "bindings/pyside6/gallery/tools/generate_gallery_contract.py"
+    if not generator_path.is_file():
+        raise AssertionError("--project-root does not contain the Gallery contract generator")
+    spec = util.spec_from_file_location("gallery_smoke_contract", generator_path)
+    generator = util.module_from_spec(spec)
+    sys.modules[spec.name] = generator
+    spec.loader.exec_module(generator)
+    return generator.generate_contract(project_root)
+
+
+def verify_source_contract(project_root, package_dir, contract):
+    """Optional CI check against the exact source checkout being packaged."""
+    if contract != native_contract(project_root):
+        raise AssertionError("Installed Gallery contract differs from native sources")
+    source_root = project_root / "app/assets/control_images"
+    image_root = package_dir / "assets/control_images"
+    expected = {path.relative_to(source_root) for path in source_root.rglob("*.png")}
+    actual = {path.relative_to(image_root) for path in image_root.rglob("*.png")}
+    if not expected or actual != expected:
+        raise AssertionError(
+            "Gallery images differ from native sources: missing={0}, extra={1}".format(
+                sorted(expected - actual), sorted(actual - expected)
+            )
+        )
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--project-root", type=Path,
+                        help="Also compare installed data with this source checkout (required in CI).")
+    args = parser.parse_args(argv)
+    import fluentqt
+    import fluentqt_gallery
+    from fluentqt_gallery.catalog import CONTRACT, CATEGORIES, ENTRIES, ROUTES, SUPPORT_TYPES
+    from fluentqt_gallery.native_samples import ported_sample_keys
+
     expected_version = os.environ["FLUENTQT_EXPECTED_VERSION"]
     if metadata.version("FluentQt") != expected_version:
         raise AssertionError("Installed FluentQt wheel has the wrong version")
@@ -40,6 +89,8 @@ def main():
 
     package_dir = Path(fluentqt_gallery.__file__).resolve().parent
     require_installed_below_prefix(package_dir)
+    if args.project_root is not None:
+        verify_source_contract(args.project_root.resolve(), package_dir, CONTRACT)
     native_files = tuple(
         path
         for path in package_dir.rglob("*")
@@ -61,15 +112,7 @@ def main():
     for asset in required_assets:
         if not asset.is_file():
             raise AssertionError("Standalone Gallery asset is missing: {0}".format(asset))
-    control_images = tuple(
-        (package_dir / "assets" / "control_images").rglob("*.png")
-    )
-    if len(control_images) != 90:
-        raise AssertionError(
-            "Standalone Gallery control-image count: expected 90, found {0}".format(
-                len(control_images)
-            )
-        )
+    verify_control_images(package_dir, metadata.files("FluentQt-Gallery"))
     expected_home_tiles = {
         "GitHub-Mark.png",
         "Header-Toolkit.png",
@@ -90,12 +133,14 @@ def main():
 
     sample_count = sum(len(entry.samples) for entry in ENTRIES)
     if (
-        len(CATEGORIES) != 13
-        or len(ENTRIES) != 83
-        or len(ROUTES) != 105
-        or len(SUPPORT_TYPES) != 23
-        or sample_count != 228
-        or len(ported_sample_keys()) != 228
+        len(CATEGORIES) != len(CONTRACT["categories"])
+        or len(ENTRIES) != CONTRACT["summary"]["component_count"]
+        or len(ROUTES) != CONTRACT["summary"]["route_count"]
+        or set(SUPPORT_TYPES) != set(CONTRACT["binding_support_types"])
+        or sample_count != CONTRACT["summary"]["sample_count"]
+        or set(ported_sample_keys()) != {
+            (entry.route_id, sample.id) for entry in ENTRIES for sample in entry.samples
+        }
     ):
         raise AssertionError("Standalone Gallery catalog has wrong coverage")
 
