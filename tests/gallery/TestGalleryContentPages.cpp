@@ -3721,12 +3721,18 @@ TEST_F(GalleryContentPagesTest, GalleryToastUsesOverlayMarginAndSuccessBadge)
 
     auto* card = toast->findChild<QFrame*>(QStringLiteral("galleryToastCard"));
     ASSERT_NE(card, nullptr);
-    EXPECT_EQ(toast->size(), fluent::overlay::outerSizeForVisibleCard(card->sizeHint()));
+    EXPECT_EQ(card->geometry(), fluent::overlay::visibleCardRect(toast->rect()));
+    EXPECT_EQ(card->height(), 52);
+    EXPECT_GE(card->width(), 220);
+    EXPECT_LT(card->width(), 300);
+    EXPECT_EQ(toast->size(), toast->sizeHint());
+    EXPECT_EQ(toast->size(), fluent::overlay::outerSizeForVisibleCard(card->size()));
 
     auto* icon = toast->findChild<fluent::FontIcon*>(QStringLiteral("galleryToastIcon"));
     ASSERT_NE(icon, nullptr);
     EXPECT_EQ(icon->size(), QSize(Typography::IconSize::Standard, Typography::IconSize::Standard));
-    EXPECT_EQ(icon->glyph(), Typography::Icons::Success);
+    EXPECT_EQ(icon->glyph(),
+              Typography::Icons::glyph(QStringLiteral("ic_fluent_checkmark_circle_16_regular")));
 
     auto* reusableToast = qobject_cast<fluent::status_info::Toast*>(toast);
     ASSERT_NE(reusableToast, nullptr);
@@ -3735,7 +3741,9 @@ TEST_F(GalleryContentPagesTest, GalleryToastUsesOverlayMarginAndSuccessBadge)
 
     auto* opacity = qobject_cast<QGraphicsOpacityEffect*>(toast->graphicsEffect());
     ASSERT_NE(opacity, nullptr);
-    opacity->setOpacity(1.0);
+    reusableToast->setAnimationEnabled(false);
+    EXPECT_DOUBLE_EQ(reusableToast->toastProgress(), 1.0);
+    EXPECT_FALSE(opacity->isEnabled());
 
     QImage rendered(toast->size(), QImage::Format_ARGB32_Premultiplied);
     rendered.fill(Qt::transparent);
