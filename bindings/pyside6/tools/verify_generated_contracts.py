@@ -263,7 +263,7 @@ def verify_no_protected_hack(generated_dir):
             )
 
 
-def verify_no_menus_toolbars_enum_helpers(generated_dir):
+def verify_no_namespace_enum_helpers(generated_dir):
     namespace_path = generated_dir / FLUENT_NAMESPACE_WRAPPER
     if not namespace_path.is_file():
         raise RuntimeError(
@@ -272,13 +272,14 @@ def verify_no_menus_toolbars_enum_helpers(generated_dir):
             )
         )
     namespace_source = namespace_path.read_text(encoding="utf-8")
-    for helper_name in ("qt_getEnumMetaObject", "qt_getEnumName"):
-        leaked_helper = "fluent::menus_toolbars::{0}".format(helper_name)
-        if leaked_helper in namespace_source:
-            raise RuntimeError(
-                "Shiboken generated an invalid menus_toolbars Q_ENUM helper: "
-                "{0}".format(leaked_helper)
-            )
+    for namespace in ("charts", "menus_toolbars"):
+        for helper_name in ("qt_getEnumMetaObject", "qt_getEnumName"):
+            leaked_helper = "fluent::{0}::{1}".format(namespace, helper_name)
+            if leaked_helper in namespace_source:
+                raise RuntimeError(
+                    "Shiboken generated an invalid {0} Q_ENUM helper: "
+                    "{1}".format(namespace, leaked_helper)
+                )
 
 
 def reject_wrapper_bookkeeping(source, context, allow_python_ownership=False):
@@ -1704,7 +1705,7 @@ def verify_date_time_pickers(generated_dir):
 
 def verify_contracts(generated_dir, check_backdrop_converter):
     verify_no_protected_hack(generated_dir)
-    verify_no_menus_toolbars_enum_helpers(generated_dir)
+    verify_no_namespace_enum_helpers(generated_dir)
     verify_drawer_view(generated_dir)
     verify_popup(generated_dir)
     verify_flyout(generated_dir)
@@ -3462,7 +3463,7 @@ def verify_contracts(generated_dir, check_backdrop_converter):
         "ComboBox dropdown and editor ownership",
         "AutoSuggestBox suggestion popup privacy",
         "Fluent menu ownership",
-        "menus/toolbars Qt 6.2 enum extraction",
+        "charts and menus/toolbars Qt 6.2 enum extraction",
         "command surface borrowed action ownership",
         "date/time picker popup privacy",
         "ScrollView ownership",

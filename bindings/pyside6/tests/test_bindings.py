@@ -216,8 +216,12 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(second.model().rowCount(), 10001)
         first.setCurrentPoint(0, 9999)
         self.assertEqual(first.currentRow(), 9999)
-        for presentation in fluentqt.ChartView.ChartType:
+        # Shiboken 6.2 enum types are not iterable; exercise every named value.
+        for name in ("Line", "Area", "Bar", "HorizontalBar",
+                     "Pie", "Donut", "Scatter", "Sparkline"):
+            presentation = getattr(fluentqt.ChartView.ChartType, name)
             first.setChartType(presentation)
+            self.assertEqual(first.chartType(), presentation)
             first.grab()
         reference = weakref.ref(model)
         del model
