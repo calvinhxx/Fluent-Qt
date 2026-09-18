@@ -3814,8 +3814,29 @@ with (
             splash.cache_dismissal_content(content)
             self.assertTrue(shiboken6.isValid(host))
             self.assertTrue(shiboken6.isValid(content))
+            destroyed = []
+            host.destroyed.connect(lambda: destroyed.append("host"))
+            content.destroyed.connect(lambda: destroyed.append("content"))
+            ownership = "\n".join(
+                f"{name}: {shiboken6.dump(widget)}"
+                for name, widget in (
+                    ("host", host), ("content", content),
+                    ("cover", cover_host), ("splash", splash),
+                    ("effect", content.graphicsEffect()),
+                )
+            )
+            accessors = {
+                name: getattr(fluentqt.SplashScreen, name) is getattr(QWidget, name)
+                for name in (
+                    "window", "parentWidget", "graphicsEffect", "setGraphicsEffect",
+                )
+            }
             shiboken6.delete(splash)
-            self.assertTrue(shiboken6.isValid(host))
+            self.assertTrue(
+                shiboken6.isValid(host),
+                f"Native destruction: {destroyed}\nInherited accessors: {accessors}"
+                f"\nBefore deletion:\n{ownership}",
+            )
             self.assertTrue(shiboken6.isValid(content))
             self.assertIsNone(content.graphicsEffect())
             self.assertTrue(visible.isAnimationEnabled())
