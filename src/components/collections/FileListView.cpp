@@ -552,8 +552,6 @@ public:
         painter->restore();
     }
 
-    void notifySizeChanged(const QModelIndex& index) { emit sizeHintChanged(index); }
-
 private:
     FileListView* m_view;
 };
@@ -574,12 +572,15 @@ void FileListView::Private::rememberHeight(const QModelIndex& index, int height)
         heightDeliveryScheduled = false;
         const auto pending = pendingHeights;
         pendingHeights.clear();
-        QPointer<FileListView> guard(q);
         for (const auto& index : pending) {
-            if (!guard)
-                return;
-            if (index.isValid() && index.model() == guard->model())
-                guard->d->delegate->notifySizeChanged(index);
+            if (index.isValid() && index.model() == q->model()) {
+                // Qt queues a full layout for every sizeHintChanged signal.
+                // Apply all heights measured in this frame with one layout.
+                // zh_CN: Qt 为每个 sizeHintChanged 分别排入完整布局；同一帧
+                // 测得的所有高度变化只安排一次布局。
+                q->scheduleDelayedItemsLayout();
+                break;
+            }
         }
     });
 }
