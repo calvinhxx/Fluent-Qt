@@ -39,6 +39,18 @@ class WheelBuilderTest(unittest.TestCase):
             WHEEL_BUILDER.REQUIRED_PACKAGE_FILES,
         )
 
+    def test_core_wheel_builder_rejects_missing_chart_files(self):
+        for missing in ("charts.py", "charts.pyi"):
+            with self.subTest(missing=missing), tempfile.TemporaryDirectory() as temporary:
+                package_dir = Path(temporary)
+                for name in WHEEL_BUILDER.REQUIRED_PACKAGE_FILES:
+                    (package_dir / name).write_text("", encoding="utf-8")
+                (package_dir / "_fluentqt.so").write_bytes(b"extension fixture")
+                (package_dir / missing).unlink()
+                with self.assertRaisesRegex(RuntimeError, "missing required files") as error:
+                    WHEEL_BUILDER.package_files(package_dir)
+                self.assertIn(missing, str(error.exception))
+
     def test_design_facade_and_semantic_alias_data_are_required_in_wheel(self):
         for name in ("design.py", "design.pyi", "_icon_aliases.json"):
             with self.subTest(name=name):
