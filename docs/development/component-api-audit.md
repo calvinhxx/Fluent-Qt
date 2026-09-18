@@ -10,6 +10,29 @@
 [← System capability delivery record](system-capability-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
 <!-- docs-nav:top:end -->
 
+## 2026-09-18 File entry and Toast refinement
+
+`FileDropZone` adds application-owned browsing and local URL drop signals in
+`basicinput`; it does not read or upload files. `FileListView` reuses `ListView`
+with a caller-owned model and a private row delegate. Removal and retry are
+requests; the model remains authoritative. Full names and metadata wrap.
+
+Toast gains an optional `closable` property (default false) and appends
+`CloseButton` to `DismissReason`, preserving earlier enum values. Existing
+factories, placements, borrowed QAction ownership, and hover opt-in remain.
+Compact and detailed cards reuse Card, Label, FontIcon, and Button. Private
+`src/design/ToastTokens_p.h` defines Toast geometry, motion, shadow, and local
+tints for the approved Figma design; shared semantic colors still supply text
+and status colors, with HighContrast using the existing semantic palette.
+Existing Toast instances adopt this appearance. Finite motion no longer
+measures Toast text on every frame.
+
+Button measures explicit multiline captions by their widest line and complete
+height, keeping adjacent icons inside the control. Single-line measurement and
+IconOnly layout retain their existing behavior.
+
+The current ownership and input contract is [Files and feedback](../architecture/files-and-feedback.md).
+
 ## 2026-09-16 Charts addition and input review
 
 This unreleased addition is reviewed against the v1.8.4 synchronization point.

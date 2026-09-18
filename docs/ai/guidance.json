@@ -479,6 +479,11 @@
           "component_id": "toggle-split-button",
           "choose_when": "The primary action toggles state while the secondary part exposes related options.",
           "avoid_when": "State and options are independent concepts that should use separate controls."
+        },
+        {
+          "component_id": "file-drop-zone",
+          "choose_when": "Users choose or drop local files with clear validation feedback; the application owns browsing and file policy.",
+          "avoid_when": "The surface must implement storage, upload transport, authentication, or queue persistence."
         }
       ]
     },
@@ -571,6 +576,11 @@
           "component_id": "stack-view",
           "choose_when": "Pages follow push, pop, and back navigation semantics.",
           "avoid_when": "Peer pages need persistent visible tabs or top-level navigation."
+        },
+        {
+          "component_id": "file-list-view",
+          "choose_when": "A caller-owned file model needs complete names, metadata, transfer progress, remove and retry actions.",
+          "avoid_when": "Rows are general content unrelated to files or the view should own upload work."
         }
       ]
     },

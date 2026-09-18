@@ -3,6 +3,7 @@
 
 #include <components/collections/DataGrid.h>
 #include <components/collections/DrawerView.h>
+#include <components/collections/FileListView.h>
 #include <components/collections/FlipView.h>
 #include <components/collections/FlowView.h>
 #include <components/collections/GridView.h>

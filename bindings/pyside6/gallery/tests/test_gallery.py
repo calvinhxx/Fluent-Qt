@@ -259,6 +259,7 @@ CPP_PYTHON_MEMBER_EQUIVALENTS = frozenset(
         "titleBar",
         "titleBarHeight",
         "toInt",
+        "toReal",  # QVariant qreal maps to a Python float.
         "toString",
         "value",
         "valueToKey",
@@ -266,6 +267,32 @@ CPP_PYTHON_MEMBER_EQUIVALENTS = frozenset(
         "window",
     }
 )
+
+
+def _python_language_member_equivalents(module: ast.AST) -> set[str]:
+    """Recognize real Python operations corresponding to Qt value methods.
+
+    QString lowercasing uses str.lower(), while QString/QStringList membership
+    uses in/not in. Require the operation in the AST instead of exempting these
+    C++ methods from parity checks or matching words in comments and strings.
+    """
+    equivalents = set()
+    for node in ast.walk(module):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "lower"
+            and not node.args
+            and not node.keywords
+        ):
+            equivalents.add("toLower")
+        elif isinstance(node, ast.Compare) and any(
+            isinstance(operator, (ast.In, ast.NotIn)) for operator in node.ops
+        ):
+            equivalents.add("contains")
+    return equivalents
+
+
 FORBIDDEN_DISPLAY_HELPERS = frozenset(
     {
         "AnnotatedColorSectionsContent",
@@ -387,24 +414,24 @@ class PythonGalleryTest(unittest.TestCase):
 
     def test_contract_exactly_matches_the_public_binding(self):
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-        self.assertEqual(len(manifest["classes"]), 104)
+        self.assertEqual(len(manifest["classes"]), 106)
         self.assertEqual(catalog_coverage_errors(manifest["classes"]), [])
         self.assertEqual(runtime_catalog_errors(), [])
-        self.assertEqual(len(ROUTES), 103)
-        self.assertEqual(len(ENTRIES), 81)
+        self.assertEqual(len(ROUTES), 105)
+        self.assertEqual(len(ENTRIES), 83)
         self.assertEqual(len(CATEGORIES), 13)
         self.assertEqual(
             sum(len(entry.samples) for entry in ENTRIES),
-            224,
+            228,
         )
-        self.assertEqual(len({route.id for route in ROUTES}), 103)
-        self.assertEqual(len({entry.route_id for entry in ENTRIES}), 81)
+        self.assertEqual(len({route.id for route in ROUTES}), 105)
+        self.assertEqual(len({entry.route_id for entry in ENTRIES}), 83)
 
     def test_support_types_are_explicit_and_embedded_in_real_samples(self):
         self.assertEqual(SUPPORT_TYPES, EXPECTED_SUPPORT_TYPES)
         routed_types = {entry.name for entry in ENTRIES}
         self.assertTrue(routed_types.isdisjoint(SUPPORT_TYPES))
-        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 104)
+        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 106)
         for entry in ENTRIES:
             self.assertFalse(entry.support_type)
 
@@ -838,7 +865,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 
     def test_every_native_sample_has_an_exact_python_port(self):
         expected = _contract_sample_keys()
-        self.assertEqual(len(expected), 224)
+        self.assertEqual(len(expected), 228)
         self.assertEqual(ported_sample_keys(), expected)
 
     def test_splash_preview_handles_host_teardown_after_namespace_cleanup(self):
@@ -2636,6 +2663,29 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     result.widget.close()
                     result.widget.deleteLater()
 
+    def test_value_member_parity_requires_python_operations(self):
+        self.assertEqual(
+            _python_language_member_equivalents(
+                ast.parse("accepted = suffix.lower() in extensions")
+            ),
+            {"toLower", "contains"},
+        )
+        self.assertEqual(
+            _python_language_member_equivalents(
+                ast.parse("rejected = suffix not in extensions")
+            ),
+            {"contains"},
+        )
+        self.assertEqual(
+            _python_language_member_equivalents(ast.parse(
+                "operation = suffix.lower\n"
+                "note = 'toLower() contains() lower() in extensions'\n"
+                "for extension in extensions:\n"
+                "    pass\n"
+            )),
+            set(),
+        )
+
     def test_preview_source_executes_and_displayed_source_stays_concise(self):
         app = QApplication.instance()
         self.assertIsNotNone(app)
@@ -3072,6 +3122,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                             for node in ast.walk(displayed_tree)
                             if isinstance(node, ast.Attribute)
                         }
+                        python_members.update(
+                            _python_language_member_equivalents(displayed_tree)
+                        )
                         for member, aliases in (
                             _CPP_DISPLAY_MEMBER_ALIASES.items()
                         ):
@@ -3331,14 +3384,14 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     namespace.clear()
                     QApplication.processEvents()
 
-    def test_window_builds_all_103_routes_and_224_sample_cards(self):
+    def test_window_builds_all_105_routes_and_228_sample_cards(self):
         window = GalleryWindow()
         window.show()
         QApplication.processEvents()
         try:
             self.assertEqual(window.all_route_ids(), tuple(route.id for route in ROUTES))
             self.assertEqual(window.visit_all_routes(), [])
-            self.assertEqual(len(window._pages), 103)
+            self.assertEqual(len(window._pages), 105)
             built_sample_count = 0
             for entry in ENTRIES:
                 _index, page = window._pages[entry.route_id]
@@ -3377,7 +3430,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     "sample surface".format(entry.route_id),
                 )
                 built_sample_count += len(results)
-            self.assertEqual(built_sample_count, 224)
+            self.assertEqual(built_sample_count, 228)
         finally:
             window.close()
             window.deleteLater()

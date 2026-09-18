@@ -125,6 +125,7 @@
       "components": [
         "annotated-scrollbar",
         "data-grid",
+        "file-list-view",
         "flip-view",
         "flow-view",
         "grid-view",
@@ -230,6 +231,7 @@
       "donut-chart",
       "expander",
       "field",
+      "file-drop-zone",
       "font-icon",
       "horizontal-bar-chart",
       "hyperlink-button",
@@ -646,6 +648,25 @@
         "coverage": "all-required-states",
         "surface": "visual-check",
         "test_case": "DropDownButtonTest.VisualCheck"
+      }
+    },
+    {
+      "id": "file-list-view",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "FileListViewTest.Contract_FullFilenameAndMetadataWrapAtNarrowWidth",
+          "states": [
+            "narrow"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "gallery"
       }
     },
     {

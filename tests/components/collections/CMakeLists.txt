@@ -10,6 +10,7 @@ add_qt_test_module(test_grid_view TestGridView.cpp FluentGridItemDelegate.cpp)
 
 # FlowView
 add_qt_test_module(test_flow_view TestFlowView.cpp)
+add_qt_test_module(test_file_list_view TestFileListView.cpp)
 
 # TreeView
 add_qt_test_module(test_tree_view TestTreeView.cpp FluentTreeItemDelegate.cpp)

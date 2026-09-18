@@ -63,6 +63,7 @@ REQUIRED_PACKAGE_FILES = {
     "native_samples_scrolling.py",
     "native_samples_status.py",
     "native_samples_text_window.py",
+    "native_samples_files.py",
     "samples.py",
     "settings.py",
     "single_instance.py",

@@ -1291,6 +1291,130 @@ QVector<GallerySample> toastSamples()
 {
     return {
         makeSample(
+            QStringLiteral("toast-feedback"), QStringLiteral("Messages"),
+            QStringLiteral("Timely feedback, with a clear next step. Hover pauses the timeout; "
+                           "close or use an action to continue."),
+            QStringLiteral(
+                "auto* panel = new QWidget(this);\n"
+                "auto* layout = new QVBoxLayout(panel);\n"
+                "layout->setContentsMargins(0, 0, 0, 0);\n"
+                "layout->setSpacing(12);\n"
+                "auto* retry = new QAction(\"Try again\", panel);\n"
+                "QObject::connect(retry, &QAction::triggered, panel, [panel]() {\n"
+                "    Toast::showToast(panel, \"Ready to retry\", Toast::Success, 2200, "
+                "Toast::TopEnd);\n"
+                "});\n"
+                "auto* review = new QAction(\"Review file\", panel);\n"
+                "QObject::connect(review, &QAction::triggered, panel, [panel]() {\n"
+                "    Toast::showToast(panel, \"Choose a file under 20 MB\", Toast::Informational, "
+                "3500, Toast::TopEnd);\n"
+                "});\n"
+                "auto* row = new QWidget(panel);\n"
+                "auto* buttons = new QHBoxLayout(row);\n"
+                "buttons->setContentsMargins(0, 0, 0, 0);\n"
+                "buttons->setSpacing(8);\n"
+                "const QStringList labels = {\"Saved\", \"Copied\", \"Warning\", \"Error\"};\n"
+                "for (int i = 0; i < labels.size(); ++i) {\n"
+                "    auto* button = new Button(labels.at(i), row);\n"
+                "    button->setObjectName(QStringLiteral(\"feedback%1\").arg(i));\n"
+                "    buttons->addWidget(button);\n"
+                "    QObject::connect(button, &Button::clicked, panel, [panel, retry, review, i]() "
+                "{\n"
+                "        for (Toast* previous : "
+                "panel->window()->findChildren<Toast*>(\"feedbackToast\"))\n"
+                "            previous->dismiss();\n"
+                "        auto* toast = new Toast(panel);\n"
+                "        toast->setObjectName(\"feedbackToast\");\n"
+                "        toast->setDuration(5500);\n"
+                "        toast->setPlacement(Toast::TopEnd);\n"
+                "        toast->setClosable(true);\n"
+                "        toast->setPauseOnHoverEnabled(true);\n"
+                "        if (i == 0 || i == 1) {\n"
+                "            toast->setSeverity(i == 0 ? Toast::Success : Toast::Informational);\n"
+                "            toast->setMessage(i == 0 ? \"Changes saved\" : \"Link copied\");\n"
+                "        } else if (i == 2) {\n"
+                "            toast->setSeverity(Toast::Warning);\n"
+                "            toast->setTitle(\"One file needs attention\");\n"
+                "            toast->setMessage(\"archive.zip exceeds the 20 MB limit. The other "
+                "files can continue.\");\n"
+                "            toast->setAction(review);\n"
+                "        } else {\n"
+                "            toast->setSeverity(Toast::Error);\n"
+                "            toast->setTitle(\"Upload interrupted\");\n"
+                "            toast->setMessage(\"Your connection was lost. Try again to resume "
+                "product-shot.png.\");\n"
+                "            toast->setAction(retry);\n"
+                "        }\n"
+                "        QObject::connect(panel, &QObject::destroyed, toast, "
+                "&QObject::deleteLater);\n"
+                "        QObject::connect(toast, &Toast::dismissed, toast, "
+                "&QObject::deleteLater);\n"
+                "        toast->present(panel);\n"
+                "    });\n"
+                "}\n"
+                "buttons->addStretch();\n"
+                "layout->addWidget(row);"),
+            [](QWidget* parent) {
+                auto* panel = new QWidget(parent);
+                auto* layout = new QVBoxLayout(panel);
+                layout->setContentsMargins(0, 0, 0, 0);
+                layout->setSpacing(12);
+                auto* retry = new QAction("Try again", panel);
+                QObject::connect(retry, &QAction::triggered, panel, [panel]() {
+                    Toast::showToast(panel, "Ready to retry", Toast::Success, 2200, Toast::TopEnd);
+                });
+                auto* review = new QAction("Review file", panel);
+                QObject::connect(review, &QAction::triggered, panel, [panel]() {
+                    Toast::showToast(panel, "Choose a file under 20 MB", Toast::Informational, 3500,
+                                     Toast::TopEnd);
+                });
+                auto* row = new QWidget(panel);
+                auto* buttons = new QHBoxLayout(row);
+                buttons->setContentsMargins(0, 0, 0, 0);
+                buttons->setSpacing(8);
+                const QStringList labels = {"Saved", "Copied", "Warning", "Error"};
+                for (int i = 0; i < labels.size(); ++i) {
+                    auto* button = new Button(labels.at(i), row);
+                    button->setObjectName(QStringLiteral("feedback%1").arg(i));
+                    buttons->addWidget(button);
+                    QObject::connect(button, &Button::clicked, panel, [panel, retry, review, i]() {
+                        for (Toast* previous :
+                             panel->window()->findChildren<Toast*>("feedbackToast"))
+                            previous->dismiss();
+                        auto* toast = new Toast(panel);
+                        toast->setObjectName("feedbackToast");
+                        toast->setDuration(5500);
+                        toast->setPlacement(Toast::TopEnd);
+                        toast->setClosable(true);
+                        toast->setPauseOnHoverEnabled(true);
+                        if (i == 0 || i == 1) {
+                            toast->setSeverity(i == 0 ? Toast::Success : Toast::Informational);
+                            toast->setMessage(i == 0 ? "Changes saved" : "Link copied");
+                        } else if (i == 2) {
+                            toast->setSeverity(Toast::Warning);
+                            toast->setTitle("One file needs attention");
+                            toast->setMessage("archive.zip exceeds the 20 MB limit. The other "
+                                              "files can continue.");
+                            toast->setAction(review);
+                        } else {
+                            toast->setSeverity(Toast::Error);
+                            toast->setTitle("Upload interrupted");
+                            toast->setMessage(
+                                "Your connection was lost. Try again to resume product-shot.png.");
+                            toast->setAction(retry);
+                        }
+                        QObject::connect(panel, &QObject::destroyed, toast, &QObject::deleteLater);
+                        QObject::connect(toast, &Toast::dismissed, toast, &QObject::deleteLater);
+                        toast->present(panel);
+                    });
+                }
+                buttons->addStretch();
+                layout->addWidget(row);
+
+                return panel;
+            },
+            true),
+        makeSample(
             QStringLiteral("toast-severity"), QStringLiteral("Severity"),
             QStringLiteral("Use a short-lived same-window toast to acknowledge an action without "
                            "blocking the current task."),

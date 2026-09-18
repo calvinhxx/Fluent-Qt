@@ -1,4 +1,5 @@
 #include "CollectionsSamples.h"
+#include "FilesSamples.h"
 
 #include <functional>
 
@@ -1987,6 +1988,8 @@ QVector<GallerySample> stackViewSamples()
 
 QVector<GallerySample> collectionsSamples(const QString& routeId)
 {
+    if (routeId == QStringLiteral("file-list-view"))
+        return fileListViewSamples();
     if (routeId == QStringLiteral("drawer-view"))
         return drawerViewSamples();
     if (routeId == QStringLiteral("data-grid"))

@@ -187,6 +187,7 @@
         <object-type name="FontIcon"/>
 
         <namespace-type name="basicinput" visible="no">
+            <object-type name="FileDropZone"/>
             <object-type name="Button">
                 <enum-type name="ButtonStyle"/>
                 <enum-type name="ButtonSize"/>
@@ -479,6 +480,15 @@
         </namespace-type>
 
         <namespace-type name="collections" visible="no">
+            <object-type name="FileListView">
+                <enum-type name="Status"/>
+                <enum-type name="DataRole"/>
+                <modify-function signature="setModel(QAbstractItemModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
             <object-type name="DataGrid">
                 <!-- DataGrid redeclares the model and selection-model entry
                      points. Preserve the caller-owned Qt objects while their

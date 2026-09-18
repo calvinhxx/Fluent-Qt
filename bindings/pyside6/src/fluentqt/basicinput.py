@@ -8,6 +8,7 @@ ColorPicker = _native.fluent.ColorPicker
 _NativeComboBox = _native.fluent.ComboBox
 CompoundButton = _native.fluent.CompoundButton
 DropDownButton = _native.fluent.DropDownButton
+FileDropZone = _native.fluent.FileDropZone
 HyperlinkButton = _native.fluent.HyperlinkButton
 MultiSelectComboBox = _native.fluent.MultiSelectComboBox
 RadioButton = _native.fluent.RadioButton
@@ -66,6 +67,7 @@ __all__ = [
     "ComboBox",
     "CompoundButton",
     "DropDownButton",
+    "FileDropZone",
     "HyperlinkButton",
     "MultiSelectComboBox",
     "RadioButton",

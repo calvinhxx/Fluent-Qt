@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
 
-[← Inspector Report Contract](inspector-report.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md)
+[← Inspector Report Contract](inspector-report.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Files and feedback →](files-and-feedback.md)
 <!-- docs-nav:top:end -->
 
 Charts uses the existing Qt Core, Gui, and Widgets dependencies. It does not
@@ -193,5 +193,5 @@ they are diagnostics rather than universal frame-time guarantees.
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Inspector Report Contract](inspector-report.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md)
+[← Inspector Report Contract](inspector-report.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Files and feedback →](files-and-feedback.md)
 <!-- docs-nav:bottom:end -->
