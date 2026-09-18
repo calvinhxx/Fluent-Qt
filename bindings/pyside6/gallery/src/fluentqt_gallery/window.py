@@ -2130,6 +2130,7 @@ class GalleryWindow(fluentqt.Window):
         self._current_route = ""
         self._history: list[str] = []
         self._splash: GallerySplashScreen | None = None
+        self._dismissal_splash: GallerySplashScreen | None = None
         self._skeleton: tuple[int, GalleryPageSkeleton] | None = None
         self._intro_tour: GalleryIntroTour | None = None
         self._startup_finished = not self._startup_visuals
@@ -2209,7 +2210,11 @@ class GalleryWindow(fluentqt.Window):
             self._schedule_startup_finish()
             return
         route_id = self._prewarm_queue.pop(0)
-        self._ensure_page(route_id)
+        _index, page = self._ensure_page(route_id)
+        # Hidden widgets defer their first resize. Match the C++ prewarm so
+        # that work cannot accumulate into the first splash fade frame.
+        page.resize(self._content_host.contentsRect().size())
+        page.grab(QRect(0, 0, 1, 1))
         self._prewarm_done += 1
         page_percent = (
             self._prewarm_done * 100 // max(1, self._prewarm_total)
@@ -2258,12 +2263,17 @@ class GalleryWindow(fluentqt.Window):
         splash = self._splash
         self._splash = None
         if splash is not None:
+            self._dismissal_splash = splash
+            splash.cache_dismissal_content(self._navigation_view)
             splash.dismiss()
+
     def _startup_replaced(self) -> None:
         self._finish_startup()
+        self._dismissal_splash = None
         self._title_content.set_app_icon_revealed(True)
 
     def _startup_dismissed(self) -> None:
+        self._dismissal_splash = None
         self._title_content.set_app_icon_revealed(True)
         if not self._settings.intro_completed:
             _single_shot(480, self, self._maybe_start_intro_tour)
@@ -2565,6 +2575,8 @@ class GalleryWindow(fluentqt.Window):
         del animated
         if route_id not in ROUTE_BY_ID:
             raise KeyError("Unknown native Gallery route: {0}".format(route_id))
+        if self._dismissal_splash is not None:
+            self._dismissal_splash.clear_dismissal_content()
         resident = self._pages.get(route_id)
         if route_id == self._current_route:
             self._refresh_route_visuals(route_id)

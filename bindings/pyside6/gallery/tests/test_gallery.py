@@ -57,6 +57,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QFrame,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QSizePolicy,
@@ -3696,6 +3697,128 @@ with (
                     self.assertEqual(persisted.value(key), chosen)
                     previous_chosen = chosen
 
+    def test_startup_prewarm_completes_hidden_first_layout(self):
+        window = GalleryWindow(startup_visuals=True)
+        try:
+            window.resize(960, 680)
+            window._prewarm_queue = ["button", "slider", "tab-view"]
+            window._prewarm_paused = True
+            window.show()
+            QApplication.processEvents()
+            window._prewarm_paused = False
+            for _ in range(3):
+                window._prewarm_next_route()
+            for route in ("button", "slider", "tab-view"):
+                page = window._pages[route][1]
+                self.assertTrue(page.isHidden())
+                self.assertFalse(page.testAttribute(Qt.WA_PendingResizeEvent))
+                self.assertEqual(page.size(), window._content_host.contentsRect().size())
+        finally:
+            window.close()
+            window.deleteLater()
+            QApplication.processEvents()
+
+    def test_splash_handoff_caches_native_pixels_and_invalidates(self):
+        class PaintCounter(QLabel):
+            paints = 0
+
+            def paintEvent(self, event):
+                self.paints += 1
+                super().paintEvent(event)
+
+        self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())
+        self.addCleanup(fluentqt.set_theme, fluentqt.current_theme())
+        fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
+        host = QWidget()
+        host.resize(640, 420)
+        content = PaintCounter("Live Gallery content", host)
+        content.setGeometry(10, 10, 300, 180)
+        cover_host = QWidget(host)
+        cover_host.setGeometry(320, 10, 300, 180)
+        splash = GallerySplashScreen(cover_host)
+        host.show()
+        splash.show()
+        QApplication.processEvents()
+        try:
+            before = host.grab(content.geometry()).toImage()
+            splash.cache_dismissal_content(content)
+            self.assertIsNotNone(content.graphicsEffect())
+            self.assertEqual(host.grab(content.geometry()).toImage(), before)
+            paints = content.paints
+            for _ in range(3):
+                content.update()
+                host.grab()
+            self.assertEqual(content.paints, paints)
+            content.resize(330, 185)
+            host.grab()
+            self.assertGreater(content.paints, paints)
+            paints = content.paints
+            next_theme = (
+                fluentqt.Theme.Dark
+                if fluentqt.current_theme() != fluentqt.Theme.Dark
+                else fluentqt.Theme.Light
+            )
+            fluentqt.set_theme(next_theme)
+            host.grab()
+            self.assertGreater(content.paints, paints)
+            splash.hide()
+            self.assertIsNone(content.graphicsEffect())
+            paints = content.paints
+            host.grab()
+            self.assertGreater(content.paints, paints)
+        finally:
+            host.close()
+            host.deleteLater()
+            QApplication.processEvents()
+
+    def test_splash_cache_preserves_effects_motion_and_particle_lifetime(self):
+        self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())
+        fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
+        host = QWidget()
+        host.resize(640, 420)
+        content = QWidget(host)
+        content.setGeometry(0, 0, 300, 220)
+        visible = fluentqt.ParticleBackdrop(content)
+        disabled = fluentqt.ParticleBackdrop(content)
+        disabled.setAnimationEnabled(False)
+        hidden = fluentqt.ParticleBackdrop(content)
+        hidden.hide()
+        cover_host = QWidget(host)
+        cover_host.setGeometry(310, 0, 300, 220)
+        splash = GallerySplashScreen(cover_host)
+        host.show()
+        splash.show()
+        QApplication.processEvents()
+        try:
+            effect = QGraphicsOpacityEffect(content)
+            content.setGraphicsEffect(effect)
+            splash.cache_dismissal_content(content)
+            self.assertIs(content.graphicsEffect(), effect)
+            content.setGraphicsEffect(None)
+            splash.cache_dismissal_content(host)
+            self.assertIsNone(host.graphicsEffect())
+            splash.cache_dismissal_content(content)
+            self.assertFalse(visible.isAnimationEnabled())
+            self.assertFalse(disabled.isAnimationEnabled())
+            self.assertTrue(hidden.isAnimationEnabled())
+            splash.hide()
+            self.assertTrue(visible.isAnimationEnabled())
+            self.assertFalse(disabled.isAnimationEnabled())
+            self.assertIsNone(content.graphicsEffect())
+            splash.show()
+            fluentqt.set_motion_mode(fluentqt.MotionMode.Reduced)
+            splash.cache_dismissal_content(content)
+            self.assertIsNone(content.graphicsEffect())
+            fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
+            splash.cache_dismissal_content(content)
+            shiboken6.delete(splash)
+            self.assertIsNone(content.graphicsEffect())
+            self.assertTrue(visible.isAnimationEnabled())
+        finally:
+            host.close()
+            host.deleteLater()
+            QApplication.processEvents()
+
     def test_opt_in_startup_splash_matches_native_chrome_handoff(self):
         self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())
         window = GalleryWindow(startup_visuals=True)
@@ -3732,10 +3855,14 @@ with (
             self.assertTrue(_wait_until(lambda: window._splash is None))
             self.assertGreaterEqual(visible.elapsed(), 1400)
             self.assertIsNone(window._splash)
+            self.assertIsNotNone(window._navigation_view.graphicsEffect())
+            window.navigate("button")
+            self.assertIsNone(window._navigation_view.graphicsEffect())
             self.assertTrue(window._menu_button.isVisible())
             _qwait(500)
             self.assertIsNone(window._intro_tour)
             self.assertTrue(_wait_until(lambda: not shiboken6.isValid(splash)))
+            self.assertIsNone(window._navigation_view.graphicsEffect())
             self.assertGreaterEqual(visible.elapsed(), 2000)
         finally:
             window.close()
