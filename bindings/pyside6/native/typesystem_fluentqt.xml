@@ -1461,6 +1461,13 @@ Shiboken::Object::keepReference(
             </object-type>
             <object-type name="SplashScreen">
                 <enum-type name="Presentation"/>
+                <!-- The transition target is borrowed and may be an ancestor.
+                     Do not make its wrapper a child of the splash. -->
+                <modify-function signature="transitionTarget()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
             </object-type>
             <object-type name="Shimmer">
                 <enum-type name="ShimmerTemplate"/>

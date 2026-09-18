@@ -370,6 +370,19 @@ class FluentQtBindingTest(unittest.TestCase):
             host.deleteLater()
             QApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
+    def test_splash_screen_transition_target_getter_borrows_native_host(self):
+        window = fluentqt.Window()
+        host = window.contentHost()
+        splash = fluentqt.SplashScreen(host)
+        try:
+            splash.setTransitionTarget(host)
+            self.assertIs(splash.transitionTarget(), host)
+            shiboken6.delete(splash)
+            self.assertTrue(shiboken6.isValid(host))
+            self.assertIs(window.contentHost(), host)
+        finally:
+            shiboken6.delete(window)
+
     def test_public_types_and_build_versions(self):
         self.assertTrue(issubclass(fluentqt.Accordion, QWidget))
         self.assertTrue(issubclass(fluentqt.Avatar, QWidget))
