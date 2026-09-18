@@ -478,6 +478,7 @@ TEST(ToastTest, Contract_ActionReusesFluentButtonWithLocalNeutralStyling)
 
 TEST(ToastTest, Contract_CloseButtonIsOptionalAndReportsOneDismissal)
 {
+    qRegisterMetaType<Toast::DismissReason>("DismissReason");
     QWidget host;
     host.resize(640, 480);
     host.show();
