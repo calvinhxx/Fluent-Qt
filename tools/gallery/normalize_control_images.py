@@ -81,6 +81,39 @@ def _corner_alpha(image: Image.Image) -> tuple[int, int, int, int]:
     )
 
 
+def _aliased_silhouette_sides(image: Image.Image) -> list[str]:
+    """Find sustained hard diagonal steps, ignoring pixel-aligned straight edges."""
+    alpha = image.getchannel("A")
+    sides = (
+        ("left", alpha),
+        ("right", alpha.transpose(Image.Transpose.FLIP_LEFT_RIGHT)),
+        ("top", alpha.transpose(Image.Transpose.ROTATE_90)),
+        ("bottom", alpha.transpose(Image.Transpose.ROTATE_270)),
+    )
+    aliased = []
+    for name, mask in sides:
+        pixels = mask.load()
+        edge = [
+            next((x for x in range(mask.width) if pixels[x, y] > 0), None)
+            for y in range(mask.height)
+        ]
+        hard_steps = 0
+        for y in range(1, mask.height - 1):
+            previous, x, following = edge[y - 1:y + 2]
+            if x is None or previous is None or following is None:
+                continue
+            if x == 0 or x == mask.width - 1:
+                continue
+            # Skip long jumps between separate shapes and flat horizontal/vertical
+            # edges. A few opaque tangent pixels are normal even on smooth curves.
+            diagonal = 0 < abs(x - previous) <= 2 or 0 < abs(x - following) <= 2
+            if diagonal and pixels[x, y] >= 250:
+                hard_steps += 1
+        if hard_steps >= 12:
+            aliased.append(name)
+    return aliased
+
+
 def audit(fix: bool) -> int:
     images = set(IMAGE_ROOT.rglob("*.png"))
     registered = _qrc_control_images()
@@ -111,6 +144,13 @@ def audit(fix: bool) -> int:
             failures.append(
                 f"{relative}: canvas corners must be transparent, found {corners}"
             )
+        if image.size == TARGET_SIZE:
+            aliased = _aliased_silhouette_sides(image)
+            if len(aliased) >= 2:
+                failures.append(
+                    f"{relative}: hard staircase edges on {', '.join(aliased)}; "
+                    "re-export with antialiased transparency"
+                )
 
     for path in sorted(images - registered):
         failures.append(f"{path.relative_to(ROOT)}: missing from app/gallery_resources.qrc")
@@ -129,7 +169,8 @@ def audit(fix: bool) -> int:
         return 1
 
     print(
-        f"control-image audit passed: {len(images)} registered 72x72 RGBA PNGs"
+        f"control-image audit passed: {len(images)} registered 72x72 RGBA PNGs; "
+        "no sustained hard staircase edges"
     )
     return 0
 

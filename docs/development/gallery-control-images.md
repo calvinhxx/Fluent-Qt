@@ -41,8 +41,9 @@ Rules for Gallery component-card artwork under
   filling the square outside the rounded tile
 
 When generating artwork with an image model, assume the model may emit an
-opaque full-bleed square. Always post-process with a transparent rounded-rect
-mask before committing.
+opaque full-bleed square. Use an antialiased rounded-rect mask before committing.
+Preserve partial-alpha edge pixels; thresholding the mask to fully transparent
+or fully opaque creates visible stair-step corners.
 
 Gallery cards reserve a 40 × 40 logical-pixel icon slot but center bitmap
 artwork in a 36 × 36 rectangle. This maps a 72 × 72 source one-for-one on a
@@ -66,6 +67,7 @@ high-contrast (usually white) on that family:
 | `menus-toolbars` | purple |
 | `collections` | purple |
 | `charts` | steel blue |
+| `spatial` | indigo |
 | `text-fields` | blue |
 
 When adding an icon to an existing category, sample neighboring icons in that
@@ -77,7 +79,8 @@ control.
 1. Match the category color family above.
 2. Keep the motif simple enough to read at 72 × 72.
 3. Export or resize to 72 × 72 PNG.
-4. Apply a transparent rounded-rect mask so canvas corners are alpha 0.
+4. Use an antialiased rounded-rect mask so canvas corners are alpha 0 and curved
+   edges retain partial coverage.
 5. Add the file under the correct `control_images/<category-id>/` folder.
 6. Register it in `app/gallery_resources.qrc`.
 7. Rebuild Gallery and confirm the card image on light and dark chrome.
@@ -90,8 +93,16 @@ The six Layout-family tiles are deterministic assets. Regenerate them with
 `python tools/gallery/generate_layout_control_images.py` so their coral fill,
 line weight, radius, and alpha treatment stay identical.
 
+The Spatial tiles use an indigo family. Regenerate them with
+`python tools/gallery/generate_spatial_control_images.py`.
+
 The ChartView tile uses the Charts steel-blue family. Regenerate it with
 `python tools/gallery/generate_charts_control_image.py`.
+
+FontIcon, CommandBar, CommandBarFlyout, and Toast have editable SVG sources in
+`tools/gallery/artwork/`. Export each to its existing 72 × 72 PNG with
+antialiasing enabled. Rendering at 4× resolution before downsampling also
+preserves smooth strokes and transparent corners.
 
 The SplashScreen tile uses the Status & info teal family. Regenerate it with
 `python tools/gallery/generate_splash_control_image.py`.
@@ -104,6 +115,19 @@ Quick alpha sanity check for a candidate icon:
 - transparent pixel ratio is roughly in the same band as neighboring icons in
   that category (often about 15–25% for full rounded tiles)
 - opaque content stays inside the rounded tile, not flush to the bitmap edge
+
+The audit also detects sustained hard steps along transparent silhouettes.
+It ignores pixel-aligned straight edges and isolated opaque pixels at curve
+tangents. This catches hard rounded masks even when the artwork contains
+semi-transparent pixels elsewhere; it does not replace visual review of the
+interior artwork or scaled rendering. `--fix` only normalizes canvas size and
+does not blur or repair an aliased outline.
+
+Check the detector's positive and negative cases with:
+
+```bash
+python3 tools/gallery/test_normalize_control_images.py
+```
 
 <!-- docs-nav:bottom:start -->
 ---

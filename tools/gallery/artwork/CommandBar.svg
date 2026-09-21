@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <defs>
+    <linearGradient id="bar" x1="0" y1="26" x2="0" y2="46" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c99ce7"/>
+      <stop offset="1" stop-color="#9465ba"/>
+    </linearGradient>
+    <linearGradient id="button" x1="0" y1="31" x2="0" y2="43" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f2dfff"/>
+      <stop offset="1" stop-color="#d8b9ec"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="66" height="66" rx="16" fill="#684394"/>
+  <rect x="5.5" y="26" width="61" height="21" rx="7"
+        fill="url(#bar)" stroke="#dbb3f3" stroke-width="1.2"/>
+  <path d="M12 28.5H60" stroke="#f4dfff" stroke-opacity="0.65" stroke-linecap="round"/>
+  <g fill="#58347b" opacity="0.35">
+    <rect x="10" y="32" width="11" height="12" rx="2.4"/>
+    <rect x="25" y="32" width="11" height="12" rx="2.4"/>
+    <rect x="40" y="32" width="11" height="12" rx="2.4"/>
+  </g>
+  <g fill="url(#button)" stroke="#70488c" stroke-width="0.8">
+    <rect x="9.5" y="31" width="11" height="12" rx="2.4"/>
+    <rect x="24.5" y="31" width="11" height="12" rx="2.4"/>
+    <rect x="39.5" y="31" width="11" height="12" rx="2.4"/>
+  </g>
+  <circle cx="58.5" cy="37" r="4.8" fill="#ac80cb" stroke="#d6aff0" stroke-width="0.8"/>
+  <g fill="#f3e4ff">
+    <circle cx="56" cy="37" r="0.85"/>
+    <circle cx="58.5" cy="37" r="0.85"/>
+    <circle cx="61" cy="37" r="0.85"/>
+  </g>
+</svg>

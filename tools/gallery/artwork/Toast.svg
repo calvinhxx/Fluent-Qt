@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <defs>
+    <linearGradient id="tile" x1="4" y1="4" x2="66" y2="68" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#42e6e2"/>
+      <stop offset="0.25" stop-color="#29c6cd"/>
+      <stop offset="0.35" stop-color="#80e4e1"/>
+      <stop offset="0.46" stop-color="#1dafbb"/>
+      <stop offset="1" stop-color="#048496"/>
+    </linearGradient>
+    <linearGradient id="banner" x1="0" y1="24" x2="0" y2="46" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d0ffff" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#8aeeee" stop-opacity="0.25"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="66" height="66" rx="16" fill="url(#tile)"/>
+  <rect x="8" y="27" width="57" height="20" rx="5" fill="#006978" opacity="0.25"/>
+  <rect x="7.5" y="24" width="57" height="20" rx="5"
+        fill="url(#banner)" stroke="#b8f7f4" stroke-width="1"/>
+  <circle cx="18" cy="34" r="6" fill="#efffff" fill-opacity="0.9"/>
+  <circle cx="18" cy="34" r="3.5" fill="#63cbd0"/>
+  <path d="M30 30H55" stroke="#f4ffff" stroke-width="2.3" stroke-linecap="round"/>
+  <path d="M30 36H47" stroke="#d9ffff" stroke-width="2.1" stroke-linecap="round"/>
+  <path d="M30 40H40" stroke="#b9eeee" stroke-width="1.2" stroke-linecap="round"/>
+</svg>
