@@ -1494,6 +1494,7 @@ QVector<GallerySample> spatialViewSamples()
         sample.usageSnippet = spatialUsage(sample.id);
         sample.supplementary = sample.id != QStringLiteral("spatial-view-scene") &&
                                sample.id != QStringLiteral("spatial-view-cards") &&
+                               sample.id != QStringLiteral("spatial-view-donut") &&
                                sample.id != QStringLiteral("spatial-view-hybrid");
     }
     return samples;

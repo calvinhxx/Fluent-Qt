@@ -62,6 +62,9 @@ PYTHONPATH=build/pyside6/python .venv-pyside/bin/python -m fluentqt_gallery
 examples under **Spatial**. The component pages link back to that setting;
 **Key usage / Full example** separates the integration calls from the complete
 working Python example. The same widget instances and values survive mode changes.
+With Spatial installed, a fresh Gallery starts in 3D when acceleration is available.
+Turning it off saves a 2D preference for later launches. Failed initialization uses
+2D without changing that preference.
 
 The shell uses a shared Qt OpenGL canvas with cached widget surfaces. Pointer
 input maps back to the live widgets, and native overlays remain above the canvas.

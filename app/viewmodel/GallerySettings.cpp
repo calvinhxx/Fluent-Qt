@@ -110,6 +110,8 @@ GallerySettings::GallerySettings(QObject* parent) : QObject(parent)
         const ThemeMode initialHostMode = hostThemeMode(platform::hostTheme());
         if (initialHostMode != ThemeMode::System)
             m_themeMode = initialHostMode;
+        if (m_themeMode == ThemeMode::HighContrast)
+            m_spatialModeEnabled = false;
         platform::setHostThemeChangedHandler(
             this, [this](platform::HostTheme theme) { applyHostThemeMode(hostThemeMode(theme)); });
     }
@@ -402,6 +404,9 @@ void GallerySettings::applyThemeMode()
 
 void GallerySettings::load()
 {
+#ifdef FLUENT_QT_HAS_SPATIAL
+    m_spatialModeEnabled = true;
+#endif
     if (!platform::persistenceAvailable())
         return;
 
@@ -437,7 +442,7 @@ void GallerySettings::load()
         settings.value(QString::fromLatin1(kHomeParticlesEnabledKey), true).toBool();
     m_spatialModeEnabled =
         m_motionMode == MotionMode::Full && m_themeMode != ThemeMode::HighContrast &&
-        settings.value(QString::fromLatin1(kSpatialModeEnabledKey), false).toBool();
+        settings.value(QString::fromLatin1(kSpatialModeEnabledKey), m_spatialModeEnabled).toBool();
 }
 
 } // namespace fluent::gallery

@@ -417,6 +417,10 @@ class PythonGalleryTest(unittest.TestCase):
             raise RuntimeError("FluentQt resources could not be initialized")
         cls.app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
 
+    def setUp(self):
+        # These are native 2D shell checks; the Spatial suite owns GPU presentation.
+        gallery_settings_module.gallery_settings().set_spatial_mode_enabled(False)
+
     def tearDown(self):
         QApplication.processEvents()
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)

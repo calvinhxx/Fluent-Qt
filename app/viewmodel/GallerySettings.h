@@ -74,8 +74,9 @@ public:
     void setHomeParticlesEnabled(bool enabled);
 
     // One mode for Gallery shell/cards and every Spatial example.
+    // Spatial builds default to 3D; a saved choice takes precedence.
     // Reduced motion and high contrast use 2D.
-    // zh_CN: 统一控制 Gallery 外壳、卡片及所有 Spatial 示例。减弱动效和高对比度使用 2D。
+    // zh_CN: Spatial 构建默认开启 3D，保留已保存的选择；减弱动效和高对比度使用 2D。
     bool spatialModeEnabled() const { return m_spatialModeEnabled; }
     void setSpatialModeEnabled(bool enabled);
 

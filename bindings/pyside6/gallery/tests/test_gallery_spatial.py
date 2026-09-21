@@ -8,11 +8,12 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
 import fluentqt
-from PySide6.QtCore import QAbstractAnimation, QEvent, QObject, QPoint, QPointF, QRect, QSizeF, Qt
+from PySide6.QtCore import QAbstractAnimation, QEvent, QObject, QPoint, QPointF, QRect, QSettings, QSizeF, Qt
 from PySide6.QtGui import QPainter, QPolygonF, QTransform
 from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QApplication, QGraphicsView, QWidget
@@ -23,6 +24,7 @@ from fluentqt_gallery.native_samples import build_native_sample
 from fluentqt_gallery.settings import NavigationStyle, ThemeMode, gallery_settings
 from fluentqt_gallery.spatial_support import SPATIAL_AVAILABLE
 from fluentqt_gallery.window import GalleryWindow
+import fluentqt_gallery.settings as settings_module
 
 
 class GallerySpatialTest(unittest.TestCase):
@@ -50,6 +52,36 @@ class GallerySpatialTest(unittest.TestCase):
         QApplication.processEvents()
         sys.excepthook = self.old_hook
         self.assertEqual(self.errors, [], "Unhandled Qt callback error")
+
+    def test_spatial_defaults_respect_module_saved_choice_and_accessibility(self):
+        cases = ((None, 0, 1), (False, 0, 1), (True, 0, 1),
+                 (True, 1, 1), (True, 2, 1), (True, 0, 3))
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "config.ini"
+            with (patch.object(settings_module, "persistence_available", return_value=True),
+                  patch.object(settings_module, "config_file_path", return_value=path)):
+                for available in (False, True):
+                    for saved, motion, theme in cases:
+                        with self.subTest(available=available, saved=saved, motion=motion, theme=theme):
+                            storage = QSettings(str(path), QSettings.IniFormat)
+                            storage.clear()
+                            storage.setValue("settings/motionMode", motion)
+                            storage.setValue("settings/themeMode", theme)
+                            if saved is not None:
+                                storage.setValue("settings/spatialModeEnabled", saved)
+                            storage.sync()
+                            with patch.object(settings_module, "SPATIAL_AVAILABLE", available):
+                                settings = settings_module.GallerySettings()
+                            try:
+                                expected = (available if saved is None else saved) and motion == 0 and theme != 3
+                                self.assertEqual(settings.spatial_mode_enabled, expected)
+                                self.assertEqual(storage.contains("settings/spatialModeEnabled"), saved is not None)
+                                if expected:
+                                    settings.set_spatial_mode_enabled(False)
+                                    storage.sync()
+                                    self.assertFalse(storage.value("settings/spatialModeEnabled", type=bool))
+                            finally:
+                                delete(settings)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_cache_budget_preserves_native_density(self):
@@ -89,6 +121,7 @@ window = GalleryWindow(startup_visuals=False)
 window.navigate("settings", animated=False)
 assert window._spatial_controller is None
 assert not window._settings.spatial_available
+assert not window._settings.spatial_mode_enabled
 assert (len(ENTRIES), len(ROUTES)) == (83, 105)
 assert "PySide6.QtOpenGLWidgets" not in sys.modules
 assert "PySide6.QtOpenGL" not in sys.modules
@@ -147,6 +180,23 @@ print("2D-only Gallery: no OpenGL imports")
             self.assertTrue(all(not r.widget._spatial_binding.view.isSpatialEnabled() for r in results))
         finally:
             delete(host)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_chart_is_outside_more_examples_and_updates_its_model(self):
+        window = GalleryWindow(startup_visuals=False)
+        try:
+            window.navigate("spatial-view", animated=False)
+            page = window._pages["spatial-view"][1]
+            more = page.findChild(fluentqt.Expander, "galleryMoreSpatialExamples")
+            self.assertFalse(more.isExpanded())
+            chart = page.findChild(fluentqt.DonutChart, "spatialAllocationChart")
+            self.assertIsNotNone(chart)
+            self.assertFalse(more.isAncestorOf(chart))
+            slider = page.findChild(fluentqt.Slider, "spatialAllocationSlider")
+            slider.setValue(72)
+            self.assertEqual(chart.centerText(), "72%")
+        finally:
+            delete(window)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_2d_startup_defers_gpu_probe_until_requested(self):

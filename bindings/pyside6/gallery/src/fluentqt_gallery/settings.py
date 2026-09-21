@@ -23,6 +23,7 @@ from PySide6.QtGui import QColor, QGuiApplication
 from PySide6.QtWidgets import QApplication
 
 from .identity import APPLICATION_NAME, ORGANIZATION_NAME
+from .spatial_support import SPATIAL_AVAILABLE
 
 
 class ThemeMode(IntEnum):
@@ -169,7 +170,7 @@ class GallerySettings(QObject):
         self.intro_completed = False
         self.last_home_particle_effect = ""
         self.home_particles_enabled = True
-        self.spatial_mode_enabled = False
+        self.spatial_mode_enabled = SPATIAL_AVAILABLE
         self.spatial_available = False
         self.spatial_availability_pending = True
         self.spatial_unavailable_reason = "Preparing 3D rendering."
@@ -245,8 +246,10 @@ class GallerySettings(QObject):
         self.home_particles_enabled = bool(
             settings.value(_HOME_PARTICLES_ENABLED_KEY, True, type=bool)
         )
-        self.spatial_mode_enabled = bool(
-            settings.value("settings/spatialModeEnabled", False, type=bool)
+        self.spatial_mode_enabled = (
+            self.motion_mode == MotionMode.Full
+            and self.theme_mode != ThemeMode.HighContrast
+            and bool(settings.value("settings/spatialModeEnabled", SPATIAL_AVAILABLE, type=bool))
         )
 
     def apply_user_theme(self) -> None:

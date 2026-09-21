@@ -279,7 +279,7 @@ TEST(GalleryMotionPersistenceTest, ColdLoadProbe)
     QCoreApplication::setApplicationName(fluent::gallery::platform::capabilities().applicationName);
     const QString dataPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
     ASSERT_TRUE(QDir().mkpath(dataPath));
-    QLockFile persistenceLock(QDir(dataPath).filePath(QStringLiteral("motion-cold-load.lock")));
+    QLockFile persistenceLock(QDir(dataPath).filePath(QStringLiteral("settings-cold-load.lock")));
     ASSERT_TRUE(persistenceLock.tryLock(10000));
 
     QSettings storage = fluent::gallery::platform::createSettings();
@@ -334,6 +334,8 @@ protected:
         m_themeMode = settings.themeMode();
         m_motionMode = settings.motionMode();
         m_navigationStyle = settings.navigationStyle();
+        m_spatialEnabled = settings.spatialModeEnabled();
+        settings.setSpatialModeEnabled(false);
         settings.setThemeMode(GallerySettings::ThemeMode::Light);
         settings.setMotionMode(GallerySettings::MotionMode::Full);
         settings.setNavigationStyle(GallerySettings::NavigationStyle::Auto);
@@ -346,6 +348,7 @@ protected:
         settings.setNavigationStyle(m_navigationStyle);
         settings.setThemeMode(m_themeMode);
         settings.setMotionMode(m_motionMode);
+        settings.setSpatialModeEnabled(m_spatialEnabled);
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
 
@@ -353,6 +356,7 @@ private:
     GallerySettings::ThemeMode m_themeMode = GallerySettings::ThemeMode::System;
     GallerySettings::MotionMode m_motionMode = GallerySettings::MotionMode::Full;
     GallerySettings::NavigationStyle m_navigationStyle = GallerySettings::NavigationStyle::Auto;
+    bool m_spatialEnabled = false;
 };
 
 TEST_F(GalleryShellFrameworkTest, WindowConstructsInitialHomeContentPage)

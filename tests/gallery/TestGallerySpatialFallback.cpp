@@ -3,6 +3,12 @@
 #include <QDir>
 #include <QGraphicsEffect>
 #include <QHelpEvent>
+#include <QLockFile>
+#include <QProcess>
+#include <QProcessEnvironment>
+#include <QScopeGuard>
+#include <QSettings>
+#include <QStandardPaths>
 #include <QScrollBar>
 #include <QScreen>
 #include <QSignalSpy>
@@ -10,6 +16,7 @@
 
 #include "QtTestEnvironment.h"
 #include "model/GalleryComponentCatalog.h"
+#include "platform/GalleryPlatform.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/SettingsPage.h"
 #include "view/shell/GalleryContentPresenter.h"
@@ -81,6 +88,144 @@ protected:
     }
 };
 } // namespace
+
+TEST(GallerySpatialPreferenceTest, ColdLoadProbe)
+{
+    const QString scenario = qEnvironmentVariable("FLUENTQT_GALLERY_SPATIAL_COLD_LOAD");
+    if (scenario.isEmpty())
+        GTEST_SKIP() << "Only exercised by the isolated preference test";
+    ASSERT_TRUE(QStandardPaths::isTestModeEnabled());
+    QCoreApplication::setOrganizationName("Fluent-Qt");
+    QCoreApplication::setApplicationName(platform::capabilities().applicationName);
+    const QString dataPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    ASSERT_TRUE(QDir().mkpath(dataPath));
+    QLockFile lock(QDir(dataPath).filePath("settings-cold-load.lock"));
+    ASSERT_TRUE(lock.tryLock(10000));
+    QSettings storage = platform::createSettings();
+    const QStringList keys = {"settings/spatialModeEnabled", "settings/themeMode",
+                              "settings/motionMode", "intro/completed", "home/particlesEnabled"};
+    QMap<QString, QVariant> previous;
+    for (const auto& key : keys) {
+        if (storage.contains(key))
+            previous.insert(key, storage.value(key));
+        storage.remove(key);
+    }
+    const auto restore = qScopeGuard([&] {
+        for (const auto& key : keys) {
+            if (previous.contains(key))
+                storage.setValue(key, previous.value(key));
+            else
+                storage.remove(key);
+        }
+        storage.sync();
+    });
+    if (scenario != "default")
+        storage.setValue("settings/spatialModeEnabled", scenario != "saved-2d");
+    storage.setValue("settings/themeMode", scenario == "high-contrast" ? 3 : 1);
+    storage.setValue("settings/motionMode", scenario == "reduced" ? 1 : 0);
+    storage.setValue("intro/completed", true);
+    storage.setValue("home/particlesEnabled", false);
+    storage.sync();
+
+    auto& settings = GallerySettings::instance();
+#ifdef FLUENT_QT_HAS_SPATIAL
+    constexpr bool defaultEnabled = true;
+#else
+    constexpr bool defaultEnabled = false;
+#endif
+    const bool expected = scenario == "saved-3d" || (scenario == "default" && defaultEnabled);
+    EXPECT_EQ(settings.spatialModeEnabled(), expected);
+    EXPECT_EQ(storage.contains("settings/spatialModeEnabled"), scenario != "default");
+#ifdef FLUENT_QT_HAS_SPATIAL
+    if (scenario == "default" && !tests::support::isHeadlessPlatform()) {
+        GalleryWindow window;
+        auto* presenter = window.findChild<GalleryContentPresenter*>();
+        presenter->setPrewarmPaused(true);
+        presenter->prewarmFinished();
+        window.resize(1200, 820);
+        window.show();
+        QTRY_VERIFY_WITH_TIMEOUT(!window.findChild<QWidget*>("gallerySplashScreen"), 6500);
+        QTRY_VERIFY_WITH_TIMEOUT(!settings.spatialAvailabilityPending(), 6000);
+        auto* surface = window.findChild<QWidget*>("gallerySpatialSurface");
+        if (settings.spatialAvailable()) {
+            ASSERT_NE(surface, nullptr);
+            QTRY_VERIFY_WITH_TIMEOUT(surface->property("presenting").toBool(), 2000);
+            EXPECT_TRUE(depth::enabled(&window));
+        } else {
+            EXPECT_FALSE(depth::enabled(&window));
+        }
+        EXPECT_TRUE(settings.spatialModeEnabled());
+        EXPECT_FALSE(storage.contains("settings/spatialModeEnabled"));
+        ASSERT_TRUE(window.selectRoute("spatial-view"));
+        QTRY_VERIFY_WITH_TIMEOUT(window.currentContentPage() &&
+                                     window.currentContentPage()->routeId() == "spatial-view",
+                                 2000);
+        auto* page = window.currentContentPage();
+        charts::DonutChart* chart = nullptr;
+        spatial::SpatialView* preview = nullptr;
+        QWidget* card = nullptr;
+        for (auto* candidate : page->findChildren<spatial::SpatialView*>()) {
+            for (auto* item : candidate->items()) {
+                auto* match =
+                    item->widget()->findChild<charts::DonutChart*>("spatialAllocationChart");
+                if (match) {
+                    chart = match;
+                    preview = candidate;
+                    card = item->widget();
+                }
+            }
+        }
+        ASSERT_NE(chart, nullptr);
+        auto* more = page->findChild<layout::Expander*>("galleryMoreSpatialExamples");
+        ASSERT_NE(more, nullptr);
+        EXPECT_FALSE(more->isExpanded());
+        EXPECT_FALSE(more->isAncestorOf(preview));
+        auto* view = card->findChild<basicinput::Slider*>("spatialAllocationSlider");
+        ASSERT_NE(view, nullptr);
+        view->setValue(72);
+        EXPECT_EQ(chart->model()->pointAt(0).y(), 72);
+        const QString directory = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
+        if (!directory.isEmpty()) {
+            auto* scroll = page->findChild<scrolling::ScrollView*>();
+            ASSERT_NE(scroll, nullptr);
+            for (auto theme :
+                 {GallerySettings::ThemeMode::Light, GallerySettings::ThemeMode::Dark}) {
+                settings.setThemeMode(theme);
+                scroll->ensureWidgetVisible(preview, 0, 48);
+                QTest::qWait(350);
+                const QString name = theme == GallerySettings::ThemeMode::Light ? "light" : "dark";
+                EXPECT_TRUE(window.screen()
+                                ->grabWindow(window.winId())
+                                .save(directory + "/default-3d-chart-" + name + ".png"));
+            }
+        }
+    }
+#endif
+    if (expected) {
+        settings.setSpatialModeEnabled(false);
+        storage.sync();
+        EXPECT_FALSE(storage.value("settings/spatialModeEnabled").toBool());
+    }
+}
+
+TEST(GallerySpatialPreferenceTest, DefaultsAndSavedChoicesLoadInFreshProcesses)
+{
+    for (const QString& scenario :
+         {"default", "saved-2d", "saved-3d", "reduced", "high-contrast"}) {
+        QProcess probe;
+        auto environment = QProcessEnvironment::systemEnvironment();
+        environment.insert("FLUENTQT_GALLERY_SPATIAL_COLD_LOAD", scenario);
+        probe.setProcessEnvironment(environment);
+        probe.start(QCoreApplication::applicationFilePath(),
+                    {"--gtest_filter=GallerySpatialPreferenceTest.ColdLoadProbe"});
+        ASSERT_TRUE(probe.waitForStarted(10000));
+        ASSERT_TRUE(probe.waitForFinished(30000));
+        EXPECT_EQ(probe.exitStatus(), QProcess::NormalExit);
+        EXPECT_EQ(probe.exitCode(), 0) << scenario.toStdString() << "\n"
+                                       << probe.readAllStandardOutput().toStdString()
+                                       << probe.readAllStandardError().toStdString();
+    }
+}
 
 TEST_F(GallerySpatialFallbackTest, SupportBadgesTrackCapabilityInsteadOfTheModePreference)
 {

@@ -144,6 +144,8 @@ Start with the main examples:
   rendering settings keep their defaults.
 - **SpatialView / Two cards at different depths**: a settings card and a
   Sparkline card have separate poses. The chart retains its ordinary model.
+- **SpatialView / DonutChart and Slider**: drag the slider to update the chart's
+  model and center label inside the projected card.
 - **SpatialView / File preview**: keep the dropdown
   outside the scene and connect its selection to the projected card.
 - **SpatialItem / Card finish and pose**: the settings card contains just three
@@ -153,7 +155,7 @@ Start with the main examples:
 
 **More component combinations** is collapsed by default. It contains Slider/CheckBox,
 ListView/InfoBadge, CalendarView, SelectorBar with a text preview, RadioButton/Rating,
-a file browser and DonutChart. These examples follow the same setting, including
+a file browser. These examples follow the same setting, including
 when hidden or created after a mode change.
 
 Source code opens on **Key usage**, a short Spatial integration excerpt with
@@ -163,9 +165,12 @@ Gallery [TreeRowDelegate](../../app/view/widgets/samples/CollectionSampleDelegat
 for its row styling; it is an application delegate, not a Spatial dependency.
 The shared setting opens navigation and content into opposing surfaces while the
 native title bar stays stable. Gallery checks GPU support and creates its shell
-QOpenGLWidget and context only when 3D is first enabled, including a saved enabled
-preference. Default 2D startup does neither. On macOS with Qt 6.4 or later, Gallery
-prepares an OpenGL-compatible native window format before showing the window. This does
+QOpenGLWidget and context only when 3D is enabled. Builds with Spatial default to
+3D on first launch; a saved 2D choice takes precedence and skips GPU initialization.
+Unavailable acceleration falls back to 2D without erasing the saved preference.
+Reduced motion and high contrast also use 2D. The C++, Python and WebAssembly
+Galleries follow the same policy. On macOS with Qt 6.4 or later, Gallery prepares
+an OpenGL-compatible native window format before showing the window. This does
 not create a context or enable GPU composition: ordinary 2D painting still uses
 the raster backing store. It prevents Qt from destroying and recreating the
 visible window when the first QOpenGLWidget is added. The base library and

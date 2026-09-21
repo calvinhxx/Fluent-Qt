@@ -1143,7 +1143,7 @@ def build_component_page(
     for sample in entry.samples:
         card, result = _build_sample_card(entry, sample, content)
         if entry.route_id == "spatial-view" and sample.id not in {
-            "spatial-view-scene", "spatial-view-cards", "spatial-view-hybrid"
+            "spatial-view-scene", "spatial-view-cards", "spatial-view-donut", "spatial-view-hybrid"
         }:
             if more is None:
                 more = fluentqt.Expander(content)

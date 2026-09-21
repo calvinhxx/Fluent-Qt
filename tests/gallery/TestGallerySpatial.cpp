@@ -128,7 +128,7 @@ TEST_F(GallerySpatialTest, CategoryOwnsBothComponentsAndPublicReferences)
     }
 }
 
-TEST_F(GallerySpatialTest, Default2DDoesNotCreateOpenGLSurfaces)
+TEST_F(GallerySpatialTest, Explicit2DDoesNotCreateOpenGLSurfaces)
 {
     auto& settings = GallerySettings::instance();
     GalleryWindow window;
@@ -448,8 +448,15 @@ TEST_F(GallerySpatialTest, AdditionalCombinationsAreDisclosedAndShareTheGlobalMo
     auto* more = page.findChild<layout::Expander*>("galleryMoreSpatialExamples");
     ASSERT_NE(more, nullptr);
     EXPECT_FALSE(more->isExpanded());
-    EXPECT_EQ(more->findChildren<spatial::SpatialView*>().size(), 7);
+    EXPECT_EQ(more->findChildren<spatial::SpatialView*>().size(), 6);
     EXPECT_EQ(page.findChildren<spatial::SpatialView*>().size(), 10);
+    auto* chart = page.findChild<charts::DonutChart*>("spatialAllocationChart");
+    ASSERT_NE(chart, nullptr);
+    EXPECT_FALSE(more->isAncestorOf(chart));
+    auto* allocation = page.findChild<basicinput::Slider*>("spatialAllocationSlider");
+    ASSERT_NE(allocation, nullptr);
+    allocation->setValue(72);
+    EXPECT_EQ(chart->centerText(), "72%");
     EXPECT_EQ(page.findChild<QWidget*>("spatialPreviewMode"), nullptr);
     GallerySettings::instance().setSpatialModeEnabled(true);
     for (auto* view : page.findChildren<spatial::SpatialView*>())
