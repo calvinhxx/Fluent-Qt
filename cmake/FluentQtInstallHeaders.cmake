@@ -17,6 +17,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     include/FluentQt/MenusToolbars.h
     include/FluentQt/Navigation.h
     include/FluentQt/Scrolling.h
+    include/FluentQt/Spatial.h
     include/FluentQt/StatusInfo.h
     include/FluentQt/TextFields.h
     include/FluentQt/Windowing.h
@@ -118,6 +119,8 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/scrolling/ScrollBar.h
     src/components/scrolling/ScrollView.h
 
+    src/components/spatial/SpatialItem.h
+    src/components/spatial/SpatialView.h
     src/components/status_info/Avatar.h
     src/components/status_info/InfoBadge.h
     src/components/status_info/InfoBar.h
@@ -157,6 +160,10 @@ set(FLUENT_QT_INSTALL_HEADERS
 
 function(fluent_qt_install_headers source_root)
     foreach(_header IN LISTS FLUENT_QT_INSTALL_HEADERS)
+        if(NOT FLUENT_QT_BUILD_SPATIAL AND
+           (_header MATCHES "^src/components/spatial/" OR _header STREQUAL "include/FluentQt/Spatial.h"))
+            continue()
+        endif()
         if(_header MATCHES "^include/FluentQt/(.+)$")
             set(_relative_path "${CMAKE_MATCH_1}")
         elseif(_header MATCHES "^src/(.+)$")

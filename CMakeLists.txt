@@ -25,6 +25,7 @@ endif()
 option(BUILD_TESTING "Enable testing and build tests" OFF)
 option(FLUENT_QT_BUILD_TESTS "Build Fluent-Qt test targets" OFF)
 option(FLUENT_QT_BUILD_GALLERY "Build the Fluent-Qt Gallery application" OFF)
+option(FLUENT_QT_BUILD_SPATIAL "Build the optional Spatial module (requires Qt OpenGL support)" OFF)
 option(FLUENT_QT_BUILD_EXAMPLES "Build Fluent-Qt executable examples" ${FLUENT_QT_IS_TOP_LEVEL})
 option(FLUENT_QT_BUILD_PYSIDE6_BINDINGS "Build the optional PySide6 bindings" OFF)
 option(FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT "Build the optional WebAssembly adapter targets" OFF)
@@ -57,6 +58,9 @@ file(GLOB_RECURSE SRC CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 list(SORT SRC)
+set(FLUENT_QT_SPATIAL_SOURCES ${SRC})
+list(FILTER FLUENT_QT_SPATIAL_SOURCES INCLUDE REGEX "/components/spatial/")
+list(FILTER SRC EXCLUDE REGEX "/components/spatial/")
 set(FLUENT_QT_OPTIONAL_RESOURCE_ENTRIES "")
 if(EMSCRIPTEN AND FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT)
     set(FLUENT_QT_OPTIONAL_RESOURCE_ENTRIES
@@ -96,6 +100,10 @@ set_target_properties(FluentQt PROPERTIES
     EXPORT_NAME FluentQt
     OUTPUT_NAME FluentQt
 )
+
+if(FLUENT_QT_BUILD_SPATIAL)
+    include(cmake/FluentQtSpatial.cmake)
+endif()
 
 if(FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT)
     add_subdirectory(platforms/webassembly)
@@ -149,6 +157,12 @@ if(FLUENT_QT_INSTALL)
         NAMESPACE FluentQt::
         DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}"
         COMPONENT Development)
+    if(TARGET FluentQtSpatial)
+        install(TARGETS FluentQtSpatial EXPORT FluentQtSpatialTargets
+            ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Development)
+        install(EXPORT FluentQtSpatialTargets NAMESPACE FluentQt::
+            DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}" COMPONENT Development)
+    endif()
     install(FILES
         "${CMAKE_CURRENT_BINARY_DIR}/FluentQtConfig.cmake"
         "${CMAKE_CURRENT_BINARY_DIR}/FluentQtConfigVersion.cmake"

@@ -73,6 +73,7 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtApplePlatformDependencies.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtConfig.cmake.in"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtInstallHeaders.cmake"
+    "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtSpatial.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtSanitizers.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtTargetOptions.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/CreateSourcePackage.cmake"

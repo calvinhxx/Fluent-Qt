@@ -47,6 +47,9 @@ bool initializeResources();
 #include <FluentQt/MenusToolbars.h>
 #include <FluentQt/Navigation.h>
 #include <FluentQt/Scrolling.h>
+#ifdef FLUENT_QT_HAS_SPATIAL
+#include <FluentQt/Spatial.h>
+#endif
 #include <FluentQt/StatusInfo.h>
 #include <FluentQt/TextFields.h>
 #include <FluentQt/Windowing.h>

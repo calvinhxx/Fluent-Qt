@@ -1,0 +1,5 @@
+add_qt_test_module(test_spatial_view TestSpatialView.cpp)
+target_link_libraries(test_spatial_view PRIVATE FluentQt::Spatial)
+if(QT_VERSION_MAJOR EQUAL 6)
+    target_link_libraries(test_spatial_view PRIVATE Qt6::OpenGLWidgets)
+endif()

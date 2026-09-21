@@ -325,14 +325,15 @@ void Window::scheduleBackdropResolution()
 
 void Window::scheduleNativeChromeRepair()
 {
-    if (compatibility::WindowChromeCompat::currentPlatform() !=
-            compatibility::WindowChromeCompat::Platform::Windows ||
+    const auto platform = compatibility::WindowChromeCompat::currentPlatform();
+    if ((platform != compatibility::WindowChromeCompat::Platform::Windows &&
+         platform != compatibility::WindowChromeCompat::Platform::MacOS) ||
         m_nativeChromeRepairPending) {
         return;
     }
 
     m_nativeChromeRepairPending = true;
-    QTimer::singleShot(0, this, [this] {
+    QTimer::singleShot(0, this, [this, platform] {
         m_nativeChromeRepairPending = false;
         if (!isVisible())
             return;
@@ -342,7 +343,15 @@ void Window::scheduleNativeChromeRepair()
         // fully unwound so WS_THICKFRAME and the client-area hit test remain paired.
         // zh_CN: Qt 5/6.2 可能在原生句柄、DPI 或窗口状态切换后重写 Win32 style；
         // 待事件结束后重新施加自定义 chrome，确保 WS_THICKFRAME 与客户区命中测试保持配对。
-        m_chrome.applyPlatformWindowFlags();
+        if (platform == compatibility::WindowChromeCompat::Platform::Windows) {
+            m_chrome.applyPlatformWindowFlags();
+        } else {
+            // The platform may lay out native buttons after QWidget show/activation or
+            // OpenGL surface recreation. Align them once that native pass finishes.
+            // zh_CN: 平台可能在显示、激活或 OpenGL 重建窗口后重新布局原生按钮；
+            // 等该轮原生布局结束，再与 Fluent 标题栏对齐。
+            syncTitleBarSystemInsets();
+        }
         updateChromeOptions();
     });
 }
@@ -759,6 +768,10 @@ bool Window::event(QEvent* event)
         scheduleBackdropResolution();
         scheduleNativeChromeRepair();
     }
+    if (type == QEvent::WindowActivate && isVisible() &&
+        compatibility::WindowChromeCompat::currentPlatform() ==
+            compatibility::WindowChromeCompat::Platform::MacOS)
+        scheduleNativeChromeRepair();
     return handled;
 }
 

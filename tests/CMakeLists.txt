@@ -9,6 +9,9 @@ set(FLUENT_QT_CI_FAST_TARGETS
     test_qt_test_environment
     test_visual_comparison
 )
+if(TARGET FluentQtSpatial)
+    list(APPEND FLUENT_QT_CI_FAST_TARGETS test_spatial_view)
+endif()
 if(FLUENT_QT_BUILD_GALLERY)
     list(APPEND FLUENT_QT_CI_FAST_TARGETS test_gallery_single_instance)
 endif()
@@ -423,9 +426,13 @@ if(FLUENT_QT_ALL_TEST_TARGETS)
             menus_toolbars
             navigation
             scrolling
+            spatial
             status_info
             textfields
             windowing)
+    if(NOT TARGET FluentQtSpatial)
+        list(REMOVE_ITEM _fluent_qt_component_groups spatial)
+    endif()
     if(FLUENT_QT_BUILD_GALLERY)
         list(APPEND _fluent_qt_component_groups gallery)
     endif()

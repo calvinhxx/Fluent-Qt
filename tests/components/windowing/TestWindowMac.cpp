@@ -4,6 +4,10 @@
 #include <QGuiApplication>
 #include <QTest>
 #include <QWindow>
+#ifdef FLUENT_QT_HAS_SPATIAL
+#include <QOpenGLWidget>
+#endif
+#include <QVBoxLayout>
 
 #include <cstring>
 
@@ -14,6 +18,7 @@
 
 #include "components/windowing/Window.h"
 #include "components/windowing/WindowBackdrop.h"
+#include "components/windowing/TitleBar.h"
 
 using fluent::windowing::BackdropBackend;
 using fluent::windowing::BackdropEffect;
@@ -229,6 +234,53 @@ void expectBackdropHierarchy(const BackdropHierarchy& hierarchy, long expectedMa
 }
 
 } // namespace
+
+#ifdef FLUENT_QT_HAS_SPATIAL
+TEST(CocoaWindowBackdropTest, TrafficLightsStayCenteredAfterOpenGLSurfaceCreation)
+{
+    if (QGuiApplication::platformName() != QStringLiteral("cocoa"))
+        GTEST_SKIP() << "Requires the native macOS window system";
+    Window window;
+    window.resize(640, 480);
+    auto* content = new QWidget;
+    auto* column = new QVBoxLayout(content);
+    window.setContentWidget(content);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    const auto expectCentered = [&] {
+        const id native = nativeWindowFor(&window);
+        ASSERT_NE(native, nil);
+        for (unsigned long type : {0UL, 1UL, 2UL}) {
+            const id button = sendUnsignedLongReturnsId(native, "standardWindowButton:", type);
+            ASSERT_NE(button, nil);
+            const CGRect frame = sendRect(button, "frame");
+            const id host = sendId(button, "superview");
+            const CGRect bounds = sendRect(host, "bounds");
+            const qreal centerFromTop = sendBool(host, "isFlipped")
+                                            ? CGRectGetMidY(frame)
+                                            : bounds.size.height - CGRectGetMidY(frame);
+            const auto* titleBar = window.titleBar();
+            const qreal expected =
+                titleBar->mapTo(&window, QPoint()).y() + titleBar->height() / 2.0;
+            EXPECT_NEAR(centerFromTop, expected, 1.0) << "native button " << type;
+        }
+    };
+    QTest::qWait(100);
+    expectCentered();
+    for (int cycle = 0; cycle < 2; ++cycle) {
+        auto* viewport = new QOpenGLWidget(content);
+        column->addWidget(viewport);
+        viewport->show();
+        QTest::qWait(150);
+        ASSERT_TRUE(viewport->isValid());
+        expectCentered();
+        delete viewport;
+        QTest::qWait(50);
+        expectCentered();
+    }
+}
+
+#endif // FLUENT_QT_HAS_SPATIAL
 
 TEST(CocoaWindowBackdropTest, PreservesQtContentAndReusesInWindowMaterial)
 {

@@ -38,5 +38,11 @@ int main(int argc, char* argv[])
     compoundButton.setSecondaryText(QStringLiteral("Downloads and restarts the application"));
     fluent::layout::Accordion accordion;
     fluent::status_info::Avatar avatar(QStringLiteral("Ada Lovelace"));
+#ifdef FLUENT_QT_HAS_SPATIAL
+    fluent::spatial::SpatialView spatial;
+    spatial.setRenderMode(fluent::spatial::SpatialView::RenderMode::Raster);
+    auto* card = new fluent::layout::Card;
+    spatial.addWidget(card, fluent::WidgetOwnership::Owned)->setRotation(QVector3D(0, 10, 0));
+#endif
     return 0;
 }

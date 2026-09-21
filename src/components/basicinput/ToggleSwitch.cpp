@@ -366,6 +366,10 @@ void ToggleSwitch::mousePressEvent(QMouseEvent* event)
         m_keyboardFocusVisible = false;
         m_isPressed = true;
         update();
+        // Keep the press/release pair on this control when embedded in a graphics proxy.
+        // zh_CN: 嵌入图形代理时保留按下与松开的配对，避免默认 QWidget 处理忽略按下事件。
+        event->accept();
+        return;
     }
     QWidget::mousePressEvent(event);
 }
@@ -378,6 +382,8 @@ void ToggleSwitch::mouseReleaseEvent(QMouseEvent* event)
             toggle();
         }
         update();
+        event->accept();
+        return;
     }
     QWidget::mouseReleaseEvent(event);
 }

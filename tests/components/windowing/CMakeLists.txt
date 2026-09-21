@@ -17,8 +17,18 @@ endfunction()
 
 if(APPLE)
     add_qt_test_module(test_window_mac TestWindowMac.cpp)
+    if(TARGET FluentQtSpatial)
+        target_link_libraries(test_window_mac PRIVATE FluentQt::Spatial)
+        if(QT_VERSION_MAJOR EQUAL 6)
+            target_link_libraries(test_window_mac PRIVATE Qt6::OpenGLWidgets)
+        endif()
+    endif()
     configure_native_window_desktop_test(
         CocoaWindowBackdropTest.PreservesQtContentAndReusesInWindowMaterial cocoa)
+    if(TARGET FluentQtSpatial)
+        configure_native_window_desktop_test(
+            CocoaWindowBackdropTest.TrafficLightsStayCenteredAfterOpenGLSurfaceCreation cocoa)
+    endif()
 endif()
 if(WIN32)
     add_qt_test_module(test_window_win TestWindowWin.cpp)

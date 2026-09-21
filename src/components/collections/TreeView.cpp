@@ -50,6 +50,18 @@ constexpr qreal kDiscreteWheelStepPx = ::Spacing::ControlHeight::Large;
 // 层级缩进后的内容边缘自绘圆角状态面；保留原生面板会在缩进槽中残留一块分离背景。
 class DelegateOwnedRowStyle final : public QProxyStyle {
 public:
+    void drawControl(ControlElement element, const QStyleOption* option, QPainter* painter,
+                     const QWidget* widget = nullptr) const override
+    {
+        // NoFrame needs no native decoration. Cocoa's frame painter requires a raster
+        // CGContext even for this no-op, which is unavailable during GPU composition.
+        // zh_CN: NoFrame 无需原生边框；Cocoa 即使不画边框也索取光栅 CGContext，无法用于 GPU 合成。
+        const auto* frame = qobject_cast<const QFrame*>(widget);
+        if (element == CE_ShapedFrame && frame && frame->frameShape() == QFrame::NoFrame)
+            return;
+        QProxyStyle::drawControl(element, option, painter, widget);
+    }
+
     void drawPrimitive(PrimitiveElement element, const QStyleOption* option, QPainter* painter,
                        const QWidget* widget = nullptr) const override
     {

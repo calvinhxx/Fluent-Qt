@@ -373,6 +373,8 @@ void RatingControl::mousePressEvent(QMouseEvent* event)
         m_keyboardFocusVisible = false;
         if (!m_isReadOnly)
             m_isPressed = true;
+        event->accept();
+        return;
     }
     QWidget::mousePressEvent(event);
 }
@@ -389,6 +391,8 @@ void RatingControl::mouseReleaseEvent(QMouseEvent* event)
                 setValue(clickValue);
             }
         }
+        event->accept();
+        return;
     }
     QWidget::mouseReleaseEvent(event);
 }

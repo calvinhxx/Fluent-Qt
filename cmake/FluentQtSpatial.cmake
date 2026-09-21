@@ -1,0 +1,28 @@
+# OpenGL belongs to this opt-in target, never to the base Widgets library.
+if(QT_VERSION_MAJOR EQUAL 6)
+    find_package(Qt6 REQUIRED COMPONENTS OpenGLWidgets)
+else()
+    include(CheckCXXSourceCompiles)
+    include(CMakePushCheckState)
+    cmake_push_check_state(RESET)
+    set(CMAKE_REQUIRED_LIBRARIES Qt5::Widgets)
+    check_cxx_source_compiles(
+        "#include <QOpenGLWidget>\nint main() { QOpenGLWidget widget; return 0; }"
+        FLUENT_QT_HAS_QOPENGLWIDGET)
+    cmake_pop_check_state()
+    if(NOT FLUENT_QT_HAS_QOPENGLWIDGET)
+        message(FATAL_ERROR "FluentQt Spatial requires Qt 5 Widgets with QOpenGLWidget support. Disable FLUENT_QT_BUILD_SPATIAL for a 2D-only build.")
+    endif()
+endif()
+
+add_library(FluentQtSpatial STATIC ${FLUENT_QT_SPATIAL_SOURCES})
+add_library(FluentQt::Spatial ALIAS FluentQtSpatial)
+fluent_qt_configure_cpp_target(FluentQtSpatial)
+fluent_qt_enable_project_warnings(FluentQtSpatial)
+fluent_qt_enable_sanitizers(FluentQtSpatial)
+target_link_libraries(FluentQtSpatial PUBLIC FluentQt::FluentQt)
+target_compile_definitions(FluentQtSpatial PUBLIC FLUENT_QT_HAS_SPATIAL=1)
+if(QT_VERSION_MAJOR EQUAL 6)
+    target_link_libraries(FluentQtSpatial PRIVATE Qt6::OpenGLWidgets)
+endif()
+set_target_properties(FluentQtSpatial PROPERTIES EXPORT_NAME Spatial OUTPUT_NAME FluentQtSpatial)

@@ -34,7 +34,7 @@ packages=(
 if [[ "$qt_source" == "apt5" ]]; then
     packages+=(qtbase5-dev qtbase5-dev-tools)
 elif [[ "$qt_source" == "apt" || "$qt_source" == "apt6" ]]; then
-    packages+=(qt6-base-dev qt6-base-dev-tools)
+    packages+=(qt6-base-dev qt6-base-dev-tools libqt6opengl6-dev)
 fi
 
 sudo apt-get update

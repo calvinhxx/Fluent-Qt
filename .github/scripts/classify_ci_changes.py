@@ -113,6 +113,7 @@ CPP_COMPONENT_TEST_GROUPS = frozenset(
         "menus_toolbars",
         "navigation",
         "scrolling",
+        "spatial",
         "status_info",
         "textfields",
         "windowing",

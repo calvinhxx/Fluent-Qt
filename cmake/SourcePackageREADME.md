@@ -14,6 +14,7 @@ Requirements:
 - C++17
 - CMake 3.16+
 - Qt Widgets 5.15+ or 6.2+
+- Optional Spatial: enable `FLUENT_QT_BUILD_SPATIAL=ON` and link `FluentQt::Spatial`; Qt 6 requires OpenGLWidgets, Qt 5 requires QOpenGLWidget support
 
 WebAssembly consumers use the narrower browser baseline: Qt 6.9.3
 `wasm_singlethread` with Emscripten 3.1.70. Configure with
@@ -29,11 +30,12 @@ PySide6, Shiboken6, and Shiboken6 generator versions from 6.2 onward. See
 `bindings/pyside6/API_COMPATIBILITY.md` for API version governance, and
 `bindings/pyside6/MANYLINUX.md` for the publishable Linux wheel boundary.
 
-Top-level development builds include `FluentQt` and the
-`fluentqt_hello_world` executable example. Source-subproject builds keep the
-example disabled and build only the library. The included
+Top-level development builds include `FluentQt` and the minimal
+`fluentqt_hello_world` executable example. Source-subproject builds keep examples
+disabled and build only the library. The included
 `examples/hello_world` project demonstrates both in-tree and installed-package
-integration.
+integration. Interactive component demonstrations are maintained in the Gallery
+in the full repository.
 
 Before changing a consumer, run the bundled local preflight. It performs no
 network requests and configures its Qt Widgets probe in a temporary directory:
