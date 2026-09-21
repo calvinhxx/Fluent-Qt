@@ -875,6 +875,22 @@ struct GallerySpatialController::Private {
         return nullptr;
     }
 
+    bool nativeOverlayAt(const QPoint& global) const
+    {
+        if (!firstOverlay())
+            return false;
+        // Hit-test the native stack before unprojecting. childAt respects masks and
+        // mouse transparency, so dim-only scrims still allow background input.
+        // zh_CN: 先命中原生层叠；childAt 遵守遮罩与鼠标透明属性，纯调暗遮罩仍允许背景交互。
+        for (auto* hit = window->childAt(window->mapFromGlobal(global)); hit && hit != window;
+             hit = hit->parentWidget()) {
+            if (qobject_cast<overlay::OverlayScrim*>(hit) ||
+                hit->property(overlay::kOverlaySurfaceProperty).toBool())
+                return true;
+        }
+        return false;
+    }
+
     void raisePresentation()
     {
         if (auto* overlay = firstOverlay())
@@ -1505,6 +1521,15 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
                           : contextMenu ? static_cast<QContextMenuEvent*>(event)->globalPos()
                           : toolTip     ? static_cast<QHelpEvent*>(event)->globalPos()
                                     : static_cast<QWheelEvent*>(event)->globalPosition().toPoint();
+    if (d->nativeOverlayAt(global)) {
+        // Ignored input from an overlay label can bubble to the window. It must
+        // never be reinterpreted as an interaction with the projected background.
+        // zh_CN: 浮层文字未处理的输入可能冒泡到窗口，但不能再被解释为投影背景上的交互。
+        QScopedValueRollback<bool> forward(d->forwarding, true);
+        d->grabbed = nullptr;
+        d->hover(nullptr, {});
+        return true;
+    }
     const QPoint presented = d->navigation->mapFromGlobal(global);
     if (!inSource && !d->navigation->rect().contains(presented))
         return false;

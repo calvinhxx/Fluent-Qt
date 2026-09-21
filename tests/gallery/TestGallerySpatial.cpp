@@ -2440,6 +2440,118 @@ TEST_F(GallerySpatialTest, SettingsUpdateTextRemainsCompleteAfterSpatialResize)
     }
 }
 
+TEST_F(GallerySpatialTest, NativeOverlaysBlockProjectedHomeLinks)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires native window hit testing and GPU composition";
+    auto& settings = GallerySettings::instance();
+    settings.setHomeParticlesEnabled(false);
+    settings.setNavigationStyle(GallerySettings::NavigationStyle::Left);
+    for (bool spatial : {false, true}) {
+        SCOPED_TRACE(spatial ? "3D" : "2D");
+        settings.setSpatialModeEnabled(spatial);
+        GalleryWindow window;
+        auto* presenter = window.findChild<GalleryContentPresenter*>();
+        presenter->setPrewarmPaused(true);
+        presenter->prewarmFinished();
+        window.resize(1200, 850);
+        window.show();
+        QTRY_VERIFY_WITH_TIMEOUT(!window.findChild<GallerySplashScreen*>(), 6500);
+        auto* controller = window.findChild<GallerySpatialController*>();
+        ASSERT_NE(controller, nullptr);
+        if (spatial) {
+            auto* surface = window.findChild<QWidget*>("gallerySpatialSurface");
+            ASSERT_NE(surface, nullptr);
+            QTRY_VERIFY_WITH_TIMEOUT(surface->property("presenting").toBool(), 3000);
+            controller->cancelTransition();
+        }
+        auto snapshot = [&](const QString& name) {
+            const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
+            if (dir.isEmpty())
+                return;
+            QDir().mkpath(dir);
+            window.raise();
+            window.activateWindow();
+            QTest::qWait(120);
+            EXPECT_TRUE(window.screen()
+                            ->grabWindow(window.winId())
+                            .save(dir + (spatial ? "/3d-" : "/2d-") + name + ".png"));
+        };
+        auto* links = window.findChild<collections::ListView*>("galleryHomeHeroLinksView");
+        ASSERT_NE(links, nullptr);
+        // Observe the real activation without launching an external browser.
+        QObject::disconnect(links, &collections::ListView::itemClicked, nullptr, nullptr);
+        QSignalSpy activated(links, &collections::ListView::itemClicked);
+        const QPoint source =
+            static_cast<QListView*>(links)->visualRect(links->model()->index(0, 0)).topLeft() +
+            QPoint(24, 36);
+        const QPoint point = controller->projectedPosition(links->viewport(), source);
+        QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier, point);
+        ASSERT_EQ(activated.count(), 1);
+        activated.clear();
+
+        dialogs_flyouts::ContentDialog dialog(&window);
+        dialog.setAnimationEnabled(false);
+        dialog.setTitle("Close behavior");
+        dialog.setContent(new textfields::Label("Choose how to close Gallery."));
+        dialog.setCloseButtonText("Cancel");
+        dialog.open();
+        auto* scrim = window.findChild<overlay::OverlayScrim*>("DialogSmokeScrim");
+        ASSERT_NE(scrim, nullptr);
+        ASSERT_TRUE(scrim->isVisible());
+        ASSERT_FALSE(scrim->testAttribute(Qt::WA_TransparentForMouseEvents));
+        ASSERT_FALSE(dialog.geometry().contains(point));
+        snapshot("modal-scrim");
+        QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier, point);
+        EXPECT_EQ(activated.count(), 0) << "The modal scrim must block native hit testing";
+        QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, point);
+        EXPECT_EQ(activated.count(), 0) << "Host-delivered input must also respect the scrim";
+        activated.clear();
+
+        dialog.setModal(false);
+        QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier, point);
+        EXPECT_EQ(activated.count(), 1) << "A dim-only scrim must retain modeless input";
+        dialog.done(dialogs_flyouts::ContentDialog::ResultNone);
+        activated.clear();
+
+        auto* target = window.findChild<QWidget*>("galleryMainNavigationPane");
+        ASSERT_NE(target, nullptr);
+        GalleryIntroTour tour(&window);
+        tour.setSteps({{target,
+                        {},
+                        "Browse by category",
+                        "Explore the controls.",
+                        dialogs_flyouts::CoachMark::Right}});
+        tour.start();
+        auto* card = window.findChild<dialogs_flyouts::CoachMark*>();
+        ASSERT_NE(card, nullptr);
+        QTest::qWait(350);
+        textfields::Label* title = nullptr;
+        for (auto* label : card->findChildren<textfields::Label*>())
+            if (label->text() == "Browse by category")
+                title = label;
+        ASSERT_NE(title, nullptr);
+        // Put ignored label input exactly over a live link, as in the reported tour.
+        card->move(card->pos() + point - title->mapTo(&window, title->rect().center()));
+        snapshot("intro-card");
+        QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier, point);
+        EXPECT_EQ(activated.count(), 0)
+            << "Ignored card/label events must not reach projected links";
+        QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, point);
+        EXPECT_EQ(activated.count(), 0);
+        auto* next = window.findChild<basicinput::Button*>("GalleryIntroTour.NextButton");
+        ASSERT_NE(next, nullptr);
+        QSignalSpy finished(&tour, &GalleryIntroTour::finished);
+        QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier,
+                          next->mapTo(&window, next->rect().center()));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 1000);
+        QTest::qWait(350);
+        activated.clear();
+        QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier, point);
+        EXPECT_EQ(activated.count(), 1) << "Closing the overlay must restore ordinary links";
+    }
+}
+
 TEST_F(GallerySpatialTest, IntroStaysAboveSpatialPanelsAndUsesPresentedTargets)
 {
     if (tests::support::isHeadlessPlatform())

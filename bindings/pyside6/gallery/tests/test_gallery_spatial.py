@@ -440,6 +440,85 @@ print("2D-only Gallery: no OpenGL imports")
             delete(window)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_native_overlays_block_projected_home_links(self):
+        if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
+            self.skipTest("requires native window hit testing and GPU composition")
+        from fluentqt_gallery.intro_tour import GalleryIntroTour, TourStep
+        from fluentqt_gallery.visual import GalleryHeroLinkCard
+
+        for spatial in (False, True):
+            with self.subTest(spatial=spatial), patch(
+                "fluentqt_gallery.visual.QDesktopServices.openUrl", return_value=True
+            ) as open_url:
+                self.settings.set_spatial_mode_enabled(spatial)
+                window = GalleryWindow(startup_visuals=False)
+                tour = None
+                try:
+                    window.resize(1200, 850)
+                    window.show()
+                    QTest.qWait(600)
+                    controller = window._spatial_controller
+                    if spatial:
+                        self.assertTrue(controller.canvas.property("presenting"))
+                        controller.settle()
+                    link = window.findChild(GalleryHeroLinkCard)
+                    self.assertIsNotNone(link)
+                    point = controller.projected_position(link, QPoint(24, 36))
+
+                    def click(native=True, position=point):
+                        QTest.mouseClick(window.windowHandle() if native else window,
+                                         Qt.LeftButton, pos=position)
+
+                    click()
+                    self.assertEqual(open_url.call_count, 1)
+                    open_url.reset_mock()
+                    dialog = fluentqt.ContentDialog(window)
+                    dialog.setAnimationEnabled(False)
+                    dialog.setTitle("Close behavior")
+                    dialog.setContent(fluentqt.Label("Choose how to close Gallery."))
+                    dialog.setCloseButtonText("Cancel")
+                    dialog.open()
+                    scrim = window.findChild(QWidget, "DialogSmokeScrim")
+                    self.assertTrue(scrim.isVisible())
+                    self.assertFalse(scrim.testAttribute(Qt.WA_TransparentForMouseEvents))
+                    self.assertFalse(dialog.geometry().contains(point))
+                    click()
+                    click(native=False)
+                    open_url.assert_not_called()
+                    dialog.setModal(False)
+                    click()
+                    self.assertEqual(open_url.call_count, 1, "Dim-only scrims retain modeless input")
+                    dialog.done(fluentqt.ContentDialog.ResultNone)
+                    open_url.reset_mock()
+
+                    target = window.findChild(QWidget, "galleryMainNavigationPane")
+                    self.assertIsNotNone(target)
+                    tour = GalleryIntroTour(window)
+                    tour.set_steps([TourStep(target, "", "Browse by category", "Explore the controls.",
+                                             fluentqt.CoachMark.Placement.Right)])
+                    tour.start()
+                    QTest.qWait(350)
+                    card = window.findChild(fluentqt.CoachMark)
+                    title = next(label for label in card.findChildren(fluentqt.Label)
+                                 if label.text() == "Browse by category")
+                    card.move(card.pos() + point - title.mapTo(window, title.rect().center()))
+                    click()
+                    click(native=False)
+                    open_url.assert_not_called()
+                    next_button = next(button for button in card.findChildren(fluentqt.Button)
+                                       if button.text() == "Finish")
+                    finished = QSignalSpy(tour.finished)
+                    click(position=next_button.mapTo(window, next_button.rect().center()))
+                    self.assertEqual(finished.count(), 1)
+                    QTest.qWait(350)
+                    click()
+                    self.assertEqual(open_url.call_count, 1, "Closing overlays restores links")
+                finally:
+                    if tour is not None:
+                        delete(tour)
+                    delete(window)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_native_gpu_shell_input_overlay_and_scroll(self):
         if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
             self.skipTest("requires a native desktop GPU; offscreen is not visual approval")

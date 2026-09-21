@@ -731,14 +731,29 @@ class GallerySpatialController(QObject):
         self.settings.set_spatial_availability(False, reason)
         self.navigation.update()
 
+    @staticmethod
+    def is_native_overlay(widget):
+        return (bool(widget.property("_fluent_qt_overlay_surface"))
+                or "Scrim" in widget.metaObject().className()
+                or widget.objectName() == "GalleryIntroTour.Scrim")
+
     def first_overlay(self):
         for child in self.window.children():
             if (isinstance(child, QWidget) and child.isVisible() and not child.isWindow()
-                    and (child.property("_fluent_qt_overlay_surface")
-                         or "Scrim" in child.metaObject().className()
-                         or child.objectName() == "GalleryIntroTour.Scrim")):
+                    and self.is_native_overlay(child)):
                 return child
         return None
+
+    def native_overlay_at(self, global_pos):
+        if not self.first_overlay():
+            return False
+        # Native hit testing respects masks and skips mouse-transparent dim-only scrims.
+        hit = self.window.childAt(self.window.mapFromGlobal(global_pos))
+        while hit and hit != self.window:
+            if self.is_native_overlay(hit):
+                return True
+            hit = hit.parentWidget()
+        return False
 
     def raise_presentation(self):
         overlay = self.first_overlay()
@@ -1039,6 +1054,15 @@ class GallerySpatialController(QObject):
         if not (mouse or wheel or tooltip or context):
             return False
         global_pos = event.globalPosition().toPoint() if mouse or wheel else event.globalPos()
+        if self.native_overlay_at(global_pos):
+            # Ignored label/card input may bubble to the host; never forward it behind the overlay.
+            self.forwarding = True
+            try:
+                self.grabbed = None
+                self.hover(None, QPoint())
+            finally:
+                self.forwarding = False
+            return True
         presented = nav.mapFromGlobal(global_pos)
         if not in_source and not nav.rect().contains(presented):
             return False
