@@ -31,6 +31,7 @@ flowchart TD
 |---|---|
 | [Files and feedback](files-and-feedback.md) | File entry, file model ownership, transfer presentation, or actionable Toast |
 | [Charts](charts.md) | Model ownership, indexed projections, streaming, chart aggregation, or accessibility |
+| [Spatial](spatial-view.md) | Compose existing controls with SpatialView and SpatialItem; examples, parameters, ownership and 2D fallback |
 | [Overlay behavior](overlay-behavior.md) | Popup, Flyout, Dialog, TeachingTip, dropdown, drawer, or another same-window transient surface |
 | [Window chrome](window-chrome.md) | Title bars, native move/resize, backdrops, hit testing, or platform window behavior |
 | [Typography resolution](typography-resolution.md) | Fonts, inherited application typography, role resolution, or text scaling |

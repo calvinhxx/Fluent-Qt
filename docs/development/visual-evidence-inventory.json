@@ -253,6 +253,8 @@
       "shimmer",
       "slider",
       "sparkline",
+      "spatial-item",
+      "spatial-view",
       "split-view",
       "text-edit",
       "toggle-button",

@@ -80,6 +80,71 @@ screen-reader and IME acceptance.
 
 ## Component contracts
 
+`SpatialView` is a C++ composition surface in the **Spatial** category. Its
+native accessibility contract applies in **2D mode**: the same widgets, values,
+names and ownership remain in a normal scrollable layout. Scene Tab/Escape,
+reduced motion and high contrast select that layout. Projected proxy geometry
+is not a platform screen-reader or IME contract. `SpatialItem` is a non-visual
+QObject pose and finish handle; semantics belong to the hosted content. Optional
+shadow and rim decoration has no input or accessibility target. Hover lift freezes
+during pointer input and disappears in native 2D, reduced-motion and high-contrast
+layouts, preserving the original controls and values.
+
+Gallery provides controls, lists, calendar, navigation and chart compositions
+with one mode switch in Settings > 3D Gallery. It controls the shell and every
+Spatial example, including hidden and newly opened examples; values and models
+remain intact. Spatial pages link to Settings and disclose additional component
+combinations in a keyboard-accessible Expander. Navigation and
+content share a finite transition into opposing Y rotations (left navigation) or
+X rotations (top navigation). A single GL compositor preserves window material;
+the title bar, native widget ownership and focus remain stable. Long-lens
+perspective limits text distortion, with thin material surfaces and low-elevation
+content cards; decoration has no input target. Resize settles
+the transition. Sub-degree pointer following stops when settled and freezes during
+held input, scrolling and popups. Startup completes the Splash and logo handoff
+before starting 3D. Reduced/Disabled motion and High Contrast restore native 2D.
+Gallery keeps the 3D preference separate from runtime availability. Without acceleration,
+its Settings switch is off and disabled with an accessible explanation, and the shell
+restores native 2D widgets in both the shell and the Spatial examples. Tab/Escape
+from a scene also restores the shared 2D mode for native input.
+Spatial navigation and the Settings switch have matching InfoBadge indicators:
+neutral while checking or available, critical after runtime fallback. Their hover
+tooltips and accessible descriptions explain GPU requirements or the fallback
+reason; selecting 2D or reduced motion does not report a hardware failure.
+The fallback badge remains enabled beside the disabled switch.
+Pointer hits and drags are mapped back from the displayed panels; keyboard and
+IME input still reach the focused native control. Projected shell geometry is not
+a platform screen-reader geometry contract; use 2D for assistive technology.
+Text editing and dropdowns in the local Spatial examples
+remain outside the scene. The pose workbench hosts its parameter sliders in a
+separate projected card, with a stable pose while adjusting the preview, responsive
+placement. The view workbench keeps camera/zoom sliders and its follow switch
+outside the projection. Scene controls are disabled
+in 2D and their values are retained when switching back. The item workbench limits
+its controls to surface intensity, rotation and depth, with native input in 2D.
+Spatial source blocks offer a keyboard-accessible SelectorBar for the focused
+excerpt and full example; Copy uses the currently displayed source.
+Top mode hides the unavailable title-bar menu button and reclaims its space.
+The Gallery's Top navigation labels Home, Settings and the active category;
+icon-only categories retain accessible names and tooltips. Narrow layouts keep
+the active category visible and expose the remaining routes through More.
+The 3D shell captures navigation and content independently, so an overlapping
+compact drawer preserves complete rows, projected hit targets and light dismiss.
+Intro keeps its modal scrim and CoachMark above the compositor, with matching
+projected anchors in Left and Top layouts. Pointer following pauses during the
+tour; finishing restores window chrome and normal input. Settings update status
+uses the description column beside the action and wraps in narrow layouts.
+Toggle tracks and labels, checkbox clicks,
+slider dragging, list/tree selection and expansion, ratings, date selection and tabs have projected-input
+regressions. `SpatialView` releases the OpenGL viewport while hidden or fully clipped, and
+uses Raster under an ancestor graphics effect without changing the requested
+render mode;
+hidden construction defers GPU initialization so startup prewarm preserves the
+native window surface. The original Home Hero is unchanged. See the [composition guide](../architecture/spatial-view.md),
+[core tests](../../tests/components/spatial/TestSpatialView.cpp) and
+[Gallery tests](../../tests/gallery/TestGallerySpatial.cpp). Native animation
+and assistive-technology acceptance remain human-required.
+
 Private adapters preserve caller-owned content and the existing public APIs.
 The table lists the semantic boundary and its focused regression source.
 

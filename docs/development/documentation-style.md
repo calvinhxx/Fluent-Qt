@@ -24,6 +24,10 @@ State one of these near the title:
 If a document mixes historical and current material, split it or label the
 boundary explicitly.
 
+Write new documents in English by default. Create a Chinese document or
+translation only when explicitly requested. Keep existing translated documents
+aligned when updating their content.
+
 ## Prefer direct prose
 
 - Lead with the outcome, constraint, or command the reader needs.

@@ -200,7 +200,10 @@ def format_component(component: dict[str, object]) -> str:
         f"- C++: `{component['cpp']['public_header']}` / "
         f"`{component['cpp']['qualified_type']}` / "
         f"`{component['cpp']['cmake_target']}`",
-        f"- Python: `{component['python']['import_statement']}`",
+        (f"- Python: `{component['python']['import_statement']}`"
+         + (f" (source build: `{component['python']['build_option']}`)"
+            if component['python'].get('build_option') else "")
+         if component["python"] is not None else "- Python: Not available (C++ only)."),
         f"- Capabilities: {', '.join(component['capabilities'])}",
         f"- Focused test: `{component['tests'][0]['target']}` "
         f"(`{component['tests'][0]['source']}`)",

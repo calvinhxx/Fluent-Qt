@@ -28,7 +28,8 @@
             "architecture/typography-resolution.md",
             "architecture/inspector-report.md",
             "architecture/charts.md",
-            "architecture/files-and-feedback.md"
+            "architecture/files-and-feedback.md",
+            "architecture/spatial-view.md"
           ]
         }
       ]

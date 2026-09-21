@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
 
-[← Charts](charts.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md)
+[← Charts](charts.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Spatial: compose existing widgets in depth →](spatial-view.md)
 <!-- docs-nav:top:end -->
 
 `FileDropZone` receives files, `FileListView` presents a caller-owned model, and
@@ -95,5 +95,5 @@ still require review on each target operating system.
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Charts](charts.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md)
+[← Charts](charts.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Spatial: compose existing widgets in depth →](spatial-view.md)
 <!-- docs-nav:bottom:end -->

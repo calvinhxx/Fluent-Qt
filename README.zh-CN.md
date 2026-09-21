@@ -179,6 +179,14 @@ cmake --install build/fluentqt --config Release \
 python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_package
 ```
 
+### 可选 Spatial 模块
+
+[Spatial](docs/architecture/spatial-view.md) 可让现有控件倾斜、旋转，并呈现远近层次。它是可选的 3D 扩展，普通 2D 应用无需启用。
+
+想先看效果，可以打开 C++、Python 或 WebAssembly Gallery，在 Settings → 3D Gallery 打开开关，再到 Controls → Spatial 操作示例。
+
+接入自己的应用时，C++ 链接 `FluentQt::Spatial`；Python 需要[从源码构建并启用该模块](bindings/pyside6/README.md#optional-spatial-module)。桌面端使用 OpenGL，WebAssembly 使用 WebGL。设备无法提供所需的图形加速时，Gallery 自动使用 2D 界面。
+
 ### WebAssembly
 
 评估项目时可直接使用[在线 WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/)。本地工具链、构建、浏览器冒烟测试和 Pages 部署统一见 [WebAssembly 工作流](docs/development/webassembly-workflow.md)。

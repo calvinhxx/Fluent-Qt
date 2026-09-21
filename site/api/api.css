@@ -112,9 +112,20 @@ h1 { margin: 0; font-size: clamp(42px, 7vw, 74px); line-height: .98; letter-spac
 .card-links { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; }
 .card-links a { color: var(--accent); font-size: 13px; font-weight: 650; text-decoration: none; }
 .card-links a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.has-parameters { align-self: start; }
+.parameter-reference { margin-top: 16px; border-top: 1px solid var(--stroke); padding-top: 12px; }
+.parameter-reference summary { cursor: pointer; color: var(--accent); font-weight: 650; }
+.parameter-reference summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.parameter-reference .signature { white-space: pre-wrap; overflow-wrap: anywhere; }
+.parameter-reference dl { margin: 16px 0 0; }
+.parameter-reference dt { overflow-wrap: anywhere; }
+.parameter-type { font-size: 12px; color: var(--muted); }
+.parameter-reference dd { margin: 5px 0 18px; color: var(--muted); overflow-wrap: anywhere; }
+.parameter-reference dd:last-child { margin-bottom: 0; }
 .header-card > p { min-height: 0; }
 .declarations { margin-top: 10px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .empty { display: grid; justify-items: center; gap: 4px; padding: 64px 20px; color: var(--muted); text-align: center; }
+.empty[hidden] { display: none; }
 .empty strong { color: var(--text); font-size: 17px; }
 
 footer { display: flex; justify-content: space-between; gap: 24px; width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 0 0 34px; color: var(--muted); font-size: 12px; }

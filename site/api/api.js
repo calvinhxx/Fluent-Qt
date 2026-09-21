@@ -5,7 +5,8 @@ const labels = {
     placeholder: "Search controls, types, or headers…", all: "All", results: "results",
     declaration: "Declaration", example: "Gallery", test: "Test", headerSource: "Header source",
     noResults: "No matches", tryAnother: "Try another name or clear the category filter.",
-    generated: "Generated from the installed-header allowlist and Gallery catalog."
+    generated: "Generated from the installed-header allowlist and Gallery catalog.",
+    parameters: "Parameters", readOnly: "read-only", sourceBuild: "Source build option"
   },
   zh: {
     gallery: "Gallery", source: "源码", intro: "查找控件、头文件、Gallery 示例和聚焦测试。",
@@ -13,7 +14,8 @@ const labels = {
     placeholder: "搜索控件、类型或头文件…", all: "全部", results: "项结果",
     declaration: "声明", example: "Gallery", test: "测试", headerSource: "查看头文件",
     noResults: "没有匹配项", tryAnother: "换个关键词，或清除分类筛选。",
-    generated: "由安装头文件白名单和 Gallery 目录生成。"
+    generated: "由安装头文件白名单和 Gallery 目录生成。",
+    parameters: "参数说明", readOnly: "只读", sourceBuild: "源码构建选项"
   }
 };
 
@@ -62,6 +64,15 @@ function componentCard(component) {
   card.append(heading, node("p", "", component.description));
   card.append(node("code", "signature", `#include ${component.cpp.public_header}`));
   card.append(node("div", "subline", component.cpp.qualified_type));
+  if (component.python) {
+    const python = node("details", "parameter-reference");
+    python.append(node("summary", "", "Python"));
+    python.append(node("code", "signature", component.python.import_statement));
+    if (component.python.build_option) {
+      python.append(node("p", "", `${text("sourceBuild")}: ${component.python.build_option}`));
+    }
+    card.append(python);
+  }
   const links = node("div", "card-links");
   links.append(
     link(text("declaration"), component.cpp.declaration_url),
@@ -69,6 +80,21 @@ function componentCard(component) {
     link(text("test"), component.tests[0].source_url)
   );
   card.append(links);
+  if (component.properties?.length) {
+    card.classList.add("has-parameters");
+    const details = node("details", "parameter-reference");
+    details.append(node("summary", "", text("parameters")));
+    const list = node("dl");
+    component.properties.forEach(property => {
+      const term = node("dt");
+      term.append(node("code", "", property.name));
+      term.append(node("span", "parameter-type",
+        ` ${property.type}${property.read_only ? ` · ${text("readOnly")}` : ""}`));
+      list.append(term, node("dd", "", property.description[state.language]));
+    });
+    details.append(list);
+    card.append(details);
+  }
   return card;
 }
 
@@ -98,8 +124,8 @@ function visibleRecords() {
     return categoryMatches && matches([
       component.id, component.title, component.description, component.category_id,
       component.cpp.public_header, component.cpp.installed_declaration_header,
-      component.cpp.qualified_type, component.python.import_statement,
-      ...component.capabilities
+      component.cpp.qualified_type, component.python?.import_statement ?? "C++ only",
+      ...component.capabilities, ...(component.properties ?? []).map(property => property.name)
     ]);
   });
 }

@@ -23,9 +23,9 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 83,
-    "public_headers": 132,
-    "categories": 13
+    "components": 85,
+    "public_headers": 135,
+    "categories": 14
   },
   "categories": [
     {
@@ -57,6 +57,11 @@
       "id": "layout",
       "title": "Layout",
       "component_count": 6
+    },
+    {
+      "id": "spatial",
+      "title": "Spatial",
+      "component_count": 2
     },
     {
       "id": "menus-toolbars",
@@ -1916,6 +1921,262 @@
       "sample_count": 3
     },
     {
+      "id": "spatial-view",
+      "title": "SpatialView",
+      "category_id": "spatial",
+      "description": "Give existing widgets perspective and pointer tilt. Keep text editing and popups in the normal layout; native-window and OpenGL children cannot be embedded.",
+      "capabilities": [
+        "spatial-composition"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Spatial.h>",
+        "installed_declaration_header": "<FluentQt/components/spatial/SpatialView.h>",
+        "qualified_type": "fluent::spatial::SpatialView",
+        "target": "FluentQt::Spatial",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/spatial/SpatialView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.spatial",
+        "type": "SpatialView",
+        "import_statement": "from fluentqt.spatial import SpatialView",
+        "build_option": "FLUENT_QT_BUILD_SPATIAL=ON"
+      },
+      "gallery": {
+        "route_id": "spatial-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=spatial-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/SpatialSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_spatial_view",
+          "ctest_label": "test_spatial_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/spatial/TestSpatialView.cpp"
+        }
+      ],
+      "sample_count": 10,
+      "properties": [
+        {
+          "name": "spatialEnabled",
+          "type": "bool",
+          "read_only": false,
+          "description": {
+            "en": "Enables perspective; default true when motion/theme policy permits it. False restores the same widgets in a native vertical layout with their state intact.",
+            "zh": "是否启用透视；动效和主题策略允许时默认 true。 关闭后将同一批控件放回原生纵向布局，保留原有状态。"
+          }
+        },
+        {
+          "name": "cameraDistance",
+          "type": "qreal",
+          "read_only": false,
+          "description": {
+            "en": "Perspective distance in logical pixels [100, 10000]; default 1000. A shorter distance increases the apparent size difference between near and far surfaces.",
+            "zh": "透视距离，逻辑像素范围 [100, 10000]，默认 1000；越小，近大远小越明显。"
+          }
+        },
+        {
+          "name": "zoom",
+          "type": "qreal",
+          "read_only": false,
+          "description": {
+            "en": "Whole-scene magnification [0.1, 4]; default 1. Item poses stay unchanged.",
+            "zh": "整个场景的显示倍率 [0.1, 4]，默认 1；不改变条目的位置和姿态。"
+          }
+        },
+        {
+          "name": "pointerTrackingEnabled",
+          "type": "bool",
+          "read_only": false,
+          "description": {
+            "en": "Tilts the whole scene toward the pointer; default true, active in 3D only.",
+            "zh": "是否让整个场景随鼠标倾斜，默认 true，仅在 3D 中生效。"
+          }
+        },
+        {
+          "name": "maximumTilt",
+          "type": "QPointF",
+          "read_only": false,
+          "description": {
+            "en": "Maximum pointer pitch/yaw, each [0, 45] degrees; default (10, 16).",
+            "zh": "鼠标跟随的俯仰/偏航上限，各为 [0, 45] 度，默认 (10, 16)。"
+          }
+        },
+        {
+          "name": "responseTime",
+          "type": "int",
+          "read_only": false,
+          "description": {
+            "en": "Exponential pointer response time [0, 1000] ms; default 140, zero is immediate. Larger values soften the response; this is a time constant, not an animation duration.",
+            "zh": "指针跟随时间常数 [0, 1000] 毫秒，默认 140；越大越柔和，0 表示立即跟随。 此值是指数响应的时间常数，不是固定动画时长。"
+          }
+        },
+        {
+          "name": "maximumFrameRate",
+          "type": "int",
+          "read_only": false,
+          "description": {
+            "en": "Pointer animation update cap [15, 120] fps; default 60, not measured display FPS.",
+            "zh": "鼠标动画更新上限 [15, 120] 帧/秒，默认 60，不代表显示器实际帧率。"
+          }
+        },
+        {
+          "name": "cacheEnabled",
+          "type": "bool",
+          "read_only": false,
+          "description": {
+            "en": "Caches widget surfaces; default true. Changed content still repaints.",
+            "zh": "是否缓存控件表面，默认 true；内容发生变化时仍会重绘。"
+          }
+        },
+        {
+          "name": "renderMode",
+          "type": "RenderMode",
+          "read_only": false,
+          "description": {
+            "en": "Requested renderer: Auto (default), Raster or OpenGL; OpenGL may fall back. Switching waits until active pointer input finishes; inspect activeBackend for the result. Clipped/hidden views release their GPU viewport. Ancestor graphics effects use Raster so the outer compositor can capture the scene; the requested mode remains unchanged.",
+            "zh": "请求的后端：Auto（默认）、Raster 或 OpenGL；OpenGL 不可用时回退。 切换等待当前鼠标操作结束；使用 activeBackend 查询实际后端。隐藏或完全裁出时释放 GPU 视口；祖先绘制特效启用时使用 Raster 供外层捕获，保留请求的渲染模式。"
+          }
+        },
+        {
+          "name": "activeBackend",
+          "type": "Backend",
+          "read_only": true,
+          "description": {
+            "en": "Actual renderer, Raster or OpenGL; read-only, initially Raster until exposed.",
+            "zh": "实际渲染后端 Raster 或 OpenGL；只读，在视图显示并完成初始化前为 Raster。"
+          }
+        },
+        {
+          "name": "rendererName",
+          "type": "QString",
+          "read_only": true,
+          "description": {
+            "en": "Active OpenGL device name; read-only, empty for Raster or before initialization.",
+            "zh": "当前 OpenGL 设备名称；只读，Raster 或尚未初始化时为空。"
+          }
+        },
+        {
+          "name": "fallbackReason",
+          "type": "QString",
+          "read_only": true,
+          "description": {
+            "en": "Explanation of automatic renderer fallback; read-only, empty when none applies.",
+            "zh": "自动回退后端的原因；只读，没有回退原因时为空。"
+          }
+        },
+        {
+          "name": "itemCount",
+          "type": "int",
+          "read_only": true,
+          "description": {
+            "en": "Number of hosted surfaces, including hidden ones; read-only, initially 0.",
+            "zh": "承载的表面数量，包含隐藏条目；只读，初始为 0。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "spatial-item",
+      "title": "SpatialItem",
+      "category_id": "spatial",
+      "description": "Position, rotate and scale a widget inside SpatialView.",
+      "capabilities": [
+        "spatial-composition"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Spatial.h>",
+        "installed_declaration_header": "<FluentQt/components/spatial/SpatialItem.h>",
+        "qualified_type": "fluent::spatial::SpatialItem",
+        "target": "FluentQt::Spatial",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/spatial/SpatialItem.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.spatial",
+        "type": "SpatialItem",
+        "import_statement": "from fluentqt.spatial import SpatialItem",
+        "build_option": "FLUENT_QT_BUILD_SPATIAL=ON"
+      },
+      "gallery": {
+        "route_id": "spatial-item",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=spatial-item",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/SpatialSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_spatial_view",
+          "ctest_label": "test_spatial_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/spatial/TestSpatialView.cpp"
+        }
+      ],
+      "sample_count": 1,
+      "properties": [
+        {
+          "name": "position",
+          "type": "QVector3D",
+          "read_only": false,
+          "description": {
+            "en": "Pivot position relative to view center in logical pixels; default (0, 0, 0). X points right, Y down and positive Z toward the camera.",
+            "zh": "轴心相对视图中心的位置，使用逻辑像素，默认 (0, 0, 0)；X 向右、Y 向下、Z 正值朝向相机。"
+          }
+        },
+        {
+          "name": "rotation",
+          "type": "QVector3D",
+          "read_only": false,
+          "description": {
+            "en": "Rotation about the pivot in X/Y/Z degrees, applied in order; default (0, 0, 0).",
+            "zh": "绕轴心依次应用的 X/Y/Z 旋转角度，默认 (0, 0, 0)；单位是度，不是弧度。"
+          }
+        },
+        {
+          "name": "scale",
+          "type": "qreal",
+          "read_only": false,
+          "description": {
+            "en": "Uniform size multiplier for this surface [0.05, 8]; default 1.",
+            "zh": "单个表面的整体缩放倍率 [0.05, 8]，默认 1。"
+          }
+        },
+        {
+          "name": "pivot",
+          "type": "QPointF",
+          "read_only": false,
+          "description": {
+            "en": "Normalized anchor and rotation origin, each axis [0, 1]; default center (0.5, 0.5).",
+            "zh": "归一化的位置锚点和旋转轴心，各轴 [0, 1]，默认中心 (0.5, 0.5)。"
+          }
+        },
+        {
+          "name": "visible",
+          "type": "bool",
+          "read_only": false,
+          "description": {
+            "en": "Visibility in both spatial and native layouts; default true. Use this property instead of hiding the hosted root widget directly.",
+            "zh": "在 3D 和原生 2D 布局中的可见性，默认 true；使用此属性，而非直接隐藏承载的根控件。"
+          }
+        },
+        {
+          "name": "surfaceIntensity",
+          "type": "qreal",
+          "read_only": false,
+          "description": {
+            "en": "Strength of the rounded surface shadow and rim, clamped to [0, 1]; default 0. Intended for an intact rectangular Card; decoration does not change content or hit areas. Only drawn in spatial mode.",
+            "zh": "圆角卡片表面的阴影和边缘高光强度，限制为 [0, 1]，默认 0。 用于完整矩形 Card，不改变内容或命中区域；仅空间模式绘制。"
+          }
+        },
+        {
+          "name": "hoverLift",
+          "type": "qreal",
+          "read_only": false,
+          "description": {
+            "en": "Temporary upward pointer-hover offset in logical pixels [0, 16]; default 0. Motion freezes during pointer input. Native mode removes it.",
+            "zh": "悬停时临时向上抬升的逻辑像素数 [0, 16]，默认 0，不修改 position。 鼠标按住时冻结位移，原生平面模式移除此效果。"
+          }
+        }
+      ]
+    },
+    {
       "id": "menu",
       "title": "Menu",
       "category_id": "menus-toolbars",
@@ -3094,6 +3355,13 @@
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/Scrolling.h"
     },
     {
+      "include": "<FluentQt/Spatial.h>",
+      "source": "include/FluentQt/Spatial.h",
+      "summary": "Public declarations provided by Spatial.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/Spatial.h"
+    },
+    {
       "include": "<FluentQt/StatusInfo.h>",
       "source": "include/FluentQt/StatusInfo.h",
       "summary": "Public declarations provided by StatusInfo.",
@@ -4013,6 +4281,26 @@
         "Axis"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/scrolling/ScrollView.h"
+    },
+    {
+      "include": "<FluentQt/components/spatial/SpatialItem.h>",
+      "source": "src/components/spatial/SpatialItem.h",
+      "summary": "One live widget surface positioned in a SpatialView.",
+      "declarations": [
+        "SpatialItem"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/spatial/SpatialItem.h"
+    },
+    {
+      "include": "<FluentQt/components/spatial/SpatialView.h>",
+      "source": "src/components/spatial/SpatialView.h",
+      "summary": "OpenGL-backed host for a small number of perspective-transformed live widgets.",
+      "declarations": [
+        "SpatialView",
+        "RenderMode",
+        "Backend"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/spatial/SpatialView.h"
     },
     {
       "include": "<FluentQt/components/status_info/Avatar.h>",

@@ -71,6 +71,37 @@ def _declarations(contents: str) -> list[str]:
     return list(dict.fromkeys(value for value in values if value not in {"final"}))
 
 
+def _property_reference(contents: str) -> list[dict[str, object]]:
+    """Read Q_PROPERTY documentation from the comment on its READ accessor."""
+    properties = []
+    for macro in re.findall(r"Q_PROPERTY\((.*?)\)", contents, re.DOTALL):
+        declaration = " ".join(macro.split())
+        match = re.match(r"(\S+)\s+(\w+)\s+READ\s+(\w+)\b", declaration)
+        if not match:
+            continue
+        property_type, name, reader = match.groups()
+        comment = re.search(
+            r"/\*\*((?:(?!\*/).)*)\*/\s*[\w:<>,*&\s]+\b"
+            + re.escape(reader) + r"\(\)\s+const\s*;",
+            contents,
+            re.DOTALL,
+        )
+        if not comment:
+            continue
+        body = " ".join(re.sub(r"^\s*\* ?", "", line).strip()
+                        for line in comment.group(1).splitlines()).strip()
+        if not body.startswith("@brief "):
+            continue
+        english, _, chinese = body.removeprefix("@brief ").partition("zh_CN:")
+        properties.append({
+            "name": name,
+            "type": property_type,
+            "read_only": "WRITE" not in declaration.split(),
+            "description": {"en": english.strip(), "zh": chinese.strip() or english.strip()},
+        })
+    return properties
+
+
 def _public_headers(paths: list[str]) -> list[dict[str, object]]:
     headers: list[dict[str, object]] = []
     for source_path in paths:
@@ -142,6 +173,14 @@ def _component_records(
                 "sample_count": len(component["samples"]),
             }
         )
+        # Spatial publishes a complete parameter reference from its public headers.
+        # Other categories keep their current index until their accessor docs are reviewed.
+        if component["category_id"] == "spatial":
+            contents = (ROOT / declaration).read_text(encoding="utf-8")
+            properties = _property_reference(contents)
+            if len(properties) != len(re.findall(r"\bQ_PROPERTY\(", contents)):
+                raise ValueError(f"Incomplete property documentation for {component['id']}")
+            records[-1]["properties"] = properties
     return records
 
 

@@ -2,6 +2,8 @@
   "schema_version": 1,
   "source_catalog": "docs/ai/generated/fluentqt-ai-catalog.json",
   "components": [
+    {"id":"spatial-view","classification":"native","risk":"high","status":"covered","evidence":["docs/architecture/spatial-view.md","tests/components/spatial/TestSpatialView.cpp","tests/gallery/TestGallerySpatial.cpp","bindings/pyside6/gallery/tests/test_gallery_spatial.py"],"gap":""},
+    {"id":"spatial-item","classification":"not-applicable","risk":"low","status":"not-applicable","evidence":["src/components/spatial/SpatialItem.h","tests/components/spatial/TestSpatialView.cpp"],"gap":"Non-widget pose and surface-finish handle. Decoration has no input or semantic target; native 2D retains the hosted controls."},
     {"id":"chart-view","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
     {"id":"button","classification":"native","risk":"low","status":"covered","evidence":["src/components/basicinput/Button.h"],"gap":""},
     {"id":"compound-button","classification":"augmented","risk":"low","status":"covered","evidence":["tests/components/basicinput/TestCompoundButton.cpp"],"gap":""},

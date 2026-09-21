@@ -933,6 +933,22 @@
           "avoid_when": "Do not pass full histories per frame; prepare indexed ChartData snapshots off the GUI thread."
         }
       ]
+    },
+    {
+      "id": "spatial-composition",
+      "question": "How can existing widgets gain perspective and depth?",
+      "candidates": [
+        {
+          "component_id": "spatial-view",
+          "choose_when": "A small C++ showcase or preview should host real Fluent widgets with perspective and pointer tilt. Compose ordinary Cards first and provide a 2D mode.",
+          "avoid_when": "The task needs mesh rendering, many live surfaces, native child windows, or primary text editing and popups in perspective."
+        },
+        {
+          "component_id": "spatial-item",
+          "choose_when": "A widget already added to SpatialView needs an independent position, rotation, scale or pivot. Use the handle returned by addWidget().",
+          "avoid_when": "A normal layout, a standalone widget, or automatic extraction of a widget paint layer is required."
+        }
+      ]
     }
   ]
 }

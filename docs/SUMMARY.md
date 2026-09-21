@@ -20,6 +20,7 @@ standalone reading tasks.
     - [Inspector Report Contract](architecture/inspector-report.md)
     - [Charts](architecture/charts.md)
     - [Files and feedback](architecture/files-and-feedback.md)
+    - [Spatial: compose existing widgets in depth](architecture/spatial-view.md)
 - [Fluent design](design-languages/README.md)
   - **Design references**
     - [Fluent (Windows) — Design Reference](design-languages/fluent.md)

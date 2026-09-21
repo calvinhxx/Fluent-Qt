@@ -189,7 +189,7 @@
         "title": { "$ref": "#/$defs/nonEmptyString" },
         "components": { "$ref": "#/$defs/nonEmptyStringArray" },
         "cpp_header": { "$ref": "#/$defs/nonEmptyString" },
-        "python_module": { "$ref": "#/$defs/nonEmptyString" }
+        "python_module": { "type": ["string", "null"], "minLength": 1 }
       }
     },
     "test": {
@@ -264,14 +264,16 @@
           }
         },
         "python": {
-          "type": "object",
+          "description": "Null means this C++ component has no Python binding.",
+          "type": ["object", "null"],
           "additionalProperties": false,
           "required": ["package", "module", "type", "import_statement"],
           "properties": {
             "package": { "$ref": "#/$defs/nonEmptyString" },
             "module": { "$ref": "#/$defs/nonEmptyString" },
             "type": { "$ref": "#/$defs/nonEmptyString" },
-            "import_statement": { "$ref": "#/$defs/nonEmptyString" }
+            "import_statement": { "$ref": "#/$defs/nonEmptyString" },
+            "build_option": { "$ref": "#/$defs/nonEmptyString" }
           }
         },
         "tests": {

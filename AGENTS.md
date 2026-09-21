@@ -32,7 +32,9 @@ Read the owning code and the guide sections relevant to the task below.
   [src/components/](src/components/) is grouped by category with mirrored tests
   under [tests/components/](tests/components/). Shared infrastructure belongs in
   `foundation/`, composition surfaces in `layout/`, and model/view surfaces in
-  `collections/`. Indexed plotting models and views belong in `charts/`. Preserve
+  `collections/`. Indexed plotting models and views belong in `charts/`. Perspective widget hosts
+  and item transforms belong in `spatial/` (`fluent::spatial`), built by the opt-in
+  `FluentQt::Spatial` target. Keep OpenGL out of the base target and package discovery. Preserve
   caller-owned collection and chart models.
 - Use `compatibility/QtCompat.h` and `FluentEnterEvent` in new `enterEvent`
   overrides. Inside `namespace fluent::<category>`, inherit shared mixins as
@@ -49,6 +51,8 @@ Read the owning code and the guide sections relevant to the task below.
   mechanically rewriting untouched comments.
 - Update the accessibility inventory for new or materially changed visible
   components. Keep Gallery previews and displayed source semantically aligned.
+- Keep `examples/` focused on minimal library integration. Interactive component
+  demonstrations belong in Gallery samples.
 - Do not keep empty component directories. A category addition/removal updates
   the README overview, tests CMake, and this map.
 - Register tests with `add_qt_test_module`. Shared QApplication, resources,

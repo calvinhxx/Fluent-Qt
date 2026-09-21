@@ -977,6 +977,22 @@
           "avoid_when": "Do not pass full histories per frame; prepare indexed ChartData snapshots off the GUI thread."
         }
       ]
+    },
+    {
+      "id": "spatial-composition",
+      "question": "How can existing widgets gain perspective and depth?",
+      "candidates": [
+        {
+          "component_id": "spatial-view",
+          "choose_when": "A small C++ showcase or preview should host real Fluent widgets with perspective and pointer tilt. Compose ordinary Cards first and provide a 2D mode.",
+          "avoid_when": "The task needs mesh rendering, many live surfaces, native child windows, or primary text editing and popups in perspective."
+        },
+        {
+          "component_id": "spatial-item",
+          "choose_when": "A widget already added to SpatialView needs an independent position, rotation, scale or pivot. Use the handle returned by addWidget().",
+          "avoid_when": "A normal layout, a standalone widget, or automatic extraction of a widget paint layer is required."
+        }
+      ]
     }
   ],
   "categories": [
@@ -1079,6 +1095,16 @@
       ],
       "cpp_header": "<FluentQt/Layout.h>",
       "python_module": "fluentqt.layout"
+    },
+    {
+      "id": "spatial",
+      "title": "Spatial",
+      "components": [
+        "spatial-view",
+        "spatial-item"
+      ],
+      "cpp_header": "<FluentQt/Spatial.h>",
+      "python_module": "fluentqt.spatial"
     },
     {
       "id": "menus-toolbars",
@@ -6082,6 +6108,292 @@
       ]
     },
     {
+      "id": "spatial-view",
+      "title": "SpatialView",
+      "category_id": "spatial",
+      "description": "Give existing widgets perspective and pointer tilt. Keep text editing and popups in the normal layout; native-window and OpenGL children cannot be embedded.",
+      "capabilities": [
+        "spatial-composition"
+      ],
+      "search_terms": [
+        "2d.",
+        "adjust",
+        "allocation.",
+        "below",
+        "browser",
+        "calendar.",
+        "calendarview",
+        "camera",
+        "cannot",
+        "card",
+        "card.",
+        "cards",
+        "cards.",
+        "chart.",
+        "chartmodel",
+        "checkbox",
+        "children",
+        "choose",
+        "count",
+        "date",
+        "depths",
+        "depths.",
+        "different",
+        "done.",
+        "donutchart",
+        "drag",
+        "dropdown",
+        "edit",
+        "editing",
+        "either",
+        "embedded.",
+        "existing",
+        "expand",
+        "file",
+        "files",
+        "folders",
+        "format.",
+        "give",
+        "infobadge",
+        "inside",
+        "keep",
+        "label",
+        "layout",
+        "level",
+        "list",
+        "listview",
+        "live",
+        "mark",
+        "mode.",
+        "model",
+        "move",
+        "mute",
+        "name",
+        "native-window",
+        "normal",
+        "one",
+        "opengl",
+        "over",
+        "perspective",
+        "pointer",
+        "popups",
+        "preset",
+        "preview",
+        "preview.",
+        "projected",
+        "radiobutton",
+        "rate",
+        "ratingcontrol",
+        "remaining",
+        "restore",
+        "return",
+        "same",
+        "scene",
+        "select",
+        "selected",
+        "selectorbar",
+        "settings",
+        "share",
+        "slider",
+        "sparkline",
+        "spatial",
+        "spatial-composition",
+        "spatial-view",
+        "spatial-view-calendar",
+        "spatial-view-cards",
+        "spatial-view-donut",
+        "spatial-view-hybrid",
+        "spatial-view-inputs",
+        "spatial-view-list",
+        "spatial-view-navigation",
+        "spatial-view-rating",
+        "spatial-view-scene",
+        "spatial-view-tree",
+        "spatialview",
+        "stays",
+        "switch",
+        "tabs",
+        "task",
+        "text",
+        "then",
+        "tilt.",
+        "tilted",
+        "together.",
+        "two",
+        "update",
+        "updates",
+        "view",
+        "when",
+        "widgets",
+        "you",
+        "zoom"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Spatial.h>",
+        "declaration": "src/components/spatial/SpatialView.h",
+        "qualified_type": "fluent::spatial::SpatialView",
+        "cmake_target": "FluentQt::Spatial"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.spatial",
+        "type": "SpatialView",
+        "import_statement": "from fluentqt.spatial import SpatialView",
+        "build_option": "FLUENT_QT_BUILD_SPATIAL=ON"
+      },
+      "tests": [
+        {
+          "target": "test_spatial_view",
+          "source": "tests/components/spatial/TestSpatialView.cpp",
+          "ctest_label": "test_spatial_view"
+        }
+      ],
+      "gallery": {
+        "route_id": "spatial-view",
+        "sample_source": "app/view/widgets/samples/SpatialSamples.cpp",
+        "control_image": "app/assets/control_images/spatial/SpatialView.png"
+      },
+      "samples": [
+        {
+          "id": "spatial-view-scene",
+          "title": "Scene perspective",
+          "description": "Adjust the camera and zoom, then move the pointer over the cards.",
+          "cpp_snippet": "using namespace fluent;\n// The two cards keep their own poses while the view changes the whole scene.\nclass SceneView final : public spatial::SpatialView {\npublic:\n    using SpatialView::SpatialView;\n    void arrange()\n    {\n        if (itemCount() != 2)\n            return;\n        const float spread = width() < 650 ? 24 : 100;\n        items().first()->setPosition(QVector3D(-spread, -44, -160));\n        items().last()->setPosition(QVector3D(spread, 44, 160));\n    }\nprotected:\n    void resizeEvent(QResizeEvent* event) override\n    {\n        SpatialView::resizeEvent(event);\n        arrange();\n    }\n};\nauto* panel = new QWidget(parent);\nauto* column = new QVBoxLayout(panel);\ncolumn->setContentsMargins(0, 0, 0, 0);\ncolumn->setSpacing(16);\nauto* view = new SceneView(panel);\nview->setObjectName(\"spatialPreviewView\");\nview->setFixedHeight(400);\nview->setCameraDistance(1200);\nview->setZoom(0.9);\nview->setMaximumTilt(QPointF(6, 12));\n// Response time (140 ms), animation limit (60 fps), cache and Auto renderer use UILib defaults.\n// See SpatialView.h for the full parameter contract.\n\n// Both layers use the same size and data, making perspective easy to compare.\nconst auto makeLayer = [](const QString& title, const QString& caption) {\n    auto* card = new layout::Card;\n    card->setFixedSize(220, 150);\n    auto* content = new QVBoxLayout(card);\n    content->setContentsMargins(16, 12, 16, 12);\n    content->setSpacing(6);\n    auto* heading = new textfields::Label(title, card);\n    heading->setFluentTypography(Typography::FontRole::Subtitle);\n    heading->setTextColorRole(textfields::Label::TextColorRole::Primary);\n    content->addWidget(heading);\n    auto* chart = new charts::Sparkline(card);\n    chart->setAccessibleName(title + \" sample chart\");\n    auto* model = new charts::ChartModel(card);\n    model->setPoints({{0, 12}, {1, 24}, {2, 18}, {3, 38}, {4, 32}, {5, 54}});\n    chart->setModel(model);\n    content->addWidget(chart, 1);\n    auto* note = new textfields::Label(caption, card);\n    note->setTextColorRole(textfields::Label::TextColorRole::Secondary);\n    content->addWidget(note);\n    return card;\n};\nspatial::SpatialItem* back = view->addWidget(\n    makeLayer(\"Back layer\", \"Z -160 · sample data\"), WidgetOwnership::Owned);\nspatial::SpatialItem* front = view->addWidget(\n    makeLayer(\"Front layer\", \"Z +160 · sample data\"), WidgetOwnership::Owned);\nback->setRotation(QVector3D(6, 16, 0));\nfront->setRotation(QVector3D(-6, -16, 0));\nback->setSurfaceIntensity(0.75);\nfront->setSurfaceIntensity(0.75);\nview->arrange();\n\nauto* toolbar = new QHBoxLayout;\nauto* follow = new basicinput::ToggleSwitch(panel);\nfollow->setObjectName(\"spatialViewFollow\");\nfollow->setAccessibleName(\"Follow pointer\");\nfollow->setOnContent(\"Follow pointer\");\nfollow->setOffContent(\"Follow pointer\");\nfollow->setIsOn(true);\ntoolbar->addWidget(follow);\ntoolbar->addStretch();\ncolumn->addLayout(toolbar);\ncolumn->addWidget(view);\n\n// Keep view-wide controls outside the projection so their drag targets stay still.\nauto* controls = new QWidget(panel);\ncontrols->setObjectName(\"spatialViewControls\");\nauto* grid = new QGridLayout(controls);\ngrid->setContentsMargins(0, 0, 0, 0);\ngrid->setHorizontalSpacing(24);\ngrid->setVerticalSpacing(12);\ngrid->setColumnStretch(0, 1);\ngrid->setColumnStretch(1, 1);\nconst auto addSlider = [controls, grid](const QString& name, const QString& label,\n                                      const QString& unit, int minimum, int maximum,\n                                      int initial, int row, int col) {\n    auto* group = new QWidget(controls);\n    auto* layout = new QVBoxLayout(group);\n    layout->setContentsMargins(0, 0, 0, 0);\n    layout->setSpacing(4);\n    auto* text = new textfields::Label(group);\n    text->setTextColorRole(textfields::Label::TextColorRole::Primary);\n    auto* slider = new basicinput::Slider(group);\n    slider->setObjectName(name);\n    slider->setAccessibleName(label);\n    slider->setRange(minimum, maximum);\n    slider->setValue(initial);\n    const auto updateText = [text, label, unit](int value) {\n        text->setText(QString(\"%1: %2%3\").arg(label).arg(value).arg(unit));\n    };\n    updateText(initial);\n    QObject::connect(slider, &basicinput::Slider::valueChanged, text, updateText);\n    layout->addWidget(text);\n    layout->addWidget(slider);\n    grid->addWidget(group, row, col);\n    return slider;\n};\nauto* distance = addSlider(\"spatialViewDistance\", \"Camera distance\", \" px\",\n                           650, 2400, 1200, 0, 0);\nauto* zoom = addSlider(\"spatialViewZoom\", \"Scene zoom\", \"%\", 50, 110, 90, 0, 1);\nQObject::connect(distance, &basicinput::Slider::valueChanged, view,\n                 [view](int value) { view->setCameraDistance(value); });\nQObject::connect(zoom, &basicinput::Slider::valueChanged, view,\n                 [view](int value) { view->setZoom(value / 100.0); });\ncolumn->addWidget(controls);\n\nQObject::connect(follow, &basicinput::ToggleSwitch::toggled,\n                 view, &spatial::SpatialView::setPointerTrackingEnabled);\nQObject::connect(view, &spatial::SpatialView::pointerTrackingEnabledChanged,\n                 follow, &basicinput::ToggleSwitch::setIsOn);\nconst auto updateAvailability = [view, controls, follow] {\n    controls->setEnabled(view->isSpatialEnabled());\n    follow->setEnabled(view->isSpatialEnabled());\n};\nQObject::connect(view, &spatial::SpatialView::spatialEnabledChanged, controls, updateAvailability);\nupdateAvailability();\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "spatial-view-cards",
+          "title": "Two cards at different depths",
+          "description": "A settings card and a Sparkline share one view at different depths.",
+          "cpp_snippet": "using namespace fluent;\nauto* panel = new QWidget(parent);\nauto* column = new QVBoxLayout(panel);\ncolumn->setContentsMargins(0, 0, 0, 0);\ncolumn->setSpacing(12);\nauto* view = new spatial::SpatialView(panel);\nview->setObjectName(\"spatialPreviewView\");\nview->setFixedHeight(340);\nview->setCameraDistance(1400);\nview->setMaximumTilt(QPointF(4, 6));\ncolumn->addWidget(view);\nview->setZoom(0.78);\n// Each intact card is a separate item. Models and control signals stay ordinary Qt.\nauto* settings = new layout::Card;\nsettings->setFixedSize(270, 180);\nauto* controls = new QVBoxLayout(settings);\ncontrols->setContentsMargins(20, 16, 20, 16);\nauto* heading = new textfields::Label(\"Notifications\", settings);\nheading->setFluentTypography(Typography::FontRole::Subtitle);\nheading->setTextColorRole(textfields::Label::TextColorRole::Primary);\ncontrols->addWidget(heading);\nauto* alerts = new basicinput::ToggleSwitch(settings);\nalerts->setAccessibleName(\"Desktop alerts\");\nalerts->setOnContent(\"Desktop alerts on\");\nalerts->setOffContent(\"Desktop alerts off\");\nalerts->setIsOn(true);\ncontrols->addWidget(alerts);\nauto* note = new textfields::Label(\"Try the switch in either mode.\", settings);\nnote->setTextColorRole(textfields::Label::TextColorRole::Secondary);\nnote->setWordWrap(true);\ncontrols->addWidget(note);\nauto* back = view->addWidget(settings, WidgetOwnership::Owned);\nback->setSurfaceIntensity(0.75);\nback->setHoverLift(4.5);\nback->setPosition(QVector3D(-110, -64, -80));\nback->setRotation(QVector3D(6, 12, 0));\n\nauto* summary = new layout::Card;\nsummary->setFixedSize(270, 180);\nauto* summaryLayout = new QVBoxLayout(summary);\nsummaryLayout->setContentsMargins(20, 16, 20, 16);\nauto* chart = new charts::Sparkline(summary);\nchart->setObjectName(\"spatialDemoChart\");\nchart->setAccessibleName(\"Illustrative activity trend\");\nchart->setMinimumHeight(72);\nauto* model = new charts::ChartModel(summary);\nmodel->setPoints({{0, 12}, {1, 24}, {2, 18}, {3, 38}, {4, 32}, {5, 54}});\nchart->setModel(model);\nauto* caption = new textfields::Label(\"Activity trend · demo data\", summary);\ncaption->setTextColorRole(textfields::Label::TextColorRole::Primary);\nsummaryLayout->addWidget(caption);\nsummaryLayout->addWidget(chart);\nauto* front = view->addWidget(summary, WidgetOwnership::Owned);\nfront->setSurfaceIntensity(0.75);\nfront->setHoverLift(4.5);\nfront->setPosition(QVector3D(110, 64, 100));\nfront->setRotation(QVector3D(-6, -14, 0));\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "spatial-view-inputs",
+          "title": "Slider and CheckBox",
+          "description": "Drag the level slider, then mute and restore the preview.",
+          "cpp_snippet": "using namespace fluent;\nauto* panel = new QWidget(parent);\nauto* column = new QVBoxLayout(panel);\ncolumn->setContentsMargins(0, 0, 0, 0);\ncolumn->setSpacing(12);\nauto* view = new spatial::SpatialView(panel);\nview->setObjectName(\"spatialPreviewView\");\nview->setFixedHeight(340);\nview->setCameraDistance(1400);\nview->setMaximumTilt(QPointF(4, 6));\ncolumn->addWidget(view);\nauto* card = new layout::Card;\ncard->setFixedSize(320, 260);\nauto* content = new QVBoxLayout(card);\ncontent->setContentsMargins(20, 16, 20, 16);\ncontent->setSpacing(12);\nauto* title = new textfields::Label(\"Level preview\", card);\ntitle->setFluentTypography(Typography::FontRole::Subtitle);\ntitle->setTextColorRole(textfields::Label::TextColorRole::Primary);\ncontent->addWidget(title);\nauto* value = new textfields::Label(\"Level: 40%\", card);\nvalue->setObjectName(\"spatialLevelText\");\nvalue->setTextColorRole(textfields::Label::TextColorRole::Primary);\ncontent->addWidget(value);\nauto* level = new basicinput::Slider(card);\nlevel->setObjectName(\"spatialLevelSlider\");\nlevel->setAccessibleName(\"Preview level\");\nlevel->setRange(0, 100);\nlevel->setValue(40);\ncontent->addWidget(level);\nauto* meter = new status_info::ProgressBar(card);\nmeter->setObjectName(\"spatialLevelMeter\");\nmeter->setAccessibleName(\"Preview output\");\nmeter->setValue(40);\ncontent->addWidget(meter);\nauto* mute = new basicinput::CheckBox(\"Mute preview\", card);\nmute->setObjectName(\"spatialMuteCheckBox\");\ncontent->addWidget(mute);\nQObject::connect(level, &basicinput::Slider::valueChanged, meter,\n                 [value, meter, mute](int number) {\n    value->setText(QString(\"Level: %1%\").arg(number));\n    meter->setValue(mute->isChecked() ? 0 : number);\n});\nQObject::connect(mute, &basicinput::CheckBox::toggled, meter,\n                 [level, meter](bool muted) {\n    meter->setValue(muted ? 0 : level->value());\n});\nauto* item = view->addWidget(card, WidgetOwnership::Owned);\nitem->setSurfaceIntensity(0.75);\nitem->setHoverLift(4.5);\nitem->setRotation(QVector3D(5, -12, 0));\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "spatial-view-list",
+          "title": "ListView and InfoBadge",
+          "description": "Select a task and mark it done. The list model and remaining count update together.",
+          "cpp_snippet": "using namespace fluent;\nauto* panel = new QWidget(parent);\nauto* column = new QVBoxLayout(panel);\ncolumn->setContentsMargins(0, 0, 0, 0);\ncolumn->setSpacing(12);\nauto* view = new spatial::SpatialView(panel);\nview->setObjectName(\"spatialPreviewView\");\nview->setFixedHeight(340);\nview->setCameraDistance(1400);\nview->setMaximumTilt(QPointF(4, 6));\ncolumn->addWidget(view);\nauto* card = new layout::Card;\ncard->setFixedSize(340, 290);\nauto* content = new QVBoxLayout(card);\ncontent->setContentsMargins(20, 16, 20, 16);\ncontent->setSpacing(12);\nauto* heading = new QHBoxLayout;\nauto* title = new textfields::Label(\"Demo tasks\", card);\ntitle->setFluentTypography(Typography::FontRole::Subtitle);\ntitle->setTextColorRole(textfields::Label::TextColorRole::Primary);\nheading->addWidget(title, 1);\nauto* count = new status_info::InfoBadge(card);\ncount->setObjectName(\"spatialTaskCount\");\ncount->setAccessibleName(\"Remaining demo tasks\");\ncount->setValue(3);\nheading->addWidget(count);\ncontent->addLayout(heading);\nauto* model = new QStringListModel({\"Review colors\", \"Check spacing\", \"Try dark mode\"}, card);\nauto* tasks = new collections::ListView(card);\ntasks->setObjectName(\"spatialTaskList\");\ntasks->setAccessibleName(\"Demo tasks\");\ntasks->setModel(model);\ntasks->setEditTriggers(QAbstractItemView::NoEditTriggers);\ntasks->setSelectedIndex(0);\ntasks->setPlaceholderText(\"All demo tasks done\");\ncontent->addWidget(tasks, 1);\nauto* done = new basicinput::Button(\"Mark selected done\", card);\ndone->setObjectName(\"spatialTaskDone\");\ndone->setFluentStyle(basicinput::Button::Accent);\ncontent->addWidget(done);\nQObject::connect(done, &basicinput::Button::clicked, model, [model, tasks, count, done] {\n    const int row = tasks->selectedIndex();\n    if (row < 0)\n        return;\n    model->removeRow(row);\n    count->setValue(model->rowCount());\n    tasks->setSelectedIndex(qMin(row, model->rowCount() - 1));\n    done->setEnabled(model->rowCount() > 0);\n});\nauto* item = view->addWidget(card, WidgetOwnership::Owned);\nitem->setSurfaceIntensity(0.75);\nitem->setHoverLift(4.5);\nitem->setRotation(QVector3D(5, -12, 0));\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "spatial-view-calendar",
+          "title": "CalendarView and Label",
+          "description": "Choose a date on the tilted calendar. The selected date stays when you return to 2D.",
+          "cpp_snippet": "using namespace fluent;\nauto* panel = new QWidget(parent);\nauto* column = new QVBoxLayout(panel);\ncolumn->setContentsMargins(0, 0, 0, 0);\ncolumn->setSpacing(12);\nauto* view = new spatial::SpatialView(panel);\nview->setObjectName(\"spatialPreviewView\");\nview->setFixedHeight(380);\nview->setZoom(0.82);\nview->setCameraDistance(1400);\nview->setMaximumTilt(QPointF(4, 6));\ncolumn->addWidget(view);\nauto* card = new layout::Card;\ncard->setFixedSize(360, 410);\nauto* content = new QVBoxLayout(card);\ncontent->setContentsMargins(16, 12, 16, 12);\ncontent->setSpacing(8);\nauto* calendar = new date_time::CalendarView(card);\ncalendar->setObjectName(\"spatialCalendar\");\ncalendar->setAccessibleName(\"Demo appointment date\");\ncalendar->setSelectedDate(QDate(2026, 9, 15));\ncalendar->setFrameVisible(false);\ncontent->addWidget(calendar, 1);\nauto* selected = new textfields::Label(\"Selected: 2026-09-15\", card);\nselected->setObjectName(\"spatialSelectedDate\");\nselected->setTextColorRole(textfields::Label::TextColorRole::Primary);\ncontent->addWidget(selected);\nQObject::connect(calendar, &date_time::CalendarView::selectedDateChanged, selected,\n                 [selected](const QDate& date) {\n    selected->setText(\"Selected: \" + date.toString(Qt::ISODate));\n});\nauto* item = view->addWidget(card, WidgetOwnership::Owned);\nitem->setSurfaceIntensity(0.75);\nitem->setHoverLift(4.5);\nitem->setRotation(QVector3D(5, -12, 0));\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "spatial-view-navigation",
+          "title": "SelectorBar with a live text preview",
+          "description": "Switch tabs inside the card. Edit the name below to update the preview.",
+          "cpp_snippet": "using namespace fluent;\nauto* panel = new QWidget(parent);\nauto* column = new QVBoxLayout(panel);\ncolumn->setContentsMargins(0, 0, 0, 0);\ncolumn->setSpacing(12);\nauto* view = new spatial::SpatialView(panel);\nview->setObjectName(\"spatialPreviewView\");\nview->setFixedHeight(340);\nview->setCameraDistance(1400);\nview->setMaximumTilt(QPointF(4, 6));\ncolumn->addWidget(view);\nauto* card = new layout::Card;\ncard->setFixedSize(340, 260);\nauto* content = new QVBoxLayout(card);\ncontent->setContentsMargins(20, 16, 20, 16);\ncontent->setSpacing(12);\nauto* title = new textfields::Label(\"Studio\", card);\ntitle->setObjectName(\"spatialProfileTitle\");\ntitle->setWordWrap(true);\ntitle->setFluentTypography(Typography::FontRole::Subtitle);\ntitle->setTextColorRole(textfields::Label::TextColorRole::Primary);\ncontent->addWidget(title);\nauto* tabs = new navigation::SelectorBar(card);\ntabs->setObjectName(\"spatialProfileTabs\");\ntabs->addItem(\"Overview\");\ntabs->addItem(\"Details\");\ncontent->addWidget(tabs);\nauto* pages = new navigation::StackContentHost(card);\npages->setObjectName(\"spatialProfilePages\");\npages->setTransitionAnimationEnabled(false);\nauto* overview = new textfields::Label(\"Your workspace preview\", pages);\noverview->setWordWrap(true);\noverview->setTextColorRole(textfields::Label::TextColorRole::Primary);\nauto* details = new textfields::Label(\"Card + SelectorBar + StackContentHost\", pages);\ndetails->setWordWrap(true);\ndetails->setTextColorRole(textfields::Label::TextColorRole::Primary);\npages->insertPage(0, overview, WidgetOwnership::Owned);\npages->insertPage(1, details, WidgetOwnership::Owned);\npages->setCurrentIndex(0, 0, false);\ncontent->addWidget(pages, 1);\ntabs->setSelectedIndex(0);\nQObject::connect(tabs, &navigation::SelectorBar::selectedIndexChanged, pages,\n                 [pages](int index) { pages->setCurrentIndex(index, 0, false); });\n// Keep text editing in the normal layout, connected to the spatial preview.\nauto* nameLabel = new textfields::Label(\"Workspace name\", panel);\nnameLabel->setTextColorRole(textfields::Label::TextColorRole::Primary);\ncolumn->addWidget(nameLabel);\nauto* name = new textfields::LineEdit(panel);\nname->setObjectName(\"spatialProfileName\");\nname->setAccessibleName(\"Workspace name\");\nname->setText(\"Studio\");\nname->setMaxLength(24);\ncolumn->addWidget(name);\nQObject::connect(name, &textfields::LineEdit::textChanged, title,\n                 [title](const QString& text) {\n    title->setText(text.isEmpty() ? \"Workspace\" : text);\n});\nauto* item = view->addWidget(card, WidgetOwnership::Owned);\nitem->setSurfaceIntensity(0.75);\nitem->setHoverLift(4.5);\nitem->setRotation(QVector3D(5, -12, 0));\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "spatial-view-rating",
+          "title": "RadioButton and RatingControl",
+          "description": "Choose a preset and rate it inside the tilted card.",
+          "cpp_snippet": "using namespace fluent;\nauto* panel = new QWidget(parent);\nauto* column = new QVBoxLayout(panel);\ncolumn->setContentsMargins(0, 0, 0, 0);\ncolumn->setSpacing(12);\nauto* view = new spatial::SpatialView(panel);\nview->setObjectName(\"spatialPreviewView\");\nview->setFixedHeight(380);\nview->setCameraDistance(1400);\nview->setMaximumTilt(QPointF(4, 6));\ncolumn->addWidget(view);\nauto* card = new layout::Card;\ncard->setFixedSize(340, 300);\nauto* content = new QVBoxLayout(card);\ncontent->setContentsMargins(20, 16, 20, 16);\ncontent->setSpacing(12);\nauto* title = new textfields::Label(\"Review a preset\", card);\ntitle->setFluentTypography(Typography::FontRole::Subtitle);\ntitle->setTextColorRole(textfields::Label::TextColorRole::Primary);\ncontent->addWidget(title);\nauto* balanced = new basicinput::RadioButton(\"Balanced\", card);\nbalanced->setObjectName(\"spatialBalancedPreset\");\nauto* vivid = new basicinput::RadioButton(\"Vivid\", card);\nvivid->setObjectName(\"spatialVividPreset\");\nbalanced->setChecked(true);\ncontent->addWidget(balanced);\ncontent->addWidget(vivid);\nauto* rating = new basicinput::RatingControl(card);\nrating->setObjectName(\"spatialPresetRating\");\nrating->setAccessibleName(\"Preset rating\");\nrating->setValue(3);\nrating->setCaption(\"3 / 5\");\ncontent->addWidget(rating);\nauto* result = new textfields::Label(\"Balanced selected\", card);\nresult->setObjectName(\"spatialPresetResult\");\nresult->setTextColorRole(textfields::Label::TextColorRole::Secondary);\ncontent->addWidget(result);\nQObject::connect(balanced, &basicinput::RadioButton::toggled, result,\n                 [result](bool checked) { if (checked) result->setText(\"Balanced selected\"); });\nQObject::connect(vivid, &basicinput::RadioButton::toggled, result,\n                 [result](bool checked) { if (checked) result->setText(\"Vivid selected\"); });\nQObject::connect(rating, &basicinput::RatingControl::valueChanged, rating,\n                 [rating](double value) {\n    rating->setCaption(value < 0 ? \"Not rated\" : QString(\"%1 / 5\").arg(value));\n});\nauto* item = view->addWidget(card, WidgetOwnership::Owned);\nitem->setSurfaceIntensity(0.75);\nitem->setHoverLift(4.5);\nitem->setRotation(QVector3D(5, -12, 0));\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "spatial-view-tree",
+          "title": "File browser",
+          "description": "Expand folders and select files inside the card.",
+          "cpp_snippet": "// Gallery row styling: app/view/widgets/samples/CollectionSampleDelegates.h\n#include \"CollectionSampleDelegates.h\"\nusing namespace fluent;\nauto* panel = new QWidget(parent);\nauto* column = new QVBoxLayout(panel);\ncolumn->setContentsMargins(0, 0, 0, 0);\ncolumn->setSpacing(12);\nauto* view = new spatial::SpatialView(panel);\nview->setObjectName(\"spatialPreviewView\");\nview->setFixedHeight(356);\nview->setCameraDistance(1400);\nview->setMaximumTilt(QPointF(4, 6));\ncolumn->addWidget(view);\nauto* card = new layout::Card;\ncard->setFixedSize(360, 264);\nauto* content = new QVBoxLayout(card);\ncontent->setContentsMargins(20, 16, 20, 16);\ncontent->setSpacing(8);\nauto* title = new textfields::Label(\"Project files\", card);\ntitle->setFluentTypography(Typography::FontRole::Subtitle);\ntitle->setTextColorRole(textfields::Label::TextColorRole::Primary);\ncontent->addWidget(title);\nauto* tree = new collections::TreeView(card);\ntree->setObjectName(\"spatialFileTree\");\ntree->setAccessibleName(\"Project files\");\ntree->setHeaderHidden(true);\ntree->setBorderVisible(false);\ntree->setBackgroundVisible(false);\n// Reuse Gallery's row styling; this delegate is not part of the Spatial API.\ntree->setItemDelegate(new gallery::TreeRowDelegate(tree, 32, tree, tree));\nauto* model = new QStandardItemModel(card);\nconst auto node = [](const QString& name, const QString& icon) {\n    auto* row = new QStandardItem(name);\n    row->setData(icon, gallery::TreeIconGlyphRole);\n    return row;\n};\nauto* sources = node(\"Sources\", Typography::Icons::Folder);\nsources->appendRow(node(\"main.cpp\", Typography::Icons::Document));\nsources->appendRow(node(\"window.cpp\", Typography::Icons::Document));\nmodel->appendRow(sources);\nauto* assets = node(\"Assets\", Typography::Icons::Folder);\nassets->appendRow(node(\"logo.svg\", Typography::Icons::Document));\nmodel->appendRow(assets);\ntree->setModel(model);\ntree->expandAll();\ntree->setCurrentIndex(model->index(0, 0, model->index(0, 0)));\ncontent->addWidget(tree, 1);\nauto* selected = new textfields::Label(\"main.cpp\", card);\nselected->setObjectName(\"spatialSelectedFile\");\nselected->setTextColorRole(textfields::Label::TextColorRole::Secondary);\ncontent->addWidget(selected);\nQObject::connect(tree, &QTreeView::clicked, selected,\n                 [selected](const QModelIndex& index) {\n    selected->setText(index.data().toString());\n});\nauto* item = view->addWidget(card, WidgetOwnership::Owned);\nitem->setSurfaceIntensity(0.75);\nitem->setHoverLift(4.5);\nitem->setRotation(QVector3D(5, -12, 0));\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "spatial-view-donut",
+          "title": "DonutChart and Slider",
+          "description": "Adjust the allocation. The same ChartModel updates the projected chart.",
+          "cpp_snippet": "using namespace fluent;\nauto* panel = new QWidget(parent);\nauto* column = new QVBoxLayout(panel);\ncolumn->setContentsMargins(0, 0, 0, 0);\ncolumn->setSpacing(12);\nauto* view = new spatial::SpatialView(panel);\nview->setObjectName(\"spatialPreviewView\");\nview->setFixedHeight(380);\nview->setCameraDistance(1400);\nview->setMaximumTilt(QPointF(4, 6));\ncolumn->addWidget(view);\nauto* card = new layout::Card;\ncard->setFixedSize(340, 300);\nauto* content = new QVBoxLayout(card);\ncontent->setContentsMargins(20, 16, 20, 16);\ncontent->setSpacing(12);\nauto* chart = new charts::DonutChart(card);\nchart->setObjectName(\"spatialAllocationChart\");\nchart->setAccessibleName(\"Illustrative storage allocation\");\nchart->setTitle(\"Storage allocation\");\nchart->setLegendVisible(false);\nchart->setCenterText(\"65%\");\nchart->setCenterCaption(\"used\");\nauto* model = new charts::ChartModel(card);\nmodel->setPoints({{0, 65}, {1, 35}}, {\"Used\", \"Free\"});\nchart->setModel(model);\ncontent->addWidget(chart, 1);\nauto* allocation = new basicinput::Slider(card);\nallocation->setObjectName(\"spatialAllocationSlider\");\nallocation->setAccessibleName(\"Used storage percentage\");\nallocation->setRange(5, 95);\nallocation->setValue(65);\ncontent->addWidget(allocation);\nQObject::connect(allocation, &basicinput::Slider::valueChanged, chart,\n                 [chart, model](int value) {\n    model->setPoints({{0, double(value)}, {1, double(100 - value)}}, {\"Used\", \"Free\"});\n    chart->setCenterText(QString(\"%1%\").arg(value));\n});\nauto* item = view->addWidget(card, WidgetOwnership::Owned);\nitem->setSurfaceIntensity(0.75);\nitem->setHoverLift(4.5);\nitem->setRotation(QVector3D(5, -12, 0));\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "spatial-view-hybrid",
+          "title": "File preview",
+          "description": "Choose a format. The dropdown updates the card in either mode.",
+          "cpp_snippet": "using namespace fluent;\nauto* panel = new QWidget(parent);\nauto* column = new QVBoxLayout(panel);\ncolumn->setContentsMargins(0, 0, 0, 0);\ncolumn->setSpacing(12);\nauto* view = new spatial::SpatialView(panel);\nview->setObjectName(\"spatialPreviewView\");\nview->setFixedHeight(276);\nview->setCameraDistance(1400);\nview->setMaximumTilt(QPointF(4, 6));\ncolumn->addWidget(view);\nauto* card = new layout::Card;\ncard->setFixedSize(360, 176);\nauto* content = new QVBoxLayout(card);\ncontent->setContentsMargins(20, 16, 20, 16);\ncontent->setSpacing(12);\nauto* heading = new QHBoxLayout;\nauto* title = new textfields::Label(\"Export preview\", card);\ntitle->setFluentTypography(Typography::FontRole::Subtitle);\ntitle->setTextColorRole(textfields::Label::TextColorRole::Primary);\nheading->addWidget(title);\nheading->addStretch();\nauto* format = new textfields::Label(\"PNG\", card);\nformat->setObjectName(\"spatialExportFormat\");\nformat->setTextColorRole(textfields::Label::TextColorRole::Accent);\nheading->addWidget(format);\ncontent->addLayout(heading);\nauto* file = new QHBoxLayout;\nfile->setSpacing(16);\nauto* icon = new FontIcon(Typography::Icons::Document, card);\nicon->setIconSize(48);\nfile->addWidget(icon);\nauto* details = new QVBoxLayout;\ndetails->setSpacing(4);\ndetails->setAlignment(Qt::AlignVCenter);\nauto* filename = new textfields::Label(\"gallery-preview.png\", card);\nfilename->setObjectName(\"spatialExportFilename\");\nfilename->setFluentTypography(Typography::FontRole::BodyStrong);\nfilename->setTextColorRole(textfields::Label::TextColorRole::Primary);\ndetails->addWidget(filename);\nauto* note = new textfields::Label(\"Image with transparency\", card);\nnote->setObjectName(\"spatialExportNote\");\nnote->setWordWrap(true);\nnote->setTextColorRole(textfields::Label::TextColorRole::Secondary);\ndetails->addWidget(note);\nfile->addLayout(details, 1);\ncontent->addLayout(file, 1);\n// Keep the native popup outside the projected surface.\nauto* formats = new basicinput::ComboBox(panel);\nformats->setObjectName(\"spatialExportChoice\");\nformats->setAccessibleName(\"Export format\");\nformats->setFixedWidth(120);\nformats->addItems({\"PNG\", \"JPEG\", \"SVG\"});\nQObject::connect(formats, qOverload<int>(&basicinput::ComboBox::currentIndexChanged),\n                 note, [format, filename, note, formats](int index) {\n    const auto type = formats->itemText(index);\n    format->setText(type);\n    filename->setText(\"gallery-preview.\" + type.toLower());\n    const QStringList descriptions = {\"Image with transparency\", \"Compact photo\", \"Scalable vector\"};\n    note->setText(descriptions.value(index));\n});\nauto* item = view->addWidget(card, WidgetOwnership::Owned);\nitem->setSurfaceIntensity(0.75);\nitem->setHoverLift(4.5);\nitem->setRotation(QVector3D(5, -12, 0));\nauto* toolbar = new QHBoxLayout;\ntoolbar->addStretch();\ntoolbar->addWidget(formats);\ncolumn->insertLayout(0, toolbar);\n",
+          "fill_available_width": true
+        }
+      ]
+    },
+    {
+      "id": "spatial-item",
+      "title": "SpatialItem",
+      "category_id": "spatial",
+      "description": "Position, rotate and scale a widget inside SpatialView.",
+      "capabilities": [
+        "spatial-composition"
+      ],
+      "search_terms": [
+        "adjust",
+        "card",
+        "controls",
+        "finish",
+        "inside",
+        "keep",
+        "one",
+        "own",
+        "pose",
+        "position",
+        "position.",
+        "rotate",
+        "scale",
+        "spatial",
+        "spatial-composition",
+        "spatial-item",
+        "spatial-item-pose",
+        "spatialitem",
+        "spatialview.",
+        "their",
+        "while",
+        "widget"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Spatial.h>",
+        "declaration": "src/components/spatial/SpatialItem.h",
+        "qualified_type": "fluent::spatial::SpatialItem",
+        "cmake_target": "FluentQt::Spatial"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.spatial",
+        "type": "SpatialItem",
+        "import_statement": "from fluentqt.spatial import SpatialItem",
+        "build_option": "FLUENT_QT_BUILD_SPATIAL=ON"
+      },
+      "tests": [
+        {
+          "target": "test_spatial_view",
+          "source": "tests/components/spatial/TestSpatialView.cpp",
+          "ctest_label": "test_spatial_view"
+        }
+      ],
+      "gallery": {
+        "route_id": "spatial-item",
+        "sample_source": "app/view/widgets/samples/SpatialSamples.cpp",
+        "control_image": "app/assets/control_images/spatial/SpatialItem.png"
+      },
+      "samples": [
+        {
+          "id": "spatial-item-pose",
+          "title": "Card finish and pose",
+          "description": "Adjust one card while the controls keep their own position.",
+          "cpp_snippet": "using namespace fluent;\n// Keep the control card independent of the card it adjusts.\nclass WorkbenchView final : public spatial::SpatialView {\npublic:\n    using SpatialView::SpatialView;\n    void arrange()\n    {\n        if (itemCount() != 2)\n            return;\n        const bool stacked = width() < 720;\n        setFixedHeight(!isSpatialEnabled() ? 520 : (stacked ? 560 : 360));\n        auto* preview = items().first();\n        preview->setPosition(QVector3D(stacked ? 0 : -164, stacked ? -140 : 0,\n                                      preview->position().z()));\n        items().last()->setPosition(QVector3D(stacked ? 0 : 164, stacked ? 110 : 0, -50));\n    }\nprotected:\n    void resizeEvent(QResizeEvent* event) override\n    {\n        SpatialView::resizeEvent(event);\n        // Update the responsive height after the current layout pass.\n        QTimer::singleShot(0, this, [this] { arrange(); });\n    }\n};\nauto* panel = new QWidget(parent);\nauto* column = new QVBoxLayout(panel);\ncolumn->setContentsMargins(0, 0, 0, 0);\ncolumn->setSpacing(12);\nauto* view = new WorkbenchView(panel);\nview->setObjectName(\"spatialPreviewView\");\nview->setCameraDistance(1400);\nview->setZoom(0.92);\nview->setMaximumTilt(QPointF(4, 6));\ncolumn->addWidget(view);\nauto* card = new layout::Card;\ncard->setObjectName(\"spatialDemoCard\");\ncard->setFixedSize(280, 180);\nauto* content = new QVBoxLayout(card);\ncontent->setContentsMargins(20, 16, 20, 16);\ncontent->setSpacing(8);\nauto* title = new textfields::Label(\"Activity\", card);\ntitle->setFluentTypography(Typography::FontRole::Subtitle);\ntitle->setTextColorRole(textfields::Label::TextColorRole::Primary);\ncontent->addWidget(title);\nauto* chart = new charts::Sparkline(card);\nchart->setAccessibleName(\"Activity trend, demo data\");\nauto* model = new charts::ChartModel(card);\nmodel->setPoints({{0, 12}, {1, 24}, {2, 18}, {3, 38}, {4, 32}, {5, 54}});\nchart->setModel(model);\ncontent->addWidget(chart, 1);\nauto* caption = new textfields::Label(\"Last 6 days · demo data\", card);\ncaption->setTextColorRole(textfields::Label::TextColorRole::Secondary);\ncontent->addWidget(caption);\nspatial::SpatialItem* item = view->addWidget(card, WidgetOwnership::Owned);\nitem->setSurfaceIntensity(0.75);\nitem->setHoverLift(5);\nitem->setRotation(QVector3D(0, -18, 0));\n// Scale, pivot and visibility retain their defaults; see SpatialItem.h.\nauto* settings = new layout::Card;\nsettings->setObjectName(\"spatialParameterCard\");\nsettings->setFixedSize(280, 260);\nauto* controls = new QVBoxLayout(settings);\ncontrols->setContentsMargins(20, 16, 20, 16);\ncontrols->setSpacing(8);\nauto* heading = new textfields::Label(\"Card\", settings);\nheading->setFluentTypography(Typography::FontRole::Subtitle);\nheading->setTextColorRole(textfields::Label::TextColorRole::Primary);\ncontrols->addWidget(heading);\nconst auto addSlider = [settings, controls](const QString& name, const QString& label,\n                                           const QString& unit, int minimum, int maximum,\n                                           int initial) {\n    auto* group = new QVBoxLayout;\n    group->setSpacing(4);\n    auto* text = new textfields::Label(settings);\n    text->setTextColorRole(textfields::Label::TextColorRole::Primary);\n    auto* slider = new basicinput::Slider(settings);\n    slider->setObjectName(name);\n    slider->setAccessibleName(label);\n    slider->setRange(minimum, maximum);\n    slider->setValue(initial);\n    const auto updateText = [text, label, unit](int value) {\n        text->setText(QString(\"%1: %2%3\").arg(label).arg(value).arg(unit));\n    };\n    updateText(initial);\n    QObject::connect(slider, &basicinput::Slider::valueChanged, text, updateText);\n    group->addWidget(text);\n    group->addWidget(slider);\n    controls->addLayout(group);\n    return slider;\n};\nauto* finish = addSlider(\"spatialItemSurfaceIntensity\", \"Surface\", \"%\", 0, 100, 75);\nauto* angle = addSlider(\"spatialItemRotation\", \"Rotation\", \"°\", -35, 35, -18);\nauto* depth = addSlider(\"spatialItemDepth\", \"Depth\", \" px\", -120, 120, 0);\nQObject::connect(finish, &basicinput::Slider::valueChanged, item,\n                 [item](int value) { item->setSurfaceIntensity(value / 100.0); });\nQObject::connect(angle, &basicinput::Slider::valueChanged, item,\n                 [item](int value) { item->setRotation(QVector3D(0, value, 0)); });\nQObject::connect(depth, &basicinput::Slider::valueChanged, item, [item](int value) {\n    auto position = item->position();\n    position.setZ(value);\n    item->setPosition(position);\n});\nauto* controlItem = view->addWidget(settings, WidgetOwnership::Owned);\ncontrolItem->setSurfaceIntensity(0.75);\ncontrolItem->setRotation(QVector3D(0, -6, 0));\n// No hover lift for the parameter card: keep its drag targets steady.\nQObject::connect(view, &spatial::SpatialView::spatialEnabledChanged,\n                 view, [view] { view->arrange(); });\nview->arrange();\n",
+          "fill_available_width": true
+        }
+      ]
+    },
+    {
       "id": "menu",
       "title": "Menu",
       "category_id": "menus-toolbars",
@@ -9792,6 +10104,27 @@
       "description": "Adds a label, required marker, helper text, and validation feedback to any input control."
     },
     {
+      "id": "spatial",
+      "title": "Spatial",
+      "kind": "category",
+      "parent_id": "controls",
+      "description": "Explore existing Fluent controls in 3D, with live examples and source code."
+    },
+    {
+      "id": "spatial-view",
+      "title": "SpatialView",
+      "kind": "component",
+      "parent_id": "spatial",
+      "description": "Give existing widgets perspective and pointer tilt. Keep text editing and popups in the normal layout; native-window and OpenGL children cannot be embedded."
+    },
+    {
+      "id": "spatial-item",
+      "title": "SpatialItem",
+      "kind": "component",
+      "parent_id": "spatial",
+      "description": "Position, rotate and scale a widget inside SpatialView."
+    },
+    {
       "id": "menus-toolbars",
       "title": "Menus & toolbars",
       "kind": "category",
@@ -10077,12 +10410,12 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 105,
-    "component_count": 83,
-    "sample_count": 228,
+    "route_count": 108,
+    "component_count": 85,
+    "sample_count": 239,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
-    "selection_guide_count": 13,
-    "guided_component_count": 83
+    "selection_guide_count": 14,
+    "guided_component_count": 85
   }
 }

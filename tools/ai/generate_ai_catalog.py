@@ -17,6 +17,13 @@ from typing import Iterable
 
 
 CATEGORY_API = {
+    "spatial": {
+        "cpp_header": "Spatial.h",
+        "cpp_namespace": "fluent::spatial",
+        "python_module": "spatial",
+        "source_directory": "spatial",
+        "sample_source": "SpatialSamples.cpp",
+    },
     "charts": {
         "cpp_header": "Charts.h",
         "cpp_namespace": "fluent::charts",
@@ -111,6 +118,7 @@ CATEGORY_API = {
 }
 
 TEST_SOURCE_OVERRIDES = {
+    "spatial-item": "TestSpatialView.cpp",
     "title-bar": "TestWindow.cpp",
     "line-chart": "TestChartView.cpp",
     "area-chart": "TestChartView.cpp",
@@ -167,7 +175,7 @@ def _gallery_contract(project_root: Path) -> dict[str, object]:
         / "generate_gallery_contract.py"
     )
     module = _load_module("_fluentqt_gallery_contract", generator_path)
-    return module.generate_contract(project_root)
+    return module.generate_contract(project_root, include_cpp_only=True)
 
 
 def _project_version(project_root: Path) -> str:
@@ -349,6 +357,9 @@ def generate_catalog(project_root: Path) -> dict[str, object]:
             raise ValueError(
                 f"Missing installed category header for {category_id}: {public_header}"
             )
+        if category_api["python_module"] is None:
+            python_exports[category_id] = set()
+            continue
         module_path = (
             project_root
             / "bindings"
@@ -374,7 +385,10 @@ def generate_catalog(project_root: Path) -> dict[str, object]:
         category_api = CATEGORY_API.get(category_id)
         if category_api is None:
             raise ValueError(f"Missing API mapping for category {category_id}")
-        if component["api_type"] not in python_exports[category_id]:
+        if (
+            category_api["python_module"] is not None
+            and component["api_type"] not in python_exports[category_id]
+        ):
             raise ValueError(
                 f"Python module fluentqt.{category_api['python_module']} does not "
                 f"export {component['api_type']} for {component['id']}"
@@ -435,7 +449,7 @@ def generate_catalog(project_root: Path) -> dict[str, object]:
                     "qualified_type": (
                         f"{category_api['cpp_namespace']}::{component['api_type']}"
                     ),
-                    "cmake_target": "FluentQt::FluentQt",
+                    "cmake_target": "FluentQt::Spatial" if category_id == "spatial" else "FluentQt::FluentQt",
                 },
                 "python": {
                     "package": "FluentQt",
@@ -445,7 +459,9 @@ def generate_catalog(project_root: Path) -> dict[str, object]:
                         f"from fluentqt.{category_api['python_module']} "
                         f"import {component['api_type']}"
                     ),
-                },
+                    **({"build_option": "FLUENT_QT_BUILD_SPATIAL=ON"}
+                       if category_id == "spatial" else {}),
+                } if category_api["python_module"] is not None else None,
                 "tests": [test],
                 "gallery": {
                     "route_id": component["id"],
@@ -467,7 +483,10 @@ def generate_catalog(project_root: Path) -> dict[str, object]:
             {
                 **category,
                 "cpp_header": f"<FluentQt/{category_api['cpp_header']}>",
-                "python_module": f"fluentqt.{category_api['python_module']}",
+                "python_module": (
+                    f"fluentqt.{category_api['python_module']}"
+                    if category_api["python_module"] is not None else None
+                ),
             }
         )
 
