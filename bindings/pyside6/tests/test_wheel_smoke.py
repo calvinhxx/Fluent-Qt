@@ -254,6 +254,22 @@ def main():
         "textfields.pyi",
         "windowing.pyi",
     }
+    spatial_exports = (
+        hasattr(native.fluent, "SpatialView"),
+        hasattr(native.fluent, "SpatialItem"),
+    )
+    if any(spatial_exports) and not all(spatial_exports):
+        raise AssertionError("Installed native Spatial API is incomplete")
+    if all(spatial_exports):
+        from fluentqt.spatial import SpatialItem, SpatialView
+
+        if SpatialItem is not native.fluent.SpatialItem or not issubclass(
+            SpatialView, native.fluent.SpatialView
+        ):
+            raise AssertionError("Installed Spatial facade does not match the native API")
+        expected_stubs.add("spatial.pyi")
+    elif (package_dir / "spatial.py").exists():
+        raise AssertionError("Core-only wheel contains an unusable Spatial facade")
     installed_stubs = {path.name for path in package_dir.glob("*.pyi")}
     if installed_stubs != expected_stubs:
         raise AssertionError(

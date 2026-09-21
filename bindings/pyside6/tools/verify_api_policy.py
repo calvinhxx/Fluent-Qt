@@ -82,6 +82,12 @@ def public_symbols(manifest: dict[str, Any]) -> set[str]:
                 for name in names
                 if isinstance(name, str)
             )
+    for module, contract in manifest.get("optional_modules", {}).items():
+        if not isinstance(contract, dict):
+            continue
+        symbols.update(f"{module}.{name}" for name in contract.get("classes", []))
+        for class_name, names in contract.get("methods", {}).items():
+            symbols.update(f"{module}.{class_name}.{name}" for name in names)
     return symbols
 
 
@@ -118,6 +124,24 @@ def validate_manifest(
                 "variables must expose the version contract: "
                 + ", ".join(missing_variables)
             )
+
+    optional = manifest.get("optional_modules", {})
+    if not isinstance(optional, dict):
+        return [*errors, "optional_modules must be an object"]
+    for module, contract in optional.items():
+        if not module.startswith("fluentqt.") or not isinstance(contract, dict):
+            return [*errors, "optional_modules entries must name fluentqt modules"]
+        if not isinstance(contract.get("build_option"), str):
+            errors.append(f"{module} must declare its build_option")
+        classes = contract.get("classes", [])
+        methods = contract.get("methods", {})
+        if (not isinstance(classes, list) or not all(isinstance(name, str) for name in classes)
+                or len(set(classes)) != len(classes) or not isinstance(methods, dict)):
+            return [*errors, f"{module} has invalid classes or methods"]
+        for name, names in methods.items():
+            if (name not in classes or not isinstance(names, list)
+                    or not all(isinstance(method, str) for method in names)):
+                return [*errors, f"{module}.{name} has invalid methods"]
 
     symbols = public_symbols(manifest)
     deprecations = manifest.get("deprecations")

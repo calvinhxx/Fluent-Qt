@@ -102,6 +102,9 @@
 #include <components/windowing/TitleBar.h>
 #include <components/windowing/Window.h>
 #include <design/Typography.h>
+#ifdef FLUENT_QT_HAS_SPATIAL
+#include <FluentQt/Spatial.h>
+#endif
 
 namespace fluent::binding {
 

@@ -155,6 +155,18 @@ def main():
     sys.path.insert(0, str(package_dir.parent))
     try:
         runtime_package = importlib.import_module("fluentqt")
+        for module_name, contract in manifest.get("optional_modules", {}).items():
+            module_file = package_dir / (module_name.rsplit(".", 1)[1] + ".py")
+            if not module_file.is_file():
+                continue
+            module = importlib.import_module(module_name)
+            if sorted(module.__all__) != sorted(contract["classes"]):
+                raise RuntimeError(f"{module_name} exports differ from its optional API contract")
+            for class_name, expected in contract["methods"].items():
+                cls = getattr(module, class_name)
+                for method in expected:
+                    if not hasattr(cls, method) or method not in methods.get(class_name, set()):
+                        raise RuntimeError(f"Missing optional API or stub: {class_name}.{method}")
     finally:
         sys.path.pop(0)
 

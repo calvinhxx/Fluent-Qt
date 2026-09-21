@@ -214,6 +214,28 @@ set(FLUENTQT_PYSIDE6_GENERATED_SOURCES
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_windowing_titlebar_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_windowing_window_wrapper.cpp")
 
+# One native extension keeps Fluent theme/motion singletons shared. Spatial is
+# compiled only on explicit opt-in; ordinary 2D bindings retain their Qt dependencies.
+set(FLUENTQT_PYSIDE6_BINDING_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.h")
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/native/typesystem_fluentqt.xml" FLUENTQT_PYSIDE6_TYPES)
+if(TARGET FluentQtSpatial)
+    set_target_properties(FluentQtSpatial PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    list(APPEND FLUENTQT_PYSIDE6_GENERATED_SOURCES
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialview_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialitem_wrapper.cpp")
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/native/spatial_types.xml" FLUENTQT_PYSIDE6_SPATIAL_TYPES)
+    string(REPLACE "<!-- Optional Spatial types. -->" "${FLUENTQT_PYSIDE6_SPATIAL_TYPES}"
+        FLUENTQT_PYSIDE6_TYPES "${FLUENTQT_PYSIDE6_TYPES}")
+    set(FLUENTQT_PYSIDE6_BINDING_HEADER "${CMAKE_CURRENT_BINARY_DIR}/SpatialBindingApi.h")
+    file(GENERATE OUTPUT "${FLUENTQT_PYSIDE6_BINDING_HEADER}" CONTENT
+        "#include \"${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.h\"\n#include <FluentQt/Spatial.h>\n")
+endif()
+set(FLUENTQT_PYSIDE6_TYPESYSTEM "${CMAKE_CURRENT_BINARY_DIR}/typesystem_fluentqt.xml")
+file(GENERATE OUTPUT "${FLUENTQT_PYSIDE6_TYPESYSTEM}" CONTENT "${FLUENTQT_PYSIDE6_TYPES}")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/native/typesystem_fluentqt.xml"
+    "${CMAKE_CURRENT_SOURCE_DIR}/native/spatial_types.xml")
+
 set(FLUENTQT_PYSIDE6_GENERATOR_INCLUDE_ARGUMENTS
     "-I${CMAKE_CURRENT_SOURCE_DIR}/native"
     "-I${PROJECT_SOURCE_DIR}/src"
@@ -262,13 +284,15 @@ add_custom_command(
         "${FLUENTQT_PYSIDE6_GENERATED_ROOT}"
     COMMAND "${FLUENTQT_SHIBOKEN6_GENERATOR}"
         ${FLUENTQT_PYSIDE6_GENERATOR_ARGUMENTS}
-        "${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/native/typesystem_fluentqt.xml"
+        "${FLUENTQT_PYSIDE6_BINDING_HEADER}"
+        "${FLUENTQT_PYSIDE6_TYPESYSTEM}"
     COMMAND "${CMAKE_COMMAND}" -E touch
         "${FLUENTQT_PYSIDE6_GENERATION_STAMP}"
     DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/native/typesystem_fluentqt.xml"
+        "${FLUENTQT_PYSIDE6_BINDING_HEADER}"
+        "${FLUENTQT_PYSIDE6_TYPESYSTEM}"
         ${FLUENTQT_PYSIDE6_INPUT_HEADERS}
     COMMENT "Generating FluentQt PySide6 bindings"
     VERBATIM)
@@ -334,6 +358,9 @@ target_link_libraries(_fluentqt PRIVATE
     Qt6::Widgets
     "${FLUENTQT_PYSIDE6_LIBRARY}"
     "${FLUENTQT_SHIBOKEN6_LIBRARY}")
+if(TARGET FluentQtSpatial)
+    target_link_libraries(_fluentqt PRIVATE FluentQt::Spatial)
+endif()
 if(WIN32)
     target_link_libraries(_fluentqt PRIVATE Python::Python)
 elseif(APPLE)
@@ -392,6 +419,14 @@ set(FLUENTQT_PYSIDE6_STUB_FILES
     status_info.pyi
     textfields.pyi
     windowing.pyi)
+if(TARGET FluentQtSpatial)
+    list(APPEND FLUENTQT_PYSIDE6_PYTHON_FILES spatial.py)
+    list(APPEND FLUENTQT_PYSIDE6_STUB_FILES spatial.pyi)
+else()
+    # Reconfiguring the same build as 2D must not advertise a stale optional module.
+    file(REMOVE "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/spatial.py"
+                "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/spatial.pyi")
+endif()
 set(FLUENTQT_PYSIDE6_PYTHON_SOURCE_PATHS)
 foreach(FLUENTQT_PYSIDE6_PYTHON_FILE
         IN LISTS FLUENTQT_PYSIDE6_PYTHON_FILES)
@@ -572,6 +607,14 @@ add_custom_target(fluentqt_pyside6_manylinux_wheel
 endif()
 
 if(BUILD_TESTING)
+    if(TARGET FluentQtSpatial)
+        add_test(NAME test_pyside6_spatial
+            COMMAND "${Python_EXECUTABLE}" -X faulthandler
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_spatial.py" -v)
+        set_tests_properties(test_pyside6_spatial PROPERTIES
+            ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+            LABELS "pyside;unit;ci_fast;lifetime" TIMEOUT 60)
+    endif()
     add_test(
         NAME test_pyside6_bindings
         COMMAND "${Python_EXECUTABLE}"

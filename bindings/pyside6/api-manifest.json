@@ -1560,5 +1560,65 @@
       "setAnimationEnabled",
       "isAnimationEnabled"
     ]
+  },
+  "optional_modules": {
+    "fluentqt.spatial": {
+      "build_option": "FLUENT_QT_BUILD_SPATIAL",
+      "classes": [
+        "SpatialItem",
+        "SpatialView"
+      ],
+      "methods": {
+        "SpatialItem": [
+          "widget",
+          "position",
+          "setPosition",
+          "rotation",
+          "setRotation",
+          "scale",
+          "setScale",
+          "pivot",
+          "setPivot",
+          "isVisible",
+          "setVisible",
+          "surfaceIntensity",
+          "setSurfaceIntensity",
+          "hoverLift",
+          "setHoverLift",
+          "projectedPolygon"
+        ],
+        "SpatialView": [
+          "addWidget",
+          "addOwnedWidget",
+          "addBorrowedWidget",
+          "addReparentedWidget",
+          "takeWidget",
+          "releaseItem",
+          "items",
+          "itemCount",
+          "isSpatialEnabled",
+          "setSpatialEnabled",
+          "cameraDistance",
+          "setCameraDistance",
+          "zoom",
+          "setZoom",
+          "isPointerTrackingEnabled",
+          "setPointerTrackingEnabled",
+          "maximumTilt",
+          "setMaximumTilt",
+          "responseTime",
+          "setResponseTime",
+          "maximumFrameRate",
+          "setMaximumFrameRate",
+          "isCacheEnabled",
+          "setCacheEnabled",
+          "renderMode",
+          "setRenderMode",
+          "activeBackend",
+          "rendererName",
+          "fallbackReason"
+        ]
+      }
+    }
   }
 }

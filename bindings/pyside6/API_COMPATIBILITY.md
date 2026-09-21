@@ -87,6 +87,12 @@ three read-only, selection/column, and editing/validation scenarios as C++.
 
 ## Gates
 
+`optional_modules` in the manifest records APIs enabled by a source-build option.
+Their public names are imported from the declared category module and validated
+when that module is packaged. Default builds need not export these names.
+`fluentqt.spatial` is enabled by `FLUENT_QT_BUILD_SPATIAL`; it uses explicit
+owned, borrowed, reparented and take methods around native widget ownership.
+
 `tools/verify_api_policy.py` rejects version drift, malformed or duplicate
 ledger entries, missing public version variables, deprecations of unknown
 symbols, replacements that are not public, future deprecation dates, and

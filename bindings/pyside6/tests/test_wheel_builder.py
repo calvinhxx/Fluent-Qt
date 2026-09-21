@@ -2,6 +2,7 @@
 
 import ast
 import importlib.util
+import json
 from email.parser import Parser
 from pathlib import Path
 import tempfile
@@ -26,6 +27,13 @@ class WheelBuilderTest(unittest.TestCase):
         # Do not import fluentqt: this gate must run before Qt is installed.
         binding_root = WHEEL_BUILDER_PATH.parents[1]
         facades = {path.stem for path in (binding_root / "src/fluentqt").glob("*.py")}
+        manifest = json.loads((binding_root / "api-manifest.json").read_text(encoding="utf-8"))
+        optional_facades = {name.removeprefix("fluentqt.") for name in manifest["optional_modules"]}
+        self.assertTrue(optional_facades <= facades, "Optional module facade is missing")
+        for name in optional_facades:
+            self.assertNotIn(name + ".py", WHEEL_BUILDER.REQUIRED_PACKAGE_FILES)
+            self.assertNotIn(name + ".pyi", WHEEL_BUILDER.REQUIRED_PACKAGE_FILES)
+        facades -= optional_facades
         expected_stubs = {name + ".pyi" for name in facades} | {"_fluentqt.pyi"}
         expected_files = {name + ".py" for name in facades} | expected_stubs
         self.assertFalse(

@@ -1,0 +1,26 @@
+<namespace-type name="spatial" visible="no">
+    <object-type name="SpatialItem">
+        <modify-function signature="widget()const">
+            <modify-argument index="return">
+                <define-ownership class="target" owner="default"/>
+            </modify-argument>
+        </modify-function>
+    </object-type>
+    <object-type name="SpatialView">
+        <enum-type name="RenderMode"/>
+        <enum-type name="Backend"/>
+        <modify-function signature="addWidget(QWidget*,fluent::WidgetOwnership)"
+                         rename="_addWidgetWithOwnership">
+            <modify-argument index="return">
+                <parent index="this" action="add"/>
+                <define-ownership class="target" owner="c++"/>
+            </modify-argument>
+        </modify-function>
+        <modify-function signature="takeWidget(fluent::spatial::SpatialItem*)">
+            <modify-argument index="return">
+                <define-ownership class="target" owner="target"/>
+            </modify-argument>
+        </modify-function>
+        <modify-function signature="onThemeUpdated()" remove="all"/>
+    </object-type>
+</namespace-type>

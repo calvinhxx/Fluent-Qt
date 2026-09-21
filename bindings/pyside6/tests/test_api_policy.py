@@ -34,6 +34,12 @@ class ApiPolicyTest(unittest.TestCase):
             [],
         )
 
+    def test_optional_apis_participate_in_deprecation_policy(self):
+        self.assertIn("fluentqt.spatial.SpatialView.addOwnedWidget",
+                      VERIFIER.public_symbols(self.manifest))
+        self.manifest["optional_modules"]["fluentqt.spatial"]["methods"]["MissingType"] = ["method"]
+        self.assertTrue(VERIFIER.validate_manifest(self.manifest, self.project_version))
+
     def test_api_version_must_follow_project_major_minor(self):
         manifest = copy.deepcopy(self.manifest)
         manifest["api_version"] = "9.9"

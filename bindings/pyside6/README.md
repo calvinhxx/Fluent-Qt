@@ -116,6 +116,33 @@ artifact-verification steps.
 
 ## Run representative examples
 
+### Optional Spatial module
+
+The default binding build keeps the base 2D API. To include `SpatialView` and
+`SpatialItem`, enable Spatial in the same matched source-build environment:
+
+```bash
+cmake -S . -B build/pyside6 -DFLUENT_QT_BUILD_SPATIAL=ON
+python3 tools/dev/fluent_qt_build.py build/pyside6 --target fluentqt_pyside6_stubs
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python bindings/pyside6/examples/hello_world/spatial.py
+```
+
+Import from `fluentqt.spatial`. Rendering and pointer animation use the native
+C++ implementation; Python handles configuration and application signals.
+Use `addOwnedWidget()` to transfer a widget to the view, `addBorrowedWidget()`
+to retain it, or `addReparentedWidget()` to restore its original parent on release.
+
+This build adds Qt OpenGL/OpenGLWidgets to the same extension, sharing theme
+and motion state with the base controls. A 2D-only build does not link these
+modules. This is a source-build option, not a promise that existing PyPI wheels
+include Spatial. With `FLUENT_QT_BUILD_PYSIDE6_GALLERY=ON`, the Python Gallery
+uses **Settings → 3D Gallery** for its shell and every Spatial example, matching
+the C++ and WebAssembly Gallery. See the [Gallery guide](gallery/README.md#spatial-mode).
+See [Spatial](../../docs/architecture/spatial-view.md) for supported content and fallback behavior.
+
+### Base examples
+
 Run build-tree examples with the generated package on `PYTHONPATH`:
 
 ```bash

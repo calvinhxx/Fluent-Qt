@@ -81,7 +81,28 @@ ownership tests, and applicable Gallery example land together.
 Do not copy class or route counts into this document. Query the manifest or the
 generated Gallery/catalog data when exact inventory is required.
 
+## Optional modules
+
+### Spatial composition
+
+`fluentqt.spatial` exports `SpatialView` and `SpatialItem` when the binding is
+built with `FLUENT_QT_BUILD_SPATIAL=ON`. Its optional API manifest, generated
+stubs, ownership tests and [minimal example](examples/hello_world/spatial.py)
+are separate from the default 2D exports. Both modules share the same native
+extension and process-wide theme and motion state.
+
+The [Spatial guide](../../docs/architecture/spatial-view.md) describes content
+limits and renderer fallback. C++, Python and WebAssembly Gallery share the
+Spatial category and one **Settings → 3D Gallery** switch. The Python shell
+composes live navigation and content through Qt's OpenGL paint engine; component
+examples use the native Spatial bindings. A base-only binding keeps the same
+Gallery package in 2D without importing Qt OpenGL modules.
+Enabling Spatial in a source build does not extend
+the published wheel matrix or establish results for untested toolchains.
+
 ## Intentional exclusions
+
+### Implementation surfaces
 
 The following implementation surfaces remain outside the Python contract
 unless a separate public design is accepted:

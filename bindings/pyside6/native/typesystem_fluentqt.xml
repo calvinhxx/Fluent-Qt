@@ -8,6 +8,8 @@
          extraction while keeping the declared enum types available. -->
     <rejection class="fluent::basicinput"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <rejection class="fluent::spatial"
+               function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::charts"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::date_time"
@@ -147,6 +149,7 @@
     <namespace-type name="fluent">
         <include file-name="BindingApi.h" location="global"/>
         <enum-type name="WidgetOwnership"/>
+        <!-- Optional Spatial types. -->
         <namespace-type name="binding" visible="no">
             <enum-type name="Theme"/>
             <enum-type name="MotionMode"/>
