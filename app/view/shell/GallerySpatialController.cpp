@@ -19,7 +19,9 @@
 #include <QPainterPath>
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLPaintDevice>
-#include <QOpenGLTextureBlitter>
+#include <QOpenGLShaderProgram>
+#include <QOpenGLBuffer>
+#include <QOpenGLVertexArrayObject>
 #include <QPaintEngine>
 #include <QProxyStyle>
 #include <QStyleOption>
@@ -256,7 +258,7 @@ struct ShellScene : FluentElement {
     QPointF pointerTilt;
     bool top = false;
     std::function<void()> themeChanged;
-    std::function<void(QPainter&, bool)> renderWidgets;
+    std::function<void(QPainter&, bool, const QRegion&)> renderWidgets;
     void onThemeUpdated() override
     {
         if (themeChanged)
@@ -398,6 +400,88 @@ struct ShellScene : FluentElement {
     }
 };
 
+// Sample a projected pixel's footprint rather than one point in a supersampled
+// texture. Four bilinear taps retain thin strokes without mipmap upsampling blur.
+class PanelSampler {
+public:
+    bool create()
+    {
+        auto* context = QOpenGLContext::currentContext();
+        const bool es = context->isOpenGLES();
+        // A Qt WebAssembly sharing wrapper can still report the requested ES 2
+        // format while its current browser context is already WebGL 2 / ES 3.
+        const QByteArray glVersion(
+            reinterpret_cast<const char*>(context->functions()->glGetString(GL_VERSION)));
+        const bool es3 = context->format().majorVersion() >= 3 ||
+                         glVersion.startsWith("OpenGL ES 3.") || glVersion.contains("WebGL 2.");
+        const bool modern = es ? es3 : context->format().profile() == QSurfaceFormat::CoreProfile;
+        const QByteArray version =
+            modern ? (es ? "#version 300 es\n" : "#version 150\n")
+                   : (es ? "#extension GL_OES_standard_derivatives : enable\n" : "");
+        const QByteArray precision = es ? "precision highp float;\n" : "";
+        const QByteArray vertex =
+            (modern ? "in vec2 position; out vec2 uv;\n"
+                    : "attribute highp vec2 position; varying highp vec2 uv;\n") +
+            QByteArray("uniform mat4 target; void main() {\n"
+                       "uv = (position + 1.0) * 0.5;\n"
+                       "gl_Position = target * vec4(position, 0.0, 1.0); }\n");
+        const QByteArray fragment =
+            (modern ? "in vec2 uv; out vec4 color;\n#define SAMPLE texture\n#define OUTPUT color\n"
+                    : "varying highp vec2 uv;\n#define SAMPLE texture2D\n#define OUTPUT "
+                      "gl_FragColor\n") +
+            QByteArray(
+                "uniform sampler2D source; uniform vec2 sourceSize;\n"
+                "void main() {\n"
+                "vec2 dx = dFdx(uv), dy = dFdy(uv);\n"
+                "vec2 span = clamp(vec2(length(dx * sourceSize), length(dy * sourceSize)) - 1.0, "
+                "0.0, 1.0);\n"
+                "dx *= 0.25 * span.x; dy *= 0.25 * span.y;\n"
+                "OUTPUT = 0.25 * (SAMPLE(source, uv - dx - dy) + SAMPLE(source, uv + dx - dy)\n"
+                " + SAMPLE(source, uv - dx + dy) + SAMPLE(source, uv + dx + dy)); }\n");
+        if (!m_program.addShaderFromSourceCode(QOpenGLShader::Vertex,
+                                               version + precision + vertex) ||
+            !m_program.addShaderFromSourceCode(QOpenGLShader::Fragment,
+                                               version + precision + fragment))
+            return false;
+        m_program.bindAttributeLocation("position", 0);
+        if (!m_program.link() || !m_vertices.create())
+            return false;
+        m_vao.create();
+        QOpenGLVertexArrayObject::Binder vao(&m_vao);
+        m_vertices.bind();
+        const GLfloat vertices[] = {-1, -1, 1, -1, -1, 1, 1, 1};
+        m_vertices.allocate(vertices, sizeof(vertices));
+        m_vertices.release();
+        return true;
+    }
+
+    bool isCreated() const { return m_program.isLinked() && m_vertices.isCreated(); }
+    void blit(GLuint texture, const QSize& size, const QMatrix4x4& target)
+    {
+        auto* gl = QOpenGLContext::currentContext()->functions();
+        QOpenGLVertexArrayObject::Binder vao(&m_vao);
+        m_program.bind();
+        m_vertices.bind();
+        m_program.enableAttributeArray(0);
+        m_program.setAttributeBuffer(0, GL_FLOAT, 0, 2);
+        m_program.setUniformValue("target", target);
+        m_program.setUniformValue("source", 0);
+        m_program.setUniformValue("sourceSize", QVector2D(size.width(), size.height()));
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glBindTexture(GL_TEXTURE_2D, texture);
+        gl->glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        gl->glBindTexture(GL_TEXTURE_2D, 0);
+        m_program.disableAttributeArray(0);
+        m_vertices.release();
+        m_program.release();
+    }
+
+private:
+    QOpenGLShaderProgram m_program;
+    QOpenGLBuffer m_vertices;
+    QOpenGLVertexArrayObject m_vao;
+};
+
 // Create the shared GL surface only after opting into 3D. Keep it hidden between
 // later toggles to avoid repeatedly replacing the native window's backing store.
 // zh_CN: 首次启用 3D 才创建共享 GL 表面；后续关闭时隐藏，避免反复重建原生窗口后备存储。
@@ -439,6 +523,9 @@ public:
     int maxCacheDimension() const { return m_maxDimension; }
     int allocationRetries = 0;
     int surfaceSamples = 0;
+    int paintSamples() const { return m_paintTarget ? m_paintTarget->format().samples() : 0; }
+    qint64 estimatedCacheBytes() const { return m_plan.estimatedBytes; }
+    int paintTargetHeight() const { return m_plan.paintSize.height(); }
     bool ready() const { return m_blitter && m_blitter->isCreated(); }
     qint64 cachedPixels() const
     {
@@ -454,6 +541,8 @@ public:
         makeCurrent();
         m_navigation = {};
         m_content = {};
+        m_paintTarget.reset();
+        m_resolveTarget.reset();
         m_plan = {};
         m_maxExtraSampling = 2;
         m_cacheFailurePending = false;
@@ -461,6 +550,7 @@ public:
     }
     const bool measuring = qEnvironmentVariableIntValue("FLUENT_QT_SPATIAL_BENCHMARK") != 0;
     qint64 paints = 0, paintNanoseconds = 0;
+    qint64 allocationNanoseconds = 0, firstPaintNanoseconds = 0;
 
 protected:
     void initializeGL() override
@@ -472,7 +562,17 @@ protected:
         gl->glGetIntegerv(GL_MAX_VIEWPORT_DIMS, viewportLimits);
         m_maxDimension =
             qMin(qMin(textureLimit, renderbufferLimit), qMin(viewportLimits[0], viewportLimits[1]));
-        m_blitter = std::make_unique<QOpenGLTextureBlitter>();
+        // A driver may round the requested sample count up. Query a tiny target
+        // before planning large allocations so the memory bound remains accurate.
+        QOpenGLFramebufferObjectFormat sampleFormat;
+        sampleFormat.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+        sampleFormat.setInternalTextureFormat(GL_RGBA8);
+        sampleFormat.setSamples(spatial_render::kPaintSamples);
+        {
+            QOpenGLFramebufferObject sampleProbe(QSize(1, 1), sampleFormat);
+            m_paintSamples = sampleProbe.isValid() ? sampleProbe.format().samples() : 0;
+        }
+        m_blitter = std::make_unique<PanelSampler>();
         m_blitter->create();
         connect(context(), &QOpenGLContext::aboutToBeDestroyed, this, [this] {
             makeCurrent();
@@ -538,16 +638,15 @@ protected:
                 QMatrix4x4 quad;
                 quad.translate(panel.source.center().x(), panel.source.center().y());
                 quad.scale(panel.source.width() / 2, -panel.source.height() / 2);
-                m_blitter->bind();
-                m_blitter->blit(cache.texture->texture(),
-                                projection * QMatrix4x4(panel.transform) * quad,
-                                QOpenGLTextureBlitter::OriginBottomLeft);
-                m_blitter->release();
+                m_blitter->blit(cache.texture->texture(), cache.texture->size(),
+                                projection * QMatrix4x4(panel.transform) * quad);
                 p.endNativePainting();
             });
         }
         painter.end();
         if (measuring) {
+            if (!firstPaintNanoseconds && property("presenting").toBool())
+                firstPaintNanoseconds = clock.nsecsElapsed();
             ++paints;
             paintNanoseconds += clock.nsecsElapsed();
         }
@@ -561,20 +660,26 @@ private:
         qreal dpr = 0;
     };
     TextureCache m_navigation, m_content;
-    std::unique_ptr<QOpenGLTextureBlitter> m_blitter;
+    std::unique_ptr<PanelSampler> m_blitter;
+    std::unique_ptr<QOpenGLFramebufferObject> m_paintTarget;
+    std::unique_ptr<QOpenGLFramebufferObject> m_resolveTarget;
     ShellScene* m_scene;
     spatial_render::CachePlan m_plan;
     int m_maxDimension = 0;
+    int m_paintSamples = spatial_render::kPaintSamples;
     qreal m_maxExtraSampling = 2;
     bool m_cacheFailurePending = false;
 
     bool prepareCaches()
     {
+        if (m_paintSamples <= 1)
+            return false;
         const std::array<QSizeF, 2> panels = {m_scene->navigation.source.size(),
                                               m_scene->content.source.size()};
         while (true) {
-            const auto plan = spatial_render::planCaches(panels, devicePixelRatioF(),
-                                                         m_maxDimension, m_maxExtraSampling);
+            const auto plan = spatial_render::planCaches(
+                panels, devicePixelRatioF(), m_maxDimension, m_maxExtraSampling,
+                spatial_render::kCacheBudgetBytes, m_paintSamples);
             if (!plan.valid())
                 return false;
             if (plan.sizes == m_plan.sizes && plan.dpr == m_plan.dpr)
@@ -583,16 +688,32 @@ private:
             // must not transiently retain two complete sets of high-DPI caches.
             m_navigation = {};
             m_content = {};
+            m_paintTarget.reset();
+            m_resolveTarget.reset();
             m_plan = {};
+            QElapsedTimer allocationClock;
+            if (measuring)
+                allocationClock.start();
             bool allocated = true;
+            QOpenGLFramebufferObjectFormat paintFormat;
+            paintFormat.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+            paintFormat.setInternalTextureFormat(GL_RGBA8);
+            paintFormat.setSamples(m_paintSamples);
+            m_paintTarget = std::make_unique<QOpenGLFramebufferObject>(plan.paintSize, paintFormat);
+            QOpenGLFramebufferObjectFormat textureFormat;
+            textureFormat.setAttachment(QOpenGLFramebufferObject::NoAttachment);
+            textureFormat.setInternalTextureFormat(GL_RGBA8);
+            m_resolveTarget =
+                std::make_unique<QOpenGLFramebufferObject>(plan.paintSize, textureFormat);
+            allocated = m_paintTarget->isValid() && m_resolveTarget->isValid();
             const std::array<TextureCache*, 2> caches = {&m_navigation, &m_content};
             for (size_t i = 0; i < caches.size(); ++i) {
+                if (!allocated)
+                    break;
                 if (plan.sizes[i].isEmpty())
                     continue;
-                QOpenGLFramebufferObjectFormat format;
-                format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
                 auto& texture = caches[i]->texture;
-                texture = std::make_unique<QOpenGLFramebufferObject>(plan.sizes[i], format);
+                texture = std::make_unique<QOpenGLFramebufferObject>(plan.sizes[i], textureFormat);
                 if (!texture->isValid()) {
                     allocated = false;
                     break;
@@ -603,6 +724,8 @@ private:
                 gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 gl->glBindTexture(GL_TEXTURE_2D, 0);
             }
+            if (measuring)
+                allocationNanoseconds += allocationClock.nsecsElapsed();
             if (allocated) {
                 m_plan = plan;
                 return true;
@@ -618,6 +741,8 @@ private:
     {
         m_navigation = {};
         m_content = {};
+        m_paintTarget.reset();
+        m_resolveTarget.reset();
         m_plan = {};
         m_maxExtraSampling = 2;
         m_cacheFailurePending = false;
@@ -634,33 +759,57 @@ private:
         if (!cache.texture || !cache.texture->isValid())
             return false;
         const QSize pixels = cache.texture->size();
-        cache.texture->bind();
-        auto* gl = context()->functions();
-        gl->glDisable(GL_SCISSOR_TEST);
-        gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-        gl->glClearColor(0, 0, 0, 0);
-        gl->glStencilMask(~0u);
-        gl->glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        QOpenGLPaintDevice device(pixels);
-        device.setDevicePixelRatio(dpr);
-        QPainter painter(&device);
-        painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
-        if (navigation)
-            painter.translate(-source.topLeft());
-        // Separate render passes keep a floating navigation drawer out of the content cache.
-        // Child widgets (including raster Spatial viewports) inherit this OpenGL painter.
-        // zh_CN: 分开绘制避免浮动导航混入正文；子控件与内嵌 Spatial 共享当前 OpenGL 画笔。
-        m_scene->renderWidgets(painter, navigation);
-        painter.resetTransform();
         QPainterPath outside;
         outside.addRect(QRectF(QPointF(), source.size()));
         outside.addRoundedRect(QRectF(QPointF(), source.size()).adjusted(.5, .5, -.5, -.5),
                                m_scene->themeRadius().overlay * 1.5,
                                m_scene->themeRadius().overlay * 1.5);
         outside.setFillRule(Qt::OddEvenFill);
-        painter.setCompositionMode(QPainter::CompositionMode_DestinationOut);
-        painter.fillPath(outside, Qt::black);
-        painter.end();
+        const int guard = qMax(1, qCeil(dpr));
+        const int stride = pixels.height() <= m_plan.paintSize.height()
+                               ? pixels.height()
+                               : qMax(1, m_plan.paintSize.height() - 2 * guard);
+        for (int top = 0; top < pixels.height(); top += stride) {
+            const int height = qMin(stride, pixels.height() - top);
+            // QWidget clips in logical pixels. Guard a full logical pixel so
+            // rounded clip coordinates and MSAA coverage stay outside the copied strip.
+            const int paintTop = qMax(0, top - guard);
+            const int paintBottom = qMin(pixels.height(), top + height + guard);
+            const int paintHeight = paintBottom - paintTop;
+            m_paintTarget->bind();
+            auto* gl = context()->functions();
+            gl->glDisable(GL_SCISSOR_TEST);
+            gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+            gl->glClearColor(0, 0, 0, 0);
+            gl->glStencilMask(~0u);
+            gl->glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+            QOpenGLPaintDevice device(QSize(pixels.width(), paintHeight));
+            device.setDevicePixelRatio(dpr);
+            QPainter painter(&device);
+            painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
+            painter.translate(0, -paintTop / dpr);
+            const QRectF strip(0, paintTop / dpr, source.width(), paintHeight / dpr);
+            painter.setClipRect(strip);
+            const QPointF origin = navigation ? source.topLeft() : QPointF();
+            painter.translate(-origin);
+            // Supply the dirty strip to QWidget::render so unrelated children are skipped.
+            // zh_CN: 按条带指定绘制区域，跳过未覆盖的子控件，复用同一抗锯齿画布。
+            m_scene->renderWidgets(painter, navigation, strip.translated(origin).toAlignedRect());
+            painter.translate(origin);
+            painter.setCompositionMode(QPainter::CompositionMode_DestinationOut);
+            painter.fillPath(outside, Qt::black);
+            painter.end();
+            gl->glDisable(GL_SCISSOR_TEST);
+            // WebGL/GLES requires identical rectangles and formats for MSAA resolve.
+            // Resolve first, then move the guarded strip into the panel texture.
+            QOpenGLFramebufferObject::blitFramebuffer(m_resolveTarget.get(), m_paintTarget.get());
+            // GL framebuffer coordinates run upwards; widget coordinates run downwards.
+            QOpenGLFramebufferObject::blitFramebuffer(
+                cache.texture.get(),
+                QRect(0, pixels.height() - top - height, pixels.width(), height),
+                m_resolveTarget.get(),
+                QRect(0, paintBottom - top - height, pixels.width(), height));
+        }
         cache.revision = revision;
         cache.source = source;
         cache.dpr = dpr;
@@ -670,6 +819,7 @@ private:
 } // namespace
 
 struct GallerySpatialController::Private {
+    QVariantMap initializationTimings;
     QObject* owner = nullptr;
     QPointer<QWidget> window;
     QPointer<navigation::NavigationView> navigation;
@@ -849,6 +999,11 @@ struct GallerySpatialController::Private {
     }
 };
 
+void GallerySpatialController::prepareApplicationStyle()
+{
+    prepareNativeStyle();
+}
+
 GallerySpatialController::GallerySpatialController(QWidget* window,
                                                    navigation::NavigationView* navigation)
     : QObject(window), d(new Private)
@@ -921,12 +1076,22 @@ void GallerySpatialController::ensureRenderer()
     if (d->rendererFailed)
         return;
     if (!d->canvas) {
+        const bool measuring = qEnvironmentVariableIntValue("FLUENT_QT_SPATIAL_BENCHMARK");
+        QElapsedTimer clock;
+        if (measuring)
+            clock.start();
         const QString reason = accelerationUnavailableReason();
+        if (measuring) {
+            d->initializationTimings["probeMs"] = clock.nsecsElapsed() / 1e6;
+            clock.restart();
+        }
         if (!reason.isEmpty()) {
             disableSpatial(reason);
             return;
         }
         prepareNativeStyle();
+        if (measuring)
+            d->initializationTimings["nativeStyleMs"] = clock.nsecsElapsed() / 1e6;
         auto* surface = new GpuSurface(&d->scene, d->window);
         d->canvas = surface;
         surface->setObjectName(QStringLiteral("gallerySpatialSurface"));
@@ -955,7 +1120,13 @@ void GallerySpatialController::ensureRenderer()
     }
     d->setFiltering(true);
     d->canvas->setGeometry(QRect(d->navigation->mapTo(d->window, QPoint()), d->navigation->size()));
+    QElapsedTimer showClock;
+    const bool measuring = qEnvironmentVariableIntValue("FLUENT_QT_SPATIAL_BENCHMARK");
+    if (measuring)
+        showClock.start();
     d->canvas->show();
+    if (measuring)
+        d->initializationTimings["surfaceShowMs"] = showClock.nsecsElapsed() / 1e6;
     d->sync();
     startPresentation();
 }
@@ -1073,7 +1244,7 @@ void GallerySpatialController::startPresentation()
         d->scene.layout(d->navigation);
         d->canvas->update();
     };
-    d->scene.renderWidgets = [this](QPainter& painter, bool navigation) {
+    d->scene.renderWidgets = [this](QPainter& painter, bool navigation, const QRegion& region) {
         QScopedValueRollback<bool> navComposing(d->capture->composing, true);
         QScopedValueRollback<bool> contentComposing(d->contentCapture->composing, true);
         auto* capture = navigation ? d->capture.data() : d->contentCapture.data();
@@ -1084,7 +1255,7 @@ void GallerySpatialController::startPresentation()
         if (capture->measuring)
             clock.start();
         // Preserve transparent hosts instead of forcing a palette window background.
-        widget->render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+        widget->render(&painter, region.boundingRect().topLeft(), region, QWidget::DrawChildren);
         if (capture->measuring) {
             ++capture->captures;
             capture->captureNanoseconds += clock.nsecsElapsed();
@@ -1114,7 +1285,7 @@ bool GallerySpatialController::transitionRunning() const
 }
 QVariantMap GallerySpatialController::renderingStatistics() const
 {
-    QVariantMap result;
+    QVariantMap result = d->initializationTimings;
     for (const auto& entry : {qMakePair(QStringLiteral("navigation"), d->capture.data()),
                               qMakePair(QStringLiteral("content"), d->contentCapture.data())}) {
         result[entry.first + "Captures"] = entry.second ? entry.second->captures : 0;
@@ -1124,10 +1295,13 @@ QVariantMap GallerySpatialController::renderingStatistics() const
     auto* surface = static_cast<GpuSurface*>(d->canvas.data());
     result["paints"] = surface ? surface->paints : 0;
     result["paintMs"] = surface ? surface->paintNanoseconds / 1e6 : 0;
+    result["allocationMs"] = surface ? surface->allocationNanoseconds / 1e6 : 0;
+    result["firstPaintMs"] = surface ? surface->firstPaintNanoseconds / 1e6 : 0;
     result["cachedPixels"] = surface ? surface->cachedPixels() : 0;
     result["cacheDpr"] = surface ? surface->cacheDpr() : 0;
-    result["cacheEstimatedBytes"] =
-        surface ? surface->cachedPixels() * spatial_render::kCacheBytesPerPixel : 0;
+    result["cacheEstimatedBytes"] = surface ? surface->estimatedCacheBytes() : 0;
+    result["paintSamples"] = surface ? surface->paintSamples() : 0;
+    result["paintTargetHeight"] = surface ? surface->paintTargetHeight() : 0;
     result["cacheBudgetBytes"] = spatial_render::kCacheBudgetBytes;
     result["maxCacheDimension"] = surface ? surface->maxCacheDimension() : 0;
     result["allocationRetries"] = surface ? surface->allocationRetries : 0;

@@ -9,6 +9,7 @@ import os
 import math
 import ctypes
 import sys
+import struct
 
 import fluentqt
 from PySide6.QtCore import (
@@ -19,11 +20,11 @@ from PySide6.QtGui import (
     QBrush, QColor, QContextMenuEvent, QEnterEvent, QGuiApplication, QHelpEvent,
     QImage, QLinearGradient, QMatrix4x4, QMouseEvent, QOffscreenSurface, QOpenGLContext,
     QPaintEngine, QPainter, QPainterPath, QPen, QPixmap, QPolygonF, QRegion, QTransform,
-    QVector3D, QWheelEvent,
+    QVector2D, QVector3D, QSurfaceFormat, QWheelEvent,
 )
 from PySide6.QtOpenGL import (
     QOpenGLFramebufferObject, QOpenGLFramebufferObjectFormat, QOpenGLPaintDevice,
-    QOpenGLTextureBlitter,
+    QOpenGLBuffer, QOpenGLShader, QOpenGLShaderProgram, QOpenGLVertexArrayObject,
 )
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from PySide6.QtWidgets import (
@@ -83,11 +84,14 @@ def _alpha(color, opacity):
 
 # Same aggregate cache budget and sampling ladder as GallerySpatialRenderPolicy.h.
 _CACHE_BUDGET_BYTES = 192 * 1024 * 1024
-_CACHE_BYTES_PER_PIXEL = 12
+_CACHE_BYTES_PER_PIXEL = 4
+_PAINT_SAMPLES = 2
 
 
-def _cache_plan(panels, native_dpr, max_dimension, max_extra=2., budget=_CACHE_BUDGET_BYTES):
-    if not math.isfinite(native_dpr) or native_dpr <= 0 or max_dimension <= 0 or budget <= 0:
+def _cache_plan(panels, native_dpr, max_dimension, max_extra=2., budget=_CACHE_BUDGET_BYTES,
+                paint_samples=_PAINT_SAMPLES):
+    if (not math.isfinite(native_dpr) or native_dpr <= 0 or max_dimension <= 0
+            or budget <= 0 or paint_samples <= 1):
         return None
     for extra in (2., 1.75, 1.5, 1.25, 1.):
         if extra > max_extra:
@@ -104,8 +108,18 @@ def _cache_plan(panels, native_dpr, max_dimension, max_extra=2., budget=_CACHE_B
                 break
             sizes.append(QSize(math.ceil(width), math.ceil(height)))
         pixels = sum(size.width() * size.height() for size in sizes if not size.isEmpty())
-        if len(sizes) == len(panels) and pixels <= budget // _CACHE_BYTES_PER_PIXEL:
-            return dpr, sizes
+        paint_size = QSize()
+        for size in sizes:
+            paint_size = paint_size.expandedTo(size)
+        if len(sizes) != len(panels) or paint_size.isEmpty():
+            continue
+        texture_bytes = pixels * _CACHE_BYTES_PER_PIXEL
+        row_bytes = paint_size.width() * (12 * paint_samples + 4)
+        rows = (budget - texture_bytes) // row_bytes
+        if rows < min(32, paint_size.height()):
+            continue
+        paint_size.setHeight(min(paint_size.height(), rows))
+        return dpr, sizes, paint_size
     return None
 
 
@@ -198,6 +212,91 @@ class _SceneTheme(fluentqt.FluentWidget):
         self.changed.emit()
 
 
+class _PanelSampler:
+    """Integrate a projected pixel's footprint without mipmap upsampling blur."""
+
+    def __init__(self):
+        self.program = QOpenGLShaderProgram()
+        self.vertices = QOpenGLBuffer()
+        self.vao = QOpenGLVertexArrayObject()
+
+    def create(self):
+        context = QOpenGLContext.currentContext()
+        es = context.isOpenGLES()
+        version_string = context.functions().glGetString(0x1F02)  # GL_VERSION
+        if isinstance(version_string, bytes):
+            version_string = version_string.decode("ascii", errors="replace")
+        version_string = str(version_string)
+        es3 = (context.format().majorVersion() >= 3
+               or version_string.startswith("OpenGL ES 3.") or "WebGL 2." in version_string)
+        modern = (es3 if es
+                  else context.format().profile() == QSurfaceFormat.CoreProfile)
+        version = ("#version 300 es\n" if es else "#version 150\n") if modern else (
+            "#extension GL_OES_standard_derivatives : enable\n" if es else "")
+        precision = "precision highp float;\n" if es else ""
+        vertex = ("in vec2 position; out vec2 uv;\n" if modern else
+                  "attribute highp vec2 position; varying highp vec2 uv;\n") + """
+uniform mat4 target;
+void main() {
+    uv = (position + 1.0) * 0.5;
+    gl_Position = target * vec4(position, 0.0, 1.0);
+}
+"""
+        fragment = ("in vec2 uv; out vec4 color;\n#define SAMPLE texture\n#define OUTPUT color\n"
+                    if modern else "varying highp vec2 uv;\n#define SAMPLE texture2D\n#define OUTPUT gl_FragColor\n") + """
+uniform sampler2D source;
+uniform vec2 sourceSize;
+void main() {
+    vec2 dx = dFdx(uv), dy = dFdy(uv);
+    vec2 span = clamp(vec2(length(dx * sourceSize), length(dy * sourceSize)) - 1.0, 0.0, 1.0);
+    dx *= 0.25 * span.x; dy *= 0.25 * span.y;
+    OUTPUT = 0.25 * (SAMPLE(source, uv - dx - dy) + SAMPLE(source, uv + dx - dy)
+                  + SAMPLE(source, uv - dx + dy) + SAMPLE(source, uv + dx + dy));
+}
+"""
+        if (not self.program.addShaderFromSourceCode(QOpenGLShader.Vertex, version + precision + vertex)
+                or not self.program.addShaderFromSourceCode(QOpenGLShader.Fragment, version + precision + fragment)):
+            return False
+        self.program.bindAttributeLocation("position", 0)
+        if not self.program.link() or not self.vertices.create():
+            return False
+        self.vao.create()
+        vao = QOpenGLVertexArrayObject.Binder(self.vao)
+        self.vertices.bind()
+        data = struct.pack("8f", -1, -1, 1, -1, -1, 1, 1, 1)
+        self.vertices.allocate(data, len(data))
+        self.vertices.release()
+        del vao
+        return True
+
+    def isCreated(self):
+        return self.program.isLinked() and self.vertices.isCreated()
+
+    def destroy(self):
+        self.vertices.destroy()
+        self.vao.destroy()
+        self.program.removeAllShaders()
+
+    def blit(self, texture, size, target):
+        gl = QOpenGLContext.currentContext().functions()
+        vao = QOpenGLVertexArrayObject.Binder(self.vao)
+        self.program.bind()
+        self.vertices.bind()
+        self.program.enableAttributeArray(0)
+        self.program.setAttributeBuffer(0, 0x1406, 0, 2)
+        self.program.setUniformValue("target", target)
+        self.program.setUniformValue("source", 0)
+        self.program.setUniformValue("sourceSize", QVector2D(size.width(), size.height()))
+        gl.glActiveTexture(0x84C0)
+        gl.glBindTexture(0x0DE1, texture)
+        gl.glDrawArrays(0x0005, 0, 4)
+        gl.glBindTexture(0x0DE1, 0)
+        self.program.disableAttributeArray(0)
+        self.vertices.release()
+        self.program.release()
+        del vao
+
+
 class _Surface(QOpenGLWidget):
     def __init__(self, owner, parent):
         super().__init__(parent)
@@ -219,9 +318,11 @@ class _Surface(QOpenGLWidget):
         self.setFormat(fmt)
 
     def initializeGL(self):
-        self.blitter = QOpenGLTextureBlitter()
+        self.blitter = _PanelSampler()
         self.blitter.create()
         self.caches = [{}, {}]
+        self.paint_target = None
+        self.resolve_target = None
         self.plan = None
         self.max_extra = 2.
         self.cache_failure_pending = False
@@ -236,6 +337,13 @@ class _Surface(QOpenGLWidget):
             query(0x0D3A, viewport)
         self.max_dimension = min(gl.glGetIntegerv(0x0D33), gl.glGetIntegerv(0x84E8),
                                  *viewport)
+        sample_format = QOpenGLFramebufferObjectFormat()
+        sample_format.setAttachment(QOpenGLFramebufferObject.CombinedDepthStencil)
+        sample_format.setInternalTextureFormat(0x8058)  # GL_RGBA8
+        sample_format.setSamples(_PAINT_SAMPLES)
+        probe = QOpenGLFramebufferObject(QSize(1, 1), sample_format)
+        self.paint_samples = probe.format().samples() if probe.isValid() else 0
+        del probe
         self.context().aboutToBeDestroyed.connect(self.release_context)
         self.owner.renderer_initialized = True
         self.owner.queue_check()
@@ -243,6 +351,8 @@ class _Surface(QOpenGLWidget):
     def clear_frame_caches(self):
         self.makeCurrent()
         self.caches = [{}, {}]
+        self.paint_target = None
+        self.resolve_target = None
         self.plan = None
         self.max_extra = 2.
         self.cache_failure_pending = False
@@ -251,29 +361,45 @@ class _Surface(QOpenGLWidget):
     def release_context(self):
         self.makeCurrent()
         self.caches = [{}, {}]
+        self.paint_target = None
+        self.resolve_target = None
         self.blitter.destroy()
         self.doneCurrent()
         self.owner.context_lost()
 
     def prepare_caches(self):
+        if self.paint_samples <= 1:
+            return False
         panels = [rect.size() for rect, _ in self.owner.panels]
         while True:
             plan = _cache_plan(panels, self.devicePixelRatioF(), self.max_dimension,
-                               self.max_extra)
+                               self.max_extra, paint_samples=self.paint_samples)
             if plan is None:
                 return False
             if plan == self.plan:
                 return True
             # Free the old pair before allocating replacements, including on resize.
             self.caches = [{}, {}]
+            self.paint_target = None
+            self.resolve_target = None
             self.plan = None
             allocated = True
+            paint_format = QOpenGLFramebufferObjectFormat()
+            paint_format.setAttachment(QOpenGLFramebufferObject.CombinedDepthStencil)
+            paint_format.setInternalTextureFormat(0x8058)
+            paint_format.setSamples(self.paint_samples)
+            self.paint_target = QOpenGLFramebufferObject(plan[2], paint_format)
+            texture_format = QOpenGLFramebufferObjectFormat()
+            texture_format.setAttachment(QOpenGLFramebufferObject.NoAttachment)
+            texture_format.setInternalTextureFormat(0x8058)
+            self.resolve_target = QOpenGLFramebufferObject(plan[2], texture_format)
+            allocated = self.paint_target.isValid() and self.resolve_target.isValid()
             for index, size in enumerate(plan[1]):
+                if not allocated:
+                    break
                 if size.isEmpty():
                     continue
-                fmt = QOpenGLFramebufferObjectFormat()
-                fmt.setAttachment(QOpenGLFramebufferObject.CombinedDepthStencil)
-                texture = QOpenGLFramebufferObject(size, fmt)
+                texture = QOpenGLFramebufferObject(size, texture_format)
                 if not texture.isValid():
                     allocated = False
                     del texture
@@ -305,29 +431,46 @@ class _Surface(QOpenGLWidget):
         if not cache or not cache["texture"].isValid():
             return False
         pixels = cache["texture"].size()
-        cache["texture"].bind()
-        gl = self.context().functions()
-        gl.glDisable(0x0C11)
-        gl.glColorMask(True, True, True, True)
-        gl.glStencilMask(0xFFFFFFFF)
-        gl.glClearColor(0, 0, 0, 0)
-        gl.glClear(0x4000 | 0x0400)
-        device = QOpenGLPaintDevice(pixels)
-        device.setDevicePixelRatio(dpr)
-        painter = QPainter(device)
-        painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-        if index == 0:
-            painter.translate(-rect.topLeft())
-        owner.render_widgets(painter, index == 0)
-        painter.resetTransform()
         outside = QPainterPath()
         local = QRectF(QPointF(), rect.size())
         outside.addRect(local)
         outside.addRoundedRect(local.adjusted(.5, .5, -.5, -.5), 12, 12)
         outside.setFillRule(Qt.OddEvenFill)
-        painter.setCompositionMode(QPainter.CompositionMode_DestinationOut)
-        painter.fillPath(outside, Qt.black)
-        painter.end()
+        guard = max(1, math.ceil(dpr))
+        stride = (pixels.height() if pixels.height() <= self.plan[2].height()
+                  else max(1, self.plan[2].height() - 2 * guard))
+        for top in range(0, pixels.height(), stride):
+            height = min(stride, pixels.height() - top)
+            paint_top = max(0, top - guard)
+            paint_bottom = min(pixels.height(), top + height + guard)
+            paint_height = paint_bottom - paint_top
+            self.paint_target.bind()
+            gl = self.context().functions()
+            gl.glDisable(0x0C11)
+            gl.glColorMask(True, True, True, True)
+            gl.glStencilMask(0xFFFFFFFF)
+            gl.glClearColor(0, 0, 0, 0)
+            gl.glClear(0x4000 | 0x0400)
+            device = QOpenGLPaintDevice(QSize(pixels.width(), paint_height))
+            device.setDevicePixelRatio(dpr)
+            painter = QPainter(device)
+            painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
+            painter.translate(0, -paint_top / dpr)
+            strip = QRectF(0, paint_top / dpr, rect.width(), paint_height / dpr)
+            painter.setClipRect(strip)
+            origin = rect.topLeft() if index == 0 else QPointF()
+            painter.translate(-origin)
+            owner.render_widgets(painter, index == 0, QRegion(strip.translated(origin).toAlignedRect()))
+            painter.translate(origin)
+            painter.setCompositionMode(QPainter.CompositionMode_DestinationOut)
+            painter.fillPath(outside, Qt.black)
+            painter.end()
+            gl.glDisable(0x0C11)
+            # GLES requires matching rectangles/formats when resolving multisampling.
+            QOpenGLFramebufferObject.blitFramebuffer(self.resolve_target, self.paint_target)
+            QOpenGLFramebufferObject.blitFramebuffer(
+                cache["texture"], QRect(0, pixels.height() - top - height, pixels.width(), height),
+                self.resolve_target, QRect(0, paint_bottom - top - height, pixels.width(), height))
         cache["key"] = key
         return True
 
@@ -345,10 +488,8 @@ class _Surface(QOpenGLWidget):
         quad = QMatrix4x4()
         quad.translate(rect.center().x(), rect.center().y())
         quad.scale(rect.width() / 2, -rect.height() / 2)
-        self.blitter.bind()
-        self.blitter.blit(cache["texture"].texture(), projection * QMatrix4x4(transform) * quad,
-                          QOpenGLTextureBlitter.OriginBottomLeft)
-        self.blitter.release()
+        self.blitter.blit(cache["texture"].texture(), cache["texture"].size(),
+                          projection * QMatrix4x4(transform) * quad)
         painter.endNativePainting()
 
     def paintGL(self):
@@ -545,7 +686,7 @@ class GallerySpatialController(QObject):
         self.layout()
         self.canvas.update()
 
-    def render_widgets(self, painter, navigation):
+    def render_widgets(self, painter, navigation, region):
         # Widgets paint directly into the GPU cache. Suppress the other panel's effect
         # during this pass so a floating drawer never becomes part of the content.
         capture = self.capture if navigation else self.content_capture
@@ -553,7 +694,7 @@ class GallerySpatialController(QObject):
         self.capture.composing = self.content_capture.composing = True
         capture.rendering = True
         try:
-            widget.render(painter, QPoint(), QRegion(), QWidget.DrawChildren)
+            widget.render(painter, region.boundingRect().topLeft(), region, QWidget.DrawChildren)
         finally:
             capture.rendering = False
             self.capture.composing = self.content_capture.composing = False

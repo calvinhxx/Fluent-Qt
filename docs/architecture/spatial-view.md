@@ -163,30 +163,58 @@ Gallery [TreeRowDelegate](../../app/view/widgets/samples/CollectionSampleDelegat
 for its row styling; it is an application delegate, not a Spatial dependency.
 The shared setting opens navigation and content into opposing surfaces while the
 native title bar stays stable. Gallery checks GPU support and creates its shell
-OpenGL surface only when 3D is first enabled, including a saved enabled preference.
-Default 2D startup does neither. The startup Splash and logo handoff finish before
+QOpenGLWidget and context only when 3D is first enabled, including a saved enabled
+preference. Default 2D startup does neither. On macOS with Qt 6.4 or later, Gallery
+prepares an OpenGL-compatible native window format before showing the window. This does
+not create a context or enable GPU composition: ordinary 2D painting still uses
+the raster backing store. It prevents Qt from destroying and recreating the
+visible window when the first QOpenGLWidget is added. The base library and
+2D-only Gallery builds keep their original window setup.
+The startup Splash and logo handoff finish before
 the shell redirects widget painting.
 
 The shell redirects widget painting into two cached GPU textures through an
 OpenGL painter. Content changes redraw the affected surface; pointer motion reuses
 the textures. It does not capture and upload a full-page CPU bitmap each frame.
-The panel caches use up to twice the output density in each axis to preserve
-glyph detail through perspective filtering. Their combined allocation has a
-192 MiB estimated budget (12 bytes per pixel, allowing for separate color,
-depth and stencil storage). The planner also checks the context's texture,
-renderbuffer and viewport limits. It reduces **extra** sampling in quarter steps
-when necessary and never renders below the window's native pixel density.
+The panels share a multisampled paint target and a matching resolve target. Each
+dirty panel is painted there, resolved, then copied into its own RGBA texture for
+perspective composition. The intermediate resolve keeps sample rectangles and
+formats identical, as required by WebGL. This applies
+antialiasing to control curves and glyph outlines before they become a texture.
+Antialiasing on the final window alone cannot repair aliased cached artwork.
+
+The caches use up to twice the output density to preserve detail through
+perspective filtering. A four-tap shader samples each output pixel's projected
+footprint; a single bilinear lookup undersamples small curves when the cache is
+reduced and tilted. It uses full-precision coordinates, preserves premultiplied
+alpha, and reduces to ordinary sampling at native density. No full-screen blur
+or sharpening pass is applied. Perspective still moves strokes off the pixel
+grid, so projected text cannot be pixel-identical to axis-aligned 2D text.
+Large glyphs that Qt paints as outlines receive the same
+multisample coverage as curved controls.
+The two textures and the shared paint and resolve targets have a combined 192 MiB
+estimated budget: four bytes per resolved pixel and twelve bytes per paint sample,
+allowing for separate color, depth and stencil storage. The actual sample count is queried
+before allocating large targets. Large panels paint in horizontal strips into a
+shorter shared target; only children intersecting each strip are rendered. This
+keeps the antialiasing buffer within budget without reducing text density.
+The planner also checks texture, renderbuffer and viewport limits. It reduces
+extra sampling in quarter steps only when the resolved textures cannot fit,
+and never renders below the window's native pixel density.
 Allocation failures retry smaller caches. If even native density cannot fit,
 Gallery returns to 2D; the GPU remains available for another attempt after resizing
 or freeing resources. This budget excludes Qt's final window framebuffer and
 other application/GPU resources.
 
-The panel caches have no multisample buffers; the final surface retains MSAA.
-Both caches are released on return to 2D. The C++, Python and WebAssembly shells
+The paint target requests 2x MSAA; the final surface retains its existing MSAA.
+The paint target and both caches are released on return to 2D. The C++, Python and WebAssembly shells
 use the same policy. Web keeps native output resolution by default; a lower
 resolution remains an explicit choice.
 
-On macOS, native style primitives that require CGContext use raster images.
+On macOS, a paint adapter is installed before Gallery creates its pages, without
+creating an OpenGL context. First enabling 3D reuses that adapter, avoiding an
+application-wide style change and layout pass over all prewarmed pages. Native
+style primitives that require CGContext use raster images.
 Frames, buttons and base style options are painted in a local rectangle so a
 small primitive far from the widget origin does not allocate a widget-sized
 image. Other native option types retain their original coordinates. The rest of

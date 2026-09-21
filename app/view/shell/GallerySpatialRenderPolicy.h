@@ -7,24 +7,29 @@
 
 namespace fluent::gallery::spatial_render {
 
-// Budget for both panel caches, excluding the window's own framebuffer. Reserve
-// 12 bytes per pixel for RGBA8 and drivers with separate depth/stencil storage.
+// Two panel textures share a multisampled paint target and a matching resolve
+// target. Include color and potentially separate depth/stencil storage.
 constexpr qint64 kCacheBudgetBytes = 192LL * 1024 * 1024;
-constexpr qint64 kCacheBytesPerPixel = 12;
+constexpr qint64 kCacheBytesPerPixel = 4;
+constexpr int kPaintSamples = 2;
 
 struct CachePlan {
     std::array<QSize, 2> sizes{};
     qreal dpr = 0;
     qint64 pixels = 0;
+    QSize paintSize;
+    qint64 estimatedBytes = 0;
     bool valid() const { return dpr > 0; }
 };
 
-// Keep the extra samples that protect perspective text when resources allow.
-// Never render below the window's native density to make a cache fit.
+// Preserve perspective sampling headroom. Large panels reuse a shorter paint
+// target in strips instead of lowering density to fit a full-height MSAA buffer.
 inline CachePlan planCaches(const std::array<QSizeF, 2>& panels, qreal nativeDpr, int maxDimension,
-                            qreal maxExtraSampling = 2, qint64 budget = kCacheBudgetBytes)
+                            qreal maxExtraSampling = 2, qint64 budget = kCacheBudgetBytes,
+                            int paintSamples = kPaintSamples)
 {
-    if (!qIsFinite(nativeDpr) || nativeDpr <= 0 || maxDimension <= 0 || budget <= 0)
+    if (!qIsFinite(nativeDpr) || nativeDpr <= 0 || maxDimension <= 0 || budget <= 0 ||
+        paintSamples <= 1)
         return {};
     for (qreal extra : {2., 1.75, 1.5, 1.25, 1.}) {
         if (extra > maxExtraSampling)
@@ -44,8 +49,18 @@ inline CachePlan planCaches(const std::array<QSizeF, 2>& panels, qreal nativeDpr
             }
             plan.sizes[i] = QSize(qCeil(width), qCeil(height));
             plan.pixels += qint64(plan.sizes[i].width()) * plan.sizes[i].height();
+            plan.paintSize = plan.paintSize.expandedTo(plan.sizes[i]);
         }
-        if (fits && plan.pixels <= budget / kCacheBytesPerPixel)
+        if (!fits || plan.paintSize.isEmpty())
+            continue;
+        const qint64 textureBytes = plan.pixels * kCacheBytesPerPixel;
+        const qint64 paintRowBytes = qint64(plan.paintSize.width()) * (12 * paintSamples + 4);
+        const qint64 availableRows = (budget - textureBytes) / paintRowBytes;
+        if (availableRows < qMin(32, plan.paintSize.height()))
+            continue;
+        plan.paintSize.setHeight(int(qMin(qint64(plan.paintSize.height()), availableRows)));
+        plan.estimatedBytes = textureBytes + paintRowBytes * plan.paintSize.height();
+        if (fits && plan.estimatedBytes <= budget)
             return plan;
     }
     return {};

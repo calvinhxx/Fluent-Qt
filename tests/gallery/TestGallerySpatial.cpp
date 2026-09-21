@@ -153,6 +153,10 @@ TEST_F(GallerySpatialTest, Default2DDoesNotCreateOpenGLSurfaces)
             window.findChild<basicinput::ToggleSwitch*>("gallerySettingsSpatialModeToggle");
         ASSERT_NE(toggle, nullptr);
         EXPECT_TRUE(toggle->isEnabled());
+        const auto firstNativeId = window.winId();
+        QPointer<QWindow> firstHandle = window.windowHandle();
+        QSignalSpy visibilityChanges(firstHandle, &QWindow::visibleChanged);
+        const auto firstGeometry = window.geometry();
         QTest::mouseClick(toggle, Qt::LeftButton, Qt::NoModifier, QPoint(20, toggle->height() / 2));
         QTRY_VERIFY_WITH_TIMEOUT(settings.spatialAvailable(), 3000);
         auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
@@ -160,6 +164,13 @@ TEST_F(GallerySpatialTest, Default2DDoesNotCreateOpenGLSurfaces)
         QTRY_VERIFY(surface->property("presenting").toBool());
         auto* controller = window.findChild<GallerySpatialController*>();
         QTRY_VERIFY_WITH_TIMEOUT(!controller->transitionRunning(), 1500);
+        if (QGuiApplication::platformName() == QLatin1String("cocoa")) {
+            EXPECT_EQ(window.winId(), firstNativeId);
+            EXPECT_EQ(window.windowHandle(), firstHandle);
+            EXPECT_TRUE(visibilityChanges.isEmpty())
+                << "First activation must not hide/recreate the visible native window";
+            EXPECT_EQ(window.geometry(), firstGeometry);
+        }
         const auto nativeId = window.winId();
         settings.setSpatialModeEnabled(false);
         QTRY_VERIFY_WITH_TIMEOUT(!controller->transitionRunning(), 1500);
@@ -1495,12 +1506,14 @@ TEST_F(GallerySpatialTest, CacheBudgetPreservesDensityAndRespectsGpuLimits)
     const std::array<QSizeF, 2> panels = {QSizeF(240, 900), QSizeF(1360, 900)};
     const auto normal = planCaches({QSizeF(240, 700), QSizeF(960, 700)}, 2, 16384);
     ASSERT_TRUE(normal.valid());
-    EXPECT_EQ(normal.dpr, 4); // Retain the proven 2x sampling at ordinary Retina sizes.
+    EXPECT_EQ(normal.dpr, 4);
     const auto large = planCaches(panels, 2, 16384);
     ASSERT_TRUE(large.valid());
     EXPECT_GE(large.dpr, 2);
-    EXPECT_LT(large.dpr, 4);
-    EXPECT_LE(large.pixels * kCacheBytesPerPixel, kCacheBudgetBytes);
+    EXPECT_EQ(large.dpr, 4);
+    EXPECT_LT(large.paintSize.height(), large.sizes[1].height());
+    EXPECT_LE(large.estimatedBytes, kCacheBudgetBytes);
+    EXPECT_GT(large.estimatedBytes, large.pixels * kCacheBytesPerPixel);
     const auto limited = planCaches(panels, 2, 4096);
     ASSERT_TRUE(limited.valid());
     EXPECT_GE(limited.dpr, 2);
@@ -1646,6 +1659,7 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
         window.show();
         ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
         QTest::qWait(200);
+        toggle->setFocus(Qt::TabFocusReason);
         const QImage reference = content->grab().toImage();
         GallerySettings::instance().setSpatialModeEnabled(true);
         auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
@@ -1666,13 +1680,25 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
         const auto stats = controller.renderingStatistics();
         EXPECT_LE(stats["cacheEstimatedBytes"].toLongLong(), spatial_render::kCacheBudgetBytes);
         EXPECT_GE(stats["cacheDpr"].toDouble(), window.devicePixelRatioF());
-        if (windowSize.width() == 1500 && window.devicePixelRatioF() == 2)
-            EXPECT_LT(stats["cacheDpr"].toDouble(), 4);
+        EXPECT_GT(stats["paintSamples"].toInt(), 1)
+            << "Control curves need MSAA in the paint target, not just the window";
+        if (windowSize.width() == 1500 && window.devicePixelRatioF() == 2) {
+            EXPECT_EQ(stats["cacheDpr"].toDouble(), 4);
+            EXPECT_LT(stats["paintTargetHeight"].toInt(), content->height() * 4);
+        }
         const QString evidence = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE") +
                                  (windowSize.width() == 1500 ? "/large" : "");
         const qreal dpr = surface->devicePixelRatioF();
         const QPoint origin = surface->mapFrom(&window, controller.projectedPosition(content, {}));
         const QImage actual = frame.copy(QRect(origin * dpr, reference.size()));
+        int seamPixels = 0;
+        for (int y = qCeil(20 * dpr); y < actual.height() - qCeil(20 * dpr); ++y) {
+            const auto pixel = actual.pixelColor(qRound(20 * dpr), y);
+            seamPixels += pixel.alpha() < 250 || pixel.red() < 250;
+        }
+        EXPECT_EQ(seamPixels, 0)
+            << "Shared MSAA strips must not leave transparent or dark seams: "
+            << QJsonDocument::fromVariant(stats).toJson(QJsonDocument::Compact).constData();
         if (const auto dir = evidence; !qEnvironmentVariableIsEmpty("FLUENT_QT_SPATIAL_EVIDENCE")) {
             QDir().mkpath(dir);
             reference.save(dir + "/detail-2d.png");
@@ -1919,6 +1945,74 @@ TEST_F(GallerySpatialTest, MacNativeStyleControlsKeepTheirPixelsInGpuCache)
 }
 
 // Opt-in, native frame pacing probe. No machine-dependent timing assertion in CI.
+TEST_F(GallerySpatialTest, NativeColdActivationProbe)
+{
+    if (qEnvironmentVariableIsEmpty("FLUENT_QT_SPATIAL_BENCHMARK") ||
+        tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires opt-in native cold activation measurement";
+    if (QGuiApplication::platformName() == QLatin1String("cocoa")) {
+        for (const auto& name : QStyleFactory::keys())
+            if (name.contains("mac", Qt::CaseInsensitive))
+                qApp->setStyle(QStyleFactory::create(name));
+    }
+    const auto restoreStyle = qScopeGuard([] { qApp->setStyle(QStringLiteral("Fusion")); });
+    GallerySettings::instance().setNavigationStyle(GallerySettings::NavigationStyle::Top);
+    GalleryWindow window;
+    window.resize(1209, 811);
+    window.show();
+    QTRY_VERIFY_WITH_TIMEOUT(!window.findChild<GallerySplashScreen*>(), 6500);
+    ASSERT_TRUE(window.selectRoute("settings"));
+    QTest::qWait(300);
+    auto* toggle = window.findChild<basicinput::ToggleSwitch*>("gallerySettingsSpatialModeToggle");
+    auto* controller = window.findChild<GallerySpatialController*>();
+    ASSERT_NE(toggle, nullptr);
+    ASSERT_NE(controller, nullptr);
+    QElapsedTimer heartbeat, activation;
+    heartbeat.start();
+    qint64 longestGap = 0;
+    QTimer pulse;
+    pulse.setInterval(8);
+    QObject::connect(&pulse, &QTimer::timeout, &window,
+                     [&] { longestGap = qMax(longestGap, heartbeat.restart()); });
+    pulse.start();
+    auto* preparedStyle = qApp->style();
+    activation.start();
+    QTest::mouseClick(toggle, Qt::LeftButton, Qt::NoModifier, QPoint(20, toggle->height() / 2));
+    const qint64 clickMs = activation.elapsed();
+    EXPECT_EQ(qApp->style(), preparedStyle) << "First activation must not repolish every page";
+    QTRY_VERIFY_WITH_TIMEOUT(controller->transitionRunning(), 5000);
+    const qint64 startMs = activation.elapsed();
+    QTRY_VERIFY_WITH_TIMEOUT(!controller->transitionRunning(), 3000);
+    pulse.stop();
+    toggle->setFocus(Qt::TabFocusReason);
+    QTest::qWait(100);
+    const QString directory = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
+    if (!directory.isEmpty()) {
+        QDir().mkpath(directory);
+        window.grab().save(directory + "/cold-settings-3d.png");
+        auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
+        const auto position = [&](const QPoint& point) {
+            return surface->mapFrom(&window,
+                                    controller->projectedPosition(toggle->parentWidget(), point));
+        };
+        const auto rect = toggle->parentWidget()->rect();
+        const QRect bounds = QPolygon{position(rect.topLeft()), position(rect.topRight()),
+                                      position(rect.bottomLeft()), position(rect.bottomRight())}
+                                 .boundingRect()
+                                 .adjusted(-4, -4, 4, 4);
+        const qreal dpr = surface->devicePixelRatioF();
+        surface->grabFramebuffer()
+            .copy(QRect(bounds.topLeft() * dpr, bounds.size() * dpr))
+            .save(directory + "/cold-toggle-3d.png");
+    }
+    std::cout << "SPATIAL_COLD click=" << clickMs << "ms start=" << startMs
+              << "ms longestEventGap=" << longestGap << "ms stats="
+              << QJsonDocument::fromVariant(controller->renderingStatistics())
+                     .toJson(QJsonDocument::Compact)
+                     .constData()
+              << std::endl;
+}
+
 TEST_F(GallerySpatialTest, AssemblyFramePacingProbe)
 {
     if (qEnvironmentVariableIsEmpty("FLUENT_QT_SPATIAL_BENCHMARK"))

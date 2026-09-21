@@ -14,7 +14,7 @@ from unittest.mock import patch
 import fluentqt
 from PySide6.QtCore import QAbstractAnimation, QEvent, QObject, QPoint, QPointF, QRect, QSizeF, Qt
 from PySide6.QtGui import QPainter, QPolygonF, QTransform
-from PySide6.QtTest import QTest
+from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QApplication, QGraphicsView, QWidget
 from shiboken6 import delete, isValid
 
@@ -53,14 +53,17 @@ class GallerySpatialTest(unittest.TestCase):
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_cache_budget_preserves_native_density(self):
-        from fluentqt_gallery.spatial_controller import _cache_plan, _CACHE_BUDGET_BYTES
+        from fluentqt_gallery.spatial_controller import _cache_plan, _CACHE_BUDGET_BYTES, _PAINT_SAMPLES
         normal = _cache_plan([QSizeF(240, 700), QSizeF(960, 700)], 2, 16384)
         self.assertEqual(normal[0], 4)
         panels = [QSizeF(240, 900), QSizeF(1360, 900)]
         large = _cache_plan(panels, 2, 16384)
         self.assertGreaterEqual(large[0], 2)
-        self.assertLess(large[0], 4)
-        self.assertLessEqual(sum(s.width() * s.height() for s in large[1]) * 12,
+        self.assertEqual(large[0], 4)
+        paint_width, paint_height = large[2].width(), large[2].height()
+        self.assertLess(paint_height, large[1][1].height())
+        self.assertLessEqual(sum(s.width() * s.height() for s in large[1]) * 4
+                             + paint_width * paint_height * (12 * _PAINT_SAMPLES + 4),
                              _CACHE_BUDGET_BYTES)
         limited = _cache_plan(panels, 2, 4096)
         self.assertTrue(all(s.width() <= 4096 and s.height() <= 4096 for s in limited[1]))
@@ -372,6 +375,7 @@ print("2D-only Gallery: no OpenGL imports")
             controller.settle()
             QTest.qWait(120)
             surface = controller.canvas
+            self.assertGreater(surface.paint_target.format().samples(), 1)
             image = surface.grabFramebuffer()
             dpr = surface.devicePixelRatioF()
             a = surface.mapFrom(window, controller.projected_position(content, QPoint(50, 190)))
@@ -421,11 +425,19 @@ print("2D-only Gallery: no OpenGL imports")
             theme = window.findChild(fluentqt.ComboBox, "gallerySettingsThemeChoice")
             navigation = window.findChild(fluentqt.ComboBox, "gallerySettingsNavigationChoice")
             toggle = window.findChild(fluentqt.ToggleSwitch, "gallerySettingsSpatialModeToggle")
+            first_handle, first_id = window.windowHandle(), window.winId()
+            first_geometry = window.geometry()
+            visibility = QSignalSpy(first_handle.visibleChanged)
             QTest.mouseClick(toggle, Qt.LeftButton, pos=QPoint(20, 16))
             QTest.qWait(600)
             self.assertTrue(self.settings.spatial_available, self.settings.spatial_unavailable_reason)
             self.assertTrue(self.settings.spatial_mode_enabled)
             self.assertEqual(controller.progress, 1.)
+            if QApplication.platformName() == "cocoa":
+                self.assertIs(window.windowHandle(), first_handle)
+                self.assertEqual(window.winId(), first_id)
+                self.assertEqual(window.geometry(), first_geometry)
+                self.assertEqual(visibility.count(), 0)
             self.assertTrue(all(cache.get("texture") and cache["texture"].isValid()
                                 for cache in controller.canvas.caches))
             screenshot("settings-light")

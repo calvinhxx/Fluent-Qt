@@ -5,6 +5,7 @@
 #include "viewmodel/GallerySettings.h"
 
 namespace fluent::gallery {
+void GallerySpatialController::prepareApplicationStyle() {}
 struct GallerySpatialController::Private {};
 
 GallerySpatialController::GallerySpatialController(QWidget* window, navigation::NavigationView*)
@@ -28,6 +29,7 @@ void GallerySpatialController::cancelTransition() {}
 void GallerySpatialController::startPresentation() {}
 void GallerySpatialController::applyMode(bool) {}
 void GallerySpatialController::checkRenderer() {}
+void GallerySpatialController::releaseOversizedPresentation() {}
 bool GallerySpatialController::eventFilter(QObject*, QEvent*)
 {
     return false;

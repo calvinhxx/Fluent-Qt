@@ -7,6 +7,7 @@
 #include <QResizeEvent>
 #include <QShowEvent>
 #include <QTimer>
+#include <QWindow>
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/MotionPolicy.h"
@@ -63,6 +64,20 @@ constexpr int kPrewarmInteractionResumeMs = 200;
 GalleryWindow::GalleryWindow(QWidget* parent)
     : fluent::windowing::Window(parent), m_navigationState(this)
 {
+    GallerySpatialController::prepareApplicationStyle();
+#if defined(FLUENT_QT_HAS_SPATIAL) && defined(Q_OS_MACOS) && QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+    if (QGuiApplication::platformName() == QLatin1String("cocoa") &&
+        qEnvironmentVariableIntValue("FLUENT_QT_GALLERY_DISABLE_3D") == 0) {
+        // Window's Cocoa chrome has already made a hidden native window. Prepare
+        // its replacement before showing anything, so adding the first GL widget
+        // cannot destroy the visible window. This creates no GL context or RHI.
+        // zh_CN: 在首次显示前准备兼容表面，避免首次加入 GL 控件时重建可见窗口；不创建 GPU 上下文。
+        destroy();
+        setAttribute(Qt::WA_NativeWindow, false);
+        setAttribute(Qt::WA_NativeWindow);
+        windowHandle()->setSurfaceType(QSurface::OpenGLSurface);
+    }
+#endif
     setObjectName(QStringLiteral("galleryWindow"));
     setWindowTitle(platform::capabilities().windowTitle);
     setWindowIcon(appicon::icon());

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import sys
 from typing import Callable, Iterable
 
@@ -23,6 +24,7 @@ from PySide6.QtCore import (
     QTimer,
     QUrl,
     QVariantAnimation,
+    qVersion,
 )
 from PySide6.QtGui import (
     QColor,
@@ -32,6 +34,7 @@ from PySide6.QtGui import (
     QPainter,
     QPainterPath,
     QPen,
+    QSurface,
 )
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -2188,6 +2191,18 @@ class GalleryWindow(fluentqt.Window):
 
     def __init__(self, startup_visuals: bool | None = None) -> None:
         super().__init__()
+        if SPATIAL_AVAILABLE:
+            from .spatial_controller import _prepare_native_style
+            _prepare_native_style()
+            if (QApplication.platformName() == "cocoa"
+                    and tuple(map(int, qVersion().split(".")[:2])) >= (6, 4)
+                    and os.environ.get("FLUENT_QT_GALLERY_DISABLE_3D", "0") == "0"):
+                # Prepare the hidden Cocoa window's format without creating a GPU
+                # context. The first 3D toggle must not recreate a visible window.
+                self.destroy()
+                self.setAttribute(Qt.WA_NativeWindow, False)
+                self.setAttribute(Qt.WA_NativeWindow)
+                self.windowHandle().setSurfaceType(QSurface.OpenGLSurface)
         self._settings = gallery_settings()
         self._startup_visuals = (
             persistence_available()

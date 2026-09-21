@@ -18,6 +18,8 @@ namespace fluent::gallery {
 class GallerySpatialController final : public QObject {
     Q_OBJECT
 public:
+    // Install the Cocoa paint adapter before building pages, without creating a GPU context.
+    static void prepareApplicationStyle();
     GallerySpatialController(QWidget* window, fluent::navigation::NavigationView* navigation);
     ~GallerySpatialController() override;
     bool transitionRunning() const;
