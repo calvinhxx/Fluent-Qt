@@ -34,23 +34,22 @@
       return theme;
     })();
     // Qt 6.9's WebAssembly platform reads window.devicePixelRatio directly
-    // when sizing the QWidget backing store. Cap it before qtloader starts so
-    // Retina displays do not turn a 1280x720 Gallery into a 2560x1440 paint
-    // target. The default adapts between 1x and 1.25x to keep the backing
-    // store near 1.6 million pixels. Append ?render-scale=native to opt back
-    // into native resolution.
+    // when sizing the QWidget backing store. Preserve native detail by default;
+    // lower resolution is an explicit choice via ?render-scale=adaptive or a
+    // numeric scale, never an automatic cost of enabling 3D.
     window.fluentQtRenderProfile = (() => {
       const params = new URLSearchParams(window.location.search);
       const nativeDpr = Number(window.devicePixelRatio) || 1;
       const requested = params.get('render-scale');
-      const nativeMode = requested === 'native';
       const numeric = Number(requested);
+      const fixedMode = Number.isFinite(numeric) && numeric > 0;
+      const nativeMode = requested !== 'adaptive' && !fixedMode;
       const pixelBudget = 1600000;
       const viewportPixels = Math.max(1, window.innerWidth * window.innerHeight);
       const adaptiveDpr = Math.max(1, Math.floor(
         Math.min(1.25, Math.sqrt(pixelBudget / viewportPixels)) * 20
       ) / 20);
-      const requestedDpr = Number.isFinite(numeric) && numeric > 0
+      const requestedDpr = fixedMode
         ? numeric
         : adaptiveDpr;
       const targetDpr = nativeMode
@@ -72,7 +71,7 @@
       const mode = effectiveDpr < nativeDpr ? 'performance' : 'native';
       const profile = nativeMode
         ? 'native'
-        : (Number.isFinite(numeric) && numeric > 0 ? 'fixed' : 'adaptive');
+        : (fixedMode ? 'fixed' : 'adaptive');
       document.documentElement.dataset.fluentQtNativeDpr = String(nativeDpr);
       document.documentElement.dataset.fluentQtRenderDpr = String(effectiveDpr);
       document.documentElement.dataset.fluentQtRenderMode = mode;
@@ -248,8 +247,8 @@
     const nextRenderUrl = new URL(window.location.href);
     const balancedDpr = Math.min(renderProfile.nativeDpr, 1.25);
     if (renderProfile.profile === 'native') {
-      nextRenderUrl.searchParams.delete('render-scale');
-      renderScaleToggle.textContent = 'Adaptive resolution';
+      nextRenderUrl.searchParams.set('render-scale', 'adaptive');
+      renderScaleToggle.textContent = 'Lower resolution (faster)';
     } else if (renderProfile.effectiveDpr + 0.01 < balancedDpr) {
       nextRenderUrl.searchParams.set('render-scale', '1.25');
       renderScaleToggle.textContent = `Sharper ${formatScale(balancedDpr)}x resolution`;

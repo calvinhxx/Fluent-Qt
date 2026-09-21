@@ -13,8 +13,12 @@
 #include <QFont>
 #include <QFontDatabase>
 #include <QFontMetrics>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QKeyEvent>
 #include <QLineEdit>
+#include <QMouseEvent>
 #include <QPointer>
 #include <QRegion>
 #include <QScrollArea>
@@ -23,7 +27,17 @@
 #include <QSettings>
 #include <QSizePolicy>
 #include <QTimer>
+#include <QVariantAnimation>
 #include <QUrlQuery>
+
+#include <cmath>
+
+#ifdef FLUENT_QT_HAS_SPATIAL
+#include <FluentQt/Spatial.h>
+#include <QOpenGLContext>
+#include <QOpenGLFunctions>
+#include <QOpenGLWidget>
+#endif
 
 #include <emscripten/emscripten.h>
 #include <emscripten/heap.h>
@@ -31,6 +45,8 @@
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ComboBox.h"
 #include "components/basicinput/MultiSelectComboBox.h"
+#include "components/basicinput/Slider.h"
+#include "components/basicinput/ToggleSwitch.h"
 #include "components/collections/DataGrid.h"
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Dialog.h"
@@ -48,6 +64,7 @@
 #include "support/logging/Log.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/SettingsPage.h"
+#include "view/shell/GallerySpatialController.h"
 #include "view/shell/GalleryWindow.h"
 #include "viewmodel/GallerySettings.h"
 
@@ -1035,9 +1052,301 @@ private:
 
 } // namespace
 
+#ifdef FLUENT_QT_HAS_SPATIAL
+// Capture the same real page through both rendering paths, including the flat GPU
+// endpoint. The browser acknowledges each frame after saving its actual canvas.
+class WasmSpatialQualityProbe final : public QObject {
+public:
+    explicit WasmSpatialQualityProbe(GalleryWindow* window) : QObject(window), m_window(window)
+    {
+        auto& settings = GallerySettings::instance();
+        settings.setHomeParticlesEnabled(false);
+        settings.setSpatialModeEnabled(false);
+        settings.setNavigationStyle(GallerySettings::NavigationStyle::Left);
+        window->selectRoute(QStringLiteral("popup"));
+        publishSmokeState("running", QStringLiteral("Waiting for quality comparison"));
+        m_clock.start();
+        m_tick.setInterval(50);
+        connect(&m_tick, &QTimer::timeout, this, [this] { tick(); });
+        m_tick.start();
+    }
+
+private:
+    void tick()
+    {
+        if (m_clock.elapsed() > 30000) {
+            publishSmokeState("fail", QStringLiteral("Quality capture timed out"));
+            deleteLater();
+            return;
+        }
+        auto* controller = m_window->findChild<GallerySpatialController*>();
+        auto* surface = m_window->findChild<QOpenGLWidget*>("gallerySpatialSurface");
+        if (m_window->findChild<QWidget*>("gallerySplashScreen") || !controller)
+            return;
+        if (m_ready) {
+            const int acknowledged = EM_ASM_INT({
+                return Number(document.documentElement.dataset.fluentQtQualityAcknowledged || -1);
+            });
+            if (acknowledged != m_stage)
+                return;
+            m_ready = false;
+            if (m_stage == 0) {
+                GallerySettings::instance().setSpatialModeEnabled(true);
+            } else if (m_stage == 1) {
+                controller->cancelTransition();
+            } else if (m_stage == 2) {
+                GallerySettings::instance().setSpatialModeEnabled(false);
+            } else {
+                publishSmokeState("pass",
+                                  QStringLiteral("2D, flat GPU, 3D and 2D return captured"));
+                deleteLater();
+                return;
+            }
+            ++m_stage;
+            m_clock.restart();
+            return;
+        }
+        if (controller->transitionRunning() || m_clock.elapsed() < 800)
+            return;
+        if (!m_button) {
+            auto* page = m_window->currentContentPage();
+            if (!page || page->routeId() != "popup")
+                return;
+            for (auto* candidate : page->findChildren<basicinput::Button*>())
+                if (candidate->text() == "Show popup")
+                    m_button = candidate;
+            if (!m_button)
+                return;
+            if (auto* scroll = page->findChild<QScrollArea*>())
+                scroll->ensureWidgetVisible(m_button, 0, 60);
+            m_clock.restart();
+            return;
+        }
+        if (m_stage == 1 && !m_flat) {
+            if (!surface || !surface->property("presenting").toBool())
+                return;
+            controller->cancelTransition();
+            auto* motion = controller->findChild<QVariantAnimation*>("galleryAssemblyAnimation");
+            motion->setStartValue(0.0);
+            motion->setEndValue(1.0);
+            motion->setCurrentTime(motion->duration() / 2);
+            motion->setCurrentTime(0);
+            m_flat = true;
+            m_clock.restart();
+            return;
+        }
+        QJsonArray corners;
+        const QRect rect = m_button->rect();
+        for (const auto& point :
+             {rect.topLeft(), rect.topRight(), rect.bottomRight(), rect.bottomLeft()}) {
+            const QPoint position =
+                m_window->mapToGlobal(controller->projectedPosition(m_button, point));
+            corners.append(QJsonArray{position.x(), position.y()});
+        }
+        QJsonObject frame{
+            {"stage", m_stage},
+            {"dpr", m_window->devicePixelRatioF()},
+            {"button", corners},
+            {"cache", QJsonObject::fromVariantMap(controller->renderingStatistics())}};
+        const auto json = QJsonDocument(frame).toJson(QJsonDocument::Compact);
+        EM_ASM({ document.documentElement.dataset.fluentQtQualityFrame = UTF8ToString($0); },
+               json.constData());
+        m_ready = true;
+    }
+    GalleryWindow* m_window;
+    QPointer<basicinput::Button> m_button;
+    QTimer m_tick;
+    QElapsedTimer m_clock;
+    int m_stage = 0;
+    bool m_ready = false, m_flat = false;
+};
+
+// An explicit diagnostic URL drives a repeatable workload; normal visits create no probe.
+class WasmSpatialProbe final : public QObject {
+public:
+    explicit WasmSpatialProbe(GalleryWindow* window, bool expectFallback)
+        : QObject(window), m_window(window), m_expectFallback(expectFallback)
+    {
+        auto& settings = GallerySettings::instance();
+        settings.setHomeParticlesEnabled(false);
+        settings.setMotionMode(MotionPolicy::Mode::Full);
+        settings.setSpatialModeEnabled(true);
+        window->selectRoute(QStringLiteral("settings"));
+        publishSmokeState("running", QStringLiteral("Waiting for the Spatial renderer"));
+        m_clock.start();
+        m_tick.setInterval(16);
+        connect(&m_tick, &QTimer::timeout, this, [this] { tick(); });
+        m_tick.start();
+    }
+
+private:
+    void tick()
+    {
+        auto& settings = GallerySettings::instance();
+        auto* controller = m_window->findChild<GallerySpatialController*>();
+        if (m_stage == 0) {
+            if (m_clock.elapsed() > 12000) {
+                finish(false, QStringLiteral("Spatial initialization timed out: %1")
+                                  .arg(settings.spatialUnavailableReason()));
+                return;
+            }
+            if (settings.spatialAvailabilityPending() ||
+                m_window->findChild<QWidget*>(QStringLiteral("gallerySplashScreen")))
+                return;
+            if (!settings.spatialAvailable()) {
+                finish(m_expectFallback, settings.spatialUnavailableReason());
+                return;
+            }
+            if (m_expectFallback) {
+                finish(false, QStringLiteral("Expected software rendering to select 2D"));
+                return;
+            }
+            if (!controller || controller->transitionRunning())
+                return;
+            m_surface =
+                m_window->findChild<QOpenGLWidget*>(QStringLiteral("gallerySpatialSurface"));
+            if (!m_surface || !m_surface->property("presenting").toBool())
+                return;
+            m_surface->makeCurrent();
+            const auto* renderer = m_surface->context()->functions()->glGetString(GL_RENDERER);
+            m_result["renderer"] = QString::fromLatin1(reinterpret_cast<const char*>(renderer));
+            m_surface->doneCurrent();
+            m_result["width"] = m_window->width();
+            m_result["height"] = m_window->height();
+            m_result["dpr"] = m_window->devicePixelRatioF();
+            connect(m_surface, &QOpenGLWidget::frameSwapped, this, [this] {
+                if (m_stage == 1 || m_stage == 3)
+                    ++m_frames;
+            });
+            m_clock.restart();
+            m_stage = 1;
+        } else if (m_stage == 1) {
+            const qreal angle = m_clock.elapsed() * .003;
+            const QPointF position(m_window->width() * (.5 + .32 * std::sin(angle)),
+                                   m_window->height() * (.55 + .25 * std::cos(angle)));
+            QMouseEvent move(QEvent::MouseMove, position, position,
+                             m_window->mapToGlobal(position.toPoint()), Qt::NoButton, Qt::NoButton,
+                             Qt::NoModifier);
+            QApplication::sendEvent(m_window, &move);
+            if (m_clock.elapsed() >= 3000) {
+                m_result["moving_frames"] = m_frames;
+                m_result["moving_ms"] = double(m_clock.elapsed());
+                m_result["moving_fps"] = m_frames * 1000.0 / m_clock.elapsed();
+                if (m_frames < 3) {
+                    finish(false, QStringLiteral("Pointer following did not repaint the scene"));
+                    return;
+                }
+                m_clock.restart();
+                m_stage = 2;
+            }
+        } else if (m_stage == 2 && m_clock.elapsed() >= 600) {
+            m_frames = 0;
+            m_clock.restart();
+            m_stage = 3;
+        } else if (m_stage == 3 && m_clock.elapsed() >= 1500) {
+            m_result["idle_frames"] = m_frames;
+            m_result["idle_ms"] = double(m_clock.elapsed());
+            auto* toggle = m_window->findChild<basicinput::ToggleSwitch*>(
+                QStringLiteral("gallerySettingsSpatialModeToggle"));
+            if (!toggle || !controller) {
+                finish(false, QStringLiteral("The 3D switch was not created"));
+                return;
+            }
+            const QPoint local =
+                controller->projectedPosition(toggle, QPoint(20, toggle->height() / 2));
+            const QPoint global = m_window->mapToGlobal(local);
+            QMouseEvent press(QEvent::MouseButtonPress, local, local, global, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+            QMouseEvent release(QEvent::MouseButtonRelease, local, local, global, Qt::LeftButton,
+                                Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(m_window, &press);
+            QApplication::sendEvent(m_window, &release);
+            m_result["projected_click"] = !settings.spatialModeEnabled();
+            if (settings.spatialModeEnabled()) {
+                finish(false, QStringLiteral("The projected 3D switch did not receive its click"));
+                return;
+            }
+            m_clock.restart();
+            m_stage = 4;
+        } else if (m_stage == 4 && !controller->transitionRunning()) {
+            m_result["return_to_2d_ms"] = double(m_clock.elapsed());
+            if (m_surface->property("presenting").toBool()) {
+                finish(false, QStringLiteral("The native 2D layout was not restored"));
+                return;
+            }
+            settings.setSpatialModeEnabled(true);
+            m_stage = 5;
+        } else if (m_stage == 5 && !controller->transitionRunning()) {
+            if (!m_surface || !m_surface->property("presenting").toBool() ||
+                !m_window->selectRoute(QStringLiteral("spatial-view"))) {
+                finish(false, QStringLiteral("Could not open the Spatial component example"));
+                return;
+            }
+            m_clock.restart();
+            m_stage = 6;
+        } else if (m_stage == 6) {
+            if (m_clock.elapsed() > 6000) {
+                finish(false, QStringLiteral("The Spatial component example did not initialize"));
+                return;
+            }
+            auto* page = m_window->currentContentPage();
+            auto* view =
+                page ? page->findChild<spatial::SpatialView*>("spatialPreviewView") : nullptr;
+            auto* scroll = page ? page->findChild<QScrollArea*>() : nullptr;
+            auto* distance =
+                page ? page->findChild<basicinput::Slider*>("spatialViewDistance") : nullptr;
+            if (!view || !scroll || !distance || view->itemCount() != 2)
+                return;
+            scroll->ensureWidgetVisible(view);
+            distance->setValue(900);
+            m_preview = view;
+            m_clock.restart();
+            m_stage = 7;
+        } else if (m_stage == 7 && m_clock.elapsed() >= 600) {
+            const bool valid = m_preview && m_preview->isSpatialEnabled() &&
+                               m_preview->cameraDistance() == 900 &&
+                               !m_preview->items().first()->projectedPolygon().isEmpty();
+            m_result["spatial_example"] = valid;
+            finish(valid, QStringLiteral("3D animation, projected input, idle, 2D roundtrip and "
+                                         "Spatial example checked"));
+        }
+    }
+    void finish(bool passed, const QString& detail)
+    {
+        m_tick.stop();
+        m_result["detail"] = detail;
+        const auto json = QJsonDocument(m_result).toJson(QJsonDocument::Compact);
+        EM_ASM({ document.documentElement.dataset.fluentQtSpatialMetrics = UTF8ToString($0); },
+               json.constData());
+        publishSmokeState(passed ? "pass" : "fail", detail);
+        deleteLater();
+    }
+    GalleryWindow* m_window;
+    QPointer<QOpenGLWidget> m_surface;
+    QPointer<spatial::SpatialView> m_preview;
+    QTimer m_tick;
+    QElapsedTimer m_clock;
+    QJsonObject m_result;
+    int m_stage = 0;
+    int m_frames = 0;
+    bool m_expectFallback = false;
+};
+#endif
+
 void startWasmSmokeIfRequested(GalleryWindow* window)
 {
     const QString mode = smokeMode();
+#ifdef FLUENT_QT_HAS_SPATIAL
+    if (window && mode == QStringLiteral("spatial-quality")) {
+        new WasmSpatialQualityProbe(window);
+        return;
+    }
+    if (window &&
+        (mode == QStringLiteral("spatial") || mode == QStringLiteral("spatial-fallback"))) {
+        new WasmSpatialProbe(window, mode == QStringLiteral("spatial-fallback"));
+        return;
+    }
+#endif
     if (!window || (mode != QStringLiteral("fast") && mode != QStringLiteral("full")))
         return;
     (new WasmSmokeRunner(window, mode == QStringLiteral("full")))->start();

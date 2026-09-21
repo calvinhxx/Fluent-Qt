@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--render-scale",
         default="default",
-        help="Gallery render scale: default, native, or a positive number.",
+        help="Gallery render scale: default (native), native, adaptive, or a positive number.",
     )
     parser.add_argument(
         "--window-mode",
@@ -626,11 +626,11 @@ def run_smoke(
                     "Browser native DPR does not match the requested device scale: "
                     f"{gallery_state}"
                 )
-            if render_scale == "native":
+            if render_scale in ("native", "default"):
                 expected_render_dpr = device_scale_factor
                 expected_render_mode = "native"
                 expected_render_profile = "native"
-            elif render_scale == "default":
+            elif render_scale == "adaptive":
                 expected_render_dpr = adaptive_render_dpr(
                     device_scale_factor, viewport_width, viewport_height
                 )

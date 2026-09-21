@@ -70,21 +70,17 @@ Then open `http://127.0.0.1:4173/app/index.html`.
 ### High-density rendering
 
 Qt WebAssembly sizes the QWidget backing store from the browser device pixel
-ratio. Painting a 2x Retina backing store requires four times as many pixels as
-1x, which is costly on the single browser thread. The Gallery Web shell selects
-an adaptive 1x–1.25x scale in 0.05 steps, targeting at most 1.6 million viewport
-pixels while preserving the same logical layout. Large desktop viewports
-therefore default to 1x; smaller surfaces retain the sharper 1.25x profile.
+ratio. The Gallery uses native resolution by default in both 2D and 3D, including
+2x Retina displays. Enabling 3D does not lower the canvas resolution.
 
-On a Retina display, an explicit 1x profile is intentionally a maximum-speed
-mode and its text will look softer because the browser scales a lower-resolution
-backing store. Use 1.25x for normal interaction and visual review; reserve 1x
-for large viewports or performance comparisons.
+Lower-resolution rendering remains an explicit performance option. It reduces
+pixel work but makes text softer on high-density displays. The adaptive option
+selects 1x–1.25x in 0.05 steps, targeting at most 1.6 million viewport pixels;
+it preserves the logical layout.
 
-- use the footer links to cycle from adaptive to balanced 1.25x and then native
-  resolution;
-- append `?render-scale=native` for native-resolution screenshots and visual
-  review;
+- use the footer link to opt into lower resolution and return to native;
+- append `?render-scale=native` to explicitly select the default quality;
+- append `?render-scale=adaptive` for the bounded performance profile;
 - append `?render-scale=1` or another positive value for an explicit profile;
 - the selected/native values, profile, and pixel budget are exposed as
   `data-fluent-qt-render-dpr`, `data-fluent-qt-native-dpr`,
@@ -200,12 +196,54 @@ python .github/scripts/run-wasm-browser-smoke.py \
 ```
 
 The smoke runner defaults to a simulated DPR 2 so CI covers the Retina profile.
-Use `--render-scale native` for a controlled quality/performance comparison.
+Use `--render-scale adaptive` for a controlled quality/performance comparison.
 Use `--viewport-width 1920 --viewport-height 1080` to exercise the large-screen
 adaptive profile.
 
 Use `--mode full` before changing route construction, settings persistence,
 dialogs, menus, the Web shell, or Pages packaging.
+
+### Spatial WebGL validation
+
+With `FLUENT_QT_BUILD_SPATIAL=ON` (included in the `wasm` preset), the Gallery's
+**Settings → 3D Gallery** switch uses the same native compositor through WebGL.
+The browser canvas owns the context. Initialization checks the real viewport;
+reparenting into the browser desktop can replace that context and is revalidated.
+Initialization failure selects the usable 2D layout and updates the support badge.
+
+Run the optional rendering and performance probe separately from the route smoke:
+
+```bash
+python3 .github/scripts/run-wasm-spatial-smoke.py \
+  --root build/wasm --headed --channel chrome \
+  --output build/spatial-validation/web
+```
+
+`?wasm-smoke=spatial` measures three seconds of pointer following and an idle
+interval, then clicks the projected switch and returns through 2D → 3D. It also
+opens a Spatial example and changes its camera-distance control. It writes
+frame-swap counts and timings to
+`data-fluent-qt-spatial-metrics`; the runner also records the browser's GPU device
+and saves a screenshot. Normal visits create no measurement timer.
+Frame swaps count renderer submissions, not monitor scanout. Keep the browser
+foreground and distinguish hardware WebGL from SwiftShader when reporting
+performance; a headless pass alone does not establish GPU performance.
+
+Add `--quality` to capture the same Popup page in 2D, at the flat GPU endpoint,
+in 3D, and after returning to 2D. This checks projected text edge contrast against
+the 2D reference and saves full-page and control-detail images for visual review.
+Use `--render-scale adaptive` to repeat that check for the optional lower-resolution
+profile. Interaction smoke and frame counts alone do not establish text clarity.
+
+To check the 2D fallback with Chromium's software renderer:
+
+```bash
+python3 .github/scripts/run-wasm-spatial-smoke.py \
+  --root build/wasm --software-gl \
+  --output build/spatial-validation/web-fallback
+```
+
+This check requires the Gallery to reject SwiftShader and remain usable in 2D.
 
 ## Adapter boundary
 

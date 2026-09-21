@@ -19,7 +19,7 @@
     <li>Emscripten compiler runtime: <a href="Emscripten-LICENSE.txt">MIT and University of Illinois/NCSA licenses</a>.</li>
     <li>Bundled fonts and icons: <a href="THIRD_PARTY_NOTICES.md">third-party notices</a>, including the WebAssembly-only Noto Sans SC subset under the <a href="NotoSansSC-LICENSE.txt">SIL Open Font License 1.1</a>.</li>
   </ul>
-  <p>The supported build uses Qt 6.9.3 <code>wasm_singlethread</code> and Emscripten 3.1.70. Gallery dialogs and menus use asynchronous APIs, so the application does not link whole-program Asyncify. High-density displays use an adaptive 1x–1.25x QWidget backing store with a bounded route cache; the Gallery footer can still select balanced or native resolution.</p>
+  <p>The supported build uses Qt 6.9.3 <code>wasm_singlethread</code> and Emscripten 3.1.70. Gallery dialogs and menus use asynchronous APIs, so the application does not link whole-program Asyncify. High-density displays use native resolution with a bounded route cache; the Gallery footer offers an explicit lower-resolution performance mode.</p>
   <p>This build comes with no warranty to the extent permitted by law. You may copy, modify, and convey the GPL-covered binary under the terms in <a href="Qt-LICENSE.txt">Qt-LICENSE.txt</a>; complete corresponding source links are listed above.</p>
   <p><a href="index.html">Return to the C++ Web Gallery</a></p>
 </body>
