@@ -40,8 +40,7 @@ constexpr int kMaxColumns = 4;
 
 } // namespace
 
-GalleryEntryGrid::GalleryEntryGrid(QWidget* parent)
-    : QWidget(parent)
+GalleryEntryGrid::GalleryEntryGrid(QWidget* parent) : QWidget(parent)
 {
     setObjectName(QStringLiteral("galleryEntryGrid"));
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -76,13 +75,10 @@ int GalleryEntryGrid::gridHeight() const
     const int rows = rowCount();
     if (rows == 0)
         return 0;
-    if (m_rowHeights.size() == rows
-        && m_rowTops.size() == rows) {
-        return m_rowTops.constLast()
-            + m_rowHeights.constLast();
+    if (m_rowHeights.size() == rows && m_rowTops.size() == rows) {
+        return m_rowTops.constLast() + m_rowHeights.constLast();
     }
-    return rows * kMinCardHeight
-        + (rows - 1) * kGridSpacing;
+    return rows * kMinCardHeight + (rows - 1) * kGridSpacing;
 }
 
 int GalleryEntryGrid::columnWidth() const
@@ -98,12 +94,9 @@ QRect GalleryEntryGrid::cardRect(int index) const
     const int column = index % cols;
     const int cardWidth = columnWidth();
     const int x = column * (cardWidth + kGridSpacing);
-    const int y = row < m_rowTops.size()
-        ? m_rowTops.at(row)
-        : row * (kMinCardHeight + kGridSpacing);
-    const int height = row < m_rowHeights.size()
-        ? m_rowHeights.at(row)
-        : kMinCardHeight;
+    const int y =
+        row < m_rowTops.size() ? m_rowTops.at(row) : row * (kMinCardHeight + kGridSpacing);
+    const int height = row < m_rowHeights.size() ? m_rowHeights.at(row) : kMinCardHeight;
     return QRect(x, y, cardWidth, height);
 }
 
@@ -118,9 +111,7 @@ int GalleryEntryGrid::cardIndexAt(const QPoint& pos) const
         return -1;
 
     int row = -1;
-    for (int candidate = 0;
-         candidate < m_rowHeights.size();
-         ++candidate) {
+    for (int candidate = 0; candidate < m_rowHeights.size(); ++candidate) {
         const int top = m_rowTops.at(candidate);
         if (pos.y() < top)
             break;
@@ -170,8 +161,7 @@ void GalleryEntryGrid::resizeEvent(QResizeEvent* event)
 bool GalleryEntryGrid::recalculateRowLayout()
 {
     const int rows = rowCount();
-    QVector<int> rowHeights(
-        rows, kMinCardHeight);
+    QVector<int> rowHeights(rows, kMinCardHeight);
     const int textWidth = columnWidth() - 2 * kCardPadding - kIconSize - kIconTextGap;
     if (textWidth > 0) {
         const QFontMetrics titleMetrics(themeFont(Typography::FontRole::BodyStrong).toQFont());
@@ -183,15 +173,12 @@ bool GalleryEntryGrid::recalculateRowLayout()
             if (!entry.description.isEmpty()) {
                 const QRect descriptionBounds = descMetrics.boundingRect(
                     QRect(0, 0, textWidth, QWIDGETSIZE_MAX),
-                    Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
-                    entry.description);
+                    Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, entry.description);
                 textHeight += kTitleDescGap + descriptionBounds.height();
             }
             const int row = index / cols;
-            rowHeights[row] = qMax(
-                rowHeights.at(row),
-                2 * kCardPadding
-                    + qMax(kIconSize, textHeight));
+            rowHeights[row] =
+                qMax(rowHeights.at(row), 2 * kCardPadding + qMax(kIconSize, textHeight));
         }
     }
 
@@ -203,8 +190,7 @@ bool GalleryEntryGrid::recalculateRowLayout()
         nextTop += height + kGridSpacing;
     }
 
-    if (rowHeights == m_rowHeights
-        && rowTops == m_rowTops) {
+    if (rowHeights == m_rowHeights && rowTops == m_rowTops) {
         return false;
     }
     m_rowHeights = rowHeights;
@@ -278,7 +264,7 @@ void GalleryEntryGrid::paintEvent(QPaintEvent* event)
         if (rect.bottom() < exposed.top())
             continue;
         if (rect.top() > exposed.bottom())
-            break;  // rows below are all further down
+            break; // rows below are all further down
 
         const Entry& entry = m_entries.at(index);
         const bool hovered = index == m_hoveredIndex;
@@ -288,9 +274,8 @@ void GalleryEntryGrid::paintEvent(QPaintEvent* event)
         const QRectF body = QRectF(rect).adjusted(0.5, 0.5, -0.5, -0.5);
         painter.drawRoundedRect(body, ::CornerRadius::Overlay, ::CornerRadius::Overlay);
 
-        const QRect iconRect(rect.left() + kCardPadding,
-                             rect.top() + kCardPadding,
-                             kIconSize, kIconSize);
+        const QRect iconRect(rect.left() + kCardPadding, rect.top() + kCardPadding, kIconSize,
+                             kIconSize);
         if (!entry.iconGlyph.isEmpty()) {
             // Glyph variant (used by category cards): a tinted tile with an icon-font glyph,
             // matching GalleryIconTile. zh_CN: 字形变体（分类卡片用）：着色圆角块 + 图标字体字形，对齐 GalleryIconTile。
@@ -304,10 +289,8 @@ void GalleryEntryGrid::paintEvent(QPaintEvent* event)
                              Typography::Icons::glyphForSize(entry.iconGlyph, glyphSize));
         } else if (!entry.icon.isNull()) {
             const int inset = (kIconSize - kControlImageSize) / 2;
-            fluentDrawPixmapInLogicalRect(
-                painter,
-                iconRect.adjusted(inset, inset, -inset, -inset),
-                entry.icon);
+            fluentDrawPixmapInLogicalRect(painter, iconRect.adjusted(inset, inset, -inset, -inset),
+                                          entry.icon);
         }
 
         const int textLeft = iconRect.right() + 1 + kIconTextGap;
@@ -325,12 +308,10 @@ void GalleryEntryGrid::paintEvent(QPaintEvent* event)
         if (!entry.description.isEmpty()) {
             const int descY = titleY + titleMetrics.height() + kTitleDescGap;
             const int descBottom = rect.bottom() - kCardPadding;
-            const QRect descRect(textLeft, descY, textWidth,
-                                 qMax(0, descBottom - descY + 1));
+            const QRect descRect(textLeft, descY, textWidth, qMax(0, descBottom - descY + 1));
             painter.setFont(descFont);
             painter.setPen(colors.textSecondary);
-            painter.drawText(descRect,
-                             Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
+            painter.drawText(descRect, Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
                              entry.description);
         }
     }

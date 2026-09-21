@@ -65,8 +65,7 @@ QRectF rowBackgroundRectForOption(const QStyleOptionViewItem& option)
     const bool fullyCompact = compact && compactProgress >= 0.999;
     const qreal availableWidth = fullyCompact ? kCompactPaneWidth : viewportWidthForOption(option);
     const qreal rightInset = compact ? kRowLeftInset : kRowRightInset;
-    return QRectF(kRowLeftInset,
-                  option.rect.top() + kRowVerticalInset,
+    return QRectF(kRowLeftInset, option.rect.top() + kRowVerticalInset,
                   qMax<qreal>(0.0, availableWidth - kRowLeftInset - rightInset),
                   option.rect.height() - 2.0 * kRowVerticalInset);
 }
@@ -75,18 +74,14 @@ QRectF chevronRectForOption(const QStyleOptionViewItem& option)
 {
     const QRectF backgroundRect = rowBackgroundRectForOption(option);
     return QRectF(backgroundRect.right() - kChevronRightInset - kChevronAreaWidth,
-                  backgroundRect.top(),
-                  kChevronAreaWidth,
-                  backgroundRect.height());
+                  backgroundRect.top(), kChevronAreaWidth, backgroundRect.height());
 }
 
 class GalleryNavigationDelegate : public QStyledItemDelegate {
 public:
     explicit GalleryNavigationDelegate(fluent::FluentElement* themeHost, QObject* parent = nullptr)
-        : QStyledItemDelegate(parent)
-        , m_themeHost(themeHost)
-    {
-    }
+        : QStyledItemDelegate(parent), m_themeHost(themeHost)
+    {}
 
     QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
@@ -98,7 +93,8 @@ public:
         return QSize(1, kRouteHeight);
     }
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    void paint(QPainter* painter, const QStyleOptionViewItem& option,
+               const QModelIndex& index) const override
     {
         if (!index.isValid() || !m_themeHost)
             return;
@@ -124,8 +120,7 @@ public:
             painter->setPen(colors.textSecondary);
             painter->setOpacity(expandedOpacity);
             painter->drawText(option.rect.adjusted(qRound(16 - 6 * compactProgress), 6, -8, 0),
-                              Qt::AlignLeft | Qt::AlignVCenter,
-                              text);
+                              Qt::AlignLeft | Qt::AlignVCenter, text);
             painter->restore();
             return;
         }
@@ -156,11 +151,14 @@ public:
         QRectF chevronRect;
         const qreal chevronOpacity = compact ? 0.0 : expandedOpacity;
         if (hasChildren && chevronOpacity > 0.01) {
-            const auto* treeView = qobject_cast<const fluent::collections::TreeView*>(option.widget);
-            const qreal progress = treeView
-                ? treeView->chevronRotation(index)
-                : (qobject_cast<const QTreeView*>(option.widget)
-                       && qobject_cast<const QTreeView*>(option.widget)->isExpanded(index) ? 1.0 : 0.0);
+            const auto* treeView =
+                qobject_cast<const fluent::collections::TreeView*>(option.widget);
+            const qreal progress =
+                treeView ? treeView->chevronRotation(index)
+                         : (qobject_cast<const QTreeView*>(option.widget) &&
+                                    qobject_cast<const QTreeView*>(option.widget)->isExpanded(index)
+                                ? 1.0
+                                : 0.0);
             chevronRect = chevronRectForOption(option);
             const QFont iconFont = Typography::Icons::font(kChevronIconPixelSize);
             painter->setFont(iconFont);
@@ -170,48 +168,41 @@ public:
             painter->translate(chevronRect.center());
             painter->rotate(180.0 * qBound<qreal>(0.0, progress, 1.0));
             painter->translate(-chevronRect.center());
-            painter->drawText(chevronRect,
-                              Qt::AlignCenter,
-                              Typography::Icons::glyphForSize(
-                                  Typography::Icons::ChevronDownMed,
-                                  kChevronIconPixelSize));
+            painter->drawText(chevronRect, Qt::AlignCenter,
+                              Typography::Icons::glyphForSize(Typography::Icons::ChevronDownMed,
+                                                              kChevronIconPixelSize));
             painter->restore();
         }
 
         const QString iconGlyph = index.data(IconGlyphRole).toString();
-        const QString paintedIconGlyph = Typography::Icons::glyphForSize(
-            iconGlyph, kRouteIconPixelSize);
+        const QString paintedIconGlyph =
+            Typography::Icons::glyphForSize(iconGlyph, kRouteIconPixelSize);
         const bool hasIcon = !iconGlyph.isEmpty();
         const qreal contentLeft = backgroundRect.left() + kContentStart;
         const qreal compactIconLeft = qMax<qreal>(0.0, (kCompactPaneWidth - kIconAreaWidth) / 2.0);
         const qreal iconLeft = contentLeft + (compactIconLeft - contentLeft) * compactProgress;
         qreal textX = kind == GalleryNavigationItem::Kind::ComponentRoute
-            ? backgroundRect.left() + kTextStart
-            : contentLeft;
+                          ? backgroundRect.left() + kTextStart
+                          : contentLeft;
         if (!iconGlyph.isEmpty()) {
             const QFont iconFont = Typography::Icons::font(kRouteIconPixelSize);
             painter->setFont(iconFont);
             painter->setPen(selected ? colors.textPrimary : colors.textSecondary);
-            const QRectF iconRect(iconLeft,
-                                  backgroundRect.top(),
-                                  kIconAreaWidth,
+            const QRectF iconRect(iconLeft, backgroundRect.top(), kIconAreaWidth,
                                   backgroundRect.height());
-            const qreal iconRotation = index.data(RouteIdRole).toString() == QStringLiteral("settings")
-                ? settingsIconRotationForOption(option)
-                : 0.0;
+            const qreal iconRotation =
+                index.data(RouteIdRole).toString() == QStringLiteral("settings")
+                    ? settingsIconRotationForOption(option)
+                    : 0.0;
             if (!qFuzzyIsNull(iconRotation)) {
                 painter->save();
                 painter->translate(iconRect.center());
                 painter->rotate(iconRotation);
                 painter->translate(-iconRect.center());
-                painter->drawText(iconRect,
-                                  Qt::AlignCenter,
-                                  paintedIconGlyph);
+                painter->drawText(iconRect, Qt::AlignCenter, paintedIconGlyph);
                 painter->restore();
             } else {
-                painter->drawText(iconRect,
-                                  Qt::AlignCenter,
-                                  paintedIconGlyph);
+                painter->drawText(iconRect, Qt::AlignCenter, paintedIconGlyph);
             }
             textX = backgroundRect.left() + kTextStart;
         } else if (!hasIcon && kind != GalleryNavigationItem::Kind::ComponentRoute) {
@@ -224,24 +215,19 @@ public:
         textFont.setPixelSize(kRouteTextPixelSize);
         painter->setFont(textFont);
         painter->setPen(colors.textPrimary);
-        const qreal textRight = hasChildren && !compact
-            ? chevronRect.left() - kTextRightGap
-            : backgroundRect.right() - kTextRightGap;
-        const QRectF textSlot(textX - 6.0 * compactProgress,
-                              backgroundRect.top(),
-                              qMax<qreal>(0.0, textRight - textX),
-                              backgroundRect.height());
+        const qreal textRight = hasChildren && !compact ? chevronRect.left() - kTextRightGap
+                                                        : backgroundRect.right() - kTextRightGap;
+        const QRectF textSlot(textX - 6.0 * compactProgress, backgroundRect.top(),
+                              qMax<qreal>(0.0, textRight - textX), backgroundRect.height());
         if (expandedOpacity > 0.01) {
             const QFontMetricsF metrics(painter->font());
-            const QString elidedText = cachedElidedText(
-                painter->fontMetrics(), text, qRound(textSlot.width()));
-            const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
-                textSlot, metrics, elidedText);
+            const QString elidedText =
+                cachedElidedText(painter->fontMetrics(), text, qRound(textSlot.width()));
+            const QRectF textRect =
+                fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
             painter->save();
             painter->setOpacity(expandedOpacity);
-            painter->drawText(textRect,
-                              Qt::AlignLeft | Qt::AlignVCenter,
-                              elidedText);
+            painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elidedText);
             painter->restore();
         }
         painter->restore();
@@ -270,7 +256,8 @@ private:
 
 } // namespace
 
-QAbstractItemDelegate* makeGalleryNavigationDelegate(fluent::FluentElement* themeHost, QObject* parent)
+QAbstractItemDelegate* makeGalleryNavigationDelegate(fluent::FluentElement* themeHost,
+                                                     QObject* parent)
 {
     return new GalleryNavigationDelegate(themeHost, parent);
 }

@@ -17,8 +17,7 @@ std::unique_ptr<fluent::windowing::Window> createWindow()
     auto* layout = new QVBoxLayout(content);
     layout->setContentsMargins(32, 32, 32, 32);
 
-    auto* button = new fluent::basicinput::Button(
-        QStringLiteral("Hello from FluentQt"), content);
+    auto* button = new fluent::basicinput::Button(QStringLiteral("Hello from FluentQt"), content);
     button->setFluentStyle(fluent::basicinput::Button::Accent);
     layout->addStretch();
     layout->addWidget(button, 0, Qt::AlignCenter);

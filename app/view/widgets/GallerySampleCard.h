@@ -26,8 +26,7 @@ class GalleryCodeBlock;
 class GallerySampleCard : public QFrame, public fluent::FluentElement, public fluent::QMLPlus {
 public:
     explicit GallerySampleCard(const GallerySample& sample, QWidget* parent = nullptr);
-    GallerySampleCard(const QString& routeId,
-                      const GallerySample& sample,
+    GallerySampleCard(const QString& routeId, const GallerySample& sample,
                       QWidget* parent = nullptr);
 
     QString sampleId() const { return m_sampleId; }

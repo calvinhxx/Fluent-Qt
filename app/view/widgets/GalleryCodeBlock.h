@@ -27,19 +27,14 @@ class GalleryCodeBlock : public fluent::layout::Expander {
 
 public:
     explicit GalleryCodeBlock(const QString& code, QWidget* parent = nullptr);
-    GalleryCodeBlock(const QString& cppCode,
-                     const QString& pythonCode,
-                     QWidget* parent = nullptr);
+    GalleryCodeBlock(const QString& cppCode, const QString& pythonCode, QWidget* parent = nullptr);
 
     QString code() const;
     QString cppCode() const { return m_cppCode; }
     QString pythonCode() const { return m_pythonCode; }
     bool hasPythonCode() const { return !m_pythonCode.isEmpty(); }
     GalleryCodeLanguage codeLanguage() const { return m_codeLanguage; }
-    GalleryLanguageSelector* languageSelector() const
-    {
-        return m_languageSelector;
-    }
+    GalleryLanguageSelector* languageSelector() const { return m_languageSelector; }
     fluent::basicinput::Button* copyButton() const { return m_copyButton; }
 
     void setCodeLanguage(GalleryCodeLanguage language);
@@ -49,8 +44,7 @@ public:
     void onThemeUpdated() override;
 
 signals:
-    void codeLanguageChanged(
-        fluent::gallery::GalleryCodeLanguage language);
+    void codeLanguageChanged(fluent::gallery::GalleryCodeLanguage language);
 
 private:
     void applyPalette();

@@ -22,7 +22,8 @@ namespace fluent::gallery {
 
 class GalleryTopNavigationPane : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
-    Q_PROPERTY(QString selectedRouteId READ selectedRouteId WRITE setSelectedRouteId NOTIFY selectedRouteIdChanged)
+    Q_PROPERTY(QString selectedRouteId READ selectedRouteId WRITE setSelectedRouteId NOTIFY
+                   selectedRouteIdChanged)
 
 public:
     explicit GalleryTopNavigationPane(const QVector<GalleryNavigationItem>& items,

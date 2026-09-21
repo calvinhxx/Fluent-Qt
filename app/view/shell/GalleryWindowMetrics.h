@@ -47,19 +47,15 @@ struct TitleBar {
 
     static int leadingOffset(int systemReservedLeadingWidth)
     {
-        return systemReservedLeadingWidth > 0
-            ? systemReservedLeadingWidth + HorizontalMargin
-            : HorizontalMargin;
+        return systemReservedLeadingWidth > 0 ? systemReservedLeadingWidth + HorizontalMargin
+                                              : HorizontalMargin;
     }
 
-    static int leadingChromeRight(int systemReservedLeadingWidth,
-                                  bool showAppIcon,
-                                  bool showTitle,
+    static int leadingChromeRight(int systemReservedLeadingWidth, bool showAppIcon, bool showTitle,
                                   qreal backReveal)
     {
-        int right = leadingOffset(systemReservedLeadingWidth)
-                    + qRound(backReveal * (ButtonSize + ItemGap))
-                    + ButtonSize;
+        int right = leadingOffset(systemReservedLeadingWidth) +
+                    qRound(backReveal * (ButtonSize + ItemGap)) + ButtonSize;
         if (showAppIcon)
             right += ItemGap + AppIconSize;
         if (showTitle)
@@ -67,12 +63,11 @@ struct TitleBar {
         return right;
     }
 
-    static int searchLeftBound(int systemReservedLeadingWidth,
-                               bool showAppIcon,
-                               bool showTitle,
+    static int searchLeftBound(int systemReservedLeadingWidth, bool showAppIcon, bool showTitle,
                                qreal backReveal)
     {
-        return leadingChromeRight(systemReservedLeadingWidth, showAppIcon, showTitle, backReveal) + ItemGap;
+        return leadingChromeRight(systemReservedLeadingWidth, showAppIcon, showTitle, backReveal) +
+               ItemGap;
     }
 
     static int searchRightBound(int barWidth, int systemReservedTrailingWidth)
@@ -85,24 +80,17 @@ struct TitleBar {
         return rightBound - leftBound;
     }
 
-    static bool canShowSearch(int availableWidth)
-    {
-        return availableWidth >= SearchMinWidth;
-    }
+    static bool canShowSearch(int availableWidth) { return availableWidth >= SearchMinWidth; }
 
     static int searchWidth(int availableWidth)
     {
-        return qBound(SearchMinWidth,
-                      availableWidth - SearchEdgeGap,
-                      SearchMaxWidth);
+        return qBound(SearchMinWidth, availableWidth - SearchEdgeGap, SearchMaxWidth);
     }
 
     static int searchX(int barWidth, int width, int leftBound, int rightBound)
     {
         const int centeredX = (barWidth - width) / 2;
-        return centeredX >= leftBound && centeredX <= rightBound - width
-            ? centeredX
-            : leftBound;
+        return centeredX >= leftBound && centeredX <= rightBound - width ? centeredX : leftBound;
     }
 };
 

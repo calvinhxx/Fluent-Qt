@@ -17,8 +17,7 @@ namespace {
 QPainterPath ratingStarPath(const QRectF& cell, int requestedSize)
 {
     constexpr qreal kPi = 3.14159265358979323846;
-    const qreal diameter = qMin<qreal>(qMax(1, requestedSize),
-                                      qMin(cell.width(), cell.height()));
+    const qreal diameter = qMin<qreal>(qMax(1, requestedSize), qMin(cell.width(), cell.height()));
     const qreal outerRadius = diameter * 0.47;
     const qreal innerRadius = outerRadius * 0.48;
     const QPointF center = cell.center();
@@ -27,8 +26,7 @@ QPainterPath ratingStarPath(const QRectF& cell, int requestedSize)
     for (int point = 0; point < 10; ++point) {
         const qreal radius = (point % 2 == 0) ? outerRadius : innerRadius;
         const qreal angle = -kPi / 2.0 + point * kPi / 5.0;
-        const QPointF vertex(center.x() + qCos(angle) * radius,
-                             center.y() + qSin(angle) * radius);
+        const QPointF vertex(center.x() + qCos(angle) * radius, center.y() + qSin(angle) * radius);
         if (point == 0)
             path.moveTo(vertex);
         else
@@ -38,8 +36,8 @@ QPainterPath ratingStarPath(const QRectF& cell, int requestedSize)
     return path;
 }
 
-void drawRatingStar(QPainter& painter, const QPainterPath& path,
-                    const QColor& color, bool filled, qreal outlineWidth)
+void drawRatingStar(QPainter& painter, const QPainterPath& path, const QColor& color, bool filled,
+                    qreal outlineWidth)
 {
     painter.save();
     painter.setBrush(filled ? QBrush(color) : Qt::NoBrush);
@@ -55,8 +53,7 @@ void drawRatingStar(QPainter& painter, const QPainterPath& path,
 
 } // namespace
 
-RatingControl::RatingControl(QWidget* parent)
-    : QWidget(parent)
+RatingControl::RatingControl(QWidget* parent) : QWidget(parent)
 {
     detail::ensureBasicValueAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
@@ -83,18 +80,19 @@ void RatingControl::onThemeUpdated()
 void RatingControl::setValue(double value)
 {
     value = qBound(-1.0, value, static_cast<double>(m_maxRating));
-    if (qFuzzyCompare(m_value, value)) return;
+    if (qFuzzyCompare(m_value, value))
+        return;
     m_value = value;
     update();
-    accessibility::detail::notifyValueAccessibilityValue(
-        this, qMax(0.0, m_value));
+    accessibility::detail::notifyValueAccessibilityValue(this, qMax(0.0, m_value));
     emit valueChanged(m_value);
 }
 
 void RatingControl::setPlaceholderValue(double value)
 {
     value = qBound(0.0, value, static_cast<double>(m_maxRating));
-    if (qFuzzyCompare(m_placeholderValue, value)) return;
+    if (qFuzzyCompare(m_placeholderValue, value))
+        return;
     m_placeholderValue = value;
     update();
     emit placeholderValueChanged(m_placeholderValue);
@@ -102,27 +100,28 @@ void RatingControl::setPlaceholderValue(double value)
 
 void RatingControl::setCaption(const QString& caption)
 {
-    if (m_caption == caption) return;
+    if (m_caption == caption)
+        return;
     m_caption = caption;
     updateGeometry();
     update();
-    accessibility::detail::notifyValueAccessibilityText(
-        this, QAccessible::DescriptionChanged);
+    accessibility::detail::notifyValueAccessibilityText(this, QAccessible::DescriptionChanged);
     emit captionChanged(m_caption);
 }
 
 void RatingControl::setIsClearEnabled(bool enabled)
 {
-    if (m_isClearEnabled == enabled) return;
+    if (m_isClearEnabled == enabled)
+        return;
     m_isClearEnabled = enabled;
-    accessibility::detail::notifyValueAccessibilityValue(
-        this, qMax(0.0, m_value));
+    accessibility::detail::notifyValueAccessibilityValue(this, qMax(0.0, m_value));
     emit isClearEnabledChanged(m_isClearEnabled);
 }
 
 void RatingControl::setIsReadOnly(bool readOnly)
 {
-    if (m_isReadOnly == readOnly) return;
+    if (m_isReadOnly == readOnly)
+        return;
     m_isReadOnly = readOnly;
     setCursor(readOnly ? Qt::ArrowCursor : Qt::PointingHandCursor);
     update();
@@ -136,20 +135,23 @@ void RatingControl::setIsReadOnly(bool readOnly)
 void RatingControl::setMaxRating(int rating)
 {
     rating = qMax(1, rating);
-    if (m_maxRating == rating) return;
+    if (m_maxRating == rating)
+        return;
     m_maxRating = rating;
-    if (m_value > m_maxRating) m_value = m_maxRating;
-    if (m_placeholderValue > m_maxRating) m_placeholderValue = m_maxRating;
+    if (m_value > m_maxRating)
+        m_value = m_maxRating;
+    if (m_placeholderValue > m_maxRating)
+        m_placeholderValue = m_maxRating;
     updateGeometry();
     update();
-    accessibility::detail::notifyValueAccessibilityValue(
-        this, qMax(0.0, m_value));
+    accessibility::detail::notifyValueAccessibilityValue(this, qMax(0.0, m_value));
     emit maxRatingChanged(m_maxRating);
 }
 
 void RatingControl::setStarSize(int size)
 {
-    if (m_starSize == size) return;
+    if (m_starSize == size)
+        return;
     m_starSize = size;
     updateGeometry();
     update();
@@ -158,7 +160,8 @@ void RatingControl::setStarSize(int size)
 
 void RatingControl::setFontRole(Typography::FontRole role)
 {
-    if (m_fontRole == role) return;
+    if (m_fontRole == role)
+        return;
     m_fontRole = role;
     setFont(themeFont(m_fontRole).toQFont());
     updateGeometry();
@@ -168,7 +171,8 @@ void RatingControl::setFontRole(Typography::FontRole role)
 
 void RatingControl::setCaptionFontRole(Typography::FontRole role)
 {
-    if (m_captionFontRole == role) return;
+    if (m_captionFontRole == role)
+        return;
     m_captionFontRole = role;
     updateGeometry();
     update();
@@ -181,8 +185,8 @@ QSize RatingControl::iconCellSize() const
 {
     const QFont iconFont = Typography::Icons::font(m_starSize);
     QFontMetrics fm(iconFont);
-    const QString starGlyph = Typography::Icons::glyphForSize(
-        Typography::Icons::FavoriteStar, m_starSize);
+    const QString starGlyph =
+        Typography::Icons::glyphForSize(Typography::Icons::FavoriteStar, m_starSize);
     int w = fm.horizontalAdvance(starGlyph);
     int h = fm.height();
     return QSize(qMax(w, m_starSize), qMax(h, m_starSize));
@@ -230,15 +234,13 @@ double RatingControl::ratingFromPosition(int x) const
         QRectF r = starRect(i);
         if (x >= r.left() && x <= r.right()) {
             double midX = r.center().x();
-            const bool firstHalf = layoutDirection() == Qt::RightToLeft
-                ? x > midX
-                : x < midX;
+            const bool firstHalf = layoutDirection() == Qt::RightToLeft ? x > midX : x < midX;
             return firstHalf ? (i + 0.5) : (i + 1.0);
         }
     }
     const QRectF maximumStar = starRect(m_maxRating - 1);
-    if ((layoutDirection() == Qt::LeftToRight && x > maximumStar.right())
-        || (layoutDirection() == Qt::RightToLeft && x < maximumStar.left())) {
+    if ((layoutDirection() == Qt::LeftToRight && x > maximumStar.right()) ||
+        (layoutDirection() == Qt::RightToLeft && x < maximumStar.left())) {
         return m_maxRating;
     }
     return 0;
@@ -264,9 +266,8 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
 
     // Resolve the displayed value. zh_CN: 确定要显示的值。
     bool isHoverPreview = m_isHovered && !m_isReadOnly && m_hoverValue > 0;
-    double displayValue = isHoverPreview
-        ? m_hoverValue
-        : (m_value >= 0 ? m_value : m_placeholderValue);
+    double displayValue =
+        isHoverPreview ? m_hoverValue : (m_value >= 0 ? m_value : m_placeholderValue);
     bool isPlaceholder = (m_value < 0 && !isHoverPreview);
     bool isDisabled = !isEnabled();
 
@@ -303,9 +304,8 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
             drawRatingStar(p, star, emptyColor, false, outlineWidth);
             p.save();
             const qreal fillWidth = rect.width() * fillFraction;
-            const qreal fillX = layoutDirection() == Qt::RightToLeft
-                ? rect.right() - fillWidth
-                : rect.left();
+            const qreal fillX =
+                layoutDirection() == Qt::RightToLeft ? rect.right() - fillWidth : rect.left();
             p.setClipRect(QRectF(fillX, rect.top(), fillWidth, rect.height()));
             drawRatingStar(p, star, filledColor, true, outlineWidth);
             p.restore();
@@ -319,11 +319,9 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
         p.setPen(isDisabled ? c.textDisabled : c.textSecondary);
         const int captionX = starsAreaWidth() + m_itemSpacing * 2;
         const QRect logicalCaptionRect(captionX, 0, width() - captionX, height());
-        const QRect captionRect =
-            QStyle::visualRect(layoutDirection(), rect(), logicalCaptionRect);
+        const QRect captionRect = QStyle::visualRect(layoutDirection(), rect(), logicalCaptionRect);
         p.drawText(captionRect,
-                   QStyle::visualAlignment(layoutDirection(),
-                                           Qt::AlignVCenter | Qt::AlignLeft),
+                   QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
                    m_caption);
     }
 
@@ -332,8 +330,7 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
         focusColor.setAlpha(120);
         const QRect logicalFocusRect(0, 0, starsAreaWidth(), height());
         const QRect focusRect =
-            QStyle::visualRect(layoutDirection(), rect(), logicalFocusRect)
-                .adjusted(1, 1, -1, -1);
+            QStyle::visualRect(layoutDirection(), rect(), logicalFocusRect).adjusted(1, 1, -1, -1);
         p.setPen(QPen(focusColor, 1.0));
         p.setBrush(Qt::NoBrush);
         p.drawRoundedRect(focusRect, themeRadius().control, themeRadius().control);
@@ -442,9 +439,8 @@ void RatingControl::focusInEvent(QFocusEvent* event)
     QWidget::focusInEvent(event);
     if (event->reason() == Qt::MouseFocusReason)
         m_keyboardFocusVisible = false;
-    else if (event->reason() == Qt::TabFocusReason
-             || event->reason() == Qt::BacktabFocusReason
-             || event->reason() == Qt::ShortcutFocusReason)
+    else if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason ||
+             event->reason() == Qt::ShortcutFocusReason)
         m_keyboardFocusVisible = true;
     update();
 }
