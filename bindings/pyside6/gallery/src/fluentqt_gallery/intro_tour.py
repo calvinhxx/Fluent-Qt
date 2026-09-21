@@ -19,7 +19,7 @@ from PySide6.QtCore import (
     Property,
     Signal,
 )
-from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath
+from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPolygon
 from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 
 from .foundation_pages import _theme_tokens
@@ -241,6 +241,9 @@ class GalleryIntroTour(QObject):
             self.finished.emit()
             return
         self._build()
+        controller = getattr(self._host.window(), "_spatial_controller", None)
+        if controller is not None:
+            controller.settle()
         self._host.window().setChromeInteractive(False)
         self._sync_scrim_geometry()
         self._scrim.show()
@@ -285,16 +288,47 @@ class GalleryIntroTour(QObject):
             step = self._steps[self._index]
             if not step.centered and step.target is not None:
                 self._scrim.spotlightRect = self._spotlight_rect(step.target)
+                if getattr(self, "_presented_anchor", None) is not None:
+                    self._presented_anchor.setGeometry(
+                        self._presented_rect(step.target).translated(-self._scrim.pos())
+                    )
 
     def _spotlight_rect(self, target: QWidget) -> QRect:
         window = self._host.window()
         surface = self._surface_rect()
-        in_window = QRect(target.mapTo(window, QPoint(0, 0)), target.size())
+        in_window = self._presented_rect(target)
         return (
             in_window.translated(-surface.topLeft())
             .marginsAdded(QMargins(1, 1, 1, 1))
             .intersected(QRect(QPoint(0, 0), surface.size()))
         )
+
+    def _presented_rect(self, target: QWidget) -> QRect:
+        controller = getattr(self._host.window(), "_spatial_controller", None)
+        if controller is None:
+            return QRect(target.mapTo(self._host.window(), QPoint()), target.size())
+        rect = target.rect()
+        return QPolygon([
+            controller.projected_position(target, corner) for corner in
+            (rect.topLeft(), rect.topRight(), rect.bottomRight(), rect.bottomLeft())
+        ]).boundingRect()
+
+    def _set_presented_anchor(self, step):
+        if step.centered or step.target is None:
+            self._card.setTarget(None)
+            return
+        previous = getattr(self, "_presented_anchor", None)
+        self._presented_anchor = QWidget(self._scrim)
+        self._presented_anchor.setObjectName("GalleryIntroTour.PresentedAnchor")
+        self._presented_anchor.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self._presented_anchor.setAttribute(Qt.WA_NoSystemBackground)
+        self._presented_anchor.setGeometry(
+            self._presented_rect(step.target).translated(-self._scrim.pos())
+        )
+        self._presented_anchor.show()
+        self._card.setTarget(self._presented_anchor)
+        if previous is not None:
+            previous.deleteLater()
 
     def _apply_spotlight(self, step: TourStep, animate: bool) -> None:
         if self._scrim is None or self._spot_animation is None:
@@ -332,7 +366,7 @@ class GalleryIntroTour(QObject):
         self._previous.setVisible(index > 0)
         self._next.setText("Finish" if index + 1 == len(self._steps) else "Next")
         self._card.setPlacement(step.placement)
-        self._card.setTarget(None if step.centered else step.target)
+        self._set_presented_anchor(step)
         self._apply_spotlight(step, animate)
 
     def go_to_step(self, index: int) -> None:

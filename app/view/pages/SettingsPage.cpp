@@ -7,6 +7,7 @@
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QPalette>
+#include <QPainter>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QSignalBlocker>
@@ -25,7 +26,9 @@
 #include "platform/GalleryPlatform.h"
 #include "support/logging/Log.h"
 #include "view/support/GalleryCloseBehaviorUi.h"
+#include "view/support/GalleryDepth.h"
 #include "view/widgets/AccentColorControl.h"
+#include "view/widgets/GallerySpatialSupportBadge.h"
 #include "viewmodel/GallerySettings.h"
 
 namespace fluent::gallery {
@@ -79,7 +82,7 @@ private:
 class SettingsRow final : public fluent::layout::Card {
 public:
     SettingsRow(const QString& icon, const QString& title, const QString& subtitle,
-                QWidget* trailing, QWidget* parent)
+                QWidget* trailing, QWidget* parent, fluent::textfields::Label* status = nullptr)
         : Card(parent), m_trailing(trailing)
     {
         setObjectName(QStringLiteral("gallerySettingsRow"));
@@ -104,8 +107,9 @@ public:
         auto* titleLabel = new fluent::textfields::Label(title, textColumn);
         titleLabel->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
         titleLabel->setFluentTypography(Typography::FontRole::BodyStrong);
-        auto* subtitleLabel = new SecondaryLabel(subtitle, textColumn);
-        subtitleLabel->setObjectName(QStringLiteral("gallerySettingsSubtitle"));
+        auto* subtitleLabel = status ? status : new SecondaryLabel(subtitle, textColumn);
+        if (!status)
+            subtitleLabel->setObjectName(QStringLiteral("gallerySettingsSubtitle"));
         subtitleLabel->setFluentTypography(Typography::FontRole::Caption);
         subtitleLabel->setWordWrap(true);
 
@@ -127,13 +131,19 @@ public:
         m_stacked = stacked;
         m_trailing->setParent(this);
         m_layout->removeWidget(m_trailing);
+        // Wrapped controls must receive the same width used by the grid's
+        // height-for-width calculation. Horizontal alignment would shrink them
+        // to sizeHint() after that calculation and clip the extra text lines.
+        // zh_CN: 换行区域实际宽度须与布局测高时一致，避免右对齐缩窄后新增行被裁切。
+        const Qt::Alignment alignment =
+            m_trailing->hasHeightForWidth() ? Qt::Alignment{} : Qt::AlignRight | Qt::AlignVCenter;
         if (m_stacked) {
-            m_layout->addWidget(m_trailing, 1, 1, Qt::AlignRight | Qt::AlignVCenter);
+            m_layout->addWidget(m_trailing, 1, 1, alignment);
             // Keep the narrow two-row layout at the documented touch/reading
             // height regardless of platform font metrics.
             setMinimumHeight(120);
         } else {
-            m_layout->addWidget(m_trailing, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
+            m_layout->addWidget(m_trailing, 0, 2, alignment);
             setMinimumHeight(74);
         }
         m_trailing->show();
@@ -141,6 +151,23 @@ public:
     }
 
 protected:
+    bool event(QEvent* event) override
+    {
+        if (event->type() == depth::changeEvent())
+            update();
+        return Card::event(event);
+    }
+
+    void paintEvent(QPaintEvent* event) override
+    {
+        if (!depth::enabled(this)) {
+            Card::paintEvent(event);
+            return;
+        }
+        QPainter painter(this);
+        depth::paintSurface(painter, QRectF(rect()).adjusted(6, 6, -6, -6), themeColors());
+    }
+
     void resizeEvent(QResizeEvent* event) override
     {
         Card::resizeEvent(event);
@@ -217,6 +244,52 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
             &GallerySettings::setHomeParticlesEnabled);
     connect(settings, &GallerySettings::homeParticlesEnabledChanged, homeParticles,
             &fluent::basicinput::ToggleSwitch::setIsOn);
+    auto* spatialMode = new fluent::basicinput::ToggleSwitch(this);
+    spatialMode->setObjectName(QStringLiteral("gallerySettingsSpatialModeToggle"));
+    spatialMode->setAccessibleName(QStringLiteral("3D Gallery"));
+    spatialMode->setAccessibleDescription(
+        QStringLiteral("Switch the Gallery and all Spatial examples between 2D and 3D."));
+    spatialMode->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    connect(spatialMode, &fluent::basicinput::ToggleSwitch::toggled, settings,
+            &GallerySettings::setSpatialModeEnabled);
+    const auto updateSpatialAvailability = [spatialMode, settings]() {
+        const bool policyAllows =
+            fluent::MotionPolicy::instance().mode() == fluent::MotionPolicy::Mode::Full &&
+            fluent::FluentElement::currentTheme() != fluent::FluentElement::HighContrast;
+        const bool canTry = settings->spatialAvailable() || settings->spatialAvailabilityPending();
+        const bool available = canTry && policyAllows;
+        // Display the effective state without overwriting a preference from another machine.
+        // zh_CN: 显示生效状态，保留用户在其他设备上保存的偏好。
+        const QSignalBlocker blocker(spatialMode);
+        spatialMode->setIsOn(available && settings->spatialModeEnabled());
+        spatialMode->setEnabled(available);
+        spatialMode->setToolTip(
+            !canTry ? settings->spatialUnavailableReason()
+            : !policyAllows
+                ? QStringLiteral("Use Full motion and a Light or Dark theme to enable 3D")
+                : QString());
+        spatialMode->setAccessibleDescription(
+            available
+                ? QStringLiteral("Switch the Gallery and all Spatial examples between 2D and 3D.")
+                : spatialMode->toolTip());
+    };
+    connect(settings, &GallerySettings::spatialModeEnabledChanged, spatialMode,
+            updateSpatialAvailability);
+    connect(settings, &GallerySettings::spatialAvailabilityChanged, spatialMode,
+            updateSpatialAvailability);
+    connect(&fluent::MotionPolicy::instance(), &fluent::MotionPolicy::modeChanged, spatialMode,
+            updateSpatialAvailability);
+    connect(settings, &GallerySettings::themeModeChanged, spatialMode, updateSpatialAvailability);
+    updateSpatialAvailability();
+    auto* spatialControl = new QWidget(this);
+    spatialControl->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    auto* spatialControlLayout = new QHBoxLayout(spatialControl);
+    spatialControlLayout->setContentsMargins(0, 0, 0, 0);
+    spatialControlLayout->setSpacing(8);
+    auto* spatialBadge = new GallerySpatialSupportBadge(spatialControl);
+    spatialBadge->setObjectName(QStringLiteral("gallerySettingsSpatialSupportBadge"));
+    spatialControlLayout->addWidget(spatialBadge, 0, Qt::AlignVCenter);
+    spatialControlLayout->addWidget(spatialMode, 0, Qt::AlignVCenter);
     // Match the native WinUI Gallery, which exposes only two navigation styles: "Left" and "Top".
     // "Left" maps to the responsive Auto mode (expanded → compact → minimal by width, just like
     // WinUI's PaneDisplayMode.Auto); "Top" is the horizontal bar. The richer internal enum
@@ -308,6 +381,10 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
         Typography::Icons::Play, QStringLiteral("Motion"),
         QStringLiteral("Choose full, reduced, or disabled interface motion"), m_motionChoice));
     m_contentLayout->addWidget(createSettingsRow(
+        Typography::Icons::Grid, QStringLiteral("3D Gallery"),
+        QStringLiteral("Add depth to navigation, pages and all Spatial examples."),
+        spatialControl));
+    m_contentLayout->addWidget(createSettingsRow(
         Typography::Icons::FavoriteStar, QStringLiteral("Home particle effects"),
         QStringLiteral("Show animated particles in the home banner"), homeParticles));
     m_contentLayout->addWidget(createSettingsRow(
@@ -328,9 +405,10 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
     }
     m_contentLayout->addSpacing(10);
     m_contentLayout->addWidget(createSectionTitle(runtime.distributionSectionTitle));
-    m_contentLayout->addWidget(createSettingsRow(
+    auto* updateControl = createUpdateCheckControl();
+    m_contentLayout->addWidget(new SettingsRow(
         runtime.checksForUpdates ? Typography::Icons::Sync : Typography::Icons::Link,
-        runtime.distributionTitle, runtime.distributionDescription, createUpdateCheckControl()));
+        runtime.distributionTitle, {}, updateControl, this, m_updateStatusLabel));
     m_contentLayout->addStretch(1);
 
     scrollArea->setWidget(m_viewport);
@@ -421,19 +499,20 @@ QWidget* SettingsPage::createUpdateCheckControl()
     panel->setObjectName(QStringLiteral("gallerySettingsUpdateCheckControl"));
     auto* layout = new QHBoxLayout(panel);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(12);
-    layout->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
     const auto& runtime = platform::capabilities();
+    // Version/status is the row's subtitle; only the action occupies the trailing column.
+    // zh_CN: 版本及更新状态作为行副标题，仅操作按钮占据尾部列。
+    m_updateStatusLabel = new SecondaryLabel(
+        QStringLiteral("Version %1 · %2")
+            .arg(m_updateChecker ? m_updateChecker->currentVersion()
+                                 : QCoreApplication::applicationVersion(),
+                 m_updateChecker ? m_updateChecker->platformLabel() : runtime.runtimeLabel),
+        this);
+    m_updateStatusLabel->setObjectName(QStringLiteral("gallerySettingsUpdateStatus"));
+    m_updateStatusLabel->setToolTip(runtime.distributionDescription);
     if (!runtime.checksForUpdates) {
         m_updateActionUrl = runtime.distributionActionUrl;
-        m_updateStatusLabel = new SecondaryLabel(
-            QStringLiteral("Version %1 / %2")
-                .arg(QCoreApplication::applicationVersion(), runtime.runtimeLabel),
-            panel);
-        m_updateStatusLabel->setObjectName(QStringLiteral("gallerySettingsUpdateStatus"));
-        m_updateStatusLabel->setFluentTypography(Typography::FontRole::Caption);
-        m_updateStatusLabel->setAlignment(Qt::AlignRight);
 
         m_updateButton = new fluent::basicinput::Button(runtime.distributionActionText, panel);
         m_updateButton->setObjectName(QStringLiteral("gallerySettingsViewSourceButton"));
@@ -441,21 +520,9 @@ QWidget* SettingsPage::createUpdateCheckControl()
         m_updateButton->setIconGlyph(Typography::Icons::Link, Typography::IconSize::Standard);
         connect(m_updateButton, &QPushButton::clicked, this, &SettingsPage::openUpdateTarget);
 
-        layout->addWidget(m_updateStatusLabel, 1, Qt::AlignRight | Qt::AlignVCenter);
         layout->addWidget(m_updateButton, 0, Qt::AlignRight);
         return panel;
     }
-
-    m_updateStatusLabel = new SecondaryLabel(
-        QStringLiteral("Current %1 / %2")
-            .arg(m_updateChecker->currentVersion(), m_updateChecker->platformLabel()),
-        panel);
-    m_updateStatusLabel->setObjectName(QStringLiteral("gallerySettingsUpdateStatus"));
-    m_updateStatusLabel->setFluentTypography(Typography::FontRole::Caption);
-    m_updateStatusLabel->setAlignment(Qt::AlignRight);
-    m_updateStatusLabel->setWordWrap(true);
-    m_updateStatusLabel->setMaximumWidth(240);
-    m_updateStatusLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
     m_updateButton = new fluent::basicinput::Button(QStringLiteral("Check updates"), panel);
     m_updateButton->setObjectName(QStringLiteral("gallerySettingsCheckUpdatesButton"));
@@ -473,7 +540,6 @@ QWidget* SettingsPage::createUpdateCheckControl()
     connect(m_updateChecker, &UpdateChecker::checkFinished, this,
             &SettingsPage::handleUpdateCheckFinished);
 
-    layout->addWidget(m_updateStatusLabel, 1, Qt::AlignRight | Qt::AlignVCenter);
     layout->addWidget(m_updateButton, 0, Qt::AlignRight);
     return panel;
 }
@@ -500,7 +566,7 @@ void SettingsPage::handleUpdateCheckFinished(const UpdateChecker::Result& result
         m_updateActionUrl = result.assetUrl.isValid() ? result.assetUrl : result.releaseUrl;
         m_updateStatusLabel->setText(
             result.assetUrl.isValid()
-                ? QStringLiteral("Version %1 available / %2")
+                ? QStringLiteral("Version %1 available · %2")
                       .arg(result.latestVersion, m_updateChecker->platformLabel())
                 : QStringLiteral("Version %1 available").arg(result.latestVersion));
         m_updateButton->setFluentStyle(fluent::basicinput::Button::Accent);

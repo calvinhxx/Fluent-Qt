@@ -108,6 +108,16 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
           {QStringLiteral("field"), QStringLiteral("Field"), Typography::Icons::Edit},
           {QStringLiteral("particle-backdrop"), QStringLiteral("ParticleBackdrop"),
            Typography::Icons::Refresh}}},
+#ifdef FLUENT_QT_HAS_SPATIAL
+        {QStringLiteral("spatial"),
+         QStringLiteral("Spatial"),
+         QStringLiteral("spatial"),
+         Typography::Icons::glyph(QStringLiteral("ic_fluent_layer_diagonal_20_regular")),
+         {{QStringLiteral("spatial-view"), QStringLiteral("SpatialView"),
+           Typography::Icons::glyph(QStringLiteral("ic_fluent_cube_multiple_20_regular"))},
+          {QStringLiteral("spatial-item"), QStringLiteral("SpatialItem"),
+           Typography::Icons::glyph(QStringLiteral("ic_fluent_cube_rotate_20_regular"))}}},
+#endif
         {QStringLiteral("menus-toolbars"),
          QStringLiteral("Menus & toolbars"),
          QStringLiteral("menus_toolbars"),
@@ -200,6 +210,7 @@ GalleryComponentReference galleryComponentReference(const QString& routeId)
         {QStringLiteral("menus_toolbars"), QStringLiteral("<FluentQt/MenusToolbars.h>")},
         {QStringLiteral("navigation"), QStringLiteral("<FluentQt/Navigation.h>")},
         {QStringLiteral("scrolling"), QStringLiteral("<FluentQt/Scrolling.h>")},
+        {QStringLiteral("spatial"), QStringLiteral("<FluentQt/Spatial.h>")},
         {QStringLiteral("status_info"), QStringLiteral("<FluentQt/StatusInfo.h>")},
         {QStringLiteral("textfields"), QStringLiteral("<FluentQt/TextFields.h>")},
         {QStringLiteral("windowing"), QStringLiteral("<FluentQt/Windowing.h>")},
@@ -216,6 +227,14 @@ GalleryComponentReference galleryComponentReference(const QString& routeId)
                 component.apiNamespace.isEmpty()
                     ? QStringLiteral("fluent::%1").arg(category.sourceDirectory)
                     : component.apiNamespace;
+            if (category.id == QStringLiteral("spatial")) {
+                return {categoryHeaders.value(category.sourceDirectory),
+                        QStringLiteral("%1::%2").arg(apiNamespace, typeName),
+                        QStringLiteral("FluentQt::Spatial"),
+                        QStringLiteral("Source build: FLUENT_QT_BUILD_SPATIAL=ON"),
+                        QStringLiteral("from fluentqt.spatial import %1").arg(typeName),
+                        typeName};
+            }
             return {categoryHeaders.value(category.sourceDirectory,
                                           QStringLiteral("<FluentQt/FluentQt.h>")),
                     QStringLiteral("%1::%2").arg(apiNamespace, typeName),

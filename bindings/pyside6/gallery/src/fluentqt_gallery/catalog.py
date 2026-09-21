@@ -8,6 +8,8 @@ from pathlib import Path
 import re
 from typing import Iterable
 
+from .spatial_support import SPATIAL_AVAILABLE
+
 
 @dataclass(frozen=True)
 class GallerySampleEntry:
@@ -76,9 +78,9 @@ def _load_contract() -> dict[str, object]:
         )
     summary = contract.get("summary", {})
     expected = {
-        "route_count": 105,
-        "component_count": 83,
-        "sample_count": 228,
+        "route_count": 108,
+        "component_count": 85,
+        "sample_count": 239,
     }
     if summary != expected:
         raise RuntimeError(
@@ -90,13 +92,22 @@ def _load_contract() -> dict[str, object]:
 
 CONTRACT = _load_contract()
 
+# Package one canonical catalog. Optional routes are exposed only when the
+# installed binding includes Spatial; the same Gallery wheel supports 2D users.
+_categories = [c for c in CONTRACT["categories"]
+               if SPATIAL_AVAILABLE or c["id"] != "spatial"]
+_components = [c for c in CONTRACT["components"]
+               if SPATIAL_AVAILABLE or c["category_id"] != "spatial"]
+_routes = [r for r in CONTRACT["routes"]
+           if SPATIAL_AVAILABLE or (r["id"] != "spatial" and r["parent_id"] != "spatial")]
+
 CATEGORIES = tuple(
     GalleryCategory(
         id=category["id"],
         title=category["title"],
         components=tuple(category["components"]),
     )
-    for category in CONTRACT["categories"]
+    for category in _categories
 )
 
 ENTRIES = tuple(
@@ -121,7 +132,7 @@ ENTRIES = tuple(
             for sample in component["samples"]
         ),
     )
-    for component in CONTRACT["components"]
+    for component in _components
 )
 
 ROUTES = tuple(
@@ -132,7 +143,7 @@ ROUTES = tuple(
         parent_id=route["parent_id"],
         description=route["description"],
     )
-    for route in CONTRACT["routes"]
+    for route in _routes
 )
 
 SUPPORT_TYPES = frozenset(CONTRACT["binding_support_types"])
@@ -180,6 +191,8 @@ def catalog_coverage_errors(manifest_classes: Iterable[str]) -> list[str]:
     """Compare routed plus embedded support types with the binding manifest."""
 
     manifest = set(manifest_classes)
+    if SPATIAL_AVAILABLE:
+        manifest.update(("SpatialView", "SpatialItem"))
     routed = {entry.name for entry in ENTRIES}
     covered = routed | set(SUPPORT_TYPES)
     errors = []

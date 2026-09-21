@@ -29,6 +29,7 @@ constexpr char kWindowMaximizedKey[] = "window/maximized";
 constexpr char kIntroCompletedKey[] = "intro/completed";
 constexpr char kLastHomeParticleEffectKey[] = "home/lastParticleEffect";
 constexpr char kHomeParticlesEnabledKey[] = "home/particlesEnabled";
+constexpr char kSpatialModeEnabledKey[] = "settings/spatialModeEnabled";
 
 using BackdropEffect = fluent::windowing::BackdropEffect;
 
@@ -130,6 +131,43 @@ GallerySettings::GallerySettings(QObject* parent) : QObject(parent)
             applyThemeMode();
     });
     applyThemeMode();
+    connect(&fluent::MotionPolicy::instance(), &fluent::MotionPolicy::modeChanged, this,
+            [this](MotionMode mode) {
+                if (mode != MotionMode::Full)
+                    setSpatialModeEnabled(false);
+            });
+}
+
+void GallerySettings::beginSpatialAvailabilityCheck()
+{
+    m_spatialAvailable = false;
+    m_spatialAvailabilityPending = true;
+    m_spatialUnavailableReason = tr("3D support is checked when you enable it.");
+    emit spatialAvailabilityChanged();
+}
+
+void GallerySettings::setSpatialAvailability(bool available, const QString& reason)
+{
+    const QString effectiveReason = available ? QString() : reason;
+    if (!m_spatialAvailabilityPending && m_spatialAvailable == available &&
+        m_spatialUnavailableReason == effectiveReason)
+        return;
+    m_spatialAvailabilityPending = false;
+    m_spatialAvailable = available;
+    m_spatialUnavailableReason = effectiveReason;
+    emit spatialAvailabilityChanged();
+}
+
+void GallerySettings::setSpatialModeEnabled(bool enabled)
+{
+    enabled = enabled && fluent::MotionPolicy::instance().mode() == MotionMode::Full &&
+              fluent::FluentElement::currentTheme() != fluent::FluentElement::HighContrast;
+    if (m_spatialModeEnabled == enabled)
+        return;
+    m_spatialModeEnabled = enabled;
+    if (platform::persistenceAvailable())
+        platform::createSettings().setValue(QString::fromLatin1(kSpatialModeEnabledKey), enabled);
+    emit spatialModeEnabledChanged(enabled);
 }
 
 void GallerySettings::setHomeParticlesEnabled(bool enabled)
@@ -197,6 +235,8 @@ void GallerySettings::setThemeMode(ThemeMode mode)
                                             static_cast<int>(mode));
     }
     applyThemeMode();
+    if (mode == ThemeMode::HighContrast)
+        setSpatialModeEnabled(false);
     emit themeModeChanged(m_themeMode);
     LOG_INFO(
         QStringLiteral("GallerySettings themeModeChanged mode=%1").arg(static_cast<int>(mode)));
@@ -395,6 +435,9 @@ void GallerySettings::load()
         settings.value(QString::fromLatin1(kLastHomeParticleEffectKey)).toString();
     m_homeParticlesEnabled =
         settings.value(QString::fromLatin1(kHomeParticlesEnabledKey), true).toBool();
+    m_spatialModeEnabled =
+        m_motionMode == MotionMode::Full && m_themeMode != ThemeMode::HighContrast &&
+        settings.value(QString::fromLatin1(kSpatialModeEnabledKey), false).toBool();
 }
 
 } // namespace fluent::gallery

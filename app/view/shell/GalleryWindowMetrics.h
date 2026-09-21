@@ -52,21 +52,24 @@ struct TitleBar {
     }
 
     static int leadingChromeRight(int systemReservedLeadingWidth, bool showAppIcon, bool showTitle,
-                                  qreal backReveal)
+                                  qreal backReveal, bool showMenu = true)
     {
-        int right = leadingOffset(systemReservedLeadingWidth) +
-                    qRound(backReveal * (ButtonSize + ItemGap)) + ButtonSize;
+        int right =
+            leadingOffset(systemReservedLeadingWidth) + qRound(backReveal * (ButtonSize + ItemGap));
+        if (showMenu)
+            right += ButtonSize;
         if (showAppIcon)
-            right += ItemGap + AppIconSize;
+            right += (showMenu ? ItemGap : 0) + AppIconSize;
         if (showTitle)
             right += ItemGap + TitleWidth;
         return right;
     }
 
     static int searchLeftBound(int systemReservedLeadingWidth, bool showAppIcon, bool showTitle,
-                               qreal backReveal)
+                               qreal backReveal, bool showMenu = true)
     {
-        return leadingChromeRight(systemReservedLeadingWidth, showAppIcon, showTitle, backReveal) +
+        return leadingChromeRight(systemReservedLeadingWidth, showAppIcon, showTitle, backReveal,
+                                  showMenu) +
                ItemGap;
     }
 

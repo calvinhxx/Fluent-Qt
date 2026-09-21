@@ -21,7 +21,7 @@ fluentqt.prepare_high_dpi_application()
 
 from PySide6.QtWidgets import QApplication
 
-from fluentqt_gallery.catalog import ENTRIES
+from fluentqt_gallery.catalog import CONTRACT, ENTRIES
 from fluentqt_gallery.samples import build_sample
 
 
@@ -63,6 +63,8 @@ def generate_catalog() -> dict[str, object]:
 
     samples: list[dict[str, str]] = []
     for entry in ENTRIES:
+        if entry.category_id == "spatial":
+            continue
         for sample in entry.samples:
             result = build_sample(entry.route_id, sample.id)
             try:
@@ -113,13 +115,31 @@ def generate_catalog() -> dict[str, object]:
                 _GENERATED_RESULTS.append(result)
                 QApplication.processEvents()
 
+    # Spatial's source is packaged even with a base binding. The optional
+    # binding tests execute these same examples when that module is built.
+    # Generation must not require OpenGL merely to export teaching text.
+    from fluentqt_gallery.native_samples_spatial import full_example_source
+    for component in CONTRACT["components"]:
+        if component["category_id"] != "spatial":
+            continue
+        for sample in component["samples"]:
+            samples.append({
+                "route_id": component["id"],
+                "sample_id": sample["id"],
+                "source": full_example_source(sample["id"]),
+            })
+    order = {(c["id"], s["id"]): i for i, (c, s) in enumerate(
+        (c, s) for c in CONTRACT["components"] for s in c["samples"]
+    )}
+    samples.sort(key=lambda sample: order[(sample["route_id"], sample["sample_id"])])
+
     return {
         "schema_version": 1,
         "canonical_source": (
             "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py"
         ),
         "summary": {
-            "component_count": len(ENTRIES),
+            "component_count": len(CONTRACT["components"]),
             "sample_count": len(samples),
         },
         "samples": samples,

@@ -35,6 +35,8 @@ class ToolTip;
 
 namespace fluent::gallery {
 
+class GallerySpatialSupportBadge;
+
 class GalleryNavigationPane : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     Q_PROPERTY(QString selectedRouteId READ selectedRouteId WRITE setSelectedRouteId NOTIFY
@@ -78,6 +80,7 @@ private:
     void rebuild();
     void updateButtonStyles();
     void updateCompactRowVisibility();
+    void updateSpatialBadgeGeometry();
     void syncCompactVisualProperties();
     void updateDividerPalette();
     void startCompactVisualTransition(bool compact);
@@ -97,6 +100,7 @@ private:
     QVector<GalleryNavigationItem> m_items;
     QStandardItemModel* m_model = nullptr;
     fluent::collections::TreeView* m_treeView = nullptr;
+    GallerySpatialSupportBadge* m_spatialBadge = nullptr;
     fluent::layout::Divider* m_footerDivider = nullptr;
     fluent::dialogs_flyouts::Popup* m_compactFlyout = nullptr;
     fluent::status_info::ToolTip* m_compactToolTip = nullptr;

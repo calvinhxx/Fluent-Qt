@@ -1,4 +1,5 @@
 #include "GalleryIntroTour.h"
+#include "GallerySpatialController.h"
 
 #include <algorithm>
 
@@ -159,6 +160,49 @@ void GalleryIntroTour::build()
     m_spotAnim->setEasingCurve(animation.decelerate);
 }
 
+QRect GalleryIntroTour::presentedTargetRect(QWidget* target) const
+{
+    QWidget* win = m_host ? m_host->window() : nullptr;
+    if (!win || !target)
+        return {};
+    if (auto* spatial = win->findChild<GallerySpatialController*>()) {
+        const QRect rect = target->rect();
+        const QPolygon corners{spatial->projectedPosition(target, rect.topLeft()),
+                               spatial->projectedPosition(target, rect.topRight()),
+                               spatial->projectedPosition(target, rect.bottomLeft()),
+                               spatial->projectedPosition(target, rect.bottomRight())};
+        return corners.boundingRect();
+    }
+    return QRect(target->mapTo(win, QPoint()), target->size());
+}
+
+void GalleryIntroTour::syncCardAnchor(bool retarget)
+{
+    if (!m_card || m_index < 0 || m_index >= m_steps.size())
+        return;
+    const auto& step = m_steps.at(m_index);
+    if (step.centered || !step.target) {
+        m_card->setTarget(nullptr);
+        return;
+    }
+    // The original widgets retain their native layout. Give CoachMark an inert
+    // anchor at the presented bounds, using the same mapping as the spotlight.
+    // zh_CN: 原控件保留原生布局；提示框和高亮共用投影坐标，锚点仅提供几何、不承接输入。
+    QWidget* previous = nullptr;
+    if (retarget || !m_presentedAnchor) {
+        previous = m_presentedAnchor;
+        m_presentedAnchor = new QWidget(m_scrim);
+        m_presentedAnchor->setObjectName(QStringLiteral("GalleryIntroTour.PresentedAnchor"));
+        m_presentedAnchor->setAttribute(Qt::WA_TransparentForMouseEvents);
+        m_presentedAnchor->setAttribute(Qt::WA_NoSystemBackground);
+    }
+    m_presentedAnchor->setGeometry(presentedTargetRect(step.target).translated(-m_scrim->pos()));
+    m_presentedAnchor->show();
+    m_card->setTarget(m_presentedAnchor);
+    if (previous)
+        previous->deleteLater();
+}
+
 QRect GalleryIntroTour::spotlightRectFor(QWidget* target) const
 {
     QWidget* win = m_host ? m_host->window() : nullptr;
@@ -168,7 +212,7 @@ QRect GalleryIntroTour::spotlightRectFor(QWidget* target) const
     if (surface.isEmpty())
         return QRect();
 
-    const QRect inWindow(target->mapTo(win, QPoint(0, 0)), target->size());
+    const QRect inWindow = presentedTargetRect(target);
     const QRect inScrim = inWindow.translated(-surface.topLeft());
     return inScrim
         .marginsAdded(
@@ -209,6 +253,7 @@ void GalleryIntroTour::syncScrimGeometry()
     if (m_scrim && m_host && m_host->window()) {
         m_scrim->setGeometry(scrimGeometryForWindow());
         syncScrimSurfaceRadius();
+        syncCardAnchor();
         // The target moved with the window; re-anchor the cut-out without a glide. zh_CN: 目标随窗口移动,
         // 不滑动地重新对齐挖空。
         if (m_haveSpot && m_index >= 0 && m_index < m_steps.size()) {
@@ -249,6 +294,8 @@ void GalleryIntroTour::start()
     }
 
     m_focusBeforeStart = QApplication::focusWidget();
+    if (auto* spatial = m_host->window()->findChild<GallerySpatialController*>())
+        spatial->cancelTransition();
     build();
     // Modal: the scrim blocks clicks; lock the window chrome so it can't be moved or resized.
     // zh_CN: 模态:遮罩拦截点击;锁定窗口 chrome,使其不可移动或缩放。
@@ -323,7 +370,7 @@ void GalleryIntroTour::applyStep(int index, bool animateSpotlight)
     // CoachMark glides to the new target itself when retargeted while open.
     // zh_CN: 打开状态下重定向时,CoachMark 自己滑动到新目标。
     m_card->setPlacement(step.placement);
-    m_card->setTarget(step.centered ? nullptr : step.target.data());
+    syncCardAnchor(/*retarget*/ true);
 
     applyStepSpotlight(index, animateSpotlight);
 }
@@ -423,6 +470,11 @@ bool GalleryIntroTour::eventFilter(QObject* watched, QEvent* event)
         m_scrim->raise();
         if (m_card && m_card->isOpen())
             m_card->raise();
+        // Re-map once the host's layout and spatial compositor have settled this resize.
+        QTimer::singleShot(0, this, [this] {
+            if (!m_finished)
+                syncScrimGeometry();
+        });
     }
     return QObject::eventFilter(watched, event);
 }

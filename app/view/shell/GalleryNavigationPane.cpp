@@ -10,6 +10,7 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPropertyAnimation>
+#include <QScrollBar>
 #include <QStandardItem>
 #include <QStandardItemModel>
 #include <QTimer>
@@ -29,6 +30,9 @@
 #include "GalleryNavigationDelegate.h"
 #include "GalleryNavigationMetrics.h"
 #include "view/support/GalleryStyleSupport.h"
+#include "view/support/GalleryDepth.h"
+#include "view/widgets/GallerySpatialSupportBadge.h"
+#include "viewmodel/GallerySettings.h"
 
 namespace fluent::gallery {
 
@@ -215,6 +219,11 @@ void GalleryNavigationPane::paintEvent(QPaintEvent* event)
 
 bool GalleryNavigationPane::event(QEvent* event)
 {
+    if (event->type() == depth::changeEvent()) {
+        update();
+        if (m_treeView && m_treeView->viewport())
+            m_treeView->viewport()->update();
+    }
     // Repaint when the window's activation changes so the inline pane's themeBackdrop tracks
     // active/inactive in lockstep with the title bar (both read isActiveWindow() via
     // windowChromeBackdropFill). Without this the pane would stay at the active tint while the title bar
@@ -259,6 +268,8 @@ bool GalleryNavigationPane::eventFilter(QObject* watched, QEvent* event)
     }
 
     if (m_treeView && watched == m_treeView->viewport()) {
+        if (event->type() == QEvent::Resize || event->type() == QEvent::Paint)
+            updateSpatialBadgeGeometry();
         switch (event->type()) {
         case QEvent::ToolTip: {
             const auto* helpEvent = static_cast<QHelpEvent*>(event);
@@ -354,6 +365,27 @@ void GalleryNavigationPane::rebuild()
 
     m_treeView->setModel(m_model);
     m_treeView->setItemDelegate(makeGalleryNavigationDelegate(this, m_treeView));
+    if (indexForRouteId(QStringLiteral("spatial")).isValid()) {
+        m_spatialBadge = new GallerySpatialSupportBadge(m_treeView->viewport());
+        m_spatialBadge->setObjectName(QStringLiteral("galleryNavigationSpatialSupportBadge"));
+        m_spatialBadge->hide();
+        m_model->setData(indexForRouteId(QStringLiteral("spatial")),
+                         m_spatialBadge->width() + qRound(kTextRightGap), AccessoryWidthRole);
+        const auto updateSupportDescription = [this] {
+            m_model->setData(indexForRouteId(QStringLiteral("spatial")),
+                             m_spatialBadge->accessibleDescription(),
+                             Qt::AccessibleDescriptionRole);
+        };
+        connect(&GallerySettings::instance(), &GallerySettings::spatialAvailabilityChanged, this,
+                updateSupportDescription);
+        updateSupportDescription();
+        connect(m_treeView->verticalScrollBar(), &QScrollBar::valueChanged, this,
+                &GalleryNavigationPane::updateSpatialBadgeGeometry);
+        connect(m_treeView, &QTreeView::expanded, this,
+                &GalleryNavigationPane::updateSpatialBadgeGeometry);
+        connect(m_treeView, &QTreeView::collapsed, this,
+                &GalleryNavigationPane::updateSpatialBadgeGeometry);
+    }
     m_treeView->installEventFilter(this);
     if (!isFooterOnly())
         m_treeView->collapseAll();
@@ -368,6 +400,25 @@ void GalleryNavigationPane::rebuild()
                   .arg(m_treeView->objectName())
                   .arg(m_routeIndexes.size())
                   .arg(isFooterOnly() ? QStringLiteral("true") : QStringLiteral("false")));
+}
+
+void GalleryNavigationPane::updateSpatialBadgeGeometry()
+{
+    if (!m_spatialBadge)
+        return;
+    const QRect row = m_treeView->visualRect(indexForRouteId(QStringLiteral("spatial")));
+    const auto* viewport = m_treeView->viewport();
+    const int right = viewport->width() - qRound(kRowRightInset + kChevronRightInset +
+                                                 kChevronAreaWidth + kTextRightGap);
+    const QRect badgeRect(right - m_spatialBadge->width(),
+                          row.top() + (row.height() - m_spatialBadge->height()) / 2,
+                          m_spatialBadge->width(), m_spatialBadge->height());
+    const bool visible = !m_compact && m_compactVisualProgress < 0.01 && !row.isEmpty() &&
+                         viewport->rect().intersects(badgeRect);
+    if (m_spatialBadge->geometry() != badgeRect)
+        m_spatialBadge->setGeometry(badgeRect);
+    if (m_spatialBadge->isHidden() == visible)
+        m_spatialBadge->setVisible(visible);
 }
 
 void GalleryNavigationPane::activateRouteIndex(const QModelIndex& index, bool pointerActivation)

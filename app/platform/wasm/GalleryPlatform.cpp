@@ -12,6 +12,8 @@
 #include <QSettings>
 
 #include <emscripten.h>
+#include <emscripten/html5_webgl.h>
+#include <cstdlib>
 
 #include <utility>
 
@@ -57,6 +59,17 @@ EM_JS(void, fluentQtGalleryPublishHostTheme, (int value), {
 
 } // namespace
 
+QString graphicsRendererOverride()
+{
+    const auto context = emscripten_webgl_get_current_context();
+    if (!context || !emscripten_webgl_enable_extension(context, "WEBGL_debug_renderer_info"))
+        return {};
+    char* name = emscripten_webgl_get_parameter_utf8(0x9246); // UNMASKED_RENDERER_WEBGL
+    const QString result = QString::fromUtf8(name ? name : "");
+    std::free(name);
+    return result;
+}
+
 void chooseFiles(QWidget* context, const QString& filter,
                  std::function<void(const QString&, qint64)> selected)
 {
@@ -79,6 +92,7 @@ const Capabilities& capabilities()
         result.checksForUpdates = false;
         result.editsThemeFiles = false;
         result.prewarmsRoutes = false;
+        result.probesOffscreenOpenGL = false;
         result.usesClientSideTitleBar = true;
         result.hostControlsTheme = fluentQtGalleryEmbeddedHost() != 0;
         result.showsBilingualDocumentation = true;

@@ -15,6 +15,7 @@
 
 #include "components/basicinput/Button.h"
 #include "components/menus_toolbars/Menu.h"
+#include "components/navigation/SelectorBar.h"
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
@@ -242,8 +243,22 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& python
         topRow->addLayout(langColumn);
     }
 
+    m_sourceSelector = new navigation::SelectorBar(m_contentInner);
+    m_sourceSelector->setObjectName(QStringLiteral("galleryCodeBlockSourceSelector"));
+    m_sourceSelector->setAccessibleName(QStringLiteral("Source detail"));
+    m_sourceSelector->setItemFontRole(Typography::FontRole::Caption);
+    m_sourceSelector->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    m_sourceSelector->addItem(QStringLiteral("Key usage"));
+    m_sourceSelector->addItem(QStringLiteral("Full example"));
+    m_sourceSelector->setSelectedIndex(0);
+    m_sourceSelector->hide();
+    topRow->addWidget(m_sourceSelector, 0, Qt::AlignVCenter);
+    connect(m_sourceSelector, &navigation::SelectorBar::selectedIndexChanged, this,
+            [this] { refreshDisplayedCode(); });
+
     m_copyButton = new fluent::basicinput::Button(m_contentInner);
     m_copyButton->setObjectName(QStringLiteral("galleryCodeBlockCopyButton"));
+    m_copyButton->setAccessibleName(QStringLiteral("Copy displayed code"));
     m_copyButton->setFluentStyle(fluent::basicinput::Button::Subtle);
     m_copyButton->setFluentSize(fluent::basicinput::Button::Small);
     m_copyButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
@@ -303,7 +318,37 @@ QString GalleryCodeBlock::code() const
     if (m_codeLanguage == GalleryCodeLanguage::Python && hasPythonCode()) {
         return m_pythonCode;
     }
+    if (!m_cppExcerpt.isEmpty() && m_sourceSelector->selectedIndex() == 0)
+        return m_cppExcerpt;
     return m_cppCode;
+}
+
+void GalleryCodeBlock::setCppExcerpt(const QString& code)
+{
+    if (m_cppExcerpt == code)
+        return;
+    m_cppExcerpt = code;
+    m_excerptHighlightedHtml.clear();
+    m_sourceSelector->setVisible(!code.isEmpty() && m_codeLanguage == GalleryCodeLanguage::Cpp);
+    if (m_langUnderline)
+        m_langUnderline->setVisible(code.isEmpty());
+    refreshDisplayedCode();
+}
+
+void GalleryCodeBlock::setCppCode(const QString& code)
+{
+    if (m_cppCode == code)
+        return;
+    const bool expanded = isExpanded();
+    if (expanded)
+        setExpandedAnimated(false, false);
+    m_cppCode = code;
+    m_cppHighlightedHtml.clear();
+    m_codeLabel->clear();
+    if (expanded) {
+        applyHighlightedCode();
+        setExpandedAnimated(true, false);
+    }
 }
 
 void GalleryCodeBlock::setCodeLanguage(GalleryCodeLanguage language)
@@ -317,6 +362,7 @@ void GalleryCodeBlock::setCodeLanguage(GalleryCodeLanguage language)
     if (reopen)
         setExpandedAnimated(false, /*animated=*/false);
     m_codeLanguage = language;
+    m_sourceSelector->setVisible(!m_cppExcerpt.isEmpty() && language == GalleryCodeLanguage::Cpp);
     if (m_languageSelector)
         m_languageSelector->setLanguage(language);
     if (m_codeLabel)
@@ -333,6 +379,20 @@ void GalleryCodeBlock::setCodeLanguage(GalleryCodeLanguage language)
     emit codeLanguageChanged(language);
 }
 
+void GalleryCodeBlock::refreshDisplayedCode()
+{
+    const bool reopen = isExpanded();
+    if (reopen)
+        setExpandedAnimated(false, false);
+    m_codeLabel->clear();
+    if (reopen) {
+        applyHighlightedCode();
+        m_contentInner->layout()->invalidate();
+        m_contentInner->layout()->activate();
+        setExpandedAnimated(true, false);
+    }
+}
+
 void GalleryCodeBlock::setExpanded(bool expanded, bool animated)
 {
     LOG_DEBUG(QStringLiteral("GalleryCodeBlock setExpanded expanded=%1 animated=%2")
@@ -347,6 +407,7 @@ void GalleryCodeBlock::onThemeUpdated()
     applyPalette();
     m_cppHighlightedHtml.clear();
     m_pythonHighlightedHtml.clear();
+    m_excerptHighlightedHtml.clear();
     if (isExpanded())
         applyHighlightedCode();
     else if (m_codeLabel)
@@ -364,6 +425,10 @@ void GalleryCodeBlock::applyHighlightedCode()
             m_pythonHighlightedHtml = highlightPythonToHtml(m_pythonCode, dark);
         }
         m_codeLabel->setText(m_pythonHighlightedHtml);
+    } else if (!m_cppExcerpt.isEmpty() && m_sourceSelector->selectedIndex() == 0) {
+        if (m_excerptHighlightedHtml.isEmpty())
+            m_excerptHighlightedHtml = highlightCppToHtml(m_cppExcerpt, dark);
+        m_codeLabel->setText(m_excerptHighlightedHtml);
     } else {
         if (m_cppHighlightedHtml.isEmpty())
             m_cppHighlightedHtml = highlightCppToHtml(m_cppCode, dark);
@@ -392,6 +457,8 @@ void GalleryCodeBlock::applyPalette()
         m_copyButton->onThemeUpdated();
     if (m_languageSelector)
         m_languageSelector->onThemeUpdated();
+    if (m_sourceSelector)
+        m_sourceSelector->onThemeUpdated();
 }
 
 } // namespace fluent::gallery

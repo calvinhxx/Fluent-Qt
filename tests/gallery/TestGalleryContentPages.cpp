@@ -64,6 +64,7 @@
 #include "components/menus_toolbars/CommandBar.h"
 #include "components/menus_toolbars/CommandBarFlyout.h"
 #include "components/menus_toolbars/Menu.h"
+#include "components/navigation/SelectorBar.h"
 #include "components/scrolling/AnnotatedScrollBar.h"
 #include "components/scrolling/PipsPager.h"
 #include "components/scrolling/ScrollView.h"
@@ -752,11 +753,23 @@ TEST_F(GalleryContentPagesTest, ComponentReferencesMatchPublicIntegrationSurface
             EXPECT_TRUE(reference.header.startsWith(QStringLiteral("<FluentQt/")));
             EXPECT_TRUE(reference.header.endsWith(QStringLiteral(".h>")));
             EXPECT_NE(reference.header, QStringLiteral("<FluentQt/FluentQt.h>"));
-            EXPECT_EQ(reference.cmakeTarget, QStringLiteral("FluentQt::FluentQt"));
-            EXPECT_TRUE(reference.hasPythonReference());
-            EXPECT_EQ(reference.pythonInstall, QStringLiteral("python -m pip install FluentQt"));
-            EXPECT_EQ(reference.pythonImport, QStringLiteral("import fluentqt"));
-            EXPECT_TRUE(reference.pythonType.startsWith(QStringLiteral("fluentqt.")));
+            EXPECT_EQ(reference.cmakeTarget, category.id == QStringLiteral("spatial")
+                                                 ? QStringLiteral("FluentQt::Spatial")
+                                                 : QStringLiteral("FluentQt::FluentQt"));
+            if (category.id == QStringLiteral("spatial")) {
+                EXPECT_TRUE(reference.hasPythonReference());
+                EXPECT_EQ(reference.pythonType, component.title);
+                EXPECT_EQ(reference.pythonImport,
+                          QStringLiteral("from fluentqt.spatial import %1").arg(component.title));
+                EXPECT_TRUE(
+                    reference.pythonInstall.contains(QStringLiteral("FLUENT_QT_BUILD_SPATIAL=ON")));
+            } else {
+                EXPECT_TRUE(reference.hasPythonReference());
+                EXPECT_EQ(reference.pythonInstall,
+                          QStringLiteral("python -m pip install FluentQt"));
+                EXPECT_EQ(reference.pythonImport, QStringLiteral("import fluentqt"));
+                EXPECT_TRUE(reference.pythonType.startsWith(QStringLiteral("fluentqt.")));
+            }
             const QString expectedNamespace =
                 component.apiNamespace.isEmpty()
                     ? QStringLiteral("fluent::%1").arg(category.sourceDirectory)
@@ -2482,6 +2495,7 @@ TEST_F(GalleryContentPagesTest, FileSamplesKeepEntryAndModelIndependent)
 TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSource)
 {
     int auditedSamples = 0;
+    int pythonSamples = 0;
     for (const auto& category : galleryComponentCatalog()) {
         for (const auto& component : category.components) {
             const auto reference = galleryComponentReference(component.id);
@@ -2505,7 +2519,12 @@ TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSourc
                 EXPECT_FALSE(
                     sample.codeSnippet.contains(QStringLiteral("import QtQuick.Controls")));
                 const QString pythonSource = galleryPythonSnippet(component.id, sample.id);
-                EXPECT_FALSE(pythonSource.isEmpty());
+                if (reference.hasPythonReference()) {
+                    EXPECT_FALSE(pythonSource.isEmpty());
+                    ++pythonSamples;
+                } else {
+                    EXPECT_TRUE(pythonSource.isEmpty());
+                }
 
                 std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
                 ASSERT_NE(preview, nullptr);
@@ -2558,12 +2577,13 @@ TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSourc
                 codeSampleIds.append(sample.id);
                 ++auditedSamples;
             }
-            EXPECT_TRUE(galleryPythonSnippetsAvailable(component.id, codeSampleIds));
+            EXPECT_EQ(galleryPythonSnippetsAvailable(component.id, codeSampleIds),
+                      reference.hasPythonReference());
         }
     }
 
     EXPECT_GT(auditedSamples, 100) << "The audit must cover the complete component sample catalog";
-    EXPECT_EQ(galleryPythonSnippetCount(), auditedSamples);
+    EXPECT_EQ(galleryPythonSnippetCount(), pythonSamples);
 }
 
 TEST_F(GalleryContentPagesTest, PythonSnippetCatalogToleratesStaleSummaryCounts)
@@ -2965,6 +2985,49 @@ TEST_F(GalleryContentPagesTest, CodeBlockCollapsesAndExpands)
     // toggleExpanded flips the state.
     block.toggleExpanded();
     EXPECT_TRUE(block.isExpanded());
+}
+
+TEST_F(GalleryContentPagesTest, CodeExcerptSwitchesAndCopiesTheDisplayedSource)
+{
+    const QString full = QStringLiteral("auto* card = new Card;\n") +
+                         QStringLiteral("// Full widget setup\n").repeated(20) +
+                         QStringLiteral("view->addWidget(card, WidgetOwnership::Owned);");
+    const QString excerpt = QStringLiteral("// card is built in Full example.\n"
+                                           "view->addWidget(card, WidgetOwnership::Owned);");
+    const QString python = QStringLiteral("button = Button(parent)");
+    GalleryCodeBlock block(full, python);
+    block.setCppExcerpt(excerpt);
+    block.resize(620, block.sizeHint().height());
+    block.show();
+    block.setExpanded(true, false);
+    QApplication::processEvents();
+    auto* selector = block.findChild<fluent::navigation::SelectorBar*>(
+        QStringLiteral("galleryCodeBlockSourceSelector"));
+    ASSERT_NE(selector, nullptr);
+    EXPECT_EQ(block.cppCode(), full);
+    EXPECT_EQ(block.code(), excerpt);
+    const int excerptHeight = block.height();
+    QTest::mouseClick(block.copyButton(), Qt::LeftButton);
+    EXPECT_EQ(QApplication::clipboard()->text(), excerpt);
+
+    QTest::mouseClick(selector, Qt::LeftButton, Qt::NoModifier, selector->itemGeometry(1).center());
+    QApplication::processEvents();
+    EXPECT_TRUE(block.isExpanded());
+    EXPECT_EQ(block.code(), full);
+    EXPECT_GT(block.height(), excerptHeight);
+    QTest::mouseClick(block.copyButton(), Qt::LeftButton);
+    EXPECT_EQ(QApplication::clipboard()->text(), full);
+
+    block.setCodeLanguage(GalleryCodeLanguage::Python);
+    EXPECT_FALSE(selector->isVisible());
+    EXPECT_EQ(block.code(), python);
+    block.setCodeLanguage(GalleryCodeLanguage::Cpp);
+    EXPECT_TRUE(selector->isVisible());
+    QTest::mouseClick(selector, Qt::LeftButton, Qt::NoModifier, selector->itemGeometry(0).center());
+    EXPECT_EQ(block.code(), excerpt);
+    block.setCppExcerpt({});
+    EXPECT_FALSE(selector->isVisible());
+    EXPECT_EQ(block.code(), full);
 }
 
 TEST_F(GalleryContentPagesTest, CodeBlockUsesBodySizedNativeMonospaceFont)

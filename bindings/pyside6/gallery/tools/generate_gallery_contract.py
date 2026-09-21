@@ -34,6 +34,7 @@ CATEGORY_SOURCES = (
         "dialogs-flyouts", "Dialogs & flyouts", "DialogsFlyoutsSamples.cpp"
     ),
     CategorySource("layout", "Layout", "LayoutSamples.cpp"),
+    CategorySource("spatial", "Spatial", "SpatialSamples.cpp"),
     CategorySource(
         "menus-toolbars", "Menus & toolbars", "MenusToolbarsSamples.cpp"
     ),
@@ -360,7 +361,7 @@ def _component_route(component: dict[str, object]) -> dict[str, object]:
     }
 
 
-def generate_contract(project_root: Path) -> dict[str, object]:
+def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> dict[str, object]:
     app_root = project_root / "app"
     samples_root = app_root / "view" / "widgets" / "samples"
     component_source = (app_root / "model" / "GalleryComponentCatalog.cpp").read_text(
@@ -395,6 +396,10 @@ def generate_contract(project_root: Path) -> dict[str, object]:
     for category in CATEGORY_SOURCES:
         source = (samples_root / category.source_file).read_text(encoding="utf-8")
         route_functions = _route_sample_functions(source)
+        if category.id == "spatial" and not include_cpp_only:
+            # Explicit base-only contract for clients without optional modules.
+            seen_routes.update(route_functions)
+            continue
         category_components = []
         for route_id, function_name in route_functions.items():
             if route_id in seen_routes:
@@ -496,29 +501,27 @@ def generate_contract(project_root: Path) -> dict[str, object]:
     )
     manifest_classes = set(api_manifest["classes"])
     routed_types = {component["api_type"] for component in components}
-    missing_bindings = sorted(routed_types - manifest_classes)
+    optional_classes = {
+        name for module in api_manifest.get("optional_modules", {}).values()
+        for name in module["classes"]
+    }
+    missing_bindings = sorted(routed_types - manifest_classes - optional_classes)
     if missing_bindings:
         raise ValueError(
             "native Gallery component types are absent from the binding manifest: {0}"
             .format(", ".join(missing_bindings))
         )
     support_types = sorted(manifest_classes - routed_types)
-    if component_count != 83:
-        raise ValueError(
-            "native component route count changed from 83 to {0}; review the contract"
-            .format(component_count)
-        )
-    if sample_count != 228:
-        raise ValueError(
-            "native sample count changed from 228 to {0}; review the contract".format(
-                sample_count
+    expected_counts = (85, 239, 108) if include_cpp_only else (83, 228, 105)
+    for name, actual, expected in zip(
+        ("component", "sample", "route"),
+        (component_count, sample_count, len(routes)),
+        expected_counts,
+    ):
+        if actual != expected:
+            raise ValueError(
+                f"Gallery {name} count changed from {expected} to {actual}; review the contract"
             )
-        )
-    if len(routes) != 105:
-        raise ValueError(
-            "native navigation route count changed from 105 to {0}; review the contract"
-            .format(len(routes))
-        )
 
     return {
         "schema_version": 1,

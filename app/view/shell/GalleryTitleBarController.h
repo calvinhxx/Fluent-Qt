@@ -69,7 +69,8 @@ public:
     /// zh_CN: 仅在有导航历史时显示返回按钮（平滑收展+淡入淡出）。
     void setBackAvailable(bool available);
 
-    /// Enables/disables the navigation menu button. zh_CN: 启用/禁用导航菜单按钮。
+    /// Shows the navigation menu only when a side pane is available.
+    /// zh_CN: 仅在存在侧边窗格时显示导航菜单按钮。
     void setMenuEnabled(bool enabled);
 
     /// Search box widget the first-launch intro tour anchors a coach mark to.
@@ -110,6 +111,7 @@ private:
     bool m_windowActive = false;
     bool m_backRevealed = false;
     bool m_chromeVisible = true;
+    bool m_menuAvailable = false;
     bool m_appIconRevealed = true;
 };
 

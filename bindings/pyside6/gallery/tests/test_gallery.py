@@ -81,6 +81,8 @@ from fluentqt_gallery.application_controller import (
     GalleryApplicationController,
     keep_running_choice,
 )
+from fluentqt_gallery.spatial_support import SPATIAL_AVAILABLE
+
 from fluentqt_gallery.catalog import (
     CATEGORIES,
     ENTRIES,
@@ -280,6 +282,12 @@ def _python_language_member_equivalents(module: ast.AST) -> set[str]:
     """
     equivalents = set()
     for node in ast.walk(module):
+        if isinstance(node, ast.Subscript):
+            if isinstance(node.slice, ast.Constant) and node.slice.value == 0:
+                equivalents.add("first")
+            if (isinstance(node.slice, ast.UnaryOp) and isinstance(node.slice.op, ast.USub)
+                    and isinstance(node.slice.operand, ast.Constant) and node.slice.operand.value == 1):
+                equivalents.add("last")
         if (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Attribute)
@@ -419,21 +427,21 @@ class PythonGalleryTest(unittest.TestCase):
         self.assertEqual(len(manifest["classes"]), 106)
         self.assertEqual(catalog_coverage_errors(manifest["classes"]), [])
         self.assertEqual(runtime_catalog_errors(), [])
-        self.assertEqual(len(ROUTES), 105)
-        self.assertEqual(len(ENTRIES), 83)
-        self.assertEqual(len(CATEGORIES), 13)
+        self.assertEqual(len(ROUTES), 108 if SPATIAL_AVAILABLE else 105)
+        self.assertEqual(len(ENTRIES), 85 if SPATIAL_AVAILABLE else 83)
+        self.assertEqual(len(CATEGORIES), 14 if SPATIAL_AVAILABLE else 13)
         self.assertEqual(
             sum(len(entry.samples) for entry in ENTRIES),
-            228,
+            239 if SPATIAL_AVAILABLE else 228,
         )
-        self.assertEqual(len({route.id for route in ROUTES}), 105)
-        self.assertEqual(len({entry.route_id for entry in ENTRIES}), 83)
+        self.assertEqual(len({route.id for route in ROUTES}), 108 if SPATIAL_AVAILABLE else 105)
+        self.assertEqual(len({entry.route_id for entry in ENTRIES}), 85 if SPATIAL_AVAILABLE else 83)
 
     def test_support_types_are_explicit_and_embedded_in_real_samples(self):
         self.assertEqual(SUPPORT_TYPES, EXPECTED_SUPPORT_TYPES)
         routed_types = {entry.name for entry in ENTRIES}
         self.assertTrue(routed_types.isdisjoint(SUPPORT_TYPES))
-        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 106)
+        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 108 if SPATIAL_AVAILABLE else 106)
         for entry in ENTRIES:
             self.assertFalse(entry.support_type)
 
@@ -867,7 +875,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 
     def test_every_native_sample_has_an_exact_python_port(self):
         expected = _contract_sample_keys()
-        self.assertEqual(len(expected), 228)
+        self.assertEqual(len(expected), 239 if SPATIAL_AVAILABLE else 228)
         self.assertEqual(ported_sample_keys(), expected)
 
     def test_splash_preview_handles_host_teardown_after_namespace_cleanup(self):
@@ -3009,6 +3017,13 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                                 entry.route_id, sample.id
                             ),
                         )
+                        # Spatial displays a short integration excerpt and a separately
+                        # selectable Full example, like the C++ Gallery. Check the
+                        # full example for API and design-token parity.
+                        contract_source = (result.preview_source
+                                           if entry.category_id == "spatial"
+                                           else result.source)
+                        contract_tree = ast.parse(contract_source)
                         expected_design_tokens = {
                             "fluentqt.Typography.Icons.{0}".format(name)
                             for name in re.findall(
@@ -3052,7 +3067,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         for design_token in expected_design_tokens:
                             self.assertIn(
                                 design_token,
-                                result.source,
+                                contract_source,
                                 "{0}/{1} replaces canonical C++ design "
                                 "token {2} with a hard-coded value or a "
                                 "different alias".format(
@@ -3121,11 +3136,11 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         )
                         python_members = {
                             node.attr
-                            for node in ast.walk(displayed_tree)
+                            for node in ast.walk(contract_tree)
                             if isinstance(node, ast.Attribute)
                         }
                         python_members.update(
-                            _python_language_member_equivalents(displayed_tree)
+                            _python_language_member_equivalents(contract_tree)
                         )
                         for member, aliases in (
                             _CPP_DISPLAY_MEMBER_ALIASES.items()
@@ -3170,7 +3185,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                             isinstance(node, ast.Call)
                             and isinstance(node.func, ast.Attribute)
                             and node.func.attr == "connect"
-                            for node in ast.walk(displayed_tree)
+                            for node in ast.walk(contract_tree)
                         )
                         self.assertGreaterEqual(
                             python_connection_count,
@@ -3202,7 +3217,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                                 and isinstance(node.func.value, ast.Name)
                                 and node.func.value.id == "fluentqt"
                                 and node.func.attr == type_name
-                                for node in ast.walk(displayed_tree)
+                                for node in ast.walk(contract_tree)
                             )
                             self.assertGreaterEqual(
                                 python_constructor_count,
@@ -3217,7 +3232,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 
                         python_text_literals = {
                             node.value
-                            for node in ast.walk(displayed_tree)
+                            for node in ast.walk(contract_tree)
                             if isinstance(node, ast.Constant)
                             and isinstance(node.value, str)
                             and node.value
@@ -3236,6 +3251,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                                 not cpp_literal
                                 or len(cpp_literal) <= 1
                                 or cpp_literal.startswith(":/")
+                                or cpp_literal.endswith(".h")
                                 or "%" in cpp_literal
                             ):
                                 continue
@@ -3279,6 +3295,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                                 isinstance(value, QWidget)
                                 and shiboken6.isValid(value)
                                 and value.parent() is None
+                                and value.graphicsProxyWidget() is None
                             )
                         }
                         self.assertEqual(
@@ -3386,14 +3403,14 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     namespace.clear()
                     QApplication.processEvents()
 
-    def test_window_builds_all_105_routes_and_228_sample_cards(self):
+    def test_window_builds_all_available_routes_and_sample_cards(self):
         window = GalleryWindow()
         window.show()
         QApplication.processEvents()
         try:
             self.assertEqual(window.all_route_ids(), tuple(route.id for route in ROUTES))
             self.assertEqual(window.visit_all_routes(), [])
-            self.assertEqual(len(window._pages), 105)
+            self.assertEqual(len(window._pages), len(ROUTES))
             built_sample_count = 0
             for entry in ENTRIES:
                 _index, page = window._pages[entry.route_id]
@@ -3432,7 +3449,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     "sample surface".format(entry.route_id),
                 )
                 built_sample_count += len(results)
-            self.assertEqual(built_sample_count, 228)
+            self.assertEqual(built_sample_count, len(SAMPLE_BY_KEY))
         finally:
             window.close()
             window.deleteLater()
@@ -3548,7 +3565,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             )
             self.assertEqual(len(home._gallery_featured_grid.cards), 9)
             self.assertEqual(home._gallery_featured_grid.columns, 3)
-            self.assertEqual(len(home._gallery_category_grid.cards), 14)
+            self.assertEqual(len(home._gallery_category_grid.cards), len(CATEGORIES) + 1)
         finally:
             window.close()
             window.deleteLater()
@@ -4124,7 +4141,7 @@ with (
             tour.go_to_step(1)
             tour.go_to_step(2)
             expected_spot = tour._spotlight_rect(
-                window._main_navigation_pane
+                window._navigation_view.mainChromeWidget()
             )
             self.assertEqual(tour._scrim.spotlightRect, expected_spot)
             self.assertEqual(
@@ -4304,7 +4321,7 @@ with (
                 window._navigation_view.footerChromeWidget(),
                 window._top_footer_navigation_pane,
             )
-            self.assertFalse(window._menu_button.isEnabled())
+            self.assertTrue(window._menu_button.isHidden())
             self.assertEqual(window._content_host.geometry().top(), 48)
             self.assertEqual(
                 window._top_main_navigation_pane.sizeHint().height(), 48
@@ -5042,7 +5059,7 @@ with (
         QApplication.processEvents()
         try:
             _index, page = window._pages["settings"]
-            self.assertEqual(len(page._gallery_settings_rows), 8)
+            self.assertEqual(len(page._gallery_settings_rows), 9)
             particles = page.findChild(
                 fluentqt.ToggleSwitch, "gallerySettingsHomeParticlesToggle"
             )

@@ -32,18 +32,28 @@ public:
     QString selectedRouteId() const { return m_selectedRouteId; }
     void setSelectedRouteId(const QString& routeId);
     QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
+    void onThemeUpdated() override;
 
 signals:
     void routeActivated(const QString& routeId);
     void selectedRouteIdChanged(const QString& routeId);
 
+protected:
+    void resizeEvent(QResizeEvent* event) override;
+
 private:
     void updateButtonStyles();
+    void updateButtonLayout();
+    QString visualRouteId() const;
     void showChildFlyout(const QString& routeId, fluent::basicinput::Button* anchor);
     void closeChildFlyout(bool animated = true);
     void startSettingsIconRotation(fluent::basicinput::Button* button);
 
     QHash<QString, fluent::basicinput::Button*> m_buttons;
+    QVector<GalleryNavigationItem> m_items;
+    fluent::basicinput::Button* m_moreButton = nullptr;
+    QWidget* m_groupDivider = nullptr;
     QHash<QString, QVector<GalleryNavigationItem>> m_childItems;
     QHash<QString, QString> m_parentRoutes;
     QString m_selectedRouteId;

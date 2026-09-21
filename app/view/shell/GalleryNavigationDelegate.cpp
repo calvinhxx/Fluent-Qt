@@ -17,6 +17,7 @@
 #include "design/Typography.h"
 #include "GalleryNavigationMetrics.h"
 #include "model/GalleryNavigationItem.h"
+#include "view/support/GalleryDepth.h"
 
 namespace fluent::gallery {
 
@@ -137,7 +138,11 @@ public:
         else if (selected || hovered)
             background = colors.subtleSecondary;
 
-        if (background.alpha() > 0) {
+        const bool spatial = depth::enabled(option.widget);
+        if (spatial && (selected || hovered)) {
+            depth::paintNavigationSurface(*painter, backgroundRect.adjusted(1, 0, -1, -1), colors,
+                                          selected, pressed);
+        } else if (background.alpha() > 0) {
             painter->setPen(Qt::NoPen);
             painter->setBrush(background);
             painter->drawRoundedRect(backgroundRect, radius.control, radius.control);
@@ -187,9 +192,20 @@ public:
         if (!iconGlyph.isEmpty()) {
             const QFont iconFont = Typography::Icons::font(kRouteIconPixelSize);
             painter->setFont(iconFont);
-            painter->setPen(selected ? colors.textPrimary : colors.textSecondary);
+            painter->setPen(selected && spatial
+                                ? colors.accentDefault
+                                : (selected ? colors.textPrimary : colors.textSecondary));
             const QRectF iconRect(iconLeft, backgroundRect.top(), kIconAreaWidth,
                                   backgroundRect.height());
+            if (spatial && (selected || hovered)) {
+                painter->save();
+                QColor reflection = colors.accentDefault;
+                reflection.setAlphaF(selected ? 0.10 : 0.05);
+                painter->setPen(Qt::NoPen);
+                painter->setBrush(reflection);
+                painter->drawRoundedRect(iconRect.adjusted(-3, 3, 3, -3), 5, 5);
+                painter->restore();
+            }
             const qreal iconRotation =
                 index.data(RouteIdRole).toString() == QStringLiteral("settings")
                     ? settingsIconRotationForOption(option)
@@ -215,8 +231,9 @@ public:
         textFont.setPixelSize(kRouteTextPixelSize);
         painter->setFont(textFont);
         painter->setPen(colors.textPrimary);
-        const qreal textRight = hasChildren && !compact ? chevronRect.left() - kTextRightGap
-                                                        : backgroundRect.right() - kTextRightGap;
+        const qreal textRight = (hasChildren && !compact ? chevronRect.left() - kTextRightGap
+                                                         : backgroundRect.right() - kTextRightGap) -
+                                index.data(AccessoryWidthRole).toInt();
         const QRectF textSlot(textX - 6.0 * compactProgress, backgroundRect.top(),
                               qMax<qreal>(0.0, textRight - textX), backgroundRect.height());
         if (expandedOpacity > 0.01) {

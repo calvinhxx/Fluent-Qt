@@ -29,6 +29,9 @@ struct Capabilities {
     bool prewarmsRoutes = true;
     bool usesClientSideTitleBar = false;
     bool hostControlsTheme = false;
+    // WebGL shares the browser canvas context; validate the real viewport instead.
+    // zh_CN: WebGL 共用浏览器画布上下文，应检测真实视口而非创建离屏探针。
+    bool probesOffscreenOpenGL = true;
 
     // Browser component pages can be cross-language documentation surfaces
     // even though their live previews run as native C++ WebAssembly. Installed
@@ -73,6 +76,9 @@ void chooseFiles(QWidget* context, const QString& filter,
 const Capabilities& capabilities();
 bool persistenceAvailable();
 QSettings createSettings();
+// Optional host renderer detail while a graphics context is current.
+// zh_CN: 图形上下文有效时，宿主可补充实际渲染设备名称。
+QString graphicsRendererOverride();
 HostTheme hostTheme();
 void setHostThemeChangedHandler(QObject* context, HostThemeChangedHandler handler);
 void showTopLevelWindow(QWidget* window, const QRect& normalGeometry, bool maximized = false);

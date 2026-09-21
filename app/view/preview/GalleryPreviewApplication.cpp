@@ -18,6 +18,10 @@
 #include <QLayout>
 #include <QLocale>
 #include <QPalette>
+#include <QPainter>
+#ifdef FLUENT_QT_HAS_SPATIAL
+#include <QOpenGLWidget>
+#endif
 #include <QPixmap>
 #include <QRegularExpression>
 #include <QSaveFile>
@@ -226,11 +230,28 @@ bool writeSnapshot(GalleryPreviewWindow* window, const QString& path, QString& r
     if (!ensureParentDirectory(resolvedPath, error))
         return false;
 
-    const QPixmap snapshot = window->grab();
+    QPixmap snapshot = window->grab();
     if (snapshot.isNull()) {
         error = QStringLiteral("Preview window returned an empty snapshot.");
         return false;
     }
+#ifdef FLUENT_QT_HAS_SPATIAL
+    // QWidget::grab does not include separately composed OpenGL child surfaces.
+    // Capture their real FBOs with the same clipping and logical geometry.
+    // zh_CN: QWidget 截图不含独立合成的 OpenGL 子表面；按原裁剪与几何补入真实 FBO。
+    {
+        QPainter painter(&snapshot);
+        for (auto* gl : window->findChildren<QOpenGLWidget*>()) {
+            if (!gl->isVisible() || !gl->isValid() || gl->visibleRegion().isEmpty())
+                continue;
+            const QPoint origin = gl->mapTo(window, QPoint());
+            painter.save();
+            painter.setClipRegion(gl->visibleRegion().translated(origin));
+            painter.drawImage(QRect(origin, gl->size()), gl->grabFramebuffer());
+            painter.restore();
+        }
+    }
+#endif
     QSaveFile file(resolvedPath);
     if (!file.open(QIODevice::WriteOnly)) {
         error =

@@ -120,9 +120,16 @@ def runtime_catalog_errors() -> list[str]:
     from .catalog import ENTRIES, SUPPORT_TYPES
 
     errors = []
-    covered_types = [entry.name for entry in ENTRIES] + sorted(SUPPORT_TYPES)
-    for name in covered_types:
-        value = getattr(fluentqt, name, None)
+    from .spatial_support import SPATIAL_AVAILABLE
+
+    covered_types = [(fluentqt, entry.name) for entry in ENTRIES
+                     if entry.category_id != "spatial"]
+    covered_types.extend((fluentqt, name) for name in sorted(SUPPORT_TYPES))
+    if SPATIAL_AVAILABLE:
+        from fluentqt import spatial
+        covered_types.extend((spatial, name) for name in ("SpatialView", "SpatialItem"))
+    for module, name in covered_types:
+        value = getattr(module, name, None)
         if value is None:
             errors.append("Missing public runtime type: {0}".format(name))
         elif not isinstance(value, type):

@@ -196,6 +196,16 @@ const QHash<QString, QString>& routeDescriptions()
         {QStringLiteral("coach-mark"),
          QStringLiteral("A standalone teaching tip in its own window that points "
                         "a tail at a target and glides between them.")},
+        // Spatial
+        {QStringLiteral("spatial"),
+         QStringLiteral(
+             "Explore existing Fluent controls in 3D, with live examples and source code.")},
+        {QStringLiteral("spatial-view"),
+         QStringLiteral(
+             "Give existing widgets perspective and pointer tilt. Keep text editing and popups in "
+             "the normal layout; native-window and OpenGL children cannot be embedded.")},
+        {QStringLiteral("spatial-item"),
+         QStringLiteral("Position, rotate and scale a widget inside SpatialView.")},
         // Layout
         {QStringLiteral("accordion"),
          QStringLiteral("Coordinates a vertical group of expandable sections "

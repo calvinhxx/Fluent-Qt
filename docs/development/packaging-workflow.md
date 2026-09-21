@@ -19,11 +19,18 @@ surface; the reusable component library is installed through the separate
 - Ensure the Qt deployment tool from the selected Qt kit is available:
   - macOS: `macdeployqt`.
   - Windows: `windeployqt`.
-- Gallery has a Widgets-only Qt runtime contract. Windows deployment disables
+- The base SDK exports `FluentQt::FluentQt` with Widgets dependencies only.
+  The optional `FluentQt::Spatial` target has its own export, loaded by
+  `find_package(FluentQt COMPONENTS Spatial)`. Gallery release presets enable it;
+  use `FLUENT_QT_BUILD_SPATIAL=OFF` for a 2D-only application/SDK.
+  Spatial-enabled Gallery packages may include Qt 6 OpenGL/OpenGLWidgets;
+  Qt 5 uses QOpenGLWidget from Widgets. Gallery restores native 2D when
+  acceleration is unavailable; SpatialView has its own raster fallback.
+  Windows deployment disables
   Qt Quick import scanning, Qt translations, the software OpenGL renderer, and
   the system D3D compiler; Qt 5 deployment also disables ANGLE. Every Windows
   and macOS package is then checked for translation/QML directories and
-  Qt QML, Quick, or OpenGL modules. If Gallery intentionally adopts one of
+  Qt QML or Quick modules. If Gallery intentionally adopts one of
   those features later, update the deployment contract and compatibility tests
   in the same change.
 - Windows NSIS packaging requires NSIS to be installed and available to CPack.
@@ -52,7 +59,7 @@ control for at least the period promised in
 use the distribution's Qt packages.
 
 If Gallery starts deploying a Qt module outside its current Qt Core, GUI,
-Widgets, Network, and Qt Base plug-in contract, add that module's license and
+Widgets, Network, OpenGL/OpenGLWidgets, and Qt Base plug-in contract, add that module's license and
 corresponding source to the package process before release.
 
 Tagged releases also publish `FluentQt-<version>-source.zip`. This portable,

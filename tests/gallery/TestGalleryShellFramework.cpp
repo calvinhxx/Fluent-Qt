@@ -72,6 +72,7 @@
 #include "view/shell/GalleryIntroTour.h"
 #include "view/shell/GalleryNavigationMetrics.h"
 #include "view/shell/GalleryNavigationPane.h"
+#include "view/shell/GalleryTopNavigationPane.h"
 #include "view/shell/GalleryPageSkeleton.h"
 #include "view/shell/GallerySingleInstance.h"
 #include "view/shell/GalleryTitleBarController.h"
@@ -1292,6 +1293,9 @@ TEST_F(GalleryShellFrameworkTest, NavigationEntriesExposeRequiredGroups)
         titles, {QStringLiteral("Home"), QStringLiteral("Controls"), QStringLiteral("Basic input"),
                  QStringLiteral("Collections"), QStringLiteral("Date & time"),
                  QStringLiteral("Dialogs & flyouts"), QStringLiteral("Layout"),
+#ifdef FLUENT_QT_HAS_SPATIAL
+                 QStringLiteral("Spatial"),
+#endif
                  QStringLiteral("Menus & toolbars"), QStringLiteral("Navigation"),
                  QStringLiteral("Scrolling"), QStringLiteral("Status & info"),
                  QStringLiteral("Text fields"), QStringLiteral("Windowing")}));
@@ -1304,6 +1308,9 @@ TEST_F(GalleryShellFrameworkTest, NavigationEntriesExposeRequiredGroups)
         containsAll(routeIds, {QStringLiteral("all-controls"), QStringLiteral("basic-input"),
                                QStringLiteral("collections"), QStringLiteral("date-time"),
                                QStringLiteral("dialogs-flyouts"), QStringLiteral("layout"),
+#ifdef FLUENT_QT_HAS_SPATIAL
+                               QStringLiteral("spatial"),
+#endif
                                QStringLiteral("menus-toolbars"), QStringLiteral("navigation"),
                                QStringLiteral("scrolling"), QStringLiteral("status-info"),
                                QStringLiteral("text-fields"), QStringLiteral("windowing")}));
@@ -1947,6 +1954,62 @@ TEST_F(GalleryShellFrameworkTest, WindowPlacementUsesLogicalScreenBounds)
               QRect(349, 119, 1382, 842));
 }
 
+TEST_F(GalleryShellFrameworkTest, TopModeHidesMenuAndReclaimsItsTitleBarSpace)
+{
+    QWidget host;
+    host.resize(1000, 100);
+    auto* bar = new fluent::windowing::TitleBar(&host);
+    bar->setGeometry(0, 0, 1000, 48);
+    fluent::gallery::GalleryTitleBarController controller(bar, {}, {}, &host);
+    controller.setMenuEnabled(true);
+    host.show();
+    QApplication::processEvents();
+    auto* menu = bar->findChild<QWidget*>("GalleryTitleBar.MenuButton");
+    auto* icon = bar->findChild<QWidget*>("GalleryTitleBar.AppIcon");
+    ASSERT_NE(menu, nullptr);
+    ASSERT_NE(icon, nullptr);
+    const int withMenu = icon->x();
+    controller.setMenuEnabled(false);
+    QApplication::processEvents();
+    EXPECT_TRUE(menu->isHidden());
+    EXPECT_EQ(withMenu - icon->x(), 32);
+    controller.setChromeVisible(false);
+    controller.setChromeVisible(true);
+    EXPECT_TRUE(menu->isHidden());
+    controller.setMenuEnabled(true);
+    EXPECT_TRUE(menu->isVisible());
+    EXPECT_EQ(icon->x(), withMenu);
+}
+
+TEST_F(GalleryShellFrameworkTest, SettingsUpdateStatusFitsAfterFirstNarrowResize)
+{
+    fluent::gallery::GalleryNavigationItem item;
+    item.id = "settings";
+    item.title = "Settings";
+    SettingsPage page(item);
+    page.resize(1000, 800);
+    page.show();
+    QApplication::processEvents();
+    auto* status = page.findChild<QLabel*>("gallerySettingsUpdateStatus");
+    auto* panel = page.findChild<QWidget*>("gallerySettingsUpdateCheckControl");
+    auto* button = page.findChild<Button*>("gallerySettingsCheckUpdatesButton");
+    ASSERT_NE(status, nullptr);
+    ASSERT_NE(panel, nullptr);
+    ASSERT_NE(button, nullptr);
+    EXPECT_FALSE(status->alignment().testFlag(Qt::AlignRight));
+    EXPECT_TRUE(status->text().startsWith("Version "));
+    status->setText("Version 1.8.5 · macOS Apple Silicon");
+    for (int width : {556, 460, 1000, 500}) {
+        page.resize(width, 800);
+        QApplication::processEvents();
+        QTRY_VERIFY_WITH_TIMEOUT(status->height() >= status->heightForWidth(status->width()), 500);
+        EXPECT_TRUE(status->parentWidget()->rect().contains(status->geometry()));
+        EXPECT_TRUE(panel->parentWidget()->rect().contains(panel->geometry()));
+        const QRect textBounds(status->mapTo(panel->parentWidget(), QPoint()), status->size());
+        EXPECT_FALSE(textBounds.intersects(panel->geometry()));
+    }
+}
+
 TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
 {
     auto& settings = GallerySettings::instance();
@@ -2033,9 +2096,9 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
             EXPECT_EQ(metrics.elidedText(item, Qt::ElideRight, availableTextWidth), item);
         }
     }
-    // Appearance & behavior (6 rows) + App behavior (1 row) + Updates (1 row) = 8 rows.
+    // Appearance & behavior (7 rows) + App behavior (1 row) + Updates (1 row) = 9 rows.
     EXPECT_NE(page->findChild<QWidget*>(QStringLiteral("gallerySettingsAccentControl")), nullptr);
-    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 8);
+    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 9);
 
     QStringList visibleText;
     for (auto* label : page->findChildren<fluent::textfields::Label*>())
@@ -2047,7 +2110,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
 
     const auto iconViews =
         page->findChildren<fluent::FontIcon*>(QStringLiteral("gallerySettingsRowIcon"));
-    ASSERT_EQ(iconViews.size(), 8);
+    ASSERT_EQ(iconViews.size(), 9);
     for (auto* iconView : iconViews) {
         EXPECT_FALSE(iconView->glyph().isEmpty());
         EXPECT_EQ(iconView->iconSize(), Typography::IconSize::Standard);
@@ -2912,4 +2975,69 @@ TEST_F(GalleryShellFrameworkTest, TopFlyoutRowClickDismissesAfterReopen)
 
     QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     settings.setNavigationStyle(previousStyle);
+}
+
+TEST_F(GalleryShellFrameworkTest, TopNavigationKeepsActiveCategoryVisibleAndOffersOverflow)
+{
+    GalleryNavigationViewModel model;
+    fluent::gallery::GalleryTopNavigationPane pane(model.mainPaneItems());
+    pane.resize(520, 48);
+    pane.setSelectedRouteId("date-picker");
+    pane.show();
+    QApplication::processEvents();
+    auto* current = pane.findChild<Button*>("galleryTopNavigationButton_date-time");
+    auto* more = pane.findChild<Button*>("galleryTopNavigationMore");
+    auto* windowing = pane.findChild<Button*>("galleryTopNavigationButton_windowing");
+    ASSERT_NE(current, nullptr);
+    ASSERT_NE(more, nullptr);
+    ASSERT_NE(windowing, nullptr);
+    EXPECT_TRUE(current->isChecked());
+    EXPECT_EQ(current->text(), "Date & time");
+    EXPECT_TRUE(current->isVisible());
+    EXPECT_TRUE(more->isVisible());
+    EXPECT_FALSE(windowing->isVisible());
+    EXPECT_LE(more->geometry().right(), pane.width() - 1);
+    QSignalSpy activated(&pane, &fluent::gallery::GalleryTopNavigationPane::routeActivated);
+    QTest::mouseClick(more, Qt::LeftButton);
+    auto* popup = visiblePopupByName(&pane, "galleryTopNavigationFlyout");
+    ASSERT_NE(popup, nullptr);
+    auto* row = popup->findChild<QWidget*>("galleryCompactNavigationFlyoutRow_windowing");
+    ASSERT_NE(row, nullptr);
+    QTest::mouseClick(row, Qt::LeftButton);
+    QApplication::processEvents();
+    ASSERT_EQ(activated.size(), 1);
+    EXPECT_EQ(activated.first().first().toString(), "windowing");
+    EXPECT_TRUE(windowing->isVisible());
+    EXPECT_TRUE(windowing->isChecked());
+    EXPECT_EQ(windowing->text(), "Windowing");
+    EXPECT_FALSE(current->isChecked());
+    EXPECT_TRUE(current->text().isEmpty());
+
+    pane.resize(1180, 48);
+    QApplication::processEvents();
+    EXPECT_FALSE(more->isVisible());
+    for (auto* button : pane.findChildren<Button*>()) {
+        if (!button->objectName().startsWith("galleryTopNavigationButton_"))
+            continue;
+        EXPECT_TRUE(button->isVisible());
+        EXPECT_FALSE(button->accessibleName().isEmpty());
+        EXPECT_TRUE(pane.rect().contains(button->geometry()));
+    }
+    QTest::mouseClick(windowing, Qt::LeftButton);
+    EXPECT_TRUE(windowing->isChecked()) << "Clicking the current category must keep it selected";
+    auto* accessible = QAccessible::queryAccessibleInterface(current);
+    ASSERT_NE(accessible, nullptr);
+    ASSERT_NE(accessible->actionInterface(), nullptr);
+    activated.clear();
+    accessible->actionInterface()->doAction(QAccessibleActionInterface::toggleAction());
+    ASSERT_EQ(activated.size(), 1);
+    EXPECT_EQ(activated.first().first().toString(), "date-time");
+    EXPECT_TRUE(current->isChecked());
+    EXPECT_FALSE(windowing->isChecked());
+    pane.setSelectedRouteId("home");
+    EXPECT_EQ(activated.size(), 1) << "Synchronizing selection must not activate another route";
+    activated.clear();
+    QTest::keyClick(current, Qt::Key_Space);
+    ASSERT_EQ(activated.size(), 1);
+    EXPECT_EQ(activated.first().first().toString(), "date-time");
 }

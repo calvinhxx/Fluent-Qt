@@ -42,7 +42,8 @@ any proprietary Segoe font outlines.
 ## Qt runtime
 
 The reusable FluentQt library dynamically links to Qt Core, Qt GUI, and Qt
-Widgets. The Gallery also dynamically links to Qt Network. Official Windows
+Widgets. The optional Spatial module additionally uses Qt OpenGL and
+OpenGLWidgets on Qt 6, or QOpenGLWidget from Widgets on Qt 5. The Gallery also dynamically links to Qt Network. Official Windows
 and macOS Gallery packages use Qt's shared libraries and deploy only the Qt
 libraries and plug-ins selected by `windeployqt` or `macdeployqt`. Linux DEB
 packages do not bundle Qt; they depend on the distribution's Qt packages.
@@ -56,7 +57,7 @@ corresponding-source offer, and replacement/relinking instructions are under
 
 For every official package that contains Qt binaries, the distributor must
 retain the exact corresponding Qt Base source under its control for the period
-stated in the written offer. `qtbase` covers the Qt Core, GUI, Widgets, Network,
+stated in the written offer. `qtbase` covers the Qt Core, GUI, Widgets, Network, OpenGL, OpenGLWidgets,
 and platform plug-in runtime contract currently used by Gallery, including the
 third-party source and license material shipped inside Qt Base. If the runtime
 contract grows beyond Qt Base, the corresponding module source must be added

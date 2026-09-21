@@ -7,6 +7,7 @@ import sys
 from typing import Callable, Iterable
 
 import fluentqt
+from shiboken6 import isValid
 import fluentqt._fluentqt as _native
 from PySide6.QtCore import (
     QEasingCurve,
@@ -62,6 +63,7 @@ from .intro_tour import GalleryIntroTour, TourStep
 from .metrics import TITLE_BAR_HEIGHT
 from .motion import start_finite_transition
 from .samples import PreviewResult, build_sample
+from .spatial_support import SPATIAL_AVAILABLE, SpatialSupportBadge
 from .settings import (
     NavigationStyle,
     gallery_settings,
@@ -983,7 +985,14 @@ def _build_sample_card(
     preview_layout.activate()
     card_layout.addWidget(preview_surface)
 
-    source_expander = GalleryCodeBlock(result.source, card)
+    full_code = None
+    if entry.category_id == "spatial":
+        from .native_samples_spatial import full_example_source
+        full_code = full_example_source(sample.id)
+    source_expander = GalleryCodeBlock(
+        result.source, card,
+        full_code=full_code,
+    )
     source_expander.setObjectName("galleryCodeBlock")
     source_expander.setProperty("gallerySampleId", sample.id)
     source_expander.setProperty("galleryRouteId", entry.route_id)
@@ -1086,7 +1095,19 @@ def build_component_page(
         16,
     )
     theme_button.setFixedSize(32, 32)
-    _add_page_header(layout, content, entry.title, action=theme_button)
+    header_actions = theme_button
+    if entry.category_id == "spatial":
+        header_actions = QWidget(content)
+        actions_layout = QHBoxLayout(header_actions)
+        actions_layout.setContentsMargins(0, 0, 0, 0)
+        actions_layout.setSpacing(8)
+        settings_button = fluentqt.Button("3D settings", header_actions)
+        settings_button.setObjectName("gallerySpatialSettingsLink")
+        settings_button.setIconGlyph(fluentqt.Typography.Icons.Settings)
+        settings_button.clicked.connect(lambda: navigate("settings"))
+        actions_layout.addWidget(settings_button)
+        actions_layout.addWidget(theme_button)
+    _add_page_header(layout, content, entry.title, action=header_actions)
 
     _add_section_heading(layout, "Overview", content)
     layout.addWidget(_body(entry.description, content))
@@ -1094,14 +1115,49 @@ def build_component_page(
     reference = GalleryReferenceCard(entry.name, entry.category_id, content)
     layout.addWidget(reference)
     _add_section_heading(layout, "Live examples", content)
+    if entry.category_id == "spatial":
+        status = _body("", content)
+        status.setObjectName("gallerySpatialModeStatus")
+        settings = gallery_settings()
+
+        def update_spatial_status():
+            if not isValid(status):
+                return
+            enabled = settings.spatial_available and settings.spatial_mode_enabled
+            status.setText(
+                "3D is on. All examples follow Settings > 3D Gallery."
+                if enabled else "2D is on. Enable 3D in Settings > 3D Gallery."
+            )
+
+        settings.spatialModeEnabledChanged.connect(update_spatial_status)
+        settings.spatialAvailabilityChanged.connect(update_spatial_status)
+        update_spatial_status()
+        layout.addWidget(status)
 
     cards = []
     results = []
+    more = None
     for sample in entry.samples:
         card, result = _build_sample_card(entry, sample, content)
-        layout.addWidget(card)
+        if entry.route_id == "spatial-view" and sample.id not in {
+            "spatial-view-scene", "spatial-view-cards", "spatial-view-hybrid"
+        }:
+            if more is None:
+                more = fluentqt.Expander(content)
+                more.setObjectName("galleryMoreSpatialExamples")
+                more.setHeaderText("More component combinations")
+                combinations = QWidget()
+                combinations_layout = QVBoxLayout(combinations)
+                combinations_layout.setContentsMargins(0, 0, 0, 0)
+                combinations_layout.setSpacing(16)
+                more.setOwnedContentWidget(combinations)
+            combinations_layout.addWidget(card)
+        else:
+            layout.addWidget(card)
         cards.append(card)
         results.append(result)
+    if more is not None:
+        layout.addWidget(more)
 
     _add_section_heading(layout, "Category", content)
     related_route = ROUTE_BY_ID[category.id]
@@ -1562,6 +1618,37 @@ def build_settings_page(
         int(settings.motion_mode),
         content,
     )
+    spatial_panel = QWidget(content)
+    spatial_layout = QHBoxLayout(spatial_panel)
+    spatial_layout.setContentsMargins(0, 0, 0, 0)
+    spatial_layout.setSpacing(8)
+    spatial_badge = SpatialSupportBadge(spatial_panel)
+    spatial_badge.setObjectName("gallerySettingsSpatialSupportBadge")
+    spatial = fluentqt.ToggleSwitch(spatial_panel)
+    spatial.setObjectName("gallerySettingsSpatialModeToggle")
+    spatial.setAccessibleName("3D Gallery")
+    spatial.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+    spatial.setIsOn(settings.spatial_mode_enabled)
+    spatial.toggled.connect(settings.set_spatial_mode_enabled)
+
+    def refresh_spatial():
+        if not isValid(spatial):
+            return
+        blocked = spatial.blockSignals(True)
+        can_try = settings.spatial_available or settings.spatial_availability_pending
+        spatial.setIsOn(can_try and settings.spatial_mode_enabled)
+        spatial.blockSignals(blocked)
+        spatial.setEnabled(can_try
+                           and fluentqt.current_motion_mode() == fluentqt.MotionMode.Full
+                           and fluentqt.current_theme() != fluentqt.Theme.HighContrast)
+
+    settings.spatialAvailabilityChanged.connect(refresh_spatial)
+    settings.spatialModeEnabledChanged.connect(refresh_spatial)
+    settings.motionModeChanged.connect(refresh_spatial)
+    settings.themeModeChanged.connect(refresh_spatial)
+    refresh_spatial()
+    spatial_layout.addWidget(spatial_badge)
+    spatial_layout.addWidget(spatial)
     home_particles = fluentqt.ToggleSwitch(content)
     home_particles.setObjectName("gallerySettingsHomeParticlesToggle")
     home_particles.setAccessibleName("Home particle effects")
@@ -1753,15 +1840,20 @@ def build_settings_page(
             content,
         ),
     )
+    rows = rows[:3] + (_SettingsRow(
+        fluentqt.Typography.Icons.Grid, "3D Gallery",
+        "Add depth to navigation, pages and all Spatial examples.",
+        spatial_panel, content,
+    ),) + rows[3:]
     layout.addWidget(_settings_section("Appearance & behavior", content))
-    for row in rows[:6]:
+    for row in rows[:7]:
         layout.addWidget(row)
     layout.addSpacing(10)
     layout.addWidget(_settings_section("App behavior", content))
-    layout.addWidget(rows[6])
+    layout.addWidget(rows[7])
     layout.addSpacing(10)
     layout.addWidget(_settings_section("Updates", content))
-    layout.addWidget(rows[7])
+    layout.addWidget(rows[8])
     layout.addStretch(1)
     page._gallery_settings_rows = rows
     page._gallery_settings_choices = (
@@ -1936,7 +2028,7 @@ class _GalleryTitleContent(QWidget):
             return
 
         self._back.show()
-        self._menu.show()
+        self._menu.setVisible(not getattr(self, "_top_navigation", False))
         self._icon.show()
         self._title.setVisible(not self._minimal)
         self._update_geometry()
@@ -2049,8 +2141,10 @@ class _GalleryTitleContent(QWidget):
             24,
         )
         x += back_width + back_gap
-        self._menu.setGeometry(x - content_origin_x, y_button, 24, 24)
-        x += 32
+        self._menu.setVisible(not getattr(self, "_top_navigation", False))
+        if not self._menu.isHidden():
+            self._menu.setGeometry(x - content_origin_x, y_button, 24, 24)
+            x += 32
         self._icon.setGeometry(
             x - content_origin_x,
             max(0, (self.height() - 18) // 2),
@@ -2166,6 +2260,14 @@ class GalleryWindow(fluentqt.Window):
         self.navigate("home", record_history=False)
         if self._startup_visuals:
             self._start_startup()
+        self._spatial_controller = None
+        if SPATIAL_AVAILABLE:
+            from .spatial_controller import GallerySpatialController
+            self._spatial_controller = GallerySpatialController(self, self._navigation_view)
+        else:
+            self._settings.set_spatial_availability(
+                False, "This FluentQt installation does not include Spatial. Using the 2D Gallery."
+            )
 
     def _start_startup(self) -> None:
         self._startup_finished = False
@@ -2271,10 +2373,14 @@ class GalleryWindow(fluentqt.Window):
         self._finish_startup()
         self._dismissal_splash = None
         self._title_content.set_app_icon_revealed(True)
+        if self._spatial_controller is not None:
+            _single_shot(0, self._spatial_controller, self._spatial_controller.start_presentation)
 
     def _startup_dismissed(self) -> None:
         self._dismissal_splash = None
         self._title_content.set_app_icon_revealed(True)
+        if self._spatial_controller is not None:
+            _single_shot(0, self._spatial_controller, self._spatial_controller.start_presentation)
         if not self._settings.intro_completed:
             _single_shot(480, self, self._maybe_start_intro_tour)
 
@@ -2299,20 +2405,24 @@ class GalleryWindow(fluentqt.Window):
                 fluentqt.CoachMark.Placement.Bottom,
             ),
             TourStep(
-                self._main_navigation_pane,
+                self._navigation_view.mainChromeWidget(),
                 "\ue71d",
                 "Browse by category",
                 "Controls are grouped by category here. Expand one to "
                 "explore its samples.",
-                fluentqt.CoachMark.Placement.Right,
+                (fluentqt.CoachMark.Placement.Bottom
+                 if self._navigation_view.effectiveDisplayMode() == fluentqt.NavigationView.DisplayMode.Top
+                 else fluentqt.CoachMark.Placement.Right),
             ),
             TourStep(
-                self._footer_navigation_pane,
+                self._navigation_view.footerChromeWidget(),
                 "\ue713",
                 "Make it yours",
                 "Switch between light and dark theme and adjust "
                 "preferences in Settings.",
-                fluentqt.CoachMark.Placement.Right,
+                (fluentqt.CoachMark.Placement.Bottom
+                 if self._navigation_view.effectiveDisplayMode() == fluentqt.NavigationView.DisplayMode.Top
+                 else fluentqt.CoachMark.Placement.Right),
             ),
         ]
         tour = GalleryIntroTour(self, self)
@@ -2716,9 +2826,7 @@ class GalleryWindow(fluentqt.Window):
         self._title_content.set_minimal(
             display_mode == fluentqt.NavigationView.DisplayMode.LeftMinimal
         )
-        self._menu_button.setEnabled(
-            display_mode != fluentqt.NavigationView.DisplayMode.Top
-        )
+        self._title_content._top_navigation = display_mode == fluentqt.NavigationView.DisplayMode.Top
         self._navigation_view.setPaneOpen(
             display_mode == fluentqt.NavigationView.DisplayMode.Left
         )

@@ -73,6 +73,20 @@ public:
     bool homeParticlesEnabled() const { return m_homeParticlesEnabled; }
     void setHomeParticlesEnabled(bool enabled);
 
+    // One mode for Gallery shell/cards and every Spatial example.
+    // Reduced motion and high contrast use 2D.
+    // zh_CN: 统一控制 Gallery 外壳、卡片及所有 Spatial 示例。减弱动效和高对比度使用 2D。
+    bool spatialModeEnabled() const { return m_spatialModeEnabled; }
+    void setSpatialModeEnabled(bool enabled);
+
+    // Runtime capability is separate from the persisted user's preference.
+    // zh_CN: 当前运行环境的能力与用户持久化偏好分开保存。
+    bool spatialAvailable() const { return m_spatialAvailable; }
+    bool spatialAvailabilityPending() const { return m_spatialAvailabilityPending; }
+    QString spatialUnavailableReason() const { return m_spatialUnavailableReason; }
+    void beginSpatialAvailabilityCheck();
+    void setSpatialAvailability(bool available, const QString& reason = {});
+
 signals:
     void themeModeChanged(ThemeMode mode);
     void motionModeChanged(fluent::MotionPolicy::Mode mode);
@@ -81,6 +95,8 @@ signals:
     void windowEffectChanged(fluent::windowing::BackdropEffect effect);
     void closeBehaviorChanged(CloseBehavior behavior);
     void homeParticlesEnabledChanged(bool enabled);
+    void spatialModeEnabledChanged(bool enabled);
+    void spatialAvailabilityChanged();
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -103,6 +119,10 @@ private:
     bool m_introCompleted = false;
     QString m_lastHomeParticleEffect;
     bool m_homeParticlesEnabled = true;
+    bool m_spatialModeEnabled = false;
+    bool m_spatialAvailable = false;
+    bool m_spatialAvailabilityPending = true;
+    QString m_spatialUnavailableReason = QStringLiteral("3D rendering is not ready.");
 };
 
 } // namespace fluent::gallery

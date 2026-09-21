@@ -17,7 +17,8 @@ enum GalleryNavigationRole {
     KindRole,
     ParentRouteIdRole,
     IconGlyphRole,
-    IndicatorInsetRole
+    IndicatorInsetRole,
+    AccessoryWidthRole
 };
 
 // Shared layout metrics for navigation rows, the row delegate, and the compact flyout.

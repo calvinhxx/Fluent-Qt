@@ -14,6 +14,10 @@ namespace fluent::textfields {
 class Label;
 }
 
+namespace fluent::navigation {
+class SelectorBar;
+}
+
 namespace fluent::gallery {
 
 class GalleryLanguageSelector;
@@ -30,6 +34,8 @@ public:
     GalleryCodeBlock(const QString& cppCode, const QString& pythonCode, QWidget* parent = nullptr);
 
     QString code() const;
+    void setCppCode(const QString& code);
+    void setCppExcerpt(const QString& code);
     QString cppCode() const { return m_cppCode; }
     QString pythonCode() const { return m_pythonCode; }
     bool hasPythonCode() const { return !m_pythonCode.isEmpty(); }
@@ -50,14 +56,18 @@ private:
     void applyPalette();
     void applyHighlightedCode();
     void ensureHighlighted();
+    void refreshDisplayedCode();
 
     QString m_cppCode;
     QString m_pythonCode;
+    QString m_cppExcerpt;
+    QString m_excerptHighlightedHtml;
     QString m_cppHighlightedHtml;
     QString m_pythonHighlightedHtml;
     GalleryCodeLanguage m_codeLanguage = GalleryCodeLanguage::Cpp;
     QWidget* m_contentInner = nullptr;
     GalleryLanguageSelector* m_languageSelector = nullptr;
+    fluent::navigation::SelectorBar* m_sourceSelector = nullptr;
     fluent::textfields::Label* m_langLabel = nullptr;
     QWidget* m_langUnderline = nullptr;
     fluent::textfields::Label* m_codeLabel = nullptr;

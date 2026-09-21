@@ -8,6 +8,11 @@ file(GLOB_RECURSE FLUENT_QT_GALLERY_CORE_SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/viewmodel/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/viewmodel/*.cpp
 )
+if(TARGET FluentQtSpatial)
+    list(FILTER FLUENT_QT_GALLERY_CORE_SOURCES EXCLUDE REGEX "/GallerySpatialFallback\\.cpp$")
+else()
+    list(FILTER FLUENT_QT_GALLERY_CORE_SOURCES EXCLUDE REGEX "/(SpatialSamples|GallerySpatialController)\\.cpp$")
+endif()
 set(FLUENT_QT_GALLERY_RESOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/gallery_resources.qrc
 )
@@ -53,6 +58,12 @@ target_link_libraries(FluentQtGalleryCore
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Network
 )
+if(TARGET FluentQtSpatial)
+    target_link_libraries(FluentQtGalleryCore PRIVATE FluentQt::Spatial)
+    if(QT_VERSION_MAJOR EQUAL 6)
+        target_link_libraries(FluentQtGalleryCore PRIVATE Qt6::OpenGLWidgets)
+    endif()
+endif()
 # Consumers already link these runtime dependencies. The object target needs
 # their compile usage requirements only; suppress link-only propagation so
 # Apple ld does not receive duplicate FluentQt/logging archives.
@@ -81,6 +92,9 @@ target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Network
 )
+if(TARGET FluentQtSpatial)
+    target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE FluentQt::Spatial)
+endif()
 if(EMSCRIPTEN)
     include("${CMAKE_CURRENT_SOURCE_DIR}/platform/wasm/FluentQtGalleryWebAssembly.cmake")
     fluent_qt_configure_gallery_webassembly(

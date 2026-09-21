@@ -12,6 +12,9 @@ function(fluent_qt_configure_gallery_webassembly target source_dir)
         "${_adapter_dir}/WasmSmokeRunner.cpp"
         "${_adapter_dir}/WasmSmokeRunner.h")
     target_link_libraries(${target} PRIVATE FluentQt::WebAssembly)
+    if(TARGET FluentQtSpatial)
+        target_link_libraries(${target} PRIVATE Qt6::OpenGLWidgets)
+    endif()
     set_target_properties(${target} PROPERTIES
         QT_WASM_INITIAL_MEMORY "128MB"
         QT_WASM_MAXIMUM_MEMORY "512MB")

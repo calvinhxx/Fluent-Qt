@@ -5,6 +5,8 @@
 #include <QString>
 #include <QVector>
 #include <QWidget>
+#include <QVariantAnimation>
+#include <QTransform>
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
@@ -56,6 +58,7 @@ signals:
     void activated(const QString& routeId);
 
 protected:
+    bool event(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
@@ -71,6 +74,10 @@ private:
     int gridHeight() const;
     bool recalculateRowLayout();
     void setHoveredIndex(int index);
+    void animateTilt(const QPointF& tilt, qreal lift);
+    QTransform cardTransform(int index) const;
+    void paintEntry(QPainter& painter, int index, const QRect& rect, bool hovered) const;
+    void resetDepthMotion();
 
     QVector<Entry> m_entries;
     QVector<int> m_rowHeights;
@@ -78,6 +85,13 @@ private:
     int m_hoveredIndex = -1;
     int m_lastColumns = 0;
     int m_lastColumnWidth = 0;
+    QVariantAnimation m_depthMotion;
+    QPointF m_tilt;
+    qreal m_lift = 0;
+    int m_animatedIndex = -1;
+    int m_pressedIndex = -1;
+    QPixmap m_hoverFrame;
+    int m_frameTheme = -1;
 };
 
 } // namespace fluent::gallery

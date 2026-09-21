@@ -281,6 +281,7 @@ ROUTE_ICON_NAMES = {
     "date-time": chr(0xE787),
     "dialogs-flyouts": chr(0xE8BD),
     "layout": chr(0xE8E4),
+    "spatial": "ic_fluent_layer_20_regular",
     "menus-toolbars": chr(0xE74E),
     "navigation": chr(0xE700),
     "scrolling": chr(0xE74B),
@@ -1798,6 +1799,7 @@ _REFERENCE_MODULES = {
     "menus-toolbars": "menus_toolbars",
     "navigation": "navigation",
     "scrolling": "scrolling",
+    "spatial": "spatial",
     "status-info": "status_info",
     "text-fields": "textfields",
     "windowing": "windowing",
@@ -1829,12 +1831,13 @@ class GalleryReferenceCard(QFrame):
             (
                 (
                     "Import",
-                    "import fluentqt",
+                    "from fluentqt.spatial import SpatialView, SpatialItem"
+                    if category_id == "spatial" else "import fluentqt",
                     "galleryComponentReferenceImport",
                 ),
                 (
                     "Type",
-                    "fluentqt.{0}".format(api_type),
+                    api_type if category_id == "spatial" else "fluentqt.{0}".format(api_type),
                     "galleryComponentReferenceType",
                 ),
                 (
@@ -1895,7 +1898,8 @@ class GalleryReferenceCard(QFrame):
 class GalleryCodeBlock(fluentqt.Expander):
     """Source-code expander matching the native GalleryCodeBlock structure."""
 
-    def __init__(self, code: str, parent: QWidget | None = None) -> None:
+    def __init__(self, code: str, parent: QWidget | None = None,
+                 *, full_code: str | None = None) -> None:
         super().__init__(parent)
         self._code = code
         # Source extraction keeps a terminal line break for stable formatting,
@@ -1952,6 +1956,20 @@ class GalleryCodeBlock(fluentqt.Expander):
         fluentqt.ToolTip.attach(copy, "Copy")
         copy.clicked.connect(self._copy_source)
         top.addLayout(language_column)
+        self._source_selector = None
+        if full_code and full_code != code:
+            selector = fluentqt.SelectorBar(content)
+            selector.setObjectName("galleryCodeBlockSourceSelector")
+            selector.setAccessibleName("Source detail")
+            selector.setItemFontRole(fluentqt.FontRole.Caption)
+            selector.addItem("Key usage")
+            selector.addItem("Full example")
+            selector.setSelectedIndex(0)
+            selector.selectedIndexChanged.connect(
+                lambda index: self._set_code(full_code if index == 1 else code)
+            )
+            top.addWidget(selector)
+            self._source_selector = selector
         top.addStretch()
         top.addWidget(copy, 0, Qt.AlignTop)
 
@@ -2147,6 +2165,13 @@ class GalleryCodeBlock(fluentqt.Expander):
             )
         )
         self._highlighted = True
+
+    def _set_code(self, code: str) -> None:
+        self._code = code
+        self._display_code = code.rstrip("\r\n")
+        self._apply_highlighted_code()
+        self._code_label.updateGeometry()
+        self.updateGeometry()
 
     def _on_expansion_transition_started(self, expanding: bool) -> None:
         if expanding and not self._highlighted:
@@ -2676,7 +2701,7 @@ class _GalleryNavigationDelegate(QStyledItemDelegate):
             text_rect = QRectF(
                 text_x - 6.0 * compact_progress,
                 background.top(),
-                max(0, text_right - text_x),
+                max(0, text_right - text_x - (32 if route_id == "spatial" and not compact else 0)),
                 background.height(),
             )
             elided = painter.fontMetrics().elidedText(
@@ -2943,7 +2968,32 @@ class GalleryNavigationPane(QWidget):
         tree.viewport().installEventFilter(self)
         tree.setProperty("fluentPreserveParentSurface", False)
         tree.viewport().setProperty("fluentPreserveParentSurface", False)
+        self._spatial_badge = None
+        if "spatial" in route_items:
+            from .spatial_support import SpatialSupportBadge
+            self._spatial_badge = SpatialSupportBadge(tree.viewport())
+            self._spatial_badge.setObjectName("galleryNavigationSpatialSupportBadge")
+            self._spatial_badge.hide()
+            tree.expanded.connect(self._update_spatial_badge)
+            tree.collapsed.connect(self._update_spatial_badge)
+            bar = tree.verticalFluentScrollBar()
+            if bar is not None:
+                bar.valueChanged.connect(self._update_spatial_badge)
         self.set_compact(False)
+
+    def _update_spatial_badge(self, *args):
+        badge = self._spatial_badge
+        if badge is None:
+            return
+        row = self._tree.visualRect(self._route_items["spatial"].index())
+        viewport = self._tree.viewport()
+        rect = QRect(viewport.width() - 78, row.top() + (row.height() - 24) // 2, 24, 24)
+        if badge.geometry() != rect:
+            badge.setGeometry(rect)
+        visible = (not self._compact and self._compact_visual_progress < .01
+                   and not row.isEmpty() and viewport.rect().intersects(rect))
+        if badge.isHidden() == visible:
+            badge.setVisible(visible)
 
     def _activate_index(
         self,
@@ -2978,6 +3028,10 @@ class GalleryNavigationPane(QWidget):
         return super().event(event)
 
     def eventFilter(self, watched, event: QEvent) -> bool:
+        if (hasattr(self, "_spatial_badge")
+                and watched in (self._tree, self._tree.viewport())
+                and event.type() in (QEvent.Resize, QEvent.Show, QEvent.Paint, QEvent.LayoutRequest)):
+            self._update_spatial_badge()
         if watched is self._tree and _navigation_key_moves_current_item(event):
             _single_shot(
                 0,

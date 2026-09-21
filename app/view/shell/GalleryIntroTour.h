@@ -66,6 +66,8 @@ private:
     QRect scrimGeometryForWindow() const;
     void syncScrimGeometry();
     void syncScrimSurfaceRadius();
+    QRect presentedTargetRect(QWidget* target) const;
+    void syncCardAnchor(bool retarget = false);
     void applyStepSpotlight(int index, bool animate); // glide / pop the dim cut-out onto the target
     QRect
     spotlightRectFor(QWidget* target) const; // target geometry in scrim-local coords + padding
@@ -76,6 +78,7 @@ private:
     QWidget* m_host = nullptr;
     fluent::overlay::OverlayScrim* m_scrim = nullptr;     // dim: child of the app window
     fluent::dialogs_flyouts::CoachMark* m_card = nullptr; // same-window card (owns fade + glide)
+    QWidget* m_presentedAnchor = nullptr;                 // geometry-only child of the scrim
     QPropertyAnimation* m_dimAnim = nullptr;
     QPropertyAnimation* m_spotAnim = nullptr; // glides the spotlight cut-out between step targets
     bool m_haveSpot = false;                  // a spotlight is currently shown (for glide-vs-pop)

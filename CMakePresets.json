@@ -16,6 +16,7 @@
         "BUILD_TESTING": "ON",
         "FLUENT_QT_BUILD_EXAMPLES": "ON",
         "FLUENT_QT_BUILD_GALLERY": "ON",
+        "FLUENT_QT_BUILD_SPATIAL": "ON",
         "FLUENT_QT_BUILD_TESTS": "ON",
         "VCPKG_MANIFEST_FEATURES": "gallery;tests"
       }
@@ -33,6 +34,7 @@
         "BUILD_TESTING": "OFF",
         "FLUENT_QT_BUILD_EXAMPLES": "ON",
         "FLUENT_QT_BUILD_GALLERY": "ON",
+        "FLUENT_QT_BUILD_SPATIAL": "ON",
         "FLUENT_QT_BUILD_TESTS": "OFF",
         "FLUENT_QT_BUILD_PYSIDE6_BINDINGS": "OFF",
         "FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT": "ON",

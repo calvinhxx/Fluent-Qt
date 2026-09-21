@@ -1,4 +1,6 @@
 #include "GallerySampleCard.h"
+#include <QPainter>
+#include "view/support/GalleryDepth.h"
 
 #include <QColor>
 #include <QEvent>
@@ -113,6 +115,7 @@ GallerySampleCard::GallerySampleCard(const QString& routeId, const GallerySample
         const QString pythonCode =
             routeId.isEmpty() ? QString() : galleryPythonSnippet(routeId, sample.id);
         m_codeBlock = new GalleryCodeBlock(sample.codeSnippet, pythonCode, this);
+        m_codeBlock->setCppExcerpt(sample.usageSnippet);
         connect(m_codeBlock, &GalleryCodeBlock::layoutHeightChanged, this,
                 [this]() { updateCodeBlockTransitionLayout(); });
     }
@@ -206,6 +209,26 @@ bool GallerySampleCard::eventFilter(QObject* watched, QEvent* event)
         queueAnchoredLayoutUpdate();
     }
     return QFrame::eventFilter(watched, event);
+}
+
+bool GallerySampleCard::event(QEvent* event)
+{
+    if (event->type() == depth::changeEvent() || event->type() == QEvent::Show ||
+        event->type() == QEvent::ParentChange) {
+        applyPalette();
+        update();
+    }
+    return QFrame::event(event);
+}
+
+void GallerySampleCard::paintEvent(QPaintEvent* event)
+{
+    if (!depth::enabled(this)) {
+        QFrame::paintEvent(event);
+        return;
+    }
+    QPainter painter(this);
+    depth::paintSurface(painter, QRectF(rect()).adjusted(6, 6, -6, -6), themeColors());
 }
 
 void GallerySampleCard::resizeEvent(QResizeEvent* event)
@@ -321,10 +344,12 @@ void GallerySampleCard::applyPalette()
 {
     const Colors colors = themeColors();
     const QString cardStyle =
-        QStringLiteral(
-            "#gallerySampleCard { background: %1; border: 1px solid %2; border-radius: %3px; }")
-            .arg(cssColor(colors.bgLayer), cssColor(colors.strokeCard))
-            .arg(::CornerRadius::Overlay);
+        depth::enabled(this)
+            ? QStringLiteral("#gallerySampleCard { background: transparent; border: none; }")
+            : QStringLiteral("#gallerySampleCard { background: %1; border: 1px solid %2; "
+                             "border-radius: %3px; }")
+                  .arg(cssColor(colors.bgLayer), cssColor(colors.strokeCard))
+                  .arg(::CornerRadius::Overlay);
     if (styleSheet() != cardStyle)
         setStyleSheet(cardStyle);
     // Color the text via each label's OWN style sheet, not the palette: this card sets a style sheet

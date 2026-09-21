@@ -861,6 +861,16 @@ if(BUILD_TESTING)
             TIMEOUT 240)
 
         add_test(
+            NAME test_pyside6_gallery_spatial
+            COMMAND "${Python_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery_spatial.py")
+        set_tests_properties(test_pyside6_gallery_spatial PROPERTIES
+            ENVIRONMENT
+                "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+            LABELS "pyside;unit;ci_fast"
+            TIMEOUT 60)
+
+        add_test(
             NAME test_pyside6_live_preview
             COMMAND "${Python_EXECUTABLE}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_live_preview.py")

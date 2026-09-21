@@ -308,6 +308,8 @@ void GalleryTitleBarController::updateLayout()
     // they show. Nothing shows while the splash owns the title bar. zh_CN: 最小布局下标题+图标让位给搜索框。
     const bool showAppIcon = m_chromeVisible;
     const bool showTitle = m_chromeVisible && !minimalNav;
+    if (m_menuButton)
+        m_menuButton->setVisible(m_chromeVisible && m_menuAvailable);
     if (m_title)
         m_title->setVisible(showTitle);
     if (m_appIcon)
@@ -318,8 +320,8 @@ void GalleryTitleBarController::updateLayout()
     if (auto* barLayout = bar->layout())
         barLayout->activate();
 
-    const int leftBound = TitleBarMetrics::searchLeftBound(bar->systemReservedLeadingWidth(),
-                                                           showAppIcon, showTitle, m_backReveal);
+    const int leftBound = TitleBarMetrics::searchLeftBound(
+        bar->systemReservedLeadingWidth(), showAppIcon, showTitle, m_backReveal, m_menuAvailable);
     const int rightBound =
         TitleBarMetrics::searchRightBound(bar->width(), bar->systemReservedTrailingWidth());
     const int avail = TitleBarMetrics::searchAvailableWidth(leftBound, rightBound);
@@ -396,8 +398,19 @@ void GalleryTitleBarController::setChromeVisible(bool visible, bool animated)
 
 void GalleryTitleBarController::setMenuEnabled(bool enabled)
 {
+    m_menuAvailable = enabled;
     if (m_menuButton)
         m_menuButton->setEnabled(enabled);
+    if (auto* layout = m_bar ? qobject_cast<fluent::AnchorLayout*>(m_bar->layout()) : nullptr) {
+        fluent::AnchorLayout::Anchors anchors;
+        anchors.left = {
+            enabled ? static_cast<QWidget*>(m_menuButton) : static_cast<QWidget*>(m_backButton),
+            Edge::Right,
+            enabled ? TitleBarMetrics::ItemGap : qRound(m_backReveal * TitleBarMetrics::ItemGap)};
+        anchors.verticalCenter = {m_bar, Edge::VCenter, 0};
+        layout->addAnchoredWidget(m_appIcon, anchors);
+    }
+    updateLayout();
 }
 
 QWidget* GalleryTitleBarController::searchBox() const
@@ -429,7 +442,7 @@ void GalleryTitleBarController::applyBackButtonReveal(qreal reveal)
         m_menuButton->anchors()->left.offset = qRound(reveal * TitleBarMetrics::ItemGap);
     if (auto* barLayout = m_bar ? m_bar->layout() : nullptr)
         barLayout->invalidate();
-    updateLayout();
+    setMenuEnabled(m_menuAvailable);
 }
 
 void GalleryTitleBarController::refreshAppIcon()

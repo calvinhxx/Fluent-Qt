@@ -15,6 +15,11 @@
 
 namespace fluent::gallery::platform {
 
+QString graphicsRendererOverride()
+{
+    return {};
+}
+
 void chooseFiles(QWidget* context, const QString& filter,
                  std::function<void(const QString&, qint64)> selected)
 {

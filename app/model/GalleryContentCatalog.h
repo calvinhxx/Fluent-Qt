@@ -42,6 +42,12 @@ struct GallerySample {
     // Opt in to using the complete preview row; existing samples retain their right spacer.
     // zh_CN: 显式选择铺满预览行；既有示例保留右侧留白。
     bool fillAvailableWidth = false;
+    // Optional focused C++ excerpt; codeSnippet retains the complete example.
+    // zh_CN: 可选的 C++ 核心用法摘录；codeSnippet 保留完整示例。
+    QString usageSnippet;
+    // Additional combinations are disclosed after the primary examples.
+    // zh_CN: 补充组合示例折叠收纳在主要示例之后。
+    bool supplementary = false;
 };
 
 /**

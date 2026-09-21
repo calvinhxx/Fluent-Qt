@@ -87,6 +87,9 @@ if(FLUENT_QT_BUILD_GALLERY)
         test_gallery_content_pages
         test_gallery_shell_motion_policy
         test_gallery_preview_cli)
+    if(TARGET FluentQtSpatial)
+        list(APPEND FLUENT_QT_CI_FULL_TARGETS test_gallery_spatial)
+    endif()
 endif()
 
 set(FLUENT_QT_MANUAL_VISUAL_TESTS

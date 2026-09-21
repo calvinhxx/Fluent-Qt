@@ -40,6 +40,7 @@ add_dependencies(test_gallery_single_instance test_gallery_single_instance_probe
 
 add_qt_test_module(test_gallery_shell_framework
     TestGalleryShellFramework.cpp
+    TestGallerySpatialFallback.cpp
     TestUpdateChecker.cpp
     ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
     ${FLUENT_QT_GALLERY_RESOURCES}
@@ -61,6 +62,36 @@ target_include_directories(test_gallery_shell_motion_policy
     PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
 target_link_libraries(test_gallery_shell_motion_policy
     PRIVATE FluentQtGalleryCore Qt${QT_VERSION_MAJOR}::Network)
+
+if(TARGET FluentQtSpatial)
+add_qt_test_module(test_gallery_spatial
+    TestGallerySpatial.cpp
+    ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
+    ${FLUENT_QT_GALLERY_RESOURCES}
+)
+target_include_directories(test_gallery_spatial PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_link_libraries(test_gallery_spatial
+    PRIVATE FluentQtGalleryCore Qt${QT_VERSION_MAJOR}::Network)
+if(QT_VERSION_MAJOR EQUAL 6)
+    target_link_libraries(test_gallery_spatial PRIVATE Qt6::OpenGLWidgets)
+endif()
+if(APPLE)
+    add_test(NAME GallerySpatialTest.NativeGalleryAssemblyPreservesMaterial
+        COMMAND $<TARGET_FILE:test_gallery_spatial>
+            --gtest_filter=GallerySpatialTest.GalleryAssemblyPreservesMaterialAndNativeSurface)
+    set_tests_properties(
+        GallerySpatialTest.NativeGalleryAssemblyPreservesMaterial
+        GallerySpatialTest.NativeOpenGLPreviewsRevealWithoutHover
+        GallerySpatialTest.NativeOpenGLPreviewsSurviveClippingAndExternalUpdates
+        GallerySpatialTest.MacStartupPrewarmKeepsNativeWindowSurface
+        GallerySpatialTest.MacTrafficLightsRemainCenteredAcrossSpatialNavigation
+        PROPERTIES
+            ENVIRONMENT "SKIP_VISUAL_TEST=1;QT_QPA_PLATFORM=cocoa"
+            LABELS "qt;unit;gallery;gallery_spatial;test_gallery_spatial;platform_macos;local_desktop;native_window"
+            RUN_SERIAL TRUE
+            TIMEOUT 30)
+endif()
+endif()
 
 add_qt_test_module(test_gallery_content_pages
     TestGalleryContentPages.cpp
@@ -110,7 +141,16 @@ if(WIN32)
             test_gallery_single_instance
             test_gallery_shell_framework
             test_gallery_shell_motion_policy
+            test_gallery_spatial
             test_gallery_content_pages)
-        target_link_libraries(${_gallery_test_target} PRIVATE user32)
+        if(TARGET ${_gallery_test_target})
+            target_link_libraries(${_gallery_test_target} PRIVATE user32)
+        endif()
+    endforeach()
+endif()
+
+if(TARGET FluentQtSpatial)
+    foreach(_spatial_gallery_test test_gallery_shell_framework test_gallery_shell_motion_policy test_gallery_spatial test_gallery_content_pages)
+        target_link_libraries(${_spatial_gallery_test} PRIVATE FluentQt::Spatial)
     endforeach()
 endif()

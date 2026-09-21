@@ -97,5 +97,7 @@
         <file>assets/control_images/charts/Sparkline.png</file>
         <file>assets/control_images/basic-input/FileDropZone.png</file>
         <file>assets/control_images/collections/FileListView.png</file>
+        <file>assets/control_images/spatial/SpatialView.png</file>
+        <file>assets/control_images/spatial/SpatialItem.png</file>
     </qresource>
 </RCC>

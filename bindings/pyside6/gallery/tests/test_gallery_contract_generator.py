@@ -42,11 +42,20 @@ def main() -> int:
         raise AssertionError(
             "packaged Python Gallery contract differs from current native C++ sources"
         )
+    base_contract = generate_contract(project_root, include_cpp_only=False)
+    cpp_only_ids = {"spatial-view", "spatial-item"}
+    if cpp_only_ids & {c["id"] for c in base_contract["components"]}:
+        raise AssertionError("The base Python Gallery must not require optional Spatial bindings")
+    cpp_spatial = [c for c in generated["components"] if c["id"] in cpp_only_ids]
+    if len(cpp_spatial) != 2 or any(c["category_id"] != "spatial" for c in cpp_spatial):
+        raise AssertionError("native Spatial components must share their first-level category")
+    if sum(len(c["samples"]) for c in cpp_spatial) != 11:
+        raise AssertionError("Spatial composition samples are missing")
     summary = generated["summary"]
     if summary != {
-        "route_count": 105,
-        "component_count": 83,
-        "sample_count": 228,
+        "route_count": 108,
+        "component_count": 85,
+        "sample_count": 239,
     }:
         raise AssertionError("unexpected Gallery contract summary: {0!r}".format(summary))
     print(

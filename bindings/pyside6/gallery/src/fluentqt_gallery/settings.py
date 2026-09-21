@@ -17,6 +17,7 @@ from PySide6.QtCore import (
     QTimer,
     Qt,
     Signal,
+    Slot,
 )
 from PySide6.QtGui import QColor, QGuiApplication
 from PySide6.QtWidgets import QApplication
@@ -151,6 +152,8 @@ class GallerySettings(QObject):
     windowEffectChanged = Signal(int)
     closeBehaviorChanged = Signal(int)
     homeParticlesEnabledChanged = Signal(bool)
+    spatialModeEnabledChanged = Signal(bool)
+    spatialAvailabilityChanged = Signal()
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -166,7 +169,12 @@ class GallerySettings(QObject):
         self.intro_completed = False
         self.last_home_particle_effect = ""
         self.home_particles_enabled = True
+        self.spatial_mode_enabled = False
+        self.spatial_available = False
+        self.spatial_availability_pending = True
+        self.spatial_unavailable_reason = "Preparing 3D rendering."
         self._load()
+        fluentqt.motion_policy().modeChanged.connect(self._motion_policy_changed)
         self.apply_motion_mode()
         self.apply_user_theme()
         self.apply_theme_mode()
@@ -237,6 +245,9 @@ class GallerySettings(QObject):
         self.home_particles_enabled = bool(
             settings.value(_HOME_PARTICLES_ENABLED_KEY, True, type=bool)
         )
+        self.spatial_mode_enabled = bool(
+            settings.value("settings/spatialModeEnabled", False, type=bool)
+        )
 
     def apply_user_theme(self) -> None:
         fluentqt.apply_user_theme()
@@ -259,6 +270,11 @@ class GallerySettings(QObject):
     def apply_motion_mode(self) -> None:
         fluentqt.set_motion_mode(self.motion_mode)
 
+    @Slot(object)
+    def _motion_policy_changed(self, mode) -> None:
+        if mode != MotionMode.Full:
+            self.set_spatial_mode_enabled(False)
+
     def set_theme_mode(self, mode: int | ThemeMode) -> None:
         next_mode = ThemeMode(_bounded(mode, 0, 3, 0))
         if self.theme_mode == next_mode:
@@ -270,11 +286,14 @@ class GallerySettings(QObject):
                 "settings/themeMode", int(self.theme_mode)
             )
         self.apply_theme_mode()
+        if next_mode == ThemeMode.HighContrast:
+            self.set_spatial_mode_enabled(False)
         self.themeModeChanged.emit(int(self.theme_mode))
 
     def set_motion_mode(self, mode: int | MotionMode) -> None:
         next_mode = MotionMode(_bounded(mode, 0, 2, 0))
         if self.motion_mode == next_mode:
+            self.apply_motion_mode()
             return
         self.motion_mode = next_mode
         if persistence_available():
@@ -282,6 +301,8 @@ class GallerySettings(QObject):
                 "settings/motionMode", int(self.motion_mode)
             )
         self.apply_motion_mode()
+        if next_mode != MotionMode.Full:
+            self.set_spatial_mode_enabled(False)
         self.motionModeChanged.emit(int(self.motion_mode))
 
     def set_accent_color(self, accent: QColor) -> None:
@@ -368,6 +389,27 @@ class GallerySettings(QObject):
             settings.setValue(_HOME_PARTICLES_ENABLED_KEY, enabled)
             settings.sync()
         self.homeParticlesEnabledChanged.emit(enabled)
+
+    def set_spatial_availability(self, available: bool, reason: str = "") -> None:
+        reason = "" if available else reason
+        if (not self.spatial_availability_pending
+                and self.spatial_available == available
+                and self.spatial_unavailable_reason == reason):
+            return
+        self.spatial_availability_pending = False
+        self.spatial_available = bool(available)
+        self.spatial_unavailable_reason = reason
+        self.spatialAvailabilityChanged.emit()
+
+    def set_spatial_mode_enabled(self, enabled: bool) -> None:
+        enabled = (bool(enabled) and fluentqt.current_motion_mode() == MotionMode.Full
+                   and fluentqt.current_theme() != fluentqt.Theme.HighContrast)
+        if self.spatial_mode_enabled == enabled:
+            return
+        self.spatial_mode_enabled = enabled
+        if persistence_available():
+            _config_settings().setValue("settings/spatialModeEnabled", enabled)
+        self.spatialModeEnabledChanged.emit(enabled)
 
     def set_last_home_particle_effect(self, effect: str | bytes) -> None:
         effect = _home_particle_effect_id(effect)

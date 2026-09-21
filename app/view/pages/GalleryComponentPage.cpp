@@ -1,6 +1,9 @@
 #include "GalleryComponentPage.h"
 
 #include "components/basicinput/Button.h"
+#include "components/layout/Expander.h"
+#include "components/textfields/Label.h"
+#include <QVBoxLayout>
 #include "components/status_info/ToolTip.h"
 #include "design/Typography.h"
 #include "model/GalleryComponentCatalog.h"
@@ -8,6 +11,7 @@
 #include "model/GalleryPythonSnippetCatalog.h"
 #include "platform/GalleryPlatform.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
+#include "viewmodel/GallerySettings.h"
 #include "view/widgets/GalleryComponentReferenceCard.h"
 #include "view/widgets/GalleryCodeBlock.h"
 #include "view/widgets/GalleryEntryCard.h"
@@ -107,6 +111,26 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
     }
 
     addSectionHeader(QStringLiteral("Live examples"));
+    if (entry.categoryId == QStringLiteral("spatial")) {
+        auto* settingsButton = new fluent::basicinput::Button(QStringLiteral("3D settings"), this);
+        settingsButton->setObjectName(QStringLiteral("gallerySpatialSettingsLink"));
+        settingsButton->setIconGlyph(Typography::Icons::Settings);
+        addHeaderAction(settingsButton);
+        connect(settingsButton, &fluent::basicinput::Button::clicked, this,
+                [this] { emit routeActivated(QStringLiteral("settings")); });
+        auto* status = addBodyText(QString());
+        status->setObjectName(QStringLiteral("gallerySpatialModeStatus"));
+        auto& settings = GallerySettings::instance();
+        const auto updateStatus = [status, &settings] {
+            const bool enabled = settings.spatialAvailable() && settings.spatialModeEnabled();
+            status->setText(
+                enabled ? QStringLiteral("3D is on. All examples follow Settings > 3D Gallery.")
+                        : QStringLiteral("2D is on. Enable 3D in Settings > 3D Gallery."));
+        };
+        connect(&settings, &GallerySettings::spatialModeEnabledChanged, status, updateStatus);
+        connect(&settings, &GallerySettings::spatialAvailabilityChanged, status, updateStatus);
+        updateStatus();
+    }
     // A component page without samples is a coverage gap in the sample catalog,
     // not a normal state — surface it loudly.
     // zh_CN: 组件页没有任何示例说明示例目录存在覆盖缺口，不是正常状态——大声暴露出来。
@@ -114,6 +138,8 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
         LOG_WARN(QStringLiteral("GalleryComponentPage samples missing routeId=%1 title=%2")
                      .arg(entry.routeId, entry.title));
     }
+    QWidget* moreExamples = nullptr;
+    QVBoxLayout* moreLayout = nullptr;
     for (const GallerySample& sample : samples) {
         auto* card = m_bilingualDocumentationEnabled
                          ? new GallerySampleCard(entry.routeId, sample, this)
@@ -125,8 +151,25 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
                 block->setCodeLanguage(m_codeLanguage);
             }
         }
-        addContentWidget(card);
+        if (sample.supplementary) {
+            if (!moreExamples) {
+                moreExamples = new QWidget(this);
+                moreLayout = new QVBoxLayout(moreExamples);
+                moreLayout->setContentsMargins(0, 0, 0, 0);
+                moreLayout->setSpacing(16);
+            }
+            moreLayout->addWidget(card);
+        } else {
+            addContentWidget(card);
+        }
         m_sampleCards.append(card);
+    }
+    if (moreExamples) {
+        auto* more = new fluent::layout::Expander(this);
+        more->setObjectName(QStringLiteral("galleryMoreSpatialExamples"));
+        more->setHeaderText(QStringLiteral("More component combinations"));
+        more->setContentWidget(moreExamples, fluent::WidgetOwnership::Owned);
+        addContentWidget(more);
     }
 
     if (!entry.relatedRouteIds.isEmpty()) {

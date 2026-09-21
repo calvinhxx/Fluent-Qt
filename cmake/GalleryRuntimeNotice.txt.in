@@ -13,6 +13,9 @@ Qt
 --
 Gallery dynamically links to Qt Core, GUI, Widgets, and Network, together with
 the Qt platform and image-format plug-ins selected by the deployment tool.
+When Spatial is enabled, Gallery also links to Qt OpenGL and OpenGLWidgets on Qt 6.
+Spatial included in this build: @FLUENT_QT_BUILD_SPATIAL@.
+The base FluentQt library does not require those additional modules.
 @FLUENT_QT_RUNTIME_QT_DISTRIBUTION_STATEMENT@
 
 Open-source Qt components used by this package are provided under the GNU

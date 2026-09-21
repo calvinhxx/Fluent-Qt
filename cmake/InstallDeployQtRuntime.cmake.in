@@ -57,8 +57,8 @@ elseif(_fluent_qt_platform STREQUAL "windows")
         --no-system-d3d-compiler
         --no-opengl-sw)
     if(_fluent_qt_qt_major STREQUAL "5")
-        # Official Qt 5 Windows kits can otherwise deploy ANGLE beside a
-        # Widgets-only application even though Gallery does not use OpenGL.
+        # SpatialView uses system OpenGL, with raster fallback when unavailable.
+        # Do not bundle the optional Qt 5 ANGLE implementation.
         list(APPEND _fluent_qt_deploy_arguments --no-angle)
     endif()
     if(CMAKE_INSTALL_CONFIG_NAME MATCHES "^[Dd]ebug$")
@@ -92,7 +92,7 @@ if(NOT _fluent_qt_deploy_result EQUAL 0)
         "${_fluent_qt_deploy_stdout}\n${_fluent_qt_deploy_stderr}")
 endif()
 
-# Treat the lean Widgets-only runtime as a packaging contract. The deploy tool
+# Treat the Widgets and system-OpenGL runtime as a packaging contract. The deploy tool
 # options above remove optional Windows payloads; this scan also protects
 # macOS and catches future Qt/deploy-tool changes. If Gallery later adopts one
 # of these features, packaging must be updated deliberately instead of silently
@@ -113,9 +113,9 @@ set(_fluent_qt_forbidden_runtime_patterns
     "(^|/)d3dcompiler_[0-9]+\\.dll$"
     "(^|/)libegl\\.dll$"
     "(^|/)libglesv2\\.dll$"
-    "(^|/)qt[56](qml|quick|opengl)[^/]*\\.dll$"
-    "(^|/)qt(qml|quick|opengl)[^/]*\\.framework(/|$)"
-    "(^|/)libqt[56](qml|quick|opengl)[^/]*\\.dylib$")
+    "(^|/)qt[56](qml|quick)[^/]*\\.dll$"
+    "(^|/)qt(qml|quick)[^/]*\\.framework(/|$)"
+    "(^|/)libqt[56](qml|quick)[^/]*\\.dylib$")
 foreach(_fluent_qt_runtime_entry IN LISTS _fluent_qt_runtime_entries)
     file(RELATIVE_PATH _fluent_qt_runtime_relative
         "${_fluent_qt_runtime_root}"
@@ -131,15 +131,15 @@ foreach(_fluent_qt_runtime_entry IN LISTS _fluent_qt_runtime_entries)
             "${_fluent_qt_forbidden_runtime_pattern}")
             message(FATAL_ERROR
                 "Packaged Gallery contains '${_fluent_qt_runtime_relative}', which is "
-                "outside its Widgets-only runtime contract. Gallery currently does not "
-                "use QTranslator, QML, Qt Quick, or OpenGL. Update the deployment "
+                "outside its Widgets and system-OpenGL runtime contract. Gallery does not "
+                "use QTranslator, QML, Qt Quick, or bundled software GL/ANGLE. Update the deployment "
                 "contract if that feature is added intentionally.")
         endif()
     endforeach()
 endforeach()
 
 message(STATUS
-    "Verified lean Qt runtime: no translations, QML/Qt Quick, or OpenGL payloads")
+    "Verified Qt runtime: Widgets and OpenGL permitted; no translations, QML/Qt Quick, or software GL/ANGLE")
 
 if(_fluent_qt_platform STREQUAL "macos")
     # The local Qt is a universal (x86_64 + arm64) build, so macdeployqt copies fat frameworks and

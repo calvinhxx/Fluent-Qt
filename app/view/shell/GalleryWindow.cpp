@@ -1,4 +1,5 @@
 #include "GalleryWindow.h"
+#include "GallerySpatialController.h"
 
 #include <algorithm>
 
@@ -100,6 +101,7 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     buildNavigationShell();
     buildContentPresenter();
     installSplashScreen();
+    new GallerySpatialController(this, m_navigationView);
     showInitialRouteContent();
     prewarmRemainingRoutes();
     LOG_INFO(QStringLiteral("GalleryWindow constructed defaultRoute=%1")
@@ -400,18 +402,20 @@ void GalleryWindow::maybeStartIntroTour()
         steps.append({m_titleBar->searchBox(), Icons::Search, QStringLiteral("Search"),
                       QStringLiteral("Find any control or sample by name — just start typing."),
                       Tip::Bottom});
-    if (m_mainNavigationPane)
+    const bool top = m_navigationView->effectiveDisplayMode() ==
+                     fluent::navigation::NavigationView::DisplayMode::Top;
+    if (auto* main = m_navigationView->mainChromeWidget())
         steps.append(
-            {m_mainNavigationPane, Icons::AllApps, QStringLiteral("Browse by category"),
+            {main, Icons::AllApps, QStringLiteral("Browse by category"),
              QStringLiteral(
                  "Controls are grouped by category here. Expand one to explore its samples."),
-             Tip::Right});
-    if (m_footerNavigationPane)
+             top ? Tip::Bottom : Tip::Right});
+    if (auto* footer = m_navigationView->footerChromeWidget())
         steps.append(
-            {m_footerNavigationPane, Icons::Settings, QStringLiteral("Make it yours"),
+            {footer, Icons::Settings, QStringLiteral("Make it yours"),
              QStringLiteral(
                  "Switch between light and dark theme and adjust preferences in Settings."),
-             Tip::Right});
+             top ? Tip::Bottom : Tip::Right});
 
     if (steps.isEmpty())
         return;

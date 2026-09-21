@@ -6459,6 +6459,10 @@ from . import native_samples_scrolling as _native_samples_scrolling  # noqa: E40
 from . import native_samples_status as _native_samples_status  # noqa: E402,F401
 from . import native_samples_text_window as _native_samples_text_window  # noqa: E402,F401
 from . import native_samples_files as _native_samples_files  # noqa: E402,F401
+from .spatial_support import SPATIAL_AVAILABLE  # noqa: E402
+
+if SPATIAL_AVAILABLE:
+    from . import native_samples_spatial as _native_samples_spatial  # noqa: E402,F401
 
 
 __all__ = ["build_native_sample", "ported_sample_keys", "register_source_samples"]
