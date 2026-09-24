@@ -1,23 +1,21 @@
-# Fluent (Windows) — Design Reference
+# Fluent (Windows): design reference
 
 > **Status:** Accepted contract
 
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Fluent design](README.md) › Design references
 
-[Contents](../SUMMARY.md) · [Fluent design index](README.md) · [自定义主题与组件局部覆盖 →](custom-themes.md)
+[Contents](../SUMMARY.md) · [Fluent design index](README.md) · [Custom themes and component overrides →](custom-themes.md)
 <!-- docs-nav:top:end -->
 
-Source of truth: **Windows UI kit (Community)** — file `qpecbg7hOfos9DcHWeKlfw`.
-Fluent is the project's only supported visual contract. The values below are quoted directly from our own
-design headers (`src/design/*.h`), which seed the runtime `ThemeRegistry`; the Figma kit was
-the original measurement source and is kept as visual grounding (see
+Fluent is the project's only supported visual contract. The values below come
+from the design headers (`src/design/*.h`) that initialize the runtime
+`ThemeRegistry`. The original measurements came from Windows UI kit (Community),
+file `qpecbg7hOfos9DcHWeKlfw`, which remains a visual reference (see
 [figma-sources.md](figma-sources.md)).
 
-> Fluent is **token-based**: controls read semantic `FluentElement::Colors`, `themeRadius()`,
-> and `themeFont()` at runtime. Those tokens **are** the seed —
-> `ThemeRegistry::seedDefaults()` copies `ThemeColors::{Light,Dark,Contrast}` straight into `Colors`,
-> with optional user overrides layered on top.
+Controls read semantic `FluentElement::Colors`, `themeRadius()`, and
+`themeFont()` at runtime. User overrides can replace the defaults described here.
 
 ---
 
@@ -59,9 +57,9 @@ These are the canonical Fluent swatches: `ThemeRegistry::seedDefaults()` assigns
 | `System::Caution` | `#FCE100` | `System::Success` | `#6CCB5F` |
 | `System::Informational` | `#60CDFF` | | |
 
-> **Headline accents:** Light `#005FB8` (a deep WinUI blue), Dark `#60CDFF` (a bright cyan).
-> Note the polarity flip in `OnAccentPrimary` — **white** text on the light accent, **black** on
-> the dark accent — because the dark accent is light enough to need dark text.
+Light uses the deep WinUI blue `#005FB8`; Dark uses the bright cyan `#60CDFF`.
+`OnAccentPrimary` is white on the Light accent and black on the Dark accent,
+whose higher brightness needs dark text.
 
 The neutral `Grey10…Grey200` ramp (e.g. `Grey10 #FAF9F8`, `Grey130 #605E5C`, `Grey160 #323130`,
 `Grey190 #201F1E`) and the 12-swatch `Charts` list also live in this header.
@@ -90,7 +88,7 @@ overrides through `fluent.json`. The WebAssembly host separately maps browser
 
 ---
 
-## 2. Typography — **FluentQt UI static instances** (`src/design/Typography.h`)
+## 2. Typography: FluentQt UI static instances (`src/design/Typography.h`)
 
 FluentQt registers project-specific Text/Heading/Display faces generated from
 the open-source, hinted static Inter fonts. This prevents platform font matchers
@@ -112,45 +110,46 @@ from the kit's typography styles. See
 | Title Large | FluentQt UI Display | 40 / 52 | SemiBold (600) |
 | Display | FluentQt UI Display | 68 / 92 | SemiBold (600) |
 
-Default control text is **Body (14 px Regular)** — `Button`, `CheckBox`, `RadioButton`,
-`ToggleSwitch` all construct with `themeFont(Typography::FontRole::Body)`. Icon glyphs come from the bundled
-**FluentQt Icons** face (the `Typography::Icons::*` table — chevrons, CheckMark, Hyphen, etc.).
+Default control text is Body (14 px Regular). `Button`, `CheckBox`, `RadioButton`,
+and `ToggleSwitch` all construct with `themeFont(Typography::FontRole::Body)`.
+Icon glyphs come from the bundled FluentQt Icons face. The `Typography::Icons::*`
+table includes chevrons, CheckMark, Hyphen, and other symbols.
 
 ---
 
 ## 3. Shape (`src/design/CornerRadius.h`)
 
-A deliberately tiny two-step scale — the WinUI default.
+The main control and overlay radii follow WinUI's two-step scale.
 
 | Token | px | Used by |
 |---|---|---|
 | `None` | **0** | Flush/square edges |
 | `Control` | **4** | In-page controls (Button, TextBox, CheckBox box) |
 | `Overlay` | **8** | Overlay containers (Flyout, Dialog, ToolTip) |
-| `Indicator` | 1.5 | Selection-indicator pills (TabView/SelectorBar/Pivot bar — 3 px bar, rounded at half-thickness) |
+| `Indicator` | 1.5 | Selection-indicator pills for TabView/SelectorBar/Pivot; 3 px thick with a radius of half the thickness |
 
 `themeRadius().control` is **4** and `themeRadius().overlay` is **8** for the Fluent seed.
 `Button::cornerRadii()` returns `control` (4) on all four corners by default.
 
 ---
 
-## 4. Interaction — layered fills & acrylic context
+## 4. Interaction: layered fills and acrylic context
 
-Fluent does not use a single state-layer formula. Instead each control swaps among a small set
-of **pre-defined translucent fills** in `ThemeColors`, so hover/press read correctly in both
-themes without a `.darker()`/`.lighter()` guess:
+Each control switches among predefined translucent fills in `ThemeColors` for
+hover and pressed states in both themes. It does not derive those states through
+`.darker()` or `.lighter()`:
 
-- **Neutral controls** step `ControlDefault → ControlSecondary (hover) → ControlTertiary
-  (pressed)`. In dark theme these are white-at-rising-alpha (~6 % → ~9 % → ~4 %); in light theme
-  near-white opaque fills — same role, theme-correct value.
-- **Subtle / transparent controls** use the `Fill::Subtle*` set: `SubtleTransparent` at rest →
+- Neutral controls step `ControlDefault → ControlSecondary (hover) → ControlTertiary
+  (pressed)`. Dark theme uses white at different alpha values (~6 % → ~9 % → ~4 %);
+  light theme uses near-white opaque fills. Each theme supplies values for the same roles.
+- Subtle / transparent controls use the `Fill::Subtle*` set: `SubtleTransparent` at rest →
   `SubtleSecondary` on hover (light: `0,0,0,9`; dark: `255,255,255,15`) → `SubtleTertiary` on
   drag-over. This is the "subtle" command-bar/list-item treatment.
-- **Accent fills** step `AccentDefault → AccentSecondary (hover, ~90 %) → AccentTertiary
-  (pressed, ~80 %)` — i.e. the accent itself fades, not a neutral veil.
-- **Pressed motion:** Fluent nudges button content **down 0.5 px** while pressed.
-- **Focus:** a two-ring focus rect — `Stroke::FocusOuter` (a near-opaque ring) over
-  `Stroke::FocusInner` (the opposite polarity), drawn inset.
+- Accent fills step `AccentDefault → AccentSecondary (hover, ~90 %) → AccentTertiary
+  (pressed, ~80 %)`. The accent itself fades without a neutral overlay.
+- Pressing a button moves its content down 0.5 px.
+- Focus uses two inset rings: near-opaque `Stroke::FocusOuter` over
+  `Stroke::FocusInner` in the opposite polarity.
 
 Application-wide motion is resolved through `MotionPolicy`. `Full` preserves component timing,
 `Reduced` caps transitions at 50 ms and stops continuous motion, and `Disabled` resolves all
@@ -186,14 +185,12 @@ the **caret**, and the inline **text-box button**.
 
 ### Text fields
 
-TextBox is a 4 px-rounded surface with a **bottom accent underline** that thickens to the accent
-color on focus — the signature Fluent input affordance.
+TextBox is a 4 px-rounded surface with a bottom underline that thickens and
+uses the accent color on focus.
 
 ### Basic input family
 
-Overview of the control family below.
-
-### Button (`Button.cpp`, default branch)
+#### Button (`Button.cpp`, default branch)
 - Flat **4 px rounded-rect** (`themeRadius().control`); no pill, no gradient.
 - **Accent** (or checked Standard) → `accentDefault` fill + `textOnAccent` text + `strokeStrong`
   border; hover → `accentSecondary`, pressed → `accentTertiary` with the border flattened to
@@ -205,7 +202,7 @@ Overview of the control family below.
   `subtleTertiary`; a checked Subtle keeps a faint `subtleSecondary` rest fill.
 - Pressed nudges content down **0.5 px**. Critical-on-hover swaps to `systemCritical`.
 
-### ToggleSwitch (`ToggleSwitch.cpp`, default branch)
+#### ToggleSwitch (`ToggleSwitch.cpp`, default branch)
 - **Pill track 40 × 20** (`kTrackRadius = 10`) + a **circular knob** (rounded-rect at half-size).
 - Knob size grows by state: **12** rest → **14** hover → **17 × 14** pressed; it animates across
   the track via `knobPosition` (fast / decelerate easing).
@@ -233,16 +230,17 @@ PySide6 exposes the same API: `toggle.setVisualScale(2.0)` and
 `toggle.visualScaleChanged`. The Gallery's **Visual size** card demonstrates
 both C++ and Python usage.
 
-### CheckBox (`CheckBox.cpp`, default branch)
-- **~4 px box** (`radius.control`); the inner glyph is FluentQt Icons — CheckMark when
-  checked, Hyphen when indeterminate — with an animated scale-in (`checkProgress`).
+#### CheckBox (`CheckBox.cpp`, default branch)
+- The box uses an approximately 4 px radius (`radius.control`). Its FluentQt Icons
+  glyph is CheckMark when checked or Hyphen when indeterminate, with an animated
+  scale-in (`checkProgress`).
 - **Unchecked**: `controlDefault` fill + `strokeDefault` border (hover → `controlSecondary` +
   `strokeStrong`, pressed → `controlTertiary`).
 - **Checked / Indeterminate**: `accentDefault` fill (hover `accentSecondary`, pressed
   `accentTertiary`), no border, `textOnAccent` glyph.
 - Optional whole-row `subtleSecondary` hover background (4 px rounded).
 
-### RadioButton (`RadioButton.cpp`, default branch)
+#### RadioButton (`RadioButton.cpp`, default branch)
 - **Ring + dot**: outer circle at the control's `circleSize`; inner dot ≈ **50 %** of the ring.
 - **Selected**: ring fills with `accentDefault` (hover `accentSecondary`, pressed
   `accentTertiary`), no outline; inner dot = `textOnAccent`. The dot grows **20 %** on hover
@@ -250,8 +248,8 @@ both C++ and Python usage.
 - **Unselected**: `controlDefault` fill + outline (`strokeDefault`, `strokeStrong` on hover), no
   dot.
 
-### Slider (`Slider.cpp`, default branch)
-- **Thin track** — `m_trackHeight = 4 px`, fully rounded; inactive = `controlAltSecondary`,
+#### Slider (`Slider.cpp`, default branch)
+- The fully rounded track uses `m_trackHeight = 4 px`; inactive = `controlAltSecondary`,
   active/filled = `accentDefault` (`accentDisabled` when disabled).
 - **Circular knob**, `m_handleSize = 20` (base radius 10): a `bgSolid`-filled **white outer
   ring** with a `strokeStrong` 1 px border (which masks the track behind it, reading as a border)
@@ -263,7 +261,7 @@ both C++ and Python usage.
 
 ## 6. Fluent is the runtime contract
 
-Everything above is the **default** the app boots into. Concretely:
+The theme APIs apply these defaults as follows:
 
 - `ThemeRegistry::seedDefaults()` copies `ThemeColors::{Light,Dark,Contrast}` into `Colors` and installs
   radius **4 / 8** plus the FluentQt UI type scale.
@@ -277,5 +275,5 @@ Everything above is the **default** the app boots into. Concretely:
 
 <!-- docs-nav:bottom:start -->
 ---
-[Contents](../SUMMARY.md) · [Fluent design index](README.md) · [自定义主题与组件局部覆盖 →](custom-themes.md)
+[Contents](../SUMMARY.md) · [Fluent design index](README.md) · [Custom themes and component overrides →](custom-themes.md)
 <!-- docs-nav:bottom:end -->

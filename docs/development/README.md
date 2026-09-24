@@ -32,7 +32,7 @@ so a dated roadmap cannot be mistaken for current guidance.
 ### API, compatibility, and writing
 
 - [Component API conventions](component-api-conventions.md)
-- [Compatibility policy](compatibility-policy.md) · [简体中文](compatibility-policy.zh-CN.md)
+- [Compatibility policy](compatibility-policy.md)
 - [Source comment style](comment-style.md)
 - [Documentation style](documentation-style.md)
 

@@ -34,13 +34,6 @@ private repository links, and local paths first.
 Maintainers may move or close duplicate, incomplete, out-of-scope, or
 security-sensitive public reports while pointing to the appropriate channel.
 
-## 中文说明
-
-- 安装、接入和使用问题请前往 [Discussions Q&A](https://github.com/calvinhxx/Fluent-Qt/discussions/categories/q-a)。
-- 可复现错误请使用 [Bug Report](https://github.com/calvinhxx/Fluent-Qt/issues/new?template=bug_report.yml)。
-- 早期想法请先在 [Ideas](https://github.com/calvinhxx/Fluent-Qt/discussions/categories/ideas) 讨论。
-- 涉及安全漏洞时请遵循 [SECURITY.md](SECURITY.md)，不要公开披露细节。
-
 <!-- docs-nav:bottom:start -->
 ---
 [← Contributing to FluentQt](CONTRIBUTING.md) · [Contents](docs/SUMMARY.md) · [Community index](docs/community/README.md) · [Security Policy →](SECURITY.md)

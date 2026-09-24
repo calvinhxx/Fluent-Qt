@@ -8,15 +8,31 @@
 [← Window Chrome Architecture](window-chrome.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Typography Resolution →](typography-resolution.md)
 <!-- docs-nav:top:end -->
 
-本项目的 transient overlay（`Popup`、`Flyout`、`ComboBox` / `MultiSelectComboBox` dropdown、`DrawerView`、`Dialog` / `ContentDialog`、`CoachMark`、`TeachingTip`）使用 **same-window overlay** 模型：打开时挂载到 owning top-level `QWidget`，保持 `Qt::Widget` 子控件语义，不创建独立 `Qt::Window` / `Qt::Dialog` / `Qt::Tool`。这与 WinUI Gallery 的 ContentDialog / Flyout / TeachingTip（绑在当前窗口 `XamlRoot`）对齐。
+Transient overlays (`Popup`, `Flyout`, `ComboBox` / `MultiSelectComboBox`
+dropdowns, `DrawerView`, `Dialog` / `ContentDialog`, `CoachMark`, and
+`TeachingTip`) appear within their owning window. They attach to the owning
+top-level `QWidget` and retain `Qt::Widget` child semantics, without creating
+a separate `Qt::Window` / `Qt::Dialog` / `Qt::Tool`. This follows WinUI Gallery's
+ContentDialog / Flyout / TeachingTip model, which binds to the current window's
+`XamlRoot`.
 
-相关 helper 的 canonical 位置是 `src/components/foundation/overlay/`，命名空间是 `fluent::overlay`。`OverlayCoordinator` 是 UILib 内部协调器，集中处理 top-level 挂载、宿主 resize、scrim 生命周期与 stacking；它不会进入安装头文件或成为应用层 API。
+Shared helpers live in `src/components/foundation/overlay/`, in the
+`fluent::overlay` namespace. The internal `OverlayCoordinator` manages top-level
+attachment, host resizing, scrim lifetime, and stacking. It is not an installed
+header or an application-facing API.
 
 ## Startup content cover
 
-`fluent::status_info::SplashScreen` 是父控件内容区的启动遮罩。它跟随父控件尺寸，不管理任务、标题栏或启动流程。将它放在 `Window::contentHost()` 上可保留窗口按钮；也可以覆盖应用选定的局部容器。
+`fluent::status_info::SplashScreen` covers a parent widget's content during
+startup and follows its size. It does not manage tasks, the title bar, or the
+startup sequence. Place it on `Window::contentHost()` to keep window buttons
+available, or on a local container chosen by the application.
 
-默认 `Presentation::Branded` 使用完整图标显影、柔和背景光、可选品牌文字和底部进度条。`Presentation::Simple` 保留居中图标、加载环和状态文字的简洁效果，供应用显式选配。Gallery 启动使用默认效果，组件示例可切换两种模式并重播。
+The default `Presentation::Branded` reveals the full icon with soft background
+light, optional brand text, and a bottom progress bar. Applications can select
+`Presentation::Simple` for a centered icon, progress ring, and status text.
+Gallery startup uses the default presentation; the component sample can switch
+between both modes and replay them.
 
 ```cpp
 #include <FluentQt/FluentQt.h>
@@ -50,166 +66,287 @@ splash.setProgress(3, 5)
 splash.dismiss()
 ```
 
-选用简洁效果时，C++ 调用 `splash->setPresentation(SplashScreen::Presentation::Simple)`，Python 调用 `splash.setPresentation(fluentqt.SplashScreen.Presentation.Simple)`。切换模式保留当前状态文字和进度。
+To select the simple presentation, call
+`splash->setPresentation(SplashScreen::Presentation::Simple)` in C++ or
+`splash.setPresentation(fluentqt.SplashScreen.Presentation.Simple)` in Python.
+Switching modes preserves the current status text and progress.
 
-`setProgress(done, total)` 切换为确定进度并归一化到 0–100%；`total <= 0` 或 `setIndeterminate(true)` 显示不确定进度并隐藏百分比。Branded 使用进度条，Simple 使用加载环。状态文字独立保留。达到 100% 不自动关闭，避免把任务计数当成启动完成。长文字显示省略，辅助功能可读取完整文本；小窗口会缩小图标并压缩间隔。
+`setProgress(done, total)` selects determinate progress, normalized from 0 to
+100%. A `total <= 0` or `setIndeterminate(true)` selects indeterminate progress
+and hides the percentage. Branded uses a progress bar; Simple uses a progress
+ring. Status text is retained independently. Reaching 100% does not dismiss
+the cover, since a task count does not establish that startup has finished.
+Long text is elided visually and remains available in full to accessibility
+clients. Small windows reduce the icon size and spacing.
 
-`setTransitionTarget(QWidget*)` 借用应用的图标容器。Full 动效退场时，完整图标缩小并移入该控件的内容矩形；目标可以位于内容宿主外的同窗口标题栏。组件不改变目标的所有权、外观或可见性，目标图标的显示时机由应用协调。没有目标、目标不可见或不在同一窗口时使用淡出；目标销毁后指针归零，进行中的图标从最后有效位置淡出。传入遮罩自身或其子控件会被忽略。
+`setTransitionTarget(QWidget*)` borrows an application-owned icon container.
+With Full motion, the full icon shrinks and moves into that widget's content
+rectangle on dismissal. The target may sit outside the content host in the
+same window's title bar. The component does not change the target's ownership,
+appearance, or visibility; the application coordinates when the target icon
+appears. A missing, invisible, or different-window target uses a fade instead.
+Destroying the target clears the pointer, and an icon already in transition
+fades from its last valid position. Passing the cover itself or one of its
+children is ignored.
 
-`dismiss()` 遵循 Full/Reduced/Disabled 动效策略，隐藏后发送一次 `dismissed()`，默认不销毁。完成后可以再次 `show()` 复用；直接 `hide()` 会取消退场且不发送完成信号。一次性使用可连接 `dismissed` 到 `deleteLater`。隐藏状态下或退场中的重复 `dismiss()` 不触发额外信号。窗口最小化不会取消已发起的退场，恢复窗口时不会重新显示已关闭的遮罩。
+`dismiss()` follows the Full/Reduced/Disabled motion policy and emits
+`dismissed()` once after hiding. It does not destroy the component by default.
+Call `show()` again to reuse it. Calling `hide()` directly cancels dismissal
+without a completion signal. For one-shot use, connect `dismissed` to
+`deleteLater`. Repeated `dismiss()` calls while hidden or already dismissing
+emit no extra signals. Minimizing the window does not cancel a dismissal in
+progress, and restoring the window does not reshow a dismissed cover.
 
-Reduced 使用短淡出，Disabled 立即完成；两者都不播放图标位移或装饰性入场。HighContrast 不绘制背景光。任务完成后可立即 `dismiss()`，无需等待入场动画结束。
+Reduced uses a short fade; Disabled completes immediately. Neither moves the
+icon or plays a decorative entrance. HighContrast omits background light.
+Once the task finishes, `dismiss()` can run immediately without waiting for
+the entrance animation.
 
-Gallery 外壳单独控制启动节奏：Full 动效下的 Branded 至少展示 1400 ms，加载时间计入其中；预热完成后至少保留 250 ms，再以 700 ms 的平滑起落曲线连接标题栏图标。长加载只补足就绪停留，不重复等待整段展示时间。Simple、Reduced 和 Disabled 保留 120 ms 的合成等待；首启引导从 `dismissed()` 后开始计时。公共组件不附加最短展示等待，示例中的 3600 ms 是可重播的模拟加载时间。
+The Gallery shell controls its own startup timing. Branded with Full motion
+stays visible for at least 1400 ms, including loading time. After warm-up it
+remains for at least 250 ms, then moves the icon into the title bar along a
+700 ms ease-in/out curve. A long load adds only the remaining ready-state
+pause, without restarting the full display duration. Simple, Reduced, and
+Disabled retain a 120 ms composition wait. First-run onboarding starts its
+timer after `dismissed()`. The public component adds no minimum display delay;
+the sample's 3600 ms duration is replayable simulated loading.
 
-同一窗口内，新显示的遮罩会直接隐藏同宿主或嵌套重叠宿主上已有的遮罩；互不重叠的容器可以各自显示。新遮罩就绪后，旧遮罩发送一次 `replaced()`，不发送 `dismissed()`，也不自动销毁。一次性使用应将 `dismissed` 和 `replaced` 都连接到 `deleteLater`；可复用的遮罩可以保留对象，稍后重新显示。直接 `hide()` 和窗口最小化不发送 `replaced()`。
+Within one window, showing a new cover immediately hides any existing cover
+on the same host or on nested, overlapping hosts. Non-overlapping containers
+can each show a cover. Once the new cover is ready, the old one emits
+`replaced()` once, without emitting `dismissed()` or destroying itself.
+For one-shot use, connect both `dismissed` and `replaced` to `deleteLater`.
+Reusable covers may keep their objects and show them again later. Direct
+`hide()` calls and window minimization do not emit `replaced()`.
 
-显示及退场期间，遮罩拦截宿主内容内的鼠标和键盘输入，接管内容区焦点并阻止底层快捷键通过该焦点触发；隐藏后尽可能恢复之前的焦点。宿主外的标题栏、控件和其他窗口继续正常工作。独立弹层及宿主外命令仍由应用协调。加载工作应分批调度或在工作线程执行，不能阻塞 GUI 线程，否则动画和窗口操作也会停止。
+While visible or dismissing, the cover intercepts mouse and keyboard input
+within the host content. It takes content focus and prevents underlying
+shortcuts from firing through that focus. After hiding, it restores the
+previous focus where possible. The title bar, controls outside the host, and
+other windows remain usable. The application still coordinates separate
+popups and commands outside the host. Schedule loading in batches or on a
+worker thread; blocking the GUI thread also stops animation and window input.
 
 ## Geometry
 
-Overlay 实现必须区分三层几何：
+Overlay implementations must distinguish three geometry regions:
 
-- outer widget geometry：包含阴影预留边距的实际 `QWidget::geometry()`。
-- visible card/panel geometry：用户看到、定位和 hit-test 的逻辑卡片或抽屉区域。
-- content geometry：承载 ListView、viewport 或任意子控件的内容区域；内容应保持 inset 或裁剪，避免方形 viewport 背景泄漏到圆角外。
+- Outer widget: the actual `QWidget::geometry()`, including shadow margins.
+- Visible card or panel: the card or drawer region used for placement and
+  hit testing.
+- Content: the region containing a ListView, viewport, or arbitrary child
+  widgets. Inset or clip it to keep rectangular viewport backgrounds inside
+  rounded corners.
 
-阴影 margin 不参与调用方语义。`setPosition()`、anchor placement、edge placement 和测试断言都以 visible card/panel 为准。
+`setPosition()`, anchor placement, edge placement, and test assertions refer
+to the visible card or panel, excluding shadow margins.
 
 ## Light Dismiss
 
-`CloseOnPressOutside` 只把 visible card/panel 外的按下视为 outside press；shadow margin 不是交互区域。`CloseOnEscape` 支持 overlay 自身以及 owning top-level 上下文中的 Escape。`NoAutoClose` 禁止 outside press 和 Escape 的隐式关闭。
+`CloseOnPressOutside` treats presses outside the visible card or panel as
+outside presses; shadow margins are not an interactive region.
+`CloseOnEscape` handles Escape in the overlay and its owning top-level window.
+`NoAutoClose` disables implicit dismissal from outside presses and Escape.
 
-非模态 overlay 关闭后允许原始 outside press 继续传递给背景目标。`DrawerView` 的 Escape 关闭仍保持原有“吞掉 Escape”的行为，以避免背景快捷键在抽屉关闭时同时触发。
+After a non-modal overlay closes, the original outside press continues to the
+background target. `DrawerView` still consumes Escape when closing so that
+background shortcuts do not fire at the same time.
 
 ## Scrim And Stacking
 
-模态或 dim overlay 使用同窗口 `OverlayScrim`：scrim 位于背景控件之上、overlay 卡片或抽屉之下。模态 scrim 阻止背景 pointer input；非模态或非 dim 场景不保留阻塞 scrim。overlay 打开、top-level resize、抽屉位置更新时都应显式维护 `scrim -> overlay` 的 z-order（`raiseOverlayStack`）。
+Modal or dimmed overlays use a same-window `OverlayScrim`. It sits above
+background widgets and below the overlay card or drawer. A modal scrim blocks
+background pointer input. The `modal` and `dim` combinations below determine
+whether the scrim exists and whether it intercepts input. Explicitly maintain
+the `scrim -> overlay` stacking order with `raiseOverlayStack` when opening an
+overlay, resizing the top-level window, or updating a drawer's position.
 
-关闭 overlay 时必须同步隐藏或销毁 scrim，避免 stale scrim 留在 top-level 上继续阻塞背景控件。`Dialog` 烟雾与 `Popup` / `DrawerView` 共用同一 `OverlayScrim` 实现（含可选圆角表面与 spotlight）。
+Closing an overlay must synchronously hide or destroy its scrim so a stale
+scrim cannot keep blocking background widgets. `Dialog` smoke and
+`Popup` / `DrawerView` share the `OverlayScrim` implementation, including
+optional rounded surfaces and spotlight effects.
 
 ## Rendering And Theme
 
-Overlay surface、border、shadow、smoke/scrim 均使用 Fluent token 和自绘。visible card/panel 外应保持透明，圆角区域不能由嵌入子控件背景泄漏填充。主题切换只触发重绘和 hosted content 样式刷新，不改变 open state、placement、selected value 或 content ownership。
+Overlay surfaces, borders, shadows, and smoke/scrims use custom painting with
+Fluent tokens. The area outside the visible card or panel stays transparent;
+embedded child backgrounds must not extend beyond rounded corners. Theme
+changes repaint the overlay and refresh hosted-content styling without
+changing open state, placement, selected values, or content ownership.
 
-同窗口子控件不要用独立原生窗口的 `windowOpacity` 做淡入淡出；使用 `QGraphicsOpacityEffect`（或等价控件内 opacity）画进宿主共享后备缓冲。
+Same-window children use `QGraphicsOpacityEffect` or equivalent widget-level
+opacity to paint fades into the host's shared backing store. Do not use
+`windowOpacity`, which belongs to separate native windows.
 
 ## Animation
 
-禁用动画时，open/close 的可见性、进度、scrim、geometry 和 lifecycle signals 必须同步落定。启用动画时，Popup/Flyout/Dialog 的 opacity-only transition 不应改变 visible card geometry；DrawerView 的 position animation 保持 normalized `position` 语义。
+With animation disabled, opening and closing must settle visibility, progress,
+scrims, geometry, and lifecycle signals synchronously. With animation enabled,
+opacity-only transitions in Popup/Flyout/Dialog must not change visible card
+geometry. DrawerView position animations retain normalized `position` semantics.
 
 ## Open State Machine
 
-Overlay 组件统一可观察语义，不统一继承树。`Popup` / `Flyout` / `TeachingTip`、`CoachMark` 与 `Dialog` / `ContentDialog` 保持各自的 Qt 基类；`DrawerView`、`ComboBox` / `MultiSelectComboBox` dropdown、`SplitButton` / `DropDownButton`（QMenu）不并入同一基类。
+Overlay components share observable semantics while retaining their own
+inheritance hierarchies. `Popup` / `Flyout` / `TeachingTip`, `CoachMark`, and
+`Dialog` / `ContentDialog` keep their respective Qt base classes. `DrawerView`,
+`ComboBox` / `MultiSelectComboBox` dropdowns, and `SplitButton` / `DropDownButton`
+(QMenu) are not merged into a common base class.
 
-### 三个“打开”分别指什么
+### Three meanings of open
 
-| 概念 | API | 含义 |
+| Concept | API | Meaning |
 | --- | --- | --- |
-| 逻辑请求态（公开 `isOpen`） | `isOpen()` / `setIsOpen(bool)` / `isOpenChanged` | 调用方请求的开关。`open()` / `setIsOpen(true)` 在 Opening 开始时即为 `true`；`close()` / `setIsOpen(false)` 在 Closing 开始时即为 `false`。 |
-| 动画完成态 | `opened()` / `closed()` | 入场或退场动画结束（禁用动画时与请求同步落定）。 |
-| 控件可见性 | `QWidget::isVisible()` | 实现细节。Opening 在 `show()` 前可暂不可见，Open 为可见；Closing 期间仍可见，退场完成后先 `hide()`，再发 `closed()`。 |
+| Requested logical state (public `isOpen`) | `isOpen()` / `setIsOpen(bool)` / `isOpenChanged` | The caller's requested state. `open()` / `setIsOpen(true)` sets it to `true` when Opening begins; `close()` / `setIsOpen(false)` sets it to `false` when Closing begins. |
+| Completed animation state | `opened()` / `closed()` | The entrance or exit animation has finished. With animation disabled, completion is synchronous with the request. |
+| Widget visibility | `QWidget::isVisible()` | An implementation detail. Opening may briefly precede `show()`; Open is visible. Closing remains visible until the exit finishes, then calls `hide()` before emitting `closed()`. |
 
-公开绑定应使用 `isOpen`，不要用 `isVisible()` 推断逻辑开关。`popupProgress` / `animationProgress` 只描述过渡，不代替 `isOpen`。
+Public bindings use `isOpen`. Do not infer logical state from `isVisible()`.
+`popupProgress` / `animationProgress` describes the transition and does not
+replace `isOpen`.
 
-### 相位与信号顺序
+### Phases and signal order
 
-相位：`Closed → Opening → Open → Closing → Closed`。
+Phases: `Closed → Opening → Open → Closing → Closed`.
 
-打开（canonical 在前，旧名为兼容别名，两者都发）：
+Opening follows this sequence. Legacy aliases appear after the current names
+below; both signals are emitted:
 
-1. `opening()`（别名 `aboutToShow()`）
-2. `isOpenChanged(true)`（仅在逻辑态实际变化时）
-3. 控件 `show()`，scrim / geometry 就位
-4. `opened()`（动画结束；禁用动画时在同一次调用内同步发出）
+1. `opening()` (alias: `aboutToShow()`).
+2. `isOpenChanged(true)` only when the logical state changes.
+3. Widget `show()`, with scrim and geometry in place.
+4. `opened()` when the animation finishes, or synchronously within the same
+   call when animation is disabled.
 
-关闭：
+Closing:
 
-1. `closing(reason)`（别名 `aboutToHide()`；无参 `aboutToHide` 保持原签名；`Dialog` 的 canonical 信号仍为无参 `closing()`）
-2. `isOpenChanged(false)`（仅在逻辑态实际变化时）
-3. 退场动画（若启用）；此间 `isOpen() == false` 且 `isVisible() == true`
-4. `hide()` 并释放 scrim，然后 `closed()`
+1. `closing(reason)` (alias: `aboutToHide()`; the parameterless `aboutToHide`
+   retains its signature, and `Dialog` retains parameterless `closing()` as
+   its main signal).
+2. `isOpenChanged(false)` only when the logical state changes.
+3. The exit animation, if enabled; during it, `isOpen() == false` and
+   `isVisible() == true`.
+4. `hide()` and release the scrim, then emit `closed()`.
 
-`Dialog` / `ContentDialog` 使用同一顺序。`QDialog::finished(int)` / `accepted()` / `rejected()` 保留；它们不是 overlay 相位信号。`TeachingTip::closing(TeachingTip::CloseReason)` 保留为组件特定信号，数值 0–4 与 `Popup::CloseReason` 对齐。
+`Dialog` / `ContentDialog` follows the same order. `QDialog::finished(int)` /
+`accepted()` / `rejected()` remains available; these are not overlay phase
+signals. `TeachingTip::closing(TeachingTip::CloseReason)` remains a
+component-specific signal, with values 0 to 4 aligned with `Popup::CloseReason`.
 
-`CoachMark` 保留既有 `open` 属性、`isOpen()` / `setOpen()` 和 `openChanged(bool)`，不在 1.7 中新增一组同义公开 API。`openChanged` 在逻辑请求态变化时发出；`opened` 在淡入完成后发出，`closed` 在淡出完成并隐藏后发出。打开中关闭或关闭中重开会反转当前过渡，不得为被取消的方向发出完成信号。
+`CoachMark` retains its existing `open` property, `isOpen()` / `setOpen()`, and
+`openChanged(bool)`, without adding synonymous public APIs in 1.7.
+`openChanged` fires when the requested logical state changes; `opened` fires
+after fade-in, and `closed` fires after fade-out and hiding. Closing during
+opening or reopening during closing reverses the current transition. Do not
+emit a completion signal for the cancelled direction.
 
-### 重入
+### Reentrancy
 
-| 调用 | 规则 |
+| Call | Rule |
 | --- | --- |
-| `open()` 在 Opening / Open | 忽略（no-op，不重复信号） |
-| `close()` 在 Closing / Closed | 忽略 |
-| `close()` 在 Opening | 取消入场，转入 Closing |
-| `open()` 在 Closing | 取消退场，转入 Opening（从当前进度反向） |
-| 相位信号处理里销毁 overlay | 允许；实现必须用 `QPointer` 防护，不得在销毁后发后续信号 |
+| `open()` during Opening / Open | No-op; no repeated signals |
+| `close()` during Closing / Closed | No-op |
+| `close()` during Opening | Cancel the entrance and enter Closing |
+| `open()` during Closing | Cancel the exit and enter Opening, reversing from the current progress |
+| Destroy the overlay in a phase signal handler | Allowed; implementations must guard with `QPointer` and emit no further signals after destruction |
 
-`opening` / `closing` **不可取消**。需要阻止关闭时用 `NoAutoClose` 或不要调用 `close()`。
+`opening` / `closing` cannot be cancelled. To prevent dismissal, use
+`NoAutoClose` or avoid calling `close()`.
 
 ### Close reasons
 
-`Popup::CloseReason`（`Q_ENUM`）：
+`Popup::CloseReason` (`Q_ENUM`):
 
-| 值 | 何时 |
+| Value | When it applies |
 | --- | --- |
-| `Programmatic` | `close()` / `setIsOpen(false)` / `Dialog::done()`，以及未标明原因的关闭 |
-| `ActionButton` | TeachingTip / ContentDialog 主操作等显式动作 |
-| `CloseButton` | TeachingTip 关闭按钮 |
-| `LightDismiss` | `CloseOnPressOutside` 命中可见卡片外 |
-| `TargetDestroyed` | 锚点 / target 销毁 |
-| `Escape` | `CloseOnEscape`（TeachingTip 在 light-dismiss 开启时仍通过自己的 `closing` 报告 `LightDismiss`，以保持既有数值） |
+| `Programmatic` | `close()` / `setIsOpen(false)` / `Dialog::done()`, or dismissal with no specified reason |
+| `ActionButton` | An explicit action, such as the primary action in TeachingTip / ContentDialog |
+| `CloseButton` | The TeachingTip close button |
+| `LightDismiss` | `CloseOnPressOutside` hits outside the visible card |
+| `TargetDestroyed` | The anchor / target is destroyed |
+| `Escape` | `CloseOnEscape`; when light-dismiss is enabled, TeachingTip still reports `LightDismiss` through its own `closing` signal to preserve existing values |
 
-未标明时默认为 `Programmatic`。重复 `close()` 不重复发 `closing`。
+The default reason is `Programmatic`. Repeated `close()` calls do not repeat
+`closing`.
 
-应用级事件过滤器只能处理所属顶层窗口内的 Escape。若按键来自原生菜单、其他顶层窗口，或当前事件位于另一个同窗口 overlay 内，应先交给该表面处理；CoachMark 不得跨窗口关闭，也不得抢先吞掉更上层菜单或 overlay 的 Escape。
+Application-level event filters may handle Escape only within the owning
+top-level window. Native menus, other top-level windows, and another overlay
+in the same window must handle their own key events first. CoachMark must not
+close across windows or consume Escape before a menu or overlay above it.
 
-### `modal`、`dim`、`closePolicy` 正交
+### Independent `modal`, `dim`, and `closePolicy` properties
 
-三条轴独立，不要用其中一条去推断另一条：
+These properties control separate behaviors:
 
-- **`modal`**：是否用 scrim **挡住**背景指针。`true` 时 scrim `WA_TransparentForMouseEvents` 为 false。
-- **`dim`**：是否绘制烟雾。`false` 时 scrim 不涂色（仍可按 `modal` 拦截输入）。
-- **`closePolicy` / light-dismiss**：`NoAutoClose`、`CloseOnPressOutside`、`CloseOnEscape`。只约束隐式关闭，不决定是否有 scrim。
+- `modal`: whether the scrim blocks background pointer input. When `true`, the
+  scrim's `WA_TransparentForMouseEvents` is false.
+- `dim`: whether to paint smoke. When `false`, the scrim remains unpainted but
+  may still intercept input according to `modal`.
+- `closePolicy` / light-dismiss: `NoAutoClose`, `CloseOnPressOutside`, and
+  `CloseOnEscape` control implicit dismissal, not whether a scrim exists.
 
-组合：
+Combinations:
 
-- 二者皆 false：无 scrim。
-- 仅 `modal`：不可见的输入挡板。
-- 仅 `dim`：可见但不拦截的烟雾；outside press 仍可按 `closePolicy` 关闭，并允许穿透到背景。
-- 二者皆 true：挡输入的烟雾。
+- Both false: no scrim.
+- `modal` only: an invisible input barrier.
+- `dim` only: visible smoke that does not intercept input. Outside presses may
+  still dismiss the overlay according to `closePolicy` and reach the background.
+- Both true: visible smoke that blocks input.
 
-`Dialog::setSmokeEnabled(true)` 是历史兼容包：同时打开 `modal` 与 `dim`。`setSmokeEnabled(false)` 同时关掉二者；`isSmokeEnabled()` 仅在两条轴都为 `true` 时返回 `true`。正交组合请直接 `setModal` / `setDim`。`DrawerView` 继续用自己的 `ClosePolicy` 类型，不与 `Popup::ClosePolicy` 合并。
+`Dialog::setSmokeEnabled(true)` is a legacy compatibility wrapper that enables
+both `modal` and `dim`. `setSmokeEnabled(false)` disables both;
+`isSmokeEnabled()` returns `true` only when both are `true`. Use `setModal` /
+`setDim` for independent combinations. `DrawerView` keeps its own `ClosePolicy`
+type, separate from `Popup::ClosePolicy`.
 
-### NOTIFY 与 no-op
+### NOTIFY and no-op writes
 
-可绑定属性（`isOpen`、`modal`、`dim`、`closePolicy`、`animationEnabled`，以及各组件已公开的同类属性）必须：
+Bindable properties (`isOpen`, `modal`, `dim`, `closePolicy`,
+`animationEnabled`, and equivalent properties already public on each component)
+must:
 
-- 提供 `NOTIFY` 信号；
-- 写入当前值时为 no-op，不重复 `NOTIFY`。
+- Provide a `NOTIFY` signal.
+- Treat writing the current value as a no-op, without repeating `NOTIFY`.
 
-主题切换只重绘 / 刷新 hosted content，不得改变 `isOpen`、placement、selected value 或 content ownership，也不得因此发出 open-state 信号。
+Theme changes only repaint and refresh hosted content. They must not change
+`isOpen`, placement, selected values, or content ownership, or emit open-state
+signals as a result.
 
-### 兼容别名
+### Compatibility aliases
 
-旧名称保留到下一个 major 才考虑删除：
+Keep legacy names at least until the next major version before considering
+removal:
 
 - `aboutToShow` ↔ `opening`
-- `aboutToHide` ↔ `closing`（无参别名）
-- `setIsOpen` / `isOpen` 为公开开关；`open()` / `close()` 为命令
-- `Dialog::isSmokeEnabled` / `setSmokeEnabled` ↔ 历史烟雾包（见上）
-- TeachingTip 的 `CloseReason` 与 `closing(TeachingTip::CloseReason)` 保留
+- `aboutToHide` ↔ `closing` (parameterless alias).
+- `setIsOpen` / `isOpen` is the public state API; `open()` / `close()` are commands.
+- `Dialog::isSmokeEnabled` / `setSmokeEnabled` ↔ the legacy smoke wrapper above.
+- TeachingTip retains `CloseReason` and `closing(TeachingTip::CloseReason)`.
 
-### 不强制统一的继承
+### Separate inheritance hierarchies
 
-不要把 `DrawerView`、`ComboBox`、`MultiSelectComboBox`、`SplitButton`、`DropDownButton`、`Dialog` 收进同一个 overlay 基类。`SplitButton` / `DropDownButton` 的 `isOpen` 描述的是 QMenu 可见性，不是 same-window overlay 相位。`ComboBox` 与 `MultiSelectComboBox` dropdown 继续组合 `Flyout`。`fluent::overlay::OverlayCoordinator` 保持内部实现。
+Do not merge `DrawerView`, `ComboBox`, `MultiSelectComboBox`, `SplitButton`,
+`DropDownButton`, and `Dialog` into one overlay base class. For `SplitButton` /
+`DropDownButton`, `isOpen` describes QMenu visibility, not a same-window overlay
+phase. `ComboBox` and `MultiSelectComboBox` dropdowns continue to compose
+`Flyout`. `fluent::overlay::OverlayCoordinator` remains an internal implementation.
 
 ## Preserved Differences And Deferred Work
 
-`ComboBox` 与 `MultiSelectComboBox` dropdown 保持非模态、非 dim；前者保留当前 index、editable text 和 ListView 单选行为，后者保留即时多选、搜索与 filtered select-all 行为。`DrawerView` 保留 edge drag、normalized position、content widget ownership 和现有 public `ClosePolicy` API。
+`ComboBox` and `MultiSelectComboBox` dropdowns remain non-modal and undimmed.
+The former retains its current index, editable text, and ListView single
+selection. The latter retains immediate multi-selection, search, and
+select-all over filtered results. `DrawerView` retains edge dragging,
+normalized position, content-widget ownership, and its existing public
+`ClosePolicy` API.
 
-暂不把 `Popup::ClosePolicy` 与 `DrawerView::ClosePolicy` 合并，也不让 `DrawerView` 继承 `Popup`。这些 public API consolidation 若需要，应通过后续独立设计与实现任务单独评估。
+Keep `Popup::ClosePolicy` and `DrawerView::ClosePolicy` separate, and do not
+make `DrawerView` inherit `Popup`. Any consolidation of these public APIs
+requires a separate design and implementation task.
 
-需要真正跨应用边界的系统对话框时，应使用独立 `Window`，不要让 `ContentDialog` / `Dialog` 再走原生顶层旁路。
+Use a separate `Window` for a system dialog that must cross application
+boundaries. Do not route `ContentDialog` / `Dialog` through a native top-level
+window instead.
 
 <!-- docs-nav:bottom:start -->
 ---

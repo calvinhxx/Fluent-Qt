@@ -163,6 +163,11 @@ explicit prerequisites. **Full example** includes the controls, layout, signals
 and ownership. Copy follows the selected source. The file browser reuses the
 Gallery [TreeRowDelegate](../../app/view/widgets/samples/CollectionSampleDelegates.h)
 for its row styling; it is an application delegate, not a Spatial dependency.
+
+## Gallery rendering
+
+### Shared mode and startup
+
 The shared setting opens navigation and content into opposing surfaces while the
 native title bar stays stable. Gallery checks GPU support and creates its shell
 QOpenGLWidget and context only when 3D is enabled. Builds with Spatial default to
@@ -174,9 +179,10 @@ an OpenGL-compatible native window format before showing the window. This does
 not create a context or enable GPU composition: ordinary 2D painting still uses
 the raster backing store. It prevents Qt from destroying and recreating the
 visible window when the first QOpenGLWidget is added. The base library and
-2D-only Gallery builds keep their original window setup.
-The startup Splash and logo handoff finish before
-the shell redirects widget painting.
+2D-only Gallery builds keep their original window setup. The startup Splash and
+logo handoff finish before the shell redirects widget painting.
+
+### GPU textures and sampling
 
 The shell redirects widget painting into two cached GPU textures through an
 OpenGL painter. Content changes redraw the affected surface; pointer motion reuses
@@ -195,8 +201,11 @@ reduced and tilted. It uses full-precision coordinates, preserves premultiplied
 alpha, and reduces to ordinary sampling at native density. No full-screen blur
 or sharpening pass is applied. Perspective still moves strokes off the pixel
 grid, so projected text cannot be pixel-identical to axis-aligned 2D text.
-Large glyphs that Qt paints as outlines receive the same
-multisample coverage as curved controls.
+Large glyphs that Qt paints as outlines receive the same multisample coverage
+as curved controls.
+
+### Cache budget
+
 The two textures and the shared paint and resolve targets have a combined 192 MiB
 estimated budget: four bytes per resolved pixel and twelve bytes per paint sample,
 allowing for separate color, depth and stencil storage. The actual sample count is queried
@@ -216,6 +225,8 @@ The paint target and both caches are released on return to 2D. The C++, Python a
 use the same policy. Web keeps native output resolution by default; a lower
 resolution remains an explicit choice.
 
+### macOS paint adapter
+
 On macOS, a paint adapter is installed before Gallery creates its pages, without
 creating an OpenGL context. First enabling 3D reuses that adapter, avoiding an
 application-wide style change and layout pass over all prewarmed pages. Native
@@ -226,6 +237,8 @@ image. Other native option types retain their original coordinates. The rest of
 the widget tree paints into the GPU texture. Transparent hosts retain their
 background rather than acquiring a forced palette fill.
 
+### Returning to 2D
+
 Returning to 2D stops capture and input redirection, clears cached textures, and
 hides the GPU surface for reuse. After the first opt-in, Qt may retain the window's
 GL composition resources until it closes. Live widgets keep their parents, focus
@@ -233,28 +246,36 @@ and values. Reduced motion and high contrast select 2D. Shell angles, animation
 timing and antialiasing choices belong to
 [`GallerySpatialController.cpp`](../../app/view/shell/GallerySpatialController.cpp),
 not the library's API contract.
+
 `SpatialView` uses a regular widget viewport under an ancestor graphics effect,
 avoiding nested OpenGL surfaces while keeping controls and 3D poses live. In the
 Gallery shell that viewport paints through the outer OpenGL painter, so its
-perspective transform no longer needs an intermediate full-page CPU bitmap. A
+perspective transform needs no intermediate full-page CPU bitmap. A
 regular raster capture in another application still uses software painting. It also
 releases its GPU viewport while hidden or fully clipped and restores it when
-visible. Applications no longer need a visibility/backend adapter for this.
+visible. The view manages this itself; applications need no visibility/backend
+adapter.
+
 `renderMode()` remains the requested policy; `activeBackend()` identifies the
 view's own viewport. Under Gallery composition, `Raster` denotes its regular
 widget viewport, whose redirected painter uses the outer GPU surface. A standalone
 visible view can use its own OpenGL viewport normally.
+
 Tab/Escape in a Gallery scene restores 2D throughout the Gallery for native input.
 The original Home Hero remains intact. Web Gallery uses the same compositor
 through WebGL and falls back to 2D if the renderer is unavailable. It checks the
 actual canvas context instead of creating an offscreen desktop OpenGL probe.
 See the [browser validation workflow](../development/webassembly-workflow.md#spatial-webgl-validation).
 
+### Python bindings
+
 Python source builds can enable `fluentqt.spatial`; see the
 [binding guide](../../bindings/pyside6/README.md#optional-spatial-module) and
 [coverage reference](../../bindings/pyside6/ROADMAP.md#spatial-composition).
 Python calls configure the same C++ scene and connect ordinary widget signals;
 projection, caching and pointer animation stay in C++.
+
+### Window materials and overlays
 
 Mica/Acrylic and 3D have separate responsibilities: the window backdrop supplies
 the bottom material, while the 3D compositor positions the navigation and content
@@ -294,8 +315,8 @@ OpenGL child widgets cannot be embedded.
 
 ## Which components can use 3D?
 
-Spatial transforms a QWidget subtree, rather than providing a second 3D version
-of every component. Embedding successfully is not a guarantee for every interaction.
+Spatial transforms an existing QWidget subtree. Review the interactions you
+need as well as whether the content can be embedded:
 
 | Content | Current scope |
 | --- | --- |
@@ -307,8 +328,8 @@ of every component. Embedding successfully is not a guarantee for every interact
 | SpatialView nested inside SpatialView; entire Window or NavigationView shells | Outside the supported composition scope |
 | Models, themes, animations and other non-widget helpers | Continue using their normal APIs; they have no surface to transform |
 
-This is a tested subset, not an all-components compatibility certification.
-Qt also documents limitations for proxy widgets with an OpenGL viewport:
+Compatibility evidence covers only this tested subset. Qt also documents
+limitations for proxy widgets with an OpenGL viewport:
 [QGraphicsView](https://doc.qt.io/qt-6/qgraphicsview.html).
 
 ## Public parameters
@@ -322,17 +343,17 @@ of them. Slider ranges are convenient review ranges, not the full API limits.
 |---|---|---|---|
 | Item | `position` | `(0, 0, 0)` | Pivot position in logical pixels relative to view center; X right, Y down, Z toward camera |
 | Item | `rotation` | `(0, 0, 0)` | X/Y/Z degrees, applied in that order |
-| Item | `scale` | `1` | Uniform scale, clamped to 0.05–8 |
-| Item | `pivot` | `(0.5, 0.5)` | Normalized content anchor and rotation origin, each axis clamped to 0–1 |
+| Item | `scale` | `1` | Uniform scale, clamped between 0.05 and 8 |
+| Item | `pivot` | `(0.5, 0.5)` | Normalized content anchor and rotation origin, each axis clamped between 0 and 1 |
 | Item | `visible` | `true` | Visibility in both spatial and native layouts |
-| Item | `surfaceIntensity` | `0` | Rounded-card shadow and edge light, clamped to 0–1; 3D only |
-| Item | `hoverLift` | `0` | Temporary upward hover offset, clamped to 0–16 logical pixels; freezes during input |
-| View | `cameraDistance` | `1000` | Perspective distance in logical pixels, clamped to 100–10000 |
-| View | `zoom` | `1` | Whole-scene magnification, clamped to 0.1–4 |
+| Item | `surfaceIntensity` | `0` | Rounded-card shadow and edge light, clamped between 0 and 1; 3D only |
+| Item | `hoverLift` | `0` | Temporary upward hover offset, clamped between 0 and 16 logical pixels; freezes during input |
+| View | `cameraDistance` | `1000` | Perspective distance in logical pixels, clamped between 100 and 10000 |
+| View | `zoom` | `1` | Whole-scene magnification, clamped between 0.1 and 4 |
 | View | `pointerTrackingEnabled` | `true` | Pointer-driven scene tilt |
-| View | `maximumTilt` | `(10, 16)` | Maximum pointer pitch/yaw in degrees, each clamped to 0–45 |
-| View | `responseTime` | `140 ms` | Exponential follow time constant, 0 immediate; clamped to 0–1000 |
-| View | `maximumFrameRate` | `60` | Pointer animation update cap, clamped to 15–120; not measured display FPS |
+| View | `maximumTilt` | `(10, 16)` | Maximum pointer pitch/yaw in degrees, each clamped between 0 and 45 |
+| View | `responseTime` | `140 ms` | Exponential follow time constant, 0 immediate; clamped between 0 and 1000 |
+| View | `maximumFrameRate` | `60` | Pointer animation update cap, clamped between 15 and 120; not measured display FPS |
 | View | `cacheEnabled` | `true` | Cache widget surfaces and repaint changed content |
 | View | `renderMode` | `Auto` | Auto, raster, or OpenGL request; unavailable OpenGL falls back |
 | View | `spatialEnabled` | `true` when permitted | Switch between perspective and native vertical layout |
@@ -394,6 +415,7 @@ shows the effective availability. All Spatial examples follow that effective
 mode; the saved preference remains available when acceleration returns. Set `FLUENT_QT_GALLERY_DISABLE_3D=1` to
 start in 2D without creating a shell OpenGL canvas for troubleshooting.
 
+### Library rendering
 
 The library maps each widget's rectangle through rotation, translation, and
 perspective, then applies the resulting projective transform to a private

@@ -8,7 +8,7 @@
 [← DataGrid API Contract](datagrid-api-proposal.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Editing Command Router API Contract →](editing-command-router-proposal.md)
 <!-- docs-nav:top:end -->
 
-Issue: [#37 — 新增多选下拉框](https://github.com/calvinhxx/Fluent-Qt/issues/37)
+Issue: [#37: Add a multi-select combo box](https://github.com/calvinhxx/Fluent-Qt/issues/37)
 
 `fluent::basicinput::MultiSelectComboBox` is a separate model-backed
 multi-selection component. The existing `ComboBox` remains single-select and

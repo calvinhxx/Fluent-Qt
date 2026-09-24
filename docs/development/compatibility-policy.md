@@ -5,10 +5,8 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Development](README.md) › API, policy, and writing
 
-[← Technical debt roadmap](technical-debt-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [兼容性策略 →](compatibility-policy.zh-CN.md)
+[← Technical debt roadmap](technical-debt-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Source Comment Style →](comment-style.md)
 <!-- docs-nav:top:end -->
-
-[简体中文](compatibility-policy.zh-CN.md)
 
 This policy applies from FluentQt 1.7 onward. It keeps the public contract
 predictable without promising binary compatibility that Qt toolchains cannot
@@ -60,5 +58,5 @@ security or distribution constraint makes that impossible.
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Technical debt roadmap](technical-debt-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [兼容性策略 →](compatibility-policy.zh-CN.md)
+[← Technical debt roadmap](technical-debt-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Source Comment Style →](comment-style.md)
 <!-- docs-nav:bottom:end -->

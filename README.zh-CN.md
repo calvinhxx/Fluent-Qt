@@ -35,7 +35,9 @@
   <a href="https://github.com/calvinhxx/Fluent-Qt/discussions">提问与交流</a>
 </p>
 
-Fluent-Qt（FluentQt）是面向 Qt Widgets 的跨平台 Fluent UI 组件库，提供输入、导航、集合、数据表格、[图表](docs/architecture/charts.md)、弹窗和窗口等原生控件。它保留 Qt Widgets 熟悉的对象模型和 CMake 工作流，支持 Windows、macOS、Linux、WebAssembly、浅色/深色/高对比度主题、应用级完整/减弱/关闭动效策略，以及 C++ 和可选 PySide6 接口，可直接接入现有项目。
+Fluent-Qt（FluentQt）是面向 Qt Widgets 的跨平台 Fluent UI 组件库，提供输入、导航、集合、数据表格、[图表](docs/architecture/charts.md)、弹窗和窗口等原生控件。接入现有项目后，仍可沿用 Qt 的对象模型和 CMake 工作流。
+
+组件库支持 Windows、macOS、Linux 和 WebAssembly，提供 C++ API 和可选的 PySide6 绑定。内置浅色、深色和高对比度主题；应用级动效可选择完整、减弱或关闭。
 
 ## 🤖 使用 Agent 构建
 

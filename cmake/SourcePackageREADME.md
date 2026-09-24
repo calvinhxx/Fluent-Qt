@@ -1,13 +1,12 @@
 # FluentQt Library Source Package
 
-This archive contains the reusable FluentQt UI component library, its optional
-PySide6 binding sources, the optional WebAssembly adapter target, and minimal
-integration material. The native C++
-Gallery, top-level C++ tests, and application logging support are not part of
-this package. The standalone `FluentQt-Gallery` application is intentionally
-excluded because it depends on the native Gallery catalogs and artwork from
-the complete repository. This archive still builds the reusable `FluentQt`
-Python wheel; use a full checkout to build the separate Gallery wheel.
+This archive contains the FluentQt UI component library, optional PySide6
+binding sources, the optional WebAssembly adapter target, and minimal
+integration material. It can also build the `FluentQt` Python wheel.
+
+The native C++ Gallery, top-level C++ tests, and application logging support
+are excluded. Building the separate `FluentQt-Gallery` application wheel
+requires a full checkout with the native Gallery catalogs and artwork.
 
 Requirements:
 
@@ -58,19 +57,22 @@ Use `--starter existing-qt` for an embeddable integration slice or
 `--language pyside6` for the Python counterpart. See
 `tools/onboarding/README.md` for the full contract.
 
-For AI-assisted integration, start with `llms.txt` and
-`docs/ai/README.md`. The source package includes the generated component and
-integration catalog, its JSON Schemas, the cross-agent `build-fluentqt-gui`
-Skill, its product-reference, differentiation, component-selection, theme, and
-visual-evidence contracts under `.agents/skills/`, plus its proportional
-`lite`/`full` routing and performance/lifecycle contract. The Skill is
-self-contained: its scripts read the bundled catalog snapshot and the same
-directory can be installed in any compatible agent. The package also includes
-the Skill packager, catalog compatibility query, and deterministic evaluation
-tools under `tools/ai/`. It intentionally omits the catalog generator because
-regeneration depends on Gallery sources from a full checkout. Catalog source
-and focused-test paths point back to that checkout; sample code remains
-embedded in the catalog and is available with `--json`.
+For AI-assisted integration, start with `llms.txt` and `docs/ai/README.md`.
+The package includes the generated component and integration catalog, its
+JSON Schemas, and the cross-agent `build-fluentqt-gui` Skill under
+`.agents/skills/`. The Skill covers product references, differentiation,
+component selection, themes, visual evidence, and performance/lifecycle rules.
+Its `lite`/`full` routing matches the workflow to the task's scope.
+
+The Skill is self-contained: its scripts read the bundled catalog snapshot,
+and its directory can be installed in any compatible agent. The package also
+includes the Skill packager, catalog compatibility query, and deterministic
+evaluation tools under `tools/ai/`.
+
+Regenerating the catalog requires Gallery sources from a full checkout, so
+the generator is excluded. Catalog source and focused-test paths refer to
+that checkout. Sample code is embedded in the catalog and available with
+`--json`.
 
 The project's own source is MIT licensed. Bundled assets retain the licenses
 and notices included in `THIRD_PARTY_NOTICES.md` and `third_party/`. Qt is a

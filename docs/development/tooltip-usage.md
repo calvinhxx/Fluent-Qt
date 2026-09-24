@@ -29,8 +29,6 @@ a tooltip is supplemental help, not the accessible label. Tests for hover help
 should send `QEvent::ToolTip` to the target and assert against the attached
 `ToolTip`, rather than inspecting a platform-native tooltip window.
 
-中文约定：所有悬停提示统一使用 `fluent::status_info::ToolTip`，调用点不要直接使用 `QToolTip` 或 `QWidget::setToolTip()`。图标按钮仍必须提供无障碍名称；Tooltip 只是补充提示，不能替代无障碍文本。
-
 <!-- docs-nav:bottom:start -->
 ---
 [← Gallery Control Images](gallery-control-images.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Project site workflow →](site-workflow.md)

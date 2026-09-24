@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Fluent design](README.md) › Design references
 
-[← 自定义主题与组件局部覆盖](custom-themes.md) · [Contents](../SUMMARY.md) · [Fluent design index](README.md)
+[← Custom themes and component overrides](custom-themes.md) · [Contents](../SUMMARY.md) · [Fluent design index](README.md)
 <!-- docs-nav:top:end -->
 
 FluentQt's canonical values live in `src/design/*.h` and are summarized in
@@ -31,5 +31,5 @@ their focused tests together.
 
 <!-- docs-nav:bottom:start -->
 ---
-[← 自定义主题与组件局部覆盖](custom-themes.md) · [Contents](../SUMMARY.md) · [Fluent design index](README.md)
+[← Custom themes and component overrides](custom-themes.md) · [Contents](../SUMMARY.md) · [Fluent design index](README.md)
 <!-- docs-nav:bottom:end -->

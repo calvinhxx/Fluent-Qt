@@ -35,7 +35,9 @@
   <a href="https://github.com/calvinhxx/Fluent-Qt/discussions">Questions &amp; community</a>
 </p>
 
-Fluent-Qt (FluentQt) is a cross-platform Fluent UI component library for Qt Widgets. It provides native controls for input, navigation, collections, data grids, [charts](docs/architecture/charts.md), overlays, and windows while preserving Qt's object model and CMake workflow. It supports Windows, macOS, Linux, WebAssembly, Light/Dark/High Contrast themes, an application-wide Full/Reduced/Disabled motion policy, C++, and optional PySide6 bindings, and can be added directly to existing projects.
+Fluent-Qt (FluentQt) is a cross-platform Fluent UI component library for Qt Widgets. It provides native controls for input, navigation, collections, data grids, [charts](docs/architecture/charts.md), overlays, and windows. You can add it to an existing project using Qt's object model and CMake workflow.
+
+The library supports Windows, macOS, Linux, and WebAssembly, with C++ APIs and optional PySide6 bindings. It includes Light, Dark, and High Contrast themes and an application-wide motion policy: Full, Reduced, or Disabled.
 
 ## 🤖 Build with AI
 

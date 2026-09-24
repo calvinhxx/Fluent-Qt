@@ -131,23 +131,32 @@ contrast adjustment against Fluent neutral surfaces. HighContrast uses the
 theme chart palette. `BarChart` uses block legend swatches, `ScatterChart` uses
 dots, and line legends preserve the series stroke styles.
 
+### Readout layout
+
 Hover hit testing reads cached projections. Each chart lazily reuses one passive
 `Popup` with `Label` children for its readout; the popup supplies the shared
 surface, shadow, theme, and placement lifecycle. It does not take focus or
 intercept pointer events. The number of labels is bounded by the visible series,
-not the data points. Readout width follows the text within the chart's available
-space. Headings and series names wrap instead of eliding; values use their
+not the data points.
+
+Readout width follows the text within the chart's available space. Headings
+and series names wrap instead of eliding; values use their
 measured width and move below the name when two columns do not fit.
 Comparison rows are limited by their measured height; any remaining series
 are reported as a count, with the active series always shown first.
-`LineChart` and `AreaChart` show a shared readout at the
-active point's X. The active series keeps
-its exact value; a keyboard-selected raw row is read directly when absent from
-the projection. Other series appear only when their cached projection contains
+
+### Values and series comparison
+
+`LineChart` and `AreaChart` show a shared readout at the active point's X.
+The active series keeps its exact value; a keyboard-selected raw row is read
+directly when absent from the projection. Other series appear only when their
+cached projection contains
 an exactly equal X. Nearby samples are omitted. The active series appears first
 and uses Fluent `BodyStrong` typography, including keyboard selections. Bar,
 radial and scatter readouts describe only the selected series or aggregate;
 Sparkline shows cursor markers without a readout panel.
+
+### Pointer and keyboard
 
 The outer focus ring appears for keyboard navigation and hides on mouse clicks.
 Mouse selection retains the data cursor without outlining the card. Readouts
@@ -164,6 +173,8 @@ Qt key propagation so the parent dialog can apply its own close policy. After
 resetting a zoomed chart, a second Escape can close the parent dialog.
 Applications can set an exact viewport through `setXRange()`. Pie and Donut
 always use the complete first model and ignore X-axis zoom.
+
+### Accessible values
 
 The root accessible role is Chart, with the application-supplied name and
 description taking precedence. The current raw value is exposed as accessible

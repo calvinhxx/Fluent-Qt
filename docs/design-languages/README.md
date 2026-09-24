@@ -69,4 +69,5 @@ modes.
 - [Component API conventions](../development/component-api-conventions.md)
 - [Visual review](../development/visual-review.md)
 
-自定义应用配色和单组件属性请参阅 [自定义主题与组件局部覆盖](custom-themes.md)。
+For application colors and per-component settings, see
+[Custom themes and component overrides](custom-themes.md).

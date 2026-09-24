@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Development](README.md) › API, policy, and writing
 
-[← 兼容性策略](compatibility-policy.zh-CN.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Documentation style →](documentation-style.md)
+[← Compatibility Policy](compatibility-policy.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Documentation style →](documentation-style.md)
 <!-- docs-nav:top:end -->
 
 Use this guide when adding or materially editing comments under `src/`.
@@ -147,5 +147,5 @@ Use these terms consistently in comments and docs:
 
 <!-- docs-nav:bottom:start -->
 ---
-[← 兼容性策略](compatibility-policy.zh-CN.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Documentation style →](documentation-style.md)
+[← Compatibility Policy](compatibility-policy.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Documentation style →](documentation-style.md)
 <!-- docs-nav:bottom:end -->

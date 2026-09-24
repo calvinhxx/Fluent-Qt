@@ -23,15 +23,14 @@ standalone reading tasks.
     - [Spatial: compose existing widgets in depth](architecture/spatial-view.md)
 - [Fluent design](design-languages/README.md)
   - **Design references**
-    - [Fluent (Windows) — Design Reference](design-languages/fluent.md)
-    - [自定义主题与组件局部覆盖](design-languages/custom-themes.md)
+    - [Fluent (Windows): design reference](design-languages/fluent.md)
+    - [Custom themes and component overrides](design-languages/custom-themes.md)
     - [Fluent Design Kit Source](design-languages/figma-sources.md)
 - [Development](development/README.md)
   - **API, policy, and writing**
     - [Component API Conventions](development/component-api-conventions.md)
     - [Technical debt roadmap](development/technical-debt-roadmap.md)
     - [Compatibility Policy](development/compatibility-policy.md)
-    - [兼容性策略](development/compatibility-policy.zh-CN.md)
     - [Source Comment Style](development/comment-style.md)
     - [Documentation style](development/documentation-style.md)
     - [Accessibility Contract](development/accessibility-contract.md)
