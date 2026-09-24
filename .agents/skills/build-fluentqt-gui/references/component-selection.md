@@ -1,14 +1,12 @@
 # Component Selection
 
-Choose controls from user intent, state semantics, and layout ownership. Visual
-similarity alone is not enough.
+Choose controls after defining the product signature and information
+architecture. Match each control to user intent, state semantics, and layout
+ownership. A visual resemblance does not establish that match.
 
-Select the product signature and information architecture first. Components
-implement that composition; they must not decide it by accident.
-
-If a product reference was used, treat its component probes as questions, not a
-shopping list. Select from the target-specific winning concept and re-query the
-FluentQt catalog; do not inherit a reference product's widget inventory.
+If you used a product reference, check its component suggestions against the
+selected concept and query the FluentQt catalog again. Do not copy the
+reference's widget inventory.
 
 ## Contents
 
@@ -39,11 +37,9 @@ conditional family. For example, a temporary inspectable side surface can make
 `DrawerView` conditional; it becomes must-use only when the workflow actually
 contains such details.
 
-There is no minimum component count. Do not perform component bingo. A control
-that does not own a required behavior, state, lifetime, or data shape is a
-liability even when it would make the screen look different. Diversity should
-come from the product's primary object, time model, and signature surface, then
-from the controls that naturally express them.
+There is no minimum component count. Use a control only when it owns a required
+behavior, state, lifetime, or data shape. Let the product's primary object, time
+model, and signature surface determine the composition and the controls it needs.
 
 ## Decide in this order
 
@@ -79,6 +75,8 @@ decide an entire screen.
 Verify the public header/import, supported sample, and focused test. Catalog
 retrieval is evidence gathering, not permission to use every returned control.
 
+### Collection rows
+
 For collection and model/view controls, inspect the code that builds the live
 sample, not only the displayed snippet. Record the model roles, delegate,
 selection-indicator owner, row height, icon size, and any proxy model. Ordinary
@@ -88,11 +86,15 @@ When a custom row fill already owns selection, call
 `setSelectionIndicatorVisible(false)` and do not paint a second indicator in
 the delegate. Keep the real selection model; presentation is not a reason to
 discard keyboard or accessibility selection semantics.
-Variable-height custom delegates **must clip** and keep `sizeHint == paint`;
-Gallery's default 32–36 px uniform rows hide overlap. Tool/step rows are
-compact Caption chips (name · status on one line), not Standard-sized cards.
+Variable-height custom delegates must clip and keep `sizeHint == paint`.
+Gallery's default 32 to 36 px uniform rows can hide overlap. Use compact Caption
+chips for tool/step rows, with name and status on one line; Standard-sized cards
+are too tall for this content.
+
+### Material and background
+
 A backgroundless `ListView`/`TreeView` that directly reveals composited Mica
-must erase its viewport (`CompositionMode_Source`)—filled Gallery lists never
+must erase its viewport (`CompositionMode_Source`). Filled Gallery lists never
 exercise that path. A backgroundless `GridView` uses the same public
 `backgroundVisible` contract. When any of these views sits on an intentionally
 painted parent instead of directly on composited material, set
@@ -100,6 +102,9 @@ painted parent instead of directly on composited material, set
 `Qt::WA_NoSystemBackground` on the viewport; remove all three together if the
 view returns to direct material. Keep a background when the view is itself the
 bounded surface.
+
+### Text input
+
 A `TextEdit` used as a composer must `setLineHeight` from the text font's
 `lineSpacing()`, not `ControlHeight::Standard` (32).
 Message-style composers should also call `setTabChangesFocus(true)`, give the
@@ -107,6 +112,9 @@ next primary action `Qt::StrongFocus`, and set an explicit tab order. Verify
 that Tab moves focus without inserting `\t` on macOS. At the declared maximum
 line count, the first overflow line must be fully owned by the editor scroll
 viewport; no glyph may paint through the focus stroke.
+
+### Growing data
+
 For long or growing data, also record paging/windowing, incremental update,
 cache, and editor-materialization policies. `ScrollView` does not virtualize a
 layout of child widgets; `ListView` loses virtualization if every index receives

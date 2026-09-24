@@ -1,9 +1,8 @@
 # Experience Differentiation
 
-Make the interface recognizable from its product workflow, not from a reusable
-shell. FluentQt supplies consistent controls and tokens; it does not imply that
-every tool needs a navigation rail, conversation column, and permanent
-inspector.
+Build the interface around the product's workflow. FluentQt supplies consistent
+controls and tokens; choose a navigation rail, conversation column, or permanent
+inspector only when the workflow needs one.
 
 ## Contents
 
@@ -90,11 +89,9 @@ classify each plausible component family:
 - **conditional**: useful only when the corresponding state appears;
 - **not applicable**: would be decorative, redundant, or misleading.
 
-Record the reasoning for major surfaces. This is an opportunity scan, not a
-component quota. Never add a carousel, badge, drawer, card, or visualization
-merely to increase variety. Reusing a small set of controls is correct when the
-workflow is genuinely simple; repeating the same shell without product evidence
-is not.
+Record the reasoning for major surfaces. Add a carousel, badge, drawer, card,
+or visualization only when it serves the workflow. A simple workflow may need
+few controls; reusing a shell still requires product evidence.
 
 Examples of meaningful compositions:
 
@@ -107,9 +104,9 @@ Examples of meaningful compositions:
 | Prompt-driven agent with editable artifacts | artifact workbench + compact command surface + temporary run details |
 | Prompt-driven agent whose primary object is the run | designed transcript (user / assistant / tool / permission) + integrated composer |
 
-These examples are not mandatory layouts. Use them to challenge a generic
-conversation-first default unless the identity card names the run or
-conversation as the primary object. Then follow
+Use these optional examples to check whether a conversation-first layout fits the
+product. If the identity card names the run or conversation as the primary
+object, follow
 [Signature surface](signature-surface.md).
 
 ## Review cross-product similarity
@@ -126,10 +123,10 @@ render. Review these dimensions:
 6. repeated component families and card rhythm;
 7. narrow-layout transformation.
 
-If four or more dimensions match a recent unrelated product, either cite domain
-evidence proving the similarity is necessary or revise the concept. Do not
-manufacture novelty by moving controls randomly; change the composition around
+If four or more dimensions match a recent unrelated product, cite domain
+evidence explaining why the similarity is necessary or revise the concept around
 the product signature.
+Moving controls randomly does not address the underlying similarity.
 
 ## Differentiation acceptance gate
 

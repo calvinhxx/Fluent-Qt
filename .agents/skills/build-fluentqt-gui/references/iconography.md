@@ -1,9 +1,7 @@
 # Iconography
 
-Use one coherent icon system so controls read as one desktop product rather
-than a collection of unrelated assets. Borrow the rigor of mature web design
-systems—one family, named size tokens, normalized geometry, semantic states—
-while preserving desktop hit targets, accessibility, scaling, and Qt theme
+Use one icon family with named size tokens, normalized geometry, and semantic
+states. Preserve desktop hit targets, accessibility, scaling, and Qt theme
 behavior.
 
 ## Contents
@@ -40,9 +38,8 @@ Reject these substitutes for product icons:
 - text abbreviations where a familiar semantic icon exists;
 - decorative symbols with no action, status, or domain meaning.
 
-If no existing icon communicates a domain action, keep a short text action or
-create one licensed project-owned vector. A novel ambiguous glyph is not an
-upgrade over clear copy.
+If no existing icon clearly communicates a domain action, use a short text
+label or create a licensed project-owned vector.
 
 ## Decide when to reuse, repair, or generate
 
@@ -59,9 +56,9 @@ sources, and license terms before generating anything. Use this decision order:
    explicitly requests a new identity.
 
 For generation, translate the product's primary object, verb, material, and
-tempo into three genuinely different silhouettes. Avoid the default AI visual
-vocabulary—sparkles, generic robots, chat bubbles, glowing brains, and abstract
-hexagons—unless the product evidence specifically requires it. Use an available
+tempo into three distinct silhouettes. Use sparkles, generic robots, chat
+bubbles, glowing brains, or abstract hexagons only when product evidence
+specifically calls for them. Use an available
 image-generation capability for broad exploration or construct vector-native
 candidates directly. Resolve the selected candidate as a clean vector or
 high-resolution master; never ship pseudo-text, a screenshot crop, or the first
@@ -77,7 +74,7 @@ silently replace a valid upstream mark.
 Record one source grid plus compact glyph, standard glyph, and action-slot
 sizes in the design brief. Use 4 px-aligned tokens; a useful desktop starting
 point is a 20 px source grid, 16 px compact glyph, 20 px standard glyph, and
-24–28 px action slot. The owning component may require a larger accessible hit
+24 to 28 px action slot. The owning component may require a larger accessible hit
 target than the visible icon.
 
 Align the optical shape, not only the asset rectangle:
@@ -99,7 +96,7 @@ Keep one editable master and derive platform outputs from it. The optimization
 pass must:
 
 - remove accidental canvas padding and center the perceived silhouette;
-- simplify detail that disappears at 16–32 px;
+- simplify detail that disappears at 16 to 32 px;
 - preserve a stable safe area instead of scaling the mark to every edge;
 - test the shape in grayscale and against light, dark, and desktop backgrounds;
 - avoid baked shadows or backgrounds on the transparent in-product mark;
@@ -113,8 +110,7 @@ may cache or mask them differently.
 
 ## Separate the application icon from the in-app mark
 
-Treat these as related assets with different jobs, not one image reused at two
-scales:
+Create related assets for these two jobs:
 
 - The file-system, launcher, Dock, taskbar, and app-switcher icon is a complete
   application tile. Follow the target platform's silhouette, safe area, and
@@ -134,7 +130,7 @@ packaged application icon is correct.
 
 ## Derive a palette seed from the approved identity
 
-Treat the identity as evidence, not a bucket of pixels to copy blindly. Record:
+Use the approved identity to choose palette roles. Record:
 
 - one dominant chromatic anchor from the mark, excluding transparent pixels,
   white tile backgrounds, shadows, and anti-aliased edge noise;
@@ -171,8 +167,8 @@ success, warning, or error state.
 Do not hard-code a Light-only gray, use several accent colors in one toolbar,
 or paint every icon with brand color. Verify contrast in Light and Dark themes,
 including disabled, selected, hover, focus, and material-backed states. A
-multicolor illustration belongs to content, onboarding, or an empty state—not
-to routine chrome.
+multicolor illustration belongs to content, onboarding, or an empty state.
+Keep it out of routine chrome.
 
 ## Make icon-only actions accessible
 
@@ -254,8 +250,8 @@ Before final visual acceptance:
 - peer actions share optical weight, slots, and state treatment;
 - operating-system application icons use a platform-appropriate complete tile,
   while compact in-app marks remain transparent and crisp;
-- the packaged application icon is inspected at launcher and 16–32 px detail,
-  and the approved identity visibly relates to—but does not overwhelm—the
-  semantic application palette;
+- the packaged application icon is inspected at launcher and 16 to 32 px detail,
+  and the approved identity visibly relates to the semantic application palette
+  without overwhelming it;
 - no icon source, license, accessible name, or missing-resource boundary is
   unresolved.

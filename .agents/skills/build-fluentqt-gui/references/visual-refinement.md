@@ -1,12 +1,8 @@
 # Visual Refinement
 
-Treat visual quality as an iterative engineering task. A compiling window and a
-single screenshot are not a finished GUI.
-
-Visual and engineering quality are co-equal acceptance gates. Use this
-reference together with Performance and lifecycle; polished pixels do not
-compensate for unbounded object creation, full-model rebuilds, blocked event
-loops, or incorrect transient ownership.
+Build, inspect, and refine the actual GUI until its visual checks pass. Run the
+Performance and lifecycle checks as well: object creation, model updates, event
+loop responsiveness, and transient ownership must meet their own requirements.
 
 ## Contents
 
@@ -18,9 +14,9 @@ loops, or incorrect transient ownership.
 
 ## Gallery-equivalent quality bar
 
-Use the shipped FluentQt Gallery as the benchmark for finish, not as a layout
-template. Product-specific navigation and density may differ, but the result
-must still look and behave like it belongs to the same component library.
+Use the shipped FluentQt Gallery to judge component finish and behavior.
+Navigation and density may follow the product's needs; keep the components
+consistent with the library.
 
 Choose comparison evidence in this order:
 
@@ -40,9 +36,9 @@ scale, and font setup. Review these dimensions explicitly:
 | Interaction | Hover, pressed, focus, selected, disabled, loading, overlays, and motion feel complete |
 | Resilience | Light/Dark, long content, scaling, normal/narrow/minimum widths remain intentional |
 
-Do not require pixel identity: native chrome and product structure may differ.
-Do require comparable completeness. An unexplained downgrade in a major
-dimension blocks visual acceptance.
+Native chrome and product structure may differ, so compare completeness rather
+than identical pixels. An unexplained downgrade in any major dimension blocks
+visual acceptance.
 
 ## Start with window material, then density
 
@@ -64,15 +60,15 @@ these logical-pixel values and change them only for a recorded reason:
 
 | Region or element | Fluent desktop starting point |
 | --- | --- |
-| Title bar | 40–44 high; mixed chrome content in a shared 24-high slot |
-| Compact icon/action | 16–18 icon inside a 24–28 action slot |
-| Compact text control | 28–32 high |
-| Normal text control | 32–36 high |
-| Navigation/list row | 32–36 high |
+| Title bar | 40 to 44 high; mixed chrome content in a shared 24-high slot |
+| Compact icon/action | 16 to 18 icon inside a 24 to 28 action slot |
+| Compact text control | 28 to 32 high |
+| Normal text control | 32 to 36 high |
+| Navigation/list row | 32 to 36 high |
 | Panel inset | 12 compact or 16 normal |
 | Related controls | 8 gap |
-| Separate compact sections | 12–16 gap |
-| Bottom action footer | 44–48 high with a centered compact action |
+| Separate compact sections | 12 to 16 gap |
+| Bottom action footer | 44 to 48 high with a centered compact action |
 
 Keep typography restrained: normally use no more than one title role, one body
 role, and one caption role in a surface. Do not enlarge every heading, make
@@ -116,9 +112,8 @@ Also inspect native-resolution crops of these high-risk regions:
 - transient edge cases: focus cues, menus, flyouts, tooltips, IME preedit and
   candidate surfaces.
 
-Check every window edge once even when it looks unimportant. Large stretches
-often conceal an accidentally oversized footer or a button pinned to the wrong
-edge.
+Check every window edge, including empty stretches where an oversized footer
+or a misplaced button can be easy to miss.
 
 ## Review in passes
 
@@ -285,9 +280,9 @@ Use short issue/fix notes, for example:
 | Medium | Two accent buttons compete in header | Demote secondary action | Normal/narrow |
 | Low | Caption is 2 px off adjacent baseline | Align layout margins | Normal |
 
-Fix high-impact hierarchy, legibility, clipping, and interaction issues before
-small cosmetic differences. Rebuild and inspect the same state after each fix;
-do not rely on code inspection to predict the final pixels.
+Fix hierarchy, legibility, clipping, and interaction issues before small
+cosmetic differences. After each fix, rebuild and inspect the same state in the
+application.
 
 ## Geometry and layer gate
 

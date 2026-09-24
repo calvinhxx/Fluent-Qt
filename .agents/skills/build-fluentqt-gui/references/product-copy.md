@@ -1,8 +1,7 @@
 # Product Copy
 
-Write interface text that names the user's object, state, or next action. Do
-not make the interface narrate what an AI intends to do. Product copy should
-feel edited, not generated.
+Name the user's object, state, or next action. Use product labels instead of
+narrating what an AI intends to do.
 
 ## Contents
 
@@ -25,10 +24,9 @@ inventing copy. Record these in `copy_policy`:
 - technical terms the audience already understands;
 - compression rules, shared state vocabulary, and forbidden patterns.
 
-Keep one register across title bar, navigation, empty states, dialogs, status,
-demo fixtures, and errors. A technical application may be precise without
-sounding like a protocol inspector. A friendly application may be warm without
-personifying every operation.
+Use the same register in the title bar, navigation, empty states, dialogs,
+status, demo fixtures, and errors. Choose the technical detail your audience
+needs. A friendly register does not require personifying routine operations.
 
 ## Rewrite by interface job
 
@@ -72,9 +70,9 @@ fixtures, and system messages.
 
 ## Preserve useful technical precision
 
-Short does not mean vague. Keep a technical term when users act on it or when
-removing it would hide a consequence. Explain an unfamiliar term once, nearest
-to the decision. Do not expose raw RPC methods, internal enum names, UUIDs,
+Keep technical terms that users need to act or understand a consequence.
+Explain an unfamiliar term once, nearest to the decision. Do not expose raw
+RPC methods, internal enum names, UUIDs,
 payload keys, or implementation paths on ordinary product surfaces.
 
 Use a stable state vocabulary. Do not alternate between `Ready`, `Available`,
@@ -103,9 +101,8 @@ demo and failure states. For each string ask:
 5. Does it still fit and read naturally in Light, Dark, normal, narrow, and
    long/localized-content captures?
 
-Review the built application, not only the source strings. Copy that is concise
-in a file may still create an awkward line, oversized panel, or repeated visual
-hierarchy.
+Review the text in the built application. Check for awkward wrapping, oversized
+panels, and repeated visual hierarchy that source strings alone cannot reveal.
 
 ## Product-copy acceptance gate
 

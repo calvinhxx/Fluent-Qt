@@ -1,10 +1,8 @@
 # Art Direction and Human Selection
 
-Lock the visual direction before implementation so a technically correct
-FluentQt shell does not become the default design. This gate applies to every
-new GUI and major redesign. A focused correction keeps its accepted
-direction without a new concept-selection cycle. A new shell or major
-redesign still follows this contract.
+New GUIs, new shells, and major redesigns need a human-approved visual direction
+before implementation. Focused corrections keep their accepted direction and
+do not repeat concept selection.
 
 The initializer emits design-brief contract v4. Contracts v2/v3 remain readable
 as legacy inputs, but they do not pass the current direct design gate for new
@@ -80,11 +78,11 @@ exist.
 
 ## Use representative product content
 
-The content fixture prevents one concept from winning because it received
-shorter copy, fewer rows, or a more flattering state. Derive it from repository
-evidence or document why a synthetic fixture is representative. Give it a
-stable id, one end-to-end scenario, at least three real strings or data values,
-and at least two meaningful states.
+Use a shared content fixture so differences in copy length, row count, or state
+do not bias the comparison. Derive it from repository evidence, or explain why
+a synthetic fixture is representative. Include a stable id, one end-to-end
+scenario, at least three real strings or data values, and at least two meaningful
+states.
 
 Every full-profile comp must use that same fixture id, theme, viewport, product
 moment, and content quantity. Preserve long labels, realistic status text,
@@ -114,9 +112,10 @@ provide the art direction. For each concept, define:
 - one restraint rule;
 - one reason the direction may fail.
 
-Then create one local high-fidelity comp file per concept. Use any available
-design-capable workflow—Figma export, raster composition, SVG, or a code-native
-static mockup—but the result must be a resolved desktop window, not a wireframe.
+Then create one local high-fidelity comp file per concept. Use an available
+design workflow such as Figma export, raster composition, SVG, or a code-native
+static mockup. Each result must show a resolved desktop window; wireframes do
+not meet this requirement.
 The comp must be at least 960 × 600 logical pixels and show:
 
 - the complete normal-size window and its material/layer relationship;
@@ -150,13 +149,13 @@ why the revised signature remains recognizable without brand marks. Reject a
 choice that could move unchanged into an unrelated product.
 
 Record all six global `tuning_axes` from
-[Design intelligence](design-intelligence.md), each with a 1–5 value and a
+[Design intelligence](design-intelligence.md), each with a 1 to 5 value and a
 semantic note. These axes make feedback such as “less large,” “quieter,” or
 “more tactile” update the whole direction instead of producing local patches.
 
 ## Score the visual system
 
-Score every concept from 1–5 and attach a concrete note for each dimension:
+Score every concept from 1 to 5 and attach a concrete note for each dimension:
 
 - workflow fit;
 - product signature;
@@ -168,13 +167,12 @@ Score every concept from 1–5 and attach a concrete note for each dimension:
 - responsive quality;
 - state and interaction polish.
 
-These scores expose tradeoffs for the human decision; they are not an automatic
-winner function and do not all need to reach 4 at concept time. Judge the
-actual comp at native size. `surface_composition` covers the relationship among
-material, panes, cards, dividers, borders, radius, and empty space—not how many
-containers were added. A score of 0, a placeholder note, or an omitted
-dimension blocks `CONCEPTS READY`. The rendered board places all nine scores
-under each comparable comp.
+Judge each comp at native size. The scores help a human compare tradeoffs;
+they do not select a winner, and not every score needs to reach 4 at concept
+time. `surface_composition` measures the relationships among material, panes,
+cards, dividers, borders, radius, and empty space. Adding containers does not
+improve the score. A score of 0, a placeholder note, or a missing dimension
+blocks `CONCEPTS READY`. The board shows all nine scores below each comp.
 
 ## Require a human decision
 
@@ -227,17 +225,16 @@ rules, locked decisions, allowed adaptations, known risks, and comparison
 regions. The default validator rejects an approved v4 brief without this
 handoff.
 
-Treat the selected comp as a visual contract, while the repository and FluentQt
-APIs remain the behavioral contract. Translate its relationships into semantic
-tokens, shared metrics, layouts, models, and FluentQt components. Do not trace
-pixels with fragile fixed geometry or preserve a comp mistake that violates
-accessibility, localization, platform behavior, or component semantics.
+The selected comp defines the visual contract; repository and FluentQt APIs
+define behavior. Implement its relationships with semantic tokens, shared
+metrics, layouts, models, and FluentQt components. Avoid fixed geometry that
+breaks under layout changes, and correct comp errors that violate accessibility,
+localization, platform behavior, or component semantics.
 
-At the first runnable vertical slice, compare the actual window directly with
-the selected comp. Record every material deviation in hierarchy, density,
-typography, palette role, signature move, or pane lifetime. Fix it or obtain a
-new human decision; do not let implementation convenience create a fourth,
-unreviewed direction.
+Compare the first runnable vertical slice with the selected comp. Record every
+material deviation in hierarchy, density, typography, palette role, signature
+move, or pane lifetime. Fix each deviation or obtain a new human decision before
+keeping it.
 
 The final independent visual review remains separate. Human concept approval
 chooses the intended direction; contract v4 evidence checks whether the built
@@ -269,7 +266,7 @@ Before implementation of a full-profile GUI or major redesign:
 - one coherent icon family and its provenance, sizing, state, color, and
   accessibility policies are recorded;
 - three structurally and aesthetically distinct high-fidelity comps exist;
-- all nine visual dimensions have a concrete 1–5 score and comp-specific note;
+- all nine visual dimensions have a concrete 1 to 5 score and comp-specific note;
 - genericity critique records at least one concrete revision and all six tuning
   axes are defined;
 - the comparison board embeds those comps rather than only region diagrams;

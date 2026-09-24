@@ -1,7 +1,7 @@
 # Theme System
 
-Use semantic theme tokens to express a product's visual language. Do not treat
-the accent color as the whole theme.
+Define the product theme with semantic tokens for the full palette, typography,
+and density, including the accent color.
 
 ## Establish evidence
 
@@ -43,10 +43,9 @@ canvas with neon brand color. If color tooling supports a perceptual space,
 use it to build a coherent ramp, then verify the actual rendered controls and
 text against the target project's accessibility policy.
 
-The resulting theme should still look related to the identity when the logo is
-hidden, through accent relationships, neutral temperature, focus treatment,
-and one restrained signature surface. It must also remain recognizably Fluent
-without adding product-specific geometry branches.
+When the logo is hidden, accent relationships, neutral temperature, focus, and
+one restrained signature surface should still connect the theme to the identity.
+Preserve Fluent geometry; do not add product-specific geometry branches.
 
 ## Choose the supported strategy
 
@@ -71,11 +70,10 @@ resolved at startup when cross-version dynamic system tracking is unavailable.
 
 ## Install window material with the theme
 
-Color tokens are not the whole surface. An application-owned Fluent window
-requests Mica (default) or Acrylic and lets unused canvas, pane gaps, and
-chrome rest areas reveal that material. An embedded GUI inherits its
-host-owned window instead. Follow [Premium shell](premium-shell.md) for both
-paths.
+For an application-owned Fluent window, request Mica (default) or Acrylic and
+let unused canvas, pane gaps, and chrome rest areas reveal it. An embedded GUI
+inherits its host-owned window. Follow [Premium shell](premium-shell.md) for
+both paths.
 
 - Call `Window::setBackdropEffect(BackdropEffect::Mica)` (or Acrylic) before
   show. Do not switch to `Solid` to make screenshots look simpler.
@@ -87,8 +85,8 @@ paths.
   instead of clearing through it or letting Qt restore a default base fill.
 - Never apply `Qt::WA_TranslucentBackground` to descendant content widgets;
   that punches a hole through painted-Mica fallback instead of revealing it.
-- A helper that paints `bgCanvas` / `bgLayer` onto every `QWidget` is a theme
-  defect, not a layer strategy. Use `Card` only for an independent object.
+- Do not paint `bgCanvas` / `bgLayer` onto every `QWidget`; this hides the window
+  material. Use `Card` only for an independent object.
   Follow [Signature surface](signature-surface.md) for composers and pane
   chrome on material.
 

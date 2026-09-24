@@ -1,8 +1,7 @@
 # Premium Shell
 
-Install FluentQt's Gallery-grade window material before composing product
-content. A compiling window filled with opaque `QWidget` hosts is not a Fluent
-application.
+Install the window material used by FluentQt Gallery before composing product
+content. Content-host `QWidget` fills must allow that material to remain visible.
 
 Use this recipe when the slice owns a top-level application window. Do not
 apply it to a plugin pane or a surface embedded in a host-owned window. In that
@@ -110,9 +109,8 @@ Do **not** set `Qt::WA_TranslucentBackground` on descendant content widgets.
 On the painted-Mica fallback that attribute punches a hole through the window
 instead of revealing material.
 
-Do **not** write a helper that `setAutoFillBackground(true)` and stamps
-`bgCanvas` / `bgLayer` onto every host. That is the most common way generated
-GUIs lose grain, vibrancy, and depth.
+Do not use a helper that calls `setAutoFillBackground(true)` and paints
+`bgCanvas` / `bgLayer` on every host; those fills cover the window material.
 
 ## Surface roles
 
@@ -123,17 +121,16 @@ Build hierarchy with these roles, in this order:
 | Window material | Quiet large background | `Window` + Mica/Acrylic, gaps unfilled |
 | Alternate layer | Persistent sidebar or inspector | Transparent pane on material, or one `Card` `LayerAlt` only when the pane must read as a slab |
 | Canvas | Signature work surface | Transparent; typography and spacing create hierarchy |
-| Card | One independent floating object | `fluent::layout::Card` for a document, module, or tool-step chip—not the composer or pane header |
+| Card | One independent floating object | `fluent::layout::Card` for a document, module, or tool-step chip; keep the composer and pane header on material |
 | Overlay | Dialog, flyout, drawer, menu | Fluent overlay components; they own elevation and scrim |
 
 Add a card or border only when the object is independent of the canvas.
 Spacing and typography are the default separators. A card around every
 section, nested rounded rectangles, and full-pane fills are visual defects.
 
-The composer, pane header, and workspace switcher are not independent
-objects. They stay on material as quiet chrome. Follow
-[Signature surface](signature-surface.md) instead of wrapping them in
-`Card::Layer` to satisfy a one-card quota.
+Keep the composer, pane header, and workspace switcher on the window material
+as low-emphasis chrome. Follow [Signature surface](signature-surface.md);
+do not wrap these controls in `Card::Layer`.
 
 ## Density
 
@@ -141,19 +138,19 @@ Use one compact desktop density unless the product is touch-first:
 
 | Region | Logical px |
 | --- | --- |
-| Title bar | 40–44; mixed chrome in a shared 24-high slot |
-| Icon-only chrome | 16–18 icon in a 24–28 `Button::Small` Subtle slot |
-| Text control / list row | 32–36 |
+| Title bar | 40 to 44; mixed chrome in a shared 24-high slot |
+| Icon-only chrome | 16 to 18 icon in a 24 to 28 `Button::Small` Subtle slot |
+| Text control / list row | 32 to 36 |
 | Panel inset | 12 |
 | Related controls | 8 |
-| Separate sections | 12–16 |
+| Separate sections | 12 to 16 |
 
 At most one title, one body, and one caption role per surface. One accent
 action per local decision region.
 
 ## Reject these first-render patterns
 
-Stop and rebuild the shell when any of these appear:
+Correct and rebuild the shell before continuing when any of these appear:
 
 - `setBackdropEffect(Solid)` without a recorded host/capture reason
 - `setAutoFillBackground(true)` on the content host, split panes, headers,

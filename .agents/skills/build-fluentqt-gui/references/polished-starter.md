@@ -1,7 +1,7 @@
 # Maintained workbench starter
 
-Use the bundled `workbench` starter for a new standalone C++ or PySide6
-application. It is a production-shaped starting point, not a product concept.
+Use the bundled `workbench` starter to set up a standalone C++ or PySide6
+application. Replace its sample page with the selected product design.
 
 ## Prepare a new environment
 
@@ -25,8 +25,8 @@ replacing the target's build system. Reuse a working setup for ordinary edits.
 - separate reusable shell and replaceable product page;
 - a centered wide-screen stage with a readable maximum width;
 - material revealed between a navigation rail and the primary surface;
-- a primary page that owns the available height instead of leaving unrelated
-  header and footer islands around a dead middle field;
+- a primary page that uses the available height, with its header, content, and
+  footer arranged together;
 - a compact layout that removes the rail before the primary workflow becomes
   cramped;
 - Light/Dark theme wiring, semantic accent setup, tests, CI, and architecture

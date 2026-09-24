@@ -1,15 +1,16 @@
 # Signature Surface
 
-The premium shell makes a window look like Fluent. This recipe makes the
-product look finished. A Mica window that still shows two labeled log rows, a
-white composer slab, and a filled ComboBox in the pane header is a failed
-first product surface, not a checkpoint.
+Complete the product's primary surface as well as its window shell. The sections
+below define the required composition, states, and input behavior.
 
-Use the applicable sections when users inspect a conversation, run, document,
-queue, or another primary object, or when the surface has a primary input.
-Copy the matching finish, not a generic chat/log/form. FluentQt has no
-Transcript widget; compose one from `ListView`, delegates, `TextEdit`,
-`InfoBar`, and quiet chrome.
+A Mica window with two labeled log rows, an opaque white composer, and a filled
+ComboBox in the pane header fails this gate. Rebuild that surface before
+continuing.
+
+Use the sections that match the primary object: a conversation, run, document,
+queue, or other content. Apply the input section when the workflow needs one.
+FluentQt has no Transcript widget; compose one from `ListView`, delegates,
+`TextEdit`, `InfoBar`, and low-emphasis chrome.
 
 ## Finish the product object, not the shell
 
@@ -23,8 +24,8 @@ A signature surface is done only when all of these are true:
 5. When a primary input exists, it is an integrated dock unless it is itself
    the document. A monitor or read-only surface may correctly have no input.
 
-Backdrop and window-material acceptance from
-[Premium shell](premium-shell.md) is a prerequisite, not a substitute.
+Meet the backdrop and window-material requirements in
+[Premium shell](premium-shell.md) as well as the requirements here.
 
 ## Choose the finish from the time model
 
@@ -69,23 +70,24 @@ Paint these kinds. Do not invent extra chrome to fake a missing control.
 | Permission | `InfoBar` in the canvas, or `ContentDialog` when blocking. Not a log row. | Allow / Deny in product language. |
 | System | One Caption line. | Status the user asked for, not transport events. |
 
-Row metrics: 12 px pane inset, 8 px between lines in a turn, 12–16 px between
-turns, 16–18 px glyphs in a 24 px slot, Body for content, Caption for meta.
+Row metrics: 12 px pane inset, 8 px between lines in a turn, 12 to 16 px between
+turns, 16 to 18 px glyphs in a 24 px slot, Body for content, Caption for meta.
 Markdown headings (`#` / lists) and fenced code are part of the first slice
 when the domain has them; plain wrapping Body with no hierarchy is a
-wireframe. User vs assistant distinction is typography and measure (BodyStrong
-and a max-width column, or a quiet inset)—not a farm of opaque bubbles on Mica.
+wireframe. Distinguish user and assistant content through typography and text
+width: BodyStrong with a max-width column, or a low-emphasis inset. Avoid filling
+Mica with opaque message bubbles.
 
 Variable-height delegates are a hard geometry gate:
 
 - `sizeHint` **must equal** the painted height of that row. Clip `paint` to
-  `option.rect`. Gallery default 32–36 uniform rows hide this defect.
+  `option.rect`. Gallery default 32 to 36 uniform rows hide this defect.
 - Invalidate height caches when body, status, width, or theme changes; call
   `doItemsLayout()` on `dataChanged` (and insert/reset when heights can change).
 - A transparent `ListView` / `TreeView` that directly reveals composited Mica
   **must erase** the viewport with `CompositionMode_Source` before items paint.
   Gallery filled lists hide this; skipping it stacks glyphs through the next
-  row (“图层错乱”). When the view sits on an intentionally painted parent,
+  row. When the view sits on an intentionally painted parent,
   preserve that surface instead of clearing through it.
 
 After append or stream, keep the reader's scroll anchor. Follow the end only
@@ -112,9 +114,9 @@ is Fluent):
 
 ## Composer and command dock
 
-Apply this section only when the workflow has a primary input. The composer
-sits on its owning material. `TextEdit` already paints control chrome. A
-`Card` around it is a second frame and reads as a sticker.
+When the workflow has a primary input, place its composer on the owning
+material. `TextEdit` paints its own control chrome, so an outer `Card` would
+duplicate the frame.
 
 ```cpp
 auto* dock = new QWidget(canvas);
@@ -145,7 +147,7 @@ send->setFocusPolicy(Qt::StrongFocus);
 QWidget::setTabOrder(edit, send);
 ```
 
-Rest height of the dock is about 44–56 px plus a compact tool row. One Accent
+Rest height of the dock is about 44 to 56 px plus a compact tool row. One Accent
 action. Stop/cancel replaces Send while a run is active; do not keep both as
 equal Standard buttons.
 
@@ -154,8 +156,8 @@ document (mail compose, note body). Record `primary_input_reason`.
 
 ## Quiet chrome on material
 
-`ComboBox` always paints a filled bezel. That is correct in forms and
-settings. It is a sticker when it is the pane title on Mica.
+Use the filled bezel of `ComboBox` in forms and settings. For a pane title on
+Mica, use a Subtle switcher:
 
 ```cpp
 auto* workspace = new fluent::basicinput::DropDownButton(
@@ -197,7 +199,7 @@ Internal-protocol copy is allowed only on an explicit ops/debug surface.
 
 ## Reject these unfinished surfaces
 
-Stop and rebuild the signature surface when any of these appear:
+Correct and rebuild the signature surface before continuing when any of these appear:
 
 - Two `Request` / `Agent` (or equivalent) labeled rows as the timeline
 - A large opaque `Card` wrapping the composer on Mica

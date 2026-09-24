@@ -1,14 +1,9 @@
 # Performance and Lifecycle
 
-Performance and visual quality are co-equal acceptance gates. Use this
-reference together with Visual refinement; it does not authorize visually
-generic, poorly aligned, low-contrast, or unfinished UI in exchange for lower
-memory use.
-
-Treat data cardinality, update frequency, and object lifetime as component
-selection inputs. A visually correct component is still the wrong component
-when it materializes unbounded content, rebuilds stable rows for every event,
-or keeps one-shot surfaces alive for the lifetime of the window.
+Run these checks alongside Visual refinement; both must pass. Choose components
+according to data cardinality, update frequency, and object lifetime as well as
+appearance. Avoid unbounded content materialization, rebuilding stable rows for
+every event, and retaining one-shot surfaces for the window's lifetime.
 
 ## Classify the data before choosing a viewport
 
@@ -31,8 +26,8 @@ that can grow with user activity.
 
 ## Preserve item-view virtualization
 
-Using `ListView`, `TreeView`, or `GridView` is necessary but not sufficient.
-Keep these rules together:
+To preserve virtualization in `ListView`, `TreeView`, or `GridView`, apply all
+of these rules:
 
 - store row state in a `QAbstractItemModel` or a tested proxy model;
 - paint rich rows with a delegate; do not call `setIndexWidget()` for every row
@@ -144,9 +139,9 @@ Add deterministic tests proportional to the surface:
 - switch theme and width under dense data and require bounded caches to
   invalidate without clipping or stale colors.
 
-Wall-clock and RSS checks are useful diagnostics but can be noisy in CI. Prefer
-deterministic invariants first: model signals, retained-row limits, object
-counts, cache limits, request identities, and teardown completion.
+Start with deterministic checks for model signals, retained-row limits, object
+counts, cache limits, request identities, and teardown completion. Use elapsed
+time and RSS as additional diagnostics; they can vary in CI.
 
 ## Acceptance gate
 

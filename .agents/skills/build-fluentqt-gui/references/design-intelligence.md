@@ -36,9 +36,8 @@ material, semantic color, and motion. Do not paste literal decoration from the
 domain onto a generic app shell. A pipeline may justify an ordered trace; it
 does not justify decorative pipes.
 
-The primary surface is the desktop equivalent of a thesis: it should reveal
-what the product is for within a few seconds. Structural devices such as
-numbers, rails, grids, labels, or dividers must encode real information.
+The primary surface should make the product's purpose clear within a few
+seconds. Numbers, rails, grids, labels, and dividers must carry information.
 
 ## Build a compact taste context
 
@@ -51,9 +50,9 @@ Collect the smallest useful set of design evidence before concepting:
    or interaction character;
 5. recent unrelated outputs whose repeated shell or aesthetic must not recur.
 
-For each source, record what authority it has, what transfers, and what is
-rejected. A screenshot is evidence, not a template. Never transfer marks,
-proprietary assets, exact copy, or screenshot geometry.
+For each source, record its authority, the ideas to use, and the traits to
+reject. Use screenshots to study relationships. Do not copy marks, proprietary
+assets, exact wording, or screenshot geometry.
 
 Keep this context task-local by default. When the user repeatedly gives the
 same feedback, offer to update a repository-owned design guide or taste
@@ -74,9 +73,8 @@ Record:
   native control behavior;
 - a fallback if Qt, accessibility, or performance evidence rejects it.
 
-Not taking any position produces generic UI. Taking risks everywhere produces
-noise. Spend boldness once, then remove one unnecessary accessory before human
-review.
+Keep the distinctive choice in one part of the interface so it remains clear.
+Before human review, remove one unnecessary accessory.
 
 ## Render resolved concepts before coding
 
@@ -122,7 +120,7 @@ surface effects.
 
 ## Expose global tuning axes
 
-Record six 1–5 axes with short semantic notes so human feedback can change the
+Record six 1 to 5 axes with short semantic notes so human feedback can change the
 whole system coherently instead of creating local patches:
 
 | Axis | 1 | 5 |
@@ -134,10 +132,9 @@ whole system coherently instead of creating local patches:
 | motion_energy | still | expressive |
 | visual_expressiveness | restrained | bold |
 
-These are direction controls, not formulas. Changing an axis requires updating
-the concept, tokens, affected components, and evidence together. It must not
-override accessibility, Fluent component geometry, platform behavior, or the
-4 px rhythm.
+Use the axes to guide design changes. Update the concept, tokens, affected
+components, and evidence together when an axis changes. Preserve accessibility,
+Fluent component geometry, platform behavior, and the 4 px rhythm.
 
 ## Extract an implementation design system
 
@@ -155,9 +152,8 @@ implementation spec from the accepted comp:
 - decisions that are locked, adaptations that are allowed, and known risks;
 - full-window and detail regions used for implementation comparison.
 
-Treat this as a production design spec. During implementation, compare the
-actual rebuilt window beside the accepted comp. Record any material deviation
-instead of gradually reinterpreting the design.
+During implementation, compare the rebuilt window with the accepted comp and
+record any material deviation from this spec.
 
 ## Preserve native desktop quality
 

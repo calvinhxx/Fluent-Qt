@@ -1,9 +1,8 @@
 # Product Reference Patterns
 
-Use these products as evidence-backed structural references, never as visual
-templates. The transferable unit is a relationship between the primary object,
-time model, signature surface, panel lifetime, density, and interaction—not a
-brand, screenshot, icon set, color palette, or exact geometry.
+Study how these products connect the primary object, time model, signature
+surface, panel lifetime, density, and interaction. Adapt those relationships
+without copying a brand, screenshot, icon set, color palette, or exact geometry.
 
 Sources were reviewed on 2026-08-12. Recheck the official source when a design
 decision depends on behavior that may have changed.
@@ -67,10 +66,11 @@ target into this library merely because a card looks polished.
 **Reference:** [Visual Studio Code repository](https://github.com/microsoft/vscode)
 and [official interface guide](https://code.visualstudio.com/docs/editing/userinterface).
 
-Official guidance describes a dominant editor surrounded by primary and
-secondary side bars, an activity switcher, a movable panel, status, and
-side-by-side editor groups. Treat the important lesson as **configurable region
-ownership around peer documents**, not “put a rail on the left.”
+VS Code's interface guide describes a dominant editor with primary and secondary
+side bars, an activity switcher, a movable panel, status, and side-by-side editor
+groups. Users can configure these regions around the documents they are editing.
+Do not reduce this reference to adding a left-hand rail; preserve configurable
+region ownership around peer documents.
 
 - Transfer: let the editable artifact own most space; keep navigation and
   output subordinate; persist the user's tabs, splits, and visibility choices.
@@ -88,10 +88,10 @@ ownership around peer documents**, not “put a rail on the left.”
 **Reference:** [Godot repository](https://github.com/godotengine/godot) and
 [official editor tour](https://docs.godotengine.org/en/stable/getting_started/introduction/first_look_at_the_editor.html).
 
-Godot documents a central viewport with context-dependent tools, side docks for
-scene/files/properties, and a bottom panel that expands only for debugging,
-animation, audio, and related tasks. The transferable lesson is **selection in
-the canvas controls the meaning of surrounding tools**.
+Godot's central viewport has tools that follow the current selection, with side
+docks for scenes, files, and properties. A bottom panel expands only for debugging,
+animation, audio, and related tasks. The selected canvas object gives the
+surrounding tools their context.
 
 - Transfer: prioritize the authored scene; bind hierarchy selection, property
   inspection, and commands to the same selected object.
@@ -110,10 +110,10 @@ the canvas controls the meaning of surrounding tools**.
 [official project-panel guide](https://zed.dev/docs/project-panel), and
 [official window/project model](https://zed.dev/docs/windows-and-projects).
 
-Zed's documented project tree, preview-versus-permanent tabs, preserved splits,
-project-scoped context, collaboration, and command-driven navigation show a
-different lesson from a maximal IDE: **advanced capability can remain
-contextual while the editor canvas stays visually restrained**.
+Zed keeps the editor canvas restrained while exposing advanced actions in
+context. Its documented features include a project tree, preview and permanent
+tabs, preserved splits, project-scoped context, collaboration, and command-driven
+navigation.
 
 - Transfer: distinguish previews from committed work surfaces; keep project,
   collaboration, and agent context scoped to the active project.
@@ -131,10 +131,9 @@ contextual while the editor canvas stays visually restrained**.
 **Reference:** [LocalSend repository](https://github.com/localsend/localsend)
 and [official product flow](https://localsend.org/).
 
-LocalSend presents a zero-account sequence of selecting content and choosing a
-nearby device, followed by transfer progress. The transferable lesson is
-**endpoint discovery as the hero choice in a short, confidence-sensitive
-workflow**.
+LocalSend lets users select content, choose a nearby device, and follow transfer
+progress without an account. Finding and confirming the destination is the main
+decision in this short workflow.
 
 - Transfer: keep payload, destination, security/availability, progress, and
   completion in one understandable sequence.
@@ -153,10 +152,10 @@ workflow**.
 [official overview](https://obsproject.com/kb/obs-studio-overview), and
 [audio mixer guide](https://obsproject.com/kb/audio-mixer-guide).
 
-OBS centers live composition and surrounds it with scene/source ordering,
-meters, controls, and status. Studio mode further separates editable preview
-from live program output. The transferable lesson is **continuous observability
-plus immediate, stateful control**.
+OBS places scene/source ordering, meters, controls, and status around live
+composition. Operators can monitor the output continuously and act on its
+current state. Studio mode separates the editable preview from live program
+output.
 
 - Transfer: keep the live output or monitored artifact dominant; show status
   where an operator can verify it without navigating away.
@@ -174,9 +173,9 @@ plus immediate, stateful control**.
 **Reference:** [AppFlowy repository](https://github.com/AppFlowy-IO/AppFlowy)
 and [official architecture overview](https://docs.appflowy.io/docs/documentation/software-contributions/architecture/frontend/frontend/codemap).
 
-AppFlowy exposes durable workspace hierarchy and several views such as text,
-grid, and board. The transferable lesson is **one knowledge object can have a
-quiet editing canvas plus alternate structured representations**.
+AppFlowy combines a persistent workspace hierarchy with text, grid, and board
+views. Use this pattern to give a knowledge object a restrained editing canvas
+and alternate structured representations.
 
 - Transfer: let the document or database view dominate; keep hierarchy and
   view switching stable while block-level commands remain contextual.
@@ -193,8 +192,8 @@ quiet editing canvas plus alternate structured representations**.
 
 **Reference:** Codex Desktop as a run-first hierarchy. Treat IDE/editor-hosted
 agents as contrast references when the editor or artifact owns the primary
-surface. Transfer hierarchy and density only—not marks, colors, copy, or
-screenshot geometry.
+surface. Transfer hierarchy and density without copying marks, colors, wording,
+or screenshot geometry.
 
 This pattern uses a compact session rail, a transcript that **is** the product,
 and an integrated composer dock. Prefer it when the identity is an ordered
@@ -206,7 +205,7 @@ stay dominant; do not force a run-first shell into an IDE panel.
   grouping, retained history, and active execution capacity remain separate.
   Overflow work queues visibly instead of disabling creation because a runtime
   slot is busy. Keep the New action and contextual move/close operations in
-  their owning collection region, and keep the footer inset (12–16 px), not
+  their owning collection region, and keep the footer inset (12 to 16 px), not
   glued to the window corner. Center
   canvas distinguishes user / assistant / tool / error / permission without
   protocol labels (`Request` / `Agent`). Tool calls are one- or two-line
@@ -220,7 +219,7 @@ stay dominant; do not force a run-first shell into an IDE panel.
   composer.
 - Component probes: `ListView` + mixed-height delegate, Subtle
   `DropDownButton`, `TextEdit` composer, permission `InfoBar`.
-- Reject: Gallery-uniform 32–36 px rows as tool cards; bottom-anchoring a
+- Reject: Gallery-uniform 32 to 36 px rows as tool cards; bottom-anchoring a
   short transcript; wrapping the composer in a `Card`; treating handshake
   frames as turns; decorative wires between a selected session row and detail;
   repeating that row as an oversized empty-state card.
