@@ -36,6 +36,20 @@ LIST_ITEM_RE = re.compile(r"^\s*(?:[-+*]|\d+[.)])\s+")
 NON_PROSE_RE = re.compile(
     r"^\s*(?:#{1,6}\s|>|\||<!--|-->|<[/!?A-Za-z]|(?:---+|===+|___+)\s*$)"
 )
+GENERATED_NAV_RE = re.compile(
+    r"^<!-- docs-nav:(top|bottom):start -->\n.*?^<!-- docs-nav:\1:end -->$",
+    re.MULTILINE | re.DOTALL,
+)
+HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+CODE_FENCE_RE = re.compile(r"^[ \t]*(?:>[ \t]*)*(`{3,}|~{3,})(.*)$")
+INLINE_CODE_RE = re.compile(r"(?<![\\`])(`+)(?!`)[\s\S]*?(?<!`)\1(?!`)")
+LINK_DESTINATION_RE = re.compile(r"(?<=\]\()[ \t]*(?:<[^>\n]*>|[^\s)]+)")
+REFERENCE_DESTINATION_RE = re.compile(
+    r"^ {0,3}\[[^\]\n]+\]:[ \t]*(?:<[^>\n]*>|\S+)", re.MULTILINE
+)
+REFERENCE_ID_RE = re.compile(r"(?<=\])\[[^\]\n]*\]")
+URL_RE = re.compile(r"\b(?:https?://|mailto:)[^\s<>\"']+")
+HTML_DESTINATION_RE = re.compile(r"\b(?:href|src)\s*=\s*([\"']).*?\1")
 
 
 def relative_posix_path(path: PurePath, root: PurePath) -> str:
@@ -69,7 +83,13 @@ def markdown_files(project_root: Path) -> list[Path]:
             if not any(part in excluded or part.startswith("build-") for part in path.parts)
         )
 
-    return [project_root / relative for relative in output.splitlines() if relative]
+    # The index still lists unstaged deletions. Navigation and link checks
+    # report any remaining references to those missing documents.
+    return [
+        project_root / relative
+        for relative in output.splitlines()
+        if relative and (project_root / relative).is_file()
+    ]
 
 
 def local_target(raw_target: str) -> str | None:
@@ -132,6 +152,73 @@ def cjk_hard_wrap_lines(text: str) -> list[int]:
     return hard_wraps
 
 
+def english_document_cjk_lines(text: str, relative: str) -> list[int]:
+    """Find CJK text outside the documented exceptions, preserving line numbers."""
+
+    if relative in {"README.md", "docs/SUMMARY.md"} or relative.endswith(".zh-CN.md"):
+        return []
+
+    def blank(value: str) -> str:
+        return re.sub(r"[^\n]", " ", value)
+
+    # Generated navigation is checked against the manifest separately. A link
+    # to an explicitly translated page may contain its translated title.
+    text = GENERATED_NAV_RE.sub(lambda match: blank(match.group()), text)
+    lines: list[str] = []
+    fence = ""
+    for line in text.splitlines(keepends=True):
+        marker = CODE_FENCE_RE.match(line)
+        if fence:
+            if (
+                marker
+                and marker[1][0] == fence[0]
+                and len(marker[1]) >= len(fence)
+                and not marker[2].strip()
+            ):
+                fence = ""
+            lines.append(blank(line))
+        elif marker and not (marker[1][0] == "`" and "`" in marker[2]):
+            fence = marker[1]
+            lines.append(blank(line))
+        else:
+            lines.append(line)
+
+    text = "".join(lines)
+    for pattern in (
+        INLINE_CODE_RE,
+        HTML_COMMENT_RE,
+        LINK_DESTINATION_RE,
+        REFERENCE_DESTINATION_RE,
+        REFERENCE_ID_RE,
+        HTML_DESTINATION_RE,
+        URL_RE,
+    ):
+        text = pattern.sub(lambda match: blank(match.group()), text)
+
+    violations: list[int] = []
+    in_glossary = False
+    in_translation_table = False
+    for number, line in enumerate(text.splitlines(), start=1):
+        if relative == "docs/development/comment-style.md":
+            if re.match(r"^#{1,2} ", line):
+                in_glossary = line.strip() == "## Glossary"
+                in_translation_table = False
+            cells = line.strip().split("|")
+            if in_glossary and len(cells) == 5 and not cells[0] and not cells[-1]:
+                if [cell.strip() for cell in cells[1:-1]] == ["English", "Chinese", "Notes"]:
+                    in_translation_table = True
+                if in_translation_table:
+                    # Only the translation column is exempt, not the guide or
+                    # the explanatory notes in the same table.
+                    cells[2] = ""
+                    line = "|".join(cells)
+            else:
+                in_translation_table = False
+        if CJK_RE.search(line):
+            violations.append(number)
+    return violations
+
+
 def validate(project_root: Path) -> list[str]:
     project_root = project_root.resolve()
     errors: list[str] = []
@@ -190,6 +277,12 @@ def validate(project_root: Path) -> list[str]:
 
         for line in cjk_hard_wrap_lines(text):
             errors.append(f"hard-wrapped CJK prose: {relative}:{line}-{line + 1}")
+
+        for line in english_document_cjk_lines(text, relative):
+            errors.append(
+                f"CJK prose in English document: {relative}:{line} "
+                "(use English or a .zh-CN.md translation)"
+            )
 
         targets = [match.group(1) for match in INLINE_LINK_RE.finditer(text)]
         targets.extend(match.group(1) for match in REFERENCE_LINK_RE.finditer(text))
