@@ -324,7 +324,11 @@ TEST_F(SelectorBarTest, PointerKeyboardThemeAndAccessibilityBehaveAsSelector)
     const QRect revealStart = selector->property("animatedIndicatorRect").toRect();
     EXPECT_FALSE(revealStart.isEmpty());
     EXPECT_LT(revealStart.width(), activityIndicator.width());
-    QTRY_COMPARE(selector->property("animatedIndicatorRect").toRect(), activityIndicator);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            return (selector->property("animatedIndicatorRect").toRect()) == (activityIndicator);
+        },
+        5000));
     EXPECT_EQ(activationSpy.count(), 1);
     EXPECT_EQ(selectionSpy.count(), 1);
     EXPECT_TRUE(selector->accessibleName().isEmpty());

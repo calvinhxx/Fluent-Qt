@@ -563,16 +563,16 @@ TEST_F(PopupTest, CloseRestoresFocusWhenItRemainsInsidePopup)
     trigger->show();
     window->activateWindow();
     trigger->setFocus(Qt::OtherFocusReason);
-    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), trigger, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (QApplication::focusWidget()) == (trigger); }, 1000));
 
     Popup p(window);
     p.setAnimationEnabled(false);
     p.open();
-    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), &p, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (QApplication::focusWidget()) == (&p); }, 1000));
 
     p.close();
 
-    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), trigger, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (QApplication::focusWidget()) == (trigger); }, 1000));
 }
 
 TEST_F(PopupTest, CloseDoesNotStealFocusMovedOutsidePopup)
@@ -585,18 +585,20 @@ TEST_F(PopupTest, CloseDoesNotStealFocusMovedOutsidePopup)
     destination->show();
     window->activateWindow();
     trigger->setFocus(Qt::OtherFocusReason);
-    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), trigger, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (QApplication::focusWidget()) == (trigger); }, 1000));
 
     Popup p(window);
     p.setAnimationEnabled(false);
     p.open();
-    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), &p, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (QApplication::focusWidget()) == (&p); }, 1000));
     destination->setFocus(Qt::OtherFocusReason);
-    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), destination, 1000);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return (QApplication::focusWidget()) == (destination); }, 1000));
 
     p.close();
 
-    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), destination, 1000);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return (QApplication::focusWidget()) == (destination); }, 1000));
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -634,10 +636,11 @@ TEST_F(PopupTest, RelativePositionTracksMovingAncestorAndClosesWhenClipped)
     const QPoint initialPosition = p.pos();
 
     scrollingContent->move(0, -64);
-    QTRY_COMPARE_WITH_TIMEOUT(p.pos(), initialPosition - QPoint(0, 64), 1000);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return (p.pos()) == (initialPosition - QPoint(0, 64)); }, 1000));
 
     scrollingContent->move(0, -500);
-    QTRY_VERIFY_WITH_TIMEOUT(!p.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !p.isOpen(); }, 1000));
 }
 
 TEST_F(PopupTest, DefaultPosition_CentersInParent)
@@ -906,10 +909,15 @@ TEST_F(PopupTest, HostResizeSynchronizesScrimAndCenteredPlacement)
 
     window->resize(920, 680);
 
-    QTRY_COMPARE_WITH_TIMEOUT(scrim->geometry(), fluent::overlay::overlaySurfaceRect(window), 1000);
-    QTRY_COMPARE_WITH_TIMEOUT(
-        p.pos(), QPoint((window->width() - p.width()) / 2, (window->height() - p.height()) / 2),
-        1000);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return (scrim->geometry()) == (fluent::overlay::overlaySurfaceRect(window)); },
+        1000));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            return (p.pos()) ==
+                   (QPoint((window->width() - p.width()) / 2, (window->height() - p.height()) / 2));
+        },
+        1000));
     EXPECT_TRUE(scrim->isVisible());
     EXPECT_TRUE(p.isVisible());
     p.close();

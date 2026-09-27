@@ -2,12 +2,19 @@
 
 #include <QByteArray>
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QImage>
 #include <QImageReader>
+#include <QProcess>
+#include <QProcessEnvironment>
+#include <QRegularExpression>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QWidget>
+#include <QXmlStreamReader>
+#include <QtTest>
 
 #include <gtest/gtest.h>
 
@@ -166,4 +173,86 @@ TEST(QtTestEnvironmentTest, VisualCompareToBaselineDetectsMismatch)
 
     EXPECT_FALSE(
         tests::support::compareVisualSnapshotToBaseline(actualPath, QStringLiteral("mismatch")));
+}
+
+// These two disabled cases run only in the subprocess contract below. A genuine
+// failure must be serialized by GTest, while a later event-loop wait still runs.
+TEST(QtTestReporterProbe, DISABLED_FailureReachesGTest)
+{
+    ASSERT_TRUE(QTest::qWaitFor([] { return false; }, 1));
+}
+
+TEST(QtTestReporterProbe, DISABLED_SubsequentWaitStillProcessesEvents)
+{
+    QObject context;
+    bool delivered = false;
+    QTimer::singleShot(30, &context, [&] { delivered = true; });
+    ASSERT_TRUE(QTest::qWaitFor([&] { return delivered; }, 1000));
+    EXPECT_FALSE(QTest::currentTestFailed());
+}
+
+TEST(QtTestEnvironmentTest, Contract_EventLoopFailuresReachExitCodeAndXml)
+{
+    QTemporaryDir temporary;
+    ASSERT_TRUE(temporary.isValid());
+    const QString xmlPath = temporary.filePath(QStringLiteral("assertions.xml"));
+    QProcess child;
+    auto environment = QProcessEnvironment::systemEnvironment();
+    environment.insert(QStringLiteral("QT_QPA_PLATFORM"), QStringLiteral("offscreen"));
+    environment.insert(QStringLiteral("SKIP_VISUAL_TEST"), QStringLiteral("1"));
+    child.setProcessEnvironment(environment);
+    child.start(QCoreApplication::applicationFilePath(),
+                {QStringLiteral("--gtest_also_run_disabled_tests"),
+                 QStringLiteral("--gtest_filter=QtTestReporterProbe.*"),
+                 QStringLiteral("--gtest_output=xml:") + xmlPath});
+    ASSERT_TRUE(child.waitForStarted(10000)) << child.errorString().toStdString();
+    ASSERT_TRUE(child.waitForFinished(10000)) << child.errorString().toStdString();
+    EXPECT_EQ(child.exitStatus(), QProcess::NormalExit);
+    EXPECT_EQ(child.exitCode(), 1) << child.readAllStandardOutput().toStdString();
+    QFile file(xmlPath);
+    ASSERT_TRUE(file.open(QIODevice::ReadOnly));
+    QXmlStreamReader xml(file.readAll());
+    int cases = 0;
+    int failures = 0;
+    QString failedCase;
+    QString currentCase;
+    while (!xml.atEnd()) {
+        xml.readNext();
+        if (!xml.isStartElement())
+            continue;
+        if (xml.name() == QStringLiteral("testcase")) {
+            ++cases;
+            currentCase = xml.attributes().value(QStringLiteral("name")).toString();
+            EXPECT_EQ(xml.attributes().value(QStringLiteral("status")), QStringLiteral("run"));
+        } else if (xml.name() == QStringLiteral("failure")) {
+            ++failures;
+            failedCase = currentCase;
+        }
+    }
+    EXPECT_FALSE(xml.hasError()) << xml.errorString().toStdString();
+    EXPECT_EQ(cases, 2);
+    EXPECT_EQ(failures, 1);
+    EXPECT_EQ(failedCase, QStringLiteral("DISABLED_FailureReachesGTest"));
+}
+
+TEST(QtTestEnvironmentTest, Contract_TestSourcesUseTheGTestFailureReporter)
+{
+    // Qt input/event-loop helpers are valid; its standalone test-runner macros
+    // do not report to this suite's GTest main and can silently pass on failure.
+    const QRegularExpression forbidden(
+        QStringLiteral("\\bQ(?:TRY_[A-Z_]+|VERIFY2?|COMPARE|FAIL|SKIP)\\s*\\("));
+    const QString root = QString::fromUtf8(FLUENT_QT_TEST_SOURCE_DIR);
+    ASSERT_TRUE(QDir(root).exists());
+    QDirIterator files(root, {QStringLiteral("*.cpp"), QStringLiteral("*.h")}, QDir::Files,
+                       QDirIterator::Subdirectories);
+    int checked = 0;
+    while (files.hasNext()) {
+        QFile source(files.next());
+        ASSERT_TRUE(source.open(QIODevice::ReadOnly));
+        const auto match = forbidden.match(QString::fromUtf8(source.readAll()));
+        EXPECT_FALSE(match.hasMatch())
+            << source.fileName().toStdString() << ": " << match.captured().toStdString();
+        ++checked;
+    }
+    EXPECT_GT(checked, 100);
 }

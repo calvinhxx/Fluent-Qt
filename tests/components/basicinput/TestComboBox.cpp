@@ -46,6 +46,22 @@ using namespace fluent::basicinput;
 
 // ─── FluentTestWindow ────────────────────────────────────────────────────────
 
+TEST(ComboBoxLifetimeTest, Contract_DeferredDeleteDoesNotSynchronizeDestroyedEditor)
+{
+    QWidget owner;
+    for (bool editable : {false, true}) {
+        QPointer<ComboBox> combo = new ComboBox(&owner);
+        combo->addItems({"One", "Two"});
+        combo->setEditable(editable);
+        QPointer<QLineEdit> editor = combo->lineEdit();
+        combo->deleteLater();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        EXPECT_TRUE(combo.isNull());
+        EXPECT_TRUE(editor.isNull());
+    }
+    QApplication::processEvents();
+}
+
 class ComboBoxTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
@@ -605,7 +621,7 @@ TEST_F(ComboBoxTest, CallerSuppliedQtEditorUsesFluentContextMenu)
     QApplication::sendEvent(editor, &event);
 
     EXPECT_TRUE(event.isAccepted());
-    QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return sawFluentMenu; }, 1000));
     EXPECT_TRUE(sawFluentMenu);
 }
 

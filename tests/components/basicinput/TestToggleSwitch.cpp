@@ -466,7 +466,7 @@ TEST_F(ToggleSwitchTest, GlobalMotionReducedCapsKnobTransition)
     ASSERT_NE(animation, nullptr);
     EXPECT_GT(animation->duration(), 0);
     EXPECT_LE(animation->duration(), 50);
-    QTRY_VERIFY_WITH_TIMEOUT(qFuzzyCompare(ts.knobPosition(), 1.0), 300);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return qFuzzyCompare(ts.knobPosition(), 1.0); }, 300));
 }
 
 TEST_F(ToggleSwitchTest, ActiveKnobTransitionConvergesWhenMotionIsDisabled)

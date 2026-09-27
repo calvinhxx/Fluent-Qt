@@ -1871,10 +1871,8 @@ TEST_F(GallerySpatialTest, NativeAutoSuggestPageTypingKeepsPopupAndGpuAlive)
     QTest::mouseMove(window.windowHandle(), target);
     QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier, target);
     ASSERT_TRUE(QTest::qWaitFor([&] { return box->hasFocus(); }, 1000));
-    std::cout << "AutoSuggestBox focused; typing" << std::endl;
     QTest::keyClicks(box, "a", Qt::NoModifier, 20);
     ASSERT_TRUE(QTest::qWaitFor([&] { return box->isSuggestionListOpen(); }, 1000));
-    std::cout << "AutoSuggestBox popup open; painting" << std::endl;
     ASSERT_FALSE(surface->grabFramebuffer().isNull());
     QTest::keyClick(box, Qt::Key_Down);
     QTest::keyClick(box, Qt::Key_Return);
@@ -2391,10 +2389,10 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
                 }
             return std::array<double, 2>{ink, ink > 0 ? energy / ink : 0};
         };
-        QVariantList evidence;
         std::array<double, 3> minimumInk{1e20, 1e20, 1e20}, maximumInk{};
         double improvement = 0;
         for (int phase = 0; phase < 8; ++phase) {
+            SCOPED_TRACE(::testing::Message() << "phase=" << phase);
             const QTransform tilt(.96, .006, .00006, -.012, .97, .00003, 20. + phase / 8.,
                                   16. + phase / 20., 1.);
             const QImage before = draw(linear, tilt), after = draw(monotone, tilt);
@@ -2404,8 +2402,8 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
                     ASSERT_GE(value, 31) << "Reconstruction must not undershoot the source";
                     ASSERT_LE(value, 225) << "Reconstruction must not add a bright halo";
                 }
-            QVariantList ratios;
             for (int row = 0; row < 3; ++row) {
+                SCOPED_TRACE(::testing::Message() << "text row=" << row);
                 const QRect region =
                     tilt.mapRect(QRectF(24, 20 + row * 75, 500, 43)).toAlignedRect();
                 const auto old = measure(before, region), current = measure(after, region);
@@ -2416,7 +2414,6 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
                 improvement += current[1] / old[1];
                 minimumInk[row] = qMin(minimumInk[row], current[0]);
                 maximumInk[row] = qMax(maximumInk[row], current[0]);
-                ratios.append(current[1] / old[1]);
             }
             const QRect lines = tilt.mapRect(QRectF(35, 264, 400, 40)).toAlignedRect();
             int filtered = 0;
@@ -2427,7 +2424,6 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
                 }
             EXPECT_GT(filtered, lines.width() * lines.height() * .08)
                 << "Projected thin strokes must retain continuous filtered coverage";
-            evidence.append(QVariantMap{{"phase", phase / 8.}, {"contrastRatios", ratios}});
             const QString directory = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
             if (!directory.isEmpty() && phase == 0) {
                 QDir().mkpath(directory);
@@ -2439,25 +2435,6 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
         for (int row = 0; row < 3; ++row)
             EXPECT_LT(maximumInk[row] / minimumInk[row], 1.03)
                 << "Subpixel movement must not cause text coverage to flicker";
-        const QTransform tilt(.96, .006, .00006, -.012, .97, .00003, 20.25, 16.1, 1.);
-        const auto timeSampler = [&](spatial_render::PanelSampler& sampler) {
-            gl->glFinish();
-            QElapsedTimer timer;
-            timer.start();
-            for (int frame = 0; frame < 64; ++frame)
-                render(sampler, tilt);
-            gl->glFinish();
-            return timer.nsecsElapsed() / (64. * 1e6);
-        };
-        // Diagnostic only: GPU scheduling and frequency are not deterministic CI gates.
-        const double linearMs = timeSampler(linear), monotoneMs = timeSampler(monotone);
-        std::cout << "tilted-font-quality "
-                  << QJsonDocument::fromVariant(QVariantMap{{"phases", evidence},
-                                                            {"linearMsPerBlit", linearMs},
-                                                            {"monotoneMsPerBlit", monotoneMs}})
-                         .toJson(QJsonDocument::Compact)
-                         .constData()
-                  << std::endl;
         EXPECT_EQ(gl->glGetError(), GLenum(GL_NO_ERROR));
     }
     surface.doneCurrent();
@@ -2584,9 +2561,9 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
                 << "The flat GPU endpoint must retain native control detail";
         // Large glyphs can use Qt's outline path instead of its raster glyph cache.
         // Compare stroke edge contrast; exact ink weight differs between those engines.
-        QVariantList fontEvidence;
         for (const QRect region :
              {QRect(35, 20, 370, 35), QRect(35, 260, 370, 35), QRect(35, 306, 370, 30)}) {
+            SCOPED_TRACE(::testing::Message() << "dpr=" << dpr << " text row=" << region.y());
             const QRect area(region.topLeft() * dpr, region.size() * dpr);
             const auto contrast = [&](const QImage& image) {
                 double ink = 0, energy = 0;
@@ -2599,27 +2576,10 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
                     }
                 return ink > 0 ? energy / ink : 0;
             };
-            EXPECT_GT(contrast(reference), 20);
-            EXPECT_GE(contrast(actual), contrast(reference) * .9);
-            int chromatic = 0;
-            for (int y = area.top(); y < area.bottom(); ++y)
-                for (int x = area.left(); x < area.right(); ++x) {
-                    const QColor color = reference.pixelColor(x, y);
-                    chromatic += qMax(color.red(), qMax(color.green(), color.blue())) -
-                                     qMin(color.red(), qMin(color.green(), color.blue())) >
-                                 5;
-                }
-            fontEvidence.append(
-                QVariantMap{{"contrastRatio", contrast(actual) / contrast(reference)},
-                            {"referenceChromaticPixels", chromatic}});
+            const double referenceContrast = contrast(reference);
+            EXPECT_GT(referenceContrast, 20);
+            EXPECT_GE(contrast(actual), referenceContrast * .9);
         }
-        std::cout << "font-quality "
-                  << QJsonDocument::fromVariant(QVariantMap{{"dpr", dpr},
-                                                            {"fontRegions", fontEvidence},
-                                                            {"geometryDifferentPixels", different}})
-                         .toJson(QJsonDocument::Compact)
-                         .constData()
-                  << std::endl;
         // A perspective transform introduces fractional texture coordinates. The old
         // CPU/QPainter path filtered these; nearest-neighbour FBO sampling drops thin
         // strokes and makes their weight change as the pointer moves.

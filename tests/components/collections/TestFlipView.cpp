@@ -529,7 +529,7 @@ TEST_F(FlipViewTest, MouseWheelDiscreteFlipsImmediately)
     fv.addPage(new QWidget);
     fv.addPage(new QWidget);
     fv.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&fv));
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&fv));
     EXPECT_EQ(fv.currentIndex(), 0);
 
     // 向下滚动一格 → goNext
@@ -545,7 +545,8 @@ TEST_F(FlipViewTest, MouseWheelDiscreteFlipsImmediately)
     QPropertyAnimation* slideAnimation = fv.findChild<QPropertyAnimation*>();
     ASSERT_NE(slideAnimation, nullptr);
     EXPECT_EQ(slideAnimation->propertyName(), QByteArrayLiteral("slideOffset"));
-    QTRY_COMPARE_WITH_TIMEOUT(slideAnimation->state(), QAbstractAnimation::Stopped, 1500);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return (slideAnimation->state()) == (QAbstractAnimation::Stopped); }, 1500));
 
     // 向上滚动一格 → goPrevious
     QWheelEvent wheelUp(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, 120),
@@ -564,7 +565,7 @@ TEST_F(FlipViewTest, WindowsTouchpadHighFreqFlipsOnce)
     fv.addPage(new QWidget);
     fv.addPage(new QWidget);
     fv.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&fv));
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&fv));
     EXPECT_EQ(fv.currentIndex(), 0);
 
     // 发送 10 个高频事件，每个 angleDelta.y = -30, 总计 -300 (远超阈值 50)
@@ -588,7 +589,7 @@ TEST_F(FlipViewTest, RdpTouchpadHighFreq120FlipsOnce)
     for (int i = 0; i < 5; ++i)
         fv.addPage(new QWidget);
     fv.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&fv));
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&fv));
     EXPECT_EQ(fv.currentIndex(), 0);
 
     // 发送 8 个高频 ±120 事件（模拟 Mac 触控板 RDP 传输）
@@ -614,7 +615,7 @@ TEST_F(FlipViewTest, NoScrollPhaseNoPendingDuringAnimation)
     fv.addPage(new QWidget);
     fv.addPage(new QWidget);
     fv.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&fv));
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&fv));
     EXPECT_EQ(fv.currentIndex(), 0);
 
     // 第一次翻页 → 触发动画

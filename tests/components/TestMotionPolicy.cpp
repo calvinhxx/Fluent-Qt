@@ -124,7 +124,7 @@ TEST_F(MotionPolicyTest, Contract_TransitionHelperAppliesReducedAndDisabledFinal
     MotionPolicy::instance().setMode(MotionPolicy::Mode::Reduced);
     fluent::detail::startMotionTransition(&animation, Animation::Duration::Normal);
     EXPECT_EQ(animation.duration(), 50);
-    QTRY_COMPARE(finishedSpy.count(), 1);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (finishedSpy.count()) == (1); }, 5000));
     EXPECT_DOUBLE_EQ(animation.currentValue().toDouble(), 1.0);
 
     MotionPolicy::instance().setMode(MotionPolicy::Mode::Disabled);
@@ -186,7 +186,8 @@ TEST_F(MotionPolicyTest, Contract_ReusedTransitionRefreshesItsLocalAnimationPref
     MotionPolicy::instance().setMode(MotionPolicy::Mode::Reduced);
     EXPECT_EQ(animation.duration(), 50);
     EXPECT_EQ(animation.state(), QAbstractAnimation::Running);
-    QTRY_COMPARE(animation.state(), QAbstractAnimation::Stopped);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return (animation.state()) == (QAbstractAnimation::Stopped); }, 5000));
     EXPECT_DOUBLE_EQ(animation.currentValue().toDouble(), 1.0);
 }
 
@@ -211,7 +212,8 @@ TEST_F(MotionPolicyTest, Contract_TransitionGroupResolvesEveryChild)
     fluent::detail::startMotionTransitionGroup(&group);
     EXPECT_EQ(first->duration(), 50);
     EXPECT_EQ(second->duration(), 50);
-    QTRY_COMPARE(group.state(), QAbstractAnimation::Stopped);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return (group.state()) == (QAbstractAnimation::Stopped); }, 5000));
     EXPECT_DOUBLE_EQ(firstTarget.property("value").toDouble(), 1.0);
     EXPECT_DOUBLE_EQ(secondTarget.property("value").toDouble(), 1.0);
 }

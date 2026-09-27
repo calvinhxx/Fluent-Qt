@@ -164,10 +164,11 @@ TEST_F(TeachingTipTest, TracksMovingTargetAncestorAndClosesWhenClipped)
     const QPoint initialPosition = tip.pos();
 
     scrollingContent->move(0, -64);
-    QTRY_COMPARE_WITH_TIMEOUT(tip.pos(), initialPosition - QPoint(0, 64), 1000);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return (tip.pos()) == (initialPosition - QPoint(0, 64)); }, 1000));
 
     scrollingContent->move(0, -500);
-    QTRY_VERIFY_WITH_TIMEOUT(!tip.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !tip.isOpen(); }, 1000));
 }
 
 TEST_F(TeachingTipTest, ShowAtInheritsThemeOverrideFromTarget)

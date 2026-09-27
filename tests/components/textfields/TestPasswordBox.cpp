@@ -305,7 +305,7 @@ TEST_F(PasswordBoxTest, Contract_HiddenPasswordUsesInheritedFluentContextMenu)
     QApplication::sendEvent(box, &event);
 
     EXPECT_TRUE(event.isAccepted());
-    QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return sawFluentMenu; }, 1000));
     EXPECT_TRUE(sawFluentMenu);
     EXPECT_TRUE(sawCut);
     EXPECT_TRUE(sawCopy);
@@ -361,7 +361,7 @@ TEST_F(PasswordBoxTest, Contract_PeekContextMenuEndsRevealAndNeverExportsText)
     const QPoint localPos = box->rect().center();
     QContextMenuEvent event(QContextMenuEvent::Mouse, localPos, box->mapToGlobal(localPos));
     QApplication::sendEvent(box, &event);
-    QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return sawFluentMenu; }, 1000));
     QTest::mouseRelease(revealButton, Qt::LeftButton);
     QApplication::processEvents();
 

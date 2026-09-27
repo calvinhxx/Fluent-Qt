@@ -147,7 +147,7 @@ TEST_F(ToolTipTest, AttachedToolTipUsesFluentBubbleAboveTarget)
 
     QEvent leave(QEvent::Leave);
     QApplication::sendEvent(target, &leave);
-    QTRY_VERIFY_WITH_TIMEOUT(!tip->isVisible(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !tip->isVisible(); }, 1000));
 }
 
 TEST_F(ToolTipTest, StylingPropertiesRemainStable)
@@ -255,7 +255,7 @@ TEST_F(ToolTipTest, AnimatedHideKeepsVisibleUntilFadeOutCompletes)
     QApplication::processEvents();
 
     EXPECT_TRUE(tooltip.isVisible());
-    QTRY_VERIFY_WITH_TIMEOUT(!tooltip.isVisible(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !tooltip.isVisible(); }, 1000));
     EXPECT_NEAR(opacityEffectFor(tooltip)->opacity(), 0.0, 0.001);
     EXPECT_DOUBLE_EQ(tooltip.windowOpacity(), 1.0);
 }
@@ -269,13 +269,13 @@ TEST_F(ToolTipTest, HideDuringEntryReversesCleanly)
     QApplication::processEvents();
     ASSERT_TRUE(tooltip.isVisible());
     ASSERT_NE(opacityEffectFor(tooltip), nullptr);
-    QTRY_VERIFY_WITH_TIMEOUT(opacityEffectFor(tooltip)->opacity() > 0.0, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return opacityEffectFor(tooltip)->opacity() > 0.0; }, 1000));
 
     tooltip.hide();
     QApplication::processEvents();
 
     EXPECT_TRUE(tooltip.isVisible());
-    QTRY_VERIFY_WITH_TIMEOUT(!tooltip.isVisible(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !tooltip.isVisible(); }, 1000));
     EXPECT_NEAR(opacityEffectFor(tooltip)->opacity(), 0.0, 0.001);
     EXPECT_DOUBLE_EQ(tooltip.windowOpacity(), 1.0);
 }

@@ -861,7 +861,7 @@ TEST_F(TextEditTest, StandardEditingActionsUseFluentContextMenu)
     QApplication::sendEvent(inner->viewport(), &event);
 
     EXPECT_TRUE(event.isAccepted());
-    QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return sawFluentMenu; }, 1000));
     EXPECT_TRUE(sawFluentMenu);
     EXPECT_TRUE(sawCopy);
     EXPECT_TRUE(sawSelectAll);
@@ -944,7 +944,7 @@ TEST_F(TextEditTest, StandardEditingActionsReceiveIconsAndShortcutTextWithoutPla
     EXPECT_TRUE(fluent::menus_toolbars::detail::showTextEditingContextMenu(
         window, standardMenu, window->mapToGlobal(QPoint(40, 40)),
         QStringLiteral("FluentTextEdit.PlatformFallbackMenu")));
-    QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return sawFluentMenu; }, 1000));
     EXPECT_TRUE(sawFluentMenu);
     EXPECT_EQ(editingActionCount, 7);
     EXPECT_EQ(iconCount, editingActionCount);
@@ -1036,7 +1036,8 @@ TEST_F(TextEditTest, ContextMenuVisualCheck)
 
         QContextMenuEvent event(QContextMenuEvent::Mouse, localPos, globalPos);
         QApplication::sendEvent(inner->viewport(), &event);
-        QTRY_VERIFY_WITH_TIMEOUT(snapshotSaved || !snapshotError.isEmpty(), 1000);
+        ASSERT_TRUE(
+            QTest::qWaitFor([&] { return snapshotSaved || !snapshotError.isEmpty(); }, 1000));
         ASSERT_TRUE(snapshotSaved) << snapshotError.toStdString();
         return;
     }

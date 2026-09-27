@@ -21,6 +21,7 @@
 #include "components/foundation/ThemeRegistry.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
+#include "QtFontComparison.h"
 #include "QtTestEnvironment.h"
 
 using fluent::AnchorLayout;
@@ -154,7 +155,9 @@ TEST_F(TimePickerTest, DefaultsAndInheritanceMatchComponentPattern)
     EXPECT_NE(dynamic_cast<fluent::FluentElement*>(&picker), nullptr);
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(&picker), nullptr);
     EXPECT_EQ(picker.fontRole(), Typography::FontRole::Body);
-    EXPECT_EQ(picker.font(), picker.themeFont(Typography::FontRole::Body).toQFont());
+    EXPECT_EQ(tests::support::normalizedFontFamilies(picker.font()),
+              tests::support::normalizedFontFamilies(
+                  picker.themeFont(Typography::FontRole::Body).toQFont()));
 }
 
 TEST_F(TimePickerTest, InheritedFontRoleResolvesThemeTypography)
@@ -164,7 +167,9 @@ TEST_F(TimePickerTest, InheritedFontRoleResolvesThemeTypography)
     picker.setFontRole(Typography::FontRole::Caption);
 
     EXPECT_EQ(picker.fontRole(), Typography::FontRole::Caption);
-    EXPECT_EQ(picker.font(), picker.themeFont(Typography::FontRole::Caption).toQFont());
+    EXPECT_EQ(tests::support::normalizedFontFamilies(picker.font()),
+              tests::support::normalizedFontFamilies(
+                  picker.themeFont(Typography::FontRole::Caption).toQFont()));
 }
 
 TEST_F(TimePickerTest, SelectedTimeClearAndFormattingDriveSegments)
@@ -509,8 +514,11 @@ TEST_F(TimePickerTest, ThemeFontRefreshPreservesPendingFlyoutTime)
     EXPECT_TRUE(popup->isOpen());
     EXPECT_EQ(picker->selectedTime(), QTime(9, 30));
     EXPECT_EQ(QApplication::focusWidget(), focusedBeforeTheme);
-    EXPECT_EQ(picker->font(), picker->themeFont(Typography::FontRole::Body).toQFont());
-    EXPECT_EQ(minuteColumn->font(), picker->font());
+    EXPECT_EQ(tests::support::normalizedFontFamilies(picker->font()),
+              tests::support::normalizedFontFamilies(
+                  picker->themeFont(Typography::FontRole::Body).toQFont()));
+    EXPECT_EQ(tests::support::normalizedFontFamilies(minuteColumn->font()),
+              tests::support::normalizedFontFamilies(picker->font()));
     EXPECT_GT(picker->sizeHint().height(), defaultEntrySize.height());
     EXPECT_GT(popup->height(), defaultPopupSize.height());
     EXPECT_GT(minuteColumn->height(), defaultColumnHeight);

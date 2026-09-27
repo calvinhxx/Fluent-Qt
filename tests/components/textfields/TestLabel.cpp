@@ -139,7 +139,7 @@ TEST_F(LabelTest, SelectableTextUsesSharedFluentContextMenu)
     QApplication::sendEvent(label, &event);
 
     EXPECT_TRUE(event.isAccepted());
-    QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return sawFluentMenu; }, 1000));
     EXPECT_TRUE(sawFluentMenu);
     EXPECT_TRUE(sawCopy);
     EXPECT_TRUE(sawSelectAll);
@@ -290,7 +290,7 @@ TEST_F(LabelTest, HoverShowsFullTextToolTipOnlyWhenActuallyElided)
     EXPECT_TRUE(tip->isVisible());
 
     sendLeave(label);
-    QTRY_VERIFY_WITH_TIMEOUT(!tip->isVisible(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !tip->isVisible(); }, 1000));
 
     Label* wideLabel = new Label(fullText, window);
     wideLabel->setGeometry(12, 48, 800, 24);

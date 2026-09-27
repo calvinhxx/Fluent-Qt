@@ -1216,7 +1216,7 @@ TEST_F(NavigationViewTest, StackContentHostTransitionEffectControlsIncomingOffse
     EXPECT_GT(second->geometry().top(), 0);
     EXPECT_LT(second->geometry().top(), host.height());
 
-    QTRY_VERIFY_WITH_TIMEOUT(!host.busy(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !host.busy(); }, 1000));
     EXPECT_EQ(second->geometry(), host.rect());
 }
 

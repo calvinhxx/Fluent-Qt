@@ -760,7 +760,7 @@ TEST(ToastTest, Contract_HoverPausePreservesRemainingDuration)
 
     QEvent leave(QEvent::Leave);
     QCoreApplication::sendEvent(&toast, &leave);
-    QTRY_VERIFY_WITH_TIMEOUT(!toast.isOpen(), 500);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !toast.isOpen(); }, 500));
 }
 
 TEST(ToastTest, Contract_TimeoutReportsDismissReason)
@@ -781,7 +781,7 @@ TEST(ToastTest, Contract_TimeoutReportsDismissReason)
                          reason = value;
                      });
     ASSERT_TRUE(toast.present(&host));
-    QTRY_VERIFY_WITH_TIMEOUT(!toast.isOpen(), 500);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !toast.isOpen(); }, 500));
     EXPECT_EQ(reasonCount, 1);
     EXPECT_EQ(reason, Toast::TimedOut);
 }
