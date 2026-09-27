@@ -166,6 +166,8 @@ jobs:
       - name: Run browser smoke
         shell: bash
         run: |
+          python .github/scripts/test_wasm_browser_smoke.py
+          python .github/scripts/test_wasm_spatial_smoke.py
           python .github/scripts/run-wasm-browser-smoke.py \
             --root build/wasm \
             --mode "${{ inputs.mode }}" \
@@ -176,6 +178,26 @@ jobs:
             --device-scale-factor 2 \
             --viewport-width 1920 \
             --viewport-height 1080
+
+      # Hosted runners have no audited hardware GPU. This proves a usable 2D
+      # fallback, not hardware 3D performance or projected-text quality.
+      - name: Run Spatial software fallback smoke
+        shell: bash
+        run: |
+          python .github/scripts/run-wasm-spatial-smoke.py \
+            --root build/wasm \
+            --software-gl \
+            --device-scale-factor 2 \
+            --output build/spatial-validation/ci-software-fallback
+
+      - name: Upload Spatial fallback evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fluentqt-wasm-spatial-software-fallback
+          path: build/spatial-validation/ci-software-fallback
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Stage GitHub Pages payload
         shell: bash

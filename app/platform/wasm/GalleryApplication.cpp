@@ -71,6 +71,7 @@ void showGalleryWindow(GalleryWindow* window)
 
 int runApplication(int argc, char** argv)
 {
+    prepareWasmSmokeIfRequested();
     fluent::webassembly::configureRuntime();
     QCoreApplication::setApplicationName(capabilities().applicationName);
     QCoreApplication::setOrganizationName(QStringLiteral(FLUENT_QT_GALLERY_ORGANIZATION_NAME));

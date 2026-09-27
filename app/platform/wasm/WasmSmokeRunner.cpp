@@ -1,9 +1,12 @@
 #include "platform/wasm/WasmSmokeRunner.h"
 
+#include "components/status_info/Toast.h"
+
 #include <FluentQt/WebAssembly.h>
 
 #include <QAbstractItemModel>
 #include <QAbstractItemView>
+#include <QAbstractTextDocumentLayout>
 #include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
@@ -27,6 +30,9 @@
 #include <QSettings>
 #include <QSizePolicy>
 #include <QTimer>
+#include <QTextBlock>
+#include <QTextDocument>
+#include <QTextLayout>
 #include <QVariantAnimation>
 #include <QUrlQuery>
 
@@ -51,6 +57,7 @@
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Dialog.h"
 #include "components/dialogs_flyouts/TeachingTip.h"
+#include "components/layout/ParticleBackdrop.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/StackContentHost.h"
@@ -66,6 +73,7 @@
 #include "view/pages/SettingsPage.h"
 #include "view/shell/GallerySpatialController.h"
 #include "view/shell/GalleryWindow.h"
+#include "view/widgets/GalleryCodeBlock.h"
 #include "viewmodel/GallerySettings.h"
 
 namespace fluent::gallery {
@@ -1050,6 +1058,113 @@ private:
     QElapsedTimer m_routeTimer;
 };
 
+// Read-only geometry for physical browser input. Qt accessibility rectangles are
+// unprojected in 3D, so they cannot locate the visible source text on the canvas.
+// This URL-only probe neither expands the source nor changes focus/selection.
+class WasmSourceInputProbe final : public QObject {
+public:
+    explicit WasmSourceInputProbe(GalleryWindow* window) : QObject(window), m_window(window)
+    {
+        m_clock.start();
+        m_tick.setInterval(50);
+        connect(&m_tick, &QTimer::timeout, this, [this] { tick(); });
+        m_tick.start();
+    }
+
+private:
+    QJsonArray position(const QWidget* widget, const QPoint& point) const
+    {
+        const auto* controller = m_window->findChild<GallerySpatialController*>();
+        const QPoint global =
+            controller ? m_window->mapToGlobal(controller->projectedPosition(widget, point))
+                       : widget->mapToGlobal(point);
+        return {global.x(), global.y()};
+    }
+
+    void tick()
+    {
+        // clang-format off
+        const bool done = EM_ASM_INT({
+            return document.documentElement.dataset.fluentQtSourceInputDone === 'true';
+        });
+        // clang-format on
+        if (m_clock.elapsed() > 45000 || done) {
+            deleteLater();
+            return;
+        }
+        if (m_window->findChild<QWidget*>(QStringLiteral("gallerySplashScreen")))
+            return;
+        auto* controller = m_window->findChild<GallerySpatialController*>();
+        if (GallerySettings::instance().spatialAvailabilityPending() ||
+            (controller && controller->transitionRunning()))
+            return;
+        auto* page = m_window->currentContentPage();
+        if (!page || page->routeId() != QStringLiteral("button"))
+            return;
+        if (!m_block) {
+            m_block = page->findChild<GalleryCodeBlock*>();
+            if (!m_block)
+                return;
+            connect(m_block, &GalleryCodeBlock::expansionTransitionStarted, this,
+                    [this] { m_expanding = true; });
+            connect(m_block, &GalleryCodeBlock::expansionTransitionFinished, this,
+                    [this] { m_expanding = false; });
+        }
+        const auto* surface =
+            m_window->findChild<QWidget*>(QStringLiteral("gallerySpatialSurface"));
+        QJsonObject frame{
+            {"state", QStringLiteral("ready")},
+            {"header", position(m_block->headerButton(), m_block->headerButton()->rect().center())},
+            {"spatial",
+             surface && surface->isVisible() && surface->property("presenting").toBool()}};
+        frame["copyEnabled"] = m_block->copyButton()->isEnabled();
+        QJsonArray toasts;
+        for (const auto* toast : m_window->window()->findChildren<status_info::Toast*>()) {
+            if (toast->isOpen())
+                toasts.append(QJsonObject{{"message", toast->message()},
+                                          {"severity", int(toast->severity())}});
+        }
+        frame["toasts"] = toasts;
+        if (m_block->isExpanded() && !m_expanding) {
+            auto* label =
+                m_block->findChild<textfields::Label*>(QStringLiteral("galleryCodeBlockText"));
+            if (!label || !label->isVisible())
+                return;
+            const QRect content = label->contentsRect().adjusted(
+                label->margin(), label->margin(), -label->margin(), -label->margin());
+            QTextDocument document;
+            document.setDefaultFont(label->font());
+            document.setDocumentMargin(0);
+            document.setHtml(label->text());
+            document.setTextWidth(content.width());
+            document.documentLayout()->documentSize();
+            const auto* layout = document.firstBlock().layout();
+            if (!layout || layout->lineCount() < 2)
+                return;
+            QJsonArray lines;
+            for (int index = 0; index < 2; ++index) {
+                const auto line = layout->lineAt(index);
+                const int y =
+                    qRound(content.y() + layout->position().y() + line.y() + line.height() / 2);
+                lines.append(QJsonArray{position(label, QPoint(content.left() + 1, y)),
+                                        position(label, QPoint(content.right() - 1, y))});
+            }
+            frame["state"] = QStringLiteral("expanded");
+            frame["copy"] = position(m_block->copyButton(), m_block->copyButton()->rect().center());
+            frame["lines"] = lines;
+        }
+        const auto json = QJsonDocument(frame).toJson(QJsonDocument::Compact);
+        EM_ASM({ document.documentElement.dataset.fluentQtSourceInput = UTF8ToString($0); },
+               json.constData());
+    }
+
+    GalleryWindow* m_window;
+    QPointer<GalleryCodeBlock> m_block;
+    QTimer m_tick;
+    QElapsedTimer m_clock;
+    bool m_expanding = false;
+};
+
 } // namespace
 
 #ifdef FLUENT_QT_HAS_SPATIAL
@@ -1194,7 +1309,17 @@ private:
                 m_window->findChild<QWidget*>(QStringLiteral("gallerySplashScreen")))
                 return;
             if (!settings.spatialAvailable()) {
-                finish(m_expectFallback, settings.spatialUnavailableReason());
+                m_result["fallback"] = true;
+                if (!m_expectFallback) {
+                    finish(false, settings.spatialUnavailableReason());
+                    return;
+                }
+                if (!m_window->selectRoute(QStringLiteral("button"))) {
+                    finish(false, QStringLiteral("The 2D fallback could not select a route"));
+                    return;
+                }
+                m_clock.restart();
+                m_stage = -1; // Route creation/presentation is deferred to the event loop.
                 return;
             }
             if (m_expectFallback) {
@@ -1219,7 +1344,22 @@ private:
                     ++m_frames;
             });
             m_clock.restart();
+            m_result["statistics_before_motion"] =
+                QJsonObject::fromVariantMap(controller->renderingStatistics());
             m_stage = 1;
+        } else if (m_stage == -1) {
+            auto* page = m_window->currentContentPage();
+            if (!page || page->routeId() != QStringLiteral("button") || !page->isVisible()) {
+                if (m_clock.elapsed() > 5000)
+                    finish(false, QStringLiteral("The 2D fallback route did not become visible"));
+                return;
+            }
+            auto* surface = m_window->findChild<QWidget*>(QStringLiteral("gallerySpatialSurface"));
+            // Keep the saved 3D preference: the effective presentation must be 2D.
+            const bool usable = !settings.spatialAvailable() &&
+                                (!surface || !surface->property("presenting").toBool());
+            m_result["two_dimensional_usable"] = usable;
+            finish(usable, settings.spatialUnavailableReason());
         } else if (m_stage == 1) {
             const qreal angle = m_clock.elapsed() * .003;
             const QPointF position(m_window->width() * (.5 + .32 * std::sin(angle)),
@@ -1232,6 +1372,15 @@ private:
                 m_result["moving_frames"] = m_frames;
                 m_result["moving_ms"] = double(m_clock.elapsed());
                 m_result["moving_fps"] = m_frames * 1000.0 / m_clock.elapsed();
+                m_result["statistics_after_motion"] =
+                    QJsonObject::fromVariantMap(controller->renderingStatistics());
+                const auto before = m_result["statistics_before_motion"].toObject();
+                const auto after = m_result["statistics_after_motion"].toObject();
+                if (after["backdropUploads"] != before["backdropUploads"]) {
+                    finish(false,
+                           QStringLiteral("Pointer motion reuploaded an unchanged backdrop"));
+                    return;
+                }
                 if (m_frames < 3) {
                     finish(false, QStringLiteral("Pointer following did not repaint the scene"));
                     return;
@@ -1270,6 +1419,13 @@ private:
             m_stage = 4;
         } else if (m_stage == 4 && !controller->transitionRunning()) {
             m_result["return_to_2d_ms"] = double(m_clock.elapsed());
+            const auto statistics = controller->renderingStatistics();
+            m_result["statistics_after_return_to_2d"] = QJsonObject::fromVariantMap(statistics);
+            if (statistics["backdropTextureBytes"].toLongLong() ||
+                statistics["cacheEstimatedBytes"].toLongLong()) {
+                finish(false, QStringLiteral("The 2D return retained GPU frame caches"));
+                return;
+            }
             if (m_surface->property("presenting").toBool()) {
                 finish(false, QStringLiteral("The native 2D layout was not restored"));
                 return;
@@ -1307,8 +1463,68 @@ private:
                                m_preview->cameraDistance() == 900 &&
                                !m_preview->items().first()->projectedPolygon().isEmpty();
             m_result["spatial_example"] = valid;
-            finish(valid, QStringLiteral("3D animation, projected input, idle, 2D roundtrip and "
-                                         "Spatial example checked"));
+            if (!valid) {
+                finish(false, QStringLiteral("The Spatial example did not retain its state"));
+                return;
+            }
+            settings.setHomeParticlesEnabled(true);
+            settings.setSpatialModeEnabled(false);
+            m_window->selectRoute(QStringLiteral("home"));
+            m_clock.restart();
+            m_stage = 8;
+        } else if (m_stage == 8) {
+            auto* particles =
+                m_window->findChild<layout::ParticleBackdrop*>("galleryHomeParticles");
+            if (!particles || !particles->isVisible() || m_clock.elapsed() < 600) {
+                if (m_clock.elapsed() > 6000)
+                    finish(false, QStringLiteral("The particle Home page did not become visible"));
+                return;
+            }
+            const auto statistics = controller->renderingStatistics();
+            if (statistics["particleLayers"].toInt() != 0) {
+                finish(false, QStringLiteral("The 2D particle path retained a GPU layer"));
+                return;
+            }
+            m_result["particle_cpu"] = QJsonObject::fromVariantMap(statistics);
+            settings.setSpatialModeEnabled(true);
+            m_clock.restart();
+            m_stage = 9;
+        } else if (m_stage == 9 && m_clock.elapsed() >= 800) {
+            m_result["particle_before"] =
+                QJsonObject::fromVariantMap(controller->renderingStatistics());
+            m_clock.restart();
+            m_stage = 10;
+        } else if (m_stage == 10 && m_clock.elapsed() >= 600) {
+            const auto statistics = controller->renderingStatistics();
+            const bool accelerated = statistics["particleLayers"].toInt() > 0;
+            m_result["particle_accelerated"] = accelerated;
+            m_result["particle_after"] = QJsonObject::fromVariantMap(statistics);
+            const auto before = m_result["particle_before"].toObject();
+            if (accelerated &&
+                statistics["particleFrames"].toDouble() <= before["particleFrames"].toDouble()) {
+                finish(false, QStringLiteral("The GPU particle texture stopped advancing"));
+                return;
+            }
+            if (statistics["cacheEstimatedBytes"].toLongLong() >
+                statistics["cacheBudgetBytes"].toLongLong()) {
+                finish(false, QStringLiteral("Particle targets exceeded the shared cache budget"));
+                return;
+            }
+            // High-DPI/large panels may legitimately retain CPU particles when
+            // no auxiliary textures fit. Report that path instead of calling it GPU.
+            settings.setSpatialModeEnabled(false);
+            m_clock.restart();
+            m_stage = 11;
+        } else if (m_stage == 11 && !controller->transitionRunning()) {
+            const auto statistics = controller->renderingStatistics();
+            m_result["particle_return_to_2d"] = QJsonObject::fromVariantMap(statistics);
+            if (statistics["particleLayers"].toInt() || statistics["particleBytes"].toLongLong() ||
+                statistics["cacheEstimatedBytes"].toLongLong()) {
+                finish(false, QStringLiteral("Returning to 2D retained particle GPU resources"));
+                return;
+            }
+            finish(true, QStringLiteral("3D input, idle, roundtrip, Spatial example and particle "
+                                        "CPU/automatic/release paths checked"));
         }
     }
     void finish(bool passed, const QString& detail)
@@ -1336,6 +1552,10 @@ private:
 void startWasmSmokeIfRequested(GalleryWindow* window)
 {
     const QString mode = smokeMode();
+    if (window && mode == QStringLiteral("source-input")) {
+        new WasmSourceInputProbe(window);
+        return;
+    }
 #ifdef FLUENT_QT_HAS_SPATIAL
     if (window && mode == QStringLiteral("spatial-quality")) {
         new WasmSpatialQualityProbe(window);
@@ -1350,6 +1570,12 @@ void startWasmSmokeIfRequested(GalleryWindow* window)
     if (!window || (mode != QStringLiteral("fast") && mode != QStringLiteral("full")))
         return;
     (new WasmSmokeRunner(window, mode == QStringLiteral("full")))->start();
+}
+
+void prepareWasmSmokeIfRequested()
+{
+    if (smokeMode() == QStringLiteral("spatial"))
+        qputenv("FLUENT_QT_SPATIAL_BENCHMARK", "1");
 }
 
 } // namespace fluent::gallery

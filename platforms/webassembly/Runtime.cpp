@@ -52,11 +52,14 @@ void configureAccessibleProxyPresentation()
     // ObjectShow supplies their geometry. Its negative-z a11y layer is visible
     // through our transparent desktop canvas, exposing native HTML form chrome.
     // Keep proxy semantics, geometry and events intact; only Qt paints the UI.
+    // Offscreen proxy rectangles must not enlarge the scrollable Qt window:
+    // browser focus otherwise scrolls its canvas away with the hidden proxy.
     // Exclude the screen-reader enable button, and never target the independent
     // document-body input used by Qt's keyboard/IME context.
     // zh_CN: Qt 6.9.3 的焦点/名称事件可能先于 ObjectShow 创建无几何的语义代理。
     // 负 z 层仍会透过透明桌面画布，露出原生 HTML 表单；这里只关闭代理绘制，
     // 保留语义、几何和事件，并排除读屏启用按钮及独立的键盘/IME 输入节点。
+    // 裁剪代理层溢出，避免聚焦屏外代理时浏览器连同画布一起滚走。
     EM_ASM({
         const containers = Module['qtContainerElements'];
         if (!Array.isArray(containers))
@@ -69,7 +72,8 @@ void configureAccessibleProxyPresentation()
                 continue;
             const style = container.ownerDocument.createElement('style');
             style.id = 'fluentqt-accessible-proxy-presentation';
-            style.textContent = '.qt-window-a11y-container > [id]:not(' +
+            style.textContent = '.qt-window-a11y-container { overflow: clip; }' +
+                                '.qt-window-a11y-container > [id]:not(' +
                                 '.hidden-visually-read-by-screen-reader) { opacity: 0; }';
             shadow.appendChild(style);
         }

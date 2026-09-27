@@ -10,15 +10,28 @@ from pathlib import Path
 import threading
 from urllib.parse import urlencode
 
-from playwright.sync_api import sync_playwright
-
-
 class QuietHandler(SimpleHTTPRequestHandler):
     def log_message(self, *_args):
         pass
 
 
+def validate_spatial_result(result, page_errors, *, expect_fallback):
+    """Reject script errors and distinguish usable 2D fallback from hardware 3D."""
+    if page_errors:
+        raise RuntimeError("Browser page errors: " + "; ".join(page_errors))
+    if result.get("state") != "pass":
+        raise RuntimeError(result.get("detail") or "Spatial probe did not pass")
+    metrics = result.get("metrics", {})
+    if expect_fallback:
+        if metrics.get("fallback") is not True or metrics.get("two_dimensional_usable") is not True:
+            raise RuntimeError("Software renderer did not prove a usable 2D fallback")
+    elif metrics.get("fallback") is True:
+        raise RuntimeError("2D fallback cannot pass hardware Spatial validation")
+
+
 def main():
+    from playwright.sync_api import sync_playwright
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("build/wasm"))
     parser.add_argument("--output", type=Path, default=Path("build/spatial-validation/web"))
@@ -41,6 +54,7 @@ def main():
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     logs = []
+    page_errors = []
     try:
         with sync_playwright() as playwright:
             browser_args = ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] if args.software_gl else []
@@ -48,7 +62,7 @@ def main():
             info = browser.new_browser_cdp_session().send("SystemInfo.getInfo")
             page = browser.new_page(viewport={"width": args.viewport_width, "height": args.viewport_height}, device_scale_factor=args.device_scale_factor, color_scheme="light")
             page.on("console", lambda message: logs.append(message.text))
-            page.on("pageerror", lambda error: logs.append(str(error)))
+            page.on("pageerror", lambda error: page_errors.append(str(error)))
             mode = "spatial-quality" if args.quality else "spatial-fallback" if args.software_gl else "spatial"
             query = {"wasm-smoke": mode}
             if args.window_mode != "default":
@@ -58,6 +72,7 @@ def main():
             url = f"http://127.0.0.1:{server.server_port}/app/?{urlencode(query)}"
             page.goto(url)
             frames = []
+            result = {"state": "fail", "detail": "Spatial probe did not complete"}
             try:
                 if args.quality:
                     for stage, name in enumerate(("2d", "gpu-flat", "3d", "2d-return")):
@@ -108,17 +123,20 @@ def main():
                         raise RuntimeError("Enabling 3D changed the canvas pixel ratio")
                 page.wait_for_function("['pass','fail'].includes(document.documentElement.dataset.fluentQtSmoke)", timeout=120_000)
                 result = page.evaluate("({state: document.documentElement.dataset.fluentQtSmoke, detail: document.documentElement.dataset.fluentQtSmokeDetail, metrics: JSON.parse(document.documentElement.dataset.fluentQtSpatialMetrics || '{}')})")
+                validate_spatial_result(result, page_errors, expect_fallback=args.software_gl)
             except Exception as error:
-                result = {"state": "fail", "detail": str(error)}
+                result.update(state="fail", detail=str(error))
             result["browser"] = browser.version
             result["gpu"] = info["gpu"]
             result["headless"] = not args.headed
             result["forced_software_gl"] = args.software_gl
+            result["validation_scope"] = "software-2d-fallback" if args.software_gl else "hardware-spatial-quality" if args.quality else "hardware-spatial-interaction"
+            result["page_errors"] = page_errors
             if frames:
                 result["frames"] = frames
             page.screenshot(path=str(args.output / "web-spatial.png"))
             (args.output / "web-spatial.json").write_text(json.dumps(result, indent=2) + "\n")
-            (args.output / "browser.log").write_text("\n".join(logs))
+            (args.output / "browser.log").write_text("\n".join(logs + page_errors))
             print(json.dumps({key: value for key, value in result.items() if key != "gpu"}, indent=2))
             print("GPU devices:", info["gpu"].get("devices"))
             browser.close()

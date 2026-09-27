@@ -58,7 +58,7 @@ PAGES_PIPELINE_ACTION_REVISIONS = {
         ),
         "actions/upload-artifact": (
             "ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2",
-            1,
+            2,
         ),
     },
 }
@@ -594,6 +594,8 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "      - name: Cache Chromium",
         "      - name: Install Chromium runtime",
         "      - name: Run browser smoke",
+        "      - name: Run Spatial software fallback smoke",
+        "      - name: Upload Spatial fallback evidence",
         "      - name: Stage GitHub Pages payload",
         "      - name: Upload WebAssembly Pages payload",
     ]
@@ -684,6 +686,35 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         errors.append(
             "ci-wasm.yml installed-consumer step must exactly consume the audited SDK"
         )
+
+    fallback_step = named_step_section(build, "Run Spatial software fallback smoke")
+    expected_fallback_step = [
+        "      - name: Run Spatial software fallback smoke",
+        "        shell: bash",
+        "        run: |",
+        "          python .github/scripts/run-wasm-spatial-smoke.py \\",
+        "            --root build/wasm \\",
+        "            --software-gl \\",
+        "            --device-scale-factor 2 \\",
+        "            --output build/spatial-validation/ci-software-fallback",
+    ]
+    if uncommented_workflow_lines(fallback_step) != expected_fallback_step:
+        errors.append(
+            "ci-wasm.yml must run the fail-closed Spatial software fallback contract"
+        )
+    evidence_step = named_step_section(build, "Upload Spatial fallback evidence")
+    expected_evidence_step = [
+        "      - name: Upload Spatial fallback evidence",
+        "        if: ${{ always() }}",
+        "        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+        "        with:",
+        "          name: fluentqt-wasm-spatial-software-fallback",
+        "          path: build/spatial-validation/ci-software-fallback",
+        "          if-no-files-found: ignore",
+        "          retention-days: 7",
+    ]
+    if uncommented_workflow_lines(evidence_step) != expected_evidence_step:
+        errors.append("ci-wasm.yml must retain Spatial fallback failure evidence")
 
     active_install = "\n".join(uncommented_workflow_lines(install_step))
     active_without_install = active_build.replace(active_install, "", 1)

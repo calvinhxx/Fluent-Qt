@@ -450,6 +450,22 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             "workflow validator accepted workflow-wide Pages write permissions",
         )
 
+    def test_wasm_spatial_fallback_cannot_be_disabled_or_claim_hardware(self):
+        for replacement in ("            --quality \\\n", "            --software-gl || true \\\n"):
+            with self.subTest(replacement=replacement):
+                errors = self.workflow_errors_with_replacement(
+                    "ci-wasm.yml", "            --software-gl \\\n", replacement,
+                )
+                self.assertTrue(any("fail-closed Spatial software fallback" in error for error in errors))
+
+    def test_wasm_spatial_failure_evidence_must_be_retained(self):
+        errors = self.workflow_errors_with_replacement(
+            "ci-wasm.yml",
+            "      - name: Upload Spatial fallback evidence\n        if: ${{ always() }}\n",
+            "      - name: Upload Spatial fallback evidence\n        if: ${{ success() }}\n",
+        )
+        self.assertTrue(any("retain Spatial fallback failure evidence" in error for error in errors))
+
     def test_wasm_emsdk_revision_cannot_drift(self):
         errors = self.workflow_errors_with_replacement(
             "ci-wasm.yml",

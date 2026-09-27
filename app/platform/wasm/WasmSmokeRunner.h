@@ -5,7 +5,10 @@ namespace fluent::gallery {
 
 class GalleryWindow;
 
-/** Starts the browser smoke sequence when the URL contains `wasm-smoke=fast|full`. */
+/** Enables opt-in timing before creating a Gallery renderer for Spatial smoke. */
+void prepareWasmSmokeIfRequested();
+
+/** Starts a browser smoke or read-only input probe selected by `wasm-smoke`. */
 void startWasmSmokeIfRequested(GalleryWindow* window);
 
 } // namespace fluent::gallery
