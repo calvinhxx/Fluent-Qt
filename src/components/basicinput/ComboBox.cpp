@@ -22,7 +22,7 @@
 #include "compatibility/private/ComboBoxCompat_p.h"
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
-#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/foundation/private/MotionPolicy_p.h"
@@ -328,9 +328,9 @@ void ComboBox::ComboBoxPopup::updateLayout()
     int rowsH = maxVisible * itemH;
     const int sSize = kPopupShadowMargin;
     const int cardInset = kPopupContentInset;
-    QWidget* top = m_comboBox->window();
+    QWidget* top = ::fluent::overlay::presentedTopLevel(m_comboBox);
     const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
-    const QRect anchor(m_comboBox->mapTo(top, QPoint()), m_comboBox->size());
+    const QRect anchor = ::fluent::overlay::presentedRectInTopLevel(m_comboBox);
     const int availableHeight =
         qMax(surface.bottom() - anchor.bottom(), anchor.top() - surface.top());
     rowsH = qMin(rowsH, qMax(1, availableHeight - m_comboBox->popupOffset() - kPopupWindowMargin -
@@ -406,14 +406,14 @@ void ComboBox::ComboBoxPopup::paintEvent(QPaintEvent*)
 
 QPoint ComboBox::ComboBoxPopup::computePosition() const
 {
-    if (!m_comboBox || !m_comboBox->window())
+    if (!::fluent::overlay::presentedTopLevel(m_comboBox))
         return Flyout::computePosition();
 
-    QWidget* top = m_comboBox->window();
+    QWidget* top = ::fluent::overlay::presentedTopLevel(m_comboBox);
     const int shadow = kPopupShadowMargin;
     const QSize cardSize = ::fluent::overlay::visibleCardSize(size(), shadow);
     const int cardH = cardSize.height();
-    const QRect anchor(m_comboBox->mapTo(top, QPoint(0, 0)), m_comboBox->size());
+    const QRect anchor = ::fluent::overlay::presentedRectInTopLevel(m_comboBox);
 
     const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
     const int spaceBelow = surface.bottom() - anchor.bottom();
@@ -458,7 +458,8 @@ bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event)
     }
     if (event && event->type() == QEvent::MouseButtonPress && m_comboBox) {
         auto* mouseEvent = static_cast<QMouseEvent*>(event);
-        const QPoint comboLocal = m_comboBox->mapFromGlobal(fluentMouseGlobalPos(mouseEvent));
+        const QPoint comboLocal = ::fluent::overlay::localPointFromPresentedGlobal(
+            m_comboBox, fluentMouseGlobalPos(mouseEvent));
         const bool pressOnOwner = m_comboBox->rect().contains(comboLocal);
         const bool pressInsidePopup = ::fluent::overlay::visibleCardContains(
             rect(), mapFromGlobal(fluentMouseGlobalPos(mouseEvent)), kPopupShadowMargin);
@@ -770,7 +771,10 @@ void ComboBox::applyLineEditStyle()
 
 bool ComboBox::event(QEvent* event)
 {
+    const QPointer<ComboBox> guard(this);
     const bool handled = QComboBox::event(event);
+    if (!guard)
+        return handled;
     synchronizeLineEdit();
     if (event && event->type() == QEvent::LayoutDirectionChange) {
         layoutLineEdit();

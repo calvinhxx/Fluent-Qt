@@ -33,7 +33,7 @@
 #include "components/basicinput/private/MultiSelectComboBoxAccessibility_p.h"
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
-#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/LogicalItemAccessibility_p.h"
 #include "components/foundation/private/SurfacePainter_p.h"
@@ -837,7 +837,7 @@ private:
         const int scrollValue = scrollBar ? scrollBar->value() : 0;
 
         int cardWidth = qMax(m_owner->width(), kPopupMinimumCardWidth);
-        if (QWidget* top = m_owner->window()) {
+        if (QWidget* top = ::fluent::overlay::presentedTopLevel(m_owner)) {
             const int available =
                 ::fluent::overlay::overlaySurfaceRect(top).width() - kPopupWindowMargin * 2;
             if (available > 0)
@@ -860,9 +860,9 @@ private:
 
         int listHeight = desiredListHeight;
         Flyout::Placement placement = Flyout::Auto;
-        if (QWidget* top = m_owner->window()) {
+        if (QWidget* top = ::fluent::overlay::presentedTopLevel(m_owner)) {
             const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
-            const QRect anchorRect(m_owner->mapTo(top, QPoint()), m_owner->size());
+            const QRect anchorRect = ::fluent::overlay::presentedRectInTopLevel(m_owner);
             const int desiredCardHeight =
                 ::fluent::overlay::visibleCardSize(m_layout->sizeHint(), kPopupShadowMargin)
                     .height();

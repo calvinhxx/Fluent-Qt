@@ -26,6 +26,7 @@
 #include "components/basicinput/Button.h"
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/textfields/private/AutoSuggestBoxAccessibility_p.h"
 #include "design/Spacing.h"
@@ -273,7 +274,10 @@ private:
         }
 
         QRegion hitRegion(rect());
-        const QRect ownerRect(mapFromGlobal(m_owner->mapToGlobal(QPoint(0, 0))), m_owner->size());
+        const QRect presented = ::fluent::overlay::presentedRectInTopLevel(m_owner);
+        const QRect ownerRect(
+            mapFrom(::fluent::overlay::presentedTopLevel(m_owner), presented.topLeft()),
+            presented.size());
         hitRegion -= QRegion(ownerRect.adjusted(-1, -1, 1, 1));
         setMask(hitRegion);
     }

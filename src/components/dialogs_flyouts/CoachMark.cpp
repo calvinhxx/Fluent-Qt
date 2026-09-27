@@ -18,7 +18,7 @@
 
 #include "components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.h"
 #include "components/foundation/overlay/OverlayCoordinator.h"
-#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/overlay/OverlayWindow.h"
 #include "components/foundation/private/MotionPolicy_p.h"
@@ -206,7 +206,7 @@ bool CoachMark::eventFilter(QObject* watched, QEvent* event)
         QWidget* ownerTopLevel =
             m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : nullptr;
         if (!ownerTopLevel)
-            ownerTopLevel = m_owner ? m_owner->window() : window();
+            ownerTopLevel = m_owner ? ::fluent::overlay::presentedTopLevel(m_owner) : window();
         if (!ownerTopLevel || ::fluent::overlay::eventTopLevel(watched) != ownerTopLevel) {
             return QWidget::eventFilter(watched, event);
         }
@@ -268,7 +268,7 @@ bool CoachMark::syncThemeOverrideFromSource()
 
 void CoachMark::attachToOwnerTopLevel()
 {
-    QWidget* top = m_owner ? m_owner->window() : parentWidget();
+    QWidget* top = m_owner ? ::fluent::overlay::presentedTopLevel(m_owner) : parentWidget();
     if (!top)
         return;
     m_overlayCoordinator->attachTo(top);
@@ -298,7 +298,7 @@ void CoachMark::reposition(bool animated)
     const QSize win = size();
     QWidget* ownerWindow = m_overlayCoordinator->topLevelWidget();
     if (!ownerWindow)
-        ownerWindow = m_owner ? m_owner->window() : parentWidget();
+        ownerWindow = m_owner ? ::fluent::overlay::presentedTopLevel(m_owner) : parentWidget();
 
     if (!m_target) {
         m_tailVisible = false;
@@ -320,7 +320,12 @@ void CoachMark::reposition(bool animated)
         return;
     }
 
-    const QRect targetRef(m_target->mapTo(ownerWindow, QPoint(0, 0)), m_target->size());
+    const QRect targetRef =
+        ::fluent::overlay::presentedTopLevel(m_target) == ownerWindow
+            ? ::fluent::overlay::presentedRectInTopLevel(m_target)
+            : QRect(ownerWindow->mapFromGlobal(
+                        ::fluent::overlay::presentedPointToGlobal(m_target, QPoint())),
+                    ::fluent::overlay::presentedRectInTopLevel(m_target).size());
     const Placement p = (m_placement == Auto) ? Bottom : m_placement;
 
     QPoint topLeft;

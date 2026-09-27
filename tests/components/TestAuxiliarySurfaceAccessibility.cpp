@@ -159,8 +159,10 @@ bool hasAccessibleAncestor(QWidget* child, QWidget* ancestor)
 
 } // namespace
 
-TEST(AuxiliarySurfaceAccessibilityTest,
-     Contract_AccessibilityDropDownButtonExposesOneMenuActionAndKeyboardPath)
+// CTest discovers test declarations on one line.
+// clang-format off
+TEST(AuxiliarySurfaceAccessibilityTest, Contract_AccessibilityDropDownButtonExposesOneMenuActionAndKeyboardPath)
+// clang-format on
 {
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";
@@ -213,34 +215,34 @@ TEST(AuxiliarySurfaceAccessibilityTest,
                            QStringLiteral("Alt+Down"), QStringLiteral("F4")}));
 
     actions->doAction(QAccessibleActionInterface::showMenuAction());
-    QTRY_VERIFY_WITH_TIMEOUT(button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen(); }, 1000));
     EXPECT_TRUE(root->state().expanded);
     EXPECT_EQ(events.countExpandedState(&button), 2);
     QTest::keyClick(&first, Qt::Key_Escape);
-    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
     EXPECT_TRUE(button.hasFocus());
     EXPECT_EQ(events.countExpandedState(&button), 3);
 
     QTest::keyClick(&button, Qt::Key_Space);
-    QTRY_VERIFY_WITH_TIMEOUT(button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen(); }, 1000));
     QTest::keyClick(&first, Qt::Key_Escape);
-    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
     QTest::keyClick(&button, Qt::Key_Return);
-    QTRY_VERIFY_WITH_TIMEOUT(button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen(); }, 1000));
     QTest::keyClick(&first, Qt::Key_Escape);
-    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
     QTest::keyClick(&button, Qt::Key_Enter);
-    QTRY_VERIFY_WITH_TIMEOUT(button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen(); }, 1000));
     QTest::keyClick(&first, Qt::Key_Escape);
-    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
     QTest::keyClick(&button, Qt::Key_Down, Qt::AltModifier);
-    QTRY_VERIFY_WITH_TIMEOUT(button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen(); }, 1000));
     QTest::keyClick(&first, Qt::Key_Escape);
-    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
     QTest::keyClick(&button, Qt::Key_F4);
-    QTRY_VERIFY_WITH_TIMEOUT(button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen(); }, 1000));
     QTest::keyClick(&first, Qt::Key_Escape);
-    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
     EXPECT_EQ(clicked.count(), 0);
 
     events.clear();
@@ -259,8 +261,10 @@ TEST(AuxiliarySurfaceAccessibilityTest,
 #endif
 }
 
-TEST(AuxiliarySurfaceAccessibilityTest,
-     Contract_AccessibilityDrawerExposesPaneStateDismissAndFocusReturn)
+// CTest discovers test declarations on one line.
+// clang-format off
+TEST(AuxiliarySurfaceAccessibilityTest, Contract_AccessibilityDrawerExposesPaneStateDismissAndFocusReturn)
+// clang-format on
 {
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";
@@ -334,8 +338,10 @@ TEST(AuxiliarySurfaceAccessibilityTest,
 #endif
 }
 
-TEST(AuxiliarySurfaceAccessibilityTest,
-     Contract_AccessibilityToolTipExposesTextOwnerAndLogicalLifecycle)
+// CTest discovers test declarations on one line.
+// clang-format off
+TEST(AuxiliarySurfaceAccessibilityTest, Contract_AccessibilityToolTipExposesTextOwnerAndLogicalLifecycle)
+// clang-format on
 {
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";

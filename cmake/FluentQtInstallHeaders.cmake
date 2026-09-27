@@ -91,6 +91,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/foundation/WidgetOwnership.h
     src/components/foundation/overlay/OverlayGeometry.h
     src/components/foundation/overlay/OverlayLightDismiss.h
+    src/components/foundation/overlay/OverlayPresentation.h
     src/components/foundation/overlay/OverlayScrim.h
     src/components/foundation/overlay/OverlayShadow.h
     src/components/foundation/overlay/OverlayWindow.h

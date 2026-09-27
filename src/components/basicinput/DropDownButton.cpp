@@ -7,6 +7,7 @@
 #include <QPainter>
 #include <QPropertyAnimation>
 #include <QStyleOptionButton>
+#include <QTimer>
 #include <QtMath>
 
 namespace fluent::basicinput {
@@ -51,7 +52,16 @@ void DropDownButton::setMenu(QMenu* menu)
     setOpen(false);
     m_menu = menu;
     if (m_menu) {
-        connect(m_menu, &QMenu::aboutToShow, this, [this]() { setOpen(true); });
+        connect(m_menu, &QMenu::aboutToShow, this, [this]() {
+            // Empty QMenu emits aboutToShow but never aboutToHide. Wait one
+            // turn so application handlers can populate or clear it on demand.
+            // zh_CN: 空菜单不发 aboutToHide；等待一轮以允许应用动态填充或清空。
+            QTimer::singleShot(0, this, [this, menu = m_menu] {
+                if (menu && menu == m_menu && menu->isEmpty() && !menu->isVisible())
+                    setOpen(false);
+            });
+            setOpen(true);
+        });
         connect(m_menu, &QMenu::aboutToHide, this, [this]() { setOpen(false); });
         connect(m_menu, &QObject::destroyed, this, [this]() {
             setOpen(false);

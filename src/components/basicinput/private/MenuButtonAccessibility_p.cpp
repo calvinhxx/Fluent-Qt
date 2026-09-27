@@ -9,6 +9,7 @@
 
 #include "components/basicinput/DropDownButton.h"
 #include "components/basicinput/SplitButton.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "compatibility/QtCompat.h"
 
 namespace fluent::basicinput::detail {
@@ -42,10 +43,13 @@ template <typename ButtonType> void showAttachedMenu(ButtonType* button)
 
     if (button->focusPolicy() != Qt::NoFocus)
         button->setFocus(Qt::PopupFocusReason);
-    QPoint popupPosition = button->mapToGlobal(button->rect().bottomLeft());
-    if (button->layoutDirection() == Qt::RightToLeft)
-        popupPosition.rx() -= menu->sizeHint().width() - button->width();
-    menu->popup(popupPosition);
+    QPoint popupPosition = button->rect().bottomLeft();
+    QPoint popupOffset;
+    if (button->layoutDirection() == Qt::RightToLeft) {
+        popupPosition.setX(button->width());
+        popupOffset.setX(-menu->sizeHint().width());
+    }
+    ::fluent::overlay::popupMenuAt(menu, button, popupPosition, popupOffset);
 }
 
 #if QT_CONFIG(accessibility)

@@ -4,7 +4,7 @@
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.h"
 #include "components/foundation/overlay/OverlayCoordinator.h"
-#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/foundation/overlay/OverlayLightDismiss.h"
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/foundation/overlay/OverlayShadow.h"
@@ -222,11 +222,12 @@ void Popup::setPosition(QWidget* relativeTo, const QPoint& localPos)
 {
     if (!relativeTo)
         return;
-    QWidget* top = relativeTo->window();
-    m_targetPos = relativeTo->mapTo(top, localPos);
+    m_targetPos = ::fluent::overlay::presentedPointInTopLevel(relativeTo, localPos);
     m_positionRelativeTo = relativeTo;
     m_positionLocalPos = localPos;
     m_positionSet = true;
+    if (m_isOpen)
+        queuePositionSync();
 }
 
 // ── Position (centered by default; subclasses may override). zh_CN: 位置计算 ──
@@ -250,7 +251,12 @@ QPoint Popup::resolvedPosition() const
     QPoint cardTopLeft = m_targetPos;
     if (m_positionRelativeTo && m_positionRelativeTo->window()) {
         cardTopLeft =
-            m_positionRelativeTo->mapTo(m_positionRelativeTo->window(), m_positionLocalPos);
+            ::fluent::overlay::presentedPointInTopLevel(m_positionRelativeTo, m_positionLocalPos);
+        if (::fluent::overlay::hasPresentedTransform(m_positionRelativeTo)) {
+            cardTopLeft = ::fluent::overlay::clampCardTopLeft(
+                cardTopLeft, ::fluent::overlay::visibleCardSize(size()),
+                ::fluent::overlay::overlaySurfaceRect(originalParentTopLevel()), 0);
+        }
     }
     return ::fluent::overlay::outerTopLeftForVisibleCard(cardTopLeft);
 }
@@ -309,6 +315,11 @@ void Popup::syncPositionToAnchor()
     if (!::fluent::overlay::isAnchorVisibleInTopLevel(anchor)) {
         close();
         return;
+    }
+    if (QWidget* top = originalParentTopLevel(); top && parentWidget() != top) {
+        m_overlayCoordinator->attachTo(top);
+        show();
+        updateScrimState();
     }
     move(resolvedPosition());
     m_overlayCoordinator->raiseStack();
@@ -628,11 +639,13 @@ bool Popup::eventFilter(QObject* watched, QEvent* event)
         for (const QPointer<QWidget>& passthrough : m_lightDismissPassthrough) {
             if (!passthrough)
                 continue;
+            const bool projected = ::fluent::overlay::presentationRoot(passthrough) != nullptr;
             const bool byHierarchy =
-                hit && (hit == passthrough.data() || passthrough->isAncestorOf(hit));
+                !projected && hit && (hit == passthrough.data() || passthrough->isAncestorOf(hit));
             const bool byGeometry =
                 passthrough->isVisible() &&
-                passthrough->rect().contains(passthrough->mapFromGlobal(globalPos));
+                passthrough->rect().contains(
+                    ::fluent::overlay::localPointFromPresentedGlobal(passthrough, globalPos));
             if (byHierarchy || byGeometry)
                 return false;
         }

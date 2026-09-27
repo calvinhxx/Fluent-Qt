@@ -19,7 +19,7 @@
 #include <QWidget>
 
 #include "compatibility/QtCompat.h"
-#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/foundation/overlay/OverlayLightDismiss.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/layout/Divider.h"
@@ -56,7 +56,7 @@ constexpr int kDefaultMenuWidth = 180;
 QWidget* owningTopLevel(const CommandBarFlyout* flyout)
 {
     QWidget* parent = flyout ? flyout->parentWidget() : nullptr;
-    return parent ? parent->window() : nullptr;
+    return overlay::presentedTopLevel(parent);
 }
 
 bool isValidInvocationTarget(const CommandBarFlyout* flyout, QWidget* target,
@@ -68,16 +68,17 @@ bool isValidInvocationTarget(const CommandBarFlyout* flyout, QWidget* target,
             << invocation << "rejected: CommandBarFlyout has no owning window";
         return false;
     }
-    if (!target || !target->window()) {
+    QWidget* targetTopLevel = overlay::presentedTopLevel(target);
+    if (!targetTopLevel) {
         qCWarning(logging::commandBarCategory)
             << invocation << "rejected: target is null or has no window"
             << "target=" << target;
         return false;
     }
-    if (target->window() != ownerTopLevel) {
+    if (targetTopLevel != ownerTopLevel) {
         qCWarning(logging::commandBarCategory)
             << invocation << "rejected: target belongs to another top-level window"
-            << "ownerWindow=" << ownerTopLevel << "targetWindow=" << target->window();
+            << "ownerWindow=" << ownerTopLevel << "targetWindow=" << targetTopLevel;
         return false;
     }
     return true;
@@ -474,7 +475,7 @@ public:
         if (!q)
             return;
         preOpenFocus = QApplication::focusWidget();
-        if (preOpenFocus && preOpenFocus->window() != owningTopLevel(q)) {
+        if (preOpenFocus && overlay::presentedTopLevel(preOpenFocus) != owningTopLevel(q)) {
             preOpenFocus.clear();
         }
         closeFocusDisposition = CloseFocusDisposition::Default;
@@ -528,7 +529,7 @@ public:
         layoutPresentation(false);
 
         if (restore && restoreTarget && restoreTarget->isVisible() && restoreTarget->isEnabled() &&
-            q && restoreTarget->window() == owningTopLevel(q)) {
+            q && overlay::presentedTopLevel(restoreTarget) == owningTopLevel(q)) {
             restoreTarget->setFocus(Qt::PopupFocusReason);
         }
     }
@@ -1617,7 +1618,9 @@ void CommandBarFlyout::showAt(QWidget* anchor)
     }
 
     setAnchor(anchor);
-    if (isOpen() || isVisible()) {
+    // A closing flyout is still visible; let Popup::open() reverse its transition.
+    // zh_CN: 退场中的浮层仍可见，交给 Popup::open() 中断退场并重新打开。
+    if (isOpen()) {
         d->recomputePresentation(CommandBarFlyoutPrivate::RecomputeReason::OpenStateChange);
         move(computePosition());
         return;
@@ -1646,7 +1649,7 @@ void CommandBarFlyout::showAtPoint(QWidget* relativeTo, const QPoint& localPosit
     d->pointPlacement = true;
     d->pointSource = relativeTo;
     d->localPoint = localPosition;
-    if (isOpen() || isVisible()) {
+    if (isOpen()) {
         d->recomputePresentation(CommandBarFlyoutPrivate::RecomputeReason::OpenStateChange);
         move(computePosition());
         return;
@@ -1684,11 +1687,11 @@ QPoint CommandBarFlyout::computePosition() const
 {
     if (!d->pointPlacement)
         return dialogs_flyouts::Flyout::computePosition();
-    if (!d->pointSource || !d->pointSource->window())
+    QWidget* topLevel = overlay::presentedTopLevel(d->pointSource);
+    if (!topLevel)
         return dialogs_flyouts::Popup::computePosition();
 
-    QWidget* topLevel = d->pointSource->window();
-    QPoint cardTopLeft = d->pointSource->mapTo(topLevel, d->localPoint);
+    QPoint cardTopLeft = ::fluent::overlay::presentedPointInTopLevel(d->pointSource, d->localPoint);
     cardTopLeft.ry() += anchorOffset();
     cardTopLeft = overlay::clampCardTopLeft(cardTopLeft, overlay::visibleCardSize(size()),
                                             overlay::overlaySurfaceRect(topLevel), kHostEdgeMargin);

@@ -1,4 +1,5 @@
 #include "TextEditingMenu_p.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 
 #include <QAction>
 #include <QIcon>
@@ -311,7 +312,10 @@ bool showTextEditingContextMenu(QWidget* parent, QMenu* standardMenu, const QPoi
     }
 
     QObject::connect(menu, &QMenu::aboutToHide, menu, &QObject::deleteLater);
-    menu->popup(globalPosition);
+    if (parent)
+        ::fluent::overlay::popupMenuAt(menu, parent, parent->mapFromGlobal(globalPosition));
+    else
+        menu->popup(globalPosition);
     return true;
 }
 

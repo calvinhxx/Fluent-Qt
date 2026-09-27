@@ -6,7 +6,7 @@
 #include <QSize>
 #include <QWidget>
 
-#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 
 namespace fluent::date_time::detail {
 
@@ -17,11 +17,11 @@ inline QPoint alignedWheelFlyoutPosition(const QWidget* owner, const QSize& oute
                                          int shadowMargin, int selectedRowCenterY,
                                          bool clampToWindow, int windowMargin = 4)
 {
-    QWidget* top = owner ? owner->window() : nullptr;
+    QWidget* top = overlay::presentedTopLevel(owner);
     if (!top)
         return QPoint();
 
-    const QRect anchorRect(owner->mapTo(top, QPoint(0, 0)), owner->size());
+    const QRect anchorRect = overlay::presentedRectInTopLevel(owner);
     const QSize cardSize = overlay::visibleCardSize(outerSize, shadowMargin);
     QPoint cardTopLeft(anchorRect.left(), anchorRect.center().y() - selectedRowCenterY);
     if (clampToWindow) {

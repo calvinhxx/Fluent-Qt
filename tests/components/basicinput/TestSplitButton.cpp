@@ -133,6 +133,7 @@ TEST_F(SplitButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestruction)
     SplitButton button(QStringLiteral("Choose"));
     auto* firstMenu = new QMenu(QStringLiteral("First"));
     auto* secondMenu = new QMenu(QStringLiteral("Second"));
+    firstMenu->addAction(QStringLiteral("First action"));
     QSignalSpy menuSpy(&button, &SplitButton::menuChanged);
     QSignalSpy openSpy(&button, &SplitButton::openChanged);
 
@@ -149,7 +150,7 @@ TEST_F(SplitButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestruction)
                      [firstMenu]() { QTimer::singleShot(0, firstMenu, &QMenu::close); });
     QTest::mouseClick(&button, Qt::LeftButton, Qt::NoModifier,
                       QPoint(button.width() - 8, button.height() / 2));
-    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
     EXPECT_EQ(openSpy.count(), 2);
 
     button.setMenu(secondMenu);
@@ -176,12 +177,32 @@ TEST_F(SplitButtonTest, Contract_ParentOwnedMenuTearsDownSafely)
     delete button;
 }
 
+TEST_F(SplitButtonTest, Contract_EmptyMenuTracksActualVisibility)
+{
+    SplitButton button(QStringLiteral("Choose"));
+    QMenu menu;
+    button.setMenu(&menu);
+    button.resize(160, 36);
+    button.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&button));
+    QSignalSpy shown(&menu, &QMenu::aboutToShow);
+    QTest::mouseClick(&button, Qt::LeftButton, Qt::NoModifier,
+                      QPoint(button.width() - 8, button.height() / 2));
+    EXPECT_EQ(shown.count(), 1);
+    EXPECT_TRUE(menu.isEmpty());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen() == menu.isVisible(); }, 1000));
+    menu.close();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
+}
+
 TEST_F(SplitButtonTest, SecondaryActivationDoesNotEmitPrimaryClickOrToggle)
 {
     SplitButton split(QStringLiteral("Choose"));
     ToggleSplitButton toggle(QStringLiteral("Pin"));
     QMenu splitMenu(QStringLiteral("Split"));
     QMenu toggleMenu(QStringLiteral("Toggle"));
+    splitMenu.addAction(QStringLiteral("Split action"));
+    toggleMenu.addAction(QStringLiteral("Toggle action"));
     split.setMenu(&splitMenu);
     toggle.setMenu(&toggleMenu);
     split.resize(160, 36);
@@ -207,8 +228,8 @@ TEST_F(SplitButtonTest, SecondaryActivationDoesNotEmitPrimaryClickOrToggle)
     QTest::mouseClick(&split, Qt::LeftButton, Qt::NoModifier, splitSecondary);
     QTest::mouseClick(&toggle, Qt::LeftButton, Qt::NoModifier, toggleSecondary);
 
-    QTRY_VERIFY_WITH_TIMEOUT(!split.isOpen(), 1000);
-    QTRY_VERIFY_WITH_TIMEOUT(!toggle.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !split.isOpen(); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !toggle.isOpen(); }, 1000));
 
     EXPECT_EQ(splitClickSpy.count(), 0);
     EXPECT_EQ(toggleClickSpy.count(), 0);
@@ -330,13 +351,13 @@ TEST_F(SplitButtonTest, BothSegmentsStartPressReboundAnimation)
     const QPoint primaryPoint(split.width() / 4, split.height() / 2);
     QTest::mousePress(&split, Qt::LeftButton, Qt::NoModifier, primaryPoint);
     EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
-    QTRY_VERIFY_WITH_TIMEOUT(animation->currentValue().toReal() > 0.0, 300);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return animation->currentValue().toReal() > 0.0; }, 300));
     QTest::mouseRelease(&split, Qt::LeftButton, Qt::NoModifier, primaryPoint);
 
     const QPoint secondaryPoint(split.width() - 8, split.height() / 2);
     QTest::mousePress(&split, Qt::LeftButton, Qt::NoModifier, secondaryPoint);
     EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
-    QTRY_VERIFY_WITH_TIMEOUT(animation->currentValue().toReal() > 0.0, 300);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return animation->currentValue().toReal() > 0.0; }, 300));
     QTest::mouseRelease(&split, Qt::LeftButton, Qt::NoModifier, secondaryPoint);
 }
 
@@ -352,7 +373,7 @@ TEST_F(SplitButtonTest, ToggleSplitButtonInheritsPressReboundAnimation)
     const QPoint primaryPoint(split.width() / 4, split.height() / 2);
     QTest::mousePress(&split, Qt::LeftButton, Qt::NoModifier, primaryPoint);
     EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
-    QTRY_VERIFY_WITH_TIMEOUT(animation->currentValue().toReal() > 0.0, 300);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return animation->currentValue().toReal() > 0.0; }, 300));
     QTest::mouseRelease(&split, Qt::LeftButton, Qt::NoModifier, primaryPoint);
 }
 

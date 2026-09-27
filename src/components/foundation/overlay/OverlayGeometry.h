@@ -2,6 +2,7 @@
 #define OVERLAYGEOMETRY_H
 
 #include <QEvent>
+#include <QDynamicPropertyChangeEvent>
 #include <QMargins>
 #include <QObject>
 #include <QPainterPath>
@@ -121,57 +122,13 @@ inline bool visibleCardContains(const QRect& outerRect, const QPoint& localPoint
  * @brief Returns whether an application event can change an anchor's mapped geometry.
  * zh_CN: 判断应用事件是否可能改变锚点映射后的几何位置。
  */
-inline bool anchorGeometryMayChange(QObject* watched, QEvent* event, QWidget* anchor)
-{
-    if (!event || !anchor)
-        return false;
-    if (event->type() == QEvent::Wheel)
-        return true;
-
-    auto* changedWidget = qobject_cast<QWidget*>(watched);
-    if (!changedWidget || (changedWidget != anchor && !changedWidget->isAncestorOf(anchor))) {
-        return false;
-    }
-
-    switch (event->type()) {
-    case QEvent::Move:
-    case QEvent::Resize:
-    case QEvent::Show:
-    case QEvent::Hide:
-    case QEvent::ParentChange:
-    case QEvent::LayoutRequest:
-        return true;
-    default:
-        return false;
-    }
-}
+bool anchorGeometryMayChange(QObject* watched, QEvent* event, QWidget* anchor);
 
 /**
  * @brief Returns whether any part of an anchor remains visible through its ancestor chain.
  * zh_CN: 判断锚点经过祖先裁剪后是否仍有可见区域。
  */
-inline bool isAnchorVisibleInTopLevel(QWidget* anchor)
-{
-    if (!anchor)
-        return false;
-    QWidget* top = anchor->window();
-    if (!top || !anchor->isVisibleTo(top))
-        return false;
-
-    QRect visibleRect(anchor->mapTo(top, QPoint(0, 0)), anchor->size());
-    for (QWidget* ancestor = anchor->parentWidget(); ancestor;
-         ancestor = ancestor->parentWidget()) {
-        if (!ancestor->isVisibleTo(top))
-            return false;
-        const QRect ancestorRect(ancestor->mapTo(top, QPoint(0, 0)), ancestor->size());
-        visibleRect = visibleRect.intersected(ancestorRect);
-        if (visibleRect.isEmpty())
-            return false;
-        if (ancestor == top)
-            break;
-    }
-    return !visibleRect.isEmpty();
-}
+bool isAnchorVisibleInTopLevel(QWidget* anchor);
 
 inline QVariant inheritedThemeOverride(const QWidget* source)
 {

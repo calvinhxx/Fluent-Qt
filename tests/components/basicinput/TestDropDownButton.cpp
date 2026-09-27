@@ -79,6 +79,7 @@ TEST_F(DropDownButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestructio
     DropDownButton button(QStringLiteral("Options"));
     auto* firstMenu = new QMenu(QStringLiteral("First"));
     auto* secondMenu = new QMenu(QStringLiteral("Second"));
+    firstMenu->addAction(QStringLiteral("First action"));
     QSignalSpy menuSpy(&button, &DropDownButton::menuChanged);
     QSignalSpy openSpy(&button, &DropDownButton::openChanged);
 
@@ -95,7 +96,7 @@ TEST_F(DropDownButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestructio
     QObject::connect(firstMenu, &QMenu::aboutToShow, firstMenu,
                      [firstMenu]() { QTimer::singleShot(0, firstMenu, &QMenu::close); });
     QTest::mouseClick(&button, Qt::LeftButton, Qt::NoModifier, button.rect().center());
-    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
     EXPECT_EQ(openSpy.count(), 2);
 
     button.setMenu(secondMenu);
@@ -122,6 +123,60 @@ TEST_F(DropDownButtonTest, Contract_ParentOwnedMenuTearsDownSafely)
     delete button;
 }
 
+TEST_F(DropDownButtonTest, Contract_EmptyMenuTracksActualVisibility)
+{
+    DropDownButton button(QStringLiteral("Options"));
+    QMenu menu;
+    button.setMenu(&menu);
+    button.resize(140, 36);
+    button.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&button));
+    QSignalSpy shown(&menu, &QMenu::aboutToShow);
+    QTest::mouseClick(&button, Qt::LeftButton, Qt::NoModifier, button.rect().center());
+    EXPECT_EQ(shown.count(), 1);
+    // Qt backends differ on whether an empty QMenu actually opens. The button
+    // mirrors that decision; it must not stay expanded for a hidden menu.
+    EXPECT_TRUE(menu.isEmpty());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen() == menu.isVisible(); }, 1000));
+    menu.close();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
+}
+
+TEST_F(DropDownButtonTest, Contract_EmptyMenuCanPopulateDuringAboutToShow)
+{
+    DropDownButton button(QStringLiteral("Options"));
+    QMenu menu;
+    button.setMenu(&menu);
+    QObject::connect(&menu, &QMenu::aboutToShow, &menu,
+                     [&] { menu.addAction(QStringLiteral("Dynamic action")); });
+    button.resize(140, 36);
+    button.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&button));
+    QTest::mouseClick(&button, Qt::LeftButton, Qt::NoModifier, button.rect().center());
+    EXPECT_TRUE(menu.isVisible());
+    EXPECT_TRUE(button.isOpen());
+    menu.close();
+    EXPECT_FALSE(button.isOpen());
+}
+
+TEST_F(DropDownButtonTest, Contract_MenuClearedDuringAboutToShowTracksActualVisibility)
+{
+    DropDownButton button(QStringLiteral("Options"));
+    QMenu menu;
+    menu.addAction(QStringLiteral("Removed action"));
+    button.setMenu(&menu);
+    QObject::connect(&menu, &QMenu::aboutToShow, &menu, &QMenu::clear);
+    button.resize(140, 36);
+    button.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&button));
+    QTest::mouseClick(&button, Qt::LeftButton, Qt::NoModifier, button.rect().center());
+    EXPECT_TRUE(menu.isEmpty());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen() == menu.isVisible(); }, 1000));
+    menu.close();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
+    EXPECT_FALSE(menu.isVisible());
+}
+
 TEST_F(DropDownButtonTest, PressAnimationCompletesSmoothProgress)
 {
     DropDownButton button("Options");
@@ -131,8 +186,8 @@ TEST_F(DropDownButtonTest, PressAnimationCompletesSmoothProgress)
 
     QTest::mousePress(&button, Qt::LeftButton, Qt::NoModifier, button.rect().center());
 
-    QTRY_VERIFY_WITH_TIMEOUT(button.pressProgress() > 0.0, 300);
-    QTRY_VERIFY_WITH_TIMEOUT(qFuzzyCompare(button.pressProgress(), 1.0), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.pressProgress() > 0.0; }, 300));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return qFuzzyCompare(button.pressProgress(), 1.0); }, 1000));
 
     QTest::mouseRelease(&button, Qt::LeftButton, Qt::NoModifier, button.rect().center());
 }

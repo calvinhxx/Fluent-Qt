@@ -160,13 +160,13 @@ TEST(SplitButtonAccessibilityTest, Contract_AccessibilitySplitButtonExposesPrima
     EXPECT_EQ(menuShown.count(), 0);
 
     actions->doAction(QAccessibleActionInterface::showMenuAction());
-    QTRY_VERIFY_WITH_TIMEOUT(button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen(); }, 1000));
     EXPECT_EQ(clicked.count(), 1);
     EXPECT_EQ(menuShown.count(), 1);
     EXPECT_TRUE(root->state().expanded);
     EXPECT_FALSE(root->state().collapsed);
     menu.close();
-    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
 
     button.setAccessibleName(QStringLiteral("Build project"));
     button.setAccessibleDescription(QStringLiteral("Default build command"));
@@ -176,8 +176,10 @@ TEST(SplitButtonAccessibilityTest, Contract_AccessibilitySplitButtonExposesPrima
 #endif
 }
 
-TEST(SplitButtonAccessibilityTest,
-     Contract_AccessibilityToggleSplitButtonKeepsToggleAndMenuDistinct)
+// CTest discovers test declarations on one line.
+// clang-format off
+TEST(SplitButtonAccessibilityTest, Contract_AccessibilityToggleSplitButtonKeepsToggleAndMenuDistinct)
+// clang-format on
 {
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";
@@ -208,17 +210,19 @@ TEST(SplitButtonAccessibilityTest,
     EXPECT_EQ(toggled.count(), 1);
 
     actions->doAction(QAccessibleActionInterface::showMenuAction());
-    QTRY_VERIFY_WITH_TIMEOUT(button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen(); }, 1000));
     EXPECT_TRUE(button.isChecked());
     EXPECT_EQ(clicked.count(), 1);
     EXPECT_EQ(toggled.count(), 1);
     menu.close();
-    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
 #endif
 }
 
-TEST(SplitButtonAccessibilityTest,
-     Contract_AccessibilityMenuAvailabilityDisabledStateAndKeyboardStayAligned)
+// CTest discovers test declarations on one line.
+// clang-format off
+TEST(SplitButtonAccessibilityTest, Contract_AccessibilityMenuAvailabilityDisabledStateAndKeyboardStayAligned)
+// clang-format on
 {
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";
@@ -245,14 +249,14 @@ TEST(SplitButtonAccessibilityTest,
     button.setEnabled(true);
     button.setFocus(Qt::OtherFocusReason);
     QTest::keyClick(&button, Qt::Key_Down, Qt::AltModifier);
-    QTRY_VERIFY_WITH_TIMEOUT(button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen(); }, 1000));
     menu->close();
-    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
 
     QTest::keyClick(&button, Qt::Key_F4);
-    QTRY_VERIFY_WITH_TIMEOUT(button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen(); }, 1000));
     menu->close();
-    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !button.isOpen(); }, 1000));
 
     delete menu;
     EXPECT_EQ(button.menu(), nullptr);
@@ -261,8 +265,10 @@ TEST(SplitButtonAccessibilityTest,
 #endif
 }
 
-TEST(SplitButtonAccessibilityTest,
-     Contract_AccessibilitySplitStateEventsFollowEffectiveChangesAndNoOps)
+// CTest discovers test declarations on one line.
+// clang-format off
+TEST(SplitButtonAccessibilityTest, Contract_AccessibilitySplitStateEventsFollowEffectiveChangesAndNoOps)
+// clang-format on
 {
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";
@@ -288,7 +294,7 @@ TEST(SplitButtonAccessibilityTest,
     EXPECT_EQ(capture.count(&button, QAccessible::ActionChanged), 1);
 
     root->actionInterface()->doAction(QAccessibleActionInterface::showMenuAction());
-    QTRY_VERIFY_WITH_TIMEOUT(button.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return button.isOpen(); }, 1000));
     EXPECT_EQ(capture.countExpandedState(&button), 2);
     root->actionInterface()->doAction(QAccessibleActionInterface::showMenuAction());
     QApplication::processEvents();

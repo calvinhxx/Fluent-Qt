@@ -25,15 +25,9 @@ inline QWidget* enclosingOverlaySurface(QWidget* widget)
     return nullptr;
 }
 
-inline QWidget* resolveOwningTopLevel(const QPointer<QWidget>& originalParent,
-                                      QWidget* currentParent)
-{
-    if (originalParent)
-        return originalParent->window();
-    if (currentParent)
-        return currentParent->window();
-    return nullptr;
-}
+/** @brief Resolve the native overlay host, including embedded widget presentations.
+ * zh_CN: 解析原生浮层宿主，包括嵌入控件的显示宿主。 */
+QWidget* resolveOwningTopLevel(const QPointer<QWidget>& originalParent, QWidget* currentParent);
 
 inline void attachToTopLevel(QWidget* overlay, QWidget* topLevel)
 {
@@ -53,12 +47,9 @@ inline void raiseOverlayStack(QWidget* scrim, QWidget* overlay)
         overlay->raise();
 }
 
-inline QWidget* eventTopLevel(QObject* watched)
-{
-    if (auto* widget = qobject_cast<QWidget*>(watched))
-        return widget->window();
-    return QApplication::focusWidget() ? QApplication::focusWidget()->window() : nullptr;
-}
+/** @brief Resolve the event receiver's native host, falling back to the focused widget.
+ * zh_CN: 解析事件接收者的原生宿主；非控件接收者使用焦点控件。 */
+QWidget* eventTopLevel(QObject* watched);
 
 } // namespace fluent::overlay
 
