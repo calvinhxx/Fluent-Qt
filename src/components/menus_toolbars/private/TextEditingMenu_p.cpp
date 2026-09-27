@@ -16,8 +16,7 @@
 namespace fluent::menus_toolbars::detail {
 namespace {
 
-bool matchesStandardShortcut(const QAction* action,
-                             QKeySequence::StandardKey standardKey)
+bool matchesStandardShortcut(const QAction* action, QKeySequence::StandardKey standardKey)
 {
     if (!action)
         return false;
@@ -27,17 +26,14 @@ bool matchesStandardShortcut(const QAction* action,
         const QString text = action->text();
         const int tabIndex = text.indexOf(QLatin1Char('\t'));
         if (tabIndex >= 0) {
-            shortcut = QKeySequence(
-                text.mid(tabIndex + 1).trimmed(),
-                QKeySequence::NativeText);
+            shortcut = QKeySequence(text.mid(tabIndex + 1).trimmed(), QKeySequence::NativeText);
         }
     }
 
     if (shortcut.isEmpty())
         return false;
 
-    const QList<QKeySequence> bindings =
-        QKeySequence::keyBindings(standardKey);
+    const QList<QKeySequence> bindings = QKeySequence::keyBindings(standardKey);
     for (const QKeySequence& binding : bindings) {
         if (shortcut.matches(binding) == QKeySequence::ExactMatch)
             return true;
@@ -45,8 +41,7 @@ bool matchesStandardShortcut(const QAction* action,
     return false;
 }
 
-QKeySequence::StandardKey standardEditingActionKey(
-    const QAction* action)
+QKeySequence::StandardKey standardEditingActionKey(const QAction* action)
 {
     if (matchesStandardShortcut(action, QKeySequence::Undo))
         return QKeySequence::Undo;
@@ -65,9 +60,7 @@ QKeySequence::StandardKey standardEditingActionKey(
     return QKeySequence::UnknownKey;
 }
 
-QKeySequence::StandardKey positionalEditingActionKey(
-    int section,
-    int indexInSection)
+QKeySequence::StandardKey positionalEditingActionKey(int section, int indexInSection)
 {
     if (section == 0) {
         if (indexInSection == 0)
@@ -93,18 +86,14 @@ QKeySequence::StandardKey positionalEditingActionKey(
     return QKeySequence::UnknownKey;
 }
 
-QString standardEditingShortcutText(
-    QKeySequence::StandardKey standardKey)
+QString standardEditingShortcutText(QKeySequence::StandardKey standardKey)
 {
     if (standardKey == QKeySequence::UnknownKey)
         return QString();
 
-    const QList<QKeySequence> bindings =
-        QKeySequence::keyBindings(standardKey);
+    const QList<QKeySequence> bindings = QKeySequence::keyBindings(standardKey);
     const QKeySequence shortcut =
-        bindings.isEmpty()
-        ? QKeySequence(standardKey)
-        : bindings.constFirst();
+        bindings.isEmpty() ? QKeySequence(standardKey) : bindings.constFirst();
     return shortcut.toString(QKeySequence::NativeText);
 }
 
@@ -125,8 +114,7 @@ QString standardEditingActionGlyph(const QAction* action)
     if (matchesStandardShortcut(action, QKeySequence::SelectAll))
         return Typography::Icons::SelectAll;
 
-    const QString iconName =
-        action ? action->icon().name() : QString();
+    const QString iconName = action ? action->icon().name() : QString();
     const struct {
         const char* keyword;
         const QString* glyph;
@@ -140,18 +128,14 @@ QString standardEditingActionGlyph(const QAction* action)
         {"select-all", &Typography::Icons::SelectAll},
     };
     for (const auto& mapping : iconMappings) {
-        if (iconName.contains(
-                QString::fromLatin1(mapping.keyword),
-                Qt::CaseInsensitive)) {
+        if (iconName.contains(QString::fromLatin1(mapping.keyword), Qt::CaseInsensitive)) {
             return *mapping.glyph;
         }
     }
     return QString();
 }
 
-QString positionalEditingActionGlyph(
-    int section,
-    int indexInSection)
+QString positionalEditingActionGlyph(int section, int indexInSection)
 {
     // QLineEdit and QTextEdit expose the same stable standard-menu groups:
     // Undo/Redo, Cut/Copy/Paste/Delete, then Select All. Some Linux platform
@@ -181,8 +165,7 @@ QString positionalEditingActionGlyph(
     return QString();
 }
 
-bool hasStandardEditingActionShape(
-    const QList<QAction*>& actions)
+bool hasStandardEditingActionShape(const QList<QAction*>& actions)
 {
     int sectionSizes[3] = {0, 0, 0};
     int section = 0;
@@ -194,10 +177,7 @@ bool hasStandardEditingActionShape(
         if (section >= 0 && section < 3)
             ++sectionSizes[section];
     }
-    return section >= 2
-        && sectionSizes[0] == 2
-        && sectionSizes[1] >= 4
-        && sectionSizes[2] >= 1;
+    return section >= 2 && sectionSizes[0] == 2 && sectionSizes[1] >= 4 && sectionSizes[2] >= 1;
 }
 
 class TextEditingContextMenu final : public FluentMenu {
@@ -220,19 +200,12 @@ public:
         setFont(themeFont(Typography::FontRole::Caption).toQFont());
         const auto spacing = themeSpacing();
         const int shadow =
-            compatibility::detail::runtimePlatformCapabilities()
-                    .translucentPopupSurfaces
-            ? ::Spacing::Standard
-            : 0;
-        const int verticalInset =
-            qMax(1, spacing.gap.tight / 2);
-        setContentsMargins(
-            shadow,
-            shadow + verticalInset,
-            shadow,
-            shadow + verticalInset);
-        setItemLayoutMetrics(qMax(1, spacing.padding.listItemV / 2),
-                             spacing.gap.normal);
+            compatibility::detail::runtimePlatformCapabilities().translucentPopupSurfaces
+                ? ::Spacing::Standard
+                : 0;
+        const int verticalInset = qMax(1, spacing.gap.tight / 2);
+        setContentsMargins(shadow, shadow + verticalInset, shadow, shadow + verticalInset);
+        setItemLayoutMetrics(qMax(1, spacing.padding.listItemV / 2), spacing.gap.normal);
         setMinimumWidth(sizeHint().width());
         updateGeometry();
         update();
@@ -246,43 +219,31 @@ public:
         const Colors& colors = themeColorsRef();
         const QColor activeColor = colors.textPrimary;
 
-        auto pixmapForColor =
-            [this, &glyph](const QColor& color) {
-                constexpr int iconSize = Typography::IconSize::Standard;
-                const qreal dpr =
-                    qMax<qreal>(1.0, devicePixelRatioF());
-                const int physicalSize =
-                    qMax(1, qCeil(iconSize * dpr));
-                QPixmap pixmap(physicalSize, physicalSize);
-                pixmap.setDevicePixelRatio(dpr);
-                pixmap.fill(Qt::transparent);
-                QPainter painter(&pixmap);
-                painter.setPen(color);
-                Typography::Icons::paintGlyph(
-                    painter,
-                    QRectF(0, 0, iconSize, iconSize),
-                    glyph,
-                    iconSize,
-                    Qt::AlignCenter);
-                return pixmap;
-            };
+        auto pixmapForColor = [this, &glyph](const QColor& color) {
+            constexpr int iconSize = Typography::IconSize::Standard;
+            const qreal dpr = qMax<qreal>(1.0, devicePixelRatioF());
+            const int physicalSize = qMax(1, qCeil(iconSize * dpr));
+            QPixmap pixmap(physicalSize, physicalSize);
+            pixmap.setDevicePixelRatio(dpr);
+            pixmap.fill(Qt::transparent);
+            QPainter painter(&pixmap);
+            painter.setPen(color);
+            Typography::Icons::paintGlyph(painter, QRectF(0, 0, iconSize, iconSize), glyph,
+                                          iconSize, Qt::AlignCenter);
+            return pixmap;
+        };
 
         QIcon icon;
-        icon.addPixmap(
-            pixmapForColor(colors.textPrimary), QIcon::Normal);
-        icon.addPixmap(
-            pixmapForColor(activeColor), QIcon::Active);
-        icon.addPixmap(
-            pixmapForColor(colors.textDisabled), QIcon::Disabled);
+        icon.addPixmap(pixmapForColor(colors.textPrimary), QIcon::Normal);
+        icon.addPixmap(pixmapForColor(activeColor), QIcon::Active);
+        icon.addPixmap(pixmapForColor(colors.textDisabled), QIcon::Disabled);
         return icon;
     }
 };
 
 } // namespace
 
-bool showTextEditingContextMenu(QWidget* parent,
-                                QMenu* standardMenu,
-                                const QPoint& globalPosition,
+bool showTextEditingContextMenu(QWidget* parent, QMenu* standardMenu, const QPoint& globalPosition,
                                 const QString& objectName)
 {
     if (!standardMenu)
@@ -302,8 +263,7 @@ bool showTextEditingContextMenu(QWidget* parent,
     standardMenu->setAttribute(Qt::WA_DontShowOnScreen, true);
     standardMenu->hide();
     const QList<QAction*> standardActions = standardMenu->actions();
-    const bool usePositionalFallback =
-        hasStandardEditingActionShape(standardActions);
+    const bool usePositionalFallback = hasStandardEditingActionShape(standardActions);
     int section = 0;
     int indexInSection = 0;
 
@@ -317,8 +277,7 @@ bool showTextEditingContextMenu(QWidget* parent,
 
         // Some Qt versions dispatch Undo/Redo through the standard menu's
         // action chain. Proxy the action instead of changing its owner.
-        auto* action = new QAction(
-            sourceAction->icon(), sourceAction->text(), menu);
+        auto* action = new QAction(sourceAction->icon(), sourceAction->text(), menu);
         action->setEnabled(sourceAction->isEnabled());
         action->setCheckable(sourceAction->isCheckable());
         action->setChecked(sourceAction->isChecked());
@@ -328,40 +287,30 @@ bool showTextEditingContextMenu(QWidget* parent,
         action->setStatusTip(sourceAction->statusTip());
         action->setToolTip(sourceAction->toolTip());
 
-        QKeySequence::StandardKey editingKey =
-            standardEditingActionKey(sourceAction);
-        if (editingKey == QKeySequence::UnknownKey
-            && usePositionalFallback) {
-            editingKey = positionalEditingActionKey(
-                section, indexInSection);
+        QKeySequence::StandardKey editingKey = standardEditingActionKey(sourceAction);
+        if (editingKey == QKeySequence::UnknownKey && usePositionalFallback) {
+            editingKey = positionalEditingActionKey(section, indexInSection);
         }
         if (menu->shortcutTextForAction(action).isEmpty()) {
-            const QString shortcutText =
-                standardEditingShortcutText(editingKey);
+            const QString shortcutText = standardEditingShortcutText(editingKey);
             if (!shortcutText.isEmpty()) {
-                action->setProperty(
-                    "shortcutText", shortcutText);
+                action->setProperty("shortcutText", shortcutText);
             }
         }
 
-        QObject::connect(
-            action,
-            &QAction::triggered,
-            sourceAction,
-            [sourceAction]() { sourceAction->trigger(); });
+        QObject::connect(action, &QAction::triggered, sourceAction,
+                         [sourceAction]() { sourceAction->trigger(); });
 
         QString iconGlyph = standardEditingActionGlyph(sourceAction);
         if (iconGlyph.isEmpty() && usePositionalFallback)
-            iconGlyph = positionalEditingActionGlyph(
-                section, indexInSection);
+            iconGlyph = positionalEditingActionGlyph(section, indexInSection);
         if (!iconGlyph.isEmpty())
             action->setIcon(menu->editingIcon(iconGlyph));
         menu->addAction(action);
         ++indexInSection;
     }
 
-    QObject::connect(menu, &QMenu::aboutToHide,
-                     menu, &QObject::deleteLater);
+    QObject::connect(menu, &QMenu::aboutToHide, menu, &QObject::deleteLater);
     menu->popup(globalPosition);
     return true;
 }

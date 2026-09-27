@@ -35,18 +35,14 @@ public:
                          QWidget* parent = nullptr);
     GalleryComponentPage(const GalleryContentEntry& entry,
                          const GalleryNavigationViewModel& navigationViewModel,
-                         const GalleryComponentPageOptions& options,
-                         QWidget* parent = nullptr);
+                         const GalleryComponentPageOptions& options, QWidget* parent = nullptr);
 
     QString overviewText() const { return m_overviewText; }
     int sampleCount() const { return m_sampleCards.size(); }
     QVector<GallerySampleCard*> sampleCards() const { return m_sampleCards; }
     GalleryComponentReferenceCard* referenceCard() const { return m_referenceCard; }
     GalleryCodeLanguage codeLanguage() const { return m_codeLanguage; }
-    bool bilingualDocumentationEnabled() const
-    {
-        return m_bilingualDocumentationEnabled;
-    }
+    bool bilingualDocumentationEnabled() const { return m_bilingualDocumentationEnabled; }
 
     void onThemeUpdated() override;
 

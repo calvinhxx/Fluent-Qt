@@ -25,7 +25,8 @@ class SplitButtonTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
 
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -33,7 +34,8 @@ public:
 
 class SplitButtonTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new SplitButtonTestWindow();
         window->setFixedSize(600, 500);
         window->setWindowTitle("Fluent SplitButton Visual Test");
@@ -45,19 +47,18 @@ protected:
         // 1. Basic SplitButton (Standard)
         layout->addWidget(new QLabel("1. Basic SplitButton (Standard):", window));
         auto* split1 = new SplitButton("Choose Color", window);
-        
+
         // 使用自定义 FluentMenu
         FluentMenu* menu1 = new FluentMenu("Colors", split1);
         menu1->addAction(new FluentMenuItem("Red", menu1));
         menu1->addAction(new FluentMenuItem("Green", menu1));
         menu1->addAction(new FluentMenuItem("Blue", menu1));
         split1->setMenu(menu1);
-        
+
         QLabel* status1 = new QLabel("Status: Ready", window);
-        QObject::connect(split1, &SplitButton::clicked, [status1]() {
-            status1->setText("Status: Primary Clicked!");
-        });
-        
+        QObject::connect(split1, &SplitButton::clicked,
+                         [status1]() { status1->setText("Status: Primary Clicked!"); });
+
         layout->addWidget(split1);
         layout->addWidget(status1);
 
@@ -65,7 +66,7 @@ protected:
         layout->addWidget(new QLabel("2. Accent SplitButton:", window));
         auto* split2 = new SplitButton("Submit", window);
         split2->setFluentStyle(Button::Accent);
-        
+
         FluentMenu* menu2 = new FluentMenu("Actions", split2);
         menu2->addAction(new FluentMenuItem("Submit and close", menu2));
         menu2->addAction(new FluentMenuItem("Submit and notify", menu2));
@@ -94,17 +95,16 @@ protected:
         themeBtn->setFixedSize(120, 32);
         layout->addWidget(themeBtn);
         QObject::connect(themeBtn, &Button::clicked, []() {
-            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light 
-                                    ? fluent::FluentElement::Dark 
-                                    : fluent::FluentElement::Light);
+            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                    fluent::FluentElement::Light
+                                                ? fluent::FluentElement::Dark
+                                                : fluent::FluentElement::Light);
         });
 
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     SplitButtonTestWindow* window = nullptr;
 };
@@ -115,7 +115,8 @@ public:
     using SplitButton::SplitButton;
 };
 
-TEST_F(SplitButtonTest, SecondaryHitTargetMirrorsInRightToLeftLayouts) {
+TEST_F(SplitButtonTest, SecondaryHitTargetMirrorsInRightToLeftLayouts)
+{
     TestableSplitButton button(QStringLiteral("Choose"));
     button.resize(160, 32);
 
@@ -127,7 +128,8 @@ TEST_F(SplitButtonTest, SecondaryHitTargetMirrorsInRightToLeftLayouts) {
     EXPECT_EQ(button.getPartAt(QPoint(156, 16)), SplitButton::Primary);
 }
 
-TEST_F(SplitButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestruction) {
+TEST_F(SplitButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestruction)
+{
     SplitButton button(QStringLiteral("Choose"));
     auto* firstMenu = new QMenu(QStringLiteral("First"));
     auto* secondMenu = new QMenu(QStringLiteral("Second"));
@@ -143,9 +145,8 @@ TEST_F(SplitButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestruction) 
     button.resize(160, 36);
     button.show();
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&button));
-    QObject::connect(firstMenu, &QMenu::aboutToShow, firstMenu, [firstMenu]() {
-        QTimer::singleShot(0, firstMenu, &QMenu::close);
-    });
+    QObject::connect(firstMenu, &QMenu::aboutToShow, firstMenu,
+                     [firstMenu]() { QTimer::singleShot(0, firstMenu, &QMenu::close); });
     QTest::mouseClick(&button, Qt::LeftButton, Qt::NoModifier,
                       QPoint(button.width() - 8, button.height() / 2));
     QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
@@ -155,8 +156,7 @@ TEST_F(SplitButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestruction) 
     EXPECT_EQ(button.menu(), secondMenu);
     EXPECT_EQ(menuSpy.count(), 2);
 
-    ASSERT_TRUE(QMetaObject::invokeMethod(firstMenu, "aboutToShow",
-                                          Qt::DirectConnection));
+    ASSERT_TRUE(QMetaObject::invokeMethod(firstMenu, "aboutToShow", Qt::DirectConnection));
     EXPECT_FALSE(button.isOpen());
 
     delete secondMenu;
@@ -167,7 +167,8 @@ TEST_F(SplitButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestruction) 
     delete firstMenu;
 }
 
-TEST_F(SplitButtonTest, Contract_ParentOwnedMenuTearsDownSafely) {
+TEST_F(SplitButtonTest, Contract_ParentOwnedMenuTearsDownSafely)
+{
     auto* button = new SplitButton(QStringLiteral("Choose"));
     auto* menu = new QMenu(QStringLiteral("Owned"), button);
     button->setMenu(menu);
@@ -175,7 +176,8 @@ TEST_F(SplitButtonTest, Contract_ParentOwnedMenuTearsDownSafely) {
     delete button;
 }
 
-TEST_F(SplitButtonTest, SecondaryActivationDoesNotEmitPrimaryClickOrToggle) {
+TEST_F(SplitButtonTest, SecondaryActivationDoesNotEmitPrimaryClickOrToggle)
+{
     SplitButton split(QStringLiteral("Choose"));
     ToggleSplitButton toggle(QStringLiteral("Pin"));
     QMenu splitMenu(QStringLiteral("Split"));
@@ -189,12 +191,10 @@ TEST_F(SplitButtonTest, SecondaryActivationDoesNotEmitPrimaryClickOrToggle) {
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&split));
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&toggle));
 
-    QObject::connect(&splitMenu, &QMenu::aboutToShow, &splitMenu, [&splitMenu]() {
-        QTimer::singleShot(0, &splitMenu, &QMenu::close);
-    });
-    QObject::connect(&toggleMenu, &QMenu::aboutToShow, &toggleMenu, [&toggleMenu]() {
-        QTimer::singleShot(0, &toggleMenu, &QMenu::close);
-    });
+    QObject::connect(&splitMenu, &QMenu::aboutToShow, &splitMenu,
+                     [&splitMenu]() { QTimer::singleShot(0, &splitMenu, &QMenu::close); });
+    QObject::connect(&toggleMenu, &QMenu::aboutToShow, &toggleMenu,
+                     [&toggleMenu]() { QTimer::singleShot(0, &toggleMenu, &QMenu::close); });
 
     QSignalSpy splitClickSpy(&split, &SplitButton::clicked);
     QSignalSpy toggleClickSpy(&toggle, &ToggleSplitButton::clicked);
@@ -230,7 +230,8 @@ TEST_F(SplitButtonTest, SecondaryActivationDoesNotEmitPrimaryClickOrToggle) {
     EXPECT_TRUE(toggle.isChecked());
 }
 
-TEST_F(SplitButtonTest, CrossSegmentReleaseCancelsPrimaryActivation) {
+TEST_F(SplitButtonTest, CrossSegmentReleaseCancelsPrimaryActivation)
+{
     SplitButton split(QStringLiteral("Choose"));
     split.resize(160, 36);
     split.show();
@@ -248,8 +249,7 @@ TEST_F(SplitButtonTest, CrossSegmentReleaseCancelsPrimaryActivation) {
     EXPECT_EQ(clickSpy.count(), 0);
 }
 
-static int rightmostInkColumn(const QImage& image, QRgb background,
-                              int minimumX, int maximumX)
+static int rightmostInkColumn(const QImage& image, QRgb background, int minimumX, int maximumX)
 {
     for (int x = maximumX; x >= minimumX; --x) {
         for (int y = 0; y < image.height(); ++y) {
@@ -260,7 +260,8 @@ static int rightmostInkColumn(const QImage& image, QRgb background,
     return minimumX;
 }
 
-TEST(SplitButtonLayoutTest, ListOptionsTextDoesNotCrowdDivider) {
+TEST(SplitButtonLayoutTest, ListOptionsTextDoesNotCrowdDivider)
+{
     ToggleSplitButton button(QStringLiteral("List options"));
     button.setFluentLayout(Button::IconBefore);
     button.setIconGlyph(Typography::Icons::List, Typography::IconSize::Standard);
@@ -279,13 +280,13 @@ TEST(SplitButtonLayoutTest, ListOptionsTextDoesNotCrowdDivider) {
     const int gapPx = dividerX - textRight - 1;
 
     EXPECT_GE(gapPx, ::Spacing::Gap::Normal)
-        << "textRight=" << textRight << " dividerX=" << dividerX
-        << " width=" << button.width()
+        << "textRight=" << textRight << " dividerX=" << dividerX << " width=" << button.width()
         << " gapPx=" << gapPx;
     EXPECT_GT(button.width(), 160);
 }
 
-TEST(SplitButtonLayoutTest, IconOnlyCentersGlyphInPrimaryZone) {
+TEST(SplitButtonLayoutTest, IconOnlyCentersGlyphInPrimaryZone)
+{
     ToggleSplitButton button;
     button.setFluentLayout(Button::IconOnly);
     button.setIconGlyph(Typography::Icons::Settings, Typography::IconSize::Standard);
@@ -312,11 +313,12 @@ TEST(SplitButtonLayoutTest, IconOnlyCentersGlyphInPrimaryZone) {
     const int inkCenter = (left + right) / 2;
     const int primaryCenter = primaryRight / 2;
     EXPECT_NEAR(inkCenter, primaryCenter, 2)
-        << "left=" << left << " right=" << right
-        << " inkCenter=" << inkCenter << " primaryCenter=" << primaryCenter;
+        << "left=" << left << " right=" << right << " inkCenter=" << inkCenter
+        << " primaryCenter=" << primaryCenter;
 }
 
-TEST_F(SplitButtonTest, BothSegmentsStartPressReboundAnimation) {
+TEST_F(SplitButtonTest, BothSegmentsStartPressReboundAnimation)
+{
     SplitButton split(QStringLiteral("Choose"));
     split.resize(160, 36);
     split.show();
@@ -338,7 +340,8 @@ TEST_F(SplitButtonTest, BothSegmentsStartPressReboundAnimation) {
     QTest::mouseRelease(&split, Qt::LeftButton, Qt::NoModifier, secondaryPoint);
 }
 
-TEST_F(SplitButtonTest, ToggleSplitButtonInheritsPressReboundAnimation) {
+TEST_F(SplitButtonTest, ToggleSplitButtonInheritsPressReboundAnimation)
+{
     ToggleSplitButton split(QStringLiteral("Pin"));
     split.resize(140, 36);
     split.show();
@@ -353,7 +356,8 @@ TEST_F(SplitButtonTest, ToggleSplitButtonInheritsPressReboundAnimation) {
     QTest::mouseRelease(&split, Qt::LeftButton, Qt::NoModifier, primaryPoint);
 }
 
-TEST_F(SplitButtonTest, VisualCheck) {
+TEST_F(SplitButtonTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }

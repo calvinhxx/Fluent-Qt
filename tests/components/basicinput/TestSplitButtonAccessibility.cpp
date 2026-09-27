@@ -40,9 +40,7 @@ void captureAccessibilityEvent(QAccessibleEvent* event)
         record.object = event->object();
         record.type = event->type();
         if (event->type() == QAccessible::StateChanged) {
-            record.changedState =
-                static_cast<QAccessibleStateChangeEvent*>(event)
-                    ->changedStates();
+            record.changedState = static_cast<QAccessibleStateChangeEvent*>(event)->changedStates();
         }
         g_accessibilityEvents.append(record);
     }
@@ -51,8 +49,7 @@ void captureAccessibilityEvent(QAccessibleEvent* event)
 class ScopedAccessibilityEventCapture {
 public:
     ScopedAccessibilityEventCapture()
-        : m_previous(
-              QAccessible::installUpdateHandler(captureAccessibilityEvent))
+        : m_previous(QAccessible::installUpdateHandler(captureAccessibilityEvent))
     {
         g_accessibilityEvents.clear();
     }
@@ -77,10 +74,8 @@ public:
     {
         int result = 0;
         for (const AccessibleEventRecord& event : g_accessibilityEvents) {
-            if (event.object == object
-                && event.type == QAccessible::StateChanged
-                && (event.changedState.hasPopup
-                    || event.changedState.expandable)) {
+            if (event.object == object && event.type == QAccessible::StateChanged &&
+                (event.changedState.hasPopup || event.changedState.expandable)) {
                 ++result;
             }
         }
@@ -91,10 +86,8 @@ public:
     {
         int result = 0;
         for (const AccessibleEventRecord& event : g_accessibilityEvents) {
-            if (event.object == object
-                && event.type == QAccessible::StateChanged
-                && (event.changedState.expanded
-                    || event.changedState.collapsed)) {
+            if (event.object == object && event.type == QAccessible::StateChanged &&
+                (event.changedState.expanded || event.changedState.collapsed)) {
                 ++result;
             }
         }
@@ -105,9 +98,8 @@ public:
     {
         int result = 0;
         for (const AccessibleEventRecord& event : g_accessibilityEvents) {
-            if (event.object == object
-                && event.type == QAccessible::StateChanged
-                && event.changedState.checked) {
+            if (event.object == object && event.type == QAccessible::StateChanged &&
+                event.changedState.checked) {
                 ++result;
             }
         }
@@ -153,19 +145,13 @@ TEST(SplitButtonAccessibilityTest, Contract_AccessibilitySplitButtonExposesPrima
 
     QAccessibleActionInterface* actions = root->actionInterface();
     ASSERT_NE(actions, nullptr);
-    EXPECT_TRUE(actions->actionNames().contains(
-        QAccessibleActionInterface::pressAction()));
-    EXPECT_TRUE(actions->actionNames().contains(
-        QAccessibleActionInterface::showMenuAction()));
-    EXPECT_FALSE(actions->actionNames().contains(
-        QAccessibleActionInterface::toggleAction()));
-    EXPECT_EQ(actions->keyBindingsForAction(
-                  QAccessibleActionInterface::pressAction()),
+    EXPECT_TRUE(actions->actionNames().contains(QAccessibleActionInterface::pressAction()));
+    EXPECT_TRUE(actions->actionNames().contains(QAccessibleActionInterface::showMenuAction()));
+    EXPECT_FALSE(actions->actionNames().contains(QAccessibleActionInterface::toggleAction()));
+    EXPECT_EQ(actions->keyBindingsForAction(QAccessibleActionInterface::pressAction()),
               QStringList{QStringLiteral("Space")});
-    EXPECT_EQ(actions->keyBindingsForAction(
-                  QAccessibleActionInterface::showMenuAction()),
-              (QStringList{QStringLiteral("Alt+Down"),
-                           QStringLiteral("F4")}));
+    EXPECT_EQ(actions->keyBindingsForAction(QAccessibleActionInterface::showMenuAction()),
+              (QStringList{QStringLiteral("Alt+Down"), QStringLiteral("F4")}));
 
     QSignalSpy clicked(&button, &SplitButton::clicked);
     QSignalSpy menuShown(&menu, &QMenu::aboutToShow);
@@ -185,14 +171,13 @@ TEST(SplitButtonAccessibilityTest, Contract_AccessibilitySplitButtonExposesPrima
     button.setAccessibleName(QStringLiteral("Build project"));
     button.setAccessibleDescription(QStringLiteral("Default build command"));
     button.setText(QStringLiteral("Changed text"));
-    EXPECT_EQ(root->text(QAccessible::Name),
-              QStringLiteral("Build project"));
-    EXPECT_EQ(root->text(QAccessible::Description),
-              QStringLiteral("Default build command"));
+    EXPECT_EQ(root->text(QAccessible::Name), QStringLiteral("Build project"));
+    EXPECT_EQ(root->text(QAccessible::Description), QStringLiteral("Default build command"));
 #endif
 }
 
-TEST(SplitButtonAccessibilityTest, Contract_AccessibilityToggleSplitButtonKeepsToggleAndMenuDistinct)
+TEST(SplitButtonAccessibilityTest,
+     Contract_AccessibilityToggleSplitButtonKeepsToggleAndMenuDistinct)
 {
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";
@@ -210,12 +195,9 @@ TEST(SplitButtonAccessibilityTest, Contract_AccessibilityToggleSplitButtonKeepsT
     EXPECT_FALSE(root->state().checked);
     QAccessibleActionInterface* actions = root->actionInterface();
     ASSERT_NE(actions, nullptr);
-    EXPECT_TRUE(actions->actionNames().contains(
-        QAccessibleActionInterface::toggleAction()));
-    EXPECT_TRUE(actions->actionNames().contains(
-        QAccessibleActionInterface::showMenuAction()));
-    EXPECT_FALSE(actions->actionNames().contains(
-        QAccessibleActionInterface::pressAction()));
+    EXPECT_TRUE(actions->actionNames().contains(QAccessibleActionInterface::toggleAction()));
+    EXPECT_TRUE(actions->actionNames().contains(QAccessibleActionInterface::showMenuAction()));
+    EXPECT_FALSE(actions->actionNames().contains(QAccessibleActionInterface::pressAction()));
 
     QSignalSpy clicked(&button, &ToggleSplitButton::clicked);
     QSignalSpy toggled(&button, &ToggleSplitButton::toggled);
@@ -235,7 +217,8 @@ TEST(SplitButtonAccessibilityTest, Contract_AccessibilityToggleSplitButtonKeepsT
 #endif
 }
 
-TEST(SplitButtonAccessibilityTest, Contract_AccessibilityMenuAvailabilityDisabledStateAndKeyboardStayAligned)
+TEST(SplitButtonAccessibilityTest,
+     Contract_AccessibilityMenuAvailabilityDisabledStateAndKeyboardStayAligned)
 {
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";
@@ -249,8 +232,7 @@ TEST(SplitButtonAccessibilityTest, Contract_AccessibilityMenuAvailabilityDisable
     EXPECT_FALSE(root->state().hasPopup);
     EXPECT_FALSE(root->state().expandable);
     EXPECT_FALSE(root->state().collapsed);
-    EXPECT_FALSE(actions->actionNames().contains(
-        QAccessibleActionInterface::showMenuAction()));
+    EXPECT_FALSE(actions->actionNames().contains(QAccessibleActionInterface::showMenuAction()));
 
     auto* menu = new QMenu(QStringLiteral("Formats"), &button);
     menu->addAction(QStringLiteral("PDF"));
@@ -275,12 +257,12 @@ TEST(SplitButtonAccessibilityTest, Contract_AccessibilityMenuAvailabilityDisable
     delete menu;
     EXPECT_EQ(button.menu(), nullptr);
     EXPECT_FALSE(root->state().hasPopup);
-    EXPECT_FALSE(actions->actionNames().contains(
-        QAccessibleActionInterface::showMenuAction()));
+    EXPECT_FALSE(actions->actionNames().contains(QAccessibleActionInterface::showMenuAction()));
 #endif
 }
 
-TEST(SplitButtonAccessibilityTest, Contract_AccessibilitySplitStateEventsFollowEffectiveChangesAndNoOps)
+TEST(SplitButtonAccessibilityTest,
+     Contract_AccessibilitySplitStateEventsFollowEffectiveChangesAndNoOps)
 {
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";
@@ -305,12 +287,10 @@ TEST(SplitButtonAccessibilityTest, Contract_AccessibilitySplitStateEventsFollowE
     EXPECT_EQ(capture.countExpandedState(&button), 1);
     EXPECT_EQ(capture.count(&button, QAccessible::ActionChanged), 1);
 
-    root->actionInterface()->doAction(
-        QAccessibleActionInterface::showMenuAction());
+    root->actionInterface()->doAction(QAccessibleActionInterface::showMenuAction());
     QTRY_VERIFY_WITH_TIMEOUT(button.isOpen(), 1000);
     EXPECT_EQ(capture.countExpandedState(&button), 2);
-    root->actionInterface()->doAction(
-        QAccessibleActionInterface::showMenuAction());
+    root->actionInterface()->doAction(QAccessibleActionInterface::showMenuAction());
     QApplication::processEvents();
     EXPECT_EQ(capture.countExpandedState(&button), 2);
     first.hide();

@@ -23,33 +23,34 @@ static constexpr int kTailHalfWidth = 10;
 
 namespace {
 
-bool isTopPlacement(TeachingTip::PreferredPlacement placement) {
-    return placement == TeachingTip::Top ||
-           placement == TeachingTip::TopLeft ||
+bool isTopPlacement(TeachingTip::PreferredPlacement placement)
+{
+    return placement == TeachingTip::Top || placement == TeachingTip::TopLeft ||
            placement == TeachingTip::TopRight;
 }
 
-bool isBottomPlacement(TeachingTip::PreferredPlacement placement) {
-    return placement == TeachingTip::Bottom ||
-           placement == TeachingTip::BottomLeft ||
+bool isBottomPlacement(TeachingTip::PreferredPlacement placement)
+{
+    return placement == TeachingTip::Bottom || placement == TeachingTip::BottomLeft ||
            placement == TeachingTip::BottomRight;
 }
 
-bool isLeftPlacement(TeachingTip::PreferredPlacement placement) {
-    return placement == TeachingTip::Left ||
-           placement == TeachingTip::LeftTop ||
+bool isLeftPlacement(TeachingTip::PreferredPlacement placement)
+{
+    return placement == TeachingTip::Left || placement == TeachingTip::LeftTop ||
            placement == TeachingTip::LeftBottom;
 }
 
-bool isRightPlacement(TeachingTip::PreferredPlacement placement) {
-    return placement == TeachingTip::Right ||
-           placement == TeachingTip::RightTop ||
+bool isRightPlacement(TeachingTip::PreferredPlacement placement)
+{
+    return placement == TeachingTip::Right || placement == TeachingTip::RightTop ||
            placement == TeachingTip::RightBottom;
 }
 
 } // namespace
 
-TeachingTip::TeachingTip(QWidget* parent) : Popup(parent) {
+TeachingTip::TeachingTip(QWidget* parent) : Popup(parent)
+{
     setModal(false);
     setDim(false);
     setClosePolicy(ClosePolicy(NoAutoClose));
@@ -61,18 +62,23 @@ TeachingTip::TeachingTip(QWidget* parent) : Popup(parent) {
     onThemeUpdated();
 }
 
-void TeachingTip::onThemeUpdated() {
+void TeachingTip::onThemeUpdated()
+{
     Popup::onThemeUpdated();
     update();
 }
 
-void TeachingTip::setTarget(QWidget* targetWidget) {
-    if (m_target == targetWidget) return;
+void TeachingTip::setTarget(QWidget* targetWidget)
+{
+    if (m_target == targetWidget)
+        return;
 
-    if (m_target) m_target->removeEventFilter(this);
+    if (m_target)
+        m_target->removeEventFilter(this);
     m_target = targetWidget;
 
-    if (m_target) m_target->installEventFilter(this);
+    if (m_target)
+        m_target->installEventFilter(this);
 
     QPointer<TeachingTip> guard(this);
     emit targetChanged(m_target.data());
@@ -86,8 +92,10 @@ void TeachingTip::setTarget(QWidget* targetWidget) {
     }
 }
 
-void TeachingTip::setPreferredPlacement(PreferredPlacement placement) {
-    if (m_preferredPlacement == placement) return;
+void TeachingTip::setPreferredPlacement(PreferredPlacement placement)
+{
+    if (m_preferredPlacement == placement)
+        return;
     m_preferredPlacement = placement;
     emit preferredPlacementChanged(m_preferredPlacement);
     if (isOpen()) {
@@ -96,15 +104,19 @@ void TeachingTip::setPreferredPlacement(PreferredPlacement placement) {
     }
 }
 
-void TeachingTip::setPlacementMargin(int margin) {
+void TeachingTip::setPlacementMargin(int margin)
+{
     margin = qMax(0, margin);
-    if (m_placementMargin == margin) return;
+    if (m_placementMargin == margin)
+        return;
     m_placementMargin = margin;
     emit placementMarginChanged(m_placementMargin);
-    if (isOpen()) move(computePosition());
+    if (isOpen())
+        move(computePosition());
 }
 
-void TeachingTip::setLightDismissEnabled(bool enabled) {
+void TeachingTip::setLightDismissEnabled(bool enabled)
+{
     if (m_lightDismissEnabled == enabled)
         return;
     m_lightDismissEnabled = enabled;
@@ -113,34 +125,43 @@ void TeachingTip::setLightDismissEnabled(bool enabled) {
     emit lightDismissEnabledChanged(m_lightDismissEnabled);
 }
 
-void TeachingTip::setTailVisible(bool visible) {
-    if (m_tailVisible == visible) return;
+void TeachingTip::setTailVisible(bool visible)
+{
+    if (m_tailVisible == visible)
+        return;
     m_tailVisible = visible;
     emit tailVisibleChanged(m_tailVisible);
     updateWidgetSize();
-    if (isOpen()) move(computePosition());
+    if (isOpen())
+        move(computePosition());
     update();
 }
 
-void TeachingTip::setCardSize(const QSize& size) {
-    if (m_cardSizeHint == size) return;
+void TeachingTip::setCardSize(const QSize& size)
+{
+    if (m_cardSizeHint == size)
+        return;
     m_cardSizeHint = size;
     updateWidgetSize();
-    if (isOpen()) move(computePosition());
+    if (isOpen())
+        move(computePosition());
 }
 
-void TeachingTip::showAt(QWidget* targetWidget) {
+void TeachingTip::showAt(QWidget* targetWidget)
+{
     setTarget(targetWidget);
-    updateWidgetSize();  // Target set: recompute the widget size with tailInsets. zh_CN: target 已设置，重新计算含 tailInsets 的尺寸。
+    updateWidgetSize(); // Target set: recompute the widget size with tailInsets. zh_CN: target 已设置，重新计算含 tailInsets 的尺寸。
     open();
 }
 
-void TeachingTip::closeWithReason(CloseReason reason) {
+void TeachingTip::closeWithReason(CloseReason reason)
+{
     markPendingCloseReason(reason);
     Popup::closeWithReason(static_cast<Popup::CloseReason>(reason));
 }
 
-QPoint TeachingTip::computePosition() const {
+QPoint TeachingTip::computePosition() const
+{
     if (!m_target || !m_target->window()) {
         return Popup::computePosition();
     }
@@ -153,25 +174,27 @@ QPoint TeachingTip::computePosition() const {
     return widgetTopLeftForCardTopLeft(cardTopLeft, placement);
 }
 
-bool TeachingTip::eventFilter(QObject* watched, QEvent* event) {
+bool TeachingTip::eventFilter(QObject* watched, QEvent* event)
+{
     if (watched == m_target) {
         switch (event->type()) {
         case QEvent::Destroy:
             m_target = nullptr;
             detail::notifyTransientSurfaceAccessibilityRelationChanged(this);
-            if (isVisible() || isOpen()) closeWithReason(TargetDestroyed);
+            if (isVisible() || isOpen())
+                closeWithReason(TargetDestroyed);
             break;
         case QEvent::Hide:
-            if (isVisible() || isOpen()) closeWithReason(Programmatic);
+            if (isVisible() || isOpen())
+                closeWithReason(Programmatic);
             break;
         default:
             break;
         }
     }
 
-    if ((isVisible() || isOpen()) && isLightDismissEnabled()
-        && event->type() == QEvent::KeyPress
-        && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
+    if ((isVisible() || isOpen()) && isLightDismissEnabled() && event->type() == QEvent::KeyPress &&
+        static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
         // Popup installs this object as an application event filter, so an
         // Escape sent to the owning window reaches here before keyPressEvent().
         // Keep TeachingTip's legacy close-reason surface at LightDismiss.
@@ -180,7 +203,8 @@ bool TeachingTip::eventFilter(QObject* watched, QEvent* event) {
         markPendingCloseReason(LightDismiss);
     }
 
-    if ((isVisible() || isOpen()) && isLightDismissEnabled() && event->type() == QEvent::MouseButtonPress) {
+    if ((isVisible() || isOpen()) && isLightDismissEnabled() &&
+        event->type() == QEvent::MouseButtonPress) {
         auto* mouseEvent = static_cast<QMouseEvent*>(event);
         const QPoint globalPos = fluentMouseGlobalPos(mouseEvent);
         if (!rect().contains(mapFromGlobal(globalPos))) {
@@ -191,14 +215,16 @@ bool TeachingTip::eventFilter(QObject* watched, QEvent* event) {
     return Popup::eventFilter(watched, event);
 }
 
-void TeachingTip::keyPressEvent(QKeyEvent* event) {
+void TeachingTip::keyPressEvent(QKeyEvent* event)
+{
     if (event->key() == Qt::Key_Escape && isLightDismissEnabled()) {
         markPendingCloseReason(LightDismiss);
     }
     Popup::keyPressEvent(event);
 }
 
-void TeachingTip::paintEvent(QPaintEvent*) {
+void TeachingTip::paintEvent(QPaintEvent*)
+{
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
@@ -211,14 +237,17 @@ void TeachingTip::paintEvent(QPaintEvent*) {
     if (m_tailVisible && !targetRectInTopLevel().isEmpty()) {
         QPolygon tail;
         const QPoint targetTopLeft = m_target->mapTo(m_target->window(), QPoint(0, 0));
-        const QRect localTargetRect = QRect(mapFrom(m_target->window(), targetTopLeft), m_target->size());
+        const QRect localTargetRect =
+            QRect(mapFrom(m_target->window(), targetTopLeft), m_target->size());
 
         if (isBottomPlacement(placement)) {
             int centerX = localTargetRect.center().x();
-            if (placement == BottomLeft)  centerX = localTargetRect.left()  + qMin(24, localTargetRect.width() / 2);
-            if (placement == BottomRight) centerX = localTargetRect.right() - qMin(24, localTargetRect.width() / 2);
-            centerX = qBound(visualCardRect.left() + radius + kTailHalfWidth,
-                             centerX, visualCardRect.right() - radius - kTailHalfWidth);
+            if (placement == BottomLeft)
+                centerX = localTargetRect.left() + qMin(24, localTargetRect.width() / 2);
+            if (placement == BottomRight)
+                centerX = localTargetRect.right() - qMin(24, localTargetRect.width() / 2);
+            centerX = qBound(visualCardRect.left() + radius + kTailHalfWidth, centerX,
+                             visualCardRect.right() - radius - kTailHalfWidth);
             // The base points push 2px into the card so united() overlaps with
             // area, removing the seam line.
             // zh_CN: 底边两点向 card 内 +2px，确保 united() 有面积重叠，消除接缝线。
@@ -227,28 +256,34 @@ void TeachingTip::paintEvent(QPaintEvent*) {
                  << QPoint(centerX, visualCardRect.top() - kTailSize);
         } else if (isTopPlacement(placement)) {
             int centerX = localTargetRect.center().x();
-            if (placement == TopLeft)  centerX = localTargetRect.left()  + qMin(24, localTargetRect.width() / 2);
-            if (placement == TopRight) centerX = localTargetRect.right() - qMin(24, localTargetRect.width() / 2);
-            centerX = qBound(visualCardRect.left() + radius + kTailHalfWidth,
-                             centerX, visualCardRect.right() - radius - kTailHalfWidth);
+            if (placement == TopLeft)
+                centerX = localTargetRect.left() + qMin(24, localTargetRect.width() / 2);
+            if (placement == TopRight)
+                centerX = localTargetRect.right() - qMin(24, localTargetRect.width() / 2);
+            centerX = qBound(visualCardRect.left() + radius + kTailHalfWidth, centerX,
+                             visualCardRect.right() - radius - kTailHalfWidth);
             tail << QPoint(centerX - kTailHalfWidth, visualCardRect.bottom() - 2)
                  << QPoint(centerX + kTailHalfWidth, visualCardRect.bottom() - 2)
                  << QPoint(centerX, visualCardRect.bottom() + kTailSize);
         } else if (isRightPlacement(placement)) {
             int centerY = localTargetRect.center().y();
-            if (placement == RightTop)    centerY = localTargetRect.top()    + qMin(24, localTargetRect.height() / 2);
-            if (placement == RightBottom) centerY = localTargetRect.bottom() - qMin(24, localTargetRect.height() / 2);
-            centerY = qBound(visualCardRect.top() + radius + kTailHalfWidth,
-                             centerY, visualCardRect.bottom() - radius - kTailHalfWidth);
+            if (placement == RightTop)
+                centerY = localTargetRect.top() + qMin(24, localTargetRect.height() / 2);
+            if (placement == RightBottom)
+                centerY = localTargetRect.bottom() - qMin(24, localTargetRect.height() / 2);
+            centerY = qBound(visualCardRect.top() + radius + kTailHalfWidth, centerY,
+                             visualCardRect.bottom() - radius - kTailHalfWidth);
             tail << QPoint(visualCardRect.left() + 2, centerY - kTailHalfWidth)
                  << QPoint(visualCardRect.left() + 2, centerY + kTailHalfWidth)
                  << QPoint(visualCardRect.left() - kTailSize, centerY);
         } else if (isLeftPlacement(placement)) {
             int centerY = localTargetRect.center().y();
-            if (placement == LeftTop)    centerY = localTargetRect.top()    + qMin(24, localTargetRect.height() / 2);
-            if (placement == LeftBottom) centerY = localTargetRect.bottom() - qMin(24, localTargetRect.height() / 2);
-            centerY = qBound(visualCardRect.top() + radius + kTailHalfWidth,
-                             centerY, visualCardRect.bottom() - radius - kTailHalfWidth);
+            if (placement == LeftTop)
+                centerY = localTargetRect.top() + qMin(24, localTargetRect.height() / 2);
+            if (placement == LeftBottom)
+                centerY = localTargetRect.bottom() - qMin(24, localTargetRect.height() / 2);
+            centerY = qBound(visualCardRect.top() + radius + kTailHalfWidth, centerY,
+                             visualCardRect.bottom() - radius - kTailHalfWidth);
             tail << QPoint(visualCardRect.right() - 2, centerY - kTailHalfWidth)
                  << QPoint(visualCardRect.right() - 2, centerY + kTailHalfWidth)
                  << QPoint(visualCardRect.right() + kTailSize, centerY);
@@ -261,8 +296,7 @@ void TeachingTip::paintEvent(QPaintEvent*) {
         }
     }
 
-    fluent::overlay::paintLayeredShadow(
-        painter, bubblePath, themeShadow(Elevation::High));
+    fluent::overlay::paintLayeredShadow(painter, bubblePath, themeShadow(Elevation::High));
 
     const auto& colors = themeColorsRef();
     const QPen outlinePen(colors.strokeDefault, 1);
@@ -279,46 +313,57 @@ void TeachingTip::paintEvent(QPaintEvent*) {
     painter.drawPath(bubblePath);
 }
 
-void TeachingTip::resizeEvent(QResizeEvent* event) {
+void TeachingTip::resizeEvent(QResizeEvent* event)
+{
     QWidget::resizeEvent(event);
     syncContentHostGeometry();
 }
 
-void TeachingTip::syncContentHostGeometry() {
+void TeachingTip::syncContentHostGeometry()
+{
     if (m_contentHost) {
         m_contentHost->setGeometry(cardRect());
     }
 }
 
-void TeachingTip::updateWidgetSize() {
+void TeachingTip::updateWidgetSize()
+{
     const PreferredPlacement placement = (m_preferredPlacement == Auto)
-        ? resolveAutoPlacement(m_cardSizeHint)
-        : m_preferredPlacement;
+                                             ? resolveAutoPlacement(m_cardSizeHint)
+                                             : m_preferredPlacement;
     const QMargins tail = tailInsets(placement);
-    resize(m_cardSizeHint.width()  + 2 * kShadowMargin + tail.left() + tail.right(),
-           m_cardSizeHint.height() + 2 * kShadowMargin + tail.top()  + tail.bottom());
+    resize(m_cardSizeHint.width() + 2 * kShadowMargin + tail.left() + tail.right(),
+           m_cardSizeHint.height() + 2 * kShadowMargin + tail.top() + tail.bottom());
     syncContentHostGeometry();
 }
 
-QRect TeachingTip::cardRect() const {
-    QRect visualRect = rect().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+QRect TeachingTip::cardRect() const
+{
+    QRect visualRect =
+        rect().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
     const QMargins insets = tailInsets(resolvedPlacement());
     return visualRect.adjusted(insets.left(), insets.top(), -insets.right(), -insets.bottom());
 }
 
-QRect TeachingTip::targetRectInTopLevel() const {
-    if (!m_target || !m_target->window()) return QRect();
+QRect TeachingTip::targetRectInTopLevel() const
+{
+    if (!m_target || !m_target->window())
+        return QRect();
     return QRect(m_target->mapTo(m_target->window(), QPoint(0, 0)), m_target->size());
 }
 
-TeachingTip::PreferredPlacement TeachingTip::resolvedPlacement() const {
-    return m_preferredPlacement == Auto ? resolveAutoPlacement(m_cardSizeHint) : m_preferredPlacement;
+TeachingTip::PreferredPlacement TeachingTip::resolvedPlacement() const
+{
+    return m_preferredPlacement == Auto ? resolveAutoPlacement(m_cardSizeHint)
+                                        : m_preferredPlacement;
 }
 
-TeachingTip::PreferredPlacement TeachingTip::resolveAutoPlacement(const QSize& cardSize) const {
+TeachingTip::PreferredPlacement TeachingTip::resolveAutoPlacement(const QSize& cardSize) const
+{
     const QRect targetRect = targetRectInTopLevel();
     QWidget* top = m_target ? m_target->window() : nullptr;
-    if (targetRect.isEmpty() || !top) return Bottom;
+    if (targetRect.isEmpty() || !top)
+        return Bottom;
     const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
 
     // Only the main axis is checked for space, matching Flyout. Cross-axis
@@ -339,15 +384,20 @@ TeachingTip::PreferredPlacement TeachingTip::resolveAutoPlacement(const QSize& c
         return true;
     };
 
-    if (fits(Bottom)) return Bottom;
-    if (fits(Top))    return Top;
-    if (fits(Right))  return Right;
-    if (fits(Left))   return Left;
+    if (fits(Bottom))
+        return Bottom;
+    if (fits(Top))
+        return Top;
+    if (fits(Right))
+        return Right;
+    if (fits(Left))
+        return Left;
     return Bottom;
 }
 
 QPoint TeachingTip::cardTopLeftForPlacement(PreferredPlacement placement, const QRect& targetRect,
-                                             const QSize& cardSize) const {
+                                            const QSize& cardSize) const
+{
     QPoint cardTopLeft(targetRect.center().x() - (cardSize.width() / 2),
                        targetRect.bottom() + m_placementMargin);
 
@@ -398,39 +448,48 @@ QPoint TeachingTip::cardTopLeftForPlacement(PreferredPlacement placement, const 
     return cardTopLeft;
 }
 
-QPoint TeachingTip::clampCardTopLeft(const QPoint& cardTopLeft, const QSize& cardSize) const {
+QPoint TeachingTip::clampCardTopLeft(const QPoint& cardTopLeft, const QSize& cardSize) const
+{
     QWidget* top = m_target ? m_target->window() : nullptr;
-    if (!top) return cardTopLeft;
+    if (!top)
+        return cardTopLeft;
 
-    return ::fluent::overlay::clampCardTopLeft(cardTopLeft,
-                                               cardSize,
-                                               ::fluent::overlay::overlaySurfaceRect(top),
-                                               kWindowClampMargin);
+    return ::fluent::overlay::clampCardTopLeft(
+        cardTopLeft, cardSize, ::fluent::overlay::overlaySurfaceRect(top), kWindowClampMargin);
 }
 
 QPoint TeachingTip::widgetTopLeftForCardTopLeft(const QPoint& cardTopLeft,
-                                                 PreferredPlacement placement) const {
+                                                PreferredPlacement placement) const
+{
     const QMargins insets = tailInsets(placement);
     return cardTopLeft - QPoint(kShadowMargin + insets.left(), kShadowMargin + insets.top());
 }
 
-QMargins TeachingTip::tailInsets(PreferredPlacement placement) const {
-    if (!m_tailVisible || !m_target) return QMargins();
+QMargins TeachingTip::tailInsets(PreferredPlacement placement) const
+{
+    if (!m_tailVisible || !m_target)
+        return QMargins();
 
-    if (isBottomPlacement(placement)) return QMargins(0, kTailSize, 0, 0);
-    if (isTopPlacement(placement))    return QMargins(0, 0, 0, kTailSize);
-    if (isRightPlacement(placement))  return QMargins(kTailSize, 0, 0, 0);
-    if (isLeftPlacement(placement))   return QMargins(0, 0, kTailSize, 0);
+    if (isBottomPlacement(placement))
+        return QMargins(0, kTailSize, 0, 0);
+    if (isTopPlacement(placement))
+        return QMargins(0, 0, 0, kTailSize);
+    if (isRightPlacement(placement))
+        return QMargins(kTailSize, 0, 0, 0);
+    if (isLeftPlacement(placement))
+        return QMargins(0, 0, kTailSize, 0);
     return QMargins();
 }
 
-void TeachingTip::markPendingCloseReason(CloseReason reason) {
+void TeachingTip::markPendingCloseReason(CloseReason reason)
+{
     m_pendingCloseReason = reason;
     m_closeReasonExplicit = true;
     Popup::setPendingCloseReason(static_cast<Popup::CloseReason>(reason));
 }
 
-void TeachingTip::emitClosingReason() {
+void TeachingTip::emitClosingReason()
+{
     const CloseReason reason = m_closeReasonExplicit ? m_pendingCloseReason : Programmatic;
     QPointer<TeachingTip> guard(this);
     emit closing(reason);

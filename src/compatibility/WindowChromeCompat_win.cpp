@@ -20,16 +20,16 @@
 #define DWMWA_SYSTEMBACKDROP_TYPE 38
 #endif
 #ifndef DWMSBT_AUTO
-#define DWMSBT_AUTO 0  // Let DWM decide (no explicit backdrop)
+#define DWMSBT_AUTO 0 // Let DWM decide (no explicit backdrop)
 #endif
 #ifndef DWMSBT_NONE
-#define DWMSBT_NONE 1  // Explicitly disable the system backdrop
+#define DWMSBT_NONE 1 // Explicitly disable the system backdrop
 #endif
 #ifndef DWMSBT_MAINWINDOW
-#define DWMSBT_MAINWINDOW 2  // Mica
+#define DWMSBT_MAINWINDOW 2 // Mica
 #endif
 #ifndef DWMSBT_TRANSIENTWINDOW
-#define DWMSBT_TRANSIENTWINDOW 3  // Acrylic
+#define DWMSBT_TRANSIENTWINDOW 3 // Acrylic
 #endif
 
 namespace compatibility {
@@ -47,12 +47,12 @@ struct WindowsVersionInfo {
     bool valid = false;
 };
 
-WindowsVersionInfo currentWindowsVersion() {
+WindowsVersionInfo currentWindowsVersion()
+{
     using RtlGetVersionFn = LONG(WINAPI*)(OSVERSIONINFOW*);
     HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
-    auto* rtlGetVersion = ntdll
-        ? reinterpret_cast<RtlGetVersionFn>(GetProcAddress(ntdll, "RtlGetVersion"))
-        : nullptr;
+    auto* rtlGetVersion =
+        ntdll ? reinterpret_cast<RtlGetVersionFn>(GetProcAddress(ntdll, "RtlGetVersion")) : nullptr;
     if (!rtlGetVersion)
         return {};
 
@@ -64,19 +64,21 @@ WindowsVersionInfo currentWindowsVersion() {
     return {info.dwMajorVersion, info.dwMinorVersion, info.dwBuildNumber, true};
 }
 
-bool supportsDwmSystemBackdrop(const WindowsVersionInfo& version) {
-    return version.valid
-        && (version.major > 10 || (version.major == 10 && version.build >= 22621));
+bool supportsDwmSystemBackdrop(const WindowsVersionInfo& version)
+{
+    return version.valid && (version.major > 10 || (version.major == 10 && version.build >= 22621));
 }
 
-HWND hwndForWindow(QWidget* window) {
+HWND hwndForWindow(QWidget* window)
+{
     if (!window || !window->windowHandle())
         return nullptr;
 
     return reinterpret_cast<HWND>(window->windowHandle()->winId());
 }
 
-int storedChromeTopMargin(HWND hwnd) {
+int storedChromeTopMargin(HWND hwnd)
+{
     if (!hwnd)
         return -1;
 
@@ -84,22 +86,23 @@ int storedChromeTopMargin(HWND hwnd) {
     return value > 0 ? static_cast<int>(value - 1) : -1;
 }
 
-void storeChromeTopMargin(HWND hwnd, int topMargin) {
+void storeChromeTopMargin(HWND hwnd, int topMargin)
+{
     if (!hwnd)
         return;
 
-    SetPropW(hwnd,
-             ChromeTopMarginProperty,
+    SetPropW(hwnd, ChromeTopMarginProperty,
              reinterpret_cast<HANDLE>(static_cast<INT_PTR>(qMax(0, topMargin) + 1)));
 }
 
-void clearChromeTopMargin(HWND hwnd) {
+void clearChromeTopMargin(HWND hwnd)
+{
     if (hwnd)
         RemovePropW(hwnd, ChromeTopMarginProperty);
 }
 
-template <typename T>
-T resolveDwmProc(const char* name) {
+template <typename T> T resolveDwmProc(const char* name)
+{
     static HMODULE dwmApi = LoadLibraryW(L"dwmapi.dll");
     if (!dwmApi)
         return nullptr;
@@ -107,7 +110,8 @@ T resolveDwmProc(const char* name) {
     return reinterpret_cast<T>(GetProcAddress(dwmApi, name));
 }
 
-void ensureDwmChromeStyle(QWidget* window) {
+void ensureDwmChromeStyle(QWidget* window)
+{
     HWND hwnd = hwndForWindow(window);
     if (!hwnd)
         return;
@@ -130,16 +134,12 @@ void ensureDwmChromeStyle(QWidget* window) {
         return;
 
     SetWindowLongPtrW(hwnd, GWL_STYLE, desiredStyle);
-    SetWindowPos(hwnd,
-                 nullptr,
-                 0,
-                 0,
-                 0,
-                 0,
+    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
                  SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
 }
 
-bool monitorInfoForWindow(HWND hwnd, MONITORINFO* monitorInfo) {
+bool monitorInfoForWindow(HWND hwnd, MONITORINFO* monitorInfo)
+{
     if (!hwnd || !monitorInfo)
         return false;
 
@@ -148,10 +148,11 @@ bool monitorInfoForWindow(HWND hwnd, MONITORINFO* monitorInfo) {
     return monitor && GetMonitorInfoW(monitor, monitorInfo);
 }
 
-void extendFrameIntoClientArea(HWND hwnd, int topMargin) {
+void extendFrameIntoClientArea(HWND hwnd, int topMargin)
+{
     using DwmExtendFrameIntoClientAreaFn = HRESULT(WINAPI*)(HWND, const MARGINS*);
-    auto* extendFrame = resolveDwmProc<DwmExtendFrameIntoClientAreaFn>(
-        "DwmExtendFrameIntoClientArea");
+    auto* extendFrame =
+        resolveDwmProc<DwmExtendFrameIntoClientAreaFn>("DwmExtendFrameIntoClientArea");
     if (!hwnd || !extendFrame)
         return;
 
@@ -159,7 +160,8 @@ void extendFrameIntoClientArea(HWND hwnd, int topMargin) {
     extendFrame(hwnd, &margins);
 }
 
-bool handleDwmFrameMessage(MSG* msg, FluentNativeEventResult* result) {
+bool handleDwmFrameMessage(MSG* msg, FluentNativeEventResult* result)
+{
     using DwmDefWindowProcFn = BOOL(WINAPI*)(HWND, UINT, WPARAM, LPARAM, LRESULT*);
     auto* dwmDefWindowProc = resolveDwmProc<DwmDefWindowProcFn>("DwmDefWindowProc");
     if (!msg || !result || !msg->hwnd || !dwmDefWindowProc)
@@ -176,33 +178,42 @@ bool handleDwmFrameMessage(MSG* msg, FluentNativeEventResult* result) {
     return true;
 }
 
-int toNativeHitTest(WindowChromeCompat::HitTest hitTest) {
+int toNativeHitTest(WindowChromeCompat::HitTest hitTest)
+{
     switch (hitTest) {
-    case WindowChromeCompat::HitTest::Caption: return HTCAPTION;
-    case WindowChromeCompat::HitTest::Left: return HTLEFT;
-    case WindowChromeCompat::HitTest::Right: return HTRIGHT;
-    case WindowChromeCompat::HitTest::Top: return HTTOP;
-    case WindowChromeCompat::HitTest::Bottom: return HTBOTTOM;
-    case WindowChromeCompat::HitTest::TopLeft: return HTTOPLEFT;
-    case WindowChromeCompat::HitTest::TopRight: return HTTOPRIGHT;
-    case WindowChromeCompat::HitTest::BottomLeft: return HTBOTTOMLEFT;
-    case WindowChromeCompat::HitTest::BottomRight: return HTBOTTOMRIGHT;
+    case WindowChromeCompat::HitTest::Caption:
+        return HTCAPTION;
+    case WindowChromeCompat::HitTest::Left:
+        return HTLEFT;
+    case WindowChromeCompat::HitTest::Right:
+        return HTRIGHT;
+    case WindowChromeCompat::HitTest::Top:
+        return HTTOP;
+    case WindowChromeCompat::HitTest::Bottom:
+        return HTBOTTOM;
+    case WindowChromeCompat::HitTest::TopLeft:
+        return HTTOPLEFT;
+    case WindowChromeCompat::HitTest::TopRight:
+        return HTTOPRIGHT;
+    case WindowChromeCompat::HitTest::BottomLeft:
+        return HTBOTTOMLEFT;
+    case WindowChromeCompat::HitTest::BottomRight:
+        return HTBOTTOMRIGHT;
     case WindowChromeCompat::HitTest::Client:
     default:
         return HTCLIENT;
     }
 }
 
-QPoint logicalClientPointForNativeScreenPoint(QWidget* window,
-                                               HWND hwnd,
-                                               const QPoint& nativeScreenPoint) {
+QPoint logicalClientPointForNativeScreenPoint(QWidget* window, HWND hwnd,
+                                              const QPoint& nativeScreenPoint)
+{
     if (!window || !hwnd)
         return {};
 
     POINT nativeClientPoint = {nativeScreenPoint.x(), nativeScreenPoint.y()};
     RECT nativeClientRect = {};
-    if (!ScreenToClient(hwnd, &nativeClientPoint)
-        || !GetClientRect(hwnd, &nativeClientRect)) {
+    if (!ScreenToClient(hwnd, &nativeClientPoint) || !GetClientRect(hwnd, &nativeClientRect)) {
         return window->mapFromGlobal(nativeScreenPoint);
     }
 
@@ -220,13 +231,12 @@ QPoint logicalClientPointForNativeScreenPoint(QWidget* window,
     // QT_SCALE_FACTOR 即使在系统 100% 缩放下也会让两者不同。应通过当前原生客户区
     // 尺寸换算，不能把物理坐标直接交给 mapFromGlobal()。
     return QPoint(
-        qFloor(static_cast<qreal>(nativeClientPoint.x) * logicalSize.width()
-               / nativeWidth),
-        qFloor(static_cast<qreal>(nativeClientPoint.y) * logicalSize.height()
-               / nativeHeight));
+        qFloor(static_cast<qreal>(nativeClientPoint.x) * logicalSize.width() / nativeWidth),
+        qFloor(static_cast<qreal>(nativeClientPoint.y) * logicalSize.height() / nativeHeight));
 }
 
-bool handleCustomChromeClientRect(MSG* msg, FluentNativeEventResult* result) {
+bool handleCustomChromeClientRect(MSG* msg, FluentNativeEventResult* result)
+{
     if (!msg || !result || msg->message != WM_NCCALCSIZE)
         return false;
 
@@ -254,7 +264,8 @@ bool handleCustomChromeClientRect(MSG* msg, FluentNativeEventResult* result) {
     return true;
 }
 
-bool handleCustomChromeMinMaxInfo(QWidget* window, MSG* msg, FluentNativeEventResult* result) {
+bool handleCustomChromeMinMaxInfo(QWidget* window, MSG* msg, FluentNativeEventResult* result)
+{
     if (!window || !msg || !result || msg->message != WM_GETMINMAXINFO)
         return false;
 
@@ -302,26 +313,27 @@ bool handleCustomChromeMinMaxInfo(QWidget* window, MSG* msg, FluentNativeEventRe
 
 namespace detail {
 
-BackdropCapabilities platformBackdropCapabilities() {
+BackdropCapabilities platformBackdropCapabilities()
+{
     BackdropCapabilities capabilities;
     const bool supported = supportsDwmSystemBackdrop(currentWindowsVersion());
     capabilities.alphaSurfaceSupported = supported;
     capabilities.nativeMica = supported;
     capabilities.nativeAcrylic = supported;
-    capabilities.provider = supported ? QStringLiteral("dwm-system-backdrop")
-                                      : QStringLiteral("painted-material");
+    capabilities.provider =
+        supported ? QStringLiteral("dwm-system-backdrop") : QStringLiteral("painted-material");
     return capabilities;
 }
 
-bool platformSupportsSystemBackdrop() {
+bool platformSupportsSystemBackdrop()
+{
     const BackdropCapabilities capabilities = platformBackdropCapabilities();
     return capabilities.nativeMica || capabilities.nativeAcrylic;
 }
 
-BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window,
-                                                BackdropEffect effect,
-                                                bool dark,
-                                                bool forceRecomposite) {
+BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
+                                                bool forceRecomposite)
+{
     BackdropApplyResult result;
     HWND hwnd = hwndForWindow(window);
     if (!hwnd) {
@@ -365,11 +377,18 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window,
     // zh_CN: Mica 与 Acrylic 走完全相同的管线——仅 DWMWA_SYSTEMBACKDROP_TYPE 取值不同。
     int backdropType = DWMSBT_MAINWINDOW;
     switch (effect) {
-    case BackdropEffect::Acrylic: backdropType = DWMSBT_TRANSIENTWINDOW; break;
-    case BackdropEffect::Solid:   backdropType = DWMSBT_NONE;            break;
-    case BackdropEffect::Mica:    backdropType = DWMSBT_MAINWINDOW;      break;
+    case BackdropEffect::Acrylic:
+        backdropType = DWMSBT_TRANSIENTWINDOW;
+        break;
+    case BackdropEffect::Solid:
+        backdropType = DWMSBT_NONE;
+        break;
+    case BackdropEffect::Mica:
+        backdropType = DWMSBT_MAINWINDOW;
+        break;
     }
-    const HRESULT hr = setAttr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdropType, sizeof(backdropType));
+    const HRESULT hr =
+        setAttr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdropType, sizeof(backdropType));
     if (!SUCCEEDED(hr)) {
         result.reason = QStringLiteral("dwm-set-window-attribute-failed-%1")
                             .arg(static_cast<quint32>(hr), 8, 16, QLatin1Char('0'));
@@ -409,14 +428,14 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window,
 // zh_CN: 前向声明，完整定义在 handlePlatformNativeEvent 之后。
 bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos);
 
-void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options) {
+void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options)
+{
     if (!window)
         return;
 
     if (options.useCustomWindowChrome) {
         window->setAttribute(Qt::WA_ContentsMarginsRespectsSafeArea, false);
-        Qt::WindowFlags desiredFlags =
-            window->windowFlags() | Qt::Window | Qt::CustomizeWindowHint;
+        Qt::WindowFlags desiredFlags = window->windowFlags() | Qt::Window | Qt::CustomizeWindowHint;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
         desiredFlags |= Qt::ExpandedClientAreaHint | Qt::NoTitleBarBackgroundHint;
 #endif
@@ -429,11 +448,10 @@ void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& option
     }
 }
 
-bool handlePlatformNativeEvent(QWidget* window,
-                               const WindowChromeOptions& options,
-                               const QByteArray& eventType,
-                               void* message,
-                               FluentNativeEventResult* result) {
+bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& options,
+                               const QByteArray& eventType, void* message,
+                               FluentNativeEventResult* result)
+{
     if (!window || !message || !result || !options.useCustomWindowChrome)
         return false;
 
@@ -465,8 +483,8 @@ bool handlePlatformNativeEvent(QWidget* window,
     // zh_CN: 上的行为一致）。由于 DwmDefWindowProc 可能先消费该消息，需在此显式处理。
     if (msg->message == WM_NCRBUTTONUP) {
         const QPoint globalPos(GET_X_LPARAM(msg->lParam), GET_Y_LPARAM(msg->lParam));
-        const QPoint localPos = logicalClientPointForNativeScreenPoint(
-            window, msg->hwnd, globalPos);
+        const QPoint localPos =
+            logicalClientPointForNativeScreenPoint(window, msg->hwnd, globalPos);
         const auto hit = WindowChromeCompat::classifyHitTest(options, window->size(), localPos);
         if (hit == WindowChromeCompat::HitTest::Caption) {
             showPlatformSystemMenu(window, globalPos);
@@ -509,8 +527,7 @@ bool handlePlatformNativeEvent(QWidget* window,
     // zh_CN: 自绘 Fluent 标题栏按钮位于客户区（已加入标题栏拖拽排除区），classifyHitTest 在其上返回
     // HTCLIENT，按钮正常收到点击——无需 DWM 按钮命中测试（原生玻璃按钮已抑制）。
     const QPoint globalPos(GET_X_LPARAM(msg->lParam), GET_Y_LPARAM(msg->lParam));
-    const QPoint localPos = logicalClientPointForNativeScreenPoint(
-        window, msg->hwnd, globalPos);
+    const QPoint localPos = logicalClientPointForNativeScreenPoint(window, msg->hwnd, globalPos);
     // Convert the repository-level hit-test result to the native HT* code expected by Windows.
     // zh_CN: 将项目内逻辑命中结果转换为 Windows 期望的原生 HT* code。
     const auto hitTest = WindowChromeCompat::classifyHitTest(options, window->size(), localPos);
@@ -519,7 +536,8 @@ bool handlePlatformNativeEvent(QWidget* window,
     return true;
 }
 
-bool beginPlatformSystemMove(QWidget* window, const QPoint& globalPos) {
+bool beginPlatformSystemMove(QWidget* window, const QPoint& globalPos)
+{
     HWND hwnd = hwndForWindow(window);
     if (!hwnd)
         return false;
@@ -529,7 +547,8 @@ bool beginPlatformSystemMove(QWidget* window, const QPoint& globalPos) {
     return true;
 }
 
-bool beginPlatformSystemResize(QWidget* window, Qt::Edges edges, const QPoint& globalPos) {
+bool beginPlatformSystemResize(QWidget* window, Qt::Edges edges, const QPoint& globalPos)
+{
     if (!window || edges == Qt::Edges())
         return false;
 
@@ -539,14 +558,22 @@ bool beginPlatformSystemResize(QWidget* window, Qt::Edges edges, const QPoint& g
     const bool top = edges.testFlag(Qt::TopEdge);
     const bool bottom = edges.testFlag(Qt::BottomEdge);
 
-    if (top && left) nativeEdge = HTTOPLEFT;
-    else if (top && right) nativeEdge = HTTOPRIGHT;
-    else if (bottom && left) nativeEdge = HTBOTTOMLEFT;
-    else if (bottom && right) nativeEdge = HTBOTTOMRIGHT;
-    else if (left) nativeEdge = HTLEFT;
-    else if (right) nativeEdge = HTRIGHT;
-    else if (top) nativeEdge = HTTOP;
-    else if (bottom) nativeEdge = HTBOTTOM;
+    if (top && left)
+        nativeEdge = HTTOPLEFT;
+    else if (top && right)
+        nativeEdge = HTTOPRIGHT;
+    else if (bottom && left)
+        nativeEdge = HTBOTTOMLEFT;
+    else if (bottom && right)
+        nativeEdge = HTBOTTOMRIGHT;
+    else if (left)
+        nativeEdge = HTLEFT;
+    else if (right)
+        nativeEdge = HTRIGHT;
+    else if (top)
+        nativeEdge = HTTOP;
+    else if (bottom)
+        nativeEdge = HTBOTTOM;
 
     if (nativeEdge == HTCLIENT)
         return false;
@@ -560,7 +587,8 @@ bool beginPlatformSystemResize(QWidget* window, Qt::Edges edges, const QPoint& g
     return true;
 }
 
-bool performPlatformTitleBarDoubleClick(QWidget* window, const WindowChromeOptions& options) {
+bool performPlatformTitleBarDoubleClick(QWidget* window, const WindowChromeOptions& options)
+{
     if (!options.useCustomWindowChrome)
         return false;
 
@@ -572,7 +600,8 @@ bool performPlatformTitleBarDoubleClick(QWidget* window, const WindowChromeOptio
     return true;
 }
 
-bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos) {
+bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos)
+{
     HWND hwnd = hwndForWindow(window);
     if (!hwnd)
         return false;
@@ -587,30 +616,32 @@ bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos) {
     const bool isMinimized = IsIconic(hwnd) != FALSE;
     const bool canResize = (GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_THICKFRAME) != 0;
 
-    EnableMenuItem(systemMenu, SC_RESTORE,  MF_BYCOMMAND | ((isMaximized || isMinimized) ? MF_ENABLED : MF_GRAYED));
-    EnableMenuItem(systemMenu, SC_MOVE,     MF_BYCOMMAND | (isMaximized ? MF_GRAYED : MF_ENABLED));
-    EnableMenuItem(systemMenu, SC_SIZE,     MF_BYCOMMAND | (!isMaximized && canResize ? MF_ENABLED : MF_GRAYED));
+    EnableMenuItem(systemMenu, SC_RESTORE,
+                   MF_BYCOMMAND | ((isMaximized || isMinimized) ? MF_ENABLED : MF_GRAYED));
+    EnableMenuItem(systemMenu, SC_MOVE, MF_BYCOMMAND | (isMaximized ? MF_GRAYED : MF_ENABLED));
+    EnableMenuItem(systemMenu, SC_SIZE,
+                   MF_BYCOMMAND | (!isMaximized && canResize ? MF_ENABLED : MF_GRAYED));
     EnableMenuItem(systemMenu, SC_MINIMIZE, MF_BYCOMMAND | MF_ENABLED);
     EnableMenuItem(systemMenu, SC_MAXIMIZE, MF_BYCOMMAND | (isMaximized ? MF_GRAYED : MF_ENABLED));
-    EnableMenuItem(systemMenu, SC_CLOSE,    MF_BYCOMMAND | MF_ENABLED);
+    EnableMenuItem(systemMenu, SC_CLOSE, MF_BYCOMMAND | MF_ENABLED);
 
     SetForegroundWindow(hwnd);
-    const UINT cmd = TrackPopupMenu(systemMenu,
-                                    TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD,
-                                    globalPos.x(), globalPos.y(),
-                                    0, hwnd, nullptr);
+    const UINT cmd = TrackPopupMenu(systemMenu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD,
+                                    globalPos.x(), globalPos.y(), 0, hwnd, nullptr);
     if (cmd != 0)
         PostMessageW(hwnd, WM_SYSCOMMAND, static_cast<WPARAM>(cmd), 0);
 
     return true;
 }
 
-bool requestPlatformForegroundActivation(QWidget* window) {
+bool requestPlatformForegroundActivation(QWidget* window)
+{
     HWND hwnd = hwndForWindow(window);
     return hwnd && SetForegroundWindow(hwnd) != FALSE;
 }
 
-void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& options) {
+void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& options)
+{
     if (!options.useCustomWindowChrome)
         return;
 
@@ -639,27 +670,25 @@ void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& op
         return;
 
     storeChromeTopMargin(hwnd, topMargin);
-    SetWindowPos(hwnd,
-                 nullptr,
-                 0,
-                 0,
-                 0,
-                 0,
+    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
                  SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
 }
 
-int nativeTitleBarLeadingInset(QWidget* window) {
+int nativeTitleBarLeadingInset(QWidget* window)
+{
     Q_UNUSED(window);
     return 0;
 }
 
-int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options) {
+int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options)
+{
     Q_UNUSED(window);
     Q_UNUSED(options);
     return 0;
 }
 
-bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions& options) {
+bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions& options)
+{
     Q_UNUSED(window);
     Q_UNUSED(options);
     return false;
