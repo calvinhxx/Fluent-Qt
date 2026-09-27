@@ -10,8 +10,7 @@ TEST(FoundationContractsTest, Contract_NormalOverlayCardClampsInsideAvailableBou
     const QRect bounds(10, 20, 100, 80);
     const QSize cardSize(30, 20);
 
-    const QPoint clamped = fluent::overlay::clampCardTopLeft(
-        QPoint(-20, 500), cardSize, bounds, 8);
+    const QPoint clamped = fluent::overlay::clampCardTopLeft(QPoint(-20, 500), cardSize, bounds, 8);
 
     EXPECT_EQ(clamped, QPoint(18, 72));
     EXPECT_GE(clamped.x(), bounds.left() + 8);
@@ -25,8 +24,8 @@ TEST(FoundationContractsTest, Contract_OversizedOverlayCardUsesStableAvailableOr
     const QRect bounds(10, 20, 100, 80);
     const QSize oversizedCard(300, 200);
 
-    const QPoint clamped = fluent::overlay::clampCardTopLeft(
-        QPoint(70, 60), oversizedCard, bounds, 8);
+    const QPoint clamped =
+        fluent::overlay::clampCardTopLeft(QPoint(70, 60), oversizedCard, bounds, 8);
 
     EXPECT_EQ(clamped, QPoint(18, 28));
 }
@@ -34,8 +33,7 @@ TEST(FoundationContractsTest, Contract_OversizedOverlayCardUsesStableAvailableOr
 TEST(FoundationContractsTest, Contract_ElevationNoneHasNoVisibleShadow)
 {
     for (bool dark : {false, true}) {
-        const Elevation::ShadowParams& shadow =
-            Elevation::getShadow(Elevation::None, dark);
+        const Elevation::ShadowParams& shadow = Elevation::getShadow(Elevation::None, dark);
 
         EXPECT_EQ(shadow.offsetX, 0);
         EXPECT_EQ(shadow.offsetY, 0);

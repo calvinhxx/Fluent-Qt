@@ -8,10 +8,8 @@ namespace compatibility {
 
 namespace detail {
 void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options);
-bool handlePlatformNativeEvent(QWidget* window,
-                               const WindowChromeOptions& options,
-                               const QByteArray& eventType,
-                               void* message,
+bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& options,
+                               const QByteArray& eventType, void* message,
                                FluentNativeEventResult* result);
 bool beginPlatformSystemMove(QWidget* window, const QPoint& globalPos);
 bool beginPlatformSystemResize(QWidget* window, Qt::Edges edges, const QPoint& globalPos);
@@ -23,21 +21,18 @@ int nativeTitleBarLeadingInset(QWidget* window);
 int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options);
 bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions& options);
 BackdropCapabilities platformBackdropCapabilities();
-BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window,
-                                                 BackdropEffect effect,
-                                                 bool dark,
-                                                 bool forceRecomposite);
-}
+BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
+                                                bool forceRecomposite);
+} // namespace detail
 
 namespace {
 
 // Guard system move/resize entry points so widgets do not start platform
 // operations before the native window handle and chrome policy are ready.
 // zh_CN: 在原生窗口句柄和 chrome 策略就绪前，避免 widget 启动平台系统移动/缩放。
-bool canBeginSystemOperation(QWidget* window,
-                             const WindowChromeOptions& options,
-                             bool resize,
-                             Qt::Edges edges = Qt::Edges()) {
+bool canBeginSystemOperation(QWidget* window, const WindowChromeOptions& options, bool resize,
+                             Qt::Edges edges = Qt::Edges())
+{
     if (!window || !window->isWindow() || !window->isVisible())
         return false;
 
@@ -50,8 +45,8 @@ bool canBeginSystemOperation(QWidget* window,
     if (WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::Windows) {
         if (!options.useCustomWindowChrome)
             return false;
-        if (WindowChromeCompat::expandedClientAreaHintsAvailable()
-            && !WindowChromeCompat::windowHasExpandedClientAreaHint(window)) {
+        if (WindowChromeCompat::expandedClientAreaHintsAvailable() &&
+            !WindowChromeCompat::windowHasExpandedClientAreaHint(window)) {
             return false;
         }
     }
@@ -59,53 +54,57 @@ bool canBeginSystemOperation(QWidget* window,
     return true;
 }
 
-}
+} // namespace
 
-WindowChromeCompat::WindowChromeCompat(QWidget* window)
-    : m_window(window) {
+WindowChromeCompat::WindowChromeCompat(QWidget* window) : m_window(window)
+{
     m_options.useCustomWindowChrome = platformPrefersCustomWindowChrome();
     m_options.preferNativeMacControls = (currentPlatform() == Platform::MacOS);
 }
 
-void WindowChromeCompat::configure(const WindowChromeOptions& options) {
+void WindowChromeCompat::configure(const WindowChromeOptions& options)
+{
     m_options = options;
     detail::syncPlatformTitleBarGeometry(m_window, m_options);
 }
 
-void WindowChromeCompat::applyPlatformWindowFlags() {
+void WindowChromeCompat::applyPlatformWindowFlags()
+{
     detail::applyPlatformWindowFlags(m_window, m_options);
 }
 
-bool WindowChromeCompat::systemBackdropSupported() const {
+bool WindowChromeCompat::systemBackdropSupported() const
+{
     const BackdropCapabilities capabilities = backdropCapabilities();
-    return capabilities.nativeMica || capabilities.nativeAcrylic
-        || capabilities.compositorBlur;
+    return capabilities.nativeMica || capabilities.nativeAcrylic || capabilities.compositorBlur;
 }
 
-BackdropCapabilities WindowChromeCompat::backdropCapabilities() const {
+BackdropCapabilities WindowChromeCompat::backdropCapabilities() const
+{
     return detail::platformBackdropCapabilities();
 }
 
-bool WindowChromeCompat::applySystemBackdrop(BackdropEffect effect,
-                                             bool dark,
-                                             bool forceRecomposite) {
+bool WindowChromeCompat::applySystemBackdrop(BackdropEffect effect, bool dark,
+                                             bool forceRecomposite)
+{
     return applySystemBackdropDetailed(effect, dark, forceRecomposite).applied;
 }
 
-BackdropApplyResult WindowChromeCompat::applySystemBackdropDetailed(
-    BackdropEffect effect,
-    bool dark,
-    bool forceRecomposite) {
+BackdropApplyResult WindowChromeCompat::applySystemBackdropDetailed(BackdropEffect effect,
+                                                                    bool dark,
+                                                                    bool forceRecomposite)
+{
     return detail::applyPlatformSystemBackdrop(m_window, effect, dark, forceRecomposite);
 }
 
-bool WindowChromeCompat::handleNativeEvent(const QByteArray& eventType,
-                                           void* message,
-                                           FluentNativeEventResult* result) {
+bool WindowChromeCompat::handleNativeEvent(const QByteArray& eventType, void* message,
+                                           FluentNativeEventResult* result)
+{
     return detail::handlePlatformNativeEvent(m_window, m_options, eventType, message, result);
 }
 
-bool WindowChromeCompat::beginSystemMove(const QPoint& globalPos) {
+bool WindowChromeCompat::beginSystemMove(const QPoint& globalPos)
+{
     if (!canBeginSystemOperation(m_window, m_options, false))
         return false;
 
@@ -115,7 +114,8 @@ bool WindowChromeCompat::beginSystemMove(const QPoint& globalPos) {
     return detail::beginPlatformSystemMove(m_window, globalPos);
 }
 
-bool WindowChromeCompat::beginSystemResize(Qt::Edges edges, const QPoint& globalPos) {
+bool WindowChromeCompat::beginSystemResize(Qt::Edges edges, const QPoint& globalPos)
+{
     if (!canBeginSystemOperation(m_window, m_options, true, edges))
         return false;
 
@@ -125,51 +125,62 @@ bool WindowChromeCompat::beginSystemResize(Qt::Edges edges, const QPoint& global
     return detail::beginPlatformSystemResize(m_window, edges, globalPos);
 }
 
-bool WindowChromeCompat::performTitleBarDoubleClick() {
+bool WindowChromeCompat::performTitleBarDoubleClick()
+{
     return detail::performPlatformTitleBarDoubleClick(m_window, m_options);
 }
 
-bool WindowChromeCompat::showSystemMenu(const QPoint& globalPos) {
+bool WindowChromeCompat::showSystemMenu(const QPoint& globalPos)
+{
     return detail::showPlatformSystemMenu(m_window, globalPos);
 }
 
-bool WindowChromeCompat::requestForegroundActivation() {
+bool WindowChromeCompat::requestForegroundActivation()
+{
     return detail::requestPlatformForegroundActivation(m_window);
 }
 
-bool WindowChromeCompat::usesCustomWindowChrome() const {
+bool WindowChromeCompat::usesCustomWindowChrome() const
+{
     const Platform platform = currentPlatform();
-    return m_options.useCustomWindowChrome
-        && (platform == Platform::Windows || platform == Platform::Linux
-            || platform == Platform::Other);
+    return m_options.useCustomWindowChrome &&
+           (platform == Platform::Windows || platform == Platform::Linux ||
+            platform == Platform::Other);
 }
 
-bool WindowChromeCompat::prefersNativeMacControls() const {
+bool WindowChromeCompat::prefersNativeMacControls() const
+{
     return m_options.preferNativeMacControls && currentPlatform() == Platform::MacOS;
 }
 
-bool WindowChromeCompat::manualMoveResizeFallbackAllowed() const {
+bool WindowChromeCompat::manualMoveResizeFallbackAllowed() const
+{
     return detail::manualMoveResizeFallbackAllowed(m_window, m_options);
 }
 
-int WindowChromeCompat::nativeTitleBarLeadingInset() const {
+int WindowChromeCompat::nativeTitleBarLeadingInset() const
+{
     return prefersNativeMacControls() ? detail::nativeTitleBarLeadingInset(m_window) : 0;
 }
 
-int WindowChromeCompat::nativeTitleBarTrailingInset() const {
+int WindowChromeCompat::nativeTitleBarTrailingInset() const
+{
     return 0;
 }
 
-int WindowChromeCompat::clientSideFrameMargin() const {
+int WindowChromeCompat::clientSideFrameMargin() const
+{
     return detail::clientSideFrameMargin(m_window, m_options);
 }
 
-WindowChromeCompat::HitTest WindowChromeCompat::hitTestLocal(const QPoint& localPos) const {
+WindowChromeCompat::HitTest WindowChromeCompat::hitTestLocal(const QPoint& localPos) const
+{
     const QSize size = m_window ? m_window->size() : QSize();
     return classifyHitTest(m_options, size, localPos);
 }
 
-WindowChromeCompat::Platform WindowChromeCompat::currentPlatform() {
+WindowChromeCompat::Platform WindowChromeCompat::currentPlatform()
+{
 #ifdef Q_OS_WIN
     return Platform::Windows;
 #elif defined(Q_OS_MAC)
@@ -181,16 +192,19 @@ WindowChromeCompat::Platform WindowChromeCompat::currentPlatform() {
 #endif
 }
 
-bool WindowChromeCompat::platformPrefersCustomWindowChrome() {
-    return currentPlatform() == Platform::Windows
-        || detail::runtimePlatformCapabilities().customWindowChromePreferred;
+bool WindowChromeCompat::platformPrefersCustomWindowChrome()
+{
+    return currentPlatform() == Platform::Windows ||
+           detail::runtimePlatformCapabilities().customWindowChromePreferred;
 }
 
-bool WindowChromeCompat::expandedClientAreaHintsAvailable() {
+bool WindowChromeCompat::expandedClientAreaHintsAvailable()
+{
     return QT_VERSION >= QT_VERSION_CHECK(6, 9, 0);
 }
 
-bool WindowChromeCompat::windowHasExpandedClientAreaHint(const QWidget* window) {
+bool WindowChromeCompat::windowHasExpandedClientAreaHint(const QWidget* window)
+{
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
     return window && window->windowFlags().testFlag(Qt::ExpandedClientAreaHint);
 #else
@@ -199,7 +213,8 @@ bool WindowChromeCompat::windowHasExpandedClientAreaHint(const QWidget* window) 
 #endif
 }
 
-bool WindowChromeCompat::windowHasNoTitleBarBackgroundHint(const QWidget* window) {
+bool WindowChromeCompat::windowHasNoTitleBarBackgroundHint(const QWidget* window)
+{
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
     return window && window->windowFlags().testFlag(Qt::NoTitleBarBackgroundHint);
 #else
@@ -208,10 +223,10 @@ bool WindowChromeCompat::windowHasNoTitleBarBackgroundHint(const QWidget* window
 #endif
 }
 
-WindowChromeCompat::HitTest WindowChromeCompat::classifyHitTest(
-    const WindowChromeOptions& options,
-    const QSize& windowSize,
-    const QPoint& localPos) {
+WindowChromeCompat::HitTest WindowChromeCompat::classifyHitTest(const WindowChromeOptions& options,
+                                                                const QSize& windowSize,
+                                                                const QPoint& localPos)
+{
     if (!QRect(QPoint(0, 0), windowSize).contains(localPos))
         return HitTest::Client;
 
@@ -227,14 +242,22 @@ WindowChromeCompat::HitTest WindowChromeCompat::classifyHitTest(
         const bool top = localPos.y() < border;
         const bool bottom = localPos.y() >= windowSize.height() - border;
 
-        if (top && left) return HitTest::TopLeft;
-        if (top && right) return HitTest::TopRight;
-        if (bottom && left) return HitTest::BottomLeft;
-        if (bottom && right) return HitTest::BottomRight;
-        if (left) return HitTest::Left;
-        if (right) return HitTest::Right;
-        if (top) return HitTest::Top;
-        if (bottom) return HitTest::Bottom;
+        if (top && left)
+            return HitTest::TopLeft;
+        if (top && right)
+            return HitTest::TopRight;
+        if (bottom && left)
+            return HitTest::BottomLeft;
+        if (bottom && right)
+            return HitTest::BottomRight;
+        if (left)
+            return HitTest::Left;
+        if (right)
+            return HitTest::Right;
+        if (top)
+            return HitTest::Top;
+        if (bottom)
+            return HitTest::Bottom;
     }
 
     if (options.titleBarRect.contains(localPos)) {

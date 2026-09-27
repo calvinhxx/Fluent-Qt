@@ -17,13 +17,14 @@ using fluent::basicinput::Button;
 using fluent::textfields::Label;
 
 // 与 Popup.cpp 内部 kShadowMargin 保持一致
-static constexpr int kShadowMargin = ::Spacing::Standard;  // 16
+static constexpr int kShadowMargin = ::Spacing::Standard; // 16
 
 // ── FluentTestWindow ─────────────────────────────────────────────────────────
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -32,7 +33,8 @@ public:
 // ── Fixture ──────────────────────────────────────────────────────────────────
 class FlyoutTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new FluentTestWindow();
         window->setFixedSize(800, 600);
         window->setWindowTitle("Flyout Test");
@@ -40,10 +42,15 @@ protected:
         window->show();
         ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
     }
-    void TearDown() override { delete window; window = nullptr; }
+    void TearDown() override
+    {
+        delete window;
+        window = nullptr;
+    }
 
     /// 创建固定尺寸 anchor 按钮并放到指定位置
-    Button* makeAnchor(const QPoint& pos, const QSize& sz = QSize(100, 32)) {
+    Button* makeAnchor(const QPoint& pos, const QSize& sz = QSize(100, 32))
+    {
         auto* btn = new Button("Anchor", window);
         btn->setFixedSize(sz);
         btn->move(pos);
@@ -52,9 +59,9 @@ protected:
     }
 
     /// 等到 flyout 完成 open（含动画）
-    void waitOpen(Flyout* fl) {
-        ASSERT_TRUE(QTest::qWaitFor(
-            [&]() { return fl->isOpen(); }, 1500));
+    void waitOpen(Flyout* fl)
+    {
+        ASSERT_TRUE(QTest::qWaitFor([&]() { return fl->isOpen(); }, 1500));
     }
 
     FluentTestWindow* window = nullptr;
@@ -64,10 +71,11 @@ protected:
 // 1. 默认属性
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(FlyoutTest, DefaultProperties) {
+TEST_F(FlyoutTest, DefaultProperties)
+{
     Flyout fl(window);
-    EXPECT_EQ(fl.placement(),     Flyout::Bottom);
-    EXPECT_EQ(fl.anchorOffset(),  8);
+    EXPECT_EQ(fl.placement(), Flyout::Bottom);
+    EXPECT_EQ(fl.anchorOffset(), 8);
     EXPECT_TRUE(fl.clampToWindow());
     EXPECT_FALSE(fl.isModal());
     EXPECT_FALSE(fl.isDim());
@@ -76,7 +84,8 @@ TEST_F(FlyoutTest, DefaultProperties) {
     EXPECT_EQ(fl.anchor(), nullptr);
 }
 
-TEST_F(FlyoutTest, Contract_InheritsPopupLifecycleAndNotifyNoOps) {
+TEST_F(FlyoutTest, Contract_InheritsPopupLifecycleAndNotifyNoOps)
+{
     auto* btn = makeAnchor(QPoint(350, 280));
     Flyout fl(window);
     fl.setAnimationEnabled(false);
@@ -106,20 +115,21 @@ TEST_F(FlyoutTest, Contract_InheritsPopupLifecycleAndNotifyNoOps) {
     fl.close();
     EXPECT_FALSE(fl.isOpen());
     EXPECT_EQ(order, (QStringList{
-                          QStringLiteral("opening"),
-                          QStringLiteral("aboutToShow"),
-                          QStringLiteral("opened"),
-                          QStringLiteral("closing"),
-                          QStringLiteral("aboutToHide"),
-                          QStringLiteral("closed"),
-                      }));
+                         QStringLiteral("opening"),
+                         QStringLiteral("aboutToShow"),
+                         QStringLiteral("opened"),
+                         QStringLiteral("closing"),
+                         QStringLiteral("aboutToHide"),
+                         QStringLiteral("closed"),
+                     }));
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 2. showAt → setAnchor + open
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(FlyoutTest, ShowAtSetsAnchorAndOpens) {
+TEST_F(FlyoutTest, ShowAtSetsAnchorAndOpens)
+{
     auto* btn = makeAnchor(QPoint(350, 280));
 
     Flyout fl(window);
@@ -139,7 +149,8 @@ TEST_F(FlyoutTest, ShowAtSetsAnchorAndOpens) {
 // 3. Bottom Placement
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(FlyoutTest, ShowAtInheritsThemeOverrideFromAnchor) {
+TEST_F(FlyoutTest, ShowAtInheritsThemeOverrideFromAnchor)
+{
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     window->onThemeUpdated();
 
@@ -162,7 +173,8 @@ TEST_F(FlyoutTest, ShowAtInheritsThemeOverrideFromAnchor) {
     fl.close();
 }
 
-TEST_F(FlyoutTest, BottomPlacement) {
+TEST_F(FlyoutTest, BottomPlacement)
+{
     auto* btn = makeAnchor(QPoint(350, 280));
 
     Flyout fl(window);
@@ -171,8 +183,8 @@ TEST_F(FlyoutTest, BottomPlacement) {
     fl.showAt(btn);
 
     // 卡片可见区域 = 整体几何 - shadow margin
-    const QRect card = fl.geometry().adjusted(
-        kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card =
+        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
 
     const QRect anchor(btn->mapTo(window, QPoint(0, 0)), btn->size());
 
@@ -188,7 +200,8 @@ TEST_F(FlyoutTest, BottomPlacement) {
 // 4. Top Placement
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(FlyoutTest, TopPlacement) {
+TEST_F(FlyoutTest, TopPlacement)
+{
     auto* btn = makeAnchor(QPoint(350, 280));
 
     Flyout fl(window);
@@ -196,8 +209,8 @@ TEST_F(FlyoutTest, TopPlacement) {
     fl.setPlacement(Flyout::Top);
     fl.showAt(btn);
 
-    const QRect card = fl.geometry().adjusted(
-        kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card =
+        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
     const QRect anchor(btn->mapTo(window, QPoint(0, 0)), btn->size());
 
     // QRect.bottom() = top + h - 1（闭区间）→ 卡片底边与 anchor 顶边之间留 anchorOffset 个像素
@@ -211,7 +224,8 @@ TEST_F(FlyoutTest, TopPlacement) {
 // 5. Left / Right Placement
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(FlyoutTest, LeftPlacement) {
+TEST_F(FlyoutTest, LeftPlacement)
+{
     auto* btn = makeAnchor(QPoint(400, 280));
 
     Flyout fl(window);
@@ -219,8 +233,8 @@ TEST_F(FlyoutTest, LeftPlacement) {
     fl.setPlacement(Flyout::Left);
     fl.showAt(btn);
 
-    const QRect card = fl.geometry().adjusted(
-        kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card =
+        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
     const QRect anchor(btn->mapTo(window, QPoint(0, 0)), btn->size());
 
     EXPECT_EQ(card.right() + 1, anchor.left() - fl.anchorOffset());
@@ -229,7 +243,8 @@ TEST_F(FlyoutTest, LeftPlacement) {
     fl.close();
 }
 
-TEST_F(FlyoutTest, RightPlacement) {
+TEST_F(FlyoutTest, RightPlacement)
+{
     auto* btn = makeAnchor(QPoint(300, 280));
 
     Flyout fl(window);
@@ -237,8 +252,8 @@ TEST_F(FlyoutTest, RightPlacement) {
     fl.setPlacement(Flyout::Right);
     fl.showAt(btn);
 
-    const QRect card = fl.geometry().adjusted(
-        kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card =
+        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
     const QRect anchor(btn->mapTo(window, QPoint(0, 0)), btn->size());
 
     EXPECT_EQ(card.left(), anchor.right() + fl.anchorOffset());
@@ -251,7 +266,8 @@ TEST_F(FlyoutTest, RightPlacement) {
 // 6. Auto 反转
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(FlyoutTest, AutoFlipsToTopWhenBottomInsufficient) {
+TEST_F(FlyoutTest, AutoFlipsToTopWhenBottomInsufficient)
+{
     // 把 anchor 放到窗口底部附近，下方空间不足以放 192px 高的默认 flyout
     auto* btn = makeAnchor(QPoint(350, 560));
 
@@ -260,8 +276,8 @@ TEST_F(FlyoutTest, AutoFlipsToTopWhenBottomInsufficient) {
     fl.setPlacement(Flyout::Auto);
     fl.showAt(btn);
 
-    const QRect card = fl.geometry().adjusted(
-        kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card =
+        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
     const QRect anchor(btn->mapTo(window, QPoint(0, 0)), btn->size());
 
     // Auto 应该反转到 Top → 卡片底部 < anchor 顶部
@@ -274,7 +290,8 @@ TEST_F(FlyoutTest, AutoFlipsToTopWhenBottomInsufficient) {
 // 7. clampToWindow
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(FlyoutTest, ClampToWindowKeepsCardInside) {
+TEST_F(FlyoutTest, ClampToWindowKeepsCardInside)
+{
     // anchor 紧贴右边缘
     auto* btn = makeAnchor(QPoint(window->width() - 80, 280));
 
@@ -284,8 +301,8 @@ TEST_F(FlyoutTest, ClampToWindowKeepsCardInside) {
     fl.setClampToWindow(true);
     fl.showAt(btn);
 
-    const QRect card = fl.geometry().adjusted(
-        kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card =
+        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
 
     // 右边 ≤ window.right - 4（4px 呼吸空间）
     EXPECT_LE(card.right(), window->width() - 4);
@@ -294,7 +311,8 @@ TEST_F(FlyoutTest, ClampToWindowKeepsCardInside) {
     fl.close();
 }
 
-TEST_F(FlyoutTest, TopLevelResizeRepositionsAndRaisesAboveSiblings) {
+TEST_F(FlyoutTest, TopLevelResizeRepositionsAndRaisesAboveSiblings)
+{
     auto* btn = makeAnchor(QPoint(350, 280));
     auto* sibling = new QWidget(window);
     sibling->setGeometry(window->rect());
@@ -310,14 +328,15 @@ TEST_F(FlyoutTest, TopLevelResizeRepositionsAndRaisesAboveSiblings) {
     window->setFixedSize(840, 640);
     QApplication::processEvents();
 
-    const QRect card = fl.geometry().adjusted(
-        kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card =
+        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
     EXPECT_EQ(window->childAt(card.center()), &fl);
 
     fl.close();
 }
 
-TEST_F(FlyoutTest, TracksMovingAnchorAncestorAndClosesWhenAnchorIsClipped) {
+TEST_F(FlyoutTest, TracksMovingAnchorAncestorAndClosesWhenAnchorIsClipped)
+{
     auto* scrollingContent = new QWidget(window);
     scrollingContent->setGeometry(0, 0, window->width(), 1000);
     scrollingContent->show();
@@ -344,15 +363,16 @@ TEST_F(FlyoutTest, TracksMovingAnchorAncestorAndClosesWhenAnchorIsClipped) {
 // 8. 无 anchor 退化
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(FlyoutTest, NoAnchorFallsBackToCenter) {
+TEST_F(FlyoutTest, NoAnchorFallsBackToCenter)
+{
     Flyout fl(window);
     fl.setAnimationEnabled(false);
-    fl.open();  // 没有 anchor
+    fl.open(); // 没有 anchor
 
     EXPECT_TRUE(fl.isOpen());
 
     // 与基类 Popup 居中行为一致：top-level 中心 ≈ flyout 中心
-    const int expectedX = (window->width()  - fl.width())  / 2;
+    const int expectedX = (window->width() - fl.width()) / 2;
     const int expectedY = (window->height() - fl.height()) / 2;
     EXPECT_EQ(fl.x(), expectedX);
     EXPECT_EQ(fl.y(), expectedY);
@@ -364,7 +384,8 @@ TEST_F(FlyoutTest, NoAnchorFallsBackToCenter) {
 // 9. anchor 销毁安全
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(FlyoutTest, AnchorDestroyedSafely) {
+TEST_F(FlyoutTest, AnchorDestroyedSafely)
+{
     auto* btn = makeAnchor(QPoint(350, 280));
     btn->setFocus(Qt::OtherFocusReason);
     QApplication::processEvents();
@@ -384,7 +405,7 @@ TEST_F(FlyoutTest, AnchorDestroyedSafely) {
     // 此刻强制重新计算位置（关闭 -> 重开）
     fl.close();
     fl.open();
-    EXPECT_TRUE(fl.isOpen());  // 不 crash，回退到居中
+    EXPECT_TRUE(fl.isOpen()); // 不 crash，回退到居中
     fl.close();
     window->close();
     QApplication::processEvents();
@@ -394,7 +415,8 @@ TEST_F(FlyoutTest, AnchorDestroyedSafely) {
 // 10. light-dismiss 行为（继承自 Popup）
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(FlyoutTest, EscapeClosesFlyout) {
+TEST_F(FlyoutTest, EscapeClosesFlyout)
+{
     auto* btn = makeAnchor(QPoint(350, 280));
 
     Flyout fl(window);
@@ -407,7 +429,8 @@ TEST_F(FlyoutTest, EscapeClosesFlyout) {
     EXPECT_FALSE(fl.isOpen());
 }
 
-TEST_F(FlyoutTest, ClickOutsideClosesFlyout) {
+TEST_F(FlyoutTest, ClickOutsideClosesFlyout)
+{
     auto* btn = makeAnchor(QPoint(350, 280));
 
     Flyout fl(window);
@@ -425,15 +448,16 @@ TEST_F(FlyoutTest, ClickOutsideClosesFlyout) {
 // 11. Full = 居中
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(FlyoutTest, FullPlacementCenters) {
-    auto* btn = makeAnchor(QPoint(60, 60));  // 故意放角落
+TEST_F(FlyoutTest, FullPlacementCenters)
+{
+    auto* btn = makeAnchor(QPoint(60, 60)); // 故意放角落
 
     Flyout fl(window);
     fl.setAnimationEnabled(false);
     fl.setPlacement(Flyout::Full);
     fl.showAt(btn);
 
-    const int expectedX = (window->width()  - fl.width())  / 2;
+    const int expectedX = (window->width() - fl.width()) / 2;
     const int expectedY = (window->height() - fl.height()) / 2;
     EXPECT_EQ(fl.x(), expectedX);
     EXPECT_EQ(fl.y(), expectedY);
@@ -445,7 +469,8 @@ TEST_F(FlyoutTest, FullPlacementCenters) {
 // 12. VisualCheck — 6 种 Placement + Auto 反转 演示
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(FlyoutTest, VisualCheck) {
+TEST_F(FlyoutTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -465,18 +490,19 @@ TEST_F(FlyoutTest, VisualCheck) {
     // Theme toggle
     auto* themeBtn = new Button("Toggle Theme", visual);
     themeBtn->setFixedSize(140, 32);
-    themeBtn->anchors()->top   = {visual, Edge::Top,   12};
+    themeBtn->anchors()->top = {visual, Edge::Top, 12};
     themeBtn->anchors()->right = {visual, Edge::Right, -12};
     layout->addWidget(themeBtn);
     QObject::connect(themeBtn, &Button::clicked, [visual]() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                                    ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
         visual->onThemeUpdated();
     });
 
     // Helper to build an anchor button + a Flyout with given placement
-    auto addDemo = [&](const QString& label, Flyout::Placement p,
-                       int x, int y) {
+    auto addDemo = [&](const QString& label, Flyout::Placement p, int x, int y) {
         auto* btn = new Button(label, visual);
         btn->setFixedSize(140, 32);
         btn->move(x, y);
@@ -489,26 +515,23 @@ TEST_F(FlyoutTest, VisualCheck) {
         fl->setLayout(pl);
         auto* title = new Label(label, fl);
         title->setFluentTypography(Typography::FontRole::BodyStrong);
-        title->anchors()->top  = {fl, Edge::Top,  20};
+        title->anchors()->top = {fl, Edge::Top, 20};
         title->anchors()->left = {fl, Edge::Left, 20};
         pl->addWidget(title);
         auto* body = new Label(QStringLiteral("Placement = %1").arg(label), fl);
-        body->anchors()->top  = {title, Edge::Bottom, 8};
+        body->anchors()->top = {title, Edge::Bottom, 8};
         body->anchors()->left = {fl, Edge::Left, 20};
         pl->addWidget(body);
 
-        QObject::connect(btn, &Button::clicked, fl, [fl, btn]() {
-            fl->showAt(btn);
-        });
+        QObject::connect(btn, &Button::clicked, fl, [fl, btn]() { fl->showAt(btn); });
     };
 
-    addDemo("Top",    Flyout::Top,    330, 320);
+    addDemo("Top", Flyout::Top, 330, 320);
     addDemo("Bottom", Flyout::Bottom, 330, 240);
-    addDemo("Left",   Flyout::Left,   500, 280);
-    addDemo("Right",  Flyout::Right,  160, 280);
-    addDemo("Full",   Flyout::Full,    20, 540);
-    addDemo("Auto (anchor near bottom → flips Top)",
-            Flyout::Auto, 200, 540);
+    addDemo("Left", Flyout::Left, 500, 280);
+    addDemo("Right", Flyout::Right, 160, 280);
+    addDemo("Full", Flyout::Full, 20, 540);
+    addDemo("Auto (anchor near bottom → flips Top)", Flyout::Auto, 200, 540);
 
     visual->show();
     qApp->exec();

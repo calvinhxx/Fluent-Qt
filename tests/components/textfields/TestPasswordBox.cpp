@@ -28,7 +28,8 @@ using namespace fluent::textfields;
 class PasswordBoxTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& colors = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(colors.bgCanvas.name()));
     }
@@ -42,7 +43,8 @@ protected:
             "fluent::textfields::PasswordBox::PasswordRevealMode");
     }
 
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new PasswordBoxTestWindow();
         window->setFixedSize(560, 460);
         layout = new AnchorLayout(window);
@@ -50,11 +52,10 @@ protected:
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
-    void showAndFocus(PasswordBox* box) {
+    void showAndFocus(PasswordBox* box)
+    {
         window->show();
         box->setFocus(Qt::OtherFocusReason);
         QApplication::processEvents();
@@ -66,8 +67,7 @@ protected:
 
 namespace {
 
-bool actionMatchesStandardKey(const QAction* action,
-                              QKeySequence::StandardKey standardKey)
+bool actionMatchesStandardKey(const QAction* action, QKeySequence::StandardKey standardKey)
 {
     if (!action)
         return false;
@@ -76,16 +76,14 @@ bool actionMatchesStandardKey(const QAction* action,
     if (shortcuts.isEmpty()) {
         const int tabIndex = action->text().indexOf(QLatin1Char('\t'));
         if (tabIndex >= 0) {
-            const QKeySequence embedded(
-                action->text().mid(tabIndex + 1).trimmed(),
-                QKeySequence::NativeText);
+            const QKeySequence embedded(action->text().mid(tabIndex + 1).trimmed(),
+                                        QKeySequence::NativeText);
             if (!embedded.isEmpty())
                 shortcuts.append(embedded);
         }
     }
 
-    const QList<QKeySequence> bindings =
-        QKeySequence::keyBindings(standardKey);
+    const QList<QKeySequence> bindings = QKeySequence::keyBindings(standardKey);
     for (const QKeySequence& shortcut : shortcuts) {
         for (const QKeySequence& binding : bindings) {
             if (shortcut.matches(binding) == QKeySequence::ExactMatch)
@@ -97,7 +95,8 @@ bool actionMatchesStandardKey(const QAction* action,
 
 } // namespace
 
-TEST_F(PasswordBoxTest, DefaultsAndRevealButton) {
+TEST_F(PasswordBoxTest, DefaultsAndRevealButton)
+{
     PasswordBox box(window);
 
     EXPECT_TRUE(box.password().isEmpty());
@@ -111,7 +110,8 @@ TEST_F(PasswordBoxTest, DefaultsAndRevealButton) {
     EXPECT_TRUE(revealButton->isHidden());
 }
 
-TEST_F(PasswordBoxTest, PasswordPropertyUsesTextValue) {
+TEST_F(PasswordBoxTest, PasswordPropertyUsesTextValue)
+{
     PasswordBox box(window);
     QSignalSpy passwordSpy(&box, &PasswordBox::passwordChanged);
 
@@ -126,7 +126,8 @@ TEST_F(PasswordBoxTest, PasswordPropertyUsesTextValue) {
     EXPECT_EQ(passwordSpy.count(), 1);
 }
 
-TEST_F(PasswordBoxTest, UserEditingEmitsPasswordChanged) {
+TEST_F(PasswordBoxTest, UserEditingEmitsPasswordChanged)
+{
     auto* box = new PasswordBox(window);
     box->setFixedWidth(240);
     layout->addWidget(box);
@@ -141,7 +142,8 @@ TEST_F(PasswordBoxTest, UserEditingEmitsPasswordChanged) {
     EXPECT_EQ(passwordSpy.last().at(0).toString(), "abc");
 }
 
-TEST_F(PasswordBoxTest, RevealModesControlEchoAndButton) {
+TEST_F(PasswordBoxTest, RevealModesControlEchoAndButton)
+{
     PasswordBox box(window);
     box.resize(240, box.sizeHint().height());
     box.setPassword("secret");
@@ -165,7 +167,8 @@ TEST_F(PasswordBoxTest, RevealModesControlEchoAndButton) {
     EXPECT_FALSE(revealButton->isHidden());
 }
 
-TEST_F(PasswordBoxTest, PeekButtonTemporarilyRevealsAndKeepsFocus) {
+TEST_F(PasswordBoxTest, PeekButtonTemporarilyRevealsAndKeepsFocus)
+{
     auto* box = new PasswordBox(window);
     box->setFixedWidth(240);
     box->setPassword("secret");
@@ -187,7 +190,8 @@ TEST_F(PasswordBoxTest, PeekButtonTemporarilyRevealsAndKeepsFocus) {
     EXPECT_TRUE(box->hasFocus());
 }
 
-TEST_F(PasswordBoxTest, PeekRestoresOnLeaveAndFocusLoss) {
+TEST_F(PasswordBoxTest, PeekRestoresOnLeaveAndFocusLoss)
+{
     auto* box = new PasswordBox(window);
     box->setFixedWidth(240);
     box->setPassword("secret");
@@ -215,7 +219,8 @@ TEST_F(PasswordBoxTest, PeekRestoresOnLeaveAndFocusLoss) {
     EXPECT_EQ(box->echoMode(), QLineEdit::Password);
 }
 
-TEST_F(PasswordBoxTest, HeaderHeightAndButtonLayout) {
+TEST_F(PasswordBoxTest, HeaderHeightAndButtonLayout)
+{
     PasswordBox box(window);
     EXPECT_EQ(box.sizeHint().height(), 32);
 
@@ -232,7 +237,8 @@ TEST_F(PasswordBoxTest, HeaderHeightAndButtonLayout) {
     EXPECT_LT(revealButton->geometry().bottom(), box.height());
 }
 
-TEST_F(PasswordBoxTest, DisabledAndReadOnlyHideRevealButton) {
+TEST_F(PasswordBoxTest, DisabledAndReadOnlyHideRevealButton)
+{
     PasswordBox box(window);
     box.resize(240, box.sizeHint().height());
     box.setPassword("secret");
@@ -258,8 +264,7 @@ TEST_F(PasswordBoxTest, Contract_HiddenPasswordUsesInheritedFluentContextMenu)
     auto* box = new PasswordBox(window);
     box->setFixedWidth(240);
     box->setPassword(QStringLiteral("secret"));
-    box->setPasswordRevealMode(
-        PasswordBox::PasswordRevealMode::Hidden);
+    box->setPasswordRevealMode(PasswordBox::PasswordRevealMode::Hidden);
     box->setSelection(0, 1);
     layout->addWidget(box);
     showAndFocus(box);
@@ -273,25 +278,20 @@ TEST_F(PasswordBoxTest, Contract_HiddenPasswordUsesInheritedFluentContextMenu)
     bool selectAllEnabled = false;
     QTimer::singleShot(0, [&]() {
         auto* menu =
-            qobject_cast<fluent::menus_toolbars::FluentMenu*>(
-                QApplication::activePopupWidget());
+            qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
         sawFluentMenu = menu != nullptr;
         if (!menu)
             return;
 
-        EXPECT_EQ(
-            menu->objectName(),
-            QStringLiteral("FluentLineEdit.ContextMenu"));
+        EXPECT_EQ(menu->objectName(), QStringLiteral("FluentLineEdit.ContextMenu"));
         for (QAction* action : menu->actions()) {
             if (actionMatchesStandardKey(action, QKeySequence::Cut)) {
                 sawCut = true;
                 cutEnabled = action->isEnabled();
-            } else if (actionMatchesStandardKey(
-                           action, QKeySequence::Copy)) {
+            } else if (actionMatchesStandardKey(action, QKeySequence::Copy)) {
                 sawCopy = true;
                 copyEnabled = action->isEnabled();
-            } else if (actionMatchesStandardKey(
-                           action, QKeySequence::SelectAll)) {
+            } else if (actionMatchesStandardKey(action, QKeySequence::SelectAll)) {
                 sawSelectAll = true;
                 selectAllEnabled = action->isEnabled();
             }
@@ -301,8 +301,7 @@ TEST_F(PasswordBoxTest, Contract_HiddenPasswordUsesInheritedFluentContextMenu)
 
     const QPoint localPos = box->rect().center();
     const QPoint globalPos = box->mapToGlobal(localPos);
-    QContextMenuEvent event(
-        QContextMenuEvent::Mouse, localPos, globalPos);
+    QContextMenuEvent event(QContextMenuEvent::Mouse, localPos, globalPos);
     QApplication::sendEvent(box, &event);
 
     EXPECT_TRUE(event.isAccepted());
@@ -325,15 +324,13 @@ TEST_F(PasswordBoxTest, Contract_PeekContextMenuEndsRevealAndNeverExportsText)
     layout->addWidget(box);
     showAndFocus(box);
 
-    auto* revealButton =
-        box->findChild<Button*>(QStringLiteral("PasswordBoxRevealButton"));
+    auto* revealButton = box->findChild<Button*>(QStringLiteral("PasswordBoxRevealButton"));
     ASSERT_NE(revealButton, nullptr);
     QTest::mousePress(revealButton, Qt::LeftButton);
     QApplication::processEvents();
     ASSERT_EQ(box->echoMode(), QLineEdit::Normal);
     box->setSelection(0, 1);
-    QApplication::clipboard()->setText(
-        QStringLiteral("clipboard sentinel"));
+    QApplication::clipboard()->setText(QStringLiteral("clipboard sentinel"));
 
     bool sawCut = false;
     bool sawCopy = false;
@@ -342,9 +339,7 @@ TEST_F(PasswordBoxTest, Contract_PeekContextMenuEndsRevealAndNeverExportsText)
     bool copyEnabled = true;
     QTimer::singleShot(0, [&]() {
         QWidget* popup = QApplication::activePopupWidget();
-        auto* menu =
-            qobject_cast<fluent::menus_toolbars::FluentMenu*>(
-                popup);
+        auto* menu = qobject_cast<fluent::menus_toolbars::FluentMenu*>(popup);
         sawFluentMenu = menu != nullptr;
         if (!menu) {
             if (popup)
@@ -355,8 +350,7 @@ TEST_F(PasswordBoxTest, Contract_PeekContextMenuEndsRevealAndNeverExportsText)
             if (actionMatchesStandardKey(action, QKeySequence::Cut)) {
                 sawCut = true;
                 cutEnabled = action->isEnabled();
-            } else if (actionMatchesStandardKey(
-                           action, QKeySequence::Copy)) {
+            } else if (actionMatchesStandardKey(action, QKeySequence::Copy)) {
                 sawCopy = true;
                 copyEnabled = action->isEnabled();
             }
@@ -365,10 +359,7 @@ TEST_F(PasswordBoxTest, Contract_PeekContextMenuEndsRevealAndNeverExportsText)
     });
 
     const QPoint localPos = box->rect().center();
-    QContextMenuEvent event(
-        QContextMenuEvent::Mouse,
-        localPos,
-        box->mapToGlobal(localPos));
+    QContextMenuEvent event(QContextMenuEvent::Mouse, localPos, box->mapToGlobal(localPos));
     QApplication::sendEvent(box, &event);
     QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
     QTest::mouseRelease(revealButton, Qt::LeftButton);
@@ -382,13 +373,11 @@ TEST_F(PasswordBoxTest, Contract_PeekContextMenuEndsRevealAndNeverExportsText)
     EXPECT_FALSE(cutEnabled);
     EXPECT_FALSE(copyEnabled);
     EXPECT_EQ(box->password(), QStringLiteral("secret"));
-    EXPECT_EQ(
-        QApplication::clipboard()->text(),
-        QStringLiteral("clipboard sentinel"));
+    EXPECT_EQ(QApplication::clipboard()->text(), QStringLiteral("clipboard sentinel"));
 }
 
-
-TEST_F(PasswordBoxTest, VisualCheck) {
+TEST_F(PasswordBoxTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -457,7 +446,10 @@ TEST_F(PasswordBoxTest, VisualCheck) {
     layout->addWidget(themeButton);
 
     QObject::connect(themeButton, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
+                                                fluent::FluentElement::Light
+                                            ? fluent::FluentElement::Dark
+                                            : fluent::FluentElement::Light);
     });
 
     window->show();

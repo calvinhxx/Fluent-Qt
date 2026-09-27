@@ -30,8 +30,7 @@ QDate todayMonth()
     return firstOfMonth(QDate::currentDate());
 }
 
-Qt::DayOfWeek normalizeDayOfWeek(Qt::DayOfWeek day,
-                                 Qt::DayOfWeek fallback)
+Qt::DayOfWeek normalizeDayOfWeek(Qt::DayOfWeek day, Qt::DayOfWeek fallback)
 {
     if (day < Qt::Monday || day > Qt::Sunday)
         return fallback;
@@ -62,9 +61,7 @@ QDate boundedMonthForRange(const QDate& month, const QDate& minDate, const QDate
 class CalendarDatePickerPopup : public fluent::dialogs_flyouts::Flyout {
 public:
     explicit CalendarDatePickerPopup(CalendarDatePicker* picker)
-        : Flyout(picker)
-        , m_picker(picker)
-        , m_calendarView(new CalendarView(this))
+        : Flyout(picker), m_picker(picker), m_calendarView(new CalendarView(this))
     {
         setObjectName(QStringLiteral("CalendarDatePickerPopup"));
         setAnimationEnabled(false);
@@ -76,8 +73,8 @@ public:
 
         m_calendarView->setObjectName(QStringLiteral("CalendarDatePickerCalendarView"));
         m_calendarView->setFrameVisible(false);
-        connect(m_calendarView, &CalendarView::dateActivated,
-                m_picker, &CalendarDatePicker::selectDateFromCalendar);
+        connect(m_calendarView, &CalendarView::dateActivated, m_picker,
+                &CalendarDatePicker::selectDateFromCalendar);
 
         layoutCalendarView();
     }
@@ -108,7 +105,8 @@ public:
         if (!m_picker)
             return;
 
-        const QDate month = resetMonth ? m_picker->defaultVisibleMonth() : m_calendarView->visibleMonth();
+        const QDate month =
+            resetMonth ? m_picker->defaultVisibleMonth() : m_calendarView->visibleMonth();
         m_calendarView->setLocale(m_picker->locale());
         m_calendarView->setDateRange(m_picker->minDate(), m_picker->maxDate());
         m_calendarView->setFirstDayOfWeek(m_picker->firstDayOfWeek());
@@ -162,8 +160,7 @@ private:
     CalendarView* m_calendarView = nullptr;
 };
 
-CalendarDatePicker::CalendarDatePicker(QWidget* parent)
-    : fluent::basicinput::Button(parent)
+CalendarDatePicker::CalendarDatePicker(QWidget* parent) : fluent::basicinput::Button(parent)
 {
     m_observedLocale = QWidget::locale();
     m_firstDayOfWeek = m_observedLocale.firstDayOfWeek();
@@ -233,8 +230,7 @@ void CalendarDatePicker::setMaxDate(const QDate& date)
     setDateRange(m_minDate, date);
 }
 
-void CalendarDatePicker::setDateRange(const QDate& minDate,
-                                      const QDate& maxDate)
+void CalendarDatePicker::setDateRange(const QDate& minDate, const QDate& maxDate)
 {
     QDate nextMin = minDate;
     QDate nextMax = maxDate;
@@ -275,8 +271,7 @@ void CalendarDatePicker::setDisplayFormat(const QString& format)
 
 void CalendarDatePicker::setFirstDayOfWeek(Qt::DayOfWeek day)
 {
-    const Qt::DayOfWeek normalized =
-        normalizeDayOfWeek(day, locale().firstDayOfWeek());
+    const Qt::DayOfWeek normalized = normalizeDayOfWeek(day, locale().firstDayOfWeek());
     m_firstDayFollowsLocale = false;
     if (m_firstDayOfWeek == normalized)
         return;
@@ -374,12 +369,10 @@ void CalendarDatePicker::clearDate()
 void CalendarDatePicker::changeEvent(QEvent* event)
 {
     fluent::basicinput::Button::changeEvent(event);
-    if (event->type() == QEvent::LocaleChange
-        && m_observedLocale != QWidget::locale()) {
+    if (event->type() == QEvent::LocaleChange && m_observedLocale != QWidget::locale()) {
         m_observedLocale = QWidget::locale();
         if (m_firstDayFollowsLocale) {
-            const Qt::DayOfWeek automaticDay =
-                m_observedLocale.firstDayOfWeek();
+            const Qt::DayOfWeek automaticDay = m_observedLocale.firstDayOfWeek();
             if (m_firstDayOfWeek != automaticDay) {
                 m_firstDayOfWeek = automaticDay;
                 emit firstDayOfWeekChanged(m_firstDayOfWeek);
@@ -462,11 +455,10 @@ void CalendarDatePicker::ensurePopup()
         m_popup = nullptr;
         handlePopupOpenChanged(false);
     });
-    connect(m_popup, &fluent::dialogs_flyouts::Popup::isOpenChanged,
-            this, &CalendarDatePicker::handlePopupOpenChanged);
-    connect(m_popup, &fluent::dialogs_flyouts::Popup::closed, this, [this]() {
-        handlePopupOpenChanged(false);
-    });
+    connect(m_popup, &fluent::dialogs_flyouts::Popup::isOpenChanged, this,
+            &CalendarDatePicker::handlePopupOpenChanged);
+    connect(m_popup, &fluent::dialogs_flyouts::Popup::closed, this,
+            [this]() { handlePopupOpenChanged(false); });
 }
 
 void CalendarDatePicker::handlePopupOpenChanged(bool open)

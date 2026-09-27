@@ -53,7 +53,8 @@ void showAndProcess(QWidget& widget)
     QApplication::processEvents();
 }
 
-QWidget* createPage(const QString& title, const QString& body = QString(), QWidget* parent = nullptr)
+QWidget* createPage(const QString& title, const QString& body = QString(),
+                    QWidget* parent = nullptr)
 {
     using Edge = AnchorLayout::Edge;
     auto* page = new QWidget(parent);
@@ -67,8 +68,11 @@ QWidget* createPage(const QString& title, const QString& body = QString(), QWidg
     heading->anchors()->right = {page, Edge::Right, -18};
     addAnchored(layout, heading);
 
-    auto* summary = new Label(body.isEmpty() ? QStringLiteral("External page hosted by StackContentHost "
-                                     "and driven by SelectorBar selection.") : body, page);
+    auto* summary =
+        new Label(body.isEmpty() ? QStringLiteral("External page hosted by StackContentHost "
+                                                  "and driven by SelectorBar selection.")
+                                 : body,
+                  page);
     summary->setFluentTypography(Typography::FontRole::Caption);
     summary->setTextElideMode(Qt::ElideRight);
     summary->anchors()->top = {heading, Edge::Bottom, 8};
@@ -91,7 +95,8 @@ class SelectorBarTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite()
     {
-        qRegisterMetaType<fluent::navigation::SelectorBarItem>("fluent::navigation::SelectorBarItem");
+        qRegisterMetaType<fluent::navigation::SelectorBarItem>(
+            "fluent::navigation::SelectorBarItem");
         qRegisterMetaType<fluent::navigation::SelectorBar::OverflowBehavior>(
             "fluent::navigation::SelectorBar::OverflowBehavior");
         qRegisterMetaType<QVector<int>>("QVector<int>");
@@ -188,7 +193,8 @@ TEST_F(SelectorBarTest, ItemManagementPreservesMetadataAndClampsSelection)
     EXPECT_EQ(selector.selectedIndex(), 0);
     EXPECT_TRUE(selector.itemAt(0).selected);
 
-    SelectorBarItem rich(QStringLiteral("Sample code"), Typography::Icons::Document, true, false, QStringLiteral("code"), QStringLiteral("Sample code page"));
+    SelectorBarItem rich(QStringLiteral("Sample code"), Typography::Icons::Document, true, false,
+                         QStringLiteral("code"), QStringLiteral("Sample code page"));
     EXPECT_EQ(selector.addItem(rich), 1);
     EXPECT_FALSE(selector.itemAt(1).visible);
     EXPECT_EQ(selector.itemAt(1).data.toString(), QStringLiteral("code"));
@@ -240,7 +246,8 @@ TEST_F(SelectorBarTest, LayoutOverflowAndGeometryAreDeterministic)
     using Edge = AnchorLayout::Edge;
     auto* selector = new SelectorBar(window);
     for (int index = 0; index < 9; ++index)
-        selector->addItem(SelectorBarItem(QStringLiteral("Category %1 with long text").arg(index), Typography::Icons::Folder));
+        selector->addItem(SelectorBarItem(QStringLiteral("Category %1 with long text").arg(index),
+                                          Typography::Icons::Folder));
     selector->setItemVisible(2, false);
     selector->setFixedSize(280, 44);
     selector->anchors()->top = {window, Edge::Top, 20};
@@ -253,7 +260,8 @@ TEST_F(SelectorBarTest, LayoutOverflowAndGeometryAreDeterministic)
     EXPECT_TRUE(selector->itemGeometry(2).isEmpty());
     const QRect initialIndicator = selector->selectedIndicatorGeometry(selector->selectedIndex());
     EXPECT_FALSE(initialIndicator.isEmpty());
-    EXPECT_LT(initialIndicator.width(), selector->itemGeometry(selector->selectedIndex()).width() / 2);
+    EXPECT_LT(initialIndicator.width(),
+              selector->itemGeometry(selector->selectedIndex()).width() / 2);
     EXPECT_LE(initialIndicator.width(), 24);
     EXPECT_LT(selector->visibleItemIndexes().size(), selector->itemCount());
     EXPECT_TRUE(selector->hiddenItemIndexes().contains(2));
@@ -261,7 +269,8 @@ TEST_F(SelectorBarTest, LayoutOverflowAndGeometryAreDeterministic)
 
     selector->clearSelection();
     const QVector<int> before = selector->visibleItemIndexes();
-    QTest::mouseClick(selector, Qt::LeftButton, Qt::NoModifier, selector->overflowForwardGeometry().center());
+    QTest::mouseClick(selector, Qt::LeftButton, Qt::NoModifier,
+                      selector->overflowForwardGeometry().center());
     QApplication::processEvents();
     EXPECT_NE(selector->visibleItemIndexes(), before);
 
@@ -275,7 +284,8 @@ TEST_F(SelectorBarTest, LayoutOverflowAndGeometryAreDeterministic)
     QApplication::processEvents();
     EXPECT_FALSE(selector->overflowGeometry().isEmpty());
     QSignalSpy overflowSpy(selector, &SelectorBar::overflowActivated);
-    QTest::mouseClick(selector, Qt::LeftButton, Qt::NoModifier, selector->overflowGeometry().center());
+    QTest::mouseClick(selector, Qt::LeftButton, Qt::NoModifier,
+                      selector->overflowGeometry().center());
     QApplication::processEvents();
     EXPECT_EQ(overflowSpy.count(), 1);
 
@@ -292,7 +302,8 @@ TEST_F(SelectorBarTest, PointerKeyboardThemeAndAccessibilityBehaveAsSelector)
     selector->addItem(SelectorBarItem(QStringLiteral("Overview"), Typography::Icons::Home));
     selector->addItem(SelectorBarItem(QStringLiteral("Activity"), Typography::Icons::Calendar));
     selector->addItem(SelectorBarItem(QStringLiteral("Disabled"), Typography::Icons::Lock, false));
-    selector->addItem(SelectorBarItem(QStringLiteral("Hidden"), Typography::Icons::Hide, true, false));
+    selector->addItem(
+        SelectorBarItem(QStringLiteral("Hidden"), Typography::Icons::Hide, true, false));
     selector->setItemAccessibleName(1, QStringLiteral("Activity timeline"));
     selector->setFixedSize(560, 44);
     selector->anchors()->top = {window, Edge::Top, 20};
@@ -338,8 +349,7 @@ TEST_F(SelectorBarTest, PointerKeyboardThemeAndAccessibilityBehaveAsSelector)
     selector->setSelectedIndex(0);
     selector->setLayoutDirection(Qt::RightToLeft);
     QApplication::processEvents();
-    EXPECT_GT(selector->itemGeometry(0).center().x(),
-              selector->itemGeometry(1).center().x());
+    EXPECT_GT(selector->itemGeometry(0).center().x(), selector->itemGeometry(1).center().x());
     QTest::keyClick(selector, Qt::Key_Left);
     QTest::keyClick(selector, Qt::Key_Space);
     EXPECT_EQ(selector->selectedIndex(), 1);
@@ -361,8 +371,10 @@ TEST_F(SelectorBarTest, SelectionCanDriveExternalStackContentHostAndState)
 {
     using Edge = AnchorLayout::Edge;
     auto* selector = new SelectorBar(window);
-    selector->addItem(SelectorBarItem(QStringLiteral("Inbox"), Typography::Icons::Mail, true, true, QStringLiteral("inbox")));
-    selector->addItem(SelectorBarItem(QStringLiteral("Calendar"), Typography::Icons::Calendar, true, true, QStringLiteral("calendar")));
+    selector->addItem(SelectorBarItem(QStringLiteral("Inbox"), Typography::Icons::Mail, true, true,
+                                      QStringLiteral("inbox")));
+    selector->addItem(SelectorBarItem(QStringLiteral("Calendar"), Typography::Icons::Calendar, true,
+                                      true, QStringLiteral("calendar")));
     selector->setFixedSize(520, 44);
     selector->anchors()->top = {window, Edge::Top, 20};
     selector->anchors()->left = {window, Edge::Left, 20};
@@ -380,12 +392,11 @@ TEST_F(SelectorBarTest, SelectionCanDriveExternalStackContentHostAndState)
     addAnchored(layout, host);
 
     QString activeKey;
-    QObject::connect(selector, &SelectorBar::currentChanged, host, [host](int index) {
-        host->setCurrentIndex(index, 0, false);
-    });
-    QObject::connect(selector, &SelectorBar::selectionChanged, window, [&activeKey](int, const SelectorBarItem& item) {
-        activeKey = item.data.toString();
-    });
+    QObject::connect(selector, &SelectorBar::currentChanged, host,
+                     [host](int index) { host->setCurrentIndex(index, 0, false); });
+    QObject::connect(
+        selector, &SelectorBar::selectionChanged, window,
+        [&activeKey](int, const SelectorBarItem& item) { activeKey = item.data.toString(); });
     host->setCurrentIndex(selector->selectedIndex(), 0, false);
     activeKey = selector->selectedItem().data.toString();
     showAndProcess(*window);
@@ -419,11 +430,16 @@ TEST_F(SelectorBarTest, VisualCheck)
     addAnchored(layout, title);
 
     auto* selector = new SelectorBar(window);
-    selector->addItem(SelectorBarItem(QStringLiteral("Overview"), Typography::Icons::Home, true, true, QStringLiteral("overview")));
-    selector->addItem(SelectorBarItem(QStringLiteral("Activity"), Typography::Icons::Calendar, true, true, QStringLiteral("activity")));
-    selector->addItem(SelectorBarItem(QStringLiteral("Sample code"), Typography::Icons::Document, true, false, QStringLiteral("code")));
-    selector->addItem(SelectorBarItem(QStringLiteral("Disabled"), Typography::Icons::Lock, false, true, QStringLiteral("disabled")));
-    selector->addItem(SelectorBarItem(QStringLiteral("Settings"), Typography::Icons::Settings, true, true, QStringLiteral("settings")));
+    selector->addItem(SelectorBarItem(QStringLiteral("Overview"), Typography::Icons::Home, true,
+                                      true, QStringLiteral("overview")));
+    selector->addItem(SelectorBarItem(QStringLiteral("Activity"), Typography::Icons::Calendar, true,
+                                      true, QStringLiteral("activity")));
+    selector->addItem(SelectorBarItem(QStringLiteral("Sample code"), Typography::Icons::Document,
+                                      true, false, QStringLiteral("code")));
+    selector->addItem(SelectorBarItem(QStringLiteral("Disabled"), Typography::Icons::Lock, false,
+                                      true, QStringLiteral("disabled")));
+    selector->addItem(SelectorBarItem(QStringLiteral("Settings"), Typography::Icons::Settings, true,
+                                      true, QStringLiteral("settings")));
     selector->setFixedSize(920, 44);
     selector->anchors()->top = {title, Edge::Bottom, 4};
     selector->anchors()->left = {title, Edge::Left, 0};
@@ -431,19 +447,26 @@ TEST_F(SelectorBarTest, VisualCheck)
 
     auto* host = new StackContentHost(window);
     host->setFixedSize(920, 216);
-    host->insertPage(0, createPage(QStringLiteral("Overview"), QStringLiteral("SelectorBar owns the selector row; "
-                                   "StackContentHost owns the visible page.")));
-    host->insertPage(1, createPage(QStringLiteral("Activity"), QStringLiteral("SelectionChanged can also swap external data sources.")));
-    host->insertPage(2, createPage(QStringLiteral("Sample code"), QStringLiteral("This hidden selector item mimics WinUI "
-                                   "Gallery sample-code visibility.")));
-    host->insertPage(3, createPage(QStringLiteral("Disabled"), QStringLiteral("Disabled items stay visible but cannot be selected.")));
-    host->insertPage(4, createPage(QStringLiteral("Settings"), QStringLiteral("The page is switched externally through currentChanged.")));
+    host->insertPage(0, createPage(QStringLiteral("Overview"),
+                                   QStringLiteral("SelectorBar owns the selector row; "
+                                                  "StackContentHost owns the visible page.")));
+    host->insertPage(
+        1, createPage(QStringLiteral("Activity"),
+                      QStringLiteral("SelectionChanged can also swap external data sources.")));
+    host->insertPage(2, createPage(QStringLiteral("Sample code"),
+                                   QStringLiteral("This hidden selector item mimics WinUI "
+                                                  "Gallery sample-code visibility.")));
+    host->insertPage(
+        3, createPage(QStringLiteral("Disabled"),
+                      QStringLiteral("Disabled items stay visible but cannot be selected.")));
+    host->insertPage(
+        4, createPage(QStringLiteral("Settings"),
+                      QStringLiteral("The page is switched externally through currentChanged.")));
     host->anchors()->top = {selector, Edge::Bottom, 0};
     host->anchors()->left = {selector, Edge::Left, 0};
     addAnchored(layout, host);
-    QObject::connect(selector, &SelectorBar::currentChanged, host, [host](int index) {
-        host->setCurrentIndex(index, 0, true);
-    });
+    QObject::connect(selector, &SelectorBar::currentChanged, host,
+                     [host](int index) { host->setCurrentIndex(index, 0, true); });
     host->setCurrentIndex(selector->selectedIndex(), 0, false);
 
     auto* compact = new SelectorBar(window);
@@ -465,7 +488,9 @@ TEST_F(SelectorBarTest, VisualCheck)
 
     auto* overflow = new SelectorBar(window);
     for (int index = 0; index < 10; ++index)
-        overflow->addItem(SelectorBarItem(QStringLiteral("Category %1").arg(index + 1), index % 2 == 0 ? Typography::Icons::Folder : Typography::Icons::Document));
+        overflow->addItem(SelectorBarItem(QStringLiteral("Category %1").arg(index + 1),
+                                          index % 2 == 0 ? Typography::Icons::Folder
+                                                         : Typography::Icons::Document));
     overflow->setItemVisible(3, false);
     overflow->setOverflowBehavior(SelectorBar::OverflowBehavior::MoreButton);
     overflow->setFixedSize(420, 44);
@@ -477,17 +502,21 @@ TEST_F(SelectorBarTest, VisualCheck)
     switchTheme->setFixedSize(140, 32);
     switchTheme->anchors()->top = {compact, Edge::Bottom, 28};
     switchTheme->anchors()->left = {compact, Edge::Left, 0};
-    QObject::connect(switchTheme, &Button::clicked, window, [this, title, selector, host, compact, overflowTitle, overflow]() {
-        const fluent::FluentElement::Theme next = fluent::FluentElement::currentTheme() == fluent::FluentElement::Light ? fluent::FluentElement::Dark : fluent::FluentElement::Light;
-        fluent::FluentElement::setTheme(next);
-        window->onThemeUpdated();
-        title->onThemeUpdated();
-        selector->onThemeUpdated();
-        host->onThemeUpdated();
-        compact->onThemeUpdated();
-        overflowTitle->onThemeUpdated();
-        overflow->onThemeUpdated();
-    });
+    QObject::connect(switchTheme, &Button::clicked, window,
+                     [this, title, selector, host, compact, overflowTitle, overflow]() {
+                         const fluent::FluentElement::Theme next =
+                             fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                                 ? fluent::FluentElement::Dark
+                                 : fluent::FluentElement::Light;
+                         fluent::FluentElement::setTheme(next);
+                         window->onThemeUpdated();
+                         title->onThemeUpdated();
+                         selector->onThemeUpdated();
+                         host->onThemeUpdated();
+                         compact->onThemeUpdated();
+                         overflowTitle->onThemeUpdated();
+                         overflow->onThemeUpdated();
+                     });
     addAnchored(layout, switchTheme);
 
     window->show();

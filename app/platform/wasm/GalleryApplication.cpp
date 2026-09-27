@@ -29,8 +29,8 @@ std::unique_ptr<GalleryWindow> galleryWindow;
 
 QString requestedWindowMode()
 {
-    const char* rawMode = emscripten_run_script_string(
-        "window.fluentQtWindowProfile?.mode || 'windowed'");
+    const char* rawMode =
+        emscripten_run_script_string("window.fluentQtWindowProfile?.mode || 'windowed'");
     return QString::fromUtf8(rawMode ? rawMode : "windowed");
 }
 
@@ -47,8 +47,7 @@ void showGalleryWindow(GalleryWindow* window)
         return;
 
     QScreen* screen = application ? application->primaryScreen() : nullptr;
-    const QRect available = screen ? screen->availableGeometry()
-                                   : QRect(0, 0, 1280, 720);
+    const QRect available = screen ? screen->availableGeometry() : QRect(0, 0, 1280, 720);
     constexpr int stageMargin = 24;
     constexpr int preferredMinimumWidth = 900;
     constexpr int preferredMinimumHeight = 600;
@@ -57,23 +56,15 @@ void showGalleryWindow(GalleryWindow* window)
 
     const int availableWidth = qMax(1, available.width() - stageMargin * 2);
     const int availableHeight = qMax(1, available.height() - stageMargin * 2);
-    const int preferredWidth = qBound(
-        preferredMinimumWidth,
-        qRound(available.width() * 0.72),
-        preferredMaximumWidth);
-    const int preferredHeight = qBound(
-        preferredMinimumHeight,
-        qRound(available.height() * 0.78),
-        preferredMaximumHeight);
-    const QSize size(qMin(availableWidth, preferredWidth),
-                     qMin(availableHeight, preferredHeight));
-    const QPoint topLeft(
-        available.x() + (available.width() - size.width()) / 2,
-        available.y() + (available.height() - size.height()) / 2);
-    showTopLevelWindow(
-        window,
-        QRect(topLeft, size),
-        requestedWindowMode() == QStringLiteral("maximized"));
+    const int preferredWidth =
+        qBound(preferredMinimumWidth, qRound(available.width() * 0.72), preferredMaximumWidth);
+    const int preferredHeight =
+        qBound(preferredMinimumHeight, qRound(available.height() * 0.78), preferredMaximumHeight);
+    const QSize size(qMin(availableWidth, preferredWidth), qMin(availableHeight, preferredHeight));
+    const QPoint topLeft(available.x() + (available.width() - size.width()) / 2,
+                         available.y() + (available.height() - size.height()) / 2);
+    showTopLevelWindow(window, QRect(topLeft, size),
+                       requestedWindowMode() == QStringLiteral("maximized"));
 }
 
 } // namespace
@@ -82,10 +73,8 @@ int runApplication(int argc, char** argv)
 {
     fluent::webassembly::configureRuntime();
     QCoreApplication::setApplicationName(capabilities().applicationName);
-    QCoreApplication::setOrganizationName(
-        QStringLiteral(FLUENT_QT_GALLERY_ORGANIZATION_NAME));
-    QCoreApplication::setApplicationVersion(
-        QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
+    QCoreApplication::setOrganizationName(QStringLiteral(FLUENT_QT_GALLERY_ORGANIZATION_NAME));
+    QCoreApplication::setApplicationVersion(QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
     fluent::prepareHighDpiApplication();
 
     application = std::make_unique<QApplication>(argc, argv);
@@ -98,15 +87,13 @@ int runApplication(int argc, char** argv)
     loggingOptions.installQtMessageHandler = true;
     fluent::support::logging::initialize(loggingOptions);
     LOG_INFO(QStringLiteral("GalleryApp startup appName=%1 organization=%2")
-                 .arg(QApplication::applicationName(),
-                      QApplication::organizationName()));
+                 .arg(QApplication::applicationName(), QApplication::organizationName()));
     application->setWindowIcon(appicon::icon());
 
     galleryWindow = std::make_unique<GalleryWindow>();
     const QString initialRoute = requestedRoute();
     if (!initialRoute.isEmpty() && !galleryWindow->selectRoute(initialRoute)) {
-        LOG_WARN(QStringLiteral("GalleryApp ignored unknown requested route=%1")
-                     .arg(initialRoute));
+        LOG_WARN(QStringLiteral("GalleryApp ignored unknown requested route=%1").arg(initialRoute));
     }
     // The browser owns only the Qt screen. The runtime adapter selects the
     // initial presentation while Fluent Window remains the single owner of

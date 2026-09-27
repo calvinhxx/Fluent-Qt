@@ -24,8 +24,7 @@ QString stripMnemonic(const QString& source)
             result.append(source.at(index));
             continue;
         }
-        if (index + 1 < source.size()
-            && source.at(index + 1) == QLatin1Char('&')) {
+        if (index + 1 < source.size() && source.at(index + 1) == QLatin1Char('&')) {
             result.append(QLatin1Char('&'));
             ++index;
         }
@@ -33,8 +32,7 @@ QString stripMnemonic(const QString& source)
     return result;
 }
 
-template<typename ButtonType>
-void showAttachedMenu(ButtonType* button)
+template <typename ButtonType> void showAttachedMenu(ButtonType* button)
 {
     if (!button || !button->isEnabled())
         return;
@@ -56,8 +54,7 @@ class MenuButtonAccessibleBase : public QAccessibleWidget {
 public:
     explicit MenuButtonAccessibleBase(QAbstractButton* button)
         : QAccessibleWidget(button, QAccessible::ButtonMenu)
-    {
-    }
+    {}
 
     QString text(QAccessible::Text type) const override
     {
@@ -81,8 +78,7 @@ public:
 
         const bool enabled = current->isEnabled();
         const bool hasMenu = menu() != nullptr;
-        result.focusable = enabled
-            && current->focusPolicy() != Qt::NoFocus;
+        result.focusable = enabled && current->focusPolicy() != Qt::NoFocus;
         result.focused = current->hasFocus();
         result.pressed = current->isDown();
         if (auto* pushButton = qobject_cast<QPushButton*>(current))
@@ -104,10 +100,7 @@ protected:
 
 class DropDownButtonAccessible final : public MenuButtonAccessibleBase {
 public:
-    explicit DropDownButtonAccessible(DropDownButton* button)
-        : MenuButtonAccessibleBase(button)
-    {
-    }
+    explicit DropDownButtonAccessible(DropDownButton* button) : MenuButtonAccessibleBase(button) {}
 
     QStringList actionNames() const override
     {
@@ -116,9 +109,8 @@ public:
             return {};
         if (current->menu())
             return {QAccessibleActionInterface::showMenuAction()};
-        return {current->isCheckable()
-                    ? QAccessibleActionInterface::toggleAction()
-                    : QAccessibleActionInterface::pressAction()};
+        return {current->isCheckable() ? QAccessibleActionInterface::toggleAction()
+                                       : QAccessibleActionInterface::pressAction()};
     }
 
     void doAction(const QString& actionName) override
@@ -126,32 +118,29 @@ public:
         DropDownButton* current = view();
         if (!current || !current->isEnabled())
             return;
-        if (actionName == QAccessibleActionInterface::showMenuAction()
-            && current->menu()) {
+        if (actionName == QAccessibleActionInterface::showMenuAction() && current->menu()) {
             showMenuButtonMenu(current);
             return;
         }
         const QString primaryAction = current->isCheckable()
-            ? QAccessibleActionInterface::toggleAction()
-            : QAccessibleActionInterface::pressAction();
+                                          ? QAccessibleActionInterface::toggleAction()
+                                          : QAccessibleActionInterface::pressAction();
         if (!current->menu() && actionName == primaryAction)
             current->click();
     }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         DropDownButton* current = view();
         if (!current)
             return {};
-        if (actionName == QAccessibleActionInterface::showMenuAction()
-            && current->menu()) {
-            return {QStringLiteral("Space"), QStringLiteral("Enter"),
-                    QStringLiteral("Alt+Down"), QStringLiteral("F4")};
+        if (actionName == QAccessibleActionInterface::showMenuAction() && current->menu()) {
+            return {QStringLiteral("Space"), QStringLiteral("Enter"), QStringLiteral("Alt+Down"),
+                    QStringLiteral("F4")};
         }
         const QString primaryAction = current->isCheckable()
-            ? QAccessibleActionInterface::toggleAction()
-            : QAccessibleActionInterface::pressAction();
+                                          ? QAccessibleActionInterface::toggleAction()
+                                          : QAccessibleActionInterface::pressAction();
         if (!current->menu() && actionName == primaryAction)
             return {QStringLiteral("Space")};
         return {};
@@ -159,28 +148,16 @@ public:
 
 protected:
     QAbstractButton* button() const override { return view(); }
-    QMenu* menu() const override
-    {
-        return view() ? view()->menu() : nullptr;
-    }
-    bool isOpen() const override
-    {
-        return view() && view()->isOpen();
-    }
+    QMenu* menu() const override { return view() ? view()->menu() : nullptr; }
+    bool isOpen() const override { return view() && view()->isOpen(); }
 
 private:
-    DropDownButton* view() const
-    {
-        return static_cast<DropDownButton*>(widget());
-    }
+    DropDownButton* view() const { return static_cast<DropDownButton*>(widget()); }
 };
 
 class SplitButtonAccessible final : public MenuButtonAccessibleBase {
 public:
-    explicit SplitButtonAccessible(SplitButton* button)
-        : MenuButtonAccessibleBase(button)
-    {
-    }
+    explicit SplitButtonAccessible(SplitButton* button) : MenuButtonAccessibleBase(button) {}
 
     QStringList actionNames() const override
     {
@@ -188,10 +165,8 @@ public:
         if (!current || !current->isEnabled())
             return {};
 
-        QStringList result{
-            current->isCheckable()
-                ? QAccessibleActionInterface::toggleAction()
-                : QAccessibleActionInterface::pressAction()};
+        QStringList result{current->isCheckable() ? QAccessibleActionInterface::toggleAction()
+                                                  : QAccessibleActionInterface::pressAction()};
         if (current->menu())
             result.append(QAccessibleActionInterface::showMenuAction());
         return result;
@@ -204,31 +179,28 @@ public:
             return;
 
         const QString primaryAction = current->isCheckable()
-            ? QAccessibleActionInterface::toggleAction()
-            : QAccessibleActionInterface::pressAction();
+                                          ? QAccessibleActionInterface::toggleAction()
+                                          : QAccessibleActionInterface::pressAction();
         if (actionName == primaryAction) {
             current->click();
             return;
         }
-        if (actionName == QAccessibleActionInterface::showMenuAction()
-            && current->menu()) {
+        if (actionName == QAccessibleActionInterface::showMenuAction() && current->menu()) {
             showMenuButtonMenu(current);
         }
     }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         SplitButton* current = view();
         if (!current)
             return {};
         const QString primaryAction = current->isCheckable()
-            ? QAccessibleActionInterface::toggleAction()
-            : QAccessibleActionInterface::pressAction();
+                                          ? QAccessibleActionInterface::toggleAction()
+                                          : QAccessibleActionInterface::pressAction();
         if (actionName == primaryAction)
             return {QStringLiteral("Space")};
-        if (actionName == QAccessibleActionInterface::showMenuAction()
-            && current->menu()) {
+        if (actionName == QAccessibleActionInterface::showMenuAction() && current->menu()) {
             return {QStringLiteral("Alt+Down"), QStringLiteral("F4")};
         }
         return {};
@@ -236,24 +208,14 @@ public:
 
 protected:
     QAbstractButton* button() const override { return view(); }
-    QMenu* menu() const override
-    {
-        return view() ? view()->menu() : nullptr;
-    }
-    bool isOpen() const override
-    {
-        return view() && view()->isOpen();
-    }
+    QMenu* menu() const override { return view() ? view()->menu() : nullptr; }
+    bool isOpen() const override { return view() && view()->isOpen(); }
 
 private:
-    SplitButton* view() const
-    {
-        return static_cast<SplitButton*>(widget());
-    }
+    SplitButton* view() const { return static_cast<SplitButton*>(widget()); }
 };
 
-QAccessibleInterface* menuButtonAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* menuButtonAccessibilityFactory(const QString&, QObject* object)
 {
     if (auto* dropDown = qobject_cast<DropDownButton*>(object))
         return new DropDownButtonAccessible(dropDown);
@@ -262,7 +224,7 @@ QAccessibleInterface* menuButtonAccessibilityFactory(
     return nullptr;
 }
 
-template<typename ButtonType>
+template <typename ButtonType>
 void notifyMenuAvailability(ButtonType* button, bool availabilityChanged)
 {
     if (!button)
@@ -280,8 +242,7 @@ void notifyMenuAvailability(ButtonType* button, bool availabilityChanged)
     QAccessible::updateAccessibility(&actionEvent);
 }
 
-template<typename ButtonType>
-void notifyOpenState(ButtonType* button)
+template <typename ButtonType> void notifyOpenState(ButtonType* button)
 {
     if (!button)
         return;
@@ -314,15 +275,13 @@ void ensureMenuButtonAccessibilityFactory()
 void initializeMenuButtonAccessibility(DropDownButton* button)
 {
     ensureMenuButtonAccessibilityFactory();
-    fluentRefreshAccessibleInterfaceAfterConstruction(
-        button, QAccessible::ButtonMenu);
+    fluentRefreshAccessibleInterfaceAfterConstruction(button, QAccessible::ButtonMenu);
 }
 
 void initializeMenuButtonAccessibility(SplitButton* button)
 {
     ensureMenuButtonAccessibilityFactory();
-    fluentRefreshAccessibleInterfaceAfterConstruction(
-        button, QAccessible::ButtonMenu);
+    fluentRefreshAccessibleInterfaceAfterConstruction(button, QAccessible::ButtonMenu);
 }
 
 void showMenuButtonMenu(DropDownButton* button)
@@ -335,8 +294,7 @@ void showMenuButtonMenu(SplitButton* button)
     showAttachedMenu(button);
 }
 
-void notifyMenuButtonMenuAccessibility(
-    DropDownButton* button, bool availabilityChanged)
+void notifyMenuButtonMenuAccessibility(DropDownButton* button, bool availabilityChanged)
 {
 #if QT_CONFIG(accessibility)
     notifyMenuAvailability(button, availabilityChanged);
@@ -346,8 +304,7 @@ void notifyMenuButtonMenuAccessibility(
 #endif
 }
 
-void notifyMenuButtonMenuAccessibility(
-    SplitButton* button, bool availabilityChanged)
+void notifyMenuButtonMenuAccessibility(SplitButton* button, bool availabilityChanged)
 {
 #if QT_CONFIG(accessibility)
     notifyMenuAvailability(button, availabilityChanged);

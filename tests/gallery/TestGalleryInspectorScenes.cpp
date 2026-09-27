@@ -46,14 +46,14 @@ TEST(GalleryInspectorScenesTest, ManifestDrivenInspectorAcceptance)
     struct RestoreApplicationProperty final {
         QVariant value;
         ~RestoreApplicationProperty() { qApp->setProperty("fluentqtGalleryAutomated", value); }
-    } restoreApplicationProperty { previousAutomatedProperty };
+    } restoreApplicationProperty{previousAutomatedProperty};
     qApp->setProperty("fluentqtGalleryAutomated", true);
 
     QFile manifestFile(QString::fromUtf8(FLUENT_QT_APPLICATION_SCENES_PATH));
     ASSERT_TRUE(manifestFile.open(QIODevice::ReadOnly));
     QJsonParseError parseError;
-    const QJsonDocument manifestDocument
-        = QJsonDocument::fromJson(manifestFile.readAll(), &parseError);
+    const QJsonDocument manifestDocument =
+        QJsonDocument::fromJson(manifestFile.readAll(), &parseError);
     ASSERT_EQ(parseError.error, QJsonParseError::NoError);
     ASSERT_TRUE(manifestDocument.isObject());
     const QJsonArray scenes = manifestDocument.object().value(QStringLiteral("scenes")).toArray();
@@ -70,10 +70,9 @@ TEST(GalleryInspectorScenesTest, ManifestDrivenInspectorAcceptance)
     int automatedSceneCount = 0;
     for (const QJsonValue& sceneValue : scenes) {
         const QJsonObject scene = sceneValue.toObject();
-        if (scene.value(QStringLiteral("application")).toString()
-                != QString::fromLatin1(GalleryApplicationId)
-            || scene.value(QStringLiteral("automation")).toString()
-                != QStringLiteral("automated")) {
+        if (scene.value(QStringLiteral("application")).toString() !=
+                QString::fromLatin1(GalleryApplicationId) ||
+            scene.value(QStringLiteral("automation")).toString() != QStringLiteral("automated")) {
             continue;
         }
         ++automatedSceneCount;
@@ -81,7 +80,7 @@ TEST(GalleryInspectorScenesTest, ManifestDrivenInspectorAcceptance)
         const QString route = scene.value(QStringLiteral("route")).toString();
         const QJsonObject viewport = scene.value(QStringLiteral("viewport")).toObject();
         const QSize viewportSize(viewport.value(QStringLiteral("width")).toInt(),
-            viewport.value(QStringLiteral("height")).toInt());
+                                 viewport.value(QStringLiteral("height")).toInt());
         const bool dark = scene.value(QStringLiteral("theme")).toString() == QStringLiteral("dark");
         const auto theme = dark ? fluent::FluentElement::Dark : fluent::FluentElement::Light;
 
@@ -106,8 +105,8 @@ TEST(GalleryInspectorScenesTest, ManifestDrivenInspectorAcceptance)
         QSet<QString> allowedCodes;
         for (const QJsonValue& code : budget.value(QStringLiteral("allowed_codes")).toArray())
             allowedCodes.insert(code.toString());
-        const std::string report
-            = QJsonDocument(Inspector::report(page)).toJson(QJsonDocument::Compact).toStdString();
+        const std::string report =
+            QJsonDocument(Inspector::report(page)).toJson(QJsonDocument::Compact).toStdString();
 
         EXPECT_LE(findings.size(), maxFindings) << report;
         for (const auto& finding : findings)

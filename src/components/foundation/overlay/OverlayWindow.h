@@ -8,8 +8,7 @@
 
 namespace fluent::overlay {
 
-inline constexpr char kOverlaySurfaceProperty[] =
-    "_fluent_qt_overlay_surface";
+inline constexpr char kOverlaySurfaceProperty[] = "_fluent_qt_overlay_surface";
 
 inline void markOverlaySurface(QWidget* overlay)
 {
@@ -19,15 +18,15 @@ inline void markOverlaySurface(QWidget* overlay)
 
 inline QWidget* enclosingOverlaySurface(QWidget* widget)
 {
-    for (QWidget* current = widget; current;
-         current = current->parentWidget()) {
+    for (QWidget* current = widget; current; current = current->parentWidget()) {
         if (current->property(kOverlaySurfaceProperty).toBool())
             return current;
     }
     return nullptr;
 }
 
-inline QWidget* resolveOwningTopLevel(const QPointer<QWidget>& originalParent, QWidget* currentParent)
+inline QWidget* resolveOwningTopLevel(const QPointer<QWidget>& originalParent,
+                                      QWidget* currentParent)
 {
     if (originalParent)
         return originalParent->window();

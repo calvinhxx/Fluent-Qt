@@ -17,17 +17,15 @@ namespace fluent::gallery {
 
 GalleryPageFactory::GalleryPageFactory(const GalleryNavigationViewModel& navigationViewModel)
     : m_navigationViewModel(navigationViewModel)
-{
-}
+{}
 
-QWidget* GalleryPageFactory::createPage(
-    const QString& routeId,
-    QWidget* parent) const
+QWidget* GalleryPageFactory::createPage(const QString& routeId, QWidget* parent) const
 {
     const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
     if (!item) {
-        LOG_WARN(QStringLiteral("GalleryPageFactory createPage rejected routeId=%1 reason=missing-route")
-                     .arg(routeId));
+        LOG_WARN(
+            QStringLiteral("GalleryPageFactory createPage rejected routeId=%1 reason=missing-route")
+                .arg(routeId));
         return nullptr;
     }
 
@@ -38,20 +36,15 @@ QWidget* GalleryPageFactory::createPage(
     if (const GalleryContentEntry* entry = galleryContentEntry(routeId)) {
         switch (entry->kind) {
         case GalleryPageKind::Home:
-            return new GalleryHomePage(
-                *entry, m_navigationViewModel, parent);
+            return new GalleryHomePage(*entry, m_navigationViewModel, parent);
         case GalleryPageKind::Category:
-            return new GalleryCategoryPage(
-                *entry, m_navigationViewModel, parent);
+            return new GalleryCategoryPage(*entry, m_navigationViewModel, parent);
         case GalleryPageKind::Component:
-            return new GalleryComponentPage(
-                *entry, m_navigationViewModel, parent);
+            return new GalleryComponentPage(*entry, m_navigationViewModel, parent);
         case GalleryPageKind::Foundation:
-            return new GalleryFoundationPage(
-                *entry, m_navigationViewModel, parent);
+            return new GalleryFoundationPage(*entry, m_navigationViewModel, parent);
         case GalleryPageKind::FoundationTopic:
-            return new GalleryFoundationTopicPage(
-                *entry, m_navigationViewModel, parent);
+            return new GalleryFoundationTopicPage(*entry, m_navigationViewModel, parent);
         case GalleryPageKind::Settings:
             break;
         }
@@ -61,7 +54,8 @@ QWidget* GalleryPageFactory::createPage(
     // metadata is a catalog error rather than a user-facing placeholder state.
     // zh_CN: 每个可导航文档路由都必须有真实页面；缺失元数据属于目录错误，
     // 不再以面向用户的占位页掩盖。
-    LOG_WARN(QStringLiteral("GalleryPageFactory createPage rejected routeId=%1 reason=missing-content-entry")
+    LOG_WARN(QStringLiteral(
+                 "GalleryPageFactory createPage rejected routeId=%1 reason=missing-content-entry")
                  .arg(routeId));
     return nullptr;
 }

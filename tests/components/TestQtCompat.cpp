@@ -31,18 +31,21 @@
 
 namespace {
 
-QString repositoryRootPath() {
+QString repositoryRootPath()
+{
     QDir dir(QFileInfo(QString::fromLocal8Bit(__FILE__)).absoluteDir());
     dir.cdUp();
     dir.cdUp();
     return dir.absolutePath();
 }
 
-QString relativeToRepository(const QString& absolutePath) {
+QString relativeToRepository(const QString& absolutePath)
+{
     return QDir(repositoryRootPath()).relativeFilePath(absolutePath);
 }
 
-bool fileContainsQtVersionGuard(const QString& path) {
+bool fileContainsQtVersionGuard(const QString& path)
+{
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         ADD_FAILURE() << "Could not read " << path.toStdString();
@@ -55,15 +58,14 @@ bool fileContainsQtVersionGuard(const QString& path) {
            content.contains(QStringLiteral("QT_VERSION <"));
 }
 
-bool isAllowedQtVersionGuardFile(const QString& relativePath) {
+bool isAllowedQtVersionGuardFile(const QString& relativePath)
+{
     // src/compatibility is the project boundary for Qt-version branches;
     // TestQtCompat intentionally asserts that boundary.
     if (relativePath.startsWith(QStringLiteral("src/compatibility/")))
         return true;
 
-    static const QStringList allowed = {
-        QStringLiteral("tests/components/TestQtCompat.cpp")
-    };
+    static const QStringList allowed = {QStringLiteral("tests/components/TestQtCompat.cpp")};
     return allowed.contains(relativePath);
 }
 
@@ -71,8 +73,8 @@ class FixedHeightDelegate : public QStyledItemDelegate {
 public:
     explicit FixedHeightDelegate(int height) : m_height(height) {}
 
-    QSize sizeHint(const QStyleOptionViewItem& option,
-                   const QModelIndex& index) const override {
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
         Q_UNUSED(option);
         Q_UNUSED(index);
         return QSize(80, m_height);
@@ -84,13 +86,15 @@ private:
 
 } // namespace
 
-TEST(QtCompat, FluentEnterEventDerivesFromQEvent) {
+TEST(QtCompat, FluentEnterEventDerivesFromQEvent)
+{
     static_assert(std::is_base_of<QEvent, FluentEnterEvent>::value,
                   "FluentEnterEvent must derive from QEvent");
     SUCCEED();
 }
 
-TEST(QtCompat, FluentEnterEventMatchesExpectedType) {
+TEST(QtCompat, FluentEnterEventMatchesExpectedType)
+{
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     static_assert(std::is_same<FluentEnterEvent, QEnterEvent>::value,
                   "On Qt6, FluentEnterEvent must alias QEnterEvent");
@@ -101,12 +105,14 @@ TEST(QtCompat, FluentEnterEventMatchesExpectedType) {
     SUCCEED();
 }
 
-TEST(QtCompat, QtVersionMacrosDefined) {
+TEST(QtCompat, QtVersionMacrosDefined)
+{
     EXPECT_GT(QT_VERSION, 0);
     EXPECT_GE(QT_VERSION_MAJOR, 5);
 }
 
-TEST(QtCompat, AccessibleInterfaceCapabilitiesMatchQtVersion) {
+TEST(QtCompat, AccessibleInterfaceCapabilitiesMatchQtVersion)
+{
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     EXPECT_EQ(FLUENT_HAS_ACCESSIBLE_HYPERLINK_INTERFACE, 1);
 #else
@@ -128,14 +134,14 @@ TEST(QtCompat, AccessibleInterfaceCapabilitiesMatchQtVersion) {
 #endif
 }
 
-TEST(QtCompat, CheckBoxStateConnectionNormalizesState) {
+TEST(QtCompat, CheckBoxStateConnectionNormalizesState)
+{
     QCheckBox checkBox;
     checkBox.setTristate(true);
     QVector<Qt::CheckState> observed;
 
     const auto connection = fluentConnectCheckStateChanged(
-        &checkBox, &checkBox,
-        [&observed](Qt::CheckState state) { observed.push_back(state); });
+        &checkBox, &checkBox, [&observed](Qt::CheckState state) { observed.push_back(state); });
 
     EXPECT_TRUE(connection);
     checkBox.setCheckState(Qt::PartiallyChecked);
@@ -143,19 +149,22 @@ TEST(QtCompat, CheckBoxStateConnectionNormalizesState) {
     EXPECT_EQ(observed.constFirst(), Qt::PartiallyChecked);
 }
 
-TEST(QtCompat, WheelPositionHelperReturnsLocalPosition) {
+TEST(QtCompat, WheelPositionHelperReturnsLocalPosition)
+{
     FLUENT_MAKE_WHEEL_EVENT(event, 12, 18, 120, Qt::ControlModifier);
 
     EXPECT_EQ(fluentWheelPosition(&event), QPointF(12, 18));
 }
 
-TEST(QtCompat, NativeGestureConstructorCapabilityIsCentralized) {
+TEST(QtCompat, NativeGestureConstructorCapabilityIsCentralized)
+{
     EXPECT_EQ(fluentCanConstructNativeGestureEvent(),
               FLUENT_HAS_NATIVE_GESTURE_EVENT_CONSTRUCTOR != 0);
     EXPECT_NE(QString::fromLatin1(fluentNativeGestureEventSkipReason()), QString());
 }
 
-TEST(QtCompat, NativeGesturePositionHelperReturnsLocalPositionWhenConstructible) {
+TEST(QtCompat, NativeGesturePositionHelperReturnsLocalPositionWhenConstructible)
+{
 #if FLUENT_HAS_NATIVE_GESTURE_EVENT_CONSTRUCTOR
     ASSERT_NE(qApp, nullptr);
     QWidget target;
@@ -169,37 +178,37 @@ TEST(QtCompat, NativeGesturePositionHelperReturnsLocalPositionWhenConstructible)
 #endif
 }
 
-TEST(QtCompat, WheelHelpersClassifyAndNormalizeNoPhasePixelInput) {
-    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(event, QPoint(8, 9), QPoint(8, 9),
-                                       QPoint(0, -60), QPoint(),
-                                       Qt::NoButton, Qt::NoModifier,
-                                       Qt::NoScrollPhase, false);
+TEST(QtCompat, WheelHelpersClassifyAndNormalizeNoPhasePixelInput)
+{
+    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(event, QPoint(8, 9), QPoint(8, 9), QPoint(0, -60), QPoint(),
+                                       Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
 
     EXPECT_EQ(fluentWheelInputKind(&event), FluentWheelInputKind::NoPhasePixel);
     EXPECT_EQ(fluentWheelDeltaY(&event), -60.0);
 }
 
-TEST(QtCompat, WheelHelpersClassifyAndNormalizeNoPhaseDiscreteInput) {
+TEST(QtCompat, WheelHelpersClassifyAndNormalizeNoPhaseDiscreteInput)
+{
     FLUENT_MAKE_WHEEL_EVENT(event, 8, 9, -120, Qt::NoModifier);
 
     EXPECT_EQ(fluentWheelInputKind(&event), FluentWheelInputKind::NoPhaseDiscrete);
     EXPECT_EQ(fluentWheelDeltaY(&event), -120.0);
 }
 
-TEST(QtCompat, WheelHelpersClassifyPhaseBasedInput) {
+TEST(QtCompat, WheelHelpersClassifyPhaseBasedInput)
+{
     if (!fluentWheelEventSupportsPhase())
         GTEST_SKIP() << fluentWheelEventPhaseSkipReason();
 
-    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(event, QPoint(8, 9), QPoint(8, 9),
-                                       QPoint(0, -30), QPoint(),
-                                       Qt::NoButton, Qt::NoModifier,
-                                       Qt::ScrollUpdate, false);
+    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(event, QPoint(8, 9), QPoint(8, 9), QPoint(0, -30), QPoint(),
+                                       Qt::NoButton, Qt::NoModifier, Qt::ScrollUpdate, false);
 
     EXPECT_EQ(fluentWheelInputKind(&event), FluentWheelInputKind::PhaseBased);
     EXPECT_EQ(fluentWheelDeltaY(&event), -30.0);
 }
 
-TEST(QtCompat, ItemViewRowHeightPrefersVisualRectHeight) {
+TEST(QtCompat, ItemViewRowHeightPrefersVisualRectHeight)
+{
     QListView view;
     QStandardItemModel model;
     model.appendRow(new QStandardItem(QStringLiteral("row")));
@@ -209,7 +218,8 @@ TEST(QtCompat, ItemViewRowHeightPrefersVisualRectHeight) {
     EXPECT_EQ(fluentItemViewRowHeight(&view, index, QRect(0, 0, 120, 24)), 24);
 }
 
-TEST(QtCompat, ItemViewRowHeightFallsBackToDelegateSizeHint) {
+TEST(QtCompat, ItemViewRowHeightFallsBackToDelegateSizeHint)
+{
     QListView view;
     QStandardItemModel model;
     model.appendRow(new QStandardItem(QStringLiteral("row")));
@@ -221,11 +231,13 @@ TEST(QtCompat, ItemViewRowHeightFallsBackToDelegateSizeHint) {
     EXPECT_EQ(fluentItemViewRowHeight(&view, index, QRect(0, 0, 120, 0)), 44);
 }
 
-TEST(QtCompat, AdjacentButtonRowSpacingDoesNotShrinkRequestedSpacing) {
+TEST(QtCompat, AdjacentButtonRowSpacingDoesNotShrinkRequestedSpacing)
+{
     EXPECT_GE(fluentAdjacentButtonRowSpacing(8), 8);
 }
 
-TEST(QtCompat, DisplayScaleChangeHelperCoversSupportedScreenEvents) {
+TEST(QtCompat, DisplayScaleChangeHelperCoversSupportedScreenEvents)
+{
     EXPECT_FALSE(fluentIsDisplayScaleChangeEvent(nullptr));
 
     QEvent resizeEvent(QEvent::Resize);
@@ -235,18 +247,13 @@ TEST(QtCompat, DisplayScaleChangeHelperCoversSupportedScreenEvents) {
     EXPECT_TRUE(fluentIsDisplayScaleChangeEvent(&screenChangeEvent));
 }
 
-TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards) {
+TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards)
+{
     const QString root = repositoryRootPath();
-    const QStringList scanRoots = {
-        root + QStringLiteral("/app"),
-        root + QStringLiteral("/src"),
-        root + QStringLiteral("/tests/components"),
-        root + QStringLiteral("/tests/gallery")
-    };
-    const QStringList nameFilters = {
-        QStringLiteral("*.h"),
-        QStringLiteral("*.cpp")
-    };
+    const QStringList scanRoots = {root + QStringLiteral("/app"), root + QStringLiteral("/src"),
+                                   root + QStringLiteral("/tests/components"),
+                                   root + QStringLiteral("/tests/gallery")};
+    const QStringList nameFilters = {QStringLiteral("*.h"), QStringLiteral("*.cpp")};
 
     QStringList offenders;
     for (const QString& scanRoot : scanRoots) {
@@ -261,6 +268,6 @@ TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards) {
         }
     }
 
-    EXPECT_TRUE(offenders.isEmpty()) << "Scattered Qt version guard in: "
-                                     << offenders.join(QStringLiteral(", ")).toStdString();
+    EXPECT_TRUE(offenders.isEmpty())
+        << "Scattered Qt version guard in: " << offenders.join(QStringLiteral(", ")).toStdString();
 }
