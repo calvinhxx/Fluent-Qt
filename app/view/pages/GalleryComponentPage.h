@@ -8,6 +8,8 @@
 #include "GalleryContentPage.h"
 #include "view/support/GalleryCodeLanguage.h"
 
+class QVBoxLayout;
+
 namespace fluent::basicinput {
 class Button;
 }
@@ -20,6 +22,7 @@ class GallerySampleCard;
 
 struct GalleryComponentPageOptions {
     bool requestBilingualDocumentation = false;
+    bool deferSamples = false;
 };
 
 /**
@@ -44,6 +47,11 @@ public:
     GalleryCodeLanguage codeLanguage() const { return m_codeLanguage; }
     bool bilingualDocumentationEnabled() const { return m_bilingualDocumentationEnabled; }
 
+    // Startup builds one live example per event-loop turn; ordinary factories stay synchronous.
+    // zh_CN: 启动时每轮事件循环构建一个实时示例；普通工厂仍同步完成页面。
+    bool hasPendingSamples() const { return m_nextSample < m_samples.size(); }
+    void buildNextSample();
+
     void onThemeUpdated() override;
 
 private:
@@ -55,6 +63,10 @@ private:
     QString m_overviewText;
     GalleryComponentReferenceCard* m_referenceCard = nullptr;
     QVector<GallerySampleCard*> m_sampleCards;
+    QVector<GallerySample> m_samples;
+    int m_nextSample = 0;
+    QVBoxLayout* m_samplesLayout = nullptr;
+    QVBoxLayout* m_moreSamplesLayout = nullptr;
     GalleryCodeLanguage m_codeLanguage = GalleryCodeLanguage::Cpp;
     ::fluent::basicinput::Button* m_themeButton = nullptr;
     fluent::FluentElement::Theme m_sampleTheme = fluent::FluentElement::Light;

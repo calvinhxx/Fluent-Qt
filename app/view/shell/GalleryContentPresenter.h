@@ -38,6 +38,7 @@ public:
     GalleryContentPresenter(fluent::navigation::StackContentHost* contentHost,
                             const GalleryNavigationViewModel& navigationViewModel,
                             QObject* parent = nullptr, int maxResidentRoutes = 0);
+    ~GalleryContentPresenter() override;
 
     QString currentRouteId() const { return m_currentRouteId; }
     QWidget* currentPage() const;
@@ -58,18 +59,14 @@ public:
     bool presentRoute(const QString& routeId);
 
     /**
-     * @brief Builds and prepares the first layout of the listed pages (one per event-loop tick)
-     * behind the splash, capped by a time budget, then emits prewarmFinished.
-     * zh_CN: 在 splash 背后逐页完成构建和首次布局（每个事件循环一个），受时间预算限制，
-     * 随后发出 prewarmFinished。
+     * @brief Prepares every queued page and its first layout before completing startup.
+     * zh_CN: 启动完成前准备全部排队页面及首次布局。
      *
-     * Building pages freezes the GUI thread, so we only ever do it while the splash hides the
-     * jank. The budget bounds how long startup waits: whatever warmed in time becomes an
-     * instant show/hide later; the un-warmed tail builds lazily behind a shimmer skeleton on
-     * first visit. We deliberately do NOT warm in the background after the splash — that would
-     * stutter the live UI. zh_CN: 建页会冻结 GUI 线程，故只在 splash 遮挡卡顿时做。预算限定启动等待时长：
-     * 及时预热到的之后瞬时显隐；没预热到的尾部在首次访问时于 shimmer 骨架屏背后懒构建。刻意不在 splash 之后做
-     * 后台预热——那会让活动中的 UI 卡顿。
+     * Component pages yield between individual sample factories. Progress counts ready pages,
+     * never elapsed time; no timer discards the tail of the queue. Pages remain hidden until
+     * complete, so their ordinary visibility lifecycle keeps live demonstrations idle.
+     * zh_CN: 组件页在各个示例工厂之间让出事件循环。进度只统计就绪页，不按时间推算或丢弃队尾；
+     * 页面完成前保持隐藏，实时示例沿用可见性生命周期保持空闲。
      */
     void prewarmRoutes(const QStringList& routeIds);
 
@@ -85,6 +82,8 @@ public:
      * 期间暂停建页、停止片刻后恢复，使首屏 splash 期间拖拽顺滑，又不放弃预热收益。队列排空后为空操作。
      */
     void setPrewarmPaused(bool paused);
+    void cancelPrewarm();
+    void setStartupCovered(bool covered);
 
 signals:
     void routeActivated(const QString& routeId);
@@ -98,8 +97,9 @@ signals:
 
     /** @brief Splash-phase prewarm warmed `done` of `total` queued pages; drives the splash caption. */
     void prewarmProgress(int done, int total);
-    /** @brief Splash-phase prewarm has finished (budget hit or queue drained); dismiss the splash. */
+    /** @brief The queue is drained; failures are reported separately, never counted as ready. */
     void prewarmFinished();
+    void prewarmFailed(const QString& routeId);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -112,8 +112,11 @@ private:
     void touchResidentRoute(const QString& routeId);
     void trimResidentRoutes(const QString& protectedRouteId);
     int ensurePageBuilt(const QString& routeId, qint64* buildMs = nullptr);
+    int registerPage(const QString& routeId, QWidget* page);
     void ensureSkeleton();
     void scheduleLazyBuild(const QString& routeId, quint64 requestId);
+    void buildNextLazyPart(const QString& routeId, quint64 requestId);
+    void cancelLazyBuild();
     void scheduleNextPrewarm();
     qint64 switchToStackPage(int targetIndex);
 
@@ -140,14 +143,17 @@ private:
     // zh_CN: 单个 shimmer 骨架页，常驻栈里，请求冷路由时立刻显示，使导航在真页构建期间也即时响应。
     QWidget* m_skeleton = nullptr;
     int m_skeletonIndex = -1;
+    QPointer<QWidget> m_lazyPage;
+    qint64 m_lazyBuildMs = 0;
 
-    // Splash-phase prewarm: routes waiting to warm, drained one per event-loop tick behind the
-    // splash until the budget timer elapses. m_prewarmScheduled guards against double-queuing
-    // the next tick. zh_CN: splash 期预热：待预热的路由，在 splash 背后每帧建一个，直到预算计时器到点。
-    // m_prewarmScheduled 防止重复排入下一帧。
+    // The active page is owned by the host but not navigable until all samples/layout are ready.
+    // zh_CN: 当前构建页由 host 持有，全部示例和布局就绪前不加入可导航缓存。
     QQueue<QString> m_prewarmQueue;
-    QElapsedTimer m_prewarmBudget;
+    QElapsedTimer m_prewarmTimer;
+    QPointer<QWidget> m_prewarmPage;
+    QString m_prewarmRouteId;
     bool m_prewarmScheduled = false;
+    bool m_startupCovered = false;
     bool m_prewarmPaused =
         false; // Set while the user moves/resizes the window; blocks page builds.
 

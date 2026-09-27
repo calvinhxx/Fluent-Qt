@@ -63,9 +63,11 @@ TEST(GalleryInspectorScenesTest, ManifestDrivenInspectorAcceptance)
     window.setBackdropEffect(fluent::windowing::BackdropEffect::Solid);
     window.resize(1180, 760);
     window.show();
-    ASSERT_TRUE(waitUntil([&window]() {
-        return window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr;
-    }));
+    ASSERT_TRUE(waitUntil(
+        [&window]() {
+            return window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr;
+        },
+        60000));
 
     int automatedSceneCount = 0;
     for (const QJsonValue& sceneValue : scenes) {

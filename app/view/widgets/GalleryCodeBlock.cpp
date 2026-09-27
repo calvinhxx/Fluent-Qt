@@ -14,12 +14,14 @@
 #include <QtMath>
 
 #include "components/basicinput/Button.h"
+#include "components/foundation/overlay/OverlayPresentation.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/navigation/SelectorBar.h"
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
 #include "GalleryLanguageSelector.h"
+#include "platform/GalleryPlatform.h"
 #include "support/logging/Log.h"
 #include "view/support/GalleryCodeHighlighter.h"
 #include "view/support/GalleryStyleSupport.h"
@@ -123,7 +125,7 @@ protected:
         selectAll->setEnabled(!text().isEmpty());
         connect(selectAll, &QAction::triggered, this, [this]() { selectAllSource(); });
         connect(menu, &QMenu::aboutToHide, menu, &QObject::deleteLater);
-        menu->popup(event->globalPos());
+        overlay::presentation::popupMenu(menu, this, event->pos());
         event->accept();
     }
 
@@ -267,9 +269,16 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& python
     fluent::status_info::ToolTip::attach(m_copyButton, QStringLiteral("Copy"));
 
     connect(m_copyButton, &fluent::basicinput::Button::clicked, this, [this]() {
-        if (QClipboard* clipboard = QApplication::clipboard()) {
-            clipboard->setText(code());
-            LOG_DEBUG(QStringLiteral("GalleryCodeBlock copyCode chars=%1").arg(code().size()));
+        const QString source = code();
+        m_copyButton->setEnabled(false);
+        platform::copyText(this, source, [this, count = source.size()](bool copied) {
+            m_copyButton->setEnabled(true);
+            if (!copied) {
+                showGalleryToast(this, QStringLiteral("Could not copy to clipboard. Try again."),
+                                 status_info::Toast::Error);
+                return;
+            }
+            LOG_DEBUG(QStringLiteral("GalleryCodeBlock copyCode chars=%1").arg(count));
             showGalleryToast(this, QStringLiteral("Copied to clipboard"));
             m_copyButton->setIconGlyph(Typography::Icons::CheckMark,
                                        Typography::IconSize::Standard);
@@ -279,7 +288,7 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& python
                     button->setIconGlyph(Typography::Icons::Copy, Typography::IconSize::Standard);
                 }
             });
-        }
+        });
     });
 
     topRow->addStretch(1);

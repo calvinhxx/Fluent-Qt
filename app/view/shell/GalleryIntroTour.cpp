@@ -167,10 +167,11 @@ QRect GalleryIntroTour::presentedTargetRect(QWidget* target) const
         return {};
     if (auto* spatial = win->findChild<GallerySpatialController*>()) {
         const QRect rect = target->rect();
-        const QPolygon corners{spatial->projectedPosition(target, rect.topLeft()),
-                               spatial->projectedPosition(target, rect.topRight()),
-                               spatial->projectedPosition(target, rect.bottomLeft()),
-                               spatial->projectedPosition(target, rect.bottomRight())};
+        QPolygon corners;
+        corners << spatial->projectedPosition(target, rect.topLeft())
+                << spatial->projectedPosition(target, rect.topRight())
+                << spatial->projectedPosition(target, rect.bottomLeft())
+                << spatial->projectedPosition(target, rect.bottomRight());
         return corners.boundingRect();
     }
     return QRect(target->mapTo(win, QPoint()), target->size());

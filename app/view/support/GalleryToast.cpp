@@ -15,14 +15,14 @@ constexpr int kGalleryToastVisibleMs = 1700;
 
 } // namespace
 
-void showGalleryToast(QWidget* anchor, const QString& message)
+void showGalleryToast(QWidget* anchor, const QString& message,
+                      status_info::Toast::Severity severity)
 {
     // Apply Gallery title-bar clearance before present so the first layout and
     // any stack eviction use the final inset. zh_CN: 在 present 前写入 Gallery
     // 标题栏留白，保证首次布局与堆叠淘汰都使用最终边距。
     auto* toast = status_info::Toast::showToast(
-        anchor, message, status_info::Toast::Success, kGalleryToastVisibleMs,
-        status_info::Toast::Top,
+        anchor, message, severity, kGalleryToastVisibleMs, status_info::Toast::Top,
         QMargins(16, kGalleryTitleBarHeight + kGalleryToastTopGap, 16, 16));
     if (!toast) {
         LOG_WARN(QStringLiteral("GalleryToast show rejected reason=missing-host message=%1")

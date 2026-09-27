@@ -1,6 +1,8 @@
 #include "platform/GalleryPlatform.h"
 
 #include <QCoreApplication>
+#include <QClipboard>
+#include <QGuiApplication>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QPointer>
@@ -18,6 +20,20 @@ namespace fluent::gallery::platform {
 QString graphicsRendererOverride()
 {
     return {};
+}
+
+void copyText(QObject* context, const QString& text, std::function<void(bool)> completed)
+{
+    if (!context || !completed)
+        return;
+    const QPointer<QObject> guard(context);
+    QClipboard* clipboard = QGuiApplication::clipboard();
+    if (clipboard)
+        clipboard->setText(text);
+    // Clipboard signals may synchronously destroy the requesting code block.
+    // zh_CN: 剪贴板信号可能同步销毁发起复制的代码块。
+    if (guard)
+        completed(clipboard != nullptr);
 }
 
 void chooseFiles(QWidget* context, const QString& filter,

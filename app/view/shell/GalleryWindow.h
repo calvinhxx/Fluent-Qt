@@ -11,6 +11,7 @@
 #include "viewmodel/GallerySettings.h"
 
 class QMoveEvent;
+class QHideEvent;
 class QResizeEvent;
 class QShowEvent;
 class QTimer;
@@ -71,7 +72,9 @@ public:
     SettingsPage* currentSettingsPage() const;
 
 protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
     // Pause splash-phase page warming while the user is moving/resizing the window so a synchronous
     // build never stutters the drag; a short debounce resumes once they stop. zh_CN: 用户移动/缩放窗口期间
     // 暂停 splash 期建页，使同步构建绝不卡顿拖拽；停止后经短防抖恢复。
@@ -131,6 +134,8 @@ private:
     QElapsedTimer m_startupReadyTimer;
     QTimer* m_startupFinishTimer = nullptr;
     bool m_startupFinished = false;
+    bool m_startupPrewarmStarted = false;
+    QStringList m_startupFailedRoutes;
 };
 
 } // namespace fluent::gallery
