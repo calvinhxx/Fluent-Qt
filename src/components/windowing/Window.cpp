@@ -1,10 +1,12 @@
 #include "Window.h"
 
 #include <QApplication>
+#include <QBackingStore>
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPaintEngine>
 #include <QPointer>
 #include <QPixmap>
 #include <QResizeEvent>
@@ -18,6 +20,7 @@
 #include "WindowBackdropMaterial.h"
 #include "WindowChromeFrame.h"
 #include "compatibility/private/WindowBackdropEvents_p.h"
+#include "compatibility/private/WindowBackdropTransition_p.h"
 #include "design/Breakpoints.h"
 #include "design/Typography.h"
 #include "compatibility/QtCompat.h"
@@ -364,7 +367,8 @@ void Window::resolveBackdropState(bool applyPlatform, bool forceRecomposite)
 
     const bool canUsePlatform =
         m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect);
-    if (applyPlatform && (m_backdropEffect == BackdropEffect::Solid || canUsePlatform)) {
+    if (applyPlatform && !m_backdropDisablePending &&
+        (m_backdropEffect == BackdropEffect::Solid || canUsePlatform)) {
         const BackdropApplyResult applied = m_chrome.applySystemBackdropDetailed(
             m_backdropEffect, effectiveThemeUsesDarkAppearance(), forceRecomposite);
         if (applied.applied) {
@@ -473,7 +477,30 @@ void Window::setBackdropEffect(BackdropEffect effect)
 {
     if (m_backdropEffect == effect)
         return;
+    const bool commitOpaque =
+        compatibility::detail::requiresOpaqueBackdropCommit(this, m_backdropState, effect);
     m_backdropEffect = effect;
+    m_backdropDisablePending = commitOpaque;
+    m_backdropOpaqueFramePainted = false;
+
+    if (commitOpaque) {
+        // Native material removal and Qt painting are separate submissions.
+        // Present opaque pixels while the old material still covers the last
+        // transparent frame; never expose the desktop between those operations.
+        // State observers update cached/composited content before repaint().
+        // zh_CN: 先在旧材质仍存在时呈现不透明帧，再移除原生材质；状态观察者
+        // 会在 repaint() 前更新缓存/合成内容，避免两次提交之间透出桌面。
+        QPointer<Window> guard(this);
+        setEffectiveBackdropState(paintedFallbackState(QStringLiteral("solid-requested")));
+        if (!guard || m_backdropEffect != effect)
+            return;
+        if (updatesEnabled()) {
+            repaint();
+            if (!guard || m_backdropEffect != effect)
+                return;
+            finishPendingBackdropChange();
+        }
+    }
 
     // Switching effects updates paint hints and the requested OS backdrop type.
     // Avoid toggling native window flags at runtime to prevent flicker/focus churn.
@@ -481,8 +508,27 @@ void Window::setBackdropEffect(BackdropEffect effect)
     // Deliberate effect switches resolve the actual backend before descendants
     // are allowed to clear the top-level backing store.
     // zh_CN: 用户主动切换效果时先解析实际后端，再允许后代控件清除顶层后备缓冲。
-    resolveBackdropState(isVisible(), /*forceRecomposite*/ isVisible());
+    // Windows' forced recomposition sends a non-client deactivate/activate pair
+    // reserved for first-show priming. Repeating it for a runtime material change
+    // visibly flashes the surface even when the HWND and keyboard focus stay put.
+    // zh_CN: Windows 强制重合成会发送首屏专用的非客户区失活/激活消息；
+    // 运行时切材质重复它，即使 HWND 和键盘焦点不变也会闪烁。
+    const bool forceRecomposite =
+        isVisible() && compatibility::WindowChromeCompat::currentPlatform() !=
+                           compatibility::WindowChromeCompat::Platform::Windows;
+    resolveBackdropState(isVisible(), forceRecomposite);
     emit backdropEffectChanged(m_backdropEffect);
+}
+
+void Window::finishPendingBackdropChange()
+{
+    if (!m_backdropDisablePending || !m_backdropOpaqueFramePainted ||
+        m_backdropEffect != BackdropEffect::Solid ||
+        !compatibility::detail::flushWindowBackdropSurface(this))
+        return;
+
+    m_backdropDisablePending = false;
+    resolveBackdropState(isVisible());
 }
 
 void Window::minimizeWindow()
@@ -623,6 +669,19 @@ void Window::paintPaintedSurface(QPainter& painter, bool includeClientFrame)
 void Window::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
+    if (m_backdropDisablePending && !m_backdropOpaqueFramePainted &&
+        m_backdropState.surfaceMode == BackdropSurfaceMode::SolidOpaque && backingStore() &&
+        painter.paintEngine() &&
+        painter.paintEngine()->paintDevice() == backingStore()->paintDevice()) {
+        // Cache captures via QWidget::render() are not presentation. Only an
+        // opaque paint into the real backing store can release the old material.
+        // Exposure can paint without an UpdateRequest, so also finish after this
+        // paint and its child/GL composition have unwound.
+        // zh_CN: QWidget::render 缓存不是屏幕提交；仅真实后备缓冲的不透明绘制
+        // 可解除旧材质。Expose 可能不经过 UpdateRequest，故本轮合成结束后也检查。
+        m_backdropOpaqueFramePainted = true;
+        QTimer::singleShot(0, this, &Window::finishPendingBackdropChange);
+    }
 
     const int frameMargin = activeClientSideFrameMargin();
     if (frameMargin > 0) {
@@ -761,6 +820,8 @@ bool Window::event(QEvent* event)
 
     const QEvent::Type type = event ? event->type() : QEvent::None;
     const bool handled = QWidget::event(event);
+    if (type == QEvent::UpdateRequest)
+        finishPendingBackdropChange();
     bool nativeSurfaceMayHaveChanged =
         type == QEvent::WinIdChange || fluentIsDisplayScaleChangeEvent(event);
     if (nativeSurfaceMayHaveChanged && isVisible()) {

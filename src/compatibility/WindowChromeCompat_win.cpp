@@ -331,6 +331,22 @@ bool platformSupportsSystemBackdrop()
     return capabilities.nativeMica || capabilities.nativeAcrylic;
 }
 
+bool flushPlatformWindowBackdropSurface(QWidget* window)
+{
+    if (!hwndForWindow(window) || !window->isVisible() || window->isMinimized() ||
+        !window->updatesEnabled() || !window->windowHandle()->isExposed())
+        return false;
+
+    // QWidget must submit its replacement frame before this presentation fence.
+    // DwmSetWindowAttribute alone accepts the request; it does not order the
+    // existing transparent client surface against the material's removal.
+    // zh_CN: 此处先等待 QWidget 已提交的替代帧呈现；设置 DWM 属性成功本身并不保证
+    // 旧透明客户区与移除材质之间的时序。
+    using DwmFlushFn = HRESULT(WINAPI*)();
+    const auto flush = resolveDwmProc<DwmFlushFn>("DwmFlush");
+    return flush && SUCCEEDED(flush());
+}
+
 BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
                                                 bool forceRecomposite)
 {
@@ -395,10 +411,13 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect 
         return result;
     }
 
-    // Nudge DWM to recompute the frame so the backdrop composites right away.
-    // zh_CN: 触发 DWM 重新计算 frame。
-    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
-                 SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    // Only first-show/explicit native repair needs a frame recomputation. A
+    // material-only change does not change the client geometry.
+    // zh_CN: 仅首屏或显式原生修复需要重算窗框；单纯切换材质不改变客户区几何。
+    if (forceRecomposite) {
+        SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+                     SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
 
     // On first show DWM intermittently leaves a flat default glass instead of the real,
     // wallpaper-tinted Mica material, and only an activation round-trip paints the material in.

@@ -456,6 +456,46 @@ TEST_F(WindowTest, RuntimeCanUseOpaqueTitleBarAndCachedPaintedSurface)
     EXPECT_GT(window.property("fluentPaintedSurfaceCacheGeneration").toInt(), firstGeneration);
 }
 
+TEST_F(WindowTest, PaintedSurfaceCacheTracksEffectChangesFromTheFirstFrame)
+{
+    auto capabilities = compatibility::detail::runtimePlatformCapabilities();
+    capabilities.cachePaintedWindowSurfaces = true;
+    RuntimeCapabilitiesScope capabilityScope(capabilities);
+    Window window;
+    window.resize(520, 500);
+    window.ensurePolished();
+    if (window.layout())
+        window.layout()->activate();
+
+    const auto renderFrame = [&] {
+        QImage frame(window.size(), QImage::Format_ARGB32_Premultiplied);
+        frame.fill(Qt::transparent);
+        window.render(&frame);
+        return frame;
+    };
+    QImage previousMaterial;
+    for (BackdropEffect effect : {BackdropEffect::Acrylic, BackdropEffect::Mica,
+                                  BackdropEffect::Solid, BackdropEffect::Acrylic}) {
+        SCOPED_TRACE(static_cast<int>(effect));
+        const int generation = window.property("fluentPaintedSurfaceCacheGeneration").toInt();
+        window.setBackdropEffect(effect);
+        const QImage firstFrame = renderFrame();
+        const QImage material = firstFrame.copy(80, 150, 320, 250);
+        EXPECT_TRUE(imageIsFullyOpaque(material));
+        if (!previousMaterial.isNull())
+            EXPECT_FALSE(material == previousMaterial);
+        previousMaterial = material;
+        const int updatedGeneration =
+            window.property("fluentPaintedSurfaceCacheGeneration").toInt();
+        EXPECT_EQ(updatedGeneration, generation + (effect == BackdropEffect::Solid ? 0 : 1));
+
+        window.setBackdropEffect(effect); // A no-op must keep the already rendered material.
+        EXPECT_EQ(renderFrame(), firstFrame);
+        EXPECT_EQ(window.property("fluentPaintedSurfaceCacheGeneration").toInt(),
+                  updatedGeneration);
+    }
+}
+
 TEST_F(WindowTest, ApplicationSuppliesCaptionButtonAccessibleNames)
 {
     Window window;
@@ -957,7 +997,7 @@ TEST_F(WindowTest, WindowsCustomTitleBarSharesNativeCaptionRow)
     Window window;
     window.resize(640, 420);
     window.show();
-    QTRY_VERIFY_WITH_TIMEOUT(window.isVisible(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.isVisible(); }, 1000));
     ASSERT_NE(window.windowHandle(), nullptr);
     ASSERT_NE(window.titleBar(), nullptr);
     QApplication::processEvents();
@@ -1226,7 +1266,7 @@ TEST_F(WindowTest, TitleBarAutoSuggestClearButtonWorksWhilePopupOpen)
 
     QTest::keyClicks(search, "asdasd");
     QApplication::processEvents();
-    QTRY_VERIFY_WITH_TIMEOUT(search->isSuggestionListOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return search->isSuggestionListOpen(); }, 1000));
 
     auto* clearButton = search->findChild<Button*>("AutoSuggestBoxClearButton");
     ASSERT_NE(clearButton, nullptr);
@@ -1251,8 +1291,8 @@ TEST_F(WindowTest, TitleBarAutoSuggestClearButtonWorksWhilePopupOpen)
     QApplication::processEvents();
 
     EXPECT_TRUE(search->text().isEmpty());
-    QTRY_VERIFY_WITH_TIMEOUT(clearButton->isHidden(), 1000);
-    QTRY_VERIFY_WITH_TIMEOUT(!search->isSuggestionListOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return clearButton->isHidden(); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !search->isSuggestionListOpen(); }, 1000));
 
     window.close();
 }
@@ -1301,11 +1341,11 @@ TEST_F(WindowTest, WindowsTitleBarDoubleClickTogglesNativeMaximizeRestore)
 
     QTest::mouseDClick(window.titleBar(), Qt::LeftButton, Qt::NoModifier,
                        QPoint(320, window.titleBar()->titleBarHeight() / 2));
-    QTRY_VERIFY_WITH_TIMEOUT(window.isMaximized(), 3000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.isMaximized(); }, 3000));
 
     QTest::mouseDClick(window.titleBar(), Qt::LeftButton, Qt::NoModifier,
                        QPoint(320, window.titleBar()->titleBarHeight() / 2));
-    QTRY_VERIFY_WITH_TIMEOUT(!window.isMaximized(), 3000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.isMaximized(); }, 3000));
 
     window.close();
 #else
@@ -1767,7 +1807,7 @@ TEST_F(WindowTest, WindowsMaximizedCustomChromeFillsAvailableGeometry)
     QApplication::processEvents();
 
     window.showMaximized();
-    QTRY_VERIFY_WITH_TIMEOUT(window.isMaximized(), 3000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.isMaximized(); }, 3000));
     QApplication::processEvents();
 
     QScreen* screen = window.screen() ? window.screen() : qApp->primaryScreen();
@@ -1790,7 +1830,7 @@ TEST_F(WindowTest, WindowsMaximizedCustomChromeFillsAvailableGeometry)
     EXPECT_EQ(window.contentHost()->geometry().width(), window.width());
 
     window.showNormal();
-    QTRY_VERIFY_WITH_TIMEOUT(!window.isMaximized(), 3000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.isMaximized(); }, 3000));
     window.close();
 #else
     GTEST_SKIP() << "Windows custom chrome maximize geometry is only required on Windows";

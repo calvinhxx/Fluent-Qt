@@ -3,6 +3,7 @@
 #include <QWindow>
 
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
+#include "compatibility/private/WindowBackdropTransition_p.h"
 
 namespace compatibility {
 
@@ -23,6 +24,29 @@ bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions&
 BackdropCapabilities platformBackdropCapabilities();
 BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
                                                 bool forceRecomposite);
+#ifdef Q_OS_WIN
+bool flushPlatformWindowBackdropSurface(QWidget* window);
+#endif
+
+bool requiresOpaqueBackdropCommit(const QWidget* window,
+                                  const fluent::windowing::BackdropState& previous,
+                                  BackdropEffect requested)
+{
+    return WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::Windows &&
+           window &&
+           previous.surfaceMode == fluent::windowing::BackdropSurfaceMode::CompositedTransparent &&
+           requested == BackdropEffect::Solid;
+}
+
+bool flushWindowBackdropSurface(QWidget* window)
+{
+#ifdef Q_OS_WIN
+    return flushPlatformWindowBackdropSurface(window);
+#else
+    Q_UNUSED(window);
+    return true;
+#endif
+}
 } // namespace detail
 
 namespace {

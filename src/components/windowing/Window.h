@@ -196,6 +196,7 @@ private:
     void scheduleBackdropResolution();
     void scheduleNativeChromeRepair();
     void resolveBackdropState(bool applyPlatform, bool forceRecomposite = false);
+    void finishPendingBackdropChange();
     void setEffectiveBackdropState(const BackdropState& state);
     BackdropState paintedFallbackState(const QString& reason) const;
     void setupCaptionButtons();
@@ -234,6 +235,8 @@ private:
     bool m_windowTranslucent = false;
     bool m_backdropPrimed = false;
     bool m_backdropResolutionPending = false;
+    bool m_backdropDisablePending = false;
+    bool m_backdropOpaqueFramePainted = false;
     bool m_nativeChromeRepairPending = false;
     bool m_fallbackDragging = false;
     bool m_chromeInteractive = true;

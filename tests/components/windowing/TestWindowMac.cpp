@@ -375,8 +375,9 @@ TEST(CocoaWindowBackdropTest, PreservesQtContentAndReusesInWindowMaterial)
 
     window.setBackdropEffect(BackdropEffect::Mica);
     window.showFullScreen();
-    QTRY_VERIFY_WITH_TIMEOUT(window.isFullScreen(), 8000);
-    QTRY_COMPARE_WITH_TIMEOUT(window.backdropState().backend, BackdropBackend::MacVibrancy, 8000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.isFullScreen(); }, 8000));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return (window.backdropState().backend) == (BackdropBackend::MacVibrancy); }, 8000));
     EXPECT_EQ(window.backdropState().surfaceMode, BackdropSurfaceMode::CompositedTransparent);
     EXPECT_TRUE(window.backdropState().platformApplied);
     expectBackdropHierarchy(resolveBackdropHierarchy(&window), NSVisualEffectMaterialSidebar);
@@ -387,8 +388,9 @@ TEST(CocoaWindowBackdropTest, PreservesQtContentAndReusesInWindowMaterial)
     }
 
     window.showNormal();
-    QTRY_VERIFY_WITH_TIMEOUT(!window.isFullScreen(), 8000);
-    QTRY_COMPARE_WITH_TIMEOUT(window.backdropState().backend, BackdropBackend::MacVibrancy, 8000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.isFullScreen(); }, 8000));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return (window.backdropState().backend) == (BackdropBackend::MacVibrancy); }, 8000));
     EXPECT_EQ(window.backdropState().surfaceMode, BackdropSurfaceMode::CompositedTransparent);
     EXPECT_TRUE(window.backdropState().platformApplied);
     expectBackdropHierarchy(resolveBackdropHierarchy(&window), NSVisualEffectMaterialSidebar);
