@@ -27,7 +27,8 @@ public:
      * @brief Creates a new page widget for a route, or nullptr if the route is unknown.
      * zh_CN: 为某路由创建新的页面控件；路由未知时返回 nullptr。
      */
-    QWidget* createPage(const QString& routeId, QWidget* parent = nullptr) const;
+    QWidget* createPage(const QString& routeId, QWidget* parent = nullptr,
+                        bool deferComponentSamples = false) const;
 
 private:
     const GalleryNavigationViewModel& m_navigationViewModel;

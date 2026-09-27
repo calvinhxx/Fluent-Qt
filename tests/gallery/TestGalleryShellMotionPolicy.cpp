@@ -10,8 +10,11 @@
 #include <QPropertyAnimation>
 #include <QSignalSpy>
 #include <QTest>
+#include <QTimer>
 #include <QVariantAnimation>
 #include <QWidget>
+
+#include "QtTestEnvironment.h"
 
 #include "components/basicinput/Button.h"
 #include "components/collections/TreeView.h"
@@ -21,10 +24,15 @@
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/layout/ParticleBackdrop.h"
 #include "components/navigation/StackContentHost.h"
+#include "components/status_info/ProgressBar.h"
+#include "components/status_info/ProgressRing.h"
+#include "components/status_info/Shimmer.h"
 #include "components/textfields/Label.h"
 #include "components/windowing/TitleBar.h"
 #include "model/GalleryNavigationItem.h"
 #include "view/pages/GalleryContentPage.h"
+#include "view/pages/GalleryComponentPage.h"
+#include "view/pages/SettingsPage.h"
 #include "view/shell/GalleryIntroTour.h"
 #include "view/shell/GalleryContentPresenter.h"
 #include "view/shell/GalleryNavigationPane.h"
@@ -33,6 +41,7 @@
 #include "view/shell/GalleryTopNavigationPane.h"
 #include "view/shell/GalleryWindow.h"
 #include "view/support/GalleryMotion.h"
+#include "view/widgets/GallerySampleCatalog.h"
 
 namespace {
 
@@ -113,7 +122,7 @@ TEST_F(GalleryShellMotionPolicyTest, ReducedMotionCapsSplashDismissAndKeepsClean
     EXPECT_EQ(fade->state(), QAbstractAnimation::Running);
     EXPECT_GT(fade->duration(), 0);
     EXPECT_LE(fade->duration(), 50);
-    QTRY_VERIFY_WITH_TIMEOUT(splashGuard.isNull(), 500);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return splashGuard.isNull(); }, 500));
 }
 
 TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesSplashDismissSynchronously)
@@ -148,7 +157,7 @@ TEST_F(GalleryShellMotionPolicyTest, StartupPrewarmCompletesHiddenPageLayoutBefo
     QSignalSpy finished(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmFinished);
     presenter.prewarmRoutes(
         {QStringLiteral("button"), QStringLiteral("slider"), QStringLiteral("tab-view")});
-    QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 4000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (finished.count()) == (1); }, 4000));
     EXPECT_EQ(presenter.currentRouteId(), QStringLiteral("home"));
 
     class ResizeWatch final : public QObject {
@@ -295,6 +304,12 @@ TEST_F(GalleryShellMotionPolicyTest, StartupReplacementCleansUpWithoutStartingTo
     EXPECT_TRUE(original.isNull());
     EXPECT_TRUE(replacement.isVisible());
     EXPECT_EQ(window.findChild<GalleryIntroTour*>(), nullptr);
+    const int readyPages = window.findChildren<fluent::gallery::GalleryComponentPage*>().size();
+    QSignalSpy progress(presenter, &fluent::gallery::GalleryContentPresenter::prewarmProgress);
+    QTest::qWait(350);
+    EXPECT_TRUE(progress.isEmpty());
+    EXPECT_EQ(window.findChildren<fluent::gallery::GalleryComponentPage*>().size(), readyPages)
+        << "Replacing the startup splash must cancel its queued and staged page work";
     replacement.dismiss();
     EXPECT_TRUE(replacement.isHidden());
 }
@@ -321,12 +336,13 @@ TEST_F(GalleryShellMotionPolicyTest, FastStartupPreservesPresentationFromWindowS
     ASSERT_TRUE(splash);
     EXPECT_TRUE(splash->isVisible());
     EXPECT_EQ(window.findChild<QWidget*>("splashLogoTransition"), nullptr);
-    QTRY_VERIFY_WITH_TIMEOUT(window.findChild<QWidget*>("splashLogoTransition"), 2000);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return window.findChild<QWidget*>("splashLogoTransition"); }, 2000));
     EXPECT_GE(visible.elapsed(), 1400);
     // The first-run tour must also wait for the complete connected transition.
     QTest::qWait(500);
     EXPECT_EQ(window.findChild<GalleryIntroTour*>(), nullptr);
-    QTRY_COMPARE_WITH_TIMEOUT(dismissed.count(), 1, 1200);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (dismissed.count()) == (1); }, 1200));
     EXPECT_GE(visible.elapsed(), 2000);
 }
 
@@ -346,7 +362,7 @@ TEST_F(GalleryShellMotionPolicyTest, ReducedPreferenceReleasesPendingStartupPres
         QTest::qWait(200);
         EXPECT_EQ(dismissed.count(), 0);
         fluent::MotionPolicy::instance().setMode(mode);
-        QTRY_COMPARE_WITH_TIMEOUT(dismissed.count(), 1, 400);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return (dismissed.count()) == (1); }, 400));
         EXPECT_EQ(window.findChild<QWidget*>("splashLogoTransition"), nullptr);
     }
 }
@@ -602,7 +618,8 @@ TEST_F(GalleryShellMotionPolicyTest, RunningGalleryTransitionConvergesWhenMotion
 
     fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Reduced);
     EXPECT_LE(animation.duration() - animation.currentTime(), 50);
-    QTRY_COMPARE_WITH_TIMEOUT(animation.state(), QAbstractAnimation::Stopped, 250);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return (animation.state()) == (QAbstractAnimation::Stopped); }, 250));
     EXPECT_EQ(finishedSpy.count(), 1);
     EXPECT_DOUBLE_EQ(animation.currentValue().toDouble(), 1.0);
 }
@@ -626,6 +643,290 @@ TEST_F(GalleryShellMotionPolicyTest, RunningTransientGalleryTransitionDeletesWhe
     EXPECT_EQ(finishedSpy.count(), 1);
     processDeferredDeletes();
     EXPECT_TRUE(guard.isNull());
+}
+
+class GalleryStartupTest : public GalleryShellMotionPolicyTest {
+protected:
+    bool oldSpatial = false;
+    bool oldIntro = false;
+    bool oldParticles = false;
+    fluent::gallery::GallerySettings::MotionMode oldMotion;
+    fluent::gallery::GallerySettings::ThemeMode oldTheme;
+    fluent::windowing::BackdropEffect oldEffect;
+
+    void SetUp() override
+    {
+        GalleryShellMotionPolicyTest::SetUp();
+        auto& settings = fluent::gallery::GallerySettings::instance();
+        oldSpatial = settings.spatialModeEnabled();
+        oldIntro = settings.introCompleted();
+        oldParticles = settings.homeParticlesEnabled();
+        oldMotion = settings.motionMode();
+        oldTheme = settings.themeMode();
+        oldEffect = settings.windowEffect();
+        settings.setSpatialModeEnabled(false);
+        settings.setIntroCompleted(true);
+        settings.setHomeParticlesEnabled(false);
+        settings.setMotionMode(fluent::gallery::GallerySettings::MotionMode::Full);
+    }
+
+    void TearDown() override
+    {
+        auto& settings = fluent::gallery::GallerySettings::instance();
+        settings.setSpatialModeEnabled(oldSpatial);
+        settings.setIntroCompleted(oldIntro);
+        settings.setHomeParticlesEnabled(oldParticles);
+        settings.setMotionMode(oldMotion);
+        settings.setThemeMode(oldTheme);
+        settings.setWindowEffect(oldEffect);
+        GalleryShellMotionPolicyTest::TearDown();
+    }
+};
+
+TEST_F(GalleryStartupTest, SlowPrewarmYieldsPerSampleAndNeverExpiresWhilePaused)
+{
+    fluent::navigation::StackContentHost host;
+    host.resize(960, 680);
+    fluent::gallery::GalleryNavigationViewModel model;
+    fluent::gallery::GalleryContentPresenter presenter(&host, model);
+    ASSERT_TRUE(presenter.presentRoute(QStringLiteral("home")));
+    QSignalSpy progress(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmProgress);
+    QSignalSpy finished(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmFinished);
+    presenter.prewarmRoutes(
+        {QStringLiteral("button"), QStringLiteral("combobox"), QStringLiteral("tab-view")});
+    QPointer<fluent::gallery::GalleryComponentPage> staged;
+    bool inspectedFirstTurn = false;
+    QTimer::singleShot(0, &host, [&] {
+        const auto pages = host.findChildren<fluent::gallery::GalleryComponentPage*>();
+        if (!pages.isEmpty())
+            staged = pages.front();
+        presenter.setPrewarmPaused(true);
+        inspectedFirstTurn = true;
+    });
+    ASSERT_TRUE(QTest::qWaitFor([&] { return inspectedFirstTurn; }, 1000));
+    ASSERT_TRUE(staged);
+    EXPECT_TRUE(staged->isHidden());
+    EXPECT_TRUE(staged->hasPendingSamples());
+    EXPECT_EQ(staged->sampleCount(), 0)
+        << "A staged page shell must yield before constructing its first live example";
+    ASSERT_EQ(progress.count(), 1);
+    EXPECT_EQ(progress.last().at(0).toInt(), 0);
+    EXPECT_EQ(progress.last().at(1).toInt(), 3);
+
+    // This deliberately crosses the former 3-second startup cutoff. Paused time
+    // must neither report false completion nor discard the unbuilt catalog tail.
+    QTest::qWait(3100);
+    EXPECT_EQ(progress.count(), 1);
+    EXPECT_EQ(finished.count(), 0);
+    EXPECT_EQ(staged->sampleCount(), 0);
+    presenter.setPrewarmPaused(false);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return finished.count() == 1; }, 15000));
+    ASSERT_EQ(progress.count(), 4);
+    for (int index = 0; index != progress.count(); ++index) {
+        EXPECT_EQ(progress.at(index).at(0).toInt(), index);
+        EXPECT_EQ(progress.at(index).at(1).toInt(), 3);
+    }
+    EXPECT_FALSE(staged->hasPendingSamples());
+    EXPECT_EQ(staged->sampleCount(), fluent::gallery::gallerySamplesForRoute("button").size());
+    ASSERT_TRUE(presenter.presentRoute(QStringLiteral("button")));
+    EXPECT_EQ(presenter.currentPage(), staged.data());
+}
+
+TEST_F(GalleryStartupTest, FailedPrewarmReportsTheRouteWithoutCountingItReady)
+{
+    fluent::navigation::StackContentHost host;
+    fluent::gallery::GalleryNavigationViewModel model;
+    fluent::gallery::GalleryContentPresenter presenter(&host, model);
+    ASSERT_TRUE(presenter.presentRoute(QStringLiteral("home")));
+    QSignalSpy progress(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmProgress);
+    QSignalSpy failed(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmFailed);
+    QSignalSpy finished(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmFinished);
+    presenter.prewarmRoutes({QStringLiteral("button"), QStringLiteral("missing-startup-route")});
+    ASSERT_TRUE(QTest::qWaitFor([&] { return finished.count() == 1; }, 10000));
+    ASSERT_EQ(failed.count(), 1);
+    EXPECT_EQ(failed.first().first().toString(), QStringLiteral("missing-startup-route"));
+    ASSERT_FALSE(progress.isEmpty());
+    EXPECT_EQ(progress.last().at(0).toInt(), 1);
+    EXPECT_EQ(progress.last().at(1).toInt(), 2);
+    EXPECT_FALSE(presenter.presentRoute(QStringLiteral("missing-startup-route")));
+    EXPECT_TRUE(presenter.presentRoute(QStringLiteral("button")));
+}
+
+TEST_F(GalleryStartupTest, ProgressObserversCanPauseOrCancelWithoutStartingAnotherPage)
+{
+    for (const bool cancel : {false, true}) {
+        SCOPED_TRACE(::testing::Message() << "cancel=" << cancel);
+        fluent::navigation::StackContentHost host;
+        fluent::gallery::GalleryNavigationViewModel model;
+        fluent::gallery::GalleryContentPresenter presenter(&host, model);
+        ASSERT_TRUE(presenter.presentRoute(QStringLiteral("home")));
+        QSignalSpy finished(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmFinished);
+        bool stopped = false;
+        QObject::connect(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmProgress,
+                         &host, [&](int done, int) {
+                             if (done != 1 || stopped)
+                                 return;
+                             stopped = true;
+                             if (cancel)
+                                 presenter.cancelPrewarm();
+                             else
+                                 presenter.setPrewarmPaused(true);
+                         });
+        presenter.prewarmRoutes({QStringLiteral("button"), QStringLiteral("combobox")});
+        ASSERT_TRUE(QTest::qWaitFor([&] { return stopped; }, 10000));
+        QTest::qWait(80);
+        const auto pages = host.findChildren<fluent::gallery::GalleryComponentPage*>();
+        ASSERT_EQ(pages.size(), 1)
+            << "A synchronous progress observer must stop this tick before the next page shell";
+        EXPECT_EQ(pages.first()->routeId(), QStringLiteral("button"));
+        EXPECT_EQ(finished.count(), 0)
+            << "Cancellation is not successful completion of the remaining queue";
+        if (!cancel) {
+            presenter.setPrewarmPaused(false);
+            ASSERT_TRUE(QTest::qWaitFor([&] { return finished.count() == 1; }, 10000));
+            EXPECT_EQ(host.findChildren<fluent::gallery::GalleryComponentPage*>().size(), 2);
+        }
+    }
+}
+
+TEST_F(GalleryStartupTest, HiddenAndClosedWindowsStopPendingPrewarmAndReleaseOwnedPages)
+{
+    auto* window = new fluent::gallery::GalleryWindow;
+    window->setAttribute(Qt::WA_DeleteOnClose);
+    window->resize(960, 680);
+    QPointer<fluent::gallery::GalleryWindow> windowGuard = window;
+    QPointer<fluent::gallery::GalleryContentPresenter> presenter =
+        window->findChild<fluent::gallery::GalleryContentPresenter*>();
+    ASSERT_TRUE(presenter);
+    QSignalSpy progress(presenter, &fluent::gallery::GalleryContentPresenter::prewarmProgress);
+    QTest::qWait(80);
+    EXPECT_TRUE(window->findChildren<fluent::gallery::GalleryComponentPage*>().isEmpty())
+        << "No component page may be built before the splash has painted";
+    EXPECT_EQ(progress.count(), 0);
+    // Exercise a pending multi-page queue explicitly; normal startup now warms
+    // only Home and Settings instead of eagerly constructing every component.
+    presenter->prewarmRoutes({QStringLiteral("button"), QStringLiteral("tab-view")});
+    bool hidAfterReadyPage = false;
+    QObject::connect(
+        presenter, &fluent::gallery::GalleryContentPresenter::prewarmProgress, window,
+        [&](int done, int) {
+            if (done > 0 && !hidAfterReadyPage &&
+                !window->findChildren<fluent::gallery::GalleryComponentPage*>().isEmpty()) {
+                hidAfterReadyPage = true;
+                window->hide();
+            }
+        });
+    window->show();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return hidAfterReadyPage; }, 15000));
+    ASSERT_TRUE(windowGuard);
+    EXPECT_FALSE(window->isVisible());
+    const int pausedProgressCount = progress.count();
+    QVector<QPointer<fluent::gallery::GalleryComponentPage>> ownedPages;
+    for (auto* page : window->findChildren<fluent::gallery::GalleryComponentPage*>())
+        ownedPages.append(page);
+    ASSERT_FALSE(ownedPages.isEmpty());
+    QTest::qWait(350);
+    EXPECT_EQ(progress.count(), pausedProgressCount);
+    EXPECT_EQ(window->findChildren<fluent::gallery::GalleryComponentPage*>().size(),
+              ownedPages.size());
+    window->show();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return progress.count() > pausedProgressCount; }, 15000));
+    window->close();
+    processDeferredDeletes();
+    EXPECT_TRUE(windowGuard.isNull());
+    EXPECT_TRUE(presenter.isNull());
+    for (const auto& page : ownedPages)
+        EXPECT_TRUE(page.isNull());
+    // A queued zero-timer must not dereference its old presenter after close.
+    QTest::qWait(80);
+}
+
+TEST_F(GalleryStartupTest, BoundedStartupAndCancellableColdPagesPreserveWarmState)
+{
+    fluent::gallery::GallerySettings::instance().setHomeParticlesEnabled(true);
+    QElapsedTimer clock;
+    clock.start();
+    fluent::gallery::GalleryWindow window;
+    window.resize(1100, 820);
+    auto* presenter = window.findChild<fluent::gallery::GalleryContentPresenter*>();
+    ASSERT_NE(presenter, nullptr);
+    QPointer<GallerySplashScreen> splash = window.findChild<GallerySplashScreen*>();
+    auto* particles = window.findChild<fluent::layout::ParticleBackdrop*>("galleryHomeParticles");
+    ASSERT_NE(particles, nullptr);
+    particles->setPauseWhenInactive(false);
+    EXPECT_FALSE(particles->isAnimating());
+    QSignalSpy finished(presenter, &fluent::gallery::GalleryContentPresenter::prewarmFinished);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return finished.count() == 1; }, 10000));
+    EXPECT_TRUE(window.findChildren<fluent::gallery::GalleryComponentPage*>().isEmpty())
+        << "Unvisited component demos must not extend startup";
+    EXPECT_FALSE(particles->isAnimating());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return splash.isNull(); }, 6000));
+    const qint64 handoffMs = clock.elapsed();
+    RecordProperty("startupHandoffMs", int(handoffMs));
+    EXPECT_TRUE(particles->isAnimating());
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("settings")));
+    auto* settings = window.currentSettingsPage();
+    ASSERT_NE(settings, nullptr);
+
+    // Cancellation destroys an incomplete cold page, never publishes it.
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
+    QPointer<fluent::gallery::GalleryComponentPage> staged;
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            const auto pages = window.findChildren<fluent::gallery::GalleryComponentPage*>();
+            if (!pages.isEmpty())
+                staged = pages.front();
+            return !staged.isNull();
+        },
+        3000));
+    ASSERT_TRUE(staged->hasPendingSamples());
+    EXPECT_TRUE(staged->isHidden());
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("settings")));
+    EXPECT_TRUE(staged.isNull());
+    EXPECT_EQ(window.currentSettingsPage(), settings);
+
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            const auto* page = window.currentContentPage();
+            return page && page->routeId() == QStringLiteral("button");
+        },
+        15000));
+    auto* page = qobject_cast<fluent::gallery::GalleryComponentPage*>(window.currentContentPage());
+    ASSERT_NE(page, nullptr);
+    EXPECT_FALSE(page->hasPendingSamples());
+    EXPECT_EQ(page->sampleCount(), fluent::gallery::gallerySamplesForRoute("button").size());
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("settings")));
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
+    EXPECT_EQ(window.currentContentPage(), page);
+    qInfo("Bounded Gallery startup: handoffMs=%lld completeChecksMs=%lld", handoffMs,
+          clock.elapsed());
+}
+
+TEST_F(GalleryStartupTest, VisualCheck)
+{
+    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST"))
+        GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Gallery startup and mode switching require native desktop review";
+    auto& settings = fluent::gallery::GallerySettings::instance();
+    settings.setThemeMode(fluent::gallery::GallerySettings::ThemeMode::Dark);
+    settings.setWindowEffect(fluent::windowing::BackdropEffect::Mica);
+    settings.setHomeParticlesEnabled(true);
+    fluent::gallery::GalleryWindow window;
+    window.resize(1180, 820);
+    window.show();
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        ASSERT_TRUE(
+            QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 60000));
+        tests::support::VisualSnapshotOptions options;
+        options.theme = tests::support::VisualSnapshotTheme::Dark;
+        options.variant = QStringLiteral("startup-ready");
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(&window, options));
+        return;
+    }
+    qApp->exec();
 }
 
 } // namespace

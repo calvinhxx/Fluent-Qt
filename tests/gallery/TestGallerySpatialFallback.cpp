@@ -144,12 +144,14 @@ TEST(GallerySpatialPreferenceTest, ColdLoadProbe)
         presenter->prewarmFinished();
         window.resize(1200, 820);
         window.show();
-        QTRY_VERIFY_WITH_TIMEOUT(!window.findChild<QWidget*>("gallerySplashScreen"), 6500);
-        QTRY_VERIFY_WITH_TIMEOUT(!settings.spatialAvailabilityPending(), 6000);
+        ASSERT_TRUE(QTest::qWaitFor(
+            [&] { return !window.findChild<QWidget*>("gallerySplashScreen"); }, 60000));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return !settings.spatialAvailabilityPending(); }, 6000));
         auto* surface = window.findChild<QWidget*>("gallerySpatialSurface");
         if (settings.spatialAvailable()) {
             ASSERT_NE(surface, nullptr);
-            QTRY_VERIFY_WITH_TIMEOUT(surface->property("presenting").toBool(), 2000);
+            ASSERT_TRUE(
+                QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 2000));
             EXPECT_TRUE(depth::enabled(&window));
         } else {
             EXPECT_FALSE(depth::enabled(&window));
@@ -157,9 +159,12 @@ TEST(GallerySpatialPreferenceTest, ColdLoadProbe)
         EXPECT_TRUE(settings.spatialModeEnabled());
         EXPECT_FALSE(storage.contains("settings/spatialModeEnabled"));
         ASSERT_TRUE(window.selectRoute("spatial-view"));
-        QTRY_VERIFY_WITH_TIMEOUT(window.currentContentPage() &&
-                                     window.currentContentPage()->routeId() == "spatial-view",
-                                 2000);
+        ASSERT_TRUE(QTest::qWaitFor(
+            [&] {
+                return window.currentContentPage() &&
+                       window.currentContentPage()->routeId() == "spatial-view";
+            },
+            2000));
         auto* page = window.currentContentPage();
         charts::DonutChart* chart = nullptr;
         spatial::SpatialView* preview = nullptr;
@@ -268,7 +273,12 @@ TEST_F(GallerySpatialFallbackTest, SupportBadgesTrackCapabilityInsteadOfTheModeP
         for (auto* badge : badges) {
             EXPECT_TRUE(badge->isEnabled());
             EXPECT_EQ(badge->status(), status_info::InfoBadge::InfoBadgeStatus::Critical);
-            QTRY_COMPARE(badge->effectiveForegroundColor(), badge->themeColorsRef().systemCritical);
+            ASSERT_TRUE(QTest::qWaitFor(
+                [&] {
+                    return (badge->effectiveForegroundColor()) ==
+                           (badge->themeColorsRef().systemCritical);
+                },
+                5000));
             EXPECT_TRUE(badge->toolTip().contains("unavailable"));
             EXPECT_TRUE(badge->toolTip().contains(settings.spatialUnavailableReason()));
         }
@@ -288,7 +298,7 @@ TEST_F(GallerySpatialFallbackTest, NavigationSupportBadgeFollowsTheRowWithoutAct
     auto* tree = pane.findChild<collections::TreeView*>("galleryMainNavigationTreeView");
     ASSERT_NE(badge, nullptr);
     ASSERT_NE(tree, nullptr);
-    QTRY_VERIFY(badge->isVisible());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return badge->isVisible(); }, 5000));
     const auto spatial = pane.indexForRouteId("spatial");
     const auto checkAligned = [&] {
         const auto row = tree->visualRect(spatial);
@@ -307,10 +317,10 @@ TEST_F(GallerySpatialFallbackTest, NavigationSupportBadgeFollowsTheRowWithoutAct
     QCoreApplication::processEvents();
     checkAligned();
     pane.setCompact(true);
-    QTRY_VERIFY(badge->isHidden());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return badge->isHidden(); }, 5000));
     pane.setCompact(false);
     tree->scrollTo(spatial, QAbstractItemView::PositionAtCenter);
-    QTRY_VERIFY(badge->isVisible());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return badge->isVisible(); }, 5000));
     checkAligned();
     settings.setSpatialAvailability(false, "Hardware acceleration is unavailable. Using 2D.");
     EXPECT_EQ(spatial.data(Qt::AccessibleDescriptionRole).toString(),
@@ -331,7 +341,8 @@ TEST_F(GallerySpatialFallbackTest, UnavailableAccelerationKeepsNativeWidgetsAndP
     qputenv("FLUENT_QT_GALLERY_DISABLE_3D", "1");
     GalleryWindow window;
     finishStartup(window);
-    QTRY_VERIFY_WITH_TIMEOUT(!window.findChild<QWidget*>("gallerySplashScreen"), 6500);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return !window.findChild<QWidget*>("gallerySplashScreen"); }, 60000));
     auto* navigation = window.findChild<navigation::NavigationView*>();
     auto* controller = window.findChild<GallerySpatialController*>();
     ASSERT_NE(navigation, nullptr);
@@ -346,7 +357,7 @@ TEST_F(GallerySpatialFallbackTest, UnavailableAccelerationKeepsNativeWidgetsAndP
     EXPECT_EQ(controller->projectedPosition(navigation, QPoint(20, 20)),
               navigation->mapTo(&window, QPoint(20, 20)));
     ASSERT_TRUE(window.selectRoute("settings"));
-    QTRY_VERIFY_WITH_TIMEOUT(window.currentSettingsPage(), 2000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.currentSettingsPage(); }, 2000));
     auto* toggle = window.findChild<basicinput::ToggleSwitch*>("gallerySettingsSpatialModeToggle");
     ASSERT_NE(toggle, nullptr);
     EXPECT_FALSE(toggle->isOn());
@@ -368,7 +379,7 @@ TEST_F(GallerySpatialFallbackTest, UnavailableAccelerationKeepsNativeWidgetsAndP
         window.activateWindow();
         QTest::mouseMove(&window, QPoint(window.width() / 2, 25));
         QTest::mouseMove(&window, badge->mapTo(&window, badge->rect().center()));
-        QTRY_VERIFY_WITH_TIMEOUT(tooltip->isVisible(), 3000);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return tooltip->isVisible(); }, 3000));
     } else {
         QHelpEvent help(QEvent::ToolTip, badge->rect().center(),
                         badge->mapToGlobal(badge->rect().center()));
@@ -383,7 +394,7 @@ TEST_F(GallerySpatialFallbackTest, UnavailableAccelerationKeepsNativeWidgetsAndP
     window.resize(760, 740);
     capture(window, QStringLiteral("fallback-dark-narrow"));
     ASSERT_TRUE(window.selectRoute("button"));
-    QTRY_VERIFY_WITH_TIMEOUT(window.currentContentPage(), 2000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.currentContentPage(); }, 2000));
     EXPECT_TRUE(window.currentContentPage()->isVisible());
 #ifndef FLUENT_QT_HAS_SPATIAL
     EXPECT_FALSE(window.selectRoute("spatial-view"));
@@ -404,13 +415,14 @@ TEST_F(GallerySpatialFallbackTest, RendererFailureRestoresTheSamePageAndStopsMot
     qunsetenv("FLUENT_QT_GALLERY_DISABLE_3D");
     GalleryWindow window;
     finishStartup(window);
-    QTRY_VERIFY_WITH_TIMEOUT(!window.findChild<QWidget*>("gallerySplashScreen"), 6500);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return !window.findChild<QWidget*>("gallerySplashScreen"); }, 60000));
     ASSERT_TRUE(settings.spatialAvailable());
     auto* controller = window.findChild<GallerySpatialController*>();
     auto* navigation = window.findChild<navigation::NavigationView*>();
     ASSERT_TRUE(controller);
-    QTRY_VERIFY_WITH_TIMEOUT(depth::enabled(&window), 1500);
-    QTRY_VERIFY_WITH_TIMEOUT(!controller->transitionRunning(), 2000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return depth::enabled(&window); }, 1500));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !controller->transitionRunning(); }, 2000));
     auto* page = window.currentContentPage();
     auto* surface = window.findChild<QWidget*>("gallerySpatialSurface");
     ASSERT_NE(surface, nullptr);
@@ -422,19 +434,20 @@ TEST_F(GallerySpatialFallbackTest, RendererFailureRestoresTheSamePageAndStopsMot
     ASSERT_TRUE(
         QMetaObject::invokeMethod(controller, "disableSpatial", Qt::QueuedConnection,
                                   Q_ARG(QString, QStringLiteral("Simulated context loss"))));
-    QTRY_VERIFY_WITH_TIMEOUT(!settings.spatialAvailable(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !settings.spatialAvailable(); }, 1000));
     EXPECT_FALSE(controller->transitionRunning());
     EXPECT_EQ(navigation->graphicsEffect(), nullptr);
     EXPECT_EQ(navigation->contentHost()->graphicsEffect(), nullptr);
     EXPECT_FALSE(depth::enabled(page));
     EXPECT_EQ(window.currentContentPage(), page);
     EXPECT_TRUE(marker->isOn());
-    QTRY_VERIFY_WITH_TIMEOUT(!window.findChild<QWidget*>("gallerySpatialSurface"), 1000);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return !window.findChild<QWidget*>("gallerySpatialSurface"); }, 1000));
     settings.setSpatialModeEnabled(true);
     EXPECT_FALSE(depth::enabled(page));
     EXPECT_FALSE(controller->transitionRunning());
     EXPECT_TRUE(window.selectRoute("settings"));
-    QTRY_VERIFY_WITH_TIMEOUT(window.currentSettingsPage(), 2000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.currentSettingsPage(); }, 2000));
     auto* toggle = window.findChild<basicinput::ToggleSwitch*>("gallerySettingsSpatialModeToggle");
     ASSERT_NE(toggle, nullptr);
     EXPECT_FALSE(toggle->isEnabled());

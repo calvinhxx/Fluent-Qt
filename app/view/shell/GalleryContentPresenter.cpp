@@ -11,6 +11,7 @@
 #include "model/GalleryNavigationItem.h"
 #include "support/logging/Log.h"
 #include "view/pages/GalleryContentPage.h"
+#include "view/pages/GalleryComponentPage.h"
 #include "view/pages/GalleryPageFactory.h"
 #include "view/shell/GalleryPageSkeleton.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
@@ -30,14 +31,6 @@ constexpr int kSkeletonRevealMs = 100;
 constexpr int kSkeletonRevealMs = 32;
 #endif
 
-// Time budget for splash-phase prewarm. Building pages freezes the GUI thread, so we only warm
-// while the splash hides it; once this elapses we stop and dismiss the splash, leaving the
-// un-warmed tail to lazy + shimmer. Bounds startup wait, and adapts to machine speed (Release
-// drains the whole queue well inside it). zh_CN: splash 期预热的时间预算。建页会冻结 GUI 线程，故只在
-// splash 遮挡时预热；到点即停并消除 splash，剩余尾部交给懒加载+shimmer。限定启动等待，并自适应机器速度
-//（Release 远在预算内就能排空整个队列）。
-constexpr int kPrewarmBudgetMs = 3000;
-
 } // namespace
 
 GalleryContentPresenter::GalleryContentPresenter(
@@ -46,6 +39,35 @@ GalleryContentPresenter::GalleryContentPresenter(
     : QObject(parent), m_contentHost(contentHost), m_navigationViewModel(navigationViewModel),
       m_maxResidentRoutes(qMax(0, maxResidentRoutes))
 {}
+
+GalleryContentPresenter::~GalleryContentPresenter()
+{
+    cancelLazyBuild();
+    cancelPrewarm();
+}
+
+void GalleryContentPresenter::cancelLazyBuild()
+{
+    delete m_lazyPage.data();
+    m_lazyPage.clear();
+    m_lazyBuildMs = 0;
+}
+
+void GalleryContentPresenter::cancelPrewarm()
+{
+    m_prewarmPaused = true;
+    m_prewarmQueue.clear();
+    delete m_prewarmPage.data();
+    m_prewarmPage.clear();
+    m_prewarmRouteId.clear();
+}
+
+void GalleryContentPresenter::setStartupCovered(bool covered)
+{
+    m_startupCovered = covered;
+    if (QWidget* page = currentPage())
+        page->setVisible(!covered);
+}
 
 QWidget* GalleryContentPresenter::currentPage() const
 {
@@ -148,6 +170,7 @@ bool GalleryContentPresenter::presentRoute(const QString& routeId)
     // Record the target route up front: a deferred lazy build re-checks this to confirm the
     // page it built is still the one the user wants before swapping it in.
     // zh_CN: 先记录目标路由：延迟的懒构建会复查它，确认建好的页面仍是用户想要的才换入。
+    cancelLazyBuild();
     m_currentRouteId = routeId;
     const quint64 requestId = ++m_navigationRequestId;
 
@@ -202,26 +225,42 @@ void GalleryContentPresenter::ensureSkeleton()
 
 void GalleryContentPresenter::scheduleLazyBuild(const QString& routeId, quint64 requestId)
 {
-    // Delay the build by kSkeletonRevealMs (not 0): a zero-timer would fire before the just-
-    // shown skeleton paints, so the build would block the thread first and the skeleton would
-    // never appear. Waiting a frame lets the skeleton render before the build runs.
-    // zh_CN: 用 kSkeletonRevealMs 而非 0 延迟构建：零延迟会在刚切上的骨架绘制前触发，导致构建先阻塞线程、
-    // 骨架根本不显示。等一帧让骨架先渲染，再执行构建。
-    QTimer::singleShot(kSkeletonRevealMs, this, [this, routeId, requestId]() {
-        // The user may have navigated on (or to a now-warm page) before this fired; only
-        // spend the build if this route is still the one on screen.
-        // zh_CN: 触发前用户可能已切走（或切到已预热页）；仅当该路由仍是屏幕上的目标时才花费构建。
-        if (m_currentRouteId != routeId || m_navigationRequestId != requestId)
-            return;
-        qint64 buildMs = 0;
-        const int index = ensurePageBuilt(routeId, &buildMs);
-        if (index >= 0 && m_currentRouteId == routeId && m_navigationRequestId == requestId) {
-            watchNavigationPage(m_contentHost->pageWidget(index), buildMs);
-            m_pendingSwitchMs = switchToStackPage(index);
-        } else if (index < 0 && m_navigationRequestId == requestId) {
+    QTimer::singleShot(kSkeletonRevealMs, this,
+                       [this, routeId, requestId] { buildNextLazyPart(routeId, requestId); });
+}
+
+void GalleryContentPresenter::buildNextLazyPart(const QString& routeId, quint64 requestId)
+{
+    if (m_currentRouteId != routeId || m_navigationRequestId != requestId)
+        return;
+    QElapsedTimer clock;
+    clock.start();
+    if (!m_lazyPage) {
+        GalleryPageFactory factory(m_navigationViewModel);
+        m_lazyPage = factory.createPage(routeId, m_contentHost, true);
+        if (!m_lazyPage) {
             cancelNavigationWatch();
+            return;
         }
-    });
+        m_lazyPage->hide();
+        m_lazyPage->resize(m_contentHost->contentsRect().size());
+    } else if (auto* page = qobject_cast<GalleryComponentPage*>(m_lazyPage.data());
+               page && page->hasPendingSamples()) {
+        page->buildNextSample();
+    } else {
+        const int index = registerPage(routeId, m_lazyPage);
+        m_lazyPage.clear();
+        m_lazyBuildMs += clock.elapsed();
+        watchNavigationPage(m_contentHost->pageWidget(index), m_lazyBuildMs);
+        m_pendingSwitchMs = switchToStackPage(index);
+        m_lazyBuildMs = 0;
+        return;
+    }
+    m_lazyBuildMs += clock.elapsed();
+    // A single sample factory is the indivisible GUI-thread unit. Let input
+    // and Shimmer paint between units; stale navigation cancels the owned page.
+    QTimer::singleShot(8, this,
+                       [this, routeId, requestId] { buildNextLazyPart(routeId, requestId); });
 }
 
 void GalleryContentPresenter::prewarmRoutes(const QStringList& routeIds)
@@ -247,16 +286,21 @@ void GalleryContentPresenter::prewarmRoutes(const QStringList& routeIds)
     }
     if (m_prewarmQueue.isEmpty()) {
         // Nothing to warm — still notify so the splash dismisses. zh_CN: 没有要预热的——仍通知，让 splash 关闭。
-        emit prewarmFinished();
+        const QPointer<GalleryContentPresenter> guard(this);
+        emit prewarmProgress(0, 0);
+        if (guard)
+            emit prewarmFinished();
         return;
     }
-    m_prewarmTotal = m_prewarmQueue.size();
-    m_prewarmDone = 0;
-    LOG_DEBUG(QStringLiteral("GalleryContentPresenter prewarmRoutes queued=%1 budgetMs=%2")
-                  .arg(m_prewarmTotal)
-                  .arg(kPrewarmBudgetMs));
-    emit prewarmProgress(0, 100);
-    m_prewarmBudget.start();
+    m_prewarmTotal = m_prewarmDone + m_prewarmQueue.size();
+    LOG_DEBUG(QStringLiteral("GalleryContentPresenter prewarmRoutes queued=%1")
+                  .arg(m_prewarmQueue.size()));
+    const QPointer<GalleryContentPresenter> guard(this);
+    emit prewarmProgress(m_prewarmDone, m_prewarmTotal);
+    if (!guard)
+        return;
+    if (!m_prewarmTimer.isValid())
+        m_prewarmTimer.start();
     scheduleNextPrewarm();
 }
 
@@ -276,9 +320,9 @@ void GalleryContentPresenter::scheduleNextPrewarm()
     if (m_prewarmScheduled || m_prewarmPaused)
         return;
     m_prewarmScheduled = true;
-    // One page per event-loop tick: the build freezes the thread, but yielding between pages
-    // lets the splash spinner keep animating instead of locking up for the whole prewarm.
-    // zh_CN: 每帧建一个：建页会冻结线程，但页间让出控制权，让 splash 转圈持续动画而非整段预热期间锁死。
+    // One sample factory per turn, followed by a separate first-layout turn. Never process
+    // events recursively inside a factory: ownership and navigation stay non-reentrant.
+    // zh_CN: 每轮一个示例工厂，首次布局单独一轮；不在工厂内递归处理事件，保证所有权和导航不重入。
     QTimer::singleShot(0, this, [this]() {
         m_prewarmScheduled = false;
         // Paused after this tick was queued (user grabbed the window): skip the build and wait —
@@ -289,51 +333,56 @@ void GalleryContentPresenter::scheduleNextPrewarm()
 
         // Skip anything already built (e.g. the user reached it first), then warm the next.
         // zh_CN: 跳过已建好的（如用户先到达的），再预热下一个。
-        while (!m_prewarmQueue.isEmpty() && m_routeStackIndex.contains(m_prewarmQueue.head()))
+        while (!m_prewarmQueue.isEmpty() && m_routeStackIndex.contains(m_prewarmQueue.head())) {
             m_prewarmQueue.dequeue();
+            ++m_prewarmDone;
+            const QPointer<GalleryContentPresenter> guard(this);
+            emit prewarmProgress(m_prewarmDone, m_prewarmTotal);
+            if (!guard || m_prewarmPaused)
+                return;
+        }
 
         if (m_prewarmQueue.isEmpty()) {
-            emit prewarmProgress(100, 100);
+            LOG_DEBUG(QStringLiteral(
+                          "GalleryContentPresenter prewarm finished ready=%1 total=%2 elapsedMs=%3")
+                          .arg(m_prewarmDone)
+                          .arg(m_prewarmTotal)
+                          .arg(m_prewarmTimer.elapsed()));
             emit prewarmFinished();
             return;
         }
-        const int index = ensurePageBuilt(m_prewarmQueue.dequeue());
-        if (auto* page = m_contentHost->pageWidget(index)) {
-            // Hidden pages defer resize delivery. Include their first layout in this page's
-            // warm-up, rather than flushing every resident page when an opacity effect renders
-            // the window at dismissal. Only one pixel is painted; no full-page image is kept.
-            // zh_CN: 隐藏页会延迟分发 resize；逐页预热时完成首次布局，避免退场透明度合成时
-            // 集中处理所有常驻页。仅绘制一个像素，不保留整页截图，也不显示页面或启动其动画。
-            page->resize(m_contentHost->contentsRect().size());
-            page->grab(QRect(0, 0, 1, 1));
-        }
-        ++m_prewarmDone;
-        // Show whichever is further along — pages warmed, or time spent against the budget — so
-        // the caption climbs smoothly to ~100% whether the budget caps it (Debug) or the queue
-        // drains first (Release), instead of stalling at a low page fraction.
-        // zh_CN: 取「已预热页数」与「已用时间/预算」中较大者显示，使百分比平滑爬到约 100%——无论是预算封顶
-        //（Debug）还是队列先排空（Release），而不会卡在很低的页数占比上。
-        const int pagePct = m_prewarmDone * 100 / m_prewarmTotal;
-        const int timePct = static_cast<int>(m_prewarmBudget.elapsed() * 100 / kPrewarmBudgetMs);
-        emit prewarmProgress(qBound(0, qMax(pagePct, timePct), 100), 100);
-
-        if (m_prewarmQueue.isEmpty() || m_prewarmBudget.elapsed() >= kPrewarmBudgetMs) {
-            // Budget spent (or queue drained): stop warming and let the splash go. The tail
-            // builds lazily behind the shimmer skeleton on first visit. Snap the caption to 100%
-            // so it reads "ready", not stalled mid-load.
-            // zh_CN: 预算用尽（或队列排空）：停止预热并放行 splash。尾部在首次访问时于 shimmer 骨架屏背后懒构建。
-            // 把文字补到 100%，读起来是「就绪」而非加载到一半卡住。
-            LOG_DEBUG(
-                QStringLiteral(
-                    "GalleryContentPresenter prewarm stopped warmed=%1 remaining=%2 elapsedMs=%3")
-                    .arg(m_prewarmDone)
-                    .arg(m_prewarmQueue.size())
-                    .arg(m_prewarmBudget.elapsed()));
-            m_prewarmQueue.clear();
-            emit prewarmProgress(100, 100);
-            emit prewarmFinished();
+        const QString routeId = m_prewarmQueue.head();
+        if (!m_prewarmPage) {
+            m_prewarmRouteId = routeId;
+            GalleryPageFactory factory(m_navigationViewModel);
+            m_prewarmPage = factory.createPage(routeId, m_contentHost, true);
+            if (!m_prewarmPage) {
+                m_prewarmQueue.dequeue();
+                m_prewarmRouteId.clear();
+                const QPointer<GalleryContentPresenter> guard(this);
+                emit prewarmFailed(routeId);
+                if (!guard)
+                    return;
+            } else {
+                m_prewarmPage->hide();
+                m_prewarmPage->resize(m_contentHost->contentsRect().size());
+            }
+            scheduleNextPrewarm();
             return;
         }
+        auto* componentPage = qobject_cast<GalleryComponentPage*>(m_prewarmPage.data());
+        if (componentPage && componentPage->hasPendingSamples()) {
+            componentPage->buildNextSample();
+            scheduleNextPrewarm();
+            return;
+        }
+        // Flush delayed layout without showing a hidden demo or retaining a screenshot.
+        // zh_CN: 完成延迟布局，不显示隐藏示例，也不保留截图。
+        registerPage(routeId, m_prewarmPage);
+        m_prewarmPage->resize(m_contentHost->contentsRect().size());
+        m_prewarmPage->grab(QRect(0, 0, 1, 1));
+        m_prewarmPage.clear();
+        m_prewarmRouteId.clear();
         scheduleNextPrewarm();
     });
 }
@@ -360,7 +409,19 @@ int GalleryContentPresenter::ensurePageBuilt(const QString& routeId, qint64* bui
     QElapsedTimer buildTimer;
     buildTimer.start();
     GalleryPageFactory pageFactory(m_navigationViewModel);
-    QWidget* page = pageFactory.createPage(routeId, m_contentHost);
+    QWidget* page = m_prewarmRouteId == routeId ? m_prewarmPage.data() : nullptr;
+    if (page) {
+        // A programmatic navigation can overtake warm-up; finish and reuse its owned page.
+        // zh_CN: 程序化导航可能抢先到达预热页；补完并复用，避免创建第二份。
+        if (auto* componentPage = qobject_cast<GalleryComponentPage*>(page)) {
+            while (componentPage->hasPendingSamples())
+                componentPage->buildNextSample();
+        }
+        m_prewarmPage.clear();
+        m_prewarmRouteId.clear();
+    } else {
+        page = pageFactory.createPage(routeId, m_contentHost);
+    }
     if (!page) {
         LOG_WARN(
             QStringLiteral(
@@ -368,22 +429,27 @@ int GalleryContentPresenter::ensurePageBuilt(const QString& routeId, qint64* bui
                 .arg(routeId));
         return -1;
     }
-    connectPageNavigation(page);
-    const int index = m_contentHost->count();
-    m_contentHost->insertPage(index, page);
-    m_routeStackIndex.insert(routeId, index);
-    touchResidentRoute(routeId);
-    trimResidentRoutes(routeId);
+    const int residentIndex = registerPage(routeId, page);
     const qint64 elapsedBuildMs = buildTimer.elapsed();
     if (buildMs)
         *buildMs = elapsedBuildMs;
-    const int residentIndex = m_routeStackIndex.value(routeId, -1);
     LOG_DEBUG(QStringLiteral("PERF buildPage routeId=%1 buildMs=%2 pageType=%3 stackIndex=%4")
                   .arg(routeId)
                   .arg(elapsedBuildMs)
                   .arg(QString::fromLatin1(page->metaObject()->className()))
                   .arg(residentIndex));
     return residentIndex;
+}
+
+int GalleryContentPresenter::registerPage(const QString& routeId, QWidget* page)
+{
+    connectPageNavigation(page);
+    const int index = m_contentHost->count();
+    m_contentHost->insertPage(index, page);
+    m_routeStackIndex.insert(routeId, index);
+    touchResidentRoute(routeId);
+    trimResidentRoutes(routeId);
+    return m_routeStackIndex.value(routeId, -1);
 }
 
 void GalleryContentPresenter::touchResidentRoute(const QString& routeId)
@@ -454,6 +520,10 @@ qint64 GalleryContentPresenter::switchToStackPage(int targetIndex)
     QElapsedTimer switchTimer;
     switchTimer.start();
     m_contentHost->setCurrentIndex(targetIndex, 0, false);
+    if (m_startupCovered) {
+        if (QWidget* page = currentPage())
+            page->hide();
+    }
     const qint64 switchMs = switchTimer.elapsed();
     LOG_DEBUG(QStringLiteral("PERF switchToStackPage from=%1 to=%2 switchMs=%3")
                   .arg(fromIndex)

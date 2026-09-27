@@ -1,9 +1,13 @@
 #include "GalleryWindow.h"
 #include "GallerySpatialController.h"
+#ifdef FLUENT_QT_HAS_SPATIAL
+#include "components/spatial/SpatialRuntime.h"
+#endif
 
 #include <algorithm>
 
 #include <QMoveEvent>
+#include <QHideEvent>
 #include <QResizeEvent>
 #include <QShowEvent>
 #include <QTimer>
@@ -12,6 +16,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/MotionPolicy.h"
 #include "compatibility/WindowChromeCompat.h"
+#include "compatibility/QtCompat.h"
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/textfields/EditingCommandRouter.h"
@@ -32,6 +37,7 @@
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/SettingsPage.h"
 #include "view/support/GalleryEditingCommands.h"
+#include "view/support/GalleryToast.h"
 
 namespace fluent::gallery {
 namespace {
@@ -65,18 +71,9 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     : fluent::windowing::Window(parent), m_navigationState(this)
 {
     GallerySpatialController::prepareApplicationStyle();
-#if defined(FLUENT_QT_HAS_SPATIAL) && defined(Q_OS_MACOS) && QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
-    if (QGuiApplication::platformName() == QLatin1String("cocoa") &&
-        qEnvironmentVariableIntValue("FLUENT_QT_GALLERY_DISABLE_3D") == 0) {
-        // Window's Cocoa chrome has already made a hidden native window. Prepare
-        // its replacement before showing anything, so adding the first GL widget
-        // cannot destroy the visible window. This creates no GL context or RHI.
-        // zh_CN: 在首次显示前准备兼容表面，避免首次加入 GL 控件时重建可见窗口；不创建 GPU 上下文。
-        destroy();
-        setAttribute(Qt::WA_NativeWindow, false);
-        setAttribute(Qt::WA_NativeWindow);
-        windowHandle()->setSurfaceType(QSurface::OpenGLSurface);
-    }
+#ifdef FLUENT_QT_HAS_SPATIAL
+    if (qEnvironmentVariableIntValue("FLUENT_QT_GALLERY_DISABLE_3D") == 0)
+        spatial::SpatialRuntime::prepareWindow(this);
 #endif
     setObjectName(QStringLiteral("galleryWindow"));
     setWindowTitle(platform::capabilities().windowTitle);
@@ -246,6 +243,12 @@ void GalleryWindow::installSplashScreen()
             m_titleBar->setAppIconRevealed(true);
         LOG_DEBUG(QStringLiteral("GalleryWindow startup dismissed visibleMs=%1")
                       .arg(m_startupVisibleTimer.elapsed()));
+        if (!m_startupFailedRoutes.isEmpty())
+            showGalleryToast(
+                this,
+                QStringLiteral("Some pages could not be prepared: %1. Select a page to retry.")
+                    .arg(m_startupFailedRoutes.join(QStringLiteral(", "))),
+                status_info::Toast::Warning);
         // Schedule from actual completion so the tour never covers a travelling logo.
         // zh_CN: 从实际退场完成时计时，避免首启引导盖住仍在移动的图标。
         if (platform::capabilities().showsIntroTour &&
@@ -265,6 +268,11 @@ void GalleryWindow::installSplashScreen()
             [this]() { scheduleStartupFinish(); });
     m_splashScreen->show();
     m_splashScreen->raise();
+    // Do not spend page construction before the splash reaches its first actual paint.
+    // zh_CN: splash 实际绘制首帧之后才开始建页，避免首次显示前长时间空白。
+    m_contentPresenter->setPrewarmPaused(true);
+    m_contentPresenter->setStartupCovered(true);
+    m_splashScreen->installEventFilter(this);
 
     // Prewarm completion marks content ready; presentation timing belongs to the Gallery shell.
     // zh_CN: 预热完成表示内容已就绪；展示节奏由 Gallery 外壳控制，公共组件仍可随时 dismiss。
@@ -282,6 +290,43 @@ void GalleryWindow::installSplashScreen()
         }
         scheduleStartupFinish();
     });
+    connect(m_contentPresenter, &GalleryContentPresenter::prewarmFailed, this,
+            [this](const QString& routeId) {
+                m_startupFailedRoutes.append(routeId);
+                setProperty("galleryStartupFailedRoutes", m_startupFailedRoutes);
+                if (m_splashScreen)
+                    m_splashScreen->setText(QStringLiteral("Some pages could not be prepared"));
+                LOG_WARN(
+                    QStringLiteral("GalleryWindow startup page failed routeId=%1").arg(routeId));
+            });
+}
+
+bool GalleryWindow::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == m_splashScreen && event->type() == QEvent::Paint && !m_startupPrewarmStarted &&
+        !m_startupReadyTimer.isValid() && isVisible() && !isMinimized()) {
+        m_startupPrewarmStarted = true;
+        QTimer::singleShot(0, this, [this] {
+            if (m_startupPrewarmStarted && !m_startupReadyTimer.isValid() && isVisible() &&
+                !isMinimized() && m_contentPresenter &&
+                (!m_prewarmResumeTimer || !m_prewarmResumeTimer->isActive()))
+                m_contentPresenter->setPrewarmPaused(false);
+        });
+    }
+    return fluent::windowing::Window::eventFilter(watched, event);
+}
+
+void GalleryWindow::hideEvent(QHideEvent* event)
+{
+    if (!m_startupFinished && m_contentPresenter) {
+        m_contentPresenter->setPrewarmPaused(true);
+        m_startupPrewarmStarted = false;
+        if (m_prewarmResumeTimer)
+            m_prewarmResumeTimer->stop();
+        if (m_startupFinishTimer)
+            m_startupFinishTimer->stop();
+    }
+    fluent::windowing::Window::hideEvent(event);
 }
 
 void GalleryWindow::showEvent(QShowEvent* event)
@@ -294,8 +339,8 @@ void GalleryWindow::showEvent(QShowEvent* event)
 
 void GalleryWindow::scheduleStartupFinish()
 {
-    if (m_startupFinished || !m_startupFinishTimer || !m_splashScreen ||
-        !m_startupReadyTimer.isValid() || !m_startupVisibleTimer.isValid())
+    if (m_startupFinished || !m_startupFinishTimer || !m_splashScreen || !isVisible() ||
+        isMinimized() || !m_startupReadyTimer.isValid() || !m_startupVisibleTimer.isValid())
         return;
     const bool branded =
         MotionPolicy::instance().mode() == MotionPolicy::Mode::Full &&
@@ -312,32 +357,11 @@ void GalleryWindow::prewarmRemainingRoutes()
     if (!m_contentPresenter)
         return;
 
-    // Warm Home's directly clickable featured routes first, then the remaining
-    // navigation order. Debug builds may hit the fixed startup budget before the
-    // whole catalog is resident; prioritizing the landing-page entry points keeps
-    // Button/TabView/etc. instant without extending the splash.
-    // zh_CN: 先预热 Home 上可直接点击的精选路由，再按导航顺序补齐。Debug 构建可能在
-    // 全目录常驻前触及固定启动预算；优先落地页入口可让 Button/TabView 等保持瞬时，且不延长 splash。
+    // Prepare only navigation essentials. Unvisited demos do not extend Splash
+    // or run background construction during interactive use.
     QStringList routeIds;
-    if (platform::capabilities().prewarmsRoutes) {
-        auto appendUnique = [&routeIds](const QString& routeId) {
-            if (!routeId.isEmpty() && !routeIds.contains(routeId))
-                routeIds.append(routeId);
-        };
-        if (const GalleryContentEntry* home =
-                galleryContentEntry(m_navigationViewModel.defaultRouteId())) {
-            for (const QString& routeId : home->relatedRouteIds)
-                appendUnique(routeId);
-        }
-        if (m_mainNavigationPane) {
-            for (const QString& routeId : m_mainNavigationPane->routeIds())
-                appendUnique(routeId);
-        }
-        if (m_footerNavigationPane) {
-            for (const QString& routeId : m_footerNavigationPane->routeIds())
-                appendUnique(routeId);
-        }
-    }
+    if (platform::capabilities().prewarmsRoutes)
+        routeIds.append(QStringLiteral("settings"));
     m_contentPresenter->prewarmRoutes(routeIds);
 }
 
@@ -368,7 +392,8 @@ void GalleryWindow::deferPrewarmDuringInteraction()
         m_prewarmResumeTimer = new QTimer(this);
         m_prewarmResumeTimer->setSingleShot(true);
         connect(m_prewarmResumeTimer, &QTimer::timeout, this, [this]() {
-            if (m_contentPresenter && !m_startupReadyTimer.isValid())
+            if (m_contentPresenter && m_startupPrewarmStarted && isVisible() && !isMinimized() &&
+                !m_startupReadyTimer.isValid())
                 m_contentPresenter->setPrewarmPaused(false);
         });
     }
@@ -381,6 +406,11 @@ void GalleryWindow::finishStartup()
         return;
     m_startupFinished = true;
     m_startupFinishTimer->stop();
+    // Replacement can explicitly end startup early. Do not keep constructing pages behind
+    // the now-interactive UI; any omitted route retains the ordinary lazy fallback.
+    // zh_CN: 遮罩被替换可提前结束启动；不在已可交互的 UI 后继续建页，遗漏路由保留按需回退。
+    m_contentPresenter->cancelPrewarm();
+    m_contentPresenter->setStartupCovered(false);
     LOG_DEBUG(QStringLiteral("GalleryWindow startup dismiss visibleMs=%1 readyMs=%2")
                   .arg(m_startupVisibleTimer.elapsed())
                   .arg(m_startupReadyTimer.elapsed()));

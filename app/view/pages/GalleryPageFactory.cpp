@@ -4,6 +4,7 @@
 
 #include "model/GalleryContentCatalog.h"
 #include "model/GalleryNavigationItem.h"
+#include "platform/GalleryPlatform.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "support/logging/Log.h"
 #include "GalleryCategoryPage.h"
@@ -19,7 +20,8 @@ GalleryPageFactory::GalleryPageFactory(const GalleryNavigationViewModel& navigat
     : m_navigationViewModel(navigationViewModel)
 {}
 
-QWidget* GalleryPageFactory::createPage(const QString& routeId, QWidget* parent) const
+QWidget* GalleryPageFactory::createPage(const QString& routeId, QWidget* parent,
+                                        bool deferComponentSamples) const
 {
     const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
     if (!item) {
@@ -40,7 +42,11 @@ QWidget* GalleryPageFactory::createPage(const QString& routeId, QWidget* parent)
         case GalleryPageKind::Category:
             return new GalleryCategoryPage(*entry, m_navigationViewModel, parent);
         case GalleryPageKind::Component:
-            return new GalleryComponentPage(*entry, m_navigationViewModel, parent);
+            return new GalleryComponentPage(
+                *entry, m_navigationViewModel,
+                GalleryComponentPageOptions{platform::capabilities().showsBilingualDocumentation,
+                                            deferComponentSamples},
+                parent);
         case GalleryPageKind::Foundation:
             return new GalleryFoundationPage(*entry, m_navigationViewModel, parent);
         case GalleryPageKind::FoundationTopic:

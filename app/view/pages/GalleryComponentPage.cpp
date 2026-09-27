@@ -1,5 +1,7 @@
 #include "GalleryComponentPage.h"
 
+#include <algorithm>
+
 #include "components/basicinput/Button.h"
 #include "components/layout/Expander.h"
 #include "components/textfields/Label.h"
@@ -79,7 +81,8 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
     if (!m_overviewText.isEmpty())
         addBodyText(m_overviewText);
 
-    const QVector<GallerySample> samples = gallerySamplesForRoute(entry.routeId);
+    m_samples = gallerySamplesForRoute(entry.routeId);
+    const auto& samples = m_samples;
     QStringList codeSampleIds;
     codeSampleIds.reserve(samples.size());
     for (const GallerySample& sample : samples) {
@@ -138,38 +141,28 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
         LOG_WARN(QStringLiteral("GalleryComponentPage samples missing routeId=%1 title=%2")
                      .arg(entry.routeId, entry.title));
     }
-    QWidget* moreExamples = nullptr;
-    QVBoxLayout* moreLayout = nullptr;
-    for (const GallerySample& sample : samples) {
-        auto* card = m_bilingualDocumentationEnabled
-                         ? new GallerySampleCard(entry.routeId, sample, this)
-                         : new GallerySampleCard(sample, this);
-        if (GalleryCodeBlock* block = card->codeBlock()) {
-            if (block->languageSelector()) {
-                connect(block, &GalleryCodeBlock::codeLanguageChanged, this,
-                        &GalleryComponentPage::setCodeLanguage);
-                block->setCodeLanguage(m_codeLanguage);
-            }
-        }
-        if (sample.supplementary) {
-            if (!moreExamples) {
-                moreExamples = new QWidget(this);
-                moreLayout = new QVBoxLayout(moreExamples);
-                moreLayout->setContentsMargins(0, 0, 0, 0);
-                moreLayout->setSpacing(16);
-            }
-            moreLayout->addWidget(card);
-        } else {
-            addContentWidget(card);
-        }
-        m_sampleCards.append(card);
-    }
-    if (moreExamples) {
+    auto* examples = new QWidget(this);
+    m_samplesLayout = new QVBoxLayout(examples);
+    m_samplesLayout->setContentsMargins(0, 0, 0, 0);
+    m_samplesLayout->setSpacing(16);
+    addContentWidget(examples);
+    const bool hasSupplementary =
+        std::any_of(samples.cbegin(), samples.cend(),
+                    [](const GallerySample& sample) { return sample.supplementary; });
+    if (hasSupplementary) {
+        auto* moreExamples = new QWidget(this);
+        m_moreSamplesLayout = new QVBoxLayout(moreExamples);
+        m_moreSamplesLayout->setContentsMargins(0, 0, 0, 0);
+        m_moreSamplesLayout->setSpacing(16);
         auto* more = new fluent::layout::Expander(this);
         more->setObjectName(QStringLiteral("galleryMoreSpatialExamples"));
         more->setHeaderText(QStringLiteral("More component combinations"));
         more->setContentWidget(moreExamples, fluent::WidgetOwnership::Owned);
         addContentWidget(more);
+    }
+    if (!options.deferSamples) {
+        while (hasPendingSamples())
+            buildNextSample();
     }
 
     if (!entry.relatedRouteIds.isEmpty()) {
@@ -196,6 +189,27 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
                   .arg(entry.routeId)
                   .arg(samples.size())
                   .arg(entry.relatedRouteIds.size()));
+}
+
+void GalleryComponentPage::buildNextSample()
+{
+    if (!hasPendingSamples())
+        return;
+    const GallerySample& sample = m_samples.at(m_nextSample);
+    auto* card = m_bilingualDocumentationEnabled ? new GallerySampleCard(routeId(), sample, this)
+                                                 : new GallerySampleCard(sample, this);
+    if (GalleryCodeBlock* block = card->codeBlock()) {
+        if (block->languageSelector()) {
+            connect(block, &GalleryCodeBlock::codeLanguageChanged, this,
+                    &GalleryComponentPage::setCodeLanguage);
+            block->setCodeLanguage(m_codeLanguage);
+        }
+    }
+    (sample.supplementary ? m_moreSamplesLayout : m_samplesLayout)->addWidget(card);
+    m_sampleCards.append(card);
+    ++m_nextSample;
+    if (m_sampleThemeExplicit)
+        card->setPreviewThemeOverride(m_sampleTheme);
 }
 
 void GalleryComponentPage::setCodeLanguage(GalleryCodeLanguage language)

@@ -5,6 +5,7 @@
 #include <QCoreApplication>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QHash>
 #include <QWidget>
 #include <QObject>
 #include <QPointer>
@@ -23,10 +24,34 @@ namespace {
 QPointer<QObject> hostThemeContext;
 HostThemeChangedHandler hostThemeChangedHandler;
 
+struct ClipboardRequest {
+    QPointer<QObject> context;
+    std::function<void(bool)> completed;
+    QMetaObject::Connection destroyedConnection;
+};
+
+QHash<quint32, ClipboardRequest> clipboardRequests;
+quint32 nextClipboardRequest = 0;
+
 // clang-format off
 // EM_JS bodies are JavaScript; treating `===` as C++ tokens corrupts them.
 EM_JS(int, fluentQtGalleryEmbeddedHost, (), {
     return window.fluentQtEmbedded === true ? 1 : 0;
+});
+
+EM_JS(void, fluentQtGalleryCopyText, (unsigned int request, const char* utf8), {
+    const complete = success => Module['_fluentQtGalleryCopyCompleted'](request, success ? 1 : 0);
+    try {
+        const text = UTF8ToString(utf8);
+        if (!navigator.clipboard || !navigator.clipboard.writeText) {
+            complete(false);
+            return;
+        }
+        // Invoke in the original input turn, before awaiting browser permission.
+        navigator.clipboard.writeText(text).then(() => complete(true), () => complete(false));
+    } catch (_) {
+        complete(false);
+    }
 });
 
 EM_JS(int, fluentQtGalleryHostTheme, (), {
@@ -70,6 +95,35 @@ QString graphicsRendererOverride()
     return result;
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE void fluentQtGalleryCopyCompleted(unsigned int request, int success)
+{
+    const auto found = clipboardRequests.find(request);
+    if (found == clipboardRequests.end())
+        return;
+    const ClipboardRequest pending = found.value();
+    clipboardRequests.erase(found);
+    QObject::disconnect(pending.destroyedConnection);
+    if (pending.context)
+        pending.completed(success != 0);
+}
+
+void copyText(QObject* context, const QString& text, std::function<void(bool)> completed)
+{
+    if (!context || !completed)
+        return;
+    do {
+        ++nextClipboardRequest;
+    } while (nextClipboardRequest == 0 || clipboardRequests.contains(nextClipboardRequest));
+    const quint32 request = nextClipboardRequest;
+    ClipboardRequest pending{context, std::move(completed), {}};
+    pending.destroyedConnection = QObject::connect(
+        context, &QObject::destroyed, [request] { clipboardRequests.remove(request); });
+    clipboardRequests.insert(request, std::move(pending));
+    // Qt's WASM clipboard cache is not proof of a successful browser write.
+    // zh_CN: Qt 的 WASM 剪贴板缓存不能证明浏览器写入已成功。
+    fluentQtGalleryCopyText(request, text.toUtf8().constData());
+}
+
 void chooseFiles(QWidget* context, const QString& filter,
                  std::function<void(const QString&, qint64)> selected)
 {
@@ -92,7 +146,6 @@ const Capabilities& capabilities()
         result.checksForUpdates = false;
         result.editsThemeFiles = false;
         result.prewarmsRoutes = false;
-        result.probesOffscreenOpenGL = false;
         result.usesClientSideTitleBar = true;
         result.hostControlsTheme = fluentQtGalleryEmbeddedHost() != 0;
         result.showsBilingualDocumentation = true;
