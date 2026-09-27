@@ -51,6 +51,8 @@ REQUIRED_PACKAGE_FILES = {
     "__init__.py",
     "__init__.pyi",
     "_fluentqt.pyi",
+    "_qt_compat.py",
+    "_qt_compat.pyi",
     "basicinput.py",
     "basicinput.pyi",
     "charts.py",

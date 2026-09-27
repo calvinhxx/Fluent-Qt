@@ -9,6 +9,16 @@ from PySide6 import QtCore as _QtCore
 from PySide6 import QtGui as _QtGui
 from PySide6 import QtWidgets as _QtWidgets
 
+# Python 3.8+ does not search PATH for extension dependencies on Windows.
+# Keep Spatial's extra Qt DLLs discoverable without importing OpenGL modules
+# (or changing the dependency/import contract of a 2D-only package).
+import sys as _sys
+if _sys.platform == "win32":
+    import os as _os
+    from pathlib import Path as _Path
+    if _Path(__file__).with_name("spatial.py").is_file():
+        _spatial_dll_directory = _os.add_dll_directory(str(_Path(_QtCore.__file__).parent))
+
 from ._fluentqt import (
     bindingBuildInfo,
     initializeResources,

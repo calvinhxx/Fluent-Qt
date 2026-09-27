@@ -131,6 +131,7 @@ from fluentqt_gallery.visual import (
     _direct_icon_glyph,
     _draw_pixmap_in_logical_rect,
     _hero_link_pixmap,
+    _image_alpha_bounds,
     _macos_dock_icon_pixmap,
     _qt_seeded_bytes,
     _single_shot,
@@ -150,6 +151,7 @@ from fluentqt_gallery.window import (
     GalleryWindow,
     _build_sample_card,
     _refresh_fluent_subtree,
+    build_settings_page,
     gallery_window_editing_command_router,
 )
 from fluentqt_gallery.window_placement import (
@@ -1962,6 +1964,44 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             ),
         )
 
+    def test_hero_alpha_bounds_preserve_threshold_and_pixel_extent(self):
+        for image_format in (
+            QImage.Format_ARGB32,
+            QImage.Format_RGBA8888,
+            QImage.Format_ARGB32_Premultiplied,
+        ):
+            with self.subTest(image_format=image_format):
+                image = QImage(11, 7, image_format)
+                image.fill(Qt.transparent)
+                self.assertTrue(_image_alpha_bounds(image).isNull())
+                image.setPixelColor(0, 0, QColor(255, 255, 255, 8))
+                self.assertTrue(_image_alpha_bounds(image).isNull())
+                image.setPixelColor(7, 2, QColor(20, 30, 40, 9))
+                image.setPixelColor(3, 4, QColor(40, 60, 80, 255))
+                image.setPixelColor(10, 6, QColor(1, 2, 3, 8))
+                self.assertEqual(_image_alpha_bounds(image), QRect(3, 2, 5, 3))
+                image.setPixelColor(10, 6, QColor(1, 2, 3, 9))
+                self.assertEqual(_image_alpha_bounds(image), QRect(3, 2, 8, 5))
+                image.fill(QColor(5, 10, 15, 255))
+                self.assertEqual(_image_alpha_bounds(image), image.rect())
+
+    def test_hero_tint_palette_cache_preserves_alpha_for_repeats_and_overflow(self):
+        image = QImage(40, 40, QImage.Format_ARGB32)
+        pixels = image.bits().cast("I")
+        expected = []
+        for index in range(1600):
+            seed = index if index < 1400 else index - 1400
+            source = ((seed * 17 % 256) << 24) | (seed * 41 & 0xFFFFFF)
+            pixels[index] = source
+            luminance = (
+                ((source >> 16) & 255) * 11
+                + ((source >> 8) & 255) * 16 + (source & 255) * 5
+            ) // 32
+            alpha = (255 - luminance) * (source >> 24) // 255
+            expected.append((alpha << 24) | 0x123456)
+        _tint_github_mark(image, QColor(0x12, 0x34, 0x56))
+        self.assertEqual(list(image.constBits().cast("I")), expected)
+
     def test_particle_sample_cards_fill_width_and_controls_change_motion(self):
         entry = ENTRY_BY_ROUTE_ID["particle-backdrop"]
         for sample in entry.samples:
@@ -3724,12 +3764,18 @@ with (
         try:
             window.resize(960, 680)
             window._prewarm_queue = ["button", "slider", "tab-view"]
+            window._prewarm_total = 3
             window._prewarm_paused = True
             window.show()
             QApplication.processEvents()
             window._prewarm_paused = False
-            for _ in range(3):
+            for _ in range(40):
                 window._prewarm_next_route()
+                if window._startup_ready_timer.isValid():
+                    break
+            self.assertTrue(window._startup_ready_timer.isValid())
+            self.assertEqual(window._prewarm_done, 3)
+            self.assertEqual(window._prewarm_failures, {})
             for route in ("button", "slider", "tab-view"):
                 page = window._pages[route][1]
                 self.assertTrue(page.isHidden())
@@ -3739,6 +3785,166 @@ with (
             window.close()
             window.deleteLater()
             QApplication.processEvents()
+
+    def test_startup_waits_for_splash_paint_and_builds_one_sample_per_turn(self):
+        window = GalleryWindow(startup_visuals=True)
+        try:
+            self.assertEqual(window.current_route, "home")
+            self.assertEqual(window._pages, {})
+            QApplication.processEvents()
+            self.assertEqual(window._pages, {})
+            self.assertFalse(window._prewarm_started)
+            window._prewarm_queue = ["button"]
+            window._prewarm_total = 1
+            window._prewarm_paused = True
+            window.show()
+            QApplication.processEvents()
+            self.assertTrue(window._prewarm_started)
+            self.assertEqual(window._pages, {})
+            window._prewarm_paused = False
+            window._prewarm_next_route()
+            route, staged = window._prewarm_page
+            self.assertEqual(route, "button")
+            self.assertEqual(staged._gallery_sample_cards, ())
+            self.assertTrue(staged.isHidden())
+            for count in range(1, len(ENTRY_BY_ROUTE_ID[route].samples) + 1):
+                window._prewarm_next_route()
+                self.assertEqual(len(staged._gallery_sample_cards), count)
+                self.assertNotIn(route, window._pages)
+                self.assertEqual(window._prewarm_done, 0)
+                self.assertEqual(window._splash.progress(), 0)
+                # Navigation must not finish or reveal a partial page.
+                window.navigate(route)
+                self.assertNotIn(route, window._pages)
+                self.assertTrue(staged.isHidden())
+                with self.assertRaisesRegex(RuntimeError, "still being prepared"):
+                    window._ensure_page(route)
+            window._prewarm_next_route()
+            self.assertIs(window._pages[route][1], staged)
+            self.assertEqual(window._prewarm_done, 1)
+            self.assertEqual(window._splash.progress(), 100)
+        finally:
+            shiboken6.delete(window)
+
+    def test_startup_is_bounded_and_cold_pages_remain_cancellable(self):
+        self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())
+        fluentqt.set_motion_mode(fluentqt.MotionMode.Disabled)
+        window = GalleryWindow(startup_visuals=True)
+        try:
+            with patch("fluentqt_gallery.update_checker.GalleryUpdateChecker.check_for_updates") as network:
+                window.show()
+                self.assertTrue(_wait_until(lambda: window._startup_finished, 10000))
+                self.assertEqual(set(window._pages), {"home", "settings"})
+                self.assertEqual(window._prewarm_failures, {})
+                network.assert_not_called()
+            window.navigate("button")
+            self.assertTrue(_wait_until(lambda: window._cold_page is not None, 1000))
+            staged = window._cold_page[1]
+            self.assertTrue(staged.isHidden())
+            self.assertTrue(staged._gallery_pending_samples)
+            window.navigate("settings")
+            QApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+            self.assertFalse(shiboken6.isValid(staged))
+            self.assertNotIn("button", window._pages)
+            window.navigate("button")
+            self.assertTrue(_wait_until(lambda: "button" in window._pages, 5000))
+            page = window._pages["button"][1]
+            self.assertFalse(page._gallery_pending_samples)
+            window.navigate("settings")
+            window.navigate("button")
+            self.assertIs(window._pages["button"][1], page)
+        finally:
+            shiboken6.delete(window)
+
+    def test_startup_catalog_grid_builds_one_entry_per_turn(self):
+        window = GalleryWindow(startup_visuals=True)
+        try:
+            window._prewarm_queue = ["all-controls"]
+            window._prewarm_total = 1
+            window._prewarm_paused = True
+            window.show()
+            QApplication.processEvents()
+            window._prewarm_paused = False
+            window._prewarm_next_route()
+            route, page = window._prewarm_page
+            self.assertEqual(route, "all-controls")
+            total = len(page._gallery_pending_entries)
+            self.assertGreater(total, 80)
+            self.assertEqual(page._gallery_buttons, ())
+            for count in range(1, total + 1):
+                window._prewarm_next_route()
+                self.assertEqual(len(page._gallery_buttons), count)
+                self.assertNotIn(route, window._pages)
+                self.assertEqual(window._prewarm_done, 0)
+                self.assertTrue(page.isHidden())
+                self.assertEqual(
+                    len(page._gallery_entry_grid.cards), total if count == total else 0
+                )
+            window._prewarm_next_route()
+            self.assertIs(window._pages[route][1], page)
+            self.assertEqual(window._prewarm_done, 1)
+        finally:
+            shiboken6.delete(window)
+
+    def test_startup_hidden_page_activity_and_close_resume(self):
+        window = GalleryWindow(startup_visuals=True)
+        try:
+            window._prewarm_queue = ["home", "button"]
+            window._prewarm_total = 2
+            window._prewarm_paused = True
+            window.show()
+            QApplication.processEvents()
+            window._prewarm_paused = False
+            window._prewarm_next_route()
+            window._prewarm_next_route()
+            home = window._pages["home"][1]
+            self.assertTrue(home.isHidden())
+            for backdrop in home.findChildren(fluentqt.ParticleBackdrop):
+                self.assertFalse(backdrop.isAnimating())
+            window._prewarm_next_route()
+            window._prewarm_next_route()
+            staged = window._prewarm_page[1]
+            count = len(staged._gallery_sample_cards)
+            window.close()
+            _qwait(80)
+            self.assertFalse(window._prewarm_step_timer.isActive())
+            self.assertEqual(len(staged._gallery_sample_cards), count)
+            window.show()
+            self.assertTrue(_wait_until(lambda: window._startup_ready_timer.isValid(), 3000))
+            self.assertIs(window._pages["button"][1], staged)
+            self.assertEqual(window._prewarm_done, 2)
+        finally:
+            shiboken6.delete(window)
+
+    def test_startup_failure_is_explicit_and_does_not_strand_splash(self):
+        window = GalleryWindow(startup_visuals=True)
+        failures = []
+        window.prewarmFailed.connect(lambda route, detail: failures.append((route, detail)))
+        original_create = window._create_page
+
+        def fail_button(route_id, **kwargs):
+            if route_id == "button":
+                raise RuntimeError("sample initialization failed")
+            return original_create(route_id, **kwargs)
+
+        try:
+            window._prewarm_queue = ["button", "slider"]
+            window._prewarm_total = 2
+            with patch.object(window, "_create_page", side_effect=fail_button):
+                window.show()
+                self.assertTrue(_wait_until(lambda: window._startup_ready_timer.isValid(), 5000))
+            self.assertEqual(len(failures), 1)
+            self.assertEqual(failures[0][0], "button")
+            self.assertIn("sample initialization failed", failures[0][1])
+            self.assertEqual(window.property("galleryPrewarmFailedRoutes"), ["button"])
+            self.assertEqual(window._pages["button"][1].objectName(), "galleryPageLoadError")
+            self.assertIn("slider", window._pages)
+            self.assertEqual(window._prewarm_done, 1)
+            self.assertEqual(window._splash.progress(), 50)
+            self.assertIn("could not be prepared", window._splash.text())
+            self.assertTrue(_wait_until(lambda: window._startup_finished, 3000))
+        finally:
+            shiboken6.delete(window)
 
     def test_splash_handoff_caches_native_pixels_and_invalidates(self):
         class PaintCounter(QLabel):
@@ -3869,7 +4075,8 @@ with (
                 )
             )
             self.assertTrue(window._menu_button.isHidden())
-            # Finish loading while hidden: only visible time pays for presentation.
+            # Empty readiness still waits for the first visible splash paint;
+            # hidden time must not pay for the branded presentation.
             window._prewarm_queue.clear()
             window._prewarm_paused = False
             window._prewarm_next_route()
@@ -4182,8 +4389,7 @@ with (
             )
             self.assertEqual(window.current_route, "button")
 
-            _qwait(120)
-            self.assertIn("button", window._pages)
+            self.assertTrue(_wait_until(lambda: "button" in window._pages, 5000))
             button_index, button_page = window._pages["button"]
             self.assertEqual(
                 window._content_host.currentIndex(), button_index
@@ -5056,6 +5262,23 @@ with (
                     reloaded.deleteLater()
                     QApplication.processEvents()
 
+    def test_particle_gpu_request_is_component_owned_not_persisted(self):
+        settings = gallery_settings_module.gallery_settings()
+        self.assertFalse(hasattr(settings, "particle_acceleration_enabled"))
+        backdrop = fluentqt.ParticleBackdrop()
+        try:
+            self.assertFalse(backdrop.isGpuAccelerationEnabled())
+            changes = []
+            backdrop.gpuAccelerationEnabledChanged.connect(changes.append)
+            backdrop.setGpuAccelerationEnabled(False)
+            backdrop.setGpuAccelerationEnabled(True)
+            backdrop.setGpuAccelerationEnabled(True)
+            self.assertEqual(changes, [True])
+            backdrop.setGpuAccelerationEnabled(False)
+            self.assertEqual(changes, [True, False])
+        finally:
+            shiboken6.delete(backdrop)
+
     def test_settings_page_matches_native_rows_and_choices(self):
         window = GalleryWindow()
         window.show()
@@ -5074,6 +5297,9 @@ with (
             self.addCleanup(settings.set_home_particles_enabled, original_particles)
             settings.set_home_particles_enabled(True)
             self.assertTrue(particles.isOn())
+            self.assertIsNone(page.findChild(
+                fluentqt.ComboBox, "gallerySettingsParticleRenderingChoice"
+            ))
             particles.setFocus(Qt.OtherFocusReason)
             QTest.keyClick(particles, Qt.Key_Space)
             self.assertFalse(settings.home_particles_enabled)

@@ -1,5 +1,4 @@
 """Standalone application settings matching the native C++ Gallery."""
-
 from __future__ import annotations
 
 from enum import IntEnum
@@ -392,6 +391,7 @@ class GallerySettings(QObject):
             settings.setValue(_HOME_PARTICLES_ENABLED_KEY, enabled)
             settings.sync()
         self.homeParticlesEnabledChanged.emit(enabled)
+
 
     def set_spatial_availability(self, available: bool, reason: str = "") -> None:
         reason = "" if available else reason

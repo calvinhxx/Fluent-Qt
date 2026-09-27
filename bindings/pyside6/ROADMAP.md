@@ -119,6 +119,14 @@ unless a separate public design is accepted:
 Applications use the stable Python-shaped facade rather than reaching into the
 native module's implementation namespace.
 
+`fluent::overlay::presentation` in the directly included
+`OverlayPresentation.h` is an intentionally C++-only host adapter in this release.
+It publishes Widget-local presentation transforms and guarded native-menu
+invocation anchors without owning a renderer or changing widget ownership.
+Python Gallery already implements this host-side protocol with PySide objects;
+ordinary Python overlays require no new API. The header is not in the umbrella
+or binding parser, and no Python import is advertised for it.
+
 ## Ownership rules
 
 - Application models, selection models, and delegates stay caller-owned. The

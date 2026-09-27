@@ -7,91 +7,99 @@ Only the optional Spatial entry path imports this module.
 
 import os
 import math
-import ctypes
-import sys
-import struct
+import weakref
+from functools import partial
 
 import fluentqt
+from fluentqt.spatial import SpatialRuntime
 from PySide6.QtCore import (
     QAbstractAnimation, QEasingCurve, QEvent, QLineF, QObject, QPoint, QPointF,
     QRect, QRectF, QSize, Qt, QTimer, QVariantAnimation, Signal, Slot,
 )
 from PySide6.QtGui import (
-    QBrush, QColor, QContextMenuEvent, QEnterEvent, QGuiApplication, QHelpEvent,
-    QImage, QLinearGradient, QMatrix4x4, QMouseEvent, QOffscreenSurface, QOpenGLContext,
-    QPaintEngine, QPainter, QPainterPath, QPen, QPixmap, QPolygonF, QRegion, QTransform,
-    QVector2D, QVector3D, QSurfaceFormat, QWheelEvent,
+    QColor, QContextMenuEvent, QEnterEvent, QGuiApplication, QHelpEvent,
+    QImage, QMatrix4x4, QMouseEvent, QOffscreenSurface, QOpenGLContext,
+    QPaintEngine, QPainter, QPainterPath, QPixmap, QPolygonF, QRegion, QTransform,
+    QVector3D, QSurfaceFormat, QWheelEvent,
 )
 from PySide6.QtOpenGL import (
     QOpenGLFramebufferObject, QOpenGLFramebufferObjectFormat, QOpenGLPaintDevice,
-    QOpenGLBuffer, QOpenGLShader, QOpenGLShaderProgram, QOpenGLVertexArrayObject,
+    QOpenGLTexture,
 )
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from PySide6.QtWidgets import (
-    QApplication, QFrame, QGraphicsEffect, QProxyStyle, QStyle, QStyleOption,
+    QApplication, QFrame, QGraphicsEffect, QMenu, QProxyStyle, QStyle, QStyleOption,
     QStyleOptionButton, QStyleOptionFrame, QWidget,
 )
-from shiboken6 import isValid
+from shiboken6 import VoidPtr, invalidate, isValid
 
 from .settings import gallery_settings
+from .glyph_paint_device import GlyphPaintDevice, needs_native_glyph_coverage
+from .panel_sampler import _PanelSampler
 
 
 def _alive(widget):
     return widget is not None and isValid(widget)
 
 
+_PRESENTATION_TRANSFORM = "_fluent_qt_overlay_presentation_transform"
+_PRESENTED_MENU_SOURCE = "_fluent_qt_presented_menu_source"
+_PRESENTED_MENU_POINT = "_fluent_qt_presented_menu_point"
+
+
+def _invalidate_context_functions(reference):
+    functions = reference()
+    if _alive(functions):
+        # Qt owns the C++ functions. Only retire their borrowed Python wrapper:
+        # native-created contexts do not invalidate it reliably on older PySide.
+        invalidate(functions)
+
+
+def _mouse_global_position(receiver, event):
+    # Nested Qt hover events can overwrite a native mouse event's shared global
+    # point. Receiver-local position survives; synthetic callers own their global.
+    if event.spontaneous():
+        return receiver.mapToGlobal(event.position().toPoint())
+    return event.globalPosition().toPoint()
+
+
+# Runtime/driver compatibility is shared with the native library and C++ Gallery.
 def _software(renderer):
-    return not renderer or any(name in renderer.lower() for name in (
-        "llvmpipe", "softpipe", "swiftshader", "software", "basic render driver",
-        "warp", "gdi generic",
-    ))
+    return not SpatialRuntime.isHardwareRenderer(renderer)
 
 
 def _renderer(context):
-    value = context.functions().glGetString(0x1F01)  # GL_RENDERER
-    return value.decode() if isinstance(value, bytes) else str(value or "")
+    return SpatialRuntime.currentRendererName()
 
 
 def _session_unavailable_reason():
     if os.environ.get("FLUENT_QT_GALLERY_DISABLE_3D", "0") != "0":
         return "3D is disabled for this session."
-    if QGuiApplication.platformName() in ("offscreen", "minimal", "vnc"):
+    if not SpatialRuntime.supportsOpenGLDisplay():
         return "This display uses the 2D Gallery."
     return ""
 
 
 def _unavailable_reason():
-    context = QOpenGLContext()
-    if not context.create():
-        return "3D acceleration is unavailable. Using the 2D Gallery."
-    surface = QOffscreenSurface()
-    surface.setFormat(context.format())
-    surface.create()
-    if not surface.isValid() or not context.makeCurrent(surface):
-        return "3D acceleration is unavailable. Using the 2D Gallery."
-    renderer = _renderer(context)
-    context.doneCurrent()
-    if _software(renderer):
-        return "Hardware acceleration is unavailable. Using the 2D Gallery."
-    return ""
+    return SpatialRuntime.preflightFailure()
 
 
-def _alpha(color, opacity):
-    result = QColor(color)
-    result.setAlphaF(max(0., min(1., opacity)))
-    return result
+def _maximum_cache_dimension(context):
+    return SpatialRuntime.maximumTextureDimension()
 
 
 # Same aggregate cache budget and sampling ladder as GallerySpatialRenderPolicy.h.
 _CACHE_BUDGET_BYTES = 192 * 1024 * 1024
 _CACHE_BYTES_PER_PIXEL = 4
 _PAINT_SAMPLES = 2
+_GLYPH_SCRATCH_BYTES = 512 * 1024
 
 
 def _cache_plan(panels, native_dpr, max_dimension, max_extra=2., budget=_CACHE_BUDGET_BYTES,
-                paint_samples=_PAINT_SAMPLES):
+                paint_samples=_PAINT_SAMPLES, backdrop_bytes=0, glyph_scratch_bytes=0):
     if (not math.isfinite(native_dpr) or native_dpr <= 0 or max_dimension <= 0
-            or budget <= 0 or paint_samples <= 1):
+            or budget <= 0 or paint_samples <= 1 or backdrop_bytes < 0 or backdrop_bytes >= budget
+            or glyph_scratch_bytes < 0 or glyph_scratch_bytes >= budget - backdrop_bytes):
         return None
     for extra in (2., 1.75, 1.5, 1.25, 1.):
         if extra > max_extra:
@@ -115,7 +123,7 @@ def _cache_plan(panels, native_dpr, max_dimension, max_extra=2., budget=_CACHE_B
             continue
         texture_bytes = pixels * _CACHE_BYTES_PER_PIXEL
         row_bytes = paint_size.width() * (12 * paint_samples + 4)
-        rows = (budget - texture_bytes) // row_bytes
+        rows = (budget - backdrop_bytes - glyph_scratch_bytes - texture_bytes) // row_bytes
         if rows < min(32, paint_size.height()):
             continue
         paint_size.setHeight(min(paint_size.height(), rows))
@@ -123,71 +131,6 @@ def _cache_plan(panels, native_dpr, max_dimension, max_extra=2., budget=_CACHE_B
     return None
 
 
-class _GpuCompatibleNativeStyle(QProxyStyle):
-    """Keep Cocoa's CGContext-only style primitives out of the OpenGL painter."""
-
-    def __init__(self, base):
-        name = base.objectName()
-        super().__init__(base)
-        self.setObjectName(name)
-        self.setProperty("galleryGpuCompatibleStyle", True)
-
-    @staticmethod
-    def _gpu(painter):
-        return painter.paintEngine().type() == QPaintEngine.OpenGL2
-
-    def _paint_native(self, option, painter, paint):
-        if not self._gpu(painter):
-            paint(option, painter)
-            return
-        # Translate the option, not the painter: Cocoa draws NSViews in option coordinates.
-        if isinstance(option, (QStyleOptionFrame, QStyleOptionButton)) or option.type == QStyleOption.SO_Default:
-            option = type(option)(option)
-            bounds = option.rect.adjusted(-4, -4, 4, 4)
-            rect = option.rect
-            rect.translate(-bounds.topLeft())
-            option.rect = rect
-        else:
-            bounds = QRect(0, 0, max(1, option.rect.right() + 5), max(1, option.rect.bottom() + 5))
-        size = bounds.size()
-        dpr = painter.device().devicePixelRatioF()
-        image = QImage(QSize(math.ceil(size.width() * dpr), math.ceil(size.height() * dpr)),
-                       QImage.Format_ARGB32_Premultiplied)
-        image.setDevicePixelRatio(dpr)
-        image.fill(Qt.transparent)
-        native = QPainter(image)
-        native.setFont(painter.font())
-        native.setPen(painter.pen())
-        native.setRenderHints(painter.renderHints())
-        paint(option, native)
-        native.end()
-        painter.drawImage(bounds.topLeft(), image)
-
-    def drawPrimitive(self, element, option, painter, widget=None):
-        if self._gpu(painter) and element == QStyle.PE_Widget:
-            return  # QMacStyle delegates this no-op to QCommonStyle.
-        self._paint_native(option, painter, lambda local, target:
-                           QProxyStyle.drawPrimitive(self, element, local, target, widget))
-
-    def drawControl(self, element, option, painter, widget=None):
-        if (self._gpu(painter) and element == QStyle.CE_ShapedFrame
-                and getattr(option, "frameShape", None) == QFrame.NoFrame):
-            return
-        self._paint_native(option, painter, lambda local, target:
-                           QProxyStyle.drawControl(self, element, local, target, widget))
-
-    def drawComplexControl(self, control, option, painter, widget=None):
-        self._paint_native(option, painter, lambda local, target:
-                           QProxyStyle.drawComplexControl(self, control, local, target, widget))
-
-
-def _prepare_native_style():
-    app = QApplication.instance()
-    style = app.style()
-    if (app.platformName() == "cocoa" and "mac" in style.objectName().lower()
-            and not style.property("galleryGpuCompatibleStyle")):
-        app._gallery_gpu_style = _GpuCompatibleNativeStyle(style)
-        app.setStyle(app._gallery_gpu_style)
 
 
 class _Capture(QGraphicsEffect):
@@ -200,7 +143,7 @@ class _Capture(QGraphicsEffect):
     def draw(self, painter):
         if self.rendering:
             self.drawSource(painter)
-        elif not self.composing:
+        elif not self.composing and self.invalidated:
             self.invalidated()
 
 
@@ -212,95 +155,22 @@ class _SceneTheme(fluentqt.FluentWidget):
         self.changed.emit()
 
 
-class _PanelSampler:
-    """Integrate a projected pixel's footprint without mipmap upsampling blur."""
-
-    def __init__(self):
-        self.program = QOpenGLShaderProgram()
-        self.vertices = QOpenGLBuffer()
-        self.vao = QOpenGLVertexArrayObject()
-
-    def create(self):
-        context = QOpenGLContext.currentContext()
-        es = context.isOpenGLES()
-        version_string = context.functions().glGetString(0x1F02)  # GL_VERSION
-        if isinstance(version_string, bytes):
-            version_string = version_string.decode("ascii", errors="replace")
-        version_string = str(version_string)
-        es3 = (context.format().majorVersion() >= 3
-               or version_string.startswith("OpenGL ES 3.") or "WebGL 2." in version_string)
-        modern = (es3 if es
-                  else context.format().profile() == QSurfaceFormat.CoreProfile)
-        version = ("#version 300 es\n" if es else "#version 150\n") if modern else (
-            "#extension GL_OES_standard_derivatives : enable\n" if es else "")
-        precision = "precision highp float;\n" if es else ""
-        vertex = ("in vec2 position; out vec2 uv;\n" if modern else
-                  "attribute highp vec2 position; varying highp vec2 uv;\n") + """
-uniform mat4 target;
-void main() {
-    uv = (position + 1.0) * 0.5;
-    gl_Position = target * vec4(position, 0.0, 1.0);
-}
-"""
-        fragment = ("in vec2 uv; out vec4 color;\n#define SAMPLE texture\n#define OUTPUT color\n"
-                    if modern else "varying highp vec2 uv;\n#define SAMPLE texture2D\n#define OUTPUT gl_FragColor\n") + """
-uniform sampler2D source;
-uniform vec2 sourceSize;
-void main() {
-    vec2 dx = dFdx(uv), dy = dFdy(uv);
-    vec2 span = clamp(vec2(length(dx * sourceSize), length(dy * sourceSize)) - 1.0, 0.0, 1.0);
-    dx *= 0.25 * span.x; dy *= 0.25 * span.y;
-    OUTPUT = 0.25 * (SAMPLE(source, uv - dx - dy) + SAMPLE(source, uv + dx - dy)
-                  + SAMPLE(source, uv - dx + dy) + SAMPLE(source, uv + dx + dy));
-}
-"""
-        if (not self.program.addShaderFromSourceCode(QOpenGLShader.Vertex, version + precision + vertex)
-                or not self.program.addShaderFromSourceCode(QOpenGLShader.Fragment, version + precision + fragment)):
-            return False
-        self.program.bindAttributeLocation("position", 0)
-        if not self.program.link() or not self.vertices.create():
-            return False
-        self.vao.create()
-        vao = QOpenGLVertexArrayObject.Binder(self.vao)
-        self.vertices.bind()
-        data = struct.pack("8f", -1, -1, 1, -1, -1, 1, 1, 1)
-        self.vertices.allocate(data, len(data))
-        self.vertices.release()
-        del vao
-        return True
-
-    def isCreated(self):
-        return self.program.isLinked() and self.vertices.isCreated()
-
-    def destroy(self):
-        self.vertices.destroy()
-        self.vao.destroy()
-        self.program.removeAllShaders()
-
-    def blit(self, texture, size, target):
-        gl = QOpenGLContext.currentContext().functions()
-        vao = QOpenGLVertexArrayObject.Binder(self.vao)
-        self.program.bind()
-        self.vertices.bind()
-        self.program.enableAttributeArray(0)
-        self.program.setAttributeBuffer(0, 0x1406, 0, 2)
-        self.program.setUniformValue("target", target)
-        self.program.setUniformValue("source", 0)
-        self.program.setUniformValue("sourceSize", QVector2D(size.width(), size.height()))
-        gl.glActiveTexture(0x84C0)
-        gl.glBindTexture(0x0DE1, texture)
-        gl.glDrawArrays(0x0005, 0, 4)
-        gl.glBindTexture(0x0DE1, 0)
-        self.program.disableAttributeArray(0)
-        self.vertices.release()
-        self.program.release()
-        del vao
-
-
 class _Surface(QOpenGLWidget):
     def __init__(self, owner, parent):
         super().__init__(parent)
+        from .particle_compositor import GalleryParticleCompositor
         self.owner = owner
+        self.particles = GalleryParticleCompositor(self)
+        self.particles.frameRequested.connect(self.update)
+        self.particles.staticContentInvalidated.connect(owner._capture_content)
+        self.presented_content_texture = 0
+        self._functions = None
+        self.backdrop_cache = {}
+        self.backdrop_uploads = 0
+        # A Python subclass has no C++ destructor override. Release GL resources
+        # before the parent destroys its child QOpenGLWidget/context; its own
+        # aboutToBeDestroyed connection is too late once the receiver is deleted.
+        owner.window.destroyed.connect(self.release_window_context)
         self.setObjectName("gallerySpatialSurface")
         self.setProperty("galleryGpuComposition", True)
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
@@ -318,6 +188,10 @@ class _Surface(QOpenGLWidget):
         self.setFormat(fmt)
 
     def initializeGL(self):
+        context = self.context()
+        # Keep one registered wrapper for this context, including on PySide
+        # versions that otherwise recreate it for each functions() query.
+        self._functions = context.functions()
         self.blitter = _PanelSampler()
         self.blitter.create()
         self.caches = [{}, {}]
@@ -326,17 +200,18 @@ class _Surface(QOpenGLWidget):
         self.plan = None
         self.max_extra = 2.
         self.cache_failure_pending = False
-        gl = self.context().functions()
-        # PySide 6.9's array-return overload requires NumPy and can crash without it.
-        # Query the two viewport values through the context's standard GL entry point.
-        convention = ctypes.WINFUNCTYPE if sys.platform == "win32" else ctypes.CFUNCTYPE
-        address = self.context().getProcAddress(b"glGetIntegerv")
-        viewport = (ctypes.c_int * 2)()
-        if address:
-            query = convention(None, ctypes.c_uint, ctypes.POINTER(ctypes.c_int))(address)
-            query(0x0D3A, viewport)
-        self.max_dimension = min(gl.glGetIntegerv(0x0D33), gl.glGetIntegerv(0x84E8),
-                                 *viewport)
+        self.max_dimension = 0
+        self.paint_samples = 0
+        context.aboutToBeDestroyed.connect(self.release_context)
+        # No controller/context capture: this also runs if Qt has already
+        # invalidated the Python QOpenGLWidget receiver during destruction.
+        context.aboutToBeDestroyed.connect(partial(
+            _invalidate_context_functions, weakref.ref(self._functions)))
+        try:
+            self.max_dimension = _maximum_cache_dimension(self.context())
+        except (AttributeError, OSError, TypeError, ValueError):
+            self.owner.render_failure_timer.start(0)
+            return
         sample_format = QOpenGLFramebufferObjectFormat()
         sample_format.setAttachment(QOpenGLFramebufferObject.CombinedDepthStencil)
         sample_format.setInternalTextureFormat(0x8058)  # GL_RGBA8
@@ -344,12 +219,14 @@ class _Surface(QOpenGLWidget):
         probe = QOpenGLFramebufferObject(QSize(1, 1), sample_format)
         self.paint_samples = probe.format().samples() if probe.isValid() else 0
         del probe
-        self.context().aboutToBeDestroyed.connect(self.release_context)
         self.owner.renderer_initialized = True
         self.owner.queue_check()
 
     def clear_frame_caches(self):
         self.makeCurrent()
+        self.particles.release()
+        self.presented_content_texture = 0
+        self.clear_backdrop()
         self.caches = [{}, {}]
         self.paint_target = None
         self.resolve_target = None
@@ -358,27 +235,48 @@ class _Surface(QOpenGLWidget):
         self.cache_failure_pending = False
         self.doneCurrent()
 
+    def release_window_context(self):
+        self.clear_frame_caches()
+        self.invalidate_functions()
+
+    def invalidate_functions(self):
+        if self._functions is not None:
+            _invalidate_context_functions(weakref.ref(self._functions))
+            self._functions = None
+
     def release_context(self):
         self.makeCurrent()
+        self.particles.release()
+        self.presented_content_texture = 0
+        self.clear_backdrop()
         self.caches = [{}, {}]
         self.paint_target = None
         self.resolve_target = None
+        self.plan = None
         self.blitter.destroy()
         self.doneCurrent()
+        self.invalidate_functions()
         self.owner.context_lost()
 
     def prepare_caches(self):
         if self.paint_samples <= 1:
             return False
         panels = [rect.size() for rect, _ in self.owner.panels]
+        backdrop = self.owner.backdrop
+        backdrop_bytes = backdrop.width() * backdrop.height() * 4
         while True:
             plan = _cache_plan(panels, self.devicePixelRatioF(), self.max_dimension,
-                               self.max_extra, paint_samples=self.paint_samples)
+                               self.max_extra, paint_samples=self.paint_samples,
+                               backdrop_bytes=backdrop_bytes,
+                               glyph_scratch_bytes=(_GLYPH_SCRATCH_BYTES
+                                   if needs_native_glyph_coverage(self.devicePixelRatioF()) else 0))
             if plan is None:
                 return False
             if plan == self.plan:
                 return True
             # Free the old pair before allocating replacements, including on resize.
+            self.particles.release()
+            self.presented_content_texture = 0
             self.caches = [{}, {}]
             self.paint_target = None
             self.resolve_target = None
@@ -417,6 +315,17 @@ class _Surface(QOpenGLWidget):
             self.caches = [{}, {}]
             self.max_extra = plan[0] / self.devicePixelRatioF() - .25
 
+    def static_cache_bytes(self):
+        backdrop = self.owner.backdrop
+        total = backdrop.width() * backdrop.height() * 4
+        if self.plan is None:
+            return total
+        total += sum(size.width() * size.height() * 4 for size in self.plan[1])
+        total += self.plan[2].width() * self.plan[2].height() * (12 * self.paint_samples + 4)
+        if needs_native_glyph_coverage(self.devicePixelRatioF()):
+            total += _GLYPH_SCRATCH_BYTES
+        return total
+
     def update_texture(self, index):
         owner = self.owner
         rect = owner.panels[index][0]
@@ -431,11 +340,6 @@ class _Surface(QOpenGLWidget):
         if not cache or not cache["texture"].isValid():
             return False
         pixels = cache["texture"].size()
-        outside = QPainterPath()
-        local = QRectF(QPointF(), rect.size())
-        outside.addRect(local)
-        outside.addRoundedRect(local.adjusted(.5, .5, -.5, -.5), 12, 12)
-        outside.setFillRule(Qt.OddEvenFill)
         guard = max(1, math.ceil(dpr))
         stride = (pixels.height() if pixels.height() <= self.plan[2].height()
                   else max(1, self.plan[2].height() - 2 * guard))
@@ -453,7 +357,10 @@ class _Surface(QOpenGLWidget):
             gl.glClear(0x4000 | 0x0400)
             device = QOpenGLPaintDevice(QSize(pixels.width(), paint_height))
             device.setDevicePixelRatio(dpr)
-            painter = QPainter(device)
+            glyph_device = GlyphPaintDevice(device, self.devicePixelRatioF(),
+                                            QPointF(0, paint_top / dpr))
+            painter = QPainter(glyph_device if needs_native_glyph_coverage(self.devicePixelRatioF())
+                               else device)
             painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
             painter.translate(0, -paint_top / dpr)
             strip = QRectF(0, paint_top / dpr, rect.width(), paint_height / dpr)
@@ -462,8 +369,6 @@ class _Surface(QOpenGLWidget):
             painter.translate(-origin)
             owner.render_widgets(painter, index == 0, QRegion(strip.translated(origin).toAlignedRect()))
             painter.translate(origin)
-            painter.setCompositionMode(QPainter.CompositionMode_DestinationOut)
-            painter.fillPath(outside, Qt.black)
             painter.end()
             gl.glDisable(0x0C11)
             # GLES requires matching rectangles/formats when resolving multisampling.
@@ -474,7 +379,7 @@ class _Surface(QOpenGLWidget):
         cache["key"] = key
         return True
 
-    def draw_texture(self, painter, index):
+    def draw_texture(self, painter, index, colors, dark):
         cache = self.caches[index]
         if not cache:
             return
@@ -488,8 +393,83 @@ class _Surface(QOpenGLWidget):
         quad = QMatrix4x4()
         quad.translate(rect.center().x(), rect.center().y())
         quad.scale(rect.width() / 2, -rect.height() / 2)
-        self.blitter.blit(cache["texture"].texture(), cache["texture"].size(),
-                          projection * QMatrix4x4(transform) * quad)
+        appearance = (rect.size(), 12., self.owner.progress, colors.bgLayerAlt, colors.grey10,
+                      (.32 if dark else .34) if index == 0 else (.62 if dark else .56),
+                      .18 if dark else .72)
+        texture = (self.presented_content_texture if index == 1 and self.presented_content_texture
+                   else cache["texture"].texture())
+        self.blitter.blit(texture, cache["texture"].size(),
+                          projection * QMatrix4x4(transform) * quad, appearance)
+        painter.endNativePainting()
+
+    def clear_backdrop(self):
+        if self.backdrop_cache:
+            self.backdrop_cache["texture"].destroy()
+        self.backdrop_cache = {}
+
+    def invalidate_backdrop(self):
+        pixmap = self.owner.backdrop
+        key = (pixmap.cacheKey(), pixmap.size(), pixmap.devicePixelRatioF(), self.context())
+        if self.backdrop_cache.get("key") != key:
+            self.clear_backdrop()
+
+    def update_backdrop(self):
+        pixmap = self.owner.backdrop
+        if pixmap.isNull() or self.backdrop_cache:
+            return True
+        size = pixmap.size()
+        if (not self.blitter.isCreated() or size.width() > self.max_dimension
+                or size.height() > self.max_dimension
+                or size.width() * size.height() * 4 > _CACHE_BUDGET_BYTES):
+            return False
+        image = pixmap.toImage().convertToFormat(QImage.Format_RGBA8888_Premultiplied)
+        if image.isNull():
+            return False
+        texture = QOpenGLTexture(QOpenGLTexture.Target2D)
+        if not texture.create():
+            return False
+        texture.setFormat(QOpenGLTexture.RGBA8_UNorm)
+        texture.setSize(size.width(), size.height())
+        texture.setMipLevels(1)
+        texture.setMinMagFilters(QOpenGLTexture.Linear, QOpenGLTexture.Linear)
+        texture.setWrapMode(QOpenGLTexture.ClampToEdge)
+        texture.allocateStorage(QOpenGLTexture.RGBA, QOpenGLTexture.UInt8)
+        if not texture.isStorageAllocated():
+            texture.destroy()
+            return False
+        # PySide advertises this void* overload as int but rejects 64-bit integers.
+        # The explicit buffer pointer works across supported PySide versions.
+        # Keep the QImage alive through this synchronous upload.
+        try:
+            texture.setData(QOpenGLTexture.RGBA, QOpenGLTexture.UInt8, VoidPtr(image.bits()))
+        except (TypeError, ValueError, RuntimeError):
+            texture.destroy()
+            return False
+        if self.context().functions().glGetError():
+            texture.destroy()
+            return False
+        self.backdrop_cache = {
+            "texture": texture,
+            "key": (pixmap.cacheKey(), size, pixmap.devicePixelRatioF(), self.context()),
+        }
+        self.backdrop_uploads += 1
+        return True
+
+    def draw_backdrop(self, painter):
+        if not self.backdrop_cache:
+            return
+        _, size, dpr, _ = self.backdrop_cache["key"]
+        painter.beginNativePainting()
+        gl = self.context().functions()
+        gl.glEnable(0x0BE2)
+        gl.glBlendFunc(1, 0x0303)
+        projection = QMatrix4x4()
+        projection.ortho(0., float(self.width()), float(self.height()), 0., -1., 1.)
+        quad = QMatrix4x4()
+        quad.translate(size.width() / dpr / 2, size.height() / dpr / 2)
+        # QImage upload rows start at the top, unlike the panel FBO textures.
+        quad.scale(size.width() / dpr / 2, size.height() / dpr / 2)
+        self.blitter.blit(self.backdrop_cache["texture"].textureId(), size, projection * quad)
         painter.endNativePainting()
 
     def paintGL(self):
@@ -498,22 +478,45 @@ class _Surface(QOpenGLWidget):
         gl.glColorMask(True, True, True, True)
         gl.glClearColor(0, 0, 0, 0)
         gl.glClear(0x4000)  # GL_COLOR_BUFFER_BIT
+        self.invalidate_backdrop()
         if self.property("presenting"):
+            # Layout may still be pending during first exposure or a resize.
+            # An empty scene is not an allocation failure or a user 2D choice.
+            if all(rect.isEmpty() for rect, _ in self.owner.panels):
+                return
             if not self.prepare_caches():
                 if not self.cache_failure_pending:
                     self.cache_failure_pending = True
-                    QTimer.singleShot(0, self.owner, self.owner.release_oversized_presentation)
+                    self.owner.cache_failure_timer.start(0)
                 return
+            accelerated_particles = self.particles.prepare(
+                self.owner.navigation.contentHost(), self.owner.content_revision, self.plan[1][1],
+                self.devicePixelRatioF(), self.plan[0],
+                max(0, _CACHE_BUDGET_BYTES - self.static_cache_bytes()),
+                True)
             if (not self.blitter.isCreated() or not self.update_texture(1)
                     or not self.update_texture(0)):
-                QTimer.singleShot(0, self.owner, self.owner.rendering_failed)
+                self.owner.render_failure_timer.start(0)
                 return
+            self.presented_content_texture = self.caches[1]["texture"].texture() if self.caches[1] else 0
+            if accelerated_particles:
+                revision = self.owner.content_revision
+                self.presented_content_texture = self.particles.compose(
+                    self.presented_content_texture, revision, self.paint_target, self.resolve_target,
+                    self.owner.render_foreground)
+                if revision != self.owner.content_revision and not self.particles.activeLayerCount():
+                    if not self.update_texture(1):
+                        self.owner.render_failure_timer.start(0)
+                        return
+                    self.presented_content_texture = self.caches[1]["texture"].texture() if self.caches[1] else 0
             gl.glBindFramebuffer(0x8D40, self.defaultFramebufferObject())
             gl.glViewport(0, 0, round(self.width() * self.devicePixelRatioF()),
                           round(self.height() * self.devicePixelRatioF()))
+        if not self.update_backdrop():
+            self.owner.render_failure_timer.start(0)
+            return
         painter = QPainter(self)
-        if not self.owner.backdrop.isNull():
-            painter.drawPixmap(0, 0, self.owner.backdrop)
+        self.draw_backdrop(painter)
         if self.property("presenting"):
             self.owner.paint(painter)
         painter.end()
@@ -543,7 +546,7 @@ class GallerySpatialController(QObject):
         self.forwarding = False
         self.filtering = False
         self.grabbed = self.hovered = None
-        self.popup_positions = {}
+        self.native_popup_anchors = {}
         self._native_background = navigation.testAttribute(Qt.WA_NoSystemBackground)
         # A public FluentWidget supplies inherited semantic tokens and theme changes.
         self.tokens = _SceneTheme(window)
@@ -568,11 +571,35 @@ class GallerySpatialController(QObject):
         self.renderer_timeout.setSingleShot(True)
         self.renderer_timeout.setInterval(5000)
         self.renderer_timeout.timeout.connect(self.initialization_timed_out)
-        self.settings.spatialModeEnabledChanged.connect(self.apply_mode)
-        self.settings.themeModeChanged.connect(self.refresh)
-        self.settings.accentColorChanged.connect(self.refresh)
-        self.settings.windowEffectChanged.connect(self.refresh)
-        fluentqt.motion_policy().modeChanged.connect(self.refresh)
+        self.cache_failure_timer = QTimer(self)
+        self.cache_failure_timer.setSingleShot(True)
+        self.cache_failure_timer.timeout.connect(self.release_oversized_presentation)
+        self.render_failure_timer = QTimer(self)
+        self.render_failure_timer.setSingleShot(True)
+        self.render_failure_timer.timeout.connect(self.rendering_failed)
+        shared_connections = [
+            self.settings.spatialModeEnabledChanged.connect(self.apply_mode),
+            self.settings.themeModeChanged.connect(self.refresh),
+            self.settings.accentColorChanged.connect(self.refresh),
+            self.settings.windowEffectChanged.connect(self.refresh),
+            fluentqt.motion_policy().modeChanged.connect(self.refresh),
+        ]
+        if isinstance(window, fluentqt.Window):
+            shared_connections.append(window.backdropStateChanged.connect(self._backdrop_state_changed))
+        # PySide 6.2 can retain Python slots after their QObject receiver dies.
+        # Capture connection handles, not the controller, and disconnect senders
+        # which outlive the window before its child timers are destroyed.
+        def disconnect_shared_settings(*_args):
+            for connection in shared_connections:
+                QObject.disconnect(connection)
+        self.destroyed.connect(disconnect_shared_settings)
+        roots = (weakref.ref(navigation), weakref.ref(navigation.contentHost()))
+        def clear_presentation_roots(*_args):
+            for root_ref in roots:
+                root = root_ref()
+                if _alive(root):
+                    root.setProperty(_PRESENTATION_TRANSFORM, None)
+        self.destroyed.connect(clear_presentation_roots)
         self.tokens.changed.connect(self.refresh, Qt.QueuedConnection)
         self.settings.spatial_available = False
         self.settings.spatial_availability_pending = True
@@ -601,7 +628,7 @@ class GallerySpatialController(QObject):
             if reason:
                 self.disable(reason)
                 return
-            _prepare_native_style()
+            SpatialRuntime.prepareApplication()
             self.canvas = _Surface(self, self.window)
             self.canvas.lower()
             self.navigation.setMouseTracking(True)
@@ -699,6 +726,17 @@ class GallerySpatialController(QObject):
             capture.rendering = False
             self.capture.composing = self.content_capture.composing = False
 
+    def render_foreground(self, painter, widget, region):
+        previous = (self.capture.composing, self.capture.rendering,
+                    self.content_capture.composing, self.content_capture.rendering)
+        self.capture.composing = self.content_capture.composing = True
+        self.capture.rendering = self.content_capture.rendering = True
+        try:
+            widget.render(painter, region.boundingRect().topLeft(), region, QWidget.DrawChildren)
+        finally:
+            (self.capture.composing, self.capture.rendering,
+             self.content_capture.composing, self.content_capture.rendering) = previous
+
     @Slot()
     def release_oversized_presentation(self):
         # Resource pressure can recover; keep the GPU available for another attempt.
@@ -710,6 +748,7 @@ class GallerySpatialController(QObject):
         self.disable("3D rendering is unavailable. Using the 2D Gallery.")
 
     def disable(self, reason):
+        self.publish_presentation_transforms(False)
         self.renderer_failed = True
         self.renderer_timeout.stop()
         self.set_filtering(False)
@@ -723,6 +762,7 @@ class GallerySpatialController(QObject):
             self.navigation.contentHost().setGraphicsEffect(None)
         self.capture = self.content_capture = None
         if _alive(self.canvas):
+            self.canvas.clear_frame_caches()
             self.canvas.hide()
             self.canvas.deleteLater()
         self.canvas = None
@@ -738,7 +778,7 @@ class GallerySpatialController(QObject):
                 or widget.objectName() == "GalleryIntroTour.Scrim")
 
     def first_overlay(self):
-        for child in self.window.children():
+        for child in self.window.window().children():
             if (isinstance(child, QWidget) and child.isVisible() and not child.isWindow()
                     and self.is_native_overlay(child)):
                 return child
@@ -748,8 +788,9 @@ class GallerySpatialController(QObject):
         if not self.first_overlay():
             return False
         # Native hit testing respects masks and skips mouse-transparent dim-only scrims.
-        hit = self.window.childAt(self.window.mapFromGlobal(global_pos))
-        while hit and hit != self.window:
+        top = self.window.window()
+        hit = top.childAt(top.mapFromGlobal(global_pos))
+        while hit and hit != top:
             if self.is_native_overlay(hit):
                 return True
             hit = hit.parentWidget()
@@ -757,7 +798,7 @@ class GallerySpatialController(QObject):
 
     def raise_presentation(self):
         overlay = self.first_overlay()
-        if overlay:
+        if overlay and overlay.parentWidget() == self.canvas.parentWidget():
             self.canvas.stackUnder(overlay)
         else:
             self.canvas.raise_()
@@ -768,6 +809,15 @@ class GallerySpatialController(QObject):
         if fluentqt.current_theme() == fluentqt.Theme.HighContrast:
             self.settings.set_spatial_mode_enabled(False)
         self.apply_mode(self.settings.spatial_mode_enabled)
+
+    @Slot()
+    def _backdrop_state_changed(self):
+        # Native material removal must see the new opaque GPU background before
+        # the later Gallery Settings notification. Do not restart 3D motion.
+        self.backdrop_dirty = True
+        self.navigation_revision += 1
+        self.content_revision += 1
+        self.sync()
 
     @Slot(bool)
     def apply_mode(self, enabled):
@@ -782,6 +832,7 @@ class GallerySpatialController(QObject):
             return
         if enabled:
             self.set_filtering(True)
+            self.layout()
             self.canvas.show()
             self.navigation.setAttribute(Qt.WA_NoSystemBackground)
         self.motion.stop()
@@ -821,6 +872,7 @@ class GallerySpatialController(QObject):
             self.navigation.setAttribute(Qt.WA_NoSystemBackground)
             self.raise_presentation()
         else:
+            self.publish_presentation_transforms(False)
             self.navigation.setAttribute(Qt.WA_NoSystemBackground, self._native_background)
             self.canvas.hide()
             self.canvas.clear_frame_caches()
@@ -895,6 +947,8 @@ class GallerySpatialController(QObject):
             return
         bounds = QRect(self.navigation.mapTo(self.window, QPoint()), self.navigation.size())
         self.backdrop_dirty |= self.canvas.geometry() != bounds
+        self.backdrop_dirty |= (not self.backdrop.isNull()
+                                and self.backdrop.devicePixelRatioF() != self.window.devicePixelRatioF())
         self.canvas.setGeometry(bounds)
         # The visible GL surface needs the window material during splash fade-out,
         # before it starts presenting the projected panels.
@@ -914,12 +968,65 @@ class GallerySpatialController(QObject):
             self.canvas.update()
             return
         self.layout()
+        self.publish_presentation_transforms(True)
         self.canvas.setProperty("galleryRotationAxis", "X" if self.top else "Y")
         self.canvas.setProperty("galleryNavigationRotation", (3. if self.top else 5.) * self.progress)
         self.canvas.setProperty("galleryContentRotation", -(3. if self.top else 5.) * self.progress)
         self.canvas.setProperty("galleryPointerTilt", self.pointer)
         self.canvas.setProperty("galleryDepthProgress", self.progress)
         self.canvas.update()
+
+    def publish_presentation_transforms(self, enabled):
+        if not _alive(self.navigation):
+            return
+        host = self.navigation.contentHost()
+        if enabled:
+            origin = host.mapTo(self.navigation, QPoint())
+            transform = (QTransform.fromTranslate(origin.x(), origin.y()) * self.panels[1][1]
+                         * QTransform.fromTranslate(-origin.x(), -origin.y()))
+            self.navigation.setProperty(_PRESENTATION_TRANSFORM, self.panels[0][1])
+            host.setProperty(_PRESENTATION_TRANSFORM, transform)
+        else:
+            self.navigation.setProperty(_PRESENTATION_TRANSFORM, None)
+            host.setProperty(_PRESENTATION_TRANSFORM, None)
+        for key, (popup, source, point, offset) in list(self.native_popup_anchors.items()):
+            if not _alive(popup):
+                self.native_popup_anchors.pop(key, None)
+                continue
+            if (not _alive(source) or not popup.isVisible()
+                    or source.window() != self.window.window()):
+                continue
+            presented = (self.window.mapToGlobal(self.projected_position(source, point))
+                         if enabled else source.mapToGlobal(point))
+            position = presented + offset
+            screen = QGuiApplication.screenAt(presented) or popup.screen()
+            if screen:
+                available = screen.availableGeometry()
+                frame = popup.frameGeometry()
+                frame_offset = frame.topLeft() - popup.pos()
+                frame_position = position + frame_offset
+                position = QPoint(
+                    max(available.left(), min(frame_position.x(), available.right() - frame.width() + 1)),
+                    max(available.top(), min(frame_position.y(), available.bottom() - frame.height() + 1)),
+                ) - frame_offset
+            was_forwarding = self.forwarding
+            self.forwarding = True
+            try:
+                popup.move(position)
+            finally:
+                self.forwarding = was_forwarding
+
+    def _settle_native_popup_offset(self, key):
+        if not _alive(self):
+            return
+        entry = self.native_popup_anchors.get(key)
+        if not entry:
+            return
+        popup, source, point, _offset = entry
+        if not _alive(popup) or not _alive(source) or not popup.isVisible():
+            return
+        presented = self.window.mapToGlobal(self.projected_position(source, point))
+        self.native_popup_anchors[key] = (popup, source, point, popup.pos() - presented)
 
     def paint(self, painter):
         if not self.navigation_revision:
@@ -949,20 +1056,9 @@ class GallerySpatialController(QObject):
                 painter.setBrush(QColor(0, 0, 0, round((1.5 if index == 0 else 2.2) * self.progress)))
                 painter.drawRoundedRect(body.adjusted(-spread, -spread + 3, spread, spread + 3), 12 + spread, 12 + spread)
             painter.restore()
-            material = QLinearGradient(body.topLeft(), body.bottomRight())
-            opacity = (.32 if dark else .34) if index == 0 else (.62 if dark else .56)
-            material.setColorAt(0, _alpha(colors.bgLayerAlt, opacity * self.progress))
-            material.setColorAt(1, _alpha(colors.bgLayerAlt, (opacity - .12) * self.progress))
-            painter.fillPath(path, material)
-            self.canvas.draw_texture(painter, index)
-            if self.progress > 0:
-                rim = QLinearGradient(body.topLeft(), body.bottomRight())
-                rim.setColorAt(0, _alpha(colors.grey10, (.18 if dark else .72) * self.progress))
-                rim.setColorAt(.35, _alpha(colors.grey10, .12 * self.progress))
-                rim.setColorAt(1, _alpha(colors.grey10, 0))
-                painter.setBrush(Qt.NoBrush)
-                painter.setPen(QPen(rim, 1))
-                painter.drawPath(path)
+            # Use the sampler's single projected boundary for widget coverage,
+            # material and reflection instead of independently rasterized edges.
+            self.canvas.draw_texture(painter, index, colors, dark)
             painter.restore()
 
     def in_content(self, widget):
@@ -988,14 +1084,43 @@ class GallerySpatialController(QObject):
             QApplication.sendEvent(target, QEnterEvent(local, target.mapTo(self.window, local), target.mapToGlobal(local)))
 
     def eventFilter(self, watched, event):
-        if self.forwarding or not _alive(self.canvas) or not _alive(self.window):
+        native_menu_show = event.type() == QEvent.Show and isinstance(watched, QMenu)
+        if ((self.forwarding and not native_menu_show) or not _alive(self.canvas) or not _alive(self.window)
+                or not _alive(self.navigation)):
             return False
         kind = event.type()
         nav = self.navigation
+        if (kind == QEvent.MouseMove and _alive(self.hovered) and _alive(self.capture)
+                and self.capture.isEnabled() and event.buttons() == Qt.NoButton
+                and watched == self.window.window().windowHandle()):
+            global_pos = event.globalPosition().toPoint()
+            presented = nav.mapFromGlobal(global_pos)
+            target = None
+            if nav.rect().contains(presented) and not self.native_overlay_at(global_pos):
+                for rect, transform in self.panels:
+                    source = transform.inverted()[0].map(QPointF(presented))
+                    if rect.contains(source):
+                        target = nav.childAt(source.toPoint())
+                        break
+            if target != self.hovered:
+                # Clear projected hover before Qt dispatches the native QWidget
+                # move and starts its tooltip timer. A later synthetic Leave
+                # cancels that timer; the forwarded move cannot restart it.
+                previous, self.hovered = self.hovered, None
+                self.forwarding = True
+                try:
+                    QApplication.sendEvent(previous, QEvent(QEvent.Leave))
+                finally:
+                    if _alive(self):
+                        self.forwarding = False
+                if not _alive(self) or not _alive(watched):
+                    return True
         if watched == self.window and not self.renderer_ready and kind in (QEvent.Show, QEvent.UpdateRequest):
             self.queue_check()
         if not isinstance(watched, QWidget):
             return False
+        mouse = kind in (QEvent.MouseMove, QEvent.MouseButtonPress, QEvent.MouseButtonRelease, QEvent.MouseButtonDblClick)
+        mouse_global = _mouse_global_position(watched, event) if mouse else QPoint()
         if not _alive(self.grabbed):
             self.grabbed = None
         if kind in (QEvent.MouseMove, QEvent.Wheel) and event.buttons() == Qt.NoButton:
@@ -1017,18 +1142,8 @@ class GallerySpatialController(QObject):
             return False
         if kind in (QEvent.MouseButtonPress, QEvent.Wheel) or (kind == QEvent.Show and (watched.isWindow() or self.first_overlay())):
             self.pointer_motion.stop()
-        if kind in (QEvent.Show, QEvent.Move) and isinstance(watched, fluentqt.Popup):
-            # Native ComboBox flyouts are not instances of the Python Flyout facade.
-            anchor = watched.anchor() if callable(getattr(watched, "anchor", None)) else None
-            if anchor and nav.isAncestorOf(anchor) and watched.parentWidget() == self.window:
-                if self.popup_positions.get(id(watched)) != watched.pos():
-                    delta = self.projected_position(anchor, anchor.rect().center()) - anchor.mapTo(self.window, anchor.rect().center())
-                    self.forwarding = True
-                    watched.move(watched.pos() + delta)
-                    self.popup_positions[id(watched)] = watched.pos()
-                    self.forwarding = False
         outside_move = (not in_source and watched != self.canvas and kind == QEvent.MouseMove
-                        and (watched != self.window or not nav.rect().contains(nav.mapFromGlobal(event.globalPosition().toPoint()))))
+                        and (watched != self.window or not nav.rect().contains(nav.mapFromGlobal(mouse_global))))
         if (watched == self.window and kind == QEvent.Leave) or outside_move:
             self.forwarding = True
             self.hover(None, QPoint())
@@ -1037,23 +1152,42 @@ class GallerySpatialController(QObject):
                 self.follow_pointer(QPointF())
         if watched == self.window and kind in (QEvent.WindowDeactivate, QEvent.Hide):
             self.settle()
-        if in_source and watched.isWindow() and kind == QEvent.Show:
-            # Popups keep their native input/focus; only their anchor is projected.
-            source = nav.mapFromGlobal(watched.pos())
-            panel = 1 if self.in_content(watched) else 0
-            presented = self.panels[panel][1].map(QPointF(source)).toPoint()
-            watched.move(nav.mapToGlobal(presented))
+        if isinstance(watched, QMenu) and kind == QEvent.Show:
+            key = id(watched)
+            if key in self.native_popup_anchors:
+                self.native_popup_anchors[key] = (watched, None, QPoint(), QPoint())
+            declared = watched.property(_PRESENTED_MENU_SOURCE)
+            source = declared if _alive(declared) else watched.parentWidget()
+            # Child menus and other top-levels already have native coordinates.
+            if (_alive(source) and source.window() == self.window.window()
+                    and (source == nav or nav.isAncestorOf(source))):
+                point = (watched.property(_PRESENTED_MENU_POINT) if declared
+                         else source.mapFromGlobal(watched.pos()))
+                presented = self.window.mapToGlobal(self.projected_position(source, point))
+                if not declared:
+                    was_forwarding = self.forwarding
+                    self.forwarding = True
+                    try:
+                        watched.move(presented)
+                    finally:
+                        self.forwarding = was_forwarding
+                anchors = self.native_popup_anchors
+                if key not in anchors:
+                    watched.destroyed.connect(lambda _=None, key=key: anchors.pop(key, None))
+                anchors[key] = (watched, source, point, watched.pos() - presented)
+                QTimer.singleShot(0, partial(self._settle_native_popup_offset, key))
         if watched.window() != self.window.window() or (not in_source and watched != self.window):
             return False
         if in_source and kind in (QEvent.Enter, QEvent.Leave, QEvent.HoverEnter, QEvent.HoverLeave, QEvent.HoverMove):
             return True
-        mouse = kind in (QEvent.MouseMove, QEvent.MouseButtonPress, QEvent.MouseButtonRelease, QEvent.MouseButtonDblClick)
         wheel = kind == QEvent.Wheel
         tooltip = kind == QEvent.ToolTip
         context = kind == QEvent.ContextMenu
         if not (mouse or wheel or tooltip or context):
             return False
-        global_pos = event.globalPosition().toPoint() if mouse or wheel else event.globalPos()
+        # Qt's tooltip timer may have saved the same overwritten global point.
+        global_pos = (mouse_global if mouse else watched.mapToGlobal(event.pos()) if tooltip
+                      else event.globalPosition().toPoint() if wheel else event.globalPos())
         if self.native_overlay_at(global_pos):
             # Ignored label/card input may bubble to the host; never forward it behind the overlay.
             self.forwarding = True

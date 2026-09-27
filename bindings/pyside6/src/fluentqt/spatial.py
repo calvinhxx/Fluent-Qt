@@ -11,6 +11,8 @@ from shiboken6 import isValid
 from . import _fluentqt as _native
 
 SpatialItem = _native.fluent.SpatialItem
+SpatialRuntime = _native.fluent.SpatialRuntime
+ParticleLayer = _native.fluent.ParticleLayer
 _Ownership = _native.fluent.WidgetOwnership
 
 
@@ -29,15 +31,8 @@ class SpatialView(_native.fluent.SpatialView):
                 return item
         original = widget.parentWidget()
         restore = original if ownership == _Ownership.Reparented else None
-        if original is not None and ownership != _Ownership.Reparented:
-            widget.setParent(None)
-        try:
-            item = super()._addWidgetWithOwnership(widget, ownership)
-        except Exception:
-            widget.setParent(original)
-            raise
+        item = super()._addWidgetWithOwnership(widget, ownership)
         if item is None:
-            widget.setParent(original)
             return None
         # Mutable restore target lets takeWidget override Reparented semantics.
         record = [widget, restore]
@@ -81,4 +76,4 @@ class SpatialView(_native.fluent.SpatialView):
         return widget
 
 
-__all__ = ["SpatialView", "SpatialItem"]
+__all__ = ["SpatialView", "SpatialItem", "ParticleLayer", "SpatialRuntime"]

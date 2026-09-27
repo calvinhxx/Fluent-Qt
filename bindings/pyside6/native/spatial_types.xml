@@ -1,4 +1,13 @@
 <namespace-type name="spatial" visible="no">
+    <value-type name="SpatialRuntime"/>
+    <object-type name="ParticleLayer">
+        <modify-function signature="backdrop()const">
+            <modify-argument index="return">
+                <define-ownership class="target" owner="default"/>
+            </modify-argument>
+        </modify-function>
+        <modify-function signature="eventFilter(QObject*,QEvent*)" remove="all"/>
+    </object-type>
     <object-type name="SpatialItem">
         <modify-function signature="widget()const">
             <modify-argument index="return">
@@ -15,6 +24,13 @@
                 <parent index="this" action="add"/>
                 <define-ownership class="target" owner="c++"/>
             </modify-argument>
+            <!-- Native validation must run before changing QObject parents or
+                 layouts. On success only detach the Python parent record;
+                 the C++ host has already applied the requested ownership. -->
+            <inject-code class="target" position="end">
+if (pyResult != Py_None &amp;&amp; Shiboken::Object::isValid(%PYARG_1))
+    Shiboken::Object::setParent(nullptr, %PYARG_1);
+            </inject-code>
         </modify-function>
         <modify-function signature="takeWidget(fluent::spatial::SpatialItem*)">
             <modify-argument index="return">

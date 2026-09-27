@@ -368,12 +368,14 @@ class NavigationView(_NativeNavigationView):
 
     def _remember_chrome(self, slot, widget, ownership, original_parent):
         host_ref = weakref.ref(self)
+        # The signal owns its callback; it must not retain its own sender.
+        widget_ref = weakref.ref(widget)
 
         def forget_destroyed_chrome(*_args):
             host = host_ref()
             if host is not None:
                 record = host._fluentqt_chrome_records.get(slot)
-                if record is not None and record[0] is widget:
+                if record is not None and record[0] is widget_ref():
                     host._fluentqt_chrome_records.pop(slot, None)
 
         widget.destroyed.connect(forget_destroyed_chrome)

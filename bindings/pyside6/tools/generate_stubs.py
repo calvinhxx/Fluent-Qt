@@ -182,6 +182,13 @@ def generate_native_stub(extension, package_dir):
     import PySide6.QtWidgets
     import shiboken6  # noqa: F401
 
+    # Native-only generation loads _fluentqt directly, bypassing the facade's
+    # Windows loader setup. Keep its optional Spatial Qt dependencies visible
+    # for this operation without importing QtOpenGL Python modules.
+    _dll_directory = None
+    if sys.platform == "win32" and (package_dir / "spatial.py").is_file():
+        _dll_directory = os.add_dll_directory(str(Path(PySide6.__file__).parent))
+
     generator = import_signature_module("lib.pyi_generator")
     enum_sig = import_signature_module("lib.enum_sig")
     tool = import_signature_module("lib.tool")

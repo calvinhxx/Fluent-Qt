@@ -1379,6 +1379,8 @@
       "visibleTabIndexes"
     ],
     "ParticleBackdrop": [
+      "isGpuAccelerationEnabled",
+      "setGpuAccelerationEnabled",
       "effect",
       "setEffect",
       "isAnimationEnabled",
@@ -1565,10 +1567,28 @@
     "fluentqt.spatial": {
       "build_option": "FLUENT_QT_BUILD_SPATIAL",
       "classes": [
+        "ParticleLayer",
+        "SpatialRuntime",
         "SpatialItem",
         "SpatialView"
       ],
       "methods": {
+        "SpatialRuntime": [
+          "prepareApplication", "prepareWindow", "supportsOpenGLDisplay",
+          "isHardwareRenderer", "currentRendererName", "preflightFailure",
+          "maximumTextureDimension", "needsNativeGlyphCoverage"
+        ],
+        "ParticleLayer": [
+          "backdrop",
+          "isActive",
+          "estimatedBytes",
+          "render",
+          "textureId",
+          "textureSize",
+          "allocatedBytes",
+          "renderedFrameCount",
+          "release"
+        ],
         "SpatialItem": [
           "widget",
           "position",
