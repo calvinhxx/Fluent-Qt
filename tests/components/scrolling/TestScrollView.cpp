@@ -31,6 +31,23 @@ using fluent::WidgetOwnership;
 
 namespace {
 
+TEST(ScrollViewLifetimeTest, Contract_DeferredDeleteDoesNotSynchronizeDestroyedContent)
+{
+    QWidget owner;
+    for (int pass = 0; pass < 16; ++pass) {
+        QPointer<ScrollView> view = new ScrollView(&owner);
+        QPointer<QWidget> content = new QWidget;
+        view->setWidget(content);
+        view->setWidgetResizable(true);
+        view->resize(320, 240);
+        view->deleteLater();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        EXPECT_TRUE(view.isNull());
+        EXPECT_TRUE(content.isNull());
+    }
+    QApplication::processEvents();
+}
+
 class ScrollViewTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;

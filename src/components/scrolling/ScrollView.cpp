@@ -448,7 +448,13 @@ bool ScrollView::event(QEvent* event)
         return true;
 
     const QEvent::Type type = event->type();
+    const QPointer<ScrollView> guard(this);
     const bool handled = QScrollArea::event(event);
+    // QObject consumes DeferredDelete by destroying this widget synchronously.
+    // Never query QScrollArea's content after its base event handler deleted it.
+    // zh_CN: QObject 处理 DeferredDelete 时会同步销毁自身；基类返回后不能再查询内容。
+    if (!guard)
+        return handled;
     synchronizeContentWidget();
     if (shouldSyncFloatingScrollBarAfter(type))
         syncFloatingScrollBar();

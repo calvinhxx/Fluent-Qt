@@ -22,6 +22,9 @@ class QVBoxLayout;
 namespace fluent::basicinput {
 class Button;
 }
+namespace fluent::spatial {
+class SpatialRuntime;
+}
 
 namespace fluent::windowing {
 
@@ -188,6 +191,7 @@ private slots:
     void handleTitleBarContextMenuRequested(const QPoint& globalPos);
 
 private:
+    friend class fluent::spatial::SpatialRuntime;
     void refreshBackdropCapabilities();
     void scheduleBackdropResolution();
     void scheduleNativeChromeRepair();

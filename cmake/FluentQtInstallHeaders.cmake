@@ -120,6 +120,8 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/scrolling/ScrollBar.h
     src/components/scrolling/ScrollView.h
 
+    src/components/spatial/ParticleLayer.h
+    src/components/spatial/SpatialRuntime.h
     src/components/spatial/SpatialItem.h
     src/components/spatial/SpatialView.h
     src/components/status_info/Avatar.h

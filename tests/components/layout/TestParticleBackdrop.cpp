@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QImage>
+#include <QPainter>
 #include <QPointer>
 #include <QSignalSpy>
 #include <QTest>
@@ -10,6 +11,7 @@
 #include "components/basicinput/Button.h"
 #include "components/foundation/MotionPolicy.h"
 #include "components/layout/ParticleBackdrop.h"
+#include "components/layout/ParticleBackdrop_p.h"
 #include "QtTestEnvironment.h"
 
 using fluent::layout::ParticleBackdrop;
@@ -347,6 +349,100 @@ TEST_F(ParticleBackdropTest, Contract_AnimatingNotificationMayDestroySurface)
     QPointer<ParticleBackdrop> guard(backdrop);
     backdrop->setAnimationEnabled(false);
     EXPECT_TRUE(guard.isNull());
+}
+
+TEST_F(ParticleBackdropTest, Contract_GpuRequestDefaultsOffAndPreservesCpuState)
+{
+    ParticleBackdrop backdrop;
+    backdrop.setAnimationEnabled(false);
+    EXPECT_FALSE(backdrop.isGpuAccelerationEnabled());
+    const auto effect = backdrop.effect();
+    const int count = backdrop.particleCount();
+    QSignalSpy changes(&backdrop, &ParticleBackdrop::gpuAccelerationEnabledChanged);
+    backdrop.setGpuAccelerationEnabled(false);
+    EXPECT_EQ(changes.count(), 0);
+    backdrop.setGpuAccelerationEnabled(true);
+    backdrop.setGpuAccelerationEnabled(true);
+    EXPECT_TRUE(backdrop.isGpuAccelerationEnabled());
+    EXPECT_EQ(changes.count(), 1);
+    EXPECT_EQ(backdrop.effect(), effect);
+    EXPECT_EQ(backdrop.particleCount(), count);
+    EXPECT_FALSE(backdrop.isAnimating());
+    backdrop.setGpuAccelerationEnabled(false);
+    EXPECT_EQ(changes.count(), 2);
+}
+
+TEST_P(ParticleBackdropPresetTest, Contract_IsolatedRenderPreservesTheCpuFrame)
+{
+    ParticleBackdrop backdrop;
+    backdrop.resize(320, 180);
+    backdrop.setEffect(GetParam());
+    backdrop.setAnimationEnabled(false);
+    backdrop.setFadeMargins(QMarginsF(90, 12, 20, 70));
+    // Match QWidget's rounded physical capture size and fractional DPR. A
+    // DPR-1 target resamples only the CPU layer; ceil adds non-widget padding.
+    const qreal dpr = backdrop.devicePixelRatioF();
+    const QSize pixels = backdrop.size() * dpr;
+    RecordProperty("devicePixelRatio", QString::number(dpr, 'g', 15).toStdString());
+    for (auto mode : {ParticleBackdrop::Transparent, ParticleBackdrop::Solid}) {
+        SCOPED_TRACE(::testing::Message() << "backgroundMode=" << int(mode));
+        backdrop.setBackgroundMode(mode);
+        QImage cpu(pixels, QImage::Format_ARGB32_Premultiplied);
+        cpu.setDevicePixelRatio(dpr);
+        cpu.fill(Qt::transparent);
+        {
+            QPainter painter(&cpu);
+            backdrop.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+        }
+        QImage isolated(pixels, QImage::Format_ARGB32_Premultiplied);
+        isolated.setDevicePixelRatio(dpr);
+        isolated.fill(Qt::transparent);
+        {
+            QPainter painter(&isolated);
+            fluent::layout::ParticleBackdropRenderAccess::paintIsolated(&backdrop, painter);
+        }
+        EXPECT_EQ(isolated, cpu);
+        // Changing the destination does not advance or reset simulation time.
+        EXPECT_FALSE(backdrop.isAnimating());
+        EXPECT_EQ(backdrop.particleCount(), 240);
+    }
+}
+
+TEST_F(ParticleBackdropTest, Contract_ExternalFramesDoNotRepaintTheWidgetAndOwnerLossRestoresCpu)
+{
+    class PaintProbe : public ParticleBackdrop {
+    public:
+        int paints = 0;
+        void paintEvent(QPaintEvent* event) override
+        {
+            ++paints;
+            ParticleBackdrop::paintEvent(event);
+        }
+    } backdrop;
+    using Access = fluent::layout::ParticleBackdropRenderAccess;
+    backdrop.resize(300, 180);
+    backdrop.setPauseWhenInactive(false);
+    backdrop.show();
+    QTest::qWait(60);
+    ASSERT_TRUE(backdrop.isAnimating());
+    int frames = 0;
+    auto* owner = new QObject;
+    ASSERT_TRUE(Access::claim(&backdrop, owner, [&] { ++frames; }));
+    QObject competingOwner;
+    EXPECT_FALSE(Access::claim(&backdrop, &competingOwner, [] {}));
+    QTest::qWait(30); // Flush the one cache-invalidating ownership change.
+    backdrop.paints = 0;
+    const quint64 revision = Access::revision(&backdrop);
+    QTest::qWait(180);
+    EXPECT_GT(frames, 2);
+    EXPECT_GT(Access::revision(&backdrop), revision);
+    EXPECT_EQ(backdrop.paints, 0);
+    EXPECT_TRUE(backdrop.isAnimating());
+    delete owner;
+    EXPECT_FALSE(Access::isClaimedBy(&backdrop, &competingOwner));
+    QTest::qWait(80);
+    EXPECT_GT(backdrop.paints, 0);
+    EXPECT_TRUE(backdrop.isAnimating());
 }
 
 TEST_F(ParticleBackdropTest, VisualCheck_ParticlesAndChildControls)

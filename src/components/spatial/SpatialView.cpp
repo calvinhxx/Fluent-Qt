@@ -1,4 +1,5 @@
 #include "SpatialView.h"
+#include "SpatialRuntime.h"
 #include "SpatialSurface_p.h"
 
 #include <QApplication>
@@ -14,6 +15,7 @@
 #include <QMouseEvent>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
+#include <QOpenGLPaintDevice>
 #include <QOpenGLWidget>
 #include <QPainter>
 #include <QPointer>
@@ -61,6 +63,10 @@ protected:
     }
     bool eventFilter(QObject* watched, QEvent* event) override
     {
+        if (watched == this && event->type() == QEvent::Paint && m_fullExposurePaint) {
+            m_fullExposurePaint = false;
+            return QOpenGLWidget::event(event);
+        }
         observeExposureEvent(event->type());
         return QOpenGLWidget::eventFilter(watched, event);
     }
@@ -70,7 +76,13 @@ protected:
         // bypassing QGraphicsView's viewport paint event. A plain QOpenGLWidget
         // clears the frame in that path and leaves the live preview blank.
         // zh_CN: Qt 可能直接重绘 FBO，绕过 QGraphicsView 的视口事件；空 paintGL 会清空预览。
-        QPainter painter(this);
+        // Paint outside QWidget's stale system clip after an ancestor has scrolled.
+        // zh_CN: 祖先滚动后绕过 QWidget 的旧系统裁剪，恢复完整 FBO 而非仅原可见区域。
+        QOpenGLPaintDevice target(size() * devicePixelRatioF());
+        target.setDevicePixelRatio(devicePixelRatioF());
+        QPainter painter(&target);
+        painter.setRenderHints(m_view->renderHints());
+        painter.fillRect(rect(), m_view->backgroundBrush());
         m_view->render(&painter);
     }
 
@@ -110,8 +122,10 @@ private:
             // zh_CN: 祖先滚动只改变裁剪，不触发本控件移动；新露出的 GL 区域需要主动重绘。
             const bool revealed = !QRegion(exposed).subtracted(m_exposed).isEmpty();
             m_exposed = exposed;
-            if (revealed)
+            if (revealed) {
+                m_fullExposurePaint = true;
                 update();
+            }
         });
     }
     QGraphicsView* m_view;
@@ -119,6 +133,7 @@ private:
     QRect m_exposed;
     bool m_rebuildAncestors = true;
     bool m_exposurePending = false;
+    bool m_fullExposurePaint = false;
 };
 class SpatialCanvas final : public QGraphicsView {
 public:
@@ -202,11 +217,12 @@ struct SpatialView::Private {
     QStackedLayout* stack = nullptr;
     QList<SpatialItem*> items;
     QTimer* motion = nullptr;
+    QTimer* modeChange = nullptr;
     QElapsedTimer clock;
     QPointF pointer, target, tilt{10, 16};
     qreal camera = 1000, zoom = 1;
     int response = 140, frameRate = 60;
-    bool spatial = true, tracking = true, cache = true;
+    bool spatial = true, requestedSpatial = true, tracking = true, cache = true;
     bool destroying = false, projecting = false, geometryQueued = false, updatingTheme = false;
     bool backendQueued = false, checkQueued = false, gpuFailed = false;
     RenderMode mode = RenderMode::Auto;
@@ -388,14 +404,7 @@ struct SpatialView::Private {
                 name = QString::fromLatin1(reinterpret_cast<const char*>(value));
         }
         gl->doneCurrent();
-        const auto lower = name.toLower();
-        if (name.isEmpty() || lower.contains(QStringLiteral("llvmpipe")) ||
-            lower.contains(QStringLiteral("softpipe")) ||
-            lower.contains(QStringLiteral("swiftshader")) ||
-            lower.contains(QStringLiteral("software")) ||
-            lower.contains(QStringLiteral("basic render driver")) ||
-            lower.contains(QStringLiteral("warp")) ||
-            lower.contains(QStringLiteral("gdi generic"))) {
+        if (!SpatialRuntime::isHardwareRenderer(name)) {
             gpuFailed = true;
             useRaster(q->tr("A hardware OpenGL renderer is unavailable."));
             return;
@@ -429,7 +438,6 @@ struct SpatialView::Private {
             queueBackend(16);
             return;
         }
-        const auto platform = QGuiApplication::platformName();
         inspectEnvironment(QEvent::LayoutRequest);
         if (!spatial || environmentRaster || mode == RenderMode::Raster ||
             (mode == RenderMode::Auto &&
@@ -438,8 +446,7 @@ struct SpatialView::Private {
             useRaster();
             return;
         }
-        if (platform == QStringLiteral("offscreen") || platform == QStringLiteral("minimal") ||
-            platform == QStringLiteral("vnc")) {
+        if (!SpatialRuntime::supportsOpenGLDisplay()) {
             useRaster(q->tr("This Qt platform uses software drawing."));
             return;
         }
@@ -456,6 +463,9 @@ struct SpatialView::Private {
             gl->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
             QObject::connect(gl, &QOpenGLWidget::frameSwapped, q, [this] { queueCheck(); });
             canvas->setViewport(gl);
+            // Run the one-shot exposure paint before QGraphicsView's viewport filter.
+            // zh_CN: 新曝光的整帧恢复先于 QGraphicsView 的视口过滤器执行。
+            gl->installEventFilter(gl);
             gl->setMouseTracking(true);
             if (focused)
                 canvas->setFocus(Qt::OtherFocusReason);
@@ -609,7 +619,7 @@ void SpatialItem::setVisible(bool visible)
 SpatialView::SpatialView(QWidget* parent) : QWidget(parent), d(new Private)
 {
     d->q = this;
-    d->spatial = d->allowsSpatial();
+    d->spatial = d->requestedSpatial = d->allowsSpatial();
     d->stack = new QStackedLayout(this);
     d->stack->setContentsMargins(0, 0, 0, 0);
     d->canvas = new SpatialCanvas(this);
@@ -637,6 +647,11 @@ SpatialView::SpatialView(QWidget* parent) : QWidget(parent), d(new Private)
     d->motion->setTimerType(Qt::PreciseTimer);
     d->motion->setInterval(17);
     connect(d->motion, &QTimer::timeout, this, [this] { d->advance(); });
+    d->modeChange = new QTimer(this);
+    d->modeChange->setObjectName(QStringLiteral("spatialModeChangeTimer"));
+    d->modeChange->setSingleShot(true);
+    connect(d->modeChange, &QTimer::timeout, this,
+            [this] { setSpatialEnabled(d->requestedSpatial); });
     d->canvas->pointer = [this](QPointF p) { d->pointAt(p); };
     d->canvas->resized = [this] {
         updateProjection();
@@ -669,6 +684,7 @@ SpatialView::~SpatialView()
 {
     d->destroying = true;
     d->motion->stop();
+    d->modeChange->stop();
     d->canvas->pointer = {};
     d->canvas->resized = {};
     d->canvas->nativeRequested = {};
@@ -712,8 +728,9 @@ SpatialItem* SpatialView::addWidget(QWidget* widget, WidgetOwnership ownership)
         d->syncContentTheme(item);
     }
     updateProjection();
+    QPointer<SpatialItem> itemGuard(item);
     emit itemCountChanged(itemCount());
-    return item;
+    return itemGuard.data();
 }
 QWidget* SpatialView::detachItem(SpatialItem* item, bool applyOwnership)
 {
@@ -721,6 +738,10 @@ QWidget* SpatialView::detachItem(SpatialItem* item, bool applyOwnership)
         return nullptr;
     auto* widget = item->d->widget.data();
     item->d->owner = nullptr;
+    // A count-change handler may destroy the empty host. It no longer owns this
+    // item while its removal (or destructor) is still completing.
+    // zh_CN: 数量变化回调可能销毁空宿主；移除过程中的条目不再归宿主的 QObject 子级所有。
+    item->setParent(nullptr);
     if (widget) {
         widget->removeEventFilter(this);
         disconnect(item->d->destroyedConnection);
@@ -749,9 +770,11 @@ QWidget* SpatialView::takeWidget(SpatialItem* item)
 {
     if (!item || item->d->owner != this)
         return nullptr;
-    auto* widget = detachItem(item, false);
-    delete item;
-    return widget;
+    QPointer<SpatialItem> itemGuard(item);
+    QPointer<QWidget> widget(item->widget());
+    detachItem(item, false);
+    delete itemGuard.data();
+    return widget.data();
 }
 void SpatialView::releaseItem(SpatialItem* item)
 {
@@ -773,10 +796,15 @@ bool SpatialView::isSpatialEnabled() const
 void SpatialView::setSpatialEnabled(bool enabled)
 {
     enabled = enabled && d->allowsSpatial();
+    d->requestedSpatial = enabled;
+    d->modeChange->stop();
     if (enabled == d->spatial)
         return;
-    if (d->scene->mouseGrabberItem()) {
-        QTimer::singleShot(16, this, [this, enabled] { setSpatialEnabled(enabled); });
+    if (d->scene->mouseGrabberItem() && isVisible()) {
+        // Keep only the latest intent while a visible pointer interaction is held.
+        // Hidden scenes cannot receive its release and must not poll indefinitely.
+        // zh_CN: 按住期间只保留最后一次模式请求；隐藏场景收不到松开事件，不能无限重试。
+        d->modeChange->start(16);
         return;
     }
     d->motion->stop();
@@ -949,8 +977,8 @@ void SpatialView::updateProjection()
         model.rotate(item->d->rotation.y(), 0, 1, 0);
         model.rotate(item->d->rotation.x(), 1, 0, 0);
         model.scale(float(item->d->scale));
-        const QPolygonF source{rect.topLeft(), rect.topRight(), rect.bottomRight(),
-                               rect.bottomLeft()};
+        QPolygonF source;
+        source << rect.topLeft() << rect.topRight() << rect.bottomRight() << rect.bottomLeft();
         QPolygonF projected;
         bool valid = !rect.isEmpty();
         for (const QPointF& corner : source) {
@@ -1001,7 +1029,10 @@ bool SpatialView::eventFilter(QObject* watched, QEvent* event)
 }
 bool SpatialView::event(QEvent* event)
 {
+    const QPointer<SpatialView> guard(this);
     const bool handled = QWidget::event(event);
+    if (!guard)
+        return handled;
     if (d && d->canvas)
         d->inspectEnvironment(event->type());
     return handled;
@@ -1016,6 +1047,14 @@ void SpatialView::showEvent(QShowEvent* event)
 void SpatialView::hideEvent(QHideEvent* event)
 {
     d->settle();
+    if (auto* grabber = d->scene->mouseGrabberItem())
+        grabber->ungrabMouse();
+    // Finish after QWidget's hide traversal, before another pointer release is needed.
+    // zh_CN: 等 QWidget 隐藏遍历结束再完成模式切换，不依赖隐藏后无法接收的鼠标松开。
+    if (d->requestedSpatial != d->spatial)
+        d->modeChange->start(0);
+    else
+        d->modeChange->stop();
     d->queueBackend();
     QWidget::hideEvent(event);
 }

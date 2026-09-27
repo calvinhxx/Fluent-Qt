@@ -1,4 +1,5 @@
 #include "ParticleBackdrop.h"
+#include "ParticleBackdrop_p.h"
 
 #include <QApplication>
 #include <QElapsedTimer>
@@ -57,7 +58,14 @@ public:
                              pulses.begin(), pulses.end(),
                              [this](const Pulse& pulse) { return elapsed - pulse.started > 1.6; }),
                          pulses.end());
-            q->update();
+            ++frameRevision;
+            if (frameOwner && requestFrame) {
+                // Copy before dispatch: the consumer may destroy either owner.
+                const auto notify = requestFrame;
+                notify();
+            } else {
+                q->update();
+            }
         });
         QObject::connect(&MotionPolicy::instance(), &MotionPolicy::modeChanged, q,
                          [this] { syncTimer(); });
@@ -81,6 +89,7 @@ public:
     QTimer timer;
     QElapsedTimer clock;
     bool animationEnabled = true, interactive = false, pauseWhenInactive = true;
+    bool gpuAccelerationEnabled = false;
     bool pointerActive = false, visibilityQueued = false;
     qreal speed = 1;
     int particleCount = 240, maximumFrameRate = 30;
@@ -101,11 +110,17 @@ public:
     QImage layer;
     QSize cachedPixels;
     qreal cachedDpr = 0;
+    bool cachedIsolated = false;
+    quint64 frameRevision = 1;
+    QPointer<QObject> frameOwner;
+    std::function<void()> requestFrame;
+    QMetaObject::Connection frameOwnerDestroyed;
 
     int width() const { return q->width(); }
     int height() const { return q->height(); }
     void rebuildParticles()
     {
+        ++frameRevision;
         if (effect != ParticleBackdrop::FlowingRibbons) {
             for (auto& lane : particles)
                 lane.clear();
@@ -183,6 +198,7 @@ public:
     }
     void invalidate()
     {
+        ++frameRevision;
         cachedPixels = {};
         backdrop = {};
         layer = {};
@@ -207,14 +223,17 @@ public:
         }
         }
     }
-    void ensureCache(const QColor& background, const std::array<QColor, 3>& hues, bool dark)
+    void ensureCache(const QColor& background, const std::array<QColor, 3>& hues, bool dark,
+                     bool isolated)
     {
         const qreal dpr = q->devicePixelRatioF();
         const QSize pixels(qCeil(width() * dpr), qCeil(height() * dpr));
-        if (pixels == cachedPixels && dpr == cachedDpr)
+        if (pixels == cachedPixels && dpr == cachedDpr && isolated == cachedIsolated)
             return;
         cachedPixels = pixels;
         cachedDpr = dpr;
+        cachedIsolated = isolated;
+        layer = {};
         if (effect == ParticleBackdrop::FloatingDots) {
             // Small reusable raster sprites avoid per-particle gradients and blur passes.
             for (int hue = 0; hue < 3; ++hue) {
@@ -240,7 +259,7 @@ public:
             glow.setColorAt(0, alpha(hues[1], dark ? .12 : .08));
             glow.setColorAt(1, Qt::transparent);
             painter.fillRect(q->rect(), glow);
-        } else if (hasFade()) {
+        } else if (hasFade() && !isolated) {
             layer = QImage(pixels, QImage::Format_ARGB32_Premultiplied);
             layer.setDevicePixelRatio(dpr);
         }
@@ -269,7 +288,7 @@ public:
                              fade);
         }
     }
-    void paint(QPainter& painter)
+    void paint(QPainter& painter, bool isolated = false)
     {
         const auto& colors = q->themeColorsRef();
         if (q->effectiveTheme() == FluentElement::HighContrast) {
@@ -285,11 +304,19 @@ public:
         for (int i = 0; i < 3; ++i)
             hues[i] = QColor::fromHsvF(std::fmod(hue + offsets[i] + 1, 1.0), dark ? .60 : .78,
                                        dark ? .95 : .66);
-        ensureCache(colors.bgSolid, hues, dark);
+        ensureCache(colors.bgSolid, hues, dark, isolated);
         if (backgroundMode == ParticleBackdrop::Solid) {
             painter.drawPixmap(0, 0, backdrop);
             draw(painter, hues);
             applyFades(painter);
+        } else if (isolated && hasFade()) {
+            // The caller supplies a private transparent target. Mask directly
+            // there; no full-size CPU image or per-frame texture upload.
+            painter.save();
+            draw(painter, hues);
+            painter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+            applyFades(painter);
+            painter.restore();
         } else if (!layer.isNull()) {
             // Mask only this isolated image, never the parent's shared backing-store pixels.
             layer.fill(Qt::transparent);
@@ -496,7 +523,15 @@ ParticleBackdrop::ParticleBackdrop(QWidget* parent)
     setFocusPolicy(Qt::NoFocus);
     d->watchAncestors();
 }
-ParticleBackdrop::~ParticleBackdrop() = default;
+ParticleBackdrop::~ParticleBackdrop()
+{
+    // A child/external presentation owner may outlive this derived pimpl.
+    // Disconnect before QWidget teardown delivers Hide/destroyed callbacks.
+    d->timer.stop();
+    QObject::disconnect(d->frameOwnerDestroyed);
+    d->frameOwner.clear();
+    d->requestFrame = {};
+}
 ParticleBackdrop::Effect ParticleBackdrop::effect() const
 {
     return d->effect;
@@ -524,6 +559,18 @@ bool ParticleBackdrop::isAnimationEnabled() const
 bool ParticleBackdrop::isAnimating() const
 {
     return d->timer.isActive();
+}
+bool ParticleBackdrop::isGpuAccelerationEnabled() const
+{
+    return d->gpuAccelerationEnabled;
+}
+void ParticleBackdrop::setGpuAccelerationEnabled(bool enabled)
+{
+    if (d->gpuAccelerationEnabled == enabled)
+        return;
+    d->gpuAccelerationEnabled = enabled;
+    update();
+    emit gpuAccelerationEnabledChanged(enabled);
 }
 qreal ParticleBackdrop::speed() const
 {
@@ -648,6 +695,7 @@ void ParticleBackdrop::triggerRipple(const QPointF& position)
     if (d->pulses.size() == 3)
         d->pulses.erase(d->pulses.begin());
     d->pulses.push_back({position, d->elapsed});
+    ++d->frameRevision;
     update();
 }
 void ParticleBackdrop::onThemeUpdated()
@@ -699,6 +747,8 @@ bool ParticleBackdrop::eventFilter(QObject* watched, QEvent* e)
 }
 void ParticleBackdrop::paintEvent(QPaintEvent*)
 {
+    if (d->frameOwner)
+        return;
     QPainter painter(this);
     d->paint(painter);
 }
@@ -720,5 +770,62 @@ void ParticleBackdrop::leaveEvent(QEvent* event)
 {
     d->pointerActive = false;
     QWidget::leaveEvent(event);
+}
+
+bool ParticleBackdropRenderAccess::claim(ParticleBackdrop* backdrop, QObject* owner,
+                                         std::function<void()> requestFrame)
+{
+    if (!backdrop || !owner || !requestFrame)
+        return false;
+    auto* data = backdrop->d.get();
+    if (data->frameOwner && data->frameOwner != owner)
+        return false;
+    if (data->frameOwner == owner)
+        return true;
+    data->frameOwner = owner;
+    data->requestFrame = std::move(requestFrame);
+    data->frameOwnerDestroyed = QObject::connect(owner, &QObject::destroyed, backdrop, [backdrop] {
+        auto* data = backdrop->d.get();
+        data->frameOwner.clear();
+        data->requestFrame = {};
+        data->invalidate();
+        backdrop->update();
+    });
+    backdrop->update();
+    return true;
+}
+
+void ParticleBackdropRenderAccess::release(ParticleBackdrop* backdrop, QObject* owner)
+{
+    if (!backdrop || !isClaimedBy(backdrop, owner))
+        return;
+    auto* data = backdrop->d.get();
+    QObject::disconnect(data->frameOwnerDestroyed);
+    data->frameOwner.clear();
+    data->requestFrame = {};
+    data->invalidate();
+    backdrop->update();
+}
+
+bool ParticleBackdropRenderAccess::isClaimedBy(const ParticleBackdrop* backdrop,
+                                               const QObject* owner)
+{
+    return backdrop && owner && backdrop->d->frameOwner == owner;
+}
+
+quint64 ParticleBackdropRenderAccess::revision(const ParticleBackdrop* backdrop)
+{
+    return backdrop ? backdrop->d->frameRevision : 0;
+}
+
+bool ParticleBackdropRenderAccess::isInViewport(const ParticleBackdrop* backdrop)
+{
+    return backdrop && backdrop->d->inViewport();
+}
+
+void ParticleBackdropRenderAccess::paintIsolated(ParticleBackdrop* backdrop, QPainter& painter)
+{
+    if (backdrop)
+        backdrop->d->paint(painter, true);
 }
 } // namespace fluent::layout

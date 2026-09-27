@@ -1,12 +1,14 @@
 #pragma once
 
 #include <QGraphicsProxyWidget>
+#include <QCoreApplication>
 #include <QGraphicsSceneHoverEvent>
 #include <QGraphicsSceneMouseEvent>
 #include <QImage>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPointer>
+#include <QTimer>
 #include <QVariantAnimation>
 #include <QtMath>
 #include <algorithm>
@@ -14,6 +16,7 @@
 #include <functional>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/MotionPolicy.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 
 namespace fluent::spatial {
 
@@ -139,6 +142,7 @@ class SpatialSurfaceProxy final : public QGraphicsProxyWidget {
 public:
     SpatialSurfaceProxy() : m_decoration(new SpatialSurfaceDecoration(this))
     {
+        setFlag(QGraphicsItem::ItemSendsGeometryChanges);
         m_motion.setEasingCurve(QEasingCurve::OutCubic);
         connect(&m_motion, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
             m_feedback = value.toReal();
@@ -166,6 +170,29 @@ public:
     }
 
 protected:
+    QVariant itemChange(GraphicsItemChange change, const QVariant& value) override
+    {
+        const QVariant result = QGraphicsProxyWidget::itemChange(change, value);
+        if (change == ItemTransformHasChanged || change == ItemPositionHasChanged ||
+            change == ItemVisibleHasChanged || change == ItemSceneHasChanged) {
+            if (widget() && !m_presentationNotificationPending) {
+                m_presentationNotificationPending = true;
+                // Never reposition or close an overlay inside a scene mutation.
+                // Coalesce projection changes and let the common anchor tracker act.
+                // zh_CN: 不在场景更新栈中关闭或移动浮层；合并投影变化后通知共用锚点跟踪器。
+                QTimer::singleShot(0, this, [this] {
+                    m_presentationNotificationPending = false;
+                    if (QWidget* source = widget()) {
+                        QDynamicPropertyChangeEvent event(
+                            overlay::presentationTransformPropertyName());
+                        QCoreApplication::sendEvent(source, &event);
+                    }
+                });
+            }
+        }
+        return result;
+    }
+
     void hoverEnterEvent(QGraphicsSceneHoverEvent* event) override
     {
         QGraphicsProxyWidget::hoverEnterEvent(event);
@@ -222,5 +249,6 @@ private:
     QVariantAnimation m_motion;
     qreal m_lift = 0, m_intensity = 0, m_feedback = 0;
     bool m_hovered = false, m_pressed = false;
+    bool m_presentationNotificationPending = false;
 };
 } // namespace fluent::spatial

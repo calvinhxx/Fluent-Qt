@@ -12,9 +12,10 @@
 namespace fluent::layout {
 
 class ParticleBackdropPrivate;
+class ParticleBackdropRenderAccess;
 
 /**
- * @brief CPU-painted particle presets behind caller-composed content.
+ * @brief CPU-default particle presets behind caller-composed content.
  * zh_CN: 在调用方组合的内容后方，用 CPU 绘制可切换预设的粒子背景。
  *
  * Uses ordinary QWidget child layouts. Hidden, clipped and reduced-motion
@@ -29,6 +30,8 @@ class ParticleBackdrop : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY
                    animationEnabledChanged)
     Q_PROPERTY(bool animating READ isAnimating NOTIFY animatingChanged)
+    Q_PROPERTY(bool gpuAccelerationEnabled READ isGpuAccelerationEnabled WRITE
+                   setGpuAccelerationEnabled NOTIFY gpuAccelerationEnabledChanged)
     Q_PROPERTY(qreal speed READ speed WRITE setSpeed NOTIFY speedChanged)
     Q_PROPERTY(
         int particleCount READ particleCount WRITE setParticleCount NOTIFY particleCountChanged)
@@ -72,6 +75,16 @@ public:
     /** @brief Effective timer state after policy and visibility. zh_CN: 策略与可见性收敛后的实际计时状态。 */
     bool isAnimating() const;
 
+    /**
+     * @brief Permit an optional Spatial compositor to accelerate painting; false by default.
+     * zh_CN: 允许可选 Spatial 合成器加速绘制，默认关闭。
+     * This is a request, not an active-backend flag. Without a capable host it
+     * keeps CPU painting; no context, timer or OpenGL dependency is created.
+     * zh_CN: 此值是请求而非实际后端；无可用宿主时仍用 CPU，不创建上下文、计时器或 OpenGL 依赖。
+     */
+    bool isGpuAccelerationEnabled() const;
+    void setGpuAccelerationEnabled(bool enabled);
+
     qreal speed() const;
     /** @brief Sets speed in [0, 4]; zero freezes motion. zh_CN: 设置 0 到 4 倍速度，零表示静止。 */
     void setSpeed(qreal speed);
@@ -107,6 +120,7 @@ signals:
     void effectChanged(Effect effect);
     void animationEnabledChanged(bool enabled);
     void animatingChanged(bool animating);
+    void gpuAccelerationEnabledChanged(bool enabled);
     void speedChanged(qreal speed);
     void particleCountChanged(int count);
     void maximumFrameRateChanged(int framesPerSecond);
@@ -124,6 +138,7 @@ protected:
     void leaveEvent(QEvent* event) override;
 
 private:
+    friend class ParticleBackdropRenderAccess;
     std::unique_ptr<ParticleBackdropPrivate> d;
 };
 
