@@ -92,6 +92,9 @@ WASM_ROOT_FILES = {
 WASM_CI_FILES = {
     ".github/scripts/classify_ci_changes.py",
     ".github/scripts/run-wasm-browser-smoke.py",
+    ".github/scripts/run-wasm-spatial-smoke.py",
+    ".github/scripts/test_wasm_browser_smoke.py",
+    ".github/scripts/test_wasm_spatial_smoke.py",
     ".github/scripts/stage-wasm-pages.py",
     ".github/scripts/test_classify_ci_changes.py",
     ".github/scripts/validate-ci-workflow-boundaries.py",

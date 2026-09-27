@@ -187,6 +187,27 @@ def run_screen_reader_proxy_contract(page: object, app_name: str) -> None:
     print(f"{app_name} screen-reader proxy contract passed: proxies={len(proxies)}")
 
 
+def validate_source_input_probe(probe: dict) -> None:
+    """Require projected CSS-space points; an axis-aligned proxy box is not enough."""
+    if probe.get("state") not in ("ready", "expanded"):
+        raise RuntimeError(f"Gallery source input probe is not ready: {probe}")
+    points = [probe.get("header")]
+    if probe["state"] == "expanded":
+        lines = probe.get("lines")
+        if not isinstance(lines, list) or len(lines) != 2 or any(
+            not isinstance(line, list) or len(line) != 2 for line in lines
+        ):
+            raise RuntimeError(f"Gallery source input probe has no two line segments: {probe}")
+        points += [probe.get("copy"), *(point for line in lines for point in line)]
+    if any(
+        not isinstance(point, list) or len(point) != 2
+        or any(not isinstance(value, (int, float)) or isinstance(value, bool)
+               or not math.isfinite(value) for value in point)
+        for point in points
+    ):
+        raise RuntimeError(f"Gallery source input probe has invalid projected points: {probe}")
+
+
 def run_source_selection_clipboard_contract(page: object, base_url: str) -> None:
     """Copy two real canvas selections after priming Qt with the whole source."""
     expected_lines = (
@@ -202,8 +223,10 @@ def run_source_selection_clipboard_contract(page: object, base_url: str) -> None
     previous_viewport = page.viewport_size
     page.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=base_url)
 
-    def click_canvas_rect(rect: dict) -> None:
-        page.mouse.click(rect["x"] + rect["width"] / 2, rect["y"] + rect["height"] / 2)
+    def geometry() -> dict:
+        probe = page.evaluate("JSON.parse(document.documentElement.dataset.fluentQtSourceInput)")
+        validate_source_input_probe(probe)
+        return probe
 
     def expect_clipboard(expected: str, label: str) -> None:
         deadline = time.monotonic() + 5
@@ -219,56 +242,142 @@ def run_source_selection_clipboard_contract(page: object, base_url: str) -> None
     try:
         # Keep both short source lines onscreen without depending on scrollbars.
         page.set_viewport_size({"width": 1280, "height": 1200})
-        source_url = f"{base_url}/app/index.html?route=button"
+        source_url = f"{base_url}/app/index.html?route=button&wasm-smoke=source-input"
         page.goto(source_url, wait_until="domcontentloaded")
         page.wait_for_function("document.documentElement.dataset.fluentQtLoaded === 'true'")
-        run_screen_reader_proxy_contract(page, "Gallery source coordinate discovery")
         proxies = page.locator("#qt-shadow-container .qt-window-a11y-container").first
+        # Read-only Qt geometry maps the actual rendered controls through the
+        # current 3D projection (or the ordinary 2D transform). Accessibility
+        # proxies retain unprojected rectangles and must not drive canvas input.
         page.wait_for_function(
-            """e => !e.querySelector(
-                '[id$=".gallerySplashScreen"]:not([aria-hidden="true"])')""",
-            arg=proxies.element_handle(), timeout=10_000,
+            "JSON.parse(document.documentElement.dataset.fluentQtSourceInput || '{}').state === 'ready'",
+            timeout=15_000,
         )
-        header = page.get_by_role("button", name="Source code", exact=True).first.bounding_box()
-        if header is None:
-            raise RuntimeError("Gallery source header has no canvas geometry")
         page.bring_to_front()
-        click_canvas_rect(header)
-        source = proxies.locator('textarea[id$=".galleryCodeBlockText"]').first
-        page.wait_for_function("e => e.value.startsWith('auto* standard =')",
-                               arg=source.element_handle(), timeout=5_000)
-        code_rect = source.bounding_box()
-        copy_rect = proxies.locator('[id$=".galleryCodeBlockCopyButton"]').first.bounding_box()
-        if code_rect is None or copy_rect is None:
-            raise RuntimeError("Gallery source/copy button has no canvas geometry")
-
-        # Reload the ordinary runtime: accessibility was only a read-only geometry
-        # source. No proxy focus/click, Qt calls, or DOM mutations drive this case.
-        page.goto(source_url, wait_until="domcontentloaded")
-        page.wait_for_function("document.documentElement.dataset.fluentQtLoaded === 'true'")
-        page.bring_to_front()
-        # Without screen-reader proxies the QWidget transitions have no DOM idle
-        # signal. Allow the 1400 ms branded hold + 700 ms exit, then the expander.
-        page.wait_for_timeout(2500)
-        click_canvas_rect(header)
-        page.wait_for_timeout(500)
+        page.mouse.click(*geometry()["header"])
+        page.wait_for_function(
+            "JSON.parse(document.documentElement.dataset.fluentQtSourceInput || '{}').state === 'expanded'",
+            timeout=5_000,
+        )
         if proxies.locator(":scope > [id]").count() != 0:
             raise RuntimeError("Gallery clipboard input case unexpectedly enabled accessibility")
         page.evaluate("navigator.clipboard.writeText('fluentqt-source-copy-sentinel')")
-        click_canvas_rect(copy_rect)
+        # Hold then reject one host write. Qt's cache or a success toast must not
+        # be accepted as evidence that the browser clipboard actually changed.
+        page.evaluate("""() => {
+            window.fluentQtClipboardTest = {
+                original: navigator.clipboard.writeText.bind(navigator.clipboard), calls: 0
+            };
+            navigator.clipboard.writeText = () => {
+                ++window.fluentQtClipboardTest.calls;
+                return new Promise((resolve, reject) => {
+                    window.fluentQtClipboardTest.reject = reject;
+                });
+            };
+        }""")
+        page.mouse.click(*geometry()["copy"])
+        page.wait_for_function("""() => {
+            const state = JSON.parse(document.documentElement.dataset.fluentQtSourceInput);
+            return window.fluentQtClipboardTest.calls === 1 && state.copyEnabled === false;
+        }""", timeout=5_000)
+        if geometry().get("toasts"):
+            raise RuntimeError("Gallery reported a clipboard result before host completion")
+        page.evaluate("window.fluentQtClipboardTest.reject(new DOMException('Denied', 'NotAllowedError'))")
+        page.wait_for_function("""() => {
+            const state = JSON.parse(document.documentElement.dataset.fluentQtSourceInput);
+            return state.copyEnabled && state.toasts.some(toast =>
+                toast.message === 'Could not copy to clipboard. Try again.' && toast.severity === 3);
+        }""", timeout=5_000)
+        expect_clipboard("fluentqt-source-copy-sentinel", "rejected write")
+        if page.evaluate("window.fluentQtClipboardTest.calls") != 1:
+            raise RuntimeError("One Copy action issued multiple browser writes")
+        page.evaluate("""() => {
+            navigator.clipboard.writeText = window.fluentQtClipboardTest.original;
+            delete window.fluentQtClipboardTest;
+        }""")
+        page.mouse.click(*geometry()["copy"])
         expect_clipboard(full_source, "whole-source button")
-        # These positions lie inside the first two short, unwrapped lines. The
-        # exact source assertions also reject synthetic U+200B wrapping markers.
-        for offset, expected in zip((9, 31), expected_lines):
-            y = code_rect["y"] + offset
-            page.mouse.move(code_rect["x"] + 1, y)
+        page.wait_for_function("""() => {
+            const state = JSON.parse(document.documentElement.dataset.fluentQtSourceInput);
+            return state.copyEnabled && state.toasts.some(toast =>
+                toast.message === 'Copied to clipboard' && toast.severity === 1);
+        }""", timeout=5_000)
+        # Drag along each projected text baseline, not a horizontal accessibility
+        # rectangle. Exact source assertions reject synthetic U+200B markers.
+        for index, expected in enumerate(expected_lines):
+            start, end = geometry()["lines"][index]
+            page.mouse.move(*start)
             page.mouse.down()
-            page.mouse.move(code_rect["x"] + code_rect["width"] - 2, y, steps=15)
+            page.mouse.move(*end, steps=15)
             page.mouse.up()
             page.keyboard.press("ControlOrMeta+c")
             expect_clipboard(expected, "selected source line")
         print("Gallery source clipboard contract passed: whole source, then two exact lines; "
-              "raw Chromium keyboard, screen reader disabled")
+              f"projected={geometry()['spatial']}, raw Chromium keyboard, screen reader disabled")
+    finally:
+        page.evaluate("document.documentElement.dataset.fluentQtSourceInputDone = 'true'")
+        if previous_viewport is not None:
+            page.set_viewport_size(previous_viewport)
+
+
+def run_accessible_source_focus_contract(page: object, base_url: str) -> None:
+    """Focus real offscreen AX proxies without moving their sibling Qt canvas."""
+    previous_viewport = page.viewport_size
+    try:
+        page.set_viewport_size({"width": 1280, "height": 720})
+        page.goto(f"{base_url}/app/index.html?route=spatial-view&window-mode=maximized",
+                  wait_until="domcontentloaded")
+        page.wait_for_function("document.documentElement.dataset.fluentQtLoaded === 'true'")
+        run_screen_reader_proxy_contract(page, "Gallery accessible source")
+        container = page.locator("#qt-shadow-container .qt-window-a11y-container").first
+        header = container.locator('[id$=".galleryCodeBlockHeader"]').first
+        copy = container.locator('[id$=".galleryCodeBlockCopyButton"]').first
+        header.wait_for(state="attached", timeout=15_000)
+        # Qt creates AX nodes before publishing their first real widget geometry.
+        # A zero-sized HTML button still has a nonzero CSS border/padding box.
+        page.wait_for_function("""button => {
+            return parseFloat(button.style.width) > 0 && parseFloat(button.style.height) > 0;
+        }""", arg=header.element_handle(), timeout=5_000)
+        header.focus()
+        page.keyboard.press("Enter")
+        page.wait_for_function("""button => {
+            const r = button.getBoundingClientRect();
+            return getComputedStyle(button).visibility === 'visible' && r.height > 0
+                && parseFloat(button.style.width) > 0 && parseFloat(button.style.height) > 0;
+        }""", arg=copy.element_handle(), timeout=5_000)
+        read_geometry = """container => {
+            const canvas = container.parentElement.querySelector('canvas.qt-window-canvas');
+            const rect = canvas.getBoundingClientRect();
+            const offsets = [];
+            for (let e = canvas.parentElement; e; e = e.parentElement || e.getRootNode().host)
+                offsets.push([e.scrollLeft, e.scrollTop]);
+            return {x: rect.x, y: rect.y, width: rect.width, height: rect.height, offsets};
+        }"""
+        before = container.evaluate(read_geometry)
+        copy_rect = copy.bounding_box()
+        if not copy_rect or copy_rect["y"] <= before["y"] + before["height"]:
+            raise RuntimeError(f"AX focus regression did not reach an offscreen proxy: {copy_rect}")
+        copy.focus()
+        if container.evaluate(read_geometry) != before:
+            raise RuntimeError("Focusing an offscreen source proxy scrolled the Qt canvas")
+        cdp = page.context.new_cdp_session(page)
+        try:
+            nodes = cdp.send("Accessibility.getFullAXTree")["nodes"]
+        finally:
+            cdp.detach()
+        if not any(not node.get("ignored")
+                   and node.get("role", {}).get("value") == "button"
+                   and node.get("name", {}).get("value") == "Copy displayed code"
+                   and any(prop.get("name") == "focused" and prop.get("value", {}).get("value")
+                           for prop in node.get("properties", [])) for node in nodes):
+            raise RuntimeError("Clipped source proxy lost its accessible button/focus state")
+        page.evaluate("navigator.clipboard.writeText('accessible-copy-sentinel')")
+        page.keyboard.press("Enter")
+        page.wait_for_function("""async () =>
+            (await navigator.clipboard.readText()).includes('SpatialView')""", timeout=5_000)
+        if container.evaluate(read_geometry) != before:
+            raise RuntimeError("Accessible Copy activation scrolled the Qt canvas")
+        print("Gallery AX offscreen focus and trusted Enter passed; canvas geometry unchanged")
     finally:
         if previous_viewport is not None:
             page.set_viewport_size(previous_viewport)
@@ -736,6 +845,7 @@ def run_smoke(
             if mode == "full":
                 run_screen_reader_proxy_contract(page, "Gallery")
                 run_source_selection_clipboard_contract(page, base_url)
+                run_accessible_source_focus_contract(page, base_url)
 
             licenses = page.goto(
                 f"{base_url}/app/licenses.html", wait_until="domcontentloaded"

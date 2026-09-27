@@ -306,12 +306,16 @@ class ClassifyCiChangesTest(unittest.TestCase):
         )
 
     def test_wasm_smoke_change_runs_wasm_only(self):
-        self.assert_classification(
-            [".github/scripts/run-wasm-browser-smoke.py"],
-            native=True,
-            pyside=False,
-            wasm=True,
-        )
+        for path in (
+            ".github/scripts/run-wasm-browser-smoke.py",
+            ".github/scripts/run-wasm-spatial-smoke.py",
+            ".github/scripts/test_wasm_browser_smoke.py",
+            ".github/scripts/test_wasm_spatial_smoke.py",
+        ):
+            with self.subTest(path=path):
+                self.assert_classification(
+                    [path], native=True, pyside=False, wasm=True,
+                )
 
     def test_wasm_adapter_change_runs_wasm_only(self):
         self.assert_classification(
