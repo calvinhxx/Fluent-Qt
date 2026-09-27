@@ -1,4 +1,5 @@
 #include "MenuBar.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 
 #include <QAction>
 #include <QActionEvent>
@@ -537,7 +538,7 @@ void FluentMenuBar::openMenuForAction(QAction* action)
     m_openAction = action;
     setHoveredAction(action);
     update();
-    menu->popup(mapToGlobal(QPoint(itemRect.left(), itemRect.bottom() + 1)));
+    ::fluent::overlay::popupMenuAt(menu, this, QPoint(itemRect.left(), itemRect.bottom() + 1));
 }
 
 void FluentMenuBar::closeOpenMenu()

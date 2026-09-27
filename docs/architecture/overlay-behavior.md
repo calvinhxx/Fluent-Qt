@@ -141,6 +141,50 @@ Overlay implementations must distinguish three geometry regions:
 `setPosition()`, anchor placement, edge placement, and test assertions refer
 to the visible card or panel, excluding shadow margins.
 
+In the Gallery's 3D shell, anchored overlays use the target's presented bounds
+before choosing a side or applying containment. Popup points and attached
+tooltips use the same mapping; native menu invocation points are mapped before
+Qt applies screen containment. Submenus keep their native coordinates. The
+internal presentation mapping stops at native-window boundaries and is removed
+when the shell returns to 2D. Dialogs, ContentDialog, and DrawerView remain
+centered or edge-aligned in their actual owning window, not in a projected page.
+
+An embedded `QGraphicsProxyWidget` root is a logical QWidget window, not an
+overlay boundary. The private `WidgetPresentationCompat` adapter resolves its
+scene viewport; foundation composes that mapping with any outer host transform.
+The same placement code is used on Windows, macOS, Linux and WebAssembly.
+Chart readouts and other same-window overlays attach to the actual owning
+window, so card edges do not clip them. Native menus and tooltips bypass Qt's
+automatic child-proxy embedding while retaining their QObject ownership.
+Coalesced scene-transform notifications keep open anchors current; hiding the
+source or its viewport dismisses the anchored surface. Ordinary non-embedded
+2D coordinates are unchanged.
+
+CommandBar overflow and CommandBarFlyout use the same presented owner for
+placement, maximum size, invocation validation and focus restoration. An
+embedded card is not a separate application window: a flyout can reopen from
+that card after attaching to the native owner, while truly foreign-window
+invocations remain rejected. Overflow-anchor hit testing uses the inverse
+presentation mapping so one press closes the menu without reopening it.
+Calling `showAt()` or `showAtPoint()` during the exit animation reopens the
+flyout through the base Popup transition. Visibility alone does not mean a
+flyout is open; an in-flight close must not swallow the next invocation.
+
+Custom C++ compositor hosts use the Widget-only
+`fluent::overlay::presentation` adapter from the directly included
+`<FluentQt/components/foundation/overlay/OverlayPresentation.h>`. It publishes
+root-local transforms, maps points and opens native menus before containment;
+nonfinite or noninvertible transforms clear that root's published transform.
+`clearTransform()` removes only that root's value, so mapping can inherit the
+nearest published ancestor again. Publish an identity transform to explicitly
+shield a subtree from an ancestor's transform; without a published ancestor or
+proxy embedding, clearing restores ordinary coordinates. The guarded menu anchor is only
+published during synchronous invocation and never owns its source. Property
+keys and mapping implementation remain private. This optional
+host adapter does not render, create OpenGL contexts or replace native widget
+ownership. It is intentionally C++-only; see the
+[binding coverage decision](../../bindings/pyside6/ROADMAP.md#implementation-surfaces).
+
 ## Light Dismiss
 
 `CloseOnPressOutside` treats presses outside the visible card or panel as

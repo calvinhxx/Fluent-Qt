@@ -7,6 +7,7 @@
 #include <QPainterPath>
 #include <QStyle>
 #include <QStyleOptionButton>
+#include <QTimer>
 #include <QVariantAnimation>
 #include <QtMath>
 
@@ -77,7 +78,16 @@ void SplitButton::setMenu(QMenu* menu)
     setOpen(false);
     m_menu = menu;
     if (m_menu) {
-        connect(m_menu, &QMenu::aboutToShow, this, [this]() { setOpen(true); });
+        connect(m_menu, &QMenu::aboutToShow, this, [this]() {
+            // QMenu may stay hidden if application aboutToShow handlers leave
+            // it empty. Its private expanded state must not remain latched.
+            // zh_CN: 应用填充回调后仍为空的菜单不显示，按钮展开状态需复原。
+            QTimer::singleShot(0, this, [this, menu = m_menu] {
+                if (menu && menu == m_menu && menu->isEmpty() && !menu->isVisible())
+                    setOpen(false);
+            });
+            setOpen(true);
+        });
         connect(m_menu, &QMenu::aboutToHide, this, [this]() { setOpen(false); });
         connect(m_menu, &QObject::destroyed, this, [this]() {
             setOpen(false);

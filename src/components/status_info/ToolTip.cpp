@@ -1,5 +1,5 @@
 #include "ToolTip.h"
-#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "components/foundation/private/SurfacePainter_p.h"
@@ -54,6 +54,7 @@ ToolTip::ToolTip(QWidget* parent) : QWidget(parent)
 {
     detail::ensureToolTipAccessibilityFactory();
     setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
+    ::fluent::compat::prepareNativeWidgetPopup(this);
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
 
@@ -191,6 +192,12 @@ void ToolTip::setAnimationEnabled(bool enabled)
 
 void ToolTip::setVisible(bool visible)
 {
+    if (qApp) {
+        if (visible && m_target)
+            qApp->installEventFilter(this);
+        else
+            qApp->removeEventFilter(this);
+    }
     if (m_accessibilityVisible != visible) {
         m_accessibilityVisible = visible;
         detail::notifyToolTipAccessibilityVisibilityChanged(this);
@@ -238,6 +245,12 @@ void ToolTip::onThemeUpdated()
 
 bool ToolTip::eventFilter(QObject* watched, QEvent* event)
 {
+    if (isVisible() && ::fluent::overlay::anchorGeometryMayChange(watched, event, m_target)) {
+        if (::fluent::overlay::isAnchorVisibleInTopLevel(m_target))
+            positionForTarget();
+        else
+            hide();
+    }
     if (watched != m_target || !event)
         return QWidget::eventFilter(watched, event);
 
@@ -322,7 +335,8 @@ void ToolTip::positionForTarget()
     const QSize outerSize = sizeHint().expandedTo(size());
     const QSize cardSize(qMax(0, outerSize.width() - 2 * kShadowMargin),
                          qMax(0, outerSize.height() - 2 * kShadowMargin));
-    const QRect targetRect(m_target->mapToGlobal(QPoint(0, 0)), m_target->size());
+    const QRect targetRect = ::fluent::overlay::presentedRectInTopLevel(m_target).translated(
+        ::fluent::overlay::presentedTopLevel(m_target)->mapToGlobal(QPoint()));
 
     auto cardTopLeft = [&](Placement placement) {
         switch (placement) {

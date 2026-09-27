@@ -1,6 +1,6 @@
 #include "Flyout.h"
 
-#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.h"
 
 namespace fluent::dialogs_flyouts {
@@ -60,18 +60,17 @@ QRect Flyout::anchorRectInTopLevel() const
 {
     if (!m_anchor)
         return QRect();
-    QWidget* top = m_anchor->window();
+    QWidget* top = ::fluent::overlay::presentedTopLevel(m_anchor);
     if (!top)
         return QRect();
-    const QPoint tl = m_anchor->mapTo(top, QPoint(0, 0));
-    return QRect(tl, m_anchor->size());
+    return ::fluent::overlay::presentedRectInTopLevel(m_anchor);
 }
 
 QPoint Flyout::clampCardPos(const QPoint& cardTopLeft) const
 {
     if (!m_clampToWindow)
         return cardTopLeft;
-    QWidget* top = m_anchor ? m_anchor->window() : parentWidget();
+    QWidget* top = m_anchor ? ::fluent::overlay::presentedTopLevel(m_anchor) : parentWidget();
     if (!top)
         return cardTopLeft;
 
@@ -86,7 +85,7 @@ Flyout::Placement Flyout::resolveAutoPlacement() const
 {
     if (!m_anchor)
         return Bottom;
-    QWidget* top = m_anchor->window();
+    QWidget* top = ::fluent::overlay::presentedTopLevel(m_anchor);
     if (!top)
         return Bottom;
 
@@ -110,7 +109,7 @@ Flyout::Placement Flyout::resolveAutoPlacement() const
 QPoint Flyout::computePosition() const
 {
     // No anchor: fall back to the base class (centered). zh_CN: 没有 anchor → 退化到基类（居中）。
-    if (!m_anchor || !m_anchor->window()) {
+    if (!::fluent::overlay::presentedTopLevel(m_anchor)) {
         return Popup::computePosition();
     }
 

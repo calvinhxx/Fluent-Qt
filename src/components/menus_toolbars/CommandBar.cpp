@@ -20,7 +20,7 @@
 
 #include "compatibility/QtCompat.h"
 #include "components/dialogs_flyouts/Flyout.h"
-#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/foundation/overlay/OverlayLightDismiss.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/layout/Divider.h"
@@ -255,7 +255,8 @@ protected:
             if (!overlay::visibleCardContains(rect(), localPosition)) {
                 const bool hitAnchor =
                     m_anchorButton && m_anchorButton->isVisible() &&
-                    m_anchorButton->rect().contains(m_anchorButton->mapFromGlobal(globalPosition));
+                    m_anchorButton->rect().contains(
+                        overlay::localPointFromPresentedGlobal(m_anchorButton, globalPosition));
                 m_restoreFocusOnClose = hitAnchor;
                 if (hitAnchor && m_anchorPressHandler)
                     m_anchorPressHandler();
@@ -267,12 +268,11 @@ protected:
 
     QPoint computePosition() const override
     {
-        if (!m_anchorButton || !m_anchorButton->window())
+        QWidget* topLevel = overlay::presentedTopLevel(m_anchorButton);
+        if (!topLevel)
             return dialogs_flyouts::Flyout::computePosition();
 
-        QWidget* topLevel = m_anchorButton->window();
-        const QPoint anchorTopLeft = m_anchorButton->mapTo(topLevel, QPoint());
-        const QRect anchorRect(anchorTopLeft, m_anchorButton->size());
+        const QRect anchorRect = ::fluent::overlay::presentedRectInTopLevel(m_anchorButton);
         const QSize cardSize = overlay::visibleCardSize(size());
         const QRect surface = overlay::overlaySurfaceRect(topLevel);
 
@@ -366,7 +366,7 @@ private:
             }
         }
 
-        QWidget* topLevel = m_anchorButton ? m_anchorButton->window() : nullptr;
+        QWidget* topLevel = overlay::presentedTopLevel(m_anchorButton);
         const QRect surface = topLevel ? overlay::overlaySurfaceRect(topLevel)
                                        : QRect(0, 0, desiredWidth + 16, contentHeight + 16);
         const int maximumCardWidth =

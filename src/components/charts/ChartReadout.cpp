@@ -5,6 +5,7 @@
 #include <QPainter>
 #include <algorithm>
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/textfields/Label.h"
 
 namespace fluent::charts::detail {
@@ -156,15 +157,14 @@ void ChartReadout::present(const QString& heading, const QVector<ReadoutRow>& ro
     origin.setX(std::clamp(origin.x(), 16, std::max(16, m_chart->width() - width - 16)));
     origin.setY(std::clamp(origin.y(), 16, std::max(16, m_chart->height() - height - 16)));
     setPosition(m_chart, origin);
-    if (isOpen())
-        move(overlay::outerTopLeftForVisibleCard(m_chart->mapTo(parentWidget(), origin)));
-    else
+    if (!isOpen())
         open();
 }
 
 bool ChartReadout::eventFilter(QObject* watched, QEvent* event)
 {
-    if (m_chart && watched == m_chart->window() && event->type() == QEvent::WindowDeactivate)
+    if (m_chart && watched == overlay::presentedTopLevel(m_chart) &&
+        event->type() == QEvent::WindowDeactivate)
         close();
     return Popup::eventFilter(watched, event);
 }

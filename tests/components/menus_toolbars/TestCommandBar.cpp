@@ -7,10 +7,14 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QEvent>
+#include <QGraphicsProxyWidget>
+#include <QGraphicsScene>
+#include <QGraphicsView>
 #include <QIcon>
 #include <QImage>
 #include <QLineEdit>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QPixmap>
 #include <QPointer>
 #include <QScrollArea>
@@ -24,6 +28,8 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
+#include "components/foundation/overlay/OverlayPresentation.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/menus_toolbars/CommandBar.h"
 #include "components/menus_toolbars/CommandBarFlyout.h"
 
@@ -77,6 +83,85 @@ QIcon testIcon()
 }
 
 } // namespace
+
+TEST(CommandBarTest, Contract_EmbeddedOverflowUsesPresentedHostForPlacementAndSize)
+{
+    QWidget window;
+    window.resize(1000, 640);
+    QGraphicsScene scene;
+    QGraphicsView view(&scene, &window);
+    view.setGeometry(window.rect());
+    view.setSceneRect(window.rect());
+    view.setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    auto* card = new QWidget;
+    card->setFixedSize(260, 100);
+    auto* bar = new CommandBar(card);
+    bar->setGeometry(10, 10, 240, 48);
+    for (int index = 0; index < 5; ++index)
+        ASSERT_TRUE(
+            bar->addSecondaryAction(new QAction(QStringLiteral("Command %1").arg(index), bar)));
+    auto* proxy = scene.addWidget(card);
+    proxy->setPos(470, 180);
+    proxy->setTransform(QTransform().rotate(5));
+    window.show();
+    processDeferredUiWork();
+    auto* more = commandButton(bar, QStringLiteral("FluentCommandBar.MoreButton"));
+    ASSERT_NE(more, nullptr);
+
+    for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        SCOPED_TRACE(int(direction));
+        bar->setLayoutDirection(direction);
+        bar->setOverflowOpen(true);
+        processDeferredUiWork();
+        ASSERT_TRUE(bar->isOverflowOpen());
+        auto* popup = window.findChild<fluent::dialogs_flyouts::Flyout*>(
+            QStringLiteral("FluentCommandBar.OverflowPopup"));
+        ASSERT_NE(popup, nullptr);
+        EXPECT_EQ(popup->parentWidget(), &window);
+        const QRect shown =
+            fluent::overlay::visibleCardRect(popup->rect()).translated(popup->pos());
+        const QRect anchor = fluent::overlay::presentedRectInTopLevel(more);
+        EXPECT_GT(shown.height(), card->height());
+        EXPECT_TRUE(window.rect().contains(shown));
+        EXPECT_EQ(shown.top(), anchor.bottom() + 1 + popup->anchorOffset());
+        EXPECT_EQ(direction == Qt::RightToLeft ? shown.left() : shown.right(),
+                  direction == Qt::RightToLeft ? anchor.left() : anchor.right());
+        bar->setOverflowOpen(false);
+        processDeferredUiWork();
+    }
+}
+
+TEST(CommandBarTest, Contract_PresentedAnchorPressClosesWithoutReopeningOverflow)
+{
+    QWidget window;
+    window.resize(900, 600);
+    QWidget page(&window);
+    page.setGeometry(20, 20, 400, 200);
+    CommandBar bar(&page);
+    bar.setGeometry(10, 10, 260, 48);
+    QAction secondary(QStringLiteral("Secondary"));
+    ASSERT_TRUE(bar.addSecondaryAction(&secondary));
+    window.show();
+    fluent::overlay::presentation::setTransform(&page, QTransform::fromTranslate(300, 160));
+    processDeferredUiWork();
+    auto* more = commandButton(&bar, QStringLiteral("FluentCommandBar.MoreButton"));
+    ASSERT_NE(more, nullptr);
+    bar.setOverflowOpen(true);
+    processDeferredUiWork();
+    ASSERT_TRUE(bar.isOverflowOpen());
+    const QPoint global = fluent::overlay::presentedPointToGlobal(more, more->rect().center());
+    QMouseEvent press(QEvent::MouseButtonPress, QPointF(window.mapFromGlobal(global)),
+                      QPointF(global), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    // The native host sees the press before the compositor forwards activation.
+    QApplication::sendEvent(&window, &press);
+    EXPECT_FALSE(bar.isOverflowOpen());
+    more->click();
+    EXPECT_FALSE(bar.isOverflowOpen());
+    more->click();
+    EXPECT_TRUE(bar.isOverflowOpen());
+    bar.setOverflowOpen(false);
+    fluent::overlay::presentation::clearTransform(&page);
+}
 
 TEST(CommandBarTest, DefaultsAndPropertiesNotifyOnlyOnChange)
 {
@@ -546,6 +631,8 @@ TEST(CommandBarTest, Contract_CompositeKeyboardFocusAndOverflowNavigation)
     QWidget::setTabOrder(&before, &bar);
     QWidget::setTabOrder(&bar, &after);
     window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
     before.setFocus(Qt::OtherFocusReason);
     processDeferredUiWork();
     ASSERT_EQ(QApplication::focusWidget(), &before);
@@ -696,6 +783,8 @@ TEST(CommandBarTest, Contract_OverflowDismissAndActivationRespectFocusDestinatio
     QAction command(QStringLiteral("Secondary command"));
     ASSERT_TRUE(bar.addSecondaryAction(&command));
     window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
     bar.setFocus(Qt::OtherFocusReason);
     processDeferredUiWork();
 

@@ -6,11 +6,15 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QEvent>
+#include <QGraphicsProxyWidget>
+#include <QGraphicsScene>
+#include <QGraphicsView>
 #include <QImage>
 #include <QKeySequence>
 #include <QLineEdit>
 #include <QPalette>
 #include <QPointer>
+#include <QPropertyAnimation>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -25,6 +29,7 @@
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/menus_toolbars/CommandBar.h"
 #include "components/menus_toolbars/CommandBarFlyout.h"
 #include "components/textfields/Label.h"
@@ -83,7 +88,8 @@ struct FlyoutFixture {
         flyout.setAnimationEnabled(false);
         flyout.resize(240, 140);
         window.show();
-        QApplication::processEvents();
+        window.activateWindow();
+        EXPECT_TRUE(QTest::qWaitForWindowActive(&window));
     }
 
     ~FlyoutFixture()
@@ -107,6 +113,132 @@ public:
 };
 
 } // namespace
+
+TEST(CommandBarFlyoutTest, Contract_EmbeddedPointPlacementUsesHostAndCanReopen)
+{
+    QWidget window;
+    window.resize(1000, 640);
+    QGraphicsScene scene;
+    QGraphicsView view(&scene, &window);
+    view.setGeometry(window.rect());
+    view.setSceneRect(window.rect());
+    view.setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    auto* card = new QWidget;
+    card->setFixedSize(260, 100);
+    auto* anchor = new fluent::basicinput::Button(QStringLiteral("Commands"), card);
+    anchor->setGeometry(20, 20, 180, 40);
+    auto* proxy = scene.addWidget(card);
+    proxy->setPos(470, 180);
+    proxy->setTransform(QTransform().rotate(5));
+    CommandBarFlyout flyout(card);
+    flyout.setAnimationEnabled(false);
+    for (int index = 0; index < 5; ++index)
+        ASSERT_TRUE(flyout.addSecondaryAction(
+            new QAction(QStringLiteral("Command %1").arg(index), &flyout)));
+    window.show();
+    processDeferredUiWork();
+
+    for (const QPoint point : {QPoint(40, 20), QPoint(80, 40), QPoint(600, 500)}) {
+        flyout.showAtPoint(anchor, point, CommandBarFlyout::ShowMode::Transient);
+        processDeferredUiWork();
+        ASSERT_TRUE(flyout.isOpen());
+        EXPECT_EQ(flyout.parentWidget(), &window);
+        const QRect shown =
+            fluent::overlay::visibleCardRect(flyout.rect()).translated(flyout.pos());
+        QPoint expected = fluent::overlay::presentedPointInTopLevel(anchor, point);
+        expected.ry() += flyout.anchorOffset();
+        expected = fluent::overlay::clampCardTopLeft(expected, shown.size(), window.rect(), 4);
+        EXPECT_EQ(shown.topLeft(), expected);
+        EXPECT_GT(shown.height(), card->height());
+        EXPECT_TRUE(window.rect().contains(shown));
+        flyout.close();
+        processDeferredUiWork();
+    }
+
+    proxy->setWidget(nullptr);
+    delete proxy;
+    card->setParent(&window);
+    card->move(30, 40);
+    card->show();
+    flyout.showAt(anchor);
+    processDeferredUiWork();
+    EXPECT_TRUE(flyout.isOpen());
+    EXPECT_EQ(flyout.parentWidget(), &window);
+    flyout.close();
+}
+
+TEST(CommandBarFlyoutTest, Contract_EmbeddedAnchorSharesNativeOwnerButRejectsForeignWindow)
+{
+    QWidget window;
+    window.resize(700, 500);
+    QGraphicsScene scene;
+    QGraphicsView view(&scene, &window);
+    view.setGeometry(window.rect());
+    auto* anchor = new fluent::basicinput::Button(QStringLiteral("Commands"));
+    anchor->setFixedSize(180, 40);
+    scene.addWidget(anchor);
+    CommandBarFlyout flyout(&window);
+    flyout.setAnimationEnabled(false);
+    QAction command(QStringLiteral("Command"));
+    ASSERT_TRUE(flyout.addSecondaryAction(&command));
+    window.show();
+    processDeferredUiWork();
+    flyout.showAt(anchor);
+    processDeferredUiWork();
+    EXPECT_TRUE(flyout.isOpen());
+    EXPECT_EQ(flyout.parentWidget(), &window);
+    flyout.close();
+
+    QWidget foreignWindow;
+    fluent::basicinput::Button foreignAnchor(QStringLiteral("Other window"), &foreignWindow);
+    foreignWindow.show();
+    processDeferredUiWork();
+    flyout.showAt(&foreignAnchor);
+    EXPECT_FALSE(flyout.isOpen());
+    flyout.showAtPoint(&foreignAnchor, QPoint(10, 10));
+    EXPECT_FALSE(flyout.isOpen());
+}
+
+TEST(CommandBarFlyoutTest, Contract_ReopenDuringExitAnimationCancelsPendingClose)
+{
+    FlyoutFixture sample;
+    ASSERT_TRUE(sample.flyout.addSecondaryAction(&sample.secondary));
+    auto* animation =
+        sample.flyout.findChild<QPropertyAnimation*>(QString(), Qt::FindDirectChildrenOnly);
+    ASSERT_NE(animation, nullptr);
+    ASSERT_EQ(animation->propertyName(), QByteArray("popupProgress"));
+
+    for (bool pointPlacement : {false, true}) {
+        SCOPED_TRACE(pointPlacement ? "point placement" : "anchor placement");
+        QSignalSpy opened(&sample.flyout, &CommandBarFlyout::opened);
+        QSignalSpy closed(&sample.flyout, &CommandBarFlyout::closed);
+        sample.flyout.setAnimationEnabled(true);
+        const auto show = [&]() {
+            if (pointPlacement)
+                sample.flyout.showAtPoint(&sample.anchor, QPoint(20, 15));
+            else
+                sample.flyout.showAt(&sample.anchor);
+        };
+        show();
+        ASSERT_EQ(animation->state(), QAbstractAnimation::Running);
+        animation->setCurrentTime(animation->duration());
+        ASSERT_EQ(opened.count(), 1);
+        sample.flyout.close();
+        ASSERT_FALSE(sample.flyout.isOpen());
+        ASSERT_TRUE(sample.flyout.isVisible());
+        ASSERT_EQ(animation->state(), QAbstractAnimation::Running);
+
+        show();
+        ASSERT_TRUE(sample.flyout.isOpen());
+        animation->setCurrentTime(animation->duration());
+        EXPECT_TRUE(sample.flyout.isVisible());
+        EXPECT_TRUE(sample.flyout.isOpen());
+        EXPECT_EQ(opened.count(), 2);
+        EXPECT_EQ(closed.count(), 0);
+        sample.flyout.setAnimationEnabled(false);
+        sample.flyout.close();
+    }
+}
 
 TEST(CommandBarFlyoutTest, DefaultsAndPropertiesNotifyOnlyOnChange)
 {

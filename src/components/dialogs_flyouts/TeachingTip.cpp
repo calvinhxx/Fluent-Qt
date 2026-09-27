@@ -10,7 +10,7 @@
 
 #include "compatibility/QtCompat.h"
 #include "components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.h"
-#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "design/Spacing.h"
 
@@ -162,7 +162,7 @@ void TeachingTip::closeWithReason(CloseReason reason)
 
 QPoint TeachingTip::computePosition() const
 {
-    if (!m_target || !m_target->window()) {
+    if (!::fluent::overlay::presentedTopLevel(m_target)) {
         return Popup::computePosition();
     }
 
@@ -236,9 +236,10 @@ void TeachingTip::paintEvent(QPaintEvent*)
 
     if (m_tailVisible && !targetRectInTopLevel().isEmpty()) {
         QPolygon tail;
-        const QPoint targetTopLeft = m_target->mapTo(m_target->window(), QPoint(0, 0));
-        const QRect localTargetRect =
-            QRect(mapFrom(m_target->window(), targetTopLeft), m_target->size());
+        const QRect targetRect = targetRectInTopLevel();
+        const QRect localTargetRect(
+            mapFrom(::fluent::overlay::presentedTopLevel(m_target), targetRect.topLeft()),
+            targetRect.size());
 
         if (isBottomPlacement(placement)) {
             int centerX = localTargetRect.center().x();
@@ -347,9 +348,9 @@ QRect TeachingTip::cardRect() const
 
 QRect TeachingTip::targetRectInTopLevel() const
 {
-    if (!m_target || !m_target->window())
+    if (!::fluent::overlay::presentedTopLevel(m_target))
         return QRect();
-    return QRect(m_target->mapTo(m_target->window(), QPoint(0, 0)), m_target->size());
+    return ::fluent::overlay::presentedRectInTopLevel(m_target);
 }
 
 TeachingTip::PreferredPlacement TeachingTip::resolvedPlacement() const
@@ -361,7 +362,7 @@ TeachingTip::PreferredPlacement TeachingTip::resolvedPlacement() const
 TeachingTip::PreferredPlacement TeachingTip::resolveAutoPlacement(const QSize& cardSize) const
 {
     const QRect targetRect = targetRectInTopLevel();
-    QWidget* top = m_target ? m_target->window() : nullptr;
+    QWidget* top = ::fluent::overlay::presentedTopLevel(m_target);
     if (targetRect.isEmpty() || !top)
         return Bottom;
     const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
@@ -450,7 +451,7 @@ QPoint TeachingTip::cardTopLeftForPlacement(PreferredPlacement placement, const 
 
 QPoint TeachingTip::clampCardTopLeft(const QPoint& cardTopLeft, const QSize& cardSize) const
 {
-    QWidget* top = m_target ? m_target->window() : nullptr;
+    QWidget* top = ::fluent::overlay::presentedTopLevel(m_target);
     if (!top)
         return cardTopLeft;
 

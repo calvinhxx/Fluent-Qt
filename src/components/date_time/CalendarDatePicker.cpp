@@ -1,4 +1,5 @@
 #include "CalendarDatePicker.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 
 #include <QEvent>
 #include <QKeyEvent>
@@ -124,11 +125,11 @@ public:
 protected:
     QPoint computePosition() const override
     {
-        if (!m_picker || !m_picker->window())
+        if (!::fluent::overlay::presentedTopLevel(m_picker))
             return Flyout::computePosition();
 
-        QWidget* top = m_picker->window();
-        const QRect anchor(m_picker->mapTo(top, QPoint(0, 0)), m_picker->size());
+        QWidget* top = ::fluent::overlay::presentedTopLevel(m_picker);
+        const QRect anchor = ::fluent::overlay::presentedRectInTopLevel(m_picker);
         const int cardW = width() - kCalendarShadowMargin * 2;
         const int cardH = height() - kCalendarShadowMargin * 2;
 
