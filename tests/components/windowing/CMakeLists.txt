@@ -32,6 +32,16 @@ if(APPLE)
 endif()
 if(WIN32)
     add_qt_test_module(test_window_win TestWindowWin.cpp)
+    if(TARGET FluentQtSpatial)
+        target_link_libraries(test_window_win PRIVATE FluentQt::Spatial)
+        if(QT_VERSION_MAJOR EQUAL 6)
+            target_link_libraries(test_window_win PRIVATE Qt6::OpenGLWidgets)
+        endif()
+    endif()
+    configure_native_window_desktop_test(
+        WindowsWindowBackdropTest.EffectChangesPreserveNativeWindowWithoutActivationCompensation windows)
     configure_native_window_desktop_test(
         WindowsWindowBackdropTest.StateChangesDoNotRepeatActivationCompensation windows)
+    configure_native_window_desktop_test(
+        WindowsWindowBackdropTest.SuspendedUpdatesKeepMaterialUntilOpaqueFrameCommits windows)
 endif()
