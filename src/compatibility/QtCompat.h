@@ -83,6 +83,14 @@ using FluentEnterEvent = QEvent;
 #define FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE 0
 #endif
 
+// Qt 6.4+ may replace a native window when its first QOpenGLWidget is inserted.
+// zh_CN: Qt 6.4 起，首次加入 QOpenGLWidget 可能更换原生窗口。
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+#define FLUENT_OPENGL_WIDGET_CAN_REPLACE_NATIVE_WINDOW 1
+#else
+#define FLUENT_OPENGL_WIDGET_CAN_REPLACE_NATIVE_WINDOW 0
+#endif
+
 #if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
 #define FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION 1
 #define FLUENT_HAS_UNCONDITIONAL_ACCESSIBLE_UPDATE_HANDLER 1
@@ -681,6 +689,20 @@ using FluentColorComponent = qreal;
 // Usage:
 //   FLUENT_MAKE_ENTER_EVENT(ev, 5, 5);
 //   QApplication::sendEvent(widget, &ev);
+/**
+ * @brief Constructs an enter event with distinct local, scene and global positions.
+ * zh_CN: 使用独立的本地、场景及全局位置构造 enter 事件；Qt 5 保持普通 Enter 事件。
+ */
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#define FLUENT_MAKE_ENTER_EVENT_AT(name, local, scene, global)                                     \
+    QEnterEvent name                                                                               \
+    {                                                                                              \
+        QPointF(local), QPointF(scene), QPointF(global)                                            \
+    }
+#else
+#define FLUENT_MAKE_ENTER_EVENT_AT(name, local, scene, global) QEvent name(QEvent::Enter)
+#endif
+
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #define FLUENT_MAKE_ENTER_EVENT(name, x, y)                                                        \
     QEnterEvent name(QPointF((x), (y)), QPointF((x), (y)), QPointF((x), (y)))

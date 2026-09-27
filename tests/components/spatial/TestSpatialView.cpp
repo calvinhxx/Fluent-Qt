@@ -3,14 +3,20 @@
 #include <QAccessible>
 #include <QApplication>
 #include <QGraphicsView>
+#include <QGraphicsScene>
 #include <QGraphicsProxyWidget>
 #include <QGraphicsOpacityEffect>
 #include <QOpenGLWidget>
+#include <QOpenGLFunctions>
 #include <QPointer>
+#include <QScrollBar>
 #include <QSignalSpy>
 #include <QTest>
 #include <QTimer>
+#include <QVBoxLayout>
 #include <limits>
+#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayPresentation_p.h"
 
 using fluent::spatial::SpatialItem;
 using fluent::spatial::SpatialView;
@@ -81,6 +87,142 @@ TEST_F(SpatialViewTest, Contract_FlatCanvasFollowsHostTheme)
         const int inset = qRound(12 * canvas.devicePixelRatioF());
         EXPECT_EQ(canvas.toImage().pixelColor(inset, inset), view.themeColors().bgCanvas);
         EXPECT_EQ(card->effectiveTheme(), theme);
+    }
+}
+
+TEST_F(SpatialViewTest, Contract_EmbeddedChartReadoutUsesPresentedWindow)
+{
+    QWidget window;
+    window.resize(900, 650);
+    auto* view = new SpatialView(&window);
+    view->setGeometry(40, 50, 800, 540);
+    view->setRenderMode(SpatialView::RenderMode::Raster);
+    view->setPointerTrackingEnabled(false);
+    auto* card = new fluent::layout::Card;
+    card->setFixedSize(340, 300);
+    auto* chart = new fluent::charts::DonutChart(card);
+    chart->setGeometry(20, 16, 300, 230);
+    chart->setLegendVisible(false);
+    auto* model = new fluent::charts::ChartModel(card);
+    model->setPoints({{0, 65}, {1, 35}}, {"Used", "Free"});
+    chart->setModel(model);
+    auto* item = view->addWidget(card, WidgetOwnership::Owned);
+    item->setRotation(QVector3D(5, -12, 0));
+    window.show();
+    QApplication::processEvents();
+    view->grab();
+    chart->setCurrentPoint(0, 0);
+    fluent::dialogs_flyouts::Popup* readout = nullptr;
+    for (auto* widget : QApplication::allWidgets())
+        if (widget->objectName() == "FluentChartReadout")
+            readout = qobject_cast<fluent::dialogs_flyouts::Popup*>(widget);
+    ASSERT_NE(readout, nullptr);
+    ASSERT_TRUE(readout->isOpen());
+    EXPECT_EQ(readout->parentWidget(), &window)
+        << "A projected card is not the overlay's owning native window";
+    EXPECT_TRUE(window.rect().contains(fluent::overlay::visibleCardGeometry(readout->geometry())));
+    const QPoint firstPosition = readout->pos();
+    item->setRotation(QVector3D(-10, 20, 0));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return readout->pos() != firstPosition; }, 1000));
+    EXPECT_TRUE(window.rect().contains(fluent::overlay::visibleCardGeometry(readout->geometry())));
+    chart->setCurrentPoint(0, 1);
+    QApplication::processEvents();
+    EXPECT_EQ(readout->parentWidget(), &window);
+    view->setSpatialEnabled(false);
+    QApplication::processEvents();
+    chart->setCurrentPoint(0, 0);
+    EXPECT_EQ(readout->parentWidget(), &window);
+    view->hide();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !readout->isOpen(); }, 1000));
+}
+
+TEST_F(SpatialViewTest, Contract_DeferredDeleteDoesNotInspectDestroyedScene)
+{
+    QWidget owner;
+    for (int pass = 0; pass < 8; ++pass) {
+        QPointer<SpatialView> view = new SpatialView(&owner);
+        view->setRenderMode(SpatialView::RenderMode::Raster);
+        QPointer<QWidget> card = new fluent::layout::Card;
+        card->setFixedSize(200, 120);
+        view->addWidget(card, WidgetOwnership::Owned);
+        view->deleteLater();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        EXPECT_TRUE(view.isNull());
+        EXPECT_TRUE(card.isNull());
+    }
+    QApplication::processEvents();
+}
+
+TEST_F(SpatialViewTest, Contract_NativeRevealRestoresTheWholeCanvasWithoutIdleRepaints)
+{
+    const auto platform = QGuiApplication::platformName();
+    if (platform == QStringLiteral("offscreen") || platform == QStringLiteral("minimal"))
+        GTEST_SKIP() << "Requires a native OpenGL viewport";
+    for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        SCOPED_TRACE(int(theme));
+        fluent::scrolling::ScrollView scroll;
+        scroll.setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        auto* content = new QWidget;
+        auto* column = new QVBoxLayout(content);
+        column->addSpacing(600);
+        auto* view = new SpatialView(content);
+        view->setProperty("fluentThemeOverride", int(theme));
+        view->onThemeUpdated();
+        view->setPointerTrackingEnabled(false);
+        view->setFixedHeight(340);
+        auto* card = new fluent::layout::Card;
+        card->setFixedSize(180, 120);
+        view->addWidget(card, WidgetOwnership::Owned);
+        column->addWidget(view);
+        column->addSpacing(600);
+        scroll.setWidgetResizable(true);
+        scroll.setWidget(content);
+        scroll.resize(740, 540);
+        scroll.show();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&scroll));
+        const int top = view->mapTo(content, QPoint()).y();
+        const auto readFrame = [view] {
+            auto* canvas = view->findChild<QGraphicsView*>();
+            auto* gl = qobject_cast<QOpenGLWidget*>(canvas->viewport());
+            if (!gl || !gl->isValid())
+                return QImage();
+            QImage image(gl->size() * gl->devicePixelRatioF(), QImage::Format_RGBA8888);
+            gl->makeCurrent();
+            gl->context()->functions()->glReadPixels(0, 0, image.width(), image.height(), GL_RGBA,
+                                                     GL_UNSIGNED_BYTE, image.bits());
+            gl->doneCurrent();
+            return image.mirrored();
+        };
+        for (int pass = 0; pass < 4; ++pass) {
+            SCOPED_TRACE(pass);
+            const bool fromAbove = pass % 2 == 0;
+            scroll.verticalScrollBar()->setValue(fromAbove ? top + view->height() + 20 : 0);
+            ASSERT_TRUE(QTest::qWaitFor(
+                [&] { return view->activeBackend() == SpatialView::Backend::Raster; }, 1000));
+            scroll.verticalScrollBar()->setValue(
+                fromAbove ? top + view->height() - 30 : top - scroll.viewport()->height() + 30);
+            ASSERT_TRUE(QTest::qWaitFor(
+                [&] { return view->activeBackend() == SpatialView::Backend::OpenGL; }, 2000))
+                << view->fallbackReason().toStdString();
+            QTest::qWait(60);
+            scroll.verticalScrollBar()->setValue(top - 40);
+            QTest::qWait(100);
+            // Read the existing FBO: repaint/grabFramebuffer would conceal exposure failures.
+            const QImage actual = readFrame();
+            ASSERT_FALSE(actual.isNull());
+            const QColor background = view->themeColors().bgCanvas;
+            for (int y : {0, actual.height() / 2, actual.height() - 1})
+                for (int x : {0, actual.width() - 1})
+                    EXPECT_EQ(actual.pixelColor(x, y), background) << "x=" << x << " y=" << y;
+            for (int y : {0, actual.height() - 1})
+                EXPECT_EQ(actual.pixelColor(actual.width() / 2, y), background);
+        }
+        QTest::qWait(200);
+        auto* gl = view->findChild<QOpenGLWidget*>();
+        ASSERT_NE(gl, nullptr);
+        QSignalSpy frames(gl, &QOpenGLWidget::frameSwapped);
+        QTest::qWait(120);
+        EXPECT_EQ(frames.count(), 0) << "Exposure recovery must not start an idle repaint loop";
     }
 }
 
@@ -277,19 +419,31 @@ TEST_F(SpatialViewTest, Contract_SurfaceHoverFreezesDuringPointerInputAndSettles
     button->setGeometry(25, 50, 170, 36);
     auto* item = view.addWidget(card, WidgetOwnership::Owned);
     item->setSurfaceIntensity(.75);
-    item->setHoverLift(8);
     view.show();
-    QTest::qWait(40);
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&view));
     auto* canvas = view.findChild<QGraphicsView*>();
+    ASSERT_NE(canvas, nullptr);
+    // QWidget mouseMove uses the real cursor on native platforms, whose moves
+    // may coalesce. Use Qt's window input path and record a neutral baseline.
+    const auto move = [&](const QPoint& point) {
+        QTest::mouseMove(view.windowHandle(), canvas->viewport()->mapTo(&view, point));
+    };
+    move(QPoint(5, 5));
     const QPointF rest = item->projectedPolygon().boundingRect().center();
+    item->setHoverLift(8);
     const auto hit = [&] {
         return canvas->mapFromScene(
             card->graphicsProxyWidget()->mapToScene(button->mapTo(card, button->rect().center())));
     };
-    QTest::mouseMove(canvas->viewport(), QPoint(5, 5));
-    QTest::mouseMove(canvas->viewport(), hit());
-    QTRY_VERIFY_WITH_TIMEOUT(item->projectedPolygon().boundingRect().center().y() < rest.y() - 7,
-                             1000);
+    move(hit());
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return bool(item->projectedPolygon().boundingRect().center().y() < rest.y() - 7); },
+        1000))
+        << "restY=" << rest.y()
+        << " currentY=" << item->projectedPolygon().boundingRect().center().y()
+        << " proxyUnderMouse=" << card->graphicsProxyWidget()->isUnderMouse()
+        << " viewportUnderMouse=" << canvas->viewport()->underMouse()
+        << " active=" << view.isActiveWindow();
     QSignalSpy clicked(button, &fluent::basicinput::Button::clicked);
     const QPoint down = hit();
     QTest::mousePress(canvas->viewport(), Qt::LeftButton, Qt::NoModifier, down);
@@ -299,9 +453,13 @@ TEST_F(SpatialViewTest, Contract_SurfaceHoverFreezesDuringPointerInputAndSettles
     QTest::mouseRelease(canvas->viewport(), Qt::LeftButton, Qt::NoModifier, down);
     EXPECT_EQ(clicked.count(), 1);
     EXPECT_EQ(item->position(), QVector3D());
-    QTest::mouseMove(canvas->viewport(), QPoint(5, 5));
-    QTRY_VERIFY_WITH_TIMEOUT(
-        std::abs(item->projectedPolygon().boundingRect().center().y() - rest.y()) < 1, 1000);
+    move(QPoint(5, 5));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            return bool(std::abs(item->projectedPolygon().boundingRect().center().y() - rest.y()) <
+                        1);
+        },
+        1000));
     view.setSpatialEnabled(false);
     QTest::mouseClick(button, Qt::LeftButton);
     EXPECT_EQ(clicked.count(), 2);
@@ -342,6 +500,135 @@ TEST_F(SpatialViewTest, Contract_OwnershipReleaseAndTakeInBothModes)
         EXPECT_EQ(clicks, 1);
         delete button;
     }
+}
+TEST_F(SpatialViewTest, Contract_TakeAllowsCountHandlerToDestroyTheHost)
+{
+    for (const auto ownership :
+         {WidgetOwnership::Borrowed, WidgetOwnership::Owned, WidgetOwnership::Reparented}) {
+        QWidget original;
+        QPointer<SpatialView> view = new SpatialView;
+        QPointer<QWidget> widget = new fluent::basicinput::Button("Transferred", &original);
+        QPointer<SpatialItem> item = view->addWidget(widget, ownership);
+        int notifications = 0;
+        QObject::connect(view, &SpatialView::itemCountChanged, view, [&](int count) {
+            EXPECT_EQ(count, 0);
+            ++notifications;
+            delete view.data();
+        });
+        EXPECT_EQ(view->takeWidget(item), widget.data());
+        EXPECT_EQ(notifications, 1);
+        EXPECT_TRUE(view.isNull());
+        EXPECT_TRUE(item.isNull());
+        ASSERT_FALSE(widget.isNull());
+        EXPECT_EQ(widget->parentWidget(), nullptr);
+        delete widget.data();
+    }
+}
+TEST_F(SpatialViewTest, Contract_AddReturnsNullWhenTheCountHandlerDestroysTheHost)
+{
+    for (const auto ownership :
+         {WidgetOwnership::Borrowed, WidgetOwnership::Owned, WidgetOwnership::Reparented}) {
+        QWidget original;
+        QPointer<SpatialView> view = new SpatialView;
+        QPointer<QWidget> widget = new fluent::basicinput::Button("Added", &original);
+        QObject::connect(view, &SpatialView::itemCountChanged, view, [&](int count) {
+            EXPECT_EQ(count, 1);
+            delete view.data();
+        });
+        EXPECT_EQ(view->addWidget(widget, ownership), nullptr);
+        EXPECT_TRUE(view.isNull());
+        if (ownership == WidgetOwnership::Owned) {
+            EXPECT_TRUE(widget.isNull());
+        } else {
+            ASSERT_FALSE(widget.isNull());
+            EXPECT_EQ(widget->parentWidget(),
+                      ownership == WidgetOwnership::Reparented ? &original : nullptr);
+            delete widget.data();
+        }
+    }
+}
+TEST_F(SpatialViewTest, Contract_ReleaseAllowsCountHandlerToDestroyTheHost)
+{
+    QPointer<SpatialView> view = new SpatialView;
+    QPointer<QWidget> widget = new fluent::basicinput::Button("Owned");
+    QPointer<SpatialItem> item = view->addWidget(widget, WidgetOwnership::Owned);
+    QObject::connect(view, &SpatialView::itemCountChanged, view, [&](int) { delete view.data(); });
+    view->releaseItem(item);
+    EXPECT_TRUE(view.isNull());
+    EXPECT_TRUE(item.isNull());
+    EXPECT_TRUE(widget.isNull());
+}
+TEST_F(SpatialViewTest, Contract_DeferredModeChangeKeepsOnlyTheLatestRequest)
+{
+    SpatialView view;
+    view.setRenderMode(SpatialView::RenderMode::Raster);
+    view.setPointerTrackingEnabled(false);
+    view.resize(640, 400);
+    auto* button = new fluent::basicinput::Button("Hold");
+    button->setFixedSize(160, 48);
+    auto* item = view.addWidget(button, WidgetOwnership::Owned);
+    view.show();
+    QTest::qWait(30);
+    auto* canvas = view.findChild<QGraphicsView*>();
+    auto* pending = view.findChild<QTimer*>(QStringLiteral("spatialModeChangeTimer"));
+    ASSERT_NE(canvas, nullptr);
+    ASSERT_NE(pending, nullptr);
+    const QPoint hit = canvas->viewport()->mapFrom(
+        &view, item->projectedPolygon().boundingRect().center().toPoint());
+    QSignalSpy changed(&view, &SpatialView::spatialEnabledChanged);
+    QTest::mousePress(canvas->viewport(), Qt::LeftButton, Qt::NoModifier, hit);
+    ASSERT_NE(canvas->scene()->mouseGrabberItem(), nullptr);
+    view.setSpatialEnabled(false);
+    EXPECT_TRUE(pending->isActive());
+    view.setSpatialEnabled(true);
+    EXPECT_FALSE(pending->isActive());
+    QTest::mouseRelease(canvas->viewport(), Qt::LeftButton, Qt::NoModifier, hit);
+    QTest::qWait(50);
+    EXPECT_TRUE(view.isSpatialEnabled());
+    EXPECT_EQ(changed.count(), 0);
+
+    QTest::mousePress(canvas->viewport(), Qt::LeftButton, Qt::NoModifier, hit);
+    ASSERT_NE(canvas->scene()->mouseGrabberItem(), nullptr);
+    view.setSpatialEnabled(false);
+    view.setSpatialEnabled(true);
+    view.setSpatialEnabled(false);
+    EXPECT_TRUE(view.isSpatialEnabled());
+    QTest::mouseRelease(canvas->viewport(), Qt::LeftButton, Qt::NoModifier, hit);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!view.isSpatialEnabled()); }, 1000));
+    EXPECT_EQ(changed.count(), 1);
+    EXPECT_FALSE(pending->isActive());
+}
+TEST_F(SpatialViewTest, Contract_HidingAGrabbedSceneCompletesThePendingModeChange)
+{
+    SpatialView view;
+    view.setRenderMode(SpatialView::RenderMode::Raster);
+    view.resize(640, 400);
+    auto* button = new fluent::basicinput::Button("Hold");
+    button->setFixedSize(160, 48);
+    auto* item = view.addWidget(button, WidgetOwnership::Owned);
+    view.show();
+    QTest::qWait(30);
+    auto* canvas = view.findChild<QGraphicsView*>();
+    auto* pending = view.findChild<QTimer*>(QStringLiteral("spatialModeChangeTimer"));
+    ASSERT_NE(canvas, nullptr);
+    ASSERT_NE(pending, nullptr);
+    const QPoint hit = canvas->viewport()->mapFrom(
+        &view, item->projectedPolygon().boundingRect().center().toPoint());
+    QTest::mousePress(canvas->viewport(), Qt::LeftButton, Qt::NoModifier, hit);
+    ASSERT_NE(canvas->scene()->mouseGrabberItem(), nullptr);
+    view.setSpatialEnabled(false);
+    view.hide();
+    EXPECT_EQ(canvas->scene()->mouseGrabberItem(), nullptr);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!view.isSpatialEnabled()); }, 1000));
+    EXPECT_EQ(canvas->scene()->mouseGrabberItem(), nullptr);
+    EXPECT_FALSE(pending->isActive());
+    EXPECT_EQ(item->widget(), button);
+    QTest::mouseRelease(canvas->viewport(), Qt::LeftButton, Qt::NoModifier, hit);
+    view.show();
+    QTest::qWait(30);
+    QSignalSpy clicked(button, &fluent::basicinput::Button::clicked);
+    QTest::mouseClick(button, Qt::LeftButton);
+    EXPECT_EQ(clicked.count(), 1);
 }
 TEST_F(SpatialViewTest, Contract_ContentDestructionDuplicateAndUnsupportedInputs)
 {

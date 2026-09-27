@@ -43,7 +43,8 @@ endif()
 add_executable(fluentqt_external_integration
     main.cpp
     CategoryHeaderProbe.cpp
-    BackdropHeaderProbe.cpp)
+    BackdropHeaderProbe.cpp
+    OverlayWindowHeaderProbe.cpp)
 set_target_properties(fluentqt_external_integration PROPERTIES
     AUTOMOC ON
     CXX_STANDARD 17

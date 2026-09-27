@@ -111,6 +111,33 @@ TEST(QtCompat, QtVersionMacrosDefined)
     EXPECT_GE(QT_VERSION_MAJOR, 5);
 }
 
+TEST(QtCompat, EnterConstructionPreservesCoordinateSpaces)
+{
+    const QPoint local(2, 3);
+    const QPoint scene(12, 23);
+    const QPoint global(102, 203);
+    FLUENT_MAKE_ENTER_EVENT_AT(event, local, scene, global);
+    EXPECT_EQ(event.type(), QEvent::Enter);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    EXPECT_EQ(event.position(), QPointF(local));
+    EXPECT_EQ(event.scenePosition(), QPointF(scene));
+    EXPECT_EQ(event.globalPosition(), QPointF(global));
+#else
+    Q_UNUSED(local);
+    Q_UNUSED(scene);
+    Q_UNUSED(global);
+#endif
+}
+
+TEST(QtCompat, OpenGLWidgetWindowReplacementMatchesQtRuntimeLine)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+    EXPECT_EQ(FLUENT_OPENGL_WIDGET_CAN_REPLACE_NATIVE_WINDOW, 1);
+#else
+    EXPECT_EQ(FLUENT_OPENGL_WIDGET_CAN_REPLACE_NATIVE_WINDOW, 0);
+#endif
+}
+
 TEST(QtCompat, AccessibleInterfaceCapabilitiesMatchQtVersion)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)

@@ -1,8 +1,11 @@
 #include <FluentQt/FluentQt.h>
+#include <FluentQt/components/foundation/overlay/OverlayPresentation.h>
 
 #include <QApplication>
 #include <QAction>
 #include <QLocale>
+
+bool verifyOverlayWindowHeaders(QWidget* child, QWidget* top);
 
 // Compile/link fixture for external add_subdirectory consumers.
 // CI builds this target but does not start its event loop.
@@ -29,6 +32,18 @@ int main(int argc, char* argv[])
     calendar.resetFirstDayOfWeek();
 
     fluent::basicinput::Button button(QStringLiteral("FluentQt external integration"));
+    QWidget overlayAnchor(&button);
+    if (!verifyOverlayWindowHeaders(&overlayAnchor, &button))
+        return 6;
+    const QPoint nativeAnchor = button.mapToGlobal(QPoint(3, 5));
+    fluent::overlay::presentation::setTransform(&button, QTransform::fromTranslate(7, 11));
+    if (!fluent::overlay::presentation::hasTransform(&button) ||
+        fluent::overlay::presentation::mapToGlobal(&button, QPoint(3, 5)) !=
+            nativeAnchor + QPoint(7, 11))
+        return 1;
+    fluent::overlay::presentation::clearTransform(&button);
+    if (fluent::overlay::presentation::mapToGlobal(&button, QPoint(3, 5)) != nativeAnchor)
+        return 2;
     fluent::menus_toolbars::CommandBar commandBar;
     QAction command(QStringLiteral("External command"));
     commandBar.addPrimaryAction(&command);
@@ -37,8 +52,18 @@ int main(int argc, char* argv[])
     fluent::basicinput::CompoundButton compoundButton(QStringLiteral("Install update"), &button);
     compoundButton.setSecondaryText(QStringLiteral("Downloads and restarts the application"));
     fluent::layout::Accordion accordion;
+    fluent::layout::ParticleBackdrop particles;
+    if (particles.isGpuAccelerationEnabled())
+        return 3;
+    particles.setGpuAccelerationEnabled(true);
+    if (!particles.isGpuAccelerationEnabled())
+        return 4;
     fluent::status_info::Avatar avatar(QStringLiteral("Ada Lovelace"));
 #ifdef FLUENT_QT_HAS_SPATIAL
+    fluent::spatial::SpatialRuntime::prepareApplication();
+    if (!fluent::spatial::SpatialRuntime::isHardwareRenderer(QStringLiteral("Test GPU")) ||
+        fluent::spatial::SpatialRuntime::isHardwareRenderer(QStringLiteral("llvmpipe")))
+        return 5;
     fluent::spatial::SpatialView spatial;
     spatial.setRenderMode(fluent::spatial::SpatialView::RenderMode::Raster);
     auto* card = new fluent::layout::Card;
