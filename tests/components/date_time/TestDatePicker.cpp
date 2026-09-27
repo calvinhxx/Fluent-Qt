@@ -22,6 +22,7 @@
 #include "components/foundation/ThemeRegistry.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
+#include "QtFontComparison.h"
 #include "QtTestEnvironment.h"
 
 using fluent::AnchorLayout;
@@ -162,7 +163,9 @@ TEST_F(DatePickerTest, DefaultsAndInheritanceMatchComponentPattern)
     EXPECT_NE(dynamic_cast<fluent::FluentElement*>(&picker), nullptr);
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(&picker), nullptr);
     EXPECT_EQ(picker.fontRole(), Typography::FontRole::Body);
-    EXPECT_EQ(picker.font(), picker.themeFont(Typography::FontRole::Body).toQFont());
+    EXPECT_EQ(tests::support::normalizedFontFamilies(picker.font()),
+              tests::support::normalizedFontFamilies(
+                  picker.themeFont(Typography::FontRole::Body).toQFont()));
 
     picker.setLocale(QLocale(QLocale::Chinese, QLocale::China));
     picker.setSelectedDate(QDate(2026, 7, 21));
@@ -178,7 +181,9 @@ TEST_F(DatePickerTest, InheritedFontRoleResolvesThemeTypography)
     picker.setFontRole(Typography::FontRole::Caption);
 
     EXPECT_EQ(picker.fontRole(), Typography::FontRole::Caption);
-    EXPECT_EQ(picker.font(), picker.themeFont(Typography::FontRole::Caption).toQFont());
+    EXPECT_EQ(tests::support::normalizedFontFamilies(picker.font()),
+              tests::support::normalizedFontFamilies(
+                  picker.themeFont(Typography::FontRole::Caption).toQFont()));
 }
 
 TEST_F(DatePickerTest, SelectedDateClearAndFormattingDriveSegments)
@@ -508,8 +513,11 @@ TEST_F(DatePickerTest, ThemeFontRefreshPreservesPendingFlyoutDate)
     EXPECT_TRUE(popup->isOpen());
     EXPECT_EQ(picker->selectedDate(), QDate(2026, 5, 21));
     EXPECT_EQ(QApplication::focusWidget(), focusedBeforeTheme);
-    EXPECT_EQ(picker->font(), picker->themeFont(Typography::FontRole::Body).toQFont());
-    EXPECT_EQ(dayColumn->font(), picker->font());
+    EXPECT_EQ(tests::support::normalizedFontFamilies(picker->font()),
+              tests::support::normalizedFontFamilies(
+                  picker->themeFont(Typography::FontRole::Body).toQFont()));
+    EXPECT_EQ(tests::support::normalizedFontFamilies(dayColumn->font()),
+              tests::support::normalizedFontFamilies(picker->font()));
     EXPECT_GT(picker->sizeHint().height(), defaultEntrySize.height());
     EXPECT_GT(popup->height(), defaultPopupSize.height());
     EXPECT_GT(dayColumn->height(), defaultColumnHeight);

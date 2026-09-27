@@ -109,7 +109,7 @@ TEST(TextEditMotionTest, Contract_FocusedEditsAnimateRetargetAndCollapseVisibleL
 
     EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
     EXPECT_GT(threeLineHeight, twoLineHeight);
-    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), threeLineHeight, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (edit.height()) == (threeLineHeight); }, 1000));
     EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
 
     deletePreviousCharacter(inner);
@@ -118,8 +118,9 @@ TEST(TextEditMotionTest, Contract_FocusedEditsAnimateRetargetAndCollapseVisibleL
     EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
     EXPECT_EQ(animation->endValue().toInt(), twoLineHeight);
     EXPECT_GT(edit.height(), twoLineHeight);
-    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), twoLineHeight, 1000);
-    QTRY_COMPARE_WITH_TIMEOUT(animation->state(), QAbstractAnimation::Stopped, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (edit.height()) == (twoLineHeight); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return (animation->state()) == (QAbstractAnimation::Stopped); }, 1000));
 }
 
 TEST(TextEditMotionTest, Contract_ReducedAndDisabledMotionResolveEditedHeight)
@@ -147,7 +148,7 @@ TEST(TextEditMotionTest, Contract_ReducedAndDisabledMotionResolveEditedHeight)
     EXPECT_TRUE(inner->hasFocus());
     EXPECT_EQ(animation->duration(), 50);
     EXPECT_GT(twoLineHeight, oneLineHeight);
-    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), twoLineHeight, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (edit.height()) == (twoLineHeight); }, 1000));
 
     edit.clear();
     QApplication::processEvents();
@@ -277,8 +278,9 @@ TEST(TextEditMotionTest, Contract_InputMethodPreeditKeepsHeightStableUntilCommit
     EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
     EXPECT_GT(committedHeight, oneLineHeight);
     EXPECT_LT(edit.height(), committedHeight);
-    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), committedHeight, 1000);
-    QTRY_COMPARE_WITH_TIMEOUT(animation->state(), QAbstractAnimation::Stopped, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (edit.height()) == (committedHeight); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return (animation->state()) == (QAbstractAnimation::Stopped); }, 1000));
 }
 
 TEST(TextEditMotionTest, Contract_CrossingVisibleLineLimitKeepsHeightTransitionRunning)
@@ -317,6 +319,7 @@ TEST(TextEditMotionTest, Contract_CrossingVisibleLineLimitKeepsHeightTransitionR
     EXPECT_GT(edit.height(), threeLineHeight);
     EXPECT_LT(edit.height(), fourLineHeight);
     EXPECT_LT(inner->width(), edit.width());
-    QTRY_COMPARE_WITH_TIMEOUT(edit.height(), fourLineHeight, 1000);
-    QTRY_COMPARE_WITH_TIMEOUT(animation->state(), QAbstractAnimation::Stopped, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (edit.height()) == (fourLineHeight); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return (animation->state()) == (QAbstractAnimation::Stopped); }, 1000));
 }

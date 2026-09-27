@@ -11,6 +11,7 @@
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
+#include "QtFontComparison.h"
 
 using fluent::ThemeRegistry;
 using fluent::menus_toolbars::FluentMenu;
@@ -68,8 +69,12 @@ TEST_F(MenuTest, FontStylePropertiesNotifyOnlyOnChange)
     item.setFontStyle(Typography::FontRole::Caption);
     EXPECT_EQ(menuSpy.count(), 1);
     EXPECT_EQ(itemSpy.count(), 1);
-    EXPECT_EQ(menu.font(), menu.themeFont(Typography::FontRole::BodyStrong).toQFont());
-    EXPECT_EQ(item.font(), item.themeFont(Typography::FontRole::Caption).toQFont());
+    EXPECT_EQ(tests::support::normalizedFontFamilies(menu.font()),
+              tests::support::normalizedFontFamilies(
+                  menu.themeFont(Typography::FontRole::BodyStrong).toQFont()));
+    EXPECT_EQ(tests::support::normalizedFontFamilies(item.font()),
+              tests::support::normalizedFontFamilies(
+                  item.themeFont(Typography::FontRole::Caption).toQFont()));
 }
 
 TEST_F(MenuTest, MenuItemRetainsQActionTriggerSemantics)
@@ -129,7 +134,7 @@ TEST_F(MenuTest, OpaquePopupSurfaceUsesRoundedWindowMask)
     menu.addAction(QStringLiteral("Confirm selection"));
     menu.addAction(QStringLiteral("Review changes"));
     menu.popup(QPoint(100, 100));
-    QTRY_VERIFY(menu.isVisible());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return menu.isVisible(); }, 5000));
     QTest::qWait(20);
 
     const QRegion surfaceMask = menu.mask();
@@ -149,7 +154,7 @@ TEST_F(MenuTest, RepeatedPopupKeepsStableHeight)
     menu.addAction(QStringLiteral("Review changes"));
 
     menu.popup(QPoint(100, 100));
-    QTRY_VERIFY(menu.isVisible());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return menu.isVisible(); }, 5000));
     QTest::qWait(20);
     const int firstHeight = menu.height();
     const int firstHintHeight = menu.sizeHint().height();
@@ -157,10 +162,10 @@ TEST_F(MenuTest, RepeatedPopupKeepsStableHeight)
     const int firstRowHeight = menu.actionGeometry(firstActions.constFirst()).height();
 
     menu.hide();
-    QTRY_VERIFY(!menu.isVisible());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !menu.isVisible(); }, 5000));
 
     menu.popup(QPoint(100, 100));
-    QTRY_VERIFY(menu.isVisible());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return menu.isVisible(); }, 5000));
     QTest::qWait(20);
     const int secondHeight = menu.height();
     const int secondHintHeight = menu.sizeHint().height();

@@ -611,6 +611,27 @@ TEST_F(TypographyTest, FontFamilyNormalizationPreservesFallbacksAndRenderingProp
     const QFont normalized = tests::support::normalizedFontFamilies(font);
     EXPECT_EQ(normalized, tests::support::normalizedFontFamilies(explicitFamily));
 
+    QFont repeatedFamily = font;
+    repeatedFamily.setFamilies({font.family(), font.family(), font.family()});
+    EXPECT_EQ(normalized, tests::support::normalizedFontFamilies(repeatedFamily));
+
+    QFont orderedFallbacks = font;
+    orderedFallbacks.setFamilies({font.family(), QStringLiteral("Fallback")});
+    QFont repeatedFallbacks = font;
+    repeatedFallbacks.setFamilies(
+        {font.family(), QStringLiteral("Fallback"), font.family(), QStringLiteral("Fallback")});
+    EXPECT_EQ(tests::support::normalizedFontFamilies(orderedFallbacks),
+              tests::support::normalizedFontFamilies(repeatedFallbacks));
+    QFont reversedFallbacks = font;
+    reversedFallbacks.setFamilies({QStringLiteral("Fallback"), font.family()});
+    EXPECT_NE(tests::support::normalizedFontFamilies(orderedFallbacks),
+              tests::support::normalizedFontFamilies(reversedFallbacks));
+    QFont caseDistinctFallbacks = font;
+    caseDistinctFallbacks.setFamilies(
+        {font.family(), QStringLiteral("Fallback"), QStringLiteral("fallback")});
+    EXPECT_EQ(tests::support::normalizedFontFamilies(caseDistinctFallbacks).families(),
+              caseDistinctFallbacks.families());
+
     const std::function<void(QFont&)> changes[] = {
         [](QFont& value) {
             value.setFamilies({value.family(), QStringLiteral("Fallback")});

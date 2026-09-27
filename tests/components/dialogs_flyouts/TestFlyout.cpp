@@ -353,10 +353,11 @@ TEST_F(FlyoutTest, TracksMovingAnchorAncestorAndClosesWhenAnchorIsClipped)
     const QPoint initialPosition = fl.pos();
 
     scrollingContent->move(0, -64);
-    QTRY_COMPARE_WITH_TIMEOUT(fl.pos(), initialPosition - QPoint(0, 64), 1000);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return (fl.pos()) == (initialPosition - QPoint(0, 64)); }, 1000));
 
     scrollingContent->move(0, -500);
-    QTRY_VERIFY_WITH_TIMEOUT(!fl.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !fl.isOpen(); }, 1000));
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

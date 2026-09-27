@@ -290,7 +290,7 @@ TEST_F(ShimmerTest, AnimationLifecycleTracksVisibilityAndActiveState)
     Shimmer shimmer;
     shimmer.resize(240, 72);
     shimmer.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&shimmer));
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&shimmer));
     EXPECT_TRUE(shimmer.isAnimationRunning());
 
     const qreal before = shimmer.shimmerProgress();
@@ -316,7 +316,7 @@ TEST_F(ShimmerTest, Contract_GlobalMotionStopsSweepButPreservesBusyState)
     Shimmer shimmer;
     shimmer.resize(240, 72);
     shimmer.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&shimmer));
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&shimmer));
     ASSERT_TRUE(shimmer.isAnimationRunning());
 
     auto* accessible = QAccessible::queryAccessibleInterface(&shimmer);

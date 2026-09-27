@@ -613,7 +613,7 @@ TEST_F(FluentElementTest, DeferredThemeSwitchThemesVisibleSynchronouslyThenHidde
 
     // The deferred hidden element catches up on a later tick, and the visible one is themed exactly once.
     // zh_CN: 延后的隐藏元素在之后的 tick 补刷；可见元素恰好刷新一次。
-    QTRY_COMPARE_WITH_TIMEOUT(hiddenComponent.updateCount, 1, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (hiddenComponent.updateCount) == (1); }, 1000));
     EXPECT_EQ(visibleComponent->updateCount, 1);
 }
 
@@ -630,7 +630,7 @@ TEST_F(FluentElementTest, Contract_DeferredThemeCallbackCanSwitchSynchronously)
         };
     }
     fluent::FluentElement::setThemeDeferred(fluent::FluentElement::Dark);
-    QTRY_VERIFY_WITH_TIMEOUT(switched, 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return switched; }, 1000));
     QApplication::processEvents();
     for (const auto& component : components)
         EXPECT_EQ(component.lightUpdates, 1);
@@ -650,7 +650,7 @@ TEST_F(FluentElementTest, Contract_DeferredThemeCallbackPreservesNewDeferredQueu
     }
     fluent::FluentElement::setThemeDeferred(fluent::FluentElement::Dark);
     for (const auto& component : components)
-        QTRY_COMPARE_WITH_TIMEOUT(component.lightUpdates, 1, 1000);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return (component.lightUpdates) == (1); }, 1000));
     QApplication::processEvents();
     for (const auto& component : components)
         EXPECT_EQ(component.lightUpdates, 1);

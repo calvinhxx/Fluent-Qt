@@ -301,7 +301,7 @@ TEST_F(PivotTest, SelectionCanDriveExternalStackContentHostPages)
     EXPECT_LT(unreadPage->pos().x(), 0);
     EXPECT_GT(unreadPage->pos().x(), -host->width());
 
-    QTRY_VERIFY_WITH_TIMEOUT(!host->busy(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !host->busy(); }, 1000));
     EXPECT_FALSE(allPage->isVisible());
     EXPECT_TRUE(unreadPage->isVisible());
 
@@ -315,7 +315,7 @@ TEST_F(PivotTest, SelectionCanDriveExternalStackContentHostPages)
     EXPECT_LT(allPage->pos().x(), 0);
     EXPECT_GT(allPage->pos().x(), -host->width());
 
-    QTRY_VERIFY_WITH_TIMEOUT(!host->busy(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !host->busy(); }, 1000));
     EXPECT_TRUE(allPage->isVisible());
     EXPECT_FALSE(unreadPage->isVisible());
 }

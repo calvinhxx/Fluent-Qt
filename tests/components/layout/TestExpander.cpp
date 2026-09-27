@@ -151,7 +151,7 @@ TEST(ExpanderTest, Contract_GlobalMotionConvergesActiveTransitions)
     EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
     EXPECT_GT(animation->duration(), 0);
     EXPECT_LT(animation->duration(), Animation::Duration::Normal);
-    QTRY_COMPARE(finishedSpy.count(), 1);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (finishedSpy.count()) == (1); }, 5000));
     EXPECT_TRUE(expander.isExpanded());
     EXPECT_GT(expander.height(), 44);
 

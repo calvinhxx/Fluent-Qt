@@ -458,10 +458,11 @@ TEST_F(CoachMarkTest, TracksMovingTargetAncestorAndClosesWhenClipped)
     const QPoint initialPosition = coach.pos();
 
     scrollingContent->move(0, -64);
-    QTRY_COMPARE_WITH_TIMEOUT(coach.pos(), initialPosition - QPoint(0, 64), 1000);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return (coach.pos()) == (initialPosition - QPoint(0, 64)); }, 1000));
 
     scrollingContent->move(0, -500);
-    QTRY_VERIFY_WITH_TIMEOUT(!coach.isOpen(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !coach.isOpen(); }, 1000));
 }
 
 TEST_F(CoachMarkTest, TargetDestroyedClearsPointer)

@@ -27,6 +27,13 @@ point initializes Qt, logging, fonts, and resources once per process. Each run
 uses an independent temporary application-data directory and removes it on
 exit, so parallel instances of the same test binary do not share themes or
 settings. Snapshot names use the executable name and remain stable across runs.
+Assertions must use GTest (`ASSERT_*`, `EXPECT_*`, `GTEST_SKIP`). QtTest remains
+available for input simulation and bounded event-loop waits, for example
+`ASSERT_TRUE(QTest::qWaitFor([&] { return ready; }, 1000))`. Do not use QtTest's
+standalone runner assertion macros: their failure state does not reach GTest's
+exit code/XML and can short-circuit later waits on older Qt. The shared test
+environment contracts check source usage and run a deliberately failing child
+process to verify reporting and subsequent event delivery.
 Persistence probes should keep this test identity unless their contract
 explicitly requires another scope. The Gallery cold-load probe needs the real
 application identity to enable persistence; it uses a process lock inside Qt's

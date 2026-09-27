@@ -414,10 +414,12 @@ TEST_F(MenuBarTest, EntranceAnimationUsesPaintOpacityInsteadOfNativeWindowOpacit
     EXPECT_TRUE(menu.isVisible());
     EXPECT_DOUBLE_EQ(menu.windowOpacity(), 1.0);
     EXPECT_EQ(QApplication::isEffectEnabled(Qt::UI_AnimateMenu), nativeMenuAnimationsEnabled);
-    QTRY_VERIFY_WITH_TIMEOUT(
-        menu.findChild<QVariantAnimation*>(QStringLiteral("fluentMenuEntranceAnimation"),
-                                           Qt::FindDirectChildrenOnly) == nullptr,
-        1000);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            return menu.findChild<QVariantAnimation*>(QStringLiteral("fluentMenuEntranceAnimation"),
+                                                      Qt::FindDirectChildrenOnly) == nullptr;
+        },
+        1000));
     EXPECT_EQ(menu.graphicsEffect(), nullptr);
     EXPECT_DOUBLE_EQ(menu.windowOpacity(), 1.0);
 

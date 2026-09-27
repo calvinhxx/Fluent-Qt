@@ -267,7 +267,7 @@ TEST_F(TabViewTest, CompletedTabRevealDisablesOpacityEffects)
             return effect && !effect->isEnabled() && qFuzzyCompare(effect->opacity(), 1.0);
         });
     };
-    QTRY_VERIFY_WITH_TIMEOUT(allEffectsDisabled(), 500);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return allEffectsDisabled(); }, 500));
 }
 
 TEST_F(TabViewTest, SizeToContentLeavesEnoughRoomForFullLabels)
@@ -477,7 +477,7 @@ TEST_F(TabViewTest, SelectionCanDriveExternalStackContentHostPages)
     EXPECT_TRUE(host->busy());
     EXPECT_FALSE(first->isVisible());
     EXPECT_TRUE(second->isVisible());
-    QTRY_VERIFY_WITH_TIMEOUT(!host->busy(), 1000);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !host->busy(); }, 1000));
     EXPECT_FALSE(first->isVisible());
     EXPECT_TRUE(second->isVisible());
     EXPECT_EQ(currentSpy.count(), 1);
@@ -531,8 +531,9 @@ TEST_F(TabViewTest, GeometryWidthModesCloseModesAndOverflowAreDeterministic)
     sendMouseMove(&tabs, tabs.tabGeometry(0).center());
     QApplication::processEvents();
     EXPECT_GE(tabs.tabGeometry(0).width(), compactCollapsedWidth);
-    QTRY_VERIFY_WITH_TIMEOUT(tabs.tabGeometry(0).width() > compactCollapsedWidth, 500);
-    QTRY_VERIFY_WITH_TIMEOUT(!tabs.closeButtonGeometry(0).isEmpty(), 500);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return tabs.tabGeometry(0).width() > compactCollapsedWidth; }, 500));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !tabs.closeButtonGeometry(0).isEmpty(); }, 500));
     const QRect compactHoverTab = tabs.tabGeometry(0);
     const QRect compactHoverClose = tabs.closeButtonGeometry(0);
     EXPECT_GT(compactHoverTab.width(), compactCollapsedWidth);
@@ -787,7 +788,7 @@ TEST_F(TabViewTest, DarkHoverAndSelectedFillsKeepOrderedContrast)
                std::all_of(effects.cbegin(), effects.cend(),
                            [](const auto* effect) { return effect && !effect->isEnabled(); });
     };
-    QTRY_VERIFY_WITH_TIMEOUT(revealSettled(), 500);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return revealSettled(); }, 500));
 
     const auto renderTabs = [&tabs]() {
         QImage image(tabs.size(), QImage::Format_ARGB32_Premultiplied);

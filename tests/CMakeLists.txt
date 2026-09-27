@@ -347,6 +347,8 @@ endmacro()
 # 按源码目录结构添加子目录，Qt Creator 工程树会呈现层级
 add_qt_test_module(test_project_logging TestProjectLogging.cpp)
 add_qt_test_module(test_qt_test_environment TestQtTestEnvironment.cpp)
+target_compile_definitions(test_qt_test_environment PRIVATE
+    FLUENT_QT_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}/tests")
 add_qt_test_module(test_visual_comparison TestVisualComparison.cpp)
 target_compile_definitions(test_visual_comparison PRIVATE
     FLUENT_QT_VISUAL_COMPARE_PATH="$<TARGET_FILE:fluent_qt_visual_compare>")
