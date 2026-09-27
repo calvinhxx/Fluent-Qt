@@ -164,7 +164,7 @@ TEST_F(WidgetTest, VisualCheck) {
             "docs/development/technical-debt-roadmap.md",
             "| Phase | State | Scope | Exit condition |\n"
             "|---|---|---|---|\n"
-            f"| TD-3 — High-risk visual regression rollout | {self.roadmap_state} "
+            f"| TD-3: High-risk visual regression rollout | {self.roadmap_state} "
             "| Test scope | Test exit |\n",
         )
 
@@ -804,6 +804,31 @@ TEST_F(WidgetTest, VisualCheck) {
         self.roadmap_state = "Complete"
         _, errors = self.validate()
         self.assert_error_contains("TD-3 state does not match", errors)
+
+    def test_roadmap_accepts_current_and_historical_title_separators(self) -> None:
+        self.write_fixture()
+        for separator in (": ", " — "):
+            with self.subTest(separator=separator):
+                self.write_text(
+                    "docs/development/technical-debt-roadmap.md",
+                    f"| TD-3{separator}High-risk visual regression rollout | Active |\n",
+                )
+                errors = []
+                VALIDATOR.validate_governance_contract(self.root, self.inventory, errors)
+                self.assertEqual(errors, [])
+
+    def test_roadmap_rejects_duplicate_or_similarly_named_phases(self) -> None:
+        self.write_fixture()
+        for rows in (
+            "| TD-30: Another phase | Active |\n",
+            "| TD-3: | Active |\n",
+            "| TD-3: Current | Active |\n| TD-3 — Duplicate | Active |\n",
+        ):
+            with self.subTest(rows=rows):
+                self.write_text("docs/development/technical-debt-roadmap.md", rows)
+                errors = []
+                VALIDATOR.validate_governance_contract(self.root, self.inventory, errors)
+                self.assert_error_contains("exactly one TD-3 row", errors)
 
     def test_pseudo_png_is_not_pixel_evidence(self) -> None:
         baseline = b"png"

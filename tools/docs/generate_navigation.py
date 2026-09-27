@@ -258,7 +258,7 @@ def generate(project_root: Path, *, check: bool) -> list[str]:
         actual = path.read_text(encoding="utf-8") if path.exists() else ""
         if actual == expected:
             continue
-        stale.append(str(path.relative_to(project_root)))
+        stale.append(path.relative_to(project_root).as_posix())
         if not check:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(expected, encoding="utf-8")
