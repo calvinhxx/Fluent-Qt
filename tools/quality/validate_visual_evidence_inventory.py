@@ -1376,7 +1376,7 @@ def validate_governance_contract(
         return
     rows: list[list[str]] = []
     for line in roadmap_text.splitlines():
-        if re.match(r"^\|\s*TD-3\s+—", line):
+        if re.match(r"^\|\s*TD-3(?:\s*:\s*|\s+—\s+)[^\s|]", line):
             rows.append(
                 [cell.strip() for cell in line.strip().strip("|").split("|")]
             )

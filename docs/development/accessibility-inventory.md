@@ -74,11 +74,27 @@ accessibility proxies readable and focusable without painting a second control
 surface through the transparent desktop canvas. A stylesheet scoped to each
 application Qt screen makes only identified proxy nodes transparent; it excludes
 the screen-reader enable button and leaves the separate keyboard/IME input,
-ARIA state, geometry, and event handlers unchanged. This presentation adaptation
+ARIA state, geometry, and event handlers unchanged. The proxy container clips
+overflow without becoming a scroll container, so focusing an offscreen proxy
+does not scroll the sibling Qt canvas out of view. Browser source-copy feedback
+waits for the actual clipboard write result; a rejected write reports failure
+and leaves the action available for retry. This presentation adaptation
 does not repair upstream accessibility geometry updates or replace native
 screen-reader and IME acceptance.
 
 ## Component contracts
+
+CommandBar and CommandBarFlyout retain their toolbar/menu roles, action state
+and focus contracts when embedded in a graphics proxy. Presented-window
+validation and inverse anchor hit testing preserve reopen and dismissal
+behavior; the focused command-bar tests cover these paths and ordinary 2D
+behavior. These tests do not certify native screen-reader geometry for
+transformed content.
+
+Menu-button expanded state follows a real menu. An empty `QMenu` can emit
+`aboutToShow` without opening; DropDownButton and SplitButton restore their
+collapsed state in that case, while still allowing actions to be populated
+inside `aboutToShow`.
 
 `SpatialView` is a C++ composition surface in the **Spatial** category. Its
 native accessibility contract applies in **2D mode**: the same widgets, values,
@@ -89,6 +105,14 @@ QObject pose and finish handle; semantics belong to the hosted content. Optional
 shadow and rim decoration has no input or accessibility target. Hover lift freezes
 during pointer input and disappears in native 2D, reduced-motion and high-contrast
 layouts, preserving the original controls and values.
+
+Anchored overlays from an embedded Spatial card now resolve the actual host
+window through the shared Qt presentation adapter. Chart readouts no longer
+clip to the card; menus and attached tooltips stay native rather than becoming
+child scene proxies. Existing focus policies, target relations and values are
+unchanged. `TestFoundationContracts.cpp` and `TestSpatialView.cpp` cover
+ownership, containment, movement and source hiding. This is not projected
+screen-reader or IME acceptance.
 
 Gallery provides controls, lists, calendar, navigation and chart compositions
 with one mode switch in Settings > 3D Gallery. It controls the shell and every
@@ -102,7 +126,23 @@ perspective limits text distortion, with thin material surfaces and low-elevatio
 content cards; decoration has no input target. Resize settles
 the transition. Sub-degree pointer following stops when settled and freezes during
 held input, scrolling and popups. Startup completes the Splash and logo handoff
-before starting 3D. Reduced/Disabled motion and High Contrast restore native 2D.
+before starting 3D. Desktop Splash prepares only Home/Settings, not unvisited
+demos; cold pages yield between samples and retain completed pages for reuse.
+Splash reports completed page readiness rather than
+a time-based percentage; failed pages are identified explicitly. Cached hidden
+pages keep their continuous animations stopped. The first 2D-to-3D opt-in on
+Qt 6.4+ desktop hosts prepares the native surface before display, preserving
+the visible window, focus and restore geometry. Reduced/Disabled motion and
+High Contrast restore native 2D.
+Projected text uses continuous, non-negative reconstruction weights to reduce
+texture-sampling softness without changing glyph weight, focus, or hit geometry.
+Perspective still differs from native 2D text. Material-to-Solid changes publish
+the opaque state and refresh the 3D caches before the Windows compositor removes
+the old material, preserving window identity and avoiding a transparent handoff.
+The low-DPI text adapter reports only its actual backend's paint capabilities,
+so focused native editors do not request unsupported XOR caret drawing in 3D.
+Automated input checks cover text fields, editable ComboBox and collection-cell
+editors; injected IME commits do not replace a native IME candidate-window review.
 Gallery keeps the 3D preference separate from runtime availability. Without acceleration,
 its Settings switch is off and disabled with an accessible explanation, and the shell
 restores native 2D widgets in both the shell and the Spatial examples. Tab/Escape
@@ -112,9 +152,17 @@ neutral while checking or available, critical after runtime fallback. Their hove
 tooltips and accessible descriptions explain GPU requirements or the fallback
 reason; selecting 2D or reduced motion does not report a hardware failure.
 The fallback badge remains enabled beside the disabled switch.
+Particle acceleration follows the existing 3D Gallery control; there is no
+second renderer preference. The component defaults to CPU and requires an
+explicit request plus a capable host. 2D and fallback restore CPU painting.
+The separate Home particle effects switch continues to control visibility and motion.
 Pointer hits and drags are mapped back from the displayed panels; keyboard and
 IME input still reach the focused native control. Projected shell geometry is not
 a platform screen-reader geometry contract; use 2D for assistive technology.
+Anchored overlays and tooltips follow the presented target bounds through scrolling,
+panel motion and return to 2D. First-level native menus map before screen containment;
+submenus remain in native coordinates, while dialogs and drawers retain window-relative
+placement. Existing focus, modal blocking and light-dismiss contracts are unchanged.
 Text editing and dropdowns in the local Spatial examples
 remain outside the scene. The pose workbench hosts its parameter sliders in a
 separate projected card, with a stable pose while adjusting the preview, responsive

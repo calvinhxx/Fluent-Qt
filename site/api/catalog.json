@@ -24,7 +24,7 @@
   ],
   "summary": {
     "components": 85,
-    "public_headers": 135,
+    "public_headers": 138,
     "categories": 14
   },
   "categories": [
@@ -4025,6 +4025,15 @@
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/overlay/OverlayLightDismiss.h"
     },
     {
+      "include": "<FluentQt/components/foundation/overlay/OverlayPresentation.h>",
+      "source": "src/components/foundation/overlay/OverlayPresentation.h",
+      "summary": "Widget-only host adapter for overlays on transformed presentations.",
+      "declarations": [
+        "MenuAnchor"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/overlay/OverlayPresentation.h"
+    },
+    {
       "include": "<FluentQt/components/foundation/overlay/OverlayScrim.h>",
       "source": "src/components/foundation/overlay/OverlayScrim.h",
       "summary": "Same-window dim/scrim used behind modal overlays, drawers, and spotlights.",
@@ -4043,7 +4052,7 @@
     {
       "include": "<FluentQt/components/foundation/overlay/OverlayWindow.h>",
       "source": "src/components/foundation/overlay/OverlayWindow.h",
-      "summary": "Public declarations provided by OverlayWindow.",
+      "summary": "Resolve the native overlay host, including embedded widget presentations.",
       "declarations": [],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/overlay/OverlayWindow.h"
     },
@@ -4099,7 +4108,7 @@
     {
       "include": "<FluentQt/components/layout/ParticleBackdrop.h>",
       "source": "src/components/layout/ParticleBackdrop.h",
-      "summary": "CPU-painted particle presets behind caller-composed content.",
+      "summary": "CPU-default particle presets behind caller-composed content.",
       "declarations": [
         "ParticleBackdrop",
         "Effect",
@@ -4281,6 +4290,24 @@
         "Axis"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/scrolling/ScrollView.h"
+    },
+    {
+      "include": "<FluentQt/components/spatial/ParticleLayer.h>",
+      "source": "src/components/spatial/ParticleLayer.h",
+      "summary": "Render a borrowed ParticleBackdrop into an existing OpenGL compositor.",
+      "declarations": [
+        "ParticleLayer"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/spatial/ParticleLayer.h"
+    },
+    {
+      "include": "<FluentQt/components/spatial/SpatialRuntime.h>",
+      "source": "src/components/spatial/SpatialRuntime.h",
+      "summary": "Shared opt-in runtime entry for native and application-owned 3D hosts.",
+      "declarations": [
+        "SpatialRuntime"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/spatial/SpatialRuntime.h"
     },
     {
       "include": "<FluentQt/components/spatial/SpatialItem.h>",

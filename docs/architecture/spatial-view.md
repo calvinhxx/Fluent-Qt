@@ -174,13 +174,50 @@ QOpenGLWidget and context only when 3D is enabled. Builds with Spatial default t
 3D on first launch; a saved 2D choice takes precedence and skips GPU initialization.
 Unavailable acceleration falls back to 2D without erasing the saved preference.
 Reduced motion and high contrast also use 2D. The C++, Python and WebAssembly
-Galleries follow the same policy. On macOS with Qt 6.4 or later, Gallery prepares
-an OpenGL-compatible native window format before showing the window. This does
+Galleries follow the same policy. On native Windows, Cocoa, X11 and Wayland with
+Qt 6.4 or later, Gallery prepares an OpenGL-compatible native window format
+before showing the window. This does
 not create a context or enable GPU composition: ordinary 2D painting still uses
 the raster backing store. It prevents Qt from destroying and recreating the
 visible window when the first QOpenGLWidget is added. The base library and
 2D-only Gallery builds keep their original window setup. The startup Splash and
 logo handoff finish before the shell redirects widget painting.
+
+Desktop C++ and Python Gallery prepare only Home, Settings and the reusable
+loading shell during Splash. The catalog and navigation are available immediately,
+but unvisited component demos are not constructed. Progress counts ready pages,
+not elapsed time. Covered and hidden controls keep their animations stopped.
+Moving or hiding the window pauses startup work; closing cancels pending work.
+
+A cold route shows Shimmer, then builds one sample per event-loop turn. Changing
+routes cancels its unpublished page. Completed pages retain their models and
+interaction state; revisits reuse the same widgets. There is no full-catalog
+background warm-up competing with interactive rendering. QWidget construction
+remains on the GUI thread, so an individually expensive sample can still block
+for its own factory duration. Code highlighting waits for expansion. WebAssembly
+retains its bounded resident cache; desktop retains only the finite visited set.
+
+### Shared runtime entry and compatibility
+
+`FluentQt::Spatial` exposes `SpatialRuntime` (also
+`fluentqt.spatial.SpatialRuntime`). Gallery and SpatialView share renderer
+classification and display capability checks. C++ and Python Gallery use the
+same native methods for preflight, texture limits, native text-coverage policy,
+and hidden-window preparation. Gallery owns the one 3D preference and its
+presentation/controller; UILib does not read application settings.
+
+Applications call `SpatialRuntime::prepareApplication()` before building pages
+and `SpatialRuntime::prepareWindow(&window)` before showing a Fluent Window.
+Neither call creates a GL context. The window call is idempotent and refuses
+visible windows. Actual acceleration is confirmed only after the real surface
+has initialized; a preparation result is not a hardware-availability verdict.
+
+OS/Qt differences live in `src/compatibility/SpatialRenderCompat.h` and the
+private native-style adapter. Cocoa still needs CGContext primitive adaptation
+and an exposure preflight; Qt 6.4+ desktop windows need hidden surface
+preparation. Measured low-DPI font-coverage adapters differ by QPA/DPR. These
+are implementation capabilities behind the same business flow, not separate
+macOS/Windows/Linux Gallery policies.
 
 ### GPU textures and sampling
 
@@ -197,21 +234,52 @@ Antialiasing on the final window alone cannot repair aliased cached artwork.
 The caches use up to twice the output density to preserve detail through
 perspective filtering. A four-tap shader samples each output pixel's projected
 footprint; a single bilinear lookup undersamples small curves when the cache is
-reduced and tilted. It uses full-precision coordinates, preserves premultiplied
-alpha, and reduces to ordinary sampling at native density. No full-screen blur
-or sharpening pass is applied. Perspective still moves strokes off the pixel
-grid, so projected text cannot be pixel-identical to axis-aligned 2D text.
+reduced and tilted. Each tap uses a monotone cubic fractional-texel weight to
+reduce the softening of already-antialiased source pixels. This reconstruction
+has no negative weights, preserves premultiplied alpha, and retains the source
+value at texel centers. It keeps the same four texture reads and cache budget;
+it adds arithmetic, not another image pass or widget repaint. The app-private
+sampler has a linear reference mode only for same-context tilted-text and
+subpixel-motion regression tests, not a user setting. No full-screen blur or
+sharpening pass is applied. Perspective still moves strokes off the pixel grid,
+so projected text cannot be pixel-identical to axis-aligned 2D text.
 Large glyphs that Qt paints as outlines receive the same multisample coverage
 as curved controls.
 
+The rounded panel boundary, material and one-logical-pixel rim share the same
+signed-distance coverage in the composition shader. Screen-space derivatives
+adjust edge coverage under perspective. This avoids independently filtering a
+cached rounded mask and a second transformed border, which can create a broken
+or doubled thin edge. It does not change the panel geometry or cache density.
+
+On Windows at output DPR 1 to below 2, and Linux at DPR 1, the Gallery preserves native glyph
+coverage with a private paint-device adapter. It rasterizes Qt's already-shaped
+text items into bounded, transparent native-density tiles during dirty-cache
+updates, then composes them into the unchanged supersampled GPU panel. Shaping,
+fallback fonts and bidi ordering are not repeated. Geometry and images still
+paint through OpenGL; transformed or patterned text retains Qt's original path.
+There is no persistent glyph cache or whole-window CPU capture. Cocoa,
+WebAssembly, Linux fractional DPR and output DPR 2 or higher keep the original glyph path.
+The adapter reuses an unchanged device-space clip across drawing primitives;
+clip or transform changes invalidate it while retaining the caller's painter
+state. This avoids repeated stencil setup in Debug without caching shaped text.
+Its paint-engine capability mask must match the target engine. In particular,
+advertising raster operations to an OpenGL delegate makes Qt's text editors
+select an unsupported XOR caret path. C++ and Python adapters preserve the
+delegate's capabilities; native input regressions exercise focus, caret blink,
+selection, IME commit, suggestion acceptance and item-editor commit in 3D.
+
 ### Cache budget
 
-The two textures and the shared paint and resolve targets have a combined 192 MiB
-estimated budget: four bytes per resolved pixel and twelve bytes per paint sample,
+The two panel textures, native-density backdrop texture, and shared paint and resolve
+targets have a combined 192 MiB estimated budget: four bytes per resolved pixel and twelve bytes per paint sample,
 allowing for separate color, depth and stencil storage. The actual sample count is queried
 before allocating large targets. Large panels paint in horizontal strips into a
 shorter shared target; only children intersecting each strip are rendered. This
-keeps the antialiasing buffer within budget without reducing text density.
+keeps the antialiasing buffer within budget without reducing text density. The
+low-DPI native glyph adapter also reserves 512 KiB for one bounded CPU tile and
+its upload. Native-density backgrounds are uploaded only when their content,
+size, DPR or OpenGL context changes, not on each pointer-motion frame.
 The planner also checks texture, renderbuffer and viewport limits. It reduces
 extra sampling in quarter steps only when the resolved textures cannot fit,
 and never renders below the window's native pixel density.
@@ -221,9 +289,39 @@ or freeing resources. This budget excludes Qt's final window framebuffer and
 other application/GPU resources.
 
 The paint target requests 2x MSAA; the final surface retains its existing MSAA.
-The paint target and both caches are released on return to 2D. The C++, Python and WebAssembly shells
+The paint and resolve targets, both panel caches, and backdrop texture are released
+on return to 2D. The C++, Python and WebAssembly shells
 use the same policy. Web keeps native output resolution by default; a lower
 resolution remains an explicit choice.
+
+### Gallery particle layers
+
+Particle acceleration follows the existing **Settings → 3D Gallery** state.
+There is no independent renderer setting or persisted particle-acceleration
+preference. Only an exposed, hardware-backed 3D shell requests acceleration.
+
+`ParticleBackdrop::setGpuAccelerationEnabled(bool)` is a component-level
+request, false by default. Setting it does not create a context or add OpenGL
+to the base library. A capable optional `ParticleLayer` host is still required;
+otherwise normal CPU painting continues. The Gallery compositor scopes the
+request to its active sources and restores their prior request on release.
+Visibility, simulation and reduced-motion policy remain separate.
+
+The GPU path borrows the same particle state and the shell's current context.
+Particle ticks update a separate native-density texture; unchanged page content
+can retain its static cache. A cached transparent foreground preserves QWidget
+stacking, text coverage and translucent content without painting them twice.
+Foreground changes refresh that cache. This does not move particle simulation
+to a compute shader or increase the component's configured animation rate.
+
+Particle targets and composition textures must fit the unused portion of the
+same 192 MiB shell budget. Foreground capture borrows the existing multisample
+and resolve targets. Unsupported masks or graphics effects retain CPU rendering;
+allocation or rendering failure, loss of the context, and return to 2D release
+acceleration without resetting the particle effect's phase.
+A failed allocation is not retried on every animation tick; source, geometry,
+context, request or budget changes allow another attempt. Hidden
+pages do not acquire particle textures.
 
 ### macOS paint adapter
 
@@ -281,6 +379,23 @@ Mica/Acrylic and 3D have separate responsibilities: the window backdrop supplies
 the bottom material, while the 3D compositor positions the navigation and content
 surfaces above it. Their translucent areas and gutters reveal that backdrop;
 opaque cards cover it. The compositor does not add another desktop blur.
+On Windows, ordinary runtime backdrop changes do not replay the first-show
+non-client deactivation/activation repair. First exposure and native-window
+repair still keep their existing platform handling.
+Switching a composited material to Solid first publishes the opaque paint state.
+Both Gallery controllers invalidate their backdrop and panel caches from that
+actual state, not only from the later application-setting signal. Windows commits
+the replacement frame before removing the old DWM material; suspended or hidden
+windows defer removal until they can present. The private compatibility helper
+owns this platform fence. There is no fixed waiting period or permanent opaque
+overlay; an exposure paint can finish the handoff on the next event-loop turn.
+
+Anchored popups use the presented anchor rectangle before choosing a side or
+clamping to the available area. Menus map their invocation point once, while
+native submenus keep Qt's placement. The transforms are cleared on return to
+2D. These are Gallery presentation mappings, not new ownership or modality
+rules: centered dialogs, window-edge drawers and their scrims remain attached
+to the native window. See [overlay behavior](overlay-behavior.md).
 Intro and other modal overlays stay above the compositor. Intro freezes pointer
 following and maps its spotlight and CoachMark anchor to the displayed panel
 bounds, using the active Left or Top navigation.
@@ -312,6 +427,13 @@ them in a native scrollable vertical layout. It does not reconstruct the
 caller's previous custom grid. Keep a visible mode switch outside the scene.
 Use 2D for text entry, popups and platform accessibility; native-window and
 OpenGL child widgets cannot be embedded.
+
+Fluent anchored overlays, including chart readouts, use the shared
+[overlay presentation mapping](overlay-behavior.md#geometry). A projected
+card is not their clipping window: they are placed in the actual owning
+window, including when the Gallery shell also has a transform. Popups remain
+untransformed, readable overlays. This fixes placement and containment; it
+does not make projected proxy geometry an IME or screen-reader contract.
 
 ## Which components can use 3D?
 
