@@ -64,6 +64,27 @@ def verify_source_contract(project_root, package_dir, contract):
         )
 
 
+def verify_runtime_catalog(contract, categories, entries, routes, support_types,
+                           ported_keys, spatial_available):
+    """Check the active subset without weakening the complete packaged contract."""
+    expected_categories = [c["id"] for c in contract["categories"]
+                           if spatial_available or c["id"] != "spatial"]
+    expected_components = [c for c in contract["components"]
+                           if spatial_available or c["category_id"] != "spatial"]
+    expected_routes = [r["id"] for r in contract["routes"]
+                       if spatial_available or (r["id"] != "spatial" and r["parent_id"] != "spatial")]
+    expected_keys = {(c["id"], sample["id"]) for c in expected_components for sample in c["samples"]}
+    actual_keys = [(entry.route_id, sample.id) for entry in entries for sample in entry.samples]
+    if ([category.id for category in categories] != expected_categories
+            or [entry.route_id for entry in entries] != [c["id"] for c in expected_components]
+            or [route.id for route in routes] != expected_routes
+            or set(support_types) != set(contract["binding_support_types"])
+            or len(actual_keys) != len(expected_keys)
+            or set(actual_keys) != expected_keys
+            or set(ported_keys) != expected_keys):
+        raise AssertionError("Standalone Gallery catalog has wrong coverage")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", type=Path,
@@ -73,6 +94,7 @@ def main(argv=None):
     import fluentqt_gallery
     from fluentqt_gallery.catalog import CONTRACT, CATEGORIES, ENTRIES, ROUTES, SUPPORT_TYPES
     from fluentqt_gallery.native_samples import ported_sample_keys
+    from fluentqt_gallery.spatial_support import SPATIAL_AVAILABLE
 
     expected_version = os.environ["FLUENTQT_EXPECTED_VERSION"]
     if metadata.version("FluentQt") != expected_version:
@@ -131,18 +153,8 @@ def main(argv=None):
             )
         )
 
-    sample_count = sum(len(entry.samples) for entry in ENTRIES)
-    if (
-        len(CATEGORIES) != len(CONTRACT["categories"])
-        or len(ENTRIES) != CONTRACT["summary"]["component_count"]
-        or len(ROUTES) != CONTRACT["summary"]["route_count"]
-        or set(SUPPORT_TYPES) != set(CONTRACT["binding_support_types"])
-        or sample_count != CONTRACT["summary"]["sample_count"]
-        or set(ported_sample_keys()) != {
-            (entry.route_id, sample.id) for entry in ENTRIES for sample in entry.samples
-        }
-    ):
-        raise AssertionError("Standalone Gallery catalog has wrong coverage")
+    verify_runtime_catalog(CONTRACT, CATEGORIES, ENTRIES, ROUTES, SUPPORT_TYPES,
+                           ported_sample_keys(), SPATIAL_AVAILABLE)
 
     fluentqt.prepare_high_dpi_application()
     from PySide6.QtCore import QCoreApplication, QEvent

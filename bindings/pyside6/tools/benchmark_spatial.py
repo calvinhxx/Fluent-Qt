@@ -100,7 +100,8 @@ def main():
             result["error"] = "Activate the benchmark window before measuring pointer following"
             finish()
             return
-        result["backend"] = view.activeBackend().name
+        backend = view.activeBackend().name
+        result["backend"] = backend.decode("utf-8") if isinstance(backend, bytes) else backend
         result["renderer"] = view.rendererName()
         result["fallback"] = view.fallbackReason()
         surface = view.findChild(QOpenGLWidget)

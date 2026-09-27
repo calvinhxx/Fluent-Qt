@@ -850,6 +850,34 @@ def _acrylic_noise_tile() -> QImage:
 
 
 _HERO_LINK_PIXMAP_CACHE: dict[tuple[str, int, int, int], QPixmap] = {}
+_VISIBLE_ALPHA_TABLE = bytes(0 if alpha <= 8 else 1 for alpha in range(256))
+
+
+def _image_alpha_bounds(image: QImage) -> QRect:
+    """Find the native card artwork bounds without a Python loop per pixel."""
+
+    alpha_image = image.convertToFormat(QImage.Format_RGBA8888)
+    raw = alpha_image.constBits()
+    stride = alpha_image.bytesPerLine()
+    width = image.width()
+    left, top = width, image.height()
+    right = bottom = -1
+    for y in range(image.height()):
+        # Byte slicing/translation scans each row in native code. The threshold
+        # and crop are identical to the C++ and previous Python pixel traversal.
+        coverage = bytes(raw[y * stride + 3:y * stride + width * 4:4]).translate(
+            _VISIBLE_ALPHA_TABLE
+        )
+        trailing = coverage.rstrip(b"\0")
+        if not trailing:
+            continue
+        left = min(left, width - len(coverage.lstrip(b"\0")))
+        top = min(top, y)
+        right = max(right, len(trailing) - 1)
+        bottom = y
+    if right < left:
+        return QRect()
+    return QRect(left, top, right - left + 1, bottom - top + 1)
 
 
 def _tint_github_mark(image: QImage, tint: QColor) -> None:
@@ -858,6 +886,7 @@ def _tint_github_mark(image: QImage, tint: QColor) -> None:
     stride = image.bytesPerLine() // 4
     width = image.width()
     height = image.height()
+    colors: dict[int, int] = {}
     # Keep the entire hot loop on the native pixel buffer. Calling a wrapped
     # void setter once per pixel can exhaust Py_None references with the
     # PySide 6.9 Linux ARM64 wheel before a 560 px icon is processed.
@@ -865,13 +894,20 @@ def _tint_github_mark(image: QImage, tint: QColor) -> None:
         row = y * stride
         for x in range(width):
             source = int(pixels[row + x])
-            luminance = (
-                ((source >> 16) & 0xFF) * 11
-                + ((source >> 8) & 0xFF) * 16
-                + (source & 0xFF) * 5
-            ) // 32
-            alpha = (255 - luminance) * ((source >> 24) & 0xFF) // 255
-            pixels[row + x] = (alpha << 24) | tint_rgb
+            color = colors.get(source)
+            if color is None:
+                luminance = (
+                    ((source >> 16) & 0xFF) * 11
+                    + ((source >> 8) & 0xFF) * 16
+                    + (source & 0xFF) * 5
+                ) // 32
+                alpha = (255 - luminance) * ((source >> 24) & 0xFF) // 255
+                color = (alpha << 24) | tint_rgb
+                # The monochrome mark repeats a small palette. Bound this local
+                # lookup so a future colorful asset cannot grow retained state.
+                if len(colors) < 1024:
+                    colors[source] = color
+            pixels[row + x] = color
 
 
 def _hero_link_pixmap(
@@ -903,24 +939,9 @@ def _hero_link_pixmap(
     image = image.convertToFormat(QImage.Format_ARGB32)
     if image_name == "GitHub-Mark.png":
         _tint_github_mark(image, tint)
-    alpha_image = image.convertToFormat(QImage.Format_RGBA8888)
-    raw = bytes(alpha_image.constBits())
-    stride = alpha_image.bytesPerLine()
-    left, top = image.width(), image.height()
-    right = bottom = -1
-    for y in range(image.height()):
-        alpha_row = raw[y * stride + 3 : y * stride + image.width() * 4 : 4]
-        for x, alpha in enumerate(alpha_row):
-            if alpha <= 8:
-                continue
-            left = min(left, x)
-            top = min(top, y)
-            right = max(right, x)
-            bottom = max(bottom, y)
-    if right >= left and bottom >= top:
-        visible = QRect(left, top, right - left + 1, bottom - top + 1)
-        if visible.size() != image.size():
-            image = image.copy(visible)
+    visible = _image_alpha_bounds(image)
+    if visible.isValid() and visible.size() != image.size():
+        image = image.copy(visible)
     image = image.scaled(
         physical_size,
         physical_size,

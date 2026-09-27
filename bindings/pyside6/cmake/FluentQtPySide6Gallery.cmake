@@ -27,6 +27,7 @@ set(FLUENTQT_PYSIDE6_GALLERY_FILES
     app.py
     catalog.py
     foundation_pages.py
+    glyph_paint_device.py
     identity.py
     intro_tour.py
     metrics.py
@@ -43,6 +44,8 @@ set(FLUENTQT_PYSIDE6_GALLERY_FILES
     native_samples_spatial.py
     native_samples_status.py
     native_samples_text_window.py
+    panel_sampler.py
+    particle_compositor.py
     samples.py
     settings.py
     spatial_support.py

@@ -221,6 +221,8 @@ file(READ "${CMAKE_CURRENT_SOURCE_DIR}/native/typesystem_fluentqt.xml" FLUENTQT_
 if(TARGET FluentQtSpatial)
     set_target_properties(FluentQtSpatial PROPERTIES POSITION_INDEPENDENT_CODE ON)
     list(APPEND FLUENTQT_PYSIDE6_GENERATED_SOURCES
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_particlelayer_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialruntime_wrapper.cpp"
         "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialview_wrapper.cpp"
         "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialitem_wrapper.cpp")
     file(READ "${CMAKE_CURRENT_SOURCE_DIR}/native/spatial_types.xml" FLUENTQT_PYSIDE6_SPATIAL_TYPES)
@@ -387,6 +389,7 @@ set_target_properties(_fluentqt PROPERTIES
 file(MAKE_DIRECTORY "${FLUENTQT_PYSIDE6_PACKAGE_DIR}")
 set(FLUENTQT_PYSIDE6_PYTHON_FILES
     __init__.py
+    _qt_compat.py
     basicinput.py
     charts.py
     collections.py
@@ -405,6 +408,7 @@ set(FLUENTQT_PYSIDE6_PYTHON_FILES
 set(FLUENTQT_PYSIDE6_STUB_FILES
     __init__.pyi
     _fluentqt.pyi
+    _qt_compat.pyi
     basicinput.pyi
     charts.pyi
     collections.pyi
@@ -607,6 +611,12 @@ add_custom_target(fluentqt_pyside6_manylinux_wheel
 endif()
 
 if(BUILD_TESTING)
+    add_test(NAME test_pyside6_qt_compat
+        COMMAND "${Python_EXECUTABLE}" -X faulthandler
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_qt_compat.py" -v)
+    set_tests_properties(test_pyside6_qt_compat PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen;PYTHONMALLOC=malloc;MALLOC_PERTURB_=165"
+        LABELS "pyside;unit;ci_fast;lifetime" TIMEOUT 60)
     if(TARGET FluentQtSpatial)
         add_test(NAME test_pyside6_spatial
             COMMAND "${Python_EXECUTABLE}" -X faulthandler
@@ -868,6 +878,52 @@ if(BUILD_TESTING)
             ENVIRONMENT
                 "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
             LABELS "pyside;unit;ci_fast"
+            TIMEOUT 60)
+
+        add_test(
+            NAME test_pyside6_gallery_spatial_backdrop
+            COMMAND "${Python_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery_spatial_backdrop.py")
+        set_tests_properties(test_pyside6_gallery_spatial_backdrop PROPERTIES
+            ENVIRONMENT
+                "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+            LABELS "pyside;unit;ci_fast"
+            TIMEOUT 30)
+
+        if(TARGET FluentQtSpatial)
+            add_test(
+                NAME test_pyside6_gallery_spatial_backdrop_native
+                COMMAND "${Python_EXECUTABLE}" -X faulthandler
+                    "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery_spatial_backdrop.py"
+                    GallerySpatialBackdropTest.test_native_parent_destruction_releases_texture_with_current_context)
+            set_tests_properties(test_pyside6_gallery_spatial_backdrop_native PROPERTIES
+                ENVIRONMENT
+                    "PYTHONPATH=${PROJECT_BINARY_DIR}/python;FLUENTQT_REQUIRE_NATIVE_TEST=1"
+                # Headless wheel CI selects ^pyside$; native approval is a
+                # separate opt-in lane and must never become a skipped CI pass.
+                LABELS "pyside_native;unit;local_desktop;lifetime"
+                RUN_SERIAL TRUE
+                TIMEOUT 30)
+        endif()
+
+        add_test(
+            NAME test_pyside6_gallery_glyph_paint_device
+            COMMAND "${Python_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery_glyph_paint_device.py")
+        set_tests_properties(test_pyside6_gallery_glyph_paint_device PROPERTIES
+            ENVIRONMENT
+                "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+            LABELS "pyside;unit;ci_fast"
+            TIMEOUT 60)
+
+        add_test(
+            NAME test_pyside6_gallery_particle_compositor
+            COMMAND "${Python_EXECUTABLE}" -X faulthandler
+                "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery_particle_compositor.py")
+        set_tests_properties(test_pyside6_gallery_particle_compositor PROPERTIES
+            ENVIRONMENT
+                "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+            LABELS "pyside;unit;ci_fast;lifetime"
             TIMEOUT 60)
 
         add_test(

@@ -118,8 +118,8 @@ artifact-verification steps.
 
 ### Optional Spatial module
 
-The default binding build keeps the base 2D API. To include `SpatialView` and
-`SpatialItem`, enable Spatial in the same matched source-build environment:
+The default binding build keeps the base 2D API. To include `SpatialView`,
+`SpatialItem`, and `ParticleLayer`, enable Spatial in the same matched source-build environment:
 
 ```bash
 cmake -S . -B build/pyside6 -DFLUENT_QT_BUILD_SPATIAL=ON
@@ -132,6 +132,32 @@ Import from `fluentqt.spatial`. Rendering and pointer animation use the native
 C++ implementation; Python handles configuration and application signals.
 Use `addOwnedWidget()` to transfer a widget to the view, `addBorrowedWidget()`
 to retain it, or `addReparentedWidget()` to restore its original parent on release.
+
+`ParticleLayer` is a lower-level integration for an **existing** OpenGL
+compositor, not another widget or particle simulation. It borrows a visible
+`ParticleBackdrop`; that component still defaults to CPU rendering. For example:
+
+```python
+from fluentqt.spatial import ParticleLayer
+
+layer = ParticleLayer(backdrop, canvas)
+layer.frameRequested.connect(canvas.update)
+
+# In canvas.paintGL(), with its context current and an aggregate byte allowance:
+if layer.render(canvas.devicePixelRatioF(), remaining_bytes):
+    texture = layer.textureId()  # Premultiplied RGBA, bottom-up GL coordinates.
+    # Sample this texture in the compositor, preserving widget clipping/stacking.
+
+# On 2D mode or compositor teardown, resume CPU at the same particle phase:
+layer.release()
+```
+
+Only a successful `render()` delegates the source's painting and frame requests.
+The caller selects the hardware context and preserves foreground occlusion;
+`render()` fails safely on invalid contexts, hidden sources, or insufficient
+budget. `allocatedBytes()` includes actual driver MSAA storage. The Python
+Gallery's [particle compositor](gallery/src/fluentqt_gallery/particle_compositor.py)
+is the complete implementation for cached pages and foreground widgets.
 
 This build adds Qt OpenGL/OpenGLWidgets to the same extension, sharing theme
 and motion state with the base controls. A 2D-only build does not link these

@@ -8715,6 +8715,7 @@ class FluentQtBindingTest(unittest.TestCase):
         for _ in range(10):
             nav = fluentqt.NavigationView()
             chrome = QWidget()
+            chrome_ref = weakref.ref(chrome)
             nav.setBorrowedMainChromeWidget(chrome)
             nav_ref = weakref.ref(nav)
             del nav
@@ -8724,6 +8725,9 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertIsNone(chrome.parent())
             del chrome
             gc.collect()
+            self.assertIsNone(
+                chrome_ref(), "The destroyed callback must not retain borrowed chrome"
+            )
 
     def test_navigation_view_reparented_chrome_gc_stress(self):
         for _ in range(10):

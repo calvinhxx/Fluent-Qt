@@ -14,12 +14,14 @@ from PySide6.QtCore import (
     QEasingCurve,
     QElapsedTimer,
     QEvent,
+    QObject,
     QPoint,
     QPropertyAnimation,
     QRect,
     QRectF,
     QSize,
     QStandardPaths,
+    Signal,
     Qt,
     QTimer,
     QUrl,
@@ -408,6 +410,42 @@ def _add_entry_grid(
     return grid
 
 
+def _populate_entry_cards(
+    page: fluentqt.ScrollView,
+    entries: Iterable[GalleryEntry | GalleryRoute],
+    navigate: Callable[[str], None],
+    *,
+    defer_entries: bool,
+    image_category: str = "",
+) -> None:
+    page._gallery_pending_entries = list(entries)
+    page._gallery_entry_image_category = image_category
+    page._gallery_buttons = ()
+    if not defer_entries:
+        while page._gallery_pending_entries:
+            _append_entry_card(page, navigate)
+
+
+def _append_entry_card(
+    page: fluentqt.ScrollView, navigate: Callable[[str], None]
+) -> None:
+    entry = page._gallery_pending_entries[0]
+    grid = page._gallery_entry_grid
+    if isinstance(entry, GalleryEntry):
+        card = _component_card(entry, navigate, grid)
+    else:
+        card = _route_card(
+            entry, navigate, grid, image_category=page._gallery_entry_image_category
+        )
+    card.hide()
+    page._gallery_buttons += (card,)
+    page._gallery_pending_entries.pop(0)
+    if not page._gallery_pending_entries:
+        # Install the completed collection once; repeated set_cards calls would
+        # turn one-card chunks into quadratic reparenting and row measurement.
+        grid.set_cards(page._gallery_buttons)
+
+
 def build_home_page(
     navigate: Callable[[str], None],
     parent: QWidget | None = None,
@@ -479,6 +517,8 @@ def build_category_page(
     entries: Iterable[GalleryEntry],
     navigate: Callable[[str], None],
     parent: QWidget | None = None,
+    *,
+    defer_entries: bool = False,
 ) -> fluentqt.ScrollView:
     page, layout = _scroll_page(
         "FluentQtPythonGallery.CategoryPage.{0}".format(route.id)
@@ -487,22 +527,23 @@ def build_category_page(
     content = page._gallery_content
     _add_page_header(layout, content, route.title, route.description)
     _add_section_heading(layout, "Components", content)
-    cards = [_component_card(entry, navigate, content) for entry in entries]
     grid = _add_entry_grid(
         layout,
-        cards,
+        (),
         "galleryCategoryCards.{0}".format(route.id),
         content,
     )
     layout.addStretch()
-    page._gallery_buttons = tuple(cards)
     page._gallery_entry_grid = grid
+    _populate_entry_cards(page, entries, navigate, defer_entries=defer_entries)
     return page
 
 
 def build_all_controls_page(
     navigate: Callable[[str], None],
     parent: QWidget | None = None,
+    *,
+    defer_entries: bool = False,
 ) -> fluentqt.ScrollView:
     route = ROUTE_BY_ID["all-controls"]
     page, layout = _scroll_page("FluentQtPythonGallery.CategoryPage.all-controls")
@@ -520,41 +561,34 @@ def build_all_controls_page(
         "foundation-geometry",
         "foundation-spacing",
     )
-    cards = []
-    for route_id in foundation_route_ids:
-        if route_id == "font-icon":
-            cards.append(
-                _component_card(ENTRY_BY_ROUTE_ID[route_id], navigate, content)
-            )
-        else:
-            cards.append(
-                _route_card(
-                    ROUTE_BY_ID[route_id],
-                    navigate,
-                    content,
-                    image_category="foundation",
-                )
-            )
-    cards.extend(
-        _component_card(entry, navigate, content)
+    entries = [
+        ENTRY_BY_ROUTE_ID[route_id] if route_id == "font-icon" else ROUTE_BY_ID[route_id]
+        for route_id in foundation_route_ids
+    ]
+    entries.extend(
+        entry
         for entry in ENTRIES
         if entry.route_id != "font-icon"
     )
     grid = _add_entry_grid(
         layout,
-        cards,
+        (),
         "galleryCategoryCards.all-controls",
         content,
     )
     layout.addStretch()
-    page._gallery_buttons = tuple(cards)
     page._gallery_entry_grid = grid
+    _populate_entry_cards(
+        page, entries, navigate, defer_entries=defer_entries, image_category="foundation"
+    )
     return page
 
 
 def build_foundation_page(
     navigate: Callable[[str], None],
     parent: QWidget | None = None,
+    *,
+    defer_entries: bool = False,
 ) -> fluentqt.ScrollView:
     page, layout = _scroll_page("FluentQtPythonGallery.FoundationPage")
     page.setParent(parent)
@@ -565,19 +599,18 @@ def build_foundation_page(
     child_routes = tuple(
         candidate for candidate in ROUTES if candidate.parent_id == "foundation"
     )
-    cards = [
-        _route_card(child, navigate, content, image_category="foundation")
-        for child in child_routes
-    ]
     grid = _add_entry_grid(
         layout,
-        cards,
+        (),
         "galleryFoundationCards",
         content,
     )
     layout.addStretch()
-    page._gallery_buttons = tuple(cards)
     page._gallery_entry_grid = grid
+    _populate_entry_cards(
+        page, child_routes, navigate,
+        defer_entries=defer_entries, image_category="foundation",
+    )
     return page
 
 
@@ -1079,6 +1112,8 @@ def build_component_page(
     entry: GalleryEntry,
     navigate: Callable[[str], None],
     parent: QWidget | None = None,
+    *,
+    defer_samples: bool = False,
 ) -> fluentqt.ScrollView:
     page, layout = _scroll_page(
         "FluentQtPythonGallery.ComponentPage.{0}".format(entry.route_id)
@@ -1137,30 +1172,14 @@ def build_component_page(
         update_spatial_status()
         layout.addWidget(status)
 
-    cards = []
-    results = []
-    more = None
-    for sample in entry.samples:
-        card, result = _build_sample_card(entry, sample, content)
-        if entry.route_id == "spatial-view" and sample.id not in {
-            "spatial-view-scene", "spatial-view-cards", "spatial-view-donut", "spatial-view-hybrid"
-        }:
-            if more is None:
-                more = fluentqt.Expander(content)
-                more.setObjectName("galleryMoreSpatialExamples")
-                more.setHeaderText("More component combinations")
-                combinations = QWidget()
-                combinations_layout = QVBoxLayout(combinations)
-                combinations_layout.setContentsMargins(0, 0, 0, 0)
-                combinations_layout.setSpacing(16)
-                more.setOwnedContentWidget(combinations)
-            combinations_layout.addWidget(card)
-        else:
-            layout.addWidget(card)
-        cards.append(card)
-        results.append(result)
-    if more is not None:
-        layout.addWidget(more)
+    # A stable sample container keeps the footer in place while startup builds
+    # one card per event-loop turn. Ordinary callers still get a complete page.
+    samples = QWidget(content)
+    samples.setObjectName("galleryComponentSamples")
+    samples_layout = QVBoxLayout(samples)
+    samples_layout.setContentsMargins(0, 0, 0, 0)
+    samples_layout.setSpacing(16)
+    layout.addWidget(samples)
 
     _add_section_heading(layout, "Category", content)
     related_route = ROUTE_BY_ID[category.id]
@@ -1168,8 +1187,12 @@ def build_component_page(
     layout.addWidget(category_card)
     layout.addStretch()
 
-    page._gallery_sample_cards = tuple(cards)
-    page._gallery_sample_results = tuple(results)
+    page._gallery_sample_cards = ()
+    page._gallery_sample_results = ()
+    page._gallery_sample_entry = entry
+    page._gallery_pending_samples = list(entry.samples)
+    page._gallery_samples_layout = samples_layout
+    page._gallery_more_samples = None
     page._gallery_reference_card = reference
     page._gallery_category_card = category_card
     page._gallery_theme_button = theme_button
@@ -1177,7 +1200,50 @@ def build_component_page(
     page._gallery_sample_theme_explicit = False
     _update_component_theme_button(page)
     theme_button.clicked.connect(lambda: _toggle_component_sample_theme(page))
+    if not defer_samples:
+        while page._gallery_pending_samples:
+            _append_component_sample(page)
     return page
+
+
+def _append_component_sample(page: fluentqt.ScrollView) -> None:
+    """Construct one hidden sample; callers choose when to yield the GUI thread."""
+
+    entry = page._gallery_sample_entry
+    sample = page._gallery_pending_samples[0]
+    content = page._gallery_samples_layout.parentWidget()
+    card, result = _build_sample_card(entry, sample, content)
+    if entry.route_id == "spatial-view" and sample.id not in {
+        "spatial-view-scene", "spatial-view-cards", "spatial-view-donut",
+        "spatial-view-hybrid",
+    }:
+        if page._gallery_more_samples is None:
+            more = fluentqt.Expander(content)
+            more.setObjectName("galleryMoreSpatialExamples")
+            more.setHeaderText("More component combinations")
+            combinations = QWidget()
+            combinations_layout = QVBoxLayout(combinations)
+            combinations_layout.setContentsMargins(0, 0, 0, 0)
+            combinations_layout.setSpacing(16)
+            more.setOwnedContentWidget(combinations)
+            page._gallery_samples_layout.addWidget(more)
+            page._gallery_more_samples = combinations_layout
+        page._gallery_more_samples.addWidget(card)
+    else:
+        # The collapsed extra examples always follow the primary examples,
+        # even if the catalog interleaves their construction order.
+        position = page._gallery_samples_layout.count()
+        if page._gallery_more_samples is not None:
+            position -= 1
+        page._gallery_samples_layout.insertWidget(position, card)
+    page._gallery_sample_cards += (card,)
+    page._gallery_sample_results += (result,)
+    page._gallery_pending_samples.pop(0)
+    if page._gallery_sample_theme_explicit:
+        card._gallery_preview_surface.setProperty(
+            "fluentThemeOverride", int(page._gallery_sample_theme)
+        )
+        _refresh_fluent_subtree(card._gallery_preview_surface)
 
 
 class _GallerySettingsPage(_GalleryContentScrollView):
@@ -1849,14 +1915,14 @@ def build_settings_page(
         spatial_panel, content,
     ),) + rows[3:]
     layout.addWidget(_settings_section("Appearance & behavior", content))
-    for row in rows[:7]:
+    for row in rows[:-2]:
         layout.addWidget(row)
     layout.addSpacing(10)
     layout.addWidget(_settings_section("App behavior", content))
-    layout.addWidget(rows[7])
+    layout.addWidget(rows[-2])
     layout.addSpacing(10)
     layout.addWidget(_settings_section("Updates", content))
-    layout.addWidget(rows[8])
+    layout.addWidget(rows[-1])
     layout.addStretch(1)
     page._gallery_settings_rows = rows
     page._gallery_settings_choices = (
@@ -2189,20 +2255,15 @@ class _GalleryTitleContent(QWidget):
 class GalleryWindow(fluentqt.Window):
     """Fluent window presenting the C++ Gallery route and sample ledger."""
 
+    prewarmFailed = Signal(str, str)
+
     def __init__(self, startup_visuals: bool | None = None) -> None:
         super().__init__()
         if SPATIAL_AVAILABLE:
-            from .spatial_controller import _prepare_native_style
-            _prepare_native_style()
-            if (QApplication.platformName() == "cocoa"
-                    and tuple(map(int, qVersion().split(".")[:2])) >= (6, 4)
-                    and os.environ.get("FLUENT_QT_GALLERY_DISABLE_3D", "0") == "0"):
-                # Prepare the hidden Cocoa window's format without creating a GPU
-                # context. The first 3D toggle must not recreate a visible window.
-                self.destroy()
-                self.setAttribute(Qt.WA_NativeWindow, False)
-                self.setAttribute(Qt.WA_NativeWindow)
-                self.windowHandle().setSurfaceType(QSurface.OpenGLSurface)
+            from fluentqt.spatial import SpatialRuntime
+            SpatialRuntime.prepareApplication()
+            if os.environ.get("FLUENT_QT_GALLERY_DISABLE_3D", "0") == "0":
+                SpatialRuntime.prepareWindow(self)
         self._settings = gallery_settings()
         self._startup_visuals = (
             persistence_available()
@@ -2253,10 +2314,16 @@ class GalleryWindow(fluentqt.Window):
             self._schedule_startup_finish
         )
         self._navigation_request_id = 0
+        self._cold_page: tuple[str, QWidget] | None = None
         self._prewarm_queue: list[str] = []
         self._prewarm_total = 0
         self._prewarm_done = 0
-        self._prewarm_timer = QElapsedTimer()
+        self._prewarm_page: tuple[str, QWidget] | None = None
+        self._prewarm_failures: dict[str, str] = {}
+        self._prewarm_started = False
+        self._prewarm_step_timer = QTimer(self)
+        self._prewarm_step_timer.setSingleShot(True)
+        self._prewarm_step_timer.timeout.connect(self._prewarm_next_route)
         self._prewarm_paused = False
         self._prewarm_resume_timer = QTimer(self)
         self._prewarm_resume_timer.setSingleShot(True)
@@ -2272,9 +2339,9 @@ class GalleryWindow(fluentqt.Window):
         self._build_title_bar()
         self._build_navigation_shell()
         self._apply_navigation_style(self._settings.navigation_style)
-        self.navigate("home", record_history=False)
         if self._startup_visuals:
             self._start_startup()
+        self.navigate("home", record_history=False)
         self._spatial_controller = None
         if SPATIAL_AVAILABLE:
             from .spatial_controller import GallerySpatialController
@@ -2296,51 +2363,111 @@ class GalleryWindow(fluentqt.Window):
         self._title_content.set_app_icon_revealed(False)
         splash.dismissed.connect(self._startup_dismissed)
         splash.replaced.connect(self._startup_replaced)
+        splash.installEventFilter(self)
         splash.show()
         splash.raise_()
         self._splash = splash
-        self._ensure_skeleton()
-        prioritized: list[str] = []
-        for route_id in FEATURED_ROUTES + self.all_route_ids():
-            if route_id == "home" or route_id in prioritized:
-                continue
-            prioritized.append(route_id)
+        # Same bounded startup set as C++: Home and Settings, not every demo.
+        prioritized = ["home", "settings"]
         self._prewarm_queue = prioritized
         self._prewarm_total = len(prioritized)
         self._prewarm_done = 0
-        self._prewarm_timer.start()
-        splash.set_progress(0, 100)
-        _single_shot(0, self, self._prewarm_next_route)
+        splash.set_progress(0, self._prewarm_total)
+
+    def eventFilter(self, watched, event) -> bool:
+        if (
+            watched is getattr(self, "_splash", None)
+            and event.type() == QEvent.Paint
+            and not self._prewarm_started
+        ):
+            # Do not spend the first visible frame constructing pages. A posted
+            # timer runs after the splash's own paint has returned.
+            self._prewarm_started = True
+            self._schedule_prewarm_step()
+        return super().eventFilter(watched, event)
+
+    def _schedule_prewarm_step(self) -> None:
+        if (
+            self._splash is not None
+            and self._prewarm_started
+            and not self._startup_ready_timer.isValid()
+            and not self._prewarm_paused
+            and self.isVisible()
+            and not self.isMinimized()
+        ):
+            self._prewarm_step_timer.start(0)
 
     def _prewarm_next_route(self) -> None:
-        if self._splash is None or self._startup_ready_timer.isValid():
-            return
-        if self._prewarm_paused:
-            return
+        self._prewarm_step_timer.stop()
         if (
-            not self._prewarm_queue
-            or self._prewarm_timer.elapsed() >= 3000
+            self._splash is None
+            or self._startup_ready_timer.isValid()
+            or self._prewarm_paused
+            or not self._prewarm_started
+            or not self.isVisible()
+            or self.isMinimized()
         ):
-            self._prewarm_queue.clear()
-            self._splash.set_progress(100, 100)
+            return
+        if self._prewarm_page is None and not self._prewarm_queue:
+            self._splash.set_progress(self._prewarm_done, self._prewarm_total)
             self._startup_ready_timer.start()
             self._schedule_startup_finish()
             return
-        route_id = self._prewarm_queue.pop(0)
-        _index, page = self._ensure_page(route_id)
-        # Hidden widgets defer their first resize. Match the C++ prewarm so
-        # that work cannot accumulate into the first splash fade frame.
-        page.resize(self._content_host.contentsRect().size())
-        page.grab(QRect(0, 0, 1, 1))
-        self._prewarm_done += 1
-        page_percent = (
-            self._prewarm_done * 100 // max(1, self._prewarm_total)
+        route_id = (
+            self._prewarm_page[0] if self._prewarm_page is not None
+            else self._prewarm_queue.pop(0)
         )
-        time_percent = self._prewarm_timer.elapsed() * 100 // 3000
-        self._splash.set_progress(
-            max(page_percent, min(time_percent, 100)), 100
-        )
-        _single_shot(0, self, self._prewarm_next_route)
+        ready = True
+        try:
+            if self._prewarm_page is None:
+                if route_id not in self._pages:
+                    page = self._create_page(route_id, defer_samples=True)
+                    page.setParent(self._content_host)
+                    page.hide()
+                    self._prewarm_page = (route_id, page)
+                    self._schedule_prewarm_step()
+                    return
+            else:
+                page = self._prewarm_page[1]
+                if getattr(page, "_gallery_pending_samples", ()):
+                    _append_component_sample(page)
+                    self._schedule_prewarm_step()
+                    return
+                if getattr(page, "_gallery_pending_entries", ()):
+                    _append_entry_card(page, self.navigate)
+                    self._schedule_prewarm_step()
+                    return
+                # Flush the first layout separately from the final sample. No
+                # partially built page enters the visible stack or route cache.
+                page.resize(self._content_host.contentsRect().size())
+                page.grab(QRect(0, 0, 1, 1))
+                self._publish_page(route_id, page)
+                self._prewarm_page = None
+        except Exception as error:
+            ready = False
+            if self._prewarm_page is not None:
+                self._prewarm_page[1].deleteLater()
+                self._prewarm_page = None
+            detail = "{0}: {1}".format(type(error).__name__, error)
+            self._prewarm_failures[route_id] = detail
+            self.setProperty("galleryPrewarmFailedRoutes", list(self._prewarm_failures))
+            page, layout = _scroll_page("galleryPageLoadError")
+            layout.addWidget(_heading("This page could not be prepared", page))
+            layout.addWidget(_body(ROUTE_BY_ID[route_id].title + ": " + detail, page))
+            page.setProperty("galleryPrewarmError", detail)
+            self._publish_page(route_id, page)
+            self.prewarmFailed.emit(route_id, detail)
+            self._splash.setText(
+                "Some pages could not be prepared. Opening available pages."
+            )
+        if ready:
+            self._prewarm_done += 1
+        self._splash.set_progress(self._prewarm_done, self._prewarm_total)
+        if self._current_route == route_id:
+            self._content_host.setCurrentIndex(self._pages[route_id][0], 0, False)
+            self._pages[route_id][1].hide()
+            self._refresh_route_visuals(route_id)
+        self._schedule_prewarm_step()
 
     def _schedule_startup_finish(self) -> None:
         if (
@@ -2348,6 +2475,8 @@ class GalleryWindow(fluentqt.Window):
             or self._splash is None
             or not self._startup_ready_timer.isValid()
             or not self._startup_visible_timer.isValid()
+            or not self.isVisible()
+            or self.isMinimized()
         ):
             return
         branded = (
@@ -2372,7 +2501,12 @@ class GalleryWindow(fluentqt.Window):
             return
         self._startup_finished = True
         self._startup_finish_timer.stop()
+        self._prewarm_step_timer.stop()
+        self._prewarm_resume_timer.stop()
         self._prewarm_paused = False
+        current_page = self._pages.get(self._current_route)
+        if current_page is not None:
+            current_page[1].show()
         self._title_content.set_chrome_visible(True, animated=True)
         reapply = getattr(self, "reapplySystemBackdrop", None)
         if callable(reapply):
@@ -2386,6 +2520,14 @@ class GalleryWindow(fluentqt.Window):
 
     def _startup_replaced(self) -> None:
         self._finish_startup()
+        self._prewarm_queue.clear()
+        if self._prewarm_page is not None:
+            self._prewarm_page[1].deleteLater()
+            self._prewarm_page = None
+        if self._current_route not in self._pages:
+            index, page = self._ensure_page(self._current_route)
+            self._content_host.setCurrentIndex(index, 0, False)
+            page.show()
         self._dismissal_splash = None
         self._title_content.set_app_icon_revealed(True)
         if self._spatial_controller is not None:
@@ -2394,6 +2536,15 @@ class GalleryWindow(fluentqt.Window):
     def _startup_dismissed(self) -> None:
         self._dismissal_splash = None
         self._title_content.set_app_icon_revealed(True)
+        if self._prewarm_failures:
+            fluentqt.Toast.showToast(
+                self,
+                "{0} Gallery page(s) could not be prepared. Open the page for details.".format(
+                    len(self._prewarm_failures)
+                ),
+                fluentqt.Toast.Severity.Warning,
+                6000,
+            )
         if self._spatial_controller is not None:
             _single_shot(0, self._spatial_controller, self._spatial_controller.start_presentation)
         if not self._settings.intro_completed:
@@ -2460,6 +2611,16 @@ class GalleryWindow(fluentqt.Window):
 
     def event(self, event: QEvent) -> bool:
         result = super().event(event)
+        if (
+            event.type() == QEvent.WindowStateChange
+            and hasattr(self, "_prewarm_step_timer")
+        ):
+            if self.isMinimized():
+                self._prewarm_step_timer.stop()
+                self._startup_finish_timer.stop()
+            else:
+                self._schedule_prewarm_step()
+                self._schedule_startup_finish()
         display_scale_events = tuple(
             event_type
             for event_type in (
@@ -2484,8 +2645,7 @@ class GalleryWindow(fluentqt.Window):
         # Resume the state machine even when the queue drained while a window
         # move/resize had it paused.  The next tick emits the same finished
         # transition as GalleryContentPresenter instead of stranding splash.
-        if self._splash is not None:
-            _single_shot(0, self, self._prewarm_next_route)
+        self._schedule_prewarm_step()
 
     def moveEvent(self, event) -> None:
         super().moveEvent(event)
@@ -2497,6 +2657,15 @@ class GalleryWindow(fluentqt.Window):
             if not self._startup_visible_timer.isValid():
                 self._startup_visible_timer.start()
             self._schedule_startup_finish()
+            self._schedule_prewarm_step()
+
+    def hideEvent(self, event) -> None:
+        super().hideEvent(event)
+        if hasattr(self, "_prewarm_step_timer"):
+            self._prewarm_step_timer.stop()
+            self._prewarm_resume_timer.stop()
+            self._startup_finish_timer.stop()
+            self._prewarm_paused = False
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -2626,26 +2795,35 @@ class GalleryWindow(fluentqt.Window):
         existing = self._pages.get(route_id)
         if existing is not None:
             return existing
+        if self._prewarm_page is not None and self._prewarm_page[0] == route_id:
+            raise RuntimeError("Gallery route is still being prepared: " + route_id)
+        return self._publish_page(route_id, self._create_page(route_id))
+
+    def _create_page(
+        self, route_id: str, *, defer_samples: bool = False
+    ) -> QWidget:
         route = ROUTE_BY_ID.get(route_id)
         if route is None:
             raise KeyError("Unknown native Gallery route: {0}".format(route_id))
         if route.kind == "home":
             page = build_home_page(self.navigate)
         elif route.kind == "foundation":
-            page = build_foundation_page(self.navigate)
+            page = build_foundation_page(self.navigate, defer_entries=defer_samples)
         elif route.kind == "foundation-topic":
             page = build_foundation_topic_page(route, self.navigate)
         elif route.kind == "all-controls":
-            page = build_all_controls_page(self.navigate)
+            page = build_all_controls_page(self.navigate, defer_entries=defer_samples)
         elif route.kind == "category":
             page = build_category_page(
-                route, entries_for_category(route.id), self.navigate
+                route, entries_for_category(route.id), self.navigate,
+                defer_entries=defer_samples,
             )
         elif route.kind == "component":
             page = build_component_page(
                 ENTRY_BY_ROUTE_ID[route.id],
                 self.navigate,
                 self._content_host,
+                defer_samples=defer_samples,
             )
         elif route.kind == "settings":
             page = build_settings_page(
@@ -2659,11 +2837,16 @@ class GalleryWindow(fluentqt.Window):
             raise KeyError(
                 "Unsupported native Gallery route kind: {0}".format(route.kind)
             )
+        return page
+
+    def _publish_page(self, route_id: str, page: QWidget) -> tuple[int, QWidget]:
         if not self._content_host.addOwnedPage(page):
             raise RuntimeError("Could not host Gallery route: {0}".format(route_id))
         record = (self._content_host.count() - 1, page)
         self._pages[route_id] = record
         self._page_visual_generations[route_id] = self._visual_generation
+        if self._splash is not None and not self._startup_finished:
+            page.hide()
         return record
 
     def _ensure_skeleton(self) -> tuple[int, GalleryPageSkeleton]:
@@ -2675,21 +2858,32 @@ class GalleryWindow(fluentqt.Window):
         self._skeleton = (self._content_host.count() - 1, skeleton)
         return self._skeleton
 
-    def _finish_cold_navigation(
-        self, route_id: str, request_id: int
-    ) -> None:
-        if (
-            self._current_route != route_id
-            or self._navigation_request_id != request_id
-        ):
+    def _cancel_cold_navigation(self) -> None:
+        if self._cold_page is not None:
+            self._cold_page[1].deleteLater()
+            self._cold_page = None
+
+    def _finish_cold_navigation(self, route_id: str, request_id: int) -> None:
+        if self._current_route != route_id or self._navigation_request_id != request_id:
             return
-        index, _page = self._ensure_page(route_id)
-        if (
-            self._current_route == route_id
-            and self._navigation_request_id == request_id
-        ):
-            self._content_host.setCurrentIndex(index, 0, False)
-            self._refresh_route_visuals(route_id)
+        if self._cold_page is None:
+            page = self._create_page(route_id, defer_samples=True)
+            page.setParent(self._content_host)
+            page.hide()
+            self._cold_page = (route_id, page)
+        else:
+            page = self._cold_page[1]
+            if getattr(page, "_gallery_pending_samples", ()):
+                _append_component_sample(page)
+            elif getattr(page, "_gallery_pending_entries", ()):
+                _append_entry_card(page, self.navigate)
+            else:
+                index, _page = self._publish_page(route_id, page)
+                self._cold_page = None
+                self._content_host.setCurrentIndex(index, 0, False)
+                self._refresh_route_visuals(route_id)
+                return
+        _single_shot(8, self, lambda: self._finish_cold_navigation(route_id, request_id))
 
     def navigate(
         self,
@@ -2708,6 +2902,7 @@ class GalleryWindow(fluentqt.Window):
             return
         if record_history and self._current_route:
             self._history.append(self._current_route)
+        self._cancel_cold_navigation()
         self._current_route = route_id
         self._navigation_request_id += 1
         request_id = self._navigation_request_id
@@ -2731,7 +2926,20 @@ class GalleryWindow(fluentqt.Window):
             self._navigation_view.setPaneOpen(False)
         if resident is not None:
             self._content_host.setCurrentIndex(resident[0], 0, False)
+            if self._splash is not None and not self._startup_finished:
+                resident[1].hide()
             self._refresh_route_visuals(route_id)
+            return
+        if self._splash is not None and not self._startup_finished:
+            # Startup owns incomplete pages. Navigation may reprioritize a
+            # request but cannot synchronously finish a heavy page or expose it.
+            if self._prewarm_page is None or self._prewarm_page[0] != route_id:
+                if route_id in self._prewarm_queue:
+                    self._prewarm_queue.remove(route_id)
+                else:
+                    self._prewarm_total += 1
+                self._prewarm_queue.insert(0, route_id)
+            self._schedule_prewarm_step()
             return
         if not self._startup_visuals or not self._startup_finished:
             index, _page = self._ensure_page(route_id)

@@ -69,7 +69,12 @@ Turning it off saves a 2D preference for later launches. Failed initialization u
 The shell uses a shared Qt OpenGL canvas with cached widget surfaces. Pointer
 input maps back to the live widgets, and native overlays remain above the canvas.
 Splash and Intro retain their normal order. The material behind the canvas still
-belongs to the Window's Mica/Acrylic setting.
+belongs to the Window's Mica/Acrylic setting. Particle acceleration follows the
+same effective 3D mode; no separate renderer preference is exposed. The native
+`SpatialRuntime` entry centralizes driver checks, texture limits, native style
+and hidden-window preparation for both C++ and Python. Splash prepares Home and
+Settings only; cold component pages yield between samples and cache completed
+pages for later visits.
 
 Without the optional binding, the Gallery omits Spatial routes and imports no Qt
 OpenGL modules. With the binding but no supported renderer, it retains those
@@ -89,6 +94,19 @@ The native test saves snapshots under `build/spatial-validation/python-gallery`.
 Offscreen results cover fallback behavior; they do not establish native visual
 or performance parity. See [Spatial](../../../docs/architecture/spatial-view.md)
 for supported content and platform review boundaries.
+
+The background-texture teardown also has a dedicated native CTest entry:
+
+```bash
+ctest --test-dir build/pyside6 -R '^test_pyside6_gallery_spatial_backdrop_native$' --output-on-failure
+```
+
+Run it in a desktop session without `QT_QPA_PLATFORM=offscreen`. It is labeled
+`pyside_native;local_desktop`, outside headless CI's `pyside` selection, and fails
+rather than silently skipping when selected without a native platform.
+Private QObject cleanup uses targeted Qt deferred-delete delivery;
+it does not rely on Shiboken 6.2.4's uninitialized application-singleton flag or
+change the application's normal ownership policy.
 
 <!-- docs-nav:bottom:start -->
 ---

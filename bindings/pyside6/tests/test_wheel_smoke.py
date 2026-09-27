@@ -239,6 +239,7 @@ def main():
     expected_stubs = {
         "__init__.pyi",
         "_fluentqt.pyi",
+        "_qt_compat.pyi",
         "basicinput.pyi",
         "charts.pyi",
         "collections.pyi",
@@ -255,14 +256,17 @@ def main():
         "windowing.pyi",
     }
     spatial_exports = (
+        hasattr(native.fluent, "ParticleLayer"),
         hasattr(native.fluent, "SpatialView"),
         hasattr(native.fluent, "SpatialItem"),
     )
     if any(spatial_exports) and not all(spatial_exports):
         raise AssertionError("Installed native Spatial API is incomplete")
     if all(spatial_exports):
-        from fluentqt.spatial import SpatialItem, SpatialView
+        from fluentqt.spatial import ParticleLayer, SpatialItem, SpatialView
 
+        if ParticleLayer is not native.fluent.ParticleLayer:
+            raise AssertionError("Installed ParticleLayer facade does not match the native API")
         if SpatialItem is not native.fluent.SpatialItem or not issubclass(
             SpatialView, native.fluent.SpatialView
         ):

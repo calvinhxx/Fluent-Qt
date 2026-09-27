@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path, PurePosixPath
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest import mock
 
 
@@ -14,6 +15,34 @@ SPEC.loader.exec_module(SMOKE)
 
 
 class GalleryWheelSmokeContractsTest(unittest.TestCase):
+    def test_runtime_coverage_supports_both_optional_module_states(self):
+        contract = {
+            "categories": [{"id": "basic"}, {"id": "spatial"}],
+            "components": [
+                {"id": "button", "category_id": "basic", "samples": [{"id": "button-basic"}]},
+                {"id": "spatial-view", "category_id": "spatial", "samples": [{"id": "spatial-basic"}]},
+            ],
+            "routes": [{"id": "button", "parent_id": "basic"},
+                       {"id": "spatial", "parent_id": ""},
+                       {"id": "spatial-view", "parent_id": "spatial"}],
+            "binding_support_types": ["Theme"],
+        }
+        for available in (False, True):
+            with self.subTest(spatial_available=available):
+                components = contract["components"] if available else contract["components"][:1]
+                categories = [SimpleNamespace(id=c["id"]) for c in contract["categories"][:2 if available else 1]]
+                entries = [SimpleNamespace(route_id=c["id"], samples=[SimpleNamespace(**s) for s in c["samples"]])
+                           for c in components]
+                routes = [SimpleNamespace(id=r["id"]) for r in contract["routes"][:3 if available else 1]]
+                keys = {(c["id"], s["id"]) for c in components for s in c["samples"]}
+                SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys, available)
+                # Same-sized wrong catalog and missing ports must still fail.
+                with self.assertRaisesRegex(AssertionError, "wrong coverage"):
+                    SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, set(), available)
+                routes[0].id = "wrong-component"
+                with self.assertRaisesRegex(AssertionError, "wrong coverage"):
+                    SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys, available)
+
     def images(self, root, names):
         directory = root / "assets/control_images"
         for name in names:
