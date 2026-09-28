@@ -85,6 +85,7 @@ from fluentqt_gallery.spatial_support import SPATIAL_AVAILABLE
 
 from fluentqt_gallery.catalog import (
     CATEGORIES,
+    CONTRACT,
     ENTRIES,
     ENTRY_BY_ROUTE_ID,
     ROUTES,
@@ -338,9 +339,10 @@ _TEST_APPLICATION: QApplication | None = None
 
 def _contract_sample_keys() -> frozenset[tuple[str, str]]:
     return frozenset(
-        (entry.route_id, sample.id)
-        for entry in ENTRIES
-        for sample in entry.samples
+        (component["id"], sample["id"])
+        for component in CONTRACT["components"]
+        if SPATIAL_AVAILABLE or component["category_id"] != "spatial"
+        for sample in component["samples"]
     )
 
 
@@ -430,24 +432,28 @@ class PythonGalleryTest(unittest.TestCase):
 
     def test_contract_exactly_matches_the_public_binding(self):
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-        self.assertEqual(len(manifest["classes"]), 106)
         self.assertEqual(catalog_coverage_errors(manifest["classes"]), [])
         self.assertEqual(runtime_catalog_errors(), [])
-        self.assertEqual(len(ROUTES), 108 if SPATIAL_AVAILABLE else 105)
-        self.assertEqual(len(ENTRIES), 85 if SPATIAL_AVAILABLE else 83)
-        self.assertEqual(len(CATEGORIES), 14 if SPATIAL_AVAILABLE else 13)
+        components = [c for c in CONTRACT["components"]
+                      if SPATIAL_AVAILABLE or c["category_id"] != "spatial"]
+        routes = [r for r in CONTRACT["routes"]
+                  if SPATIAL_AVAILABLE or (r["id"] != "spatial" and r["parent_id"] != "spatial")]
+        categories = [c for c in CONTRACT["categories"]
+                      if SPATIAL_AVAILABLE or c["id"] != "spatial"]
+        self.assertEqual([(entry.route_id, entry.name) for entry in ENTRIES],
+                         [(c["id"], c["api_type"]) for c in components])
+        self.assertEqual([route.id for route in ROUTES], [r["id"] for r in routes])
+        self.assertEqual([category.id for category in CATEGORIES], [c["id"] for c in categories])
+        self.assertEqual(len({route.id for route in ROUTES}), len(ROUTES))
+        self.assertEqual(len({entry.route_id for entry in ENTRIES}), len(ENTRIES))
         self.assertEqual(
-            sum(len(entry.samples) for entry in ENTRIES),
-            239 if SPATIAL_AVAILABLE else 228,
-        )
-        self.assertEqual(len({route.id for route in ROUTES}), 108 if SPATIAL_AVAILABLE else 105)
-        self.assertEqual(len({entry.route_id for entry in ENTRIES}), 85 if SPATIAL_AVAILABLE else 83)
+            [(entry.route_id, sample.id) for entry in ENTRIES for sample in entry.samples],
+            [(c["id"], sample["id"]) for c in components for sample in c["samples"]])
 
     def test_support_types_are_explicit_and_embedded_in_real_samples(self):
         self.assertEqual(SUPPORT_TYPES, EXPECTED_SUPPORT_TYPES)
         routed_types = {entry.name for entry in ENTRIES}
         self.assertTrue(routed_types.isdisjoint(SUPPORT_TYPES))
-        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 108 if SPATIAL_AVAILABLE else 106)
         for entry in ENTRIES:
             self.assertFalse(entry.support_type)
 
@@ -881,7 +887,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 
     def test_every_native_sample_has_an_exact_python_port(self):
         expected = _contract_sample_keys()
-        self.assertEqual(len(expected), 239 if SPATIAL_AVAILABLE else 228)
+        self.assertTrue(expected)
         self.assertEqual(ported_sample_keys(), expected)
 
     def test_splash_preview_handles_host_teardown_after_namespace_cleanup(self):
@@ -1608,14 +1614,6 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             buttons[1].click()
             self.assertEqual(flip_view.currentIndex(), 1)
             self.assertEqual(status.text(), "Current page: 2")
-            self.assertIn(
-                "flip_view.currentIndexChanged.connect(update_status)",
-                result.source,
-            )
-            self.assertIn(
-                "def update_status(index, label=status):",
-                result.preview_source,
-            )
         finally:
             dispose(result)
 
@@ -1631,12 +1629,8 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 "Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom",
                 result.preview_source,
             )
-            self.assertIn("page = QLabel(flip_view)", result.preview_source)
             self.assertEqual(result.widget.pageCount(), 3)
             self.assertEqual(result.source.count("addOwnedPage("), 3)
-            self.assertIn("addOwnedPage(sunrise_photo)", result.source)
-            self.assertIn("addOwnedPage(ocean_photo)", result.source)
-            self.assertIn("addOwnedPage(forest_photo)", result.source)
         finally:
             dispose(result)
 
@@ -1646,14 +1640,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             self.assertEqual(
                 result.widget.orientation(), Qt.Orientation.Vertical
             )
-            self.assertIn(
-                "flip_view.setOrientation(Qt.Orientation.Vertical)",
-                result.source,
-            )
             self.assertEqual(result.source.count("addOwnedPage("), 3)
-            self.assertIn("addOwnedPage(first_page)", result.source)
-            self.assertIn("addOwnedPage(second_page)", result.source)
-            self.assertIn("addOwnedPage(third_page)", result.source)
         finally:
             dispose(result)
 

@@ -1063,7 +1063,8 @@ private:
 // This URL-only probe neither expands the source nor changes focus/selection.
 class WasmSourceInputProbe final : public QObject {
 public:
-    explicit WasmSourceInputProbe(GalleryWindow* window) : QObject(window), m_window(window)
+    explicit WasmSourceInputProbe(GalleryWindow* window)
+        : QObject(window), m_window(window), m_route(window->currentRouteId())
     {
         m_clock.start();
         m_tick.setInterval(50);
@@ -1099,7 +1100,7 @@ private:
             (controller && controller->transitionRunning()))
             return;
         auto* page = m_window->currentContentPage();
-        if (!page || page->routeId() != QStringLiteral("button"))
+        if (!page || page->routeId() != m_route || !page->isVisible())
             return;
         if (!m_block) {
             m_block = page->findChild<GalleryCodeBlock*>();
@@ -1114,6 +1115,7 @@ private:
             m_window->findChild<QWidget*>(QStringLiteral("gallerySpatialSurface"));
         QJsonObject frame{
             {"state", QStringLiteral("ready")},
+            {"route", m_route},
             {"header", position(m_block->headerButton(), m_block->headerButton()->rect().center())},
             {"spatial",
              surface && surface->isVisible() && surface->property("presenting").toBool()}};
@@ -1159,6 +1161,7 @@ private:
     }
 
     GalleryWindow* m_window;
+    const QString m_route;
     QPointer<GalleryCodeBlock> m_block;
     QTimer m_tick;
     QElapsedTimer m_clock;

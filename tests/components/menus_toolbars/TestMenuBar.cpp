@@ -408,6 +408,10 @@ TEST_F(MenuBarTest, EntranceAnimationUsesPaintOpacityInsteadOfNativeWindowOpacit
     EXPECT_DOUBLE_EQ(menu.windowOpacity(), 1.0);
     const bool nativeMenuAnimationsEnabled = QApplication::isEffectEnabled(Qt::UI_AnimateMenu);
 
+    window->show();
+    window->raise();
+    window->activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
     menu.popup(window->mapToGlobal(QPoint(24, 24)));
     QApplication::processEvents();
 
@@ -605,8 +609,12 @@ TEST_F(MenuBarTest, FluentMenuContentPatternsExposeDeterministicGeometry)
     group->addAction(portrait);
     menu->addAction(portrait);
 
-    menu->show();
-    QApplication::processEvents();
+    window->show();
+    window->raise();
+    window->activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
+    menu->popup(window->mapToGlobal(QPoint(40, 40)));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return menu->isVisible(); }, 1000));
 
     EXPECT_FALSE(menu->actionGeometry(output).isEmpty());
     EXPECT_GE(menu->actionGeometry(output).height(), 32);
@@ -650,12 +658,14 @@ TEST_F(MenuBarTest, FluentMenuContentPatternsExposeDeterministicGeometry)
     QApplication::processEvents();
     EXPECT_FALSE(menu->actionGeometry(save).isEmpty());
 
-    submenu->show();
-    QApplication::processEvents();
+    menu->setActiveAction(submenuAction);
+    QTest::keyClick(menu, Qt::Key_Right);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return submenu->isVisible(); }, 1000));
     EXPECT_FALSE(submenu->actionGeometry(compressedAction).isEmpty());
     EXPECT_FALSE(submenu->itemSubmenuIndicatorGeometry(compressedAction).isEmpty());
-    compressedMenu->show();
-    QApplication::processEvents();
+    submenu->setActiveAction(compressedAction);
+    QTest::keyClick(submenu, Qt::Key_Right);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return compressedMenu->isVisible(); }, 1000));
     EXPECT_TRUE(menu->isVisible());
     EXPECT_TRUE(submenu->isVisible());
     EXPECT_TRUE(compressedMenu->isVisible());

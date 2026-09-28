@@ -39,6 +39,11 @@ class GallerySpatialTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
+        if os.environ.get("FLUENTQT_REQUIRE_NATIVE_TEST") == "1":
+            if cls.app.platformName() in ("offscreen", "minimal", "vnc"):
+                raise RuntimeError("Native Spatial tests require a real desktop Qt platform")
+            if not SPATIAL_AVAILABLE:
+                raise RuntimeError("Native Spatial tests require the optional Spatial binding")
         cls.app.setProperty("fluentqtGalleryAutomated", True)
         fluentqt.initialize_resources()
         cls.app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
@@ -310,8 +315,8 @@ class GallerySpatialTest(unittest.TestCase):
             monotone.destroy()
             if texture is not None:
                 texture.destroy()
-            if target is not None:
-                delete(target)
+            # FBOs are not QObjects; drop the wrapper while its context is current.
+            target = None
             surface.doneCurrent()
             delete(surface)
 
@@ -620,13 +625,17 @@ import fluentqt
 app = QApplication([])
 fluentqt.initialize_resources()
 from fluentqt_gallery.window import GalleryWindow
-from fluentqt_gallery.catalog import ENTRIES, ROUTES
+from fluentqt_gallery.catalog import CONTRACT, ENTRIES, ROUTES
 window = GalleryWindow(startup_visuals=False)
 window.navigate("settings", animated=False)
 assert window._spatial_controller is None
 assert not window._settings.spatial_available
 assert not window._settings.spatial_mode_enabled
-assert (len(ENTRIES), len(ROUTES)) == (83, 105)
+assert {entry.route_id for entry in ENTRIES} == {
+    component["id"] for component in CONTRACT["components"] if component["category_id"] != "spatial"}
+assert {route.id for route in ROUTES} == {
+    route["id"] for route in CONTRACT["routes"]
+    if route["id"] != "spatial" and route["parent_id"] != "spatial"}
 assert "PySide6.QtOpenGLWidgets" not in sys.modules
 assert "PySide6.QtOpenGL" not in sys.modules
 assert "fluentqt.spatial" not in sys.modules
@@ -751,6 +760,8 @@ print("2D-only Gallery: no OpenGL imports")
                         window.activateWindow()
                         window._search.setFocus()
                         _qwait(100)
+                        if maximized and not window.isMaximized():
+                            self.skipTest("Window manager did not enter maximized state before the 3D toggle")
                         controller = window._spatial_controller
                         self.assertIsNone(controller.canvas)
                         first_handle = window.windowHandle()

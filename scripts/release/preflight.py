@@ -143,7 +143,10 @@ def integration_checks(output_dir: Path) -> list[tuple[str, list[str]]]:
     return [
         ("CI component registration", [python, ".github/scripts/test_classify_ci_changes.py"]),
         ("core wheel inventory", [python, "bindings/pyside6/tests/test_wheel_builder.py"]),
+        ("desktop candidate assembly", [python, ".github/scripts/test_assemble_desktop_release_candidate.py"]),
+        ("Python platform artifact coverage", [python, ".github/scripts/test_verify_pyside_platform_artifacts.py"]),
         ("binding verifier tests", [python, "bindings/pyside6/tests/test_generated_contract_verifier.py"]),
+        ("binding test partition", [python, "bindings/pyside6/tests/test_binding_test_partition.py"]),
         ("Gallery wheel builder", [python, "bindings/pyside6/gallery/tests/test_wheel_builder.py"]),
         ("Gallery smoke contracts", [python, "bindings/pyside6/gallery/tests/test_gallery_wheel_smoke_contracts.py"]),
         ("native Gallery contract", [python, "bindings/pyside6/gallery/tools/generate_gallery_contract.py", "--project-root", ".", "--output", contract]),

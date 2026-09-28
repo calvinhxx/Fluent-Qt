@@ -3,7 +3,6 @@ add_qt_test_module(test_list_view
     TestListView.cpp
     TestCollectionItemState.cpp
     FluentListItemDelegate.cpp)
-target_link_libraries(test_list_view PRIVATE Qt${QT_VERSION_MAJOR}::Network)
 
 # GridView
 add_qt_test_module(test_grid_view TestGridView.cpp FluentGridItemDelegate.cpp)
@@ -17,7 +16,6 @@ add_qt_test_module(test_tree_view TestTreeView.cpp FluentTreeItemDelegate.cpp)
 
 # FlipView
 add_qt_test_module(test_flip_view TestFlipView.cpp)
-target_link_libraries(test_flip_view PRIVATE Qt${QT_VERSION_MAJOR}::Network)
 
 # StackView
 add_qt_test_module(test_stack_view TestStackView.cpp)

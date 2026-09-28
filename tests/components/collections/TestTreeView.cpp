@@ -5,11 +5,9 @@
 #include <QCoreApplication>
 #include <QImage>
 #include <QItemSelectionModel>
-#include <QLabel>
 #include <QMetaType>
 #include <QPaintEvent>
 #include <QPainter>
-#include <QScrollArea>
 #include <QScrollBar>
 #include <QStandardItemModel>
 #include <QStyleOptionViewItem>
@@ -19,19 +17,14 @@
 
 #include "FluentTreeItemDelegate.h"
 #include "components/collections/TreeView.h"
-#include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 
-#include "components/basicinput/Button.h"
 #include "components/scrolling/ScrollBar.h"
-#include "components/textfields/Label.h"
 
 using namespace fluent::collections;
 using namespace fluent;
-using fluent::basicinput::Button;
-using fluent::textfields::Label;
 
 namespace {
 
@@ -312,15 +305,12 @@ protected:
         window = new FluentTestWindow();
         window->setFixedSize(500, 500);
         window->setWindowTitle("Fluent TreeView Test");
-        layout = new AnchorLayout(window);
-        window->setLayout(layout);
         window->onThemeUpdated();
     }
 
     void TearDown() override { delete window; }
 
     FluentTestWindow* window;
-    AnchorLayout* layout;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2304,269 +2294,3 @@ TEST_F(TreeViewTest, IconModelPaintNoCrash)
 // ═══════════════════════════════════════════════════════════════════════════════
 // VisualCheck
 // ═══════════════════════════════════════════════════════════════════════════════
-
-TEST_F(TreeViewTest, VisualCheck)
-{
-    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
-        GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
-    }
-
-    window->setFixedSize(800, 600);
-    using Edge = AnchorLayout::Edge;
-
-    // --- ScrollArea 容器 ---
-    auto* scrollArea = new QScrollArea(window);
-    scrollArea->setWidgetResizable(true);
-    scrollArea->setFrameStyle(QFrame::NoFrame);
-    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scrollArea->setGeometry(0, 0, 800, 600);
-
-    // Fluent 自定义垂直滚动条覆盖在 scrollArea 上
-    auto* fluentVBar = new fluent::scrolling::ScrollBar(Qt::Vertical, scrollArea);
-    fluentVBar->setObjectName("fluentScrollAreaVBar");
-    auto* nativeVBar = scrollArea->verticalScrollBar();
-    QObject::connect(nativeVBar, &QScrollBar::valueChanged, fluentVBar, &QScrollBar::setValue);
-    QObject::connect(fluentVBar, &QScrollBar::valueChanged, nativeVBar, &QScrollBar::setValue);
-
-    auto syncFluentBar = [scrollArea, fluentVBar, nativeVBar]() {
-        fluentVBar->setRange(nativeVBar->minimum(), nativeVBar->maximum());
-        fluentVBar->setPageStep(nativeVBar->pageStep());
-        const bool need = nativeVBar->maximum() > nativeVBar->minimum();
-        fluentVBar->setVisible(need);
-        if (!need)
-            return;
-        const QRect r = scrollArea->rect();
-        const int x = r.right() - fluentVBar->thickness() + 1;
-        fluentVBar->setGeometry(x, r.top() + 2, fluentVBar->thickness(), r.height() - 4);
-        fluentVBar->raise();
-    };
-    QObject::connect(nativeVBar, &QScrollBar::rangeChanged, scrollArea, syncFluentBar);
-
-    auto* content = new FluentTestWindow();
-    content->setMinimumWidth(800);
-    content->onThemeUpdated();
-    auto* innerLayout = new AnchorLayout(content);
-    content->setLayout(innerLayout);
-    scrollArea->setWidget(content);
-
-    // ── TreeView 0: Selected indicator motion sample ────────────────────
-    Label* motionHeader = new Label("Selected indicator motion transitions.", content);
-    motionHeader->setFluentTypography(Typography::FontRole::BodyStrong);
-    motionHeader->anchors()->top = {content, Edge::Top, 20};
-    motionHeader->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(motionHeader);
-
-    Button* upwardBtn = new Button("Up", content);
-    upwardBtn->setFixedSize(84, 32);
-    upwardBtn->anchors()->top = {motionHeader, Edge::Bottom, 8};
-    upwardBtn->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(upwardBtn);
-
-    Button* downwardBtn = new Button("Down", content);
-    downwardBtn->setFixedSize(84, 32);
-    downwardBtn->anchors()->top = {upwardBtn, Edge::Top, 0};
-    downwardBtn->anchors()->left = {upwardBtn, Edge::Right, 8};
-    innerLayout->addWidget(downwardBtn);
-
-    Button* inwardBtn = new Button("Inward", content);
-    inwardBtn->setFixedSize(84, 32);
-    inwardBtn->anchors()->top = {upwardBtn, Edge::Top, 0};
-    inwardBtn->anchors()->left = {downwardBtn, Edge::Right, 8};
-    innerLayout->addWidget(inwardBtn);
-
-    Button* outwardBtn = new Button("Outward", content);
-    outwardBtn->setFixedSize(92, 32);
-    outwardBtn->anchors()->top = {upwardBtn, Edge::Top, 0};
-    outwardBtn->anchors()->left = {inwardBtn, Edge::Right, 8};
-    innerLayout->addWidget(outwardBtn);
-
-    TreeView* motionTree = new TreeView(content);
-    motionTree->setHeaderText("Nested sample for selected indicator direction and depth.");
-    motionTree->setBorderVisible(true);
-    motionTree->setIndicatorMotionAnimationEnabled(true);
-    QModelIndex motionWork;
-    QModelIndex motionPictures;
-    QModelIndex motionSpec;
-    QModelIndex motionSchedule;
-    {
-        auto* model = createSampleTreeModel(motionTree);
-        motionTree->setModel(model);
-        attachFluentDelegate(motionTree);
-        motionTree->expand(model->index(0, 0));
-        motionTree->expand(model->index(1, 0));
-        motionTree->expand(model->item(1)->child(0)->index());
-        motionWork = model->index(0, 0);
-        motionPictures = model->index(2, 0);
-        motionSpec = model->item(0)->child(0)->index();
-        motionSchedule = model->item(0)->child(1)->index();
-        motionTree->setSelectedItem(motionWork);
-    }
-    motionTree->setFixedHeight(280);
-    motionTree->anchors()->top = {upwardBtn, Edge::Bottom, 8};
-    motionTree->anchors()->left = {content, Edge::Left, 20};
-    motionTree->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(motionTree);
-
-    auto triggerMotion = [motionTree](const QModelIndex& from, const QModelIndex& to) {
-        motionTree->setSelectedItem(from);
-        QApplication::processEvents();
-        motionTree->setSelectedItem(to);
-    };
-    QObject::connect(upwardBtn, &Button::clicked, [triggerMotion, motionPictures, motionWork]() {
-        triggerMotion(motionPictures, motionWork);
-    });
-    QObject::connect(downwardBtn, &Button::clicked, [triggerMotion, motionWork, motionPictures]() {
-        triggerMotion(motionWork, motionPictures);
-    });
-    QObject::connect(inwardBtn, &Button::clicked, [triggerMotion, motionWork, motionSpec]() {
-        triggerMotion(motionWork, motionSpec);
-    });
-    QObject::connect(outwardBtn, &Button::clicked, [triggerMotion, motionSchedule, motionWork]() {
-        triggerMotion(motionSchedule, motionWork);
-    });
-
-    // ── TreeView 1: A simple TreeView with drag and drop support ─────────
-    TreeView* tv1 = new TreeView(content);
-    tv1->setHeaderText("A simple TreeView with drag and drop support.");
-    tv1->setBorderVisible(true);
-    tv1->setCanReorderItems(true);
-    {
-        auto* model = createSampleTreeModel(tv1);
-        tv1->setModel(model);
-        attachFluentDelegate(tv1);
-        tv1->expand(model->index(0, 0));                         // Work Documents
-        tv1->expand(model->index(1, 0));                         // Personal Documents
-        tv1->expand(model->item(1)->child(0)->index());          // Home Remodel
-        tv1->setSelectedItem(model->item(0)->child(0)->index()); // XYZ Functional Spec
-    }
-    tv1->setFixedHeight(300);
-    tv1->anchors()->top = {motionTree, Edge::Bottom, 16};
-    tv1->anchors()->left = {content, Edge::Left, 20};
-    tv1->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(tv1);
-
-    // ── TreeView 2: Multi-selection with CheckBox ────────────────────────
-    Label* header2 = new Label("A TreeView with Multi-selection enabled.", content);
-    header2->setFluentTypography(Typography::FontRole::BodyStrong);
-    header2->anchors()->top = {tv1, Edge::Bottom, 16};
-    header2->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header2);
-
-    TreeView* tv2 = new TreeView(content);
-    tv2->setBorderVisible(true);
-    tv2->setSelectionMode(SelectionMode::Multiple);
-    {
-        auto* model = createCheckableTreeModel(tv2);
-        tv2->setModel(model);
-        auto* d = new treeview_test::FluentTreeItemDelegate(
-            static_cast<fluent::FluentElement*>(tv2), defaultTreeRowHeight(), tv2, tv2);
-        d->setCheckBoxVisible(true);
-        tv2->setItemDelegate(d);
-        tv2->expand(model->index(0, 0));                // Work Documents
-        tv2->expand(model->index(1, 0));                // Personal Documents
-        tv2->expand(model->item(1)->child(0)->index()); // Home Remodel
-        selectCheckedRows(tv2);
-    }
-    tv2->setFixedHeight(300);
-    tv2->anchors()->top = {header2, Edge::Bottom, 8};
-    tv2->anchors()->left = {content, Edge::Left, 20};
-    tv2->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(tv2);
-
-    // ── TreeView 3: DataBinding using ItemSource ─────────────────────────
-    Label* header3 = new Label("A TreeView with DataBinding Using ItemSource.", content);
-    header3->setFluentTypography(Typography::FontRole::BodyStrong);
-    header3->anchors()->top = {tv2, Edge::Bottom, 16};
-    header3->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header3);
-
-    TreeView* tv3 = new TreeView(content);
-    tv3->setBorderVisible(true);
-    tv3->setCanReorderItems(true);
-    {
-        auto* model = new QStandardItemModel(tv3);
-
-        auto* desktop = new QStandardItem("Desktop");
-        desktop->appendRow(new QStandardItem("folder1"));
-        desktop->appendRow(new QStandardItem("folder2"));
-        desktop->appendRow(new QStandardItem("folder3"));
-        model->appendRow(desktop);
-
-        auto* documents = new QStandardItem("Documents");
-        auto* myDocs = new QStandardItem("My Documents");
-        myDocs->appendRow(new QStandardItem("Binder1"));
-        myDocs->appendRow(new QStandardItem("Binder2"));
-        documents->appendRow(myDocs);
-        model->appendRow(documents);
-
-        auto* downloads = new QStandardItem("Downloads");
-        model->appendRow(downloads);
-
-        auto* pictures = new QStandardItem("Pictures");
-        auto* camera = new QStandardItem("Camera Roll");
-        camera->appendRow(new QStandardItem("IMG_001.jpg"));
-        camera->appendRow(new QStandardItem("IMG_002.jpg"));
-        pictures->appendRow(camera);
-        pictures->appendRow(new QStandardItem("Wallpapers"));
-        model->appendRow(pictures);
-
-        tv3->setModel(model);
-        attachFluentDelegate(tv3);
-        tv3->expand(model->index(1, 0)); // Documents
-    }
-    tv3->setFixedHeight(280);
-    tv3->anchors()->top = {header3, Edge::Bottom, 8};
-    tv3->anchors()->left = {content, Edge::Left, 20};
-    tv3->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(tv3);
-
-    // ── TreeView 4: ItemTemplateSelector (folder/document icons) ─────────
-    Label* header4 = new Label("A TreeView with ItemTemplateSelector.", content);
-    header4->setFluentTypography(Typography::FontRole::BodyStrong);
-    header4->anchors()->top = {tv3, Edge::Bottom, 16};
-    header4->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header4);
-
-    TreeView* tv4 = new TreeView(content);
-    tv4->setBorderVisible(true);
-    {
-        auto* model = createIconTreeModel(tv4);
-        tv4->setModel(model);
-        attachFluentDelegate(tv4);
-        tv4->expand(model->index(0, 0));                // Work Documents
-        tv4->expand(model->index(1, 0));                // Personal Documents
-        tv4->expand(model->item(1)->child(0)->index()); // Home Remodel
-    }
-    tv4->setFixedHeight(300);
-    tv4->anchors()->top = {header4, Edge::Bottom, 8};
-    tv4->anchors()->left = {content, Edge::Left, 20};
-    tv4->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(tv4);
-
-    // --- Switch Theme 按钮 ---
-    Button* themeBtn = new Button("Switch Theme", content);
-    themeBtn->setFluentStyle(Button::Accent);
-    themeBtn->setFixedSize(120, 32);
-    themeBtn->anchors()->top = {tv4, Edge::Bottom, 24};
-    themeBtn->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(themeBtn);
-
-    // content 最小高度
-    content->setMinimumHeight(1660);
-
-    QObject::connect(themeBtn, &Button::clicked, [scrollArea, content]() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                fluent::FluentElement::Light
-                                            ? fluent::FluentElement::Dark
-                                            : fluent::FluentElement::Light);
-        content->onThemeUpdated();
-        scrollArea->setStyleSheet(content->styleSheet());
-    });
-
-    content->onThemeUpdated();
-    scrollArea->setStyleSheet(content->styleSheet());
-    window->show();
-    syncFluentBar();
-    qApp->exec();
-}

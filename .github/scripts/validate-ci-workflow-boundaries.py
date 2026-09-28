@@ -120,6 +120,7 @@ EXPECTED_JOBS = {
     "ci-python.yml": {
         "plan",
         "pyside6_linux",
+        "pyside6_spatial",
         "pyside6_windows",
         "pyside6_macos",
         "pyside6_release",
@@ -1677,6 +1678,18 @@ def validate_boundaries() -> list[str]:
                 f"ci-python.yml {job_id} must test the Gallery on the Qt 6.2 baseline"
             )
     macos_job = job_section(python, "pyside6_macos")
+    spatial_job = job_section(python, "pyside6_spatial")
+    for required in (
+        "inputs.mode == 'full' && inputs.run_compatibility_validation",
+        "-DFLUENT_QT_BUILD_SPATIAL=ON",
+        "assert SPATIAL_AVAILABLE",
+        "-L '^pyside$'",
+        "-L '^pyside_native$'",
+        "^test_pyside6_gallery_spatial_backdrop_native$",
+        "--no-tests=error",
+    ):
+        if required not in spatial_job:
+            errors.append(f"ci-python.yml optional Spatial validation is missing: {required}")
     if "if: ${{ inputs.run_macos_release_validation }}" not in macos_job:
         errors.append(
             "ci-python.yml pyside6_macos must honor run_macos_release_validation"
