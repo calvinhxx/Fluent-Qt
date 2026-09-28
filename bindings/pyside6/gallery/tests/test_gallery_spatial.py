@@ -140,6 +140,37 @@ class GallerySpatialTest(unittest.TestCase):
             _qwait(650)
             self.assertTrue(box.isSuggestionListOpen())
             self.assertFalse(controller.canvas.grabFramebuffer().isNull())
+            for theme in (ThemeMode.Light, ThemeMode.Dark):
+                with self.subTest(theme=theme):
+                    self.settings.set_theme_mode(theme)
+                    box.setText("Visible 输入 42")
+                    box.deselect()
+                    _qwait(100)
+                    canvas = controller.canvas
+                    image = canvas.grabFramebuffer()
+                    dpr = canvas.devicePixelRatioF()
+                    bounds = QRect(12, box.height() - box.inputHeight() + 4,
+                                   170, box.inputHeight() - 8)
+                    polygon = QPolygonF()
+                    for corner in (bounds.topLeft(), bounds.topRight(),
+                                   bounds.bottomRight(), bounds.bottomLeft()):
+                        point = canvas.mapFrom(window, controller.projected_position(box, corner))
+                        polygon.append(QPointF(point.x() * dpr, point.y() * dpr))
+                    pixels = polygon.boundingRect().toAlignedRect().intersected(image.rect())
+                    ink = 0
+                    for y in range(pixels.top(), pixels.bottom() + 1):
+                        for x in range(pixels.left(), pixels.right() + 1):
+                            if not polygon.containsPoint(QPointF(x, y), Qt.OddEvenFill):
+                                continue
+                            gray = qGray(image.pixel(x, y))
+                            ink += gray < 100 if theme == ThemeMode.Light else gray > 180
+                    self.assertGreater(ink, 40 * dpr * dpr,
+                                       "Unselected input text must reach the GPU frame")
+                    if evidence_dir := os.environ.get("FLUENTQT_SPATIAL_EVIDENCE_DIR"):
+                        folder = Path(evidence_dir)
+                        folder.mkdir(parents=True, exist_ok=True)
+                        mode = "light" if theme == ThemeMode.Light else "dark"
+                        image.save(str(folder / f"python-input-{mode}.png"))
             QTest.keyClick(box, Qt.Key_Down)
             QTest.keyClick(box, Qt.Key_Return)
             _qwait(80)
