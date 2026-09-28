@@ -1266,7 +1266,13 @@ void StackView::setGraphicsOpacity(QWidget* item, qreal opacity,
     if (!item)
         return;
     auto* effect = new QGraphicsOpacityEffect(item);
+    // Skip the effect's direct-source path at full opacity: QWidget::render
+    // otherwise applies a nested effect's offset twice before its cache exists.
+    // zh_CN: 完全不透明时绕过特效，避免缓存建立前嵌套特效的坐标被重复应用。
+    connect(effect, &QGraphicsOpacityEffect::opacityChanged, effect,
+            [effect](qreal value) { effect->setEnabled(value < 1.0); });
     effect->setOpacity(opacity);
+    effect->setEnabled(opacity < 1.0);
     item->setGraphicsEffect(effect);
     effectStore = effect;
 }

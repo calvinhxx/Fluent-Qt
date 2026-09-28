@@ -231,6 +231,14 @@ formats identical, as required by WebGL. This applies
 antialiasing to control curves and glyph outlines before they become a texture.
 Antialiasing on the final window alone cannot repair aliased cached artwork.
 
+When a panel spans several paint strips, `QWidget::render` carries the integer
+strip offset so nested graphics effects clip in the same coordinates as ordinary
+widgets. The painter transform carries only fractional pixel alignment. The root
+capture effect cancels Qt's repeated source offset. This keeps StackView fades,
+TabView label reveals and embedded SplashScreen dismissal continuous across strip
+boundaries. StackView and SplashScreen bypass their opacity effect at full opacity,
+as TabView already does, to keep the uncached first frame in place.
+
 The caches use up to twice the output density to preserve detail through
 perspective filtering. A four-tap shader samples each output pixel's projected
 footprint; a single bilinear lookup undersamples small curves when the cache is

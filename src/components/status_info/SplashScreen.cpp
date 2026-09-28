@@ -207,6 +207,9 @@ SplashScreen::SplashScreen(QWidget* parent) : QWidget(parent)
     m_fade = new QPropertyAnimation(m_opacity, "opacity", this);
     m_fade->setObjectName(QStringLiteral("splashDismissAnimation"));
     connect(m_fade, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        // Full opacity needs no effect and avoids nested direct-source offsets.
+        // zh_CN: 完全不透明时无需特效，避免嵌套直接绘制的重复偏移。
+        m_opacity->setEnabled(value.toReal() < 1.0);
         if (m_logoTransition)
             m_logoTransition->advance(1.0 - value.toReal());
     });
@@ -420,7 +423,6 @@ void SplashScreen::dismiss()
     // An opaque-paint attribute would turn the opacity-effect fade black.
     // zh_CN: 淡出前恢复透明合成，避免不透明绘制属性使退场背景变黑。
     setAttribute(Qt::WA_OpaquePaintEvent, false);
-    m_opacity->setEnabled(true);
     m_intro->stop();
     m_ring->setIsActive(false);
     m_bar->setIsIndeterminate(false);

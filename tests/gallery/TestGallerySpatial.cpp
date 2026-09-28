@@ -8,6 +8,8 @@
 #include <iostream>
 #include <QGraphicsProxyWidget>
 #include <QGraphicsEffect>
+#include <QGraphicsOpacityEffect>
+#include <QParallelAnimationGroup>
 #include <QHelpEvent>
 #include <QGraphicsView>
 #include <QOpenGLWidget>
@@ -1929,6 +1931,161 @@ TEST_F(GallerySpatialTest, NativeAutoSuggestPageTypingKeepsPopupAndGpuAlive)
     EXPECT_FALSE(box->isSuggestionListOpen());
     EXPECT_FALSE(box->text().isEmpty());
     ASSERT_FALSE(surface->grabFramebuffer().isNull());
+}
+
+TEST_F(GallerySpatialTest, NativeNestedOpacityKeepsColorAndUnrelatedPixels)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires actual GPU effect composition";
+    windowing::Window window;
+    spatial::SpatialRuntime::prepareWindow(&window);
+    window.resize(1200, 900);
+    auto* nav = new navigation::NavigationView;
+    nav->setDisplayMode(navigation::NavigationView::DisplayMode::Left);
+    window.setContentWidget(nav);
+    auto* page = new QWidget;
+    page->setAutoFillBackground(true);
+    QPalette palette = page->palette();
+    palette.setColor(QPalette::Window, QColor(240, 240, 240));
+    page->setPalette(palette);
+    nav->contentHost()->insertPage(0, page);
+    nav->contentHost()->setCurrentIndex(0, 0, false);
+    auto* label = new textfields::Label("Static text must stay intact", page);
+    label->setGeometry(40, 40, 400, 40);
+    auto* tile = new QWidget(page);
+    tile->setGeometry(80, 180, 430, 160);
+    tile->setAutoFillBackground(true);
+    palette.setColor(QPalette::Window, QColor(220, 40, 70));
+    tile->setPalette(palette);
+    auto* effect = new QGraphicsOpacityEffect(tile);
+    tile->setGraphicsEffect(effect);
+    effect->setOpacity(1.);
+    GallerySpatialController controller(&window, nav);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    GallerySettings::instance().setSpatialModeEnabled(true);
+    auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
+    ASSERT_NE(surface, nullptr);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 5000));
+    controller.cancelTransition();
+    const qreal dpr = surface->devicePixelRatioF();
+    const auto point = [&](QWidget* widget, QPoint local) {
+        const QPoint p = surface->mapFrom(&window, controller.projectedPosition(widget, local));
+        return QPoint(qRound(p.x() * dpr), qRound(p.y() * dpr));
+    };
+    const QRect labelRect(point(label, QPoint(0, 0)), point(label, label->rect().bottomRight()));
+    const QImage baseline = surface->grabFramebuffer().copy(labelRect);
+    for (const int y : {180, 520}) {
+        SCOPED_TRACE(y);
+        tile->move(80, y);
+        for (const qreal alpha : {.25, .5, .75, 1.}) {
+            SCOPED_TRACE(alpha);
+            effect->setOpacity(alpha);
+            QTest::qWait(100);
+            const QImage image = surface->grabFramebuffer();
+            const QColor actual = image.pixelColor(point(tile, tile->rect().center()));
+            EXPECT_NEAR(actual.red(), 240 * (1 - alpha) + 220 * alpha, 6);
+            EXPECT_NEAR(actual.green(), 240 * (1 - alpha) + 40 * alpha, 6);
+            EXPECT_NEAR(actual.blue(), 240 * (1 - alpha) + 70 * alpha, 6);
+            EXPECT_EQ(image.copy(labelRect), baseline);
+            if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
+                !dir.isEmpty()) {
+                QDir().mkpath(dir);
+                image.save(dir + QStringLiteral("/nested-opacity-%1-%2.png").arg(y).arg(alpha));
+            }
+        }
+    }
+}
+
+TEST_F(GallerySpatialTest, NativeStackTransitionsRemainVisibleAcrossPaintStrips)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires actual GPU transition frames";
+    auto& settings = GallerySettings::instance();
+    settings.setHomeParticlesEnabled(false);
+    settings.setThemeMode(GallerySettings::ThemeMode::Dark);
+    settings.setSpatialModeEnabled(true);
+    GalleryWindow window;
+    window.resize(1200, 900);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 15000));
+    ASSERT_TRUE(window.selectRoute("stack-view"));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            return window.currentContentPage() &&
+                   window.currentContentPage()->findChild<collections::StackView*>();
+        },
+        10000));
+    auto* controller = window.findChild<GallerySpatialController*>();
+    auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
+    ASSERT_NE(controller, nullptr);
+    ASSERT_NE(surface, nullptr);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 5000));
+    controller->cancelTransition();
+    auto* stack = window.currentContentPage()->findChild<collections::StackView*>();
+    auto* scroll = window.currentContentPage()->findChild<scrolling::ScrollView*>();
+    ASSERT_NE(stack, nullptr);
+    ASSERT_NE(scroll, nullptr);
+    scroll->verticalScrollBar()->setValue(0);
+    QTest::qWait(100);
+    basicinput::Button* push = nullptr;
+    for (auto* b : stack->parentWidget()->findChildren<basicinput::Button*>())
+        if (b->text() == "Push page")
+            push = b;
+    ASSERT_NE(push, nullptr);
+    const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
+    if (!dir.isEmpty())
+        QDir().mkpath(dir);
+    for (auto type : {collections::StackView::StackViewTransitionType::SlideFade,
+                      collections::StackView::StackViewTransitionType::ScaleFade}) {
+        stack->setTransitionType(type);
+        stack->setTransitionDuration(1000);
+        push->click();
+        QParallelAnimationGroup* animation = nullptr;
+        for (auto* group : stack->findChildren<QParallelAnimationGroup*>())
+            if (group->state() == QAbstractAnimation::Running)
+                animation = group;
+        ASSERT_NE(animation, nullptr);
+        animation->pause();
+        for (bool spatial : {true, false}) {
+            settings.setSpatialModeEnabled(spatial);
+            controller->cancelTransition();
+            QTest::qWait(30);
+            for (int time : {0, 250, 500, 750, 999}) {
+                animation->setCurrentTime(time);
+                QTest::qWait(30);
+                const auto name = QStringLiteral("/stack-%1-%2").arg(int(type)).arg(time);
+                const QImage image = spatial ? surface->grabFramebuffer() : window.grab().toImage();
+                const qreal dpr = window.devicePixelRatioF();
+                int colored = 0, sampled = 0;
+                for (int y = 10; y < stack->height() - 10; y += 8) {
+                    for (int x = 10; x < stack->width() - 10; x += 8) {
+                        QPoint target =
+                            spatial ? surface->mapFrom(&window, controller->projectedPosition(
+                                                                    stack, QPoint(x, y)))
+                                    : stack->mapTo(&window, QPoint(x, y));
+                        target = QPoint(qRound(target.x() * dpr), qRound(target.y() * dpr));
+                        if (!image.rect().contains(target))
+                            continue;
+                        const auto color = image.pixelColor(target);
+                        colored += std::max({color.red(), color.green(), color.blue()}) -
+                                       std::min({color.red(), color.green(), color.blue()}) >
+                                   20;
+                        ++sampled;
+                    }
+                }
+                EXPECT_GT(sampled, 100);
+                EXPECT_GT(colored, sampled / 4)
+                    << "mode=" << spatial << " type=" << int(type) << " time=" << time;
+                if (!dir.isEmpty())
+                    image.save(dir + name + (spatial ? "-gpu.png" : "-2d.png"));
+            }
+        }
+        settings.setSpatialModeEnabled(true);
+        controller->cancelTransition();
+        animation->setCurrentTime(1000);
+        QTest::qWait(30);
+    }
 }
 
 TEST_F(GallerySpatialTest, GlyphAdapterReportsOnlyDelegateCapabilities)

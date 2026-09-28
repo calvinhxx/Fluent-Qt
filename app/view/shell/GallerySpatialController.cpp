@@ -90,6 +90,7 @@ class SurfaceCapture final : public QGraphicsEffect {
 public:
     std::function<void()> invalidated;
     bool rendering = false, composing = false;
+    QPoint renderOrigin;
     const bool measuring = qEnvironmentVariableIntValue("FLUENT_QT_SPATIAL_BENCHMARK") != 0;
     qint64 captures = 0, captureNanoseconds = 0;
 
@@ -97,7 +98,13 @@ protected:
     void draw(QPainter* painter) override
     {
         if (rendering) {
+            // Qt applies the root effect's target offset again in drawSource.
+            // Cancel it here; descendants keep their strip-local clip coordinates.
+            // zh_CN: 抵消 drawSource 重复应用的根偏移，子特效仍使用条带内裁剪坐标。
+            painter->save();
+            painter->translate(renderOrigin);
             drawSource(painter);
+            painter->restore();
         } else if (!composing && invalidated) {
             invalidated();
         }
@@ -724,15 +731,17 @@ private:
                                  ? static_cast<QPaintDevice*>(&glyphDevice)
                                  : &device);
             painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
-            painter.translate(0, -paintTop / dpr);
             const QRectF strip(0, paintTop / dpr, source.width(), paintHeight / dpr);
-            painter.setClipRect(strip);
+            painter.setClipRect(QRectF(0, 0, source.width(), paintHeight / dpr));
             const QPointF origin = navigation ? source.topLeft() : QPointF();
-            painter.translate(-origin);
+            const QRect sourceRect = strip.translated(origin).toAlignedRect();
+            // QWidget must own the integer offset for nested effect clips; only
+            // the fractional pixel alignment belongs in the painter transform.
+            // zh_CN: 整数偏移交给 QWidget 以正确裁剪子特效，画笔仅处理亚像素对齐。
+            painter.translate(QPointF(sourceRect.topLeft()) - origin - strip.topLeft());
             // Supply the dirty strip to QWidget::render so unrelated children are skipped.
             // zh_CN: 按条带指定绘制区域，跳过未覆盖的子控件，复用同一抗锯齿画布。
-            m_scene->renderWidgets(painter, navigation, strip.translated(origin).toAlignedRect());
-            painter.translate(origin);
+            m_scene->renderWidgets(painter, navigation, sourceRect);
             painter.end();
             gl->glDisable(GL_SCISSOR_TEST);
             // WebGL/GLES requires identical rectangles and formats for MSAA resolve.
@@ -1279,11 +1288,13 @@ void GallerySpatialController::startPresentation()
         auto* widget = navigation ? static_cast<QWidget*>(d->navigation.data())
                                   : static_cast<QWidget*>(d->navigation->contentHost());
         QScopedValueRollback<bool> rendering(capture->rendering, true);
+        QScopedValueRollback<QPoint> renderOrigin(capture->renderOrigin,
+                                                  region.boundingRect().topLeft());
         QElapsedTimer clock;
         if (capture->measuring)
             clock.start();
         // Preserve transparent hosts instead of forcing a palette window background.
-        widget->render(&painter, region.boundingRect().topLeft(), region, QWidget::DrawChildren);
+        widget->render(&painter, QPoint(), region, QWidget::DrawChildren);
         if (capture->measuring) {
             ++capture->captures;
             capture->captureNanoseconds += clock.nsecsElapsed();

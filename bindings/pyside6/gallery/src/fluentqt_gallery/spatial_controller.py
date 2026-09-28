@@ -140,11 +140,19 @@ class _Capture(QGraphicsEffect):
         super().__init__(parent)
         self.invalidated = invalidated
         self.rendering = self.composing = False
+        self.render_origin = QPoint()
         self.setEnabled(False)
 
     def draw(self, painter):
         if self.rendering:
-            self.drawSource(painter)
+            painter.save()
+            try:
+                # Cancel the root offset reapplied by drawSource. Descendant
+                # effects retain QWidget's strip-local clipping coordinates.
+                painter.translate(self.render_origin)
+                self.drawSource(painter)
+            finally:
+                painter.restore()
         elif not self.composing and self.invalidated:
             self.invalidated()
 
@@ -390,13 +398,14 @@ class _Surface(QOpenGLWidget):
             painter = QPainter(glyph_device if needs_native_glyph_coverage(self.devicePixelRatioF())
                                else device)
             painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-            painter.translate(0, -paint_top / dpr)
             strip = QRectF(0, paint_top / dpr, rect.width(), paint_height / dpr)
-            painter.setClipRect(strip)
+            painter.setClipRect(QRectF(0, 0, rect.width(), paint_height / dpr))
             origin = rect.topLeft() if index == 0 else QPointF()
-            painter.translate(-origin)
-            owner.render_widgets(painter, index == 0, QRegion(strip.translated(origin).toAlignedRect()))
-            painter.translate(origin)
+            source_rect = strip.translated(origin).toAlignedRect()
+            # QWidget owns the integer offset for nested effect clips; the
+            # painter carries only the fractional pixel alignment.
+            painter.translate(QPointF(source_rect.topLeft()) - origin - strip.topLeft())
+            owner.render_widgets(painter, index == 0, QRegion(source_rect))
             painter.end()
             gl.glDisable(0x0C11)
             # GLES requires matching rectangles/formats when resolving multisampling.
@@ -748,10 +757,12 @@ class GallerySpatialController(QObject):
         widget = self.navigation if navigation else self.navigation.contentHost()
         self.capture.composing = self.content_capture.composing = True
         capture.rendering = True
+        capture.render_origin = region.boundingRect().topLeft()
         try:
-            widget.render(painter, region.boundingRect().topLeft(), region, QWidget.DrawChildren)
+            widget.render(painter, QPoint(), region, QWidget.DrawChildren)
         finally:
             capture.rendering = False
+            capture.render_origin = QPoint()
             self.capture.composing = self.content_capture.composing = False
 
     def render_foreground(self, painter, widget, region):
