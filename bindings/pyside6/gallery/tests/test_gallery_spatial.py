@@ -1541,7 +1541,12 @@ print("2D-only Gallery: no OpenGL imports")
             first_geometry = window.geometry()
             visibility = QSignalSpy(first_handle.visibleChanged)
             QTest.mouseClick(toggle, Qt.LeftButton, pos=QPoint(20, 16))
-            _qwait(600)
+            # The first device/pipeline initialization can exceed the animation
+            # duration on a VM. Wait for its observable result with a deadline.
+            for _ in range(100):
+                if controller.progress == 1. or controller.renderer_failed:
+                    break
+                _qwait(50)
             self.assertTrue(self.settings.spatial_available, self.settings.spatial_unavailable_reason)
             self.assertTrue(self.settings.spatial_mode_enabled)
             self.assertEqual(controller.progress, 1.)
