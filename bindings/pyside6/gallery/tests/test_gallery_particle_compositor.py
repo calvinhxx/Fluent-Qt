@@ -4,11 +4,11 @@ import unittest
 
 import fluentqt
 from fluentqt._qt_compat import delete_qobject as delete
-from PySide6.QtCore import QMarginsF, QPoint, QRect, QSize, Qt
+from PySide6.QtCore import QMarginsF, QPoint, QRect, QSize, QSizeF, Qt
 from PySide6.QtGui import QColor, QOpenGLContext, QPainter, QPalette, QRegion
 from PySide6.QtOpenGL import QOpenGLFramebufferObject, QOpenGLFramebufferObjectFormat, QOpenGLPaintDevice
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
-from PySide6.QtTest import QTest
+from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QApplication, QGraphicsOpacityEffect, QWidget
 
 from fluentqt_gallery.glyph_paint_device import GlyphPaintDevice, needs_native_glyph_coverage
@@ -165,6 +165,7 @@ class GalleryParticleCompositorTest(unittest.TestCase):
         surface = self._native_context()
         root = QWidget()
         compositor = GalleryParticleCompositor()
+        original = base = paint = resolve = None
         try:
             root.resize(420, 240)
             root.setAutoFillBackground(True)
@@ -214,12 +215,103 @@ class GalleryParticleCompositorTest(unittest.TestCase):
             self.assertEqual(_capture(root).toImage(), expected)
             self.assertFalse(compositor.prepare(root, 3, root.size(), 1, 1, 1, True))
             scans = compositor.sourceScanCount()
-            for _ in range(12):
-                self.assertFalse(compositor.prepare(root, 3, root.size(), 1, 1, 1, True))
+            for revision in range(4, 16):
+                self.assertFalse(compositor.prepare(root, revision, root.size(), 1, 1, 1, True))
             self.assertEqual(compositor.sourceScanCount(), scans)
             self.assertTrue(compositor.prepare(root, 3, root.size(), 1, 1, 32 << 20, True))
-            del original, base, paint, resolve
         finally:
+            surface.makeCurrent()
+            original = base = paint = resolve = None
+            compositor.release()
+            delete(compositor)
+            delete(root)
+            surface.doneCurrent()
+
+    def test_native_hidpi_joint_budget_keeps_animated_and_static_caches(self):
+        from fluentqt_gallery.spatial_controller import _cache_plan, _CACHE_BUDGET_BYTES
+        surface = self._native_context()
+        root = QWidget()
+        compositor = GalleryParticleCompositor()
+        probe = navigation = content = paint = resolve = None
+        try:
+            root.resize(960, 700)
+            source = fluentqt.ParticleBackdrop(root)
+            source.setGeometry(20, 20, 600, 240)
+            source.setEffect(fluentqt.ParticleBackdrop.FloatingDots)
+            source.setPauseWhenInactive(False)
+            foreground = _Foreground(QColor(20, 90, 150, 128), root)
+            foreground.setGeometry(40, 40, 300, 100)
+            root.show()
+            self.assertTrue(QTest.qWaitForWindowExposed(root))
+            surface.makeCurrent()
+            format_ = _format()
+            probe = QOpenGLFramebufferObject(QSize(1, 1), format_)
+            self.assertTrue(probe.isValid())
+            samples = probe.format().samples()
+            format_.setSamples(samples)
+            panels = [QSizeF(240, 700), QSizeF(root.size())]
+            base_plan = _cache_plan(panels, 2, 16384, paint_samples=samples)
+            self.assertIsNotNone(base_plan)
+            self.assertEqual(base_plan[0], 4)
+
+            def static_bytes(plan):
+                return (sum(size.width() * size.height() * 4 for size in plan[1])
+                        + plan[2].width() * plan[2].height() * (12 * samples + 4))
+
+            required = compositor.requiredBytes(root, 1, base_plan[1][1], 2, 4, True)
+            self.assertGreater(required, _CACHE_BUDGET_BYTES - static_bytes(base_plan))
+            plan = _cache_plan(panels, 2, 16384, paint_samples=samples, reserved_bytes=required)
+            self.assertIsNotNone(plan)
+            self.assertEqual(plan[0], base_plan[0])
+            self.assertLess(plan[2].height(), base_plan[2].height())
+            allowance = _CACHE_BUDGET_BYTES - static_bytes(plan)
+            navigation = QOpenGLFramebufferObject(plan[1][0])
+            content = QOpenGLFramebufferObject(plan[1][1])
+            paint = QOpenGLFramebufferObject(plan[2], format_)
+            resolve = QOpenGLFramebufferObject(plan[2])
+            self.assertTrue(all(target.isValid() for target in (navigation, content, paint, resolve)))
+            content.bind()
+            gl = surface.context().functions()
+            gl.glClearColor(.1, .15, .2, 1.)
+            gl.glClear(0x4000)
+            self.assertTrue(compositor.prepare(root, 1, plan[1][1], 2, 4, allowance, True))
+            self.assertEqual(compositor.activeLayerCount(), 1)
+            self.assertNotEqual(compositor.compose(content.texture(), 2, paint, resolve, _render_foreground),
+                                content.texture())
+            frames, captures = compositor.particleFrameCount(), compositor.foregroundCaptureCount()
+            allocated, texture = compositor.allocatedBytes(), content.texture()
+            requested, invalidated = QSignalSpy(compositor.frameRequested), QSignalSpy(compositor.staticContentInvalidated)
+            for _ in range(60):
+                if requested.count() >= 2:
+                    break
+                QTest.qWait(25)
+            self.assertGreaterEqual(requested.count(), 2)
+            surface.makeCurrent()
+            self.assertGreater(compositor.requiredBytes(root, 2, QSize(3360, 2450), 2, 3.5, True), 0)
+            self.assertEqual(compositor.activeLayerCount(), 1)
+            self.assertEqual(compositor.allocatedBytes(), allocated)
+            self.assertTrue(compositor.prepare(root, 2, plan[1][1], 2, 4, allowance, True))
+            self.assertGreater(compositor.particleFrameCount(), frames)
+            self.assertNotEqual(compositor.compose(content.texture(), 2, paint, resolve, _render_foreground),
+                                content.texture())
+            self.assertEqual(compositor.foregroundCaptureCount(), captures)
+            self.assertEqual(invalidated.count(), 0)
+            self.assertEqual(content.texture(), texture)
+            self.assertEqual(compositor.allocatedBytes(), allocated)
+            self.assertLessEqual(static_bytes(plan) + allocated, _CACHE_BUDGET_BYTES)
+            self.assertEqual(gl.glGetError(), 0)
+
+            self.assertFalse(compositor.prepare(root, 3, plan[1][1], 2, 4, 1, True))
+            scans = compositor.sourceScanCount()
+            for revision in range(4, 20):
+                self.assertFalse(compositor.prepare(root, revision, plan[1][1], 2, 4, 1, True))
+            self.assertEqual(compositor.sourceScanCount(), scans)
+            self.assertEqual(compositor.allocatedBytes(), 0)
+            self.assertTrue(compositor.prepare(root, 20, plan[1][1], 2, 4, allowance, True))
+            self.assertEqual(compositor.activeLayerCount(), 1)
+        finally:
+            surface.makeCurrent()
+            probe = navigation = content = paint = resolve = None
             compositor.release()
             delete(compositor)
             delete(root)
@@ -253,6 +345,15 @@ class GalleryParticleCompositorTest(unittest.TestCase):
                 self.assertEqual(compositor.activeLayerCount(), 0)
                 self.assertEqual(compositor.allocatedBytes(), 0)
                 self.assertEqual(_capture(root).toImage(), expected)
+            foreground.setGraphicsEffect(None)
+            self.assertTrue(compositor.prepare(root, 3, root.size(), 1, 1, 32 << 20, True))
+            self.assertEqual(compositor.activeLayerCount(), 1)
+            parent.move(10, -30)
+            self.assertTrue(compositor.prepare(root, 4, root.size(), 1, 1, 32 << 20, True))
+            parent.hide()
+            self.assertFalse(compositor.prepare(root, 5, root.size(), 1, 1, 32 << 20, True))
+            parent.show()
+            self.assertTrue(compositor.prepare(root, 6, root.size(), 1, 1, 32 << 20, True))
         finally:
             compositor.release()
             delete(compositor)
@@ -263,6 +364,7 @@ class GalleryParticleCompositorTest(unittest.TestCase):
         surface = self._native_context()
         root = QWidget()
         compositor = GalleryParticleCompositor()
+        original = base = paint = resolve = None
         try:
             root.resize(420, 320)
             parent = QWidget(root)
@@ -292,8 +394,9 @@ class GalleryParticleCompositorTest(unittest.TestCase):
             self.assertLess(_difference(actual, expected, root.rect()), 2.)
             self.assertEqual(compositor.foregroundCaptureCount(), 1)
             self.assertEqual(surface.context().functions().glGetError(), 0)
-            del original, base, paint, resolve
         finally:
+            surface.makeCurrent()
+            original = base = paint = resolve = None
             compositor.release()
             delete(compositor)
             delete(root)

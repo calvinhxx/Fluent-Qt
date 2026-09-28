@@ -613,6 +613,16 @@ class GallerySpatialTest(unittest.TestCase):
         self.assertIsNone(_cache_plan(panels, 0, 16384))
         self.assertIsNone(_cache_plan([QSizeF(1e20, 900), QSizeF()], 2, 16384))
         self.assertEqual(_cache_plan(panels, 1.25, 4096, max_extra=1.5)[0], 1.875)
+        particles = 90 << 20
+        joint = _cache_plan([QSizeF(240, 700), QSizeF(960, 700)], 2, 16384,
+                            reserved_bytes=particles)
+        self.assertEqual(joint[:2], normal[:2])
+        self.assertLess(joint[2].height(), normal[2].height())
+        self.assertLessEqual(sum(s.width() * s.height() for s in joint[1]) * 4
+                             + joint[2].width() * joint[2].height() * (12 * _PAINT_SAMPLES + 4)
+                             + particles, _CACHE_BUDGET_BYTES)
+        self.assertIsNone(_cache_plan(panels, 2, 16384, reserved_bytes=_CACHE_BUDGET_BYTES))
+        self.assertIsNone(_cache_plan(panels, 2, 16384, reserved_bytes=-1))
 
     def test_gallery_without_spatial_does_not_load_opengl(self):
         # Model an installed 2D binding: the optional module is absent.
@@ -928,6 +938,62 @@ print("2D-only Gallery: no OpenGL imports")
             self.assertIsNone(navigation.contentHost().graphicsEffect())
         finally:
             self.app.removeEventFilter(blocker)
+            delete(window)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_native_home_particles_share_budget_without_recapturing_static_content(self):
+        if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
+            self.skipTest("requires the real Home layout and native GPU composition")
+        from fluentqt_gallery.spatial_controller import _CACHE_BUDGET_BYTES
+        self.settings.set_home_particles_enabled(True)
+        window = GalleryWindow(startup_visuals=False)
+        try:
+            window.resize(1200, 850)
+            window.show()
+            self.assertTrue(QTest.qWaitForWindowExposed(window))
+            if window.devicePixelRatioF() > 2:
+                self.skipTest("this full-size acceleration budget covers native DPR up to 2")
+            particles = window.findChild(fluentqt.ParticleBackdrop, "galleryHomeParticles")
+            self.assertIsNotNone(particles)
+            particles.setEffect(fluentqt.ParticleBackdrop.Starfield)
+            particles.setPauseWhenInactive(False)
+            self.settings.set_spatial_mode_enabled(True)
+            controller = window._spatial_controller
+            for _ in range(100):
+                if (controller.canvas and controller.canvas.property("presenting")
+                        and controller.canvas.particles.activeLayerCount()):
+                    break
+                _qwait(30)
+            surface = controller.canvas
+            self.assertIsNotNone(surface)
+            self.assertTrue(surface.property("presenting"))
+            self.assertGreater(surface.particles.activeLayerCount(), 0)
+            controller.settle()
+            QTest.mouseMove(window, QPoint(5, 5))
+            QApplication.sendEvent(window, QEvent(QEvent.Leave))
+            _qwait(800)
+
+            def stable_state():
+                return (tuple(cache["texture"].texture() for cache in surface.caches),
+                        tuple(cache.get("key") for cache in surface.caches),
+                        surface.plan, surface.particles.allocatedBytes(),
+                        surface.particles.foregroundCaptureCount())
+
+            before = stable_state()
+            frames = surface.particles.particleFrameCount()
+            for _ in range(3):
+                _qwait(150)
+                self.assertEqual(stable_state(), before)
+                self.assertGreater(surface.particles.particleFrameCount(), frames)
+                frames = surface.particles.particleFrameCount()
+            self.assertGreaterEqual(surface.plan[0], window.devicePixelRatioF())
+            self.assertLessEqual(surface.static_cache_bytes() + surface.particles.allocatedBytes(),
+                                 _CACHE_BUDGET_BYTES)
+            if os.environ.get("FLUENTQT_SPATIAL_EVIDENCE_DIR"):
+                directory = Path(os.environ["FLUENTQT_SPATIAL_EVIDENCE_DIR"])
+                directory.mkdir(parents=True, exist_ok=True)
+                self.assertTrue(surface.grabFramebuffer().save(str(directory / "python-home-particles-joint.png")))
+        finally:
             delete(window)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")

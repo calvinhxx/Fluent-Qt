@@ -10,16 +10,21 @@ import struct
 
 import fluentqt
 from fluentqt._qt_compat import delete_qobject
-from PySide6.QtCore import QObject, QPoint, QPointF, QRect, QRectF, QSize, QSizeF, Qt, Signal, Slot
+from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QRect, QRectF, QSize, QSizeF, Qt, Signal, Slot
 from PySide6.QtGui import QOpenGLContext, QPainter, QRegion, QSurfaceFormat, QVector2D, QVector4D
 from PySide6.QtOpenGL import (
     QOpenGLBuffer, QOpenGLFramebufferObject, QOpenGLFramebufferObjectFormat,
     QOpenGLPaintDevice, QOpenGLShader, QOpenGLShaderProgram, QOpenGLVertexArrayObject,
 )
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QApplication, QWidget
 from shiboken6 import isValid
 
 from .glyph_paint_device import GlyphPaintDevice, needs_native_glyph_coverage
+
+_SOURCE_CHANGE_EVENTS = frozenset((
+    QEvent.ChildAdded, QEvent.ChildRemoved, QEvent.Show, QEvent.Hide,
+    QEvent.ParentChange, QEvent.Move, QEvent.Resize, QEvent.ZOrderChange, QEvent.LayoutRequest,
+))
 
 
 def _particle_layer_type():
@@ -203,6 +208,7 @@ class GalleryParticleCompositor(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.root = self.context = None
+        self.candidates = []
         self.sources, self.source_rects, self.source_clips, self.layers = [], [], [], []
         self.sampler = None
         self.composed = []
@@ -211,42 +217,54 @@ class GalleryParticleCompositor(QObject):
         self.scan_revision = self.static_revision = self.last_frames = 0
         self.captures = self.compositions = self.scans = self.bytes = self.maximum_bytes = 0
         self.result = 0
-        self.releasing = self.scanned = self.failed = False
+        self.native_required = 0
+        self.releasing = self.scanned = self.validated = self.failed = False
 
     @Slot(bool)
     def _active_changed(self, _active):
         if not self.releasing:
             self.staticContentInvalidated.emit()
 
-    def prepare(self, content, revision, panel_pixels, native_dpr, cache_dpr, maximum_bytes, enabled):
+    def eventFilter(self, watched, event):
+        if event.type() not in _SOURCE_CHANGE_EVENTS:
+            return False
+        if (_alive(self.root) and isinstance(watched, QWidget)
+                and (watched == self.root or self.root.isAncestorOf(watched))):
+            self.scanned = self.validated = False
+        return False
+
+    def requiredBytes(self, content, revision, panel_pixels, native_dpr, cache_dpr, enabled):
         context = QOpenGLContext.currentContext()
         layer_type = _particle_layer_type()
         if (not enabled or not _alive(content) or not _alive(context) or layer_type is None
                 or panel_pixels.isEmpty() or not math.isfinite(native_dpr) or native_dpr <= 0
                 or not math.isfinite(cache_dpr) or cache_dpr <= 0):
             self.release()
-            return False
-        if (self.root != content or self.context != context or self.panel_pixels != panel_pixels
-                or self.native_dpr != native_dpr or self.cache_dpr != cache_dpr):
+            return 0
+        if self.root != content or self.context != context or self.native_dpr != native_dpr:
             self.release()
             self.root, self.context = content, context
-            self.panel_pixels = QSize(panel_pixels)
-            self.native_dpr, self.cache_dpr = native_dpr, cache_dpr
-        if not self.scanned or self.scan_revision != revision:
+            self.native_dpr = native_dpr
+            QApplication.instance().installEventFilter(self)
+        if not self.scanned:
             self.scans += 1
-            candidates = []
+            self.candidates = []
 
             def visit(parent):
                 for child in parent.children():
                     if not isinstance(child, QWidget) or child.isWindow() or child.isHidden():
                         continue
                     if isinstance(child, fluentqt.ParticleBackdrop):
-                        candidates.append(child)
+                        self.candidates.append(child)
                     visit(child)
 
             visit(content)
+            self.scanned, self.validated = True, False
+        if not self.validated or self.scan_revision != revision:
             visible, rects, clips = [], [], []
-            for backdrop in candidates:
+            for backdrop in self.candidates:
+                if not _alive(backdrop):
+                    continue
                 clip = _clipped_rect(backdrop, content)
                 supported = (backdrop.mask().isEmpty() and backdrop.graphicsEffect() is None
                              and not clip.isEmpty())
@@ -261,12 +279,37 @@ class GalleryParticleCompositor(QObject):
             if visible != self.sources or rects != self.source_rects or clips != self.source_clips:
                 self._release_gpu()
                 self.sources, self.source_rects, self.source_clips = visible, rects, clips
+                self.native_required = 0
                 self.failed = False
-            self.scan_revision, self.scanned = revision, True
-        if not self.sources or (self.failed and self.maximum_bytes == maximum_bytes):
+            self.scan_revision, self.validated = revision, True
+        if not self.sources:
+            return 0
+        if not self.native_required:
+            for rect in self.source_rects:
+                estimated = layer_type.estimatedBytes(rect.size(), native_dpr)
+                if not estimated:
+                    self.native_required = (1 << 64) - 1
+                    break
+                self.native_required += estimated
+        return (self.native_required + _texture_bytes(panel_pixels) * (2 if len(self.sources) > 1 else 1)
+                + sum(_texture_bytes(_physical_size(clip.size(), cache_dpr)) for clip in self.source_clips))
+
+    def prepare(self, content, revision, panel_pixels, native_dpr, cache_dpr, maximum_bytes, enabled):
+        required = self.requiredBytes(content, revision, panel_pixels, native_dpr, cache_dpr, enabled)
+        if not required:
+            return False
+        # Estimating other levels leaves this plan's allocated GPU targets intact.
+        if self.panel_pixels != panel_pixels or self.cache_dpr != cache_dpr:
+            self._release_gpu()
+            self.panel_pixels, self.cache_dpr = QSize(panel_pixels), cache_dpr
+            self.failed = False
+        if self.failed and self.maximum_bytes == maximum_bytes:
             return False
         self.maximum_bytes = maximum_bytes
+        if required > maximum_bytes:
+            return self._fail()
         if not self.layers:
+            layer_type = _particle_layer_type()
             for source, rect, clip in zip(self.sources, self.source_rects, self.source_clips):
                 if not _alive(source):
                     return self._fail()
@@ -426,10 +469,15 @@ class GalleryParticleCompositor(QObject):
             self.staticContentInvalidated.emit()
 
     def release(self):
+        app = QApplication.instance()
+        if app is not None:
+            app.removeEventFilter(self)
         self.root = self.context = None
+        self.candidates = []
         self.sources, self.source_rects, self.source_clips = [], [], []
         self.scan_revision = 0
-        self.scanned = self.failed = False
+        self.native_required = 0
+        self.scanned = self.validated = self.failed = False
         self._release_gpu()
 
     def activeLayerCount(self):

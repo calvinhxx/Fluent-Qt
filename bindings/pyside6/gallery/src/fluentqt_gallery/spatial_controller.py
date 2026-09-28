@@ -96,10 +96,12 @@ _GLYPH_SCRATCH_BYTES = 512 * 1024
 
 
 def _cache_plan(panels, native_dpr, max_dimension, max_extra=2., budget=_CACHE_BUDGET_BYTES,
-                paint_samples=_PAINT_SAMPLES, backdrop_bytes=0, glyph_scratch_bytes=0):
+                paint_samples=_PAINT_SAMPLES, backdrop_bytes=0, glyph_scratch_bytes=0,
+                reserved_bytes=0):
     if (not math.isfinite(native_dpr) or native_dpr <= 0 or max_dimension <= 0
             or budget <= 0 or paint_samples <= 1 or backdrop_bytes < 0 or backdrop_bytes >= budget
-            or glyph_scratch_bytes < 0 or glyph_scratch_bytes >= budget - backdrop_bytes):
+            or glyph_scratch_bytes < 0 or glyph_scratch_bytes >= budget - backdrop_bytes
+            or reserved_bytes < 0 or reserved_bytes >= budget - backdrop_bytes - glyph_scratch_bytes):
         return None
     for extra in (2., 1.75, 1.5, 1.25, 1.):
         if extra > max_extra:
@@ -123,7 +125,7 @@ def _cache_plan(panels, native_dpr, max_dimension, max_extra=2., budget=_CACHE_B
             continue
         texture_bytes = pixels * _CACHE_BYTES_PER_PIXEL
         row_bytes = paint_size.width() * (12 * paint_samples + 4)
-        rows = (budget - backdrop_bytes - glyph_scratch_bytes - texture_bytes) // row_bytes
+        rows = (budget - backdrop_bytes - glyph_scratch_bytes - reserved_bytes - texture_bytes) // row_bytes
         if rows < min(32, paint_size.height()):
             continue
         paint_size.setHeight(min(paint_size.height(), rows))
@@ -264,14 +266,40 @@ class _Surface(QOpenGLWidget):
         panels = [rect.size() for rect, _ in self.owner.panels]
         backdrop = self.owner.backdrop
         backdrop_bytes = backdrop.width() * backdrop.height() * 4
+        glyph_scratch = (_GLYPH_SCRATCH_BYTES
+                        if needs_native_glyph_coverage(self.devicePixelRatioF()) else 0)
         while True:
             plan = _cache_plan(panels, self.devicePixelRatioF(), self.max_dimension,
                                self.max_extra, paint_samples=self.paint_samples,
                                backdrop_bytes=backdrop_bytes,
-                               glyph_scratch_bytes=(_GLYPH_SCRATCH_BYTES
-                                   if needs_native_glyph_coverage(self.devicePixelRatioF()) else 0))
+                               glyph_scratch_bytes=glyph_scratch)
             if plan is None:
                 return False
+            for extra in (2., 1.75, 1.5, 1.25, 1.):
+                if self.devicePixelRatioF() * extra > plan[0]:
+                    continue
+                candidate = _cache_plan(
+                    panels, self.devicePixelRatioF(), self.max_dimension, extra,
+                    paint_samples=self.paint_samples, backdrop_bytes=backdrop_bytes,
+                    glyph_scratch_bytes=glyph_scratch)
+                if candidate is None or candidate[0] != self.devicePixelRatioF() * extra:
+                    continue
+                particle_bytes = self.particles.requiredBytes(
+                    self.owner.navigation.contentHost(), self.owner.content_revision, candidate[1][1],
+                    self.devicePixelRatioF(), candidate[0], True)
+                if not particle_bytes:
+                    break
+                if particle_bytes >= _CACHE_BUDGET_BYTES:
+                    continue
+                joint = _cache_plan(
+                    panels, self.devicePixelRatioF(), self.max_dimension, extra,
+                    paint_samples=self.paint_samples,
+                    backdrop_bytes=backdrop_bytes, glyph_scratch_bytes=glyph_scratch,
+                    reserved_bytes=particle_bytes)
+                # Highest joint level; output/native density never changes.
+                if joint is not None and joint[0] == candidate[0]:
+                    plan = joint
+                    break
             if plan == self.plan:
                 return True
             # Free the old pair before allocating replacements, including on resize.

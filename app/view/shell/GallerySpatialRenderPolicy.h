@@ -32,11 +32,12 @@ struct CachePlan {
 inline CachePlan planCaches(const std::array<QSizeF, 2>& panels, qreal nativeDpr, int maxDimension,
                             qreal maxExtraSampling = 2, qint64 budget = kCacheBudgetBytes,
                             int paintSamples = kPaintSamples, qint64 backdropBytes = 0,
-                            qint64 glyphScratchBytes = 0)
+                            qint64 glyphScratchBytes = 0, qint64 reservedBytes = 0)
 {
     if (!qIsFinite(nativeDpr) || nativeDpr <= 0 || maxDimension <= 0 || budget <= 0 ||
         paintSamples <= 1 || backdropBytes < 0 || backdropBytes >= budget ||
-        glyphScratchBytes < 0 || glyphScratchBytes >= budget - backdropBytes)
+        glyphScratchBytes < 0 || glyphScratchBytes >= budget - backdropBytes || reservedBytes < 0 ||
+        reservedBytes >= budget - backdropBytes - glyphScratchBytes)
         return {};
     for (qreal extra : {2., 1.75, 1.5, 1.25, 1.}) {
         if (extra > maxExtraSampling)
@@ -65,13 +66,14 @@ inline CachePlan planCaches(const std::array<QSizeF, 2>& panels, qreal nativeDpr
         const qint64 textureBytes = plan.pixels * kCacheBytesPerPixel;
         const qint64 paintRowBytes = qint64(plan.paintSize.width()) * (12 * paintSamples + 4);
         const qint64 availableRows =
-            (budget - backdropBytes - glyphScratchBytes - textureBytes) / paintRowBytes;
+            (budget - backdropBytes - glyphScratchBytes - reservedBytes - textureBytes) /
+            paintRowBytes;
         if (availableRows < qMin(32, plan.paintSize.height()))
             continue;
         plan.paintSize.setHeight(int(qMin(qint64(plan.paintSize.height()), availableRows)));
         plan.estimatedBytes = backdropBytes + glyphScratchBytes + textureBytes +
                               paintRowBytes * plan.paintSize.height();
-        if (fits && plan.estimatedBytes <= budget)
+        if (fits && plan.estimatedBytes <= budget - reservedBytes)
             return plan;
     }
     return {};

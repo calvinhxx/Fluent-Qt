@@ -1684,6 +1684,22 @@ TEST_F(GallerySpatialTest, CacheBudgetPreservesDensityAndRespectsGpuLimits)
     EXPECT_FALSE(planCaches({QSizeF(1e20, 900), QSizeF()}, 2, 16384).valid());
     const auto retry = planCaches(panels, 1.25, 4096, 1.5);
     EXPECT_EQ(retry.dpr, 1.875);
+
+    // Animated targets share the budget with panel pixels and the temporary
+    // paint strip. Reserving them must shorten the strip before lowering density.
+    constexpr qint64 particles = 90LL * 1024 * 1024;
+    const auto joint = planCaches({QSizeF(240, 700), QSizeF(960, 700)}, 2, 16384, 2,
+                                  kCacheBudgetBytes, kPaintSamples, 0, 0, particles);
+    ASSERT_TRUE(joint.valid());
+    EXPECT_EQ(joint.dpr, normal.dpr);
+    EXPECT_EQ(joint.sizes, normal.sizes);
+    EXPECT_LT(joint.paintSize.height(), normal.paintSize.height());
+    EXPECT_LE(joint.estimatedBytes + particles, kCacheBudgetBytes);
+    EXPECT_FALSE(
+        planCaches(panels, 2, 16384, 2, kCacheBudgetBytes, kPaintSamples, 0, 0, kCacheBudgetBytes)
+            .valid());
+    EXPECT_FALSE(
+        planCaches(panels, 2, 16384, 2, kCacheBudgetBytes, kPaintSamples, 0, 0, -1).valid());
 }
 
 TEST_F(GallerySpatialTest, CacheResourceFailureAllowsRetry)
@@ -3082,6 +3098,43 @@ TEST_F(GallerySpatialTest, StationaryParticleFramePacingProbe)
         result["p50Ms"] = intervals[intervals.size() / 2];
         result["p95Ms"] = intervals[qMin(int(intervals.size()) - 1, int(intervals.size() * .95))];
         result["dpr"] = window.devicePixelRatioF();
+        if (accelerated && qFuzzyCompare(window.devicePixelRatioF(), 2.0)) {
+            // Regression for the real 1200x850 Home, whose full hero does not fit
+            // at cache DPR 4. A passing benchmark must actually use GPU particles.
+            EXPECT_GT(result["particleLayers"].toInt(), 0);
+            EXPECT_GT(result["particleFrames"].toLongLong(), 0);
+            EXPECT_GE(result["cacheDpr"].toDouble(), window.devicePixelRatioF());
+            EXPECT_LE(result["cacheEstimatedBytes"].toLongLong(),
+                      result["cacheBudgetBytes"].toLongLong());
+            EXPECT_EQ(result["particleBytes"], before["particleBytes"]);
+            EXPECT_EQ(result["contentTextureId"], before["contentTextureId"]);
+            EXPECT_EQ(result["allocationMs"], before["allocationMs"]);
+            EXPECT_EQ(result["contentCaptures"].toLongLong(), 0);
+            EXPECT_EQ(result["navigationCaptures"].toLongLong(), 0);
+            EXPECT_EQ(result["particleForegroundCaptures"].toLongLong(), 0);
+        }
+        if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE"); !dir.isEmpty()) {
+            QDir().mkpath(dir);
+            const QString mode = accelerated ? "joint" : "reference";
+            const auto frame = surface->grabFramebuffer();
+            EXPECT_EQ(frame.size(), QSize(qRound(surface->width() * window.devicePixelRatioF()),
+                                          qRound(surface->height() * window.devicePixelRatioF())));
+            frame.save(dir + "/home-particles-" + mode + ".png");
+            for (const auto& name : {"galleryHomeHeroTitle", "galleryHomeHeroTagline"}) {
+                auto* label = window.findChild<QWidget*>(QLatin1String(name));
+                ASSERT_NE(label, nullptr);
+                QPolygon outline;
+                for (const auto& point : {label->rect().topLeft(), label->rect().topRight(),
+                                          label->rect().bottomRight(), label->rect().bottomLeft()})
+                    outline << surface->mapFrom(&window,
+                                                controller->projectedPosition(label, point));
+                const auto crop = outline.boundingRect().adjusted(-2, -2, 2, 2);
+                frame
+                    .copy(QRect(crop.topLeft() * window.devicePixelRatioF(),
+                                crop.size() * window.devicePixelRatioF()))
+                    .save(dir + "/home-particles-" + mode + "-" + QLatin1String(name) + ".png");
+            }
+        }
         std::cout << "SPATIAL_PARTICLES "
                   << QJsonDocument::fromVariant(result).toJson(QJsonDocument::Compact).constData()
                   << std::endl;

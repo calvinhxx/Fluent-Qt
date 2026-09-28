@@ -5,6 +5,8 @@
 #include "components/layout/ParticleBackdrop.h"
 #include "components/spatial/ParticleLayer.h"
 
+#include <QApplication>
+#include <QEvent>
 #include <QOpenGLBuffer>
 #include <QOpenGLContext>
 #include <QOpenGLFramebufferObject>
@@ -19,6 +21,7 @@
 #include <QWidget>
 #include <QtMath>
 #include <array>
+#include <limits>
 #include <vector>
 
 namespace fluent::gallery::spatial_render {
@@ -200,7 +203,7 @@ struct GalleryParticleCompositor::Private {
     };
     QPointer<QWidget> root;
     QPointer<QOpenGLContext> context;
-    QList<QPointer<ParticleBackdrop>> sources;
+    QList<QPointer<ParticleBackdrop>> candidates, sources;
     QList<QRect> sourceRects, sourceClips;
     std::vector<Layer> layers;
     std::unique_ptr<InsertionSampler> sampler;
@@ -209,9 +212,10 @@ struct GalleryParticleCompositor::Private {
     qreal nativeDpr = 0, cacheDpr = 0;
     quint64 scanRevision = 0, staticRevision = 0, lastFrames = 0;
     quint64 captures = 0, compositions = 0, scans = 0, bytes = 0, maximumBytes = 0;
+    quint64 nativeRequired = 0;
     GLuint result = 0;
     bool releasing = false;
-    bool scanned = false, failed = false;
+    bool scanned = false, validated = false, failed = false;
 };
 
 GalleryParticleCompositor::GalleryParticleCompositor(QObject* parent)
@@ -220,47 +224,78 @@ GalleryParticleCompositor::GalleryParticleCompositor(QObject* parent)
 
 GalleryParticleCompositor::~GalleryParticleCompositor()
 {
+    if (qApp)
+        qApp->removeEventFilter(this);
     releaseGpu(false);
 }
 
-bool GalleryParticleCompositor::prepare(QWidget* content, quint64 revision,
-                                        const QSize& panelPixels, qreal nativeDpr, qreal cacheDpr,
-                                        quint64 maximumBytes, bool enabled)
+bool GalleryParticleCompositor::eventFilter(QObject* watched, QEvent* event)
+{
+    if (!d->root)
+        return false;
+    switch (event->type()) {
+    case QEvent::ChildAdded:
+    case QEvent::ChildRemoved:
+    case QEvent::Show:
+    case QEvent::Hide:
+    case QEvent::ParentChange:
+    case QEvent::Move:
+    case QEvent::Resize:
+    case QEvent::ZOrderChange:
+    case QEvent::LayoutRequest:
+        if (auto* widget = qobject_cast<QWidget*>(watched);
+            widget && (widget == d->root || d->root->isAncestorOf(widget)))
+            d->scanned = d->validated = false;
+        break;
+    default:
+        break;
+    }
+    return false;
+}
+
+quint64 GalleryParticleCompositor::requiredBytes(QWidget* content, quint64 revision,
+                                                 const QSize& panelPixels, qreal nativeDpr,
+                                                 qreal cacheDpr, bool enabled)
 {
     auto* context = QOpenGLContext::currentContext();
-    if (!enabled || !content || !context || panelPixels.isEmpty() || nativeDpr <= 0 ||
-        cacheDpr <= 0) {
+    if (!enabled || !content || !context || panelPixels.isEmpty() || !qIsFinite(nativeDpr) ||
+        nativeDpr <= 0 || !qIsFinite(cacheDpr) || cacheDpr <= 0) {
         release();
-        return false;
+        return 0;
     }
-    if (d->root != content || d->context != context || d->panelPixels != panelPixels ||
-        d->nativeDpr != nativeDpr || d->cacheDpr != cacheDpr) {
+    if (d->root != content || d->context != context || d->nativeDpr != nativeDpr) {
         release();
         d->root = content;
         d->context = context;
-        d->panelPixels = panelPixels;
         d->nativeDpr = nativeDpr;
-        d->cacheDpr = cacheDpr;
+        qApp->installEventFilter(this);
     }
-    if (!d->scanned || d->scanRevision != revision) {
+    if (!d->scanned) {
         ++d->scans;
-        // Hidden prewarmed pages are not traversed. A clean no-particle page
-        // retains this negative result until its source revision changes.
-        QList<ParticleBackdrop*> candidates;
+        // Pixel-only invalidation (including CPU particle ticks) does not change
+        // membership. Geometry/tree events invalidate this visible-source cache.
+        d->candidates.clear();
         std::function<void(QWidget*)> visit = [&](QWidget* parent) {
             for (auto* child : parent->children()) {
                 auto* widget = qobject_cast<QWidget*>(child);
                 if (!widget || widget->isWindow() || widget->isHidden())
                     continue;
                 if (auto* backdrop = qobject_cast<ParticleBackdrop*>(widget))
-                    candidates.append(backdrop);
+                    d->candidates.append(backdrop);
                 visit(widget);
             }
         };
         visit(content);
+        d->scanned = true;
+        d->validated = false;
+    }
+    if (!d->validated || d->scanRevision != revision) {
         QList<QPointer<ParticleBackdrop>> visible;
         QList<QRect> rects, clips;
-        for (auto* backdrop : candidates) {
+        for (const auto& candidate : d->candidates) {
+            auto* backdrop = candidate.data();
+            if (!backdrop)
+                continue;
             bool supported = backdrop->mask().isEmpty() && !backdrop->graphicsEffect() &&
                              !clippedRect(backdrop, content).isEmpty();
             for (auto* foreground : foregroundWidgets(backdrop, content)) {
@@ -281,16 +316,61 @@ bool GalleryParticleCompositor::prepare(QWidget* content, quint64 revision,
             d->sources = visible;
             d->sourceRects = rects;
             d->sourceClips = clips;
+            d->nativeRequired = 0;
             d->failed = false;
         }
         d->scanRevision = revision;
-        d->scanned = true;
+        d->validated = true;
     }
     if (d->sources.empty())
+        return 0;
+    const auto limit = std::numeric_limits<quint64>::max();
+    if (!d->nativeRequired) {
+        for (const auto& rect : d->sourceRects) {
+            const auto estimated = ParticleLayer::estimatedBytes(rect.size(), nativeDpr);
+            if (!estimated || estimated > limit - d->nativeRequired) {
+                d->nativeRequired = limit;
+                break;
+            }
+            d->nativeRequired += estimated;
+        }
+    }
+    quint64 required = quint64(panelPixels.width()) * quint64(panelPixels.height()) * 4 *
+                       (d->sources.size() > 1 ? 2 : 1);
+    for (int i = 0; i < d->sources.size(); ++i) {
+        const QSize foreground = physicalSize(d->sourceClips[i].size(), cacheDpr);
+        const quint64 pixels = quint64(foreground.width()) * quint64(foreground.height()) * 4;
+        if (pixels > limit - required)
+            return limit;
+        required += pixels;
+    }
+    return d->nativeRequired > limit - required ? limit : required + d->nativeRequired;
+}
+
+bool GalleryParticleCompositor::prepare(QWidget* content, quint64 revision,
+                                        const QSize& panelPixels, qreal nativeDpr, qreal cacheDpr,
+                                        quint64 maximumBytes, bool enabled)
+{
+    const quint64 required =
+        requiredBytes(content, revision, panelPixels, nativeDpr, cacheDpr, enabled);
+    if (!required)
         return false;
+    // Candidate estimates leave the active targets intact. Only the selected
+    // plan changes allocated geometry, avoiding per-frame sampling-level churn.
+    if (d->panelPixels != panelPixels || d->cacheDpr != cacheDpr) {
+        releaseGpu();
+        d->panelPixels = panelPixels;
+        d->cacheDpr = cacheDpr;
+        d->failed = false;
+    }
     if (d->failed && d->maximumBytes == maximumBytes)
         return false; // Retry only a geometry/source/context/preference/budget change.
     d->maximumBytes = maximumBytes;
+    if (required > maximumBytes) {
+        releaseGpu();
+        d->failed = true;
+        return false;
+    }
     if (d->layers.empty()) {
         for (int i = 0; i < d->sources.size(); ++i) {
             auto* backdrop = d->sources[i].data();
@@ -318,21 +398,6 @@ bool GalleryParticleCompositor::prepare(QWidget* content, quint64 revision,
         const QSize foregroundPixels = physicalSize(layer.clip.size(), cacheDpr);
         auxiliaryBytes +=
             quint64(foregroundPixels.width()) * quint64(foregroundPixels.height()) * 4;
-    }
-    quint64 required = auxiliaryBytes;
-    for (const auto& layer : d->layers) {
-        const quint64 estimated = ParticleLayer::estimatedBytes(layer.rect.size(), nativeDpr);
-        if (!estimated || required > maximumBytes || estimated > maximumBytes - required) {
-            releaseGpu();
-            d->failed = true;
-            return false;
-        }
-        required += estimated;
-    }
-    if (required > maximumBytes) {
-        releaseGpu();
-        d->failed = true;
-        return false;
     }
     if (!d->sampler) {
         auto sampler = std::make_unique<InsertionSampler>();
@@ -510,13 +575,17 @@ void GalleryParticleCompositor::releaseGpu(bool notify)
 
 void GalleryParticleCompositor::release()
 {
+    if (qApp)
+        qApp->removeEventFilter(this);
     d->root.clear();
     d->context.clear();
+    d->candidates.clear();
     d->sources.clear();
     d->sourceRects.clear();
     d->sourceClips.clear();
     d->scanRevision = 0;
-    d->scanned = d->failed = false;
+    d->nativeRequired = 0;
+    d->scanned = d->validated = d->failed = false;
     releaseGpu();
 }
 

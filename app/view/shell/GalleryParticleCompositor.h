@@ -23,6 +23,10 @@ public:
     explicit GalleryParticleCompositor(QObject* parent = nullptr);
     ~GalleryParticleCompositor() override;
 
+    // Discover sources and estimate their targets before sizing the shell's paint strip.
+    // Returns zero for no eligible source and the maximum value for unsupported sizes.
+    quint64 requiredBytes(QWidget* content, quint64 contentRevision, const QSize& panelPixels,
+                          qreal nativeDpr, qreal cacheDpr, bool enabled);
     bool prepare(QWidget* content, quint64 contentRevision, const QSize& panelPixels,
                  qreal nativeDpr, qreal cacheDpr, quint64 maximumBytes, bool enabled);
     unsigned int compose(unsigned int staticTexture, quint64 contentRevision,
@@ -41,6 +45,7 @@ signals:
     void staticContentInvalidated();
 
 private:
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void releaseGpu(bool notify = true);
     struct Private;
     std::unique_ptr<Private> d;
