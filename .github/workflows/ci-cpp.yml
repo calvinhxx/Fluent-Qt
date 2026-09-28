@@ -752,7 +752,10 @@ jobs:
             -P cmake/CreateSourcePackage.cmake
           archive="$output/FluentQt-ci-source.zip"
           test -f "$archive"
-          if unzip -Z1 "$archive" | grep -E '^[^/]+/(app|tests|support)/'; then
+          # The native Python binding builds the shared texture host from source.
+          # Keep only that support subtree; Gallery, tests and logging stay out.
+          if unzip -Z1 "$archive" | grep -E '^[^/]+/(app|tests|support)/' | \
+              grep -Ev '^[^/]+/support/(spatial(/.*)?)?$'; then
             echo "::error::Non-library files leaked into the FluentQt source package."
             exit 1
           fi
@@ -763,6 +766,11 @@ jobs:
           fi
           archive_entries="$(unzip -Z1 "$archive")"
           for source_file in \
+              support/spatial/SpatialTextureHost.cpp \
+              support/spatial/SpatialTextureHost.h \
+              support/spatial/shaders/spatial_rhi.qrc \
+              support/spatial/shaders/panel.vert.qsb \
+              support/spatial/shaders/panel.frag.qsb \
               .agents/skills/build-fluentqt-gui/SKILL.md \
               .agents/skills/build-fluentqt-gui/LICENSE.txt \
               .agents/skills/build-fluentqt-gui/agents/openai.yaml \

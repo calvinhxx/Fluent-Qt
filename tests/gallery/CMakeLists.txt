@@ -80,7 +80,7 @@ add_qt_test_module(test_gallery_spatial
 )
 target_include_directories(test_gallery_spatial PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
 target_link_libraries(test_gallery_spatial
-    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform FluentQtSpatialRenderer Qt${QT_VERSION_MAJOR}::Network)
+    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network)
 if(QT_VERSION_MAJOR EQUAL 6)
     target_link_libraries(test_gallery_spatial PRIVATE Qt6::OpenGLWidgets)
 endif()
@@ -158,6 +158,6 @@ endif()
 
 if(TARGET FluentQtSpatial)
     foreach(_spatial_gallery_test test_gallery_shell_framework test_gallery_shell_motion_policy test_gallery_spatial test_gallery_content_pages)
-        target_link_libraries(${_spatial_gallery_test} PRIVATE FluentQt::Spatial)
+        target_link_libraries(${_spatial_gallery_test} PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
     endforeach()
 endif()

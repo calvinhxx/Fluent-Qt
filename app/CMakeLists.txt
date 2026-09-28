@@ -93,7 +93,7 @@ target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
     Qt${QT_VERSION_MAJOR}::Network
 )
 if(TARGET FluentQtSpatial)
-    target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE FluentQt::Spatial)
+    target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
 endif()
 if(EMSCRIPTEN)
     include("${CMAKE_CURRENT_SOURCE_DIR}/platform/wasm/FluentQtGalleryWebAssembly.cmake")
