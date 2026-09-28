@@ -30,6 +30,7 @@ public:
     QPaintEngine* paintEngine() const override { return &m_engine; }
     qreal nativeDpr() const { return m_nativeDpr; }
     int glyphItems() const { return m_engine.glyphItems; }
+    int glyphTiles() const { return m_engine.glyphTiles; }
     int systemClipApplications() const { return m_engine.systemClipApplications; }
     static const GalleryGlyphPaintDevice* fromPainter(const QPainter& painter)
     {
@@ -237,8 +238,19 @@ private:
                 ink = ink.united(
                     QRectF(0, -item.ascent(), item.width(), item.ascent() + item.descent()));
                 ink = ink.adjusted(-2, -2, 2, 2).translated(baseline);
-                const QRect pixels = QTransform::fromScale(dpr, dpr).mapRect(ink).toAlignedRect();
                 ++glyphItems;
+                // Bound fallback-font overestimates and offscreen text to the
+                // visible paint strip before allocating or iterating glyph tiles.
+                const qreal targetDpr = device.m_target.devicePixelRatioF();
+                QRectF visible(0, 0, device.m_target.width() / targetDpr,
+                               device.m_target.height() / targetDpr);
+                if (painter.hasClipping())
+                    visible = visible.intersected(
+                        painter.worldTransform().mapRect(painter.clipBoundingRect()));
+                ink = ink.intersected(visible.translated(device.m_rasterOrigin));
+                if (ink.isEmpty())
+                    return;
+                const QRect pixels = QTransform::fromScale(dpr, dpr).mapRect(ink).toAlignedRect();
                 // One 256 KiB CPU tile plus its upload is reserved by the cache plan.
                 // Tiles and their Qt texture-cache keys die immediately; no glyph LRU.
                 for (int top = pixels.top(); top <= pixels.bottom(); top += 128) {
@@ -248,6 +260,7 @@ private:
                         QImage glyph(size, QImage::Format_ARGB32_Premultiplied);
                         if (glyph.isNull())
                             continue;
+                        ++glyphTiles;
                         glyph.setDevicePixelRatio(dpr);
                         glyph.fill(Qt::transparent);
                         const QPointF tileOrigin(left / dpr, top / dpr);
@@ -278,6 +291,7 @@ private:
         }
 
         int glyphItems = 0;
+        int glyphTiles = 0;
         int systemClipApplications = 0;
 
     private:

@@ -36,11 +36,11 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
         sys.excepthook = self.old_hook
         self.assertEqual(self.errors, [])
 
-    def render(self, draw, adapted, dpr=1, opaque=False):
+    def render(self, draw, adapted, dpr=1, opaque=False, raster_origin=QPointF()):
         image = QImage(960, 360, QImage.Format_ARGB32_Premultiplied)
         image.setDevicePixelRatio(dpr)
         image.fill(Qt.white if opaque else Qt.transparent)
-        device = GlyphPaintDevice(image, 1) if adapted else image
+        device = GlyphPaintDevice(image, 1, raster_origin) if adapted else image
         painter = QPainter(device)
         try:
             draw(painter)
@@ -150,6 +150,25 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
         actual, device = self.render(draw, True)
         self.assertEqual(actual, expected)
         self.assertEqual(device.engine.glyph_items, 0)
+
+    def test_glyph_tiles_are_bounded_by_visible_clip(self):
+        def draw(painter):
+            font = QFont("Arial")
+            font.setPixelSize(22)
+            painter.setFont(font)
+            painter.translate(13, 7)
+            painter.setClipRect(QRect(0, 0, 64, 50))
+            painter.drawText(QPointF(0, 35), "Gallery 标题 العربية שלום " * 100)
+        expected, _ = self.render(draw, False)
+        for origin in (QPointF(), QPointF(113, 197)):
+            with self.subTest(origin=origin):
+                with patch("fluentqt_gallery.glyph_paint_device.QFontMetricsF") as metrics:
+                    metrics.return_value.boundingRect.return_value = QRectF(-1e6, -1e6, 2e6, 2e6)
+                    actual, device = self.render(draw, True, raster_origin=origin)
+                self.assertEqual(actual, expected)
+                self.assertGreater(device.engine.glyph_tiles, 0)
+                self.assertLessEqual(device.engine.glyph_tiles, device.engine.glyph_items,
+                                     "The visible clip fits one tile per shaped item, regardless of ink bounds")
 
     def test_text_hints_and_opaque_background_are_preserved(self):
         def draw(painter):

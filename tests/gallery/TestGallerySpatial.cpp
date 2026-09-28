@@ -2149,6 +2149,33 @@ TEST_F(GallerySpatialTest, GlyphCoveragePreservesOpacityAndOpaqueBackground)
     }
 }
 
+TEST_F(GallerySpatialTest, GlyphTilesAreBoundedByVisibleClip)
+{
+    const auto paint = [](QPaintDevice* device) {
+        QPainter painter(device);
+        QFont font(QStringLiteral("Arial"));
+        font.setPixelSize(22);
+        painter.setFont(font);
+        painter.translate(13, 7);
+        painter.setClipRect(QRect(0, 0, 64, 50));
+        painter.drawText(QPointF(-1000, 35),
+                         QStringLiteral("abcdefghijklmnopqrstuvwxyz ").repeated(200));
+    };
+    QImage expected(240, 100, QImage::Format_ARGB32_Premultiplied);
+    expected.fill(Qt::transparent);
+    paint(&expected);
+    for (const QPointF& origin : {QPointF(), QPointF(113, 197)}) {
+        QImage actual(expected.size(), expected.format());
+        actual.fill(Qt::transparent);
+        spatial_render::GalleryGlyphPaintDevice device(actual, 1, origin);
+        paint(&device);
+        EXPECT_EQ(actual, expected);
+        EXPECT_GT(device.glyphTiles(), 0);
+        EXPECT_LE(device.glyphTiles(), device.glyphItems())
+            << "The visible clip fits one tile per shaped item regardless of text length";
+    }
+}
+
 class GallerySpatialEditorTest : public GallerySpatialTest,
                                  public ::testing::WithParamInterface<const char*> {};
 

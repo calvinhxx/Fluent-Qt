@@ -70,6 +70,7 @@ class _GlyphPaintEngine(QPaintEngine):
         self.device = weakref.proxy(device)
         self.painter = None
         self.glyph_items = 0
+        self.glyph_tiles = 0
         self.last_system_clip = QRegion()
         self.system_clip_path = QPainterPath()
         self.system_clip_applied = False
@@ -237,8 +238,18 @@ class _GlyphPaintEngine(QPaintEngine):
             ink = QFontMetricsF(item.font()).boundingRect(item.text())
             ink = ink.united(QRectF(0, -item.ascent(), item.width(), item.ascent() + item.descent()))
             ink = ink.adjusted(-2, -2, 2, 2).translated(baseline)
-            pixels = QTransform.fromScale(dpr, dpr).mapRect(ink).toAlignedRect()
             self.glyph_items += 1
+            # Native fallback fonts can overestimate ink by orders of magnitude.
+            # Bound work to this paint strip and its active clip before tiling.
+            target = self.device.target
+            target_dpr = target.devicePixelRatioF()
+            visible = QRectF(0, 0, target.width() / target_dpr, target.height() / target_dpr)
+            if painter.hasClipping():
+                visible = visible.intersected(painter.worldTransform().mapRect(painter.clipBoundingRect()))
+            ink = ink.intersected(visible.translated(self.device.raster_origin))
+            if ink.isEmpty():
+                return
+            pixels = QTransform.fromScale(dpr, dpr).mapRect(ink).toAlignedRect()
             # One 256 KiB image plus its upload is reserved by the panel cache plan.
             # Release every tile immediately; no persistent or per-frame glyph cache.
             for top in range(pixels.top(), pixels.bottom() + 1, 128):
@@ -248,6 +259,7 @@ class _GlyphPaintEngine(QPaintEngine):
                                    QImage.Format_ARGB32_Premultiplied)
                     if glyph.isNull():
                         continue
+                    self.glyph_tiles += 1
                     glyph.setDevicePixelRatio(dpr)
                     glyph.fill(Qt.transparent)
                     tile_origin = QPointF(left / dpr, top / dpr)
