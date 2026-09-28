@@ -1,4 +1,17 @@
 #include "GallerySpatialController.h"
+#include "compatibility/QtCompat.h"
+#include "components/foundation/MotionPolicy.h"
+#include "components/foundation/overlay/OverlayPresentation.h"
+#include "components/foundation/overlay/OverlayShadow.h"
+#include "components/foundation/overlay/OverlayScrim.h"
+#include "components/foundation/overlay/OverlayWindow.h"
+#include "components/navigation/NavigationView.h"
+#include "components/navigation/StackContentHost.h"
+#include "components/windowing/WindowBackdrop.h"
+#include "components/windowing/Window.h"
+#include "view/support/GalleryDepth.h"
+#include "GallerySplashScreen.h"
+#include "viewmodel/GallerySettings.h"
 #include "GallerySpatialRenderPolicy.h"
 #include "GalleryGlyphPaintDevice.h"
 #include "GalleryPanelSampler.h"
@@ -37,20 +50,6 @@
 #include <QtMath>
 #include <functional>
 #include <algorithm>
-
-#include "compatibility/QtCompat.h"
-#include "components/foundation/MotionPolicy.h"
-#include "components/foundation/overlay/OverlayPresentation.h"
-#include "components/foundation/overlay/OverlayShadow.h"
-#include "components/foundation/overlay/OverlayScrim.h"
-#include "components/foundation/overlay/OverlayWindow.h"
-#include "components/navigation/NavigationView.h"
-#include "components/navigation/StackContentHost.h"
-#include "components/windowing/WindowBackdrop.h"
-#include "components/windowing/Window.h"
-#include "view/support/GalleryDepth.h"
-#include "GallerySplashScreen.h"
-#include "viewmodel/GallerySettings.h"
 
 namespace fluent::gallery {
 namespace {

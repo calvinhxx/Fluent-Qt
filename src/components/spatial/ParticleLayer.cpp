@@ -1,4 +1,6 @@
 #include "ParticleLayer.h"
+#include "components/layout/ParticleBackdrop.h"
+#include "components/layout/ParticleBackdrop_p.h"
 
 #include <QEvent>
 #include <QOpenGLContext>
@@ -10,9 +12,6 @@
 #include <QVariant>
 #include <QtMath>
 #include <cmath>
-
-#include "components/layout/ParticleBackdrop.h"
-#include "components/layout/ParticleBackdrop_p.h"
 
 namespace fluent::spatial {
 namespace {

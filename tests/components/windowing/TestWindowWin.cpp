@@ -1,4 +1,8 @@
 #include <gtest/gtest.h>
+#include "compatibility/WindowChromeCompat.h"
+#include "components/basicinput/Button.h"
+#include "components/windowing/Window.h"
+#include "components/windowing/WindowBackdrop.h"
 
 #include <QApplication>
 #include <QGuiApplication>
@@ -13,11 +17,6 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLWidget>
 #endif
-
-#include "compatibility/WindowChromeCompat.h"
-#include "components/basicinput/Button.h"
-#include "components/windowing/Window.h"
-#include "components/windowing/WindowBackdrop.h"
 
 // Windows headers define small as a macro; include them after FluentQt declarations.
 // zh_CN: Windows 头文件将 small 定义为宏，应在 FluentQt 声明之后包含。

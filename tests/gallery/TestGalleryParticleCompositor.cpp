@@ -1,4 +1,8 @@
 #include <gtest/gtest.h>
+#include "components/layout/ParticleBackdrop.h"
+#include "view/shell/GalleryGlyphPaintDevice.h"
+#include "view/shell/GalleryParticleCompositor.h"
+#include "view/shell/GallerySpatialRenderPolicy.h"
 #include <QApplication>
 #include <QImage>
 #include <QGraphicsOpacityEffect>
@@ -11,11 +15,6 @@
 #include <QSignalSpy>
 #include <QTest>
 #include <QtMath>
-
-#include "components/layout/ParticleBackdrop.h"
-#include "view/shell/GalleryGlyphPaintDevice.h"
-#include "view/shell/GalleryParticleCompositor.h"
-#include "view/shell/GallerySpatialRenderPolicy.h"
 
 namespace {
 using fluent::layout::ParticleBackdrop;

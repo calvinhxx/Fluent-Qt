@@ -1,4 +1,7 @@
 #include "SpatialRuntime.h"
+#include "compatibility/SpatialNativeStyle_p.h"
+#include "compatibility/SpatialRenderCompat.h"
+#include "components/windowing/Window.h"
 
 #include <QOffscreenSurface>
 #include <QOpenGLContext>
@@ -6,9 +9,6 @@
 #include <QPointer>
 #include <QScopeGuard>
 #include <QWindow>
-#include "compatibility/SpatialNativeStyle_p.h"
-#include "compatibility/SpatialRenderCompat.h"
-#include "components/windowing/Window.h"
 
 namespace fluent::spatial {
 void SpatialRuntime::prepareApplication()

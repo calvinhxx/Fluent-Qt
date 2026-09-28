@@ -1,4 +1,8 @@
 #include <gtest/gtest.h>
+#include "components/foundation/MotionPolicy.h"
+#include "components/layout/ParticleBackdrop.h"
+#include "components/layout/ParticleBackdrop_p.h"
+#include "components/spatial/ParticleLayer.h"
 #include <QApplication>
 #include <QImage>
 #include <QOpenGLContext>
@@ -8,11 +12,6 @@
 #include <QPointer>
 #include <QSignalSpy>
 #include <QTest>
-
-#include "components/foundation/MotionPolicy.h"
-#include "components/layout/ParticleBackdrop.h"
-#include "components/layout/ParticleBackdrop_p.h"
-#include "components/spatial/ParticleLayer.h"
 
 using fluent::layout::ParticleBackdrop;
 using fluent::spatial::ParticleLayer;

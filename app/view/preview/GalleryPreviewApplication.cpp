@@ -1,4 +1,10 @@
 #include "GalleryPreviewApplication.h"
+#include "compatibility/QtCompat.h"
+#include "components/foundation/ThemeRegistry.h"
+#include "components/scrolling/ScrollView.h"
+#include "view/preview/GalleryPreviewActions.h"
+#include "view/widgets/GallerySampleCard.h"
+#include "view/widgets/GallerySampleCatalog.h"
 
 #include <FluentQt/Diagnostics.h>
 
@@ -34,13 +40,6 @@
 
 #include <cstddef>
 #include <cstdio>
-
-#include "compatibility/QtCompat.h"
-#include "components/foundation/ThemeRegistry.h"
-#include "components/scrolling/ScrollView.h"
-#include "view/preview/GalleryPreviewActions.h"
-#include "view/widgets/GallerySampleCard.h"
-#include "view/widgets/GallerySampleCatalog.h"
 
 namespace fluent::gallery {
 namespace {

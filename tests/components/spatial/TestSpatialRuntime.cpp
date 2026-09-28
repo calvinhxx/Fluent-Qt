@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
+#include "components/spatial/SpatialRuntime.h"
+#include "components/windowing/Window.h"
 #include <QApplication>
 #include <QOpenGLContext>
 #include <QWindow>
-#include "components/spatial/SpatialRuntime.h"
-#include "components/windowing/Window.h"
 
 using fluent::spatial::SpatialRuntime;
 
