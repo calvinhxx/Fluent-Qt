@@ -32,11 +32,13 @@ TEST(SpatialRuntimeTest, Contract_PreparationIsIdempotentAndNeverRecreatesVisibl
     const bool prepared = SpatialRuntime::prepareWindow(&window);
     const auto* handle = window.windowHandle();
     EXPECT_EQ(SpatialRuntime::prepareWindow(&window), prepared);
+    EXPECT_EQ(SpatialRuntime::prepareWindow(&window, QSurface::OpenGLSurface), prepared);
     EXPECT_EQ(window.windowHandle(), handle);
     EXPECT_EQ(QOpenGLContext::currentContext(), nullptr);
     window.show();
     const WId id = window.winId();
     EXPECT_FALSE(SpatialRuntime::prepareWindow(&window));
+    EXPECT_FALSE(SpatialRuntime::prepareWindow(&window, QSurface::RasterSurface));
     EXPECT_EQ(window.winId(), id);
 }
 

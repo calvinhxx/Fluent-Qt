@@ -18,16 +18,21 @@ void SpatialRuntime::prepareApplication()
 
 bool SpatialRuntime::prepareWindow(windowing::Window* window)
 {
+    return prepareWindow(window, QSurface::OpenGLSurface);
+}
+
+bool SpatialRuntime::prepareWindow(windowing::Window* window, QSurface::SurfaceType surfaceType)
+{
     if (!window || !window->isWindow() || window->isVisible() ||
         !compatibility::spatialRenderCapabilities().prepareNativeSurface)
         return false;
-    if (window->windowHandle() && window->windowHandle()->surfaceType() == QSurface::OpenGLSurface)
+    if (window->windowHandle() && window->windowHandle()->surfaceType() == surfaceType)
         return true;
     window->destroy();
     window->setAttribute(Qt::WA_NativeWindow, false);
     window->setAttribute(Qt::WA_NativeWindow);
     if (auto* surface = window->windowHandle()) {
-        surface->setSurfaceType(QSurface::OpenGLSurface);
+        surface->setSurfaceType(surfaceType);
         return true;
     }
     return false;

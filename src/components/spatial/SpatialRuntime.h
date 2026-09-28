@@ -2,6 +2,7 @@
 #define FLUENTQT_SPATIALRUNTIME_H
 
 #include <QString>
+#include <QSurface>
 
 namespace fluent::windowing {
 class Window;
@@ -24,6 +25,10 @@ public:
      * Returns false for visible/unsupported hosts; repeated preparation is a no-op.
      * zh_CN: 为隐藏的 Fluent 窗口准备后续 GPU 合成，不创建上下文；可见或不支持时返回 false，重复调用为空操作。 */
     static bool prepareWindow(windowing::Window* window);
+    /** @brief Prepare a hidden window for a caller-selected graphics API; no device is created.
+     * The caller must probe that API before installing a GPU canvas.
+     * zh_CN: 为调用方指定的图形 API 准备隐藏窗口，不创建设备；安装 GPU 画布前仍须探测该 API。 */
+    static bool prepareWindow(windowing::Window* window, QSurface::SurfaceType surfaceType);
     /** @brief Whether this display can attempt OpenGL; actual context validation is still required.
      * zh_CN: 当前显示是否允许尝试 OpenGL，仍需验证真实上下文。 */
     static bool supportsOpenGLDisplay();
