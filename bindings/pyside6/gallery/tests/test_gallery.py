@@ -5268,7 +5268,7 @@ with (
             backdrop.setGpuAccelerationEnabled(False)
             self.assertEqual(changes, [True, False])
         finally:
-            shiboken6.delete(backdrop)
+            delete_qobject(backdrop)
 
     def test_settings_page_matches_native_rows_and_choices(self):
         window = GalleryWindow()

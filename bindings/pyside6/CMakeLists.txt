@@ -878,7 +878,7 @@ if(BUILD_TESTING)
     if(FLUENT_QT_BUILD_PYSIDE6_GALLERY)
         add_test(
             NAME test_pyside6_gallery
-            COMMAND "${Python_EXECUTABLE}"
+            COMMAND "${Python_EXECUTABLE}" -X faulthandler
                 "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery.py")
         set_tests_properties(test_pyside6_gallery PROPERTIES
             ENVIRONMENT

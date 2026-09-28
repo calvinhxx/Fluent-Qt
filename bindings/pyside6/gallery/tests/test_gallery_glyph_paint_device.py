@@ -1,8 +1,15 @@
 """CPU contracts for the private low-DPI Gallery glyph adapter."""
+import faulthandler
 import sys
 import unittest
 import weakref
 from unittest.mock import patch
+
+if __name__ == "__main__":
+    # Preserve the blocked call stack before CTest's 60-second timeout,
+    # including a stall while importing the native bindings.
+    faulthandler.enable()
+    faulthandler.dump_traceback_later(45)
 
 from PySide6.QtCore import QLineF, QPoint, QPointF, QRect, QRectF, Qt
 from PySide6.QtGui import (
@@ -241,4 +248,7 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    try:
+        unittest.main(verbosity=2)
+    finally:
+        faulthandler.cancel_dump_traceback_later()
