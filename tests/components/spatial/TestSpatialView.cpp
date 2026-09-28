@@ -216,6 +216,8 @@ TEST_F(SpatialViewTest, Contract_NativeRevealRestoresTheWholeCanvasWithoutIdleRe
                     EXPECT_EQ(actual.pixelColor(x, y), background) << "x=" << x << " y=" << y;
             for (int y : {0, actual.height() - 1})
                 EXPECT_EQ(actual.pixelColor(actual.width() / 2, y), background);
+            EXPECT_EQ(actual.pixelColor(actual.width() / 2, actual.height() / 2),
+                      card->themeColors().bgLayer);
         }
         QTest::qWait(200);
         auto* gl = view->findChild<QOpenGLWidget*>();
@@ -557,6 +559,44 @@ TEST_F(SpatialViewTest, Contract_ReleaseAllowsCountHandlerToDestroyTheHost)
     EXPECT_TRUE(view.isNull());
     EXPECT_TRUE(item.isNull());
     EXPECT_TRUE(widget.isNull());
+}
+TEST_F(SpatialViewTest, Contract_ContentDestructionDetachesBeforeCountNotification)
+{
+    for (const bool spatial : {false, true}) {
+        for (const bool destroyHost : {false, true}) {
+            SCOPED_TRACE(spatial);
+            SCOPED_TRACE(destroyHost);
+            QPointer<SpatialView> view = new SpatialView;
+            view->setRenderMode(SpatialView::RenderMode::Raster);
+            view->setSpatialEnabled(spatial);
+            QPointer<QWidget> widget = new QWidget;
+            QPointer<SpatialItem> item = view->addWidget(widget);
+            QPointer<QGraphicsProxyWidget> proxy = widget->graphicsProxyWidget();
+            EXPECT_EQ(!proxy.isNull(), spatial);
+            QSignalSpy destroyed(widget, &QObject::destroyed);
+            int notifications = 0;
+            QObject::connect(view, &SpatialView::itemCountChanged, view, [&](int count) {
+                ++notifications;
+                EXPECT_EQ(count, 0);
+                EXPECT_TRUE(view->items().isEmpty());
+                EXPECT_EQ(item->widget(), nullptr);
+                if (destroyHost)
+                    delete view.data();
+            });
+            delete widget.data();
+            EXPECT_EQ(notifications, 1);
+            EXPECT_EQ(destroyed.count(), 1);
+            EXPECT_TRUE(widget.isNull());
+            EXPECT_TRUE(proxy.isNull());
+            EXPECT_EQ(view.isNull(), destroyHost);
+            if (view)
+                EXPECT_EQ(view->itemCount(), 0);
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+            EXPECT_TRUE(item.isNull());
+            EXPECT_EQ(notifications, 1);
+            delete view.data();
+        }
+    }
 }
 TEST_F(SpatialViewTest, Contract_DeferredModeChangeKeepsOnlyTheLatestRequest)
 {
