@@ -143,6 +143,9 @@ The low-DPI text adapter reports only its actual backend's paint capabilities,
 so focused native editors do not request unsupported XOR caret drawing in 3D.
 Automated input checks cover text fields, editable ComboBox and collection-cell
 editors; injected IME commits do not replace a native IME candidate-window review.
+The AutoSuggestBox Gallery check also verifies visible unselected text in Light
+and Dark GPU frames. LineEdit finishes its frame painter before native text
+painting, preserving text contrast when widgets render into the projected cache.
 Gallery keeps the 3D preference separate from runtime availability. Without acceleration,
 its Settings switch is off and disabled with an accessible explanation, and the shell
 restores native 2D widgets in both the shell and the Spatial examples. Tab/Escape

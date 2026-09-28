@@ -1890,6 +1890,40 @@ TEST_F(GallerySpatialTest, NativeAutoSuggestPageTypingKeepsPopupAndGpuAlive)
     QTest::keyClicks(box, "a", Qt::NoModifier, 20);
     ASSERT_TRUE(QTest::qWaitFor([&] { return box->isSuggestionListOpen(); }, 1000));
     ASSERT_FALSE(surface->grabFramebuffer().isNull());
+    for (const auto theme : {GallerySettings::ThemeMode::Light, GallerySettings::ThemeMode::Dark}) {
+        SCOPED_TRACE(theme == GallerySettings::ThemeMode::Light ? "Light" : "Dark");
+        settings.setThemeMode(theme);
+        box->setText(QString::fromUtf8("Visible 输入 42"));
+        box->deselect();
+        QTest::qWait(100);
+        const QImage image = surface->grabFramebuffer();
+        const qreal dpr = surface->devicePixelRatioF();
+        QPolygon polygon;
+        const QRect input(12, box->height() - box->inputHeight() + 4, 170, box->inputHeight() - 8);
+        for (const QPoint& corner :
+             {input.topLeft(), input.topRight(), input.bottomRight(), input.bottomLeft()}) {
+            const QPoint projected =
+                surface->mapFrom(&window, controller->projectedPosition(box, corner));
+            polygon << QPoint(qRound(projected.x() * dpr), qRound(projected.y() * dpr));
+        }
+        const QRect bounds = polygon.boundingRect().intersected(image.rect());
+        int textPixels = 0;
+        for (int y = bounds.top(); y <= bounds.bottom(); ++y)
+            for (int x = bounds.left(); x <= bounds.right(); ++x) {
+                if (!polygon.containsPoint(QPoint(x, y), Qt::OddEvenFill))
+                    continue;
+                const int gray = qGray(image.pixel(x, y));
+                if (theme == GallerySettings::ThemeMode::Light ? gray < 100 : gray > 180)
+                    ++textPixels;
+            }
+        EXPECT_GT(textPixels, 40 * dpr * dpr) << "Unselected input text must reach the GPU frame";
+        if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE"); !dir.isEmpty()) {
+            QDir().mkpath(dir);
+            const QString mode = theme == GallerySettings::ThemeMode::Light ? "light" : "dark";
+            image.save(dir + "/gallery-input-" + mode + ".png");
+            image.copy(bounds).save(dir + "/gallery-input-" + mode + "-crop.png");
+        }
+    }
     QTest::keyClick(box, Qt::Key_Down);
     QTest::keyClick(box, Qt::Key_Return);
     EXPECT_FALSE(box->isSuggestionListOpen());

@@ -54,10 +54,14 @@ LineEdit::LineEdit(QWidget* parent) : QLineEdit(parent)
 
 void LineEdit::paintEvent(QPaintEvent* event)
 {
-    QPainter p(this);
-    p.setRenderHint(QPainter::Antialiasing);
-    if (m_frameVisible)
+    // End the frame painter before Qt paints text. QWidget::render shares its
+    // painter with the GPU target; overlapping painters lose the text state.
+    // zh_CN: 先结束边框画笔；重定向到 GPU 时，重叠画笔会让文字绘制状态失效。
+    if (m_frameVisible) {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
         paintFrame(p);
+    }
     QLineEdit::paintEvent(event);
 }
 
