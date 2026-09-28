@@ -275,6 +275,10 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
 
 TreeView::~TreeView()
 {
+    // Detaching the model resets animation state. Do not expose that reset to
+    // callbacks whose Python wrapper has already entered destruction.
+    // zh_CN: 解绑模型会重置动效状态，析构时不向已进入销毁流程的 Python 包装器发信号。
+    blockSignals(true);
     if (m_indicatorMotionAnim)
         m_indicatorMotionAnim->stop();
     if (m_expandRevealAnim)
