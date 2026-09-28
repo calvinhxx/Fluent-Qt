@@ -156,6 +156,12 @@
       "index": "releases/README.md",
       "groups": [
         {
+          "title": "1.9",
+          "pages": [
+            "releases/v1.9.0.md"
+          ]
+        },
+        {
           "title": "1.8",
           "pages": [
             "releases/v1.8.5.md",
