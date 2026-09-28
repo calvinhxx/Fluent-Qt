@@ -59,7 +59,9 @@ class _GlyphPaintEngine(QPaintEngine):
         engine = device.target.paintEngine()
         features = QPaintEngine.PaintEngineFeatures(0)
         if engine is not None:
-            for bit in range(32):
+            # Bit 31 is not a Qt paint feature and overflows the signed enum
+            # converter in PySide6 6.2 on Windows.
+            for bit in range(31):
                 feature = QPaintEngine.PaintEngineFeature(1 << bit)
                 if engine.hasFeature(feature):
                     features |= feature

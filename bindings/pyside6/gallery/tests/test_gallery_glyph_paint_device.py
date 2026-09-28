@@ -12,6 +12,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QApplication, QWidget
 
 from fluentqt_gallery.glyph_paint_device import GlyphPaintDevice, needs_native_glyph_coverage
+from fluentqt_gallery.spatial_support import SPATIAL_AVAILABLE
 
 
 class GalleryGlyphPaintDeviceTest(unittest.TestCase):
@@ -55,11 +56,12 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
 
         target = Device()
         adapter = GlyphPaintDevice(target, 1)
-        for bit in range(32):
+        for bit in range(31):
             feature = QPaintEngine.PaintEngineFeature(1 << bit)
             self.assertEqual(adapter.paintEngine().hasFeature(feature), target.engine.hasFeature(feature))
         self.assertFalse(adapter.paintEngine().hasFeature(QPaintEngine.RasterOpModes))
 
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding is not installed")
     def test_platform_gate_delegates_to_shared_native_runtime(self):
         # Platform/DPR decisions belong to SpatialRuntime, not a Python-only fork.
         with patch("fluentqt.spatial.SpatialRuntime") as runtime:

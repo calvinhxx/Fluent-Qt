@@ -228,8 +228,8 @@ class GalleryParticleCompositorTest(unittest.TestCase):
             surface.doneCurrent()
 
     def test_native_hidpi_joint_budget_keeps_animated_and_static_caches(self):
-        from fluentqt_gallery.spatial_controller import _cache_plan, _CACHE_BUDGET_BYTES
         surface = self._native_context()
+        from fluentqt_gallery.spatial_controller import _cache_plan, _CACHE_BUDGET_BYTES
         root = QWidget()
         compositor = GalleryParticleCompositor()
         probe = navigation = content = paint = resolve = None

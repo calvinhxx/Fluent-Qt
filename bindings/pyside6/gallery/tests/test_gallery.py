@@ -3815,7 +3815,7 @@ with (
             self.assertEqual(window._prewarm_done, 1)
             self.assertEqual(window._splash.progress(), 100)
         finally:
-            shiboken6.delete(window)
+            delete_qobject(window)
 
     def test_startup_is_bounded_and_cold_pages_remain_cancellable(self):
         self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())
@@ -3845,7 +3845,7 @@ with (
             window.navigate("button")
             self.assertIs(window._pages["button"][1], page)
         finally:
-            shiboken6.delete(window)
+            delete_qobject(window)
 
     def test_startup_catalog_grid_builds_one_entry_per_turn(self):
         window = GalleryWindow(startup_visuals=True)
@@ -3875,7 +3875,7 @@ with (
             self.assertIs(window._pages[route][1], page)
             self.assertEqual(window._prewarm_done, 1)
         finally:
-            shiboken6.delete(window)
+            delete_qobject(window)
 
     def test_startup_hidden_page_activity_and_close_resume(self):
         window = GalleryWindow(startup_visuals=True)
@@ -3905,7 +3905,7 @@ with (
             self.assertIs(window._pages["button"][1], staged)
             self.assertEqual(window._prewarm_done, 2)
         finally:
-            shiboken6.delete(window)
+            delete_qobject(window)
 
     def test_startup_failure_is_explicit_and_does_not_strand_splash(self):
         window = GalleryWindow(startup_visuals=True)
@@ -3935,7 +3935,7 @@ with (
             self.assertIn("could not be prepared", window._splash.text())
             self.assertTrue(_wait_until(lambda: window._startup_finished, 3000))
         finally:
-            shiboken6.delete(window)
+            delete_qobject(window)
 
     def test_splash_handoff_caches_native_pixels_and_invalidates(self):
         class PaintCounter(QLabel):
