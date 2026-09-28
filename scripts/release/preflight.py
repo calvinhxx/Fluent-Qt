@@ -142,6 +142,7 @@ def integration_checks(output_dir: Path) -> list[tuple[str, list[str]]]:
     contract = str(output_dir / "gallery-contract.json")
     return [
         ("CI component registration", [python, ".github/scripts/test_classify_ci_changes.py"]),
+        ("Python API policy", [python, "bindings/pyside6/tools/verify_api_policy.py"]),
         ("core wheel inventory", [python, "bindings/pyside6/tests/test_wheel_builder.py"]),
         ("desktop candidate assembly", [python, ".github/scripts/test_assemble_desktop_release_candidate.py"]),
         ("Python platform artifact coverage", [python, ".github/scripts/test_verify_pyside_platform_artifacts.py"]),

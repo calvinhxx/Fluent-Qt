@@ -3,7 +3,7 @@
   "project": {
     "name": "FluentQt",
     "version": "1.9.0",
-    "api_version": "1.8",
+    "api_version": "1.9",
     "cpp_standard": "C++17",
     "qt_versions": [
       "5.15+",
