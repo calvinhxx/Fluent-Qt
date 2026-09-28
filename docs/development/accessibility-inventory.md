@@ -187,7 +187,11 @@ tour; finishing restores window chrome and normal input. Settings update status
 uses the description column beside the action and wraps in narrow layouts.
 Toggle tracks and labels, checkbox clicks,
 slider dragging, list/tree selection and expansion, ratings, date selection and tabs have projected-input
-regressions. `SpatialView` releases the OpenGL viewport while hidden or fully clipped, and
+regressions. Native GPU checks cover nested opacity above and below paint-strip
+boundaries and StackView's SlideFade/ScaleFade start and intermediate frames.
+The C++ and Python Gallery compositors preserve the same effect coordinates;
+full-opacity StackView and SplashScreen frames bypass unnecessary effects.
+`SpatialView` releases the OpenGL viewport while hidden or fully clipped, and
 uses Raster under an ancestor graphics effect without changing the requested
 render mode;
 hidden construction defers GPU initialization so startup prewarm preserves the

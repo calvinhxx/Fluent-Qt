@@ -107,6 +107,63 @@ class GallerySpatialTest(unittest.TestCase):
                          ["target", "sourceSize", "panelSize"])
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_native_nested_opacity_keeps_color_across_paint_strips(self):
+        if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
+            self.skipTest("requires actual GPU effect composition")
+        from PySide6.QtGui import QColor, QPalette
+        from fluentqt.spatial import SpatialRuntime
+        from fluentqt_gallery.spatial_controller import GallerySpatialController
+        window = fluentqt.Window()
+        window._splash = window._dismissal_splash = None
+        SpatialRuntime.prepareWindow(window)
+        window.resize(1200, 900)
+        navigation = fluentqt.NavigationView()
+        navigation.setDisplayMode(fluentqt.NavigationView.DisplayMode.Left)
+        window.setContentWidget(navigation)
+        page = QWidget()
+        page.setAutoFillBackground(True)
+        palette = page.palette()
+        palette.setColor(QPalette.Window, QColor(240, 240, 240))
+        page.setPalette(palette)
+        navigation.contentHost().insertPage(0, page)
+        navigation.contentHost().setCurrentIndex(0, 0, False)
+        tile = QWidget(page)
+        tile.setGeometry(80, 180, 430, 160)
+        tile.setAutoFillBackground(True)
+        palette.setColor(QPalette.Window, QColor(220, 40, 70))
+        tile.setPalette(palette)
+        effect = QGraphicsOpacityEffect(tile)
+        tile.setGraphicsEffect(effect)
+        controller = GallerySpatialController(window, navigation)
+        try:
+            window.show()
+            self.assertTrue(QTest.qWaitForWindowExposed(window))
+            self.settings.set_spatial_mode_enabled(True)
+            for _ in range(100):
+                if controller.canvas and controller.canvas.property("presenting"):
+                    break
+                _qwait(50)
+            self.assertTrue(controller.canvas.property("presenting"))
+            controller.settle()
+            surface = controller.canvas
+            dpr = surface.devicePixelRatioF()
+            for y in (180, 520):
+                tile.move(80, y)
+                for alpha in (.25, .5, .75, 1.):
+                    with self.subTest(y=y, alpha=alpha):
+                        effect.setOpacity(alpha)
+                        _qwait(100)
+                        point = surface.mapFrom(window, controller.projected_position(
+                            tile, tile.rect().center()))
+                        image = surface.grabFramebuffer()
+                        actual = image.pixelColor(round(point.x() * dpr), round(point.y() * dpr))
+                        for channel, foreground in zip(actual.getRgb()[:3], (220, 40, 70)):
+                            self.assertAlmostEqual(channel, 240 * (1 - alpha) + foreground * alpha,
+                                                   delta=6)
+        finally:
+            delete(window)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_native_autosuggest_component_page_accepts_projected_focus_and_typing(self):
         if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
             self.skipTest("requires a native focused editor and GPU composition")
