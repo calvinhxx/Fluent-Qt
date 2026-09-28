@@ -579,15 +579,18 @@ TEST_F(SpatialViewTest, Contract_ContentDestructionDetachesBeforeCountNotificati
                 ++notifications;
                 EXPECT_EQ(count, 0);
                 EXPECT_TRUE(view->items().isEmpty());
-                EXPECT_EQ(item->widget(), nullptr);
+                EXPECT_TRUE(item.isNull() || item->widget() == nullptr);
                 if (destroyHost)
                     delete view.data();
             });
             delete widget.data();
-            EXPECT_EQ(notifications, 1);
+            EXPECT_EQ(view->itemCount(), 0);
+            EXPECT_EQ(notifications, 0);
             EXPECT_EQ(destroyed.count(), 1);
             EXPECT_TRUE(widget.isNull());
             EXPECT_TRUE(proxy.isNull());
+            QCoreApplication::processEvents();
+            EXPECT_EQ(notifications, 1);
             EXPECT_EQ(view.isNull(), destroyHost);
             if (view)
                 EXPECT_EQ(view->itemCount(), 0);
@@ -597,6 +600,19 @@ TEST_F(SpatialViewTest, Contract_ContentDestructionDetachesBeforeCountNotificati
             delete view.data();
         }
     }
+    SpatialView view;
+    auto* first = new QWidget;
+    auto* second = new QWidget;
+    view.addWidget(first);
+    view.addWidget(second);
+    QSignalSpy changes(&view, &SpatialView::itemCountChanged);
+    delete first;
+    delete second;
+    EXPECT_EQ(view.itemCount(), 0);
+    EXPECT_TRUE(changes.isEmpty());
+    QCoreApplication::processEvents();
+    ASSERT_EQ(changes.size(), 1);
+    EXPECT_EQ(changes.at(0).at(0).toInt(), 0);
 }
 TEST_F(SpatialViewTest, Contract_DeferredModeChangeKeepsOnlyTheLatestRequest)
 {

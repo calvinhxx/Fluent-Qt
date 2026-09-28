@@ -74,7 +74,10 @@ public:
     void releaseItem(SpatialItem* item);
     QList<SpatialItem*> items() const;
     /** @brief Number of hosted surfaces, including hidden ones; read-only, initially 0.
-     * zh_CN: 承载的表面数量，包含隐藏条目；只读，初始为 0。 */
+     * Externally destroyed content is removed immediately; its notification is
+     * coalesced until widget teardown finishes, so handlers may destroy the host.
+     * zh_CN: 承载的表面数量，包含隐藏条目；只读，初始为 0。
+     * 外部销毁控件时立即移除条目，销毁完成后合并通知，允许回调销毁宿主。 */
     int itemCount() const;
 
     /** @brief Enables perspective; default true when motion/theme policy permits it.

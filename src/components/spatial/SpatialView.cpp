@@ -226,6 +226,7 @@ struct SpatialView::Private {
     int response = 140, frameRate = 60;
     bool spatial = true, requestedSpatial = true, tracking = true, cache = true;
     bool destroying = false, projecting = false, geometryQueued = false, updatingTheme = false;
+    bool countNotificationQueued = false;
     bool backendQueued = false, checkQueued = false, gpuFailed = false;
     RenderMode mode = RenderMode::Auto;
     Backend backend = Backend::Raster;
@@ -722,18 +723,22 @@ SpatialItem* SpatialView::addWidget(QWidget* widget, WidgetOwnership ownership)
                 object->removeEventFilter(this);
                 item->d->owner = nullptr;
                 item->d->widget.clear();
-                // QWidget emits destroyed before unlinking its parent and proxy. A count
-                // handler can delete this host, so remove both ownership paths first.
-                // zh_CN: destroyed 发出时父对象与代理尚未解绑；先解除所有权，允许数量回调同步销毁宿主。
-                if (auto* proxy = item->d->proxy.data()) {
+                // Qt 5/6.2 already dismantled the focus chain here: reparenting the
+                // dying widget is unsafe. Let Qt release its parent/proxy first,
+                // then notify handlers that may synchronously destroy this host.
+                // zh_CN: 旧版 Qt 此时已拆除焦点链，不能重设父对象；待 Qt 完成解绑后再通知外部。
+                if (auto* proxy = item->d->proxy.data())
                     proxy->moved = {};
-                    d->scene->removeItem(proxy);
-                    // Qt's widget-destroyed slot will delete the detached proxy safely.
-                    // Deleting it here would recursively delete the same widget.
-                }
-                static_cast<QWidget*>(object)->setParent(nullptr);
                 item->deleteLater();
-                emit itemCountChanged(itemCount());
+                if (!d->countNotificationQueued) {
+                    d->countNotificationQueued = true;
+                    QTimer::singleShot(0, this, [this] {
+                        if (!d->countNotificationQueued)
+                            return;
+                        d->countNotificationQueued = false;
+                        emit itemCountChanged(itemCount());
+                    });
+                }
             }
         });
     if (d->spatial)
@@ -745,6 +750,7 @@ SpatialItem* SpatialView::addWidget(QWidget* widget, WidgetOwnership ownership)
     }
     updateProjection();
     QPointer<SpatialItem> itemGuard(item);
+    d->countNotificationQueued = false;
     emit itemCountChanged(itemCount());
     return itemGuard.data();
 }
@@ -778,8 +784,10 @@ QWidget* SpatialView::detachItem(SpatialItem* item, bool applyOwnership)
             refreshContentTheme(widget);
         }
     }
-    if (!d->destroying)
+    if (!d->destroying) {
+        d->countNotificationQueued = false;
         emit itemCountChanged(itemCount());
+    }
     return widget;
 }
 QWidget* SpatialView::takeWidget(SpatialItem* item)
