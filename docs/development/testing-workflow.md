@@ -65,6 +65,10 @@ test-data directory and restores the setting it changes.
 - `visual_gate` is the opt-in representative Light/Dark/RTL snapshot compare
   (three checked-in PNGs). It is not part of `ci_fast`, `ci_full`, or
   `local_full`.
+- `performance` contains opt-in native Gallery timing probes, excluded from
+  `ci_fast`, `ci_full`, and `local_full`. Run them serially on an idle desktop
+  with `FLUENT_QT_SPATIAL_BENCHMARK=1` and `ctest -L '^performance$'`. Without
+  that environment variable they skip, including in unfiltered CTest runs.
 - Discovered tests also receive conservative semantic labels based on test-name
   tokens: `visual`, `interactive`, `animation`, `slow`, `platform_windows`,
   and `platform_macos`. VisualCheck tests receive `visual`,
@@ -188,12 +192,44 @@ python3 tools/site/generate_api_reference.py --check
 
 ## Local integration preflight
 
+For routine edits, start with the owning tests on the current SDK:
+
+```bash
+python3 tools/dev/fluent_qt_preflight.py --quick --plan \
+  --paths tests/components/basicinput/TestButton.cpp
+python3 tools/dev/fluent_qt_preflight.py --quick --config Debug \
+  --paths tests/components/basicinput/TestButton.cpp \
+  --build-dir build/vcpkg-osx
+```
+
+`--quick` defaults to uncommitted changes relative to `HEAD`, including new files.
+Use `--paths` to work on a smaller part of a dirty checkout; the report explicitly
+limits its result to those paths. CMake registrations provide test-file ownership.
+A component implementation with a matching test selects that owner; headers,
+shared infrastructure and unknown mappings retain the broader category or host
+selection. This mode gives local feedback, not complete dependent-component or
+cross-platform coverage. It does not run the release SDK matrix or replace the
+integration checks below.
+
+Python test-file edits select their registered suite. Known private Spatial
+Gallery modules select their compositor/integration suites; other binding changes
+retain the full Python selection. Supply the configured `--pyside-build-dir` for
+Python checks. Manual desktop checks remain separate. A missing required build
+directory fails; `--plan` can inspect the selection without one.
+
 Catch component-selection, wheel-file, generated-wrapper verifier, and Gallery
 contract omissions before compiling Qt or pushing a pull request:
 
 ```bash
 python3 tools/dev/fluent_qt_preflight.py --checks-only
 ```
+
+The ordinary PySide6 binding suite excludes the lifecycle methods that CTest
+runs in separate processes. CMake generates this exclusion list from the same
+registrations; a missing method fails the runner. Directly running
+`bindings/pyside6/tests/test_bindings.py` still executes the complete suite.
+Use the `pyside_native` label for the separate Gallery desktop checks. Those
+checks require a native Qt platform and are not included by `-L '^pyside$'`.
 
 The same source/packaging checks run in CI's planning job and the release
 preflight. They require no Qt installation. This command does not verify
@@ -210,7 +246,7 @@ python3 tools/dev/fluent_qt_preflight.py --base-ref origin/main \
   --build-dir build/vcpkg-osx --pyside-build-dir build/pyside6-local
 ```
 
-Both local and CI selection map `app/` and `tests/gallery/` changes to
+Integration mode and CI map `app/` and `tests/gallery/` changes to
 `fluent_qt_gallery_tests` and the `gallery` label. Mixed component/Gallery
 changes combine their groups; shared library or build changes still select
 the full host set. Gallery selection requires `FLUENT_QT_BUILD_GALLERY=ON`.

@@ -325,9 +325,15 @@ def run_accessible_source_focus_contract(page: object, base_url: str) -> None:
     previous_viewport = page.viewport_size
     try:
         page.set_viewport_size({"width": 1280, "height": 720})
-        page.goto(f"{base_url}/app/index.html?route=spatial-view&window-mode=maximized",
+        page.goto(f"{base_url}/app/index.html?route=spatial-view&window-mode=maximized&wasm-smoke=source-input",
                   wait_until="domcontentloaded")
-        page.wait_for_function("document.documentElement.dataset.fluentQtLoaded === 'true'")
+        # Loader completion precedes startup focus changes, deferred route
+        # construction and the renderer decision. Use the existing read-only
+        # source probe to wait for the actual page before focusing its AX nodes.
+        page.wait_for_function("""() => {
+            const probe = JSON.parse(document.documentElement.dataset.fluentQtSourceInput || '{}');
+            return probe.state === 'ready' && probe.route === 'spatial-view';
+        }""", timeout=45_000)
         run_screen_reader_proxy_contract(page, "Gallery accessible source")
         container = page.locator("#qt-shadow-container .qt-window-a11y-container").first
         header = container.locator('[id$=".galleryCodeBlockHeader"]').first
@@ -379,6 +385,7 @@ def run_accessible_source_focus_contract(page: object, base_url: str) -> None:
             raise RuntimeError("Accessible Copy activation scrolled the Qt canvas")
         print("Gallery AX offscreen focus and trusted Enter passed; canvas geometry unchanged")
     finally:
+        page.evaluate("document.documentElement.dataset.fluentQtSourceInputDone = 'true'")
         if previous_viewport is not None:
             page.set_viewport_size(previous_viewport)
 
@@ -556,7 +563,9 @@ def run_smoke(
                 viewport={"width": viewport_width, "height": viewport_height},
                 device_scale_factor=device_scale_factor,
             )
-            page.on("pageerror", lambda error: page_errors.append(str(error)))
+            page.on("pageerror", lambda error: page_errors.append(
+                f"{page.url}: {getattr(error, 'stack', None) or str(error)}"
+            ))
             page.on(
                 "console",
                 lambda message: console_messages.append(
@@ -935,6 +944,10 @@ def run_smoke(
 
             browser.close()
     except Exception:
+        if page_errors:
+            print("Browser page errors (URL and stack):", file=sys.stderr)
+            for error in page_errors:
+                print(f"  {error}", file=sys.stderr)
         if console_messages:
             print("Browser console tail:", file=sys.stderr)
             for message in console_messages[-30:]:

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import importlib.util
 import json
 import os
@@ -30,6 +31,102 @@ def load_helper(name: str, path: Path):
 
 CLASSIFIER = load_helper("local_ci_classifier", ROOT / ".github/scripts/classify_ci_changes.py")
 RELEASE = load_helper("local_release_preflight", ROOT / "scripts/release/preflight.py")
+
+
+@dataclass(frozen=True)
+class FocusedCppSelection:
+    targets: tuple[str, ...]
+    label_regex: str
+    scope: str = "selected"
+
+
+def registered_sources(root: Path, directory: str, command: str) -> dict[str, set[str]]:
+    """Read literal source ownership from existing CMake registrations, not a second catalog."""
+    owners: dict[str, set[str]] = {}
+    for cmake in (root / directory).rglob("CMakeLists.txt"):
+        text = re.sub(r"(?m)^\s*#.*$", "", cmake.read_text(encoding="utf-8"))
+        for match in re.finditer(rf"\b{command}\s*\(([^)]*)\)", text, re.DOTALL):
+            body = match[1]
+            target = re.match(r'\s*(?:NAME\s+)?"?(test_[a-z0-9_]+)\b', body)
+            if not target:
+                continue
+            body = body.replace("${CMAKE_CURRENT_SOURCE_DIR}", str(cmake.parent))
+            body = body.replace("${CMAKE_SOURCE_DIR}", str(root))
+            for token in re.findall(r'[^\s";]+\.(?:cpp|h|py)\b', body):
+                if "$" in token:
+                    continue
+                source = (cmake.parent / token).resolve()
+                if source.is_relative_to(root):
+                    owners.setdefault(source.relative_to(root).as_posix(), set()).add(target[1])
+    return owners
+
+
+def quick_selection(paths: list[str], root: Path = ROOT):
+    """Owner feedback only; headers and unknown inputs retain the broad CI selection."""
+    cpp_owners = registered_sources(root, "tests", "add_qt_test_module")
+    targets: set[str] = set()
+    broad_paths = []
+    for path in paths:
+        own_test = ("tests/" + Path(path).with_name("Test" + Path(path).stem + ".cpp").as_posix()
+                    .removeprefix("src/"))
+        if path in cpp_owners:
+            targets.update(cpp_owners[path])
+        elif (path.startswith("src/components/") and Path(path).suffix == ".cpp"
+              and own_test in cpp_owners and (root / path).with_suffix(".h").is_file()):
+            targets.update(cpp_owners[own_test])
+        else:
+            broad_paths.append(path)
+    broad, _ = selection_for(broad_paths)
+    if broad.scope == "all":
+        cpp = broad
+    else:
+        labels = sorted(targets | set(broad.groups))
+        cpp = (FocusedCppSelection(tuple(sorted(targets | set(broad.targets))),
+                                   "^(" + "|".join(labels) + ")$")
+               if labels else CLASSIFIER.CppTestSelection("none"))
+
+    py_owners = registered_sources(root, "bindings/pyside6", "add_test")
+    python_tests: set[str] = set()
+    full_python = False
+    spatial_modules = {
+        "particle_compositor.py": {"gallery_particle_compositor", "gallery_spatial"},
+        "glyph_paint_device.py": {"gallery_glyph_paint_device", "gallery_particle_compositor", "gallery_spatial"},
+        "spatial_backdrop.py": {"gallery_spatial_backdrop", "gallery_spatial"},
+        "spatial_controller.py": {"gallery_spatial", "gallery_particle_compositor", "gallery_spatial_backdrop"},
+    }
+    for path in paths:
+        if path in py_owners:
+            python_tests.update(name for name in py_owners[path] if not name.endswith("_native"))
+        elif path.startswith("bindings/pyside6/gallery/src/fluentqt_gallery/") and Path(path).name in spatial_modules:
+            python_tests.update("test_pyside6_" + name for name in spatial_modules[Path(path).name])
+            python_tests.add("test_pyside6_gallery_python_snippet_catalog")
+        elif (not CLASSIFIER.is_documentation_path(path) and CLASSIFIER.affects_pyside(path)
+              and not path.startswith("src/components/")):
+            full_python = True
+        elif path.startswith("src/components/") and Path(path).suffix == ".h":
+            full_python = True
+    return cpp, "^(" + "|".join(sorted(python_tests)) + ")$" if python_tests and not full_python else "", full_python or bool(python_tests)
+
+
+def quick_checks(paths: list[str], output_dir: Path = ROOT / "build/local-preflight") -> list[tuple[str, list[str]]]:
+    checks: dict[str, list[str]] = {}
+    for path in paths:
+        file = ROOT / path
+        if path.startswith(("tools/", "scripts/", ".github/")):
+            test = file if file.name.startswith("test_") else file.with_name("test_" + file.name.replace("-", "_"))
+            if file.suffix == ".py" and test.is_file():
+                checks[str(test)] = [sys.executable, str(test)]
+            else:
+                # An unrecognized tool must not turn into an empty successful gate.
+                checks.update(RELEASE.integration_checks(output_dir))
+                checks["CI boundaries"] = [sys.executable, ".github/scripts/validate-ci-workflow-boundaries.py"]
+        elif CLASSIFIER.is_documentation_path(path):
+            checks["documentation"] = [sys.executable, "tools/docs/validate_documentation.py", "--project-root", "."]
+        elif path == "docs/development/visual-evidence-inventory.json":
+            checks["visual evidence"] = [sys.executable, "tools/quality/validate_visual_evidence_inventory.py", "--project-root", "."]
+        if file.suffix in {".cpp", ".h"}:
+            checks["C++ format"] = [sys.executable, "tools/quality/check_cpp_format.py", "--working-tree"]
+    return list(checks.items())
 
 
 def changed_paths(root: Path, base_ref: str) -> list[str]:
@@ -123,7 +220,7 @@ def read_build(build_dir: Path, kind: str, root: Path) -> dict:
     return result
 
 
-def lane_commands(lane: dict, cpp, config: str) -> list[list[str]]:
+def lane_commands(lane: dict, cpp, config: str, python_regex: str = "") -> list[list[str]]:
     build_dir = lane["build_dir"]
     # Makefile generators cannot discover a newly added target until configure.
     configure = ["cmake", "-S", str(ROOT), "-B", build_dir]
@@ -137,6 +234,8 @@ def lane_commands(lane: dict, cpp, config: str) -> list[list[str]]:
         "-L", labels, "-LE", EXCLUDED_LABELS, "--no-tests=error",
         "--output-on-failure", "--timeout", "240",
     ]
+    if lane["kind"] == "pyside" and python_regex:
+        test += ["-R", python_regex]
     return [configure, build, test]
 
 
@@ -176,7 +275,9 @@ def run_logged(label: str, command: list[str], log_dir: Path, index: int) -> dic
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--base-ref", default="origin/main")
+    parser.add_argument("--base-ref", help="Diff baseline: HEAD for --quick, origin/main otherwise.")
+    parser.add_argument("--quick", action="store_true", help="Focused current-host feedback, without the release SDK matrix.")
+    parser.add_argument("--paths", nargs="+", help="Explicit repository-relative paths for --quick; other edits remain unverified.")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--checks-only", action="store_true", help="Run source/packaging gates without Qt or release/tag checks.")
     mode.add_argument("--plan", action="store_true", help="Show selection and configured SDKs without building or testing.")
@@ -185,17 +286,33 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", default="Release")
     parser.add_argument("--report", type=Path, default=ROOT / "build/local-preflight/report.json")
     args = parser.parse_args(argv)
+    if args.paths and not args.quick:
+        parser.error("--paths requires --quick")
+    if args.quick and args.checks_only:
+        parser.error("--quick and --checks-only have different validation scopes")
+    if args.paths and any(CLASSIFIER._has_unsafe_path_syntax(path) for path in args.paths):
+        parser.error("--paths must contain normalized repository-relative paths")
+    args.base_ref = args.base_ref or ("HEAD" if args.quick else "origin/main")
     report = {"status": "not_run", "host": platform.platform(), "checks": [], "lanes": []}
     report_path = args.report.resolve()
     report_path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        paths = [] if args.checks_only else changed_paths(ROOT, args.base_ref)
-        cpp, pyside = selection_for(paths)
+        paths = [] if args.checks_only else (sorted(set(args.paths)) if args.paths else changed_paths(ROOT, args.base_ref))
+        python_regex = ""
+        if args.quick:
+            cpp, python_regex, pyside = quick_selection(paths)
+        else:
+            cpp, pyside = selection_for(paths)
         gallery_needed = any(path.startswith(("app/", "tests/gallery/"))
                              and not CLASSIFIER.is_documentation_path(path) for path in paths)
-        required = required_versions(ROOT, cpp.scope != "none", pyside)
+        required = {} if args.quick else required_versions(ROOT, cpp.scope != "none", pyside)
         report.update({"base_ref": args.base_ref, "changed_paths": paths,
-                       "cpp_scope": cpp.scope, "required_versions": required})
+                       "cpp_scope": cpp.scope, "required_versions": required,
+                       "mode": "quick" if args.quick else "integration",
+                       "coverage": "owning tests on supplied SDKs; integration and platform checks deferred" if args.quick else "CI-selected integration",
+                       "explicit_paths": bool(args.paths), "cpp_targets": cpp.targets,
+                       "cpp_label_regex": cpp.label_regex,
+                       "python_test_regex": python_regex})
         if not args.checks_only:
             report["head_sha"] = subprocess.run(
                 ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, capture_output=True, check=True
@@ -207,9 +324,10 @@ def main(argv: list[str] | None = None) -> int:
                     lane = read_build(directory.resolve(), kind, ROOT)
                     if kind == "cpp" and gallery_needed and not lane["gallery_enabled"]:
                         raise ValueError(f"{directory}: configure with FLUENT_QT_BUILD_GALLERY=ON first")
-                    lane["commands"] = lane_commands(lane, cpp, args.config)
+                    lane["commands"] = lane_commands(lane, cpp, args.config, python_regex)
                     report["lanes"].append(lane)
-        print(f"Selected C++: {cpp.scope}; PySide6: {pyside}. Baselines: {required}")
+        print(f"Selected C++: {' '.join(cpp.targets) or 'none'}; "
+              f"PySide6: {(python_regex or 'all') if pyside else 'none'}. Baselines: {required}")
         for lane in report["lanes"]:
             print(f"Configured {lane['kind']}: Qt {lane['qt']} at {lane['build_dir']}")
         if args.plan:
@@ -218,8 +336,11 @@ def main(argv: list[str] | None = None) -> int:
             print("Plan only: no build or runtime validation was performed.")
             return 0
 
+        if args.quick and ((cpp.scope != "none" and not args.build_dir) or (pyside and not args.pyside_build_dir)):
+            raise ValueError("Quick runtime checks need the selected --build-dir and/or --pyside-build-dir; use --plan to inspect selection")
         with tempfile.TemporaryDirectory(prefix="fluentqt-local-preflight-") as temporary:
-            for label, command in RELEASE.integration_checks(Path(temporary)):
+            checks = quick_checks(paths, Path(temporary)) if args.quick else RELEASE.integration_checks(Path(temporary))
+            for label, command in checks:
                 result = run_logged(label, command, report_path.parent / "logs", len(report["checks"]))
                 report["checks"].append(result)
                 if result["returncode"]:
@@ -252,8 +373,8 @@ def main(argv: list[str] | None = None) -> int:
             print("Not verified: " + ", ".join(report["missing_coverage"]))
             print("Configure the missing SDK builds, or validate those lines on another host/CI.")
             return 2
-        report["status"] = "passed"
-        print("Selected local checks passed. Platform, installed-wheel and release gates remain separate.")
+        report["status"] = "quick_passed" if args.quick else "passed"
+        print("Selected current-host checks passed. Platform, installed-wheel and release gates remain separate.")
         return 0
     except (OSError, ValueError, subprocess.CalledProcessError) as error:
         report["status"] = "failed"

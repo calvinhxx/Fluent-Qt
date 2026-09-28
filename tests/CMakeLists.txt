@@ -82,6 +82,9 @@ set(FLUENT_QT_CI_FULL_TARGETS
     test_navigation_view
     test_window
 )
+if(TARGET FluentQtSpatial)
+    list(APPEND FLUENT_QT_CI_FULL_TARGETS test_spatial_runtime test_particle_layer)
+endif()
 if(FLUENT_QT_BUILD_GALLERY)
     list(APPEND FLUENT_QT_CI_FULL_TARGETS
         test_gallery_content_pages
@@ -130,6 +133,13 @@ set(FLUENT_QT_LOCAL_DESKTOP_TESTS
     WindowTest.WindowsTitleBarDoubleClickTogglesNativeMaximizeRestore
     WindowTest.WindowsMaximizedCustomChromeFillsAvailableGeometry
     WindowTest.TitleBarAutoSuggestClearButtonWorksWhilePopupOpen
+)
+
+set(FLUENT_QT_PERFORMANCE_TESTS
+    GallerySpatialTest.NativeColdActivationProbe
+    GallerySpatialTest.AssemblyFramePacingProbe
+    GallerySpatialTest.PointerFramePacingProbe
+    GallerySpatialTest.StationaryParticleFramePacingProbe
 )
 
 define_property(GLOBAL PROPERTY FLUENT_QT_TEST_TARGETS
@@ -255,6 +265,15 @@ macro(add_qt_test_module module_name source_file)
             set(_fluent_qt_is_local_desktop FALSE)
             set(_fluent_qt_is_known_contract_gap FALSE)
             set(_fluent_qt_is_visual_gate FALSE)
+            set(_fluent_qt_is_performance FALSE)
+            if(_fluent_qt_test_name IN_LIST FLUENT_QT_PERFORMANCE_TESTS)
+                set(_fluent_qt_is_performance TRUE)
+                set(_fluent_qt_is_local_desktop TRUE)
+                list(APPEND _fluent_qt_labels performance local_desktop)
+                set_tests_properties("${_fluent_qt_test_name}" PROPERTIES
+                    RUN_SERIAL TRUE
+                    TIMEOUT 120)
+            endif()
             if(_fluent_qt_test_name MATCHES "(^|[._/:-])Contract_")
                 list(APPEND _fluent_qt_labels contract)
                 set(_fluent_qt_target_has_contract TRUE)
@@ -302,6 +321,7 @@ macro(add_qt_test_module module_name source_file)
             endif()
             if(NOT _fluent_qt_is_manual_visual
                AND NOT _fluent_qt_is_known_contract_gap
+               AND NOT _fluent_qt_is_performance
                AND NOT _fluent_qt_is_visual_gate)
                 list(APPEND _fluent_qt_labels local_full)
             endif()

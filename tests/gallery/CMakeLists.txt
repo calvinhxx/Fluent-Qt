@@ -16,6 +16,19 @@ if(NOT DEFINED FLUENT_QT_GALLERY_WEB_RESOURCES)
     )
 endif()
 
+# Link the resource objects into every test executable so static-resource
+# initialization is retained, while compiling the large QRC only once.
+add_library(FluentQtGalleryTestPlatform OBJECT
+    ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
+    ${FLUENT_QT_GALLERY_RESOURCES}
+)
+fluent_qt_configure_cpp_target(FluentQtGalleryTestPlatform)
+fluent_qt_enable_sanitizers(FluentQtGalleryTestPlatform)
+target_include_directories(FluentQtGalleryTestPlatform
+    PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_link_libraries(FluentQtGalleryTestPlatform
+    PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+
 add_executable(test_gallery_single_instance_probe
     GallerySingleInstanceProbe.cpp
     ${FLUENT_QT_GALLERY_SOURCE_DIR}/view/shell/GallerySingleInstance.cpp
@@ -42,38 +55,32 @@ add_qt_test_module(test_gallery_shell_framework
     TestGalleryShellFramework.cpp
     TestGallerySpatialFallback.cpp
     TestUpdateChecker.cpp
-    ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
-    ${FLUENT_QT_GALLERY_RESOURCES}
     ${CMAKE_SOURCE_DIR}/tests/support/VisualGeometryTestUtils.cpp
 )
 target_include_directories(test_gallery_shell_framework PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
 target_link_libraries(test_gallery_shell_framework
-    PRIVATE FluentQtGalleryCore Qt${QT_VERSION_MAJOR}::Network)
+    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network)
 target_compile_definitions(test_gallery_shell_framework PRIVATE
     FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH="$<TARGET_FILE:test_gallery_single_instance_probe>")
 add_dependencies(test_gallery_shell_framework test_gallery_single_instance_probe)
 
 add_qt_test_module(test_gallery_shell_motion_policy
     TestGalleryShellMotionPolicy.cpp
-    ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
-    ${FLUENT_QT_GALLERY_RESOURCES}
 )
 target_include_directories(test_gallery_shell_motion_policy
     PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
 target_link_libraries(test_gallery_shell_motion_policy
-    PRIVATE FluentQtGalleryCore Qt${QT_VERSION_MAJOR}::Network)
+    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network)
 
 if(TARGET FluentQtSpatial)
 add_qt_test_module(test_gallery_spatial
     TestGallerySpatial.cpp
     TestGallerySpatialBackdrop.cpp
     TestGalleryParticleCompositor.cpp
-    ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
-    ${FLUENT_QT_GALLERY_RESOURCES}
 )
 target_include_directories(test_gallery_spatial PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
 target_link_libraries(test_gallery_spatial
-    PRIVATE FluentQtGalleryCore Qt${QT_VERSION_MAJOR}::Network)
+    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network)
 if(QT_VERSION_MAJOR EQUAL 6)
     target_link_libraries(test_gallery_spatial PRIVATE Qt6::OpenGLWidgets)
 endif()
@@ -102,13 +109,11 @@ add_qt_test_module(test_gallery_content_pages
     TestGalleryPreview.cpp
     TestGalleryInspectorScenes.cpp
     ${CMAKE_SOURCE_DIR}/tests/support/VisualGeometryTestUtils.cpp
-    ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
-    ${FLUENT_QT_GALLERY_RESOURCES}
     ${FLUENT_QT_GALLERY_WEB_RESOURCES}
 )
 target_include_directories(test_gallery_content_pages PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
 target_link_libraries(test_gallery_content_pages
-    PRIVATE FluentQtGalleryCore Qt${QT_VERSION_MAJOR}::Network)
+    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network)
 target_compile_definitions(test_gallery_content_pages PRIVATE
     FLUENT_QT_GALLERY_VERSION="${PROJECT_VERSION}"
     FLUENT_QT_APPLICATION_SCENES_PATH="${CMAKE_SOURCE_DIR}/docs/ai/evals/application-scenes.json")

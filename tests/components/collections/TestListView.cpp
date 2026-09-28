@@ -6,11 +6,7 @@
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QMetaEnum>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QNetworkRequest>
 #include <QPainter>
-#include <QScrollArea>
 #include <QStandardItemModel>
 #include <QStringListModel>
 #include <QStyleOptionViewItem>
@@ -21,21 +17,16 @@
 
 #include <gtest/gtest.h>
 #include "FluentListItemDelegate.h"
-#include "components/basicinput/Button.h"
 #include "components/collections/CollectionViewBackdrop_p.h"
 #include "components/collections/ListView.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
-#include "components/textfields/Label.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
-#include "utils/DebugOverlay.h"
 
 #include "components/scrolling/ScrollBar.h"
 
 using namespace fluent::collections;
-using namespace fluent::textfields;
-using namespace fluent::basicinput;
 using namespace fluent;
 
 namespace {
@@ -1530,36 +1521,19 @@ TEST_F(ListViewTest, FooterSignalNotDuplicate)
 
 // ── Drag reorder tests ────────────────────────────────────────────────────────
 
-TEST_F(ListViewTest, DefaultCanReorderItems)
+TEST_F(ListViewTest, CanReorderItemsChangesOnlyOnTransitions)
 {
-    ListView* lv = new ListView(window);
-    EXPECT_FALSE(lv->canReorderItems());
-}
-
-TEST_F(ListViewTest, SetCanReorderItems)
-{
-    ListView* lv = new ListView(window);
-    QSignalSpy spy(lv, &ListView::canReorderItemsChanged);
-    lv->setCanReorderItems(true);
-    EXPECT_TRUE(lv->canReorderItems());
-    EXPECT_EQ(spy.count(), 1);
-}
-
-TEST_F(ListViewTest, DisableCanReorderItems)
-{
-    ListView* lv = new ListView(window);
-    lv->setCanReorderItems(true);
-    lv->setCanReorderItems(false);
-    EXPECT_FALSE(lv->canReorderItems());
-}
-
-TEST_F(ListViewTest, CanReorderItemsSignalNotDuplicate)
-{
-    ListView* lv = new ListView(window);
-    QSignalSpy spy(lv, &ListView::canReorderItemsChanged);
-    lv->setCanReorderItems(true);
-    lv->setCanReorderItems(true); // same
-    EXPECT_EQ(spy.count(), 1);
+    ListView view;
+    EXPECT_FALSE(view.canReorderItems());
+    QSignalSpy spy(&view, &ListView::canReorderItemsChanged);
+    int expectedSignals = 0;
+    for (const bool enabled : {true, true, false, false}) {
+        SCOPED_TRACE(enabled);
+        expectedSignals += view.canReorderItems() != enabled;
+        view.setCanReorderItems(enabled);
+        EXPECT_EQ(view.canReorderItems(), enabled);
+        EXPECT_EQ(spy.count(), expectedSignals);
+    }
 }
 
 // ── Section tests ─────────────────────────────────────────────────────────────
@@ -2070,333 +2044,4 @@ TEST_F(ListViewTest, KeyboardSelectionWorksAfterNoPhaseDiscreteWheel)
     EXPECT_EQ(lv->selectedIndex(), 1)
         << "Keyboard navigation and selection should remain governed by the "
            "selection model";
-}
-
-// ── 可视化测试（业务组装与上面一致）───────────────────────────────────────────
-
-TEST_F(ListViewTest, VisualCheck)
-{
-    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
-        GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
-    }
-
-    window->setFixedSize(800, 600);
-    using Edge = AnchorLayout::Edge;
-
-    // --- ScrollArea 容器 ---
-    auto* scrollArea = new QScrollArea(window);
-    scrollArea->setWidgetResizable(true);
-    scrollArea->setFrameStyle(QFrame::NoFrame);
-    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scrollArea->setGeometry(0, 0, 780, 600);
-
-    // Fluent 自定义垂直滚动条覆盖在 scrollArea 上
-    auto* fluentVBar = new fluent::scrolling::ScrollBar(Qt::Vertical, scrollArea);
-    fluentVBar->setObjectName("fluentScrollAreaVBar");
-    auto* nativeVBar = scrollArea->verticalScrollBar();
-    QObject::connect(nativeVBar, &QScrollBar::valueChanged, fluentVBar, &QScrollBar::setValue);
-    QObject::connect(fluentVBar, &QScrollBar::valueChanged, nativeVBar, &QScrollBar::setValue);
-
-    // 同步 range / pageStep 并定位
-    auto syncFluentBar = [scrollArea, fluentVBar, nativeVBar]() {
-        fluentVBar->setRange(nativeVBar->minimum(), nativeVBar->maximum());
-        fluentVBar->setPageStep(nativeVBar->pageStep());
-        const bool need = nativeVBar->maximum() > nativeVBar->minimum();
-        fluentVBar->setVisible(need);
-        if (!need)
-            return;
-        const QRect r = scrollArea->rect();
-        const int x = r.right() - fluentVBar->thickness() + 1;
-        fluentVBar->setGeometry(x, r.top() + 2, fluentVBar->thickness(), r.height() - 4);
-        fluentVBar->raise();
-    };
-    QObject::connect(nativeVBar, &QScrollBar::rangeChanged, scrollArea, syncFluentBar);
-
-    auto* content = new FluentTestWindow();
-    content->setMinimumWidth(780);
-    content->onThemeUpdated();
-    auto* innerLayout = new AnchorLayout(content);
-    content->setLayout(innerLayout);
-    scrollArea->setWidget(content);
-
-    // --- ListView 1: 带 header + border 的单选列表 ---
-    ListView* lv1 = new ListView(content);
-    lv1->setHeaderText("Fruits (Single Selection)");
-    lv1->setBorderVisible(true);
-    attachStringListModel(
-        lv1, {"Apricot", "Banana", "Cherry", "Date", "Elderberry", "Fig", "Grape", "Honeydew"});
-    lv1->setSelectedIndex(2);
-    lv1->setFixedHeight(250);
-    lv1->anchors()->top = {content, Edge::Top, 20};
-    lv1->anchors()->left = {content, Edge::Left, 20};
-    lv1->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(lv1);
-
-    // --- ListView 2: 多选模式，无 border ---
-    Label* header2 = new Label("Multiple Selection (no border):", content);
-    header2->anchors()->top = {lv1, Edge::Bottom, 16};
-    header2->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header2);
-
-    ListView* lv2 = new ListView(content);
-    lv2->setSelectionMode(SelectionMode::Multiple);
-    lv2->setBorderVisible(false);
-    attachStringListModel(lv2, {"Item A", "Item B", "Item C", "Item D"});
-    lv2->setFixedHeight(160);
-    lv2->anchors()->top = {header2, Edge::Bottom, 8};
-    lv2->anchors()->left = {content, Edge::Left, 20};
-    lv2->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(lv2);
-
-    // --- ListView 3: 空列表，显示 placeholder ---
-    Label* header3 = new Label("Empty list with placeholder:", content);
-    header3->anchors()->top = {lv2, Edge::Bottom, 16};
-    header3->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header3);
-
-    ListView* lv3 = new ListView(content);
-    lv3->setHeaderText("Empty List");
-    lv3->setPlaceholderText("No items to display");
-    lv3->setBorderVisible(true);
-    attachStringListModel(lv3);
-    lv3->setFixedHeight(100);
-    lv3->anchors()->top = {header3, Edge::Bottom, 8};
-    lv3->anchors()->left = {content, Edge::Left, 20};
-    lv3->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(lv3);
-
-    // --- ListView 4: 水平方向列表 ---
-    Label* header4 = new Label("Horizontal Flow (LeftToRight):", content);
-    header4->anchors()->top = {lv3, Edge::Bottom, 16};
-    header4->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header4);
-
-    ListView* lv4 = new ListView(content);
-    lv4->setFlow(QListView::LeftToRight);
-    lv4->setBorderVisible(true);
-    lv4->setWrapping(false);
-    attachStringListModel(lv4, {"Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf",
-                                "Hotel", "India", "Juliet", "Kilo", "Lima", "Mike", "November"});
-    lv4->setSelectedIndex(3);
-    lv4->setFixedHeight(100);
-    lv4->anchors()->top = {header4, Edge::Bottom, 8};
-    lv4->anchors()->left = {content, Edge::Left, 20};
-    lv4->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(lv4);
-
-    // --- ListView 5: 水平方向 + 多选 ---
-    Label* header5 = new Label("Horizontal Multiple Selection:", content);
-    header5->anchors()->top = {lv4, Edge::Bottom, 16};
-    header5->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header5);
-
-    ListView* lv5 = new ListView(content);
-    lv5->setFlow(QListView::LeftToRight);
-    lv5->setSelectionMode(SelectionMode::Multiple);
-    lv5->setBorderVisible(true);
-    lv5->setWrapping(false);
-    attachStringListModel(lv5, {"Red", "Orange", "Yellow", "Green", "Blue", "Indigo", "Violet",
-                                "Pink", "Cyan", "Magenta"});
-    lv5->setFixedHeight(100);
-    lv5->anchors()->top = {header5, Edge::Bottom, 8};
-    lv5->anchors()->left = {content, Edge::Left, 20};
-    lv5->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(lv5);
-
-    // --- ListView 6: Custom Header + Footer widgets ---
-    Label* header6 = new Label("Custom Header + Footer Widgets:", content);
-    header6->anchors()->top = {lv5, Edge::Bottom, 16};
-    header6->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header6);
-
-    ListView* lv6 = new ListView(content);
-    new DebugOverlay(lv6);
-    lv6->setBorderVisible(true);
-
-    // Custom header: Button with icon
-    auto* headerBtn = new Button("Add Contact", lv6);
-    headerBtn->setIconGlyph(Typography::Icons::Add);
-    headerBtn->setFluentStyle(Button::Accent);
-    headerBtn->setFixedHeight(32);
-    lv6->setHeader(headerBtn);
-
-    // Custom footer: QLabel with image loaded from network
-    auto* footerLabel = new QLabel(lv6);
-    footerLabel->setFixedHeight(80);
-    footerLabel->setAlignment(Qt::AlignCenter);
-    footerLabel->setText("Loading image...");
-    lv6->setFooter(footerLabel);
-
-    // Load image from network asynchronously
-    auto* nam = new QNetworkAccessManager(lv6);
-    QObject::connect(nam, &QNetworkAccessManager::finished, [footerLabel](QNetworkReply* reply) {
-        if (reply->error() == QNetworkReply::NoError) {
-            QPixmap pm;
-            pm.loadFromData(reply->readAll());
-            if (!pm.isNull()) {
-                footerLabel->setPixmap(
-                    pm.scaledToHeight(footerLabel->height(), Qt::SmoothTransformation));
-            }
-        } else {
-            footerLabel->setText("Image unavailable");
-        }
-        reply->deleteLater();
-    });
-    nam->get(QNetworkRequest(QUrl("https://picsum.photos/300/80")));
-
-    attachStringListModel(lv6, {"Alice", "Bob", "Charlie", "Diana"});
-    lv6->setFixedHeight(280);
-    lv6->anchors()->top = {header6, Edge::Bottom, 8};
-    lv6->anchors()->left = {content, Edge::Left, 20};
-    lv6->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(lv6);
-
-    // --- ListView 7: Drag reorder ---
-    Label* header7 = new Label("Drag to Reorder:", content);
-    header7->anchors()->top = {lv6, Edge::Bottom, 16};
-    header7->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header7);
-
-    ListView* lv7 = new ListView(content);
-    lv7->setHeaderText("Priority List");
-    lv7->setBorderVisible(true);
-    lv7->setCanReorderItems(true);
-    attachStringListModel(lv7, {"High", "Medium", "Low", "None", "Critical"});
-    lv7->setFixedHeight(200);
-    lv7->anchors()->top = {header7, Edge::Bottom, 8};
-    lv7->anchors()->left = {content, Edge::Left, 20};
-    lv7->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(lv7);
-
-    // --- ListView 8: Section grouping ---
-    Label* header8 = new Label("Section Grouping:", content);
-    header8->anchors()->top = {lv7, Edge::Bottom, 16};
-    header8->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header8);
-
-    ListView* lv8 = new ListView(content);
-    lv8->setHeaderText("Grouped Items");
-    lv8->setBorderVisible(true);
-    lv8->setSectionEnabled(true);
-    attachStringListModel(lv8, {"Apple", "Avocado", "Banana", "Blueberry", "Cherry", "Cranberry",
-                                "Date", "Dragonfruit"});
-    lv8->setSectionKeyFunction([lv8](int row) -> QString {
-        auto idx = lv8->model()->index(row, 0);
-        return idx.data().toString().left(1);
-    });
-    lv8->setFixedHeight(280);
-    lv8->anchors()->top = {header8, Edge::Bottom, 8};
-    lv8->anchors()->left = {content, Edge::Left, 20};
-    lv8->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(lv8);
-
-    // --- ListView 9: Vertical indicator motion ---
-    Label* header9 = new Label("Vertical Indicator Motion:", content);
-    header9->anchors()->top = {lv8, Edge::Bottom, 16};
-    header9->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header9);
-
-    Button* verticalUpBtn = new Button("Previous", content);
-    verticalUpBtn->setIconGlyph(Typography::Icons::ChevronUp);
-    verticalUpBtn->setFixedSize(120, 32);
-    verticalUpBtn->anchors()->top = {header9, Edge::Bottom, 8};
-    verticalUpBtn->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(verticalUpBtn);
-
-    Button* verticalDownBtn = new Button("Next", content);
-    verticalDownBtn->setIconGlyph(Typography::Icons::ChevronDown);
-    verticalDownBtn->setFixedSize(120, 32);
-    verticalDownBtn->anchors()->top = {header9, Edge::Bottom, 8};
-    verticalDownBtn->anchors()->left = {verticalUpBtn, Edge::Right, 8};
-    innerLayout->addWidget(verticalDownBtn);
-
-    ListView* lv9 = new ListView(content);
-    lv9->setHeaderText("Navigation Items");
-    lv9->setBorderVisible(true);
-    attachStringListModel(lv9, {"Home", "Dashboard", "Messages", "Calendar", "Files", "Settings"});
-    lv9->setSelectedIndex(2);
-    lv9->setFixedHeight(220);
-    lv9->anchors()->top = {verticalUpBtn, Edge::Bottom, 8};
-    lv9->anchors()->left = {content, Edge::Left, 20};
-    lv9->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(lv9);
-
-    QObject::connect(verticalUpBtn, &Button::clicked, [lv9]() {
-        const int next = qMax(0, lv9->selectedIndex() - 1);
-        lv9->setSelectedIndex(next);
-    });
-    QObject::connect(verticalDownBtn, &Button::clicked, [lv9]() {
-        const int next = qMin(itemCount(lv9) - 1, lv9->selectedIndex() + 1);
-        lv9->setSelectedIndex(next);
-    });
-
-    // --- ListView 10: Horizontal indicator motion ---
-    Label* header10 = new Label("Horizontal Indicator Motion:", content);
-    header10->anchors()->top = {lv9, Edge::Bottom, 16};
-    header10->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header10);
-
-    Button* horizontalLeftBtn = new Button("Previous", content);
-    horizontalLeftBtn->setIconGlyph(Typography::Icons::ChevronLeft);
-    horizontalLeftBtn->setFixedSize(120, 32);
-    horizontalLeftBtn->anchors()->top = {header10, Edge::Bottom, 8};
-    horizontalLeftBtn->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(horizontalLeftBtn);
-
-    Button* horizontalRightBtn = new Button("Next", content);
-    horizontalRightBtn->setIconGlyph(Typography::Icons::ChevronRight);
-    horizontalRightBtn->setFixedSize(120, 32);
-    horizontalRightBtn->anchors()->top = {header10, Edge::Bottom, 8};
-    horizontalRightBtn->anchors()->left = {horizontalLeftBtn, Edge::Right, 8};
-    innerLayout->addWidget(horizontalRightBtn);
-
-    ListView* lv10 = new ListView(content);
-    lv10->setFlow(QListView::LeftToRight);
-    lv10->setWrapping(false);
-    lv10->setBorderVisible(true);
-    attachStringListModel(
-        lv10, {"Overview", "Activity", "Files", "Members", "Settings", "History", "Insights"});
-    lv10->setSelectedIndex(2);
-    lv10->setFixedHeight(100);
-    lv10->anchors()->top = {horizontalLeftBtn, Edge::Bottom, 8};
-    lv10->anchors()->left = {content, Edge::Left, 20};
-    lv10->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(lv10);
-
-    QObject::connect(horizontalLeftBtn, &Button::clicked, [lv10]() {
-        const int next = qMax(0, lv10->selectedIndex() - 1);
-        lv10->setSelectedIndex(next);
-    });
-    QObject::connect(horizontalRightBtn, &Button::clicked, [lv10]() {
-        const int next = qMin(itemCount(lv10) - 1, lv10->selectedIndex() + 1);
-        lv10->setSelectedIndex(next);
-    });
-
-    // --- Switch Theme 按钮 ---
-    Button* themeBtn = new Button("Switch Theme", content);
-    themeBtn->setFluentStyle(Button::Accent);
-    themeBtn->setFixedSize(120, 32);
-    themeBtn->anchors()->top = {lv10, Edge::Bottom, 16};
-    themeBtn->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(themeBtn);
-
-    // content 的最小高度根据最底部控件计算
-    content->setMinimumHeight(250 + 160 + 100 + 100 + 100 + 200 + 200 + 280 + 220 + 100 + 16 * 10 +
-                              8 * 12 + 20 * 2 + 32 + 180);
-
-    QObject::connect(themeBtn, &Button::clicked, [scrollArea, content]() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                fluent::FluentElement::Light
-                                            ? fluent::FluentElement::Dark
-                                            : fluent::FluentElement::Light);
-        content->onThemeUpdated();
-        scrollArea->setStyleSheet(content->styleSheet());
-    });
-
-    content->onThemeUpdated();
-    scrollArea->setStyleSheet(content->styleSheet());
-    window->show();
-    syncFluentBar();
-    qApp->exec();
 }

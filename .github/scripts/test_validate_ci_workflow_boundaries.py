@@ -78,6 +78,13 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
     def test_repository_workflow_boundaries_are_valid(self):
         self.assertEqual(MODULE.validate_boundaries(), [])
 
+    def test_optional_spatial_binding_cannot_silently_skip_coverage(self):
+        for requirement in ("-DFLUENT_QT_BUILD_SPATIAL=ON", "assert SPATIAL_AVAILABLE",
+                            "-R '^test_pyside6_gallery_spatial_backdrop_native$'"):
+            with self.subTest(requirement=requirement):
+                errors = self.workflow_errors_with_replacement("ci-python.yml", requirement, "")
+                self.assertTrue(any("optional Spatial validation" in error for error in errors))
+
     def test_ci_plan_requires_generated_site_freshness_checks(self):
         commands = (
             "          python3 tools/site/generate_localized_site.py --check\n",

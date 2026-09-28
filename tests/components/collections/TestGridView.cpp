@@ -2,15 +2,11 @@
 #include <QAbstractAnimation>
 #include <QAbstractItemView>
 #include <QApplication>
-#include <QHBoxLayout>
 #include <QImage>
-#include <QItemSelectionModel>
 #include <QLabel>
 #include <QMetaEnum>
+#include <QItemSelectionModel>
 #include <QPainter>
-#include <QPixmap>
-#include <QPolygon>
-#include <QScrollArea>
 #include <QScrollBar>
 #include <QStandardItemModel>
 #include <QStringListModel>
@@ -25,17 +21,13 @@
 
 #include "FluentGridItemDelegate.h"
 #include "QtTestEnvironment.h"
-#include "components/basicinput/Button.h"
 #include "components/collections/GridView.h"
-#include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/scrolling/ScrollBar.h"
-#include "components/textfields/Label.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 
 using namespace fluent::collections;
-using namespace fluent::textfields;
 using namespace fluent;
 
 namespace {
@@ -198,15 +190,12 @@ protected:
         window->resize(600, 600);
         window->setMinimumSize(320, 240);
         window->setWindowTitle("Fluent GridView Test");
-        layout = new AnchorLayout(window);
-        window->setLayout(layout);
         window->onThemeUpdated();
     }
 
     void TearDown() override { delete window; }
 
     FluentTestWindow* window;
-    AnchorLayout* layout;
 };
 
 // ── 数据操作 ──────────────────────────────────────────────────────────────────
@@ -807,100 +796,39 @@ TEST_F(GridViewTest, CellSizeAffectsColumns)
     EXPECT_GT(r2.top(), r0.top());
 }
 
-// ── 可视化测试 ────────────────────────────────────────────────────────────────
-
-namespace {
-
-QPixmap sampleImage(int variant)
-{
-    const QColor skies[] = {QColor("#7bbde8"), QColor("#e6ad8c"), QColor("#a6c6bd"),
-                            QColor("#a8b4d8")};
-    const QColor hills[] = {QColor("#39746b"), QColor("#8e655a"), QColor("#507958"),
-                            QColor("#59678e")};
-    const int palette = variant % 4;
-    QPixmap image(320, 240);
-    image.fill(skies[palette]);
-    QPainter painter(&image);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor("#fff1c1"));
-    painter.drawEllipse(QPoint(60 + (variant % 3) * 80, 60), 24, 24);
-    painter.setBrush(hills[palette]);
-    QPolygon ridge;
-    ridge << QPoint(0, 240) << QPoint(0, 170) << QPoint(110, 90) << QPoint(190, 170)
-          << QPoint(270, 120) << QPoint(320, 160) << QPoint(320, 240);
-    painter.drawPolygon(ridge);
-    painter.end();
-    return image;
-}
-
-} // namespace
-
 // ── Drag reorder tests ────────────────────────────────────────────────────────
 
-TEST_F(GridViewTest, DefaultCanReorderItems)
+TEST_F(GridViewTest, CanReorderItemsChangesOnlyOnTransitions)
 {
-    GridView* gv = new GridView(window);
-    EXPECT_FALSE(gv->canReorderItems());
-}
-
-TEST_F(GridViewTest, SetCanReorderItems)
-{
-    GridView* gv = new GridView(window);
-    QSignalSpy spy(gv, &GridView::canReorderItemsChanged);
-    gv->setCanReorderItems(true);
-    EXPECT_TRUE(gv->canReorderItems());
-    EXPECT_EQ(spy.count(), 1);
-}
-
-TEST_F(GridViewTest, DisableCanReorderItems)
-{
-    GridView* gv = new GridView(window);
-    gv->setCanReorderItems(true);
-    gv->setCanReorderItems(false);
-    EXPECT_FALSE(gv->canReorderItems());
-}
-
-TEST_F(GridViewTest, CanReorderItemsSignalNotDuplicate)
-{
-    GridView* gv = new GridView(window);
-    QSignalSpy spy(gv, &GridView::canReorderItemsChanged);
-    gv->setCanReorderItems(true);
-    gv->setCanReorderItems(true); // same
-    EXPECT_EQ(spy.count(), 1);
+    GridView view;
+    EXPECT_FALSE(view.canReorderItems());
+    QSignalSpy spy(&view, &GridView::canReorderItemsChanged);
+    int expectedSignals = 0;
+    for (const bool enabled : {true, true, false, false}) {
+        SCOPED_TRACE(enabled);
+        expectedSignals += view.canReorderItems() != enabled;
+        view.setCanReorderItems(enabled);
+        EXPECT_EQ(view.canReorderItems(), enabled);
+        EXPECT_EQ(spy.count(), expectedSignals);
+    }
 }
 
 // ── Selection mode enum mapping to Qt ─────────────────────────────────────────
 
-TEST_F(GridViewTest, SelectionModeNoneMapsToNoSelection)
+TEST_F(GridViewTest, SelectionModesMapToQt)
 {
-    GridView* gv = new GridView(window);
-    gv->setSelectionMode(SelectionMode::None);
-    EXPECT_EQ(static_cast<QAbstractItemView*>(gv)->selectionMode(), QAbstractItemView::NoSelection);
-}
-
-TEST_F(GridViewTest, SelectionModeSingleMapsToSingleSelection)
-{
-    GridView* gv = new GridView(window);
-    gv->setSelectionMode(SelectionMode::Single);
-    EXPECT_EQ(static_cast<QAbstractItemView*>(gv)->selectionMode(),
-              QAbstractItemView::SingleSelection);
-}
-
-TEST_F(GridViewTest, SelectionModeMultipleMapsToMultiSelection)
-{
-    GridView* gv = new GridView(window);
-    gv->setSelectionMode(SelectionMode::Multiple);
-    EXPECT_EQ(static_cast<QAbstractItemView*>(gv)->selectionMode(),
-              QAbstractItemView::MultiSelection);
-}
-
-TEST_F(GridViewTest, SelectionModeExtendedMapsToExtendedSelection)
-{
-    GridView* gv = new GridView(window);
-    gv->setSelectionMode(SelectionMode::Extended);
-    EXPECT_EQ(static_cast<QAbstractItemView*>(gv)->selectionMode(),
-              QAbstractItemView::ExtendedSelection);
+    const std::pair<SelectionMode, QAbstractItemView::SelectionMode> modes[] = {
+        {SelectionMode::None, QAbstractItemView::NoSelection},
+        {SelectionMode::Single, QAbstractItemView::SingleSelection},
+        {SelectionMode::Multiple, QAbstractItemView::MultiSelection},
+        {SelectionMode::Extended, QAbstractItemView::ExtendedSelection},
+    };
+    for (const auto& mode : modes) {
+        SCOPED_TRACE(static_cast<int>(mode.first));
+        GridView view;
+        view.setSelectionMode(mode.first);
+        EXPECT_EQ(static_cast<QAbstractItemView*>(&view)->selectionMode(), mode.second);
+    }
 }
 
 // ── Multiple selection behavior ───────────────────────────────────────────────
@@ -1550,368 +1478,4 @@ TEST_F(GridViewTest, DragReorderItemReorderedSignalArgs)
         EXPECT_GE(toIdx, 1); // moved forward
         EXPECT_LT(toIdx, 4);
     }
-}
-
-TEST_F(GridViewTest, VisualCheck)
-{
-    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
-        GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
-    }
-
-    window->resize(960, 720);
-    window->setMinimumSize(420, 360);
-    using Edge = AnchorLayout::Edge;
-
-    // --- ScrollArea 容器 ---
-    auto* scrollArea = new QScrollArea(window);
-    scrollArea->setWidgetResizable(true);
-    scrollArea->setFrameStyle(QFrame::NoFrame);
-    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    {
-        AnchorLayout::Anchors scrollAnchors;
-        scrollAnchors.fill = true;
-        layout->addAnchoredWidget(scrollArea, scrollAnchors);
-    }
-
-    // Fluent 自定义垂直滚动条覆盖在 scrollArea 上
-    auto* fluentVBar = new fluent::scrolling::ScrollBar(Qt::Vertical, scrollArea);
-    fluentVBar->setObjectName("fluentScrollAreaVBar");
-    auto* nativeVBar = scrollArea->verticalScrollBar();
-    QObject::connect(nativeVBar, &QScrollBar::valueChanged, fluentVBar, &QScrollBar::setValue);
-    QObject::connect(fluentVBar, &QScrollBar::valueChanged, nativeVBar, &QScrollBar::setValue);
-
-    auto syncFluentBar = [scrollArea, fluentVBar, nativeVBar]() {
-        fluentVBar->setRange(nativeVBar->minimum(), nativeVBar->maximum());
-        fluentVBar->setPageStep(nativeVBar->pageStep());
-        const bool need = nativeVBar->maximum() > nativeVBar->minimum();
-        fluentVBar->setVisible(need);
-        if (!need)
-            return;
-        const QRect r = scrollArea->rect();
-        const int x = r.right() - fluentVBar->thickness() + 1;
-        fluentVBar->setGeometry(x, r.top() + 2, fluentVBar->thickness(), r.height() - 4);
-        fluentVBar->raise();
-    };
-    QObject::connect(nativeVBar, &QScrollBar::rangeChanged, scrollArea, syncFluentBar);
-    auto* resizeSync = new ResizeSyncFilter(scrollArea, syncFluentBar);
-    scrollArea->installEventFilter(resizeSync);
-    scrollArea->viewport()->installEventFilter(resizeSync);
-
-    auto* content = new FluentTestWindow();
-    content->setMinimumWidth(360);
-    content->onThemeUpdated();
-    auto* innerLayout = new AnchorLayout(content);
-    content->setLayout(innerLayout);
-    scrollArea->setWidget(content);
-
-    // ── Loading sample: keep a stable shimmer state visible for review ──
-    GridView* gvLoading = new GridView(content);
-    gvLoading->setHeaderText("Loading image placeholders");
-    gvLoading->setBorderVisible(true);
-    gvLoading->setCellSize(QSize(140, 96));
-    gvLoading->setHorizontalSpacing(6);
-    gvLoading->setVerticalSpacing(6);
-    auto* loadingModel = new QStandardItemModel(gvLoading);
-    for (int i = 0; i < 5; ++i) {
-        auto* item = new QStandardItem(QString("Loading %1").arg(i + 1));
-        item->setData(true, gridview_test::ImageLoadingRole);
-        loadingModel->appendRow(item);
-    }
-    gvLoading->setModel(loadingModel);
-    attachFluentDelegate(gvLoading);
-    gvLoading->setFixedHeight(160);
-    gvLoading->anchors()->top = {content, Edge::Top, 20};
-    gvLoading->anchors()->left = {content, Edge::Left, 20};
-    gvLoading->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(gvLoading);
-
-    // ── GridView 1: 带图片的网格 (单选, 对应 WinUI GridView with Layout Customization) ──
-    GridView* gv1 = new GridView(content);
-    gv1->setHeaderText("GridView with Layout Customization");
-    gv1->setBorderVisible(true);
-    gv1->setCellSize(QSize(140, 100));
-    gv1->setHorizontalSpacing(6);
-    gv1->setVerticalSpacing(6);
-
-    auto* model1 = new QStandardItemModel(gv1);
-    struct ItemInfo {
-        QString name;
-        QString likes;
-    };
-    QList<ItemInfo> items1 = {
-        {"Item 1", "90 Likes"}, {"Item 2", "84 Likes"}, {"Item 3", "96 Likes"},
-        {"Item 4", "79 Likes"}, {"Item 5", "32 Likes"}, {"Item 6", "34 Likes"},
-        {"Item 7", "48 Likes"}, {"Item 8", "90 Likes"},
-    };
-    for (int i = 0; i < items1.size(); ++i) {
-        const auto& info = items1[i];
-        auto* item = new QStandardItem(info.name);
-        item->setData(info.likes, Qt::ToolTipRole);
-        item->setData(sampleImage(i), gridview_test::ImageRole);
-        model1->appendRow(item);
-    }
-    gv1->setModel(model1);
-    attachFluentDelegate(gv1);
-    gv1->setSelectedIndex(5);
-    gv1->setFixedHeight(280);
-    gv1->anchors()->top = {gvLoading, Edge::Bottom, 16};
-    gv1->anchors()->left = {content, Edge::Left, 20};
-    gv1->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(gv1);
-
-    // ── GridView 2: 多选 + 图片 + check 浮层 (对应 WinUI Content inside of a GridView) ──
-    Label* header2 = new Label("Content inside of a GridView.", content);
-    header2->setFluentTypography(Typography::FontRole::BodyStrong);
-    header2->anchors()->top = {gv1, Edge::Bottom, 16};
-    header2->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header2);
-
-    GridView* gv2 = new GridView(content);
-    gv2->setSelectionMode(SelectionMode::Multiple);
-    gv2->setCellSize(QSize(160, 120));
-    gv2->setHorizontalSpacing(8);
-    gv2->setVerticalSpacing(8);
-    gv2->setBorderVisible(false);
-
-    auto* model2 = new QStandardItemModel(gv2);
-    for (int i = 0; i < 8; ++i) {
-        auto* item = new QStandardItem(QString("Image %1").arg(i + 1));
-        item->setData(sampleImage(i), gridview_test::ImageRole);
-        model2->appendRow(item);
-    }
-    gv2->setModel(model2);
-    attachFluentDelegate(gv2);
-    gv2->selectionModel()->select(model2->index(0, 0), QItemSelectionModel::Select);
-    gv2->selectionModel()->select(model2->index(1, 0), QItemSelectionModel::Select);
-    gv2->selectionModel()->select(model2->index(2, 0), QItemSelectionModel::Select);
-    gv2->selectionModel()->select(model2->index(3, 0), QItemSelectionModel::Select);
-    gv2->selectionModel()->select(model2->index(5, 0), QItemSelectionModel::Select);
-    gv2->selectionModel()->select(model2->index(6, 0), QItemSelectionModel::Select);
-    gv2->selectionModel()->select(model2->index(7, 0), QItemSelectionModel::Select);
-    gv2->setFixedHeight(300);
-    gv2->anchors()->top = {header2, Edge::Bottom, 8};
-    gv2->anchors()->left = {content, Edge::Left, 20};
-    gv2->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(gv2);
-
-    // ── GridView 3: 空网格 + placeholder ──
-    GridView* gv3 = new GridView(content);
-    gv3->setHeaderText("Empty Grid");
-    gv3->setPlaceholderText("No items to display");
-    gv3->setBorderVisible(true);
-    attachStringListModel(gv3);
-    gv3->setFixedHeight(80);
-    gv3->anchors()->top = {gv2, Edge::Bottom, 16};
-    gv3->anchors()->left = {content, Edge::Left, 20};
-    gv3->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(gv3);
-
-    // ── GridView 4: 拖拽重排 (对应 WinUI CanReorderItems) ──
-    Label* header4 = new Label("Drag to reorder items.", content);
-    header4->setFluentTypography(Typography::FontRole::BodyStrong);
-    header4->anchors()->top = {gv3, Edge::Bottom, 16};
-    header4->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header4);
-
-    GridView* gv4 = new GridView(content);
-    gv4->setCanReorderItems(true);
-    gv4->setCellSize(QSize(120, 90));
-    gv4->setHorizontalSpacing(6);
-    gv4->setVerticalSpacing(6);
-    gv4->setBorderVisible(true);
-
-    auto* model4 = new QStandardItemModel(gv4);
-    for (int i = 0; i < 9; ++i) {
-        auto* item = new QStandardItem(QString("Tile %1").arg(i + 1));
-        item->setData(sampleImage(i), gridview_test::ImageRole);
-        model4->appendRow(item);
-    }
-    gv4->setModel(model4);
-    attachFluentDelegate(gv4);
-    gv4->setFixedHeight(230);
-    gv4->anchors()->top = {header4, Edge::Bottom, 8};
-    gv4->anchors()->left = {content, Edge::Left, 20};
-    gv4->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(gv4);
-
-    // ── Section 5: Selection Mode Comparison (None / Single / Multiple / Extended) ──
-    Label* header5 = new Label("Selection Mode Comparison", content);
-    header5->setFluentTypography(Typography::FontRole::BodyStrong);
-    header5->anchors()->top = {gv4, Edge::Bottom, 24};
-    header5->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header5);
-
-    // Helper: create a small GridView for mode demo
-    auto createModeGrid = [](QWidget* parent) -> GridView* {
-        auto* gv = new GridView(parent);
-        gv->setBorderVisible(true);
-        gv->setCellSize(QSize(80, 60));
-        gv->setHorizontalSpacing(4);
-        gv->setVerticalSpacing(4);
-        auto* model = new QStandardItemModel(gv);
-        for (int i = 1; i <= 8; i++)
-            model->appendRow(new QStandardItem(QString("Item %1").arg(i)));
-        gv->setModel(model);
-        attachFluentDelegate(gv);
-        return gv;
-    };
-
-    // Row 1: None + Single
-    auto* modeRow1 = new QWidget(content);
-    auto* row1Lay = new QHBoxLayout(modeRow1);
-    row1Lay->setSpacing(12);
-    row1Lay->setContentsMargins(0, 0, 0, 0);
-
-    auto* gvNone = createModeGrid(modeRow1);
-    gvNone->setHeaderText("None");
-    gvNone->setSelectionMode(SelectionMode::None);
-
-    auto* gvSingleDemo = createModeGrid(modeRow1);
-    gvSingleDemo->setHeaderText("Single");
-    gvSingleDemo->setSelectionMode(SelectionMode::Single);
-    gvSingleDemo->setSelectedIndex(2);
-
-    row1Lay->addWidget(gvNone);
-    row1Lay->addWidget(gvSingleDemo);
-    modeRow1->setFixedHeight(170);
-    {
-        AnchorLayout::Anchors a;
-        a.top = {header5, Edge::Bottom, 8};
-        a.left = {content, Edge::Left, 20};
-        a.right = {content, Edge::Right, -20};
-        innerLayout->addAnchoredWidget(modeRow1, a);
-    }
-
-    // Row 2: Multiple + Extended
-    auto* modeRow2 = new QWidget(content);
-    auto* row2Lay = new QHBoxLayout(modeRow2);
-    row2Lay->setSpacing(12);
-    row2Lay->setContentsMargins(0, 0, 0, 0);
-
-    auto* gvMultiDemo = createModeGrid(modeRow2);
-    gvMultiDemo->setHeaderText("Multiple (click toggles)");
-    gvMultiDemo->setSelectionMode(SelectionMode::Multiple);
-    gvMultiDemo->selectionModel()->select(gvMultiDemo->model()->index(0, 0),
-                                          QItemSelectionModel::Select);
-    gvMultiDemo->selectionModel()->select(gvMultiDemo->model()->index(2, 0),
-                                          QItemSelectionModel::Select);
-    gvMultiDemo->selectionModel()->select(gvMultiDemo->model()->index(5, 0),
-                                          QItemSelectionModel::Select);
-
-    auto* gvExtDemo = createModeGrid(modeRow2);
-    gvExtDemo->setHeaderText("Extended (Ctrl/Shift+click)");
-    gvExtDemo->setSelectionMode(SelectionMode::Extended);
-    gvExtDemo->selectionModel()->select(
-        QItemSelection(gvExtDemo->model()->index(1, 0), gvExtDemo->model()->index(4, 0)),
-        QItemSelectionModel::Select);
-
-    row2Lay->addWidget(gvMultiDemo);
-    row2Lay->addWidget(gvExtDemo);
-    modeRow2->setFixedHeight(170);
-    {
-        AnchorLayout::Anchors a;
-        a.top = {modeRow1, Edge::Bottom, 8};
-        a.left = {content, Edge::Left, 20};
-        a.right = {content, Edge::Right, -20};
-        innerLayout->addAnchoredWidget(modeRow2, a);
-    }
-
-    // ── Section 6: Drag Reorder × Selection Mode ──
-    Label* header6 = new Label("Drag Reorder \u00d7 Selection Mode", content);
-    header6->setFluentTypography(Typography::FontRole::BodyStrong);
-    header6->anchors()->top = {modeRow2, Edge::Bottom, 24};
-    header6->anchors()->left = {content, Edge::Left, 20};
-    innerLayout->addWidget(header6);
-
-    auto* dragRow = new QWidget(content);
-    auto* dragRowLay = new QHBoxLayout(dragRow);
-    dragRowLay->setSpacing(12);
-    dragRowLay->setContentsMargins(0, 0, 0, 0);
-
-    // Multiple + Drag
-    auto* gvMultiDrag = new GridView(dragRow);
-    gvMultiDrag->setHeaderText("Multiple + Drag");
-    gvMultiDrag->setSelectionMode(SelectionMode::Multiple);
-    gvMultiDrag->setCanReorderItems(true);
-    gvMultiDrag->setBorderVisible(true);
-    gvMultiDrag->setCellSize(QSize(90, 70));
-    gvMultiDrag->setHorizontalSpacing(4);
-    gvMultiDrag->setVerticalSpacing(4);
-    {
-        auto* mdl = new QStandardItemModel(gvMultiDrag);
-        for (int i = 0; i < 8; ++i) {
-            auto* item = new QStandardItem(QString("Tile %1").arg(i + 1));
-            item->setData(sampleImage(i), gridview_test::ImageRole);
-            mdl->appendRow(item);
-        }
-        gvMultiDrag->setModel(mdl);
-        attachFluentDelegate(gvMultiDrag);
-        gvMultiDrag->selectionModel()->select(mdl->index(1, 0), QItemSelectionModel::Select);
-        gvMultiDrag->selectionModel()->select(mdl->index(3, 0), QItemSelectionModel::Select);
-        gvMultiDrag->selectionModel()->select(mdl->index(5, 0), QItemSelectionModel::Select);
-    }
-
-    // Extended + Drag
-    auto* gvExtDrag = new GridView(dragRow);
-    gvExtDrag->setHeaderText("Extended + Drag");
-    gvExtDrag->setSelectionMode(SelectionMode::Extended);
-    gvExtDrag->setCanReorderItems(true);
-    gvExtDrag->setBorderVisible(true);
-    gvExtDrag->setCellSize(QSize(90, 70));
-    gvExtDrag->setHorizontalSpacing(4);
-    gvExtDrag->setVerticalSpacing(4);
-    {
-        auto* mdl = new QStandardItemModel(gvExtDrag);
-        for (int i = 0; i < 8; ++i) {
-            auto* item = new QStandardItem(QString("Tile %1").arg(i + 1));
-            item->setData(sampleImage(i), gridview_test::ImageRole);
-            mdl->appendRow(item);
-        }
-        gvExtDrag->setModel(mdl);
-        attachFluentDelegate(gvExtDrag);
-        gvExtDrag->selectionModel()->select(QItemSelection(mdl->index(0, 0), mdl->index(2, 0)),
-                                            QItemSelectionModel::Select);
-    }
-
-    dragRowLay->addWidget(gvMultiDrag);
-    dragRowLay->addWidget(gvExtDrag);
-    dragRow->setFixedHeight(210);
-    {
-        AnchorLayout::Anchors a;
-        a.top = {header6, Edge::Bottom, 8};
-        a.left = {content, Edge::Left, 20};
-        a.right = {content, Edge::Right, -20};
-        innerLayout->addAnchoredWidget(dragRow, a);
-    }
-
-    // 主题切换按钮
-    auto* themeBtn = new fluent::basicinput::Button("Switch Theme", content);
-    themeBtn->setFluentStyle(fluent::basicinput::Button::Accent);
-    themeBtn->setFixedSize(120, 32);
-    themeBtn->anchors()->top = {dragRow, Edge::Bottom, 24};
-    themeBtn->anchors()->right = {content, Edge::Right, -20};
-    innerLayout->addWidget(themeBtn);
-
-    // content 的最小高度根据最底部控件计算
-    // loading(160) + gv1(280) + gv2 header+grid(16+20+8+300) + gv3(16+80) + gv4 header+grid(16+20+8+230)
-    // + header5+modeRow1+modeRow2(24+20+8+170+8+170) + header6+dragRow(24+20+8+210)
-    // + themeBtn(24+32) + margins(20+20)
-    content->setMinimumHeight(20 + 160 + 16 + 280 + 16 + 20 + 8 + 300 + 16 + 80 + 16 + 20 + 8 +
-                              230 + 24 + 20 + 8 + 170 + 8 + 170 + 24 + 20 + 8 + 210 + 24 + 32 + 20);
-
-    QObject::connect(themeBtn, &fluent::basicinput::Button::clicked, [scrollArea, content]() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                fluent::FluentElement::Light
-                                            ? fluent::FluentElement::Dark
-                                            : fluent::FluentElement::Light);
-        content->onThemeUpdated();
-        scrollArea->setStyleSheet(content->styleSheet());
-    });
-
-    content->onThemeUpdated();
-    scrollArea->setStyleSheet(content->styleSheet());
-    window->show();
-    syncFluentBar();
-    qApp->exec();
 }

@@ -24,6 +24,86 @@ SPEC.loader.exec_module(MODULE)
 
 
 class LocalPreflightTest(unittest.TestCase):
+    def test_quick_test_edits_select_the_registered_owner_not_the_category(self):
+        for path, target in (
+            ("tests/components/basicinput/TestButton.cpp", "test_button"),
+            ("tests/components/status_info/TestToast.cpp", "test_toast"),
+            ("tests/components/collections/FluentListItemDelegate.cpp", "test_list_view"),
+            ("src/components/status_info/Toast.cpp", "test_toast"),
+        ):
+            with self.subTest(path=path):
+                cpp, _, pyside = MODULE.quick_selection([path])
+                self.assertEqual(cpp.targets, (target,))
+                self.assertEqual(cpp.label_regex, f"^({target})$")
+                self.assertFalse(pyside)
+
+    def test_quick_shared_headers_and_unknown_components_keep_broad_coverage(self):
+        for path in ("src/compatibility/QtCompat.h", "src/components/foundation/NewBase.h"):
+            with self.subTest(path=path):
+                cpp, _, pyside = MODULE.quick_selection([path])
+                self.assertEqual(cpp.scope, "all")
+                self.assertTrue(pyside)
+        cpp, _, pyside = MODULE.quick_selection(["src/components/basicinput/Button.h"])
+        self.assertEqual(cpp.targets, ("fluent_qt_basicinput_tests",))
+        self.assertTrue(pyside)
+
+    def test_quick_python_test_file_and_private_module_have_focused_suites(self):
+        cpp, regex, needed = MODULE.quick_selection([
+            "bindings/pyside6/gallery/tests/test_gallery_particle_compositor.py"])
+        self.assertEqual(cpp.scope, "none")
+        self.assertTrue(needed)
+        self.assertEqual(regex, "^(test_pyside6_gallery_particle_compositor)$")
+        _, regex, needed = MODULE.quick_selection([
+            "bindings/pyside6/gallery/src/fluentqt_gallery/particle_compositor.py"])
+        self.assertTrue(needed)
+        self.assertIn("test_pyside6_gallery_spatial", regex)
+        self.assertIn("test_pyside6_gallery_particle_compositor", regex)
+        self.assertIn("test_pyside6_gallery_python_snippet_catalog", regex)
+        command = MODULE.lane_commands({"kind": "pyside", "build_dir": "build/py"}, cpp, "Release", regex)[-1]
+        self.assertIn("^pyside$", command)
+        self.assertEqual(command[-2:], ["-R", regex])
+
+    def test_quick_mixed_paths_union_owners_and_unknown_inputs_are_not_dropped(self):
+        cpp, _, _ = MODULE.quick_selection([
+            "tests/components/basicinput/TestButton.cpp", "tests/components/status_info/TestToast.cpp"])
+        self.assertEqual(cpp.targets, ("test_button", "test_toast"))
+        cpp, _, _ = MODULE.quick_selection([
+            "tests/components/basicinput/TestButton.cpp", "tests/UnknownInfrastructure.cpp"])
+        self.assertEqual(cpp.scope, "all")
+
+    def test_quick_tooling_runs_its_owner_without_the_packaging_matrix(self):
+        checks = MODULE.quick_checks(["tools/dev/fluent_qt_preflight.py"])
+        self.assertEqual(len(checks), 1)
+        self.assertEqual(Path(checks[0][1][-1]).name, "test_fluent_qt_preflight.py")
+        with mock.patch.object(MODULE.RELEASE, "integration_checks", return_value=[("fallback", ["check"])]):
+            checks = dict(MODULE.quick_checks(["tools/dev/unknown_tool.py"]))
+            self.assertEqual(checks["fallback"], ["check"])
+
+    def test_quick_plan_uses_head_and_does_not_execute_checks(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+                mock.patch.object(MODULE, "changed_paths", return_value=["tests/components/basicinput/TestButton.cpp"]) as changed, \
+                mock.patch.object(MODULE, "run_logged") as runner, redirect_stdout(io.StringIO()):
+            report = Path(temporary) / "plan.json"
+            self.assertEqual(MODULE.main(["--quick", "--plan", "--report", str(report)]), 0)
+            changed.assert_called_once_with(MODULE.ROOT, "HEAD")
+            runner.assert_not_called()
+            result = json.loads(report.read_text())
+            self.assertEqual(result["status"], "planned")
+            self.assertEqual(result["required_versions"], {})
+            self.assertEqual(result["cpp_targets"], ["test_button"])
+
+    def test_quick_explicit_paths_do_not_silently_claim_unchecked_runtime(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+                mock.patch.object(MODULE, "changed_paths") as changed, \
+                mock.patch.object(MODULE, "run_logged") as runner, \
+                redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            report = Path(temporary) / "run.json"
+            self.assertEqual(MODULE.main(["--quick", "--paths", "tests/components/basicinput/TestButton.cpp",
+                                          "--report", str(report)]), 1)
+            changed.assert_not_called()
+            runner.assert_not_called()
+            self.assertEqual(json.loads(report.read_text())["status"], "failed")
+
     def test_diff_includes_rename_sources_staged_unstaged_and_untracked_files(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -687,8 +687,7 @@
       "manual_evidence": {
         "status": "manual-required",
         "coverage": "all-required-states",
-        "surface": "visual-check",
-        "test_case": "FlipViewTest.VisualCheck"
+        "surface": "gallery"
       }
     },
     {
@@ -789,8 +788,7 @@
       "manual_evidence": {
         "status": "manual-required",
         "coverage": "all-required-states",
-        "surface": "visual-check",
-        "test_case": "GridViewTest.VisualCheck"
+        "surface": "gallery"
       }
     },
     {
@@ -811,8 +809,7 @@
       "manual_evidence": {
         "status": "manual-required",
         "coverage": "all-required-states",
-        "surface": "visual-check",
-        "test_case": "ListViewTest.VisualCheck"
+        "surface": "gallery"
       }
     },
     {
@@ -1322,8 +1319,7 @@
       "manual_evidence": {
         "status": "manual-required",
         "coverage": "all-required-states",
-        "surface": "visual-check",
-        "test_case": "TreeViewTest.VisualCheck"
+        "surface": "gallery"
       }
     },
     {

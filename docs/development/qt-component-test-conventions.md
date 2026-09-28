@@ -65,6 +65,14 @@ synchronization, use [Testing Workflow](testing-workflow.md).
 
 ## Test Structure
 
+- Keep interactive component demonstrations in Gallery. When Gallery already
+  covers a manual test scene, remove the duplicate UI and its unused helpers;
+  retain automated interaction, geometry and ownership assertions. Update the
+  visual evidence inventory to the surviving manual entry point. A Gallery
+  route is an inspection surface, not an automated visual pass.
+- Group defaults, value transitions and duplicate-signal checks for one property
+  in one test. Use table-driven rows with `SCOPED_TRACE` for equivalent mappings;
+  preserve independent cases for different ownership or event-loop behavior.
 - Register component tests with `add_qt_test_module(test_<name> Test<Name>.cpp
   [extra sources...])`.
 - Test binaries share Qt setup through `tests/support/QtGTestMain.cpp`; do not

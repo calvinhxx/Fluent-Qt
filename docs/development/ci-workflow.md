@@ -56,6 +56,11 @@ host and focused contract validation.
 CI may pin build parallelism to its measured runner capacity. Local builds use
 the [adaptive wrapper](build-workflow.md).
 
+Full Python validation also builds the optional Spatial binding on one Linux
+Qt 6.9 lane. It checks the binding and Gallery contracts offscreen, then OpenGL
+resource destruction under Xvfb. This source-build lane does not change the
+published wheel matrix or replace native desktop rendering and input review.
+
 Run the [local integration preflight](testing-workflow.md#local-integration-preflight)
 before pushing. Its Qt-free source/packaging gates are also the first checks in
 the CI planning job, so inventory mistakes fail before allocating native

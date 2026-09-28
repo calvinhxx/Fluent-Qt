@@ -629,7 +629,8 @@ if(BUILD_TESTING)
         NAME test_pyside6_bindings
         COMMAND "${Python_EXECUTABLE}"
             -X faulthandler
-            "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_bindings.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/run_binding_tests.py"
+            --exclude-file "${CMAKE_CURRENT_BINARY_DIR}/isolated-binding-tests.txt"
             -v)
     set_tests_properties(test_pyside6_bindings PROPERTIES
         ENVIRONMENT
@@ -660,7 +661,11 @@ if(BUILD_TESTING)
         LABELS "pyside;unit;ci_fast"
         TIMEOUT 60)
 
+    set(_fluentqt_isolated_binding_methods)
     function(fluentqt_add_pyside6_isolated_lifetime_test TEST_NAME TEST_METHOD)
+        set(_fluentqt_isolated_binding_methods
+            ${_fluentqt_isolated_binding_methods} "FluentQtBindingTest.${TEST_METHOD}"
+            PARENT_SCOPE)
         add_test(
             NAME "${TEST_NAME}"
             COMMAND "${Python_EXECUTABLE}"
@@ -835,6 +840,17 @@ if(BUILD_TESTING)
         test_pyside6_annotated_scroll_bar_borrowed_link_gc
         test_annotated_scroll_bar_borrowed_scroll_view_link)
 
+    # The registration above is the sole inventory for both isolated execution
+    # and exclusion from the ordinary suite. Direct test_bindings.py stays full.
+    list(JOIN _fluentqt_isolated_binding_methods "\n" _fluentqt_isolated_binding_text)
+    file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/isolated-binding-tests.txt"
+        CONTENT "${_fluentqt_isolated_binding_text}\n")
+    add_test(NAME test_pyside6_binding_test_partition
+        COMMAND "${Python_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_binding_test_partition.py")
+    set_tests_properties(test_pyside6_binding_test_partition PROPERTIES
+        LABELS "pyside;unit;ci_fast" TIMEOUT 30)
+
     add_test(
         NAME test_pyside6_generated_contracts
         COMMAND "${Python_EXECUTABLE}"
@@ -891,6 +907,16 @@ if(BUILD_TESTING)
             TIMEOUT 30)
 
         if(TARGET FluentQtSpatial)
+            add_test(
+                NAME test_pyside6_gallery_spatial_native
+                COMMAND "${Python_EXECUTABLE}" -X faulthandler
+                    "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery_spatial.py" -v)
+            set_tests_properties(test_pyside6_gallery_spatial_native PROPERTIES
+                ENVIRONMENT
+                    "PYTHONPATH=${PROJECT_BINARY_DIR}/python;FLUENTQT_REQUIRE_NATIVE_TEST=1"
+                LABELS "pyside_native;unit;local_desktop"
+                RUN_SERIAL TRUE
+                TIMEOUT 120)
             add_test(
                 NAME test_pyside6_gallery_spatial_backdrop_native
                 COMMAND "${Python_EXECUTABLE}" -X faulthandler

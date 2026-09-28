@@ -12,8 +12,6 @@
 #include <QGraphicsOpacityEffect>
 #include <QHelpEvent>
 #include <QImage>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QLabel>
 #include <QLockFile>
 #include <QPainter>
@@ -50,6 +48,7 @@
 #include "components/basicinput/ToggleSwitch.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
+#include "components/foundation/UserTheme.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/navigation/NavigationView.h"
@@ -1609,7 +1608,12 @@ TEST_F(GalleryShellFrameworkTest, CurrentContentScrollbarStaysAtRightEdgeAfterNa
         window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     clickNavigationRoute(mainPane, QStringLiteral("combobox"));
-    QApplication::processEvents();
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            auto* current = window.currentContentPage();
+            return current && current->routeId() == QStringLiteral("combobox");
+        },
+        10000));
 
     auto* page = window.currentContentPage();
     ASSERT_NE(page, nullptr);
@@ -2808,226 +2812,55 @@ TEST_F(GalleryShellFrameworkTest, WaylandInactiveVisibleWindowUsesRemapFallback)
     window.hide();
 }
 
-TEST(GalleryUserThemePersistenceTest, ApplyingThemeDoesNotCreateUserFile)
-{
-    namespace tc = fluent::gallery::GalleryUserTheme;
-    const QString path = tc::filePath();
-    QFile::remove(path);
-
-    tc::apply();
-
-    EXPECT_FALSE(QFile::exists(path));
-    fluent::ThemeRegistry::instance().resetToDefaults();
-}
-
-TEST(GalleryUserThemePersistenceTest, ExplicitExportWritesVersionedEditableEnvelope)
-{
-    namespace tc = fluent::gallery::GalleryUserTheme;
-    const QString path = tc::filePath();
-    QFile::remove(path);
-
-    ASSERT_TRUE(tc::exportTemplate());
-    EXPECT_FALSE(tc::exportTemplate());
-
-    QFile file(path);
-    ASSERT_TRUE(file.open(QIODevice::ReadOnly | QIODevice::Text));
-    const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
-    ASSERT_TRUE(document.isObject());
-    const QJsonObject root = document.object();
-    EXPECT_EQ(root.value(QStringLiteral("schemaVersion")).toInt(), 1);
-    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("fluent"));
-    const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
-    EXPECT_TRUE(overrides.value(QStringLiteral("radius")).isObject());
-    EXPECT_TRUE(overrides.value(QStringLiteral("light")).isObject());
-    EXPECT_TRUE(overrides.value(QStringLiteral("dark")).isObject());
-
-    QFile::remove(path);
-}
-
-TEST(GalleryUserThemePersistenceTest, LegacyFlatThemeIsAppliedAndMigratedOnExplicitEdit)
-{
-    using fluent::ThemeRegistry;
-    namespace tc = fluent::gallery::GalleryUserTheme;
-    const QString path = tc::filePath();
-    QFile::remove(path);
-    QDir().mkpath(tc::directory());
-
-    QJsonObject radius;
-    radius.insert(QStringLiteral("control"), 17);
-    QJsonObject light;
-    light.insert(QStringLiteral("bgCanvas"), QStringLiteral("#123456"));
-    QJsonObject dark;
-    dark.insert(QStringLiteral("bgCanvas"), QStringLiteral("#654321"));
-    QJsonObject legacy;
-    legacy.insert(QStringLiteral("radius"), radius);
-    legacy.insert(QStringLiteral("light"), light);
-    legacy.insert(QStringLiteral("dark"), dark);
-
-    QFile legacyFile(path);
-    ASSERT_TRUE(legacyFile.open(QIODevice::WriteOnly | QIODevice::Text));
-    const QByteArray legacyPayload = QJsonDocument(legacy).toJson();
-    ASSERT_EQ(legacyFile.write(legacyPayload), legacyPayload.size());
-    legacyFile.close();
-
-    tc::apply();
-    EXPECT_EQ(ThemeRegistry::instance().radius().control, 17);
-    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Light).bgCanvas.rgb(),
-              QColor(QStringLiteral("#123456")).rgb());
-    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Dark).bgCanvas.rgb(),
-              QColor(QStringLiteral("#654321")).rgb());
-
-    const QColor picked(QStringLiteral("#4DA04D"));
-    tc::setAccent(picked);
-
-    QFile migratedFile(path);
-    ASSERT_TRUE(migratedFile.open(QIODevice::ReadOnly | QIODevice::Text));
-    const QJsonObject root = QJsonDocument::fromJson(migratedFile.readAll()).object();
-    EXPECT_EQ(root.value(QStringLiteral("schemaVersion")).toInt(), 1);
-    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("fluent"));
-    const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
-    EXPECT_EQ(overrides.value(QStringLiteral("radius"))
-                  .toObject()
-                  .value(QStringLiteral("control"))
-                  .toInt(),
-              17);
-    EXPECT_EQ(overrides.value(QStringLiteral("light"))
-                  .toObject()
-                  .value(QStringLiteral("bgCanvas"))
-                  .toString(),
-              QStringLiteral("#123456"));
-    EXPECT_EQ(overrides.value(QStringLiteral("dark"))
-                  .toObject()
-                  .value(QStringLiteral("bgCanvas"))
-                  .toString(),
-              QStringLiteral("#654321"));
-    EXPECT_EQ(overrides.value(QStringLiteral("light"))
-                  .toObject()
-                  .value(QStringLiteral("accentDefault"))
-                  .toString(),
-              QStringLiteral("#4DA04D"));
-    EXPECT_EQ(overrides.value(QStringLiteral("dark"))
-                  .toObject()
-                  .value(QStringLiteral("accentDefault"))
-                  .toString(),
-              QStringLiteral("#4DA04D"));
-
-    migratedFile.close();
-    QFile::remove(path);
-    ThemeRegistry::instance().resetToDefaults();
-}
-
-TEST(GalleryUserThemePersistenceTest, UnsupportedSchemaIsIgnored)
-{
-    using fluent::ThemeRegistry;
-    namespace tc = fluent::gallery::GalleryUserTheme;
-    const QString path = tc::filePath();
-    QDir().mkpath(tc::directory());
-
-    QJsonObject light;
-    light.insert(QStringLiteral("accentDefault"), QStringLiteral("#FF0000"));
-    QJsonObject overrides;
-    overrides.insert(QStringLiteral("light"), light);
-    QJsonObject root;
-    root.insert(QStringLiteral("schemaVersion"), 999);
-    root.insert(QStringLiteral("theme"), QStringLiteral("fluent"));
-    root.insert(QStringLiteral("overrides"), overrides);
-    QFile file(path);
-    ASSERT_TRUE(file.open(QIODevice::WriteOnly | QIODevice::Text));
-    const QByteArray payload = QJsonDocument(root).toJson();
-    ASSERT_EQ(file.write(payload), payload.size());
-    file.close();
-
-    tc::apply();
-
-    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Light).accentDefault.rgb(),
-              tc::defaultAccent(false).rgb());
-
-    tc::setAccent(QColor(QStringLiteral("#4DA04D")));
-    QFile preservedFile(path);
-    ASSERT_TRUE(preservedFile.open(QIODevice::ReadOnly | QIODevice::Text));
-    EXPECT_EQ(preservedFile.readAll(), payload);
-    preservedFile.close();
-
-    QFile::remove(path);
-    ThemeRegistry::instance().resetToDefaults();
-}
-
-TEST(GalleryUserThemePersistenceTest, MalformedThemeIsNotOverwrittenByAccentEdit)
-{
-    namespace tc = fluent::gallery::GalleryUserTheme;
-    const QString path = tc::filePath();
-    QDir().mkpath(tc::directory());
-    const QByteArray malformedPayload("{ this is not valid JSON");
-
-    QFile file(path);
-    ASSERT_TRUE(file.open(QIODevice::WriteOnly | QIODevice::Text));
-    ASSERT_EQ(file.write(malformedPayload), malformedPayload.size());
-    file.close();
-
-    tc::setAccent(QColor(QStringLiteral("#4DA04D")));
-
-    QFile preservedFile(path);
-    ASSERT_TRUE(preservedFile.open(QIODevice::ReadOnly | QIODevice::Text));
-    EXPECT_EQ(preservedFile.readAll(), malformedPayload);
-    preservedFile.close();
-    QFile::remove(path);
-}
-
-// Regression: picking a custom accent must keep the whole accent family
-// consistent. The persisted override stays sparse so derived variants always
-// follow the new accent instead of retaining stale preset values.
-// zh_CN: 回归——自定义强调色覆盖保持稀疏，派生变体始终跟随新强调色，
-// 不会残留旧预设值。
-TEST(GalleryUserThemeAccentConsistencyTest, SetAccentWritesSparseOverrideAndReDerivesVariants)
-{
-    using fluent::ThemeRegistry;
-    namespace tc = fluent::gallery::GalleryUserTheme;
-
-    QFile::remove(tc::filePath());
-
-    const QColor picked(0x4D, 0xA0,
-                        0x4D); // the green that originally clashed with stale blue variants
-    tc::setAccent(picked);
-
-    QFile file(tc::filePath());
-    ASSERT_TRUE(file.open(QIODevice::ReadOnly | QIODevice::Text));
-    const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
-    file.close();
-    EXPECT_EQ(root.value(QStringLiteral("schemaVersion")).toInt(), 1);
-    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("fluent"));
-    const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
-    for (const QString& modeName : {QStringLiteral("light"), QStringLiteral("dark")}) {
-        const QJsonObject mode = overrides.value(modeName).toObject();
-        EXPECT_EQ(mode.size(), 1);
-        EXPECT_EQ(mode.value(QStringLiteral("accentDefault")).toString(),
-                  QStringLiteral("#4DA04D"));
+class GalleryUserThemeAdapterTest : public ::testing::Test {
+protected:
+    void SetUp() override
+    {
+        QFile::remove(fluent::UserTheme::filePath());
+        fluent::ThemeRegistry::instance().resetToDefaults();
     }
 
-    tc::apply();
-
-    for (bool dark : {false, true}) {
-        const auto colors = ThemeRegistry::instance().colors(dark ? fluent::FluentElement::Dark
-                                                                  : fluent::FluentElement::Light);
-        // QColor::rgb() drops alpha, so a derived variant (same hue, lower alpha) compares equal to the
-        // picked accent — and unequal to the stale preset blue if the bug regressed.
-        EXPECT_EQ(colors.accentDefault.rgb(), picked.rgb()) << "dark=" << dark;
-        EXPECT_EQ(colors.accentSecondary.rgb(), picked.rgb())
-            << "accentSecondary stale; dark=" << dark;
-        EXPECT_EQ(colors.accentTertiary.rgb(), picked.rgb())
-            << "accentTertiary stale; dark=" << dark;
-        EXPECT_EQ(colors.textAccentPrimary.rgb(), picked.rgb())
-            << "textAccentPrimary stale; dark=" << dark;
+    void TearDown() override
+    {
+        QFile::remove(fluent::UserTheme::filePath());
+        fluent::ThemeRegistry::instance().resetToDefaults();
     }
+};
 
-    // Reset reverts cleanly to the preset accent (no half-override left behind).
-    tc::clearAccent();
-    tc::apply();
-    EXPECT_EQ(ThemeRegistry::instance().colors(fluent::FluentElement::Light).accentDefault.rgb(),
-              tc::defaultAccent(false).rgb());
+TEST_F(GalleryUserThemeAdapterTest, DesktopUsesLibraryFileBackend)
+{
+    namespace adapter = fluent::gallery::GalleryUserTheme;
+    ASSERT_TRUE(fluent::gallery::platform::capabilities().editsThemeFiles);
+    EXPECT_EQ(adapter::directory(), fluent::UserTheme::directory());
+    EXPECT_EQ(adapter::filePath(), fluent::UserTheme::filePath());
+    for (bool dark : {false, true})
+        EXPECT_EQ(adapter::defaultAccent(dark), fluent::UserTheme::defaultAccent(dark));
 
-    QFile::remove(tc::filePath());
-    ThemeRegistry::instance().resetToDefaults();
-    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    adapter::apply();
+    EXPECT_FALSE(QFile::exists(adapter::filePath()));
+    ASSERT_TRUE(adapter::exportTemplate());
+    EXPECT_TRUE(QFile::exists(fluent::UserTheme::filePath()));
+    EXPECT_FALSE(adapter::exportTemplate());
+    EXPECT_TRUE(adapter::exportTemplate(true));
+}
+
+TEST_F(GalleryUserThemeAdapterTest, DesktopAccentEditsReachTheSharedTheme)
+{
+    namespace adapter = fluent::gallery::GalleryUserTheme;
+    const QColor accent(QStringLiteral("#4DA04D"));
+    adapter::setAccent(accent);
+    ASSERT_TRUE(QFile::exists(fluent::UserTheme::filePath()));
+    adapter::apply();
+    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark})
+        EXPECT_EQ(fluent::ThemeRegistry::instance().colors(theme).accentDefault.rgb(),
+                  accent.rgb());
+
+    adapter::clearAccent();
+    adapter::apply();
+    EXPECT_EQ(fluent::ThemeRegistry::instance().colors(fluent::FluentElement::Light).accentDefault,
+              fluent::UserTheme::defaultAccent(false));
+    EXPECT_EQ(fluent::ThemeRegistry::instance().colors(fluent::FluentElement::Dark).accentDefault,
+              fluent::UserTheme::defaultAccent(true));
 }
 
 TEST(GalleryWindowingSamplesTest, TitleBarSampleReservesTrailingCaptionSpace)
