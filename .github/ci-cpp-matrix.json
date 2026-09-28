@@ -63,7 +63,7 @@
       "vcpkg_triplet": "arm64-osx",
       "build": true,
       "test": false,
-      "build_targets": "FluentQt",
+      "build_targets": "FluentQt FluentQtSpatial",
       "build_parallel": "3",
       "test_labels": "",
       "exclude_labels": "",

@@ -1,5 +1,5 @@
 #include <FluentQt/FluentQt.h>
-#include <FluentQt/components/foundation/overlay/OverlayPresentation.h>
+#include <components/foundation/overlay/OverlayPresentation.h>
 
 #include <QApplication>
 #include <QAction>
