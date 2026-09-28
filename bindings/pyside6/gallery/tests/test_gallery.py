@@ -16,6 +16,7 @@ from unittest.mock import patch
 import uuid
 
 import fluentqt
+from fluentqt._qt_compat import delete_qobject
 import fluentqt_gallery.application_controller as application_controller_module
 import fluentqt_gallery.settings as gallery_settings_module
 import fluentqt_gallery.single_instance as single_instance_module
@@ -53,7 +54,7 @@ from PySide6.QtGui import (
     QPainter,
     QPixmap,
 )
-from PySide6.QtTest import QTest
+from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -1029,6 +1030,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
     def test_tree_view_delegate_uses_native_indicator_motion_contract(self):
         result = build_sample("tree-view", "tree-view-basic")
         tree = result.widget
+        hierarchy_changes = QSignalSpy(tree.indicatorHierarchyTransitionChanged)
         try:
             delegate = tree.itemDelegate()
             paint_names = set(delegate.paint.__func__.__code__.co_names)
@@ -1051,9 +1053,11 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 fluentqt.TreeView.IndicatorHierarchyTransition.Inward,
             )
         finally:
+            changes_before_teardown = hierarchy_changes.count()
             tree.close()
-            tree.deleteLater()
-            QApplication.processEvents()
+            delete_qobject(tree)
+            self.assertEqual(hierarchy_changes.count(), changes_before_teardown,
+                             "Teardown must not notify slots using the destroyed TreeView")
 
     def test_command_bar_reuses_the_gallery_window_editing_router(self):
         window = GalleryWindow(startup_visuals=False)
