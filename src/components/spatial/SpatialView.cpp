@@ -83,7 +83,9 @@ protected:
         QPainter painter(&target);
         painter.setRenderHints(m_view->renderHints());
         painter.fillRect(rect(), m_view->backgroundBrush());
-        m_view->render(&painter);
+        // The paint device already applies DPR; render in logical viewport coordinates.
+        // zh_CN: 绘制设备已应用 DPR，视图目标必须使用逻辑坐标，避免高分屏重复缩放。
+        m_view->render(&painter, QRectF(rect()), m_view->viewport()->rect());
     }
 
 private:
@@ -713,13 +715,27 @@ SpatialItem* SpatialView::addWidget(QWidget* widget, WidgetOwnership ownership)
         widget->resize(widget->sizeHint());
     d->items.append(item);
     widget->installEventFilter(this);
-    item->d->destroyedConnection = connect(widget, &QObject::destroyed, this, [this, item] {
-        if (!d->destroying && d->items.removeOne(item)) {
-            item->d->owner = nullptr;
-            item->deleteLater();
-            emit itemCountChanged(itemCount());
-        }
-    });
+    item->d->destroyedConnection =
+        connect(widget, &QObject::destroyed, this, [this, item](QObject* object) {
+            if (!d->destroying && d->items.removeOne(item)) {
+                disconnect(item->d->destroyedConnection);
+                object->removeEventFilter(this);
+                item->d->owner = nullptr;
+                item->d->widget.clear();
+                // QWidget emits destroyed before unlinking its parent and proxy. A count
+                // handler can delete this host, so remove both ownership paths first.
+                // zh_CN: destroyed 发出时父对象与代理尚未解绑；先解除所有权，允许数量回调同步销毁宿主。
+                if (auto* proxy = item->d->proxy.data()) {
+                    proxy->moved = {};
+                    d->scene->removeItem(proxy);
+                    // Qt's widget-destroyed slot will delete the detached proxy safely.
+                    // Deleting it here would recursively delete the same widget.
+                }
+                static_cast<QWidget*>(object)->setParent(nullptr);
+                item->deleteLater();
+                emit itemCountChanged(itemCount());
+            }
+        });
     if (d->spatial)
         d->embed(item);
     else {
