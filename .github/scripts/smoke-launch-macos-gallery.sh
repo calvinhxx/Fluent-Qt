@@ -50,13 +50,14 @@ for (( elapsed = 0; elapsed < duration; elapsed++ )); do
   fi
 done
 
-if ! grep -q "GalleryContentPresenter prewarm stopped" "$log_path"; then
+if ! grep -q "GalleryWindow startup ready " "$log_path" ||
+   ! grep -q "GalleryWindow startup dismissed " "$log_path"; then
   cat "$log_path" >&2
-  echo "Gallery did not complete its startup prewarm during the smoke launch." >&2
+  echo "Gallery did not become ready and dismiss its splash during the smoke launch." >&2
   exit 1
 fi
 
-echo "Gallery completed startup prewarm and remained alive for ${duration}s."
+echo "Gallery completed startup and remained alive for ${duration}s."
 kill "$pid" 2>/dev/null || true
 wait "$pid" 2>/dev/null || true
 pid=""

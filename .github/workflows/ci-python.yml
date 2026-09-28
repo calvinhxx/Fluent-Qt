@@ -1309,11 +1309,12 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
           $python = (Get-Command python).Source -replace '\\', '/'
-          # Select the installed Visual Studio version; ARM64 runners use VS 2026.
+          # Select the installed IDE while retaining Qt's MSVC 2022 toolset.
           $configureArgs = @(
             "-S", ".",
             "-B", "${{ matrix.build_dir }}",
             "-A", "${{ matrix.cmake_arch }}",
+            "-T", "v143",
             "-DCMAKE_PREFIX_PATH=$qtRoot",
             "-DPython_EXECUTABLE=$python",
             "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=${{ matrix.requires_python }}",
