@@ -910,6 +910,8 @@ jobs:
     if: ${{ inputs.run_macos_release_validation }}
     runs-on: macos-15
     timeout-minutes: 35
+    env:
+      FLUENTQT_REQUIRE_SPATIAL: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -946,6 +948,7 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
             -DPython_EXECUTABLE="$(command -v python)" \
             "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=>=3.11,<3.14" \
+            -DFLUENT_QT_BUILD_SPATIAL=ON \
             -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON \
             -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON \
             -DFLUENT_QT_BUILD_EXAMPLES=OFF \
@@ -1198,6 +1201,8 @@ jobs:
     if: ${{ needs.plan.outputs.mode == 'full' && inputs.build_release_bundle }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ matrix.timeout_minutes }}
+    env:
+      FLUENTQT_REQUIRE_SPATIAL: "1"
     strategy:
       fail-fast: false
       # Normal CI also runs two compatibility downloads and stays at four.
@@ -1286,6 +1291,7 @@ jobs:
             -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
             -DPython_EXECUTABLE="$(command -v python)"
             "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=${{ matrix.requires_python }}"
+            -DFLUENT_QT_BUILD_SPATIAL=ON
             -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON
             -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON
             -DFLUENT_QT_BUILD_EXAMPLES=OFF
@@ -1318,6 +1324,7 @@ jobs:
             "-DCMAKE_PREFIX_PATH=$qtRoot",
             "-DPython_EXECUTABLE=$python",
             "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=${{ matrix.requires_python }}",
+            "-DFLUENT_QT_BUILD_SPATIAL=ON",
             "-DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON",
             "-DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON",
             "-DFLUENT_QT_BUILD_EXAMPLES=OFF",

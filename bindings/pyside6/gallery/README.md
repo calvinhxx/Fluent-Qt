@@ -48,7 +48,10 @@ Use `--verify-catalog --walk-routes` for deterministic headless acceptance.
 
 ## Spatial mode
 
-Enable the optional binding and Gallery in the same matched Python/Qt build:
+Release wheels must include Spatial so the installed Gallery has the same
+3D controls and examples as C++ and WebAssembly. The published 1.9.0 wheels
+omitted the module; the corrected release pipeline rejects that omission.
+Until the fix is published, enable it in a matched Python/Qt source build:
 
 ```bash
 cmake -S . -B build/pyside6 \

@@ -65,8 +65,10 @@ def verify_source_contract(project_root, package_dir, contract):
 
 
 def verify_runtime_catalog(contract, categories, entries, routes, support_types,
-                           ported_keys, spatial_available):
+                           ported_keys, spatial_available, require_spatial=False):
     """Check the active subset without weakening the complete packaged contract."""
+    if require_spatial and not spatial_available:
+        raise AssertionError("Release Gallery must include Spatial; a 2D-only fallback is not a complete package")
     expected_categories = [c["id"] for c in contract["categories"]
                            if spatial_available or c["id"] != "spatial"]
     expected_components = [c for c in contract["components"]
@@ -154,7 +156,8 @@ def main(argv=None):
         )
 
     verify_runtime_catalog(CONTRACT, CATEGORIES, ENTRIES, ROUTES, SUPPORT_TYPES,
-                           ported_sample_keys(), SPATIAL_AVAILABLE)
+                           ported_sample_keys(), SPATIAL_AVAILABLE,
+                           require_spatial=os.environ.get("FLUENTQT_REQUIRE_SPATIAL") == "1")
 
     fluentqt.prepare_high_dpi_application()
     from PySide6.QtCore import QCoreApplication, QEvent

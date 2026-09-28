@@ -36,6 +36,13 @@ class GalleryWheelSmokeContractsTest(unittest.TestCase):
                 routes = [SimpleNamespace(id=r["id"]) for r in contract["routes"][:3 if available else 1]]
                 keys = {(c["id"], s["id"]) for c in components for s in c["samples"]}
                 SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys, available)
+                if available:
+                    SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys,
+                                                 available, require_spatial=True)
+                else:
+                    with self.assertRaisesRegex(AssertionError, "Release Gallery must include Spatial"):
+                        SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys,
+                                                     available, require_spatial=True)
                 # Same-sized wrong catalog and missing ports must still fail.
                 with self.assertRaisesRegex(AssertionError, "wrong coverage"):
                     SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, set(), available)

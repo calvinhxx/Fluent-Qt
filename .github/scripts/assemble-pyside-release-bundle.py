@@ -205,6 +205,13 @@ def require_wheel_metadata(
         raise BundleError(
             f"wheel {wheel.name} has an invalid Root-Is-Purelib value"
         )
+    if normalized_distribution(distribution) == "fluentqt":
+        with zipfile.ZipFile(wheel) as archive:
+            for name in ("fluentqt/spatial.py", "fluentqt/spatial.pyi"):
+                if name not in archive.namelist() or not archive.read(name).strip():
+                    raise BundleError(
+                        f"release wheel {wheel.name} must include Spatial: missing {name}"
+                    )
 
 
 def release_scenarios(catalog: dict[str, Any]) -> list[dict[str, Any]]:

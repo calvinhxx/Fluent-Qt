@@ -160,9 +160,10 @@ Gallery's [particle compositor](gallery/src/fluentqt_gallery/particle_compositor
 is the complete implementation for cached pages and foreground widgets.
 
 This build adds Qt OpenGL/OpenGLWidgets to the same extension, sharing theme
-and motion state with the base controls. A 2D-only build does not link these
-modules. This is a source-build option, not a promise that existing PyPI wheels
-include Spatial. With `FLUENT_QT_BUILD_PYSIDE6_GALLERY=ON`, the Python Gallery
+and motion state with the base controls. A 2D-only source build does not link
+these modules. Release builds require Spatial on every wheel platform; the
+published 1.9.0 wheels omitted it and need a source build until the packaging
+fix is released. With `FLUENT_QT_BUILD_PYSIDE6_GALLERY=ON`, the Python Gallery
 uses **Settings → 3D Gallery** for its shell and every Spatial example, matching
 the C++ and WebAssembly Gallery. See the [Gallery guide](gallery/README.md#spatial-mode).
 See [Spatial](../../docs/architecture/spatial-view.md) for supported content and fallback behavior.

@@ -138,6 +138,8 @@ def verify_windows_runtime_dependencies():
     loaded = windows_loaded_modules()
     by_name = {path.name.lower(): path for path in loaded}
     required_qt = ("qt6core.dll", "qt6gui.dll", "qt6widgets.dll")
+    if hasattr(native.fluent, "SpatialView"):
+        required_qt += ("qt6opengl.dll", "qt6openglwidgets.dll")
     missing_qt = [name for name in required_qt if name not in by_name]
     if missing_qt:
         raise AssertionError(
@@ -209,6 +211,11 @@ def verify_macos_runtime_dependencies():
             path.name.startswith("libshiboken6") and path.suffix == ".dylib"
         ),
     }
+    if hasattr(native.fluent, "SpatialView"):
+        for module in ("QtOpenGL", "QtOpenGLWidgets"):
+            requirements[module] = lambda path, module=module: (
+                path.name == module and module + ".framework" in path.parts
+            )
 
     runtime_paths = []
     for name, predicate in requirements.items():
@@ -259,14 +266,19 @@ def main():
         hasattr(native.fluent, "ParticleLayer"),
         hasattr(native.fluent, "SpatialView"),
         hasattr(native.fluent, "SpatialItem"),
+        hasattr(native.fluent, "SpatialRuntime"),
     )
+    if os.environ.get("FLUENTQT_REQUIRE_SPATIAL") == "1" and not all(spatial_exports):
+        raise AssertionError("Release wheel must include the complete native Spatial API")
     if any(spatial_exports) and not all(spatial_exports):
         raise AssertionError("Installed native Spatial API is incomplete")
     if all(spatial_exports):
-        from fluentqt.spatial import ParticleLayer, SpatialItem, SpatialView
+        from fluentqt.spatial import ParticleLayer, SpatialItem, SpatialRuntime, SpatialView
 
         if ParticleLayer is not native.fluent.ParticleLayer:
             raise AssertionError("Installed ParticleLayer facade does not match the native API")
+        if SpatialRuntime is not native.fluent.SpatialRuntime:
+            raise AssertionError("Installed SpatialRuntime facade does not match the native API")
         if SpatialItem is not native.fluent.SpatialItem or not issubclass(
             SpatialView, native.fluent.SpatialView
         ):
@@ -303,6 +315,27 @@ def main():
     app = QApplication.instance() or QApplication([])
     if not fluentqt.initialize_resources():
         raise AssertionError("FluentQt resources could not be initialized")
+
+    if all(spatial_exports):
+        report_stage("Spatial controls from installed wheel")
+        from fluentqt._qt_compat import delete_qobject
+
+        view = SpatialView()
+        view.setRenderMode(SpatialView.RenderMode.Raster)
+        backdrop = fluentqt.ParticleBackdrop(view)
+        layer = ParticleLayer(backdrop, view)
+        try:
+            content = fluentqt.Button("Spatial wheel smoke")
+            item = view.addOwnedWidget(content)
+            if not isinstance(item, SpatialItem):
+                raise AssertionError("Installed SpatialView cannot host a Fluent widget")
+            for enabled in (False, True):
+                view.setSpatialEnabled(enabled)
+            if layer.backdrop() is not backdrop or layer.isActive():
+                raise AssertionError("Installed ParticleLayer has invalid initial state")
+            layer.release()
+        finally:
+            delete_qobject(view)
 
     info = fluentqt.binding_build_info()
     if info["fluentqt_version"] != expected_version:

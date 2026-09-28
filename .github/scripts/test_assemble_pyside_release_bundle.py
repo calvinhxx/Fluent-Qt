@@ -87,6 +87,9 @@ def write_wheel(
         archive.writestr(zip_info(f"{dist_info}/METADATA"), metadata)
         archive.writestr(zip_info(f"{dist_info}/WHEEL"), wheel_metadata)
         archive.writestr(zip_info(f"{normalized}/payload.bin"), marker)
+        if normalized == "fluentqt":
+            archive.writestr(zip_info("fluentqt/spatial.py"), b"# Spatial facade\n")
+            archive.writestr(zip_info("fluentqt/spatial.pyi"), b"# Spatial stubs\n")
 
 
 class ReleaseBundleAssemblerTest(unittest.TestCase):
@@ -192,6 +195,22 @@ class ReleaseBundleAssemblerTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ASSEMBLER.BundleError, "expected one"):
             self.assemble()
+
+    def test_missing_or_empty_spatial_files_cannot_enter_release_bundle(self):
+        wheel = self.core_wheel(self.scenarios[0])
+        with zipfile.ZipFile(wheel) as archive:
+            original = {name: archive.read(name) for name in archive.namelist()}
+        for name in ("fluentqt/spatial.py", "fluentqt/spatial.pyi"):
+            for empty in (False, True):
+                with self.subTest(file=name, empty=empty):
+                    with zipfile.ZipFile(wheel, "w") as archive:
+                        for member, data in original.items():
+                            if member != name:
+                                archive.writestr(zip_info(member), data)
+                            elif empty:
+                                archive.writestr(zip_info(member), b"")
+                    with self.assertRaisesRegex(ASSEMBLER.BundleError, "must include Spatial"):
+                        self.assemble()
 
     def test_compatibility_wheel_is_rejected(self):
         artifact = self.artifact_dir(self.scenarios[0])

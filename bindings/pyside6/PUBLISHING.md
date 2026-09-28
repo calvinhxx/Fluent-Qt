@@ -40,6 +40,13 @@ mismatched manylinux evidence, and non-identical Gallery wheels. Every build
 lane must produce a byte-identical Gallery wheel; the bundle retains one copy.
 The wheel matrix, rather than prose totals, defines the required file set.
 
+Every release wheel must include `fluentqt.spatial`, its generated stubs, and
+the native Spatial API. Enable `FLUENT_QT_BUILD_SPATIAL=ON` in each release
+configure path, including the manylinux repair build. Clean-install checks use
+`FLUENTQT_REQUIRE_SPATIAL=1` in candidate, TestPyPI, and PyPI jobs: a missing
+module cannot pass as a working 2D fallback. Hardware without a supported GPU
+may still use the runtime fallback; that does not remove Spatial from the package.
+
 The manifest records the project version, source commit, originating workflow
 run and attempt, every wheel hash, and every audit hash. TestPyPI and PyPI must
 receive the files from this artifact. A publication run never rebuilds wheels.
@@ -167,7 +174,8 @@ The TestPyPI smoke uses Linux x64 with CPython 3.11 to:
 
 - install PySide6-Essentials and Shiboken6 6.9.3 from production PyPI;
 - install both FluentQt distributions from TestPyPI with `--no-deps`;
-- run `pip check`, version/import/UILib smoke, and Gallery offscreen smoke.
+- run `pip check`, version/import/UILib smoke, and Gallery offscreen smoke,
+  requiring the installed Spatial API and the complete Gallery route catalog.
 
 Package-index JSON and Simple API edges can converge at different times. The
 exact-version install therefore uses bounded, cache-free retries after the
