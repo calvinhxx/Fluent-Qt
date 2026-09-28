@@ -120,6 +120,7 @@ signals:
     void frameVisibleChanged();
 
 protected:
+    void changeEvent(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
@@ -130,6 +131,7 @@ protected:
 
 private:
     void applyThemeStyle();
+    void applyThemePalette();
     void paintFrame(QPainter& painter);
     void updateClearButtonVisibility();
     void updateClearButtonGeometry();

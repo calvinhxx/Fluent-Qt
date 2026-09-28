@@ -52,6 +52,16 @@ LineEdit::LineEdit(QWidget* parent) : QLineEdit(parent)
     applyThemeStyle();
 }
 
+void LineEdit::changeEvent(QEvent* event)
+{
+    QLineEdit::changeEvent(event);
+    // An ancestor can repolish us after our theme update and restore Qt's cached
+    // old palette. Restore colors without repolishing the subtree again.
+    // zh_CN: 祖先在主题更新后重新 polish 时可能还原 Qt 缓存的旧调色板；仅恢复颜色，避免再次刷新整棵子树。
+    if (event->type() == QEvent::StyleChange)
+        applyThemePalette();
+}
+
 void LineEdit::paintEvent(QPaintEvent* event)
 {
     // End the frame painter before Qt paints text. QWidget::render shares its
@@ -270,7 +280,7 @@ void LineEdit::onThemeUpdated()
     applyThemeStyle();
 }
 
-void LineEdit::applyThemeStyle()
+void LineEdit::applyThemePalette()
 {
     const auto& c = themeColorsRef();
     QPalette pal = palette();
@@ -291,6 +301,13 @@ void LineEdit::applyThemeStyle()
     pal.setColor(QPalette::Disabled, QPalette::Text, c.textDisabled);
     pal.setColor(QPalette::Disabled, QPalette::PlaceholderText,
                  opaqueTextColor(c.textDisabled, c.bgLayerAlt));
+    if (pal != palette())
+        setPalette(pal);
+}
+
+void LineEdit::applyThemeStyle()
+{
+    const auto& c = themeColorsRef();
     int rightPadding = m_contentMargins.right();
     if (m_clearButtonEnabled) {
         rightPadding += m_clearButtonSize + m_clearButtonOffset.x();
@@ -323,7 +340,7 @@ void LineEdit::applyThemeStyle()
     // palette 前景色。先应用只负责几何的样式表，再恢复语义调色板，保证位于带样式
     // 表的 Gallery 卡片中或透明嵌入 ComboBox 时文字仍遵循当前主题。
     setStyleSheet(qss);
-    setPalette(pal);
+    applyThemePalette();
     setFont(themeFont(m_fontRole).toQFont());
 }
 

@@ -146,14 +146,23 @@ TEST_F(LineEditTest, PlaceholderPaletteUsesResolvedOpaqueToken)
 TEST_F(LineEditTest, StyledAncestorDoesNotReplaceDarkThemeTextPalette)
 {
     const auto previousTheme = fluent::FluentElement::currentTheme();
-    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     window->onThemeUpdated();
 
     LineEdit edit(window);
     edit.setText(QStringLiteral("42"));
+    window->show();
+    QApplication::processEvents();
+    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     edit.onThemeUpdated();
 
     const auto colors = edit.themeColors();
+    EXPECT_EQ(edit.palette().color(QPalette::Active, QPalette::Text), colors.textPrimary);
+    EXPECT_EQ(edit.palette().color(QPalette::Inactive, QPalette::Text), colors.textPrimary);
+    EXPECT_EQ(edit.palette().color(QPalette::Disabled, QPalette::Text), colors.textDisabled);
+
+    // Ancestors can be notified after children because the theme registry is unordered.
+    window->setStyleSheet(QStringLiteral("background-color: #202020; border: none;"));
     EXPECT_EQ(edit.palette().color(QPalette::Active, QPalette::Text), colors.textPrimary);
     EXPECT_EQ(edit.palette().color(QPalette::Inactive, QPalette::Text), colors.textPrimary);
     EXPECT_EQ(edit.palette().color(QPalette::Disabled, QPalette::Text), colors.textDisabled);
