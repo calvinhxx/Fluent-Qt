@@ -519,7 +519,8 @@ jobs:
           & "$env:GITHUB_WORKSPACE/cmake/VerifyWindowsPeArchitecture.ps1" `
             -Root $stagedGallery.Directory.FullName `
             -ExpectedMachine Arm64 `
-            -RequireMsvcRuntime
+            -RequireMsvcRuntime `
+            -RequireQt6SpatialRuntime
 
       - name: Upload Windows ARM64 Gallery installer
         if: ${{ matrix.windows_package == true }}

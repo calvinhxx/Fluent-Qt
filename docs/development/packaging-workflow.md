@@ -237,15 +237,28 @@ For an x64-hosted ARM64 package, the host `windeployqt` must receive the target
 Qt kit's `qtpaths` wrapper. Otherwise it deploys x64 Qt DLLs beside the ARM64
 Gallery executable and Windows rejects the process with
 `STATUS_INVALID_IMAGE_FORMAT` (`0xc000007b`). CI verifies every packaged EXE and
-DLL is ARM64 and that the app-local ARM64 MSVC runtime is present before it
-uploads the installer.
+DLL is ARM64 and that the app-local ARM64 MSVC runtime and Qt 6 Spatial runtime
+are present before it uploads the installer.
 
 CI runs the ARM64 binaries on the native `windows-11-arm` runner before release,
 while the full CI and release workflows keep the established x64-hosted
 cross-build for the installer artifact. A full CI run uploads
 `fluent-qt-gallery-windows-arm64-installer`, which can be installed directly in
 a Windows 11 ARM VM for visual review. This separates runtime compatibility
-from deterministic packaging.
+from deterministic packaging. The desktop release candidate then installs that
+exact cross-built installer on a fresh `windows-11-arm` runner. It launches with
+only Windows on `PATH`, checks startup completion and splash dismissal, rejects
+failed GPU surface initialization, and retains the installer hash and logs as
+`diagnostics-windows-arm64-installed`. Startup signals alone are insufficient:
+they can fire even when a failed OpenGL child leaves the window blank.
+Candidate assembly requires this check when the selected matrix includes ARM64.
+
+An installed-package launch does not validate GPU rendering. Gallery needs a
+working hardware OpenGL context on Windows; a virtual GPU advertising DirectX
+support does not establish that OpenGL is available. Record the renderer and
+native 3D visual/input results separately. If context creation fails, verify the
+reported reason and native 2D fallback rather than counting a skipped GPU test
+as a 3D pass.
 
 > 32-bit x86 is intentionally not packaged: Qt 6 ships no 32-bit Windows binaries,
 > so an `x86-windows` build would require a self-compiled 32-bit Qt.

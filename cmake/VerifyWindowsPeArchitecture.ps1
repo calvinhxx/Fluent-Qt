@@ -7,7 +7,9 @@ param(
     [ValidateSet('Arm64', 'X64', 'X86')]
     [string] $ExpectedMachine,
 
-    [switch] $RequireMsvcRuntime
+    [switch] $RequireMsvcRuntime,
+
+    [switch] $RequireQt6SpatialRuntime
 )
 
 $ErrorActionPreference = 'Stop'
@@ -70,7 +72,8 @@ foreach ($file in $peFiles) {
     } else {
         'Unknown(0x{0:X4})' -f $machine
     }
-    $relativePath = [IO.Path]::GetRelativePath($resolvedRoot, $file.FullName)
+    # Also support Windows PowerShell 5.1 when checking a package in a clean VM.
+    $relativePath = $file.FullName.Substring($resolvedRoot.TrimEnd('\', '/').Length + 1)
     Write-Host "$machineName`t$relativePath"
     if ($machine -ne $expectedMachineValue) {
         $mismatches += "$relativePath=$machineName"
@@ -92,6 +95,23 @@ if ($RequireMsvcRuntime) {
     })
     if ($missingRuntimeFiles.Count -gt 0) {
         throw "Packaged MSVC runtime is incomplete below '$resolvedRoot'; missing: $($missingRuntimeFiles -join ', ')."
+    }
+}
+
+if ($RequireQt6SpatialRuntime) {
+    $requiredSpatialFiles = @(
+        'Qt6Core.dll',
+        'Qt6Gui.dll',
+        'Qt6Widgets.dll',
+        'Qt6OpenGL.dll',
+        'Qt6OpenGLWidgets.dll',
+        'platforms/qwindows.dll'
+    )
+    $missingSpatialFiles = @($requiredSpatialFiles | Where-Object {
+        -not (Test-Path -LiteralPath (Join-Path $resolvedRoot $_) -PathType Leaf)
+    })
+    if ($missingSpatialFiles.Count -gt 0) {
+        throw "Packaged Qt 6 Spatial runtime is incomplete; missing: $($missingSpatialFiles -join ', ')."
     }
 }
 

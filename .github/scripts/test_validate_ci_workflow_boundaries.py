@@ -78,6 +78,20 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
     def test_repository_workflow_boundaries_are_valid(self):
         self.assertEqual(MODULE.validate_boundaries(), [])
 
+    def test_desktop_candidate_requires_installed_arm64_validation(self):
+        for requirement in (
+            "smoke-installed-windows-gallery.ps1",
+            "-RequireQt6SpatialRuntime",
+            "needs: [plan, package, windows_arm64_install]",
+            "needs.windows_arm64_install.result == 'success'",
+            "needs.plan.outputs.windows_arm64 == 'false' && needs.windows_arm64_install.result == 'skipped'",
+        ):
+            with self.subTest(requirement=requirement):
+                errors = self.workflow_errors_with_replacement(
+                    "desktop-release-candidate.yml", requirement, "removed"
+                )
+                self.assertTrue(any("packaging contract" in error for error in errors))
+
     def test_optional_spatial_binding_cannot_silently_skip_coverage(self):
         for requirement in ("-DFLUENT_QT_BUILD_SPATIAL=ON", "assert SPATIAL_AVAILABLE",
                             "-R '^test_pyside6_gallery_spatial_backdrop_native$'"):

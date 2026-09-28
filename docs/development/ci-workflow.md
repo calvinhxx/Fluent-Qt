@@ -58,8 +58,11 @@ the [adaptive wrapper](build-workflow.md).
 
 Full Python validation also builds the optional Spatial binding on one Linux
 Qt 6.9 lane. It checks the binding and Gallery contracts offscreen, then OpenGL
-resource destruction under Xvfb. This source-build lane does not change the
-published wheel matrix or replace native desktop rendering and input review.
+resource destruction under Xvfb. Release wheels also enable Spatial on every
+platform. Candidate and package-index clean installs require its native API,
+stubs, and full Gallery catalog; a missing module must fail instead of passing
+through the 2D fallback. These checks do not replace native desktop rendering
+and input review.
 
 Run the [local integration preflight](testing-workflow.md#local-integration-preflight)
 before pushing. Its Qt-free source/packaging gates are also the first checks in
@@ -76,6 +79,13 @@ For an untagged release version on `main`,
 packages and the complete Python publication bundle in parallel. It emits
 `Release Candidate ready` only after both commit-bound manifests pass. The tag
 workflow promotes those artifacts without rebuilding them.
+
+The desktop candidate also installs its Windows ARM64 package on a native
+ARM64 runner without a Qt SDK. Architecture, required Spatial DLLs, completed
+startup, splash dismissal, and no GPU surface initialization errors are required
+before assembly. The retained launch
+report explicitly leaves hardware 3D unvalidated; GPU rendering and input need
+a capable graphics environment and separate native review.
 
 On that release commit, Release Candidate also owns the macOS ARM64 CPython
 3.11 representative omitted from simultaneous main CI. Scheduled and manual

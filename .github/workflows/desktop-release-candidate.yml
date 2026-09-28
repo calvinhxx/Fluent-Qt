@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       package_matrix: ${{ steps.plan.outputs.package_matrix }}
+      windows_arm64: ${{ steps.plan.outputs.windows_arm64 }}
     steps:
       - name: Checkout selected source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -81,6 +82,7 @@ jobs:
               .github/package-matrix.json
           )"
           echo "package_matrix=$package_matrix" >> "$GITHUB_OUTPUT"
+          echo "windows_arm64=$(jq -r 'any(.include[]; .platform == "windows" and .arch == "arm64")' <<< "$package_matrix")" >> "$GITHUB_OUTPUT"
 
   package:
     name: Package ${{ matrix.id }}
@@ -248,7 +250,8 @@ jobs:
                 & "$env:GITHUB_WORKSPACE/cmake/VerifyWindowsPeArchitecture.ps1" `
                   -Root $stagedGallery.Directory.FullName `
                   -ExpectedMachine Arm64 `
-                  -RequireMsvcRuntime
+                  -RequireMsvcRuntime `
+                  -RequireQt6SpatialRuntime
               }
               exit 0
             }
@@ -367,10 +370,55 @@ jobs:
             ${{ runner.temp }}/fq-win-arm64/_CPack_Packages/**/*.log
             build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md
 
+  windows_arm64_install:
+    name: Install and launch Windows ARM64 candidate
+    needs: [plan, package]
+    if: ${{ needs.plan.outputs.windows_arm64 == 'true' }}
+    runs-on: windows-11-arm
+    timeout-minutes: 10
+    steps:
+      - name: Checkout candidate source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ inputs.source_ref }}
+
+      - name: Verify candidate commit
+        env:
+          EXPECTED_COMMIT: ${{ inputs.source_commit }}
+        shell: bash
+        run: test "$(git rev-parse 'HEAD^{commit}')" = "$EXPECTED_COMMIT"
+
+      - name: Download the cross-built ARM64 installer
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: fluentqt-desktop-package-windows-arm64-qt693
+          path: ${{ runner.temp }}/arm64-installer
+
+      - name: Install and verify without a Qt SDK
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/arm64-installer" -Filter *.exe -File)
+          if ($installers.Count -ne 1) {
+            throw "Expected one ARM64 installer, found $($installers.Count)."
+          }
+          & .github/scripts/smoke-installed-windows-gallery.ps1 `
+            -Installer $installers[0].FullName `
+            -InstallRoot "$env:RUNNER_TEMP/fluentqt-installed" `
+            -ReportDirectory "$env:RUNNER_TEMP/arm64-installed-smoke"
+
+      - name: Upload installed package evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: diagnostics-windows-arm64-installed
+          path: ${{ runner.temp }}/arm64-installed-smoke
+          if-no-files-found: warn
+          retention-days: 14
+
   assemble:
     name: Assemble immutable desktop candidate
-    needs: [plan, package]
-    if: ${{ always() && needs.plan.result == 'success' && needs.package.result == 'success' }}
+    needs: [plan, package, windows_arm64_install]
+    if: ${{ always() && needs.plan.result == 'success' && needs.package.result == 'success' && (needs.windows_arm64_install.result == 'success' || (needs.plan.outputs.windows_arm64 == 'false' && needs.windows_arm64_install.result == 'skipped')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
