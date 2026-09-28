@@ -227,10 +227,10 @@ struct SpatialView::Private {
     bool spatial = true, requestedSpatial = true, tracking = true, cache = true;
     bool destroying = false, projecting = false, geometryQueued = false, updatingTheme = false;
     bool countNotificationQueued = false;
-    bool backendQueued = false, checkQueued = false, gpuFailed = false;
+    bool backendQueued = false, checkQueued = false, preflightChecked = false;
     RenderMode mode = RenderMode::Auto;
     Backend backend = Backend::Raster;
-    QString renderer, reason;
+    QString renderer, reason, gpuFailure;
     QPointer<QOpenGLContext> checkedContext;
     QList<QPointer<QWidget>> ancestors;
     bool ancestorsDirty = true, environmentRaster = true;
@@ -393,8 +393,8 @@ struct SpatialView::Private {
         if (!gl || !canvas->isVisible() || !window || !window->isExposed())
             return;
         if (!gl->isValid()) {
-            gpuFailed = true;
-            useRaster(q->tr("OpenGL initialization failed."));
+            gpuFailure = q->tr("OpenGL initialization failed.");
+            useRaster(gpuFailure);
             return;
         }
         if (backend == Backend::OpenGL && checkedContext == gl->context())
@@ -408,8 +408,8 @@ struct SpatialView::Private {
         }
         gl->doneCurrent();
         if (!SpatialRuntime::isHardwareRenderer(name)) {
-            gpuFailed = true;
-            useRaster(q->tr("A hardware OpenGL renderer is unavailable."));
+            gpuFailure = q->tr("A hardware OpenGL renderer is unavailable.");
+            useRaster(gpuFailure);
             return;
         }
         checkedContext = gl->context();
@@ -458,9 +458,22 @@ struct SpatialView::Private {
         // zh_CN: 首个 OpenGL 视口可能重建顶层原生表面；隐藏页面预热时不能影响已显示的宿主。
         if (!q->isVisible())
             return;
-        if (gpuFailed)
+        if (!gpuFailure.isEmpty()) {
+            useRaster(gpuFailure);
             return;
+        }
         if (!qobject_cast<QOpenGLWidget*>(canvas->viewport())) {
+            // Probe before a GPU child changes the host's backing store. Reuse a
+            // successful probe when ancestor clipping temporarily selects raster.
+            // zh_CN: 在 GPU 子窗口改变宿主合成路径前探测；祖先裁切临时回退时复用成功结果。
+            if (!preflightChecked) {
+                gpuFailure = SpatialRuntime::preflightFailure();
+                preflightChecked = true;
+                if (!gpuFailure.isEmpty()) {
+                    useRaster(gpuFailure);
+                    return;
+                }
+            }
             const bool focused = canvas->hasFocus() || canvas->viewport()->hasFocus();
             auto* gl = new SpatialViewport(canvas);
             gl->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
@@ -960,7 +973,8 @@ void SpatialView::setRenderMode(RenderMode mode)
         mode == d->mode)
         return;
     d->mode = mode;
-    d->gpuFailed = false;
+    d->gpuFailure.clear();
+    d->preflightChecked = false;
     d->queueBackend();
     emit renderModeChanged(mode);
 }

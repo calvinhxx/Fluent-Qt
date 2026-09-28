@@ -1358,9 +1358,37 @@ private:
                 return;
             }
             auto* surface = m_window->findChild<QWidget*>(QStringLiteral("gallerySpatialSurface"));
+            auto* navigationView = m_window->findChild<navigation::NavigationView*>();
+            bool clicked = false;
+            for (auto* button : page->findChildren<basicinput::Button*>()) {
+                if (button->text() != QStringLiteral("Standard") || !button->isVisible() ||
+                    !button->isEnabled())
+                    continue;
+                for (auto* parent = button->parentWidget(); parent; parent = parent->parentWidget())
+                    if (auto* scroll = qobject_cast<QScrollArea*>(parent))
+                        scroll->ensureWidgetVisible(button);
+                const QPoint local = button->rect().center();
+                const QPoint global = button->mapToGlobal(local);
+                auto* hit = m_window->childAt(m_window->mapFromGlobal(global));
+                if (!hit || (hit != button && !button->isAncestorOf(hit)))
+                    continue;
+                const auto connection = connect(button, &basicinput::Button::clicked, this,
+                                                [&clicked] { clicked = true; });
+                QMouseEvent press(QEvent::MouseButtonPress, local, local, global, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+                QMouseEvent release(QEvent::MouseButtonRelease, local, local, global,
+                                    Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                QApplication::sendEvent(button, &press);
+                QApplication::sendEvent(button, &release);
+                disconnect(connection);
+                break;
+            }
             // Keep the saved 3D preference: the effective presentation must be 2D.
             const bool usable = !settings.spatialAvailable() &&
-                                (!surface || !surface->property("presenting").toBool());
+                                !settings.spatialUnavailableReason().isEmpty() && !surface &&
+                                navigationView && !navigationView->graphicsEffect() &&
+                                !navigationView->contentHost()->graphicsEffect() && clicked;
+            m_result["two_dimensional_input"] = clicked;
             m_result["two_dimensional_usable"] = usable;
             finish(usable, settings.spatialUnavailableReason());
         } else if (m_stage == 1) {

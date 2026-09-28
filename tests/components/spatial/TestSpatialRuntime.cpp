@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "components/spatial/SpatialRuntime.h"
 #include "components/windowing/Window.h"
+#include "SpatialTestEnvironment.h"
 #include <QApplication>
 #include <QOpenGLContext>
 #include <QWindow>
@@ -37,4 +38,15 @@ TEST(SpatialRuntimeTest, Contract_PreparationIsIdempotentAndNeverRecreatesVisibl
     const WId id = window.winId();
     EXPECT_FALSE(SpatialRuntime::prepareWindow(&window));
     EXPECT_EQ(window.winId(), id);
+}
+
+TEST(SpatialRuntimeTest, Contract_WindowsAndDesktopPreflightMatchesContextAvailability)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires a native desktop platform to probe its driver";
+    const auto* previous = QOpenGLContext::currentContext();
+    const QString unavailable = tests::support::nativeOpenGLUnavailableReason();
+    EXPECT_EQ(SpatialRuntime::preflightFailure().isEmpty(), unavailable.isEmpty())
+        << unavailable.toStdString();
+    EXPECT_EQ(QOpenGLContext::currentContext(), previous);
 }

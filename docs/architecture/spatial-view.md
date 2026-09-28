@@ -213,8 +213,12 @@ visible windows. Actual acceleration is confirmed only after the real surface
 has initialized; a preparation result is not a hardware-availability verdict.
 
 OS/Qt differences live in `src/compatibility/SpatialRenderCompat.h` and the
-private native-style adapter. Cocoa still needs CGContext primitive adaptation
-and an exposure preflight; Qt 6.4+ desktop windows need hidden surface
+private native-style adapter. Cocoa still needs CGContext primitive adaptation.
+Windows, Cocoa, X11 and Wayland probe hardware OpenGL before exposing a Gallery
+or standalone SpatialView GPU child, so an unavailable driver cannot break the
+parent window's 2D painting. SpatialView reuses a successful probe across temporary
+clipping changes and probes again after an explicit rendering-policy change.
+Qt 6.4+ desktop windows need hidden surface
 preparation. Measured low-DPI font-coverage adapters differ by QPA/DPR. These
 are implementation capabilities behind the same business flow, not separate
 macOS/Windows/Linux Gallery policies.

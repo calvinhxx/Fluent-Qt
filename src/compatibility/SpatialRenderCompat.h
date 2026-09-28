@@ -27,7 +27,9 @@ inline SpatialRenderCapabilities spatialRenderCapabilities(qreal nativeDpr = 1)
                            platform != QLatin1String("minimal") && platform != QLatin1String("vnc");
     result.prepareNativeSurface =
         FLUENT_OPENGL_WIDGET_CAN_REPLACE_NATIVE_WINDOW && (windows || linuxDesktop || cocoa);
-    result.probeBeforeExposure = cocoa;
+    // A failed QOpenGLWidget can leave the whole native window unable to compose.
+    // Check desktop drivers before exposing a GPU child, including Windows ARM VMs.
+    result.probeBeforeExposure = windows || linuxDesktop || cocoa;
     // Keep the measured font paths: Windows low-DPI and integer Linux need
     // native coverage; fractional Linux/Cocoa already preserve their coverage.
     result.nativeGlyphCoverage = (windows && nativeDpr >= 1 && nativeDpr < 2) ||

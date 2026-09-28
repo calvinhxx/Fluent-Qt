@@ -18,7 +18,7 @@ from fluentqt._qt_compat import delete_qobject as delete
 from PySide6.QtCore import QAbstractAnimation, QEvent, QEventLoop, QObject, QPoint, QPointF, QRect, QRectF, QSettings, QSize, QSizeF, QTimer, Qt, qVersion
 from PySide6.QtGui import QCursor, QMouseEvent, QPainter, QPolygonF, QTransform, QWindow, qGray
 from PySide6.QtTest import QSignalSpy, QTest
-from PySide6.QtWidgets import QApplication, QGraphicsOpacityEffect, QGraphicsView, QMenu, QScrollArea, QWidget
+from PySide6.QtWidgets import QApplication, QGraphicsOpacityEffect, QGraphicsView, QLineEdit, QMenu, QScrollArea, QWidget
 from shiboken6 import isValid
 
 from fluentqt_gallery.catalog import ENTRIES
@@ -810,31 +810,50 @@ print("2D-only Gallery: no OpenGL imports")
             delete(window)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
-    def test_2d_startup_defers_gpu_probe_until_requested(self):
-        with patch("fluentqt_gallery.spatial_controller._session_unavailable_reason", return_value=""), \
-             patch("fluentqt_gallery.spatial_controller._unavailable_reason", return_value="Simulated unavailable GPU") as probe:
-            window = GalleryWindow(startup_visuals=False)
-            try:
-                window.show()
-                window.resize(960, 720)
-                window.navigate("settings", animated=False)
-                self.settings.set_theme_mode(ThemeMode.Dark)
-                _qwait(100)
-                controller = window._spatial_controller
-                probe.assert_not_called()
-                self.assertIsNone(controller.canvas)
-                self.assertIsNone(controller.capture)
-                self.assertFalse(controller.filtering)
-                toggle = window.findChild(fluentqt.ToggleSwitch, "gallerySettingsSpatialModeToggle")
-                self.assertTrue(toggle.isEnabled())
-                QTest.mouseClick(toggle, Qt.LeftButton, pos=QPoint(20, 16))
-                probe.assert_called_once()
-                self.assertFalse(toggle.isEnabled())
-                self.assertFalse(toggle.isOn())
-                self.assertIsNone(controller.canvas)
-                self.assertTrue(self.settings.spatial_mode_enabled)
-            finally:
-                delete(window)
+    def test_unavailable_gpu_keeps_startup_and_requested_3d_in_usable_2d(self):
+        from PySide6.QtOpenGLWidgets import QOpenGLWidget
+        for initially_3d in (False, True):
+            for theme in (ThemeMode.Light, ThemeMode.Dark):
+                with self.subTest(initially_3d=initially_3d, theme=theme), \
+                     patch("fluentqt_gallery.spatial_controller._session_unavailable_reason", return_value=""), \
+                     patch("fluentqt_gallery.spatial_controller.SpatialRuntime.preflightFailure", return_value="Simulated unavailable GPU") as probe:
+                    self.settings.set_theme_mode(theme)
+                    self.settings.set_spatial_mode_enabled(initially_3d)
+                    window = GalleryWindow(startup_visuals=False)
+                    try:
+                        window.resize(960, 720)
+                        window.show()
+                        window.navigate("settings", animated=False)
+                        _qwait(100)
+                        controller = window._spatial_controller
+                        toggle = window.findChild(fluentqt.ToggleSwitch, "gallerySettingsSpatialModeToggle")
+                        if not initially_3d:
+                            probe.assert_not_called()
+                            self.assertTrue(toggle.isEnabled())
+                            QTest.mouseClick(toggle, Qt.LeftButton, pos=QPoint(20, 16))
+                        probe.assert_called_once()
+                        self.assertFalse(toggle.isEnabled())
+                        self.assertFalse(toggle.isOn())
+                        self.assertIsNone(controller.canvas)
+                        self.assertIsNone(controller.capture)
+                        self.assertIsNone(controller.content_capture)
+                        self.assertFalse(controller.filtering)
+                        self.assertEqual(window.findChildren(QOpenGLWidget), [])
+                        self.assertEqual(self.settings.spatial_unavailable_reason, "Simulated unavailable GPU")
+                        self.assertTrue(self.settings.spatial_mode_enabled)
+                        self.assertIsNone(window._navigation_view.graphicsEffect())
+                        self.assertIsNone(window._content_host.graphicsEffect())
+                        editor = window._search
+                        self.assertIsInstance(editor, QLineEdit)
+                        QTest.mouseClick(editor, Qt.LeftButton)
+                        QTest.keyClicks(editor, "Button")
+                        self.assertEqual(editor.text(), "Button")
+                        QTest.keyClick(editor, Qt.Key_Return)
+                        _qwait(50)
+                        self.assertEqual(window._current_route, "button")
+                        self.assertTrue(window._pages["button"][1].isVisible())
+                    finally:
+                        delete(window)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_native_first_toggle_preserves_window_identity_and_mica(self):

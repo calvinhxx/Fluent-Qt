@@ -810,8 +810,9 @@ TEST_F(SpatialViewTest, Contract_PresentationSwitchPreservesGeometryAndNativeCon
     EXPECT_NEAR(restored.height(), projection.height(), 1);
     view.hide();
 }
-TEST_F(SpatialViewTest, Contract_OpenGLOrExplainedFallbackAndBackendSwitch)
+TEST_F(SpatialViewTest, Contract_WindowsOpenGLOrExplainedFallbackAndBackendSwitch)
 {
+    const QString unavailable = tests::support::nativeOpenGLUnavailableReason();
     SpatialView view;
     auto* slider = new fluent::basicinput::Slider(Qt::Horizontal);
     slider->setValue(42);
@@ -824,6 +825,16 @@ TEST_F(SpatialViewTest, Contract_OpenGLOrExplainedFallbackAndBackendSwitch)
     }));
     if (view.activeBackend() == SpatialView::Backend::OpenGL)
         EXPECT_FALSE(view.rendererName().isEmpty());
+    if (!unavailable.isEmpty()) {
+        EXPECT_EQ(view.activeBackend(), SpatialView::Backend::Raster);
+        EXPECT_EQ(view.findChild<QOpenGLWidget*>(), nullptr);
+        const QString failure = view.fallbackReason();
+        view.setSpatialEnabled(false);
+        QApplication::processEvents();
+        view.setSpatialEnabled(true);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return view.fallbackReason() == failure; }));
+        EXPECT_EQ(view.findChild<QOpenGLWidget*>(), nullptr);
+    }
     view.setRenderMode(SpatialView::RenderMode::Raster);
     ASSERT_TRUE(QTest::qWaitFor([&] {
         return view.activeBackend() == SpatialView::Backend::Raster &&

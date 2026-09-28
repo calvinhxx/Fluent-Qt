@@ -195,7 +195,9 @@ full-opacity StackView and SplashScreen frames bypass unnecessary effects.
 uses Raster under an ancestor graphics effect without changing the requested
 render mode;
 hidden construction defers GPU initialization so startup prewarm preserves the
-native window surface. The original Home Hero is unchanged. See the [composition guide](../architecture/spatial-view.md),
+native window surface. Desktop Gallery checks OpenGL before creating its GPU
+child; an unavailable driver retains native 2D controls and the Settings reason.
+The original Home Hero is unchanged. See the [composition guide](../architecture/spatial-view.md),
 [core tests](../../tests/components/spatial/TestSpatialView.cpp) and
 [Gallery tests](../../tests/gallery/TestGallerySpatial.cpp). Native animation
 and assistive-technology acceptance remain human-required.

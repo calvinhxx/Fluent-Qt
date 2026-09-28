@@ -788,6 +788,8 @@ class GallerySpatialController(QObject):
 
     def disable(self, reason):
         self.publish_presentation_transforms(False)
+        if self.renderer_failed:
+            return
         self.renderer_failed = True
         self.renderer_timeout.stop()
         self.set_filtering(False)
@@ -795,11 +797,17 @@ class GallerySpatialController(QObject):
         self.motion.stop()
         self.pointer_motion.stop()
         self.progress = 0.
-        if _alive(self.capture):
-            self.navigation.setGraphicsEffect(None)
+        self.pointer = QPointF()
         if _alive(self.content_capture):
+            self.content_capture.invalidated = None
             self.navigation.contentHost().setGraphicsEffect(None)
+        if _alive(self.capture):
+            self.capture.invalidated = None
+            self.navigation.setGraphicsEffect(None)
         self.capture = self.content_capture = None
+        self.navigation_revision = self.content_revision = 0
+        self.backdrop = QPixmap()
+        self.grabbed = self.hovered = None
         if _alive(self.canvas):
             self.canvas.clear_frame_caches()
             self.canvas.hide()
@@ -809,6 +817,7 @@ class GallerySpatialController(QObject):
         self.window.setProperty("gallerySpatialEnabled", False)
         self.settings.set_spatial_availability(False, reason)
         self.navigation.update()
+        self.window.update()
 
     @staticmethod
     def is_native_overlay(widget):

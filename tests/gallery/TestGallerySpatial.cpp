@@ -37,6 +37,7 @@
 #include <QScreen>
 #include <QWindow>
 #include "QtTestEnvironment.h"
+#include "SpatialTestEnvironment.h"
 #ifdef Q_OS_MAC
 #include <CoreGraphics/CoreGraphics.h>
 #include <objc/message.h>
@@ -275,6 +276,55 @@ TEST_F(GallerySpatialTest, Explicit2DDoesNotCreateOpenGLSurfaces)
             EXPECT_TRUE(surface->isVisible());
         }
     }
+}
+
+TEST_F(GallerySpatialTest, WindowsUnavailableDriverKeepsNative2DUsable)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires a native desktop without hardware OpenGL";
+    const QString unavailable = tests::support::nativeOpenGLUnavailableReason();
+    if (unavailable.isEmpty())
+        GTEST_SKIP() << "This host has hardware OpenGL; exercise fallback on the ARM64 runner";
+
+    auto& settings = GallerySettings::instance();
+    settings.setSpatialModeEnabled(true);
+    GalleryWindow window;
+    auto* presenter = window.findChild<GalleryContentPresenter*>();
+    ASSERT_NE(presenter, nullptr);
+    presenter->setPrewarmPaused(true);
+    presenter->prewarmFinished();
+    window.resize(1100, 800);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !settings.spatialAvailabilityPending(); }, 5000));
+    EXPECT_FALSE(settings.spatialAvailable());
+    EXPECT_FALSE(settings.spatialUnavailableReason().isEmpty());
+    // Creating even a hidden GPU child can switch the whole backing store to
+    // OpenGL. Reject the driver before that child exists, not after a timeout.
+    EXPECT_TRUE(window.findChildren<QOpenGLWidget*>().isEmpty());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 60000));
+    ASSERT_TRUE(window.selectRoute("settings"));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(window.currentSettingsPage()); }, 2000));
+    auto* navigation = window.findChild<navigation::NavigationView*>();
+    ASSERT_NE(navigation, nullptr);
+    EXPECT_EQ(navigation->graphicsEffect(), nullptr);
+    EXPECT_EQ(navigation->contentHost()->graphicsEffect(), nullptr);
+    auto* toggle = window.findChild<basicinput::ToggleSwitch*>("gallerySettingsSpatialModeToggle");
+    ASSERT_NE(toggle, nullptr);
+    EXPECT_FALSE(toggle->isEnabled());
+    EXPECT_FALSE(toggle->isOn());
+    EXPECT_TRUE(settings.spatialModeEnabled());
+    auto* search = window.findChild<textfields::AutoSuggestBox*>();
+    ASSERT_NE(search, nullptr);
+    QTest::mouseClick(search, Qt::LeftButton);
+    QTest::keyClicks(search, "Button");
+    EXPECT_EQ(search->text(), QStringLiteral("Button"));
+    QTest::keyClick(search, Qt::Key_Return);
+    ASSERT_TRUE(QTest::qWaitFor([&] {
+        auto* page = window.currentContentPage();
+        return page && page->routeId() == QStringLiteral("button") && page->isVisible();
+    }));
+    EXPECT_TRUE(window.isVisible());
 }
 
 TEST_F(GallerySpatialTest, DeferredSurfaceInitializationWaitsForLayoutAndCanBeCancelled)
