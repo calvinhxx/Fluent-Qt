@@ -16,16 +16,6 @@ if(FLUENT_QT_BUILD_GALLERY)
     list(APPEND FLUENT_QT_CI_FAST_TARGETS test_gallery_single_instance)
 endif()
 
-set(FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS
-    ${FLUENT_QT_CI_FAST_TARGETS}
-    test_window
-    test_list_view
-    test_flip_view
-)
-if(WIN32)
-    list(APPEND FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS test_window_win)
-endif()
-
 set(FLUENT_QT_CI_FULL_CONTRACT_TARGETS
     test_chart_model
     test_chart_view
@@ -154,6 +144,10 @@ define_property(GLOBAL PROPERTY FLUENT_QT_CONTRACT_TEST_TARGETS
     BRIEF_DOCS "Qt/GTest targets that contain at least one contract test"
     FULL_DOCS "Qt/GTest targets that contain at least one contract test"
 )
+define_property(GLOBAL PROPERTY FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS
+    BRIEF_DOCS "Qt/GTest targets that contain a platform_windows test"
+    FULL_DOCS "Qt/GTest targets selected by the Windows platform test label"
+)
 
 add_library(FluentQtVisualComparison STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/support/VisualComparison.cpp
@@ -255,6 +249,7 @@ macro(add_qt_test_module module_name source_file)
         endif()
         set(_fluent_qt_target_has_ci_full FALSE)
         set(_fluent_qt_target_has_contract FALSE)
+        set(_fluent_qt_target_has_windows FALSE)
 
         set_tests_properties(${_fluent_qt_registered_tests} PROPERTIES
             ENVIRONMENT "SKIP_VISUAL_TEST=1"
@@ -315,6 +310,7 @@ macro(add_qt_test_module module_name source_file)
             endif()
             if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(Windows|Win32|WinUIWindows)[^._/:-]*($|[._/:-])")
                 list(APPEND _fluent_qt_labels platform_windows)
+                set(_fluent_qt_target_has_windows TRUE)
             endif()
             if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(MacOS|MacOs|macOS|Darwin|Cocoa)[^._/:-]*($|[._/:-])")
                 list(APPEND _fluent_qt_labels platform_macos)
@@ -348,6 +344,9 @@ macro(add_qt_test_module module_name source_file)
         endif()
         if(_fluent_qt_target_has_contract)
             set_property(GLOBAL APPEND PROPERTY FLUENT_QT_CONTRACT_TEST_TARGETS ${module_name})
+        endif()
+        if(_fluent_qt_target_has_windows)
+            set_property(GLOBAL APPEND PROPERTY FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS ${module_name})
         endif()
     endif()
 endmacro()
@@ -439,6 +438,9 @@ endif()
 get_property(FLUENT_QT_ALL_TEST_TARGETS GLOBAL PROPERTY FLUENT_QT_TEST_TARGETS)
 get_property(FLUENT_QT_CI_FULL_TEST_TARGETS GLOBAL PROPERTY FLUENT_QT_CI_FULL_TEST_TARGETS)
 get_property(FLUENT_QT_CONTRACT_TEST_TARGETS GLOBAL PROPERTY FLUENT_QT_CONTRACT_TEST_TARGETS)
+get_property(FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS GLOBAL PROPERTY FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS)
+list(APPEND FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS ${FLUENT_QT_CI_FAST_TARGETS})
+list(REMOVE_DUPLICATES FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS)
 if(FLUENT_QT_ALL_TEST_TARGETS)
     # Category aggregates let PR CI build affected test binaries without a second target catalog.
     set(_fluent_qt_component_groups
