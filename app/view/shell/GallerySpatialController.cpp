@@ -294,6 +294,10 @@ public:
     std::function<void()> failed;
     std::function<void()> cacheUnavailable;
     qreal cacheDpr() const { return m_plan.dpr; }
+    quint32 contentTextureId() const
+    {
+        return m_content.texture ? m_content.texture->texture() : 0;
+    }
     int maxCacheDimension() const { return m_maxDimension; }
     int allocationRetries = 0;
     int surfaceSamples = 0;
@@ -536,16 +540,43 @@ private:
             return false;
         const std::array<QSizeF, 2> panels = {m_scene->navigation.source.size(),
                                               m_scene->content.source.size()};
+        const auto backdrop = qint64(m_scene->backdrop.width()) * m_scene->backdrop.height() * 4;
+        const auto glyphScratch = spatial_render::needsNativeGlyphCoverage(devicePixelRatioF())
+                                      ? spatial_render::kGlyphScratchBytes
+                                      : 0;
         while (true) {
-            const auto plan = spatial_render::planCaches(
+            auto plan = spatial_render::planCaches(
                 panels, devicePixelRatioF(), m_maxDimension, m_maxExtraSampling,
-                spatial_render::kCacheBudgetBytes, m_paintSamples,
-                qint64(m_scene->backdrop.width()) * m_scene->backdrop.height() * 4,
-                spatial_render::needsNativeGlyphCoverage(devicePixelRatioF())
-                    ? spatial_render::kGlyphScratchBytes
-                    : 0);
+                spatial_render::kCacheBudgetBytes, m_paintSamples, backdrop, glyphScratch);
             if (!plan.valid())
                 return false;
+            for (qreal extra : {2., 1.75, 1.5, 1.25, 1.}) {
+                if (devicePixelRatioF() * extra > plan.dpr)
+                    continue;
+                const auto candidate = spatial_render::planCaches(
+                    panels, devicePixelRatioF(), m_maxDimension, extra,
+                    spatial_render::kCacheBudgetBytes, m_paintSamples, backdrop, glyphScratch);
+                if (!candidate.valid() || candidate.dpr != devicePixelRatioF() * extra)
+                    continue;
+                const quint64 particleBytes = m_particles.requiredBytes(
+                    m_scene->contentRoot, m_scene->contentRevision, candidate.sizes[1],
+                    devicePixelRatioF(), candidate.dpr,
+                    !measuring || !qEnvironmentVariableIsSet("FLUENT_QT_SPATIAL_PARTICLES_CPU"));
+                if (!particleBytes)
+                    break;
+                if (particleBytes >= quint64(spatial_render::kCacheBudgetBytes))
+                    continue;
+                const auto joint =
+                    spatial_render::planCaches(panels, devicePixelRatioF(), m_maxDimension, extra,
+                                               spatial_render::kCacheBudgetBytes, m_paintSamples,
+                                               backdrop, glyphScratch, qint64(particleBytes));
+                // Choose the highest joint level, always at least native density.
+                // Re-estimate auxiliary textures at each sampling candidate.
+                if (joint.valid() && joint.dpr == candidate.dpr) {
+                    plan = joint;
+                    break;
+                }
+            }
             if (plan.sizes == m_plan.sizes && plan.dpr == m_plan.dpr &&
                 plan.paintSize == m_plan.paintSize && plan.backdropBytes == m_plan.backdropBytes &&
                 plan.glyphScratchBytes == m_plan.glyphScratchBytes)
@@ -1305,6 +1336,7 @@ QVariantMap GallerySpatialController::renderingStatistics() const
     result["firstPaintMs"] = surface ? surface->firstPaintNanoseconds / 1e6 : 0;
     result["cachedPixels"] = surface ? surface->cachedPixels() : 0;
     result["cacheDpr"] = surface ? surface->cacheDpr() : 0;
+    result["contentTextureId"] = surface ? surface->contentTextureId() : 0;
     result["cacheEstimatedBytes"] = surface ? surface->estimatedCacheBytes() : 0;
     result["backdropTextureBytes"] = surface ? surface->backdropBytes() : 0;
     result["backdropUploads"] = surface ? surface->backdropUploads : 0;

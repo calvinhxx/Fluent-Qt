@@ -280,9 +280,10 @@ keeps the antialiasing buffer within budget without reducing text density. The
 low-DPI native glyph adapter also reserves 512 KiB for one bounded CPU tile and
 its upload. Native-density backgrounds are uploaded only when their content,
 size, DPR or OpenGL context changes, not on each pointer-motion frame.
-The planner also checks texture, renderbuffer and viewport limits. It reduces
-extra sampling in quarter steps only when the resolved textures cannot fit,
-and never renders below the window's native pixel density.
+The planner also checks texture, renderbuffer and viewport limits. It selects
+the highest extra-sampling level in quarter steps that fits the panel textures,
+paint strip and eligible particle targets together. It never renders below the
+window's native pixel density, and the final canvas keeps its native DPR.
 Allocation failures retry smaller caches. If even native density cannot fit,
 Gallery returns to 2D; the GPU remains available for another attempt after resizing
 or freeing resources. This budget excludes Qt's final window framebuffer and
@@ -314,14 +315,23 @@ stacking, text coverage and translucent content without painting them twice.
 Foreground changes refresh that cache. This does not move particle simulation
 to a compute shader or increase the component's configured animation rate.
 
-Particle targets and composition textures must fit the unused portion of the
-same 192 MiB shell budget. Foreground capture borrows the existing multisample
-and resolve targets. Unsupported masks or graphics effects retain CPU rendering;
+Particle targets and composition textures share the same 192 MiB shell budget.
+Before allocating the shell's paint target, the planner estimates visible particle
+targets using the driver's actual sample count and reserves their output and
+foreground textures. It shortens the temporary paint strip first, then tries the
+next internal sampling level with recalculated texture costs. Candidate estimates
+leave active GPU targets intact; only a changed selected plan reallocates them.
+If no joint plan fits at native density or above, particles retain CPU rendering.
+Foreground capture borrows the existing
+multisample and resolve targets. Unsupported masks or graphics effects retain CPU rendering;
 allocation or rendering failure, loss of the context, and return to 2D release
 acceleration without resetting the particle effect's phase.
 A failed allocation is not retried on every animation tick; source, geometry,
-context, request or budget changes allow another attempt. Hidden
-pages do not acquire particle textures.
+context, request or budget changes allow another attempt. Pixel-only revisions
+do not traverse the widget tree again: geometry, visibility and child changes
+invalidate the visible-source list; known candidates still revalidate masks,
+effects and clipping when their content changes. Hidden pages do not acquire
+particle textures.
 
 ### macOS paint adapter
 

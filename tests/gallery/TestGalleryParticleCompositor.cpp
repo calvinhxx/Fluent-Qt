@@ -8,12 +8,14 @@
 #include <QOpenGLPaintDevice>
 #include <QOpenGLWidget>
 #include <QPainter>
+#include <QSignalSpy>
 #include <QTest>
 #include <QtMath>
 
 #include "components/layout/ParticleBackdrop.h"
 #include "view/shell/GalleryGlyphPaintDevice.h"
 #include "view/shell/GalleryParticleCompositor.h"
+#include "view/shell/GallerySpatialRenderPolicy.h"
 
 namespace {
 using fluent::layout::ParticleBackdrop;
@@ -198,7 +200,7 @@ TEST_P(GalleryParticleCompositionTest, Contract_NativeInsertionPreservesStacking
     EXPECT_FALSE(compositor.prepare(&root, revision, panelPixels, 1, cacheDpr, 1, true));
     const quint64 scans = compositor.sourceScanCount();
     for (int i = 0; i < 12; ++i)
-        EXPECT_FALSE(compositor.prepare(&root, revision, panelPixels, 1, cacheDpr, 1, true));
+        EXPECT_FALSE(compositor.prepare(&root, ++revision, panelPixels, 1, cacheDpr, 1, true));
     EXPECT_EQ(compositor.sourceScanCount(), scans);
     EXPECT_EQ(compositor.allocatedBytes(), 0u);
     EXPECT_TRUE(
@@ -211,6 +213,98 @@ TEST_P(GalleryParticleCompositionTest, Contract_NativeInsertionPreservesStacking
 INSTANTIATE_TEST_SUITE_P(ScaleAndClip, GalleryParticleCompositionTest,
                          testing::Values(std::make_pair(1, false), std::make_pair(2, false),
                                          std::make_pair(2, true)));
+
+TEST(GalleryParticleCompositorTest, Contract_NativeHiDpiBudgetKeepsAnimatedAndStaticCaches)
+{
+    if (!nativePlatform())
+        GTEST_SKIP() << "Requires native GPU composition";
+    using namespace fluent::gallery::spatial_render;
+    QOpenGLWidget context;
+    context.resize(320, 220);
+    context.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&context));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return context.isValid(); }));
+    QWidget root;
+    root.resize(960, 700);
+    ParticleBackdrop source(&root);
+    source.setGeometry(20, 20, 600, 240);
+    source.setEffect(ParticleBackdrop::FloatingDots);
+    source.setPauseWhenInactive(false);
+    ForegroundProbe foreground(QColor(20, 90, 150, 128), &root);
+    foreground.setGeometry(40, 40, 300, 100);
+    root.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&root));
+    context.makeCurrent();
+    {
+        GalleryParticleCompositor compositor;
+        const std::array<QSizeF, 2> panels = {QSizeF(240, 700), QSizeF(root.size())};
+        QOpenGLFramebufferObjectFormat paintFormat;
+        paintFormat.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+        paintFormat.setInternalTextureFormat(GL_RGBA8);
+        paintFormat.setSamples(kPaintSamples);
+        QOpenGLFramebufferObject sampleProbe(QSize(1, 1), paintFormat);
+        ASSERT_TRUE(sampleProbe.isValid());
+        const int samples = sampleProbe.format().samples();
+        paintFormat.setSamples(samples);
+        const auto basePlan = planCaches(panels, 2, 16384, 2, kCacheBudgetBytes, samples);
+        ASSERT_TRUE(basePlan.valid());
+        ASSERT_EQ(basePlan.dpr, 4);
+        const auto required = compositor.requiredBytes(&root, 1, basePlan.sizes[1], 2, 4, true);
+        ASSERT_GT(required, quint64(kCacheBudgetBytes - basePlan.estimatedBytes));
+        const auto plan =
+            planCaches(panels, 2, 16384, 2, kCacheBudgetBytes, samples, 0, 0, qint64(required));
+        ASSERT_TRUE(plan.valid());
+        ASSERT_EQ(plan.dpr, basePlan.dpr);
+        ASSERT_LT(plan.paintSize.height(), basePlan.paintSize.height());
+        const quint64 allowance = kCacheBudgetBytes - plan.estimatedBytes;
+        QOpenGLFramebufferObject navigation(plan.sizes[0]), content(plan.sizes[1]);
+        QOpenGLFramebufferObject paint(plan.paintSize, paintFormat), resolve(plan.paintSize);
+        ASSERT_TRUE(navigation.isValid() && content.isValid() && paint.isValid() &&
+                    resolve.isValid());
+        content.bind();
+        auto* gl = context.context()->functions();
+        gl->glClearColor(.1f, .15f, .2f, 1.f);
+        gl->glClear(GL_COLOR_BUFFER_BIT);
+        ASSERT_TRUE(compositor.prepare(&root, 1, plan.sizes[1], 2, 4, allowance, true));
+        ASSERT_EQ(compositor.activeLayerCount(), 1);
+        ASSERT_NE(compositor.compose(content.texture(), 2, &paint, &resolve, renderForeground),
+                  content.texture());
+        const auto frames = compositor.particleFrameCount();
+        const auto captures = compositor.foregroundCaptureCount();
+        const auto bytes = compositor.allocatedBytes();
+        const auto texture = content.texture();
+        QSignalSpy requested(&compositor, &GalleryParticleCompositor::frameRequested);
+        QSignalSpy invalidated(&compositor, &GalleryParticleCompositor::staticContentInvalidated);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return requested.count() >= 2; }, 1500));
+        context.makeCurrent();
+        // Trying a different candidate is a cost query, not an allocation change.
+        EXPECT_GT(compositor.requiredBytes(&root, 2, QSize(3360, 2450), 2, 3.5, true), 0u);
+        EXPECT_EQ(compositor.activeLayerCount(), 1);
+        EXPECT_EQ(compositor.allocatedBytes(), bytes);
+        ASSERT_TRUE(compositor.prepare(&root, 2, plan.sizes[1], 2, 4, allowance, true));
+        EXPECT_GT(compositor.particleFrameCount(), frames);
+        EXPECT_NE(compositor.compose(content.texture(), 2, &paint, &resolve, renderForeground),
+                  content.texture());
+        EXPECT_EQ(compositor.foregroundCaptureCount(), captures);
+        EXPECT_EQ(invalidated.count(), 0);
+        EXPECT_EQ(content.texture(), texture);
+        EXPECT_EQ(compositor.allocatedBytes(), bytes);
+        EXPECT_LE(plan.estimatedBytes + qint64(bytes), kCacheBudgetBytes);
+        EXPECT_EQ(gl->glGetError(), GLenum(GL_NO_ERROR));
+
+        // A stable failed budget remains cheap even while CPU pixels change.
+        EXPECT_FALSE(compositor.prepare(&root, 3, plan.sizes[1], 2, 4, 1, true));
+        const auto scans = compositor.sourceScanCount();
+        for (quint64 revision = 4; revision < 20; ++revision)
+            EXPECT_FALSE(compositor.prepare(&root, revision, plan.sizes[1], 2, 4, 1, true));
+        EXPECT_EQ(compositor.sourceScanCount(), scans);
+        EXPECT_EQ(compositor.allocatedBytes(), 0u);
+        EXPECT_TRUE(compositor.prepare(&root, 20, plan.sizes[1], 2, 4, allowance, true));
+        EXPECT_EQ(compositor.activeLayerCount(), 1);
+        compositor.release();
+    }
+    context.doneCurrent();
+}
 
 TEST(GalleryParticleCompositorTest, Contract_NativeMaskedAncestorFallsBackWithoutLosingCpuPixels)
 {
@@ -249,6 +343,16 @@ TEST(GalleryParticleCompositorTest, Contract_NativeMaskedAncestorFallsBackWithou
     EXPECT_FALSE(compositor.prepare(&root, 2, root.size(), 1, 1, 32 * 1024 * 1024, true));
     EXPECT_EQ(compositor.activeLayerCount(), 0);
     EXPECT_EQ(capture(root)->toImage(), effectBefore);
+    foreground.setGraphicsEffect(nullptr);
+    EXPECT_TRUE(compositor.prepare(&root, 3, root.size(), 1, 1, 32 * 1024 * 1024, true));
+    EXPECT_EQ(compositor.activeLayerCount(), 1);
+    masked.move(10, -30);
+    EXPECT_TRUE(compositor.prepare(&root, 4, root.size(), 1, 1, 32 * 1024 * 1024, true));
+    masked.hide();
+    EXPECT_FALSE(compositor.prepare(&root, 5, root.size(), 1, 1, 32 * 1024 * 1024, true));
+    masked.show();
+    EXPECT_TRUE(compositor.prepare(&root, 6, root.size(), 1, 1, 32 * 1024 * 1024, true));
+    compositor.release();
     context.doneCurrent();
 }
 
