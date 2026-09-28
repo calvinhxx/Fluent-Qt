@@ -1309,10 +1309,10 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
           $python = (Get-Command python).Source -replace '\\', '/'
+          # Select the installed Visual Studio version; ARM64 runners use VS 2026.
           $configureArgs = @(
             "-S", ".",
             "-B", "${{ matrix.build_dir }}",
-            "-G", "Visual Studio 17 2022",
             "-A", "${{ matrix.cmake_arch }}",
             "-DCMAKE_PREFIX_PATH=$qtRoot",
             "-DPython_EXECUTABLE=$python",
