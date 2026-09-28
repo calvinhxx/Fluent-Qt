@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/fluentqt/spatial">
+    <file>panel.vert.qsb</file>
+    <file>panel.frag.qsb</file>
+  </qresource>
+</RCC>

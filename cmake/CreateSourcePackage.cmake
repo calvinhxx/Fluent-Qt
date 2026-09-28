@@ -38,6 +38,7 @@ file(COPY
     PATTERN "__pycache__" EXCLUDE
     PATTERN "*.pyc" EXCLUDE
     PATTERN "*.pyo" EXCLUDE)
+file(COPY "${FLUENT_QT_SOURCE_DIR}/support/spatial" DESTINATION "${_package_root}/support")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/.github/scripts/setup-shiboken-clang.py"
     DESTINATION "${_package_root}/.github/scripts")
