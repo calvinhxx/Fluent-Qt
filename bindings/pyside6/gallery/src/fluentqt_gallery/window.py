@@ -2263,7 +2263,8 @@ class GalleryWindow(fluentqt.Window):
             from fluentqt.spatial import SpatialRuntime
             SpatialRuntime.prepareApplication()
             if os.environ.get("FLUENT_QT_GALLERY_DISABLE_3D", "0") == "0":
-                SpatialRuntime.prepareWindow(self)
+                from fluentqt._fluentqt import fluent as _native_fluent
+                _native_fluent._SpatialTextureHost.prepareWindow(self)
         self._settings = gallery_settings()
         self._startup_visuals = (
             persistence_available()

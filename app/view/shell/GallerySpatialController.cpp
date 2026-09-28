@@ -17,6 +17,7 @@
 #include "GalleryPanelSampler.h"
 #include "GalleryParticleCompositor.h"
 #include "components/spatial/SpatialRuntime.h"
+#include "support/spatial/SpatialTextureHost.h"
 #include "platform/GalleryPlatform.h"
 
 #include <QApplication>
@@ -251,6 +252,64 @@ struct ShellScene : FluentElement {
         }
     }
 };
+
+class RhiSurface final : public spatial::SpatialTextureHost {
+public:
+    RhiSurface(ShellScene* scene, QWidget* parent) : SpatialTextureHost(parent), m_scene(scene) {}
+
+protected:
+    void synchronizeFrame() override
+    {
+        const bool presenting = property("presenting").toBool() && m_scene->navigationRevision;
+        setLayerCount(presenting ? 3 : 1);
+        const auto& backdrop = m_scene->backdrop;
+        const QSizeF size =
+            backdrop.isNull() ? QSizeF() : QSizeF(backdrop.size()) / backdrop.devicePixelRatioF();
+        setLayer(0, QRectF(QPointF(), size), {}, quint64(backdrop.cacheKey()));
+        setSceneClip(
+            presenting && m_scene->progress > 0
+                ? m_scene->navigation.source.united(m_scene->content.source).adjusted(1, 1, -1, -1)
+                : QRectF());
+        if (!presenting)
+            return;
+        const auto colors = m_scene->themeColors();
+        const bool dark = m_scene->effectiveThemeUsesDarkAppearance();
+        for (int i : {1, 2}) {
+            const bool nav = i == 2;
+            const auto& panel = nav ? m_scene->navigation : m_scene->content;
+            QColor material = colors.bgLayerAlt;
+            material.setAlphaF(nav ? (dark ? .32 : .34) : (dark ? .62 : .56));
+            QColor reflection = colors.grey10;
+            reflection.setAlphaF(dark ? .18 : .72);
+            setLayer(i, panel.source, panel.transform,
+                     nav ? m_scene->navigationRevision : m_scene->contentRevision,
+                     m_scene->themeRadius().overlay * 1.5, material, reflection, m_scene->progress,
+                     nav ? .06 : .085);
+        }
+    }
+    void paintLayer(QPainter* painter, int index, const QRegion& region) override
+    {
+        if (index == 0) {
+            painter->drawPixmap(QPointF(), m_scene->backdrop);
+        } else if (m_scene->renderWidgets) {
+            const bool nav = index == 2;
+            const QPoint origin = nav ? QPoint() : m_scene->content.source.topLeft().toPoint();
+            painter->translate(origin);
+            m_scene->renderWidgets(*painter, nav, region.translated(-origin));
+        }
+    }
+
+private:
+    ShellScene* m_scene;
+};
+
+void requestCanvasFrame(QWidget* canvas)
+{
+    if (auto* rhi = dynamic_cast<spatial::SpatialTextureHost*>(canvas))
+        rhi->requestFrame();
+    else if (canvas)
+        canvas->update();
+}
 
 using spatial_render::PanelSampler;
 
@@ -957,7 +1016,7 @@ struct GallerySpatialController::Private {
             }
         }
         if (!canvas->property("presenting").toBool()) {
-            canvas->update();
+            requestCanvasFrame(canvas);
             return;
         }
         scene.layout(navigation);
@@ -968,7 +1027,7 @@ struct GallerySpatialController::Private {
         canvas->setProperty("galleryContentRotation", -angle * scene.progress);
         canvas->setProperty("galleryPointerTilt", scene.pointerTilt);
         canvas->setProperty("galleryDepthProgress", scene.progress);
-        canvas->update();
+        requestCanvasFrame(canvas);
     }
     void settle()
     {
@@ -986,7 +1045,10 @@ struct GallerySpatialController::Private {
             publishPresentationTransforms(false);
             navigation->setAttribute(Qt::WA_NoSystemBackground, nativeNoSystemBackground);
             canvas->hide();
-            static_cast<GpuSurface*>(canvas.data())->clearFrameCaches();
+            if (auto* rhi = dynamic_cast<RhiSurface*>(canvas.data()))
+                rhi->clearFrameCaches();
+            else
+                static_cast<GpuSurface*>(canvas.data())->clearFrameCaches();
             setFiltering(false);
             canvas->setProperty("galleryDepthProgress", 0.0);
         }
@@ -1115,7 +1177,9 @@ void GallerySpatialController::ensureRenderer()
         QElapsedTimer clock;
         if (measuring)
             clock.start();
-        const QString reason = accelerationUnavailableReason();
+        const bool useRhi = spatial::SpatialTextureHost::isPreferred() &&
+                            spatial::SpatialTextureHost::preflightFailure().isEmpty();
+        const QString reason = useRhi ? QString() : accelerationUnavailableReason();
         if (measuring) {
             d->initializationTimings["probeMs"] = clock.nsecsElapsed() / 1e6;
             clock.restart();
@@ -1127,29 +1191,38 @@ void GallerySpatialController::ensureRenderer()
         spatial::SpatialRuntime::prepareApplication();
         if (measuring)
             d->initializationTimings["nativeStyleMs"] = clock.nsecsElapsed() / 1e6;
-        auto* surface = new GpuSurface(&d->scene, d->window);
-        d->canvas = surface;
-        surface->setObjectName(QStringLiteral("gallerySpatialSurface"));
-        surface->setProperty("galleryGpuComposition", true);
-        surface->initialized = [this] {
+        const auto initialized = [this] {
             d->rendererInitialized = true;
             QTimer::singleShot(0, this, &GallerySpatialController::checkRenderer);
         };
-        surface->contextLost = [this] {
-            // Reparenting can destroy a context before its replacement is initialized.
-            // zh_CN: 更换父窗口时，旧上下文销毁后替代上下文可能尚未初始化。
-            d->rendererInitialized = d->rendererReady = false;
-            QTimer::singleShot(0, this, &GallerySpatialController::checkRenderer);
-        };
-        surface->cacheUnavailable = [this] {
-            QTimer::singleShot(0, this, &GallerySpatialController::releaseOversizedPresentation);
-        };
-        surface->failed = [this] {
+        const auto failed = [this] {
             QTimer::singleShot(0, this, [this] {
                 disableSpatial(tr("3D rendering is unavailable. Using the 2D Gallery."));
             });
         };
-        surface->lower();
+        const auto cacheUnavailable = [this] {
+            QTimer::singleShot(0, this, &GallerySpatialController::releaseOversizedPresentation);
+        };
+        if (useRhi) {
+            auto* surface = new RhiSurface(&d->scene, d->window);
+            d->canvas = surface;
+            connect(surface, &RhiSurface::initialized, this, initialized);
+            connect(surface, &RhiSurface::renderingFailed, this, failed);
+            connect(surface, &RhiSurface::cacheUnavailable, this, cacheUnavailable);
+        } else {
+            auto* surface = new GpuSurface(&d->scene, d->window);
+            d->canvas = surface;
+            surface->initialized = initialized;
+            surface->failed = failed;
+            surface->cacheUnavailable = cacheUnavailable;
+            surface->contextLost = [this] {
+                d->rendererInitialized = d->rendererReady = false;
+                QTimer::singleShot(0, this, &GallerySpatialController::checkRenderer);
+            };
+        }
+        d->canvas->setObjectName(QStringLiteral("gallerySpatialSurface"));
+        d->canvas->setProperty("galleryGpuComposition", true);
+        d->canvas->lower();
         d->navigation->setMouseTracking(true);
         d->window->setMouseTracking(true);
     }
@@ -1181,14 +1254,23 @@ void GallerySpatialController::checkRenderer()
         d->rendererTimeout->start();
     if (!d->rendererInitialized)
         return;
-    auto* surface = static_cast<GpuSurface*>(d->canvas.data());
-    if (!surface->isValid() || !surface->ready()) {
-        disableSpatial(tr("3D could not start. Using the 2D Gallery."));
-        return;
+    QString renderer;
+    if (auto* rhi = dynamic_cast<RhiSurface*>(d->canvas.data())) {
+        if (!rhi->isReady()) {
+            disableSpatial(tr("3D could not start. Using the 2D Gallery."));
+            return;
+        }
+        renderer = rhi->rendererName();
+    } else {
+        auto* surface = static_cast<GpuSurface*>(d->canvas.data());
+        if (!surface->isValid() || !surface->ready()) {
+            disableSpatial(tr("3D could not start. Using the 2D Gallery."));
+            return;
+        }
+        surface->makeCurrent();
+        renderer = currentRendererName(surface->context());
+        surface->doneCurrent();
     }
-    surface->makeCurrent();
-    const QString renderer = currentRendererName(surface->context());
-    surface->doneCurrent();
     if (!spatial::SpatialRuntime::isHardwareRenderer(renderer)) {
         disableSpatial(tr("Hardware acceleration is unavailable. Using the 2D Gallery."));
         return;
@@ -1235,12 +1317,16 @@ void GallerySpatialController::disableSpatial(const QString& reason)
     d->scene.backdrop = {};
     d->grabbed = nullptr;
     d->hovered = nullptr;
-    if (auto* surface = static_cast<GpuSurface*>(d->canvas.data())) {
-        surface->initialized = {};
-        surface->contextLost = {};
-        surface->failed = {};
-        surface->hide();
-        surface->deleteLater();
+    if (d->canvas) {
+        if (auto* surface = dynamic_cast<GpuSurface*>(d->canvas.data())) {
+            surface->initialized = {};
+            surface->contextLost = {};
+            surface->failed = {};
+            surface->cacheUnavailable = {};
+        }
+        d->canvas->disconnect(this);
+        d->canvas->hide();
+        d->canvas->deleteLater();
         d->canvas = nullptr;
     }
     d->navigation->setAttribute(Qt::WA_NoSystemBackground, d->nativeNoSystemBackground);
@@ -1272,13 +1358,13 @@ void GallerySpatialController::startPresentation()
     d->capture->setEnabled(false);
     d->contentCapture->invalidated = [this] {
         ++d->scene.contentRevision;
-        d->canvas->update();
+        requestCanvasFrame(d->canvas);
     };
     d->capture->invalidated = [this] {
         ++d->scene.navigationRevision;
         ++d->scene.contentRevision;
         d->scene.layout(d->navigation);
-        d->canvas->update();
+        requestCanvasFrame(d->canvas);
     };
     d->scene.renderWidgets = [this](QPainter& painter, bool navigation, const QRegion& region) {
         QScopedValueRollback<bool> navComposing(d->capture->composing, true);
@@ -1338,6 +1424,12 @@ QVariantMap GallerySpatialController::renderingStatistics() const
         result[entry.first + "Captures"] = entry.second ? entry.second->captures : 0;
         result[entry.first + "CaptureMs"] =
             entry.second ? entry.second->captureNanoseconds / 1e6 : 0;
+    }
+    if (auto* rhi = dynamic_cast<RhiSurface*>(d->canvas.data())) {
+        const auto stats = rhi->statistics();
+        for (auto it = stats.cbegin(); it != stats.cend(); ++it)
+            result[it.key()] = it.value();
+        return result;
     }
     auto* surface = static_cast<GpuSurface*>(d->canvas.data());
     result["paints"] = surface ? surface->paints : 0;

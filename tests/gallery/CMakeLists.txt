@@ -80,7 +80,7 @@ add_qt_test_module(test_gallery_spatial
 )
 target_include_directories(test_gallery_spatial PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
 target_link_libraries(test_gallery_spatial
-    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network)
+    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform FluentQtSpatialRenderer Qt${QT_VERSION_MAJOR}::Network)
 if(QT_VERSION_MAJOR EQUAL 6)
     target_link_libraries(test_gallery_spatial PRIVATE Qt6::OpenGLWidgets)
 endif()

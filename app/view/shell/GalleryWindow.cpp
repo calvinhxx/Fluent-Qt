@@ -2,6 +2,7 @@
 #include "GallerySpatialController.h"
 #ifdef FLUENT_QT_HAS_SPATIAL
 #include "components/spatial/SpatialRuntime.h"
+#include "support/spatial/SpatialTextureHost.h"
 #endif
 
 #include <algorithm>
@@ -73,7 +74,7 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     GallerySpatialController::prepareApplicationStyle();
 #ifdef FLUENT_QT_HAS_SPATIAL
     if (qEnvironmentVariableIntValue("FLUENT_QT_GALLERY_DISABLE_3D") == 0)
-        spatial::SpatialRuntime::prepareWindow(this);
+        spatial::SpatialTextureHost::prepareWindow(this);
 #endif
     setObjectName(QStringLiteral("galleryWindow"));
     setWindowTitle(platform::capabilities().windowTitle);

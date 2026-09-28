@@ -1,5 +1,8 @@
 <namespace-type name="spatial" visible="no">
     <value-type name="SpatialRuntime"/>
+    <object-type name="SpatialTextureHost" target-lang-name="_SpatialTextureHost">
+        <include file-name="support/spatial/SpatialTextureHost.h" location="global"/>
+    </object-type>
     <object-type name="ParticleLayer">
         <modify-function signature="backdrop()const">
             <modify-argument index="return">

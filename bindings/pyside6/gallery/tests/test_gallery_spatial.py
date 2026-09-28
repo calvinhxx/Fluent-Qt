@@ -816,6 +816,7 @@ print("2D-only Gallery: no OpenGL imports")
             for theme in (ThemeMode.Light, ThemeMode.Dark):
                 with self.subTest(initially_3d=initially_3d, theme=theme), \
                      patch("fluentqt_gallery.spatial_controller._session_unavailable_reason", return_value=""), \
+                     patch("fluentqt_gallery.spatial_controller._RhiSurface.preflightFailure", return_value="Simulated unavailable GPU"), \
                      patch("fluentqt_gallery.spatial_controller.SpatialRuntime.preflightFailure", return_value="Simulated unavailable GPU") as probe:
                     self.settings.set_theme_mode(theme)
                     self.settings.set_spatial_mode_enabled(initially_3d)
@@ -1544,13 +1545,22 @@ print("2D-only Gallery: no OpenGL imports")
             self.assertTrue(self.settings.spatial_available, self.settings.spatial_unavailable_reason)
             self.assertTrue(self.settings.spatial_mode_enabled)
             self.assertEqual(controller.progress, 1.)
-            if tuple(map(int, qVersion().split(".")[:2])) >= (6, 4):
+            from fluentqt_gallery.spatial_controller import _RhiSurface
+            rhi = isinstance(controller.canvas, _RhiSurface)
+            # Metal is an opt-in validation path here. Its CAMetalLayer cannot
+            # be prepared while the macOS splash still uses raster flushing.
+            metal_probe = rhi and QApplication.platformName() == "cocoa"
+            if tuple(map(int, qVersion().split(".")[:2])) >= (6, 4) and not metal_probe:
                 self.assertIs(window.windowHandle(), first_handle)
                 self.assertEqual(window.winId(), first_id)
                 self.assertEqual(window.geometry(), first_geometry)
                 self.assertEqual(visibility.count(), 0)
-            self.assertTrue(all(cache.get("texture") and cache["texture"].isValid()
-                                for cache in controller.canvas.caches))
+            if rhi:
+                self.assertTrue(controller.canvas.isReady())
+                self.assertGreaterEqual(controller.canvas.statistics()["uploads"], 2)
+            else:
+                self.assertTrue(all(cache.get("texture") and cache["texture"].isValid()
+                                    for cache in controller.canvas.caches))
             screenshot("settings-light")
             click(toggle, QPoint(20, 16))
             _qwait(500)
@@ -1558,7 +1568,10 @@ print("2D-only Gallery: no OpenGL imports")
             self.assertEqual(controller.progress, 0.)
             self.assertFalse(controller.filtering)
             self.assertTrue(controller.canvas.isHidden())
-            self.assertEqual(controller.canvas.caches, [{}, {}])
+            if rhi:
+                self.assertEqual(controller.canvas.statistics()["cacheEstimatedBytes"], 0)
+            else:
+                self.assertEqual(controller.canvas.caches, [{}, {}])
             self.assertTrue(controller.backdrop.isNull())
             window.resize(1220, 820)
             self.settings.set_theme_mode(ThemeMode.Dark)
@@ -1682,7 +1695,13 @@ print("2D-only Gallery: no OpenGL imports")
             self.assertEqual(window._prewarm_failures, {})
             self.assertIsNone(window._skeleton)
             from PySide6.QtOpenGLWidgets import QOpenGLWidget
-            self.assertEqual(window.findChildren(QOpenGLWidget), [controller.canvas])
+            from fluentqt_gallery.spatial_controller import _RhiSurface
+            if isinstance(controller.canvas, _RhiSurface):
+                self.assertEqual(window.findChildren(QOpenGLWidget), [])
+                self.assertEqual(window.findChildren(_RhiSurface), [controller.canvas])
+                self.assertTrue(controller.canvas.isReady())
+            else:
+                self.assertEqual(window.findChildren(QOpenGLWidget), [controller.canvas])
             self.assertIsNotNone(controller.capture)
             self.assertEqual(controller.progress, 1.)
         finally:

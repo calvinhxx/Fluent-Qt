@@ -731,6 +731,19 @@ platform contracts.
   inventory, and `site/api/catalog.json` checks passed for the same working
   tree.
 
+## 2026-09-28: Native composition surface selection
+
+`SpatialRuntime::prepareWindow(Window*, QSurface::SurfaceType)` lets an
+application prepare a hidden Fluent window for its chosen graphics API. The
+existing one-argument entry still selects OpenGL. Both entries preserve the
+visible-window rejection and create no graphics device; the caller must probe
+the chosen API before adding its canvas. The overload is included in PySide6.
+
+The Direct3D texture host shared by the two Galleries lives under
+`support/spatial`. It is application infrastructure, is not installed with the
+UILib SDK, and is not exported through `fluentqt.spatial`. Its Qt private headers
+stay out of the public Spatial target and base package discovery.
+
 <!-- docs-nav:bottom:start -->
 ---
 [← System capability delivery record](system-capability-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md)

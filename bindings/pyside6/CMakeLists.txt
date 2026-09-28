@@ -223,6 +223,7 @@ if(TARGET FluentQtSpatial)
     list(APPEND FLUENTQT_PYSIDE6_GENERATED_SOURCES
         "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_particlelayer_wrapper.cpp"
         "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialruntime_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialtexturehost_wrapper.cpp"
         "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialview_wrapper.cpp"
         "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialitem_wrapper.cpp")
     file(READ "${CMAKE_CURRENT_SOURCE_DIR}/native/spatial_types.xml" FLUENTQT_PYSIDE6_SPATIAL_TYPES)
@@ -230,7 +231,7 @@ if(TARGET FluentQtSpatial)
         FLUENTQT_PYSIDE6_TYPES "${FLUENTQT_PYSIDE6_TYPES}")
     set(FLUENTQT_PYSIDE6_BINDING_HEADER "${CMAKE_CURRENT_BINARY_DIR}/SpatialBindingApi.h")
     file(GENERATE OUTPUT "${FLUENTQT_PYSIDE6_BINDING_HEADER}" CONTENT
-        "#include \"${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.h\"\n#include <FluentQt/Spatial.h>\n")
+        "#include \"${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.h\"\n#include <FluentQt/Spatial.h>\n#include <${PROJECT_SOURCE_DIR}/support/spatial/SpatialTextureHost.h>\n")
 endif()
 set(FLUENTQT_PYSIDE6_TYPESYSTEM "${CMAKE_CURRENT_BINARY_DIR}/typesystem_fluentqt.xml")
 file(GENERATE OUTPUT "${FLUENTQT_PYSIDE6_TYPESYSTEM}" CONTENT "${FLUENTQT_PYSIDE6_TYPES}")
@@ -361,7 +362,7 @@ target_link_libraries(_fluentqt PRIVATE
     "${FLUENTQT_PYSIDE6_LIBRARY}"
     "${FLUENTQT_SHIBOKEN6_LIBRARY}")
 if(TARGET FluentQtSpatial)
-    target_link_libraries(_fluentqt PRIVATE FluentQt::Spatial)
+    target_link_libraries(_fluentqt PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
 endif()
 if(WIN32)
     target_link_libraries(_fluentqt PRIVATE Python::Python)

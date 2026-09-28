@@ -12,6 +12,7 @@ from functools import partial
 
 import fluentqt
 from fluentqt.spatial import SpatialRuntime
+from fluentqt._fluentqt import fluent as _native_fluent
 from PySide6.QtCore import (
     QAbstractAnimation, QEasingCurve, QEvent, QLineF, QObject, QPoint, QPointF,
     QRect, QRectF, QSize, Qt, QTimer, QVariantAnimation, Signal, Slot,
@@ -163,6 +164,61 @@ class _SceneTheme(fluentqt.FluentWidget):
     def on_theme_updated(self):
         super().on_theme_updated()
         self.changed.emit()
+
+
+class _RhiSurface(_native_fluent._SpatialTextureHost):
+    """Shared native compositor: Direct3D on Windows, Metal for native validation."""
+    def __init__(self, owner, parent):
+        super().__init__(parent)
+        self.owner = owner
+        self.setObjectName("gallerySpatialSurface")
+        self.setProperty("galleryGpuComposition", True)
+        self.initialized.connect(self._initialized)
+        self.renderingFailed.connect(owner.rendering_failed)
+        self.cacheUnavailable.connect(owner.release_oversized_presentation)
+
+    def _initialized(self):
+        self.owner.renderer_initialized = True
+        self.owner.queue_check()
+
+    def update(self):
+        self.requestFrame()
+
+    def clear_frame_caches(self):
+        self.clearFrameCaches()
+
+    def synchronizeFrame(self):
+        owner = self.owner
+        presenting = bool(self.property("presenting") and owner.navigation_revision)
+        self.setLayerCount(3 if presenting else 1)
+        backdrop = owner.backdrop
+        size = QSize() if backdrop.isNull() else backdrop.size() / backdrop.devicePixelRatioF()
+        self.setLayer(0, QRectF(QPoint(), size), QTransform(), backdrop.cacheKey())
+        self.setSceneClip(owner.panels[0][0].united(owner.panels[1][0]).adjusted(1, 1, -1, -1)
+                          if presenting and owner.progress > 0 else QRectF())
+        if not presenting:
+            return
+        colors = owner.tokens.theme_tokens().colors
+        dark = fluentqt.theme_uses_dark_appearance(fluentqt.current_theme())
+        for layer, panel in ((1, 1), (2, 0)):
+            rect, transform = owner.panels[panel]
+            nav = panel == 0
+            material = QColor(colors.bgLayerAlt)
+            material.setAlphaF((.32 if dark else .34) if nav else (.62 if dark else .56))
+            reflection = QColor(colors.grey10)
+            reflection.setAlphaF(.18 if dark else .72)
+            self.setLayer(layer, rect, transform,
+                          owner.navigation_revision if nav else owner.content_revision,
+                          12., material, reflection, owner.progress, .06 if nav else .085)
+
+    def paintLayer(self, painter, index, region):
+        if index == 0:
+            painter.drawPixmap(QPointF(), self.owner.backdrop)
+        else:
+            nav = index == 2
+            origin = QPoint() if nav else self.owner.panels[1][0].topLeft().toPoint()
+            painter.translate(origin)
+            self.owner.render_widgets(painter, nav, region.translated(-origin))
 
 
 class _Surface(QOpenGLWidget):
@@ -661,12 +717,13 @@ class GallerySpatialController(QObject):
         if self.renderer_failed:
             return
         if not _alive(self.canvas):
-            reason = _unavailable_reason()
+            use_rhi = (_RhiSurface.isPreferred() and not _RhiSurface.preflightFailure())
+            reason = "" if use_rhi else _unavailable_reason()
             if reason:
                 self.disable(reason)
                 return
             SpatialRuntime.prepareApplication()
-            self.canvas = _Surface(self, self.window)
+            self.canvas = (_RhiSurface if use_rhi else _Surface)(self, self.window)
             self.canvas.lower()
             self.navigation.setMouseTracking(True)
             self.window.setMouseTracking(True)
@@ -708,12 +765,18 @@ class GallerySpatialController(QObject):
             self.renderer_timeout.start()
         if not self.renderer_initialized:
             return
-        if not self.canvas.isValid() or not self.canvas.blitter.isCreated():
-            self.disable("3D could not start. Using the 2D Gallery.")
-            return
-        self.canvas.makeCurrent()
-        self.renderer_name = _renderer(self.canvas.context())
-        self.canvas.doneCurrent()
+        if isinstance(self.canvas, _RhiSurface):
+            if not self.canvas.isReady():
+                self.disable("3D could not start. Using the 2D Gallery.")
+                return
+            self.renderer_name = self.canvas.rendererName()
+        else:
+            if not self.canvas.isValid() or not self.canvas.blitter.isCreated():
+                self.disable("3D could not start. Using the 2D Gallery.")
+                return
+            self.canvas.makeCurrent()
+            self.renderer_name = _renderer(self.canvas.context())
+            self.canvas.doneCurrent()
         if _software(self.renderer_name):
             self.disable("Hardware acceleration is unavailable. Using the 2D Gallery.")
             return

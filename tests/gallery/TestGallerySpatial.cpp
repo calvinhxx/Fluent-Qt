@@ -38,6 +38,7 @@
 #include <QWindow>
 #include "QtTestEnvironment.h"
 #include "SpatialTestEnvironment.h"
+#include "support/spatial/SpatialTextureHost.h"
 #ifdef Q_OS_MAC
 #include <CoreGraphics/CoreGraphics.h>
 #include <objc/message.h>
@@ -72,6 +73,15 @@
 using namespace fluent;
 using namespace fluent::gallery;
 namespace {
+QImage spatialFrame(QWidget* surface)
+{
+    if (auto* rhi = qobject_cast<spatial::SpatialTextureHost*>(surface))
+        return rhi->grabFramebuffer();
+    if (auto* gl = qobject_cast<QOpenGLWidget*>(surface))
+        return gl->grabFramebuffer();
+    return surface->grab().toImage();
+}
+
 void dragWithLeftButton(QWidget* target, const QPoint& from, const QPoint& to)
 {
     QTest::mousePress(target, Qt::LeftButton, Qt::NoModifier, from);
@@ -283,8 +293,9 @@ TEST_F(GallerySpatialTest, WindowsUnavailableDriverKeepsNative2DUsable)
     if (tests::support::isHeadlessPlatform())
         GTEST_SKIP() << "Requires a native desktop without hardware OpenGL";
     const QString unavailable = tests::support::nativeOpenGLUnavailableReason();
-    if (unavailable.isEmpty())
-        GTEST_SKIP() << "This host has hardware OpenGL; exercise fallback on the ARM64 runner";
+    if (unavailable.isEmpty() || (spatial::SpatialTextureHost::isPreferred() &&
+                                  spatial::SpatialTextureHost::preflightFailure().isEmpty()))
+        GTEST_SKIP() << "This host has hardware graphics; exercise fallback on a software runner";
 
     auto& settings = GallerySettings::instance();
     settings.setSpatialModeEnabled(true);
@@ -1929,7 +1940,7 @@ TEST_F(GallerySpatialTest, NativeAutoSuggestPageTypingKeepsPopupAndGpuAlive)
         10000));
     auto* controller = window.findChild<GallerySpatialController*>();
     ASSERT_NE(controller, nullptr);
-    auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
+    auto* surface = window.findChild<QWidget*>("gallerySpatialSurface");
     ASSERT_NE(surface, nullptr);
     ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 5000));
     controller->cancelTransition();
@@ -1941,14 +1952,14 @@ TEST_F(GallerySpatialTest, NativeAutoSuggestPageTypingKeepsPopupAndGpuAlive)
     ASSERT_TRUE(QTest::qWaitFor([&] { return box->hasFocus(); }, 1000));
     QTest::keyClicks(box, "a", Qt::NoModifier, 20);
     ASSERT_TRUE(QTest::qWaitFor([&] { return box->isSuggestionListOpen(); }, 1000));
-    ASSERT_FALSE(surface->grabFramebuffer().isNull());
+    ASSERT_FALSE(spatialFrame(surface).isNull());
     for (const auto theme : {GallerySettings::ThemeMode::Light, GallerySettings::ThemeMode::Dark}) {
         SCOPED_TRACE(theme == GallerySettings::ThemeMode::Light ? "Light" : "Dark");
         settings.setThemeMode(theme);
         box->setText(QString::fromUtf8("Visible 输入 42"));
         box->deselect();
         QTest::qWait(100);
-        const QImage image = surface->grabFramebuffer();
+        const QImage image = spatialFrame(surface);
         const qreal dpr = surface->devicePixelRatioF();
         QPolygon polygon;
         const QRect input(12, box->height() - box->inputHeight() + 4, 170, box->inputHeight() - 8);
@@ -1980,7 +1991,7 @@ TEST_F(GallerySpatialTest, NativeAutoSuggestPageTypingKeepsPopupAndGpuAlive)
     QTest::keyClick(box, Qt::Key_Return);
     EXPECT_FALSE(box->isSuggestionListOpen());
     EXPECT_FALSE(box->text().isEmpty());
-    ASSERT_FALSE(surface->grabFramebuffer().isNull());
+    ASSERT_FALSE(spatialFrame(surface).isNull());
 }
 
 TEST_F(GallerySpatialTest, NativeNestedOpacityKeepsColorAndUnrelatedPixels)
@@ -2014,7 +2025,7 @@ TEST_F(GallerySpatialTest, NativeNestedOpacityKeepsColorAndUnrelatedPixels)
     window.show();
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
     GallerySettings::instance().setSpatialModeEnabled(true);
-    auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
+    auto* surface = window.findChild<QWidget*>("gallerySpatialSurface");
     ASSERT_NE(surface, nullptr);
     ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 5000));
     controller.cancelTransition();
@@ -2024,7 +2035,7 @@ TEST_F(GallerySpatialTest, NativeNestedOpacityKeepsColorAndUnrelatedPixels)
         return QPoint(qRound(p.x() * dpr), qRound(p.y() * dpr));
     };
     const QRect labelRect(point(label, QPoint(0, 0)), point(label, label->rect().bottomRight()));
-    const QImage baseline = surface->grabFramebuffer().copy(labelRect);
+    const QImage baseline = spatialFrame(surface).copy(labelRect);
     for (const int y : {180, 520}) {
         SCOPED_TRACE(y);
         tile->move(80, y);
@@ -2032,7 +2043,7 @@ TEST_F(GallerySpatialTest, NativeNestedOpacityKeepsColorAndUnrelatedPixels)
             SCOPED_TRACE(alpha);
             effect->setOpacity(alpha);
             QTest::qWait(100);
-            const QImage image = surface->grabFramebuffer();
+            const QImage image = spatialFrame(surface);
             const QColor actual = image.pixelColor(point(tile, tile->rect().center()));
             EXPECT_NEAR(actual.red(), 240 * (1 - alpha) + 220 * alpha, 6);
             EXPECT_NEAR(actual.green(), 240 * (1 - alpha) + 40 * alpha, 6);
@@ -2067,7 +2078,7 @@ TEST_F(GallerySpatialTest, NativeStackTransitionsRemainVisibleAcrossPaintStrips)
         },
         10000));
     auto* controller = window.findChild<GallerySpatialController*>();
-    auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
+    auto* surface = window.findChild<QWidget*>("gallerySpatialSurface");
     ASSERT_NE(controller, nullptr);
     ASSERT_NE(surface, nullptr);
     ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 5000));
@@ -2105,7 +2116,7 @@ TEST_F(GallerySpatialTest, NativeStackTransitionsRemainVisibleAcrossPaintStrips)
                 animation->setCurrentTime(time);
                 QTest::qWait(30);
                 const auto name = QStringLiteral("/stack-%1-%2").arg(int(type)).arg(time);
-                const QImage image = spatial ? surface->grabFramebuffer() : window.grab().toImage();
+                const QImage image = spatial ? spatialFrame(surface) : window.grab().toImage();
                 const qreal dpr = window.devicePixelRatioF();
                 int colored = 0, sampled = 0;
                 for (int y = 10; y < stack->height() - 10; y += 8) {
@@ -4264,4 +4275,64 @@ TEST_F(GallerySpatialTest, ProjectedWheelBubblesFromLabelsInBothLayouts)
                 [&] { return (scroll->verticalScrollBar()->value()) == (0); }, 1000));
         }
     }
+}
+
+namespace {
+class TestTextureHost final : public fluent::spatial::SpatialTextureHost {
+public:
+    quint64 revision = 1;
+    QTransform transform;
+    QColor fill = Qt::red;
+    int captures = 0;
+
+protected:
+    void synchronizeFrame() override
+    {
+        setLayerCount(1);
+        setLayer(0, QRectF(20, 20, 80, 60), transform, revision);
+    }
+    void paintLayer(QPainter* painter, int, const QRegion&) override
+    {
+        ++captures;
+        painter->fillRect(QRectF(20, 20, 80, 60), fill);
+    }
+};
+} // namespace
+
+TEST(GalleryTextureHostTest, NativeRhi_ProjectsCachedTexturesAndRefreshesChangedContent)
+{
+    using fluent::spatial::SpatialTextureHost;
+    if (!SpatialTextureHost::isSupported() || !SpatialTextureHost::preflightFailure().isEmpty()) {
+        ASSERT_EQ(qEnvironmentVariableIntValue("FLUENT_QT_SPATIAL_REQUIRE_RHI"), 0)
+            << "A hardware RHI device is required by this acceptance run";
+        GTEST_SKIP() << "Requires a hardware Direct3D or Metal device";
+    }
+    TestTextureHost host;
+    QSignalSpy errors(&host, &SpatialTextureHost::renderingFailed);
+    host.resize(240, 160);
+    host.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return host.isReady() && host.captures > 0; }, 5000));
+    const auto pixel = [&host](const QPointF& logical) {
+        const QImage frame = host.grabFramebuffer();
+        return frame.pixelColor((logical * host.devicePixelRatioF()).toPoint());
+    };
+    EXPECT_EQ(pixel({60, 50}), QColor(Qt::red));
+    const int captures = host.captures;
+    host.transform.translate(80, 0);
+    host.requestFrame();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return pixel({140, 50}) == QColor(Qt::red); }, 2000));
+    EXPECT_EQ(pixel({60, 50}).alpha(), 0);
+    EXPECT_EQ(host.captures, captures) << "Perspective-only updates must not recapture content";
+    host.fill = Qt::blue;
+    ++host.revision;
+    host.requestFrame();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return pixel({140, 50}) == QColor(Qt::blue); }, 2000));
+    EXPECT_EQ(host.captures, captures + 1);
+    EXPECT_LE(host.statistics()["cacheEstimatedBytes"].toLongLong(), 192 * 1024 * 1024);
+    EXPECT_FALSE(host.rendererName().isEmpty());
+    host.clearFrameCaches();
+    host.requestFrame();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return host.captures == captures + 2; }, 2000));
+    EXPECT_EQ(errors.count(), 0);
 }

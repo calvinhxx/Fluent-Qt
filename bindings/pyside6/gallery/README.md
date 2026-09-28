@@ -69,11 +69,13 @@ With Spatial installed, a fresh Gallery starts in 3D when acceleration is availa
 Turning it off saves a 2D preference for later launches. Failed initialization uses
 2D without changing that preference.
 
-The shell uses a shared Qt OpenGL canvas with cached widget surfaces. Pointer
+The shell uses cached widget surfaces, with the shared native Direct3D 11
+compositor on Windows ARM64 (Qt 6.7+) and OpenGL on the other release platforms. Pointer
 input maps back to the live widgets, and native overlays remain above the canvas.
 Splash and Intro retain their normal order. The material behind the canvas still
-belongs to the Window's Mica/Acrylic setting. Particle acceleration follows the
-same effective 3D mode; no separate renderer preference is exposed. The native
+belongs to the Window's Mica/Acrylic setting. Particle effects remain visible in
+both backends; Direct3D currently captures their CPU-painted contents. No separate
+renderer preference is exposed. The native
 `SpatialRuntime` entry centralizes driver checks, texture limits, native style
 and hidden-window preparation for both C++ and Python. Splash prepares Home and
 Settings only; cold component pages yield between samples and cache completed

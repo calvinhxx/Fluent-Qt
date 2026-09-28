@@ -59,7 +59,7 @@ target_link_libraries(FluentQtGalleryCore
     Qt${QT_VERSION_MAJOR}::Network
 )
 if(TARGET FluentQtSpatial)
-    target_link_libraries(FluentQtGalleryCore PRIVATE FluentQt::Spatial)
+    target_link_libraries(FluentQtGalleryCore PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
     if(QT_VERSION_MAJOR EQUAL 6)
         target_link_libraries(FluentQtGalleryCore PRIVATE Qt6::OpenGLWidgets)
     endif()

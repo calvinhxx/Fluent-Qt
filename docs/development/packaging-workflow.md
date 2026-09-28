@@ -253,12 +253,13 @@ failed GPU surface initialization, and retains the installer hash and logs as
 they can fire even when a failed OpenGL child leaves the window blank.
 Candidate assembly requires this check when the selected matrix includes ARM64.
 
-An installed-package launch does not validate GPU rendering. Gallery needs a
-working hardware OpenGL context on Windows; a virtual GPU advertising DirectX
-support does not establish that OpenGL is available. Record the renderer and
-native 3D visual/input results separately. If context creation fails, verify the
-reported reason and native 2D fallback rather than counting a skipped GPU test
-as a 3D pass.
+An installed-package launch does not validate GPU rendering. Windows ARM64
+Gallery uses the shared native Direct3D 11 compositor with Qt 6.7+; Windows x64
+release packages retain their Qt 6.2 OpenGL path. Direct3D uses Windows 11's
+native `d3dcompiler_47.dll`, without bundling an x64 compiler into the ARM64
+package. Record the initialized backend, adapter and native 3D visual/input
+results separately. If both Direct3D and OpenGL are unavailable, verify the
+reported reason and native 2D fallback. A skipped GPU test is not a 3D pass.
 
 > 32-bit x86 is intentionally not packaged: Qt 6 ships no 32-bit Windows binaries,
 > so an `x86-windows` build would require a self-compiled 32-bit Qt.

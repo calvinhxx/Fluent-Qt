@@ -536,7 +536,7 @@ The root build then creates `FluentQt::Spatial` through
 When Spatial is off, Gallery compiles its 2D fallback and omits Spatial samples.
 
 Gallery also links `Qt6::OpenGLWidgets` directly to its core on Qt 6 because its
-whole-window compositor uses `QOpenGLWidget` itself. Applications that only use
+OpenGL compositor uses `QOpenGLWidget` itself. Applications that only use
 SpatialView do not need this extra CMake line. The component samples use
 SpatialView; the Gallery shell has a separate compositor. Both follow the one
 Settings mode. The shell compositor remains Gallery application code, not a
@@ -544,8 +544,8 @@ public Spatial API.
 
 The [Python Gallery](../../bindings/pyside6/gallery/README.md#spatial-mode)
 follows the same boundary: `fluentqt.spatial` supplies the native SpatialView and
-SpatialItem bindings, while a Python shell controller owns the shared OpenGL
-canvas, projected input and overlay ordering. Its Settings switch drives both
+SpatialItem bindings, while a Python shell controller owns the canvas,
+projected input and overlay ordering. Its Settings switch drives both
 the shell and the same eleven live examples. The C++, Python and WebAssembly
 Galleries share their sample catalog and display complete Python example source.
 Installing only the base Python binding leaves Spatial routes and Qt OpenGL
@@ -558,6 +558,43 @@ widgets and stops both transition and pointer animations. The Settings switch
 shows the effective availability. All Spatial examples follow that effective
 mode; the saved preference remains available when acceleration returns. Set `FLUENT_QT_GALLERY_DISABLE_3D=1` to
 start in 2D without creating a shell OpenGL canvas for troubleshooting.
+
+### Windows ARM graphics backend
+
+With Qt 6.7 or newer, Windows ARM64 Gallery uses Direct3D 11 through a private
+native QRhi compositor shared by C++ and Python. Other release platforms retain
+their OpenGL path; WebAssembly continues to use WebGL. The shader sources and
+precompiled shader packs live in `support/spatial/shaders`. Qt Shader Tools
+is needed only when editing these shaders, not to build or run the checked-in
+sources:
+
+```bash
+qsb --qt6 --qsbversion 64 -o panel.vert.qsb panel.vert
+qsb --qt6 --qsbversion 64 -o panel.frag.qsb panel.frag
+```
+
+The application renderer uses Qt's private GUI headers for QRhi and is rebuilt
+with its Qt kit. It is not part of the installed SDK; the public Spatial target
+keeps its existing dependencies. The base Widgets target and the minimum Qt
+version are unchanged. No Qt Quick, Qt3D, or separate rendering
+library is required. Windows 11 supplies the native Direct3D shader compiler.
+
+The compositor rejects software devices and checks the real canvas after the
+driver probe. If Direct3D is unavailable, Gallery tries its existing OpenGL path;
+if neither is usable, the same native widgets remain available in 2D.
+
+Widget contents are captured into textures only when their revision, size or
+pixel density changes. Perspective, rounded edges and material animation run on
+the GPU. CPU captures, queued uploads, textures and render targets share a
+192 MiB estimate; oversampling can decrease to native display density. The
+Direct3D path currently paints particle contents through the existing CPU
+widget path, while OpenGL retains its specialized particle compositor.
+
+For native backend regression work, `FLUENT_QT_SPATIAL_BACKEND=rhi` selects
+Direct3D on Windows or Metal on macOS. `opengl` selects the established backend.
+Metal is a validation path, not the default macOS Gallery renderer. A log entry
+under `fluentqt.spatial.renderer` names the initialized hardware backend and
+adapter. A successful launch or 2D fallback alone is not a 3D acceptance result.
 
 ### Library rendering
 
