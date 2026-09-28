@@ -15,6 +15,7 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include <limits>
+#include "SpatialTestEnvironment.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
 
@@ -155,9 +156,9 @@ TEST_F(SpatialViewTest, Contract_DeferredDeleteDoesNotInspectDestroyedScene)
 
 TEST_F(SpatialViewTest, Contract_NativeRevealRestoresTheWholeCanvasWithoutIdleRepaints)
 {
-    const auto platform = QGuiApplication::platformName();
-    if (platform == QStringLiteral("offscreen") || platform == QStringLiteral("minimal"))
-        GTEST_SKIP() << "Requires a native OpenGL viewport";
+    const QString unavailable = tests::support::nativeOpenGLUnavailableReason();
+    if (!unavailable.isEmpty())
+        GTEST_SKIP() << unavailable.toStdString();
     for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
         SCOPED_TRACE(int(theme));
         fluent::scrolling::ScrollView scroll;

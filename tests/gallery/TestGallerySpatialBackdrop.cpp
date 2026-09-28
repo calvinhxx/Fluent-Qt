@@ -9,6 +9,7 @@
 #include <QVariantAnimation>
 
 #include "QtTestEnvironment.h"
+#include "SpatialTestEnvironment.h"
 #include "view/shell/GallerySpatialController.h"
 #include "view/shell/GallerySpatialRenderPolicy.h"
 #include "viewmodel/GallerySettings.h"
@@ -153,6 +154,9 @@ TEST(GallerySpatialBackdropTest, NativeWindowsMaterialHandoffPresentsOpaqueGpuBa
 {
     if (QGuiApplication::platformName() != QStringLiteral("windows"))
         GTEST_SKIP() << "Requires the native Windows material compositor";
+    const QString unavailable = tests::support::nativeOpenGLUnavailableReason();
+    if (!unavailable.isEmpty())
+        GTEST_SKIP() << unavailable.toStdString();
     auto& settings = GallerySettings::instance();
     const auto oldMotion = settings.motionMode();
     const bool oldSpatial = settings.spatialModeEnabled();
