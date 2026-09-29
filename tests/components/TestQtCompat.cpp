@@ -5,6 +5,7 @@
 #include <QEvent>
 #include <QFile>
 #include <QFileInfo>
+#include <QImage>
 #include <QListView>
 #include <QPointF>
 #include <QStandardItem>
@@ -20,6 +21,7 @@
 #define interface struct
 #endif
 #include "compatibility/QtCompat.h"
+#include "compatibility/TextPaintCompat.h"
 #ifdef FLUENT_QT_TEST_DEFINED_INTERFACE_MACRO
 #undef interface
 #undef FLUENT_QT_TEST_DEFINED_INTERFACE_MACRO
@@ -297,4 +299,30 @@ TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards)
 
     EXPECT_TRUE(offenders.isEmpty())
         << "Scattered Qt version guard in: " << offenders.join(QStringLiteral(", ")).toStdString();
+}
+
+TEST(QtCompat, PaintDeviceDprMetricsPreserveImagePrecision)
+{
+    class ForwardingDevice final : public QPaintDevice {
+    public:
+        explicit ForwardingDevice(qreal dpr) : m_dpr(dpr) {}
+        QPaintEngine* paintEngine() const override { return nullptr; }
+
+    protected:
+        int metric(PaintDeviceMetric metric) const override
+        {
+            return fluent::painting::devicePixelRatioMetric(metric, m_dpr);
+        }
+
+    private:
+        qreal m_dpr;
+    };
+    for (qreal dpr : {1.0, 1.1, 1.25, 1.5, 2.1875, 2.625, 3.0}) {
+        SCOPED_TRACE(dpr);
+        QImage image(1, 1, QImage::Format_ARGB32_Premultiplied);
+        image.setDevicePixelRatio(dpr);
+        ForwardingDevice device(image.devicePixelRatioF());
+        EXPECT_EQ(device.devicePixelRatioF(), image.devicePixelRatioF());
+        EXPECT_EQ(fluent::painting::imageRasterDpr(dpr), image.devicePixelRatioF());
+    }
 }

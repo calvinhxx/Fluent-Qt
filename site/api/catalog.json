@@ -3412,7 +3412,7 @@
     {
       "include": "<FluentQt/compatibility/TextPaintCompat.h>",
       "source": "src/compatibility/TextPaintCompat.h",
-      "summary": "Returns the vertical translation that centers visible glyph ink in a target rectangle.",
+      "summary": "Encodes a target DPR for a forwarding paint device's metric override.",
       "declarations": [],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/TextPaintCompat.h"
     },

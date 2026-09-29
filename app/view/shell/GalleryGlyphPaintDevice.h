@@ -9,6 +9,7 @@
 #include <QPainterPath>
 #include <QRegion>
 #include <QtMath>
+#include "compatibility/TextPaintCompat.h"
 #include "components/spatial/SpatialRuntime.h"
 
 namespace fluent::gallery::spatial_render {
@@ -78,17 +79,8 @@ protected:
             return m_target.physicalDpiX();
         case PdmPhysicalDpiY:
             return m_target.physicalDpiY();
-        case PdmDevicePixelRatio:
-            return qRound(m_target.devicePixelRatioF());
-        case PdmDevicePixelRatioScaled:
-            return qRound(m_target.devicePixelRatioF() * devicePixelRatioFScale());
-#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
-        case PdmDevicePixelRatioF_EncodedA:
-        case PdmDevicePixelRatioF_EncodedB:
-            return QPaintDevice::encodeMetricF(metric, m_target.devicePixelRatioF());
-#endif
         default:
-            return 0;
+            return painting::devicePixelRatioMetric(metric, m_target.devicePixelRatioF());
         }
     }
 
@@ -246,13 +238,8 @@ private:
                     painter.paintEngine()->drawTextItem(position, item);
                     return;
                 }
-                qreal dpr = device.rasterDpr(item.font());
+                const qreal dpr = painting::imageRasterDpr(device.rasterDpr(item.font()));
                 const QFontMetricsF metrics(item.font());
-#if QT_VERSION < QT_VERSION_CHECK(6, 8, 0)
-                // Match QImage's fixed-point DPR metric on older Qt versions.
-                const qreal scale = QPaintDevice::devicePixelRatioFScale();
-                dpr = qFloor(dpr * scale) / scale;
-#endif
                 // Qt's rasterizer can round negative glyph origins differently
                 // (notably Qt 5). Keep seam-crossing origins in a positive guard
                 // band while reserving that guard inside the fixed tile budget.
