@@ -82,8 +82,13 @@ protected:
             return qRound(m_target.devicePixelRatioF());
         case PdmDevicePixelRatioScaled:
             return qRound(m_target.devicePixelRatioF() * devicePixelRatioFScale());
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+        case PdmDevicePixelRatioF_EncodedA:
+        case PdmDevicePixelRatioF_EncodedB:
+            return QPaintDevice::encodeMetricF(metric, m_target.devicePixelRatioF());
+#endif
         default:
-            return 0; // Qt 6.8's encoded-double metrics fall back to the scaled metric.
+            return 0;
         }
     }
 
@@ -241,11 +246,33 @@ private:
                     painter.paintEngine()->drawTextItem(position, item);
                     return;
                 }
-                const qreal dpr = device.rasterDpr(item.font());
+                qreal dpr = device.rasterDpr(item.font());
+                const QFontMetricsF metrics(item.font());
+#if QT_VERSION < QT_VERSION_CHECK(6, 8, 0)
+                // Match QImage's fixed-point DPR metric on older Qt versions.
+                const qreal scale = QPaintDevice::devicePixelRatioFScale();
+                dpr = qFloor(dpr * scale) / scale;
+#endif
+                // Qt's rasterizer can round negative glyph origins differently
+                // (notably Qt 5). Keep seam-crossing origins in a positive guard
+                // band while reserving that guard inside the fixed tile budget.
+                // zh_CN: Qt 栅格化对负字形原点的取整可能不同（尤其是 Qt 5）；在固定
+                // 分块预算内预留保护区，让跨缝字形原点为正，保留原始亚像素覆盖率。
+                const QSize padding(
+                    qCeil((metrics.maxWidth() + qMax(qreal(0), -metrics.minRightBearing()) + 2) *
+                          dpr),
+                    qCeil((metrics.descent() + 2) * dpr));
+                if (padding.width() >= 256 || padding.height() >= 64) {
+                    // Oversized glyphs retain Qt's direct path instead of
+                    // exceeding the fixed tile budget or leaving a partial guard.
+                    painter.paintEngine()->syncState();
+                    painter.paintEngine()->drawTextItem(position, item);
+                    return;
+                }
                 const QPointF origin(painter.worldTransform().dx() + device.m_rasterOrigin.x(),
                                      painter.worldTransform().dy() + device.m_rasterOrigin.y());
                 const QPointF baseline = position + origin;
-                QRectF ink = QFontMetricsF(item.font()).boundingRect(item.text());
+                QRectF ink = metrics.boundingRect(item.text());
                 ink = ink.united(
                     QRectF(0, -item.ascent(), item.width(), item.ascent() + item.descent()));
                 ink = ink.adjusted(-2, -2, 2, 2).translated(baseline);
@@ -264,15 +291,16 @@ private:
                 const QRect pixels = QTransform::fromScale(dpr, dpr).mapRect(ink).toAlignedRect();
                 // One 256 KiB CPU tile plus its upload is reserved by the cache plan.
                 // Tiles and their Qt texture-cache keys die immediately; no glyph LRU.
-                for (int top = pixels.top(); top <= pixels.bottom(); top += 128) {
-                    for (int left = pixels.left(); left <= pixels.right(); left += 512) {
-                        const QSize size(qMin(512, pixels.right() - left + 1),
-                                         qMin(128, pixels.bottom() - top + 1));
-                        QImage glyph(size, QImage::Format_ARGB32_Premultiplied);
+                const QSize contentSize = QSize(512, 128) - padding;
+                for (int top = pixels.top(); top <= pixels.bottom(); top += contentSize.height()) {
+                    for (int left = pixels.left(); left <= pixels.right();
+                         left += contentSize.width()) {
+                        const QSize size(qMin(contentSize.width(), pixels.right() - left + 1),
+                                         qMin(contentSize.height(), pixels.bottom() - top + 1));
+                        QImage glyph(size + padding, QImage::Format_ARGB32_Premultiplied);
                         if (glyph.isNull())
                             continue;
                         ++glyphTiles;
-                        glyph.setDevicePixelRatio(dpr);
                         glyph.fill(Qt::transparent);
                         const QPointF tileOrigin(left / dpr, top / dpr);
                         QPainter raster(&glyph);
@@ -284,21 +312,27 @@ private:
                         raster.setRenderHints(painter.renderHints());
                         raster.setBackground(painter.background());
                         raster.setBackgroundMode(painter.backgroundMode());
-                        // Keep the shaped baseline's subpixel phase unchanged at
-                        // fractional DPR; tile offsets belong to the paint transform.
-                        // zh_CN: 分数缩放时保留已排版基线的亚像素相位，分块偏移交给绘制变换。
-                        raster.translate(-tileOrigin);
+                        // Keep the shaped baseline unchanged and translate in
+                        // physical pixels; a logical-pixel round trip can alter
+                        // glyph phase at fractional strip origins.
+                        // zh_CN: 保留已排版基线，直接用物理像素平移，避免逻辑坐标往返
+                        // 在分数分块原点处改变字形的亚像素相位。
+                        raster.setWorldTransform(
+                            QTransform(dpr, 0, 0, dpr, origin.x() * dpr + padding.width() - left,
+                                       origin.y() * dpr + padding.height() - top));
                         // QTextItem retains the fallback font, shaping, bidi order and decorations.
                         // Never re-layout item.text() as a new drawText call.
                         // QPainter paints underline/strikeout separately on the outer
                         // device. Dispatch directly to avoid drawing decorations twice.
                         raster.paintEngine()->syncState();
-                        raster.paintEngine()->drawTextItem(baseline, item);
+                        raster.paintEngine()->drawTextItem(position, item);
                         raster.end();
+                        glyph.setDevicePixelRatio(dpr);
                         painter.save();
                         painter.setOpacity(1);
                         painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
-                        painter.drawImage(tileOrigin - origin, glyph);
+                        painter.drawImage(QRectF(tileOrigin - origin, QSizeF(size) / dpr), glyph,
+                                          QRectF(QPointF(padding.width(), padding.height()), size));
                         painter.restore();
                     }
                 }

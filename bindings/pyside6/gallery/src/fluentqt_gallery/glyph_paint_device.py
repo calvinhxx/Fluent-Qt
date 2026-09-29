@@ -5,9 +5,10 @@ hinted fonts retain the display's pixel grid. Geometry, images, panel resolution
 and multisampling still use the target device.
 """
 
+import math
 import weakref
 
-from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtCore import QPointF, QRectF, Qt, qVersion
 from PySide6.QtGui import (
     QFont, QFontMetricsF, QImage, QPaintDevice, QPaintEngine, QPainter,
     QPainterPath, QRegion, QTransform,
@@ -23,6 +24,9 @@ def glyph_raster_dpr(font, native_dpr, cache_dpr):
     # Hinting fits strokes to physical pixels; oversampling would fit a
     # different grid. Unhinted outlines can retain their real cache detail.
     return cache_dpr if font.hintingPreference() == QFont.PreferNoHinting else native_dpr
+
+
+_EXACT_DPR_METRICS = tuple(int(part) for part in qVersion().split(".")[:2]) >= (6, 8)
 
 
 class GlyphPaintDevice(QPaintDevice):
@@ -58,7 +62,9 @@ class GlyphPaintDevice(QPaintDevice):
             return round(self.target.devicePixelRatioF())
         if metric == QPaintDevice.PdmDevicePixelRatioScaled:
             return round(self.target.devicePixelRatioF() * 65536)
-        # Qt 6.8's encoded-double metrics fall back to the scaled metric.
+        if _EXACT_DPR_METRICS and metric in (QPaintDevice.PdmDevicePixelRatioF_EncodedA,
+                                           QPaintDevice.PdmDevicePixelRatioF_EncodedB):
+            return QPaintDevice.encodeMetricF(metric, self.target.devicePixelRatioF())
         return 0
 
 
@@ -242,10 +248,20 @@ class _GlyphPaintEngine(QPaintEngine):
                 painter.paintEngine().drawTextItem(position, item)
                 return
             dpr = self.device.raster_dpr(item.font())
+            if not _EXACT_DPR_METRICS:
+                dpr = math.floor(dpr * 65536) / 65536
+            metrics = QFontMetricsF(item.font())
+            # Keep partial glyph origins positive without increasing the tile budget.
+            padding_x = math.ceil((metrics.maxWidth() + max(0, -metrics.minRightBearing()) + 2) * dpr)
+            padding_y = math.ceil((metrics.descent() + 2) * dpr)
+            if padding_x >= 256 or padding_y >= 64:
+                painter.paintEngine().syncState()
+                painter.paintEngine().drawTextItem(position, item)
+                return
             origin = QPointF(painter.worldTransform().dx(), painter.worldTransform().dy())
             origin += self.device.raster_origin
             baseline = position + origin
-            ink = QFontMetricsF(item.font()).boundingRect(item.text())
+            ink = metrics.boundingRect(item.text())
             ink = ink.united(QRectF(0, -item.ascent(), item.width(), item.ascent() + item.descent()))
             ink = ink.adjusted(-2, -2, 2, 2).translated(baseline)
             self.glyph_items += 1
@@ -262,15 +278,15 @@ class _GlyphPaintEngine(QPaintEngine):
             pixels = QTransform.fromScale(dpr, dpr).mapRect(ink).toAlignedRect()
             # One 256 KiB image plus its upload is reserved by the panel cache plan.
             # Release every tile immediately; no persistent or per-frame glyph cache.
-            for top in range(pixels.top(), pixels.bottom() + 1, 128):
-                for left in range(pixels.left(), pixels.right() + 1, 512):
-                    glyph = QImage(min(512, pixels.right() - left + 1),
-                                   min(128, pixels.bottom() - top + 1),
+            for top in range(pixels.top(), pixels.bottom() + 1, 128 - padding_y):
+                for left in range(pixels.left(), pixels.right() + 1, 512 - padding_x):
+                    width = min(512 - padding_x, pixels.right() - left + 1)
+                    height = min(128 - padding_y, pixels.bottom() - top + 1)
+                    glyph = QImage(width + padding_x, height + padding_y,
                                    QImage.Format_ARGB32_Premultiplied)
                     if glyph.isNull():
                         continue
                     self.glyph_tiles += 1
-                    glyph.setDevicePixelRatio(dpr)
                     glyph.fill(Qt.transparent)
                     tile_origin = QPointF(left / dpr, top / dpr)
                     raster = QPainter(glyph)
@@ -287,15 +303,20 @@ class _GlyphPaintEngine(QPaintEngine):
                     # Its drawTextItem wrapper would paint underline/strikeout twice.
                     # Translate the device, not the shaped baseline: fractional
                     # tile offsets must not change Qt's glyph subpixel phase.
-                    raster.translate(-tile_origin)
+                    raster.setWorldTransform(QTransform(dpr, 0, 0, dpr,
+                                                        origin.x() * dpr + padding_x - left,
+                                                        origin.y() * dpr + padding_y - top))
                     raster.paintEngine().syncState()
-                    raster.paintEngine().drawTextItem(baseline, item)
+                    raster.paintEngine().drawTextItem(position, item)
                     raster.end()
                     del raster
+                    glyph.setDevicePixelRatio(dpr)
                     painter.save()
                     painter.setOpacity(1)
                     painter.setRenderHint(QPainter.SmoothPixmapTransform, False)
-                    painter.drawImage(tile_origin - origin, glyph)
+                    painter.drawImage(QRectF(tile_origin.x() - origin.x(), tile_origin.y() - origin.y(),
+                                             width / dpr, height / dpr), glyph,
+                                      QRectF(padding_x, padding_y, width, height))
                     painter.restore()
                     del glyph
         self._forward(draw)

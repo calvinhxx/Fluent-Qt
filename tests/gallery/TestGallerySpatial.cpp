@@ -2276,8 +2276,8 @@ TEST_F(GallerySpatialTest, GlyphTilesPreserveShapingAcrossFractionalCacheStrips)
         painter.setPen(QColor(32, 90, 150, 210));
         painter.setOpacity(.65);
         painter.setFont(Typography::Styles::Caption.toQFont());
-        // Keep one long shaped item so its visible ink crosses the 512 px tile
-        // boundary, rather than testing many individually short fallback runs.
+        // Keep one long shaped item so its visible ink crosses bounded tile
+        // seams, rather than testing many individually short fallback runs.
         painter.drawText(QPointF(7.25, 31.5),
                          QStringLiteral("Gallery Popup settings 0123456789 ").repeated(12));
         QFont font = Typography::Styles::BodyStrong.toQFont();
@@ -2287,11 +2287,13 @@ TEST_F(GallerySpatialTest, GlyphTilesPreserveShapingAcrossFractionalCacheStrips)
         painter.drawText(QPointF(7.25, 76.5),
                          QString::fromUtf8("Gallery 设置 · العربية · Popup 0123456789"));
     };
-    for (qreal dpr : {1.25, 1.5, 2.1875}) {
+    for (qreal dpr : {1.0, 1.25, 1.5, 1.75, 2.1875, 2.625, 3.0}) {
         // Paint strips begin on physical pixels, including when the logical
         // origin is fractional. The raster phase must be unchanged at a seam.
-        for (const QPointF origin : {QPointF(), QPointF(0, 197 / dpr)}) {
-            SCOPED_TRACE(::testing::Message() << "dpr=" << dpr << " origin=" << origin.y());
+        for (const QPointF origin :
+             {QPointF(), QPointF(0, 197 / dpr), QPointF(113 / dpr, 197 / dpr)}) {
+            SCOPED_TRACE(::testing::Message()
+                         << "dpr=" << dpr << " origin=" << origin.x() << "," << origin.y());
             QImage expected(qCeil(960 * dpr), qCeil(100 * dpr),
                             QImage::Format_ARGB32_Premultiplied);
             expected.setDevicePixelRatio(dpr);
@@ -2304,8 +2306,10 @@ TEST_F(GallerySpatialTest, GlyphTilesPreserveShapingAcrossFractionalCacheStrips)
             const QString directory = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
             if (actual != expected && !directory.isEmpty()) {
                 QDir().mkpath(directory);
-                const QString prefix =
-                    directory + QStringLiteral("/glyph-strip-%1-%2-").arg(dpr).arg(origin.y());
+                const QString prefix = directory + QStringLiteral("/glyph-strip-%1-%2-%3-")
+                                                       .arg(dpr)
+                                                       .arg(origin.x())
+                                                       .arg(origin.y());
                 expected.save(prefix + "reference.png");
                 actual.save(prefix + "actual.png");
             }
@@ -2313,6 +2317,49 @@ TEST_F(GallerySpatialTest, GlyphTilesPreserveShapingAcrossFractionalCacheStrips)
                 << "Bounded glyph tiles must preserve shaping, decorations and painter opacity";
         }
     }
+}
+
+TEST_F(GallerySpatialTest, GlyphTilesPreserveOversizedFontCoverage)
+{
+    const auto paint = [](QPaintDevice* target) {
+        QPainter painter(target);
+        QFont font = Typography::Styles::BodyStrong.toQFont();
+        font.setPixelSize(256);
+        painter.setFont(font);
+        painter.setPen(QColor(32, 90, 150, 210));
+        painter.setOpacity(.65);
+        painter.drawText(QPointF(7.25, 210.5), QStringLiteral("Gallery Popup"));
+    };
+    QImage expected(1200, 400, QImage::Format_ARGB32_Premultiplied);
+    expected.setDevicePixelRatio(1.25);
+    expected.fill(Qt::transparent);
+    QImage actual = expected.copy();
+    paint(&expected);
+    spatial_render::GalleryGlyphPaintDevice device(actual, 1.25);
+    paint(&device);
+    EXPECT_EQ(actual, expected);
+    EXPECT_EQ(device.glyphTiles(), 0)
+        << "A guard too large for the bounded tile must keep Qt's direct path";
+}
+
+TEST_F(GallerySpatialTest, GlyphTilesUseImageDprPrecision)
+{
+    const auto paint = [](QPaintDevice* target) {
+        QPainter painter(target);
+        painter.setFont(Typography::Styles::Caption.toQFont());
+        painter.drawText(QPointF(7.25, 31.5),
+                         QStringLiteral("Gallery Popup settings 0123456789 ").repeated(12));
+    };
+    QImage expected(1060, 60, QImage::Format_ARGB32_Premultiplied);
+    expected.setDevicePixelRatio(1.1);
+    expected.fill(Qt::transparent);
+    QImage actual = expected.copy();
+    paint(&expected);
+    const qreal dpr = expected.devicePixelRatioF();
+    spatial_render::GalleryGlyphPaintDevice device(actual, 1.1, QPointF(113 / dpr, 197 / dpr));
+    paint(&device);
+    EXPECT_EQ(actual, expected);
+    EXPECT_GT(device.glyphTiles(), device.glyphItems());
 }
 
 class GallerySpatialEditorTest : public GallerySpatialTest,

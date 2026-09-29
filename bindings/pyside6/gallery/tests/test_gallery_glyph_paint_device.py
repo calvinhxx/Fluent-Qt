@@ -3,7 +3,7 @@ import faulthandler
 import sys
 import unittest
 import weakref
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 if __name__ == "__main__":
     # Preserve the blocked call stack before CTest's 60-second timeout,
@@ -15,7 +15,7 @@ import fluentqt
 
 from PySide6.QtCore import QLineF, QPoint, QPointF, QRect, QRectF, Qt
 from PySide6.QtGui import (
-    QColor, QFont, QImage, QLinearGradient, QPaintDevice, QPaintEngine, QPainter, QPainterPath, QPen, QRegion,
+    QColor, QFont, QFontMetricsF, QImage, QLinearGradient, QPaintDevice, QPaintEngine, QPainter, QPainterPath, QPen, QRegion,
     QTransform,
 )
 from PySide6.QtWidgets import QApplication, QWidget
@@ -192,6 +192,10 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
 
     def test_fractional_tiles_preserve_shaped_font_phase_exactly(self):
         def draw(painter):
+            painter.setFont(fluentqt.font_for_role(fluentqt.FontRole.Caption))
+            painter.setPen(QColor(32, 90, 150, 210))
+            painter.setOpacity(.65)
+            painter.drawText(QPointF(7.25, 31.5), "Gallery Popup settings 0123456789 " * 12)
             font = fluentqt.font_for_role(fluentqt.FontRole.BodyStrong)
             font.setUnderline(True)
             font.setStrikeOut(True)
@@ -200,14 +204,38 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
             painter.setPen(QColor(32, 90, 150, 210))
             painter.setOpacity(.65)
             painter.drawText(QPointF(7.25, 76.5), "Gallery 设置 · العربية · Popup 0123456789")
-        for dpr in (1.25, 1.5, 2.1875):
-            for origin in (QPointF(), QPointF(0, 197 / dpr)):
+        for dpr in (1, 1.25, 1.5, 1.75, 2.1875, 2.625, 3):
+            for origin in (QPointF(), QPointF(0, 197 / dpr), QPointF(113 / dpr, 197 / dpr)):
                 with self.subTest(dpr=dpr, origin=origin):
                     expected, _ = self.render(draw, False, dpr)
                     actual, device = self.render(draw, True, dpr, raster_origin=origin)
                     self.assertGreater(device.engine.glyph_items, 1)
                     self.assertEqual(actual, expected,
                                      "Tile offsets must not move Qt's shaped glyph phase")
+
+    def test_oversized_fonts_keep_direct_coverage_and_bounded_allocation(self):
+        def draw(painter):
+            font = fluentqt.font_for_role(fluentqt.FontRole.BodyStrong)
+            font.setPixelSize(256)
+            painter.setFont(font)
+            painter.setPen(QColor(32, 90, 150, 210))
+            painter.setOpacity(.65)
+            painter.drawText(QPointF(7.25, 210.5), "Gallery Popup")
+        expected, _ = self.render(draw, False, 1.25)
+        actual, device = self.render(draw, True, 1.25)
+        self.assertEqual(actual, expected)
+        self.assertEqual(device.engine.glyph_tiles, 0)
+
+    def test_tiles_use_image_dpr_precision(self):
+        def draw(painter):
+            painter.setFont(fluentqt.font_for_role(fluentqt.FontRole.Caption))
+            painter.drawText(QPointF(7.25, 31.5), "Gallery Popup settings 0123456789 " * 12)
+        expected, _ = self.render(draw, False, 1.1)
+        dpr = expected.devicePixelRatioF()
+        actual, device = self.render(draw, True, 1.1,
+                                     raster_origin=QPointF(113 / dpr, 197 / dpr))
+        self.assertEqual(actual, expected)
+        self.assertGreater(device.engine.glyph_tiles, device.engine.glyph_items)
 
     def test_patterned_and_rotated_text_keep_original_painter_path(self):
         def draw(painter):
@@ -237,10 +265,14 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
             painter.setClipRect(QRect(0, 0, 64, 50))
             painter.drawText(QPointF(0, 35), "Gallery 标题 العربية שלום " * 100)
         expected, _ = self.render(draw, False)
+        def overestimated_metrics(font):
+            metrics = Mock(wraps=QFontMetricsF(font))
+            metrics.boundingRect.return_value = QRectF(-1e6, -1e6, 2e6, 2e6)
+            return metrics
         for origin in (QPointF(), QPointF(113, 197)):
             with self.subTest(origin=origin):
-                with patch("fluentqt_gallery.glyph_paint_device.QFontMetricsF") as metrics:
-                    metrics.return_value.boundingRect.return_value = QRectF(-1e6, -1e6, 2e6, 2e6)
+                with patch("fluentqt_gallery.glyph_paint_device.QFontMetricsF",
+                           side_effect=overestimated_metrics):
                     actual, device = self.render(draw, True, raster_origin=origin)
                 self.assertEqual(actual, expected)
                 self.assertGreater(device.engine.glyph_tiles, 0)
