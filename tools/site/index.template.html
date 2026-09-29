@@ -64,8 +64,8 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260908-1">
-    <script src="site.js?v=20260908-1" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260929-2">
+    <script src="site.js?v=20260929-3" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content" data-i18n="a11y.skip">跳到主要内容</a>
@@ -198,7 +198,11 @@
                 fetchpriority="high"
               >
             </a>
-            <figcaption class="visually-hidden" data-i18n="hero.visualCaption">Gallery 实际界面</figcaption>
+            <figcaption class="hero-caption">
+              <span data-i18n="hero.visualCaption">Windows · 3D + Mica · Home 实拍</span>
+              <a href="assets/gallery/gallery-home-real.png" data-gallery-preview aria-haspopup="dialog" data-i18n="hero.viewOriginal">原尺寸查看 ↗</a>
+            </figcaption>
+            <a class="hero-spatial-link" href="#spatial" data-i18n="hero.exploreSpatial">探索可选的 Spatial 3D 扩展 →</a>
           </figure>
         </div>
 
@@ -223,7 +227,7 @@
       <section class="path-section" aria-labelledby="path-title">
         <div class="page-shell path-layout">
           <div class="path-heading" data-reveal>
-            <p class="section-index" data-i18n="path.kicker">开始使用</p>
+            <p class="section-index" data-i18n="path.kicker">01 / 开始使用</p>
             <h2 id="path-title" data-i18n="path.title">开始使用 Fluent-Qt</h2>
             <p data-i18n="path.copy">先打开在线 Gallery 查看控件效果，或直接查看 C++ / Python 接入说明。</p>
           </div>
@@ -410,10 +414,52 @@
         </div>
       </section>
 
+      <section class="spatial-section" id="spatial" aria-labelledby="spatial-title">
+        <div class="page-shell spatial-layout">
+          <div class="spatial-copy">
+            <p class="section-index" data-i18n="spatial.kicker">04 / SPATIAL · 可选 3D 扩展</p>
+            <h2 id="spatial-title" data-i18n="spatial.title">熟悉的控件，多一层空间。</h2>
+            <p class="spatial-intro" data-i18n="spatial.copy">把现有 QWidget 组合放进 SpatialView，为卡片加入透视、旋转与景深。普通 2D 应用无需启用。</p>
+            <ul class="spatial-features">
+              <li><strong data-i18n="spatial.widgetsTitle">控件不必重写</strong><p data-i18n="spatial.widgetsCopy">保留原有布局、signals / slots 和模型；SpatialItem 管理整组控件的姿态。</p></li>
+              <li><strong data-i18n="spatial.renderTitle">空间合成，按需刷新</strong><p data-i18n="spatial.renderCopy">桌面使用 OpenGL，WebAssembly 使用 WebGL；内容不变时复用纹理。</p></li>
+              <li><strong data-i18n="spatial.optionalTitle">按需启用，保留 2D</strong><p data-i18n="spatial.optionalCopy">C++ 链接 FluentQt::Spatial，Python 通过可选绑定使用。Gallery 在加速不可用时回退到 2D。</p></li>
+            </ul>
+            <div class="spatial-links">
+              <a class="text-link" href="https://github.com/calvinhxx/Fluent-Qt/blob/main/docs/architecture/spatial-view.md" data-i18n="spatial.guide">查看 Spatial 接入指南 ↗</a>
+              <a class="text-link" href="#gallery" data-i18n="spatial.try">在 Gallery 中体验 →</a>
+            </div>
+            <p class="spatial-how" data-i18n="spatial.how">Gallery：Settings → 3D Gallery，再打开 Controls → Spatial。</p>
+          </div>
+          <figure class="spatial-demo">
+            <div class="spatial-live" data-spatial-showcase data-showcase-state="waiting"
+                 data-showcase-src="gallery/?embed=site&amp;showcase=spatial&amp;window-mode=maximized&amp;render-scale=native">
+              <div class="spatial-live-toolbar">
+                <strong>SpatialView <span>· C++ / WebAssembly</span></strong>
+                <div>
+                  <button type="button" data-showcase-stop hidden data-i18n="spatial.stop">停止并释放</button>
+                  <a href="gallery/?showcase=spatial&amp;window-mode=maximized" target="_blank" rel="noopener" data-i18n="spatial.open">独立打开 ↗</a>
+                </div>
+              </div>
+              <div class="spatial-live-viewport">
+                <iframe data-showcase-frame title="真实 C++ Spatial 交互示例" data-i18n-title="spatial.frameTitle" tabindex="-1" aria-hidden="true"></iframe>
+                <div class="spatial-live-overlay" data-showcase-overlay>
+                  <img src="assets/app-icon.png" width="64" height="64" alt="">
+                  <strong data-showcase-message data-i18n="spatial.runTitle">直接运行真实的 SpatialView</strong>
+                  <p data-showcase-detail data-i18n="spatial.runCopy">两张卡片、实时图表和镜头控件，来自 C++ Gallery 的同一个示例。点击后加载 Qt / WASM。</p>
+                  <button class="button button-primary" type="button" data-showcase-start disabled data-i18n="spatial.run">运行 C++ 3D 示例</button>
+                </div>
+              </div>
+            </div>
+            <figcaption data-i18n="spatial.caption">真实 Qt Widgets / WebGL · 拖动滑块调整镜头，在场景内移动鼠标查看景深。</figcaption>
+          </figure>
+        </div>
+      </section>
+
       <section class="positioning-section" id="why" aria-labelledby="positioning-title">
         <div class="page-shell positioning-grid">
           <div class="positioning-lead" data-reveal>
-            <p class="section-index">04 / POSITIONING</p>
+            <p class="section-index">05 / POSITIONING</p>
             <h2 id="positioning-title">
               <span data-i18n="positioning.titleLine1">独立控件</span>
               <span data-i18n="positioning.titleLine2">不止主题皮肤</span>
@@ -451,7 +497,7 @@
         <div class="page-shell">
           <div class="section-heading component-heading" data-reveal>
             <div>
-              <p class="section-index">05 / COMPONENTS</p>
+              <p class="section-index">06 / COMPONENTS</p>
               <h2 id="components-title"><span data-i18n="components.title">控件按用途分类</span></h2>
             </div>
             <p data-i18n="components.copy">以下为 Gallery 中的部分控件</p>
@@ -541,7 +587,7 @@
       <section class="quick-start-section" id="quick-start" aria-labelledby="quick-start-title">
         <div class="page-shell quick-start-grid">
           <div class="quick-start-copy" data-reveal>
-            <p class="section-index">06 / QUICK START</p>
+            <p class="section-index">07 / QUICK START</p>
             <h2 id="quick-start-title"><span data-i18n="quickStart.title">快速接入</span></h2>
             <p data-i18n="quickStart.copy">复制 CMake 片段即可接入现有工程；也支持 add_subdirectory 与 find_package。</p>
             <ul class="quick-start-checks">
@@ -596,7 +642,7 @@ target_link_libraries(
       <section class="download-section" id="downloads" aria-labelledby="downloads-title">
         <div class="page-shell download-grid">
           <div class="download-copy" data-reveal>
-            <p class="section-index">07 / DOWNLOAD</p>
+            <p class="section-index">08 / DOWNLOAD</p>
             <h2 id="downloads-title">
               <span data-i18n="downloads.title">下载 Gallery</span>
             </h2>
@@ -651,6 +697,16 @@ target_link_libraries(
         </div>
       </section>
     </main>
+
+    <dialog class="gallery-preview" aria-labelledby="gallery-preview-title">
+      <div class="gallery-preview-header">
+        <div><strong id="gallery-preview-title" data-i18n="hero.previewTitle">Gallery Home · 原尺寸截图</strong><p data-i18n="hero.previewHelp">1440 × 900 原始像素；窄窗口可滚动查看，按 Esc 关闭。</p></div>
+        <form method="dialog"><button type="submit" autofocus data-i18n="hero.closePreview">关闭</button></form>
+      </div>
+      <div class="gallery-preview-scroll" tabindex="0" role="region" aria-label="原尺寸 Gallery 截图" data-i18n-aria-label="hero.previewRegion">
+        <img alt="" width="1440" height="900">
+      </div>
+    </dialog>
 
     <footer class="site-footer">
       <div class="page-shell footer-grid">

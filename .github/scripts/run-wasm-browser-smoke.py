@@ -467,7 +467,84 @@ def run_embedded_theme_contract(browser: object, base_url: str) -> None:
         page.close()
 
 
-def run_site_theme_contract(browser: object) -> None:
+def run_spatial_showcase_contract(browser: object, base_url: str, root: Path) -> None:
+    context = browser.new_context(viewport={"width": 720, "height": 660}, device_scale_factor=1)
+    page = context.new_page()
+    errors = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    evidence = root / "showcase-evidence"
+    evidence.mkdir(exist_ok=True)
+    try:
+        page.goto(f"{base_url}/app/?embed=site&showcase=spatial&host-theme=light&render-scale=native")
+        page.wait_for_selector('html[data-fluent-qt-showcase="spatial"][data-fluent-qt-loaded="true"]', timeout=60_000)
+        if page.locator('html').get_attribute('data-fluent-qt-showcase-spatial') != 'true':
+            raise RuntimeError("Spatial showcase did not start the real perspective sample")
+        page.screenshot(path=str(evidence / "light.png"))
+        activation = page.get_by_role('button', name='Enable Screen Reader', exact=True)
+        activation.focus()
+        page.keyboard.press('Enter')
+        activation.wait_for(state='detached')
+        slider = page.locator('[id$="spatialViewDistance"]')
+        slider.wait_for(state='attached')
+        geometry = slider.bounding_box()
+        if not geometry:
+            raise RuntimeError("Spatial showcase camera Slider has no visible geometry")
+        page.mouse.click(geometry['x'] + geometry['width'] * 0.7,
+                         geometry['y'] + geometry['height'] / 2)
+        page.wait_for_function("document.documentElement.dataset.fluentQtShowcaseDistance !== '1200'")
+        mode = page.locator('[id$="showcaseSpatialMode"]').bounding_box()
+        if not mode:
+            raise RuntimeError("Spatial showcase mode switch has no visible geometry")
+        for expected in ('false', 'true'):
+            page.mouse.click(mode['x'] + 18, mode['y'] + mode['height'] / 2)
+            page.wait_for_function("value => document.documentElement.dataset.fluentQtShowcaseSpatial === value", arg=expected)
+        for theme in ('high-contrast', 'dark'):
+            page.evaluate("theme => window.postMessage({source:'fluent-qt-site',type:'theme',theme}, location.origin)", theme)
+            page.wait_for_function("theme => document.documentElement.dataset.fluentQtGalleryHostTheme === theme", arg=theme)
+            if theme == 'high-contrast':
+                page.wait_for_function("document.documentElement.dataset.fluentQtShowcaseSpatial === 'false'")
+        page.mouse.click(mode['x'] + 18, mode['y'] + mode['height'] / 2)
+        page.wait_for_function("document.documentElement.dataset.fluentQtShowcaseSpatial === 'true'")
+        page.screenshot(path=str(evidence / "dark.png"))
+        backend = page.locator('html').get_attribute('data-fluent-qt-showcase-backend')
+        for active, expected in ((False, 'raster'), (True, backend)):
+            page.evaluate("active => window.postMessage({source:'fluent-qt-site',type:'showcase-visibility',active}, location.origin)", active)
+            page.wait_for_function("backend => document.documentElement.dataset.fluentQtShowcaseBackend === backend", arg=expected)
+        page.set_viewport_size({"width": 390, "height": 660})
+        page.wait_for_function("document.documentElement.dataset.fluentQtWindowWidth === '390'")
+        page.screenshot(path=str(evidence / "narrow-resized.png"))
+        # Also cover initial narrow startup, not only resizing an initialized scene.
+        page.reload()
+        page.wait_for_selector('html[data-fluent-qt-showcase="spatial"][data-fluent-qt-loaded="true"]')
+        page.wait_for_function("document.documentElement.dataset.fluentQtWindowWidth === '390'")
+        activation = page.get_by_role('button', name='Enable Screen Reader', exact=True)
+        activation.focus()
+        page.keyboard.press('Enter')
+        activation.wait_for(state='detached')
+        for name in ('showcaseSpatialMode', 'spatialViewDistance', 'spatialViewZoom'):
+            control = page.locator(f'[id$="{name}"]')
+            control.scroll_into_view_if_needed()
+            bounds = control.bounding_box()
+            if not bounds or bounds['x'] < 0 or bounds['x'] + bounds['width'] > 391:
+                raise RuntimeError(f"Narrow Spatial showcase clipped {name}: {bounds}")
+        page.screenshot(path=str(evidence / "narrow.png"))
+        geometry = page.locator('[id$="spatialViewDistance"]').bounding_box()
+        page.mouse.click(geometry['x'] + geometry['width'] * 0.7,
+                         geometry['y'] + geometry['height'] / 2)
+        page.wait_for_function("document.documentElement.dataset.fluentQtShowcaseDistance !== '1200'")
+        page.emulate_media(reduced_motion='reduce')
+        page.wait_for_function("document.documentElement.dataset.fluentQtShowcaseSpatial === 'false'")
+        if errors:
+            raise RuntimeError(f"Spatial showcase browser errors: {errors}")
+        print('Spatial showcase passed: real Slider, 2D/3D, themes, reduced motion, suspend/resume, narrow input')
+    except Exception:
+        page.screenshot(path=str(evidence / "failure.png"))
+        raise
+    finally:
+        context.close()
+
+
+def run_site_theme_contract(browser: object, root: Path) -> None:
     site_root = Path(__file__).resolve().parents[2] / "site"
     handler = partial(QuietHandler, directory=str(site_root))
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -524,6 +601,19 @@ def run_site_theme_contract(browser: object) -> None:
         page.wait_for_function("document.documentElement.dataset.theme === 'light'")
         if page.locator("[data-theme-toggle]").is_disabled():
             raise RuntimeError("Website theme control did not recover after forced-colors")
+        for width in (1280, 390):
+            page.set_viewport_size({"width": width, "height": 800})
+            page.goto(f"http://127.0.0.1:{server.server_port}/zh-CN/#top")
+            page.wait_for_selector("html[data-i18n-ready]")
+            if page.evaluate("document.documentElement.scrollWidth > innerWidth"):
+                raise RuntimeError(f"Website overflows horizontally at {width}px")
+            page.wait_for_function("""width =>
+                (getComputedStyle(document.querySelector('.hero-window')).transform === 'none') === (width < 900)
+            """, arg=width)
+            page.wait_for_function("getComputedStyle(document.querySelector('.hero-message')).opacity === '1'")
+            if page.locator('[data-showcase-frame]').get_attribute('src'):
+                raise RuntimeError("Website eagerly loaded the opt-in Spatial runtime")
+            page.screenshot(path=str(root / "showcase-evidence" / f"site-{width}.png"))
     finally:
         page.close()
         server.shutdown()
@@ -940,7 +1030,8 @@ def run_smoke(
                 )
 
             run_embedded_theme_contract(browser, base_url)
-            run_site_theme_contract(browser)
+            run_spatial_showcase_contract(browser, base_url, root)
+            run_site_theme_contract(browser, root)
 
             browser.close()
     except Exception:

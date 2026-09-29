@@ -65,6 +65,26 @@ scrolling do not trigger it. Keep at most three pulses alive, cap the canvas at
 Desktop drawing is capped at 60 fps. Avoid pairwise particle links or per-dot
 blur filters: their cost grows quickly with density.
 
+The optional Spatial introduction follows GUI Skill; the first section after the
+hero remains Get Started. It embeds the real C++ `spatial-view-scene` Gallery
+sample through `gallery/?embed=site&showcase=spatial&render-scale=native`, not CSS
+imitations or a second full Gallery shell. The browser launcher calls the same
+sample factory, does not load Gallery preferences, and leaves rendering/input
+to SpatialView. Theme and reduced-motion changes reach the actual Qt controls.
+
+The showcase loads only on request. Its controller pauses the Qt content when
+offscreen or in a hidden tab; Stop unloads the iframe. Ready/error messages must
+match the origin, frame, and current session. Keep explicit error/retry and
+standalone links; never hide a failed runtime behind a simulated scene.
+
+The hero retains a small desktop perspective tilt and returns to a flat image
+on hover or keyboard focus. Mobile, reduced motion and High Contrast use a flat
+capture. Keep screenshot pixels free of filters, reflective overlays and
+narrow-screen cropping. The full-size link
+opens the original 1440×900 capture in a keyboard-accessible dialog with scrolling,
+Escape dismissal, and focus restoration. It follows the displayed theme and
+falls back to an ordinary image link without JavaScript or dialog support.
+
 ## Gallery screenshots
 
 Use the current **Windows native Gallery with 3D enabled and Mica** for README and first-party
@@ -138,6 +158,7 @@ python3 tools/site/generate_localized_site.py --check
 python3 tools/site/generate_api_reference.py --check
 node --check site/site.js
 node --test tools/site/test_hero_particles.mjs
+node --test tools/site/test_spatial_showcase.mjs
 ```
 
 The check requires matching translation keys, static localized text and
@@ -153,6 +174,22 @@ pause persistence, system preferences, pointer input, resize limits, and page
 cleanup. They do not replace browser review: inspect both languages in Light,
 Dark, and High Contrast, check the mobile layout, and operate the pause control
 with the keyboard.
+Also start the WASM Spatial sample, adjust its real camera Slider and switch
+2D/3D. Check offscreen suspension, theme changes, Stop/restart and error handling.
+The WASM browser smoke verifies the shared sample and writes Light/Dark captures
+under `build/wasm/showcase-evidence/`. Open the full-size Home capture in both themes, check its natural dimensions,
+and verify Escape/Close restores focus to the opener. At narrow widths, the page
+must not scroll horizontally; only the full-size image viewer may do so.
+
+For a local preview with the built runtime mounted at the same URL as Pages:
+
+```bash
+python3 tools/site/serve.py --port 8765
+```
+
+This serves the website from `site/` and `/gallery/` from `build/wasm/app/`, without
+copying compiled binaries into tracked assets. Build the `wasm` Gallery first;
+a site-only `http.server --directory site` does not contain the runtime.
 
 After deployment, verify both language URLs and submit `sitemap.xml` to the
 configured search-engine webmaster tools. Search Console ownership and sitemap

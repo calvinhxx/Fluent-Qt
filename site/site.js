@@ -36,12 +36,37 @@ const translations = {
     "hero.pythonLabel": "Python / PySide6",
     "hero.pythonCopy": "Python 项目可通过 PySide6 使用同一套控件",
     "hero.pythonGallery": "Gallery",
-    "hero.visualCaption": "Gallery 实际界面",
+    "hero.visualCaption": "Windows · 3D + Mica · Home 实拍",
+    "hero.viewOriginal": "原尺寸查看 ↗",
+    "hero.exploreSpatial": "探索可选的 Spatial 3D 扩展 →",
+    "hero.previewTitle": "Gallery Home · 原尺寸截图",
+    "hero.previewHelp": "1440 × 900 原始像素；窄窗口可滚动查看，按 Esc 关闭。",
+    "hero.previewRegion": "原尺寸 Gallery 截图",
+    "hero.closePreview": "关闭",
+    "spatial.kicker": "04 / SPATIAL · 可选 3D 扩展",
+    "spatial.title": "熟悉的控件，多一层空间。",
+    "spatial.copy": "把现有 QWidget 组合放进 SpatialView，为卡片加入透视、旋转与景深。普通 2D 应用无需启用。",
+    "spatial.widgetsTitle": "控件不必重写",
+    "spatial.widgetsCopy": "保留原有布局、signals / slots 和模型；SpatialItem 管理整组控件的姿态。",
+    "spatial.renderTitle": "空间合成，按需刷新",
+    "spatial.renderCopy": "桌面使用 OpenGL，WebAssembly 使用 WebGL；内容不变时复用纹理。",
+    "spatial.optionalTitle": "按需启用，保留 2D",
+    "spatial.optionalCopy": "C++ 链接 FluentQt::Spatial，Python 通过可选绑定使用。Gallery 在加速不可用时回退到 2D。",
+    "spatial.guide": "查看 Spatial 接入指南 ↗",
+    "spatial.try": "在 Gallery 中体验 →",
+    "spatial.how": "Gallery：Settings → 3D Gallery，再打开 Controls → Spatial。",
+    "spatial.stop": "停止并释放",
+    "spatial.open": "独立打开 ↗",
+    "spatial.frameTitle": "真实 C++ Spatial 交互示例",
+    "spatial.runTitle": "直接运行真实的 SpatialView",
+    "spatial.runCopy": "两张卡片、实时图表和镜头控件，来自 C++ Gallery 的同一个示例。点击后加载 Qt / WASM。",
+    "spatial.run": "运行 C++ 3D 示例",
+    "spatial.caption": "真实 Qt Widgets / WebGL · 拖动滑块调整镜头，在场景内移动鼠标查看景深。",
     "spec.runtime": "UI 运行时",
     "spec.qt": "Qt 支持",
     "spec.toolchain": "工具链",
     "spec.platforms": "运行平台",
-    "path.kicker": "开始使用",
+    "path.kicker": "01 / 开始使用",
     "path.title": "开始使用 Fluent-Qt",
     "path.copy": "先打开在线 Gallery 查看控件效果，或直接查看 C++ / Python 接入说明。",
     "path.tryTitle": "在线 Gallery",
@@ -137,7 +162,7 @@ const translations = {
     "footer.readme": "README",
     "footer.license": "项目 MIT 许可证",
     "footer.notices": "第三方声明",
-    "images.hero": "Windows Mica 效果下的 Fluent-Qt Gallery 首页，展示控件分类和示例",
+    "images.hero": "Windows 下开启 3D 与 Mica 的 Fluent-Qt Gallery Home 实际截图，展示控件分类和示例",
     "images.button": "Windows Mica 效果下的 Fluent-Qt Gallery Button 控件页面",
     "images.toggle": "Fluent-Qt Gallery 中完整的 ToggleSwitch 控件页面",
     "images.slider": "Fluent-Qt Gallery 中完整的 Slider 控件页面",
@@ -185,12 +210,37 @@ const translations = {
     "hero.pythonLabel": "Python / PySide6",
     "hero.pythonCopy": "Use the same controls from Python through PySide6",
     "hero.pythonGallery": "Gallery",
-    "hero.visualCaption": "Gallery interface",
+    "hero.visualCaption": "Windows · 3D + Mica · Actual Home capture",
+    "hero.viewOriginal": "View full size ↗",
+    "hero.exploreSpatial": "Explore the optional Spatial 3D extension →",
+    "hero.previewTitle": "Gallery Home · Full-size capture",
+    "hero.previewHelp": "Original 1440 × 900 pixels. Scroll in smaller windows; press Esc to close.",
+    "hero.previewRegion": "Full-size Gallery capture",
+    "hero.closePreview": "Close",
+    "spatial.kicker": "04 / SPATIAL · OPTIONAL 3D EXTENSION",
+    "spatial.title": "Familiar widgets. A new dimension.",
+    "spatial.copy": "Place an existing QWidget composition in SpatialView to add perspective, rotation, and depth. Ordinary 2D apps do not need to enable it.",
+    "spatial.widgetsTitle": "Keep your widgets",
+    "spatial.widgetsCopy": "Keep layouts, signals, slots, and models. SpatialItem controls the pose of the whole widget composition.",
+    "spatial.renderTitle": "Compose in depth. Refresh on demand.",
+    "spatial.renderCopy": "OpenGL on desktop, WebGL in WebAssembly. Unchanged content reuses its textures.",
+    "spatial.optionalTitle": "Opt in. Keep the 2D path.",
+    "spatial.optionalCopy": "Link FluentQt::Spatial in C++, or use the optional Python binding. Gallery falls back to 2D when acceleration is unavailable.",
+    "spatial.guide": "Read the Spatial integration guide ↗",
+    "spatial.try": "Try it in Gallery →",
+    "spatial.how": "Gallery: Settings → 3D Gallery, then Controls → Spatial.",
+    "spatial.stop": "Stop and release",
+    "spatial.open": "Open separately ↗",
+    "spatial.frameTitle": "Live C++ Spatial interactive sample",
+    "spatial.runTitle": "Run the actual SpatialView",
+    "spatial.runCopy": "Two cards, live charts, and camera controls from the same C++ Gallery sample. Qt / WASM loads only when you start it.",
+    "spatial.run": "Run the C++ 3D sample",
+    "spatial.caption": "Real Qt Widgets / WebGL. Adjust the camera sliders and move the pointer across the scene to explore depth.",
     "spec.runtime": "UI runtime",
     "spec.qt": "Qt support",
     "spec.toolchain": "Toolchain",
     "spec.platforms": "Platforms",
-    "path.kicker": "GET STARTED",
+    "path.kicker": "01 / GET STARTED",
     "path.title": "Get started with Fluent-Qt",
     "path.copy": "Open the online Gallery, or go straight to the C++ or Python setup guide.",
     "path.tryTitle": "Online Gallery",
@@ -286,7 +336,7 @@ const translations = {
     "footer.readme": "README",
     "footer.license": "Project MIT License",
     "footer.notices": "Third-party notices",
-    "images.hero": "Fluent-Qt Gallery home on Windows with Mica, showing the control catalog and samples",
+    "images.hero": "Actual Fluent-Qt Gallery Home capture on Windows with 3D and Mica enabled, showing the control catalog and samples",
     "images.button": "Button control page in Fluent-Qt Gallery on Windows with Mica",
     "images.toggle": "Complete ToggleSwitch control page in Fluent-Qt Gallery",
     "images.slider": "Complete Slider control page in Fluent-Qt Gallery",
@@ -318,6 +368,7 @@ const systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
 const forcedColorsQuery = window.matchMedia("(forced-colors: active)");
 let followsSystemTheme = true;
 let preferredTheme = "light";
+let spatialShowcase = null;
 
 const galleryRoot = document.querySelector("[data-live-gallery]");
 const galleryFrame = document.querySelector("[data-gallery-frame]");
@@ -578,6 +629,10 @@ function updateThemeMedia(theme) {
     if (source && image.getAttribute("src") !== source) image.setAttribute("src", source);
   });
 
+  const previewLink = document.querySelector("[data-gallery-preview]");
+  const heroImage = document.querySelector(".hero-window img");
+  if (previewLink && heroImage) previewLink.href = heroImage.src;
+
   document.querySelectorAll("[data-theme-label]").forEach((label) => {
     const value = label.dataset[`themeLabel${suffix}`];
     if (value) label.textContent = value;
@@ -585,6 +640,7 @@ function updateThemeMedia(theme) {
 }
 
 function syncGalleryTheme() {
+  spatialShowcase?.syncTheme();
   if (!galleryFrame?.contentWindow || !galleryFrame.getAttribute("src")) return;
   galleryFrame.contentWindow.postMessage({
     source: "fluent-qt-site",
@@ -844,14 +900,40 @@ function setupInteractions() {
   });
 }
 
+function setupGalleryPreview() {
+  const link = document.querySelector("[data-gallery-preview]");
+  const dialog = document.querySelector(".gallery-preview");
+  const source = document.querySelector(".hero-window img");
+  if (!link || !source || typeof dialog?.showModal !== "function") return;
+
+  link.addEventListener("click", (event) => {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    const image = dialog.querySelector("img");
+    image.src = source.src;
+    image.alt = source.alt;
+    dialog.showModal();
+    const scroll = dialog.querySelector(".gallery-preview-scroll");
+    scroll.scrollTop = scroll.scrollLeft = 0;
+  });
+}
+
 document.documentElement.setAttribute("data-i18n-ready", "");
 loadAnalytics();
 setupNavigation();
 setupInteractions();
+setupGalleryPreview();
 setupLiveGallery();
 setupReveal();
 releaseState.platform = detectPlatform();
 initializeTheme();
+import("./spatial-showcase.js?v=20260929-1")
+  .then(({ createSpatialShowcase }) => {
+    spatialShowcase = createSpatialShowcase(document.querySelector('[data-spatial-showcase]'), {
+      theme: activeTheme, strings: dictionary
+    });
+  })
+  .catch(() => { /* The independent sample link remains usable without the controller. */ });
 import("./hero-particles.js?v=20260908-1")
   .then(({ createHeroParticles }) => createHeroParticles(document.querySelector(".hero")))
   .catch(() => { /* Keep the static hero if the optional decoration cannot load. */ });

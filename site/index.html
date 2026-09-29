@@ -104,8 +104,8 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260908-1">
-    <script src="site.js?v=20260908-1" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260929-2">
+    <script src="site.js?v=20260929-3" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to main content</a>
@@ -231,14 +231,18 @@
                 src="assets/gallery/gallery-home-real.png?v=b885a0fc143b"
                 data-theme-src-light="assets/gallery/gallery-home-real.png?v=b885a0fc143b"
                 data-theme-src-dark="assets/gallery/gallery-home-dark.png?v=a24d8882ccf6"
-                alt="Fluent-Qt Gallery home on Windows with Mica, showing the control catalog and samples"
+                alt="Actual Fluent-Qt Gallery Home capture on Windows with 3D and Mica enabled, showing the control catalog and samples"
                 data-i18n-alt="images.hero"
                 width="1440"
                 height="900"
                 fetchpriority="high"
               >
             </a>
-            <figcaption class="visually-hidden" data-i18n="hero.visualCaption">Gallery interface</figcaption>
+            <figcaption class="hero-caption">
+              <span data-i18n="hero.visualCaption">Windows · 3D + Mica · Actual Home capture</span>
+              <a href="assets/gallery/gallery-home-real.png?v=b885a0fc143b" data-gallery-preview aria-haspopup="dialog" data-i18n="hero.viewOriginal">View full size ↗</a>
+            </figcaption>
+            <a class="hero-spatial-link" href="#spatial" data-i18n="hero.exploreSpatial">Explore the optional Spatial 3D extension →</a>
           </figure>
         </div>
 
@@ -263,7 +267,7 @@
       <section class="path-section" aria-labelledby="path-title">
         <div class="page-shell path-layout">
           <div class="path-heading" data-reveal>
-            <p class="section-index" data-i18n="path.kicker">GET STARTED</p>
+            <p class="section-index" data-i18n="path.kicker">01 / GET STARTED</p>
             <h2 id="path-title" data-i18n="path.title">Get started with Fluent-Qt</h2>
             <p data-i18n="path.copy">Open the online Gallery, or go straight to the C++ or Python setup guide.</p>
           </div>
@@ -450,10 +454,52 @@
         </div>
       </section>
 
+      <section class="spatial-section" id="spatial" aria-labelledby="spatial-title">
+        <div class="page-shell spatial-layout">
+          <div class="spatial-copy">
+            <p class="section-index" data-i18n="spatial.kicker">04 / SPATIAL · OPTIONAL 3D EXTENSION</p>
+            <h2 id="spatial-title" data-i18n="spatial.title">Familiar widgets. A new dimension.</h2>
+            <p class="spatial-intro" data-i18n="spatial.copy">Place an existing QWidget composition in SpatialView to add perspective, rotation, and depth. Ordinary 2D apps do not need to enable it.</p>
+            <ul class="spatial-features">
+              <li><strong data-i18n="spatial.widgetsTitle">Keep your widgets</strong><p data-i18n="spatial.widgetsCopy">Keep layouts, signals, slots, and models. SpatialItem controls the pose of the whole widget composition.</p></li>
+              <li><strong data-i18n="spatial.renderTitle">Compose in depth. Refresh on demand.</strong><p data-i18n="spatial.renderCopy">OpenGL on desktop, WebGL in WebAssembly. Unchanged content reuses its textures.</p></li>
+              <li><strong data-i18n="spatial.optionalTitle">Opt in. Keep the 2D path.</strong><p data-i18n="spatial.optionalCopy">Link FluentQt::Spatial in C++, or use the optional Python binding. Gallery falls back to 2D when acceleration is unavailable.</p></li>
+            </ul>
+            <div class="spatial-links">
+              <a class="text-link" href="https://github.com/calvinhxx/Fluent-Qt/blob/main/docs/architecture/spatial-view.md" data-i18n="spatial.guide">Read the Spatial integration guide ↗</a>
+              <a class="text-link" href="#gallery" data-i18n="spatial.try">Try it in Gallery →</a>
+            </div>
+            <p class="spatial-how" data-i18n="spatial.how">Gallery: Settings → 3D Gallery, then Controls → Spatial.</p>
+          </div>
+          <figure class="spatial-demo">
+            <div class="spatial-live" data-spatial-showcase data-showcase-state="waiting"
+                 data-showcase-src="gallery/?embed=site&amp;showcase=spatial&amp;window-mode=maximized&amp;render-scale=native">
+              <div class="spatial-live-toolbar">
+                <strong>SpatialView <span>· C++ / WebAssembly</span></strong>
+                <div>
+                  <button type="button" data-showcase-stop hidden data-i18n="spatial.stop">Stop and release</button>
+                  <a href="gallery/?showcase=spatial&amp;window-mode=maximized" target="_blank" rel="noopener" data-i18n="spatial.open">Open separately ↗</a>
+                </div>
+              </div>
+              <div class="spatial-live-viewport">
+                <iframe data-showcase-frame title="Live C++ Spatial interactive sample" data-i18n-title="spatial.frameTitle" tabindex="-1" aria-hidden="true"></iframe>
+                <div class="spatial-live-overlay" data-showcase-overlay>
+                  <img src="assets/app-icon.png?v=6bb48ccbdf19" width="64" height="64" alt="">
+                  <strong data-showcase-message data-i18n="spatial.runTitle">Run the actual SpatialView</strong>
+                  <p data-showcase-detail data-i18n="spatial.runCopy">Two cards, live charts, and camera controls from the same C++ Gallery sample. Qt / WASM loads only when you start it.</p>
+                  <button class="button button-primary" type="button" data-showcase-start disabled data-i18n="spatial.run">Run the C++ 3D sample</button>
+                </div>
+              </div>
+            </div>
+            <figcaption data-i18n="spatial.caption">Real Qt Widgets / WebGL. Adjust the camera sliders and move the pointer across the scene to explore depth.</figcaption>
+          </figure>
+        </div>
+      </section>
+
       <section class="positioning-section" id="why" aria-labelledby="positioning-title">
         <div class="page-shell positioning-grid">
           <div class="positioning-lead" data-reveal>
-            <p class="section-index">04 / POSITIONING</p>
+            <p class="section-index">05 / POSITIONING</p>
             <h2 id="positioning-title">
               <span data-i18n="positioning.titleLine1">Native controls</span>
               <span data-i18n="positioning.titleLine2">C++ APIs</span>
@@ -491,7 +537,7 @@
         <div class="page-shell">
           <div class="section-heading component-heading" data-reveal>
             <div>
-              <p class="section-index">05 / COMPONENTS</p>
+              <p class="section-index">06 / COMPONENTS</p>
               <h2 id="components-title"><span data-i18n="components.title">Controls by purpose</span></h2>
             </div>
             <p data-i18n="components.copy">A selection from Gallery</p>
@@ -581,7 +627,7 @@
       <section class="quick-start-section" id="quick-start" aria-labelledby="quick-start-title">
         <div class="page-shell quick-start-grid">
           <div class="quick-start-copy" data-reveal>
-            <p class="section-index">06 / QUICK START</p>
+            <p class="section-index">07 / QUICK START</p>
             <h2 id="quick-start-title"><span data-i18n="quickStart.title">Quick start</span></h2>
             <p data-i18n="quickStart.copy">Place this after add_executable(my_app ...). See hello_world for a complete project.</p>
             <ul class="quick-start-checks">
@@ -636,7 +682,7 @@ target_link_libraries(
       <section class="download-section" id="downloads" aria-labelledby="downloads-title">
         <div class="page-shell download-grid">
           <div class="download-copy" data-reveal>
-            <p class="section-index">07 / DOWNLOAD</p>
+            <p class="section-index">08 / DOWNLOAD</p>
             <h2 id="downloads-title">
               <span data-i18n="downloads.title">Download Gallery</span>
             </h2>
@@ -691,6 +737,16 @@ target_link_libraries(
         </div>
       </section>
     </main>
+
+    <dialog class="gallery-preview" aria-labelledby="gallery-preview-title">
+      <div class="gallery-preview-header">
+        <div><strong id="gallery-preview-title" data-i18n="hero.previewTitle">Gallery Home · Full-size capture</strong><p data-i18n="hero.previewHelp">Original 1440 × 900 pixels. Scroll in smaller windows; press Esc to close.</p></div>
+        <form method="dialog"><button type="submit" autofocus data-i18n="hero.closePreview">Close</button></form>
+      </div>
+      <div class="gallery-preview-scroll" tabindex="0" role="region" aria-label="Full-size Gallery capture" data-i18n-aria-label="hero.previewRegion">
+        <img alt="" width="1440" height="900">
+      </div>
+    </dialog>
 
     <footer class="site-footer">
       <div class="page-shell footer-grid">

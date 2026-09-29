@@ -199,6 +199,7 @@ def prefix_resources(page: str, prefix: str) -> str:
         "data-theme-src-light",
         "data-theme-src-dark",
         "data-gallery-src",
+        "data-showcase-src",
     )
     attribute_names = "|".join(re.escape(name) for name in attributes)
     pattern = re.compile(
@@ -352,6 +353,11 @@ def validate_page(page: str, locale: Locale, values: dict[str, str]) -> None:
     for expected in expected_links:
         if expected not in page:
             fail(f"{locale.output} is missing language link: {expected}")
+
+    section_labels = re.findall(r'<p class="section-index"[^>]*>([^<]*)</p>', page)
+    for number, label in enumerate(section_labels, start=1):
+        if not label.startswith(f"{number:02d} / "):
+            fail(f"{locale.output} section {number:02d} has a missing or out-of-order index: {label}")
 
 
 def validate_error_page() -> None:
