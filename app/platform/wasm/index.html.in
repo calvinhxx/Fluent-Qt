@@ -184,6 +184,16 @@
     const renderScaleToggle = document.getElementById('render-scale-toggle');
     const renderProfile = window.fluentQtRenderProfile;
     let wasmInstance = null;
+    const showcase = new URLSearchParams(window.location.search).get('showcase') === 'spatial';
+    const showcaseSession = new URLSearchParams(window.location.search).get('host-session') || '';
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let showcaseActive = true;
+    let showcaseReduced = reducedMotion.matches;
+    const syncShowcase = () => {
+      if (!showcase) return;
+      wasmInstance?._fluentQtGalleryShowcaseActive?.(showcaseActive ? 1 : 0);
+      wasmInstance?._fluentQtGalleryShowcaseMotion?.(showcaseReduced ? 1 : 0);
+    };
     const normalizeHostTheme = theme =>
       theme === 'light' || theme === 'dark' || theme === 'high-contrast'
         ? theme
@@ -218,11 +228,24 @@
     window.addEventListener('message', event => {
       if (!window.fluentQtEmbedded || event.source !== window.parent
           || event.origin !== window.location.origin
-          || event.data?.source !== 'fluent-qt-site'
-          || event.data?.type !== 'theme') {
+          || event.data?.source !== 'fluent-qt-site') {
         return;
       }
-      applyHostTheme(event.data.theme);
+      if (event.data.type === 'theme') applyHostTheme(event.data.theme);
+      if (showcase && event.data.type === 'showcase-visibility'
+          && typeof event.data.active === 'boolean') {
+        showcaseActive = event.data.active;
+        syncShowcase();
+      }
+      if (showcase && event.data.type === 'showcase-motion'
+          && typeof event.data.reduced === 'boolean') {
+        showcaseReduced = event.data.reduced;
+        syncShowcase();
+      }
+    });
+    listenForMediaChange(reducedMotion, () => {
+      showcaseReduced = reducedMotion.matches;
+      syncShowcase();
     });
     if (!window.fluentQtEmbedded && window.fluentQtHostThemeFollowsSystem)
       listenForMediaChange(window.fluentQtHostThemeMedia.systemDark,
@@ -233,6 +256,7 @@
       window.parent.postMessage({
         source: 'fluent-qt-gallery',
         state,
+        session: showcaseSession,
         detail
       }, window.location.origin);
     };
@@ -294,6 +318,7 @@
           }
         });
         syncHostTheme();
+        syncShowcase();
       } catch (error) {
         console.error(error);
         document.documentElement.dataset.fluentQtError = String(error);

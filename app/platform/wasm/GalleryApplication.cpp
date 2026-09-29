@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "platform/wasm/WasmSmokeRunner.h"
+#include "platform/wasm/GallerySpatialShowcase.h"
 #include "support/logging/Log.h"
 #include "view/shell/AppIcon.h"
 #include "view/shell/GalleryWindow.h"
@@ -26,6 +27,7 @@ namespace {
 
 std::unique_ptr<QApplication> application;
 std::unique_ptr<GalleryWindow> galleryWindow;
+std::unique_ptr<QWidget> showcaseWindow;
 
 QString requestedWindowMode()
 {
@@ -81,7 +83,6 @@ int runApplication(int argc, char** argv)
     application = std::make_unique<QApplication>(argc, argv);
     fluent::initializeResources();
     application->setFont(Typography::Styles::Body.toQFont());
-    GallerySettings::instance();
 
     fluent::support::logging::InitializationOptions loggingOptions;
     loggingOptions.defaultLevel = fluent::support::logging::Level::Info;
@@ -91,6 +92,16 @@ int runApplication(int argc, char** argv)
                  .arg(QApplication::applicationName(), QApplication::organizationName()));
     application->setWindowIcon(appicon::icon());
 
+    const bool showcase = emscripten_run_script_int(
+        "new URLSearchParams(window.location.search).get('showcase') === 'spatial'");
+    if (showcase) {
+        showcaseWindow.reset(createSpatialShowcase());
+        const QRect available = application->primaryScreen()->availableGeometry();
+        showTopLevelWindow(showcaseWindow.get(), available, true);
+        return 0;
+    }
+
+    GallerySettings::instance();
     galleryWindow = std::make_unique<GalleryWindow>();
     const QString initialRoute = requestedRoute();
     if (!initialRoute.isEmpty() && !galleryWindow->selectRoute(initialRoute)) {

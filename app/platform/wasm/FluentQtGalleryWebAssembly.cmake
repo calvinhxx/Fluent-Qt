@@ -8,6 +8,8 @@ function(fluent_qt_configure_gallery_webassembly target source_dir)
     set(_adapter_dir "${source_dir}/platform/wasm")
     target_sources(${target} PRIVATE
         "${_adapter_dir}/GalleryApplication.cpp"
+        "${_adapter_dir}/GallerySpatialShowcase.cpp"
+        "${_adapter_dir}/GallerySpatialShowcase.h"
         "${_adapter_dir}/GalleryPlatform.cpp"
         "${_adapter_dir}/WasmSmokeRunner.cpp"
         "${_adapter_dir}/WasmSmokeRunner.h")

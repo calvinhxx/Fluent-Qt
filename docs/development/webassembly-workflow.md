@@ -147,6 +147,24 @@ preference is restored. The website theme button also cycles through all three
 values, so an embedded Gallery can enter high contrast without relying on an OS
 setting.
 
+### Embedded Spatial sample
+
+`?showcase=spatial` starts the existing `spatial-view-scene` sample without the
+Gallery navigation, startup pages, or saved preferences. Its C++ host lives in
+`app/platform/wasm/GallerySpatialShowcase.cpp`; the sample and component code are
+unchanged. `embed=site` retains the host theme contract. The website loads this
+view on demand at native render density and can send same-origin
+`showcase-visibility` (boolean `active`) and `showcase-motion` (boolean `reduced`)
+messages. Hiding the sample lets SpatialView release its GPU viewport; unloading
+the iframe releases the browser runtime. An optional `host-session` query is
+echoed in lifecycle messages so discarded loads cannot overwrite a new session.
+
+The browser smoke operates the real camera Slider and 2D/3D switch, checks theme
+and reduced-motion transitions, and saves Light/Dark evidence. The host publishes
+`data-fluent-qt-showcase-*` values from component signals for verification; those
+attributes do not drive the UI. Software-rendered CI evidence is not hardware
+GPU performance approval.
+
 ### Simplified Chinese font fallback
 
 WebAssembly builds embed
