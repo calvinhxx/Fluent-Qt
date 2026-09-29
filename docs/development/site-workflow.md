@@ -67,18 +67,22 @@ blur filters: their cost grows quickly with density.
 
 ## Gallery screenshots
 
-Use the current **Windows native Gallery with Mica** for README and first-party
+Use the current **Windows native Gallery with 3D enabled and Mica** for README and first-party
 website product images. Build `fluent_qt_gallery` using the
 [build workflow](build-workflow.md). Capture the real composed window in Light
 and Dark at 1440×900, with the Windows caption buttons visible. Keep third-party
 case-study images in their original platform and do not add simulated window
 chrome or a painted Mica background.
 
-In Gallery Settings, select Mica as the window effect and choose the required
-theme. Keep the window active and unmaximized, wait for the splash and navigation
+In Gallery Settings, enable **3D Gallery**, select Mica as the window effect,
+and choose the required theme. Verify that 3D is active, not a fallback; the
+Spatial navigation category alone does not establish this. Keep the window active
+and unmaximized, wait for the splash and navigation
 animations to finish, and move the pointer outside the captured window. Use
-Windows Graphics Capture (for example, Computer Use's native window capture),
-not `QWidget::grab()`: Mica is supplied by the desktop compositor. The
+an OS-composited, lossless PNG capture, not a compressed automation preview or
+`QWidget::grab()`: Mica is supplied by the desktop compositor. For example,
+copy the active window with Alt+Print Screen and save it as PNG in Paint without
+resizing. Check the saved file for cursor indicators and transient overlays. The
 `PythonParityVisualCheck` and `FoundationVisualCheck` fixtures deliberately use
 `BackdropEffect::Solid` for deterministic test snapshots; they are not the source
 for these marketing images. Restore any capture-only changes to local Gallery
@@ -92,8 +96,15 @@ home JPEGs at `docs/assets/readme/gallery-home.jpg` and
 `site/assets/gallery-home.jpg` synchronized with the Light home capture. Preserve
 the captured pixels when converting formats; do not retouch native controls.
 
-The current set was captured on Windows with Qt 6.9.3 from revision `8dfba78f`
-on 2026-09-16. Both Home captures use the Gallery's Starfield particle effect.
+The current set was recaptured on 2026-09-29 from a local Release build of Gallery
+1.9.1 (rendering sources now recorded in `143bdbfa`) with Qt 6.9.3, at
+1440×900 with 3D and Mica enabled. All ten Light/Dark PNGs and the Home-derived
+artwork use these new captures; none reuse the earlier soft 3D frames.
+Home retains its live particle background. The PNGs preserve the native capture
+pixels; do not resize or stretch source material. A 4K display is not required.
+Use Home for the hero, README, loading poster, and sharing card, not a Spatial
+component demonstration. Compare old and new material at the same display size;
+image dimensions alone do not establish text sharpness.
 
 The README, Gallery loading poster, and sharing card use designed compositions.
 Keep the README's frame, spacing, and shadow; keep the sharing card's brand,
@@ -106,7 +117,10 @@ python3 -m playwright install chromium
 python3 tools/site/generate_promo_assets.py
 ```
 
-The renderer uses the Light home capture and bundled Inter fonts. It produces
+The renderer uses the Light home capture and bundled Inter fonts. It downsamples
+the README's embedded capture once with high-quality filtering at its final
+1232×770 size, leaving the source PNG untouched. This does not remove softness
+already present in the native 3D rendering. It produces
 the 1600×900 README image and matching loading poster, plus a separate
 1731×909 `site/assets/og.png`. Use `--output-root /tmp/fluentqt-promo-review`
 to preview them before replacement. Do not copy a raw screenshot over these

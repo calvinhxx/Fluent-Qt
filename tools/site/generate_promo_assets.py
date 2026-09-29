@@ -32,6 +32,20 @@ def main() -> int:
             page.goto((root / "tools/site/promo-assets.html").as_uri())
             page.evaluate("document.fonts.ready")
             page.evaluate("Promise.all([...document.images].map(image => image.decode()))")
+            # Choose high-quality downsampling at the framed image's final
+            # pixel size; keep the native PNG and output dimensions unchanged.
+            page.locator("#readme img").evaluate("""image => {
+                const canvas = document.createElement('canvas');
+                canvas.width = image.clientWidth;
+                canvas.height = image.clientHeight;
+                canvas.setAttribute('role', 'img');
+                canvas.setAttribute('aria-label', image.alt);
+                const context = canvas.getContext('2d');
+                context.imageSmoothingEnabled = true;
+                context.imageSmoothingQuality = 'high';
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                image.replaceWith(canvas);
+            }""")
             for selector, paths in (
                 ("#readme", ("docs/assets/readme/hero.png", "site/assets/gallery/gallery-hero-real.png")),
                 ("#social", ("site/assets/og.png",)),

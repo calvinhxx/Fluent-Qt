@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <a href="https://calvinhxx.github.io/Fluent-Qt/#top"><img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery on Windows with Mica"></a>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/#top"><img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery Home in 3D mode on Windows with Mica"></a>
 </p>
 
 <p align="center">
@@ -187,17 +187,9 @@ python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_pa
 
 ### Optional Spatial module
 
-[Spatial](docs/architecture/spatial-view.md) lets you tilt, rotate, and position
-existing widgets at different depths. It is an optional 3D extension; ordinary
-2D applications do not need to enable it.
-
-To try it, open the C++, Python or WebAssembly Gallery. Turn on Settings → 3D
-Gallery, then visit Controls → Spatial for interactive examples.
-
-For your own application, link `FluentQt::Spatial` in C++, or enable the module
-in a [Python source build](bindings/pyside6/README.md#optional-spatial-module).
-Desktop builds use OpenGL; WebAssembly uses WebGL. Gallery automatically uses
-the 2D interface when the required graphics acceleration is unavailable.
+[Spatial](docs/architecture/spatial-view.md) adds optional tilt, rotation and
+depth to existing widgets. Try it in Gallery via Settings → 3D Gallery;
+ordinary 2D applications are unaffected.
 
 ### WebAssembly
 
