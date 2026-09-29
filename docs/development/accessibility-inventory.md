@@ -136,6 +136,9 @@ the visible window, focus and restore geometry. Reduced/Disabled motion and
 High Contrast restore native 2D.
 Projected text uses continuous, non-negative reconstruction weights to reduce
 texture-sampling softness without changing glyph weight, focus, or hit geometry.
+The low-DPI glyph adapter rasterizes unhinted text at the existing panel-cache density,
+including Home's particle foreground. Hinted text retains its native pixel grid so
+small-text contrast is preserved; the policy follows each shaped item's font.
 Perspective still differs from native 2D text. Material-to-Solid changes publish
 the opaque state and refresh the 3D caches before the Windows compositor removes
 the old material, preserving window identity and avoiding a transparent handoff.

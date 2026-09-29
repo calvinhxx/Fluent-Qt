@@ -54,7 +54,9 @@ std::unique_ptr<QOpenGLFramebufferObject> capture(QWidget& root, qreal cacheDpr 
     QOpenGLPaintDevice device(pixels);
     device.setDevicePixelRatio(cacheDpr);
     GalleryGlyphPaintDevice glyph(device, 1);
-    QPainter painter(&glyph);
+    QPainter painter(fluent::gallery::spatial_render::needsNativeGlyphCoverage(1)
+                         ? static_cast<QPaintDevice*>(&glyph)
+                         : &device);
     root.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
     painter.end();
     QOpenGLFramebufferObject::blitFramebuffer(texture.get(), &paintTarget);

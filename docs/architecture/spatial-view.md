@@ -264,10 +264,14 @@ adjust edge coverage under perspective. This avoids independently filtering a
 cached rounded mask and a second transformed border, which can create a broken
 or doubled thin edge. It does not change the panel geometry or cache density.
 
-On Windows at output DPR 1 to below 2, and Linux at DPR 1, the Gallery preserves native glyph
+On Windows at output DPR 1 to below 2, and Linux at DPR 1, the Gallery uses Qt's raster glyph
 coverage with a private paint-device adapter. It rasterizes Qt's already-shaped
-text items into bounded, transparent native-density tiles during dirty-cache
-updates, then composes them into the unchanged supersampled GPU panel. Shaping,
+text items into bounded, transparent tiles during dirty-cache updates, including
+particle-layer foreground text. Unhinted fonts use the actual panel-cache density
+to avoid enlarging low-density antialiased glyphs before perspective sampling.
+Hinted fonts retain the native output grid so their grid fitting and small-text
+contrast do not change. This private policy uses each shaped item's font, not an
+application-wide font or a new platform branch. Shaping,
 fallback fonts and bidi ordering are not repeated. Geometry and images still
 paint through OpenGL; transformed or patterned text retains Qt's original path.
 There is no persistent glyph cache or whole-window CPU capture. Cocoa,

@@ -2210,6 +2210,37 @@ TEST_F(GallerySpatialTest, GlyphCoveragePreservesOpacityAndOpaqueBackground)
     }
 }
 
+TEST_F(GallerySpatialTest, GlyphRasterDensityPreservesPerFontHinting)
+{
+    struct Row {
+        QFont::HintingPreference hinting;
+        qreal nativeDpr, cacheDpr, expectedDpr;
+    };
+    const Row rows[] = {
+        {QFont::PreferNoHinting, 1., 2., 2.},
+        {QFont::PreferNoHinting, 1.25, 2.1875, 2.1875},
+        {QFont::PreferNoHinting, 1.5, 1.5, 1.5},
+        {QFont::PreferDefaultHinting, 1., 2., 1.},
+        {QFont::PreferVerticalHinting, 1., 2., 1.},
+        {QFont::PreferFullHinting, 1., 2., 1.},
+        {QFont::PreferVerticalHinting, 1.25, 2.1875, 1.25},
+        {QFont::PreferFullHinting, 1.5, 1.5, 1.5},
+    };
+    for (const auto& row : rows) {
+        SCOPED_TRACE(::testing::Message() << "hint=" << row.hinting << " native=" << row.nativeDpr
+                                          << " cache=" << row.cacheDpr);
+        QFont font = Typography::Styles::Body.toQFont();
+        font.setHintingPreference(row.hinting);
+        EXPECT_EQ(spatial_render::glyphRasterDpr(font, row.nativeDpr, row.cacheDpr),
+                  row.expectedDpr);
+        QImage target(32, 32, QImage::Format_ARGB32_Premultiplied);
+        target.setDevicePixelRatio(row.cacheDpr);
+        spatial_render::GalleryGlyphPaintDevice device(target, row.nativeDpr);
+        EXPECT_EQ(device.rasterDpr(font), row.expectedDpr)
+            << "Explicit font hinting must not be replaced by the application font's policy";
+    }
+}
+
 TEST_F(GallerySpatialTest, GlyphTilesAreBoundedByVisibleClip)
 {
     const auto paint = [](QPaintDevice* device) {
@@ -2234,6 +2265,53 @@ TEST_F(GallerySpatialTest, GlyphTilesAreBoundedByVisibleClip)
         EXPECT_GT(device.glyphTiles(), 0);
         EXPECT_LE(device.glyphTiles(), device.glyphItems())
             << "The visible clip fits one tile per shaped item regardless of text length";
+    }
+}
+
+TEST_F(GallerySpatialTest, GlyphTilesPreserveShapingAcrossFractionalCacheStrips)
+{
+    const auto paint = [](QPaintDevice* target) {
+        QPainter painter(target);
+        painter.setRenderHint(QPainter::TextAntialiasing);
+        painter.setPen(QColor(32, 90, 150, 210));
+        painter.setOpacity(.65);
+        painter.setFont(Typography::Styles::Caption.toQFont());
+        // Keep one long shaped item so its visible ink crosses the 512 px tile
+        // boundary, rather than testing many individually short fallback runs.
+        painter.drawText(QPointF(7.25, 31.5),
+                         QStringLiteral("Gallery Popup settings 0123456789 ").repeated(12));
+        QFont font = Typography::Styles::BodyStrong.toQFont();
+        font.setUnderline(true);
+        font.setStrikeOut(true);
+        painter.setFont(font);
+        painter.drawText(QPointF(7.25, 76.5),
+                         QString::fromUtf8("Gallery 设置 · العربية · Popup 0123456789"));
+    };
+    for (qreal dpr : {1.25, 1.5, 2.1875}) {
+        // Paint strips begin on physical pixels, including when the logical
+        // origin is fractional. The raster phase must be unchanged at a seam.
+        for (const QPointF origin : {QPointF(), QPointF(0, 197 / dpr)}) {
+            SCOPED_TRACE(::testing::Message() << "dpr=" << dpr << " origin=" << origin.y());
+            QImage expected(qCeil(960 * dpr), qCeil(100 * dpr),
+                            QImage::Format_ARGB32_Premultiplied);
+            expected.setDevicePixelRatio(dpr);
+            expected.fill(Qt::transparent);
+            QImage actual = expected.copy();
+            paint(&expected);
+            spatial_render::GalleryGlyphPaintDevice device(actual, dpr, origin);
+            paint(&device);
+            EXPECT_GT(device.glyphTiles(), device.glyphItems());
+            const QString directory = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
+            if (actual != expected && !directory.isEmpty()) {
+                QDir().mkpath(directory);
+                const QString prefix =
+                    directory + QStringLiteral("/glyph-strip-%1-%2-").arg(dpr).arg(origin.y());
+                expected.save(prefix + "reference.png");
+                actual.save(prefix + "actual.png");
+            }
+            EXPECT_EQ(actual, expected)
+                << "Bounded glyph tiles must preserve shaping, decorations and painter opacity";
+        }
     }
 }
 
@@ -2735,6 +2813,163 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
     surface.doneCurrent();
 }
 
+TEST_F(GallerySpatialTest, PanelDensityGlyphsRetainSmallTextDetailDuringProjection)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires a native OpenGL sampler";
+    if (!spatial_render::needsNativeGlyphCoverage(1))
+        GTEST_SKIP() << "This platform retains Qt's original glyph path";
+    QOpenGLWidget surface;
+    surface.resize(640, 400);
+    surface.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&surface));
+    surface.makeCurrent();
+    ASSERT_NE(surface.context(), nullptr);
+    auto* gl = surface.context()->functions();
+    {
+        QOpenGLFramebufferObject target(QSize(640, 400));
+        ASSERT_TRUE(target.isValid());
+        spatial_render::PanelSampler sampler;
+        ASSERT_TRUE(sampler.create());
+        QMatrix4x4 projection, quad;
+        projection.ortho(0.f, 640.f, 400.f, 0.f, -1.f, 1.f);
+        quad.translate(300, 180);
+        quad.scale(300, 180);
+        // Home uses these bundled faces, including Caption descriptions and
+        // BodyStrong card labels. Isolate its unhinted Windows strategy here;
+        // hinted fonts keep native density and the separate flat-detail contract.
+        std::array<QFont, 3> fonts{Typography::Styles::Caption.toQFont(),
+                                   Typography::Styles::Body.toQFont(),
+                                   Typography::Styles::BodyStrong.toQFont()};
+        for (auto& font : fonts)
+            font.setHintingPreference(QFont::PreferNoHinting);
+        for (const bool dark : {false, true}) {
+            SCOPED_TRACE(::testing::Message() << "dark=" << dark);
+            const QColor background =
+                dark ? ThemeColors::Dark::BackgroundLayer : ThemeColors::Light::BackgroundLayer;
+            const std::array<QColor, 3> colors{
+                dark ? ThemeColors::Dark::Text::Secondary : ThemeColors::Light::Text::Secondary,
+                dark ? ThemeColors::Dark::Text::AccentPrimary
+                     : ThemeColors::Light::Text::AccentPrimary,
+                dark ? ThemeColors::Dark::Text::Primary : ThemeColors::Light::Text::Primary};
+            const auto cacheAt = [&](qreal cacheDpr) {
+                QImage image(qRound(600 * cacheDpr), qRound(360 * cacheDpr),
+                             QImage::Format_ARGB32_Premultiplied);
+                image.setDevicePixelRatio(cacheDpr);
+                image.fill(background);
+                spatial_render::GalleryGlyphPaintDevice device(image, 1);
+                {
+                    QPainter painter(&device);
+                    painter.setRenderHint(QPainter::TextAntialiasing);
+                    for (int row = 0; row < 3; ++row) {
+                        painter.setFont(fonts[row]);
+                        painter.setPen(colors[row]);
+                        painter.drawText(QPoint(30, 55 + row * 75),
+                                         QString::fromUtf8("Gallery 设置 · Popup 0123456789"));
+                    }
+                }
+                if (cacheDpr == 1) {
+                    image = image.scaled(QSize(1200, 720), Qt::IgnoreAspectRatio,
+                                         Qt::FastTransformation);
+                    image.setDevicePixelRatio(2);
+                } else {
+                    EXPECT_GT(device.glyphItems(), 0);
+                }
+                return image;
+            };
+            // Both textures have the same allocation and use the unchanged
+            // sampler. Only shaped-glyph raster density differs from the old path.
+            QOpenGLTexture nativeGlyphs(cacheAt(1)), panelGlyphs(cacheAt(2));
+            for (auto* texture : {&nativeGlyphs, &panelGlyphs}) {
+                texture->setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
+                texture->setWrapMode(QOpenGLTexture::ClampToEdge);
+                ASSERT_TRUE(texture->isCreated());
+            }
+            const auto draw = [&](QOpenGLTexture& texture, const QTransform& tilt) {
+                target.bind();
+                gl->glViewport(0, 0, 640, 400);
+                gl->glDisable(GL_BLEND);
+                gl->glDisable(GL_DEPTH_TEST);
+                gl->glDisable(GL_SCISSOR_TEST);
+                gl->glClearColor(background.redF(), background.greenF(), background.blueF(), 1);
+                gl->glClear(GL_COLOR_BUFFER_BIT);
+                sampler.blit(texture.textureId(), QSize(1200, 720),
+                             projection * QMatrix4x4(tilt) * quad);
+                return target.toImage();
+            };
+            const auto measure = [&](const QImage& image, const QRect& region) {
+                double ink = 0, energy = 0;
+                const int backgroundGray = qGray(background.rgb());
+                for (int y = region.top(); y <= region.bottom(); ++y)
+                    for (int x = region.left(); x <= region.right(); ++x) {
+                        const int value = qGray(image.pixel(x, y));
+                        ink += qAbs(backgroundGray - value);
+                        energy += qPow(value - qGray(image.pixel(x - 1, y)), 2) +
+                                  qPow(value - qGray(image.pixel(x, y - 1)), 2);
+                    }
+                return std::array<double, 2>{ink, ink > 0 ? energy / ink : 0};
+            };
+            std::array<double, 3> minimumInk{1e20, 1e20, 1e20}, maximumInk{}, gain{};
+            for (int phase = 0; phase < 8; ++phase) {
+                SCOPED_TRACE(::testing::Message() << "phase=" << phase);
+                const QTransform tilt(.96, .006, .00006, -.012, .97, .00003, 20. + phase / 8.,
+                                      16. + phase / 20., 1.);
+                const QImage before = draw(nativeGlyphs, tilt), after = draw(panelGlyphs, tilt);
+                for (int row = 0; row < 3; ++row) {
+                    SCOPED_TRACE(::testing::Message() << "text row=" << row);
+                    const QRect region =
+                        tilt.mapRect(QRectF(24, 20 + row * 75, 500, 43)).toAlignedRect();
+                    ASSERT_TRUE(after.rect().adjusted(1, 1, -1, -1).contains(region));
+                    const auto old = measure(before, region), current = measure(after, region);
+                    ASSERT_GT(old[1], 10);
+                    EXPECT_GE(current[1], old[1])
+                        << "A fractional phase must not trade away small-text contrast";
+                    EXPECT_NEAR(current[0] / old[0], 1., .025)
+                        << "Clarity must come from detail, not a heavier text color";
+                    gain[row] += current[1] / old[1];
+                    minimumInk[row] = qMin(minimumInk[row], current[0]);
+                    maximumInk[row] = qMax(maximumInk[row], current[0]);
+                    const QColor pen = colors[row];
+                    for (int y = region.top(); y <= region.bottom(); ++y)
+                        for (int x = region.left(); x <= region.right(); ++x) {
+                            const QColor pixel = after.pixelColor(x, y);
+                            const std::array<int, 3> actual{pixel.red(), pixel.green(),
+                                                            pixel.blue()};
+                            const std::array<int, 3> bg{background.red(), background.green(),
+                                                        background.blue()};
+                            const std::array<int, 3> fg{pen.red(), pen.green(), pen.blue()};
+                            for (int channel = 0; channel < 3; ++channel) {
+                                const int opaqueInk = qRound(fg[channel] * pen.alphaF() +
+                                                             bg[channel] * (1 - pen.alphaF()));
+                                ASSERT_GE(actual[channel], qMin(bg[channel], opaqueInk) - 1)
+                                    << "Glyph reconstruction must not add a dark/color halo";
+                                ASSERT_LE(actual[channel], qMax(bg[channel], opaqueInk) + 1)
+                                    << "Glyph reconstruction must not add a bright/color halo";
+                            }
+                            ASSERT_EQ(pixel.alpha(), 255);
+                        }
+                }
+                const QString directory = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
+                if (!directory.isEmpty() && phase == 0) {
+                    QDir().mkpath(directory);
+                    const QString prefix = directory + (dark ? "/glyph-dark-" : "/glyph-light-");
+                    before.save(prefix + "native-density.png");
+                    after.save(prefix + "panel-density.png");
+                }
+            }
+            for (int row = 0; row < 3; ++row) {
+                SCOPED_TRACE(::testing::Message() << "text row=" << row);
+                EXPECT_GE(gain[row] / 8., 1.25)
+                    << "Real small text needs a material improvement over enlarged native tiles";
+                EXPECT_LT(maximumInk[row] / minimumInk[row], 1.03)
+                    << "Subpixel motion must not cause glyph coverage to flicker";
+            }
+        }
+        EXPECT_EQ(gl->glGetError(), GLenum(GL_NO_ERROR));
+    }
+    surface.doneCurrent();
+}
+
 TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
 {
     if (tests::support::isHeadlessPlatform())
@@ -2744,12 +2979,15 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
         class DetailContent final : public QWidget {
         public:
             qreal glyphDpr = 0;
+            QFont glyphFont;
             void paintEvent(QPaintEvent*) override
             {
                 QPainter painter(this);
                 if (const auto* device =
-                        spatial_render::GalleryGlyphPaintDevice::fromPainter(painter))
-                    glyphDpr = device->nativeDpr();
+                        spatial_render::GalleryGlyphPaintDevice::fromPainter(painter)) {
+                    glyphFont = painter.font();
+                    glyphDpr = device->rasterDpr(glyphFont);
+                }
                 painter.fillRect(rect(), Qt::white);
                 painter.setPen(Qt::black);
                 QFont text = font();
@@ -2810,8 +3048,10 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
         EXPECT_GT(stats["paintSamples"].toInt(), 1)
             << "Control curves need MSAA in the paint target, not just the window";
         if (spatial_render::needsNativeGlyphCoverage(window.devicePixelRatioF()))
-            EXPECT_EQ(content->glyphDpr, window.devicePixelRatioF())
-                << "The production cache must rasterize shaped glyphs at native density";
+            EXPECT_EQ(content->glyphDpr,
+                      spatial_render::glyphRasterDpr(content->glyphFont, window.devicePixelRatioF(),
+                                                     stats["cacheDpr"].toDouble()))
+                << "The production cache must preserve each font's hinting policy";
         else
             EXPECT_EQ(content->glyphDpr, 0)
                 << "Preserve Cocoa, WebAssembly and high-DPI glyph paths";
@@ -3463,7 +3703,7 @@ TEST_F(GallerySpatialTest, EmbeddedWindowRevalidatesContextAndRoutesProjectedInp
     // presentation has not started its animation yet. Wait for the real surface.
     ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 3000));
     ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!controller->transitionRunning()); }, 1500));
-    EXPECT_TRUE(surface->isValid());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return surface->isValid(); }, 3000));
     EXPECT_TRUE(surface->property("presenting").toBool());
     QEvent leave(QEvent::Leave);
     QApplication::sendEvent(&window, &leave);

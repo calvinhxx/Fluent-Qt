@@ -1304,7 +1304,7 @@ print("2D-only Gallery: no OpenGL imports")
                 from fluentqt_gallery.glyph_paint_device import GlyphPaintDevice
                 device = getattr(painter.paintEngine(), "device", None)
                 if isinstance(device, GlyphPaintDevice):
-                    self.glyph_dpr = device.native_dpr
+                    self.glyph_dpr = device.raster_dpr(painter.font())
                 painter.fillRect(self.rect(), Qt.white)
                 painter.setPen(Qt.black)
                 font = self.font()
@@ -1354,8 +1354,10 @@ print("2D-only Gallery: no OpenGL imports")
             surface = controller.canvas
             self.assertGreater(surface.paint_target.format().samples(), 1)
             dpr = surface.devicePixelRatioF()
-            from fluentqt_gallery.glyph_paint_device import needs_native_glyph_coverage
-            self.assertEqual(content.glyph_dpr, dpr if needs_native_glyph_coverage(dpr) else 0)
+            from fluentqt_gallery.glyph_paint_device import glyph_raster_dpr, needs_native_glyph_coverage
+            self.assertEqual(content.glyph_dpr,
+                             glyph_raster_dpr(content.font(), dpr, surface.plan[0])
+                             if needs_native_glyph_coverage(dpr) else 0)
             controller.motion.setStartValue(0.)
             controller.motion.setEndValue(1.)
             controller.motion.setCurrentTime(controller.motion.duration() // 2)

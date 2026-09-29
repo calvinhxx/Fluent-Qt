@@ -1,14 +1,15 @@
-"""Private native-DPI glyph coverage adapter for the low-DPI GL panel cache.
+"""Private glyph coverage adapter for the low-DPI GL panel cache.
 
-Qt has already shaped each QTextItem. Only that item is rasterized; geometry,
-images, panel resolution and multisampling continue to use the target device.
+Qt has already shaped each QTextItem. Unhinted outlines use the cache density;
+hinted fonts retain the display's pixel grid. Geometry, images, panel resolution
+and multisampling still use the target device.
 """
 
 import weakref
 
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import (
-    QFontMetricsF, QImage, QPaintDevice, QPaintEngine, QPainter,
+    QFont, QFontMetricsF, QImage, QPaintDevice, QPaintEngine, QPainter,
     QPainterPath, QRegion, QTransform,
 )
 
@@ -18,6 +19,12 @@ def needs_native_glyph_coverage(native_dpr):
     return SpatialRuntime.needsNativeGlyphCoverage(native_dpr)
 
 
+def glyph_raster_dpr(font, native_dpr, cache_dpr):
+    # Hinting fits strokes to physical pixels; oversampling would fit a
+    # different grid. Unhinted outlines can retain their real cache detail.
+    return cache_dpr if font.hintingPreference() == QFont.PreferNoHinting else native_dpr
+
+
 class GlyphPaintDevice(QPaintDevice):
     def __init__(self, target, native_dpr, raster_origin=QPointF()):
         super().__init__()
@@ -25,6 +32,9 @@ class GlyphPaintDevice(QPaintDevice):
         self.native_dpr = native_dpr
         self.raster_origin = QPointF(raster_origin)
         self.engine = _GlyphPaintEngine(self)
+
+    def raster_dpr(self, font):
+        return glyph_raster_dpr(font, self.native_dpr, self.target.devicePixelRatioF())
 
     def paintEngine(self):
         return self.engine
@@ -231,7 +241,7 @@ class _GlyphPaintEngine(QPaintEngine):
                 painter.paintEngine().syncState()
                 painter.paintEngine().drawTextItem(position, item)
                 return
-            dpr = self.device.native_dpr
+            dpr = self.device.raster_dpr(item.font())
             origin = QPointF(painter.worldTransform().dx(), painter.worldTransform().dy())
             origin += self.device.raster_origin
             baseline = position + origin
@@ -275,8 +285,11 @@ class _GlyphPaintEngine(QPaintEngine):
                     # Preserve shaping, fallback fonts, bidi order and decorations.
                     # QPainter already draws decorations on the outer device.
                     # Its drawTextItem wrapper would paint underline/strikeout twice.
+                    # Translate the device, not the shaped baseline: fractional
+                    # tile offsets must not change Qt's glyph subpixel phase.
+                    raster.translate(-tile_origin)
                     raster.paintEngine().syncState()
-                    raster.paintEngine().drawTextItem(baseline - tile_origin, item)
+                    raster.paintEngine().drawTextItem(baseline, item)
                     raster.end()
                     del raster
                     painter.save()

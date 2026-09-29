@@ -11,6 +11,8 @@ if __name__ == "__main__":
     faulthandler.enable()
     faulthandler.dump_traceback_later(45)
 
+import fluentqt
+
 from PySide6.QtCore import QLineF, QPoint, QPointF, QRect, QRectF, Qt
 from PySide6.QtGui import (
     QColor, QFont, QImage, QLinearGradient, QPaintDevice, QPaintEngine, QPainter, QPainterPath, QPen, QRegion,
@@ -18,7 +20,9 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QApplication, QWidget
 
-from fluentqt_gallery.glyph_paint_device import GlyphPaintDevice, needs_native_glyph_coverage
+from fluentqt_gallery.glyph_paint_device import (
+    GlyphPaintDevice, glyph_raster_dpr, needs_native_glyph_coverage,
+)
 from fluentqt_gallery.spatial_support import SPATIAL_AVAILABLE
 
 
@@ -26,6 +30,7 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
+        fluentqt.initialize_resources()
 
     def setUp(self):
         self.errors = []
@@ -36,11 +41,12 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
         sys.excepthook = self.old_hook
         self.assertEqual(self.errors, [])
 
-    def render(self, draw, adapted, dpr=1, opaque=False, raster_origin=QPointF()):
+    def render(self, draw, adapted, dpr=1, opaque=False, raster_origin=QPointF(), native_dpr=None):
         image = QImage(960, 360, QImage.Format_ARGB32_Premultiplied)
         image.setDevicePixelRatio(dpr)
         image.fill(Qt.white if opaque else Qt.transparent)
-        device = GlyphPaintDevice(image, 1, raster_origin) if adapted else image
+        device = GlyphPaintDevice(image, dpr if native_dpr is None else native_dpr,
+                                  raster_origin) if adapted else image
         painter = QPainter(device)
         try:
             draw(painter)
@@ -77,6 +83,36 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
                     runtime.needsNativeGlyphCoverage.return_value = expected
                     self.assertEqual(needs_native_glyph_coverage(dpr), expected)
                     runtime.needsNativeGlyphCoverage.assert_called_with(dpr)
+
+    def test_raster_density_preserves_each_fonts_hinting_policy(self):
+        for hint in (QFont.PreferDefaultHinting, QFont.PreferNoHinting,
+                     QFont.PreferVerticalHinting, QFont.PreferFullHinting):
+            font = QFont()
+            font.setHintingPreference(hint)
+            for native, cache in ((1, 2), (1.5, 2.625), (2, 2)):
+                with self.subTest(hint=hint, native=native, cache=cache):
+                    self.assertEqual(glyph_raster_dpr(font, native, cache),
+                                     cache if hint == QFont.PreferNoHinting else native)
+
+    def test_shaped_items_choose_density_independently(self):
+        hints = (QFont.PreferDefaultHinting, QFont.PreferNoHinting,
+                 QFont.PreferVerticalHinting, QFont.PreferFullHinting)
+        observed = []
+        def density(font, native, cache):
+            result = glyph_raster_dpr(font, native, cache)
+            observed.append((font.hintingPreference(), result))
+            return result
+        def draw(painter):
+            font = QFont("Arial")
+            font.setPixelSize(14)
+            for row, hint in enumerate(hints):
+                font.setHintingPreference(hint)
+                painter.setFont(font)
+                painter.drawText(QPointF(12, 25 + row * 30), "Independent glyph policy")
+        with patch("fluentqt_gallery.glyph_paint_device.glyph_raster_dpr", side_effect=density):
+            self.render(draw, True, 2, native_dpr=1)
+        self.assertEqual(observed, [(hint, 2 if hint == QFont.PreferNoHinting else 1)
+                                    for hint in hints])
 
     def test_non_text_transform_clip_opacity_and_composition_are_forwarded(self):
         def draw(painter):
@@ -124,13 +160,54 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
             painter.setFont(font)
             painter.setOpacity(.65)
             painter.drawText(QPointF(13, 90), "abcdefghijklmnopqrstuvwxyz 0123456789 " * 3)
-        expected, _ = self.render(draw, False)
-        actual, device = self.render(draw, True)
-        self.assertGreater(device.engine.glyph_items, 2)
-        # Two source-over operations may differ by one premultiplied channel bit;
-        # glyph positions, fallback selection, decorations and coverage cannot move.
-        self.assertLessEqual(max(abs(a - b) for a, b in zip(
-            memoryview(actual.constBits()).cast("B"), memoryview(expected.constBits()).cast("B"))), 1)
+        for dpr in (1, 1.25, 1.5, 2):
+            with self.subTest(dpr=dpr):
+                expected, _ = self.render(draw, False, dpr)
+                actual, device = self.render(draw, True, dpr)
+                self.assertEqual(device.raster_dpr(QFont()), dpr)
+                self.assertGreater(device.engine.glyph_items, 2)
+                # Two source-over operations may differ by one premultiplied channel bit;
+                # shaping and decorations must match direct painting at the cache density.
+                self.assertLessEqual(max(abs(a - b) for a, b in zip(
+                    memoryview(actual.constBits()).cast("B"),
+                    memoryview(expected.constBits()).cast("B"))), 1)
+
+    def test_cache_density_rasterizes_detail_instead_of_enlarging_native_pixels(self):
+        def draw(painter):
+            font = QFont("Arial")
+            font.setPixelSize(14)
+            font.setHintingPreference(QFont.PreferNoHinting)
+            painter.setFont(font)
+            painter.setPen(Qt.black)
+            painter.drawText(QPointF(13, 30), "Small glyph detail 0123456789 " * 3)
+        expected, _ = self.render(draw, False, 2)
+        actual, device = self.render(draw, True, 2, native_dpr=1)
+        self.assertEqual(actual, expected)
+        self.assertGreater(device.engine.glyph_tiles, device.engine.glyph_items,
+                           "Long text must exercise the bounded tile boundary")
+        native, _ = self.render(draw, False)
+        enlarged = native.scaled(native.size() * 2, Qt.IgnoreAspectRatio, Qt.FastTransformation)
+        enlarged.setDevicePixelRatio(2)
+        self.assertNotEqual(actual.copy(0, 0, 900, 90), enlarged.copy(0, 0, 900, 90))
+
+    def test_fractional_tiles_preserve_shaped_font_phase_exactly(self):
+        def draw(painter):
+            font = fluentqt.font_for_role(fluentqt.FontRole.BodyStrong)
+            font.setUnderline(True)
+            font.setStrikeOut(True)
+            painter.setFont(font)
+            painter.setRenderHint(QPainter.TextAntialiasing)
+            painter.setPen(QColor(32, 90, 150, 210))
+            painter.setOpacity(.65)
+            painter.drawText(QPointF(7.25, 76.5), "Gallery 设置 · العربية · Popup 0123456789")
+        for dpr in (1.25, 1.5, 2.1875):
+            for origin in (QPointF(), QPointF(0, 197 / dpr)):
+                with self.subTest(dpr=dpr, origin=origin):
+                    expected, _ = self.render(draw, False, dpr)
+                    actual, device = self.render(draw, True, dpr, raster_origin=origin)
+                    self.assertGreater(device.engine.glyph_items, 1)
+                    self.assertEqual(actual, expected,
+                                     "Tile offsets must not move Qt's shaped glyph phase")
 
     def test_patterned_and_rotated_text_keep_original_painter_path(self):
         def draw(painter):

@@ -13,13 +13,21 @@
 
 namespace fluent::gallery::spatial_render {
 
-// The low-DPI GL glyph atlas loses coverage when the perspective cache is sampled
-// back to native density. Rasterize only Qt's already-shaped text items at that
-// density; all other painting, MSAA and panel resolution still use the GPU.
-// zh_CN: 低 DPI 的 GL 字形二次采样会损失覆盖率；仅以原生密度栅格化已排版字形。
+// Use Qt's rasterizer for low-DPI shaped text; geometry and composition stay on the GPU.
+// zh_CN: 低 DPI 已排版字形由 Qt 栅格化，几何与合成仍由 GPU 完成。
 inline bool needsNativeGlyphCoverage(qreal nativeDpr)
 {
     return spatial::SpatialRuntime::needsNativeGlyphCoverage(nativeDpr);
+}
+
+inline qreal glyphRasterDpr(const QFont& font, qreal nativeDpr, qreal cacheDpr)
+{
+    // Unhinted outlines retain more detail at cache density. Hinted glyphs must
+    // keep the output pixel grid; rerasterizing them at another size changes
+    // their grid fitting and can reduce native small-text contrast.
+    // zh_CN: 无 hinting 的轮廓按缓存密度保留细节；有 hinting 的字形保留输出像素网格，
+    // 避免重新栅格化改变网格对齐并降低小字对比度。按实际字形字体选择，不依赖平台分支。
+    return font.hintingPreference() == QFont::PreferNoHinting ? cacheDpr : nativeDpr;
 }
 
 class GalleryGlyphPaintDevice final : public QPaintDevice {
@@ -28,7 +36,10 @@ public:
         : m_target(target), m_nativeDpr(nativeDpr), m_rasterOrigin(rasterOrigin), m_engine(*this)
     {}
     QPaintEngine* paintEngine() const override { return &m_engine; }
-    qreal nativeDpr() const { return m_nativeDpr; }
+    qreal rasterDpr(const QFont& font) const
+    {
+        return glyphRasterDpr(font, m_nativeDpr, m_target.devicePixelRatioF());
+    }
     int glyphItems() const { return m_engine.glyphItems; }
     int glyphTiles() const { return m_engine.glyphTiles; }
     int systemClipApplications() const { return m_engine.systemClipApplications; }
@@ -230,7 +241,7 @@ private:
                     painter.paintEngine()->drawTextItem(position, item);
                     return;
                 }
-                const qreal dpr = device.m_nativeDpr;
+                const qreal dpr = device.rasterDpr(item.font());
                 const QPointF origin(painter.worldTransform().dx() + device.m_rasterOrigin.x(),
                                      painter.worldTransform().dy() + device.m_rasterOrigin.y());
                 const QPointF baseline = position + origin;
@@ -273,12 +284,16 @@ private:
                         raster.setRenderHints(painter.renderHints());
                         raster.setBackground(painter.background());
                         raster.setBackgroundMode(painter.backgroundMode());
+                        // Keep the shaped baseline's subpixel phase unchanged at
+                        // fractional DPR; tile offsets belong to the paint transform.
+                        // zh_CN: 分数缩放时保留已排版基线的亚像素相位，分块偏移交给绘制变换。
+                        raster.translate(-tileOrigin);
                         // QTextItem retains the fallback font, shaping, bidi order and decorations.
                         // Never re-layout item.text() as a new drawText call.
                         // QPainter paints underline/strikeout separately on the outer
                         // device. Dispatch directly to avoid drawing decorations twice.
                         raster.paintEngine()->syncState();
-                        raster.paintEngine()->drawTextItem(baseline - tileOrigin, item);
+                        raster.paintEngine()->drawTextItem(baseline, item);
                         raster.end();
                         painter.save();
                         painter.setOpacity(1);
