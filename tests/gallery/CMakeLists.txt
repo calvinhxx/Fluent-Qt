@@ -5,6 +5,7 @@ if(NOT TARGET FluentQtGalleryCore)
     message(FATAL_ERROR
         "Gallery tests require the shared FluentQtGalleryCore target")
 endif()
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Svg)
 if(NOT DEFINED FLUENT_QT_GALLERY_RESOURCES)
     set(FLUENT_QT_GALLERY_RESOURCES
         ${FLUENT_QT_GALLERY_SOURCE_DIR}/gallery_resources.qrc
@@ -59,7 +60,7 @@ add_qt_test_module(test_gallery_shell_framework
 )
 target_include_directories(test_gallery_shell_framework PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
 target_link_libraries(test_gallery_shell_framework
-    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network)
+    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
 target_compile_definitions(test_gallery_shell_framework PRIVATE
     FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH="$<TARGET_FILE:test_gallery_single_instance_probe>")
 add_dependencies(test_gallery_shell_framework test_gallery_single_instance_probe)
@@ -70,7 +71,7 @@ add_qt_test_module(test_gallery_shell_motion_policy
 target_include_directories(test_gallery_shell_motion_policy
     PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
 target_link_libraries(test_gallery_shell_motion_policy
-    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network)
+    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
 
 if(TARGET FluentQtSpatial)
 add_qt_test_module(test_gallery_spatial
@@ -80,7 +81,7 @@ add_qt_test_module(test_gallery_spatial
 )
 target_include_directories(test_gallery_spatial PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
 target_link_libraries(test_gallery_spatial
-    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network)
+    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
 if(QT_VERSION_MAJOR EQUAL 6)
     target_link_libraries(test_gallery_spatial PRIVATE Qt6::OpenGLWidgets)
 endif()
@@ -113,7 +114,7 @@ add_qt_test_module(test_gallery_content_pages
 )
 target_include_directories(test_gallery_content_pages PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
 target_link_libraries(test_gallery_content_pages
-    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network)
+    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
 target_compile_definitions(test_gallery_content_pages PRIVATE
     FLUENT_QT_GALLERY_VERSION="${PROJECT_VERSION}"
     FLUENT_QT_APPLICATION_SCENES_PATH="${CMAKE_SOURCE_DIR}/docs/ai/evals/application-scenes.json")

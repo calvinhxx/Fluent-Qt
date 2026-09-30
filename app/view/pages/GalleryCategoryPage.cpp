@@ -1,6 +1,5 @@
 #include "GalleryCategoryPage.h"
 
-#include <QPixmap>
 #include <QVector>
 
 #include "model/GalleryComponentCatalog.h"
@@ -42,23 +41,19 @@ GalleryCategoryPage::GalleryCategoryPage(const GalleryContentEntry& entry,
         if (const GalleryContentEntry* componentEntry = galleryContentEntry(item.id))
             description = componentEntry->description;
 
-        const QPixmap icon(galleryControlImageResource(item.title));
-        entries.append({item.id,
-                        item.title,
-                        description,
-                        icon,
-                        icon.isNull() ? item.iconGlyph : QString()});
+        const QString imageResource = galleryControlImageResource(item.title);
+        entries.append({item.id, item.title, description, imageResource,
+                        imageResource.isEmpty() ? item.iconGlyph : QString()});
     }
 
     grid->setEntries(entries);
-    connect(grid, &GalleryEntryGrid::activated,
-            this, &GalleryContentPage::routeActivated);
+    connect(grid, &GalleryEntryGrid::activated, this, &GalleryContentPage::routeActivated);
     addContentWidget(grid);
 
-    LOG_DEBUG(QStringLiteral("GalleryCategoryPage created routeId=%1 categoryId=%2 cards=%3")
-                  .arg(entry.routeId,
-                       includeAllCategories ? QStringLiteral("<all>") : entry.categoryId)
-                  .arg(entries.size()));
+    LOG_DEBUG(
+        QStringLiteral("GalleryCategoryPage created routeId=%1 categoryId=%2 cards=%3")
+            .arg(entry.routeId, includeAllCategories ? QStringLiteral("<all>") : entry.categoryId)
+            .arg(entries.size()));
 }
 
 } // namespace fluent::gallery

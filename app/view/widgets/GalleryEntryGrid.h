@@ -39,8 +39,8 @@ public:
         QString routeId;
         QString title;
         QString description;
-        QPixmap icon;      // control image; used when iconGlyph is empty
-        QString iconGlyph; // FluentQt Icons glyph drawn on a tile instead of `icon`
+        QString imageResource; // SVG artwork; used when iconGlyph is empty
+        QString iconGlyph;     // FluentQt Icons glyph drawn instead of artwork
     };
 
     explicit GalleryEntryGrid(QWidget* parent = nullptr);

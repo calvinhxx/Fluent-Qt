@@ -980,9 +980,9 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
         QString description;
         if (const GalleryContentEntry* componentEntry = galleryContentEntry(routeId))
             description = componentEntry->description;
-        const QPixmap icon(galleryControlImageResource(item->title));
-        featuredEntries.append({item->id, item->title, description, icon,
-                                icon.isNull() ? item->iconGlyph : QString()});
+        const QString imageResource = galleryControlImageResource(item->title);
+        featuredEntries.append({item->id, item->title, description, imageResource,
+                                imageResource.isEmpty() ? item->iconGlyph : QString()});
     }
     addEntryGrid(QStringLiteral("galleryHomeCards"))->setEntries(featuredEntries);
 
@@ -1000,7 +1000,7 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
         QString description;
         if (const GalleryContentEntry* categoryEntry = galleryContentEntry(item.id))
             description = categoryEntry->description;
-        categoryEntries.append({item.id, item.title, description, QPixmap(), item.iconGlyph});
+        categoryEntries.append({item.id, item.title, description, QString(), item.iconGlyph});
     };
     if (const GalleryNavigationItem* allControls =
             navigationViewModel.itemById(QStringLiteral("all-controls")))

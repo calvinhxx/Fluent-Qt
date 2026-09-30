@@ -2,10 +2,10 @@
 
 #include <QPainter>
 
-#include "compatibility/QtCompat.h"
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
 #include "model/GalleryComponentCatalog.h"
+#include "view/support/GalleryArtwork.h"
 
 namespace fluent::gallery {
 namespace {
@@ -17,8 +17,7 @@ constexpr int kGlyphSize = Typography::IconSize::Large;
 } // namespace
 
 GalleryIconTile::GalleryIconTile(const QString& controlName, QWidget* parent)
-    : QWidget(parent)
-    , m_pixmap(galleryControlImageResource(controlName))
+    : QWidget(parent), m_imageResource(galleryControlImageResource(controlName))
 {
     setObjectName(QStringLiteral("galleryIconTile"));
     setFixedSize(kTileSize, kTileSize);
@@ -52,12 +51,9 @@ void GalleryIconTile::paintEvent(QPaintEvent*)
         return;
     }
 
-    if (!m_pixmap.isNull()) {
+    if (!m_imageResource.isEmpty()) {
         const int inset = (kTileSize - kControlImageSize) / 2;
-        fluentDrawPixmapInLogicalRect(
-            painter,
-            rect().adjusted(inset, inset, -inset, -inset),
-            m_pixmap);
+        drawGalleryArtwork(painter, rect().adjusted(inset, inset, -inset, -inset), m_imageResource);
     }
 }
 

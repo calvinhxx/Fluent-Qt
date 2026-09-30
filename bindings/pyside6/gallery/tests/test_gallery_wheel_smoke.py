@@ -25,10 +25,10 @@ def verify_control_images(package_dir, recorded_files):
     expected = {
         Path(*path.parts[len(prefix):])
         for path in (recorded_files or ())
-        if path.parts[:len(prefix)] == prefix and path.suffix == ".png"
+        if path.parts[:len(prefix)] == prefix and path.suffix == ".svg"
     }
     image_root = package_dir / "assets/control_images"
-    actual = {path.relative_to(image_root) for path in image_root.rglob("*.png")}
+    actual = {path.relative_to(image_root) for path in image_root.rglob("*") if path.is_file()}
     if not expected or actual != expected:
         raise AssertionError(
             "Installed Gallery images differ from wheel RECORD: missing={0}, extra={1}".format(
@@ -52,16 +52,19 @@ def verify_source_contract(project_root, package_dir, contract):
     """Optional CI check against the exact source checkout being packaged."""
     if contract != native_contract(project_root):
         raise AssertionError("Installed Gallery contract differs from native sources")
-    source_root = project_root / "app/assets/control_images"
+    source_root = project_root / "tools/gallery/artwork"
     image_root = package_dir / "assets/control_images"
-    expected = {path.relative_to(source_root) for path in source_root.rglob("*.png")}
-    actual = {path.relative_to(image_root) for path in image_root.rglob("*.png")}
+    expected = {path.relative_to(source_root) for path in source_root.rglob("*.svg")}
+    actual = {path.relative_to(image_root) for path in image_root.rglob("*") if path.is_file()}
     if not expected or actual != expected:
         raise AssertionError(
             "Gallery images differ from native sources: missing={0}, extra={1}".format(
                 sorted(expected - actual), sorted(actual - expected)
             )
         )
+    for path in expected:
+        if (source_root / path).read_bytes() != (image_root / path).read_bytes():
+            raise AssertionError("Gallery artwork differs from its SVG master: {0}".format(path))
 
 
 def verify_runtime_catalog(contract, categories, entries, routes, support_types,
@@ -126,7 +129,7 @@ def main(argv=None):
         package_dir / "assets" / "app-icon.png",
         package_dir / "assets" / "icon_aliases.json",
         package_dir / "assets" / "icon_catalog.json",
-        package_dir / "assets" / "control_images" / "Placeholder.png",
+        package_dir / "assets" / "control_images" / "Placeholder.svg",
         package_dir
         / "assets"
         / "home_header_tiles"

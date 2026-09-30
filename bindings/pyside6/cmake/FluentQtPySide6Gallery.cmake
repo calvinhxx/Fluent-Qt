@@ -71,15 +71,13 @@ foreach(FLUENTQT_PYSIDE6_GALLERY_FILE
         COPYONLY)
 endforeach()
 
-# The standalone Gallery owns its application artwork.  The native C++ app is
-# still the canonical source so parity assets cannot silently diverge.
+# C++ and Python package the same SVG masters, with no duplicated source files.
 set(FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR
     "${PROJECT_SOURCE_DIR}/app/assets")
 set(FLUENTQT_PYSIDE6_GALLERY_ASSET_PACKAGE_DIR
     "${FLUENTQT_PYSIDE6_GALLERY_PACKAGE_DIR}/assets")
 file(GLOB_RECURSE FLUENTQT_PYSIDE6_GALLERY_ASSET_FILES
     CONFIGURE_DEPENDS
-    "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}/control_images/*.png"
     "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}/home_header_tiles/*.png")
 list(APPEND FLUENTQT_PYSIDE6_GALLERY_ASSET_FILES
     "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}/app-icon.png")
@@ -95,6 +93,22 @@ foreach(FLUENTQT_PYSIDE6_GALLERY_ASSET
     configure_file(
         "${FLUENTQT_PYSIDE6_GALLERY_ASSET}"
         "${FLUENTQT_PYSIDE6_GALLERY_ASSET_PACKAGE_DIR}/${FLUENTQT_PYSIDE6_GALLERY_ASSET_RELATIVE}"
+        COPYONLY)
+endforeach()
+
+set(FLUENTQT_PYSIDE6_GALLERY_ARTWORK_SOURCE_DIR
+    "${PROJECT_SOURCE_DIR}/tools/gallery/artwork")
+file(GLOB_RECURSE FLUENTQT_PYSIDE6_GALLERY_ARTWORK_FILES CONFIGURE_DEPENDS
+    "${FLUENTQT_PYSIDE6_GALLERY_ARTWORK_SOURCE_DIR}/*.svg")
+# This generated directory was formerly populated with PNG exports. Remove stale
+# staged assets when reconfiguring an existing build, including deleted SVGs.
+file(REMOVE_RECURSE "${FLUENTQT_PYSIDE6_GALLERY_ASSET_PACKAGE_DIR}/control_images")
+foreach(FLUENTQT_PYSIDE6_GALLERY_ARTWORK IN LISTS FLUENTQT_PYSIDE6_GALLERY_ARTWORK_FILES)
+    file(RELATIVE_PATH FLUENTQT_PYSIDE6_GALLERY_ARTWORK_RELATIVE
+        "${FLUENTQT_PYSIDE6_GALLERY_ARTWORK_SOURCE_DIR}"
+        "${FLUENTQT_PYSIDE6_GALLERY_ARTWORK}")
+    configure_file("${FLUENTQT_PYSIDE6_GALLERY_ARTWORK}"
+        "${FLUENTQT_PYSIDE6_GALLERY_ASSET_PACKAGE_DIR}/control_images/${FLUENTQT_PYSIDE6_GALLERY_ARTWORK_RELATIVE}"
         COPYONLY)
 endforeach()
 
@@ -166,12 +180,16 @@ install(FILES "${FLUENTQT_PYSIDE6_GALLERY_ICON_ALIASES}"
     COMPONENT FluentQtPySide6Gallery
     EXCLUDE_FROM_ALL)
 install(DIRECTORY
-    "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}/control_images"
     "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}/home_header_tiles"
     DESTINATION fluentqt_gallery/assets
     COMPONENT FluentQtPySide6Gallery
     EXCLUDE_FROM_ALL
     FILES_MATCHING PATTERN "*.png")
+install(DIRECTORY "${FLUENTQT_PYSIDE6_GALLERY_ARTWORK_SOURCE_DIR}/"
+    DESTINATION fluentqt_gallery/assets/control_images
+    COMPONENT FluentQtPySide6Gallery
+    EXCLUDE_FROM_ALL
+    FILES_MATCHING PATTERN "*.svg")
 install(FILES "${FLUENTQT_PYSIDE6_GALLERY_CONTRACT}"
     DESTINATION fluentqt_gallery
     COMPONENT FluentQtPySide6Gallery

@@ -43,7 +43,11 @@ any proprietary Segoe font outlines.
 
 The reusable FluentQt library dynamically links to Qt Core, Qt GUI, and Qt
 Widgets. The optional Spatial module additionally uses Qt OpenGL and
-OpenGLWidgets on Qt 6, or QOpenGLWidget from Widgets on Qt 5. The Gallery also dynamically links to Qt Network. Official Windows
+OpenGLWidgets on Qt 6, or QOpenGLWidget from Widgets on Qt 5. The Gallery also
+dynamically links to Qt Network and Qt SVG. Qt SVG renders the bundled component
+card artwork and is available under LGPLv3; see the upstream
+[Qt SVG license information](https://doc.qt.io/qt-6/qtsvg-index.html#licenses-and-attributions).
+Official Windows
 and macOS Gallery packages use Qt's shared libraries and deploy only the Qt
 libraries and plug-ins selected by `windeployqt` or `macdeployqt`. Linux DEB
 packages do not bundle Qt; they depend on the distribution's Qt packages.
@@ -56,12 +60,12 @@ corresponding-source offer, and replacement/relinking instructions are under
 `third_party/runtime/qt/NOTICE.md` and are installed with binary packages.
 
 For every official package that contains Qt binaries, the distributor must
-retain the exact corresponding Qt Base source under its control for the period
+retain the exact corresponding Qt Base and Qt SVG sources under its control for the period
 stated in the written offer. `qtbase` covers the Qt Core, GUI, Widgets, Network, OpenGL, OpenGLWidgets,
 and platform plug-in runtime contract currently used by Gallery, including the
-third-party source and license material shipped inside Qt Base. If the runtime
-contract grows beyond Qt Base, the corresponding module source must be added
-before publishing the package.
+third-party source and license material shipped inside Qt Base. `qtsvg` covers
+the Gallery's SVG renderer. If the runtime contract grows beyond these modules,
+the corresponding module source must be added before publishing the package.
 
 The C++ Web Gallery is a separate static WebAssembly distribution built with
 Qt 6.9.3 `wasm_singlethread`. Its open-source binary is conveyed under GPLv3;

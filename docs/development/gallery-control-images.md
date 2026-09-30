@@ -27,14 +27,20 @@ Rules for Gallery component-card artwork under
   (for example `layout`, `status-info`, `foundation`)
 - `<Title>` matches the Gallery card title
   (for example `Card.png`, `Toast.png`, `FontIcon.png`)
-- Register every new file in `app/gallery_resources.qrc`
+- Register the SVG master in `app/gallery_resources.qrc`, using an
+  `assets/control_images/<category-id>/<Title>.svg` alias and the relative
+  `../tools/gallery/artwork/<category-id>/<Title>.svg` source path.
 - Resolve images through `galleryControlImageResource()`; do not hard-code
   fallbacks that reuse unrelated category artwork
-- Edit the SVG master and regenerate its PNG. Keep PNG paths stable for C++,
-  Python, and WebAssembly; only the PNG exports are packaged.
+- Edit the SVG master and regenerate its PNG. C++, Python, and WebAssembly
+  display and package the SVG masters; PNGs remain checked-in exports.
 - Masters contain self-contained vector geometry on a `0 0 72 72` view box.
   Outline text before saving; embedded bitmaps, external references, and live
   font-dependent text are rejected by the exporter.
+- Use basic paths, shapes, groups, and linear/radial gradients supported by
+  Qt 5.15 and Qt 6. The exporter rejects unsupported clipping and newer SVG
+  masks, filters, patterns, symbols, and markers. Bake such effects into
+  ordinary vector geometry when authoring artwork.
 
 ## Canvas and Alpha
 
@@ -53,12 +59,16 @@ at 4x resolution with Qt SVG and downsamples with Qt's smooth image scaler.
 Preserve partial-alpha edge pixels rather than thresholding curves to opaque
 or transparent pixels.
 
-Gallery cards reserve a 40 × 40 logical-pixel icon slot but center bitmap
-artwork in a 36 × 36 rectangle. This maps a 72 × 72 source one-for-one on a
-2x backing store instead of blurring it through a 72 → 80 upscale. Do not
-enlarge the bitmap to fill the slot in application or binding code. FontIcon
-glyph tiles may use the complete 40 × 40 slot because they render at the target
-device resolution.
+Gallery cards reserve a 40 × 40 logical-pixel icon slot and center SVG artwork
+in a 36 × 36 rectangle. `GalleryArtwork` and its Python counterpart render the
+SVG at the paint device's pixel ratio: 45 × 45 at 125%, 72 × 72 at 2x, and
+108 × 108 at 3x. They cache parsed documents with a 128-entry limit and reuse
+Qt's memory-bounded pixmap cache, keyed by source, physical size, and pixel
+ratio. Warm scrolling and repainting reuse those pixels; a scale change gets
+a fresh SVG render. FontIcon glyph tiles use the complete 40 × 40 slot.
+
+Qt SVG is a Gallery dependency. The base `FluentQt` library remains independent
+of it. The Python Gallery uses the Qt SVG module supplied by PySide6.
 
 ## Category Color Families
 
@@ -90,7 +100,7 @@ control.
 4. Export the PNG with the shared tool below. Canvas corners remain alpha 0
    and curved edges retain partial coverage.
 5. Keep the export under the matching `control_images/<category-id>/` folder.
-6. Register it in `app/gallery_resources.qrc`.
+6. Register the SVG master and its runtime alias in `app/gallery_resources.qrc`.
 7. Rebuild Gallery and confirm the card image on light and dark chrome.
 8. Run the source/export freshness check and the canvas/resource audit below.
 
@@ -116,6 +126,10 @@ python3 tools/gallery/export_control_images.py --check navigation/Stepper
 `--check` compares decoded pixels without rewriting files. It reports stale or
 missing PNGs and PNGs without a corresponding master. The canvas audit also
 checks source coverage and registration in `app/gallery_resources.qrc`.
+The shared CI and release preflight run `validate_control_artwork.py` without
+Qt or Pillow to check SVG compatibility, paired export coverage, resource
+aliases, and duplicate registrations. Pixel freshness and alpha checks use
+the tools above in the matched development environment.
 All categories use this exporter; category-specific drawing scripts are not
 alternative sources of truth.
 

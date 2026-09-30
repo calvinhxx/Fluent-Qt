@@ -252,7 +252,7 @@ GalleryComponentReference galleryComponentReference(const QString& routeId)
 QString galleryControlImageResource(const QString& controlTitle)
 {
     static const QString placeholder =
-        QStringLiteral(":/app/assets/control_images/Placeholder.png");
+        QStringLiteral(":/app/assets/control_images/Placeholder.svg");
 
     // Foundation topics are content routes, not entries in galleryComponentCatalog(), so the
     // title->category lookup below can't resolve them — and their display titles (for example
@@ -262,17 +262,17 @@ QString galleryControlImageResource(const QString& controlTitle)
     // 故在此用干净的 ASCII 图片名显式映射它们。
     static const QHash<QString, QString> foundationOverrides = {
         {QStringLiteral("QML+"),
-         QStringLiteral(":/app/assets/control_images/foundation/QMLPlus.png")},
+         QStringLiteral(":/app/assets/control_images/foundation/QMLPlus.svg")},
         {QStringLiteral("Typography"),
-         QStringLiteral(":/app/assets/control_images/foundation/Typography.png")},
+         QStringLiteral(":/app/assets/control_images/foundation/Typography.svg")},
         {QStringLiteral("Color"),
-         QStringLiteral(":/app/assets/control_images/foundation/Color.png")},
+         QStringLiteral(":/app/assets/control_images/foundation/Color.svg")},
         {QStringLiteral("Iconography"),
-         QStringLiteral(":/app/assets/control_images/foundation/Iconography.png")},
+         QStringLiteral(":/app/assets/control_images/foundation/Iconography.svg")},
         {QStringLiteral("Geometry"),
-         QStringLiteral(":/app/assets/control_images/foundation/Geometry.png")},
+         QStringLiteral(":/app/assets/control_images/foundation/Geometry.svg")},
         {QStringLiteral("Spacing"),
-         QStringLiteral(":/app/assets/control_images/foundation/Spacing.png")},
+         QStringLiteral(":/app/assets/control_images/foundation/Spacing.svg")},
     };
     const auto foundationIt = foundationOverrides.constFind(controlTitle);
     if (foundationIt != foundationOverrides.constEnd())
@@ -294,7 +294,7 @@ QString galleryControlImageResource(const QString& controlTitle)
         return QString();
 
     const QString candidate =
-        QStringLiteral(":/app/assets/control_images/%1/%2.png").arg(it.value(), controlTitle);
+        QStringLiteral(":/app/assets/control_images/%1/%2.svg").arg(it.value(), controlTitle);
     return QFile::exists(candidate) ? candidate : QString();
 }
 

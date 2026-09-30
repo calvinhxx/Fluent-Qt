@@ -55,10 +55,12 @@ from PySide6.QtGui import (
     QPalette,
     QPen,
     QPixmap,
+    QPixmapCache,
     QRadialGradient,
     QStandardItem,
     QStandardItemModel,
 )
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -292,9 +294,8 @@ ROUTE_ICON_NAMES = {
 }
 
 
-# Control images are authored at 72 physical pixels. A 36 logical-pixel draw
-# rect maps them one-for-one on the common 2x desktop backing store, while the
-# surrounding 40-pixel slot preserves the native Gallery card layout.
+# Preserve the accepted 36 logical-pixel artwork footprint in a 40-pixel slot.
+# The SVG supplies the physical pixels required by the current paint device.
 CONTROL_IMAGE_SIZE = 36
 
 
@@ -309,10 +310,71 @@ def route_icon_name(route_id: str) -> str:
 
 def control_image_path(category_id: str, title: str) -> Path:
     file_title = {"QML+": "QMLPlus"}.get(title, title)
-    candidate = asset_path("control_images", category_id, file_title + ".png")
+    packaged = Path(__file__).resolve().with_name("assets") / "control_images"
+    source_root = packaged
+    if not packaged.is_dir():
+        for parent in Path(__file__).resolve().parents:
+            checkout = parent / "tools/gallery/artwork"
+            if checkout.is_dir():
+                source_root = checkout
+                break
+    candidate = source_root / category_id / (file_title + ".svg")
     if candidate.is_file():
         return candidate
-    return asset_path("control_images", "Placeholder.png")
+    return source_root / "Placeholder.svg"
+
+
+@lru_cache(maxsize=128)
+def _gallery_artwork_renderer(path: str) -> QSvgRenderer | None:
+    renderer = QSvgRenderer(path)
+    return renderer if renderer.isValid() else None
+
+
+def _gallery_artwork_pixmap(path: Path, logical_size: QSize, dpr: float) -> QPixmap:
+    """Match the C++ SVG cache; Qt bounds the shared pixmap cache by bytes."""
+    if logical_size.isEmpty() or not math.isfinite(dpr):
+        return QPixmap()
+    dpr = max(1.0, dpr)
+    physical_size = QSize(
+        max(1, _qround(logical_size.width() * dpr)),
+        max(1, _qround(logical_size.height() * dpr)),
+    )
+    key = (
+        f"fluentqt-gallery-svg:{path}:{physical_size.width()}x"
+        f"{physical_size.height()}:{dpr:.17g}"
+    )
+    pixmap = QPixmap()
+    if QPixmapCache.find(key, pixmap):
+        return pixmap
+    renderer = _gallery_artwork_renderer(str(path))
+    if renderer is None:
+        return pixmap
+    pixmap = QPixmap(physical_size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.Antialiasing)
+    renderer.render(painter, QRectF(QPointF(), physical_size))
+    painter.end()
+    pixmap.setDevicePixelRatio(dpr)
+    QPixmapCache.insert(key, pixmap)
+    return pixmap
+
+
+def _draw_gallery_artwork(painter: QPainter, rect: QRect, path: Path) -> None:
+    # QWidget.render may redirect painting without changing device().devicePixelRatioF().
+    transform = painter.deviceTransform()
+    dpr = max(
+        painter.device().devicePixelRatioF(),
+        math.hypot(transform.m11(), transform.m12()),
+        math.hypot(transform.m21(), transform.m22()),
+    )
+    pixmap = _gallery_artwork_pixmap(path, rect.size(), dpr)
+    if not pixmap.isNull():
+        logical_size = QSizeF(pixmap.size()) / pixmap.devicePixelRatioF()
+        top_left = QRectF(rect).center() - QPointF(
+            logical_size.width() / 2, logical_size.height() / 2,
+        )
+        painter.drawPixmap(top_left, pixmap)
 
 
 class _GalleryIconTile(QWidget):
@@ -320,12 +382,12 @@ class _GalleryIconTile(QWidget):
 
     def __init__(
         self,
-        pixmap: QPixmap,
+        image_path: Path | None,
         glyph: str,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self._pixmap = QPixmap(pixmap)
+        self._image_path = image_path
         self._glyph = glyph
         self.setObjectName("galleryIconTile")
         self.setFixedSize(40, 40)
@@ -348,11 +410,11 @@ class _GalleryIconTile(QWidget):
                 20,
                 colors.text_primary,
             )
-        elif not self._pixmap.isNull():
-            _draw_pixmap_in_logical_rect(
+        elif self._image_path is not None:
+            _draw_gallery_artwork(
                 painter,
                 _control_image_rect(self.rect()),
-                self._pixmap,
+                self._image_path,
             )
 
 
@@ -375,10 +437,12 @@ class GalleryEntryCard(QFrame):
         self._entry_title = title
         self._entry_description = description
         self._entry_icon_name = icon_name or route_icon_name(route_id)
-        self._entry_pixmap = (
-            QPixmap(str(image_path))
-            if image_path is not None and image_path.is_file()
-            else QPixmap()
+        self._entry_image_path = (
+            image_path
+            if image_path is not None
+            and image_path.is_file()
+            and _gallery_artwork_renderer(str(image_path)) is not None
+            else None
         )
         self.setObjectName("galleryEntryCard")
         self.setProperty("galleryTargetRouteId", route_id)
@@ -391,8 +455,8 @@ class GalleryEntryCard(QFrame):
         layout.setSpacing(16)
 
         tile = _GalleryIconTile(
-            self._entry_pixmap,
-            "" if not self._entry_pixmap.isNull() else self._entry_icon_name,
+            self._entry_image_path,
+            "" if self._entry_image_path is not None else self._entry_icon_name,
             self,
         )
         layout.addWidget(tile, 0, Qt.AlignTop)
@@ -691,7 +755,7 @@ class GalleryEntryGrid(QWidget):
                 self.ICON_SIZE,
                 self.ICON_SIZE,
             )
-            if card._entry_pixmap.isNull():
+            if card._entry_image_path is None:
                 painter.setPen(Qt.NoPen)
                 painter.setBrush(colors.subtle)
                 painter.drawRoundedRect(icon_rect, 4.0, 4.0)
@@ -703,10 +767,10 @@ class GalleryEntryGrid(QWidget):
                     colors.text_primary,
                 )
             else:
-                _draw_pixmap_in_logical_rect(
+                _draw_gallery_artwork(
                     painter,
                     _control_image_rect(icon_rect),
-                    card._entry_pixmap,
+                    card._entry_image_path,
                 )
 
             text_left = icon_rect.right() + 1 + self.ICON_TEXT_GAP
