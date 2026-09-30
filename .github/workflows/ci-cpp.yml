@@ -429,6 +429,7 @@ jobs:
         env:
           QT_QPA_PLATFORM: ${{ matrix.qt_qpa_platform || 'offscreen' }}
           SKIP_VISUAL_TEST: 1
+          FLUENT_QT_SPATIAL_EVIDENCE: ${{ github.workspace }}/build/${{ matrix.preset }}/Testing/SpatialEvidence
           ASAN_OPTIONS: ${{ matrix.asan_options || '' }}
           UBSAN_OPTIONS: ${{ matrix.ubsan_options || '' }}
         run: |
@@ -592,6 +593,7 @@ jobs:
             build/${{ matrix.preset }}/CMakeFiles/CMakeConfigureLog.yaml
             build/${{ matrix.preset }}/Testing/Temporary/LastTest.log
             build/${{ matrix.preset }}/Testing/Temporary/LastTestsFailed.log
+            build/${{ matrix.preset }}/Testing/SpatialEvidence/
             build/${{ matrix.preset }}/vcpkg-manifest-install.log
             build/${{ matrix.package_build_preset }}/CMakeCache.txt
             build/${{ matrix.package_build_preset }}/_CPack_Packages/**/*.log

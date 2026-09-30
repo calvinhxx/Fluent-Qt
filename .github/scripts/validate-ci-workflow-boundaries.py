@@ -973,6 +973,7 @@ def validate_cpp_execution_contract(cpp: str) -> list[str]:
         "        env:",
         "          QT_QPA_PLATFORM: ${{ matrix.qt_qpa_platform || 'offscreen' }}",
         "          SKIP_VISUAL_TEST: 1",
+        "          FLUENT_QT_SPATIAL_EVIDENCE: ${{ github.workspace }}/build/${{ matrix.preset }}/Testing/SpatialEvidence",
         "          ASAN_OPTIONS: ${{ matrix.asan_options || '' }}",
         "          UBSAN_OPTIONS: ${{ matrix.ubsan_options || '' }}",
         "        run: |",
