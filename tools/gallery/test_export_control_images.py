@@ -68,6 +68,19 @@ class SourceContract(ArtworkFixture):
         with self.assertRaisesRegex(ValueError, "external artwork"):
             validate_source(self.write_source(data=data))
 
+    def test_features_outside_the_shared_qt_svg_subset_are_rejected(self):
+        for element in ('<clipPath id="bounds"/>', '<mask id="mask"/>', '<filter id="blur"/>',
+                        '<pattern id="dots"/>', '<symbol id="shape"/>', '<marker id="arrow"/>'):
+            with self.subTest(element=element):
+                data = SVG.format(color="blue").replace('</svg>', element + '</svg>')
+                with self.assertRaisesRegex(ValueError, "Qt 5.15-compatible"):
+                    validate_source(self.write_source(data=data))
+        for attribute in ('clip-path', 'mask', 'filter', 'marker-start', 'marker-mid', 'marker-end'):
+            with self.subTest(attribute=attribute):
+                data = SVG.format(color="blue").replace('<rect ', f'<rect {attribute}="url(#effect)" ')
+                with self.assertRaisesRegex(ValueError, "Qt 5.15-compatible"):
+                    validate_source(self.write_source(data=data))
+
 
 class ExportContract(ArtworkFixture):
     @classmethod
