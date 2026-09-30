@@ -2322,8 +2322,11 @@ TEST_F(GallerySpatialTest, GlyphTilesPreserveVerticalSeamsAndBoundOversizedFonts
         SCOPED_TRACE(fontSize);
         const auto paint = [fontSize](QPaintDevice* target) {
             QPainter painter(target);
-            QFont font = Typography::Styles::Body.toQFont();
+            // A fixed-width face keeps the guard within the tile budget across
+            // font backends, while the UI-font phase is covered above.
+            QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
             font.setPixelSize(fontSize);
+            fluentConfigureTextRendering(font);
             painter.setFont(font);
             painter.setPen(QColor(32, 90, 150, 210));
             painter.setOpacity(.65);

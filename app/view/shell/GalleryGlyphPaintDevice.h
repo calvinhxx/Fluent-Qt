@@ -255,7 +255,8 @@ private:
                 const qreal guardWidth =
                     (metrics.maxWidth() - qMin(qreal(0), metrics.minRightBearing())) * dpr + 2;
                 const qreal guardHeight = qMax(metrics.descent(), item.descent()) * dpr + 2;
-                if (guardWidth >= 512 || guardHeight >= 128) {
+                // Rounding the guard up must leave at least one payload pixel.
+                if (guardWidth > 511 || guardHeight > 127) {
                     // Oversized fonts retain the delegate's semantics without
                     // allocating a tile larger than the cache plan reserves.
                     painter.paintEngine()->syncState();
@@ -300,6 +301,7 @@ private:
                         glyph.fill(Qt::transparent);
                         const QPointF tileOrigin(left / dpr, top / dpr);
                         QPainter raster(&glyph);
+                        raster.setFont(item.font());
                         raster.setPen(painter.pen());
                         // Keep opacity in the glyph rasterizer: native font backends
                         // may select different coverage than a later image blend.

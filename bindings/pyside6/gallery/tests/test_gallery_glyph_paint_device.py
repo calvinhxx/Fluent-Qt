@@ -16,7 +16,7 @@ import fluentqt
 
 from PySide6.QtCore import QLineF, QPoint, QPointF, QRect, QRectF, Qt
 from PySide6.QtGui import (
-    QColor, QFont, QFontMetricsF, QImage, QLinearGradient, QPaintDevice, QPaintEngine, QPainter, QPainterPath, QPen, QRegion,
+    QColor, QFont, QFontDatabase, QFontMetricsF, QImage, QLinearGradient, QPaintDevice, QPaintEngine, QPainter, QPainterPath, QPen, QRegion,
     QTransform,
 )
 from PySide6.QtWidgets import QApplication, QWidget
@@ -235,8 +235,13 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
         for font_size in (68, 1024):
             with self.subTest(font_size=font_size):
                 def draw(painter):
-                    font = fluentqt.font_for_role(fluentqt.FontRole.Body)
+                    # Fixed-width metrics keep this tiling case inside the
+                    # scratch budget across CoreText, FreeType and DirectWrite.
+                    font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
                     font.setPixelSize(font_size)
+                    policy = fluentqt.font_for_role(fluentqt.FontRole.Body)
+                    font.setHintingPreference(policy.hintingPreference())
+                    font.setStyleStrategy(policy.styleStrategy())
                     painter.setFont(font)
                     painter.setPen(QColor(32, 90, 150, 210))
                     painter.setOpacity(.65)
@@ -257,6 +262,23 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
                 else:
                     self.assertEqual(image.call_count, 0)
                     self.assertEqual(device.engine.glyph_tiles, 0)
+
+    def test_guard_rounding_leaves_a_positive_payload(self):
+        def draw(painter):
+            painter.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+            painter.drawText(QPointF(12, 30), "Rounded guard boundary")
+        expected, _ = self.render(draw, False)
+        for width, descent in ((509.5, 10), (10, 125.5)):
+            with self.subTest(width=width, descent=descent):
+                def metrics(font):
+                    real = QFontMetricsF(font)
+                    return SimpleNamespace(maxWidth=lambda: width, minRightBearing=lambda: 0,
+                                           descent=lambda: descent, boundingRect=real.boundingRect)
+                with patch("fluentqt_gallery.glyph_paint_device.QFontMetricsF", side_effect=metrics):
+                    actual, device = self.render(draw, True)
+                self.assertEqual(actual, expected)
+                self.assertEqual(device.engine.glyph_tiles, 0,
+                                 "Rounding a guard to the full tile extent must use the delegate")
 
     def test_glyph_tiles_are_bounded_by_visible_clip(self):
         def draw(painter):
