@@ -8,7 +8,7 @@ and multisampling still use the target device.
 import math
 import weakref
 
-from PySide6.QtCore import QPointF, QRectF, Qt, qVersion
+from PySide6.QtCore import QPoint, QPointF, QRectF, QSize, QSizeF, Qt, qVersion
 from PySide6.QtGui import (
     QFont, QFontMetricsF, QImage, QPaintDevice, QPaintEngine, QPainter,
     QPainterPath, QRegion, QTransform,
@@ -250,17 +250,21 @@ class _GlyphPaintEngine(QPaintEngine):
             dpr = self.device.raster_dpr(item.font())
             if not _EXACT_DPR_METRICS:
                 dpr = math.floor(dpr * 65536) / 65536
-            metrics = QFontMetricsF(item.font())
-            # Keep partial glyph origins positive without increasing the tile budget.
-            padding_x = math.ceil((metrics.maxWidth() + max(0, -metrics.minRightBearing()) + 2) * dpr)
-            padding_y = math.ceil((metrics.descent() + 2) * dpr)
-            if padding_x >= 256 or padding_y >= 64:
-                painter.paintEngine().syncState()
-                painter.paintEngine().drawTextItem(position, item)
-                return
             origin = QPointF(painter.worldTransform().dx(), painter.worldTransform().dy())
             origin += self.device.raster_origin
             baseline = position + origin
+            metrics = QFontMetricsF(item.font())
+            # Guard the leading edges without exceeding the 512 x 128 budget.
+            # Fixed-point truncation can change the phase when a crossing
+            # glyph's raster origin becomes negative inside the next tile.
+            guard_width = (metrics.maxWidth() - min(0, metrics.minRightBearing())) * dpr + 2
+            guard_height = max(metrics.descent(), item.descent()) * dpr + 2
+            if guard_width >= 512 or guard_height >= 128:
+                painter.paintEngine().syncState()
+                painter.paintEngine().drawTextItem(position, item)
+                return
+            guard = QSize(math.ceil(guard_width), math.ceil(guard_height))
+            payload = QSize(512 - guard.width(), 128 - guard.height())
             ink = metrics.boundingRect(item.text())
             ink = ink.united(QRectF(0, -item.ascent(), item.width(), item.ascent() + item.descent()))
             ink = ink.adjusted(-2, -2, 2, 2).translated(baseline)
@@ -278,11 +282,13 @@ class _GlyphPaintEngine(QPaintEngine):
             pixels = QTransform.fromScale(dpr, dpr).mapRect(ink).toAlignedRect()
             # One 256 KiB image plus its upload is reserved by the panel cache plan.
             # Release every tile immediately; no persistent or per-frame glyph cache.
-            for top in range(pixels.top(), pixels.bottom() + 1, 128 - padding_y):
-                for left in range(pixels.left(), pixels.right() + 1, 512 - padding_x):
-                    width = min(512 - padding_x, pixels.right() - left + 1)
-                    height = min(128 - padding_y, pixels.bottom() - top + 1)
-                    glyph = QImage(width + padding_x, height + padding_y,
+            for top in range(pixels.top(), pixels.bottom() + 1, payload.height()):
+                for left in range(pixels.left(), pixels.right() + 1, payload.width()):
+                    size = QSize(min(payload.width(), pixels.right() - left + 1),
+                                 min(payload.height(), pixels.bottom() - top + 1))
+                    tile = QPoint(max(0, left - guard.width()), max(0, top - guard.height()))
+                    prefix = QPoint(left, top) - tile
+                    glyph = QImage(size + QSize(prefix.x(), prefix.y()),
                                    QImage.Format_ARGB32_Premultiplied)
                     if glyph.isNull():
                         continue
@@ -301,11 +307,11 @@ class _GlyphPaintEngine(QPaintEngine):
                     # Preserve shaping, fallback fonts, bidi order and decorations.
                     # QPainter already draws decorations on the outer device.
                     # Its drawTextItem wrapper would paint underline/strikeout twice.
-                    # Translate the device, not the shaped baseline: fractional
-                    # tile offsets must not change Qt's glyph subpixel phase.
+                    # Keep the shaped position intact: Qt's outline path can
+                    # quantize it before applying the strip/tile transform.
                     raster.setWorldTransform(QTransform(dpr, 0, 0, dpr,
-                                                        origin.x() * dpr + padding_x - left,
-                                                        origin.y() * dpr + padding_y - top))
+                                                        origin.x() * dpr - tile.x(),
+                                                        origin.y() * dpr - tile.y()))
                     raster.paintEngine().syncState()
                     raster.paintEngine().drawTextItem(position, item)
                     raster.end()
@@ -314,9 +320,9 @@ class _GlyphPaintEngine(QPaintEngine):
                     painter.save()
                     painter.setOpacity(1)
                     painter.setRenderHint(QPainter.SmoothPixmapTransform, False)
-                    painter.drawImage(QRectF(tile_origin.x() - origin.x(), tile_origin.y() - origin.y(),
-                                             width / dpr, height / dpr), glyph,
-                                      QRectF(padding_x, padding_y, width, height))
+                    painter.drawImage(QRectF(tile_origin - origin,
+                                             QSizeF(size.width() / dpr, size.height() / dpr)),
+                                      glyph, QRectF(prefix, size))
                     painter.restore()
                     del glyph
         self._forward(draw)

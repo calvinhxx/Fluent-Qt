@@ -239,26 +239,28 @@ private:
                     return;
                 }
                 const qreal dpr = painting::imageRasterDpr(device.rasterDpr(item.font()));
+                const QPointF origin(painter.worldTransform().dx() + device.m_rasterOrigin.x(),
+                                     painter.worldTransform().dy() + device.m_rasterOrigin.y());
+                const QPointF baseline = position + origin;
                 const QFontMetricsF metrics(item.font());
-                // Qt's rasterizer can round negative glyph origins differently
-                // (notably Qt 5). Keep seam-crossing origins in a positive guard
-                // band while reserving that guard inside the fixed tile budget.
-                // zh_CN: Qt 栅格化对负字形原点的取整可能不同（尤其是 Qt 5）；在固定
-                // 分块预算内预留保护区，让跨缝字形原点为正，保留原始亚像素覆盖率。
-                const QSize padding(
-                    qCeil((metrics.maxWidth() + qMax(qreal(0), -metrics.minRightBearing()) + 2) *
-                          dpr),
-                    qCeil((metrics.descent() + 2) * dpr));
-                if (padding.width() >= 256 || padding.height() >= 64) {
-                    // Oversized glyphs retain Qt's direct path instead of
-                    // exceeding the fixed tile budget or leaving a partial guard.
+                // A glyph crossing a tile's leading edge must retain a positive
+                // raster origin. Qt 5 truncates fixed-point coordinates toward
+                // zero, so moving that origin below zero changes its phase.
+                // Keep the guard inside the existing 512 x 128 scratch budget.
+                // zh_CN: 给分块前沿保留字形保护边，避免跨边界字形变成负坐标后
+                // 被 Qt 5 向零截断而改变相位；保护边计入既有 512 x 128 内存上限。
+                const qreal guardWidth =
+                    (metrics.maxWidth() - qMin(qreal(0), metrics.minRightBearing())) * dpr + 2;
+                const qreal guardHeight = qMax(metrics.descent(), item.descent()) * dpr + 2;
+                if (guardWidth >= 512 || guardHeight >= 128) {
+                    // Oversized fonts retain the delegate's semantics without
+                    // allocating a tile larger than the cache plan reserves.
                     painter.paintEngine()->syncState();
                     painter.paintEngine()->drawTextItem(position, item);
                     return;
                 }
-                const QPointF origin(painter.worldTransform().dx() + device.m_rasterOrigin.x(),
-                                     painter.worldTransform().dy() + device.m_rasterOrigin.y());
-                const QPointF baseline = position + origin;
+                const QSize guard(qCeil(guardWidth), qCeil(guardHeight));
+                const QSize payload(512 - guard.width(), 128 - guard.height());
                 QRectF ink = metrics.boundingRect(item.text());
                 ink = ink.united(
                     QRectF(0, -item.ascent(), item.width(), item.ascent() + item.descent()));
@@ -278,13 +280,17 @@ private:
                 const QRect pixels = QTransform::fromScale(dpr, dpr).mapRect(ink).toAlignedRect();
                 // One 256 KiB CPU tile plus its upload is reserved by the cache plan.
                 // Tiles and their Qt texture-cache keys die immediately; no glyph LRU.
-                const QSize contentSize = QSize(512, 128) - padding;
-                for (int top = pixels.top(); top <= pixels.bottom(); top += contentSize.height()) {
+                for (int top = pixels.top(); top <= pixels.bottom(); top += payload.height()) {
                     for (int left = pixels.left(); left <= pixels.right();
-                         left += contentSize.width()) {
-                        const QSize size(qMin(contentSize.width(), pixels.right() - left + 1),
-                                         qMin(contentSize.height(), pixels.bottom() - top + 1));
-                        QImage glyph(size + padding, QImage::Format_ARGB32_Premultiplied);
+                         left += payload.width()) {
+                        const QSize size(qMin(payload.width(), pixels.right() - left + 1),
+                                         qMin(payload.height(), pixels.bottom() - top + 1));
+                        // Leave the canvas origin unchanged at the outer edge.
+                        const QPoint tile(qMax(0, left - guard.width()),
+                                          qMax(0, top - guard.height()));
+                        const QPoint prefix = QPoint(left, top) - tile;
+                        QImage glyph(size + QSize(prefix.x(), prefix.y()),
+                                     QImage::Format_ARGB32_Premultiplied);
                         if (glyph.isNull())
                             continue;
                         ++glyphTiles;
@@ -299,14 +305,14 @@ private:
                         raster.setRenderHints(painter.renderHints());
                         raster.setBackground(painter.background());
                         raster.setBackgroundMode(painter.backgroundMode());
-                        // Keep the shaped baseline unchanged and translate in
-                        // physical pixels; a logical-pixel round trip can alter
-                        // glyph phase at fractional strip origins.
-                        // zh_CN: 保留已排版基线，直接用物理像素平移，避免逻辑坐标往返
-                        // 在分数分块原点处改变字形的亚像素相位。
-                        raster.setWorldTransform(
-                            QTransform(dpr, 0, 0, dpr, origin.x() * dpr + padding.width() - left,
-                                       origin.y() * dpr + padding.height() - top));
+                        // Preserve the original shaped position: Qt's outline
+                        // path may quantize it before applying the transform.
+                        // Both strip and tile shifts belong in physical pixels.
+                        // zh_CN: 保留原始字形位置；Qt 的轮廓路径可能先量化位置再
+                        // 应用变换，因此条带和分块偏移都放在物理像素变换中。
+                        raster.setWorldTransform(QTransform(dpr, 0, 0, dpr,
+                                                            origin.x() * dpr - tile.x(),
+                                                            origin.y() * dpr - tile.y()));
                         // QTextItem retains the fallback font, shaping, bidi order and decorations.
                         // Never re-layout item.text() as a new drawText call.
                         // QPainter paints underline/strikeout separately on the outer
@@ -318,8 +324,9 @@ private:
                         painter.save();
                         painter.setOpacity(1);
                         painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
-                        painter.drawImage(QRectF(tileOrigin - origin, QSizeF(size) / dpr), glyph,
-                                          QRectF(QPointF(padding.width(), padding.height()), size));
+                        painter.drawImage(QRectF(tileOrigin - origin,
+                                                 QSizeF(size.width() / dpr, size.height() / dpr)),
+                                          glyph, QRectF(prefix, size));
                         painter.restore();
                     }
                 }
