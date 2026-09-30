@@ -270,7 +270,6 @@ class _GlyphPaintEngine(QPaintEngine):
                     if glyph.isNull():
                         continue
                     self.glyph_tiles += 1
-                    glyph.setDevicePixelRatio(dpr)
                     glyph.fill(Qt.transparent)
                     tile_origin = QPointF(left / dpr, top / dpr)
                     raster = QPainter(glyph)
@@ -285,13 +284,14 @@ class _GlyphPaintEngine(QPaintEngine):
                     # Preserve shaping, fallback fonts, bidi order and decorations.
                     # QPainter already draws decorations on the outer device.
                     # Its drawTextItem wrapper would paint underline/strikeout twice.
-                    # Translate the device, not the shaped baseline: fractional
-                    # tile offsets must not change Qt's glyph subpixel phase.
-                    raster.translate(-tile_origin)
+                    # Keep integer offsets in physical pixels: a logical DPR
+                    # roundtrip can change Qt's fixed-point glyph phase.
+                    raster.setWorldTransform(QTransform(dpr, 0, 0, dpr, -left, -top))
                     raster.paintEngine().syncState()
                     raster.paintEngine().drawTextItem(baseline, item)
                     raster.end()
                     del raster
+                    glyph.setDevicePixelRatio(dpr)
                     painter.save()
                     painter.setOpacity(1)
                     painter.setRenderHint(QPainter.SmoothPixmapTransform, False)

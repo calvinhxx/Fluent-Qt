@@ -272,7 +272,6 @@ private:
                         if (glyph.isNull())
                             continue;
                         ++glyphTiles;
-                        glyph.setDevicePixelRatio(dpr);
                         glyph.fill(Qt::transparent);
                         const QPointF tileOrigin(left / dpr, top / dpr);
                         QPainter raster(&glyph);
@@ -284,10 +283,12 @@ private:
                         raster.setRenderHints(painter.renderHints());
                         raster.setBackground(painter.background());
                         raster.setBackgroundMode(painter.backgroundMode());
-                        // Keep the shaped baseline's subpixel phase unchanged at
-                        // fractional DPR; tile offsets belong to the paint transform.
-                        // zh_CN: 分数缩放时保留已排版基线的亚像素相位，分块偏移交给绘制变换。
-                        raster.translate(-tileOrigin);
+                        // Apply integer tile offsets in physical pixels. Dividing
+                        // by DPR and multiplying it back in QPainter can change
+                        // Qt 5's fixed-point glyph phase at fractional densities.
+                        // zh_CN: 在物理像素中设置整数分块偏移，避免分数 DPR 往返运算
+                        // 改变 Qt 5 定点字形坐标的亚像素相位。
+                        raster.setWorldTransform(QTransform(dpr, 0, 0, dpr, -left, -top));
                         // QTextItem retains the fallback font, shaping, bidi order and decorations.
                         // Never re-layout item.text() as a new drawText call.
                         // QPainter paints underline/strikeout separately on the outer
@@ -295,6 +296,7 @@ private:
                         raster.paintEngine()->syncState();
                         raster.paintEngine()->drawTextItem(baseline, item);
                         raster.end();
+                        glyph.setDevicePixelRatio(dpr);
                         painter.save();
                         painter.setOpacity(1);
                         painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
