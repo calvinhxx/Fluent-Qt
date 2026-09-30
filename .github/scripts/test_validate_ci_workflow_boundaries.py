@@ -1193,6 +1193,15 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             self.workflow.replace("          ctest @testArgs\n", "", 1)
         )
 
+    def test_spatial_failure_evidence_stays_in_selected_build_tree(self):
+        self.assert_contract_error(
+            self.workflow.replace(
+                "FLUENT_QT_SPATIAL_EVIDENCE: ${{ github.workspace }}/build/${{ matrix.preset }}/Testing/SpatialEvidence",
+                "FLUENT_QT_SPATIAL_EVIDENCE: ${{ github.workspace }}/evidence",
+                1,
+            )
+        )
+
     def test_commented_ctest_invocation_cannot_satisfy_contract(self):
         self.assert_contract_error(
             self.workflow.replace(
