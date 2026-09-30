@@ -140,6 +140,9 @@ def validate_catalog(data: Any) -> list[str]:
             errors.append(f"{context}.mode must be fast or full")
         if scenario.get("qt_source") not in {"apt", "aqt"}:
             errors.append(f"{context}.qt_source must be apt or aqt")
+        archives = scenario.get("qt_archives")
+        if isinstance(archives, str) and archives and "qtsvg" not in archives.split():
+            errors.append(f"{context}.qt_archives must include qtsvg for Gallery")
         for field in (
             "build",
             "test",

@@ -7,9 +7,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 import sys
-import xml.etree.ElementTree as ET
 
-from export_control_images import SOURCE_ROOT, source_pairs, validate_source
+from export_control_images import SOURCE_ROOT
+from validate_control_artwork import validate
 
 try:
     from PIL import Image
@@ -21,17 +21,7 @@ except ImportError as error:  # pragma: no cover - maintainer dependency guard
 
 ROOT = Path(__file__).resolve().parents[2]
 IMAGE_ROOT = ROOT / "app" / "assets" / "control_images"
-QRC_PATH = ROOT / "app" / "gallery_resources.qrc"
 TARGET_SIZE = (72, 72)
-
-
-def _qrc_control_images() -> set[Path]:
-    tree = ET.parse(QRC_PATH)
-    return {
-        ROOT / "app" / node.text
-        for node in tree.findall(".//file")
-        if node.text and node.text.startswith("assets/control_images/")
-    }
 
 
 def _normalized_canvas(image: Image.Image) -> Image.Image:
@@ -118,18 +108,9 @@ def _aliased_silhouette_sides(image: Image.Image) -> list[str]:
 
 def audit(fix: bool) -> int:
     images = set(IMAGE_ROOT.rglob("*.png"))
-    registered = _qrc_control_images()
-    failures: list[str] = []
+    sources = set(SOURCE_ROOT.rglob("*.svg"))
+    failures = validate(ROOT)
     normalized_paths: list[Path] = []
-
-    try:
-        pairs = source_pairs(SOURCE_ROOT, IMAGE_ROOT)
-        for source, output in pairs:
-            validate_source(source)
-            if not output.is_file():
-                failures.append(f"{source.relative_to(ROOT)}: missing PNG export")
-    except (ValueError, ET.ParseError) as error:
-        failures.append(str(error))
 
     for path in sorted(images):
         with Image.open(path) as opened:
@@ -163,11 +144,6 @@ def audit(fix: bool) -> int:
                     "re-export with antialiased transparency"
                 )
 
-    for path in sorted(images - registered):
-        failures.append(f"{path.relative_to(ROOT)}: missing from app/gallery_resources.qrc")
-    for path in sorted(registered - images):
-        failures.append(f"{path.relative_to(ROOT)}: qrc entry has no matching file")
-
     if normalized_paths:
         print(f"normalized {len(normalized_paths)} image canvas(es):")
         for path in normalized_paths:
@@ -180,7 +156,7 @@ def audit(fix: bool) -> int:
         return 1
 
     print(
-        f"control-image audit passed: {len(images)} registered 72x72 RGBA PNGs; "
+        f"control-image audit passed: {len(sources)} registered SVGs with 72x72 RGBA PNG exports; "
         "no sustained hard staircase edges"
     )
     return 0

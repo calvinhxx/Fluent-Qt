@@ -18,9 +18,6 @@
       <stop offset="0.45" stop-color="#eeeef5" />
       <stop offset="1" stop-color="#9397a6" />
     </radialGradient>
-    <clipPath id="bounds">
-      <rect x="3" y="3" width="66" height="66" rx="6" />
-    </clipPath>
   </defs>
   <g id="artwork">
     <rect x="3" y="3" width="66" height="66" rx="6" fill="url(#tile)" opacity="1" />
@@ -30,7 +27,7 @@
     <rect x="35" y="33" width="15" height="4" rx="2" fill="#b8f8f2" opacity="1" />
     <rect x="18" y="44" width="31" height="4" rx="2" fill="#b8f8f2" opacity="1" />
     <rect x="18" y="53" width="31" height="4" rx="2" fill="#b8f8f2" opacity="1" />
-    <g clip-path="url(#bounds)">
+    <g>
       <path d="M-10 4H4L57 69H43Z" fill="#c5ffff" opacity="0.38" />
       <path d="M6 4H15L68 69H59Z" fill="#c5ffff" opacity="0.18" />
     </g>
