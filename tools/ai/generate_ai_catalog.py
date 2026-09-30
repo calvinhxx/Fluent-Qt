@@ -132,6 +132,8 @@ TEST_SOURCE_OVERRIDES = {
 
 SAMPLE_SOURCE_OVERRIDES = {
     "tree-view": "CollectionsTreeSamples.cpp",
+    "timeline": "SequenceSamples.cpp",
+    "stepper": "SequenceSamples.cpp",
 }
 
 WORD_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9+.-]*")

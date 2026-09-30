@@ -195,6 +195,7 @@ EXPECTED_SUPPORT_TYPES = frozenset(
         "Spacing",
         "StackContentHost",
         "StateGroup",
+        "StepperItem",
         "TabViewItem",
         "ThemeTokens",
         "Typography",
@@ -2046,6 +2047,42 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     self.assertIsNotNone(row.itemAt(1).spacerItem())
                 finally:
                     card.close()
+
+    def test_sequence_samples_fill_width_and_keep_interactions_live(self):
+        for route in ("timeline", "stepper"):
+            entry = ENTRY_BY_ROUTE_ID[route]
+            for sample in entry.samples:
+                with self.subTest(route=route, sample=sample.id):
+                    self.assertTrue(sample.fill_available_width)
+                    card, result = _build_sample_card(entry, sample, None)
+                    try:
+                        for width in (880, 400):
+                            card.resize(width, 650)
+                            card.show()
+                            _qwait(30)
+                            root = result.widget
+                            self.assertEqual(root.width(), root.parentWidget().width() - 40)
+                            control = root.findChild(
+                                fluentqt.Timeline if route == "timeline" else fluentqt.Stepper
+                            )
+                            self.assertEqual(control.width(), root.width())
+                        if route == "timeline":
+                            change = root.findChild(fluentqt.Button, "timelineChangeState")
+                            QTest.mouseClick(change, Qt.LeftButton)
+                            self.assertEqual(
+                                control.model().index(1, 0).data(fluentqt.Timeline.DataRole.StatusRole),
+                                fluentqt.Timeline.Status.Success,
+                            )
+                        else:
+                            toggle = root.findChild(fluentqt.Button, "stepperToggleError")
+                            QTest.mouseClick(toggle, Qt.LeftButton)
+                            self.assertEqual(control.itemAt(1).state, fluentqt.Stepper.State.Error)
+                            control.findChildren(fluentqt.Button, "stepperStep")[0].click()
+                            self.assertEqual(control.currentIndex(), 0)
+                            self.assertEqual(control.itemAt(1).state, fluentqt.Stepper.State.Error)
+                    finally:
+                        card.close()
+                        card.deleteLater()
 
     def test_sample_card_and_code_block_match_native_shell_behavior(self):
         window = GalleryWindow()

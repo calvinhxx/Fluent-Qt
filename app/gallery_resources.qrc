@@ -30,6 +30,7 @@
         <file>assets/control_images/collections/FlowView.png</file>
         <file>assets/control_images/collections/GridView.png</file>
         <file>assets/control_images/collections/ListView.png</file>
+        <file>assets/control_images/collections/Timeline.png</file>
         <file>assets/control_images/collections/SplitView.png</file>
         <file>assets/control_images/collections/StackView.png</file>
         <file>assets/control_images/collections/TreeView.png</file>
@@ -64,6 +65,7 @@
         <file>assets/control_images/navigation/NavigationView.png</file>
         <file>assets/control_images/navigation/Pivot.png</file>
         <file>assets/control_images/navigation/SelectorBar.png</file>
+        <file>assets/control_images/navigation/Stepper.png</file>
         <file>assets/control_images/navigation/TabView.png</file>
         <file>assets/control_images/scrolling/AnnotatedScrollBar.png</file>
         <file>assets/control_images/scrolling/PipsPager.png</file>

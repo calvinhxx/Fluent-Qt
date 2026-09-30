@@ -59,6 +59,11 @@ major-version policy above.
 
 ## New C++ surface decisions
 
+`Timeline`, `Stepper` and `StepperItem` are supported in Python in the same
+slice as C++. Timeline borrows the native Qt model and delegate; Stepper owns
+only its navigation metadata and emits requests without owning application
+pages or workflow rules. Their Gallery routes share the C++ sample contract.
+
 Every new installed C++ component or non-trivial public API records one of
 these decisions before release:
 

@@ -84,6 +84,16 @@ screen-reader and IME acceptance.
 
 ## Component contracts
 
+Timeline exposes a read-only list with logical model rows, including caller
+names, supporting text, timestamps and node status. Stepper exposes a page-tab
+list whose native focus buttons share the same step interfaces, with selected,
+disabled and focused states. Tab entry skips an unavailable current step.
+Its press action emits a
+navigation request; acceptance remains application-controlled. Shared logical
+adapters retain full item text when visual captions elide. Focused contracts
+are in `TestTimeline.cpp` and `TestStepper.cpp`; see the
+[sequence controls contract](../architecture/sequence-controls.md).
+
 CommandBar and CommandBarFlyout retain their toolbar/menu roles, action state
 and focus contracts when embedded in a graphics proxy. Presented-window
 validation and inverse anchor hit testing preserve reopen and dismissal

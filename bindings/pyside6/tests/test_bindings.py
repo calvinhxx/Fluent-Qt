@@ -99,6 +99,55 @@ def wait_for_events(duration_ms):
 
 
 class FluentQtBindingTest(unittest.TestCase):
+    def test_stepper_requests_and_value_metadata(self):
+        view = fluentqt.Stepper()
+        item = fluentqt.StepperItem("First", "Description")
+        item.state = fluentqt.Stepper.State.Completed
+        item.data = {"id": 7}
+        self.assertEqual(view.addItem(item), 0)
+        view.addItem("Second")
+        view.setCurrentIndex(0)
+        self.assertEqual(view.itemAt(0).data, {"id": 7})
+        self.assertEqual(view.itemAt(0).state, fluentqt.Stepper.State.Completed)
+        changed = QSignalSpy(view.currentIndexChanged)
+        requested = QSignalSpy(view.stepRequested)
+        view.findChildren(fluentqt.Button, "stepperStep")[1].click()
+        self.assertEqual(requested.count(), 1)
+        self.assertEqual(view.currentIndex(), 0)
+        self.assertEqual(changed.count(), 0)
+        view.stepRequested.connect(view.setCurrentIndex)
+        view.findChildren(fluentqt.Button, "stepperStep")[1].click()
+        self.assertEqual(view.currentIndex(), 1)
+        self.assertEqual(view.itemAt(0).state, fluentqt.Stepper.State.Completed)
+        view.setCurrentIndex(1)
+        self.assertEqual(changed.count(), 1)
+        view.setOrientation(Qt.Orientation.Vertical)
+        self.assertEqual(view.orientation(), Qt.Orientation.Vertical)
+
+    def test_timeline_borrows_python_model_and_delegate(self):
+        view = fluentqt.Timeline()
+        model = QStandardItemModel(2, 1)
+        model.setData(model.index(0, 0), "Node")
+        model.setData(model.index(0, 0), "Description", fluentqt.Timeline.DataRole.DescriptionRole)
+        view.setModel(model)
+        model_ref = weakref.ref(model)
+        del model
+        gc.collect()
+        self.assertIsNotNone(model_ref())
+        self.assertIsNone(view.model().parent())
+        self.assertEqual(view.model().index(0, 0).data(), "Node")
+        delegate = QStyledItemDelegate()
+        delegate_ref = weakref.ref(delegate)
+        view.setItemDelegate(delegate)
+        del delegate
+        gc.collect()
+        self.assertIsNotNone(delegate_ref())
+        view.setItemDelegate(None)
+        view.setModel(None)
+        gc.collect()
+        self.assertIsNone(model_ref())
+        self.assertIsNone(delegate_ref())
+
     @classmethod
     def setUpClass(cls):
         QStandardPaths.setTestModeEnabled(True)

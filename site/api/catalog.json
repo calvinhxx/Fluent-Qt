@@ -23,8 +23,8 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 85,
-    "public_headers": 138,
+    "components": 87,
+    "public_headers": 140,
     "categories": 14
   },
   "categories": [
@@ -41,7 +41,7 @@
     {
       "id": "collections",
       "title": "Collections",
-      "component_count": 10
+      "component_count": 11
     },
     {
       "id": "date-time",
@@ -71,7 +71,7 @@
     {
       "id": "navigation",
       "title": "Navigation",
-      "component_count": 5
+      "component_count": 6
     },
     {
       "id": "scrolling",
@@ -1009,6 +1009,41 @@
         }
       ],
       "sample_count": 4
+    },
+    {
+      "id": "timeline",
+      "title": "Timeline",
+      "category_id": "collections",
+      "description": "Presents caller-owned model rows as a timeline with text, time labels and node states.",
+      "capabilities": [
+        "collections"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "installed_declaration_header": "<FluentQt/components/collections/Timeline.h>",
+        "qualified_type": "fluent::collections::Timeline",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/Timeline.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "Timeline",
+        "import_statement": "from fluentqt.collections import Timeline"
+      },
+      "gallery": {
+        "route_id": "timeline",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=timeline",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/SequenceSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_timeline",
+          "ctest_label": "test_timeline",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestTimeline.cpp"
+        }
+      ],
+      "sample_count": 2
     },
     {
       "id": "file-list-view",
@@ -2312,6 +2347,41 @@
           "target": "test_command_bar_flyout",
           "ctest_label": "test_command_bar_flyout",
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/menus_toolbars/TestCommandBarFlyout.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "stepper",
+      "title": "Stepper",
+      "category_id": "navigation",
+      "description": "Presents application-controlled steps with completion, error and availability states.",
+      "capabilities": [
+        "navigation"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Navigation.h>",
+        "installed_declaration_header": "<FluentQt/components/navigation/Stepper.h>",
+        "qualified_type": "fluent::navigation::Stepper",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/Stepper.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.navigation",
+        "type": "Stepper",
+        "import_statement": "from fluentqt.navigation import Stepper"
+      },
+      "gallery": {
+        "route_id": "stepper",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=stepper",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/SequenceSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_stepper",
+          "ctest_label": "test_stepper",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/navigation/TestStepper.cpp"
         }
       ],
       "sample_count": 2
@@ -3767,6 +3837,18 @@
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/ListView.h"
     },
     {
+      "include": "<FluentQt/components/collections/Timeline.h>",
+      "source": "src/components/collections/Timeline.h",
+      "summary": "Model-backed timeline with reusable Fluent scrolling, input and theme behavior.",
+      "declarations": [
+        "Timeline",
+        "NodeAlignment",
+        "Status",
+        "DataRole"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/Timeline.h"
+    },
+    {
       "include": "<FluentQt/components/collections/SelectionMode.h>",
       "source": "src/components/collections/SelectionMode.h",
       "summary": "Shared item-selection behavior for Fluent collection views.",
@@ -4214,6 +4296,17 @@
         "HitKind"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/SelectorBar.h"
+    },
+    {
+      "include": "<FluentQt/components/navigation/Stepper.h>",
+      "source": "src/components/navigation/Stepper.h",
+      "summary": "Presents application-controlled steps without owning pages or workflow rules.",
+      "declarations": [
+        "Stepper",
+        "StepperItem",
+        "State"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/Stepper.h"
     },
     {
       "include": "<FluentQt/components/navigation/StackContentHost.h>",

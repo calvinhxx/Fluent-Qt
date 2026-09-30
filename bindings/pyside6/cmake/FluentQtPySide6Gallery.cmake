@@ -40,6 +40,7 @@ set(FLUENTQT_PYSIDE6_GALLERY_FILES
     native_samples_layout.py
     native_samples_dialogs.py
     native_samples_navigation.py
+    native_samples_sequences.py
     native_samples_scrolling.py
     native_samples_spatial.py
     native_samples_status.py

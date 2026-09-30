@@ -45,6 +45,7 @@
 #include <components/collections/FlowView.h>
 #include <components/collections/GridView.h>
 #include <components/collections/ListView.h>
+#include <components/collections/Timeline.h>
 #include <components/collections/SplitView.h>
 #include <components/collections/StackView.h>
 #include <components/collections/TreeView.h>
@@ -77,6 +78,7 @@
 #include <components/navigation/NavigationView.h>
 #include <components/navigation/Pivot.h>
 #include <components/navigation/SelectorBar.h>
+#include <components/navigation/Stepper.h>
 #include <components/navigation/StackContentHost.h>
 #include <components/navigation/TabView.h>
 #include <components/scrolling/AnnotatedScrollBar.h>
