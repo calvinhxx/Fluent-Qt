@@ -10,6 +10,7 @@
 #include <QSignalSpy>
 #include <QTest>
 #include <QVariantMap>
+#include <QVariantAnimation>
 
 #include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
@@ -903,8 +904,15 @@ TEST_F(CalendarViewTest, NoPhasePixelSameDirectionTailAfterAnimationUsesExtended
     EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
     EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
 
-    QTest::qWait(190);
+    // Complete the animation through its clock. A wall-clock wait leaves only
+    // 30 ms before the committed-tail deadline and can overshoot on a busy CI
+    // runner before the actual extended-gap probe even starts.
+    for (auto* animation : calendarView->findChildren<QVariantAnimation*>()) {
+        if (animation->state() == QAbstractAnimation::Running)
+            animation->setCurrentTime(animation->duration());
+    }
     processEvents();
+    ASSERT_FALSE(calendarView->property("previousVisibleMonth").toDate().isValid());
     EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
 
     QElapsedTimer probeTimer;
