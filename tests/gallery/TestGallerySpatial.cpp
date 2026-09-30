@@ -1189,6 +1189,7 @@ TEST_F(GallerySpatialTest, ComponentCompositionsHandleProjectedPointerInput)
         } else if (id.endsWith("calendar")) {
             auto* calendar = card->findChild<date_time::CalendarView*>("spatialCalendar");
             auto* selected = card->findChild<textfields::Label*>("spatialSelectedDate");
+            ASSERT_EQ(calendar->visibleMonth(), QDate(2026, 9, 1));
             EXPECT_TRUE(calendar->rect().contains(calendar->gridRect()));
             EXPECT_GT(selected->geometry().top(), calendar->geometry().bottom());
             QSignalSpy changed(calendar, &date_time::CalendarView::selectedDateChanged);

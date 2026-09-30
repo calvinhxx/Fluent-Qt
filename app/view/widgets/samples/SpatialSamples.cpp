@@ -810,6 +810,7 @@ QVector<GallerySample> spatialViewSamples()
                 "auto* calendar = new date_time::CalendarView(card);\n"
                 "calendar->setObjectName(\"spatialCalendar\");\n"
                 "calendar->setAccessibleName(\"Demo appointment date\");\n"
+                "calendar->setVisibleMonth(QDate(2026, 9, 1));\n"
                 "calendar->setSelectedDate(QDate(2026, 9, 15));\n"
                 "calendar->setFrameVisible(false);\n"
                 "content->addWidget(calendar, 1);\n"
@@ -846,6 +847,7 @@ QVector<GallerySample> spatialViewSamples()
                 auto* calendar = new date_time::CalendarView(card);
                 calendar->setObjectName("spatialCalendar");
                 calendar->setAccessibleName("Demo appointment date");
+                calendar->setVisibleMonth(QDate(2026, 9, 1));
                 calendar->setSelectedDate(QDate(2026, 9, 15));
                 calendar->setFrameVisible(false);
                 content->addWidget(calendar, 1);
