@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>Shimmer</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#33d7d3" />
+      <stop offset="1" stop-color="#007e8f" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+    <clipPath id="bounds">
+      <rect x="3" y="3" width="66" height="66" rx="6" />
+    </clipPath>
+  </defs>
+  <g id="artwork">
+    <rect x="3" y="3" width="66" height="66" rx="6" fill="url(#tile)" opacity="1" />
+    <rect x="12" y="10" width="48" height="50" rx="3" fill="none" opacity="1" stroke="#a7f4ee" stroke-width="2" />
+    <circle cx="23" cy="23" r="8" fill="#b8f8f2" opacity="0.65" />
+    <rect x="35" y="21" width="21" height="4" rx="2" fill="#b8f8f2" opacity="1" />
+    <rect x="35" y="33" width="15" height="4" rx="2" fill="#b8f8f2" opacity="1" />
+    <rect x="18" y="44" width="31" height="4" rx="2" fill="#b8f8f2" opacity="1" />
+    <rect x="18" y="53" width="31" height="4" rx="2" fill="#b8f8f2" opacity="1" />
+    <g clip-path="url(#bounds)">
+      <path d="M-10 4H4L57 69H43Z" fill="#c5ffff" opacity="0.38" />
+      <path d="M6 4H15L68 69H59Z" fill="#c5ffff" opacity="0.18" />
+    </g>
+  </g>
+</svg>

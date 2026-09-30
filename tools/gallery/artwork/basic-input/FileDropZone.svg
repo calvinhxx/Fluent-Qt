@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>FileDropZone</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#26b7ed" />
+      <stop offset="1" stop-color="#00427e" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="3" y="3" width="66" height="66" rx="16" fill="#1683db" opacity="1" />
+    <path id="fluent-glyph" d="M380 427Q387 427 391.5 431.5Q396 436 396.0 442.5Q396 449 391.5 453.5Q387 458 380 458H109Q103 458 98.5 453.5Q94 449 94.0 442.5Q94 436 98.5 431.5Q103 427 109 427ZM243 42H245Q251 42 255.0 45.5Q259 49 260 55V342L338 265Q342 261 348.0 260.5Q354 260 358 263L360 265Q364 269 364.5 274.5Q365 280 362 285L256 391Q252 395 246.0 395.5Q240 396 236 392L130 287Q125 283 125.0 276.5Q125 270 129.0 265.5Q133 261 139.0 260.5Q145 260 150 263L229 342V57Q229 51 233.0 46.5Q237 42 243 42Z" fill="white" transform="translate(16.40000 56.00000) scale(0.080000 -0.080000)" />
+  </g>
+</svg>

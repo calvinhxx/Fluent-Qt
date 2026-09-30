@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>FlipView</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ce9afa" />
+      <stop offset="1" stop-color="#61418f" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="3" y="3" width="66" height="66" rx="4" fill="url(#tile)" opacity="1" />
+    <path d="M3 51L19 39 32 49 46 35 69 53V69H3Z" fill="#7b52a9" opacity="1" />
+    <path d="M3 60L37 49 69 59V69H3Z" fill="#56358c" opacity="1" />
+    <circle cx="33" cy="17" r="6" fill="url(#sphere)" opacity="1" />
+    <rect x="7" y="24" width="10" height="24" rx="2" fill="white" opacity="0.4" />
+    <rect x="55" y="24" width="10" height="24" rx="2" fill="white" opacity="0.4" />
+    <polyline points="13,31 9,36 13,41" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+    <polyline points="59,31 63,36 59,41" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+  </g>
+</svg>

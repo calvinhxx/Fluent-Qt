@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>TreeView</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ce9afa" />
+      <stop offset="1" stop-color="#61418f" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="8" y="7" width="14" height="14" rx="2" fill="url(#tile)" opacity="1" />
+    <polyline points="12,11 17,14 12,17" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+    <rect x="29" y="10" width="34" height="8" rx="4" fill="url(#purpleSurface)" opacity="1" />
+    <rect x="18" y="31" width="14" height="14" rx="2" fill="url(#tile)" opacity="1" />
+    <polyline points="22,35 27,38 22,41" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+    <rect x="39" y="34" width="34" height="8" rx="4" fill="url(#purpleSurface)" opacity="1" />
+    <rect x="18" y="55" width="14" height="14" rx="2" fill="url(#tile)" opacity="1" />
+    <polyline points="22,59 27,62 22,65" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+    <rect x="39" y="58" width="34" height="8" rx="4" fill="url(#purpleSurface)" opacity="1" />
+  </g>
+</svg>

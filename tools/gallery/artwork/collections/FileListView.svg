@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>FileListView</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ce9afa" />
+      <stop offset="1" stop-color="#61418f" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="3" y="3" width="66" height="66" rx="16" fill="#9d78d7" opacity="1" />
+    <path id="fluent-glyph" d="M125 458Q108 458 95.5 446.0Q83 434 83 417V83Q83 66 95.5 54.0Q108 42 125 42H375Q392 42 404.5 54.0Q417 66 417 83V295Q417 313 404 325L283 446Q271 458 254 458ZM115 417Q115 421 118.0 424.0Q121 427 125 427H250V333Q250 316 262.0 304.0Q274 292 292 292H385V83Q385 79 382.0 76.0Q379 73 375 73H125Q121 73 118.0 76.0Q115 79 115 83ZM362 323H292Q287 323 284.0 326.0Q281 329 281 333V404Z" fill="white" transform="translate(16.00000 56.00000) scale(0.080000 -0.080000)" />
+  </g>
+</svg>

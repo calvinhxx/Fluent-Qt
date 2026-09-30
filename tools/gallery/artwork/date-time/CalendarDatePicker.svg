@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>CalendarDatePicker</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#23b4eb" />
+      <stop offset="1" stop-color="#003c75" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <circle cx="36" cy="36" r="35" fill="url(#tile)" opacity="1" />
+    <g aria-label="Jan" fill="white" transform="translate(29.820 17) scale(0.003418 -0.003418)">
+      <path transform="translate(0 0)" d="M560 -20Q339 -20 208.5 99.5Q78 219 78 440V525H345V438Q345 320 403.5 260.0Q462 200 560 200Q657 200 715.0 260.5Q773 321 773 438V1490H1038V441Q1038 219 908.5 99.5Q779 -20 560 -20Z" />
+      <path transform="translate(1187 0)" d="M450 -23Q344 -23 259.0 15.5Q174 54 125.0 129.0Q76 204 76 314Q76 440 137.5 509.5Q199 579 296.5 610.5Q394 642 502 653Q648 669 713.0 682.5Q778 696 778 754V759Q778 841 728.0 886.5Q678 932 583 932Q485 932 427.0 889.0Q369 846 349 791L108 840Q157 988 285.5 1060.0Q414 1132 582 1132Q661 1132 741.5 1113.5Q822 1095 889.0 1051.5Q956 1008 997.0 933.5Q1038 859 1038 747V0H789V154H779Q742 82 661.0 29.5Q580 -23 450 -23ZM517 170Q637 170 708.5 239.0Q780 308 780 401V533Q762 519 716.0 508.5Q670 498 618.5 490.5Q567 483 533 478Q445 466 386.5 430.0Q328 394 328 317Q328 245 381.0 207.5Q434 170 517 170Z" />
+      <path transform="translate(2363 0)" d="M398 655V0H138V1118H384L387 895Q487 1132 733 1132Q906 1132 1010.5 1022.0Q1115 912 1115 711V0H855V671Q855 783 797.0 847.0Q739 911 637 911Q533 911 465.5 844.0Q398 777 398 655Z" />
+    </g>
+    <g aria-label="1" fill="white" transform="translate(26.274 57) scale(0.022461 -0.022461)">
+      <path transform="translate(0 0)" d="M717 1490V0H452V1252H442L94 1002V1256L421 1490Z" />
+    </g>
+  </g>
+</svg>
