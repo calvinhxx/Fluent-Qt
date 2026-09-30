@@ -2362,6 +2362,37 @@ TEST_F(GallerySpatialTest, GlyphTilesUseImageDprPrecision)
     EXPECT_GT(device.glyphTiles(), device.glyphItems());
 }
 
+TEST_F(GallerySpatialTest, GlyphTilesPreserveVerticalSeamsAndBoundOversizedFonts)
+{
+    for (int fontSize : {68, 1024}) {
+        SCOPED_TRACE(fontSize);
+        const auto paint = [fontSize](QPaintDevice* target) {
+            QPainter painter(target);
+            QFont font = Typography::Styles::Body.toQFont();
+            font.setPixelSize(fontSize);
+            painter.setFont(font);
+            painter.setPen(QColor(32, 90, 150, 210));
+            painter.setOpacity(.65);
+            painter.drawText(QPointF(7.25, 110.5), QStringLiteral("Gallery gjpq ").repeated(4));
+        };
+        const qreal dpr = 2.1875;
+        QImage expected(qCeil(960 * dpr), qCeil(160 * dpr), QImage::Format_ARGB32_Premultiplied);
+        expected.setDevicePixelRatio(dpr);
+        expected.fill(Qt::transparent);
+        QImage actual = expected.copy();
+        paint(&expected);
+        spatial_render::GalleryGlyphPaintDevice device(actual, dpr, QPointF(0, 197 / dpr));
+        paint(&device);
+        EXPECT_EQ(actual, expected);
+        if (fontSize == 68) {
+            EXPECT_GT(device.glyphTiles(), device.glyphItems());
+        } else {
+            EXPECT_EQ(device.glyphTiles(), 0)
+                << "A font exceeding the tile budget must use the delegate without allocating";
+        }
+    }
+}
+
 class GallerySpatialEditorTest : public GallerySpatialTest,
                                  public ::testing::WithParamInterface<const char*> {};
 
