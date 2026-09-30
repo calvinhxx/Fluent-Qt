@@ -55,6 +55,7 @@ from PySide6.QtGui import (
     QPixmap,
 )
 from PySide6.QtTest import QSignalSpy, QTest
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -125,6 +126,8 @@ from fluentqt_gallery.native_samples import (
 from fluentqt_gallery.samples import build_sample
 from fluentqt_gallery.visual import (
     GalleryCodeBlock,
+    GalleryEntryCard,
+    GalleryEntryGrid,
     GalleryHomeHero,
     GalleryPageSkeleton,
     GallerySplashScreen,
@@ -132,6 +135,8 @@ from fluentqt_gallery.visual import (
     _direct_icon_font,
     _direct_icon_glyph,
     _draw_pixmap_in_logical_rect,
+    _gallery_artwork_pixmap,
+    _gallery_artwork_renderer,
     _hero_link_pixmap,
     _image_alpha_bounds,
     _macos_dock_icon_pixmap,
@@ -141,6 +146,7 @@ from fluentqt_gallery.visual import (
     app_icon,
     app_icon_pixmap,
     css_color,
+    control_image_path,
     gallery_font_icon_pixmap,
     gallery_colors,
 )
@@ -1793,6 +1799,66 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         self.assertEqual(image.pixelColor(40, 20), QColor(220, 30, 40))
         self.assertEqual(image.pixelColor(40, 59), QColor(220, 30, 40))
         self.assertEqual(image.pixelColor(40, 60).alpha(), 0)
+
+    def test_gallery_svg_artwork_uses_display_resolution_and_cached_pixels(self):
+        source = control_image_path("collections", "Timeline")
+        self.assertEqual(source.suffix, ".svg")
+        self.assertEqual(control_image_path("foundation", "QML+").name, "QMLPlus.svg")
+        self.assertEqual(control_image_path("missing", "Unknown").name, "Placeholder.svg")
+        with TemporaryDirectory() as temporary:
+            path = Path(temporary) / "Timeline.svg"
+            path.write_bytes(source.read_bytes())
+            misses = _gallery_artwork_renderer.cache_info().misses
+            renderer = QSvgRenderer(str(path))
+            renders = []
+            for dpr, physical_size in ((1.0, 36), (1.25, 45), (2.0, 72), (3.0, 108)):
+                with self.subTest(dpr=dpr):
+                    pixmap = _gallery_artwork_pixmap(path, QSize(36, 36), dpr)
+                    self.assertEqual(pixmap.size(), QSize(physical_size, physical_size))
+                    self.assertAlmostEqual(pixmap.devicePixelRatioF(), dpr)
+                    self.assertEqual(
+                        _gallery_artwork_pixmap(path, QSize(36, 36), dpr).cacheKey(),
+                        pixmap.cacheKey(),
+                    )
+                    reference = QImage(pixmap.size(), QImage.Format_ARGB32_Premultiplied)
+                    reference.fill(Qt.GlobalColor.transparent)
+                    painter = QPainter(reference)
+                    painter.setRenderHint(QPainter.Antialiasing)
+                    renderer.render(painter, QRectF(QPointF(), reference.size()))
+                    painter.end()
+                    actual = pixmap.toImage()
+                    actual.setDevicePixelRatio(1.0)
+                    self.assertEqual(actual, reference)
+                    renders.append(pixmap)
+            self.assertEqual(_gallery_artwork_renderer.cache_info().misses - misses, 1)
+            for pixmap in renders:
+                self.assertEqual(
+                    _gallery_artwork_pixmap(path, QSize(36, 36), pixmap.devicePixelRatioF()).cacheKey(),
+                    pixmap.cacheKey(),
+                )
+            larger = _gallery_artwork_pixmap(path, QSize(40, 40), 3.0)
+            self.assertEqual(larger.size(), QSize(120, 120))
+            self.assertNotEqual(larger.cacheKey(), renders[-1].cacheKey())
+
+    def test_gallery_svg_artwork_paints_tiles_and_virtualized_cards_at_three_times_scale(self):
+        path = control_image_path("collections", "Timeline")
+        card = GalleryEntryCard("timeline", "Timeline", "", image_path=path)
+        grid = GalleryEntryGrid()
+        grid.resize(320, 86)
+        grid.set_cards([card])
+        expected = _gallery_artwork_pixmap(path, QSize(36, 36), 3.0).toImage()
+        try:
+            for widget, origin in ((card._icon, QPoint(6, 6)), (grid, QPoint(54, 54))):
+                image = QImage(widget.size() * 3, QImage.Format_ARGB32_Premultiplied)
+                image.setDevicePixelRatio(3.0)
+                image.fill(Qt.GlobalColor.transparent)
+                widget.render(image)
+                for y in range(expected.height()):
+                    for x in range(expected.width()):
+                        if expected.pixelColor(x, y).alpha() == 255:
+                            self.assertEqual(image.pixelColor(origin + QPoint(x, y)), expected.pixelColor(x, y))
+        finally:
+            delete_qobject(grid)
 
     def test_gallery_raster_assets_are_rendered_at_physical_dpr(self):
         for dpr, expected_app_size, expected_link_size in (

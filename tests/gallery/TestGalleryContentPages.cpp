@@ -28,6 +28,8 @@
 #include <QPoint>
 #include <QPointer>
 #include <QPixmap>
+#include <QPainter>
+#include <QSvgRenderer>
 #include <QScrollBar>
 #include <QSet>
 #include <QSizePolicy>
@@ -93,6 +95,8 @@
 #include "view/pages/SettingsPage.h"
 #include "view/widgets/GalleryComponentReferenceCard.h"
 #include "view/widgets/GalleryEntryGrid.h"
+#include "view/widgets/GalleryIconTile.h"
+#include "view/support/GalleryArtwork.h"
 #include "view/widgets/GalleryIconBrowser.h"
 #include "view/widgets/GalleryLanguageSelector.h"
 #include "view/widgets/GallerySampleCard.h"
@@ -1048,7 +1052,7 @@ TEST_F(GalleryContentPagesTest, EntryGridExpandsCardsForWrappedDescriptions)
     grid.setEntries({{QStringLiteral("foundation-qmlplus"), QStringLiteral("QML+"),
                       QStringLiteral("QML+ brings anchors, reactive property binding, and named "
                                      "states to plain QWidget controls."),
-                      QPixmap(), QString()}});
+                      QString(), QString()}});
     grid.show();
     QApplication::processEvents();
     const int wideHeight = grid.sizeHint().height();
@@ -1068,9 +1072,9 @@ TEST_F(GalleryContentPagesTest, EntryGridExpandsOnlyRowsThatNeedWrappedDescripti
         QStringLiteral("A deliberately long description that wraps across several "
                        "lines in one card without stretching every later row in the "
                        "catalog grid."),
-        QPixmap(), QString()};
+        QString(), QString()};
     const GalleryEntryGrid::Entry compactEntry{QStringLiteral("compact"), QStringLiteral("Compact"),
-                                               QString(), QPixmap(), QString()};
+                                               QString(), QString(), QString()};
 
     GalleryEntryGrid wrappedRow;
     wrappedRow.resize(1000, 100);
@@ -1088,7 +1092,7 @@ TEST_F(GalleryContentPagesTest, EntryGridExpandsOnlyRowsThatNeedWrappedDescripti
 
 TEST_F(GalleryContentPagesTest, ComponentCardsUseBundledImagesOrCatalogGlyphs)
 {
-    const QString placeholder = QStringLiteral(":/app/assets/control_images/Placeholder.png");
+    const QString placeholder = QStringLiteral(":/app/assets/control_images/Placeholder.svg");
 
     for (const auto& category : galleryComponentCatalog()) {
         for (const auto& component : category.components) {
@@ -1105,7 +1109,7 @@ TEST_F(GalleryContentPagesTest, ComponentCardsUseBundledImagesOrCatalogGlyphs)
 
 TEST_F(GalleryContentPagesTest, ControlImageAssetsMeetPixelContract)
 {
-    const QString placeholder = QStringLiteral(":/app/assets/control_images/Placeholder.png");
+    const QString placeholder = QStringLiteral(":/app/assets/control_images/Placeholder.svg");
     QSet<QString> expected{placeholder};
     for (const auto& category : galleryComponentCatalog()) {
         for (const auto& component : category.components) {
@@ -1127,14 +1131,18 @@ TEST_F(GalleryContentPagesTest, ControlImageAssetsMeetPixelContract)
 
     QSet<QString> actual;
     QDirIterator resources(QStringLiteral(":/app/assets/control_images"),
-                           QStringList{QStringLiteral("*.png")}, QDir::Files,
+                           QStringList{QStringLiteral("*.svg")}, QDir::Files,
                            QDirIterator::Subdirectories);
     while (resources.hasNext())
         actual.insert(resources.next());
 
     EXPECT_EQ(actual, expected);
     for (const QString& resource : actual) {
-        const QImage image(resource);
+        QSvgRenderer renderer(resource);
+        ASSERT_TRUE(renderer.isValid()) << resource.toStdString();
+        EXPECT_EQ(renderer.viewBox(), QRect(0, 0, 72, 72)) << resource.toStdString();
+        const QImage image =
+            fluent::gallery::galleryArtworkPixmap(resource, QSize(36, 36), 2).toImage();
         ASSERT_FALSE(image.isNull()) << resource.toStdString();
         EXPECT_EQ(image.size(), QSize(72, 72)) << resource.toStdString();
         EXPECT_TRUE(image.hasAlphaChannel()) << resource.toStdString();
@@ -1143,6 +1151,68 @@ TEST_F(GalleryContentPagesTest, ControlImageAssetsMeetPixelContract)
         EXPECT_EQ(qAlpha(image.pixel(0, image.height() - 1)), 0) << resource.toStdString();
         EXPECT_EQ(qAlpha(image.pixel(image.width() - 1, image.height() - 1)), 0)
             << resource.toStdString();
+    }
+}
+
+TEST_F(GalleryContentPagesTest, SvgArtworkUsesDisplayResolutionAndReusesCachedPixels)
+{
+    const QString resource = galleryControlImageResource(QStringLiteral("Timeline"));
+    QSvgRenderer renderer(resource);
+    ASSERT_TRUE(renderer.isValid());
+    QVector<QPixmap> renders;
+    for (const qreal dpr : {1.0, 1.25, 2.0, 3.0}) {
+        const QPixmap pixmap = fluent::gallery::galleryArtworkPixmap(resource, QSize(36, 36), dpr);
+        ASSERT_FALSE(pixmap.isNull());
+        EXPECT_EQ(pixmap.size(), QSize(qRound(36 * dpr), qRound(36 * dpr)));
+        EXPECT_DOUBLE_EQ(pixmap.devicePixelRatioF(), dpr);
+        EXPECT_EQ(fluent::gallery::galleryArtworkPixmap(resource, QSize(36, 36), dpr).cacheKey(),
+                  pixmap.cacheKey());
+
+        QImage reference(pixmap.size(), QImage::Format_ARGB32_Premultiplied);
+        reference.fill(Qt::transparent);
+        QPainter painter(&reference);
+        painter.setRenderHint(QPainter::Antialiasing);
+        renderer.render(&painter, QRectF(QPointF(), reference.size()));
+        painter.end();
+        QImage actual = pixmap.toImage();
+        actual.setDevicePixelRatio(1);
+        EXPECT_EQ(actual, reference) << "DPR " << dpr;
+        renders.append(pixmap);
+    }
+    for (const QPixmap& pixmap : renders) {
+        EXPECT_EQ(fluent::gallery::galleryArtworkPixmap(resource, QSize(36, 36),
+                                                        pixmap.devicePixelRatioF())
+                      .cacheKey(),
+                  pixmap.cacheKey());
+    }
+    const QPixmap larger = fluent::gallery::galleryArtworkPixmap(resource, QSize(40, 40), 3);
+    EXPECT_EQ(larger.size(), QSize(120, 120));
+    EXPECT_NE(larger.cacheKey(), renders.constLast().cacheKey());
+}
+
+TEST_F(GalleryContentPagesTest, SvgArtworkPaintsTilesAndVirtualizedCardsAtThreeTimesScale)
+{
+    const QString resource = galleryControlImageResource(QStringLiteral("Timeline"));
+    const QImage expected =
+        fluent::gallery::galleryArtworkPixmap(resource, QSize(36, 36), 3).toImage();
+    fluent::gallery::GalleryIconTile tile(QStringLiteral("Timeline"));
+    GalleryEntryGrid grid;
+    grid.resize(320, 86);
+    grid.setEntries({{QStringLiteral("timeline"), QStringLiteral("Timeline"), {}, resource, {}}});
+    for (QWidget* widget : {static_cast<QWidget*>(&tile), static_cast<QWidget*>(&grid)}) {
+        QImage image(widget->size() * 3, QImage::Format_ARGB32_Premultiplied);
+        image.setDevicePixelRatio(3);
+        image.fill(Qt::transparent);
+        widget->render(&image);
+        const QPoint origin = widget == &tile ? QPoint(6, 6) : QPoint(54, 54);
+        // Compare opaque interior pixels: the card surface fills transparent corners.
+        // zh_CN: 比较不透明的内部像素；卡片表面会填充图标透明的边角。
+        for (int y = 0; y < expected.height(); ++y) {
+            for (int x = 0; x < expected.width(); ++x) {
+                if (expected.pixelColor(x, y).alpha() == 255)
+                    ASSERT_EQ(image.pixelColor(origin + QPoint(x, y)), expected.pixelColor(x, y));
+            }
+        }
     }
 }
 
@@ -2157,7 +2227,8 @@ TEST_F(GalleryContentPagesTest, CommandBarRoutesExposePublicSamplesAndBundledArt
         const QString resource = galleryControlImageResource(title);
         ASSERT_FALSE(resource.isEmpty());
         ASSERT_TRUE(QFile::exists(resource));
-        const QImage image(resource);
+        const QImage image =
+            fluent::gallery::galleryArtworkPixmap(resource, QSize(36, 36), 2).toImage();
         ASSERT_FALSE(image.isNull());
         EXPECT_EQ(image.size(), QSize(72, 72));
         EXPECT_TRUE(image.hasAlphaChannel());

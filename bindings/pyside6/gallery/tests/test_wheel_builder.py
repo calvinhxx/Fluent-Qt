@@ -40,7 +40,7 @@ class GalleryWheelBuilderTest(unittest.TestCase):
             "assets/app-icon.png",
             "assets/icon_aliases.json",
             "assets/icon_catalog.json",
-            "assets/control_images/Placeholder.png",
+            "assets/control_images/Placeholder.svg",
             "assets/home_header_tiles/Header-WindowsDesign.png",
         ):
             with self.subTest(name=name):

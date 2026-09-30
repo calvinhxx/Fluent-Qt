@@ -166,7 +166,7 @@
       "qt_version": "5.15.2",
       "qt_source": "aqt",
       "qt_arch": "gcc_64",
-      "qt_archives": "qtbase icu",
+      "qt_archives": "qtbase qtsvg icu",
       "host_qt_arch": "",
       "vcpkg_triplet": "x64-linux",
       "build": true,

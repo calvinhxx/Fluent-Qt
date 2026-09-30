@@ -50,8 +50,8 @@ class GalleryWheelSmokeContractsTest(unittest.TestCase):
                 with self.assertRaisesRegex(AssertionError, "wrong coverage"):
                     SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys, available)
 
-    def images(self, root, names):
-        directory = root / "assets/control_images"
+    def images(self, root, names, *, source=False):
+        directory = root / ("tools/gallery/artwork" if source else "assets/control_images")
         for name in names:
             path = directory / name
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -64,22 +64,22 @@ class GalleryWheelSmokeContractsTest(unittest.TestCase):
     def test_standalone_check_uses_installed_record(self):
         with tempfile.TemporaryDirectory() as temporary:
             package = Path(temporary)
-            self.images(package, ["Placeholder.png", "charts/LineChart.png"])
-            SMOKE.verify_control_images(package, self.record(["Placeholder.png", "charts/LineChart.png"]))
+            self.images(package, ["Placeholder.svg", "charts/LineChart.svg"])
+            SMOKE.verify_control_images(package, self.record(["Placeholder.svg", "charts/LineChart.svg"]))
 
     def test_missing_and_replaced_images_fail_even_when_the_count_matches(self):
-        for installed in (["Placeholder.png"], ["Placeholder.png", "charts/Wrong.png"]):
+        for installed in (["Placeholder.svg"], ["Placeholder.svg", "charts/Wrong.svg"]):
             with self.subTest(installed=installed), tempfile.TemporaryDirectory() as temporary:
                 package = Path(temporary)
                 self.images(package, installed)
                 with self.assertRaisesRegex(AssertionError, "wheel RECORD"):
-                    SMOKE.verify_control_images(package, self.record(["Placeholder.png", "charts/LineChart.png"]))
+                    SMOKE.verify_control_images(package, self.record(["Placeholder.svg", "charts/LineChart.svg"]))
 
     def test_missing_record_cannot_silently_skip_asset_validation(self):
         for record in (None, []):
             with self.subTest(record=record), tempfile.TemporaryDirectory() as temporary:
                 package = Path(temporary)
-                self.images(package, ["Placeholder.png"])
+                self.images(package, ["Placeholder.svg"])
                 with self.assertRaisesRegex(AssertionError, "wheel RECORD"):
                     SMOKE.verify_control_images(package, record)
 
@@ -88,18 +88,36 @@ class GalleryWheelSmokeContractsTest(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, "project-root"):
                 SMOKE.verify_source_contract(Path(temporary), Path(temporary), {})
 
+    def test_legacy_pngs_are_not_packaged_with_the_svg_artwork(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary)
+            self.images(package, ["Placeholder.svg", "Placeholder.png"])
+            with self.assertRaisesRegex(AssertionError, "wheel RECORD"):
+                SMOKE.verify_control_images(package, self.record(["Placeholder.svg"]))
+
+    def test_source_check_rejects_changed_svg_contents(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            package = root / "installed"
+            images = self.images(package, ["Placeholder.svg"])
+            self.images(root, ["Placeholder.svg"], source=True)
+            (images / "Placeholder.svg").write_bytes(b"different artwork")
+            with mock.patch.object(SMOKE, "native_contract", return_value={}):
+                with self.assertRaisesRegex(AssertionError, "SVG master"):
+                    SMOKE.verify_source_contract(root, package, {})
+
     def test_source_check_catches_contract_and_source_asset_drift(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             package = root / "installed"
-            self.images(package, ["Placeholder.png"])
-            self.images(root / "app", ["Placeholder.png"])
+            self.images(package, ["Placeholder.svg"])
+            self.images(root, ["Placeholder.svg"], source=True)
             contract = {"summary": {"sample_count": 1}}
             with mock.patch.object(SMOKE, "native_contract", return_value=contract):
                 SMOKE.verify_source_contract(root, package, contract)
                 with self.assertRaisesRegex(AssertionError, "contract differs"):
                     SMOKE.verify_source_contract(root, package, {})
-                self.images(root / "app", ["charts/Added.png"])
+                self.images(root, ["charts/Added.svg"], source=True)
                 with self.assertRaisesRegex(AssertionError, "images differ"):
                     SMOKE.verify_source_contract(root, package, contract)
 

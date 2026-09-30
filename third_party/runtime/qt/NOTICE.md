@@ -26,9 +26,11 @@ build.
 ## Corresponding-source offer
 
 For an official Fluent-Qt Gallery package that contains Qt under GNU LGPLv3,
-the maintainers retain under their control the exact
-`qtbase-everywhere-src-<Qt-version>.tar.xz` source named in
-`RUNTIME_DEPENDENCIES.txt`.
+the maintainers retain under their control the exact Qt Base and Qt SVG sources
+named in `RUNTIME_DEPENDENCIES.txt`:
+
+- `qtbase-everywhere-src-<Qt-version>.tar.xz`
+- `qtsvg-everywhere-src-<Qt-version>.tar.xz`
 
 To receive a copy, open an issue at
 <https://github.com/calvinhxx/Fluent-Qt/issues> and include the Gallery version,

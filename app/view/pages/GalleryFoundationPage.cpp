@@ -1,6 +1,5 @@
 #include "GalleryFoundationPage.h"
 
-#include <QPixmap>
 #include <QVector>
 
 #include "model/GalleryComponentCatalog.h"
@@ -34,17 +33,13 @@ GalleryFoundationPage::GalleryFoundationPage(const GalleryContentEntry& entry,
         // use their catalog glyph instead of borrowing an unrelated image.
         // zh_CN: 优先使用主题专属图片；没有专属图片的组件路由改用目录字形，
         // 不再借用其他组件的图片。
-        const QPixmap icon(galleryControlImageResource(item->title));
-        entries.append({item->id,
-                        item->title,
-                        description,
-                        icon,
-                        icon.isNull() ? item->iconGlyph : QString()});
+        const QString imageResource = galleryControlImageResource(item->title);
+        entries.append({item->id, item->title, description, imageResource,
+                        imageResource.isEmpty() ? item->iconGlyph : QString()});
     }
 
     grid->setEntries(entries);
-    connect(grid, &GalleryEntryGrid::activated,
-            this, &GalleryContentPage::routeActivated);
+    connect(grid, &GalleryEntryGrid::activated, this, &GalleryContentPage::routeActivated);
     addContentWidget(grid);
 
     LOG_DEBUG(QStringLiteral("GalleryFoundationPage created routeId=%1 cards=%2")
