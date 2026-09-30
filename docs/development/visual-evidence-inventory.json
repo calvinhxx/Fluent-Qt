@@ -134,6 +134,7 @@
         "scroll-view",
         "scrollbar",
         "stack-view",
+        "timeline",
         "tree-view"
       ],
       "required_states": [
@@ -166,6 +167,7 @@
         "navigation-view",
         "pivot",
         "selector-bar",
+        "stepper",
         "tab-view"
       ],
       "required_states": [
@@ -1137,6 +1139,25 @@
       }
     },
     {
+      "id": "stepper",
+      "family": "responsive-navigation",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "StepperTest.Contract_OverflowAndMirroredGeometryRemainReachable",
+          "states": [
+            "narrow"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "gallery"
+      }
+    },
+    {
       "id": "tab-view",
       "family": "responsive-navigation",
       "automated_evidence": [
@@ -1217,6 +1238,25 @@
         "coverage": "all-required-states",
         "surface": "visual-check",
         "test_case": "TimePickerTest.VisualCheck"
+      }
+    },
+    {
+      "id": "timeline",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "TimelineTest.Contract_WrappedRowsAndNoPersistentItemWidgets",
+          "states": [
+            "narrow"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "gallery"
       }
     },
     {

@@ -65,6 +65,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/collections/FlowView.h
     src/components/collections/GridView.h
     src/components/collections/ListView.h
+    src/components/collections/Timeline.h
     src/components/collections/SelectionMode.h
     src/components/collections/SplitView.h
     src/components/collections/StackView.h
@@ -112,6 +113,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/navigation/NavigationView.h
     src/components/navigation/Pivot.h
     src/components/navigation/SelectorBar.h
+    src/components/navigation/Stepper.h
     src/components/navigation/StackContentHost.h
     src/components/navigation/TabView.h
 

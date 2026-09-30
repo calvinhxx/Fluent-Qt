@@ -148,6 +148,9 @@ const QHash<QString, QString>& routeDescriptions()
         {QStringLiteral("toggle-switch"),
          QStringLiteral("A switch that flips between on and off states.")},
         // Collections
+        {QStringLiteral("timeline"),
+         QStringLiteral("Presents caller-owned model rows as a timeline with text, time labels and "
+                        "node states.")},
         {QStringLiteral("data-grid"),
          QStringLiteral("Presents large model-backed rows and columns with "
                         "headers, sorting, selection, and delegate editing.")},
@@ -230,6 +233,8 @@ const QHash<QString, QString>& routeDescriptions()
         {QStringLiteral("command-bar-flyout"),
          QStringLiteral("A contextual command surface with primary and secondary actions.")},
         // Navigation
+        {QStringLiteral("stepper"), QStringLiteral("Presents application-controlled steps with "
+                                                   "completion, error and availability states.")},
         {QStringLiteral("breadcrumb"),
          QStringLiteral("Shows the trail to the current location and lets people "
                         "go back up the hierarchy.")},

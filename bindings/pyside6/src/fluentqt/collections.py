@@ -16,6 +16,7 @@ _NativeFlowView = _native.fluent.FlowView
 _NativeGridView = _native.fluent.GridView
 _NativeListView = _native.fluent.ListView
 _NativeFileListView = _native.fluent.FileListView
+_NativeTimeline = _native.fluent.Timeline
 _NativeSplitView = _native.fluent.SplitView
 SplitViewPaneOptions = _native.fluent.SplitViewPaneOptions
 _NativeStackView = _native.fluent.StackView
@@ -845,6 +846,22 @@ class GridView(_NativeGridView):
         return super().itemDelegate(*args)
 
 
+class Timeline(_NativeTimeline):
+    """Model-backed timeline with caller-owned ordering, data and delegates."""
+
+    SelectionMode = SelectionMode
+
+    def selectionMode(self):
+        return _native.listViewSelectionMode(self)
+
+    def setSelectionMode(self, mode):
+        _native.setListViewSelectionMode(self, mode)
+
+    def setItemDelegate(self, delegate):
+        super().setItemDelegate(delegate)
+        self._fluentqt_timeline_delegate = delegate
+
+
 class FileListView(_NativeFileListView):
     """File rows with the shared Fluent selection and scrollbar contract.
 
@@ -1514,6 +1531,7 @@ __all__ = [
     "GridView",
     "ListView",
     "FileListView",
+    "Timeline",
     "SelectionMode",
     "SplitView",
     "SplitViewPaneOptions",

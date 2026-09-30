@@ -1,4 +1,5 @@
 #include "NavigationSamples.h"
+#include "SequenceSamples.h"
 
 #include <functional>
 
@@ -2093,6 +2094,8 @@ QVector<GallerySample> tabViewSamples()
 
 QVector<GallerySample> navigationSamples(const QString& routeId)
 {
+    if (routeId == QStringLiteral("stepper"))
+        return stepperSamples();
     if (routeId == QStringLiteral("breadcrumb"))
         return breadcrumbSamples();
     if (routeId == QStringLiteral("navigation-view"))

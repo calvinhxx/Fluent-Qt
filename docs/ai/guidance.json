@@ -581,6 +581,11 @@
           "component_id": "file-list-view",
           "choose_when": "A caller-owned file model needs complete names, metadata, transfer progress, remove and retry actions.",
           "avoid_when": "Rows are general content unrelated to files or the view should own upload work."
+        },
+        {
+          "component_id": "timeline",
+          "choose_when": "Ordered model rows need a timeline rail, supporting text and status.",
+          "avoid_when": "The application needs a workflow navigation control instead of a record view."
         }
       ]
     },
@@ -746,6 +751,11 @@
           "component_id": "breadcrumb",
           "choose_when": "Users need the current hierarchical path and direct navigation to ancestors.",
           "avoid_when": "The product structure is flat or the trail would duplicate top-level navigation."
+        },
+        {
+          "component_id": "stepper",
+          "choose_when": "A small sequence needs current, completion and error states with application-controlled navigation requests.",
+          "avoid_when": "The control must own validation, business actions or a large data collection."
         }
       ]
     },

@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
 
-[← Files and feedback](files-and-feedback.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md)
+[← Files and feedback](files-and-feedback.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Timeline and Stepper →](sequence-controls.md)
 <!-- docs-nav:top:end -->
 
 `Spatial` is a first-level component category in `src/components/spatial`, using
@@ -681,5 +681,5 @@ interactive examples; `examples/hello_world` is the minimal library consumer.
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Files and feedback](files-and-feedback.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md)
+[← Files and feedback](files-and-feedback.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Timeline and Stepper →](sequence-controls.md)
 <!-- docs-nav:bottom:end -->

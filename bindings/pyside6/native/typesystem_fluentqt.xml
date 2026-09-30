@@ -485,6 +485,16 @@
         </namespace-type>
 
         <namespace-type name="collections" visible="no">
+            <object-type name="Timeline">
+                <enum-type name="NodeAlignment"/>
+                <enum-type name="Status"/>
+                <enum-type name="DataRole"/>
+                <modify-function signature="setModel(QAbstractItemModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
             <object-type name="FileListView">
                 <enum-type name="Status"/>
                 <enum-type name="DataRole"/>
@@ -1377,6 +1387,10 @@ Shiboken::Object::keepReference(
                 <enum-type name="OverflowBehavior"/>
             </object-type>
             <value-type name="SelectorBarItem"/>
+            <value-type name="StepperItem"/>
+            <object-type name="Stepper">
+                <enum-type name="State"/>
+            </object-type>
             <object-type name="SelectorBar">
                 <enum-type name="OverflowBehavior"/>
             </object-type>

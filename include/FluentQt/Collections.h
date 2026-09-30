@@ -12,5 +12,6 @@
 #include <components/collections/SplitView.h>
 #include <components/collections/StackView.h>
 #include <components/collections/TreeView.h>
+#include <components/collections/Timeline.h>
 
 #endif // FLUENTQT_COLLECTIONS_H

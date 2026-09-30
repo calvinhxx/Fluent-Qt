@@ -98,12 +98,15 @@
     "StackContentHost",
     "StackView",
     "StateGroup",
+    "Stepper",
+    "StepperItem",
     "TabView",
     "TabViewItem",
     "TeachingTip",
     "TextEdit",
     "ThemeTokens",
     "TimePicker",
+    "Timeline",
     "TitleBar",
     "Toast",
     "ToggleButton",
@@ -1561,6 +1564,32 @@
       "model",
       "setAnimationEnabled",
       "isAnimationEnabled"
+    ],
+    "Timeline": [
+      "setModel",
+      "nodeAlignment",
+      "setNodeAlignment",
+      "isAnimationEnabled",
+      "setAnimationEnabled"
+    ],
+    "Stepper": [
+      "itemCount",
+      "itemAt",
+      "items",
+      "addItem",
+      "insertItem",
+      "removeItem",
+      "clearItems",
+      "setItem",
+      "setItemState",
+      "setItemEnabled",
+      "currentIndex",
+      "setCurrentIndex",
+      "orientation",
+      "setOrientation",
+      "isAnimationEnabled",
+      "setAnimationEnabled",
+      "itemGeometry"
     ]
   },
   "optional_modules": {

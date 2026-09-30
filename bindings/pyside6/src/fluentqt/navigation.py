@@ -16,6 +16,8 @@ Pivot = _native.fluent.Pivot
 PivotItem = _native.fluent.PivotItem
 SelectorBar = _native.fluent.SelectorBar
 SelectorBarItem = _native.fluent.SelectorBarItem
+Stepper = _native.fluent.Stepper
+StepperItem = _native.fluent.StepperItem
 TabView = _native.fluent.TabView
 TabViewItem = _native.fluent.TabViewItem
 WidgetOwnership = _native.fluent.WidgetOwnership
@@ -619,6 +621,8 @@ __all__ = [
     "PivotItem",
     "SelectorBar",
     "SelectorBarItem",
+    "Stepper",
+    "StepperItem",
     "StackContentHost",
     "TabView",
     "TabViewItem",
