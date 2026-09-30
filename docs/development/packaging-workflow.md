@@ -20,6 +20,8 @@ surface; the reusable component library is installed through the separate
   - macOS: `macdeployqt`.
   - Windows: `windeployqt`.
 - The base SDK exports `FluentQt::FluentQt` with Widgets dependencies only.
+  Gallery also requires Qt Network and Qt SVG; deployment tools include the
+  linked SVG library, and its source archive is listed in the runtime notice.
   The optional `FluentQt::Spatial` target has its own export, loaded by
   `find_package(FluentQt COMPONENTS Spatial)`. Gallery release presets enable it;
   use `FLUENT_QT_BUILD_SPATIAL=OFF` for a 2D-only application/SDK.
@@ -53,13 +55,13 @@ Every Gallery package includes the project license, `THIRD_PARTY_NOTICES.md`,
 `TRADEMARKS.md`, dependency license files, and a generated
 `RUNTIME_DEPENDENCIES.txt` containing the resolved Qt, spdlog, and fmt versions.
 Windows and macOS packages dynamically deploy Qt; before publishing one, retain
-the exact Qt Base corresponding source named in that notice under maintainer
+the exact Qt Base and Qt SVG corresponding sources named in that notice under maintainer
 control for at least the period promised in
 `third_party/runtime/qt/NOTICE.md`. Linux DEBs do not bundle Qt and instead
 use the distribution's Qt packages.
 
 If Gallery starts deploying a Qt module outside its current Qt Core, GUI,
-Widgets, Network, OpenGL/OpenGLWidgets, and Qt Base plug-in contract, add that module's license and
+Widgets, Network, SVG, OpenGL/OpenGLWidgets, and Qt Base plug-in contract, add that module's license and
 corresponding source to the package process before release.
 
 Tagged releases also publish `FluentQt-<version>-source.zip`. This portable,

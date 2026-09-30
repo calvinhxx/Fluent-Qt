@@ -30,11 +30,13 @@ endif()
 
 set(FLUENT_QT_RUNTIME_QT_SOURCE_ARCHIVE
     "qtbase-everywhere-src-${FLUENT_QT_RUNTIME_QT_VERSION}.tar.xz")
+set(FLUENT_QT_RUNTIME_QT_SVG_SOURCE_ARCHIVE
+    "qtsvg-everywhere-src-${FLUENT_QT_RUNTIME_QT_VERSION}.tar.xz")
 if((WIN32 OR APPLE) AND FLUENT_QT_PACKAGE_DEPLOY_QT_RUNTIME)
     set(FLUENT_QT_RUNTIME_QT_DISTRIBUTION_STATEMENT
         "This package contains dynamically linked Qt libraries and plug-ins deployed with Gallery.")
     set(FLUENT_QT_RUNTIME_QT_SOURCE_STATEMENT
-        "Matching Qt Base source archive: ${FLUENT_QT_RUNTIME_QT_SOURCE_ARCHIVE}\n\nBefore distributing this package, the distributor must retain that exact source under its own control. See licenses/qt/NOTICE.md for the no-charge request instructions and three-year written offer.")
+        "Matching Qt Base source archive: ${FLUENT_QT_RUNTIME_QT_SOURCE_ARCHIVE}\nMatching Qt SVG source archive: ${FLUENT_QT_RUNTIME_QT_SVG_SOURCE_ARCHIVE}\n\nBefore distributing this package, the distributor must retain both exact sources under its own control. See licenses/qt/NOTICE.md for the no-charge request instructions and three-year written offer.")
 else()
     set(FLUENT_QT_RUNTIME_QT_DISTRIBUTION_STATEMENT
         "This package does not contain Qt binaries; Qt is supplied by the operating system or the user's Qt installation.")

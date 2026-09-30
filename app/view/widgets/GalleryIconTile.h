@@ -1,7 +1,6 @@
 #ifndef GALLERYICONTILE_H
 #define GALLERYICONTILE_H
 
-#include <QPixmap>
 #include <QString>
 #include <QWidget>
 
@@ -12,15 +11,12 @@ class QPaintEvent;
 namespace fluent::gallery {
 
 /**
- * @brief Square control-icon tile rendering the WinUI Gallery image for a control.
- * zh_CN: 方形控件图标块，渲染某控件对应的 WinUI Gallery 图标图片。
+ * @brief Square control-icon tile rendering bundled SVG artwork at the display resolution.
+ * zh_CN: 方形控件图标块，按显示分辨率渲染内置 SVG 素材。
  *
- * The image is looked up by control name from bundled resources; controls without a
- * matching asset (project-specific ones) fall back to a neutral placeholder so a
- * designer can supply art later. Tiles can alternatively render an icon-font glyph
- * (used by category cards, which have no per-control art).
- * zh_CN: 图标按控件名从打包资源中查找；没有同名素材的（项目特有控件）回退到中性占位图，
- * 方便后续由设计师补充。也可改为渲染图标字体字符（分类卡片没有控件图片时使用）。
+ * Artwork is looked up by control name. Tiles can alternatively render a bundled
+ * icon-font glyph, as used by category cards.
+ * zh_CN: 按控件名查找素材；也可渲染内置图标字体字形，供分类卡片使用。
  */
 class GalleryIconTile : public QWidget, public fluent::FluentElement {
 public:
@@ -38,7 +34,7 @@ protected:
     void paintEvent(QPaintEvent* event) override;
 
 private:
-    QPixmap m_pixmap;
+    QString m_imageResource;
     QString m_iconGlyph;
 };
 

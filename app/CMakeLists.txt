@@ -39,7 +39,7 @@ set(FLUENT_QT_GALLERY_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 set(FLUENT_QT_GALLERY_RESOURCES ${FLUENT_QT_GALLERY_RESOURCES} PARENT_SCOPE)
 set(FLUENT_QT_GALLERY_WEB_RESOURCES ${FLUENT_QT_GALLERY_WEB_RESOURCES} PARENT_SCOPE)
 
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Network)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Network Svg)
 
 # The application and Gallery test executables share the same model/view code.
 # Keep it in one internal object target so a cold full build compiles those sources
@@ -57,6 +57,7 @@ target_link_libraries(FluentQtGalleryCore
     FluentQtLoggingSupport
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::Svg
 )
 if(TARGET FluentQtSpatial)
     target_link_libraries(FluentQtGalleryCore PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
@@ -91,6 +92,7 @@ target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
     FluentQtLoggingSupport
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::Svg
 )
 if(TARGET FluentQtSpatial)
     target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
