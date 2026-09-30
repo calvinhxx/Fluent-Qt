@@ -16,6 +16,10 @@ IMAGE_ROOT = ROOT / "app" / "assets" / "control_images"
 CANVAS = 72
 SCALE = 4
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"
+SUPPORTED_ELEMENTS = {
+    "svg", "title", "desc", "defs", "g", "path", "rect", "circle", "ellipse",
+    "line", "polyline", "polygon", "linearGradient", "radialGradient", "stop", "use",
+}
 
 
 def validate_source(path: Path) -> None:
@@ -32,7 +36,13 @@ def validate_source(path: Path) -> None:
         name = element.tag.rsplit("}", 1)[-1]
         if name in {"image", "text", "script", "foreignObject"}:
             raise ValueError(f"{path}: {name} is not outlined vector artwork")
+        if name not in SUPPORTED_ELEMENTS:
+            raise ValueError(f"{path}: {name} is outside the Qt 5.15-compatible artwork subset")
         for attribute, value in element.attrib.items():
+            if attribute.rsplit("}", 1)[-1] in {
+                "clip-path", "mask", "filter", "marker-start", "marker-mid", "marker-end",
+            }:
+                raise ValueError(f"{path}: {attribute} is outside the Qt 5.15-compatible artwork subset")
             if attribute.rsplit("}", 1)[-1] == "href" and not value.startswith("#"):
                 raise ValueError(f"{path}: external artwork references are unsupported")
 

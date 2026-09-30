@@ -49,6 +49,12 @@ class ValidateCiCppMatrixTest(unittest.TestCase):
         catalog["scenarios"][0]["timeout_minutes"] = 0
         self.assertTrue(any("positive integer" in error for error in MODULE.validate_catalog(catalog)))
 
+    def test_minimal_qt_download_must_include_gallery_svg_dependency(self):
+        catalog = copy.deepcopy(self.catalog)
+        scenario = next(item for item in catalog["scenarios"] if item["id"] == "linux-x64-qt515-full")
+        scenario["qt_archives"] = "qtbase icu"
+        self.assertTrue(any("must include qtsvg" in error for error in MODULE.validate_catalog(catalog)))
+
     def test_non_boolean_first_window_trial_is_rejected(self):
         catalog = copy.deepcopy(self.catalog)
         catalog["scenarios"][0]["first_window_trial"] = "yes"
