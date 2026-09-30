@@ -5,9 +5,10 @@ hinted fonts retain the display's pixel grid. Geometry, images, panel resolution
 and multisampling still use the target device.
 """
 
+import math
 import weakref
 
-from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtCore import QPoint, QPointF, QRectF, QSize, QSizeF, Qt
 from PySide6.QtGui import (
     QFont, QFontMetricsF, QImage, QPaintDevice, QPaintEngine, QPainter,
     QPainterPath, QRegion, QTransform,
@@ -245,7 +246,19 @@ class _GlyphPaintEngine(QPaintEngine):
             origin = QPointF(painter.worldTransform().dx(), painter.worldTransform().dy())
             origin += self.device.raster_origin
             baseline = position + origin
-            ink = QFontMetricsF(item.font()).boundingRect(item.text())
+            metrics = QFontMetricsF(item.font())
+            # Guard the leading edges without exceeding the 512 x 128 budget.
+            # Fixed-point truncation can change the phase when a crossing
+            # glyph's raster origin becomes negative inside the next tile.
+            guard_width = (metrics.maxWidth() - min(0, metrics.minRightBearing())) * dpr + 2
+            guard_height = max(metrics.descent(), item.descent()) * dpr + 2
+            if guard_width >= 512 or guard_height >= 128:
+                painter.paintEngine().syncState()
+                painter.paintEngine().drawTextItem(position, item)
+                return
+            guard = QSize(math.ceil(guard_width), math.ceil(guard_height))
+            payload = QSize(512 - guard.width(), 128 - guard.height())
+            ink = metrics.boundingRect(item.text())
             ink = ink.united(QRectF(0, -item.ascent(), item.width(), item.ascent() + item.descent()))
             ink = ink.adjusted(-2, -2, 2, 2).translated(baseline)
             self.glyph_items += 1
@@ -262,10 +275,13 @@ class _GlyphPaintEngine(QPaintEngine):
             pixels = QTransform.fromScale(dpr, dpr).mapRect(ink).toAlignedRect()
             # One 256 KiB image plus its upload is reserved by the panel cache plan.
             # Release every tile immediately; no persistent or per-frame glyph cache.
-            for top in range(pixels.top(), pixels.bottom() + 1, 128):
-                for left in range(pixels.left(), pixels.right() + 1, 512):
-                    glyph = QImage(min(512, pixels.right() - left + 1),
-                                   min(128, pixels.bottom() - top + 1),
+            for top in range(pixels.top(), pixels.bottom() + 1, payload.height()):
+                for left in range(pixels.left(), pixels.right() + 1, payload.width()):
+                    size = QSize(min(payload.width(), pixels.right() - left + 1),
+                                 min(payload.height(), pixels.bottom() - top + 1))
+                    tile = QPoint(max(0, left - guard.width()), max(0, top - guard.height()))
+                    prefix = QPoint(left, top) - tile
+                    glyph = QImage(size + QSize(prefix.x(), prefix.y()),
                                    QImage.Format_ARGB32_Premultiplied)
                     if glyph.isNull():
                         continue
@@ -284,18 +300,22 @@ class _GlyphPaintEngine(QPaintEngine):
                     # Preserve shaping, fallback fonts, bidi order and decorations.
                     # QPainter already draws decorations on the outer device.
                     # Its drawTextItem wrapper would paint underline/strikeout twice.
-                    # Keep integer offsets in physical pixels: a logical DPR
-                    # roundtrip can change Qt's fixed-point glyph phase.
-                    raster.setWorldTransform(QTransform(dpr, 0, 0, dpr, -left, -top))
+                    # Keep the shaped position intact: Qt's outline path can
+                    # quantize it before applying the strip/tile transform.
+                    raster.setWorldTransform(QTransform(dpr, 0, 0, dpr,
+                                                        origin.x() * dpr - tile.x(),
+                                                        origin.y() * dpr - tile.y()))
                     raster.paintEngine().syncState()
-                    raster.paintEngine().drawTextItem(baseline, item)
+                    raster.paintEngine().drawTextItem(position, item)
                     raster.end()
                     del raster
                     glyph.setDevicePixelRatio(dpr)
                     painter.save()
                     painter.setOpacity(1)
                     painter.setRenderHint(QPainter.SmoothPixmapTransform, False)
-                    painter.drawImage(tile_origin - origin, glyph)
+                    painter.drawImage(QRectF(tile_origin - origin,
+                                             QSizeF(size.width() / dpr, size.height() / dpr)),
+                                      glyph, QRectF(prefix, size))
                     painter.restore()
                     del glyph
         self._forward(draw)

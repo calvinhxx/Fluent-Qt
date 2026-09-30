@@ -245,7 +245,26 @@ private:
                 const QPointF origin(painter.worldTransform().dx() + device.m_rasterOrigin.x(),
                                      painter.worldTransform().dy() + device.m_rasterOrigin.y());
                 const QPointF baseline = position + origin;
-                QRectF ink = QFontMetricsF(item.font()).boundingRect(item.text());
+                const QFontMetricsF metrics(item.font());
+                // A glyph crossing a tile's leading edge must retain a positive
+                // raster origin. Qt 5 truncates fixed-point coordinates toward
+                // zero, so moving that origin below zero changes its phase.
+                // Keep the guard inside the existing 512 x 128 scratch budget.
+                // zh_CN: 给分块前沿保留字形保护边，避免跨边界字形变成负坐标后
+                // 被 Qt 5 向零截断而改变相位；保护边计入既有 512 x 128 内存上限。
+                const qreal guardWidth =
+                    (metrics.maxWidth() - qMin(qreal(0), metrics.minRightBearing())) * dpr + 2;
+                const qreal guardHeight = qMax(metrics.descent(), item.descent()) * dpr + 2;
+                if (guardWidth >= 512 || guardHeight >= 128) {
+                    // Oversized fonts retain the delegate's semantics without
+                    // allocating a tile larger than the cache plan reserves.
+                    painter.paintEngine()->syncState();
+                    painter.paintEngine()->drawTextItem(position, item);
+                    return;
+                }
+                const QSize guard(qCeil(guardWidth), qCeil(guardHeight));
+                const QSize payload(512 - guard.width(), 128 - guard.height());
+                QRectF ink = metrics.boundingRect(item.text());
                 ink = ink.united(
                     QRectF(0, -item.ascent(), item.width(), item.ascent() + item.descent()));
                 ink = ink.adjusted(-2, -2, 2, 2).translated(baseline);
@@ -264,11 +283,17 @@ private:
                 const QRect pixels = QTransform::fromScale(dpr, dpr).mapRect(ink).toAlignedRect();
                 // One 256 KiB CPU tile plus its upload is reserved by the cache plan.
                 // Tiles and their Qt texture-cache keys die immediately; no glyph LRU.
-                for (int top = pixels.top(); top <= pixels.bottom(); top += 128) {
-                    for (int left = pixels.left(); left <= pixels.right(); left += 512) {
-                        const QSize size(qMin(512, pixels.right() - left + 1),
-                                         qMin(128, pixels.bottom() - top + 1));
-                        QImage glyph(size, QImage::Format_ARGB32_Premultiplied);
+                for (int top = pixels.top(); top <= pixels.bottom(); top += payload.height()) {
+                    for (int left = pixels.left(); left <= pixels.right();
+                         left += payload.width()) {
+                        const QSize size(qMin(payload.width(), pixels.right() - left + 1),
+                                         qMin(payload.height(), pixels.bottom() - top + 1));
+                        // Leave the canvas origin unchanged at the outer edge.
+                        const QPoint tile(qMax(0, left - guard.width()),
+                                          qMax(0, top - guard.height()));
+                        const QPoint prefix = QPoint(left, top) - tile;
+                        QImage glyph(size + QSize(prefix.x(), prefix.y()),
+                                     QImage::Format_ARGB32_Premultiplied);
                         if (glyph.isNull())
                             continue;
                         ++glyphTiles;
@@ -283,24 +308,28 @@ private:
                         raster.setRenderHints(painter.renderHints());
                         raster.setBackground(painter.background());
                         raster.setBackgroundMode(painter.backgroundMode());
-                        // Apply integer tile offsets in physical pixels. Dividing
-                        // by DPR and multiplying it back in QPainter can change
-                        // Qt 5's fixed-point glyph phase at fractional densities.
-                        // zh_CN: 在物理像素中设置整数分块偏移，避免分数 DPR 往返运算
-                        // 改变 Qt 5 定点字形坐标的亚像素相位。
-                        raster.setWorldTransform(QTransform(dpr, 0, 0, dpr, -left, -top));
+                        // Preserve the original shaped position: Qt's outline
+                        // path may quantize it before applying the transform.
+                        // Both strip and tile shifts belong in physical pixels.
+                        // zh_CN: 保留原始字形位置；Qt 的轮廓路径可能先量化位置再
+                        // 应用变换，因此条带和分块偏移都放在物理像素变换中。
+                        raster.setWorldTransform(QTransform(dpr, 0, 0, dpr,
+                                                            origin.x() * dpr - tile.x(),
+                                                            origin.y() * dpr - tile.y()));
                         // QTextItem retains the fallback font, shaping, bidi order and decorations.
                         // Never re-layout item.text() as a new drawText call.
                         // QPainter paints underline/strikeout separately on the outer
                         // device. Dispatch directly to avoid drawing decorations twice.
                         raster.paintEngine()->syncState();
-                        raster.paintEngine()->drawTextItem(baseline, item);
+                        raster.paintEngine()->drawTextItem(position, item);
                         raster.end();
                         glyph.setDevicePixelRatio(dpr);
                         painter.save();
                         painter.setOpacity(1);
                         painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
-                        painter.drawImage(tileOrigin - origin, glyph);
+                        painter.drawImage(QRectF(tileOrigin - origin,
+                                                 QSizeF(size.width() / dpr, size.height() / dpr)),
+                                          glyph, QRectF(prefix, size));
                         painter.restore();
                     }
                 }
