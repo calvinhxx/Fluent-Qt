@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>Avatar</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#33d7d3" />
+      <stop offset="1" stop-color="#007e8f" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="3" y="3" width="66" height="66" rx="16" fill="url(#tile)" opacity="1" />
+    <path d="M3 3H69L3 58Z" fill="#a5f1ee" opacity="0.15" />
+    <circle cx="36" cy="35" r="18" fill="#eeffff" opacity="1" />
+    <g aria-label="M" fill="#35aeb0" transform="translate(27.238 43) scale(0.009277 -0.009277)">
+      <path transform="translate(0 0)" d="M150 0V1490H552L835 721Q850 677 869.5 606.5Q889 536 909.0 455.5Q929 375 946 301Q963 374 983.0 454.5Q1003 535 1022.5 605.5Q1042 676 1056 721L1336 1490H1739V0H1473V752Q1473 808 1474.5 890.5Q1476 973 1478.5 1066.0Q1481 1159 1482 1248Q1457 1152 1429.0 1057.0Q1401 962 1376.0 882.0Q1351 802 1333 752L1058 0H831L552 752Q534 800 509.5 878.0Q485 956 457.5 1050.0Q430 1144 402 1240Q404 1156 406.5 1064.5Q409 973 410.5 891.0Q412 809 412 752V0Z" />
+    </g>
+    <circle cx="49" cy="50" r="5" fill="#e9ffff" opacity="1" />
+    <circle cx="49" cy="50" r="3" fill="#27abae" opacity="1" />
+  </g>
+</svg>

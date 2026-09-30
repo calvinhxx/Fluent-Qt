@@ -1,0 +1,210 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>ColorPicker</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#26b7ed" />
+      <stop offset="1" stop-color="#00427e" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+    <radialGradient id="wheelLight">
+      <stop stop-color="#fff" stop-opacity="0.9" />
+      <stop offset="1" stop-color="#fff" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <path d="M36 36L71.000 36.000A35 35 0 0 1 70.976 37.283Z" fill="#f73c23" opacity="1" />
+    <path d="M36 36L70.979 37.221A35 35 0 0 1 70.910 38.502Z" fill="#f74323" opacity="1" />
+    <path d="M36 36L70.915 38.441A35 35 0 0 1 70.802 39.719Z" fill="#f74a23" opacity="1" />
+    <path d="M36 36L70.808 39.658A35 35 0 0 1 70.651 40.932Z" fill="#f75123" opacity="1" />
+    <path d="M36 36L70.659 40.871A35 35 0 0 1 70.458 42.138Z" fill="#f75923" opacity="1" />
+    <path d="M36 36L70.468 42.078A35 35 0 0 1 70.222 43.337Z" fill="#f76023" opacity="1" />
+    <path d="M36 36L70.235 43.277A35 35 0 0 1 69.946 44.527Z" fill="#f76723" opacity="1" />
+    <path d="M36 36L69.960 44.467A35 35 0 0 1 69.627 45.706Z" fill="#f76e23" opacity="1" />
+    <path d="M36 36L69.644 45.647A35 35 0 0 1 69.268 46.874Z" fill="#f77523" opacity="1" />
+    <path d="M36 36L69.287 46.816A35 35 0 0 1 68.868 48.028Z" fill="#f77c23" opacity="1" />
+    <path d="M36 36L68.889 47.971A35 35 0 0 1 68.429 49.168Z" fill="#f78323" opacity="1" />
+    <path d="M36 36L68.451 49.111A35 35 0 0 1 67.949 50.292Z" fill="#f78a23" opacity="1" />
+    <path d="M36 36L67.974 50.236A35 35 0 0 1 67.431 51.398Z" fill="#f79123" opacity="1" />
+    <path d="M36 36L67.458 51.343A35 35 0 0 1 66.874 52.485Z" fill="#f79823" opacity="1" />
+    <path d="M36 36L66.903 52.432A35 35 0 0 1 66.280 53.553Z" fill="#f79f23" opacity="1" />
+    <path d="M36 36L66.311 53.500A35 35 0 0 1 65.649 54.599Z" fill="#f7a723" opacity="1" />
+    <path d="M36 36L65.682 54.547A35 35 0 0 1 64.982 55.622Z" fill="#f7ae23" opacity="1" />
+    <path d="M36 36L65.016 55.572A35 35 0 0 1 64.280 56.622Z" fill="#f7b523" opacity="1" />
+    <path d="M36 36L64.316 56.572A35 35 0 0 1 63.543 57.596Z" fill="#f7bc23" opacity="1" />
+    <path d="M36 36L63.580 57.548A35 35 0 0 1 62.772 58.544Z" fill="#f7c323" opacity="1" />
+    <path d="M36 36L62.812 58.498A35 35 0 0 1 61.969 59.465Z" fill="#f7ca23" opacity="1" />
+    <path d="M36 36L62.010 59.420A35 35 0 0 1 61.134 60.357Z" fill="#f7d123" opacity="1" />
+    <path d="M36 36L61.177 60.313A35 35 0 0 1 60.269 61.219Z" fill="#f7d823" opacity="1" />
+    <path d="M36 36L60.313 61.177A35 35 0 0 1 59.374 62.051Z" fill="#f7df23" opacity="1" />
+    <path d="M36 36L59.420 62.010A35 35 0 0 1 58.451 62.851Z" fill="#f7e623" opacity="1" />
+    <path d="M36 36L58.498 62.812A35 35 0 0 1 57.500 63.618Z" fill="#f7ed23" opacity="1" />
+    <path d="M36 36L57.548 63.580A35 35 0 0 1 56.523 64.351Z" fill="#f7f523" opacity="1" />
+    <path d="M36 36L56.572 64.316A35 35 0 0 1 55.521 65.050Z" fill="#f3f723" opacity="1" />
+    <path d="M36 36L55.572 65.016A35 35 0 0 1 54.495 65.714Z" fill="#ecf723" opacity="1" />
+    <path d="M36 36L54.547 65.682A35 35 0 0 1 53.447 66.341Z" fill="#e5f723" opacity="1" />
+    <path d="M36 36L53.500 66.311A35 35 0 0 1 52.378 66.932Z" fill="#def723" opacity="1" />
+    <path d="M36 36L52.432 66.903A35 35 0 0 1 51.288 67.485Z" fill="#d7f723" opacity="1" />
+    <path d="M36 36L51.343 67.458A35 35 0 0 1 50.180 67.999Z" fill="#d0f723" opacity="1" />
+    <path d="M36 36L50.236 67.974A35 35 0 0 1 49.055 68.474Z" fill="#c9f723" opacity="1" />
+    <path d="M36 36L49.111 68.451A35 35 0 0 1 47.913 68.910Z" fill="#c1f723" opacity="1" />
+    <path d="M36 36L47.971 68.889A35 35 0 0 1 46.757 69.306Z" fill="#baf723" opacity="1" />
+    <path d="M36 36L46.816 69.287A35 35 0 0 1 45.589 69.661Z" fill="#b3f723" opacity="1" />
+    <path d="M36 36L45.647 69.644A35 35 0 0 1 44.408 69.975Z" fill="#acf723" opacity="1" />
+    <path d="M36 36L44.467 69.960A35 35 0 0 1 43.217 70.248Z" fill="#a5f723" opacity="1" />
+    <path d="M36 36L43.277 70.235A35 35 0 0 1 42.018 70.479Z" fill="#9ef723" opacity="1" />
+    <path d="M36 36L42.078 70.468A35 35 0 0 1 40.811 70.668Z" fill="#97f723" opacity="1" />
+    <path d="M36 36L40.871 70.659A35 35 0 0 1 39.598 70.815Z" fill="#90f723" opacity="1" />
+    <path d="M36 36L39.658 70.808A35 35 0 0 1 38.381 70.919Z" fill="#89f723" opacity="1" />
+    <path d="M36 36L38.441 70.915A35 35 0 0 1 37.160 70.981Z" fill="#82f723" opacity="1" />
+    <path d="M36 36L37.221 70.979A35 35 0 0 1 35.939 71.000Z" fill="#7bf723" opacity="1" />
+    <path d="M36 36L36.000 71.000A35 35 0 0 1 34.717 70.976Z" fill="#73f723" opacity="1" />
+    <path d="M36 36L34.779 70.979A35 35 0 0 1 33.498 70.910Z" fill="#6cf723" opacity="1" />
+    <path d="M36 36L33.559 70.915A35 35 0 0 1 32.281 70.802Z" fill="#65f723" opacity="1" />
+    <path d="M36 36L32.342 70.808A35 35 0 0 1 31.068 70.651Z" fill="#5ef723" opacity="1" />
+    <path d="M36 36L31.129 70.659A35 35 0 0 1 29.862 70.458Z" fill="#57f723" opacity="1" />
+    <path d="M36 36L29.922 70.468A35 35 0 0 1 28.663 70.222Z" fill="#50f723" opacity="1" />
+    <path d="M36 36L28.723 70.235A35 35 0 0 1 27.473 69.946Z" fill="#49f723" opacity="1" />
+    <path d="M36 36L27.533 69.960A35 35 0 0 1 26.294 69.627Z" fill="#42f723" opacity="1" />
+    <path d="M36 36L26.353 69.644A35 35 0 0 1 25.126 69.268Z" fill="#3bf723" opacity="1" />
+    <path d="M36 36L25.184 69.287A35 35 0 0 1 23.972 68.868Z" fill="#34f723" opacity="1" />
+    <path d="M36 36L24.029 68.889A35 35 0 0 1 22.832 68.429Z" fill="#2df723" opacity="1" />
+    <path d="M36 36L22.889 68.451A35 35 0 0 1 21.708 67.949Z" fill="#25f723" opacity="1" />
+    <path d="M36 36L21.764 67.974A35 35 0 0 1 20.602 67.431Z" fill="#23f727" opacity="1" />
+    <path d="M36 36L20.657 67.458A35 35 0 0 1 19.515 66.874Z" fill="#23f72e" opacity="1" />
+    <path d="M36 36L19.568 66.903A35 35 0 0 1 18.447 66.280Z" fill="#23f735" opacity="1" />
+    <path d="M36 36L18.500 66.311A35 35 0 0 1 17.401 65.649Z" fill="#23f73c" opacity="1" />
+    <path d="M36 36L17.453 65.682A35 35 0 0 1 16.378 64.982Z" fill="#23f743" opacity="1" />
+    <path d="M36 36L16.428 65.016A35 35 0 0 1 15.378 64.280Z" fill="#23f74a" opacity="1" />
+    <path d="M36 36L15.428 64.316A35 35 0 0 1 14.404 63.543Z" fill="#23f751" opacity="1" />
+    <path d="M36 36L14.452 63.580A35 35 0 0 1 13.456 62.772Z" fill="#23f759" opacity="1" />
+    <path d="M36 36L13.502 62.812A35 35 0 0 1 12.535 61.969Z" fill="#23f760" opacity="1" />
+    <path d="M36 36L12.580 62.010A35 35 0 0 1 11.643 61.134Z" fill="#23f767" opacity="1" />
+    <path d="M36 36L11.687 61.177A35 35 0 0 1 10.781 60.269Z" fill="#23f76e" opacity="1" />
+    <path d="M36 36L10.823 60.313A35 35 0 0 1 9.949 59.374Z" fill="#23f775" opacity="1" />
+    <path d="M36 36L9.990 59.420A35 35 0 0 1 9.149 58.451Z" fill="#23f77c" opacity="1" />
+    <path d="M36 36L9.188 58.498A35 35 0 0 1 8.382 57.500Z" fill="#23f783" opacity="1" />
+    <path d="M36 36L8.420 57.548A35 35 0 0 1 7.649 56.523Z" fill="#23f78a" opacity="1" />
+    <path d="M36 36L7.684 56.572A35 35 0 0 1 6.950 55.521Z" fill="#23f791" opacity="1" />
+    <path d="M36 36L6.984 55.572A35 35 0 0 1 6.286 54.495Z" fill="#23f798" opacity="1" />
+    <path d="M36 36L6.318 54.547A35 35 0 0 1 5.659 53.447Z" fill="#23f79f" opacity="1" />
+    <path d="M36 36L5.689 53.500A35 35 0 0 1 5.068 52.378Z" fill="#23f7a7" opacity="1" />
+    <path d="M36 36L5.097 52.432A35 35 0 0 1 4.515 51.288Z" fill="#23f7ae" opacity="1" />
+    <path d="M36 36L4.542 51.343A35 35 0 0 1 4.001 50.180Z" fill="#23f7b5" opacity="1" />
+    <path d="M36 36L4.026 50.236A35 35 0 0 1 3.526 49.055Z" fill="#23f7bc" opacity="1" />
+    <path d="M36 36L3.549 49.111A35 35 0 0 1 3.090 47.913Z" fill="#23f7c3" opacity="1" />
+    <path d="M36 36L3.111 47.971A35 35 0 0 1 2.694 46.757Z" fill="#23f7ca" opacity="1" />
+    <path d="M36 36L2.713 46.816A35 35 0 0 1 2.339 45.589Z" fill="#23f7d1" opacity="1" />
+    <path d="M36 36L2.356 45.647A35 35 0 0 1 2.025 44.408Z" fill="#23f7d8" opacity="1" />
+    <path d="M36 36L2.040 44.467A35 35 0 0 1 1.752 43.217Z" fill="#23f7df" opacity="1" />
+    <path d="M36 36L1.765 43.277A35 35 0 0 1 1.521 42.018Z" fill="#23f7e6" opacity="1" />
+    <path d="M36 36L1.532 42.078A35 35 0 0 1 1.332 40.811Z" fill="#23f7ed" opacity="1" />
+    <path d="M36 36L1.341 40.871A35 35 0 0 1 1.185 39.598Z" fill="#23f7f5" opacity="1" />
+    <path d="M36 36L1.192 39.658A35 35 0 0 1 1.081 38.381Z" fill="#23f3f7" opacity="1" />
+    <path d="M36 36L1.085 38.441A35 35 0 0 1 1.019 37.160Z" fill="#23ecf7" opacity="1" />
+    <path d="M36 36L1.021 37.221A35 35 0 0 1 1.000 35.939Z" fill="#23e5f7" opacity="1" />
+    <path d="M36 36L1.000 36.000A35 35 0 0 1 1.024 34.717Z" fill="#23def7" opacity="1" />
+    <path d="M36 36L1.021 34.779A35 35 0 0 1 1.090 33.498Z" fill="#23d7f7" opacity="1" />
+    <path d="M36 36L1.085 33.559A35 35 0 0 1 1.198 32.281Z" fill="#23d0f7" opacity="1" />
+    <path d="M36 36L1.192 32.342A35 35 0 0 1 1.349 31.068Z" fill="#23c9f7" opacity="1" />
+    <path d="M36 36L1.341 31.129A35 35 0 0 1 1.542 29.862Z" fill="#23c1f7" opacity="1" />
+    <path d="M36 36L1.532 29.922A35 35 0 0 1 1.778 28.663Z" fill="#23baf7" opacity="1" />
+    <path d="M36 36L1.765 28.723A35 35 0 0 1 2.054 27.473Z" fill="#23b3f7" opacity="1" />
+    <path d="M36 36L2.040 27.533A35 35 0 0 1 2.373 26.294Z" fill="#23acf7" opacity="1" />
+    <path d="M36 36L2.356 26.353A35 35 0 0 1 2.732 25.126Z" fill="#23a5f7" opacity="1" />
+    <path d="M36 36L2.713 25.184A35 35 0 0 1 3.132 23.972Z" fill="#239ef7" opacity="1" />
+    <path d="M36 36L3.111 24.029A35 35 0 0 1 3.571 22.832Z" fill="#2397f7" opacity="1" />
+    <path d="M36 36L3.549 22.889A35 35 0 0 1 4.051 21.708Z" fill="#2390f7" opacity="1" />
+    <path d="M36 36L4.026 21.764A35 35 0 0 1 4.569 20.602Z" fill="#2389f7" opacity="1" />
+    <path d="M36 36L4.542 20.657A35 35 0 0 1 5.126 19.515Z" fill="#2382f7" opacity="1" />
+    <path d="M36 36L5.097 19.568A35 35 0 0 1 5.720 18.447Z" fill="#237bf7" opacity="1" />
+    <path d="M36 36L5.689 18.500A35 35 0 0 1 6.351 17.401Z" fill="#2373f7" opacity="1" />
+    <path d="M36 36L6.318 17.453A35 35 0 0 1 7.018 16.378Z" fill="#236cf7" opacity="1" />
+    <path d="M36 36L6.984 16.428A35 35 0 0 1 7.720 15.378Z" fill="#2365f7" opacity="1" />
+    <path d="M36 36L7.684 15.428A35 35 0 0 1 8.457 14.404Z" fill="#235ef7" opacity="1" />
+    <path d="M36 36L8.420 14.452A35 35 0 0 1 9.228 13.456Z" fill="#2357f7" opacity="1" />
+    <path d="M36 36L9.188 13.502A35 35 0 0 1 10.031 12.535Z" fill="#2350f7" opacity="1" />
+    <path d="M36 36L9.990 12.580A35 35 0 0 1 10.866 11.643Z" fill="#2349f7" opacity="1" />
+    <path d="M36 36L10.823 11.687A35 35 0 0 1 11.731 10.781Z" fill="#2342f7" opacity="1" />
+    <path d="M36 36L11.687 10.823A35 35 0 0 1 12.626 9.949Z" fill="#233bf7" opacity="1" />
+    <path d="M36 36L12.580 9.990A35 35 0 0 1 13.549 9.149Z" fill="#2334f7" opacity="1" />
+    <path d="M36 36L13.502 9.188A35 35 0 0 1 14.500 8.382Z" fill="#232df7" opacity="1" />
+    <path d="M36 36L14.452 8.420A35 35 0 0 1 15.477 7.649Z" fill="#2325f7" opacity="1" />
+    <path d="M36 36L15.428 7.684A35 35 0 0 1 16.479 6.950Z" fill="#2723f7" opacity="1" />
+    <path d="M36 36L16.428 6.984A35 35 0 0 1 17.505 6.286Z" fill="#2e23f7" opacity="1" />
+    <path d="M36 36L17.453 6.318A35 35 0 0 1 18.553 5.659Z" fill="#3523f7" opacity="1" />
+    <path d="M36 36L18.500 5.689A35 35 0 0 1 19.622 5.068Z" fill="#3c23f7" opacity="1" />
+    <path d="M36 36L19.568 5.097A35 35 0 0 1 20.712 4.515Z" fill="#4323f7" opacity="1" />
+    <path d="M36 36L20.657 4.542A35 35 0 0 1 21.820 4.001Z" fill="#4a23f7" opacity="1" />
+    <path d="M36 36L21.764 4.026A35 35 0 0 1 22.945 3.526Z" fill="#5123f7" opacity="1" />
+    <path d="M36 36L22.889 3.549A35 35 0 0 1 24.087 3.090Z" fill="#5923f7" opacity="1" />
+    <path d="M36 36L24.029 3.111A35 35 0 0 1 25.243 2.694Z" fill="#6023f7" opacity="1" />
+    <path d="M36 36L25.184 2.713A35 35 0 0 1 26.411 2.339Z" fill="#6723f7" opacity="1" />
+    <path d="M36 36L26.353 2.356A35 35 0 0 1 27.592 2.025Z" fill="#6e23f7" opacity="1" />
+    <path d="M36 36L27.533 2.040A35 35 0 0 1 28.783 1.752Z" fill="#7523f7" opacity="1" />
+    <path d="M36 36L28.723 1.765A35 35 0 0 1 29.982 1.521Z" fill="#7c23f7" opacity="1" />
+    <path d="M36 36L29.922 1.532A35 35 0 0 1 31.189 1.332Z" fill="#8323f7" opacity="1" />
+    <path d="M36 36L31.129 1.341A35 35 0 0 1 32.402 1.185Z" fill="#8a23f7" opacity="1" />
+    <path d="M36 36L32.342 1.192A35 35 0 0 1 33.619 1.081Z" fill="#9123f7" opacity="1" />
+    <path d="M36 36L33.559 1.085A35 35 0 0 1 34.840 1.019Z" fill="#9823f7" opacity="1" />
+    <path d="M36 36L34.779 1.021A35 35 0 0 1 36.061 1.000Z" fill="#9f23f7" opacity="1" />
+    <path d="M36 36L36.000 1.000A35 35 0 0 1 37.283 1.024Z" fill="#a723f7" opacity="1" />
+    <path d="M36 36L37.221 1.021A35 35 0 0 1 38.502 1.090Z" fill="#ae23f7" opacity="1" />
+    <path d="M36 36L38.441 1.085A35 35 0 0 1 39.719 1.198Z" fill="#b523f7" opacity="1" />
+    <path d="M36 36L39.658 1.192A35 35 0 0 1 40.932 1.349Z" fill="#bc23f7" opacity="1" />
+    <path d="M36 36L40.871 1.341A35 35 0 0 1 42.138 1.542Z" fill="#c323f7" opacity="1" />
+    <path d="M36 36L42.078 1.532A35 35 0 0 1 43.337 1.778Z" fill="#ca23f7" opacity="1" />
+    <path d="M36 36L43.277 1.765A35 35 0 0 1 44.527 2.054Z" fill="#d123f7" opacity="1" />
+    <path d="M36 36L44.467 2.040A35 35 0 0 1 45.706 2.373Z" fill="#d823f7" opacity="1" />
+    <path d="M36 36L45.647 2.356A35 35 0 0 1 46.874 2.732Z" fill="#df23f7" opacity="1" />
+    <path d="M36 36L46.816 2.713A35 35 0 0 1 48.028 3.132Z" fill="#e623f7" opacity="1" />
+    <path d="M36 36L47.971 3.111A35 35 0 0 1 49.168 3.571Z" fill="#ed23f7" opacity="1" />
+    <path d="M36 36L49.111 3.549A35 35 0 0 1 50.292 4.051Z" fill="#f523f7" opacity="1" />
+    <path d="M36 36L50.236 4.026A35 35 0 0 1 51.398 4.569Z" fill="#f723f3" opacity="1" />
+    <path d="M36 36L51.343 4.542A35 35 0 0 1 52.485 5.126Z" fill="#f723ec" opacity="1" />
+    <path d="M36 36L52.432 5.097A35 35 0 0 1 53.553 5.720Z" fill="#f723e5" opacity="1" />
+    <path d="M36 36L53.500 5.689A35 35 0 0 1 54.599 6.351Z" fill="#f723de" opacity="1" />
+    <path d="M36 36L54.547 6.318A35 35 0 0 1 55.622 7.018Z" fill="#f723d7" opacity="1" />
+    <path d="M36 36L55.572 6.984A35 35 0 0 1 56.622 7.720Z" fill="#f723d0" opacity="1" />
+    <path d="M36 36L56.572 7.684A35 35 0 0 1 57.596 8.457Z" fill="#f723c9" opacity="1" />
+    <path d="M36 36L57.548 8.420A35 35 0 0 1 58.544 9.228Z" fill="#f723c1" opacity="1" />
+    <path d="M36 36L58.498 9.188A35 35 0 0 1 59.465 10.031Z" fill="#f723ba" opacity="1" />
+    <path d="M36 36L59.420 9.990A35 35 0 0 1 60.357 10.866Z" fill="#f723b3" opacity="1" />
+    <path d="M36 36L60.313 10.823A35 35 0 0 1 61.219 11.731Z" fill="#f723ac" opacity="1" />
+    <path d="M36 36L61.177 11.687A35 35 0 0 1 62.051 12.626Z" fill="#f723a5" opacity="1" />
+    <path d="M36 36L62.010 12.580A35 35 0 0 1 62.851 13.549Z" fill="#f7239e" opacity="1" />
+    <path d="M36 36L62.812 13.502A35 35 0 0 1 63.618 14.500Z" fill="#f72397" opacity="1" />
+    <path d="M36 36L63.580 14.452A35 35 0 0 1 64.351 15.477Z" fill="#f72390" opacity="1" />
+    <path d="M36 36L64.316 15.428A35 35 0 0 1 65.050 16.479Z" fill="#f72389" opacity="1" />
+    <path d="M36 36L65.016 16.428A35 35 0 0 1 65.714 17.505Z" fill="#f72382" opacity="1" />
+    <path d="M36 36L65.682 17.453A35 35 0 0 1 66.341 18.553Z" fill="#f7237b" opacity="1" />
+    <path d="M36 36L66.311 18.500A35 35 0 0 1 66.932 19.622Z" fill="#f72373" opacity="1" />
+    <path d="M36 36L66.903 19.568A35 35 0 0 1 67.485 20.712Z" fill="#f7236c" opacity="1" />
+    <path d="M36 36L67.458 20.657A35 35 0 0 1 67.999 21.820Z" fill="#f72365" opacity="1" />
+    <path d="M36 36L67.974 21.764A35 35 0 0 1 68.474 22.945Z" fill="#f7235e" opacity="1" />
+    <path d="M36 36L68.451 22.889A35 35 0 0 1 68.910 24.087Z" fill="#f72357" opacity="1" />
+    <path d="M36 36L68.889 24.029A35 35 0 0 1 69.306 25.243Z" fill="#f72350" opacity="1" />
+    <path d="M36 36L69.287 25.184A35 35 0 0 1 69.661 26.411Z" fill="#f72349" opacity="1" />
+    <path d="M36 36L69.644 26.353A35 35 0 0 1 69.975 27.592Z" fill="#f72342" opacity="1" />
+    <path d="M36 36L69.960 27.533A35 35 0 0 1 70.248 28.783Z" fill="#f7233b" opacity="1" />
+    <path d="M36 36L70.235 28.723A35 35 0 0 1 70.479 29.982Z" fill="#f72334" opacity="1" />
+    <path d="M36 36L70.468 29.922A35 35 0 0 1 70.668 31.189Z" fill="#f7232d" opacity="1" />
+    <path d="M36 36L70.659 31.129A35 35 0 0 1 70.815 32.402Z" fill="#f72325" opacity="1" />
+    <path d="M36 36L70.808 32.342A35 35 0 0 1 70.919 33.619Z" fill="#f72723" opacity="1" />
+    <path d="M36 36L70.915 33.559A35 35 0 0 1 70.981 34.840Z" fill="#f72e23" opacity="1" />
+    <path d="M36 36L70.979 34.779A35 35 0 0 1 71.000 36.061Z" fill="#f73523" opacity="1" />
+    <circle cx="36" cy="36" r="35" fill="url(#wheelLight)" opacity="1" />
+    <circle cx="22" cy="20" r="6" fill="url(#sphere)" opacity="1" />
+  </g>
+</svg>

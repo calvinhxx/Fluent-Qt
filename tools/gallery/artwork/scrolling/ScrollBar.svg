@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>ScrollBar</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffd80b" />
+      <stop offset="1" stop-color="#ee9f00" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="3" y="3" width="66" height="66" rx="4" fill="url(#tile)" opacity="1" />
+    <rect x="31" y="9" width="10" height="54" rx="5" fill="url(#surface)" opacity="1" />
+    <rect x="33" y="23" width="6" height="20" rx="3" fill="#dc8700" opacity="1" />
+    <path d="M32 17L36 12 40 17Z" fill="#bb7600" opacity="1" />
+    <path d="M32 55L36 60 40 55Z" fill="#bb7600" opacity="1" />
+  </g>
+</svg>

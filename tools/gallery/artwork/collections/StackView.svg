@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>StackView</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ce9afa" />
+      <stop offset="1" stop-color="#61418f" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="3" y="3" width="66" height="66" rx="16" fill="url(#tile)" opacity="1" />
+    <rect x="17" y="10" width="40" height="28" rx="4" fill="#b3a3c9" opacity="1" />
+    <rect x="13" y="16" width="46" height="33" rx="4" fill="#ded0ed" opacity="1" />
+    <rect x="9.5" y="27" width="53" height="36" rx="5" fill="#12343f" opacity="0.22" />
+    <rect x="8" y="25" width="53" height="36" rx="5" fill="white" opacity="1" />
+    <rect x="14" y="33" width="32" height="4" rx="2" fill="#b1a0c5" opacity="1" />
+    <rect x="14" y="43" width="22" height="4" rx="2" fill="#b1a0c5" opacity="1" />
+  </g>
+</svg>

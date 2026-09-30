@@ -19,7 +19,10 @@ Rules for Gallery component-card artwork under
 
 ## File Layout
 
-- Path: `app/assets/control_images/<category-id>/<Title>.png`
+- Master: `tools/gallery/artwork/<category-id>/<Title>.svg`
+- Export: `app/assets/control_images/<category-id>/<Title>.png`
+- Every PNG has one matching SVG master with the same category and title.
+  `Placeholder.svg` and `Placeholder.png` sit directly in their respective roots.
 - `<category-id>` matches `GalleryComponentCategory.id`
   (for example `layout`, `status-info`, `foundation`)
 - `<Title>` matches the Gallery card title
@@ -27,6 +30,11 @@ Rules for Gallery component-card artwork under
 - Register every new file in `app/gallery_resources.qrc`
 - Resolve images through `galleryControlImageResource()`; do not hard-code
   fallbacks that reuse unrelated category artwork
+- Edit the SVG master and regenerate its PNG. Keep PNG paths stable for C++,
+  Python, and WebAssembly; only the PNG exports are packaged.
+- Masters contain self-contained vector geometry on a `0 0 72 72` view box.
+  Outline text before saving; embedded bitmaps, external references, and live
+  font-dependent text are rejected by the exporter.
 
 ## Canvas and Alpha
 
@@ -40,10 +48,10 @@ Rules for Gallery component-card artwork under
 - Do **not** ship icons with opaque white, black, or near-opaque fringe
   filling the square outside the rounded tile
 
-When generating artwork with an image model, assume the model may emit an
-opaque full-bleed square. Use an antialiased rounded-rect mask before committing.
-Preserve partial-alpha edge pixels; thresholding the mask to fully transparent
-or fully opaque creates visible stair-step corners.
+Author rounded shapes and transparency in the SVG. The shared exporter renders
+at 4x resolution with Qt SVG and downsamples with Qt's smooth image scaler.
+Preserve partial-alpha edge pixels rather than thresholding curves to opaque
+or transparent pixels.
 
 Gallery cards reserve a 40 × 40 logical-pixel icon slot but center bitmap
 artwork in a 36 × 36 rectangle. This maps a 72 × 72 source one-for-one on a
@@ -78,34 +86,43 @@ control.
 
 1. Match the category color family above.
 2. Keep the motif simple enough to read at 72 × 72.
-3. Export or resize to 72 × 72 PNG.
-4. Use an antialiased rounded-rect mask so canvas corners are alpha 0 and curved
-   edges retain partial coverage.
-5. Add the file under the correct `control_images/<category-id>/` folder.
+3. Save an editable SVG under the matching `artwork/<category-id>/` folder.
+4. Export the PNG with the shared tool below. Canvas corners remain alpha 0
+   and curved edges retain partial coverage.
+5. Keep the export under the matching `control_images/<category-id>/` folder.
 6. Register it in `app/gallery_resources.qrc`.
 7. Rebuild Gallery and confirm the card image on light and dark chrome.
-8. Run `python tools/gallery/normalize_control_images.py`. Use `--fix` only
-   when importing a legacy image whose canvas is not 72 × 72; smaller images
-   are centered without enlarging their artwork, while oversized canvases are
-   proportionally reduced.
+8. Run the source/export freshness check and the canvas/resource audit below.
 
-The six Layout-family tiles are deterministic assets. Regenerate them with
-`python tools/gallery/generate_layout_control_images.py` so their coral fill,
-line weight, radius, and alpha treatment stay identical.
+## Export All Categories
 
-The Spatial tiles use an indigo family. Regenerate them with
-`python tools/gallery/generate_spatial_control_images.py`.
+Use the matched PySide6 development environment described in the
+[binding build guide](../../bindings/pyside6/README.md#build-from-source).
+The exporter uses PySide6's Qt SVG implementation and creates no desktop window:
 
-The ChartView tile uses the Charts steel-blue family. Regenerate it with
-`python tools/gallery/generate_charts_control_image.py`.
+```bash
+python3 tools/gallery/export_control_images.py
+python3 tools/gallery/export_control_images.py --check
+python3 tools/gallery/normalize_control_images.py
+```
 
-FontIcon, CommandBar, CommandBarFlyout, and Toast have editable SVG sources in
-`tools/gallery/artwork/`. Export each to its existing 72 × 72 PNG with
-antialiasing enabled. Rendering at 4× resolution before downsampling also
-preserves smooth strokes and transparent corners.
+Pass category/title keys to update or check a focused set:
 
-The SplashScreen tile uses the Status & info teal family. Regenerate it with
-`python tools/gallery/generate_splash_control_image.py`.
+```bash
+python3 tools/gallery/export_control_images.py navigation/Stepper collections/Timeline
+python3 tools/gallery/export_control_images.py --check navigation/Stepper
+```
+
+`--check` compares decoded pixels without rewriting files. It reports stale or
+missing PNGs and PNGs without a corresponding master. The canvas audit also
+checks source coverage and registration in `app/gallery_resources.qrc`.
+All categories use this exporter; category-specific drawing scripts are not
+alternative sources of truth.
+
+The project owns the SVG illustrations. Outlined text uses the bundled Inter
+fonts, while FileDropZone and FileListView retain glyph outlines from the
+bundled Fluent UI System Icons font. See the font and icon attribution in
+[third-party notices](../../THIRD_PARTY_NOTICES.md).
 
 ## Verification
 
@@ -127,6 +144,7 @@ Check the detector's positive and negative cases with:
 
 ```bash
 python3 tools/gallery/test_normalize_control_images.py
+python3 tools/gallery/test_export_control_images.py
 ```
 
 <!-- docs-nav:bottom:start -->

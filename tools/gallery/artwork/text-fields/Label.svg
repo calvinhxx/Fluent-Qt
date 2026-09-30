@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>Label</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2db5e7" />
+      <stop offset="1" stop-color="#0d4688" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="3" y="3" width="66" height="66" rx="6" fill="url(#tile)" opacity="1" />
+    <g aria-label="Aa" fill="white" transform="translate(15.823 47) scale(0.015137 -0.015137)">
+      <path transform="translate(0 0)" d="M50 0 570 1490H909L1441 0H1148L1021 369H464L342 0ZM535 584H948L883 774Q850 877 814.5 1002.0Q779 1127 737 1282Q697 1126 663.0 999.5Q629 873 598 774Z" />
+      <path transform="translate(1490 0)" d="M450 -23Q344 -23 259.0 15.5Q174 54 125.0 129.0Q76 204 76 314Q76 440 137.5 509.5Q199 579 296.5 610.5Q394 642 502 653Q648 669 713.0 682.5Q778 696 778 754V759Q778 841 728.0 886.5Q678 932 583 932Q485 932 427.0 889.0Q369 846 349 791L108 840Q157 988 285.5 1060.0Q414 1132 582 1132Q661 1132 741.5 1113.5Q822 1095 889.0 1051.5Q956 1008 997.0 933.5Q1038 859 1038 747V0H789V154H779Q742 82 661.0 29.5Q580 -23 450 -23ZM517 170Q637 170 708.5 239.0Q780 308 780 401V533Q762 519 716.0 508.5Q670 498 618.5 490.5Q567 483 533 478Q445 466 386.5 430.0Q328 394 328 317Q328 245 381.0 207.5Q434 170 517 170Z" />
+    </g>
+  </g>
+</svg>

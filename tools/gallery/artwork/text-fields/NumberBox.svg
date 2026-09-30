@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>NumberBox</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2db5e7" />
+      <stop offset="1" stop-color="#0d4688" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="2" y="10" width="68" height="53" rx="3" fill="url(#tile)" opacity="1" />
+    <g aria-label="10" fill="white" transform="translate(9.000 49) scale(0.015137 -0.015137)">
+      <path transform="translate(0 0)" d="M717 1490V0H452V1252H442L94 1002V1256L421 1490Z" />
+      <path transform="translate(866 0)" d="M676 -20Q404 -20 253.5 180.5Q103 381 103 744Q103 1106 254.0 1308.0Q405 1510 676 1510Q946 1510 1097.0 1308.0Q1248 1106 1248 744Q1248 381 1097.5 180.5Q947 -20 676 -20ZM676 204Q822 204 900.5 345.0Q979 486 979 744Q979 1003 900.5 1145.0Q822 1287 676 1287Q530 1287 451.0 1144.5Q372 1002 372 744Q372 486 450.5 345.0Q529 204 676 204Z" />
+    </g>
+    <polyline points="50,29 56,23 62,29" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+    <polyline points="50,43 56,49 62,43" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+  </g>
+</svg>

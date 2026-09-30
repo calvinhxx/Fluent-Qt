@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>Typography</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7c72ef" />
+      <stop offset="1" stop-color="#392d98" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="3" y="3" width="66" height="66" rx="6" fill="url(#tile)" opacity="1" />
+    <g aria-label="Ag" fill="white" transform="translate(11.646 51) scale(0.017578 -0.017578)">
+      <path transform="translate(0 0)" d="M50 0 570 1490H909L1441 0H1148L1021 369H464L342 0ZM535 584H948L883 774Q850 877 814.5 1002.0Q779 1127 737 1282Q697 1126 663.0 999.5Q629 873 598 774Z" />
+      <path transform="translate(1490 0)" d="M620 -442Q418 -442 296.0 -368.0Q174 -294 132 -183L352 -104Q378 -152 437.5 -198.0Q497 -244 619 -244Q740 -244 813.0 -187.5Q886 -131 886 -11V200H864Q844 160 807.0 117.0Q770 74 708.0 45.5Q646 17 549 17Q421 17 316.5 77.5Q212 138 150.5 259.0Q89 380 89 562Q89 745 150.5 872.5Q212 1000 317.0 1066.0Q422 1132 551 1132Q650 1132 714.0 1099.0Q778 1066 816.0 1019.5Q854 973 874 933H888V1118H1143V-3Q1143 -153 1075.0 -250.0Q1007 -347 889.0 -394.5Q771 -442 620 -442ZM622 222Q749 222 818.0 313.0Q887 404 887 564Q887 723 819.0 820.5Q751 918 622 918Q490 918 422.5 817.0Q355 716 355 564Q355 409 423.0 315.5Q491 222 622 222Z" />
+    </g>
+    <g aria-label="Ag" fill="#c7bfff" transform="translate(41.499 28) scale(0.008301 -0.008301)">
+      <path transform="translate(0 0)" d="M50 0 570 1490H909L1441 0H1148L1021 369H464L342 0ZM535 584H948L883 774Q850 877 814.5 1002.0Q779 1127 737 1282Q697 1126 663.0 999.5Q629 873 598 774Z" />
+      <path transform="translate(1490 0)" d="M620 -442Q418 -442 296.0 -368.0Q174 -294 132 -183L352 -104Q378 -152 437.5 -198.0Q497 -244 619 -244Q740 -244 813.0 -187.5Q886 -131 886 -11V200H864Q844 160 807.0 117.0Q770 74 708.0 45.5Q646 17 549 17Q421 17 316.5 77.5Q212 138 150.5 259.0Q89 380 89 562Q89 745 150.5 872.5Q212 1000 317.0 1066.0Q422 1132 551 1132Q650 1132 714.0 1099.0Q778 1066 816.0 1019.5Q854 973 874 933H888V1118H1143V-3Q1143 -153 1075.0 -250.0Q1007 -347 889.0 -394.5Q771 -442 620 -442ZM622 222Q749 222 818.0 313.0Q887 404 887 564Q887 723 819.0 820.5Q751 918 622 918Q490 918 422.5 817.0Q355 716 355 564Q355 409 423.0 315.5Q491 222 622 222Z" />
+    </g>
+  </g>
+</svg>
