@@ -7,5 +7,6 @@
 #include <components/navigation/SelectorBar.h>
 #include <components/navigation/StackContentHost.h>
 #include <components/navigation/TabView.h>
+#include <components/navigation/Stepper.h>
 
 #endif // FLUENTQT_NAVIGATION_H

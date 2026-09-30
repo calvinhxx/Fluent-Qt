@@ -625,6 +625,11 @@
           "component_id": "file-list-view",
           "choose_when": "A caller-owned file model needs complete names, metadata, transfer progress, remove and retry actions.",
           "avoid_when": "Rows are general content unrelated to files or the view should own upload work."
+        },
+        {
+          "component_id": "timeline",
+          "choose_when": "Ordered model rows need a timeline rail, supporting text and status.",
+          "avoid_when": "The application needs a workflow navigation control instead of a record view."
         }
       ]
     },
@@ -790,6 +795,11 @@
           "component_id": "breadcrumb",
           "choose_when": "Users need the current hierarchical path and direct navigation to ancestors.",
           "avoid_when": "The product structure is flat or the trail would duplicate top-level navigation."
+        },
+        {
+          "component_id": "stepper",
+          "choose_when": "A small sequence needs current, completion and error states with application-controlled navigation requests.",
+          "avoid_when": "The control must own validation, business actions or a large data collection."
         }
       ]
     },
@@ -1042,6 +1052,7 @@
       "id": "collections",
       "title": "Collections",
       "components": [
+        "timeline",
         "file-list-view",
         "drawer-view",
         "data-grid",
@@ -1122,6 +1133,7 @@
       "id": "navigation",
       "title": "Navigation",
       "components": [
+        "stepper",
         "breadcrumb",
         "navigation-view",
         "pivot",
@@ -3627,6 +3639,89 @@
             "orientation": "horizontal",
             "spacing": 24
           }
+        }
+      ]
+    },
+    {
+      "id": "timeline",
+      "title": "Timeline",
+      "category_id": "collections",
+      "description": "Presents caller-owned model rows as a timeline with text, time labels and node states.",
+      "capabilities": [
+        "collections"
+      ],
+      "search_terms": [
+        "alternating",
+        "application",
+        "button",
+        "caller-owned",
+        "can",
+        "click",
+        "collections",
+        "content",
+        "labels",
+        "layout.",
+        "logical",
+        "mirrors",
+        "model",
+        "model-backed",
+        "node",
+        "place",
+        "presents",
+        "rail",
+        "rows",
+        "rtl",
+        "same",
+        "see",
+        "sides",
+        "state",
+        "states.",
+        "supplies",
+        "text",
+        "time",
+        "timeline",
+        "timeline-alternate",
+        "timeline-basic",
+        "transition."
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "declaration": "src/components/collections/Timeline.h",
+        "qualified_type": "fluent::collections::Timeline",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "Timeline",
+        "import_statement": "from fluentqt.collections import Timeline"
+      },
+      "tests": [
+        {
+          "target": "test_timeline",
+          "source": "tests/components/collections/TestTimeline.cpp",
+          "ctest_label": "test_timeline"
+        }
+      ],
+      "gallery": {
+        "route_id": "timeline",
+        "sample_source": "app/view/widgets/samples/SequenceSamples.cpp",
+        "control_image": "app/assets/control_images/collections/Timeline.png"
+      },
+      "samples": [
+        {
+          "id": "timeline-basic",
+          "title": "Model-backed timeline",
+          "description": "The application supplies text, time labels and node states. Click the button to see a state transition.",
+          "cpp_snippet": "auto* timeline = new Timeline(this);\nauto* model = new QStandardItemModel(3, 1, this);\nfor (int i = 0; i < 3; ++i) {\n    model->setData(model->index(i, 0), QString(\"Node %1\").arg(i + 1));\n    model->setData(model->index(i, 0), \"Optional supporting content supplied by the application.\", Timeline::DescriptionRole);\n    model->setData(model->index(i, 0), QString(\"Time label %1\").arg(i + 1), Timeline::TimestampRole);\n}\nmodel->setData(model->index(1, 0), Timeline::Active, Timeline::StatusRole);\ntimeline->setModel(model);\nconnect(changeState, &Button::clicked, model, [model] {\n    const auto index = model->index(1, 0);\n    model->setData(index, model->data(index, Timeline::StatusRole).toInt() == Timeline::Active\n        ? Timeline::Success : Timeline::Active, Timeline::StatusRole);\n});\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "timeline-alternate",
+          "title": "Alternating content",
+          "description": "The same model can place content on alternating sides of the rail; RTL mirrors its logical layout.",
+          "cpp_snippet": "auto* timeline = new Timeline(this);\nauto* model = new QStandardItemModel(3, 1, this);\nfor (int i = 0; i < 3; ++i) {\n    model->setData(model->index(i, 0), QString(\"Node %1\").arg(i + 1));\n    model->setData(model->index(i, 0), \"Optional supporting content supplied by the application.\", Timeline::DescriptionRole);\n    model->setData(model->index(i, 0), QString(\"Time label %1\").arg(i + 1), Timeline::TimestampRole);\n}\nmodel->setData(model->index(1, 0), Timeline::Active, Timeline::StatusRole);\ntimeline->setModel(model);\nconnect(changeState, &Button::clicked, model, [model] {\n    const auto index = model->index(1, 0);\n    model->setData(index, model->data(index, Timeline::StatusRole).toInt() == Timeline::Active\n        ? Timeline::Success : Timeline::Active, Timeline::StatusRole);\n});\ntimeline->setNodeAlignment(Timeline::Alternate);\n",
+          "fill_available_width": true
         }
       ]
     },
@@ -6739,6 +6834,88 @@
           "title": "Keep secondary commands visible",
           "description": "AlwaysExpanded removes the More step and keeps secondary commands visible even in Transient mode; turn it off to compare the collapsed presentation.",
           "cpp_snippet": "auto* flyout = new CommandBarFlyout(this);\nflyout->setAlwaysExpanded(true);\nauto* copyLinkAction = new QAction(\n    QIcon(\":/icons/link.svg\"), \"Copy link\", this);\nauto* favoriteAction = new QAction(\n    QIcon(\":/icons/favorite.svg\"), \"Favorite\", this);\nfavoriteAction->setCheckable(true);\nauto* renameAction = new QAction(\n    QIcon(\":/icons/edit.svg\"), \"Rename\", this);\nauto* propertiesAction = new QAction(\n    QIcon(\":/icons/info.svg\"), \"Properties\", this);\nflyout->addPrimaryAction(copyLinkAction);\nflyout->addPrimaryAction(favoriteAction);\nflyout->addSecondaryAction(renameAction);\nflyout->addSecondaryAction(propertiesAction);\n\nauto* openButton =\n    new Button(\"Open actions\", this);\nauto* alwaysExpandedButton =\n    new Button(\"Always expanded: On\", this);\nconnect(openButton, &Button::clicked, flyout, [=] {\n    flyout->showAt(\n        openButton,\n        CommandBarFlyout::ShowMode::Transient);\n});\nalwaysExpandedButton->setCheckable(true);\nalwaysExpandedButton->setChecked(true);\nconnect(alwaysExpandedButton,\n        &QAbstractButton::toggled, flyout,\n        &CommandBarFlyout::setAlwaysExpanded);"
+        }
+      ]
+    },
+    {
+      "id": "stepper",
+      "title": "Stepper",
+      "category_id": "navigation",
+      "description": "Presents application-controlled steps with completion, error and availability states.",
+      "capabilities": [
+        "navigation"
+      ],
+      "search_terms": [
+        "application-controlled",
+        "arrow",
+        "availability",
+        "click",
+        "completion",
+        "current",
+        "enter",
+        "error",
+        "errors",
+        "focus",
+        "independent",
+        "keys",
+        "move",
+        "navigation",
+        "navigation.",
+        "presents",
+        "rail.",
+        "request",
+        "requests",
+        "same",
+        "space",
+        "states.",
+        "stay",
+        "step",
+        "step.",
+        "stepper",
+        "stepper-horizontal",
+        "stepper-vertical",
+        "steps",
+        "use",
+        "vertical"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Navigation.h>",
+        "declaration": "src/components/navigation/Stepper.h",
+        "qualified_type": "fluent::navigation::Stepper",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.navigation",
+        "type": "Stepper",
+        "import_statement": "from fluentqt.navigation import Stepper"
+      },
+      "tests": [
+        {
+          "target": "test_stepper",
+          "source": "tests/components/navigation/TestStepper.cpp",
+          "ctest_label": "test_stepper"
+        }
+      ],
+      "gallery": {
+        "route_id": "stepper",
+        "sample_source": "app/view/widgets/samples/SequenceSamples.cpp",
+        "control_image": "app/assets/control_images/navigation/Stepper.png"
+      },
+      "samples": [
+        {
+          "id": "stepper-horizontal",
+          "title": "Application-controlled steps",
+          "description": "Click a step to request navigation. Completion, errors and availability stay independent of the current step.",
+          "cpp_snippet": "auto* stepper = new Stepper(this);\nfor (int i = 0; i < 4; ++i) {\n    StepperItem item(QString(\"Step %1\").arg(i + 1), \"Optional description\");\n    if (i == 0) item.state = Stepper::Completed;\n    if (i == 3) item.enabled = false;\n    stepper->addItem(item);\n}\nstepper->setCurrentIndex(1);\nconnect(stepper, &Stepper::stepRequested, stepper, &Stepper::setCurrentIndex);\nconnect(stepper, &Stepper::currentIndexChanged, statusLabel, [statusLabel](int i) {\n    statusLabel->setText(QString(\"Current step: %1\").arg(i + 1));\n});\nconnect(toggleError, &Button::clicked, stepper, [stepper] {\n    stepper->setItemState(1, stepper->itemAt(1).state == Stepper::Error ? Stepper::Pending : Stepper::Error);\n});\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "stepper-vertical",
+          "title": "Vertical steps",
+          "description": "The same steps use a vertical rail. Arrow keys move focus; Enter or Space requests navigation.",
+          "cpp_snippet": "auto* stepper = new Stepper(this);\nfor (int i = 0; i < 4; ++i) {\n    StepperItem item(QString(\"Step %1\").arg(i + 1), \"Optional description\");\n    if (i == 0) item.state = Stepper::Completed;\n    if (i == 3) item.enabled = false;\n    stepper->addItem(item);\n}\nstepper->setCurrentIndex(1);\nconnect(stepper, &Stepper::stepRequested, stepper, &Stepper::setCurrentIndex);\nconnect(stepper, &Stepper::currentIndexChanged, statusLabel, [statusLabel](int i) {\n    statusLabel->setText(QString(\"Current step: %1\").arg(i + 1));\n});\nconnect(toggleError, &Button::clicked, stepper, [stepper] {\n    stepper->setItemState(1, stepper->itemAt(1).state == Stepper::Error ? Stepper::Pending : Stepper::Error);\n});\nstepper->setOrientation(Qt::Vertical);\n",
+          "fill_available_width": true
         }
       ]
     },
@@ -9901,6 +10078,13 @@
       "description": "Controls that present and organize sets of related items."
     },
     {
+      "id": "timeline",
+      "title": "Timeline",
+      "kind": "component",
+      "parent_id": "collections",
+      "description": "Presents caller-owned model rows as a timeline with text, time labels and node states."
+    },
+    {
       "id": "file-list-view",
       "title": "FileListView",
       "kind": "component",
@@ -10167,6 +10351,13 @@
       "description": "Controls that help people move between and within app areas."
     },
     {
+      "id": "stepper",
+      "title": "Stepper",
+      "kind": "component",
+      "parent_id": "navigation",
+      "description": "Presents application-controlled steps with completion, error and availability states."
+    },
+    {
       "id": "breadcrumb",
       "title": "Breadcrumb",
       "kind": "component",
@@ -10405,17 +10596,18 @@
     "SplitViewPaneOptions",
     "StackContentHost",
     "StateGroup",
+    "StepperItem",
     "TabViewItem",
     "ThemeTokens",
     "Typography"
   ],
   "summary": {
-    "route_count": 108,
-    "component_count": 85,
-    "sample_count": 239,
+    "route_count": 110,
+    "component_count": 87,
+    "sample_count": 243,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 14,
-    "guided_component_count": 85
+    "guided_component_count": 87
   }
 }

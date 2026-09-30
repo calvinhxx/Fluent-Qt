@@ -29,7 +29,8 @@
             "architecture/inspector-report.md",
             "architecture/charts.md",
             "architecture/files-and-feedback.md",
-            "architecture/spatial-view.md"
+            "architecture/spatial-view.md",
+            "architecture/sequence-controls.md"
           ]
         }
       ]

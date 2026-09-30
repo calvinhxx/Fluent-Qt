@@ -6455,6 +6455,7 @@ from . import native_samples_collections as _native_samples_collections  # noqa:
 from . import native_samples_dialogs as _native_samples_dialogs  # noqa: E402,F401
 from . import native_samples_layout as _native_samples_layout  # noqa: E402,F401
 from . import native_samples_navigation as _native_samples_navigation  # noqa: E402,F401
+from . import native_samples_sequences as _native_samples_sequences  # noqa: E402,F401
 from . import native_samples_scrolling as _native_samples_scrolling  # noqa: E402,F401
 from . import native_samples_status as _native_samples_status  # noqa: E402,F401
 from . import native_samples_text_window as _native_samples_text_window  # noqa: E402,F401

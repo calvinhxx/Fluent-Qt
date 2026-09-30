@@ -86,6 +86,8 @@
     {"id":"pie-chart","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
     {"id":"donut-chart","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
     {"id":"scatter-chart","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
-    {"id":"sparkline","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""}
+    {"id":"sparkline","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/charts/ChartView.cpp","tests/components/charts/TestChartView.cpp"],"gap":""},
+    {"id":"timeline","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/collections/Timeline.cpp","tests/components/collections/TestTimeline.cpp"],"gap":""},
+    {"id":"stepper","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/navigation/Stepper.cpp","tests/components/navigation/TestStepper.cpp"],"gap":""}
   ]
 }

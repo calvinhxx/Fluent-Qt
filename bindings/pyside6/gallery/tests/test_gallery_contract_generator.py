@@ -53,9 +53,9 @@ def main() -> int:
         raise AssertionError("Spatial composition samples are missing")
     summary = generated["summary"]
     if summary != {
-        "route_count": 108,
-        "component_count": 85,
-        "sample_count": 239,
+        "route_count": 110,
+        "component_count": 87,
+        "sample_count": 243,
     }:
         raise AssertionError("unexpected Gallery contract summary: {0!r}".format(summary))
     print(

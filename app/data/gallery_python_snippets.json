@@ -2,8 +2,8 @@
   "schema_version": 1,
   "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
   "summary": {
-    "component_count": 85,
-    "sample_count": 239
+    "component_count": 87,
+    "sample_count": 243
   },
   "samples": [
     {
@@ -325,6 +325,16 @@
       "route_id": "toggle-switch",
       "sample_id": "toggle-switch-disabled",
       "source": "off = fluentqt.ToggleSwitch()\noff.setOffContent('Off')\noff.setEnabled(False)\non = fluentqt.ToggleSwitch()\non.setOnContent('On')\non.setIsOn(True)\non.setEnabled(False)\n"
+    },
+    {
+      "route_id": "timeline",
+      "sample_id": "timeline-basic",
+      "source": "from PySide6.QtGui import QStandardItemModel\n\ntimeline = fluentqt.Timeline()\nroles = fluentqt.Timeline.DataRole\nstates = fluentqt.Timeline.Status\nmodel = QStandardItemModel(3, 1, root)\ndetail = 'Optional supporting content supplied by the application.'\nfor i in range(3):\n    index = model.index(i, 0)\n    model.setData(index, f'Node {i + 1}')\n    model.setData(index, detail, roles.DescriptionRole)\n    model.setData(\n        index,\n        f'Time label {i + 1}',\n        roles.TimestampRole\n    )\nmodel.setData(model.index(1, 0), states.Active, roles.StatusRole)\ntimeline.setModel(model)\nchange = fluentqt.Button('Change node state')\ndef change_state():\n    index = model.index(1, 0)\n    active = index.data(roles.StatusRole) == states.Active\n    state = states.Success if active else states.Active\n    model.setData(index, state, roles.StatusRole)\nchange.clicked.connect(change_state)\n"
+    },
+    {
+      "route_id": "timeline",
+      "sample_id": "timeline-alternate",
+      "source": "from PySide6.QtGui import QStandardItemModel\n\ntimeline = fluentqt.Timeline()\nroles = fluentqt.Timeline.DataRole\nstates = fluentqt.Timeline.Status\nmodel = QStandardItemModel(3, 1, root)\ndetail = 'Optional supporting content supplied by the application.'\nfor i in range(3):\n    index = model.index(i, 0)\n    model.setData(index, f'Node {i + 1}')\n    model.setData(index, detail, roles.DescriptionRole)\n    model.setData(\n        index,\n        f'Time label {i + 1}',\n        roles.TimestampRole\n    )\nmodel.setData(model.index(1, 0), states.Active, roles.StatusRole)\ntimeline.setModel(model)\nchange = fluentqt.Button('Change node state')\ndef change_state():\n    index = model.index(1, 0)\n    active = index.data(roles.StatusRole) == states.Active\n    state = states.Success if active else states.Active\n    model.setData(index, state, roles.StatusRole)\nchange.clicked.connect(change_state)\ntimeline.setNodeAlignment(fluentqt.Timeline.NodeAlignment.Alternate)\n"
     },
     {
       "route_id": "file-list-view",
@@ -755,6 +765,16 @@
       "route_id": "command-bar-flyout",
       "sample_id": "command-bar-flyout-always-expanded",
       "source": "from PySide6.QtGui import QAction, QIcon\n\nflyout = fluentqt.CommandBarFlyout()\nflyout.setAlwaysExpanded(True)\ncopy_link = QAction(QIcon(\":/icons/link.svg\"), \"Copy link\", flyout)\nfavorite = QAction(\n    QIcon(\":/icons/favorite.svg\"),\n    \"Favorite\",\n    flyout\n)\nfavorite.setCheckable(True)\nrename = QAction(QIcon(\":/icons/edit.svg\"), \"Rename\", flyout)\nproperties = QAction(\n    QIcon(\":/icons/info.svg\"),\n    \"Properties\",\n    flyout\n)\nflyout.addPrimaryAction(copy_link)\nflyout.addPrimaryAction(favorite)\nflyout.addSecondaryAction(rename)\nflyout.addSecondaryAction(properties)\n\nopen_button = fluentqt.Button(\"Open actions\")\nalways_expanded = fluentqt.Button(\"Always expanded: On\")\nopen_button.clicked.connect(\n    lambda: flyout.showAt(open_button, fluentqt.CommandBarFlyout.ShowMode.Transient)\n)\nalways_expanded.setCheckable(True)\nalways_expanded.setChecked(True)\nalways_expanded.toggled.connect(flyout.setAlwaysExpanded)\n"
+    },
+    {
+      "route_id": "stepper",
+      "sample_id": "stepper-horizontal",
+      "source": "stepper = fluentqt.Stepper()\nstates = fluentqt.Stepper.State\nfor i in range(4):\n    item = fluentqt.StepperItem(f'Step {i + 1}', 'Optional description')\n    if i == 0:\n        item.state = states.Completed\n    if i == 3:\n        item.enabled = False\n    stepper.addItem(item)\nstepper.setCurrentIndex(1)\nstepper.stepRequested.connect(stepper.setCurrentIndex)\ndef update_status(index):\n    status.setText(f'Current step: {index + 1}')\nstepper.currentIndexChanged.connect(update_status)\ntoggle = fluentqt.Button('Toggle step 2 error')\ndef toggle_error():\n    error = stepper.itemAt(1).state == states.Error\n    stepper.setItemState(1, states.Pending if error else states.Error)\ntoggle.clicked.connect(toggle_error)\n"
+    },
+    {
+      "route_id": "stepper",
+      "sample_id": "stepper-vertical",
+      "source": "from PySide6.QtCore import Qt\n\nstepper = fluentqt.Stepper()\nstates = fluentqt.Stepper.State\nfor i in range(4):\n    item = fluentqt.StepperItem(f'Step {i + 1}', 'Optional description')\n    if i == 0:\n        item.state = states.Completed\n    if i == 3:\n        item.enabled = False\n    stepper.addItem(item)\nstepper.setCurrentIndex(1)\nstepper.stepRequested.connect(stepper.setCurrentIndex)\ndef update_status(index):\n    status.setText(f'Current step: {index + 1}')\nstepper.currentIndexChanged.connect(update_status)\ntoggle = fluentqt.Button('Toggle step 2 error')\ndef toggle_error():\n    error = stepper.itemAt(1).state == states.Error\n    stepper.setItemState(1, states.Pending if error else states.Error)\ntoggle.clicked.connect(toggle_error)\nstepper.setOrientation(Qt.Orientation.Vertical)\n"
     },
     {
       "route_id": "breadcrumb",
