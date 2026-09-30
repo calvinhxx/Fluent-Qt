@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>CalendarView</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#23b4eb" />
+      <stop offset="1" stop-color="#003c75" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="5" y="4" width="62" height="64" rx="3" fill="url(#tile)" opacity="1" />
+    <rect x="10" y="26" width="52" height="37" rx="2" fill="white" opacity="1" />
+    <rect x="12" y="12" width="25" height="4" rx="2" fill="white" opacity="1" />
+    <path d="M45 16L48 11 51 16Z" fill="white" opacity="1" />
+    <path d="M55 11L58 16 61 11Z" fill="white" opacity="1" />
+    <circle cx="17" cy="34" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="27" cy="34" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="37" cy="34" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="47" cy="34" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="57" cy="34" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="17" cy="42" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="27" cy="42" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="37" cy="42" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="47" cy="42" r="2.5" fill="#0075c3" opacity="1" />
+    <circle cx="57" cy="42" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="17" cy="50" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="27" cy="50" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="37" cy="50" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="47" cy="50" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="57" cy="50" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="17" cy="58" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="27" cy="58" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="37" cy="58" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="47" cy="58" r="2.5" fill="#cbd2dc" opacity="1" />
+    <circle cx="57" cy="58" r="2.5" fill="#cbd2dc" opacity="1" />
+  </g>
+</svg>

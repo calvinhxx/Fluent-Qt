@@ -9,6 +9,8 @@ from pathlib import Path
 import sys
 import xml.etree.ElementTree as ET
 
+from export_control_images import SOURCE_ROOT, source_pairs, validate_source
+
 try:
     from PIL import Image
 except ImportError as error:  # pragma: no cover - maintainer dependency guard
@@ -119,6 +121,15 @@ def audit(fix: bool) -> int:
     registered = _qrc_control_images()
     failures: list[str] = []
     normalized_paths: list[Path] = []
+
+    try:
+        pairs = source_pairs(SOURCE_ROOT, IMAGE_ROOT)
+        for source, output in pairs:
+            validate_source(source)
+            if not output.is_file():
+                failures.append(f"{source.relative_to(ROOT)}: missing PNG export")
+    except (ValueError, ET.ParseError) as error:
+        failures.append(str(error))
 
     for path in sorted(images):
         with Image.open(path) as opened:

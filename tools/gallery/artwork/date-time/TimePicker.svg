@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>TimePicker</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#23b4eb" />
+      <stop offset="1" stop-color="#003c75" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="1" y="15" width="22" height="43" rx="2" fill="url(#tile)" opacity="1" />
+    <g aria-label="12" fill="white" transform="translate(6.248 40) scale(0.005371 -0.005371)">
+      <path transform="translate(0 0)" d="M717 1490V0H452V1252H442L94 1002V1256L421 1490Z" />
+      <path transform="translate(866 0)" d="M134 0V192L651 701Q760 812 817.0 891.0Q874 970 874 1065Q874 1170 803.5 1231.0Q733 1292 627 1292Q515 1292 448.0 1225.5Q381 1159 381 1044H126Q126 1185 190.5 1290.0Q255 1395 369.0 1452.5Q483 1510 630 1510Q779 1510 892.0 1454.0Q1005 1398 1068.0 1300.5Q1131 1203 1131 1078Q1131 996 1099.5 916.0Q1068 836 988.0 737.0Q908 638 763 498L504 234V223H1153V0Z" />
+    </g>
+    <rect x="25" y="15" width="22" height="43" rx="2" fill="url(#tile)" opacity="1" />
+    <g aria-label="30" fill="white" transform="translate(28.873 40) scale(0.005371 -0.005371)">
+      <path transform="translate(0 0)" d="M651 -20Q494 -20 372.5 33.5Q251 87 181.0 183.0Q111 279 107 404H376Q382 312 460.0 258.0Q538 204 651 204Q771 204 848.0 266.0Q925 328 925 427Q925 529 845.5 593.5Q766 658 624 658H492V864H624Q740 864 813.0 924.0Q886 984 886 1082Q886 1177 822.5 1234.5Q759 1292 654 1292Q551 1292 474.5 1238.0Q398 1184 395 1089H138Q140 1213 209.5 1308.0Q279 1403 395.5 1456.5Q512 1510 656 1510Q805 1510 915.0 1454.0Q1025 1398 1085.5 1304.5Q1146 1211 1146 1098Q1146 972 1072.0 887.0Q998 802 877 775V763Q1033 741 1116.5 647.0Q1200 553 1200 413Q1200 288 1129.0 190.0Q1058 92 934.0 36.0Q810 -20 651 -20Z" />
+      <path transform="translate(1303 0)" d="M676 -20Q404 -20 253.5 180.5Q103 381 103 744Q103 1106 254.0 1308.0Q405 1510 676 1510Q946 1510 1097.0 1308.0Q1248 1106 1248 744Q1248 381 1097.5 180.5Q947 -20 676 -20ZM676 204Q822 204 900.5 345.0Q979 486 979 744Q979 1003 900.5 1145.0Q822 1287 676 1287Q530 1287 451.0 1144.5Q372 1002 372 744Q372 486 450.5 345.0Q529 204 676 204Z" />
+    </g>
+    <rect x="49" y="15" width="22" height="43" rx="2" fill="url(#tile)" opacity="1" />
+    <g aria-label="PM" fill="white" transform="translate(51.379 40) scale(0.005371 -0.005371)">
+      <path transform="translate(0 0)" d="M150 0V1490H707Q878 1490 995.0 1426.0Q1112 1362 1172.0 1250.5Q1232 1139 1232 997Q1232 854 1171.5 742.5Q1111 631 993.0 567.5Q875 504 703 504H417V0ZM417 724H668Q819 724 889.0 801.0Q959 878 959 997Q959 1116 889.0 1191.0Q819 1266 666 1266H417Z" />
+      <path transform="translate(1321 0)" d="M150 0V1490H552L835 721Q850 677 869.5 606.5Q889 536 909.0 455.5Q929 375 946 301Q963 374 983.0 454.5Q1003 535 1022.5 605.5Q1042 676 1056 721L1336 1490H1739V0H1473V752Q1473 808 1474.5 890.5Q1476 973 1478.5 1066.0Q1481 1159 1482 1248Q1457 1152 1429.0 1057.0Q1401 962 1376.0 882.0Q1351 802 1333 752L1058 0H831L552 752Q534 800 509.5 878.0Q485 956 457.5 1050.0Q430 1144 402 1240Q404 1156 406.5 1064.5Q409 973 410.5 891.0Q412 809 412 752V0Z" />
+    </g>
+    <path d="M33 23L36 19 39 23Z" fill="white" opacity="1" />
+    <path d="M33 50L36 54 39 50Z" fill="white" opacity="1" />
+  </g>
+</svg>

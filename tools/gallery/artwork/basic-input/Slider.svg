@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>Slider</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#26b7ed" />
+      <stop offset="1" stop-color="#00427e" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="2" y="39" width="68" height="12" rx="6" fill="#8b949c" opacity="1" />
+    <rect x="2" y="39" width="42" height="12" rx="6" fill="url(#tile)" opacity="1" />
+    <circle cx="43" cy="45" r="8" fill="url(#tile)" opacity="1" stroke="#c7d3df" stroke-width="2" />
+    <rect x="34" y="8" width="19" height="19" rx="2" fill="#087dce" opacity="1" />
+    <g aria-label="60" fill="white" transform="translate(35.704 22) scale(0.005859 -0.005859)">
+      <path transform="translate(0 0)" d="M671 -20Q564 -20 463.0 16.5Q362 53 280.5 136.0Q199 219 151.0 358.0Q103 497 103 702Q103 957 174.5 1137.5Q246 1318 377.0 1414.0Q508 1510 687 1510Q826 1510 934.0 1455.0Q1042 1400 1109.5 1305.0Q1177 1210 1193 1089H931Q910 1174 847.0 1226.5Q784 1279 687 1279Q531 1279 447.0 1144.0Q363 1009 363 772H374Q428 869 526.5 923.5Q625 978 745 978Q876 978 980.5 915.5Q1085 853 1146.0 743.0Q1207 633 1207 492Q1207 345 1140.0 229.5Q1073 114 952.5 47.0Q832 -20 671 -20ZM670 197Q749 197 812.0 235.5Q875 274 911.5 339.5Q948 405 948 487Q948 567 912.5 632.0Q877 697 814.5 735.0Q752 773 673 773Q594 773 530.5 733.5Q467 694 430.0 628.5Q393 563 393 486Q393 407 429.0 341.5Q465 276 527.5 236.5Q590 197 670 197Z" />
+      <path transform="translate(1310 0)" d="M676 -20Q404 -20 253.5 180.5Q103 381 103 744Q103 1106 254.0 1308.0Q405 1510 676 1510Q946 1510 1097.0 1308.0Q1248 1106 1248 744Q1248 381 1097.5 180.5Q947 -20 676 -20ZM676 204Q822 204 900.5 345.0Q979 486 979 744Q979 1003 900.5 1145.0Q822 1287 676 1287Q530 1287 451.0 1144.5Q372 1002 372 744Q372 486 450.5 345.0Q529 204 676 204Z" />
+    </g>
+  </g>
+</svg>

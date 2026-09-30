@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>Menu</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c594f4" />
+      <stop offset="1" stop-color="#5e3888" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="3" y="3" width="66" height="66" rx="7" fill="url(#tile)" opacity="1" />
+    <rect x="16.5" y="12" width="43" height="51" rx="2" fill="#12343f" opacity="0.22" />
+    <rect x="15" y="10" width="43" height="51" rx="2" fill="url(#surface)" opacity="1" />
+    <rect x="20" y="17" width="30" height="4" rx="2" fill="#9c86ba" opacity="1" />
+    <rect x="20" y="29" width="27" height="4" rx="2" fill="#9c86ba" opacity="1" />
+    <rect x="20" y="41" width="19" height="4" rx="2" fill="#9c86ba" opacity="1" />
+    <rect x="20" y="53" width="22" height="4" rx="2" fill="#9c86ba" opacity="1" />
+  </g>
+</svg>

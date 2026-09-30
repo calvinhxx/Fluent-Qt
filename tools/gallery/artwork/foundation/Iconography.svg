@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>Iconography</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7c72ef" />
+      <stop offset="1" stop-color="#392d98" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="3" y="3" width="66" height="66" rx="6" fill="url(#tile)" opacity="1" />
+    <path d="M24.0 14.0 26.275 19.869 32.56 20.219 27.681 24.196 29.29 30.281 24.0 26.87 18.71 30.281 20.319 24.196 15.44 20.219 21.725 19.869Z" fill="none" opacity="1" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M40 18C39 12 48 10 49 17C51 10 60 14 57 21L49 29Z" fill="none" opacity="1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M16 43L24 36 32 43V53H27V45H21V53H16Z" fill="none" opacity="1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="48" cy="45" r="8" fill="none" opacity="1" stroke="white" stroke-width="2" />
+    <circle cx="48" cy="45" r="3" fill="none" opacity="1" stroke="white" stroke-width="1.7" />
+    <polyline points="56.00,45.00 59.00,45.00" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+    <polyline points="53.66,50.66 55.78,52.78" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+    <polyline points="48.00,53.00 48.00,56.00" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+    <polyline points="42.34,50.66 40.22,52.78" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+    <polyline points="40.00,45.00 37.00,45.00" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+    <polyline points="42.34,39.34 40.22,37.22" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+    <polyline points="48.00,37.00 48.00,34.00" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+    <polyline points="53.66,39.34 55.78,37.22" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="1" />
+  </g>
+</svg>

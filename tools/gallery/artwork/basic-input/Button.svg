@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>Button</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#26b7ed" />
+      <stop offset="1" stop-color="#00427e" />
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" />
+      <stop offset="1" stop-color="#dde0e8" />
+    </linearGradient>
+    <linearGradient id="purpleSurface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f5e5ff" />
+      <stop offset="1" stop-color="#cba8eb" />
+    </linearGradient>
+    <radialGradient id="sphere" cx="0.35" cy="0.3" r="0.75">
+      <stop stop-color="#fff" />
+      <stop offset="0.45" stop-color="#eeeef5" />
+      <stop offset="1" stop-color="#9397a6" />
+    </radialGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="2" y="14" width="68" height="43" rx="4" fill="url(#tile)" opacity="1" />
+    <g aria-label="ab" fill="white" transform="translate(17.427 48) scale(0.015137 -0.015137)">
+      <path transform="translate(0 0)" d="M450 -23Q344 -23 259.0 15.5Q174 54 125.0 129.0Q76 204 76 314Q76 440 137.5 509.5Q199 579 296.5 610.5Q394 642 502 653Q648 669 713.0 682.5Q778 696 778 754V759Q778 841 728.0 886.5Q678 932 583 932Q485 932 427.0 889.0Q369 846 349 791L108 840Q157 988 285.5 1060.0Q414 1132 582 1132Q661 1132 741.5 1113.5Q822 1095 889.0 1051.5Q956 1008 997.0 933.5Q1038 859 1038 747V0H789V154H779Q742 82 661.0 29.5Q580 -23 450 -23ZM517 170Q637 170 708.5 239.0Q780 308 780 401V533Q762 519 716.0 508.5Q670 498 618.5 490.5Q567 483 533 478Q445 466 386.5 430.0Q328 394 328 317Q328 245 381.0 207.5Q434 170 517 170Z" />
+      <path transform="translate(1176 0)" d="M728 -20Q632 -20 568.5 12.5Q505 45 467.0 91.0Q429 137 409 177H392V0H138V1490H398V933H409Q428 972 465.0 1018.5Q502 1065 566.0 1098.5Q630 1132 729 1132Q858 1132 962.5 1066.0Q1067 1000 1128.5 871.5Q1190 743 1190 557Q1190 373 1129.5 244.0Q1069 115 965.0 47.5Q861 -20 728 -20ZM658 194Q788 194 855.5 297.5Q923 401 923 558Q923 714 856.5 816.0Q790 918 658 918Q529 918 461.0 819.5Q393 721 393 558Q393 395 462.0 294.5Q531 194 658 194Z" />
+    </g>
+  </g>
+</svg>
