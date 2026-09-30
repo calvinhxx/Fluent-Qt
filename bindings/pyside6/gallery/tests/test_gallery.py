@@ -898,6 +898,21 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         self.assertTrue(expected)
         self.assertEqual(ported_sample_keys(), expected)
 
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding is not installed")
+    def test_spatial_calendar_preview_keeps_the_selected_month_independent_of_today(self):
+        result = build_sample("spatial-view", "spatial-view-calendar")
+        try:
+            calendar = result.widget.findChild(fluentqt.CalendarView, "spatialCalendar")
+            selected = result.widget.findChild(fluentqt.Label, "spatialSelectedDate")
+            self.assertIsNotNone(calendar)
+            self.assertEqual(calendar.visibleMonth().toString(Qt.ISODate), "2026-09-01")
+            self.assertEqual(calendar.selectedDate().toString(Qt.ISODate), "2026-09-15")
+            self.assertTrue(calendar.dateCellRect(calendar.selectedDate()).isValid())
+            self.assertEqual(selected.text(), "Selected: 2026-09-15")
+        finally:
+            result.widget.close()
+            result.widget.deleteLater()
+
     def test_splash_preview_handles_host_teardown_after_namespace_cleanup(self):
         host = QWidget()
         result = build_sample("splash-screen", "splash-screen-startup", host)

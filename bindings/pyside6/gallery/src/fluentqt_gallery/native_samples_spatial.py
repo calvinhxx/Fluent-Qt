@@ -151,6 +151,7 @@ _SCRIPTS["spatial-view-calendar"] = _panel(380) + _card(360, 410, 8) + _source("
     calendar = fluentqt.CalendarView(card)
     calendar.setObjectName("spatialCalendar")
     calendar.setAccessibleName("Demo appointment date")
+    calendar.setVisibleMonth(QDate(2026, 9, 1))
     calendar.setSelectedDate(QDate(2026, 9, 15))
     calendar.setFrameVisible(False)
     content.addWidget(calendar, 1)
