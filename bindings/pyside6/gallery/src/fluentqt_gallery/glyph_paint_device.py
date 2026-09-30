@@ -259,7 +259,7 @@ class _GlyphPaintEngine(QPaintEngine):
             # glyph's raster origin becomes negative inside the next tile.
             guard_width = (metrics.maxWidth() - min(0, metrics.minRightBearing())) * dpr + 2
             guard_height = max(metrics.descent(), item.descent()) * dpr + 2
-            if guard_width >= 512 or guard_height >= 128:
+            if guard_width > 511 or guard_height > 127:
                 painter.paintEngine().syncState()
                 painter.paintEngine().drawTextItem(position, item)
                 return
@@ -296,6 +296,7 @@ class _GlyphPaintEngine(QPaintEngine):
                     glyph.fill(Qt.transparent)
                     tile_origin = QPointF(left / dpr, top / dpr)
                     raster = QPainter(glyph)
+                    raster.setFont(item.font())
                     raster.setPen(painter.pen())
                     # Apply opacity in Qt's glyph rasterizer, not a second image
                     # blend: native font backends may use opacity-dependent coverage.
