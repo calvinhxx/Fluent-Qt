@@ -4,7 +4,7 @@ import sys
 import unittest
 import weakref
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 if __name__ == "__main__":
     # Preserve the blocked call stack before CTest's 60-second timeout,
@@ -203,14 +203,38 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
             font.setStrikeOut(True)
             painter.setFont(font)
             painter.drawText(QPointF(7.25, 76.5), "Gallery 设置 · العربية · Popup 0123456789")
-        for dpr in (1.25, 1.5, 2.1875):
-            for origin in (QPointF(), QPointF(0, 197 / dpr)):
+        for dpr in (1, 1.25, 1.5, 1.75, 2.1875, 2.625, 3):
+            for origin in (QPointF(), QPointF(0, 197 / dpr), QPointF(113 / dpr, 197 / dpr)):
                 with self.subTest(dpr=dpr, origin=origin):
                     expected, _ = self.render(draw, False, dpr)
                     actual, device = self.render(draw, True, dpr, raster_origin=origin)
                     self.assertGreater(device.engine.glyph_items, 1)
                     self.assertEqual(actual, expected,
                                      "Tile offsets must not move Qt's shaped glyph phase")
+
+    def test_oversized_fonts_keep_direct_coverage_and_bounded_allocation(self):
+        def draw(painter):
+            font = fluentqt.font_for_role(fluentqt.FontRole.BodyStrong)
+            font.setPixelSize(256)
+            painter.setFont(font)
+            painter.setPen(QColor(32, 90, 150, 210))
+            painter.setOpacity(.65)
+            painter.drawText(QPointF(7.25, 210.5), "Gallery Popup")
+        expected, _ = self.render(draw, False, 1.25)
+        actual, device = self.render(draw, True, 1.25)
+        self.assertEqual(actual, expected)
+        self.assertEqual(device.engine.glyph_tiles, 0)
+
+    def test_tiles_use_image_dpr_precision(self):
+        def draw(painter):
+            painter.setFont(fluentqt.font_for_role(fluentqt.FontRole.Caption))
+            painter.drawText(QPointF(7.25, 31.5), "Gallery Popup settings 0123456789 " * 12)
+        expected, _ = self.render(draw, False, 1.1)
+        dpr = expected.devicePixelRatioF()
+        actual, device = self.render(draw, True, 1.1,
+                                     raster_origin=QPointF(113 / dpr, 197 / dpr))
+        self.assertEqual(actual, expected)
+        self.assertGreater(device.engine.glyph_tiles, device.engine.glyph_items)
 
     def test_patterned_and_rotated_text_keep_original_painter_path(self):
         def draw(painter):

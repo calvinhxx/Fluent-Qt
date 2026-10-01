@@ -8,7 +8,7 @@ and multisampling still use the target device.
 import math
 import weakref
 
-from PySide6.QtCore import QPoint, QPointF, QRectF, QSize, QSizeF, Qt
+from PySide6.QtCore import QPoint, QPointF, QRectF, QSize, QSizeF, Qt, qVersion
 from PySide6.QtGui import (
     QFont, QFontMetricsF, QImage, QPaintDevice, QPaintEngine, QPainter,
     QPainterPath, QRegion, QTransform,
@@ -24,6 +24,9 @@ def glyph_raster_dpr(font, native_dpr, cache_dpr):
     # Hinting fits strokes to physical pixels; oversampling would fit a
     # different grid. Unhinted outlines can retain their real cache detail.
     return cache_dpr if font.hintingPreference() == QFont.PreferNoHinting else native_dpr
+
+
+_EXACT_DPR_METRICS = tuple(int(part) for part in qVersion().split(".")[:2]) >= (6, 8)
 
 
 class GlyphPaintDevice(QPaintDevice):
@@ -59,7 +62,9 @@ class GlyphPaintDevice(QPaintDevice):
             return round(self.target.devicePixelRatioF())
         if metric == QPaintDevice.PdmDevicePixelRatioScaled:
             return round(self.target.devicePixelRatioF() * 65536)
-        # Qt 6.8's encoded-double metrics fall back to the scaled metric.
+        if _EXACT_DPR_METRICS and metric in (QPaintDevice.PdmDevicePixelRatioF_EncodedA,
+                                           QPaintDevice.PdmDevicePixelRatioF_EncodedB):
+            return QPaintDevice.encodeMetricF(metric, self.target.devicePixelRatioF())
         return 0
 
 
@@ -243,6 +248,8 @@ class _GlyphPaintEngine(QPaintEngine):
                 painter.paintEngine().drawTextItem(position, item)
                 return
             dpr = self.device.raster_dpr(item.font())
+            if not _EXACT_DPR_METRICS:
+                dpr = math.floor(dpr * 65536) / 65536
             origin = QPointF(painter.worldTransform().dx(), painter.worldTransform().dy())
             origin += self.device.raster_origin
             baseline = position + origin

@@ -9,6 +9,7 @@
 #include <QPainterPath>
 #include <QRegion>
 #include <QtMath>
+#include "compatibility/TextPaintCompat.h"
 #include "components/spatial/SpatialRuntime.h"
 
 namespace fluent::gallery::spatial_render {
@@ -78,12 +79,8 @@ protected:
             return m_target.physicalDpiX();
         case PdmPhysicalDpiY:
             return m_target.physicalDpiY();
-        case PdmDevicePixelRatio:
-            return qRound(m_target.devicePixelRatioF());
-        case PdmDevicePixelRatioScaled:
-            return qRound(m_target.devicePixelRatioF() * devicePixelRatioFScale());
         default:
-            return 0; // Qt 6.8's encoded-double metrics fall back to the scaled metric.
+            return painting::devicePixelRatioMetric(metric, m_target.devicePixelRatioF());
         }
     }
 
@@ -241,7 +238,7 @@ private:
                     painter.paintEngine()->drawTextItem(position, item);
                     return;
                 }
-                const qreal dpr = device.rasterDpr(item.font());
+                const qreal dpr = painting::imageRasterDpr(device.rasterDpr(item.font()));
                 const QPointF origin(painter.worldTransform().dx() + device.m_rasterOrigin.x(),
                                      painter.worldTransform().dy() + device.m_rasterOrigin.y());
                 const QPointF baseline = position + origin;
