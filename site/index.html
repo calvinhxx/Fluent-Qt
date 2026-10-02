@@ -104,8 +104,8 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260929-2">
-    <script src="site.js?v=20260929-3" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20261002-1">
+    <script src="site.js?v=20261002-2" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to main content</a>
@@ -185,8 +185,8 @@
           <div class="hero-message">
             <img class="hero-app-icon" src="assets/app-icon.png?v=6bb48ccbdf19" alt="" width="96" height="96">
             <h1 id="hero-title">Fluent-Qt</h1>
-            <p class="hero-tagline" data-i18n="hero.tagline">Fluent controls for Qt Widgets</p>
-            <p class="hero-value-detail" data-i18n="hero.detail">Native C++17 controls that keep your existing signals, slots, layouts, and project structure.</p>
+            <p class="hero-tagline" data-i18n="hero.tagline">A Fluent UI component library for Qt Widgets</p>
+            <p class="hero-value-detail" data-i18n="hero.detail">Build cross-platform desktop apps with input, navigation and data display components, built-in theming and smooth animations.</p>
             <p class="hero-techline" aria-label="C++17, Qt 5.15 or Qt 6.2 and above, MIT" data-i18n-aria-label="a11y.heroTech">
               <strong>C++17</strong>
               <span aria-hidden="true">·</span>
@@ -208,7 +208,6 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
               </a>
             </div>
-            <p class="hero-action-note" data-i18n="hero.actionNote">The Web Gallery needs no Qt installation.</p>
             <div class="hero-python-callout">
               <span class="hero-python-label" data-i18n="hero.pythonLabel">Python / PySide6</span>
               <span class="hero-python-copy" data-i18n="hero.pythonCopy">Use the same controls from Python through PySide6</span>
@@ -222,10 +221,12 @@
           <figure class="hero-product">
             <a
               class="hero-window"
-              href="#gallery"
-              aria-label="Open the C++ Web Gallery"
-              data-i18n-aria-label="a11y.openGallery"
-              data-analytics-event="hero_visual_gallery"
+              href="assets/gallery/gallery-home-real.png?v=b885a0fc143b"
+              data-gallery-preview
+              aria-haspopup="dialog"
+              aria-label="View the Gallery screenshot at full size"
+              data-i18n-aria-label="a11y.previewGallery"
+              data-analytics-event="hero_visual_preview"
             >
               <img
                 src="assets/gallery/gallery-home-real.png?v=b885a0fc143b"
@@ -238,11 +239,6 @@
                 fetchpriority="high"
               >
             </a>
-            <figcaption class="hero-caption">
-              <span data-i18n="hero.visualCaption">Windows · 3D + Mica · Actual Home capture</span>
-              <a href="assets/gallery/gallery-home-real.png?v=b885a0fc143b" data-gallery-preview aria-haspopup="dialog" data-i18n="hero.viewOriginal">View full size ↗</a>
-            </figcaption>
-            <a class="hero-spatial-link" href="#spatial" data-i18n="hero.exploreSpatial">Explore the optional Spatial 3D extension →</a>
           </figure>
         </div>
 
@@ -454,10 +450,65 @@
         </div>
       </section>
 
+      <section class="quick-start-section" id="quick-start" aria-labelledby="quick-start-title">
+        <div class="page-shell quick-start-grid">
+          <div class="quick-start-copy" data-reveal>
+            <p class="section-index">04 / QUICK START</p>
+            <h2 id="quick-start-title"><span data-i18n="quickStart.title">Quick start</span></h2>
+            <p data-i18n="quickStart.copy">Place this after add_executable(my_app ...). See hello_world for a complete project.</p>
+            <ul class="quick-start-checks">
+              <li><span aria-hidden="true">✓</span><span data-i18n="quickStart.keepProject">Keep the Widgets project and event loop you already have</span></li>
+              <li><span aria-hidden="true">✓</span><span data-i18n="quickStart.libraryOnly">The library target depends only on Qt Widgets</span></li>
+              <li><span aria-hidden="true">✓</span><span data-i18n="quickStart.sameApi">Use the same application-facing API with Qt 5 and Qt 6</span></li>
+            </ul>
+            <div class="quick-start-links">
+              <a class="text-link" href="https://github.com/calvinhxx/Fluent-Qt/tree/main/examples/hello_world" data-analytics-event="hello_world_quick_start">
+                <span data-i18n="quickStart.example">Open the complete hello_world</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </a>
+              <a class="text-link" href="https://pypi.org/project/FluentQt/" data-analytics-event="pypi_quick_start">
+                <span data-i18n="quickStart.python">Python / PySide6 · pip install FluentQt</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </a>
+              <a class="text-link" href="https://github.com/calvinhxx/Fluent-Qt/discussions/categories/q-a" data-analytics-event="discussions_quick_start">
+                <span data-i18n="quickStart.help">Ask a question</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <article class="code-panel" data-reveal data-reveal-delay="100">
+            <header>
+              <div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+              <span>CMakeLists.txt</span>
+              <button class="copy-button" type="button" data-copy-target="cmake-snippet">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8h10v11H9zM5 5h10v3M5 5v11h4"/></svg>
+                <span data-copy-label data-i18n="copy.copy">Copy</span>
+              </button>
+            </header>
+            <pre><code id="cmake-snippet"><span class="code-comment"># Add Fluent-Qt to your existing project</span>
+<span class="code-keyword">include</span>(FetchContent)
+
+FetchContent_Declare(
+  fluentqt
+  GIT_REPOSITORY <span class="code-string">https://github.com/calvinhxx/Fluent-Qt.git</span>
+  GIT_TAG <span class="code-string">v1.9.2</span>
+  GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(fluentqt)
+
+target_link_libraries(
+  my_app PRIVATE <span class="code-accent">FluentQt::FluentQt</span>
+)</code></pre>
+          </article>
+        </div>
+        <p class="copy-announcement" aria-live="polite"></p>
+      </section>
+
       <section class="spatial-section" id="spatial" aria-labelledby="spatial-title">
         <div class="page-shell spatial-layout">
           <div class="spatial-copy">
-            <p class="section-index" data-i18n="spatial.kicker">04 / SPATIAL · OPTIONAL 3D EXTENSION</p>
+            <p class="section-index" data-i18n="spatial.kicker">05 / SPATIAL · OPTIONAL 3D EXTENSION</p>
             <h2 id="spatial-title" data-i18n="spatial.title">Familiar widgets. A new dimension.</h2>
             <p class="spatial-intro" data-i18n="spatial.copy">Place an existing QWidget composition in SpatialView to add perspective, rotation, and depth. Ordinary 2D apps do not need to enable it.</p>
             <ul class="spatial-features">
@@ -499,7 +550,7 @@
       <section class="positioning-section" id="why" aria-labelledby="positioning-title">
         <div class="page-shell positioning-grid">
           <div class="positioning-lead" data-reveal>
-            <p class="section-index">05 / POSITIONING</p>
+            <p class="section-index">06 / POSITIONING</p>
             <h2 id="positioning-title">
               <span data-i18n="positioning.titleLine1">Native controls</span>
               <span data-i18n="positioning.titleLine2">C++ APIs</span>
@@ -537,7 +588,7 @@
         <div class="page-shell">
           <div class="section-heading component-heading" data-reveal>
             <div>
-              <p class="section-index">06 / COMPONENTS</p>
+              <p class="section-index">07 / COMPONENTS</p>
               <h2 id="components-title"><span data-i18n="components.title">Controls by purpose</span></h2>
             </div>
             <p data-i18n="components.copy">A selection from Gallery</p>
@@ -622,61 +673,6 @@
             <article><strong>Windowing</strong><span>Window · TitleBar · WindowBackdrop</span></article>
           </div>
         </div>
-      </section>
-
-      <section class="quick-start-section" id="quick-start" aria-labelledby="quick-start-title">
-        <div class="page-shell quick-start-grid">
-          <div class="quick-start-copy" data-reveal>
-            <p class="section-index">07 / QUICK START</p>
-            <h2 id="quick-start-title"><span data-i18n="quickStart.title">Quick start</span></h2>
-            <p data-i18n="quickStart.copy">Place this after add_executable(my_app ...). See hello_world for a complete project.</p>
-            <ul class="quick-start-checks">
-              <li><span aria-hidden="true">✓</span><span data-i18n="quickStart.keepProject">Keep the Widgets project and event loop you already have</span></li>
-              <li><span aria-hidden="true">✓</span><span data-i18n="quickStart.libraryOnly">The library target depends only on Qt Widgets</span></li>
-              <li><span aria-hidden="true">✓</span><span data-i18n="quickStart.sameApi">Use the same application-facing API with Qt 5 and Qt 6</span></li>
-            </ul>
-            <div class="quick-start-links">
-              <a class="text-link" href="https://github.com/calvinhxx/Fluent-Qt/tree/main/examples/hello_world" data-analytics-event="hello_world_quick_start">
-                <span data-i18n="quickStart.example">Open the complete hello_world</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
-              </a>
-              <a class="text-link" href="https://pypi.org/project/FluentQt/" data-analytics-event="pypi_quick_start">
-                <span data-i18n="quickStart.python">Python / PySide6 · pip install FluentQt</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
-              </a>
-              <a class="text-link" href="https://github.com/calvinhxx/Fluent-Qt/discussions/categories/q-a" data-analytics-event="discussions_quick_start">
-                <span data-i18n="quickStart.help">Ask a question</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
-              </a>
-            </div>
-          </div>
-
-          <article class="code-panel" data-reveal data-reveal-delay="100">
-            <header>
-              <div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
-              <span>CMakeLists.txt</span>
-              <button class="copy-button" type="button" data-copy-target="cmake-snippet">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8h10v11H9zM5 5h10v3M5 5v11h4"/></svg>
-                <span data-copy-label data-i18n="copy.copy">Copy</span>
-              </button>
-            </header>
-            <pre><code id="cmake-snippet"><span class="code-comment"># Add Fluent-Qt to your existing project</span>
-<span class="code-keyword">include</span>(FetchContent)
-
-FetchContent_Declare(
-  fluentqt
-  GIT_REPOSITORY <span class="code-string">https://github.com/calvinhxx/Fluent-Qt.git</span>
-  GIT_TAG <span class="code-string">v1.9.2</span>
-  GIT_SHALLOW TRUE
-)
-FetchContent_MakeAvailable(fluentqt)
-
-target_link_libraries(
-  my_app PRIVATE <span class="code-accent">FluentQt::FluentQt</span>
-)</code></pre>
-          </article>
-        </div>
-        <p class="copy-announcement" aria-live="polite"></p>
       </section>
 
       <section class="download-section" id="downloads" aria-labelledby="downloads-title">
