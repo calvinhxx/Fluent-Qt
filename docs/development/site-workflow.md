@@ -65,8 +65,9 @@ scrolling do not trigger it. Keep at most three pulses alive, cap the canvas at
 Desktop drawing is capped at 60 fps. Avoid pairwise particle links or per-dot
 blur filters: their cost grows quickly with density.
 
-The optional Spatial introduction follows GUI Skill; the first section after the
-hero remains Get Started. It embeds the real C++ `spatial-view-scene` Gallery
+Quick Start is the fourth content section after the hero, following GUI Skill
+and preceding the optional Spatial introduction. Get Started remains first.
+The Spatial section embeds the real C++ `spatial-view-scene` Gallery
 sample through `gallery/?embed=site&showcase=spatial&render-scale=native`, not CSS
 imitations or a second full Gallery shell. The browser launcher calls the same
 sample factory, does not load Gallery preferences, and leaves rendering/input
