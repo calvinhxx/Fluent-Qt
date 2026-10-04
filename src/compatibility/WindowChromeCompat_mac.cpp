@@ -15,6 +15,8 @@
 
 #include <cstring>
 
+#include "compatibility/private/WindowBackdropTransition_p.h"
+
 namespace compatibility {
 namespace detail {
 
@@ -428,6 +430,7 @@ bool performNativeTitleBarDoubleClick(QWidget* window)
 // zh_CN: NSView 标识符，用于跨多次重新施加时查找/复用我们的背景层。
 constexpr char kBackdropBaseIdentifier[] = "fluentBackdropBase";
 constexpr char kBackdropTintIdentifier[] = "fluentBackdropTint";
+constexpr char kBackdropFailureCoverIdentifier[] = "fluentBackdropFailureCover";
 
 // AppKit enum values pinned locally so this file needs no Cocoa headers.
 // zh_CN: 在本地固定 AppKit 枚举值，使本文件无需 Cocoa 头文件。
@@ -440,6 +443,30 @@ constexpr long NSWindowAbove = 1;
 constexpr long NSWindowBelow = -1;
 constexpr unsigned long NSViewWidthSizable = 2;
 constexpr unsigned long NSViewHeightSizable = 16;
+
+class BackdropLayerTransaction {
+public:
+    BackdropLayerTransaction() : m_transaction(objc_getClass("CATransaction"))
+    {
+        if (!m_transaction)
+            return;
+        using Send = void (*)(Class, SEL);
+        using Disable = void (*)(Class, SEL, BOOL);
+        reinterpret_cast<Send>(objc_msgSend)(m_transaction, selector("begin"));
+        reinterpret_cast<Disable>(objc_msgSend)(m_transaction, selector("setDisableActions:"), YES);
+    }
+
+    ~BackdropLayerTransaction()
+    {
+        if (!m_transaction)
+            return;
+        using Send = void (*)(Class, SEL);
+        reinterpret_cast<Send>(objc_msgSend)(m_transaction, selector("commit"));
+    }
+
+private:
+    Class m_transaction;
+};
 
 id makeNSString(const char* text)
 {
@@ -529,6 +556,7 @@ id ensureBackdropView(id superview, id contentView, long material)
 
     if (id name = makeNSString(kBackdropBaseIdentifier))
         sendId(effectView, "setIdentifier:", name);
+    sendBool(effectView, "setHidden:", YES);
     sendBool(effectView, "setWantsLayer:", YES);
     sendUnsignedLong(effectView, "setAutoresizingMask:", NSViewWidthSizable | NSViewHeightSizable);
     sendLong(effectView, "setMaterial:", material);
@@ -623,6 +651,89 @@ void setBackdropViewHidden(id superview, BOOL hidden)
     id base = findSubviewWithIdentifier(superview, kBackdropBaseIdentifier);
     if (base && respondsTo(base, selector("setHidden:")))
         sendBool(base, "setHidden:", hidden);
+    if (hidden) {
+        id cover = findSubviewWithIdentifier(superview, kBackdropFailureCoverIdentifier);
+        if (cover)
+            sendBool(cover, "setHidden:", YES);
+    }
+}
+
+CGRect convertRectFromView(id view, CGRect rect, id fromView)
+{
+#if defined(__x86_64__)
+    CGRect converted = CGRectNull;
+    using Send = void (*)(CGRect*, id, SEL, CGRect, id);
+    reinterpret_cast<Send>(objc_msgSend_stret)(&converted, view, selector("convertRect:fromView:"),
+                                               rect, fromView);
+    return converted;
+#else
+    using Send = CGRect (*)(id, SEL, CGRect, id);
+    return reinterpret_cast<Send>(objc_msgSend)(view, selector("convertRect:fromView:"), rect,
+                                                fromView);
+#endif
+}
+
+void setLayerOpaqueColor(id layer, const QColor& color)
+{
+    if (!layer)
+        return;
+    const CGFloat components[] = {color.redF(), color.greenF(), color.blueF(), 1.0};
+    CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    CGColorRef nativeColor = CGColorCreate(space, components);
+    CGColorSpaceRelease(space);
+    using Send = void (*)(id, SEL, CGColorRef);
+    reinterpret_cast<Send>(objc_msgSend)(layer, selector("setBackgroundColor:"), nativeColor);
+    CGColorRelease(nativeColor);
+}
+
+void syncBackdropFailureCover(id cover, id contentView, id base, const QColor& opaqueColor)
+{
+    if (!cover || !contentView || !base)
+        return;
+    BackdropLayerTransaction transaction;
+    sendCGRect(cover, "setFrame:", sendRect(contentView, "frame"));
+    setLayerOpaqueColor(sendId(cover, "layer"), opaqueColor);
+
+    // An invalid effect can also extend beyond the content. Clip it before revealing the
+    // correctly sized opaque cover; retain the effect until the normal Qt-frame handoff.
+    // zh_CN: 错尺寸材质可能越出内容区。先裁剪，再显示正确尺寸的不透明覆盖；仍保留材质到 Qt 帧提交。
+    id layer = sendId(base, "layer");
+    id mask = layer ? sendId(layer, "mask") : nil;
+    if (!mask)
+        mask = sendClassId("CALayer", "layer");
+    if (mask && layer) {
+        sendCGRect(mask, "setFrame:",
+                   convertRectFromView(base, sendRect(contentView, "bounds"), contentView));
+        setLayerOpaqueColor(mask, Qt::black);
+        sendId(layer, "setMask:", mask);
+    }
+}
+
+void coverInvalidBackdrop(QWidget* window, id superview, id contentView, id base)
+{
+    // A new/previously disabled material has never supplied visible pixels. Keep it hidden;
+    // the prepared native theme base already covers a cold or opaque surface.
+    // zh_CN: 新建或已禁用的材质没有承载可见像素；保持隐藏，由预备底色覆盖冷启动或不透明 surface。
+    if (!base || sendBool(base, "isHidden"))
+        return;
+    BackdropLayerTransaction transaction;
+    id cover = findSubviewWithIdentifier(superview, kBackdropFailureCoverIdentifier);
+    if (!cover) {
+        cover = allocInitWithFrame("NSView", sendRect(contentView, "frame"));
+        if (!cover)
+            return;
+        sendBool(cover, "setHidden:", YES);
+        if (id name = makeNSString(kBackdropFailureCoverIdentifier))
+            sendId(cover, "setIdentifier:", name);
+        sendBool(cover, "setWantsLayer:", YES);
+        sendUnsignedLong(cover, "setAutoresizingMask:", NSViewWidthSizable | NSViewHeightSizable);
+        addSubviewPositioned(superview, cover, NSWindowBelow, contentView);
+        sendVoid(cover, "release");
+    } else {
+        addSubviewPositioned(superview, cover, NSWindowBelow, contentView);
+    }
+    syncBackdropFailureCover(cover, contentView, base, windowBackdropSurfaceColor(window));
+    sendBool(cover, "setHidden:", NO);
 }
 
 } // namespace
@@ -642,6 +753,13 @@ void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueC
         opaqueColor.redF(), opaqueColor.greenF(), opaqueColor.blueF(), transparent ? 0.0 : 1.0);
     sendId(nsWindow, "setBackgroundColor:", color);
     id contentView = sendId(nsWindow, "contentView");
+    id superview = contentView ? sendId(contentView, "superview") : nil;
+    id cover = findSubviewWithIdentifier(superview, kBackdropFailureCoverIdentifier);
+    if (cover && !sendBool(cover, "isHidden")) {
+        syncBackdropFailureCover(cover, contentView,
+                                 findSubviewWithIdentifier(superview, kBackdropBaseIdentifier),
+                                 opaqueColor);
+    }
     id layer = contentView ? sendId(contentView, "layer") : nil;
     if (layer) {
         // Surface preparation is immediate; an implicit layer fade would expose the previous base.
@@ -854,8 +972,10 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect 
     if (effect == BackdropEffect::Solid) {
         id contentView = nil;
         id superview = nil;
-        if (resolveBackdropHost(window, &contentView, &superview))
+        if (resolveBackdropHost(window, &contentView, &superview)) {
+            BackdropLayerTransaction transaction;
             setBackdropViewHidden(superview, YES);
+        }
         result.applied = true;
         result.backend = fluent::windowing::BackdropBackend::Solid;
         result.fidelity = fluent::windowing::BackdropFidelity::Solid;
@@ -884,6 +1004,7 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect 
     // 而 Acrylic（sidebar + 0.20）看起来反而才像真正的 Mica。
     const bool acrylic = effect == BackdropEffect::Acrylic;
     const long material = acrylic ? NSVisualEffectMaterialHUDWindow : NSVisualEffectMaterialSidebar;
+    BackdropLayerTransaction transaction;
     id base = ensureBackdropView(superview, contentView, material);
     if (!base) {
         // The shared opaque-commit protocol removes any surviving material after replacement paint.
@@ -892,11 +1013,11 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect 
         return result;
     }
 
-    sendBool(base, "setHidden:", NO);
     sendUnsignedLong(base, "setAutoresizingMask:", NSViewWidthSizable | NSViewHeightSizable);
     const CGRect contentFrame = sendRect(contentView, "frame");
     sendCGRect(base, "setFrame:", contentFrame);
     if (!CGRectEqualToRect(sendRect(base, "frame"), contentFrame)) {
+        coverInvalidBackdrop(window, superview, contentView, base);
         result.reason = QStringLiteral("visual-effect-view-geometry-mismatch");
         return result;
     }
@@ -907,6 +1028,11 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect 
         sendCGRect(tint, "setFrame:", sendRect(base, "bounds"));
         setMicaTintColor(tint, dark, tintAlpha);
     }
+    if (id layer = sendId(base, "layer"))
+        sendId(layer, "setMask:", nil);
+    if (id cover = findSubviewWithIdentifier(superview, kBackdropFailureCoverIdentifier))
+        sendBool(cover, "setHidden:", YES);
+    sendBool(base, "setHidden:", NO);
 
     if (forceRecomposite) {
         if (respondsTo(base, selector("setNeedsDisplay:")))

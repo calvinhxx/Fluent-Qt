@@ -67,6 +67,11 @@ test-data directory and restores the setting it changes.
   session and Qt platform plugin. The KWin material-removal cases skip when
   compositor blur is unavailable. Never select a missing native platform plugin
   and treat its startup failure as a passing or skipped test.
+  `test_window` also runs X11 protocol tests without a Linux desktop. They cover
+  protocol-error submission evidence, checked request failures, background
+  preparation caching and native-surface invalidation. The `native_xcb` lane
+  separately sends requests to a destroyed real window and checks connection
+  survival; ordinary protocol tests do not establish native X11 visual acceptance.
 - `visual_gate` is the opt-in representative Light/Dark/RTL snapshot compare
   (three checked-in PNGs). It is not part of `ci_fast`, `ci_full`, or
   `local_full`.

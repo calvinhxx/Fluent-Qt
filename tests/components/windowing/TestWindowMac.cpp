@@ -21,6 +21,7 @@
 
 #include "components/windowing/Window.h"
 #include "components/windowing/WindowBackdrop.h"
+#include "components/windowing/WindowBackdropMaterial.h"
 #include "components/windowing/TitleBar.h"
 #include "compatibility/QtCompat.h"
 
@@ -33,6 +34,7 @@ namespace {
 
 constexpr char kBackdropBaseIdentifier[] = "fluentBackdropBase";
 constexpr char kBackdropTintIdentifier[] = "fluentBackdropTint";
+constexpr char kBackdropFailureCoverIdentifier[] = "fluentBackdropFailureCover";
 constexpr char kLegacyBackdropWindowIdentifier[] = "fluentBackdropWindow";
 
 SEL selector(const char* name)
@@ -98,6 +100,24 @@ QColor nativeBackgroundColor(id nativeWindow)
     return result;
 }
 
+QColor nativeLayerBackgroundColor(id view)
+{
+    id layer = sendId(view, "layer");
+    const auto nativeColor = reinterpret_cast<CGColorRef>(sendId(layer, "backgroundColor"));
+    if (!nativeColor)
+        return QColor();
+    const auto space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    const auto converted = CGColorCreateCopyByMatchingToColorSpace(space, kCGRenderingIntentDefault,
+                                                                   nativeColor, nullptr);
+    CGColorSpaceRelease(space);
+    if (!converted)
+        return QColor();
+    const auto* components = CGColorGetComponents(converted);
+    const auto color = QColor::fromRgbF(components[0], components[1], components[2], components[3]);
+    CGColorRelease(converted);
+    return color;
+}
+
 #ifdef FLUENT_QT_HAS_SPATIAL
 class BackdropCommitOpenGLWidget final : public QOpenGLWidget, protected QOpenGLFunctions {
 public:
@@ -138,6 +158,48 @@ CGRect sendRect(id receiver, const char* name)
     return reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name));
 #endif
 }
+
+void sendRect(id receiver, const char* name, CGRect rect)
+{
+    using Send = void (*)(id, SEL, CGRect);
+    reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name), rect);
+}
+
+void rejectBackdropFrame(id, SEL, CGRect) {}
+
+class ScopedBackdropFrameFailure {
+public:
+    explicit ScopedBackdropFrameFailure(id view) : m_view(view), m_original(object_getClass(view))
+    {
+        constexpr char kFailureClassName[] = "FluentTestBackdropFrameFailure";
+        Class failureClass = objc_getClass(kFailureClassName);
+        if (!failureClass) {
+            failureClass = objc_allocateClassPair(m_original, kFailureClassName, 0);
+            const Method setter = class_getInstanceMethod(m_original, selector("setFrame:"));
+            if (!failureClass || !setter)
+                return;
+            class_addMethod(failureClass, selector("setFrame:"),
+                            reinterpret_cast<IMP>(rejectBackdropFrame),
+                            method_getTypeEncoding(setter));
+            objc_registerClassPair(failureClass);
+        }
+        object_setClass(m_view, failureClass);
+        m_installed = true;
+    }
+
+    ~ScopedBackdropFrameFailure()
+    {
+        if (m_installed)
+            object_setClass(m_view, m_original);
+    }
+
+    bool installed() const { return m_installed; }
+
+private:
+    id m_view;
+    Class m_original;
+    bool m_installed = false;
+};
 
 bool identifierEquals(id object, const char* expected)
 {
@@ -454,29 +516,48 @@ TEST(CocoaWindowBackdropTest, PreservesQtContentAndReusesInWindowMaterial)
     window.close();
 }
 
-TEST(CocoaWindowBackdropTest, SolidFirstShowPreparesNativeThemeBackground)
+TEST(CocoaWindowBackdropTest, FirstShowPreparesNativeThemeBackground)
 {
     if (QGuiApplication::platformName() != QStringLiteral("cocoa"))
         GTEST_SKIP() << "Requires the Cocoa platform plugin";
-    for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+    for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark,
+                             fluent::FluentElement::HighContrast}) {
         SCOPED_TRACE(static_cast<int>(theme));
-        Window window;
-        window.setProperty("fluentThemeOverride", static_cast<int>(theme));
-        window.setBackdropEffect(BackdropEffect::Solid);
-        window.onThemeUpdated();
-        window.resize(520, 360);
-        const QSize expectedSize = window.size();
-        const WId nativeId = window.winId();
-        const QColor initial = nativeBackgroundColor(nativeWindowFor(&window));
-        EXPECT_NEAR(initial.redF(), window.themeBackdrop(false).redF(), 0.005);
-        EXPECT_NEAR(initial.greenF(), window.themeBackdrop(false).greenF(), 0.005);
-        EXPECT_NEAR(initial.blueF(), window.themeBackdrop(false).blueF(), 0.005);
-        EXPECT_EQ(initial.alpha(), 255) << "The native base must be ready before show(), not later";
-        window.show();
-        EXPECT_EQ(window.winId(), nativeId);
-        EXPECT_EQ(window.size(), expectedSize);
-        QApplication::processEvents();
-        window.close();
+        for (const auto effect :
+             {BackdropEffect::Solid, BackdropEffect::Mica, BackdropEffect::Acrylic}) {
+            SCOPED_TRACE(static_cast<int>(effect));
+            Window window;
+            window.setProperty("fluentThemeOverride", static_cast<int>(theme));
+            window.setBackdropEffect(effect);
+            window.onThemeUpdated();
+            window.resize(520, 360);
+            const QSize expectedSize = window.size();
+            const WId nativeId = window.winId();
+            QColor expected = window.themeBackdrop(false);
+            if (effect != BackdropEffect::Solid) {
+                const auto& colors = window.themeColorsRef();
+                auto options = fluent::windowing::WindowBackdropMaterialOptions::forTheme(
+                    window.effectiveThemeUsesDarkAppearance(), colors.bgCanvas,
+                    colors.accentDefault);
+                options.effect = effect;
+                options.active = false;
+                expected = fluent::windowing::WindowBackdropMaterial::opaqueBaseColor(options);
+                EXPECT_EQ(window.backdropState().surfaceMode, BackdropSurfaceMode::PaintedOpaque);
+            }
+            const QColor initial = nativeBackgroundColor(nativeWindowFor(&window));
+            EXPECT_NEAR(initial.redF(), expected.redF(), 0.005);
+            EXPECT_NEAR(initial.greenF(), expected.greenF(), 0.005);
+            EXPECT_NEAR(initial.blueF(), expected.blueF(), 0.005);
+            EXPECT_EQ(initial.alpha(), 255)
+                << "The native base must match the first opaque painter before show(), not later";
+            window.show();
+            EXPECT_EQ(window.winId(), nativeId);
+            EXPECT_EQ(window.size(), expectedSize);
+            ASSERT_NE(window.windowHandle(), nullptr);
+            EXPECT_GT(window.windowHandle()->format().alphaBufferSize(), 0);
+            QApplication::processEvents();
+            window.close();
+        }
     }
 }
 
@@ -508,6 +589,107 @@ TEST(CocoaWindowBackdropTest, SuspendedUpdatesKeepMaterialUntilOpaqueFrameCommit
     EXPECT_EQ(window.winId(), nativeId);
     EXPECT_EQ(window.size(), expectedSize);
     window.close();
+}
+
+TEST(CocoaWindowBackdropTest, GeometryFailureKeepsSafeCoverUntilOpaqueFrameCommits)
+{
+    if (QGuiApplication::platformName() != QStringLiteral("cocoa"))
+        GTEST_SKIP() << "Requires the Cocoa platform plugin";
+    for (const auto effect : {BackdropEffect::Mica, BackdropEffect::Acrylic}) {
+        SCOPED_TRACE(static_cast<int>(effect));
+        Window window;
+        window.setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
+        window.onThemeUpdated();
+        window.setBackdropEffect(effect);
+        window.resize(520, 360);
+        window.show();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+        ASSERT_EQ(window.backdropState().backend, BackdropBackend::MacVibrancy);
+        const auto hierarchy = resolveBackdropHierarchy(&window);
+        ASSERT_NE(hierarchy.effectView, nil);
+        const WId nativeId = window.winId();
+
+        window.setUpdatesEnabled(false);
+        CGRect invalidFrame = sendRect(hierarchy.contentView, "frame");
+        invalidFrame.origin.x -= 40;
+        invalidFrame.size.width -= 120;
+        sendRect(hierarchy.effectView, "setFrame:", invalidFrame);
+        {
+            ScopedBackdropFrameFailure failure(hierarchy.effectView);
+            ASSERT_TRUE(failure.installed());
+            window.reapplySystemBackdrop();
+            EXPECT_EQ(window.backdropState().reason,
+                      QStringLiteral("visual-effect-view-geometry-mismatch"));
+            EXPECT_EQ(window.backdropState().surfaceMode, BackdropSurfaceMode::PaintedOpaque);
+            EXPECT_FALSE(sendBool(hierarchy.effectView, "isHidden"))
+                << "A geometry failure must retain the old material until replacement paint";
+            int coverCount = 0;
+            id cover = directSubviewWithIdentifier(hierarchy.hostView,
+                                                   kBackdropFailureCoverIdentifier, &coverCount);
+            ASSERT_NE(cover, nil);
+            EXPECT_EQ(coverCount, 1);
+            EXPECT_FALSE(sendBool(cover, "isHidden"));
+            EXPECT_TRUE(CGRectEqualToRect(sendRect(cover, "frame"),
+                                          sendRect(hierarchy.contentView, "frame")));
+            EXPECT_TRUE(isSubviewBelow(hierarchy.hostView, hierarchy.effectView, cover));
+            EXPECT_TRUE(isSubviewBelow(hierarchy.hostView, cover, hierarchy.contentView));
+            id mask = sendId(sendId(hierarchy.effectView, "layer"), "mask");
+            ASSERT_NE(mask, nil)
+                << "The invalid effect must be clipped so it cannot extend past the content";
+            const CGRect maskFrame = sendRect(mask, "frame");
+            const CGRect contentFrame = sendRect(hierarchy.contentView, "frame");
+            EXPECT_NEAR(maskFrame.origin.x, contentFrame.origin.x - invalidFrame.origin.x, 0.01);
+            EXPECT_NEAR(maskFrame.size.width, contentFrame.size.width, 0.01);
+            EXPECT_NEAR(maskFrame.size.height, contentFrame.size.height, 0.01);
+
+            const auto& colors = window.themeColorsRef();
+            auto options = fluent::windowing::WindowBackdropMaterialOptions::forTheme(
+                window.effectiveThemeUsesDarkAppearance(), colors.bgCanvas, colors.accentDefault);
+            options.effect = effect;
+            options.active = window.isActiveWindow();
+            const QColor expected =
+                fluent::windowing::WindowBackdropMaterial::opaqueBaseColor(options);
+            const QColor actual = nativeLayerBackgroundColor(cover);
+            EXPECT_EQ(actual.alpha(), 255);
+            EXPECT_NEAR(actual.redF(), expected.redF(), 0.005);
+            EXPECT_NEAR(actual.greenF(), expected.greenF(), 0.005);
+            EXPECT_NEAR(actual.blueF(), expected.blueF(), 0.005);
+
+            window.setUpdatesEnabled(true);
+            QImage cache(window.size(), QImage::Format_ARGB32_Premultiplied);
+            cache.fill(Qt::transparent);
+            window.render(&cache);
+            EXPECT_FALSE(sendBool(cover, "isHidden"));
+            EXPECT_FALSE(sendBool(hierarchy.effectView, "isHidden"));
+            window.setUpdatesEnabled(false);
+            window.hide();
+            QApplication::processEvents();
+            EXPECT_FALSE(sendBool(cover, "isHidden"))
+                << "An unexposed surface must retain its safe cover while the Qt frame is pending";
+            window.setUpdatesEnabled(true);
+            window.show();
+            ASSERT_TRUE(QTest::qWaitFor(
+                [&] {
+                    return sendBool(cover, "isHidden") &&
+                           sendBool(hierarchy.effectView, "isHidden");
+                },
+                2000));
+            EXPECT_EQ(window.backdropState().surfaceMode, BackdropSurfaceMode::PaintedOpaque);
+            EXPECT_EQ(window.winId(), nativeId);
+        }
+
+        window.reapplySystemBackdrop();
+        ASSERT_TRUE(QTest::qWaitFor(
+            [&] { return window.backdropState().backend == BackdropBackend::MacVibrancy; }, 2000));
+        const auto recovered = resolveBackdropHierarchy(&window);
+        expectBackdropHierarchy(recovered, effect == BackdropEffect::Acrylic ? 13 : 7);
+        id cover = directSubviewWithIdentifier(recovered.hostView, kBackdropFailureCoverIdentifier);
+        ASSERT_NE(cover, nil);
+        EXPECT_TRUE(sendBool(cover, "isHidden"));
+        EXPECT_EQ(sendId(sendId(recovered.effectView, "layer"), "mask"), nil);
+        EXPECT_EQ(window.winId(), nativeId);
+        window.close();
+    }
 }
 
 #ifdef FLUENT_QT_HAS_SPATIAL

@@ -9,8 +9,10 @@ class QColor;
 namespace compatibility::detail {
 
 // Seed Qt and native surfaces before exposure; only a resolved compositor may clear them.
-void prepareWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
+void prepareWindowBackdropSurface(QWidget* window, const QColor& activeColor,
+                                  const QColor& inactiveColor, bool active,
                                   fluent::windowing::BackdropSurfaceMode mode);
+QColor windowBackdropSurfaceColor(const QWidget* window);
 
 bool windowBackdropSurfaceWasPainted(const QWidget* window);
 void markWindowBackdropSurfacePainted(QWidget* window);
