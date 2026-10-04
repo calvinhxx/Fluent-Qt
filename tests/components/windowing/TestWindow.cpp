@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <functional>
+
 #include <QApplication>
 #include <QColor>
 #include <QDirIterator>
@@ -64,6 +66,35 @@ using fluent::windowing::WindowBackdropMaterialOptions;
 namespace {
 
 using Edge = AnchorLayout::Edge;
+
+class PaletteChangeCounter final : public QObject {
+public:
+    int changes = 0;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::PaletteChange)
+            ++changes;
+        return QObject::eventFilter(watched, event);
+    }
+};
+
+class OneShotPaletteAction final : public QObject {
+public:
+    std::function<void()> action;
+    bool triggered = false;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::PaletteChange && !triggered) {
+            triggered = true;
+            action();
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
 
 constexpr int TitleBarIconSize = 24;
 constexpr int TitleBarAppIconSize = 14;
@@ -782,7 +813,9 @@ TEST_F(WindowTest, FirstShowPreparesThemeBackgroundBeforePainting)
         window.resize(520, 360);
         const auto expectedSize = window.size();
         const bool translucent = window.testAttribute(Qt::WA_TranslucentBackground);
-        for (const auto group : {QPalette::Active, QPalette::Inactive, QPalette::Disabled})
+        EXPECT_EQ(window.palette().color(QPalette::Active, QPalette::Window),
+                  window.themeBackdrop(true));
+        for (const auto group : {QPalette::Inactive, QPalette::Disabled})
             EXPECT_EQ(window.palette().color(group, QPalette::Window), window.themeBackdrop(false));
         window.show();
         EXPECT_EQ(window.size(), expectedSize);
@@ -790,6 +823,142 @@ TEST_F(WindowTest, FirstShowPreparesThemeBackgroundBeforePainting)
         EXPECT_EQ(window.palette().color(QPalette::Window),
                   window.themeBackdrop(window.isActiveWindow()));
         window.close();
+    }
+}
+
+TEST_F(WindowTest, PaintedFallbackPreparesMaterialBaseColors)
+{
+    for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark,
+                             fluent::FluentElement::HighContrast}) {
+        for (const auto effect : {BackdropEffect::Mica, BackdropEffect::Acrylic}) {
+            SCOPED_TRACE(::testing::Message() << "theme=" << theme << ", effect=" << int(effect));
+            Window window;
+            window.setProperty("fluentThemeOverride", static_cast<int>(theme));
+            window.setBackdropEffect(BackdropEffect::Solid);
+            window.onThemeUpdated();
+            window.setBackdropEffect(effect);
+            ASSERT_EQ(window.backdropState().surfaceMode, BackdropSurfaceMode::PaintedOpaque);
+            const auto& colors = window.themeColors();
+            auto material = WindowBackdropMaterialOptions::forTheme(
+                window.effectiveThemeUsesDarkAppearance(), colors.bgCanvas, colors.accentDefault);
+            material.effect = effect;
+            for (const auto group : {QPalette::Active, QPalette::Inactive, QPalette::Disabled}) {
+                material.active = group == QPalette::Active;
+                EXPECT_EQ(window.palette().color(group, QPalette::Window),
+                          WindowBackdropMaterial::opaqueBaseColor(material));
+            }
+            window.setBackdropEffect(BackdropEffect::Solid);
+            EXPECT_EQ(window.palette().color(QPalette::Active, QPalette::Window),
+                      window.themeBackdrop(true));
+            EXPECT_EQ(window.palette().color(QPalette::Inactive, QPalette::Window),
+                      window.themeBackdrop(false));
+        }
+    }
+}
+
+// Exercise both Qt activation groups synchronously, without window-manager policy or timing.
+QT_WARNING_PUSH
+QT_WARNING_DISABLE_DEPRECATED
+TEST_F(WindowTest, ActivationSelectsPreparedColorsWithoutPaletteBroadcast)
+{
+    for (const auto effect :
+         {BackdropEffect::Solid, BackdropEffect::Mica, BackdropEffect::Acrylic}) {
+        SCOPED_TRACE(static_cast<int>(effect));
+        Window window;
+        window.setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
+        window.setBackdropEffect(effect);
+        window.onThemeUpdated();
+        Button child(&window);
+        QPalette palette = window.palette();
+        palette.setColor(QPalette::Active, QPalette::WindowText, QColor(37, 73, 113));
+        window.setPalette(palette);
+        const QPalette prepared = window.palette();
+        PaletteChangeCounter rootCounter;
+        PaletteChangeCounter childCounter;
+        window.installEventFilter(&rootCounter);
+        child.installEventFilter(&childCounter);
+
+        for (int cycle = 0; cycle < 3; ++cycle) {
+            QApplication::setActiveWindow(&window);
+            ASSERT_TRUE(window.isActiveWindow());
+            EXPECT_EQ(compatibility::detail::windowBackdropSurfaceColor(&window),
+                      prepared.color(QPalette::Active, QPalette::Window));
+            QApplication::setActiveWindow(nullptr);
+            ASSERT_FALSE(window.isActiveWindow());
+            EXPECT_EQ(compatibility::detail::windowBackdropSurfaceColor(&window),
+                      prepared.color(QPalette::Inactive, QPalette::Window));
+        }
+        EXPECT_EQ(window.palette(), prepared);
+        EXPECT_EQ(rootCounter.changes, 0);
+        EXPECT_EQ(childCounter.changes, 0);
+        EXPECT_EQ(window.palette().color(QPalette::Active, QPalette::WindowText),
+                  QColor(37, 73, 113));
+        EXPECT_EQ(compatibility::detail::windowBackdropSurfaceColor(&window),
+                  prepared.color(QPalette::Inactive, QPalette::Window));
+    }
+}
+QT_WARNING_POP
+
+TEST_F(WindowTest, PaletteCallbackCannotPublishASupersededBackdrop)
+{
+    Window window;
+    window.setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
+    window.setBackdropEffect(BackdropEffect::Solid);
+    window.onThemeUpdated();
+    OneShotPaletteAction filter;
+    filter.action = [&] { window.setBackdropEffect(BackdropEffect::Acrylic); };
+    window.installEventFilter(&filter);
+    QSignalSpy effectSpy(&window, &Window::backdropEffectChanged);
+    QSignalSpy stateSpy(&window, &Window::backdropStateChanged);
+    window.setBackdropEffect(BackdropEffect::Mica);
+    ASSERT_TRUE(filter.triggered);
+    EXPECT_EQ(window.backdropEffect(), BackdropEffect::Acrylic);
+    EXPECT_EQ(window.backdropState().requestedEffect, BackdropEffect::Acrylic);
+    EXPECT_EQ(fluent::windowing::windowBackdropState(&window), window.backdropState());
+    EXPECT_EQ(window.property("fluentWindowBackdropEffect").toInt(), int(BackdropEffect::Acrylic));
+    EXPECT_EQ(effectSpy.count(), 1);
+    EXPECT_EQ(stateSpy.count(), 1);
+    const auto& colors = window.themeColors();
+    auto material = WindowBackdropMaterialOptions::forTheme(
+        window.effectiveThemeUsesDarkAppearance(), colors.bgCanvas, colors.accentDefault);
+    material.effect = BackdropEffect::Acrylic;
+    material.active = false;
+    EXPECT_EQ(compatibility::detail::windowBackdropSurfaceColor(&window),
+              WindowBackdropMaterial::opaqueBaseColor(material));
+}
+
+TEST_F(WindowTest, DisabledHostedSurfaceKeepsThePainterActivationBase)
+{
+    auto capabilities = compatibility::detail::runtimePlatformCapabilities();
+    capabilities.hostsApplicationWindowsInDesktopSurface = true;
+    RuntimeCapabilitiesScope capabilityScope(capabilities);
+    QWidget host;
+    Window window(&host);
+    window.setWindowFlags(Qt::Widget);
+    window.setEnabled(false);
+    window.setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
+    for (const auto effect :
+         {BackdropEffect::Solid, BackdropEffect::Mica, BackdropEffect::Acrylic}) {
+        SCOPED_TRACE(static_cast<int>(effect));
+        window.setBackdropEffect(effect);
+        window.onThemeUpdated();
+        ASSERT_FALSE(window.isWindow());
+        ASSERT_FALSE(window.isActiveWindow());
+        ASSERT_FALSE(window.isEnabled());
+        const auto& colors = window.themeColors();
+        auto material = WindowBackdropMaterialOptions::forTheme(
+            window.effectiveThemeUsesDarkAppearance(), colors.bgCanvas, colors.accentDefault);
+        material.effect = effect;
+        material.active = true;
+        const QColor activeBase = effect == BackdropEffect::Solid
+                                      ? window.themeBackdrop(true)
+                                      : WindowBackdropMaterial::opaqueBaseColor(material);
+        material.active = false;
+        const QColor inactiveBase = effect == BackdropEffect::Solid
+                                        ? window.themeBackdrop(false)
+                                        : WindowBackdropMaterial::opaqueBaseColor(material);
+        EXPECT_EQ(compatibility::detail::windowBackdropSurfaceColor(&window), activeBase);
+        EXPECT_EQ(window.palette().color(QPalette::Disabled, QPalette::Window), inactiveBase);
     }
 }
 

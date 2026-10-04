@@ -279,19 +279,34 @@ BackdropState Window::paintedFallbackState(const QString& reason) const
 
 void Window::setEffectiveBackdropState(const BackdropState& state)
 {
+    QPointer<Window> guard(this);
+    const quint64 revision = ++m_backdropStateRevision;
+    const auto current = [&] { return guard && guard->m_backdropStateRevision == revision; };
     const bool changed = m_backdropState != state;
     m_backdropState = state;
     prepareBackdropSurface();
+    if (!current())
+        return;
 
     // Keep the old dynamic properties as compatibility aliases while all new
     // consumers use the typed state published by WindowBackdrop.
     // zh_CN: 保留旧动态属性作为兼容别名；新消费者统一读取 WindowBackdrop 发布的类型化状态。
     setProperty("fluentWindowBackdropEffect", static_cast<int>(state.requestedEffect));
+    if (!current())
+        return;
     setProperty("fluentMicaBackdrop",
                 state.surfaceMode == BackdropSurfaceMode::CompositedTransparent);
+    if (!current())
+        return;
     setProperty("fluentBackdropSurfaceMode", static_cast<int>(state.surfaceMode));
+    if (!current())
+        return;
     setProperty("fluentBackdropBackend", static_cast<int>(state.backend));
+    if (!current())
+        return;
     publishWindowBackdropState(this, state);
+    if (!current())
+        return;
 
     if (changed) {
         invalidatePaintedSurfaceCache();
@@ -320,8 +335,13 @@ void Window::prepareBackdropSurface()
     // zh_CN: 旧原生材质保留到不透明替代帧提交；冷启动底色与 Qt 首次绘制的主题色一致。
     const auto mode = m_backdropDisablePending ? BackdropSurfaceMode::CompositedTransparent
                                                : m_backdropState.surfaceMode;
-    compatibility::detail::prepareWindowBackdropSurface(this, themeBackdrop(isEffectivelyActive()),
-                                                        mode);
+    const auto baseColor = [this](bool active) {
+        return m_backdropEffect == BackdropEffect::Solid
+                   ? themeBackdrop(active)
+                   : WindowBackdropMaterial::opaqueBaseColor(paintedSurfaceMaterialOptions(active));
+    };
+    compatibility::detail::prepareWindowBackdropSurface(this, baseColor(true), baseColor(false),
+                                                        isEffectivelyActive(), mode);
 }
 
 void Window::scheduleBackdropResolution()
@@ -421,10 +441,13 @@ void Window::beginOpaqueBackdropCommit(const BackdropState& next)
 
 void Window::onThemeUpdated()
 {
+    QPointer<Window> guard(this);
     invalidatePaintedSurfaceCache();
     // Keep the native backdrop tint in step with this window's effective theme.
     // zh_CN: 让原生背景着色跟随窗口的实际主题。
     resolveBackdropState(isVisible());
+    if (!guard)
+        return;
     if (m_titleBar)
         m_titleBar->onThemeUpdated();
     if (m_minimizeButton)
@@ -629,11 +652,18 @@ ClientSideFramePaintOptions Window::clientSideFramePaintOptions() const
         m_backdropState.surfaceMode == BackdropSurfaceMode::CompositedTransparent;
     options.usePaintedMaterial = m_backdropState.surfaceMode == BackdropSurfaceMode::PaintedOpaque;
     options.effect = m_backdropEffect;
-    options.material = WindowBackdropMaterialOptions::forTheme(
-        effectiveThemeUsesDarkAppearance(), colors.bgCanvas, colors.accentDefault);
-    options.material.effect = m_backdropEffect;
-    options.material.active = active;
-    options.material.devicePixelRatio = devicePixelRatioF();
+    options.material = paintedSurfaceMaterialOptions(active);
+    return options;
+}
+
+WindowBackdropMaterialOptions Window::paintedSurfaceMaterialOptions(bool active) const
+{
+    const auto& colors = themeColorsRef();
+    auto options = WindowBackdropMaterialOptions::forTheme(effectiveThemeUsesDarkAppearance(),
+                                                           colors.bgCanvas, colors.accentDefault);
+    options.effect = m_backdropEffect;
+    options.active = active;
+    options.devicePixelRatio = devicePixelRatioF();
     return options;
 }
 

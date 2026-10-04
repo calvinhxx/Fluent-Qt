@@ -3,6 +3,7 @@
 #include "components/basicinput/Button.h"
 #include "components/windowing/Window.h"
 #include "components/windowing/WindowBackdrop.h"
+#include "components/windowing/WindowBackdropMaterial.h"
 
 #include <QApplication>
 #include <QGuiApplication>
@@ -293,7 +294,13 @@ TEST(WindowsWindowBackdropTest, NativeErasePaintsFallbackAndPreservesCompositedP
                 SendMessageW(hwnd, WM_ERASEBKGND, reinterpret_cast<WPARAM>(pendingSurface.dc()), 0),
                 1);
             EXPECT_TRUE(window.lastBackgroundEraseHandled);
-            const QColor fallback = window.palette().color(QPalette::Window);
+            const auto& colors = window.themeColors();
+            auto material = fluent::windowing::WindowBackdropMaterialOptions::forTheme(
+                window.effectiveThemeUsesDarkAppearance(), colors.bgCanvas, colors.accentDefault);
+            material.effect = effect;
+            material.active = false;
+            const QColor fallback =
+                fluent::windowing::WindowBackdropMaterial::opaqueBaseColor(material);
             pendingSurface.expectColor(RGB(fallback.red(), fallback.green(), fallback.blue()));
             EXPECT_TRUE(window.paintedStates.isEmpty());
 

@@ -7,7 +7,7 @@
 #include <QDynamicPropertyChangeEvent>
 #include <QEvent>
 #include <QGuiApplication>
-#include <QLibrary>
+#include <QPointer>
 #include <QPixmap>
 #include <QRegion>
 #include <QScreen>
@@ -17,166 +17,28 @@
 #include <QtMath>
 
 #include "compatibility/private/WindowBackdropEvents_p.h"
+#include "compatibility/private/WindowBackdropXcb_p.h"
 
-#include <cstddef>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
+#include <QtGui/qguiapplication_platform.h>
+#endif
+
 #include <limits>
 
 namespace compatibility {
 namespace {
 
 constexpr int LinuxClientFrameMargin = 16;
-constexpr unsigned long X11False = 0;
-constexpr unsigned long X11True = 1;
-constexpr int X11PropModeReplace = 0;
-constexpr int X11Success = 0;
-constexpr unsigned long X11AtomType = 4;
-constexpr unsigned long X11None = 0;
-constexpr int X11TrueColor = 4;
+constexpr quint32 XcbNone = 0;
+constexpr quint32 XcbCardinalAtom = 6;
+constexpr quint8 XcbTrueColor = 4;
 constexpr const char* KWinBlurAtomName = "_KDE_NET_WM_BLUR_BEHIND_REGION";
 constexpr const char* BackdropSurfaceRectPropertyName = "fluentOverlaySurfaceRect";
 constexpr const char* BackdropSurfaceRadiusPropertyName = "fluentClientSideFrameRadius";
 constexpr const char* KWinBlurUpdaterObjectName = "_fluentKWinBlurRegionUpdater";
+constexpr const char* X11PreparationObjectName = "_fluentX11BackdropSurfacePreparation";
 
-using XDisplay = struct _XDisplay;
-using XAtom = unsigned long;
-using XWindow = unsigned long;
-using XDrawable = unsigned long;
-
-// Stable Xlib ABI declarations keep the optional runtime adapter independent
-// of X11 development headers and link libraries.
-struct XVisual {
-    void* extensionData;
-    unsigned long visualId;
-    int visualClass;
-    unsigned long redMask;
-    unsigned long greenMask;
-    unsigned long blueMask;
-    int bitsPerRgb;
-    int mapEntries;
-};
-
-struct XWindowAttributes {
-    int x;
-    int y;
-    int width;
-    int height;
-    int borderWidth;
-    int depth;
-    XVisual* visual;
-    XWindow root;
-    int windowClass;
-    int bitGravity;
-    int windowGravity;
-    int backingStore;
-    unsigned long backingPlanes;
-    unsigned long backingPixel;
-    int saveUnder;
-    unsigned long colormap;
-    int mapInstalled;
-    int mapState;
-    long allEventMasks;
-    long yourEventMask;
-    long doNotPropagateMask;
-    int overrideRedirect;
-    void* screen;
-};
-
-static_assert((sizeof(void*) == 4 || sizeof(void*) == 8) &&
-                  sizeof(unsigned long) == sizeof(void*) && sizeof(int) == 4,
-              "The dynamic Xlib adapter requires the Linux ILP32 or LP64 ABI");
-static_assert(sizeof(XVisual) == (sizeof(void*) == 8 ? 56 : 32) &&
-                  offsetof(XVisual, redMask) == (sizeof(void*) == 8 ? 24 : 12),
-              "XVisual must retain the Xlib Visual layout");
-static_assert(sizeof(XWindowAttributes) == (sizeof(void*) == 8 ? 136 : 92) &&
-                  offsetof(XWindowAttributes, visual) == 24 &&
-                  offsetof(XWindowAttributes, screen) == (sizeof(void*) == 8 ? 128 : 88),
-              "XWindowAttributes must retain the complete Xlib output-buffer layout");
-
-struct X11Api {
-    QLibrary library{QStringLiteral("X11")};
-    using XOpenDisplayFn = XDisplay* (*)(const char*);
-    using XCloseDisplayFn = int (*)(XDisplay*);
-    using XDefaultScreenFn = int (*)(XDisplay*);
-    using XScreenCountFn = int (*)(XDisplay*);
-    using XRootWindowFn = XWindow (*)(XDisplay*, int);
-    using XInternAtomFn = XAtom (*)(XDisplay*, const char*, int);
-    using XGetSelectionOwnerFn = XWindow (*)(XDisplay*, XAtom);
-    using XListPropertiesFn = XAtom* (*)(XDisplay*, XWindow, int*);
-    using XGetWindowPropertyFn = int (*)(XDisplay*, XWindow, XAtom, long, long, int, XAtom, XAtom*,
-                                         int*, unsigned long*, unsigned long*, unsigned char**);
-    using XChangePropertyFn = int (*)(XDisplay*, XWindow, XAtom, XAtom, int, int,
-                                      const unsigned char*, int);
-    using XDeletePropertyFn = int (*)(XDisplay*, XWindow, XAtom);
-    using XFlushFn = int (*)(XDisplay*);
-    using XFreeFn = int (*)(void*);
-    using XGetGeometryFn = int (*)(XDisplay*, XDrawable, XWindow*, int*, int*, unsigned int*,
-                                   unsigned int*, unsigned int*, unsigned int*);
-    using XMapRaisedFn = int (*)(XDisplay*, XWindow);
-    using XRaiseWindowFn = int (*)(XDisplay*, XWindow);
-    using XSetInputFocusFn = int (*)(XDisplay*, XWindow, int, unsigned long);
-    using XGetWindowAttributesFn = int (*)(XDisplay*, XWindow, XWindowAttributes*);
-    using XSetWindowBackgroundFn = int (*)(XDisplay*, XWindow, unsigned long);
-
-    XOpenDisplayFn openDisplay = nullptr;
-    XCloseDisplayFn closeDisplay = nullptr;
-    XDefaultScreenFn defaultScreen = nullptr;
-    XScreenCountFn screenCount = nullptr;
-    XRootWindowFn rootWindow = nullptr;
-    XInternAtomFn internAtom = nullptr;
-    XGetSelectionOwnerFn getSelectionOwner = nullptr;
-    XListPropertiesFn listProperties = nullptr;
-    XGetWindowPropertyFn getWindowProperty = nullptr;
-    XChangePropertyFn changeProperty = nullptr;
-    XDeletePropertyFn deleteProperty = nullptr;
-    XFlushFn flush = nullptr;
-    XFreeFn freeData = nullptr;
-    XGetGeometryFn getGeometry = nullptr;
-    XMapRaisedFn mapRaised = nullptr;
-    XRaiseWindowFn raiseWindow = nullptr;
-    XSetInputFocusFn setInputFocus = nullptr;
-    XGetWindowAttributesFn getWindowAttributes = nullptr;
-    XSetWindowBackgroundFn setWindowBackground = nullptr;
-
-    bool load()
-    {
-        if (!library.isLoaded() && !library.load())
-            return false;
-
-        openDisplay = reinterpret_cast<XOpenDisplayFn>(library.resolve("XOpenDisplay"));
-        closeDisplay = reinterpret_cast<XCloseDisplayFn>(library.resolve("XCloseDisplay"));
-        defaultScreen = reinterpret_cast<XDefaultScreenFn>(library.resolve("XDefaultScreen"));
-        screenCount = reinterpret_cast<XScreenCountFn>(library.resolve("XScreenCount"));
-        rootWindow = reinterpret_cast<XRootWindowFn>(library.resolve("XRootWindow"));
-        internAtom = reinterpret_cast<XInternAtomFn>(library.resolve("XInternAtom"));
-        getSelectionOwner =
-            reinterpret_cast<XGetSelectionOwnerFn>(library.resolve("XGetSelectionOwner"));
-        listProperties = reinterpret_cast<XListPropertiesFn>(library.resolve("XListProperties"));
-        getWindowProperty =
-            reinterpret_cast<XGetWindowPropertyFn>(library.resolve("XGetWindowProperty"));
-        changeProperty = reinterpret_cast<XChangePropertyFn>(library.resolve("XChangeProperty"));
-        deleteProperty = reinterpret_cast<XDeletePropertyFn>(library.resolve("XDeleteProperty"));
-        flush = reinterpret_cast<XFlushFn>(library.resolve("XFlush"));
-        freeData = reinterpret_cast<XFreeFn>(library.resolve("XFree"));
-        getGeometry = reinterpret_cast<XGetGeometryFn>(library.resolve("XGetGeometry"));
-        mapRaised = reinterpret_cast<XMapRaisedFn>(library.resolve("XMapRaised"));
-        raiseWindow = reinterpret_cast<XRaiseWindowFn>(library.resolve("XRaiseWindow"));
-        setInputFocus = reinterpret_cast<XSetInputFocusFn>(library.resolve("XSetInputFocus"));
-        getWindowAttributes =
-            reinterpret_cast<XGetWindowAttributesFn>(library.resolve("XGetWindowAttributes"));
-        setWindowBackground =
-            reinterpret_cast<XSetWindowBackgroundFn>(library.resolve("XSetWindowBackground"));
-        return openDisplay && closeDisplay && defaultScreen && screenCount && rootWindow &&
-               internAtom && getSelectionOwner && listProperties && getWindowProperty &&
-               changeProperty && deleteProperty && flush && freeData && getGeometry && mapRaised &&
-               raiseWindow && setInputFocus;
-    }
-};
-
-X11Api* loadedX11Api()
-{
-    static X11Api api;
-    return api.load() ? &api : nullptr;
-}
+namespace xcb = compatibility::detail::xcb;
 
 bool isXcbPlatform()
 {
@@ -189,91 +51,252 @@ bool isWaylandPlatform()
                                                       Qt::CaseInsensitive);
 }
 
-bool x11ColorComponentPixel(int component, unsigned long mask, unsigned long* pixel)
+class XcbClient final : public QObject {
+public:
+    explicit XcbClient(QObject* parent) : QObject(parent) {}
+    ~XcbClient() override
+    {
+        if (m_connection)
+            api.disconnect(m_connection);
+    }
+
+    xcb::Connection* connection()
+    {
+        if (m_connection && !api.healthy(m_connection)) {
+            api.disconnect(m_connection);
+            m_connection = nullptr;
+        }
+        if (!m_connection && api.load()) {
+            m_connection = api.connect(nullptr, &m_screenNumber);
+            ++m_generation;
+            if (!api.healthy(m_connection)) {
+                if (m_connection)
+                    api.disconnect(m_connection);
+                m_connection = nullptr;
+            }
+        }
+        return m_connection;
+    }
+
+    quint64 generation() const { return m_generation; }
+
+    xcb::Screen* screen(xcb::Connection* native)
+    {
+        if (!native)
+            return nullptr;
+        const xcb::Setup* setup = api.getSetup(native);
+        if (!setup)
+            return nullptr;
+        auto screens = api.rootsIterator(setup);
+        for (int index = 0; screens.remaining > 0; ++index, api.screenNext(&screens)) {
+            if (index == m_screenNumber)
+                return screens.data;
+        }
+        return nullptr;
+    }
+
+    int screenNumber() const { return m_screenNumber; }
+
+    quint32 internAtom(xcb::Connection* native, const QByteArray& name, bool onlyIfExists)
+    {
+        if (!native || name.isEmpty() || name.size() > std::numeric_limits<quint16>::max())
+            return XcbNone;
+        const auto cookie = api.internAtom(native, onlyIfExists ? 1 : 0,
+                                           static_cast<quint16>(name.size()), name.constData());
+        const auto reply = api.reply(native, cookie, api.internAtomReply);
+        return reply ? reply->id : XcbNone;
+    }
+
+    bool visualForWindow(xcb::Connection* native, quint32 nativeId, xcb::Visual* visual,
+                         quint8* depth)
+    {
+        if (!native || !nativeId || !visual || !depth)
+            return false;
+        const auto attributes = api.reply(native, api.getWindowAttributes(native, nativeId),
+                                          api.getWindowAttributesReply);
+        const xcb::Setup* setup = api.getSetup(native);
+        if (!attributes || !setup)
+            return false;
+        auto screens = api.rootsIterator(setup);
+        for (; screens.remaining > 0; api.screenNext(&screens)) {
+            auto depths = api.depthsIterator(screens.data);
+            for (; depths.remaining > 0; api.depthNext(&depths)) {
+                auto visuals = api.visualsIterator(depths.data);
+                for (; visuals.remaining > 0; api.visualNext(&visuals)) {
+                    if (visuals.data->id == attributes->visual) {
+                        *visual = *visuals.data;
+                        *depth = depths.data->depth;
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    xcb::Api api;
+
+private:
+    xcb::Connection* m_connection = nullptr;
+    int m_screenNumber = 0;
+    quint64 m_generation = 0;
+};
+
+XcbClient* xcbClient()
+{
+    // One private connection per application, owned and torn down with it.
+    // Checked XCB requests return protocol errors instead of invoking Xlib's
+    // process-global handler; no application/Qt error handler is replaced.
+    static QPointer<XcbClient> client;
+    if (!qGuiApp || !isXcbPlatform())
+        return nullptr;
+    if (!client)
+        client = new XcbClient(qGuiApp);
+    return client;
+}
+
+bool qtXcbRoundTrip(QWidget* window)
+{
+    if (!window || !window->internalWinId() || !isXcbPlatform())
+        return false;
+    XcbClient* client = xcbClient();
+    if (!client || !client->api.load())
+        return false;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0) && QT_CONFIG(xcb)
+    // Qt 6 exposes its XCB connection publicly. A reply or protocol error on
+    // this connection orders all earlier Qt backing-store requests.
+    if (auto* native = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
+        return client->api.roundTrip(reinterpret_cast<xcb::Connection*>(native->connection()));
+    }
+#endif
+    QWindow* handle = window->windowHandle();
+    QScreen* screen = handle ? handle->screen() : nullptr;
+    if (!screen || !screen->handle())
+        return false;
+    // Qt 5.15's public QScreen path enters QXcbScreen::grabWindow only after
+    // checking the platform-screen handle and nonzero native sample size.
+    // Its first request waits for GetGeometry(root) on Qt's own connection;
+    // a later GetImage failure therefore does not invalidate that round trip.
+    // Use enough logical pixels to remain nonzero at fractional scale factors.
+    // No pixels are kept and no events are dispatched. Connection health is
+    // rechecked on our private client, rather than treating an empty image as
+    // evidence that Qt's ordered request failed.
+    const int extent = qMax(1, qCeil(1.0 / qMax<qreal>(0.01, screen->devicePixelRatio())));
+    screen->grabWindow(window->internalWinId(), 0, 0, extent, extent);
+    xcb::Connection* native = client->connection();
+    return native && client->api.roundTrip(native);
+}
+
+bool x11ColorComponentPixel(int component, quint32 mask, quint32* pixel)
 {
     if (!mask || !pixel)
         return false;
-    unsigned long maximum = mask;
+    quint32 maximum = mask;
     unsigned int shift = 0;
-    while ((maximum & 1UL) == 0) {
+    while ((maximum & 1U) == 0) {
         maximum >>= 1;
         ++shift;
     }
-    if ((maximum & (maximum + 1UL)) != 0)
+    if ((maximum & (maximum + 1U)) != 0)
         return false;
     const quint64 scaled = (static_cast<quint64>(component) * maximum + 127) / 255;
-    *pixel |= (static_cast<unsigned long>(scaled) << shift) & mask;
+    *pixel |= (static_cast<quint32>(scaled) << shift) & mask;
     return true;
 }
 
-bool x11OpaqueBackgroundPixel(const XWindowAttributes& attributes, const QColor& color,
-                              unsigned long* pixel)
+bool x11OpaqueBackgroundPixel(const xcb::Visual& visual, quint8 depth, const QColor& color,
+                              quint32* pixel)
 {
-    if (!pixel || !attributes.visual || attributes.visual->visualClass != X11TrueColor ||
-        attributes.depth <= 0 || attributes.depth > 32)
+    if (!pixel || visual.visualClass != XcbTrueColor || depth == 0 || depth > 32)
         return false;
-    const XVisual& visual = *attributes.visual;
-    const unsigned long colorMask = visual.redMask | visual.greenMask | visual.blueMask;
-    const unsigned long depthMask =
-        static_cast<unsigned long>((quint64{1} << attributes.depth) - 1);
+    const quint32 colorMask = visual.redMask | visual.greenMask | visual.blueMask;
+    const quint32 depthMask = static_cast<quint32>((quint64{1} << depth) - 1);
     if ((colorMask & ~depthMask) != 0 || (visual.redMask & visual.greenMask) != 0 ||
         (visual.redMask & visual.blueMask) != 0 || (visual.greenMask & visual.blueMask) != 0)
         return false;
-    // Qt's XCB raster visual puts alpha in the depth bits outside the RGB masks.
-    // Set those bits opaque instead of assuming a 0xAARRGGBB channel layout.
     *pixel = depthMask & ~colorMask;
     return x11ColorComponentPixel(color.red(), visual.redMask, pixel) &&
            x11ColorComponentPixel(color.green(), visual.greenMask, pixel) &&
            x11ColorComponentPixel(color.blue(), visual.blueMask, pixel);
 }
 
-bool closeX11Display(X11Api* api, XDisplay* display)
+class X11BackdropSurfacePreparation final : public QObject {
+public:
+    explicit X11BackdropSurfacePreparation(QWidget* window) : QObject(window), m_window(window)
+    {
+        setObjectName(QString::fromLatin1(X11PreparationObjectName));
+        window->installEventFilter(this);
+    }
+
+    void prepare(XcbClient* client, const QColor& color, bool transparent)
+    {
+        const quint32 nativeId = static_cast<quint32>(m_window->internalWinId());
+        if (m_nativeId != nativeId || m_connectionGeneration != client->generation()) {
+            invalidate();
+            m_nativeId = nativeId;
+            m_connectionGeneration = client->generation();
+        }
+        m_state.prepare(
+            nativeId, color.rgb(), transparent, [&] { return qtXcbRoundTrip(m_window); },
+            [&](quint32 rgb, bool clear) {
+                xcb::Connection* connection = client->connection();
+                if (!connection)
+                    return false;
+                if (!m_visualAvailable) {
+                    m_visualAvailable =
+                        client->visualForWindow(connection, nativeId, &m_visual, &m_depth);
+                    if (!m_visualAvailable)
+                        return false;
+                }
+                quint32 pixel = 0;
+                if (!clear &&
+                    !x11OpaqueBackgroundPixel(m_visual, m_depth, QColor::fromRgb(rgb), &pixel))
+                    return false;
+                // Change only future map/expose pixels, never clear a painted
+                // backing store. A checked request completes before Qt maps it.
+                constexpr quint32 BackgroundPixelMask = 2;
+                const auto cookie = client->api.changeAttributesChecked(
+                    connection, nativeId, BackgroundPixelMask, &pixel);
+                return client->api.check(connection, cookie);
+            });
+    }
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (watched == m_window && event && event->type() == QEvent::WinIdChange)
+            invalidate();
+        return QObject::eventFilter(watched, event);
+    }
+
+private:
+    void invalidate()
+    {
+        m_state.invalidate();
+        m_nativeId = 0;
+        m_visualAvailable = false;
+    }
+
+    QWidget* m_window;
+    compatibility::detail::X11BackdropBackgroundPreparation m_state;
+    quint32 m_nativeId = 0;
+    quint64 m_connectionGeneration = 0;
+    xcb::Visual m_visual{};
+    quint8 m_depth = 0;
+    bool m_visualAvailable = false;
+};
+
+X11BackdropSurfacePreparation* ensureX11BackdropSurfacePreparation(QWidget* window)
 {
-    return api && display && api->closeDisplay(display) == X11Success;
-}
-
-bool freeX11Data(X11Api* api, unsigned char*& data)
-{
-    if (!data)
-        return true;
-    const int status = api->freeData(data);
-    data = nullptr;
-    return status != 0;
-}
-
-bool validX11Screen(X11Api* api, XDisplay* display, int* screen)
-{
-    if (!api || !display || !screen)
-        return false;
-    const int count = api->screenCount(display);
-    if (count <= 0)
-        return false;
-    const int candidate = api->defaultScreen(display);
-    if (candidate < 0 || candidate >= count)
-        return false;
-    *screen = candidate;
-    return true;
-}
-
-bool windowHasPropertyAtom(X11Api* api, XDisplay* display, XWindow window, XAtom expectedAtom)
-{
-    if (!api || !display || !window || !expectedAtom)
-        return false;
-
-    int propertyCount = 0;
-    XAtom* properties = api->listProperties(display, window, &propertyCount);
-    const bool listResultValid =
-        propertyCount >= 0 && (propertyCount == 0 || properties != nullptr);
-
-    bool found = false;
-    for (int i = 0; listResultValid && properties && i < propertyCount; ++i) {
-        if (properties[i] == expectedAtom) {
-            found = true;
-            break;
+    if (!window)
+        return nullptr;
+    for (QObject* child : window->children()) {
+        if (child->objectName() == QString::fromLatin1(X11PreparationObjectName)) {
+            if (auto* preparation = dynamic_cast<X11BackdropSurfacePreparation*>(child))
+                return preparation;
         }
     }
-    const bool freeSucceeded = !properties || api->freeData(properties) != 0;
-    return listResultValid && found && freeSucceeded;
+    return new X11BackdropSurfacePreparation(window);
 }
 
 struct LinuxBackdropCapabilities {
@@ -296,76 +319,55 @@ LinuxBackdropCapabilities queryLinuxBackdropCapabilities()
     capabilities.xcbPlatform = isXcbPlatform();
     if (!capabilities.xcbPlatform)
         return capabilities;
-
-    X11Api* api = loadedX11Api();
-    capabilities.x11LibraryAvailable = api != nullptr;
-    if (!api)
+    XcbClient* client = xcbClient();
+    xcb::Connection* connection = client ? client->connection() : nullptr;
+    capabilities.x11LibraryAvailable = connection != nullptr;
+    if (!connection)
         return capabilities;
-
-    XDisplay* display = api->openDisplay(nullptr);
-    if (!display)
+    xcb::Screen* screen = client->screen(connection);
+    if (!screen)
         return capabilities;
-
-    int screen = 0;
-    if (!validX11Screen(api, display, &screen)) {
-        closeX11Display(api, display);
-        return capabilities;
+    const QByteArray selectionName =
+        QByteArrayLiteral("_NET_WM_CM_S") + QByteArray::number(client->screenNumber());
+    const quint32 compositorSelection = client->internAtom(connection, selectionName, true);
+    const quint32 blurAtom = client->internAtom(connection, QByteArray(KWinBlurAtomName), true);
+    if (compositorSelection) {
+        const auto owner = client->api.reply(
+            connection, client->api.getSelectionOwner(connection, compositorSelection),
+            client->api.getSelectionOwnerReply);
+        capabilities.compositorActive = owner && owner->id != XcbNone;
     }
-
-    const QByteArray compositorSelectionName =
-        QByteArrayLiteral("_NET_WM_CM_S") + QByteArray::number(screen);
-    const XAtom compositorSelection =
-        api->internAtom(display, compositorSelectionName.constData(), X11True);
-    const XAtom blurAtom = api->internAtom(display, KWinBlurAtomName, X11True);
-    const XWindow compositorOwner =
-        compositorSelection ? api->getSelectionOwner(display, compositorSelection) : X11None;
-    capabilities.compositorActive = compositorOwner != X11None;
-    // On X11, an active compositing manager is what makes an ARGB visual useful;
-    // the concrete window visual is probed separately before applying blur.
     capabilities.alphaCompositionAvailable = capabilities.compositorActive;
-
-    const XWindow root = api->rootWindow(display, screen);
-    if (capabilities.compositorActive && root && blurAtom) {
-        // KWindowEffects advertises blur availability by publishing the blur
-        // property on the root window, so inspect the root property list.
-        capabilities.blurProtocolAdvertised = windowHasPropertyAtom(api, display, root, blurAtom);
+    if (capabilities.compositorActive && screen->root && blurAtom) {
+        const auto properties =
+            client->api.reply(connection, client->api.listProperties(connection, screen->root),
+                              client->api.listPropertiesReply);
+        if (properties) {
+            const quint32* atoms = client->api.listPropertyAtoms(properties.get());
+            for (quint16 i = 0; atoms && i < properties->atomsLength; ++i) {
+                if (atoms[i] == blurAtom) {
+                    capabilities.blurProtocolAdvertised = true;
+                    break;
+                }
+            }
+        }
     }
-
-    if (!closeX11Display(api, display))
-        capabilities = LinuxBackdropCapabilities{};
     return capabilities;
 }
 
 bool x11WindowHasAlphaSurface(QWidget* window)
 {
-    if (!window || !isXcbPlatform() || !window->testAttribute(Qt::WA_TranslucentBackground)) {
+    if (!window || !isXcbPlatform() || !window->testAttribute(Qt::WA_TranslucentBackground))
         return false;
-    }
-
-    const XWindow xWindow = static_cast<XWindow>(window->winId());
-    if (!xWindow)
+    const quint32 nativeId = static_cast<quint32>(window->internalWinId());
+    XcbClient* client = xcbClient();
+    xcb::Connection* connection = client ? client->connection() : nullptr;
+    if (!nativeId || !connection)
         return false;
-
-    X11Api* api = loadedX11Api();
-    if (!api)
-        return false;
-
-    XDisplay* display = api->openDisplay(nullptr);
-    if (!display)
-        return false;
-
-    XWindow root = X11None;
-    int x = 0;
-    int y = 0;
-    unsigned int width = 0;
-    unsigned int height = 0;
-    unsigned int borderWidth = 0;
-    unsigned int depth = 0;
-    const bool geometryAvailable = api->getGeometry(display, xWindow, &root, &x, &y, &width,
-                                                    &height, &borderWidth, &depth) != 0;
-    const bool closeSucceeded = closeX11Display(api, display);
-    return geometryAvailable && root != X11None && width > 0 && height > 0 && depth == 32 &&
-           closeSucceeded;
+    const auto geometry = client->api.reply(
+        connection, client->api.getGeometry(connection, nativeId), client->api.getGeometryReply);
+    return geometry && geometry->root && geometry->width > 0 && geometry->height > 0 &&
+           geometry->depth == 32;
 }
 
 QRect backdropSurfaceRect(QWidget* window)
@@ -428,9 +430,9 @@ QRegion roundedRectRegion(const QRect& rect, int radius)
     return region;
 }
 
-QVector<unsigned long> kwinBlurRegionValues(QWidget* window)
+QVector<quint32> kwinBlurRegionValues(QWidget* window)
 {
-    QVector<unsigned long> values;
+    QVector<quint32> values;
     const QRect surface = backdropSurfaceRect(window);
     if (surface.isEmpty())
         return values;
@@ -442,49 +444,42 @@ QVector<unsigned long> kwinBlurRegionValues(QWidget* window)
             continue;
         // KWin's X11 property is expressed in native pixels even though Qt's
         // widget and QRegion geometry is device-independent.
-        values.append(static_cast<unsigned long>(qFloor(rect.x() * dpr)));
-        values.append(static_cast<unsigned long>(qFloor(rect.y() * dpr)));
-        values.append(static_cast<unsigned long>(qCeil(rect.width() * dpr)));
-        values.append(static_cast<unsigned long>(qCeil(rect.height() * dpr)));
+        values.append(static_cast<quint32>(qFloor(rect.x() * dpr)));
+        values.append(static_cast<quint32>(qFloor(rect.y() * dpr)));
+        values.append(static_cast<quint32>(qCeil(rect.width() * dpr)));
+        values.append(static_cast<quint32>(qCeil(rect.height() * dpr)));
     }
     return values;
 }
 
-bool verifyKWinBlurProperty(X11Api* api, XDisplay* display, XWindow window, XAtom blurAtom,
-                            XAtom cardinalAtom, const QVector<unsigned long>* expectedValues)
+bool verifyKWinBlurProperty(XcbClient* client, xcb::Connection* connection, quint32 nativeId,
+                            quint32 blurAtom, const QVector<quint32>* expectedValues)
 {
-    XAtom actualType = X11None;
-    int actualFormat = 0;
-    unsigned long itemCount = 0;
-    unsigned long bytesAfter = 0;
-    unsigned char* data = nullptr;
-    const unsigned long expectedCount =
-        expectedValues ? static_cast<unsigned long>(expectedValues->size()) : 0;
-    const long requestedLength =
-        expectedValues ? qMax<long>(1, static_cast<long>(expectedCount)) : 1;
-    const int status =
-        api->getWindowProperty(display, window, blurAtom, 0, requestedLength, X11False,
-                               expectedValues ? cardinalAtom : X11None, &actualType, &actualFormat,
-                               &itemCount, &bytesAfter, &data);
-    bool matches = status == X11Success && bytesAfter == 0;
-    if (expectedValues) {
-        matches = matches && actualType == cardinalAtom && actualFormat == 32 &&
-                  itemCount == expectedCount && data;
-        if (matches) {
-            const auto* actualValues = reinterpret_cast<const unsigned long*>(data);
-            for (unsigned long i = 0; i < itemCount; ++i) {
-                if (actualValues[i] != expectedValues->at(static_cast<int>(i))) {
-                    matches = false;
-                    break;
-                }
-            }
-        }
-    } else {
-        matches = matches && actualType == X11None && actualFormat == 0 && itemCount == 0;
+    if (!client || !connection || !nativeId || !blurAtom)
+        return false;
+    const quint32 expectedCount = expectedValues ? static_cast<quint32>(expectedValues->size()) : 0;
+    const quint32 requestedLength = qMax<quint32>(1, expectedCount);
+    const auto property = client->api.reply(
+        connection,
+        client->api.getProperty(connection, 0, nativeId, blurAtom,
+                                expectedValues ? XcbCardinalAtom : XcbNone, 0, requestedLength),
+        client->api.getPropertyReply);
+    if (!property || property->bytesAfter != 0)
+        return false;
+    if (!expectedValues)
+        return property->type == XcbNone && property->format == 0 && property->valueLength == 0;
+    if (property->type != XcbCardinalAtom || property->format != 32 ||
+        property->valueLength != expectedCount ||
+        client->api.propertyValueLength(property.get()) != expectedValues->size() * 4)
+        return false;
+    const auto* values = static_cast<const quint32*>(client->api.propertyValue(property.get()));
+    if (!values)
+        return false;
+    for (quint32 i = 0; i < expectedCount; ++i) {
+        if (values[i] != expectedValues->at(static_cast<int>(i)))
+            return false;
     }
-    if (!freeX11Data(api, data))
-        matches = false;
-    return matches;
+    return true;
 }
 
 bool applyKWinBlurBehindNow(QWidget* window, bool enabled, bool validateEnvironment = true)
@@ -493,57 +488,34 @@ bool applyKWinBlurBehindNow(QWidget* window, bool enabled, bool validateEnvironm
         return false;
     if (enabled && validateEnvironment &&
         (!queryLinuxBackdropCapabilities().nativeBlurAvailable() ||
-         !x11WindowHasAlphaSurface(window))) {
+         !x11WindowHasAlphaSurface(window)))
         return false;
-    }
-
-    const XWindow xWindow = static_cast<XWindow>(window->winId());
-    if (!xWindow)
+    const quint32 nativeId = static_cast<quint32>(window->internalWinId());
+    XcbClient* client = xcbClient();
+    xcb::Connection* connection = client ? client->connection() : nullptr;
+    if (!nativeId || !connection)
         return false;
-
-    X11Api* api = loadedX11Api();
-    if (!api)
+    const quint32 blurAtom = client->internAtom(connection, QByteArray(KWinBlurAtomName), false);
+    if (!blurAtom)
         return false;
-    XDisplay* display = api->openDisplay(nullptr);
-    if (!display)
-        return false;
-
-    const XAtom blurAtom = api->internAtom(display, KWinBlurAtomName, X11False);
-    const XAtom cardinalAtom = api->internAtom(display, "CARDINAL", X11False);
-    if (!blurAtom || !cardinalAtom) {
-        closeX11Display(api, display);
-        return false;
-    }
-
-    bool requestAccepted = false;
+    // Checked void requests wait for either server acceptance or a protocol
+    // error. BadWindow is recoverable even if Qt destroyed a surface between
+    // the capability probe and this write; it never invokes a global handler.
     if (enabled) {
-        const QVector<unsigned long> values = kwinBlurRegionValues(window);
-        if (values.isEmpty() || values.size() > std::numeric_limits<int>::max()) {
-            closeX11Display(api, display);
+        const QVector<quint32> values = kwinBlurRegionValues(window);
+        if (values.isEmpty())
             return false;
-        }
-        requestAccepted =
-            api->changeProperty(display, xWindow, blurAtom, cardinalAtom, 32, X11PropModeReplace,
-                                reinterpret_cast<const unsigned char*>(values.constData()),
-                                static_cast<int>(values.size())) != 0;
-        if (requestAccepted)
-            requestAccepted = api->flush(display) != 0;
-        if (requestAccepted && validateEnvironment) {
-            requestAccepted =
-                verifyKWinBlurProperty(api, display, xWindow, blurAtom, cardinalAtom, &values);
-        }
-    } else {
-        requestAccepted = api->deleteProperty(display, xWindow, blurAtom) != 0;
-        if (requestAccepted)
-            requestAccepted = api->flush(display) != 0;
-        if (requestAccepted) {
-            requestAccepted =
-                verifyKWinBlurProperty(api, display, xWindow, blurAtom, cardinalAtom, nullptr);
-        }
+        const auto cookie = client->api.changePropertyChecked(
+            connection, 0, nativeId, blurAtom, XcbCardinalAtom, 32,
+            static_cast<quint32>(values.size()), values.constData());
+        if (!client->api.check(connection, cookie))
+            return false;
+        return !validateEnvironment ||
+               verifyKWinBlurProperty(client, connection, nativeId, blurAtom, &values);
     }
-
-    const bool closeSucceeded = closeX11Display(api, display);
-    return requestAccepted && closeSucceeded;
+    const auto cookie = client->api.deletePropertyChecked(connection, nativeId, blurAtom);
+    return client->api.check(connection, cookie) &&
+           verifyKWinBlurProperty(client, connection, nativeId, blurAtom, nullptr);
 }
 
 class KWinBlurRegionUpdater final : public QObject {
@@ -632,7 +604,7 @@ private:
         m_capabilityProbe.stop();
         // Leave the last blur hint in place until Window has submitted its
         // opaque fallback. The shared transition then removes it through the
-        // Solid backend after the XCB readback fence. A compositor that exits
+        // Solid backend after the Qt-connection submission fence. A compositor that exits
         // independently cannot be kept alive by retaining this property.
         // zh_CN: 保留 blur 属性到 Window 提交不透明回退帧并完成 XCB 同连接同步之后；
         // 共享流程经 Solid 后端移除属性。保留属性不能阻止外部 compositor 退出。
@@ -692,60 +664,22 @@ namespace detail {
 void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
                                           fluent::windowing::BackdropSurfaceMode mode)
 {
-    // Wayland maps a surface only after Qt submits its first buffer. Keep that
-    // compositor-owned lifecycle rather than mapping or clearing it ourselves.
+    // Wayland maps only after Qt submits its first buffer. Its lifecycle does
+    // not need an X11 background write or a separate native connection.
     if (!window || !isXcbPlatform() || !window->internalWinId())
         return;
-    X11Api* api = loadedX11Api();
-    if (!api || !api->getWindowAttributes || !api->setWindowBackground)
+    XcbClient* client = xcbClient();
+    if (!client || !client->connection())
         return;
-    QWindow* handle = window->windowHandle();
-    QScreen* screen = handle ? handle->screen() : nullptr;
-    if (!screen || screen->geometry().isEmpty())
-        return;
-    // A WId can exist before Qt's XCB create request reaches the server.
-    // topLevelAt() queries the native screen through Qt's own connection in
-    // Qt 5.15/6, even while this window is unmapped. Its reply orders creation
-    // before the separate Xlib query and avoids a fatal early BadWindow error.
-    // No window is activated, mapped, captured, or changed by this read.
-    // zh_CN: WId 分配不等于 server 已完成创建；先用 Qt 同连接的只读屏幕查询等待
-    // create 请求完成，再跨连接获取属性，避免原生窗口早期出现 BadWindow。
-    QGuiApplication::topLevelAt(screen->geometry().center());
-    XDisplay* display = api->openDisplay(nullptr);
-    if (!display)
-        return;
-    const XWindow xWindow = static_cast<XWindow>(window->internalWinId());
-    XWindowAttributes attributes{};
-    unsigned long pixel = 0;
-    if (api->getWindowAttributes(display, xWindow, &attributes) != 0 &&
-        x11OpaqueBackgroundPixel(attributes, opaqueColor, &pixel)) {
-        if (mode == fluent::windowing::BackdropSurfaceMode::CompositedTransparent)
-            pixel = 0;
-        // Setting the background changes future map/expose pixels without
-        // clearing the already-painted client surface. CloseDisplay completes
-        // this connection's request before Qt is allowed to map the window.
-        // zh_CN: 修改后续映射/曝光使用的底色，不清除已绘制内容；关闭此连接会先完成请求。
-        api->setWindowBackground(display, xWindow, pixel);
-    }
-    closeX11Display(api, display);
+    X11BackdropSurfacePreparation* preparation = ensureX11BackdropSurfacePreparation(window);
+    if (preparation)
+        preparation->prepare(client, opaqueColor,
+                             mode == fluent::windowing::BackdropSurfaceMode::CompositedTransparent);
 }
 
 bool flushPlatformWindowBackdropSurface(QWidget* window)
 {
-    if (!window || !window->internalWinId() || !isXcbPlatform())
-        return false;
-    QWindow* handle = window->windowHandle();
-    QScreen* screen = handle ? handle->screen() : nullptr;
-    if (!screen)
-        return false;
-    // QScreen's XCB readback performs a round trip on Qt's own connection in
-    // Qt 5.15 and Qt 6.2+. This orders its submitted replacement buffer before
-    // removing the blur hint on our separate Xlib connection. A separate
-    // XSync/XFlush cannot provide that ordering. Discard the one-pixel sample;
-    // this confirms X server receipt, not physical compositor presentation.
-    // zh_CN: 只读取本窗口一个像素以等待 Qt 同连接上的请求完成；不保存像素、不泵送事件，
-    // 确认的是 X server 接收次序，并非合成器已经物理呈现到屏幕。
-    return !screen->grabWindow(window->internalWinId(), 0, 0, 1, 1).isNull();
+    return qtXcbRoundTrip(window);
 }
 
 void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options)
@@ -851,32 +785,27 @@ bool requestPlatformForegroundActivation(QWidget* window)
 {
     if (!window || !isXcbPlatform())
         return false;
-
-    const XWindow xWindow = static_cast<XWindow>(window->winId());
-    X11Api* api = loadedX11Api();
-    if (!xWindow || !api)
+    const quint32 nativeId = static_cast<quint32>(window->internalWinId());
+    XcbClient* client = xcbClient();
+    xcb::Connection* connection = client ? client->connection() : nullptr;
+    if (!nativeId || !connection)
         return false;
-
-    XDisplay* display = api->openDisplay(nullptr);
-    if (!display)
-        return false;
-
-    // QWindow::requestActivate() sends the EWMH activation request first. The
-    // secondary process launch is an explicit user action, so X11 may safely
-    // finish the operation by mapping/raising the existing client and assigning
-    // input focus. This is intentionally X11-only: Wayland compositors own focus
-    // policy and may reject activation without a compositor-issued token.
-    // zh_CN: QWindow::requestActivate() 先发送 EWMH 激活请求。第二次启动属于明确的
-    // 用户操作，因此 X11 可继续映射、提升已有窗口并设置输入焦点。Wayland 的焦点策略
-    // 由 compositor 管理，没有 compositor token 时不得强制抢焦点。
-    const bool mapped = api->mapRaised(display, xWindow) != 0;
-    const bool raised = api->raiseWindow(display, xWindow) != 0;
-    constexpr int RevertToParent = 2;
-    constexpr unsigned long CurrentTime = 0;
-    const bool focused = api->setInputFocus(display, xWindow, RevertToParent, CurrentTime) != 0;
-    const bool flushed = api->flush(display) != 0;
-    const bool closed = closeX11Display(api, display);
-    return mapped && raised && focused && flushed && closed;
+    // Preserve the existing explicit-user-action X11 activation fallback.
+    // Every native request is checked so a destroyed native window cannot
+    // turn a secondary launch into a process-fatal Xlib BadWindow error.
+    const auto mapped = client->api.mapWindowChecked(connection, nativeId);
+    constexpr quint16 StackModeMask = 64;
+    constexpr quint32 Above = 0;
+    const auto raised =
+        client->api.configureWindowChecked(connection, nativeId, StackModeMask, &Above);
+    constexpr quint8 RevertToParent = 2;
+    constexpr quint32 CurrentTime = 0;
+    const auto focused =
+        client->api.setInputFocusChecked(connection, RevertToParent, nativeId, CurrentTime);
+    const bool mappedSuccessfully = client->api.check(connection, mapped);
+    const bool raisedSuccessfully = client->api.check(connection, raised);
+    const bool focusedSuccessfully = client->api.check(connection, focused);
+    return mappedSuccessfully && raisedSuccessfully && focusedSuccessfully;
 }
 
 bool platformSupportsSystemBackdrop()

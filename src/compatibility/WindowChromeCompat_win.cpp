@@ -498,7 +498,7 @@ bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& optio
         if (!windowBackdropSurfaceWasPainted(window) &&
             window->property("fluentBackdropSurfaceMode").toInt() !=
                 static_cast<int>(fluent::windowing::BackdropSurfaceMode::CompositedTransparent)) {
-            const QColor color = window->palette().color(QPalette::Window);
+            const QColor color = windowBackdropSurfaceColor(window);
             RECT rect;
             if (!msg->wParam || !GetClientRect(msg->hwnd, &rect))
                 return false;
