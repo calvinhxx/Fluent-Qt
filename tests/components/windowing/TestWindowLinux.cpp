@@ -4,7 +4,6 @@
 #include <QEvent>
 #include <QGuiApplication>
 #include <QImage>
-#include <QLibrary>
 #include <QPalette>
 #include <QPixmap>
 #include <QScreen>
@@ -12,10 +11,15 @@
 #include <QVector>
 #include <QWindow>
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
+#include <QtGui/qguiapplication_platform.h>
+#endif
+
 #include <functional>
 
 #include "components/windowing/Window.h"
 #include "components/windowing/WindowBackdrop.h"
+#include "compatibility/private/WindowBackdropXcb_p.h"
 
 using fluent::windowing::BackdropBackend;
 using fluent::windowing::BackdropEffect;
@@ -34,72 +38,58 @@ struct BlurHintResult {
     bool present = false;
 };
 
-// Inspect the server property independently of Window's published state. No
-// Xlib struct replicas, development headers, or link dependency are needed.
+// Inspect the server property independently of Window's published state.
+// Checked XCB replies keep a disappearing/recreated native ID nonfatal.
 class X11BlurHintReader final {
 public:
     X11BlurHintReader()
     {
-        if (!m_library.load())
-            return;
-        const auto openDisplay = reinterpret_cast<OpenDisplay>(m_library.resolve("XOpenDisplay"));
-        m_closeDisplay = reinterpret_cast<CloseDisplay>(m_library.resolve("XCloseDisplay"));
-        m_internAtom = reinterpret_cast<InternAtom>(m_library.resolve("XInternAtom"));
-        m_getWindowProperty =
-            reinterpret_cast<GetWindowProperty>(m_library.resolve("XGetWindowProperty"));
-        m_freeData = reinterpret_cast<FreeData>(m_library.resolve("XFree"));
-        if (openDisplay && m_closeDisplay && m_internAtom && m_getWindowProperty && m_freeData)
-            m_display = openDisplay(nullptr);
+        if (m_api.load()) {
+            m_connection = m_api.connect(nullptr, nullptr);
+            if (!m_api.healthy(m_connection)) {
+                if (m_connection)
+                    m_api.disconnect(m_connection);
+                m_connection = nullptr;
+            }
+        }
     }
 
     ~X11BlurHintReader()
     {
-        if (m_display)
-            m_closeDisplay(m_display);
+        if (m_connection)
+            m_api.disconnect(m_connection);
     }
 
-    bool isAvailable() const { return m_display != nullptr; }
+    bool isAvailable() const { return m_connection != nullptr; }
 
     BlurHintResult read(WId nativeId) const
     {
-        if (!m_display || !nativeId)
+        if (!m_connection || !nativeId)
             return {};
-        const unsigned long atom = m_internAtom(m_display, "_KDE_NET_WM_BLUR_BEHIND_REGION", 1);
+        constexpr const char* AtomName = "_KDE_NET_WM_BLUR_BEHIND_REGION";
+        const auto atom = m_api.reply(
+            m_connection,
+            m_api.internAtom(m_connection, 1, static_cast<quint16>(qstrlen(AtomName)), AtomName),
+            m_api.internAtomReply);
         if (!atom)
+            return {};
+        if (!atom->id)
             return {true, false};
-        unsigned long actualType = 0;
-        int actualFormat = 0;
-        unsigned long itemCount = 0;
-        unsigned long bytesAfter = 0;
-        unsigned char* data = nullptr;
-        const int status =
-            m_getWindowProperty(m_display, static_cast<unsigned long>(nativeId), atom, 0, 0, 0, 0,
-                                &actualType, &actualFormat, &itemCount, &bytesAfter, &data);
-        const bool freed = !data || m_freeData(data) != 0;
-        constexpr unsigned long CardinalAtom = 6;
-        const bool present = actualType != 0;
+        const auto property = m_api.reply(
+            m_connection,
+            m_api.getProperty(m_connection, 0, static_cast<quint32>(nativeId), atom->id, 0, 0, 0),
+            m_api.getPropertyReply);
+        if (!property)
+            return {};
+        const bool present = property->type != 0;
         const bool valid =
-            status == 0 && freed &&
-            (present ? actualType == CardinalAtom && actualFormat == 32 : actualFormat == 0);
+            present ? property->type == 6 && property->format == 32 : property->format == 0;
         return {valid, present};
     }
 
 private:
-    using Display = struct XDisplay;
-    using OpenDisplay = Display* (*)(const char*);
-    using CloseDisplay = int (*)(Display*);
-    using InternAtom = unsigned long (*)(Display*, const char*, int);
-    using GetWindowProperty = int (*)(Display*, unsigned long, unsigned long, long, long, int,
-                                      unsigned long, unsigned long*, int*, unsigned long*,
-                                      unsigned long*, unsigned char**);
-    using FreeData = int (*)(void*);
-
-    QLibrary m_library{QStringLiteral("X11")};
-    Display* m_display = nullptr;
-    CloseDisplay m_closeDisplay = nullptr;
-    InternAtom m_internAtom = nullptr;
-    GetWindowProperty m_getWindowProperty = nullptr;
-    FreeData m_freeData = nullptr;
+    compatibility::detail::xcb::Api m_api;
+    compatibility::detail::xcb::Connection* m_connection = nullptr;
 };
 
 class NativeBackdropProbeWindow final : public Window {
@@ -300,6 +290,56 @@ TEST(XcbWindowBackdropTest, SuspendedUpdatesKeepBlurUntilSolidFrameCommits)
 TEST(XcbWindowBackdropTest, SuspendedUpdatesKeepBlurUntilPaintedMicaFrameCommits)
 {
     runKWinOpaqueCommit(BackdropEffect::Mica);
+}
+
+TEST(XcbWindowBackdropTest, DestroyedSurfaceRequestsReturnErrorsAndKeepConnectionAlive)
+{
+    if (!isXcbPlatform())
+        GTEST_SKIP() << "Requires a real XCB desktop";
+    namespace xcb = compatibility::detail::xcb;
+    xcb::Api api;
+    if (!api.load())
+        GTEST_SKIP() << "Requires the optional XCB runtime adapter";
+    xcb::Connection* connection = api.connect(nullptr, nullptr);
+    ASSERT_TRUE(api.healthy(connection));
+    const auto closeConnection = [&api](xcb::Connection* value) { api.disconnect(value); };
+    std::unique_ptr<xcb::Connection, decltype(closeConnection)> ownedConnection(connection,
+                                                                                closeConnection);
+    QWindow nativeWindow;
+    nativeWindow.create();
+    const quint32 destroyedId = static_cast<quint32>(nativeWindow.winId());
+    ASSERT_NE(destroyedId, 0U);
+    QScreen* screen = nativeWindow.screen();
+    ASSERT_NE(screen, nullptr);
+    nativeWindow.destroy();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0) && QT_CONFIG(xcb)
+    auto* native = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
+    ASSERT_NE(native, nullptr);
+    ASSERT_TRUE(api.roundTrip(reinterpret_cast<xcb::Connection*>(native->connection())));
+#else
+    ASSERT_NE(screen->handle(), nullptr);
+    // Qt 5.15 always waits for root geometry first, even when the following
+    // lookup of this intentionally destroyed client returns BadWindow.
+    screen->grabWindow(destroyedId, 0, 0, 2, 2);
+#endif
+    EXPECT_FALSE(api.reply(connection, api.getWindowAttributes(connection, destroyedId),
+                           api.getWindowAttributesReply));
+    EXPECT_FALSE(
+        api.reply(connection, api.getGeometry(connection, destroyedId), api.getGeometryReply));
+    EXPECT_FALSE(api.reply(connection, api.getProperty(connection, 0, destroyedId, 6, 0, 0, 0),
+                           api.getPropertyReply));
+    constexpr quint32 pixel = 0xff202020;
+    EXPECT_FALSE(
+        api.check(connection, api.changeAttributesChecked(connection, destroyedId, 2, &pixel)));
+    EXPECT_FALSE(api.check(
+        connection, api.changePropertyChecked(connection, 0, destroyedId, 6, 6, 32, 1, &pixel)));
+    EXPECT_FALSE(api.check(connection, api.deletePropertyChecked(connection, destroyedId, 6)));
+    EXPECT_FALSE(api.check(connection, api.mapWindowChecked(connection, destroyedId)));
+    constexpr quint32 above = 0;
+    EXPECT_FALSE(
+        api.check(connection, api.configureWindowChecked(connection, destroyedId, 64, &above)));
+    EXPECT_FALSE(api.check(connection, api.setInputFocusChecked(connection, 2, destroyedId, 0)));
+    EXPECT_TRUE(api.roundTrip(connection)) << "BadWindow must not terminate or poison the client";
 }
 
 TEST(WaylandWindowBackdropTest, FirstPaintUsesOpaqueFallback)

@@ -1,4 +1,4 @@
-add_qt_test_module(test_window TestWindow.cpp)
+add_qt_test_module(test_window TestWindow.cpp TestWindowX11Protocol.cpp)
 target_compile_definitions(test_window PRIVATE PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
 # Native window transitions can change Spaces or focus. Keep these out of local_full,
@@ -26,9 +26,11 @@ if(APPLE)
     configure_native_window_desktop_test(
         CocoaWindowBackdropTest.PreservesQtContentAndReusesInWindowMaterial cocoa)
     configure_native_window_desktop_test(
-        CocoaWindowBackdropTest.SolidFirstShowPreparesNativeThemeBackground cocoa)
+        CocoaWindowBackdropTest.FirstShowPreparesNativeThemeBackground cocoa)
     configure_native_window_desktop_test(
         CocoaWindowBackdropTest.SuspendedUpdatesKeepMaterialUntilOpaqueFrameCommits cocoa)
+    configure_native_window_desktop_test(
+        CocoaWindowBackdropTest.GeometryFailureKeepsSafeCoverUntilOpaqueFrameCommits cocoa)
     if(TARGET FluentQtSpatial)
         configure_native_window_desktop_test(
             CocoaWindowBackdropTest.TrafficLightsStayCenteredAfterOpenGLSurfaceCreation cocoa)
@@ -43,6 +45,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     configure_native_window_desktop_test(
         XcbWindowBackdropTest.SolidFirstExposureUsesNativeThemeBackground xcb)
     configure_native_window_desktop_test(
+        XcbWindowBackdropTest.DestroyedSurfaceRequestsReturnErrorsAndKeepConnectionAlive xcb)
+    configure_native_window_desktop_test(
         XcbWindowBackdropTest.SuspendedUpdatesKeepBlurUntilSolidFrameCommits xcb)
     configure_native_window_desktop_test(
         XcbWindowBackdropTest.SuspendedUpdatesKeepBlurUntilPaintedMicaFrameCommits xcb)
@@ -50,6 +54,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         WaylandWindowBackdropTest.FirstPaintUsesOpaqueFallback wayland)
     set_property(TEST
         XcbWindowBackdropTest.SolidFirstExposureUsesNativeThemeBackground
+        XcbWindowBackdropTest.DestroyedSurfaceRequestsReturnErrorsAndKeepConnectionAlive
         XcbWindowBackdropTest.SuspendedUpdatesKeepBlurUntilSolidFrameCommits
         XcbWindowBackdropTest.SuspendedUpdatesKeepBlurUntilPaintedMicaFrameCommits
         APPEND PROPERTY LABELS native_xcb)

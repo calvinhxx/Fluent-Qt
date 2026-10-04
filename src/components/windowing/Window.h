@@ -30,6 +30,7 @@ namespace fluent::windowing {
 
 class ClientSideFrameEdgeOverlay;
 struct ClientSideFramePaintOptions;
+struct WindowBackdropMaterialOptions;
 class TitleBar;
 class WindowResizeSession;
 
@@ -210,6 +211,7 @@ private:
     int activeClientSideFrameMargin() const;
     QRect windowFrameRect() const;
     ClientSideFramePaintOptions clientSideFramePaintOptions() const;
+    WindowBackdropMaterialOptions paintedSurfaceMaterialOptions(bool active) const;
     void invalidatePaintedSurfaceCache();
     void paintPaintedSurface(QPainter& painter, bool includeClientFrame);
     void syncClientSideFrameMargins();
@@ -234,6 +236,7 @@ private:
     BackdropEffect m_backdropEffect = BackdropEffect::Mica;
     BackdropCapabilities m_backdropCapabilities;
     BackdropState m_backdropState;
+    quint64 m_backdropStateRevision = 0;
     bool m_windowTranslucent = false;
     bool m_backdropPrimed = false;
     bool m_backdropResolutionPending = false;

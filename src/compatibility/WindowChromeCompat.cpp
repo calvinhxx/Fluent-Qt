@@ -3,6 +3,7 @@
 #include <QWindow>
 #include <QColor>
 #include <QPalette>
+#include <QPointer>
 #include <QVariant>
 
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
@@ -33,7 +34,9 @@ void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueC
 
 namespace {
 constexpr char kPaintedNativeSurfaceProperty[] = "_fluentBackdropPaintedNativeId";
-}
+constexpr char kOpaqueNativeColorProperty[] = "_fluentBackdropOpaqueBaseColor";
+constexpr char kPreparationRevisionProperty[] = "_fluentBackdropPreparationRevision";
+} // namespace
 
 bool windowBackdropSurfaceWasPainted(const QWidget* window)
 {
@@ -55,17 +58,52 @@ void resetWindowBackdropSurfacePaint(QWidget* window)
         window->setProperty(kPaintedNativeSurfaceProperty, QVariant());
 }
 
-void prepareWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
+QColor windowBackdropSurfaceColor(const QWidget* window)
+{
+    if (!window)
+        return QColor();
+    const QColor prepared = window->property(kOpaqueNativeColorProperty).value<QColor>();
+    return prepared.isValid() ? prepared : window->palette().color(QPalette::Window);
+}
+
+void prepareWindowBackdropSurface(QWidget* window, const QColor& activeColor,
+                                  const QColor& inactiveColor, bool active,
                                   fluent::windowing::BackdropSurfaceMode mode)
 {
-    if (!window || !opaqueColor.isValid())
+    if (!window || !activeColor.isValid() || !inactiveColor.isValid())
         return;
-    QColor color = opaqueColor;
-    color.setAlpha(255);
+    QPointer<QWidget> guard(window);
+    const qulonglong revision = window->property(kPreparationRevisionProperty).toULongLong() + 1;
+    const auto current = [&] {
+        return guard && guard->property(kPreparationRevisionProperty).toULongLong() == revision;
+    };
+    window->setProperty(kPreparationRevisionProperty, QVariant::fromValue(revision));
+    if (!current())
+        return;
+    QColor enabled = activeColor;
+    QColor inactive = inactiveColor;
+    enabled.setAlpha(255);
+    inactive.setAlpha(255);
+    const QColor color = active ? enabled : inactive;
     QPalette palette = window->palette();
-    palette.setColor(QPalette::Window, color);
+    palette.setColor(QPalette::Active, QPalette::Window, enabled);
+    palette.setColor(QPalette::Inactive, QPalette::Window, inactive);
+    palette.setColor(QPalette::Disabled, QPalette::Window, inactive);
+    // Activation selects a prepared base instead of broadcasting a new palette to descendants.
+    // Keep this separate from Disabled's palette policy and hosted windows' Qt activation state.
+    // zh_CN: 激活仅选择已准备的底色，不向子级广播新 palette；原生底色独立于 Disabled
+    // 调色板策略以及 hosted 窗口的 Qt 激活状态。
+    if (windowBackdropSurfaceColor(window) != color ||
+        !window->property(kOpaqueNativeColorProperty).isValid())
+        window->setProperty(kOpaqueNativeColorProperty, color);
+    if (!current())
+        return;
     if (window->palette() != palette)
         window->setPalette(palette);
+    // PaletteChange is synchronous and can supersede this effect request.
+    // zh_CN: PaletteChange 同步发送，其回调可能已用新效果请求替代本次准备。
+    if (!current())
+        return;
     // internalWinId() must not create a native handle before the alpha format is selected.
     // zh_CN: 不得在 alpha 格式确定之前，因准备底色而提前创建原生句柄。
     if (window->internalWinId())
