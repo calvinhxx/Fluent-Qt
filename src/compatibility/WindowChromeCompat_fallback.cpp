@@ -7,7 +7,22 @@
 namespace compatibility {
 namespace detail {
 
-void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options) {
+void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
+                                          fluent::windowing::BackdropSurfaceMode mode)
+{
+    Q_UNUSED(window);
+    Q_UNUSED(opaqueColor);
+    Q_UNUSED(mode);
+}
+
+bool flushPlatformWindowBackdropSurface(QWidget* window)
+{
+    Q_UNUSED(window);
+    return true;
+}
+
+void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options)
+{
     if (!window)
         return;
 
@@ -24,11 +39,10 @@ void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& option
     window->setWindowFlag(Qt::FramelessWindowHint, options.useCustomWindowChrome);
 }
 
-bool handlePlatformNativeEvent(QWidget* window,
-                               const WindowChromeOptions& options,
-                               const QByteArray& eventType,
-                               void* message,
-                               FluentNativeEventResult* result) {
+bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& options,
+                               const QByteArray& eventType, void* message,
+                               FluentNativeEventResult* result)
+{
     Q_UNUSED(window);
     Q_UNUSED(options);
     Q_UNUSED(eventType);
@@ -37,60 +51,68 @@ bool handlePlatformNativeEvent(QWidget* window,
     return false;
 }
 
-bool beginPlatformSystemMove(QWidget* window, const QPoint& globalPos) {
+bool beginPlatformSystemMove(QWidget* window, const QPoint& globalPos)
+{
     Q_UNUSED(window);
     Q_UNUSED(globalPos);
     return false;
 }
 
-bool beginPlatformSystemResize(QWidget* window, Qt::Edges edges, const QPoint& globalPos) {
+bool beginPlatformSystemResize(QWidget* window, Qt::Edges edges, const QPoint& globalPos)
+{
     Q_UNUSED(window);
     Q_UNUSED(edges);
     Q_UNUSED(globalPos);
     return false;
 }
 
-bool performPlatformTitleBarDoubleClick(QWidget* window, const WindowChromeOptions& options) {
+bool performPlatformTitleBarDoubleClick(QWidget* window, const WindowChromeOptions& options)
+{
     Q_UNUSED(window);
     Q_UNUSED(options);
     return false;
 }
 
-bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos) {
+bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos)
+{
     Q_UNUSED(window);
     Q_UNUSED(globalPos);
     return false;
 }
 
-void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& options) {
+void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& options)
+{
     Q_UNUSED(window);
     Q_UNUSED(options);
 }
 
-int nativeTitleBarLeadingInset(QWidget* window) {
+int nativeTitleBarLeadingInset(QWidget* window)
+{
     Q_UNUSED(window);
     return 0;
 }
 
-BackdropCapabilities platformBackdropCapabilities() {
+BackdropCapabilities platformBackdropCapabilities()
+{
     BackdropCapabilities capabilities;
     capabilities.provider = QStringLiteral("painted-material");
     return capabilities;
 }
 
-bool requestPlatformForegroundActivation(QWidget* window) {
+bool requestPlatformForegroundActivation(QWidget* window)
+{
     Q_UNUSED(window);
     return false;
 }
 
-bool platformSupportsSystemBackdrop() {
+bool platformSupportsSystemBackdrop()
+{
     return false;
 }
 
-BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window,
-                                                BackdropEffect effect,
-                                                bool dark,
-                                                bool forceRecomposite) {
+BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
+                                                bool forceRecomposite)
+{
     Q_UNUSED(window);
     Q_UNUSED(dark);
     Q_UNUSED(forceRecomposite);
@@ -107,17 +129,19 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window,
     return result;
 }
 
-int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options) {
+int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options)
+{
     Q_UNUSED(window);
     return options.useCustomWindowChrome
-        ? qMax(0, runtimePlatformCapabilities().clientSideFrameMargin)
-        : 0;
+               ? qMax(0, runtimePlatformCapabilities().clientSideFrameMargin)
+               : 0;
 }
 
-bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions& options) {
+bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions& options)
+{
     Q_UNUSED(window);
-    return options.useCustomWindowChrome && options.chromeInteractive
-        && runtimePlatformCapabilities().manualMoveResizeFallback;
+    return options.useCustomWindowChrome && options.chromeInteractive &&
+           runtimePlatformCapabilities().manualMoveResizeFallback;
 }
 
 } // namespace detail

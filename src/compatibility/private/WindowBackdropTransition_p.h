@@ -4,13 +4,22 @@
 #include "compatibility/WindowBackdropTypes.h"
 
 class QWidget;
+class QColor;
 
 namespace compatibility::detail {
+
+// Seed Qt and native surfaces before exposure; only a resolved compositor may clear them.
+void prepareWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
+                                  fluent::windowing::BackdropSurfaceMode mode);
+
+bool windowBackdropSurfaceWasPainted(const QWidget* window);
+void markWindowBackdropSurfacePainted(QWidget* window);
+void resetWindowBackdropSurfacePaint(QWidget* window);
 
 // Native material teardown must not race a still-transparent client frame.
 bool requiresOpaqueBackdropCommit(const QWidget* window,
                                   const fluent::windowing::BackdropState& previous,
-                                  fluent::windowing::BackdropEffect requested);
+                                  fluent::windowing::BackdropSurfaceMode next);
 
 // Flush a submitted opaque frame without dispatching input or arbitrary events.
 bool flushWindowBackdropSurface(QWidget* window);

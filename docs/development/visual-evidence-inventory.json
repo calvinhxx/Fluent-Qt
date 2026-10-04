@@ -1373,6 +1373,15 @@
             "normal-light"
           ],
           "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "WindowTest.FirstShowPreparesThemeBackgroundBeforePainting",
+          "states": [
+            "normal-light",
+            "normal-dark"
+          ],
+          "execution": "ci"
         }
       ],
       "manual_evidence": {

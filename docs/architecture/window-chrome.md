@@ -83,6 +83,37 @@ Before a native window is ready, the state remains safely opaque. A later show o
 explicit reapply may promote it to `CompositedTransparent` only after a successful
 platform call. Runtime loss/failure similarly resolves back to `PaintedOpaque`.
 
+First exposure and material removal share a private surface-preparation protocol.
+`Window` seeds Qt's window palette with the effective theme before native-handle
+creation, and refreshes that color on show, theme/activation, and native-surface
+changes. The platform adapter prepares an opaque native base for opaque modes;
+only a successfully resolved `CompositedTransparent` state may clear that base.
+Cocoa prepares both `NSWindow.backgroundColor` and Qt's existing content layer;
+Windows uses the same palette for native background erasure before the first
+real paint, and consumes later erase requests without overwriting the existing
+client pixels. Cache renders cannot mark a native surface painted, and handle
+replacement resets that record. X11 prepares its
+native background pixel, while Wayland maps the surface through Qt's first buffer
+commit. Preparation must not hide, resize, or recreate an existing window.
+
+When a native material changes to Solid or a painted fallback, publish the opaque state so descendants
+and cached/GL content can repaint, but retain the old native material until the
+replacement has been painted into the real Qt backing store and submitted.
+`QWidget::render()` cache captures do not satisfy this commit. Suspended updates
+retain the material; a superseding effect request cancels the pending removal.
+Painting is requested with `update()` so an input handler cannot synchronously
+re-enter Cocoa rendering. Pending commits belong to one native handle; surface
+replacement discards the old paint evidence and prepares an opaque new base.
+After submission, the native opaque base is also prepared before teardown.
+Cocoa colors its current content layer; Windows background erasure and X11
+future exposure use their theme-colored bases. These are not a cross-platform
+GPU failure or device-loss guarantee.
+The commit policy is platform-neutral. DWM flush, Cocoa layer-transaction flush,
+and the X11 server round trip implement their respective submission boundaries
+without dispatching arbitrary Qt events. Server submission is not proof that
+every physical desktop compositor has displayed the frame; native startup and
+material-switch review remains required on each operating system.
+
 ## Surface-mode paint contract
 
 `surfaceMode`—not the requested effect and not `WA_TranslucentBackground`—decides

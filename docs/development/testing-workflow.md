@@ -62,6 +62,11 @@ test-data directory and restores the setting it changes.
   `ctest --preset <host-preset> -L '^native_window$' --output-on-failure`
   in a real desktop session. Unfiltered CTest still selects these checks; use
   the documented tier filters for unattended runs.
+  Linux provides `test_window_linux`: select `native_xcb` or `native_wayland`
+  with the matching `*-local-desktop` test preset, according to the available
+  session and Qt platform plugin. The KWin material-removal cases skip when
+  compositor blur is unavailable. Never select a missing native platform plugin
+  and treat its startup failure as a passing or skipped test.
 - `visual_gate` is the opt-in representative Light/Dark/RTL snapshot compare
   (three checked-in PNGs). It is not part of `ci_fast`, `ci_full`, or
   `local_full`.

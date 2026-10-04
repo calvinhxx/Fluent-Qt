@@ -1,4 +1,5 @@
 #include "WindowChromeCompat.h"
+#include "compatibility/private/WindowBackdropTransition_p.h"
 
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
@@ -347,6 +348,15 @@ bool flushPlatformWindowBackdropSurface(QWidget* window)
     return flush && SUCCEEDED(flush());
 }
 
+void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
+                                          fluent::windowing::BackdropSurfaceMode mode)
+{
+    Q_UNUSED(window);
+    Q_UNUSED(opaqueColor);
+    Q_UNUSED(mode);
+    // WM_ERASEBKGND consumes the shared theme palette; no shared class brush is changed.
+}
+
 BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
                                                 bool forceRecomposite)
 {
@@ -471,7 +481,7 @@ bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& optio
                                const QByteArray& eventType, void* message,
                                FluentNativeEventResult* result)
 {
-    if (!window || !message || !result || !options.useCustomWindowChrome)
+    if (!window || !message || !result)
         return false;
 
     if (eventType != "windows_generic_MSG" && eventType != "windows_dispatcher_MSG")
@@ -479,6 +489,31 @@ bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& optio
 
     MSG* msg = static_cast<MSG*>(message);
     if (!msg)
+        return false;
+
+    if (msg->message == WM_ERASEBKGND) {
+        // Qt preserves an existing backing store instead of erasing it. Only a new native surface
+        // needs a theme seed before its first real paint; never wipe a warm UI between paint events.
+        // zh_CN: Qt 会保留现有后备缓冲；仅新 surface 首次绘制前补主题底色，不能擦除已显示的界面。
+        if (!windowBackdropSurfaceWasPainted(window) &&
+            window->property("fluentBackdropSurfaceMode").toInt() !=
+                static_cast<int>(fluent::windowing::BackdropSurfaceMode::CompositedTransparent)) {
+            const QColor color = window->palette().color(QPalette::Window);
+            RECT rect;
+            if (!msg->wParam || !GetClientRect(msg->hwnd, &rect))
+                return false;
+            HBRUSH brush = CreateSolidBrush(RGB(color.red(), color.green(), color.blue()));
+            if (!brush)
+                return false;
+            const bool filled = FillRect(reinterpret_cast<HDC>(msg->wParam), &rect, brush) != 0;
+            DeleteObject(brush);
+            if (!filled)
+                return false;
+        }
+        *result = 1;
+        return true;
+    }
+    if (!options.useCustomWindowChrome)
         return false;
 
     // A native handle/state transition in Qt 5 or Qt 6.2 may restore Qt's

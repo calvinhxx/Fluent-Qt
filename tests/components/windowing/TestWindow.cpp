@@ -21,6 +21,7 @@
 #include "compatibility/QtCompat.h"
 #include "compatibility/WindowChromeCompat.h"
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
+#include "compatibility/private/WindowBackdropTransition_p.h"
 #include "design/Breakpoints.h"
 #include "design/Typography.h"
 #include "components/foundation/FluentElement.h"
@@ -746,6 +747,71 @@ TEST_F(WindowTest, BackdropEffectSwitchesModes)
     window.setBackdropEffect(BackdropEffect::Acrylic); // no-op must not notify
     EXPECT_EQ(effectSpy.count(), 3);
     EXPECT_EQ(stateSpy.count(), 3);
+}
+
+TEST_F(WindowTest, OpaqueBackdropCommitAppliesToEveryNativeBackend)
+{
+    Window window;
+    for (const auto backend : {BackdropBackend::DwmSystemBackdrop, BackdropBackend::MacVibrancy,
+                               BackdropBackend::LinuxCompositor}) {
+        SCOPED_TRACE(static_cast<int>(backend));
+        BackdropState previous;
+        previous.backend = backend;
+        previous.surfaceMode = BackdropSurfaceMode::CompositedTransparent;
+        EXPECT_TRUE(compatibility::detail::requiresOpaqueBackdropCommit(
+            &window, previous, BackdropSurfaceMode::SolidOpaque));
+        EXPECT_TRUE(compatibility::detail::requiresOpaqueBackdropCommit(
+            &window, previous, BackdropSurfaceMode::PaintedOpaque));
+        EXPECT_FALSE(compatibility::detail::requiresOpaqueBackdropCommit(
+            &window, previous, BackdropSurfaceMode::CompositedTransparent));
+        previous.surfaceMode = BackdropSurfaceMode::PaintedOpaque;
+        EXPECT_FALSE(compatibility::detail::requiresOpaqueBackdropCommit(
+            &window, previous, BackdropSurfaceMode::SolidOpaque));
+    }
+}
+
+TEST_F(WindowTest, FirstShowPreparesThemeBackgroundBeforePainting)
+{
+    for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark,
+                             fluent::FluentElement::HighContrast}) {
+        SCOPED_TRACE(static_cast<int>(theme));
+        Window window;
+        window.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        window.setBackdropEffect(BackdropEffect::Solid);
+        window.onThemeUpdated();
+        window.resize(520, 360);
+        const auto expectedSize = window.size();
+        const bool translucent = window.testAttribute(Qt::WA_TranslucentBackground);
+        for (const auto group : {QPalette::Active, QPalette::Inactive, QPalette::Disabled})
+            EXPECT_EQ(window.palette().color(group, QPalette::Window), window.themeBackdrop(false));
+        window.show();
+        EXPECT_EQ(window.size(), expectedSize);
+        EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), translucent);
+        EXPECT_EQ(window.palette().color(QPalette::Window),
+                  window.themeBackdrop(window.isActiveWindow()));
+        window.close();
+    }
+}
+
+TEST_F(WindowTest, CacheRenderDoesNotMarkNativeSurfacePainted)
+{
+    Window window;
+    window.setBackdropEffect(BackdropEffect::Solid);
+    window.resize(520, 360);
+    window.winId();
+    EXPECT_FALSE(compatibility::detail::windowBackdropSurfaceWasPainted(&window));
+    QImage cache(window.size(), QImage::Format_ARGB32_Premultiplied);
+    cache.fill(Qt::transparent);
+    window.render(&cache);
+    EXPECT_FALSE(compatibility::detail::windowBackdropSurfaceWasPainted(&window));
+    window.show();
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return compatibility::detail::windowBackdropSurfaceWasPainted(&window); }, 2000));
+    window.setBackdropEffect(BackdropEffect::Acrylic);
+    window.onThemeUpdated();
+    EXPECT_TRUE(compatibility::detail::windowBackdropSurfaceWasPainted(&window))
+        << "Effect and theme changes must preserve the already-painted native surface";
+    window.close();
 }
 
 TEST_F(WindowTest, BackdropCapabilityHelpersResolvePerEffect)
