@@ -1,6 +1,9 @@
 #include "WindowChromeCompat.h"
 
 #include <QWindow>
+#include <QColor>
+#include <QPalette>
+#include <QVariant>
 
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "compatibility/private/WindowBackdropTransition_p.h"
@@ -24,28 +27,66 @@ bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions&
 BackdropCapabilities platformBackdropCapabilities();
 BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
                                                 bool forceRecomposite);
-#ifdef Q_OS_WIN
 bool flushPlatformWindowBackdropSurface(QWidget* window);
-#endif
+void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
+                                          fluent::windowing::BackdropSurfaceMode mode);
+
+namespace {
+constexpr char kPaintedNativeSurfaceProperty[] = "_fluentBackdropPaintedNativeId";
+}
+
+bool windowBackdropSurfaceWasPainted(const QWidget* window)
+{
+    return window && window->internalWinId() &&
+           window->property(kPaintedNativeSurfaceProperty).toULongLong() ==
+               static_cast<qulonglong>(window->internalWinId());
+}
+
+void markWindowBackdropSurfacePainted(QWidget* window)
+{
+    if (window && window->internalWinId() && !windowBackdropSurfaceWasPainted(window))
+        window->setProperty(kPaintedNativeSurfaceProperty,
+                            QVariant::fromValue(static_cast<qulonglong>(window->internalWinId())));
+}
+
+void resetWindowBackdropSurfacePaint(QWidget* window)
+{
+    if (window)
+        window->setProperty(kPaintedNativeSurfaceProperty, QVariant());
+}
+
+void prepareWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
+                                  fluent::windowing::BackdropSurfaceMode mode)
+{
+    if (!window || !opaqueColor.isValid())
+        return;
+    QColor color = opaqueColor;
+    color.setAlpha(255);
+    QPalette palette = window->palette();
+    palette.setColor(QPalette::Window, color);
+    if (window->palette() != palette)
+        window->setPalette(palette);
+    // internalWinId() must not create a native handle before the alpha format is selected.
+    // zh_CN: 不得在 alpha 格式确定之前，因准备底色而提前创建原生句柄。
+    if (window->internalWinId())
+        preparePlatformWindowBackdropSurface(window, color, mode);
+}
 
 bool requiresOpaqueBackdropCommit(const QWidget* window,
                                   const fluent::windowing::BackdropState& previous,
-                                  BackdropEffect requested)
+                                  fluent::windowing::BackdropSurfaceMode next)
 {
-    return WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::Windows &&
-           window &&
+    return window &&
            previous.surfaceMode == fluent::windowing::BackdropSurfaceMode::CompositedTransparent &&
-           requested == BackdropEffect::Solid;
+           next != fluent::windowing::BackdropSurfaceMode::CompositedTransparent;
 }
 
 bool flushWindowBackdropSurface(QWidget* window)
 {
-#ifdef Q_OS_WIN
+    if (!window || !window->isVisible() || window->isMinimized() || !window->updatesEnabled() ||
+        !window->windowHandle() || !window->windowHandle()->isExposed())
+        return false;
     return flushPlatformWindowBackdropSurface(window);
-#else
-    Q_UNUSED(window);
-    return true;
-#endif
 }
 } // namespace detail
 

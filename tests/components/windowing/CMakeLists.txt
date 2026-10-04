@@ -25,10 +25,36 @@ if(APPLE)
     endif()
     configure_native_window_desktop_test(
         CocoaWindowBackdropTest.PreservesQtContentAndReusesInWindowMaterial cocoa)
+    configure_native_window_desktop_test(
+        CocoaWindowBackdropTest.SolidFirstShowPreparesNativeThemeBackground cocoa)
+    configure_native_window_desktop_test(
+        CocoaWindowBackdropTest.SuspendedUpdatesKeepMaterialUntilOpaqueFrameCommits cocoa)
     if(TARGET FluentQtSpatial)
         configure_native_window_desktop_test(
             CocoaWindowBackdropTest.TrafficLightsStayCenteredAfterOpenGLSurfaceCreation cocoa)
+        configure_native_window_desktop_test(
+            CocoaWindowBackdropTest.BackdropCommitWaitsForOpenGLComposition cocoa)
+        configure_native_window_desktop_test(
+            CocoaWindowBackdropTest.RecreatedSurfaceDiscardsPendingBackdropCommit cocoa)
     endif()
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_qt_test_module(test_window_linux TestWindowLinux.cpp)
+    configure_native_window_desktop_test(
+        XcbWindowBackdropTest.SolidFirstExposureUsesNativeThemeBackground xcb)
+    configure_native_window_desktop_test(
+        XcbWindowBackdropTest.SuspendedUpdatesKeepBlurUntilSolidFrameCommits xcb)
+    configure_native_window_desktop_test(
+        XcbWindowBackdropTest.SuspendedUpdatesKeepBlurUntilPaintedMicaFrameCommits xcb)
+    configure_native_window_desktop_test(
+        WaylandWindowBackdropTest.FirstPaintUsesOpaqueFallback wayland)
+    set_property(TEST
+        XcbWindowBackdropTest.SolidFirstExposureUsesNativeThemeBackground
+        XcbWindowBackdropTest.SuspendedUpdatesKeepBlurUntilSolidFrameCommits
+        XcbWindowBackdropTest.SuspendedUpdatesKeepBlurUntilPaintedMicaFrameCommits
+        APPEND PROPERTY LABELS native_xcb)
+    set_property(TEST WaylandWindowBackdropTest.FirstPaintUsesOpaqueFallback
+        APPEND PROPERTY LABELS native_wayland)
 endif()
 if(WIN32)
     add_qt_test_module(test_window_win TestWindowWin.cpp)
@@ -44,4 +70,8 @@ if(WIN32)
         WindowsWindowBackdropTest.StateChangesDoNotRepeatActivationCompensation windows)
     configure_native_window_desktop_test(
         WindowsWindowBackdropTest.SuspendedUpdatesKeepMaterialUntilOpaqueFrameCommits windows)
+    configure_native_window_desktop_test(
+        WindowsWindowBackdropTest.SolidFirstShowPreparesNativeThemeBackground windows)
+    configure_native_window_desktop_test(
+        WindowsWindowBackdropTest.NativeErasePaintsFallbackAndPreservesCompositedPixels windows)
 endif()

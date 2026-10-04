@@ -3,11 +3,14 @@
 #ifdef Q_OS_LINUX
 
 #include <QByteArray>
+#include <QColor>
 #include <QDynamicPropertyChangeEvent>
 #include <QEvent>
 #include <QGuiApplication>
 #include <QLibrary>
+#include <QPixmap>
 #include <QRegion>
+#include <QScreen>
 #include <QTimer>
 #include <QVariant>
 #include <QWindow>
@@ -15,6 +18,7 @@
 
 #include "compatibility/private/WindowBackdropEvents_p.h"
 
+#include <cstddef>
 #include <limits>
 
 namespace compatibility {
@@ -27,6 +31,7 @@ constexpr int X11PropModeReplace = 0;
 constexpr int X11Success = 0;
 constexpr unsigned long X11AtomType = 4;
 constexpr unsigned long X11None = 0;
+constexpr int X11TrueColor = 4;
 constexpr const char* KWinBlurAtomName = "_KDE_NET_WM_BLUR_BEHIND_REGION";
 constexpr const char* BackdropSurfaceRectPropertyName = "fluentOverlaySurfaceRect";
 constexpr const char* BackdropSurfaceRadiusPropertyName = "fluentClientSideFrameRadius";
@@ -36,6 +41,56 @@ using XDisplay = struct _XDisplay;
 using XAtom = unsigned long;
 using XWindow = unsigned long;
 using XDrawable = unsigned long;
+
+// Stable Xlib ABI declarations keep the optional runtime adapter independent
+// of X11 development headers and link libraries.
+struct XVisual {
+    void* extensionData;
+    unsigned long visualId;
+    int visualClass;
+    unsigned long redMask;
+    unsigned long greenMask;
+    unsigned long blueMask;
+    int bitsPerRgb;
+    int mapEntries;
+};
+
+struct XWindowAttributes {
+    int x;
+    int y;
+    int width;
+    int height;
+    int borderWidth;
+    int depth;
+    XVisual* visual;
+    XWindow root;
+    int windowClass;
+    int bitGravity;
+    int windowGravity;
+    int backingStore;
+    unsigned long backingPlanes;
+    unsigned long backingPixel;
+    int saveUnder;
+    unsigned long colormap;
+    int mapInstalled;
+    int mapState;
+    long allEventMasks;
+    long yourEventMask;
+    long doNotPropagateMask;
+    int overrideRedirect;
+    void* screen;
+};
+
+static_assert((sizeof(void*) == 4 || sizeof(void*) == 8) &&
+                  sizeof(unsigned long) == sizeof(void*) && sizeof(int) == 4,
+              "The dynamic Xlib adapter requires the Linux ILP32 or LP64 ABI");
+static_assert(sizeof(XVisual) == (sizeof(void*) == 8 ? 56 : 32) &&
+                  offsetof(XVisual, redMask) == (sizeof(void*) == 8 ? 24 : 12),
+              "XVisual must retain the Xlib Visual layout");
+static_assert(sizeof(XWindowAttributes) == (sizeof(void*) == 8 ? 136 : 92) &&
+                  offsetof(XWindowAttributes, visual) == 24 &&
+                  offsetof(XWindowAttributes, screen) == (sizeof(void*) == 8 ? 128 : 88),
+              "XWindowAttributes must retain the complete Xlib output-buffer layout");
 
 struct X11Api {
     QLibrary library{QStringLiteral("X11")};
@@ -59,6 +114,8 @@ struct X11Api {
     using XMapRaisedFn = int (*)(XDisplay*, XWindow);
     using XRaiseWindowFn = int (*)(XDisplay*, XWindow);
     using XSetInputFocusFn = int (*)(XDisplay*, XWindow, int, unsigned long);
+    using XGetWindowAttributesFn = int (*)(XDisplay*, XWindow, XWindowAttributes*);
+    using XSetWindowBackgroundFn = int (*)(XDisplay*, XWindow, unsigned long);
 
     XOpenDisplayFn openDisplay = nullptr;
     XCloseDisplayFn closeDisplay = nullptr;
@@ -77,6 +134,8 @@ struct X11Api {
     XMapRaisedFn mapRaised = nullptr;
     XRaiseWindowFn raiseWindow = nullptr;
     XSetInputFocusFn setInputFocus = nullptr;
+    XGetWindowAttributesFn getWindowAttributes = nullptr;
+    XSetWindowBackgroundFn setWindowBackground = nullptr;
 
     bool load()
     {
@@ -102,6 +161,10 @@ struct X11Api {
         mapRaised = reinterpret_cast<XMapRaisedFn>(library.resolve("XMapRaised"));
         raiseWindow = reinterpret_cast<XRaiseWindowFn>(library.resolve("XRaiseWindow"));
         setInputFocus = reinterpret_cast<XSetInputFocusFn>(library.resolve("XSetInputFocus"));
+        getWindowAttributes =
+            reinterpret_cast<XGetWindowAttributesFn>(library.resolve("XGetWindowAttributes"));
+        setWindowBackground =
+            reinterpret_cast<XSetWindowBackgroundFn>(library.resolve("XSetWindowBackground"));
         return openDisplay && closeDisplay && defaultScreen && screenCount && rootWindow &&
                internAtom && getSelectionOwner && listProperties && getWindowProperty &&
                changeProperty && deleteProperty && flush && freeData && getGeometry && mapRaised &&
@@ -124,6 +187,44 @@ bool isWaylandPlatform()
 {
     return QGuiApplication::platformName().startsWith(QStringLiteral("wayland"),
                                                       Qt::CaseInsensitive);
+}
+
+bool x11ColorComponentPixel(int component, unsigned long mask, unsigned long* pixel)
+{
+    if (!mask || !pixel)
+        return false;
+    unsigned long maximum = mask;
+    unsigned int shift = 0;
+    while ((maximum & 1UL) == 0) {
+        maximum >>= 1;
+        ++shift;
+    }
+    if ((maximum & (maximum + 1UL)) != 0)
+        return false;
+    const quint64 scaled = (static_cast<quint64>(component) * maximum + 127) / 255;
+    *pixel |= (static_cast<unsigned long>(scaled) << shift) & mask;
+    return true;
+}
+
+bool x11OpaqueBackgroundPixel(const XWindowAttributes& attributes, const QColor& color,
+                              unsigned long* pixel)
+{
+    if (!pixel || !attributes.visual || attributes.visual->visualClass != X11TrueColor ||
+        attributes.depth <= 0 || attributes.depth > 32)
+        return false;
+    const XVisual& visual = *attributes.visual;
+    const unsigned long colorMask = visual.redMask | visual.greenMask | visual.blueMask;
+    const unsigned long depthMask =
+        static_cast<unsigned long>((quint64{1} << attributes.depth) - 1);
+    if ((colorMask & ~depthMask) != 0 || (visual.redMask & visual.greenMask) != 0 ||
+        (visual.redMask & visual.blueMask) != 0 || (visual.greenMask & visual.blueMask) != 0)
+        return false;
+    // Qt's XCB raster visual puts alpha in the depth bits outside the RGB masks.
+    // Set those bits opaque instead of assuming a 0xAARRGGBB channel layout.
+    *pixel = depthMask & ~colorMask;
+    return x11ColorComponentPixel(color.red(), visual.redMask, pixel) &&
+           x11ColorComponentPixel(color.green(), visual.greenMask, pixel) &&
+           x11ColorComponentPixel(color.blue(), visual.blueMask, pixel);
 }
 
 bool closeX11Display(X11Api* api, XDisplay* display)
@@ -525,11 +626,16 @@ private:
 
     void disableBlurAndRequestReevaluation()
     {
+        if (!m_blurEnabled)
+            return;
         m_blurEnabled = false;
         m_capabilityProbe.stop();
-        const bool stalePropertyRemoved =
-            applyKWinBlurBehindNow(m_window, false, /*validateEnvironment*/ false);
-        Q_UNUSED(stalePropertyRemoved);
+        // Leave the last blur hint in place until Window has submitted its
+        // opaque fallback. The shared transition then removes it through the
+        // Solid backend after the XCB readback fence. A compositor that exits
+        // independently cannot be kept alive by retaining this property.
+        // zh_CN: 保留 blur 属性到 Window 提交不透明回退帧并完成 XCB 同连接同步之后；
+        // 共享流程经 Solid 后端移除属性。保留属性不能阻止外部 compositor 退出。
         compatibility::detail::requestWindowBackdropReevaluation(m_window);
     }
 
@@ -582,6 +688,65 @@ bool setKWinBlurBehind(QWidget* window, bool enabled)
 } // namespace
 
 namespace detail {
+
+void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
+                                          fluent::windowing::BackdropSurfaceMode mode)
+{
+    // Wayland maps a surface only after Qt submits its first buffer. Keep that
+    // compositor-owned lifecycle rather than mapping or clearing it ourselves.
+    if (!window || !isXcbPlatform() || !window->internalWinId())
+        return;
+    X11Api* api = loadedX11Api();
+    if (!api || !api->getWindowAttributes || !api->setWindowBackground)
+        return;
+    QWindow* handle = window->windowHandle();
+    QScreen* screen = handle ? handle->screen() : nullptr;
+    if (!screen || screen->geometry().isEmpty())
+        return;
+    // A WId can exist before Qt's XCB create request reaches the server.
+    // topLevelAt() queries the native screen through Qt's own connection in
+    // Qt 5.15/6, even while this window is unmapped. Its reply orders creation
+    // before the separate Xlib query and avoids a fatal early BadWindow error.
+    // No window is activated, mapped, captured, or changed by this read.
+    // zh_CN: WId 分配不等于 server 已完成创建；先用 Qt 同连接的只读屏幕查询等待
+    // create 请求完成，再跨连接获取属性，避免原生窗口早期出现 BadWindow。
+    QGuiApplication::topLevelAt(screen->geometry().center());
+    XDisplay* display = api->openDisplay(nullptr);
+    if (!display)
+        return;
+    const XWindow xWindow = static_cast<XWindow>(window->internalWinId());
+    XWindowAttributes attributes{};
+    unsigned long pixel = 0;
+    if (api->getWindowAttributes(display, xWindow, &attributes) != 0 &&
+        x11OpaqueBackgroundPixel(attributes, opaqueColor, &pixel)) {
+        if (mode == fluent::windowing::BackdropSurfaceMode::CompositedTransparent)
+            pixel = 0;
+        // Setting the background changes future map/expose pixels without
+        // clearing the already-painted client surface. CloseDisplay completes
+        // this connection's request before Qt is allowed to map the window.
+        // zh_CN: 修改后续映射/曝光使用的底色，不清除已绘制内容；关闭此连接会先完成请求。
+        api->setWindowBackground(display, xWindow, pixel);
+    }
+    closeX11Display(api, display);
+}
+
+bool flushPlatformWindowBackdropSurface(QWidget* window)
+{
+    if (!window || !window->internalWinId() || !isXcbPlatform())
+        return false;
+    QWindow* handle = window->windowHandle();
+    QScreen* screen = handle ? handle->screen() : nullptr;
+    if (!screen)
+        return false;
+    // QScreen's XCB readback performs a round trip on Qt's own connection in
+    // Qt 5.15 and Qt 6.2+. This orders its submitted replacement buffer before
+    // removing the blur hint on our separate Xlib connection. A separate
+    // XSync/XFlush cannot provide that ordering. Discard the one-pixel sample;
+    // this confirms X server receipt, not physical compositor presentation.
+    // zh_CN: 只读取本窗口一个像素以等待 Qt 同连接上的请求完成；不保存像素、不泵送事件，
+    // 确认的是 X server 接收次序，并非合成器已经物理呈现到屏幕。
+    return !screen->grabWindow(window->internalWinId(), 0, 0, 1, 1).isNull();
+}
 
 void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options)
 {
