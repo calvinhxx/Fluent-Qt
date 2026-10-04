@@ -2,9 +2,12 @@
 
 #include <QApplication>
 #include <QGuiApplication>
+#include <QImage>
+#include <QPainter>
 #include <QTest>
 #include <QWindow>
 #ifdef FLUENT_QT_HAS_SPATIAL
+#include <QOpenGLFunctions>
 #include <QOpenGLWidget>
 #endif
 #include <QVBoxLayout>
@@ -19,6 +22,7 @@
 #include "components/windowing/Window.h"
 #include "components/windowing/WindowBackdrop.h"
 #include "components/windowing/TitleBar.h"
+#include "compatibility/QtCompat.h"
 
 using fluent::windowing::BackdropBackend;
 using fluent::windowing::BackdropEffect;
@@ -74,6 +78,53 @@ bool sendBool(id receiver, const char* name)
     using Send = BOOL (*)(id, SEL);
     return reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name));
 }
+
+QColor nativeBackgroundColor(id nativeWindow)
+{
+    id color = sendId(nativeWindow, "backgroundColor");
+    if (!color)
+        return QColor();
+    const auto cgColor = reinterpret_cast<CGColorRef>(sendId(color, "CGColor"));
+    const auto space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    const auto converted =
+        CGColorCreateCopyByMatchingToColorSpace(space, kCGRenderingIntentDefault, cgColor, nullptr);
+    CGColorSpaceRelease(space);
+    if (!converted)
+        return QColor();
+    const auto* components = CGColorGetComponents(converted);
+    const auto result =
+        QColor::fromRgbF(components[0], components[1], components[2], components[3]);
+    CGColorRelease(converted);
+    return result;
+}
+
+#ifdef FLUENT_QT_HAS_SPATIAL
+class BackdropCommitOpenGLWidget final : public QOpenGLWidget, protected QOpenGLFunctions {
+public:
+    explicit BackdropCommitOpenGLWidget(Window* window, QWidget* parent)
+        : QOpenGLWidget(parent), m_window(window)
+    {
+        auto alphaFormat = format();
+        alphaFormat.setAlphaBufferSize(8);
+        setFormat(alphaFormat);
+    }
+
+    bool opaqueFramePainted = false;
+
+protected:
+    void initializeGL() override { initializeOpenGLFunctions(); }
+    void paintGL() override
+    {
+        opaqueFramePainted =
+            m_window->backdropState().surfaceMode != BackdropSurfaceMode::CompositedTransparent;
+        glClearColor(0.15f, 0.15f, 0.15f, opaqueFramePainted ? 1.0f : 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
+
+private:
+    Window* m_window;
+};
+#endif
 
 CGRect sendRect(id receiver, const char* name)
 {
@@ -402,3 +453,126 @@ TEST(CocoaWindowBackdropTest, PreservesQtContentAndReusesInWindowMaterial)
 
     window.close();
 }
+
+TEST(CocoaWindowBackdropTest, SolidFirstShowPreparesNativeThemeBackground)
+{
+    if (QGuiApplication::platformName() != QStringLiteral("cocoa"))
+        GTEST_SKIP() << "Requires the Cocoa platform plugin";
+    for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        SCOPED_TRACE(static_cast<int>(theme));
+        Window window;
+        window.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        window.setBackdropEffect(BackdropEffect::Solid);
+        window.onThemeUpdated();
+        window.resize(520, 360);
+        const QSize expectedSize = window.size();
+        const WId nativeId = window.winId();
+        const QColor initial = nativeBackgroundColor(nativeWindowFor(&window));
+        EXPECT_NEAR(initial.redF(), window.themeBackdrop(false).redF(), 0.005);
+        EXPECT_NEAR(initial.greenF(), window.themeBackdrop(false).greenF(), 0.005);
+        EXPECT_NEAR(initial.blueF(), window.themeBackdrop(false).blueF(), 0.005);
+        EXPECT_EQ(initial.alpha(), 255) << "The native base must be ready before show(), not later";
+        window.show();
+        EXPECT_EQ(window.winId(), nativeId);
+        EXPECT_EQ(window.size(), expectedSize);
+        QApplication::processEvents();
+        window.close();
+    }
+}
+
+TEST(CocoaWindowBackdropTest, SuspendedUpdatesKeepMaterialUntilOpaqueFrameCommits)
+{
+    if (QGuiApplication::platformName() != QStringLiteral("cocoa"))
+        GTEST_SKIP() << "Requires the Cocoa platform plugin";
+    Window window;
+    window.resize(520, 360);
+    const QSize expectedSize = window.size();
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    ASSERT_EQ(window.backdropState().backend, BackdropBackend::MacVibrancy);
+    const auto material = resolveBackdropHierarchy(&window);
+    ASSERT_NE(material.effectView, nil);
+    const WId nativeId = window.winId();
+    window.setUpdatesEnabled(false);
+    window.setBackdropEffect(BackdropEffect::Solid);
+    EXPECT_FALSE(sendBool(material.effectView, "isHidden"));
+    window.reapplySystemBackdrop();
+    EXPECT_FALSE(sendBool(material.effectView, "isHidden"));
+    window.setUpdatesEnabled(true);
+    QImage cache(window.size(), QImage::Format_ARGB32_Premultiplied);
+    cache.fill(Qt::transparent);
+    window.render(&cache);
+    EXPECT_FALSE(sendBool(material.effectView, "isHidden"))
+        << "A cache capture cannot release the native material";
+    ASSERT_TRUE(QTest::qWaitFor([&] { return sendBool(material.effectView, "isHidden"); }, 2000));
+    EXPECT_EQ(window.winId(), nativeId);
+    EXPECT_EQ(window.size(), expectedSize);
+    window.close();
+}
+
+#ifdef FLUENT_QT_HAS_SPATIAL
+TEST(CocoaWindowBackdropTest, BackdropCommitWaitsForOpenGLComposition)
+{
+    if (QGuiApplication::platformName() != QStringLiteral("cocoa"))
+        GTEST_SKIP() << "Requires native Cocoa/OpenGL composition";
+    Window window;
+    auto* content = new QWidget;
+    auto* layout = new QVBoxLayout(content);
+    auto* gl = new BackdropCommitOpenGLWidget(&window, content);
+    layout->addWidget(gl);
+    window.setContentWidget(content);
+    window.resize(640, 520);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return gl->isValid(); }, 2000));
+    const auto material = resolveBackdropHierarchy(&window);
+    ASSERT_NE(material.effectView, nil);
+    const WId nativeId = window.winId();
+    int opaqueCompositions = 0;
+    QObject::connect(gl, &QOpenGLWidget::frameSwapped, &window, [&] {
+        if (!gl->opaqueFramePainted || opaqueCompositions != 0)
+            return;
+        ++opaqueCompositions;
+        EXPECT_FALSE(sendBool(material.effectView, "isHidden"))
+            << "The first opaque GL composition must still be covered by the old material";
+    });
+    window.setBackdropEffect(BackdropEffect::Solid);
+    EXPECT_FALSE(sendBool(material.effectView, "isHidden"));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return sendBool(material.effectView, "isHidden"); }, 2000));
+    EXPECT_EQ(opaqueCompositions, 1);
+    EXPECT_EQ(window.winId(), nativeId);
+    EXPECT_EQ(nativeBackgroundColor(nativeWindowFor(&window)).alpha(), 255);
+    window.close();
+}
+
+TEST(CocoaWindowBackdropTest, RecreatedSurfaceDiscardsPendingBackdropCommit)
+{
+    if (QGuiApplication::platformName() != QStringLiteral("cocoa"))
+        GTEST_SKIP() << "Requires native Cocoa/OpenGL surfaces";
+    if (!FLUENT_OPENGL_WIDGET_CAN_REPLACE_NATIVE_WINDOW)
+        GTEST_SKIP() << "Dynamic top-level OpenGL surface recreation begins with Qt 6.4";
+    Window window;
+    window.setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
+    window.onThemeUpdated();
+    window.resize(640, 520);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    const WId originalId = window.winId();
+    window.setUpdatesEnabled(false);
+    window.setBackdropEffect(BackdropEffect::Solid);
+    auto* gl = new BackdropCommitOpenGLWidget(&window, nullptr);
+    window.setContentWidget(gl);
+    gl->show();
+    const WId replacementId = window.winId();
+    if (originalId == replacementId)
+        GTEST_SKIP() << "This Qt backend retained the existing native surface";
+    const QColor base = nativeBackgroundColor(nativeWindowFor(&window));
+    EXPECT_EQ(base.alpha(), 255);
+    EXPECT_LT(base.lightness(), 80)
+        << "A replacement must not inherit clear pixels or the old surface's paint evidence";
+    window.setUpdatesEnabled(true);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return gl->isValid(); }, 2000));
+    EXPECT_EQ(window.backdropState().surfaceMode, BackdropSurfaceMode::SolidOpaque);
+    window.close();
+}
+#endif

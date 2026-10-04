@@ -3,6 +3,8 @@
 #ifdef Q_OS_MAC
 
 #include <QGuiApplication>
+#include <QColor>
+#include <QWindow>
 
 #include <cmath>
 
@@ -625,6 +627,59 @@ void setBackdropViewHidden(id superview, BOOL hidden)
 
 } // namespace
 
+void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
+                                          fluent::windowing::BackdropSurfaceMode mode)
+{
+    if (!window || QGuiApplication::platformName() != QStringLiteral("cocoa"))
+        return;
+    id nsWindow = nativeWindowFor(window);
+    if (!nsWindow)
+        return;
+    const bool transparent = mode == fluent::windowing::BackdropSurfaceMode::CompositedTransparent;
+    using ColorSend = id (*)(Class, SEL, CGFloat, CGFloat, CGFloat, CGFloat);
+    id color = reinterpret_cast<ColorSend>(objc_msgSend)(
+        objc_getClass("NSColor"), selector("colorWithSRGBRed:green:blue:alpha:"),
+        opaqueColor.redF(), opaqueColor.greenF(), opaqueColor.blueF(), transparent ? 0.0 : 1.0);
+    sendId(nsWindow, "setBackgroundColor:", color);
+    id contentView = sendId(nsWindow, "contentView");
+    id layer = contentView ? sendId(contentView, "layer") : nil;
+    if (layer) {
+        // Surface preparation is immediate; an implicit layer fade would expose the previous base.
+        // zh_CN: surface 底色必须立即就绪，不能通过隐式图层动画渐变而露出上一帧底色。
+        Class transaction = objc_getClass("CATransaction");
+        using TransactionSend = void (*)(Class, SEL);
+        using DisableSend = void (*)(Class, SEL, BOOL);
+        if (transaction) {
+            reinterpret_cast<TransactionSend>(objc_msgSend)(transaction, selector("begin"));
+            reinterpret_cast<DisableSend>(objc_msgSend)(transaction, selector("setDisableActions:"),
+                                                        YES);
+        }
+        const auto cgColor = reinterpret_cast<CGColorRef>(sendId(color, "CGColor"));
+        using LayerSend = void (*)(id, SEL, CGColorRef);
+        reinterpret_cast<LayerSend>(objc_msgSend)(layer, selector("setBackgroundColor:"), cgColor);
+        if (transaction)
+            reinterpret_cast<TransactionSend>(objc_msgSend)(transaction, selector("commit"));
+    }
+    // Keep Cocoa's alpha-capable window/view and Qt's ownership intact.
+    // zh_CN: 保持 Cocoa 的 alpha surface 以及 Qt 对窗口、视图的所有权。
+}
+
+bool flushPlatformWindowBackdropSurface(QWidget* window)
+{
+    if (!window || QGuiApplication::platformName() != QStringLiteral("cocoa"))
+        return false;
+    id nsWindow = nativeWindowFor(window);
+    Class transaction = objc_getClass("CATransaction");
+    if (!nsWindow || !transaction)
+        return false;
+    // Qt has painted/composed the replacement. Submit its layer transaction before hiding vibrancy.
+    // Do not dispatch arbitrary Qt events or reconstruct the native window.
+    // zh_CN: 先提交 Qt 已绘制、合成的替代图层，再隐藏 vibrancy；不泵送任意事件或重建窗口。
+    using Send = void (*)(Class, SEL);
+    reinterpret_cast<Send>(objc_msgSend)(transaction, selector("flush"));
+    return true;
+}
+
 void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options)
 {
     if (!window)
@@ -831,7 +886,8 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect 
     const long material = acrylic ? NSVisualEffectMaterialHUDWindow : NSVisualEffectMaterialSidebar;
     id base = ensureBackdropView(superview, contentView, material);
     if (!base) {
-        setBackdropViewHidden(superview, YES);
+        // The shared opaque-commit protocol removes any surviving material after replacement paint.
+        // zh_CN: 由共享的不透明帧提交协议，在替代帧绘制后清理仍存在的材质。
         result.reason = QStringLiteral("visual-effect-view-unavailable");
         return result;
     }
@@ -841,7 +897,6 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect 
     const CGRect contentFrame = sendRect(contentView, "frame");
     sendCGRect(base, "setFrame:", contentFrame);
     if (!CGRectEqualToRect(sendRect(base, "frame"), contentFrame)) {
-        sendBool(base, "setHidden:", YES);
         result.reason = QStringLiteral("visual-effect-view-geometry-mismatch");
         return result;
     }

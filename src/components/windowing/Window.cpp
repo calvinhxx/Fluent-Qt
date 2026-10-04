@@ -105,6 +105,7 @@ Window::Window(QWidget* parent)
         requiresAlphaSurface(m_backdropCapabilities, m_chrome.clientSideFrameMargin());
     if (m_windowTranslucent)
         setAttribute(Qt::WA_TranslucentBackground, true);
+    prepareBackdropSurface();
     m_chrome.applyPlatformWindowFlags();
 
     setAutoFillBackground(false);
@@ -280,6 +281,7 @@ void Window::setEffectiveBackdropState(const BackdropState& state)
 {
     const bool changed = m_backdropState != state;
     m_backdropState = state;
+    prepareBackdropSurface();
 
     // Keep the old dynamic properties as compatibility aliases while all new
     // consumers use the typed state published by WindowBackdrop.
@@ -309,6 +311,17 @@ void Window::setEffectiveBackdropState(const BackdropState& state)
             child->update();
         emit backdropStateChanged(m_backdropState);
     }
+}
+
+void Window::prepareBackdropSurface()
+{
+    // Preserve the old native material until its opaque replacement is submitted.
+    // A cold native window instead starts with the same theme color as Qt's first paint.
+    // zh_CN: 旧原生材质保留到不透明替代帧提交；冷启动底色与 Qt 首次绘制的主题色一致。
+    const auto mode = m_backdropDisablePending ? BackdropSurfaceMode::CompositedTransparent
+                                               : m_backdropState.surfaceMode;
+    compatibility::detail::prepareWindowBackdropSurface(this, themeBackdrop(isEffectivelyActive()),
+                                                        mode);
 }
 
 void Window::scheduleBackdropResolution()
@@ -367,6 +380,10 @@ void Window::resolveBackdropState(bool applyPlatform, bool forceRecomposite)
 
     const bool canUsePlatform =
         m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect);
+    // An opaque request or capability fallback must not tear down a still-transparent frame.
+    // zh_CN: 不透明请求以及能力回退均须先覆盖旧透明帧，再拆除原生材质。
+    if (!canUsePlatform)
+        beginOpaqueBackdropCommit(next);
     if (applyPlatform && !m_backdropDisablePending &&
         (m_backdropEffect == BackdropEffect::Solid || canUsePlatform)) {
         const BackdropApplyResult applied = m_chrome.applySystemBackdropDetailed(
@@ -388,7 +405,18 @@ void Window::resolveBackdropState(bool applyPlatform, bool forceRecomposite)
         next.reason = QStringLiteral("%1-fallback").arg(m_backdropCapabilities.provider);
     }
 
+    beginOpaqueBackdropCommit(next);
     setEffectiveBackdropState(next);
+}
+
+void Window::beginOpaqueBackdropCommit(const BackdropState& next)
+{
+    if (m_backdropDisablePending || !compatibility::detail::requiresOpaqueBackdropCommit(
+                                        this, m_backdropState, next.surfaceMode))
+        return;
+    m_backdropDisablePending = true;
+    m_backdropOpaqueFramePainted = false;
+    m_backdropCommitWinId = internalWinId();
 }
 
 void Window::onThemeUpdated()
@@ -477,29 +505,12 @@ void Window::setBackdropEffect(BackdropEffect effect)
 {
     if (m_backdropEffect == effect)
         return;
-    const bool commitOpaque =
-        compatibility::detail::requiresOpaqueBackdropCommit(this, m_backdropState, effect);
+    QPointer<Window> guard(this);
     m_backdropEffect = effect;
-    m_backdropDisablePending = commitOpaque;
     m_backdropOpaqueFramePainted = false;
-
-    if (commitOpaque) {
-        // Native material removal and Qt painting are separate submissions.
-        // Present opaque pixels while the old material still covers the last
-        // transparent frame; never expose the desktop between those operations.
-        // State observers update cached/composited content before repaint().
-        // zh_CN: 先在旧材质仍存在时呈现不透明帧，再移除原生材质；状态观察者
-        // 会在 repaint() 前更新缓存/合成内容，避免两次提交之间透出桌面。
-        QPointer<Window> guard(this);
-        setEffectiveBackdropState(paintedFallbackState(QStringLiteral("solid-requested")));
-        if (!guard || m_backdropEffect != effect)
-            return;
-        if (updatesEnabled()) {
-            repaint();
-            if (!guard || m_backdropEffect != effect)
-                return;
-            finishPendingBackdropChange();
-        }
+    if (m_backdropCapabilities.supportsTransparentMaterial(effect)) {
+        m_backdropDisablePending = false;
+        m_backdropCommitWinId = 0;
     }
 
     // Switching effects updates paint hints and the requested OS backdrop type.
@@ -517,17 +528,27 @@ void Window::setBackdropEffect(BackdropEffect effect)
         isVisible() && compatibility::WindowChromeCompat::currentPlatform() !=
                            compatibility::WindowChromeCompat::Platform::Windows;
     resolveBackdropState(isVisible(), forceRecomposite);
+    if (!guard || m_backdropEffect != effect)
+        return;
     emit backdropEffectChanged(m_backdropEffect);
 }
 
 void Window::finishPendingBackdropChange()
 {
     if (!m_backdropDisablePending || !m_backdropOpaqueFramePainted ||
-        m_backdropEffect != BackdropEffect::Solid ||
+        m_backdropCommitWinId != internalWinId() ||
         !compatibility::detail::flushWindowBackdropSurface(this))
         return;
 
     m_backdropDisablePending = false;
+    m_backdropCommitWinId = 0;
+    // Prepare the native opaque base before removing the material. Platform adapters own the
+    // content-layer preparation and the native submission boundaries.
+    // zh_CN: 移除材质前先准备原生不透明底色；平台适配器负责内容图层以及原生提交边界。
+    prepareBackdropSurface();
+    if (m_backdropEffect != BackdropEffect::Solid)
+        m_chrome.applySystemBackdropDetailed(BackdropEffect::Solid,
+                                             effectiveThemeUsesDarkAppearance());
     resolveBackdropState(isVisible());
 }
 
@@ -669,10 +690,14 @@ void Window::paintPaintedSurface(QPainter& painter, bool includeClientFrame)
 void Window::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
+    const bool paintsNativeSurface =
+        backingStore() && painter.paintEngine() &&
+        painter.paintEngine()->paintDevice() == backingStore()->paintDevice();
+    if (paintsNativeSurface)
+        compatibility::detail::markWindowBackdropSurfacePainted(this);
     if (m_backdropDisablePending && !m_backdropOpaqueFramePainted &&
-        m_backdropState.surfaceMode == BackdropSurfaceMode::SolidOpaque && backingStore() &&
-        painter.paintEngine() &&
-        painter.paintEngine()->paintDevice() == backingStore()->paintDevice()) {
+        m_backdropState.surfaceMode != BackdropSurfaceMode::CompositedTransparent &&
+        m_backdropCommitWinId == internalWinId() && paintsNativeSurface) {
         // Cache captures via QWidget::render() are not presentation. Only an
         // opaque paint into the real backing store can release the old material.
         // Exposure can paint without an UpdateRequest, so also finish after this
@@ -759,6 +784,7 @@ void Window::resizeEvent(QResizeEvent* event)
 
 void Window::showEvent(QShowEvent* event)
 {
+    prepareBackdropSurface();
     QWidget::showEvent(event);
     m_chrome.applyPlatformWindowFlags();
     refreshBackdropCapabilities();
@@ -792,6 +818,7 @@ void Window::changeEvent(QEvent* event)
     // with title/nav focus tint.
     // zh_CN: 窗口激活状态变化时重绘底层背景，使其与标题栏/导航栏焦点色同步。
     if (event->type() == QEvent::ActivationChange) {
+        prepareBackdropSurface();
         invalidatePaintedSurfaceCache();
         update();
     }
@@ -824,6 +851,24 @@ bool Window::event(QEvent* event)
         finishPendingBackdropChange();
     bool nativeSurfaceMayHaveChanged =
         type == QEvent::WinIdChange || fluentIsDisplayScaleChangeEvent(event);
+    if (type == QEvent::WinIdChange)
+        compatibility::detail::resetWindowBackdropSurfacePaint(this);
+    if (type == QEvent::WinIdChange &&
+        (m_backdropDisablePending ||
+         m_backdropState.surfaceMode == BackdropSurfaceMode::CompositedTransparent)) {
+        // The old material belonged to a destroyed surface. Never seed its replacement transparent
+        // or reuse an opaque-paint observation from the old backing store.
+        // zh_CN: 旧材质属于已销毁的 surface；新窗口不能继承透明底色或旧 backing store 的绘制证据。
+        m_backdropDisablePending = false;
+        m_backdropOpaqueFramePainted = false;
+        m_backdropCommitWinId = 0;
+        QPointer<Window> guard(this);
+        setEffectiveBackdropState(paintedFallbackState(QStringLiteral("native-surface-pending")));
+        if (!guard)
+            return handled;
+    }
+    if (nativeSurfaceMayHaveChanged)
+        prepareBackdropSurface();
     if (nativeSurfaceMayHaveChanged && isVisible()) {
         invalidatePaintedSurfaceCache();
         scheduleBackdropResolution();

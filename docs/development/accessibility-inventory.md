@@ -150,8 +150,10 @@ The low-DPI glyph adapter rasterizes unhinted text at the existing panel-cache d
 including Home's particle foreground. Hinted text retains its native pixel grid so
 small-text contrast is preserved; the policy follows each shaped item's font.
 Perspective still differs from native 2D text. Material-to-Solid changes publish
-the opaque state and refresh the 3D caches before the Windows compositor removes
-the old material, preserving window identity and avoiding a transparent handoff.
+the opaque state and refresh the 3D caches before the platform removes the old
+material, preserving window identity and avoiding a transparent handoff. Window
+startup prepares the effective theme background before native exposure; palette
+and native background updates retain the window, geometry, alpha format and focus.
 The low-DPI text adapter reports only its actual backend's paint capabilities,
 so focused native editors do not request unsupported XOR caret drawing in 3D.
 Automated input checks cover text fields, editable ComboBox and collection-cell
