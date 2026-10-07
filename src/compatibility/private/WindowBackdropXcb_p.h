@@ -2,7 +2,12 @@
 #define FLUENTWINDOWBACKDROPXCB_P_H
 
 #include <QLibrary>
+#include <QGuiApplication>
 #include <QtGlobal>
+
+#if defined(Q_OS_LINUX) && QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
+#include <QtGui/qguiapplication_platform.h>
+#endif
 
 #include <cstddef>
 #include <cstdlib>
@@ -18,6 +23,19 @@ namespace compatibility::detail::xcb {
 using Connection = struct xcb_connection_t;
 using Setup = struct xcb_setup_t;
 using Error = struct xcb_generic_error_t;
+
+// Qt 6 exposes its own connection publicly; older Qt uses the screen round trip.
+// zh_CN: Qt 6 公开其 XCB 连接；旧版 Qt 通过 screen 往返完成同步。
+inline Connection* qtConnection()
+{
+#if defined(Q_OS_LINUX) && QT_VERSION >= QT_VERSION_CHECK(6, 2, 0) && QT_CONFIG(xcb)
+    if (qGuiApp) {
+        if (auto* native = qGuiApp->nativeInterface<QNativeInterface::QX11Application>())
+            return reinterpret_cast<Connection*>(native->connection());
+    }
+#endif
+    return nullptr;
+}
 
 struct Cookie {
     unsigned int sequence;
