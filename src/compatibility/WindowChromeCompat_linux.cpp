@@ -19,10 +19,6 @@
 #include "compatibility/private/WindowBackdropEvents_p.h"
 #include "compatibility/private/WindowBackdropXcb_p.h"
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
-#include <QtGui/qguiapplication_platform.h>
-#endif
-
 #include <limits>
 
 namespace compatibility {
@@ -162,13 +158,10 @@ bool qtXcbRoundTrip(QWidget* window)
     XcbClient* client = xcbClient();
     if (!client || !client->api.load())
         return false;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0) && QT_CONFIG(xcb)
     // Qt 6 exposes its XCB connection publicly. A reply or protocol error on
     // this connection orders all earlier Qt backing-store requests.
-    if (auto* native = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
-        return client->api.roundTrip(reinterpret_cast<xcb::Connection*>(native->connection()));
-    }
-#endif
+    if (xcb::Connection* native = xcb::qtConnection())
+        return client->api.roundTrip(native);
     QWindow* handle = window->windowHandle();
     QScreen* screen = handle ? handle->screen() : nullptr;
     if (!screen || !screen->handle())

@@ -12,10 +12,6 @@
 #include <QVector>
 #include <QWindow>
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
-#include <QtGui/qguiapplication_platform.h>
-#endif
-
 #include <functional>
 #include <cstring>
 
@@ -476,16 +472,14 @@ TEST(XcbWindowBackdropTest, DestroyedSurfaceRequestsReturnErrorsAndKeepConnectio
     QScreen* screen = nativeWindow.screen();
     ASSERT_NE(screen, nullptr);
     nativeWindow.destroy();
-#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0) && QT_CONFIG(xcb)
-    auto* native = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
-    ASSERT_NE(native, nullptr);
-    ASSERT_TRUE(api.roundTrip(reinterpret_cast<xcb::Connection*>(native->connection())));
-#else
-    ASSERT_NE(screen->handle(), nullptr);
-    // Qt 5.15 always waits for root geometry first, even when the following
-    // lookup of this intentionally destroyed client returns BadWindow.
-    screen->grabWindow(destroyedId, 0, 0, 2, 2);
-#endif
+    if (xcb::Connection* native = xcb::qtConnection()) {
+        ASSERT_TRUE(api.roundTrip(native));
+    } else {
+        ASSERT_NE(screen->handle(), nullptr);
+        // Qt 5.15 always waits for root geometry first, even when the following
+        // lookup of this intentionally destroyed client returns BadWindow.
+        screen->grabWindow(destroyedId, 0, 0, 2, 2);
+    }
     EXPECT_FALSE(api.reply(connection, api.getWindowAttributes(connection, destroyedId),
                            api.getWindowAttributesReply));
     EXPECT_FALSE(
