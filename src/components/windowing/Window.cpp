@@ -720,9 +720,13 @@ void Window::paintPaintedSurface(QPainter& painter, bool includeClientFrame)
 void Window::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
-    const bool paintsNativeSurface =
-        backingStore() && painter.paintEngine() &&
-        painter.paintEngine()->paintDevice() == backingStore()->paintDevice();
+    QBackingStore* const store = backingStore();
+    // A native handle can exist before Qt allocates its backing-store image.
+    // Cache rendering must neither query that empty device nor count as a native paint.
+    // zh_CN: 原生句柄可能早于后备图像创建；缓存绘制不能读取空设备，也不能计为原生绘制。
+    const bool paintsNativeSurface = !QWidget::sharedPainter() && store &&
+                                     !store->size().isEmpty() && painter.paintEngine() &&
+                                     painter.paintEngine()->paintDevice() == store->paintDevice();
     if (paintsNativeSurface)
         compatibility::detail::markWindowBackdropSurfacePainted(this);
     if (m_backdropDisablePending && !m_backdropOpaqueFramePainted &&
