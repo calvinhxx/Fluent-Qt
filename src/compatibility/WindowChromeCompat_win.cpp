@@ -10,6 +10,7 @@
 #include <dwmapi.h>
 
 #include <QtMath>
+#include <QVariant>
 #include <QWindow>
 
 // DWM system-backdrop / dark-mode attributes (defined here so we don't depend on a
