@@ -12,6 +12,7 @@
 #include <QImage>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPixmap>
 #include <QPointer>
 #include <QPushButton>
 #include <QScreen>
@@ -811,13 +812,17 @@ TEST_F(WindowTest, FirstShowPreparesThemeBackgroundBeforePainting)
         window.setBackdropEffect(BackdropEffect::Solid);
         window.onThemeUpdated();
         window.resize(520, 360);
-        const auto expectedSize = window.size();
         const bool translucent = window.testAttribute(Qt::WA_TranslucentBackground);
         EXPECT_EQ(window.palette().color(QPalette::Active, QPalette::Window),
                   window.themeBackdrop(true));
         for (const auto group : {QPalette::Inactive, QPalette::Disabled})
             EXPECT_EQ(window.palette().color(group, QPalette::Window), window.themeBackdrop(false));
+        // Native frame realization may change the client rectangle. Backdrop preparation
+        // must preserve the realized surface when it is subsequently exposed.
+        const WId nativeId = window.winId();
+        const auto expectedSize = window.size();
         window.show();
+        EXPECT_EQ(window.winId(), nativeId);
         EXPECT_EQ(window.size(), expectedSize);
         EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), translucent);
         EXPECT_EQ(window.palette().color(QPalette::Window),
@@ -964,23 +969,53 @@ TEST_F(WindowTest, DisabledHostedSurfaceKeepsThePainterActivationBase)
 
 TEST_F(WindowTest, CacheRenderDoesNotMarkNativeSurfacePainted)
 {
-    Window window;
-    window.setBackdropEffect(BackdropEffect::Solid);
-    window.resize(520, 360);
-    window.winId();
-    EXPECT_FALSE(compatibility::detail::windowBackdropSurfaceWasPainted(&window));
-    QImage cache(window.size(), QImage::Format_ARGB32_Premultiplied);
-    cache.fill(Qt::transparent);
-    window.render(&cache);
-    EXPECT_FALSE(compatibility::detail::windowBackdropSurfaceWasPainted(&window));
-    window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return compatibility::detail::windowBackdropSurfaceWasPainted(&window); }, 2000));
-    window.setBackdropEffect(BackdropEffect::Acrylic);
-    window.onThemeUpdated();
-    EXPECT_TRUE(compatibility::detail::windowBackdropSurfaceWasPainted(&window))
-        << "Effect and theme changes must preserve the already-painted native surface";
-    window.close();
+    for (const bool exposedBeforeRender : {false, true}) {
+        SCOPED_TRACE(exposedBeforeRender);
+        Window window;
+        window.setBackdropEffect(BackdropEffect::Solid);
+        window.resize(520, 360);
+        window.winId();
+        if (exposedBeforeRender) {
+            window.setUpdatesEnabled(false);
+            window.show();
+            ASSERT_TRUE(QTest::qWaitForWindowExposed(&window, 2000));
+        }
+        EXPECT_FALSE(compatibility::detail::windowBackdropSurfaceWasPainted(&window));
+        const auto renderCaches = [&] {
+            QImage image(window.size(), QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::transparent);
+            QPainter cachePainter(&image);
+            window.render(&cachePainter);
+            cachePainter.end();
+            EXPECT_EQ(image.pixelColor(image.rect().center()).alpha(), 255);
+            EXPECT_FALSE(compatibility::detail::windowBackdropSurfaceWasPainted(&window));
+            QPixmap pixmap(window.size());
+            pixmap.fill(Qt::transparent);
+            window.render(&pixmap);
+            EXPECT_EQ(pixmap.toImage().pixelColor(pixmap.rect().center()).alpha(), 255);
+            EXPECT_FALSE(compatibility::detail::windowBackdropSurfaceWasPainted(&window));
+            const QPixmap grabbed = window.grab();
+            EXPECT_FALSE(grabbed.isNull());
+            EXPECT_FALSE(compatibility::detail::windowBackdropSurfaceWasPainted(&window));
+        };
+        renderCaches();
+        window.setUpdatesEnabled(true);
+        window.show();
+        ASSERT_TRUE(QTest::qWaitFor(
+            [&] { return compatibility::detail::windowBackdropSurfaceWasPainted(&window); }, 2000));
+        // An allocated, previously painted backing store must not make a redirected
+        // cache capture look like a new native submission either.
+        compatibility::detail::resetWindowBackdropSurfacePaint(&window);
+        renderCaches();
+        window.update();
+        ASSERT_TRUE(QTest::qWaitFor(
+            [&] { return compatibility::detail::windowBackdropSurfaceWasPainted(&window); }, 2000));
+        window.setBackdropEffect(BackdropEffect::Acrylic);
+        window.onThemeUpdated();
+        EXPECT_TRUE(compatibility::detail::windowBackdropSurfaceWasPainted(&window))
+            << "Effect and theme changes must preserve the already-painted native surface";
+        window.close();
+    }
 }
 
 TEST_F(WindowTest, BackdropCapabilityHelpersResolvePerEffect)

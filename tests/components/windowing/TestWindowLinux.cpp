@@ -4,6 +4,7 @@
 #include <QEvent>
 #include <QGuiApplication>
 #include <QImage>
+#include <QLibrary>
 #include <QPalette>
 #include <QPixmap>
 #include <QScreen>
@@ -16,6 +17,7 @@
 #endif
 
 #include <functional>
+#include <cstring>
 
 #include "components/windowing/Window.h"
 #include "components/windowing/WindowBackdrop.h"
@@ -38,11 +40,63 @@ struct BlurHintResult {
     bool present = false;
 };
 
-// Inspect the server property independently of Window's published state.
+namespace xcb = compatibility::detail::xcb;
+
+struct X11ImageReply {
+    quint8 responseType;
+    quint8 depth;
+    quint16 sequence;
+    quint32 length;
+    quint32 visual;
+    quint8 padding[20];
+};
+
+struct X11ImageSetup {
+    quint8 status;
+    quint8 padding0;
+    quint16 protocolMajor;
+    quint16 protocolMinor;
+    quint16 length;
+    quint32 release;
+    quint32 resourceIdBase;
+    quint32 resourceIdMask;
+    quint32 motionBufferSize;
+    quint16 vendorLength;
+    quint16 maximumRequestLength;
+    quint8 rootsLength;
+    quint8 formatsLength;
+    quint8 imageByteOrder;
+    quint8 bitmapBitOrder;
+    quint8 bitmapScanlineUnit;
+    quint8 bitmapScanlinePad;
+    quint8 minimumKeycode;
+    quint8 maximumKeycode;
+    quint8 padding1[4];
+};
+
+static_assert(sizeof(X11ImageReply) == 32 && offsetof(X11ImageReply, visual) == 8 &&
+                  sizeof(X11ImageSetup) == 40 && offsetof(X11ImageSetup, imageByteOrder) == 30,
+              "The native image probe must retain the core XCB wire ABI");
+
+int x11ImageColorComponent(quint32 pixel, quint32 mask)
+{
+    if (!mask)
+        return -1;
+    int shift = 0;
+    while ((mask & 1U) == 0) {
+        mask >>= 1;
+        ++shift;
+    }
+    if ((mask & (mask + 1U)) != 0)
+        return -1;
+    return static_cast<int>((quint64((pixel >> shift) & mask) * 255 + mask / 2) / mask);
+}
+
+// Inspect server properties and pixels independently of Window's published state.
 // Checked XCB replies keep a disappearing/recreated native ID nonfatal.
-class X11BlurHintReader final {
+class X11BackdropReader final {
 public:
-    X11BlurHintReader()
+    X11BackdropReader()
     {
         if (m_api.load()) {
             m_connection = m_api.connect(nullptr, nullptr);
@@ -52,15 +106,89 @@ public:
                 m_connection = nullptr;
             }
         }
+        if (m_imageLibrary.load()) {
+            m_getImage = reinterpret_cast<GetImage>(m_imageLibrary.resolve("xcb_get_image"));
+            m_getImageReply =
+                reinterpret_cast<GetImageReply>(m_imageLibrary.resolve("xcb_get_image_reply"));
+            m_imageData = reinterpret_cast<ImageData>(m_imageLibrary.resolve("xcb_get_image_data"));
+            m_imageDataLength = reinterpret_cast<ImageDataLength>(
+                m_imageLibrary.resolve("xcb_get_image_data_length"));
+        }
     }
 
-    ~X11BlurHintReader()
+    ~X11BackdropReader()
     {
         if (m_connection)
             m_api.disconnect(m_connection);
     }
 
     bool isAvailable() const { return m_connection != nullptr; }
+
+    bool canCaptureSamples() const
+    {
+        return m_api.healthy(m_connection) && m_getImage && m_getImageReply && m_imageData &&
+               m_imageDataLength;
+    }
+
+    QImage captureSample(WId nativeId, const QPoint& position) const
+    {
+        if (!canCaptureSamples() || !nativeId)
+            return {};
+        constexpr int Extent = 4;
+        constexpr quint8 ZPixmap = 2;
+        const auto reply =
+            m_api.reply(m_connection,
+                        m_getImage(m_connection, ZPixmap, static_cast<quint32>(nativeId),
+                                   position.x(), position.y(), Extent, Extent, ~quint32{0}),
+                        m_getImageReply);
+        if (!reply || reply->depth == 0 || reply->depth > 32)
+            return {};
+        const int length = m_imageDataLength(reply.get());
+        const quint8* data = m_imageData(reply.get());
+        // Four pixels align each row to every core X11 scanline pad (8/16/32),
+        // so the payload size determines its 8/16/24/32-bit pixel storage.
+        if (!data || length <= 0 || length % (Extent * Extent) != 0)
+            return {};
+        const int bytesPerPixel = length / (Extent * Extent);
+        if (bytesPerPixel < 1 || bytesPerPixel > 4 || reply->depth > bytesPerPixel * 8)
+            return {};
+        xcb::Visual visual{};
+        if (!findVisual(reply->visual, &visual) || visual.visualClass != 4)
+            return {};
+        const quint32 colorMask = visual.redMask | visual.greenMask | visual.blueMask;
+        const quint32 depthMask = static_cast<quint32>((quint64{1} << reply->depth) - 1);
+        if ((colorMask & ~depthMask) != 0 || (visual.redMask & visual.greenMask) != 0 ||
+            (visual.redMask & visual.blueMask) != 0 || (visual.greenMask & visual.blueMask) != 0)
+            return {};
+        const quint32 alphaMask = depthMask & ~colorMask;
+        const xcb::Setup* setup = m_api.getSetup(m_connection);
+        if (!setup)
+            return {};
+        X11ImageSetup imageSetup{};
+        std::memcpy(&imageSetup, setup, sizeof(imageSetup));
+        if (imageSetup.imageByteOrder > 1)
+            return {};
+        QImage sample(Extent, Extent, QImage::Format_ARGB32);
+        for (int y = 0; y < Extent; ++y) {
+            for (int x = 0; x < Extent; ++x) {
+                const int offset = (y * Extent + x) * bytesPerPixel;
+                quint32 pixel = 0;
+                for (int byte = 0; byte < bytesPerPixel; ++byte) {
+                    const int shift =
+                        imageSetup.imageByteOrder == 0 ? byte * 8 : (bytesPerPixel - byte - 1) * 8;
+                    pixel |= quint32(data[offset + byte]) << shift;
+                }
+                const int red = x11ImageColorComponent(pixel, visual.redMask);
+                const int green = x11ImageColorComponent(pixel, visual.greenMask);
+                const int blue = x11ImageColorComponent(pixel, visual.blueMask);
+                const int alpha = alphaMask ? x11ImageColorComponent(pixel, alphaMask) : 255;
+                if (red < 0 || green < 0 || blue < 0 || alpha < 0)
+                    return {};
+                sample.setPixel(x, y, qRgba(red, green, blue, alpha));
+            }
+        }
+        return sample;
+    }
 
     BlurHintResult read(WId nativeId) const
     {
@@ -88,8 +216,40 @@ public:
     }
 
 private:
-    compatibility::detail::xcb::Api m_api;
-    compatibility::detail::xcb::Connection* m_connection = nullptr;
+    bool findVisual(quint32 id, xcb::Visual* result) const
+    {
+        const xcb::Setup* setup = m_api.getSetup(m_connection);
+        if (!setup)
+            return false;
+        for (auto screen = m_api.rootsIterator(setup); screen.remaining;
+             m_api.screenNext(&screen)) {
+            for (auto depth = m_api.depthsIterator(screen.data); depth.remaining;
+                 m_api.depthNext(&depth)) {
+                for (auto visual = m_api.visualsIterator(depth.data); visual.remaining;
+                     m_api.visualNext(&visual)) {
+                    if (visual.data->id == id) {
+                        *result = *visual.data;
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    using GetImage = xcb::Cookie (*)(xcb::Connection*, quint8, quint32, qint16, qint16, quint16,
+                                     quint16, quint32);
+    using GetImageReply = xcb::Api::ReplyFunction<X11ImageReply>;
+    using ImageData = quint8* (*)(const X11ImageReply*);
+    using ImageDataLength = int (*)(const X11ImageReply*);
+
+    xcb::Api m_api;
+    xcb::Connection* m_connection = nullptr;
+    QLibrary m_imageLibrary{QStringLiteral("xcb"), 1};
+    GetImage m_getImage = nullptr;
+    GetImageReply m_getImageReply = nullptr;
+    ImageData m_imageData = nullptr;
+    ImageDataLength m_imageDataLength = nullptr;
 };
 
 class NativeBackdropProbeWindow final : public Window {
@@ -155,7 +315,7 @@ void runKWinOpaqueCommit(BackdropEffect target)
 {
     if (!isXcbPlatform())
         GTEST_SKIP() << "Requires a real XCB desktop";
-    X11BlurHintReader reader;
+    X11BackdropReader reader;
     if (!reader.isAvailable())
         GTEST_SKIP() << "Requires the optional X11 runtime adapter";
     NativeBackdropProbeWindow window;
@@ -231,9 +391,10 @@ TEST(XcbWindowBackdropTest, SolidFirstExposureUsesNativeThemeBackground)
 {
     if (!isXcbPlatform())
         GTEST_SKIP() << "Requires a real XCB desktop";
-    X11BlurHintReader reader;
+    X11BackdropReader reader;
     if (!reader.isAvailable())
         GTEST_SKIP() << "Requires the optional X11 runtime adapter";
+    ASSERT_TRUE(reader.canCaptureSamples());
     for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
         SCOPED_TRACE(static_cast<int>(theme));
         NativeBackdropProbeWindow window;
@@ -244,7 +405,7 @@ TEST(XcbWindowBackdropTest, SolidFirstExposureUsesNativeThemeBackground)
         const QSize expectedSize = window.size();
         window.setUpdatesEnabled(false);
         const WId nativeId = window.winId();
-        const QColor preparedSeed = window.palette().color(QPalette::Window);
+        const QColor preparedSeed = window.palette().color(QPalette::Inactive, QPalette::Window);
         EXPECT_EQ(preparedSeed, window.themeBackdrop(false));
         window.show();
         ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
@@ -252,13 +413,16 @@ TEST(XcbWindowBackdropTest, SolidFirstExposureUsesNativeThemeBackground)
         ASSERT_NE(window.windowHandle(), nullptr);
         QScreen* screen = window.windowHandle()->screen();
         ASSERT_NE(screen, nullptr);
-        // QScreen reads only this window's native pixels. QWidget::grab() would
-        // repaint and could conceal an incorrect background before the first paint.
+        // QScreen may capture the root for a same-depth window, which is black
+        // under rootless Xwayland. Read this native drawable directly instead;
+        // QWidget::grab() would repaint and hide a bad pre-paint background.
         const QPoint center = window.rect().center();
-        const QImage sample =
-            screen->grabWindow(nativeId, center.x() - 2, center.y() - 2, 4, 4).toImage();
+        const qreal scale = window.devicePixelRatioF();
+        const QImage sample = reader.captureSample(
+            nativeId, QPoint(qRound(center.x() * scale) - 2, qRound(center.y() * scale) - 2));
         const QColor expected = window.themeBackdrop(window.isActiveWindow());
-        EXPECT_EQ(window.palette().color(QPalette::Window), expected);
+        const auto group = window.isActiveWindow() ? QPalette::Active : QPalette::Inactive;
+        EXPECT_EQ(window.palette().color(group, QPalette::Window), expected);
         // Mapping can precede WM activation. Updating XSetWindowBackground on
         // activation deliberately leaves the already-mapped pixels untouched,
         // so the disabled-paint sample may still contain the prepared inactive
