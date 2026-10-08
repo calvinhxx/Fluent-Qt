@@ -111,6 +111,11 @@ public:
         const bool compact = compactForOption(option);
         const qreal compactProgress = compactVisualProgressForOption(option);
         const qreal expandedOpacity = qBound<qreal>(0.0, 1.0 - compactProgress, 1.0);
+        const int routeDepth = index.data(DepthRole).toInt();
+        const qreal nestedIndent =
+            routeDepth > 1 || (kind == GalleryNavigationItem::Kind::CategoryRoute && routeDepth > 0)
+                ? routeDepth * kNestedRouteIndent
+                : 0.0;
 
         if (kind == GalleryNavigationItem::Kind::SectionHeader) {
             if (expandedOpacity <= 0.01) {
@@ -183,11 +188,11 @@ public:
         const QString paintedIconGlyph =
             Typography::Icons::glyphForSize(iconGlyph, kRouteIconPixelSize);
         const bool hasIcon = !iconGlyph.isEmpty();
-        const qreal contentLeft = backgroundRect.left() + kContentStart;
+        const qreal contentLeft = backgroundRect.left() + kContentStart + nestedIndent;
         const qreal compactIconLeft = qMax<qreal>(0.0, (kCompactPaneWidth - kIconAreaWidth) / 2.0);
         const qreal iconLeft = contentLeft + (compactIconLeft - contentLeft) * compactProgress;
         qreal textX = kind == GalleryNavigationItem::Kind::ComponentRoute
-                          ? backgroundRect.left() + kTextStart
+                          ? backgroundRect.left() + kTextStart + nestedIndent * expandedOpacity
                           : contentLeft;
         if (!iconGlyph.isEmpty()) {
             const QFont iconFont = Typography::Icons::font(kRouteIconPixelSize);
@@ -220,9 +225,9 @@ public:
             } else {
                 painter->drawText(iconRect, Qt::AlignCenter, paintedIconGlyph);
             }
-            textX = backgroundRect.left() + kTextStart;
+            textX = backgroundRect.left() + kTextStart + nestedIndent * expandedOpacity;
         } else if (!hasIcon && kind != GalleryNavigationItem::Kind::ComponentRoute) {
-            textX = backgroundRect.left() + kTextStart;
+            textX = backgroundRect.left() + kTextStart + nestedIndent * expandedOpacity;
         }
 
         // Selected rows keep the regular text weight — no bold highlight.

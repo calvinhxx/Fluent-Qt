@@ -128,6 +128,7 @@ configure_file(
 file(GLOB FLUENTQT_PYSIDE6_NATIVE_GALLERY_SAMPLE_SOURCES CONFIGURE_DEPENDS
     "${PROJECT_SOURCE_DIR}/app/view/widgets/samples/*Samples.cpp")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    ${FLUENTQT_PYSIDE6_NATIVE_GALLERY_SAMPLE_SOURCES}
     "${PROJECT_SOURCE_DIR}/app/model/GalleryComponentCatalog.cpp"
     "${PROJECT_SOURCE_DIR}/app/model/GalleryContentCatalog.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/api-manifest.json"

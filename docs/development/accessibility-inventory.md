@@ -84,6 +84,12 @@ screen-reader and IME acceptance.
 
 ## Component contracts
 
+`Button` retains Qt's native role, keyboard actions, and accessible widget
+bounds. Layouts use its whole painted widget rectangle, so declared spacing
+separates adjacent Buttons, including dynamically added outputs. The focused
+geometry contract in [TestButton.cpp](../../tests/components/basicinput/TestButton.cpp)
+covers native-style layout insets and multiple Buttons.
+
 Timeline exposes a read-only list with logical model rows, including caller
 names, supporting text, timestamps and node status. Stepper exposes a page-tab
 list whose native focus buttons share the same step interfaces, with selected,
@@ -115,6 +121,13 @@ QObject pose and finish handle; semantics belong to the hosted content. Optional
 shadow and rim decoration has no input or accessibility target. Hover lift freezes
 during pointer input and disappears in native 2D, reduced-motion and high-contrast
 layouts, preserving the original controls and values.
+
+`SpatialPlugin` and `SpatialSession` add nonvisual lifecycle infrastructure.
+Deactivating a session returns its tracked views to flat raster/native 2D
+presentation while retaining the same controls, values, ownership, and models.
+Activation does not override reduced-motion or HighContrast policy and does
+not automatically re-enable old views. This integration does not add an
+accessibility target or extend projected screen-reader/IME acceptance.
 
 Anchored overlays from an embedded Spatial card now resolve the actual host
 window through the shared Qt presentation adapter. Chart readouts no longer

@@ -31,6 +31,7 @@ class GalleryCategory:
     id: str
     title: str
     components: tuple[str, ...]
+    plugin: bool = False
 
 
 @dataclass(frozen=True)
@@ -60,6 +61,8 @@ class GalleryRoute:
     kind: str
     parent_id: str
     description: str
+    group: str = ""
+    depth: int = 0
 
 
 def _load_contract() -> dict[str, object]:
@@ -78,7 +81,7 @@ def _load_contract() -> dict[str, object]:
         )
     summary = contract.get("summary", {})
     expected = {
-        "route_count": 110,
+        "route_count": 111,
         "component_count": 87,
         "sample_count": 243,
     }
@@ -96,16 +99,23 @@ CONTRACT = _load_contract()
 # installed binding includes Spatial; the same Gallery wheel supports 2D users.
 _categories = [c for c in CONTRACT["categories"]
                if SPATIAL_AVAILABLE or c["id"] != "spatial"]
-_components = [c for c in CONTRACT["components"]
-               if SPATIAL_AVAILABLE or c["category_id"] != "spatial"]
-_routes = [r for r in CONTRACT["routes"]
-           if SPATIAL_AVAILABLE or (r["id"] != "spatial" and r["parent_id"] != "spatial")]
+_category_ids = {category["id"] for category in _categories}
+_components = [c for c in CONTRACT["components"] if c["category_id"] in _category_ids]
+_hidden_routes = {category["id"] for category in CONTRACT["categories"]
+                  if category["id"] not in _category_ids}
+if not any(category.get("plugin", False) for category in _categories):
+    _hidden_routes.add("plugins")
+for route in CONTRACT["routes"]:
+    if route["parent_id"] in _hidden_routes:
+        _hidden_routes.add(route["id"])
+_routes = [route for route in CONTRACT["routes"] if route["id"] not in _hidden_routes]
 
 CATEGORIES = tuple(
     GalleryCategory(
         id=category["id"],
         title=category["title"],
         components=tuple(category["components"]),
+        plugin=category.get("plugin", False),
     )
     for category in _categories
 )
@@ -142,6 +152,8 @@ ROUTES = tuple(
         kind=route["kind"],
         parent_id=route["parent_id"],
         description=route["description"],
+        group=route["group"],
+        depth=route["depth"],
     )
     for route in _routes
 )

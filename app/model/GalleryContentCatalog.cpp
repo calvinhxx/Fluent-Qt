@@ -200,9 +200,11 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("A standalone teaching tip in its own window that points "
                         "a tail at a target and glides between them.")},
         // Spatial
+        {QStringLiteral("plugins"),
+         QStringLiteral("Explore optional FluentQt plugins and their live examples.")},
         {QStringLiteral("spatial"),
          QStringLiteral(
-             "Explore existing Fluent controls in 3D, with live examples and source code.")},
+             "A plugin that adds perspective, tilt and depth to existing Fluent controls.")},
         {QStringLiteral("spatial-view"),
          QStringLiteral(
              "Give existing widgets perspective and pointer tilt. Keep text editing and popups in "
@@ -360,8 +362,20 @@ QVector<GalleryContentEntry> buildCatalog()
                         {QStringLiteral("foundation")}});
     }
 
-    // "All" lists every component; an empty categoryId means no category filter.
-    // zh_CN: “All”列出全部组件；categoryId 为空表示不过滤分类。
+    QStringList pluginModules;
+    for (const auto& category : galleryComponentCatalog()) {
+        if (category.plugin)
+            pluginModules.append(category.id);
+    }
+    if (!pluginModules.isEmpty()) {
+        catalog.append({GalleryPageKind::Category, QStringLiteral("plugins"),
+                        QStringLiteral("Plugins"),
+                        descriptionFor(QStringLiteral("plugins"), QStringLiteral("Plugins")),
+                        QStringLiteral("plugins"), pluginModules});
+    }
+
+    // "All" lists base components; plugin modules have their own landing page.
+    // zh_CN: “All”列出基础组件，插件模块有独立的概览页。
     catalog.append({GalleryPageKind::Category,
                     QStringLiteral("all-controls"),
                     QStringLiteral("All controls"),

@@ -6,6 +6,7 @@
 #include <QJsonDocument>
 #include <QtMath>
 #include <iostream>
+#include <functional>
 #include <QGraphicsProxyWidget>
 #include <QGraphicsEffect>
 #include <QGraphicsOpacityEffect>
@@ -67,6 +68,7 @@
 #include "view/widgets/GalleryEntryGrid.h"
 #include "view/widgets/GallerySampleCard.h"
 #include "view/widgets/GallerySampleCatalog.h"
+#include "view/widgets/samples/SpatialPreviewSupport.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "viewmodel/GallerySettings.h"
 
@@ -139,6 +141,50 @@ protected:
         QApplication::processEvents();
     }
 };
+
+// Keep real session activation/ownership while exercising refused factory and
+// attachment outcomes at the shared preview boundary.
+class PreviewSessionStub final : public spatial::SpatialSession {
+public:
+    using SpatialSession::SpatialSession;
+    bool activationSucceeds = true;
+    bool factorySucceeds = true;
+    bool attachmentSucceeds = true;
+    int activationCalls = 0;
+    int factoryCalls = 0;
+    int attachmentCalls = 0;
+    QPointer<spatial::SpatialView> attachment;
+    std::function<void()> afterActivation;
+
+    bool activate()
+    {
+        ++activationCalls;
+        const bool result = activationSucceeds && SpatialSession::activate();
+        const auto callback = afterActivation;
+        if (callback)
+            callback();
+        return result;
+    }
+
+    spatial::SpatialView* createView(QWidget* parent)
+    {
+        ++factoryCalls;
+        return factorySucceeds ? SpatialSession::createView(parent) : nullptr;
+    }
+
+    bool attachView(spatial::SpatialView* view)
+    {
+        ++attachmentCalls;
+        attachment = view;
+        return attachmentSucceeds && SpatialSession::attachView(view);
+    }
+};
+
+class PreviewProbeView final : public spatial::SpatialView {
+public:
+    using SpatialView::SpatialView;
+    int sampleState = 42;
+};
 } // namespace
 
 TEST_F(GallerySpatialTest, CategoryOwnsBothComponentsAndPublicReferences)
@@ -147,18 +193,248 @@ TEST_F(GallerySpatialTest, CategoryOwnsBothComponentsAndPublicReferences)
     auto* category = navigation.itemById("spatial");
     ASSERT_NE(category, nullptr);
     EXPECT_EQ(category->kind, GalleryNavigationItem::Kind::CategoryRoute);
-    EXPECT_EQ(category->parentId, "controls");
+    const auto* plugins = navigation.itemById("plugins");
+    ASSERT_NE(plugins, nullptr);
+    EXPECT_TRUE(plugins->parentId.isEmpty());
+    EXPECT_EQ(plugins->depth, 0);
+    EXPECT_EQ(category->parentId, "plugins");
+    EXPECT_EQ(category->depth, 1);
     EXPECT_FALSE(category->iconGlyph.isEmpty());
     EXPECT_NE(category->iconGlyph, navigation.itemById("windowing")->iconGlyph);
     EXPECT_EQ(navigation.itemById("foundation-spatial"), nullptr);
     for (const QString& id : {QStringLiteral("spatial-view"), QStringLiteral("spatial-item")}) {
         ASSERT_NE(navigation.itemById(id), nullptr);
         EXPECT_EQ(navigation.itemById(id)->parentId, "spatial");
+        EXPECT_EQ(navigation.itemById(id)->depth, 2);
         auto reference = galleryComponentReference(id);
         EXPECT_TRUE(reference.isValid());
         EXPECT_TRUE(reference.hasPythonReference());
         EXPECT_FALSE(gallerySamplesForRoute(id).isEmpty());
     }
+}
+
+TEST_F(GallerySpatialTest, Contract_SessionActivationDoesNotCreateGpuSurfaces)
+{
+    QWidget window;
+    auto* navigation = new navigation::NavigationView(&window);
+    GallerySpatialController controller(&window, navigation);
+    auto* session = controller.findChild<spatial::SpatialSession*>("gallerySpatialSession");
+    ASSERT_NE(session, nullptr);
+    EXPECT_TRUE(session->isActive());
+    EXPECT_TRUE(controller.renderingStatistics()["pluginActive"].toBool());
+    EXPECT_TRUE(window.findChildren<QOpenGLWidget*>().isEmpty());
+    QSignalSpy activeChanges(session, &spatial::SpatialSession::activeChanged);
+
+    ASSERT_TRUE(session->deactivate());
+    EXPECT_FALSE(controller.renderingStatistics()["pluginActive"].toBool());
+    GallerySettings::instance().setSpatialAvailability(true);
+    GallerySettings::instance().setSpatialModeEnabled(true);
+    EXPECT_TRUE(GallerySettings::instance().spatialModeEnabled());
+    EXPECT_TRUE(window.findChildren<QOpenGLWidget*>().isEmpty());
+    EXPECT_EQ(navigation->graphicsEffect(), nullptr);
+    EXPECT_FALSE(depth::enabled(&window));
+
+    GallerySettings::instance().setSpatialModeEnabled(false);
+    ASSERT_TRUE(session->activate());
+    EXPECT_TRUE(session->isActive());
+    EXPECT_TRUE(window.findChildren<QOpenGLWidget*>().isEmpty());
+    EXPECT_EQ(activeChanges.count(), 2);
+}
+
+TEST_F(GallerySpatialTest, Contract_PreviewSessionsKeepViewsAndGalleryPreferences)
+{
+    auto& settings = GallerySettings::instance();
+    settings.setSpatialModeEnabled(true);
+    for (const QString& route : {QStringLiteral("spatial-view"), QStringLiteral("spatial-item")}) {
+        for (const auto& sample : gallerySamplesForRoute(route)) {
+            SCOPED_TRACE(sample.id.toStdString());
+            QWidget host;
+            auto* panel = sample.createPreview(&host);
+            ASSERT_NE(panel, nullptr);
+            auto* session = panel->findChild<spatial::SpatialSession*>();
+            auto* view = panel->findChild<spatial::SpatialView*>("spatialPreviewView");
+            ASSERT_NE(session, nullptr);
+            ASSERT_NE(view, nullptr);
+            EXPECT_EQ(session->parent(), panel);
+            EXPECT_TRUE(session->isActive());
+            EXPECT_TRUE(view->isSpatialEnabled());
+            EXPECT_TRUE(sample.codeSnippet.contains("spatial::SpatialSession(panel, panel)"));
+            EXPECT_TRUE(sample.codeSnippet.contains("session->activate()"));
+            EXPECT_TRUE(sample.codeSnippet.contains("session->createView(panel)") ||
+                        sample.codeSnippet.contains("session->attachView(view)"));
+            EXPECT_TRUE(sample.codeSnippet.contains("if (session->activate())") ||
+                        sample.codeSnippet.contains("const bool active = session->activate()"));
+            EXPECT_TRUE(sample.codeSnippet.contains("if (!view)") ||
+                        sample.codeSnippet.contains("if (!active || !session->attachView(view))"));
+            EXPECT_TRUE(sample.codeSnippet.contains("SpatialView::RenderMode::Raster"));
+            QPointer<spatial::SpatialView> viewLifetime(view);
+
+            ASSERT_TRUE(session->deactivate());
+            EXPECT_FALSE(viewLifetime.isNull());
+            EXPECT_FALSE(view->isSpatialEnabled());
+            EXPECT_EQ(view->renderMode(), spatial::SpatialView::RenderMode::Raster);
+            EXPECT_TRUE(settings.spatialModeEnabled());
+            ASSERT_TRUE(session->activate());
+            EXPECT_TRUE(view->isSpatialEnabled());
+            EXPECT_EQ(view->renderMode(), spatial::SpatialView::RenderMode::Auto);
+            delete session;
+            EXPECT_FALSE(viewLifetime.isNull());
+            EXPECT_FALSE(view->isSpatialEnabled());
+            EXPECT_TRUE(settings.spatialModeEnabled());
+            settings.setSpatialModeEnabled(false);
+            settings.setSpatialModeEnabled(true);
+            EXPECT_FALSE(view->isSpatialEnabled());
+        }
+    }
+}
+
+TEST_F(GallerySpatialTest, Contract_PreviewActivationFailureKeepsContentAndCallerModelFlat)
+{
+    charts::ChartModel model;
+    QPointer<charts::ChartModel> modelLifetime(&model);
+    QWidget panel;
+    auto* session = new PreviewSessionStub(&panel, &panel);
+    session->activationSucceeds = false;
+    const auto preview = samples::createSpatialPreview(session, &panel);
+    ASSERT_NE(preview.view, nullptr);
+    preview.view->setObjectName(QStringLiteral("spatialPreviewView"));
+    EXPECT_FALSE(preview.attached);
+    EXPECT_EQ(session->activationCalls, 1);
+    EXPECT_EQ(session->factoryCalls, 0);
+    EXPECT_EQ(preview.view->parentWidget(), &panel);
+    EXPECT_FALSE(preview.view->isSpatialEnabled());
+    EXPECT_EQ(preview.view->renderMode(), spatial::SpatialView::RenderMode::Raster);
+
+    auto* card = new layout::Card;
+    auto* column = new QVBoxLayout(card);
+    auto* chart = new charts::DonutChart(card);
+    chart->setModel(&model);
+    auto* action = new basicinput::Button(QStringLiteral("Keep native input"), card);
+    column->addWidget(chart);
+    column->addWidget(action);
+    int clicks = 0;
+    QObject::connect(action, &basicinput::Button::clicked, &panel, [&] { ++clicks; });
+    auto* item = preview.view->addWidget(card, WidgetOwnership::Owned);
+    ASSERT_NE(item, nullptr);
+    new samples::SpatialPreviewBinding(&panel, preview.attached);
+    GallerySettings::instance().setSpatialModeEnabled(true);
+    action->click();
+    EXPECT_EQ(clicks, 1);
+    EXPECT_EQ(chart->model(), &model);
+    EXPECT_EQ(item->widget(), card);
+    EXPECT_FALSE(preview.view->isSpatialEnabled());
+    EXPECT_TRUE(panel.findChildren<QOpenGLWidget*>().isEmpty());
+    delete preview.view;
+    EXPECT_FALSE(modelLifetime.isNull());
+}
+
+TEST_F(GallerySpatialTest, Contract_PreviewFactoryFailureCannotRegainGpuThroughPreferences)
+{
+    QWidget panel;
+    auto* session = new PreviewSessionStub(&panel, &panel);
+    session->factorySucceeds = false;
+    const auto preview = samples::createSpatialPreview(session, &panel);
+    ASSERT_NE(preview.view, nullptr);
+    preview.view->setObjectName(QStringLiteral("spatialPreviewView"));
+    EXPECT_TRUE(session->isActive());
+    EXPECT_FALSE(preview.attached);
+    EXPECT_EQ(session->factoryCalls, 1);
+    new samples::SpatialPreviewBinding(&panel, preview.attached);
+    auto& settings = GallerySettings::instance();
+    settings.setSpatialModeEnabled(true);
+    ASSERT_TRUE(session->deactivate());
+    ASSERT_TRUE(session->activate());
+    settings.setSpatialModeEnabled(false);
+    settings.setSpatialModeEnabled(true);
+    EXPECT_FALSE(preview.view->isSpatialEnabled());
+    EXPECT_EQ(preview.view->renderMode(), spatial::SpatialView::RenderMode::Raster);
+    EXPECT_TRUE(panel.findChildren<QOpenGLWidget*>().isEmpty());
+}
+
+TEST_F(GallerySpatialTest, Contract_PreviewAttachmentFailurePreservesCustomViewAndContent)
+{
+    QWidget panel;
+    auto* session = new PreviewSessionStub(&panel, &panel);
+    session->attachmentSucceeds = false;
+    const auto preview = samples::createAttachedSpatialPreview<PreviewProbeView>(session, &panel);
+    ASSERT_NE(preview.view, nullptr);
+    preview.view->setObjectName(QStringLiteral("spatialPreviewView"));
+    EXPECT_FALSE(preview.attached);
+    EXPECT_TRUE(session->isActive());
+    EXPECT_EQ(session->attachmentCalls, 1);
+    EXPECT_EQ(session->attachment.data(), preview.view);
+    EXPECT_EQ(preview.view->sampleState, 42);
+    auto* control = new basicinput::Button(QStringLiteral("Existing sample control"));
+    auto* item = preview.view->addWidget(control, WidgetOwnership::Owned);
+    ASSERT_NE(item, nullptr);
+    new samples::SpatialPreviewBinding(&panel, preview.attached);
+    GallerySettings::instance().setSpatialModeEnabled(true);
+    EXPECT_EQ(item->widget(), control);
+    EXPECT_FALSE(preview.view->isSpatialEnabled());
+    EXPECT_EQ(preview.view->renderMode(), spatial::SpatialView::RenderMode::Raster);
+    EXPECT_TRUE(panel.findChildren<QOpenGLWidget*>().isEmpty());
+}
+
+TEST_F(GallerySpatialTest, Contract_PreviewSessionDestructionDuringActivationUsesFlatFallback)
+{
+    QWidget panel;
+    auto* session = new PreviewSessionStub(&panel, &panel);
+    QPointer<PreviewSessionStub> lifetime(session);
+    session->afterActivation = [session] { delete session; };
+    const auto preview = samples::createSpatialPreview(session, &panel);
+    ASSERT_NE(preview.view, nullptr);
+    EXPECT_TRUE(lifetime.isNull());
+    EXPECT_FALSE(preview.attached);
+    EXPECT_EQ(preview.view->parentWidget(), &panel);
+    EXPECT_FALSE(preview.view->isSpatialEnabled());
+    EXPECT_EQ(preview.view->renderMode(), spatial::SpatialView::RenderMode::Raster);
+    EXPECT_TRUE(panel.findChildren<QOpenGLWidget*>().isEmpty());
+}
+
+TEST_F(GallerySpatialTest, Contract_SessionStopsAndResumesNativePresentation)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires native graphics presentation";
+    if (!tests::support::nativeOpenGLUnavailableReason().isEmpty() &&
+        !(spatial::SpatialTextureHost::isPreferred() &&
+          spatial::SpatialTextureHost::preflightFailure().isEmpty()))
+        GTEST_SKIP() << "Requires a hardware graphics device";
+    auto& settings = GallerySettings::instance();
+    QWidget window;
+    window.resize(800, 600);
+    auto* navigation = new navigation::NavigationView(&window);
+    navigation->setGeometry(window.rect());
+    GallerySpatialController controller(&window, navigation);
+    auto* session = controller.findChild<spatial::SpatialSession*>("gallerySpatialSession");
+    ASSERT_NE(session, nullptr);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    settings.setSpatialModeEnabled(true);
+    QPointer<QWidget> surface;
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            surface = window.findChild<QWidget*>("gallerySpatialSurface");
+            return surface && surface->property("presenting").toBool();
+        },
+        5000));
+    controller.cancelTransition();
+    EXPECT_TRUE(depth::enabled(&window));
+
+    ASSERT_TRUE(session->deactivate());
+    ASSERT_FALSE(surface.isNull());
+    EXPECT_TRUE(surface->isHidden());
+    EXPECT_FALSE(surface->property("presenting").toBool());
+    EXPECT_FALSE(depth::enabled(&window));
+    EXPECT_FALSE(controller.transitionRunning());
+    EXPECT_EQ(controller.renderingStatistics()["cachedPixels"].toLongLong(), 0);
+    EXPECT_TRUE(settings.spatialModeEnabled());
+
+    ASSERT_TRUE(session->activate());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 1500));
+    controller.cancelTransition();
+    EXPECT_EQ(window.findChild<QWidget*>("gallerySpatialSurface"), surface.data());
+    EXPECT_TRUE(surface->isVisible());
+    EXPECT_TRUE(depth::enabled(&window));
 }
 
 TEST_F(GallerySpatialTest, Explicit2DDoesNotCreateOpenGLSurfaces)

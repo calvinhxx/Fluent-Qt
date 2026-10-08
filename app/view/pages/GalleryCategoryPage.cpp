@@ -1,6 +1,7 @@
 #include "GalleryCategoryPage.h"
 
 #include <QVector>
+#include <QSet>
 
 #include "model/GalleryComponentCatalog.h"
 #include "model/GalleryNavigationItem.h"
@@ -17,7 +18,8 @@ GalleryCategoryPage::GalleryCategoryPage(const GalleryContentEntry& entry,
 {
     setObjectName(QStringLiteral("galleryCategoryPage"));
 
-    addSectionHeader(QStringLiteral("Components"));
+    const bool pluginIndex = entry.routeId == QStringLiteral("plugins");
+    addSectionHeader(pluginIndex ? QStringLiteral("Plugin modules") : QStringLiteral("Components"));
 
     // The cards are now data-driven and painted by a single virtualized grid rather
     // than one widget per control — this is what removes the bulk of a category page's
@@ -26,13 +28,21 @@ GalleryCategoryPage::GalleryCategoryPage(const GalleryContentEntry& entry,
     auto* grid = new GalleryEntryGrid(this);
     QVector<GalleryEntryGrid::Entry> entries;
 
-    // An empty categoryId means "no filter": the All controls page lists everything.
-    // zh_CN: categoryId 为空表示不过滤：All controls 页列出全部组件。
+    // An empty categoryId lists base components; Plugins lists module routes.
+    // zh_CN: categoryId 为空时列出基础组件，Plugins 页列出插件模块路由。
     const bool includeAllCategories = entry.categoryId.isEmpty();
+    QSet<QString> pluginCategories;
+    for (const auto& category : galleryComponentCatalog()) {
+        if (category.plugin)
+            pluginCategories.insert(category.id);
+    }
     for (const GalleryNavigationItem& item : navigationViewModel.items()) {
-        if (item.kind != GalleryNavigationItem::Kind::ComponentRoute)
+        if (pluginIndex ? item.kind != GalleryNavigationItem::Kind::CategoryRoute
+                        : item.kind != GalleryNavigationItem::Kind::ComponentRoute)
             continue;
         if (!includeAllCategories && item.parentId != entry.categoryId)
+            continue;
+        if (includeAllCategories && pluginCategories.contains(item.parentId))
             continue;
 
         m_componentRouteIds.append(item.id);

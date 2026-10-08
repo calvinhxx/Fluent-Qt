@@ -20,6 +20,7 @@ struct GalleryComponentCategory {
     QString sourceDirectory;
     QString iconGlyph;
     QVector<GalleryComponentEntry> components;
+    bool plugin = false;
 };
 
 /**
@@ -41,9 +42,7 @@ struct GalleryComponentReference {
 
     bool hasPythonReference() const
     {
-        return !pythonInstall.isEmpty()
-            && !pythonImport.isEmpty()
-            && !pythonType.isEmpty();
+        return !pythonInstall.isEmpty() && !pythonImport.isEmpty() && !pythonType.isEmpty();
     }
 };
 

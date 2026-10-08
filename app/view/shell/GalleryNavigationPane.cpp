@@ -501,7 +501,12 @@ void GalleryNavigationPane::updateButtonStyles()
         verticalFluentBar->blockSignals(true);
     if (horizontalFluentBar)
         horizontalFluentBar->blockSignals(true);
-    m_treeView->setSelectedItem(visualIndex);
+    // Keyboard navigation already selects the current row. Re-selecting it clears
+    // the indicator without a currentChanged signal to restore it.
+    // zh_CN: 键盘导航已选中当前行；重复选择会清掉指示条，却不会再次触发 currentChanged。
+    if (m_treeView->currentIndex() != visualIndex ||
+        !m_treeView->selectionModel()->isSelected(visualIndex))
+        m_treeView->setSelectedItem(visualIndex);
     m_treeView->scrollTo(visualIndex, QAbstractItemView::EnsureVisible);
     if (verticalFluentBar)
         verticalFluentBar->blockSignals(verticalSignalsBlocked);
@@ -613,8 +618,10 @@ QModelIndex GalleryNavigationPane::visualSelectionIndex(const QModelIndex& route
     if (!m_compact || !routeIndex.isValid())
         return routeIndex;
 
-    const QModelIndex parentIndex = routeIndex.parent();
-    return parentIndex.isValid() ? parentIndex : routeIndex;
+    QModelIndex visualIndex = routeIndex;
+    while (visualIndex.parent().isValid())
+        visualIndex = visualIndex.parent();
+    return visualIndex;
 }
 
 void GalleryNavigationPane::showCompactFlyoutForIndex(const QModelIndex& index)
@@ -624,7 +631,7 @@ void GalleryNavigationPane::showCompactFlyoutForIndex(const QModelIndex& index)
 
     closeCompactFlyout(false);
 
-    const QRect visualRect = m_treeView->visualRect(index);
+    const QRect visualRect = m_treeView->visualRect(visualSelectionIndex(index));
     if (visualRect.isEmpty())
         return;
 
@@ -660,12 +667,23 @@ void GalleryNavigationPane::showCompactFlyoutForIndex(const QModelIndex& index)
         const QString routeId = childIndex.data(RouteIdRole).toString();
         if (routeId.isEmpty())
             continue;
+        QModelIndex selectedIndex = indexForRouteId(m_selectedRouteId);
+        while (selectedIndex.isValid() && selectedIndex != childIndex)
+            selectedIndex = selectedIndex.parent();
         auto* itemRow = new CompactFlyoutRow(routeId, childIndex.data(Qt::DisplayRole).toString(),
-                                             routeId == m_selectedRouteId, m_compactFlyoutPanel);
+                                             selectedIndex == childIndex, m_compactFlyoutPanel);
         itemRow->onActivated = [this](const QString& activatedRouteId) {
             setSelectedRouteId(activatedRouteId);
             emit routeActivated(activatedRouteId);
-            QTimer::singleShot(0, this, [this]() { closeCompactFlyout(); });
+            QTimer::singleShot(0, this, [this, activatedRouteId]() {
+                if (m_selectedRouteId != activatedRouteId)
+                    return;
+                const auto child = indexForRouteId(activatedRouteId);
+                if (m_model->hasChildren(child))
+                    showCompactFlyoutForIndex(child);
+                else
+                    closeCompactFlyout();
+            });
         };
         layout->addWidget(itemRow);
     }
@@ -790,16 +808,24 @@ QStandardItem* GalleryNavigationPane::createItem(const GalleryNavigationItem& it
     standardItem->setData(item.id, RouteIdRole);
     standardItem->setData(static_cast<int>(item.kind), KindRole);
     standardItem->setData(item.parentId, ParentRouteIdRole);
+    standardItem->setData(item.depth, DepthRole);
     standardItem->setData(item.kind == GalleryNavigationItem::Kind::SectionHeader ? QString()
                                                                                   : item.title,
                           Qt::ToolTipRole);
     standardItem->setData(item.kind == GalleryNavigationItem::Kind::ComponentRoute ? QString()
                                                                                    : item.iconGlyph,
                           IconGlyphRole);
+    const qreal nestedIndent =
+        item.depth > 1 ||
+                (item.kind == GalleryNavigationItem::Kind::CategoryRoute && item.depth > 0)
+            ? item.depth * kNestedRouteIndent
+            : 0.0;
     if (item.kind == GalleryNavigationItem::Kind::ComponentRoute)
         standardItem->setData(kRowLeftInset + kTextStart - kSelectionIndicatorWidth -
-                                  kSelectionIndicatorTextGap,
+                                  kSelectionIndicatorTextGap + nestedIndent,
                               IndicatorInsetRole);
+    else if (nestedIndent > 0)
+        standardItem->setData(kRowLeftInset + 3.0 + nestedIndent, IndicatorInsetRole);
     standardItem->setFlags(item.kind == GalleryNavigationItem::Kind::SectionHeader
                                ? Qt::ItemIsEnabled
                                : Qt::ItemIsEnabled | Qt::ItemIsSelectable);
@@ -811,7 +837,8 @@ void GalleryNavigationPane::appendNavigationItem(QStandardItemModel* model,
                                                  const GalleryNavigationItem& item)
 {
     QStandardItem* standardItem = createItem(item);
-    if (item.kind == GalleryNavigationItem::Kind::ComponentRoute &&
+    if ((item.kind == GalleryNavigationItem::Kind::ComponentRoute ||
+         item.kind == GalleryNavigationItem::Kind::CategoryRoute) &&
         categoryItems.contains(item.parentId)) {
         categoryItems.value(item.parentId)->appendRow(standardItem);
     } else {

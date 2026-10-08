@@ -17,6 +17,7 @@
 #include "GalleryPanelSampler.h"
 #include "GalleryParticleCompositor.h"
 #include "components/spatial/SpatialRuntime.h"
+#include "components/spatial/SpatialSession.h"
 #include "support/spatial/SpatialTextureHost.h"
 #include "platform/GalleryPlatform.h"
 
@@ -318,8 +319,8 @@ using spatial_render::PanelSampler;
 // zh_CN: 首次启用 3D 才创建共享 GL 表面；后续关闭时隐藏，避免反复重建原生窗口后备存储。
 class GpuSurface final : public QOpenGLWidget {
 public:
-    GpuSurface(ShellScene* scene, QWidget* parent)
-        : QOpenGLWidget(parent), m_scene(scene), m_particles(this)
+    GpuSurface(ShellScene* scene, QWidget* parent, spatial::SpatialSession* session)
+        : QOpenGLWidget(parent), m_scene(scene), m_particles(this, session)
     {
         connect(&m_particles, &spatial_render::GalleryParticleCompositor::frameRequested, this,
                 [this] { update(); });
@@ -824,6 +825,7 @@ struct GallerySpatialController::Private {
     QVariantMap initializationTimings;
     QObject* owner = nullptr;
     QPointer<QWidget> window;
+    QPointer<spatial::SpatialSession> session;
     QPointer<navigation::NavigationView> navigation;
     QPointer<QWidget> canvas;
     QPointer<SurfaceCapture> capture;
@@ -851,9 +853,9 @@ struct GallerySpatialController::Private {
 
     bool canInitializeRenderer() const
     {
-        return GallerySettings::instance().spatialModeEnabled() && canvas && canvas->isVisible() &&
-               !canvas->size().isEmpty() && window && window->window()->windowHandle() &&
-               window->window()->windowHandle()->isExposed();
+        return session && session->isActive() && GallerySettings::instance().spatialModeEnabled() &&
+               canvas && canvas->isVisible() && !canvas->size().isEmpty() && window &&
+               window->window()->windowHandle() && window->window()->windowHandle()->isExposed();
     }
 
     void setFiltering(bool active)
@@ -1086,7 +1088,8 @@ struct GallerySpatialController::Private {
 
 void GallerySpatialController::prepareApplicationStyle()
 {
-    spatial::SpatialRuntime::prepareApplication();
+    spatial::SpatialSession session;
+    session.activate();
 }
 
 GallerySpatialController::GallerySpatialController(QWidget* window,
@@ -1153,6 +1156,22 @@ GallerySpatialController::GallerySpatialController(QWidget* window,
             d->sync();
         });
     }
+    d->session = new spatial::SpatialSession(window, this);
+    d->session->setObjectName(QStringLiteral("gallerySpatialSession"));
+    QString activationError;
+    if (!d->session->activate(&activationError)) {
+        disableSpatial(activationError);
+        return;
+    }
+    connect(d->session, &spatial::SpatialSession::activeChanged, this, [this](bool active) {
+        applyMode(active && GallerySettings::instance().spatialModeEnabled());
+        if (!active)
+            cancelTransition();
+    });
+    connect(d->session, &QObject::destroyed, this, [this] {
+        applyMode(false);
+        cancelTransition();
+    });
     const QString unavailableReason = sessionUnavailableReason();
     if (!unavailableReason.isEmpty()) {
         disableSpatial(unavailableReason);
@@ -1170,7 +1189,7 @@ GallerySpatialController::GallerySpatialController(QWidget* window,
 
 void GallerySpatialController::ensureRenderer()
 {
-    if (d->rendererFailed)
+    if (d->rendererFailed || !d->session || !d->session->isActive())
         return;
     if (!d->canvas) {
         const bool measuring = qEnvironmentVariableIntValue("FLUENT_QT_SPATIAL_BENCHMARK");
@@ -1188,7 +1207,6 @@ void GallerySpatialController::ensureRenderer()
             disableSpatial(reason);
             return;
         }
-        spatial::SpatialRuntime::prepareApplication();
         if (measuring)
             d->initializationTimings["nativeStyleMs"] = clock.nsecsElapsed() / 1e6;
         const auto initialized = [this] {
@@ -1210,7 +1228,7 @@ void GallerySpatialController::ensureRenderer()
             connect(surface, &RhiSurface::renderingFailed, this, failed);
             connect(surface, &RhiSurface::cacheUnavailable, this, cacheUnavailable);
         } else {
-            auto* surface = new GpuSurface(&d->scene, d->window);
+            auto* surface = new GpuSurface(&d->scene, d->window, d->session);
             d->canvas = surface;
             surface->initialized = initialized;
             surface->failed = failed;
@@ -1338,8 +1356,8 @@ void GallerySpatialController::disableSpatial(const QString& reason)
 
 void GallerySpatialController::startPresentation()
 {
-    if (!d->navigation || !d->canvas || d->rendererFailed ||
-        !GallerySettings::instance().spatialModeEnabled() ||
+    if (!d->session || !d->session->isActive() || !d->navigation || !d->canvas ||
+        d->rendererFailed || !GallerySettings::instance().spatialModeEnabled() ||
         d->window->findChild<GallerySplashScreen*>())
         return;
     if (d->capture && d->canvas->property("presenting").toBool())
@@ -1398,6 +1416,14 @@ void GallerySpatialController::startPresentation()
 }
 GallerySpatialController::~GallerySpatialController()
 {
+    if (d->session) {
+        disconnect(d->session, nullptr, this, nullptr);
+        d->session->deactivate();
+    }
+    if (d->window)
+        depth::setEnabled(d->window, false);
+    d->target = false;
+    cancelTransition();
     qApp->removeEventFilter(this);
     d->nativePopupAnchors.clear();
     d->publishPresentationTransforms(false);
@@ -1419,6 +1445,7 @@ bool GallerySpatialController::transitionRunning() const
 QVariantMap GallerySpatialController::renderingStatistics() const
 {
     QVariantMap result = d->initializationTimings;
+    result["pluginActive"] = d->session && d->session->isActive();
     for (const auto& entry : {qMakePair(QStringLiteral("navigation"), d->capture.data()),
                               qMakePair(QStringLiteral("content"), d->contentCapture.data())}) {
         result[entry.first + "Captures"] = entry.second ? entry.second->captures : 0;
@@ -1480,6 +1507,7 @@ void GallerySpatialController::applyMode(bool enabled)
 {
     if (!d->window || !d->navigation)
         return;
+    enabled = enabled && d->session && d->session->isActive();
     if (enabled && (!d->capture || !d->rendererReady)) {
         ensureRenderer();
         return;

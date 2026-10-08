@@ -17,13 +17,14 @@ SPEC.loader.exec_module(SMOKE)
 class GalleryWheelSmokeContractsTest(unittest.TestCase):
     def test_runtime_coverage_supports_both_optional_module_states(self):
         contract = {
-            "categories": [{"id": "basic"}, {"id": "spatial"}],
+            "categories": [{"id": "basic", "plugin": False}, {"id": "spatial", "plugin": True}],
             "components": [
                 {"id": "button", "category_id": "basic", "samples": [{"id": "button-basic"}]},
                 {"id": "spatial-view", "category_id": "spatial", "samples": [{"id": "spatial-basic"}]},
             ],
             "routes": [{"id": "button", "parent_id": "basic"},
-                       {"id": "spatial", "parent_id": ""},
+                       {"id": "plugins", "parent_id": ""},
+                       {"id": "spatial", "parent_id": "plugins"},
                        {"id": "spatial-view", "parent_id": "spatial"}],
             "binding_support_types": ["Theme"],
         }
@@ -33,7 +34,7 @@ class GalleryWheelSmokeContractsTest(unittest.TestCase):
                 categories = [SimpleNamespace(id=c["id"]) for c in contract["categories"][:2 if available else 1]]
                 entries = [SimpleNamespace(route_id=c["id"], samples=[SimpleNamespace(**s) for s in c["samples"]])
                            for c in components]
-                routes = [SimpleNamespace(id=r["id"]) for r in contract["routes"][:3 if available else 1]]
+                routes = [SimpleNamespace(id=r["id"]) for r in contract["routes"][:4 if available else 1]]
                 keys = {(c["id"], s["id"]) for c in components for s in c["samples"]}
                 SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys, available)
                 if available:

@@ -82,6 +82,429 @@ class GallerySpatialTest(unittest.TestCase):
         self.assertEqual(self.errors, [])
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_window_and_controller_share_a_session_before_gpu_initialization(self):
+        from fluentqt.spatial import SpatialSession
+        with patch.dict(os.environ, {"FLUENT_QT_GALLERY_DISABLE_3D": "1"}):
+            window = GalleryWindow(startup_visuals=False)
+        session = window._spatial_session
+        try:
+            self.assertIsInstance(session, SpatialSession)
+            self.assertTrue(session.isActive())
+            self.assertIs(session.parent(), window)
+            self.assertIs(window._spatial_controller.session, session)
+            self.assertIsNone(window._spatial_controller.canvas)
+            self.assertFalse(window.property("gallerySpatialEnabled"))
+            self.assertTrue(session.deactivate())
+            self.assertIsNone(window._spatial_controller.canvas)
+        finally:
+            delete(window)
+        self.assertFalse(isValid(session))
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_preview_session_cleanup_preserves_settings_and_live_models(self):
+        from fluentqt.spatial import SpatialView
+        self.settings.set_spatial_availability(True)
+        self.settings.set_spatial_mode_enabled(True)
+        result = build_native_sample("spatial-view", "spatial-view-donut", None)
+        panel = result.widget
+        session = panel._spatial_session
+        view = panel._spatial_binding.view
+        chart = panel._fluentqt_gallery_source_namespace["chart"]
+        model = chart.model()
+        try:
+            self.assertTrue(session.isActive())
+            self.assertIsInstance(view, SpatialView)
+            self.assertIn("SpatialSession", result.source)
+            self.assertIn("session.createView(panel)", result.source)
+            self.assertTrue(view.isSpatialEnabled())
+            self.assertTrue(session.deactivate())
+            self.assertFalse(view.isSpatialEnabled())
+            self.assertEqual(view.renderMode(), SpatialView.RenderMode.Raster)
+            self.assertTrue(self.settings.spatial_mode_enabled)
+            self.assertIs(chart.model(), model)
+            self.assertTrue(isValid(model))
+        finally:
+            delete(panel)
+        self.assertTrue(self.settings.spatial_mode_enabled)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_custom_preview_subclasses_attach_without_losing_python_ownership_helpers(self):
+        from fluentqt.spatial import SpatialView
+        for route, sample in (("spatial-view", "spatial-view-scene"),
+                              ("spatial-item", "spatial-item-pose")):
+            with self.subTest(sample=sample):
+                result = build_native_sample(route, sample, None)
+                panel = result.widget
+                try:
+                    view = panel._spatial_binding.view
+                    self.assertIsInstance(view, SpatialView)
+                    self.assertTrue(panel._spatial_session.isActive())
+                    self.assertEqual(view.itemCount(), 2)
+                    self.assertIn("session.attachView(view)", result.preview_source)
+                    self.assertTrue(panel._spatial_session.deactivate())
+                    self.assertFalse(view.isSpatialEnabled())
+                    self.assertEqual(view.renderMode(), SpatialView.RenderMode.Raster)
+                    self.assertEqual(view.itemCount(), 2)
+                    self.assertTrue(all(isValid(item.widget()) for item in view.items()))
+                finally:
+                    delete(panel)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_preview_activation_and_factory_failures_keep_flat_content_and_preferences(self):
+        from fluentqt.spatial import SpatialSession, SpatialView
+        samples = [(entry.route_id, sample.id) for entry in ENTRIES
+                   if entry.category_id == "spatial" for sample in entry.samples]
+        self.assertEqual(len(samples), 11)
+        custom = {"spatial-view-scene", "spatial-item-pose"}
+        for failure, method in (("activation", "activate"), ("factory", "createView"),
+                                ("attachment", "attachView")):
+            for route, sample in samples:
+                if failure == "factory" and sample in custom:
+                    continue
+                if failure == "attachment" and sample not in custom:
+                    continue
+                with self.subTest(failure=failure, sample=sample):
+                    self.settings.set_spatial_availability(True)
+                    self.settings.set_spatial_mode_enabled(True)
+                    with patch.object(SpatialSession, method,
+                                      return_value=None if failure == "factory" else False):
+                        result = build_native_sample(route, sample, None)
+                    panel = result.widget
+                    try:
+                        namespace = panel._fluentqt_gallery_source_namespace
+                        view = namespace["view"]
+                        self.assertIsNone(panel._spatial_binding)
+                        self.assertFalse(view.isSpatialEnabled())
+                        self.assertEqual(view.renderMode(), SpatialView.RenderMode.Raster)
+                        self.assertGreater(view.itemCount(), 0)
+                        self.assertTrue(all(isValid(item.widget()) for item in view.items()))
+                        if sample in custom:
+                            self.assertNotEqual(type(view), SpatialView)
+                        if "chart" in namespace:
+                            self.assertTrue(isValid(namespace["chart"].model()))
+                        self.assertTrue(self.settings.spatial_mode_enabled)
+                        self.settings.set_spatial_mode_enabled(False)
+                        self.settings.set_spatial_mode_enabled(True)
+                        self.assertFalse(view.isSpatialEnabled())
+                        self.assertEqual(view.renderMode(), SpatialView.RenderMode.Raster)
+                    finally:
+                        delete(panel)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_inactive_or_destroyed_session_never_reenters_gallery_renderer(self):
+        from fluentqt_gallery import spatial_controller as compositor
+        self.settings.set_spatial_mode_enabled(True)
+        for destroyed in (False, True):
+            with self.subTest(destroyed=destroyed):
+                window = fluentqt.Window()
+                window._splash = window._dismissal_splash = None
+                navigation = fluentqt.NavigationView(window)
+                with patch.object(compositor.SpatialSession, "activate", return_value=False), \
+                        patch.object(compositor, "_Surface") as surface, \
+                        patch.object(compositor, "_RhiSurface") as rhi_surface:
+                    controller = compositor.GallerySpatialController(window, navigation)
+                    try:
+                        if destroyed:
+                            delete(controller.session)
+                        controller.ensure_renderer()
+                        controller.check_renderer()
+                        controller.start_presentation()
+                        controller.apply_mode(True)
+                        controller._capture_content()
+                        controller._capture_navigation()
+                        self.assertIsNone(controller.canvas)
+                        self.assertTrue(controller.renderer_failed)
+                        self.assertFalse(self.settings.spatial_available)
+                        self.assertTrue(self.settings.spatial_mode_enabled)
+                        self.assertFalse(window.property("gallerySpatialEnabled"))
+                        surface.assert_not_called()
+                        rhi_surface.assert_not_called()
+                    finally:
+                        delete(window)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_particle_session_activation_failure_keeps_cpu_path(self):
+        from fluentqt.spatial import SpatialSession
+        from fluentqt_gallery.particle_compositor import GalleryParticleCompositor
+        host = QWidget()
+        try:
+            with patch.object(SpatialSession, "activate", return_value=False):
+                compositor = GalleryParticleCompositor(host)
+            self.assertIsNone(compositor.session)
+            self.assertEqual(compositor.requiredBytes(host, 1, QSize(64, 64), 1., 1., True), 0)
+            self.assertEqual(compositor.activeLayerCount(), 0)
+            self.assertIsNone(compositor.sampler)
+        finally:
+            delete(host)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_particle_factory_failure_restores_cpu_request(self):
+        from fluentqt.spatial import SpatialSession
+        from fluentqt_gallery.particle_compositor import GalleryParticleCompositor
+        for previous in (False, True):
+            with self.subTest(previous=previous):
+                host = QWidget()
+                session = SpatialSession(host, host)
+                self.assertTrue(session.activate())
+                compositor = GalleryParticleCompositor(host, session)
+                compositor.root = host
+                source = fluentqt.ParticleBackdrop(host)
+                source.setGpuAccelerationEnabled(previous)
+                compositor.sources = [source]
+                compositor.source_rects = [QRect(0, 0, 32, 32)]
+                compositor.source_clips = [QRect(0, 0, 32, 32)]
+                try:
+                    with patch.object(compositor, "requiredBytes", return_value=1024), \
+                            patch.object(session, "createParticleLayer", return_value=None) as factory:
+                        self.assertFalse(compositor.prepare(host, 1, QSize(64, 64), 1., 1., 4096, True))
+                    factory.assert_called_once_with(source, compositor)
+                    self.assertEqual(source.isGpuAccelerationEnabled(), previous)
+                    self.assertEqual(compositor.layers, [])
+                    self.assertIsNone(compositor.sampler)
+                finally:
+                    delete(host)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_particle_source_notification_invalidates_session_before_factory(self):
+        from fluentqt.spatial import SpatialSession
+        from fluentqt_gallery.particle_compositor import GalleryParticleCompositor
+        for destroyed in (False, True):
+            with self.subTest(destroyed=destroyed):
+                host = QWidget()
+                session = SpatialSession(host, host)
+                self.assertTrue(session.activate())
+                compositor = GalleryParticleCompositor(host, session)
+                compositor.root = host
+                source = fluentqt.ParticleBackdrop(host)
+                source.setGpuAccelerationEnabled(False)
+                compositor.sources = [source]
+                compositor.source_rects = [QRect(0, 0, 32, 32)]
+                compositor.source_clips = [QRect(0, 0, 32, 32)]
+
+                def invalidate(enabled):
+                    if enabled:
+                        delete(session) if destroyed else session.deactivate()
+                        compositor.release()
+
+                source.gpuAccelerationEnabledChanged.connect(invalidate)
+                try:
+                    with patch.object(compositor, "requiredBytes", return_value=1024), \
+                            patch.object(session, "createParticleLayer") as factory:
+                        self.assertFalse(compositor.prepare(host, 1, QSize(64, 64), 1., 1., 4096, True))
+                    factory.assert_not_called()
+                    self.assertFalse(source.isGpuAccelerationEnabled())
+                    self.assertEqual(compositor.layers, [])
+                    self.assertIsNone(compositor.sampler)
+                finally:
+                    delete(host)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_particle_factory_return_rechecks_session_and_releases_output(self):
+        from fluentqt.spatial import SpatialSession
+        from fluentqt_gallery.particle_compositor import GalleryParticleCompositor
+        for destroyed in (False, True):
+            with self.subTest(destroyed=destroyed):
+                host = QWidget()
+                session = SpatialSession(host, host)
+                self.assertTrue(session.activate())
+                compositor = GalleryParticleCompositor(host, session)
+                compositor.root = host
+                source = fluentqt.ParticleBackdrop(host)
+                source.setGpuAccelerationEnabled(False)
+                compositor.sources = [source]
+                compositor.source_rects = [QRect(0, 0, 32, 32)]
+                compositor.source_clips = [QRect(0, 0, 32, 32)]
+                renderer = QObject(compositor)
+                release = renderer.release = Mock()
+
+                def create(_source, _parent):
+                    delete(session) if destroyed else session.deactivate()
+                    compositor.release()
+                    return renderer
+
+                try:
+                    with patch.object(compositor, "requiredBytes", return_value=1024), \
+                            patch.object(session, "createParticleLayer", side_effect=create):
+                        self.assertFalse(compositor.prepare(host, 1, QSize(64, 64), 1., 1., 4096, True))
+                    release.assert_called_once_with()
+                    self.assertFalse(isValid(renderer))
+                    self.assertFalse(source.isGpuAccelerationEnabled())
+                    self.assertEqual(compositor.layers, [])
+                    self.assertIsNone(compositor.sampler)
+                finally:
+                    delete(host)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_particle_cleanup_restores_cpu_after_layer_wrapper_is_destroyed(self):
+        from fluentqt.spatial import SpatialSession
+        from fluentqt_gallery.particle_compositor import GalleryParticleCompositor
+        host = QWidget()
+        session = SpatialSession(host, host)
+        self.assertTrue(session.activate())
+        compositor = GalleryParticleCompositor(host, session)
+        source = fluentqt.ParticleBackdrop(host)
+        source.setGpuAccelerationEnabled(True)
+        renderer = QObject(compositor)
+        compositor.layers = [{"renderer": renderer, "source": source,
+                              "previous_acceleration": False, "foreground": None}]
+        delete(renderer)
+        try:
+            compositor.release()
+            self.assertFalse(source.isGpuAccelerationEnabled())
+            self.assertEqual(compositor.layers, [])
+            self.assertEqual(compositor.activeLayerCount(), 0)
+        finally:
+            delete(host)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_particle_cleanup_reentry_restores_all_sources_before_notification(self):
+        from fluentqt.spatial import SpatialSession
+        from fluentqt_gallery.particle_compositor import GalleryParticleCompositor
+        for destroyed in (False, True):
+            with self.subTest(destroyed=destroyed):
+                host = QWidget()
+                session = SpatialSession(host, host)
+                self.assertTrue(session.activate())
+                compositor = GalleryParticleCompositor(host, session)
+                sources = [fluentqt.ParticleBackdrop(host), fluentqt.ParticleBackdrop(host)]
+                renderers = [QObject(compositor), QObject(compositor)]
+                releases = []
+                for source, renderer in zip(sources, renderers):
+                    source.setGpuAccelerationEnabled(True)
+                    renderer.isActive = lambda: True
+                    renderer.release = Mock()
+                    releases.append(renderer.release)
+                    compositor.layers.append({"renderer": renderer, "source": source,
+                                              "previous_acceleration": False, "foreground": None})
+                notifications = []
+                compositor.staticContentInvalidated.connect(lambda: notifications.append(True))
+                reentry = []
+
+                def restore(enabled):
+                    if not enabled:
+                        reentry.append(compositor.requiredBytes(host, 1, QSize(64, 64), 1., 1., True))
+                        delete(compositor) if destroyed else compositor.release()
+
+                sources[0].gpuAccelerationEnabledChanged.connect(restore)
+                try:
+                    compositor.release()
+                    self.assertEqual(reentry, [0])
+                    self.assertTrue(all(not source.isGpuAccelerationEnabled() for source in sources))
+                    self.assertTrue(all(not isValid(renderer) for renderer in renderers))
+                    releases[0].assert_called_once_with()
+                    if destroyed:
+                        self.assertFalse(isValid(compositor))
+                        self.assertEqual(notifications, [])
+                    else:
+                        releases[1].assert_called_once_with()
+                        self.assertEqual(compositor.layers, [])
+                        self.assertFalse(compositor.releasing)
+                        self.assertEqual(notifications, [True])
+                finally:
+                    delete(host)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_particle_resize_cleanup_revalidates_session_root_and_source_plan(self):
+        from fluentqt.spatial import SpatialSession
+        from fluentqt_gallery import particle_compositor as particle
+        for sampling in (False, True):
+            for invalidation in ("deactivate", "delete-session", "clear-plan", "delete-compositor"):
+                with self.subTest(sampling=sampling, invalidation=invalidation):
+                    host = QWidget()
+                    session = SpatialSession(host, host)
+                    self.assertTrue(session.activate())
+                    compositor = particle.GalleryParticleCompositor(host, session)
+                    compositor.root = host
+                    sources = [fluentqt.ParticleBackdrop(host), fluentqt.ParticleBackdrop(host)]
+                    compositor.sources = sources.copy()
+                    compositor.source_rects = [QRect(0, 0, 32, 32), QRect(32, 0, 32, 32)]
+                    compositor.source_clips = compositor.source_rects.copy()
+                    compositor.panel_pixels, compositor.cache_dpr = QSize(32, 32), 1.
+                    for source in sources:
+                        source.setGpuAccelerationEnabled(True)
+                        renderer = QObject(compositor)
+                        renderer.isActive = lambda: True
+                        renderer.release = Mock()
+                        compositor.layers.append({"renderer": renderer, "source": source,
+                                                  "previous_acceleration": False, "foreground": None})
+
+                    def restore(enabled):
+                        if not enabled:
+                            if invalidation == "delete-compositor":
+                                delete(compositor)
+                                return
+                            if invalidation == "deactivate":
+                                session.deactivate()
+                            elif invalidation == "delete-session":
+                                delete(session)
+                            compositor.release()
+
+                    sources[0].gpuAccelerationEnabledChanged.connect(restore)
+                    try:
+                        with patch.object(compositor, "requiredBytes", return_value=1024), \
+                                patch.object(session, "createParticleLayer") as factory, \
+                                patch.object(particle, "_InsertionSampler") as sampler, \
+                                patch.object(particle, "QOpenGLFramebufferObject") as framebuffer:
+                            size, dpr = (QSize(32, 32), 2.) if sampling else (QSize(64, 64), 1.)
+                            self.assertFalse(compositor.prepare(host, 1, size, 1., dpr, 4096, True))
+                        factory.assert_not_called()
+                        sampler.assert_not_called()
+                        framebuffer.assert_not_called()
+                        self.assertTrue(all(not source.isGpuAccelerationEnabled() for source in sources))
+                        if isValid(compositor):
+                            self.assertEqual(compositor.layers, [])
+                            self.assertIsNone(compositor.sampler)
+                    finally:
+                        delete(host)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_particle_estimation_rebuild_does_not_restore_invalidated_plan(self):
+        from fluentqt.spatial import SpatialSession
+        from fluentqt_gallery import particle_compositor as particle
+        for geometry in (False, True):
+            for destroyed in (False, True):
+                with self.subTest(geometry=geometry, destroyed=destroyed):
+                    host = QWidget()
+                    session = SpatialSession(host, host)
+                    self.assertTrue(session.activate())
+                    compositor = particle.GalleryParticleCompositor(host, session)
+                    context = QObject(host)
+                    compositor.root = host if geometry else QWidget(host)
+                    compositor.context, compositor.native_dpr = context, 1.
+                    sources = [fluentqt.ParticleBackdrop(host), fluentqt.ParticleBackdrop(host)]
+                    compositor.sources = sources.copy()
+                    compositor.candidates = sources.copy()
+                    compositor.source_rects = [QRect(0, 0, 16, 16), QRect(16, 0, 16, 16)]
+                    compositor.source_clips = compositor.source_rects.copy()
+                    compositor.scanned, compositor.validated = True, False
+                    for source in sources:
+                        source.setGpuAccelerationEnabled(True)
+                        renderer = QObject(compositor)
+                        renderer.isActive = lambda: True
+                        renderer.release = Mock()
+                        compositor.layers.append({"renderer": renderer, "source": source,
+                                                  "previous_acceleration": False, "foreground": None})
+
+                    def restore(enabled):
+                        if not enabled:
+                            delete(session) if destroyed else session.deactivate()
+                            compositor.release()
+
+                    sources[0].gpuAccelerationEnabledChanged.connect(restore)
+                    try:
+                        with patch.object(particle.QOpenGLContext, "currentContext", return_value=context), \
+                                patch.object(particle, "_clipped_rect", return_value=QRect(0, 0, 32, 32)), \
+                                patch.object(particle, "_foreground_widgets", return_value=[]):
+                            self.assertEqual(compositor.requiredBytes(host, 2, QSize(64, 64), 1., 1., True), 0)
+                        self.assertIsNone(compositor.root)
+                        self.assertEqual(compositor.sources, [])
+                        self.assertEqual(compositor.layers, [])
+                        self.assertEqual(compositor.native_required, 0)
+                        self.assertTrue(all(not source.isGpuAccelerationEnabled() for source in sources))
+                    finally:
+                        delete(host)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_gl_limits_delegate_to_shared_native_runtime(self):
         from fluentqt_gallery import spatial_controller as compositor
         with patch.object(compositor, "SpatialRuntime") as runtime:
@@ -733,7 +1156,10 @@ assert {entry.route_id for entry in ENTRIES} == {
     component["id"] for component in CONTRACT["components"] if component["category_id"] != "spatial"}
 assert {route.id for route in ROUTES} == {
     route["id"] for route in CONTRACT["routes"]
-    if route["id"] != "spatial" and route["parent_id"] != "spatial"}
+    if route["id"] not in ("plugins", "spatial") and route["parent_id"] != "spatial"}
+assert len(ROUTES) == 107
+assert "plugins" not in window._main_navigation_pane._route_items
+assert "plugins" not in window._top_main_navigation_pane._buttons
 assert "PySide6.QtOpenGLWidgets" not in sys.modules
 assert "PySide6.QtOpenGL" not in sys.modules
 assert "fluentqt.spatial" not in sys.modules

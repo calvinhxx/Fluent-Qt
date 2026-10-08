@@ -321,6 +321,39 @@ def _component_titles(component_catalog_source: str) -> dict[str, str]:
     return titles
 
 
+def _category_metadata(component_catalog_source: str) -> dict[str, dict[str, object]]:
+    marker = "static const QVector<GalleryComponentCategory> catalog{"
+    marker_index = component_catalog_source.find(marker)
+    if marker_index < 0:
+        raise ValueError("could not find native Gallery category catalog")
+    opening = component_catalog_source.find("{", marker_index)
+    closing = _matching_delimiter(component_catalog_source, opening, "{", "}")
+    body = component_catalog_source[opening + 1:closing]
+    categories = {}
+    cursor = 0
+    while cursor < len(body):
+        opening = body.find("{", cursor)
+        if opening < 0:
+            break
+        closing = _matching_delimiter(body, opening, "{", "}")
+        arguments = _split_arguments(body[opening + 1:closing])
+        if len(arguments) not in (5, 6):
+            raise ValueError("unsupported native Gallery category initializer")
+        category_id = _cpp_string_expression(arguments[0])
+        if category_id in categories:
+            raise ValueError("duplicate native Gallery category: " + category_id)
+        plugin = arguments[5].strip() if len(arguments) == 6 else "false"
+        if plugin not in ("true", "false"):
+            raise ValueError("native Gallery category plugin flag must be a bool literal")
+        categories[category_id] = {
+            "title": _cpp_string_expression(arguments[1]),
+            "plugin": plugin == "true",
+            "components": tuple(_component_titles(arguments[4])),
+        }
+        cursor = closing + 1
+    return categories
+
+
 def _route_descriptions(content_catalog_source: str) -> dict[str, str]:
     marker = "static const QHash<QString, QString> descriptions{"
     marker_index = content_catalog_source.find(marker)
@@ -351,12 +384,14 @@ def _api_type(route_id: str, title: str) -> str:
     }.get(route_id, title)
 
 
-def _component_route(component: dict[str, object]) -> dict[str, object]:
+def _component_route(component: dict[str, object], category: dict[str, object]) -> dict[str, object]:
     return {
         "id": component["id"],
         "title": component["title"],
         "kind": "component",
         "parent_id": component["category_id"],
+        "group": category["title"],
+        "depth": 2 if category["plugin"] else 1,
         "description": component["description"],
     }
 
@@ -371,6 +406,10 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
         encoding="utf-8"
     )
     component_titles = _component_titles(component_source)
+    category_metadata = _category_metadata(component_source)
+    category_sources = {category.id: category for category in CATEGORY_SOURCES}
+    if set(category_metadata) != set(category_sources):
+        raise ValueError("native Gallery categories differ from sample source mappings")
     descriptions = _route_descriptions(content_source)
 
     # Dispatch functions remain grouped by category, while large sample
@@ -393,15 +432,19 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
     components = []
     seen_routes: set[str] = set()
     seen_samples: set[tuple[str, str]] = set()
-    for category in CATEGORY_SOURCES:
+    for category_id, metadata in category_metadata.items():
+        category = category_sources[category_id]
         source = (samples_root / category.source_file).read_text(encoding="utf-8")
         route_functions = _route_sample_functions(source)
-        if category.id == "spatial" and not include_cpp_only:
+        if metadata["plugin"] and not include_cpp_only:
             # Explicit base-only contract for clients without optional modules.
             seen_routes.update(route_functions)
             continue
         category_components = []
-        for route_id, function_name in route_functions.items():
+        if set(route_functions) != set(metadata["components"]):
+            raise ValueError("native Gallery category samples differ from its component catalog: " + category.id)
+        for route_id in metadata["components"]:
+            function_name = route_functions[route_id]
             if route_id in seen_routes:
                 raise ValueError("duplicate native Gallery route: {0}".format(route_id))
             if route_id not in component_titles:
@@ -437,7 +480,8 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
         categories.append(
             {
                 "id": category.id,
-                "title": category.title,
+                "title": metadata["title"],
+                "plugin": metadata["plugin"],
                 "components": category_components,
             }
         )
@@ -455,7 +499,9 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
             "id": category["id"],
             "title": category["title"],
             "kind": "category",
-            "parent_id": "controls",
+            "parent_id": "plugins" if category["plugin"] else "controls",
+            "group": "Plugins" if category["plugin"] else "Controls",
+            "depth": 1 if category["plugin"] else 0,
             "description": descriptions.get(category["id"], ""),
         }
         for category in categories
@@ -465,6 +511,10 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
     non_components_by_id = {route["id"]: dict(route) for route in NON_COMPONENT_ROUTES}
     for route in non_components_by_id.values():
         route["description"] = descriptions.get(route["id"], "")
+        route["group"] = ("Root" if route["id"] == "home" else
+                          "Footer" if route["id"] == "settings" else
+                          "Controls" if route["id"] == "all-controls" else "Foundation")
+        route["depth"] = 1 if route["parent_id"] == "foundation" else 0
     routes.append(non_components_by_id["home"])
     routes.append(non_components_by_id["foundation"])
     for route_id in (
@@ -477,16 +527,32 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
     # FontIcon is a real component nested between Iconography and Geometry.
     routes.append(
         _component_route(
-            next(component for component in components if component["id"] == "font-icon")
+            next(component for component in components if component["id"] == "font-icon"),
+            category_metadata["foundation"],
         )
     )
     routes.append(non_components_by_id["foundation-geometry"])
     routes.append(non_components_by_id["foundation-spacing"])
+    plugin_pages = [page for page in category_pages if page["parent_id"] == "plugins"]
+    if plugin_pages:
+        routes.append({
+            "id": "plugins", "title": "Plugins", "kind": "category", "parent_id": "",
+            "group": "Plugins", "depth": 0, "description": descriptions.get("plugins", ""),
+        })
+        for category_page in plugin_pages:
+            routes.append(category_page)
+            routes.extend(
+                _component_route(component, category_metadata[category_page["id"]])
+                for component in components
+                if component["category_id"] == category_page["id"]
+            )
     routes.append(non_components_by_id["all-controls"])
     for category_page in category_pages:
+        if category_page["parent_id"] == "plugins":
+            continue
         routes.append(category_page)
         routes.extend(
-            _component_route(component)
+            _component_route(component, category_metadata[category_page["id"]])
             for component in components
             if component["category_id"] == category_page["id"]
         )
@@ -512,7 +578,7 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
             .format(", ".join(missing_bindings))
         )
     support_types = sorted(manifest_classes - routed_types)
-    expected_counts = (87, 243, 110) if include_cpp_only else (85, 232, 107)
+    expected_counts = (87, 243, 111) if include_cpp_only else (85, 232, 107)
     for name, actual, expected in zip(
         ("component", "sample", "route"),
         (component_count, sample_count, len(routes)),

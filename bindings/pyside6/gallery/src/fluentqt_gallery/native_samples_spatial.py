@@ -1,7 +1,7 @@
 """Spatial combinations aligned with the canonical C++ Gallery cards.
 
-The complete Python example constructs the live preview. Key usage remains a
-small integration excerpt; the Gallery binds the view to its single Settings mode.
+The complete Python example constructs the live preview. Tracked views follow
+the Gallery's single Settings mode; failed attachment keeps the same cards in 2D.
 """
 
 from textwrap import dedent
@@ -10,7 +10,7 @@ from .native_samples import native_samples, _result, _format_display_source, _st
 from .spatial_support import SpatialPreviewBinding
 
 _IMPORTS = """import fluentqt
-from fluentqt.spatial import SpatialView
+from fluentqt.spatial import SpatialSession, SpatialView
 from PySide6.QtCore import QDate, QPointF, Qt, QTimer, QStringListModel
 from PySide6.QtGui import QVector3D, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
@@ -25,12 +25,24 @@ def _source(body):
 
 
 def _panel(height=340, view_type="SpatialView", camera=1400):
+    creation = ("view = session.createView(panel) if spatial_attached else None\n"
+                "spatial_attached = spatial_attached and view is not None\n"
+                "if view is None:\n"
+                "    view = SpatialView(panel)" if view_type == "SpatialView" else
+                f"view = {view_type}(panel)\n"
+                "spatial_attached = spatial_attached and session.attachView(view)")
+    creation = "\n".join("        " + line for line in creation.splitlines())
     return _source(f"""
         panel = QWidget(globals().get("gallery_parent"))
         column = QVBoxLayout(panel)
         column.setContentsMargins(0, 0, 0, 0)
         column.setSpacing(12)
-        view = {view_type}(panel)
+        session = SpatialSession(panel, panel)
+        spatial_attached = session.activate()
+{creation}
+        if not spatial_attached:
+            view.setRenderMode(SpatialView.RenderMode.Raster)
+            view.setSpatialEnabled(False)
         view.setObjectName("spatialPreviewView")
         view.setFixedHeight({height})
         view.setCameraDistance({camera})
@@ -56,12 +68,19 @@ _POSE = _source("""
     item.setRotation(QVector3D(5, -12, 0))
 """)
 _USAGE = _source("""
-    from fluentqt.spatial import SpatialView
+    from fluentqt.spatial import SpatialSession, SpatialView
     from PySide6.QtCore import QPointF
     from PySide6.QtGui import QVector3D
 
     # card and column are built in Full example.
-    view = SpatialView(panel)
+    session = SpatialSession(panel, panel)
+    spatial_attached = session.activate()
+    view = session.createView(panel) if spatial_attached else None
+    if view is None:
+        spatial_attached = False
+        view = SpatialView(panel)
+        view.setRenderMode(SpatialView.RenderMode.Raster)
+        view.setSpatialEnabled(False)
     column.addWidget(view)
     view.setCameraDistance(1400)
     view.setMaximumTilt(QPointF(4, 6))
@@ -625,7 +644,9 @@ def _register(sample_id, body):
         exec(compile(source, f"<{sample_id}>", "exec"), namespace)
         panel = namespace["panel"]
         panel._fluentqt_gallery_source_namespace = namespace
-        panel._spatial_binding = SpatialPreviewBinding(namespace["view"])
+        panel._spatial_session = namespace["session"]
+        panel._spatial_binding = (SpatialPreviewBinding(namespace["view"], namespace["session"])
+                                  if namespace["spatial_attached"] else None)
         return _result(
             panel, source, "SpatialView", "SpatialItem", source_driven=True,
             display_source=_USAGE_BY_ID.get(sample_id, _USAGE),

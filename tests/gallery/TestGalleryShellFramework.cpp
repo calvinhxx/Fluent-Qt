@@ -2954,6 +2954,108 @@ TEST_F(GalleryShellFrameworkTest, TopFlyoutRowClickDismissesAfterReopen)
     settings.setNavigationStyle(previousStyle);
 }
 
+#ifdef FLUENT_QT_HAS_SPATIAL
+TEST_F(GalleryShellFrameworkTest, PluginNavigationKeepsThreeLevelsInExpandedAndCompactModes)
+{
+    GalleryNavigationViewModel model;
+    GalleryNavigationPane pane(model.mainPaneItems());
+    pane.resize(260, 760);
+    pane.show();
+    pane.setSelectedRouteId(QStringLiteral("spatial-view"));
+    auto* tree = navigationTree(&pane);
+    ASSERT_NE(tree, nullptr);
+    const auto plugins = pane.indexForRouteId(QStringLiteral("plugins"));
+    const auto spatial = pane.indexForRouteId(QStringLiteral("spatial"));
+    const auto view = pane.indexForRouteId(QStringLiteral("spatial-view"));
+    ASSERT_TRUE(plugins.isValid());
+    ASSERT_TRUE(spatial.isValid());
+    ASSERT_TRUE(view.isValid());
+    EXPECT_EQ(spatial.parent(), plugins);
+    EXPECT_EQ(view.parent(), spatial);
+    EXPECT_TRUE(tree->isExpanded(plugins));
+    EXPECT_TRUE(tree->isExpanded(spatial));
+    EXPECT_TRUE(routeVisibleInTree(&pane, QStringLiteral("spatial-view")));
+    tree->setIndicatorMotionAnimationEnabled(false);
+    tree->setSelectionIndicatorVisible(true);
+    pane.setSelectedRouteId(QStringLiteral("spatial"));
+    QApplication::processEvents();
+    EXPECT_NEAR(tree->selectedIndicatorRect(1.0).left(), tree->visualRect(spatial).left() + 23.0,
+                0.01);
+    tree->setFocus();
+    QTest::keyClick(tree, Qt::Key_Down);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return pane.selectedRouteId() == QStringLiteral("spatial-view"); }));
+    EXPECT_EQ(tree->currentIndex(), view);
+    EXPECT_EQ(tree->indicatorMotionCurrentIndex(), view);
+    EXPECT_FALSE(tree->selectedIndicatorRect().isEmpty());
+    EXPECT_NEAR(tree->selectedIndicatorRect().left(), tree->visualRect(view).left() + 68.0, 0.01);
+
+    pane.setCompact(true);
+    pane.setCompactVisualProgress(1.0);
+    QApplication::processEvents();
+    EXPECT_EQ(tree->currentIndex(), plugins);
+    EXPECT_TRUE(routeVisibleInTree(&pane, QStringLiteral("plugins")));
+    QSignalSpy activated(&pane, &GalleryNavigationPane::routeActivated);
+    clickNavigationRoute(&pane, QStringLiteral("plugins"));
+    auto* popup = visiblePopupByName(&pane, QStringLiteral("galleryCompactNavigationFlyout"));
+    ASSERT_NE(popup, nullptr);
+    auto* moduleRow = popup->findChild<QWidget*>("galleryCompactNavigationFlyoutRow_spatial");
+    ASSERT_NE(moduleRow, nullptr);
+    QTest::mouseClick(moduleRow, Qt::LeftButton);
+    ASSERT_TRUE(QTest::qWaitFor([&] {
+        auto* current = visiblePopupByName(&pane, "galleryCompactNavigationFlyout");
+        return current &&
+               current->findChild<QWidget*>("galleryCompactNavigationFlyoutRow_spatial-view");
+    }));
+    popup = visiblePopupByName(&pane, "galleryCompactNavigationFlyout");
+    auto* viewRow = popup->findChild<QWidget*>("galleryCompactNavigationFlyoutRow_spatial-view");
+    ASSERT_NE(viewRow, nullptr);
+    QTest::qWait(200);
+    QTest::mouseClick(viewRow, Qt::LeftButton);
+    ASSERT_FALSE(activated.isEmpty());
+    EXPECT_EQ(activated.last().first().toString(), QStringLiteral("spatial-view"));
+    EXPECT_EQ(pane.selectedRouteId(), QStringLiteral("spatial-view"));
+    EXPECT_EQ(tree->currentIndex(), plugins);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return !visiblePopupByName(&pane, "galleryCompactNavigationFlyout"); }));
+}
+
+TEST_F(GalleryShellFrameworkTest, PluginTopNavigationDrillsDownAndSelectsTheRoot)
+{
+    GalleryNavigationViewModel model;
+    fluent::gallery::GalleryTopNavigationPane pane(model.mainPaneItems());
+    pane.resize(320, 48);
+    pane.setSelectedRouteId(QStringLiteral("spatial-view"));
+    pane.show();
+    QApplication::processEvents();
+    auto* plugins = pane.findChild<Button*>("galleryTopNavigationButton_plugins");
+    ASSERT_NE(plugins, nullptr);
+    EXPECT_TRUE(plugins->isChecked());
+    EXPECT_TRUE(plugins->isVisible());
+    EXPECT_TRUE(pane.rect().contains(plugins->geometry()));
+    EXPECT_EQ(pane.findChild<Button*>("galleryTopNavigationButton_spatial"), nullptr);
+    QSignalSpy activated(&pane, &fluent::gallery::GalleryTopNavigationPane::routeActivated);
+    QTest::mouseClick(plugins, Qt::LeftButton);
+    auto* popup = visiblePopupByName(&pane, "galleryTopNavigationFlyout");
+    ASSERT_NE(popup, nullptr);
+    auto* moduleRow = popup->findChild<QWidget*>("galleryCompactNavigationFlyoutRow_spatial");
+    ASSERT_NE(moduleRow, nullptr);
+    QTest::qWait(200);
+    QTest::mouseClick(moduleRow, Qt::LeftButton);
+    popup = visiblePopupByName(&pane, "galleryTopNavigationFlyout");
+    ASSERT_NE(popup, nullptr);
+    auto* viewRow = popup->findChild<QWidget*>("galleryCompactNavigationFlyoutRow_spatial-view");
+    ASSERT_NE(viewRow, nullptr);
+    QTest::qWait(200);
+    QTest::mouseClick(viewRow, Qt::LeftButton);
+    ASSERT_FALSE(activated.isEmpty());
+    EXPECT_EQ(activated.last().first().toString(), QStringLiteral("spatial-view"));
+    EXPECT_TRUE(plugins->isChecked());
+    EXPECT_EQ(pane.selectedRouteId(), QStringLiteral("spatial-view"));
+    EXPECT_EQ(visiblePopupByName(&pane, "galleryTopNavigationFlyout"), nullptr);
+}
+#endif
+
 TEST_F(GalleryShellFrameworkTest, TopNavigationKeepsActiveCategoryVisibleAndOffersOverflow)
 {
     GalleryNavigationViewModel model;

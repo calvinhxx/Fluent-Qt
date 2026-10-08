@@ -2107,7 +2107,7 @@ def validate(project_root: Path) -> dict[str, int]:
 
     summary = committed["summary"]
     expected_counts = {
-        "route_count": 110,
+        "route_count": 111,
         "component_count": 87,
         "sample_count": 243,
         "guided_component_count": 87,

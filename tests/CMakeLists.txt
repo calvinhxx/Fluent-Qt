@@ -73,7 +73,10 @@ set(FLUENT_QT_CI_FULL_TARGETS
     test_window
 )
 if(TARGET FluentQtSpatial)
-    list(APPEND FLUENT_QT_CI_FULL_TARGETS test_spatial_runtime test_particle_layer)
+    list(APPEND FLUENT_QT_CI_FULL_TARGETS test_spatial_runtime test_spatial_plugin test_particle_layer)
+endif()
+if(TARGET FluentQtPlugins)
+    list(APPEND FLUENT_QT_CI_FULL_TARGETS test_plugin_manager)
 endif()
 if(FLUENT_QT_BUILD_GALLERY)
     list(APPEND FLUENT_QT_CI_FULL_TARGETS

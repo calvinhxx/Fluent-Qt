@@ -87,10 +87,12 @@ from fluentqt_gallery.spatial_support import SPATIAL_AVAILABLE
 
 from fluentqt_gallery.catalog import (
     CATEGORIES,
+    CATEGORY_BY_ID,
     CONTRACT,
     ENTRIES,
     ENTRY_BY_ROUTE_ID,
     ROUTES,
+    ROUTE_BY_ID,
     SAMPLE_BY_KEY,
     SUPPORT_TYPES,
     catalog_coverage_errors,
@@ -445,7 +447,7 @@ class PythonGalleryTest(unittest.TestCase):
         components = [c for c in CONTRACT["components"]
                       if SPATIAL_AVAILABLE or c["category_id"] != "spatial"]
         routes = [r for r in CONTRACT["routes"]
-                  if SPATIAL_AVAILABLE or (r["id"] != "spatial" and r["parent_id"] != "spatial")]
+                  if SPATIAL_AVAILABLE or (r["id"] not in ("plugins", "spatial") and r["parent_id"] != "spatial")]
         categories = [c for c in CONTRACT["categories"]
                       if SPATIAL_AVAILABLE or c["id"] != "spatial"]
         self.assertEqual([(entry.route_id, entry.name) for entry in ENTRIES],
@@ -4618,6 +4620,192 @@ with (
             window.close()
             window.deleteLater()
             QApplication.processEvents()
+
+    def test_plugins_navigation_has_three_levels_and_root_shortcuts(self):
+        window = GalleryWindow(startup_visuals=False)
+        try:
+            pane = window._main_navigation_pane
+            if not SPATIAL_AVAILABLE:
+                self.assertNotIn("plugins", pane._route_items)
+                self.assertNotIn("plugins", window._top_main_navigation_pane._buttons)
+                self.assertEqual(len(ROUTES), 107)
+                return
+            self.assertEqual(len(ROUTES), 111)
+            self.assertTrue(CATEGORY_BY_ID["spatial"].plugin)
+            plugins = pane._route_items["plugins"]
+            spatial = pane._route_items["spatial"]
+            leaf = pane._route_items["spatial-view"]
+            self.assertIsNone(plugins.parent())
+            self.assertIs(spatial.parent(), plugins)
+            self.assertIs(leaf.parent(), spatial)
+            self.assertEqual([plugins.data(Qt.UserRole + 7), spatial.data(Qt.UserRole + 7),
+                              leaf.data(Qt.UserRole + 7)], [0, 1, 2])
+            self.assertEqual(spatial.data(Qt.UserRole + 5), 23)
+            self.assertEqual(leaf.data(Qt.UserRole + 5), 4 + 43 - 3 - 8 + 32)
+            pane.set_compact(False)
+            pane.sync_selected("spatial-view")
+            self.assertTrue(pane._tree.isExpanded(plugins.index()))
+            self.assertTrue(pane._tree.isExpanded(spatial.index()))
+            self.assertEqual(pane._tree.currentIndex().data(Qt.UserRole + 1), "spatial-view")
+            self.assertEqual(pane._tree.selectionIndicatorInset(), 68)
+            pane.sync_selected("spatial")
+            self.assertEqual(pane._tree.selectionIndicatorInset(), 23)
+            pane.sync_selected("spatial-view")
+            pane.set_compact(True)
+            self.assertEqual(pane._tree.currentIndex().data(Qt.UserRole + 1), "plugins")
+            self.assertEqual(pane._tree.selectionIndicatorInset(), 7)
+            top = window._top_main_navigation_pane
+            self.assertNotIn("spatial", top._buttons)
+            top.sync_selected("spatial-item")
+            self.assertTrue(top._buttons["plugins"].isChecked())
+            self.assertEqual(top._buttons["plugins"].text(), "Plugins")
+
+            plugins_page = window._ensure_page("plugins")[1]
+            self.assertEqual([card._route_id for card in plugins_page._gallery_buttons], ["spatial"])
+            headings = [label.text() for label in plugins_page.findChildren(fluentqt.Label)
+                        if label.objectName() == "galleryContentSectionHeader"]
+            self.assertEqual(headings, ["Plugin modules"])
+            all_page = window._ensure_page("all-controls")[1]
+            controls = {card._route_id for card in all_page._gallery_buttons}
+            self.assertNotIn("spatial-view", controls)
+            self.assertNotIn("spatial-item", controls)
+            self.assertIn("button", controls)
+            self.assertIn("font-icon", controls)
+            home = window._ensure_page("home")[1]
+            shortcuts = {card._route_id for card in home._gallery_category_grid.cards}
+            self.assertIn("plugins", shortcuts)
+            self.assertNotIn("spatial", shortcuts)
+            self.assertEqual(shortcuts, {"all-controls", "foundation"} | {
+                route.id for route in ROUTES if route.kind == "category" and route.depth == 0
+            })
+            self.assertEqual(ROUTE_BY_ID["spatial"].parent_id, "plugins")
+        finally:
+            delete_qobject(window)
+
+    def test_plugins_top_and_compact_flyouts_drill_down_from_same_anchor(self):
+        if not SPATIAL_AVAILABLE:
+            self.assertNotIn("plugins", ROUTE_BY_ID)
+            return
+        window = GalleryWindow(startup_visuals=False)
+        window.setFixedSize(1180, 900)
+        window.show()
+        window._navigation_view.setAnimationEnabled(False)
+        QApplication.processEvents()
+        try:
+            window._apply_navigation_style(gallery_settings_module.NavigationStyle.Left)
+            window.navigate("spatial", animated=False)
+            pane = window._main_navigation_pane
+            tree = pane._tree
+            tree.expand(pane._route_items["spatial"].index())
+            # Select the child immediately while the subtree reveal is running.
+            tree.setFocus()
+            QTest.keyClick(tree, Qt.Key_Down)
+            self.assertTrue(_wait_until(lambda: window.current_route == "spatial-view"),
+                            f"Keyboard route={window.current_route}, current={tree.currentIndex().data(Qt.UserRole + 1)}, compact={pane._compact}")
+            self.assertTrue(_wait_until(lambda: not tree.selectedIndicatorRect().isEmpty()),
+                            f"Keyboard selection={tree.selectionModel().isSelected(tree.currentIndex())}, current={tree.currentIndex().data(Qt.UserRole + 1)}, rect={tree.visualRect(tree.currentIndex())}")
+            self.assertTrue(tree.selectionModel().isSelected(pane._route_items["spatial-view"].index()))
+            window._set_navigation_style(1)
+            QApplication.processEvents()
+            top = window._top_main_navigation_pane
+            anchor = top._buttons["plugins"]
+            QTest.mouseClick(anchor, Qt.LeftButton)
+            self.assertTrue(_wait_until(lambda: top._child_flyout is not None))
+            rows = top._child_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
+            self.assertEqual([row._route_id for row in rows], ["spatial"])
+            QTest.mouseClick(rows[0], Qt.LeftButton, pos=rows[0].rect().center())
+            self.assertTrue(_wait_until(lambda: top._child_flyout_panel is not None
+                                       and len(top._child_flyout_panel.findChildren(
+                                           QWidget, options=Qt.FindDirectChildrenOnly)) == 2))
+            self.assertIs(top._child_flyout_anchor, anchor)
+            rows = top._child_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
+            self.assertEqual([row._route_id for row in rows], ["spatial-view", "spatial-item"])
+            QTest.mouseClick(rows[0], Qt.LeftButton, pos=rows[0].rect().center())
+            self.assertTrue(_wait_until(lambda: window.current_route == "spatial-view"))
+            self.assertIsNone(top._child_flyout)
+            self.assertTrue(anchor.isChecked())
+            self.assertEqual(anchor.text(), "Plugins")
+            top._show_child_flyout("plugins", anchor)
+            rows = top._child_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
+            self.assertTrue(rows[0]._selected)
+            top._close_child_flyout(False)
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+
+            window.setFixedSize(800, 900)
+            window._set_navigation_style(0)
+            QApplication.processEvents()
+            pane = window._main_navigation_pane
+            self.assertTrue(pane._compact)
+            pane._activate_index(pane._route_items["plugins"].index())
+            self.assertTrue(_wait_until(lambda: pane._compact_flyout_panel is not None))
+            rows = pane._compact_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
+            self.assertEqual([row._route_id for row in rows], ["spatial"])
+            anchor_geometry = pane._compact_flyout_anchor.geometry()
+            QTest.mouseClick(rows[0], Qt.LeftButton, pos=rows[0].rect().center())
+            self.assertTrue(_wait_until(lambda: pane._compact_flyout_panel is not None
+                                       and len(pane._compact_flyout_panel.findChildren(
+                                           QWidget, options=Qt.FindDirectChildrenOnly)) == 2))
+            self.assertEqual(pane._compact_flyout_anchor.geometry(), anchor_geometry)
+            rows = pane._compact_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
+            self.assertEqual([row._route_id for row in rows], ["spatial-view", "spatial-item"])
+            QTest.mouseClick(rows[1], Qt.LeftButton, pos=rows[1].rect().center())
+            self.assertTrue(_wait_until(lambda: window.current_route == "spatial-item"
+                                       and pane._compact_flyout is None))
+            self.assertEqual(pane._tree.currentIndex().data(Qt.UserRole + 1), "plugins")
+            pane._show_compact_flyout(pane._route_items["plugins"].index())
+            rows = pane._compact_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
+            self.assertTrue(rows[0]._selected)
+        finally:
+            delete_qobject(window)
+
+    def test_top_navigation_labels_and_overflow_keep_active_plugins_visible(self):
+        window = GalleryWindow(startup_visuals=False)
+        window.setFixedSize(760, 640)
+        window.show()
+        window._navigation_view.setAnimationEnabled(False)
+        QApplication.processEvents()
+        try:
+            window._set_navigation_style(1)
+            QApplication.processEvents()
+            top = window._top_main_navigation_pane
+            selected = "spatial-view" if SPATIAL_AVAILABLE else "button"
+            root = "plugins" if SPATIAL_AVAILABLE else "basic-input"
+            stable_size = top.sizeHint()
+            top.sync_selected(selected)
+            self.assertEqual(top.sizeHint(), stable_size)
+            self.assertEqual(top.minimumSizeHint(), QSize(52, 48))
+            self.assertEqual(top.layout().contentsMargins(), QMargins(8, 6, 8, 6))
+            self.assertEqual(top._buttons["home"].text(), "Home")
+            self.assertEqual(window._top_footer_navigation_pane._buttons["settings"].text(), "Settings")
+            self.assertEqual(top._buttons[root].text(), ROUTE_BY_ID[root].title)
+            self.assertTrue(top._buttons[root].isChecked())
+            self.assertFalse(top._buttons[root].isHidden())
+            self.assertFalse(top._buttons["home"].isHidden())
+            self.assertTrue(top._more_button.isVisible())
+            for route_id, button in top._buttons.items():
+                self.assertEqual(button.height(), 36)
+                if route_id not in (root, "home"):
+                    self.assertEqual(button.text(), "")
+                if not button.isHidden():
+                    self.assertLessEqual(button.geometry().right(), top.rect().right())
+            hidden = [route_id for route_id, button in top._buttons.items() if button.isHidden()]
+            self.assertEqual([route_id for route_id, _title in top._children["overflow"]], hidden)
+            target = next(route_id for route_id in hidden if top._children.get(route_id))
+            QTest.mouseClick(top._more_button, Qt.LeftButton)
+            self.assertTrue(_wait_until(lambda: top._child_flyout_panel is not None))
+            row = top._child_flyout_panel.findChild(QWidget, "galleryCompactNavigationFlyoutRow_" + target)
+            self.assertIsNotNone(row)
+            QTest.mouseClick(row, Qt.LeftButton, pos=row.rect().center())
+            self.assertTrue(_wait_until(lambda: window.current_route == target
+                                       and top._child_flyout_panel is not None))
+            self.assertTrue(top._buttons[target].isChecked())
+            self.assertFalse(top._buttons[target].isHidden())
+            self.assertEqual(top._buttons[target].text(), ROUTE_BY_ID[target].title)
+            rows = top._child_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
+            self.assertEqual([row._route_id for row in rows],
+                             [route_id for route_id, _title in top._children[target]])
+        finally:
+            delete_qobject(window)
 
     def test_top_navigation_uses_native_icon_bar_and_child_flyout(self):
         window = GalleryWindow()

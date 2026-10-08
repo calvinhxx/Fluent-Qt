@@ -9,21 +9,40 @@ namespace fluentqt::hello_world {
 std::unique_ptr<fluent::windowing::Window> createWindow()
 {
     auto window = std::make_unique<fluent::windowing::Window>();
+    window->setObjectName(QStringLiteral("helloWorldSpatialWindow"));
     window->setWindowTitle(QStringLiteral("FluentQt Hello World — 3D"));
     window->resize(720, 520);
 
+    auto* session = new fluent::spatial::SpatialSession(window.get(), window.get());
+    const bool activated = session->activate();
+    if (activated)
+        session->prepareWindow(window.get());
+
     auto* card = new fluent::layout::Card;
+    card->setObjectName(QStringLiteral("helloWorldSpatialCard"));
     card->setFixedSize(320, 200);
     auto* layout = new QVBoxLayout(card);
     layout->setContentsMargins(32, 32, 32, 32);
 
     auto* button = new fluent::basicinput::Button(QStringLiteral("Hello from FluentQt"), card);
+    button->setObjectName(QStringLiteral("helloWorldButton"));
     button->setFluentStyle(fluent::basicinput::Button::Accent);
     QObject::connect(button, &fluent::basicinput::Button::clicked, button,
                      [button] { button->setText(QStringLiteral("Hello, you!")); });
     layout->addWidget(button, 0, Qt::AlignCenter);
 
-    auto* view = new fluent::spatial::SpatialView;
+    auto* view = activated ? session->createView(window.get()) : nullptr;
+    if (!view) {
+        session->deactivate();
+        auto* content = new QWidget;
+        content->setObjectName(QStringLiteral("helloWorldSpatialFallback"));
+        auto* center = new QVBoxLayout(content);
+        center->setContentsMargins(0, 0, 0, 0);
+        center->addWidget(card, 0, Qt::AlignCenter);
+        window->setContentWidget(content);
+        return window;
+    }
+    view->setObjectName(QStringLiteral("helloWorldSpatialView"));
     auto* item = view->addWidget(card, fluent::WidgetOwnership::Owned);
     item->setRotation(QVector3D(6, -12, 0));
     item->setSurfaceIntensity(0.6);
