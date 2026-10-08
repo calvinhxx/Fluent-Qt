@@ -188,6 +188,7 @@
         "id": { "$ref": "#/$defs/nonEmptyString" },
         "title": { "$ref": "#/$defs/nonEmptyString" },
         "components": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "plugin": { "type": "boolean" },
         "cpp_header": { "$ref": "#/$defs/nonEmptyString" },
         "python_module": { "type": ["string", "null"], "minLength": 1 }
       }
@@ -307,6 +308,8 @@
         "title": { "$ref": "#/$defs/nonEmptyString" },
         "kind": { "$ref": "#/$defs/nonEmptyString" },
         "parent_id": { "type": "string" },
+        "group": { "$ref": "#/$defs/nonEmptyString" },
+        "depth": { "type": "integer", "minimum": 0 },
         "description": { "type": "string" }
       }
     },

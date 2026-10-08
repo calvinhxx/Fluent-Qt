@@ -1,12 +1,14 @@
 #include "SpatialSamples.h"
 #include "SampleBuilders.h"
 #include "CollectionSampleDelegates.h"
+#include "SpatialPreviewSupport.h"
 #include <FluentQt/FluentQt.h>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
 #include <QStringListModel>
 #include <QStandardItemModel>
+#include <QPointer>
 #include <QTimer>
 #include "viewmodel/GallerySettings.h"
 
@@ -14,40 +16,7 @@ namespace fluent::gallery {
 namespace {
 using samples::makeSample;
 
-// Gallery owns one mode; SpatialView owns rendering and visibility adaptation.
-// zh_CN: Gallery 统一管理模式，SpatialView 自行适配渲染后端和可见性。
-class SpatialPreviewBinding final : public QObject {
-public:
-    explicit SpatialPreviewBinding(QWidget* panel) : QObject(panel)
-    {
-        auto* view = panel->findChild<spatial::SpatialView*>("spatialPreviewView");
-        // Maintenance previews use an explicit local state without loading user preferences.
-        // zh_CN: 维护预览使用显式局部状态，不加载用户偏好。
-        if (panel->window()->property("galleryPreviewRouteId").isValid()) {
-            view->setSpatialEnabled(false);
-            return;
-        }
-        auto& settings = GallerySettings::instance();
-        const auto synchronize = [this, view, &settings] {
-            m_synchronizing = true;
-            view->setSpatialEnabled(settings.spatialAvailable() && settings.spatialModeEnabled());
-            m_synchronizing = false;
-        };
-        connect(&settings, &GallerySettings::spatialModeEnabledChanged, this, synchronize);
-        connect(&settings, &GallerySettings::spatialAvailabilityChanged, this, synchronize);
-        connect(view, &spatial::SpatialView::spatialEnabledChanged, this,
-                [this, &settings](bool enabled) {
-                    // Tab/Escape can restore native input. Keep the whole Gallery in that mode.
-                    // zh_CN: Tab/Escape 可恢复原生输入，Gallery 同步回到同一模式。
-                    if (!m_synchronizing && !enabled)
-                        settings.setSpatialModeEnabled(false);
-                });
-        synchronize();
-    }
-
-private:
-    bool m_synchronizing = false;
-};
+using samples::SpatialPreviewBinding;
 
 // Show the small Spatial integration first; keep the complete preview source available.
 // zh_CN: 优先展示简短的 Spatial 接入代码，完整预览源码仍可按需查看。
@@ -104,7 +73,15 @@ QString spatialUsage(const QString& id)
     if (id == QStringLiteral("spatial-view-tree"))
         return QStringLiteral("using namespace fluent;\n"
                               "// card and the surrounding layout are built in Full example.\n"
-                              "auto* view = new spatial::SpatialView(panel);\n"
+                              "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                              "spatial::SpatialView* view = nullptr;\n"
+                              "if (session->activate())\n"
+                              "    view = session->createView(panel);\n"
+                              "if (!view) {\n"
+                              "    view = new spatial::SpatialView(panel);\n"
+                              "    view->setSpatialEnabled(false);\n"
+                              "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                              "}\n"
                               "column->addWidget(view);\n"
                               "view->setCameraDistance(1400);\n"
                               "view->setMaximumTilt(QPointF(4, 6));\n"
@@ -117,7 +94,15 @@ QString spatialUsage(const QString& id)
         return QStringLiteral(
             "using namespace fluent;\n"
             "// card and the surrounding layout are built in Full example.\n"
-            "auto* view = new spatial::SpatialView(panel);\n"
+            "auto* session = new spatial::SpatialSession(panel, panel);\n"
+            "spatial::SpatialView* view = nullptr;\n"
+            "if (session->activate())\n"
+            "    view = session->createView(panel);\n"
+            "if (!view) {\n"
+            "    view = new spatial::SpatialView(panel);\n"
+            "    view->setSpatialEnabled(false);\n"
+            "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+            "}\n"
             "column->addWidget(view);\n"
             "view->setCameraDistance(1400);\n"
             "view->setMaximumTilt(QPointF(4, 6));\n"
@@ -130,7 +115,15 @@ QString spatialUsage(const QString& id)
         return QStringLiteral(
             "using namespace fluent;\n"
             "// card and the surrounding layout are built in Full example.\n"
-            "auto* view = new spatial::SpatialView(panel);\n"
+            "auto* session = new spatial::SpatialSession(panel, panel);\n"
+            "spatial::SpatialView* view = nullptr;\n"
+            "if (session->activate())\n"
+            "    view = session->createView(panel);\n"
+            "if (!view) {\n"
+            "    view = new spatial::SpatialView(panel);\n"
+            "    view->setSpatialEnabled(false);\n"
+            "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+            "}\n"
             "column->addWidget(view);\n"
             "view->setCameraDistance(1400);\n"
             "view->setMaximumTilt(QPointF(4, 6));\n"
@@ -141,7 +134,15 @@ QString spatialUsage(const QString& id)
             "// The LineEdit stays outside view; its textChanged signal updates card.\n");
     return QStringLiteral("using namespace fluent;\n"
                           "// card and the surrounding layout are built in Full example.\n"
-                          "auto* view = new spatial::SpatialView(panel);\n"
+                          "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                          "spatial::SpatialView* view = nullptr;\n"
+                          "if (session->activate())\n"
+                          "    view = session->createView(panel);\n"
+                          "if (!view) {\n"
+                          "    view = new spatial::SpatialView(panel);\n"
+                          "    view->setSpatialEnabled(false);\n"
+                          "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                          "}\n"
                           "column->addWidget(view);\n"
                           "view->setCameraDistance(1400);\n"
                           "view->setMaximumTilt(QPointF(4, 6));\n"
@@ -183,7 +184,13 @@ QVector<GallerySample> spatialViewSamples()
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(16);\n"
+                "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                "const bool active = session->activate();\n"
                 "auto* view = new SceneView(panel);\n"
+                "if (!active || !session->attachView(view)) {\n"
+                "    view->setSpatialEnabled(false);\n"
+                "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                "}\n"
                 "view->setObjectName(\"spatialPreviewView\");\n"
                 "view->setFixedHeight(400);\n"
                 "view->setCameraDistance(1200);\n"
@@ -323,7 +330,10 @@ QVector<GallerySample> spatialViewSamples()
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(16);
-                auto* view = new SceneView(panel);
+                auto* session = new spatial::SpatialSession(panel, panel);
+                const auto preview =
+                    samples::createAttachedSpatialPreview<SceneView>(session, panel);
+                auto* view = preview.view;
                 view->setObjectName("spatialPreviewView");
                 view->setFixedHeight(400);
                 view->setCameraDistance(1200);
@@ -431,7 +441,7 @@ QVector<GallerySample> spatialViewSamples()
                                  updateAvailability);
                 updateAvailability();
 
-                new SpatialPreviewBinding(panel);
+                new SpatialPreviewBinding(panel, preview.attached);
                 return panel;
             },
             true),
@@ -444,7 +454,15 @@ QVector<GallerySample> spatialViewSamples()
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
-                "auto* view = new spatial::SpatialView(panel);\n"
+                "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                "spatial::SpatialView* view = nullptr;\n"
+                "if (session->activate())\n"
+                "    view = session->createView(panel);\n"
+                "if (!view) {\n"
+                "    view = new spatial::SpatialView(panel);\n"
+                "    view->setSpatialEnabled(false);\n"
+                "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                "}\n"
                 "view->setObjectName(\"spatialPreviewView\");\n"
                 "view->setFixedHeight(340);\n"
                 "view->setCameraDistance(1400);\n"
@@ -503,7 +521,9 @@ QVector<GallerySample> spatialViewSamples()
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
-                auto* view = new spatial::SpatialView(panel);
+                auto* session = new spatial::SpatialSession(panel, panel);
+                const auto preview = samples::createSpatialPreview(session, panel);
+                auto* view = preview.view;
                 view->setObjectName("spatialPreviewView");
                 view->setFixedHeight(340);
                 view->setCameraDistance(1400);
@@ -555,7 +575,7 @@ QVector<GallerySample> spatialViewSamples()
                 front->setHoverLift(4.5);
                 front->setPosition(QVector3D(110, 64, 100));
                 front->setRotation(QVector3D(-6, -14, 0));
-                new SpatialPreviewBinding(panel);
+                new SpatialPreviewBinding(panel, preview.attached);
                 return panel;
             },
             true),
@@ -567,7 +587,15 @@ QVector<GallerySample> spatialViewSamples()
                            "auto* column = new QVBoxLayout(panel);\n"
                            "column->setContentsMargins(0, 0, 0, 0);\n"
                            "column->setSpacing(12);\n"
-                           "auto* view = new spatial::SpatialView(panel);\n"
+                           "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                           "spatial::SpatialView* view = nullptr;\n"
+                           "if (session->activate())\n"
+                           "    view = session->createView(panel);\n"
+                           "if (!view) {\n"
+                           "    view = new spatial::SpatialView(panel);\n"
+                           "    view->setSpatialEnabled(false);\n"
+                           "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                           "}\n"
                            "view->setObjectName(\"spatialPreviewView\");\n"
                            "view->setFixedHeight(340);\n"
                            "view->setCameraDistance(1400);\n"
@@ -618,7 +646,9 @@ QVector<GallerySample> spatialViewSamples()
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
-                auto* view = new spatial::SpatialView(panel);
+                auto* session = new spatial::SpatialSession(panel, panel);
+                const auto preview = samples::createSpatialPreview(session, panel);
+                auto* view = preview.view;
                 view->setObjectName("spatialPreviewView");
                 view->setFixedHeight(340);
                 view->setCameraDistance(1400);
@@ -663,7 +693,7 @@ QVector<GallerySample> spatialViewSamples()
                 item->setSurfaceIntensity(0.75);
                 item->setHoverLift(4.5);
                 item->setRotation(QVector3D(5, -12, 0));
-                new SpatialPreviewBinding(panel);
+                new SpatialPreviewBinding(panel, preview.attached);
                 return panel;
             },
             true),
@@ -676,7 +706,15 @@ QVector<GallerySample> spatialViewSamples()
                            "auto* column = new QVBoxLayout(panel);\n"
                            "column->setContentsMargins(0, 0, 0, 0);\n"
                            "column->setSpacing(12);\n"
-                           "auto* view = new spatial::SpatialView(panel);\n"
+                           "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                           "spatial::SpatialView* view = nullptr;\n"
+                           "if (session->activate())\n"
+                           "    view = session->createView(panel);\n"
+                           "if (!view) {\n"
+                           "    view = new spatial::SpatialView(panel);\n"
+                           "    view->setSpatialEnabled(false);\n"
+                           "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                           "}\n"
                            "view->setObjectName(\"spatialPreviewView\");\n"
                            "view->setFixedHeight(340);\n"
                            "view->setCameraDistance(1400);\n"
@@ -731,7 +769,9 @@ QVector<GallerySample> spatialViewSamples()
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
-                auto* view = new spatial::SpatialView(panel);
+                auto* session = new spatial::SpatialSession(panel, panel);
+                const auto preview = samples::createSpatialPreview(session, panel);
+                auto* view = preview.view;
                 view->setObjectName("spatialPreviewView");
                 view->setFixedHeight(340);
                 view->setCameraDistance(1400);
@@ -781,7 +821,7 @@ QVector<GallerySample> spatialViewSamples()
                 item->setSurfaceIntensity(0.75);
                 item->setHoverLift(4.5);
                 item->setRotation(QVector3D(5, -12, 0));
-                new SpatialPreviewBinding(panel);
+                new SpatialPreviewBinding(panel, preview.attached);
                 return panel;
             },
             true),
@@ -795,7 +835,15 @@ QVector<GallerySample> spatialViewSamples()
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
-                "auto* view = new spatial::SpatialView(panel);\n"
+                "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                "spatial::SpatialView* view = nullptr;\n"
+                "if (session->activate())\n"
+                "    view = session->createView(panel);\n"
+                "if (!view) {\n"
+                "    view = new spatial::SpatialView(panel);\n"
+                "    view->setSpatialEnabled(false);\n"
+                "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                "}\n"
                 "view->setObjectName(\"spatialPreviewView\");\n"
                 "view->setFixedHeight(380);\n"
                 "view->setZoom(0.82);\n"
@@ -832,7 +880,9 @@ QVector<GallerySample> spatialViewSamples()
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
-                auto* view = new spatial::SpatialView(panel);
+                auto* session = new spatial::SpatialSession(panel, panel);
+                const auto preview = samples::createSpatialPreview(session, panel);
+                auto* view = preview.view;
                 view->setObjectName("spatialPreviewView");
                 view->setFixedHeight(380);
                 view->setZoom(0.82);
@@ -863,7 +913,7 @@ QVector<GallerySample> spatialViewSamples()
                 item->setSurfaceIntensity(0.75);
                 item->setHoverLift(4.5);
                 item->setRotation(QVector3D(5, -12, 0));
-                new SpatialPreviewBinding(panel);
+                new SpatialPreviewBinding(panel, preview.attached);
                 return panel;
             },
             true),
@@ -878,7 +928,15 @@ QVector<GallerySample> spatialViewSamples()
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
-                "auto* view = new spatial::SpatialView(panel);\n"
+                "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                "spatial::SpatialView* view = nullptr;\n"
+                "if (session->activate())\n"
+                "    view = session->createView(panel);\n"
+                "if (!view) {\n"
+                "    view = new spatial::SpatialView(panel);\n"
+                "    view->setSpatialEnabled(false);\n"
+                "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                "}\n"
                 "view->setObjectName(\"spatialPreviewView\");\n"
                 "view->setFixedHeight(340);\n"
                 "view->setCameraDistance(1400);\n"
@@ -941,7 +999,9 @@ QVector<GallerySample> spatialViewSamples()
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
-                auto* view = new spatial::SpatialView(panel);
+                auto* session = new spatial::SpatialSession(panel, panel);
+                const auto preview = samples::createSpatialPreview(session, panel);
+                auto* view = preview.view;
                 view->setObjectName("spatialPreviewView");
                 view->setFixedHeight(340);
                 view->setCameraDistance(1400);
@@ -998,7 +1058,7 @@ QVector<GallerySample> spatialViewSamples()
                 item->setSurfaceIntensity(0.75);
                 item->setHoverLift(4.5);
                 item->setRotation(QVector3D(5, -12, 0));
-                new SpatialPreviewBinding(panel);
+                new SpatialPreviewBinding(panel, preview.attached);
                 return panel;
             },
             true),
@@ -1011,7 +1071,15 @@ QVector<GallerySample> spatialViewSamples()
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
-                "auto* view = new spatial::SpatialView(panel);\n"
+                "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                "spatial::SpatialView* view = nullptr;\n"
+                "if (session->activate())\n"
+                "    view = session->createView(panel);\n"
+                "if (!view) {\n"
+                "    view = new spatial::SpatialView(panel);\n"
+                "    view->setSpatialEnabled(false);\n"
+                "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                "}\n"
                 "view->setObjectName(\"spatialPreviewView\");\n"
                 "view->setFixedHeight(380);\n"
                 "view->setCameraDistance(1400);\n"
@@ -1064,7 +1132,9 @@ QVector<GallerySample> spatialViewSamples()
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
-                auto* view = new spatial::SpatialView(panel);
+                auto* session = new spatial::SpatialSession(panel, panel);
+                const auto preview = samples::createSpatialPreview(session, panel);
+                auto* view = preview.view;
                 view->setObjectName("spatialPreviewView");
                 view->setFixedHeight(380);
                 view->setCameraDistance(1400);
@@ -1115,7 +1185,7 @@ QVector<GallerySample> spatialViewSamples()
                 item->setSurfaceIntensity(0.75);
                 item->setHoverLift(4.5);
                 item->setRotation(QVector3D(5, -12, 0));
-                new SpatialPreviewBinding(panel);
+                new SpatialPreviewBinding(panel, preview.attached);
                 return panel;
             },
             true),
@@ -1130,7 +1200,15 @@ QVector<GallerySample> spatialViewSamples()
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
-                "auto* view = new spatial::SpatialView(panel);\n"
+                "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                "spatial::SpatialView* view = nullptr;\n"
+                "if (session->activate())\n"
+                "    view = session->createView(panel);\n"
+                "if (!view) {\n"
+                "    view = new spatial::SpatialView(panel);\n"
+                "    view->setSpatialEnabled(false);\n"
+                "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                "}\n"
                 "view->setObjectName(\"spatialPreviewView\");\n"
                 "view->setFixedHeight(356);\n"
                 "view->setCameraDistance(1400);\n"
@@ -1187,7 +1265,9 @@ QVector<GallerySample> spatialViewSamples()
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
-                auto* view = new spatial::SpatialView(panel);
+                auto* session = new spatial::SpatialSession(panel, panel);
+                const auto preview = samples::createSpatialPreview(session, panel);
+                auto* view = preview.view;
                 view->setObjectName("spatialPreviewView");
                 view->setFixedHeight(356);
                 view->setCameraDistance(1400);
@@ -1240,7 +1320,7 @@ QVector<GallerySample> spatialViewSamples()
                 item->setHoverLift(4.5);
                 item->setRotation(QVector3D(5, -12, 0));
 
-                new SpatialPreviewBinding(panel);
+                new SpatialPreviewBinding(panel, preview.attached);
                 return panel;
             },
             true),
@@ -1254,7 +1334,15 @@ QVector<GallerySample> spatialViewSamples()
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
-                "auto* view = new spatial::SpatialView(panel);\n"
+                "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                "spatial::SpatialView* view = nullptr;\n"
+                "if (session->activate())\n"
+                "    view = session->createView(panel);\n"
+                "if (!view) {\n"
+                "    view = new spatial::SpatialView(panel);\n"
+                "    view->setSpatialEnabled(false);\n"
+                "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                "}\n"
                 "view->setObjectName(\"spatialPreviewView\");\n"
                 "view->setFixedHeight(380);\n"
                 "view->setCameraDistance(1400);\n"
@@ -1298,7 +1386,9 @@ QVector<GallerySample> spatialViewSamples()
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
-                auto* view = new spatial::SpatialView(panel);
+                auto* session = new spatial::SpatialSession(panel, panel);
+                const auto preview = samples::createSpatialPreview(session, panel);
+                auto* view = preview.view;
                 view->setObjectName("spatialPreviewView");
                 view->setFixedHeight(380);
                 view->setCameraDistance(1400);
@@ -1337,7 +1427,7 @@ QVector<GallerySample> spatialViewSamples()
                 item->setSurfaceIntensity(0.75);
                 item->setHoverLift(4.5);
                 item->setRotation(QVector3D(5, -12, 0));
-                new SpatialPreviewBinding(panel);
+                new SpatialPreviewBinding(panel, preview.attached);
                 return panel;
             },
             true),
@@ -1350,7 +1440,15 @@ QVector<GallerySample> spatialViewSamples()
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
-                "auto* view = new spatial::SpatialView(panel);\n"
+                "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                "spatial::SpatialView* view = nullptr;\n"
+                "if (session->activate())\n"
+                "    view = session->createView(panel);\n"
+                "if (!view) {\n"
+                "    view = new spatial::SpatialView(panel);\n"
+                "    view->setSpatialEnabled(false);\n"
+                "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                "}\n"
                 "view->setObjectName(\"spatialPreviewView\");\n"
                 "view->setFixedHeight(276);\n"
                 "view->setCameraDistance(1400);\n"
@@ -1421,7 +1519,9 @@ QVector<GallerySample> spatialViewSamples()
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
-                auto* view = new spatial::SpatialView(panel);
+                auto* session = new spatial::SpatialSession(panel, panel);
+                const auto preview = samples::createSpatialPreview(session, panel);
+                auto* view = preview.view;
                 view->setObjectName("spatialPreviewView");
                 view->setFixedHeight(276);
                 view->setCameraDistance(1400);
@@ -1488,7 +1588,7 @@ QVector<GallerySample> spatialViewSamples()
                 toolbar->addWidget(formats);
                 column->insertLayout(0, toolbar);
 
-                new SpatialPreviewBinding(panel);
+                new SpatialPreviewBinding(panel, preview.attached);
                 return panel;
             },
             true)};
@@ -1537,7 +1637,13 @@ QVector<GallerySample> spatialItemSamples()
             "auto* column = new QVBoxLayout(panel);\n"
             "column->setContentsMargins(0, 0, 0, 0);\n"
             "column->setSpacing(12);\n"
+            "auto* session = new spatial::SpatialSession(panel, panel);\n"
+            "const bool active = session->activate();\n"
             "auto* view = new WorkbenchView(panel);\n"
+            "if (!active || !session->attachView(view)) {\n"
+            "    view->setSpatialEnabled(false);\n"
+            "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+            "}\n"
             "view->setObjectName(\"spatialPreviewView\");\n"
             "view->setCameraDistance(1400);\n"
             "view->setZoom(0.92);\n"
@@ -1652,7 +1758,10 @@ QVector<GallerySample> spatialItemSamples()
             auto* column = new QVBoxLayout(panel);
             column->setContentsMargins(0, 0, 0, 0);
             column->setSpacing(12);
-            auto* view = new WorkbenchView(panel);
+            auto* session = new spatial::SpatialSession(panel, panel);
+            const auto preview =
+                samples::createAttachedSpatialPreview<WorkbenchView>(session, panel);
+            auto* view = preview.view;
             view->setObjectName("spatialPreviewView");
             view->setCameraDistance(1400);
             view->setZoom(0.92);
@@ -1734,7 +1843,7 @@ QVector<GallerySample> spatialItemSamples()
                              [view] { view->arrange(); });
             view->arrange();
 
-            new SpatialPreviewBinding(panel);
+            new SpatialPreviewBinding(panel, preview.attached);
             return panel;
         },
         true)};

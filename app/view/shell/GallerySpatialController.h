@@ -18,7 +18,8 @@ namespace fluent::gallery {
 class GallerySpatialController final : public QObject {
     Q_OBJECT
 public:
-    // Install the Cocoa paint adapter before building pages, without creating a GPU context.
+    // Activate a short Spatial session to install native painting before building pages.
+    // Hardware probing and GPU creation remain deferred to the controller's active session.
     static void prepareApplicationStyle();
     GallerySpatialController(QWidget* window, fluent::navigation::NavigationView* navigation);
     ~GallerySpatialController() override;

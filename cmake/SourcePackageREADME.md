@@ -13,7 +13,8 @@ Requirements:
 - C++17
 - CMake 3.16+
 - Qt Widgets 5.15+ or 6.2+
-- Optional Spatial: enable `FLUENT_QT_BUILD_SPATIAL=ON` and link `FluentQt::Spatial`; Qt 6 requires OpenGLWidgets, Qt 5 requires QOpenGLWidget support
+- Optional Plugins: enable `FLUENT_QT_BUILD_PLUGINS=ON` and link `FluentQt::Plugins`; uses the existing Qt Widgets dependencies
+- Optional Spatial: enable `FLUENT_QT_BUILD_SPATIAL=ON` and link `FluentQt::Spatial`; includes Plugins automatically; Qt 6 requires OpenGLWidgets, Qt 5 requires QOpenGLWidget support
 
 WebAssembly consumers use the narrower browser baseline: Qt 6.9.3
 `wasm_singlethread` with Emscripten 3.1.70. Configure with
@@ -35,6 +36,24 @@ disabled and build only the library. The included
 `examples/hello_world` project demonstrates both in-tree and installed-package
 integration. Interactive component demonstrations are maintained in the Gallery
 in the full repository.
+
+The optional Plugins module manages linked C++ extension objects, including
+registration, dependency-ordered activation, cleanup, and an optional QWidget
+factory interface. It does not load shared libraries. Matched PySide6 builds
+expose `fluentqt.plugins`; WebAssembly compiles the same C++ lifecycle into the
+application. Its public `<FluentQt/Plugins.h>` header and the included
+`examples/plugin_extension` project describe the lifecycle and in-tree or
+installed-package integration. With `FLUENT_QT_BUILD_PLUGINS=ON` and examples
+enabled, build the `fluentqt_plugin_extension` target. Future concrete
+extensions keep their additional dependencies in separate targets.
+
+Spatial uses that plugin lifecycle through `SpatialSession`, available in C++
+and Spatial-enabled PySide6 builds. Activate the session before creating or
+attaching views. Deactivation returns tracked views to native 2D and releases
+Spatial resources while retaining caller widgets and models. Requesting the
+installed SDK's `Spatial` component loads Plugins automatically; a base-package
+request loads neither Plugins nor the additional OpenGL modules. The included
+`examples/hello_world` Spatial variant demonstrates the session entry.
 
 Before changing a consumer, run the bundled local preflight. It performs no
 network requests and configures its Qt Widgets probe in a temporary directory:

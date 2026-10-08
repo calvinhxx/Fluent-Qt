@@ -76,8 +76,13 @@ def verify_runtime_catalog(contract, categories, entries, routes, support_types,
                            if spatial_available or c["id"] != "spatial"]
     expected_components = [c for c in contract["components"]
                            if spatial_available or c["category_id"] != "spatial"]
-    expected_routes = [r["id"] for r in contract["routes"]
-                       if spatial_available or (r["id"] != "spatial" and r["parent_id"] != "spatial")]
+    hidden = {c["id"] for c in contract["categories"] if c["id"] not in expected_categories}
+    if not any(c.get("plugin", False) and c["id"] in expected_categories for c in contract["categories"]):
+        hidden.add("plugins")
+    for route in contract["routes"]:
+        if route["parent_id"] in hidden:
+            hidden.add(route["id"])
+    expected_routes = [r["id"] for r in contract["routes"] if r["id"] not in hidden]
     expected_keys = {(c["id"], sample["id"]) for c in expected_components for sample in c["samples"]}
     actual_keys = [(entry.route_id, sample.id) for entry in entries for sample in entry.samples]
     if ([category.id for category in categories] != expected_categories

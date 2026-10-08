@@ -103,6 +103,34 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
         break;
     }
 
+    const QVector<GalleryComponentCategory>& catalog = galleryComponentCatalog();
+    bool hasPlugins = false;
+    for (const auto& category : catalog)
+        hasPlugins |= category.plugin;
+    if (hasPlugins) {
+        m_items.append(node(GalleryNavigationItem::Kind::CategoryRoute, QStringLiteral("plugins"),
+                            QStringLiteral("Plugins"), QStringLiteral("Plugins"),
+                            Typography::Icons::AllApps, QColor(QStringLiteral("#F3F1FB")),
+                            QString(), 0, true));
+        for (int categoryIndex = 0; categoryIndex < catalog.size(); ++categoryIndex) {
+            const auto& category = catalog.at(categoryIndex);
+            if (!category.plugin)
+                continue;
+            m_items.append(node(GalleryNavigationItem::Kind::CategoryRoute, category.id,
+                                category.title, QStringLiteral("Plugins"), category.iconGlyph,
+                                componentColor(categoryIndex, 0), QStringLiteral("plugins"), 1,
+                                !category.components.isEmpty()));
+            for (int componentIndex = 0; componentIndex < category.components.size();
+                 ++componentIndex) {
+                const auto& component = category.components.at(componentIndex);
+                m_items.append(node(GalleryNavigationItem::Kind::ComponentRoute, component.id,
+                                    component.title, category.title, component.iconGlyph,
+                                    componentColor(categoryIndex, componentIndex + 1), category.id,
+                                    2));
+            }
+        }
+    }
+
     m_items.append(section(QStringLiteral("Controls")));
     m_items.append(node(
         GalleryNavigationItem::Kind::RootRoute, QStringLiteral("all-controls"),
@@ -111,10 +139,9 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
         // Collections' Grid glyph. zh_CN: View 表示浏览完整目录，且不与 Collections 的 Grid 撞形。
         Typography::Icons::View, QColor(QStringLiteral("#F8F8FF")), QStringLiteral("controls")));
 
-    const QVector<GalleryComponentCategory>& catalog = galleryComponentCatalog();
     for (int categoryIndex = 0; categoryIndex < catalog.size(); ++categoryIndex) {
         const GalleryComponentCategory& category = catalog.at(categoryIndex);
-        if (category.id == QStringLiteral("foundation"))
+        if (category.id == QStringLiteral("foundation") || category.plugin)
             continue;
         m_items.append(node(GalleryNavigationItem::Kind::CategoryRoute, category.id, category.title,
                             QStringLiteral("Controls"), category.iconGlyph,

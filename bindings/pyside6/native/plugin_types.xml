@@ -1,0 +1,20 @@
+<namespace-type name="plugins" visible="no">
+    <!-- Register base converters for WidgetPlugin's multiple inheritance,
+         without generating unusable QString-output/noexcept callback shells. -->
+    <object-type name="Plugin" target-lang-name="_NativePlugin"
+                 disable-wrapper="yes" force-abstract="yes"/>
+    <object-type name="WidgetPlugin" target-lang-name="_NativeWidgetPlugin"
+                 disable-wrapper="yes" force-abstract="yes"/>
+    <object-type name="PluginManager" generate="no"/>
+    <object-type name="WidgetPluginInterface" target-lang-name="_WidgetPluginInterface"
+                 disable-wrapper="yes" force-abstract="yes"/>
+    <value-type name="PluginMetadata"/>
+    <value-type name="PluginContext">
+        <modify-function signature="activePlugin(const QString&amp;)const" remove="all"/>
+        <modify-function signature="host()const">
+            <modify-argument index="return">
+                <define-ownership class="target" owner="default"/>
+            </modify-argument>
+        </modify-function>
+    </value-type>
+</namespace-type>

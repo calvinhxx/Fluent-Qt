@@ -61,6 +61,12 @@ def class_methods(trees):
                 for child in node.body
                 if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
             )
+            class_members.update(
+                child.target.id
+                for child in node.body
+                if isinstance(child, ast.AnnAssign)
+                and isinstance(child.target, ast.Name)
+            )
         for child in ast.iter_child_nodes(node):
             visit(child)
 
@@ -69,7 +75,7 @@ def class_methods(trees):
     return methods
 
 
-def verify_module_pairs(package_dir):
+def verify_module_pairs(package_dir, root_exports):
     trees = {}
     for source_path in sorted(package_dir.glob("*.py")):
         stub_path = source_path.with_suffix(".pyi")
@@ -86,6 +92,10 @@ def verify_module_pairs(package_dir):
             )
         stub_tree = ast.parse(stub_contents, filename=str(stub_path))
         source_exports = literal_all(source_tree, source_path)
+        if source_path.name == "__init__.py":
+            # Optional native targets extend the root exports conditionally.
+            # Compare with the actual source package for this configured build.
+            source_exports = list(root_exports)
         stub_exports = literal_all(stub_tree, stub_path)
         if source_exports != stub_exports:
             raise RuntimeError(
@@ -120,7 +130,14 @@ def main():
         raise RuntimeError("Native stub contains an unqualified self import")
     native_tree = ast.parse(native_contents, filename=str(native_stub))
 
-    facade_trees = verify_module_pairs(package_dir)
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    sys.path.insert(0, str(package_dir.parent))
+    try:
+        runtime_package = importlib.import_module("fluentqt")
+    finally:
+        sys.path.pop(0)
+
+    facade_trees = verify_module_pairs(package_dir, runtime_package.__all__)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     root_tree = facade_trees["__init__.pyi"]
     root_symbols = top_level_symbols(root_tree)
@@ -151,10 +168,8 @@ def main():
             )
         )
 
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     sys.path.insert(0, str(package_dir.parent))
     try:
-        runtime_package = importlib.import_module("fluentqt")
         for module_name, contract in manifest.get("optional_modules", {}).items():
             module_file = package_dir / (module_name.rsplit(".", 1)[1] + ".py")
             if not module_file.is_file():
@@ -165,7 +180,9 @@ def main():
             for class_name, expected in contract["methods"].items():
                 cls = getattr(module, class_name)
                 for method in expected:
-                    if not hasattr(cls, method) or method not in methods.get(class_name, set()):
+                    declared = any(method in methods.get(base.__name__, set())
+                                   for base in cls.__mro__)
+                    if not hasattr(cls, method) or not declared:
                         raise RuntimeError(f"Missing optional API or stub: {class_name}.{method}")
     finally:
         sys.path.pop(0)

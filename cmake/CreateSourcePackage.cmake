@@ -44,7 +44,10 @@ file(COPY
     DESTINATION "${_package_root}/.github/scripts")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/tools/fonts"
-    DESTINATION "${_package_root}/tools")
+    DESTINATION "${_package_root}/tools"
+    PATTERN "__pycache__" EXCLUDE
+    PATTERN "*.pyc" EXCLUDE
+    PATTERN "*.pyo" EXCLUDE)
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/tools/onboarding"
     DESTINATION "${_package_root}/tools"
@@ -61,7 +64,10 @@ file(COPY
     DESTINATION "${_package_root}/docs")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui"
-    DESTINATION "${_package_root}/.agents/skills")
+    DESTINATION "${_package_root}/.agents/skills"
+    PATTERN "__pycache__" EXCLUDE
+    PATTERN "*.pyc" EXCLUDE
+    PATTERN "*.pyo" EXCLUDE)
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/CMakeLists.txt"
     "${FLUENT_QT_SOURCE_DIR}/resources.qrc"
@@ -75,6 +81,7 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtConfig.cmake.in"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtInstallHeaders.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtSpatial.cmake"
+    "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtPlugins.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtSanitizers.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtTargetOptions.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/CreateSourcePackage.cmake"
@@ -82,6 +89,7 @@ file(COPY
     DESTINATION "${_package_root}/cmake")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/examples/hello_world"
+    "${FLUENT_QT_SOURCE_DIR}/examples/plugin_extension"
     DESTINATION "${_package_root}/examples")
 configure_file(
     "${FLUENT_QT_SOURCE_DIR}/cmake/SourcePackageREADME.md"

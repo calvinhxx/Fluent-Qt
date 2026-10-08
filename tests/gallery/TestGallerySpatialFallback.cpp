@@ -298,6 +298,7 @@ TEST_F(GallerySpatialFallbackTest, NavigationSupportBadgeFollowsTheRowWithoutAct
     auto* tree = pane.findChild<collections::TreeView*>("galleryMainNavigationTreeView");
     ASSERT_NE(badge, nullptr);
     ASSERT_NE(tree, nullptr);
+    tree->expand(pane.indexForRouteId("plugins"));
     ASSERT_TRUE(QTest::qWaitFor([&] { return badge->isVisible(); }, 5000));
     const auto spatial = pane.indexForRouteId("spatial");
     const auto checkAligned = [&] {
@@ -319,6 +320,7 @@ TEST_F(GallerySpatialFallbackTest, NavigationSupportBadgeFollowsTheRowWithoutAct
     pane.setCompact(true);
     ASSERT_TRUE(QTest::qWaitFor([&] { return badge->isHidden(); }, 5000));
     pane.setCompact(false);
+    tree->expand(pane.indexForRouteId("plugins"));
     tree->scrollTo(spatial, QAbstractItemView::PositionAtCenter);
     ASSERT_TRUE(QTest::qWaitFor([&] { return badge->isVisible(); }, 5000));
     checkAligned();

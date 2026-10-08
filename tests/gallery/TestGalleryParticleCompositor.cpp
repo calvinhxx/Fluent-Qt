@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "components/layout/ParticleBackdrop.h"
+#include "components/spatial/SpatialSession.h"
 #include "view/shell/GalleryGlyphPaintDevice.h"
 #include "view/shell/GalleryParticleCompositor.h"
 #include "view/shell/GallerySpatialRenderPolicy.h"
@@ -12,6 +13,7 @@
 #include <QOpenGLPaintDevice>
 #include <QOpenGLWidget>
 #include <QPainter>
+#include <QPointer>
 #include <QSignalSpy>
 #include <QTest>
 #include <QtMath>
@@ -354,6 +356,186 @@ TEST(GalleryParticleCompositorTest, Contract_NativeMaskedAncestorFallsBackWithou
     masked.show();
     EXPECT_TRUE(compositor.prepare(&root, 6, root.size(), 1, 1, 32 * 1024 * 1024, true));
     compositor.release();
+    context.doneCurrent();
+}
+
+TEST(GalleryParticleCompositorTest, Contract_NativeSessionLostDuringFactorySetupKeepsCpuSource)
+{
+    if (!nativePlatform())
+        GTEST_SKIP() << "Requires native GPU composition";
+    QOpenGLWidget context;
+    context.resize(320, 220);
+    context.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&context));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return context.isValid(); }));
+    for (bool destroy : {false, true}) {
+        SCOPED_TRACE(destroy);
+        QWidget root;
+        root.resize(300, 180);
+        ParticleBackdrop source(&root);
+        source.resize(root.size());
+        source.setAnimationEnabled(false);
+        source.setGpuAccelerationEnabled(false);
+        root.show();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&root));
+        context.makeCurrent();
+        const QImage before = capture(root)->toImage();
+        QPointer<fluent::spatial::SpatialSession> session = new fluent::spatial::SpatialSession;
+        ASSERT_TRUE(session->activate());
+        GalleryParticleCompositor compositor(nullptr, session);
+        bool notified = false;
+        QObject::connect(&source, &ParticleBackdrop::gpuAccelerationEnabledChanged, &root,
+                         [&](bool enabled) {
+                             if (!enabled)
+                                 return;
+                             notified = true;
+                             if (destroy)
+                                 delete session.data();
+                             else
+                                 session->deactivate();
+                         });
+        EXPECT_FALSE(compositor.prepare(&root, 1, root.size(), 1, 1, 32 * 1024 * 1024, true));
+        EXPECT_TRUE(notified);
+        EXPECT_FALSE(source.isGpuAccelerationEnabled());
+        EXPECT_EQ(source.parentWidget(), &root);
+        EXPECT_EQ(compositor.activeLayerCount(), 0);
+        EXPECT_EQ(compositor.allocatedBytes(), 0u);
+        EXPECT_EQ(capture(root)->toImage(), before);
+        compositor.release();
+        delete session.data();
+        context.doneCurrent();
+    }
+}
+
+TEST(GalleryParticleCompositorTest, Contract_NativeSessionDeactivationDuringCleanupKeepsCpuSource)
+{
+    if (!nativePlatform())
+        GTEST_SKIP() << "Requires native GPU composition";
+    QOpenGLWidget context;
+    context.resize(320, 220);
+    context.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&context));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return context.isValid(); }));
+    QWidget root;
+    root.resize(300, 180);
+    ParticleBackdrop source(&root);
+    source.resize(root.size());
+    source.setAnimationEnabled(false);
+    source.setGpuAccelerationEnabled(false);
+    root.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&root));
+    context.makeCurrent();
+    const QImage before = capture(root)->toImage();
+    fluent::spatial::SpatialSession session;
+    ASSERT_TRUE(session.activate());
+    GalleryParticleCompositor compositor(nullptr, &session);
+    ASSERT_TRUE(compositor.prepare(&root, 1, root.size(), 1, 1, 32 * 1024 * 1024, true));
+    ASSERT_TRUE(source.isGpuAccelerationEnabled());
+    bool notified = false;
+    QObject::connect(&source, &ParticleBackdrop::gpuAccelerationEnabledChanged, &root,
+                     [&](bool enabled) {
+                         if (!enabled) {
+                             notified = true;
+                             session.deactivate();
+                         }
+                     });
+    compositor.release();
+    EXPECT_TRUE(notified);
+    EXPECT_FALSE(session.isActive());
+    EXPECT_FALSE(source.isGpuAccelerationEnabled());
+    EXPECT_EQ(compositor.activeLayerCount(), 0);
+    EXPECT_EQ(compositor.allocatedBytes(), 0u);
+    EXPECT_EQ(capture(root)->toImage(), before);
+    context.doneCurrent();
+}
+
+TEST(GalleryParticleCompositorTest, Contract_NativeSessionDeactivationDuringRebuildKeepsCpuSource)
+{
+    if (!nativePlatform())
+        GTEST_SKIP() << "Requires native GPU composition";
+    QOpenGLWidget context;
+    context.resize(320, 220);
+    context.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&context));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return context.isValid(); }));
+    for (bool changeSource : {false, true}) {
+        SCOPED_TRACE(changeSource);
+        QWidget root;
+        root.resize(300, 180);
+        ParticleBackdrop source(&root);
+        source.resize(root.size());
+        source.setAnimationEnabled(false);
+        source.setGpuAccelerationEnabled(false);
+        root.show();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&root));
+        context.makeCurrent();
+        const QImage before = capture(root)->toImage();
+        fluent::spatial::SpatialSession session;
+        ASSERT_TRUE(session.activate());
+        GalleryParticleCompositor compositor(nullptr, &session);
+        ASSERT_TRUE(compositor.prepare(&root, 1, root.size(), 1, 1, 32 * 1024 * 1024, true));
+        bool notified = false;
+        QObject::connect(&source, &ParticleBackdrop::gpuAccelerationEnabledChanged, &root,
+                         [&](bool enabled) {
+                             if (!enabled) {
+                                 notified = true;
+                                 session.deactivate();
+                             }
+                         });
+        if (changeSource)
+            source.resize(280, 180);
+        const QSize pixels = changeSource ? root.size() : root.size() + QSize(1, 1);
+        EXPECT_FALSE(compositor.prepare(&root, 2, pixels, 1, 1, 32 * 1024 * 1024, true));
+        EXPECT_TRUE(notified);
+        EXPECT_FALSE(session.isActive());
+        EXPECT_FALSE(source.isGpuAccelerationEnabled());
+        EXPECT_EQ(source.parentWidget(), &root);
+        EXPECT_EQ(compositor.activeLayerCount(), 0);
+        EXPECT_EQ(compositor.allocatedBytes(), 0u);
+        source.resize(root.size());
+        EXPECT_EQ(capture(root)->toImage(), before);
+        compositor.release();
+        context.doneCurrent();
+    }
+}
+
+TEST(GalleryParticleCompositorTest, Contract_NativeOwnerDeletionDuringCleanupRestoresEveryCpuSource)
+{
+    if (!nativePlatform())
+        GTEST_SKIP() << "Requires native GPU composition";
+    QOpenGLWidget context;
+    context.resize(320, 220);
+    context.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&context));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return context.isValid(); }));
+    QWidget root;
+    root.resize(300, 180);
+    ParticleBackdrop first(&root), second(&root);
+    first.setGeometry(0, 0, 150, 180);
+    second.setGeometry(150, 0, 150, 180);
+    first.setAnimationEnabled(false);
+    second.setAnimationEnabled(false);
+    root.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&root));
+    context.makeCurrent();
+    const QImage before = capture(root)->toImage();
+    fluent::spatial::SpatialSession session;
+    ASSERT_TRUE(session.activate());
+    QPointer<GalleryParticleCompositor> compositor =
+        new GalleryParticleCompositor(nullptr, &session);
+    ASSERT_TRUE(compositor->prepare(&root, 1, root.size(), 1, 1, 32 * 1024 * 1024, true));
+    ASSERT_EQ(compositor->activeLayerCount(), 2);
+    QObject::connect(&first, &ParticleBackdrop::gpuAccelerationEnabledChanged, &root,
+                     [&](bool enabled) {
+                         if (!enabled)
+                             delete compositor.data();
+                     });
+    compositor->release();
+    EXPECT_TRUE(compositor.isNull());
+    EXPECT_TRUE(session.isActive());
+    EXPECT_FALSE(first.isGpuAccelerationEnabled());
+    EXPECT_FALSE(second.isGpuAccelerationEnabled());
+    EXPECT_EQ(capture(root)->toImage(), before);
     context.doneCurrent();
 }
 

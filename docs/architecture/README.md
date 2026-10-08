@@ -16,9 +16,11 @@ flowchart TD
     Overlay[Same-window overlays]
     Typography[Typography resolution]
     Inspector[Read-only Inspector]
+    Plugins[Optional plugin lifecycle]
     Platform[Qt and platform capabilities]
 
     App --> Window
+    App --> Plugins
     Window --> Components
     Components --> Overlay
     Components --> Typography
@@ -29,10 +31,11 @@ flowchart TD
 
 | Contract | Use it when changing |
 |---|---|
+| [Plugins](plugins.md) | Optional extension registration, dependency-ordered activation, borrowed ownership, or widget factories |
 | [Files and feedback](files-and-feedback.md) | File entry, file model ownership, transfer presentation, or actionable Toast |
 | [Charts](charts.md) | Model ownership, indexed projections, streaming, chart aggregation, or accessibility |
 | [Timeline and Stepper](sequence-controls.md) | Caller-owned sequences, step requests, layout, motion, and accessibility |
-| [Spatial](spatial-view.md) | Compose existing controls with SpatialView and SpatialItem; examples, parameters, ownership and 2D fallback |
+| [Spatial](spatial-view.md) | SpatialSession lifecycle, composition with SpatialView and SpatialItem, parameters, ownership, and native 2D fallback |
 | [Overlay behavior](overlay-behavior.md) | Popup, Flyout, Dialog, TeachingTip, dropdown, drawer, or another same-window transient surface |
 | [Window chrome](window-chrome.md) | Title bars, native move/resize, backdrops, hit testing, or platform window behavior |
 | [Typography resolution](typography-resolution.md) | Fonts, inherited application typography, role resolution, or text scaling |

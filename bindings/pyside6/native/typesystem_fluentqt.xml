@@ -1,6 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <typesystem package="_fluentqt">
     <load-typesystem name="typesystem_widgets.xml" generate="no"/>
+    <!-- Optional plugin global functions. -->
+
+    <!-- These C++ hooks are final in the binding adapters. Reject them before
+         constructing shell override models; expose only the Python-safe
+         _*ForBinding virtuals. -->
+    <rejection class="fluent::plugins::Plugin"
+               function-name="^(metadata|onActivate|onDeactivate)$"/>
+    <rejection class="fluent::plugins::WidgetPlugin"
+               function-name="^(metadata|onActivate|onDeactivate|widgetKeys|createWidget)$"/>
+    <rejection class="fluent::plugins::WidgetPluginInterface"
+               function-name="^(widgetKeys|createWidget)$"/>
+    <rejection class="fluent::pluginbinding::PluginAdapter"
+               function-name="^(metadata|onActivate|onDeactivate)$"/>
+    <rejection class="fluent::pluginbinding::WidgetPluginAdapter"
+               function-name="^(metadata|onActivate|onDeactivate|widgetKeys|createWidget)$"/>
+    <rejection class="fluent::spatial::SpatialPlugin"
+               function-name="^(onActivate|onDeactivate|createWidget)$"/>
 
     <!-- Shiboken 6.2 incorrectly promotes Q_ENUM friend helpers from QObject
          subclasses to namespace functions. They are Qt implementation details
@@ -149,6 +166,8 @@
     <namespace-type name="fluent">
         <include file-name="BindingApi.h" location="global"/>
         <enum-type name="WidgetOwnership"/>
+        <!-- Optional Plugins types. -->
+        <!-- Optional plugin binding adapters. -->
         <!-- Optional Spatial types. -->
         <namespace-type name="binding" visible="no">
             <enum-type name="Theme"/>

@@ -12,6 +12,10 @@ class QPainter;
 class QOpenGLFramebufferObject;
 class QWidget;
 
+namespace fluent::spatial {
+class SpatialSession;
+}
+
 namespace fluent::gallery::spatial_render {
 
 // Gallery-only prototype. Existing static panel pixels retain their foreground;
@@ -20,7 +24,8 @@ class GalleryParticleCompositor final : public QObject {
     Q_OBJECT
 public:
     using RenderWidget = std::function<void(QPainter&, QWidget*, const QRegion&)>;
-    explicit GalleryParticleCompositor(QObject* parent = nullptr);
+    explicit GalleryParticleCompositor(QObject* parent = nullptr,
+                                       spatial::SpatialSession* session = nullptr);
     ~GalleryParticleCompositor() override;
 
     // Discover sources and estimate their targets before sizing the shell's paint strip.

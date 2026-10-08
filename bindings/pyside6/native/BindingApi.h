@@ -104,8 +104,13 @@
 #include <components/windowing/TitleBar.h>
 #include <components/windowing/Window.h>
 #include <design/Typography.h>
+#include "PluginBindingApi.h"
 #ifdef FLUENT_QT_HAS_SPATIAL
-#include <FluentQt/Spatial.h>
+#include <components/spatial/ParticleLayer.h>
+#include <components/spatial/SpatialItem.h>
+#include <components/spatial/SpatialRuntime.h>
+#include <components/spatial/SpatialSession.h>
+#include <components/spatial/SpatialView.h>
 #endif
 
 namespace fluent::binding {

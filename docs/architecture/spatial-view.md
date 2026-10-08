@@ -8,11 +8,14 @@
 [← Files and feedback](files-and-feedback.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Timeline and Stepper →](sequence-controls.md)
 <!-- docs-nav:top:end -->
 
-`Spatial` is a first-level component category in `src/components/spatial`, using
-`fluent::spatial` and the installed `<FluentQt/Spatial.h>` header. Application
-examples can include `<FluentQt/FluentQt.h>` when linked to the optional
-`FluentQt::Spatial` target. The base `FluentQt::FluentQt` target keeps its
-Widgets-only module dependencies.
+`Spatial` is an optional extension in `src/components/spatial`, using
+`fluent::spatial` and the installed `<FluentQt/Spatial.h>` header.
+`SpatialSession` provides the application entry point and manages the concrete
+`SpatialPlugin` through the [shared plugin lifecycle](plugins.md).
+Applications can include `<FluentQt/FluentQt.h>` when linked to
+`FluentQt::Spatial`, which publicly links `FluentQt::Plugins` and the base
+Widgets library. The base `FluentQt::FluentQt` target keeps its Widgets-only
+module dependencies.
 
 ## Two components, one ordinary widget composition
 
@@ -38,6 +41,13 @@ This is useful for a small component showcase, a preview card or a few status
 panels. Keep primary editing, navigation and large data views in normal layouts.
 The API composes planar widgets; it does not load meshes, provide a stereoscopic
 display, or automatically split a widget's paint layers.
+
+`SpatialSession` is a nonvisual QObject that activates the extension and tracks
+its views and particle layers. `SpatialPlugin` is the native plugin implementation;
+its ID is `fluentqt.spatial` and its QWidget factory key is `spatial-view`.
+Existing `SpatialView`, `ParticleLayer`, and `SpatialRuntime` APIs remain
+available for source compatibility. New integrations use the session to share
+activation and cleanup across their Spatial objects.
 
 ## Minimal integration
 
@@ -94,26 +104,70 @@ find_package(FluentQt CONFIG REQUIRED COMPONENTS Spatial)
 target_link_libraries(spatial_card PRIVATE FluentQt::Spatial)
 ```
 
-`FluentQt::Spatial` links `FluentQt::FluentQt` publicly. It already provides the
-ordinary widgets, so listing both targets is unnecessary. It also exports
+`FluentQt::Spatial` links `FluentQt::Plugins` and `FluentQt::FluentQt` publicly.
+Enabling Spatial builds its Plugins dependency automatically; a separate
+`FLUENT_QT_BUILD_PLUGINS=ON` flag is unnecessary. It already provides the ordinary
+widgets, so listing all three targets is unnecessary. It also exports
 `FLUENT_QT_HAS_SPATIAL=1`, enabling Spatial in `<FluentQt/FluentQt.h>`; do not set
 that definition manually.
 
-In the same `main.cpp`, replace `window.setContentWidget(card);` with:
+In the same `main.cpp`, activate a session after constructing the Window and
+before constructing its pages:
+
+```cpp
+spatial::SpatialSession spatialSession(&window);
+const bool spatialActive = spatialSession.activate();
+if (spatialActive) {
+    spatialSession.prepareWindow(&window);
+}
+```
+
+Activation prepares the native-style adapter without creating a GPU context.
+Check its result before requesting a view. Window preparation is best-effort:
+its return value does not establish hardware support, and a false result alone
+does not make Spatial unavailable on WebAssembly or offscreen hosts. Replace
+`window.setContentWidget(card);` with:
 
 ```cpp
 card->setFixedSize(300, 180);
-auto* view = new spatial::SpatialView;
-auto* item = view->addWidget(card, WidgetOwnership::Owned);
-item->setRotation(QVector3D(6, -12, 0));
-item->setSurfaceIntensity(0.6);
-view->setMaximumTilt(QPointF(3, 5));
-window.setContentWidget(view);
+auto* view = spatialActive ? spatialSession.createView(&window) : nullptr;
+if (view) {
+    auto* item = view->addWidget(card, WidgetOwnership::Owned);
+    item->setRotation(QVector3D(6, -12, 0));
+    item->setSurfaceIntensity(0.6);
+    view->setMaximumTilt(QPointF(3, 5));
+    window.setContentWidget(view);
+} else {
+    spatialSession.deactivate();
+    auto* flatHost = new QWidget;
+    auto* flatLayout = new QVBoxLayout(flatHost);
+    flatLayout->setContentsMargins(0, 0, 0, 0);
+    flatLayout->addWidget(card, 0, Qt::AlignCenter);
+    window.setContentWidget(flatHost);
+}
 ```
 
-The Button and its signal connection are unchanged. The Window owns the view,
-and the view owns the card. `view->setSpatialEnabled(false)` returns the same
-card to a native 2D layout.
+The Button and its signal connection are unchanged. Failed activation or a null
+factory result keeps the Card and Button usable in an ordinary centered 2D
+layout. In the successful path, the Window owns the view and the view owns the
+card; the session tracks the view without taking its ownership. For that view,
+`view->setSpatialEnabled(false)` returns the card to a native 2D layout;
+`spatialSession.deactivate()` returns all tracked views to that layout and
+releases their Spatial rendering resources.
+
+Keep the session alive while its Spatial objects are in use. A view subclass
+constructed by the application can join the same lifecycle through
+`spatialSession.attachView(view)`. Create decorative layers with
+`spatialSession.createParticleLayer(backdrop, parent)`; their QObject parent
+continues to determine ownership. Reactivating a session does not automatically
+restore a view's previous 3D presentation. It restores the retained view's
+requested `RenderMode`, while `spatialEnabled` stays false. The application
+explicitly chooses whether to enable 3D after activation.
+
+The session and its host use the GUI thread. Creation, attachment, and window
+preparation require an active session; failure returns null or false.
+Deactivate before dismantling the host, and do not parent the session to a
+tracked view or an object inside that view's subtree.
 
 Build either variant from its directory:
 
@@ -128,13 +182,19 @@ For source integration, replace `find_package` with
 variant. The C++ code and target names stay the same. The repository's
 [hello_world](../../examples/hello_world/README.md) provides separate 2D and
 Spatial executable targets, each with its own window implementation. The base
-example contains only a Window and Button. Interactive parameter demonstrations
-live in Gallery.
+example contains only a Window and Button. The Spatial variant places the
+Button in a centered Card; its
+[Python counterpart](../../bindings/pyside6/examples/hello_world/README.md)
+uses that composition and configuration. The browser build compiles the same
+C++ Spatial window and stages it at
+`build/wasm/app/hello-world-spatial/index.html`. This minimal app is separate
+from Gallery's `?showcase=spatial` embed with interactive scene controls.
 
 ## Try the Gallery
 
 Use **Settings → 3D Gallery** to switch the shell and every Spatial example together.
-Then open **Controls → Spatial**. The component pages link back to that setting.
+Then open **Plugins → Spatial → SpatialView** or
+**Plugins → Spatial → SpatialItem**. The component pages link back to that setting.
 There are no per-example mode switches, and switching modes preserves values and models.
 
 Start with the main examples:
@@ -197,20 +257,63 @@ remains on the GUI thread, so an individually expensive sample can still block
 for its own factory duration. Code highlighting waits for expansion. WebAssembly
 retains its bounded resident cache; desktop retains only the finite visited set.
 
-### Shared runtime entry and compatibility
+### Shared session entry and runtime compatibility
 
-`FluentQt::Spatial` exposes `SpatialRuntime` (also
-`fluentqt.spatial.SpatialRuntime`). Gallery and SpatialView share renderer
-classification and display capability checks. C++ and Python Gallery use the
-same native methods for preflight, texture limits, native text-coverage policy,
-and hidden-window preparation. Gallery owns the one 3D preference and its
-presentation/controller; UILib does not read application settings.
+`FluentQt::Spatial` exposes `SpatialSession` in C++ and
+`fluentqt.spatial.SpatialSession` in Python. Each session owns an internal
+plugin manager and a registered `SpatialPlugin`; the application does not need
+to assemble that lifecycle manually. `activate()` and `deactivate()` return
+success, `isActive()` reports activation, and `activeChanged(bool)` reports
+changes. All calls use the GUI thread. Activating an already active session or
+deactivating an inactive one is a no-op.
+Activation can fail, and `createView()` or `createParticleLayer()` can return
+null (`None` in Python) even after activation. Check each result before using
+it. Keep ordinary widget content or the particle source's CPU presentation
+available as the fallback.
 
-Applications call `SpatialRuntime::prepareApplication()` before building pages
-and `SpatialRuntime::prepareWindow(&window)` before showing a Fluent Window.
-Neither call creates a GL context. The window call is idempotent and refuses
-visible windows. Actual acceleration is confirmed only after the real surface
-has initialized; a preparation result is not a hardware-availability verdict.
+Session activation and visible 3D presentation are separate states. An active
+session can retain views in native 2D; `isActive()` does not report GPU
+availability or replace a view's `spatialEnabled` and `activeBackend` state.
+
+Activation installs the native-style adapter before building application pages.
+`createView()` and `attachView()` register views for cleanup;
+`createParticleLayer()` registers decorative layers. Deactivation returns
+tracked views to flat raster presentation and releases their rendering and
+particle-layer resources. Caller widgets, view content, and models survive.
+Session destruction applies the same cleanup. A later activation restores each
+retained view's requested Auto, Raster, or OpenGL render mode, while leaving
+`spatialEnabled` false for the application to resolve. Activation creates no
+particle-layer GPU resources; rendering continues to require the compositor's
+current hardware context.
+
+The shared manager's dependency-graph work and Spatial's tracked-object work
+have separate costs. Spatial cleanup visits its views and particle layers and
+requests their renderer/resource transitions. A session with many surfaces can
+therefore take more work to suspend than a session with one surface, even though
+both register one Spatial plugin. Rendering, input-driven deferred transitions,
+and resource release retain their component contracts; plugin activation tests
+do not measure those costs across platforms.
+
+`session.prepareWindow(&window)` prepares a hidden Fluent Window before it is
+shown. The one-argument form prepares for OpenGL; the overload taking
+`QSurface::SurfaceType` prepares for the application's chosen graphics API.
+Gallery's private TextureHost retains its RHI/Direct3D backend selection.
+Preparation is idempotent and refuses visible windows. Neither
+activation nor preparation creates a GPU context or device. Actual acceleration
+is confirmed only after the real surface has initialized; a preparation result
+is not a hardware-availability verdict. Call preparation after successful
+activation and while the window is hidden. Native-surface preparation can be
+unavailable on WebAssembly or offscreen hosts while the Spatial view remains
+usable; the minimal examples treat preparation as best-effort.
+
+`SpatialRuntime` and its Python binding remain available. They own the shared
+renderer classification, display capability, preflight, texture-limit, and
+native text-coverage helpers used by Gallery and SpatialView. Existing calls to
+`SpatialRuntime::prepareApplication()` and `prepareWindow()` remain compatible;
+new consumers enter through `SpatialSession`. Gallery owns the one 3D preference
+and its presentation/controller; UILib does not read or rewrite those settings.
+The C++, Python, and WebAssembly Galleries and minimal examples use the same
+session entry while retaining their renderer and fallback policies.
 
 OS/Qt differences live in `src/compatibility/SpatialRenderCompat.h` and the
 private native-style adapter. Cocoa still needs CGContext primitive adaptation.
@@ -396,8 +499,15 @@ See the [browser validation workflow](../development/webassembly-workflow.md#spa
 Python source builds can enable `fluentqt.spatial`; see the
 [binding guide](../../bindings/pyside6/README.md#optional-spatial-module) and
 [coverage reference](../../bindings/pyside6/ROADMAP.md#spatial-composition).
-Python calls configure the same C++ scene and connect ordinary widget signals;
-projection, caching and pointer animation stay in C++.
+Python applications use `fluentqt.spatial.SpatialSession` to activate the
+extension and create or attach its views. Generic extension authoring and
+registration are available through `fluentqt.plugins`. Python applications can
+also register `fluentqt.spatial.SpatialPlugin` with a generic manager when
+Spatial belongs in a larger dependency graph. `SpatialSession` owns that
+registration for ordinary independent scopes. Existing SpatialView, SpatialItem,
+ParticleLayer, and SpatialRuntime bindings remain available. Python calls
+configure the same C++ scene and connect ordinary widget signals; projection,
+caching and pointer animation stay in C++.
 
 ### Window materials and overlays
 
@@ -519,11 +629,14 @@ for advanced pivot, backend and cache settings.
 
 Spatial is off by default in source builds. Enable it with
 `-DFLUENT_QT_BUILD_SPATIAL=ON`; the development and Gallery packaging presets opt
-in explicitly. Setting it to `OFF` also builds a 2D-only Gallery without Spatial
-routes or an OpenGL canvas.
+in explicitly. Spatial automatically builds and links the shared Plugins module,
+even when the standalone Plugins build option is off. Setting Spatial to `OFF`
+also builds a 2D-only Gallery without Spatial routes or an OpenGL canvas.
 
 An ordinary `find_package(FluentQt CONFIG REQUIRED)` loads only the base target,
-even when the SDK contains Spatial. It does not discover Qt OpenGLWidgets.
+even when the SDK contains Spatial. It does not load Plugins or discover Qt
+OpenGLWidgets. `COMPONENTS Spatial` loads both the Spatial target and its Plugins
+dependency; consumers do not need to request both components.
 Qt itself may still link platform graphics libraries through QtGui, as it did
 before Spatial; this split removes the additional Qt OpenGL module dependency.
 A Spatial-enabled application must still deploy its Qt OpenGL runtime libraries;
@@ -537,6 +650,8 @@ The root build then creates `FluentQt::Spatial` through
 [FluentQtSpatial.cmake](../../cmake/FluentQtSpatial.cmake).
 [app/CMakeLists.txt](../../app/CMakeLists.txt) conditionally links it to both
 `FluentQtGalleryCore` (the object library) and `fluent_qt_gallery` (the executable).
+The Spatial target supplies the Plugins dependency transitively. Gallery creates
+a `SpatialSession` for its host and attaches its sample views to that lifecycle.
 When Spatial is off, Gallery compiles its 2D fallback and omits Spatial samples.
 
 Gallery also links `Qt6::OpenGLWidgets` directly to its core on Qt 6 because its
@@ -547,8 +662,8 @@ Settings mode. The shell compositor remains Gallery application code, not a
 public Spatial API.
 
 The [Python Gallery](../../bindings/pyside6/gallery/README.md#spatial-mode)
-follows the same boundary: `fluentqt.spatial` supplies the native SpatialView and
-SpatialItem bindings, while a Python shell controller owns the canvas,
+follows the same boundary: `fluentqt.spatial` supplies the native SpatialSession,
+SpatialView, and SpatialItem bindings, while a Python shell controller owns the canvas,
 projected input and overlay ordering. Its Settings switch drives both
 the shell and the same eleven live examples. The C++, Python and WebAssembly
 Galleries share their sample catalog and display complete Python example source.
@@ -674,10 +789,11 @@ python3 tools/dev/fluent_qt_build.py --preset vcpkg-osx --target fluent_qt_galle
 open "build/vcpkg-osx/app/Fluent-Qt Gallery.app"
 ```
 
-Enable **Settings → 3D Gallery**, then open **Spatial → SpatialView** or
-**Spatial → SpatialItem**. The one Gallery setting controls its shell and Spatial
-examples. Other native hosts use their configured preset. The Gallery owns the
-interactive examples; `examples/hello_world` is the minimal library consumer.
+Enable **Settings → 3D Gallery**, then open **Plugins → Spatial → SpatialView** or
+**Plugins → Spatial → SpatialItem**. The one Gallery setting controls its shell
+and Spatial examples. Other native hosts use their configured preset. The Gallery
+owns the interactive examples; `examples/hello_world` is the minimal library
+consumer.
 
 <!-- docs-nav:bottom:start -->
 ---

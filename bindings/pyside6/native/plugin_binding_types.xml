@@ -1,0 +1,30 @@
+<namespace-type name="pluginbinding" visible="no">
+    <object-type name="PluginAdapter" target-lang-name="_Plugin"/>
+    <object-type name="WidgetPluginAdapter" target-lang-name="_WidgetPlugin">
+        <modify-function signature="_createWidgetForBinding(const QString&amp;,QWidget*)">
+            <modify-argument index="return">
+                <!-- Keep a parentless Python result alive through the C++ factory
+                     boundary; the manager's return below hands ownership back. -->
+                <define-ownership class="native" owner="c++"/>
+            </modify-argument>
+        </modify-function>
+    </object-type>
+    <object-type name="PluginManagerAdapter" target-lang-name="_PluginManager">
+        <modify-function signature="plugin(const QString&amp;)const">
+            <modify-argument index="return">
+                <define-ownership class="target" owner="default"/>
+            </modify-argument>
+        </modify-function>
+        <modify-function signature="activePlugin(const QString&amp;)const">
+            <modify-argument index="return">
+                <define-ownership class="target" owner="default"/>
+            </modify-argument>
+        </modify-function>
+        <modify-function signature="createWidget(const QString&amp;,const QString&amp;,QWidget*)">
+            <modify-argument index="return">
+                <define-ownership class="target" owner="target"/>
+                <parent index="3" action="add"/>
+            </modify-argument>
+        </modify-function>
+    </object-type>
+</namespace-type>

@@ -1,5 +1,6 @@
 """Optional Spatial binding ownership, runtime and input contracts."""
 import gc
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -7,6 +8,7 @@ import subprocess
 import sys
 import unittest
 import weakref
+from unittest.mock import Mock, patch
 
 from PySide6.QtCore import QEventLoop, QObject, QPoint, QPointF, QSize, QTimer, Qt
 from PySide6.QtGui import QAction, QPolygonF, QTransform, QVector3D
@@ -16,7 +18,7 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 import shiboken6
 import fluentqt
 from fluentqt._qt_compat import delete_qobject
-from fluentqt.spatial import ParticleLayer, SpatialItem, SpatialRuntime, SpatialView
+from fluentqt.spatial import ParticleLayer, SpatialItem, SpatialPlugin, SpatialRuntime, SpatialSession, SpatialView
 
 
 def _qwait(milliseconds):
@@ -47,7 +49,8 @@ class SpatialBindingTest(unittest.TestCase):
         contract = manifest["optional_modules"]["fluentqt.spatial"]
         for name, methods in contract["methods"].items():
             cls = {"SpatialView": SpatialView, "SpatialItem": SpatialItem,
-                   "ParticleLayer": ParticleLayer, "SpatialRuntime": SpatialRuntime}[name]
+                   "ParticleLayer": ParticleLayer, "SpatialRuntime": SpatialRuntime,
+                   "SpatialSession": SpatialSession, "SpatialPlugin": SpatialPlugin}[name]
             for method in methods:
                 self.assertTrue(hasattr(cls, method), f"{name}.{method}")
 
@@ -55,11 +58,153 @@ class SpatialBindingTest(unittest.TestCase):
         result = subprocess.run([sys.executable, "-c", """
 import sys
 import fluentqt
-from fluentqt.spatial import ParticleLayer, SpatialView
+from fluentqt.plugins import Plugin, PluginContext, PluginManager, PluginMetadata, WidgetPlugin
+from fluentqt.spatial import ParticleLayer, SpatialPlugin, SpatialSession, SpatialView
+assert SpatialPlugin.pluginId() == "fluentqt.spatial"
 assert "PySide6.QtOpenGL" not in sys.modules
 assert "PySide6.QtOpenGLWidgets" not in sys.modules
 """], env=os.environ.copy(), capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_session_activation_and_cleanup_preserve_caller_owned_outputs(self):
+        host = QWidget()
+        source = fluentqt.ParticleBackdrop(host)
+        session = SpatialSession(host)
+        view = layer = None
+        try:
+            self.assertIsNone(session.createView())
+            self.assertIsNone(session.createParticleLayer(source))
+            self.assertFalse(session.isActive())
+            self.assertFalse(session.property("active"))
+            spy = QSignalSpy(session.activeChanged)
+            self.assertIs(session.activate(), True)
+            self.assertIs(session.activate(), True)
+            self.assertTrue(session.property("active"))
+            self.assertEqual(spy.count(), 1)
+            view = session.createView(host)
+            self.assertIsInstance(view, SpatialView)
+            self.assertIs(view.parentWidget(), host)
+            view.setRenderMode(SpatialView.RenderMode.Raster)
+            layer = session.createParticleLayer(source, host)
+            self.assertIsNotNone(layer)
+            self.assertIs(layer.parent(), host)
+            self.assertIs(layer.backdrop(), source)
+            self.assertFalse(layer.isActive())
+            self.assertIs(source.parentWidget(), host)
+
+            self.assertIs(session.deactivate(), True)
+            self.assertIs(session.deactivate(), True)
+            self.assertEqual(spy.count(), 2)
+            self.assertFalse(session.property("active"))
+            self.assertFalse(view.isSpatialEnabled())
+            self.assertEqual(view.renderMode(), SpatialView.RenderMode.Raster)
+            self.assertTrue(shiboken6.isValid(view))
+            self.assertTrue(shiboken6.isValid(layer))
+            self.assertTrue(shiboken6.isValid(source))
+            self.assertIs(layer.backdrop(), source)
+            delete_qobject(session)
+            self.assertTrue(shiboken6.isValid(view))
+            self.assertTrue(shiboken6.isValid(layer))
+            self.assertTrue(shiboken6.isValid(host))
+        finally:
+            if shiboken6.isValid(session):
+                delete_qobject(session)
+            delete_qobject(host)
+
+    def test_session_created_view_retains_python_ownership_records_after_session_teardown(self):
+        session = SpatialSession()
+        view = None
+        model = fluentqt.ChartModel()
+        try:
+            self.assertTrue(session.activate())
+            view = session.createView()
+            self.assertIsInstance(view, SpatialView)
+            view.setRenderMode(SpatialView.RenderMode.Raster)
+            chart = fluentqt.DonutChart()
+            chart.setModel(model)
+            reference = weakref.ref(chart)
+            item = view.addOwnedWidget(chart)
+            del chart
+            gc.collect()
+            self.assertIsNotNone(reference())
+            self.assertIs(item.widget().model(), model)
+
+            delete_qobject(session)
+            self.assertTrue(shiboken6.isValid(view))
+            self.assertFalse(view.isSpatialEnabled())
+            self.assertEqual(view.renderMode(), SpatialView.RenderMode.Raster)
+            self.assertIs(item.widget().model(), model)
+            view.releaseItem(item)
+            self.assertTrue(shiboken6.isValid(model))
+        finally:
+            if shiboken6.isValid(session):
+                delete_qobject(session)
+            if view is not None and shiboken6.isValid(view):
+                delete_qobject(view)
+            delete_qobject(model)
+
+    def test_session_attaches_existing_python_subclasses_without_reparenting(self):
+        class CustomView(SpatialView):
+            pass
+
+        parent = QWidget()
+        view = CustomView(parent)
+        view.setRenderMode(SpatialView.RenderMode.Raster)
+        session = SpatialSession(parent)
+        try:
+            self.assertFalse(session.attachView(view))
+            self.assertTrue(session.activate())
+            self.assertTrue(session.attachView(view))
+            self.assertIs(view.parentWidget(), parent)
+            self.assertTrue(session.deactivate())
+            self.assertFalse(view.isSpatialEnabled())
+            self.assertEqual(view.renderMode(), SpatialView.RenderMode.Raster)
+            self.assertTrue(shiboken6.isValid(view))
+        finally:
+            delete_qobject(session)
+            delete_qobject(parent)
+
+    def test_session_factory_outputs_without_parent_can_be_collected_by_the_caller(self):
+        session = SpatialSession()
+        source = fluentqt.ParticleBackdrop()
+        try:
+            self.assertTrue(session.activate())
+            view = session.createView()
+            layer = session.createParticleLayer(source)
+            self.assertIsNotNone(view)
+            self.assertIsNotNone(layer)
+            view_reference = weakref.ref(view)
+            layer_reference = weakref.ref(layer)
+            del view, layer
+            gc.collect()
+            self.assertIsNone(view_reference())
+            self.assertIsNone(layer_reference())
+            self.assertTrue(shiboken6.isValid(source))
+            self.assertTrue(session.deactivate())
+        finally:
+            delete_qobject(session)
+            delete_qobject(source)
+
+    def test_session_destroyed_by_view_parent_during_creation_does_not_leave_an_output(self):
+        class Host(QWidget):
+            def childEvent(self, event):
+                super().childEvent(event)
+                session = getattr(self, "session", None)
+                if event.added() and session is not None and shiboken6.isValid(session):
+                    delete_qobject(session)
+
+        host = Host()
+        session = SpatialSession(host)
+        host.session = session
+        try:
+            self.assertTrue(session.activate())
+            self.assertIsNone(session.createView(host))
+            self.assertFalse(shiboken6.isValid(session))
+            self.assertEqual(host.children(), [])
+        finally:
+            if shiboken6.isValid(session):
+                delete_qobject(session)
+            delete_qobject(host)
 
     def test_embedded_command_surfaces_reopen_and_restore_2d(self):
         window = QWidget()
@@ -383,6 +528,66 @@ assert "PySide6.QtOpenGLWidgets" not in sys.modules
         self.assertEqual(spy.count(), 1)
         fluentqt.set_motion_mode(fluentqt.MotionMode.Reduced)
         self.assertFalse(self.view.isSpatialEnabled())
+
+
+class SpatialHelloWorldExampleTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QApplication.instance() or QApplication([])
+        fluentqt.initialize_resources()
+        source = Path(__file__).parents[1] / "examples/hello_world/spatial.py"
+        spec = importlib.util.spec_from_file_location("spatial_hello_world_test", source)
+        cls.example = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.example)
+
+    def test_activation_or_view_factory_failure_keeps_a_clickable_2d_card(self):
+        for activated in (False, True):
+            with self.subTest(activated=activated):
+                session = Mock(spec=SpatialSession)
+                session.activate.return_value = activated
+                session.prepareWindow.return_value = False
+                session.createView.return_value = None
+                with patch.object(self.example, "SpatialSession", return_value=session):
+                    window = self.example.create_window()
+                try:
+                    window.show()
+                    self.app.processEvents()
+                    fallback = window.findChild(QWidget, "helloWorldSpatialFallback")
+                    card = window.findChild(fluentqt.Card, "helloWorldSpatialCard")
+                    button = window.findChild(fluentqt.Button, "helloWorldButton")
+                    self.assertIsNotNone(fallback)
+                    self.assertIsNotNone(card)
+                    self.assertIs(card.parentWidget(), fallback)
+                    self.assertEqual(card.size(), QSize(320, 200))
+                    self.assertIsNotNone(button)
+                    self.assertTrue(button.isVisible())
+                    self.assertEqual(button.text(), "Hello from FluentQt")
+                    QTest.mouseClick(button, Qt.LeftButton)
+                    self.assertEqual(button.text(), "Hello, you!")
+                    self.assertIsNone(window.findChild(SpatialView))
+                    self.assertIsNone(window.findChild(QOpenGLWidget))
+                    session.deactivate.assert_called_once()
+                    if activated:
+                        session.prepareWindow.assert_called_once_with(window)
+                        session.createView.assert_called_once_with(window)
+                    else:
+                        session.prepareWindow.assert_not_called()
+                        session.createView.assert_not_called()
+                finally:
+                    delete_qobject(window)
+
+    def test_optional_native_surface_preparation_does_not_disable_the_view(self):
+        fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
+        with patch.object(SpatialSession, "prepareWindow", return_value=False):
+            window = self.example.create_window()
+        try:
+            self.assertTrue(window.spatial_session.isActive())
+            view = window.findChild(SpatialView, "helloWorldSpatialView")
+            self.assertIsNotNone(view)
+            self.assertEqual(view.itemCount(), 1)
+            self.assertIsNone(window.findChild(QWidget, "helloWorldSpatialFallback"))
+        finally:
+            delete_qobject(window)
 
 
 if __name__ == "__main__":

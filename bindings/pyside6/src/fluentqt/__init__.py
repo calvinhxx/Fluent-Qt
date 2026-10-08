@@ -438,3 +438,11 @@ __all__ = [
     "theme_uses_dark_appearance",
     "themeUsesDarkAppearance",
 ]
+
+# Generic extensions are optional in a 2D-only source build. Importing their
+# Python entry point adds no OpenGL or Quick module dependency.
+from ._fluentqt import fluent as _native_for_plugins
+if hasattr(_native_for_plugins, "_PluginManager"):
+    from .plugins import Plugin, WidgetPlugin, PluginMetadata, PluginContext, PluginManager
+    __all__ += ["Plugin", "WidgetPlugin", "PluginMetadata", "PluginContext", "PluginManager"]
+del _native_for_plugins

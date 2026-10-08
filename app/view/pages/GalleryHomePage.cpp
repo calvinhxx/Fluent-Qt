@@ -1006,7 +1006,7 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
             navigationViewModel.itemById(QStringLiteral("all-controls")))
         appendCategory(*allControls);
     for (const GalleryNavigationItem& item : navigationViewModel.items()) {
-        if (item.kind == GalleryNavigationItem::Kind::CategoryRoute)
+        if (item.kind == GalleryNavigationItem::Kind::CategoryRoute && item.depth == 0)
             appendCategory(item);
     }
     addEntryGrid(QStringLiteral("galleryHomeCategoryCards"))->setEntries(categoryEntries);

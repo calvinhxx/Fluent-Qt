@@ -67,7 +67,6 @@ QWidget* createSpatialShowcase()
                                [window](HostTheme theme) { applyShowcaseTheme(window, theme); });
 
 #if defined(FLUENT_QT_HAS_SPATIAL)
-    spatial::SpatialRuntime::prepareApplication();
     auto* toolbar = new QHBoxLayout;
     auto* mode = new basicinput::ToggleSwitch(content);
     mode->setObjectName(QStringLiteral("showcaseSpatialMode"));
@@ -87,12 +86,15 @@ QWidget* createSpatialShowcase()
         auto* preview = sample.createPreview(content);
         column->addWidget(preview);
         auto* view = preview->findChild<spatial::SpatialView*>("spatialPreviewView");
-        if (!view)
+        const QPointer<spatial::SpatialSession> session(
+            preview->findChild<spatial::SpatialSession*>());
+        if (!view || !session || !session->isActive())
             break;
-        const auto publish = [view, mode, status] {
+        const auto publish = [view, session, mode, status] {
             const QSignalBlocker blocker(mode);
             mode->setIsOn(view->isSpatialEnabled());
-            mode->setEnabled(MotionPolicy::instance().mode() == MotionPolicy::Mode::Full &&
+            mode->setEnabled(session && session->isActive() &&
+                             MotionPolicy::instance().mode() == MotionPolicy::Mode::Full &&
                              FluentElement::currentTheme() != FluentElement::HighContrast);
             const bool gpu = view->activeBackend() == spatial::SpatialView::Backend::OpenGL;
             status->setText(!view->isSpatialEnabled() ? QStringLiteral("2D · Qt Widgets")
@@ -113,7 +115,11 @@ QWidget* createSpatialShowcase()
             // clang-format on
         };
         QObject::connect(mode, &basicinput::ToggleSwitch::toggled, view,
-                         &spatial::SpatialView::setSpatialEnabled);
+                         [view, session](bool enabled) {
+                             view->setSpatialEnabled(enabled && session && session->isActive());
+                         });
+        QObject::connect(session, &spatial::SpatialSession::activeChanged, status, publish);
+        QObject::connect(session, &QObject::destroyed, status, publish);
         QObject::connect(view, &spatial::SpatialView::spatialEnabledChanged, status, publish);
         QObject::connect(view, &spatial::SpatialView::rendererChanged, status, publish);
         QObject::connect(view, &spatial::SpatialView::cameraDistanceChanged, status, publish);

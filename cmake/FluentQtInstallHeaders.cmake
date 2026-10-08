@@ -16,6 +16,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     include/FluentQt/Layout.h
     include/FluentQt/MenusToolbars.h
     include/FluentQt/Navigation.h
+    include/FluentQt/Plugins.h
     include/FluentQt/Scrolling.h
     include/FluentQt/Spatial.h
     include/FluentQt/StatusInfo.h
@@ -90,6 +91,11 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/foundation/ThemeRegistry.h
     src/components/foundation/UserTheme.h
     src/components/foundation/WidgetOwnership.h
+    src/components/foundation/plugins/Plugin.h
+    src/components/foundation/plugins/PluginContext.h
+    src/components/foundation/plugins/PluginManager.h
+    src/components/foundation/plugins/WidgetPlugin.h
+    src/components/foundation/plugins/WidgetPluginInterface.h
     src/components/foundation/overlay/OverlayGeometry.h
     src/components/foundation/overlay/OverlayLightDismiss.h
     src/components/foundation/overlay/OverlayPresentation.h
@@ -124,6 +130,8 @@ set(FLUENT_QT_INSTALL_HEADERS
 
     src/components/spatial/ParticleLayer.h
     src/components/spatial/SpatialRuntime.h
+    src/components/spatial/SpatialPlugin.h
+    src/components/spatial/SpatialSession.h
     src/components/spatial/SpatialItem.h
     src/components/spatial/SpatialView.h
     src/components/status_info/Avatar.h
@@ -165,6 +173,10 @@ set(FLUENT_QT_INSTALL_HEADERS
 
 function(fluent_qt_install_headers source_root)
     foreach(_header IN LISTS FLUENT_QT_INSTALL_HEADERS)
+        if(NOT FLUENT_QT_BUILD_PLUGINS AND
+           (_header MATCHES "^src/components/foundation/plugins/" OR _header STREQUAL "include/FluentQt/Plugins.h"))
+            continue()
+        endif()
         if(NOT FLUENT_QT_BUILD_SPATIAL AND
            (_header MATCHES "^src/components/spatial/" OR _header STREQUAL "include/FluentQt/Spatial.h"))
             continue()

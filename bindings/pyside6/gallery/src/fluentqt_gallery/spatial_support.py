@@ -8,6 +8,7 @@ from importlib.util import find_spec
 import fluentqt
 from PySide6.QtCore import QObject, Qt, Slot
 from PySide6.QtGui import QColor
+from shiboken6 import isValid
 
 
 SPATIAL_AVAILABLE = find_spec("fluentqt.spatial") is not None
@@ -55,26 +56,33 @@ class SpatialSupportBadge(fluentqt.FluentWidget):
 class SpatialPreviewBinding(QObject):
     """Every sample follows Settings, including lazy and hidden previews."""
 
-    def __init__(self, view):
+    def __init__(self, view, session=None):
         super().__init__(view)
         from .settings import gallery_settings
 
         self.view = view
+        self.session = session
         self.settings = gallery_settings()
         self.synchronizing = False
         self.settings.spatialModeEnabledChanged.connect(self.synchronize)
         self.settings.spatialAvailabilityChanged.connect(self.synchronize)
         self.view.spatialEnabledChanged.connect(self.mode_changed)
+        if self.session is not None:
+            self.session.activeChanged.connect(self.synchronize)
         self.synchronize()
 
     @Slot()
     def synchronize(self):
         self.synchronizing = True
-        self.view.setSpatialEnabled(self.settings.spatial_available
+        self.view.setSpatialEnabled(self._session_active()
+                                    and self.settings.spatial_available
                                     and self.settings.spatial_mode_enabled)
         self.synchronizing = False
 
     @Slot(bool)
     def mode_changed(self, enabled):
-        if not self.synchronizing and not enabled:
+        if not self.synchronizing and not enabled and self._session_active():
             self.settings.set_spatial_mode_enabled(False)
+
+    def _session_active(self):
+        return self.session is None or (isValid(self.session) and self.session.isActive())

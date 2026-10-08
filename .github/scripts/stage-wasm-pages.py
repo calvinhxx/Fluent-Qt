@@ -37,6 +37,20 @@ HELLO_WORLD_PAYLOAD_FILES = (
     "qtloader.js",
     "qtlogo.svg",
 )
+HELLO_WORLD_SPATIAL_PAYLOAD_FILES = (
+    "index.html",
+    "fluentqt_hello_world_spatial.js",
+    "fluentqt_hello_world_spatial.wasm",
+    "qtloader.js",
+    "qtlogo.svg",
+)
+PLUGIN_EXTENSION_PAYLOAD_FILES = (
+    "index.html",
+    "fluentqt_plugin_extension.js",
+    "fluentqt_plugin_extension.wasm",
+    "qtloader.js",
+    "qtlogo.svg",
+)
 
 
 def project_version() -> str:
@@ -68,6 +82,18 @@ def stage(args: argparse.Namespace) -> None:
         for name in HELLO_WORLD_PAYLOAD_FILES
         if not (hello_world_source / name).is_file()
     )
+    spatial_source = source / "hello-world-spatial"
+    missing.extend(
+        f"hello-world-spatial/{name}"
+        for name in HELLO_WORLD_SPATIAL_PAYLOAD_FILES
+        if not (spatial_source / name).is_file()
+    )
+    plugin_source = source / "plugin-extension"
+    missing.extend(
+        f"plugin-extension/{name}"
+        for name in PLUGIN_EXTENSION_PAYLOAD_FILES
+        if not (plugin_source / name).is_file()
+    )
     if missing:
         raise RuntimeError("Missing Pages payload file(s): " + ", ".join(missing))
 
@@ -83,6 +109,14 @@ def stage(args: argparse.Namespace) -> None:
     hello_world_destination.mkdir(parents=True, exist_ok=True)
     for name in HELLO_WORLD_PAYLOAD_FILES:
         shutil.copy2(hello_world_source / name, hello_world_destination / name)
+    spatial_destination = destination / "hello-world-spatial"
+    spatial_destination.mkdir(parents=True, exist_ok=True)
+    for name in HELLO_WORLD_SPATIAL_PAYLOAD_FILES:
+        shutil.copy2(spatial_source / name, spatial_destination / name)
+    plugin_destination = destination / "plugin-extension"
+    plugin_destination.mkdir(parents=True, exist_ok=True)
+    for name in PLUGIN_EXTENSION_PAYLOAD_FILES:
+        shutil.copy2(plugin_source / name, plugin_destination / name)
 
     metadata = {
         "project": "Fluent-Qt C++ Web Gallery",
@@ -96,7 +130,9 @@ def stage(args: argparse.Namespace) -> None:
     (destination / "build-info.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    total_files = len(PAYLOAD_FILES) + len(HELLO_WORLD_PAYLOAD_FILES)
+    total_files = (len(PAYLOAD_FILES) + len(HELLO_WORLD_PAYLOAD_FILES) +
+                   len(HELLO_WORLD_SPATIAL_PAYLOAD_FILES) +
+                   len(PLUGIN_EXTENSION_PAYLOAD_FILES))
     print(f"Staged {total_files} WebAssembly files in {destination}")
 
 

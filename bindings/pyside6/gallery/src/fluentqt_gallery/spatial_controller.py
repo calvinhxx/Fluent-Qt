@@ -11,7 +11,7 @@ import weakref
 from functools import partial
 
 import fluentqt
-from fluentqt.spatial import SpatialRuntime
+from fluentqt.spatial import SpatialRuntime, SpatialSession
 from fluentqt._fluentqt import fluent as _native_fluent
 from PySide6.QtCore import (
     QAbstractAnimation, QEasingCurve, QEvent, QLineF, QObject, QPoint, QPointF,
@@ -226,7 +226,7 @@ class _Surface(QOpenGLWidget):
         super().__init__(parent)
         from .particle_compositor import GalleryParticleCompositor
         self.owner = owner
-        self.particles = GalleryParticleCompositor(self)
+        self.particles = GalleryParticleCompositor(self, getattr(owner, "session", None))
         self.particles.frameRequested.connect(self.update)
         self.particles.staticContentInvalidated.connect(owner._capture_content)
         self.presented_content_texture = 0
@@ -621,6 +621,11 @@ class GallerySpatialController(QObject):
         self.setObjectName("gallerySpatialController")
         self.window = window
         self.navigation = navigation
+        self.session = getattr(window, "_spatial_session", None)
+        activated = True
+        if self.session is None:
+            self.session = SpatialSession(window, self)
+            activated = self.session.activate()
         self.settings = gallery_settings()
         self.canvas = None
         self.capture = self.content_capture = None
@@ -677,6 +682,8 @@ class GallerySpatialController(QObject):
             self.settings.windowEffectChanged.connect(self.refresh),
             fluentqt.motion_policy().modeChanged.connect(self.refresh),
         ]
+        if _alive(self.session):
+            shared_connections.append(self.session.activeChanged.connect(self._session_active_changed))
         if isinstance(window, fluentqt.Window):
             shared_connections.append(window.backdropStateChanged.connect(self._backdrop_state_changed))
         # PySide 6.2 can retain Python slots after their QObject receiver dies.
@@ -697,11 +704,22 @@ class GallerySpatialController(QObject):
         self.settings.spatial_available = False
         self.settings.spatial_availability_pending = True
         self.settings.spatialAvailabilityChanged.emit()
+        if not activated or not self._session_active():
+            self.disable("Spatial could not activate. Using the 2D Gallery.")
+            return
         reason = _session_unavailable_reason()
         if reason:
             self.disable(reason)
             return
         self.apply_mode(self.settings.spatial_mode_enabled)
+
+    def _session_active(self):
+        return _alive(self.session) and self.session.isActive()
+
+    @Slot(bool)
+    def _session_active_changed(self, active):
+        if not active and _alive(self.window):
+            self.disable("Spatial is inactive. Using the 2D Gallery.")
 
     def set_filtering(self, active):
         if self.filtering == active:
@@ -714,6 +732,9 @@ class GallerySpatialController(QObject):
             app.removeEventFilter(self)
 
     def ensure_renderer(self):
+        if not self._session_active():
+            self.disable("Spatial is inactive. Using the 2D Gallery.")
+            return
         if self.renderer_failed:
             return
         if not _alive(self.canvas):
@@ -722,7 +743,6 @@ class GallerySpatialController(QObject):
             if reason:
                 self.disable(reason)
                 return
-            SpatialRuntime.prepareApplication()
             self.canvas = (_RhiSurface if use_rhi else _Surface)(self, self.window)
             self.canvas.lower()
             self.navigation.setMouseTracking(True)
@@ -755,6 +775,9 @@ class GallerySpatialController(QObject):
 
     @Slot()
     def check_renderer(self):
+        if not self._session_active():
+            self.disable("Spatial is inactive. Using the 2D Gallery.")
+            return
         if self.renderer_failed or self.renderer_ready or not _alive(self.canvas):
             return
         if not self.can_initialize_renderer():
@@ -787,6 +810,9 @@ class GallerySpatialController(QObject):
 
     @Slot()
     def start_presentation(self):
+        if not self._session_active():
+            self.disable("Spatial is inactive. Using the 2D Gallery.")
+            return
         if (not self.renderer_ready
                 or not self.settings.spatial_mode_enabled
                 or self.window._splash is not None
@@ -805,13 +831,15 @@ class GallerySpatialController(QObject):
 
     def _capture_content(self):
         self.content_revision += 1
-        self.canvas.update()
+        if _alive(self.canvas):
+            self.canvas.update()
 
     def _capture_navigation(self):
         self.navigation_revision += 1
         self.content_revision += 1
         self.layout()
-        self.canvas.update()
+        if _alive(self.canvas):
+            self.canvas.update()
 
     def render_widgets(self, painter, navigation, region):
         # Widgets paint directly into the GPU cache. Suppress the other panel's effect
@@ -932,6 +960,9 @@ class GallerySpatialController(QObject):
 
     @Slot(bool)
     def apply_mode(self, enabled):
+        if not self._session_active():
+            self.disable("Spatial is inactive. Using the 2D Gallery.")
+            return
         if enabled and (not _alive(self.capture) or not self.renderer_ready):
             self.ensure_renderer()
             return

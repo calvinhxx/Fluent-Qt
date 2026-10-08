@@ -42,7 +42,8 @@ GalleryTopNavigationPane::GalleryTopNavigationPane(const QVector<GalleryNavigati
     layout->setSpacing(kButtonSpacing);
 
     for (const GalleryNavigationItem& item : items) {
-        if (item.kind == GalleryNavigationItem::Kind::ComponentRoute) {
+        if (item.kind == GalleryNavigationItem::Kind::ComponentRoute ||
+            (item.kind == GalleryNavigationItem::Kind::CategoryRoute && item.depth > 0)) {
             if (!item.id.isEmpty() && !item.parentId.isEmpty()) {
                 m_parentRoutes.insert(item.id, item.parentId);
                 m_childItems[item.parentId].append(item);
@@ -274,12 +275,17 @@ void GalleryTopNavigationPane::showChildFlyout(const QString& routeId,
     layout->setSpacing(2);
 
     for (const GalleryNavigationItem& child : children) {
-        auto* row = new CompactFlyoutRow(child.id, child.title, child.id == m_selectedRouteId,
-                                         m_childFlyoutPanel);
-        row->onActivated = [this](const QString& childRouteId) {
+        QString selected = m_selectedRouteId;
+        while (selected != child.id && m_parentRoutes.contains(selected))
+            selected = m_parentRoutes.value(selected);
+        auto* row =
+            new CompactFlyoutRow(child.id, child.title, child.id == selected, m_childFlyoutPanel);
+        row->onActivated = [this, anchor](const QString& childRouteId) {
             closeChildFlyout(false);
             setSelectedRouteId(childRouteId);
             emit routeActivated(childRouteId);
+            if (m_childItems.contains(childRouteId))
+                showChildFlyout(childRouteId, anchor);
         };
         layout->addWidget(row);
     }

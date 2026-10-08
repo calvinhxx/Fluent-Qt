@@ -62,7 +62,8 @@ PYTHONPATH=build/pyside6/python .venv-pyside/bin/python -m fluentqt_gallery
 ```
 
 **Settings → 3D Gallery** controls both the navigation/content surfaces and all
-examples under **Spatial**. The component pages link back to that setting;
+Spatial examples. Open **Plugins → Spatial → SpatialView** or
+**Plugins → Spatial → SpatialItem**. The component pages link back to that setting;
 **Key usage / Full example** separates the integration calls from the complete
 working Python example. The same widget instances and values survive mode changes.
 With Spatial installed, a fresh Gallery starts in 3D when acceleration is available.
@@ -76,8 +77,10 @@ Splash and Intro retain their normal order. The material behind the canvas still
 belongs to the Window's Mica/Acrylic setting. Particle effects remain visible in
 both backends; Direct3D currently captures their CPU-painted contents. No separate
 renderer preference is exposed. The native
-`SpatialRuntime` entry centralizes driver checks, texture limits, native style
-and hidden-window preparation for both C++ and Python. Splash prepares Home and
+`SpatialSession` activates the extension and tracks views and particle adapters;
+deactivation returns those surfaces to native 2D without taking their ownership.
+The Gallery retains its private RHI window preparation and the public
+`SpatialRuntime` driver checks and texture limits. Splash prepares Home and
 Settings only; cold component pages yield between samples and cache completed
 pages for later visits.
 

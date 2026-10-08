@@ -1593,15 +1593,48 @@
     ]
   },
   "optional_modules": {
+    "fluentqt.plugins": {
+      "build_option": "FLUENT_QT_BUILD_PLUGINS",
+      "classes": [
+        "Plugin",
+        "WidgetPlugin",
+        "PluginMetadata",
+        "PluginContext",
+        "PluginManager"
+      ],
+      "methods": {
+        "Plugin": [
+          "metadata", "onActivate", "onDeactivate", "lastError"
+        ],
+        "WidgetPlugin": [
+          "metadata", "onActivate", "onDeactivate", "widgetKeys", "createWidget", "lastError"
+        ],
+        "PluginContext": [
+          "host", "activePlugin"
+        ],
+        "PluginManager": [
+          "registerPlugin", "unregisterPlugin", "activate", "deactivate", "deactivateAll",
+          "pluginIds", "activePluginIds", "metadata", "plugin", "activePlugin", "isActive",
+          "context", "createWidget", "lastError"
+        ]
+      }
+    },
     "fluentqt.spatial": {
       "build_option": "FLUENT_QT_BUILD_SPATIAL",
       "classes": [
         "ParticleLayer",
         "SpatialRuntime",
+        "SpatialPlugin",
+        "SpatialSession",
         "SpatialItem",
         "SpatialView"
       ],
       "methods": {
+        "SpatialPlugin": ["pluginId", "metadata", "widgetKeys", "isActive", "attachView", "createParticleLayer", "prepareWindow"],
+        "SpatialSession": [
+          "activate", "deactivate", "isActive", "activeChanged",
+          "createView", "attachView", "createParticleLayer", "prepareWindow"
+        ],
         "SpatialRuntime": [
           "prepareApplication", "prepareWindow", "supportsOpenGLDisplay",
           "isHardwareRenderer", "currentRendererName", "preflightFailure",

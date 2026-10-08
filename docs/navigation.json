@@ -23,6 +23,7 @@
         {
           "title": "Runtime contracts",
           "pages": [
+            "architecture/plugins.md",
             "architecture/window-chrome.md",
             "architecture/overlay-behavior.md",
             "architecture/typography-resolution.md",

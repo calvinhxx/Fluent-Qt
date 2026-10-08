@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import sys
 import threading
@@ -13,6 +14,8 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlencode
+
+from wasm_plugin_contract import run_plugin_extension_contract
 
 
 DEFAULT_RENDER_PIXEL_BUDGET = 1_600_000
@@ -73,6 +76,12 @@ def require_files(root: Path) -> None:
         root / "app" / "hello-world" / "index.html",
         root / "app" / "hello-world" / "fluentqt_hello_world.js",
         root / "app" / "hello-world" / "fluentqt_hello_world.wasm",
+        root / "app" / "hello-world-spatial" / "index.html",
+        root / "app" / "hello-world-spatial" / "fluentqt_hello_world_spatial.js",
+        root / "app" / "hello-world-spatial" / "fluentqt_hello_world_spatial.wasm",
+        root / "app" / "plugin-extension" / "index.html",
+        root / "app" / "plugin-extension" / "fluentqt_plugin_extension.js",
+        root / "app" / "plugin-extension" / "fluentqt_plugin_extension.wasm",
     )
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
@@ -81,8 +90,9 @@ def require_files(root: Path) -> None:
 
 def run_screen_reader_proxy_contract(page: object, app_name: str) -> None:
     """Activate Qt accessibility without hiding its semantics or its canvas."""
+    # A Spatial app can create a hidden GPU surface before its desktop surface.
     container = page.locator(
-        "#qt-shadow-container .qt-window-a11y-container"
+        "#qt-shadow-container .qt-window-a11y-container:visible"
     ).first
     container.wait_for(state="attached", timeout=10_000)
     activation = container.locator(
@@ -621,6 +631,81 @@ def run_site_theme_contract(browser: object, root: Path) -> None:
         server_thread.join(timeout=5)
 
 
+def validate_hello_world_spatial_state(state: dict, text: str) -> None:
+    expected = {
+        "window": {"width": 720, "height": 520},
+        "card": {"width": 320, "height": 200},
+        "rotation": [6, -12, 0], "maximumTilt": [3, 5],
+        "text": text, "spatialEnabled": True, "projected": True,
+    }
+    if any(state.get(key) != value for key, value in expected.items()):
+        raise RuntimeError(f"Spatial Hello World differs from its shared window: {state}")
+    if not math.isclose(state.get("surfaceIntensity", -1), 0.6, abs_tol=1e-6):
+        raise RuntimeError(f"Spatial Hello World surface intensity differs: {state}")
+    for name in ("view", "button"):
+        rect = state.get(name, {})
+        if rect.get("width", 0) <= 0 or rect.get("height", 0) <= 0:
+            raise RuntimeError(f"Spatial Hello World has no {name} geometry: {state}")
+    point = state.get("buttonCenter", [])
+    if len(point) != 2 or any(not math.isfinite(value) for value in point):
+        raise RuntimeError(f"Spatial Hello World has no projected button center: {state}")
+
+
+def run_hello_world_spatial_contract(
+    browser: object, base_url: str, output: Path,
+    entry_path: str = "/app/hello-world-spatial/index.html",
+) -> None:
+    context = browser.new_context(viewport={"width": 1280, "height": 800},
+                                  device_scale_factor=2, color_scheme="light")
+    page = context.new_page()
+    errors: list[str] = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    output.mkdir(parents=True, exist_ok=True)
+    try:
+        response = page.goto(base_url + entry_path, wait_until="domcontentloaded")
+        if response is None or not response.ok:
+            raise RuntimeError("Spatial Hello World entry failed to load")
+        page.wait_for_function("""() => document.documentElement.dataset.fluentQtLoaded === 'true'
+            && typeof window.fluentQtExampleRuntime?._fluentQtHelloWorldObserve === 'function'""",
+            timeout=60_000)
+        page.wait_for_function("""() => {
+            window.fluentQtExampleRuntime._fluentQtHelloWorldObserve();
+            const state = JSON.parse(document.documentElement.dataset.fluentQtHelloWorldState || '{}');
+            return state.projected && state.view?.width > 0;
+        }""")
+        initial = page.evaluate("JSON.parse(document.documentElement.dataset.fluentQtHelloWorldState)")
+        validate_hello_world_spatial_state(initial, "Hello from FluentQt")
+        stage = page.locator("#qt-container").bounding_box()
+        window_rect = page.evaluate("""() => {
+            const root = document.documentElement.dataset;
+            return {x: Number(root.fluentQtWindowX), y: Number(root.fluentQtWindowY),
+                width: Number(root.fluentQtWindowWidth), height: Number(root.fluentQtWindowHeight)};
+        }""")
+        center = initial["buttonCenter"]
+        if not (window_rect["x"] < center[0] < window_rect["x"] + window_rect["width"]
+                and window_rect["y"] < center[1] < window_rect["y"] + window_rect["height"]):
+            raise RuntimeError(f"Spatial greeting was projected outside its window: {initial}")
+        page.screenshot(path=str(output / "spatial-initial.png"), full_page=True)
+        page.mouse.click(stage["x"] + center[0], stage["y"] + center[1])
+        page.wait_for_function("""() => {
+            window.fluentQtExampleRuntime._fluentQtHelloWorldObserve();
+            return JSON.parse(document.documentElement.dataset.fluentQtHelloWorldState).text === 'Hello, you!';
+        }""", timeout=10_000, polling=100)
+        clicked = page.evaluate("JSON.parse(document.documentElement.dataset.fluentQtHelloWorldState)")
+        validate_hello_world_spatial_state(clicked, "Hello, you!")
+        if errors:
+            raise RuntimeError("Spatial Hello World browser errors: " + " | ".join(errors))
+        page.screenshot(path=str(output / "spatial-clicked.png"), full_page=True)
+        (output / "spatial-lifecycle.json").write_text(json.dumps({
+            "browser": browser.version, "deviceScaleFactor": 2, "window": window_rect,
+            "initial": initial, "clicked": clicked, "errors": errors,
+        }, indent=2) + "\n")
+        print("Spatial Hello World passed: shared 720x520 window, 320x200 Card, pose, "
+              "projected physical button input, and greeting text")
+    finally:
+        context.close()
+
+
 def run_smoke(
     root: Path,
     mode: str,
@@ -1029,7 +1114,9 @@ def run_smoke(
                     + " | ".join(local_request_failures)
                 )
 
+            run_hello_world_spatial_contract(browser, base_url, root / "hello-world-validation")
             run_embedded_theme_contract(browser, base_url)
+            run_plugin_extension_contract(browser, base_url, root / "plugin-validation")
             run_spatial_showcase_contract(browser, base_url, root)
             run_site_theme_contract(browser, root)
 

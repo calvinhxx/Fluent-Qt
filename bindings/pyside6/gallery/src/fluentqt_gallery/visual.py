@@ -32,6 +32,7 @@ from PySide6.QtCore import (
     QRandomGenerator,
     QRect,
     QRectF,
+    QSignalBlocker,
     QSize,
     QSizeF,
     Qt,
@@ -70,6 +71,7 @@ from PySide6.QtWidgets import (
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
+    QLayout,
     QScrollArea,
     QSizePolicy,
     QStyle,
@@ -276,6 +278,7 @@ def _draw_pixmap_in_logical_rect(
 ROUTE_ICON_NAMES = {
     "home": chr(0xE80F),
     "foundation": "ic_fluent_cube_20_regular",
+    "plugins": "ic_fluent_apps_20_regular",
     "all-controls": chr(0xE890),
     "basic-input": chr(0xE73E),
     "collections": chr(0xE80A),
@@ -2312,6 +2315,7 @@ _KIND_ROLE = _ROUTE_ID_ROLE + 1
 _PARENT_ROUTE_ID_ROLE = _ROUTE_ID_ROLE + 2
 _ICON_GLYPH_ROLE = _ROUTE_ID_ROLE + 3
 _INDICATOR_INSET_ROLE = _ROUTE_ID_ROLE + 4
+_DEPTH_ROLE = Qt.UserRole + 7
 
 _SECTION_HEADER = 0
 _ROOT_ROUTE = 1
@@ -2331,7 +2335,7 @@ _COMPACT_FLYOUT_ENTRANCE_OFFSET = 8
 _COMPACT_FLYOUT_WINDOW_MARGIN = 12
 _COMPACT_FLYOUT_CONTENT_MARGINS = QMargins(3, 4, 3, 4)
 _TOP_NAV_BAR_HEIGHT = 48
-_TOP_NAV_BUTTON_SIZE = 32
+_TOP_NAV_BUTTON_SIZE = 36
 _TOP_NAV_BUTTON_SPACING = 4
 _TOP_NAV_HORIZONTAL_MARGIN = 8
 _TOP_NAV_FLYOUT_VERTICAL_OFFSET = 8
@@ -2664,6 +2668,9 @@ class _GalleryNavigationDelegate(QStyledItemDelegate):
         compact = self._compact(view)
         compact_progress = self._compact_progress(view)
         expanded_opacity = max(0.0, min(1.0, 1.0 - compact_progress))
+        depth = int(index.data(_DEPTH_ROLE) or 0)
+        nested_indent = (depth * 16 * expanded_opacity
+                         if depth > 1 or (kind == _CATEGORY_ROUTE and depth > 0) else 0.0)
 
         if kind == _SECTION_HEADER:
             if expanded_opacity > 0.01:
@@ -2745,7 +2752,7 @@ class _GalleryNavigationDelegate(QStyledItemDelegate):
         )
         icon_left = content_left + (
             compact_icon_left - content_left
-        ) * compact_progress
+        ) * compact_progress + nested_indent
         text_x = (
             background.left() + 43
             if kind == _COMPONENT_ROUTE
@@ -2772,6 +2779,7 @@ class _GalleryNavigationDelegate(QStyledItemDelegate):
             text_x = background.left() + 43
         elif kind != _COMPONENT_ROUTE:
             text_x = background.left() + 43
+        text_x += nested_indent
 
         if expanded_opacity > 0.01:
             font = fluentqt.font_for_role(fluentqt.FontRole.Body)
@@ -2820,16 +2828,21 @@ def _navigation_item(
     kind: int,
     parent_id: str = "",
     icon_name: str = "",
+    depth: int = 0,
 ) -> QStandardItem:
     item = QStandardItem(title)
     item.setEditable(False)
     item.setData(route_id, _ROUTE_ID_ROLE)
     item.setData(kind, _KIND_ROLE)
     item.setData(parent_id, _PARENT_ROUTE_ID_ROLE)
+    item.setData(depth, _DEPTH_ROLE)
     item.setData(icon_name if kind != _COMPONENT_ROUTE else "", _ICON_GLYPH_ROLE)
     item.setToolTip("" if kind == _SECTION_HEADER else title)
+    nested_indent = depth * 16 if depth > 1 or (kind == _CATEGORY_ROUTE and depth > 0) else 0
     if kind == _COMPONENT_ROUTE:
-        item.setData(4 + 43 - 3 - 8, _INDICATOR_INSET_ROLE)
+        item.setData(4 + 43 - 3 - 8 + nested_indent, _INDICATOR_INSET_ROLE)
+    elif nested_indent:
+        item.setData(7 + nested_indent, _INDICATOR_INSET_ROLE)
     item.setFlags(
         Qt.ItemIsEnabled
         if kind == _SECTION_HEADER
@@ -2950,6 +2963,8 @@ class GalleryNavigationPane(QWidget):
         categories: Iterable[tuple[str, str, tuple[tuple[str, str], ...]]],
         foundation_children: tuple[tuple[str, str], ...],
         parent: QWidget | None = None,
+        *,
+        plugin_categories: Iterable[tuple[str, str, tuple[tuple[str, str], ...]]] = (),
     ) -> None:
         super().__init__(parent)
         self.setObjectName("galleryMainNavigationPane")
@@ -2987,9 +3002,27 @@ class GalleryNavigationPane(QWidget):
                 child_id,
                 _COMPONENT_ROUTE,
                 parent_id="foundation",
+                depth=1,
             )
             foundation.appendRow(child)
             route_items[child_id] = child
+
+        plugin_categories = tuple(plugin_categories)
+        if plugin_categories:
+            plugins = _navigation_item("Plugins", "plugins", _CATEGORY_ROUTE,
+                                       icon_name=route_icon_name("plugins"))
+            append_root(plugins)
+            for category_id, title, child_routes in plugin_categories:
+                category = _navigation_item(title, category_id, _CATEGORY_ROUTE,
+                                            parent_id="plugins", depth=1,
+                                            icon_name=route_icon_name(category_id))
+                plugins.appendRow(category)
+                route_items[category_id] = category
+                for child_id, child_title in child_routes:
+                    child = _navigation_item(child_title, child_id, _COMPONENT_ROUTE,
+                                             parent_id=category_id, depth=2)
+                    category.appendRow(child)
+                    route_items[child_id] = child
 
         append_root(_navigation_item("Controls", "", _SECTION_HEADER))
         append_root(
@@ -3016,6 +3049,7 @@ class GalleryNavigationPane(QWidget):
                     child_id,
                     _COMPONENT_ROUTE,
                     parent_id=category_id,
+                    depth=1,
                 )
                 category.appendRow(child)
                 route_items[child_id] = child
@@ -3152,11 +3186,9 @@ class GalleryNavigationPane(QWidget):
             self._tree.setCurrentIndex(QModelIndex())
             return
         index = item.index()
-        visual_index = (
-            index.parent()
-            if self._compact and index.parent().isValid()
-            else index
-        )
+        visual_index = index
+        while self._compact and visual_index.parent().isValid():
+            visual_index = visual_index.parent()
         indicator_inset = visual_index.data(_INDICATOR_INSET_ROLE)
         self._tree.setSelectionIndicatorInset(
             float(indicator_inset) if indicator_inset is not None else 7.0
@@ -3177,7 +3209,9 @@ class GalleryNavigationPane(QWidget):
         if horizontal is not None:
             horizontal.blockSignals(True)
         try:
-            self._tree.setSelectedItem(visual_index)
+            if (self._tree.currentIndex() != visual_index
+                    or not self._tree.selectionModel().isSelected(visual_index)):
+                self._tree.setSelectedItem(visual_index)
             self._tree.scrollTo(visual_index, QAbstractItemView.EnsureVisible)
         finally:
             if vertical is not None:
@@ -3271,7 +3305,10 @@ class GalleryNavigationPane(QWidget):
             or not self._model.hasChildren(index)
         ):
             return
-        visual_rect = self._tree.visualRect(index)
+        visual_index = index
+        while visual_index.parent().isValid():
+            visual_index = visual_index.parent()
+        visual_rect = self._tree.visualRect(visual_index)
         if visual_rect.isEmpty():
             return
         self._close_compact_flyout(False)
@@ -3316,10 +3353,13 @@ class GalleryNavigationPane(QWidget):
             child_route = str(child.data(_ROUTE_ID_ROLE) or "")
             if not child_route:
                 continue
+            selected = self._route_items.get(self._selected_route_id)
+            while selected is not None and selected is not self._route_items.get(child_route):
+                selected = selected.parent()
             row = _GalleryCompactFlyoutRow(
                 child_route,
                 str(child.data(Qt.DisplayRole) or ""),
-                child_route == self._selected_route_id,
+                selected is not None,
                 panel,
             )
             row.activated.connect(self._activate_compact_child)
@@ -3415,7 +3455,15 @@ class GalleryNavigationPane(QWidget):
         self._selected_route_id = route_id
         self.sync_selected(route_id)
         self.routeActivated.emit(route_id)
-        _single_shot(0, self, self._close_compact_flyout)
+        def advance() -> None:
+            if self._selected_route_id != route_id:
+                return
+            item = self._route_items.get(route_id)
+            if item is not None and self._model.hasChildren(item.index()):
+                self._show_compact_flyout(item.index())
+            else:
+                self._close_compact_flyout()
+        _single_shot(0, self, advance)
 
     def _close_compact_flyout(self, animated: bool = True) -> None:
         popup = self._compact_flyout
@@ -3599,7 +3647,9 @@ class GalleryNavigationFooter(QWidget):
     def sync_selected(self, route_id: str) -> None:
         self._selected_route_id = route_id
         if route_id == "settings":
-            self._tree.setSelectedItem(self._item.index())
+            index = self._item.index()
+            if self._tree.currentIndex() != index or not self._tree.selectionModel().isSelected(index):
+                self._tree.setSelectedItem(index)
         else:
             self._tree.clearSelection()
             self._tree.setCurrentIndex(QModelIndex())
@@ -3783,7 +3833,7 @@ class _GalleryCompactFlyoutPanel(fluentqt.FluentWidget):
 
 
 class GalleryTopNavigationPane(fluentqt.FluentWidget):
-    """Icon-only 48 px top navigation chrome matching the C++ Gallery."""
+    """Responsive 48 px navigation chrome matching the C++ Gallery."""
 
     routeActivated = Signal(str)
 
@@ -3798,26 +3848,41 @@ class GalleryTopNavigationPane(fluentqt.FluentWidget):
             ]
         ],
         parent: QWidget | None = None,
+        *,
+        descendants: Iterable[tuple[str, tuple[tuple[str, str], ...]]] = (),
+        route_groups: Iterable[tuple[str, str]] = (),
     ) -> None:
         super().__init__(parent)
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.setMinimumHeight(_TOP_NAV_BAR_HEIGHT)
         layout = QHBoxLayout(self)
+        layout.setSizeConstraint(QLayout.SetNoConstraint)
         layout.setContentsMargins(
             _TOP_NAV_HORIZONTAL_MARGIN,
-            8,
+            6,
             _TOP_NAV_HORIZONTAL_MARGIN,
-            8,
+            6,
         )
         layout.setSpacing(_TOP_NAV_BUTTON_SPACING)
         self._buttons: dict[str, fluentqt.Button] = {}
+        self._items = tuple(items)
+        self._groups = dict(route_groups)
+        self._group_divider: fluentqt.Divider | None = None
+        self._more_button: fluentqt.Button | None = None
+        self._updating_layout = False
         self._children: dict[str, tuple[tuple[str, str], ...]] = {}
         self._parents: dict[str, str] = {}
         self._selected_route_id = ""
         self._child_flyout: fluentqt.Popup | None = None
         self._child_flyout_panel: QWidget | None = None
+        self._child_flyout_anchor: fluentqt.Button | None = None
 
-        for route_id, title, icon_name, children in items:
+        for route_id, title, icon_name, children in self._items:
+            if self._groups.get(route_id) == "Controls" and self._group_divider is None:
+                self._group_divider = fluentqt.Divider(Qt.Vertical, self)
+                self._group_divider.setObjectName("galleryTopNavigationDivider")
+                self._group_divider.setFixedSize(1, 20)
+                layout.addWidget(self._group_divider, 0, Qt.AlignVCenter)
             button = fluentqt.Button("", self)
             button.setObjectName(
                 "galleryTopNavigationButton_{0}".format(route_id)
@@ -3829,13 +3894,14 @@ class GalleryTopNavigationPane(fluentqt.FluentWidget):
             button.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
             button.setFluentSize(fluentqt.Button.ButtonSize.Small)
             button.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
+            button.setCheckable(True)
             button.setIconGlyph(
                 icon_name, fluentqt.Typography.IconSize.Standard
             )
             button.setFixedSize(
                 _TOP_NAV_BUTTON_SIZE, _TOP_NAV_BUTTON_SIZE
             )
-            button.clicked.connect(
+            button.toggled.connect(
                 lambda _checked=False, rid=route_id, source=button: (
                     self._activate_route(rid, source)
                 )
@@ -3845,30 +3911,119 @@ class GalleryTopNavigationPane(fluentqt.FluentWidget):
             for child_id, _child_title in children:
                 self._parents[child_id] = route_id
             layout.addWidget(button)
+        for route_id, children in descendants:
+            self._children[route_id] = tuple(children)
+            for child_id, _child_title in children:
+                self._parents[child_id] = route_id
+        more = fluentqt.Button(self)
+        more.setObjectName("galleryTopNavigationMore")
+        more.setAccessibleName("More categories")
+        fluentqt.ToolTip.attach(more, "More categories", fluentqt.ToolTip.Placement.Above)
+        more.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
+        more.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
+        more.setIconGlyph(fluentqt.Typography.Icons.More, fluentqt.Typography.IconSize.Standard)
+        more.setFixedSize(_TOP_NAV_BUTTON_SIZE, _TOP_NAV_BUTTON_SIZE)
+        more.clicked.connect(lambda: self._show_child_flyout("overflow", more))
+        self._more_button = more
+        layout.addWidget(more)
+        layout.addStretch(1)
+        self._update_button_styles()
 
     def sizeHint(self) -> QSize:
-        count = len(self._buttons)
+        count = len(self._items)
+        label_space = max((self._buttons[route_id].fontMetrics().horizontalAdvance(title) + 4
+                           for route_id, title, _icon, _children in self._items), default=0)
+        if count > 1 and "home" in self._buttons:
+            label_space += self._buttons["home"].fontMetrics().horizontalAdvance(self._items[0][1]) + 4
         return QSize(
             2 * _TOP_NAV_HORIZONTAL_MARGIN
             + count * _TOP_NAV_BUTTON_SIZE
-            + max(0, count - 1) * _TOP_NAV_BUTTON_SPACING,
+            + max(0, count - 1) * _TOP_NAV_BUTTON_SPACING + label_space
+            + (1 + _TOP_NAV_BUTTON_SPACING if self._group_divider is not None else 0),
             _TOP_NAV_BAR_HEIGHT,
         )
 
-    def sync_selected(self, route_id: str) -> None:
-        if self._selected_route_id == route_id:
-            return
-        self._close_child_flyout(False)
-        self._selected_route_id = route_id
-        visual_route = route_id
+    def minimumSizeHint(self) -> QSize:
+        return QSize(_TOP_NAV_BUTTON_SIZE + 2 * _TOP_NAV_HORIZONTAL_MARGIN, _TOP_NAV_BAR_HEIGHT)
+
+    def _visual_route_id(self) -> str:
+        visual_route = self._selected_route_id
         while visual_route not in self._buttons and visual_route in self._parents:
             visual_route = self._parents[visual_route]
+        return visual_route
+
+    def sync_selected(self, route_id: str) -> None:
+        if self._selected_route_id != route_id:
+            self._close_child_flyout(False)
+            self._selected_route_id = route_id
+        self._update_button_styles()
+
+    def _update_button_styles(self) -> None:
+        visual_route = self._visual_route_id()
         for button_route, button in self._buttons.items():
-            button.setFluentStyle(
-                fluentqt.Button.ButtonStyle.Standard
-                if button_route == visual_route
-                else fluentqt.Button.ButtonStyle.Subtle
-            )
+            with QSignalBlocker(button):
+                button.setChecked(button_route == visual_route)
+        self._update_button_layout()
+
+    def _update_button_layout(self) -> None:
+        if self._more_button is None or self._updating_layout:
+            return
+        self._updating_layout = True
+        try:
+            selected = self._visual_route_id()
+            widths = []
+            visible = [True] * len(self._items)
+            for route_id, title, _icon, _children in self._items:
+                button = self._buttons[route_id]
+                label = route_id == selected or route_id == "home" or len(self._items) == 1
+                button.setText(title if label else "")
+                button.setFluentLayout(fluentqt.Button.ButtonLayout.IconBefore if label
+                                       else fluentqt.Button.ButtonLayout.IconOnly)
+                widths.append(max(_TOP_NAV_BUTTON_SIZE, button.sizeHint().width()) if label
+                              else _TOP_NAV_BUTTON_SIZE)
+                button.setFixedSize(widths[-1], _TOP_NAV_BUTTON_SIZE)
+            available = max(0, self.width() - 2 * _TOP_NAV_HORIZONTAL_MARGIN)
+
+            def occupied(more):
+                total = _TOP_NAV_BUTTON_SIZE + _TOP_NAV_BUTTON_SPACING if more else 0
+                total += sum(width + _TOP_NAV_BUTTON_SPACING for width, show in zip(widths, visible) if show)
+                return total - _TOP_NAV_BUTTON_SPACING + (
+                    1 + _TOP_NAV_BUTTON_SPACING if self._group_divider is not None else 0)
+
+            overflow = occupied(False) > available
+            for index in range(len(self._items) - 1, -1, -1):
+                if not overflow or occupied(True) <= available:
+                    break
+                if self._items[index][0] not in (selected, "home"):
+                    visible[index] = False
+            hidden = []
+            has_controls = False
+            for (route_id, title, _icon, _children), show in zip(self._items, visible):
+                self._buttons[route_id].setVisible(show)
+                if not show:
+                    hidden.append((route_id, title))
+                elif self._groups.get(route_id) == "Controls":
+                    has_controls = True
+            self._children["overflow"] = tuple(hidden)
+            self._more_button.setVisible(bool(hidden))
+            if self._group_divider is not None:
+                foundation = self._buttons.get("foundation")
+                self._group_divider.setVisible(has_controls and foundation is not None and not foundation.isHidden())
+            self.layout().activate()
+        finally:
+            self._updating_layout = False
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if hasattr(self, "_more_button"):
+            self._close_child_flyout(False)
+            self._update_button_layout()
+
+    def on_theme_updated(self) -> None:
+        super().on_theme_updated()
+        if getattr(self, "_more_button", None) is not None:
+            self._update_button_layout()
+            self.updateGeometry()
 
     def _activate_route(self, route_id: str, button: fluentqt.Button) -> None:
         if route_id == "settings":
@@ -3907,10 +4062,13 @@ class GalleryTopNavigationPane(fluentqt.FluentWidget):
         panel_layout.setSpacing(2)
         rows = []
         for child_id, child_title in children:
+            selected = self._selected_route_id
+            while selected != child_id and selected in self._parents:
+                selected = self._parents[selected]
             row = _GalleryCompactFlyoutRow(
                 child_id,
                 child_title,
-                child_id == self._selected_route_id,
+                child_id == selected,
                 panel,
             )
             row.activated.connect(self._activate_child_route)
@@ -3946,6 +4104,7 @@ class GalleryTopNavigationPane(fluentqt.FluentWidget):
 
         self._child_flyout = popup
         self._child_flyout_panel = panel
+        self._child_flyout_anchor = anchor
 
         def clear_popup(*_unused: object) -> None:
             if self._child_flyout is popup:
@@ -3978,9 +4137,13 @@ class GalleryTopNavigationPane(fluentqt.FluentWidget):
         )
 
     def _activate_child_route(self, route_id: str) -> None:
+        anchor = self._child_flyout_anchor
         self._close_child_flyout(False)
         self.sync_selected(route_id)
         self.routeActivated.emit(route_id)
+        if self._children.get(route_id) and anchor is not None:
+            _single_shot(0, self, lambda: self._show_child_flyout(route_id, anchor)
+                         if self._selected_route_id == route_id else None)
 
     def _close_child_flyout(self, animated: bool = True) -> None:
         popup = self._child_flyout
