@@ -10,7 +10,20 @@ button to change its text.
 | `fluentqt_hello_world_spatial` | `FluentQt::Spatial` | A Button on a Card in SpatialView, with rotation, shadow and pointer tilt |
 
 The 2D executable does not link Spatial or its Qt OpenGL modules, even when both
-targets are built together. Spatial already links the base library.
+targets are built together. Spatial includes Plugins and the base library.
+
+The Spatial window requests a 720 × 520 logical size. It centers a 320 × 200
+Card containing the accent Button. The item uses rotation `(6, -12, 0)`, surface
+intensity `0.6`, and maximum pointer tilt `(3, 5)`. The
+[Python counterpart](../../bindings/pyside6/examples/hello_world/README.md)
+uses this composition and configuration; the browser executable compiles the
+same C++ window construction.
+
+The Spatial variant checks activation and the nullable view factory before
+using the view. If either fails, it deactivates the session and keeps the same
+Card and Button centered in an ordinary QWidget layout. Window preparation is
+best-effort after activation; a false preparation result alone does not select
+the fallback. Successful activation does not establish GPU availability.
 
 ## Read the code
 
@@ -62,12 +75,24 @@ See the repository [README](../../README.md) for `add_subdirectory`,
 
 ## WebAssembly
 
-The 2D executable is also the minimal WebAssembly smoke target. Activate
-Emscripten 3.1.70, set `QT_WASM_ROOT` and `QT_HOST_ROOT`, then build the public
-`wasm` preset. Serve `build/wasm` over HTTP and open
-`examples/hello_world/fluentqt_hello_world.html`. The browser target links
+Both executable targets also build for WebAssembly. Activate Emscripten 3.1.70,
+set `QT_WASM_ROOT` and `QT_HOST_ROOT`, then build the public `wasm` preset.
+Serve `build/wasm` over HTTP and use the matching entry:
+
+| Variant | Standalone build output | Staged beside Gallery |
+| --- | --- | --- |
+| Base 2D | `examples/hello_world/hello-world/index.html` | `app/hello-world/index.html` |
+| Spatial | `examples/hello_world/hello-world-spatial/index.html` | `app/hello-world-spatial/index.html` |
+
+The browser target links
 `FluentQt::WebAssembly`; its selected launcher calls `configureRuntime()` and
 `showWindow()` so the shared window is hosted in the same movable/resizable Qt
 desktop surface as the Gallery. Hello World does not use nested modal loops and
 therefore does not link `FluentQt::WasmAsyncify`. Shared window construction
 contains no WebAssembly conditionals.
+
+The Spatial minimal app is separate from the Gallery's `?showcase=spatial`
+embed, which includes interactive scene controls. Use the minimal entry when
+comparing the C++, Python, and browser Hello World layouts. Compare logical
+widget geometry and matching states; platform fonts, device pixel ratios, and
+the surrounding browser stage can change raw screenshot pixels.

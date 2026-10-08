@@ -14,6 +14,7 @@ Read the owning code and the guide sections relevant to the task below.
 | Public API change | [API conventions](docs/development/component-api-conventions.md), [compatibility policy](docs/development/compatibility-policy.md) |
 | Trace an earlier API decision or audit a baseline | [Historical API audit](docs/development/component-api-audit.md); its dated addenda are evidence, not current rules |
 | Runtime ownership or overlays | [Architecture](docs/architecture/README.md); [overlay behavior](docs/architecture/overlay-behavior.md) for popups, flyouts, dropdowns, and drawers |
+| Optional plugin extensions | [Plugin contract](docs/architecture/plugins.md) for lifecycle, dependencies, thread affinity, and caller-owned widgets |
 | Visible component change | [Accessibility inventory](docs/development/accessibility-inventory.md), [visual review](docs/development/visual-review.md) |
 | Cross-cutting maintenance or high-risk visual work | [Technical debt roadmap](docs/development/technical-debt-roadmap.md) and its [visual evidence inventory](docs/development/visual-evidence-inventory.json) |
 | Gallery samples or card images | [Sample/source alignment](docs/development/app-sample-optimization.md), [preview workflow](docs/development/gallery-preview-workflow.md), or [card images](docs/development/gallery-control-images.md) |
@@ -34,8 +35,18 @@ Read the owning code and the guide sections relevant to the task below.
   `foundation/`, composition surfaces in `layout/`, and model/view surfaces in
   `collections/`. Indexed plotting models and views belong in `charts/`. Perspective widget hosts
   and item transforms belong in `spatial/` (`fluent::spatial`), built by the opt-in
-  `FluentQt::Spatial` target. Keep OpenGL out of the base target and package discovery. Preserve
-  caller-owned collection and chart models.
+  `FluentQt::Spatial` target with `FluentQt::Plugins` as a public dependency.
+  Use `SpatialSession` for shared extension activation and cleanup; preserve
+  the native 2D fallback. Keep Plugins and OpenGL out of base package discovery.
+  Preserve caller-owned collection and chart models.
+- Nonvisual plugin infrastructure lives in `foundation/plugins/`
+  (`fluent::plugins`), built by opt-in `FluentQt::Plugins`. Concrete extension
+  dependencies belong in separate targets; preserve borrowed plugin/host
+  ownership and application-owned models, permissions, and widget lifetimes.
+  Python authoring uses `fluentqt.plugins`; WebAssembly compiles the shared C++
+  lifecycle into the application. Keep plugin/host ownership borrowed; Python
+  callers retain unparented plugin wrappers or provide a Qt owner. Do not add
+  a separate browser manager.
 - Use `compatibility/QtCompat.h` and `FluentEnterEvent` in new `enterEvent`
   overrides. Inside `namespace fluent::<category>`, inherit shared mixins as
   `public FluentElement, public QMLPlus`; qualify them with `fluent::` outside.

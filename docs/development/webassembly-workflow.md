@@ -53,10 +53,22 @@ python3 tools/dev/fluent_qt_build.py --preset wasm
 The main browser entry points are:
 
 - `build/wasm/app/index.html` for the C++ Web Gallery;
-- `build/wasm/examples/hello_world/fluentqt_hello_world.html` for the minimal
-  example build output;
+- `build/wasm/examples/hello_world/hello-world/index.html` for the standalone
+  minimal example with the shared browser shell;
 - `build/wasm/app/hello-world/index.html` for the minimal UILib app exactly as
-  it is staged beside the Gallery for Pages.
+  it is staged beside the Gallery for Pages;
+- `build/wasm/app/hello-world-spatial/index.html` for the minimal Spatial app,
+  built from the same C++ window as the native Spatial executable; its
+  standalone entry is
+  `build/wasm/examples/hello_world/hello-world-spatial/index.html`;
+- `build/wasm/app/plugin-extension/index.html` for the optional plugin lifecycle
+  app; its standalone build entry is
+  `build/wasm/examples/plugin_extension/index.html`.
+
+The [Hello World guide](../../examples/hello_world/README.md) maps the native,
+Python, and browser Spatial examples. The
+[plugin example guide](../architecture/plugins.md#minimal-extension-example)
+maps the corresponding Plugins entries.
 
 Serve the build directory over HTTP. Browsers must not load the generated files
 directly through `file://`:
@@ -152,7 +164,9 @@ setting.
 `?showcase=spatial` starts the existing `spatial-view-scene` sample without the
 Gallery navigation, startup pages, or saved preferences. Its C++ host lives in
 `app/platform/wasm/GallerySpatialShowcase.cpp`; the sample and component code are
-unchanged. `embed=site` retains the host theme contract. The website loads this
+unchanged. It includes scene controls and is separate from the minimal
+`app/hello-world-spatial/index.html` application. `embed=site` retains the host
+theme contract. The website loads this
 view on demand at native render density and can send same-origin
 `showcase-visibility` (boolean `active`) and `showcase-motion` (boolean `reduced`)
 messages. Hiding the sample lets SpatialView release its GPU viewport; unloading
@@ -199,8 +213,11 @@ The Gallery owns condition-driven browser checks selected by a query parameter:
   message contract, forced-colors precedence and restoration, and the website
   theme cycle/persistence behavior;
 - browser smoke records WebAssembly heap capacity and program-break watermarks;
-- both tiers verify the Simplified Chinese fallback and launch the independently
-  staged minimal UILib app.
+- both tiers verify the Simplified Chinese fallback, launch the staged base and
+  Spatial minimal apps, and click the Spatial Button at its projected position;
+- both tiers operate the plugin example through activation, creation,
+  deactivation, and restoration, checking retained widgets and native
+  dependency/failure probes.
 
 The runner publishes `data-fluent-qt-smoke="pass|fail"` and a detail field on
 the document root. CI drives that contract through Playwright:

@@ -4,6 +4,7 @@
 #include "GalleryGlyphPaintDevice.h"
 #include "components/layout/ParticleBackdrop.h"
 #include "components/spatial/ParticleLayer.h"
+#include "components/spatial/SpatialSession.h"
 
 #include <QApplication>
 #include <QEvent>
@@ -202,6 +203,7 @@ struct GalleryParticleCompositor::Private {
         quint64 foregroundRevision = 0;
     };
     QPointer<QWidget> root;
+    QPointer<spatial::SpatialSession> session;
     QPointer<QOpenGLContext> context;
     QList<QPointer<ParticleBackdrop>> candidates, sources;
     QList<QRect> sourceRects, sourceClips;
@@ -218,15 +220,30 @@ struct GalleryParticleCompositor::Private {
     bool scanned = false, validated = false, failed = false;
 };
 
-GalleryParticleCompositor::GalleryParticleCompositor(QObject* parent)
+GalleryParticleCompositor::GalleryParticleCompositor(QObject* parent,
+                                                     spatial::SpatialSession* session)
     : QObject(parent), d(std::make_unique<Private>())
-{}
+{
+    d->session = session ? session : new spatial::SpatialSession(this, this);
+    if (!session)
+        d->session->activate();
+    connect(d->session, &spatial::SpatialSession::activeChanged, this, [this](bool active) {
+        if (!active)
+            release();
+    });
+    connect(d->session, &QObject::destroyed, this, [this] { release(); });
+}
 
 GalleryParticleCompositor::~GalleryParticleCompositor()
 {
     if (qApp)
         qApp->removeEventFilter(this);
     releaseGpu(false);
+    if (d->session) {
+        disconnect(d->session, nullptr, this, nullptr);
+        if (d->session->parent() == this)
+            d->session->deactivate();
+    }
 }
 
 bool GalleryParticleCompositor::eventFilter(QObject* watched, QEvent* event)
@@ -257,14 +274,25 @@ quint64 GalleryParticleCompositor::requiredBytes(QWidget* content, quint64 revis
                                                  const QSize& panelPixels, qreal nativeDpr,
                                                  qreal cacheDpr, bool enabled)
 {
+    if (d->releasing)
+        return 0;
     auto* context = QOpenGLContext::currentContext();
-    if (!enabled || !content || !context || panelPixels.isEmpty() || !qIsFinite(nativeDpr) ||
-        nativeDpr <= 0 || !qIsFinite(cacheDpr) || cacheDpr <= 0) {
+    if (!d->session || !d->session->isActive() || !enabled || !content || !context ||
+        panelPixels.isEmpty() || !qIsFinite(nativeDpr) || nativeDpr <= 0 || !qIsFinite(cacheDpr) ||
+        cacheDpr <= 0) {
         release();
         return 0;
     }
+    const QPointer<GalleryParticleCompositor> lifetime(this);
+    const auto session = d->session;
+    const QPointer<QWidget> root(content);
+    const auto available = [&] {
+        return lifetime && session && session == d->session && session->isActive() && root;
+    };
     if (d->root != content || d->context != context || d->nativeDpr != nativeDpr) {
         release();
+        if (!available())
+            return 0;
         d->root = content;
         d->context = context;
         d->nativeDpr = nativeDpr;
@@ -313,6 +341,8 @@ quint64 GalleryParticleCompositor::requiredBytes(QWidget* content, quint64 revis
         }
         if (visible != d->sources || rects != d->sourceRects || clips != d->sourceClips) {
             releaseGpu();
+            if (!available() || d->root != root)
+                return 0;
             d->sources = visible;
             d->sourceRects = rects;
             d->sourceClips = clips;
@@ -355,10 +385,19 @@ bool GalleryParticleCompositor::prepare(QWidget* content, quint64 revision,
         requiredBytes(content, revision, panelPixels, nativeDpr, cacheDpr, enabled);
     if (!required)
         return false;
+    const QPointer<GalleryParticleCompositor> lifetime(this);
+    const auto session = d->session;
+    const auto root = d->root;
+    const auto available = [&] {
+        return lifetime && session && session == d->session && session->isActive() && root &&
+               root == d->root && !d->sources.empty();
+    };
     // Candidate estimates leave the active targets intact. Only the selected
     // plan changes allocated geometry, avoiding per-frame sampling-level churn.
     if (d->panelPixels != panelPixels || d->cacheDpr != cacheDpr) {
         releaseGpu();
+        if (!available())
+            return false;
         d->panelPixels = panelPixels;
         d->cacheDpr = cacheDpr;
         d->failed = false;
@@ -368,18 +407,42 @@ bool GalleryParticleCompositor::prepare(QWidget* content, quint64 revision,
     d->maximumBytes = maximumBytes;
     if (required > maximumBytes) {
         releaseGpu();
-        d->failed = true;
+        if (lifetime)
+            d->failed = true;
         return false;
     }
     if (d->layers.empty()) {
-        for (int i = 0; i < d->sources.size(); ++i) {
-            auto* backdrop = d->sources[i].data();
+        const auto sources = d->sources;
+        const auto rects = d->sourceRects;
+        const auto clips = d->sourceClips;
+        for (int i = 0; i < sources.size(); ++i) {
+            const QPointer<ParticleBackdrop> backdrop = sources[i];
+            if (!backdrop) {
+                releaseGpu();
+                return false;
+            }
             Private::Layer layer;
             layer.previousAcceleration = backdrop->isGpuAccelerationEnabled();
+            const auto failLayer = [&] {
+                if (backdrop)
+                    backdrop->setGpuAccelerationEnabled(layer.previousAcceleration);
+                if (lifetime) {
+                    releaseGpu();
+                    if (lifetime)
+                        d->failed = true;
+                }
+                return false;
+            };
+            // Acceleration notifications can stop/destroy the borrowed session and clear the plan.
+            // zh_CN: 加速状态通知可停用或销毁借用的会话，并清空当前计划。
             backdrop->setGpuAccelerationEnabled(true);
-            layer.renderer = std::make_unique<ParticleLayer>(backdrop);
-            layer.rect = d->sourceRects[i];
-            layer.clip = d->sourceClips[i];
+            if (!backdrop || !available())
+                return failLayer();
+            layer.renderer.reset(session->createParticleLayer(backdrop));
+            if (!backdrop || !available() || !layer.renderer)
+                return failLayer();
+            layer.rect = rects[i];
+            layer.clip = clips[i];
             connect(layer.renderer.get(), &ParticleLayer::frameRequested, this,
                     &GalleryParticleCompositor::frameRequested);
             connect(layer.renderer.get(), &ParticleLayer::activeChanged, this, [this] {
@@ -403,7 +466,8 @@ bool GalleryParticleCompositor::prepare(QWidget* content, quint64 revision,
         auto sampler = std::make_unique<InsertionSampler>();
         if (!sampler->create()) {
             releaseGpu();
-            d->failed = true;
+            if (lifetime)
+                d->failed = true;
             return false;
         }
         d->sampler = std::move(sampler);
@@ -435,12 +499,14 @@ bool GalleryParticleCompositor::prepare(QWidget* content, quint64 revision,
     }
     if (!valid) {
         releaseGpu();
-        d->failed = true;
+        if (lifetime)
+            d->failed = true;
         return false;
     }
     if (allocated > maximumBytes) {
         releaseGpu();
-        d->failed = true;
+        if (lifetime)
+            d->failed = true;
         return false;
     }
     d->bytes = allocated;
@@ -555,19 +621,25 @@ unsigned int GalleryParticleCompositor::compose(unsigned int base, quint64 revis
 
 void GalleryParticleCompositor::releaseGpu(bool notify)
 {
+    if (d->releasing)
+        return;
+    const QPointer<GalleryParticleCompositor> lifetime(this);
     const bool active = activeLayerCount() != 0;
     d->releasing = true;
-    for (auto& layer : d->layers) {
+    auto layers = std::move(d->layers);
+    d->composed = {};
+    d->sampler.reset();
+    d->staticRevision = d->lastFrames = d->bytes = 0;
+    d->result = 0;
+    for (auto& layer : layers) {
         QPointer<ParticleBackdrop> source(layer.renderer->backdrop());
         layer.renderer.reset();
         if (source)
             source->setGpuAccelerationEnabled(layer.previousAcceleration);
     }
-    d->layers.clear();
-    d->composed = {};
-    d->sampler.reset();
-    d->staticRevision = d->lastFrames = d->bytes = 0;
-    d->result = 0;
+    layers.clear();
+    if (!lifetime)
+        return;
     d->releasing = false;
     if (active && notify)
         emit staticContentInvalidated();
@@ -593,7 +665,7 @@ int GalleryParticleCompositor::activeLayerCount() const
 {
     int count = 0;
     for (const auto& layer : d->layers)
-        count += layer.renderer->isActive();
+        count += layer.renderer && layer.renderer->isActive();
     return count;
 }
 

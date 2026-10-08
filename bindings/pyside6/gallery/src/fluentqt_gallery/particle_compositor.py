@@ -205,8 +205,16 @@ class GalleryParticleCompositor(QObject):
     frameRequested = Signal()
     staticContentInvalidated = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, session=None):
         super().__init__(parent)
+        self.session = session
+        if self.session is None:
+            from fluentqt.spatial import SpatialSession
+            self.session = SpatialSession(parent, self)
+            if not self.session.activate():
+                if _alive(self.session):
+                    delete_qobject(self.session)
+                self.session = None
         self.root = self.context = None
         self.candidates = []
         self.sources, self.source_rects, self.source_clips, self.layers = [], [], [], []
@@ -234,15 +242,22 @@ class GalleryParticleCompositor(QObject):
         return False
 
     def requiredBytes(self, content, revision, panel_pixels, native_dpr, cache_dpr, enabled):
+        if self.releasing:
+            return 0
+        session = self.session
         context = QOpenGLContext.currentContext()
         layer_type = _particle_layer_type()
-        if (not enabled or not _alive(content) or not _alive(context) or layer_type is None
+        if (not enabled or not _alive(session) or not session.isActive()
+                or not _alive(content) or not _alive(context) or layer_type is None
                 or panel_pixels.isEmpty() or not math.isfinite(native_dpr) or native_dpr <= 0
                 or not math.isfinite(cache_dpr) or cache_dpr <= 0):
             self.release()
             return 0
         if self.root != content or self.context != context or self.native_dpr != native_dpr:
             self.release()
+            if (not _alive(self) or not _alive(session) or self.session != session
+                    or not session.isActive() or not _alive(content) or not _alive(context)):
+                return 0
             self.root, self.context = content, context
             self.native_dpr = native_dpr
             QApplication.instance().installEventFilter(self)
@@ -278,6 +293,14 @@ class GalleryParticleCompositor(QObject):
                     clips.append(clip)
             if visible != self.sources or rects != self.source_rects or clips != self.source_clips:
                 self._release_gpu()
+                if not _alive(self):
+                    return 0
+                if (not _alive(session) or self.session != session or not session.isActive()
+                        or not _alive(content) or self.root != content
+                        or not _alive(context) or self.context != context
+                        or any(not _alive(source) for source in visible)):
+                    self.release()
+                    return 0
                 self.sources, self.source_rects, self.source_clips = visible, rects, clips
                 self.native_required = 0
                 self.failed = False
@@ -298,27 +321,48 @@ class GalleryParticleCompositor(QObject):
         required = self.requiredBytes(content, revision, panel_pixels, native_dpr, cache_dpr, enabled)
         if not required:
             return False
+        session, root = self.session, self.root
+        plan = tuple(zip(self.sources, self.source_rects, self.source_clips))
         # Estimating other levels leaves this plan's allocated GPU targets intact.
         if self.panel_pixels != panel_pixels or self.cache_dpr != cache_dpr:
             self._release_gpu()
+            if not _alive(self):
+                return False
             self.panel_pixels, self.cache_dpr = QSize(panel_pixels), cache_dpr
             self.failed = False
+        if (not _alive(session) or self.session != session or not session.isActive()
+                or not _alive(root) or self.root != root or not plan
+                or plan != tuple(zip(self.sources, self.source_rects, self.source_clips))
+                or any(not _alive(source) for source, _rect, _clip in plan)):
+            return self._fail()
         if self.failed and self.maximum_bytes == maximum_bytes:
             return False
         self.maximum_bytes = maximum_bytes
         if required > maximum_bytes:
             return self._fail()
         if not self.layers:
-            layer_type = _particle_layer_type()
-            for source, rect, clip in zip(self.sources, self.source_rects, self.source_clips):
+            for source, rect, clip in plan:
                 if not _alive(source):
                     return self._fail()
                 previous_acceleration = source.isGpuAccelerationEnabled()
                 source.setGpuAccelerationEnabled(True)
-                renderer = layer_type(source, self)
+                renderer = (session.createParticleLayer(source, self)
+                            if (_alive(source) and _alive(root) and self.root == root
+                                and _alive(session) and self.session == session and session.isActive())
+                            else None)
+                if (not _alive(renderer) or not _alive(source)
+                        or not _alive(root) or self.root != root
+                        or not _alive(session) or self.session != session or not session.isActive()):
+                    if _alive(renderer):
+                        renderer.release()
+                        delete_qobject(renderer)
+                    if _alive(source):
+                        source.setGpuAccelerationEnabled(previous_acceleration)
+                    return self._fail()
                 renderer.frameRequested.connect(self.frameRequested.emit)
                 renderer.activeChanged.connect(self._active_changed)
-                self.layers.append({"renderer": renderer, "rect": rect, "clip": clip,
+                self.layers.append({"renderer": renderer, "source": source,
+                                    "rect": rect, "clip": clip,
                                     "foreground": None, "revision": None,
                                     "previous_acceleration": previous_acceleration})
             self.result = 0
@@ -447,23 +491,28 @@ class GalleryParticleCompositor(QObject):
         return False
 
     def _release_gpu(self):
+        if self.releasing:
+            return
         active = self.activeLayerCount() != 0
         self.releasing = True
-        for layer in self.layers:
+        layers, self.layers = self.layers, []
+        self.composed.clear()
+        sampler, self.sampler = self.sampler, None
+        self.static_revision = self.last_frames = self.bytes = self.result = 0
+        if sampler is not None:
+            sampler.destroy()
+        for layer in layers:
             renderer = layer["renderer"]
             if _alive(renderer):
-                source = renderer.backdrop()
                 renderer.release()
-                delete_qobject(renderer)
-                if _alive(source):
-                    source.setGpuAccelerationEnabled(layer["previous_acceleration"])
+                if _alive(renderer):
+                    delete_qobject(renderer)
+            source = layer["source"]
+            if _alive(source):
+                source.setGpuAccelerationEnabled(layer["previous_acceleration"])
             layer["foreground"] = None
-        self.layers.clear()
-        self.composed.clear()
-        if self.sampler is not None:
-            self.sampler.destroy()
-            self.sampler = None
-        self.static_revision = self.last_frames = self.bytes = self.result = 0
+        if not _alive(self):
+            return
         self.releasing = False
         if active:
             self.staticContentInvalidated.emit()

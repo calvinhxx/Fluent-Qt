@@ -83,6 +83,43 @@ MODULE_VARIABLE_TYPES = {
     ("fluentqt", "__version__"): "str",
 }
 CLASS_METHOD_SIGNATURES = {
+    ("fluentqt.plugins", "PluginMetadata", "__init__"):
+        "(self, id: str = ..., name: str = ..., "
+        "version: PySide6.QtCore.QVersionNumber | None = ..., "
+        "dependencies: Sequence[str] = ...) -> None",
+    ("fluentqt.plugins", "PluginContext", "activePlugin"):
+        "(self, id: str) -> PySide6.QtCore.QObject | None",
+    ("fluentqt.plugins", "Plugin", "metadata"):
+        "(self) -> PluginMetadata",
+    ("fluentqt.plugins", "Plugin", "onActivate"):
+        "(self, context: PluginContext) -> bool",
+    ("fluentqt.plugins", "Plugin", "onDeactivate"):
+        "(self) -> None",
+    ("fluentqt.plugins", "Plugin", "lastError"):
+        "(self) -> str",
+    ("fluentqt.plugins", "WidgetPlugin", "metadata"):
+        "(self) -> PluginMetadata",
+    ("fluentqt.plugins", "WidgetPlugin", "onActivate"):
+        "(self, context: PluginContext) -> bool",
+    ("fluentqt.plugins", "WidgetPlugin", "onDeactivate"):
+        "(self) -> None",
+    ("fluentqt.plugins", "WidgetPlugin", "lastError"):
+        "(self) -> str",
+    ("fluentqt.plugins", "WidgetPlugin", "widgetKeys"):
+        "(self) -> list[str]",
+    ("fluentqt.plugins", "WidgetPlugin", "createWidget"):
+        "(self, key: str, parent: PySide6.QtWidgets.QWidget | None = ...) "
+        "-> PySide6.QtWidgets.QWidget | None",
+    ("fluentqt.plugins", "PluginManager", "metadata"):
+        "(self, id: str) -> PluginMetadata",
+    ("fluentqt.plugins", "PluginManager", "context"):
+        "(self) -> PluginContext",
+    ("fluentqt.plugins", "PluginManager", "createWidget"):
+        "(self, pluginId: str, key: str, "
+        "parent: PySide6.QtWidgets.QWidget | None = ...) "
+        "-> PySide6.QtWidgets.QWidget | None",
+    ("fluentqt.spatial", "SpatialSession", "createView"):
+        "(self, parent: PySide6.QtWidgets.QWidget | None = ...) -> SpatialView | None",
     ("fluentqt.foundation", "FluentWidget", "effective_theme"):
         "(self) -> Theme",
     ("fluentqt.foundation", "FluentWidget", "on_theme_updated"):
@@ -117,6 +154,11 @@ CLASS_METHOD_SIGNATURES = {
         "(self, name: str) -> Any",
 }
 CLASS_ATTRIBUTE_TYPES = {
+    ("fluentqt.plugins", "PluginMetadata", "id"): "str",
+    ("fluentqt.plugins", "PluginMetadata", "name"): "str",
+    ("fluentqt.plugins", "PluginMetadata", "version"):
+        "PySide6.QtCore.QVersionNumber",
+    ("fluentqt.plugins", "PluginMetadata", "dependencies"): "list[str]",
     ("fluentqt.foundation", "MotionPolicy", "Kind"):
         "type[MotionKind]",
     ("fluentqt.foundation", "MotionPolicy", "Mode"):
@@ -199,7 +241,17 @@ def generate_native_stub(extension, package_dir):
     generator.PySide6 = PySide6
     generator.inspect = inspect
     generator.typing = typing
-    generator.HintingEnumerator = enum_sig.HintingEnumerator
+
+    class BindingHintingEnumerator(enum_sig.HintingEnumerator):
+        def klass(self, class_name, klass, *args, **kwargs):
+            # Shiboken skips nested classes whose names contain "._". These
+            # private native bases are needed by our public Python facades.
+            # Enumerate their native signatures with a temporary visible name.
+            if klass.__module__ in NATIVE_MODULE_NAMES and "._" in class_name:
+                class_name = class_name.replace("._", ".FluentQtBindingPrivate_")
+            return super().klass(class_name, klass, *args, **kwargs)
+
+    generator.HintingEnumerator = BindingHintingEnumerator
     generator.build_brace_pattern = tool.build_brace_pattern
 
     options = shiboken_generator_options()
@@ -214,6 +266,7 @@ def generate_native_stub(extension, package_dir):
         )
 
     contents = native_stub.read_text(encoding="utf-8")
+    contents = contents.replace("FluentQtBindingPrivate_", "_")
     contents = contents.replace(
         "import _fluentqt\n",
         "import fluentqt._fluentqt as _fluentqt\n",
@@ -476,6 +529,9 @@ def pure_python_class_stub(name, public_class, indent=""):
 
 def class_stub(name, public_class):
     facade_members = python_facade_members(public_class)
+    for module_name, class_name, member_name in CLASS_ATTRIBUTE_TYPES:
+        if module_name == public_class.__module__ and class_name == name:
+            facade_members.setdefault(member_name, None)
     is_python_facade = (public_class.__module__ or "").startswith("fluentqt")
     if not is_python_facade and not facade_members:
         return ["{0} = {1}".format(name, native_expression(public_class))]
@@ -561,10 +617,11 @@ def generate_facade_stub(module, output_path):
     lines = [
         '"""Generated typing facade for {0}."""'.format(module.__name__),
         "",
-        "from collections.abc import Mapping",
+        "from collections.abc import Mapping, Sequence",
         "from typing import Any",
         "import PySide6.QtCore",
         "import PySide6.QtGui",
+        "import PySide6.QtWidgets",
         "from . import _fluentqt as _native",
         "",
     ]
@@ -594,12 +651,20 @@ def root_imports(source_path):
     tree = ast.parse(source_path.read_text(encoding="utf-8"))
     imports = []
     functions = []
-    for node in tree.body:
-        if isinstance(node, ast.ImportFrom) and node.level == 1:
-            imports.append(node)
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if not node.name.startswith("_"):
-                functions.append(node.name)
+    def collect(nodes):
+        for node in nodes:
+            if isinstance(node, ast.ImportFrom) and node.level == 1:
+                imports.append(node)
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if not node.name.startswith("_"):
+                    functions.append(node.name)
+            elif isinstance(node, ast.If):
+                # Optional modules re-export classes only when their native
+                # target is present. Runtime __all__ below selects this build.
+                collect(node.body)
+                collect(node.orelse)
+
+    collect(tree.body)
     return imports, functions
 
 

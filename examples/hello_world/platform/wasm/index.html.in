@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
-  <title>FluentQt UILib Hello World</title>
+  <title>@FLUENTQT_EXAMPLE_TITLE@</title>
   <style>
     :root { color-scheme: light dark; font-family: Inter, system-ui, sans-serif; }
     * { box-sizing: border-box; }
@@ -72,7 +72,7 @@
   </style>
 </head>
 <body>
-  <main id="qt-container" aria-label="Minimal FluentQt UILib WebAssembly app">
+  <main id="qt-container" aria-label="@FLUENTQT_EXAMPLE_TITLE@">
     <section id="loading" role="status" aria-live="polite">
       <div class="spinner" aria-hidden="true"></div>
       <strong>Loading FluentQt UILib…</strong>
@@ -80,20 +80,19 @@
     </section>
   </main>
   <footer>
-    <span>Independent <code>FluentQt::FluentQt</code> consumer</span>
-    <a href="../">Back to Gallery</a>
+    <span>Independent <code>@FLUENTQT_EXAMPLE_LIBRARY@</code> consumer</span>
   </footer>
   <script src="qtloader.js"></script>
-  <script src="fluentqt_hello_world.js"></script>
+  <script src="@FLUENTQT_EXAMPLE_TARGET@.js"></script>
   <script>
     const container = document.getElementById('qt-container');
     const loading = document.getElementById('loading');
     const detail = document.getElementById('loading-detail');
     (async () => {
       try {
-        await qtLoad({
+        window.fluentQtExampleRuntime = await qtLoad({
           qt: {
-            entryFunction: window.fluentqt_hello_world_entry,
+            entryFunction: window.@FLUENTQT_EXAMPLE_TARGET@_entry,
             containerElements: [container],
             onLoaded: () => {
               document.documentElement.dataset.fluentQtLoaded = 'true';

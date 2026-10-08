@@ -47,6 +47,40 @@ function(add_hello_world target library window_source)
         set_target_properties(${target} PROPERTIES
             QT_WASM_INITIAL_MEMORY "64MB"
             QT_WASM_MAXIMUM_MEMORY "256MB")
+        set(FLUENTQT_EXAMPLE_TARGET "${target}")
+        set(FLUENTQT_EXAMPLE_LIBRARY "${library}")
+        if(target STREQUAL "fluentqt_hello_world_spatial")
+            set(FLUENTQT_EXAMPLE_TITLE "FluentQt Spatial Hello World")
+            set(_fluentqt_hello_world_slug "hello-world-spatial")
+        else()
+            set(FLUENTQT_EXAMPLE_TITLE "FluentQt UILib Hello World")
+            set(_fluentqt_hello_world_slug "hello-world")
+        endif()
+        set(_fluentqt_hello_world_destinations
+            "${CMAKE_CURRENT_BINARY_DIR}/${_fluentqt_hello_world_slug}")
+        if(TARGET fluent_qt_gallery)
+            list(APPEND _fluentqt_hello_world_destinations
+                "${CMAKE_BINARY_DIR}/app/${_fluentqt_hello_world_slug}")
+            add_dependencies(fluent_qt_gallery ${target})
+            if(target STREQUAL "fluentqt_hello_world_spatial")
+                target_compile_definitions(${target} PRIVATE
+                    FLUENTQT_HELLO_WORLD_SPATIAL_OBSERVATIONS=1)
+            endif()
+        endif()
+        foreach(_fluentqt_hello_world_destination IN LISTS _fluentqt_hello_world_destinations)
+            file(MAKE_DIRECTORY "${_fluentqt_hello_world_destination}")
+            configure_file(
+                "${CMAKE_CURRENT_SOURCE_DIR}/platform/wasm/index.html.in"
+                "${_fluentqt_hello_world_destination}/index.html" @ONLY)
+            add_custom_command(TARGET ${target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_CURRENT_BINARY_DIR}/${target}.js"
+                    "${CMAKE_CURRENT_BINARY_DIR}/${target}.wasm"
+                    "${CMAKE_CURRENT_BINARY_DIR}/qtloader.js"
+                    "${CMAKE_CURRENT_BINARY_DIR}/qtlogo.svg"
+                    "${_fluentqt_hello_world_destination}"
+                COMMENT "Stage ${target} with the shared FluentQt browser shell")
+        endforeach()
     endif()
 endfunction()
 
@@ -54,30 +88,4 @@ endfunction()
 add_hello_world(fluentqt_hello_world FluentQt::FluentQt HelloWorldWindow.cpp)
 if(TARGET FluentQt::Spatial)
     add_hello_world(fluentqt_hello_world_spatial FluentQt::Spatial HelloWorldSpatialWindow.cpp)
-endif()
-
-if(EMSCRIPTEN AND TARGET fluent_qt_gallery)
-    set(_fluentqt_hello_world_web_destination
-        "${CMAKE_BINARY_DIR}/app/hello-world")
-    file(MAKE_DIRECTORY "${_fluentqt_hello_world_web_destination}")
-    configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/platform/wasm/index.html.in"
-        "${_fluentqt_hello_world_web_destination}/index.html"
-        @ONLY)
-    add_custom_command(TARGET fluentqt_hello_world POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory
-            "${_fluentqt_hello_world_web_destination}"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_CURRENT_BINARY_DIR}/fluentqt_hello_world.js"
-            "${_fluentqt_hello_world_web_destination}/fluentqt_hello_world.js"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_CURRENT_BINARY_DIR}/fluentqt_hello_world.wasm"
-            "${_fluentqt_hello_world_web_destination}/fluentqt_hello_world.wasm"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_CURRENT_BINARY_DIR}/qtloader.js"
-            "${_fluentqt_hello_world_web_destination}/qtloader.js"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_CURRENT_BINARY_DIR}/qtlogo.svg"
-            "${_fluentqt_hello_world_web_destination}/qtlogo.svg"
-        COMMENT "Stage the minimal FluentQt WebAssembly consumer")
 endif()

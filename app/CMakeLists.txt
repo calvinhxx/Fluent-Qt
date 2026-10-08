@@ -20,6 +20,12 @@ set(FLUENT_QT_GALLERY_WEB_RESOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/gallery_web_resources.qrc
 )
 if(EMSCRIPTEN)
+    # Emscripten 3.1.70 miscompiles Pivot's temporary QString loop with
+    # -O3 and plugin exception handling. Keep the workaround on this source;
+    # the shared plugin lifecycle and the remaining Gallery retain their flags.
+    set_source_files_properties(
+        "${CMAKE_CURRENT_SOURCE_DIR}/view/widgets/samples/NavigationSamples.cpp"
+        PROPERTIES COMPILE_OPTIONS "-fno-unroll-loops")
     list(APPEND FLUENT_QT_GALLERY_RESOURCES
         ${FLUENT_QT_GALLERY_WEB_RESOURCES})
     list(FILTER FLUENT_QT_GALLERY_CORE_SOURCES EXCLUDE REGEX

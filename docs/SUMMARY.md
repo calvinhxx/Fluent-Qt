@@ -14,6 +14,7 @@ standalone reading tasks.
     - [Add a FluentQt GUI to a project](ai/add-gui-to-project.md)
 - [Architecture](architecture/README.md)
   - **Runtime contracts**
+    - [Plugins: optional extension lifecycle](architecture/plugins.md)
     - [Window Chrome Architecture](architecture/window-chrome.md)
     - [Overlay Behavior Contract](architecture/overlay-behavior.md)
     - [Typography Resolution](architecture/typography-resolution.md)

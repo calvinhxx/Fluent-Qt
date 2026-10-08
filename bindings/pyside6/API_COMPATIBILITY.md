@@ -97,6 +97,32 @@ Their public names are imported from the declared category module and validated
 when that module is packaged. Default builds need not export these names.
 `fluentqt.spatial` is enabled by `FLUENT_QT_BUILD_SPATIAL`; it uses explicit
 owned, borrowed, reparented and take methods around native widget ownership.
+`SpatialSession` exposes activation, tracked views, particle adapters, and
+hidden-window preparation. Python activation and deactivation return `bool`;
+the optional C++ error output is omitted. Session-created views use the same
+Python ownership bookkeeping as directly constructed `SpatialView` objects.
+Stopping or deleting a session restores tracked surfaces to 2D and releases
+particle delegation without deleting their caller-owned outputs or models.
+`fluentqt.plugins` is enabled by `FLUENT_QT_BUILD_PLUGINS` and exposes the native
+metadata, context, plugin, and manager lifecycle. Python subclasses use the same
+dependency, rollback, no-op, and reentrancy contracts as C++. Registration
+borrows the native object and does not retain an unparented Python plugin's
+wrapper; the application must keep its reference or provide a Qt owner.
+Collecting a plugin unregisters it and stops surviving dependents. Widget
+factories must preserve caller ownership for both parented and parentless
+outputs, including across garbage collection and manager or plugin destruction.
+Invalid returned parents are
+rejected and cleaned up by the native manager.
+
+The raw `WidgetPluginInterface` is a C++ Qt interface. Python exposes its
+factory capability through `WidgetPlugin`, whose native bridge declares the
+interface; Python subclasses do not duplicate Qt interface registration.
+
+Spatial-enabled builds also export `SpatialPlugin` for registration with a
+generic manager. `SpatialSession` remains the convenience scope over that
+lifecycle. WebAssembly consumers compile the shared C++ implementation into
+their executable; the Python category module is not a browser runtime and the
+plugin contract does not promise dynamic shared-library loading.
 
 `tools/verify_api_policy.py` rejects version drift, malformed or duplicate
 ledger entries, missing public version variables, deprecations of unknown

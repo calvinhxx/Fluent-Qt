@@ -1028,7 +1028,7 @@ TEST_F(GalleryContentPagesTest, ComponentStateMatrixVisualCheck)
     qApp->exec();
 }
 
-// The All controls route lists every component as a clickable card.
+// All controls lists every base component; plugins have their own landing page.
 TEST_F(GalleryContentPagesTest, AllControlsRouteListsEveryComponent)
 {
     GalleryWindow window;
@@ -1037,12 +1037,40 @@ TEST_F(GalleryContentPagesTest, AllControlsRouteListsEveryComponent)
     ASSERT_NE(page, nullptr);
 
     GalleryNavigationViewModel navigationViewModel;
+    QSet<QString> pluginCategories;
+    for (const auto& category : galleryComponentCatalog()) {
+        if (category.plugin)
+            pluginCategories.insert(category.id);
+    }
     int componentCount = 0;
     for (const auto& item : navigationViewModel.items()) {
-        if (item.kind == fluent::gallery::GalleryNavigationItem::Kind::ComponentRoute)
+        if (item.kind == fluent::gallery::GalleryNavigationItem::Kind::ComponentRoute &&
+            !pluginCategories.contains(item.parentId))
             ++componentCount;
     }
     EXPECT_EQ(page->componentRouteIds().size(), componentCount);
+    EXPECT_FALSE(page->componentRouteIds().contains(QStringLiteral("spatial-view")));
+    EXPECT_FALSE(page->componentRouteIds().contains(QStringLiteral("spatial-item")));
+}
+
+TEST_F(GalleryContentPagesTest, PluginLandingListsModulesSeparatelyFromControls)
+{
+    GalleryNavigationViewModel navigation;
+    const auto* entry = galleryContentEntry(QStringLiteral("plugins"));
+#ifdef FLUENT_QT_HAS_SPATIAL
+    ASSERT_NE(entry, nullptr);
+    GalleryCategoryPage page(*entry, navigation);
+    EXPECT_EQ(page.componentRouteIds(), QStringList{QStringLiteral("spatial")});
+    EXPECT_EQ(entry->relatedRouteIds, QStringList{QStringLiteral("spatial")});
+    const auto* spatialEntry = galleryContentEntry(QStringLiteral("spatial"));
+    ASSERT_NE(spatialEntry, nullptr);
+    GalleryCategoryPage module(*spatialEntry, navigation);
+    EXPECT_EQ(module.componentRouteIds(),
+              (QStringList{QStringLiteral("spatial-view"), QStringLiteral("spatial-item")}));
+#else
+    EXPECT_EQ(entry, nullptr);
+    EXPECT_EQ(navigation.itemById(QStringLiteral("plugins")), nullptr);
+#endif
 }
 
 TEST_F(GalleryContentPagesTest, EntryGridExpandsCardsForWrappedDescriptions)

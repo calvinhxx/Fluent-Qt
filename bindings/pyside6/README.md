@@ -116,6 +116,35 @@ artifact-verification steps.
 
 ## Run representative examples
 
+### Optional Plugins module
+
+Enable `FLUENT_QT_BUILD_PLUGINS=ON` in the matched source-build environment and
+build `fluentqt_pyside6_stubs` to include `fluentqt.plugins`. Spatial includes
+this dependency automatically. The Python module uses the native plugin
+manager for metadata, dependency ordering, activation, rollback, and cleanup.
+See the [Plugins contract](../../docs/architecture/plugins.md) for extension
+authoring and caller ownership.
+
+The [plugin extension example](examples/plugin_extension.py) demonstrates
+registration, activation, widget creation, and deactivation. With the generated
+package on `PYTHONPATH`, run it normally or pass `--smoke-test` for an automated
+lifecycle run. That run does not establish native visual acceptance.
+The [example entry table](../../docs/architecture/plugins.md#minimal-extension-example)
+identifies the matching C++ executable and browser app.
+
+The manager borrows plugins and the host. Keep a Python reference to an
+unparented plugin while it is registered; dropping its last reference permits
+garbage collection, which unregisters it and stops surviving dependents. A Qt
+parent can own a Python plugin instead. Registration does not change that
+parent, unregistering does not delete the plugin, and destroying its actual Qt
+owner removes its registration. Factory widgets keep the parent requested by
+the application and can outlive both the manager and plugin.
+
+The optional module is a source-build capability; published wheel coverage
+remains governed by the [wheel matrix](wheel-matrix.json). Browser applications
+compile the shared C++ module for WebAssembly rather than running Python or
+loading native dynamic libraries.
+
 ### Optional Spatial module
 
 The default binding build keeps the base 2D API. To include `SpatialView`,
@@ -130,6 +159,38 @@ PYTHONPATH=build/pyside6/python \
 
 Import from `fluentqt.spatial`. Rendering and pointer animation use the native
 C++ implementation; Python handles configuration and application signals.
+The [Spatial Hello World guide](examples/hello_world/README.md) describes the
+Card-and-Button layout and matching native C++ and browser entries.
+Activate a `SpatialSession` before creating or attaching its surfaces:
+
+```python
+from fluentqt.spatial import SpatialSession
+from PySide6.QtWidgets import QWidget
+
+session = SpatialSession(window, window)
+active = session.activate()
+if active:
+    session.prepareWindow(window)  # Best-effort while the window is hidden.
+view = session.createView(window) if active else None
+if view is None:
+    session.deactivate()
+    content = QWidget()  # Populate an ordinary 2D surface with application controls.
+else:
+    content = view
+window.setContentWidget(content)
+```
+
+Check activation and each nullable factory result before accessing it. The full
+Hello World example retains its Card and Button in an ordinary centered layout
+when activation or view creation fails. A false preparation result alone does
+not make a Spatial view unavailable on WebAssembly or offscreen hosts.
+
+The session shares the C++ plugin lifecycle. Applications that already manage a
+larger extension graph can register `fluentqt.spatial.SpatialPlugin` through
+`fluentqt.plugins.PluginManager` instead. Activation creates no GPU context.
+Deactivation restores tracked views to flat Raster mode and releases particle
+delegation; returned objects, content widgets, and models keep their recorded ownership. Existing
+`SpatialView` subclasses can join the session with `attachView(view)`.
 Use `addOwnedWidget()` to transfer a widget to the view, `addBorrowedWidget()`
 to retain it, or `addReparentedWidget()` to restore its original parent on release.
 
@@ -138,21 +199,28 @@ compositor, not another widget or particle simulation. It borrows a visible
 `ParticleBackdrop`; that component still defaults to CPU rendering. For example:
 
 ```python
-from fluentqt.spatial import ParticleLayer
+from fluentqt.spatial import SpatialSession
 
-layer = ParticleLayer(backdrop, canvas)
-layer.frameRequested.connect(canvas.update)
+session = SpatialSession(canvas, canvas)
+layer = session.createParticleLayer(backdrop, canvas) if session.activate() else None
+if layer is not None:
+    layer.frameRequested.connect(canvas.update)
 
 # In canvas.paintGL(), with its context current and an aggregate byte allowance:
-if layer.render(canvas.devicePixelRatioF(), remaining_bytes):
+if layer is not None and layer.render(canvas.devicePixelRatioF(), remaining_bytes):
     texture = layer.textureId()  # Premultiplied RGBA, bottom-up GL coordinates.
     # Sample this texture in the compositor, preserving widget clipping/stacking.
 
 # On 2D mode or compositor teardown, resume CPU at the same particle phase:
-layer.release()
+if layer is not None:
+    layer.release()
+# At the end of the extension's scope, release every tracked adapter:
+session.deactivate()
 ```
 
 Only a successful `render()` delegates the source's painting and frame requests.
+Failed activation or a `None` adapter leaves the original ParticleBackdrop's
+CPU presentation available.
 The caller selects the hardware context and preserves foreground occlusion;
 `render()` fails safely on invalid contexts, hidden sources, or insufficient
 budget. `allocatedBytes()` includes actual driver MSAA storage. The Python

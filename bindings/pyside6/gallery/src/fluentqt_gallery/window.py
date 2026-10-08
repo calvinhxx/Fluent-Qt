@@ -490,9 +490,8 @@ def build_home_page(
         ROUTE_BY_ID["all-controls"],
         ROUTE_BY_ID["foundation"],
     ] + [
-        ROUTE_BY_ID[category.id]
-        for category in CATEGORIES
-        if category.id != "foundation"
+        route for route in ROUTES
+        if route.kind == "category" and route.depth == 0 and route.id != "foundation"
     ]
     category_cards = [
         _route_card(route, navigate, body) for route in category_routes
@@ -514,7 +513,7 @@ def build_home_page(
 
 def build_category_page(
     route: GalleryRoute,
-    entries: Iterable[GalleryEntry],
+    entries: Iterable[GalleryEntry | GalleryRoute],
     navigate: Callable[[str], None],
     parent: QWidget | None = None,
     *,
@@ -526,7 +525,7 @@ def build_category_page(
     page.setParent(parent)
     content = page._gallery_content
     _add_page_header(layout, content, route.title, route.description)
-    _add_section_heading(layout, "Components", content)
+    _add_section_heading(layout, "Plugin modules" if route.id == "plugins" else "Components", content)
     grid = _add_entry_grid(
         layout,
         (),
@@ -568,7 +567,7 @@ def build_all_controls_page(
     entries.extend(
         entry
         for entry in ENTRIES
-        if entry.route_id != "font-icon"
+        if entry.route_id != "font-icon" and not CATEGORY_BY_ID[entry.category_id].plugin
     )
     grid = _add_entry_grid(
         layout,
@@ -2259,11 +2258,14 @@ class GalleryWindow(fluentqt.Window):
 
     def __init__(self, startup_visuals: bool | None = None) -> None:
         super().__init__()
+        self._spatial_session = None
         if SPATIAL_AVAILABLE:
-            from fluentqt.spatial import SpatialRuntime
-            SpatialRuntime.prepareApplication()
-            if os.environ.get("FLUENT_QT_GALLERY_DISABLE_3D", "0") == "0":
+            from fluentqt.spatial import SpatialSession
+            self._spatial_session = SpatialSession(self, self)
+            activated = self._spatial_session.activate()
+            if activated and os.environ.get("FLUENT_QT_GALLERY_DISABLE_3D", "0") == "0":
                 from fluentqt._fluentqt import fluent as _native_fluent
+                # The Gallery's private compositor retains its RHI preference.
                 _native_fluent._SpatialTextureHost.prepareWindow(self)
         self._settings = gallery_settings()
         self._startup_visuals = (
@@ -2715,9 +2717,16 @@ class GalleryWindow(fluentqt.Window):
                 ),
             )
             for category in CATEGORIES
-            if category.id != "foundation"
+            if category.id != "foundation" and not category.plugin
         )
-        main = GalleryNavigationPane(categories, foundation_children, nav)
+        plugin_categories = tuple(
+            (category.id, category.title,
+             tuple((entry.route_id, entry.title) for entry in entries_for_category(category.id)))
+            for category in CATEGORIES if category.plugin
+        )
+        main = GalleryNavigationPane(
+            categories, foundation_children, nav, plugin_categories=plugin_categories
+        )
         footer = GalleryNavigationFooter(nav)
         top_main_items = (
             (
@@ -2732,13 +2741,11 @@ class GalleryWindow(fluentqt.Window):
                 route_icon_name("foundation"),
                 foundation_children,
             ),
-            (
-                "all-controls",
-                "All",
-                route_icon_name("all-controls"),
-                (),
-            ),
-        ) + tuple(
+        )
+        if plugin_categories:
+            top_main_items += (("plugins", "Plugins", route_icon_name("plugins"),
+                                tuple((category_id, title) for category_id, title, _ in plugin_categories)),)
+        top_main_items += (("all-controls", "All", route_icon_name("all-controls"), ()),) + tuple(
             (
                 category_id,
                 title,
@@ -2747,7 +2754,15 @@ class GalleryWindow(fluentqt.Window):
             )
             for category_id, title, child_routes in categories
         )
-        top_main = GalleryTopNavigationPane(top_main_items, nav)
+        descendants = tuple(
+            (route.id, tuple((child.id, child.title) for child in ROUTES if child.parent_id == route.id))
+            for route in ROUTES
+            if any(child.parent_id == route.id for child in ROUTES)
+        )
+        top_main = GalleryTopNavigationPane(
+            top_main_items, nav, descendants=descendants,
+            route_groups=tuple((route.id, route.group) for route in ROUTES),
+        )
         top_main.setObjectName("galleryTopMainNavigationPane")
         top_footer = GalleryTopNavigationPane(
             (
@@ -2815,8 +2830,10 @@ class GalleryWindow(fluentqt.Window):
         elif route.kind == "all-controls":
             page = build_all_controls_page(self.navigate, defer_entries=defer_samples)
         elif route.kind == "category":
+            entries = (tuple(child for child in ROUTES if child.parent_id == route.id)
+                       if route.id == "plugins" else entries_for_category(route.id))
             page = build_category_page(
-                route, entries_for_category(route.id), self.navigate,
+                route, entries, self.navigate,
                 defer_entries=defer_samples,
             )
         elif route.kind == "component":

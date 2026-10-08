@@ -1,5 +1,39 @@
 <namespace-type name="spatial" visible="no">
     <value-type name="SpatialRuntime"/>
+    <object-type name="SpatialPlugin">
+        <modify-function signature="createParticleLayer(fluent::layout::ParticleBackdrop*,QObject*)">
+            <modify-argument index="return">
+                <define-ownership class="target" owner="target"/>
+                <parent index="2" action="add"/>
+            </modify-argument>
+        </modify-function>
+    </object-type>
+    <object-type name="SpatialSession">
+        <!-- Lifecycle errors remain optional C++ output parameters. Python
+             callers observe the bool result and activeChanged signal. -->
+        <modify-function signature="activate(QString*)">
+            <modify-argument index="1">
+                <remove-argument/>
+            </modify-argument>
+        </modify-function>
+        <modify-function signature="deactivate(QString*)">
+            <modify-argument index="1">
+                <remove-argument/>
+            </modify-argument>
+        </modify-function>
+        <modify-function signature="createView(QWidget*)">
+            <modify-argument index="return">
+                <parent index="1" action="add"/>
+                <define-ownership class="target" owner="target"/>
+            </modify-argument>
+        </modify-function>
+        <modify-function signature="createParticleLayer(fluent::layout::ParticleBackdrop*,QObject*)">
+            <modify-argument index="return">
+                <parent index="2" action="add"/>
+                <define-ownership class="target" owner="target"/>
+            </modify-argument>
+        </modify-function>
+    </object-type>
     <object-type name="SpatialTextureHost" target-lang-name="_SpatialTextureHost">
         <include file-name="support/spatial/SpatialTextureHost.h" location="global"/>
     </object-type>

@@ -18,7 +18,8 @@ enum GalleryNavigationRole {
     ParentRouteIdRole,
     IconGlyphRole,
     IndicatorInsetRole,
-    AccessoryWidthRole
+    AccessoryWidthRole,
+    DepthRole
 };
 
 // Shared layout metrics for navigation rows, the row delegate, and the compact flyout.
@@ -36,6 +37,7 @@ constexpr qreal kRowLeftInset = 4.0;
 constexpr qreal kRowRightInset = 12.0;
 constexpr qreal kRowVerticalInset = 2.0;
 constexpr qreal kContentStart = 12.0;
+constexpr qreal kNestedRouteIndent = 16.0;
 constexpr qreal kIconAreaWidth = 20.0;
 constexpr int kRouteIconPixelSize = Typography::IconSize::Standard;
 constexpr qreal kIconTextGap = 11.0;

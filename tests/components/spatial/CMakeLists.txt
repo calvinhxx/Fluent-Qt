@@ -12,6 +12,8 @@ endif()
 
 add_qt_test_module(test_spatial_runtime TestSpatialRuntime.cpp)
 target_link_libraries(test_spatial_runtime PRIVATE FluentQt::Spatial)
+add_qt_test_module(test_spatial_plugin TestSpatialPlugin.cpp)
+target_link_libraries(test_spatial_plugin PRIVATE FluentQt::Spatial)
 if(QT_VERSION_MAJOR EQUAL 6)
     target_link_libraries(test_spatial_runtime PRIVATE Qt6::OpenGLWidgets)
 endif()

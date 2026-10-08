@@ -17,6 +17,7 @@
         "FLUENT_QT_BUILD_EXAMPLES": "ON",
         "FLUENT_QT_BUILD_GALLERY": "ON",
         "FLUENT_QT_BUILD_SPATIAL": "ON",
+        "FLUENT_QT_BUILD_PLUGINS": "ON",
         "FLUENT_QT_BUILD_TESTS": "ON",
         "VCPKG_MANIFEST_FEATURES": "gallery;tests"
       }

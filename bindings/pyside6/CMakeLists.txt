@@ -221,25 +221,58 @@ set(FLUENTQT_PYSIDE6_GENERATED_SOURCES
 # compiled only on explicit opt-in; ordinary 2D bindings retain their Qt dependencies.
 set(FLUENTQT_PYSIDE6_BINDING_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.h")
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/native/typesystem_fluentqt.xml" FLUENTQT_PYSIDE6_TYPES)
+set(FLUENTQT_PYSIDE6_OPTIONAL_BINDING_HEADER "")
+if(TARGET FluentQtPlugins)
+    set_target_properties(FluentQtPlugins PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    list(APPEND FLUENTQT_PYSIDE6_GENERATED_SOURCES
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_plugins_plugin_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_plugins_widgetplugin_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_plugins_widgetplugininterface_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_plugins_pluginmetadata_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_plugins_plugincontext_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_pluginbinding_pluginadapter_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_pluginbinding_widgetpluginadapter_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_pluginbinding_pluginmanageradapter_wrapper.cpp")
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/native/plugin_types.xml" FLUENTQT_PYSIDE6_PLUGIN_TYPES)
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/native/plugin_binding_types.xml" FLUENTQT_PYSIDE6_PLUGIN_ADAPTER_TYPES)
+    string(REPLACE "<!-- Optional Plugins types. -->" "${FLUENTQT_PYSIDE6_PLUGIN_TYPES}"
+        FLUENTQT_PYSIDE6_TYPES "${FLUENTQT_PYSIDE6_TYPES}")
+    string(REPLACE "<!-- Optional plugin binding adapters. -->" "${FLUENTQT_PYSIDE6_PLUGIN_ADAPTER_TYPES}"
+        FLUENTQT_PYSIDE6_TYPES "${FLUENTQT_PYSIDE6_TYPES}")
+    string(REPLACE "<!-- Optional plugin global functions. -->"
+        "<function signature=\"pluginContextActivePluginForBinding(const fluent::plugins::PluginContext&amp;,const QString&amp;)\"><modify-function><modify-argument index=\"return\"><define-ownership class=\"target\" owner=\"default\"/></modify-argument></modify-function></function>"
+        FLUENTQT_PYSIDE6_TYPES "${FLUENTQT_PYSIDE6_TYPES}")
+    string(APPEND FLUENTQT_PYSIDE6_OPTIONAL_BINDING_HEADER "#define FLUENT_QT_HAS_PLUGINS 1\n")
+endif()
+string(APPEND FLUENTQT_PYSIDE6_OPTIONAL_BINDING_HEADER
+    "#include \"${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.h\"\n")
 if(TARGET FluentQtSpatial)
     set_target_properties(FluentQtSpatial PROPERTIES POSITION_INDEPENDENT_CODE ON)
     list(APPEND FLUENTQT_PYSIDE6_GENERATED_SOURCES
         "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_particlelayer_wrapper.cpp"
         "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialruntime_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialsession_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialplugin_wrapper.cpp"
         "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialtexturehost_wrapper.cpp"
         "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialview_wrapper.cpp"
         "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_spatial_spatialitem_wrapper.cpp")
     file(READ "${CMAKE_CURRENT_SOURCE_DIR}/native/spatial_types.xml" FLUENTQT_PYSIDE6_SPATIAL_TYPES)
     string(REPLACE "<!-- Optional Spatial types. -->" "${FLUENTQT_PYSIDE6_SPATIAL_TYPES}"
         FLUENTQT_PYSIDE6_TYPES "${FLUENTQT_PYSIDE6_TYPES}")
-    set(FLUENTQT_PYSIDE6_BINDING_HEADER "${CMAKE_CURRENT_BINARY_DIR}/SpatialBindingApi.h")
-    file(GENERATE OUTPUT "${FLUENTQT_PYSIDE6_BINDING_HEADER}" CONTENT
-        "#include \"${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.h\"\n#include <FluentQt/Spatial.h>\n#include <${PROJECT_SOURCE_DIR}/support/spatial/SpatialTextureHost.h>\n")
+    string(APPEND FLUENTQT_PYSIDE6_OPTIONAL_BINDING_HEADER
+        "#include <components/spatial/SpatialSession.h>\n#include <components/spatial/SpatialPlugin.h>\n#include <components/spatial/SpatialView.h>\n#include <components/spatial/SpatialItem.h>\n#include <components/spatial/SpatialRuntime.h>\n#include <components/spatial/ParticleLayer.h>\n#include <${PROJECT_SOURCE_DIR}/support/spatial/SpatialTextureHost.h>\n")
+endif()
+if(TARGET FluentQtPlugins OR TARGET FluentQtSpatial)
+    set(FLUENTQT_PYSIDE6_BINDING_HEADER "${CMAKE_CURRENT_BINARY_DIR}/OptionalBindingApi.h")
+    file(GENERATE OUTPUT "${FLUENTQT_PYSIDE6_BINDING_HEADER}"
+        CONTENT "${FLUENTQT_PYSIDE6_OPTIONAL_BINDING_HEADER}")
 endif()
 set(FLUENTQT_PYSIDE6_TYPESYSTEM "${CMAKE_CURRENT_BINARY_DIR}/typesystem_fluentqt.xml")
 file(GENERATE OUTPUT "${FLUENTQT_PYSIDE6_TYPESYSTEM}" CONTENT "${FLUENTQT_PYSIDE6_TYPES}")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/native/typesystem_fluentqt.xml"
+    "${CMAKE_CURRENT_SOURCE_DIR}/native/plugin_types.xml"
+    "${CMAKE_CURRENT_SOURCE_DIR}/native/plugin_binding_types.xml"
     "${CMAKE_CURRENT_SOURCE_DIR}/native/spatial_types.xml")
 
 set(FLUENTQT_PYSIDE6_GENERATOR_INCLUDE_ARGUMENTS
@@ -296,6 +329,7 @@ add_custom_command(
         "${FLUENTQT_PYSIDE6_GENERATION_STAMP}"
     DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/native/PluginBindingApi.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/native/typesystem_fluentqt.xml"
         "${FLUENTQT_PYSIDE6_BINDING_HEADER}"
         "${FLUENTQT_PYSIDE6_TYPESYSTEM}"
@@ -309,7 +343,8 @@ set_source_files_properties(
 
 add_library(_fluentqt MODULE
     ${FLUENTQT_PYSIDE6_GENERATED_SOURCES}
-    "${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/native/PluginBindingApi.cpp")
 add_dependencies(_fluentqt fluentqt_pyside6_generate)
 set_target_properties(_fluentqt PROPERTIES
     AUTOMOC OFF
@@ -366,6 +401,9 @@ target_link_libraries(_fluentqt PRIVATE
     "${FLUENTQT_SHIBOKEN6_LIBRARY}")
 if(TARGET FluentQtSpatial)
     target_link_libraries(_fluentqt PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
+endif()
+if(TARGET FluentQtPlugins)
+    target_link_libraries(_fluentqt PRIVATE FluentQt::Plugins)
 endif()
 if(WIN32)
     target_link_libraries(_fluentqt PRIVATE Python::Python)
@@ -434,6 +472,13 @@ else()
     # Reconfiguring the same build as 2D must not advertise a stale optional module.
     file(REMOVE "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/spatial.py"
                 "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/spatial.pyi")
+endif()
+if(TARGET FluentQtPlugins)
+    list(APPEND FLUENTQT_PYSIDE6_PYTHON_FILES plugins.py)
+    list(APPEND FLUENTQT_PYSIDE6_STUB_FILES plugins.pyi)
+else()
+    file(REMOVE "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/plugins.py"
+                "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/plugins.pyi")
 endif()
 set(FLUENTQT_PYSIDE6_PYTHON_SOURCE_PATHS)
 foreach(FLUENTQT_PYSIDE6_PYTHON_FILE
@@ -621,6 +666,20 @@ if(BUILD_TESTING)
     set_tests_properties(test_pyside6_qt_compat PROPERTIES
         ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen;PYTHONMALLOC=malloc;MALLOC_PERTURB_=165"
         LABELS "pyside;unit;ci_fast;lifetime" TIMEOUT 60)
+    if(TARGET FluentQtPlugins)
+        add_test(NAME test_pyside6_plugins
+            COMMAND "${Python_EXECUTABLE}" -X faulthandler
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_plugins.py" -v)
+        set_tests_properties(test_pyside6_plugins PROPERTIES
+            ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen;PYTHONMALLOC=malloc;MALLOC_PERTURB_=165"
+            LABELS "pyside;unit;ci_fast;lifetime" TIMEOUT 60)
+        add_test(NAME test_pyside6_plugin_extension
+            COMMAND "${Python_EXECUTABLE}" -X faulthandler
+                "${CMAKE_CURRENT_SOURCE_DIR}/examples/plugin_extension.py" --smoke-test)
+        set_tests_properties(test_pyside6_plugin_extension PROPERTIES
+            ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+            LABELS "pyside;integration;ci_fast;lifetime" TIMEOUT 60)
+    endif()
     if(TARGET FluentQtSpatial)
         add_test(NAME test_pyside6_spatial
             COMMAND "${Python_EXECUTABLE}" -X faulthandler

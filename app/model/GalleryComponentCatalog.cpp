@@ -117,7 +117,8 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
          {{QStringLiteral("spatial-view"), QStringLiteral("SpatialView"),
            Typography::Icons::glyph(QStringLiteral("ic_fluent_cube_multiple_20_regular"))},
           {QStringLiteral("spatial-item"), QStringLiteral("SpatialItem"),
-           Typography::Icons::glyph(QStringLiteral("ic_fluent_cube_rotate_20_regular"))}}},
+           Typography::Icons::glyph(QStringLiteral("ic_fluent_cube_rotate_20_regular"))}},
+         true},
 #endif
         {QStringLiteral("menus-toolbars"),
          QStringLiteral("Menus & toolbars"),

@@ -3,16 +3,22 @@
 Rendering and pointer animation stay in C++. Keep widget wrappers alive while
 hosted, and use explicit ownership methods when the view should own or restore
 content. ``addWidget`` preserves C++'s borrowed default.
+Use ``SpatialSession`` for a local extension scope or register ``SpatialPlugin``
+with ``fluentqt.plugins.PluginManager``. Neither manager owns returned views.
 """
 
 import weakref
+from types import MethodType
 
 from shiboken6 import isValid
+from PySide6.QtWidgets import QWidget
 from . import _fluentqt as _native
+from ._qt_compat import delete_qobject
 
 SpatialItem = _native.fluent.SpatialItem
 SpatialRuntime = _native.fluent.SpatialRuntime
 ParticleLayer = _native.fluent.ParticleLayer
+SpatialPlugin = _native.fluent.SpatialPlugin
 _Ownership = _native.fluent.WidgetOwnership
 
 
@@ -31,7 +37,7 @@ class SpatialView(_native.fluent.SpatialView):
                 return item
         original = widget.parentWidget()
         restore = original if ownership == _Ownership.Reparented else None
-        item = super()._addWidgetWithOwnership(widget, ownership)
+        item = _native.fluent.SpatialView._addWidgetWithOwnership(self, widget, ownership)
         if item is None:
             return None
         # Mutable restore target lets takeWidget override Reparented semantics.
@@ -70,10 +76,33 @@ class SpatialView(_native.fluent.SpatialView):
         stored = self._spatial_records.get(id(item))
         if stored is not None:
             stored[1][1] = None
-        widget = super().takeWidget(item)
+        widget = _native.fluent.SpatialView.takeWidget(self, item)
         if widget is not None:
             widget.setParent(None)
         return widget
 
 
-__all__ = ["SpatialView", "SpatialItem", "ParticleLayer", "SpatialRuntime"]
+def _prepare_spatial_view(view):
+    """Add the same ownership helpers to a C++ factory-created native view."""
+    if not hasattr(view, "_spatial_records"):
+        view._spatial_records = {}
+        for name in ("_add_widget", "addWidget", "addBorrowedWidget", "addOwnedWidget",
+                     "addReparentedWidget", "takeWidget"):
+            setattr(view, name, MethodType(getattr(SpatialView, name), view))
+    return view
+
+
+class SpatialSession(_native.fluent.SpatialSession):
+    def createView(self, parent: QWidget | None = None) -> SpatialView | None:
+        """Create a tracked view with Python widget ownership bookkeeping."""
+        if not self.isActive():
+            return None
+        view = SpatialView(parent)
+        if not isValid(self) or not isValid(view) or not self.attachView(view):
+            if isValid(view):
+                delete_qobject(view)
+            return None
+        return view
+
+
+__all__ = ["SpatialPlugin", "SpatialSession", "SpatialView", "SpatialItem", "ParticleLayer", "SpatialRuntime"]

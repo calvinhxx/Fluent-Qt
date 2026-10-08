@@ -26,6 +26,7 @@ option(BUILD_TESTING "Enable testing and build tests" OFF)
 option(FLUENT_QT_BUILD_TESTS "Build Fluent-Qt test targets" OFF)
 option(FLUENT_QT_BUILD_GALLERY "Build the Fluent-Qt Gallery application" OFF)
 option(FLUENT_QT_BUILD_SPATIAL "Build the optional Spatial module (requires Qt OpenGL support)" OFF)
+option(FLUENT_QT_BUILD_PLUGINS "Build the optional plugin interfaces and lifecycle manager" OFF)
 option(FLUENT_QT_BUILD_EXAMPLES "Build Fluent-Qt executable examples" ${FLUENT_QT_IS_TOP_LEVEL})
 option(FLUENT_QT_BUILD_PYSIDE6_BINDINGS "Build the optional PySide6 bindings" OFF)
 option(FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT "Build the optional WebAssembly adapter targets" OFF)
@@ -61,6 +62,9 @@ list(SORT SRC)
 set(FLUENT_QT_SPATIAL_SOURCES ${SRC})
 list(FILTER FLUENT_QT_SPATIAL_SOURCES INCLUDE REGEX "/components/spatial/")
 list(FILTER SRC EXCLUDE REGEX "/components/spatial/")
+set(FLUENT_QT_PLUGIN_SOURCES ${SRC})
+list(FILTER FLUENT_QT_PLUGIN_SOURCES INCLUDE REGEX "/components/foundation/plugins/")
+list(FILTER SRC EXCLUDE REGEX "/components/foundation/plugins/")
 set(FLUENT_QT_OPTIONAL_RESOURCE_ENTRIES "")
 if(EMSCRIPTEN AND FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT)
     set(FLUENT_QT_OPTIONAL_RESOURCE_ENTRIES
@@ -101,6 +105,13 @@ set_target_properties(FluentQt PROPERTIES
     OUTPUT_NAME FluentQt
 )
 
+if(FLUENT_QT_BUILD_SPATIAL)
+    # Spatial is a concrete plugin and always includes its lifecycle dependency.
+    set(FLUENT_QT_BUILD_PLUGINS ON)
+endif()
+if(FLUENT_QT_BUILD_PLUGINS)
+    include(cmake/FluentQtPlugins.cmake)
+endif()
 if(FLUENT_QT_BUILD_SPATIAL)
     include(cmake/FluentQtSpatial.cmake)
 endif()
@@ -161,6 +172,12 @@ if(FLUENT_QT_INSTALL)
         install(TARGETS FluentQtSpatial EXPORT FluentQtSpatialTargets
             ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Development)
         install(EXPORT FluentQtSpatialTargets NAMESPACE FluentQt::
+            DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}" COMPONENT Development)
+    endif()
+    if(TARGET FluentQtPlugins)
+        install(TARGETS FluentQtPlugins EXPORT FluentQtPluginsTargets
+            ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Development)
+        install(EXPORT FluentQtPluginsTargets NAMESPACE FluentQt::
             DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}" COMPONENT Development)
     endif()
     install(FILES
@@ -262,6 +279,9 @@ endif()
 
 if(FLUENT_QT_BUILD_EXAMPLES)
     add_subdirectory(examples/hello_world)
+    if(TARGET FluentQtPlugins)
+        add_subdirectory(examples/plugin_extension)
+    endif()
 endif()
 
 if(EMSCRIPTEN AND TARGET fluent_qt_gallery AND TARGET fluentqt_hello_world)

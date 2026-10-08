@@ -10,6 +10,235 @@
 [← System capability delivery record](system-capability-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
 <!-- docs-nav:top:end -->
 
+## 2026-10-08 Shared Plugins across C++, Python, and WebAssembly
+
+`WidgetPlugin` adds an abstract QObject bridge over `WidgetPluginInterface`.
+The optional `fluentqt.plugins` Python category exposes native metadata,
+context, dependency management, and plugin authoring. Python widget extensions
+use the same native factory validation and caller-ownership contract. The
+Spatial Python category also exposes `SpatialPlugin` for registration in a
+shared dependency graph; `SpatialSession` retains its convenience scope.
+
+The Python manager borrows plugins without retaining unparented wrappers;
+callers keep a Python reference or use a Qt owner. Collecting a plugin removes
+its registration and stops surviving dependents. Context value copies
+retain guarded access after their original manager or host is destroyed.
+Parentless factory outputs stay caller-owned; stopping or destroying a manager
+or plugin does not delete successful outputs. Wrong-parent outputs are rejected
+and destroyed by the native factory boundary.
+
+`SpatialPlugin` permits a generated QObject wrapper shell so Qt's targeted
+DeferredDelete can deliver destruction before the Python wrapper becomes
+invalid. Its Python binding keeps lifecycle and factory hooks native; extension
+authors use `Plugin` or `WidgetPlugin` for custom Python hooks. The shared Qt
+lifetime helper retains its existing Qt 6.2 workaround.
+
+The pinned Emscripten 3.1.70 kit exposed an `-O3` loop-unroll error with exception
+handling in `NavigationSamples.cpp`. Source, LLVM IR, and browser comparisons
+isolated the issue: both `-O2` and `-O3 -fno-unroll-loops` avoided the trap. The
+WASM Gallery build applies `-fno-unroll-loops` to that translation unit only;
+page logic and the Plugins exception contract are preserved.
+
+WebAssembly compiles the same C++ lifecycle and linked plugin objects into the
+application. It introduces no browser-specific manager, native dynamic-library
+loader, marketplace, or hot-unload contract. Source/API availability is separate
+from each platform's build, runtime, and visual-acceptance evidence. The
+10-03 records below preserve their original validation scope; the current
+contract is [Plugins](../architecture/plugins.md).
+
+The macOS arm64 Qt/PySide6 6.9.3 build passed all 22 Python plugin behavior
+contracts with no skipped cases. Coverage includes Python virtual dispatch,
+dependency activation and rollback, context copies after owner destruction,
+unparented and Qt-parented plugin collection, cleanup exceptions, pure temporary
+widget factory outputs, wrong-parent destruction, and a generic SpatialPlugin
+graph with retained views and caller-owned chart models. The SpatialPlugin
+DeferredDelete regression also passed independently before the complete suite.
+
+The same native build passed 40 C++ plugin contracts. The eight Spatial cases
+passed again after the wrapper fix. All 19 generated stub files verified.
+An installed native Plugins SDK consumer passed its seven dependency/failure
+probes and widget lifecycle smoke run. The reduced source archive matched all
+669 included files byte for byte after the Button spacing fix;
+it contained no Python bytecode cache files.
+
+Qt 6.9.3 `wasm_singlethread` with Emscripten 3.1.70 passed the installed Plugins
+SDK consumer and the formal Chromium DPR 2 full Gallery run after the local
+compiler workaround. The browser visited 110 routes, passed seven native
+plugin probes and fifteen physical-input lifecycle phases, and exercised Spatial
+sliders, 2D/3D switching, themes, reduced motion, suspension/resumption, and
+narrow-layout input. The run at the Button spacing checkpoint took
+43.90 seconds, with heap samples from 128 to 184 MiB; these are run observations,
+not performance targets.
+All 27 Pages payload files matched the validated app by SHA256. Fresh browser
+runs of the staged Spatial and Plugins entries also passed. Independent
+WebAssembly Spatial SDK validation covered configuration only.
+Windows, Linux, Qt 5, the minimum Qt 6.2 kit, and approved native visual
+baselines remain outside this validation run.
+
+The minimal demonstrations received a separate parity review. Python Spatial
+now follows the C++ Card and Button composition, window size, pose, surface
+intensity, and pointer tilt. The browser build uses that C++ window through
+`app/hello-world-spatial/index.html`; Gallery's `?showcase=spatial` remains the
+scene with interactive controls. The Plugins example explicitly requests its
+displayed 600 × 500 window size in both native implementations.
+
+Cocoa DPR 2 captures and geometry reports compared the C++ and Python examples
+in ordinary, Dark, and narrow windows, each with three lifecycle states.
+Plugin control geometry, text, enabled state, and fonts matched; all 18
+Inspector reports contained zero findings. Spatial geometry, pose, material,
+tilt, text, lifecycle state, and renderer matched across nine state pairs, with
+zero findings in all 36 Window/Card Inspector reports. Initial Spatial captures
+used the Apple M2 renderer; clicking changed the Button text, and deactivation
+retained the widgets in flat Raster presentation. Native visual comparison used
+system-composited screen captures because `QWidget::grab()` omits the native
+backdrop. The evidence establishes the tested client composition and behavior;
+platform framing and compositor pixels remain separate from raw image identity.
+
+The rebuilt and staged browser Spatial minimal apps reported the canonical
+720 × 520 window, 320 × 200 Card, rotation, surface intensity, and pointer tilt.
+Physical mouse input at the projected Button center changed its actual text
+from `Hello from FluentQt` to `Hello, you!`, with no browser errors. The browser
+Plugins app checked its initial layout and wording plus all seven native
+contracts and fifteen interaction phases, including retained outputs after
+deactivation. These checks use native widget observations and rendered captures;
+matching source alone is not their acceptance evidence.
+
+A subsequent multi-output check exposed a gap in the earlier parity review:
+its native captures contained only one generated greeting. Native QPushButton
+layout insets could reduce a 33-pixel Button to a 21-pixel layout item, consuming
+the example's 12-pixel spacing even though FluentQt paints the whole widget.
+Both Button constructors now use `Qt::WA_LayoutUsesWidgetRect`, aligning the
+layout item with the painted bounds. The API and native accessible role are
+unchanged. This is a base `FluentQt::FluentQt` component correction and applies
+with Plugins disabled. The focused geometry regression adds Buttons dynamically
+under a style with layout insets and checks the actual bounds and adjacent gaps.
+
+Rebuilt C++ and PySide6 applications matched across twelve native state pairs:
+ordinary, Dark, and narrow windows after creating two and four outputs, stopping,
+and reactivating. Every observed adjacent gap was 12 logical pixels, layout and
+widget rectangles matched, and all 24 Inspector reports had zero findings.
+Final capture probes used the production fix without per-widget overrides.
+The browser's fifteen-phase gate checked the same two/four-output spacing and
+retained widget identities and text in both the formal and staged runs.
+
+The focused Button-family and Gallery run passed 164 cases and skipped ten
+manual VisualChecks, with zero failures. The Python example passed its CTest
+gate, and the compiled Cocoa Dark Button-styles preview reported zero Inspector
+findings. Manual visual approval and other native platform runs remain outside
+this evidence.
+
+A later integration review hardened failed activation, failed factories, and
+particle-cleanup callbacks without adding public API. The C++ and Python minimal
+Spatial apps retain their Card, Button, and click behavior in an ordinary
+centered 2D layout when activation or view creation fails. Window preparation
+remains best-effort after activation. Gallery previews keep unattached views
+flat when the saved 3D preference changes. Particle composition checks borrowed
+session and source lifetimes during setup, detaches its layer set before
+cleanup notifications, and restores surviving sources' CPU presentation when
+callbacks stop the session or destroy the compositor. Resource reconstruction
+also stops if cleanup invalidates the session, root, or source plan.
+
+The current guides distinguish dependency-graph bookkeeping from concrete
+Spatial view/layer tracking, cleanup, and rendering work. Plugins propagates
+WebAssembly `-fexceptions` to its consumers, including Spatial consumers;
+binary-size and runtime costs depend on the workload and toolchain. This
+review makes no cross-platform performance claim and does not change the
+exception mode or the independent base Button correction.
+
+The macOS arm64 Gallery Spatial/content-owner gate selected 179 cases: 133
+passed, 46 skipped under offscreen execution, and none failed. After the final
+resource-rebuild guard, five related Cocoa GPU regressions passed separately
+without skips, covering particle setup, session loss, reentrant cleanup,
+reconstruction after panel-size or source-rectangle changes, and owner
+destruction. The complete owner gate was not repeated after that guard.
+All five preview integration contracts passed on the final source. Python's
+matching guards passed all 14 focused failure/cleanup cases without skips and
+all 16 helper tests. The three Gallery Spatial, particle-backdrop, and snippet
+suites passed again with the final runtime; the minimal Spatial example gate
+also passed. New native captures matched C++ and Python geometry, content, and
+settings across nine state pairs in ordinary, Dark, and narrow windows; every
+Window/Card Inspector report had zero findings. Injected activation and factory
+failures also retained clickable ordinary 2D content with zero Inspector
+findings. Offscreen skips remain separate from the executed native GPU evidence.
+
+The final WebAssembly build, including the resource-rebuild guards, passed
+Chromium DPR 2 full validation in 40.96 seconds: 110 routes and all five changed
+sample probes, with zero failures or skips. The same run passed seven native
+plugin contracts and fifteen interaction phases, preserving 12-pixel gaps for
+two and four greeting Buttons across deactivation and reactivation. The Spatial
+minimal app retained its 720 × 520 window and 320 × 200 Card; projected physical
+mouse input changed the actual Button text to `Hello, you!`, with no browser
+errors. All 27 Pages payloads matched the validated app byte for byte, and both
+staged minimal entries passed fresh browser input checks. The refreshed source
+archive matched all 669 included files and contained no bytecode caches.
+These results retain the platform, SDK-runtime, performance, and visual-approval
+limits stated above.
+
+## 2026-10-03 Optional plugin infrastructure
+
+`fluent::plugins` adds `PluginMetadata`, `Plugin`, `PluginContext`,
+`PluginManager`, and `WidgetPluginInterface` under `foundation/plugins`.
+The opt-in `FluentQt::Plugins` target and `<FluentQt/Plugins.h>` expose this
+nonvisual C++ infrastructure; PySide6 does not bind it. Public headers are
+installed only when the module is enabled.
+
+The manager borrows plugins and the application host. Dependency graphs are
+validated before activation; failed attempts clean up newly started plugins
+while preserving previously active plugins. Deactivation stops dependents
+first. Hooks and direct lifecycle signals reject nested mutations. The optional
+widget interface preserves application ownership and uses the GUI thread.
+
+Concrete extension dependencies remain in separate targets. This addition
+introduces no QML/Quick dependency, dynamic library discovery, or binary plugin
+compatibility guarantee. The current rules are in the
+[Plugins contract](../architecture/plugins.md).
+
+Validation on macOS arm64 with Qt 6.9.3 passed all 31 plugin contract tests,
+the installed-SDK example build and offscreen launch, module discovery and
+disabled-module source/header isolation checks, and the local C++ static gate.
+The reduced source archive includes the module and its minimal example.
+
+## 2026-10-03 Spatial plugin integration
+
+`SpatialPlugin` is the first concrete `fluent::plugins::Plugin`, supplied by the
+existing optional Spatial target. Its ID is `fluentqt.spatial`; the optional
+QWidget factory exposes the `spatial-view` key. `SpatialSession` is a nonvisual
+QObject facade that owns the plugin manager and plugin, providing activation,
+tracked view/layer creation, and hidden-window preparation. The session is bound
+for PySide6; SpatialPlugin and the generic plugin APIs remain C++ only.
+
+Activation installs native-style adapters without creating a GPU device.
+Deactivation restores tracked views to flat raster presentation and releases
+their rendering and particle-layer resources without deleting caller widgets
+or models. It does not change Gallery's saved 3D preference or automatically
+re-enable old views after activation. Reactivation restores each retained
+view's requested render mode while leaving `spatialEnabled` false. Existing
+SpatialView, ParticleLayer, and SpatialRuntime APIs remain source compatible.
+
+`FluentQt::Spatial` now publicly links `FluentQt::Plugins` and the Widgets core.
+Enabling Spatial includes Plugins automatically. Installed consumers request
+`COMPONENTS Spatial` to load its dependency; the base package continues to omit
+Plugins and Qt OpenGL discovery. The C++, Python, and WebAssembly Galleries and
+examples use the session entry while preserving renderer, overlay, motion,
+HighContrast, and native 2D fallback contracts. This adds lifecycle
+infrastructure without adding a visible control. The current rules are in the
+[Spatial guide](../architecture/spatial-view.md).
+
+Validation on macOS arm64 with Qt 6.9.3 passed 39 plugin lifecycle tests
+(31 shared-manager and eight Spatial tests), including synchronous session
+deletion from lifecycle and view signals. Three native graphics tests passed
+for session suspension/resumption, particle resource release, and context
+preflight. The focused Spatial and Gallery CTest run passed 173 cases and
+skipped 56 native, platform-specific, or manual-visual cases. PySide6 Spatial
+and Gallery lifecycle suites, teaching-source and contract generation, and
+route acceptance passed in the configured offscreen binding environment.
+Installed-SDK Spatial and base consumers built and launched, with
+automatic plugin discovery and disabled-module isolation checked separately.
+C++ and Python native sample captures reported zero Inspector findings.
+The reduced source archive includes both modules and the Spatial example.
+WebAssembly configuration was blocked by the missing Emscripten toolchain.
+Windows, Linux, Qt 5, and approved native visual baselines were not exercised here.
+
 ## 2026-09-18 File entry and Toast refinement
 
 `FileDropZone` adds application-owned browsing and local URL drop signals in
