@@ -130,6 +130,9 @@ void Button::mouseReleaseEvent(QMouseEvent* event)
 
 Button::Button(const QString& text, QWidget* parent) : QPushButton(text, parent)
 {
+    // The custom surface fills the widget; native layout insets must not consume its spacing.
+    // zh_CN: 自绘表面覆盖完整控件，原生布局内缩不能抵消控件间距。
+    setAttribute(Qt::WA_LayoutUsesWidgetRect);
     setAttribute(Qt::WA_Hover);
 #ifdef Q_OS_MAC
     setAttribute(Qt::WA_MacShowFocusRect, false);
@@ -139,6 +142,7 @@ Button::Button(const QString& text, QWidget* parent) : QPushButton(text, parent)
 
 Button::Button(QWidget* parent) : QPushButton(parent)
 {
+    setAttribute(Qt::WA_LayoutUsesWidgetRect);
     setAttribute(Qt::WA_Hover);
 #ifdef Q_OS_MAC
     setAttribute(Qt::WA_MacShowFocusRect, false);

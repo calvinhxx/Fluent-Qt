@@ -12,11 +12,14 @@
 #include <QPixmap>
 #include <QPointer>
 #include <QPolygonF>
+#include <QProxyStyle>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QStyle>
+#include <QStyleOption>
 #include <QTest>
 #include <QTimer>
+#include <QVBoxLayout>
 #include <gtest/gtest.h>
 
 using namespace fluent::basicinput;
@@ -73,6 +76,53 @@ public:
 
     int paintedIconPixelSize() const { return iconPixelSize(); }
 };
+
+class InsetPushButtonStyle final : public QProxyStyle {
+public:
+    QRect subElementRect(SubElement element, const QStyleOption* option,
+                         const QWidget* widget = nullptr) const override
+    {
+        if (element == SE_PushButtonLayoutItem && option)
+            return option->rect.adjusted(0, 4, 0, -8);
+        return QProxyStyle::subElementRect(element, option, widget);
+    }
+};
+
+TEST(ButtonLayout, Contract_DynamicallyAddedButtonsKeepPaintedBoundsAndSpacing)
+{
+    InsetPushButtonStyle nativeStyle;
+    QWidget host;
+    host.setAttribute(Qt::WA_DontShowOnScreen);
+    auto* column = new QVBoxLayout(&host);
+    column->setContentsMargins(0, 0, 0, 0);
+    column->setSpacing(12);
+    column->setAlignment(Qt::AlignTop);
+    host.resize(320, 300);
+    host.show();
+
+    QList<Button*> buttons;
+    for (int count = 1; count <= 4; ++count) {
+        SCOPED_TRACE(count);
+        auto* button = count % 2 ? new Button(&host)
+                                 : new Button(QStringLiteral("Hello from an extension"), &host);
+        if (count % 2)
+            button->setText(QStringLiteral("Hello from an extension"));
+        button->setStyle(&nativeStyle);
+        column->addWidget(button);
+        buttons.append(button);
+        button->show();
+        QApplication::processEvents();
+        column->activate();
+
+        for (int index = 0; index < buttons.size(); ++index) {
+            EXPECT_EQ(column->itemAt(index)->geometry(), buttons[index]->geometry());
+            if (index > 0) {
+                const auto* previous = buttons[index - 1];
+                EXPECT_EQ(buttons[index]->y() - previous->y() - previous->height(), 12);
+            }
+        }
+    }
+}
 
 TEST(ButtonProperties, SemanticIconUsesWinUIStandardControlSlotByDefault)
 {
