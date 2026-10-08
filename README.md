@@ -39,33 +39,66 @@ Fluent-Qt (FluentQt) is a cross-platform Fluent UI component library for Qt Widg
 
 The library supports Windows, macOS, Linux, and WebAssembly, with C++ APIs and optional PySide6 bindings. It includes Light, Dark, and High Contrast themes and an application-wide motion policy: Full, Reduced, or Disabled.
 
+## 🧩 Library modules
+
+### Core
+
+`FluentQt::FluentQt` provides native controls, themes, design tokens, and shared
+widget foundations. Ordinary 2D applications only need this target.
+
+### Plugins
+
+The optional [Plugins](docs/architecture/plugins.md) module handles registration,
+dependencies, activation, and cleanup. C++ applications link `FluentQt::Plugins`;
+each plugin has its own target for any extra dependencies.
+
+C++ applications call the library directly. Python uses matching PySide6 bindings,
+and WebAssembly builds compile the same C++ code to run in the browser.
+
+#### Spatial
+
+The [Spatial](docs/architecture/spatial-view.md) plugin adds 3D presentation to
+existing Qt Widgets interfaces. `SpatialSession` activates the plugin, creates views,
+and cleans up when the plugin stops.
+
+Linking `FluentQt::Spatial` also links `FluentQt::Plugins` and adds OpenGL
+dependencies. Spatial supports a native 2D fallback when 3D is unavailable.
+
+Open Plugins → Spatial in Gallery to see SpatialView and SpatialItem examples.
+Turn on 3D in Settings → 3D Gallery.
+
+## 🖼 Gallery
+
+Use Gallery to browse controls, try interactions, and read example code.
+
+| Try it on | Entry point |
+|---|---|
+| Browser | [Live Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/) · [Project website](https://calvinhxx.github.io/Fluent-Qt/#gallery) |
+| Windows, macOS, Linux | [Download a Gallery package](https://github.com/calvinhxx/Fluent-Qt/releases/latest) |
+
+### Python compatibility Gallery
+
+The Python Gallery is available from
+[PyPI](https://pypi.org/project/FluentQt-Gallery/).
+
+```bash
+python -m pip install FluentQt-Gallery
+python -m fluentqt_gallery
+```
+
+`FluentQt-Gallery` installs the matching `FluentQt` version automatically.
+
 ## 🤖 Build with AI
 
 Use [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) in Codex, Claude Code, or Cursor to build a desktop app, add a GUI to a project, or fix an interface. [Example](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [Install and use](docs/ai/README.md)
 
 When tuning a Gallery sample, use Live Scene to see each saved change, then check the result in the compiled C++ sample. [How it works](docs/development/gallery-preview-workflow.md)
 
-## 🧱 Dependencies
-
-| Scope | Dependencies |
-|---|---|
-| FluentQt C++ library | C++17, CMake 3.16+, Qt Widgets 5.15+ or 6.2+ |
-| C++ Gallery | FluentQt, Qt Network, spdlog/fmt |
-| C++ WebAssembly | Qt 6.9.3 `wasm_singlethread`, Emscripten 3.1.70 |
-| Tests | FluentQt, Qt Test/Network, GTest, spdlog/fmt |
-| Optional PySide6 bindings | Qt/PySide6/Shiboken6 6.2.4+; Python 3.10+ for source builds |
-
 ## 🚀 Quick Start
 
-Link FluentQt to a CMake project using one of the following methods. `FetchContent` is recommended for new projects.
+The C++ integration requires C++17, CMake 3.16+, and Qt Widgets 5.15+ or 6.2+. Use `FetchContent` for new projects.
 
 ### C++ setup
-
-| Integration | CMake |
-|---|---|
-| `FetchContent` integration | `FetchContent_MakeAvailable(fluentqt)` |
-| Source integration | `add_subdirectory(Fluent-Qt)` |
-| Installed package integration | `find_package(FluentQt CONFIG REQUIRED)` |
 
 #### `FetchContent` integration
 
@@ -99,7 +132,10 @@ add_subdirectory(Fluent-Qt)
 target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 ```
 
-#### Installed package integration
+#### Installed library integration
+
+Use a FluentQt installation that includes the development headers and CMake
+package files. See the [library build and installation guide](docs/development/build-workflow.md#install-the-library-or-create-a-source-package).
 
 ```cmake
 find_package(FluentQt CONFIG REQUIRED)
@@ -163,6 +199,16 @@ examples, compatibility, and source builds.
 
 ## 🛠 Build
 
+### Dependencies
+
+| Scope | Dependencies |
+|---|---|
+| FluentQt C++ library | C++17, CMake 3.16+, Qt Widgets 5.15+ or 6.2+ |
+| C++ Gallery | FluentQt, Qt Network, spdlog/fmt |
+| C++ WebAssembly | Qt 6.9.3 `wasm_singlethread`, Emscripten 3.1.70 |
+| Tests | FluentQt, Qt Test/Network, GTest, spdlog/fmt |
+| Optional PySide6 bindings | Qt/PySide6/Shiboken6 6.2.4+; Python 3.10+ for source builds |
+
 ### Library
 
 ```bash
@@ -177,43 +223,22 @@ cmake --install build/fluentqt --config Release \
 The build script selects parallelism from available CPU and memory.
 See the [build workflow](docs/development/build-workflow.md) for configuration.
 
-### Source package
+### Optional extensions
 
-Create the reduced library source package for offline or source integration:
+Enable the Plugins infrastructure or a plugin module when configuring FluentQt,
+then link the corresponding target in your application.
 
-```bash
-python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_package
-```
+| Extension scope | Build option | CMake target | Integration example |
+|---|---|---|---|
+| Plugins infrastructure | `-DFLUENT_QT_BUILD_PLUGINS=ON` | `FluentQt::Plugins` | [Minimal plugin example](docs/architecture/plugins.md#minimal-extension-example) |
+| Plugins → Spatial | `-DFLUENT_QT_BUILD_SPATIAL=ON` | `FluentQt::Spatial` (automatically includes Plugins) | [Spatial Hello World](examples/hello_world/README.md) |
 
-### Optional Spatial module
+For source integration, set the option before `add_subdirectory()` or
+`FetchContent_MakeAvailable()`. See each module's guide for installed-package
+integration. Matched Python builds expose `fluentqt.plugins` and `fluentqt.spatial`;
+WebAssembly uses the shared C++ implementation.
 
-[Spatial](docs/architecture/spatial-view.md) adds optional tilt, rotation and
-depth to existing widgets. Try it in Gallery via Settings → 3D Gallery;
-ordinary 2D applications are unaffected.
-
-### WebAssembly
-
-Use the [live WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/)
-for evaluation. Local toolchain setup, builds, browser smoke tests, and Pages
-deployment are documented in the
-[WebAssembly workflow](docs/development/webassembly-workflow.md).
-
-## 🖼 Gallery
-
-Gallery is used to browse, demonstrate, and validate FluentQt components.
-
-### C++ Web Gallery
-
-Online: [project website](https://calvinhxx.github.io/Fluent-Qt/#gallery) · [standalone page](https://calvinhxx.github.io/Fluent-Qt/gallery/).
-
-### C++ Gallery packages
-
-Download the current Windows, macOS, or Linux Gallery package from
-[GitHub Releases](https://github.com/calvinhxx/Fluent-Qt/releases/latest).
-The maintained build and package matrix lives in the
-[packaging workflow](docs/development/packaging-workflow.md).
-
-### Run the C++ Gallery locally
+### Build Gallery locally
 
 Repository presets require CMake 3.25+ and `VCPKG_ROOT`. Configure your Qt kit
 using the [first-use setup](docs/development/build-workflow.md#first-use-setup).
@@ -244,24 +269,21 @@ Use the matching preset on other platforms:
 | Windows x64 | `vcpkg-windows` |
 | Windows ARM64 | `vcpkg-windows-arm64` |
 
-Use the matching `-release` preset when packaging.
+For packaging, use the matching `-release` preset and the verification
+steps in the [packaging workflow](docs/development/packaging-workflow.md).
 
-### Package the C++ Gallery locally
+### WebAssembly
 
-Use the platform preset and verification steps in the
-[Packaging Workflow](docs/development/packaging-workflow.md).
+See the [WebAssembly workflow](docs/development/webassembly-workflow.md) for
+the browser toolchain, local builds, validation, and Pages deployment.
 
-### Python compatibility Gallery
+### Source package
 
-The Python Gallery is available from
-[PyPI](https://pypi.org/project/FluentQt-Gallery/).
+Create the reduced library source package for offline or source integration:
 
 ```bash
-python -m pip install FluentQt-Gallery
-python -m fluentqt_gallery
+python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_package
 ```
-
-`FluentQt-Gallery` installs the matching `FluentQt` version automatically.
 
 ## 📚 Documentation
 
