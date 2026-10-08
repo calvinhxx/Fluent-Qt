@@ -515,6 +515,33 @@ TEST_F(TreeViewTest, IndicatorMotionClearsOnInvalidResetSelectionModelAndCollaps
     EXPECT_FALSE(tv->indicatorMotionCurrentIndex().isValid());
 }
 
+TEST_F(TreeViewTest, IndicatorReturnsWhenCurrentRowIsSelectedAgain)
+{
+    auto* tv = new TreeView(window);
+    auto* model = attachSampleModel(tv);
+    tv->setIndicatorMotionAnimationEnabled(false);
+    tv->setSelectionIndicatorVisible(true);
+    tv->setFixedSize(350, 400);
+    tv->expandAll();
+    showOffscreen(window);
+
+    const QModelIndex leaf = model->item(1)->child(0)->child(0)->index();
+    tv->setSelectedItem(leaf);
+    processEvents();
+    ASSERT_FALSE(tv->selectedIndicatorRect().isEmpty());
+
+    tv->clearSelection();
+    EXPECT_EQ(tv->currentIndex(), leaf);
+    EXPECT_TRUE(tv->selectedIndicatorRect().isEmpty());
+
+    tv->selectionModel()->select(leaf, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    processEvents();
+    EXPECT_EQ(tv->indicatorMotionCurrentIndex(), leaf);
+    ASSERT_FALSE(tv->selectedIndicatorRect().isEmpty());
+    EXPECT_TRUE(hasAccentPixelInRect(tv->viewport(), tv->selectedIndicatorRect().toAlignedRect(),
+                                     tv->themeColors().accentDefault));
+}
+
 TEST_F(TreeViewTest, IndicatorMotionSuppressesDuplicateSelectionAndSnapsWhenAnimationDisabled)
 {
     TreeView* tv = new TreeView(window);
