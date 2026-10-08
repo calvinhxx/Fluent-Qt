@@ -896,6 +896,11 @@ void TreeView::selectionChanged(const QItemSelection& selected, const QItemSelec
     if (selected.indexes().isEmpty() &&
         (!selectionModel() || selectionModel()->selectedIndexes().isEmpty()))
         clearIndicatorMotionState();
+    // Selecting the same current row again has no currentChanged signal.
+    // zh_CN: 重新选中仍为 current 的行时，不会再次发出 currentChanged。
+    else if (!m_currentIndicatorIndex.isValid() && selectionModel() &&
+             selectionModel()->isSelected(currentIndex()))
+        updateIndicatorMotionForIndex(currentIndex(), QModelIndex());
 }
 
 void TreeView::drawBranches(QPainter* /*painter*/, const QRect& /*rect*/,
