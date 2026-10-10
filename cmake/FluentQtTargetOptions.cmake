@@ -10,6 +10,18 @@ function(fluent_qt_configure_cpp_target target)
         CXX_STANDARD_REQUIRED ON
         CXX_EXTENSIONS OFF)
 
+    # These generators need explicit target folders. Other IDEs read the real
+    # CMake directory tree; virtual folders would create a second hierarchy.
+    if(CMAKE_GENERATOR MATCHES "^(Visual Studio|Xcode)")
+        get_target_property(_fluent_qt_target_source_dir "${target}" SOURCE_DIR)
+        file(RELATIVE_PATH _fluent_qt_module_dir "${PROJECT_SOURCE_DIR}"
+            "${_fluent_qt_target_source_dir}")
+        if(_fluent_qt_module_dir AND NOT _fluent_qt_module_dir STREQUAL "."
+           AND NOT _fluent_qt_module_dir MATCHES "^\\.\\.")
+            set_target_properties("${target}" PROPERTIES FOLDER "${_fluent_qt_module_dir}")
+        endif()
+    endif()
+
     if(MSVC)
         target_compile_definitions("${target}" PRIVATE
             UNICODE

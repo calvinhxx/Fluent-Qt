@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import gc
+import weakref
 from pathlib import Path
 import unittest
 
@@ -11,8 +13,9 @@ import shiboken6
 
 fluentqt.prepare_high_dpi_application()
 
-from PySide6.QtCore import QCoreApplication, QEvent
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, QThread
 from PySide6.QtWidgets import QApplication, QLabel, QSlider, QWidget
+from PySide6.QtTest import QTest
 
 
 class FoundationAuthoringTest(unittest.TestCase):
@@ -110,6 +113,244 @@ class FoundationAuthoringTest(unittest.TestCase):
         self.assertFalse(shiboken6.isValid(lifetime_target))
         lifetime_source.setValue(61)
         self.assertEqual(lifetime_source.value(), 61)
+
+    def test_legacy_bind_rejects_foreign_thread_without_replacing_existing_binding(self):
+        original, source, target = QObject(), QObject(), QObject()
+        original.setObjectName("original")
+        source.setObjectName("foreign")
+        binding = fluentqt.bind_managed(original, "objectName", target, "objectName")
+        self.assertTrue(binding.isValid())
+
+        thread = QThread()
+        source.moveToThread(thread)
+        thread.finished.connect(source.deleteLater)
+        thread.start()
+        try:
+            with self.assertRaises(ValueError):
+                fluentqt.bind(source, "objectName", target, "objectName")
+            self.assertEqual(target.objectName(), "original")
+            self.assertTrue(binding.isValid())
+            original.setObjectName("updated")
+            self.assertEqual(target.objectName(), "updated")
+        finally:
+            thread.quit()
+            thread.wait()
+
+    def test_legacy_bind_reports_target_destruction_during_initial_sync(self):
+        source, target = QSlider(), QSlider()
+        source.setValue(20)
+        target.valueChanged.connect(lambda value: shiboken6.delete(target))
+        with self.assertRaises(ValueError):
+            fluentqt.bind(source, "value", target, "value")
+        self.assertFalse(shiboken6.isValid(target))
+
+    def test_legacy_bind_replaces_target_binding_and_keeps_notify_requirement(self):
+        first, second, target = QSlider(), QSlider(), QSlider()
+        first.setValue(10)
+        second.setValue(20)
+        fluentqt.bind(first, "value", target, "value")
+        fluentqt.bind(second, "value", target, "value")
+        self.assertEqual(target.value(), 20)
+        first.setValue(30)
+        self.assertEqual(target.value(), 20)
+
+        unobserved = QWidget()
+        unobserved.setMinimumWidth(40)
+        with self.assertRaises(ValueError):
+            fluentqt.bind(unobserved, "minimumWidth", target, "value")
+        second.setValue(50)
+        self.assertEqual(target.value(), 50)
+
+    def test_managed_binding_pauses_resumes_and_survives_a_dropped_handle(self):
+        source, target = QSlider(), QSlider()
+        source.setValue(20)
+        handle = fluentqt.bind_managed(source, "value", target, "value")
+        self.assertEqual(target.value(), 20)
+        handle.pause()
+        source.setValue(70)
+        self.assertEqual(target.value(), 20)
+        self.assertTrue(handle.isSuspended())
+        handle.resume()
+        self.assertEqual(target.value(), 70)
+        handle.setEnabled(False)
+        source.setValue(40)
+        self.assertEqual(target.value(), 70)
+        handle.setEnabled(True)
+        self.assertEqual(target.value(), 40)
+        del handle
+        gc.collect()
+        source.setValue(55)
+        self.assertEqual(target.value(), 55)
+
+    def test_computed_binding_coalesces_and_stops_after_dependency_destruction(self):
+        first, second, label = QSlider(), QSlider(), QLabel()
+        calls = []
+
+        def compute():
+            calls.append(True)
+            return str(first.value() + second.value())
+
+        handle = fluentqt.bind_computed(
+            label, "text", [(first, "value"), (second, "value")], compute, deferred=True)
+        self.assertEqual(label.text(), "0")
+        self.assertEqual(len(calls), 1)
+        first.setValue(20)
+        second.setValue(30)
+        self.assertEqual(label.text(), "0")
+        QApplication.processEvents()
+        self.assertEqual(label.text(), "50")
+        self.assertEqual(len(calls), 2)
+        handle.pause()
+        first.setValue(40)
+        QApplication.processEvents()
+        self.assertEqual(len(calls), 2)
+        handle.resume()
+        self.assertEqual(label.text(), "70")
+        first.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        count = len(calls)
+        second.setValue(60)
+        QApplication.processEvents()
+        self.assertFalse(handle.isValid())
+        self.assertEqual(len(calls), count)
+
+    def test_computed_failure_holds_value_and_invalid_replacement_preserves_binding(self):
+        source, label = QSlider(), QLabel()
+
+        def compute():
+            if source.value() == 60:
+                raise RuntimeError("expression failed")
+            return str(source.value())
+
+        handle = fluentqt.bind_computed(label, "text", [(source, "value")], compute)
+        source.setValue(25)
+        with self.assertRaises(ValueError):
+            fluentqt.bind_computed(label, "text", [(source, "missing")], lambda: "bad")
+        self.assertTrue(handle.isValid())
+        source.setValue(30)
+        self.assertEqual(label.text(), "30")
+        source.setValue(60)
+        self.assertEqual(label.text(), "30")
+        self.assertTrue(handle.isSuspended())
+        self.assertIsInstance(handle.last_error, RuntimeError)
+        source.setValue(35)
+        handle.resume()
+        self.assertEqual(label.text(), "35")
+        self.assertIsNone(handle.last_error)
+        replacement = fluentqt.bind_managed(source, "value", label, "text")
+        self.assertTrue(replacement.isValid())
+        self.assertFalse(handle.isValid())
+        QApplication.processEvents()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        self.assertFalse(getattr(label, "_fluentqt_binding_expressions", {}))
+
+    def test_computed_target_teardown_releases_the_retained_callable(self):
+        class Expression:
+            def __call__(self):
+                return "alive"
+
+        label = QLabel()
+        expression = Expression()
+        expression_ref = weakref.ref(expression)
+        handle = fluentqt.bind_computed(label, "text", [], expression)
+        del expression
+        gc.collect()
+        self.assertIsNotNone(expression_ref())
+        label.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QApplication.processEvents()
+        gc.collect()
+        self.assertFalse(handle.isValid())
+        self.assertIsNone(expression_ref())
+
+    def test_computed_evaluator_can_destroy_its_target_without_stale_writes(self):
+        source, target = QSlider(), QLabel()
+
+        def compute():
+            if source.value() == 40:
+                shiboken6.delete(target)
+            return "value"
+
+        handle = fluentqt.bind_computed(target, "text", [(source, "value")], compute)
+        source.setValue(40)
+        self.assertFalse(shiboken6.isValid(target))
+        self.assertFalse(handle.isValid())
+
+    def test_conditional_signal_can_destroy_the_controller(self):
+        source, label = QSlider(), QLabel("Default")
+        states = fluentqt.StateGroup()
+        states.state_changed.connect(lambda name: shiboken6.delete(states) if name else None)
+        states.add("active", {label: {"text": "Active"}},
+                   when=lambda: source.value() > 50, dependencies=[(source, "value")])
+        source.setValue(70)
+        self.assertFalse(shiboken6.isValid(states))
+        source.setValue(30)
+        QApplication.processEvents()
+
+    def test_conditional_inherited_states_and_two_way_binding_restoration(self):
+        source, target, label = QSlider(), QSlider(), QLabel("Ready")
+        source.setValue(20)
+        fluentqt.bind(source, "value", target, "value", fluentqt.BindingMode.TwoWay)
+        states = fluentqt.StateGroup()
+        changed = []
+        states.state_changed.connect(changed.append)
+        states.add("busy", {label: {"enabled": False}})
+        states.add("saving", {label: {"text": "Saving..."}, target: {"value": 99}},
+                   extend="busy", when=lambda: source.value() > 50,
+                   dependencies=[(source, "value")])
+        source.setValue(70)
+        self.assertEqual(states.state(), "saving")
+        self.assertFalse(label.isEnabled())
+        self.assertEqual(label.text(), "Saving...")
+        self.assertEqual(target.value(), 99)
+        self.assertEqual(source.value(), 70)
+        source.setValue(30)
+        self.assertEqual(states.state(), "")
+        self.assertTrue(label.isEnabled())
+        self.assertEqual(label.text(), "Ready")
+        self.assertEqual(target.value(), 30)
+        self.assertEqual(changed, ["saving", ""])
+
+    def test_behavior_and_transition_use_the_native_motion_policy(self):
+        fluentqt.set_motion_mode(fluentqt.MotionMode.Disabled)
+        source = QSlider()
+        bar = fluentqt.ProgressBar()
+        fluentqt.set_behavior(bar, "value", duration=300)
+        fluentqt.bind(source, "value", bar, "value")
+        source.setValue(60)
+        self.assertEqual(bar.value(), 60)
+        states = fluentqt.StateGroup()
+        finished = []
+        states.transition_finished.connect(finished.append)
+        states.add("high", {bar: {"value": 80.0}})
+        states.add_transition(["value"], duration=300)
+        states.set("high")
+        self.assertEqual(bar.value(), 80)
+        self.assertEqual(finished, ["high"])
+        source.setValue(40)
+        self.assertEqual(bar.value(), 80)
+        states.clear()
+        self.assertEqual(bar.value(), 40)
+
+    def test_state_anchor_changes_restore_the_original_native_layout(self):
+        surface = fluentqt.Card()
+        surface.resize(360, 120)
+        button = fluentqt.Button("Move me", surface)
+        anchors = fluentqt.AnchorLayout(surface)
+        anchors.addWidget(button, fluentqt.anchors(left=(surface, 12), vertical_center=surface))
+        states = fluentqt.StateGroup(surface)
+        states.add("right", {}, anchor_changes={button: fluentqt.anchors(
+            right=(surface, -12), vertical_center=surface)})
+        surface.show()
+        QApplication.processEvents()
+        self.assertEqual(button.x(), 12)
+        states.set("right")
+        QApplication.processEvents()
+        self.assertEqual(button.x() + button.width(), surface.width() - 12)
+        states.clear()
+        QApplication.processEvents()
+        self.assertEqual(button.x(), 12)
+        surface.deleteLater()
 
     def test_state_group_applies_and_restores_properties(self):
         label = QLabel("Ready")

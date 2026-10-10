@@ -213,6 +213,17 @@ jobs:
         shell: bash
         run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}"
 
+      - name: Install QmlBridge Linux dependencies
+        if: ${{ runner.os == 'Linux' && matrix.qt_source == 'apt' && contains(matrix.configure_args, '-DFLUENT_QT_BUILD_QML_BRIDGE=ON') }}
+        shell: bash
+        run: |
+          sudo apt-get install -y --no-install-recommends \
+            qt6-declarative-dev \
+            qml6-module-qtquick \
+            qml6-module-qtqml \
+            qml6-module-qtqml-models \
+            qml6-module-qtqml-workerscript
+
       - name: Install NSIS for Windows packaging
         if: ${{ matrix.windows_package == true }}
         shell: pwsh
@@ -768,6 +779,20 @@ jobs:
           fi
           archive_entries="$(unzip -Z1 "$archive")"
           for source_file in \
+              uilib/CMakeLists.txt \
+              plugin/CMakeLists.txt \
+              plugin/plugin_extension/CMakeLists.txt \
+              plugin/Spatial/CMakeLists.txt \
+              plugin/QmlBridge/CMakeLists.txt \
+              cmake/FluentQtPlugins.cmake \
+              cmake/FluentQtSpatial.cmake \
+              cmake/FluentQtQmlBridge.cmake \
+              cmake/FluentQtHelloWorldExamples.cmake \
+              cmake/FluentQtPluginExtensionExample.cmake \
+              cmake/FluentQtQmlBridgeExample.cmake \
+              examples/hello_world/CMakeLists.txt \
+              examples/plugin_extension/CMakeLists.txt \
+              examples/qml_bridge/CMakeLists.txt \
               support/spatial/SpatialTextureHost.cpp \
               support/spatial/SpatialTextureHost.h \
               support/spatial/shaders/spatial_rhi.qrc \

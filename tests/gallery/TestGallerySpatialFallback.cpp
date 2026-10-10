@@ -13,6 +13,7 @@
 #include <QScreen>
 #include <QSignalSpy>
 #include <QTest>
+#include <QWindow>
 
 #include "QtTestEnvironment.h"
 #include "model/GalleryComponentCatalog.h"
@@ -88,6 +89,27 @@ protected:
     }
 };
 } // namespace
+
+#ifdef FLUENT_QT_HAS_SPATIAL
+TEST_F(GallerySpatialFallbackTest, GraphicsBackendConflictPreservesWidgetsAndPreference)
+{
+    const auto previous = qApp->property("fluentqtGalleryGraphicsBackendFailure");
+    const auto restore = qScopeGuard(
+        [previous] { qApp->setProperty("fluentqtGalleryGraphicsBackendFailure", previous); });
+    const QString reason = QStringLiteral("The selected graphics APIs are incompatible.");
+    qApp->setProperty("fluentqtGalleryGraphicsBackendFailure", reason);
+    qputenv("FLUENT_QT_GALLERY_DISABLE_3D", "0");
+    GalleryWindow window;
+    finishStartup(window);
+    ASSERT_NE(window.windowHandle(), nullptr);
+    EXPECT_NE(window.windowHandle()->surfaceType(), QSurface::OpenGLSurface);
+    EXPECT_EQ(window.findChild<QWidget*>(QStringLiteral("gallerySpatialSurface")), nullptr);
+    EXPECT_FALSE(window.property("gallerySpatialEnabled").toBool());
+    EXPECT_TRUE(settings.spatialModeEnabled());
+    EXPECT_FALSE(settings.spatialAvailable());
+    EXPECT_EQ(settings.spatialUnavailableReason(), reason);
+}
+#endif
 
 TEST(GallerySpatialPreferenceTest, ColdLoadProbe)
 {

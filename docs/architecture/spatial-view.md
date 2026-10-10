@@ -700,7 +700,9 @@ library is required. Windows 11 supplies the native Direct3D shader compiler.
 
 The compositor rejects software devices and checks the real canvas after the
 driver probe. If Direct3D is unavailable, Gallery tries its existing OpenGL path;
-if neither is usable, the same native widgets remain available in 2D.
+if neither is usable, the same native widgets remain available in 2D. When
+QmlBridge is enabled, this fallback also requires a compatible Quick backend.
+Quick already using Direct3D or Metal keeps that API and the Gallery uses 2D.
 
 Widget contents are captured into textures only when their revision, size or
 pixel density changes. Perspective, rounded edges and material animation run on

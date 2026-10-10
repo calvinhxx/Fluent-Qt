@@ -1021,12 +1021,17 @@ def _build_sample_card(
     card_layout.addWidget(preview_surface)
 
     full_code = None
+    source_files = None
     if entry.category_id == "spatial":
         from .native_samples_spatial import full_example_source
         full_code = full_example_source(sample.id)
+    elif entry.category_id == "qml-bridge":
+        from .native_samples_qmlbridge import example_source_files
+        source_files = example_source_files(sample.id)
     source_expander = GalleryCodeBlock(
         result.source, card,
         full_code=full_code,
+        source_files=source_files,
     )
     source_expander.setObjectName("galleryCodeBlock")
     source_expander.setProperty("gallerySampleId", sample.id)
@@ -2263,7 +2268,8 @@ class GalleryWindow(fluentqt.Window):
             from fluentqt.spatial import SpatialSession
             self._spatial_session = SpatialSession(self, self)
             activated = self._spatial_session.activate()
-            if activated and os.environ.get("FLUENT_QT_GALLERY_DISABLE_3D", "0") == "0":
+            if (activated and os.environ.get("FLUENT_QT_GALLERY_DISABLE_3D", "0") == "0"
+                    and not QApplication.instance().property("fluentqtGalleryGraphicsBackendFailure")):
                 from fluentqt._fluentqt import fluent as _native_fluent
                 # The Gallery's private compositor retains its RHI preference.
                 _native_fluent._SpatialTextureHost.prepareWindow(self)
@@ -2467,7 +2473,7 @@ class GalleryWindow(fluentqt.Window):
             self._prewarm_done += 1
         self._splash.set_progress(self._prewarm_done, self._prewarm_total)
         if self._current_route == route_id:
-            self._content_host.setCurrentIndex(self._pages[route_id][0], 0, False)
+            self._show_content_page(self._pages[route_id][0])
             self._pages[route_id][1].hide()
             self._refresh_route_visuals(route_id)
         self._schedule_prewarm_step()
@@ -2529,7 +2535,7 @@ class GalleryWindow(fluentqt.Window):
             self._prewarm_page = None
         if self._current_route not in self._pages:
             index, page = self._ensure_page(self._current_route)
-            self._content_host.setCurrentIndex(index, 0, False)
+            self._show_content_page(index)
             page.show()
         self._dismissal_splash = None
         self._title_content.set_app_icon_revealed(True)
@@ -2807,6 +2813,12 @@ class GalleryWindow(fluentqt.Window):
     def all_route_ids(self) -> tuple[str, ...]:
         return tuple(route.id for route in ROUTES)
 
+    def _show_content_page(self, index: int) -> None:
+        self._content_host.setCurrentIndex(index, 0, False)
+        controller = getattr(self, "_spatial_controller", None)
+        if controller is not None and isValid(controller):
+            controller.sync_content_capabilities()
+
     def _ensure_page(self, route_id: str) -> tuple[int, QWidget]:
         existing = self._pages.get(route_id)
         if existing is not None:
@@ -2898,7 +2910,7 @@ class GalleryWindow(fluentqt.Window):
             else:
                 index, _page = self._publish_page(route_id, page)
                 self._cold_page = None
-                self._content_host.setCurrentIndex(index, 0, False)
+                self._show_content_page(index)
                 self._refresh_route_visuals(route_id)
                 return
         _single_shot(8, self, lambda: self._finish_cold_navigation(route_id, request_id))
@@ -2943,7 +2955,7 @@ class GalleryWindow(fluentqt.Window):
         ):
             self._navigation_view.setPaneOpen(False)
         if resident is not None:
-            self._content_host.setCurrentIndex(resident[0], 0, False)
+            self._show_content_page(resident[0])
             if self._splash is not None and not self._startup_finished:
                 resident[1].hide()
             self._refresh_route_visuals(route_id)
@@ -2961,11 +2973,11 @@ class GalleryWindow(fluentqt.Window):
             return
         if not self._startup_visuals or not self._startup_finished:
             index, _page = self._ensure_page(route_id)
-            self._content_host.setCurrentIndex(index, 0, False)
+            self._show_content_page(index)
             self._refresh_route_visuals(route_id)
             return
         skeleton_index, _skeleton = self._ensure_skeleton()
-        self._content_host.setCurrentIndex(skeleton_index, 0, False)
+        self._show_content_page(skeleton_index)
         _single_shot(
             32,
             self,

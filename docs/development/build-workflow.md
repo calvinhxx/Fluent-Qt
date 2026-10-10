@@ -78,6 +78,50 @@ python3 tools/dev/fluent_qt_build.py \
   --target FluentQt
 ```
 
+## IDE project tree
+
+The root build adds three module directories: `app`, `uilib`, and `plugin`.
+Targets are created from the owning directory's `CMakeLists.txt`, so IDEs can
+read the same hierarchy from CMake. After updating the project, rerun CMake;
+in Qt Creator, select **Build → Run CMake**.
+
+The main build tree is:
+
+```text
+app
+  fluent_qt_gallery
+  FluentQtGalleryCore
+  FluentQtLoggingSupport
+uilib
+  FluentQt
+  fluentqt_hello_world
+plugin
+  FluentQtPlugins
+  plugin_extension
+    fluentqt_plugin_extension
+  Spatial
+    FluentQtSpatial
+    FluentQtSpatialRenderer
+    fluentqt_hello_world_spatial
+  QmlBridge
+    FluentQtQmlBridge
+    fluentqt_qml_bridge
+```
+
+Only enabled targets appear. `FluentQtPlugins` is the lifecycle framework;
+`fluentqt_plugin_extension` is an example of writing a plugin. Spatial and
+QmlBridge each provide an optional library target and a separate runnable
+example. Tests, bindings, and platform directories retain their existing
+CMake tree. `app` also owns logging support when C++ tests need it without
+building Gallery.
+
+Library implementations remain under `src/`, and example sources remain under
+`examples/`. The `examples/hello_world`, `examples/plugin_extension`, and
+`examples/qml_bridge` projects remain standalone entry points; the full build
+creates their targets under the module that they demonstrate. Target names,
+link dependencies, and executable paths are unchanged. IDEs may label source
+and generated files differently, but CMake owns the module hierarchy.
+
 ## Install the library or create a source package
 
 For a standalone library build, Qt is the only external dependency. From a

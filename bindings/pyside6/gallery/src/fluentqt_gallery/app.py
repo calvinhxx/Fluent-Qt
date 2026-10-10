@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -123,11 +124,15 @@ def runtime_catalog_errors() -> list[str]:
     from .spatial_support import SPATIAL_AVAILABLE
 
     covered_types = [(fluentqt, entry.name) for entry in ENTRIES
-                     if entry.category_id != "spatial"]
+                     if entry.category_id not in {"spatial", "qml-bridge"}]
     covered_types.extend((fluentqt, name) for name in sorted(SUPPORT_TYPES))
     if SPATIAL_AVAILABLE:
         from fluentqt import spatial
         covered_types.extend((spatial, name) for name in ("SpatialView", "SpatialItem"))
+    from .qmlbridge_support import QML_BRIDGE_AVAILABLE
+    if QML_BRIDGE_AVAILABLE:
+        from fluentqt import qmlbridge
+        covered_types.append((qmlbridge, "QmlView"))
     for module, name in covered_types:
         value = getattr(module, name, None)
         if value is None:
@@ -302,6 +307,40 @@ def _freeze_current_page_animations(window: GalleryWindow) -> None:
         shimmer.setShimmerProgress(0.42)
 
 
+_qml_bridge_prepared = False
+
+
+def _prepare_qml_bridge_application() -> None:
+    """Select mixed-renderer policy once at the application entry point."""
+    global _qml_bridge_prepared
+    from .qmlbridge_support import QML_BRIDGE_AVAILABLE
+    from .spatial_support import SPATIAL_AVAILABLE
+    if not QML_BRIDGE_AVAILABLE or not SPATIAL_AVAILABLE or _qml_bridge_prepared:
+        return
+    app = QApplication.instance()
+    if app is None:
+        raise RuntimeError("Prepare Gallery graphics after creating QApplication.")
+    from fluentqt.qmlbridge import QmlSession
+    from fluentqt._fluentqt import fluent as native
+
+    graphics_api = QmlSession.GraphicsApi.OpenGL
+    if native._SpatialTextureHost.isPreferred():
+        if sys.platform == "win32":
+            graphics_api = QmlSession.GraphicsApi.Direct3D11
+        elif sys.platform == "darwin":
+            graphics_api = QmlSession.GraphicsApi.Metal
+    if not any(os.environ.get(name) for name in
+               ("QSG_RHI_BACKEND", "QT_QUICK_BACKEND", "QMLSCENE_DEVICE")):
+        QmlSession.prepareApplication(graphics_api)
+    if not QmlSession.isGraphicsApiCompatible(graphics_api):
+        app.setProperty(
+            "fluentqtGalleryGraphicsBackendFailure",
+            "The selected Qt Quick and 3D backends cannot share a window. "
+            "Using the 2D Gallery.",
+        )
+    _qml_bridge_prepared = True
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     automated = bool(
@@ -316,6 +355,7 @@ def main(argv: list[str] | None = None) -> int:
     QCoreApplication.setApplicationVersion(fluentqt.__version__)
     fluentqt.prepare_high_dpi_application()
     app = QApplication.instance() or QApplication(sys.argv[:1])
+    _prepare_qml_bridge_application()
     app.setProperty("fluentqtGalleryAutomated", automated)
     if sys.platform.startswith("linux"):
         QGuiApplication.setDesktopFileName(APPLICATION_ID)

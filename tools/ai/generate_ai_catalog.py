@@ -17,12 +17,23 @@ from typing import Iterable
 
 
 CATEGORY_API = {
+    "qml-bridge": {
+        "cpp_header": "QmlBridge.h",
+        "cpp_namespace": "fluent::qmlbridge",
+        "python_module": "qmlbridge",
+        "source_directory": "qmlbridge",
+        "sample_source": "QmlBridgeSamples.cpp",
+        "cmake_target": "FluentQt::QmlBridge",
+        "build_option": "FLUENT_QT_BUILD_QML_BRIDGE=ON",
+    },
     "spatial": {
         "cpp_header": "Spatial.h",
         "cpp_namespace": "fluent::spatial",
         "python_module": "spatial",
         "source_directory": "spatial",
         "sample_source": "SpatialSamples.cpp",
+        "cmake_target": "FluentQt::Spatial",
+        "build_option": "FLUENT_QT_BUILD_SPATIAL=ON",
     },
     "charts": {
         "cpp_header": "Charts.h",
@@ -118,6 +129,7 @@ CATEGORY_API = {
 }
 
 TEST_SOURCE_OVERRIDES = {
+    "qml-view": "TestQmlBridge.cpp",
     "spatial-item": "TestSpatialView.cpp",
     "title-bar": "TestWindow.cpp",
     "line-chart": "TestChartView.cpp",
@@ -451,7 +463,7 @@ def generate_catalog(project_root: Path) -> dict[str, object]:
                     "qualified_type": (
                         f"{category_api['cpp_namespace']}::{component['api_type']}"
                     ),
-                    "cmake_target": "FluentQt::Spatial" if category_id == "spatial" else "FluentQt::FluentQt",
+                    "cmake_target": category_api.get("cmake_target", "FluentQt::FluentQt"),
                 },
                 "python": {
                     "package": "FluentQt",
@@ -461,8 +473,8 @@ def generate_catalog(project_root: Path) -> dict[str, object]:
                         f"from fluentqt.{category_api['python_module']} "
                         f"import {component['api_type']}"
                     ),
-                    **({"build_option": "FLUENT_QT_BUILD_SPATIAL=ON"}
-                       if category_id == "spatial" else {}),
+                    **({"build_option": category_api["build_option"]}
+                       if "build_option" in category_api else {}),
                 } if category_api["python_module"] is not None else None,
                 "tests": [test],
                 "gallery": {

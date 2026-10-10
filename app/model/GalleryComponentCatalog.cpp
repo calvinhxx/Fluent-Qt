@@ -120,6 +120,15 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
            Typography::Icons::glyph(QStringLiteral("ic_fluent_cube_rotate_20_regular"))}},
          true},
 #endif
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+        {QStringLiteral("qml-bridge"),
+         QStringLiteral("QmlBridge"),
+         QStringLiteral("qmlbridge"),
+         Typography::Icons::glyph(QStringLiteral("ic_fluent_code_20_regular")),
+         {{QStringLiteral("qml-view"), QStringLiteral("QmlView"),
+           Typography::Icons::glyph(QStringLiteral("ic_fluent_code_20_regular"))}},
+         true},
+#endif
         {QStringLiteral("menus-toolbars"),
          QStringLiteral("Menus & toolbars"),
          QStringLiteral("menus_toolbars"),
@@ -212,6 +221,7 @@ GalleryComponentReference galleryComponentReference(const QString& routeId)
         {QStringLiteral("layout"), QStringLiteral("<FluentQt/Layout.h>")},
         {QStringLiteral("menus_toolbars"), QStringLiteral("<FluentQt/MenusToolbars.h>")},
         {QStringLiteral("navigation"), QStringLiteral("<FluentQt/Navigation.h>")},
+        {QStringLiteral("qmlbridge"), QStringLiteral("<FluentQt/QmlBridge.h>")},
         {QStringLiteral("scrolling"), QStringLiteral("<FluentQt/Scrolling.h>")},
         {QStringLiteral("spatial"), QStringLiteral("<FluentQt/Spatial.h>")},
         {QStringLiteral("status_info"), QStringLiteral("<FluentQt/StatusInfo.h>")},
@@ -236,6 +246,14 @@ GalleryComponentReference galleryComponentReference(const QString& routeId)
                         QStringLiteral("FluentQt::Spatial"),
                         QStringLiteral("Source build: FLUENT_QT_BUILD_SPATIAL=ON"),
                         QStringLiteral("from fluentqt.spatial import %1").arg(typeName),
+                        typeName};
+            }
+            if (category.id == QStringLiteral("qml-bridge")) {
+                return {categoryHeaders.value(category.sourceDirectory),
+                        QStringLiteral("%1::%2").arg(apiNamespace, typeName),
+                        QStringLiteral("FluentQt::QmlBridge"),
+                        QStringLiteral("Source build: FLUENT_QT_BUILD_QML_BRIDGE=ON"),
+                        QStringLiteral("from fluentqt.qmlbridge import %1").arg(typeName),
                         typeName};
             }
             return {categoryHeaders.value(category.sourceDirectory,

@@ -86,6 +86,7 @@ high-contrast (usually white) on that family:
 | `collections` | purple |
 | `charts` | steel blue |
 | `spatial` | indigo |
+| `qml-bridge` | teal / blue |
 | `text-fields` | blue |
 
 When adding an icon to an existing category, sample neighboring icons in that

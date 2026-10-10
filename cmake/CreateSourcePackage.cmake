@@ -33,6 +33,8 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/third_party"
     "${FLUENT_QT_SOURCE_DIR}/bindings"
     "${FLUENT_QT_SOURCE_DIR}/platforms"
+    "${FLUENT_QT_SOURCE_DIR}/uilib"
+    "${FLUENT_QT_SOURCE_DIR}/plugin"
     DESTINATION "${_package_root}"
     PATTERN "gallery" EXCLUDE
     PATTERN "__pycache__" EXCLUDE
@@ -82,6 +84,10 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtInstallHeaders.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtSpatial.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtPlugins.cmake"
+    "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtQmlBridge.cmake"
+    "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtHelloWorldExamples.cmake"
+    "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtPluginExtensionExample.cmake"
+    "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtQmlBridgeExample.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtSanitizers.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtTargetOptions.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/CreateSourcePackage.cmake"
@@ -90,6 +96,7 @@ file(COPY
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/examples/hello_world"
     "${FLUENT_QT_SOURCE_DIR}/examples/plugin_extension"
+    "${FLUENT_QT_SOURCE_DIR}/examples/qml_bridge"
     DESTINATION "${_package_root}/examples")
 configure_file(
     "${FLUENT_QT_SOURCE_DIR}/cmake/SourcePackageREADME.md"

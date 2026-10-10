@@ -945,6 +945,17 @@
       ]
     },
     {
+      "id": "qml-content",
+      "question": "How can a Widgets application reuse a QML page and business model?",
+      "candidates": [
+        {
+          "component_id": "qml-view",
+          "choose_when": "An existing QWidget window should embed a trusted QML page and share application-owned QObject or QAbstractItemModel data. Enable QmlBridge, bind context objects before load, and use fluentTheme tokens explicitly.",
+          "avoid_when": "The application needs automatic QWidget-to-Quick conversion, untrusted script isolation, or a new Qt Quick control library. Coordinate the graphics API before mixing Quick and Spatial in one window."
+        }
+      ]
+    },
+    {
       "id": "spatial-composition",
       "question": "How can existing widgets gain perspective and depth?",
       "candidates": [

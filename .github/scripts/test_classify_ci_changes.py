@@ -184,6 +184,24 @@ class ClassifyCiChangesTest(unittest.TestCase):
             wasm=True,
         )
 
+    def test_module_cmake_entries_run_all_consuming_lanes_and_cpp_tests(self):
+        for path in (
+            "uilib/CMakeLists.txt",
+            "plugin/CMakeLists.txt",
+            "plugin/plugin_extension/CMakeLists.txt",
+            "plugin/Spatial/CMakeLists.txt",
+            "plugin/QmlBridge/CMakeLists.txt",
+            "plugin/future_extension/CMakeLists.txt",
+        ):
+            with self.subTest(path=path):
+                self.assert_classification(
+                    [path], native=True, pyside=True, wasm=True,
+                )
+                self.assert_cpp_selection(
+                    [path], scope="all", labels="^qt$",
+                    targets=["fluent_qt_all_tests"],
+                )
+
     def test_binding_change_runs_both_matrices(self):
         self.assert_classification(
             ["bindings/pyside6/native/typesystem_fluentqt.xml"],
@@ -309,6 +327,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
         for path in (
             ".github/scripts/run-wasm-browser-smoke.py",
             ".github/scripts/run-wasm-plugin-smoke.py",
+            ".github/scripts/run-wasm-qml-bridge-smoke.py",
             ".github/scripts/run-wasm-spatial-smoke.py",
             ".github/scripts/test_wasm_browser_smoke.py",
             ".github/scripts/test_wasm_spatial_smoke.py",
@@ -375,8 +394,32 @@ class ClassifyCiChangesTest(unittest.TestCase):
     def test_selected_categories_have_cmake_aggregate_targets(self):
         contents = (PROJECT_ROOT / "tests/CMakeLists.txt").read_text(encoding="utf-8")
         groups = re.search(r"set\(_fluent_qt_component_groups\s+([^)]*)\)", contents).group(1).split()
-        self.assertEqual(set(groups), set(MODULE.CPP_COMPONENT_TEST_GROUPS))
+        optional_groups = set(re.findall(
+            r"list\(APPEND _fluent_qt_component_groups ([a-z_]+)\)", contents,
+        )) - {"gallery"}
+        self.assertEqual(set(groups) | optional_groups, set(MODULE.CPP_COMPONENT_TEST_GROUPS))
         self.assertIn("list(APPEND _fluent_qt_component_groups gallery)", contents)
+
+    def test_qml_bridge_changes_select_its_optional_owner(self):
+        for path in (
+            "src/components/qmlbridge/QmlView.cpp",
+            "tests/components/qmlbridge/TestQmlBridge.cpp",
+            "tests/components/qmlbridge/fixtures/Bridge.qml",
+        ):
+            with self.subTest(path=path):
+                self.assert_cpp_selection(
+                    [path], scope="selected", labels="^(qmlbridge)$",
+                    targets=["fluent_qt_qmlbridge_tests"],
+                )
+
+    def test_shared_qml_bridge_example_runs_all_consuming_lanes(self):
+        for path in (
+            "examples/qml_bridge/QmlBridgePanel.cpp",
+            "examples/qml_bridge/qml/Preview.qml",
+            "examples/qml_bridge/platform/wasm/QmlBridgeApplication.cpp",
+        ):
+            with self.subTest(path=path):
+                self.assert_classification([path], native=True, pyside=True, wasm=True)
 
     def test_gallery_uses_its_own_tests_instead_of_all_components(self):
         for path in ("app/view/ContentPresenter.cpp", "app/assets/app-icon.png",

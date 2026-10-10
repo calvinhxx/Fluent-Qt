@@ -212,6 +212,22 @@
         "spacing": { "type": "integer", "minimum": 0 }
       }
     },
+    "sourceFile": {
+      "description": "One separately copyable source file in a Gallery example.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "language", "code", "usage_snippet"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!\\.{1,2}$)[^/\\\\:\\u0000-\\u001f]+$(?![\\s\\S])"
+        },
+        "language": { "enum": ["cpp", "python", "qml", "xml", "cmake"] },
+        "code": { "$ref": "#/$defs/nonEmptyString" },
+        "usage_snippet": { "type": "string" }
+      }
+    },
     "sample": {
       "type": "object",
       "additionalProperties": false,
@@ -221,6 +237,12 @@
         "title": { "$ref": "#/$defs/nonEmptyString" },
         "description": { "$ref": "#/$defs/nonEmptyString" },
         "cpp_snippet": { "$ref": "#/$defs/nonEmptyString" },
+        "source_files": {
+          "description": "Optional file bundle. The first file is C++ and its code equals cpp_snippet; names are unique on case-insensitive filesystems. An empty usage_snippet shows the complete file.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/sourceFile" }
+        },
         "preview_layout": { "$ref": "#/$defs/previewLayout" },
         "fill_available_width": { "type": "boolean" }
       }

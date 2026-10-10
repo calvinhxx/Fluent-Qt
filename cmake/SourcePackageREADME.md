@@ -8,6 +8,13 @@ The native C++ Gallery, top-level C++ tests, and application logging support
 are excluded. Building the separate `FluentQt-Gallery` application wheel
 requires a full checkout with the native Gallery catalogs and artwork.
 
+The archive preserves the CMake module tree: `uilib/` owns the Widgets library
+and its minimal example; `plugin/` owns the lifecycle framework and the
+`plugin_extension`, `Spatial`, and `QmlBridge` subdirectories. Library
+implementations remain under `src/`, and example sources and standalone
+projects remain under `examples/`. The full checkout also has `app/` for
+Gallery, which is excluded here.
+
 Requirements:
 
 - C++17
@@ -15,6 +22,7 @@ Requirements:
 - Qt Widgets 5.15+ or 6.2+
 - Optional Plugins: enable `FLUENT_QT_BUILD_PLUGINS=ON` and link `FluentQt::Plugins`; uses the existing Qt Widgets dependencies
 - Optional Spatial: enable `FLUENT_QT_BUILD_SPATIAL=ON` and link `FluentQt::Spatial`; includes Plugins automatically; Qt 6 requires OpenGLWidgets, Qt 5 requires QOpenGLWidget support
+- Optional QmlBridge: enable `FLUENT_QT_BUILD_QML_BRIDGE=ON` and link `FluentQt::QmlBridge`; includes Plugins automatically and requires Qt Qml, Quick, and QuickWidgets
 
 WebAssembly consumers use the narrower browser baseline: Qt 6.9.3
 `wasm_singlethread` with Emscripten 3.1.70. Configure with
@@ -32,7 +40,7 @@ PySide6, Shiboken6, and Shiboken6 generator versions from 6.2 onward. See
 
 Top-level development builds include `FluentQt` and the minimal
 `fluentqt_hello_world` executable example. Source-subproject builds keep examples
-disabled and build only the library. The included
+disabled by default. The included
 `examples/hello_world` project demonstrates both in-tree and installed-package
 integration. Interactive component demonstrations are maintained in the Gallery
 in the full repository.
@@ -52,8 +60,20 @@ and Spatial-enabled PySide6 builds. Activate the session before creating or
 attaching views. Deactivation returns tracked views to native 2D and releases
 Spatial resources while retaining caller widgets and models. Requesting the
 installed SDK's `Spatial` component loads Plugins automatically; a base-package
-request loads neither Plugins nor the additional OpenGL modules. The included
-`examples/hello_world` Spatial variant demonstrates the session entry.
+request loads neither Plugins nor the additional OpenGL or Quick modules. The
+included `examples/hello_world` Spatial variant demonstrates the session entry.
+
+QmlBridge hosts application QML through `QmlSession` and `QmlView`, without
+adding Qt Quick to the Widgets core. Call `QmlSession::prepareApplication()`
+before the first Quick surface, check activation and view creation, and bind
+borrowed context models before loading. Deactivation clears page state while
+retaining caller-owned hosts and models; Quick resources are released through
+deferred deletion after QML callbacks return. Allow that delivery before
+application teardown. Reactivation requires an explicit load.
+Request `COMPONENTS QmlBridge` from the installed SDK to discover its Quick
+dependencies. Its public `<FluentQt/QmlBridge.h>` header and the included
+`examples/qml_bridge` project describe in-tree and installed integration.
+With the module and examples enabled, build `fluentqt_qml_bridge`.
 
 Before changing a consumer, run the bundled local preflight. It performs no
 network requests and configures its Qt Widgets probe in a temporary directory:

@@ -503,27 +503,6 @@ class QmlPlusDemoCard(_SurfaceCard):
         self.body.setSpacing(12)
 
 
-class _AnchorDemoBox(QWidget):
-    def __init__(self, parent: QWidget) -> None:
-        super().__init__(parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setMinimumHeight(140)
-        self.setStyleSheet("border: 1px dashed rgba(128,128,128,0.45); border-radius: 6px;")
-        self.centered = fluentqt.Button("Centered", self)
-        self.centered.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
-        self.pinned = fluentqt.Button("Top-right", self)
-        self.pinned.setFluentStyle(fluentqt.Button.ButtonStyle.Standard)
-        anchor_layout = fluentqt.AnchorLayout(self)
-        anchor_layout.addWidget(
-            self.centered,
-            fluentqt.anchors(center_in=self),
-        )
-        anchor_layout.addWidget(
-            self.pinned,
-            fluentqt.anchors(top_right=(self, 12)),
-        )
-
-
 def _code(
     lines: Iterable[str],
     parent: QWidget,
@@ -543,166 +522,37 @@ def _code(
 
 
 def _build_qmlplus(layout: QVBoxLayout, content: QWidget) -> tuple[QWidget, ...]:
-    widgets: list[QWidget] = []
+    from .catalog import CONTRACT
+    from .qmlplus_samples import build_example, python_source, sample_ids
 
-    _add_section_heading(layout, "Property binding", content)
-    property_card = QmlPlusDemoCard(content)
-    property_card.body.addWidget(
-        _secondary_caption(
-            'One-way · fluentqt.bind(slider, "value", bar, "value")',
-            property_card,
-        )
-    )
-    slider_row = QWidget(property_card)
-    slider_layout = QHBoxLayout(slider_row)
-    slider_layout.setContentsMargins(0, 0, 0, 0)
-    slider_layout.setSpacing(12)
-    slider = fluentqt.Slider(Qt.Horizontal, slider_row)
-    slider.setRange(0, 100)
-    slider.setValue(40)
-    value_label = fluentqt.Label("40%", slider_row)
-    value_label.setFluentTypography(fluentqt.FontRole.BodyStrong)
-    value_label.setMinimumWidth(48)
-    slider_layout.addWidget(slider, 1)
-    slider_layout.addWidget(value_label)
-    property_card.body.addWidget(slider_row)
-    progress = fluentqt.ProgressBar(property_card)
-    progress.setRange(0, 100)
-    progress.setValue(40)
-    property_card.body.addWidget(progress)
-    fluentqt.bind(slider, "value", progress, "value")
-    slider.valueChanged.connect(lambda value: value_label.setText("{0}%".format(value)))
-    property_card.body.addSpacing(4)
-    property_card.body.addWidget(
-        _secondary_caption("Two-way · each switch's isOn mirrors the other", property_card)
-    )
-    switch_row = QWidget(property_card)
-    switch_layout = QHBoxLayout(switch_row)
-    switch_layout.setContentsMargins(0, 0, 0, 0)
-    switch_layout.setSpacing(24)
-    switch_a = fluentqt.ToggleSwitch(switch_row)
-    switch_b = fluentqt.ToggleSwitch(switch_row)
-    for control in (switch_a, switch_b):
-        control.setOnContent("On")
-        control.setOffContent("Off")
-        switch_layout.addWidget(control)
-    switch_layout.addStretch()
-    fluentqt.bind(
-        switch_a,
-        "isOn",
-        switch_b,
-        "isOn",
-        fluentqt.BindingMode.TwoWay,
-    )
-    property_card.body.addWidget(switch_row)
-    layout.addWidget(property_card)
-    property_code = _code(
-        (
-            "slider = fluentqt.Slider(Qt.Orientation.Horizontal)",
-            "slider.setRange(0, 100)",
-            "bar = fluentqt.ProgressBar()",
-            "bar.setRange(0, 100)",
-            "",
-            "# One-way: slider.value drives bar.value.",
-            'fluentqt.bind(slider, "value", bar, "value")',
-            "",
-            "# Two-way: each switch mirrors the other.",
-            "switch_a = fluentqt.ToggleSwitch()",
-            "switch_b = fluentqt.ToggleSwitch()",
-            'fluentqt.bind(switch_a, "isOn", switch_b, "isOn",',
-            "              fluentqt.BindingMode.TwoWay)",
-        ),
-        content,
-        "galleryFoundationQmlPlusPropertyCodeBlock",
-        imports=("from PySide6.QtCore import Qt",),
-    )
-    layout.addWidget(property_code)
-    widgets.extend((property_card, property_code))
-
-    _add_section_heading(layout, "States", content)
-    state_card = QmlPlusDemoCard(content)
-    state_card.body.addWidget(
-        _secondary_caption(
-            'states.set("active") applies a named bundle of property changes.',
-            state_card,
-        )
-    )
-    state_label = fluentqt.Label("Idle", state_card)
-    state_label.setFluentTypography(fluentqt.FontRole.BodyLargeStrong)
-    state_card.body.addWidget(state_label)
-    state_progress = fluentqt.ProgressBar(state_card)
-    state_progress.setRange(0, 100)
-    state_progress.setValue(20)
-    state_card.body.addWidget(state_progress)
-    state_toggle = fluentqt.ToggleSwitch(state_card)
-    state_toggle.setOnContent("Active")
-    state_toggle.setOffContent("Idle")
-    state_card.body.addWidget(state_toggle)
-
-    states = fluentqt.StateGroup(state_card)
-    states.add(
-        "active",
-        {
-            state_label: {
-                "text": "Active — one state rewrote text + value",
-            },
-            state_progress: {"value": 90},
-        },
-    )
-    state_toggle.toggled.connect(
-        lambda active: states.set("active" if active else "")
-    )
-    layout.addWidget(state_card)
-    state_code = _code(
-        (
-            'label = fluentqt.Label("Idle")',
-            "bar = fluentqt.ProgressBar()",
-            "toggle = fluentqt.ToggleSwitch()",
-            "states = fluentqt.StateGroup()",
-            'states.add("active", {',
-            '    label: {"text": "Active — one state, many props"},',
-            '    bar: {"value": 90},',
-            "})",
-            "",
-            "toggle.toggled.connect(",
-            '    lambda on: states.set("active" if on else "")',
-            ")",
-        ),
-        content,
-        "galleryFoundationQmlPlusStateCodeBlock",
-    )
-    layout.addWidget(state_code)
-    widgets.extend((state_card, state_code))
-
-    _add_section_heading(layout, "Anchors", content)
-    anchor_card = QmlPlusDemoCard(content)
-    anchor_card.body.addWidget(
-        _secondary_caption(
-            "AnchorLayout pins children by edge — resize the window and watch them track.",
-            anchor_card,
-        )
-    )
-    anchor_box = _AnchorDemoBox(anchor_card)
-    anchor_card.body.addWidget(anchor_box)
-    layout.addWidget(anchor_card)
-    anchor_code = _code(
-        (
-            "box = fluentqt.FluentWidget()",
-            'centered = fluentqt.Button("Centered", box)',
-            'pinned = fluentqt.Button("Top-right", box)',
-            "layout = fluentqt.AnchorLayout(box)",
-            "layout.addWidget(",
-            "    centered, fluentqt.anchors(center_in=box)",
-            ")",
-            "layout.addWidget(",
-            "    pinned, fluentqt.anchors(top_right=(box, 12))",
-            ")",
-        ),
-        content,
-        "galleryFoundationQmlPlusAnchorCodeBlock",
-    )
-    layout.addWidget(anchor_code)
-    widgets.extend((anchor_card, anchor_code))
+    samples = CONTRACT["foundation_samples"]["foundation-qmlplus"]
+    if tuple(sample["id"] for sample in samples) != sample_ids():
+        raise RuntimeError("QMLPlus sample order differs from the native Gallery")
+    widgets = []
+    sections = {0: "Bindings", 4: "States", 8: "Animation", 10: "Anchors"}
+    for index, sample in enumerate(samples):
+        if index in sections:
+            _add_section_heading(layout, sections[index], content)
+        card = QmlPlusDemoCard(content)
+        card.setObjectName("gallerySampleCard")
+        card.setProperty("gallerySampleId", sample["id"])
+        title = fluentqt.Label(sample["title"], card)
+        title.setFluentTypography(fluentqt.FontRole.BodyStrong)
+        card.body.addWidget(title)
+        card.body.addWidget(_secondary_caption(sample["description"], card))
+        preview = fluentqt.Card(card)
+        preview.setObjectName("gallerySampleCardPreview")
+        preview.setAppearance(fluentqt.Card.Appearance.LayerAlt)
+        body = QVBoxLayout(preview)
+        body.setContentsMargins(16, 16, 16, 16)
+        body.addWidget(build_example(sample["id"], preview))
+        card.body.addWidget(preview)
+        code = GalleryCodeBlock(python_source(sample["id"]), card)
+        code.setProperty("gallerySampleId", sample["id"])
+        code.setProperty("galleryRouteId", "foundation-qmlplus")
+        card.body.addWidget(code)
+        layout.addWidget(card)
+        widgets.extend((card, code))
     return tuple(widgets)
 
 

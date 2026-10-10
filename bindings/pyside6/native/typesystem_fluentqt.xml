@@ -18,6 +18,8 @@
                function-name="^(metadata|onActivate|onDeactivate|widgetKeys|createWidget)$"/>
     <rejection class="fluent::spatial::SpatialPlugin"
                function-name="^(onActivate|onDeactivate|createWidget)$"/>
+    <rejection class="fluent::qmlbridge::QmlPlugin"
+               function-name="^(onActivate|onDeactivate|createWidget)$"/>
 
     <!-- Shiboken 6.2 incorrectly promotes Q_ENUM friend helpers from QObject
          subclasses to namespace functions. They are Qt implementation details
@@ -26,6 +28,8 @@
     <rejection class="fluent::basicinput"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::spatial"
+               function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <rejection class="fluent::qmlbridge"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::charts"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
@@ -101,6 +105,9 @@
         </modify-function>
     </function>
     <function signature="bindProperties(QObject*,const QString&amp;,QObject*,const QString&amp;,fluent::binding::BindingMode)"/>
+    <function signature="bindManagedProperties(QObject*,const QString&amp;,QObject*,const QString&amp;,fluent::binding::BindingMode,bool)"/>
+    <function signature="bindComputedProperties(QObject*,const QString&amp;,QObject*,const QList&lt;QObject*&gt;&amp;,const QStringList&amp;,bool)"/>
+    <function signature="setPropertyBehavior(QObject*,const QString&amp;,int)"/>
     <function signature="listViewSectionEnabled(const fluent::collections::ListView*)"/>
     <function signature="setListViewSectionEnabled(fluent::collections::ListView*,bool)"/>
     <function signature="setListViewSectionKeys(fluent::collections::ListView*,const QStringList&amp;)"/>
@@ -166,9 +173,11 @@
     <namespace-type name="fluent">
         <include file-name="BindingApi.h" location="global"/>
         <enum-type name="WidgetOwnership"/>
+        <value-type name="BindingHandle"/>
         <!-- Optional Plugins types. -->
         <!-- Optional plugin binding adapters. -->
         <!-- Optional Spatial types. -->
+        <!-- Optional QmlBridge types. -->
         <namespace-type name="binding" visible="no">
             <enum-type name="Theme"/>
             <enum-type name="MotionMode"/>
@@ -186,6 +195,11 @@
                 </modify-function>
             </object-type>
             <object-type name="StateGroup">
+                <modify-function signature="configureState(const QString&amp;,const QString&amp;,QObject*,const QList&lt;QObject*&gt;&amp;,const QStringList&amp;)" rename="_configureState"/>
+                <modify-function signature="addStateAnchorChange(const QString&amp;,QWidget*,const fluent::binding::AnchorSpec&amp;)" rename="_addStateAnchorChange"/>
+                <modify-function signature="addStateTransition(const QString&amp;,const QString&amp;,const QStringList&amp;,int)" rename="_addStateTransition"/>
+                <modify-function signature="stateObserver()" rename="_stateObserver"/>
+                <modify-function signature="evaluateStateConditions()" rename="_evaluateStateConditions"/>
                 <modify-function signature="addStateChange(const QString&amp;,QObject*,const QString&amp;,const QVariant&amp;)"
                                  rename="_addStateChange"/>
                 <modify-function signature="clearStateDefinition(const QString&amp;)"

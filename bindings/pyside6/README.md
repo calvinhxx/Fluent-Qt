@@ -236,6 +236,49 @@ uses **Settings → 3D Gallery** for its shell and every Spatial example, matchi
 the C++ and WebAssembly Gallery. See the [Gallery guide](gallery/README.md#spatial-mode).
 See [Spatial](../../docs/architecture/spatial-view.md) for supported content and fallback behavior.
 
+### Optional QmlBridge module
+
+Enable `FLUENT_QT_BUILD_QML_BRIDGE=ON` in the matched Qt/PySide6 source build
+and rebuild `fluentqt_pyside6_stubs` to include `fluentqt.qmlbridge`. The module
+exports the shared native `QmlPlugin`, `QmlSession`, `QmlTheme`,
+`QmlTextureLayer`, and `QmlView`.
+Its Qt QuickWidgets dependencies remain opt-in. Importing `fluentqt` does not
+import the Quick Python modules; explicit `fluentqt.qmlbridge` imports register
+the converters used by returned QML root objects.
+
+Call `QmlSession.prepareApplication()` once at application startup, before the
+first Quick surface, when sharing a window with Spatial or `QOpenGLWidget`.
+Then activate a session, create a view, register caller-owned context objects,
+and load an absolute `QUrl`. Python `activate()`, `deactivate()`, and `load()`
+return `bool`; read `QmlView.lastError()` and observe `errorOccurred` for load
+failures. Keep unparented model wrappers alive or give them a Qt owner.
+
+The [shared-model example](examples/qml_bridge.py) uses the same
+[`Preview.qml`](../../examples/qml_bridge/qml/Preview.qml), layout, controls,
+and model values as C++ and WebAssembly:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python bindings/pyside6/examples/qml_bridge.py --smoke-test
+```
+
+Stopping the session clears the public scene immediately and releases its
+Quick widget and engine on the next event-loop turn. The view and model stay
+caller-owned, and reactivation requires an explicit reload. QML content binds
+to the read-only `fluentTheme` colors, typography, radii, and motion values.
+The Python Gallery exposes six focused cards under **Plugins → QmlBridge →
+QmlView** when this module is available: loading, Fluent theme tokens, context
+binding, QML actions, lifecycle, and load errors. Each card exports its own
+setup and QML asset; the standalone shared-model panel remains a separate
+application example. See the [Gallery card contract](../../docs/architecture/qml-bridge.md#gallery-example-cards).
+
+`QmlTextureLayer` and the lower-level `QmlView` texture API let a compatible
+OpenGL host compose the existing QML scene into its projected Widgets panel.
+Models, the engine, and local QML state retain their ownership. This path uses
+ordinary Qt Quick items; it has no Qt Quick 3D dependency or Direct3D/Metal
+texture import. See the [composition contract](../../docs/architecture/qml-bridge.md#composition-and-gallery-mode)
+for cache budgets, native fallback, and the Qt 5.15/6.2 DPR restriction.
+
 ### Base examples
 
 Run build-tree examples with the generated package on `PYTHONPATH`:

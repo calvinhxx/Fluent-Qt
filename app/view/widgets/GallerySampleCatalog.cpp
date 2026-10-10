@@ -9,6 +9,8 @@
 #include "samples/LayoutSamples.h"
 #include "samples/MenusToolbarsSamples.h"
 #include "samples/NavigationSamples.h"
+#include "samples/QmlBridgeSamples.h"
+#include "samples/QmlPlusSamples.h"
 #include "samples/ScrollingSamples.h"
 #include "samples/SpatialSamples.h"
 #include "samples/StatusInfoSamples.h"
@@ -26,8 +28,11 @@ QVector<GallerySample> gallerySamplesForRoute(const QString& routeId)
     static constexpr SampleResolver resolvers[] = {
         &basicInputSamples,     &chartsSamples,     &collectionsSamples, &dateTimeSamples,
         &dialogsFlyoutsSamples, &foundationSamples, &layoutSamples,      &menusToolbarsSamples,
-        &navigationSamples,     &scrollingSamples,  &statusInfoSamples,  &textFieldsSamples,
-        &windowingSamples,
+        &navigationSamples,     &qmlPlusSamples,    &scrollingSamples,   &statusInfoSamples,
+        &textFieldsSamples,     &windowingSamples,
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+        &qmlBridgeSamples,
+#endif
 #ifdef FLUENT_QT_HAS_SPATIAL
         &spatialSamples,
 #endif

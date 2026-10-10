@@ -16,6 +16,7 @@
     "AutoSuggestBox",
     "Avatar",
     "BarChart",
+    "BindingHandle",
     "Breadcrumb",
     "BreadcrumbItem",
     "Button",
@@ -138,6 +139,8 @@
     "apply_theme_overrides",
     "apply_user_theme",
     "bind",
+    "bind_computed",
+    "bind_managed",
     "binding_build_info",
     "current_motion_mode",
     "current_theme",
@@ -149,6 +152,7 @@
     "prepare_high_dpi_application",
     "reset_theme_tokens",
     "set_accent_color",
+    "set_behavior",
     "set_font_scale",
     "set_motion_mode",
     "set_theme",
@@ -183,7 +187,9 @@
     ],
     "StateGroup": [
       "add",
+      "add_transition",
       "clear",
+      "evaluate",
       "has",
       "set",
       "state"
@@ -1590,9 +1596,108 @@
       "isAnimationEnabled",
       "setAnimationEnabled",
       "itemGeometry"
+    ],
+    "BindingHandle": [
+      "isValid",
+      "isEnabled",
+      "isSuspended",
+      "setEnabled",
+      "pause",
+      "resume",
+      "refresh",
+      "unbind"
     ]
   },
   "optional_modules": {
+    "fluentqt.qmlbridge": {
+      "build_option": "FLUENT_QT_BUILD_QML_BRIDGE",
+      "classes": [
+        "QmlPlugin",
+        "QmlSession",
+        "QmlTheme",
+        "QmlTextureLayer",
+        "QmlView"
+      ],
+      "methods": {
+        "QmlPlugin": [
+          "pluginId",
+          "metadata",
+          "widgetKeys",
+          "isActive",
+          "attachView"
+        ],
+        "QmlSession": [
+          "prepareApplication",
+          "isGraphicsApiCompatible",
+          "activate",
+          "deactivate",
+          "isActive",
+          "createView",
+          "attachView",
+          "activeChanged"
+        ],
+        "QmlTheme": [
+          "background",
+          "surface",
+          "surfaceAlt",
+          "text",
+          "secondaryText",
+          "accent",
+          "onAccent",
+          "border",
+          "isDark",
+          "areAnimationsEnabled",
+          "fontFamily",
+          "fontPixelSize",
+          "cornerRadius",
+          "transitionDuration",
+          "changed"
+        ],
+        "QmlTextureLayer": [
+          "rootWidget",
+          "setRootWidget",
+          "synchronize",
+          "requiredBytes",
+          "prepareFrame",
+          "compose",
+          "textureId",
+          "textureSize",
+          "statistics",
+          "clearFrameCaches",
+          "release",
+          "frameRequested",
+          "renderingFailed"
+        ],
+        "QmlView": [
+          "source",
+          "status",
+          "errors",
+          "lastError",
+          "rootObject",
+          "themeObject",
+          "isActive",
+          "setContextObject",
+          "load",
+          "unload",
+          "setTextureRenderingEnabled",
+          "isTextureRenderingEnabled",
+          "renderTexture",
+          "textureId",
+          "textureSize",
+          "textureRevision",
+          "textureStatistics",
+          "releaseTexture",
+          "sourceChanged",
+          "statusChanged",
+          "activeChanged",
+          "errorsChanged",
+          "errorOccurred",
+          "textureRenderingEnabledChanged",
+          "textureUpdateRequested",
+          "textureRenderingFailed"
+        ]
+      }
+    },
     "fluentqt.plugins": {
       "build_option": "FLUENT_QT_BUILD_PLUGINS",
       "classes": [
@@ -1604,18 +1709,38 @@
       ],
       "methods": {
         "Plugin": [
-          "metadata", "onActivate", "onDeactivate", "lastError"
+          "metadata",
+          "onActivate",
+          "onDeactivate",
+          "lastError"
         ],
         "WidgetPlugin": [
-          "metadata", "onActivate", "onDeactivate", "widgetKeys", "createWidget", "lastError"
+          "metadata",
+          "onActivate",
+          "onDeactivate",
+          "widgetKeys",
+          "createWidget",
+          "lastError"
         ],
         "PluginContext": [
-          "host", "activePlugin"
+          "host",
+          "activePlugin"
         ],
         "PluginManager": [
-          "registerPlugin", "unregisterPlugin", "activate", "deactivate", "deactivateAll",
-          "pluginIds", "activePluginIds", "metadata", "plugin", "activePlugin", "isActive",
-          "context", "createWidget", "lastError"
+          "registerPlugin",
+          "unregisterPlugin",
+          "activate",
+          "deactivate",
+          "deactivateAll",
+          "pluginIds",
+          "activePluginIds",
+          "metadata",
+          "plugin",
+          "activePlugin",
+          "isActive",
+          "context",
+          "createWidget",
+          "lastError"
         ]
       }
     },
@@ -1630,15 +1755,34 @@
         "SpatialView"
       ],
       "methods": {
-        "SpatialPlugin": ["pluginId", "metadata", "widgetKeys", "isActive", "attachView", "createParticleLayer", "prepareWindow"],
+        "SpatialPlugin": [
+          "pluginId",
+          "metadata",
+          "widgetKeys",
+          "isActive",
+          "attachView",
+          "createParticleLayer",
+          "prepareWindow"
+        ],
         "SpatialSession": [
-          "activate", "deactivate", "isActive", "activeChanged",
-          "createView", "attachView", "createParticleLayer", "prepareWindow"
+          "activate",
+          "deactivate",
+          "isActive",
+          "activeChanged",
+          "createView",
+          "attachView",
+          "createParticleLayer",
+          "prepareWindow"
         ],
         "SpatialRuntime": [
-          "prepareApplication", "prepareWindow", "supportsOpenGLDisplay",
-          "isHardwareRenderer", "currentRendererName", "preflightFailure",
-          "maximumTextureDimension", "needsNativeGlyphCoverage"
+          "prepareApplication",
+          "prepareWindow",
+          "supportsOpenGLDisplay",
+          "isHardwareRenderer",
+          "currentRendererName",
+          "preflightFailure",
+          "maximumTextureDimension",
+          "needsNativeGlyphCoverage"
         ],
         "ParticleLayer": [
           "backdrop",

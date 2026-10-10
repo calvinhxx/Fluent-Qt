@@ -37,6 +37,7 @@ from shiboken6 import VoidPtr, invalidate, isValid
 from .settings import gallery_settings
 from .glyph_paint_device import GlyphPaintDevice, needs_native_glyph_coverage
 from .panel_sampler import _PanelSampler
+from .qmlbridge_support import QML_BRIDGE_AVAILABLE
 
 
 def _alive(widget):
@@ -46,6 +47,31 @@ def _alive(widget):
 _PRESENTATION_TRANSFORM = "_fluent_qt_overlay_presentation_transform"
 _PRESENTED_MENU_SOURCE = "_fluent_qt_presented_menu_source"
 _PRESENTED_MENU_POINT = "_fluent_qt_presented_menu_point"
+_DIRECT_COMPOSITION_REQUIRED = "fluentqtDirectCompositionRequired"
+_QML_FAILURE_PENDING = "galleryQmlFailurePending"
+
+
+class _DirectCompositionObserver(QObject):
+    """Observe renderer requirements even while projected input is paused."""
+
+    def __init__(self, controller):
+        super().__init__(controller)
+        self.controller = weakref.ref(controller)
+        QApplication.instance().installEventFilter(self)
+
+    def eventFilter(self, watched, event):
+        controller = self.controller()
+        if not _alive(controller) or not isinstance(watched, QWidget):
+            return False
+        if not _alive(controller.window) or watched.window() != controller.window.window():
+            return False
+        kind = event.type()
+        changed = (kind == QEvent.DynamicPropertyChange
+                   and bytes(event.propertyName()) == _DIRECT_COMPOSITION_REQUIRED.encode())
+        if changed or (kind in (QEvent.Show, QEvent.Hide)
+                       and watched.property(_DIRECT_COMPOSITION_REQUIRED)):
+            controller.composition_requirement_changed(watched, changed)
+        return False
 
 
 def _invalidate_context_functions(reference):
@@ -76,6 +102,9 @@ def _renderer(context):
 def _session_unavailable_reason():
     if os.environ.get("FLUENT_QT_GALLERY_DISABLE_3D", "0") != "0":
         return "3D is disabled for this session."
+    graphics_failure = QApplication.instance().property("fluentqtGalleryGraphicsBackendFailure")
+    if graphics_failure:
+        return str(graphics_failure)
     if not SpatialRuntime.supportsOpenGLDisplay():
         return "This display uses the 2D Gallery."
     return ""
@@ -222,6 +251,8 @@ class _RhiSurface(_native_fluent._SpatialTextureHost):
 
 
 class _Surface(QOpenGLWidget):
+    qmlCompositionFailed = Signal(object, str)
+
     def __init__(self, owner, parent):
         super().__init__(parent)
         from .particle_compositor import GalleryParticleCompositor
@@ -229,7 +260,15 @@ class _Surface(QOpenGLWidget):
         self.particles = GalleryParticleCompositor(self, getattr(owner, "session", None))
         self.particles.frameRequested.connect(self.update)
         self.particles.staticContentInvalidated.connect(owner._capture_content)
+        self.qml_layer = None
+        if QML_BRIDGE_AVAILABLE:
+            from fluentqt.qmlbridge import QmlTextureLayer
+            self.qml_layer = QmlTextureLayer(self)
+            self.qml_layer.frameRequested.connect(self.update)
+            self.qml_layer.renderingFailed.connect(self.qml_rendering_failed)
+            self.qmlCompositionFailed.connect(owner.qml_rendering_failed, Qt.QueuedConnection)
         self.presented_content_texture = 0
+        self.has_presented_frame = False
         self._functions = None
         self.backdrop_cache = {}
         self.backdrop_uploads = 0
@@ -242,7 +281,9 @@ class _Surface(QOpenGLWidget):
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WA_NoSystemBackground)
         self.setFocusPolicy(Qt.NoFocus)
-        self.setUpdateBehavior(QOpenGLWidget.UpdateBehavior.NoPartialUpdate)
+        # A failed auxiliary frame keeps the completed scene; successful frames
+        # still clear the whole target before drawing.
+        self.setUpdateBehavior(QOpenGLWidget.UpdateBehavior.PartialUpdate)
         fmt = self.format()
         samples = 4
         if os.environ.get("FLUENT_QT_SPATIAL_BENCHMARK", "0") != "0":
@@ -253,7 +294,16 @@ class _Surface(QOpenGLWidget):
         fmt.setAlphaBufferSize(8)
         self.setFormat(fmt)
 
+    @Slot(str)
+    def qml_rendering_failed(self, message):
+        self.setProperty(_QML_FAILURE_PENDING, True)
+        page = self.qml_layer.rootWidget() if _alive(self.qml_layer) else None
+        # Queue the originating borrowed wrapper, not a later current-page query.
+        # Qt deletion invalidates it; the receiver checks validity before use.
+        self.qmlCompositionFailed.emit(page, message)
+
     def initializeGL(self):
+        self.has_presented_frame = False
         context = self.context()
         # Keep one registered wrapper for this context, including on PySide
         # versions that otherwise recreate it for each functions() query.
@@ -288,9 +338,15 @@ class _Surface(QOpenGLWidget):
         self.owner.renderer_initialized = True
         self.owner.queue_check()
 
+    def resizeGL(self, width, height):
+        self.has_presented_frame = False
+
     def clear_frame_caches(self):
+        self.has_presented_frame = False
         self.makeCurrent()
         self.particles.release()
+        if _alive(self.qml_layer):
+            self.qml_layer.clearFrameCaches()
         self.presented_content_texture = 0
         self.clear_backdrop()
         self.caches = [{}, {}]
@@ -311,8 +367,11 @@ class _Surface(QOpenGLWidget):
             self._functions = None
 
     def release_context(self):
+        self.has_presented_frame = False
         self.makeCurrent()
         self.particles.release()
+        if _alive(self.qml_layer):
+            self.qml_layer.clearFrameCaches()
         self.presented_content_texture = 0
         self.clear_backdrop()
         self.caches = [{}, {}]
@@ -323,6 +382,21 @@ class _Surface(QOpenGLWidget):
         self.doneCurrent()
         self.invalidate_functions()
         self.owner.context_lost()
+
+    def qml_source(self):
+        if not _alive(self.qml_layer):
+            return QRectF()
+        page = self.qml_layer.rootWidget()
+        if not _alive(page) or not _alive(self.owner.navigation):
+            return QRectF()
+        host = self.owner.navigation.contentHost()
+        origin = page.mapFrom(host, QPoint())
+        return QRectF(origin.x(), origin.y(), host.width(), host.height())
+
+    def qml_required_bytes(self, dpr):
+        if not _alive(self.qml_layer) or self.qml_source().isEmpty():
+            return 0
+        return self.qml_layer.requiredBytes(self.qml_source(), dpr)
 
     def prepare_caches(self):
         if self.paint_samples <= 1:
@@ -351,15 +425,16 @@ class _Surface(QOpenGLWidget):
                 particle_bytes = self.particles.requiredBytes(
                     self.owner.navigation.contentHost(), self.owner.content_revision, candidate[1][1],
                     self.devicePixelRatioF(), candidate[0], True)
-                if not particle_bytes:
+                reserved_bytes = particle_bytes + self.qml_required_bytes(candidate[0])
+                if not reserved_bytes:
                     break
-                if particle_bytes >= _CACHE_BUDGET_BYTES:
+                if reserved_bytes >= _CACHE_BUDGET_BYTES:
                     continue
                 joint = _cache_plan(
                     panels, self.devicePixelRatioF(), self.max_dimension, extra,
                     paint_samples=self.paint_samples,
                     backdrop_bytes=backdrop_bytes, glyph_scratch_bytes=glyph_scratch,
-                    reserved_bytes=particle_bytes)
+                    reserved_bytes=reserved_bytes)
                 # Highest joint level; output/native density never changes.
                 if joint is not None and joint[0] == candidate[0]:
                     plan = joint
@@ -368,6 +443,8 @@ class _Surface(QOpenGLWidget):
                 return True
             # Free the old pair before allocating replacements, including on resize.
             self.particles.release()
+            if _alive(self.qml_layer):
+                self.qml_layer.clearFrameCaches()
             self.presented_content_texture = 0
             self.caches = [{}, {}]
             self.paint_target = None
@@ -567,10 +644,6 @@ class _Surface(QOpenGLWidget):
 
     def paintGL(self):
         gl = self.context().functions()
-        gl.glDisable(0x0C11)  # GL_SCISSOR_TEST
-        gl.glColorMask(True, True, True, True)
-        gl.glClearColor(0, 0, 0, 0)
-        gl.glClear(0x4000)  # GL_COLOR_BUFFER_BIT
         self.invalidate_backdrop()
         if self.property("presenting"):
             # Layout may still be pending during first exposure or a resize.
@@ -585,8 +658,25 @@ class _Surface(QOpenGLWidget):
             accelerated_particles = self.particles.prepare(
                 self.owner.navigation.contentHost(), self.owner.content_revision, self.plan[1][1],
                 self.devicePixelRatioF(), self.plan[0],
-                max(0, _CACHE_BUDGET_BYTES - self.static_cache_bytes()),
+                max(0, _CACHE_BUDGET_BYTES - self.static_cache_bytes()
+                    - self.qml_required_bytes(self.plan[0])),
                 True)
+            qml_ready = True
+            if _alive(self.qml_layer):
+                qml_ready = self.qml_layer.prepareFrame(
+                    self.context(), self.qml_source(), self.plan[0],
+                    max(0, _CACHE_BUDGET_BYTES - self.static_cache_bytes()
+                        - self.particles.allocatedBytes()))
+                if not _alive(self) or not _alive(self.owner):
+                    return
+                if not self.property("presenting"):
+                    self.bind_surface_target()
+                    return
+                if not qml_ready and self.has_presented_frame:
+                    self.bind_surface_target()
+                    return
+                # A first/resized FBO has no previous scene. Finish its ordinary
+                # panels while native QML restoration waits for the event loop.
             if (not self.blitter.isCreated() or not self.update_texture(1)
                     or not self.update_texture(0)):
                 self.owner.render_failure_timer.start(0)
@@ -602,17 +692,40 @@ class _Surface(QOpenGLWidget):
                         self.owner.render_failure_timer.start(0)
                         return
                     self.presented_content_texture = self.caches[1]["texture"].texture() if self.caches[1] else 0
-            gl.glBindFramebuffer(0x8D40, self.defaultFramebufferObject())
-            gl.glViewport(0, 0, round(self.width() * self.devicePixelRatioF()),
-                          round(self.height() * self.devicePixelRatioF()))
+            if qml_ready and _alive(self.qml_layer):
+                texture = self.qml_layer.compose(
+                    self.presented_content_texture, self.plan[1][1],
+                    self.owner.content_revision + self.particles.compositionCount())
+                if not _alive(self) or not _alive(self.owner):
+                    return
+                if not self.property("presenting"):
+                    self.bind_surface_target()
+                    return
+                if texture:
+                    self.presented_content_texture = texture
+                elif self.has_presented_frame:
+                    self.bind_surface_target()
+                    return
         if not self.update_backdrop():
             self.owner.render_failure_timer.start(0)
             return
+        self.bind_surface_target()
+        gl.glDisable(0x0C11)  # GL_SCISSOR_TEST
+        gl.glColorMask(True, True, True, True)
+        gl.glClearColor(0, 0, 0, 0)
+        gl.glClear(0x4000)  # GL_COLOR_BUFFER_BIT
         painter = QPainter(self)
         self.draw_backdrop(painter)
         if self.property("presenting"):
             self.owner.paint(painter)
         painter.end()
+        self.has_presented_frame = bool(self.property("presenting"))
+
+    def bind_surface_target(self):
+        gl = self.context().functions()
+        gl.glBindFramebuffer(0x8D40, self.defaultFramebufferObject())
+        gl.glViewport(0, 0, round(self.width() * self.devicePixelRatioF()),
+                      round(self.height() * self.devicePixelRatioF()))
 
 
 class GallerySpatialController(QObject):
@@ -645,6 +758,10 @@ class GallerySpatialController(QObject):
         self.filtering = False
         self.grabbed = self.hovered = None
         self.native_popup_anchors = {}
+        self._direct_composition_required = False
+        self._composing_requirements = False
+        self._qml_failed_page = None
+        self._qml_texture_failure = ""
         self._native_background = navigation.testAttribute(Qt.WA_NoSystemBackground)
         # A public FluentWidget supplies inherited semantic tokens and theme changes.
         self.tokens = _SceneTheme(window)
@@ -659,6 +776,9 @@ class GallerySpatialController(QObject):
         self.pointer_motion.setDuration(180)
         self.pointer_motion.setEasingCurve(QEasingCurve.OutCubic)
         self.pointer_motion.valueChanged.connect(self._tilt)
+        self._composition_resume_timer = QTimer(self)
+        self._composition_resume_timer.setSingleShot(True)
+        self._composition_resume_timer.timeout.connect(self._resume_content_presentation)
         self.sync_timer = QTimer(self)
         self.sync_timer.setSingleShot(True)
         self.sync_timer.timeout.connect(self.sync)
@@ -675,7 +795,9 @@ class GallerySpatialController(QObject):
         self.render_failure_timer = QTimer(self)
         self.render_failure_timer.setSingleShot(True)
         self.render_failure_timer.timeout.connect(self.rendering_failed)
+        self._composition_observer = _DirectCompositionObserver(self)
         shared_connections = [
+            self.navigation.contentHost().currentIndexChanged.connect(self.sync_content_capabilities),
             self.settings.spatialModeEnabledChanged.connect(self.apply_mode),
             self.settings.themeModeChanged.connect(self.refresh),
             self.settings.accentColorChanged.connect(self.refresh),
@@ -716,6 +838,87 @@ class GallerySpatialController(QObject):
     def _session_active(self):
         return _alive(self.session) and self.session.isActive()
 
+    def _current_page(self):
+        if not _alive(self.navigation):
+            return None
+        host = self.navigation.contentHost()
+        return host.pageWidget(host.currentIndex())
+
+    @staticmethod
+    def _qml_views(page):
+        if not QML_BRIDGE_AVAILABLE or not _alive(page):
+            return []
+        from fluentqt.qmlbridge import QmlView
+        return ([page] if isinstance(page, QmlView) else []) + page.findChildren(QmlView)
+
+    def _content_requires_direct_composition(self):
+        if not _alive(self.window) or not _alive(self.navigation):
+            return False
+        page = self._current_page()
+        if not _alive(page):
+            return False
+        # Only the selected page participates. A pending load can request this
+        # before its placeholder reveals the view; cached pages cannot pause it.
+        return any(widget.property(_DIRECT_COMPOSITION_REQUIRED)
+                   for widget in (page, *page.findChildren(QWidget)))
+
+    def _suspend_direct_composition(self):
+        self.renderer_timeout.stop()
+        self.target = False
+        self.motion.stop()
+        self.pointer_motion.stop()
+        self.pointer = QPointF()
+        self.progress = 0.
+        self.publish_presentation_transforms(False)
+        self.set_filtering(False)
+        self.window.setProperty("gallerySpatialEnabled", False)
+        if _alive(self.canvas):
+            self.canvas.setProperty("presenting", False)
+            self.canvas.setProperty("galleryDepthProgress", 0.)
+            self.canvas.hide()
+            self.canvas.clear_frame_caches()
+        # QQuickWidget cannot be captured through an ancestor QGraphicsEffect.
+        # Remove the effects synchronously, before a newly requested scene loads.
+        if _alive(self.content_capture):
+            self.content_capture.invalidated = None
+            self.navigation.contentHost().setGraphicsEffect(None)
+        if _alive(self.capture):
+            self.capture.invalidated = None
+            self.navigation.setGraphicsEffect(None)
+        self.capture = self.content_capture = None
+        self.navigation.setAttribute(Qt.WA_NoSystemBackground, self._native_background)
+        self.navigation_revision = self.content_revision = 0
+        self.backdrop = QPixmap()
+        self.backdrop_dirty = True
+        self.grabbed = self.hovered = None
+        self.navigation.update()
+        self.window.update()
+
+    def sync_content_capabilities(self, *_unused):
+        if not _alive(self.window) or not _alive(self.navigation):
+            return
+        if self._composing_requirements:
+            self._composition_resume_timer.start(0)
+        else:
+            self.apply_mode(self.settings.spatial_mode_enabled)
+
+    def composition_requirement_changed(self, widget, property_changed):
+        page = self._current_page()
+        if property_changed and (not _alive(page)
+                                 or (page != widget and not page.isAncestorOf(widget))):
+            return
+        if (property_changed and widget.property(_DIRECT_COMPOSITION_REQUIRED)
+                and not self._composing_requirements):
+            # Remove capture effects before Quick creates or restores its native scene.
+            self.sync_content_capabilities()
+        elif not self._composition_resume_timer.isActive():
+            self._composition_resume_timer.start(0)
+
+    def _resume_content_presentation(self):
+        if not _alive(self.window) or not _alive(self.navigation):
+            return
+        self.apply_mode(self.settings.spatial_mode_enabled)
+
     @Slot(bool)
     def _session_active_changed(self, active):
         if not active and _alive(self.window):
@@ -738,8 +941,18 @@ class GallerySpatialController(QObject):
         if self.renderer_failed:
             return
         if not _alive(self.canvas):
-            use_rhi = (_RhiSurface.isPreferred() and not _RhiSurface.preflightFailure())
-            reason = "" if use_rhi else _unavailable_reason()
+            use_rhi = _RhiSurface.isPreferred()
+            reason = QApplication.instance().property("fluentqtGalleryGraphicsBackendFailure")
+            if not reason:
+                reason = _RhiSurface.preflightFailure() if use_rhi else _unavailable_reason()
+                if use_rhi and reason:
+                    allow_opengl = True
+                    if QML_BRIDGE_AVAILABLE:
+                        from fluentqt.qmlbridge import QmlSession
+                        allow_opengl = QmlSession.isGraphicsApiCompatible(QmlSession.GraphicsApi.OpenGL)
+                    if allow_opengl:
+                        use_rhi = False
+                        reason = _unavailable_reason()
             if reason:
                 self.disable(reason)
                 return
@@ -763,7 +976,8 @@ class GallerySpatialController(QObject):
 
     def can_initialize_renderer(self):
         handle = self.window.window().windowHandle()
-        return (self.settings.spatial_mode_enabled and _alive(self.canvas)
+        return (not self._direct_composition_required and self._session_active()
+                and self.settings.spatial_mode_enabled and _alive(self.canvas)
                 and self.canvas.isVisible() and not self.canvas.size().isEmpty()
                 and handle is not None and handle.isExposed())
 
@@ -813,8 +1027,10 @@ class GallerySpatialController(QObject):
         if not self._session_active():
             self.disable("Spatial is inactive. Using the 2D Gallery.")
             return
-        if (not self.renderer_ready
+        if (self._direct_composition_required or not self.renderer_ready
                 or not self.settings.spatial_mode_enabled
+                or fluentqt.current_motion_mode() != fluentqt.MotionMode.Full
+                or fluentqt.current_theme() == fluentqt.Theme.HighContrast
                 or self.window._splash is not None
                 or self.window._dismissal_splash is not None):
             return
@@ -877,6 +1093,18 @@ class GallerySpatialController(QObject):
     def rendering_failed(self):
         self.disable("3D rendering is unavailable. Using the 2D Gallery.")
 
+    @Slot(object, str)
+    def qml_rendering_failed(self, page, message):
+        try:
+            if not _alive(self.window) or not _alive(self.navigation) or not _alive(page):
+                return
+            self._qml_failed_page = page
+            self._qml_texture_failure = message
+            self.apply_mode(self.settings.spatial_mode_enabled)
+        finally:
+            if _alive(self.canvas):
+                self.canvas.setProperty(_QML_FAILURE_PENDING, False)
+
     def disable(self, reason):
         self.publish_presentation_transforms(False)
         if self.renderer_failed:
@@ -896,6 +1124,8 @@ class GallerySpatialController(QObject):
             self.capture.invalidated = None
             self.navigation.setGraphicsEffect(None)
         self.capture = self.content_capture = None
+        if isinstance(self.canvas, _Surface) and _alive(self.canvas.qml_layer):
+            self.canvas.qml_layer.release()
         self.navigation_revision = self.content_revision = 0
         self.backdrop = QPixmap()
         self.grabbed = self.hovered = None
@@ -960,9 +1190,60 @@ class GallerySpatialController(QObject):
 
     @Slot(bool)
     def apply_mode(self, enabled):
+        if not _alive(self.window) or not _alive(self.navigation) or self._composing_requirements:
+            return
         if not self._session_active():
             self.disable("Spatial is inactive. Using the 2D Gallery.")
             return
+        requested = enabled
+        enabled = (enabled and fluentqt.current_motion_mode() == fluentqt.MotionMode.Full
+                   and fluentqt.current_theme() != fluentqt.Theme.HighContrast)
+        self._composing_requirements = True
+        try:
+            page = self._current_page()
+            views = self._qml_views(page)
+            has_qml_scene = any(view.status() == view.Status.Loading
+                                or _alive(view.rootObject())
+                                or view.property(_DIRECT_COMPOSITION_REQUIRED)
+                                for view in views if _alive(view))
+            if not requested:
+                self._qml_failed_page = None
+                self._qml_texture_failure = ""
+            if enabled and has_qml_scene and not _alive(self.canvas) and not self.renderer_failed:
+                # Initialize GL without captures; native Quick must surrender
+                # composition before the ancestor effects can be installed.
+                self._direct_composition_required = True
+                self.ensure_renderer()
+            layer = (self.canvas.qml_layer if isinstance(self.canvas, _Surface)
+                     and _alive(self.canvas) else None)
+            if not enabled and _alive(layer) and layer.statistics().get("views", 0):
+                self._suspend_direct_composition()
+                layer.release()
+                self._direct_composition_required = self._content_requires_direct_composition()
+                return
+            adapted = True
+            if enabled and has_qml_scene:
+                adapted = _alive(layer) and self._qml_failed_page != page
+                if adapted:
+                    layer.setRootWidget(page)
+                    adapted = layer.synchronize()
+            elif _alive(layer):
+                layer.setRootWidget(page)
+            self._direct_composition_required = (not adapted
+                                                 or self._content_requires_direct_composition())
+            if self._direct_composition_required:
+                self._suspend_direct_composition()
+                # Keep the request while loading: Ready will migrate the same
+                # scene and notify the observer, allowing presentation to resume.
+                pending = any(view.status() == view.Status.Loading
+                              or (view.isTextureRenderingEnabled()
+                                  and view.status() == view.Status.Unloaded)
+                              for view in views if _alive(view))
+                if _alive(layer) and not pending:
+                    layer.release()
+                return
+        finally:
+            self._composing_requirements = False
         if enabled and (not _alive(self.capture) or not self.renderer_ready):
             self.ensure_renderer()
             return
@@ -1225,10 +1506,45 @@ class GallerySpatialController(QObject):
             local = target.mapFrom(self.navigation, source)
             QApplication.sendEvent(target, QEnterEvent(local, target.mapTo(self.window, local), target.mapToGlobal(local)))
 
+    def _blocks_pending_qml_input(self, watched, event):
+        if not (self.canvas.property(_QML_FAILURE_PENDING) and self.canvas.property("presenting")):
+            return False
+        nav = self.navigation
+
+        def in_source(widget):
+            return (isinstance(widget, QWidget) and _alive(widget)
+                    and widget.window() == self.window.window()
+                    and (widget == nav or nav.isAncestorOf(widget)))
+
+        source = in_source(watched)
+        top = watched in (self.window, self.window.window(), self.window.window().windowHandle())
+        if not source and not top:
+            return False
+        kind = event.type()
+        if kind in (QEvent.KeyPress, QEvent.KeyRelease, QEvent.ShortcutOverride, QEvent.InputMethod):
+            return source or in_source(QApplication.focusWidget())
+        if kind in (QEvent.MouseMove, QEvent.MouseButtonPress, QEvent.MouseButtonRelease,
+                    QEvent.MouseButtonDblClick, QEvent.Wheel):
+            global_pos = event.globalPosition().toPoint()
+        elif kind == QEvent.ContextMenu:
+            global_pos = event.globalPos()
+        elif kind in (QEvent.TouchBegin, QEvent.TouchUpdate, QEvent.TouchEnd, QEvent.TouchCancel):
+            if not event.points():
+                return source
+            global_pos = event.points()[0].globalPosition().toPoint()
+        else:
+            return False
+        return ((source or nav.rect().contains(nav.mapFromGlobal(global_pos)))
+                and not self.native_overlay_at(global_pos))
+
     def eventFilter(self, watched, event):
+        if not _alive(self.canvas) or not _alive(self.window) or not _alive(self.navigation):
+            return False
+        if self._blocks_pending_qml_input(watched, event):
+            event.accept()
+            return True
         native_menu_show = event.type() == QEvent.Show and isinstance(watched, QMenu)
-        if ((self.forwarding and not native_menu_show) or not _alive(self.canvas) or not _alive(self.window)
-                or not _alive(self.navigation)):
+        if self.forwarding and not native_menu_show:
             return False
         kind = event.type()
         nav = self.navigation

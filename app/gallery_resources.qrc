@@ -101,5 +101,6 @@
         <file alias="assets/control_images/collections/FileListView.svg">../tools/gallery/artwork/collections/FileListView.svg</file>
         <file alias="assets/control_images/spatial/SpatialView.svg">../tools/gallery/artwork/spatial/SpatialView.svg</file>
         <file alias="assets/control_images/spatial/SpatialItem.svg">../tools/gallery/artwork/spatial/SpatialItem.svg</file>
+        <file alias="assets/control_images/qml-bridge/QmlView.svg">../tools/gallery/artwork/qml-bridge/QmlView.svg</file>
     </qresource>
 </RCC>

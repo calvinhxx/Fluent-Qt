@@ -25,6 +25,17 @@ enum class GalleryPageKind {
 };
 
 /**
+ * @brief One named source file shown and copied by a Gallery sample.
+ * zh_CN: Gallery 示例中可独立查看与复制的命名源文件。
+ */
+struct GallerySourceFile {
+    QString name;
+    QString language;
+    QString code;
+    QString usageSnippet;
+};
+
+/**
  * @brief A single live sample: metadata plus a preview/options widget factory.
  * zh_CN: 单个实样：元数据加上预览/选项控件工厂。
  *
@@ -48,6 +59,9 @@ struct GallerySample {
     // Additional combinations are disclosed after the primary examples.
     // zh_CN: 补充组合示例折叠收纳在主要示例之后。
     bool supplementary = false;
+    // Optional multi-file example; the first file is the host's source.
+    // zh_CN: 可选的多文件示例；首个文件为宿主源码。
+    QVector<GallerySourceFile> sourceFiles;
 };
 
 /**

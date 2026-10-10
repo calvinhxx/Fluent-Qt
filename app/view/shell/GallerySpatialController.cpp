@@ -20,10 +20,14 @@
 #include "components/spatial/SpatialSession.h"
 #include "support/spatial/SpatialTextureHost.h"
 #include "platform/GalleryPlatform.h"
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+#include <FluentQt/QmlBridge.h>
+#endif
 
 #include <QApplication>
 #include <QContextMenuEvent>
 #include <QElapsedTimer>
+#include <QDynamicPropertyChangeEvent>
 #include <QFrame>
 #include <QGraphicsEffect>
 #include <QHash>
@@ -47,6 +51,7 @@
 #include <QScopedValueRollback>
 #include <QSurfaceFormat>
 #include <QTimer>
+#include <QTouchEvent>
 #include <QVariantAnimation>
 #include <QWheelEvent>
 #include <QtMath>
@@ -59,6 +64,53 @@ constexpr qreal kSideRotation = 5.0;
 constexpr qreal kTopRotation = 3.0;
 constexpr qreal kPointerYaw = .65;
 constexpr qreal kPointerPitch = .45;
+constexpr char kDirectCompositionRequiredProperty[] = "fluentqtDirectCompositionRequired";
+constexpr char kQmlFailurePendingProperty[] = "galleryQmlFailurePending";
+
+bool requiresDirectComposition(const QWidget* root)
+{
+    if (!root)
+        return false;
+    if (root->property(kDirectCompositionRequiredProperty).toBool())
+        return true;
+    for (auto* child : root->findChildren<QWidget*>()) {
+        if (child->property(kDirectCompositionRequiredProperty).toBool())
+            return true;
+    }
+    return false;
+}
+
+class DirectCompositionObserver final : public QObject {
+public:
+    explicit DirectCompositionObserver(QObject* parent) : QObject(parent)
+    {
+        qApp->installEventFilter(this);
+    }
+    std::function<void(QWidget*, bool)> changed;
+#ifdef Q_OS_WASM
+    std::function<void(QObject*)> windowReady;
+#endif
+
+protected:
+    bool eventFilter(QObject* object, QEvent* event) override
+    {
+#ifdef Q_OS_WASM
+        if (windowReady && (event->type() == QEvent::Show || event->type() == QEvent::Expose))
+            windowReady(object);
+#endif
+        const bool propertyChanged =
+            event->type() == QEvent::DynamicPropertyChange &&
+            static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName() ==
+                kDirectCompositionRequiredProperty;
+        if (!propertyChanged && event->type() != QEvent::ParentChange)
+            return false;
+        auto* widget = qobject_cast<QWidget*>(object);
+        if (widget && changed &&
+            (propertyChanged || widget->property(kDirectCompositionRequiredProperty).toBool()))
+            changed(widget, propertyChanged);
+        return false;
+    }
+};
 
 QString currentRendererName(QOpenGLContext* context)
 {
@@ -74,6 +126,10 @@ QString sessionUnavailableReason()
 {
     if (qEnvironmentVariableIntValue("FLUENT_QT_GALLERY_DISABLE_3D") != 0)
         return QObject::tr("3D is disabled for this session.");
+    const QString graphicsFailure =
+        qApp->property("fluentqtGalleryGraphicsBackendFailure").toString();
+    if (!graphicsFailure.isEmpty())
+        return graphicsFailure;
     if (!spatial::SpatialRuntime::supportsOpenGLDisplay())
         return QObject::tr("This display uses the 2D Gallery.");
     return {};
@@ -322,6 +378,15 @@ public:
     GpuSurface(ShellScene* scene, QWidget* parent, spatial::SpatialSession* session)
         : QOpenGLWidget(parent), m_scene(scene), m_particles(this, session)
     {
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+        m_qml = new qmlbridge::QmlTextureLayer(this);
+        connect(m_qml, &qmlbridge::QmlTextureLayer::frameRequested, this, [this] { update(); });
+        connect(m_qml, &qmlbridge::QmlTextureLayer::renderingFailed, this, [this](const QString&) {
+            setProperty(kQmlFailurePendingProperty, true);
+            if (qmlCompositionFailed)
+                qmlCompositionFailed(m_qml->rootWidget());
+        });
+#endif
         connect(&m_particles, &spatial_render::GalleryParticleCompositor::frameRequested, this,
                 [this] { update(); });
         connect(&m_particles, &spatial_render::GalleryParticleCompositor::staticContentInvalidated,
@@ -332,7 +397,10 @@ public:
         setAttribute(Qt::WA_TransparentForMouseEvents);
         setAttribute(Qt::WA_NoSystemBackground);
         setFocusPolicy(Qt::NoFocus);
-        setUpdateBehavior(NoPartialUpdate);
+        // Keep the completed surface while an auxiliary frame is being prepared.
+        // Successful frames still clear every pixel before drawing.
+        // zh_CN: 准备附加纹理期间保留完整画面；成功帧仍先清空再全量绘制。
+        setUpdateBehavior(PartialUpdate);
         auto surfaceFormat = format();
         int samples = 4;
         if (qEnvironmentVariableIntValue("FLUENT_QT_SPATIAL_BENCHMARK")) {
@@ -359,27 +427,64 @@ public:
     std::function<void()> contextLost;
     std::function<void()> failed;
     std::function<void()> cacheUnavailable;
-    qreal cacheDpr() const { return m_plan.dpr; }
+    std::function<void(QWidget*)> qmlCompositionFailed;
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+    qmlbridge::QmlTextureLayer* qmlLayer() const
+    {
+        return m_qml;
+    }
+    QRectF qmlSource() const
+    {
+        auto* root = m_qml->rootWidget();
+        return root && m_scene->contentRoot ? QRectF(root->mapFrom(m_scene->contentRoot, QPoint()),
+                                                     m_scene->content.source.size())
+                                            : QRectF();
+    }
+#endif
+    qreal cacheDpr() const
+    {
+        return m_plan.dpr;
+    }
     quint32 contentTextureId() const
     {
         return m_content.texture ? m_content.texture->texture() : 0;
     }
-    int maxCacheDimension() const { return m_maxDimension; }
+    int maxCacheDimension() const
+    {
+        return m_maxDimension;
+    }
     int allocationRetries = 0;
     int surfaceSamples = 0;
-    int paintSamples() const { return m_paintTarget ? m_paintTarget->format().samples() : 0; }
+    int paintSamples() const
+    {
+        return m_paintTarget ? m_paintTarget->format().samples() : 0;
+    }
     qint64 estimatedCacheBytes() const
     {
-        return qMax(m_plan.estimatedBytes, backdropBytes()) + qint64(m_particles.allocatedBytes());
+        qint64 bytes =
+            qMax(m_plan.estimatedBytes, backdropBytes()) + qint64(m_particles.allocatedBytes());
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+        bytes += m_qml->statistics().value("allocatedBytes").toLongLong();
+#endif
+        return bytes;
     }
-    const spatial_render::GalleryParticleCompositor& particles() const { return m_particles; }
+    const spatial_render::GalleryParticleCompositor& particles() const
+    {
+        return m_particles;
+    }
     qint64 backdropBytes() const
     {
         return m_backdrop.texture ? qint64(m_backdrop.size.width()) * m_backdrop.size.height() * 4
                                   : 0;
     }
-    int paintTargetHeight() const { return m_plan.paintSize.height(); }
-    bool ready() const { return m_blitter && m_blitter->isCreated(); }
+    int paintTargetHeight() const
+    {
+        return m_plan.paintSize.height();
+    }
+    bool ready() const
+    {
+        return m_blitter && m_blitter->isCreated();
+    }
     qint64 cachedPixels() const
     {
         qint64 pixels = 0;
@@ -391,8 +496,12 @@ public:
 
     void clearFrameCaches()
     {
+        m_hasPresentedFrame = false;
         makeCurrent();
         m_particles.release();
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+        m_qml->clearFrameCaches();
+#endif
         m_presentedContentTexture = 0;
         m_navigation = {};
         m_content = {};
@@ -410,8 +519,14 @@ public:
     qint64 backdropUploads = 0;
 
 protected:
+    void resizeGL(int, int) override
+    {
+        m_hasPresentedFrame = false;
+    }
+
     void initializeGL() override
     {
+        m_hasPresentedFrame = false;
         m_surfaceSamplesKnown = false;
         auto* gl = context()->functions();
         m_maxDimension = spatial::SpatialRuntime::maximumTextureDimension();
@@ -450,13 +565,6 @@ protected:
             gl->glGetIntegerv(GL_SAMPLES, &surfaceSamples);
             m_surfaceSamplesKnown = true;
         }
-        // QPainter can leave a scissor/color mask behind. Clear the whole FBO before
-        // drawing a new translucent frame, otherwise animated foregrounds leave trails.
-        // zh_CN: QPainter 可能遗留裁剪或颜色掩码，清理整个 FBO，避免透明动效留下上一帧轨迹。
-        gl->glDisable(GL_SCISSOR_TEST);
-        gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-        gl->glClearColor(0, 0, 0, 0);
-        gl->glClear(GL_COLOR_BUFFER_BIT);
         // Retain the native-sized backdrop independently of Qt's pixmap texture
         // cache. Some ES sharing contexts report NPOT support inconsistently and
         // otherwise rescale/reupload this unchanged image on every motion frame.
@@ -475,10 +583,35 @@ protected:
             }
             const auto remaining =
                 qMax<qint64>(0, spatial_render::kCacheBudgetBytes - m_plan.estimatedBytes);
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+            const auto qmlBytes = m_qml->requiredBytes(qmlSource(), m_plan.dpr);
+#else
+            const quint64 qmlBytes = 0;
+#endif
             const bool acceleratedParticles = m_particles.prepare(
                 m_scene->contentRoot, m_scene->contentRevision, m_plan.sizes[1],
-                devicePixelRatioF(), m_plan.dpr, quint64(remaining),
+                devicePixelRatioF(), m_plan.dpr,
+                quint64(qMax<qint64>(0, remaining - qint64(qmlBytes))),
                 !measuring || !qEnvironmentVariableIsSet("FLUENT_QT_SPATIAL_PARTICLES_CPU"));
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+            const QPointer<GpuSurface> lifetime(this);
+            const bool qmlReady = m_qml->prepareFrame(
+                context(), qmlSource(), m_plan.dpr,
+                quint64(qMax<qint64>(0, remaining - qint64(m_particles.allocatedBytes()))));
+            if (!lifetime)
+                return;
+            if (!property("presenting").toBool()) {
+                bindSurfaceTarget();
+                return;
+            }
+            if (!qmlReady && m_hasPresentedFrame) {
+                bindSurfaceTarget();
+                return;
+            }
+            // A first/resized FBO has no previous frame. Finish its Widgets and
+            // particle panels while native QML restoration waits for the event loop.
+            // zh_CN: 首帧或缩放后无旧画面，先完成普通控件与粒子面板，回调退出后恢复原生 QML。
+#endif
             const bool valid = ready() &&
                                updateTexture(m_content, m_scene->contentRevision,
                                              m_scene->content.source, false) &&
@@ -509,15 +642,39 @@ protected:
                         m_content.texture ? m_content.texture->texture() : 0;
                 }
             }
-            gl->glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
-            gl->glViewport(0, 0, qRound(width() * devicePixelRatioF()),
-                           qRound(height() * devicePixelRatioF()));
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+            if (qmlReady) {
+                const auto qmlRevision = m_scene->contentRevision + m_particles.compositionCount();
+                const auto texture =
+                    m_qml->compose(m_presentedContentTexture, m_plan.sizes[1], qmlRevision);
+                if (!lifetime)
+                    return;
+                if (!property("presenting").toBool()) {
+                    bindSurfaceTarget();
+                    return;
+                }
+                if (texture)
+                    m_presentedContentTexture = texture;
+                else if (m_hasPresentedFrame) {
+                    bindSurfaceTarget();
+                    return;
+                }
+            }
+#endif
         }
         if (!updateBackdrop()) {
             if (failed)
                 failed();
             return;
         }
+        bindSurfaceTarget();
+        // Do not touch the displayed FBO until frame preparation succeeds or a
+        // first-frame fallback is ready. QPainter can leave scissor/color masks.
+        // zh_CN: 准备完成或首帧回退可用后才清屏，同时清除 QPainter 遗留的裁剪和颜色掩码。
+        gl->glDisable(GL_SCISSOR_TEST);
+        gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        gl->glClearColor(0, 0, 0, 0);
+        gl->glClear(GL_COLOR_BUFFER_BIT);
         QPainter painter(this);
         if (m_backdrop.texture) {
             painter.beginNativePainting();
@@ -563,6 +720,7 @@ protected:
             });
         }
         painter.end();
+        m_hasPresentedFrame = property("presenting").toBool();
         if (measuring) {
             if (!firstPaintNanoseconds && property("presenting").toBool())
                 firstPaintNanoseconds = clock.nsecsElapsed();
@@ -572,6 +730,9 @@ protected:
     }
 
 private:
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+    qmlbridge::QmlTextureLayer* m_qml = nullptr;
+#endif
     struct TextureCache {
         std::unique_ptr<QOpenGLFramebufferObject> texture;
         quint64 revision = 0;
@@ -599,6 +760,15 @@ private:
     qreal m_maxExtraSampling = 2;
     bool m_cacheFailurePending = false;
     bool m_surfaceSamplesKnown = false;
+    bool m_hasPresentedFrame = false;
+
+    void bindSurfaceTarget()
+    {
+        auto* gl = context()->functions();
+        gl->glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
+        gl->glViewport(0, 0, qRound(width() * devicePixelRatioF()),
+                       qRound(height() * devicePixelRatioF()));
+    }
 
     bool prepareCaches()
     {
@@ -628,14 +798,22 @@ private:
                     m_scene->contentRoot, m_scene->contentRevision, candidate.sizes[1],
                     devicePixelRatioF(), candidate.dpr,
                     !measuring || !qEnvironmentVariableIsSet("FLUENT_QT_SPATIAL_PARTICLES_CPU"));
-                if (!particleBytes)
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+                const quint64 qmlBytes = m_qml->requiredBytes(qmlSource(), candidate.dpr);
+#else
+                const quint64 qmlBytes = 0;
+#endif
+                if (qmlBytes >= quint64(spatial_render::kCacheBudgetBytes))
+                    continue;
+                const quint64 auxiliaryBytes = particleBytes + qmlBytes;
+                if (!auxiliaryBytes)
                     break;
-                if (particleBytes >= quint64(spatial_render::kCacheBudgetBytes))
+                if (auxiliaryBytes >= quint64(spatial_render::kCacheBudgetBytes))
                     continue;
                 const auto joint =
                     spatial_render::planCaches(panels, devicePixelRatioF(), m_maxDimension, extra,
                                                spatial_render::kCacheBudgetBytes, m_paintSamples,
-                                               backdrop, glyphScratch, qint64(particleBytes));
+                                               backdrop, glyphScratch, qint64(auxiliaryBytes));
                 // Choose the highest joint level, always at least native density.
                 // Re-estimate auxiliary textures at each sampling candidate.
                 if (joint.valid() && joint.dpr == candidate.dpr) {
@@ -650,6 +828,9 @@ private:
             // Release both old targets before allocating replacements: window resizing
             // must not transiently retain two complete sets of high-DPI caches.
             m_particles.release();
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+            m_qml->clearFrameCaches();
+#endif
             m_presentedContentTexture = 0;
             m_navigation = {};
             m_content = {};
@@ -704,7 +885,11 @@ private:
 
     void releaseTextures()
     {
+        m_hasPresentedFrame = false;
         m_particles.release();
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+        m_qml->clearFrameCaches();
+#endif
         m_presentedContentTexture = 0;
         m_navigation = {};
         m_content = {};
@@ -830,6 +1015,7 @@ struct GallerySpatialController::Private {
     QPointer<QWidget> canvas;
     QPointer<SurfaceCapture> capture;
     QPointer<SurfaceCapture> contentCapture;
+    DirectCompositionObserver* compositionObserver = nullptr;
     QPointer<QWidget> grabbed, hovered;
     struct NativePopupAnchor {
         QPointer<QWidget> source;
@@ -850,12 +1036,78 @@ struct GallerySpatialController::Private {
     QTimer* rendererTimeout = nullptr;
     bool nativeNoSystemBackground = false;
     bool filtering = false;
+    bool directCompositionRequired = false;
+    bool compositionRefreshQueued = false;
+    bool composingRequirements = false;
+    QPointer<QWidget> qmlFailedPage;
 
     bool canInitializeRenderer() const
     {
-        return session && session->isActive() && GallerySettings::instance().spatialModeEnabled() &&
-               canvas && canvas->isVisible() && !canvas->size().isEmpty() && window &&
-               window->window()->windowHandle() && window->window()->windowHandle()->isExposed();
+        return !directCompositionRequired && session && session->isActive() &&
+               GallerySettings::instance().spatialModeEnabled() && canvas && canvas->isVisible() &&
+               !canvas->size().isEmpty() && window && window->window()->windowHandle() &&
+               window->window()->windowHandle()->isExposed();
+    }
+
+    bool blocksPendingQmlInput(QObject* watched, QEvent* event) const
+    {
+        if (!canvas->property(kQmlFailurePendingProperty).toBool() ||
+            !canvas->property("presenting").toBool())
+            return false;
+        auto* widget = qobject_cast<QWidget*>(watched);
+        const auto inSource = [this](QWidget* candidate) {
+            return candidate && candidate->window() == window->window() &&
+                   (candidate == navigation || navigation->isAncestorOf(candidate));
+        };
+        const bool source = inSource(widget);
+        const bool top = watched == window || watched == window->window() ||
+                         watched == window->window()->windowHandle();
+        if (!source && !top)
+            return false;
+        QPoint global;
+        switch (event->type()) {
+        case QEvent::KeyPress:
+        case QEvent::KeyRelease:
+        case QEvent::ShortcutOverride:
+        case QEvent::InputMethod:
+            return source || inSource(QApplication::focusWidget());
+        case QEvent::MouseMove:
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonRelease:
+        case QEvent::MouseButtonDblClick:
+            global = fluentMouseGlobalPos(static_cast<QMouseEvent*>(event));
+            break;
+        case QEvent::Wheel:
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+            global = static_cast<QWheelEvent*>(event)->globalPosition().toPoint();
+#else
+            global = static_cast<QWheelEvent*>(event)->globalPos();
+#endif
+            break;
+        case QEvent::ContextMenu:
+            global = static_cast<QContextMenuEvent*>(event)->globalPos();
+            break;
+        case QEvent::TouchBegin:
+        case QEvent::TouchUpdate:
+        case QEvent::TouchEnd:
+        case QEvent::TouchCancel: {
+            const auto* touch = static_cast<QTouchEvent*>(event);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            if (touch->points().isEmpty())
+                return source;
+            global = touch->points().first().globalPosition().toPoint();
+#else
+            if (touch->touchPoints().isEmpty())
+                return source;
+            global = touch->touchPoints().first().screenPos().toPoint();
+#endif
+            break;
+        }
+        default:
+            return false;
+        }
+        return (source || navigation->rect().contains(navigation->mapFromGlobal(global))) &&
+               !nativeOverlayAt(global);
     }
 
     void setFiltering(bool active)
@@ -1177,6 +1429,46 @@ GallerySpatialController::GallerySpatialController(QWidget* window,
         disableSpatial(unavailableReason);
         return;
     }
+    const auto refreshComposition = [this] {
+        applyMode(GallerySettings::instance().spatialModeEnabled());
+    };
+    connect(navigation->contentHost(), &navigation::StackContentHost::currentIndexChanged, this,
+            refreshComposition);
+    d->compositionObserver = new DirectCompositionObserver(this);
+#ifdef Q_OS_WASM
+    d->compositionObserver->windowReady = [this, refreshComposition](QObject* object) {
+        if (d->canvas || d->rendererFailed || d->compositionRefreshQueued ||
+            !GallerySettings::instance().spatialModeEnabled())
+            return;
+        auto* top = d->window->window();
+        if (object != d->window && object != top && object != top->windowHandle())
+            return;
+        d->compositionRefreshQueued = true;
+        QTimer::singleShot(0, this, [this, refreshComposition] {
+            d->compositionRefreshQueued = false;
+            refreshComposition();
+        });
+    };
+#endif
+    d->compositionObserver->changed = [this, refreshComposition](QWidget* widget,
+                                                                 bool propertyChanged) {
+        auto* host = d->navigation ? d->navigation->contentHost() : nullptr;
+        auto* page = host ? host->pageWidget(host->currentIndex()) : nullptr;
+        if (propertyChanged && (!page || (page != widget && !page->isAncestorOf(widget))))
+            return;
+        if (!d->composingRequirements && propertyChanged &&
+            widget->property(kDirectCompositionRequiredProperty).toBool()) {
+            // No fade-out: the ancestor effects must be gone before Quick is constructed.
+            // zh_CN: 不做退出动画，须在创建 Quick 前移除祖先捕获特效。
+            refreshComposition();
+        } else if (!d->compositionRefreshQueued) {
+            d->compositionRefreshQueued = true;
+            QTimer::singleShot(0, this, [this, refreshComposition] {
+                d->compositionRefreshQueued = false;
+                refreshComposition();
+            });
+        }
+    };
     // The splash keeps ownership of its capture effect through the logo handoff.
     // zh_CN: 启动图标交接结束前，内容缓存特效仍由 splash 管理。
     if (auto* splash = window->findChild<GallerySplashScreen*>()) {
@@ -1191,14 +1483,38 @@ void GallerySpatialController::ensureRenderer()
 {
     if (d->rendererFailed || !d->session || !d->session->isActive())
         return;
+#ifdef Q_OS_WASM
+    // The browser runtime reparents Gallery into its desktop surface. Creating
+    // GL resources before that surface is exposed leaves them in an offscreen
+    // WebGL context that cannot share textures with the final backing store.
+    // zh_CN: 浏览器会将 Gallery 放入桌面表面；须等该表面显示后再创建 GL 资源，
+    // 避免资源留在无法与最终后备存储共享纹理的离屏 WebGL 上下文中。
+    auto* top = d->window->window();
+    if (!d->window->isVisible() || !top->windowHandle() || !top->windowHandle()->isExposed())
+        return;
+#endif
     if (!d->canvas) {
         const bool measuring = qEnvironmentVariableIntValue("FLUENT_QT_SPATIAL_BENCHMARK");
         QElapsedTimer clock;
         if (measuring)
             clock.start();
-        const bool useRhi = spatial::SpatialTextureHost::isPreferred() &&
-                            spatial::SpatialTextureHost::preflightFailure().isEmpty();
-        const QString reason = useRhi ? QString() : accelerationUnavailableReason();
+        bool useRhi = spatial::SpatialTextureHost::isPreferred();
+        QString reason = qApp->property("fluentqtGalleryGraphicsBackendFailure").toString();
+        if (reason.isEmpty()) {
+            reason = useRhi ? spatial::SpatialTextureHost::preflightFailure()
+                            : accelerationUnavailableReason();
+            if (useRhi && !reason.isEmpty()) {
+                bool allowOpenGL = true;
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+                allowOpenGL = qmlbridge::QmlSession::isGraphicsApiCompatible(
+                    qmlbridge::QmlSession::GraphicsApi::OpenGL);
+#endif
+                if (allowOpenGL) {
+                    useRhi = false;
+                    reason = accelerationUnavailableReason();
+                }
+            }
+        }
         if (measuring) {
             d->initializationTimings["probeMs"] = clock.nsecsElapsed() / 1e6;
             clock.restart();
@@ -1233,6 +1549,15 @@ void GallerySpatialController::ensureRenderer()
             surface->initialized = initialized;
             surface->failed = failed;
             surface->cacheUnavailable = cacheUnavailable;
+            surface->qmlCompositionFailed = [this](QWidget* failedPage) {
+                const QPointer<QWidget> guardedPage(failedPage);
+                QTimer::singleShot(0, this, [this, guardedPage] {
+                    d->qmlFailedPage = guardedPage;
+                    applyMode(GallerySettings::instance().spatialModeEnabled());
+                    if (d->canvas)
+                        d->canvas->setProperty(kQmlFailurePendingProperty, false);
+                });
+            };
             surface->contextLost = [this] {
                 d->rendererInitialized = d->rendererReady = false;
                 QTimer::singleShot(0, this, &GallerySpatialController::checkRenderer);
@@ -1330,6 +1655,10 @@ void GallerySpatialController::disableSpatial(const QString& reason)
         d->capture->invalidated = {};
         d->navigation->setGraphicsEffect(nullptr);
     }
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+    if (auto* surface = dynamic_cast<GpuSurface*>(d->canvas.data()))
+        surface->qmlLayer()->release();
+#endif
     d->scene.navigationRevision = 0;
     d->scene.contentRevision = 0;
     d->scene.backdrop = {};
@@ -1357,7 +1686,8 @@ void GallerySpatialController::disableSpatial(const QString& reason)
 void GallerySpatialController::startPresentation()
 {
     if (!d->session || !d->session->isActive() || !d->navigation || !d->canvas ||
-        d->rendererFailed || !GallerySettings::instance().spatialModeEnabled() ||
+        d->rendererFailed || d->directCompositionRequired ||
+        !GallerySettings::instance().spatialModeEnabled() ||
         d->window->findChild<GallerySplashScreen*>())
         return;
     if (d->capture && d->canvas->property("presenting").toBool())
@@ -1416,6 +1746,8 @@ void GallerySpatialController::startPresentation()
 }
 GallerySpatialController::~GallerySpatialController()
 {
+    delete d->compositionObserver;
+    d->compositionObserver = nullptr;
     if (d->session) {
         disconnect(d->session, nullptr, this, nullptr);
         d->session->deactivate();
@@ -1429,12 +1761,16 @@ GallerySpatialController::~GallerySpatialController()
     d->publishPresentationTransforms(false);
     if (d->capture) {
         d->capture->invalidated = {};
-        d->capture->setEnabled(false);
+        d->navigation->setGraphicsEffect(nullptr);
     }
     if (d->contentCapture) {
         d->contentCapture->invalidated = {};
-        d->contentCapture->setEnabled(false);
+        d->navigation->contentHost()->setGraphicsEffect(nullptr);
     }
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+    if (auto* surface = dynamic_cast<GpuSurface*>(d->canvas.data()))
+        surface->qmlLayer()->release();
+#endif
     delete d->canvas;
 }
 
@@ -1446,6 +1782,7 @@ QVariantMap GallerySpatialController::renderingStatistics() const
 {
     QVariantMap result = d->initializationTimings;
     result["pluginActive"] = d->session && d->session->isActive();
+    result["directCompositionRequired"] = d->directCompositionRequired;
     for (const auto& entry : {qMakePair(QStringLiteral("navigation"), d->capture.data()),
                               qMakePair(QStringLiteral("content"), d->contentCapture.data())}) {
         result[entry.first + "Captures"] = entry.second ? entry.second->captures : 0;
@@ -1482,6 +1819,9 @@ QVariantMap GallerySpatialController::renderingStatistics() const
         surface ? surface->particles().foregroundCaptureCount() : 0;
     result["particleCompositions"] = surface ? surface->particles().compositionCount() : 0;
     result["particleSourceScans"] = surface ? surface->particles().sourceScanCount() : 0;
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+    result["qmlTextures"] = surface ? surface->qmlLayer()->statistics() : QVariantMap();
+#endif
     return result;
 }
 void GallerySpatialController::cancelTransition()
@@ -1507,7 +1847,89 @@ void GallerySpatialController::applyMode(bool enabled)
 {
     if (!d->window || !d->navigation)
         return;
-    enabled = enabled && d->session && d->session->isActive();
+    if (d->composingRequirements)
+        return;
+    QScopedValueRollback<bool> compositionGuard(d->composingRequirements, true);
+    auto* host = d->navigation->contentHost();
+    auto* page = host->pageWidget(host->currentIndex());
+    const auto suspend = [this, host] {
+        d->rendererTimeout->stop();
+        d->target = false;
+        depth::setEnabled(d->window, false);
+        if (d->capture) {
+            d->settle();
+            d->contentCapture->invalidated = {};
+            d->capture->invalidated = {};
+            host->setGraphicsEffect(nullptr);
+            d->navigation->setGraphicsEffect(nullptr);
+            d->scene.renderWidgets = {};
+            d->scene.renderForeground = {};
+        } else {
+            d->motion->stop();
+            d->pointerMotion->stop();
+            d->scene.progress = 0;
+            d->scene.pointerTilt = {};
+            d->publishPresentationTransforms(false);
+            if (d->canvas)
+                d->canvas->hide();
+            d->setFiltering(false);
+        }
+    };
+    const bool requested = enabled && d->session && d->session->isActive();
+    if (!requested)
+        d->qmlFailedPage = nullptr;
+    enabled = requested && MotionPolicy::instance().mode() == MotionPolicy::Mode::Full &&
+              FluentElement::currentTheme() != FluentElement::HighContrast;
+    bool adapted = true;
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+    auto qmlViews = page ? page->findChildren<qmlbridge::QmlView*>() : QList<qmlbridge::QmlView*>();
+    if (auto* view = qobject_cast<qmlbridge::QmlView*>(page))
+        qmlViews.prepend(view);
+    const bool hasQml =
+        std::any_of(qmlViews.cbegin(), qmlViews.cend(), [](qmlbridge::QmlView* view) {
+            return view->status() == qmlbridge::QmlView::Loading || view->rootObject() ||
+                   view->property(kDirectCompositionRequiredProperty).toBool();
+        });
+    if (enabled && hasQml && !d->canvas && !d->rendererFailed) {
+        // Initialize the GL canvas without capture effects. The new QML views
+        // must surrender native composition before startPresentation can capture.
+        // zh_CN: 先初始化不带捕获特效的 GL 画布，QML 视图接管原生合成后才能启用整页捕获。
+        d->directCompositionRequired = true;
+        ensureRenderer();
+    }
+    auto* surface = dynamic_cast<GpuSurface*>(d->canvas.data());
+    if (!enabled && surface && surface->qmlLayer()->statistics().value("views").toInt()) {
+        suspend();
+        surface->qmlLayer()->release();
+        d->directCompositionRequired = requiresDirectComposition(page);
+        return;
+    }
+    if (enabled && hasQml) {
+        adapted = surface && d->qmlFailedPage != page;
+        if (adapted) {
+            surface->qmlLayer()->setRootWidget(page);
+            adapted = surface->qmlLayer()->synchronize();
+        }
+    } else if (surface) {
+        surface->qmlLayer()->setRootWidget(page);
+    }
+#endif
+    d->directCompositionRequired = !adapted || requiresDirectComposition(page);
+    if (d->directCompositionRequired) {
+        suspend();
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+        bool pending = false;
+        if (page)
+            for (auto* view : page->findChildren<qmlbridge::QmlView*>())
+                pending |= view->status() == qmlbridge::QmlView::Loading ||
+                           (view->isTextureRenderingEnabled() &&
+                            view->status() == qmlbridge::QmlView::Unloaded);
+        if (surface && !pending)
+            surface->qmlLayer()->release();
+#endif
+        return;
+    }
+    d->composingRequirements = false;
     if (enabled && (!d->capture || !d->rendererReady)) {
         ensureRenderer();
         return;
@@ -1551,8 +1973,14 @@ void GallerySpatialController::applyMode(bool enabled)
 
 bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
 {
+    if (!d->window || !d->navigation || !d->canvas)
+        return false;
+    if (d->blocksPendingQmlInput(watched, event)) {
+        event->accept();
+        return true;
+    }
     const bool nativeMenuShow = event->type() == QEvent::Show && qobject_cast<QMenu*>(watched);
-    if ((d->forwarding && !nativeMenuShow) || !d->window || !d->navigation || !d->canvas)
+    if (d->forwarding && !nativeMenuShow)
         return false;
     if (event->type() == QEvent::MouseMove && d->hovered && d->capture && d->capture->isEnabled() &&
         watched == d->window->window()->windowHandle()) {

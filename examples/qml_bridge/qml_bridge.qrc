@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/fluentqt/qmlbridge">
+        <file alias="Preview.qml">qml/Preview.qml</file>
+    </qresource>
+</RCC>

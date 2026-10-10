@@ -31,7 +31,9 @@ flowchart TD
 
 | Contract | Use it when changing |
 |---|---|
+| [QMLPlus](qmlplus.md) | Managed/computed bindings, conditional states, binding restoration, motion, or stateful anchors |
 | [Plugins](plugins.md) | Optional extension registration, dependency-ordered activation, borrowed ownership, or widget factories |
+| [QmlBridge](qml-bridge.md) | Optional QmlSession lifecycle, application QML hosting, borrowed context models, theme tokens, and explicit Quick initialization |
 | [Files and feedback](files-and-feedback.md) | File entry, file model ownership, transfer presentation, or actionable Toast |
 | [Charts](charts.md) | Model ownership, indexed projections, streaming, chart aggregation, or accessibility |
 | [Timeline and Stepper](sequence-controls.md) | Caller-owned sequences, step requests, layout, motion, and accessibility |

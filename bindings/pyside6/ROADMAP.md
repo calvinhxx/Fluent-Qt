@@ -100,7 +100,24 @@ Gallery package in 2D without importing Qt OpenGL modules.
 Enabling Spatial in a source build does not extend
 the published wheel matrix or establish results for untested toolchains.
 
+## QMLPlus reactive authoring
+
+Python supports `bind_managed`, `bind_computed`, `BindingHandle`, `set_behavior`,
+conditional/inherited `StateGroup` definitions, state transitions, and state
+anchor changes. The adapters use the same native binding and state runtime as
+C++. The target or state controller retains expression objects and their
+Python callable; dependencies and state targets remain caller-owned. Deleting
+a dependency invalidates a computed binding. Dropping a handle preserves the
+binding; `unbind()` removes it. Callback failures pause computed bindings and
+hold the displayed value; inspect `last_error` and call `resume()` to retry.
+
+Gallery presents the same twelve atomic examples in C++, Python, and
+WebAssembly. Native C++ and Python show their own source language; the browser
+offers both. See the [QMLPlus contract](../../docs/architecture/qmlplus.md).
+
 ## Intentional exclusions
+their native direct bindings participate in shared state/binding coordination.
+This decision does not raise the Qt or Python minimum versions.
 
 ### Implementation surfaces
 

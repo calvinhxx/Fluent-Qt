@@ -17,6 +17,9 @@ function(fluent_qt_configure_gallery_webassembly target source_dir)
     if(TARGET FluentQtSpatial)
         target_link_libraries(${target} PRIVATE Qt6::OpenGLWidgets)
     endif()
+    if(TARGET FluentQtQmlBridge)
+        target_link_libraries(${target} PRIVATE Qt6::Quick Qt6::QuickWidgets)
+    endif()
     set_target_properties(${target} PROPERTIES
         QT_WASM_INITIAL_MEMORY "128MB"
         QT_WASM_MAXIMUM_MEMORY "512MB")

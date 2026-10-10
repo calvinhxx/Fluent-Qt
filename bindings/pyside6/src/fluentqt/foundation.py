@@ -1,6 +1,9 @@
 """Theme and typography helpers for FluentQt bindings."""
 
-from PySide6.QtCore import QByteArray, QMargins, QObject, Signal
+import weakref
+
+import shiboken6
+from PySide6.QtCore import QByteArray, QMargins, QObject, Property, QThread, Signal
 from PySide6.QtWidgets import QWidget
 
 from . import _fluentqt as _native
@@ -159,18 +162,45 @@ class StateGroup(_NativeStateGroup):
     """Named property bundles with default restoration and safe QObject targets."""
 
     state_changed = Signal(str)
+    transition_running_changed = Signal(bool)
+    transition_finished = Signal(str)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._fluentqt_state_names = set()
+        self._fluentqt_state_bases = {}
+        self._fluentqt_conditions = {}
+        observer = self._stateObserver()
+        observer.stateChanged.connect(self.state_changed)
+        observer.transitionRunningChanged.connect(self.transition_running_changed)
+        observer.transitionFinished.connect(self.transition_finished)
 
-    def add(self, name, changes):
+    def add(self, name, changes, *, when=None, dependencies=(), extend="", anchor_changes=None):
         """Add or replace a state from ``{QObject: {property: value}}``."""
 
         if not isinstance(name, str) or not name:
             raise ValueError("State name must be a non-empty string")
         if not hasattr(changes, "items"):
             raise TypeError("State changes must be a mapping")
+        if self.thread() != QThread.currentThread():
+            raise ValueError("States must be authored on their controller's Qt thread")
+        if extend and extend not in self._fluentqt_state_names:
+            raise KeyError("Unknown base state: " + extend)
+        cursor, visited = extend, {name}
+        while cursor:
+            if cursor in visited:
+                raise ValueError("State inheritance must not contain a cycle")
+            visited.add(cursor)
+            cursor = self._fluentqt_state_bases.get(cursor, "")
+        sources, dependency_properties = _binding_dependencies(dependencies)
+        if when is not None and not callable(when):
+            raise TypeError("State condition must be callable")
+        if sources and when is None:
+            raise ValueError("Conditional dependencies require a condition")
+        staged_anchors = list((anchor_changes or {}).items())
+        for target, spec in staged_anchors:
+            if not isinstance(target, QWidget) or not isinstance(spec, AnchorSpec):
+                raise TypeError("State anchors must map QWidget targets to AnchorSpec values")
 
         staged_changes = []
         for target, properties in changes.items():
@@ -200,9 +230,21 @@ class StateGroup(_NativeStateGroup):
                     )
                 staged_changes.append((target, property_name, value))
 
+        condition = _Expression(when, self) if when is not None else None
+        if condition is not None:
+            try:
+                condition.prepare()
+            except Exception:
+                if shiboken6.isValid(condition):
+                    condition.deleteLater()
+                raise
+        if not shiboken6.isValid(self):
+            return self
         active = self.state() == name
         if active:
             self.set("")
+            if not shiboken6.isValid(self):
+                return self
         self._clearStateDefinition(name)
         for target, property_name, value in staged_changes:
             try:
@@ -219,6 +261,24 @@ class StateGroup(_NativeStateGroup):
                 self._fluentqt_state_names.discard(name)
                 raise
         self._fluentqt_state_names.add(name)
+        for target, spec in staged_anchors:
+            if not self._addStateAnchorChange(name, target, spec):
+                raise ValueError("State anchor target is unavailable")
+        configured = self._configureState(name, extend, condition, sources, dependency_properties)
+        if not shiboken6.isValid(self):
+            return self
+        if not configured:
+            self._clearStateDefinition(name)
+            self._fluentqt_state_names.discard(name)
+            if condition is not None:
+                condition.deleteLater()
+            raise ValueError("Invalid state condition, dependency, or inheritance")
+        old_condition = self._fluentqt_conditions.pop(name, None)
+        if old_condition is not None:
+            old_condition.deleteLater()
+        if condition is not None:
+            self._fluentqt_conditions[name] = condition
+        self._fluentqt_state_bases[name] = extend
         if active:
             self.set(name)
         return self
@@ -228,11 +288,22 @@ class StateGroup(_NativeStateGroup):
 
         if name and name not in self._fluentqt_state_names:
             raise KeyError("Unknown FluentQt state: {0}".format(name))
-        previous = self.state()
         self._setState(name)
-        current = self.state()
-        if current != previous:
-            self.state_changed.emit(current)
+
+    def evaluate(self):
+        """Reevaluate native conditions using their declared dependencies."""
+
+        self._evaluateStateConditions()
+
+    def add_transition(self, properties=(), *, from_state="*", to_state="*", duration=180):
+        """Animate matching state changes through native MotionPolicy."""
+
+        if not isinstance(duration, int) or duration < 0:
+            raise ValueError("Transition duration must be a non-negative integer")
+        if any(not isinstance(prop, str) or not prop for prop in properties):
+            raise ValueError("Transition properties must be non-empty strings")
+        self._addStateTransition(from_state, to_state, list(properties), duration)
+        return self
 
     def clear(self):
         """Restore all properties changed by the active state."""
@@ -273,6 +344,179 @@ def bind(
             "Unable to bind {0} to {1}; verify readable, writable, and notify "
             "properties".format(source_property, target_property)
         )
+
+
+def _binding_dependencies(dependencies):
+    sources, properties = [], []
+    for source, name in dependencies:
+        if not isinstance(source, QObject) or not shiboken6.isValid(source):
+            raise ValueError("Binding dependency must be a live QObject")
+        if source.thread() != QThread.currentThread():
+            raise ValueError("Dependencies must share the binding's Qt thread")
+        if not isinstance(name, str) or not name:
+            raise ValueError("Dependency property must be a non-empty string")
+        index = source.metaObject().indexOfProperty(name)
+        if index < 0:
+            raise ValueError("Unknown dependency property: " + name)
+        meta = source.metaObject().property(index)
+        if not meta.isReadable() or not meta.hasNotifySignal():
+            raise ValueError("Dependency must be readable and notify changes: " + name)
+        sources.append(source)
+        properties.append(name)
+    return sources, properties
+
+
+class _Expression(QObject):
+    changed = Signal()
+    error_occurred = Signal(object)
+
+    def __init__(self, evaluate, parent):
+        super().__init__(parent)
+        self._evaluate = evaluate
+        self._cached = None
+        self._prepared = False
+        self._handle = None
+        self.last_error = None
+
+    def prepare(self):
+        self._cached = self._evaluate()
+        self._prepared = True
+
+    @Property("QVariant", notify=changed)
+    def value(self):
+        if self._prepared:
+            self._prepared = False
+            return self._cached
+        if self.last_error is not None:
+            return self._cached
+        try:
+            self._cached = self._evaluate()
+        except Exception as error:
+            self.last_error = error
+            if self._handle is not None:
+                self._handle.pause()
+            if shiboken6.isValid(self):
+                self.error_occurred.emit(error)
+        return self._cached
+
+
+class BindingHandle:
+    """Control a target-owned native binding without owning its endpoints."""
+
+    def __init__(self, native, expression=None):
+        self._native = native
+        self._expression = weakref.ref(expression) if expression is not None else lambda: None
+
+    def isValid(self):
+        return self._native.isValid()
+
+    def isEnabled(self):
+        return self._native.isEnabled()
+
+    def isSuspended(self):
+        return self._native.isSuspended()
+
+    def setEnabled(self, enabled):
+        self._native.setEnabled(enabled)
+
+    def pause(self):
+        self._native.pause()
+
+    def resume(self):
+        expression = self._expression()
+        if expression is not None:
+            expression.last_error = None
+        self._native.resume()
+
+    def refresh(self):
+        self._native.refresh()
+
+    def unbind(self):
+        self._native.unbind()
+        expression = self._expression()
+        if expression is not None and shiboken6.isValid(expression):
+            expression.deleteLater()
+
+    @property
+    def last_error(self):
+        expression = self._expression()
+        return expression.last_error if expression is not None else None
+
+
+def _retain_expression(target, property_name, expression):
+    registry = getattr(target, "_fluentqt_binding_expressions", None)
+    if registry is None:
+        registry = target._fluentqt_binding_expressions = {}
+    previous = registry.pop(property_name, None)
+    if previous is not None and shiboken6.isValid(previous):
+        previous.deleteLater()
+    if expression is not None:
+        registry[property_name] = expression
+        target_ref = weakref.ref(target)
+
+        def discard(*_args):
+            owner = target_ref()
+            if owner is not None and registry.get(property_name) is expression:
+                registry.pop(property_name, None)
+
+        expression.destroyed.connect(discard)
+
+
+def bind_managed(source, source_property, target, target_property,
+                 mode=BindingMode.OneWay, *, deferred=False):
+    """Create a pausable native binding; resume reads the current source."""
+
+    handle = _native.bindManagedProperties(source, source_property, target,
+                                          target_property, BindingMode(mode), deferred)
+    if not handle.isValid():
+        raise ValueError("Invalid managed binding endpoints or properties")
+    _retain_expression(target, target_property, None)
+    return BindingHandle(handle)
+
+
+def bind_computed(target, target_property, dependencies, evaluate, *, deferred=False):
+    """Bind an expression to explicit native NOTIFY dependencies."""
+
+    if not isinstance(target, QObject) or not shiboken6.isValid(target):
+        raise ValueError("Computed binding target must be a live QObject")
+    if target.thread() != QThread.currentThread():
+        raise ValueError("Bindings must be authored on their target's Qt thread")
+    if not isinstance(target_property, str) or not target_property:
+        raise ValueError("Target property must be a non-empty string")
+    index = target.metaObject().indexOfProperty(target_property)
+    if index < 0:
+        raise ValueError("Unknown target property: " + target_property)
+    meta = target.metaObject().property(index)
+    if not meta.isReadable() or not meta.isWritable():
+        raise ValueError("Computed target property must be readable and writable")
+    if not callable(evaluate):
+        raise TypeError("Computed binding evaluator must be callable")
+    sources, properties = _binding_dependencies(dependencies)
+    expression = _Expression(evaluate, target)
+    try:
+        expression.prepare()
+        if not shiboken6.isValid(target) or not shiboken6.isValid(expression):
+            raise ValueError("Computed evaluator destroyed its target")
+        native = _native.bindComputedProperties(target, target_property, expression,
+                                                sources, properties, deferred)
+        if not native.isValid():
+            raise ValueError("Invalid computed binding target or dependencies")
+    except Exception:
+        if shiboken6.isValid(expression):
+            expression.deleteLater()
+        raise
+    expression._handle = native
+    _retain_expression(target, target_property, expression)
+    return BindingHandle(native, expression)
+
+
+def set_behavior(target, property_name, *, duration=180):
+    """Animate managed writes on a Fluent widget using native MotionPolicy."""
+
+    if not isinstance(duration, int) or duration < 0:
+        raise ValueError("Behavior duration must be a non-negative integer")
+    if not _native.setPropertyBehavior(target, property_name, duration):
+        raise ValueError("Behavior requires a writable Fluent widget property")
 
 
 _ANCHOR_EDGES = {

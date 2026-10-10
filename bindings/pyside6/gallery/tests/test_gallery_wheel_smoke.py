@@ -68,14 +68,16 @@ def verify_source_contract(project_root, package_dir, contract):
 
 
 def verify_runtime_catalog(contract, categories, entries, routes, support_types,
-                           ported_keys, spatial_available, require_spatial=False):
+                           ported_keys, spatial_available, require_spatial=False,
+                           qmlbridge_available=False):
     """Check the active subset without weakening the complete packaged contract."""
     if require_spatial and not spatial_available:
         raise AssertionError("Release Gallery must include Spatial; a 2D-only fallback is not a complete package")
     expected_categories = [c["id"] for c in contract["categories"]
-                           if spatial_available or c["id"] != "spatial"]
+                           if (spatial_available or c["id"] != "spatial")
+                           and (qmlbridge_available or c["id"] != "qml-bridge")]
     expected_components = [c for c in contract["components"]
-                           if spatial_available or c["category_id"] != "spatial"]
+                           if c["category_id"] in expected_categories]
     hidden = {c["id"] for c in contract["categories"] if c["id"] not in expected_categories}
     if not any(c.get("plugin", False) and c["id"] in expected_categories for c in contract["categories"]):
         hidden.add("plugins")
@@ -105,6 +107,7 @@ def main(argv=None):
     from fluentqt_gallery.catalog import CONTRACT, CATEGORIES, ENTRIES, ROUTES, SUPPORT_TYPES
     from fluentqt_gallery.native_samples import ported_sample_keys
     from fluentqt_gallery.spatial_support import SPATIAL_AVAILABLE
+    from fluentqt_gallery.qmlbridge_support import QML_BRIDGE_AVAILABLE
 
     expected_version = os.environ["FLUENTQT_EXPECTED_VERSION"]
     if metadata.version("FluentQt") != expected_version:
@@ -165,7 +168,8 @@ def main(argv=None):
 
     verify_runtime_catalog(CONTRACT, CATEGORIES, ENTRIES, ROUTES, SUPPORT_TYPES,
                            ported_sample_keys(), SPATIAL_AVAILABLE,
-                           require_spatial=os.environ.get("FLUENTQT_REQUIRE_SPATIAL") == "1")
+                           require_spatial=os.environ.get("FLUENTQT_REQUIRE_SPATIAL") == "1",
+                           qmlbridge_available=QML_BRIDGE_AVAILABLE)
 
     fluentqt.prepare_high_dpi_application()
     from PySide6.QtCore import QCoreApplication, QEvent

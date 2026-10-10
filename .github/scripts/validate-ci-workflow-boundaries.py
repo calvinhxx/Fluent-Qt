@@ -152,6 +152,22 @@ UNCONDITIONAL_JOBS = {
     "ci-wasm.yml": {"build"},
     "pages.yml": {"authorize"},
 }
+SOURCE_PACKAGE_CMAKE_ENTRIES = (
+    "uilib/CMakeLists.txt",
+    "plugin/CMakeLists.txt",
+    "plugin/plugin_extension/CMakeLists.txt",
+    "plugin/Spatial/CMakeLists.txt",
+    "plugin/QmlBridge/CMakeLists.txt",
+    "cmake/FluentQtPlugins.cmake",
+    "cmake/FluentQtSpatial.cmake",
+    "cmake/FluentQtQmlBridge.cmake",
+    "cmake/FluentQtHelloWorldExamples.cmake",
+    "cmake/FluentQtPluginExtensionExample.cmake",
+    "cmake/FluentQtQmlBridgeExample.cmake",
+    "examples/hello_world/CMakeLists.txt",
+    "examples/plugin_extension/CMakeLists.txt",
+    "examples/qml_bridge/CMakeLists.txt",
+)
 
 
 def read_workflow(name: str) -> str:
@@ -1222,6 +1238,40 @@ def validate_cpp_integration_contract(cpp: str) -> list[str]:
         errors.append(
             "ci-cpp.yml integration job must not be disabled or made fail-open: "
             + ", ".join(controls)
+        )
+    source_package = named_step_section(
+        integration, "Verify FluentQt library source package"
+    )
+    inventory_match = re.search(
+        r"^          for source_file in \\\n(?P<entries>.*?); do\n",
+        source_package,
+        re.MULTILINE | re.DOTALL,
+    )
+    inventory = (
+        {
+            line.strip().rstrip("\\").strip()
+            for line in inventory_match.group("entries").splitlines()
+        }
+        if inventory_match else set()
+    )
+    for path in SOURCE_PACKAGE_CMAKE_ENTRIES:
+        if path not in inventory:
+            errors.append(
+                "ci-cpp.yml source-package inventory must require " + path
+            )
+    membership_gate = "\n".join((
+        'if ! grep -x "FluentQt-ci-source/$source_file" \\',
+        '<<< "$archive_entries" > /dev/null; then',
+        'echo "::error::Missing source-package file: $source_file"',
+        "exit 1",
+        "fi",
+    ))
+    source_script = "\n".join(
+        line.strip() for line in uncommented_workflow_lines(source_package)
+    )
+    if membership_gate not in source_script:
+        errors.append(
+            "ci-cpp.yml source-package inventory must fail on missing archive files"
         )
     return errors
 

@@ -1,6 +1,7 @@
 #include "platform/wasm/WasmSmokeRunner.h"
 
 #include "components/status_info/Toast.h"
+#include "components/status_info/ProgressBar.h"
 
 #include <FluentQt/WebAssembly.h>
 
@@ -11,12 +12,14 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QContextMenuEvent>
+#include <QCryptographicHash>
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QFont>
 #include <QFontDatabase>
 #include <QFontMetrics>
 #include <QJsonDocument>
+#include <QLabel>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QKeyEvent>
@@ -35,6 +38,9 @@
 #include <QTextLayout>
 #include <QVariantAnimation>
 #include <QUrlQuery>
+#include "view/pages/GalleryFoundationTopicPage.h"
+#include "view/widgets/GallerySampleCard.h"
+#include "view/widgets/GallerySampleCatalog.h"
 
 #include <cmath>
 
@@ -43,6 +49,13 @@
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 #include <QOpenGLWidget>
+#endif
+
+#if defined(FLUENT_QT_HAS_QML_BRIDGE) && defined(FLUENT_QT_HAS_SPATIAL)
+#include <FluentQt/QmlBridge.h>
+#include <QQmlEngine>
+#include <QQuickItem>
+#include <QQuickWidget>
 #endif
 
 #include <emscripten/emscripten.h>
@@ -60,8 +73,10 @@
 #include "components/layout/ParticleBackdrop.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/navigation/NavigationView.h"
+#include "components/navigation/SelectorBar.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/navigation/TabView.h"
+#include "components/scrolling/ScrollView.h"
 #include "components/textfields/LineEdit.h"
 #include "components/textfields/Label.h"
 #include "components/textfields/PasswordBox.h"
@@ -74,6 +89,7 @@
 #include "view/shell/GallerySpatialController.h"
 #include "view/shell/GalleryWindow.h"
 #include "view/widgets/GalleryCodeBlock.h"
+#include "view/widgets/GallerySampleCard.h"
 #include "viewmodel/GallerySettings.h"
 
 namespace fluent::gallery {
@@ -1061,6 +1077,186 @@ private:
 // Read-only geometry for physical browser input. Qt accessibility rectangles are
 // unprojected in 3D, so they cannot locate the visible source text on the canvas.
 // This URL-only probe neither expands the source nor changes focus/selection.
+class WasmQmlPlusProbe final : public QObject {
+public:
+    explicit WasmQmlPlusProbe(GalleryWindow* window) : QObject(window), m_window(window)
+    {
+        qApp->setProperty("fluentqtGalleryAutomated", true);
+        GallerySettings::instance().setSpatialModeEnabled(false);
+        window->selectRoute(QStringLiteral("foundation-qmlplus"));
+        m_clock.start();
+        m_tick.setInterval(50);
+        connect(&m_tick, &QTimer::timeout, this, [this] { tick(); });
+        m_tick.start();
+    }
+
+private:
+    static QJsonObject fingerprint(const QString& source)
+    {
+        const auto bytes = source.toUtf8();
+        return {
+            {"bytes", int(bytes.size())},
+            {"sha256", QString::fromLatin1(
+                           QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())}};
+    }
+
+    QList<GallerySampleCard*> cards(GalleryFoundationTopicPage* page)
+    {
+        QList<GallerySampleCard*> result;
+        for (auto* widget : page->findChildren<QWidget*>())
+            if (auto* sample = dynamic_cast<GallerySampleCard*>(widget))
+                result.append(sample);
+        return result;
+    }
+
+    GallerySampleCard* card(GalleryFoundationTopicPage* page, const QString& id)
+    {
+        for (auto* candidate : cards(page))
+            if (candidate->sampleId() == id)
+                return candidate;
+        return nullptr;
+    }
+
+    void tick()
+    {
+        auto* page = m_window
+                         ? qobject_cast<GalleryFoundationTopicPage*>(m_window->currentContentPage())
+                         : nullptr;
+        if (!page || !page->isVisible() ||
+            m_window->currentRouteId() != QStringLiteral("foundation-qmlplus")) {
+            if (m_clock.elapsed() > 60000)
+                publishSmokeState("fail", QStringLiteral("QMLPlus page did not load"));
+            return;
+        }
+        // clang-format off
+        const char* input = reinterpret_cast<const char*>(EM_ASM_PTR({
+            const value = document.documentElement.dataset.fluentQtQmlPlusCommand || '{}';
+            const size = lengthBytesUTF8(value) + 1;
+            const ptr = _malloc(size); stringToUTF8(value, ptr, size); return ptr;
+        }));
+        // clang-format on
+        const auto request = QJsonDocument::fromJson(QByteArray(input)).object();
+        free(const_cast<char*>(input));
+        const int sequence = request["sequence"].toInt();
+        if (sequence > m_sequence) {
+            m_sequence = sequence;
+            const auto action = request["action"].toString();
+            const auto target = request["target"].toString();
+            if (action == QStringLiteral("value")) {
+                auto* widget = page->findChild<QWidget*>(target);
+                const auto property = request["property"].toString().toUtf8();
+                if (!widget || !widget->setProperty(property, request["value"].toVariant()))
+                    m_failure =
+                        QStringLiteral("QMLPlus control/property is missing: %1").arg(target);
+            } else if (action == QStringLiteral("show-source")) {
+                m_selectedSource = target;
+                if (auto* sample = card(page, target)) {
+                    sample->codeBlock()->setExpanded(true, false);
+                    if (auto* scroll = page->findChild<QScrollArea*>())
+                        scroll->ensureWidgetVisible(sample->codeBlock(), 0, 20);
+                } else {
+                    m_failure = QStringLiteral("QMLPlus source card is missing: %1").arg(target);
+                }
+            } else if (action == QStringLiteral("finish")) {
+                m_finished = true;
+            }
+        }
+        QJsonObject sources;
+        for (auto* sample : cards(page)) {
+            auto* block = sample->codeBlock();
+            if (!block->hasPythonCode() || !block->languageSelector()) {
+                m_failure = QStringLiteral("QMLPlus card has no bilingual source: %1")
+                                .arg(sample->sampleId());
+                break;
+            }
+            sources[sample->sampleId()] = QJsonObject{{"cpp", fingerprint(block->cppCode())},
+                                                      {"python", fingerprint(block->pythonCode())}};
+        }
+        QJsonObject values;
+        QJsonObject rectangles;
+        for (auto* widget : page->findChildren<QWidget*>()) {
+            const auto name = widget->objectName();
+            if (!name.startsWith(QStringLiteral("qmlplus")))
+                continue;
+            QJsonObject properties;
+            for (const auto* property : {"value", "isOn", "text", "enabled"}) {
+                const auto value = widget->property(property);
+                if (value.isValid())
+                    properties[QString::fromLatin1(property)] = QJsonValue::fromVariant(value);
+            }
+            values[name] = properties;
+            rectangles[name] =
+                QJsonArray{widget->x(), widget->y(), widget->width(), widget->height()};
+        }
+        QJsonObject positions;
+        QString selectedLanguage;
+        QJsonObject selectedCode;
+        if (auto* sample = card(page, m_selectedSource)) {
+            auto* block = sample->codeBlock();
+            selectedLanguage = block->codeLanguage() == GalleryCodeLanguage::Python
+                                   ? QStringLiteral("python")
+                                   : QStringLiteral("cpp");
+            selectedCode = fingerprint(block->code());
+            for (const auto* language : {"Cpp", "Python"}) {
+                const QString name =
+                    QStringLiteral("galleryLanguage%1Button").arg(QString::fromLatin1(language));
+                if (auto* button = block->findChild<QWidget*>(name)) {
+                    QPoint point = button->mapToGlobal(button->rect().center());
+#ifdef FLUENT_QT_HAS_SPATIAL
+                    if (auto* controller = m_window->findChild<GallerySpatialController*>())
+                        point = m_window->mapToGlobal(
+                            controller->projectedPosition(button, button->rect().center()));
+#endif
+                    positions[QString::fromLatin1(language)] = QJsonArray{point.x(), point.y()};
+                }
+            }
+        }
+        if (positions != m_positions) {
+            m_positions = positions;
+            m_geometryClock.restart();
+        }
+        bool transitioning = false;
+#ifdef FLUENT_QT_HAS_SPATIAL
+        if (auto* controller = m_window->findChild<GallerySpatialController*>())
+            transitioning = controller->transitionRunning();
+#endif
+        const QJsonObject frame{
+            {"state", !m_failure.isEmpty() ? "fail"
+                      : m_finished         ? "pass"
+                                           : "observing"},
+            {"error", m_failure},
+            {"sequence", m_sequence},
+            {"ready", sources.size() == 12},
+            {"geometryStable", m_geometryClock.isValid() && m_geometryClock.elapsed() >= 150},
+            {"transitioning", transitioning},
+            {"sources", sources},
+            {"values", values},
+            {"rectangles", rectangles},
+            {"positions", positions},
+            {"language", selectedLanguage},
+            {"code", selectedCode}};
+        const auto output = QJsonDocument(frame).toJson(QJsonDocument::Compact);
+        // clang-format off
+        EM_ASM({ document.documentElement.dataset.fluentQtQmlPlus = UTF8ToString($0); }, output.constData());
+        // clang-format on
+        if (m_finished || !m_failure.isEmpty()) {
+            publishSmokeState(m_failure.isEmpty() ? "pass" : "fail", m_failure);
+            m_tick.stop();
+            deleteLater();
+        }
+    }
+
+    QPointer<GalleryWindow> m_window;
+    QTimer m_tick;
+    QElapsedTimer m_clock;
+    QElapsedTimer m_geometryClock;
+    QJsonObject m_positions;
+    int m_sequence = 0;
+    QString m_selectedSource = QStringLiteral("qmlplus-binding-one-way");
+    QString m_failure;
+    bool m_finished = false;
+};
+
 class WasmSourceInputProbe final : public QObject {
 public:
     explicit WasmSourceInputProbe(GalleryWindow* window)
@@ -1167,6 +1363,625 @@ private:
     QElapsedTimer m_clock;
     bool m_expanding = false;
 };
+
+#if defined(FLUENT_QT_HAS_QML_BRIDGE) && defined(FLUENT_QT_HAS_SPATIAL)
+// Explicit URL-only observation of the real Gallery page. Browser commands may
+// navigate or scroll; all preview/form/button input comes from the browser canvas.
+class WasmQmlBridgeProbe final : public QObject {
+public:
+    explicit WasmQmlBridgeProbe(GalleryWindow* window) : QObject(window), m_window(window)
+    {
+        qApp->setProperty("fluentqtGalleryAutomated", true);
+        auto& settings = GallerySettings::instance();
+        settings.setHomeParticlesEnabled(false);
+        settings.setMotionMode(MotionPolicy::Mode::Full);
+        settings.setNavigationStyle(GallerySettings::NavigationStyle::Auto);
+        settings.setSpatialModeEnabled(true);
+        window->selectRoute(QStringLiteral("button"));
+        publishSmokeState("running", QStringLiteral("Waiting for QmlBridge Gallery input"));
+        m_clock.start();
+        m_tick.setInterval(50);
+        connect(&m_tick, &QTimer::timeout, this, [this] { tick(); });
+        m_tick.start();
+    }
+
+private:
+    QJsonObject position(QWidget* widget, const QPoint& local) const
+    {
+        if (!widget)
+            return {};
+        const QPoint nativeGlobal = widget->mapToGlobal(local);
+        auto* controller = m_window->findChild<GallerySpatialController*>();
+        const QPoint global =
+            controller ? m_window->mapToGlobal(controller->projectedPosition(widget, local))
+                       : nativeGlobal;
+        QRect visible = globalWidgetRect(widget);
+        for (auto* parent = widget->parentWidget(); parent; parent = parent->parentWidget())
+            visible &= globalWidgetRect(parent);
+        return {{"point", QJsonArray{global.x(), global.y()}},
+                {"visible", widget->isVisible() && visible.contains(nativeGlobal)},
+                {"enabled", widget->isEnabled()}};
+    }
+
+    GalleryCodeBlock* actionSource(qmlbridge::QmlView* view) const
+    {
+        for (auto* parent = view ? view->parentWidget() : nullptr; parent;
+             parent = parent->parentWidget())
+            if (auto* card = dynamic_cast<GallerySampleCard*>(parent))
+                return card->codeBlock();
+        return nullptr;
+    }
+
+    static QJsonObject sourceFingerprint(const QString& source)
+    {
+        const auto bytes = source.toUtf8();
+        const int lines = source.isEmpty() ? 0
+                                           : int(source.count(QLatin1Char('\n'))) +
+                                                 (source.endsWith(QLatin1Char('\n')) ? 0 : 1);
+        return {
+            {"sha256", QString::fromLatin1(
+                           QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
+            {"lines", lines},
+            {"bytes", int(bytes.size())}};
+    }
+
+    void captureSourceContract(GalleryContentPage* page)
+    {
+        if (!m_sourceContract.isEmpty() && !m_sourceFileContract.isEmpty())
+            return;
+        const QStringList ids{
+            QStringLiteral("qml-view-load"),      QStringLiteral("qml-view-theme"),
+            QStringLiteral("qml-view-context"),   QStringLiteral("qml-view-action"),
+            QStringLiteral("qml-view-lifecycle"), QStringLiteral("qml-view-error")};
+        QJsonObject sources;
+        QJsonObject sourceFiles;
+        QJsonObject pythonFiles;
+        for (auto* widget : page->findChildren<QWidget*>()) {
+            auto* card = dynamic_cast<GallerySampleCard*>(widget);
+            if (!card)
+                continue;
+            const auto id = card->sampleId();
+            auto* block = card->codeBlock();
+            if (!ids.contains(id) || sources.contains(id) || !block ||
+                block->codeLanguage() != GalleryCodeLanguage::Cpp) {
+                m_failure = QStringLiteral("Cannot capture the default C++ source for QML card: %1")
+                                .arg(id);
+                return;
+            }
+            // Read the actual card's full source and its initially selected Key usage.
+            // zh_CN: 从真实卡片读取完整源码和初始选中的核心用法，避免另建源码副本。
+            sources[id] = QJsonObject{{"full", sourceFingerprint(block->cppCode())},
+                                      {"key", sourceFingerprint(block->code())}};
+            QJsonArray files;
+            for (const auto& file : block->sourceFileBundle()) {
+                files.append(QJsonObject{{"name", file.name},
+                                         {"language", file.language},
+                                         {"code", sourceFingerprint(file.code)},
+                                         {"usage", sourceFingerprint(file.usageSnippet)}});
+            }
+            sourceFiles[id] = files;
+            if (!block->hasPythonCode() || !block->languageSelector()) {
+                m_failure =
+                    QStringLiteral("QML card is missing its Python source selector: %1").arg(id);
+                return;
+            }
+            block->setCodeLanguage(GalleryCodeLanguage::Python);
+            QJsonArray python;
+            for (const auto& file : block->sourceFileBundle()) {
+                python.append(QJsonObject{{"name", file.name},
+                                          {"language", file.language},
+                                          {"code", sourceFingerprint(file.code)},
+                                          {"usage", sourceFingerprint(file.usageSnippet)}});
+            }
+            if (python.size() != 2 || python[0].toObject()["name"].toString() != "main.py") {
+                m_failure =
+                    QStringLiteral("QML card has an incomplete Python file bundle: %1").arg(id);
+                return;
+            }
+            pythonFiles[id] = python;
+            block->setCodeLanguage(GalleryCodeLanguage::Cpp);
+        }
+        if (sources.size() != ids.size()) {
+            m_failure = QStringLiteral("The QmlView page does not expose all six source cards");
+            return;
+        }
+        m_sourceContract = sources;
+        m_sourceFileContract = sourceFiles;
+        m_pythonSourceFileContract = pythonFiles;
+    }
+
+    QJsonObject viewState(qmlbridge::QmlView* view)
+    {
+        if (!view)
+            return {};
+        if (!m_readyCounts.contains(view)) {
+            m_readyCounts.insert(view, view->status() == qmlbridge::QmlView::Ready ? 1 : 0);
+            connect(view, &qmlbridge::QmlView::statusChanged, this,
+                    [this, view](qmlbridge::QmlView::Status status) {
+                        if (status == qmlbridge::QmlView::Ready)
+                            ++m_readyCounts[view];
+                    });
+            connect(view, &QObject::destroyed, this, [this, view] { m_readyCounts.remove(view); });
+        }
+        QJsonObject state{{"active", view->isActive()},
+                          {"ready", view->status() == qmlbridge::QmlView::Ready},
+                          {"readyCount", m_readyCounts.value(view)},
+                          {"status", int(view->status())},
+                          {"source", view->source().toString()},
+                          {"lastError", view->lastError()},
+                          {"rootPresent", view->rootObject() != nullptr},
+                          {"textureEnabled", view->isTextureRenderingEnabled()},
+                          {"textureId", double(view->textureId())},
+                          {"textureRevision", double(view->textureRevision())},
+                          {"quickWidgets", view->findChildren<QQuickWidget*>().size()}};
+        if (auto* root = view->rootObject()) {
+            state["rootIdentity"] = QString::number(quintptr(root), 16);
+            state["engineIdentity"] = QString::number(quintptr(qmlEngine(root)), 16);
+        }
+        return state;
+    }
+
+    QPoint advancePosition(qmlbridge::QmlView* view) const
+    {
+        auto* root = view ? view->rootObject() : nullptr;
+        auto* item =
+            root ? root->findChild<QQuickItem*>(QStringLiteral("qmlBridgeAdvanceButton")) : nullptr;
+        if (!item)
+            return QPoint(-1, -1);
+        return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint();
+    }
+
+    bool command(GalleryContentPage* page, qmlbridge::QmlView* view)
+    {
+        // clang-format off
+        const char* raw = emscripten_run_script_string(R"JS((() => {
+            const root = document.documentElement;
+            const command = root.dataset.fluentQtQmlGalleryCommand || '';
+            delete root.dataset.fluentQtQmlGalleryCommand;
+            return command;
+        })())JS");
+        // clang-format on
+        if (!raw || !*raw)
+            return true;
+        const QJsonObject request = QJsonDocument::fromJson(QByteArray(raw)).object();
+        const QString action = request["action"].toString();
+        m_commandSequence = request["sequence"].toInt();
+        if (action == QStringLiteral("open-qml") || action == QStringLiteral("return-qml")) {
+            if (!m_initial3d) {
+                m_failure = QStringLiteral("QML was requested before the Button page presented 3D");
+                return false;
+            }
+            if (!m_window->selectRoute(QStringLiteral("qml-view")))
+                m_failure = QStringLiteral("The QmlView Gallery route is missing");
+        } else if (action == QStringLiteral("leave-qml")) {
+            if (!m_window->selectRoute(QStringLiteral("button")))
+                m_failure = QStringLiteral("The Button Gallery route is missing");
+        } else if (action == QStringLiteral("source-language")) {
+            auto* source = actionSource(view);
+            if (!source || !source->hasPythonCode()) {
+                m_failure = QStringLiteral("Cannot select the Python QML host source");
+                return false;
+            }
+            source->setCodeLanguage(request["target"].toString() == QStringLiteral("python")
+                                        ? GalleryCodeLanguage::Python
+                                        : GalleryCodeLanguage::Cpp);
+        } else if (action == QStringLiteral("source-detail")) {
+            auto* source = actionSource(view);
+            auto* selector = source ? source->findChild<navigation::SelectorBar*>(
+                                          QStringLiteral("galleryCodeBlockSourceSelector"))
+                                    : nullptr;
+            if (!selector || selector->isHidden()) {
+                m_failure = QStringLiteral("Cannot select the host source detail");
+                return false;
+            }
+            selector->setSelectedIndex(request["target"].toString() == "full" ? 1 : 0);
+        } else if (action == QStringLiteral("source-file")) {
+            auto* source = actionSource(view);
+            auto* selector = source ? source->findChild<basicinput::ComboBox*>(
+                                          QStringLiteral("galleryCodeBlockFileSelector"))
+                                    : nullptr;
+            const QString filename = request["target"].toString();
+            const int index = selector ? selector->findText(filename) : -1;
+            if (!page || page->routeId() != QStringLiteral("qml-view") || index < 0) {
+                m_failure = QStringLiteral("Cannot select the QML source file: %1").arg(filename);
+                return false;
+            }
+            selector->setCurrentIndex(index);
+        } else if (action == QStringLiteral("reveal")) {
+            if (!page || page->routeId() != QStringLiteral("qml-view")) {
+                m_failure = QStringLiteral("Cannot scroll a QML control outside its page");
+                return false;
+            }
+            const QString target = request["target"].toString();
+            QWidget* widget = nullptr;
+            QPoint point;
+            if (target == QStringLiteral("advance")) {
+                widget = view;
+                point = advancePosition(view);
+            } else {
+                const QString name =
+                    target == QStringLiteral("title")        ? QStringLiteral("qmlBridgeTitleEdit")
+                    : target == QStringLiteral("deactivate") ? QStringLiteral("qmlBridgeDeactivate")
+                    : target == QStringLiteral("reload")     ? QStringLiteral("qmlBridgeReload")
+                    : target == QStringLiteral("missing") ? QStringLiteral("qmlBridgeLoadMissing")
+                    : target == QStringLiteral("restore") ? QStringLiteral("qmlBridgeRestore")
+                    : target == QStringLiteral("lifecycle")
+                        ? QStringLiteral("qmlBridgeLifecycleView")
+                        : QString();
+                if (target == QStringLiteral("source") ||
+                    target == QStringLiteral("sourcePython") ||
+                    target == QStringLiteral("sourceCpp")) {
+                    auto* source = actionSource(view);
+                    widget = source ? source->findChild<QWidget*>(
+                                          target == QStringLiteral("sourcePython")
+                                              ? QStringLiteral("galleryLanguagePythonButton")
+                                          : target == QStringLiteral("sourceCpp")
+                                              ? QStringLiteral("galleryLanguageCppButton")
+                                              : QStringLiteral("galleryCodeBlockHeader"))
+                                    : nullptr;
+                } else {
+                    widget = name.isEmpty() ? nullptr : page->findChild<QWidget*>(name);
+                }
+                if (widget)
+                    point = widget->rect().center();
+            }
+            auto* scroll = page->findChild<QScrollArea*>();
+            if (!widget || point.x() < 0 || point.y() < 0 || !scroll || !scroll->widget()) {
+                m_failure = QStringLiteral("Cannot locate the requested QML Gallery control: %1")
+                                .arg(target);
+                return false;
+            }
+            const QPoint inContent = widget->mapTo(scroll->widget(), point);
+            scroll->ensureVisible(inContent.x(), inContent.y(), 32, 72);
+        } else if (action == QStringLiteral("clip-advance")) {
+            auto* scroll = page ? page->findChild<scrolling::ScrollView*>() : nullptr;
+            if (!view || !scroll || !scroll->widget()) {
+                m_failure = QStringLiteral("Cannot clip the QML action without its scroll page");
+                return false;
+            }
+            if (auto* focused = QApplication::focusWidget())
+                focused->clearFocus();
+            auto* item = view->rootObject() ? view->rootObject()->findChild<QQuickItem*>(
+                                                  QStringLiteral("qmlBridgeAdvanceButton"))
+                                            : nullptr;
+            if (!item) {
+                m_failure = QStringLiteral("Cannot clip an unloaded QML action");
+                return false;
+            }
+            const QPoint local = advancePosition(view);
+            const QPoint accent = item->mapToScene(QPointF(8, item->height() / 2)).toPoint();
+            const int actionY = view->mapTo(scroll->widget(), local).y();
+            const int maximum = scroll->verticalScrollBar()->maximum();
+            const bool clipTop = actionY + 12 <= maximum;
+            const QRect appRect = globalWidgetRect(m_window);
+            bool placed = false;
+            for (int inset : {12, 4, 1}) {
+                const int requested =
+                    clipTop ? actionY + inset : actionY - scroll->viewport()->height() - inset;
+                if (requested < 0 || requested > maximum)
+                    continue;
+                scroll->scrollTo(scroll->horizontalScrollBar()->value(), requested, false);
+                const auto actionPoint = position(view, local);
+                const auto accentPoint = position(view, accent);
+                const auto inApp = [&appRect](const QJsonObject& observation) {
+                    const auto point = observation["point"].toArray();
+                    return point.size() == 2 &&
+                           appRect.contains(QPoint(point[0].toInt(), point[1].toInt()));
+                };
+                const QRect viewInViewport(view->mapTo(scroll->viewport(), QPoint()), view->size());
+                if (!actionPoint["visible"].toBool() && !accentPoint["visible"].toBool() &&
+                    inApp(actionPoint) && inApp(accentPoint) &&
+                    viewInViewport.intersects(scroll->viewport()->rect())) {
+                    placed = true;
+                    break;
+                }
+            }
+            if (!placed) {
+                m_failure =
+                    QStringLiteral("Cannot place a clipped QML action inside the Qt window");
+                return false;
+            }
+            m_geometryClock.restart();
+        } else if (action == QStringLiteral("mode-2d")) {
+            GallerySettings::instance().setSpatialModeEnabled(false);
+        } else if (action == QStringLiteral("mode-3d")) {
+            GallerySettings::instance().setSpatialModeEnabled(true);
+        } else if (action == QStringLiteral("finish")) {
+            m_finished = true;
+        } else {
+            m_failure = QStringLiteral("Unsupported QML Gallery probe command: %1").arg(action);
+        }
+        return m_failure.isEmpty();
+    }
+
+    void tick()
+    {
+        if (!m_window || m_clock.elapsed() > 90000) {
+            m_failure = QStringLiteral("QML Gallery browser input timed out or lost its window");
+        }
+        auto* page = m_window ? m_window->currentContentPage() : nullptr;
+        auto* view =
+            page ? page->findChild<qmlbridge::QmlView*>(QStringLiteral("qmlBridgeActionView"))
+                 : nullptr;
+        if (m_failure.isEmpty())
+            command(page, view);
+        // A route command may have changed the current page synchronously.
+        page = m_window ? m_window->currentContentPage() : nullptr;
+        view = page ? page->findChild<qmlbridge::QmlView*>(QStringLiteral("qmlBridgeActionView"))
+                    : nullptr;
+        auto* controller = m_window ? m_window->findChild<GallerySpatialController*>() : nullptr;
+        auto* surface = m_window ? m_window->findChild<QWidget*>("gallerySpatialSurface") : nullptr;
+        auto* navigationView =
+            m_window ? m_window->findChild<navigation::NavigationView*>() : nullptr;
+        const auto& settings = GallerySettings::instance();
+        if (!settings.spatialAvailabilityPending() && !settings.spatialAvailable() &&
+            !settings.spatialUnavailableReason().isEmpty()) {
+            m_failure = QStringLiteral("QML Gallery probe requires hardware 3D: %1")
+                            .arg(settings.spatialUnavailableReason());
+        }
+        const bool presenting =
+            surface && surface->isVisible() && surface->property("presenting").toBool();
+        const bool transitioning = controller && controller->transitionRunning();
+        const QVariantMap stats = controller ? controller->renderingStatistics() : QVariantMap();
+        if (page && page->routeId() == QStringLiteral("button") && presenting && !transitioning &&
+            settings.spatialModeEnabled() && !stats["directCompositionRequired"].toBool())
+            m_initial3d = true;
+        QJsonObject frame{
+            {"state", m_failure.isEmpty() ? (m_finished ? "pass" : "observing") : "fail"},
+            {"error", m_failure},
+            {"commandSequence", m_commandSequence},
+            {"initial3d", m_initial3d},
+            {"route", m_window ? m_window->currentRouteId() : QString()},
+            {"pageVisible", page && page->isVisible()},
+            {"spatialRequested", settings.spatialModeEnabled()},
+            {"spatialAvailable", settings.spatialAvailable()},
+            {"availabilityPending", settings.spatialAvailabilityPending()},
+            {"spatialUnavailableReason", settings.spatialUnavailableReason()},
+            {"presenting", presenting},
+            {"transitioning", transitioning},
+            {"directCompositionRequired", stats["directCompositionRequired"].toBool()},
+            {"navigationEffect", navigationView && navigationView->graphicsEffect()},
+            {"contentEffect", navigationView && navigationView->contentHost()->graphicsEffect()},
+            {"navigationMode", navigationView ? int(navigationView->effectiveDisplayMode()) : -1},
+            {"windowWidth", m_window ? m_window->width() : 0},
+            {"windowHeight", m_window ? m_window->height() : 0},
+            {"dpr", m_window ? m_window->devicePixelRatioF() : 0},
+            {"statistics", QJsonObject::fromVariantMap(stats)}};
+        int allQuickCount = 0;
+        int cachedReadyCount = 0;
+        if (m_window) {
+            allQuickCount = m_window->findChildren<QQuickWidget*>().size();
+            for (auto* cachedView : m_window->findChildren<qmlbridge::QmlView*>())
+                if (cachedView->status() == qmlbridge::QmlView::Ready &&
+                    (!page || !page->isAncestorOf(cachedView)))
+                    ++cachedReadyCount;
+        }
+        frame["allQuickWidgets"] = allQuickCount;
+        frame["cachedReadyViews"] = cachedReadyCount;
+        frame["quickWidgets"] = page ? page->findChildren<QQuickWidget*>().size() : 0;
+        int visibleQuickCount = 0;
+        if (page)
+            for (auto* quick : page->findChildren<QQuickWidget*>())
+                visibleQuickCount += quick->isVisible();
+        frame["visibleQuickWidgets"] = visibleQuickCount;
+        QJsonArray effects;
+        if (view) {
+            for (auto* ancestor = static_cast<QWidget*>(view); ancestor;
+                 ancestor = ancestor->parentWidget())
+                if (ancestor->graphicsEffect())
+                    effects.append(QString::fromLatin1(ancestor->metaObject()->className()) +
+                                   QLatin1Char(':') + ancestor->objectName());
+            frame["active"] = view->isActive();
+            frame["ready"] = view->status() == qmlbridge::QmlView::Ready;
+            frame["status"] = int(view->status());
+            frame["source"] = view->source().toString();
+            frame["rootPresent"] = view->rootObject() != nullptr;
+            frame["qmlErrors"] = QJsonArray::fromStringList(view->errors());
+            frame["viewDirectCompositionRequired"] =
+                view->property("fluentqtDirectCompositionRequired").toBool();
+            frame["themeDark"] = view->themeObject()->property("dark").toBool();
+            frame["textureEnabled"] = view->isTextureRenderingEnabled();
+            frame["textureId"] = double(view->textureId());
+            frame["textureRevision"] = double(view->textureRevision());
+            frame["textureSize"] =
+                QJsonArray{view->textureSize().width(), view->textureSize().height()};
+            frame["textureStatistics"] = QJsonObject::fromVariantMap(view->textureStatistics());
+            if (auto* root = view->rootObject()) {
+                frame["rootIdentity"] = QString::number(quintptr(root), 16);
+                frame["engineIdentity"] = QString::number(quintptr(qmlEngine(root)), 16);
+                frame["qmlTitle"] = root->property("previewTitle").toString();
+                frame["qmlProgress"] = root->property("previewProgress").toInt();
+                if (m_progressProbe < 0)
+                    m_progressProbe = (root->property("previewProgress").toInt() + 5) / 100.;
+            }
+        }
+        frame["ancestorEffects"] = effects;
+        if (page && page->routeId() == QStringLiteral("qml-view")) {
+            if (auto* source = actionSource(view)) {
+                auto* files = source->findChild<basicinput::ComboBox*>(
+                    QStringLiteral("galleryCodeBlockFileSelector"));
+                auto* modes = source->findChild<navigation::SelectorBar*>(
+                    QStringLiteral("galleryCodeBlockSourceSelector"));
+                frame["sourceSelection"] = QJsonObject{
+                    {"currentFileName", files ? files->currentText() : QString()},
+                    {"sourceLanguage", source->sourceLanguage()},
+                    {"codeFingerprint", sourceFingerprint(source->code())},
+                    {"sourceMode", !modes || modes->isHidden()   ? QStringLiteral("file")
+                                   : modes->selectedIndex() == 0 ? QStringLiteral("key")
+                                                                 : QStringLiteral("full")}};
+                auto* text = source->findChild<QLabel*>("galleryCodeBlockText");
+                auto* clip = source->findChild<QWidget*>("galleryCodeBlockContent");
+                auto* body = source->contentWidget();
+                frame["sourceContentFits"] =
+                    text && clip && body && text->height() >= text->heightForWidth(text->width()) &&
+                    clip->height() >= body->height();
+            }
+            auto* title = page->findChild<QLineEdit*>(QStringLiteral("qmlBridgeTitleEdit"));
+            auto* progress =
+                page->findChild<status_info::ProgressBar*>("qmlBridgeProgressIndicator");
+            frame["widgetTitle"] = title ? title->text() : QString();
+            frame["widgetProgress"] = progress ? progress->value() : -1;
+            auto* context =
+                page->findChild<qmlbridge::QmlView*>(QStringLiteral("qmlBridgeContextView"));
+            frame["qmlTitle"] = context && context->rootObject()
+                                    ? context->rootObject()->property("previewTitle").toString()
+                                    : QString();
+            QJsonObject states;
+            const auto names = {qMakePair("load", "qmlBridgeLoadView"),
+                                qMakePair("theme", "qmlBridgeThemeView"),
+                                qMakePair("context", "qmlBridgeContextView"),
+                                qMakePair("action", "qmlBridgeActionView"),
+                                qMakePair("lifecycle", "qmlBridgeLifecycleView"),
+                                qMakePair("error", "qmlBridgeErrorView")};
+            bool allReady = true;
+            for (const auto& name : names) {
+                const auto state = viewState(
+                    page->findChild<qmlbridge::QmlView*>(QString::fromLatin1(name.second)));
+                allReady &= state["ready"].toBool();
+                states[name.first] = state;
+            }
+            if (allReady)
+                captureSourceContract(page);
+            frame["views"] = states;
+            frame["pageDirectCompositionRequired"] =
+                page->property("fluentqtDirectCompositionRequired").toBool();
+            if (auto* source = actionSource(view))
+                frame["sourceExpanded"] = source->isExpanded();
+            QJsonObject positions;
+            if (view && view->rootObject()) {
+                positions["advance"] = position(view, advancePosition(view));
+                auto* action = view->rootObject()->findChild<QQuickItem*>(
+                    QStringLiteral("qmlBridgeAdvanceButton"));
+                if (action) {
+                    const QPoint sample =
+                        action->mapToScene(QPointF(8, action->height() / 2)).toPoint();
+                    positions["accentSample"] = position(view, sample);
+                    positions["backgroundSample"] =
+                        position(view, QPoint(view->width() - 24, sample.y()));
+                    const QColor accent = view->themeObject()->property("accent").value<QColor>();
+                    const QColor background =
+                        view->themeObject()->property("surface").value<QColor>();
+                    frame["accentRgb"] = QJsonArray{accent.red(), accent.green(), accent.blue()};
+                    frame["backgroundRgb"] =
+                        QJsonArray{background.red(), background.green(), background.blue()};
+                    for (auto* item : view->rootObject()->findChildren<QQuickItem*>()) {
+                        if (!qFuzzyCompare(item->height(), 6.) ||
+                            item->width() < view->width() * .7)
+                            continue;
+                        positions["progressSample"] = position(
+                            view, item->mapToScene(QPointF(item->width() * m_progressProbe, 3))
+                                      .toPoint());
+                        QColor progressColor =
+                            progress && progress->value() >= m_progressProbe * 100
+                                ? accent
+                                : view->themeObject()->property("border").value<QColor>();
+                        const qreal opacity = progressColor.alphaF();
+                        progressColor = QColor(qRound(progressColor.red() * opacity +
+                                                      background.red() * (1 - opacity)),
+                                               qRound(progressColor.green() * opacity +
+                                                      background.green() * (1 - opacity)),
+                                               qRound(progressColor.blue() * opacity +
+                                                      background.blue() * (1 - opacity)));
+                        frame["progressRgb"] = QJsonArray{
+                            progressColor.red(), progressColor.green(), progressColor.blue()};
+                        break;
+                    }
+                }
+            }
+            if (title)
+                positions["title"] = position(title, title->rect().center());
+            for (const auto& target : {qMakePair("deactivate", "qmlBridgeDeactivate"),
+                                       qMakePair("reload", "qmlBridgeReload"),
+                                       qMakePair("missing", "qmlBridgeLoadMissing"),
+                                       qMakePair("restore", "qmlBridgeRestore")}) {
+                if (auto* widget = page->findChild<QWidget*>(QString::fromLatin1(target.second)))
+                    positions[target.first] = position(widget, widget->rect().center());
+            }
+            if (auto* source = actionSource(view)) {
+                if (auto* header =
+                        source->findChild<QWidget*>(QStringLiteral("galleryCodeBlockHeader")))
+                    positions["source"] = position(header, header->rect().center());
+                for (const auto& language :
+                     {qMakePair("sourceCpp", "galleryLanguageCppButton"),
+                      qMakePair("sourcePython", "galleryLanguagePythonButton")}) {
+                    if (auto* button =
+                            source->findChild<QWidget*>(QString::fromLatin1(language.second)))
+                        positions[language.first] = position(button, button->rect().center());
+                }
+            }
+            if (auto* lifecycle =
+                    page->findChild<qmlbridge::QmlView*>(QStringLiteral("qmlBridgeLifecycleView")))
+                positions["lifecycle"] = position(lifecycle, lifecycle->rect().center());
+            if (auto* scroll = page->findChild<QScrollArea*>()) {
+                positions["scrollViewport"] =
+                    position(scroll->viewport(), QPoint(qMax(0, scroll->viewport()->width() - 8),
+                                                        scroll->viewport()->height() / 2));
+                frame["scrollValue"] = scroll->verticalScrollBar()->value();
+                frame["scrollMaximum"] = scroll->verticalScrollBar()->maximum();
+                if (view && scroll->widget()) {
+                    const QPoint origin = view->mapTo(scroll->widget(), QPoint());
+                    auto* source = actionSource(view);
+                    const QJsonArray geometry{origin.x(),
+                                              origin.y(),
+                                              view->width(),
+                                              view->height(),
+                                              scroll->viewport()->width(),
+                                              scroll->viewport()->height(),
+                                              scroll->widget()->width(),
+                                              scroll->widget()->height(),
+                                              scroll->verticalScrollBar()->value(),
+                                              scroll->verticalScrollBar()->maximum(),
+                                              source ? source->height() : 0,
+                                              source && source->isExpanded()};
+                    if (geometry != m_geometry) {
+                        m_geometry = geometry;
+                        m_geometryClock.restart();
+                    }
+                    bool sourceAnimating = false;
+                    if (source)
+                        for (auto* animation : source->findChildren<QVariantAnimation*>())
+                            sourceAnimating |= animation->state() == QAbstractAnimation::Running;
+                    frame["geometry"] = geometry;
+                    frame["geometryStable"] = !sourceAnimating && m_geometryClock.elapsed() >= 100;
+                }
+            }
+            frame["positions"] = positions;
+        }
+        frame["sourceContract"] = m_sourceContract;
+        frame["sourceFileContract"] = m_sourceFileContract;
+        frame["pythonSourceFileContract"] = m_pythonSourceFileContract;
+        if (!m_failure.isEmpty()) {
+            frame["state"] = QStringLiteral("fail");
+            frame["error"] = m_failure;
+        }
+        const auto json = QJsonDocument(frame).toJson(QJsonDocument::Compact);
+        // clang-format off
+        EM_ASM({ document.documentElement.dataset.fluentQtQmlGallery = UTF8ToString($0); },
+               json.constData());
+        // clang-format on
+        if (!m_failure.isEmpty() || m_finished) {
+            publishSmokeState(m_failure.isEmpty() ? "pass" : "fail", m_failure);
+            m_tick.stop();
+            deleteLater();
+        }
+    }
+
+    QPointer<GalleryWindow> m_window;
+    QTimer m_tick;
+    QElapsedTimer m_clock;
+    QElapsedTimer m_geometryClock;
+    QJsonArray m_geometry;
+    QJsonObject m_sourceContract;
+    QJsonObject m_sourceFileContract;
+    QJsonObject m_pythonSourceFileContract;
+    QHash<qmlbridge::QmlView*, int> m_readyCounts;
+    QString m_failure;
+    qreal m_progressProbe = -1;
+    int m_commandSequence = 0;
+    bool m_initial3d = false;
+    bool m_finished = false;
+};
+#endif
 
 } // namespace
 
@@ -1583,6 +2398,16 @@ private:
 void startWasmSmokeIfRequested(GalleryWindow* window)
 {
     const QString mode = smokeMode();
+    if (window && mode == QStringLiteral("qmlplus")) {
+        new WasmQmlPlusProbe(window);
+        return;
+    }
+#if defined(FLUENT_QT_HAS_QML_BRIDGE) && defined(FLUENT_QT_HAS_SPATIAL)
+    if (window && mode == QStringLiteral("qml-bridge")) {
+        new WasmQmlBridgeProbe(window);
+        return;
+    }
+#endif
     if (window && mode == QStringLiteral("source-input")) {
         new WasmSourceInputProbe(window);
         return;

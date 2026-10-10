@@ -143,6 +143,7 @@ bool Expander::setContentWidget(QWidget* widget, WidgetOwnership ownership)
     if (widget) {
         widget->setParent(m_clip);
         widget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        widget->installEventFilter(this);
         widget->show();
         m_contentDestroyedConnection =
             connect(widget, &QObject::destroyed, this, [this]() { handleContentDestroyed(); });
@@ -309,6 +310,35 @@ void Expander::onThemeUpdated()
         m_divider->onThemeUpdated();
 }
 
+bool Expander::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == m_contentWidget && event->type() == QEvent::LayoutRequest && m_expanded &&
+        !m_refreshingContentHeight) {
+        m_refreshingContentHeight = true;
+        QPointer<Expander> guard(this);
+        const int height = naturalContentHeight(false);
+        if (!guard)
+            return true;
+        if (height != m_contentTargetHeight) {
+            // A live content change needs the same layout/scroll transaction as
+            // expansion; otherwise a paint can expose the old enclosing card.
+            const bool ownsViewportTransition = !m_viewportTransitionActive;
+            if (ownsViewportTransition)
+                beginViewportTransition();
+            m_contentTargetHeight = height;
+            applyFraction(m_fraction);
+            if (!guard)
+                return true;
+            if (ownsViewportTransition)
+                finishViewportTransition();
+            if (!guard)
+                return true;
+        }
+        m_refreshingContentHeight = false;
+    }
+    return Card::eventFilter(watched, event);
+}
+
 void Expander::resizeEvent(QResizeEvent* event)
 {
     Card::resizeEvent(event);
@@ -322,7 +352,7 @@ void Expander::resizeEvent(QResizeEvent* event)
     updateChildGeometry();
 }
 
-int Expander::naturalContentHeight() const
+int Expander::naturalContentHeight(bool invalidateLayout) const
 {
     if (!m_contentWidget)
         return 0;
@@ -332,7 +362,8 @@ int Expander::naturalContentHeight() const
     content->ensurePolished();
     content->resize(availableWidth, qMax(content->height(), 1));
     if (QLayout* contentLayout = content->layout()) {
-        contentLayout->invalidate();
+        if (invalidateLayout)
+            contentLayout->invalidate();
         contentLayout->activate();
     }
 
@@ -393,6 +424,8 @@ void Expander::applyFraction(qreal fraction)
 void Expander::releaseContent(bool deleteOwned, bool restoreParent)
 {
     QWidget* content = m_contentWidget.data();
+    if (content)
+        content->removeEventFilter(this);
     QObject::disconnect(m_contentDestroyedConnection);
     m_contentDestroyedConnection = QMetaObject::Connection();
     if (!content) {

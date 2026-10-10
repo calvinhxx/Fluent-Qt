@@ -69,6 +69,7 @@ from PySide6.QtWidgets import (
 )
 
 from fluentqt_gallery.app import (
+    _prepare_qml_bridge_application,
     _normalize_snapshot_capture,
     _pending_gallery_network_requests,
     _reset_current_page_scroll,
@@ -84,6 +85,7 @@ from fluentqt_gallery.application_controller import (
     keep_running_choice,
 )
 from fluentqt_gallery.spatial_support import SPATIAL_AVAILABLE
+from fluentqt_gallery.qmlbridge_support import QML_BRIDGE_AVAILABLE
 
 from fluentqt_gallery.catalog import (
     CATEGORIES,
@@ -185,6 +187,7 @@ EXPECTED_SUPPORT_TYPES = frozenset(
     {
         "AnchorLayout",
         "AnchorSpec",
+        "BindingHandle",
         "AnnotatedScrollBarLabel",
         "BreadcrumbItem",
         "ChartData",
@@ -295,6 +298,9 @@ def _python_language_member_equivalents(module: ast.AST) -> set[str]:
     """
     equivalents = set()
     for node in ast.walk(module):
+        if (isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant)
+                and node.value.value == ""):
+            equivalents.add("clear")
         if isinstance(node, ast.Subscript):
             if isinstance(node.slice, ast.Constant) and node.slice.value == 0:
                 equivalents.add("first")
@@ -309,6 +315,9 @@ def _python_language_member_equivalents(module: ast.AST) -> set[str]:
             and not node.keywords
         ):
             equivalents.add("toLower")
+        elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+              and node.func.id == "bool" and len(node.args) == 1):
+            equivalents.add("toBool")
         elif isinstance(node, ast.Compare) and any(
             isinstance(operator, (ast.In, ast.NotIn)) for operator in node.ops
         ):
@@ -351,7 +360,8 @@ def _contract_sample_keys() -> frozenset[tuple[str, str]]:
     return frozenset(
         (component["id"], sample["id"])
         for component in CONTRACT["components"]
-        if SPATIAL_AVAILABLE or component["category_id"] != "spatial"
+        if (SPATIAL_AVAILABLE or component["category_id"] != "spatial")
+        and (QML_BRIDGE_AVAILABLE or component["category_id"] != "qml-bridge")
         for sample in component["samples"]
     )
 
@@ -425,6 +435,7 @@ class PythonGalleryTest(unittest.TestCase):
     def setUpClass(cls):
         global _TEST_APPLICATION
         _TEST_APPLICATION = QApplication.instance() or QApplication([])
+        _prepare_qml_bridge_application()
         cls.app = _TEST_APPLICATION
         cls.app.setProperty("fluentqtGalleryAutomated", True)
         if not fluentqt.initialize_resources():
@@ -445,11 +456,18 @@ class PythonGalleryTest(unittest.TestCase):
         self.assertEqual(catalog_coverage_errors(manifest["classes"]), [])
         self.assertEqual(runtime_catalog_errors(), [])
         components = [c for c in CONTRACT["components"]
-                      if SPATIAL_AVAILABLE or c["category_id"] != "spatial"]
-        routes = [r for r in CONTRACT["routes"]
-                  if SPATIAL_AVAILABLE or (r["id"] not in ("plugins", "spatial") and r["parent_id"] != "spatial")]
+                      if (SPATIAL_AVAILABLE or c["category_id"] != "spatial")
+                      and (QML_BRIDGE_AVAILABLE or c["category_id"] != "qml-bridge")]
         categories = [c for c in CONTRACT["categories"]
-                      if SPATIAL_AVAILABLE or c["id"] != "spatial"]
+                      if (SPATIAL_AVAILABLE or c["id"] != "spatial")
+                      and (QML_BRIDGE_AVAILABLE or c["id"] != "qml-bridge")]
+        hidden = {c["id"] for c in CONTRACT["categories"] if c not in categories}
+        if not any(c["plugin"] for c in categories):
+            hidden.add("plugins")
+        for route in CONTRACT["routes"]:
+            if route["parent_id"] in hidden:
+                hidden.add(route["id"])
+        routes = [r for r in CONTRACT["routes"] if r["id"] not in hidden]
         self.assertEqual([(entry.route_id, entry.name) for entry in ENTRIES],
                          [(c["id"], c["api_type"]) for c in components])
         self.assertEqual([route.id for route in ROUTES], [r["id"] for r in routes])
@@ -2850,6 +2868,12 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             )),
             set(),
         )
+        self.assertEqual(
+            _python_language_member_equivalents(ast.parse(
+                'self.error = ""\ndark = bool(theme.property("dark"))\n'
+            )),
+            {"clear", "toBool"},
+        )
 
     def test_preview_source_executes_and_displayed_source_stays_concise(self):
         app = QApplication.instance()
@@ -2861,6 +2885,20 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         for entry in ENTRIES:
             for sample in entry.samples:
                 with self.subTest(route=entry.route_id, sample=sample.id):
+                    # Bridge host code and its QML page are separate source files.
+                    # Compare the host API here; the focused bridge gate also
+                    # executes the complete file bundle and checks its QML bytes.
+                    cpp_source = sample.cpp_snippet
+                    cpp_api_source = cpp_source
+                    if entry.route_id == "qml-view":
+                        cpp_api_source = cpp_source.split("QWidget* makePanel(", 1)[1]
+                        cpp_api_source = cpp_api_source.split("\nint main(", 1)[0]
+                        # source.resolved(QUrl("Missing.qml")) and Python's
+                        # qml_source("Missing") both select the sibling file.
+                        # The bridge source gate executes both error paths.
+                        cpp_api_source = cpp_api_source.replace(
+                            'source.resolved(QUrl("Missing.qml"))', 'qml_source("Missing")'
+                        )
                     result = None
                     namespace: dict[str, object] = {
                         "__name__": "fluentqt_gallery_snippet"
@@ -2878,11 +2916,11 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         cpp_has_layout = bool(
                             re.search(
                                 r"\bQ(?:Form|Grid|HBox|Stacked|VBox)Layout\b",
-                                sample.cpp_snippet,
+                                cpp_source,
                             )
                         )
                         cpp_has_widget = bool(
-                            re.search(r"\bQWidget\b", sample.cpp_snippet)
+                            re.search(r"\bQWidget\b", cpp_source)
                         )
                         leaked_preview_scaffolding: set[str] = set()
                         for call in (
@@ -2902,7 +2940,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                                     r"(?:->|\.){0}\s*\(".format(
                                         re.escape(call_name)
                                     ),
-                                    sample.cpp_snippet,
+                                    cpp_source,
                                 )
                             ):
                                 leaked_preview_scaffolding.add(call_name)
@@ -2952,7 +2990,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                             for node in ast.walk(displayed_tree)
                         )
                         cpp_semantic_statements = max(
-                            1, sample.cpp_snippet.count(";")
+                            1, cpp_source.count(";")
                         )
                         self.assertLessEqual(
                             displayed_semantic_statements,
@@ -2971,7 +3009,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                             for node in displayed_tree.body
                             if isinstance(node, (ast.For, ast.AsyncFor))
                         ]
-                        if not re.search(r"\bfor\s*\(", sample.cpp_snippet):
+                        if not re.search(r"\bfor\s*\(", cpp_source):
                             self.assertEqual(
                                 top_level_loops,
                                 [],
@@ -3052,7 +3090,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                                     ),
                                 )
                         cpp_wrapped_calls = _cpp_wrapped_call_names(
-                            sample.cpp_snippet
+                            cpp_source
                         )
                         for statement in ast.walk(displayed_tree):
                             if not isinstance(
@@ -3105,7 +3143,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                             isinstance(node, ast.stmt)
                             for node in ast.walk(displayed_tree)
                         )
-                        cpp_line_count += len(sample.cpp_snippet.splitlines())
+                        cpp_line_count += len(cpp_source.splitlines())
                         maximum_displayed_lines = max(
                             maximum_displayed_lines, displayed_lines
                         )
@@ -3172,32 +3210,60 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                                 entry.route_id, sample.id
                             ),
                         )
-                        # Spatial displays a short integration excerpt and a separately
-                        # selectable Full example, like the C++ Gallery. Check the
-                        # full example for API and design-token parity.
+                        # Extension samples display a short integration excerpt and
+                        # a separately selectable Full example, like the C++ Gallery.
+                        # Check the full example for API and design-token parity.
                         contract_source = (result.preview_source
-                                           if entry.category_id == "spatial"
+                                           if entry.category_id in {"spatial", "qml-bridge"}
                                            else result.source)
+                        if entry.route_id == "qml-view":
+                            from fluentqt.qmlbridge import QmlView
+                            from fluentqt_gallery.native_samples_qmlbridge import (
+                                example_source_files, full_example_source,
+                            )
+                            contract_source = full_example_source(sample.id)
                         contract_tree = ast.parse(contract_source)
+                        if entry.route_id == "qml-view":
+                            files = example_source_files(sample.id)
+                            host = next(file for file in files if file["name"] == "main.py")
+                            qml = next(file for file in files if file["language"] == "qml")
+                            self.assertEqual(host["code"], contract_source)
+                            self.assertNotIn("import QtQuick", host["code"])
+                            self.assertNotIn("_QML", host["code"])
+                            self.assertFalse(any(
+                                isinstance(node, ast.Call)
+                                and isinstance(node.func, ast.Attribute)
+                                and node.func.attr == "write_text"
+                                for node in ast.walk(contract_tree)
+                            ), "The Python host must load its separate QML page")
+                            views = result.widget.findChildren(QmlView)
+                            if isinstance(result.widget, QmlView):
+                                views.insert(0, result.widget)
+                            self.assertEqual(len(views), 1)
+                            loaded_file = Path(views[0].source().toLocalFile())
+                            self.assertEqual(
+                                qml["code"].encode("utf-8"), loaded_file.read_bytes(),
+                                "The copyable QML must be the asset used by this preview",
+                            )
                         expected_design_tokens = {
                             "fluentqt.Typography.Icons.{0}".format(name)
                             for name in re.findall(
                                 r"Typography::Icons::([A-Za-z0-9_]+)",
-                                sample.cpp_snippet,
+                                cpp_source,
                             )
                         }
                         expected_design_tokens.update(
                             "fluentqt.Typography.IconSize.{0}".format(name)
                             for name in re.findall(
                                 r"Typography::IconSize::([A-Za-z0-9_]+)",
-                                sample.cpp_snippet,
+                                cpp_source,
                             )
                         )
                         expected_design_tokens.update(
                             "fluentqt.FontRole.{0}".format(name)
                             for name in re.findall(
                                 r"Typography::FontRole::([A-Za-z0-9_]+)",
-                                sample.cpp_snippet,
+                                cpp_source,
                             )
                         )
                         expected_design_tokens.update(
@@ -3207,7 +3273,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                             for name in re.findall(
                                 r"Spacing::((?:[A-Za-z0-9_]+::)*"
                                 r"[A-Za-z0-9_]+)",
-                                sample.cpp_snippet,
+                                cpp_source,
                             )
                         )
                         expected_design_tokens.update(
@@ -3216,7 +3282,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                             )
                             for name in re.findall(
                                 r"CornerRadius::([A-Za-z0-9_]+)",
-                                sample.cpp_snippet,
+                                cpp_source,
                             )
                         )
                         for design_token in expected_design_tokens:
@@ -3286,7 +3352,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         cpp_methods = set(
                             re.findall(
                                 r"(?:->|\.)([A-Za-z_][A-Za-z0-9_]*)\s*\(",
-                                sample.cpp_snippet,
+                                cpp_api_source,
                             )
                         )
                         python_members = {
@@ -3333,7 +3399,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                             re.findall(
                                 r"(?<![A-Za-z_:])(?:QObject::)?"
                                 r"connect\s*\(",
-                                sample.cpp_snippet,
+                                cpp_source,
                             )
                         )
                         python_connection_count = sum(
@@ -3353,7 +3419,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 
                         cpp_constructor_types = re.findall(
                             r"\bnew\s+([A-Z][A-Za-z0-9_]*)\b",
-                            sample.cpp_snippet,
+                            cpp_api_source,
                         )
                         for type_name in set(cpp_constructor_types):
                             if not hasattr(fluentqt, type_name):
@@ -3394,7 +3460,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         }
                         for raw_literal in re.findall(
                             r'"((?:\\.|[^"\\])*)"',
-                            sample.cpp_snippet,
+                            cpp_api_source,
                         ):
                             try:
                                 cpp_literal = ast.literal_eval(
@@ -3405,7 +3471,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                             if (
                                 not cpp_literal
                                 or len(cpp_literal) <= 1
-                                or cpp_literal.startswith(":/")
+                                or cpp_literal.startswith((":/", "qrc:/"))
                                 or cpp_literal.endswith(".h")
                                 or "%" in cpp_literal
                             ):
@@ -3720,7 +3786,11 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             )
             self.assertEqual(len(home._gallery_featured_grid.cards), 9)
             self.assertEqual(home._gallery_featured_grid.columns, 3)
-            self.assertEqual(len(home._gallery_category_grid.cards), len(CATEGORIES) + 1)
+            root_categories = sum(not category.plugin for category in CATEGORIES)
+            plugin_root = int(any(category.plugin for category in CATEGORIES))
+            self.assertEqual(
+                len(home._gallery_category_grid.cards), root_categories + plugin_root + 1
+            )
         finally:
             window.close()
             window.deleteLater()
@@ -4626,11 +4696,11 @@ with (
         try:
             pane = window._main_navigation_pane
             if not SPATIAL_AVAILABLE:
-                self.assertNotIn("plugins", pane._route_items)
-                self.assertNotIn("plugins", window._top_main_navigation_pane._buttons)
-                self.assertEqual(len(ROUTES), 107)
+                self.assertEqual("plugins" in pane._route_items, QML_BRIDGE_AVAILABLE)
+                self.assertEqual("plugins" in window._top_main_navigation_pane._buttons, QML_BRIDGE_AVAILABLE)
+                self.assertEqual(len(ROUTES), 107 + 2 * QML_BRIDGE_AVAILABLE)
                 return
-            self.assertEqual(len(ROUTES), 111)
+            self.assertEqual(len(ROUTES), 111 + 2 * QML_BRIDGE_AVAILABLE)
             self.assertTrue(CATEGORY_BY_ID["spatial"].plugin)
             plugins = pane._route_items["plugins"]
             spatial = pane._route_items["spatial"]
@@ -4661,7 +4731,8 @@ with (
             self.assertEqual(top._buttons["plugins"].text(), "Plugins")
 
             plugins_page = window._ensure_page("plugins")[1]
-            self.assertEqual([card._route_id for card in plugins_page._gallery_buttons], ["spatial"])
+            self.assertEqual([card._route_id for card in plugins_page._gallery_buttons],
+                             [category.id for category in CATEGORIES if category.plugin])
             headings = [label.text() for label in plugins_page.findChildren(fluentqt.Label)
                         if label.objectName() == "galleryContentSectionHeader"]
             self.assertEqual(headings, ["Plugin modules"])
@@ -4712,11 +4783,11 @@ with (
             QTest.mouseClick(anchor, Qt.LeftButton)
             self.assertTrue(_wait_until(lambda: top._child_flyout is not None))
             rows = top._child_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
-            self.assertEqual([row._route_id for row in rows], ["spatial"])
+            self.assertEqual([row._route_id for row in rows], [c.id for c in CATEGORIES if c.plugin])
             QTest.mouseClick(rows[0], Qt.LeftButton, pos=rows[0].rect().center())
             self.assertTrue(_wait_until(lambda: top._child_flyout_panel is not None
-                                       and len(top._child_flyout_panel.findChildren(
-                                           QWidget, options=Qt.FindDirectChildrenOnly)) == 2))
+                                       and [row._route_id for row in top._child_flyout_panel.findChildren(
+                                           QWidget, options=Qt.FindDirectChildrenOnly)] == ["spatial-view", "spatial-item"]))
             self.assertIs(top._child_flyout_anchor, anchor)
             rows = top._child_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
             self.assertEqual([row._route_id for row in rows], ["spatial-view", "spatial-item"])
@@ -4739,12 +4810,12 @@ with (
             pane._activate_index(pane._route_items["plugins"].index())
             self.assertTrue(_wait_until(lambda: pane._compact_flyout_panel is not None))
             rows = pane._compact_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
-            self.assertEqual([row._route_id for row in rows], ["spatial"])
+            self.assertEqual([row._route_id for row in rows], [c.id for c in CATEGORIES if c.plugin])
             anchor_geometry = pane._compact_flyout_anchor.geometry()
             QTest.mouseClick(rows[0], Qt.LeftButton, pos=rows[0].rect().center())
             self.assertTrue(_wait_until(lambda: pane._compact_flyout_panel is not None
-                                       and len(pane._compact_flyout_panel.findChildren(
-                                           QWidget, options=Qt.FindDirectChildrenOnly)) == 2))
+                                       and [row._route_id for row in pane._compact_flyout_panel.findChildren(
+                                           QWidget, options=Qt.FindDirectChildrenOnly)] == ["spatial-view", "spatial-item"]))
             self.assertEqual(pane._compact_flyout_anchor.geometry(), anchor_geometry)
             rows = pane._compact_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
             self.assertEqual([row._route_id for row in rows], ["spatial-view", "spatial-item"])
@@ -5195,7 +5266,7 @@ with (
         window.show()
         QApplication.processEvents()
         expected_sections = {
-            "foundation-qmlplus": ("Property binding", "States", "Anchors"),
+            "foundation-qmlplus": ("Bindings", "States", "Animation", "Anchors"),
             "foundation-typography": ("Type ramp", "Use semantic roles"),
             "foundation-color": (
                 "Text",
@@ -5236,7 +5307,8 @@ with (
                         page.findChildren(GalleryCodeBlock)
                     )
 
-            self.assertEqual(len(foundation_code_blocks), 5)
+            # Twelve atomic QMLPlus examples, plus Typography and Geometry.
+            self.assertEqual(len(foundation_code_blocks), 14)
             for block in foundation_code_blocks:
                 with self.subTest(code_block=block.objectName()):
                     source = block._code
@@ -5301,6 +5373,8 @@ with (
                             "__name__": "fluentqt_foundation_snippet",
                             "fluentqt": fluentqt,
                         }
+                        if block.property("galleryRouteId") == "foundation-qmlplus":
+                            namespace["panel"] = QWidget()
                         exec(compiled, namespace)
                         for widget in _take_top_level_widgets(namespace):
                             if shiboken6.isValid(widget):

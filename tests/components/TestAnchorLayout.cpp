@@ -11,6 +11,11 @@
 
 using namespace fluent;
 
+class QMLPlusAnchorWidget : public QWidget, public fluent::QMLPlus {
+public:
+    explicit QMLPlusAnchorWidget(QWidget* parent = nullptr) : QWidget(parent) {}
+};
+
 class AnchorLayoutTest : public ::testing::Test {
 protected:
     void SetUp() override
@@ -219,6 +224,92 @@ TEST_F(AnchorLayoutTest, Contract_DestroyedAnchorTargetIsSafelyIgnored)
     layout->setGeometry(window->rect());
 
     EXPECT_EQ(child->geometry(), QRect(0, 12, 50, 20));
+}
+
+TEST_F(AnchorLayoutTest, Contract_ManagedAnchorUpdateInvalidatesWithoutParentResize)
+{
+    auto* child = new QMLPlusAnchorWidget(window);
+    child->setFixedSize(80, 40);
+    AnchorLayout::Anchors initial;
+    initial.left = {window, AnchorLayout::Edge::Left, 12};
+    initial.top = {window, AnchorLayout::Edge::Top, 16};
+    child->setAnchors(initial);
+    layout->addWidget(child);
+    layout->setGeometry(window->rect());
+    ASSERT_EQ(child->geometry(), QRect(12, 16, 80, 40));
+    const QSize parentSize = window->size();
+
+    AnchorLayout::Anchors trailing;
+    trailing.right = {window, AnchorLayout::Edge::Right, -11};
+    trailing.bottom = {window, AnchorLayout::Edge::Bottom, -13};
+    child->setAnchors(trailing);
+    layout->activate();
+
+    EXPECT_EQ(window->size(), parentSize);
+    EXPECT_EQ(child->geometry(), QRect(509, 547, 80, 40));
+    child->resetAnchors();
+    layout->activate();
+    EXPECT_EQ(child->geometry(), QRect(0, 0, 80, 40));
+}
+
+TEST_F(AnchorLayoutTest, Contract_StateAnchorChangesReplaceAndRestoreCompleteAnchorSet)
+{
+    auto* child = new QMLPlusAnchorWidget(window);
+    child->setFixedSize(80, 40);
+    AnchorLayout::Anchors initial;
+    initial.left = {window, AnchorLayout::Edge::Left, 12};
+    initial.top = {window, AnchorLayout::Edge::Top, 16};
+    initial.fillMargins = QMargins(1, 2, 3, 4);
+    child->setAnchors(initial);
+    layout->addWidget(child);
+    layout->setGeometry(window->rect());
+    const QRect originalGeometry = child->geometry();
+
+    AnchorLayout::Anchors compact;
+    compact.horizontalCenter = {window, AnchorLayout::Edge::HCenter, 0};
+    compact.bottom = {window, AnchorLayout::Edge::Bottom, -20};
+    QMLState state;
+    state.name = QStringLiteral("compact");
+    state.anchorChanges = {{child, compact}};
+    child->addState(state);
+
+    for (int i = 0; i < 3; ++i) {
+        SCOPED_TRACE(i);
+        child->setState(QStringLiteral("compact"));
+        layout->activate();
+        EXPECT_EQ(child->geometry(), QRect(260, 540, 80, 40));
+        EXPECT_TRUE(child->anchors()->left.target.isNull());
+        child->setState(QString());
+        layout->activate();
+        EXPECT_EQ(child->geometry(), originalGeometry);
+        EXPECT_EQ(child->anchors()->left.target.data(), window);
+        EXPECT_EQ(child->anchors()->left.offset, 12);
+        EXPECT_EQ(child->anchors()->top.offset, 16);
+        EXPECT_TRUE(child->anchors()->horizontalCenter.target.isNull());
+        EXPECT_EQ(child->anchors()->fillMargins, initial.fillMargins);
+    }
+}
+
+TEST_F(AnchorLayoutTest, Contract_StateAnchorRestoreSurvivesDestroyedTarget)
+{
+    QMLPlusAnchorWidget controller;
+    auto* child = new QMLPlusAnchorWidget(window);
+    child->setFixedSize(80, 40);
+    layout->addWidget(child);
+    AnchorLayout::Anchors compact;
+    compact.left = {window, AnchorLayout::Edge::Left, 30};
+    QMLState state;
+    state.name = QStringLiteral("compact");
+    state.anchorChanges = {{child, compact}};
+    controller.addState(state);
+    controller.setState(QStringLiteral("compact"));
+    delete child;
+
+    controller.setState(QString());
+    layout->activate();
+
+    EXPECT_TRUE(controller.state().isEmpty());
+    EXPECT_EQ(layout->count(), 0);
 }
 
 TEST_F(AnchorLayoutTest, FullScenarioVisualCheck)

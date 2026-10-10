@@ -26,6 +26,10 @@ using CodeSourceMap = QVector<CodeSourceSpan>;
  */
 QString highlightCppToHtml(const QString& code, bool darkTheme, CodeSourceMap* sourceMap = nullptr);
 
+/** @brief Highlights a QML file without treating it as a host-language string.
+ * zh_CN: 对独立 QML 文件进行高亮，不将其视为宿主语言字符串。 */
+QString highlightQmlToHtml(const QString& code, bool darkTheme, CodeSourceMap* sourceMap = nullptr);
+
 /**
  * @brief Renders a Python snippet with the same light/dark token palette.
  * zh_CN: 使用同一套明暗 token 配色渲染 Python 片段。

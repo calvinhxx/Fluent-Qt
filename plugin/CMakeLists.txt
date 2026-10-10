@@ -1,0 +1,11 @@
+fluent_qt_add_plugins_library()
+
+if(FLUENT_QT_BUILD_SPATIAL)
+    add_subdirectory(Spatial)
+endif()
+if(FLUENT_QT_BUILD_QML_BRIDGE)
+    add_subdirectory(QmlBridge)
+endif()
+if(FLUENT_QT_BUILD_EXAMPLES)
+    add_subdirectory(plugin_extension "${PROJECT_BINARY_DIR}/examples/plugin_extension")
+endif()
