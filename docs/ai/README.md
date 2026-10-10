@@ -51,6 +51,12 @@ ownership, event loop, cancellation, or persistence behavior.
 
 ## Inspect the result
 
+For a running development preview, use the
+[preview session and MCP workflow](../development/gallery-preview-workflow.md#operate-a-running-preview).
+It lets an AI client inspect the real widget tree, capture screenshots, click,
+type, and stage exposed data/state values. Python previews update on save;
+C++ `--watch` rebuilds and restarts after successful compilation.
+
 Use the [Inspector contract](../architecture/inspector-report.md) for commands
 and diagnostic rules. The Skill's
 [completion workflow](../../.agents/skills/build-fluentqt-gui/SKILL.md#validate-and-finish)

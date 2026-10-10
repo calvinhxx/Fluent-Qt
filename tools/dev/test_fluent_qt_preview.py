@@ -7,6 +7,8 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+import contextlib
+import io
 
 
 SCRIPT = Path(__file__).with_name("fluent_qt_preview.py")
@@ -18,6 +20,18 @@ SPEC.loader.exec_module(MODULE)
 
 
 class FluentQtPreviewToolTest(unittest.TestCase):
+    def test_watch_timing_has_bounded_defaults_and_overrides(self):
+        defaults = MODULE.parse_args(["--route", "button", "--watch"])
+        self.assertEqual(defaults.watch_interval, 1.0)
+        self.assertEqual(defaults.ready_timeout, 60.0)
+        custom = MODULE.parse_args(["--route", "button", "--watch", "--watch-interval", "0.5", "--ready-timeout", "120"])
+        self.assertEqual((custom.watch_interval, custom.ready_timeout), (0.5, 120.0))
+        for option, value in (("--watch-interval", "0"), ("--watch-interval", "nan"),
+                              ("--ready-timeout", "0"), ("--ready-timeout", "inf")):
+            with self.subTest(option=option, value=value), contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit):
+                    MODULE.parse_args(["--route", "button", "--watch", option, value])
+
     def test_default_presets_follow_host_architecture(self):
         self.assertEqual(MODULE.default_preset("Darwin", "arm64"), "vcpkg-osx")
         self.assertEqual(

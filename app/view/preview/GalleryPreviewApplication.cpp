@@ -3,6 +3,7 @@
 #include "components/foundation/ThemeRegistry.h"
 #include "components/scrolling/ScrollView.h"
 #include "view/preview/GalleryPreviewActions.h"
+#include "view/preview/GalleryPreviewSession.h"
 #include "view/widgets/GallerySampleCard.h"
 #include "view/widgets/GallerySampleCatalog.h"
 
@@ -105,6 +106,10 @@ void configurePreviewParser(QCommandLineParser& parser)
     parser.addOption(QCommandLineOption(
         QStringLiteral("keep-open"),
         QStringLiteral("Keep the preview open after writing requested artifacts.")));
+    parser.addOption(QCommandLineOption(
+        QStringLiteral("session-dir"),
+        QStringLiteral("Enable a local development command session in this directory."),
+        QStringLiteral("path")));
 }
 
 bool parseViewportSize(const QString& text, QSize& size)
@@ -489,6 +494,7 @@ GalleryPreviewParseResult parseGalleryPreviewArguments(const QStringList& argume
     result.options.snapshotPath = parser.value(QStringLiteral("snapshot")).trimmed();
     result.options.reportPath = parser.value(QStringLiteral("report")).trimmed();
     result.options.keepOpen = parser.isSet(QStringLiteral("keep-open"));
+    result.options.sessionDirectory = parser.value(QStringLiteral("session-dir")).trimmed();
     return result;
 }
 
@@ -673,6 +679,25 @@ int runGalleryPreviewApplication(QApplication& app, const GalleryPreviewOptions&
 
     GalleryPreviewWindow window(options, selection.sample);
     window.show();
+    std::unique_ptr<GalleryPreviewSession> session;
+    if (!options.sessionDirectory.isEmpty()) {
+        session = std::make_unique<GalleryPreviewSession>(&window, [&]() {
+            QString path;
+            QString error;
+            const QString requested =
+                QDir(options.sessionDirectory).filePath(QStringLiteral("capture.png"));
+            if (!writeSnapshot(&window, requested, path, error))
+                return QByteArray();
+            QFile png(path);
+            return png.open(QIODevice::ReadOnly) ? png.readAll() : QByteArray();
+        });
+        QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QString error;
+        if (!session->start(options.sessionDirectory, error)) {
+            writeStandardError(error);
+            return 7;
+        }
+    }
 
     const bool hasArtifacts = !options.snapshotPath.isEmpty() || !options.reportPath.isEmpty() ||
                               !options.actionsPath.isEmpty();
@@ -708,7 +733,7 @@ int runGalleryPreviewApplication(QApplication& app, const GalleryPreviewOptions&
                 }
             }
 
-            if (!options.keepOpen)
+            if (!options.keepOpen && options.sessionDirectory.isEmpty())
                 app.exit(artifactExitCode);
         });
     }

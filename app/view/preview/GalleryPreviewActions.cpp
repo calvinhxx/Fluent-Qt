@@ -9,12 +9,14 @@
 #include <QJsonParseError>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QPointer>
 #include <QTimer>
 #include <QVariant>
 #include <QVector>
 #include <QWidget>
 
 #include "compatibility/QtCompat.h"
+#include "compatibility/FontCompat.h"
 
 namespace fluent::gallery {
 namespace {
@@ -179,6 +181,7 @@ void processUi(int milliseconds = 0)
 {
     QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
     QApplication::processEvents(QEventLoop::AllEvents, 50);
+    QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     if (milliseconds <= 0)
         return;
     QEventLoop loop;
@@ -186,6 +189,7 @@ void processUi(int milliseconds = 0)
     loop.exec();
     QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
     QApplication::processEvents(QEventLoop::AllEvents, 50);
+    QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
 }
 
 QPoint localPosition(QWidget* target, const QJsonObject& step, QString& error)
@@ -289,6 +293,7 @@ QJsonObject observation(QWidget* target, QWidget* root, const QJsonObject& expec
 
 bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism, QString& error)
 {
+    QPointer<QWidget> targetGuard(target);
     const QString action = step.value(QStringLiteral("action")).toString().trimmed().toLower();
     QString modifierError;
     const Qt::KeyboardModifiers modifiers =
@@ -346,6 +351,10 @@ bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism,
         mechanism = QStringLiteral("input-event");
         QKeyEvent press(QEvent::KeyPress, key, modifiers, text);
         QApplication::sendEvent(target, &press);
+        if (!targetGuard) {
+            error = QStringLiteral("Target was removed by the input event.");
+            return false;
+        }
         QKeyEvent release(QEvent::KeyRelease, key, modifiers, text);
         QApplication::sendEvent(target, &release);
         return true;
@@ -357,10 +366,17 @@ bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism,
             return false;
         }
         mechanism = QStringLiteral("input-event");
-        for (const QChar character : text) {
-            QKeyEvent press(QEvent::KeyPress, 0, modifiers, QString(character));
+        for (const auto codePoint : text.toUcs4()) {
+            const QString character = fluentCodepointGlyph(codePoint);
+            if (!targetGuard) {
+                error = QStringLiteral("Target was removed while typing.");
+                return false;
+            }
+            QKeyEvent press(QEvent::KeyPress, 0, modifiers, character);
             QApplication::sendEvent(target, &press);
-            QKeyEvent release(QEvent::KeyRelease, 0, modifiers, QString(character));
+            if (!targetGuard)
+                return false;
+            QKeyEvent release(QEvent::KeyRelease, 0, modifiers, character);
             QApplication::sendEvent(target, &release);
         }
         return true;
@@ -386,6 +402,10 @@ bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism,
     if (action == QStringLiteral("mouse_move")) {
         QEvent enter(QEvent::Enter);
         QApplication::sendEvent(target, &enter);
+        if (!targetGuard) {
+            error = QStringLiteral("Target was removed while entering the control.");
+            return false;
+        }
         sendMouse(target, QEvent::MouseMove, position, Qt::NoButton, Qt::NoButton, modifiers);
         return true;
     }
@@ -400,6 +420,10 @@ bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism,
     if (action == QStringLiteral("click")) {
         sendMouse(target, QEvent::MouseButtonPress, position, button, button, modifiers);
         processUi();
+        if (!targetGuard) {
+            error = QStringLiteral("Target was removed during the click.");
+            return false;
+        }
         sendMouse(target, QEvent::MouseButtonRelease, position, button, Qt::NoButton, modifiers);
         return true;
     }
@@ -436,9 +460,11 @@ QJsonObject galleryPreviewActionsNotRequested()
             {QStringLiteral("steps"), QJsonArray{}}};
 }
 
-GalleryPreviewActionResult executeGalleryPreviewActions(QWidget* root, const QJsonObject& script,
-                                                        const QString& sourcePath)
+GalleryPreviewActionResult
+executeGalleryPreviewActions(QWidget* root, const QJsonObject& script, const QString& sourcePath,
+                             const std::function<QWidget*(const QString&)>& resolver)
 {
+    QPointer<QWidget> rootGuard(root);
     if (!root)
         return {failedReport(sourcePath, QStringLiteral("Preview root is missing.")), false};
     if (script.value(QStringLiteral("schema_version")).toInt(-1) != kActionScriptSchemaVersion) {
@@ -460,6 +486,10 @@ GalleryPreviewActionResult executeGalleryPreviewActions(QWidget* root, const QJs
     int passed = 0;
     int failed = 0;
     for (int index = 0; index < steps.size(); ++index) {
+        if (!rootGuard) {
+            ++failed;
+            break;
+        }
         const QJsonValue stepValue = steps.at(index);
         QJsonObject result{{QStringLiteral("index"), index}};
         if (!stepValue.isObject()) {
@@ -514,7 +544,11 @@ GalleryPreviewActionResult executeGalleryPreviewActions(QWidget* root, const QJs
         TargetResolution target;
         if (action == QStringLiteral("wait") && selector.isEmpty())
             target = {root, QString()};
-        else
+        else if (resolver) {
+            target.widget = resolver(selector);
+            if (!target.widget || (target.widget != root && !root->isAncestorOf(target.widget)))
+                target.error = QStringLiteral("Unknown or stale target.");
+        } else
             target = resolveTarget(root, selector, allowFocused);
         const QString descendantClass =
             step.value(QStringLiteral("descendant_class")).toString().trimmed();
@@ -547,14 +581,21 @@ GalleryPreviewActionResult executeGalleryPreviewActions(QWidget* root, const QJs
 
         QString mechanism;
         QString actionError;
+        QPointer<QWidget> targetGuard(target.widget);
         bool actionPassed = performAction(target.widget, step, mechanism, actionError);
         processUi(afterValue.isUndefined() ? 0 : afterMilliseconds);
 
         const QJsonObject expectations = step.value(QStringLiteral("expect")).toObject();
         QStringList expectationErrors;
-        const QJsonObject observed =
-            observation(target.widget, root, expectations,
-                        step.value(QStringLiteral("observe")).toArray(), expectationErrors);
+        QJsonObject observed;
+        if (rootGuard && targetGuard) {
+            observed =
+                observation(targetGuard, rootGuard, expectations,
+                            step.value(QStringLiteral("observe")).toArray(), expectationErrors);
+        } else {
+            expectationErrors.append(
+                QStringLiteral("Target or preview was removed by the action."));
+        }
         if (!expectationErrors.isEmpty())
             actionPassed = false;
 
