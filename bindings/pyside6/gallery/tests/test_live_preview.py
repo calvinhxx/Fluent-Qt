@@ -29,6 +29,8 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 LIVE_HOST = (
     Path(__file__).resolve().parents[4] / "tools" / "dev" / "fluent_qt_live_host.py"
 )
+sys.path.insert(0, str(LIVE_HOST.parent))
+from fluent_qt_preview_session import PythonPreviewSession  # noqa: E402
 SPEC = importlib.util.spec_from_file_location("fluent_qt_live_host", LIVE_HOST)
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -116,6 +118,194 @@ class LivePreviewTest(unittest.TestCase):
         window.close()
         window.deleteLater()
         flush_deferred_deletes()
+
+    def test_session_operates_live_widgets_and_invalidates_ids_after_reload(self):
+        with TemporaryDirectory() as temporary:
+            scene = Path(temporary) / "session.preview.py"
+            scene.write_text(scene_source("Session"), encoding="utf-8")
+            window = LivePreviewWindow(scene, watch=False)
+            window.show()
+            self.assertTrue(window.reload_scene())
+            session = PythonPreviewSession(window, Path(temporary) / "session")
+            try:
+                nodes = session.execute("inspect")["nodes"]
+                note = next(n for n in nodes if n["object_name"] == "stateNote")
+                session.execute("action", {"target": note["id"], "action": "type_text", "text": "User note"})
+                self.assertEqual(session.resolve("stateNote").text(), "User note")
+                session.execute("action", {"target": note["id"], "action": "key", "key": "space"})
+                session.execute("action", {"target": note["id"], "action": "type_text", "text": "你好 👋"})
+                self.assertEqual(session.resolve("stateNote").text(), "User note 你好 👋")
+                session.resolve("stateNote").setText("User note")
+                session.execute("action", {"target": "stateToggle", "action": "click"})
+                self.assertTrue(session.resolve("stateToggle").isOn())
+                session.execute("set_data", {"target": "stateNote", "property": "text", "value": "Temporary"})
+                self.assertEqual(session.execute("reset_data")["restored"], 1)
+                self.assertEqual(session.resolve("stateNote").text(), "User note")
+                with self.assertRaises(ValueError):
+                    session.execute("set_data", {"target": "stateNote", "property": "width", "value": 50})
+                old_session = session.session_id
+                scene.write_text("def build(:\n", encoding="utf-8")
+                self.assertFalse(window.reload_scene())
+                self.assertEqual(session.session_id, old_session)
+                scene.write_text(scene_source("Changed"), encoding="utf-8")
+                self.assertTrue(window.reload_scene())
+                self.assertNotEqual(session.session_id, old_session)
+                with self.assertRaises(ValueError):
+                    session.resolve(note["id"])
+                self.assertEqual(session.resolve("stateNote").text(), "User note")
+                self.assertEqual(session.execute("screenshot")["mime_type"], "image/png")
+            finally:
+                session.close()
+                self.close_window(window)
+
+    def test_session_replies_to_file_commands_and_redacts_password(self):
+        import json
+        from fluent_qt_preview_client import write_json
+        from PySide6.QtWidgets import QLineEdit
+
+        with TemporaryDirectory() as temporary:
+            scene = Path(temporary) / "session.preview.py"
+            scene.write_text(scene_source("Session"), encoding="utf-8")
+            window = LivePreviewWindow(scene, watch=False)
+            window.show()
+            self.assertTrue(window.reload_scene())
+            directory = Path(temporary) / "session"
+            session = PythonPreviewSession(window, directory)
+            try:
+                editor = session.resolve("stateNote")
+                editor.setEchoMode(QLineEdit.EchoMode.Password)
+                editor.setText("private")
+                write_json(directory / "requests" / "probe.json", {
+                    "id": "probe", "session_id": session.session_id,
+                    "method": "inspect", "parameters": {},
+                })
+                response = directory / "responses" / "probe.json"
+                self.assertTrue(wait_until(response.exists))
+                result = json.loads(response.read_text(encoding="utf-8"))["result"]
+                note = next(n for n in result["nodes"] if n["object_name"] == "stateNote")
+                self.assertNotIn("text", note["data"])
+            finally:
+                session.close()
+                self.close_window(window)
+
+    def test_reset_keeps_failed_originals_and_retries_them(self):
+        from PySide6.QtWidgets import QLineEdit
+
+        with TemporaryDirectory() as temporary:
+            scene = Path(temporary) / "reset.preview.py"
+            scene.write_text(scene_source("Reset", default_note="original"), encoding="utf-8")
+            window = LivePreviewWindow(scene, watch=False)
+            window.show()
+            self.assertTrue(window.reload_scene())
+            session = PythonPreviewSession(window, Path(temporary) / "session")
+            try:
+                editor = session.resolve("stateNote")
+                session.execute("set_data", {"target": "stateNote", "property": "text", "value": "temporary"})
+                session.execute("set_data", {"target": "stateNote", "property": "placeholderText", "value": "hint"})
+                editor.setEchoMode(QLineEdit.EchoMode.Password)
+                result = session.execute("reset_data")
+                self.assertIn("error", result)
+                self.assertEqual((result["restored"], result["failed"], result["pending"]), (1, 1, 1))
+                self.assertEqual(editor.text(), "temporary")
+                self.assertEqual(editor.placeholderText(), "")
+                editor.setEchoMode(QLineEdit.EchoMode.Normal)
+                result = session.execute("reset_data")
+                self.assertNotIn("error", result)
+                self.assertEqual(result["restored"], 1)
+                self.assertEqual(result["pending"], 0)
+                self.assertEqual(editor.text(), "original")
+                self.assertEqual(session.execute("reset_data")["restored"], 0)
+            finally:
+                session.close()
+                self.close_window(window)
+
+    def test_reset_checks_actual_values_after_setter_clamping(self):
+        with TemporaryDirectory() as temporary:
+            scene = Path(temporary) / "clamp.preview.py"
+            scene.write_text(scene_source("Clamp"), encoding="utf-8")
+            window = LivePreviewWindow(scene, watch=False)
+            window.show()
+            self.assertTrue(window.reload_scene())
+            progress = fluentqt.ProgressBar(window.scene_widget)
+            progress.setObjectName("progress")
+            progress.setValue(80)
+            session = PythonPreviewSession(window, Path(temporary) / "session")
+            try:
+                session.execute("set_data", {"target": "progress", "property": "value", "value": 20})
+                progress.setMaximum(50)
+                result = session.execute("reset_data")
+                self.assertIn("error", result)
+                self.assertEqual(result["pending"], 1)
+                self.assertEqual(result["restored"], 0)
+                progress.setMaximum(100)
+                self.assertEqual(session.execute("reset_data")["restored"], 1)
+                self.assertEqual(progress.value(), 80)
+            finally:
+                session.close()
+                self.close_window(window)
+
+    def test_removed_targets_make_click_key_and_text_fail(self):
+        for action in ("click", "key", "type_text"):
+            with self.subTest(action=action), TemporaryDirectory() as temporary:
+                scene = Path(temporary) / "removal.preview.py"
+                scene.write_text(scene_source("Removal"), encoding="utf-8")
+                window = LivePreviewWindow(scene, watch=False)
+                window.show()
+                self.assertTrue(window.reload_scene())
+                session = PythonPreviewSession(window, Path(temporary) / "session")
+                try:
+                    clicked = []
+                    if action == "click":
+                        target = fluentqt.Button("Remove", window.scene_widget)
+                        target.setObjectName("target")
+                        target.pressed.connect(target.deleteLater)
+                        target.clicked.connect(lambda: clicked.append(True))
+                        window.scene_widget.layout().addWidget(target)
+                        target.show()
+                    else:
+                        target = session.resolve("stateNote")
+                        target.setObjectName("target")
+                        target.textChanged.connect(target.deleteLater)
+                    QApplication.processEvents()
+                    with self.assertRaisesRegex(RuntimeError, "removed"):
+                        session.execute("action", {"target": "target", "action": action,
+                                                   "key": "x", "text": "x"})
+                    self.assertFalse(shiboken6.isValid(target))
+                    self.assertEqual(clicked, [])
+                finally:
+                    session.close()
+                    self.close_window(window)
+
+    def test_source_helpers_use_the_selected_generated_contract(self):
+        import json
+        import subprocess
+        from fluent_qt_live_preview import PySideRuntime, runtime_environment
+
+        package_root = Path(fluentqt.__file__).resolve().parent.parent
+        runtime = PySideRuntime(package_root.parent, Path(sys.executable), package_root)
+        environment = runtime_environment(runtime)
+        probe = """
+import json, fluentqt
+fluentqt.prepare_high_dpi_application()
+from PySide6.QtWidgets import QApplication
+app = QApplication([])
+from fluentqt_gallery import catalog, foundation_pages
+print(json.dumps({'helper': foundation_pages.__file__, 'catalog': catalog.__file__,
+                  'schema': catalog.CONTRACT['schema_version']}))
+"""
+        result = subprocess.run([sys.executable, "-c", probe], env=environment,
+                                capture_output=True, text=True, timeout=20)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        source = LIVE_HOST.parents[2] / "bindings/pyside6/gallery/src/fluentqt_gallery"
+        self.assertEqual(Path(report["helper"]).parent, source)
+        self.assertEqual(Path(report["catalog"]).parent, source)
+        self.assertEqual(report["schema"], 1)
+        environment["FLUENTQT_LIVE_PREVIEW_CONTRACT"] = str(package_root / "missing-contract.json")
+        invalid = subprocess.run([sys.executable, "-c", probe], env=environment,
+                                 capture_output=True, text=True, timeout=20)
+        self.assertNotEqual(invalid.returncode, 0)
+        self.assertIn("missing-contract.json", invalid.stderr)
 
     def test_reload_keeps_window_and_restores_only_interaction_delta(self):
         with TemporaryDirectory() as temporary:

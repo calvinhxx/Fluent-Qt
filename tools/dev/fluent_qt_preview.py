@@ -77,6 +77,14 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--keep-open", action="store_true", help="Keep a one-shot preview open."
     )
+    parser.add_argument("--session-dir", type=Path, help="Enable local preview commands and MCP access.")
+    parser.add_argument("--watch", action="store_true", help="Rebuild and restart the preview after source saves.")
+    parser.add_argument("--watch-path", action="append", type=Path, default=[],
+                        help="Watch this file/directory instead of the default source trees; repeatable.")
+    parser.add_argument("--watch-interval", type=float, default=1.0,
+                        help="Seconds between source scans in watch mode (0.2–60; default: 1).")
+    parser.add_argument("--ready-timeout", type=float, default=60.0,
+                        help="Seconds allowed for each watched preview startup (1–600; default: 60).")
 
     parser.add_argument("--preset", help="CMake build preset.")
     parser.add_argument(
@@ -92,8 +100,16 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
 
     if not 0 <= args.settle_ms <= 10000:
         parser.error("--settle-ms must be between 0 and 10000")
+    if not 0.2 <= args.watch_interval <= 60:
+        parser.error("--watch-interval must be between 0.2 and 60 seconds")
+    if not 1 <= args.ready_timeout <= 600:
+        parser.error("--ready-timeout must be between 1 and 600 seconds")
     if args.preset is None and args.build_dir is None:
         args.preset = default_preset()
+    if args.watch_path and not args.watch:
+        parser.error("--watch-path requires --watch")
+    if args.watch and args.session_dir is None:
+        args.session_dir = inferred_build_directory(args) / "preview" / (args.route + ".session")
     return args
 
 
@@ -189,6 +205,8 @@ def preview_arguments(args: argparse.Namespace) -> list[str]:
         command.extend(["--report", report])
     if args.keep_open:
         command.append("--keep-open")
+    if args.session_dir is not None:
+        command.extend(["--session-dir", str(args.session_dir.expanduser().resolve())])
     return command
 
 
@@ -216,6 +234,19 @@ def run_once(args: argparse.Namespace) -> int:
 def main(argv: Iterable[str] | None = None) -> int:
     args = parse_args(argv)
     try:
+        if args.watch:
+            from fluent_qt_preview_watch import run_watch
+
+            if not build_gallery(args):
+                return 1
+            return run_watch(
+                [str(selected_executable(args)), *preview_arguments(args)],
+                build_command(args), args.session_dir,
+                args.watch_path or [PROJECT_ROOT / name for name in
+                    ("app", "src", "include", "cmake", "plugin", "uilib", "CMakeLists.txt")],
+                PROJECT_ROOT,
+                poll_interval=args.watch_interval, ready_timeout=args.ready_timeout,
+            )
         return run_once(args)
     except (FileNotFoundError, RuntimeError, ValueError) as error:
         print(f"fluent_qt_preview: {error}", file=sys.stderr)

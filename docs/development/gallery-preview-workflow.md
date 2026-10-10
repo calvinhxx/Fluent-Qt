@@ -13,6 +13,41 @@ one process and window alive and replaces only the scene widget after a
 successful save. Use Native Verify when the result has been moved into C++ and
 must be checked against the compiled Gallery sample.
 
+| Capability | Entry point | Current scope |
+|---|---|---|
+| Inspect, screenshot, click, and type into the running UI | `--session-dir` plus the preview client or MCP adapter | C++ Gallery preview and Python Live Scene |
+| Update the preview after saving code | C++ `--watch`; Python file watching is enabled by default | C++ incremental build and process restart; Python scene replacement in the same window |
+| Change preview data without rebuilding | `set-data` / `preview_set_data` | Exposed scalar text, values, selection, and control state |
+
+## Watch the three capabilities together
+
+Run the guided settings-page demonstration:
+
+```bash
+python3 tools/dev/fluent_qt_settings_demo.py
+```
+
+Use `--build-dir` and `--python` if runtime discovery does not select the desired
+PySide6 build. The demo opens a real Qt settings window and drives the stdio MCP
+adapter. It reads controls, types a workspace name, switches the theme, and
+checks that disabling notifications disables their dependent controls. It then
+saves a sidebar-width change, verifies that the same process and typed name
+survive the reload, and stages long text and read-only states without editing
+source. Finally, it resets the staged data and leaves the window open.
+
+The editable scene, screenshots, MCP call log, and assertions are written under
+`build/preview/settings-demo/`. When `ffmpeg` is available, captured frames from
+that window become `settings-demo.mp4`. Choose another `--output` directory to
+run a second instance. The checked-in scene template is
+`tools/dev/scenes/settings_page.preview.py`; layout edits during replay affect
+only the generated copy. The sample keeps preferences in memory and displays
+test notifications in its own window; it does not integrate workspace or update
+services.
+
+`--content-only` on the Live Scene launcher hides the development toolbar and
+file path for presentation. File watching, the reload shortcut, error feedback,
+Inspector reports, and the optional command session remain available.
+
 Catalog-backed `--route` / `--sample` commands require a built PySide6 Gallery
 contract. Configure the selected bindings build with
 `FLUENT_QT_BUILD_PYSIDE6_GALLERY=ON`; see the
@@ -82,6 +117,134 @@ python3 tools/dev/fluent_qt_live_preview.py --scene path/to/example.preview.py
 
 Scenes execute with the launcher's filesystem and network permissions. This is
 a repository development tool, not a sandbox.
+
+## Operate a running preview
+
+Start a C++ preview with a persistent local session:
+
+```bash
+python3 tools/dev/fluent_qt_preview.py \
+  --route toggle-switch --sample toggle-switch-scale \
+  --session-dir build/preview/session --watch
+```
+
+Leave that command running. In another terminal, inspect the real controls,
+switch the toggle off without compiling, then click it and capture the result:
+
+```bash
+python3 tools/dev/fluent_qt_preview_client.py \
+  --session-dir build/preview/session inspect
+python3 tools/dev/fluent_qt_preview_client.py \
+  --session-dir build/preview/session set-data \
+  --target scaledToggleSwitch --property isOn --value false
+python3 tools/dev/fluent_qt_preview_client.py \
+  --session-dir build/preview/session action \
+  --target scaledToggleSwitch --action click
+python3 tools/dev/fluent_qt_preview_client.py \
+  --session-dir build/preview/session screenshot --output build/preview/current.png
+```
+
+`data` lists editable fields. `reset-data` restores the values staged with
+`set-data`; it does not undo clicks, application callbacks, or external effects.
+The response reports `restored`, `failed`, `pending`, and per-field `errors`.
+Restoration is checked against the actual values after all setters have run.
+Failed values on surviving targets remain available for a later retry; successful
+values are removed from the buffer. A partial failure is an error to CLI/MCP
+clients. Destroyed controls expire with their IDs and cannot be restored.
+Targets may be a unique `objectName`, an `id` returned by `inspect`, or `@root`.
+Anonymous controls also receive IDs. Inspect again after a C++ restart or a
+Python scene reload: old IDs are rejected. Duplicate names are rejected too.
+
+The property list covers text and placeholder text, checked/on states, numeric
+values, selected indices, visibility, enabled/read-only states, and indeterminate
+progress. Each field reports its Qt type and enum choices when available. Values
+go through the real widget setters and their signals; source files are not
+rewritten. Password text is omitted from editable data. Application table/list
+models and arbitrary business objects are not exposed by this first version.
+
+For Python, add the same flag to the existing Live Scene launcher:
+
+```bash
+python3 tools/dev/fluent_qt_live_preview.py \
+  --route button --sample button-styles --fork-scene \
+  --session-dir build/preview/python-session
+```
+
+Point the client at `build/preview/python-session`. Imported Gallery helpers use
+the checkout's Python source. The launcher separately supplies the selected
+build's generated `contract.json` through the child-only
+`FLUENTQT_LIVE_PREVIEW_CONTRACT` environment variable. Packaged Gallery keeps its
+colocated contract by default. An invalid explicit contract path fails rather
+than falling back to another build.
+
+Restart the preview after editing an imported helper; no rebuild is required for
+that Python edit. Automatic reload watches the selected scene file, not imported
+modules. Catalog export still uses the selected built sample snapshot, and an
+existing fork keeps its own copied source. If discovery selects a different
+build, pass `--build-dir` and, if needed, its matching `--python` interpreter.
+
+### Connect an AI client through MCP
+
+Start the preview first. Configure a stdio MCP server in the AI client with
+these fields, substituting absolute paths for this checkout and session:
+
+```json
+{
+  "command": "python3",
+  "args": [
+    "/absolute/Fluent-QT/tools/dev/fluent_qt_preview_mcp.py",
+    "--session-dir",
+    "/absolute/Fluent-QT/build/preview/session"
+  ]
+}
+```
+
+The adapter exposes `preview_inspect`, `preview_screenshot`, `preview_click`,
+`preview_type_text`, `preview_key`, `preview_set_data`, and `preview_reset_data`.
+For example, ask the connected AI client: "Inspect the preview, turn the switch
+off, click it once, then show a screenshot." Screenshots are MCP image content;
+tool failures report errors rather than claiming the operation succeeded.
+Both hosts reject an interaction if its target disappears, including deferred
+deletion while processing input. No release event is sent after a click's press
+has deleted its target.
+
+The transport is newline-delimited JSON-RPC over stdio using the
+[MCP transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)
+and [tool contracts](https://modelcontextprotocol.io/specification/2025-11-25/server/tools).
+The adapter attaches to the selected session; it does not launch the UI or change
+the AI client's configuration. Local request/response files connect it to the
+GUI thread. One host owns each session directory. Enable sessions only for
+trusted development previews, using a directory private to your user account.
+
+### Refresh C++ after saving
+
+`--watch` monitors the Gallery/library source trees and invokes the adaptive
+incremental build. A failed build leaves the old preview running. A successful
+build restarts the child preview and restores changed scalar values on controls
+whose unique `objectName` and class still match. Anonymous controls, focus,
+scroll position, application models, and external effects are not restored by
+the C++ watcher. Python retains its existing named-control state restoration.
+
+Use repeatable `--watch-path path/to/file-or-directory` arguments to narrow
+the watched files. The watcher scans once per second by default, using directory
+entry metadata and skipping `.git`, `__pycache__`, `node_modules`, and
+`CMakeFiles`. Atomic replacements are detected even when size and modification
+time are preserved. Set `--watch-interval 0.5` for a shorter interval; the valid
+range is 0.2–60 seconds. Scanning frequency is separate from build-process polling.
+
+Each startup allows 60 seconds by default; `--ready-timeout 120` extends that
+limit (valid range: 1–600 seconds). Readiness must belong to the launched process,
+and an early process exit is reported immediately. A directory lock permits one
+watcher per session. The host's own lock rejects an already running preview;
+a slow command reply is not interpreted as an available directory.
+
+With `--no-build`, only the initial build is skipped;
+subsequent saves still build. Build progress stays in the terminal, and
+`watch.json` in the session directory records `ready`, `building`,
+`build_failed`, or `stopped`. Closing the preview or interrupting the watcher
+stops its owned child processes. Startup failure or timeout stops the new child;
+restart failures retain an error in the watcher report. The previous process
+has already exited at this point, so startup failure does not restore it.
 
 ## Capture evidence
 
@@ -160,6 +323,14 @@ digest-bound independent review, use the
 [AI-assisted GUI verification workflow](gui-verification-workflow.md).
 
 ## Boundary
+
+Sessions are currently repository preview tools. They are not an installed
+runtime debugging API for arbitrary downstream applications, and the file-based
+session transport is not available in WebAssembly. The public Inspector API
+remains read-only. Injected Qt events demonstrate tool behavior; they do not
+establish native OS input, IME, accessibility, or cross-platform visual approval.
+The C++ screenshot path includes its existing OpenGL-child composition; Python
+uses `QWidget.grab()`. Cross-host screenshot parity for 3D content is not claimed.
 
 The Python scene is an authoring aid, not a second production implementation.
 C++ components and Gallery samples remain canonical. After Native Verify, run

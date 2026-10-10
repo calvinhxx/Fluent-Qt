@@ -89,6 +89,8 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--rtl", action="store_true")
     parser.add_argument("--no-watch", action="store_true")
     parser.add_argument("--snapshot", type=Path)
+    parser.add_argument("--session-dir", type=Path, help="Enable local preview commands and MCP access.")
+    parser.add_argument("--content-only", action="store_true", help="Show the scene without development chrome.")
     parser.add_argument("--report", type=Path)
     parser.add_argument("--settle-ms", type=int, default=220)
     parser.add_argument("--keep-open", action="store_true")
@@ -460,6 +462,10 @@ def host_arguments(args: argparse.Namespace) -> list[str]:
         command.extend(["--report", str(args.report.expanduser().resolve())])
     if args.keep_open:
         command.append("--keep-open")
+    if args.session_dir is not None:
+        command.extend(["--session-dir", str(args.session_dir.expanduser().resolve())])
+    if args.content_only:
+        command.append("--content-only")
     return command
 
 
@@ -471,6 +477,8 @@ def runtime_environment(
     source_first: bool = True,
 ) -> dict[str, str]:
     environment = dict(os.environ if base is None else base)
+    # Read Python helpers from the checkout and generated data from the selected
+    # build. This override is scoped to the child development-preview process.
     source_path = str(source_package_root.resolve())
     built_path = str(runtime.python_path)
     python_paths = (
@@ -481,6 +489,12 @@ def runtime_environment(
         python_paths.append(existing)
     environment["PYTHONPATH"] = os.pathsep.join(python_paths)
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    if source_first:
+        environment["FLUENTQT_LIVE_PREVIEW_CONTRACT"] = str(
+            runtime.python_path / "fluentqt_gallery" / "contract.json"
+        )
+    else:
+        environment.pop("FLUENTQT_LIVE_PREVIEW_CONTRACT", None)
     return environment
 
 

@@ -111,6 +111,8 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
         help="Disable file polling; the Reload button remains available.",
     )
     parser.add_argument("--snapshot", type=Path)
+    parser.add_argument("--session-dir", type=Path, help="Enable local preview commands and MCP access.")
+    parser.add_argument("--content-only", action="store_true", help="Show the scene without development chrome.")
     parser.add_argument(
         "--report",
         type=Path,
@@ -337,11 +339,13 @@ class LivePreviewWindow(fluentqt.Window):
         window_size: tuple[int, int] = (920, 680),
         rtl: bool = False,
         report_path: Path | None = None,
+        content_only: bool = False,
     ) -> None:
         super().__init__()
         self._scene_path = Path(scene_path).expanduser().resolve()
         self._watch_enabled = bool(watch)
         self._report_path = report_path
+        self._content_only = content_only
         self._scene_widget: QWidget | None = None
         self._scene_defaults = WidgetSnapshot(values={})
         self._generation = 0
@@ -471,6 +475,14 @@ class LivePreviewWindow(fluentqt.Window):
         stack.setStackingMode(stacking_mode.StackOne)
         scene_scroll.setContentWidget(scene_host)
         root.addWidget(scene_scroll, 1)
+
+        if self._content_only:
+            root.setContentsMargins(0, 0, 0, 0)
+            root.setSpacing(0)
+            for widget in (heading, status, reload_button, theme_button, path_label):
+                widget.hide()
+            header.setContentsMargins(0, 0, 0, 0)
+            scene_scroll.setFrameShape(QAbstractScrollArea.Shape.NoFrame)
 
         self.setContentWidget(page)
         self._status_label = status
@@ -768,8 +780,19 @@ def main(argv: Iterable[str] | None = None) -> int:
         window_size=args.size,
         rtl=args.rtl,
         report_path=args.report,
+        content_only=args.content_only,
     )
     initial_finished = False
+    session = None
+    if args.session_dir is not None:
+        from fluent_qt_preview_session import PythonPreviewSession
+
+        try:
+            session = PythonPreviewSession(window, args.session_dir)
+        except (OSError, RuntimeError) as error:
+            print("[live-scene] " + str(error), file=sys.stderr)
+            return 2
+        app.aboutToQuit.connect(session.close)
 
     def finish_initial_attempt(success: bool, _generation: int) -> None:
         nonlocal initial_finished
@@ -781,7 +804,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             artifacts_ok = True
             if args.snapshot is not None:
                 artifacts_ok = window.save_snapshot(args.snapshot)
-            if args.snapshot is not None and not args.keep_open:
+            if args.snapshot is not None and not args.keep_open and session is None:
                 app.exit(0 if success and artifacts_ok else 2)
 
         QTimer.singleShot(args.settle_ms, settle_artifacts)

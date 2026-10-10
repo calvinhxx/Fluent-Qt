@@ -3,6 +3,7 @@
 
 #include <QJsonObject>
 #include <QString>
+#include <functional>
 
 class QWidget;
 
@@ -13,8 +14,10 @@ struct GalleryPreviewActionResult {
     bool passed = false;
 };
 
-GalleryPreviewActionResult executeGalleryPreviewActions(QWidget* root, const QJsonObject& script,
-                                                        const QString& sourcePath = QString());
+GalleryPreviewActionResult
+executeGalleryPreviewActions(QWidget* root, const QJsonObject& script,
+                             const QString& sourcePath = QString(),
+                             const std::function<QWidget*(const QString&)>& resolver = {});
 
 GalleryPreviewActionResult runGalleryPreviewActions(QWidget* root, const QString& path);
 
