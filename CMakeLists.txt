@@ -18,6 +18,7 @@ include(cmake/FluentQtTargetOptions.cmake)
 
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     set(FLUENT_QT_IS_TOP_LEVEL ON)
+    set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 else()
     set(FLUENT_QT_IS_TOP_LEVEL OFF)
 endif()
@@ -27,6 +28,7 @@ option(FLUENT_QT_BUILD_TESTS "Build Fluent-Qt test targets" OFF)
 option(FLUENT_QT_BUILD_GALLERY "Build the Fluent-Qt Gallery application" OFF)
 option(FLUENT_QT_BUILD_SPATIAL "Build the optional Spatial module (requires Qt OpenGL support)" OFF)
 option(FLUENT_QT_BUILD_PLUGINS "Build the optional plugin interfaces and lifecycle manager" OFF)
+option(FLUENT_QT_BUILD_QML_BRIDGE "Build the optional QML host plugin (requires Qt QuickWidgets)" OFF)
 option(FLUENT_QT_BUILD_EXAMPLES "Build Fluent-Qt executable examples" ${FLUENT_QT_IS_TOP_LEVEL})
 option(FLUENT_QT_BUILD_PYSIDE6_BINDINGS "Build the optional PySide6 bindings" OFF)
 option(FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT "Build the optional WebAssembly adapter targets" OFF)
@@ -62,6 +64,9 @@ list(SORT SRC)
 set(FLUENT_QT_SPATIAL_SOURCES ${SRC})
 list(FILTER FLUENT_QT_SPATIAL_SOURCES INCLUDE REGEX "/components/spatial/")
 list(FILTER SRC EXCLUDE REGEX "/components/spatial/")
+set(FLUENT_QT_QML_BRIDGE_SOURCES ${SRC})
+list(FILTER FLUENT_QT_QML_BRIDGE_SOURCES INCLUDE REGEX "/components/qmlbridge/")
+list(FILTER SRC EXCLUDE REGEX "/components/qmlbridge/")
 set(FLUENT_QT_PLUGIN_SOURCES ${SRC})
 list(FILTER FLUENT_QT_PLUGIN_SOURCES INCLUDE REGEX "/components/foundation/plugins/")
 list(FILTER SRC EXCLUDE REGEX "/components/foundation/plugins/")
@@ -76,48 +81,31 @@ configure_file(
     "${CMAKE_CURRENT_BINARY_DIR}/generated/resources.qrc"
     @ONLY)
 set(RESOURCES ${CMAKE_CURRENT_BINARY_DIR}/generated/resources.qrc)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src FILES ${SRC})
-
-add_library(FluentQt STATIC ${SRC} ${RESOURCES})
-add_library(FluentQt::FluentQt ALIAS FluentQt)
-# Backward-compatible build-tree alias for existing local tests and examples.
-add_library(fluent_qt_lib ALIAS FluentQt)
-fluent_qt_configure_cpp_target(FluentQt)
-fluent_qt_enable_project_warnings(FluentQt)
-fluent_qt_enable_sanitizers(FluentQt)
-target_link_libraries(FluentQt
-    PUBLIC
-    Qt${QT_VERSION_MAJOR}::Widgets
-)
 if(APPLE)
     include(cmake/FluentQtApplePlatformDependencies.cmake)
-    target_link_libraries(FluentQt PUBLIC FluentQt::ApplePlatformDependencies)
 endif()
-target_include_directories(FluentQt
-    PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/FluentQt>
-)
-set_target_properties(FluentQt PROPERTIES
-    EXPORT_NAME FluentQt
-    OUTPUT_NAME FluentQt
-)
 
-if(FLUENT_QT_BUILD_SPATIAL)
-    # Spatial is a concrete plugin and always includes its lifecycle dependency.
+if(FLUENT_QT_BUILD_SPATIAL OR FLUENT_QT_BUILD_QML_BRIDGE)
     set(FLUENT_QT_BUILD_PLUGINS ON)
 endif()
-if(FLUENT_QT_BUILD_PLUGINS)
-    include(cmake/FluentQtPlugins.cmake)
-endif()
+include(cmake/FluentQtPlugins.cmake)
+include(cmake/FluentQtSpatial.cmake)
+include(cmake/FluentQtQmlBridge.cmake)
+# Imported Qt targets must be visible to sibling app, bindings, and tests.
 if(FLUENT_QT_BUILD_SPATIAL)
-    include(cmake/FluentQtSpatial.cmake)
+    fluent_qt_find_spatial_dependencies()
+endif()
+if(FLUENT_QT_BUILD_QML_BRIDGE)
+    fluent_qt_find_qml_bridge_dependencies()
 endif()
 
 if(FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT)
     add_subdirectory(platforms/webassembly)
+endif()
+
+add_subdirectory(uilib)
+if(FLUENT_QT_BUILD_PLUGINS)
+    add_subdirectory(plugin)
 endif()
 
 if(FLUENT_QT_BUILD_PYSIDE6_BINDINGS)
@@ -178,6 +166,12 @@ if(FLUENT_QT_INSTALL)
         install(TARGETS FluentQtPlugins EXPORT FluentQtPluginsTargets
             ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Development)
         install(EXPORT FluentQtPluginsTargets NAMESPACE FluentQt::
+            DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}" COMPONENT Development)
+    endif()
+    if(TARGET FluentQtQmlBridge)
+        install(TARGETS FluentQtQmlBridge EXPORT FluentQtQmlBridgeTargets
+            ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Development)
+        install(EXPORT FluentQtQmlBridgeTargets NAMESPACE FluentQt::
             DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}" COMPONENT Development)
     endif()
     install(FILES
@@ -247,45 +241,17 @@ if(FLUENT_QT_INSTALL)
 endif()
 
 if(FLUENT_QT_BUILD_GALLERY OR (BUILD_TESTING AND FLUENT_QT_BUILD_TESTS))
-    if(EMSCRIPTEN)
-        if(NOT FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT)
-            message(FATAL_ERROR
-                "Gallery logging requires FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT")
-        endif()
-        set(_fluent_qt_logging_source
-            "${CMAKE_CURRENT_SOURCE_DIR}/platforms/webassembly/LogBackend.cpp")
-    else()
-        find_package(spdlog CONFIG REQUIRED)
-        set(_fluent_qt_logging_source
-            "${CMAKE_CURRENT_SOURCE_DIR}/support/logging/Log.cpp")
-    endif()
-    add_library(FluentQtLoggingSupport STATIC
-        "${_fluent_qt_logging_source}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/support/logging/Log.h")
-    fluent_qt_configure_cpp_target(FluentQtLoggingSupport)
-    target_include_directories(FluentQtLoggingSupport
-        PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-    target_link_libraries(FluentQtLoggingSupport
-        PUBLIC Qt${QT_VERSION_MAJOR}::Core)
     if(NOT EMSCRIPTEN)
-        target_link_libraries(FluentQtLoggingSupport PRIVATE spdlog::spdlog)
+        find_package(spdlog CONFIG REQUIRED)
     endif()
-    fluent_qt_enable_sanitizers(FluentQtLoggingSupport)
-endif()
-
-if(FLUENT_QT_BUILD_GALLERY)
     add_subdirectory(app)
 endif()
 
-if(FLUENT_QT_BUILD_EXAMPLES)
-    add_subdirectory(examples/hello_world)
-    if(TARGET FluentQtPlugins)
-        add_subdirectory(examples/plugin_extension)
+if(EMSCRIPTEN AND TARGET fluent_qt_gallery)
+    get_property(_fluent_qt_gallery_examples GLOBAL PROPERTY FLUENT_QT_GALLERY_EXAMPLE_TARGETS)
+    if(_fluent_qt_gallery_examples)
+        add_dependencies(fluent_qt_gallery ${_fluent_qt_gallery_examples})
     endif()
-endif()
-
-if(EMSCRIPTEN AND TARGET fluent_qt_gallery AND TARGET fluentqt_hello_world)
-    add_dependencies(fluent_qt_gallery fluentqt_hello_world)
 endif()
 
 # ut

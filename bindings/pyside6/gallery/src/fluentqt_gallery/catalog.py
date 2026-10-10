@@ -9,6 +9,7 @@ import re
 from typing import Iterable
 
 from .spatial_support import SPATIAL_AVAILABLE
+from .qmlbridge_support import QML_BRIDGE_AVAILABLE
 
 
 @dataclass(frozen=True)
@@ -81,9 +82,9 @@ def _load_contract() -> dict[str, object]:
         )
     summary = contract.get("summary", {})
     expected = {
-        "route_count": 111,
-        "component_count": 87,
-        "sample_count": 243,
+        "route_count": 113,
+        "component_count": 88,
+        "sample_count": 249,
     }
     if summary != expected:
         raise RuntimeError(
@@ -96,9 +97,10 @@ def _load_contract() -> dict[str, object]:
 CONTRACT = _load_contract()
 
 # Package one canonical catalog. Optional routes are exposed only when the
-# installed binding includes Spatial; the same Gallery wheel supports 2D users.
+# installed binding includes the module; the same Gallery wheel supports 2D users.
 _categories = [c for c in CONTRACT["categories"]
-               if SPATIAL_AVAILABLE or c["id"] != "spatial"]
+               if (SPATIAL_AVAILABLE or c["id"] != "spatial")
+               and (QML_BRIDGE_AVAILABLE or c["id"] != "qml-bridge")]
 _category_ids = {category["id"] for category in _categories}
 _components = [c for c in CONTRACT["components"] if c["category_id"] in _category_ids]
 _hidden_routes = {category["id"] for category in CONTRACT["categories"]
@@ -205,6 +207,8 @@ def catalog_coverage_errors(manifest_classes: Iterable[str]) -> list[str]:
     manifest = set(manifest_classes)
     if SPATIAL_AVAILABLE:
         manifest.update(("SpatialView", "SpatialItem"))
+    if QML_BRIDGE_AVAILABLE:
+        manifest.add("QmlView")
     routed = {entry.name for entry in ENTRIES}
     covered = routed | set(SUPPORT_TYPES)
     errors = []

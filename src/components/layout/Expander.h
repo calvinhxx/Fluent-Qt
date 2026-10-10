@@ -88,10 +88,11 @@ signals:
     void layoutHeightChanged(int height);
 
 protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
 
 private:
-    int naturalContentHeight() const;
+    int naturalContentHeight(bool invalidateLayout = true) const;
     int currentContentHeight() const;
     int totalHeightForContent(int contentHeight) const;
     void updateChildGeometry();
@@ -127,6 +128,7 @@ private:
     qreal m_fraction = 0.0;
     int m_contentTargetHeight = 0;
     int m_lastEmittedLayoutHeight = -1;
+    bool m_refreshingContentHeight = false;
     bool m_viewportTransitionActive = false;
     bool m_restoringViewportAnchor = false;
     quint64 m_viewportTransitionGeneration = 0;

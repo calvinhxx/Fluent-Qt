@@ -14,7 +14,9 @@ standalone reading tasks.
     - [Add a FluentQt GUI to a project](ai/add-gui-to-project.md)
 - [Architecture](architecture/README.md)
   - **Runtime contracts**
+    - [QMLPlus reactive composition](architecture/qmlplus.md)
     - [Plugins: optional extension lifecycle](architecture/plugins.md)
+    - [QmlBridge: application QML in a QWidget host](architecture/qml-bridge.md)
     - [Window Chrome Architecture](architecture/window-chrome.md)
     - [Overlay Behavior Contract](architecture/overlay-behavior.md)
     - [Typography Resolution](architecture/typography-resolution.md)

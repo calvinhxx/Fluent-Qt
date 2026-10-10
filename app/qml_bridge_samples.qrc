@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/app/qml-bridge">
+        <file alias="Basic.qml">view/widgets/samples/qmlbridge/Basic.qml</file>
+        <file alias="Theme.qml">view/widgets/samples/qmlbridge/Theme.qml</file>
+        <file alias="Context.qml">view/widgets/samples/qmlbridge/Context.qml</file>
+        <file alias="Action.qml">view/widgets/samples/qmlbridge/Action.qml</file>
+    </qresource>
+</RCC>

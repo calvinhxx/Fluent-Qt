@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
 
-[← Plugins: optional extension lifecycle](plugins.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Overlay Behavior Contract →](overlay-behavior.md)
+[← QmlBridge: application QML in a QWidget host](qml-bridge.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Overlay Behavior Contract →](overlay-behavior.md)
 <!-- docs-nav:top:end -->
 
 ## Ownership and boundary
@@ -313,5 +313,5 @@ When changing backdrop behavior, verify:
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Plugins: optional extension lifecycle](plugins.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Overlay Behavior Contract →](overlay-behavior.md)
+[← QmlBridge: application QML in a QWidget host](qml-bridge.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Overlay Behavior Contract →](overlay-behavior.md)
 <!-- docs-nav:bottom:end -->

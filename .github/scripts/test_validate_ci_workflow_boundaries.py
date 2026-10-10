@@ -75,6 +75,32 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             MODULE.validate_cpp_integration_contract(self.workflow), []
         )
 
+    def test_source_package_inventory_requires_module_and_example_entries(self):
+        for path in MODULE.SOURCE_PACKAGE_CMAKE_ENTRIES:
+            with self.subTest(path=path):
+                original = f"              {path} \\\n"
+                self.assertIn(original, self.workflow)
+                self.assert_integration_contract_error(
+                    self.workflow.replace(original, "", 1)
+                )
+                # A comment containing the same path cannot satisfy inventory.
+                self.assert_integration_contract_error(
+                    self.workflow.replace(original, f"          # {path}\n", 1)
+                )
+
+    def test_source_package_inventory_keeps_missing_files_fatal(self):
+        original = 'if ! grep -x "FluentQt-ci-source/$source_file" \\'
+        self.assertIn(original, self.workflow)
+        self.assert_integration_contract_error(
+            self.workflow.replace(original, original.replace("! ", ""), 1)
+        )
+        step = MODULE.named_step_section(
+            MODULE.job_section(self.workflow, "integration"),
+            "Verify FluentQt library source package",
+        )
+        self.assertTrue(step)
+        self.assert_integration_contract_error(self.workflow.replace(step, "", 1))
+
     def test_repository_workflow_boundaries_are_valid(self):
         self.assertEqual(MODULE.validate_boundaries(), [])
 

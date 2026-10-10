@@ -115,6 +115,7 @@ set(FLUENTQT_PYSIDE6_GENERATED_SOURCES
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_binding_anchorspec_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_binding_fluentwidget_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_binding_stategroup_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_bindinghandle_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_basicinput_button_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_basicinput_checkbox_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_basicinput_colorpicker_wrapper.cpp"
@@ -217,8 +218,8 @@ set(FLUENTQT_PYSIDE6_GENERATED_SOURCES
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_windowing_titlebar_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_windowing_window_wrapper.cpp")
 
-# One native extension keeps Fluent theme/motion singletons shared. Spatial is
-# compiled only on explicit opt-in; ordinary 2D bindings retain their Qt dependencies.
+# One native extension keeps Fluent theme/motion singletons shared. Optional
+# renderers are compiled only on explicit opt-in; base bindings retain their Qt dependencies.
 set(FLUENTQT_PYSIDE6_BINDING_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.h")
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/native/typesystem_fluentqt.xml" FLUENTQT_PYSIDE6_TYPES)
 set(FLUENTQT_PYSIDE6_OPTIONAL_BINDING_HEADER "")
@@ -262,7 +263,21 @@ if(TARGET FluentQtSpatial)
     string(APPEND FLUENTQT_PYSIDE6_OPTIONAL_BINDING_HEADER
         "#include <components/spatial/SpatialSession.h>\n#include <components/spatial/SpatialPlugin.h>\n#include <components/spatial/SpatialView.h>\n#include <components/spatial/SpatialItem.h>\n#include <components/spatial/SpatialRuntime.h>\n#include <components/spatial/ParticleLayer.h>\n#include <${PROJECT_SOURCE_DIR}/support/spatial/SpatialTextureHost.h>\n")
 endif()
-if(TARGET FluentQtPlugins OR TARGET FluentQtSpatial)
+if(TARGET FluentQtQmlBridge)
+    set_target_properties(FluentQtQmlBridge PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    list(APPEND FLUENTQT_PYSIDE6_GENERATED_SOURCES
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_qmlbridge_qmlplugin_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_qmlbridge_qmlsession_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_qmlbridge_qmltheme_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_qmlbridge_qmltexturelayer_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_qmlbridge_qmlview_wrapper.cpp")
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/native/qmlbridge_types.xml" FLUENTQT_PYSIDE6_QMLBRIDGE_TYPES)
+    string(REPLACE "<!-- Optional QmlBridge types. -->" "${FLUENTQT_PYSIDE6_QMLBRIDGE_TYPES}"
+        FLUENTQT_PYSIDE6_TYPES "${FLUENTQT_PYSIDE6_TYPES}")
+    string(APPEND FLUENTQT_PYSIDE6_OPTIONAL_BINDING_HEADER
+        "#include <components/qmlbridge/QmlPlugin.h>\n#include <components/qmlbridge/QmlSession.h>\n#include <components/qmlbridge/QmlTheme.h>\n#include <components/qmlbridge/QmlTextureLayer.h>\n#include <components/qmlbridge/QmlView.h>\n")
+endif()
+if(TARGET FluentQtPlugins OR TARGET FluentQtSpatial OR TARGET FluentQtQmlBridge)
     set(FLUENTQT_PYSIDE6_BINDING_HEADER "${CMAKE_CURRENT_BINARY_DIR}/OptionalBindingApi.h")
     file(GENERATE OUTPUT "${FLUENTQT_PYSIDE6_BINDING_HEADER}"
         CONTENT "${FLUENTQT_PYSIDE6_OPTIONAL_BINDING_HEADER}")
@@ -273,13 +288,18 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/native/typesystem_fluentqt.xml"
     "${CMAKE_CURRENT_SOURCE_DIR}/native/plugin_types.xml"
     "${CMAKE_CURRENT_SOURCE_DIR}/native/plugin_binding_types.xml"
-    "${CMAKE_CURRENT_SOURCE_DIR}/native/spatial_types.xml")
+    "${CMAKE_CURRENT_SOURCE_DIR}/native/spatial_types.xml"
+    "${CMAKE_CURRENT_SOURCE_DIR}/native/qmlbridge_types.xml")
 
 set(FLUENTQT_PYSIDE6_GENERATOR_INCLUDE_ARGUMENTS
     "-I${CMAKE_CURRENT_SOURCE_DIR}/native"
     "-I${PROJECT_SOURCE_DIR}/src"
     "-I${PROJECT_SOURCE_DIR}/include")
-foreach(FLUENTQT_PYSIDE6_QT_TARGET Qt6::Core Qt6::Gui Qt6::Widgets)
+set(FLUENTQT_PYSIDE6_GENERATOR_QT_TARGETS Qt6::Core Qt6::Gui Qt6::Widgets)
+if(TARGET FluentQtQmlBridge)
+    list(APPEND FLUENTQT_PYSIDE6_GENERATOR_QT_TARGETS Qt6::Qml Qt6::Quick Qt6::QuickWidgets)
+endif()
+foreach(FLUENTQT_PYSIDE6_QT_TARGET IN LISTS FLUENTQT_PYSIDE6_GENERATOR_QT_TARGETS)
     get_target_property(FLUENTQT_PYSIDE6_QT_INCLUDE_DIRS
         ${FLUENTQT_PYSIDE6_QT_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
     foreach(FLUENTQT_PYSIDE6_QT_INCLUDE_DIR
@@ -405,6 +425,9 @@ endif()
 if(TARGET FluentQtPlugins)
     target_link_libraries(_fluentqt PRIVATE FluentQt::Plugins)
 endif()
+if(TARGET FluentQtQmlBridge)
+    target_link_libraries(_fluentqt PRIVATE FluentQt::QmlBridge)
+endif()
 if(WIN32)
     target_link_libraries(_fluentqt PRIVATE Python::Python)
 elseif(APPLE)
@@ -479,6 +502,13 @@ if(TARGET FluentQtPlugins)
 else()
     file(REMOVE "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/plugins.py"
                 "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/plugins.pyi")
+endif()
+if(TARGET FluentQtQmlBridge)
+    list(APPEND FLUENTQT_PYSIDE6_PYTHON_FILES qmlbridge.py)
+    list(APPEND FLUENTQT_PYSIDE6_STUB_FILES qmlbridge.pyi)
+else()
+    file(REMOVE "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/qmlbridge.py"
+                "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/qmlbridge.pyi")
 endif()
 set(FLUENTQT_PYSIDE6_PYTHON_SOURCE_PATHS)
 foreach(FLUENTQT_PYSIDE6_PYTHON_FILE
@@ -660,6 +690,12 @@ add_custom_target(fluentqt_pyside6_manylinux_wheel
 endif()
 
 if(BUILD_TESTING)
+    add_test(NAME test_pyside6_hello_world
+        COMMAND "${Python_EXECUTABLE}" -X faulthandler
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_hello_world.py" -v)
+    set_tests_properties(test_pyside6_hello_world PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+        LABELS "pyside;integration;ci_fast" TIMEOUT 60)
     add_test(NAME test_pyside6_qt_compat
         COMMAND "${Python_EXECUTABLE}" -X faulthandler
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_qt_compat.py" -v)
@@ -687,6 +723,20 @@ if(BUILD_TESTING)
         set_tests_properties(test_pyside6_spatial PROPERTIES
             ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
             LABELS "pyside;unit;ci_fast;lifetime" TIMEOUT 60)
+    endif()
+    if(TARGET FluentQtQmlBridge)
+        add_test(NAME test_pyside6_qmlbridge
+            COMMAND "${Python_EXECUTABLE}" -X faulthandler
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_qmlbridge.py" -v)
+        set_tests_properties(test_pyside6_qmlbridge PROPERTIES
+            ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software;PYTHONMALLOC=malloc;MALLOC_PERTURB_=165"
+            LABELS "pyside;unit;ci_fast;lifetime" TIMEOUT 60)
+        add_test(NAME test_pyside6_qml_bridge_example
+            COMMAND "${Python_EXECUTABLE}" -X faulthandler
+                "${CMAKE_CURRENT_SOURCE_DIR}/examples/qml_bridge.py" --smoke-test)
+        set_tests_properties(test_pyside6_qml_bridge_example PROPERTIES
+            ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+            LABELS "pyside;integration;ci_fast;lifetime" TIMEOUT 60)
     endif()
     add_test(
         NAME test_pyside6_bindings
@@ -939,6 +989,12 @@ if(BUILD_TESTING)
         TIMEOUT 30)
 
     if(FLUENT_QT_BUILD_PYSIDE6_GALLERY)
+        add_test(NAME test_pyside6_gallery_qmlplus
+            COMMAND "${Python_EXECUTABLE}" -X faulthandler
+                "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery_qmlplus.py" -v)
+        set_tests_properties(test_pyside6_gallery_qmlplus PROPERTIES
+            ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+            LABELS "pyside;unit;ci_fast;lifetime" TIMEOUT 60)
         add_test(
             NAME test_pyside6_gallery
             COMMAND "${Python_EXECUTABLE}" -X faulthandler
@@ -948,6 +1004,31 @@ if(BUILD_TESTING)
                 "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
             LABELS "pyside;unit;ci_fast"
             TIMEOUT 240)
+        if(TARGET FluentQtQmlBridge)
+            set_property(TEST test_pyside6_gallery APPEND PROPERTY ENVIRONMENT "QT_QUICK_BACKEND=software")
+            add_test(NAME test_pyside6_gallery_qmlbridge
+                COMMAND "${Python_EXECUTABLE}" -X faulthandler
+                    "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery_qmlbridge.py" -v)
+            set_tests_properties(test_pyside6_gallery_qmlbridge PROPERTIES
+                ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+                LABELS "pyside;unit;ci_fast;lifetime" TIMEOUT 60)
+            if(TARGET FluentQtSpatial)
+                add_test(NAME test_pyside6_gallery_qmlbridge_native
+                    COMMAND "${Python_EXECUTABLE}" -X faulthandler
+                        "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery_qmlbridge_native.py" -v)
+                set_tests_properties(test_pyside6_gallery_qmlbridge_native PROPERTIES
+                    ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QUICK_BACKEND=;QSG_RHI_BACKEND=opengl;FLUENT_QT_GALLERY_DISABLE_3D=0"
+                    LABELS "pyside_native;unit;qml_bridge;local_desktop;native_window"
+                    RUN_SERIAL TRUE TIMEOUT 90)
+                if(APPLE)
+                    set_property(TEST test_pyside6_gallery_qmlbridge_native APPEND PROPERTY ENVIRONMENT
+                        "QT_QPA_PLATFORM=cocoa")
+                elseif(WIN32)
+                    set_property(TEST test_pyside6_gallery_qmlbridge_native APPEND PROPERTY ENVIRONMENT
+                        "QT_QPA_PLATFORM=windows")
+                endif()
+            endif()
+        endif()
 
         add_test(
             NAME test_pyside6_gallery_spatial
@@ -1042,6 +1123,9 @@ if(BUILD_TESTING)
                     "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
                 LABELS "pyside;unit;ci_fast"
                 TIMEOUT 240)
+            if(TARGET FluentQtQmlBridge)
+                set_property(TEST test_pyside6_gallery_python_snippet_catalog APPEND PROPERTY ENVIRONMENT "QT_QUICK_BACKEND=software")
+            endif()
         endif()
 
         add_test(
@@ -1429,6 +1513,9 @@ if(BUILD_TESTING)
                 "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
             LABELS "pyside;acceptance;ci_fast"
             TIMEOUT 120)
+        if(TARGET FluentQtQmlBridge)
+            set_property(TEST test_pyside6_gallery_acceptance APPEND PROPERTY ENVIRONMENT "QT_QUICK_BACKEND=software")
+        endif()
     endif()
 
     add_test(

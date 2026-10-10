@@ -31,6 +31,7 @@
 #include <QPainter>
 #include <QSvgRenderer>
 #include <QScrollBar>
+#include <QSignalSpy>
 #include <QSet>
 #include <QSizePolicy>
 #include <QStringList>
@@ -56,6 +57,7 @@
 #include "components/collections/TreeView.h"
 #include "components/dialogs_flyouts/CoachMark.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
 #include "components/foundation/FontIcon.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -73,6 +75,7 @@
 #include "components/status_info/Avatar.h"
 #include "components/status_info/InfoBadge.h"
 #include "components/status_info/ProgressRing.h"
+#include "components/status_info/ProgressBar.h"
 #include "components/status_info/Shimmer.h"
 #include "components/status_info/SplashScreen.h"
 #include "components/status_info/ToolTip.h"
@@ -379,6 +382,257 @@ TEST_F(GalleryContentPagesTest, FoundationLandingOrderMatchesNavigation)
     const auto* foundationEntry = galleryContentEntry(QStringLiteral("foundation"));
     ASSERT_NE(foundationEntry, nullptr);
     EXPECT_EQ(navigationRouteIds, foundationEntry->relatedRouteIds);
+}
+
+TEST_F(GalleryContentPagesTest, QmlPlusExamplesStayShortAndOrderedByPrerequisite)
+{
+    const QStringList expectedIds = {QStringLiteral("qmlplus-binding-one-way"),
+                                     QStringLiteral("qmlplus-binding-two-way"),
+                                     QStringLiteral("qmlplus-binding-computed"),
+                                     QStringLiteral("qmlplus-binding-pause"),
+                                     QStringLiteral("qmlplus-state-manual"),
+                                     QStringLiteral("qmlplus-state-conditional"),
+                                     QStringLiteral("qmlplus-state-inheritance"),
+                                     QStringLiteral("qmlplus-state-binding-restore"),
+                                     QStringLiteral("qmlplus-behavior"),
+                                     QStringLiteral("qmlplus-transition"),
+                                     QStringLiteral("qmlplus-anchors-center"),
+                                     QStringLiteral("qmlplus-anchors-state")};
+    const auto samples =
+        fluent::gallery::gallerySamplesForRoute(QStringLiteral("foundation-qmlplus"));
+    ASSERT_EQ(samples.size(), expectedIds.size());
+    for (int index = 0; index < samples.size(); ++index) {
+        const auto& sample = samples.at(index);
+        SCOPED_TRACE(sample.id.toStdString());
+        EXPECT_EQ(sample.id, expectedIds.at(index));
+        EXPECT_TRUE(static_cast<bool>(sample.createPreview));
+        EXPECT_FALSE(sample.codeSnippet.isEmpty());
+        EXPECT_LE(sample.codeSnippet.count(QLatin1Char('\n')) + 1, 24);
+        EXPECT_TRUE(sample.usageSnippet.isEmpty());
+        EXPECT_FALSE(sample.supplementary);
+    }
+
+    const auto* entry = galleryContentEntry(QStringLiteral("foundation-qmlplus"));
+    ASSERT_NE(entry, nullptr);
+    GalleryNavigationViewModel navigationViewModel;
+    GalleryFoundationTopicPage page(*entry, navigationViewModel);
+    EXPECT_EQ(page.findChildren<QWidget*>(QStringLiteral("gallerySampleCard")).size(),
+              expectedIds.size());
+    EXPECT_EQ(page.findChildren<GalleryCodeBlock*>().size(), expectedIds.size());
+}
+
+TEST_F(GalleryContentPagesTest, QmlPlusOneWayExampleOnlyFollowsTheSource)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("foundation-qmlplus"),
+                               QStringLiteral("qmlplus-binding-one-way"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* slider =
+        preview->findChild<fluent::basicinput::Slider*>(QStringLiteral("qmlplusOneWaySource"));
+    auto* bar = preview->findChild<fluent::status_info::ProgressBar*>(
+        QStringLiteral("qmlplusOneWayTarget"));
+    ASSERT_NE(slider, nullptr);
+    ASSERT_NE(bar, nullptr);
+    EXPECT_DOUBLE_EQ(bar->value(), 40);
+    slider->setValue(80);
+    EXPECT_DOUBLE_EQ(bar->value(), 80);
+    bar->setValue(20);
+    EXPECT_EQ(slider->value(), 80);
+}
+
+TEST_F(GalleryContentPagesTest, QmlPlusTwoWayExampleAcceptsEitherSwitch)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("foundation-qmlplus"),
+                               QStringLiteral("qmlplus-binding-two-way"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* first =
+        preview->findChild<fluent::basicinput::ToggleSwitch*>(QStringLiteral("qmlplusTwoWayFirst"));
+    auto* second = preview->findChild<fluent::basicinput::ToggleSwitch*>(
+        QStringLiteral("qmlplusTwoWaySecond"));
+    ASSERT_NE(first, nullptr);
+    ASSERT_NE(second, nullptr);
+    first->setIsOn(true);
+    EXPECT_TRUE(second->isOn());
+    second->setIsOn(false);
+    EXPECT_FALSE(first->isOn());
+}
+
+TEST_F(GalleryContentPagesTest, QmlPlusComputedExampleObservesBothInputs)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("foundation-qmlplus"),
+                               QStringLiteral("qmlplus-binding-computed"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* first =
+        preview->findChild<fluent::basicinput::Slider*>(QStringLiteral("qmlplusComputedFirst"));
+    auto* second =
+        preview->findChild<fluent::basicinput::Slider*>(QStringLiteral("qmlplusComputedSecond"));
+    auto* result =
+        preview->findChild<fluent::textfields::Label*>(QStringLiteral("qmlplusComputedResult"));
+    ASSERT_NE(first, nullptr);
+    ASSERT_NE(second, nullptr);
+    ASSERT_NE(result, nullptr);
+    EXPECT_EQ(result->text(), QStringLiteral("20 + 30 = 50"));
+    first->setValue(40);
+    EXPECT_EQ(result->text(), QStringLiteral("40 + 30 = 70"));
+    second->setValue(60);
+    EXPECT_EQ(result->text(), QStringLiteral("40 + 60 = 100"));
+}
+
+TEST_F(GalleryContentPagesTest, QmlPlusPauseExampleCatchesUpOnResume)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("foundation-qmlplus"),
+                               QStringLiteral("qmlplus-binding-pause"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* slider =
+        preview->findChild<fluent::basicinput::Slider*>(QStringLiteral("qmlplusPauseSource"));
+    auto* bar =
+        preview->findChild<fluent::status_info::ProgressBar*>(QStringLiteral("qmlplusPauseTarget"));
+    auto* toggle =
+        preview->findChild<fluent::basicinput::ToggleSwitch*>(QStringLiteral("qmlplusPauseToggle"));
+    ASSERT_NE(slider, nullptr);
+    ASSERT_NE(bar, nullptr);
+    ASSERT_NE(toggle, nullptr);
+    toggle->setIsOn(true);
+    slider->setValue(85);
+    EXPECT_DOUBLE_EQ(bar->value(), 40);
+    toggle->setIsOn(false);
+    EXPECT_DOUBLE_EQ(bar->value(), 85);
+}
+
+TEST_F(GalleryContentPagesTest, QmlPlusNamedAndConditionalExamplesRestoreTheOriginalText)
+{
+    const QStringList variants = {QStringLiteral("Manual"), QStringLiteral("Conditional")};
+    for (const auto& variant : variants) {
+        SCOPED_TRACE(variant.toStdString());
+        fluent::gallery::GallerySample sample;
+        const QString sampleId = variant == QStringLiteral("Manual")
+                                     ? QStringLiteral("qmlplus-state-manual")
+                                     : QStringLiteral("qmlplus-state-conditional");
+        ASSERT_TRUE(findSampleById(QStringLiteral("foundation-qmlplus"), sampleId, &sample));
+        std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+        auto* label = preview->findChild<fluent::textfields::Label*>(
+            QStringLiteral("qmlplus%1Result").arg(variant));
+        auto* toggle = preview->findChild<fluent::basicinput::ToggleSwitch*>(
+            QStringLiteral("qmlplus%1Toggle").arg(variant));
+        ASSERT_NE(label, nullptr);
+        ASSERT_NE(toggle, nullptr);
+        toggle->setIsOn(true);
+        EXPECT_EQ(label->text(), QStringLiteral("Active"));
+        toggle->setIsOn(false);
+        EXPECT_EQ(label->text(), QStringLiteral("Default"));
+        // An active condition must also be safe while its preview is closing.
+        // zh_CN: 预览关闭时，仍然活动的状态条件也必须安全。
+        toggle->setIsOn(true);
+        preview.reset();
+    }
+}
+
+TEST_F(GalleryContentPagesTest, QmlPlusInheritanceExampleCombinesBaseAndDerivedChanges)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("foundation-qmlplus"),
+                               QStringLiteral("qmlplus-state-inheritance"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* button = preview->findChild<Button*>(QStringLiteral("qmlplusInheritedTarget"));
+    auto* toggle = preview->findChild<fluent::basicinput::ToggleSwitch*>(
+        QStringLiteral("qmlplusInheritedToggle"));
+    ASSERT_NE(button, nullptr);
+    ASSERT_NE(toggle, nullptr);
+    toggle->setIsOn(true);
+    EXPECT_FALSE(button->isEnabled());
+    EXPECT_EQ(button->text(), QStringLiteral("Saving..."));
+    toggle->setIsOn(false);
+    EXPECT_TRUE(button->isEnabled());
+    EXPECT_EQ(button->text(), QStringLiteral("Ready"));
+}
+
+TEST_F(GalleryContentPagesTest, QmlPlusStateOverrideExampleRestoresTheLatestBindingValue)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("foundation-qmlplus"),
+                               QStringLiteral("qmlplus-state-binding-restore"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* slider =
+        preview->findChild<fluent::basicinput::Slider*>(QStringLiteral("qmlplusRestoreSource"));
+    auto* bar = preview->findChild<fluent::status_info::ProgressBar*>(
+        QStringLiteral("qmlplusRestoreTarget"));
+    auto* toggle = preview->findChild<fluent::basicinput::ToggleSwitch*>(
+        QStringLiteral("qmlplusRestoreToggle"));
+    ASSERT_NE(slider, nullptr);
+    ASSERT_NE(bar, nullptr);
+    ASSERT_NE(toggle, nullptr);
+    toggle->setIsOn(true);
+    EXPECT_DOUBLE_EQ(bar->value(), 100);
+    slider->setValue(65);
+    EXPECT_DOUBLE_EQ(bar->value(), 100);
+    toggle->setIsOn(false);
+    EXPECT_DOUBLE_EQ(bar->value(), 65);
+}
+
+TEST_F(GalleryContentPagesTest, QmlPlusMotionExamplesAnimateTheirSingleValue)
+{
+    struct MotionModeRestore {
+        fluent::MotionPolicy::Mode previous = fluent::MotionPolicy::instance().mode();
+        ~MotionModeRestore() { fluent::MotionPolicy::instance().setMode(previous); }
+    } restoreMotionMode;
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    for (const QString& sampleId :
+         {QStringLiteral("qmlplus-behavior"), QStringLiteral("qmlplus-transition")}) {
+        SCOPED_TRACE(sampleId.toStdString());
+        fluent::gallery::GallerySample sample;
+        ASSERT_TRUE(findSampleById(QStringLiteral("foundation-qmlplus"), sampleId, &sample));
+        std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+        auto* bar = preview->findChild<fluent::status_info::ProgressBar*>();
+        ASSERT_NE(bar, nullptr);
+        const double initial = bar->value();
+        if (auto* slider = preview->findChild<fluent::basicinput::Slider*>())
+            slider->setValue(80);
+        else
+            preview->findChild<fluent::basicinput::ToggleSwitch*>()->setIsOn(true);
+        EXPECT_DOUBLE_EQ(bar->value(), initial);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return bar->value() > initial; }, 1000));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return qAbs(bar->value() - 80) < 0.001; }, 1000));
+    }
+}
+
+TEST_F(GalleryContentPagesTest, QmlPlusAnchorExamplesCenterMoveAndRestoreOneButton)
+{
+    for (const QString& sampleId :
+         {QStringLiteral("qmlplus-anchors-center"), QStringLiteral("qmlplus-anchors-state")}) {
+        SCOPED_TRACE(sampleId.toStdString());
+        fluent::gallery::GallerySample sample;
+        ASSERT_TRUE(findSampleById(QStringLiteral("foundation-qmlplus"), sampleId, &sample));
+        std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+        auto* surface = preview->findChild<fluent::layout::Card*>();
+        auto* button = preview->findChild<Button*>();
+        ASSERT_NE(surface, nullptr);
+        ASSERT_NE(button, nullptr);
+        preview->resize(480, 220);
+        preview->show();
+        ASSERT_TRUE(QTest::qWaitFor([&] { return surface->width() > 300; }, 1000));
+        surface->layout()->activate();
+        const QRect initial = button->geometry();
+        auto* toggle = preview->findChild<fluent::basicinput::ToggleSwitch*>();
+        if (toggle) {
+            EXPECT_EQ(button->x(), 12);
+            toggle->setIsOn(true);
+            surface->layout()->activate();
+            EXPECT_EQ(button->geometry().right(), surface->rect().right() - 12);
+            toggle->setIsOn(false);
+            surface->layout()->activate();
+            EXPECT_EQ(button->geometry(), initial);
+        } else {
+            EXPECT_LE(qAbs(button->geometry().center().x() - surface->rect().center().x()), 1);
+            preview->resize(620, 220);
+            ASSERT_TRUE(QTest::qWaitFor([&] { return surface->width() > 500; }, 1000));
+            surface->layout()->activate();
+            EXPECT_LE(qAbs(button->geometry().center().x() - surface->rect().center().x()), 1);
+        }
+        EXPECT_LE(qAbs(button->geometry().center().y() - surface->rect().center().y()), 1);
+    }
 }
 
 // Full coverage: every navigation route except Settings has a content entry, and
@@ -760,9 +1014,11 @@ TEST_F(GalleryContentPagesTest, ComponentReferencesMatchPublicIntegrationSurface
             EXPECT_TRUE(reference.header.startsWith(QStringLiteral("<FluentQt/")));
             EXPECT_TRUE(reference.header.endsWith(QStringLiteral(".h>")));
             EXPECT_NE(reference.header, QStringLiteral("<FluentQt/FluentQt.h>"));
-            EXPECT_EQ(reference.cmakeTarget, category.id == QStringLiteral("spatial")
-                                                 ? QStringLiteral("FluentQt::Spatial")
-                                                 : QStringLiteral("FluentQt::FluentQt"));
+            const bool isSpatial = category.id == QStringLiteral("spatial");
+            const bool isQmlBridge = category.id == QStringLiteral("qml-bridge");
+            EXPECT_EQ(reference.cmakeTarget, isSpatial     ? QStringLiteral("FluentQt::Spatial")
+                                             : isQmlBridge ? QStringLiteral("FluentQt::QmlBridge")
+                                                           : QStringLiteral("FluentQt::FluentQt"));
             if (category.id == QStringLiteral("spatial")) {
                 EXPECT_TRUE(reference.hasPythonReference());
                 EXPECT_EQ(reference.pythonType, component.title);
@@ -770,6 +1026,14 @@ TEST_F(GalleryContentPagesTest, ComponentReferencesMatchPublicIntegrationSurface
                           QStringLiteral("from fluentqt.spatial import %1").arg(component.title));
                 EXPECT_TRUE(
                     reference.pythonInstall.contains(QStringLiteral("FLUENT_QT_BUILD_SPATIAL=ON")));
+            } else if (isQmlBridge) {
+                EXPECT_EQ(reference.header, QStringLiteral("<FluentQt/QmlBridge.h>"));
+                EXPECT_TRUE(reference.hasPythonReference());
+                EXPECT_EQ(reference.pythonType, component.title);
+                EXPECT_EQ(reference.pythonImport,
+                          QStringLiteral("from fluentqt.qmlbridge import %1").arg(component.title));
+                EXPECT_TRUE(reference.pythonInstall.contains(
+                    QStringLiteral("FLUENT_QT_BUILD_QML_BRIDGE=ON")));
             } else {
                 EXPECT_TRUE(reference.hasPythonReference());
                 EXPECT_EQ(reference.pythonInstall,
@@ -1051,25 +1315,41 @@ TEST_F(GalleryContentPagesTest, AllControlsRouteListsEveryComponent)
     EXPECT_EQ(page->componentRouteIds().size(), componentCount);
     EXPECT_FALSE(page->componentRouteIds().contains(QStringLiteral("spatial-view")));
     EXPECT_FALSE(page->componentRouteIds().contains(QStringLiteral("spatial-item")));
+    EXPECT_FALSE(page->componentRouteIds().contains(QStringLiteral("qml-view")));
 }
 
 TEST_F(GalleryContentPagesTest, PluginLandingListsModulesSeparatelyFromControls)
 {
     GalleryNavigationViewModel navigation;
     const auto* entry = galleryContentEntry(QStringLiteral("plugins"));
+    QStringList modules;
 #ifdef FLUENT_QT_HAS_SPATIAL
+    modules.append(QStringLiteral("spatial"));
+#endif
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+    modules.append(QStringLiteral("qml-bridge"));
+#endif
+    if (modules.isEmpty()) {
+        EXPECT_EQ(entry, nullptr);
+        EXPECT_EQ(navigation.itemById(QStringLiteral("plugins")), nullptr);
+        return;
+    }
     ASSERT_NE(entry, nullptr);
     GalleryCategoryPage page(*entry, navigation);
-    EXPECT_EQ(page.componentRouteIds(), QStringList{QStringLiteral("spatial")});
-    EXPECT_EQ(entry->relatedRouteIds, QStringList{QStringLiteral("spatial")});
+    EXPECT_EQ(page.componentRouteIds(), modules);
+    EXPECT_EQ(entry->relatedRouteIds, modules);
+#ifdef FLUENT_QT_HAS_SPATIAL
     const auto* spatialEntry = galleryContentEntry(QStringLiteral("spatial"));
     ASSERT_NE(spatialEntry, nullptr);
     GalleryCategoryPage module(*spatialEntry, navigation);
     EXPECT_EQ(module.componentRouteIds(),
               (QStringList{QStringLiteral("spatial-view"), QStringLiteral("spatial-item")}));
-#else
-    EXPECT_EQ(entry, nullptr);
-    EXPECT_EQ(navigation.itemById(QStringLiteral("plugins")), nullptr);
+#endif
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+    const auto* qmlEntry = galleryContentEntry(QStringLiteral("qml-bridge"));
+    ASSERT_NE(qmlEntry, nullptr);
+    GalleryCategoryPage qmlModule(*qmlEntry, navigation);
+    EXPECT_EQ(qmlModule.componentRouteIds(), QStringList{QStringLiteral("qml-view")});
 #endif
 }
 
@@ -2663,6 +2943,16 @@ TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSourc
                 EXPECT_TRUE(sample.codeSnippet.contains(QLatin1Char(';')))
                     << "Gallery source blocks are C++ statements, not pseudocode or QML";
                 EXPECT_FALSE(sample.codeSnippet.contains(QStringLiteral("import QtQuick")));
+                if (component.id == QStringLiteral("qml-view")) {
+                    EXPECT_TRUE(std::any_of(sample.sourceFiles.cbegin(), sample.sourceFiles.cend(),
+                                            [](const fluent::gallery::GallerySourceFile& file) {
+                                                return file.language == QStringLiteral("qml") &&
+                                                       file.name.endsWith(QStringLiteral(".qml")) &&
+                                                       file.code.contains(
+                                                           QStringLiteral("import QtQuick"));
+                                            }))
+                        << "QML belongs in a separate named source file";
+                }
                 EXPECT_FALSE(
                     sample.codeSnippet.contains(QStringLiteral("import QtQuick.Controls")));
                 const QString pythonSource = galleryPythonSnippet(component.id, sample.id);
@@ -2730,6 +3020,16 @@ TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSourc
     }
 
     EXPECT_GT(auditedSamples, 100) << "The audit must cover the complete component sample catalog";
+    const auto foundation =
+        fluent::gallery::gallerySamplesForRoute(QStringLiteral("foundation-qmlplus"));
+    ASSERT_EQ(foundation.size(), 12);
+    for (const auto& sample : foundation) {
+        const auto python = galleryPythonSnippet(QStringLiteral("foundation-qmlplus"), sample.id);
+        EXPECT_FALSE(python.isEmpty()) << sample.id.toStdString();
+        EXPECT_TRUE(python.contains(QStringLiteral("fluentqt.")));
+        EXPECT_FALSE(python.contains(QStringLiteral("auto*")));
+        ++pythonSamples;
+    }
     EXPECT_EQ(galleryPythonSnippetCount(), pythonSamples);
 }
 
@@ -3171,6 +3471,9 @@ TEST_F(GalleryContentPagesTest, CodeExcerptSwitchesAndCopiesTheDisplayedSource)
     EXPECT_EQ(QApplication::clipboard()->text(), excerpt);
 
     QTest::mouseClick(selector, Qt::LeftButton, Qt::NoModifier, selector->itemGeometry(1).center());
+    auto* label = block.findChild<QLabel*>(QStringLiteral("galleryCodeBlockText"));
+    ASSERT_NE(label, nullptr);
+    EXPECT_GE(label->height(), label->heightForWidth(label->width()));
     QApplication::processEvents();
     EXPECT_TRUE(block.isExpanded());
     EXPECT_EQ(block.code(), full);
@@ -3188,6 +3491,11 @@ TEST_F(GalleryContentPagesTest, CodeExcerptSwitchesAndCopiesTheDisplayedSource)
     block.setCppExcerpt({});
     EXPECT_FALSE(selector->isVisible());
     EXPECT_EQ(block.code(), full);
+    QSignalSpy expandedSpy(&block, &fluent::layout::Expander::expandedChanged);
+    block.setCppCode(full + QStringLiteral("\n// Updated source"));
+    EXPECT_TRUE(block.isExpanded());
+    EXPECT_EQ(expandedSpy.count(), 0);
+    EXPECT_GE(label->height(), label->heightForWidth(label->width()));
 }
 
 TEST_F(GalleryContentPagesTest, CodeBlockUsesBodySizedNativeMonospaceFont)

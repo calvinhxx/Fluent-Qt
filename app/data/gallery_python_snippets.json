@@ -2,8 +2,9 @@
   "schema_version": 1,
   "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
   "summary": {
-    "component_count": 87,
-    "sample_count": 243
+    "component_count": 88,
+    "foundation_topic_count": 1,
+    "sample_count": 261
   },
   "samples": [
     {
@@ -727,6 +728,120 @@
       "source": "from PySide6.QtCore import QPointF, QTimer\nfrom PySide6.QtGui import QVector3D\nfrom PySide6.QtWidgets import QGridLayout, QVBoxLayout, QWidget\nfrom fluentqt.spatial import SpatialSession, SpatialView\n\nclass WorkbenchView(SpatialView):\n    def __init__(self, parent=None):\n        super().__init__(parent)\n        self.arrange_timer = QTimer(self)\n        self.arrange_timer.setSingleShot(True)\n        self.arrange_timer.timeout.connect(self.arrange)\n\n    def arrange(self):\n        if self.itemCount() != 2:\n            return\n        stacked = self.width() < 720\n        self.setFixedHeight(\n            520 if not self.isSpatialEnabled() else (560 if stacked else 360)\n        )\n        item = self.items()[0]\n        item.setPosition(\n            QVector3D(\n                0 if stacked else -164,\n                -140 if stacked else 0,\n                item.position().z()\n            )\n        )\n        self.items()[-1].setPosition(\n            QVector3D(0 if stacked else 164, 110 if stacked else 0, -50)\n        )\n\n    def resizeEvent(self, event):\n        super().resizeEvent(event)\n        self.arrange_timer.start(0)\npanel = QWidget()\ncolumn = QVBoxLayout(panel)\ncolumn.setContentsMargins(0, 0, 0, 0)\ncolumn.setSpacing(12)\nsession = SpatialSession(panel, panel)\nspatial_attached = session.activate()\nview = WorkbenchView(panel)\nspatial_attached = spatial_attached and session.attachView(view)\nif not spatial_attached:\n    view.setRenderMode(SpatialView.RenderMode.Raster)\n    view.setSpatialEnabled(False)\nview.setObjectName(\"spatialPreviewView\")\nview.setFixedHeight(360)\nview.setCameraDistance(1400)\nview.setMaximumTilt(QPointF(4, 6))\ncolumn.addWidget(view)\ncard = fluentqt.Card()\ncard.setFixedSize(280, 180)\ncontent = QVBoxLayout(card)\ncontent.setContentsMargins(20, 16, 20, 16)\ncontent.setSpacing(8)\ndef add_slider(parent, layout, name, label, unit, minimum, maximum, initial):\n    in_grid = isinstance(layout, QGridLayout)\n    group = QWidget(parent) if in_grid else parent\n    column = QVBoxLayout(group) if in_grid else QVBoxLayout()\n    column.setContentsMargins(0, 0, 0, 0)\n    column.setSpacing(4)\n    text = fluentqt.Label(f\"{label}: {initial}{unit}\", group)\n    slider = fluentqt.Slider(group)\n    slider.setObjectName(name)\n    slider.setAccessibleName(label)\n    slider.setRange(minimum, maximum)\n    slider.setValue(initial)\n    slider.valueChanged.connect(\n        lambda value: text.setText(f\"{label}: {value}{unit}\")\n    )\n    column.addWidget(text)\n    column.addWidget(slider)\n    if isinstance(layout, QGridLayout):\n        layout.addWidget(group, 0, layout.count())\n    else:\n        layout.addLayout(column)\n    return slider\nview.setZoom(0.92)\ncard.setObjectName(\"spatialDemoCard\")\ntitle = fluentqt.Label(\"Activity\", card)\ntitle.setFluentTypography(fluentqt.FontRole.Subtitle)\ntitle.setTextColorRole(fluentqt.Label.TextColorRole.Primary)\ncontent.addWidget(title)\nchart = fluentqt.Sparkline(card)\nchart.setAccessibleName(\"Activity trend, demo data\")\nmodel = fluentqt.ChartModel(card)\nmodel.setPoints([QPointF(x, y) for x, y in enumerate([12, 24, 18, 38, 32, 54])])\nchart.setModel(model)\ncontent.addWidget(chart, 1)\ncaption = fluentqt.Label(\"Last 6 days · demo data\", card)\ncaption.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)\ncontent.addWidget(caption)\nitem = view.addOwnedWidget(card)\nitem.setSurfaceIntensity(0.75)\nitem.setHoverLift(5)\nitem.setRotation(QVector3D(0, -18, 0))\nsettings = fluentqt.Card()\nsettings.setObjectName(\"spatialParameterCard\")\nsettings.setFixedSize(280, 260)\ncontrols = QVBoxLayout(settings)\ncontrols.setContentsMargins(20, 16, 20, 16)\ncontrols.setSpacing(8)\nheading = fluentqt.Label(\"Card\", settings)\nheading.setFluentTypography(fluentqt.FontRole.Subtitle)\ncontrols.addWidget(heading)\nfinish = add_slider(\n    settings,\n    controls,\n    \"spatialItemSurfaceIntensity\",\n    \"Surface\",\n    \"%\",\n    0,\n    100,\n    75\n)\nangle = add_slider(\n    settings,\n    controls,\n    \"spatialItemRotation\",\n    \"Rotation\",\n    \"°\",\n    -35,\n    35,\n    -18\n)\ndepth = add_slider(\n    settings,\n    controls,\n    \"spatialItemDepth\",\n    \"Depth\",\n    \" px\",\n    -120,\n    120,\n    0\n)\nfinish.valueChanged.connect(lambda value: item.setSurfaceIntensity(value / 100.0))\nangle.valueChanged.connect(lambda value: item.setRotation(QVector3D(0, value, 0)))\n\ndef change_depth(value):\n    position = item.position()\n    position.setZ(value)\n    item.setPosition(position)\n\ndepth.valueChanged.connect(change_depth)\ncontrol_item = view.addOwnedWidget(settings)\ncontrol_item.setSurfaceIntensity(0.75)\ncontrol_item.setRotation(QVector3D(0, -6, 0))\nview.spatialEnabledChanged.connect(view.arrange)\nview.arrange()\n"
     },
     {
+      "route_id": "qml-view",
+      "sample_id": "qml-view-load",
+      "source": "from fluentqt.qmlbridge import QmlSession\n\n# main() calls QmlSession.prepareApplication() before QApplication.\n# panel and qml_source() are defined in Full example.\nsession = QmlSession(panel, panel)\nview = session.createView(panel) if session.activate() else None\nif view is not None:\n    view.setFixedHeight(100)\n    view.load(qml_source(\"Basic\"))\n",
+      "source_files": [
+        {
+          "name": "main.py",
+          "language": "python",
+          "code": "# Save main.py and Basic.qml in the same directory.\nimport sys\nfrom pathlib import Path\nimport fluentqt\nfrom fluentqt.qmlbridge import QmlSession, QmlView\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n\nfrom PySide6.QtCore import QUrl\nfrom PySide6.QtWidgets import QApplication\n\ndef qml_source(name):\n    filename = name if name.endswith(\".qml\") else name + \".qml\"\n    return QUrl.fromLocalFile(str(Path(__file__).resolve().with_name(filename)))\n\ndef make_panel(parent=None):\n    panel = QWidget(parent)\n    panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)\n    column = QVBoxLayout(panel)\n    column.setContentsMargins(0, 0, 0, 0)\n    column.setSpacing(12)\n    column.setAlignment(Qt.AlignTop)\n    session = QmlSession(panel, panel)\n    view = session.createView(panel) if session.activate() else None\n    if view is not None:\n        view.setObjectName(\"qmlBridgeLoadView\")\n        view.setAccessibleName(\"QML preview\")\n        view.setFixedHeight(100)\n        column.addWidget(view)\n    else:\n        column.addWidget(fluentqt.Label(\"QML is unavailable\", panel))\n    if view is not None:\n        view.load(qml_source(\"Basic\"))\n    panel._qml_session = session\n    return panel\n\ndef main():\n    fluentqt.prepare_high_dpi_application()\n    QmlSession.prepareApplication()\n    app = QApplication(sys.argv)\n    fluentqt.initialize_resources()\n    app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))\n    window = fluentqt.Window()\n    window.setWindowTitle(\"QmlView\")\n    window.resize(640, 480)\n    window.setContentWidget(make_panel(window))\n    window.show()\n    return app.exec()\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n",
+          "usage_snippet": "from fluentqt.qmlbridge import QmlSession\n\n# main() calls QmlSession.prepareApplication() before QApplication.\n# panel and qml_source() are defined in Full example.\nsession = QmlSession(panel, panel)\nview = session.createView(panel) if session.activate() else None\nif view is not None:\n    view.setFixedHeight(100)\n    view.load(qml_source(\"Basic\"))\n"
+        },
+        {
+          "name": "Basic.qml",
+          "language": "qml",
+          "code": "import QtQuick 2.15\n\nRectangle {\n    color: fluentTheme.surface\n    radius: fluentTheme.cornerRadius\n    antialiasing: true\n\n    Rectangle {\n        anchors.fill: parent\n        z: -1\n        color: fluentTheme.surfaceAlt\n    }\n\n    Text {\n        anchors.centerIn: parent\n        text: \"Hello from QML\"\n        color: fluentTheme.text\n        font.family: fluentTheme.fontFamily\n        font.pixelSize: fluentTheme.fontPixelSize\n    }\n}\n",
+          "usage_snippet": ""
+        }
+      ]
+    },
+    {
+      "route_id": "qml-view",
+      "sample_id": "qml-view-theme",
+      "source": "# view and qml_source() are defined in Full example.\n# Theme.qml binds fluentTheme colors, typography and corner radius.\nview.load(qml_source(\"Theme\"))\n",
+      "source_files": [
+        {
+          "name": "main.py",
+          "language": "python",
+          "code": "# Save main.py and Theme.qml in the same directory.\nimport sys\nfrom pathlib import Path\nimport fluentqt\nfrom fluentqt.qmlbridge import QmlSession, QmlView\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n\nfrom PySide6.QtCore import QUrl\nfrom PySide6.QtWidgets import QApplication\n\ndef qml_source(name):\n    filename = name if name.endswith(\".qml\") else name + \".qml\"\n    return QUrl.fromLocalFile(str(Path(__file__).resolve().with_name(filename)))\n\ndef make_panel(parent=None):\n    panel = QWidget(parent)\n    panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)\n    column = QVBoxLayout(panel)\n    column.setContentsMargins(0, 0, 0, 0)\n    column.setSpacing(12)\n    column.setAlignment(Qt.AlignTop)\n    session = QmlSession(panel, panel)\n    view = session.createView(panel) if session.activate() else None\n    if view is not None:\n        view.setObjectName(\"qmlBridgeThemeView\")\n        view.setAccessibleName(\"QML preview\")\n        view.setFixedHeight(100)\n        column.addWidget(view)\n    else:\n        column.addWidget(fluentqt.Label(\"QML is unavailable\", panel))\n    if view is not None:\n        view.load(qml_source(\"Theme\"))\n    panel._qml_session = session\n    return panel\n\ndef main():\n    fluentqt.prepare_high_dpi_application()\n    QmlSession.prepareApplication()\n    app = QApplication(sys.argv)\n    fluentqt.initialize_resources()\n    app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))\n    window = fluentqt.Window()\n    window.setWindowTitle(\"QmlView\")\n    window.resize(640, 480)\n    window.setContentWidget(make_panel(window))\n    window.show()\n    return app.exec()\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n",
+          "usage_snippet": "# view and qml_source() are defined in Full example.\n# Theme.qml binds fluentTheme colors, typography and corner radius.\nview.load(qml_source(\"Theme\"))\n"
+        },
+        {
+          "name": "Theme.qml",
+          "language": "qml",
+          "code": "import QtQuick 2.15\n\nRectangle {\n    color: fluentTheme.surface\n    radius: fluentTheme.cornerRadius\n    antialiasing: true\n\n    Rectangle {\n        anchors.fill: parent\n        z: -1\n        color: fluentTheme.surfaceAlt\n    }\n\n    Row {\n        anchors.centerIn: parent\n        height: 24\n        spacing: 12\n        Rectangle {\n            objectName: \"qmlBridgeThemeSwatch\"\n            width: 24\n            height: 24\n            radius: fluentTheme.cornerRadius\n            antialiasing: true\n            color: fluentTheme.accent\n        }\n        Text {\n            objectName: \"qmlBridgeThemeCaption\"\n            anchors.alignWhenCentered: false\n            anchors.verticalCenter: parent.verticalCenter\n            text: fluentTheme.dark ? \"Dark theme\" : \"Light theme\"\n            color: fluentTheme.text\n            font.family: fluentTheme.fontFamily\n            font.pixelSize: fluentTheme.fontPixelSize\n        }\n    }\n}\n",
+          "usage_snippet": ""
+        }
+      ]
+    },
+    {
+      "route_id": "qml-view",
+      "sample_id": "qml-view-context",
+      "source": "# panel, view and qml_source() are defined in Full example.\ntitle_edit = fluentqt.LineEdit(panel)\ntitle_edit.setText(\"A shared title\")\nif view.setContextObject(\"widgetInput\", title_edit):\n    view.load(qml_source(\"Context\"))\n",
+      "source_files": [
+        {
+          "name": "main.py",
+          "language": "python",
+          "code": "# Save main.py and Context.qml in the same directory.\nimport sys\nfrom pathlib import Path\nimport fluentqt\nfrom fluentqt.qmlbridge import QmlSession, QmlView\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n\nfrom PySide6.QtCore import QUrl\nfrom PySide6.QtWidgets import QApplication\n\ndef qml_source(name):\n    filename = name if name.endswith(\".qml\") else name + \".qml\"\n    return QUrl.fromLocalFile(str(Path(__file__).resolve().with_name(filename)))\n\ndef make_panel(parent=None):\n    panel = QWidget(parent)\n    panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)\n    column = QVBoxLayout(panel)\n    column.setContentsMargins(0, 0, 0, 0)\n    column.setSpacing(12)\n    column.setAlignment(Qt.AlignTop)\n    title_edit = fluentqt.LineEdit(panel)\n    title_edit.setObjectName(\"qmlBridgeTitleEdit\")\n    title_edit.setAccessibleName(\"Widgets text\")\n    title_edit.setText(\"A shared title\")\n    column.addWidget(title_edit)\n    session = QmlSession(panel, panel)\n    view = session.createView(panel) if session.activate() else None\n    if view is not None:\n        view.setObjectName(\"qmlBridgeContextView\")\n        view.setAccessibleName(\"QML preview\")\n        view.setFixedHeight(100)\n        column.addWidget(view)\n    else:\n        column.addWidget(fluentqt.Label(\"QML is unavailable\", panel))\n    if view is not None and view.setContextObject(\"widgetInput\", title_edit):\n        view.load(qml_source(\"Context\"))\n    panel._qml_session = session\n    return panel\n\ndef main():\n    fluentqt.prepare_high_dpi_application()\n    QmlSession.prepareApplication()\n    app = QApplication(sys.argv)\n    fluentqt.initialize_resources()\n    app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))\n    window = fluentqt.Window()\n    window.setWindowTitle(\"QmlView\")\n    window.resize(640, 480)\n    window.setContentWidget(make_panel(window))\n    window.show()\n    return app.exec()\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n",
+          "usage_snippet": "# panel, view and qml_source() are defined in Full example.\ntitle_edit = fluentqt.LineEdit(panel)\ntitle_edit.setText(\"A shared title\")\nif view.setContextObject(\"widgetInput\", title_edit):\n    view.load(qml_source(\"Context\"))\n"
+        },
+        {
+          "name": "Context.qml",
+          "language": "qml",
+          "code": "import QtQuick 2.15\n\nRectangle {\n    color: fluentTheme.surface\n    radius: fluentTheme.cornerRadius\n    antialiasing: true\n    property string previewTitle: widgetInput ? widgetInput.text : \"\"\n\n    Rectangle {\n        anchors.fill: parent\n        z: -1\n        color: fluentTheme.surfaceAlt\n    }\n\n    Text {\n        anchors.centerIn: parent\n        width: parent.width - 32\n        horizontalAlignment: Text.AlignHCenter\n        text: parent.previewTitle\n        elide: Text.ElideRight\n        color: fluentTheme.text\n        font.family: fluentTheme.fontFamily\n        font.pixelSize: fluentTheme.fontPixelSize\n    }\n}\n",
+          "usage_snippet": ""
+        }
+      ]
+    },
+    {
+      "route_id": "qml-view",
+      "sample_id": "qml-view-action",
+      "source": "# panel, view and qml_source() are defined in Full example.\nprogress = fluentqt.ProgressBar(panel)\nprogress.setRange(0, 100)\nprogress.setValue(40)\nif view.setContextObject(\"widgetProgress\", progress):\n    view.load(qml_source(\"Action\"))\n",
+      "source_files": [
+        {
+          "name": "main.py",
+          "language": "python",
+          "code": "# Save main.py and Action.qml in the same directory.\nimport sys\nfrom pathlib import Path\nimport fluentqt\nfrom fluentqt.qmlbridge import QmlSession, QmlView\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n\nfrom PySide6.QtCore import QUrl\nfrom PySide6.QtWidgets import QApplication\n\ndef qml_source(name):\n    filename = name if name.endswith(\".qml\") else name + \".qml\"\n    return QUrl.fromLocalFile(str(Path(__file__).resolve().with_name(filename)))\n\ndef make_panel(parent=None):\n    panel = QWidget(parent)\n    panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)\n    column = QVBoxLayout(panel)\n    column.setContentsMargins(0, 0, 0, 0)\n    column.setSpacing(12)\n    column.setAlignment(Qt.AlignTop)\n    progress = fluentqt.ProgressBar(panel)\n    progress.setObjectName(\"qmlBridgeProgressIndicator\")\n    progress.setAccessibleName(\"Widgets progress\")\n    progress.setRange(0, 100)\n    progress.setValue(40)\n    column.addWidget(progress)\n    session = QmlSession(panel, panel)\n    view = session.createView(panel) if session.activate() else None\n    if view is not None:\n        view.setObjectName(\"qmlBridgeActionView\")\n        view.setAccessibleName(\"QML preview\")\n        view.setFixedHeight(180)\n        column.addWidget(view)\n    else:\n        column.addWidget(fluentqt.Label(\"QML is unavailable\", panel))\n    if view is not None and view.setContextObject(\"widgetProgress\", progress):\n        view.load(qml_source(\"Action\"))\n    panel._qml_session = session\n    return panel\n\ndef main():\n    fluentqt.prepare_high_dpi_application()\n    QmlSession.prepareApplication()\n    app = QApplication(sys.argv)\n    fluentqt.initialize_resources()\n    app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))\n    window = fluentqt.Window()\n    window.setWindowTitle(\"QmlView\")\n    window.resize(640, 480)\n    window.setContentWidget(make_panel(window))\n    window.show()\n    return app.exec()\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n",
+          "usage_snippet": "# panel, view and qml_source() are defined in Full example.\nprogress = fluentqt.ProgressBar(panel)\nprogress.setRange(0, 100)\nprogress.setValue(40)\nif view.setContextObject(\"widgetProgress\", progress):\n    view.load(qml_source(\"Action\"))\n"
+        },
+        {
+          "name": "Action.qml",
+          "language": "qml",
+          "code": "import QtQuick 2.15\n\nRectangle {\n    id: preview\n    color: fluentTheme.surface\n    radius: fluentTheme.cornerRadius\n    antialiasing: true\n    property int previewProgress: widgetProgress ? Math.round(widgetProgress.value) : 0\n\n    Rectangle {\n        anchors.fill: parent\n        z: -1\n        color: fluentTheme.surfaceAlt\n    }\n\n    function advance() {\n        if (widgetProgress)\n            widgetProgress.value = Math.min(100, widgetProgress.value + 10)\n    }\n\n    Column {\n        anchors.fill: parent\n        anchors.margins: 16\n        spacing: 12\n        Text {\n            text: preview.previewProgress + \"% in Widgets\"\n            color: fluentTheme.text\n            font.family: fluentTheme.fontFamily\n            font.pixelSize: fluentTheme.fontPixelSize\n        }\n        Rectangle {\n            width: parent.width\n            height: 6\n            radius: 3\n            antialiasing: true\n            color: fluentTheme.border\n            Rectangle {\n                width: parent.width * preview.previewProgress / 100\n                height: parent.height\n                radius: parent.radius\n                antialiasing: true\n                color: fluentTheme.accent\n            }\n        }\n        Rectangle {\n            id: action\n            objectName: \"qmlBridgeAdvanceButton\"\n            width: Math.min(parent.width, 160)\n            height: 36\n            radius: fluentTheme.cornerRadius\n            antialiasing: true\n            color: fluentTheme.accent\n            activeFocusOnTab: true\n            border.width: activeFocus ? 2 : 0\n            border.color: fluentTheme.text\n            Accessible.role: Accessible.Button\n            Accessible.name: \"Advance +10\"\n            Accessible.onPressAction: preview.advance()\n            Keys.onReturnPressed: preview.advance()\n            Keys.onEnterPressed: preview.advance()\n            Keys.onSpacePressed: preview.advance()\n            Text {\n                anchors.centerIn: parent\n                text: \"Advance +10\"\n                color: fluentTheme.onAccent\n                font.family: fluentTheme.fontFamily\n                font.pixelSize: fluentTheme.fontPixelSize\n            }\n            MouseArea {\n                anchors.fill: parent\n                cursorShape: Qt.PointingHandCursor\n                onClicked: {\n                    action.forceActiveFocus()\n                    preview.advance()\n                }\n            }\n        }\n    }\n}\n",
+          "usage_snippet": ""
+        }
+      ]
+    },
+    {
+      "route_id": "qml-view",
+      "sample_id": "qml-view-lifecycle",
+      "source": "from fluentqt.qmlbridge import QmlView\n\n# session, view, buttons, status and qml_source() are in Full example.\ndef update_status(state, label=status, ready=QmlView.Status.Ready):\n    label.setText(\"QML loaded\" if state == ready else \"QML stopped\")\n\ndef reload_qml(*_unused):\n    if view is not None and session.activate():\n        view.unload()\n        view.load(qml_source(\"Basic\"))\n\ndeactivate.clicked.connect(lambda: session.deactivate())\nreload.clicked.connect(reload_qml)\nif view is not None:\n    view.statusChanged.connect(update_status)\n    reload_qml()\nelse:\n    deactivate.setEnabled(False)\n    reload.setEnabled(False)\n",
+      "source_files": [
+        {
+          "name": "main.py",
+          "language": "python",
+          "code": "# Save main.py and Basic.qml in the same directory.\nimport sys\nfrom pathlib import Path\nimport fluentqt\nfrom fluentqt.qmlbridge import QmlSession, QmlView\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n\nfrom PySide6.QtCore import QUrl\nfrom PySide6.QtWidgets import QApplication\n\ndef qml_source(name):\n    filename = name if name.endswith(\".qml\") else name + \".qml\"\n    return QUrl.fromLocalFile(str(Path(__file__).resolve().with_name(filename)))\n\ndef make_panel(parent=None):\n    panel = QWidget(parent)\n    panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)\n    column = QVBoxLayout(panel)\n    column.setContentsMargins(0, 0, 0, 0)\n    column.setSpacing(12)\n    column.setAlignment(Qt.AlignTop)\n    session = QmlSession(panel, panel)\n    view = session.createView(panel) if session.activate() else None\n    if view is not None:\n        view.setObjectName(\"qmlBridgeLifecycleView\")\n        view.setAccessibleName(\"QML preview\")\n        view.setFixedHeight(100)\n        column.addWidget(view)\n    else:\n        column.addWidget(fluentqt.Label(\"QML is unavailable\", panel))\n    actions = QWidget(panel)\n    actions_layout = QHBoxLayout(actions)\n    actions_layout.setContentsMargins(0, 0, 0, 0)\n    actions_layout.setSpacing(12)\n    actions_layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)\n    deactivate = fluentqt.Button(\"Deactivate\", actions)\n    deactivate.setObjectName(\"qmlBridgeDeactivate\")\n    reload = fluentqt.Button(\"Reload QML\", actions)\n    reload.setObjectName(\"qmlBridgeReload\")\n    actions_layout.addWidget(deactivate)\n    actions_layout.addWidget(reload)\n    column.addWidget(actions)\n    status = fluentqt.Label(\"QML stopped\", panel)\n    status.setObjectName(\"qmlBridgeLifecycleStatus\")\n    column.addWidget(status)\n\n    def update_status(state, label=status, ready=QmlView.Status.Ready):\n        label.setText(\"QML loaded\" if state == ready else \"QML stopped\")\n\n    def reload_qml(*_unused):\n        if view is not None and session.activate():\n            view.unload()\n            view.load(qml_source(\"Basic\"))\n\n    deactivate.clicked.connect(lambda: session.deactivate())\n    reload.clicked.connect(reload_qml)\n    if view is not None:\n        view.statusChanged.connect(update_status)\n        reload_qml()\n    else:\n        deactivate.setEnabled(False)\n        reload.setEnabled(False)\n    panel._qml_session = session\n    return panel\n\ndef main():\n    fluentqt.prepare_high_dpi_application()\n    QmlSession.prepareApplication()\n    app = QApplication(sys.argv)\n    fluentqt.initialize_resources()\n    app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))\n    window = fluentqt.Window()\n    window.setWindowTitle(\"QmlView\")\n    window.resize(640, 480)\n    window.setContentWidget(make_panel(window))\n    window.show()\n    return app.exec()\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n",
+          "usage_snippet": "from fluentqt.qmlbridge import QmlView\n\n# session, view, buttons, status and qml_source() are in Full example.\ndef update_status(state, label=status, ready=QmlView.Status.Ready):\n    label.setText(\"QML loaded\" if state == ready else \"QML stopped\")\n\ndef reload_qml(*_unused):\n    if view is not None and session.activate():\n        view.unload()\n        view.load(qml_source(\"Basic\"))\n\ndeactivate.clicked.connect(lambda: session.deactivate())\nreload.clicked.connect(reload_qml)\nif view is not None:\n    view.statusChanged.connect(update_status)\n    reload_qml()\nelse:\n    deactivate.setEnabled(False)\n    reload.setEnabled(False)\n"
+        },
+        {
+          "name": "Basic.qml",
+          "language": "qml",
+          "code": "import QtQuick 2.15\n\nRectangle {\n    color: fluentTheme.surface\n    radius: fluentTheme.cornerRadius\n    antialiasing: true\n\n    Rectangle {\n        anchors.fill: parent\n        z: -1\n        color: fluentTheme.surfaceAlt\n    }\n\n    Text {\n        anchors.centerIn: parent\n        text: \"Hello from QML\"\n        color: fluentTheme.text\n        font.family: fluentTheme.fontFamily\n        font.pixelSize: fluentTheme.fontPixelSize\n    }\n}\n",
+          "usage_snippet": ""
+        }
+      ]
+    },
+    {
+      "route_id": "qml-view",
+      "sample_id": "qml-view-error",
+      "source": "from fluentqt.qmlbridge import QmlView\n\n# session, view, buttons, status and qml_source() are in Full example.\ndef update_status(state, qml_view=view, label=status,\n                  ready=QmlView.Status.Ready, error=QmlView.Status.Error):\n    if state == ready:\n        label.setText(\"QML loaded\")\n    elif state == error:\n        label.setText(qml_view.lastError())\n    else:\n        label.setText(\"QML stopped\")\n\nif view is not None:\n    view.statusChanged.connect(update_status)\n    missing.clicked.connect(lambda: view.load(qml_source(\"Missing\")))\n    restore.clicked.connect(lambda: view.load(qml_source(\"Basic\")))\n    view.load(qml_source(\"Basic\"))\nelse:\n    missing.setEnabled(False)\n    restore.setEnabled(False)\n",
+      "source_files": [
+        {
+          "name": "main.py",
+          "language": "python",
+          "code": "# Save main.py and Basic.qml in the same directory.\nimport sys\nfrom pathlib import Path\nimport fluentqt\nfrom fluentqt.qmlbridge import QmlSession, QmlView\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n\nfrom PySide6.QtCore import QUrl\nfrom PySide6.QtWidgets import QApplication\n\ndef qml_source(name):\n    filename = name if name.endswith(\".qml\") else name + \".qml\"\n    return QUrl.fromLocalFile(str(Path(__file__).resolve().with_name(filename)))\n\ndef make_panel(parent=None):\n    panel = QWidget(parent)\n    panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)\n    column = QVBoxLayout(panel)\n    column.setContentsMargins(0, 0, 0, 0)\n    column.setSpacing(12)\n    column.setAlignment(Qt.AlignTop)\n    session = QmlSession(panel, panel)\n    view = session.createView(panel) if session.activate() else None\n    if view is not None:\n        view.setObjectName(\"qmlBridgeErrorView\")\n        view.setAccessibleName(\"QML preview\")\n        view.setFixedHeight(100)\n        column.addWidget(view)\n    else:\n        column.addWidget(fluentqt.Label(\"QML is unavailable\", panel))\n    actions = QWidget(panel)\n    actions_layout = QHBoxLayout(actions)\n    actions_layout.setContentsMargins(0, 0, 0, 0)\n    actions_layout.setSpacing(12)\n    actions_layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)\n    missing = fluentqt.Button(\"Load missing QML\", actions)\n    missing.setObjectName(\"qmlBridgeLoadMissing\")\n    restore = fluentqt.Button(\"Restore QML\", actions)\n    restore.setObjectName(\"qmlBridgeRestore\")\n    actions_layout.addWidget(missing)\n    actions_layout.addWidget(restore)\n    column.addWidget(actions)\n    status = fluentqt.Label(\"QML stopped\", panel)\n    status.setObjectName(\"qmlBridgeErrorStatus\")\n    status.setWordWrap(True)\n    column.addWidget(status)\n\n    def update_status(state, qml_view=view, label=status,\n                      ready=QmlView.Status.Ready, error=QmlView.Status.Error):\n        if state == ready:\n            label.setText(\"QML loaded\")\n        elif state == error:\n            label.setText(qml_view.lastError())\n        else:\n            label.setText(\"QML stopped\")\n\n    if view is not None:\n        view.statusChanged.connect(update_status)\n        missing.clicked.connect(lambda: view.load(qml_source(\"Missing\")))\n        restore.clicked.connect(lambda: view.load(qml_source(\"Basic\")))\n        view.load(qml_source(\"Basic\"))\n    else:\n        missing.setEnabled(False)\n        restore.setEnabled(False)\n    panel._qml_session = session\n    return panel\n\ndef main():\n    fluentqt.prepare_high_dpi_application()\n    QmlSession.prepareApplication()\n    app = QApplication(sys.argv)\n    fluentqt.initialize_resources()\n    app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))\n    window = fluentqt.Window()\n    window.setWindowTitle(\"QmlView\")\n    window.resize(640, 480)\n    window.setContentWidget(make_panel(window))\n    window.show()\n    return app.exec()\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n",
+          "usage_snippet": "from fluentqt.qmlbridge import QmlView\n\n# session, view, buttons, status and qml_source() are in Full example.\ndef update_status(state, qml_view=view, label=status,\n                  ready=QmlView.Status.Ready, error=QmlView.Status.Error):\n    if state == ready:\n        label.setText(\"QML loaded\")\n    elif state == error:\n        label.setText(qml_view.lastError())\n    else:\n        label.setText(\"QML stopped\")\n\nif view is not None:\n    view.statusChanged.connect(update_status)\n    missing.clicked.connect(lambda: view.load(qml_source(\"Missing\")))\n    restore.clicked.connect(lambda: view.load(qml_source(\"Basic\")))\n    view.load(qml_source(\"Basic\"))\nelse:\n    missing.setEnabled(False)\n    restore.setEnabled(False)\n"
+        },
+        {
+          "name": "Basic.qml",
+          "language": "qml",
+          "code": "import QtQuick 2.15\n\nRectangle {\n    color: fluentTheme.surface\n    radius: fluentTheme.cornerRadius\n    antialiasing: true\n\n    Rectangle {\n        anchors.fill: parent\n        z: -1\n        color: fluentTheme.surfaceAlt\n    }\n\n    Text {\n        anchors.centerIn: parent\n        text: \"Hello from QML\"\n        color: fluentTheme.text\n        font.family: fluentTheme.fontFamily\n        font.pixelSize: fluentTheme.fontPixelSize\n    }\n}\n",
+          "usage_snippet": ""
+        }
+      ]
+    },
+    {
       "route_id": "menu",
       "sample_id": "menu-command-shortcuts",
       "source": "from PySide6.QtGui import QKeySequence\n\nbutton = fluentqt.DropDownButton(\"File\")\nstatus = fluentqt.Label(\"Clicked: (none)\")\nmenu = fluentqt.FluentMenu(\"\", button)\n\nnew_action = menu.addAction(\"New\")\nnew_action.setShortcut(QKeySequence.StandardKey.New)\nnew_action.triggered.connect(lambda: status.setText(\"Clicked: New\"))\n\nopen_action = menu.addAction(\"Open...\")\nopen_action.setShortcut(QKeySequence.StandardKey.Open)\nsave_action = menu.addAction(\"Save\")\nsave_action.setShortcut(QKeySequence.StandardKey.Save)\nmenu.addSeparator()\npublish = menu.addAction(\"Publish\")\npublish.setEnabled(False)\nbutton.setMenu(menu)\n"
@@ -1220,6 +1335,66 @@
       "route_id": "font-icon",
       "sample_id": "font-icon-color-rotation",
       "source": "from PySide6.QtGui import QColor\n\ninherited = fluentqt.FontIcon(fluentqt.Typography.Icons.Forward)\ninherited.setIconSize(24)\n\naccent = fluentqt.FontIcon(fluentqt.Typography.Icons.Forward)\naccent.setIconSize(24)\naccent.setColor(QColor(\"#0F6CBD\"))\naccent.setRotation(90.0)\n\nwarning = fluentqt.FontIcon(fluentqt.Typography.Icons.Forward)\nwarning.setIconSize(24)\nwarning.setColor(QColor(\"#F7630C\"))\nwarning.setRotation(180.0)\n"
+    },
+    {
+      "route_id": "foundation-qmlplus",
+      "sample_id": "qmlplus-binding-one-way",
+      "source": "from PySide6.QtCore import Qt\n\nslider = fluentqt.Slider(Qt.Horizontal, panel)\nslider.setRange(0, 100)\nslider.setValue(40)\nbar = fluentqt.ProgressBar(panel)\nbar.setRange(0, 100)\nfluentqt.bind(slider, \"value\", bar, \"value\")\n"
+    },
+    {
+      "route_id": "foundation-qmlplus",
+      "sample_id": "qmlplus-binding-two-way",
+      "source": "first = fluentqt.ToggleSwitch(panel)\nsecond = fluentqt.ToggleSwitch(panel)\nfluentqt.bind(first, \"isOn\", second, \"isOn\", fluentqt.BindingMode.TwoWay)\n"
+    },
+    {
+      "route_id": "foundation-qmlplus",
+      "sample_id": "qmlplus-binding-computed",
+      "source": "from PySide6.QtCore import Qt\n\nfirst = fluentqt.Slider(Qt.Horizontal, panel)\nfirst.setRange(0, 100)\nfirst.setValue(20)\nsecond = fluentqt.Slider(Qt.Horizontal, panel)\nsecond.setRange(0, 100)\nsecond.setValue(30)\nresult = fluentqt.Label(\"\", panel)\nbinding = fluentqt.bind_computed(\n    result,\n    \"text\",\n    [(first, \"value\"), (second, \"value\")],\n    lambda: \"{} + {} = {}\".format(\n        first.value(),\n        second.value(),\n        first.value() + second.value()\n    )\n)\n"
+    },
+    {
+      "route_id": "foundation-qmlplus",
+      "sample_id": "qmlplus-binding-pause",
+      "source": "from PySide6.QtCore import Qt\n\nslider = fluentqt.Slider(Qt.Horizontal, panel)\nslider.setRange(0, 100)\nslider.setValue(40)\nbar = fluentqt.ProgressBar(panel)\npause = fluentqt.ToggleSwitch(panel)\nbinding = fluentqt.bind_managed(slider, \"value\", bar, \"value\")\npause.toggled.connect(lambda on: binding.pause() if on else binding.resume())\n"
+    },
+    {
+      "route_id": "foundation-qmlplus",
+      "sample_id": "qmlplus-state-manual",
+      "source": "label = fluentqt.Label(\"Default\", panel)\ntoggle = fluentqt.ToggleSwitch(panel)\nstates = fluentqt.StateGroup(panel)\nstates.add(\"active\", {label: {\"text\": \"Active\"}})\ntoggle.toggled.connect(lambda on: states.set(\"active\" if on else \"\"))\n"
+    },
+    {
+      "route_id": "foundation-qmlplus",
+      "sample_id": "qmlplus-state-conditional",
+      "source": "label = fluentqt.Label(\"Default\", panel)\ntoggle = fluentqt.ToggleSwitch(panel)\nstates = fluentqt.StateGroup(panel)\nstates.add(\n    \"active\",\n    {label: {\"text\": \"Active\"}},\n    when=lambda: toggle.isOn(),\n    dependencies=[(toggle, \"isOn\")]\n)\n"
+    },
+    {
+      "route_id": "foundation-qmlplus",
+      "sample_id": "qmlplus-state-inheritance",
+      "source": "button = fluentqt.Button(\"Ready\", panel)\ntoggle = fluentqt.ToggleSwitch(panel)\nstates = fluentqt.StateGroup(panel)\nstates.add(\"busy\", {button: {\"enabled\": False}})\nstates.add(\"saving\", {button: {\"text\": \"Saving...\"}}, extend=\"busy\")\ntoggle.toggled.connect(lambda on: states.set(\"saving\" if on else \"\"))\n"
+    },
+    {
+      "route_id": "foundation-qmlplus",
+      "sample_id": "qmlplus-state-binding-restore",
+      "source": "from PySide6.QtCore import Qt\n\nslider = fluentqt.Slider(Qt.Horizontal, panel)\nslider.setRange(0, 100)\nslider.setValue(40)\nbar = fluentqt.ProgressBar(panel)\nfluentqt.bind(slider, \"value\", bar, \"value\")\ntoggle = fluentqt.ToggleSwitch(panel)\nstates = fluentqt.StateGroup(panel)\nstates.add(\"override\", {bar: {\"value\": 100.0}})\ntoggle.toggled.connect(lambda on: states.set(\"override\" if on else \"\"))\n"
+    },
+    {
+      "route_id": "foundation-qmlplus",
+      "sample_id": "qmlplus-behavior",
+      "source": "from PySide6.QtCore import Qt\n\nslider = fluentqt.Slider(Qt.Horizontal, panel)\nslider.setRange(0, 100)\nslider.setValue(40)\nbar = fluentqt.ProgressBar(panel)\nfluentqt.set_behavior(bar, \"value\", duration=300)\nfluentqt.bind(slider, \"value\", bar, \"value\")\n"
+    },
+    {
+      "route_id": "foundation-qmlplus",
+      "sample_id": "qmlplus-transition",
+      "source": "bar = fluentqt.ProgressBar(panel)\nbar.setValue(20)\ntoggle = fluentqt.ToggleSwitch(panel)\nstates = fluentqt.StateGroup(panel)\nstates.add(\"high\", {bar: {\"value\": 80.0}})\nstates.add_transition([\"value\"], duration=300)\ntoggle.toggled.connect(lambda on: states.set(\"high\" if on else \"\"))\n"
+    },
+    {
+      "route_id": "foundation-qmlplus",
+      "sample_id": "qmlplus-anchors-center",
+      "source": "surface = fluentqt.Card(panel)\nsurface.setMinimumHeight(104)\nanchors = fluentqt.AnchorLayout(surface)\nbutton = fluentqt.Button(\"Centered\", surface)\nanchors.addWidget(button, fluentqt.anchors(center_in=surface))\n"
+    },
+    {
+      "route_id": "foundation-qmlplus",
+      "sample_id": "qmlplus-anchors-state",
+      "source": "surface = fluentqt.Card(panel)\nsurface.setMinimumHeight(104)\nanchors = fluentqt.AnchorLayout(surface)\nbutton = fluentqt.Button(\"Move me\", surface)\ntoggle = fluentqt.ToggleSwitch(panel)\nleft = fluentqt.anchors(left=(surface, 12), vertical_center=surface)\nanchors.addWidget(button, left)\nright = fluentqt.anchors(right=(surface, -12), vertical_center=surface)\nstates = fluentqt.StateGroup(panel)\nstates.add(\"right\", {}, anchor_changes={button: right})\ntoggle.toggled.connect(lambda on: states.set(\"right\" if on else \"\"))\n"
     }
   ]
 }

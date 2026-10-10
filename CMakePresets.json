@@ -37,6 +37,7 @@
         "FLUENT_QT_BUILD_GALLERY": "ON",
         "FLUENT_QT_BUILD_SPATIAL": "ON",
         "FLUENT_QT_BUILD_TESTS": "OFF",
+        "FLUENT_QT_BUILD_QML_BRIDGE": "ON",
         "FLUENT_QT_BUILD_PYSIDE6_BINDINGS": "OFF",
         "FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT": "ON",
         "FLUENT_QT_INSTALL": "ON",
@@ -55,6 +56,7 @@
       },
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "arm64-osx",
+        "FLUENT_QT_BUILD_QML_BRIDGE": "ON",
         "CMAKE_OSX_ARCHITECTURES": "arm64"
       }
     },
@@ -64,6 +66,7 @@
       "description": "Apple Silicon release build used for DMG packaging.",
       "inherits": "vcpkg-osx",
       "cacheVariables": {
+        "FLUENT_QT_BUILD_QML_BRIDGE": "OFF",
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "OFF",
         "FLUENT_QT_BUILD_EXAMPLES": "OFF",
@@ -85,6 +88,7 @@
       },
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x64-osx",
+        "FLUENT_QT_BUILD_QML_BRIDGE": "ON",
         "CMAKE_OSX_ARCHITECTURES": "x86_64"
       }
     },
@@ -94,6 +98,7 @@
       "description": "Intel/Rosetta release build used for DMG packaging.",
       "inherits": "vcpkg-osx-x64",
       "cacheVariables": {
+        "FLUENT_QT_BUILD_QML_BRIDGE": "OFF",
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "OFF",
         "FLUENT_QT_BUILD_EXAMPLES": "OFF",

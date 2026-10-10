@@ -49,6 +49,9 @@ bool initializeResources();
 #ifdef FLUENT_QT_HAS_PLUGINS
 #include <FluentQt/Plugins.h>
 #endif
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+#include <FluentQt/QmlBridge.h>
+#endif
 #include <FluentQt/Scrolling.h>
 #ifdef FLUENT_QT_HAS_SPATIAL
 #include <FluentQt/Spatial.h>

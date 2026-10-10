@@ -69,6 +69,32 @@ TEST(ExpanderTest, Contract_DefaultsAndHeaderText)
     EXPECT_EQ(headerText->textColorRole(), fluent::textfields::Label::TextColorRole::Primary);
 }
 
+TEST(ExpanderTest, Contract_ExpandedBodyTracksTextGrowthWithoutCollapsing)
+{
+    Expander expander;
+    expander.resize(360, 44);
+    auto* body = new QWidget;
+    auto* layout = new QVBoxLayout(body);
+    auto* label = new fluent::textfields::Label(QStringLiteral("Short source"), body);
+    label->setTextFormat(Qt::RichText);
+    label->setWordWrap(true);
+    layout->addWidget(label);
+    expander.setContentWidget(body, WidgetOwnership::Owned);
+    expander.show();
+    expander.setExpandedAnimated(true, false);
+    QApplication::processEvents();
+    const int initialHeight = expander.height();
+    QSignalSpy expandedSpy(&expander, &Expander::expandedChanged);
+    label->setText(QStringLiteral("Full source line<br/>").repeated(32));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return expander.height() > initialHeight + 300; }));
+    EXPECT_GE(label->height(), label->heightForWidth(label->width()));
+    const int grownHeight = expander.height();
+    label->setText(QStringLiteral("Short source"));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return expander.height() < grownHeight - 300; }));
+    EXPECT_TRUE(expander.isExpanded());
+    EXPECT_EQ(expandedSpy.count(), 0);
+}
+
 TEST(ExpanderTest, Contract_ExpandedHandlerCanSynchronouslyDeleteExpander)
 {
     auto* expander = new Expander;

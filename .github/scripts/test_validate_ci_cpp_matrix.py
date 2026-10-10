@@ -114,6 +114,21 @@ class ValidateCiCppMatrixTest(unittest.TestCase):
                         errors,
                     )
 
+    def test_required_execution_lanes_cannot_omit_optional_qml_bridge(self):
+        for contract in MODULE.REQUIRED_EXECUTION_LANES.values():
+            with self.subTest(lane=contract["id"]):
+                catalog = copy.deepcopy(self.catalog)
+                scenario = next(item for item in catalog["scenarios"]
+                                if item["id"] == contract["id"])
+                scenario["configure_args"] = " ".join(
+                    option for option in scenario["configure_args"].split()
+                    if option != "-DFLUENT_QT_BUILD_QML_BRIDGE=ON"
+                )
+                self.assertTrue(any(
+                    "must configure -DFLUENT_QT_BUILD_QML_BRIDGE=ON" in error
+                    for error in MODULE.validate_catalog(catalog)
+                ))
+
 
 if __name__ == "__main__":
     unittest.main()

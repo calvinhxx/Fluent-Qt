@@ -29,6 +29,13 @@ not a claim of platform assistive-technology certification.
 
 ## Cross-cutting motion and contrast contract
 
+QMLPlus reactive composition preserves the accessible roles and actions of its
+native controls. Managed motion follows MotionPolicy, while conditional states
+apply enabled/value changes to the actual controls. The focused C++ QML+
+examples supply accessible names for its inputs and controls; its focused
+Gallery tests cover observable final state. This supporting infrastructure is
+not a new visible component classification. See [QMLPlus](../architecture/qmlplus.md).
+
 The component classifications above do not change when visual motion is
 reduced or disabled. `MotionPolicy::Reduced` keeps only short finite
 transitions and stops continuous motion; `MotionPolicy::Disabled` settles
@@ -111,6 +118,34 @@ Menu-button expanded state follows a real menu. An empty `QMenu` can emit
 `aboutToShow` without opening; DropDownButton and SplitButton restore their
 collapsed state in that case, while still allowing actions to be populated
 inside `aboutToShow`.
+
+`QmlView` is the optional QWidget host under **Plugins → QmlBridge**. It delegates
+input to its Quick scene; the application QML page supplies its own
+Accessible names, roles, actions, and keyboard order through Qt Quick semantics.
+Scene unloading immediately removes its old interactive surface from the host;
+scene/engine deletion follows on the next event-loop turn. The caller-owned host
+and context models are preserved. `QmlPlugin`, `QmlSession`, `QmlTheme`, and
+`QmlTextureLayer` are nonvisual lifecycle, theme, and rendering infrastructure.
+Fluent theme and motion values
+are explicit QML bindings, not automatic restyling or platform assistive-technology
+certification. See [QmlBridge](../architecture/qml-bridge.md) and its
+[host contracts](../../tests/components/qmlbridge/TestQmlBridge.cpp).
+
+Gallery's QmlView source cards use a named **Source file** combo box to select
+the host, QML page, or build file. **Source detail** switches between the host's
+key usage and full example; QML and build files show their complete source.
+The copy action and keyboard text selection use the selected file's source.
+These behaviors are covered by the
+[Gallery source contracts](../../tests/gallery/TestGalleryQmlBridge.cpp).
+
+Visible Quick widgets require direct composition outside ancestor graphics
+effects. On supported OpenGL hosts, Gallery hides that native Quick child and
+uses `QmlTextureLayer` to include the same QML scene in its projected panel,
+sharing the shell's inverse input mapping. Unsupported composition or texture
+failure restores native 2D without changing the 3D preference. Models and
+surrounding native controls remain intact; motion and contrast policy still
+apply. This rendering boundary does not change the host's accessibility
+classification or certify projected screen-reader or IME behavior.
 
 `SpatialView` is a C++ composition surface in the **Spatial** category. Its
 native accessibility contract applies in **2D mode**: the same widgets, values,

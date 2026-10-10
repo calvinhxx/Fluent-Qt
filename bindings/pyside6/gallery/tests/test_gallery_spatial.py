@@ -101,6 +101,30 @@ class GallerySpatialTest(unittest.TestCase):
         self.assertFalse(isValid(session))
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_graphics_conflict_keeps_native_window_and_requested_preference(self):
+        from fluentqt._fluentqt import fluent as native
+        key = "fluentqtGalleryGraphicsBackendFailure"
+        previous = self.app.property(key)
+        reason = "The selected graphics APIs are incompatible."
+        self.app.setProperty(key, reason)
+        self.settings.set_spatial_mode_enabled(True)
+        window = None
+        try:
+            with patch.dict(os.environ, {"FLUENT_QT_GALLERY_DISABLE_3D": "0"}), \
+                    patch.object(native._SpatialTextureHost, "prepareWindow") as prepare:
+                window = GalleryWindow(startup_visuals=False)
+                prepare.assert_not_called()
+            self.assertIsNone(window._spatial_controller.canvas)
+            self.assertFalse(window.property("gallerySpatialEnabled"))
+            self.assertTrue(self.settings.spatial_mode_enabled)
+            self.assertFalse(self.settings.spatial_available)
+            self.assertEqual(self.settings.spatial_unavailable_reason, reason)
+        finally:
+            if window is not None:
+                delete(window)
+            self.app.setProperty(key, previous)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_preview_session_cleanup_preserves_settings_and_live_models(self):
         from fluentqt.spatial import SpatialView
         self.settings.set_spatial_availability(True)
@@ -200,8 +224,10 @@ class GallerySpatialTest(unittest.TestCase):
                 window._splash = window._dismissal_splash = None
                 navigation = fluentqt.NavigationView(window)
                 with patch.object(compositor.SpatialSession, "activate", return_value=False), \
-                        patch.object(compositor, "_Surface") as surface, \
-                        patch.object(compositor, "_RhiSurface") as rhi_surface:
+                        patch.object(compositor._Surface, "__init__", autospec=True,
+                                     side_effect=AssertionError("Inactive session created GL surface")) as surface, \
+                        patch.object(compositor._RhiSurface, "__init__", autospec=True,
+                                     side_effect=AssertionError("Inactive session created RHI surface")) as rhi_surface:
                     controller = compositor.GallerySpatialController(window, navigation)
                     try:
                         if destroyed:
@@ -983,6 +1009,8 @@ class GallerySpatialTest(unittest.TestCase):
                 controller.renderer_ready = True
                 controller.panels = []
                 controller.native_overlay_at = lambda _point: False
+                controller._blocks_pending_qml_input = lambda watched, event: (
+                    GallerySpatialController._blocks_pending_qml_input(controller, watched, event))
                 calls = []
 
                 class LeaveHandler(QObject):
@@ -1058,10 +1086,11 @@ class GallerySpatialTest(unittest.TestCase):
                 owner.render_failure_timer.setSingleShot(True)
                 owner.cache_failure_timer.timeout.connect(lambda: callbacks.append("cache"))
                 owner.render_failure_timer.timeout.connect(lambda: callbacks.append("render"))
-                surface = Mock(owner=owner, cache_failure_pending=False)
+                surface = Mock(owner=owner, cache_failure_pending=False, qml_layer=None)
                 surface.plan = (1., [QSize(10, 10), QSize(10, 10)])
                 surface.devicePixelRatioF.return_value = 1.
                 surface.static_cache_bytes.return_value = 0
+                surface.qml_required_bytes.return_value = 0
                 surface.particles.prepare.return_value = False
                 surface.property.return_value = True
                 surface.prepare_caches.return_value = not resource_failure
@@ -1136,11 +1165,11 @@ class GallerySpatialTest(unittest.TestCase):
         self.assertIsNone(_cache_plan(panels, 2, 16384, reserved_bytes=-1))
 
     def test_gallery_without_spatial_does_not_load_opengl(self):
-        # Model an installed 2D binding: the optional module is absent.
+        # Model an installed base binding: optional renderers are absent.
         code = '''
 import importlib.util, json, sys
 original = importlib.util.find_spec
-importlib.util.find_spec = lambda name, *a, **k: None if name == "fluentqt.spatial" else original(name, *a, **k)
+importlib.util.find_spec = lambda name, *a, **k: None if name in ("fluentqt.spatial", "fluentqt.qmlbridge") else original(name, *a, **k)
 from PySide6.QtWidgets import QApplication
 import fluentqt
 app = QApplication([])
@@ -1153,16 +1182,18 @@ assert window._spatial_controller is None
 assert not window._settings.spatial_available
 assert not window._settings.spatial_mode_enabled
 assert {entry.route_id for entry in ENTRIES} == {
-    component["id"] for component in CONTRACT["components"] if component["category_id"] != "spatial"}
+    component["id"] for component in CONTRACT["components"] if component["category_id"] not in ("spatial", "qml-bridge")}
 assert {route.id for route in ROUTES} == {
     route["id"] for route in CONTRACT["routes"]
-    if route["id"] not in ("plugins", "spatial") and route["parent_id"] != "spatial"}
+    if route["id"] not in ("plugins", "spatial", "qml-bridge") and route["parent_id"] not in ("spatial", "qml-bridge")}
 assert len(ROUTES) == 107
 assert "plugins" not in window._main_navigation_pane._route_items
 assert "plugins" not in window._top_main_navigation_pane._buttons
 assert "PySide6.QtOpenGLWidgets" not in sys.modules
 assert "PySide6.QtOpenGL" not in sys.modules
 assert "fluentqt.spatial" not in sys.modules
+assert "fluentqt.qmlbridge" not in sys.modules
+assert "PySide6.QtQuick" not in sys.modules
 print("2D-only Gallery: no OpenGL imports")
 '''
         result = subprocess.run([sys.executable, "-c", code], env={**os.environ, "QT_QPA_PLATFORM": "offscreen"}, capture_output=True, text=True, timeout=30)

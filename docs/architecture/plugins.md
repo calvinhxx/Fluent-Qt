@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
 
-[Contents](../SUMMARY.md) · [Architecture index](README.md) · [Window Chrome Architecture →](window-chrome.md)
+[← QMLPlus reactive composition](qmlplus.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [QmlBridge: application QML in a QWidget host →](qml-bridge.md)
 <!-- docs-nav:top:end -->
 
 `FluentQt::Plugins` provides a common lifecycle for application-supplied
@@ -62,15 +62,16 @@ amount depends on the toolchain and executed paths; this contract does not limit
 the cost to binary size or guarantee zero runtime overhead. Correctness gates
 do not replace performance measurements on the target workload.
 
-A future QML integration or another external-content adapter belongs in its
-own optional target. That target can depend on `FluentQt::Plugins` and the Qt
-modules it needs. Enabling Plugins alone introduces no QML or Quick dependency
-and does not implement QML integration.
+[QmlBridge](qml-bridge.md) supplies application QML hosting in its own optional
+target. Its Qt Qml, Quick, and QuickWidgets dependencies stay with that target;
+enabling Plugins alone introduces none of them. Other external-content adapters
+follow the same boundary and select their own dependencies.
 
 ## Enable and consume the module
 
-The standalone build option defaults to off. Spatial automatically builds
-Plugins as its dependency. Enable Plugins by itself when configuring the library:
+The standalone build option defaults to off. Spatial and QmlBridge automatically
+build Plugins as their dependency. Enable Plugins by itself when configuring
+the library:
 
 ```bash
 cmake -S . -B build/fluentqt \
@@ -132,6 +133,30 @@ The Spatial target publicly links Plugins and the Widgets core. Enabling
 `find_package(FluentQt CONFIG REQUIRED COMPONENTS Spatial)` loads that dependency.
 Requesting the base package alone still loads only the Widgets core. Spatial's
 OpenGL requirements remain on its own optional target.
+
+## QmlBridge: application QML hosts
+
+`FluentQt::QmlBridge` supplies `fluent::qmlbridge::QmlPlugin`, with ID
+`fluentqt.qmlbridge` and widget key `qml-view`. `QmlSession` owns a local manager
+and plugin, while an application can register `QmlPlugin` in its shared graph.
+The same native host is available to matched PySide6 builds and compiled browser
+applications.
+
+Call `QmlSession::prepareApplication()` explicitly before the first Quick
+surface; activation does not change the global graphics backend. Deactivation
+clears tracked hosts' page state and rejects new loads immediately. Quick scenes
+and engines are released through deferred deletion after the current QML
+callback returns; caller-owned hosts and context models remain intact.
+Reactivation permits an explicit load and never reloads old
+pages automatically. The [QmlBridge contract](qml-bridge.md) owns scene/root
+lifetimes, borrowed context objects, theme tokens, and the Qt Quick dependency
+boundary. Gallery presents this plugin under **Plugins → QmlBridge → QmlView**.
+For supported OpenGL hosts, `QmlTextureLayer` redirects the existing Quick scene
+to a GPU texture and composes it into the Widgets panel before projection.
+Gallery therefore includes QML in its shared 3D mode; unsupported composition or
+texture failure uses native 2D while preserving the requested preference. The
+Quick dependencies and rendering helper stay inside QmlBridge. This does not
+add Quick dependencies or a QML graphics-proxy contract to Spatial or the core.
 
 ## Minimal extension example
 
@@ -398,5 +423,5 @@ published Python binaries follow the [wheel matrix](../../bindings/pyside6/wheel
 
 <!-- docs-nav:bottom:start -->
 ---
-[Contents](../SUMMARY.md) · [Architecture index](README.md) · [Window Chrome Architecture →](window-chrome.md)
+[← QMLPlus reactive composition](qmlplus.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [QmlBridge: application QML in a QWidget host →](qml-bridge.md)
 <!-- docs-nav:bottom:end -->

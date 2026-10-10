@@ -989,6 +989,17 @@
       ]
     },
     {
+      "id": "qml-content",
+      "question": "How can a Widgets application reuse a QML page and business model?",
+      "candidates": [
+        {
+          "component_id": "qml-view",
+          "choose_when": "An existing QWidget window should embed a trusted QML page and share application-owned QObject or QAbstractItemModel data. Enable QmlBridge, bind context objects before load, and use fluentTheme tokens explicitly.",
+          "avoid_when": "The application needs automatic QWidget-to-Quick conversion, untrusted script isolation, or a new Qt Quick control library. Coordinate the graphics API before mixing Quick and Spatial in one window."
+        }
+      ]
+    },
+    {
       "id": "spatial-composition",
       "question": "How can existing widgets gain perspective and depth?",
       "candidates": [
@@ -1123,6 +1134,16 @@
       ],
       "cpp_header": "<FluentQt/Spatial.h>",
       "python_module": "fluentqt.spatial"
+    },
+    {
+      "id": "qml-bridge",
+      "title": "QmlBridge",
+      "plugin": true,
+      "components": [
+        "qml-view"
+      ],
+      "cpp_header": "<FluentQt/QmlBridge.h>",
+      "python_module": "fluentqt.qmlbridge"
     },
     {
       "id": "menus-toolbars",
@@ -6503,6 +6524,301 @@
       ]
     },
     {
+      "id": "qml-view",
+      "title": "QmlView",
+      "category_id": "qml-bridge",
+      "description": "A QML surface that shares application models and Fluent theme tokens with the surrounding Widgets.",
+      "capabilities": [
+        "qml-content"
+      ],
+      "search_terms": [
+        "activates",
+        "again.",
+        "application",
+        "bar.",
+        "binding",
+        "button.",
+        "change",
+        "colors",
+        "create",
+        "deactivate",
+        "edit",
+        "error",
+        "field.",
+        "file",
+        "file.",
+        "fluent",
+        "follow",
+        "handle",
+        "it.",
+        "load",
+        "loads",
+        "missing",
+        "models",
+        "one",
+        "page",
+        "page.",
+        "press",
+        "preview",
+        "progress",
+        "property.",
+        "qml",
+        "qml-content",
+        "qml-view",
+        "qml-view-action",
+        "qml-view-context",
+        "qml-view-error",
+        "qml-view-lifecycle",
+        "qml-view-load",
+        "qml-view-theme",
+        "qmlbridge",
+        "qmlview",
+        "reads",
+        "reload",
+        "restore",
+        "see",
+        "session",
+        "shares",
+        "stops",
+        "surface",
+        "surrounding",
+        "text",
+        "theme",
+        "theme.",
+        "then",
+        "tokens",
+        "updates",
+        "valid",
+        "widgets",
+        "widgets."
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/QmlBridge.h>",
+        "declaration": "src/components/qmlbridge/QmlView.h",
+        "qualified_type": "fluent::qmlbridge::QmlView",
+        "cmake_target": "FluentQt::QmlBridge"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.qmlbridge",
+        "type": "QmlView",
+        "import_statement": "from fluentqt.qmlbridge import QmlView",
+        "build_option": "FLUENT_QT_BUILD_QML_BRIDGE=ON"
+      },
+      "tests": [
+        {
+          "target": "test_qml_bridge",
+          "source": "tests/components/qmlbridge/TestQmlBridge.cpp",
+          "ctest_label": "test_qml_bridge"
+        }
+      ],
+      "gallery": {
+        "route_id": "qml-view",
+        "sample_source": "app/view/widgets/samples/QmlBridgeSamples.cpp",
+        "control_image": "app/assets/control_images/qml-bridge/QmlView.png"
+      },
+      "samples": [
+        {
+          "id": "qml-view-load",
+          "title": "Load a QML page",
+          "description": "Create a QmlView and load one QML file.",
+          "cpp_snippet": "// main.cpp; build with CMakeLists.txt and keep the QML page in its own file.\n#include <FluentQt/FluentQt.h>\n#include <FluentQt/QmlBridge.h>\n#include <QApplication>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nusing fluent::basicinput::Button;\nusing fluent::qmlbridge::QmlSession;\nusing fluent::qmlbridge::QmlView;\nusing fluent::status_info::ProgressBar;\nusing fluent::textfields::Label;\nusing fluent::textfields::LineEdit;\nusing fluent::windowing::Window;\n\nQWidget* makePanel(const QUrl& source, QWidget* parent)\n{\n    auto* panel = new QWidget(parent);\n    auto* column = new QVBoxLayout(panel);\n    column->setContentsMargins(16, 16, 16, 16);\n    column->setSpacing(12);\n    column->setAlignment(Qt::AlignTop);\n    auto* session = new QmlSession(panel, panel);\n    QString error;\n    QmlView* view = session->activate(&error) ? session->createView(panel) : nullptr;\n    if (!view) {\n        column->addWidget(new Label(error.isEmpty() ? \"QML is unavailable\" : error, panel));\n        return panel;\n    }\n    view->setFixedHeight(100);\n    column->addWidget(view);\n    view->load(source);\n    return panel;\n}\n\nint main(int argc, char* argv[])\n{\n    fluent::prepareHighDpiApplication();\n    QmlSession::prepareApplication();\n    QApplication application(argc, argv);\n    fluent::initializeResources();\n    application.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());\n\n    Window window;\n    window.setWindowTitle(\"QmlView\");\n    window.resize(640, 480);\n    window.setContentWidget(makePanel(QUrl(\"qrc:/Basic.qml\"), &window));\n    window.show();\n    return application.exec();\n}\n",
+          "source_files": [
+            {
+              "name": "main.cpp",
+              "language": "cpp",
+              "code": "// main.cpp; build with CMakeLists.txt and keep the QML page in its own file.\n#include <FluentQt/FluentQt.h>\n#include <FluentQt/QmlBridge.h>\n#include <QApplication>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nusing fluent::basicinput::Button;\nusing fluent::qmlbridge::QmlSession;\nusing fluent::qmlbridge::QmlView;\nusing fluent::status_info::ProgressBar;\nusing fluent::textfields::Label;\nusing fluent::textfields::LineEdit;\nusing fluent::windowing::Window;\n\nQWidget* makePanel(const QUrl& source, QWidget* parent)\n{\n    auto* panel = new QWidget(parent);\n    auto* column = new QVBoxLayout(panel);\n    column->setContentsMargins(16, 16, 16, 16);\n    column->setSpacing(12);\n    column->setAlignment(Qt::AlignTop);\n    auto* session = new QmlSession(panel, panel);\n    QString error;\n    QmlView* view = session->activate(&error) ? session->createView(panel) : nullptr;\n    if (!view) {\n        column->addWidget(new Label(error.isEmpty() ? \"QML is unavailable\" : error, panel));\n        return panel;\n    }\n    view->setFixedHeight(100);\n    column->addWidget(view);\n    view->load(source);\n    return panel;\n}\n\nint main(int argc, char* argv[])\n{\n    fluent::prepareHighDpiApplication();\n    QmlSession::prepareApplication();\n    QApplication application(argc, argv);\n    fluent::initializeResources();\n    application.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());\n\n    Window window;\n    window.setWindowTitle(\"QmlView\");\n    window.resize(640, 480);\n    window.setContentWidget(makePanel(QUrl(\"qrc:/Basic.qml\"), &window));\n    window.show();\n    return application.exec();\n}\n",
+              "usage_snippet": "// main() calls QmlSession::prepareApplication() before QApplication.\n// panel and the absolute QML URL source are defined in Full example.\nauto* session = new QmlSession(panel, panel);\nif (!session->activate())\n    return panel;\nQmlView* view = session->createView(panel);\nif (!view)\n    return panel;\nview->setFixedHeight(100);\nview->load(source);"
+            },
+            {
+              "name": "Basic.qml",
+              "language": "qml",
+              "code": "import QtQuick 2.15\n\nRectangle {\n    color: fluentTheme.surface\n    radius: fluentTheme.cornerRadius\n    antialiasing: true\n\n    Rectangle {\n        anchors.fill: parent\n        z: -1\n        color: fluentTheme.surfaceAlt\n    }\n\n    Text {\n        anchors.centerIn: parent\n        text: \"Hello from QML\"\n        color: fluentTheme.text\n        font.family: fluentTheme.fontFamily\n        font.pixelSize: fluentTheme.fontPixelSize\n    }\n}\n",
+              "usage_snippet": ""
+            },
+            {
+              "name": "qml.qrc",
+              "language": "xml",
+              "code": "<RCC>\n    <qresource prefix=\"/\">\n        <file>Basic.qml</file>\n    </qresource>\n</RCC>\n",
+              "usage_snippet": ""
+            },
+            {
+              "name": "CMakeLists.txt",
+              "language": "cmake",
+              "code": "cmake_minimum_required(VERSION 3.16)\nproject(QmlViewExample LANGUAGES CXX)\nset(CMAKE_CXX_STANDARD 17)\nset(CMAKE_AUTORCC ON)\nfind_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)\nfind_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)\nfind_package(FluentQt CONFIG REQUIRED COMPONENTS QmlBridge)\nadd_executable(qml_view_example main.cpp qml.qrc)\ntarget_link_libraries(qml_view_example PRIVATE FluentQt::QmlBridge)\n",
+              "usage_snippet": ""
+            }
+          ],
+          "fill_available_width": true
+        },
+        {
+          "id": "qml-view-theme",
+          "title": "Fluent theme tokens",
+          "description": "Change the preview theme. The QML text and colors follow it.",
+          "cpp_snippet": "// main.cpp; build with CMakeLists.txt and keep the QML page in its own file.\n#include <FluentQt/FluentQt.h>\n#include <FluentQt/QmlBridge.h>\n#include <QApplication>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nusing fluent::basicinput::Button;\nusing fluent::qmlbridge::QmlSession;\nusing fluent::qmlbridge::QmlView;\nusing fluent::status_info::ProgressBar;\nusing fluent::textfields::Label;\nusing fluent::textfields::LineEdit;\nusing fluent::windowing::Window;\n\nQWidget* makePanel(const QUrl& source, QWidget* parent)\n{\n    auto* panel = new QWidget(parent);\n    auto* column = new QVBoxLayout(panel);\n    column->setContentsMargins(16, 16, 16, 16);\n    column->setSpacing(12);\n    column->setAlignment(Qt::AlignTop);\n    auto* session = new QmlSession(panel, panel);\n    QString error;\n    QmlView* view = session->activate(&error) ? session->createView(panel) : nullptr;\n    if (!view) {\n        column->addWidget(new Label(error.isEmpty() ? \"QML is unavailable\" : error, panel));\n        return panel;\n    }\n    view->setFixedHeight(100);\n    column->addWidget(view);\n    view->load(source);\n    return panel;\n}\n\nint main(int argc, char* argv[])\n{\n    fluent::prepareHighDpiApplication();\n    QmlSession::prepareApplication();\n    QApplication application(argc, argv);\n    fluent::initializeResources();\n    application.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());\n\n    Window window;\n    window.setWindowTitle(\"QmlView\");\n    window.resize(640, 480);\n    window.setContentWidget(makePanel(QUrl(\"qrc:/Theme.qml\"), &window));\n    window.show();\n    return application.exec();\n}\n",
+          "source_files": [
+            {
+              "name": "main.cpp",
+              "language": "cpp",
+              "code": "// main.cpp; build with CMakeLists.txt and keep the QML page in its own file.\n#include <FluentQt/FluentQt.h>\n#include <FluentQt/QmlBridge.h>\n#include <QApplication>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nusing fluent::basicinput::Button;\nusing fluent::qmlbridge::QmlSession;\nusing fluent::qmlbridge::QmlView;\nusing fluent::status_info::ProgressBar;\nusing fluent::textfields::Label;\nusing fluent::textfields::LineEdit;\nusing fluent::windowing::Window;\n\nQWidget* makePanel(const QUrl& source, QWidget* parent)\n{\n    auto* panel = new QWidget(parent);\n    auto* column = new QVBoxLayout(panel);\n    column->setContentsMargins(16, 16, 16, 16);\n    column->setSpacing(12);\n    column->setAlignment(Qt::AlignTop);\n    auto* session = new QmlSession(panel, panel);\n    QString error;\n    QmlView* view = session->activate(&error) ? session->createView(panel) : nullptr;\n    if (!view) {\n        column->addWidget(new Label(error.isEmpty() ? \"QML is unavailable\" : error, panel));\n        return panel;\n    }\n    view->setFixedHeight(100);\n    column->addWidget(view);\n    view->load(source);\n    return panel;\n}\n\nint main(int argc, char* argv[])\n{\n    fluent::prepareHighDpiApplication();\n    QmlSession::prepareApplication();\n    QApplication application(argc, argv);\n    fluent::initializeResources();\n    application.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());\n\n    Window window;\n    window.setWindowTitle(\"QmlView\");\n    window.resize(640, 480);\n    window.setContentWidget(makePanel(QUrl(\"qrc:/Theme.qml\"), &window));\n    window.show();\n    return application.exec();\n}\n",
+              "usage_snippet": "// panel, view and source are defined in main.cpp.\n// Theme.qml binds its colors and text to fluentTheme.\nview->setFixedHeight(100);\nview->load(source);"
+            },
+            {
+              "name": "Theme.qml",
+              "language": "qml",
+              "code": "import QtQuick 2.15\n\nRectangle {\n    color: fluentTheme.surface\n    radius: fluentTheme.cornerRadius\n    antialiasing: true\n\n    Rectangle {\n        anchors.fill: parent\n        z: -1\n        color: fluentTheme.surfaceAlt\n    }\n\n    Row {\n        anchors.centerIn: parent\n        height: 24\n        spacing: 12\n        Rectangle {\n            objectName: \"qmlBridgeThemeSwatch\"\n            width: 24\n            height: 24\n            radius: fluentTheme.cornerRadius\n            antialiasing: true\n            color: fluentTheme.accent\n        }\n        Text {\n            objectName: \"qmlBridgeThemeCaption\"\n            anchors.alignWhenCentered: false\n            anchors.verticalCenter: parent.verticalCenter\n            text: fluentTheme.dark ? \"Dark theme\" : \"Light theme\"\n            color: fluentTheme.text\n            font.family: fluentTheme.fontFamily\n            font.pixelSize: fluentTheme.fontPixelSize\n        }\n    }\n}\n",
+              "usage_snippet": ""
+            },
+            {
+              "name": "qml.qrc",
+              "language": "xml",
+              "code": "<RCC>\n    <qresource prefix=\"/\">\n        <file>Theme.qml</file>\n    </qresource>\n</RCC>\n",
+              "usage_snippet": ""
+            },
+            {
+              "name": "CMakeLists.txt",
+              "language": "cmake",
+              "code": "cmake_minimum_required(VERSION 3.16)\nproject(QmlViewExample LANGUAGES CXX)\nset(CMAKE_CXX_STANDARD 17)\nset(CMAKE_AUTORCC ON)\nfind_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)\nfind_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)\nfind_package(FluentQt CONFIG REQUIRED COMPONENTS QmlBridge)\nadd_executable(qml_view_example main.cpp qml.qrc)\ntarget_link_libraries(qml_view_example PRIVATE FluentQt::QmlBridge)\n",
+              "usage_snippet": ""
+            }
+          ],
+          "fill_available_width": true
+        },
+        {
+          "id": "qml-view-context",
+          "title": "Widgets to QML",
+          "description": "Edit the Widgets text field. A QML binding reads its text property.",
+          "cpp_snippet": "// main.cpp; build with CMakeLists.txt and keep the QML page in its own file.\n#include <FluentQt/FluentQt.h>\n#include <FluentQt/QmlBridge.h>\n#include <QApplication>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nusing fluent::basicinput::Button;\nusing fluent::qmlbridge::QmlSession;\nusing fluent::qmlbridge::QmlView;\nusing fluent::status_info::ProgressBar;\nusing fluent::textfields::Label;\nusing fluent::textfields::LineEdit;\nusing fluent::windowing::Window;\n\nQWidget* makePanel(const QUrl& source, QWidget* parent)\n{\n    auto* panel = new QWidget(parent);\n    auto* column = new QVBoxLayout(panel);\n    column->setContentsMargins(16, 16, 16, 16);\n    column->setSpacing(12);\n    column->setAlignment(Qt::AlignTop);\n    auto* session = new QmlSession(panel, panel);\n    QString error;\n    QmlView* view = session->activate(&error) ? session->createView(panel) : nullptr;\n    if (!view) {\n        column->addWidget(new Label(error.isEmpty() ? \"QML is unavailable\" : error, panel));\n        return panel;\n    }\n    auto* input = new LineEdit(panel);\n    input->setText(\"A shared title\");\n    column->addWidget(input);\n    view->setFixedHeight(100);\n    column->addWidget(view);\n    if (view->setContextObject(\"widgetInput\", input))\n        view->load(source);\n    return panel;\n}\n\nint main(int argc, char* argv[])\n{\n    fluent::prepareHighDpiApplication();\n    QmlSession::prepareApplication();\n    QApplication application(argc, argv);\n    fluent::initializeResources();\n    application.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());\n\n    Window window;\n    window.setWindowTitle(\"QmlView\");\n    window.resize(640, 480);\n    window.setContentWidget(makePanel(QUrl(\"qrc:/Context.qml\"), &window));\n    window.show();\n    return application.exec();\n}\n",
+          "source_files": [
+            {
+              "name": "main.cpp",
+              "language": "cpp",
+              "code": "// main.cpp; build with CMakeLists.txt and keep the QML page in its own file.\n#include <FluentQt/FluentQt.h>\n#include <FluentQt/QmlBridge.h>\n#include <QApplication>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nusing fluent::basicinput::Button;\nusing fluent::qmlbridge::QmlSession;\nusing fluent::qmlbridge::QmlView;\nusing fluent::status_info::ProgressBar;\nusing fluent::textfields::Label;\nusing fluent::textfields::LineEdit;\nusing fluent::windowing::Window;\n\nQWidget* makePanel(const QUrl& source, QWidget* parent)\n{\n    auto* panel = new QWidget(parent);\n    auto* column = new QVBoxLayout(panel);\n    column->setContentsMargins(16, 16, 16, 16);\n    column->setSpacing(12);\n    column->setAlignment(Qt::AlignTop);\n    auto* session = new QmlSession(panel, panel);\n    QString error;\n    QmlView* view = session->activate(&error) ? session->createView(panel) : nullptr;\n    if (!view) {\n        column->addWidget(new Label(error.isEmpty() ? \"QML is unavailable\" : error, panel));\n        return panel;\n    }\n    auto* input = new LineEdit(panel);\n    input->setText(\"A shared title\");\n    column->addWidget(input);\n    view->setFixedHeight(100);\n    column->addWidget(view);\n    if (view->setContextObject(\"widgetInput\", input))\n        view->load(source);\n    return panel;\n}\n\nint main(int argc, char* argv[])\n{\n    fluent::prepareHighDpiApplication();\n    QmlSession::prepareApplication();\n    QApplication application(argc, argv);\n    fluent::initializeResources();\n    application.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());\n\n    Window window;\n    window.setWindowTitle(\"QmlView\");\n    window.resize(640, 480);\n    window.setContentWidget(makePanel(QUrl(\"qrc:/Context.qml\"), &window));\n    window.show();\n    return application.exec();\n}\n",
+              "usage_snippet": "// panel, view and source are defined in main.cpp.\nauto* input = new LineEdit(panel);\ninput->setText(\"A shared title\");\nif (view->setContextObject(\"widgetInput\", input))\n    view->load(source);"
+            },
+            {
+              "name": "Context.qml",
+              "language": "qml",
+              "code": "import QtQuick 2.15\n\nRectangle {\n    color: fluentTheme.surface\n    radius: fluentTheme.cornerRadius\n    antialiasing: true\n    property string previewTitle: widgetInput ? widgetInput.text : \"\"\n\n    Rectangle {\n        anchors.fill: parent\n        z: -1\n        color: fluentTheme.surfaceAlt\n    }\n\n    Text {\n        anchors.centerIn: parent\n        width: parent.width - 32\n        horizontalAlignment: Text.AlignHCenter\n        text: parent.previewTitle\n        elide: Text.ElideRight\n        color: fluentTheme.text\n        font.family: fluentTheme.fontFamily\n        font.pixelSize: fluentTheme.fontPixelSize\n    }\n}\n",
+              "usage_snippet": ""
+            },
+            {
+              "name": "qml.qrc",
+              "language": "xml",
+              "code": "<RCC>\n    <qresource prefix=\"/\">\n        <file>Context.qml</file>\n    </qresource>\n</RCC>\n",
+              "usage_snippet": ""
+            },
+            {
+              "name": "CMakeLists.txt",
+              "language": "cmake",
+              "code": "cmake_minimum_required(VERSION 3.16)\nproject(QmlViewExample LANGUAGES CXX)\nset(CMAKE_CXX_STANDARD 17)\nset(CMAKE_AUTORCC ON)\nfind_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)\nfind_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)\nfind_package(FluentQt CONFIG REQUIRED COMPONENTS QmlBridge)\nadd_executable(qml_view_example main.cpp qml.qrc)\ntarget_link_libraries(qml_view_example PRIVATE FluentQt::QmlBridge)\n",
+              "usage_snippet": ""
+            }
+          ],
+          "fill_available_width": true
+        },
+        {
+          "id": "qml-view-action",
+          "title": "QML to Widgets",
+          "description": "Press the QML button. It updates the Widgets progress bar.",
+          "cpp_snippet": "// main.cpp; build with CMakeLists.txt and keep the QML page in its own file.\n#include <FluentQt/FluentQt.h>\n#include <FluentQt/QmlBridge.h>\n#include <QApplication>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nusing fluent::basicinput::Button;\nusing fluent::qmlbridge::QmlSession;\nusing fluent::qmlbridge::QmlView;\nusing fluent::status_info::ProgressBar;\nusing fluent::textfields::Label;\nusing fluent::textfields::LineEdit;\nusing fluent::windowing::Window;\n\nQWidget* makePanel(const QUrl& source, QWidget* parent)\n{\n    auto* panel = new QWidget(parent);\n    auto* column = new QVBoxLayout(panel);\n    column->setContentsMargins(16, 16, 16, 16);\n    column->setSpacing(12);\n    column->setAlignment(Qt::AlignTop);\n    auto* session = new QmlSession(panel, panel);\n    QString error;\n    QmlView* view = session->activate(&error) ? session->createView(panel) : nullptr;\n    if (!view) {\n        column->addWidget(new Label(error.isEmpty() ? \"QML is unavailable\" : error, panel));\n        return panel;\n    }\n    auto* progress = new ProgressBar(panel);\n    progress->setRange(0, 100);\n    progress->setValue(40);\n    column->addWidget(progress);\n    view->setFixedHeight(180);\n    column->addWidget(view);\n    if (view->setContextObject(\"widgetProgress\", progress))\n        view->load(source);\n    return panel;\n}\n\nint main(int argc, char* argv[])\n{\n    fluent::prepareHighDpiApplication();\n    QmlSession::prepareApplication();\n    QApplication application(argc, argv);\n    fluent::initializeResources();\n    application.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());\n\n    Window window;\n    window.setWindowTitle(\"QmlView\");\n    window.resize(640, 480);\n    window.setContentWidget(makePanel(QUrl(\"qrc:/Action.qml\"), &window));\n    window.show();\n    return application.exec();\n}\n",
+          "source_files": [
+            {
+              "name": "main.cpp",
+              "language": "cpp",
+              "code": "// main.cpp; build with CMakeLists.txt and keep the QML page in its own file.\n#include <FluentQt/FluentQt.h>\n#include <FluentQt/QmlBridge.h>\n#include <QApplication>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nusing fluent::basicinput::Button;\nusing fluent::qmlbridge::QmlSession;\nusing fluent::qmlbridge::QmlView;\nusing fluent::status_info::ProgressBar;\nusing fluent::textfields::Label;\nusing fluent::textfields::LineEdit;\nusing fluent::windowing::Window;\n\nQWidget* makePanel(const QUrl& source, QWidget* parent)\n{\n    auto* panel = new QWidget(parent);\n    auto* column = new QVBoxLayout(panel);\n    column->setContentsMargins(16, 16, 16, 16);\n    column->setSpacing(12);\n    column->setAlignment(Qt::AlignTop);\n    auto* session = new QmlSession(panel, panel);\n    QString error;\n    QmlView* view = session->activate(&error) ? session->createView(panel) : nullptr;\n    if (!view) {\n        column->addWidget(new Label(error.isEmpty() ? \"QML is unavailable\" : error, panel));\n        return panel;\n    }\n    auto* progress = new ProgressBar(panel);\n    progress->setRange(0, 100);\n    progress->setValue(40);\n    column->addWidget(progress);\n    view->setFixedHeight(180);\n    column->addWidget(view);\n    if (view->setContextObject(\"widgetProgress\", progress))\n        view->load(source);\n    return panel;\n}\n\nint main(int argc, char* argv[])\n{\n    fluent::prepareHighDpiApplication();\n    QmlSession::prepareApplication();\n    QApplication application(argc, argv);\n    fluent::initializeResources();\n    application.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());\n\n    Window window;\n    window.setWindowTitle(\"QmlView\");\n    window.resize(640, 480);\n    window.setContentWidget(makePanel(QUrl(\"qrc:/Action.qml\"), &window));\n    window.show();\n    return application.exec();\n}\n",
+              "usage_snippet": "// panel, view and source are defined in main.cpp.\nauto* progress = new ProgressBar(panel);\nprogress->setRange(0, 100);\nprogress->setValue(40);\nif (view->setContextObject(\"widgetProgress\", progress))\n    view->load(source);"
+            },
+            {
+              "name": "Action.qml",
+              "language": "qml",
+              "code": "import QtQuick 2.15\n\nRectangle {\n    id: preview\n    color: fluentTheme.surface\n    radius: fluentTheme.cornerRadius\n    antialiasing: true\n    property int previewProgress: widgetProgress ? Math.round(widgetProgress.value) : 0\n\n    Rectangle {\n        anchors.fill: parent\n        z: -1\n        color: fluentTheme.surfaceAlt\n    }\n\n    function advance() {\n        if (widgetProgress)\n            widgetProgress.value = Math.min(100, widgetProgress.value + 10)\n    }\n\n    Column {\n        anchors.fill: parent\n        anchors.margins: 16\n        spacing: 12\n        Text {\n            text: preview.previewProgress + \"% in Widgets\"\n            color: fluentTheme.text\n            font.family: fluentTheme.fontFamily\n            font.pixelSize: fluentTheme.fontPixelSize\n        }\n        Rectangle {\n            width: parent.width\n            height: 6\n            radius: 3\n            antialiasing: true\n            color: fluentTheme.border\n            Rectangle {\n                width: parent.width * preview.previewProgress / 100\n                height: parent.height\n                radius: parent.radius\n                antialiasing: true\n                color: fluentTheme.accent\n            }\n        }\n        Rectangle {\n            id: action\n            objectName: \"qmlBridgeAdvanceButton\"\n            width: Math.min(parent.width, 160)\n            height: 36\n            radius: fluentTheme.cornerRadius\n            antialiasing: true\n            color: fluentTheme.accent\n            activeFocusOnTab: true\n            border.width: activeFocus ? 2 : 0\n            border.color: fluentTheme.text\n            Accessible.role: Accessible.Button\n            Accessible.name: \"Advance +10\"\n            Accessible.onPressAction: preview.advance()\n            Keys.onReturnPressed: preview.advance()\n            Keys.onEnterPressed: preview.advance()\n            Keys.onSpacePressed: preview.advance()\n            Text {\n                anchors.centerIn: parent\n                text: \"Advance +10\"\n                color: fluentTheme.onAccent\n                font.family: fluentTheme.fontFamily\n                font.pixelSize: fluentTheme.fontPixelSize\n            }\n            MouseArea {\n                anchors.fill: parent\n                cursorShape: Qt.PointingHandCursor\n                onClicked: {\n                    action.forceActiveFocus()\n                    preview.advance()\n                }\n            }\n        }\n    }\n}\n",
+              "usage_snippet": ""
+            },
+            {
+              "name": "qml.qrc",
+              "language": "xml",
+              "code": "<RCC>\n    <qresource prefix=\"/\">\n        <file>Action.qml</file>\n    </qresource>\n</RCC>\n",
+              "usage_snippet": ""
+            },
+            {
+              "name": "CMakeLists.txt",
+              "language": "cmake",
+              "code": "cmake_minimum_required(VERSION 3.16)\nproject(QmlViewExample LANGUAGES CXX)\nset(CMAKE_CXX_STANDARD 17)\nset(CMAKE_AUTORCC ON)\nfind_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)\nfind_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)\nfind_package(FluentQt CONFIG REQUIRED COMPONENTS QmlBridge)\nadd_executable(qml_view_example main.cpp qml.qrc)\ntarget_link_libraries(qml_view_example PRIVATE FluentQt::QmlBridge)\n",
+              "usage_snippet": ""
+            }
+          ],
+          "fill_available_width": true
+        },
+        {
+          "id": "qml-view-lifecycle",
+          "title": "Deactivate and reload",
+          "description": "Deactivate stops this QML page. Reload activates its session and loads it again.",
+          "cpp_snippet": "// main.cpp; build with CMakeLists.txt and keep the QML page in its own file.\n#include <FluentQt/FluentQt.h>\n#include <FluentQt/QmlBridge.h>\n#include <QApplication>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nusing fluent::basicinput::Button;\nusing fluent::qmlbridge::QmlSession;\nusing fluent::qmlbridge::QmlView;\nusing fluent::status_info::ProgressBar;\nusing fluent::textfields::Label;\nusing fluent::textfields::LineEdit;\nusing fluent::windowing::Window;\n\nQWidget* makePanel(const QUrl& source, QWidget* parent)\n{\n    auto* panel = new QWidget(parent);\n    auto* column = new QVBoxLayout(panel);\n    column->setContentsMargins(16, 16, 16, 16);\n    column->setSpacing(12);\n    column->setAlignment(Qt::AlignTop);\n    auto* session = new QmlSession(panel, panel);\n    QString error;\n    QmlView* view = session->activate(&error) ? session->createView(panel) : nullptr;\n    if (!view) {\n        column->addWidget(new Label(error.isEmpty() ? \"QML is unavailable\" : error, panel));\n        return panel;\n    }\n    view->setFixedHeight(100);\n    column->addWidget(view);\n    auto* actions = new QWidget(panel);\n    auto* row = new QHBoxLayout(actions);\n    row->setContentsMargins(0, 0, 0, 0);\n    row->setSpacing(12);\n    row->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);\n    auto* deactivate = new Button(\"Deactivate\", actions);\n    auto* reload = new Button(\"Reload QML\", actions);\n    row->addWidget(deactivate);\n    row->addWidget(reload);\n    column->addWidget(actions);\n    auto* status = new Label(\"QML stopped\", panel);\n    column->addWidget(status);\n    QObject::connect(view, &QmlView::statusChanged, status, [status](QmlView::Status state) {\n        status->setText((state == QmlView::Ready) ? \"QML loaded\" : \"QML stopped\");\n    });\n    QObject::connect(deactivate, &Button::clicked, session, [session] { session->deactivate(); });\n    QObject::connect(reload, &Button::clicked, view, [session, view, source] {\n        if (session->activate()) {\n            view->unload();\n            view->load(source);\n        }\n    });\n    view->load(source);\n    return panel;\n}\n\nint main(int argc, char* argv[])\n{\n    fluent::prepareHighDpiApplication();\n    QmlSession::prepareApplication();\n    QApplication application(argc, argv);\n    fluent::initializeResources();\n    application.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());\n\n    Window window;\n    window.setWindowTitle(\"QmlView\");\n    window.resize(640, 480);\n    window.setContentWidget(makePanel(QUrl(\"qrc:/Basic.qml\"), &window));\n    window.show();\n    return application.exec();\n}\n",
+          "source_files": [
+            {
+              "name": "main.cpp",
+              "language": "cpp",
+              "code": "// main.cpp; build with CMakeLists.txt and keep the QML page in its own file.\n#include <FluentQt/FluentQt.h>\n#include <FluentQt/QmlBridge.h>\n#include <QApplication>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nusing fluent::basicinput::Button;\nusing fluent::qmlbridge::QmlSession;\nusing fluent::qmlbridge::QmlView;\nusing fluent::status_info::ProgressBar;\nusing fluent::textfields::Label;\nusing fluent::textfields::LineEdit;\nusing fluent::windowing::Window;\n\nQWidget* makePanel(const QUrl& source, QWidget* parent)\n{\n    auto* panel = new QWidget(parent);\n    auto* column = new QVBoxLayout(panel);\n    column->setContentsMargins(16, 16, 16, 16);\n    column->setSpacing(12);\n    column->setAlignment(Qt::AlignTop);\n    auto* session = new QmlSession(panel, panel);\n    QString error;\n    QmlView* view = session->activate(&error) ? session->createView(panel) : nullptr;\n    if (!view) {\n        column->addWidget(new Label(error.isEmpty() ? \"QML is unavailable\" : error, panel));\n        return panel;\n    }\n    view->setFixedHeight(100);\n    column->addWidget(view);\n    auto* actions = new QWidget(panel);\n    auto* row = new QHBoxLayout(actions);\n    row->setContentsMargins(0, 0, 0, 0);\n    row->setSpacing(12);\n    row->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);\n    auto* deactivate = new Button(\"Deactivate\", actions);\n    auto* reload = new Button(\"Reload QML\", actions);\n    row->addWidget(deactivate);\n    row->addWidget(reload);\n    column->addWidget(actions);\n    auto* status = new Label(\"QML stopped\", panel);\n    column->addWidget(status);\n    QObject::connect(view, &QmlView::statusChanged, status, [status](QmlView::Status state) {\n        status->setText((state == QmlView::Ready) ? \"QML loaded\" : \"QML stopped\");\n    });\n    QObject::connect(deactivate, &Button::clicked, session, [session] { session->deactivate(); });\n    QObject::connect(reload, &Button::clicked, view, [session, view, source] {\n        if (session->activate()) {\n            view->unload();\n            view->load(source);\n        }\n    });\n    view->load(source);\n    return panel;\n}\n\nint main(int argc, char* argv[])\n{\n    fluent::prepareHighDpiApplication();\n    QmlSession::prepareApplication();\n    QApplication application(argc, argv);\n    fluent::initializeResources();\n    application.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());\n\n    Window window;\n    window.setWindowTitle(\"QmlView\");\n    window.resize(640, 480);\n    window.setContentWidget(makePanel(QUrl(\"qrc:/Basic.qml\"), &window));\n    window.show();\n    return application.exec();\n}\n",
+              "usage_snippet": "// session, view, buttons, status and source are defined in Full example.\nQObject::connect(view, &QmlView::statusChanged, status, [status](QmlView::Status state) {\n    status->setText((state == QmlView::Ready) ? \"QML loaded\" : \"QML stopped\");\n});\nQObject::connect(deactivate, &Button::clicked, session, [session] { session->deactivate(); });\nQObject::connect(reload, &Button::clicked, view, [session, view, source] {\n    if (session->activate()) {\n        view->unload();\n        view->load(source);\n    }\n});\nview->load(source);"
+            },
+            {
+              "name": "Basic.qml",
+              "language": "qml",
+              "code": "import QtQuick 2.15\n\nRectangle {\n    color: fluentTheme.surface\n    radius: fluentTheme.cornerRadius\n    antialiasing: true\n\n    Rectangle {\n        anchors.fill: parent\n        z: -1\n        color: fluentTheme.surfaceAlt\n    }\n\n    Text {\n        anchors.centerIn: parent\n        text: \"Hello from QML\"\n        color: fluentTheme.text\n        font.family: fluentTheme.fontFamily\n        font.pixelSize: fluentTheme.fontPixelSize\n    }\n}\n",
+              "usage_snippet": ""
+            },
+            {
+              "name": "qml.qrc",
+              "language": "xml",
+              "code": "<RCC>\n    <qresource prefix=\"/\">\n        <file>Basic.qml</file>\n    </qresource>\n</RCC>\n",
+              "usage_snippet": ""
+            },
+            {
+              "name": "CMakeLists.txt",
+              "language": "cmake",
+              "code": "cmake_minimum_required(VERSION 3.16)\nproject(QmlViewExample LANGUAGES CXX)\nset(CMAKE_CXX_STANDARD 17)\nset(CMAKE_AUTORCC ON)\nfind_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)\nfind_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)\nfind_package(FluentQt CONFIG REQUIRED COMPONENTS QmlBridge)\nadd_executable(qml_view_example main.cpp qml.qrc)\ntarget_link_libraries(qml_view_example PRIVATE FluentQt::QmlBridge)\n",
+              "usage_snippet": ""
+            }
+          ],
+          "fill_available_width": true
+        },
+        {
+          "id": "qml-view-error",
+          "title": "Handle a load error",
+          "description": "Load a missing file to see the error, then restore the valid QML page.",
+          "cpp_snippet": "// main.cpp; build with CMakeLists.txt and keep the QML page in its own file.\n#include <FluentQt/FluentQt.h>\n#include <FluentQt/QmlBridge.h>\n#include <QApplication>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nusing fluent::basicinput::Button;\nusing fluent::qmlbridge::QmlSession;\nusing fluent::qmlbridge::QmlView;\nusing fluent::status_info::ProgressBar;\nusing fluent::textfields::Label;\nusing fluent::textfields::LineEdit;\nusing fluent::windowing::Window;\n\nQWidget* makePanel(const QUrl& source, QWidget* parent)\n{\n    auto* panel = new QWidget(parent);\n    auto* column = new QVBoxLayout(panel);\n    column->setContentsMargins(16, 16, 16, 16);\n    column->setSpacing(12);\n    column->setAlignment(Qt::AlignTop);\n    auto* session = new QmlSession(panel, panel);\n    QString error;\n    QmlView* view = session->activate(&error) ? session->createView(panel) : nullptr;\n    if (!view) {\n        column->addWidget(new Label(error.isEmpty() ? \"QML is unavailable\" : error, panel));\n        return panel;\n    }\n    view->setFixedHeight(100);\n    column->addWidget(view);\n    auto* actions = new QWidget(panel);\n    auto* row = new QHBoxLayout(actions);\n    row->setContentsMargins(0, 0, 0, 0);\n    row->setSpacing(12);\n    row->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);\n    auto* missing = new Button(\"Load missing QML\", actions);\n    auto* restore = new Button(\"Restore QML\", actions);\n    row->addWidget(missing);\n    row->addWidget(restore);\n    column->addWidget(actions);\n    auto* status = new Label(\"QML stopped\", panel);\n    status->setWordWrap(true);\n    column->addWidget(status);\n    QObject::connect(view, &QmlView::statusChanged, status, [view, status](QmlView::Status state) {\n        if (state == QmlView::Ready)\n            status->setText(\"QML loaded\");\n        else if (state == QmlView::Error)\n            status->setText(view->lastError());\n        else\n            status->setText(\"QML stopped\");\n    });\n    QObject::connect(missing, &Button::clicked, view, [view, source] {\n        view->load(source.resolved(QUrl(\"Missing.qml\")));\n    });\n    QObject::connect(restore, &Button::clicked, view, [view, source] {\n        view->load(source);\n    });\n    view->load(source);\n    return panel;\n}\n\nint main(int argc, char* argv[])\n{\n    fluent::prepareHighDpiApplication();\n    QmlSession::prepareApplication();\n    QApplication application(argc, argv);\n    fluent::initializeResources();\n    application.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());\n\n    Window window;\n    window.setWindowTitle(\"QmlView\");\n    window.resize(640, 480);\n    window.setContentWidget(makePanel(QUrl(\"qrc:/Basic.qml\"), &window));\n    window.show();\n    return application.exec();\n}\n",
+          "source_files": [
+            {
+              "name": "main.cpp",
+              "language": "cpp",
+              "code": "// main.cpp; build with CMakeLists.txt and keep the QML page in its own file.\n#include <FluentQt/FluentQt.h>\n#include <FluentQt/QmlBridge.h>\n#include <QApplication>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nusing fluent::basicinput::Button;\nusing fluent::qmlbridge::QmlSession;\nusing fluent::qmlbridge::QmlView;\nusing fluent::status_info::ProgressBar;\nusing fluent::textfields::Label;\nusing fluent::textfields::LineEdit;\nusing fluent::windowing::Window;\n\nQWidget* makePanel(const QUrl& source, QWidget* parent)\n{\n    auto* panel = new QWidget(parent);\n    auto* column = new QVBoxLayout(panel);\n    column->setContentsMargins(16, 16, 16, 16);\n    column->setSpacing(12);\n    column->setAlignment(Qt::AlignTop);\n    auto* session = new QmlSession(panel, panel);\n    QString error;\n    QmlView* view = session->activate(&error) ? session->createView(panel) : nullptr;\n    if (!view) {\n        column->addWidget(new Label(error.isEmpty() ? \"QML is unavailable\" : error, panel));\n        return panel;\n    }\n    view->setFixedHeight(100);\n    column->addWidget(view);\n    auto* actions = new QWidget(panel);\n    auto* row = new QHBoxLayout(actions);\n    row->setContentsMargins(0, 0, 0, 0);\n    row->setSpacing(12);\n    row->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);\n    auto* missing = new Button(\"Load missing QML\", actions);\n    auto* restore = new Button(\"Restore QML\", actions);\n    row->addWidget(missing);\n    row->addWidget(restore);\n    column->addWidget(actions);\n    auto* status = new Label(\"QML stopped\", panel);\n    status->setWordWrap(true);\n    column->addWidget(status);\n    QObject::connect(view, &QmlView::statusChanged, status, [view, status](QmlView::Status state) {\n        if (state == QmlView::Ready)\n            status->setText(\"QML loaded\");\n        else if (state == QmlView::Error)\n            status->setText(view->lastError());\n        else\n            status->setText(\"QML stopped\");\n    });\n    QObject::connect(missing, &Button::clicked, view, [view, source] {\n        view->load(source.resolved(QUrl(\"Missing.qml\")));\n    });\n    QObject::connect(restore, &Button::clicked, view, [view, source] {\n        view->load(source);\n    });\n    view->load(source);\n    return panel;\n}\n\nint main(int argc, char* argv[])\n{\n    fluent::prepareHighDpiApplication();\n    QmlSession::prepareApplication();\n    QApplication application(argc, argv);\n    fluent::initializeResources();\n    application.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());\n\n    Window window;\n    window.setWindowTitle(\"QmlView\");\n    window.resize(640, 480);\n    window.setContentWidget(makePanel(QUrl(\"qrc:/Basic.qml\"), &window));\n    window.show();\n    return application.exec();\n}\n",
+              "usage_snippet": "// view, buttons, status and source are defined in Full example.\nQObject::connect(view, &QmlView::statusChanged, status, [view, status](QmlView::Status state) {\n    if (state == QmlView::Ready)\n        status->setText(\"QML loaded\");\n    else if (state == QmlView::Error)\n        status->setText(view->lastError());\n    else\n        status->setText(\"QML stopped\");\n});\nQObject::connect(missing, &Button::clicked, view, [view, source] {\n    view->load(source.resolved(QUrl(\"Missing.qml\")));\n});\nQObject::connect(restore, &Button::clicked, view, [view, source] { view->load(source); });\nview->load(source);"
+            },
+            {
+              "name": "Basic.qml",
+              "language": "qml",
+              "code": "import QtQuick 2.15\n\nRectangle {\n    color: fluentTheme.surface\n    radius: fluentTheme.cornerRadius\n    antialiasing: true\n\n    Rectangle {\n        anchors.fill: parent\n        z: -1\n        color: fluentTheme.surfaceAlt\n    }\n\n    Text {\n        anchors.centerIn: parent\n        text: \"Hello from QML\"\n        color: fluentTheme.text\n        font.family: fluentTheme.fontFamily\n        font.pixelSize: fluentTheme.fontPixelSize\n    }\n}\n",
+              "usage_snippet": ""
+            },
+            {
+              "name": "qml.qrc",
+              "language": "xml",
+              "code": "<RCC>\n    <qresource prefix=\"/\">\n        <file>Basic.qml</file>\n    </qresource>\n</RCC>\n",
+              "usage_snippet": ""
+            },
+            {
+              "name": "CMakeLists.txt",
+              "language": "cmake",
+              "code": "cmake_minimum_required(VERSION 3.16)\nproject(QmlViewExample LANGUAGES CXX)\nset(CMAKE_CXX_STANDARD 17)\nset(CMAKE_AUTORCC ON)\nfind_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)\nfind_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)\nfind_package(FluentQt CONFIG REQUIRED COMPONENTS QmlBridge)\nadd_executable(qml_view_example main.cpp qml.qrc)\ntarget_link_libraries(qml_view_example PRIVATE FluentQt::QmlBridge)\n",
+              "usage_snippet": ""
+            }
+          ],
+          "fill_available_width": true
+        }
+      ]
+    },
+    {
       "id": "menu",
       "title": "Menu",
       "category_id": "menus-toolbars",
@@ -9936,6 +10252,24 @@
       "description": "Position, rotate and scale a widget inside SpatialView."
     },
     {
+      "id": "qml-bridge",
+      "title": "QmlBridge",
+      "kind": "category",
+      "parent_id": "plugins",
+      "group": "Plugins",
+      "depth": 1,
+      "description": "Host trusted application QML alongside Fluent Widgets."
+    },
+    {
+      "id": "qml-view",
+      "title": "QmlView",
+      "kind": "component",
+      "parent_id": "qml-bridge",
+      "group": "QmlBridge",
+      "depth": 2,
+      "description": "A QML surface that shares application models and Fluent theme tokens with the surrounding Widgets."
+    },
+    {
       "id": "all-controls",
       "title": "All",
       "kind": "all-controls",
@@ -10822,6 +11156,7 @@
     "AnchorLayout",
     "AnchorSpec",
     "AnnotatedScrollBarLabel",
+    "BindingHandle",
     "BreadcrumbItem",
     "ChartData",
     "ChartModel",
@@ -10845,12 +11180,12 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 111,
-    "component_count": 87,
-    "sample_count": 243,
+    "route_count": 113,
+    "component_count": 88,
+    "sample_count": 249,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
-    "selection_guide_count": 14,
-    "guided_component_count": 87
+    "selection_guide_count": 15,
+    "guided_component_count": 88
   }
 }
