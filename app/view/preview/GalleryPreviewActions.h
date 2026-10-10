@@ -9,16 +9,14 @@ class QWidget;
 namespace fluent::gallery {
 
 struct GalleryPreviewActionResult {
-  QJsonObject report;
-  bool passed = false;
+    QJsonObject report;
+    bool passed = false;
 };
 
-GalleryPreviewActionResult
-executeGalleryPreviewActions(QWidget *root, const QJsonObject &script,
-                             const QString &sourcePath = QString());
+GalleryPreviewActionResult executeGalleryPreviewActions(QWidget* root, const QJsonObject& script,
+                                                        const QString& sourcePath = QString());
 
-GalleryPreviewActionResult runGalleryPreviewActions(QWidget *root,
-                                                     const QString &path);
+GalleryPreviewActionResult runGalleryPreviewActions(QWidget* root, const QString& path);
 
 QJsonObject galleryPreviewActionsNotRequested();
 
