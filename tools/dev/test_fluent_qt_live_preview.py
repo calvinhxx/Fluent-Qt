@@ -73,7 +73,7 @@ class FluentQtLivePreviewLauncherTest(unittest.TestCase):
         self.assertIn("--report", command)
         self.assertIn("--keep-open", command)
 
-    def test_runtime_environment_prefers_live_source_then_built_binding(self):
+    def test_runtime_environment_prefers_sources_and_selects_generated_contract(self):
         runtime = MODULE.PySideRuntime(
             build_directory=Path("/tmp/build"),
             python_executable=Path(sys.executable),
@@ -89,6 +89,31 @@ class FluentQtLivePreviewLauncherTest(unittest.TestCase):
             ["/source/gallery", "/tmp/build/python", "/existing"],
         )
         self.assertEqual(environment["PYTHONDONTWRITEBYTECODE"], "1")
+        self.assertEqual(environment["FLUENTQT_LIVE_PREVIEW_CONTRACT"],
+                         "/tmp/build/python/fluentqt_gallery/contract.json")
+        packaged = MODULE.runtime_environment(runtime, base=environment, source_first=False)
+        self.assertNotIn("FLUENTQT_LIVE_PREVIEW_CONTRACT", packaged)
+
+    def test_helper_edits_are_visible_on_restart_without_building(self):
+        import subprocess
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            built = root / "build/python"
+            for parent, value in ((source, "current"), (built, "old build")):
+                package = parent / "fluentqt_gallery"
+                package.mkdir(parents=True)
+                (package / "__init__.py").write_text("", encoding="utf-8")
+                (package / "helper.py").write_text(f"VALUE = {value!r}\n", encoding="utf-8")
+            runtime = MODULE.PySideRuntime(built.parent, Path(sys.executable), built)
+            environment = MODULE.runtime_environment(runtime, source_package_root=source)
+            command = [sys.executable, "-c", "from fluentqt_gallery.helper import VALUE; print(VALUE)"]
+            first = subprocess.run(command, env=environment, text=True, capture_output=True, check=True)
+            self.assertEqual(first.stdout.strip(), "current")
+            (source / "fluentqt_gallery/helper.py").write_text("VALUE = 'edited'\n", encoding="utf-8")
+            second = subprocess.run(command, env=environment, text=True, capture_output=True, check=True)
+            self.assertEqual(second.stdout.strip(), "edited")
 
     def test_catalog_selection_and_default_fork_path(self):
         contract = {

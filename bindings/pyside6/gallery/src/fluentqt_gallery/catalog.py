@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import os
 from pathlib import Path
 import re
 from typing import Iterable
@@ -67,7 +68,11 @@ class GalleryRoute:
 
 
 def _load_contract() -> dict[str, object]:
-    path = Path(__file__).with_name("contract.json")
+    # Live Scene may import helpers from source while keeping the generated
+    # contract paired with its selected native build. Packaged Gallery keeps
+    # loading its colocated contract unless the preview launcher opts in.
+    override = os.environ.get("FLUENTQT_LIVE_PREVIEW_CONTRACT")
+    path = Path(override) if override else Path(__file__).with_name("contract.json")
     if not path.is_file():
         raise RuntimeError(
             "PySide6 Gallery contract is missing: {0}. Reconfigure the "

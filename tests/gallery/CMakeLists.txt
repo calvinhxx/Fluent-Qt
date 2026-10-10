@@ -109,6 +109,7 @@ add_qt_test_module(test_gallery_content_pages
     TestGalleryParticleBackdrop.cpp
     TestGallerySampleAccessibility.cpp
     TestGalleryPreview.cpp
+    TestGalleryPreviewSession.cpp
     TestGalleryInspectorScenes.cpp
     ${CMAKE_SOURCE_DIR}/tests/support/VisualGeometryTestUtils.cpp
     ${FLUENT_QT_GALLERY_WEB_RESOURCES}

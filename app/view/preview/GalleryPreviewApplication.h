@@ -34,6 +34,7 @@ struct GalleryPreviewOptions {
     QString actionsPath;
     QString snapshotPath;
     QString reportPath;
+    QString sessionDirectory;
     int settleMs = 250;
     bool keepOpen = false;
 };
