@@ -64,8 +64,8 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20261002-1">
-    <script src="site.js?v=20261002-2" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20261010-2">
+    <script src="site.js?v=20261010-2" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content" data-i18n="a11y.skip">跳到主要内容</a>
@@ -480,7 +480,7 @@ target_link_libraries(
               <a class="text-link" href="https://github.com/calvinhxx/Fluent-Qt/blob/main/docs/architecture/spatial-view.md" data-i18n="spatial.guide">查看 Spatial 接入指南 ↗</a>
               <a class="text-link" href="#gallery" data-i18n="spatial.try">在 Gallery 中体验 →</a>
             </div>
-            <p class="spatial-how" data-i18n="spatial.how">Gallery：Settings → 3D Gallery，再打开 Controls → Spatial。</p>
+            <p class="spatial-how" data-i18n="spatial.how">Gallery：Settings → 3D Gallery，再打开 Plugins → Spatial。</p>
           </div>
           <figure class="spatial-demo">
             <div class="spatial-live" data-spatial-showcase data-showcase-state="waiting"
@@ -507,10 +507,43 @@ target_link_libraries(
         </div>
       </section>
 
+      <section class="qml-section" id="qml" aria-labelledby="qml-title">
+        <div class="page-shell qml-layout">
+          <div class="qml-copy">
+            <p class="section-index" data-i18n="qml.kicker">06 / QMLBRIDGE</p>
+            <h2 id="qml-title" data-i18n="qml.title">QML 兼容</h2>
+            <p class="qml-intro" data-i18n="qml.copy">QmlBridge 是 FluentQt 的 QML 兼容插件，可在 Widgets 界面中加载 QML 页面，共用业务数据和 Fluent 主题。</p>
+            <div class="qml-links">
+              <a class="text-link" href="https://github.com/calvinhxx/Fluent-Qt/blob/main/docs/architecture/qml-bridge.md" data-i18n="qml.guide">接入指南</a>
+              <a class="text-link" href="https://github.com/calvinhxx/Fluent-Qt/tree/main/examples/qml_bridge" data-i18n="qml.example">完整示例</a>
+            </div>
+            <p class="qml-how" data-i18n="qml.how">Gallery：Plugins → QmlBridge → QmlView。</p>
+          </div>
+          <figure class="qml-example">
+            <div class="qml-source">
+              <p class="qml-file" data-i18n="qml.cppLabel">C++ 片段</p>
+              <pre><code><span class="qml-keyword">if</span> (view-&gt;setContextObject(
+        <span class="qml-string">"widgetInput"</span>, input)) {
+    view-&gt;load(QUrl(<span class="qml-string">"qrc:/Page.qml"</span>));
+}</code></pre>
+              <p class="qml-file">Page.qml</p>
+              <pre><code><span class="qml-keyword">import</span> QtQuick 2.15
+
+<span class="qml-type">Text</span> {
+    text: widgetInput.text
+    color: fluentTheme.text
+    font.family: fluentTheme.fontFamily
+}</code></pre>
+            </div>
+            <figcaption data-i18n="qml.caption">Widgets 输入框与 QML 文本绑定示例。</figcaption>
+          </figure>
+        </div>
+      </section>
+
       <section class="positioning-section" id="why" aria-labelledby="positioning-title">
         <div class="page-shell positioning-grid">
           <div class="positioning-lead" data-reveal>
-            <p class="section-index">06 / POSITIONING</p>
+            <p class="section-index">07 / POSITIONING</p>
             <h2 id="positioning-title">
               <span data-i18n="positioning.titleLine1">独立控件</span>
               <span data-i18n="positioning.titleLine2">不止主题皮肤</span>
@@ -548,7 +581,7 @@ target_link_libraries(
         <div class="page-shell">
           <div class="section-heading component-heading" data-reveal>
             <div>
-              <p class="section-index">07 / COMPONENTS</p>
+              <p class="section-index">08 / COMPONENTS</p>
               <h2 id="components-title"><span data-i18n="components.title">控件按用途分类</span></h2>
             </div>
             <p data-i18n="components.copy">以下为 Gallery 中的部分控件</p>
@@ -638,7 +671,7 @@ target_link_libraries(
       <section class="download-section" id="downloads" aria-labelledby="downloads-title">
         <div class="page-shell download-grid">
           <div class="download-copy" data-reveal>
-            <p class="section-index">08 / DOWNLOAD</p>
+            <p class="section-index">09 / DOWNLOAD</p>
             <h2 id="downloads-title">
               <span data-i18n="downloads.title">下载 Gallery</span>
             </h2>
