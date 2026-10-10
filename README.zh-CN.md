@@ -35,9 +35,9 @@
   <a href="https://github.com/calvinhxx/Fluent-Qt/discussions">提问与交流</a>
 </p>
 
-Fluent-Qt（FluentQt）是面向 Qt Widgets 的跨平台 Fluent UI 组件库，提供输入、导航、集合、数据表格、[图表](docs/architecture/charts.md)、弹窗和窗口等原生控件。接入现有项目后，仍可沿用 Qt 的对象模型和 CMake 工作流。
+Fluent-Qt（FluentQt）是基于 Qt Widgets 的跨平台 Fluent 风格 C++ UI 组件库，提供输入、导航、集合、数据表格、[图表](docs/architecture/charts.md)、弹窗和窗口等原生控件。组件库采用 C++17 开发，可通过 CMake 接入现有 Qt 项目，并提供可选的 PySide6 绑定。
 
-组件库支持 Windows、macOS、Linux 和 WebAssembly，提供 C++ API 和可选的 PySide6 绑定。内置浅色、深色和高对比度主题；应用级动效可选择完整、减弱或关闭。
+支持 Windows、macOS、Linux 和 WebAssembly，内置浅色、深色和高对比度主题，动效可减弱或关闭。可选的 [Spatial](docs/architecture/spatial-view.md) 插件为 Widgets 界面提供 3D 展示能力，[QmlBridge](docs/architecture/qml-bridge.md) 插件提供 QML 兼容支持，可加载 QML 页面并共用业务数据和 Fluent 主题。
 
 ## 🧩 模块概览
 
@@ -58,6 +58,14 @@ C++ 直接调用库，Python 使用配套的 PySide6 绑定。WebAssembly 版本
 链接 `FluentQt::Spatial` 时会自动引入 `FluentQt::Plugins` 和 OpenGL 依赖。3D 不可用时可回退到原生 2D。
 
 在 Gallery 的 Plugins → Spatial 中查看 SpatialView 和 SpatialItem 示例。3D 开关在 Settings → 3D Gallery。
+
+#### QmlBridge
+
+[QmlBridge](docs/architecture/qml-bridge.md) 是 FluentQt 的 QML 兼容插件，可在 Widgets 界面中加载 QML 页面，共用业务数据和 Fluent 主题。
+
+启用 `FLUENT_QT_BUILD_QML_BRIDGE=ON` 并链接 `FluentQt::QmlBridge`。Qt Qml、Quick 和 QuickWidgets 依赖随这个可选模块引入。
+
+在 Gallery 的 Plugins → QmlBridge → QmlView 中体验，或构建[最小示例](examples/qml_bridge/)。初始化与页面加载方法见[接入指南](docs/architecture/qml-bridge.md)。
 
 ## 🖼 Gallery
 
@@ -217,8 +225,9 @@ cmake --install build/fluentqt --config Release \
 |---|---|---|---|
 | Plugins 公共基础设施 | `-DFLUENT_QT_BUILD_PLUGINS=ON` | `FluentQt::Plugins` | [最小插件示例](docs/architecture/plugins.md#minimal-extension-example) |
 | Plugins → Spatial | `-DFLUENT_QT_BUILD_SPATIAL=ON` | `FluentQt::Spatial`（自动包含 Plugins） | [Spatial Hello World](examples/hello_world/README.md) |
+| Plugins → QmlBridge | `-DFLUENT_QT_BUILD_QML_BRIDGE=ON` | `FluentQt::QmlBridge`（自动包含 Plugins） | [QML 宿主示例](examples/qml_bridge/) |
 
-源码集成时，在 `add_subdirectory()` 或 `FetchContent_MakeAvailable()` 前设置选项；安装包集成方式见对应模块指南。匹配的 Python 构建提供 `fluentqt.plugins` 与 `fluentqt.spatial`，WebAssembly 复用 C++ 实现。
+源码集成时，在 `add_subdirectory()` 或 `FetchContent_MakeAvailable()` 前设置选项；安装包集成方式见对应模块指南。匹配的 Python 构建通过 `fluentqt.plugins`、`fluentqt.spatial` 和 `fluentqt.qmlbridge` 提供已启用模块，WebAssembly 复用 C++ 实现。
 
 ### 本地构建 Gallery
 

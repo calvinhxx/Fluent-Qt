@@ -35,9 +35,9 @@
   <a href="https://github.com/calvinhxx/Fluent-Qt/discussions">Questions &amp; community</a>
 </p>
 
-Fluent-Qt (FluentQt) is a cross-platform Fluent UI component library for Qt Widgets. It provides native controls for input, navigation, collections, data grids, [charts](docs/architecture/charts.md), overlays, and windows. You can add it to an existing project using Qt's object model and CMake workflow.
+Fluent-Qt (FluentQt) is a cross-platform, Fluent-style C++ UI component library built on Qt Widgets. It provides native controls for input, navigation, collections, data grids, [charts](docs/architecture/charts.md), overlays, and windows. Written in C++17, it integrates into existing Qt projects through CMake and offers optional PySide6 bindings.
 
-The library supports Windows, macOS, Linux, and WebAssembly, with C++ APIs and optional PySide6 bindings. It includes Light, Dark, and High Contrast themes and an application-wide motion policy: Full, Reduced, or Disabled.
+The library supports Windows, macOS, Linux, and WebAssembly. It includes Light, Dark, and High Contrast themes, with options to reduce or disable motion. The optional [Spatial](docs/architecture/spatial-view.md) plugin adds 3D presentation to Widgets interfaces. [QmlBridge](docs/architecture/qml-bridge.md) provides QML support, loading QML pages that share application data and Fluent theme settings with Widgets.
 
 ## 🧩 Library modules
 
@@ -66,6 +66,19 @@ dependencies. Spatial supports a native 2D fallback when 3D is unavailable.
 
 Open Plugins → Spatial in Gallery to see SpatialView and SpatialItem examples.
 Turn on 3D in Settings → 3D Gallery.
+
+#### QmlBridge
+
+[QmlBridge](docs/architecture/qml-bridge.md) is FluentQt's QML compatibility
+plugin. It loads QML pages in Widgets interfaces and shares application data
+and Fluent theme settings with the page.
+
+Enable `FLUENT_QT_BUILD_QML_BRIDGE=ON` and link `FluentQt::QmlBridge`. This
+optional module adds the Qt Qml, Quick, and QuickWidgets dependencies.
+
+Try Plugins → QmlBridge → QmlView in Gallery, or build the
+[minimal example](examples/qml_bridge/). Setup details are in the
+[integration guide](docs/architecture/qml-bridge.md).
 
 ## 🖼 Gallery
 
@@ -232,11 +245,13 @@ then link the corresponding target in your application.
 |---|---|---|---|
 | Plugins infrastructure | `-DFLUENT_QT_BUILD_PLUGINS=ON` | `FluentQt::Plugins` | [Minimal plugin example](docs/architecture/plugins.md#minimal-extension-example) |
 | Plugins → Spatial | `-DFLUENT_QT_BUILD_SPATIAL=ON` | `FluentQt::Spatial` (automatically includes Plugins) | [Spatial Hello World](examples/hello_world/README.md) |
+| Plugins → QmlBridge | `-DFLUENT_QT_BUILD_QML_BRIDGE=ON` | `FluentQt::QmlBridge` (automatically includes Plugins) | [QML host example](examples/qml_bridge/) |
 
 For source integration, set the option before `add_subdirectory()` or
 `FetchContent_MakeAvailable()`. See each module's guide for installed-package
-integration. Matched Python builds expose `fluentqt.plugins` and `fluentqt.spatial`;
-WebAssembly uses the shared C++ implementation.
+integration. Matched Python builds expose enabled modules through
+`fluentqt.plugins`, `fluentqt.spatial`, and `fluentqt.qmlbridge`. WebAssembly uses
+the shared C++ implementation.
 
 ### Build Gallery locally
 

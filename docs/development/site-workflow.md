@@ -73,6 +73,13 @@ imitations or a second full Gallery shell. The browser launcher calls the same
 sample factory, does not load Gallery preferences, and leaves rendering/input
 to SpatialView. Theme and reduced-motion changes reach the actual Qt controls.
 
+The QmlBridge section follows Spatial and describes the optional plugin's QML
+support. Keep C++ and QML excerpts separate; link to the integration guide and
+complete example for setup.
+
+Keep Chinese headings intact at desktop and narrow widths. Use short headings
+where needed; body copy wraps normally.
+
 The showcase loads only on request. Its controller pauses the Qt content when
 offscreen or in a hidden tab; Stop unloads the iframe. Ready/error messages must
 match the origin, frame, and current session. Keep explicit error/retry and

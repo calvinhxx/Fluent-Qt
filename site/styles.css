@@ -708,23 +708,22 @@ h3 {
   color: var(--hero-ink);
 }
 
-.positioning-lead h2 {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 0.2em;
-}
-
-.positioning-lead h2 > span {
-  display: inline-block;
-  white-space: nowrap;
-}
-
+.positioning-lead h2,
 .section-heading h2,
 .quick-start-copy h2,
 .gallery-copy h2,
 .ai-build-copy h2,
 .download-copy h2 {
   text-wrap: balance;
+}
+
+/* Short Chinese headings stay intact; prose uses normal line wrapping. */
+html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
+  max-width: none;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  text-wrap: nowrap;
 }
 
 .hero-tagline {
@@ -1249,6 +1248,86 @@ h3 {
 .spatial-live-overlay img { border-radius: 14px; }
 [data-showcase-state="ready"] .spatial-live-overlay { display: none; }
 [data-showcase-state="ready"] iframe { visibility: visible; }
+
+/* QML page hosting, with separate host and page source excerpts. */
+.qml-section {
+  padding-block: 104px;
+  border-bottom: 1px solid var(--line);
+  background: var(--white);
+}
+
+.qml-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 64px;
+}
+
+.qml-copy h2 {
+  max-width: 560px;
+  font-size: clamp(36px, 3.8vw, 54px);
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.qml-copy > p:not(.section-index) {
+  max-width: 60ch;
+  margin-top: 20px;
+  color: var(--muted);
+}
+
+.qml-copy > .qml-intro { margin-top: 24px; }
+.qml-copy > .qml-how { font-size: 12px; }
+
+.qml-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-top: 30px;
+}
+
+.qml-links .text-link { margin-top: 0; }
+
+.qml-example { min-width: 0; }
+
+.qml-source {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+}
+
+.qml-file {
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.qml-file:not(:first-child) { border-top: 1px solid var(--line); }
+
+.qml-source pre {
+  overflow-x: auto;
+  padding: 24px;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.8;
+  tab-size: 4;
+}
+
+.qml-source code { font-family: inherit; }
+.qml-keyword, .qml-type { color: color-mix(in srgb, var(--accent-hover) 85%, var(--ink)); }
+.qml-string { color: var(--ink); }
+
+.qml-example figcaption {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
 
 /* ——— Build with AI: verified application outcome ——— */
 
@@ -2529,7 +2608,7 @@ html[data-site-language="zh"] [data-lang-en] {
   }
 
   .hero-stage { gap: 28px; }
-  .spatial-layout { gap: 36px; }
+  .spatial-layout, .qml-layout { gap: 36px; }
 
   .hero-actions { gap: 10px; }
   .hero-actions .button {
@@ -2706,7 +2785,7 @@ html[data-site-language="zh"] [data-lang-en] {
     margin: 44px 0 0;
   }
 
-  .spatial-layout { grid-template-columns: minmax(0, 1fr); gap: 44px; }
+  .spatial-layout, .qml-layout { grid-template-columns: minmax(0, 1fr); gap: 44px; }
   .spatial-copy { max-width: 640px; }
   .spatial-demo { width: 100%; max-width: 660px; margin-inline: auto; }
 
@@ -2836,7 +2915,10 @@ html[data-site-language="zh"] [data-lang-en] {
     margin-top: 36px;
   }
 
-  .spatial-section { padding-block: 76px; }
+  .spatial-section, .qml-section { padding-block: 76px; }
+
+  .qml-file { padding-inline: 18px; }
+  .qml-source pre { padding: 20px 18px; font-size: 12px; }
 
   .gallery-product,
   .showcase-media {
@@ -3072,6 +3154,10 @@ html[data-site-language="zh"] [data-lang-en] {
   }
 
   .error-card { padding: 42px 28px; }
+}
+
+@media (max-width: 360px) {
+  html[data-site-language="zh"] .positioning-lead h2 { font-size: 32px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
