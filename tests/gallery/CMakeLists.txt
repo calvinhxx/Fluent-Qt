@@ -85,6 +85,7 @@ target_link_libraries(test_gallery_spatial
 if(QT_VERSION_MAJOR EQUAL 6)
     target_link_libraries(test_gallery_spatial PRIVATE Qt6::OpenGLWidgets)
 endif()
+
 if(APPLE)
     add_test(NAME GallerySpatialTest.NativeGalleryAssemblyPreservesMaterial
         COMMAND $<TARGET_FILE:test_gallery_spatial>
@@ -160,5 +161,45 @@ endif()
 if(TARGET FluentQtSpatial)
     foreach(_spatial_gallery_test test_gallery_shell_framework test_gallery_shell_motion_policy test_gallery_spatial test_gallery_content_pages)
         target_link_libraries(${_spatial_gallery_test} PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
+    endforeach()
+endif()
+
+if(TARGET FluentQtQmlBridge)
+    add_qt_test_module(test_gallery_qml_bridge
+        TestGalleryQmlBridge.cpp
+        ${FLUENT_QT_GALLERY_WEB_RESOURCES}
+    )
+    target_include_directories(test_gallery_qml_bridge PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+    target_link_libraries(test_gallery_qml_bridge PRIVATE FluentQtGalleryCore
+        FluentQtGalleryTestPlatform FluentQt::QmlBridge Qt${QT_VERSION_MAJOR}::Network
+        Qt${QT_VERSION_MAJOR}::Svg Qt${QT_VERSION_MAJOR}::QuickWidgets)
+    if(TARGET FluentQtSpatial)
+        target_link_libraries(test_gallery_qml_bridge PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
+    endif()
+    if(QT_VERSION_MAJOR EQUAL 6)
+        target_link_libraries(test_gallery_qml_bridge PRIVATE Qt6::OpenGLWidgets Qt6::OpenGL)
+    endif()
+    foreach(_qml_gallery_case IN LISTS test_gallery_qml_bridge_TESTS)
+        if(_qml_gallery_case MATCHES "\\.Contract_Native(RequestedSpatialModeRoundtrip|CornersFollowPreviewTheme|SourceSwitchKeepsPaintGeometryConsistent|QmlFailureKeepsTheCompletedFrameUntilFallback)$")
+            set_tests_properties(${_qml_gallery_case} PROPERTIES
+                LABELS "qt;unit;gallery;test_gallery_qml_bridge;qml_bridge;local_desktop;native_window"
+                ENVIRONMENT "SKIP_VISUAL_TEST=1;QT_QUICK_BACKEND="
+                RUN_SERIAL TRUE TIMEOUT 90)
+            if(APPLE)
+                set_property(TEST ${_qml_gallery_case} APPEND PROPERTY ENVIRONMENT
+                    "QT_QPA_PLATFORM=cocoa")
+            elseif(WIN32)
+                set_property(TEST ${_qml_gallery_case} APPEND PROPERTY ENVIRONMENT
+                    "QT_QPA_PLATFORM=windows")
+            endif()
+        else()
+            set_property(TEST ${_qml_gallery_case} APPEND PROPERTY ENVIRONMENT
+                "QT_QUICK_BACKEND=software")
+        endif()
+    endforeach()
+    foreach(_qml_gallery_test test_gallery_shell_framework test_gallery_shell_motion_policy test_gallery_spatial test_gallery_content_pages)
+        if(TARGET ${_qml_gallery_test})
+            target_link_libraries(${_qml_gallery_test} PRIVATE FluentQt::QmlBridge)
+        endif()
     endforeach()
 endif()

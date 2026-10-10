@@ -58,6 +58,16 @@ MODULE_FUNCTION_SIGNATURES = {
         "(source: PySide6.QtCore.QObject, source_property: str, "
         "target: PySide6.QtCore.QObject, target_property: str, "
         "mode: BindingMode = ...) -> None",
+    ("fluentqt.foundation", "bind_managed"):
+        "(source: PySide6.QtCore.QObject, source_property: str, "
+        "target: PySide6.QtCore.QObject, target_property: str, "
+        "mode: BindingMode = ..., *, deferred: bool = ...) -> BindingHandle",
+    ("fluentqt.foundation", "bind_computed"):
+        "(target: PySide6.QtCore.QObject, target_property: str, "
+        "dependencies: Sequence[tuple[PySide6.QtCore.QObject, str]], "
+        "evaluate: Callable[[], Any], *, deferred: bool = ...) -> BindingHandle",
+    ("fluentqt.foundation", "set_behavior"):
+        "(target: PySide6.QtCore.QObject, property_name: str, *, duration: int = ...) -> None",
     ("fluentqt.foundation", "current_theme"): "() -> Theme",
     ("fluentqt.foundation", "current_motion_mode"): "() -> MotionMode",
     ("fluentqt.foundation", "font_for_role"):
@@ -141,7 +151,34 @@ CLASS_METHOD_SIGNATURES = {
         "kind: MotionKind = ...) -> bool",
     ("fluentqt.foundation", "StateGroup", "add"):
         "(self, name: str, changes: "
-        "Mapping[PySide6.QtCore.QObject, Mapping[str, Any]]) -> StateGroup",
+        "Mapping[PySide6.QtCore.QObject, Mapping[str, Any]], *, "
+        "when: Callable[[], bool] | None = ..., "
+        "dependencies: Sequence[tuple[PySide6.QtCore.QObject, str]] = ..., "
+        "extend: str = ..., anchor_changes: "
+        "Mapping[PySide6.QtWidgets.QWidget, AnchorSpec] | None = ...) -> StateGroup",
+    ("fluentqt.foundation", "StateGroup", "evaluate"):
+        "(self) -> None",
+    ("fluentqt.foundation", "StateGroup", "add_transition"):
+        "(self, properties: Sequence[str] = ..., *, from_state: str = ..., "
+        "to_state: str = ..., duration: int = ...) -> StateGroup",
+    ("fluentqt.foundation", "BindingHandle", "__init__"):
+        "(self, native: Any, expression: PySide6.QtCore.QObject | None = ...) -> None",
+    ("fluentqt.foundation", "BindingHandle", "isValid"):
+        "(self) -> bool",
+    ("fluentqt.foundation", "BindingHandle", "isEnabled"):
+        "(self) -> bool",
+    ("fluentqt.foundation", "BindingHandle", "isSuspended"):
+        "(self) -> bool",
+    ("fluentqt.foundation", "BindingHandle", "setEnabled"):
+        "(self, enabled: bool) -> None",
+    ("fluentqt.foundation", "BindingHandle", "pause"):
+        "(self) -> None",
+    ("fluentqt.foundation", "BindingHandle", "resume"):
+        "(self) -> None",
+    ("fluentqt.foundation", "BindingHandle", "refresh"):
+        "(self) -> None",
+    ("fluentqt.foundation", "BindingHandle", "unbind"):
+        "(self) -> None",
     ("fluentqt.foundation", "StateGroup", "__init__"):
         "(self, parent: PySide6.QtCore.QObject | None = ...) -> None",
     ("fluentqt.foundation", "StateGroup", "clear"):
@@ -167,6 +204,12 @@ CLASS_ATTRIBUTE_TYPES = {
         "PySide6.QtCore.SignalInstance",
     ("fluentqt.foundation", "StateGroup", "state_changed"):
         "PySide6.QtCore.SignalInstance",
+    ("fluentqt.foundation", "StateGroup", "transition_running_changed"):
+        "PySide6.QtCore.SignalInstance",
+    ("fluentqt.foundation", "StateGroup", "transition_finished"):
+        "PySide6.QtCore.SignalInstance",
+    ("fluentqt.foundation", "BindingHandle", "last_error"):
+        "Exception | None",
 }
 
 
@@ -225,11 +268,15 @@ def generate_native_stub(extension, package_dir):
     import shiboken6  # noqa: F401
 
     # Native-only generation loads _fluentqt directly, bypassing the facade's
-    # Windows loader setup. Keep its optional Spatial Qt dependencies visible
-    # for this operation without importing QtOpenGL Python modules.
+    # Windows loader setup. Keep optional renderer Qt dependencies visible
+    # for this operation without importing them from the base facade.
     _dll_directory = None
-    if sys.platform == "win32" and (package_dir / "spatial.py").is_file():
+    if sys.platform == "win32" and any((package_dir / name).is_file()
+                                      for name in ("spatial.py", "qmlbridge.py")):
         _dll_directory = os.add_dll_directory(str(Path(PySide6.__file__).parent))
+    if (package_dir / "qmlbridge.py").is_file():
+        import PySide6.QtQml
+        import PySide6.QtQuick
 
     generator = import_signature_module("lib.pyi_generator")
     enum_sig = import_signature_module("lib.enum_sig")
@@ -617,7 +664,7 @@ def generate_facade_stub(module, output_path):
     lines = [
         '"""Generated typing facade for {0}."""'.format(module.__name__),
         "",
-        "from collections.abc import Mapping, Sequence",
+        "from collections.abc import Callable, Mapping, Sequence",
         "from typing import Any",
         "import PySide6.QtCore",
         "import PySide6.QtGui",

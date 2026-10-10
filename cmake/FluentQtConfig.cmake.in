@@ -10,7 +10,7 @@ endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/FluentQtTargets.cmake")
 
-# Loading the base package must not discover Qt OpenGL modules, even when Spatial is installed.
+# Optional rendering dependencies are discovered only for requested components.
 foreach(_fluent_component IN LISTS FluentQt_FIND_COMPONENTS)
     set(FluentQt_${_fluent_component}_FOUND FALSE)
     if(_fluent_component STREQUAL "Plugins" AND @FLUENT_QT_BUILD_PLUGINS@)
@@ -25,6 +25,20 @@ foreach(_fluent_component IN LISTS FluentQt_FIND_COMPONENTS)
             include("${CMAKE_CURRENT_LIST_DIR}/FluentQtPluginsTargets.cmake")
             include("${CMAKE_CURRENT_LIST_DIR}/FluentQtSpatialTargets.cmake")
             set(FluentQt_Spatial_FOUND TRUE)
+        endif()
+    endif()
+    if(_fluent_component STREQUAL "QmlBridge" AND @FLUENT_QT_BUILD_QML_BRIDGE@)
+        find_package(Qt@QT_VERSION_MAJOR@ QUIET COMPONENTS Qml Quick QuickWidgets)
+        if(@QT_VERSION_MAJOR@ EQUAL 6)
+            find_package(Qt6 QUIET COMPONENTS OpenGL)
+        endif()
+        if(TARGET Qt@QT_VERSION_MAJOR@::Qml AND
+           TARGET Qt@QT_VERSION_MAJOR@::Quick AND
+           TARGET Qt@QT_VERSION_MAJOR@::QuickWidgets AND
+           (@QT_VERSION_MAJOR@ EQUAL 5 OR TARGET Qt6::OpenGL))
+            include("${CMAKE_CURRENT_LIST_DIR}/FluentQtPluginsTargets.cmake")
+            include("${CMAKE_CURRENT_LIST_DIR}/FluentQtQmlBridgeTargets.cmake")
+            set(FluentQt_QmlBridge_FOUND TRUE)
         endif()
     endif()
     if(NOT FluentQt_${_fluent_component}_FOUND AND FluentQt_FIND_REQUIRED_${_fluent_component})

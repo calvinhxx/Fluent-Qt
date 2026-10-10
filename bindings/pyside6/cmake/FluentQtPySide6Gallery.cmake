@@ -27,6 +27,7 @@ set(FLUENTQT_PYSIDE6_GALLERY_FILES
     app.py
     catalog.py
     foundation_pages.py
+    qmlplus_samples.py
     glyph_paint_device.py
     identity.py
     intro_tour.py
@@ -43,6 +44,7 @@ set(FLUENTQT_PYSIDE6_GALLERY_FILES
     native_samples_sequences.py
     native_samples_scrolling.py
     native_samples_spatial.py
+    native_samples_qmlbridge.py
     native_samples_status.py
     native_samples_text_window.py
     panel_sampler.py
@@ -50,6 +52,7 @@ set(FLUENTQT_PYSIDE6_GALLERY_FILES
     samples.py
     settings.py
     spatial_support.py
+    qmlbridge_support.py
     spatial_controller.py
     single_instance.py
     update_checker.py
@@ -70,6 +73,45 @@ foreach(FLUENTQT_PYSIDE6_GALLERY_FILE
         "${FLUENTQT_PYSIDE6_GALLERY_PACKAGE_DIR}/${FLUENTQT_PYSIDE6_GALLERY_FILE}"
         COPYONLY)
 endforeach()
+
+# Preserve the separately runnable shared-model example and its QML asset.
+# Atomic Gallery cards use the four canonical sample assets below.
+set(FLUENTQT_PYSIDE6_QML_BRIDGE_EXAMPLE "${CMAKE_CURRENT_SOURCE_DIR}/examples/qml_bridge.py")
+set(FLUENTQT_PYSIDE6_QML_BRIDGE_SOURCE "${PROJECT_SOURCE_DIR}/examples/qml_bridge/qml/Preview.qml")
+set(FLUENTQT_PYSIDE6_QML_BRIDGE_CPP_SOURCES
+    "${PROJECT_SOURCE_DIR}/examples/qml_bridge/QmlBridgeModel.h"
+    "${PROJECT_SOURCE_DIR}/examples/qml_bridge/QmlBridgePanel.h"
+    "${PROJECT_SOURCE_DIR}/examples/qml_bridge/QmlBridgePanel.cpp")
+configure_file("${FLUENTQT_PYSIDE6_QML_BRIDGE_EXAMPLE}"
+    "${FLUENTQT_PYSIDE6_GALLERY_PACKAGE_DIR}/_qml_bridge_example.py" COPYONLY)
+file(MAKE_DIRECTORY "${FLUENTQT_PYSIDE6_GALLERY_PACKAGE_DIR}/assets/qml_bridge")
+configure_file("${FLUENTQT_PYSIDE6_QML_BRIDGE_SOURCE}"
+    "${FLUENTQT_PYSIDE6_GALLERY_PACKAGE_DIR}/assets/qml_bridge/Preview.qml" COPYONLY)
+list(APPEND FLUENTQT_PYSIDE6_GALLERY_SOURCE_PATHS
+    "${FLUENTQT_PYSIDE6_QML_BRIDGE_EXAMPLE}" "${FLUENTQT_PYSIDE6_QML_BRIDGE_SOURCE}"
+    ${FLUENTQT_PYSIDE6_QML_BRIDGE_CPP_SOURCES})
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${FLUENTQT_PYSIDE6_QML_BRIDGE_EXAMPLE}" "${FLUENTQT_PYSIDE6_QML_BRIDGE_SOURCE}"
+    ${FLUENTQT_PYSIDE6_QML_BRIDGE_CPP_SOURCES})
+
+set(FLUENTQT_PYSIDE6_QML_ATOMIC_SOURCE_DIR
+    "${PROJECT_SOURCE_DIR}/app/view/widgets/samples/qmlbridge")
+set(FLUENTQT_PYSIDE6_QML_ATOMIC_SOURCES)
+file(MAKE_DIRECTORY
+    "${FLUENTQT_PYSIDE6_GALLERY_PACKAGE_DIR}/assets/qml_bridge/atomic")
+foreach(FLUENTQT_PYSIDE6_QML_ATOMIC_FILE IN ITEMS Basic.qml Theme.qml Context.qml Action.qml)
+    set(FLUENTQT_PYSIDE6_QML_ATOMIC_SOURCE
+        "${FLUENTQT_PYSIDE6_QML_ATOMIC_SOURCE_DIR}/${FLUENTQT_PYSIDE6_QML_ATOMIC_FILE}")
+    list(APPEND FLUENTQT_PYSIDE6_QML_ATOMIC_SOURCES
+        "${FLUENTQT_PYSIDE6_QML_ATOMIC_SOURCE}")
+    configure_file("${FLUENTQT_PYSIDE6_QML_ATOMIC_SOURCE}"
+        "${FLUENTQT_PYSIDE6_GALLERY_PACKAGE_DIR}/assets/qml_bridge/atomic/${FLUENTQT_PYSIDE6_QML_ATOMIC_FILE}"
+        COPYONLY)
+endforeach()
+list(APPEND FLUENTQT_PYSIDE6_GALLERY_SOURCE_PATHS
+    ${FLUENTQT_PYSIDE6_QML_ATOMIC_SOURCES})
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    ${FLUENTQT_PYSIDE6_QML_ATOMIC_SOURCES})
 
 # C++ and Python package the same SVG masters, with no duplicated source files.
 set(FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR
@@ -95,6 +137,15 @@ foreach(FLUENTQT_PYSIDE6_GALLERY_ASSET
         "${FLUENTQT_PYSIDE6_GALLERY_ASSET_PACKAGE_DIR}/${FLUENTQT_PYSIDE6_GALLERY_ASSET_RELATIVE}"
         COPYONLY)
 endforeach()
+install(FILES "${FLUENTQT_PYSIDE6_QML_BRIDGE_EXAMPLE}"
+    DESTINATION fluentqt_gallery RENAME _qml_bridge_example.py
+    COMPONENT FluentQtPySide6Gallery EXCLUDE_FROM_ALL)
+install(FILES "${FLUENTQT_PYSIDE6_QML_BRIDGE_SOURCE}"
+    DESTINATION fluentqt_gallery/assets/qml_bridge
+    COMPONENT FluentQtPySide6Gallery EXCLUDE_FROM_ALL)
+install(FILES ${FLUENTQT_PYSIDE6_QML_ATOMIC_SOURCES}
+    DESTINATION fluentqt_gallery/assets/qml_bridge/atomic
+    COMPONENT FluentQtPySide6Gallery EXCLUDE_FROM_ALL)
 
 set(FLUENTQT_PYSIDE6_GALLERY_ARTWORK_SOURCE_DIR
     "${PROJECT_SOURCE_DIR}/tools/gallery/artwork")

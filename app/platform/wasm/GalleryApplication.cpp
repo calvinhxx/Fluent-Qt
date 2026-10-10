@@ -2,6 +2,9 @@
 
 #include <FluentQt/FluentQt.h>
 #include <FluentQt/WebAssembly.h>
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+#include <FluentQt/QmlBridge.h>
+#endif
 
 #include <QApplication>
 #include <QCoreApplication>
@@ -79,8 +82,19 @@ int runApplication(int argc, char** argv)
     QCoreApplication::setOrganizationName(QStringLiteral(FLUENT_QT_GALLERY_ORGANIZATION_NAME));
     QCoreApplication::setApplicationVersion(QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
     fluent::prepareHighDpiApplication();
-
     application = std::make_unique<QApplication>(argc, argv);
+#if defined(FLUENT_QT_HAS_QML_BRIDGE) && defined(FLUENT_QT_HAS_SPATIAL)
+    using QmlSession = fluent::qmlbridge::QmlSession;
+    if (qEnvironmentVariableIsEmpty("QSG_RHI_BACKEND") &&
+        qEnvironmentVariableIsEmpty("QT_QUICK_BACKEND") &&
+        qEnvironmentVariableIsEmpty("QMLSCENE_DEVICE"))
+        QmlSession::prepareApplication(QmlSession::GraphicsApi::OpenGL);
+    if (!QmlSession::isGraphicsApiCompatible(QmlSession::GraphicsApi::OpenGL))
+        application->setProperty(
+            "fluentqtGalleryGraphicsBackendFailure",
+            QObject::tr("The selected Qt Quick and 3D backends cannot share a window. "
+                        "Using the 2D Gallery."));
+#endif
     fluent::initializeResources();
     application->setFont(Typography::Styles::Body.toQFont());
 

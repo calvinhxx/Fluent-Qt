@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>QmlView</title>
+  <rect x="3" y="3" width="66" height="66" rx="16" fill="#177f94" />
+  <g fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="11" y="24" width="22" height="24" rx="3" />
+    <rect x="39" y="24" width="22" height="24" rx="3" />
+    <path d="M12 30h20M40 30h20" opacity="0.65" />
+    <path d="M16 36h10M16 41h7" />
+    <path d="M22 21v-4h28v4m-3-3 3 3 3-3" />
+    <path d="M50 51v4H22v-4m-3 3 3-3 3 3" />
+  </g>
+  <path d="m46 34 8 5-8 5z" fill="white" />
+</svg>

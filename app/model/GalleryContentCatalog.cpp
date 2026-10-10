@@ -211,6 +211,11 @@ const QHash<QString, QString>& routeDescriptions()
              "the normal layout; native-window and OpenGL children cannot be embedded.")},
         {QStringLiteral("spatial-item"),
          QStringLiteral("Position, rotate and scale a widget inside SpatialView.")},
+        {QStringLiteral("qml-bridge"),
+         QStringLiteral("Host trusted application QML alongside Fluent Widgets.")},
+        {QStringLiteral("qml-view"),
+         QStringLiteral("A QML surface that shares application models and Fluent theme tokens "
+                        "with the surrounding Widgets.")},
         // Layout
         {QStringLiteral("accordion"),
          QStringLiteral("Coordinates a vertical group of expandable sections "

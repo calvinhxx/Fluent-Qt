@@ -46,6 +46,15 @@ python -m fluentqt_gallery
 
 Use `--verify-catalog --walk-routes` for deterministic headless acceptance.
 
+## QML+ foundation
+
+**Foundation → QML+** contains twelve atomic examples for direct/computed
+bindings, pause/resume, states, binding restoration, animation, and anchors.
+Python Gallery displays Python source and executes the displayed statements.
+The WebAssembly Gallery offers the matching C++ and Python source. The Python
+helpers use the shared native QMLPlus runtime; see the
+[QMLPlus contract](../../../docs/architecture/qmlplus.md).
+
 ## Spatial mode
 
 Release wheels include Spatial starting with 1.9.1, so the installed Gallery
@@ -70,8 +79,30 @@ With Spatial installed, a fresh Gallery starts in 3D when acceleration is availa
 Turning it off saves a 2D preference for later launches. Failed initialization uses
 2D without changing that preference.
 
+[QmlBridge](../../../docs/architecture/qml-bridge.md) content joins the shared
+3D mode through the native `QmlTextureLayer` OpenGL compositor. The existing QML
+root, model, and state remain intact while its hidden Quick child is replaced
+by a GPU texture in the projected panel. Unsupported composition or texture
+failure uses native 2D without changing the 3D preference. Hidden cached QML
+pages do not suspend the visible page's 3D mode.
+
+**Plugins → QmlBridge → QmlView** contains six focused cards for loading,
+Fluent theme tokens, context binding, QML actions, lifecycle, and load errors.
+**Source code** shows Python host code. **Key usage** shows the integration calls;
+**Full example** shows the complete `main.py`. The **File** selector displays the
+QML page separately. Context and action cards include the
+`LineEdit` or `ProgressBar` used by QML. The Gallery
+packages the same `Basic.qml`, `Theme.qml`, `Context.qml`, and `Action.qml`
+assets as C++ and WebAssembly. The standalone
+[shared-model example](../examples/qml_bridge.py) retains its separate panel.
+
 The shell uses cached widget surfaces, with the shared native Direct3D 11
-compositor on Windows ARM64 (Qt 6.7+) and OpenGL on the other release platforms. Pointer
+compositor on Windows ARM64 (Qt 6.7+) and OpenGL on the other release platforms.
+When QmlBridge is included, Quick follows the shell's selected graphics API
+before the first window is created. Gallery preserves explicit backend
+environment settings and uses 2D if they are incompatible. RHI hosts display
+QML pages in native 2D and retain 3D on other pages; the QML texture helper does
+not import GL textures into Direct3D or Metal. Pointer
 input maps back to the live widgets, and native overlays remain above the canvas.
 Splash and Intro retain their normal order. The material behind the canvas still
 belongs to the Window's Mica/Acrylic setting. Particle effects remain visible in

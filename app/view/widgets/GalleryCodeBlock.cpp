@@ -9,11 +9,13 @@
 #include <QKeySequence>
 #include <QPainter>
 #include <QPointer>
+#include <QSignalBlocker>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QtMath>
 
 #include "components/basicinput/Button.h"
+#include "components/basicinput/ComboBox.h"
 #include "components/foundation/overlay/OverlayPresentation.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/navigation/SelectorBar.h"
@@ -135,13 +137,15 @@ private:
         if (!m_block)
             return;
         const QString source = m_block->code();
-        const auto language = m_block->codeLanguage();
+        const auto language = m_block->sourceLanguage();
         if (m_source == source && m_language == language && !m_sourceMap.isEmpty())
             return;
         m_source = source;
         m_language = language;
-        if (language == GalleryCodeLanguage::Python)
+        if (language == QStringLiteral("python"))
             highlightPythonToHtml(source, false, &m_sourceMap);
+        else if (language == QStringLiteral("qml"))
+            highlightQmlToHtml(source, false, &m_sourceMap);
         else
             highlightCppToHtml(source, false, &m_sourceMap);
     }
@@ -180,7 +184,7 @@ private:
 
     QPointer<GalleryCodeBlock> m_block;
     QString m_source;
-    GalleryCodeLanguage m_language = GalleryCodeLanguage::Cpp;
+    QString m_language;
     CodeSourceMap m_sourceMap;
 };
 
@@ -308,6 +312,34 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& python
     m_codeLabel->setFont(monospace);
 
     innerLayout->addLayout(topRow);
+    m_fileRow = new QWidget(m_contentInner);
+    auto* filesLayout = new QHBoxLayout(m_fileRow);
+    filesLayout->setContentsMargins(0, 0, 0, 0);
+    filesLayout->setSpacing(8);
+    auto* fileCaption = new textfields::Label(QStringLiteral("File"), m_fileRow);
+    fileCaption->setFluentTypography(Typography::FontRole::Caption);
+    filesLayout->addWidget(fileCaption);
+    m_fileSelector = new basicinput::ComboBox(m_fileRow);
+    m_fileSelector->setObjectName(QStringLiteral("galleryCodeBlockFileSelector"));
+    m_fileSelector->setAccessibleName(QStringLiteral("Source file"));
+    m_fileSelector->setFontRole(Typography::FontRole::Caption);
+    m_fileSelector->setContentPaddingV(5);
+    m_fileSelector->setFixedHeight(32);
+    m_fileSelector->setMinimumWidth(0);
+    m_fileSelector->setMaximumWidth(240);
+    m_fileSelector->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    filesLayout->addWidget(m_fileSelector);
+    fileCaption->setBuddy(m_fileSelector);
+    m_fileLanguage = new textfields::Label(m_fileRow);
+    m_fileLanguage->setObjectName(QStringLiteral("galleryCodeBlockFileLanguage"));
+    m_fileLanguage->setFluentTypography(Typography::FontRole::Caption);
+    m_fileLanguage->setTextColorRole(textfields::Label::TextColorRole::Secondary);
+    filesLayout->addWidget(m_fileLanguage);
+    filesLayout->addStretch(1);
+    m_fileRow->hide();
+    innerLayout->addWidget(m_fileRow);
+    connect(m_fileSelector, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+            [this] { refreshDisplayedCode(); });
     innerLayout->addWidget(m_codeLabel);
     setContentWidget(m_contentInner, WidgetOwnership::Owned);
 
@@ -324,6 +356,11 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& python
 
 QString GalleryCodeBlock::code() const
 {
+    if (const auto* file = currentFile()) {
+        if (!file->usageSnippet.isEmpty() && m_sourceSelector->selectedIndex() == 0)
+            return file->usageSnippet;
+        return file->code;
+    }
     if (m_codeLanguage == GalleryCodeLanguage::Python && hasPythonCode()) {
         return m_pythonCode;
     }
@@ -332,15 +369,74 @@ QString GalleryCodeBlock::code() const
     return m_cppCode;
 }
 
+const QVector<GallerySourceFile>& GalleryCodeBlock::sourceFiles() const
+{
+    return m_codeLanguage == GalleryCodeLanguage::Python ? m_pythonFiles : m_cppFiles;
+}
+
+const GallerySourceFile* GalleryCodeBlock::currentFile() const
+{
+    const auto& files = sourceFiles();
+    const int index = m_fileSelector ? m_fileSelector->currentIndex() : -1;
+    return index >= 0 && index < files.size() ? &files.at(index) : nullptr;
+}
+
+QString GalleryCodeBlock::sourceLanguage() const
+{
+    if (const auto* file = currentFile())
+        return file->language;
+    return m_codeLanguage == GalleryCodeLanguage::Python ? QStringLiteral("python")
+                                                         : QStringLiteral("cpp");
+}
+
+void GalleryCodeBlock::setSourceFiles(const QVector<GallerySourceFile>& cppFiles,
+                                      const QVector<GallerySourceFile>& pythonFiles)
+{
+    m_cppFiles = cppFiles;
+    m_pythonFiles = pythonFiles;
+    rebuildFileSelector();
+    refreshDisplayedCode();
+}
+
+void GalleryCodeBlock::rebuildFileSelector(const QString& preferredName)
+{
+    const QSignalBlocker blocker(m_fileSelector);
+    m_fileSelector->clear();
+    int selected = 0;
+    const auto& files = sourceFiles();
+    for (int index = 0; index < files.size(); ++index) {
+        m_fileSelector->addItem(files.at(index).name);
+        if (files.at(index).name == preferredName)
+            selected = index;
+    }
+    if (!files.isEmpty())
+        m_fileSelector->setCurrentIndex(selected);
+    m_fileRow->setVisible(files.size() > 1);
+}
+
+void GalleryCodeBlock::updateSourceControls()
+{
+    const auto* file = currentFile();
+    const bool hasExcerpt =
+        file ? !file->usageSnippet.isEmpty() && file->usageSnippet != file->code
+             : !m_cppExcerpt.isEmpty() && m_codeLanguage == GalleryCodeLanguage::Cpp;
+    m_sourceSelector->setVisible(hasExcerpt);
+    if (m_langUnderline)
+        m_langUnderline->setVisible(!hasExcerpt);
+    const auto language = sourceLanguage();
+    m_fileLanguage->setText(language == QStringLiteral("cpp")      ? QStringLiteral("C++")
+                            : language == QStringLiteral("python") ? QStringLiteral("Python")
+                            : language == QStringLiteral("qml")    ? QStringLiteral("QML")
+                            : language == QStringLiteral("xml")    ? QStringLiteral("XML")
+                                                                   : QStringLiteral("CMake"));
+}
+
 void GalleryCodeBlock::setCppExcerpt(const QString& code)
 {
     if (m_cppExcerpt == code)
         return;
     m_cppExcerpt = code;
     m_excerptHighlightedHtml.clear();
-    m_sourceSelector->setVisible(!code.isEmpty() && m_codeLanguage == GalleryCodeLanguage::Cpp);
-    if (m_langUnderline)
-        m_langUnderline->setVisible(code.isEmpty());
     refreshDisplayedCode();
 }
 
@@ -348,16 +444,9 @@ void GalleryCodeBlock::setCppCode(const QString& code)
 {
     if (m_cppCode == code)
         return;
-    const bool expanded = isExpanded();
-    if (expanded)
-        setExpandedAnimated(false, false);
     m_cppCode = code;
     m_cppHighlightedHtml.clear();
-    m_codeLabel->clear();
-    if (expanded) {
-        applyHighlightedCode();
-        setExpandedAnimated(true, false);
-    }
+    refreshDisplayedCode();
 }
 
 void GalleryCodeBlock::setCodeLanguage(GalleryCodeLanguage language)
@@ -367,39 +456,29 @@ void GalleryCodeBlock::setCodeLanguage(GalleryCodeLanguage language)
     if (m_codeLanguage == language)
         return;
 
-    const bool reopen = isExpanded();
-    if (reopen)
-        setExpandedAnimated(false, /*animated=*/false);
     m_codeLanguage = language;
-    m_sourceSelector->setVisible(!m_cppExcerpt.isEmpty() && language == GalleryCodeLanguage::Cpp);
+    rebuildFileSelector();
+    updateSourceControls();
     if (m_languageSelector)
         m_languageSelector->setLanguage(language);
-    if (m_codeLabel)
-        m_codeLabel->clear();
-    if (reopen) {
-        applyHighlightedCode();
-        if (m_contentInner && m_contentInner->layout()) {
-            m_contentInner->layout()->invalidate();
-            m_contentInner->layout()->activate();
-            m_contentInner->adjustSize();
-        }
-        setExpandedAnimated(true, /*animated=*/false);
-    }
-    emit codeLanguageChanged(language);
+    QPointer<GalleryCodeBlock> guard(this);
+    refreshDisplayedCode();
+    if (guard)
+        emit codeLanguageChanged(language);
 }
 
 void GalleryCodeBlock::refreshDisplayedCode()
 {
-    const bool reopen = isExpanded();
-    if (reopen)
-        setExpandedAnimated(false, false);
-    m_codeLabel->clear();
-    if (reopen) {
+    updateSourceControls();
+    if (isExpanded()) {
         applyHighlightedCode();
-        m_contentInner->layout()->invalidate();
-        m_contentInner->layout()->activate();
-        setExpandedAnimated(true, false);
-    }
+        m_codeLabel->updateGeometry();
+        m_contentInner->updateGeometry();
+        // Settle the expander and enclosing scroll layout before the new text
+        // can paint into the previous source height.
+        QCoreApplication::sendPostedEvents(m_contentInner, QEvent::LayoutRequest);
+    } else
+        m_codeLabel->clear();
 }
 
 void GalleryCodeBlock::setExpanded(bool expanded, bool animated)
@@ -429,7 +508,13 @@ void GalleryCodeBlock::applyHighlightedCode()
         return;
 
     const bool dark = effectiveThemeUsesDarkAppearance();
-    if (m_codeLanguage == GalleryCodeLanguage::Python && hasPythonCode()) {
+    if (currentFile()) {
+        const auto language = sourceLanguage();
+        m_codeLabel->setText(
+            language == QStringLiteral("python") ? highlightPythonToHtml(code(), dark)
+            : language == QStringLiteral("qml")  ? highlightQmlToHtml(code(), dark)
+                                                 : highlightCppToHtml(code(), dark));
+    } else if (m_codeLanguage == GalleryCodeLanguage::Python && hasPythonCode()) {
         if (m_pythonHighlightedHtml.isEmpty()) {
             m_pythonHighlightedHtml = highlightPythonToHtml(m_pythonCode, dark);
         }

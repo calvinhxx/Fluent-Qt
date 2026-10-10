@@ -142,6 +142,7 @@ public:
 
 private:
     friend class AnchorLayout;
+    friend class StateGroup;
     AnchorSpecPrivate* d_ptr;
 };
 
@@ -169,6 +170,14 @@ public:
     bool hasState(const QString& name) const;
     void setState(const QString& name);
     QString state() const;
+
+    bool configureState(const QString& name, const QString& base, QObject* condition,
+                        const QList<QObject*>& sources, const QStringList& properties);
+    bool addStateAnchorChange(const QString& name, QWidget* target, const AnchorSpec& anchors);
+    void addStateTransition(const QString& from, const QString& to, const QStringList& properties,
+                            int duration);
+    QObject* stateObserver();
+    void evaluateStateConditions();
 
 private:
     StateGroupPrivate* d_ptr;
@@ -227,6 +236,23 @@ QVariantMap inspectWidgetForBinding(QWidget* widget, int minimumHitWidth, int mi
                                     bool checkNestedScrolling, bool checkLayoutGrid);
 bool bindProperties(QObject* source, const QString& sourceProperty, QObject* target,
                     const QString& targetProperty, fluent::binding::BindingMode mode);
+
+/** @brief Returns a handle over the shared native property binding runtime.
+ * zh_CN: 返回共享原生属性绑定运行时的句柄。
+ */
+fluent::BindingHandle bindManagedProperties(QObject* source, const QString& sourceProperty,
+                                            QObject* target, const QString& targetProperty,
+                                            fluent::binding::BindingMode mode, bool deferred);
+/** @brief Observes explicit inputs and reads a borrowed QObject expression property.
+ * zh_CN: 观察显式输入，并读取借用的 QObject 表达式属性。
+ */
+fluent::BindingHandle bindComputedProperties(QObject* target, const QString& targetProperty,
+                                             QObject* expression, const QList<QObject*>& sources,
+                                             const QStringList& properties, bool deferred);
+/** @brief Configures native QMLPlus Behavior on a Fluent widget.
+ * zh_CN: 为 Fluent 控件配置原生 QMLPlus Behavior。
+ */
+bool setPropertyBehavior(QObject* target, const QString& property, int duration);
 fluent::binding::SelectionMode flowViewSelectionMode(const fluent::collections::FlowView* view);
 void setFlowViewSelectionMode(fluent::collections::FlowView* view,
                               fluent::binding::SelectionMode mode);

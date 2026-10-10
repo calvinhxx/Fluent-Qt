@@ -23,9 +23,9 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 87,
-    "public_headers": 148,
-    "categories": 14
+    "components": 88,
+    "public_headers": 154,
+    "categories": 15
   },
   "categories": [
     {
@@ -62,6 +62,11 @@
       "id": "spatial",
       "title": "Spatial",
       "component_count": 2
+    },
+    {
+      "id": "qml-bridge",
+      "title": "QmlBridge",
+      "component_count": 1
     },
     {
       "id": "menus-toolbars",
@@ -2212,6 +2217,42 @@
       ]
     },
     {
+      "id": "qml-view",
+      "title": "QmlView",
+      "category_id": "qml-bridge",
+      "description": "A QML surface that shares application models and Fluent theme tokens with the surrounding Widgets.",
+      "capabilities": [
+        "qml-content"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/QmlBridge.h>",
+        "installed_declaration_header": "<FluentQt/components/qmlbridge/QmlView.h>",
+        "qualified_type": "fluent::qmlbridge::QmlView",
+        "target": "FluentQt::QmlBridge",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/qmlbridge/QmlView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.qmlbridge",
+        "type": "QmlView",
+        "import_statement": "from fluentqt.qmlbridge import QmlView",
+        "build_option": "FLUENT_QT_BUILD_QML_BRIDGE=ON"
+      },
+      "gallery": {
+        "route_id": "qml-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=qml-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/QmlBridgeSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_qml_bridge",
+          "ctest_label": "test_qml_bridge",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/qmlbridge/TestQmlBridge.cpp"
+        }
+      ],
+      "sample_count": 6
+    },
+    {
       "id": "menu",
       "title": "Menu",
       "category_id": "menus-toolbars",
@@ -3425,6 +3466,13 @@
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/Plugins.h"
     },
     {
+      "include": "<FluentQt/QmlBridge.h>",
+      "source": "include/FluentQt/QmlBridge.h",
+      "summary": "Public declarations provided by QmlBridge.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/QmlBridge.h"
+    },
+    {
       "include": "<FluentQt/Scrolling.h>",
       "source": "include/FluentQt/Scrolling.h",
       "summary": "Public declarations provided by Scrolling.",
@@ -4062,9 +4110,16 @@
         "Anchors",
         "Item",
         "PropertyLink",
+        "BindingDependency",
+        "BindingOptions",
+        "BindingHandle",
         "PropertyBinder",
         "PropertyChange",
+        "AnchorChange",
         "QMLState",
+        "PropertyAnimation",
+        "StateTransition",
+        "QMLPlusRuntime",
         "QMLPlus",
         "Edge",
         "Direction"
@@ -4390,6 +4445,53 @@
         "TabWidthMode"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/TabView.h"
+    },
+    {
+      "include": "<FluentQt/components/qmlbridge/QmlPlugin.h>",
+      "source": "src/components/qmlbridge/QmlPlugin.h",
+      "summary": "Registers QML widget hosts with the optional plugin lifecycle.",
+      "declarations": [
+        "QmlPlugin"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/qmlbridge/QmlPlugin.h"
+    },
+    {
+      "include": "<FluentQt/components/qmlbridge/QmlSession.h>",
+      "source": "src/components/qmlbridge/QmlSession.h",
+      "summary": "Owns QML bridge activation for C++, PySide6 and WebAssembly applications.",
+      "declarations": [
+        "QmlSession",
+        "GraphicsApi"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/qmlbridge/QmlSession.h"
+    },
+    {
+      "include": "<FluentQt/components/qmlbridge/QmlTheme.h>",
+      "source": "src/components/qmlbridge/QmlTheme.h",
+      "summary": "Exposes the host's Fluent tokens to QML as the read-only fluentTheme object.",
+      "declarations": [
+        "QmlTheme"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/qmlbridge/QmlTheme.h"
+    },
+    {
+      "include": "<FluentQt/components/qmlbridge/QmlTextureLayer.h>",
+      "source": "src/components/qmlbridge/QmlTextureLayer.h",
+      "summary": "Composes borrowed QmlViews into an application-owned OpenGL panel.",
+      "declarations": [
+        "QmlTextureLayer"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/qmlbridge/QmlTextureLayer.h"
+    },
+    {
+      "include": "<FluentQt/components/qmlbridge/QmlView.h>",
+      "source": "src/components/qmlbridge/QmlView.h",
+      "summary": "Hosts an application QML page inside a caller-owned QWidget.",
+      "declarations": [
+        "QmlView",
+        "Status"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/qmlbridge/QmlView.h"
     },
     {
       "include": "<FluentQt/components/scrolling/AnnotatedScrollBar.h>",

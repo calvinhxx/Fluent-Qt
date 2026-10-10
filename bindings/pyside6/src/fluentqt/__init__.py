@@ -10,13 +10,14 @@ from PySide6 import QtGui as _QtGui
 from PySide6 import QtWidgets as _QtWidgets
 
 # Python 3.8+ does not search PATH for extension dependencies on Windows.
-# Keep Spatial's extra Qt DLLs discoverable without importing OpenGL modules
+# Keep optional renderers' Qt DLLs discoverable without importing their Python modules
 # (or changing the dependency/import contract of a 2D-only package).
 import sys as _sys
 if _sys.platform == "win32":
     import os as _os
     from pathlib import Path as _Path
-    if _Path(__file__).with_name("spatial.py").is_file():
+    if any(_Path(__file__).with_name(name).is_file()
+           for name in ("spatial.py", "qmlbridge.py")):
         _spatial_dll_directory = _os.add_dll_directory(str(_Path(_QtCore.__file__).parent))
 
 from ._fluentqt import (
@@ -82,6 +83,7 @@ from .foundation import (
     AnchorLayout,
     AnchorSpec,
     BindingMode,
+    BindingHandle,
     FluentWidget,
     FontIcon,
     FontRole,
@@ -93,6 +95,9 @@ from .foundation import (
     accent_color,
     accentColor,
     anchors,
+    bind_managed,
+    bind_computed,
+    set_behavior,
     apply_theme_overrides,
     set_widget_theme_overrides,
     widget_theme_overrides,
@@ -276,6 +281,10 @@ __all__ = [
     "AnchorEdge",
     "AnchorLayout",
     "AnchorSpec",
+    "BindingHandle",
+    "bind_managed",
+    "bind_computed",
+    "set_behavior",
     "BackdropBackend",
     "BackdropCapabilities",
     "BackdropEffect",

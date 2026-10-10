@@ -227,10 +227,10 @@ bool isIdentPart(QChar c)
 
 } // namespace
 
-QString highlightCppToHtml(const QString& code, bool darkTheme, CodeSourceMap* sourceMap)
+static QString highlightCLike(const QString& code, bool darkTheme, CodeSourceMap* sourceMap,
+                              const QSet<QString>& keywords)
 {
     const Palette& pal = paletteFor(darkTheme);
-    const QSet<QString>& keywords = cppKeywords();
 
     QString html;
     html.reserve(code.size() * 2);
@@ -331,6 +331,24 @@ QString highlightCppToHtml(const QString& code, bool darkTheme, CodeSourceMap* s
     // zh_CN: 用默认色整体包一层，让未上 span 的文本（普通标识符、运算符）也随主题着色，
     // 与宿主 label 自身的颜色无关。
     return QStringLiteral("<span style=\"color:%1;\">%2</span>").arg(pal.text, html);
+}
+
+QString highlightCppToHtml(const QString& code, bool darkTheme, CodeSourceMap* sourceMap)
+{
+    return highlightCLike(code, darkTheme, sourceMap, cppKeywords());
+}
+
+QString highlightQmlToHtml(const QString& code, bool darkTheme, CodeSourceMap* sourceMap)
+{
+    static const QSet<QString> keywords{
+        QStringLiteral("import"),   QStringLiteral("property"), QStringLiteral("readonly"),
+        QStringLiteral("required"), QStringLiteral("signal"),   QStringLiteral("function"),
+        QStringLiteral("var"),      QStringLiteral("let"),      QStringLiteral("const"),
+        QStringLiteral("if"),       QStringLiteral("else"),     QStringLiteral("return"),
+        QStringLiteral("true"),     QStringLiteral("false"),    QStringLiteral("null"),
+        QStringLiteral("int"),      QStringLiteral("real"),     QStringLiteral("bool"),
+        QStringLiteral("string"),   QStringLiteral("color"),    QStringLiteral("id")};
+    return highlightCLike(code, darkTheme, sourceMap, keywords);
 }
 
 QString highlightPythonToHtml(const QString& code, bool darkTheme, CodeSourceMap* sourceMap)

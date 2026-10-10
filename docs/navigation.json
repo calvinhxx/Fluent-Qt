@@ -23,7 +23,9 @@
         {
           "title": "Runtime contracts",
           "pages": [
+            "architecture/qmlplus.md",
             "architecture/plugins.md",
+            "architecture/qml-bridge.md",
             "architecture/window-chrome.md",
             "architecture/overlay-behavior.md",
             "architecture/typography-resolution.md",

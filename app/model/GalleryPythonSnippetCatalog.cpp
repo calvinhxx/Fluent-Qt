@@ -23,8 +23,7 @@ GalleryPythonSnippetCatalog loadCatalog()
 {
     QFile file(QStringLiteral(":/app/data/gallery_python_snippets.json"));
     if (!file.open(QIODevice::ReadOnly)) {
-        LOG_WARN(QStringLiteral(
-            "Gallery Python snippet resource could not be opened"));
+        LOG_WARN(QStringLiteral("Gallery Python snippet resource could not be opened"));
         return {};
     }
     return GalleryPythonSnippetCatalog::fromJson(file.readAll());
@@ -40,31 +39,24 @@ const GalleryPythonSnippetCatalog& catalogData()
 
 } // namespace
 
-GalleryPythonSnippetCatalog GalleryPythonSnippetCatalog::fromJson(
-    const QByteArray& payload)
+GalleryPythonSnippetCatalog GalleryPythonSnippetCatalog::fromJson(const QByteArray& payload)
 {
     GalleryPythonSnippetCatalog data;
 
     QJsonParseError error;
-    const QJsonDocument document =
-        QJsonDocument::fromJson(payload, &error);
-    if (error.error != QJsonParseError::NoError
-        || !document.isObject()) {
-        LOG_WARN(QStringLiteral(
-                     "Gallery Python snippet resource is invalid: %1")
+    const QJsonDocument document = QJsonDocument::fromJson(payload, &error);
+    if (error.error != QJsonParseError::NoError || !document.isObject()) {
+        LOG_WARN(QStringLiteral("Gallery Python snippet resource is invalid: %1")
                      .arg(error.errorString()));
         return data;
     }
 
     const QJsonObject root = document.object();
-    const QJsonValue schemaVersion =
-        root.value(QStringLiteral("schema_version"));
+    const QJsonValue schemaVersion = root.value(QStringLiteral("schema_version"));
     const QJsonValue samplesValue = root.value(QStringLiteral("samples"));
-    if (!schemaVersion.isDouble()
-        || schemaVersion.toInt() != kExpectedSchemaVersion
-        || !samplesValue.isArray()) {
-        LOG_WARN(QStringLiteral(
-            "Gallery Python snippet resource has an unsupported schema"));
+    if (!schemaVersion.isDouble() || schemaVersion.toInt() != kExpectedSchemaVersion ||
+        !samplesValue.isArray()) {
+        LOG_WARN(QStringLiteral("Gallery Python snippet resource has an unsupported schema"));
         return data;
     }
 
@@ -75,21 +67,16 @@ GalleryPythonSnippetCatalog GalleryPythonSnippetCatalog::fromJson(
     QSet<QString> parsedRouteIds;
     for (const QJsonValue& value : samples) {
         if (!value.isObject()) {
-            LOG_WARN(QStringLiteral(
-                "Gallery Python snippet resource contains a non-object entry"));
+            LOG_WARN(QStringLiteral("Gallery Python snippet resource contains a non-object entry"));
             continue;
         }
         const QJsonObject sample = value.toObject();
-        const QString routeId =
-            sample.value(QStringLiteral("route_id")).toString();
-        const QString sampleId =
-            sample.value(QStringLiteral("sample_id")).toString();
-        const QString source =
-            sample.value(QStringLiteral("source")).toString();
-        if (routeId.isEmpty() || sampleId.isEmpty()
-            || source.trimmed().isEmpty()) {
-            LOG_WARN(QStringLiteral(
-                "Gallery Python snippet resource contains an incomplete entry"));
+        const QString routeId = sample.value(QStringLiteral("route_id")).toString();
+        const QString sampleId = sample.value(QStringLiteral("sample_id")).toString();
+        const QString source = sample.value(QStringLiteral("source")).toString();
+        if (routeId.isEmpty() || sampleId.isEmpty() || source.trimmed().isEmpty()) {
+            LOG_WARN(
+                QStringLiteral("Gallery Python snippet resource contains an incomplete entry"));
             if (!routeId.isEmpty())
                 data.m_invalidRouteIds.insert(routeId);
             continue;
@@ -97,15 +84,43 @@ GalleryPythonSnippetCatalog GalleryPythonSnippetCatalog::fromJson(
 
         const QString key = snippetKey(routeId, sampleId);
         if (seenKeys.contains(key)) {
-            LOG_WARN(QStringLiteral(
-                         "Gallery Python snippet resource contains a duplicate entry: %1/%2")
-                         .arg(routeId, sampleId));
+            LOG_WARN(
+                QStringLiteral("Gallery Python snippet resource contains a duplicate entry: %1/%2")
+                    .arg(routeId, sampleId));
             data.m_invalidRouteIds.insert(routeId);
             continue;
         }
         seenKeys.insert(key);
         parsedRouteIds.insert(routeId);
         data.m_sources.insert(key, source);
+        if (sample.contains(QStringLiteral("source_files"))) {
+            const auto filesValue = sample.value(QStringLiteral("source_files"));
+            QVector<GallerySourceFile> files;
+            QSet<QString> names;
+            bool valid = filesValue.isArray() && !filesValue.toArray().isEmpty();
+            const QSet<QString> languages{QStringLiteral("cpp"), QStringLiteral("python"),
+                                          QStringLiteral("qml"), QStringLiteral("xml"),
+                                          QStringLiteral("cmake")};
+            for (const auto& value : filesValue.toArray()) {
+                const auto file = value.toObject();
+                const QString name = file.value(QStringLiteral("name")).toString();
+                const QString language = file.value(QStringLiteral("language")).toString();
+                const QString code = file.value(QStringLiteral("code")).toString();
+                if (!value.isObject() || name.isEmpty() || name.contains(QLatin1Char('/')) ||
+                    name.contains(QLatin1Char('\\')) || names.contains(name) ||
+                    !languages.contains(language) || code.trimmed().isEmpty()) {
+                    valid = false;
+                    break;
+                }
+                names.insert(name);
+                files.append(
+                    {name, language, code, file.value(QStringLiteral("usage_snippet")).toString()});
+            }
+            if (valid)
+                data.m_sourceFiles.insert(key, files);
+            else
+                data.m_invalidRouteIds.insert(routeId);
+        }
     }
 
     for (const QString& invalidRouteId : data.m_invalidRouteIds) {
@@ -117,16 +132,21 @@ GalleryPythonSnippetCatalog GalleryPythonSnippetCatalog::fromJson(
                 ++it;
         }
         parsedRouteIds.remove(invalidRouteId);
+        for (auto it = data.m_sourceFiles.begin(); it != data.m_sourceFiles.end();) {
+            if (it.key().startsWith(prefix))
+                it = data.m_sourceFiles.erase(it);
+            else
+                ++it;
+        }
     }
 
-    const QJsonObject summary =
-        root.value(QStringLiteral("summary")).toObject();
-    const int declaredSampleCount =
-        summary.value(QStringLiteral("sample_count")).toInt(-1);
-    const int declaredComponentCount =
-        summary.value(QStringLiteral("component_count")).toInt(-1);
-    if (declaredSampleCount != samples.size()
-        || declaredComponentCount != parsedRouteIds.size()) {
+    const QJsonObject summary = root.value(QStringLiteral("summary")).toObject();
+    const int declaredSampleCount = summary.value(QStringLiteral("sample_count")).toInt(-1);
+    const int declaredComponentCount = summary.value(QStringLiteral("component_count")).toInt(-1);
+    const int declaredFoundationCount =
+        summary.value(QStringLiteral("foundation_topic_count")).toInt();
+    if (declaredSampleCount != samples.size() ||
+        declaredComponentCount + declaredFoundationCount != parsedRouteIds.size()) {
         // Summary values are generated diagnostics, not a runtime allowlist.
         // Catalog growth must not disable otherwise complete routes.
         LOG_WARN(QStringLiteral(
@@ -135,39 +155,47 @@ GalleryPythonSnippetCatalog GalleryPythonSnippetCatalog::fromJson(
     return data;
 }
 
-QString GalleryPythonSnippetCatalog::snippet(const QString& routeId,
-                                             const QString& sampleId) const
+QString GalleryPythonSnippetCatalog::snippet(const QString& routeId, const QString& sampleId) const
 {
     if (!m_loaded || m_invalidRouteIds.contains(routeId))
         return {};
     return m_sources.value(snippetKey(routeId, sampleId));
 }
 
-bool GalleryPythonSnippetCatalog::hasCompleteRoute(
-    const QString& routeId,
-    const QStringList& sampleIds) const
+QVector<GallerySourceFile> GalleryPythonSnippetCatalog::sourceFiles(const QString& routeId,
+                                                                    const QString& sampleId) const
 {
-    if (!m_loaded || routeId.isEmpty() || sampleIds.isEmpty()
-        || m_invalidRouteIds.contains(routeId)) {
+    if (!m_loaded || m_invalidRouteIds.contains(routeId))
+        return {};
+    return m_sourceFiles.value(snippetKey(routeId, sampleId));
+}
+
+bool GalleryPythonSnippetCatalog::hasCompleteRoute(const QString& routeId,
+                                                   const QStringList& sampleIds) const
+{
+    if (!m_loaded || routeId.isEmpty() || sampleIds.isEmpty() ||
+        m_invalidRouteIds.contains(routeId)) {
         return false;
     }
     for (const QString& sampleId : sampleIds) {
-        if (sampleId.isEmpty()
-            || !m_sources.contains(snippetKey(routeId, sampleId))) {
+        if (sampleId.isEmpty() || !m_sources.contains(snippetKey(routeId, sampleId))) {
             return false;
         }
     }
     return true;
 }
 
-QString galleryPythonSnippet(const QString& routeId,
-                             const QString& sampleId)
+QString galleryPythonSnippet(const QString& routeId, const QString& sampleId)
 {
     return catalogData().snippet(routeId, sampleId);
 }
 
-bool galleryPythonSnippetsAvailable(const QString& routeId,
-                                    const QStringList& sampleIds)
+QVector<GallerySourceFile> galleryPythonSourceFiles(const QString& routeId, const QString& sampleId)
+{
+    return catalogData().sourceFiles(routeId, sampleId);
+}
+
+bool galleryPythonSnippetsAvailable(const QString& routeId, const QStringList& sampleIds)
 {
     return catalogData().hasCompleteRoute(routeId, sampleIds);
 }

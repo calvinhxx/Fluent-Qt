@@ -1,6 +1,12 @@
 #include "platform/GalleryPlatform.h"
 
 #include <FluentQt/FluentQt.h>
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+#include <FluentQt/QmlBridge.h>
+#ifdef FLUENT_QT_HAS_SPATIAL
+#include "support/spatial/SpatialTextureHost.h"
+#endif
+#endif
 
 #include <QApplication>
 #include <QCoreApplication>
@@ -29,8 +35,28 @@ int runApplication(int argc, char** argv)
     QCoreApplication::setOrganizationName(QStringLiteral(FLUENT_QT_GALLERY_ORGANIZATION_NAME));
     QCoreApplication::setApplicationVersion(QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
     fluent::prepareHighDpiApplication();
-
     QApplication app(argc, argv);
+#if defined(FLUENT_QT_HAS_QML_BRIDGE) && defined(FLUENT_QT_HAS_SPATIAL)
+    using QmlSession = fluent::qmlbridge::QmlSession;
+    auto graphicsApi = QmlSession::GraphicsApi::OpenGL;
+    if (spatial::SpatialTextureHost::isPreferred()) {
+#ifdef Q_OS_WIN
+        graphicsApi = QmlSession::GraphicsApi::Direct3D11;
+#elif defined(Q_OS_MACOS)
+        graphicsApi = QmlSession::GraphicsApi::Metal;
+#endif
+    }
+    // Resolve the real QPA first, preserving any explicit Quick backend choice.
+    // zh_CN: 先确定实际 QPA，并保留显式指定的 Quick 后端。
+    if (qEnvironmentVariableIsEmpty("QSG_RHI_BACKEND") &&
+        qEnvironmentVariableIsEmpty("QT_QUICK_BACKEND") &&
+        qEnvironmentVariableIsEmpty("QMLSCENE_DEVICE"))
+        QmlSession::prepareApplication(graphicsApi);
+    if (!QmlSession::isGraphicsApiCompatible(graphicsApi))
+        app.setProperty("fluentqtGalleryGraphicsBackendFailure",
+                        QObject::tr("The selected Qt Quick and 3D backends cannot share a window. "
+                                    "Using the 2D Gallery."));
+#endif
 #ifdef Q_OS_LINUX
     QGuiApplication::setDesktopFileName(QStringLiteral(FLUENT_QT_GALLERY_APP_ID));
 #endif

@@ -10,7 +10,9 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMetaProperty>
+#include <QSet>
 #include <QSysInfo>
+#include <QThread>
 #include <QtGlobal>
 
 static_assert(static_cast<int>(fluent::binding::Theme::Light) ==
@@ -363,6 +365,30 @@ void fluent::binding::AnchorLayout::addWidget(QWidget* widget, const AnchorSpec&
         m_layout->addAnchoredWidget(widget, anchors.d_ptr->anchors);
 }
 
+namespace {
+bool observedSources(QObject* owner, const QList<QObject*>& sources, const QStringList& properties,
+                     QVector<fluent::BindingDependency>& result)
+{
+    if (!owner || owner->thread() != QThread::currentThread() ||
+        sources.size() != properties.size())
+        return false;
+    for (int i = 0; i < sources.size(); ++i) {
+        auto* source = sources.at(i);
+        const auto property = properties.at(i).toUtf8();
+        if (!source || source->thread() != owner->thread())
+            return false;
+        const int index = source->metaObject()->indexOfProperty(property);
+        if (index < 0)
+            return false;
+        const auto meta = source->metaObject()->property(index);
+        if (!meta.isReadable() || !meta.hasNotifySignal())
+            return false;
+        result.append({source, property});
+    }
+    return true;
+}
+} // namespace
+
 class fluent::binding::StateGroupPrivate {
 public:
     QMap<QString, fluent::QMLState> states;
@@ -410,9 +436,78 @@ void fluent::binding::StateGroup::clearStateDefinition(const QString& name)
     if (name.isEmpty())
         return;
     fluent::QMLState& state = d_ptr->states[name];
+    state = {};
     state.name = name;
-    state.changes.clear();
     fluent::QMLPlus::addState(state);
+}
+
+bool fluent::binding::StateGroup::configureState(const QString& name, const QString& base,
+                                                 QObject* condition, const QList<QObject*>& sources,
+                                                 const QStringList& properties)
+{
+    if (!d_ptr->states.contains(name) || (!base.isEmpty() && !d_ptr->states.contains(base)))
+        return false;
+    QString cursor = base;
+    QSet<QString> visited{name};
+    while (!cursor.isEmpty()) {
+        if (visited.contains(cursor))
+            return false;
+        visited.insert(cursor);
+        cursor = d_ptr->states.value(cursor).extend;
+    }
+    QVector<fluent::BindingDependency> dependencies;
+    if (!observedSources(this, sources, properties, dependencies))
+        return false;
+    if (condition) {
+        if (!observedSources(this, {condition}, {QStringLiteral("value")}, dependencies))
+            return false;
+    }
+    auto state = d_ptr->states.value(name);
+    state.extend = base;
+    state.dependencies = dependencies;
+    const QPointer<QObject> guardedCondition(condition);
+    state.when = condition ? std::function<bool()>([guardedCondition] {
+        return guardedCondition && guardedCondition->property("value").toBool();
+    })
+                           : std::function<bool()>();
+    d_ptr->states[name] = state;
+    const QPointer<StateGroup> guard(this);
+    fluent::QMLPlus::addState(state);
+    return !guard.isNull();
+}
+
+bool fluent::binding::StateGroup::addStateAnchorChange(const QString& name, QWidget* target,
+                                                       const AnchorSpec& anchors)
+{
+    if (name.isEmpty() || !target || target->thread() != thread())
+        return false;
+    auto& state = d_ptr->states[name];
+    state.name = name;
+    state.anchorChanges.append({target, anchors.d_ptr->anchors});
+    fluent::QMLPlus::addState(state);
+    return true;
+}
+
+void fluent::binding::StateGroup::addStateTransition(const QString& from, const QString& to,
+                                                     const QStringList& properties, int duration)
+{
+    fluent::StateTransition transition;
+    transition.from = from;
+    transition.to = to;
+    for (const auto& property : properties)
+        transition.properties.append(property.toUtf8());
+    transition.animation.duration = qMax(0, duration);
+    fluent::QMLPlus::addTransition(transition);
+}
+
+QObject* fluent::binding::StateGroup::stateObserver()
+{
+    return fluent::QMLPlus::runtime();
+}
+
+void fluent::binding::StateGroup::evaluateStateConditions()
+{
+    fluent::QMLPlus::evaluateStates();
 }
 
 bool fluent::binding::StateGroup::hasState(const QString& name) const
@@ -635,9 +730,52 @@ bool bindProperties(QObject* source, const QString& sourceProperty, QObject* tar
         return false;
     }
 
-    fluent::PropertyBinder::bind(
-        source, sourceName.constData(), target, targetName.constData(),
-        static_cast<fluent::PropertyBinder::Direction>(static_cast<int>(mode)));
+    return fluent::PropertyBinder::bindManaged(
+               source, sourceName.constData(), target, targetName.constData(),
+               static_cast<fluent::PropertyBinder::Direction>(static_cast<int>(mode)))
+        .isValid();
+}
+
+fluent::BindingHandle bindManagedProperties(QObject* source, const QString& sourceProperty,
+                                            QObject* target, const QString& targetProperty,
+                                            fluent::binding::BindingMode mode, bool deferred)
+{
+    fluent::BindingOptions options;
+    options.deferred = deferred;
+    return fluent::PropertyBinder::bindManaged(
+        source, sourceProperty.toUtf8().constData(), target, targetProperty.toUtf8().constData(),
+        static_cast<fluent::PropertyBinder::Direction>(static_cast<int>(mode)), options);
+}
+
+fluent::BindingHandle bindComputedProperties(QObject* target, const QString& targetProperty,
+                                             QObject* expression, const QList<QObject*>& sources,
+                                             const QStringList& properties, bool deferred)
+{
+    QVector<fluent::BindingDependency> dependencies;
+    if (!observedSources(target, sources, properties, dependencies) ||
+        !observedSources(target, {expression}, {QStringLiteral("value")}, dependencies))
+        return {};
+    const QPointer<QObject> guard(expression);
+    fluent::BindingOptions options;
+    options.deferred = deferred;
+    return fluent::PropertyBinder::bindComputed(
+        target, targetProperty.toUtf8().constData(), dependencies,
+        [guard] { return guard ? guard->property("value") : QVariant(); }, options);
+}
+
+bool setPropertyBehavior(QObject* target, const QString& property, int duration)
+{
+    auto* mixin = dynamic_cast<fluent::QMLPlus*>(target);
+    if (!mixin || !target || target->thread() != QThread::currentThread() || property.isEmpty() ||
+        duration < 0)
+        return false;
+    const auto name = property.toUtf8();
+    const int index = target->metaObject()->indexOfProperty(name);
+    if (index < 0 || !target->metaObject()->property(index).isWritable())
+        return false;
+    fluent::PropertyAnimation animation;
+    animation.duration = duration;
+    mixin->setBehavior(name.constData(), animation);
     return true;
 }
 

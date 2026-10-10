@@ -1,3 +1,34 @@
+if(EMSCRIPTEN)
+    if(NOT FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT)
+        message(FATAL_ERROR
+            "Gallery logging requires FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT")
+    endif()
+    set(_fluent_qt_logging_source
+        "${PROJECT_SOURCE_DIR}/platforms/webassembly/LogBackend.cpp")
+else()
+    set(_fluent_qt_logging_source
+        "${PROJECT_SOURCE_DIR}/support/logging/Log.cpp")
+endif()
+add_library(FluentQtLoggingSupport STATIC
+    "${_fluent_qt_logging_source}"
+    "${PROJECT_SOURCE_DIR}/support/logging/Log.h")
+set_target_properties(FluentQtLoggingSupport PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+    AUTOGEN_BUILD_DIR "${PROJECT_BINARY_DIR}/FluentQtLoggingSupport_autogen")
+fluent_qt_configure_cpp_target(FluentQtLoggingSupport)
+target_include_directories(FluentQtLoggingSupport
+    PUBLIC "${PROJECT_SOURCE_DIR}")
+target_link_libraries(FluentQtLoggingSupport
+    PUBLIC Qt${QT_VERSION_MAJOR}::Core)
+if(NOT EMSCRIPTEN)
+    target_link_libraries(FluentQtLoggingSupport PRIVATE spdlog::spdlog)
+endif()
+fluent_qt_enable_sanitizers(FluentQtLoggingSupport)
+
+if(NOT FLUENT_QT_BUILD_GALLERY)
+    return()
+endif()
+
 include("${CMAKE_CURRENT_SOURCE_DIR}/GalleryMetadata.cmake")
 
 file(GLOB_RECURSE FLUENT_QT_GALLERY_CORE_SOURCES CONFIGURE_DEPENDS
@@ -13,9 +44,16 @@ if(TARGET FluentQtSpatial)
 else()
     list(FILTER FLUENT_QT_GALLERY_CORE_SOURCES EXCLUDE REGEX "/(SpatialSamples|GallerySpatialController)\\.cpp$")
 endif()
+if(NOT TARGET FluentQtQmlBridge)
+    list(FILTER FLUENT_QT_GALLERY_CORE_SOURCES EXCLUDE REGEX "/QmlBridgeSamples\\.cpp$")
+endif()
 set(FLUENT_QT_GALLERY_RESOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/gallery_resources.qrc
 )
+if(TARGET FluentQtQmlBridge)
+    list(APPEND FLUENT_QT_GALLERY_RESOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/qml_bridge_samples.qrc")
+endif()
 set(FLUENT_QT_GALLERY_WEB_RESOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/gallery_web_resources.qrc
 )
@@ -35,11 +73,13 @@ if(EMSCRIPTEN)
     list(FILTER FLUENT_QT_GALLERY_CORE_SOURCES EXCLUDE REGEX
         "/view/preview/.*\\.(cpp|h)$")
 endif()
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES
+set(_fluent_qt_gallery_grouped_sources
     ${FLUENT_QT_GALLERY_CORE_SOURCES}
     ${FLUENT_QT_GALLERY_RESOURCES}
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/GalleryPlatform.h"
 )
+list(FILTER _fluent_qt_gallery_grouped_sources INCLUDE REGEX "^${CMAKE_CURRENT_SOURCE_DIR}/")
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${_fluent_qt_gallery_grouped_sources})
 
 set(FLUENT_QT_GALLERY_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 set(FLUENT_QT_GALLERY_RESOURCES ${FLUENT_QT_GALLERY_RESOURCES} PARENT_SCOPE)
@@ -70,6 +110,9 @@ if(TARGET FluentQtSpatial)
     if(QT_VERSION_MAJOR EQUAL 6)
         target_link_libraries(FluentQtGalleryCore PRIVATE Qt6::OpenGLWidgets)
     endif()
+endif()
+if(TARGET FluentQtQmlBridge)
+    target_link_libraries(FluentQtGalleryCore PRIVATE FluentQt::QmlBridge)
 endif()
 # Consumers already link these runtime dependencies. The object target needs
 # their compile usage requirements only; suppress link-only propagation so
@@ -102,6 +145,14 @@ target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
 )
 if(TARGET FluentQtSpatial)
     target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
+endif()
+if(TARGET FluentQtQmlBridge)
+    target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE FluentQt::QmlBridge)
+    if(EMSCRIPTEN AND COMMAND qt_import_qml_plugins)
+        set_property(TARGET ${FLUENT_QT_GALLERY_EXECUTABLE_NAME} APPEND PROPERTY
+            QT_QML_IMPORT_SCANNER_EXTRA_ROOT_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/view/widgets/samples/qmlbridge")
+        qt_import_qml_plugins(${FLUENT_QT_GALLERY_EXECUTABLE_NAME})
+    endif()
 endif()
 if(EMSCRIPTEN)
     include("${CMAKE_CURRENT_SOURCE_DIR}/platform/wasm/FluentQtGalleryWebAssembly.cmake")

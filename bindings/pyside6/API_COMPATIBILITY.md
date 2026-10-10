@@ -59,6 +59,21 @@ major-version policy above.
 
 ## New C++ surface decisions
 
+QMLPlus reactive authoring is available through Python `bind_managed`,
+`bind_computed`, `BindingHandle`, `set_behavior`, and the extended `StateGroup`.
+These adapters use the native runtime. Python expressions are Qt-owned by the
+target or state controller; dependency objects remain caller-owned. The
+[coverage ledger](ROADMAP.md#qmlplus-reactive-authoring) records the callback,
+teardown, and motion contracts.
+
+Existing `fluentqt.bind()` calls use the same native managed runtime. Both
+endpoints must belong to the calling Qt thread, and each observed direction
+requires a NOTIFY signal. Native registration failure raises `ValueError`;
+the adapter does not report success from argument validation alone. A valid
+replacement disconnects the previous binding on that target property; an invalid
+registration leaves it intact. The legacy C++ `bind()` initial synchronization
+without NOTIFY is not part of the Python binding contract.
+
 `Timeline`, `Stepper` and `StepperItem` are supported in Python in the same
 slice as C++. Timeline borrows the native Qt model and delegate; Stepper owns
 only its navigation metadata and emits requests without owning application
@@ -123,6 +138,24 @@ generic manager. `SpatialSession` remains the convenience scope over that
 lifecycle. WebAssembly consumers compile the shared C++ implementation into
 their executable; the Python category module is not a browser runtime and the
 plugin contract does not promise dynamic shared-library loading.
+
+`fluentqt.qmlbridge` is enabled by `FLUENT_QT_BUILD_QML_BRIDGE` and exports
+`QmlPlugin`, `QmlSession`, `QmlTheme`, `QmlTextureLayer`, and `QmlView`. These classes use the same
+native lifecycle as C++ and WebAssembly. The bridge module imports PySide's
+QML/Quick converters explicitly; the base package keeps its import boundary.
+Context objects are borrowed without QObject reparenting or Python wrapper
+retention. Factory views remain caller-owned. Stopping a session clears its
+public scene immediately and schedules the Quick widget and engine for Qt
+deferred deletion, so a running QML callback can finish. Reactivation permits
+explicit loading and preserves the model bindings. Python omits the optional
+C++ error output arguments and exposes bool results plus view error accessors
+and signals. `QmlTheme` is view-owned and read-only, with no public constructor.
+The manifest also records the shared OpenGL layer's cache, composition, and
+failure APIs and `QmlView`'s texture mode, rendering, and update signals.
+Both native and facade stubs must expose those contracts when QmlBridge is
+enabled. Texture presentation preserves scene/model ownership and has no
+Qt Quick 3D dependency; the [composition contract](../../docs/architecture/qml-bridge.md#composition-and-gallery-mode)
+defines backend, DPR, budget, and 2D fallback limits.
 
 `tools/verify_api_policy.py` rejects version drift, malformed or duplicate
 ledger entries, missing public version variables, deprecations of unknown

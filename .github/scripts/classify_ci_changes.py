@@ -35,9 +35,12 @@ PYSIDE_PREFIXES = (
     "app/",
     "bindings/",
     "cmake/",
+    "examples/qml_bridge/",
     "include/",
+    "plugin/",
     "src/",
     "third_party/",
+    "uilib/",
 )
 
 PYSIDE_ROOT_FILES = {
@@ -76,12 +79,15 @@ WASM_PREFIXES = (
     "cmake/",
     "examples/hello_world/",
     "examples/plugin_extension/",
+    "examples/qml_bridge/",
     "include/",
     "platforms/webassembly/",
+    "plugin/",
     "res/",
     "src/",
     "support/logging/",
     "third_party/",
+    "uilib/",
 )
 
 WASM_ROOT_FILES = {
@@ -94,6 +100,7 @@ WASM_CI_FILES = {
     ".github/scripts/classify_ci_changes.py",
     ".github/scripts/run-wasm-browser-smoke.py",
     ".github/scripts/run-wasm-plugin-smoke.py",
+    ".github/scripts/run-wasm-qml-bridge-smoke.py",
     ".github/scripts/run-wasm-spatial-smoke.py",
     ".github/scripts/test_wasm_browser_smoke.py",
     ".github/scripts/test_wasm_spatial_smoke.py",
@@ -118,6 +125,7 @@ CPP_COMPONENT_TEST_GROUPS = frozenset(
         "layout",
         "menus_toolbars",
         "navigation",
+        "qmlbridge",
         "scrolling",
         "spatial",
         "status_info",

@@ -34,12 +34,20 @@ def _stale_runtime_package_files() -> list[str]:
 
     source_dir = Path(__file__).resolve().parents[1] / "src/fluentqt_gallery"
     runtime_dir = Path(fluentqt_gallery.__file__).resolve().parent
-    return [
+    stale = [
         source.name
         for source in sorted(source_dir.glob("*.py"))
         if not (runtime_dir / source.name).is_file()
         or (runtime_dir / source.name).read_bytes() != source.read_bytes()
     ]
+    atomic_source = (Path(__file__).resolve().parents[4]
+                     / "app/view/widgets/samples/qmlbridge")
+    for name in ("Basic.qml", "Theme.qml", "Context.qml", "Action.qml"):
+        source = atomic_source / name
+        packaged = runtime_dir / "assets/qml_bridge/atomic" / name
+        if not packaged.is_file() or packaged.read_bytes() != source.read_bytes():
+            stale.append("assets/qml_bridge/atomic/" + name)
+    return stale
 
 
 def generate_catalog() -> dict[str, object]:
@@ -63,7 +71,7 @@ def generate_catalog() -> dict[str, object]:
 
     samples: list[dict[str, str]] = []
     for entry in ENTRIES:
-        if entry.category_id == "spatial":
+        if entry.category_id in {"spatial", "qml-bridge"}:
             continue
         for sample in entry.samples:
             result = build_sample(entry.route_id, sample.id)
@@ -115,22 +123,38 @@ def generate_catalog() -> dict[str, object]:
                 _GENERATED_RESULTS.append(result)
                 QApplication.processEvents()
 
-    # Spatial's source is packaged even with a base binding. The optional
-    # binding tests execute these same examples when that module is built.
-    # Generation must not require OpenGL merely to export teaching text.
-    from fluentqt_gallery.native_samples_spatial import full_example_source
+    # Optional extension sources are packaged even with a base binding. Their
+    # binding tests execute these same examples when the modules are built.
+    # Exporting teaching text does not initialize OpenGL or a Quick engine.
+    from fluentqt_gallery.native_samples_spatial import full_example_source as spatial_source
+    from fluentqt_gallery.native_samples_qmlbridge import teaching_source as qml_bridge_source
+    from fluentqt_gallery.native_samples_qmlbridge import example_source_files as qml_bridge_files
     for component in CONTRACT["components"]:
-        if component["category_id"] != "spatial":
+        category = component["category_id"]
+        if category not in {"spatial", "qml-bridge"}:
             continue
         for sample in component["samples"]:
-            samples.append({
+            entry = {
                 "route_id": component["id"],
                 "sample_id": sample["id"],
-                "source": full_example_source(sample["id"]),
-            })
+                "source": (spatial_source(sample["id"])
+                           if category == "spatial" else qml_bridge_source(sample["id"])),
+            }
+            if category == "qml-bridge":
+                entry["source_files"] = qml_bridge_files(sample["id"])
+            samples.append(entry)
+    from fluentqt_gallery.qmlplus_samples import python_source, sample_ids
+    foundation = CONTRACT["foundation_samples"]["foundation-qmlplus"]
+    if tuple(sample["id"] for sample in foundation) != sample_ids():
+        raise RuntimeError("Python QMLPlus samples differ from the native atomic sample order")
+    for sample in foundation:
+        samples.append({"route_id": "foundation-qmlplus", "sample_id": sample["id"],
+                        "source": python_source(sample["id"])})
     order = {(c["id"], s["id"]): i for i, (c, s) in enumerate(
         (c, s) for c in CONTRACT["components"] for s in c["samples"]
     )}
+    order.update({("foundation-qmlplus", sample["id"]): len(order) + index
+                  for index, sample in enumerate(foundation)})
     samples.sort(key=lambda sample: order[(sample["route_id"], sample["sample_id"])])
 
     return {
@@ -140,6 +164,7 @@ def generate_catalog() -> dict[str, object]:
         ),
         "summary": {
             "component_count": len(CONTRACT["components"]),
+            "foundation_topic_count": len(CONTRACT["foundation_samples"]),
             "sample_count": len(samples),
         },
         "samples": samples,

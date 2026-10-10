@@ -7,6 +7,7 @@
 
 #include <algorithm>
 
+#include <QApplication>
 #include <QMoveEvent>
 #include <QHideEvent>
 #include <QResizeEvent>
@@ -75,6 +76,7 @@ GalleryWindow::GalleryWindow(QWidget* parent)
 #ifdef FLUENT_QT_HAS_SPATIAL
     spatial::SpatialSession startupSession(this);
     if (qEnvironmentVariableIntValue("FLUENT_QT_GALLERY_DISABLE_3D") == 0 &&
+        qApp->property("fluentqtGalleryGraphicsBackendFailure").toString().isEmpty() &&
         startupSession.activate()) {
         if (spatial::SpatialTextureHost::isPreferred())
             spatial::SpatialTextureHost::prepareWindow(this);

@@ -6465,5 +6465,10 @@ from .spatial_support import SPATIAL_AVAILABLE  # noqa: E402
 if SPATIAL_AVAILABLE:
     from . import native_samples_spatial as _native_samples_spatial  # noqa: E402,F401
 
+from .qmlbridge_support import QML_BRIDGE_AVAILABLE  # noqa: E402
+
+if QML_BRIDGE_AVAILABLE:
+    from . import native_samples_qmlbridge as _native_samples_qmlbridge  # noqa: E402,F401
+
 
 __all__ = ["build_native_sample", "ported_sample_keys", "register_source_samples"]

@@ -15,6 +15,7 @@ Read the owning code and the guide sections relevant to the task below.
 | Trace an earlier API decision or audit a baseline | [Historical API audit](docs/development/component-api-audit.md); its dated addenda are evidence, not current rules |
 | Runtime ownership or overlays | [Architecture](docs/architecture/README.md); [overlay behavior](docs/architecture/overlay-behavior.md) for popups, flyouts, dropdowns, and drawers |
 | Optional plugin extensions | [Plugin contract](docs/architecture/plugins.md) for lifecycle, dependencies, thread affinity, and caller-owned widgets |
+| Application QML hosting | [QmlBridge](docs/architecture/qml-bridge.md) for explicit Quick initialization, session unloading, borrowed context models, and scene-owned roots |
 | Visible component change | [Accessibility inventory](docs/development/accessibility-inventory.md), [visual review](docs/development/visual-review.md) |
 | Cross-cutting maintenance or high-risk visual work | [Technical debt roadmap](docs/development/technical-debt-roadmap.md) and its [visual evidence inventory](docs/development/visual-evidence-inventory.json) |
 | Gallery samples or card images | [Sample/source alignment](docs/development/app-sample-optimization.md), [preview workflow](docs/development/gallery-preview-workflow.md), or [card images](docs/development/gallery-control-images.md) |
@@ -25,6 +26,12 @@ Read the owning code and the guide sections relevant to the task below.
 
 ## Boundaries to preserve
 
+- CMake target ownership follows [uilib/](uilib/) for the Widgets library and its
+  minimal example, [plugin/](plugin/) for the lifecycle framework and its
+  `plugin_extension`, `Spatial`, and `QmlBridge` subdirectories, and [app/](app/)
+  for Gallery and its support targets. Keep this `add_subdirectory()` hierarchy
+  consistent across IDEs. Library sources remain under `src/`; standalone
+  example entry points and sources remain under `examples/`.
 - The project uses C++17 and Qt Widgets 5.15+ or 6.2+. `FluentQt` itself has no
   spdlog dependency. Library diagnostics use Qt logging with a `fluentqt.*`
   category; Gallery/tests use [support/logging/Log.h](support/logging/Log.h).
@@ -47,6 +54,12 @@ Read the owning code and the guide sections relevant to the task below.
   lifecycle into the application. Keep plugin/host ownership borrowed; Python
   callers retain unparented plugin wrappers or provide a Qt owner. Do not add
   a separate browser manager.
+- Application QML hosts live in `qmlbridge/` (`fluent::qmlbridge`), built by
+  opt-in `FluentQt::QmlBridge` with public Plugins and private Qt Qml/Quick/
+  QuickWidgets dependencies. Keep Quick out of the Widgets core and base package
+  discovery. Use `QmlSession` for activation and unloading; application context
+  models remain borrowed. Select the Quick backend explicitly before the first
+  Quick surface, and keep QWidget-only QMLPlus independent of this module.
 - Use `compatibility/QtCompat.h` and `FluentEnterEvent` in new `enterEvent`
   overrides. Inside `namespace fluent::<category>`, inherit shared mixins as
   `public FluentElement, public QMLPlus`; qualify them with `fluent::` outside.

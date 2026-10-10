@@ -17,6 +17,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     include/FluentQt/MenusToolbars.h
     include/FluentQt/Navigation.h
     include/FluentQt/Plugins.h
+    include/FluentQt/QmlBridge.h
     include/FluentQt/Scrolling.h
     include/FluentQt/Spatial.h
     include/FluentQt/StatusInfo.h
@@ -123,6 +124,12 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/navigation/StackContentHost.h
     src/components/navigation/TabView.h
 
+    src/components/qmlbridge/QmlPlugin.h
+    src/components/qmlbridge/QmlSession.h
+    src/components/qmlbridge/QmlTheme.h
+    src/components/qmlbridge/QmlTextureLayer.h
+    src/components/qmlbridge/QmlView.h
+
     src/components/scrolling/AnnotatedScrollBar.h
     src/components/scrolling/PipsPager.h
     src/components/scrolling/ScrollBar.h
@@ -179,6 +186,10 @@ function(fluent_qt_install_headers source_root)
         endif()
         if(NOT FLUENT_QT_BUILD_SPATIAL AND
            (_header MATCHES "^src/components/spatial/" OR _header STREQUAL "include/FluentQt/Spatial.h"))
+            continue()
+        endif()
+        if(NOT FLUENT_QT_BUILD_QML_BRIDGE AND
+           (_header MATCHES "^src/components/qmlbridge/" OR _header STREQUAL "include/FluentQt/QmlBridge.h"))
             continue()
         endif()
         if(_header MATCHES "^include/FluentQt/(.+)$")

@@ -78,6 +78,7 @@ REQUIRED_EXECUTION_LANES = {
         "id": "linux-x64-qt62-fast",
         "mode": "fast",
         "build_target": "fluent_qt_ci_fast_tests",
+        "configure_options": ("-DFLUENT_QT_BUILD_QML_BRIDGE=ON",),
         "test_labels": "^ci_fast$",
         "exclude_labels": "^(manual_visual|local_desktop)$",
     },
@@ -85,6 +86,7 @@ REQUIRED_EXECUTION_LANES = {
         "id": "linux-x64-qt62-full",
         "mode": "full",
         "build_target": "fluent_qt_all_tests",
+        "configure_options": ("-DFLUENT_QT_BUILD_QML_BRIDGE=ON",),
         "test_labels": "^ci_full$",
         "exclude_labels": "^(manual_visual|local_desktop)$",
     },
@@ -92,6 +94,7 @@ REQUIRED_EXECUTION_LANES = {
         "id": "linux-x64-qt62-contract-sanitizers",
         "mode": "full",
         "build_target": "fluent_qt_contract_tests",
+        "configure_options": ("-DFLUENT_QT_BUILD_QML_BRIDGE=ON",),
         "test_labels": "^contract$",
         "exclude_labels": "^(known_contract_gap|manual_visual|local_desktop)$",
     },
@@ -213,6 +216,10 @@ def validate_catalog(data: Any) -> list[str]:
             errors.append(
                 f"{context} must exclude labels {contract['exclude_labels']}"
             )
+        options = scenario.get("configure_args", "")
+        for option in contract.get("configure_options", ()):
+            if not isinstance(options, str) or option not in options.split():
+                errors.append(f"{context} must configure {option}")
 
     return errors
 

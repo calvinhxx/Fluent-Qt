@@ -35,6 +35,7 @@ CATEGORY_SOURCES = (
     ),
     CategorySource("layout", "Layout", "LayoutSamples.cpp"),
     CategorySource("spatial", "Spatial", "SpatialSamples.cpp"),
+    CategorySource("qml-bridge", "QmlBridge", "QmlBridgeSamples.cpp"),
     CategorySource(
         "menus-toolbars", "Menus & toolbars", "MenusToolbarsSamples.cpp"
     ),
@@ -105,6 +106,29 @@ NON_COMPONENT_ROUTES = (
     },
 )
 
+QML_VIEW_SOURCES = (
+    ("qml-view-load", "loadSource", "Basic.qml"),
+    ("qml-view-theme", "themeSource", "Theme.qml"),
+    ("qml-view-context", "contextSource", "Context.qml"),
+    ("qml-view-action", "actionSource", "Action.qml"),
+    ("qml-view-lifecycle", "lifecycleSource", "Basic.qml"),
+    ("qml-view-error", "errorSource", "Basic.qml"),
+)
+
+
+_CPP_RAW_STRING = re.compile(r'(?<![A-Za-z0-9_])(?:u8|u|U|L)?R"([^\s()\\]{0,16})\(')
+
+
+def _raw_string_end(text: str, opening: int) -> tuple[int, int]:
+    match = _CPP_RAW_STRING.match(text, opening)
+    if match is None:
+        raise ValueError("invalid C++ raw string at offset {0}".format(opening))
+    closing_text = ")" + match.group(1) + '"'
+    closing = text.find(closing_text, match.end())
+    if closing < 0:
+        raise ValueError("unterminated C++ raw string at offset {0}".format(opening))
+    return closing, closing + len(closing_text)
+
 
 def _matching_delimiter(text: str, start: int, opening: str, closing: str) -> int:
     if start >= len(text) or text[start] != opening:
@@ -146,6 +170,10 @@ def _matching_delimiter(text: str, start: int, opening: str, closing: str) -> in
         if char == "/" and following == "*":
             block_comment = True
             index += 2
+            continue
+        raw = _CPP_RAW_STRING.match(text, index)
+        if raw is not None:
+            _, index = _raw_string_end(text, index)
             continue
         if char == '"':
             in_string = True
@@ -201,6 +229,10 @@ def _split_arguments(text: str) -> list[str]:
             block_comment = True
             index += 2
             continue
+        raw = _CPP_RAW_STRING.match(text, index)
+        if raw is not None:
+            _, index = _raw_string_end(text, index)
+            continue
         if char == '"':
             in_string = True
         elif char in "([{":
@@ -221,13 +253,241 @@ _CPP_STRING = re.compile(r'(?<![A-Za-z0-9_])(?:u8|u|U|L)?("(?:\\.|[^"\\])*")')
 
 
 def _cpp_string_expression(expression: str) -> str:
-    literals = _CPP_STRING.findall(expression)
-    if not literals:
+    fragments = []
+    cursor = 0
+    while cursor < len(expression):
+        raw = _CPP_RAW_STRING.search(expression, cursor)
+        literal = _CPP_STRING.search(expression, cursor)
+        if raw is not None and (literal is None or raw.start() <= literal.start()):
+            closing, cursor = _raw_string_end(expression, raw.start())
+            fragments.append(expression[raw.end():closing])
+        elif literal is not None:
+            try:
+                fragments.append(ast.literal_eval(literal.group(1)))
+            except (SyntaxError, ValueError) as error:
+                raise ValueError("invalid C++ string expression: {0}".format(expression)) from error
+            cursor = literal.end()
+        else:
+            break
+    if not fragments:
         raise ValueError("expected a C++ string expression: {0}".format(expression))
-    try:
-        return "".join(ast.literal_eval(literal) for literal in literals)
-    except (SyntaxError, ValueError) as error:
-        raise ValueError("invalid C++ string expression: {0}".format(expression)) from error
+    return "".join(fragments)
+
+
+def _qml_bridge_template(source: str) -> str:
+    helpers = list(re.finditer(r"\bQString\s+withQml\s*\([^{};]*\)\s*\{", source))
+    if len(helpers) != 1:
+        raise ValueError("QmlBridge requires one withQml template helper")
+    opening = source.find("{", helpers[0].start())
+    signature = source[helpers[0].start():opening]
+    if re.fullmatch(
+        r"QString\s+withQml\s*\(\s*const\s+QString\s*&\s*cpp\s*,"
+        r"\s*const\s+QString\s*&\s*name\s*\)\s*", signature
+    ) is None:
+        raise ValueError("QmlBridge withQml parameters must be cpp and name")
+    closing = _matching_delimiter(source, opening, "{", "}")
+    body = source[opening + 1:closing]
+    prefix = re.match(
+        r"\s*const\s+auto\s+example\s*=\s*QString::fromUtf8\s*\(", body
+    )
+    if prefix is None:
+        raise ValueError("QmlBridge helper must read one host template literal")
+    literal_opening = prefix.end() - 1
+    literal_closing = _matching_delimiter(body, literal_opening, "(", ")")
+    literal = body[literal_opening + 1:literal_closing].strip()
+    if not literal.startswith('R"example('):
+        raise ValueError("QmlBridge template must be one R\"example raw literal")
+    _, literal_end = _raw_string_end(literal, 0)
+    if literal[literal_end:].strip():
+        raise ValueError("QmlBridge template must be one exact literal")
+    replacement_chain = (
+        r"\s*;\s*return\s+QString\s*\(\s*example\s*\)"
+        r'\s*\.replace\s*\(\s*QStringLiteral\s*\(\s*"@NAME@"\s*\)\s*,\s*name\s*\)'
+        r'\s*\.replace\s*\(\s*QStringLiteral\s*\(\s*"@BODY@"\s*\)\s*,\s*cpp\s*\)'
+        r"\s*;\s*"
+    )
+    if re.fullmatch(replacement_chain, body[literal_closing + 1:]) is None:
+        raise ValueError("QmlBridge replacements must be exactly NAME and BODY in order")
+    template = _cpp_string_expression(literal)
+    placeholders = ("@NAME@", "@BODY@")
+    if any(template.count(placeholder) != 1 for placeholder in placeholders):
+        raise ValueError("QmlBridge template requires each placeholder exactly once")
+    if set(re.findall(r"@[A-Z_]+@", template)) != set(placeholders):
+        raise ValueError("QmlBridge template contains unknown placeholders")
+    if "import QtQuick" in template or 'R"qml(' in template:
+        raise ValueError("QmlBridge C++ host template must not embed QML")
+    return template
+
+
+def _qml_bridge_source_expressions(source: str, samples_root: Path) -> dict[str, str]:
+    template = _qml_bridge_template(source)
+    expressions = {}
+    for _, function_name, expected_asset in QML_VIEW_SOURCES:
+        pattern = re.compile(r"\bQString\s+" + function_name + r"\s*\(\s*\)\s*\{")
+        matches = list(pattern.finditer(source))
+        if len(matches) != 1:
+            raise ValueError("QmlBridge requires one source function: " + function_name)
+        opening = source.find("{", matches[0].start())
+        closing = _matching_delimiter(source, opening, "{", "}")
+        body = source[opening + 1:closing]
+        returned = re.search(r"\breturn\s+withQml\s*\(", body)
+        if returned is None or body[:returned.start()].strip():
+            raise ValueError("QmlBridge source must return withQml: " + function_name)
+        call_opening = returned.end() - 1
+        call_closing = _matching_delimiter(body, call_opening, "(", ")")
+        if body[call_closing + 1:].strip() != ";":
+            raise ValueError("QmlBridge source must contain one return expression: " + function_name)
+        arguments = _split_arguments(body[call_opening + 1:call_closing])
+        if len(arguments) != 2:
+            raise ValueError("QmlBridge source requires a raw C++ snippet and QML file: " + function_name)
+        snippet = re.fullmatch(r"QString::fromUtf8\s*\(\s*(.*?)\s*\)", arguments[0], re.S)
+        if snippet is None or re.match(r'(?:u8)?R"', snippet.group(1)) is None:
+            raise ValueError("QmlBridge C++ snippet must be one raw literal: " + function_name)
+        _, raw_end = _raw_string_end(snippet.group(1), 0)
+        if snippet.group(1)[raw_end:].strip():
+            raise ValueError("QmlBridge C++ snippet must be one raw literal: " + function_name)
+        if re.fullmatch(r'QStringLiteral\s*\(\s*"[^"\\]*"\s*\)', arguments[1]) is None:
+            raise ValueError("QmlBridge QML file must be a literal: " + function_name)
+        asset = _cpp_string_expression(arguments[1])
+        if asset != expected_asset:
+            raise ValueError("QmlBridge source uses the wrong QML file: " + function_name)
+        cpp = _cpp_string_expression(arguments[0])
+        if re.search(r"@[A-Z_]+@", cpp):
+            raise ValueError("QmlBridge inserted source contains a template placeholder: " + function_name)
+        expressions[function_name + "()"] = (
+            template.replace("@NAME@", asset).replace("@BODY@", cpp)
+        )
+    return expressions
+
+
+def _qml_helper_body(source: str, name: str, parameters: str) -> str:
+    matches = list(re.finditer(r"\bQString\s+" + name + r"\s*\([^{};]*\)\s*\{", source))
+    if len(matches) != 1:
+        raise ValueError("QmlBridge requires exactly one " + name + " helper")
+    opening = source.find("{", matches[0].start())
+    signature = source[matches[0].start():opening]
+    if re.fullmatch(r"QString\s+" + name + r"\s*\(" + parameters + r"\)\s*", signature) is None:
+        raise ValueError("Unsupported QmlBridge helper signature: " + name)
+    closing = _matching_delimiter(source, opening, "{", "}")
+    return source[opening + 1:closing]
+
+
+def _single_utf8_raw(expression: str, *, delimiter: str | None = None) -> str:
+    expression = expression.strip()
+    prefix = re.match(r"QString::fromUtf8\s*\(", expression)
+    if prefix is None:
+        raise ValueError("QmlBridge source requires QString::fromUtf8 of one raw literal")
+    opening = prefix.end() - 1
+    closing = _matching_delimiter(expression, opening, "(", ")")
+    if expression[closing + 1:].strip():
+        raise ValueError("QmlBridge source requires one exact UTF-8 expression")
+    literal = expression[opening + 1:closing].strip()
+    if re.match(r'(?:u8)?R"', literal) is None:
+        raise ValueError("QmlBridge source must use a UTF-8 raw literal")
+    if delimiter is not None and not literal.startswith('R"' + delimiter + '('):
+        raise ValueError("QmlBridge template requires the " + delimiter + " raw delimiter")
+    _, raw_end = _raw_string_end(literal, 0)
+    if literal[raw_end:].strip():
+        raise ValueError("QmlBridge source must contain one raw literal")
+    return _cpp_string_expression(literal)
+
+
+def _qml_bridge_key_usages(source: str) -> dict[str, str]:
+    body = _qml_helper_body(source, "keyUsage", r"\s*const\s+QString\s*&\s*id\s*")
+    usages = {}
+    for sample_id, _, _ in QML_VIEW_SOURCES:
+        branch = re.match(
+            r'\s*if\s*\(\s*id\s*==\s*QStringLiteral\s*\(\s*"' + sample_id
+            + r'"\s*\)\s*\)\s*\{', body
+        )
+        if branch is None:
+            raise ValueError("QmlBridge Key usage must keep one branch per card in order")
+        opening = branch.end() - 1
+        closing = _matching_delimiter(body, opening, "{", "}")
+        returned = re.fullmatch(r"\s*return\s+([\s\S]*);\s*", body[opening + 1:closing])
+        if returned is None:
+            raise ValueError("QmlBridge Key usage branch must contain one return expression")
+        key = _single_utf8_raw(returned.group(1))
+        if re.search(r"@[A-Z_]+@", key) or "import QtQuick" in key or "Rectangle {" in key:
+            raise ValueError("QmlBridge host Key usage must contain only host-language code")
+        usages[sample_id] = key
+        body = body[closing + 1:]
+    if re.fullmatch(r"\s*return\s*\{\s*\}\s*;\s*", body) is None:
+        raise ValueError("QmlBridge Key usage may have no unparsed branches or statements")
+    return usages
+
+
+def _qml_bridge_file_templates(source: str) -> tuple[str, str]:
+    body = _qml_helper_body(source, "qmlResourceSource", r"\s*const\s+QString\s*&\s*name\s*")
+    prefix = re.match(r"\s*const\s+auto\s+resource\s*=\s*", body)
+    if prefix is None:
+        raise ValueError("QmlBridge resource helper must contain one resource template")
+    start = prefix.end()
+    expression = re.match(r"QString::fromUtf8\s*\(", body[start:])
+    if expression is None:
+        raise ValueError("QmlBridge resource template must be UTF-8")
+    opening = start + expression.end() - 1
+    closing = _matching_delimiter(body, opening, "(", ")")
+    resource = _single_utf8_raw(body[start:closing + 1], delimiter="resource")
+    suffix = (
+        r"\s*;\s*return\s+QString\s*\(\s*resource\s*\)"
+        r'\s*\.replace\s*\(\s*QStringLiteral\s*\(\s*"@NAME@"\s*\)\s*,\s*name\s*\)'
+        r"\s*;\s*"
+    )
+    if re.fullmatch(suffix, body[closing + 1:]) is None:
+        raise ValueError("QmlBridge resource template must replace only NAME")
+    if resource.count("@NAME@") != 1 or set(re.findall(r"@[A-Z_]+@", resource)) != {"@NAME@"}:
+        raise ValueError("QmlBridge resource template requires one NAME placeholder")
+    body = _qml_helper_body(source, "qmlCmakeSource", r"\s*")
+    returned = re.fullmatch(r"\s*return\s+([\s\S]*);\s*", body)
+    if returned is None:
+        raise ValueError("QmlBridge CMake helper must contain one return expression")
+    cmake = _single_utf8_raw(returned.group(1), delimiter="cmake")
+    if re.search(r"@[A-Z_]+@", cmake):
+        raise ValueError("QmlBridge CMake template has an unknown placeholder")
+    return resource, cmake
+
+
+def _qml_bridge_source_files(source: str, samples_root: Path) -> dict[str, list[dict[str, str]]]:
+    expressions = _qml_bridge_source_expressions(source, samples_root)
+    usages = _qml_bridge_key_usages(source)
+    resource, cmake = _qml_bridge_file_templates(source)
+    filename_body = _qml_helper_body(source, "qmlFileName", r"\s*const\s+QString\s*&\s*id\s*")
+    filename_expected = "".join(
+        'if(id==QStringLiteral("' + sample_id + '"))returnQStringLiteral("' + asset + '");'
+        for sample_id, _, asset in QML_VIEW_SOURCES if asset != "Basic.qml"
+    ) + 'returnQStringLiteral("Basic.qml");'
+    if re.sub(r"\s+", "", filename_body) != filename_expected:
+        raise ValueError("QmlBridge file names must match the source functions' QML assets")
+    body = _function_bodies(source).get("qmlViewSamples")
+    if body is None:
+        raise ValueError("QmlBridge requires its sample declaration to expose source files")
+    assignments = re.findall(r"for\s*\(\s*auto\s*&\s*sample\s*:\s*result\s*\)\s*\{", body)
+    expected = (
+        'for(auto&sample:result){constautoname=qmlFileName(sample.id);'
+        'sample.usageSnippet=keyUsage(sample.id);sample.sourceFiles={'
+        '{QStringLiteral("main.cpp"),QStringLiteral("cpp"),sample.codeSnippet,sample.usageSnippet},'
+        '{name,QStringLiteral("qml"),qmlAsset(name),{}},'
+        '{QStringLiteral("qml.qrc"),QStringLiteral("xml"),qmlResourceSource(name),{}},'
+        '{QStringLiteral("CMakeLists.txt"),QStringLiteral("cmake"),qmlCmakeSource(),{}}};}returnresult;'
+    )
+    if len(assignments) != 1 or not re.sub(r"\s+", "", body).endswith(expected):
+        raise ValueError("QmlBridge samples must expose their four canonical source files")
+    files = {}
+    for sample_id, function_name, asset in QML_VIEW_SOURCES:
+        try:
+            qml = (samples_root / "qmlbridge" / asset).read_bytes().decode("utf-8")
+        except (OSError, UnicodeError) as error:
+            raise ValueError("QmlBridge canonical QML asset is unavailable: " + asset) from error
+        files[sample_id] = [
+            {"name": "main.cpp", "language": "cpp", "code": expressions[function_name + "()"],
+             "usage_snippet": usages[sample_id]},
+            {"name": asset, "language": "qml", "code": qml, "usage_snippet": ""},
+            {"name": "qml.qrc", "language": "xml", "code": resource.replace("@NAME@", asset),
+             "usage_snippet": ""},
+            {"name": "CMakeLists.txt", "language": "cmake", "code": cmake, "usage_snippet": ""},
+        ]
+    return files
 
 
 def _function_bodies(source: str) -> dict[str, str]:
@@ -265,7 +525,10 @@ def _preview_layout(create_preview: str) -> dict[str, object] | None:
     }
 
 
-def _samples_in_body(body: str) -> list[dict[str, object]]:
+def _samples_in_body(
+    body: str, *, source_expressions: dict[str, str] | None = None,
+    source_files: dict[str, list[dict[str, str]]] | None = None,
+) -> list[dict[str, object]]:
     samples = []
     cursor = 0
     while True:
@@ -277,12 +540,18 @@ def _samples_in_body(body: str) -> list[dict[str, object]]:
         arguments = _split_arguments(body[opening + 1 : closing])
         if len(arguments) < 5:
             raise ValueError("makeSample requires at least five arguments")
+        snippet = (source_expressions or {}).get(arguments[3].strip())
         sample: dict[str, object] = {
             "id": _cpp_string_expression(arguments[0]),
             "title": _cpp_string_expression(arguments[1]),
             "description": _cpp_string_expression(arguments[2]),
-            "cpp_snippet": _cpp_string_expression(arguments[3]),
+            "cpp_snippet": snippet if snippet is not None else _cpp_string_expression(arguments[3]),
         }
+        if source_files is not None:
+            sample_id = str(sample["id"])
+            if sample_id not in source_files:
+                raise ValueError("QmlBridge sample has no parsed source files: " + sample_id)
+            sample["source_files"] = source_files[sample_id]
         if len(arguments) > 5:
             if len(arguments) != 6 or arguments[5].strip() not in {"true", "false"}:
                 raise ValueError("makeSample fillAvailableWidth must be a boolean literal")
@@ -443,6 +712,11 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
         category_components = []
         if set(route_functions) != set(metadata["components"]):
             raise ValueError("native Gallery category samples differ from its component catalog: " + category.id)
+        source_expressions = {}
+        source_files = None
+        if category_id == "qml-bridge":
+            source_expressions = _qml_bridge_source_expressions(source, samples_root)
+            source_files = _qml_bridge_source_files(source, samples_root)
         for route_id in metadata["components"]:
             function_name = route_functions[route_id]
             if route_id in seen_routes:
@@ -455,9 +729,15 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
                         route_id, function_name
                     )
                 )
-            samples = _samples_in_body(bodies[function_name])
+            samples = _samples_in_body(
+                bodies[function_name], source_expressions=source_expressions, source_files=source_files,
+            )
             if not samples:
                 raise ValueError("native Gallery route has no samples: {0}".format(route_id))
+            if route_id == "qml-view" and [sample["id"] for sample in samples] != [
+                sample_id for sample_id, _, _ in QML_VIEW_SOURCES
+            ]:
+                raise ValueError("QmlView must keep its six focused examples in canonical order")
             for sample in samples:
                 key = (route_id, sample["id"])
                 if key in seen_samples:
@@ -578,7 +858,7 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
             .format(", ".join(missing_bindings))
         )
     support_types = sorted(manifest_classes - routed_types)
-    expected_counts = (87, 243, 111) if include_cpp_only else (85, 232, 107)
+    expected_counts = (88, 249, 113) if include_cpp_only else (85, 232, 107)
     for name, actual, expected in zip(
         ("component", "sample", "route"),
         (component_count, sample_count, len(routes)),
@@ -594,6 +874,13 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
         "canonical_source": "app/view/widgets/samples",
         "categories": categories,
         "components": components,
+        "foundation_samples": {
+            "foundation-qmlplus": _samples_in_body(
+                (project_root / "app/view/widgets/samples/QmlPlusSamples.cpp").read_text(
+                    encoding="utf-8"
+                )
+            ),
+        },
         "binding_support_types": support_types,
         "routes": routes,
         "summary": {

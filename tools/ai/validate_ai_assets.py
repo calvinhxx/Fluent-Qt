@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 import json
 import os
 from pathlib import Path
@@ -121,6 +122,9 @@ def _validate_json_instance(
 
     if isinstance(value, str) and len(value) < schema.get("minLength", 0):
         raise AssertionError(f"{path} is shorter than minLength")
+    if isinstance(value, str) and "pattern" in schema:
+        if re.search(str(schema["pattern"]), value) is None:
+            raise AssertionError(f"{path} does not match pattern {schema['pattern']!r}")
     if (
         isinstance(value, (int, float))
         and not isinstance(value, bool)
@@ -163,6 +167,110 @@ def _validate_json_instance(
                 _validate_json_instance(
                     nested_value, nested_schema, root_schema, f"{path}.{key}"
                 )
+
+
+def _validate_sample_source_files(sample: dict[str, object], path: str = "$") -> None:
+    """Check relationships after the sample and file types pass JSON Schema."""
+    if "source_files" not in sample:
+        return
+    files = sample["source_files"]
+    names = set()
+    extensions = {
+        "cpp": (".cpp", ".cc", ".cxx", ".h", ".hpp", ".hh", ".hxx", ".inl", ".ipp", ".tpp"),
+        "python": (".py",),
+        "qml": (".qml",),
+        "xml": (".xml", ".qrc"),
+        "cmake": (".cmake",),
+    }
+    for index, file in enumerate(files):
+        file_path = f"{path}.source_files[{index}]"
+        name = file["name"]
+        folded_name = name.casefold()
+        if not name.strip() or name != name.strip() or folded_name in names:
+            raise AssertionError(f"{file_path} has a blank, padded or duplicate filename: {name!r}")
+        names.add(folded_name)
+        language = file["language"]
+        cmake_list = language == "cmake" and name == "CMakeLists.txt"
+        if not cmake_list and not folded_name.endswith(extensions[language]):
+            raise AssertionError(f"{file_path} filename does not match its {language} language")
+        if not file["code"].strip():
+            raise AssertionError(f"{file_path}.code must contain source text")
+        if file["usage_snippet"] and not file["usage_snippet"].strip():
+            raise AssertionError(f"{file_path}.usage_snippet must be empty or contain source text")
+    if files[0]["language"] != "cpp" or files[0]["code"] != sample["cpp_snippet"]:
+        raise AssertionError(f"{path}.source_files must begin with the canonical cpp_snippet host file")
+
+
+def _validate_sample_source_file_checks(schema: dict[str, object]) -> int:
+    """Exercise optional file bundles and reject malformed types or relationships."""
+    sample = {
+        "id": "separate-qml-page",
+        "title": "Load a QML page",
+        "description": "Load one independently supplied QML file.",
+        "cpp_snippet": 'auto* view = session->createView(panel);\nview->load(QUrl("qrc:/Scene.qml"));\n',
+    }
+
+    def check(value: dict[str, object]) -> None:
+        _validate_json_instance(value, schema["$defs"]["sample"], schema)
+        _validate_sample_source_files(value)
+
+    check(sample)  # Existing single-snippet samples remain valid.
+    sample["source_files"] = [
+        {"name": "main.cpp", "language": "cpp", "code": sample["cpp_snippet"],
+         "usage_snippet": 'view->load(QUrl("qrc:/Scene.qml"));\n'},
+        {"name": "Scene.qml", "language": "qml", "code": "import QtQuick 2.15\nItem {}\n",
+         "usage_snippet": ""},
+        {"name": "qml.qrc", "language": "xml", "code": '<RCC><qresource prefix="/"><file>Scene.qml</file></qresource></RCC>\n',
+         "usage_snippet": ""},
+        {"name": "CMakeLists.txt", "language": "cmake", "code": "add_executable(example main.cpp qml.qrc)\n",
+         "usage_snippet": ""},
+        {"name": "main.py", "language": "python", "code": 'view.load(qml_source("Scene"))\n',
+         "usage_snippet": ""},
+    ]
+    check(sample)
+    single_file = deepcopy(sample)
+    single_file["source_files"] = single_file["source_files"][:1]
+    check(single_file)
+    empty_excerpt = deepcopy(single_file)
+    empty_excerpt["source_files"][0]["usage_snippet"] = ""
+    check(empty_excerpt)
+
+    rejected = 0
+    mutations = (
+        lambda value: value.update(source_files=None),
+        lambda value: value.update(source_files={}),
+        lambda value: value.update(source_files=[]),
+        lambda value: value["source_files"].append(deepcopy(value["source_files"][1])),
+        lambda value: value["source_files"][1].update(name="MAIN.CPP", language="cpp"),
+        lambda value: value["source_files"][0].update(code="different host source"),
+        lambda value: value["source_files"].reverse(),
+        lambda value: value["source_files"][0].pop("usage_snippet"),
+        lambda value: value["source_files"][1].pop("name"),
+        lambda value: value["source_files"][1].pop("language"),
+        lambda value: value["source_files"][1].pop("code"),
+        lambda value: value["source_files"][1].update(extra="unparsed data"),
+        lambda value: value["source_files"][1].update(language="unsupported"),
+        lambda value: value["source_files"][1].update(language="cpp"),
+        lambda value: value["source_files"][1].update(code=42),
+        lambda value: value["source_files"][1].update(code="\n "),
+        lambda value: value["source_files"][1].update(usage_snippet=[]),
+        lambda value: value["source_files"][1].update(usage_snippet="\n "),
+    )
+    filename_mutations = (
+        lambda value, name=name: value["source_files"][1].update(name=name)
+        for name in ("", ".", "..", "../Scene.qml", "folder/Scene.qml", "folder\\Scene.qml",
+                     "/Scene.qml", "C:Scene.qml", "Scene.qml\0", "Scene.qml\n", " Scene.qml")
+    )
+    for mutation in (*mutations, *filename_mutations):
+        invalid = deepcopy(sample)
+        mutation(invalid)
+        try:
+            check(invalid)
+        except AssertionError:
+            rejected += 1
+        else:
+            raise AssertionError("AI sample source file checks accepted a malformed file bundle")
+    return rejected
 
 
 def _project_analysis_fixture() -> dict[str, object]:
@@ -2077,6 +2185,7 @@ def validate(project_root: Path) -> dict[str, int]:
     )
     if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
         raise AssertionError("AI catalog schema must use JSON Schema draft 2020-12")
+    _validate_sample_source_file_checks(schema)
     project_analysis_schema = json.loads(
         (project_root / "docs/ai/project-analysis.schema.json").read_text(
             encoding="utf-8"
@@ -2107,10 +2216,10 @@ def validate(project_root: Path) -> dict[str, int]:
 
     summary = committed["summary"]
     expected_counts = {
-        "route_count": 111,
-        "component_count": 87,
-        "sample_count": 243,
-        "guided_component_count": 87,
+        "route_count": 113,
+        "component_count": 88,
+        "sample_count": 249,
+        "guided_component_count": 88,
     }
     for key, expected in expected_counts.items():
         if summary.get(key) != expected:
@@ -2146,10 +2255,14 @@ def validate(project_root: Path) -> dict[str, int]:
     }
     if summary != derived_counts:
         raise AssertionError("AI catalog summary does not match catalog contents")
-    for component in committed["components"]:
+    for component_index, component in enumerate(committed["components"]):
         if not component["capabilities"]:
             raise AssertionError(
                 f"Component {component['id']} has no selection guidance"
+            )
+        for sample_index, sample in enumerate(component["samples"]):
+            _validate_sample_source_files(
+                sample, f"$.components[{component_index}].samples[{sample_index}]"
             )
         for test in component["tests"]:
             if not (project_root / test["source"]).is_file():

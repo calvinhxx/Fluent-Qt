@@ -1,0 +1,49 @@
+<namespace-type name="qmlbridge" visible="no">
+    <object-type name="QmlTheme"/>
+    <object-type name="QmlPlugin"/>
+    <object-type name="QmlTextureLayer">
+        <modify-function signature="rootWidget()const">
+            <modify-argument index="return">
+                <define-ownership class="target" owner="default"/>
+            </modify-argument>
+        </modify-function>
+    </object-type>
+    <object-type name="QmlSession">
+        <enum-type name="GraphicsApi"/>
+        <modify-function signature="activate(QString*)">
+            <modify-argument index="1">
+                <remove-argument/>
+            </modify-argument>
+        </modify-function>
+        <modify-function signature="deactivate(QString*)">
+            <modify-argument index="1">
+                <remove-argument/>
+            </modify-argument>
+        </modify-function>
+        <modify-function signature="createView(QWidget*)">
+            <modify-argument index="return">
+                <parent index="1" action="add"/>
+                <define-ownership class="target" owner="target"/>
+            </modify-argument>
+        </modify-function>
+    </object-type>
+    <object-type name="QmlView">
+        <enum-type name="Status"/>
+        <modify-function signature="load(const QUrl&amp;,QString*)">
+            <modify-argument index="2">
+                <remove-argument/>
+            </modify-argument>
+        </modify-function>
+        <modify-function signature="rootObject()const">
+            <modify-argument index="return">
+                <define-ownership class="target" owner="default"/>
+            </modify-argument>
+        </modify-function>
+        <modify-function signature="themeObject()const">
+            <modify-argument index="return">
+                <define-ownership class="target" owner="default"/>
+            </modify-argument>
+        </modify-function>
+        <modify-function signature="onThemeUpdated()" remove="all"/>
+    </object-type>
+</namespace-type>

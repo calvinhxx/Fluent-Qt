@@ -15,41 +15,52 @@ SPEC.loader.exec_module(SMOKE)
 
 
 class GalleryWheelSmokeContractsTest(unittest.TestCase):
-    def test_runtime_coverage_supports_both_optional_module_states(self):
+    def test_runtime_coverage_supports_independent_optional_module_states(self):
         contract = {
-            "categories": [{"id": "basic", "plugin": False}, {"id": "spatial", "plugin": True}],
+            "categories": [{"id": "basic", "plugin": False}, {"id": "spatial", "plugin": True},
+                           {"id": "qml-bridge", "plugin": True}],
             "components": [
                 {"id": "button", "category_id": "basic", "samples": [{"id": "button-basic"}]},
                 {"id": "spatial-view", "category_id": "spatial", "samples": [{"id": "spatial-basic"}]},
+                {"id": "qml-view", "category_id": "qml-bridge", "samples": [{"id": "qml-shared-model"}]},
             ],
             "routes": [{"id": "button", "parent_id": "basic"},
                        {"id": "plugins", "parent_id": ""},
                        {"id": "spatial", "parent_id": "plugins"},
-                       {"id": "spatial-view", "parent_id": "spatial"}],
+                       {"id": "spatial-view", "parent_id": "spatial"},
+                       {"id": "qml-bridge", "parent_id": "plugins"},
+                       {"id": "qml-view", "parent_id": "qml-bridge"}],
             "binding_support_types": ["Theme"],
         }
-        for available in (False, True):
-            with self.subTest(spatial_available=available):
-                components = contract["components"] if available else contract["components"][:1]
-                categories = [SimpleNamespace(id=c["id"]) for c in contract["categories"][:2 if available else 1]]
+        for available, qmlbridge in ((False, False), (False, True), (True, False), (True, True)):
+            with self.subTest(spatial_available=available, qmlbridge_available=qmlbridge):
+                hidden = ({"spatial"} if not available else set()) | ({"qml-bridge"} if not qmlbridge else set())
+                if not available and not qmlbridge:
+                    hidden.add("plugins")
+                components = [c for c in contract["components"] if c["category_id"] not in hidden]
+                categories = [SimpleNamespace(id=c["id"]) for c in contract["categories"] if c["id"] not in hidden]
                 entries = [SimpleNamespace(route_id=c["id"], samples=[SimpleNamespace(**s) for s in c["samples"]])
                            for c in components]
-                routes = [SimpleNamespace(id=r["id"]) for r in contract["routes"][:4 if available else 1]]
+                routes = [SimpleNamespace(id=r["id"]) for r in contract["routes"]
+                          if r["id"] not in hidden and r["parent_id"] not in hidden]
                 keys = {(c["id"], s["id"]) for c in components for s in c["samples"]}
-                SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys, available)
+                SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys, available,
+                                             qmlbridge_available=qmlbridge)
                 if available:
                     SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys,
-                                                 available, require_spatial=True)
+                                                 available, require_spatial=True, qmlbridge_available=qmlbridge)
                 else:
                     with self.assertRaisesRegex(AssertionError, "Release Gallery must include Spatial"):
                         SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys,
-                                                     available, require_spatial=True)
+                                                     available, require_spatial=True, qmlbridge_available=qmlbridge)
                 # Same-sized wrong catalog and missing ports must still fail.
                 with self.assertRaisesRegex(AssertionError, "wrong coverage"):
-                    SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, set(), available)
+                    SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, set(), available,
+                                                 qmlbridge_available=qmlbridge)
                 routes[0].id = "wrong-component"
                 with self.assertRaisesRegex(AssertionError, "wrong coverage"):
-                    SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys, available)
+                    SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys, available,
+                                                 qmlbridge_available=qmlbridge)
 
     def images(self, root, names, *, source=False):
         directory = root / ("tools/gallery/artwork" if source else "assets/control_images")
