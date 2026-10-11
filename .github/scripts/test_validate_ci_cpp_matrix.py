@@ -154,6 +154,16 @@ class ValidateCiCppMatrixTest(unittest.TestCase):
             for error in MODULE.validate_catalog(catalog)
         ))
 
+    def test_linux_fast_sdk_installation_builds_qml_bridge_without_test_selection(self):
+        catalog = copy.deepcopy(self.catalog)
+        scenario = next(item for item in catalog["scenarios"]
+                        if item["id"] == "linux-x64-qt62-fast")
+        scenario["build_targets"] = "fluent_qt_ci_fast_tests"
+        self.assertTrue(any(
+            "must build target FluentQtQmlBridge for SDK installation" in error
+            for error in MODULE.validate_catalog(catalog)
+        ))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -15,7 +15,7 @@
       "vcpkg_triplet": "x64-linux",
       "build": true,
       "test": true,
-      "build_targets": "fluent_qt_ci_fast_tests",
+      "build_targets": "fluent_qt_ci_fast_tests FluentQtQmlBridge",
       "build_parallel": "4",
       "test_labels": "^ci_fast$",
       "exclude_labels": "^(manual_visual|local_desktop)$",
