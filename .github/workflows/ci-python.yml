@@ -645,6 +645,8 @@ jobs:
             "-G", "Visual Studio 17 2022",
             "-A", "x64",
             "-T", "v142",
+            "-DCMAKE_CXX_FLAGS_RELEASE=/O2 /Ob2 /DNDEBUG /Zi",
+            "-DCMAKE_MODULE_LINKER_FLAGS_RELEASE=/DEBUG /OPT:REF /OPT:ICF",
             "-DCMAKE_PREFIX_PATH=$qtRoot",
             "-DPython_EXECUTABLE=$python",
             "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=>=3.10,<3.11",
@@ -676,6 +678,7 @@ jobs:
             build/pyside6-qt62-windows/bindings/pyside6/generated/_fluentqt
 
       - name: Test PySide6 bindings
+        id: windows_binding_tests
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -688,6 +691,24 @@ jobs:
             -L '^pyside$' `
             --output-on-failure `
             --no-tests=error
+
+      - name: Diagnose native Python lifetime failures
+        if: ${{ failure() && steps.windows_binding_tests.outcome == 'failure' }}
+        timeout-minutes: 12
+        shell: pwsh
+        run: |
+          .github/scripts/diagnose-windows-python-lifetime.ps1 `
+            -BuildDirectory build/pyside6-qt62-windows `
+            -ReportDirectory "$env:RUNNER_TEMP/fluentqt-lifetime-diagnostics"
+
+      - name: Upload native Python lifetime diagnostics
+        if: ${{ failure() && steps.windows_binding_tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fluentqt-windows-python-lifetime-diagnostics
+          path: ${{ runner.temp }}/fluentqt-lifetime-diagnostics/*.log
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Build relocatable PySide6 wheels
         shell: pwsh
