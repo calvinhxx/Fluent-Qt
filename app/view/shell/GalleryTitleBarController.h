@@ -85,6 +85,9 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    fluent::windowing::TitleBar* titleBar() const;
+    fluent::basicinput::Button* backButton() const;
+    fluent::basicinput::Button* menuButton() const;
     void build(const QStringList& searchTitles);
     void applyBackButtonReveal(qreal reveal);
     void applyChromeOpacity();
@@ -93,12 +96,14 @@ private:
     void hideToolTip();
     void refreshAppIcon();
 
-    QPointer<fluent::windowing::TitleBar> m_bar;
+    // Event filters also run after a watched widget's derived destructor.
+    // zh_CN: 事件过滤器也会在被监听控件的派生类析构后运行。
+    QPointer<QObject> m_bar;
     QPointer<QWidget> m_hostWindow;
     Callbacks m_callbacks;
 
-    QPointer<fluent::basicinput::Button> m_backButton;
-    QPointer<fluent::basicinput::Button> m_menuButton;
+    QPointer<QObject> m_backButton;
+    QPointer<QObject> m_menuButton;
     QPointer<QLabel> m_appIcon;
     QPointer<fluent::textfields::Label> m_title;
     QPointer<fluent::textfields::AutoSuggestBox> m_searchBox;

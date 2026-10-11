@@ -392,27 +392,37 @@ TEST_F(GalleryShellFrameworkTest, WindowConstructsInitialHomeContentPage)
     EXPECT_EQ(page->titleLabel()->text(), QStringLiteral("Home"));
 }
 
-TEST_F(GalleryShellFrameworkTest, TitleBarControllerSurvivesWatchedTitleBarTeardown)
+TEST_F(GalleryShellFrameworkTest, Contract_TitleBarControllerSurvivesWatchedTitleBarTeardown)
 {
-    auto* host = new QWidget;
-    auto* bar = new TitleBar(host);
-    bar->resize(800, 48);
+    for (const bool ownedByBar : {false, true}) {
+        SCOPED_TRACE(ownedByBar);
+        auto* host = new QWidget;
+        auto* bar = new TitleBar(host);
+        bar->resize(800, 48);
 
-    fluent::gallery::GalleryTitleBarController::Callbacks callbacks;
-    auto* controller =
-        new fluent::gallery::GalleryTitleBarController(bar, {}, std::move(callbacks), host);
-    ASSERT_EQ(controller->parent(), host);
+        auto* controller =
+            new fluent::gallery::GalleryTitleBarController(bar, {}, {}, ownedByBar ? bar : host);
+        QPointer<QObject> controllerGuard(controller);
+        QPointer<QObject> barGuard(bar);
 
-    // GalleryWindow's QWidget child teardown can destroy the title bar before
-    // a controller parented to the host. The host event filter must remain
-    // harmless while its watched title bar has already disappeared.
-    // zh_CN: GalleryWindow 析构子控件时可能先销毁标题栏；即使控制器仍由宿主持有，
-    // 宿主事件过滤器也不能再解引用已经销毁的标题栏。
-    delete bar;
-    QEvent event(QEvent::User);
-    QApplication::sendEvent(host, &event);
+        // QWidget deletes the title-bar layout after TitleBar's destructor.
+        // The filter must tolerate those events whether the controller is
+        // owned by the bar or outlives it under the host.
+        // zh_CN: 标题栏派生类析构后 QWidget 才删除布局；两种控制器归属都必须安全。
+        delete bar;
+        EXPECT_TRUE(barGuard.isNull());
+        EXPECT_EQ(controllerGuard.isNull(), ownedByBar);
+        QEvent event(QEvent::User);
+        QApplication::sendEvent(host, &event);
+        if (controllerGuard) {
+            controller->updateLayout();
+            controller->setMenuEnabled(false);
+            controller->setBackAvailable(false);
+        }
 
-    delete host;
+        delete host;
+        EXPECT_TRUE(controllerGuard.isNull());
+    }
 }
 
 TEST_F(GalleryShellFrameworkTest, HomeHeroStartsWithFluentResourceCards)

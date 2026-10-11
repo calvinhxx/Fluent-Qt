@@ -107,17 +107,34 @@ GalleryTitleBarController::~GalleryTitleBarController()
     }
 }
 
+fluent::windowing::TitleBar* GalleryTitleBarController::titleBar() const
+{
+    return qobject_cast<fluent::windowing::TitleBar*>(m_bar.data());
+}
+
+fluent::basicinput::Button* GalleryTitleBarController::backButton() const
+{
+    return qobject_cast<fluent::basicinput::Button*>(m_backButton.data());
+}
+
+fluent::basicinput::Button* GalleryTitleBarController::menuButton() const
+{
+    return qobject_cast<fluent::basicinput::Button*>(m_menuButton.data());
+}
+
 void GalleryTitleBarController::build(const QStringList& searchTitles)
 {
-    auto* bar = m_bar.data();
+    auto* bar = titleBar();
+    if (!bar)
+        return;
     auto* layout = qobject_cast<fluent::AnchorLayout*>(bar->layout());
     if (!layout)
         return;
 
     bar->setTitleBarHeight(TitleBarMetrics::Height);
 
-    m_backButton = new fluent::basicinput::Button(bar);
-    auto* backButton = m_backButton.data();
+    auto* backButton = new fluent::basicinput::Button(bar);
+    m_backButton = backButton;
     backButton->setObjectName(QStringLiteral("GalleryTitleBar.BackButton"));
     backButton->setFluentStyle(fluent::basicinput::Button::Subtle);
     backButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
@@ -139,8 +156,8 @@ void GalleryTitleBarController::build(const QStringList& searchTitles)
             m_callbacks.onBack();
     });
 
-    m_menuButton = new fluent::basicinput::Button(bar);
-    auto* menuButton = m_menuButton.data();
+    auto* menuButton = new fluent::basicinput::Button(bar);
+    m_menuButton = menuButton;
     menuButton->setObjectName(QStringLiteral("GalleryTitleBar.MenuButton"));
     menuButton->setFluentStyle(fluent::basicinput::Button::Subtle);
     menuButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
@@ -257,6 +274,10 @@ void GalleryTitleBarController::build(const QStringList& searchTitles)
 
 bool GalleryTitleBarController::eventFilter(QObject* watched, QEvent* event)
 {
+    auto* bar = titleBar();
+    if (!bar)
+        return QObject::eventFilter(watched, event);
+
     if (watched == m_backButton || watched == m_menuButton) {
         auto* button = qobject_cast<fluent::basicinput::Button*>(watched);
         switch (event->type()) {
@@ -281,7 +302,7 @@ bool GalleryTitleBarController::eventFilter(QObject* watched, QEvent* event)
         updateLayout();
     }
 
-    const bool watchesDisplay = m_bar && (watched == m_bar || watched == m_bar->window());
+    const bool watchesDisplay = watched == m_bar || watched == m_hostWindow;
     if (watchesDisplay && fluentIsDisplayScaleChangeEvent(event)) {
         hideToolTip();
         // Event filters run before the receiver handles the event. Refresh on
@@ -298,7 +319,7 @@ bool GalleryTitleBarController::eventFilter(QObject* watched, QEvent* event)
 
 void GalleryTitleBarController::updateLayout()
 {
-    auto* bar = m_bar.data();
+    auto* bar = titleBar();
     if (!bar || !m_searchBox)
         return;
 
@@ -308,8 +329,8 @@ void GalleryTitleBarController::updateLayout()
     // they show. Nothing shows while the splash owns the title bar. zh_CN: 最小布局下标题+图标让位给搜索框。
     const bool showAppIcon = m_chromeVisible;
     const bool showTitle = m_chromeVisible && !minimalNav;
-    if (m_menuButton)
-        m_menuButton->setVisible(m_chromeVisible && m_menuAvailable);
+    if (auto* menu = menuButton())
+        menu->setVisible(m_chromeVisible && m_menuAvailable);
     if (m_title)
         m_title->setVisible(showTitle);
     if (m_appIcon)
@@ -346,13 +367,14 @@ void GalleryTitleBarController::setChromeVisible(bool visible, bool animated)
     // The custom title-bar widgets all share the "GalleryTitleBar." object-name prefix; the native
     // min/max/close buttons do not, so toggling by prefix leaves them alone. zh_CN: 自定义控件均以
     // "GalleryTitleBar." 前缀命名，按前缀切换不影响原生窗口按钮。
-    if (!m_bar)
+    auto* bar = titleBar();
+    if (!bar)
         return;
 
     m_chromeVisible = visible;
     if (m_chromeRevealAnimation)
         m_chromeRevealAnimation->stop();
-    const QList<QWidget*> chrome = m_bar->findChildren<QWidget*>();
+    const QList<QWidget*> chrome = bar->findChildren<QWidget*>();
     for (QWidget* widget : chrome) {
         if (!widget->objectName().startsWith(QStringLiteral("GalleryTitleBar.")))
             continue;
@@ -399,15 +421,16 @@ void GalleryTitleBarController::setChromeVisible(bool visible, bool animated)
 void GalleryTitleBarController::setMenuEnabled(bool enabled)
 {
     m_menuAvailable = enabled;
-    if (m_menuButton)
-        m_menuButton->setEnabled(enabled);
-    if (auto* layout = m_bar ? qobject_cast<fluent::AnchorLayout*>(m_bar->layout()) : nullptr) {
+    auto* bar = titleBar();
+    auto* menu = menuButton();
+    if (menu)
+        menu->setEnabled(enabled);
+    if (auto* layout = bar ? qobject_cast<fluent::AnchorLayout*>(bar->layout()) : nullptr) {
         fluent::AnchorLayout::Anchors anchors;
-        anchors.left = {
-            enabled ? static_cast<QWidget*>(m_menuButton) : static_cast<QWidget*>(m_backButton),
-            Edge::Right,
-            enabled ? TitleBarMetrics::ItemGap : qRound(m_backReveal * TitleBarMetrics::ItemGap)};
-        anchors.verticalCenter = {m_bar, Edge::VCenter, 0};
+        anchors.left = {enabled ? menu : backButton(), Edge::Right,
+                        enabled ? TitleBarMetrics::ItemGap
+                                : qRound(m_backReveal * TitleBarMetrics::ItemGap)};
+        anchors.verticalCenter = {bar, Edge::VCenter, 0};
         layout->addAnchoredWidget(m_appIcon, anchors);
     }
     updateLayout();
@@ -434,22 +457,24 @@ void GalleryTitleBarController::setAppIconRevealed(bool revealed)
 void GalleryTitleBarController::applyBackButtonReveal(qreal reveal)
 {
     m_backReveal = reveal;
-    if (m_backButton) {
-        m_backButton->setFixedWidth(qRound(reveal * TitleBarMetrics::ButtonSize));
-        m_backButton->setContentOpacity(reveal);
+    if (auto* back = backButton()) {
+        back->setFixedWidth(qRound(reveal * TitleBarMetrics::ButtonSize));
+        back->setContentOpacity(reveal);
     }
-    if (m_menuButton && m_menuButton->anchors())
-        m_menuButton->anchors()->left.offset = qRound(reveal * TitleBarMetrics::ItemGap);
-    if (auto* barLayout = m_bar ? m_bar->layout() : nullptr)
+    if (auto* menu = menuButton(); menu && menu->anchors())
+        menu->anchors()->left.offset = qRound(reveal * TitleBarMetrics::ItemGap);
+    auto* bar = titleBar();
+    if (auto* barLayout = bar ? bar->layout() : nullptr)
         barLayout->invalidate();
     setMenuEnabled(m_menuAvailable);
 }
 
 void GalleryTitleBarController::refreshAppIcon()
 {
-    if (!m_bar || !m_appIcon)
+    auto* bar = titleBar();
+    if (!bar || !m_appIcon)
         return;
-    m_appIcon->setPixmap(appicon::pixmap(TitleBarMetrics::AppIconSize, m_bar->devicePixelRatioF()));
+    m_appIcon->setPixmap(appicon::pixmap(TitleBarMetrics::AppIconSize, bar->devicePixelRatioF()));
 }
 
 void GalleryTitleBarController::setChromeRevealOpacity(qreal opacity)
@@ -460,12 +485,13 @@ void GalleryTitleBarController::setChromeRevealOpacity(qreal opacity)
 
 void GalleryTitleBarController::applyChromeOpacity()
 {
-    if (!m_bar || !m_chromeVisible)
+    auto* bar = titleBar();
+    if (!bar || !m_chromeVisible)
         return;
 
     const qreal activationOpacity = m_windowActive ? 1.0 : kInactiveChromeOpacity;
     const qreal opacity = m_chromeRevealOpacity * activationOpacity;
-    const QList<QWidget*> chrome = m_bar->findChildren<QWidget*>();
+    const QList<QWidget*> chrome = bar->findChildren<QWidget*>();
     for (QWidget* widget : chrome) {
         if (!widget->objectName().startsWith(QStringLiteral("GalleryTitleBar.")))
             continue;
@@ -487,12 +513,13 @@ void GalleryTitleBarController::applyChromeOpacity()
 
 void GalleryTitleBarController::setBackAvailable(bool available)
 {
-    if (!m_backButton || m_backRevealed == available)
+    auto* back = backButton();
+    if (!back || m_backRevealed == available)
         return;
     m_backRevealed = available;
-    m_backButton->setEnabled(available);
+    back->setEnabled(available);
 
-    const auto motion = m_backButton->themeAnimation();
+    const auto motion = back->themeAnimation();
     if (!m_backRevealAnimation) {
         m_backRevealAnimation = new QVariantAnimation(this);
         m_backRevealAnimation->setObjectName(QStringLiteral("galleryTitleBarBackRevealAnimation"));
