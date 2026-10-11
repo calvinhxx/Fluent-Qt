@@ -22,6 +22,7 @@
 #endif
 #include "compatibility/QtCompat.h"
 #include "compatibility/TextPaintCompat.h"
+#include "compatibility/private/CoreCompat_p.h"
 #ifdef FLUENT_QT_TEST_DEFINED_INTERFACE_MACRO
 #undef interface
 #undef FLUENT_QT_TEST_DEFINED_INTERFACE_MACRO
@@ -274,6 +275,37 @@ TEST(QtCompat, DisplayScaleChangeHelperCoversSupportedScreenEvents)
 
     QEvent screenChangeEvent(QEvent::ScreenChangeInternal);
     EXPECT_TRUE(fluentIsDisplayScaleChangeEvent(&screenChangeEvent));
+}
+
+TEST(QtCompat, VariantConversionUsesTheRequestedPropertyType)
+{
+    QVariant value(QStringLiteral("2.5"));
+    EXPECT_TRUE(::compatibility::convertVariantToType(value, QMetaType::Double));
+    EXPECT_EQ(value.userType(), QMetaType::Double);
+    EXPECT_DOUBLE_EQ(value.toDouble(), 2.5);
+    QVariant invalid(QStringLiteral("not a date"));
+    EXPECT_FALSE(::compatibility::convertVariantToType(invalid, QMetaType::QDate));
+}
+
+TEST(QtCompat, LocalSceneMouseMappingPreservesInputIdentity)
+{
+    const QMouseEvent original(QEvent::MouseButtonPress, QPointF(12, 18), QPointF(40, 60),
+                               QPointF(120, 180), Qt::LeftButton, Qt::LeftButton, Qt::ShiftModifier,
+                               Qt::MouseEventSynthesizedByApplication);
+    const QMouseEvent mapped = ::compatibility::mouseEventForLocalScene(&original);
+    EXPECT_EQ(fluentMousePos(&mapped), QPoint(12, 18));
+    EXPECT_EQ(fluentMouseGlobalPos(&mapped), QPoint(120, 180));
+    EXPECT_EQ(mapped.type(), original.type());
+    EXPECT_EQ(mapped.button(), original.button());
+    EXPECT_EQ(mapped.buttons(), original.buttons());
+    EXPECT_EQ(mapped.modifiers(), original.modifiers());
+    EXPECT_EQ(mapped.source(), original.source());
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    EXPECT_EQ(mapped.scenePosition(), original.position());
+    EXPECT_EQ(mapped.pointingDevice(), original.pointingDevice());
+#else
+    EXPECT_EQ(mapped.windowPos(), original.localPos());
+#endif
 }
 
 TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards)

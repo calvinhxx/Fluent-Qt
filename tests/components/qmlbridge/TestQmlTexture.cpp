@@ -1,3 +1,4 @@
+#include "compatibility/private/QuickCompat_p.h"
 #include <gtest/gtest.h>
 #include <QImage>
 #include <QOffscreenSurface>
@@ -26,7 +27,7 @@ using fluent::qmlbridge::QmlView;
 
 qreal textureDpr(const QWidget& window)
 {
-#if QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
+#if !FLUENT_QUICK_HAS_RENDER_TARGET_DPR
     // Older Quick render targets inherit the presenting window's density.
     return window.devicePixelRatioF();
 #else
@@ -280,7 +281,7 @@ TEST_F(QmlTextureTest, Contract_NativeErrorsRespectTheBorrowedContextBoundary)
             QOpenGLContext::currentContext()->functions()->glEnable(GLenum(0xffffffffu));
         }
     };
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
     const auto frameFinished = &QQuickWindow::afterFrameEnd;
 #else
     const auto frameFinished = &QQuickWindow::afterRendering;

@@ -2,6 +2,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "compatibility/QtCompat.h"
+#include "compatibility/private/CoreCompat_p.h"
 #include "utils/private/FluentQtLogging_p.h"
 
 #include <QSet>
@@ -1065,11 +1066,7 @@ bool QMLPlusPropertyHub::write(QByteArray property, QVariant value,
         return false;
     const QMetaProperty targetProperty = metaProperty(m_target, property);
     if (targetProperty.isValid() && value.userType() != targetProperty.userType()) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-        value.convert(QMetaType(targetProperty.userType()));
-#else
-        value.convert(targetProperty.userType());
-#endif
+        ::compatibility::convertVariantToType(value, targetProperty.userType());
     }
     if (current == value)
         return true;

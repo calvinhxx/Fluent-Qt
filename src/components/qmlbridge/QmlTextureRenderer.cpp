@@ -1,3 +1,4 @@
+#include "compatibility/private/QuickCompat_p.h"
 #include "QmlTextureRenderer_p.h"
 #include "QmlView.h"
 
@@ -9,7 +10,7 @@
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickRenderControl>
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
+#if FLUENT_QUICK_NEEDS_PRIVATE_RENDER_WINDOW_HOOK
 #include <QtQuick/private/qquickrendercontrol_p.h>
 #endif
 #include <QQuickWidget>
@@ -18,7 +19,7 @@
 #include <QScopedValueRollback>
 #include <QtMath>
 #include <cmath>
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
 #include <QQuickGraphicsDevice>
 #include <QQuickOpenGLUtils>
 #include <QQuickRenderTarget>
@@ -28,7 +29,7 @@ namespace fluent::qmlbridge {
 namespace {
 Q_LOGGING_CATEGORY(lcQmlTexture, "fluentqt.qmlbridge.texture")
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
+#if FLUENT_QUICK_NEEDS_PRIVATE_RENDER_WINDOW_HOOK
 class LegacyRenderControlPrivate final : public QQuickRenderControlPrivate {
 public:
     LegacyRenderControlPrivate(QQuickRenderControl* control, QmlView* view)
@@ -48,7 +49,7 @@ private:
 class RenderControl final : public QQuickRenderControl {
 public:
     explicit RenderControl(QmlView* view)
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
+#if FLUENT_QUICK_NEEDS_PRIVATE_RENDER_WINDOW_HOOK
         // Qt 6.2–6.5 only recognize embedded keyboard focus through this hook.
         // zh_CN: Qt 6.2–6.5 仅通过该内部钩子识别嵌入窗口中的键盘焦点。
         : QQuickRenderControl(*new LegacyRenderControlPrivate(this, view), nullptr), m_view(view)
@@ -62,7 +63,7 @@ public:
     {
         if (!m_view)
             return nullptr;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 3, 0)
+#if FLUENT_QUICK_HAS_RENDER_TARGET_DPR
         // A real renderWindow overrides QQuickRenderTarget's DPR. Supersampling
         // therefore uses the target metadata rather than the native window DPR.
         // zh_CN: 真实窗口会覆盖目标 DPR，超采样时改用目标元数据中的比例。
@@ -230,7 +231,7 @@ void QmlTextureRenderer::releaseNow(bool restore)
         d->control->invalidate();
     d->initialized = false;
     if (d->window) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
         d->window->setRenderTarget(QQuickRenderTarget());
 #else
         d->window->setRenderTarget(static_cast<QOpenGLFramebufferObject*>(nullptr));
@@ -279,7 +280,7 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
         return false;
     if (d->window->rendererInterface()->graphicsApi() != QSGRendererInterface::OpenGL)
         return fail(QStringLiteral("Texture rendering requires Qt Quick's OpenGL backend."));
-#if QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
+#if !FLUENT_QUICK_HAS_RENDER_TARGET_DPR
     if (d->view && !qFuzzyCompare(dpr, d->view->devicePixelRatioF()))
         return fail(
             QStringLiteral("This Qt version requires the presenting window's device pixel ratio."));
@@ -328,7 +329,7 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
         d->contextDestroyed = connect(
             context, &QOpenGLContext::aboutToBeDestroyed, this, [this] { release(); },
             Qt::DirectConnection);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
         d->window->setGraphicsDevice(QQuickGraphicsDevice::fromOpenGLContext(context));
         d->initialized = d->control->initialize();
 #else
@@ -348,7 +349,7 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
             d->root->setSize(logicalSize);
         if (!d->releasePending && !d->detached && d->root &&
             (!d->target || d->pixels != pixels || !qFuzzyCompare(d->dpr, dpr))) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
             d->window->setRenderTarget(QQuickRenderTarget());
 #else
             d->window->setRenderTarget(static_cast<QOpenGLFramebufferObject*>(nullptr));
@@ -356,7 +357,7 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
             d->target.reset();
             QOpenGLFramebufferObjectFormat format;
             format.setInternalTextureFormat(GL_RGBA8);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#if !FLUENT_QUICK_USES_RHI
             format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
 #endif
             d->target = std::make_unique<QOpenGLFramebufferObject>(pixels, format);
@@ -368,9 +369,9 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
                 d->dpr = dpr;
                 d->bytes = bytes;
                 d->dirty = true;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
                 auto target = QQuickRenderTarget::fromOpenGLTexture(d->target->texture(), pixels);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 3, 0)
+#if FLUENT_QUICK_HAS_RENDER_TARGET_DPR
                 target.setDevicePixelRatio(dpr);
 #endif
                 d->window->setRenderTarget(target);
@@ -387,13 +388,13 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
             // requests raised during sync/render need another frame afterwards.
             // zh_CN: polish 中的几何/绑定变更由本次同步消费，仅同步/绘制中新增请求需保留。
             d->dirty = false;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
             d->control->beginFrame();
 #endif
             d->control->sync();
             if (!d->releasePending && !d->detached && d->root)
                 d->control->render();
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
             d->control->endFrame();
             QQuickOpenGLUtils::resetOpenGLState();
 #else

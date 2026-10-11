@@ -1,3 +1,4 @@
+#include "compatibility/private/CoreCompat_p.h"
 #include "GallerySpatialController.h"
 #include "compatibility/QtCompat.h"
 #include "components/foundation/MotionPolicy.h"
@@ -1078,11 +1079,7 @@ struct GallerySpatialController::Private {
             global = fluentMouseGlobalPos(static_cast<QMouseEvent*>(event));
             break;
         case QEvent::Wheel:
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
             global = static_cast<QWheelEvent*>(event)->globalPosition().toPoint();
-#else
-            global = static_cast<QWheelEvent*>(event)->globalPos();
-#endif
             break;
         case QEvent::ContextMenu:
             global = static_cast<QContextMenuEvent*>(event)->globalPos();
@@ -1092,15 +1089,8 @@ struct GallerySpatialController::Private {
         case QEvent::TouchEnd:
         case QEvent::TouchCancel: {
             const auto* touch = static_cast<QTouchEvent*>(event);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-            if (touch->points().isEmpty())
+            if (!::compatibility::firstTouchGlobalPosition(touch, global))
                 return source;
-            global = touch->points().first().globalPosition().toPoint();
-#else
-            if (touch->touchPoints().isEmpty())
-                return source;
-            global = touch->touchPoints().first().screenPos().toPoint();
-#endif
             break;
         }
         default:

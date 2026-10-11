@@ -885,23 +885,23 @@ TEST_F(ListViewTest, CompositedClearHonorsPreserveParentSurface)
     fluent::windowing::publishWindowBackdropState(window, state);
 
     auto* lv = new ListView(window);
-    EXPECT_TRUE(detail::shouldClearCompositedViewport(lv));
+    EXPECT_TRUE(fluent::collections::detail::shouldClearCompositedViewport(lv));
 
     lv->setProperty("fluentPreserveParentSurface", true);
-    EXPECT_FALSE(detail::shouldClearCompositedViewport(lv));
+    EXPECT_FALSE(fluent::collections::detail::shouldClearCompositedViewport(lv));
 
     lv->setProperty("fluentPreserveParentSurface", false);
     lv->viewport()->setProperty("fluentPreserveParentSurface", true);
-    EXPECT_FALSE(detail::shouldClearCompositedViewport(lv));
+    EXPECT_FALSE(fluent::collections::detail::shouldClearCompositedViewport(lv));
 
     lv->viewport()->setProperty("fluentPreserveParentSurface", false);
     window->setAttribute(Qt::WA_TranslucentBackground, false);
-    EXPECT_FALSE(detail::shouldClearCompositedViewport(lv));
+    EXPECT_FALSE(fluent::collections::detail::shouldClearCompositedViewport(lv));
 
     window->setAttribute(Qt::WA_TranslucentBackground, true);
     state.surfaceMode = fluent::windowing::BackdropSurfaceMode::PaintedOpaque;
     fluent::windowing::publishWindowBackdropState(window, state);
-    EXPECT_FALSE(detail::shouldClearCompositedViewport(lv));
+    EXPECT_FALSE(fluent::collections::detail::shouldClearCompositedViewport(lv));
 }
 
 TEST_F(ListViewTest, FlowChangeRefreshesScrollBars)

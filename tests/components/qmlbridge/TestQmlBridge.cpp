@@ -1,3 +1,4 @@
+#include "compatibility/private/QuickCompat_p.h"
 #include <gtest/gtest.h>
 #include <QPointer>
 #include <QProcess>
@@ -35,9 +36,9 @@ TEST(QmlGraphicsApiTest, StartupSelectionProbe)
     using Session = qmlbridge::QmlSession;
     using Api = Session::GraphicsApi;
     Api nativeApi = Api::OpenGL;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && defined(Q_OS_MACOS)
+#if FLUENT_QUICK_USES_RHI && defined(Q_OS_MACOS)
     nativeApi = Api::Metal;
-#elif QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && defined(Q_OS_WIN)
+#elif FLUENT_QUICK_USES_RHI && defined(Q_OS_WIN)
     nativeApi = Api::Direct3D11;
 #endif
     const bool software = scenario == "software" || scenario == "software-alias";
@@ -58,7 +59,7 @@ TEST(QmlGraphicsApiTest, StartupSelectionProbe)
         EXPECT_TRUE(Session::isGraphicsApiCompatible(Api::Direct3D11));
     }
     const auto sceneGraphBackend = QQuickWindow::sceneGraphBackend();
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
     const auto selectedApi = QQuickWindow::graphicsApi();
 #endif
     for (int invalid : {-1, 99}) {
@@ -66,7 +67,7 @@ TEST(QmlGraphicsApiTest, StartupSelectionProbe)
         EXPECT_FALSE(Session::isGraphicsApiCompatible(api));
         Session::prepareApplication(api);
         EXPECT_EQ(QQuickWindow::sceneGraphBackend(), sceneGraphBackend);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
         EXPECT_EQ(QQuickWindow::graphicsApi(), selectedApi);
 #endif
     }
