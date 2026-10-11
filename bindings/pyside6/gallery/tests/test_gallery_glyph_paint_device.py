@@ -394,7 +394,8 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
                 # Transparent glyph tiles carry grayscale coverage. Keep this
                 # ownership fixture independent of platform LCD subpixel text.
                 font = painter.font()
-                font.setStyleStrategy(font.styleStrategy() | QFont.NoSubpixelAntialias)
+                font.setStyleStrategy(QFont.StyleStrategy(
+                    font.styleStrategy() | QFont.NoSubpixelAntialias))
                 painter.setFont(font)
                 painter.drawText(QPoint(15, 25), "Nested glyph capture")
                 painter.end()
