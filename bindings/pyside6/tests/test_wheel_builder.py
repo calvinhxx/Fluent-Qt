@@ -48,6 +48,16 @@ class WheelBuilderTest(unittest.TestCase):
             and any(isinstance(target, ast.Name) and target.id == "expected_stubs" for target in node.targets)
         ]
         self.assertEqual(declarations, [expected_stubs], "Installed-wheel smoke inventory is stale")
+        optional_exports = [
+            ast.literal_eval(node.value)
+            for node in smoke.body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "OPTIONAL_NATIVE_EXPORTS"
+                    for target in node.targets)
+        ]
+        self.assertEqual(len(optional_exports), 1)
+        self.assertEqual(set(optional_exports[0]) | {"spatial"}, optional_facades,
+                         "Installed-wheel smoke must cover every optional facade")
 
     def test_native_and_facade_stubs_are_required_in_wheel(self):
         for name in (
