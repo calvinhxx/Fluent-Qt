@@ -54,6 +54,7 @@
 #include <QMouseEvent>
 #include <QSize>
 #include <QStyleHints>
+#include <QTouchEvent>
 #include <QVector>
 #include <QWheelEvent>
 #include <QWidget>
@@ -326,6 +327,24 @@ inline QPoint fluentMousePos(const QMouseEvent* e)
 #else
     return e->pos();
 #endif
+}
+
+/**
+ * @brief Reads the first touch point's global position, returning false for an empty event.
+ * zh_CN: 读取首个触点的全局位置；事件没有触点时返回 false。
+ */
+inline bool fluentFirstTouchGlobalPos(const QTouchEvent* event, QPoint& position)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (event->points().isEmpty())
+        return false;
+    position = event->points().first().globalPosition().toPoint();
+#else
+    if (event->touchPoints().isEmpty())
+        return false;
+    position = event->touchPoints().first().screenPos().toPoint();
+#endif
+    return true;
 }
 
 inline QPoint fluentMouseGlobalPos(const QMouseEvent* e)

@@ -308,6 +308,25 @@ TEST(QtCompat, LocalSceneMouseMappingPreservesInputIdentity)
 #endif
 }
 
+TEST(QtCompat, TouchGlobalPositionHandlesEmptyAndPopulatedEvents)
+{
+    QPoint position(1, 2);
+    const QTouchEvent empty(QEvent::TouchBegin);
+    EXPECT_FALSE(fluentFirstTouchGlobalPos(&empty, position));
+    EXPECT_EQ(position, QPoint(1, 2));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    const QEventPoint point(0, QEventPoint::State::Pressed, QPointF(10, 20), QPointF(110, 120));
+    const QTouchEvent populated(QEvent::TouchBegin, nullptr, Qt::NoModifier, {point});
+#else
+    QTouchEvent::TouchPoint point(0);
+    point.setScreenPos(QPointF(110, 120));
+    const QTouchEvent populated(QEvent::TouchBegin, nullptr, Qt::NoModifier, Qt::TouchPointPressed,
+                                {point});
+#endif
+    EXPECT_TRUE(fluentFirstTouchGlobalPos(&populated, position));
+    EXPECT_EQ(position, QPoint(110, 120));
+}
+
 TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards)
 {
     const QString root = repositoryRootPath();

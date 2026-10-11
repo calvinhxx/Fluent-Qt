@@ -1,4 +1,3 @@
-#include "compatibility/private/CoreCompat_p.h"
 #include "GallerySpatialController.h"
 #include "compatibility/QtCompat.h"
 #include "components/foundation/MotionPolicy.h"
@@ -1089,7 +1088,7 @@ struct GallerySpatialController::Private {
         case QEvent::TouchEnd:
         case QEvent::TouchCancel: {
             const auto* touch = static_cast<QTouchEvent*>(event);
-            if (!::compatibility::firstTouchGlobalPosition(touch, global))
+            if (!fluentFirstTouchGlobalPos(touch, global))
                 return source;
             break;
         }
