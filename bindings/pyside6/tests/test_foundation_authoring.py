@@ -266,6 +266,12 @@ assert target.isEnabled()
         self.assertEqual(len(calls), count)
 
     def test_computed_failure_holds_value_and_invalid_replacement_preserves_binding(self):
+        # Windows native fast-fail can bypass Python's fault handler.
+        def checkpoint(stage):
+            if sys.platform == "win32":
+                print("Computed binding regression: " + stage, flush=True)
+
+        checkpoint("create endpoints")
         source, label = QSlider(), QLabel()
 
         def compute():
@@ -273,24 +279,37 @@ assert target.isEnabled()
                 raise RuntimeError("expression failed")
             return str(source.value())
 
+        checkpoint("initial evaluation")
         handle = fluentqt.bind_computed(label, "text", [(source, "value")], compute)
+        errors = []
+        expression = label._fluentqt_binding_expressions["text"]
+        expression.error_occurred.connect(
+            lambda error: errors.append((error, sys.exc_info()[0])))
         source.setValue(25)
+        checkpoint("reject invalid replacement")
         with self.assertRaises(ValueError):
             fluentqt.bind_computed(label, "text", [(source, "missing")], lambda: "bad")
         self.assertTrue(handle.isValid())
         source.setValue(30)
         self.assertEqual(label.text(), "30")
+        checkpoint("pause after evaluation error")
         source.setValue(60)
         self.assertEqual(label.text(), "30")
         self.assertTrue(handle.isSuspended())
         self.assertIsInstance(handle.last_error, RuntimeError)
+        self.assertEqual(len(errors), 1)
+        self.assertIs(errors[0][0], handle.last_error)
+        self.assertIsNone(errors[0][1])
         source.setValue(35)
+        checkpoint("resume evaluation")
         handle.resume()
         self.assertEqual(label.text(), "35")
         self.assertIsNone(handle.last_error)
+        checkpoint("replace binding")
         replacement = fluentqt.bind_managed(source, "value", label, "text")
         self.assertTrue(replacement.isValid())
         self.assertFalse(handle.isValid())
+        checkpoint("flush deferred deletion")
         QApplication.processEvents()
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         self.assertFalse(getattr(label, "_fluentqt_binding_expressions", {}))
