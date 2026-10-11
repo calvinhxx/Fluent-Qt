@@ -4006,8 +4006,7 @@
         "DayPageKey",
         "MonthPageKey",
         "YearPageKey",
-        "CalendarContentLevel",
-        "WheelGestureKind"
+        "CalendarContentLevel"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/date_time/CalendarView.h"
     },

@@ -20,6 +20,9 @@
 #include <QFontDatabase>
 #include <QGraphicsOpacityEffect>
 #include <QImage>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QKeySequence>
 #include <QLabel>
 #include <QLayout>
@@ -285,17 +288,19 @@ QWidget* firstFocusableWidget(QWidget* root)
 }
 
 template <typename PageType>
-PageType* waitForCurrentPage(GalleryWindow& window, int timeoutMs = 1000)
+PageType* waitForCurrentPage(GalleryWindow& window, int timeoutMs = 5000)
 {
-    QElapsedTimer timer;
-    timer.start();
-    PageType* page = dynamic_cast<PageType*>(window.currentContentPage());
-    while (!page && timer.elapsed() < timeoutMs) {
-        QApplication::processEvents(QEventLoop::AllEvents, 20);
-        QTest::qWait(10);
-        page = dynamic_cast<PageType*>(window.currentContentPage());
-    }
-    return page;
+    // Route construction is queued behind page transitions and preview cleanup.
+    // zh_CN: 路由构建须等待页面过渡和预览清理，以目标页面就绪作为完成条件。
+    PageType* page = nullptr;
+    const QString routeId = window.currentRouteId();
+    const bool ready = QTest::qWaitFor(
+        [&] {
+            page = dynamic_cast<PageType*>(window.currentContentPage());
+            return page && page->routeId() == routeId;
+        },
+        timeoutMs);
+    return ready ? page : nullptr;
 }
 
 } // namespace
@@ -1463,6 +1468,16 @@ TEST_F(GalleryContentPagesTest, ControlImageAssetsMeetPixelContract)
         ASSERT_NE(resource, placeholder) << title.toStdString();
         expected.insert(resource);
     }
+
+    // Resources are shared by all build configurations, including disabled modules.
+    // zh_CN: 各构建配置共享资源包，其中也包含当前未启用的可选模块。
+#ifndef FLUENT_QT_HAS_SPATIAL
+    expected.insert(QStringLiteral(":/app/assets/control_images/spatial/SpatialView.svg"));
+    expected.insert(QStringLiteral(":/app/assets/control_images/spatial/SpatialItem.svg"));
+#endif
+#ifndef FLUENT_QT_HAS_QML_BRIDGE
+    expected.insert(QStringLiteral(":/app/assets/control_images/qml-bridge/QmlView.svg"));
+#endif
 
     QSet<QString> actual;
     QDirIterator resources(QStringLiteral(":/app/assets/control_images"),
@@ -3056,6 +3071,31 @@ TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSourc
         EXPECT_TRUE(python.contains(QStringLiteral("fluentqt.")));
         EXPECT_FALSE(python.contains(QStringLiteral("auto*")));
         ++pythonSamples;
+    }
+
+    // The generated resource also teaches modules omitted from this build.
+    // zh_CN: 生成资源还包含本次构建未启用模块的教学源码，只扣除明确关闭的路由。
+    QSet<QString> disabledRoutes;
+#ifndef FLUENT_QT_HAS_SPATIAL
+    disabledRoutes.insert(QStringLiteral("spatial-view"));
+    disabledRoutes.insert(QStringLiteral("spatial-item"));
+#endif
+#ifndef FLUENT_QT_HAS_QML_BRIDGE
+    disabledRoutes.insert(QStringLiteral("qml-view"));
+#endif
+    QFile snippets(QStringLiteral(":/app/data/gallery_python_snippets.json"));
+    ASSERT_TRUE(snippets.open(QIODevice::ReadOnly));
+    const auto payload = QJsonDocument::fromJson(snippets.readAll());
+    ASSERT_TRUE(payload.isObject());
+    ASSERT_TRUE(payload.object().value(QStringLiteral("samples")).isArray());
+    for (const auto& value : payload.object().value(QStringLiteral("samples")).toArray()) {
+        const auto entry = value.toObject();
+        const auto routeId = entry.value(QStringLiteral("route_id")).toString();
+        if (disabledRoutes.contains(routeId)) {
+            const auto sampleId = entry.value(QStringLiteral("sample_id")).toString();
+            ASSERT_FALSE(galleryPythonSnippet(routeId, sampleId).isEmpty());
+            ++pythonSamples;
+        }
     }
     EXPECT_EQ(galleryPythonSnippetCount(), pythonSamples);
 }

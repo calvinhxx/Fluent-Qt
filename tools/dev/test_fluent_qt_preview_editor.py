@@ -2,11 +2,14 @@
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import os
+import stat
 import unittest
+from unittest.mock import patch
 
 from fluent_qt_preview_editor import Field
 from fluent_qt_preview_editor.history import EditHistory
-from fluent_qt_preview_editor.source import SourceDocument
+from fluent_qt_preview_editor.source import SourceDocument, replace_source
 
 
 SOURCE = ('# 保留注释\r\nPREVIEW_EDITS = {"通知": {"padding": 18, "strong": True}} # untouched\r\n'
@@ -86,6 +89,37 @@ class PreviewEditorSourceTest(unittest.TestCase):
             self.begin(12)
         self.history.restore()
         self.assertEqual(self.path.read_bytes(), SOURCE)
+
+    def test_atomic_replace_preserves_source_permissions(self):
+        if os.name == "posix":
+            self.path.chmod(0o640)
+        before_mode = stat.S_IMODE(self.path.stat().st_mode)
+        replace_source(self.path, SOURCE, SOURCE + b'# edited\n')
+        self.assertEqual(self.path.read_bytes(), SOURCE + b'# edited\n')
+        self.assertEqual(stat.S_IMODE(self.path.stat().st_mode), before_mode)
+        self.assertFalse(list(self.path.parent.glob(".scene.py*")))
+
+    def test_external_change_during_atomic_prepare_is_not_overwritten(self):
+        external = SOURCE + b'# changed while the edit was prepared\n'
+        with patch("fluent_qt_preview_editor.source.os.fsync",
+                   side_effect=lambda _descriptor: self.path.write_bytes(external)):
+            with self.assertRaisesRegex(RuntimeError, "while preparing"):
+                replace_source(self.path, SOURCE, SOURCE + b'# proposed\n')
+        self.assertEqual(self.path.read_bytes(), external)
+        self.assertFalse(list(self.path.parent.glob(".scene.py*")))
+
+    def test_failed_read_only_replace_preserves_error_and_cleans_temporary(self):
+        original_mode = stat.S_IMODE(self.path.stat().st_mode)
+        self.addCleanup(self.path.chmod, original_mode)
+        self.path.chmod(stat.S_IREAD)
+        read_only_mode = stat.S_IMODE(self.path.stat().st_mode)
+        with patch("fluent_qt_preview_editor.source.os.replace",
+                   side_effect=PermissionError("original replacement failure")):
+            with self.assertRaisesRegex(PermissionError, "original replacement failure"):
+                replace_source(self.path, SOURCE, SOURCE + b'# proposed\n')
+        self.assertEqual(self.path.read_bytes(), SOURCE)
+        self.assertEqual(stat.S_IMODE(self.path.stat().st_mode), read_only_mode)
+        self.assertFalse(list(self.path.parent.glob(".scene.py*")))
 
 
 if __name__ == "__main__":

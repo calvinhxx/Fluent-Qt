@@ -192,7 +192,7 @@ TEST(PluginManagerContract, Contract_RegistrationBorrowsObjectsAndSnapshotsMetad
 
     plugin->descriptor.id = QStringLiteral("changed");
     plugin->descriptor.name = QStringLiteral("Changed name");
-    plugin->descriptor.dependencies = {QStringLiteral("missing")};
+    plugin->descriptor.dependencies = QStringList{QStringLiteral("missing")};
     EXPECT_EQ(manager.metadata(QStringLiteral("sample")).name, QStringLiteral("sample"));
     EXPECT_TRUE(manager.metadata(QStringLiteral("sample")).dependencies.isEmpty());
     EXPECT_EQ(manager.plugin(QStringLiteral("sample")), plugin);

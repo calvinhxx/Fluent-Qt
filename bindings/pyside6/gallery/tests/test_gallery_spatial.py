@@ -729,17 +729,25 @@ class GallerySpatialTest(unittest.TestCase):
                 surface.update()
                 self.assertTrue(wait_for(lambda: material_frames.count() > 0))
                 opaque_frames = []
+                missing_backdrop_frames = []
 
                 def on_frame():
-                    if window.backdropEffect() == fluentqt.BackdropEffect.Solid and surface.backdrop_cache:
-                        opaque_frames.append(True)
+                    if window.backdropEffect() == fluentqt.BackdropEffect.Solid:
+                        (opaque_frames if surface.backdrop_cache else missing_backdrop_frames).append(True)
 
                 connection = surface.frameSwapped.connect(on_frame)
                 try:
-                    # No settings signal or later event-loop turn may repair the handoff.
+                    # The old material stays until Window commits the opaque frame.
+                    # No submitted Solid frame may omit its GPU backdrop.
                     window.setBackdropEffect(fluentqt.BackdropEffect.Solid)
+                    self.assertTrue(wait_for(lambda: bool(opaque_frames)))
+                    self.assertFalse(missing_backdrop_frames)
                     self.assertTrue(opaque_frames)
                     self.assertTrue(surface.backdrop_cache)
+                    frame = surface.grabFramebuffer()
+                    self.assertFalse(frame.isNull())
+                    self.assertEqual(frame.pixelColor(0, 0).alpha(), 255)
+                    self.assertEqual(frame.pixelColor(frame.width() - 1, frame.height() - 1).alpha(), 255)
                 finally:
                     QObject.disconnect(connection)
         finally:
@@ -900,6 +908,14 @@ class GallerySpatialTest(unittest.TestCase):
             window.show()
             self.assertTrue(QTest.qWaitForWindowExposed(window))
             window.navigate("settings", animated=False)
+            tree = window.findChild(fluentqt.TreeView, "galleryMainNavigationTreeView")
+            self.assertIsNotNone(tree)
+            plugins = tree.model().match(tree.model().index(0, 0), int(Qt.UserRole) + 1,
+                                         "plugins", 1, Qt.MatchExactly)[0]
+            tree.expand(plugins)
+            spatial = tree.model().match(tree.model().index(0, 0, plugins),
+                                        int(Qt.UserRole) + 1, "spatial", 1, Qt.MatchExactly)[0]
+            tree.scrollTo(spatial)
             self.settings.set_spatial_mode_enabled(True)
             controller = window._spatial_controller
             for _ in range(60):

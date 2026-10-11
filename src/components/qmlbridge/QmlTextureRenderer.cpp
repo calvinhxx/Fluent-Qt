@@ -9,6 +9,9 @@
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickRenderControl>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
+#include <QtQuick/private/qquickrendercontrol_p.h>
+#endif
 #include <QQuickWidget>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
@@ -25,9 +28,34 @@ namespace fluent::qmlbridge {
 namespace {
 Q_LOGGING_CATEGORY(lcQmlTexture, "fluentqt.qmlbridge.texture")
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
+class LegacyRenderControlPrivate final : public QQuickRenderControlPrivate {
+public:
+    LegacyRenderControlPrivate(QQuickRenderControl* control, QmlView* view)
+        : QQuickRenderControlPrivate(control), m_view(view)
+    {}
+
+    bool isRenderWindow(const QWindow* window) override
+    {
+        return m_view && window == m_view->window()->windowHandle();
+    }
+
+private:
+    QPointer<QmlView> m_view;
+};
+#endif
+
 class RenderControl final : public QQuickRenderControl {
 public:
-    explicit RenderControl(QmlView* view) : m_view(view) {}
+    explicit RenderControl(QmlView* view)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
+        // Qt 6.2–6.5 only recognize embedded keyboard focus through this hook.
+        // zh_CN: Qt 6.2–6.5 仅通过该内部钩子识别嵌入窗口中的键盘焦点。
+        : QQuickRenderControl(*new LegacyRenderControlPrivate(this, view), nullptr), m_view(view)
+#else
+        : m_view(view)
+#endif
+    {}
     qreal targetDpr = 0;
     bool renderPhase = false;
     QWindow* renderWindow(QPoint* offset) override
@@ -209,10 +237,11 @@ void QmlTextureRenderer::releaseNow(bool restore)
 #endif
     }
     d->target.reset();
-    // Destroy the QRhi before its borrowed context, including context-loss cleanup.
-    // zh_CN: 在借用的上下文失效前销毁 QRhi，包括上下文丢失时的清理。
-    d->control.reset();
+    // The window owns render-target resources backed by the control's QRhi.
+    // Destroy those first, then the QRhi, while its borrowed context is alive.
+    // zh_CN: 先清理窗口拥有的渲染目标，再销毁 QRhi，二者均须早于借用上下文失效。
     d->window.reset();
+    d->control.reset();
     d->context.clear();
     d->cleanupSurface.reset();
     d->pixels = QSize();
@@ -289,6 +318,10 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
     d->control->renderPhase = true;
     if (!d->initialized) {
         d->context = context;
+        // Quick creates its own fallback surface when importing the context.
+        // Its EGL configuration must match the compositor's actual format.
+        // zh_CN: Quick 导入上下文时会创建备用表面，EGL 配置须匹配合成器的实际格式。
+        d->window->setFormat(context->format());
         d->cleanupSurface = std::make_unique<QOffscreenSurface>();
         d->cleanupSurface->setFormat(context->format());
         d->cleanupSurface->create();

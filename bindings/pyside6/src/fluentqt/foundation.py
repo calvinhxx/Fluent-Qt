@@ -3,7 +3,7 @@
 import weakref
 
 import shiboken6
-from PySide6.QtCore import QByteArray, QMargins, QObject, Property, QThread, Signal
+from PySide6.QtCore import QByteArray, QMargins, QObject, Property, Signal
 from PySide6.QtWidgets import QWidget
 
 from . import _fluentqt as _native
@@ -182,7 +182,7 @@ class StateGroup(_NativeStateGroup):
             raise ValueError("State name must be a non-empty string")
         if not hasattr(changes, "items"):
             raise TypeError("State changes must be a mapping")
-        if self.thread() != QThread.currentThread():
+        if not _native.objectHasCurrentThreadAffinityForBinding(self):
             raise ValueError("States must be authored on their controller's Qt thread")
         if extend and extend not in self._fluentqt_state_names:
             raise KeyError("Unknown base state: " + extend)
@@ -351,7 +351,7 @@ def _binding_dependencies(dependencies):
     for source, name in dependencies:
         if not isinstance(source, QObject) or not shiboken6.isValid(source):
             raise ValueError("Binding dependency must be a live QObject")
-        if source.thread() != QThread.currentThread():
+        if not _native.objectHasCurrentThreadAffinityForBinding(source):
             raise ValueError("Dependencies must share the binding's Qt thread")
         if not isinstance(name, str) or not name:
             raise ValueError("Dependency property must be a non-empty string")
@@ -479,7 +479,7 @@ def bind_computed(target, target_property, dependencies, evaluate, *, deferred=F
 
     if not isinstance(target, QObject) or not shiboken6.isValid(target):
         raise ValueError("Computed binding target must be a live QObject")
-    if target.thread() != QThread.currentThread():
+    if not _native.objectHasCurrentThreadAffinityForBinding(target):
         raise ValueError("Bindings must be authored on their target's Qt thread")
     if not isinstance(target_property, str) or not target_property:
         raise ValueError("Target property must be a non-empty string")

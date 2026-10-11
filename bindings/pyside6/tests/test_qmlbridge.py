@@ -83,8 +83,13 @@ from PySide6.QtWidgets import QApplication, QWidget
 from PySide6.QtQuickWidgets import QQuickWidget
 from fluentqt.qmlbridge import QmlSession
 app = QApplication([])
-assert [api.name for api in QmlSession.GraphicsApi] == [
-    "Automatic", "OpenGL", "Direct3D11", "Metal"]
+api_names = ["Automatic", "OpenGL", "Direct3D11", "Metal"]
+meta = QmlSession.staticMetaObject
+enum = meta.enumerator(meta.indexOfEnumerator("GraphicsApi"))
+assert [enum.key(index) for index in range(enum.keyCount())] == api_names
+for index, name in enumerate(api_names):
+    member = getattr(QmlSession.GraphicsApi, name)
+    assert int(getattr(member, "value", member)) == enum.value(index)
 scenario, expected = sys.argv[1:]
 environment = {name: os.environ.get(name) for name in (
     "FLUENT_QT_SPATIAL_BACKEND", "QSG_RHI_BACKEND", "QT_QUICK_BACKEND", "QMLSCENE_DEVICE")}
@@ -352,10 +357,14 @@ assert 'PySide6.QtQml' in sys.modules
         self.assertTrue(session.activate())
         view = session.createView()
         reference = weakref.ref(view)
-        destroyed = QSignalSpy(view.destroyed)
+        # Merely resolving a signal on an old PySide native factory wrapper
+        # retains it. Observe native destruction through an owned QObject child.
+        witness = QObject(view)
+        destroyed = QSignalSpy(witness.destroyed)
         del view
         gc.collect()
         self.assertIsNone(reference())
+        self.assertFalse(shiboken6.isValid(witness))
         self.assertEqual(destroyed.count(), 1)
         self.assertTrue(session.isActive())
         self.assertTrue(session.deactivate())

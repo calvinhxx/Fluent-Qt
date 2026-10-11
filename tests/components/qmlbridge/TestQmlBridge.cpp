@@ -434,7 +434,10 @@ TEST(QmlBridgeTest, Contract_GraphicsErrorCallbackCanRecoverWithoutAStaleErrorSt
     ASSERT_TRUE(session.attachView(&view));
     ASSERT_TRUE(view.setContextObject(QStringLiteral("bridgeModel"), &model));
     ASSERT_TRUE(view.load(source()));
+    // Qt 5's spy resolves the unqualified parameter name written by moc.
+    qRegisterMetaType<qmlbridge::QmlView::Status>("Status");
     QSignalSpy states(&view, &qmlbridge::QmlView::statusChanged);
+    ASSERT_TRUE(states.isValid());
     QObject::connect(&view, &qmlbridge::QmlView::errorOccurred, &view,
                      [&](const QString&) { ASSERT_TRUE(view.load(source())); });
     auto* quick = view.findChild<QQuickWidget*>();

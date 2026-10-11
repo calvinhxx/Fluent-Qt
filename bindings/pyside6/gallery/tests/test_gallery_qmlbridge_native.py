@@ -16,7 +16,8 @@ import shiboken6
 from fluentqt.qmlbridge import QmlSession, QmlView
 from fluentqt.spatial import SpatialRuntime
 from PySide6.QtCore import (
-    QAbstractAnimation, QCoreApplication, QEvent, QPoint, QPointF, QRect, QSize, Qt, qVersion,
+    QAbstractAnimation, QCoreApplication, QEvent, QEventLoop, QPoint, QPointF, QRect, QSize,
+    QTimer, Qt, qVersion,
 )
 from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QWheelEvent
 from PySide6.QtQuick import QQuickItem, QSGRendererInterface
@@ -37,6 +38,13 @@ def _delete(obj):
     QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
 
+def _wait_ms(milliseconds):
+    # PySide 6.2 does not expose QTest.qWait; keep timers and native events live.
+    loop = QEventLoop()
+    QTimer.singleShot(milliseconds, loop.quit)
+    loop.exec()
+
+
 class GalleryQmlBridgeNativeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -53,7 +61,7 @@ class GalleryQmlBridgeNativeTest(unittest.TestCase):
         while time.monotonic() < deadline:
             if predicate():
                 return
-            QTest.qWait(25)
+            _wait_ms(25)
         self.fail(f"{description}: {self._state()}")
 
     def _state(self):
@@ -172,7 +180,7 @@ class GalleryQmlBridgeNativeTest(unittest.TestCase):
     def _capture(self, label, panel):
         page = self.window._pages["qml-view"][1]
         view = panel.view
-        QTest.qWait(400)  # The page's bounded first-show scroll resets precede reveal.
+        _wait_ms(400)  # The page's bounded first-show scroll resets precede reveal.
         page.ensureWidgetVisible(view, 16, 16)
         root = view.rootObject()  # Retain the borrowed parent wrapper during findChild use.
         action = root.findChild(QQuickItem, "qmlBridgeAdvanceButton")
@@ -302,7 +310,8 @@ class GalleryQmlBridgeNativeTest(unittest.TestCase):
             self._assert_projected(canvas, panel)
 
     def test_real_gpu_projects_qml_and_retains_the_scene_across_mode_handoffs(self):
-        self.assertEqual(self.app.platformName(), "cocoa", "This local native gate requires Cocoa")
+        self.assertIn(self.app.platformName(), ("cocoa", "windows", "xcb", "wayland", "wayland-egl"),
+                      "This native gate requires a desktop QPA platform")
         self.assertNotEqual(os.environ.get("QT_QUICK_BACKEND"), "software")
         self.assertEqual(os.environ.get("FLUENT_QT_GALLERY_DISABLE_3D", "0"), "0")
         self.evidence = Path(os.environ.get(
@@ -375,7 +384,7 @@ class GalleryQmlBridgeNativeTest(unittest.TestCase):
                     roots = {v.objectName(): v.rootObject() for v in page.findChildren(QmlView)}
                     self._wait(lambda: self._presenting() and view.status() == QmlView.Status.Ready
                                and view.isTextureRenderingEnabled(), "The projected scene must be ready")
-                    QTest.qWait(400)
+                    _wait_ms(400)
                     page.ensureWidgetVisible(view, 16, 16)
                     self._assert_projected(canvas, panel)
                     quick = self._quick(panel)
@@ -411,7 +420,7 @@ class GalleryQmlBridgeNativeTest(unittest.TestCase):
                         self._assert_projected(canvas, panel)
 
                     page.ensureWidgetVisible(title_edit, 16, 16)
-                    QTest.qWait(50)
+                    _wait_ms(50)
                     self._click(title_edit)
                     title_edit.selectAll()
                     QTest.keyClicks(title_edit, "Edited in the native Gallery")
@@ -420,7 +429,7 @@ class GalleryQmlBridgeNativeTest(unittest.TestCase):
                                "Widgets edits must reach the same live QML scene")
                     self.assertEqual(root.property("previewProgress"), 65)
                     page.ensureWidgetVisible(view, 16, 16)
-                    QTest.qWait(50)
+                    _wait_ms(50)
                     action = root.findChild(QQuickItem, "qmlBridgeAdvanceButton")
                     self.assertTrue(shiboken6.isValid(action))
                     center = action.mapToScene(QPointF(action.width() / 2, action.height() / 2)).toPoint()
@@ -436,7 +445,7 @@ class GalleryQmlBridgeNativeTest(unittest.TestCase):
                     code.setExpanded(True)
                     center, clipped_sample = self._clip_action(page, view, code, action)
                     self._click(view, center)
-                    QTest.qWait(80)
+                    _wait_ms(80)
                     self.assertEqual(panel.progress.value(), 75, "Clipped QML must not receive a physical click")
                     self.assertGreater(view.textureId(), 0)
                     projected = self.controller.projected_position(view, clipped_sample)
@@ -470,15 +479,15 @@ class GalleryQmlBridgeNativeTest(unittest.TestCase):
                         for v in page.findChildren(QmlView):
                             self.assertIs(v.rootObject(), roots[v.objectName()])
                     self.assertEqual(requested.count(), 4)
-                    QTest.qWait(400)
+                    _wait_ms(400)
                     revision, frames = view.textureRevision(), view.textureStatistics()["renderedFrames"]
                     QTest.mouseMove(self.window.windowHandle(), QPoint(self.window.width() // 2, 24))
-                    QTest.qWait(150)
+                    _wait_ms(150)
                     self.assertEqual(view.textureRevision(), revision)
                     self.assertEqual(view.textureStatistics()["renderedFrames"], frames)
 
                     page.ensureWidgetVisible(page._gallery_theme_button, 16, 16)
-                    QTest.qWait(50)
+                    _wait_ms(50)
                     self._click(page._gallery_theme_button)
                     self._wait(lambda: not view.themeObject().property("dark"),
                                "The local preview must switch to Light while staying projected")
@@ -528,13 +537,13 @@ class GalleryQmlBridgeNativeTest(unittest.TestCase):
                     self.assertIs(self.controller.canvas, canvas)
                     self.assertIs(view.rootObject(), retained_root)
                     cached_frames = view.textureStatistics()["renderedFrames"]
-                    QTest.qWait(150)
+                    _wait_ms(150)
                     self.assertEqual(view.textureStatistics()["renderedFrames"], cached_frames)
                     self.records.append({"label": "restored-button", **self._state()})
                     self.window.navigate("qml-view", animated=False)
                     self._wait(lambda: self._presenting() and view.status() == QmlView.Status.Ready
                                and view.isTextureRenderingEnabled(), "The cached scene must remain ready")
-                    QTest.qWait(400)
+                    _wait_ms(400)
                     page.ensureWidgetVisible(view, 16, 16)
                     self._assert_projected(canvas, panel)
                     self.assertIs(widgets["qml-view-action"], panel.widget)

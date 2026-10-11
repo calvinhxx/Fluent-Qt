@@ -99,11 +99,11 @@ void SpatialPlugin::onDeactivate() noexcept
     QPointer<SpatialPlugin> lifetime(this);
     for (const auto& record : views) {
         auto view = record.object;
-        if (view) {
+        if (view && !view->isHostTearingDown()) {
             view->setSpatialEnabled(false);
             if (!lifetime)
                 return;
-            if (view)
+            if (view && !view->isHostTearingDown())
                 view->setRenderMode(SpatialView::RenderMode::Raster);
             if (!lifetime)
                 return;

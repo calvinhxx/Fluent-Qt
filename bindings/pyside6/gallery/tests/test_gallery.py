@@ -2486,6 +2486,26 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     window.deleteLater()
                     QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
+    def test_display_unparse_is_stable_across_python_versions(self):
+        from fluentqt_gallery.native_samples import _stable_unparse
+
+        expected = (
+            "action = lambda: 'lambda :'\n"
+            "points = [('中文', x) for x, y in pairs]\n"
+            "nested = [x for (x, y), z in triples]"
+        )
+        node = ast.parse(expected)
+        self.assertEqual(_stable_unparse(node), expected)
+        legacy = (
+            "action = lambda : 'lambda :'\n"
+            "points = [('中文', x) for (x, y) in pairs]\n"
+            "nested = [x for ((x, y), z) in triples]"
+        )
+        with patch.object(ast, "unparse", return_value=legacy):
+            normalized = _stable_unparse(node)
+        self.assertEqual(normalized, expected)
+        self.assertEqual(ast.dump(ast.parse(normalized)), ast.dump(node))
+
     def test_python_snippets_follow_cpp_semantic_wrap_boundaries(self):
         cases = (
             (

@@ -1,4 +1,5 @@
 #include "DateTimeRangePickerAccessibility_p.h"
+#include "DateTimeRangePickerText_p.h"
 
 #include <QAccessible>
 #include <QAccessibleWidget>
@@ -57,17 +58,27 @@ public:
             return QAccessibleWidget::text(type);
         const auto valueText = [this](const QDateTime& value) {
             if (!value.isValid())
-                return DateTimeRangePicker::tr("Unbounded");
+                return dateTimeRangeText(
+                    picker()->locale(),
+                    QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Unbounded"));
             return picker()->isTimeEnabled()
                        ? picker()->locale().toString(value, QLocale::ShortFormat)
                        : picker()->locale().toString(value.date(), QLocale::ShortFormat);
         };
-        return DateTimeRangePicker::tr("%1: %2; %3: %4")
-            .arg(picker()->startLabelText().isEmpty() ? DateTimeRangePicker::tr("Start")
-                                                      : picker()->startLabelText(),
+        return dateTimeRangeText(
+                   picker()->locale(),
+                   QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "%1: %2; %3: %4"))
+            .arg(picker()->startLabelText().isEmpty()
+                     ? dateTimeRangeText(
+                           picker()->locale(),
+                           QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Start"))
+                     : picker()->startLabelText(),
                  valueText(picker()->startDateTime()),
-                 picker()->endLabelText().isEmpty() ? DateTimeRangePicker::tr("End")
-                                                    : picker()->endLabelText(),
+                 picker()->endLabelText().isEmpty()
+                     ? dateTimeRangeText(
+                           picker()->locale(),
+                           QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "End"))
+                     : picker()->endLabelText(),
                  valueText(picker()->endDateTime()));
     }
 
