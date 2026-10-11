@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import math
 from pathlib import Path
 import sys
 
 from fluent_qt_preview_client import PreviewClient
+from fluent_qt_preview_editor.protocol import editor_tools
 
 
 VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
@@ -40,6 +42,7 @@ TOOLS = [
     }, ("target", "property", "value")),
     tool("preview_reset_data", "Restore the original values changed through preview_set_data."),
 ]
+TOOLS.extend(editor_tools(tool))
 
 
 class ProtocolError(Exception):
@@ -69,6 +72,8 @@ class PreviewMcpServer:
                 raise ProtocolError(-32602, "Expected a non-empty bounded string: " + key)
             if kind == "array" and (not isinstance(value, list) or not all(isinstance(v, str) for v in value)):
                 raise ProtocolError(-32602, "Expected an array of strings: " + key)
+            if kind == "object" and (not isinstance(value, dict) or not 1 <= len(value) <= 32):
+                raise ProtocolError(-32602, "Expected 1 to 32 registered field changes.")
             if isinstance(kind, list) and (value is None or not isinstance(value, (str, int, float, bool))):
                 raise ProtocolError(-32602, "Expected a scalar data value.")
             if isinstance(value, float) and not math.isfinite(value):
@@ -83,6 +88,17 @@ class PreviewMcpServer:
             if name == "preview_screenshot":
                 return {"content": [{"type": "image", "mimeType": result["mime_type"],
                                      "data": result["data"]}]}
+            if name == "preview_editor_compare":
+                content = [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]
+                for caption, key in (("Before", "before_image"), ("After", "after_image")):
+                    with Path(result[key]).open("rb") as stream:
+                        png = stream.read(20 * 1024 * 1024 + 1)
+                    if len(png) > 20 * 1024 * 1024:
+                        raise ValueError("Comparison image exceeds 20 MiB.")
+                    content.extend([{"type": "text", "text": caption},
+                                    {"type": "image", "mimeType": "image/png",
+                                     "data": base64.b64encode(png).decode("ascii")}])
+                return {"content": content}
             return {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]}
         except (OSError, ValueError, RuntimeError) as error:
             return {"isError": True, "content": [{"type": "text", "text": str(error)}]}
