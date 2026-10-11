@@ -389,14 +389,19 @@ class _Expression(QObject):
             return self._cached
         if self.last_error is not None:
             return self._cached
+        failure = None
         try:
             self._cached = self._evaluate()
         except Exception as error:
             self.last_error = error
+            failure = error
+        # Leave Python's handled-exception context before reentering Qt.
+        # Older Shiboken runtimes must not inherit it across native callbacks.
+        if failure is not None:
             if self._handle is not None:
                 self._handle.pause()
             if shiboken6.isValid(self):
-                self.error_occurred.emit(error)
+                self.error_occurred.emit(failure)
         return self._cached
 
 
