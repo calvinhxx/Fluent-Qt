@@ -12,11 +12,13 @@ from __future__ import annotations
 import ast
 import copy
 from collections.abc import Callable, Mapping, Sequence
+import io
 import json
 import keyword
 from pathlib import Path
 import re
 from textwrap import dedent
+import tokenize
 
 import fluentqt
 from PySide6.QtCore import QDate, QItemSelectionModel, QRect, QRectF, QSize, Qt, QTime
@@ -47,6 +49,45 @@ from .samples import PreviewResult
 Builder = Callable[[str, QWidget | None], PreviewResult]
 _BUILDERS: dict[tuple[str, str], Builder] = {}
 SourceSpec = tuple[str, str]
+
+
+def _stable_unparse(node: ast.AST) -> str:
+    """Keep Python 3.10+ display output stable without rewriting literal text."""
+
+    rendered = ast.unparse(node)
+    if "lambda :" not in rendered and "for (" not in rendered:
+        return rendered
+    lines = rendered.splitlines(keepends=True)
+    offsets = [0]
+    for line in lines:
+        offsets.append(offsets[-1] + len(line.encode("utf-8")))
+    encoded = rendered.encode("utf-8")
+    edits: list[tuple[int, int]] = []
+    tokens = list(tokenize.generate_tokens(io.StringIO(rendered).readline))
+    for before, after in zip(tokens, tokens[1:]):
+        if before.type == tokenize.NAME and before.string == "lambda" and after.string == ":":
+            row, column = before.end
+            start = offsets[row - 1] + len(lines[row - 1][:column].encode("utf-8"))
+            row, column = after.start
+            end = offsets[row - 1] + len(lines[row - 1][:column].encode("utf-8"))
+            edits.append((start, end))
+    try:
+        parsed = ast.parse(rendered)
+    except SyntaxError:
+        parsed = None  # Some call sites unparse a standalone argument list.
+    for part in ast.walk(parsed) if parsed is not None else ():
+        if not isinstance(part, (ast.comprehension, ast.For, ast.AsyncFor)):
+            continue
+        target = part.target
+        if not isinstance(target, ast.Tuple):
+            continue
+        start = offsets[target.lineno - 1] + target.col_offset
+        end = offsets[target.end_lineno - 1] + target.end_col_offset
+        if encoded[start:end].startswith(b"(") and encoded[start:end].endswith(b")"):
+            edits.extend(((start, start + 1), (end - 1, end)))
+    for start, end in sorted(edits, reverse=True):
+        encoded = encoded[:start] + encoded[end:]
+    return encoded.decode("utf-8")
 
 
 def _apply_root_layout_contract(
@@ -246,7 +287,7 @@ def _assigned_names(node: ast.AST) -> set[str]:
 
 
 def _format_import(node: ast.Import | ast.ImportFrom) -> str:
-    rendered = ast.unparse(node)
+    rendered = _stable_unparse(node)
     if len(rendered) <= 88 or not isinstance(node, ast.ImportFrom):
         return rendered
     module = "." * node.level + (node.module or "")
@@ -401,7 +442,7 @@ def _compact_statement_text(
     joined = re.sub(r"([([{])\s+", r"\1", joined)
     joined = re.sub(r"\s+([)\]}])", r"\1", joined)
     without_trailing_commas = re.sub(r",([)\]}])", r"\1", joined)
-    candidates = (without_trailing_commas, joined, ast.unparse(statement))
+    candidates = (without_trailing_commas, joined, _stable_unparse(statement))
     for candidate in dict.fromkeys(candidates):
         if "\n" in candidate:
             continue
@@ -422,7 +463,7 @@ def _compact_expression_text(source: str, expression: ast.AST) -> str:
         joined = re.sub(r"([([{])\s+", r"\1", joined)
         joined = re.sub(r"\s+([)\]}])", r"\1", joined)
         candidates.extend((re.sub(r",([)\]}])", r"\1", joined), joined))
-    candidates.append(ast.unparse(expression))
+    candidates.append(_stable_unparse(expression))
 
     expected = ast.dump(expression, include_attributes=False)
     for candidate in dict.fromkeys(candidates):
@@ -434,18 +475,18 @@ def _compact_expression_text(source: str, expression: ast.AST) -> str:
             continue
         if ast.dump(parsed.body, include_attributes=False) == expected:
             return candidate
-    return ast.unparse(expression)
+    return _stable_unparse(expression)
 
 
 def _display_statement_prefix(statement: ast.stmt) -> str | None:
     if isinstance(statement, ast.Expr):
         return ""
     if isinstance(statement, ast.Assign):
-        return " = ".join(ast.unparse(target) for target in statement.targets) + " = "
+        return " = ".join(_stable_unparse(target) for target in statement.targets) + " = "
     if isinstance(statement, ast.AnnAssign):
         prefix = "{0}: {1}".format(
-            ast.unparse(statement.target),
-            ast.unparse(statement.annotation),
+            _stable_unparse(statement.target),
+            _stable_unparse(statement.annotation),
         )
         return prefix + " = " if statement.value is not None else None
     if isinstance(statement, ast.Return):
@@ -716,7 +757,7 @@ def _format_display_calls(
 def _call_family(statement: ast.stmt) -> str:
     if not isinstance(statement, ast.Expr) or not isinstance(statement.value, ast.Call):
         return ""
-    return ast.unparse(statement.value.func)
+    return _stable_unparse(statement.value.func)
 
 
 def _normalize_call_group_spacing(source: str) -> str:
@@ -871,8 +912,8 @@ def _focused_short_function(
         type_comment=getattr(node, "type_comment", None),
     )
     ast.copy_location(focused, node)
-    if len(ast.unparse(focused).splitlines()) >= len(
-        ast.unparse(node).splitlines()
+    if len(_stable_unparse(focused).splitlines()) >= len(
+        _stable_unparse(node).splitlines()
     ):
         return node
     return focused
@@ -1189,7 +1230,7 @@ def _render_outline_statement(
         copy.deepcopy(statement)
     )
     ast.fix_missing_locations(transformed)
-    generated = ast.unparse(transformed)
+    generated = _stable_unparse(transformed)
     original = _equivalent_source_statement(source, transformed)
     if (
         original is not None
@@ -1202,7 +1243,7 @@ def _render_outline_statement(
         signature = copy.deepcopy(transformed)
         signature.body = [ast.Pass()]
         ast.fix_missing_locations(signature)
-        signature_lines = ast.unparse(signature).splitlines()
+        signature_lines = _stable_unparse(signature).splitlines()
         if signature_lines and signature_lines[-1].strip() == "pass":
             signature_lines.pop()
         body = "\n".join(
@@ -1217,11 +1258,11 @@ def _render_outline_statement(
     if isinstance(transformed, (ast.For, ast.AsyncFor)):
         iterator = ast.get_source_segment(source, transformed.iter)
         if iterator is None:
-            iterator = ast.unparse(transformed.iter)
+            iterator = _stable_unparse(transformed.iter)
         iterator = _dedent_source_segment(iterator)
         target = ast.get_source_segment(source, transformed.target)
         if target is None:
-            target = ast.unparse(transformed.target)
+            target = _stable_unparse(transformed.target)
         keyword = "async for" if isinstance(transformed, ast.AsyncFor) else "for"
         lines = [
             "{0} {1} in {2}:".format(
@@ -1949,7 +1990,7 @@ def _replace_display_names(
     """Substitute fixed loop values while retaining authored line wrapping."""
 
     replacements = {
-        name: ast.unparse(value) for name, value in bindings.items()
+        name: _stable_unparse(value) for name, value in bindings.items()
     }
     replacements.update(local_names)
     lines = source.splitlines()
@@ -1980,7 +2021,7 @@ def _replace_display_names(
             (
                 node.col_offset,
                 node.end_col_offset,
-                ast.unparse(bound.elts[index.value]),
+                _stable_unparse(bound.elts[index.value]),
             )
         )
         covered.setdefault(row, []).append(

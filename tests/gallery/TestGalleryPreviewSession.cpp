@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
 #include <gtest/gtest.h>
@@ -100,6 +101,39 @@ TEST(GalleryPreviewSessionTest, RejectsStaleOrAmbiguousTargetsAndHidesPasswordTe
                     .execute("set_data",
                              {{"target", "duplicate"}, {"property", "enabled"}, {"value", false}})
                     .contains("error"));
+}
+
+TEST(GalleryPreviewSessionTest, SupplementaryTextPreservesEditingContracts)
+{
+    QTemporaryDir directory;
+    QWidget root;
+    fluent::textfields::LineEdit editor(&root);
+    editor.setObjectName("editor");
+    editor.setText("original");
+    root.show();
+    GalleryPreviewSession session(&root);
+    QString error;
+    ASSERT_TRUE(session.start(directory.path(), error));
+    editor.selectAll();
+    QSignalSpy edits(&editor, &QLineEdit::textEdited);
+    const auto typeText = [&](const QString& text) {
+        return session.execute("action",
+                               {{"target", "editor"}, {"action", "type_text"}, {"text", text}});
+    };
+    ASSERT_FALSE(typeText(QStringLiteral("👋")).contains("error"));
+    EXPECT_EQ(editor.text(), QStringLiteral("👋"));
+    EXPECT_EQ(edits.count(), 1);
+    editor.undo();
+    EXPECT_EQ(editor.text(), "original");
+
+    editor.setReadOnly(true);
+    ASSERT_FALSE(typeText(QStringLiteral("👋")).contains("error"));
+    EXPECT_EQ(editor.text(), "original");
+    editor.setReadOnly(false);
+    editor.clear();
+    editor.setMaxLength(2);
+    ASSERT_FALSE(typeText(QStringLiteral("👋!")).contains("error"));
+    EXPECT_EQ(editor.text(), QStringLiteral("👋"));
 }
 
 TEST(GalleryPreviewSessionTest, RestoresOnlyChangedCompatibleNamedState)

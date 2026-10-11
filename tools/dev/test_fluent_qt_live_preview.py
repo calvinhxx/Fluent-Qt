@@ -86,11 +86,11 @@ class FluentQtLivePreviewLauncherTest(unittest.TestCase):
         )
         self.assertEqual(
             environment["PYTHONPATH"].split(os.pathsep),
-            ["/source/gallery", "/tmp/build/python", "/existing"],
+            [str(Path("/source/gallery").resolve()), str(runtime.python_path), "/existing"],
         )
         self.assertEqual(environment["PYTHONDONTWRITEBYTECODE"], "1")
         self.assertEqual(environment["FLUENTQT_LIVE_PREVIEW_CONTRACT"],
-                         "/tmp/build/python/fluentqt_gallery/contract.json")
+                         str(runtime.python_path / "fluentqt_gallery/contract.json"))
         packaged = MODULE.runtime_environment(runtime, base=environment, source_first=False)
         self.assertNotIn("FLUENTQT_LIVE_PREVIEW_CONTRACT", packaged)
 

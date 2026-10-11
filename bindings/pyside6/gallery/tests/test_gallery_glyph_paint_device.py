@@ -13,13 +13,14 @@ if __name__ == "__main__":
     faulthandler.dump_traceback_later(45)
 
 import fluentqt
+import shiboken6
 
 from PySide6.QtCore import QLineF, QPoint, QPointF, QRect, QRectF, Qt
 from PySide6.QtGui import (
     QColor, QFont, QFontDatabase, QFontMetricsF, QImage, QLinearGradient, QPaintDevice, QPaintEngine, QPainter, QPainterPath, QPen, QRegion,
     QTransform,
 )
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QGraphicsEffect, QWidget
 
 from fluentqt_gallery.glyph_paint_device import (
     GlyphPaintDevice, glyph_raster_dpr, needs_native_glyph_coverage,
@@ -380,6 +381,48 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
         expected, _ = self.render(draw, False)
         actual, _ = self.render(draw, True)
         self.assertEqual(actual, expected)
+
+    def test_widget_effect_keeps_the_callers_painter_alive(self):
+        class Content(QWidget):
+            def paintEvent(self, event):
+                painter = QPainter(self)
+                # Inspecting a redirected engine must not transfer ownership
+                # of the outer painter to this temporary widget painter.
+                _engine = painter.paintEngine()
+                painter.fillRect(self.rect(), Qt.white)
+                painter.setPen(Qt.black)
+                painter.drawText(QPoint(15, 25), "Nested glyph capture")
+                painter.end()
+
+        class Capture(QGraphicsEffect):
+            completed = 0
+
+            def draw(self, painter):
+                painter.save()
+                self.drawSource(painter)
+                painter.restore()
+                self.completed += 1
+
+        parent = QWidget()
+        parent.resize(240, 140)
+        child = Content(parent)
+        child.setGeometry(parent.rect())
+        capture = Capture(parent)
+        parent.setGraphicsEffect(capture)
+
+        def draw(painter):
+            parent.render(painter, QPoint(), QRegion(parent.rect()), QWidget.DrawChildren)
+            self.assertTrue(shiboken6.isValid(painter))
+            self.assertTrue(shiboken6.ownedByPython(painter))
+            painter.fillRect(QRect(0, 100, 20, 20), Qt.blue)
+
+        for dpr in (1, 2):
+            with self.subTest(dpr=dpr):
+                expected, _ = self.render(draw, False, dpr)
+                actual, device = self.render(draw, True, dpr)
+                self.assertEqual(actual, expected)
+                self.assertGreater(device.engine.glyph_items, 0)
+        self.assertEqual(capture.completed, 4)
 
     def test_paint_device_has_no_engine_reference_cycle(self):
         image = QImage(40, 40, QImage.Format_ARGB32_Premultiplied)

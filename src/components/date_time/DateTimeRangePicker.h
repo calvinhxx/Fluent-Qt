@@ -33,9 +33,14 @@ class DateTimeRangePickerPopup;
  * precision and retain their Qt time specification. Date-only mode stores
  * midnight for both endpoints; applications own inclusive/exclusive query rules.
  * Reversed endpoints remain visible and make isRangeValid() false.
+ * Default captions follow the effective widget locale, with built-in Simplified
+ * and Traditional Chinese text and an English fallback. Other languages use
+ * application Qt translations; application-authored text is preserved.
  * zh_CN: 无效 QDateTime 表示无界端点；值精确到分钟并保留 Qt 时间规格。
  * 仅日期模式下两端均保存午夜，查询边界是否包含由应用决定。
  * 起止顺序反转时保留输入，isRangeValid() 返回 false。
+ * 默认文案跟随控件区域设置，内置简体、繁体中文并回退到英文；
+ * 其他语言使用应用 Qt 翻译，应用自行设置的文案保持不变。
  */
 class DateTimeRangePicker : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -191,6 +196,7 @@ private:
     void updateDate(const QDate& date, bool start);
     void updateTime(const QTime& time, bool start);
     void synchronizeInputs();
+    void refreshPresentationText();
     void updateLayoutDirection();
     void closePickers(QWidget* except = nullptr);
     int horizontalWidth() const;

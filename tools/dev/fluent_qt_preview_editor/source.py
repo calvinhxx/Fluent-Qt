@@ -4,6 +4,7 @@ import ast
 import hashlib
 import os
 from pathlib import Path
+import stat
 import tempfile
 
 
@@ -22,12 +23,26 @@ def replace_source(path: Path, expected: bytes, replacement: bytes):
             stream.write(replacement)
             stream.flush()
             os.fsync(stream.fileno())
-            os.fchmod(stream.fileno(), mode)
+            if hasattr(os, "fchmod"):
+                os.fchmod(stream.fileno(), mode)
+        if not hasattr(os, "fchmod"):
+            # Windows exposes chmod only by path. Apply it to the closed
+            # temporary file, preserving the atomic replace and conflict check.
+            os.chmod(temporary, mode)
         if path.read_bytes() != expected:
             raise RuntimeError("Source changed while preparing the edit; no replacement was made.")
         os.replace(temporary, path)
     finally:
-        Path(temporary).unlink(missing_ok=True)
+        try:
+            Path(temporary).unlink(missing_ok=True)
+        except PermissionError:
+            if os.name != "nt":
+                raise
+            # Copying a read-only source's mode also makes our temporary file
+            # read-only. Clear that flag only on the file created above so a
+            # failed replace can still clean up without changing the source.
+            os.chmod(temporary, mode | stat.S_IWRITE)
+            Path(temporary).unlink(missing_ok=True)
 
 
 def dictionary(node):

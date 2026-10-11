@@ -33,6 +33,11 @@ def fingerprint(paths):
                                 scan(entry.path)
                         elif selected_file(entry.name) and entry.is_file():
                             metadata = entry.stat()
+                            # Windows DirEntry.stat() omits the file identity.
+                            # A fresh path stat detects same-size atomic saves
+                            # even when the editor preserves the timestamp.
+                            if not metadata.st_ino:
+                                metadata = os.stat(entry.path)
                             result[entry.path] = (metadata.st_mtime_ns, metadata.st_size, metadata.st_ino)
                     except FileNotFoundError:
                         pass  # An editor may replace a file atomically during the scan.

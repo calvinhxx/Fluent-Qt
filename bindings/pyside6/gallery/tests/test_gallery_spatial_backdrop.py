@@ -159,7 +159,7 @@ class GallerySpatialBackdropTest(unittest.TestCase):
         pixmap.fill(Qt.red)
         owner = SimpleNamespace(window=window, backdrop=pixmap, queue_check=lambda: None,
                                 context_lost=lambda: None, render_failure_timer=QTimer(window),
-                                _capture_content=Mock())
+                                _capture_content=Mock(), qml_rendering_failed=Mock())
         try:
             surface = BackdropSurface(owner, window)
             surface.resize(64, 64)

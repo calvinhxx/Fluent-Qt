@@ -736,6 +736,11 @@ bool bindProperties(QObject* source, const QString& sourceProperty, QObject* tar
         .isValid();
 }
 
+bool objectHasCurrentThreadAffinityForBinding(const QObject* object)
+{
+    return object && object->thread() == QThread::currentThread();
+}
+
 fluent::BindingHandle bindManagedProperties(QObject* source, const QString& sourceProperty,
                                             QObject* target, const QString& targetProperty,
                                             fluent::binding::BindingMode mode, bool deferred)

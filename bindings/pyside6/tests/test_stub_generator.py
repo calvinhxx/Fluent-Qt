@@ -1,5 +1,6 @@
 """Tests for the cross-version Shiboken stub-generator adapter."""
 
+import ast
 import importlib.util
 from pathlib import Path
 import unittest
@@ -50,6 +51,50 @@ class StubGeneratorTest(unittest.TestCase):
         self.assertFalse(options.check)
         self.assertFalse(options.is_ci)
         self.assertTrue(options.quiet)
+
+    def test_legacy_stub_gains_signals_without_changing_existing_declarations(self):
+        contents = '''import typing
+import PySide6.QtCore
+
+class fluent:
+    class QmlSession:
+        def activate(self) -> bool: ...
+    class QmlTheme:
+        changed: typing.ClassVar[PySide6.QtCore.Signal] = ...
+'''
+        signals = {"fluent.QmlSession": ["activeChanged"], "fluent.QmlTheme": ["changed"]}
+        generated = STUB_GENERATOR.add_signal_declarations(contents, signals)
+        tree = ast.parse(generated)
+        session, theme = tree.body[2].body
+        self.assertEqual([node.target.id for node in session.body if isinstance(node, ast.AnnAssign)],
+                         ["activeChanged"])
+        self.assertEqual([node.target.id for node in theme.body if isinstance(node, ast.AnnAssign)],
+                         ["changed"])
+        self.assertIn("def activate(self) -> bool: ...", generated)
+        self.assertEqual(STUB_GENERATOR.add_signal_declarations(generated, signals), generated)
+
+    def test_signal_declarations_keep_nested_and_same_named_class_owners(self):
+        contents = '''import typing
+import PySide6.QtCore
+
+class first:
+    class Session:
+        class Nested:
+            pass
+class second:
+    class Session:
+        pass
+'''
+        generated = STUB_GENERATOR.add_signal_declarations(contents, {
+            "first.Session": ["activeChanged"],
+            "first.Session.Nested": ["changed"],
+        })
+        tree = ast.parse(generated)
+        first, second = tree.body[2:]
+        self.assertEqual(first.body[0].body[1].target.id, "activeChanged")
+        self.assertEqual(first.body[0].body[0].body[1].target.id, "changed")
+        self.assertIsInstance(second.body[0].body[0], ast.Pass)
+        self.assertEqual(len(second.body[0].body), 1)
 
 
 if __name__ == "__main__":

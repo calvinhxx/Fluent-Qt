@@ -241,6 +241,62 @@ TEST_F(GallerySpatialTest, Contract_SessionActivationDoesNotCreateGpuSurfaces)
     EXPECT_EQ(activeChanges.count(), 2);
 }
 
+TEST_F(GallerySpatialTest, Contract_NativeCompositionObserverStopsBeforePageTeardown)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Direct composition observation requires a native display";
+
+    for (int boundary = 0; boundary < 3; ++boundary) {
+        SCOPED_TRACE(::testing::Message() << "destruction boundary=" << boundary);
+        auto window = std::make_unique<QWidget>();
+        auto* navigation = new navigation::NavigationView(window.get());
+        auto* host = navigation->contentHost();
+        auto* page = new QWidget;
+        ASSERT_TRUE(host->insertPage(0, page));
+        host->setCurrentIndex(0);
+        QPointer<GallerySpatialController> controller =
+            new GallerySpatialController(window.get(), navigation);
+        QObject receiver;
+        bool boundaryDestroyed = false;
+        bool pageUnloaded = false;
+        QObject* boundaries[] = {window.get(), navigation, host};
+        QObject::connect(boundaries[boundary], &QObject::destroyed, &receiver,
+                         [&] { boundaryDestroyed = true; });
+
+        // A page-owned session can change this property while QWidget deletes
+        // its children, after StackContentHost's page records are gone.
+        // zh_CN: 页面会话在 QWidget 删除子对象期间改变此属性，此时宿主页面记录已析构。
+        auto* session = new QObject(page);
+        QObject* hostObject = host;
+        QObject::connect(session, &QObject::destroyed, &receiver, [&] {
+            EXPECT_TRUE(boundaryDestroyed);
+            EXPECT_EQ(qobject_cast<navigation::StackContentHost*>(hostObject), nullptr);
+            EXPECT_FALSE(controller.isNull());
+            page->setProperty("fluentqtDirectCompositionRequired", false);
+            pageUnloaded = true;
+        });
+
+        page->setProperty("fluentqtDirectCompositionRequired", true);
+        ASSERT_TRUE(controller->renderingStatistics()["directCompositionRequired"].toBool());
+        // Leave a refresh queued as well as exercising the synchronous unload.
+        // zh_CN: 同时覆盖已排队刷新与同步卸载的生命周期边界。
+        page->setProperty("fluentqtDirectCompositionRequired", false);
+        page->setProperty("fluentqtDirectCompositionRequired", true);
+        if (boundary == 0)
+            window.reset();
+        else
+            delete boundaries[boundary];
+
+        EXPECT_TRUE(pageUnloaded);
+        if (controller) {
+            QCoreApplication::sendPostedEvents(controller, QEvent::MetaCall);
+            delete controller;
+            EXPECT_TRUE(controller.isNull());
+        }
+        EXPECT_FALSE(GallerySettings::instance().spatialModeEnabled());
+    }
+}
+
 TEST_F(GallerySpatialTest, Contract_PreviewSessionsKeepViewsAndGalleryPreferences)
 {
     auto& settings = GallerySettings::instance();
@@ -284,6 +340,49 @@ TEST_F(GallerySpatialTest, Contract_PreviewSessionsKeepViewsAndGalleryPreference
             settings.setSpatialModeEnabled(false);
             settings.setSpatialModeEnabled(true);
             EXPECT_FALSE(view->isSpatialEnabled());
+        }
+    }
+}
+
+TEST_F(GallerySpatialTest, Contract_PopulatedPreviewTeardownStopsSessionsAndKeepsPreferences)
+{
+    auto& settings = GallerySettings::instance();
+    settings.setSpatialModeEnabled(true);
+    for (bool nested : {false, true}) {
+        for (const QString& route :
+             {QStringLiteral("spatial-view"), QStringLiteral("spatial-item")}) {
+            SCOPED_TRACE(::testing::Message() << route.toStdString() << " nested=" << nested);
+            auto* owner = new scrolling::ScrollView;
+            auto* panel = gallerySamplesForRoute(route).first().createPreview(nullptr);
+            if (nested) {
+                owner->setWidgetResizable(true);
+                owner->setWidget(panel);
+            }
+            auto* session = panel->findChild<spatial::SpatialSession*>();
+            QPointer<spatial::SpatialView> view =
+                panel->findChild<spatial::SpatialView*>("spatialPreviewView");
+            ASSERT_NE(session, nullptr);
+            ASSERT_FALSE(view.isNull());
+            ASSERT_GT(view->itemCount(), 0);
+            QPointer<QWidget> card = view->items().first()->widget();
+            ASSERT_FALSE(card.isNull());
+            view->setRenderMode(spatial::SpatialView::RenderMode::Raster);
+            bool stopped = false;
+            QObject receiver;
+            QObject::connect(session, &spatial::SpatialSession::activeChanged, &receiver,
+                             [&](bool active) { stopped |= !active; });
+            QWidget* visibleRoot = nested ? static_cast<QWidget*>(owner) : panel;
+            visibleRoot->resize(800, 600);
+            visibleRoot->show();
+            QApplication::processEvents();
+            ASSERT_TRUE(view->isSpatialEnabled());
+            if (!nested)
+                delete panel;
+            delete owner;
+            EXPECT_TRUE(stopped);
+            EXPECT_TRUE(view.isNull());
+            EXPECT_TRUE(card.isNull());
+            EXPECT_TRUE(settings.spatialModeEnabled());
         }
     }
 }
@@ -748,6 +847,17 @@ TEST_F(GallerySpatialTest, SupportBadgesReceiveHoverAtTheirProjectedPositions)
     ASSERT_TRUE(settings.spatialAvailable());
     ASSERT_TRUE(window.selectRoute("settings"));
     ASSERT_TRUE(QTest::qWaitFor([&] { return bool(window.currentSettingsPage()); }, 2000));
+    auto* navigationTree =
+        window.findChild<collections::TreeView*>("galleryMainNavigationTreeView");
+    ASSERT_NE(navigationTree, nullptr);
+    auto* navigation = qobject_cast<GalleryNavigationPane*>(navigationTree->parentWidget());
+    ASSERT_NE(navigation, nullptr);
+    const auto pluginsIndex = navigation->indexForRouteId(QStringLiteral("plugins"));
+    const auto spatialIndex = navigation->indexForRouteId(QStringLiteral("spatial"));
+    ASSERT_TRUE(pluginsIndex.isValid());
+    ASSERT_TRUE(spatialIndex.isValid());
+    navigationTree->expand(pluginsIndex);
+    navigationTree->scrollTo(spatialIndex);
     auto* controller = window.findChild<GallerySpatialController*>();
     ASSERT_NE(controller, nullptr);
     ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!controller->transitionRunning()); }, 1500));
@@ -2312,7 +2422,34 @@ TEST_F(GallerySpatialTest, NativeNestedOpacityKeepsColorAndUnrelatedPixels)
         return QPoint(qRound(p.x() * dpr), qRound(p.y() * dpr));
     };
     const QRect labelRect(point(label, QPoint(0, 0)), point(label, label->rect().bottomRight()));
-    const QImage baseline = spatialFrame(surface).copy(labelRect);
+    auto* pointerMotion = controller.findChild<QVariantAnimation*>("galleryPointerAnimation");
+    ASSERT_NE(pointerMotion, nullptr);
+    QImage baselineFrame;
+    QImage baseline;
+    // The surface can be exposed while its first frame still contains only
+    // the backdrop or a native enter event starts pointer tilt. Capture painted
+    // text after that animation settles before asserting unrelated pixels.
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            baselineFrame = spatialFrame(surface);
+            const QImage current = baselineFrame.copy(labelRect);
+            const bool stable = current == baseline;
+            baseline = current;
+            int inkPixels = 0;
+            for (int y = 0; y < baseline.height(); ++y)
+                for (int x = 0; x < baseline.width(); ++x)
+                    if (qGray(baseline.pixel(x, y)) < 100)
+                        ++inkPixels;
+            return pointerMotion->state() == QAbstractAnimation::Stopped && stable &&
+                   inkPixels > 40 * dpr * dpr;
+        },
+        5000))
+        << "The label must be painted and stationary before capturing unrelated pixels";
+    if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE"); !dir.isEmpty()) {
+        QDir().mkpath(dir);
+        baselineFrame.save(dir + QStringLiteral("/nested-opacity-baseline.png"));
+        baseline.save(dir + QStringLiteral("/nested-opacity-baseline-crop.png"));
+    }
     for (const int y : {180, 520}) {
         SCOPED_TRACE(y);
         tile->move(80, y);

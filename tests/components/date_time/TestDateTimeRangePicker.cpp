@@ -8,7 +8,7 @@
 #include <QSignalSpy>
 #include <QTest>
 #include <QTimeZone>
-#include <QTimeZone>
+#include <QTranslator>
 #include <type_traits>
 
 #include <FluentQt/FluentQt.h>
@@ -427,6 +427,7 @@ TEST(DateTimeRangePickerTest, Contract_PopupExclusivityAndCloseOnHideDisable)
 TEST(DateTimeRangePickerTest, Contract_LabelsAndLocaleNoOps)
 {
     DateTimeRangePicker picker;
+    picker.setLocale(QLocale::c());
     QSignalSpy labels(&picker, &DateTimeRangePicker::startLabelTextChanged);
     picker.setStartLabelText(QStringLiteral("Since"));
     picker.setStartLabelText(QStringLiteral("Since"));
@@ -440,10 +441,249 @@ TEST(DateTimeRangePickerTest, Contract_LabelsAndLocaleNoOps)
     EXPECT_EQ(picker.endTimePicker()->locale(), target);
 }
 
+TEST(DateTimeRangePickerTest, Contract_DefaultTextFollowsLocaleWithoutTranslator)
+{
+    const QLocale previousDefault;
+    const QLocale chinese(QLocale::Chinese, QLocale::China);
+    QLocale::setDefault(chinese);
+    DateTimeRangePicker standalone;
+    QLocale::setDefault(previousDefault);
+    EXPECT_EQ(standalone.locale(), chinese);
+    EXPECT_EQ(standalone.placeholderText(), QString::fromUtf8(u8"选择日期范围"));
+    EXPECT_EQ(standalone.findChild<fluent::basicinput::Button*>("rangePreset0")->text(),
+              QString::fromUtf8(u8"今天"));
+
+    QWidget host;
+    host.setLocale(QLocale(QLocale::English, QLocale::UnitedStates));
+    host.resize(740, 720);
+    QWidget container(&host);
+    container.setGeometry(host.rect());
+    container.setLocale(chinese);
+    DateTimeRangePicker picker(&container);
+    picker.setGeometry(30, 30, 440, picker.sizeHint().height());
+    host.show();
+    picker.openPicker();
+    settle();
+    ASSERT_TRUE(picker.isPickerOpen());
+    QSignalSpy locales(&picker, &DateTimeRangePicker::localeChanged);
+    QSignalSpy ranges(&picker, &DateTimeRangePicker::rangeChanged);
+    struct Row {
+        QLocale locale;
+        QStringList presets;
+        QString done;
+        QString placeholder;
+    };
+    const Row rows[] = {
+        {chinese,
+         {QString::fromUtf8(u8"今天"), QString::fromUtf8(u8"昨天"), QString::fromUtf8(u8"过去一周"),
+          QString::fromUtf8(u8"过去一个月"), QString::fromUtf8(u8"过去六个月"),
+          QString::fromUtf8(u8"过去一年")},
+         QString::fromUtf8(u8"完成"),
+         QString::fromUtf8(u8"选择日期范围")},
+        {QLocale(QLocale::English, QLocale::UnitedStates),
+         {"Today", "Yesterday", "Past week", "Past month", "Past six months", "Past year"},
+         "Done",
+         "Select date range"},
+        {QLocale(QLocale::Chinese, QLocale::Taiwan),
+         {QString::fromUtf8(u8"今天"), QString::fromUtf8(u8"昨天"), QString::fromUtf8(u8"過去一週"),
+          QString::fromUtf8(u8"過去一個月"), QString::fromUtf8(u8"過去六個月"),
+          QString::fromUtf8(u8"過去一年")},
+         QString::fromUtf8(u8"完成"),
+         QString::fromUtf8(u8"選擇日期範圍")},
+    };
+    for (const auto& row : rows) {
+        SCOPED_TRACE(row.locale.name().toStdString());
+        container.setLocale(row.locale);
+        settle();
+        EXPECT_EQ(picker.locale(), row.locale);
+        EXPECT_TRUE(picker.isPickerOpen());
+        for (int index = 0; index < row.presets.size(); ++index) {
+            auto* button = host.findChild<fluent::basicinput::Button*>(
+                QStringLiteral("rangePreset%1").arg(index));
+            ASSERT_NE(button, nullptr);
+            EXPECT_EQ(button->text(), row.presets.at(index));
+#if QT_CONFIG(accessibility)
+            auto* accessible = QAccessible::queryAccessibleInterface(button);
+            ASSERT_NE(accessible, nullptr);
+            EXPECT_EQ(accessible->text(QAccessible::Name), row.presets.at(index));
+#endif
+        }
+        EXPECT_EQ(host.findChild<fluent::basicinput::Button*>("rangeDone")->text(), row.done);
+        EXPECT_EQ(picker.placeholderText(), row.placeholder);
+        EXPECT_EQ(picker.displayText(), row.placeholder);
+    }
+    EXPECT_EQ(locales.count(), 2);
+    EXPECT_EQ(ranges.count(), 0);
+    QList<DateTimeRangePicker::Preset> requested;
+    QObject::connect(&picker, &DateTimeRangePicker::presetRequested, &picker,
+                     [&](DateTimeRangePicker::Preset preset) { requested.append(preset); });
+    auto* pastWeek = host.findChild<fluent::basicinput::Button*>("rangePreset2");
+    clickVisible(&host, pastWeek, pastWeek->rect().center());
+    ASSERT_EQ(requested.count(), 1);
+    EXPECT_EQ(requested.first(), DateTimeRangePicker::Preset::PastWeek);
+    EXPECT_EQ(picker.startDateTime().date().daysTo(picker.endDateTime().date()), 6);
+    picker.closePicker();
+    picker.openPicker();
+    settle();
+    EXPECT_EQ(pastWeek->text(), QString::fromUtf8(u8"過去一週"));
+}
+
+TEST(DateTimeRangePickerTest, Contract_ApplicationTranslationsRefreshOpenPopupAndPreserveCustomText)
+{
+    class RangeTranslator final : public QTranslator {
+    public:
+        bool isEmpty() const override { return false; }
+        QString translate(const char* context, const char* source, const char*, int) const override
+        {
+            if (qstrcmp(context, DateTimeRangePicker::staticMetaObject.className()) != 0)
+                return {};
+            if (qstrcmp(source, "Today") == 0)
+                return QString::fromUtf8(u8"本日");
+            if (qstrcmp(source, "Done") == 0)
+                return QString::fromUtf8(u8"确定");
+            if (qstrcmp(source, "Select date range") == 0)
+                return QString::fromUtf8(u8"报表日期");
+            if (qstrcmp(source, "Start time") == 0)
+                return QString::fromUtf8(u8"起始时间");
+            return {};
+        }
+    } translator;
+    QWidget host;
+    host.resize(740, 720);
+    DateTimeRangePicker picker(&host);
+    picker.setLocale(QLocale(QLocale::Chinese, QLocale::China));
+    picker.setGeometry(30, 30, 440, picker.sizeHint().height());
+    picker.setAccessibleName(QStringLiteral("Report filter"));
+    picker.setStartLabelText(QStringLiteral("Since"));
+    picker.setInvalidRangeText(QStringLiteral("Custom validation"));
+    picker.startDatePicker()->setPlaceholderText(QStringLiteral("Any start"));
+    picker.setRange(at(1, 10, 10), at(3, 15, 10));
+    host.show();
+    picker.openPicker();
+    settle();
+    auto* today = host.findChild<fluent::basicinput::Button*>("rangePreset0");
+    auto* done = host.findChild<fluent::basicinput::Button*>("rangeDone");
+    ASSERT_NE(today, nullptr);
+    ASSERT_NE(done, nullptr);
+    auto* edit =
+        picker.startTimePicker()->findChild<QLineEdit*>(QStringLiteral("rangeStartTimeEdit"));
+    ASSERT_NE(edit, nullptr);
+    // XCB can clear a selection set on an unfocused editor. Begin a real edit first.
+    // zh_CN: XCB 可能清除未聚焦编辑框的选区，先建立实际编辑焦点。
+    host.raise();
+    host.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&host, 2000));
+    edit->setFocus(Qt::OtherFocusReason);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return edit->hasFocus(); }, 2000));
+    settle();
+    ASSERT_TRUE(edit->hasFocus());
+    edit->setText(QStringLiteral("10:25"));
+    edit->setSelection(0, 2);
+    ASSERT_EQ(edit->selectedText(), QStringLiteral("10"));
+    QSignalSpy ranges(&picker, &DateTimeRangePicker::rangeChanged);
+    QSignalSpy locales(&picker, &DateTimeRangePicker::localeChanged);
+    QSignalSpy placeholders(&picker, &DateTimeRangePicker::placeholderTextChanged);
+    ASSERT_TRUE(QCoreApplication::installTranslator(&translator));
+    struct TranslationGuard {
+        QTranslator* translator;
+        ~TranslationGuard() { QCoreApplication::removeTranslator(translator); }
+    } translationGuard{&translator};
+    settle();
+    EXPECT_EQ(today->text(), QString::fromUtf8(u8"本日"));
+    EXPECT_EQ(done->text(), QString::fromUtf8(u8"确定"));
+    EXPECT_EQ(picker.placeholderText(), QString::fromUtf8(u8"报表日期"));
+    EXPECT_EQ(placeholders.count(), 1);
+    EXPECT_EQ(picker.accessibleName(), QStringLiteral("Report filter"));
+    EXPECT_EQ(picker.startLabelText(), QStringLiteral("Since"));
+    EXPECT_EQ(picker.invalidRangeText(), QStringLiteral("Custom validation"));
+    EXPECT_EQ(picker.startDatePicker()->placeholderText(), QStringLiteral("Any start"));
+    EXPECT_EQ(edit->text(), QStringLiteral("10:25"));
+    EXPECT_EQ(edit->selectedText(), QStringLiteral("10"));
+    EXPECT_EQ(edit->accessibleName(), QString::fromUtf8(u8"起始时间"));
+    EXPECT_EQ(picker.startDateTime(), at(1, 10, 10));
+    ASSERT_TRUE(QCoreApplication::removeTranslator(&translator));
+    settle();
+    EXPECT_EQ(today->text(), QString::fromUtf8(u8"今天"));
+    EXPECT_EQ(done->text(), QString::fromUtf8(u8"完成"));
+    EXPECT_EQ(picker.placeholderText(), QString::fromUtf8(u8"选择日期范围"));
+    EXPECT_EQ(placeholders.count(), 2);
+    EXPECT_EQ(locales.count(), 0);
+    EXPECT_EQ(ranges.count(), 0);
+    EXPECT_EQ(edit->text(), QStringLiteral("10:25"));
+    EXPECT_EQ(edit->selectedText(), QStringLiteral("10"));
+    EXPECT_EQ(edit->accessibleName(), QString::fromUtf8(u8"开始时间"));
+    EXPECT_TRUE(picker.isPickerOpen());
+    picker.setPlaceholderText(QStringLiteral("Custom range"));
+    for (const auto& locale : {QLocale::c(), QLocale(QLocale::Chinese, QLocale::China)}) {
+        picker.setLocale(locale);
+        EXPECT_EQ(picker.placeholderText(), QStringLiteral("Custom range"));
+        EXPECT_EQ(picker.invalidRangeText(), QStringLiteral("Custom validation"));
+        EXPECT_EQ(picker.startDatePicker()->placeholderText(), QStringLiteral("Any start"));
+        EXPECT_EQ(picker.accessibleName(), QStringLiteral("Report filter"));
+    }
+}
+
+TEST(DateTimeRangePickerTest, Contract_PopupRetainsLocaleAcrossHostChanges)
+{
+    QWidget host;
+    host.setLocale(QLocale(QLocale::Chinese, QLocale::China));
+    host.resize(900, 720);
+    QWidget container(&host);
+    container.setGeometry(host.rect());
+    const QLocale english(QLocale::English, QLocale::UnitedStates);
+    container.setLocale(english);
+    DateTimeRangePicker picker(&container);
+    picker.setGeometry(40, 40, 500, picker.sizeHint().height());
+    picker.setRange(at(1, 10, 10), at(3, 15, 10));
+    picker.startTimePicker()->setClockIdentifier(TimePicker::ClockIdentifier::TwelveHourClock);
+    host.show();
+
+    const auto checkLocale = [&](const QLocale& expected) {
+        EXPECT_EQ(picker.locale(), expected);
+        EXPECT_EQ(picker.calendarView()->locale(), expected);
+        EXPECT_EQ(picker.startDatePicker()->locale(), expected);
+        EXPECT_EQ(picker.endDatePicker()->locale(), expected);
+        EXPECT_EQ(picker.startTimePicker()->locale(), expected);
+        EXPECT_EQ(picker.endTimePicker()->locale(), expected);
+    };
+    // An inherited locale must survive the popup leaving its original container.
+    // zh_CN: 弹窗离开原容器后，仍须保留范围控件继承的区域设置。
+    picker.openPicker();
+    settle();
+    ASSERT_TRUE(picker.isPickerOpen());
+    checkLocale(english);
+    picker.closePicker();
+    picker.setLocale(english);
+    QSignalSpy locales(&picker, &DateTimeRangePicker::localeChanged);
+    container.setLocale(QLocale(QLocale::French, QLocale::France));
+    EXPECT_EQ(picker.locale(), english);
+    EXPECT_EQ(locales.count(), 0);
+
+    picker.openPicker();
+    settle();
+    checkLocale(english);
+    const QLocale german(QLocale::German, QLocale::Germany);
+    picker.setLocale(german);
+    checkLocale(german);
+    auto* edit =
+        picker.startTimePicker()->findChild<QLineEdit*>(QStringLiteral("rangeStartTimeEdit"));
+    ASSERT_NE(edit, nullptr);
+    edit->setText(german.toString(QTime(13, 25), QStringLiteral("h:mm AP")));
+    QTest::keyClick(edit, Qt::Key_Return);
+    EXPECT_EQ(picker.startDateTime(), at(1, 13, 25));
+    picker.closePicker();
+    host.setLocale(QLocale(QLocale::Japanese, QLocale::Japan));
+    picker.openPicker();
+    settle();
+    checkLocale(german);
+    EXPECT_EQ(locales.count(), 1);
+}
+
 TEST(DateTimeRangePickerTest, Contract_AccessibilityRangeValuesAndActions)
 {
 #if QT_CONFIG(accessibility)
     DateTimeRangePicker picker;
+    picker.setLocale(QLocale::c());
     picker.setAccessibleName(QStringLiteral("Order time filter"));
     picker.setStartLabelText(QStringLiteral("Since"));
     auto* root = QAccessible::queryAccessibleInterface(&picker);
@@ -657,6 +897,7 @@ TEST(DateTimeRangePickerTest, Contract_InlineTimeAndDismissal)
     QWidget host;
     host.resize(900, 720);
     DateTimeRangePicker picker(&host);
+    picker.setLocale(QLocale(QLocale::English, QLocale::UnitedStates));
     picker.setRange(at(1, 10, 10), at(3, 15, 10));
     picker.setGeometry(40, 40, 500, picker.sizeHint().height());
     host.show();

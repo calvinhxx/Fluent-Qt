@@ -84,6 +84,17 @@ bash .github/scripts/install-linux-dependencies.sh apt
 bash .github/scripts/install-linux-dependencies.sh aqt
 ```
 
+When enabling QmlBridge with Ubuntu's Qt 6.2 packages, also install its Quick
+development headers and QML runtime modules. The matching private headers are
+needed only for the Qt 6.2–6.5 embedded-focus adapter:
+
+```bash
+sudo apt-get install -y --no-install-recommends \
+  qt6-base-private-dev qt6-declarative-dev qt6-declarative-private-dev \
+  qml6-module-qtquick qml6-module-qtqml \
+  qml6-module-qtqml-models qml6-module-qtqml-workerscript
+```
+
 If the Ubuntu `cmake` package is older than 3.25, install a newer user-local
 CMake or use another supported CMake distribution before running presets.
 
@@ -175,6 +186,12 @@ session. WSLg may be used as one optional local display host:
 QT_QPA_PLATFORM=xcb ./build/vcpkg-linux/tests/components/collections/test_list_view \
   --gtest_filter='ListViewTest.SelectedIndicatorSettlesAfterDragReorder'
 ```
+
+For QmlBridge on WSLg with Qt 6.2.4, use `QT_QPA_PLATFORM=xcb` for the desktop
+checks. The tested Ubuntu 22.04 environment can crash while rendering multiple
+`QQuickWidget` scenes through Wayland, including in a standalone Qt program
+without FluentQt. Track that environment limitation separately from XCB results;
+a passing XCB run does not validate Wayland.
 
 VisualCheck tests remain manual and use the same direct-binary pattern with
 `--gtest_filter="*VisualCheck*"`.

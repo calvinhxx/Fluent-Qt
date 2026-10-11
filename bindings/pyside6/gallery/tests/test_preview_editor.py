@@ -109,7 +109,7 @@ class PreviewEditorTest(unittest.TestCase):
         self.editor.select("workspace")
         state = self.editor.inspect()
         self.editor.apply({"row_padding": 8}, state["revision"], "workspace")
-        self.assertIn('"notifications": {"row_padding": 18', self.scene.read_text())
+        self.assertIn('"notifications": {"row_padding": 18', self.scene.read_text(encoding="utf-8"))
         manual = self.scene.read_bytes() + b'\n# Keep this external change\n'
         self.scene.write_bytes(manual)
         with self.assertRaises(RuntimeError):
@@ -119,15 +119,15 @@ class PreviewEditorTest(unittest.TestCase):
         self.editor.execute("editor_dismiss", {})
 
     def test_failed_candidate_restores_source_and_keeps_user_state(self):
-        source = self.scene.read_text().replace('def build(parent):\n',
+        source = self.scene.read_text(encoding="utf-8").replace('def build(parent):\n',
             'def build(parent):\n    if PREVIEW_EDITS["notifications"]["row_padding"] == 4:\n        raise RuntimeError("rejected test value")\n')
-        self.scene.write_text(source)
+        self.scene.write_text(source, encoding="utf-8")
         self.assertTrue(self.window.reload_scene())
         self.select()
         self.window.scene_widget.name.setText("still here")
         with self.assertRaisesRegex(RuntimeError, "could not load"):
             self.editor.apply({"row_padding": 4}, self.editor.inspect()["revision"], "notifications")
-        self.assertEqual(self.scene.read_text(), source)
+        self.assertEqual(self.scene.read_text(encoding="utf-8"), source)
         self.assertEqual(self.window.scene_widget.name.text(), "still here")
         self.assertIsNone(self.editor.history.pending)
 

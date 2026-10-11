@@ -14,6 +14,7 @@
 #include <QSignalSpy>
 #include <QScopeGuard>
 #include <QTest>
+#include <QtMath>
 #include "QmlBridgeTestModel.h"
 #include "components/qmlbridge/QmlSession.h"
 #include "components/qmlbridge/QmlTextureLayer.h"
@@ -22,6 +23,26 @@
 namespace {
 using fluent::qmlbridge::QmlSession;
 using fluent::qmlbridge::QmlView;
+
+qreal textureDpr(const QWidget& window)
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
+    // Older Quick render targets inherit the presenting window's density.
+    return window.devicePixelRatioF();
+#else
+    return 2;
+#endif
+}
+
+QSize texturePixels(const QSize& size, qreal dpr)
+{
+    return QSize(qCeil(size.width() * dpr), qCeil(size.height() * dpr));
+}
+
+QColor logicalPixel(const QImage& image, qreal dpr, int x, int y)
+{
+    return image.pixelColor(qRound(x * dpr), qRound(y * dpr));
+}
 
 QImage readTexture(QOpenGLWidget& viewport, unsigned int texture, const QSize& size)
 {
@@ -84,37 +105,45 @@ TEST_F(QmlTextureTest, Contract_NativeTextureKeepsSceneAndReusesStaticFrames)
     window.show();
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
     ASSERT_TRUE(QTest::qWaitFor([&] { return viewport.isValid(); }));
+    const qreal dpr = textureDpr(window);
     const QPointer<QObject> root(view->rootObject());
     auto* quick = view->findChild<QQuickWidget*>();
     ASSERT_NE(quick, nullptr);
     const QPointer<QQmlEngine> engine(quick->engine());
     ASSERT_FALSE(root.isNull());
+    auto* rootItem = qobject_cast<QQuickItem*>(root.data());
+    ASSERT_NE(rootItem, nullptr);
     ASSERT_TRUE(root->setProperty("localCounter", 41));
     QSignalSpy failures(view, &QmlView::textureRenderingFailed);
     int counter = 41;
+    window.raise();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+    // Older Wayland helpers can report exposure before activation arrives.
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.isActiveWindow(); }));
 
     for (int pass = 0; pass < 2; ++pass) {
         SCOPED_TRACE(pass);
         ASSERT_TRUE(view->setTextureRenderingEnabled(true));
-        ASSERT_TRUE(render(viewport, *view, 2));
+        ASSERT_TRUE(render(viewport, *view, dpr));
         EXPECT_TRUE(quick->isHidden());
         EXPECT_EQ(view->rootObject(), root);
         EXPECT_EQ(quick->engine(), engine);
         EXPECT_EQ(root->property("localCounter").toInt(), counter);
         ASSERT_NE(view->textureId(), 0u);
-        EXPECT_EQ(view->textureSize(), QSize(640, 400));
+        EXPECT_EQ(view->textureSize(), texturePixels(QSize(320, 200), dpr));
         const QImage image = readTexture(viewport, *view);
         ASSERT_FALSE(image.isNull());
-        EXPECT_EQ(image.pixelColor(20, 20), QColor(Qt::red));
-        EXPECT_EQ(image.pixelColor(620, 380), QColor(Qt::blue));
-        EXPECT_EQ(image.pixelColor(120, 200), QColor(Qt::green));
-        EXPECT_EQ(image.pixelColor(400, 200), QColor(QStringLiteral("#17212b")));
+        EXPECT_EQ(logicalPixel(image, dpr, 10, 10), QColor(Qt::red));
+        EXPECT_EQ(logicalPixel(image, dpr, 310, 190), QColor(Qt::blue));
+        EXPECT_EQ(logicalPixel(image, dpr, 60, 100), QColor(Qt::green));
+        EXPECT_EQ(logicalPixel(image, dpr, 200, 100), QColor(QStringLiteral("#17212b")));
         // Qt can request a resource-initialization frame during the first sync.
         // Require bounded convergence before checking the steady idle contract.
         quint64 previousRevision = view->textureRevision();
         ASSERT_TRUE(QTest::qWaitFor(
             [&] {
-                if (!render(viewport, *view, 2))
+                if (!render(viewport, *view, dpr))
                     return false;
                 const quint64 current = view->textureRevision();
                 const bool stable = current == previousRevision;
@@ -126,11 +155,12 @@ TEST_F(QmlTextureTest, Contract_NativeTextureKeepsSceneAndReusesStaticFrames)
         const auto frames = view->textureStatistics()[QStringLiteral("renderedFrames")];
         EXPECT_GT(frames.toULongLong(), 0u);
         for (int idle = 0; idle < 4; ++idle) {
-            ASSERT_TRUE(render(viewport, *view, 2));
+            ASSERT_TRUE(render(viewport, *view, dpr));
             EXPECT_EQ(view->textureRevision(), revision);
             EXPECT_EQ(view->textureStatistics()[QStringLiteral("renderedFrames")], frames);
         }
         QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, QPoint(100, 50));
+        EXPECT_TRUE(rootItem->hasActiveFocus());
         QTest::keyClick(view, Qt::Key_Return);
         counter += 2;
         EXPECT_EQ(root->property("localCounter").toInt(), counter);
@@ -144,26 +174,28 @@ TEST_F(QmlTextureTest, Contract_NativeTextureKeepsSceneAndReusesStaticFrames)
     }
 
     ASSERT_TRUE(view->setTextureRenderingEnabled(true));
-    ASSERT_TRUE(render(viewport, *view, 2));
+    ASSERT_TRUE(render(viewport, *view, dpr));
     const auto revision = view->textureRevision();
     model.setProgress(75);
     ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return render(viewport, *view, 2) && view->textureRevision() > revision; }));
+        [&] { return render(viewport, *view, dpr) && view->textureRevision() > revision; }));
     const auto updated = readTexture(viewport, *view);
     ASSERT_FALSE(updated.isNull());
-    EXPECT_EQ(updated.pixelColor(360, 200), QColor(Qt::green));
+    EXPECT_EQ(logicalPixel(updated, dpr, 180, 100), QColor(Qt::green));
     view->resize(360, 220);
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return render(viewport, *view, 2) && view->textureSize() == QSize(720, 440); }));
+    ASSERT_TRUE(QTest::qWaitFor([&] {
+        return render(viewport, *view, dpr) &&
+               view->textureSize() == texturePixels(QSize(360, 220), dpr);
+    }));
     const auto resized = readTexture(viewport, *view);
     ASSERT_FALSE(resized.isNull());
-    EXPECT_EQ(resized.pixelColor(700, 420), QColor(Qt::blue));
+    EXPECT_EQ(logicalPixel(resized, dpr, 350, 210), QColor(Qt::blue));
     viewport.makeCurrent();
     view->releaseTexture();
     viewport.doneCurrent();
     EXPECT_EQ(view->textureId(), 0u);
     EXPECT_EQ(view->rootObject(), root);
-    ASSERT_TRUE(render(viewport, *view, 2));
+    ASSERT_TRUE(render(viewport, *view, dpr));
     EXPECT_NE(view->textureId(), 0u);
 
     QObject::connect(&model, &QmlBridgeTestModel::stopRequested, &session, [&] {
@@ -301,12 +333,13 @@ TEST_F(QmlTextureTest, Contract_NativeLayerClipsAndReusesBorrowedTextures)
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
     ASSERT_TRUE(QTest::qWaitFor([&] { return viewport.isValid(); }));
     const QRectF source(0, 0, 360, 240);
-    const quint64 required = layer.requiredBytes(source, 2);
+    const qreal dpr = textureDpr(window);
+    const quint64 required = layer.requiredBytes(source, dpr);
     ASSERT_GT(required, 0u);
     ASSERT_LT(required, quint64(67108864));
     viewport.makeCurrent();
-    ASSERT_TRUE(layer.prepareFrame(viewport.context(), source, 2, 67108864));
-    auto base = std::make_unique<QOpenGLFramebufferObject>(QSize(720, 480));
+    ASSERT_TRUE(layer.prepareFrame(viewport.context(), source, dpr, 67108864));
+    auto base = std::make_unique<QOpenGLFramebufferObject>(texturePixels(QSize(360, 240), dpr));
     ASSERT_TRUE(base->isValid());
     ASSERT_TRUE(base->bind());
     auto* functions = viewport.context()->functions();
@@ -318,17 +351,17 @@ TEST_F(QmlTextureTest, Contract_NativeLayerClipsAndReusesBorrowedTextures)
     viewport.doneCurrent();
     const QImage composed = readTexture(viewport, texture, base->size());
     ASSERT_FALSE(composed.isNull());
-    EXPECT_EQ(composed.pixelColor(60, 60), QColor(Qt::red));
-    EXPECT_EQ(composed.pixelColor(160, 240), QColor(Qt::green));
-    EXPECT_EQ(composed.pixelColor(400, 240), QColor(QStringLiteral("#17212b")));
-    EXPECT_EQ(composed.pixelColor(460, 60), QColor(Qt::cyan))
+    EXPECT_EQ(logicalPixel(composed, dpr, 30, 30), QColor(Qt::red));
+    EXPECT_EQ(logicalPixel(composed, dpr, 80, 120), QColor(Qt::green));
+    EXPECT_EQ(logicalPixel(composed, dpr, 200, 120), QColor(QStringLiteral("#17212b")));
+    EXPECT_EQ(logicalPixel(composed, dpr, 230, 30), QColor(Qt::cyan))
         << "A QML texture must not paint outside its clipping ancestor";
-    EXPECT_EQ(composed.pixelColor(660, 420), QColor(Qt::cyan));
+    EXPECT_EQ(logicalPixel(composed, dpr, 330, 210), QColor(Qt::cyan));
     const auto frames = view->textureStatistics()[QStringLiteral("renderedFrames")];
     const auto compositions = layer.statistics()[QStringLiteral("compositions")];
     ASSERT_GT(compositions.toULongLong(), 0u);
     viewport.makeCurrent();
-    ASSERT_TRUE(layer.prepareFrame(viewport.context(), source, 2, 67108864));
+    ASSERT_TRUE(layer.prepareFrame(viewport.context(), source, dpr, 67108864));
     EXPECT_EQ(layer.compose(base->texture(), base->size(), 7), texture);
     EXPECT_EQ(layer.statistics()[QStringLiteral("compositions")], compositions);
     EXPECT_EQ(view->textureStatistics()[QStringLiteral("renderedFrames")], frames);
@@ -340,11 +373,11 @@ TEST_F(QmlTextureTest, Contract_NativeLayerClipsAndReusesBorrowedTextures)
     model.setProgress(75);
     ASSERT_TRUE(QTest::qWaitFor([&] {
         viewport.makeCurrent();
-        const bool prepared = layer.prepareFrame(viewport.context(), source, 2, 67108864);
+        const bool prepared = layer.prepareFrame(viewport.context(), source, dpr, 67108864);
         const auto refreshed = prepared ? layer.compose(base->texture(), base->size(), 8) : 0u;
         viewport.doneCurrent();
         const QImage image = refreshed ? readTexture(viewport, refreshed, base->size()) : QImage();
-        return !image.isNull() && image.pixelColor(400, 240) == QColor(Qt::green);
+        return !image.isNull() && logicalPixel(image, dpr, 200, 120) == QColor(Qt::green);
     })) << "A new QML texture revision must refresh the composed panel without a Widget repaint";
     EXPECT_GT(view->textureStatistics()[QStringLiteral("renderedFrames")].toULongLong(),
               frames.toULongLong());
@@ -354,6 +387,10 @@ TEST_F(QmlTextureTest, Contract_NativeLayerClipsAndReusesBorrowedTextures)
     EXPECT_EQ(root->property("localCounter").toInt(), count);
     QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier, QPoint(30, 30));
     EXPECT_EQ(root->property("localCounter").toInt(), count + 1);
+    // Native event delivery can leave Qt's widget context current on Windows.
+    // Establish the no-context cleanup case independently of that platform detail.
+    if (auto* current = QOpenGLContext::currentContext())
+        current->doneCurrent();
     ASSERT_EQ(QOpenGLContext::currentContext(), nullptr);
     layer.setRootWidget(nullptr);
     EXPECT_EQ(layer.textureId(), 0u);
@@ -366,7 +403,7 @@ TEST_F(QmlTextureTest, Contract_NativeLayerClipsAndReusesBorrowedTextures)
     ASSERT_TRUE(layer.synchronize());
     const auto rebuild = [&] {
         viewport.makeCurrent();
-        const bool prepared = layer.prepareFrame(viewport.context(), source, 2, 67108864);
+        const bool prepared = layer.prepareFrame(viewport.context(), source, dpr, 67108864);
         const unsigned int composed =
             prepared ? layer.compose(base->texture(), base->size(), 9) : 0u;
         const GLenum error = functions->glGetError();
@@ -440,6 +477,7 @@ TEST_F(QmlTextureTest, Contract_NativeLayerDefersReentrantCleanup)
     ASSERT_TRUE(QTest::qWaitFor([&] { return viewport.isValid(); }));
 
     bool preparing = false;
+    const qreal dpr = textureDpr(window);
     bool switched = false;
     bool released = false;
     QSignalSpy errors(&layer, &fluent::qmlbridge::QmlTextureLayer::renderingFailed);
@@ -460,7 +498,7 @@ TEST_F(QmlTextureTest, Contract_NativeLayerDefersReentrantCleanup)
     const QRectF source(0, 0, 360, 240);
     viewport.makeCurrent();
     preparing = true;
-    const bool oldPagePrepared = layer.prepareFrame(viewport.context(), source, 2, 67108864);
+    const bool oldPagePrepared = layer.prepareFrame(viewport.context(), source, dpr, 67108864);
     preparing = false;
     QObject::disconnect(switchConnection);
     EXPECT_TRUE(switched);
@@ -472,7 +510,7 @@ TEST_F(QmlTextureTest, Contract_NativeLayerDefersReentrantCleanup)
     EXPECT_EQ(layer.statistics()[QStringLiteral("allocatedBytes")].toULongLong(), 0u);
     EXPECT_EQ(QOpenGLContext::currentContext(), viewport.context());
     ASSERT_TRUE(layer.synchronize());
-    ASSERT_TRUE(layer.prepareFrame(viewport.context(), source, 2, 67108864));
+    ASSERT_TRUE(layer.prepareFrame(viewport.context(), source, dpr, 67108864));
     EXPECT_EQ(layer.statistics()[QStringLiteral("visibleViews")].toInt(), 0);
     viewport.doneCurrent();
 
@@ -490,7 +528,7 @@ TEST_F(QmlTextureTest, Contract_NativeLayerDefersReentrantCleanup)
         Qt::DirectConnection);
     viewport.makeCurrent();
     preparing = true;
-    const bool releasedPagePrepared = layer.prepareFrame(viewport.context(), source, 2, 67108864);
+    const bool releasedPagePrepared = layer.prepareFrame(viewport.context(), source, dpr, 67108864);
     preparing = false;
     QObject::disconnect(releaseConnection);
     EXPECT_TRUE(released);
@@ -513,7 +551,7 @@ TEST_F(QmlTextureTest, Contract_NativeLayerDefersReentrantCleanup)
 
     ASSERT_TRUE(layer.synchronize());
     viewport.makeCurrent();
-    ASSERT_TRUE(layer.prepareFrame(viewport.context(), source, 2, 67108864));
+    ASSERT_TRUE(layer.prepareFrame(viewport.context(), source, dpr, 67108864));
     EXPECT_NE(view->textureId(), 0u);
     EXPECT_EQ(layer.statistics()[QStringLiteral("visibleViews")].toInt(), 1);
     EXPECT_EQ(viewport.context()->functions()->glGetError(), GLenum(GL_NO_ERROR));
@@ -568,8 +606,9 @@ TEST_F(QmlTextureTest, Contract_RoundedScenesPreserveAlpha)
     QSignalSpy failures(view, &QmlView::textureRenderingFailed);
     fluent::qmlbridge::QmlTextureLayer layer;
     layer.setRootWidget(&host);
+    const qreal dpr = textureDpr(window);
     viewport.makeCurrent();
-    auto base = std::make_unique<QOpenGLFramebufferObject>(QSize(320, 200));
+    auto base = std::make_unique<QOpenGLFramebufferObject>(texturePixels(host.size(), dpr));
     ASSERT_TRUE(base->isValid());
     ASSERT_TRUE(base->bind());
     auto* functions = viewport.context()->functions();
@@ -631,7 +670,7 @@ TEST_F(QmlTextureTest, Contract_RoundedScenesPreserveAlpha)
 
         ASSERT_TRUE(layer.synchronize());
         viewport.makeCurrent();
-        const bool prepared = layer.prepareFrame(viewport.context(), host.rect(), 2, 67108864);
+        const bool prepared = layer.prepareFrame(viewport.context(), host.rect(), dpr, 67108864);
         const unsigned int composed =
             prepared ? layer.compose(base->texture(), base->size(), ++baseRevision) : 0u;
         viewport.doneCurrent();

@@ -79,7 +79,7 @@ class GalleryGraphicsPolicyTest(unittest.TestCase):
 import os
 import sys
 from unittest.mock import patch
-from PySide6.QtQuick import QQuickWindow
+from PySide6.QtQuick import QQuickWindow, QSGRendererInterface
 from PySide6.QtWidgets import QApplication
 from fluentqt._fluentqt import fluent as native
 from fluentqt.qmlbridge import QmlSession
@@ -102,9 +102,9 @@ with patch.object(native._SpatialTextureHost, "isPreferred", return_value=prefer
     assert bool(application.property("fluentqtGalleryGraphicsBackendFailure")) == (
         scenario == "explicit-conflict")
     if scenario == "default":
-        assert QQuickWindow.graphicsApi().name == "OpenGL"
+        assert QQuickWindow.graphicsApi() == QSGRendererInterface.GraphicsApi.OpenGL
     elif scenario == "rhi":
-        assert QQuickWindow.graphicsApi().name == native_api
+        assert QQuickWindow.graphicsApi() == getattr(QSGRendererInterface.GraphicsApi, native_api)
     else:
         assert QQuickWindow.graphicsApi() == original
 assert environment == {name: os.environ.get(name) for name in environment}

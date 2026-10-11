@@ -258,6 +258,45 @@ def shiboken_generator_options():
     )
 
 
+def add_signal_declarations(contents, signals_by_class):
+    """Fill signals omitted by older Shiboken generators from native metadata."""
+    insertions = {}
+
+    def visit(nodes, parents=()):
+        for node in nodes:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            path = (*parents, node.name)
+            declared = set()
+            for member in node.body:
+                if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    declared.add(member.name)
+                elif isinstance(member, ast.AnnAssign) and isinstance(member.target, ast.Name):
+                    declared.add(member.target.id)
+                elif isinstance(member, ast.Assign):
+                    declared.update(target.id for target in member.targets if isinstance(target, ast.Name))
+            missing = sorted(set(signals_by_class.get(".".join(path), ())) - declared)
+            if missing:
+                indent = node.col_offset + 4
+                lines = [" " * indent + name + ": typing.ClassVar[PySide6.QtCore.Signal] = ...\n"
+                         for name in missing]
+                insertions.setdefault(node.end_lineno, []).append((indent, lines))
+            visit(node.body, path)
+
+    visit(ast.parse(contents).body)
+    if not insertions:
+        return contents
+    lines = contents.splitlines(keepends=True)
+    for position, groups in sorted(insertions.items(), reverse=True):
+        if not lines[position - 1].endswith("\n"):
+            lines[position - 1] += "\n"
+        # A nested class can end on the same line as its outer class. Finish
+        # the deeper body first so both sets of declarations keep their owner.
+        additions = [line for _, group in sorted(groups, reverse=True) for line in group]
+        lines[position:position] = additions
+    return "".join(lines)
+
+
 def generate_native_stub(extension, package_dir):
     # Importing shiboken6 installs the virtual shibokensupport package used by
     # recent releases.  The PySide6 fallback keeps the Qt 6.2 layout working.
@@ -289,8 +328,15 @@ def generate_native_stub(extension, package_dir):
     generator.inspect = inspect
     generator.typing = typing
 
+    native_signals = {}
+
     class BindingHintingEnumerator(enum_sig.HintingEnumerator):
         def klass(self, class_name, klass, *args, **kwargs):
+            if klass.__module__ in NATIVE_MODULE_NAMES:
+                native_signals[klass.__qualname__] = [
+                    name for name, member in vars(klass).items()
+                    if isinstance(member, PySide6.QtCore.Signal)
+                ]
             # Shiboken skips nested classes whose names contain "._". These
             # private native bases are needed by our public Python facades.
             # Enumerate their native signatures with a temporary visible name.
@@ -322,6 +368,7 @@ def generate_native_stub(extension, package_dir):
     # typing.Self was added in Python 3.11.  Preserve the declared Python 3.10
     # floor without adding a runtime typing_extensions dependency.
     contents = contents.replace("typing.Self", "typing.Any")
+    contents = add_signal_declarations(contents, native_signals)
     ast.parse(contents, filename=str(native_stub))
     native_stub.write_text(contents, encoding="utf-8")
 
