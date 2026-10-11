@@ -1,3 +1,5 @@
+#include "compatibility/private/QuickCompat_p.h"
+#include "compatibility/private/CoreCompat_p.h"
 #include "QmlView.h"
 
 #include <QApplication>
@@ -33,7 +35,7 @@ protected:
     bool event(QEvent* event) override
     {
         const auto type = event->type();
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
+#if FLUENT_QUICK_NEEDS_UNSHOWN_REPARENT_GUARD
         // Qt 6.2 reloads the component when an unshown preview is adopted by a
         // window. Before scene-graph initialization there are no GPU resources
         // to rebind, and first show will create them for the final host.
@@ -54,7 +56,7 @@ protected:
     }
 
 private:
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
+#if FLUENT_QUICK_NEEDS_UNSHOWN_REPARENT_GUARD
     bool m_hasBeenShown = false;
 #endif
 };
@@ -453,7 +455,7 @@ bool QmlView::setTextureRenderingEnabled(bool enabled)
     if (enabled) {
         if (detail::usesSoftwareQuick())
             return false;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
         if (QQuickWindow::graphicsApi() != QSGRendererInterface::OpenGL)
             return false;
 #endif
@@ -616,15 +618,7 @@ bool QmlView::event(QEvent* event)
             }
             if (!lifetime || !scene)
                 return true;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-            QMouseEvent mapped(mouse->type(), mouse->position(), mouse->position(),
-                               mouse->globalPosition(), mouse->button(), mouse->buttons(),
-                               mouse->modifiers(), mouse->source(), mouse->pointingDevice());
-#else
-            QMouseEvent mapped(mouse->type(), mouse->localPos(), mouse->localPos(),
-                               mouse->screenPos(), mouse->button(), mouse->buttons(),
-                               mouse->modifiers(), mouse->source());
-#endif
+            QMouseEvent mapped = ::compatibility::mouseEventForLocalScene(mouse);
             mapped.setTimestamp(mouse->timestamp());
             const bool handled = QCoreApplication::sendEvent(scene, &mapped);
             event->setAccepted(mapped.isAccepted());

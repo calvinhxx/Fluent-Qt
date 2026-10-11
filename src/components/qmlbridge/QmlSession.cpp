@@ -1,3 +1,4 @@
+#include "compatibility/private/QuickCompat_p.h"
 #include "QmlSession.h"
 
 #include <QQuickWindow>
@@ -21,7 +22,7 @@ bool isKnownGraphicsApi(QmlSession::GraphicsApi api)
     return false;
 }
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
 QSGRendererInterface::GraphicsApi quickGraphicsApi(QmlSession::GraphicsApi api)
 {
     switch (api) {
@@ -65,7 +66,7 @@ void QmlSession::prepareApplication(GraphicsApi api)
 {
     if (!isKnownGraphicsApi(api))
         return;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
     QQuickWindow::setGraphicsApi(quickGraphicsApi(api));
 #else
     Q_UNUSED(api)
@@ -77,7 +78,7 @@ bool QmlSession::isGraphicsApiCompatible(GraphicsApi api)
         return false;
     if (api == GraphicsApi::Automatic || detail::usesSoftwareQuick())
         return true;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
     const auto selected = QQuickWindow::graphicsApi();
     return selected == QSGRendererInterface::Software || selected == quickGraphicsApi(api);
 #else

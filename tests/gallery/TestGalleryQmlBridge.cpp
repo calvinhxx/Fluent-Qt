@@ -1,3 +1,4 @@
+#include "compatibility/private/QuickCompat_p.h"
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -653,7 +654,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_AtomicSamplesKeepIndependentState)
             ASSERT_NE(nativeQuick, nullptr);
             const QColor backdrop = theme->themeObject()->property("surfaceAlt").value<QColor>();
             const auto grabFrame = [nativeQuick] {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#if !FLUENT_QUICK_USES_RHI
                 // Qt 5's software widget paints its own cached image; read
                 // that presentation instead of reentering render-control grab.
                 if (nativeQuick->quickWindow()->rendererInterface()->graphicsApi() ==
@@ -1213,7 +1214,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeQmlFailureKeepsTheCompletedFrameUnti
         } else {
             auto* item = qobject_cast<QQuickItem*>(root.data());
             ASSERT_TRUE(item && item->window());
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if FLUENT_QUICK_USES_RHI
             const auto frameFinished = &QQuickWindow::afterFrameEnd;
 #else
             const auto frameFinished = &QQuickWindow::afterRendering;
