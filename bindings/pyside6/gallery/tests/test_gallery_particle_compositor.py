@@ -1,6 +1,7 @@
 """Paint-order, fallback and real-context contracts for Gallery GPU particles."""
 import sys
 import unittest
+from unittest.mock import patch
 
 import fluentqt
 from fluentqt._qt_compat import delete_qobject as delete
@@ -142,6 +143,20 @@ class GalleryParticleCompositorTest(unittest.TestCase):
             compositor.release()
             delete(compositor)
             delete(root)
+
+    def test_missing_optional_spatial_binding_keeps_cpu_fallback(self):
+        with patch.dict(sys.modules, {"fluentqt.spatial": None}):
+            root = QWidget()
+            compositor = GalleryParticleCompositor()
+            try:
+                self.assertIsNone(compositor.session)
+                self.assertFalse(compositor.prepare(root, 1, QSize(300, 180), 1, 1, 32 << 20, True))
+                self.assertEqual(compositor.activeLayerCount(), 0)
+                self.assertEqual(compositor.allocatedBytes(), 0)
+            finally:
+                compositor.release()
+                delete(compositor)
+                delete(root)
 
     def _native_context(self):
         if QApplication.platformName() in ("offscreen", "minimal", "vnc"):

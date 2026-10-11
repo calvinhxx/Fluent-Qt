@@ -316,16 +316,23 @@ assert target.isEnabled()
 
     def test_computed_evaluator_can_destroy_its_target_without_stale_writes(self):
         source, target = QSlider(), QLabel()
+        expression_survived = []
 
         def compute():
             if source.value() == 40:
+                expression = target._fluentqt_binding_expressions["text"]
                 shiboken6.delete(target)
+                expression_survived.append(shiboken6.isValid(expression))
             return "value"
 
         handle = fluentqt.bind_computed(target, "text", [(source, "value")], compute)
+        expression = target._fluentqt_binding_expressions["text"]
         source.setValue(40)
+        self.assertEqual(expression_survived, [True])
         self.assertFalse(shiboken6.isValid(target))
         self.assertFalse(handle.isValid())
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        self.assertFalse(shiboken6.isValid(expression))
 
     def test_conditional_signal_can_destroy_the_controller(self):
         source, label = QSlider(), QLabel("Default")

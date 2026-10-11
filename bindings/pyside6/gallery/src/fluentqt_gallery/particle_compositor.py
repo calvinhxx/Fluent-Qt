@@ -209,12 +209,16 @@ class GalleryParticleCompositor(QObject):
         super().__init__(parent)
         self.session = session
         if self.session is None:
-            from fluentqt.spatial import SpatialSession
-            self.session = SpatialSession(parent, self)
-            if not self.session.activate():
-                if _alive(self.session):
-                    delete_qobject(self.session)
-                self.session = None
+            try:
+                from fluentqt.spatial import SpatialSession
+            except (ImportError, AttributeError):
+                SpatialSession = None
+            if SpatialSession is not None:
+                self.session = SpatialSession(parent, self)
+                if not self.session.activate():
+                    if _alive(self.session):
+                        delete_qobject(self.session)
+                    self.session = None
         self.root = self.context = None
         self.candidates = []
         self.sources, self.source_rects, self.source_clips, self.layers = [], [], [], []

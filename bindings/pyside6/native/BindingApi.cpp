@@ -46,6 +46,27 @@ static_assert(static_cast<int>(fluent::binding::BindingMode::TwoWay) ==
 
 namespace {
 
+QVariant readBindingExpression(const QPointer<QObject>& expression)
+{
+    if (!expression)
+        return {};
+    // A Python evaluator may delete its target. Keep the expression outside
+    // that target's child teardown until Qt has finished reading its property.
+    // zh_CN: Python 求值器可能删除目标；属性读取结束前避免表达式随目标一起析构。
+    const QPointer<QObject> owner(expression->parent());
+    const bool hadOwner = !owner.isNull();
+    if (hadOwner)
+        expression->setParent(nullptr);
+    const QVariant value = expression->property("value");
+    if (expression && hadOwner && !expression->parent()) {
+        if (owner)
+            expression->setParent(owner);
+        else
+            expression->deleteLater();
+    }
+    return value;
+}
+
 fluent::AnchorLayout::Edge toAnchorEdge(fluent::binding::AnchorEdge edge)
 {
     using BindingEdge = fluent::binding::AnchorEdge;
@@ -467,7 +488,7 @@ bool fluent::binding::StateGroup::configureState(const QString& name, const QStr
     state.dependencies = dependencies;
     const QPointer<QObject> guardedCondition(condition);
     state.when = condition ? std::function<bool()>([guardedCondition] {
-        return guardedCondition && guardedCondition->property("value").toBool();
+        return readBindingExpression(guardedCondition).toBool();
     })
                            : std::function<bool()>();
     d_ptr->states[name] = state;
@@ -765,7 +786,7 @@ fluent::BindingHandle bindComputedProperties(QObject* target, const QString& tar
     options.deferred = deferred;
     return fluent::PropertyBinder::bindComputed(
         target, targetProperty.toUtf8().constData(), dependencies,
-        [guard] { return guard ? guard->property("value") : QVariant(); }, options);
+        [guard] { return readBindingExpression(guard); }, options);
 }
 
 bool setPropertyBehavior(QObject* target, const QString& property, int duration)
