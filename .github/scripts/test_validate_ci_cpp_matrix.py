@@ -129,6 +129,31 @@ class ValidateCiCppMatrixTest(unittest.TestCase):
                     for error in MODULE.validate_catalog(catalog)
                 ))
 
+    def test_sdk_installation_cannot_omit_a_configured_library_build(self):
+        for target in ("FluentQt", "FluentQtSpatial", "FluentQtQmlBridge"):
+            with self.subTest(target=target):
+                catalog = copy.deepcopy(self.catalog)
+                scenario = next(item for item in catalog["scenarios"]
+                                if item["id"] == "mac-arm64-qt62-build")
+                scenario["build_targets"] = " ".join(
+                    value for value in scenario["build_targets"].split()
+                    if value != target
+                )
+                self.assertTrue(any(
+                    "SDK installation lane must build target " + target in error
+                    for error in MODULE.validate_catalog(catalog)
+                ))
+
+    def test_sdk_installation_keeps_qml_bridge_enabled(self):
+        catalog = copy.deepcopy(self.catalog)
+        scenario = next(item for item in catalog["scenarios"]
+                        if item["id"] == "mac-arm64-qt62-build")
+        scenario["configure_args"] = "-DBUILD_TESTING=OFF"
+        self.assertTrue(any(
+            "SDK installation lane must enable QmlBridge" in error
+            for error in MODULE.validate_catalog(catalog)
+        ))
+
 
 if __name__ == "__main__":
     unittest.main()
