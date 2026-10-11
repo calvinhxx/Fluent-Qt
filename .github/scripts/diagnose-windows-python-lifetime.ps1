@@ -57,14 +57,21 @@ $filters = @('av', '0xc0000409', '0xc0000374', 'bpe') | ForEach-Object {
 $commands = ($filters -join '; ') + '; g'
 $mode = if ($PageHeap) { 'page-heap' } else { 'ordinary-heap' }
 $stackLog = Join-Path $report "native-stack-$mode.log"
+$resultPath = Join-Path $report "probe-result-$mode.json"
 $probe = Join-Path $report 'repeat-foundation.py'
 @'
+import json
+from pathlib import Path
 import runpy
 import sys
 import unittest
 case = runpy.run_path(sys.argv[1], run_name='foundation_probe')['FoundationAuthoringTest']
 suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for _ in range(25))
 result = unittest.TextTestRunner(verbosity=2, failfast=True).run(suite)
+Path(sys.argv[2]).write_text(json.dumps({
+    'success': result.wasSuccessful(), 'tests_run': result.testsRun,
+    'failures': len(result.failures), 'errors': len(result.errors),
+}) + '\n', encoding='utf-8')
 raise SystemExit(not result.wasSuccessful())
 '@ | Set-Content -LiteralPath $probe -Encoding utf8
 foreach ($name in @('fluent_binding_stategroup_wrapper.cpp', 'fluent_binding_stategroup_wrapper.h')) {
@@ -84,7 +91,7 @@ try {
     foreach ($argument in @(
         '-G', '-logo', $stackLog,
         '-y', $symbols, '-c', $commands,
-        $python, '-X', 'faulthandler', $probe, $test
+        $python, '-X', 'faulthandler', $probe, $test, $resultPath
     )) {
         $start.ArgumentList.Add($argument)
     }
@@ -98,8 +105,13 @@ try {
         throw "Native lifetime diagnostics exited with $($process.ExitCode)."
     }
     if (Select-String -LiteralPath $stackLog -Pattern '^FLUENTQT_NATIVE_LIFETIME_FAULT' -Quiet) {
-        throw 'Native lifetime diagnostics captured an invalid memory access.'
+        throw 'Native lifetime diagnostics captured a fatal exception.'
     }
+    $result = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
+    if (!$result.success -or $result.tests_run -lt 600) {
+        throw "Repeated lifetime assertions failed: $(ConvertTo-Json $result -Compress)"
+    }
+    Write-Host "Verified $($result.tests_run) lifetime assertions under $mode."
 } finally {
     if ($process -and !$process.HasExited) {
         $process.Kill($true)

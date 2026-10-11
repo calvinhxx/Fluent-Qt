@@ -712,6 +712,7 @@ jobs:
           name: fluentqt-windows-python-lifetime-diagnostics
           path: |
             ${{ runner.temp }}/fluentqt-lifetime-diagnostics/*.log
+            ${{ runner.temp }}/fluentqt-lifetime-diagnostics/*.json
             ${{ runner.temp }}/fluentqt-lifetime-diagnostics/*.cpp
             ${{ runner.temp }}/fluentqt-lifetime-diagnostics/*.h
           if-no-files-found: warn

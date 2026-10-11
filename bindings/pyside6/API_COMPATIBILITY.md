@@ -107,6 +107,14 @@ three read-only, selection/column, and editing/validation scenarios as C++.
 
 ## Gates
 
+On Qt/PySide6 6.2.4, use `QObject.deleteLater()` for application object teardown.
+The bundled Shiboken has an
+[upstream `delete()` defect](https://github.com/pyside/pyside-setup/commit/fca1416b4f4aedc640f05a8183e04b67ea117495)
+that can mistake an ordinary wrapper for `QApplication` and destroy the application.
+Lifetime regressions explicitly deliver Qt's `DeferredDelete` events when they
+need synchronous destruction inside a callback, and check that the application
+remains alive.
+
 `optional_modules` in the manifest records APIs enabled by a source-build option.
 Their public names are imported from the declared category module and validated
 when that module is packaged. Default builds need not export these names.
