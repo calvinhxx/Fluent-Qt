@@ -188,6 +188,17 @@ def validate_catalog(data: Any) -> list[str]:
                 f"{', '.join(unexpected_trials)}"
             )
 
+    sdk_scenario = scenarios_by_id.get("mac-arm64-qt62-build")
+    if sdk_scenario is not None:
+        targets = sdk_scenario.get("build_targets", "")
+        built = set(targets.split()) if isinstance(targets, str) else set()
+        for target in ("FluentQt", "FluentQtSpatial", "FluentQtQmlBridge"):
+            if target not in built:
+                errors.append(f"macOS SDK installation lane must build target {target}")
+        options = sdk_scenario.get("configure_args", "")
+        if not isinstance(options, str) or "-DFLUENT_QT_BUILD_QML_BRIDGE=ON" not in options.split():
+            errors.append("macOS SDK installation lane must enable QmlBridge")
+
     for lane, contract in REQUIRED_EXECUTION_LANES.items():
         scenario_id = contract["id"]
         scenario = scenarios_by_id.get(scenario_id)
