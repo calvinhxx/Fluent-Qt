@@ -21,6 +21,15 @@ from PySide6.QtWidgets import QApplication, QLabel, QSlider, QWidget
 from PySide6.QtTest import QTest
 
 
+def delete_qobject_immediately(obj):
+    # Shiboken 6.2.4 delete() has an uninitialized isQAppSingleton flag.
+    # Deliver Qt's deletion event synchronously to retain reentrancy coverage.
+    obj.deleteLater()
+    QCoreApplication.sendPostedEvents(obj, QEvent.DeferredDelete)
+    if shiboken6.isValid(obj):
+        raise AssertionError("Qt did not synchronously delete the test object")
+
+
 class FoundationAuthoringTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -29,6 +38,8 @@ class FoundationAuthoringTest(unittest.TestCase):
             raise RuntimeError("FluentQt resources could not be initialized")
 
     def tearDown(self):
+        self.assertTrue(shiboken6.isValid(self.app), "Object teardown deleted QApplication")
+        self.assertIs(QApplication.instance(), self.app)
         fluentqt.reset_theme_tokens()
         fluentqt.set_theme(fluentqt.Theme.Light)
         fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
@@ -190,7 +201,7 @@ assert target.isEnabled()
     def test_legacy_bind_reports_target_destruction_during_initial_sync(self):
         source, target = QSlider(), QSlider()
         source.setValue(20)
-        target.valueChanged.connect(lambda value: shiboken6.delete(target))
+        target.valueChanged.connect(lambda value: delete_qobject_immediately(target))
         with self.assertRaises(ValueError):
             fluentqt.bind(source, "value", target, "value")
         self.assertFalse(shiboken6.isValid(target))
@@ -266,12 +277,6 @@ assert target.isEnabled()
         self.assertEqual(len(calls), count)
 
     def test_computed_failure_holds_value_and_invalid_replacement_preserves_binding(self):
-        # Windows native fast-fail can bypass Python's fault handler.
-        def checkpoint(stage):
-            if sys.platform == "win32":
-                print("Computed binding regression: " + stage, flush=True)
-
-        checkpoint("create endpoints")
         source, label = QSlider(), QLabel()
 
         def compute():
@@ -279,20 +284,17 @@ assert target.isEnabled()
                 raise RuntimeError("expression failed")
             return str(source.value())
 
-        checkpoint("initial evaluation")
         handle = fluentqt.bind_computed(label, "text", [(source, "value")], compute)
         errors = []
         expression = label._fluentqt_binding_expressions["text"]
         expression.error_occurred.connect(
             lambda error: errors.append((error, sys.exc_info()[0])))
         source.setValue(25)
-        checkpoint("reject invalid replacement")
         with self.assertRaises(ValueError):
             fluentqt.bind_computed(label, "text", [(source, "missing")], lambda: "bad")
         self.assertTrue(handle.isValid())
         source.setValue(30)
         self.assertEqual(label.text(), "30")
-        checkpoint("pause after evaluation error")
         source.setValue(60)
         self.assertEqual(label.text(), "30")
         self.assertTrue(handle.isSuspended())
@@ -301,15 +303,12 @@ assert target.isEnabled()
         self.assertIs(errors[0][0], handle.last_error)
         self.assertIsNone(errors[0][1])
         source.setValue(35)
-        checkpoint("resume evaluation")
         handle.resume()
         self.assertEqual(label.text(), "35")
         self.assertIsNone(handle.last_error)
-        checkpoint("replace binding")
         replacement = fluentqt.bind_managed(source, "value", label, "text")
         self.assertTrue(replacement.isValid())
         self.assertFalse(handle.isValid())
-        checkpoint("flush deferred deletion")
         QApplication.processEvents()
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         self.assertFalse(getattr(label, "_fluentqt_binding_expressions", {}))
@@ -342,7 +341,7 @@ assert target.isEnabled()
             if source.value() == 40:
                 expression = target._fluentqt_binding_expressions["text"]
                 evaluator_ownership.append(shiboken6.ownedByPython(expression))
-                shiboken6.delete(target)
+                delete_qobject_immediately(target)
                 expression_survived.append(shiboken6.isValid(expression))
             return "value"
 
@@ -371,7 +370,7 @@ assert target.isEnabled()
         expression = target._fluentqt_binding_expressions["text"]
 
         def failed(error):
-            shiboken6.delete(target)
+            delete_qobject_immediately(target)
             expression_survived.append(shiboken6.isValid(expression))
 
         expression.error_occurred.connect(failed)
@@ -385,7 +384,7 @@ assert target.isEnabled()
         target = QLabel()
 
         def compute():
-            shiboken6.delete(target)
+            delete_qobject_immediately(target)
             return "unused"
 
         with self.assertRaisesRegex(ValueError, "destroyed its target"):
@@ -403,18 +402,8 @@ assert target.isEnabled()
             if source.value() == 40:
                 expression = states._fluentqt_conditions["active"]
                 evaluator_ownership.append(shiboken6.ownedByPython(expression))
-                ownership = None
-                if sys.platform == "win32":
-                    ownership = (shiboken6.dump(states), shiboken6.dump(expression),
-                                 str(expression.parent()),
-                                 [(type(child).__name__, shiboken6.getCppPointer(child))
-                                  for child in states.children()])
-                shiboken6.delete(states)
+                delete_qobject_immediately(states)
                 expression_survived.append(shiboken6.isValid(expression))
-                if not expression_survived[-1] and ownership is not None:
-                    print("Controller ownership before deletion:", ownership[0], flush=True)
-                    print("Expression ownership before deletion:", ownership[1], flush=True)
-                    print("Expression parent and native children:", ownership[2:], flush=True)
             return False
 
         states.add("active", {target: {"text": "Active"}}, when=condition,
@@ -431,7 +420,7 @@ assert target.isEnabled()
     def test_conditional_signal_can_destroy_the_controller(self):
         source, label = QSlider(), QLabel("Default")
         states = fluentqt.StateGroup()
-        states.state_changed.connect(lambda name: shiboken6.delete(states) if name else None)
+        states.state_changed.connect(lambda name: delete_qobject_immediately(states) if name else None)
         states.add("active", {label: {"text": "Active"}},
                    when=lambda: source.value() > 50, dependencies=[(source, "value")])
         source.setValue(70)
@@ -708,6 +697,5 @@ assert target.isEnabled()
 
 
 if __name__ == "__main__":
-    # Report the first lifetime assertion before a subsequent native allocation
-    # can hide its traceback behind a Windows fast-fail.
+    # Stop at the first lifetime failure before later Qt calls can hide it.
     unittest.main(failfast=True)
