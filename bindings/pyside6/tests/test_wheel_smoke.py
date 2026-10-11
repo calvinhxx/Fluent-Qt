@@ -58,6 +58,12 @@ from PySide6.QtWidgets import (
 from shiboken6 import Shiboken
 
 
+OPTIONAL_NATIVE_EXPORTS = {
+    "plugins": ("PluginMetadata", "PluginContext", "_Plugin", "_WidgetPlugin", "_PluginManager"),
+    "qmlbridge": ("QmlPlugin", "QmlSession", "QmlTheme", "QmlTextureLayer", "QmlView"),
+}
+
+
 def wait_for_events(duration_ms):
     loop = QEventLoop()
     QTimer.singleShot(duration_ms, loop.quit)
@@ -286,6 +292,18 @@ def main():
         expected_stubs.add("spatial.pyi")
     elif (package_dir / "spatial.py").exists():
         raise AssertionError("Core-only wheel contains an unusable Spatial facade")
+    for module, names in OPTIONAL_NATIVE_EXPORTS.items():
+        exports = tuple(hasattr(native.fluent, name) for name in names)
+        if any(exports) and not all(exports):
+            raise AssertionError("Installed native {0} API is incomplete".format(module))
+        if all(exports):
+            from importlib import import_module
+            import_module("fluentqt." + module)
+            expected_stubs.add(module + ".pyi")
+        elif (package_dir / (module + ".py")).exists():
+            raise AssertionError("Wheel contains an unusable {0} facade".format(module))
+    if (all(spatial_exports) or "qmlbridge.pyi" in expected_stubs) and "plugins.pyi" not in expected_stubs:
+        raise AssertionError("Spatial and QmlBridge wheels must include their Plugins dependency")
     installed_stubs = {path.name for path in package_dir.glob("*.pyi")}
     if installed_stubs != expected_stubs:
         raise AssertionError(
