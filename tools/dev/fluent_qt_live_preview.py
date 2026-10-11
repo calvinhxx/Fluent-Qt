@@ -91,6 +91,7 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--snapshot", type=Path)
     parser.add_argument("--session-dir", type=Path, help="Enable local preview commands and MCP access.")
     parser.add_argument("--content-only", action="store_true", help="Show the scene without development chrome.")
+    parser.add_argument("--edit", action="store_true", help="Enable registered-region source editing and comparisons.")
     parser.add_argument("--report", type=Path)
     parser.add_argument("--settle-ms", type=int, default=220)
     parser.add_argument("--keep-open", action="store_true")
@@ -466,6 +467,8 @@ def host_arguments(args: argparse.Namespace) -> list[str]:
         command.extend(["--session-dir", str(args.session_dir.expanduser().resolve())])
     if args.content_only:
         command.append("--content-only")
+    if args.edit:
+        command.append("--edit")
     return command
 
 

@@ -48,6 +48,86 @@ services.
 file path for presentation. File watching, the reload shortcut, error feedback,
 Inspector reports, and the optional command session remain available.
 
+## Select, edit, and compare a region
+
+Open the same settings page with an optional editing panel:
+
+```bash
+python3 tools/dev/fluent_qt_settings_editor.py
+```
+
+Pass `--build-dir` and `--python` to select a matching runtime. The launcher
+creates `build/preview/settings-editor/settings.preview.py` on first use and
+preserves that copy on later launches. Use another `--output` directory for an
+independent session. The checked-in scene template is never edited by replay.
+
+1. Choose **Pick region** (`点选区域`), then click a notification row. This click
+   selects the registered group and does not toggle its controls. `F8` toggles
+   picking, `Esc` cancels it, and the region combo box provides a keyboard path.
+2. Adjust row padding, heading emphasis, or the semantic description color.
+3. Choose **Preview changes** (`预览修改`). The tool patches registered literal
+   values in the scene source and reloads it in the same window.
+4. Choose **Compare before and after** (`查看前后对比`) to inspect actual region
+   screenshots at the same scale, or copy the exact code diff.
+5. Keep or revert the pending edit. A kept edit can also be undone. Source
+   revisions are checked before replacement; external edits are never
+   intentionally overwritten by an undo. End a conflicted comparison to keep
+   the current file without writing it.
+
+Each transaction stores source snapshots and actual before/after images under
+the session's `edits/` directory. Pending review survives reopening. History is
+local development data and currently retained until its output directory is
+removed. The panel has no model-provider connection: manual controls and an
+external AI client both use the same registered edit contract. Copying a
+selection supplies its source locations, allowed fields, and current revision.
+
+### Register a scene without coupling it to the editor UI
+
+`--edit` on `fluent_qt_live_preview.py` enables this module for other Python
+scenes. Register only author-controlled regions and literal parameters:
+
+```python
+from fluent_qt_preview_editor import Field, register_region
+
+PREVIEW_EDITS = {"details": {"padding": 16}}
+
+def build(parent):
+    root = QWidget(parent)
+    layout = QVBoxLayout(root)
+    padding = PREVIEW_EDITS["details"]["padding"]
+    layout.setContentsMargins(padding, padding, padding, padding)
+    register_region(root, root, "details", "Details", [
+        Field("padding", "Padding", "int", minimum=4, maximum=32),
+    ])
+    return root
+```
+
+The dictionary must be one UTF-8 module-level `PREVIEW_EDITS = {...}` literal.
+Integer ranges, boolean fields, and enumerated string choices are supported.
+The tool changes only the selected literal spans, preserving surrounding code,
+comments, and line endings. It does not infer arbitrary Python or C++ setters.
+An optional region `reveal` callback can switch an application-owned page when
+the user explicitly selects a region from the combo box or AI tools.
+
+Scenes may export `after_preview_state_restore(root)` to reconcile derived
+presentation after the existing signal-blocked state restoration. The settings
+scene uses it to synchronize navigation highlighting and dependent notification
+controls. It runs before a candidate replaces the visible scene; a failure
+keeps the previous scene. It should not persist settings or trigger external
+application actions.
+
+The independent package is `tools/dev/fluent_qt_preview_editor/`:
+
+- `registry.py` declares regions and fields without importing Qt.
+- `source.py` and `history.py` own literal patches, revision checks, and recovery.
+- `controller.py` connects those operations to the borrowed Live Scene host.
+- `picker.py` and `panel.py` provide the optional Fluent editing interface.
+- `protocol.py` describes the same operations to MCP clients without loading Qt.
+
+This version supports registered Python scenes only. The Widgets library,
+installed public API, normal Gallery launch, and C++ preview authoring remain
+independent of this package.
+
 Catalog-backed `--route` / `--sample` commands require a built PySide6 Gallery
 contract. Configure the selected bindings build with
 `FLUENT_QT_BUILD_PYSIDE6_GALLERY=ON`; see the
@@ -207,6 +287,16 @@ tool failures report errors rather than claiming the operation succeeded.
 Both hosts reject an interaction if its target disappears, including deferred
 deletion while processing input. No release event is sent after a click's press
 has deleted its target.
+
+For a Python scene launched with `--edit`, the same adapter also exposes
+`preview_editor_inspect`, `preview_editor_select`, `preview_editor_apply`,
+`preview_editor_compare`, `preview_editor_accept`, `preview_editor_revert`,
+`preview_editor_undo`, and `preview_editor_dismiss`. Inspect the current
+selection and source revision before applying registered field changes.
+Comparisons return two actual PNG images plus the source diff. Source edits
+replace the scene and expire old widget IDs, so inspect the new tree before
+performing subsequent widget actions. Editor requests on a host without
+`--edit` fail explicitly.
 
 The transport is newline-delimited JSON-RPC over stdio using the
 [MCP transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)

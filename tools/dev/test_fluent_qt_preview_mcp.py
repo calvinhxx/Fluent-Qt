@@ -37,7 +37,9 @@ class PreviewMcpTest(unittest.TestCase):
         request = {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}
         self.assertEqual(self.server.handle(request)["error"]["code"], -32002)
         self.initialize()
-        self.assertEqual(len(self.server.handle(request)["result"]["tools"]), 7)
+        names = {tool["name"] for tool in self.server.handle(request)["result"]["tools"]}
+        self.assertEqual(len(names), 15)
+        self.assertIn("preview_editor_apply", names)
         for args in ({}, {"target": "button", "code": "arbitrary"}, {"target": 1}):
             result = self.server.handle({"jsonrpc": "2.0", "id": 3, "method": "tools/call",
                                         "params": {"name": "preview_click", "arguments": args}})
@@ -51,6 +53,16 @@ class PreviewMcpTest(unittest.TestCase):
         result = self.server.call_tool("preview_screenshot", {})
         self.assertEqual(result["content"][0]["type"], "image")
         self.assertEqual(result["content"][0]["mimeType"], "image/png")
+
+    def test_editor_dispatch_keeps_revision_and_rejects_invalid_change_objects(self):
+        self.initialize()
+        arguments = {"region": "notifications", "revision": "source-revision", "changes": {"padding": 8}}
+        self.server.call_tool("preview_editor_apply", arguments)
+        self.assertEqual(self.client.calls, [("editor_apply", arguments)])
+        for changes in ([], {}, {str(i): i for i in range(33)}):
+            from fluent_qt_preview_mcp import ProtocolError
+            with self.assertRaises(ProtocolError):
+                self.server.call_tool("preview_editor_apply", {**arguments, "changes": changes})
 
     def test_stdio_is_json_only_and_disconnected_ui_is_a_tool_error(self):
         with tempfile.TemporaryDirectory() as directory:

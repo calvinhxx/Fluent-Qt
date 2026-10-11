@@ -4,12 +4,24 @@ import fluentqt
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QStackedWidget, QVBoxLayout, QWidget
+from fluent_qt_preview_editor import Field, register_region
 
 
 SCENE_TITLE = "设置"
 CONTENT_INSET = 44
 ROW_GAP = 18
 SIDEBAR_WIDTH = 184
+
+# Only these literal values are editable through the optional development tool.
+PREVIEW_EDITS = {
+    "workspace": {"row_padding": 18, "description_tone": "secondary"},
+    "notifications": {"row_padding": 18, "heading_emphasis": True, "description_tone": "secondary"},
+}
+
+ROW_FIELDS = (
+    Field("row_padding", "行内留白", "int", minimum=4, maximum=28),
+    Field("description_tone", "说明文字", "choice", choices=(("primary", "正文"), ("secondary", "次要"))),
+)
 
 
 class Surface(fluentqt.FluentWidget):
@@ -113,22 +125,24 @@ class SettingsPage(Surface):
         self.pages.addWidget(page)
         return page, layout
 
-    def section(self, page, layout, title):
-        layout.addWidget(label(title, page, role=fluentqt.FontRole.BodyStrong))
+    def section(self, page, layout, title, *, emphasized=True):
+        layout.addWidget(label(title, page, role=fluentqt.FontRole.BodyStrong if emphasized else fluentqt.FontRole.Body))
         layout.addSpacing(8)
 
-    def row(self, page, layout, title, description, control, identity):
+    def row(self, page, layout, title, description, control, identity, *, style=None):
         row = QWidget(page)
         row.setObjectName(identity + "Row")
-        row.setMinimumHeight(76)
+        row.setMinimumHeight(52 if style is not None else 76)
         line = QHBoxLayout(row)
-        line.setContentsMargins(0, ROW_GAP, 0, ROW_GAP)
+        padding = style["row_padding"] if style is not None else ROW_GAP
+        line.setContentsMargins(0, padding, 0, padding)
         line.setSpacing(24)
         copy = QVBoxLayout()
         copy.setSpacing(5)
         copy.addWidget(label(title, row, name=identity + "Title"))
         copy.addWidget(label(description, row, role=fluentqt.FontRole.Caption,
-                             secondary=True, name=identity + "Description"))
+                             secondary=style is None or style["description_tone"] == "secondary",
+                             name=identity + "Description"))
         line.addLayout(copy, 1)
         control.setParent(row)
         control.setObjectName(identity)
@@ -157,7 +171,10 @@ class SettingsPage(Surface):
         self.name.setMinimumWidth(160)
         self.name.setMaximumWidth(228)
         self.name.setClearButtonEnabled(True)
-        self.row(page, layout, "名称", "为不同的工作环境取一个好记的名字。", self.name, "workspaceName")
+        row = self.row(page, layout, "名称", "为不同的工作环境取一个好记的名字。", self.name, "workspaceName",
+                       style=PREVIEW_EDITS["workspace"])
+        register_region(self, row, "workspace", "工作空间名称", ROW_FIELDS,
+                        reveal=lambda: self.show_page(0))
         self.divider(page, layout)
         layout.addSpacing(28)
         self.section(page, layout, "启动与恢复")
@@ -200,13 +217,25 @@ class SettingsPage(Surface):
 
     def build_notifications(self):
         page, layout = self.page("通知", "只接收你需要的提醒。")
-        self.section(page, layout, "应用内通知")
-        self.notifications = self.toggle(page, True)
-        self.row(page, layout, "允许通知", "显示操作结果和需要关注的消息。", self.notifications, "allowNotifications")
-        self.divider(page, layout)
-        self.sound = self.toggle(page, True)
-        self.sound_row = self.row(page, layout, "提示音", "收到通知时播放简短的提示音。", self.sound, "notificationSound")
-        self.divider(page, layout)
+        style = PREVIEW_EDITS["notifications"]
+        group = QWidget(page)
+        group.setObjectName("notificationGroup")
+        group_layout = QVBoxLayout(group)
+        group_layout.setContentsMargins(0, 0, 0, 0)
+        group_layout.setSpacing(0)
+        self.section(group, group_layout, "应用内通知", emphasized=style["heading_emphasis"])
+        self.notifications = self.toggle(group, True)
+        self.row(group, group_layout, "允许通知", "显示操作结果和需要关注的消息。", self.notifications,
+                 "allowNotifications", style=style)
+        self.divider(group, group_layout)
+        self.sound = self.toggle(group, True)
+        self.sound_row = self.row(group, group_layout, "提示音", "收到通知时播放简短的提示音。", self.sound,
+                                 "notificationSound", style=style)
+        self.divider(group, group_layout)
+        layout.addWidget(group)
+        register_region(self, group, "notifications", "应用内通知", (
+            ROW_FIELDS[0], Field("heading_emphasis", "标题强调", "bool"), ROW_FIELDS[1],
+        ), reveal=lambda: self.show_page(2))
         layout.addSpacing(26)
         preview_line = QHBoxLayout()
         self.preview_button = fluentqt.Button("发送测试通知", page)
@@ -270,3 +299,8 @@ class SettingsPage(Surface):
 
 def build(parent):
     return SettingsPage(parent)
+
+
+def after_preview_state_restore(page):
+    page.sync_navigation(page.pages.currentIndex())
+    page.sync_notifications(page.notifications.isOn())

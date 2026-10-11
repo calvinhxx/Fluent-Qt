@@ -77,7 +77,9 @@ class PreviewClient:
                         raise RuntimeError(json.dumps(result, ensure_ascii=False))
                     return result
                 current = self.metadata()
-                if current["session_id"] != metadata["session_id"]:
+                if (current["session_id"] != metadata["session_id"]
+                        and (method not in {"editor_apply", "editor_revert", "editor_undo"}
+                             or current.get("pid") != metadata.get("pid"))):
                     raise RuntimeError("Preview restarted; inspect it again before editing.")
                 time.sleep(0.025)
             raise RuntimeError("Preview command timed out; check that its window is still running.")

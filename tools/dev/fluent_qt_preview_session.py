@@ -289,6 +289,11 @@ class PythonPreviewSession(QObject):
             return {"mime_type": "image/png", "data": base64.b64encode(bytes(buffer.data())).decode("ascii")}
         if method == "reset_data":
             return self.reset_data()
+        if isinstance(method, str) and method.startswith("editor_"):
+            editor = getattr(self.window, "preview_editor", None)
+            if editor is None:
+                raise RuntimeError("Launch a registered Python scene with --edit to use source editing.")
+            return editor.execute(method, parameters)
         widget = self.resolve(parameters.get("target", ""))
         if method == "set_data":
             return self.set_data(widget, parameters.get("property"), parameters.get("value"))
@@ -324,7 +329,9 @@ class PythonPreviewSession(QObject):
             except (OSError, ValueError, RuntimeError, TypeError) as error:
                 result = {"error": str(error)}
             write_json(self.directory / "responses" / path.name, {
-                "id": request.get("id"), "session_id": self.session_id, "result": result,
+                # A source-edit request can replace the scene and its node IDs.
+                # Bind the reply to the request epoch; subsequent calls reconnect.
+                "id": request.get("id"), "session_id": request.get("session_id", self.session_id), "result": result,
             })
         finally:
             self.busy = False
