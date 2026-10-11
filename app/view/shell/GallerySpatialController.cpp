@@ -1384,6 +1384,37 @@ GallerySpatialController::GallerySpatialController(QWidget* window,
                 d->scene.pointerTilt = value.toPointF();
                 d->sync();
             });
+    const auto stopObserving = [this] {
+        // QWidget emits destroyed before deleting its children, while Qt 5 may
+        // still keep its QPointer alive. Child sessions must not refresh a host
+        // whose derived members have already been destroyed.
+        // zh_CN: QWidget 在删除子对象前发出 destroyed，此时 Qt 5 的 QPointer
+        // 可能仍非空；子会话卸载不能再访问已析构的导航与页面数据。
+        d->navigation = nullptr;
+        d->scene.contentRoot = nullptr;
+        d->rendererFailed = true;
+        d->target = false;
+        d->rendererTimeout->stop();
+        d->motion->stop();
+        d->pointerMotion->stop();
+        d->setFiltering(false);
+        if (d->compositionObserver)
+            qApp->removeEventFilter(d->compositionObserver);
+        if (d->canvas)
+            d->canvas->setProperty("presenting", false);
+        if (d->capture)
+            d->capture->invalidated = {};
+        if (d->contentCapture)
+            d->contentCapture->invalidated = {};
+        d->scene.renderWidgets = {};
+        d->scene.renderForeground = {};
+    };
+    connect(window, &QObject::destroyed, this, [this, stopObserving] {
+        d->window = nullptr;
+        stopObserving();
+    });
+    connect(navigation, &QObject::destroyed, this, stopObserving);
+    connect(navigation->contentHost(), &QObject::destroyed, this, stopObserving);
     auto& settings = GallerySettings::instance();
     connect(&settings, &GallerySettings::spatialModeEnabledChanged, this,
             &GallerySpatialController::applyMode);
@@ -1761,11 +1792,13 @@ GallerySpatialController::~GallerySpatialController()
     d->publishPresentationTransforms(false);
     if (d->capture) {
         d->capture->invalidated = {};
-        d->navigation->setGraphicsEffect(nullptr);
+        if (d->navigation)
+            d->navigation->setGraphicsEffect(nullptr);
     }
     if (d->contentCapture) {
         d->contentCapture->invalidated = {};
-        d->navigation->contentHost()->setGraphicsEffect(nullptr);
+        if (d->navigation)
+            d->navigation->contentHost()->setGraphicsEffect(nullptr);
     }
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
     if (auto* surface = dynamic_cast<GpuSurface*>(d->canvas.data()))
@@ -1831,7 +1864,7 @@ void GallerySpatialController::cancelTransition()
 }
 QPoint GallerySpatialController::projectedPosition(const QWidget* widget, const QPoint& point) const
 {
-    if (d->capture && d->capture->isEnabled() &&
+    if (d->navigation && d->capture && d->capture->isEnabled() &&
         (widget == d->navigation || d->navigation->isAncestorOf(widget))) {
         const QPoint local = widget->mapTo(d->navigation, point);
         const QPointF presented =

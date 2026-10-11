@@ -8,6 +8,20 @@
 
 namespace fluent::gallery::samples {
 
+class SpatialPreviewPanel final : public QWidget {
+public:
+    using QWidget::QWidget;
+    ~SpatialPreviewPanel() override
+    {
+        // Stop while this panel's native focus chain still exists. If an enclosing
+        // host is already dying, Spatial avoids restoring content into that tree.
+        // zh_CN: 在面板原生焦点链仍存活时停用；若外层宿主已开始销毁，Spatial 不再向其中恢复内容。
+        if (auto* session =
+                findChild<spatial::SpatialSession*>(QString(), Qt::FindDirectChildrenOnly))
+            session->deactivate();
+    }
+};
+
 inline void makeSpatialPreviewFlat(spatial::SpatialView* view)
 {
     view->setSpatialEnabled(false);

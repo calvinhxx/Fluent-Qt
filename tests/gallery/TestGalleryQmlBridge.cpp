@@ -652,12 +652,32 @@ TEST_F(GalleryQmlBridgeTest, Contract_AtomicSamplesKeepIndependentState)
             auto* nativeQuick = theme->findChild<QQuickWidget*>();
             ASSERT_NE(nativeQuick, nullptr);
             const QColor backdrop = theme->themeObject()->property("surfaceAlt").value<QColor>();
-            ASSERT_TRUE(QTest::qWaitFor([&] {
-                const auto frame = nativeQuick->grabFramebuffer();
+            const auto grabFrame = [nativeQuick] {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+                // Qt 5's software widget paints its own cached image; read
+                // that presentation instead of reentering render-control grab.
+                if (nativeQuick->quickWindow()->rendererInterface()->graphicsApi() ==
+                    QSGRendererInterface::Software)
+                    return nativeQuick->grab().toImage();
+#endif
+                return nativeQuick->grabFramebuffer();
+            };
+            QImage themeFrame;
+            const bool backdropRendered = QTest::qWaitFor([&] {
+                themeFrame = grabFrame();
+                const auto& frame = themeFrame;
                 return !frame.isNull() && frame.pixelColor(0, 0) == backdrop &&
                        frame.pixelColor(frame.width() - 1, frame.height() - 1) == backdrop &&
                        backdrop.alpha() == 255;
-            })) << "The Gallery Theme preview must render its explicit LayerAlt backdrop";
+            });
+            if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
+                !dir.isEmpty()) {
+                QDir().mkpath(dir);
+                themeFrame.save(dir +
+                                QStringLiteral("/qml-theme-%1-%2.png").arg(width).arg(int(mode)));
+            }
+            ASSERT_TRUE(backdropRendered)
+                << "The Gallery Theme preview must render its explicit LayerAlt backdrop";
         }
         qmlCard(&page, QStringLiteral("qml-view-theme"))->clearPreviewThemeOverride();
         const auto samples = fluent::gallery::gallerySamplesForRoute(QStringLiteral("qml-view"));
@@ -1291,6 +1311,10 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
                !controller->transitionRunning();
     };
     ASSERT_TRUE(QTest::qWaitFor(presenting, 5000));
+    auto* textureLayer = surface->findChild<fluent::qmlbridge::QmlTextureLayer*>();
+    ASSERT_NE(textureLayer, nullptr);
+    QSignalSpy renderingFailures(textureLayer,
+                                 &fluent::qmlbridge::QmlTextureLayer::renderingFailed);
     QSignalSpy requested(&settings, &GallerySettings::spatialModeEnabledChanged);
     ASSERT_TRUE(window.selectRoute(QStringLiteral("qml-view")));
     ASSERT_TRUE(QTest::qWaitFor(
@@ -1315,6 +1339,10 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
         QJsonObject state = QJsonObject::fromVariantMap(controller->renderingStatistics());
         state[QStringLiteral("qmlTexture")] =
             QJsonObject::fromVariantMap(view->textureStatistics());
+        QStringList errors;
+        for (const auto& arguments : renderingFailures)
+            errors.append(arguments.front().toString());
+        state[QStringLiteral("qmlRenderingFailures")] = QJsonArray::fromStringList(errors);
         return QJsonDocument(state).toJson(QJsonDocument::Compact).toStdString();
     };
     ASSERT_TRUE(QTest::qWaitFor([&] {

@@ -159,6 +159,8 @@ protected:
 
 private:
     friend class SpatialItem;
+    friend class SpatialPlugin;
+    bool isHostTearingDown() const;
     void updateProjection();
     QWidget* detachItem(SpatialItem* item, bool applyOwnership);
     struct Private;

@@ -4,6 +4,7 @@
 #include <QEvent>
 #include <QEventLoop>
 #include <QFile>
+#include <QInputMethodEvent>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
@@ -371,6 +372,20 @@ bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism,
             if (!targetGuard) {
                 error = QStringLiteral("Target was removed while typing.");
                 return false;
+            }
+            if (codePoint > 0xffff && modifiers == Qt::NoModifier &&
+                target->testAttribute(Qt::WA_InputMethodEnabled)) {
+                // Qt 5 QLineEdit rejects a surrogate pair in QKeyEvent text.
+                // Commit composed text through the normal input-method path,
+                // retaining selection, validation, undo and textEdited behavior.
+                QInputMethodEvent commit;
+                commit.setCommitString(character);
+                QApplication::sendEvent(target, &commit);
+                if (!targetGuard) {
+                    error = QStringLiteral("Target was removed while typing.");
+                    return false;
+                }
+                continue;
             }
             QKeyEvent press(QEvent::KeyPress, 0, modifiers, character);
             QApplication::sendEvent(target, &press);

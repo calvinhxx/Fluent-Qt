@@ -40,6 +40,12 @@ the C++17 and Qt 5.15+/6.2+ baseline; the selected Qt kit must also supply Qml,
 Quick, and QuickWidgets. For source integration, set the option before
 `add_subdirectory()` or `FetchContent_MakeAvailable()`.
 
+Source builds with Qt 6.2–6.5 also need the matching Qt Quick private headers.
+Those versions require a private render-window adapter to forward keyboard
+focus into a texture-hosted QML scene; Qt 6.6+ and Qt 5 use the public path.
+This build-only dependency is confined to QmlBridge and is not exported to
+installed consumers or the Widgets core.
+
 Installed consumers request the component:
 
 ```cmake

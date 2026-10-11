@@ -32,6 +32,21 @@ def alive(widget):
     return widget is not None and shiboken6.isValid(widget)
 
 
+def enum_integer(value):
+    """Accept both the Qt 6.2 integer enums and newer Python enum wrappers."""
+    return int(getattr(value, "value", value))
+
+
+def key_combination(sequence):
+    combination = sequence[0]
+    if hasattr(combination, "key"):
+        return combination.key(), combination.keyboardModifiers()
+    # PySide 6.2 exposes QKeySequence entries as combined integer flags.
+    combined = int(combination)
+    mask = enum_integer(Qt.KeyboardModifier.KeyboardModifierMask)
+    return combined & ~mask, Qt.KeyboardModifier(combined & mask)
+
+
 class PythonPreviewSession(QObject):
     """Borrow the scene and expose the shared UI command protocol."""
 
@@ -142,7 +157,7 @@ class PythonPreviewSession(QObject):
                 "id": ids[widget], "parent_id": ids.get(widget.parentWidget(), ""),
                 "object_name": widget.objectName(), "class": widget.metaObject().className(),
                 "accessible_name": accessible.text(QAccessible.Text.Name) if accessible else widget.accessibleName(),
-                "accessible_role": accessible.role().value if accessible else 0,
+                "accessible_role": enum_integer(accessible.role()) if accessible else 0,
                 "visible": widget.isVisible(), "enabled": widget.isEnabled(),
                 "rect": {"x": position.x(), "y": position.y(), "width": widget.width(), "height": widget.height()},
                 "data": self.data(widget),
@@ -264,10 +279,13 @@ class PythonPreviewSession(QObject):
                     raise ValueError("Key must be a string.")
                 aliases = {"enter": "Return", "escape": "Esc", "backspace": "Backspace", "tab": "Tab", "space": "Space"}
                 sequence = QKeySequence.fromString(aliases.get(name.lower(), name))
-                if sequence.isEmpty() or sequence[0].key() == Qt.Key.Key_unknown:
+                if sequence.isEmpty():
                     raise ValueError("Unknown key.")
-                text = " " if sequence[0].key() == Qt.Key.Key_Space else name if len(name) == 1 else ""
-                keys = [(sequence[0].key(), modifiers | sequence[0].keyboardModifiers(), text)]
+                key, sequence_modifiers = key_combination(sequence)
+                if key == Qt.Key.Key_unknown:
+                    raise ValueError("Unknown key.")
+                text = " " if key == Qt.Key.Key_Space else name if len(name) == 1 else ""
+                keys = [(key, modifiers | sequence_modifiers, text)]
             for key, modifiers, text in keys:
                 for kind in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease):
                     check_target()

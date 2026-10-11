@@ -24,6 +24,7 @@
 #include "components/layout/Field.h"
 #include "compatibility/QtCompat.h"
 #include "private/DateTimeRangePickerAccessibility_p.h"
+#include "private/DateTimeRangePickerText_p.h"
 
 namespace fluent::date_time {
 namespace {
@@ -46,11 +47,21 @@ bool sameDateTime(const QDateTime& left, const QDateTime& right)
 
 namespace {
 
-QStringList presetLabels()
+QStringList presetLabels(const QLocale& locale)
 {
-    return {DateTimeRangePicker::tr("Today"),           DateTimeRangePicker::tr("Yesterday"),
-            DateTimeRangePicker::tr("Past week"),       DateTimeRangePicker::tr("Past month"),
-            DateTimeRangePicker::tr("Past six months"), DateTimeRangePicker::tr("Past year")};
+    return {
+        detail::dateTimeRangeText(
+            locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Today")),
+        detail::dateTimeRangeText(
+            locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Yesterday")),
+        detail::dateTimeRangeText(
+            locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Past week")),
+        detail::dateTimeRangeText(
+            locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Past month")),
+        detail::dateTimeRangeText(
+            locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Past six months")),
+        detail::dateTimeRangeText(
+            locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Past year"))};
 }
 
 // Reserve a trailing action inside the existing Fluent button surface.
@@ -138,12 +149,17 @@ public:
         connect(this, &TimePicker::placeholderTextChanged, this, [this] { refresh(); });
     }
 
-    void refresh()
+    void refreshLabels()
     {
         m_edit->setObjectName(objectName() + QStringLiteral("Edit"));
         m_edit->setAccessibleName(accessibleName());
         m_edit->setPlaceholderText(placeholderText(TimeField::Hour) + QStringLiteral(":") +
                                    placeholderText(TimeField::Minute));
+    }
+
+    void refresh()
+    {
+        refreshLabels();
         const QString text =
             selectedTime().isValid() ? locale().toString(selectedTime(), format()) : QString();
         if (m_edit->text() != text)
@@ -290,7 +306,7 @@ public:
         m_presetsLayout = new QGridLayout(m_presets);
         m_presetsLayout->setContentsMargins(0, 0, 0, 0);
         m_presetsLayout->setSpacing(4);
-        const auto labels = presetLabels();
+        const auto labels = presetLabels(picker->locale());
         for (int index = 0; index < labels.size(); ++index) {
             auto* button = new basicinput::Button(labels.at(index), m_presets);
             button->setObjectName(QStringLiteral("rangePreset%1").arg(index));
@@ -298,6 +314,7 @@ public:
             button->setFluentSize(basicinput::Button::Small);
             button->setFontRole(Typography::FontRole::Caption);
             button->setMinimumHeight(28);
+            m_presetButtons.append(button);
             m_presetsLayout->addWidget(button, index / 3, index % 3);
             QObject::connect(button, &basicinput::Button::clicked, picker, [picker, index] {
                 picker->requestPreset(static_cast<DateTimeRangePicker::Preset>(index));
@@ -339,11 +356,15 @@ public:
         clear->setObjectName(QStringLiteral("rangeClearAll"));
         clear->setFluentStyle(basicinput::Button::Subtle);
         footer->addWidget(clear);
+        addLocalizedText(clear, "text", "Clear all");
         footer->addStretch();
         auto* done = new basicinput::Button(DateTimeRangePicker::tr("Done"), this);
         done->setObjectName(QStringLiteral("rangeDone"));
         done->setFluentStyle(basicinput::Button::Accent);
         footer->addWidget(done);
+        addLocalizedText(done, "text", "Done");
+        addLocalizedText(m_endpointField, "accessibleName", "Range bounds");
+        addLocalizedText(m_calendar, "accessibleName", "Date range calendar");
         outer->addLayout(footer);
         QObject::connect(clear, &basicinput::Button::clicked, picker, &DateTimeRangePicker::clear);
         QObject::connect(done, &basicinput::Button::clicked, picker,
@@ -355,6 +376,37 @@ public:
     QWidget* inputHost() const { return m_inputs; }
     CalendarView* calendar() const { return m_calendar; }
     void addInput(QWidget* input) { m_inputLayout->addWidget(input, 1, Qt::AlignBottom); }
+    void addLocalizedText(QObject* object, const char* property, const char* source)
+    {
+        m_localizedTexts.append({object, property, source, object->property(property).toString()});
+    }
+    bool refreshLanguage()
+    {
+        const QPointer<DateTimeRangePickerPopup> guard(this);
+        const auto labels = presetLabels(m_picker->locale());
+        for (int index = 0; index < m_presetButtons.size(); ++index) {
+            m_presetButtons.at(index)->setText(labels.at(index));
+            if (!guard)
+                return false;
+        }
+        for (auto& text : m_localizedTexts) {
+            if (!text.object)
+                continue;
+            // Refresh defaults without replacing application-authored text.
+            // zh_CN: 刷新默认文案，保留应用自行设置的文字。
+            const bool usesDefault =
+                text.followsLocale &&
+                text.object->property(text.property).toString() == text.previous;
+            text.followsLocale = usesDefault;
+            const QString next = detail::dateTimeRangeText(m_picker->locale(), text.source);
+            text.previous = next;
+            if (usesDefault)
+                text.object->setProperty(text.property, next);
+            if (!guard)
+                return false;
+        }
+        return true;
+    }
     void setValidationMessage(const QString& message)
     {
         m_endpointField->setValidationState(message.isEmpty()
@@ -487,6 +539,15 @@ private:
     }
 
     DateTimeRangePicker* m_picker;
+    struct LocalizedText {
+        QPointer<QObject> object;
+        const char* property;
+        const char* source;
+        QString previous;
+        bool followsLocale = true;
+    };
+    QList<LocalizedText> m_localizedTexts;
+    QList<basicinput::Button*> m_presetButtons;
     bool m_syncingChildStack = false;
     scrolling::ScrollView* m_scroll = nullptr;
     QWidget* m_body = nullptr;
@@ -529,6 +590,10 @@ DateTimeRangePicker::DateTimeRangePicker(QWidget* parent)
     m_summaryField->setEditor(m_entryButton, WidgetOwnership::Owned);
     m_layout->addWidget(m_summaryField);
     m_popup = new DateTimeRangePickerPopup(this);
+    m_popup->addLocalizedText(this, "accessibleName", "Date range");
+    m_popup->addLocalizedText(this, "placeholderText", "Select date range");
+    m_popup->addLocalizedText(this, "invalidRangeText", "End must not precede start");
+    m_popup->addLocalizedText(m_entryButton, "accessibleName", "Choose date range");
 
     for (bool start : {true, false}) {
         const QString prefix = start ? QStringLiteral("rangeStart") : QStringLiteral("rangeEnd");
@@ -560,6 +625,17 @@ DateTimeRangePicker::DateTimeRangePicker(QWidget* parent)
         clearButton->setObjectName(prefix + QStringLiteral("Clear"));
         clearButton->setAccessibleName(start ? tr("Clear start") : tr("Clear end"));
         clearButton->setToolTip(clearButton->accessibleName());
+        const char* dateLabel = start ? "Start date" : "End date";
+        m_popup->addLocalizedText(datePicker, "accessibleName", dateLabel);
+        m_popup->addLocalizedText(datePicker, "placeholderText", dateLabel);
+        m_popup->addLocalizedText(timePicker, "accessibleName", start ? "Start time" : "End time");
+        m_popup->addLocalizedText(timePicker, "confirmButtonAccessibleName", "Accept time");
+        m_popup->addLocalizedText(timePicker, "cancelButtonAccessibleName", "Cancel time");
+        m_popup->addLocalizedText(clearButton, "accessibleName",
+                                  start ? "Clear start" : "Clear end");
+        m_popup->addLocalizedText(clearButton, "toolTip", start ? "Clear start" : "Clear end");
+        m_popup->addLocalizedText(timePicker->findChild<QLineEdit*>(), "toolTip",
+                                  "Type a time, or use Up and Down to adjust it");
         stack->addWidget(datePicker);
         stack->addWidget(timePicker);
         field->setEditor(editor, WidgetOwnership::Owned);
@@ -637,6 +713,7 @@ DateTimeRangePicker::DateTimeRangePicker(QWidget* parent)
     QWidget::setTabOrder(m_startTimePicker, m_endDatePicker);
     QWidget::setTabOrder(m_endDatePicker, m_endClearButton);
     QWidget::setTabOrder(m_endClearButton, m_endTimePicker);
+    m_popup->refreshLanguage();
     synchronizeInputs();
 }
 
@@ -787,8 +864,6 @@ void DateTimeRangePicker::synchronizeInputs()
     static_cast<RangeTimeInput*>(m_endTimePicker)->refresh();
     const auto* activeDate = m_editingStart ? m_startDatePicker : m_endDatePicker;
     calendarView()->setDateRange(activeDate->minDate(), activeDate->maxDate());
-    calendarView()->setAccessibleDescription(m_editingStart ? tr("Choose the start date")
-                                                            : tr("Choose the end date"));
     m_startTimePicker->setVisible(m_timeEnabled);
     m_endTimePicker->setVisible(m_timeEnabled);
     m_startTimePicker->setEnabled(m_timeEnabled && m_startDateTime.isValid());
@@ -797,11 +872,21 @@ void DateTimeRangePicker::synchronizeInputs()
     m_endClearButton->setEnabled(m_endDateTime.isValid());
     m_startClearButton->setVisible(m_startDateTime.isValid());
     m_endClearButton->setVisible(m_endDateTime.isValid());
+    calendarView()->setHighlightedDateRange(m_startDateTime.date(), m_endDateTime.date());
+    refreshPresentationText();
+}
+
+void DateTimeRangePicker::refreshPresentationText()
+{
+    static_cast<RangeTimeInput*>(m_startTimePicker)->refreshLabels();
+    static_cast<RangeTimeInput*>(m_endTimePicker)->refreshLabels();
+    calendarView()->setAccessibleDescription(
+        detail::dateTimeRangeText(locale(), m_editingStart ? QT_TR_NOOP("Choose the start date")
+                                                           : QT_TR_NOOP("Choose the end date")));
     m_popup->setValidationMessage(isRangeValid() ? QString() : m_invalidRangeText);
     m_summaryField->setValidationState(isRangeValid() ? layout::Field::ValidationState::None
                                                       : layout::Field::ValidationState::Error);
     m_summaryField->setValidationMessage(isRangeValid() ? QString() : m_invalidRangeText);
-    calendarView()->setHighlightedDateRange(m_startDateTime.date(), m_endDateTime.date());
 
     refreshEntry();
     updateLayoutDirection();
@@ -848,7 +933,7 @@ void DateTimeRangePicker::setInvalidRangeText(const QString& text)
     if (m_invalidRangeText == text)
         return;
     m_invalidRangeText = text;
-    synchronizeInputs();
+    refreshPresentationText();
     if (!isRangeValid())
         detail::notifyDateTimeRangePickerDescriptionChanged(this);
     emit invalidRangeTextChanged(text);
@@ -856,8 +941,7 @@ void DateTimeRangePicker::setInvalidRangeText(const QString& text)
 
 void DateTimeRangePicker::setLocale(const QLocale& locale)
 {
-    if (QWidget::locale() != locale)
-        QWidget::setLocale(locale);
+    QWidget::setLocale(locale);
 }
 
 void DateTimeRangePicker::closePickers(QWidget* except)
@@ -922,9 +1006,11 @@ QString DateTimeRangePicker::displayText() const
     if (!m_startDateTime.isValid() && !m_endDateTime.isValid())
         return m_placeholderText;
     if (!m_startDateTime.isValid())
-        return tr("Until %1").arg(text(m_endDateTime, m_endDatePicker, m_endTimePicker));
+        return detail::dateTimeRangeText(locale(), QT_TR_NOOP("Until %1"))
+            .arg(text(m_endDateTime, m_endDatePicker, m_endTimePicker));
     if (!m_endDateTime.isValid())
-        return tr("From %1").arg(text(m_startDateTime, m_startDatePicker, m_startTimePicker));
+        return detail::dateTimeRangeText(locale(), QT_TR_NOOP("From %1"))
+            .arg(text(m_startDateTime, m_startDatePicker, m_startTimePicker));
     return tr("%1 – %2").arg(text(m_startDateTime, m_startDatePicker, m_startTimePicker),
                              text(m_endDateTime, m_endDatePicker, m_endTimePicker));
 }
@@ -955,6 +1041,9 @@ void DateTimeRangePicker::openPicker()
 {
     if (!isEnabled() || !isVisible() || !m_popup || isPickerOpen())
         return;
+    // The popup is reparented to the overlay host, which can have another locale.
+    // zh_CN: 弹窗会重挂到可能使用其他区域设置的浮层宿主，保留范围控件的区域设置。
+    m_popup->setLocale(locale());
     m_editingStart = !m_startDateTime.isValid() || m_endDateTime.isValid();
     m_completingRange = !m_endDateTime.isValid();
     synchronizeInputs();
@@ -1135,13 +1224,19 @@ void DateTimeRangePicker::changeEvent(QEvent* event)
         closePicker();
     if (event->type() == QEvent::LocaleChange && m_observedLocale != QWidget::locale()) {
         m_observedLocale = QWidget::locale();
+        m_popup->setLocale(m_observedLocale);
         calendarView()->setLocale(m_observedLocale);
         m_startDatePicker->setLocale(m_observedLocale);
         m_endDatePicker->setLocale(m_observedLocale);
         m_startTimePicker->setLocale(m_observedLocale);
         m_endTimePicker->setLocale(m_observedLocale);
-        refreshEntry();
+        if (!m_popup->refreshLanguage())
+            return;
+        synchronizeInputs();
         emit localeChanged(m_observedLocale);
+    } else if (event->type() == QEvent::LanguageChange && m_popup) {
+        if (m_popup->refreshLanguage())
+            refreshPresentationText();
     }
 }
 

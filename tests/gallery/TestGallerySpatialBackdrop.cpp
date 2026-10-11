@@ -200,18 +200,31 @@ TEST(GallerySpatialBackdropTest, NativeWindowsMaterialHandoffPresentsOpaqueGpuBa
         ASSERT_TRUE(QTest::qWaitFor([&] {
             return controller.renderingStatistics()["backdropTextureBytes"].toLongLong() == 0;
         }));
+        QSignalSpy materialFrames(surface, &QOpenGLWidget::frameSwapped);
+        surface->update();
+        ASSERT_TRUE(QTest::qWaitFor([&] { return materialFrames.count() > 0; }));
         int opaqueFrames = 0;
+        bool missingBackdropFrame = false;
         const auto connection =
             QObject::connect(surface, &QOpenGLWidget::frameSwapped, &window, [&] {
-                if (window.backdropEffect() == windowing::BackdropEffect::Solid &&
-                    controller.renderingStatistics()["backdropTextureBytes"].toLongLong() > 0)
-                    ++opaqueFrames;
+                if (window.backdropEffect() == windowing::BackdropEffect::Solid) {
+                    if (controller.renderingStatistics()["backdropTextureBytes"].toLongLong() > 0)
+                        ++opaqueFrames;
+                    else
+                        missingBackdropFrame = true;
+                }
             });
-        // No GallerySettings change or event-loop wait is allowed to repair a stale frame.
-        // The Window transaction must publish the actual state before native teardown.
+        // Window retains the old material until the opaque replacement is committed.
+        // Every submitted Solid frame must already contain the GPU backdrop.
         window.setBackdropEffect(windowing::BackdropEffect::Solid);
+        EXPECT_TRUE(QTest::qWaitFor([&] { return opaqueFrames > 0; }));
+        EXPECT_FALSE(missingBackdropFrame);
         EXPECT_GT(opaqueFrames, 0);
         EXPECT_GT(controller.renderingStatistics()["backdropTextureBytes"].toLongLong(), 0);
         QObject::disconnect(connection);
+        const auto frame = surface->grabFramebuffer();
+        ASSERT_FALSE(frame.isNull());
+        EXPECT_EQ(frame.pixelColor(0, 0).alpha(), 255);
+        EXPECT_EQ(frame.pixelColor(frame.width() - 1, frame.height() - 1).alpha(), 255);
     }
 }

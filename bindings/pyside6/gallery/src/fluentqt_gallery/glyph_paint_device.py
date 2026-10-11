@@ -85,6 +85,7 @@ class _GlyphPaintEngine(QPaintEngine):
         # The paint device owns this engine; do not retain a cycle per dirty strip.
         self.device = weakref.proxy(device)
         self.painter = None
+        self.background_mode = Qt.TransparentMode
         self.glyph_items = 0
         self.glyph_tiles = 0
         self.last_system_clip = QRegion()
@@ -110,6 +111,9 @@ class _GlyphPaintEngine(QPaintEngine):
 
     def updateState(self, state):
         dirty, painter = state.state(), self.painter
+        # Qt can emulate an opaque background without marking the delegate's
+        # mode dirty. Retain the source state for the text fallback decision.
+        self.background_mode = state.backgroundMode()
         if dirty & (QPaintEngine.DirtyTransform | QPaintEngine.DirtyClipRegion
                     | QPaintEngine.DirtyClipPath | QPaintEngine.DirtyClipEnabled):
             self._restore_system_clip()
@@ -239,10 +243,12 @@ class _GlyphPaintEngine(QPaintEngine):
     def drawTextItem(self, position, item):
         def draw():
             painter = self.painter
-            source_painter = QPaintEngine.painter(self)
+            # Use the captured state: querying QPaintEngine.painter() makes
+            # PySide 6.2 reparent its wrapper through the engine, so a nested
+            # widget painter can invalidate its caller.
             if (painter.worldTransform().type() not in (QTransform.TxNone, QTransform.TxTranslate)
                     or painter.pen().brush().style() != Qt.SolidPattern
-                    or (source_painter is not None and source_painter.backgroundMode() == Qt.OpaqueMode)
+                    or self.background_mode == Qt.OpaqueMode
                     or painter.compositionMode() != QPainter.CompositionMode_SourceOver):
                 painter.paintEngine().syncState()
                 painter.paintEngine().drawTextItem(position, item)

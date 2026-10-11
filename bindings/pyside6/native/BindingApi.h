@@ -238,6 +238,11 @@ QVariantMap inspectWidgetForBinding(QWidget* widget, int minimumHitWidth, int mi
 bool bindProperties(QObject* source, const QString& sourceProperty, QObject* target,
                     const QString& targetProperty, fluent::binding::BindingMode mode);
 
+/** @brief Checks affinity without exposing a process-lifetime QThread wrapper.
+ * zh_CN: 检查线程亲和性，不暴露进程生命周期的 QThread 包装对象。
+ */
+bool objectHasCurrentThreadAffinityForBinding(const QObject* object);
+
 /** @brief Returns a handle over the shared native property binding runtime.
  * zh_CN: 返回共享原生属性绑定运行时的句柄。
  */

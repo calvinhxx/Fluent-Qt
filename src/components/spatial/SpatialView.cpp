@@ -233,11 +233,14 @@ struct SpatialView::Private {
     QString renderer, reason, gpuFailure;
     QPointer<QOpenGLContext> checkedContext;
     QList<QPointer<QWidget>> ancestors;
+    QList<QMetaObject::Connection> ancestorDestructionConnections;
+    QList<const QObject*> destroyingAncestors;
+    bool ancestorDestroying = false;
     bool ancestorsDirty = true, environmentRaster = true;
 
     void inspectEnvironment(QEvent::Type type)
     {
-        if (destroying)
+        if (destroying || ancestorDestroying)
             return;
         if (type == QEvent::ParentChange)
             ancestorsDirty = true;
@@ -246,6 +249,9 @@ struct SpatialView::Private {
             type != QEvent::UpdateRequest && type != QEvent::LayoutRequest)
             return;
         if (ancestorsDirty) {
+            for (const auto& connection : ancestorDestructionConnections)
+                QObject::disconnect(connection);
+            ancestorDestructionConnections.clear();
             for (const auto& ancestor : ancestors)
                 if (ancestor)
                     ancestor->removeEventFilter(q);
@@ -254,6 +260,16 @@ struct SpatialView::Private {
                  ancestor = ancestor->parentWidget()) {
                 ancestors.append(ancestor);
                 ancestor->installEventFilter(q);
+                ancestorDestructionConnections.append(
+                    QObject::connect(ancestor, &QObject::destroyed, q, [this](QObject* object) {
+                        // QWidget has already dismantled its focus chain. The view will
+                        // be deleted with this tree; never restore cards into it now.
+                        // zh_CN: QWidget 已拆除焦点链，视图即将随树销毁，不能再将卡片放回其中。
+                        ancestorDestroying = true;
+                        destroyingAncestors.append(object);
+                        motion->stop();
+                        modeChange->stop();
+                    }));
             }
             ancestorsDirty = false;
         }
@@ -270,6 +286,14 @@ struct SpatialView::Private {
             environmentRaster = raster;
             queueBackend();
         }
+    }
+
+    bool parentIsTearingDown(const QObject* parent) const
+    {
+        for (auto* ancestor = parent; ancestor; ancestor = ancestor->parent())
+            if (destroyingAncestors.contains(ancestor))
+                return true;
+        return false;
     }
 
     void syncContentTheme(SpatialItem* item)
@@ -388,6 +412,8 @@ struct SpatialView::Private {
     }
     void checkBackend()
     {
+        if (destroying || ancestorDestroying)
+            return;
         auto* gl = qobject_cast<QOpenGLWidget*>(canvas->viewport());
         auto* window = q->window()->windowHandle();
         if (!gl || !canvas->isVisible() || !window || !window->isExposed())
@@ -437,6 +463,8 @@ struct SpatialView::Private {
     }
     void applyBackend()
     {
+        if (destroying || ancestorDestroying)
+            return;
         if (scene->mouseGrabberItem() && q->isVisible()) {
             queueBackend(16);
             return;
@@ -695,10 +723,13 @@ SpatialView::SpatialView(QWidget* parent) : QWidget(parent), d(new Private)
     connect(qApp, &QGuiApplication::applicationStateChanged, this, [this] { d->settle(); });
     onThemeUpdated();
     d->applyBackend();
+    d->inspectEnvironment(QEvent::ParentChange);
 }
 SpatialView::~SpatialView()
 {
     d->destroying = true;
+    for (const auto& connection : d->ancestorDestructionConnections)
+        disconnect(connection);
     d->motion->stop();
     d->modeChange->stop();
     d->canvas->pointer = {};
@@ -706,6 +737,10 @@ SpatialView::~SpatialView()
     d->canvas->nativeRequested = {};
     while (!d->items.isEmpty())
         delete d->items.last();
+}
+bool SpatialView::isHostTearingDown() const
+{
+    return d->destroying || d->ancestorDestroying;
 }
 SpatialItem* SpatialView::addWidget(QWidget* widget, WidgetOwnership ownership)
 {
@@ -789,8 +824,17 @@ QWidget* SpatialView::detachItem(SpatialItem* item, bool applyOwnership)
         if (applyOwnership && item->d->ownership == WidgetOwnership::Owned) {
             delete widget;
             widget = nullptr;
-        } else if (applyOwnership && item->d->ownership == WidgetOwnership::Reparented)
-            widget->setParent(item->d->originalParent);
+        } else if (applyOwnership && item->d->ownership == WidgetOwnership::Reparented) {
+            if (d->parentIsTearingDown(item->d->originalParent)) {
+                // Its original owner is being deleted too. Preserve that ownership
+                // outcome without inserting the widget into a dead focus chain.
+                // zh_CN: 原所有者也在销毁，保留随其销毁的语义，不向已拆除的焦点链插入控件。
+                delete widget;
+                widget = nullptr;
+            } else {
+                widget->setParent(item->d->originalParent);
+            }
+        }
         if (widget) {
             if (item->d->inheritsHostTheme)
                 widget->setProperty(kThemeOverride, QVariant());
@@ -832,6 +876,8 @@ bool SpatialView::isSpatialEnabled() const
 }
 void SpatialView::setSpatialEnabled(bool enabled)
 {
+    if (isHostTearingDown())
+        return;
     enabled = enabled && d->allowsSpatial();
     d->requestedSpatial = enabled;
     d->modeChange->stop();
@@ -969,7 +1015,8 @@ SpatialView::RenderMode SpatialView::renderMode() const
 }
 void SpatialView::setRenderMode(RenderMode mode)
 {
-    if ((mode != RenderMode::Auto && mode != RenderMode::Raster && mode != RenderMode::OpenGL) ||
+    if (isHostTearingDown() ||
+        (mode != RenderMode::Auto && mode != RenderMode::Raster && mode != RenderMode::OpenGL) ||
         mode == d->mode)
         return;
     d->mode = mode;
@@ -992,7 +1039,7 @@ QString SpatialView::fallbackReason() const
 }
 void SpatialView::updateProjection()
 {
-    if (d->destroying || d->projecting || !d->canvas)
+    if (isHostTearingDown() || d->projecting || !d->canvas)
         return;
     d->projecting = true;
     const QSize size = d->canvas->viewport()->size();

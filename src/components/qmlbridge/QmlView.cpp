@@ -33,6 +33,17 @@ protected:
     bool event(QEvent* event) override
     {
         const auto type = event->type();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
+        // Qt 6.2 reloads the component when an unshown preview is adopted by a
+        // window. Before scene-graph initialization there are no GPU resources
+        // to rebind, and first show will create them for the final host.
+        // zh_CN: Qt 6.2 会在预览首次重父时重载组件；首次场景图初始化前保留已加载的场景。
+        if (type == QEvent::WindowChangeInternal && !m_hasBeenShown &&
+            !quickWindow()->isSceneGraphInitialized())
+            return QWidget::event(event);
+        if (type == QEvent::Show)
+            m_hasBeenShown = true;
+#endif
         const QPointer<QmlQuickWidget> lifetime(this);
         const bool handled = QQuickWidget::event(event);
         // Qt recreates the Quick window on adoption into another top-level host.
@@ -41,6 +52,11 @@ protected:
             setClearColor(Qt::transparent);
         return handled;
     }
+
+private:
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
+    bool m_hasBeenShown = false;
+#endif
 };
 
 constexpr char kDirectCompositionRequiredProperty[] = "fluentqtDirectCompositionRequired";
@@ -146,7 +162,7 @@ bool QmlView::reportError(const QString& message, QString* error)
     const QPointer<QQuickWidget> scene(state->quick);
     if (state->errors == QStringList{message})
         return false;
-    state->errors = {message};
+    state->errors = QStringList{message};
     QPointer<QmlView> lifetime(this);
     emit errorsChanged();
     if (lifetime && state->quick == scene && state->errors == QStringList{message})

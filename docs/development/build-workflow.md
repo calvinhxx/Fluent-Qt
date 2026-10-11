@@ -19,6 +19,11 @@ Python 3, vcpkg, and a supported desktop Qt Widgets kit (5.15+ or 6.2+). The
 Gallery and test dependencies are selected by the preset's vcpkg features;
 Qt is discovered from your installed kit.
 
+Enabling `FLUENT_QT_BUILD_QML_BRIDGE` with Qt 6.2–6.5 also requires the matching
+Qt Quick private development headers for its embedded keyboard-focus adapter.
+Qt 6.6+, Qt 5, and builds without QmlBridge do not need this additional dependency;
+see the [QmlBridge contract](../architecture/qml-bridge.md#build-and-consume).
+
 Set `VCPKG_ROOT` to the vcpkg checkout containing
 `scripts/buildsystems/vcpkg.cmake`. Select a preset for the actual host and
 toolchain: `vcpkg-osx` for macOS arm64, `vcpkg-windows` for Windows x64, or

@@ -105,6 +105,7 @@
         </modify-function>
     </function>
     <function signature="bindProperties(QObject*,const QString&amp;,QObject*,const QString&amp;,fluent::binding::BindingMode)"/>
+    <function signature="objectHasCurrentThreadAffinityForBinding(const QObject*)"/>
     <function signature="bindManagedProperties(QObject*,const QString&amp;,QObject*,const QString&amp;,fluent::binding::BindingMode,bool)"/>
     <function signature="bindComputedProperties(QObject*,const QString&amp;,QObject*,const QList&lt;QObject*&gt;&amp;,const QStringList&amp;,bool)"/>
     <function signature="setPropertyBehavior(QObject*,const QString&amp;,int)"/>

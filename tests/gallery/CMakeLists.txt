@@ -196,6 +196,13 @@ if(TARGET FluentQtQmlBridge)
         else()
             set_property(TEST ${_qml_gallery_case} APPEND PROPERTY ENVIRONMENT
                 "QT_QUICK_BACKEND=software")
+            if(QT_VERSION_MAJOR EQUAL 5 AND
+                    _qml_gallery_case STREQUAL "GalleryQmlBridgeTest.Contract_AtomicSamplesKeepIndependentState")
+                # Qt 5's software QWidget grab includes fractional offscreen-DPI
+                # edge padding. Keep this CPU pixel fixture at the canonical DPI.
+                set_property(TEST ${_qml_gallery_case} APPEND PROPERTY ENVIRONMENT
+                    "QT_FONT_DPI=96")
+            endif()
         endif()
     endforeach()
     foreach(_qml_gallery_test test_gallery_shell_framework test_gallery_shell_motion_policy test_gallery_spatial test_gallery_content_pages)

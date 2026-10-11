@@ -17,6 +17,23 @@ namespace {
 using samples::makeSample;
 
 using samples::SpatialPreviewBinding;
+using samples::SpatialPreviewPanel;
+
+QString spatialPanelLifetimeSource()
+{
+    return QStringLiteral("using namespace fluent;\n"
+                          "class SpatialPreviewPanel final : public QWidget {\n"
+                          "public:\n"
+                          "    using QWidget::QWidget;\n"
+                          "    ~SpatialPreviewPanel() override\n"
+                          "    {\n"
+                          "        // Deactivate before dismantling the panel's widgets.\n"
+                          "        if (auto* session = findChild<spatial::SpatialSession*>(\n"
+                          "                QString(), Qt::FindDirectChildrenOnly))\n"
+                          "            session->deactivate();\n"
+                          "    }\n"
+                          "};\n\n");
+}
 
 // Show the small Spatial integration first; keep the complete preview source available.
 // zh_CN: 优先展示简短的 Spatial 接入代码，完整预览源码仍可按需查看。
@@ -180,7 +197,7 @@ QVector<GallerySample> spatialViewSamples()
                 "        arrange();\n"
                 "    }\n"
                 "};\n"
-                "auto* panel = new QWidget(parent);\n"
+                "auto* panel = new SpatialPreviewPanel(parent);\n"
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(16);\n"
@@ -326,7 +343,7 @@ QVector<GallerySample> spatialViewSamples()
                         arrange();
                     }
                 };
-                auto* panel = new QWidget(parent);
+                auto* panel = new SpatialPreviewPanel(parent);
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(16);
@@ -450,7 +467,7 @@ QVector<GallerySample> spatialViewSamples()
             QStringLiteral("A settings card and a Sparkline share one view at different depths."),
             QStringLiteral(
                 "using namespace fluent;\n"
-                "auto* panel = new QWidget(parent);\n"
+                "auto* panel = new SpatialPreviewPanel(parent);\n"
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
@@ -517,7 +534,7 @@ QVector<GallerySample> spatialViewSamples()
                 "front->setPosition(QVector3D(110, 64, 100));\n"
                 "front->setRotation(QVector3D(-6, -14, 0));\n"),
             [](QWidget* parent) {
-                auto* panel = new QWidget(parent);
+                auto* panel = new SpatialPreviewPanel(parent);
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
@@ -583,7 +600,7 @@ QVector<GallerySample> spatialViewSamples()
             QStringLiteral("spatial-view-inputs"), QStringLiteral("Slider and CheckBox"),
             QStringLiteral("Drag the level slider, then mute and restore the preview."),
             QStringLiteral("using namespace fluent;\n"
-                           "auto* panel = new QWidget(parent);\n"
+                           "auto* panel = new SpatialPreviewPanel(parent);\n"
                            "auto* column = new QVBoxLayout(panel);\n"
                            "column->setContentsMargins(0, 0, 0, 0);\n"
                            "column->setSpacing(12);\n"
@@ -642,7 +659,7 @@ QVector<GallerySample> spatialViewSamples()
                            "item->setHoverLift(4.5);\n"
                            "item->setRotation(QVector3D(5, -12, 0));\n"),
             [](QWidget* parent) {
-                auto* panel = new QWidget(parent);
+                auto* panel = new SpatialPreviewPanel(parent);
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
@@ -702,7 +719,7 @@ QVector<GallerySample> spatialViewSamples()
             QStringLiteral("Select a task and mark it done. The list model and remaining count "
                            "update together."),
             QStringLiteral("using namespace fluent;\n"
-                           "auto* panel = new QWidget(parent);\n"
+                           "auto* panel = new SpatialPreviewPanel(parent);\n"
                            "auto* column = new QVBoxLayout(panel);\n"
                            "column->setContentsMargins(0, 0, 0, 0);\n"
                            "column->setSpacing(12);\n"
@@ -765,7 +782,7 @@ QVector<GallerySample> spatialViewSamples()
                            "item->setHoverLift(4.5);\n"
                            "item->setRotation(QVector3D(5, -12, 0));\n"),
             [](QWidget* parent) {
-                auto* panel = new QWidget(parent);
+                auto* panel = new SpatialPreviewPanel(parent);
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
@@ -831,7 +848,7 @@ QVector<GallerySample> spatialViewSamples()
                            "return to 2D."),
             QStringLiteral(
                 "using namespace fluent;\n"
-                "auto* panel = new QWidget(parent);\n"
+                "auto* panel = new SpatialPreviewPanel(parent);\n"
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
@@ -876,7 +893,7 @@ QVector<GallerySample> spatialViewSamples()
                 "item->setHoverLift(4.5);\n"
                 "item->setRotation(QVector3D(5, -12, 0));\n"),
             [](QWidget* parent) {
-                auto* panel = new QWidget(parent);
+                auto* panel = new SpatialPreviewPanel(parent);
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
@@ -924,7 +941,7 @@ QVector<GallerySample> spatialViewSamples()
                 "Switch tabs inside the card. Edit the name below to update the preview."),
             QStringLiteral(
                 "using namespace fluent;\n"
-                "auto* panel = new QWidget(parent);\n"
+                "auto* panel = new SpatialPreviewPanel(parent);\n"
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
@@ -995,7 +1012,7 @@ QVector<GallerySample> spatialViewSamples()
                 "item->setHoverLift(4.5);\n"
                 "item->setRotation(QVector3D(5, -12, 0));\n"),
             [](QWidget* parent) {
-                auto* panel = new QWidget(parent);
+                auto* panel = new SpatialPreviewPanel(parent);
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
@@ -1067,7 +1084,7 @@ QVector<GallerySample> spatialViewSamples()
             QStringLiteral("Choose a preset and rate it inside the tilted card."),
             QStringLiteral(
                 "using namespace fluent;\n"
-                "auto* panel = new QWidget(parent);\n"
+                "auto* panel = new SpatialPreviewPanel(parent);\n"
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
@@ -1128,7 +1145,7 @@ QVector<GallerySample> spatialViewSamples()
                 "item->setRotation(QVector3D(5, -12, 0));\n"),
             [](QWidget* parent) {
                 using namespace fluent;
-                auto* panel = new QWidget(parent);
+                auto* panel = new SpatialPreviewPanel(parent);
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
@@ -1196,7 +1213,7 @@ QVector<GallerySample> spatialViewSamples()
                 "// Gallery row styling: app/view/widgets/samples/CollectionSampleDelegates.h\n"
                 "#include \"CollectionSampleDelegates.h\"\n"
                 "using namespace fluent;\n"
-                "auto* panel = new QWidget(parent);\n"
+                "auto* panel = new SpatialPreviewPanel(parent);\n"
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
@@ -1261,7 +1278,7 @@ QVector<GallerySample> spatialViewSamples()
                 "item->setHoverLift(4.5);\n"
                 "item->setRotation(QVector3D(5, -12, 0));\n"),
             [](QWidget* parent) {
-                auto* panel = new QWidget(parent);
+                auto* panel = new SpatialPreviewPanel(parent);
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
@@ -1330,7 +1347,7 @@ QVector<GallerySample> spatialViewSamples()
                 "Adjust the allocation. The same ChartModel updates the projected chart."),
             QStringLiteral(
                 "using namespace fluent;\n"
-                "auto* panel = new QWidget(parent);\n"
+                "auto* panel = new SpatialPreviewPanel(parent);\n"
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
@@ -1382,7 +1399,7 @@ QVector<GallerySample> spatialViewSamples()
                 "item->setRotation(QVector3D(5, -12, 0));\n"),
             [](QWidget* parent) {
                 using namespace fluent;
-                auto* panel = new QWidget(parent);
+                auto* panel = new SpatialPreviewPanel(parent);
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
@@ -1436,7 +1453,7 @@ QVector<GallerySample> spatialViewSamples()
             QStringLiteral("Choose a format. The dropdown updates the card in either mode."),
             QStringLiteral(
                 "using namespace fluent;\n"
-                "auto* panel = new QWidget(parent);\n"
+                "auto* panel = new SpatialPreviewPanel(parent);\n"
                 "auto* column = new QVBoxLayout(panel);\n"
                 "column->setContentsMargins(0, 0, 0, 0);\n"
                 "column->setSpacing(12);\n"
@@ -1515,7 +1532,7 @@ QVector<GallerySample> spatialViewSamples()
                 "toolbar->addWidget(formats);\n"
                 "column->insertLayout(0, toolbar);\n"),
             [](QWidget* parent) {
-                auto* panel = new QWidget(parent);
+                auto* panel = new SpatialPreviewPanel(parent);
                 auto* column = new QVBoxLayout(panel);
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(12);
@@ -1593,6 +1610,7 @@ QVector<GallerySample> spatialViewSamples()
             },
             true)};
     for (auto& sample : samples) {
+        sample.codeSnippet.prepend(spatialPanelLifetimeSource());
         sample.usageSnippet = spatialUsage(sample.id);
         sample.supplementary = sample.id != QStringLiteral("spatial-view-scene") &&
                                sample.id != QStringLiteral("spatial-view-cards") &&
@@ -1633,7 +1651,7 @@ QVector<GallerySample> spatialItemSamples()
             "        QTimer::singleShot(0, this, [this] { arrange(); });\n"
             "    }\n"
             "};\n"
-            "auto* panel = new QWidget(parent);\n"
+            "auto* panel = new SpatialPreviewPanel(parent);\n"
             "auto* column = new QVBoxLayout(panel);\n"
             "column->setContentsMargins(0, 0, 0, 0);\n"
             "column->setSpacing(12);\n"
@@ -1754,7 +1772,7 @@ QVector<GallerySample> spatialItemSamples()
                     QTimer::singleShot(0, this, [this] { arrange(); });
                 }
             };
-            auto* panel = new QWidget(parent);
+            auto* panel = new SpatialPreviewPanel(parent);
             auto* column = new QVBoxLayout(panel);
             column->setContentsMargins(0, 0, 0, 0);
             column->setSpacing(12);
@@ -1847,8 +1865,10 @@ QVector<GallerySample> spatialItemSamples()
             return panel;
         },
         true)};
-    for (auto& sample : samples)
+    for (auto& sample : samples) {
+        sample.codeSnippet.prepend(spatialPanelLifetimeSource());
         sample.usageSnippet = spatialUsage(sample.id);
+    }
     return samples;
 }
 

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 import gc
+import os
+import subprocess
+import sys
 import weakref
 from pathlib import Path
 import unittest
@@ -135,6 +138,54 @@ class FoundationAuthoringTest(unittest.TestCase):
         finally:
             thread.quit()
             thread.wait()
+
+    def test_computed_and_state_authoring_reject_foreign_threads_before_evaluation(self):
+        source, foreign_target, target = QObject(), QObject(), QObject()
+        controller = fluentqt.StateGroup()
+        thread = QThread()
+        for obj in (source, foreign_target, controller):
+            obj.moveToThread(thread)
+            thread.finished.connect(obj.deleteLater)
+        thread.start()
+        calls = []
+        try:
+            with self.assertRaisesRegex(ValueError, "target's Qt thread"):
+                fluentqt.bind_computed(
+                    foreign_target, "objectName", [], lambda: calls.append(True))
+            with self.assertRaisesRegex(ValueError, "binding's Qt thread"):
+                fluentqt.bind_computed(
+                    target, "objectName", [(source, "objectName")],
+                    lambda: calls.append(True))
+            with self.assertRaisesRegex(ValueError, "controller's Qt thread"):
+                controller.add("active", {}, when=lambda: calls.append(True))
+            self.assertFalse(calls)
+            self.assertEqual(target.objectName(), "")
+            self.assertFalse(controller.has("active"))
+        finally:
+            thread.quit()
+            thread.wait()
+
+    def test_authoring_thread_checks_allow_clean_process_shutdown(self):
+        probe = """
+import fluentqt
+from PySide6.QtWidgets import QApplication, QLabel
+app = QApplication([])
+target = QLabel()
+binding = fluentqt.bind_computed(target, "text", [], lambda: "ready")
+assert binding.isValid() and target.text() == "ready"
+states = fluentqt.StateGroup()
+states.add("busy", {target: {"enabled": False}})
+states.set("busy")
+assert not target.isEnabled()
+states.clear()
+assert target.isEnabled()
+"""
+        environment = dict(os.environ, QT_QPA_PLATFORM="offscreen",
+                           PYTHONMALLOC="malloc", MALLOC_PERTURB_="165")
+        process = subprocess.run(
+            [sys.executable, "-X", "faulthandler", "-c", probe],
+            env=environment, capture_output=True, text=True, timeout=30)
+        self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
 
     def test_legacy_bind_reports_target_destruction_during_initial_sync(self):
         source, target = QSlider(), QSlider()

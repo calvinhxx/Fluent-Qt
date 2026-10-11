@@ -143,6 +143,48 @@ assert "PySide6.QtOpenGLWidgets" not in sys.modules
                 delete_qobject(view)
             delete_qobject(model)
 
+    def test_parented_session_teardown_preserves_widget_ownership(self):
+        for nested in (False, True):
+            with self.subTest(nested=nested):
+                owner = QWidget()
+                host = QWidget(owner) if nested else owner
+                session = SpatialSession(host, host)
+                self.assertTrue(session.activate())
+                view = session.createView(host)
+                view.setRenderMode(SpatialView.RenderMode.Raster)
+                original_parent = QWidget(host)
+                external_parent = QWidget()
+                owned = fluentqt.Card()
+                borrowed = fluentqt.Card()
+                reparented = fluentqt.Card(original_parent)
+                external = fluentqt.Card(external_parent)
+                for card in (owned, borrowed, reparented, external):
+                    fluentqt.Button("Focus target", card)
+                view.addOwnedWidget(owned)
+                view.addBorrowedWidget(borrowed)
+                view.addReparentedWidget(reparented)
+                view.addReparentedWidget(external)
+                view.setSpatialEnabled(True)
+                self.assertTrue(view.isSpatialEnabled())
+                owner.show()
+                self.app.processEvents()
+                try:
+                    delete_qobject(owner)
+                    self.assertFalse(shiboken6.isValid(view))
+                    self.assertFalse(shiboken6.isValid(owned))
+                    self.assertFalse(shiboken6.isValid(reparented))
+                    self.assertTrue(shiboken6.isValid(borrowed))
+                    self.assertIsNone(borrowed.parentWidget())
+                    self.assertIsNone(borrowed.graphicsProxyWidget())
+                    self.assertTrue(shiboken6.isValid(external))
+                    self.assertIs(external.parentWidget(), external_parent)
+                finally:
+                    if shiboken6.isValid(owner):
+                        delete_qobject(owner)
+                    if shiboken6.isValid(borrowed):
+                        delete_qobject(borrowed)
+                    delete_qobject(external_parent)
+
     def test_session_attaches_existing_python_subclasses_without_reparenting(self):
         class CustomView(SpatialView):
             pass

@@ -11,11 +11,24 @@ from .spatial_support import SpatialPreviewBinding
 
 _IMPORTS = """import fluentqt
 from fluentqt.spatial import SpatialSession, SpatialView
-from PySide6.QtCore import QDate, QPointF, Qt, QTimer, QStringListModel
+from PySide6.QtCore import QDate, QEvent, QPointF, Qt, QTimer, QStringListModel
 from PySide6.QtGui import QVector3D, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QAbstractItemView, QGridLayout, QHBoxLayout, QVBoxLayout, QWidget,
 )
+
+class SpatialPreviewPanel(QWidget):
+    def stop_spatial(self):
+        session = self.findChild(SpatialSession)
+        if session is not None:
+            session.deactivate()
+
+    def event(self, event):
+        # Stop before deleteLater dismantles this panel's widgets.
+        # Also call stop_spatial before disposing an enclosing window.
+        if event.type() == QEvent.DeferredDelete:
+            self.stop_spatial()
+        return super().event(event)
 
 """
 
@@ -33,7 +46,7 @@ def _panel(height=340, view_type="SpatialView", camera=1400):
                 "spatial_attached = spatial_attached and session.attachView(view)")
     creation = "\n".join("        " + line for line in creation.splitlines())
     return _source(f"""
-        panel = QWidget(globals().get("gallery_parent"))
+        panel = SpatialPreviewPanel(globals().get("gallery_parent"))
         column = QVBoxLayout(panel)
         column.setContentsMargins(0, 0, 0, 0)
         column.setSpacing(12)
