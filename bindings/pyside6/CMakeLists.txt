@@ -325,6 +325,12 @@ set(FLUENTQT_PYSIDE6_GENERATOR_ARGUMENTS
     "${FLUENTQT_PYSIDE6_GENERATOR_INCLUDE_ARGUMENTS}"
     "-T${FLUENTQT_PYSIDE6_TYPESYSTEM_DIR}"
     "--output-directory=${FLUENTQT_PYSIDE6_GENERATED_ROOT}")
+if(WIN32)
+    # Shiboken's Clang must use the UCRT builtin offsetof when Qt plugin
+    # metadata evaluates offsets in a constant expression (LLVM #59689).
+    list(APPEND FLUENTQT_PYSIDE6_GENERATOR_ARGUMENTS
+        --clang-option=-D_CRT_USE_BUILTIN_OFFSETOF=1)
+endif()
 if(APPLE)
     get_filename_component(FLUENTQT_PYSIDE6_QT_FRAMEWORK_DIR
         "${Qt6_DIR}/../.." ABSOLUTE)
