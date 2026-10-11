@@ -78,6 +78,7 @@ REQUIRED_EXECUTION_LANES = {
         "id": "linux-x64-qt62-fast",
         "mode": "fast",
         "build_target": "fluent_qt_ci_fast_tests",
+        "additional_build_targets": ("FluentQtQmlBridge",),
         "configure_options": ("-DFLUENT_QT_BUILD_QML_BRIDGE=ON",),
         "test_labels": "^ci_fast$",
         "exclude_labels": "^(manual_visual|local_desktop)$",
@@ -219,6 +220,9 @@ def validate_catalog(data: Any) -> list[str]:
             errors.append(
                 f"{context} must build target {contract['build_target']}"
             )
+        for target in contract.get("additional_build_targets", ()):
+            if not isinstance(targets, str) or target not in targets.split():
+                errors.append(f"{context} must build target {target} for SDK installation")
         if scenario.get("test_labels") != contract["test_labels"]:
             errors.append(
                 f"{context} must select labels {contract['test_labels']}"
