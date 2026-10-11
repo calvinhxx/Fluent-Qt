@@ -37,6 +37,7 @@ set(FLUENTQT_PYSIDE6_GALLERY_FILES
     native_samples_basic.py
     native_samples_charts.py
     native_samples_files.py
+    native_samples_datetime.py
     native_samples_collections.py
     native_samples_layout.py
     native_samples_dialogs.py

@@ -35,6 +35,7 @@ flowchart TD
 | [Plugins](plugins.md) | Optional extension registration, dependency-ordered activation, borrowed ownership, or widget factories |
 | [QmlBridge](qml-bridge.md) | Optional QmlSession lifecycle, application QML hosting, borrowed context models, theme tokens, and explicit Quick initialization |
 | [Files and feedback](files-and-feedback.md) | File entry, file model ownership, transfer presentation, or actionable Toast |
+| [Date and time range picker](date-time-range-picker.md) | Nullable start/end inputs, minute precision, date-only mode, and query-boundary ownership |
 | [Charts](charts.md) | Model ownership, indexed projections, streaming, chart aggregation, or accessibility |
 | [Timeline and Stepper](sequence-controls.md) | Caller-owned sequences, step requests, layout, motion, and accessibility |
 | [Spatial](spatial-view.md) | SpatialSession lifecycle, composition with SpatialView and SpatialItem, parameters, ownership, and native 2D fallback |

@@ -179,6 +179,9 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("A calendar surface for browsing months and selecting dates.")},
         {QStringLiteral("date-picker"),
          QStringLiteral("A spinning-field picker for choosing a day, month, and year.")},
+        {QStringLiteral("date-time-range-picker"),
+         QStringLiteral("A compact range entry with a calendar popup, minute precision, quick "
+                        "presets, and independently optional bounds.")},
         {QStringLiteral("time-picker"),
          QStringLiteral("A spinning-field picker for choosing a time of day.")},
         // Dialogs & flyouts

@@ -85,6 +85,8 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
            Typography::Icons::Calendar},
           {QStringLiteral("date-picker"), QStringLiteral("DatePicker"),
            Typography::Icons::Calendar},
+          {QStringLiteral("date-time-range-picker"), QStringLiteral("DateTimeRangePicker"),
+           Typography::Icons::Calendar},
           {QStringLiteral("time-picker"), QStringLiteral("TimePicker"), Typography::Icons::Clock}}},
         {QStringLiteral("dialogs-flyouts"),
          QStringLiteral("Dialogs & flyouts"),

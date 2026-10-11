@@ -2,9 +2,9 @@
   "schema_version": 1,
   "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
   "summary": {
-    "component_count": 88,
+    "component_count": 89,
     "foundation_topic_count": 1,
-    "sample_count": 261
+    "sample_count": 264
   },
   "samples": [
     {
@@ -541,6 +541,21 @@
       "route_id": "date-picker",
       "sample_id": "date-picker-basic",
       "source": "from PySide6.QtCore import QDate\n\npicker = fluentqt.DatePicker()\npicker.setPlaceholderText(fluentqt.DatePicker.DateField.Month, \"month\")\npicker.setPlaceholderText(fluentqt.DatePicker.DateField.Day, \"day\")\npicker.setPlaceholderText(fluentqt.DatePicker.DateField.Year, \"year\")\npicker.setConfirmButtonAccessibleName(\"Accept date\")\npicker.setCancelButtonAccessibleName(\"Cancel date\")\npicker.setDate(QDate.currentDate())\n"
+    },
+    {
+      "route_id": "date-time-range-picker",
+      "sample_id": "date-time-range-dates",
+      "source": "from PySide6.QtCore import QDate, QDateTime, QTime\n\npicker = fluentqt.DateTimeRangePicker()\npicker.setStartLabelText(\"Start\")\npicker.setEndLabelText(\"End\")\npicker.setTimeEnabled(False)\npicker.setRange(\n    QDateTime(QDate(2025, 10, 1), QTime(0, 0)),\n    QDateTime(QDate(2025, 11, 1), QTime(0, 0))\n)\n"
+    },
+    {
+      "route_id": "date-time-range-picker",
+      "sample_id": "date-time-range-time",
+      "source": "from PySide6.QtCore import QDate, QDateTime, QTime\n\npicker = fluentqt.DateTimeRangePicker()\npicker.setStartLabelText(\"Start\")\npicker.setEndLabelText(\"End\")\npicker.setRange(\n    QDateTime(QDate(2025, 10, 1), QTime(10, 10)),\n    QDateTime(QDate(2025, 10, 3), QTime(15, 10))\n)\n"
+    },
+    {
+      "route_id": "date-time-range-picker",
+      "sample_id": "date-time-range-open-ended",
+      "source": "from PySide6.QtCore import QDate, QDateTime, QTime\n\npicker = fluentqt.DateTimeRangePicker()\npicker.setStartLabelText(\"Since\")\npicker.setEndLabelText(\"Until\")\npicker.startDatePicker().setPlaceholderText(\"No lower bound\")\npicker.endDatePicker().setPlaceholderText(\"No upper bound\")\npicker.endTimePicker().setPlaceholderText(fluentqt.TimePicker.TimeField.Hour, \"hh\")\npicker.endTimePicker().setPlaceholderText(\n    fluentqt.TimePicker.TimeField.Minute,\n    \"mm\"\n)\npicker.setStartDateTime(QDateTime(QDate(2025, 10, 1), QTime(10, 10)))\npicker.rangeChanged.connect(lambda start, end: None)\n"
     },
     {
       "route_id": "time-picker",

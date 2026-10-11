@@ -656,6 +656,11 @@
           "component_id": "time-picker",
           "choose_when": "Users select a locale-aware time of day.",
           "avoid_when": "The value represents duration rather than clock time."
+        },
+        {
+          "component_id": "date-time-range-picker",
+          "choose_when": "A compact query filter needs a calendar range popup, independently nullable start/end dates, minute precision, or whole-day presets.",
+          "avoid_when": "The application needs one date, a duration, or non-contiguous date selection."
         }
       ]
     },
@@ -1089,6 +1094,7 @@
         "calendar-date-picker",
         "calendar-view",
         "date-picker",
+        "date-time-range-picker",
         "time-picker"
       ],
       "cpp_header": "<FluentQt/DateTime.h>",
@@ -5119,6 +5125,117 @@
           "title": "Spinning-field date picker",
           "description": "Clicking opens looping day, month, and year columns.",
           "cpp_snippet": "auto* picker = new DatePicker(this);\npicker->setPlaceholderText(DatePicker::DateField::Month, \"month\");\npicker->setPlaceholderText(DatePicker::DateField::Day, \"day\");\npicker->setPlaceholderText(DatePicker::DateField::Year, \"year\");\npicker->setConfirmButtonAccessibleName(\"Accept date\");\npicker->setCancelButtonAccessibleName(\"Cancel date\");\npicker->setDate(QDate::currentDate());"
+        }
+      ]
+    },
+    {
+      "id": "date-time-range-picker",
+      "title": "DateTimeRangePicker",
+      "category_id": "date-time",
+      "description": "A compact range entry with a calendar popup, minute precision, quick presets, and independently optional bounds.",
+      "capabilities": [
+        "date-time"
+      ],
+      "search_terms": [
+        "application.",
+        "belongs",
+        "bound",
+        "bounds.",
+        "buttons",
+        "calendar",
+        "calendar.",
+        "choose",
+        "clear",
+        "compact",
+        "date",
+        "date-time",
+        "date-time-range-dates",
+        "date-time-range-open-ended",
+        "date-time-range-picker",
+        "date-time-range-time",
+        "date.",
+        "dates",
+        "datetimerangepicker",
+        "edit",
+        "either",
+        "empty",
+        "endpoint",
+        "entry",
+        "filter",
+        "flyout",
+        "inclusion",
+        "independently",
+        "independently.",
+        "invalid",
+        "leave",
+        "minute",
+        "open",
+        "optional",
+        "pick",
+        "place.",
+        "popup",
+        "precision",
+        "preset.",
+        "presets",
+        "qdatetime",
+        "query",
+        "quick",
+        "range",
+        "rather",
+        "select",
+        "than",
+        "time",
+        "times",
+        "today",
+        "two",
+        "use",
+        "whole-day"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/DateTime.h>",
+        "declaration": "src/components/date_time/DateTimeRangePicker.h",
+        "qualified_type": "fluent::date_time::DateTimeRangePicker",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.date_time",
+        "type": "DateTimeRangePicker",
+        "import_statement": "from fluentqt.date_time import DateTimeRangePicker"
+      },
+      "tests": [
+        {
+          "target": "test_date_time_range_picker",
+          "source": "tests/components/date_time/TestDateTimeRangePicker.cpp",
+          "ctest_label": "test_date_time_range_picker"
+        }
+      ],
+      "gallery": {
+        "route_id": "date-time-range-picker",
+        "sample_source": "app/view/widgets/samples/DateTimeSamples.cpp",
+        "control_image": "app/assets/control_images/date-time/DateTimeRangePicker.png"
+      },
+      "samples": [
+        {
+          "id": "date-time-range-dates",
+          "title": "Filter by a date range",
+          "description": "Open the compact entry, select two dates, or choose a whole-day preset. Query inclusion belongs to the application.",
+          "cpp_snippet": "auto* picker = new DateTimeRangePicker(this);\npicker->setStartLabelText(\"Start\");\npicker->setEndLabelText(\"End\");\npicker->setTimeEnabled(false);\npicker->setRange(QDateTime(QDate(2025, 10, 1), QTime(0, 0)),\n                 QDateTime(QDate(2025, 11, 1), QTime(0, 0)));",
+          "fill_available_width": true
+        },
+        {
+          "id": "date-time-range-time",
+          "title": "Select dates and times",
+          "description": "Pick an endpoint in its compact flyout, or select a range on the calendar. Edit times in place.",
+          "cpp_snippet": "auto* picker = new DateTimeRangePicker(this);\npicker->setStartLabelText(\"Start\");\npicker->setEndLabelText(\"End\");\npicker->setRange(QDateTime(QDate(2025, 10, 1), QTime(10, 10)),\n                 QDateTime(QDate(2025, 10, 3), QTime(15, 10)));",
+          "fill_available_width": true
+        },
+        {
+          "id": "date-time-range-open-ended",
+          "title": "Leave either bound open",
+          "description": "Use the clear buttons independently. An empty endpoint is an invalid QDateTime, rather than today's date.",
+          "cpp_snippet": "auto* picker = new DateTimeRangePicker(this);\npicker->setStartLabelText(\"Since\");\npicker->setEndLabelText(\"Until\");\npicker->startDatePicker()->setPlaceholderText(\"No lower bound\");\npicker->endDatePicker()->setPlaceholderText(\"No upper bound\");\npicker->endTimePicker()->setPlaceholderText(TimePicker::TimeField::Hour, \"hh\");\npicker->endTimePicker()->setPlaceholderText(TimePicker::TimeField::Minute, \"mm\");\npicker->setStartDateTime(QDateTime(QDate(2025, 10, 1), QTime(10, 10)));\nconnect(picker, &DateTimeRangePicker::rangeChanged, this,\n        [](const QDateTime& start, const QDateTime& end) { /* build the query */ });",
+          "fill_available_width": true
         }
       ]
     },
@@ -10675,6 +10792,15 @@
       "description": "A spinning-field picker for choosing a day, month, and year."
     },
     {
+      "id": "date-time-range-picker",
+      "title": "DateTimeRangePicker",
+      "kind": "component",
+      "parent_id": "date-time",
+      "group": "Date & time",
+      "depth": 1,
+      "description": "A compact range entry with a calendar popup, minute precision, quick presets, and independently optional bounds."
+    },
+    {
       "id": "time-picker",
       "title": "TimePicker",
       "kind": "component",
@@ -11180,12 +11306,12 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 113,
-    "component_count": 88,
-    "sample_count": 249,
+    "route_count": 114,
+    "component_count": 89,
+    "sample_count": 252,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 15,
-    "guided_component_count": 88
+    "guided_component_count": 89
   }
 }

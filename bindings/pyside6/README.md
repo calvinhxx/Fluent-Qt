@@ -295,6 +295,7 @@ PYTHONPATH=build/pyside6/python \
 | Models, delegates, and selection | [`list_view_model.py`](examples/list_view_model.py), [`grid_view_model.py`](examples/grid_view_model.py), [`tree_view_model.py`](examples/tree_view_model.py) |
 | Same-window overlays | [`popup_overlay.py`](examples/popup_overlay.py), [`flyout_overlay.py`](examples/flyout_overlay.py), [`drawer_view_ownership.py`](examples/drawer_view_ownership.py) |
 | Date and time controls | [`date_time_pickers.py`](examples/date_time_pickers.py) |
+| Nullable start/end date-time range | [`date_time_range_picker.py`](examples/date_time_range_picker.py) |
 | Navigation and page ownership | [`navigation_view_ownership.py`](examples/navigation_view_ownership.py), [`tab_view_navigation.py`](examples/tab_view_navigation.py) |
 | Menus and command surfaces | [`command_surfaces.py`](examples/command_surfaces.py) |
 

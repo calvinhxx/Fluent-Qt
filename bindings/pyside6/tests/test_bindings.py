@@ -33,6 +33,7 @@ from PySide6.QtCore import (
     QByteArray,
     QCoreApplication,
     QDate,
+    QDateTime,
     QEvent,
     QEventLoop,
     QItemSelectionModel,
@@ -99,6 +100,78 @@ def wait_for_events(duration_ms):
 
 
 class FluentQtBindingTest(unittest.TestCase):
+    def test_date_time_range_picker_nullable_values_and_child_ownership(self):
+        self.assertIs(date_time.DateTimeRangePicker, fluentqt.DateTimeRangePicker)
+        self.assertIs(native.fluent.DateTimeRangePicker, fluentqt.DateTimeRangePicker)
+        host = QWidget()
+        picker = fluentqt.DateTimeRangePicker(host)
+        picker.setStartLabelText("Start")
+        picker.setEndLabelText("End")
+        start = QDateTime.fromString("2025-10-01T10:10:00Z", Qt.DateFormat.ISODate)
+        end = QDateTime.fromString("2025-10-03T15:10:00Z", Qt.DateFormat.ISODate)
+        changes = QSignalSpy(picker.rangeChanged)
+        picker.setRange(start, end)
+        picker.setRange(start, end)
+        self.assertEqual(changes.count(), 1)
+        self.assertEqual(picker.startDateTime().timeSpec(), Qt.TimeSpec.UTC)
+        self.assertEqual(picker.startDatePicker().date(), start.date())
+        inputs = [picker.startDatePicker(), picker.endDatePicker(),
+                  picker.startTimePicker(), picker.endTimePicker(),
+                  picker.startClearButton(), picker.endClearButton()]
+        for child in inputs:
+            self.assertTrue(picker.isAncestorOf(child))
+            self.assertFalse(shiboken6.ownedByPython(child))
+        date_ref = weakref.ref(inputs[0])
+        del inputs[0]
+        gc.collect()
+        self.assertTrue(shiboken6.isValid(picker.startDatePicker()))
+        picker.clearStart()
+        self.assertFalse(picker.startDateTime().isValid())
+        self.assertEqual(picker.endDateTime(), end)
+        picker.setStartDateTime(end.addDays(1))
+        self.assertFalse(picker.isRangeValid())
+        picker.setTimeEnabled(False)
+        self.assertEqual(picker.endDateTime().time(), QTime(0, 0))
+        picker.clear()
+        self.assertTrue(picker.isRangeValid())
+        self.assertFalse(picker.endDateTime().isValid())
+        picker.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        for child in inputs:
+            self.assertFalse(shiboken6.isValid(child))
+        if date_ref() is not None:
+            self.assertFalse(shiboken6.isValid(date_ref()))
+        host.close()
+
+    def test_date_time_range_picker_presets_and_compact_entry(self):
+        picker = fluentqt.DateTimeRangePicker()
+        reference = QDateTime.fromString("2024-03-31T13:45:00+05:30", Qt.DateFormat.ISODate)
+        picker.applyPreset(fluentqt.DateTimeRangePicker.Preset.PastWeek, reference)
+        self.assertEqual(picker.startDateTime().date(), QDate(2024, 3, 25))
+        self.assertEqual(picker.endDateTime().time(), QTime(23, 59))
+        self.assertEqual(picker.endDateTime().offsetFromUtc(), 19800)
+        self.assertFalse(picker.isPickerOpen())
+        self.assertTrue(picker.isPresetsVisible())
+        self.assertFalse(shiboken6.ownedByPython(picker.entryButton()))
+        self.assertFalse(shiboken6.ownedByPython(picker.calendarView()))
+        self.assertIn("23:59", picker.displayText())
+        picker.setTimeEnabled(False)
+        picker.applyPreset(fluentqt.DateTimeRangePicker.Preset.Yesterday, reference)
+        self.assertEqual(picker.startDateTime().date(), QDate(2024, 3, 30))
+        self.assertEqual(picker.endDateTime().time(), QTime(0, 0))
+        picker.setAutoApplyPresetsEnabled(False)
+        self.assertFalse(picker.isAutoApplyPresetsEnabled())
+        picker.setPresetsVisible(False)
+        picker.setPlaceholderText("Any order date")
+        picker.clear()
+        self.assertEqual(picker.displayText(), "Any order date")
+        calendar = picker.calendarView()
+        entry = picker.entryButton()
+        picker.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        self.assertFalse(shiboken6.isValid(calendar))
+        self.assertFalse(shiboken6.isValid(entry))
+
     def test_stepper_requests_and_value_metadata(self):
         view = fluentqt.Stepper()
         item = fluentqt.StepperItem("First", "Description")

@@ -989,7 +989,7 @@ QString TimePicker::formatField(TimeField field, const QTime& time) const
 QTime TimePicker::normalizeTime(const QTime& time) const
 {
     const QTime base = time.isValid() ? time : QTime::currentTime();
-    return QTime(base.hour(), snappedMinute(base.minute()));
+    return QTime(base.hour(), snappedMinute(base.minute(), base));
 }
 
 QTime TimePicker::shiftedTime(const QTime& time, TimeField field, int offset) const
@@ -1007,8 +1007,8 @@ QTime TimePicker::shiftedTime(const QTime& time, TimeField field, int offset) co
         return QTime(hourFromDisplay12(nextDisplayHour, isPm(base)), base.minute());
     }
     case TimeField::Minute: {
-        const QVector<int> values = minuteValues();
-        const int current = snappedMinute(base.minute());
+        const QVector<int> values = minuteValues(base);
+        const int current = snappedMinute(base.minute(), base);
         int index = values.indexOf(current);
         if (index < 0)
             index = 0;
@@ -1025,7 +1025,7 @@ QTime TimePicker::shiftedTime(const QTime& time, TimeField field, int offset) co
     return base;
 }
 
-QVector<int> TimePicker::minuteValues() const
+QVector<int> TimePicker::minuteValues(const QTime& reference) const
 {
     QVector<int> values;
     const int increment = clampMinuteIncrement(m_minuteIncrement);
@@ -1033,13 +1033,18 @@ QVector<int> TimePicker::minuteValues() const
         values.append(minute);
     if (values.isEmpty())
         values.append(0);
+    const QTime current = reference.isValid()              ? reference
+                          : m_flyout && m_flyout->isOpen() ? m_flyout->pendingTime()
+                                                           : time();
+    if (m_allowDayEnd && current.hour() == 23 && values.last() != 59)
+        values.append(59);
     return values;
 }
 
-int TimePicker::snappedMinute(int minute) const
+int TimePicker::snappedMinute(int minute, const QTime& reference) const
 {
     minute = qBound(0, minute, 59);
-    const QVector<int> values = minuteValues();
+    const QVector<int> values = minuteValues(reference);
     int best = values.first();
     int bestDistance = qAbs(minute - best);
     for (int value : values) {

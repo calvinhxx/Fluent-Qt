@@ -623,552 +623,361 @@ TEST_F(CalendarViewTest, MouseMonthNavigationDoesNotShowFocusIndicator)
     EXPECT_FALSE(calendarView->selectedDate().isValid());
 }
 
-TEST_F(CalendarViewTest, ContentWheelStepCommitsOnePageWithTransition)
+TEST_F(CalendarViewTest, PixelScrollMovesContinuouslyAndKeepsHitTargetsAligned)
 {
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
+    auto* view = new CalendarView(window);
+    view->setFirstDayOfWeek(Qt::Monday);
+    view->setVisibleMonth(QDate(2026, 5, 1));
+    view->setSelectedDate(QDate(2026, 5, 12));
     showWindow(window);
+    const QPoint point = view->gridRect().center();
+    const QDate first = view->gridStartDate();
+    const QRect before = view->dateCellRect(QDate(2026, 5, 12));
+    const QRect weekdayRect(0, view->contentRect().top(), view->width(),
+                            view->gridRect().top() - view->contentRect().top());
+    const qreal dpr = view->devicePixelRatioF();
+    const QRect weekdayPixels(qRound(weekdayRect.x() * dpr), qRound(weekdayRect.y() * dpr),
+                              qRound(weekdayRect.width() * dpr),
+                              qRound(weekdayRect.height() * dpr));
+    const QImage weekdaysBefore = view->grab().toImage().copy(weekdayPixels);
+    QSignalSpy selection(view, &CalendarView::selectedDateChanged);
 
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    FLUENT_MAKE_WHEEL_EVENT(wheel, wheelPoint.x(), wheelPoint.y(), -120, Qt::NoModifier);
-    QApplication::sendEvent(calendarView, &wheel);
-    processEvents();
+    // A sub-notch movement is visible immediately, even if angleDelta is also present.
+    EXPECT_TRUE(sendCalendarWheel(view, point, QPoint(0, -11), QPoint(0, -120)));
+    EXPECT_EQ(view->dateCellRect(QDate(2026, 5, 12)).top(), before.top() - 11);
+    EXPECT_EQ(view->grab().toImage().copy(weekdayPixels), weekdaysBefore);
+    EXPECT_EQ(view->gridStartDate(), first);
+    EXPECT_EQ(view->visibleMonth(), QDate(2026, 5, 1));
+    EXPECT_EQ(view->property("monthTransitionDirection").toInt(), 0);
 
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-    EXPECT_TRUE(wheel.isAccepted());
-    EXPECT_EQ(calendarView->property("previousVisibleMonth").toDate(), QDate(2026, 5, 1));
-    EXPECT_EQ(calendarView->property("transitionVisibleMonth").toDate(), QDate(2026, 6, 1));
-    EXPECT_EQ(calendarView->property("monthTransitionDirection").toInt(), 1);
-    EXPECT_LT(calendarView->property("monthTransitionProgress").toReal(), 1.0);
-    EXPECT_EQ(calendarView->property("contentTransitionDirection").toInt(), 0);
-}
-
-TEST_F(CalendarViewTest, ContentWheelSubThresholdStaysIdle)
-{
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30));
-    QTest::qWait(180);
-    processEvents();
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 5, 1));
-    EXPECT_FALSE(calendarView->property("previousVisibleMonth").toDate().isValid());
-    EXPECT_FALSE(calendarView->property("transitionVisibleMonth").toDate().isValid());
-    EXPECT_EQ(calendarView->property("monthTransitionDirection").toInt(), 0);
-    EXPECT_EQ(calendarView->property("monthTransitionProgress").toReal(), 1.0);
-    EXPECT_EQ(visibleMonthSpy.count(), 0);
-}
-
-TEST_F(CalendarViewTest, ContentWheelAccumulationCommitsAtThreshold)
-{
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30));
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 5, 1));
-    EXPECT_FALSE(calendarView->property("previousVisibleMonth").toDate().isValid());
-
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-    ASSERT_EQ(visibleMonthSpy.count(), 1);
-    EXPECT_EQ(visibleMonthSpy.at(0).at(0).toDate(), QDate(2026, 6, 1));
-}
-
-TEST_F(CalendarViewTest, ContentWheelDirectionChangeResetsAccumulation)
-{
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -60));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, 60));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -60));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 5, 1));
-    EXPECT_FALSE(calendarView->property("previousVisibleMonth").toDate().isValid());
-
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -60));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-}
-
-TEST_F(CalendarViewTest, ContentWheelConsumesSameClusterAfterPaging)
-{
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    FLUENT_MAKE_WHEEL_EVENT(firstWheel, wheelPoint.x(), wheelPoint.y(), -120, Qt::NoModifier);
-    QApplication::sendEvent(calendarView, &firstWheel);
-    processEvents();
-
-    FLUENT_MAKE_WHEEL_EVENT(clusterTail, wheelPoint.x(), wheelPoint.y(), -120, Qt::NoModifier);
-    QApplication::sendEvent(calendarView, &clusterTail);
-    processEvents();
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-    EXPECT_TRUE(firstWheel.isAccepted());
-    EXPECT_TRUE(clusterTail.isAccepted());
-}
-
-TEST_F(CalendarViewTest, NoPhaseDiscreteTouchpadBurstPagesOnceAtDayLevel)
-{
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -40));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -40));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -40));
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-
-    QTest::qWait(190);
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30));
-    QTest::qWait(100);
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-    EXPECT_EQ(visibleMonthSpy.count(), 1);
-}
-
-TEST_F(CalendarViewTest, NoPhaseDiscreteTouchpadBurstPagesOnceAtMonthAndYearLevels)
-{
-    auto* monthView = new CalendarView(window);
-    monthView->setGeometry(32, 32, monthView->sizeHint().width(), monthView->sizeHint().height());
-    monthView->setVisibleMonth(QDate(2026, 5, 1));
-    monthView->setContentLevel(CalendarView::CalendarContentLevel::Month);
-
-    auto* yearView = new CalendarView(window);
-    yearView->setGeometry(440, 32, yearView->sizeHint().width(), yearView->sizeHint().height());
-    yearView->setVisibleMonth(QDate(2026, 5, 1));
-    yearView->setContentLevel(CalendarView::CalendarContentLevel::Year);
-
-    showWindow(window);
-    QSignalSpy monthSpy(monthView, &CalendarView::visibleMonthChanged);
-    QSignalSpy yearSpy(yearView, &CalendarView::visibleMonthChanged);
-
-    const QPoint monthWheelPoint = monthView->contentRect().center();
-    EXPECT_TRUE(sendCalendarWheel(monthView, monthWheelPoint, -40));
-    EXPECT_TRUE(sendCalendarWheel(monthView, monthWheelPoint, -40));
-    EXPECT_TRUE(sendCalendarWheel(monthView, monthWheelPoint, -40));
-    EXPECT_EQ(monthView->visibleMonth(), QDate(2027, 5, 1));
-    QTest::qWait(190);
-    EXPECT_TRUE(sendCalendarWheel(monthView, monthWheelPoint, -30));
-    QTest::qWait(100);
-    EXPECT_TRUE(sendCalendarWheel(monthView, monthWheelPoint, -30));
-
-    const QPoint yearWheelPoint = yearView->contentRect().center();
-    EXPECT_TRUE(sendCalendarWheel(yearView, yearWheelPoint, -40));
-    EXPECT_TRUE(sendCalendarWheel(yearView, yearWheelPoint, -40));
-    EXPECT_TRUE(sendCalendarWheel(yearView, yearWheelPoint, -40));
-    EXPECT_EQ(yearView->visibleMonth(), QDate(2038, 5, 1));
-    QTest::qWait(190);
-    EXPECT_TRUE(sendCalendarWheel(yearView, yearWheelPoint, -30));
-    QTest::qWait(100);
-    EXPECT_TRUE(sendCalendarWheel(yearView, yearWheelPoint, -30));
-
-    EXPECT_EQ(monthView->visibleMonth(), QDate(2027, 5, 1));
-    EXPECT_EQ(yearView->visibleMonth(), QDate(2038, 5, 1));
-    EXPECT_EQ(monthSpy.count(), 1);
-    EXPECT_EQ(yearSpy.count(), 1);
-}
-
-TEST_F(CalendarViewTest, FreshMouseWheelNotchesCanPageAfterClusterGap)
-{
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -120));
-    QTest::qWait(330);
-    processEvents();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -120));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 7, 1));
-    EXPECT_EQ(visibleMonthSpy.count(), 2);
-}
-
-TEST_F(CalendarViewTest, FullMouseWheelNotchesCanPageAfterAnimation)
-{
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -120));
-    QTest::qWait(270);
-    processEvents();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -120));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 7, 1));
-    EXPECT_EQ(visibleMonthSpy.count(), 2);
-}
-
-TEST_F(CalendarViewTest, SubNotchNoPhaseDiscreteTailDoesNotPageTwice)
-{
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30));
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-
-    QTest::qWait(190);
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30));
-    QTest::qWait(100);
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-    EXPECT_EQ(visibleMonthSpy.count(), 1);
-}
-
-TEST_F(CalendarViewTest, NoPhasePixelGesturePagesOnce)
-{
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-
-    QTest::qWait(190);
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
-    QTest::qWait(100);
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -120), QPoint()));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-    EXPECT_EQ(visibleMonthSpy.count(), 1);
-}
-
-TEST_F(CalendarViewTest, NoPhasePixelSameDirectionTailAfterAnimationUsesExtendedGap)
-{
-    constexpr int kDefaultClusterGapMs = 120;
-    constexpr int kCommittedTailGapMs = 220;
-    constexpr int kProbeGapMs = kDefaultClusterGapMs + 10;
-    constexpr int kProbeHeadroomMs = 10;
-
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-
-    // Complete the animation through its clock. A wall-clock wait leaves only
-    // 30 ms before the committed-tail deadline and can overshoot on a busy CI
-    // runner before the actual extended-gap probe even starts.
-    for (auto* animation : calendarView->findChildren<QVariantAnimation*>()) {
-        if (animation->state() == QAbstractAnimation::Running)
-            animation->setCurrentTime(animation->duration());
+    EXPECT_TRUE(sendCalendarWheel(view, point, QPoint(0, -55), QPoint()));
+    EXPECT_EQ(view->gridStartDate(), first.addDays(7));
+    EXPECT_EQ(view->selectedDate(), QDate(2026, 5, 12));
+    EXPECT_EQ(selection.count(), 0);
+    for (int i = 0; i < 49; ++i) {
+        const QDate date = view->gridStartDate().addDays(i);
+        const QRect cell = view->dateCellRect(date);
+        ASSERT_FALSE(cell.isEmpty());
+        EXPECT_TRUE(view->gridRect().contains(cell));
+        EXPECT_EQ(view->dateAt(cell.center()), date);
     }
-    processEvents();
-    ASSERT_FALSE(calendarView->property("previousVisibleMonth").toDate().isValid());
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
+    EXPECT_FALSE(view->dateAt(view->titleButtonRect().center()).isValid());
+    const QDate chosen = view->dateAt(point);
+    QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, point);
+    EXPECT_EQ(view->selectedDate(), chosen);
+    EXPECT_EQ(selection.count(), 1);
+}
 
-    QElapsedTimer probeTimer;
-    probeTimer.start();
-    QTest::qWait(kProbeGapMs);
-    processEvents();
-    const qint64 actualProbeGapMs = probeTimer.elapsed();
-    ASSERT_GT(actualProbeGapMs, kDefaultClusterGapMs);
-    if (actualProbeGapMs >= kCommittedTailGapMs - kProbeHeadroomMs) {
-        GTEST_SKIP() << "Runner overslept the committed-tail probe window: " << actualProbeGapMs
-                     << " ms";
+TEST_F(CalendarViewTest, OnePixelPacketsDoNotLeaveEmptyRowsAtWeekBoundaries)
+{
+    auto* view = new CalendarView(window);
+    view->setFirstDayOfWeek(Qt::Monday);
+    view->setVisibleMonth(QDate(2026, 5, 1));
+    showWindow(window);
+    const QDate first = view->gridStartDate();
+    for (int pixel = 1; pixel <= 132; ++pixel) {
+        sendCalendarWheel(view, view->gridRect().center(), QPoint(0, -1), QPoint());
+        EXPECT_EQ(view->gridStartDate(), first.addDays((pixel / 44) * 7));
+        EXPECT_FALSE(view->dateCellRect(view->gridStartDate()).isEmpty());
+        EXPECT_EQ(view->dateAt(view->gridRect().topLeft()), view->gridStartDate());
     }
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -120), QPoint()));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-    EXPECT_EQ(visibleMonthSpy.count(), 1);
+    for (int pixel = 131; pixel >= 0; --pixel) {
+        sendCalendarWheel(view, view->gridRect().center(), QPoint(0, 1), QPoint());
+        EXPECT_EQ(view->gridStartDate(), first.addDays((pixel / 44) * 7));
+        EXPECT_FALSE(view->dateCellRect(view->gridStartDate()).isEmpty());
+    }
 }
 
-TEST_F(CalendarViewTest, NoPhasePixelCanPageAfterTailGap)
-{
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-
-    QTest::qWait(360);
-    processEvents();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -120), QPoint()));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 7, 1));
-    EXPECT_EQ(visibleMonthSpy.count(), 2);
-}
-
-TEST_F(CalendarViewTest, NoPhasePixelCanReverseAfterTailGap)
-{
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-
-    QTest::qWait(360);
-    processEvents();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, 60), QPoint()));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, 60), QPoint()));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 5, 1));
-    EXPECT_EQ(visibleMonthSpy.count(), 2);
-}
-
-TEST_F(CalendarViewTest, NoPhasePixelReverseTailDuringAnimationDoesNotPoisonReversePage)
-{
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-
-    QTest::qWait(190);
-    processEvents();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, 30), QPoint()));
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-
-    QTest::qWait(150);
-    processEvents();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, 120), QPoint()));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 5, 1));
-    EXPECT_EQ(visibleMonthSpy.count(), 2);
-}
-
-TEST_F(CalendarViewTest, PhaseBasedTouchpadGesturePagesOnce)
+TEST_F(CalendarViewTest, TrackpadMomentumCrossesMonthsAndReversesWithoutPageLock)
 {
     if (!fluentWheelEventSupportsPhase())
         GTEST_SKIP() << fluentWheelEventPhaseSkipReason();
-
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
+    auto* view = new CalendarView(window);
+    view->setFirstDayOfWeek(Qt::Monday);
+    view->setVisibleMonth(QDate(2026, 5, 1));
     showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, 0, Qt::ScrollBegin));
-    EXPECT_TRUE(
-        sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint(), Qt::ScrollUpdate));
-    EXPECT_TRUE(
-        sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint(), Qt::ScrollUpdate));
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-    QTest::qWait(300);
-    EXPECT_TRUE(
-        sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -120), QPoint(), Qt::ScrollUpdate));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, 0, Qt::ScrollEnd));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-    EXPECT_EQ(visibleMonthSpy.count(), 1);
+    const QPoint point = view->gridRect().center();
+    const QDate first = view->gridStartDate();
+    QSignalSpy selected(view, &CalendarView::selectedDateChanged);
+    sendCalendarWheel(view, point, 0, Qt::ScrollBegin);
+    sendCalendarWheel(view, point, QPoint(0, -264), QPoint(), Qt::ScrollUpdate);
+    sendCalendarWheel(view, point, QPoint(0, -264), QPoint(), Qt::ScrollMomentum);
+    EXPECT_EQ(view->gridStartDate(), first.addDays(84));
+    EXPECT_EQ(view->visibleMonth(), QDate(2026, 8, 1));
+    const QDate afterMomentum = view->gridStartDate();
+    sendCalendarWheel(view, point, 0, Qt::ScrollEnd);
+    EXPECT_EQ(view->gridStartDate(), afterMomentum);
+    sendCalendarWheel(view, point, 0, Qt::ScrollBegin);
+    sendCalendarWheel(view, point, QPoint(0, 44), QPoint(), Qt::ScrollUpdate);
+    EXPECT_EQ(view->gridStartDate(), afterMomentum.addDays(-7));
+    sendCalendarWheel(view, point, 0, Qt::ScrollEnd);
+    EXPECT_EQ(view->gridStartDate(), afterMomentum.addDays(-7));
+    EXPECT_EQ(selected.count(), 0);
 }
 
-TEST_F(CalendarViewTest, OppositeDirectionTailDuringAnimationDoesNotNavigateBack)
+TEST_F(CalendarViewTest, DiscreteWheelInterpolatesAndAccumulatesEveryNotch)
 {
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
+    auto* view = new CalendarView(window);
+    view->setFirstDayOfWeek(Qt::Monday);
+    view->setVisibleMonth(QDate(2026, 5, 1));
     showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -40));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -40));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -40));
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-
-    QTest::qWait(190);
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, 30));
-    QTest::qWait(100);
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, 30));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-    EXPECT_EQ(visibleMonthSpy.count(), 1);
+    auto* animation =
+        view->findChild<QVariantAnimation*>(QStringLiteral("calendarScrollAnimation"));
+    ASSERT_NE(animation, nullptr);
+    const QPoint point = view->gridRect().center();
+    const QDate first = view->gridStartDate();
+    const qreal rows = qMin(3, QApplication::wheelScrollLines());
+    sendCalendarWheel(view, point, -30);
+    EXPECT_EQ(view->gridStartDate(), first);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
+    animation->setCurrentTime(animation->duration() / 2);
+    const qreal halfway = view->property("scrollPosition").toReal();
+    EXPECT_GT(halfway, 0.0);
+    EXPECT_LT(halfway, rows / 4.0);
+    sendCalendarWheel(view, point, -30);
+    sendCalendarWheel(view, point, -30);
+    sendCalendarWheel(view, point, -30);
+    animation->setCurrentTime(animation->duration());
+    EXPECT_EQ(view->gridStartDate(), first.addDays(qRound(rows) * 7));
+    EXPECT_DOUBLE_EQ(view->property("scrollPosition").toReal(), rows);
+    sendCalendarWheel(view, point, -120);
+    sendCalendarWheel(view, point, -120);
+    animation->setCurrentTime(animation->duration());
+    EXPECT_DOUBLE_EQ(view->property("scrollPosition").toReal(), rows * 3);
+    EXPECT_FALSE(view->selectedDate().isValid());
 }
 
-TEST_F(CalendarViewTest, FullMouseWheelReverseAfterAnimationCanPageBack)
+TEST_F(CalendarViewTest, ReverseWheelAndPointerInterruptTheCurrentMotion)
 {
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
+    auto* view = new CalendarView(window);
+    view->setVisibleMonth(QDate(2026, 5, 1));
     showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -120));
-    QTest::qWait(270);
-    processEvents();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, 120));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 5, 1));
-    EXPECT_EQ(visibleMonthSpy.count(), 2);
+    auto* animation =
+        view->findChild<QVariantAnimation*>(QStringLiteral("calendarScrollAnimation"));
+    const QPoint point = view->gridRect().center();
+    sendCalendarWheel(view, point, -120);
+    animation->setCurrentTime(animation->duration() / 2);
+    const qreal before = view->property("scrollPosition").toReal();
+    sendCalendarWheel(view, point, 30);
+    animation->setCurrentTime(animation->duration() / 2);
+    EXPECT_LT(view->property("scrollPosition").toReal(), before);
+    const QDate clicked = view->dateAt(point);
+    QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, point);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+    QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, point);
+    EXPECT_EQ(view->selectedDate(), clicked);
 }
 
-TEST_F(CalendarViewTest, ContentWheelMomentumTailDoesNotNavigate)
+TEST_F(CalendarViewTest, MonthAndYearRowsScrollAcrossScopesAndDrillIntoTheVisibleCell)
 {
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -120));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -120, Qt::ScrollMomentum));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
+    using Level = CalendarView::CalendarContentLevel;
+    for (const auto level : {Level::Month, Level::Year}) {
+        SCOPED_TRACE(static_cast<int>(level));
+        auto* view = new CalendarView(window);
+        view->setVisibleMonth(QDate(2025, 10, 1));
+        view->setContentLevel(level);
+        showWindow(window);
+        const int rowHeight = view->contentRect().height() / 4;
+        sendCalendarWheel(view, view->contentRect().center(), QPoint(0, -3 * rowHeight - 15),
+                          QPoint());
+        const QDate first = view->property("firstVisibleDate").toDate();
+        EXPECT_EQ(first, level == Level::Month ? QDate(2025, 10, 1) : QDate(2025, 1, 1));
+        EXPECT_EQ(view->contentCellRect(0, 0).top(), view->contentRect().top() - 15);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier,
+                          view->contentCellRect(0, 0).intersected(view->contentRect()).center());
+        EXPECT_EQ(view->contentLevel(), level == Level::Month ? Level::Day : Level::Month);
+        EXPECT_EQ(view->visibleMonth().year(), first.year());
+        if (level == Level::Month)
+            EXPECT_EQ(view->visibleMonth().month(), first.month());
+        EXPECT_DOUBLE_EQ(view->property("scrollOffset").toReal(), 0.0);
+        delete view;
+    }
 }
 
-TEST_F(CalendarViewTest, ContentWheelEndBelowThresholdDoesNotRebound)
+TEST_F(CalendarViewTest, ContinuousScrollClampsBoundsAndResetsOnContextChanges)
 {
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, 0, Qt::ScrollBegin));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -30, Qt::ScrollUpdate));
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, 0, Qt::ScrollEnd));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 5, 1));
-    EXPECT_FALSE(calendarView->property("previousVisibleMonth").toDate().isValid());
-    EXPECT_EQ(calendarView->property("monthTransitionProgress").toReal(), 1.0);
-    EXPECT_EQ(visibleMonthSpy.count(), 0);
+    using Level = CalendarView::CalendarContentLevel;
+    for (const auto level : {Level::Day, Level::Month, Level::Year}) {
+        SCOPED_TRACE(static_cast<int>(level));
+        auto* view = new CalendarView(window);
+        view->setDateRange(QDate(2025, 10, 10), QDate(2026, 3, 10));
+        view->setVisibleMonth(QDate(2025, 12, 1));
+        view->setContentLevel(level);
+        showWindow(window);
+        const QPoint point = view->contentRect().center();
+        sendCalendarWheel(view, point, QPoint(0, -100000), QPoint());
+        const QDate last = view->property("firstVisibleDate").toDate();
+        sendCalendarWheel(view, point, QPoint(0, -100), QPoint());
+        EXPECT_EQ(view->property("firstVisibleDate").toDate(), last);
+        EXPECT_LE(view->visibleMonth(), QDate(2026, 3, 1));
+        sendCalendarWheel(view, point, QPoint(0, 100000), QPoint());
+        const QDate first = view->property("firstVisibleDate").toDate();
+        sendCalendarWheel(view, point, QPoint(0, 100), QPoint());
+        EXPECT_EQ(view->property("firstVisibleDate").toDate(), first);
+        EXPECT_GE(view->visibleMonth(), QDate(2025, 10, 1));
+        view->setDateRange(QDate(2026, 1, 1), QDate(2026, 1, 31));
+        EXPECT_DOUBLE_EQ(view->property("scrollOffset").toReal(), 0.0);
+        EXPECT_EQ(view->visibleMonth(), QDate(2026, 1, 1));
+        delete view;
+    }
 }
 
-TEST_F(CalendarViewTest, WheelDuringPageAnimationIsConsumedWithoutPaging)
+TEST_F(CalendarViewTest, MotionPolicyAndHideSettleContinuousScroll)
 {
-    auto* calendarView = new CalendarView(window);
-    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(),
-                              calendarView->sizeHint().height());
-    calendarView->setVisibleMonth(QDate(2026, 5, 1));
-    showWindow(window);
-
-    QTest::mouseClick(calendarView, Qt::LeftButton, Qt::NoModifier,
-                      calendarView->nextButtonRect().center());
-    ASSERT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
-    ASSERT_LT(calendarView->property("monthTransitionProgress").toReal(), 1.0);
-
-    const QPoint wheelPoint = calendarView->gridRect().center();
-    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, -120));
-
-    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
+    for (const auto mode :
+         {fluent::MotionPolicy::Mode::Reduced, fluent::MotionPolicy::Mode::Disabled}) {
+        auto* view = new CalendarView(window);
+        view->setVisibleMonth(QDate(2026, 5, 1));
+        showWindow(window);
+        fluent::MotionPolicy::instance().setMode(mode);
+        sendCalendarWheel(view, view->gridRect().center(), -120);
+        auto* animation =
+            view->findChild<QVariantAnimation*>(QStringLiteral("calendarScrollAnimation"));
+        if (mode == fluent::MotionPolicy::Mode::Disabled) {
+            EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+            EXPECT_DOUBLE_EQ(view->property("scrollPosition").toReal(),
+                             qMin(3, QApplication::wheelScrollLines()));
+        } else {
+            EXPECT_LE(animation->duration(), 50);
+        }
+        view->hide();
+        EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+        delete view;
+    }
 }
 
-TEST_F(CalendarViewTest, WheelScrollsMonthAndYearLevelsWithPageTransition)
+TEST_F(CalendarViewTest, ScrollCanInterruptPagingAndLevelChangeCancelsQueuedMovement)
 {
-    auto* monthView = new CalendarView(window);
-    monthView->setGeometry(32, 32, monthView->sizeHint().width(), monthView->sizeHint().height());
-    monthView->setVisibleMonth(QDate(2026, 5, 1));
-    monthView->setContentLevel(CalendarView::CalendarContentLevel::Month);
-
-    auto* yearView = new CalendarView(window);
-    yearView->setGeometry(440, 32, yearView->sizeHint().width(), yearView->sizeHint().height());
-    yearView->setVisibleMonth(QDate(2026, 5, 1));
-    yearView->setContentLevel(CalendarView::CalendarContentLevel::Year);
-
+    auto* view = new CalendarView(window);
+    view->setVisibleMonth(QDate(2026, 5, 1));
     showWindow(window);
+    QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, view->nextButtonRect().center());
+    EXPECT_EQ(view->visibleMonth(), QDate(2026, 6, 1));
+    EXPECT_NE(view->property("monthTransitionDirection").toInt(), 0);
+    sendCalendarWheel(view, view->gridRect().center(), QPoint(0, -11), QPoint());
+    EXPECT_EQ(view->property("monthTransitionDirection").toInt(), 0);
+    EXPECT_TRUE(view->dateAt(view->gridRect().center()).isValid());
+    sendCalendarWheel(view, view->gridRect().center(), -120);
+    auto* animation =
+        view->findChild<QVariantAnimation*>(QStringLiteral("calendarScrollAnimation"));
+    view->setContentLevel(CalendarView::CalendarContentLevel::Month);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+    EXPECT_DOUBLE_EQ(view->property("scrollPosition").toReal(), 0.0);
+}
 
-    const QPoint monthWheelPoint = monthView->contentRect().center();
-    FLUENT_MAKE_WHEEL_EVENT(monthWheel, monthWheelPoint.x(), monthWheelPoint.y(), -120,
-                            Qt::NoModifier);
-    QApplication::sendEvent(monthView, &monthWheel);
-    processEvents();
+TEST_F(CalendarViewTest, ContinuousSelectionAndKeyboardKeepTheViewportStable)
+{
+    auto* view = new CalendarView(window);
+    view->setFirstDayOfWeek(Qt::Monday);
+    view->setVisibleMonth(QDate(2026, 5, 1));
+    showWindow(window);
+    sendCalendarWheel(view, view->gridRect().center(), QPoint(0, -22), QPoint());
+    const QDate first = view->gridStartDate();
+    const QDate target = first.addDays(8);
+    QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, view->dateCellRect(target).center());
+    EXPECT_EQ(view->gridStartDate(), first);
+    EXPECT_DOUBLE_EQ(view->property("scrollOffset").toReal(), 22.0);
+    QTest::keyClick(view, Qt::Key_Right);
+    QTest::keyClick(view, Qt::Key_Return);
+    EXPECT_EQ(view->selectedDate(), target.addDays(1));
+    EXPECT_EQ(view->gridStartDate(), first);
+    EXPECT_DOUBLE_EQ(view->property("scrollOffset").toReal(), 22.0);
+    for (int i = 0; i < 7; ++i)
+        QTest::keyClick(view, Qt::Key_Down);
+    const QDate focused = view->property("focusedDate").toDate();
+    EXPECT_FALSE(view->dateCellRect(focused).isEmpty());
+    EXPECT_EQ(view->dateCellRect(focused).height(), 44);
+    QTest::keyClick(view, Qt::Key_Return);
+    EXPECT_EQ(view->selectedDate(), focused);
+}
 
-    EXPECT_EQ(monthView->visibleMonth(), QDate(2027, 5, 1));
-    EXPECT_TRUE(monthWheel.isAccepted());
-    EXPECT_EQ(monthView->property("previousVisibleMonth").toDate(), QDate(2026, 5, 1));
-    EXPECT_EQ(monthView->property("transitionVisibleMonth").toDate(), QDate(2027, 5, 1));
-    EXPECT_EQ(monthView->property("monthTransitionDirection").toInt(), 1);
-    EXPECT_LT(monthView->property("monthTransitionProgress").toReal(), 1.0);
-    EXPECT_EQ(monthView->property("contentTransitionDirection").toInt(), 0);
+TEST_F(CalendarViewTest, ScrollDiagnosticsAreCoalescedUntilPainting)
+{
+    class Watch : public QObject {
+    public:
+        int mapUpdates = 0;
+        bool eventFilter(QObject*, QEvent* event) override
+        {
+            if (event->type() == QEvent::DynamicPropertyChange &&
+                static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName() == "dateCellRects")
+                ++mapUpdates;
+            return false;
+        }
+    } watch;
+    auto* view = new CalendarView(window);
+    view->setVisibleMonth(QDate(2026, 5, 1));
+    showWindow(window);
+    view->installEventFilter(&watch);
+    const QPoint point = view->gridRect().center();
+    for (int i = 0; i < 120; ++i) {
+        FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(wheel, point, point, QPoint(0, -1), QPoint(),
+                                           Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QApplication::sendEvent(view, &wheel);
+    }
+    EXPECT_EQ(watch.mapUpdates, 0);
+    view->grab();
+    EXPECT_EQ(watch.mapUpdates, 1);
+    const auto rects = view->property("dateCellRects").toMap();
+    const auto date = view->gridStartDate().addDays(8);
+    EXPECT_EQ(rects.value(date.toString(Qt::ISODate)).toRect(), view->cellRect(1, 1));
+}
 
-    const QPoint yearWheelPoint = yearView->contentRect().center();
-    FLUENT_MAKE_WHEEL_EVENT(yearWheel, yearWheelPoint.x(), yearWheelPoint.y(), -120,
-                            Qt::NoModifier);
-    QApplication::sendEvent(yearView, &yearWheel);
-    processEvents();
+TEST_F(CalendarViewTest, Contract_AccessibilityScrollResetWaitsForGestureEnd)
+{
+#if QT_CONFIG(accessibility)
+    if (!fluentWheelEventSupportsPhase())
+        GTEST_SKIP() << fluentWheelEventPhaseSkipReason();
+    auto* view = new CalendarView(window);
+    view->setVisibleMonth(QDate(2026, 5, 1));
+    showWindow(window);
+    ASSERT_NE(QAccessible::queryAccessibleInterface(view), nullptr);
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
+    ScopedAccessibleEventCapture capture;
+    const QPoint point = view->gridRect().center();
+    sendCalendarWheel(view, point, 0, Qt::ScrollBegin);
+    for (int i = 0; i < 20; ++i)
+        sendCalendarWheel(view, point, QPoint(0, -11), QPoint(), Qt::ScrollUpdate);
+    EXPECT_EQ(capture.count(QAccessible::TableModelChanged), 0);
+    sendCalendarWheel(view, point, 0, Qt::ScrollEnd);
+    EXPECT_EQ(capture.count(QAccessible::TableModelChanged), 1);
+    sendCalendarWheel(view, point, 0, Qt::ScrollEnd);
+    EXPECT_EQ(capture.count(QAccessible::TableModelChanged), 1);
+#else
+    GTEST_SKIP() << "Qt accessibility is disabled";
+#endif
+}
 
-    EXPECT_EQ(yearView->visibleMonth(), QDate(2038, 5, 1));
-    EXPECT_TRUE(yearWheel.isAccepted());
-    EXPECT_EQ(yearView->property("previousVisibleMonth").toDate(), QDate(2026, 5, 1));
-    EXPECT_EQ(yearView->property("transitionVisibleMonth").toDate(), QDate(2038, 5, 1));
-    EXPECT_EQ(yearView->property("monthTransitionDirection").toInt(), 1);
-    EXPECT_LT(yearView->property("monthTransitionProgress").toReal(), 1.0);
-    EXPECT_EQ(yearView->property("contentTransitionDirection").toInt(), 0);
+TEST_F(CalendarViewTest, Contract_AccessibilityTracksPartiallyVisibleScrollRows)
+{
+#if QT_CONFIG(accessibility)
+    auto* view = new CalendarView(window);
+    view->setFirstDayOfWeek(Qt::Monday);
+    view->setVisibleMonth(QDate(2026, 5, 1));
+    showWindow(window);
+    auto* root = QAccessible::queryAccessibleInterface(view);
+    ASSERT_NE(root, nullptr);
+    auto* table = root->tableInterface();
+    ASSERT_NE(table, nullptr);
+    sendCalendarWheel(view, view->gridRect().center(), QPoint(0, -55), QPoint());
+    EXPECT_EQ(table->rowCount(), 7);
+    for (int row = 0; row < table->rowCount(); ++row) {
+        for (int col = 0; col < table->columnCount(); ++col) {
+            auto* cell = table->cellAt(row, col);
+            ASSERT_NE(cell, nullptr);
+            const QDate date = view->gridStartDate().addDays(row * 7 + col);
+            EXPECT_EQ(cell->text(QAccessible::Name),
+                      view->locale().toString(date, QLocale::LongFormat));
+            EXPECT_EQ(cell->rect().size(), view->dateCellRect(date).size());
+        }
+    }
+    const QDate selected = view->gridStartDate().addDays(48);
+    auto* action = table->cellAt(6, 6)->actionInterface();
+    ASSERT_NE(action, nullptr);
+    action->doAction(QAccessibleActionInterface::pressAction());
+    EXPECT_EQ(view->selectedDate(), selected);
+#else
+    GTEST_SKIP() << "Qt accessibility is disabled";
+#endif
 }
 
 TEST_F(CalendarViewTest, TitleCyclesContentLevelsWithTransition)

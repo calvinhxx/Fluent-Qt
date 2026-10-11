@@ -1,4 +1,5 @@
 add_qt_test_module(test_calendar_view TestCalendarView.cpp)
 add_qt_test_module(test_calendar_date_picker TestCalendarDatePicker.cpp)
 add_qt_test_module(test_date_picker TestDatePicker.cpp)
+add_qt_test_module(test_date_time_range_picker TestDateTimeRangePicker.cpp)
 add_qt_test_module(test_time_picker TestTimePicker.cpp)

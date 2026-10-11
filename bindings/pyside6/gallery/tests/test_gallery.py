@@ -4698,9 +4698,9 @@ with (
             if not SPATIAL_AVAILABLE:
                 self.assertEqual("plugins" in pane._route_items, QML_BRIDGE_AVAILABLE)
                 self.assertEqual("plugins" in window._top_main_navigation_pane._buttons, QML_BRIDGE_AVAILABLE)
-                self.assertEqual(len(ROUTES), 107 + 2 * QML_BRIDGE_AVAILABLE)
+                self.assertEqual(len(ROUTES), 108 + 2 * QML_BRIDGE_AVAILABLE)
                 return
-            self.assertEqual(len(ROUTES), 111 + 2 * QML_BRIDGE_AVAILABLE)
+            self.assertEqual(len(ROUTES), 112 + 2 * QML_BRIDGE_AVAILABLE)
             self.assertTrue(CATEGORY_BY_ID["spatial"].plugin)
             plugins = pane._route_items["plugins"]
             spatial = pane._route_items["spatial"]

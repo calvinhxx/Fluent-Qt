@@ -26,13 +26,11 @@ class CalendarViewAccessibleChild;
 
 } // namespace
 
-class CalendarViewAccessible final : public QAccessibleWidget,
-                                     public QAccessibleTableInterface {
+class CalendarViewAccessible final : public QAccessibleWidget, public QAccessibleTableInterface {
 public:
     explicit CalendarViewAccessible(CalendarView* view)
         : QAccessibleWidget(view, QAccessible::Table)
-    {
-    }
+    {}
 
     ~CalendarViewAccessible() override { clearChildCache(); }
 
@@ -66,20 +64,14 @@ public:
     bool unselectColumn(int) override { return false; }
     void modelChange(QAccessibleTableModelChangeEvent*) override {}
 
-    CalendarView* view() const
-    {
-        return static_cast<CalendarView*>(widget());
-    }
+    CalendarView* view() const { return static_cast<CalendarView*>(widget()); }
 
     int cellCount() const;
     int cellIndexForLogicalChild(int logicalIndex) const
     {
         return logicalIndex - kHeaderChildCount;
     }
-    int logicalChildForCell(int cellIndex) const
-    {
-        return cellIndex + kHeaderChildCount;
-    }
+    int logicalChildForCell(int cellIndex) const { return cellIndex + kHeaderChildCount; }
     bool childIsEnabled(int logicalIndex) const;
     bool childIsSelected(int logicalIndex) const;
     bool childIsFocused(int logicalIndex) const;
@@ -100,30 +92,24 @@ private:
 
 namespace {
 
-class CalendarViewAccessibleChild final
-    : public QAccessibleInterface,
-      public QAccessibleTableCellInterface,
-      public QAccessibleActionInterface {
+class CalendarViewAccessibleChild final : public QAccessibleInterface,
+                                          public QAccessibleTableCellInterface,
+                                          public QAccessibleActionInterface {
 public:
     CalendarViewAccessibleChild(CalendarView* view, int logicalIndex)
-        : m_view(view)
-        , m_logicalIndex(logicalIndex)
-    {
-    }
+        : m_view(view), m_logicalIndex(logicalIndex)
+    {}
 
     bool isValid() const override
     {
         CalendarViewAccessible* root = accessibleRoot();
-        return root && m_logicalIndex >= 0
-            && m_logicalIndex < root->childCount();
+        return root && m_logicalIndex >= 0 && m_logicalIndex < root->childCount();
     }
     QObject* object() const override { return nullptr; }
     QAccessibleInterface* childAt(int, int) const override { return nullptr; }
     QAccessibleInterface* parent() const override
     {
-        return m_view
-            ? QAccessible::queryAccessibleInterface(m_view)
-            : nullptr;
+        return m_view ? QAccessible::queryAccessibleInterface(m_view) : nullptr;
     }
     QAccessibleInterface* child(int) const override { return nullptr; }
     int childCount() const override { return 0; }
@@ -157,15 +143,13 @@ public:
         result.disabled = !enabled;
         result.focusable = enabled;
         result.selectable = isCell() && enabled;
-        result.selected = isCell()
-            && root->childIsSelected(m_logicalIndex);
-        result.focused = isCell()
-            && root->childIsFocused(m_logicalIndex);
+        result.selected = isCell() && root->childIsSelected(m_logicalIndex);
+        result.focused = isCell() && root->childIsFocused(m_logicalIndex);
         const QRect globalRect = rect();
         result.invisible = !m_view->isVisible() || globalRect.isEmpty();
-        result.offscreen = !globalRect.isEmpty()
-            && !QRect(m_view->mapToGlobal(QPoint(0, 0)), m_view->size())
-                    .intersects(globalRect);
+        result.offscreen =
+            !globalRect.isEmpty() &&
+            !QRect(m_view->mapToGlobal(QPoint(0, 0)), m_view->size()).intersects(globalRect);
         return result;
     }
     void* interface_cast(QAccessible::InterfaceType type) override
@@ -180,32 +164,23 @@ public:
     bool isSelected() const override
     {
         CalendarViewAccessible* root = accessibleRoot();
-        return isCell() && root
-            && root->childIsSelected(m_logicalIndex);
+        return isCell() && root && root->childIsSelected(m_logicalIndex);
     }
-    QList<QAccessibleInterface*> columnHeaderCells() const override
-    {
-        return {};
-    }
-    QList<QAccessibleInterface*> rowHeaderCells() const override
-    {
-        return {};
-    }
+    QList<QAccessibleInterface*> columnHeaderCells() const override { return {}; }
+    QList<QAccessibleInterface*> rowHeaderCells() const override { return {}; }
     int columnIndex() const override
     {
         CalendarViewAccessible* root = accessibleRoot();
         return root && isCell()
-            ? root->cellIndexForLogicalChild(m_logicalIndex)
-                  % root->columnCount()
-            : -1;
+                   ? root->cellIndexForLogicalChild(m_logicalIndex) % root->columnCount()
+                   : -1;
     }
     int rowIndex() const override
     {
         CalendarViewAccessible* root = accessibleRoot();
         return root && isCell()
-            ? root->cellIndexForLogicalChild(m_logicalIndex)
-                  / root->columnCount()
-            : -1;
+                   ? root->cellIndexForLogicalChild(m_logicalIndex) / root->columnCount()
+                   : -1;
     }
     int columnExtent() const override { return isCell() ? 1 : 0; }
     int rowExtent() const override { return isCell() ? 1 : 0; }
@@ -215,14 +190,14 @@ public:
     {
         CalendarViewAccessible* root = accessibleRoot();
         return root && root->childIsEnabled(m_logicalIndex)
-            ? QStringList{QAccessibleActionInterface::pressAction()}
-            : QStringList{};
+                   ? QStringList{QAccessibleActionInterface::pressAction()}
+                   : QStringList{};
     }
     void doAction(const QString& actionName) override
     {
         CalendarViewAccessible* root = accessibleRoot();
-        if (root && actionName == QAccessibleActionInterface::pressAction()
-            && root->childIsEnabled(m_logicalIndex)) {
+        if (root && actionName == QAccessibleActionInterface::pressAction() &&
+            root->childIsEnabled(m_logicalIndex)) {
             root->activateChild(m_logicalIndex);
         }
     }
@@ -262,17 +237,23 @@ QString CalendarViewAccessible::text(QAccessible::Text type) const
         return {};
 
     if (type == QAccessible::Name) {
-        return calendar->accessibleName().isEmpty()
-            ? calendarText("Calendar")
-            : calendar->accessibleName();
+        return calendar->accessibleName().isEmpty() ? calendarText("Calendar")
+                                                    : calendar->accessibleName();
     }
     if (type == QAccessible::Description)
         return calendar->accessibleDescription();
     if (type == QAccessible::Value) {
+        if (calendar->m_rangeHighlightEnabled) {
+            const auto text = [calendar](const QDate& date) {
+                return date.isValid() ? calendar->locale().toString(date, QLocale::LongFormat)
+                                      : calendarText("Unbounded");
+            };
+            return calendarText("%1 to %2")
+                .arg(text(calendar->m_highlightedStartDate), text(calendar->m_highlightedEndDate));
+        }
         return calendar->selectedDate().isValid()
-            ? calendar->locale().toString(
-                  calendar->selectedDate(), QLocale::LongFormat)
-            : calendar->property("titleText").toString();
+                   ? calendar->locale().toString(calendar->selectedDate(), QLocale::LongFormat)
+                   : calendar->property("titleText").toString();
     }
     return QAccessibleWidget::text(type);
 }
@@ -284,6 +265,7 @@ QAccessible::State CalendarViewAccessible::state() const
     result.focusable = calendar && calendar->isEnabled();
     result.focused = calendar && calendar->hasFocus();
     result.selectable = result.focusable;
+    result.multiSelectable = calendar && calendar->m_rangeHighlightEnabled;
     return result;
 }
 
@@ -311,14 +293,12 @@ int CalendarViewAccessible::childCount() const
     return view() ? kHeaderChildCount + cellCount() : 0;
 }
 
-int CalendarViewAccessible::indexOfChild(
-    const QAccessibleInterface* accessibleChild) const
+int CalendarViewAccessible::indexOfChild(const QAccessibleInterface* accessibleChild) const
 {
-    const auto* childInterface =
-        dynamic_cast<const CalendarViewAccessibleChild*>(accessibleChild);
+    const auto* childInterface = dynamic_cast<const CalendarViewAccessibleChild*>(accessibleChild);
     return childInterface && childInterface->calendarView() == view()
-        ? childInterface->logicalIndex()
-        : -1;
+               ? childInterface->logicalIndex()
+               : -1;
 }
 
 QAccessibleInterface* CalendarViewAccessible::child(int logicalIndex) const
@@ -329,34 +309,28 @@ QAccessibleInterface* CalendarViewAccessible::child(int logicalIndex) const
 
     auto cached = m_childToId.constFind(logicalIndex);
     if (cached != m_childToId.constEnd()) {
-        if (QAccessibleInterface* interface =
-                QAccessible::accessibleInterface(cached.value())) {
+        if (QAccessibleInterface* interface = QAccessible::accessibleInterface(cached.value())) {
             return interface;
         }
         m_childToId.remove(logicalIndex);
     }
 
-    auto* interface = new CalendarViewAccessibleChild(
-        calendar, logicalIndex);
-    const QAccessible::Id id =
-        QAccessible::registerAccessibleInterface(interface);
+    auto* interface = new CalendarViewAccessibleChild(calendar, logicalIndex);
+    const QAccessible::Id id = QAccessible::registerAccessibleInterface(interface);
     m_childToId.insert(logicalIndex, id);
     return interface;
 }
 
-void* CalendarViewAccessible::interface_cast(
-    QAccessible::InterfaceType type)
+void* CalendarViewAccessible::interface_cast(QAccessible::InterfaceType type)
 {
     if (type == QAccessible::TableInterface)
         return static_cast<QAccessibleTableInterface*>(this);
     return QAccessibleWidget::interface_cast(type);
 }
 
-QAccessibleInterface* CalendarViewAccessible::cellAt(
-    int row, int column) const
+QAccessibleInterface* CalendarViewAccessible::cellAt(int row, int column) const
 {
-    if (row < 0 || column < 0 || row >= rowCount()
-        || column >= columnCount()) {
+    if (row < 0 || column < 0 || row >= rowCount() || column >= columnCount()) {
         return nullptr;
     }
     return child(logicalChildForCell(row * columnCount() + column));
@@ -364,50 +338,50 @@ QAccessibleInterface* CalendarViewAccessible::cellAt(
 
 int CalendarViewAccessible::selectedCellCount() const
 {
-    return selectedCellIndex() >= 0 ? 1 : 0;
+    return selectedCells().size();
 }
 
 QList<QAccessibleInterface*> CalendarViewAccessible::selectedCells() const
 {
+    if (view() && view()->m_rangeHighlightEnabled &&
+        view()->contentLevel() == CalendarView::CalendarContentLevel::Day) {
+        QList<QAccessibleInterface*> selected;
+        for (int index = 0; index < cellCount(); ++index) {
+            const int logical = logicalChildForCell(index);
+            if (childIsSelected(logical))
+                selected.append(child(logical));
+        }
+        return selected;
+    }
     const int selected = selectedCellIndex();
-    QAccessibleInterface* interface = selected >= 0
-        ? child(logicalChildForCell(selected))
-        : nullptr;
-    return interface
-        ? QList<QAccessibleInterface*>{interface}
-        : QList<QAccessibleInterface*>{};
+    QAccessibleInterface* interface =
+        selected >= 0 ? child(logicalChildForCell(selected)) : nullptr;
+    return interface ? QList<QAccessibleInterface*>{interface} : QList<QAccessibleInterface*>{};
 }
 
 QString CalendarViewAccessible::columnDescription(int column) const
 {
     const CalendarView* calendar = view();
-    if (!calendar || calendar->contentLevel()
-            != CalendarView::CalendarContentLevel::Day
-        || column < 0 || column >= columnCount()) {
+    if (!calendar || calendar->contentLevel() != CalendarView::CalendarContentLevel::Day ||
+        column < 0 || column >= columnCount()) {
         return {};
     }
     const int first = static_cast<int>(calendar->firstDayOfWeek());
     const int day = ((first - 1 + column) % 7) + 1;
-    return calendar->locale().standaloneDayName(
-        static_cast<Qt::DayOfWeek>(day), QLocale::LongFormat);
+    return calendar->locale().standaloneDayName(static_cast<Qt::DayOfWeek>(day),
+                                                QLocale::LongFormat);
 }
 
 int CalendarViewAccessible::columnCount() const
 {
     const CalendarView* calendar = view();
-    return calendar && calendar->contentLevel()
-            == CalendarView::CalendarContentLevel::Day
-        ? 7
-        : 3;
+    return calendar && calendar->contentLevel() == CalendarView::CalendarContentLevel::Day ? 7 : 3;
 }
 
 int CalendarViewAccessible::rowCount() const
 {
     const CalendarView* calendar = view();
-    return calendar && calendar->contentLevel()
-            == CalendarView::CalendarContentLevel::Day
-        ? 6
-        : 4;
+    return calendar ? calendar->visibleRowCount() : 0;
 }
 
 int CalendarViewAccessible::cellCount() const
@@ -418,30 +392,31 @@ int CalendarViewAccessible::cellCount() const
 QDate CalendarViewAccessible::dayForCell(int cellIndex) const
 {
     CalendarView* calendar = view();
-    return calendar && cellIndex >= 0 && cellIndex < 42
-        ? calendar->gridStartDate().addDays(cellIndex)
-        : QDate();
+    return calendar && cellIndex >= 0 && cellIndex < cellCount()
+               ? calendar->gridStartDate().addDays(cellIndex)
+               : QDate();
 }
 
 int CalendarViewAccessible::monthForCell(int cellIndex) const
 {
-    return cellIndex >= 0 && cellIndex < 12 ? cellIndex + 1 : -1;
+    const CalendarView* calendar = view();
+    return calendar && cellIndex >= 0 && cellIndex < cellCount()
+               ? calendar->contentDateForCell(cellIndex).month()
+               : -1;
 }
 
 int CalendarViewAccessible::yearForCell(int cellIndex) const
 {
     CalendarView* calendar = view();
-    if (!calendar || cellIndex < 0 || cellIndex >= 12)
+    if (!calendar || cellIndex < 0 || cellIndex >= cellCount())
         return 0;
-    const int visibleYear = calendar->visibleMonth().year();
-    return visibleYear - visibleYear % 12 + cellIndex;
+    return calendar->contentDateForCell(cellIndex).year();
 }
 
 bool CalendarViewAccessible::childIsEnabled(int logicalIndex) const
 {
     CalendarView* calendar = view();
-    if (!calendar || !calendar->isEnabled() || logicalIndex < 0
-        || logicalIndex >= childCount()) {
+    if (!calendar || !calendar->isEnabled() || logicalIndex < 0 || logicalIndex >= childCount()) {
         return false;
     }
     if (logicalIndex == 0)
@@ -456,8 +431,8 @@ bool CalendarViewAccessible::childIsEnabled(int logicalIndex) const
     case CalendarView::CalendarContentLevel::Day:
         return calendar->isDateSelectable(dayForCell(cellIndex));
     case CalendarView::CalendarContentLevel::Month:
-        return calendar->isMonthSelectable(
-            calendar->visibleMonth().year(), monthForCell(cellIndex));
+        return calendar->isMonthSelectable(calendar->contentDateForCell(cellIndex).year(),
+                                           monthForCell(cellIndex));
     case CalendarView::CalendarContentLevel::Year:
         return calendar->isYearSelectable(yearForCell(cellIndex));
     }
@@ -473,16 +448,18 @@ int CalendarViewAccessible::selectedCellIndex() const
     case CalendarView::CalendarContentLevel::Day: {
         const QDate selected = calendar->selectedDate();
         const int offset = calendar->gridStartDate().daysTo(selected);
-        return selected.isValid() && offset >= 0 && offset < 42
-            ? offset
-            : -1;
+        return selected.isValid() && offset >= 0 && offset < cellCount() ? offset : -1;
     }
     case CalendarView::CalendarContentLevel::Month:
-        return calendar->visibleMonth().month() - 1;
-    case CalendarView::CalendarContentLevel::Year: {
-        const int visibleYear = calendar->visibleMonth().year();
-        return visibleYear - (visibleYear - visibleYear % 12);
-    }
+    case CalendarView::CalendarContentLevel::Year:
+        for (int index = 0; index < cellCount(); ++index) {
+            const QDate date = calendar->contentDateForCell(index);
+            if (date.year() == calendar->visibleMonth().year() &&
+                (calendar->contentLevel() == CalendarView::CalendarContentLevel::Year ||
+                 date.month() == calendar->visibleMonth().month()))
+                return index;
+        }
+        break;
     }
     return -1;
 }
@@ -496,41 +473,41 @@ int CalendarViewAccessible::focusedCellIndex() const
         return selectedCellIndex();
     const QDate focused = calendar->property("focusedDate").toDate();
     const int offset = calendar->gridStartDate().daysTo(focused);
-    return focused.isValid() && offset >= 0 && offset < 42
-        ? offset
-        : -1;
+    return focused.isValid() && offset >= 0 && offset < cellCount() ? offset : -1;
 }
 
 bool CalendarViewAccessible::childIsSelected(int logicalIndex) const
 {
-    return logicalIndex >= kHeaderChildCount
-        && cellIndexForLogicalChild(logicalIndex) == selectedCellIndex();
+    if (view() && view()->m_rangeHighlightEnabled &&
+        view()->contentLevel() == CalendarView::CalendarContentLevel::Day) {
+        return logicalIndex >= kHeaderChildCount && logicalIndex < childCount() &&
+               view()->isHighlightedDate(dayForCell(cellIndexForLogicalChild(logicalIndex))) &&
+               childIsEnabled(logicalIndex);
+    }
+    return logicalIndex >= kHeaderChildCount &&
+           cellIndexForLogicalChild(logicalIndex) == selectedCellIndex();
 }
 
 bool CalendarViewAccessible::childIsFocused(int logicalIndex) const
 {
-    return logicalIndex >= kHeaderChildCount
-        && cellIndexForLogicalChild(logicalIndex) == focusedCellIndex();
+    return logicalIndex >= kHeaderChildCount &&
+           cellIndexForLogicalChild(logicalIndex) == focusedCellIndex();
 }
 
-QString CalendarViewAccessible::childText(
-    int logicalIndex, QAccessible::Text type) const
+QString CalendarViewAccessible::childText(int logicalIndex, QAccessible::Text type) const
 {
     CalendarView* calendar = view();
     if (!calendar || logicalIndex < 0 || logicalIndex >= childCount())
         return {};
-    if (type != QAccessible::Name
-        && type != QAccessible::Description
-        && type != QAccessible::Value) {
+    if (type != QAccessible::Name && type != QAccessible::Description &&
+        type != QAccessible::Value) {
         return {};
     }
 
     if (logicalIndex == 0)
-        return type == QAccessible::Name
-            ? calendarText("Previous page") : QString();
+        return type == QAccessible::Name ? calendarText("Previous page") : QString();
     if (logicalIndex == 2)
-        return type == QAccessible::Name
-            ? calendarText("Next page") : QString();
+        return type == QAccessible::Name ? calendarText("Next page") : QString();
     if (logicalIndex == 1) {
         if (type == QAccessible::Name || type == QAccessible::Value)
             return calendar->property("titleText").toString();
@@ -546,21 +523,21 @@ QString CalendarViewAccessible::childText(
         QStringList descriptions;
         if (date == QDate::currentDate())
             descriptions.append(calendarText("Today"));
-        if (date.month() != calendar->visibleMonth().month()
-            || date.year() != calendar->visibleMonth().year()) {
+        if (date.month() != calendar->visibleMonth().month() ||
+            date.year() != calendar->visibleMonth().year()) {
             descriptions.append(calendarText("Outside current month"));
         }
         return descriptions.join(QStringLiteral(", "));
     }
     case CalendarView::CalendarContentLevel::Month:
         return type == QAccessible::Name || type == QAccessible::Value
-            ? calendar->locale().standaloneMonthName(
-                  monthForCell(cellIndex), QLocale::LongFormat)
-            : QString();
+                   ? calendar->locale().standaloneMonthName(monthForCell(cellIndex),
+                                                            QLocale::LongFormat)
+                   : QString();
     case CalendarView::CalendarContentLevel::Year:
         return type == QAccessible::Name || type == QAccessible::Value
-            ? QString::number(yearForCell(cellIndex))
-            : QString();
+                   ? QString::number(yearForCell(cellIndex))
+                   : QString();
     }
     return {};
 }
@@ -580,13 +557,15 @@ QRect CalendarViewAccessible::childRect(int logicalIndex) const
         localRect = calendar->nextButtonRect();
     else {
         const int cellIndex = cellIndexForLogicalChild(logicalIndex);
-        localRect = calendar->contentLevel()
-                == CalendarView::CalendarContentLevel::Day
-            ? calendar->cellRect(cellIndex / 7, cellIndex % 7)
-            : calendar->contentCellRect(cellIndex / 3, cellIndex % 3);
+        localRect = calendar->contentLevel() == CalendarView::CalendarContentLevel::Day
+                        ? calendar->cellRect(cellIndex / 7, cellIndex % 7)
+                        : calendar->contentCellRect(cellIndex / 3, cellIndex % 3);
+        localRect = localRect.intersected(calendar->contentLevel() ==
+                                                  CalendarView::CalendarContentLevel::Day
+                                              ? calendar->gridRect()
+                                              : calendar->contentRect());
     }
-    return QRect(calendar->mapToGlobal(localRect.topLeft()),
-                 localRect.size());
+    return QRect(calendar->mapToGlobal(localRect.topLeft()), localRect.size());
 }
 
 void CalendarViewAccessible::activateChild(int logicalIndex)
@@ -627,14 +606,13 @@ void CalendarViewAccessible::activateChild(int logicalIndex)
     }
     case CalendarView::CalendarContentLevel::Month:
         calendar->setFocus(Qt::OtherFocusReason);
-        calendar->setVisibleMonth(QDate(
-            calendar->visibleMonth().year(), monthForCell(cellIndex), 1));
+        calendar->setVisibleMonth(calendar->contentDateForCell(cellIndex));
         calendar->setContentLevel(CalendarView::CalendarContentLevel::Day);
         return;
     case CalendarView::CalendarContentLevel::Year:
         calendar->setFocus(Qt::OtherFocusReason);
-        calendar->setVisibleMonth(QDate(
-            yearForCell(cellIndex), calendar->visibleMonth().month(), 1));
+        calendar->setVisibleMonth(
+            QDate(yearForCell(cellIndex), calendar->visibleMonth().month(), 1));
         calendar->setContentLevel(CalendarView::CalendarContentLevel::Month);
         return;
     }
@@ -648,8 +626,7 @@ void CalendarViewAccessible::clearChildCache() const
         QAccessible::deleteAccessibleInterface(id);
 }
 
-QAccessibleInterface* calendarViewAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* calendarViewAccessibilityFactory(const QString&, QObject* object)
 {
     auto* view = dynamic_cast<CalendarView*>(object);
     return view ? new CalendarViewAccessible(view) : nullptr;
@@ -668,8 +645,7 @@ void notifyCalendarViewAccessibilityReset(CalendarView* view)
 {
     if (!view)
         return;
-    QAccessibleTableModelChangeEvent event(
-        view, QAccessibleTableModelChangeEvent::ModelReset);
+    QAccessibleTableModelChangeEvent event(view, QAccessibleTableModelChangeEvent::ModelReset);
     QAccessible::updateAccessibility(&event);
 }
 
@@ -677,21 +653,20 @@ void notifyCalendarViewAccessibilitySelection(CalendarView* view)
 {
     if (!view)
         return;
-    QAccessibleInterface* root =
-        QAccessible::queryAccessibleInterface(view);
+    QAccessibleInterface* root = QAccessible::queryAccessibleInterface(view);
     auto* calendar = dynamic_cast<CalendarViewAccessible*>(root);
-    QAccessibleInterface* selected = calendar && calendar->selectedCellCount() > 0
-        ? calendar->selectedCells().first()
-        : root;
+    QAccessibleInterface* selected =
+        calendar && calendar->selectedCellCount() > 0 ? calendar->selectedCells().first() : root;
     if (selected) {
         QAccessibleEvent selectionEvent(selected, QAccessible::Selection);
         QAccessible::updateAccessibility(&selectionEvent);
     }
     QAccessibleValueChangeEvent valueEvent(
-        view, view->selectedDate().isValid()
-            ? QVariant(view->locale().toString(
-                  view->selectedDate(), QLocale::LongFormat))
-            : QVariant(QString()));
+        view, root && view->property("rangeHighlightEnabled").toBool()
+                  ? QVariant(root->text(QAccessible::Value))
+              : view->selectedDate().isValid()
+                  ? QVariant(view->locale().toString(view->selectedDate(), QLocale::LongFormat))
+                  : QVariant(QString()));
     QAccessible::updateAccessibility(&valueEvent);
 }
 
@@ -699,8 +674,7 @@ void notifyCalendarViewAccessibilityFocus(CalendarView* view)
 {
     if (!view)
         return;
-    QAccessibleInterface* root =
-        QAccessible::queryAccessibleInterface(view);
+    QAccessibleInterface* root = QAccessible::queryAccessibleInterface(view);
     QAccessibleInterface* focused = root ? root->focusChild() : nullptr;
     if (!focused)
         return;
