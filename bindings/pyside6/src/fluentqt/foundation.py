@@ -1,5 +1,6 @@
 """Theme and typography helpers for FluentQt bindings."""
 
+from contextlib import contextmanager
 import weakref
 
 import shiboken6
@@ -379,11 +380,32 @@ class _Expression(QObject):
         self.last_error = None
 
     def prepare(self):
-        self._cached = self._evaluate()
-        self._prepared = True
+        with self._evaluation_lifetime():
+            self._cached = self._evaluate()
+            self._prepared = True
+
+    @contextmanager
+    def _evaluation_lifetime(self):
+        # Use the Python setter so Shiboken's ownership graph follows Qt's.
+        # The evaluator or an error listener may destroy our original owner.
+        owner = self.parent()
+        if owner is not None:
+            self.setParent(None)
+        try:
+            yield
+        finally:
+            if owner is not None and shiboken6.isValid(self) and self.parent() is None:
+                if shiboken6.isValid(owner):
+                    self.setParent(owner)
+                else:
+                    self.deleteLater()
 
     @Property("QVariant", notify=changed)
     def value(self):
+        with self._evaluation_lifetime():
+            return self._read_value()
+
+    def _read_value(self):
         if self._prepared:
             self._prepared = False
             return self._cached

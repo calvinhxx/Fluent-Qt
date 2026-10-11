@@ -336,20 +336,82 @@ assert target.isEnabled()
     def test_computed_evaluator_can_destroy_its_target_without_stale_writes(self):
         source, target = QSlider(), QLabel()
         expression_survived = []
+        evaluator_ownership = []
 
         def compute():
             if source.value() == 40:
                 expression = target._fluentqt_binding_expressions["text"]
+                evaluator_ownership.append(shiboken6.ownedByPython(expression))
                 shiboken6.delete(target)
                 expression_survived.append(shiboken6.isValid(expression))
             return "value"
 
         handle = fluentqt.bind_computed(target, "text", [(source, "value")], compute)
         expression = target._fluentqt_binding_expressions["text"]
+        self.assertIs(expression.parent(), target)
+        self.assertFalse(shiboken6.ownedByPython(expression))
         source.setValue(40)
+        self.assertEqual(evaluator_ownership, [True])
         self.assertEqual(expression_survived, [True])
         self.assertFalse(shiboken6.isValid(target))
         self.assertFalse(handle.isValid())
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        self.assertFalse(shiboken6.isValid(expression))
+
+    def test_computed_error_listener_can_destroy_its_target(self):
+        source, target = QSlider(), QLabel()
+        expression_survived = []
+
+        def compute():
+            if source.value():
+                raise RuntimeError("evaluation failed")
+            return "value"
+
+        handle = fluentqt.bind_computed(target, "text", [(source, "value")], compute)
+        expression = target._fluentqt_binding_expressions["text"]
+
+        def failed(error):
+            shiboken6.delete(target)
+            expression_survived.append(shiboken6.isValid(expression))
+
+        expression.error_occurred.connect(failed)
+        source.setValue(1)
+        self.assertEqual(expression_survived, [True])
+        self.assertFalse(handle.isValid())
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        self.assertFalse(shiboken6.isValid(expression))
+
+    def test_initial_computed_evaluator_can_destroy_its_target(self):
+        target = QLabel()
+
+        def compute():
+            shiboken6.delete(target)
+            return "unused"
+
+        with self.assertRaisesRegex(ValueError, "destroyed its target"):
+            fluentqt.bind_computed(target, "text", [], compute)
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        self.assertFalse(shiboken6.isValid(target))
+
+    def test_conditional_evaluator_can_destroy_its_controller(self):
+        source, target = QSlider(), QLabel("Default")
+        states = fluentqt.StateGroup()
+        expression_survived = []
+
+        def condition():
+            if source.value() == 40:
+                expression = states._fluentqt_conditions["active"]
+                shiboken6.delete(states)
+                expression_survived.append(shiboken6.isValid(expression))
+            return False
+
+        states.add("active", {target: {"text": "Active"}}, when=condition,
+                   dependencies=[(source, "value")])
+        expression = states._fluentqt_conditions["active"]
+        source.setValue(40)
+        self.assertEqual(expression_survived, [True])
+        self.assertFalse(shiboken6.isValid(states))
+        self.assertEqual(target.text(), "Default")
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         self.assertFalse(shiboken6.isValid(expression))
 
