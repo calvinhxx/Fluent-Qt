@@ -700,13 +700,20 @@ jobs:
           .github/scripts/diagnose-windows-python-lifetime.ps1 `
             -BuildDirectory build/pyside6-qt62-windows `
             -ReportDirectory "$env:RUNNER_TEMP/fluentqt-lifetime-diagnostics"
+          .github/scripts/diagnose-windows-python-lifetime.ps1 `
+            -BuildDirectory build/pyside6-qt62-windows `
+            -ReportDirectory "$env:RUNNER_TEMP/fluentqt-lifetime-diagnostics" `
+            -PageHeap
 
       - name: Upload native Python lifetime diagnostics
         if: ${{ !cancelled() && (steps.windows_binding_tests.outcome == 'success' || steps.windows_binding_tests.outcome == 'failure') }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: fluentqt-windows-python-lifetime-diagnostics
-          path: ${{ runner.temp }}/fluentqt-lifetime-diagnostics/*.log
+          path: |
+            ${{ runner.temp }}/fluentqt-lifetime-diagnostics/*.log
+            ${{ runner.temp }}/fluentqt-lifetime-diagnostics/*.cpp
+            ${{ runner.temp }}/fluentqt-lifetime-diagnostics/*.h
           if-no-files-found: warn
           retention-days: 14
 

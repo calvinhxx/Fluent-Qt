@@ -403,8 +403,18 @@ assert target.isEnabled()
             if source.value() == 40:
                 expression = states._fluentqt_conditions["active"]
                 evaluator_ownership.append(shiboken6.ownedByPython(expression))
+                ownership = None
+                if sys.platform == "win32":
+                    ownership = (shiboken6.dump(states), shiboken6.dump(expression),
+                                 str(expression.parent()),
+                                 [(type(child).__name__, shiboken6.getCppPointer(child))
+                                  for child in states.children()])
                 shiboken6.delete(states)
                 expression_survived.append(shiboken6.isValid(expression))
+                if not expression_survived[-1] and ownership is not None:
+                    print("Controller ownership before deletion:", ownership[0], flush=True)
+                    print("Expression ownership before deletion:", ownership[1], flush=True)
+                    print("Expression parent and native children:", ownership[2:], flush=True)
             return False
 
         states.add("active", {target: {"text": "Active"}}, when=condition,
