@@ -27,6 +27,22 @@ All inventoried gaps are closed. `covered` means
 there is deterministic repository evidence for the component boundary; it is
 not a claim of platform assistive-technology certification.
 
+## Live Scene editing tools
+
+The opt-in Python preview editor composes existing Fluent buttons, sliders,
+toggle switches, combo boxes, and labels. Each parameter has an accessible
+name. A named region combo box is the keyboard alternative to mouse picking;
+`F8` toggles picking and `Esc` cancels it. Picking consumes the selection click
+instead of activating the application control. Its outline is a transparent,
+non-interactive development overlay. The tools panel scrolls at short window
+heights, and comparison windows close independently of the scene.
+
+The [preview editor tests](../../bindings/pyside6/gallery/tests/test_preview_editor.py)
+cover selection, state retention, source-conflict protection, and comparison
+lifetime. This development surface adds no public component classification or
+platform screen-reader certification. See the
+[region-editing workflow](gallery-preview-workflow.md#select-edit-and-compare-a-region).
+
 ## Cross-cutting motion and contrast contract
 
 QMLPlus reactive composition preserves the accessible roles and actions of its

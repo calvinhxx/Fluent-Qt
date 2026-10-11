@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -113,6 +114,7 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--snapshot", type=Path)
     parser.add_argument("--session-dir", type=Path, help="Enable local preview commands and MCP access.")
     parser.add_argument("--content-only", action="store_true", help="Show the scene without development chrome.")
+    parser.add_argument("--edit", action="store_true", help="Enable registered-region source editing and comparisons.")
     parser.add_argument(
         "--report",
         type=Path,
@@ -283,6 +285,7 @@ def execute_scene(scene_path: Path, staging_parent: QWidget) -> SceneCandidate:
 
     if not scene_path.is_file():
         raise FileNotFoundError("Scene file does not exist: {0}".format(scene_path))
+    source = scene_path.read_bytes()
     namespace = runpy.run_path(
         str(scene_path),
         run_name="__fluentqt_live_scene__",
@@ -302,6 +305,9 @@ def execute_scene(scene_path: Path, staging_parent: QWidget) -> SceneCandidate:
     if candidate.parentWidget() is not staging_parent:
         candidate.setParent(staging_parent)
     candidate._fluentqt_live_scene_namespace = namespace
+    if scene_path.read_bytes() != source:
+        raise RuntimeError("Scene source changed while building; save or reload again.")
+    candidate._fluentqt_live_scene_revision = hashlib.sha256(source).hexdigest()
 
     title = namespace.get("SCENE_TITLE", scene_path.stem)
     if not isinstance(title, str):
@@ -395,6 +401,14 @@ class LivePreviewWindow(fluentqt.Window):
         return self._scene_widget
 
     @property
+    def source_path(self) -> Path:
+        return self._scene_path
+
+    def mount_preview_tools(self, panel: QWidget) -> None:
+        """Mount an optional development panel beside the existing scene."""
+        self._preview_tools_layout.addWidget(panel)
+
+    @property
     def last_error(self) -> str:
         return self._last_error
 
@@ -474,7 +488,12 @@ class LivePreviewWindow(fluentqt.Window):
         stacking_mode = getattr(QStackedLayout, "StackingMode", QStackedLayout)
         stack.setStackingMode(stacking_mode.StackOne)
         scene_scroll.setContentWidget(scene_host)
-        root.addWidget(scene_scroll, 1)
+        tools_layout = QHBoxLayout()
+        tools_layout.setContentsMargins(0, 0, 0, 0)
+        tools_layout.setSpacing(0)
+        tools_layout.addWidget(scene_scroll, 1)
+        root.addLayout(tools_layout, 1)
+        self._preview_tools_layout = tools_layout
 
         if self._content_only:
             root.setContentsMargins(0, 0, 0, 0)
@@ -555,6 +574,7 @@ class LivePreviewWindow(fluentqt.Window):
     def reload_scene(self) -> bool:
         """Build a candidate and commit it without replacing the window."""
 
+        self._reload_timer.stop()
         self._status_label.setText("Reloading")
         self._observed_signature = self._source_signature()
         started = time.perf_counter()
@@ -574,6 +594,13 @@ class LivePreviewWindow(fluentqt.Window):
             candidate.widget.ensurePolished()
             defaults = capture_widget_state(candidate.widget)
             restored = restore_widget_state(candidate.widget, delta)
+            # Scenes may reconcile derived presentation after signal-blocked
+            # restoration, keeping application-specific behavior in the scene.
+            restored_hook = candidate.widget._fluentqt_live_scene_namespace.get("after_preview_state_restore")
+            if restored_hook is not None:
+                if not callable(restored_hook):
+                    raise TypeError("after_preview_state_restore must be callable")
+                restored_hook(candidate.widget)
         except BaseException as error:
             if isinstance(error, KeyboardInterrupt):
                 raise
@@ -793,6 +820,24 @@ def main(argv: Iterable[str] | None = None) -> int:
             print("[live-scene] " + str(error), file=sys.stderr)
             return 2
         app.aboutToQuit.connect(session.close)
+
+    if args.edit:
+        from fluent_qt_preview_editor.controller import PreviewEditor
+        from fluent_qt_preview_editor.panel import EditorPanel
+        from fluent_qt_preview_editor.picker import RegionPicker
+
+        history = (args.session_dir / "edits" if args.session_dir else
+                   args.scene.parent / ".preview-edits" / args.scene.name)
+        try:
+            editor = PreviewEditor(window, history)
+        except (OSError, ValueError, RuntimeError) as error:
+            print("[live-scene] editor could not start: " + str(error), file=sys.stderr)
+            if session:
+                session.close()
+            return 2
+        window.preview_editor = editor
+        editor.picker = RegionPicker(editor)
+        window.mount_preview_tools(EditorPanel(editor, editor.picker))
 
     def finish_initial_attempt(success: bool, _generation: int) -> None:
         nonlocal initial_finished
