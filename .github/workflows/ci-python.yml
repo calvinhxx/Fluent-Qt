@@ -692,8 +692,8 @@ jobs:
             --output-on-failure `
             --no-tests=error
 
-      - name: Diagnose native Python lifetime failures
-        if: ${{ failure() && steps.windows_binding_tests.outcome == 'failure' }}
+      - name: Verify Python lifetime with native heap diagnostics
+        if: ${{ !cancelled() && (steps.windows_binding_tests.outcome == 'success' || steps.windows_binding_tests.outcome == 'failure') }}
         timeout-minutes: 12
         shell: pwsh
         run: |
@@ -702,7 +702,7 @@ jobs:
             -ReportDirectory "$env:RUNNER_TEMP/fluentqt-lifetime-diagnostics"
 
       - name: Upload native Python lifetime diagnostics
-        if: ${{ failure() && steps.windows_binding_tests.outcome == 'failure' }}
+        if: ${{ !cancelled() && (steps.windows_binding_tests.outcome == 'success' || steps.windows_binding_tests.outcome == 'failure') }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: fluentqt-windows-python-lifetime-diagnostics

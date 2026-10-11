@@ -1,4 +1,4 @@
-# Run only after a failed binding test on a disposable Windows CI runner.
+# Run only on a disposable Windows CI runner.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
@@ -72,6 +72,10 @@ try {
         throw 'Native lifetime diagnostics exceeded five minutes.'
     }
     Write-Host "CDB diagnostic exit code: $($process.ExitCode)"
+    $stackLog = Join-Path $report 'native-stack.log'
+    if (Select-String -LiteralPath $stackLog -Pattern '^FLUENTQT_NATIVE_LIFETIME_FAULT' -Quiet) {
+        throw 'Native lifetime diagnostics captured an invalid memory access.'
+    }
 } finally {
     if ($process -and !$process.HasExited) {
         $process.Kill($true)
