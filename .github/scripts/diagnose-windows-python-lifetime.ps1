@@ -4,7 +4,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $BuildDirectory,
     [Parameter(Mandatory = $true)]
-    [string] $ReportDirectory
+    [string] $ReportDirectory,
+    [switch] $PageHeap
 )
 
 $ErrorActionPreference = 'Stop'
@@ -45,6 +46,7 @@ $python = (Get-Command python).Source
 $test = (Resolve-Path "$PSScriptRoot/../../bindings/pyside6/tests/test_foundation_authoring.py").Path
 $env:PYTHONPATH = Join-Path $build 'python'
 $env:QT_QPA_PLATFORM = 'offscreen'
+$env:_NO_DEBUG_HEAP = '1'
 Remove-Item Env:QT_PLUGIN_PATH -ErrorAction SilentlyContinue
 Remove-Item Env:QT_QPA_PLATFORM_PLUGIN_PATH -ErrorAction SilentlyContinue
 $symbols = "$(Join-Path $build 'python/fluentqt');srv*$(Join-Path $report 'symbols')*https://msdl.microsoft.com/download/symbols"
@@ -53,16 +55,36 @@ $filters = @('av', '0xc0000409', '0xc0000374', 'bpe') | ForEach-Object {
     "sxe -c `"$onFault`" -c2 `"$onFault`" $_"
 }
 $commands = ($filters -join '; ') + '; g'
+$mode = if ($PageHeap) { 'page-heap' } else { 'ordinary-heap' }
+$stackLog = Join-Path $report "native-stack-$mode.log"
+$probe = Join-Path $report 'repeat-foundation.py'
+@'
+import runpy
+import sys
+import unittest
+case = runpy.run_path(sys.argv[1], run_name='foundation_probe')['FoundationAuthoringTest']
+suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for _ in range(25))
+result = unittest.TextTestRunner(verbosity=2, failfast=True).run(suite)
+raise SystemExit(not result.wasSuccessful())
+'@ | Set-Content -LiteralPath $probe -Encoding utf8
+foreach ($name in @('fluent_binding_stategroup_wrapper.cpp', 'fluent_binding_stategroup_wrapper.h')) {
+    Copy-Item -LiteralPath (Join-Path $build "bindings/pyside6/generated/_fluentqt/$name") `
+        -Destination $report
+}
 $process = $null
 try {
-    & $gflags /p /enable python.exe /full
+    if ($PageHeap) {
+        & $gflags /p /enable python.exe /full
+    } else {
+        & $gflags /p /disable python.exe
+    }
     $start = [Diagnostics.ProcessStartInfo]::new()
     $start.FileName = $cdb
     $start.UseShellExecute = $false
     foreach ($argument in @(
-        '-G', '-logo', (Join-Path $report 'native-stack.log'),
+        '-G', '-logo', $stackLog,
         '-y', $symbols, '-c', $commands,
-        $python, '-X', 'faulthandler', $test, '-v'
+        $python, '-X', 'faulthandler', $probe, $test
     )) {
         $start.ArgumentList.Add($argument)
     }
@@ -72,7 +94,9 @@ try {
         throw 'Native lifetime diagnostics exceeded five minutes.'
     }
     Write-Host "CDB diagnostic exit code: $($process.ExitCode)"
-    $stackLog = Join-Path $report 'native-stack.log'
+    if ($process.ExitCode -ne 0) {
+        throw "Native lifetime diagnostics exited with $($process.ExitCode)."
+    }
     if (Select-String -LiteralPath $stackLog -Pattern '^FLUENTQT_NATIVE_LIFETIME_FAULT' -Quiet) {
         throw 'Native lifetime diagnostics captured an invalid memory access.'
     }
