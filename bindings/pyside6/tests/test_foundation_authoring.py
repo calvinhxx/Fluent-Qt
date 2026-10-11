@@ -397,10 +397,12 @@ assert target.isEnabled()
         source, target = QSlider(), QLabel("Default")
         states = fluentqt.StateGroup()
         expression_survived = []
+        evaluator_ownership = []
 
         def condition():
             if source.value() == 40:
                 expression = states._fluentqt_conditions["active"]
+                evaluator_ownership.append(shiboken6.ownedByPython(expression))
                 shiboken6.delete(states)
                 expression_survived.append(shiboken6.isValid(expression))
             return False
@@ -409,6 +411,7 @@ assert target.isEnabled()
                    dependencies=[(source, "value")])
         expression = states._fluentqt_conditions["active"]
         source.setValue(40)
+        self.assertEqual(evaluator_ownership, [True])
         self.assertEqual(expression_survived, [True])
         self.assertFalse(shiboken6.isValid(states))
         self.assertEqual(target.text(), "Default")
@@ -695,4 +698,6 @@ assert target.isEnabled()
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # Report the first lifetime assertion before a subsequent native allocation
+    # can hide its traceback behind a Windows fast-fail.
+    unittest.main(failfast=True)
