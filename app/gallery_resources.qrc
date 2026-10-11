@@ -35,6 +35,7 @@
         <file alias="assets/control_images/collections/StackView.svg">../tools/gallery/artwork/collections/StackView.svg</file>
         <file alias="assets/control_images/collections/TreeView.svg">../tools/gallery/artwork/collections/TreeView.svg</file>
         <file alias="assets/control_images/date-time/CalendarDatePicker.svg">../tools/gallery/artwork/date-time/CalendarDatePicker.svg</file>
+        <file alias="assets/control_images/date-time/DateTimeRangePicker.svg">../tools/gallery/artwork/date-time/DateTimeRangePicker.svg</file>
         <file alias="assets/control_images/date-time/CalendarView.svg">../tools/gallery/artwork/date-time/CalendarView.svg</file>
         <file alias="assets/control_images/date-time/DatePicker.svg">../tools/gallery/artwork/date-time/DatePicker.svg</file>
         <file alias="assets/control_images/date-time/TimePicker.svg">../tools/gallery/artwork/date-time/TimePicker.svg</file>

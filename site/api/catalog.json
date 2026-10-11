@@ -23,8 +23,8 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 88,
-    "public_headers": 154,
+    "components": 89,
+    "public_headers": 155,
     "categories": 15
   },
   "categories": [
@@ -46,7 +46,7 @@
     {
       "id": "date-time",
       "title": "Date & time",
-      "component_count": 4
+      "component_count": 5
     },
     {
       "id": "dialogs-flyouts",
@@ -1504,6 +1504,41 @@
         }
       ],
       "sample_count": 1
+    },
+    {
+      "id": "date-time-range-picker",
+      "title": "DateTimeRangePicker",
+      "category_id": "date-time",
+      "description": "A compact range entry with a calendar popup, minute precision, quick presets, and independently optional bounds.",
+      "capabilities": [
+        "date-time"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/DateTime.h>",
+        "installed_declaration_header": "<FluentQt/components/date_time/DateTimeRangePicker.h>",
+        "qualified_type": "fluent::date_time::DateTimeRangePicker",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/date_time/DateTimeRangePicker.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.date_time",
+        "type": "DateTimeRangePicker",
+        "import_statement": "from fluentqt.date_time import DateTimeRangePicker"
+      },
+      "gallery": {
+        "route_id": "date-time-range-picker",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=date-time-range-picker",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/DateTimeSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_date_time_range_picker",
+          "ctest_label": "test_date_time_range_picker",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/date_time/TestDateTimeRangePicker.cpp"
+        }
+      ],
+      "sample_count": 3
     },
     {
       "id": "time-picker",
@@ -3989,6 +4024,16 @@
         "YearFormat"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/date_time/DatePicker.h"
+    },
+    {
+      "include": "<FluentQt/components/date_time/DateTimeRangePicker.h>",
+      "source": "src/components/date_time/DateTimeRangePicker.h",
+      "summary": "Compact range entry with a calendar flyout and independently nullable endpoints.",
+      "declarations": [
+        "DateTimeRangePicker",
+        "Preset"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/date_time/DateTimeRangePicker.h"
     },
     {
       "include": "<FluentQt/components/date_time/TimePicker.h>",

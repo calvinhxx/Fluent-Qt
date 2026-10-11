@@ -612,6 +612,11 @@
           "component_id": "time-picker",
           "choose_when": "Users select a locale-aware time of day.",
           "avoid_when": "The value represents duration rather than clock time."
+        },
+        {
+          "component_id": "date-time-range-picker",
+          "choose_when": "A compact query filter needs a calendar range popup, independently nullable start/end dates, minute precision, or whole-day presets.",
+          "avoid_when": "The application needs one date, a duration, or non-contiguous date selection."
         }
       ]
     },

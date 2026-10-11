@@ -23,6 +23,7 @@
         "combobox",
         "content-dialog",
         "date-picker",
+        "date-time-range-picker",
         "dialog",
         "drawer-view",
         "dropdown-button",
@@ -363,6 +364,18 @@
       "family": "calendar-layout",
       "automated_evidence": [
         {
+          "kind": "interaction",
+          "test_case": "CalendarViewTest.PixelScrollMovesContinuouslyAndKeepsHitTargetsAligned",
+          "states": ["normal-light", "selection"],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "CalendarViewTest.Contract_AccessibilityTracksPartiallyVisibleScrollRows",
+          "states": ["keyboard-focus"],
+          "execution": "ci"
+        },
+        {
           "kind": "geometry",
           "test_case": "CalendarViewTest.CurrentDateAndSelectedDateUseDistinctVisualStates",
           "states": [
@@ -590,6 +603,86 @@
         "coverage": "all-required-states",
         "surface": "visual-check",
         "test_case": "DatePickerTest.VisualCheck"
+      }
+    },
+    {
+      "id": "date-time-range-picker",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "DateTimeRangePickerTest.Contract_ResponsiveAndRtlLayout",
+          "states": [
+            "narrow"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "DateTimeRangePickerTest.Contract_EndpointAlignmentAndSharedValidation",
+          "states": [
+            "open"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "DateTimeRangePickerTest.Contract_EmbeddedClearActionAndEmptyPresentation",
+          "states": [
+            "open"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "DateTimeRangePickerTest.Contract_DateTriggerPressAndPopupStatesStayStable",
+          "states": [
+            "open",
+            "dismissed"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "DateTimeRangePickerTest.Contract_PopupExclusivityAndCloseOnHideDisable",
+          "states": [
+            "open",
+            "dismissed"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "DateTimeRangePickerTest.Contract_CompactEndpointFlyouts",
+          "states": [
+            "open"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "DateTimeRangePickerTest.Contract_CompactFlyoutNestedDismissalAndResize",
+          "states": [
+            "open",
+            "dismissed",
+            "narrow"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "DateTimeRangePickerTest.Contract_InlineTimeAndDismissal",
+          "states": [
+            "open",
+            "dismissed"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "gallery"
       }
     },
     {

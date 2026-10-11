@@ -6460,6 +6460,7 @@ from . import native_samples_scrolling as _native_samples_scrolling  # noqa: E40
 from . import native_samples_status as _native_samples_status  # noqa: E402,F401
 from . import native_samples_text_window as _native_samples_text_window  # noqa: E402,F401
 from . import native_samples_files as _native_samples_files  # noqa: E402,F401
+from . import native_samples_datetime as _native_samples_datetime  # noqa: E402,F401
 from .spatial_support import SPATIAL_AVAILABLE  # noqa: E402
 
 if SPATIAL_AVAILABLE:

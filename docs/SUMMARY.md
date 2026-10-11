@@ -25,6 +25,7 @@ standalone reading tasks.
     - [Files and feedback](architecture/files-and-feedback.md)
     - [Spatial: compose existing widgets in depth](architecture/spatial-view.md)
     - [Timeline and Stepper](architecture/sequence-controls.md)
+    - [Date and time range picker](architecture/date-time-range-picker.md)
 - [Fluent design](design-languages/README.md)
   - **Design references**
     - [Fluent (Windows): design reference](design-languages/fluent.md)

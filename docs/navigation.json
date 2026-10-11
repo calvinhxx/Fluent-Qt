@@ -33,7 +33,8 @@
             "architecture/charts.md",
             "architecture/files-and-feedback.md",
             "architecture/spatial-view.md",
-            "architecture/sequence-controls.md"
+            "architecture/sequence-controls.md",
+            "architecture/date-time-range-picker.md"
           ]
         }
       ]

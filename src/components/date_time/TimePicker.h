@@ -33,17 +33,20 @@ class TimePicker : public fluent::basicinput::Button {
      * @brief Selected time; an invalid time represents no selection.
      * zh_CN: 选中时间；无效时间表示未选择。
      */
-    Q_PROPERTY(QTime selectedTime READ selectedTime WRITE setSelectedTime RESET clearSelectedTime NOTIFY selectedTimeChanged)
+    Q_PROPERTY(QTime selectedTime READ selectedTime WRITE setSelectedTime RESET clearSelectedTime
+                   NOTIFY selectedTimeChanged)
     /**
      * @brief Minute step used by the time picker.
      * zh_CN: 时间选择器使用的分钟步长。
      */
-    Q_PROPERTY(int minuteIncrement READ minuteIncrement WRITE setMinuteIncrement NOTIFY minuteIncrementChanged)
+    Q_PROPERTY(int minuteIncrement READ minuteIncrement WRITE setMinuteIncrement NOTIFY
+                   minuteIncrementChanged)
     /**
      * @brief Clock mode used for time display and editing.
      * zh_CN: 时间显示和编辑使用的时钟模式。
      */
-    Q_PROPERTY(ClockIdentifier clockIdentifier READ clockIdentifier WRITE setClockIdentifier NOTIFY clockIdentifierChanged)
+    Q_PROPERTY(ClockIdentifier clockIdentifier READ clockIdentifier WRITE setClockIdentifier NOTIFY
+                   clockIdentifierChanged)
     /**
      * @brief Whether the picker dropdown is open.
      * zh_CN: picker 下拉面板是否打开。
@@ -58,25 +61,20 @@ class TimePicker : public fluent::basicinput::Button {
      * @brief Accessible name supplied by the application for the confirm button.
      * zh_CN: 由应用为确认按钮提供的无障碍名称。
      */
-    Q_PROPERTY(QString confirmButtonAccessibleName READ confirmButtonAccessibleName WRITE setConfirmButtonAccessibleName NOTIFY confirmButtonAccessibleNameChanged)
+    Q_PROPERTY(QString confirmButtonAccessibleName READ confirmButtonAccessibleName WRITE
+                   setConfirmButtonAccessibleName NOTIFY confirmButtonAccessibleNameChanged)
     /**
      * @brief Accessible name supplied by the application for the cancel button.
      * zh_CN: 由应用为取消按钮提供的无障碍名称。
      */
-    Q_PROPERTY(QString cancelButtonAccessibleName READ cancelButtonAccessibleName WRITE setCancelButtonAccessibleName NOTIFY cancelButtonAccessibleNameChanged)
+    Q_PROPERTY(QString cancelButtonAccessibleName READ cancelButtonAccessibleName WRITE
+                   setCancelButtonAccessibleName NOTIFY cancelButtonAccessibleNameChanged)
 
 public:
-    enum class TimeField {
-        Hour,
-        Minute,
-        Period
-    };
+    enum class TimeField { Hour, Minute, Period };
     Q_ENUM(TimeField)
 
-    enum class ClockIdentifier {
-        TwelveHourClock,
-        TwentyFourHourClock
-    };
+    enum class ClockIdentifier { TwelveHourClock, TwentyFourHourClock };
     Q_ENUM(ClockIdentifier)
 
     explicit TimePicker(QWidget* parent = nullptr);
@@ -138,6 +136,7 @@ protected:
 
 private:
     friend class TimePickerFlyout;
+    friend class DateTimeRangePicker;
 
     struct FieldSegment {
         TimeField field;
@@ -153,8 +152,8 @@ private:
     QString formatField(TimeField field, const QTime& time) const;
     QTime normalizeTime(const QTime& time) const;
     QTime shiftedTime(const QTime& time, TimeField field, int offset) const;
-    QVector<int> minuteValues() const;
-    int snappedMinute(int minute) const;
+    QVector<int> minuteValues(const QTime& reference = QTime()) const;
+    int snappedMinute(int minute, const QTime& reference = QTime()) const;
 
     void setDropDownOpen(bool open);
     void applyPendingTime(const QTime& time);
@@ -165,6 +164,9 @@ private:
     QTime m_time;
     QTime m_selectedTime;
     int m_minuteIncrement = 1;
+    // The range endpoint also admits the final minute of a whole calendar day.
+    // zh_CN: 范围结束端点额外允许整天的最后一分钟。
+    bool m_allowDayEnd = false;
     ClockIdentifier m_clockIdentifier = ClockIdentifier::TwelveHourClock;
     QLocale m_observedLocale;
     QString m_hourPlaceholderText;

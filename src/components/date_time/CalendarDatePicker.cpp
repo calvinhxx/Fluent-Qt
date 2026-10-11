@@ -3,12 +3,14 @@
 
 #include <QEvent>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QSizePolicy>
 
 #include "CalendarView.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "components/dialogs_flyouts/Flyout.h"
+#include "compatibility/QtCompat.h"
 
 namespace fluent::date_time {
 
@@ -74,6 +76,7 @@ public:
 
         m_calendarView->setObjectName(QStringLiteral("CalendarDatePickerCalendarView"));
         m_calendarView->setFrameVisible(false);
+        m_calendarView->setCompact(picker->m_compactPopup);
         connect(m_calendarView, &CalendarView::dateActivated, m_picker,
                 &CalendarDatePicker::selectDateFromCalendar);
 
@@ -87,6 +90,7 @@ public:
         if (!m_picker)
             return;
 
+        const QPointer<CalendarDatePickerPopup> guard(this);
         setAnchor(m_picker);
         layoutCalendarView();
         updateFromPicker(true);
@@ -98,7 +102,8 @@ public:
         } else {
             showAt(m_picker);
         }
-        m_calendarView->setFocus(Qt::PopupFocusReason);
+        if (guard)
+            m_calendarView->setFocus(Qt::PopupFocusReason);
     }
 
     void updateFromPicker(bool resetMonth)
@@ -108,11 +113,17 @@ public:
 
         const QDate month =
             resetMonth ? m_picker->defaultVisibleMonth() : m_calendarView->visibleMonth();
+        if (resetMonth)
+            m_calendarView->resetScroll();
         m_calendarView->setLocale(m_picker->locale());
         m_calendarView->setDateRange(m_picker->minDate(), m_picker->maxDate());
         m_calendarView->setFirstDayOfWeek(m_picker->firstDayOfWeek());
         m_calendarView->setSelectedDate(m_picker->date());
         m_calendarView->setVisibleMonth(month);
+        if (resetMonth) {
+            m_calendarView->refreshProperties();
+            m_calendarView->update();
+        }
     }
 
     void onThemeUpdated() override
@@ -123,6 +134,18 @@ public:
     }
 
 protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (watched != this && isOpen() && m_picker && event &&
+            event->type() == QEvent::MouseButtonPress) {
+            const QPoint global = fluentMouseGlobalPos(static_cast<QMouseEvent*>(event));
+            if (m_picker->rect().contains(
+                    ::fluent::overlay::localPointFromPresentedGlobal(m_picker, global)))
+                return false;
+        }
+        return Flyout::eventFilter(watched, event);
+    }
+
     QPoint computePosition() const override
     {
         if (!::fluent::overlay::presentedTopLevel(m_picker))
@@ -476,10 +499,14 @@ void CalendarDatePicker::selectDateFromCalendar(const QDate& date)
 {
     if (!isDateSelectable(date))
         return;
+    const QPointer<CalendarDatePicker> guard(this);
     setDate(date);
+    if (!guard)
+        return;
     if (m_popup && m_popup->calendarView())
         m_popup->calendarView()->setVisibleMonth(firstOfMonth(date));
-    closeCalendar();
+    if (guard)
+        closeCalendar();
 }
 
 QDate CalendarDatePicker::defaultVisibleMonth() const

@@ -52,6 +52,7 @@
 #include <components/date_time/CalendarDatePicker.h>
 #include <components/date_time/CalendarView.h>
 #include <components/date_time/DatePicker.h>
+#include <components/date_time/DateTimeRangePicker.h>
 #include <components/date_time/TimePicker.h>
 #include <components/dialogs_flyouts/CoachMark.h>
 #include <components/dialogs_flyouts/ContentDialog.h>
