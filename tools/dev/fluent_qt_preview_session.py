@@ -7,7 +7,6 @@ import enum
 import json
 import math
 import os
-import sys
 from pathlib import Path
 import uuid
 
@@ -267,8 +266,8 @@ class PythonPreviewSession(QObject):
             else:
                 names = {"shift": Qt.KeyboardModifier.ShiftModifier, "control": Qt.KeyboardModifier.ControlModifier,
                          "alt": Qt.KeyboardModifier.AltModifier, "meta": Qt.KeyboardModifier.MetaModifier,
-                         "shortcut": (Qt.KeyboardModifier.MetaModifier if sys.platform == "darwin"
-                                      else Qt.KeyboardModifier.ControlModifier)}
+                         # Qt maps ControlModifier to Command on macOS.
+                         "shortcut": Qt.KeyboardModifier.ControlModifier}
                 modifiers = Qt.KeyboardModifier.NoModifier
                 for name in parameters.get("modifiers", []):
                     if name not in names:

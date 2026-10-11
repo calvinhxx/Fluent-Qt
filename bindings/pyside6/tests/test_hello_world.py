@@ -30,7 +30,7 @@ class HelloWorldTest(unittest.TestCase):
         self.window = example.create_window()
         self.window.show()
         self.app.processEvents()
-        self.button = self.window.findChild(Button)
+        self.button = self.window.contentWidget().findChild(Button)
         self.assertIsNotNone(self.button)
 
     def tearDown(self):
