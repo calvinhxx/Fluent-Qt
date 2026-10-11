@@ -35,6 +35,7 @@ set(FLUENT_QT_CI_FULL_CONTRACT_TARGETS
     test_expander
     test_data_grid
     test_calendar_view
+    test_date_time_range_picker
     test_navigation_accessibility
     test_value_accessibility
     test_complex_input_accessibility

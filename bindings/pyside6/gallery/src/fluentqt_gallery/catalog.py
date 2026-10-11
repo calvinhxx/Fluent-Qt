@@ -87,9 +87,9 @@ def _load_contract() -> dict[str, object]:
         )
     summary = contract.get("summary", {})
     expected = {
-        "route_count": 113,
-        "component_count": 88,
-        "sample_count": 249,
+        "route_count": 114,
+        "component_count": 89,
+        "sample_count": 252,
     }
     if summary != expected:
         raise RuntimeError(

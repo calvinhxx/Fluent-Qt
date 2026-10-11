@@ -52,6 +52,7 @@
 #include "components/basicinput/Slider.h"
 #include "components/basicinput/ToggleButton.h"
 #include "components/basicinput/ToggleSwitch.h"
+#include "components/date_time/DateTimeRangePicker.h"
 #include "compatibility/QtCompat.h"
 #include "components/collections/ListView.h"
 #include "components/collections/TreeView.h"
@@ -320,6 +321,32 @@ public:
         trackLabelColor(label, TextRole::Secondary);
     }
 };
+
+TEST_F(GalleryContentPagesTest, DateTimeRangeSamplesUseNativeNullableValues)
+{
+    const auto samples =
+        fluent::gallery::gallerySamplesForRoute(QStringLiteral("date-time-range-picker"));
+    ASSERT_EQ(samples.size(), 3);
+    QWidget host;
+    for (const auto& sample : samples) {
+        SCOPED_TRACE(sample.id.toStdString());
+        auto* picker =
+            qobject_cast<fluent::date_time::DateTimeRangePicker*>(sample.createPreview(&host));
+        ASSERT_NE(picker, nullptr);
+        EXPECT_TRUE(picker->isRangeValid());
+        EXPECT_TRUE(picker->startDateTime().isValid());
+        EXPECT_EQ(picker->startDateTime().date(), QDate(2025, 10, 1));
+        if (sample.id == QStringLiteral("date-time-range-dates")) {
+            EXPECT_FALSE(picker->isTimeEnabled());
+            EXPECT_EQ(picker->endDateTime().date(), QDate(2025, 11, 1));
+        } else if (sample.id == QStringLiteral("date-time-range-time")) {
+            EXPECT_EQ(picker->startDateTime().time(), QTime(10, 10));
+            EXPECT_EQ(picker->endDateTime().time(), QTime(15, 10));
+        } else {
+            EXPECT_FALSE(picker->endDateTime().isValid());
+        }
+    }
+}
 
 TEST_F(GalleryContentPagesTest, ContentTextRolesAreAppliedBeforeFirstPaint)
 {

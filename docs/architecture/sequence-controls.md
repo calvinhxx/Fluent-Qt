@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
 
-[← Spatial: compose existing widgets in depth](spatial-view.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md)
+[← Spatial: compose existing widgets in depth](spatial-view.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Date and time range picker →](date-time-range-picker.md)
 <!-- docs-nav:top:end -->
 
 Timeline presents an ordered collection. Stepper presents a small set of workflow
@@ -105,5 +105,5 @@ technology remain native-review boundaries.
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Spatial: compose existing widgets in depth](spatial-view.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md)
+[← Spatial: compose existing widgets in depth](spatial-view.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Date and time range picker →](date-time-range-picker.md)
 <!-- docs-nav:bottom:end -->

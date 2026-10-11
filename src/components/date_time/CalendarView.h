@@ -11,10 +11,14 @@
 #include "components/foundation/QMLPlus.h"
 
 class QPainter;
+class QTimer;
 class QVariantAnimation;
 class QWheelEvent;
 
 namespace fluent::date_time {
+
+class DateTimeRangePicker;
+class CalendarDatePickerPopup;
 
 namespace detail {
 class CalendarViewAccessible;
@@ -35,12 +39,14 @@ class CalendarView : public QWidget, public FluentElement, public QMLPlus {
      * @brief Selected date; an invalid date represents no selection.
      * zh_CN: 选中日期；无效日期表示未选择。
      */
-    Q_PROPERTY(QDate selectedDate READ selectedDate WRITE setSelectedDate NOTIFY selectedDateChanged)
+    Q_PROPERTY(
+        QDate selectedDate READ selectedDate WRITE setSelectedDate NOTIFY selectedDateChanged)
     /**
      * @brief Month currently displayed by CalendarView.
      * zh_CN: CalendarView 当前显示的月份。
      */
-    Q_PROPERTY(QDate visibleMonth READ visibleMonth WRITE setVisibleMonth NOTIFY visibleMonthChanged)
+    Q_PROPERTY(
+        QDate visibleMonth READ visibleMonth WRITE setVisibleMonth NOTIFY visibleMonthChanged)
     /**
      * @brief Minimum date accepted by the calendar surface.
      * zh_CN: 日历表面接受的最小日期。
@@ -60,26 +66,23 @@ class CalendarView : public QWidget, public FluentElement, public QMLPlus {
      * @brief First day used when laying out calendar weeks.
      * zh_CN: 日历周布局使用的一周起始日。
      */
-    Q_PROPERTY(Qt::DayOfWeek firstDayOfWeek READ firstDayOfWeek
-               WRITE setFirstDayOfWeek RESET resetFirstDayOfWeek
-               NOTIFY firstDayOfWeekChanged)
+    Q_PROPERTY(Qt::DayOfWeek firstDayOfWeek READ firstDayOfWeek WRITE setFirstDayOfWeek RESET
+                   resetFirstDayOfWeek NOTIFY firstDayOfWeekChanged)
     /**
      * @brief Calendar content level currently displayed.
      * zh_CN: 当前显示的日历内容层级。
      */
-    Q_PROPERTY(CalendarContentLevel contentLevel READ contentLevel WRITE setContentLevel NOTIFY contentLevelChanged)
+    Q_PROPERTY(CalendarContentLevel contentLevel READ contentLevel WRITE setContentLevel NOTIFY
+                   contentLevelChanged)
     /**
      * @brief Whether CalendarView paints its outer frame.
      * zh_CN: CalendarView 是否绘制自身外框。
      */
-    Q_PROPERTY(bool frameVisible READ isFrameVisible WRITE setFrameVisible NOTIFY frameVisibleChanged)
+    Q_PROPERTY(
+        bool frameVisible READ isFrameVisible WRITE setFrameVisible NOTIFY frameVisibleChanged)
 
 public:
-    enum class CalendarContentLevel {
-        Day,
-        Month,
-        Year
-    };
+    enum class CalendarContentLevel { Day, Month, Year };
     Q_ENUM(CalendarContentLevel)
 
     explicit CalendarView(QWidget* parent = nullptr);
@@ -137,6 +140,7 @@ signals:
 protected:
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
@@ -151,6 +155,21 @@ protected:
 
 private:
     friend class detail::CalendarViewAccessible;
+    friend class DateTimeRangePicker;
+    friend class CalendarDatePickerPopup;
+
+    // Compact density is reserved for the range picker's endpoint flyouts.
+    // zh_CN: 紧凑密度供范围选择器的端点浮层使用。
+    void setCompact(bool compact);
+    int headerHeight() const;
+    int weekHeaderHeight() const;
+    int dayCellHeight() const;
+
+    // Range decoration is owned by DateTimeRangePicker; ordinary calendars
+    // retain their single-date selection contract.
+    // zh_CN: 范围装饰由 DateTimeRangePicker 管理，普通日历仍保持单日期选择契约。
+    void setHighlightedDateRange(const QDate& start, const QDate& end);
+    bool isHighlightedDate(const QDate& date) const;
 
     struct DayPageKey {
         int year = 0;
@@ -165,27 +184,26 @@ private:
         int startYear = 0;
     };
 
-    enum class WheelGestureKind {
-        None,
-        PhaseBased,
-        NoPhasePixel,
-        NoPhaseDiscrete
-    };
-
     void paintHeader(QPainter& painter);
     void paintTitleButtonBackground(QPainter& painter);
-    void paintTitleForLevel(QPainter& painter, CalendarContentLevel level, const QDate& visibleMonth, qreal yOffset, qreal opacity);
+    void paintTitleForLevel(QPainter& painter, CalendarContentLevel level,
+                            const QDate& visibleMonth, qreal yOffset, qreal opacity);
     void paintNavButton(QPainter& painter, const QRect& buttonRect, const QString& glyph);
     void paintWeekdays(QPainter& painter);
     void paintContent(QPainter& painter);
-    void paintContentLevel(QPainter& painter, CalendarContentLevel level, const QDate& visibleMonth, qreal yOffset, qreal opacity);
-    void paintContentLevelZoom(QPainter& painter, CalendarContentLevel level, const QDate& visibleMonth, qreal scale, qreal opacity);
-    void paintDayContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset, qreal opacity);
+    void paintContentLevel(QPainter& painter, CalendarContentLevel level, const QDate& visibleMonth,
+                           qreal yOffset, qreal opacity);
+    void paintContentLevelZoom(QPainter& painter, CalendarContentLevel level,
+                               const QDate& visibleMonth, qreal scale, qreal opacity);
+    void paintDayContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset,
+                         qreal opacity);
     void paintMonthDays(QPainter& painter, const QDate& month, qreal yOffset, qreal opacity);
-    void paintMonthContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset, qreal opacity);
-    void paintYearContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset, qreal opacity);
-    void paintContentCellChrome(QPainter& painter, const QRectF& cell, bool current,
-                                bool selected, bool hovered, bool pressed);
+    void paintMonthContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset,
+                           qreal opacity);
+    void paintYearContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset,
+                          qreal opacity);
+    void paintContentCellChrome(QPainter& painter, const QRectF& cell, bool current, bool selected,
+                                bool hovered, bool pressed);
     QColor contentCellTextColor(bool current, bool selected) const;
     QRectF dateIndicatorRectForCell(const QRectF& cell) const;
     QRectF contentIndicatorRectForCell(const QRectF& cell) const;
@@ -196,9 +214,10 @@ private:
     YearPageKey yearPageKey(const QDate& visibleMonth) const;
     QDate monthForDayPage(const DayPageKey& key) const;
     QRect navigationButtonAt(const QPoint& pos) const;
-    bool adjustedTransitionHitPosition(const QPoint& pos, const QRect& bounds, QPoint* adjustedPos) const;
+    bool adjustedTransitionHitPosition(const QPoint& pos, const QRect& bounds,
+                                       QPoint* adjustedPos) const;
     int contentCellIndexAt(const QPoint& pos) const;
-    int monthAt(const QPoint& pos) const;
+    QDate monthAt(const QPoint& pos) const;
     int yearAt(const QPoint& pos) const;
     bool dateInGrid(const QDate& date) const;
     QDate focusFallbackDate(bool includeFirstSelectable = true) const;
@@ -209,7 +228,15 @@ private:
     void moveYear(int years);
     void moveYearPage(int pages);
     void navigatePage(int pages, bool showFocusIndicator = false);
-    void resetWheelGesture();
+    void resetScroll();
+    qreal scrollRowHeight() const;
+    qreal scrollRowOffset() const;
+    int visibleRowCount() const;
+    QDate scrollDateAtRow(qint64 row) const;
+    QDate contentDateForCell(int index) const;
+    qreal boundedScrollPosition(qreal position) const;
+    void setScrollPosition(qreal position);
+    void finishScrollUpdates();
     QDate shiftedVisibleMonth(int pages) const;
     QDate shiftedVisibleMonthFrom(const QDate& originMonth, int pages) const;
     QDate transitionTargetVisibleMonth() const;
@@ -221,15 +248,20 @@ private:
     void startMonthTransition(const QDate& previousMonth, const QDate& currentMonth,
                               qreal startProgress = 0.0, bool animate = true);
     bool monthTransitionActive() const;
-    void startContentTransition(CalendarContentLevel previousLevel, CalendarContentLevel currentLevel);
+    void startContentTransition(CalendarContentLevel previousLevel,
+                                CalendarContentLevel currentLevel);
     bool contentTransitionActive() const;
     void switchToParentContentLevel();
     void moveFocusByDays(int days);
     void activateDate(const QDate& date);
-    void refreshProperties();
+    void refreshProperties(bool includeCells = true);
 
     QDate m_visibleMonth;
     QDate m_selectedDate;
+    bool m_compact = false;
+    bool m_rangeHighlightEnabled = false;
+    QDate m_highlightedStartDate;
+    QDate m_highlightedEndDate;
     QDate m_minDate;
     QDate m_maxDate;
     QDate m_hoveredDate;
@@ -240,8 +272,8 @@ private:
     QRect m_pressedButton;
     bool m_titleHovered = false;
     bool m_titlePressed = false;
-    int m_hoveredMonth = -1;
-    int m_pressedMonth = -1;
+    QDate m_hoveredMonth;
+    QDate m_pressedMonth;
     int m_hoveredYear = 0;
     int m_pressedYear = 0;
     QDate m_previousVisibleMonth;
@@ -249,11 +281,13 @@ private:
     qreal m_monthTransitionProgress = 1.0;
     int m_monthTransitionDirection = 0;
     QVariantAnimation* m_monthTransitionAnimation = nullptr;
-    qreal m_wheelAccum = 0.0;
-    int m_wheelDir = 0;
-    WheelGestureKind m_wheelGestureKind = WheelGestureKind::None;
-    bool m_wheelGestureCommitted = false;
-    qint64 m_lastWheelTs = 0;
+    QDate m_scrollOrigin;
+    qreal m_scrollPosition = 0.0;
+    qreal m_scrollTarget = 0.0;
+    QVariantAnimation* m_scrollAnimation = nullptr;
+    QTimer* m_scrollSettleTimer = nullptr;
+    bool m_scrollPropertiesDirty = false;
+    bool m_scrollAccessibilityDirty = false;
     CalendarContentLevel m_contentLevel = CalendarContentLevel::Day;
     bool m_frameVisible = true;
     CalendarContentLevel m_previousContentLevel = CalendarContentLevel::Day;

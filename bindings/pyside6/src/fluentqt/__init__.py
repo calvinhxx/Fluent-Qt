@@ -60,7 +60,7 @@ from .collections import (
     StackView,
     TreeView,
 )
-from .date_time import CalendarDatePicker, CalendarView, DatePicker, TimePicker
+from .date_time import CalendarDatePicker, CalendarView, DatePicker, DateTimeRangePicker, TimePicker
 from .design import (
     CornerRadius,
     Icons,
@@ -325,6 +325,7 @@ __all__ = [
     "ContentDialogButton",
     "CornerRadius",
     "DatePicker",
+    "DateTimeRangePicker",
     "DataGrid",
     "Dialog",
     "Divider",

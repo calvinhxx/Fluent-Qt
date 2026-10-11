@@ -76,6 +76,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/date_time/CalendarDatePicker.h
     src/components/date_time/CalendarView.h
     src/components/date_time/DatePicker.h
+    src/components/date_time/DateTimeRangePicker.h
     src/components/date_time/TimePicker.h
 
     src/components/dialogs_flyouts/CoachMark.h

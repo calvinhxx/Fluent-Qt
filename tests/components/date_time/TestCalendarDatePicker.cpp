@@ -8,6 +8,8 @@
 #include <QTest>
 #include <QVariantMap>
 
+#include "compatibility/QtCompat.h"
+
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/basicinput/Button.h"
@@ -231,8 +233,7 @@ TEST_F(CalendarDatePickerTest, RangeAndLocaleContractsAreAtomic)
     QObject::connect(&picker, &CalendarDatePicker::minDateChanged, &picker,
                      [&picker, &observersSawCompleteRange](const QDate&) {
                          observersSawCompleteRange =
-                             observersSawCompleteRange
-                             && picker.maxDate() == QDate(2026, 5, 20);
+                             observersSawCompleteRange && picker.maxDate() == QDate(2026, 5, 20);
                      });
 
     picker.setDateRange(QDate(2026, 5, 20), QDate(2026, 5, 10));
@@ -272,6 +273,30 @@ TEST_F(CalendarDatePickerTest, FirstDayOfWeekUpdatesMonthGrid)
 
     EXPECT_NE(sundayCell, mondayCell);
     EXPECT_EQ(calendarView->property("visibleMonth").toDate(), QDate(2026, 5, 1));
+}
+
+TEST_F(CalendarDatePickerTest, ReopeningTheSameMonthResetsTheScrollOffset)
+{
+    auto* picker = new CalendarDatePicker(window);
+    picker->setDate(QDate(2026, 5, 12));
+    auto* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    auto* calendar = picker->calendarView();
+    const QDate first = calendar->gridStartDate();
+    const QPoint point = calendar->gridRect().center();
+    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(wheel, point, point, QPoint(0, -11), QPoint(), Qt::NoButton,
+                                       Qt::NoModifier, Qt::NoScrollPhase, false);
+    QApplication::sendEvent(calendar, &wheel);
+    processEvents();
+    EXPECT_DOUBLE_EQ(calendar->property("scrollOffset").toReal(), 11.0);
+    EXPECT_EQ(calendar->visibleMonth(), QDate(2026, 5, 1));
+    picker->closeCalendar();
+    picker->openCalendar();
+    processEvents();
+    EXPECT_DOUBLE_EQ(calendar->property("scrollOffset").toReal(), 0.0);
+    EXPECT_EQ(calendar->gridStartDate(), first);
+    EXPECT_EQ(calendar->dateCellRect(picker->date()).height(), 44);
+    EXPECT_EQ(picker->date(), QDate(2026, 5, 12));
 }
 
 TEST_F(CalendarDatePickerTest, OpenCloseAndLightDismiss)
@@ -319,6 +344,19 @@ TEST_F(CalendarDatePickerTest, PopupLeavesRoundedChromeVisible)
     EXPECT_GT(calendarView->geometry().top(), margins.top());
     EXPECT_LT(calendarView->geometry().right(), popup->width() - margins.right());
     EXPECT_LT(calendarView->geometry().bottom(), popup->height() - margins.bottom());
+}
+
+TEST_F(CalendarDatePickerTest, TriggerClickClosesWithoutReopening)
+{
+    auto* picker = new CalendarDatePicker(window);
+    picker->setGeometry(60, 60, 180, picker->sizeHint().height());
+    showWindow(window);
+    QTest::mouseClick(picker, Qt::LeftButton);
+    processEvents();
+    ASSERT_TRUE(picker->isCalendarOpen());
+    QTest::mouseClick(picker, Qt::LeftButton);
+    processEvents();
+    EXPECT_FALSE(picker->isCalendarOpen());
 }
 
 TEST_F(CalendarDatePickerTest, DisabledPickerDoesNotOpen)
@@ -574,7 +612,8 @@ TEST_F(CalendarDatePickerTest, VisualCheck)
     layout->addWidget(themeButton);
     QObject::connect(themeButton, &Button::clicked, themeButton, [themeButton]() {
         const bool dark = fluent::FluentElement::currentTheme() == fluent::FluentElement::Dark;
-        fluent::FluentElement::setTheme(dark ? fluent::FluentElement::Light : fluent::FluentElement::Dark);
+        fluent::FluentElement::setTheme(dark ? fluent::FluentElement::Light
+                                             : fluent::FluentElement::Dark);
         themeButton->setText(dark ? QStringLiteral("Dark") : QStringLiteral("Light"));
     });
 

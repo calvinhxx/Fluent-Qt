@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>DateTimeRangePicker</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#23b4eb"/>
+      <stop offset="1" stop-color="#003c75"/>
+    </linearGradient>
+  </defs>
+  <circle cx="36" cy="36" r="35" fill="url(#tile)"/>
+  <rect x="13" y="17" width="46" height="39" rx="5" fill="white"/>
+  <path d="M14 28H58M25 13V21M47 13V21" stroke="#0078d4" stroke-width="3" stroke-linecap="round"/>
+  <rect x="21" y="36" width="30" height="10" rx="5" fill="#bbdef5"/>
+  <circle cx="24" cy="41" r="5" fill="#0078d4"/>
+  <circle cx="48" cy="41" r="5" fill="#0078d4"/>
+  <circle cx="51" cy="53" r="12" fill="#003c75" stroke="white" stroke-width="2"/>
+  <path d="M51 46V53L56 56" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/>
+</svg>

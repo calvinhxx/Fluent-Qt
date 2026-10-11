@@ -48,6 +48,7 @@ RISK_FAMILY_RULES = {
                 "color-picker",
                 "combobox",
                 "date-picker",
+                "date-time-range-picker",
                 "drawer-view",
                 "dropdown-button",
                 "multi-select-combobox",
