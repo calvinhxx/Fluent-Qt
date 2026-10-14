@@ -87,6 +87,26 @@ set(FLUENT_QT_GALLERY_WEB_RESOURCES ${FLUENT_QT_GALLERY_WEB_RESOURCES} PARENT_SC
 
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Network Svg)
 
+# Keep static-library consumers before their dependencies so older CMake
+# versions do not append duplicate archives to satisfy link ordering.
+set(_fluent_qt_gallery_link_libraries "")
+if(TARGET FluentQtSpatial)
+    list(APPEND _fluent_qt_gallery_link_libraries
+        FluentQtSpatialRenderer FluentQt::Spatial)
+endif()
+if(TARGET FluentQtQmlBridge)
+    list(APPEND _fluent_qt_gallery_link_libraries FluentQt::QmlBridge)
+endif()
+if(TARGET FluentQtSpatial OR TARGET FluentQtQmlBridge)
+    list(APPEND _fluent_qt_gallery_link_libraries FluentQt::Plugins)
+endif()
+list(APPEND _fluent_qt_gallery_link_libraries
+    FluentQt::FluentQt
+    FluentQtLoggingSupport
+    Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::Svg)
+
 # The application and Gallery test executables share the same model/view code.
 # Keep it in one internal object target so a cold full build compiles those sources
 # once; platform adapters and qrc files stay on their final executable targets.
@@ -98,21 +118,9 @@ fluent_qt_enable_sanitizers(FluentQtGalleryCore)
 target_include_directories(FluentQtGalleryCore
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(FluentQtGalleryCore
-    PRIVATE
-    FluentQt::FluentQt
-    FluentQtLoggingSupport
-    Qt${QT_VERSION_MAJOR}::Widgets
-    Qt${QT_VERSION_MAJOR}::Network
-    Qt${QT_VERSION_MAJOR}::Svg
-)
-if(TARGET FluentQtSpatial)
-    target_link_libraries(FluentQtGalleryCore PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
-    if(QT_VERSION_MAJOR EQUAL 6)
-        target_link_libraries(FluentQtGalleryCore PRIVATE Qt6::OpenGLWidgets)
-    endif()
-endif()
-if(TARGET FluentQtQmlBridge)
-    target_link_libraries(FluentQtGalleryCore PRIVATE FluentQt::QmlBridge)
+    PRIVATE ${_fluent_qt_gallery_link_libraries})
+if(TARGET FluentQtSpatial AND QT_VERSION_MAJOR EQUAL 6)
+    target_link_libraries(FluentQtGalleryCore PRIVATE Qt6::OpenGLWidgets)
 endif()
 # Consumers already link these runtime dependencies. The object target needs
 # their compile usage requirements only; suppress link-only propagation so
@@ -135,19 +143,8 @@ fluent_qt_enable_sanitizers(${FLUENT_QT_GALLERY_EXECUTABLE_NAME})
 target_sources(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/GalleryPlatform.h")
 target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
-    PRIVATE
-    FluentQtGalleryCore
-    FluentQt::FluentQt
-    FluentQtLoggingSupport
-    Qt${QT_VERSION_MAJOR}::Widgets
-    Qt${QT_VERSION_MAJOR}::Network
-    Qt${QT_VERSION_MAJOR}::Svg
-)
-if(TARGET FluentQtSpatial)
-    target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
-endif()
+    PRIVATE FluentQtGalleryCore ${_fluent_qt_gallery_link_libraries})
 if(TARGET FluentQtQmlBridge)
-    target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE FluentQt::QmlBridge)
     if(EMSCRIPTEN AND COMMAND qt_import_qml_plugins)
         set_property(TARGET ${FLUENT_QT_GALLERY_EXECUTABLE_NAME} APPEND PROPERTY
             QT_QML_IMPORT_SCANNER_EXTRA_ROOT_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/view/widgets/samples/qmlbridge")

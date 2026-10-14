@@ -161,7 +161,7 @@ endif()
 
 if(TARGET FluentQtSpatial)
     foreach(_spatial_gallery_test test_gallery_shell_framework test_gallery_shell_motion_policy test_gallery_spatial test_gallery_content_pages)
-        target_link_libraries(${_spatial_gallery_test} PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
+        target_link_libraries(${_spatial_gallery_test} PRIVATE FluentQtSpatialRenderer FluentQt::Spatial)
     endforeach()
 endif()
 
@@ -175,7 +175,7 @@ if(TARGET FluentQtQmlBridge)
         FluentQtGalleryTestPlatform FluentQt::QmlBridge Qt${QT_VERSION_MAJOR}::Network
         Qt${QT_VERSION_MAJOR}::Svg Qt${QT_VERSION_MAJOR}::QuickWidgets)
     if(TARGET FluentQtSpatial)
-        target_link_libraries(test_gallery_qml_bridge PRIVATE FluentQt::Spatial FluentQtSpatialRenderer)
+        target_link_libraries(test_gallery_qml_bridge PRIVATE FluentQtSpatialRenderer FluentQt::Spatial)
     endif()
     if(QT_VERSION_MAJOR EQUAL 6)
         target_link_libraries(test_gallery_qml_bridge PRIVATE Qt6::OpenGLWidgets Qt6::OpenGL)
