@@ -4463,6 +4463,31 @@ with (
             window.deleteLater()
             QApplication.processEvents()
 
+    def test_destroying_window_with_active_intro_tour_releases_overlays(self):
+        window = GalleryWindow(startup_visuals=False)
+        settings = window._settings
+        original_intro_completed = settings.intro_completed
+        settings.set_intro_completed(False)
+        try:
+            window.show()
+            QApplication.processEvents()
+            window._maybe_start_intro_tour()
+            tour = window._intro_tour
+            self.assertIsNotNone(tour)
+            card, scrim = tour._card, tour._scrim
+            self.assertTrue(card.isOpen())
+
+            # Exercise QObject child-removal events while the tour still filters
+            # its host; finishing the tour first would hide this lifetime defect.
+            delete_qobject(window)
+            for obj in (window, tour, card, scrim):
+                self.assertFalse(shiboken6.isValid(obj))
+            self.assertFalse(settings.intro_completed)
+        finally:
+            settings.set_intro_completed(original_intro_completed)
+            if shiboken6.isValid(window):
+                delete_qobject(window)
+
     def test_gallery_owned_intro_and_navigation_motion_follow_policy(self):
         original_motion = fluentqt.current_motion_mode()
         self.addCleanup(fluentqt.set_motion_mode, original_motion)
