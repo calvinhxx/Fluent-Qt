@@ -21,6 +21,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPolygon
 from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+from shiboken6 import isValid
 
 from .foundation_pages import _theme_tokens
 from .motion import start_finite_transition
@@ -408,16 +409,18 @@ class GalleryIntroTour(QObject):
         self.finished.emit()
 
     def eventFilter(self, watched, event) -> bool:
-        if (
-            self._scrim is not None
-            and watched is self._host.window()
-            and event.type() in (QEvent.Type.Resize, QEvent.Type.Move)
-        ):
+        # Child-removal events can arrive after the host's Python wrapper is
+        # invalidated. Only geometry events need to inspect that borrowed host.
+        if event.type() not in (QEvent.Type.Resize, QEvent.Type.Move):
+            return False
+        if not isValid(self._host) or self._scrim is None or not isValid(self._scrim):
+            return False
+        if watched is self._host.window():
             self._sync_scrim_geometry()
             self._scrim.raise_()
-            if self._card is not None and self._card.isOpen():
+            if self._card is not None and isValid(self._card) and self._card.isOpen():
                 self._card.raise_()
-        return super().eventFilter(watched, event)
+        return False
 
 
 __all__ = ["GalleryIntroTour", "TourStep"]
