@@ -4890,6 +4890,106 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertIsNone(action_ref())
             self.assertIsNone(anchor_ref())
 
+    def test_menu_parent_enter_at_submenu_overlap_preserves_cascade(self):
+        from PySide6.QtGui import QEnterEvent, QMouseEvent
+        from PySide6.QtWidgets import QProxyStyle, QStyle
+
+        class ResetSubmenuOnEnterStyle(QProxyStyle):
+            def __init__(self):
+                super().__init__("Fusion")
+
+            def styleHint(self, hint, option=None, widget=None, data=None):
+                if hint == QStyle.SH_Menu_SubMenuResetWhenReenteringParent:
+                    return 1
+                if hint == QStyle.SH_Menu_SubMenuSloppyCloseTimeout:
+                    return 80
+                return super().styleHint(hint, option, widget, data)
+
+        # QMenu caches the hints at construction; retain the original style
+        # object rather than trying to recreate it from a possibly empty name.
+        previous_style = self.app.style()
+        previous_style.setParent(None)
+        style = ResetSubmenuOnEnterStyle()
+        self.app.setStyle(style)
+        host = QWidget()
+        try:
+            host.resize(800, 600)
+            host.show()
+            if self.app.platformName() not in {"offscreen", "minimal"}:
+                host.raise_()
+                host.activateWindow()
+                self.assertTrue(QTest.qWaitForWindowExposed(host))
+                self.assertTrue(QTest.qWaitForWindowActive(host))
+            menu = fluentqt.FluentMenu("View", host)
+            submenu = fluentqt.FluentMenu("Sort by", menu)
+            submenu.addAction("Name")
+            leaf = submenu.addAction("Date modified")
+            branch = menu.addMenu(submenu)
+            sibling = menu.addAction("Compact list")
+            menu.popup(host.mapToGlobal(QPoint(40, 80)))
+            menu.setActiveAction(branch)
+            QCoreApplication.processEvents()
+            self.assertTrue(submenu.isVisible())
+            hidden = []
+            submenu.aboutToHide.connect(lambda: hidden.append(True))
+
+            crossing = submenu.mapToGlobal(
+                QPoint(1, submenu.actionGeometry(leaf).center().y())
+            )
+            self.assertTrue(menu.frameGeometry().contains(crossing))
+            child_local = QPointF(submenu.mapFromGlobal(crossing))
+            QCoreApplication.sendEvent(
+                submenu, QEnterEvent(child_local, child_local, QPointF(crossing))
+            )
+            QCoreApplication.sendEvent(submenu, QEvent(QEvent.Leave))
+            parent_local = QPointF(menu.mapFromGlobal(crossing))
+            QCoreApplication.sendEvent(
+                menu, QEnterEvent(parent_local, parent_local, QPointF(crossing))
+            )
+            self.assertTrue(submenu.isVisible())
+            self.assertIs(menu.activeAction(), branch)
+
+            for step in range(3):
+                global_position = crossing + QPoint(0, step)
+                local = QPointF(menu.mapFromGlobal(global_position))
+                QCoreApplication.sendEvent(
+                    menu,
+                    QMouseEvent(
+                        QEvent.MouseMove, local, QPointF(global_position),
+                        Qt.NoButton, Qt.NoButton, Qt.NoModifier,
+                    ),
+                )
+            QTest.qWait(160)
+            self.assertTrue(submenu.isVisible())
+            self.assertIs(menu.activeAction(), branch)
+            self.assertEqual(hidden, [])
+
+            leaf_position = submenu.mapToGlobal(submenu.actionGeometry(leaf).center())
+            for _ in range(8):
+                local = QPointF(menu.mapFromGlobal(leaf_position))
+                QCoreApplication.sendEvent(
+                    menu,
+                    QMouseEvent(
+                        QEvent.MouseMove, local, QPointF(leaf_position),
+                        Qt.NoButton, Qt.NoButton, Qt.NoModifier,
+                    ),
+                )
+            self.assertIs(submenu.activeAction(), leaf)
+
+            back = menu.mapToGlobal(menu.actionGeometry(sibling).center())
+            self.assertFalse(submenu.frameGeometry().contains(back))
+            back_local = QPointF(menu.mapFromGlobal(back))
+            QCoreApplication.sendEvent(
+                menu, QEnterEvent(back_local, back_local, QPointF(back))
+            )
+            self.assertFalse(submenu.isVisible())
+            self.assertTrue(menu.isVisible())
+        finally:
+            host.close()
+            Shiboken.delete(host)
+            self.app.setStyle(previous_style)
+            self.assertIs(self.app.style(), previous_style)
+
     def test_menu_button_external_delete_clears_native_pointer(self):
         for button_type in (
             fluentqt.DropDownButton,

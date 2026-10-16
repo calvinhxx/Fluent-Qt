@@ -18,6 +18,7 @@
 #include <QShowEvent>
 #include <QTimer>
 #include <QVariantAnimation>
+#include "compatibility/private/PointerEventCompat_p.h"
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
@@ -98,6 +99,16 @@ bool hasLeadingAction(const FluentMenu* menu)
 bool hasMenuParent(const QWidget* widget)
 {
     return widget && qobject_cast<const QMenu*>(widget->parentWidget());
+}
+
+QMenu* visibleSubmenuAt(const QMenu* menu, const QPoint& globalPosition)
+{
+    for (QAction* action : menu->actions()) {
+        QMenu* submenu = action->menu();
+        if (submenu && submenu != menu && submenu->isVisible() && submenu->frameGeometry().contains(globalPosition))
+            return submenu;
+    }
+    return nullptr;
 }
 
 FluentMenu* rootMenuFor(FluentMenu* menu)
@@ -281,6 +292,37 @@ void FluentMenu::keyPressEvent(QKeyEvent* event)
     }
 
     QMenu::keyPressEvent(event);
+}
+
+void FluentMenu::enterEvent(FluentEnterEvent* event)
+{
+    // Translucent popup shadows overlap. Native hit testing can briefly report
+    // a parent Enter after the cursor has already entered the child window.
+    // Route that Enter to the child so Qt updates its mouse state and cancels
+    // ancestor close timers, instead of dropping the event and its bookkeeping.
+    // zh_CN: 半透明阴影重叠时，父菜单可能误收 Enter。将事件交还给实际命中的
+    // 子菜单，由 Qt 更新鼠标状态并取消祖先菜单的关闭计时，不能直接吞掉事件。
+    if (const auto position = compatibility::detail::enterEventGlobalPosition(event)) {
+        if (QPointer<QMenu> submenu = visibleSubmenuAt(this, position->toPoint())) {
+            QEvent leave(QEvent::Leave);
+            QMenu::leaveEvent(&leave);
+            if (submenu)
+                compatibility::detail::sendEnterEvent(submenu, event);
+            return;
+        }
+    }
+    QMenu::enterEvent(event);
+}
+
+void FluentMenu::mouseMoveEvent(QMouseEvent* event)
+{
+    if (QMenu* submenu = visibleSubmenuAt(this, fluentMouseGlobalPos(event))) {
+        // Native routing may send the follow-up move to the parent as well.
+        // zh_CN: 原生分发也可能把紧随 Enter 的移动误交给父菜单。
+        compatibility::detail::sendMouseEvent(submenu, event);
+        return;
+    }
+    QMenu::mouseMoveEvent(event);
 }
 
 void FluentMenu::mousePressEvent(QMouseEvent* event)

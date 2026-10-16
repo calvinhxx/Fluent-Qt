@@ -919,6 +919,14 @@
             "normal-light"
           ],
           "execution": "registered-only"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "MenuTest.ParentEnterAtSubmenuOverlapPreservesCascade",
+          "states": [
+            "open-layering"
+          ],
+          "execution": "registered-only"
         }
       ],
       "manual_evidence": {
