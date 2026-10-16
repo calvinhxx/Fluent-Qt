@@ -12,8 +12,7 @@ namespace fluent::fontcompat {
 inline const QString UITextFamily = QStringLiteral("FluentQt UI Text");
 inline const QString UIHeadingFamily = QStringLiteral("FluentQt UI Heading");
 inline const QString UIDisplayFamily = QStringLiteral("FluentQt UI Display");
-inline const QString UISimplifiedChineseFamily =
-    QStringLiteral("FluentQt UI Simplified Chinese");
+inline const QString UISimplifiedChineseFamily = QStringLiteral("FluentQt UI Simplified Chinese");
 inline const QString IconFamily = QStringLiteral("FluentQt Icons");
 
 } // namespace fluent::fontcompat
@@ -47,8 +46,8 @@ inline void fluentConfigureTextRendering(QFont& font)
 #endif
     // Use the same high-quality grayscale strategy everywhere. This avoids
     // ClearType colour fringes and keeps screenshots/composited surfaces stable.
-    font.setStyleStrategy(QFont::StyleStrategy(
-        QFont::PreferQuality | QFont::PreferAntialias | QFont::NoSubpixelAntialias));
+    font.setStyleStrategy(
+        QFont::StyleStrategy(QFont::PreferQuality | QFont::PreferAntialias | QFont::NoSubpixelAntialias));
 }
 
 inline QString fluentCodepointGlyph(quint32 codepoint)

@@ -19,13 +19,7 @@ Q_ENUM_NS(BackdropEffect)
  * @brief Backend that currently supplies the visible window background.
  * zh_CN: 当前为窗口提供可见背景的后端。
  */
-enum class BackdropBackend {
-    Solid,
-    PaintedMaterial,
-    DwmSystemBackdrop,
-    MacVibrancy,
-    LinuxCompositor
-};
+enum class BackdropBackend { Solid, PaintedMaterial, DwmSystemBackdrop, MacVibrancy, LinuxCompositor };
 Q_ENUM_NS(BackdropBackend)
 
 /**

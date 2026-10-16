@@ -59,13 +59,11 @@ QWidget* owningTopLevel(const CommandBarFlyout* flyout)
     return overlay::presentedTopLevel(parent);
 }
 
-bool isValidInvocationTarget(const CommandBarFlyout* flyout, QWidget* target,
-                             const char* invocation)
+bool isValidInvocationTarget(const CommandBarFlyout* flyout, QWidget* target, const char* invocation)
 {
     QWidget* ownerTopLevel = owningTopLevel(flyout);
     if (!ownerTopLevel) {
-        qCWarning(logging::commandBarCategory)
-            << invocation << "rejected: CommandBarFlyout has no owning window";
+        qCWarning(logging::commandBarCategory) << invocation << "rejected: CommandBarFlyout has no owning window";
         return false;
     }
     QWidget* targetTopLevel = overlay::presentedTopLevel(target);
@@ -86,10 +84,7 @@ bool isValidInvocationTarget(const CommandBarFlyout* flyout, QWidget* target,
 
 class CommandBarFlyoutScrollView final : public scrolling::ScrollView {
 public:
-    explicit CommandBarFlyoutScrollView(QWidget* parent) : scrolling::ScrollView(parent)
-    {
-        keepViewportTransparent();
-    }
+    explicit CommandBarFlyoutScrollView(QWidget* parent) : scrolling::ScrollView(parent) { keepViewportTransparent(); }
 
 protected:
     void onThemeUpdated() override
@@ -157,14 +152,13 @@ public:
         bool inside = false;
     };
 
-    explicit CommandBarFlyoutPrivate(CommandBarFlyout* owner)
-        : QObject(nullptr), q(owner), actions(owner)
+    explicit CommandBarFlyoutPrivate(CommandBarFlyout* owner) : QObject(nullptr), q(owner), actions(owner)
     {
         q->setObjectName(QStringLiteral("FluentCommandBarFlyout"));
         q->setProperty(kCommandPresentationProperty, true);
         detail::markCommandAccessibleWidget(q, CommandAccessibleRole::PopupRoot);
-        q->setAccessibleName(QCoreApplication::translate("fluent::menus_toolbars::CommandBarFlyout",
-                                                         "Command bar flyout"));
+        q->setAccessibleName(
+            QCoreApplication::translate("fluent::menus_toolbars::CommandBarFlyout", "Command bar flyout"));
         q->setModal(false);
         q->setDim(false);
         q->setClosePolicy(dialogs_flyouts::Popup::ClosePolicy(
@@ -180,8 +174,7 @@ public:
         detail::markCommandAccessibleWidget(primaryRow, CommandAccessibleRole::PrimaryRow);
 
         primaryMenuDivider = new layout::Divider(Qt::Horizontal, q);
-        primaryMenuDivider->setObjectName(
-            QStringLiteral("FluentCommandBarFlyout.PrimaryMenuDivider"));
+        primaryMenuDivider->setObjectName(QStringLiteral("FluentCommandBarFlyout.PrimaryMenuDivider"));
         primaryMenuDivider->setLeadingInset(::Spacing::Small);
         primaryMenuDivider->setTrailingInset(::Spacing::Small);
         primaryMenuDivider->hide();
@@ -210,16 +203,14 @@ public:
         scrollView->setObjectName(QStringLiteral("FluentCommandBarFlyout.ScrollView"));
         scrollView->setFrameShape(QFrame::NoFrame);
         scrollView->setHorizontalScrollMode(scrolling::ScrollView::ScrollMode::Disabled);
-        scrollView->setHorizontalScrollBarVisibility(
-            scrolling::ScrollView::ScrollBarVisibility::Disabled);
+        scrollView->setHorizontalScrollBarVisibility(scrolling::ScrollView::ScrollBarVisibility::Disabled);
         scrollView->setVerticalScrollMode(scrolling::ScrollView::ScrollMode::Auto);
-        scrollView->setVerticalScrollBarVisibility(
-            scrolling::ScrollView::ScrollBarVisibility::Auto);
+        scrollView->setVerticalScrollBarVisibility(scrolling::ScrollView::ScrollBarVisibility::Auto);
         scrollView->setWidgetResizable(false);
-        scrollView->setStyleSheet(
-            QStringLiteral("QScrollArea { background: transparent; border: none; }"
-                           "QScrollArea > QWidget > QWidget {"
-                           " background: transparent; }"));
+        scrollView->setStyleSheet(QStringLiteral(
+            "QScrollArea { background: transparent; border: none; }"
+            "QScrollArea > QWidget > QWidget {"
+            " background: transparent; }"));
         scrollView->viewport()->setAutoFillBackground(false);
         scrollView->hide();
 
@@ -232,21 +223,18 @@ public:
         QObject::connect(&actions, &CommandActionModel::structureChanged, this, [this]() {
             const FocusSnapshot snapshot = captureFocus();
             rebuildPrimaryPresenters();
-            recomputePresentation(q && (q->isOpen() || q->isVisible())
-                                      ? RecomputeReason::OpenStateChange
-                                      : RecomputeReason::Closed,
-                                  snapshot);
+            recomputePresentation(
+                q && (q->isOpen() || q->isVisible()) ? RecomputeReason::OpenStateChange : RecomputeReason::Closed,
+                snapshot);
         });
         QObject::connect(&actions, &CommandActionModel::presentationChanged, this, [this]() {
             const FocusSnapshot snapshot = captureFocus();
             refreshPrimaryPresenters();
-            recomputePresentation(q && (q->isOpen() || q->isVisible())
-                                      ? RecomputeReason::OpenStateChange
-                                      : RecomputeReason::Closed,
-                                  snapshot);
+            recomputePresentation(
+                q && (q->isOpen() || q->isVisible()) ? RecomputeReason::OpenStateChange : RecomputeReason::Closed,
+                snapshot);
         });
-        QObject::connect(q, &dialogs_flyouts::Popup::aboutToShow, q,
-                         [this]() { prepareForOpen(); });
+        QObject::connect(q, &dialogs_flyouts::Popup::aboutToShow, q, [this]() { prepareForOpen(); });
         QObject::connect(q, &dialogs_flyouts::Popup::opened, q, [this]() { afterOpen(); });
         QObject::connect(q, &dialogs_flyouts::Popup::aboutToHide, q, [this]() { beforeClose(); });
         QObject::connect(q, &dialogs_flyouts::Popup::closed, q, [this]() { afterClose(); });
@@ -273,8 +261,7 @@ public:
 
     bool isTransientPointerFocus(const QEvent* event) const
     {
-        if (!event || event->type() != QEvent::FocusIn ||
-            showMode != CommandBarFlyout::ShowMode::Transient) {
+        if (!event || event->type() != QEvent::FocusIn || showMode != CommandBarFlyout::ShowMode::Transient) {
             return false;
         }
         return static_cast<const QFocusEvent*>(event)->reason() == Qt::MouseFocusReason;
@@ -295,9 +282,8 @@ public:
             case QEvent::FontChange:
                 if (!recomputing) {
                     refreshPrimaryPresenters();
-                    recomputePresentation(q->isOpen() || q->isVisible()
-                                              ? RecomputeReason::OpenStateChange
-                                              : RecomputeReason::Closed);
+                    recomputePresentation(
+                        q->isOpen() || q->isVisible() ? RecomputeReason::OpenStateChange : RecomputeReason::Closed);
                 }
                 break;
             case QEvent::FocusIn:
@@ -326,9 +312,8 @@ public:
         } else if (event->type() == QEvent::MouseButtonPress) {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
             if (mouseEvent->button() == Qt::LeftButton) {
-                const bool transientPointerMore =
-                    watched == moreButton && showMode == CommandBarFlyout::ShowMode::Transient &&
-                    !keyboardInteractive;
+                const bool transientPointerMore = watched == moreButton
+                    && showMode == CommandBarFlyout::ShowMode::Transient && !keyboardInteractive;
                 if (transientPointerMore) {
                     focusMenuOnNextExpansion = false;
                 } else if (keyboardInteractive || watched == moreButton) {
@@ -376,31 +361,23 @@ public:
         return false;
     }
 
-    QList<QAction*> primaryActions() const
-    {
-        return actions.actions(CommandActionModel::Section::Primary);
-    }
+    QList<QAction*> primaryActions() const { return actions.actions(CommandActionModel::Section::Primary); }
 
-    QList<QAction*> secondaryActions() const
-    {
-        return actions.actions(CommandActionModel::Section::Secondary);
-    }
+    QList<QAction*> secondaryActions() const { return actions.actions(CommandActionModel::Section::Secondary); }
 
     bool hasPresentableContent() const
     {
-        return hasCommandRows(
-                   visiblePresentableActions(actions, CommandActionModel::Section::Primary)) ||
-               hasCommandRows(
-                   visiblePresentableActions(actions, CommandActionModel::Section::Secondary));
+        return hasCommandRows(visiblePresentableActions(actions, CommandActionModel::Section::Primary))
+            || hasCommandRows(visiblePresentableActions(actions, CommandActionModel::Section::Secondary));
     }
 
     QSize preferredSize() const
     {
         return preferredOuterSize.isValid()
-                   ? preferredOuterSize
-                   : overlay::outerSizeForVisibleCard(QSize(kDefaultMenuWidth + kCardInset * 2,
-                                                            kCommandTargetExtent + kCardInset * 2),
-                                                      overlay::defaultShadowMargin());
+            ? preferredOuterSize
+            : overlay::outerSizeForVisibleCard(
+                  QSize(kDefaultMenuWidth + kCardInset * 2, kCommandTargetExtent + kCardInset * 2),
+                  overlay::defaultShadowMargin());
     }
 
     QSize minimumPreferredSize() const
@@ -434,8 +411,8 @@ public:
             }
         }
         refreshPrimaryPresenters();
-        recomputePresentation(q->isOpen() || q->isVisible() ? RecomputeReason::OpenStateChange
-                                                            : RecomputeReason::Closed);
+        recomputePresentation(
+            q->isOpen() || q->isVisible() ? RecomputeReason::OpenStateChange : RecomputeReason::Closed);
     }
 
     bool setExpandedRequested(bool requested, bool enterKeyboardOnExpand = true)
@@ -466,8 +443,8 @@ public:
     {
         if (!q)
             return;
-        recomputePresentation(q->isOpen() || q->isVisible() ? RecomputeReason::OpenStateChange
-                                                            : RecomputeReason::Closed);
+        recomputePresentation(
+            q->isOpen() || q->isVisible() ? RecomputeReason::OpenStateChange : RecomputeReason::Closed);
     }
 
     void prepareForOpen()
@@ -510,8 +487,8 @@ public:
     {
         if (closeFocusDisposition == CloseFocusDisposition::Default) {
             closeFocusDisposition = keyboardInteractive && focusIsInside()
-                                        ? CloseFocusDisposition::Restore
-                                        : CloseFocusDisposition::Preserve;
+                ? CloseFocusDisposition::Restore
+                : CloseFocusDisposition::Preserve;
         }
     }
 
@@ -528,8 +505,8 @@ public:
             return;
         layoutPresentation(false);
 
-        if (restore && restoreTarget && restoreTarget->isVisible() && restoreTarget->isEnabled() &&
-            q && overlay::presentedTopLevel(restoreTarget) == owningTopLevel(q)) {
+        if (restore && restoreTarget && restoreTarget->isVisible() && restoreTarget->isEnabled() && q
+            && overlay::presentedTopLevel(restoreTarget) == owningTopLevel(q)) {
             restoreTarget->setFocus(Qt::PopupFocusReason);
         }
     }
@@ -544,8 +521,7 @@ public:
     QPoint localPoint;
 
 private:
-    static QVector<RowSpec> rowSpecs(const QList<QAction*>& overflowedPrimary,
-                                     const QList<QAction*>& secondary)
+    static QVector<RowSpec> rowSpecs(const QList<QAction*>& overflowedPrimary, const QList<QAction*>& secondary)
     {
         QVector<RowSpec> result;
         result.reserve(overflowedPrimary.size() + secondary.size() + 1);
@@ -576,9 +552,8 @@ private:
         if (first.size() != second.size())
             return false;
         for (int index = 0; index < first.size(); ++index) {
-            if (first.at(index).kind != second.at(index).kind ||
-                first.at(index).secondary != second.at(index).secondary ||
-                first.at(index).action.data() != second.at(index).action.data()) {
+            if (first.at(index).kind != second.at(index).kind || first.at(index).secondary != second.at(index).secondary
+                || first.at(index).action.data() != second.at(index).action.data()) {
                 return false;
             }
         }
@@ -594,8 +569,7 @@ private:
             return snapshot;
 
         int visualIndex = 0;
-        const auto inspectWidget = [&snapshot, focused, &visualIndex](QWidget* widget,
-                                                                      FocusArea area) {
+        const auto inspectWidget = [&snapshot, focused, &visualIndex](QWidget* widget, FocusArea area) {
             if (!widget || !widget->isVisible() || !widget->isEnabled()) {
                 return false;
             }
@@ -613,11 +587,9 @@ private:
 
         const auto inspectPrimary = [this, &inspectWidget](QAction* action) {
             QWidget* widget = primaryPresenters.value(action);
-            return dynamic_cast<CommandPresenter*>(widget) &&
-                   inspectWidget(widget, FocusArea::Primary);
+            return dynamic_cast<CommandPresenter*>(widget) && inspectWidget(widget, FocusArea::Primary);
         };
-        if (q->layoutDirection() == Qt::RightToLeft && showMore &&
-            inspectWidget(moreButton, FocusArea::More)) {
+        if (q->layoutDirection() == Qt::RightToLeft && showMore && inspectWidget(moreButton, FocusArea::More)) {
             return snapshot;
         }
         if (q->layoutDirection() == Qt::LeftToRight) {
@@ -631,14 +603,12 @@ private:
                     return snapshot;
             }
         }
-        if (q->layoutDirection() == Qt::LeftToRight && showMore &&
-            inspectWidget(moreButton, FocusArea::More)) {
+        if (q->layoutDirection() == Qt::LeftToRight && showMore && inspectWidget(moreButton, FocusArea::More)) {
             return snapshot;
         }
         if (expanded) {
             for (QWidget* widget : menuRows) {
-                if (dynamic_cast<CommandPresenter*>(widget) &&
-                    inspectWidget(widget, FocusArea::Menu)) {
+                if (dynamic_cast<CommandPresenter*>(widget) && inspectWidget(widget, FocusArea::Menu)) {
                     return snapshot;
                 }
             }
@@ -672,8 +642,8 @@ private:
                 primarySeparatorState.insert(action, true);
             } else {
                 auto* presenter = new CommandPresenter(
-                    action, CommandPresenter::Mode::Primary,
-                    [this](QAction* command) { activateAction(command); }, primaryRow);
+                    action, CommandPresenter::Mode::Primary, [this](QAction* command) { activateAction(command); },
+                    primaryRow);
                 presenter->setObjectName(QStringLiteral("FluentCommandBarFlyout.PrimaryPresenter"));
                 presenter->setPrimaryLabelCollapsed(false);
                 presenter->installEventFilter(this);
@@ -691,8 +661,8 @@ private:
         bool rebuild = primary.size() != primaryPresenters.size();
         if (!rebuild) {
             for (QAction* action : primary) {
-                if (!action || !primaryPresenters.contains(action) ||
-                    primarySeparatorState.value(action, false) != action->isSeparator()) {
+                if (!action || !primaryPresenters.contains(action)
+                    || primarySeparatorState.value(action, false) != action->isSeparator()) {
                     rebuild = true;
                     break;
                 }
@@ -717,14 +687,13 @@ private:
         if (!widget)
             return 0;
         return action && action->isSeparator()
-                   ? kSeparatorExtent
-                   : qMax(kCommandTargetExtent, widget->sizeHint().width());
+            ? kSeparatorExtent
+            : qMax(kCommandTargetExtent, widget->sizeHint().width());
     }
 
     int projectedPrimaryWidth(const QList<QAction*>& projection, bool includeMore) const
     {
-        return detail::projectedCommandWidth(
-            projection, includeMore, kCommandTargetExtent, kItemSpacing,
+        return detail::projectedCommandWidth(projection, includeMore, kCommandTargetExtent, kItemSpacing,
             [this](QAction* action) { return primaryPresenterWidth(action); });
     }
 
@@ -737,9 +706,8 @@ private:
 
         const int minimumExtent = kCommandTargetExtent + kCardInset * 2;
         const QSize maximum(qMax(minimumExtent, surface.width() - kHostEdgeMargin * 2),
-                            qMax(minimumExtent, surface.height() - kHostEdgeMargin * 2));
-        if ((surface.width() < minimumExtent || surface.height() < minimumExtent) &&
-            !impossibleGeometryWarningIssued) {
+            qMax(minimumExtent, surface.height() - kHostEdgeMargin * 2));
+        if ((surface.width() < minimumExtent || surface.height() < minimumExtent) && !impossibleGeometryWarningIssued) {
             impossibleGeometryWarningIssued = true;
             qCWarning(logging::commandBarCategory)
                 << "CommandBarFlyout host is smaller than one"
@@ -751,37 +719,31 @@ private:
 
     void recomputeProjection()
     {
-        const QList<QAction*> primarySource =
-            visiblePresentableActions(actions, CommandActionModel::Section::Primary);
-        const QList<QAction*> secondarySource =
-            visiblePresentableActions(actions, CommandActionModel::Section::Secondary);
+        const QList<QAction*> primarySource = visiblePresentableActions(actions, CommandActionModel::Section::Primary);
+        const QList<QAction*> secondarySource = visiblePresentableActions(actions,
+            CommandActionModel::Section::Secondary);
         const QSet<QAction*> allPrimaryCommands = nonSeparatorSet(primarySource);
         const QSet<QAction*> allSecondaryCommands = nonSeparatorSet(secondarySource);
 
-        originalHasPrimary =
-            hasCommandRows(normalizedProjection(primarySource, allPrimaryCommands));
+        originalHasPrimary = hasCommandRows(normalizedProjection(primarySource, allPrimaryCommands));
         QList<QAction*> nextSecondary = normalizedProjection(secondarySource, allSecondaryCommands);
 
         const QSize maximum = maximumCardSize();
         const int availableWidth = qMax(0, maximum.width() - kCardInset * 2);
-        const bool reserveMoreBeforeOverflow =
-            originalHasPrimary && hasCommandRows(nextSecondary) && !alwaysExpanded;
+        const bool reserveMoreBeforeOverflow = originalHasPrimary && hasCommandRows(nextSecondary) && !alwaysExpanded;
         detail::CommandOverflowProjectionOptions options;
         options.availableWidth = availableWidth;
         options.moreButtonWidth = kCommandTargetExtent;
         options.itemSpacing = kItemSpacing;
         options.includeMoreBeforeOverflow = reserveMoreBeforeOverflow;
         options.includeMoreWhenOverflowing = !alwaysExpanded;
-        const detail::CommandOverflowProjection projection =
-            detail::projectCommandOverflow(primarySource, options, [this](QAction* action) {
-                return primaryPresenterWidth(action);
-            });
+        const detail::CommandOverflowProjection projection = detail::projectCommandOverflow(primarySource, options,
+            [this](QAction* action) { return primaryPresenterWidth(action); });
 
         inlinePrimary = projection.inlineActions;
         overflowedPrimary = projection.overflowActions;
         normalizedSecondary = nextSecondary;
-        expandableContent =
-            hasCommandRows(overflowedPrimary) || hasCommandRows(normalizedSecondary);
+        expandableContent = hasCommandRows(overflowedPrimary) || hasCommandRows(normalizedSecondary);
         showMore = originalHasPrimary && expandableContent && !alwaysExpanded;
     }
 
@@ -819,9 +781,9 @@ private:
                 auto* presenter = new CommandPresenter(
                     spec.action.data(), CommandPresenter::Mode::Overflow,
                     [this](QAction* command) { activateAction(command); }, menuContent);
-                presenter->setObjectName(
-                    spec.secondary ? QStringLiteral("FluentCommandBarFlyout.SecondaryRow")
-                                   : QStringLiteral("FluentCommandBarFlyout.OverflowRow"));
+                presenter->setObjectName(spec.secondary
+                        ? QStringLiteral("FluentCommandBarFlyout.SecondaryRow")
+                        : QStringLiteral("FluentCommandBarFlyout.OverflowRow"));
                 presenter->installEventFilter(this);
                 menuRows.append(presenter);
                 continue;
@@ -829,8 +791,8 @@ private:
 
             auto* divider = new layout::Divider(Qt::Horizontal, menuContent);
             divider->setObjectName(spec.kind == RowKind::GroupSeparator
-                                       ? QStringLiteral("FluentCommandBarFlyout.GroupSeparator")
-                                       : QStringLiteral("FluentCommandBarFlyout.MenuSeparator"));
+                    ? QStringLiteral("FluentCommandBarFlyout.GroupSeparator")
+                    : QStringLiteral("FluentCommandBarFlyout.MenuSeparator"));
             divider->setLeadingInset(::Spacing::Small);
             divider->setTrailingInset(::Spacing::Small);
             menuRows.append(divider);
@@ -843,8 +805,7 @@ private:
         for (QWidget* widget : menuRows) {
             if (!widget)
                 continue;
-            height +=
-                dynamic_cast<CommandPresenter*>(widget) ? kCommandTargetExtent : kSeparatorExtent;
+            height += dynamic_cast<CommandPresenter*>(widget) ? kCommandTargetExtent : kSeparatorExtent;
         }
         return height;
     }
@@ -864,10 +825,7 @@ private:
         return hasRows ? width : 0;
     }
 
-    void recomputePresentation(RecomputeReason reason)
-    {
-        recomputePresentation(reason, FocusSnapshot{});
-    }
+    void recomputePresentation(RecomputeReason reason) { recomputePresentation(reason, FocusSnapshot{}); }
 
     void recomputePresentation(RecomputeReason reason, const FocusSnapshot& suppliedSnapshot)
     {
@@ -889,8 +847,7 @@ private:
         } else if (!expandableContent) {
             nextExpanded = false;
         } else if (reason == RecomputeReason::PreparingOpen) {
-            nextExpanded = alwaysExpanded || !originalHasPrimary ||
-                           showMode == CommandBarFlyout::ShowMode::Standard;
+            nextExpanded = alwaysExpanded || !originalHasPrimary || showMode == CommandBarFlyout::ShowMode::Standard;
         } else if (alwaysExpanded || !originalHasPrimary) {
             nextExpanded = true;
         }
@@ -903,8 +860,7 @@ private:
 
         const bool nowHasContent = originalHasPrimary || hasCommandRows(normalizedSecondary);
         if (!nowHasContent && (q->isOpen() || q->isVisible())) {
-            closeFocusDisposition =
-                focusIsInside() ? CloseFocusDisposition::Restore : CloseFocusDisposition::Preserve;
+            closeFocusDisposition = focusIsInside() ? CloseFocusDisposition::Restore : CloseFocusDisposition::Preserve;
             const QPointer<CommandBarFlyout> ownerGuard = q;
             recomputing = false;
             ownerGuard->close();
@@ -951,24 +907,20 @@ private:
         const int primaryHeight = primaryVisible ? kCommandTargetExtent : 0;
         const bool primaryMenuDividerVisible = primaryVisible && expanded && rowsHeight > 0;
         const int primaryMenuDividerHeight = primaryMenuDividerVisible ? kSeparatorExtent : 0;
-        const int desiredCardHeight =
-            kCardInset * 2 + primaryHeight + primaryMenuDividerHeight + rowsHeight;
-        const int cardHeight =
-            qMin(maximum.height(), qMax(kCommandTargetExtent + kCardInset * 2, desiredCardHeight));
+        const int desiredCardHeight = kCardInset * 2 + primaryHeight + primaryMenuDividerHeight + rowsHeight;
+        const int cardHeight = qMin(maximum.height(), qMax(kCommandTargetExtent + kCardInset * 2, desiredCardHeight));
 
         const QSize outerSize = overlay::outerSizeForVisibleCard(QSize(cardWidth, cardHeight),
-                                                                 overlay::defaultShadowMargin());
+            overlay::defaultShadowMargin());
         preferredOuterSize = outerSize;
         if (q->size() != outerSize)
             q->resize(outerSize);
 
         const QRect cardRect = overlay::visibleCardRect(q->rect());
-        const QRect contentRect =
-            cardRect.adjusted(kCardInset, kCardInset, -kCardInset, -kCardInset);
+        const QRect contentRect = cardRect.adjusted(kCardInset, kCardInset, -kCardInset, -kCardInset);
 
         if (primaryVisible) {
-            primaryRow->setGeometry(contentRect.left(), contentRect.top(), contentRect.width(),
-                                    kCommandTargetExtent);
+            primaryRow->setGeometry(contentRect.left(), contentRect.top(), contentRect.width(), kCommandTargetExtent);
             primaryRow->show();
             layoutPrimaryRow(primaryRow->rect());
         } else {
@@ -983,7 +935,7 @@ private:
         const int dividerTop = contentRect.top() + primaryHeight;
         if (primaryMenuDividerVisible) {
             primaryMenuDivider->setGeometry(contentRect.left(), dividerTop, contentRect.width(),
-                                            primaryMenuDividerHeight);
+                primaryMenuDividerHeight);
             primaryMenuDivider->show();
         } else {
             primaryMenuDivider->hide();
@@ -992,17 +944,14 @@ private:
         const int scrollTop = dividerTop + primaryMenuDividerHeight;
         const int scrollHeight = qMax(0, contentRect.bottom() + 1 - scrollTop);
         if (expanded && rowsHeight > 0 && scrollHeight > 0) {
-            scrollView->setGeometry(contentRect.left(), scrollTop, contentRect.width(),
-                                    scrollHeight);
+            scrollView->setGeometry(contentRect.left(), scrollTop, contentRect.width(), scrollHeight);
             scrollView->show();
             const int measuredViewportWidth = qMax(0, scrollView->viewport()->width());
-            const int maximumGutter =
-                qMax(::Spacing::Large, scrollView->verticalScrollBar()->sizeHint().width());
-            const bool measuredWidthIsCurrent =
-                measuredViewportWidth > 0 && measuredViewportWidth <= contentRect.width() &&
-                contentRect.width() - measuredViewportWidth <= maximumGutter;
-            const int viewportWidth =
-                measuredWidthIsCurrent ? measuredViewportWidth : contentRect.width();
+            const int maximumGutter = qMax(::Spacing::Large, scrollView->verticalScrollBar()->sizeHint().width());
+            const bool measuredWidthIsCurrent = measuredViewportWidth > 0
+                && measuredViewportWidth <= contentRect.width()
+                && contentRect.width() - measuredViewportWidth <= maximumGutter;
+            const int viewportWidth = measuredWidthIsCurrent ? measuredViewportWidth : contentRect.width();
             menuContent->setFixedSize(viewportWidth, rowsHeight);
             layoutMenuRows(viewportWidth);
         } else {
@@ -1073,8 +1022,7 @@ private:
             if (!widget)
                 continue;
             widget->setLayoutDirection(q->layoutDirection());
-            const int height =
-                dynamic_cast<CommandPresenter*>(widget) ? kCommandTargetExtent : kSeparatorExtent;
+            const int height = dynamic_cast<CommandPresenter*>(widget) ? kCommandTargetExtent : kSeparatorExtent;
             widget->setGeometry(0, y, width, height);
             widget->show();
             // A hidden popup can receive a theme or layout-direction refresh
@@ -1099,8 +1047,8 @@ private:
             // inline projection until the queued presenter rebuild. The
             // presenter map is cleared first, so use it as the lifetime
             // guard before reading QAction state.
-            if (!action || !widget || action->isSeparator() || !widget->isVisible() ||
-                !action->isVisible() || !action->isEnabled()) {
+            if (!action || !widget || action->isSeparator() || !widget->isVisible() || !action->isVisible()
+                || !action->isEnabled()) {
                 return;
             }
             FocusTarget target;
@@ -1140,8 +1088,7 @@ private:
             return result;
         for (QWidget* widget : menuRows) {
             auto* presenter = dynamic_cast<CommandPresenter*>(widget);
-            if (!presenter || !presenter->isVisible() || !presenter->isEnabled() ||
-                !presenter->action()) {
+            if (!presenter || !presenter->isVisible() || !presenter->isEnabled() || !presenter->action()) {
                 continue;
             }
             FocusTarget target;
@@ -1223,8 +1170,8 @@ private:
         }
 
         for (int index = 0; index < targets.size(); ++index) {
-            if (lastFocusedAction && targets.at(index).action == lastFocusedAction &&
-                targets.at(index).area == lastFocusedArea) {
+            if (lastFocusedAction && targets.at(index).action == lastFocusedAction
+                && targets.at(index).area == lastFocusedArea) {
                 focusTarget(index, Qt::PopupFocusReason);
                 return;
             }
@@ -1269,18 +1216,16 @@ private:
             return;
         }
         for (int index = 0; index < targets.size(); ++index) {
-            const bool sameMore =
-                snapshot.area == FocusArea::More && targets.at(index).area == FocusArea::More;
-            const bool sameAction = snapshot.action &&
-                                    targets.at(index).action == snapshot.action &&
-                                    targets.at(index).area == snapshot.area;
+            const bool sameMore = snapshot.area == FocusArea::More && targets.at(index).area == FocusArea::More;
+            const bool sameAction = snapshot.action && targets.at(index).action == snapshot.action
+                && targets.at(index).area == snapshot.area;
             if (sameMore || sameAction) {
                 focusTarget(index, Qt::OtherFocusReason);
                 return;
             }
         }
         focusTarget(snapshot.visualIndex < 0 ? 0 : qMin(snapshot.visualIndex, targets.size() - 1),
-                    Qt::OtherFocusReason);
+            Qt::OtherFocusReason);
     }
 
     void enterKeyboardMode() { keyboardInteractive = true; }
@@ -1290,8 +1235,7 @@ private:
         if (!event || !q)
             return false;
         if (event->key() == Qt::Key_Escape) {
-            closeFocusDisposition =
-                focusIsInside() ? CloseFocusDisposition::Restore : CloseFocusDisposition::Preserve;
+            closeFocusDisposition = focusIsInside() ? CloseFocusDisposition::Restore : CloseFocusDisposition::Preserve;
             q->close();
             event->accept();
             return true;
@@ -1305,8 +1249,7 @@ private:
             current = 0;
 
         if (event->key() == Qt::Key_Tab || event->key() == Qt::Key_Backtab) {
-            const bool forward =
-                event->key() != Qt::Key_Backtab && !event->modifiers().testFlag(Qt::ShiftModifier);
+            const bool forward = event->key() != Qt::Key_Backtab && !event->modifiers().testFlag(Qt::ShiftModifier);
             const int next = (current + (forward ? 1 : -1) + allTargets.size()) % allTargets.size();
             focusTarget(next, Qt::TabFocusReason);
             event->accept();
@@ -1314,8 +1257,7 @@ private:
         }
 
         const FocusTarget target = allTargets.at(current);
-        if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter ||
-            event->key() == Qt::Key_Space) {
+        if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter || event->key() == Qt::Key_Space) {
             auto* button = qobject_cast<QAbstractButton*>(target.widget.data());
             if (!button)
                 return false;
@@ -1415,10 +1357,9 @@ private:
             return;
 
         QWidget* focusedAfter = QApplication::focusWidget();
-        const bool focusStillInside =
-            focusedAfter && (focusedAfter == ownerGuard || ownerGuard->isAncestorOf(focusedAfter));
-        closeFocusDisposition =
-            focusStillInside ? CloseFocusDisposition::Restore : CloseFocusDisposition::Preserve;
+        const bool focusStillInside = focusedAfter
+            && (focusedAfter == ownerGuard || ownerGuard->isAncestorOf(focusedAfter));
+        closeFocusDisposition = focusStillInside ? CloseFocusDisposition::Restore : CloseFocusDisposition::Preserve;
         ownerGuard->close();
     }
 
@@ -1476,8 +1417,8 @@ CommandBarFlyout::~CommandBarFlyout()
 
 void CommandBarFlyout::addAction(QAction* action)
 {
-    if (d->actions.contains(CommandActionModel::Section::Primary, action) ||
-        d->actions.contains(CommandActionModel::Section::Secondary, action)) {
+    if (d->actions.contains(CommandActionModel::Section::Primary, action)
+        || d->actions.contains(CommandActionModel::Section::Secondary, action)) {
         return;
     }
     d->actions.add(CommandActionModel::Section::Primary, action);
@@ -1485,8 +1426,8 @@ void CommandBarFlyout::addAction(QAction* action)
 
 void CommandBarFlyout::insertAction(QAction* before, QAction* action)
 {
-    if (d->actions.contains(CommandActionModel::Section::Primary, action) ||
-        d->actions.contains(CommandActionModel::Section::Secondary, action)) {
+    if (d->actions.contains(CommandActionModel::Section::Primary, action)
+        || d->actions.contains(CommandActionModel::Section::Secondary, action)) {
         return;
     }
     if (d->actions.contains(CommandActionModel::Section::Primary, before)) {
@@ -1612,8 +1553,9 @@ void CommandBarFlyout::showAt(QWidget* anchor)
     if (!isValidInvocationTarget(this, anchor, "showAt"))
         return;
     if (!d->hasPresentableContent()) {
-        qCWarning(logging::commandBarCategory) << "showAt rejected: CommandBarFlyout has no"
-                                               << "presentable commands";
+        qCWarning(logging::commandBarCategory)
+            << "showAt rejected: CommandBarFlyout has no"
+            << "presentable commands";
         return;
     }
 
@@ -1640,8 +1582,9 @@ void CommandBarFlyout::showAtPoint(QWidget* relativeTo, const QPoint& localPosit
         return;
     }
     if (!d->hasPresentableContent()) {
-        qCWarning(logging::commandBarCategory) << "showAtPoint rejected: CommandBarFlyout has no"
-                                               << "presentable commands";
+        qCWarning(logging::commandBarCategory)
+            << "showAtPoint rejected: CommandBarFlyout has no"
+            << "presentable commands";
         return;
     }
 
@@ -1694,14 +1637,13 @@ QPoint CommandBarFlyout::computePosition() const
     QPoint cardTopLeft = ::fluent::overlay::presentedPointInTopLevel(d->pointSource, d->localPoint);
     cardTopLeft.ry() += anchorOffset();
     cardTopLeft = overlay::clampCardTopLeft(cardTopLeft, overlay::visibleCardSize(size()),
-                                            overlay::overlaySurfaceRect(topLevel), kHostEdgeMargin);
+        overlay::overlaySurfaceRect(topLevel), kHostEdgeMargin);
     return overlay::outerTopLeftForVisibleCard(cardTopLeft);
 }
 
 QWidget* CommandBarFlyout::automaticPositionAnchor() const
 {
-    return d->pointPlacement ? d->pointSource.data()
-                             : dialogs_flyouts::Flyout::automaticPositionAnchor();
+    return d->pointPlacement ? d->pointSource.data() : dialogs_flyouts::Flyout::automaticPositionAnchor();
 }
 
 } // namespace fluent::menus_toolbars

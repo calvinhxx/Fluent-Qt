@@ -25,18 +25,9 @@ class CommandBarFlyoutPrivate;
 class CommandBarFlyout final : public dialogs_flyouts::Flyout {
     Q_OBJECT
 
-    Q_PROPERTY(ShowMode showMode
-               READ showMode
-               WRITE setShowMode
-               NOTIFY showModeChanged)
-    Q_PROPERTY(bool expanded
-               READ isExpanded
-               WRITE setExpanded
-               NOTIFY expandedChanged)
-    Q_PROPERTY(bool alwaysExpanded
-               READ isAlwaysExpanded
-               WRITE setAlwaysExpanded
-               NOTIFY alwaysExpandedChanged)
+    Q_PROPERTY(ShowMode showMode READ showMode WRITE setShowMode NOTIFY showModeChanged)
+    Q_PROPERTY(bool expanded READ isExpanded WRITE setExpanded NOTIFY expandedChanged)
+    Q_PROPERTY(bool alwaysExpanded READ isAlwaysExpanded WRITE setAlwaysExpanded NOTIFY alwaysExpandedChanged)
 
 public:
     /**
@@ -140,15 +131,12 @@ public:
      * @brief Opens near a local point using the current show mode.
      * zh_CN: 使用当前显示模式在局部坐标点附近打开。
      */
-    void showAtPoint(QWidget* relativeTo,
-                     const QPoint& localPosition);
+    void showAtPoint(QWidget* relativeTo, const QPoint& localPosition);
     /**
      * @brief Opens near a local point using an explicit show mode.
      * zh_CN: 使用指定显示模式在局部坐标点附近打开。
      */
-    void showAtPoint(QWidget* relativeTo,
-                     const QPoint& localPosition,
-                     ShowMode mode);
+    void showAtPoint(QWidget* relativeTo, const QPoint& localPosition, ShowMode mode);
 
 public slots:
     /**

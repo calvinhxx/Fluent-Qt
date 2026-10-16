@@ -56,9 +56,8 @@ bool fileContainsQtVersionGuard(const QString& path)
     }
 
     const QString content = QString::fromUtf8(file.readAll());
-    return content.contains(QStringLiteral("QT_VERSION_CHECK")) ||
-           content.contains(QStringLiteral("QT_VERSION >=")) ||
-           content.contains(QStringLiteral("QT_VERSION <"));
+    return content.contains(QStringLiteral("QT_VERSION_CHECK")) || content.contains(QStringLiteral("QT_VERSION >="))
+        || content.contains(QStringLiteral("QT_VERSION <"));
 }
 
 bool isAllowedQtVersionGuardFile(const QString& relativePath)
@@ -91,8 +90,7 @@ private:
 
 TEST(QtCompat, FluentEnterEventDerivesFromQEvent)
 {
-    static_assert(std::is_base_of<QEvent, FluentEnterEvent>::value,
-                  "FluentEnterEvent must derive from QEvent");
+    static_assert(std::is_base_of<QEvent, FluentEnterEvent>::value, "FluentEnterEvent must derive from QEvent");
     SUCCEED();
 }
 
@@ -100,10 +98,9 @@ TEST(QtCompat, FluentEnterEventMatchesExpectedType)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     static_assert(std::is_same<FluentEnterEvent, QEnterEvent>::value,
-                  "On Qt6, FluentEnterEvent must alias QEnterEvent");
+        "On Qt6, FluentEnterEvent must alias QEnterEvent");
 #else
-    static_assert(std::is_same<FluentEnterEvent, QEvent>::value,
-                  "On Qt5, FluentEnterEvent must alias QEvent");
+    static_assert(std::is_same<FluentEnterEvent, QEvent>::value, "On Qt5, FluentEnterEvent must alias QEvent");
 #endif
     SUCCEED();
 }
@@ -170,8 +167,9 @@ TEST(QtCompat, CheckBoxStateConnectionNormalizesState)
     checkBox.setTristate(true);
     QVector<Qt::CheckState> observed;
 
-    const auto connection = fluentConnectCheckStateChanged(
-        &checkBox, &checkBox, [&observed](Qt::CheckState state) { observed.push_back(state); });
+    const auto connection = fluentConnectCheckStateChanged(&checkBox, &checkBox, [&observed](Qt::CheckState state) {
+        observed.push_back(state);
+    });
 
     EXPECT_TRUE(connection);
     checkBox.setCheckState(Qt::PartiallyChecked);
@@ -188,8 +186,7 @@ TEST(QtCompat, WheelPositionHelperReturnsLocalPosition)
 
 TEST(QtCompat, NativeGestureConstructorCapabilityIsCentralized)
 {
-    EXPECT_EQ(fluentCanConstructNativeGestureEvent(),
-              FLUENT_HAS_NATIVE_GESTURE_EVENT_CONSTRUCTOR != 0);
+    EXPECT_EQ(fluentCanConstructNativeGestureEvent(), FLUENT_HAS_NATIVE_GESTURE_EVENT_CONSTRUCTOR != 0);
     EXPECT_NE(QString::fromLatin1(fluentNativeGestureEventSkipReason()), QString());
 }
 
@@ -210,8 +207,8 @@ TEST(QtCompat, NativeGesturePositionHelperReturnsLocalPositionWhenConstructible)
 
 TEST(QtCompat, WheelHelpersClassifyAndNormalizeNoPhasePixelInput)
 {
-    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(event, QPoint(8, 9), QPoint(8, 9), QPoint(0, -60), QPoint(),
-                                       Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(event, QPoint(8, 9), QPoint(8, 9), QPoint(0, -60), QPoint(), Qt::NoButton,
+        Qt::NoModifier, Qt::NoScrollPhase, false);
 
     EXPECT_EQ(fluentWheelInputKind(&event), FluentWheelInputKind::NoPhasePixel);
     EXPECT_EQ(fluentWheelDeltaY(&event), -60.0);
@@ -230,8 +227,8 @@ TEST(QtCompat, WheelHelpersClassifyPhaseBasedInput)
     if (!fluentWheelEventSupportsPhase())
         GTEST_SKIP() << fluentWheelEventPhaseSkipReason();
 
-    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(event, QPoint(8, 9), QPoint(8, 9), QPoint(0, -30), QPoint(),
-                                       Qt::NoButton, Qt::NoModifier, Qt::ScrollUpdate, false);
+    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(event, QPoint(8, 9), QPoint(8, 9), QPoint(0, -30), QPoint(), Qt::NoButton,
+        Qt::NoModifier, Qt::ScrollUpdate, false);
 
     EXPECT_EQ(fluentWheelInputKind(&event), FluentWheelInputKind::PhaseBased);
     EXPECT_EQ(fluentWheelDeltaY(&event), -30.0);
@@ -289,9 +286,8 @@ TEST(QtCompat, VariantConversionUsesTheRequestedPropertyType)
 
 TEST(QtCompat, LocalSceneMouseMappingPreservesInputIdentity)
 {
-    const QMouseEvent original(QEvent::MouseButtonPress, QPointF(12, 18), QPointF(40, 60),
-                               QPointF(120, 180), Qt::LeftButton, Qt::LeftButton, Qt::ShiftModifier,
-                               Qt::MouseEventSynthesizedByApplication);
+    const QMouseEvent original(QEvent::MouseButtonPress, QPointF(12, 18), QPointF(40, 60), QPointF(120, 180),
+        Qt::LeftButton, Qt::LeftButton, Qt::ShiftModifier, Qt::MouseEventSynthesizedByApplication);
     const QMouseEvent mapped = ::compatibility::mouseEventForLocalScene(&original);
     EXPECT_EQ(fluentMousePos(&mapped), QPoint(12, 18));
     EXPECT_EQ(fluentMouseGlobalPos(&mapped), QPoint(120, 180));
@@ -320,8 +316,7 @@ TEST(QtCompat, TouchGlobalPositionHandlesEmptyAndPopulatedEvents)
 #else
     QTouchEvent::TouchPoint point(0);
     point.setScreenPos(QPointF(110, 120));
-    const QTouchEvent populated(QEvent::TouchBegin, nullptr, Qt::NoModifier, Qt::TouchPointPressed,
-                                {point});
+    const QTouchEvent populated(QEvent::TouchBegin, nullptr, Qt::NoModifier, Qt::TouchPointPressed, {point});
 #endif
     EXPECT_TRUE(fluentFirstTouchGlobalPos(&populated, position));
     EXPECT_EQ(position, QPoint(110, 120));
@@ -331,8 +326,7 @@ TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards)
 {
     const QString root = repositoryRootPath();
     const QStringList scanRoots = {root + QStringLiteral("/app"), root + QStringLiteral("/src"),
-                                   root + QStringLiteral("/tests/components"),
-                                   root + QStringLiteral("/tests/gallery")};
+        root + QStringLiteral("/tests/components"), root + QStringLiteral("/tests/gallery")};
     const QStringList nameFilters = {QStringLiteral("*.h"), QStringLiteral("*.cpp")};
 
     QStringList offenders;

@@ -6,7 +6,9 @@
 
 namespace fluent::basicinput {
 
-namespace detail { class HyperlinkButtonAccessible; }
+namespace detail {
+class HyperlinkButtonAccessible;
+}
 
 /**
  * @brief Button-styled hyperlink entry with URL and underline control.

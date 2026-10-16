@@ -38,13 +38,13 @@ class StackContentHost : public QWidget, public FluentElement, public QMLPlus {
      * @brief Page transition effect used by the content host.
      * zh_CN: 内容宿主使用的页面转场效果。
      */
-    Q_PROPERTY(TransitionEffect transitionEffect READ transitionEffect WRITE setTransitionEffect NOTIFY transitionEffectChanged)
+    Q_PROPERTY(TransitionEffect transitionEffect
+        READ transitionEffect
+        WRITE setTransitionEffect
+        NOTIFY transitionEffectChanged)
 
 public:
-    enum class TransitionEffect {
-        SlideFromLeft,
-        SlideFromBottom
-    };
+    enum class TransitionEffect { SlideFromLeft, SlideFromBottom };
     Q_ENUM(TransitionEffect)
 
     explicit StackContentHost(QWidget* parent = nullptr);
@@ -140,10 +140,10 @@ private:
     bool canHostPage(QWidget* widget) const;
     PageRecord makePage(QWidget* widget, WidgetOwnership ownership);
     bool replacePageImpl(int index,
-                         QWidget* widget,
-                         WidgetOwnership ownership,
-                         bool applyPreviousOwnership,
-                         QWidget** transferredPage);
+        QWidget* widget,
+        WidgetOwnership ownership,
+        bool applyPreviousOwnership,
+        QWidget** transferredPage);
     PageRecord extractPage(int index);
     void removeStackWidget(QWidget* widget);
     void deletePlaceholder(const PageRecord& page);
@@ -161,7 +161,7 @@ private:
     void normalizeCurrentIndexAfterRemoval(int removedIndex);
     QWidget* stackWidgetAt(int index) const;
 
-    QColor m_surfaceFill;        // Invalid/transparent → host stays transparent (no panel).
+    QColor m_surfaceFill; // Invalid/transparent → host stays transparent (no panel).
     QColor m_surfaceBorder;
     qreal m_surfaceTopLeftRadius = 0.0;
 

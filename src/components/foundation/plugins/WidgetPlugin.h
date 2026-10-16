@@ -30,8 +30,7 @@ public:
     virtual QStringList widgetKeys() const override = 0;
     /** @brief Creates a new widget with the requested parent on the GUI thread.
      * zh_CN: 在 GUI 线程创建指定父对象的新控件。 */
-    virtual QWidget* createWidget(const QString& key, QWidget* parent,
-                                  QString* error = nullptr) override = 0;
+    virtual QWidget* createWidget(const QString& key, QWidget* parent, QString* error = nullptr) override = 0;
 };
 
 } // namespace fluent::plugins

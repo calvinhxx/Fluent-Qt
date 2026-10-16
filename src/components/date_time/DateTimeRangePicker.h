@@ -44,26 +44,25 @@ class DateTimeRangePickerPopup;
  */
 class DateTimeRangePicker : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
-    Q_PROPERTY(QDateTime startDateTime READ startDateTime WRITE setStartDateTime RESET clearStart
-                   NOTIFY startDateTimeChanged)
-    Q_PROPERTY(QDateTime endDateTime READ endDateTime WRITE setEndDateTime RESET clearEnd NOTIFY
-                   endDateTimeChanged)
+    Q_PROPERTY(QDateTime startDateTime
+        READ startDateTime
+        WRITE setStartDateTime
+        RESET clearStart
+        NOTIFY startDateTimeChanged)
+    Q_PROPERTY(QDateTime endDateTime READ endDateTime WRITE setEndDateTime RESET clearEnd NOTIFY endDateTimeChanged)
     Q_PROPERTY(bool timeEnabled READ isTimeEnabled WRITE setTimeEnabled NOTIFY timeEnabledChanged)
     Q_PROPERTY(bool rangeValid READ isRangeValid NOTIFY rangeValidityChanged)
-    Q_PROPERTY(QString startLabelText READ startLabelText WRITE setStartLabelText NOTIFY
-                   startLabelTextChanged)
-    Q_PROPERTY(
-        QString endLabelText READ endLabelText WRITE setEndLabelText NOTIFY endLabelTextChanged)
-    Q_PROPERTY(QString invalidRangeText READ invalidRangeText WRITE setInvalidRangeText NOTIFY
-                   invalidRangeTextChanged)
+    Q_PROPERTY(QString startLabelText READ startLabelText WRITE setStartLabelText NOTIFY startLabelTextChanged)
+    Q_PROPERTY(QString endLabelText READ endLabelText WRITE setEndLabelText NOTIFY endLabelTextChanged)
+    Q_PROPERTY(QString invalidRangeText READ invalidRangeText WRITE setInvalidRangeText NOTIFY invalidRangeTextChanged)
     Q_PROPERTY(QLocale locale READ locale WRITE setLocale NOTIFY localeChanged)
-    Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY
-                   placeholderTextChanged)
+    Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY placeholderTextChanged)
     Q_PROPERTY(bool pickerOpen READ isPickerOpen WRITE setPickerOpen NOTIFY pickerOpenChanged)
-    Q_PROPERTY(bool presetsVisible READ isPresetsVisible WRITE setPresetsVisible NOTIFY
-                   presetsVisibleChanged)
-    Q_PROPERTY(bool autoApplyPresetsEnabled READ isAutoApplyPresetsEnabled WRITE
-                   setAutoApplyPresetsEnabled NOTIFY autoApplyPresetsEnabledChanged)
+    Q_PROPERTY(bool presetsVisible READ isPresetsVisible WRITE setPresetsVisible NOTIFY presetsVisibleChanged)
+    Q_PROPERTY(bool autoApplyPresetsEnabled
+        READ isAutoApplyPresetsEnabled
+        WRITE setAutoApplyPresetsEnabled
+        NOTIFY autoApplyPresetsEnabledChanged)
 
 public:
     /**

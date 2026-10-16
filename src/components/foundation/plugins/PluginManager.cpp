@@ -62,8 +62,8 @@ struct PluginManager::Private {
         return true;
     }
 
-    bool visit(const QString& id, QHash<QString, int>& marks, QStringList& path, QStringList& plan,
-               QString* error) const
+    bool visit(const QString& id, QHash<QString, int>& marks, QStringList& path, QStringList& plan, QString* error)
+        const
     {
         const auto entry = entries.constFind(id);
         if (entry == entries.cend() || !entry->plugin) {
@@ -75,8 +75,7 @@ struct PluginManager::Private {
         if (marks.value(id) == 1) {
             QStringList cycle = path.mid(path.indexOf(id));
             cycle.append(id);
-            return fail(error, QStringLiteral("Plugin dependency cycle: %1")
-                                   .arg(cycle.join(QStringLiteral(" -> "))));
+            return fail(error, QStringLiteral("Plugin dependency cycle: %1").arg(cycle.join(QStringLiteral(" -> "))));
         }
         marks.insert(id, 1);
         path.append(id);
@@ -176,8 +175,7 @@ struct PluginManager::Private {
     bool destroying = false;
 };
 
-PluginManager::PluginManager(QObject* host, QObject* parent)
-    : QObject(parent), d(std::make_unique<Private>(this, host))
+PluginManager::PluginManager(QObject* host, QObject* parent) : QObject(parent), d(std::make_unique<Private>(this, host))
 {}
 
 PluginManager::~PluginManager()
@@ -200,8 +198,7 @@ bool PluginManager::registerPlugin(Plugin* candidate, QString* error)
     if (!candidate) {
         return fail(error, QStringLiteral("Cannot register a null plugin."));
     }
-    if (candidate->thread() != thread() ||
-        (d->context.host() && d->context.host()->thread() != thread())) {
+    if (candidate->thread() != thread() || (d->context.host() && d->context.host()->thread() != thread())) {
         return fail(error, QStringLiteral("Plugins and host must share the manager's thread."));
     }
     if (candidate->m_manager) {
@@ -212,9 +209,7 @@ bool PluginManager::registerPlugin(Plugin* candidate, QString* error)
     try {
         descriptor = candidate->metadata();
     } catch (const std::exception& exception) {
-        return fail(
-            error,
-            QStringLiteral("Plugin metadata failed: %1").arg(QString::fromUtf8(exception.what())));
+        return fail(error, QStringLiteral("Plugin metadata failed: %1").arg(QString::fromUtf8(exception.what())));
     } catch (...) {
         return fail(error, QStringLiteral("Plugin metadata failed with an unknown exception."));
     }
@@ -222,14 +217,11 @@ bool PluginManager::registerPlugin(Plugin* candidate, QString* error)
         return fail(error, QStringLiteral("Plugin was destroyed while reading its metadata."));
     }
     if (candidate->m_manager) {
-        return fail(
-            error,
-            QStringLiteral("Plugin was registered with another manager while reading metadata."));
+        return fail(error, QStringLiteral("Plugin was registered with another manager while reading metadata."));
     }
-    if (QThread::currentThread() != thread() || candidate->thread() != thread() ||
-        (d->context.host() && d->context.host()->thread() != thread())) {
-        return fail(error, QStringLiteral(
-                               "Plugin, host or manager changed thread while reading metadata."));
+    if (QThread::currentThread() != thread() || candidate->thread() != thread()
+        || (d->context.host() && d->context.host()->thread() != thread())) {
+        return fail(error, QStringLiteral("Plugin, host or manager changed thread while reading metadata."));
     }
     if (descriptor.id.isEmpty() || descriptor.id != descriptor.id.trimmed()) {
         return fail(error, QStringLiteral("Plugin ID must be nonempty and trimmed."));
@@ -239,24 +231,22 @@ bool PluginManager::registerPlugin(Plugin* candidate, QString* error)
     }
     QSet<QString> dependencies;
     for (const QString& dependency : descriptor.dependencies) {
-        if (dependency.isEmpty() || dependency != dependency.trimmed() ||
-            dependencies.contains(dependency)) {
-            return fail(
-                error, QStringLiteral("Plugin dependencies must be nonempty, trimmed and unique."));
+        if (dependency.isEmpty() || dependency != dependency.trimmed() || dependencies.contains(dependency)) {
+            return fail(error, QStringLiteral("Plugin dependencies must be nonempty, trimmed and unique."));
         }
         dependencies.insert(dependency);
     }
     Private::Entry entry;
     entry.plugin = candidate;
     entry.metadata = descriptor;
-    entry.destroyedConnection = connect(candidate, &QObject::destroyed, this,
-                                        [this, id = descriptor.id] { d->destroyed(id); });
+    entry.destroyedConnection = connect(candidate, &QObject::destroyed, this, [this, id = descriptor.id] {
+        d->destroyed(id);
+    });
     candidate->m_manager = this;
     d->entries.insert(descriptor.id, entry);
     d->registrationOrder.append(descriptor.id);
     emit pluginRegistered(descriptor.id);
-    return lifetime ? true
-                    : fail(error, QStringLiteral("Plugin was destroyed during registration."));
+    return lifetime ? true : fail(error, QStringLiteral("Plugin was destroyed during registration."));
 }
 
 bool PluginManager::unregisterPlugin(const QString& id, QString* error)
@@ -319,9 +309,7 @@ bool PluginManager::activate(const QString& id, QString* error)
         emit pluginActivated(next);
         if (!isActive(next) || !d->dependenciesActive(next)) {
             d->rollback(started);
-            return fail(error,
-                        QStringLiteral("Plugin or dependency was destroyed during activation: %1")
-                            .arg(next));
+            return fail(error, QStringLiteral("Plugin or dependency was destroyed during activation: %1").arg(next));
         }
     }
     return true;
@@ -386,8 +374,7 @@ const PluginContext& PluginManager::context() const
     return d->context;
 }
 
-QWidget* PluginManager::createWidget(const QString& pluginId, const QString& key, QWidget* parent,
-                                     QString* error)
+QWidget* PluginManager::createWidget(const QString& pluginId, const QString& key, QWidget* parent, QString* error)
 {
     if (!d->canMutate(error)) {
         return nullptr;
@@ -405,18 +392,16 @@ QWidget* PluginManager::createWidget(const QString& pluginId, const QString& key
     QPointer<Plugin> candidate = activePlugin(requestedId);
     auto* factory = qobject_cast<WidgetPluginInterface*>(candidate.data());
     if (!factory) {
-        fail(error,
-             QStringLiteral("Plugin is inactive or has no widget interface: %1").arg(requestedId));
+        fail(error, QStringLiteral("Plugin is inactive or has no widget interface: %1").arg(requestedId));
         return nullptr;
     }
     QString detail;
     QPointer<QWidget> widget;
     try {
         const QStringList keys = factory->widgetKeys();
-        if (!candidate || !isActive(requestedId) || !keys.contains(requestedKey) ||
-            (requiresParent && !requestedParent)) {
-            fail(error,
-                 QStringLiteral("Widget key or parent is unavailable: %1").arg(requestedKey));
+        if (!candidate || !isActive(requestedId) || !keys.contains(requestedKey)
+            || (requiresParent && !requestedParent)) {
+            fail(error, QStringLiteral("Widget key or parent is unavailable: %1").arg(requestedKey));
             return nullptr;
         }
         widget = factory->createWidget(requestedKey, requestedParent.data(), &detail);
@@ -425,15 +410,13 @@ QWidget* PluginManager::createWidget(const QString& pluginId, const QString& key
     } catch (...) {
         detail = QStringLiteral("Unknown exception.");
     }
-    if (!widget || !candidate || !isActive(requestedId) || !d->dependenciesActive(requestedId) ||
-        (requiresParent && !requestedParent) || widget->parentWidget() != requestedParent.data()) {
+    if (!widget || !candidate || !isActive(requestedId) || !d->dependenciesActive(requestedId)
+        || (requiresParent && !requestedParent) || widget->parentWidget() != requestedParent.data()) {
         delete widget.data();
         if (detail.isEmpty()) {
-            detail = QStringLiteral(
-                "Factory failed, returned an incorrect parent, or lost an active dependency.");
+            detail = QStringLiteral("Factory failed, returned an incorrect parent, or lost an active dependency.");
         }
-        fail(error,
-             QStringLiteral("Cannot create %1/%2: %3").arg(requestedId, requestedKey, detail));
+        fail(error, QStringLiteral("Cannot create %1/%2: %3").arg(requestedId, requestedKey, detail));
         return nullptr;
     }
     return widget.data();

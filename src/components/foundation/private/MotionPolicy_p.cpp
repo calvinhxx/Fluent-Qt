@@ -35,8 +35,9 @@ void appendAnimationTimings(QAbstractAnimation* animation, QList<AnimationTiming
     }
 }
 
-void applyResolvedTimings(const QList<AnimationTiming>& timings, bool localAnimationEnabled,
-                          bool convergeActiveTransition)
+void applyResolvedTimings(const QList<AnimationTiming>& timings,
+    bool localAnimationEnabled,
+    bool convergeActiveTransition)
 {
     MotionPolicy& policy = MotionPolicy::instance();
     for (const AnimationTiming& timing : timings) {
@@ -44,11 +45,9 @@ void applyResolvedTimings(const QList<AnimationTiming>& timings, bool localAnima
         if (!animation)
             continue;
 
-        int resolvedDuration =
-            policy.resolvedDuration(timing.fullDurationMs, localAnimationEnabled);
+        int resolvedDuration = policy.resolvedDuration(timing.fullDurationMs, localAnimationEnabled);
         if (convergeActiveTransition && policy.mode() == MotionPolicy::Mode::Reduced) {
-            resolvedDuration =
-                qMin(timing.fullDurationMs, animation->currentTime() + resolvedDuration);
+            resolvedDuration = qMin(timing.fullDurationMs, animation->currentTime() + resolvedDuration);
         }
 
         if (auto* valueAnimation = qobject_cast<QVariantAnimation*>(animation)) {
@@ -64,12 +63,13 @@ public:
     ActiveTransitionTracker()
     {
         MotionPolicy& policy = MotionPolicy::instance();
-        QObject::connect(&policy, &MotionPolicy::modeChanged,
-                         [this](MotionPolicy::Mode mode) { handleModeChanged(mode); });
+        QObject::connect(&policy, &MotionPolicy::modeChanged, [this](MotionPolicy::Mode mode) {
+            handleModeChanged(mode);
+        });
     }
 
-    void start(QAbstractAnimation* animation, bool localAnimationEnabled,
-               QAbstractAnimation::DeletionPolicy deletionPolicy)
+    void
+    start(QAbstractAnimation* animation, bool localAnimationEnabled, QAbstractAnimation::DeletionPolicy deletionPolicy)
     {
         if (!animation)
             return;
@@ -108,8 +108,7 @@ private:
     void prune()
     {
         for (int index = m_active.size() - 1; index >= 0; --index) {
-            if (!m_active.at(index).animation ||
-                m_active.at(index).animation->state() == QAbstractAnimation::Stopped) {
+            if (!m_active.at(index).animation || m_active.at(index).animation->state() == QAbstractAnimation::Stopped) {
                 m_active.removeAt(index);
             }
         }
@@ -134,8 +133,7 @@ private:
                     animation->setCurrentTime(endTime);
                 continue;
             }
-            applyResolvedTimings(entry.timings, entry.localAnimationEnabled,
-                                 mode == MotionPolicy::Mode::Reduced);
+            applyResolvedTimings(entry.timings, entry.localAnimationEnabled, mode == MotionPolicy::Mode::Reduced);
         }
     }
 
@@ -150,9 +148,10 @@ ActiveTransitionTracker& transitionTracker()
 
 } // namespace
 
-void startMotionTransition(QVariantAnimation* animation, int fullDurationMs,
-                           bool localAnimationEnabled,
-                           QAbstractAnimation::DeletionPolicy deletionPolicy)
+void startMotionTransition(QVariantAnimation* animation,
+    int fullDurationMs,
+    bool localAnimationEnabled,
+    QAbstractAnimation::DeletionPolicy deletionPolicy)
 {
     if (!animation)
         return;
@@ -160,8 +159,9 @@ void startMotionTransition(QVariantAnimation* animation, int fullDurationMs,
     transitionTracker().start(animation, localAnimationEnabled, deletionPolicy);
 }
 
-void startMotionTransitionGroup(QAnimationGroup* group, bool localAnimationEnabled,
-                                QAbstractAnimation::DeletionPolicy deletionPolicy)
+void startMotionTransitionGroup(QAnimationGroup* group,
+    bool localAnimationEnabled,
+    QAbstractAnimation::DeletionPolicy deletionPolicy)
 {
     transitionTracker().start(group, localAnimationEnabled, deletionPolicy);
 }

@@ -18,20 +18,16 @@ using accessibility::detail::LogicalItemAccessibleState;
 
 QString annotatedText(const char* source)
 {
-    return QCoreApplication::translate(
-        "AnnotatedScrollBarAccessibility", source);
+    return QCoreApplication::translate("AnnotatedScrollBarAccessibility", source);
 }
 
 } // namespace
 
-class AnnotatedScrollBarAccessible final
-    : public LogicalItemAccessibleAdapter,
-      public QAccessibleValueInterface {
+class AnnotatedScrollBarAccessible final : public LogicalItemAccessibleAdapter, public QAccessibleValueInterface {
 public:
     explicit AnnotatedScrollBarAccessible(AnnotatedScrollBar* bar)
         : LogicalItemAccessibleAdapter(bar, QAccessible::ScrollBar)
-    {
-    }
+    {}
 
     void* interface_cast(QAccessible::InterfaceType type) override
     {
@@ -56,17 +52,13 @@ public:
 
     QAccessible::State state() const override
     {
-        QAccessible::State result =
-            LogicalItemAccessibleAdapter::state();
+        QAccessible::State result = LogicalItemAccessibleAdapter::state();
         result.readOnly = false;
         result.editable = view() && view()->isEnabled();
         return result;
     }
 
-    QVariant currentValue() const override
-    {
-        return view() ? QVariant(view()->value()) : QVariant();
-    }
+    QVariant currentValue() const override { return view() ? QVariant(view()->value()) : QVariant(); }
 
     void setCurrentValue(const QVariant& value) override
     {
@@ -78,20 +70,11 @@ public:
             view()->setValue(requested);
     }
 
-    QVariant maximumValue() const override
-    {
-        return view() ? QVariant(view()->maximum()) : QVariant();
-    }
+    QVariant maximumValue() const override { return view() ? QVariant(view()->maximum()) : QVariant(); }
 
-    QVariant minimumValue() const override
-    {
-        return view() ? QVariant(view()->minimum()) : QVariant();
-    }
+    QVariant minimumValue() const override { return view() ? QVariant(view()->minimum()) : QVariant(); }
 
-    QVariant minimumStepSize() const override
-    {
-        return view() ? QVariant(view()->lineStep()) : QVariant();
-    }
+    QVariant minimumStepSize() const override { return view() ? QVariant(view()->lineStep()) : QVariant(); }
 
     QStringList actionNames() const override
     {
@@ -100,12 +83,10 @@ public:
             return result;
         const QString increase = QAccessibleActionInterface::increaseAction();
         const QString decrease = QAccessibleActionInterface::decreaseAction();
-        if (view()->value() < view()->maximum()
-            && !result.contains(increase)) {
+        if (view()->value() < view()->maximum() && !result.contains(increase)) {
             result.append(increase);
         }
-        if (view()->value() > view()->minimum()
-            && !result.contains(decrease)) {
+        if (view()->value() > view()->minimum() && !result.contains(decrease)) {
             result.append(decrease);
         }
         return result;
@@ -113,21 +94,18 @@ public:
 
     void doAction(const QString& actionName) override
     {
-        if (view() && view()->isEnabled()
-            && actionName == QAccessibleActionInterface::increaseAction()) {
+        if (view() && view()->isEnabled() && actionName == QAccessibleActionInterface::increaseAction()) {
             view()->requestScrollTo(view()->value() + view()->lineStep());
             return;
         }
-        if (view() && view()->isEnabled()
-            && actionName == QAccessibleActionInterface::decreaseAction()) {
+        if (view() && view()->isEnabled() && actionName == QAccessibleActionInterface::decreaseAction()) {
             view()->requestScrollTo(view()->value() - view()->lineStep());
             return;
         }
         LogicalItemAccessibleAdapter::doAction(actionName);
     }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         if (actionName == QAccessibleActionInterface::increaseAction())
             return {QStringLiteral("Down")};
@@ -136,18 +114,11 @@ public:
         return LogicalItemAccessibleAdapter::keyBindingsForAction(actionName);
     }
 
-    int logicalChildCount() const override
-    {
-        return view() ? view()->m_labels.size() : 0;
-    }
+    int logicalChildCount() const override { return view() ? view()->m_labels.size() : 0; }
 
-    QAccessible::Role logicalChildRole(int) const override
-    {
-        return QAccessible::Link;
-    }
+    QAccessible::Role logicalChildRole(int) const override { return QAccessible::Link; }
 
-    QString logicalChildText(
-        int logicalIndex, QAccessible::Text type) const override
+    QString logicalChildText(int logicalIndex, QAccessible::Text type) const override
     {
         if (!validIndex(logicalIndex))
             return {};
@@ -173,8 +144,7 @@ public:
         return {};
     }
 
-    LogicalItemAccessibleState logicalChildState(
-        int logicalIndex) const override
+    LogicalItemAccessibleState logicalChildState(int logicalIndex) const override
     {
         LogicalItemAccessibleState result;
         result.valid = validIndex(logicalIndex);
@@ -182,8 +152,7 @@ public:
         result.focusable = result.valid;
         result.selectable = false;
         result.linked = result.valid;
-        result.offscreen = result.valid
-            && logicalChildRect(logicalIndex).isEmpty();
+        result.offscreen = result.valid && logicalChildRect(logicalIndex).isEmpty();
         return result;
     }
 
@@ -194,8 +163,7 @@ public:
             : QStringList();
     }
 
-    void performLogicalChildAction(
-        int logicalIndex, const QString& actionName) override
+    void performLogicalChildAction(int logicalIndex, const QString& actionName) override
     {
         if (!validIndex(logicalIndex) || !view()->isEnabled()
             || actionName != QAccessibleActionInterface::pressAction()) {
@@ -211,21 +179,14 @@ public:
     bool logicalSelectionSupported() const override { return false; }
 
 private:
-    AnnotatedScrollBar* view() const
-    {
-        return static_cast<AnnotatedScrollBar*>(widget());
-    }
+    AnnotatedScrollBar* view() const { return static_cast<AnnotatedScrollBar*>(widget()); }
 
-    bool validIndex(int index) const
-    {
-        return view() && index >= 0 && index < view()->m_labels.size();
-    }
+    bool validIndex(int index) const { return view() && index >= 0 && index < view()->m_labels.size(); }
 };
 
 namespace {
 
-QAccessibleInterface* annotatedScrollBarAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* annotatedScrollBarAccessibilityFactory(const QString&, QObject* object)
 {
     if (auto* bar = dynamic_cast<AnnotatedScrollBar*>(object))
         return new AnnotatedScrollBarAccessible(bar);
@@ -240,8 +201,7 @@ void ensureAnnotatedScrollBarAccessibilityFactory()
 {
 #if QT_CONFIG(accessibility)
     static const bool installed = [] {
-        QAccessible::installFactory(
-            annotatedScrollBarAccessibilityFactory);
+        QAccessible::installFactory(annotatedScrollBarAccessibilityFactory);
         return true;
     }();
     Q_UNUSED(installed)

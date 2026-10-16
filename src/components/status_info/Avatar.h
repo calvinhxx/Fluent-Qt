@@ -30,54 +30,34 @@ class InfoBadge;
 class Avatar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
-    Q_PROPERTY(QString initials READ initials WRITE setInitials
-                   NOTIFY initialsChanged)
+    Q_PROPERTY(QString initials READ initials WRITE setInitials NOTIFY initialsChanged)
     Q_PROPERTY(QPixmap image READ image WRITE setImage NOTIFY imageChanged)
     Q_PROPERTY(AvatarShape shape READ shape WRITE setShape NOTIFY shapeChanged)
-    Q_PROPERTY(AvatarSize avatarSize READ avatarSize WRITE setAvatarSize
-                   NOTIFY avatarSizeChanged)
-    Q_PROPERTY(PresenceStatus presence READ presence WRITE setPresence
-                   NOTIFY presenceChanged)
-    Q_PROPERTY(QColor backgroundColor READ backgroundColor
-                   WRITE setBackgroundColor NOTIFY backgroundColorChanged)
-    Q_PROPERTY(QColor foregroundColor READ foregroundColor
-                   WRITE setForegroundColor NOTIFY foregroundColorChanged)
+    Q_PROPERTY(AvatarSize avatarSize READ avatarSize WRITE setAvatarSize NOTIFY avatarSizeChanged)
+    Q_PROPERTY(PresenceStatus presence READ presence WRITE setPresence NOTIFY presenceChanged)
+    Q_PROPERTY(QColor backgroundColor READ backgroundColor WRITE setBackgroundColor NOTIFY backgroundColorChanged)
+    Q_PROPERTY(QColor foregroundColor READ foregroundColor WRITE setForegroundColor NOTIFY foregroundColorChanged)
 
 public:
     /**
      * @brief Avatar outline shape.
      * zh_CN: 头像外轮廓形状。
      */
-    enum class AvatarShape {
-        Circular,
-        Square
-    };
+    enum class AvatarShape { Circular, Square };
     Q_ENUM(AvatarShape)
 
     /**
      * @brief Token-aligned avatar size presets in device-independent pixels.
      * zh_CN: 以设备无关像素表示、与 token 对齐的头像尺寸预设。
      */
-    enum class AvatarSize {
-        Small = 24,
-        Medium = 32,
-        Large = 40,
-        ExtraLarge = 56
-    };
+    enum class AvatarSize { Small = 24, Medium = 32, Large = 40, ExtraLarge = 56 };
     Q_ENUM(AvatarSize)
 
     /**
      * @brief Presence state rendered by the composed InfoBadge.
      * zh_CN: 由内部组合的 InfoBadge 呈现的在线状态。
      */
-    enum class PresenceStatus {
-        None,
-        Available,
-        Away,
-        Busy,
-        DoNotDisturb,
-        Offline
-    };
+    enum class PresenceStatus { None, Available, Away, Busy, DoNotDisturb, Offline };
     Q_ENUM(PresenceStatus)
 
     explicit Avatar(QWidget* parent = nullptr);

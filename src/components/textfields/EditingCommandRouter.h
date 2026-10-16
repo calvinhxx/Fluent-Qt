@@ -32,15 +32,7 @@ public:
      * @brief Editing commands exposed through stable QAction instances.
      * zh_CN: 通过稳定 QAction 实例暴露的编辑命令。
      */
-    enum class Command {
-        Undo,
-        Redo,
-        Cut,
-        Copy,
-        Paste,
-        Delete,
-        SelectAll
-    };
+    enum class Command { Undo, Redo, Cut, Copy, Paste, Delete, SelectAll };
     Q_ENUM(Command)
 
     /**
@@ -52,9 +44,7 @@ public:
      * zh_CN: parent 为空时，解析出的顶层窗口将成为 QObject 父对象；每个顶层
      * 窗口应只创建一个 Router。
      */
-    explicit EditingCommandRouter(
-        QWidget* scopeWindow,
-        QObject* parent = nullptr);
+    explicit EditingCommandRouter(QWidget* scopeWindow, QObject* parent = nullptr);
     ~EditingCommandRouter() override;
 
     /**
@@ -119,9 +109,7 @@ signals:
      * @brief Emitted when one command's executable capability changes.
      * zh_CN: 某项命令的可执行能力变化时发出。
      */
-    void commandCapabilityChanged(
-        fluent::textfields::EditingCommandRouter::Command command,
-        bool enabled);
+    void commandCapabilityChanged(fluent::textfields::EditingCommandRouter::Command command, bool enabled);
 
 private:
     Q_DISABLE_COPY(EditingCommandRouter)

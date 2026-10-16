@@ -42,9 +42,9 @@ void paintClientSideFrame(QPainter& painter, const ClientSideFramePaintOptions& 
 Qt::Edges resizeEdgesForHitTest(compatibility::WindowChromeCompat::HitTest hit);
 Qt::CursorShape cursorShapeForResizeEdges(Qt::Edges edges);
 QRect resizedGeometryForEdges(const QRect& startGeometry,
-                              Qt::Edges edges,
-                              const QPoint& delta,
-                              const QSize& minimumSize);
+    Qt::Edges edges,
+    const QPoint& delta,
+    const QSize& minimumSize);
 
 class WindowResizeSession {
 public:

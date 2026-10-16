@@ -39,8 +39,7 @@ class FileListItemDelegate;
  */
 class FileListView : public ListView {
     Q_OBJECT
-    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY
-                   animationEnabledChanged)
+    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
 
 public:
     /**
@@ -65,13 +64,7 @@ public:
      * false。仅 Rejected 行可以重试，所有操作遵守 ItemIsEnabled。标准无障碍
      * 文本角色可覆盖自动生成的名称和说明。
      */
-    enum DataRole {
-        MetadataRole = Qt::UserRole + 1,
-        StatusRole,
-        ProgressRole,
-        RemovableRole,
-        RetryableRole
-    };
+    enum DataRole { MetadataRole = Qt::UserRole + 1, StatusRole, ProgressRole, RemovableRole, RetryableRole };
     Q_ENUM(DataRole)
 
     explicit FileListView(QWidget* parent = nullptr);
@@ -104,8 +97,9 @@ signals:
     void retryRequested(const QModelIndex& index);
 
 protected:
-    void dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight,
-                     const QVector<int>& roles = QVector<int>()) override;
+    void dataChanged(const QModelIndex& topLeft,
+        const QModelIndex& bottomRight,
+        const QVector<int>& roles = QVector<int>()) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;

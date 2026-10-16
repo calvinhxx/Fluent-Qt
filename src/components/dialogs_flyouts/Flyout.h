@@ -35,28 +35,28 @@ class Flyout : public Popup {
 
 public:
     enum Placement {
-        Top,        ///< Above the anchor. zh_CN: 在 anchor 上方。
-        Bottom,     ///< Below the anchor. zh_CN: 在 anchor 下方。
-        Left,       ///< Left of the anchor. zh_CN: 在 anchor 左侧。
-        Right,      ///< Right of the anchor. zh_CN: 在 anchor 右侧。
-        Full,       ///< Centered in the top-level window (base-class default). zh_CN: 顶层窗口居中。
-        Auto,       ///< Prefer Bottom, flipping to Top when space runs out. zh_CN: 优先 Bottom，空间不足时反转到 Top。
+        Top,    ///< Above the anchor. zh_CN: 在 anchor 上方。
+        Bottom, ///< Below the anchor. zh_CN: 在 anchor 下方。
+        Left,   ///< Left of the anchor. zh_CN: 在 anchor 左侧。
+        Right,  ///< Right of the anchor. zh_CN: 在 anchor 右侧。
+        Full,   ///< Centered in the top-level window (base-class default). zh_CN: 顶层窗口居中。
+        Auto,   ///< Prefer Bottom, flipping to Top when space runs out. zh_CN: 优先 Bottom，空间不足时反转到 Top。
     };
     Q_ENUM(Placement)
 
     explicit Flyout(QWidget* parent = nullptr);
     ~Flyout() override;
 
-    Placement placement() const          { return m_placement; }
-    void      setPlacement(Placement p);
+    Placement placement() const { return m_placement; }
+    void setPlacement(Placement p);
 
-    int       anchorOffset() const       { return m_anchorOffset; }
-    void      setAnchorOffset(int px);
+    int anchorOffset() const { return m_anchorOffset; }
+    void setAnchorOffset(int px);
 
-    bool      clampToWindow() const      { return m_clampToWindow; }
-    void      setClampToWindow(bool e);
+    bool clampToWindow() const { return m_clampToWindow; }
+    void setClampToWindow(bool e);
 
-    QWidget*  anchor() const             { return m_anchor.data(); }
+    QWidget* anchor() const { return m_anchor.data(); }
 
     /// Opens the flyout at the anchor; equals setAnchor(anchor) + open().
     /// zh_CN: 在指定 anchor 控件上弹出 flyout，等价于 setAnchor(anchor) + open()。
@@ -92,8 +92,8 @@ private:
 
     QPointer<QWidget> m_anchor;
     Placement m_placement = Bottom;
-    int       m_anchorOffset = 8;     // Standard WinUI gap. zh_CN: WinUI 标准间距。
-    bool      m_clampToWindow = true;
+    int m_anchorOffset = 8; // Standard WinUI gap. zh_CN: WinUI 标准间距。
+    bool m_clampToWindow = true;
 };
 
 } // namespace fluent::dialogs_flyouts

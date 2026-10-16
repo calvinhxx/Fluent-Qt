@@ -54,25 +54,17 @@ struct TabViewItem {
 
     TabViewItem() = default;
 
-    explicit TabViewItem(const QString& itemText)
-        : text(itemText)
-    {
-    }
+    explicit TabViewItem(const QString& itemText) : text(itemText) {}
 
     TabViewItem(const QString& itemText,
-                const QString& itemIconGlyph,
-                bool itemClosable = true,
-                bool itemEnabled = true,
-                const QVariant& itemData = QVariant(),
-                const QString& itemAccessibleName = QString())
-        : text(itemText)
-        , iconGlyph(itemIconGlyph)
-        , closable(itemClosable)
-        , enabled(itemEnabled)
-        , data(itemData)
-        , accessibleName(itemAccessibleName)
-    {
-    }
+        const QString& itemIconGlyph,
+        bool itemClosable = true,
+        bool itemEnabled = true,
+        const QVariant& itemData = QVariant(),
+        const QString& itemAccessibleName = QString())
+        : text(itemText), iconGlyph(itemIconGlyph), closable(itemClosable), enabled(itemEnabled), data(itemData),
+          accessibleName(itemAccessibleName)
+    {}
 };
 
 /**
@@ -93,17 +85,9 @@ class TabStrip : public QWidget, public FluentElement {
     Q_PROPERTY(QRect animatedIndicatorRect READ animatedIndicatorRect WRITE setAnimatedIndicatorRect)
 
 public:
-    enum class WidthMode {
-        Equal,
-        SizeToContent,
-        Compact
-    };
+    enum class WidthMode { Equal, SizeToContent, Compact };
 
-    enum class CloseButtonOverlayMode {
-        Auto,
-        OnHover,
-        Always
-    };
+    enum class CloseButtonOverlayMode { Auto, OnHover, Always };
 
     explicit TabStrip(QWidget* parent = nullptr);
 
@@ -181,14 +165,7 @@ protected:
 private:
     friend class detail::TabViewAccessible;
 
-    enum class HitKind {
-        None,
-        Tab,
-        Close,
-        Add,
-        OverflowBack,
-        OverflowForward
-    };
+    enum class HitKind { None, Tab, Close, Add, OverflowBack, OverflowForward };
 
     struct Metrics {
         int rowHeight = 40;
@@ -277,7 +254,11 @@ private:
     void stopRevealAnimation(int index);
     void setHeaderWidgetOpacity(TabHeaderWidgets& widgets, qreal opacity);
     fluent::basicinput::Button* createIconButton(const QString& glyph, int pixelSize);
-    void updateIconButton(fluent::basicinput::Button* button, const QRect& rect, const QString& glyph, int pixelSize, bool enabled);
+    void updateIconButton(fluent::basicinput::Button* button,
+        const QRect& rect,
+        const QString& glyph,
+        int pixelSize,
+        bool enabled);
     HitRecord hitTest(const QPoint& position) const;
     void setHoveredHit(const HitRecord& hit);
     void clearPressedHit();
@@ -374,7 +355,10 @@ class TabView : public QWidget, public FluentElement, public fluent::QMLPlus {
      * @brief Visibility behavior for tab close buttons.
      * zh_CN: 标签关闭按钮的可见性行为。
      */
-    Q_PROPERTY(CloseButtonOverlayMode closeButtonOverlayMode READ closeButtonOverlayMode WRITE setCloseButtonOverlayMode NOTIFY closeButtonOverlayModeChanged)
+    Q_PROPERTY(CloseButtonOverlayMode closeButtonOverlayMode
+        READ closeButtonOverlayMode
+        WRITE setCloseButtonOverlayMode
+        NOTIFY closeButtonOverlayModeChanged)
     /**
      * @brief Whether tabs expose close affordances.
      * zh_CN: 标签是否显示关闭入口。
@@ -384,7 +368,10 @@ class TabView : public QWidget, public FluentElement, public fluent::QMLPlus {
      * @brief Whether the add-tab button is visible.
      * zh_CN: 添加标签按钮是否可见。
      */
-    Q_PROPERTY(bool addTabButtonVisible READ addTabButtonVisible WRITE setAddTabButtonVisible NOTIFY addTabButtonVisibleChanged)
+    Q_PROPERTY(bool addTabButtonVisible
+        READ addTabButtonVisible
+        WRITE setAddTabButtonVisible
+        NOTIFY addTabButtonVisibleChanged)
     /**
      * @brief Whether users can reorder tabs.
      * zh_CN: 用户是否可以重排标签。
@@ -394,7 +381,10 @@ class TabView : public QWidget, public FluentElement, public fluent::QMLPlus {
      * @brief Whether tab keyboard accelerators are enabled.
      * zh_CN: 是否启用标签页键盘快捷操作。
      */
-    Q_PROPERTY(bool keyboardAcceleratorsEnabled READ keyboardAcceleratorsEnabled WRITE setKeyboardAcceleratorsEnabled NOTIFY keyboardAcceleratorsEnabledChanged)
+    Q_PROPERTY(bool keyboardAcceleratorsEnabled
+        READ keyboardAcceleratorsEnabled
+        WRITE setKeyboardAcceleratorsEnabled
+        NOTIFY keyboardAcceleratorsEnabledChanged)
     /**
      * @brief Typography role used by tab text.
      * zh_CN: 标签文本使用的排版角色。
@@ -407,18 +397,10 @@ class TabView : public QWidget, public FluentElement, public fluent::QMLPlus {
     Q_PROPERTY(QString iconFontFamily READ iconFontFamily WRITE setIconFontFamily NOTIFY iconFontFamilyChanged)
 
 public:
-    enum class TabWidthMode {
-        Equal,
-        SizeToContent,
-        Compact
-    };
+    enum class TabWidthMode { Equal, SizeToContent, Compact };
     Q_ENUM(TabWidthMode)
 
-    enum class CloseButtonOverlayMode {
-        Auto,
-        OnHover,
-        Always
-    };
+    enum class CloseButtonOverlayMode { Auto, OnHover, Always };
     Q_ENUM(CloseButtonOverlayMode)
 
     explicit TabView(QWidget* parent = nullptr);

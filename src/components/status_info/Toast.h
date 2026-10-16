@@ -66,15 +66,15 @@ class Toast : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(QString message READ message WRITE setMessage NOTIFY messageChanged)
     Q_PROPERTY(Severity severity READ severity WRITE setSeverity NOTIFY severityChanged)
     Q_PROPERTY(Placement placement READ placement WRITE setPlacement NOTIFY placementChanged)
-    Q_PROPERTY(QMargins placementMargins READ placementMargins WRITE setPlacementMargins NOTIFY
-                   placementMarginsChanged)
+    Q_PROPERTY(QMargins placementMargins READ placementMargins WRITE setPlacementMargins NOTIFY placementMarginsChanged)
     Q_PROPERTY(int duration READ duration WRITE setDuration NOTIFY durationChanged)
-    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY
-                   animationEnabledChanged)
+    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
     Q_PROPERTY(QAction* action READ action WRITE setAction NOTIFY actionChanged)
     Q_PROPERTY(bool closable READ isClosable WRITE setClosable NOTIFY closableChanged)
-    Q_PROPERTY(bool pauseOnHoverEnabled READ isPauseOnHoverEnabled WRITE setPauseOnHoverEnabled
-                   NOTIFY pauseOnHoverEnabledChanged)
+    Q_PROPERTY(bool pauseOnHoverEnabled
+        READ isPauseOnHoverEnabled
+        WRITE setPauseOnHoverEnabled
+        NOTIFY pauseOnHoverEnabledChanged)
     Q_PROPERTY(QString updateKey READ updateKey WRITE setUpdateKey NOTIFY updateKeyChanged)
     Q_PROPERTY(bool isOpen READ isOpen NOTIFY isOpenChanged)
     Q_PROPERTY(qreal toastProgress READ toastProgress WRITE setToastProgress)
@@ -202,10 +202,12 @@ public:
      * that host and placement is dismissed.
      * zh_CN: 超过 `maximumVisible()` 时，会关闭该宿主与定位下最旧的托管 Toast。
      */
-    static Toast* showToast(QWidget* anchor, const QString& message,
-                            Severity severity = Informational, int durationMs = 2200,
-                            Placement placement = Top,
-                            const QMargins& margins = QMargins(16, 16, 16, 16));
+    static Toast* showToast(QWidget* anchor,
+        const QString& message,
+        Severity severity = Informational,
+        int durationMs = 2200,
+        Placement placement = Top,
+        const QMargins& margins = QMargins(16, 16, 16, 16));
 
     /**
      * @brief Shows a managed toast or updates the open toast with the same key.
@@ -219,10 +221,13 @@ public:
      * 堆叠顺序、重置持续时间计时器并发出 `updated()`，且不额外占用
      * `maximumVisible()` 名额；空键等同于 `showToast()`。
      */
-    static Toast* showOrUpdateToast(QWidget* anchor, const QString& updateKey,
-                                    const QString& message, Severity severity = Informational,
-                                    int durationMs = 2200, Placement placement = Top,
-                                    const QMargins& margins = QMargins(16, 16, 16, 16));
+    static Toast* showOrUpdateToast(QWidget* anchor,
+        const QString& updateKey,
+        const QString& message,
+        Severity severity = Informational,
+        int durationMs = 2200,
+        Placement placement = Top,
+        const QMargins& margins = QMargins(16, 16, 16, 16));
 
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;

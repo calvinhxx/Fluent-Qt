@@ -47,7 +47,10 @@ class CheckBox : public QCheckBox, public FluentElement, public QMLPlus {
      * @brief Whether hover paints a subtle row background.
      * zh_CN: 悬停时是否绘制轻量背景。
      */
-    Q_PROPERTY(bool hoverBackgroundEnabled READ hoverBackgroundEnabled WRITE setHoverBackgroundEnabled NOTIFY hoverBackgroundEnabledChanged)
+    Q_PROPERTY(bool hoverBackgroundEnabled
+        READ hoverBackgroundEnabled
+        WRITE setHoverBackgroundEnabled
+        NOTIFY hoverBackgroundEnabledChanged)
 
 public:
     explicit CheckBox(const QString& text = "", QWidget* parent = nullptr);
@@ -91,10 +94,10 @@ protected:
 private:
     void initAnimation();
 
-    qreal m_checkProgress = 1.0; 
-    int m_boxSize = 20; // Defaults to 20px. zh_CN: 默认 20px。
-    int m_boxMargin = 8; // Defaults to 8px. zh_CN: 默认 8px。
-    int m_textGap = 8; // Defaults to 8px. zh_CN: 默认 8px。
+    qreal m_checkProgress = 1.0;
+    int m_boxSize = 20;                    // Defaults to 20px. zh_CN: 默认 20px。
+    int m_boxMargin = 8;                   // Defaults to 8px. zh_CN: 默认 8px。
+    int m_textGap = 8;                     // Defaults to 8px. zh_CN: 默认 8px。
     bool m_hoverBackgroundEnabled = false; // Hover fill off by default. zh_CN: 默认不启用 hover 背景。
     QPropertyAnimation* m_checkAnimation = nullptr;
     bool m_keyboardFocusVisible = false;

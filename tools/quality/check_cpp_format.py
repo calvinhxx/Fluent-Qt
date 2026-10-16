@@ -14,7 +14,7 @@ from typing import Iterable, Sequence
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-EXPECTED_CLANG_FORMAT_VERSION = "15.0.0"
+EXPECTED_CLANG_FORMAT_VERSION = "22.1.8"
 CPP_SUFFIXES = frozenset({".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"})
 
 
@@ -25,8 +25,13 @@ def parse_clang_format_version(output: str) -> str | None:
 
 
 def default_formatter_command() -> str:
-    """Return the repository-specific formatter override or the PATH default."""
-    return os.environ.get("FLUENTQT_CLANG_FORMAT") or "clang-format"
+    """Prefer an explicit override, then the isolated project tool, then PATH."""
+    override = os.environ.get("FLUENTQT_CLANG_FORMAT")
+    if override:
+        return override
+    executable = Path("Scripts/clang-format.exe") if os.name == "nt" else Path("bin/clang-format")
+    local = PROJECT_ROOT / ".venv-format" / executable
+    return str(local) if local.is_file() else "clang-format"
 
 
 def is_cpp_path(path: Path) -> bool:

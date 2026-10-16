@@ -33,8 +33,7 @@ public:
     QRectF boundingRect() const override { return m_rect.adjusted(-32, -32, 32, 40); }
     QPainterPath shape() const override { return {}; }
 
-    void configure(const QSizeF& size, qreal intensity, qreal radius,
-                   const FluentElement::Colors& colors, bool dark)
+    void configure(const QSizeF& size, qreal intensity, qreal radius, const FluentElement::Colors& colors, bool dark)
     {
         if (m_rect.size() != size || m_radius != radius) {
             prepareGeometryChange();
@@ -42,8 +41,8 @@ public:
             m_radius = radius;
             m_rest = m_raised = {};
         }
-        const bool changed = m_intensity != intensity || m_dark != dark ||
-                             m_light != colors.grey10 || m_shade != colors.grey190;
+        const bool changed = m_intensity != intensity || m_dark != dark || m_light != colors.grey10
+            || m_shade != colors.grey190;
         m_intensity = intensity;
         m_dark = dark;
         m_light = colors.grey10;
@@ -68,7 +67,7 @@ public:
         const QRectF bounds = boundingRect();
         // Bound cache memory for unusually large hosted widgets. Typical cards retain DPR.
         const qreal dpr = std::min(painter->device()->devicePixelRatioF(),
-                                   1536.0 / std::max(bounds.width(), bounds.height()));
+            1536.0 / std::max(bounds.width(), bounds.height()));
         if (m_rest.isNull() || !qFuzzyCompare(m_rest.devicePixelRatio(), dpr)) {
             m_rest = shadow(dpr, false);
             m_raised = shadow(dpr, true);
@@ -104,22 +103,19 @@ private:
     {
         const QRectF bounds = boundingRect();
         QImage image(QSize(qCeil(bounds.width() * dpr), qCeil(bounds.height() * dpr)),
-                     QImage::Format_ARGB32_Premultiplied);
+            QImage::Format_ARGB32_Premultiplied);
         image.setDevicePixelRatio(dpr);
         const auto distance = [this](qreal x, qreal y, qreal offset) {
             const qreal dx = std::abs(x - m_rect.center().x()) - (m_rect.width() / 2 - m_radius);
-            const qreal dy =
-                std::abs(y - m_rect.center().y() - offset) - (m_rect.height() / 2 - m_radius);
-            return std::hypot(std::max(dx, 0.0), std::max(dy, 0.0)) +
-                   std::min(std::max(dx, dy), 0.0) - m_radius;
+            const qreal dy = std::abs(y - m_rect.center().y() - offset) - (m_rect.height() / 2 - m_radius);
+            return std::hypot(std::max(dx, 0.0), std::max(dy, 0.0)) + std::min(std::max(dx, dy), 0.0) - m_radius;
         };
         for (int y = 0; y < image.height(); ++y) {
             auto* row = reinterpret_cast<QRgb*>(image.scanLine(y));
             for (int x = 0; x < image.width(); ++x) {
                 const qreal px = (x + .5) / dpr + bounds.left();
                 const qreal py = (y + .5) / dpr + bounds.top();
-                const qreal cast =
-                    .125 * std::erfc(distance(px, py, raised ? 12 : 5) / (raised ? 18 : 10));
+                const qreal cast = .125 * std::erfc(distance(px, py, raised ? 12 : 5) / (raised ? 18 : 10));
                 const qreal contact = .08 * std::erfc(distance(px, py, 1.5) / 2.4);
                 // Raster painting can lose a projective clip. Cut the content hole into
                 // the shadow's alpha before transforming it, so no shadow covers the card.
@@ -158,8 +154,8 @@ public:
     {
         m_lift = lift;
         m_intensity = intensity;
-        m_decoration->configure(size(), intensity, theme.themeRadius().control,
-                                theme.themeColorsRef(), theme.effectiveThemeUsesDarkAppearance());
+        m_decoration->configure(size(), intensity, theme.themeRadius().control, theme.themeColorsRef(),
+            theme.effectiveThemeUsesDarkAppearance());
     }
     void resetInteraction()
     {
@@ -173,8 +169,8 @@ protected:
     QVariant itemChange(GraphicsItemChange change, const QVariant& value) override
     {
         const QVariant result = QGraphicsProxyWidget::itemChange(change, value);
-        if (change == ItemTransformHasChanged || change == ItemPositionHasChanged ||
-            change == ItemVisibleHasChanged || change == ItemSceneHasChanged) {
+        if (change == ItemTransformHasChanged || change == ItemPositionHasChanged || change == ItemVisibleHasChanged
+            || change == ItemSceneHasChanged) {
             if (widget() && !m_presentationNotificationPending) {
                 m_presentationNotificationPending = true;
                 // Never reposition or close an overlay inside a scene mutation.
@@ -183,8 +179,7 @@ protected:
                 QTimer::singleShot(0, this, [this] {
                     m_presentationNotificationPending = false;
                     if (QWidget* source = widget()) {
-                        QDynamicPropertyChangeEvent event(
-                            overlay::presentationTransformPropertyName());
+                        QDynamicPropertyChangeEvent event(overlay::presentationTransformPropertyName());
                         QCoreApplication::sendEvent(source, &event);
                     }
                 });

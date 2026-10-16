@@ -7,9 +7,7 @@
 
 namespace fluent::overlay {
 
-OverlayCoordinator::OverlayCoordinator(QWidget* overlay, QObject* parent)
-    : QObject(parent),
-      m_overlay(overlay)
+OverlayCoordinator::OverlayCoordinator(QWidget* overlay, QObject* parent) : QObject(parent), m_overlay(overlay)
 {
     markOverlaySurface(overlay);
 }
@@ -53,8 +51,7 @@ OverlayScrim* OverlayCoordinator::ensureScrim(const QString& objectName)
 
     if (!m_scrim) {
         m_scrim = new OverlayScrim(m_topLevel.data(), objectName);
-        connect(m_scrim, &OverlayScrim::pressed,
-                this, &OverlayCoordinator::scrimPressed);
+        connect(m_scrim, &OverlayScrim::pressed, this, &OverlayCoordinator::scrimPressed);
     } else {
         attachToTopLevel(m_scrim.data(), m_topLevel.data());
     }

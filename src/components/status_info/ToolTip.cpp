@@ -101,8 +101,7 @@ ToolTip* ToolTip::attach(QWidget* target, const QString& text, Placement placeme
     if (!target)
         return nullptr;
 
-    auto* toolTip = target->findChild<ToolTip*>(QString::fromLatin1(kAttachedToolTipName),
-                                                Qt::FindDirectChildrenOnly);
+    auto* toolTip = target->findChild<ToolTip*>(QString::fromLatin1(kAttachedToolTipName), Qt::FindDirectChildrenOnly);
     if (!toolTip) {
         toolTip = new ToolTip(target);
         toolTip->setObjectName(QString::fromLatin1(kAttachedToolTipName));
@@ -225,8 +224,7 @@ void ToolTip::setVisible(bool visible)
 void ToolTip::onThemeUpdated()
 {
     const auto& c = themeColorsRef();
-    m_bgColor =
-        c.bgLayer; // Figma tooltip surface is near-white (#FCFCFC); bgLayer matches in both themes.
+    m_bgColor = c.bgLayer; // Figma tooltip surface is near-white (#FCFCFC); bgLayer matches in both themes.
     m_borderColor = c.strokeDivider;
     m_textColor = c.textPrimary;
     // Color via the label's OWN style sheet rather than its palette: a ToolTip can sit under an ancestor
@@ -234,8 +232,7 @@ void ToolTip::onThemeUpdated()
     // palettes), which would drop a palette WindowText color and render the text near-black in dark
     // theme. A style-sheet color always wins. zh_CN: 用标签自身样式表上色而非 palette：ToolTip 可能位于带样式表的
     // 祖先下（画廊示例卡会安装 QStyleSheetStyle 并忽略子 palette），palette 颜色会被丢弃，深色主题里文字变近黑；样式表颜色始终生效。
-    m_textBlock->setStyleSheet(
-        QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
+    m_textBlock->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
             .arg(m_textColor.red())
             .arg(m_textColor.green())
             .arg(m_textColor.blue())
@@ -320,9 +317,7 @@ void ToolTip::setTarget(QWidget* target, Placement placement)
 
 bool ToolTip::syncThemeOverrideFromSource()
 {
-    QWidget* source = m_themeSource ? m_themeSource.data()
-                      : m_target    ? m_target.data()
-                                    : parentWidget();
+    QWidget* source = m_themeSource ? m_themeSource.data() : m_target ? m_target.data() : parentWidget();
     return ::fluent::overlay::syncInheritedThemeOverride(this, source);
 }
 
@@ -334,25 +329,23 @@ void ToolTip::positionForTarget()
     adjustSize();
     const QSize outerSize = sizeHint().expandedTo(size());
     const QSize cardSize(qMax(0, outerSize.width() - 2 * kShadowMargin),
-                         qMax(0, outerSize.height() - 2 * kShadowMargin));
+        qMax(0, outerSize.height() - 2 * kShadowMargin));
     const QRect targetRect = ::fluent::overlay::presentedRectInTopLevel(m_target).translated(
         ::fluent::overlay::presentedTopLevel(m_target)->mapToGlobal(QPoint()));
 
     auto cardTopLeft = [&](Placement placement) {
         switch (placement) {
         case Below:
-            return QPoint(targetRect.center().x() - cardSize.width() / 2,
-                          targetRect.bottom() + 1 + kTargetGap);
+            return QPoint(targetRect.center().x() - cardSize.width() / 2, targetRect.bottom() + 1 + kTargetGap);
         case Left:
             return QPoint(targetRect.left() - kTargetGap - cardSize.width(),
-                          targetRect.center().y() - cardSize.height() / 2);
+                targetRect.center().y() - cardSize.height() / 2);
         case Right:
-            return QPoint(targetRect.right() + 1 + kTargetGap,
-                          targetRect.center().y() - cardSize.height() / 2);
+            return QPoint(targetRect.right() + 1 + kTargetGap, targetRect.center().y() - cardSize.height() / 2);
         case Above:
         default:
             return QPoint(targetRect.center().x() - cardSize.width() / 2,
-                          targetRect.top() - kTargetGap - cardSize.height());
+                targetRect.top() - kTargetGap - cardSize.height());
         }
     };
 
@@ -377,12 +370,10 @@ void ToolTip::positionForTarget()
             if (available.contains(QRect(fallbackTopLeft, cardSize)))
                 visibleTopLeft = fallbackTopLeft;
         }
-        visibleTopLeft.setX(
-            qBound(available.left(), visibleTopLeft.x(),
-                   qMax(available.left(), available.right() - cardSize.width() + 1)));
-        visibleTopLeft.setY(
-            qBound(available.top(), visibleTopLeft.y(),
-                   qMax(available.top(), available.bottom() - cardSize.height() + 1)));
+        visibleTopLeft.setX(qBound(available.left(), visibleTopLeft.x(),
+            qMax(available.left(), available.right() - cardSize.width() + 1)));
+        visibleTopLeft.setY(qBound(available.top(), visibleTopLeft.y(),
+            qMax(available.top(), available.bottom() - cardSize.height() + 1)));
     }
     move(visibleTopLeft - QPoint(kShadowMargin, kShadowMargin));
 }

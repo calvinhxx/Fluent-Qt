@@ -16,14 +16,13 @@ double normalized(double value, double lo, double hi)
 QPointF Context::map(double x, double y) const
 {
     return {plot.left() + normalized(x, xMin, xMax) * plot.width(),
-            plot.bottom() - normalized(y, yMin, yMax) * plot.height()};
+        plot.bottom() - normalized(y, yMin, yMax) * plot.height()};
 }
 Projection projectPolyline(const Context& c, const ChartModel& model)
 {
     Projection out;
     const int first = model.lowerBound(c.xMin), last = model.upperBound(c.xMax);
-    const auto rows =
-        model.sampledRows(std::max(0, first - 1), std::min(model.rowCount(), last + 1), c.budget);
+    const auto rows = model.sampledRows(std::max(0, first - 1), std::min(model.rowCount(), last + 1), c.budget);
     bool started = false, connected = false;
     QPointF end;
     const auto finish = [&] {
@@ -143,8 +142,7 @@ void ChartRenderer::hit(const QPointF& position, const Projection& data, Hit& hi
         }
     for (const auto& point : data.points) {
         const auto delta = point.position - position;
-        const double distance =
-            sharedCursor() ? delta.x() * delta.x() : delta.x() * delta.x() + delta.y() * delta.y();
+        const double distance = sharedCursor() ? delta.x() * delta.x() : delta.x() * delta.x() + delta.y() * delta.y();
         if (distance < hit.distance) {
             hit.first = point.row;
             hit.last = point.row + 1;

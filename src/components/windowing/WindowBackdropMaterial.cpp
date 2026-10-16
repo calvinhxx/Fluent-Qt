@@ -42,9 +42,8 @@ QColor blendRgb(const QColor& from, const QColor& to, qreal amount)
     const QColor source = opaqueColor(from, QColor(243, 243, 243));
     const QColor target = opaqueColor(to, source);
     return QColor::fromRgbF(source.redF() + (target.redF() - source.redF()) * t,
-                            source.greenF() + (target.greenF() - source.greenF()) * t,
-                            source.blueF() + (target.blueF() - source.blueF()) * t,
-                            1.0);
+        source.greenF() + (target.greenF() - source.greenF()) * t,
+        source.blueF() + (target.blueF() - source.blueF()) * t, 1.0);
 }
 
 QColor withOpacity(const QColor& color, qreal opacity)
@@ -71,8 +70,7 @@ QColor resolvedAccent(const WindowBackdropMaterialOptions& options)
     return opaqueColor(options.accentColor, QColor(0, 120, 212));
 }
 
-qreal resolvedDevicePixelRatio(QPainter& painter,
-                               const WindowBackdropMaterialOptions& options)
+qreal resolvedDevicePixelRatio(QPainter& painter, const WindowBackdropMaterialOptions& options)
 {
     qreal ratio = options.devicePixelRatio;
     if (ratio <= 0.0 && painter.device())
@@ -101,8 +99,7 @@ QPixmap grainTile(qreal devicePixelRatio, BackdropEffect effect)
     const int size = qMax(1, qRound(GrainTileLogicalSize * quantizedRatio));
     QImage image(size, size, QImage::Format_ARGB32_Premultiplied);
 
-    quint32 state = GrainSeed ^ static_cast<quint32>(effectKey * 0x45d9f3bU)
-                    ^ static_cast<quint32>(ratioKey);
+    quint32 state = GrainSeed ^ static_cast<quint32>(effectKey * 0x45d9f3bU) ^ static_cast<quint32>(ratioKey);
     for (int y = 0; y < size; ++y) {
         auto* scanLine = reinterpret_cast<QRgb*>(image.scanLine(y));
         for (int x = 0; x < size; ++x) {
@@ -121,55 +118,37 @@ QPixmap grainTile(qreal devicePixelRatio, BackdropEffect effect)
     return texture;
 }
 
-void paintGrain(QPainter& painter,
-                const QRectF& rect,
-                const WindowBackdropMaterialOptions& options,
-                qreal opacity)
+void paintGrain(QPainter& painter, const QRectF& rect, const WindowBackdropMaterialOptions& options, qreal opacity)
 {
     painter.save();
     painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
     painter.setOpacity(clampedUnit(opacity));
-    painter.drawTiledPixmap(rect,
-                            grainTile(resolvedDevicePixelRatio(painter, options), options.effect),
-                            QPointF(0.0, 0.0));
+    painter.drawTiledPixmap(rect, grainTile(resolvedDevicePixelRatio(painter, options), options.effect),
+        QPointF(0.0, 0.0));
     painter.restore();
 }
 
-void paintMicaColorFields(QPainter& painter,
-                          const QRectF& rect,
-                          const WindowBackdropMaterialOptions& options)
+void paintMicaColorFields(QPainter& painter, const QRectF& rect, const WindowBackdropMaterialOptions& options)
 {
     const qreal activity = options.active ? 1.0 : 0.42;
     const qreal span = qMax(rect.width(), rect.height());
     const qreal radius = qMax<qreal>(1.0, span * 0.92);
 
-    QRadialGradient accentField(QPointF(rect.left() + rect.width() * 0.10,
-                                        rect.top() + rect.height() * 0.02),
-                                radius);
-    accentField.setColorAt(0.0,
-                           withOpacity(resolvedAccent(options),
-                                       (options.dark ? 0.13 : 0.085) * activity));
-    accentField.setColorAt(0.56,
-                           withOpacity(resolvedAccent(options),
-                                       (options.dark ? 0.035 : 0.022) * activity));
+    QRadialGradient accentField(QPointF(rect.left() + rect.width() * 0.10, rect.top() + rect.height() * 0.02), radius);
+    accentField.setColorAt(0.0, withOpacity(resolvedAccent(options), (options.dark ? 0.13 : 0.085) * activity));
+    accentField.setColorAt(0.56, withOpacity(resolvedAccent(options), (options.dark ? 0.035 : 0.022) * activity));
     accentField.setColorAt(1.0, Qt::transparent);
     painter.fillRect(rect, accentField);
 
-    const QColor counterTone = options.dark ? QColor(255, 255, 255)
-                                             : QColor(66, 45, 28);
-    QRadialGradient counterField(QPointF(rect.right() - rect.width() * 0.08,
-                                         rect.bottom() - rect.height() * 0.04),
-                                 qMax<qreal>(1.0, span * 0.78));
-    counterField.setColorAt(0.0,
-                            withOpacity(counterTone,
-                                        (options.dark ? 0.032 : 0.025) * activity));
+    const QColor counterTone = options.dark ? QColor(255, 255, 255) : QColor(66, 45, 28);
+    QRadialGradient counterField(QPointF(rect.right() - rect.width() * 0.08, rect.bottom() - rect.height() * 0.04),
+        qMax<qreal>(1.0, span * 0.78));
+    counterField.setColorAt(0.0, withOpacity(counterTone, (options.dark ? 0.032 : 0.025) * activity));
     counterField.setColorAt(1.0, Qt::transparent);
     painter.fillRect(rect, counterField);
 }
 
-void paintAcrylicColorFields(QPainter& painter,
-                             const QRectF& rect,
-                             const WindowBackdropMaterialOptions& options)
+void paintAcrylicColorFields(QPainter& painter, const QRectF& rect, const WindowBackdropMaterialOptions& options)
 {
     const qreal activity = options.active ? 1.0 : 0.48;
     const qreal blurScale = std::max<qreal>(12.0, options.acrylic.blurRadius);
@@ -185,59 +164,38 @@ void paintAcrylicColorFields(QPainter& painter,
     // 强调色/冷色场重建层次；色场足够宽，既避免普通渐变壁纸感，也让 Acrylic
     // 明显比稳定克制的 Mica 更像毛玻璃。
     QLinearGradient luminosity(rect.topLeft(), rect.bottomLeft());
-    luminosity.setColorAt(0.0,
-                          withOpacity(Qt::white,
-                                      (options.dark ? 0.075 : 0.18) * activity));
+    luminosity.setColorAt(0.0, withOpacity(Qt::white, (options.dark ? 0.075 : 0.18) * activity));
     luminosity.setColorAt(0.40, Qt::transparent);
-    luminosity.setColorAt(1.0,
-                          withOpacity(Qt::black,
-                                      (options.dark ? 0.11 : 0.035) * activity));
+    luminosity.setColorAt(1.0, withOpacity(Qt::black, (options.dark ? 0.11 : 0.035) * activity));
     painter.fillRect(rect, luminosity);
 
-    QRadialGradient accentField(QPointF(rect.right() - rect.width() * 0.10,
-                                        rect.top() + rect.height() * 0.02),
-                                qMax<qreal>(1.0, radius));
-    accentField.setColorAt(0.0,
-                           withOpacity(resolvedAccent(options),
-                                       (options.dark ? 0.25 : 0.24) * activity));
-    accentField.setColorAt(0.58,
-                           withOpacity(resolvedAccent(options),
-                                       (options.dark ? 0.075 : 0.065) * activity));
+    QRadialGradient accentField(QPointF(rect.right() - rect.width() * 0.10, rect.top() + rect.height() * 0.02),
+        qMax<qreal>(1.0, radius));
+    accentField.setColorAt(0.0, withOpacity(resolvedAccent(options), (options.dark ? 0.25 : 0.24) * activity));
+    accentField.setColorAt(0.58, withOpacity(resolvedAccent(options), (options.dark ? 0.075 : 0.065) * activity));
     accentField.setColorAt(1.0, Qt::transparent);
     painter.fillRect(rect, accentField);
 
     QColor coolField = resolvedAccent(options).lighter(options.dark ? 128 : 145);
-    QRadialGradient coolGlow(QPointF(rect.right() - rect.width() * 0.04,
-                                     rect.bottom() - rect.height() * 0.04),
-                             qMax<qreal>(1.0, span * 0.86));
-    coolGlow.setColorAt(0.0,
-                        withOpacity(coolField,
-                                    (options.dark ? 0.13 : 0.16) * activity));
-    coolGlow.setColorAt(0.62,
-                        withOpacity(coolField,
-                                    (options.dark ? 0.035 : 0.028) * activity));
+    QRadialGradient coolGlow(QPointF(rect.right() - rect.width() * 0.04, rect.bottom() - rect.height() * 0.04),
+        qMax<qreal>(1.0, span * 0.86));
+    coolGlow.setColorAt(0.0, withOpacity(coolField, (options.dark ? 0.13 : 0.16) * activity));
+    coolGlow.setColorAt(0.62, withOpacity(coolField, (options.dark ? 0.035 : 0.028) * activity));
     coolGlow.setColorAt(1.0, Qt::transparent);
     painter.fillRect(rect, coolGlow);
 
-    QRadialGradient glassField(QPointF(rect.left() + rect.width() * 0.12,
-                                       rect.top() + rect.height() * 0.08),
-                               qMax<qreal>(1.0, span * 0.72));
-    glassField.setColorAt(0.0,
-                          withOpacity(Qt::white,
-                                      (options.dark ? 0.065 : 0.12) * activity));
-    glassField.setColorAt(0.44,
-                          withOpacity(Qt::white,
-                                      (options.dark ? 0.018 : 0.028) * activity));
+    QRadialGradient glassField(QPointF(rect.left() + rect.width() * 0.12, rect.top() + rect.height() * 0.08),
+        qMax<qreal>(1.0, span * 0.72));
+    glassField.setColorAt(0.0, withOpacity(Qt::white, (options.dark ? 0.065 : 0.12) * activity));
+    glassField.setColorAt(0.44, withOpacity(Qt::white, (options.dark ? 0.018 : 0.028) * activity));
     glassField.setColorAt(1.0, Qt::transparent);
     painter.fillRect(rect, glassField);
 }
 
 } // namespace
 
-WindowBackdropMaterialOptions WindowBackdropMaterialOptions::forTheme(
-    bool isDark,
-    const QColor& normal,
-    const QColor& accent)
+WindowBackdropMaterialOptions
+WindowBackdropMaterialOptions::forTheme(bool isDark, const QColor& normal, const QColor& accent)
 {
     WindowBackdropMaterialOptions options;
     options.dark = isDark;
@@ -248,9 +206,7 @@ WindowBackdropMaterialOptions WindowBackdropMaterialOptions::forTheme(
     return options;
 }
 
-void WindowBackdropMaterial::paint(QPainter& painter,
-                                   const QRectF& rect,
-                                   const WindowBackdropMaterialOptions& options)
+void WindowBackdropMaterial::paint(QPainter& painter, const QRectF& rect, const WindowBackdropMaterialOptions& options)
 {
     switch (options.effect) {
     case BackdropEffect::Mica:
@@ -267,8 +223,8 @@ void WindowBackdropMaterial::paint(QPainter& painter,
 }
 
 void WindowBackdropMaterial::paintNormal(QPainter& painter,
-                                         const QRectF& rect,
-                                         const WindowBackdropMaterialOptions& options)
+    const QRectF& rect,
+    const WindowBackdropMaterialOptions& options)
 {
     if (rect.isEmpty())
         return;
@@ -281,8 +237,8 @@ void WindowBackdropMaterial::paintNormal(QPainter& painter,
 }
 
 void WindowBackdropMaterial::paintMica(QPainter& painter,
-                                       const QRectF& rect,
-                                       const WindowBackdropMaterialOptions& options)
+    const QRectF& rect,
+    const WindowBackdropMaterialOptions& options)
 {
     if (rect.isEmpty())
         return;
@@ -295,16 +251,13 @@ void WindowBackdropMaterial::paintMica(QPainter& painter,
     painter.fillRect(rect, opaqueBaseColor(micaOptions));
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     paintMicaColorFields(painter, rect, micaOptions);
-    paintGrain(painter,
-               rect,
-               micaOptions,
-               micaOptions.active ? 0.018 : 0.010);
+    paintGrain(painter, rect, micaOptions, micaOptions.active ? 0.018 : 0.010);
     painter.restore();
 }
 
 void WindowBackdropMaterial::paintAcrylic(QPainter& painter,
-                                          const QRectF& rect,
-                                          const WindowBackdropMaterialOptions& options)
+    const QRectF& rect,
+    const WindowBackdropMaterialOptions& options)
 {
     if (rect.isEmpty())
         return;
@@ -317,15 +270,11 @@ void WindowBackdropMaterial::paintAcrylic(QPainter& painter,
     painter.fillRect(rect, opaqueBaseColor(acrylicOptions));
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     paintAcrylicColorFields(painter, rect, acrylicOptions);
-    paintGrain(painter,
-               rect,
-               acrylicOptions,
-               acrylicOptions.active ? 0.052 : 0.030);
+    paintGrain(painter, rect, acrylicOptions, acrylicOptions.active ? 0.052 : 0.030);
     painter.restore();
 }
 
-QColor WindowBackdropMaterial::opaqueBaseColor(
-    const WindowBackdropMaterialOptions& options)
+QColor WindowBackdropMaterial::opaqueBaseColor(const WindowBackdropMaterialOptions& options)
 {
     const QColor normal = resolvedNormal(options);
     switch (options.effect) {
@@ -338,15 +287,10 @@ QColor WindowBackdropMaterial::opaqueBaseColor(
     }
     case BackdropEffect::Acrylic: {
         const QColor tint = opaqueColor(options.acrylic.tintColor, normal);
-        const QColor luminosityTarget = options.dark ? tint.lighter(122)
-                                                     : tint.lighter(106);
+        const QColor luminosityTarget = options.dark ? tint.lighter(122) : tint.lighter(106);
         const qreal activity = options.active ? 1.0 : 0.72;
-        QColor result = blendRgb(normal,
-                                 luminosityTarget,
-                                 options.acrylic.luminosityOpacity * activity);
-        result = blendRgb(result,
-                          tint,
-                          options.acrylic.tintOpacity * activity);
+        QColor result = blendRgb(normal, luminosityTarget, options.acrylic.luminosityOpacity * activity);
+        result = blendRgb(result, tint, options.acrylic.tintOpacity * activity);
         if (!options.active)
             result = blendRgb(result, normal, 0.18);
         return result;

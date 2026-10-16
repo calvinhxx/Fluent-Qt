@@ -51,8 +51,7 @@ class Window : public QWidget, public FluentElement, public QMLPlus {
      * zh_CN: 作为组件内容承载的调用方控件。
      */
     Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget)
-    Q_PROPERTY(BackdropEffect backdropEffect READ backdropEffect WRITE setBackdropEffect NOTIFY
-                   backdropEffectChanged)
+    Q_PROPERTY(BackdropEffect backdropEffect READ backdropEffect WRITE setBackdropEffect NOTIFY backdropEffectChanged)
 
 public:
     explicit Window(QWidget* parent = nullptr);
@@ -141,9 +140,10 @@ public:
      * Pass restoreTooltip for the maximize button while the window is maximized.
      * zh_CN: 默认均为空，避免库内写死语言。最大化状态下的还原提示使用 restoreTooltip。
      */
-    void setCaptionButtonToolTips(const QString& minimizeTooltip, const QString& maximizeTooltip,
-                                  const QString& closeTooltip,
-                                  const QString& restoreTooltip = QString());
+    void setCaptionButtonToolTips(const QString& minimizeTooltip,
+        const QString& maximizeTooltip,
+        const QString& closeTooltip,
+        const QString& restoreTooltip = QString());
     /**
      * @brief Sets application-owned accessible names for the caption buttons.
      * zh_CN: 设置由应用拥有的标题栏按钮无障碍名称。
@@ -151,9 +151,10 @@ public:
      * Defaults remain empty; this API does not translate or synthesize labels.
      * zh_CN: 默认保持为空；该接口不会翻译或生成标签。
      */
-    void setCaptionButtonAccessibleNames(const QString& minimizeName, const QString& maximizeName,
-                                         const QString& closeName,
-                                         const QString& restoreName = QString());
+    void setCaptionButtonAccessibleNames(const QString& minimizeName,
+        const QString& maximizeName,
+        const QString& closeName,
+        const QString& restoreName = QString());
 
 public slots:
     void minimizeWindow();
@@ -177,8 +178,8 @@ protected:
     void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
     void changeEvent(QEvent* event) override;
-    bool nativeEvent(const QByteArray& eventType, void* message,
-                     compatibility::FluentNativeEventResult* result) override;
+    bool nativeEvent(const QByteArray& eventType, void* message, compatibility::FluentNativeEventResult* result)
+        override;
 
 private slots:
     void updateChromeOptions();

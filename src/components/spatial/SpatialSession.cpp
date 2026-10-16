@@ -11,13 +11,14 @@ struct SpatialSession::Private {
     plugins::PluginManager manager;
 };
 
-SpatialSession::SpatialSession(QObject* host, QObject* parent)
-    : QObject(parent), d(std::make_shared<Private>(host))
+SpatialSession::SpatialSession(QObject* host, QObject* parent) : QObject(parent), d(std::make_shared<Private>(host))
 {
-    connect(&d->manager, &plugins::PluginManager::pluginActivated, this,
-            [this](const QString&) { emit activeChanged(true); });
-    connect(&d->manager, &plugins::PluginManager::pluginDeactivated, this,
-            [this](const QString&) { emit activeChanged(false); });
+    connect(&d->manager, &plugins::PluginManager::pluginActivated, this, [this](const QString&) {
+        emit activeChanged(true);
+    });
+    connect(&d->manager, &plugins::PluginManager::pluginDeactivated, this, [this](const QString&) {
+        emit activeChanged(false);
+    });
 }
 SpatialSession::~SpatialSession()
 {
@@ -48,9 +49,10 @@ bool SpatialSession::isActive() const
 SpatialView* SpatialSession::createView(QWidget* parent)
 {
     const auto state = d;
-    return state ? qobject_cast<SpatialView*>(state->manager.createWidget(
-                       SpatialPlugin::pluginId(), QStringLiteral("spatial-view"), parent))
-                 : nullptr;
+    return state
+        ? qobject_cast<SpatialView*>(
+              state->manager.createWidget(SpatialPlugin::pluginId(), QStringLiteral("spatial-view"), parent))
+        : nullptr;
 }
 bool SpatialSession::attachView(SpatialView* view)
 {
@@ -63,13 +65,12 @@ bool SpatialSession::attachView(SpatialView* view)
     }
     return state->manager.isActive(SpatialPlugin::pluginId()) && state->plugin.attachView(view);
 }
-ParticleLayer* SpatialSession::createParticleLayer(layout::ParticleBackdrop* backdrop,
-                                                   QObject* parent)
+ParticleLayer* SpatialSession::createParticleLayer(layout::ParticleBackdrop* backdrop, QObject* parent)
 {
     const auto state = d;
     return state && state->manager.isActive(SpatialPlugin::pluginId())
-               ? state->plugin.createParticleLayer(backdrop, parent)
-               : nullptr;
+        ? state->plugin.createParticleLayer(backdrop, parent)
+        : nullptr;
 }
 bool SpatialSession::prepareWindow(windowing::Window* window)
 {

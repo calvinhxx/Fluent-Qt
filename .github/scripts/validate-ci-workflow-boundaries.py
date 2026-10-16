@@ -1044,13 +1044,14 @@ def validate_cpp_plan_contract(cpp: str) -> list[str]:
     ]
     expected_step_headers = [
         "      - name: Checkout",
+        "      - name: Install C++ formatter",
         "      - name: Validate C++ CI catalogs",
         "      - name: Check changed C++ formatting",
         "      - name: Select C++ validation matrix",
     ]
     if step_headers != expected_step_headers:
         errors.append(
-            "ci-cpp.yml plan must contain exactly the approved checkout, catalog, "
+            "ci-cpp.yml plan must contain exactly the approved checkout, formatter, catalog, "
             "and matrix-selection steps"
         )
 
@@ -1065,6 +1066,19 @@ def validate_cpp_plan_contract(cpp: str) -> list[str]:
         errors.append(
             "ci-cpp.yml checkout step must retain the PR merge parents for changed-file checks"
         )
+
+    formatter = named_step_section(plan, "Install C++ formatter")
+    expected_formatter = [
+        "      - name: Install C++ formatter",
+        "        shell: bash",
+        "        run: |",
+        "          set -euo pipefail",
+        "          python3 -m venv .venv-format",
+        "          .venv-format/bin/python -m pip install --disable-pip-version-check clang-format==22.1.8",
+    ]
+    if (uncommented_workflow_lines(formatter) != expected_formatter
+            or plan.find("- name: Install C++ formatter") > plan.find("- name: Validate C++ CI catalogs")):
+        errors.append("ci-cpp.yml must install the pinned C++ formatter before its contract tests")
 
     catalog = named_step_section(plan, "Validate C++ CI catalogs")
     if not catalog:
@@ -1114,8 +1128,7 @@ def validate_cpp_plan_contract(cpp: str) -> list[str]:
         '            git diff --name-only --diff-filter=ACMR "$PR_BASE_SHA...HEAD" --',
         '          )"',
         "          if grep -Eiq '\\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$' <<< \"$changed_files\"; then",
-        '            formatter="$(npm exec --yes --package=clang-format@1.8.0 -- which clang-format)"',
-        '            python3 tools/quality/check_cpp_format.py --changed-from "$PR_BASE_SHA" --clang-format "$formatter"',
+        '            python3 tools/quality/check_cpp_format.py --changed-from "$PR_BASE_SHA"',
         "          else",
         '            echo "No changed C++ files require formatting checks."',
         "          fi",

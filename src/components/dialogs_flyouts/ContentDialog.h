@@ -5,8 +5,12 @@
 
 #include <QPointer>
 
-namespace fluent::basicinput { class Button; }
-namespace fluent::textfields { class Label; }
+namespace fluent::basicinput {
+class Button;
+}
+namespace fluent::textfields {
+class Label;
+}
 
 namespace fluent::dialogs_flyouts {
 
@@ -30,12 +34,18 @@ class ContentDialog : public Dialog {
      * @brief Text displayed by the primary command button.
      * zh_CN: 主命令按钮显示的文本。
      */
-    Q_PROPERTY(QString primaryButtonText READ primaryButtonText WRITE setPrimaryButtonText NOTIFY primaryButtonTextChanged)
+    Q_PROPERTY(QString primaryButtonText
+        READ primaryButtonText
+        WRITE setPrimaryButtonText
+        NOTIFY primaryButtonTextChanged)
     /**
      * @brief Text displayed by the secondary command button.
      * zh_CN: 次命令按钮显示的文本。
      */
-    Q_PROPERTY(QString secondaryButtonText READ secondaryButtonText WRITE setSecondaryButtonText NOTIFY secondaryButtonTextChanged)
+    Q_PROPERTY(QString secondaryButtonText
+        READ secondaryButtonText
+        WRITE setSecondaryButtonText
+        NOTIFY secondaryButtonTextChanged)
     /**
      * @brief Text displayed by the close command button.
      * zh_CN: 关闭命令按钮显示的文本。
@@ -51,11 +61,11 @@ public:
     enum ContentDialogButton { None = 0, Primary, Secondary, Close };
     Q_ENUM(ContentDialogButton)
 
-    static constexpr int ResultNone      = QDialog::Rejected; // 0
-    static constexpr int ResultPrimary   = QDialog::Accepted; // 1
+    static constexpr int ResultNone = QDialog::Rejected;    // 0
+    static constexpr int ResultPrimary = QDialog::Accepted; // 1
     static constexpr int ResultSecondary = 2;
 
-    explicit ContentDialog(QWidget *parent = nullptr);
+    explicit ContentDialog(QWidget* parent = nullptr);
 
     // --- Title ---
     QString title() const;
@@ -72,7 +82,7 @@ public:
     void setCloseButtonText(const QString& text);
 
     // --- DefaultButton ---
-    int  defaultButton() const;
+    int defaultButton() const;
     void setDefaultButton(int btn);
 
     // --- Content ---
@@ -107,16 +117,16 @@ private:
     void updateContentAnchors();
     void ensureContentFits();
 
-    fluent::textfields::Label* m_titleLabel   = nullptr;
-    QPointer<QWidget>            m_contentWidget;
-    QWidget*                     m_buttonBar     = nullptr;
+    fluent::textfields::Label* m_titleLabel = nullptr;
+    QPointer<QWidget> m_contentWidget;
+    QWidget* m_buttonBar = nullptr;
 
-    fluent::basicinput::Button*    m_primaryBtn    = nullptr;
-    fluent::basicinput::Button*    m_secondaryBtn  = nullptr;
-    fluent::basicinput::Button*    m_closeBtn      = nullptr;
+    fluent::basicinput::Button* m_primaryBtn = nullptr;
+    fluent::basicinput::Button* m_secondaryBtn = nullptr;
+    fluent::basicinput::Button* m_closeBtn = nullptr;
 
     int m_defaultButton = None;
-    int m_buttonBarHeight = 68;  // Default mirrors kButtonBarHeight. zh_CN: 默认与 kButtonBarHeight 一致。
+    int m_buttonBarHeight = 68; // Default mirrors kButtonBarHeight. zh_CN: 默认与 kButtonBarHeight 一致。
 };
 
 } // namespace fluent::dialogs_flyouts

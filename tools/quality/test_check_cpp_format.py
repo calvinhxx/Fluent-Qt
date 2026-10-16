@@ -6,9 +6,12 @@ import importlib.util
 import io
 import os
 import stat
+import subprocess
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from textwrap import dedent
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 
@@ -29,14 +32,36 @@ class CheckCppFormatTest(unittest.TestCase):
         self.assertEqual(check_cpp_format.parse_clang_format_version(output), "15.0.0")
 
     def test_formatter_override_uses_repository_environment_variable(self) -> None:
-        with patch.dict(os.environ, {"FLUENTQT_CLANG_FORMAT": "/opt/tools/clang-format"}):
+        with (
+            patch.dict(os.environ, {"FLUENTQT_CLANG_FORMAT": "/opt/tools/clang-format"}),
+            patch.object(Path, "is_file") as is_file,
+        ):
             self.assertEqual(
                 check_cpp_format.default_formatter_command(),
                 "/opt/tools/clang-format",
             )
+            is_file.assert_not_called()
+
+    def test_project_formatter_is_preferred_to_path_on_each_platform(self) -> None:
+        for platform, executable in (
+            ("posix", "bin/clang-format"),
+            ("nt", "Scripts/clang-format.exe"),
+        ):
+            with (
+                self.subTest(platform=platform),
+                patch.object(check_cpp_format, "os", SimpleNamespace(name=platform, environ={})),
+                patch.object(Path, "is_file", return_value=True),
+            ):
+                self.assertEqual(
+                    check_cpp_format.default_formatter_command(),
+                    str(PROJECT_ROOT / ".venv-format" / executable),
+                )
 
     def test_empty_formatter_override_falls_back_to_path_default(self) -> None:
-        with patch.dict(os.environ, {"FLUENTQT_CLANG_FORMAT": ""}):
+        with (
+            patch.dict(os.environ, {"FLUENTQT_CLANG_FORMAT": ""}),
+            patch.object(Path, "is_file", return_value=False),
+        ):
             self.assertEqual(check_cpp_format.default_formatter_command(), "clang-format")
 
     def test_normalize_cpp_files_filters_and_deduplicates(self) -> None:
@@ -132,7 +157,7 @@ class CheckCppFormatTest(unittest.TestCase):
         run.return_value.returncode = 0
         run.return_value.stdout = "clang-format version 18.1.8\n"
         run.return_value.stderr = ""
-        with self.assertRaisesRegex(RuntimeError, "15.0.0 is required"):
+        with self.assertRaisesRegex(RuntimeError, "22.1.8 is required"):
             check_cpp_format.resolve_formatter("clang-format")
 
     @patch.object(check_cpp_format.subprocess, "run")
@@ -235,6 +260,129 @@ class CheckCppFormatTest(unittest.TestCase):
     def test_empty_selection_does_not_require_formatter(self, _files, resolve) -> None:
         self.assertEqual(check_cpp_format.main(["--working-tree"]), 0)
         resolve.assert_not_called()
+
+
+class CppReadabilityContractTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.formatter = check_cpp_format.resolve_formatter(
+            check_cpp_format.default_formatter_command()
+        )
+
+    def assert_format(self, source: str, expected: str) -> None:
+        original = dedent(source).lstrip("\n")
+        expected = dedent(expected).lstrip("\n")
+        for value in (original, expected):
+            result = subprocess.run(
+                [self.formatter, "--style=file", "--assume-filename=src/example.h"],
+                cwd=PROJECT_ROOT,
+                input=value,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            self.assertEqual(result.stdout, expected)
+
+    def test_short_qt_property_stays_on_one_line(self) -> None:
+        self.assert_format(
+            """
+            class FluentMenu : public QMenu {
+                Q_PROPERTY(
+                    Typography::FontRole fontStyle READ fontStyle WRITE setFontStyle NOTIFY fontStyleChanged)
+            };
+            """,
+            """
+            class FluentMenu : public QMenu {
+                Q_PROPERTY(Typography::FontRole fontStyle READ fontStyle WRITE setFontStyle NOTIFY fontStyleChanged)
+            };
+            """,
+        )
+
+    def test_long_qt_property_breaks_between_complete_clauses(self) -> None:
+        self.assert_format(
+            """
+            class FluentMenu : public QMenu {
+                Q_PROPERTY(QString accessibilityDescription READ accessibilityDescription WRITE setAccessibilityDescription NOTIFY accessibilityDescriptionChanged)
+            };
+            """,
+            """
+            class FluentMenu : public QMenu {
+                Q_PROPERTY(QString accessibilityDescription
+                    READ accessibilityDescription
+                    WRITE setAccessibilityDescription
+                    NOTIFY accessibilityDescriptionChanged)
+            };
+            """,
+        )
+
+    def test_long_signature_keeps_return_type_and_uses_fixed_indentation(self) -> None:
+        self.assert_format(
+            """
+            QMetaObject::Connection connectAccessibilityDescriptionChanged(const QObject* sender, const QObject* context, const std::function<void(const QString&)>& callback);
+            """,
+            """
+            QMetaObject::Connection connectAccessibilityDescriptionChanged(const QObject* sender,
+                const QObject* context,
+                const std::function<void(const QString&)>& callback);
+            """,
+        )
+
+    def test_lambda_body_follows_block_indentation(self) -> None:
+        self.assert_format(
+            """
+            void installHandler() {
+            QObject::connect(sender, &Source::accessibilityDescriptionChanged, context, [this](const QString& description) {
+            updateAccessibilityDescription(description);
+            });
+            }
+            """,
+            """
+            void installHandler()
+            {
+                QObject::connect(sender, &Source::accessibilityDescriptionChanged, context, [this](const QString& description) {
+                    updateAccessibilityDescription(description);
+                });
+            }
+            """,
+        )
+
+    def test_long_condition_keeps_operators_with_the_continuation(self) -> None:
+        self.assert_format(
+            """
+            void updateMenu() {
+                if (menuActionIsVisible && actionIsEnabled && childMenuIsAlreadyVisible && pointerRemainsInsideTheChildMenuFrame && interactionHasNotBeenCancelled) {
+                    preserveOpenSubmenu();
+                }
+            }
+            """,
+            """
+            void updateMenu()
+            {
+                if (menuActionIsVisible && actionIsEnabled && childMenuIsAlreadyVisible && pointerRemainsInsideTheChildMenuFrame
+                    && interactionHasNotBeenCancelled) {
+                    preserveOpenSubmenu();
+                }
+            }
+            """,
+        )
+
+    def test_comments_and_searchable_string_literals_remain_intact(self) -> None:
+        self.assert_format(
+            """
+            void recordDescription() {
+                // Keep this explanatory comment together, including intentionally aligned examples: READ name    WRITE setName.
+                const auto message = "This intentionally long diagnostic message stays intact so it remains easy to search for the exact wording in source files.";
+            }
+            """,
+            """
+            void recordDescription()
+            {
+                // Keep this explanatory comment together, including intentionally aligned examples: READ name    WRITE setName.
+                const auto message =
+                    "This intentionally long diagnostic message stays intact so it remains easy to search for the exact wording in source files.";
+            }
+            """,
+        )
 
 
 if __name__ == "__main__":

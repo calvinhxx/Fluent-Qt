@@ -224,8 +224,7 @@ private:
 
 NumberBox::NumberBox(QWidget* parent)
     : LineEdit(parent), m_value(std::numeric_limits<double>::quiet_NaN()),
-      m_minimum(-std::numeric_limits<double>::infinity()),
-      m_maximum(std::numeric_limits<double>::infinity())
+      m_minimum(-std::numeric_limits<double>::infinity()), m_maximum(std::numeric_limits<double>::infinity())
 {
     detail::ensureNumberBoxAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
@@ -284,8 +283,7 @@ void NumberBox::setRange(double minimum, double maximum)
     if (!guard)
         return;
     if (!valueChangedNow) {
-        accessibility::detail::notifyValueAccessibilityValue(
-            this, isNan(m_value) ? QVariant() : QVariant(m_value));
+        accessibility::detail::notifyValueAccessibilityValue(this, isNan(m_value) ? QVariant() : QVariant(m_value));
         if (!guard)
             return;
     }
@@ -303,8 +301,7 @@ void NumberBox::setSmallChange(double change)
         return;
     m_smallChange = change;
     const QPointer<NumberBox> guard(this);
-    accessibility::detail::notifyValueAccessibilityValue(this, isNan(m_value) ? QVariant()
-                                                                              : QVariant(m_value));
+    accessibility::detail::notifyValueAccessibilityValue(this, isNan(m_value) ? QVariant() : QVariant(m_value));
     if (!guard || !numbersEqual(m_smallChange, change))
         return;
     emit smallChangeChanged(m_smallChange);
@@ -612,8 +609,8 @@ bool NumberBox::eventFilter(QObject* watched, QEvent* event)
             m_spinnerHovered = true;
             break;
         case QEvent::Leave:
-            m_spinnerHovered = (m_spinUpButton && m_spinUpButton->underMouse()) ||
-                               (m_spinDownButton && m_spinDownButton->underMouse());
+            m_spinnerHovered = (m_spinUpButton && m_spinUpButton->underMouse())
+                || (m_spinDownButton && m_spinDownButton->underMouse());
             break;
         case QEvent::MouseButtonPress:
             m_spinnerPressed = true;
@@ -650,23 +647,21 @@ void NumberBox::initializeSpinnerButtons()
     m_spinUpButton = new ::fluent::basicinput::RepeatButton(this);
     m_spinDownButton = new ::fluent::basicinput::RepeatButton(this);
 
-    auto configureButton = [this](::fluent::basicinput::RepeatButton* button, const QString& glyph,
-                                  const QString& objectName) {
-        button->setObjectName(objectName);
-        button->setFluentStyle(::fluent::basicinput::Button::Standard);
-        button->setFluentLayout(::fluent::basicinput::Button::IconOnly);
-        button->setFluentSize(::fluent::basicinput::Button::Small);
-        button->setFocusPolicy(Qt::NoFocus);
-        button->setFixedSize(m_spinButtonSize);
-        button->setIconGlyph(glyph, m_spinButtonIconSize, Typography::FontFamily::FluentIcons);
-        button->installEventFilter(this);
-        button->hide();
-    };
+    auto configureButton =
+        [this](::fluent::basicinput::RepeatButton* button, const QString& glyph, const QString& objectName) {
+            button->setObjectName(objectName);
+            button->setFluentStyle(::fluent::basicinput::Button::Standard);
+            button->setFluentLayout(::fluent::basicinput::Button::IconOnly);
+            button->setFluentSize(::fluent::basicinput::Button::Small);
+            button->setFocusPolicy(Qt::NoFocus);
+            button->setFixedSize(m_spinButtonSize);
+            button->setIconGlyph(glyph, m_spinButtonIconSize, Typography::FontFamily::FluentIcons);
+            button->installEventFilter(this);
+            button->hide();
+        };
 
-    configureButton(m_spinUpButton, Typography::Icons::ChevronUp,
-                    QStringLiteral("NumberBoxSpinUpButton"));
-    configureButton(m_spinDownButton, Typography::Icons::ChevronDown,
-                    QStringLiteral("NumberBoxSpinDownButton"));
+    configureButton(m_spinUpButton, Typography::Icons::ChevronUp, QStringLiteral("NumberBoxSpinUpButton"));
+    configureButton(m_spinDownButton, Typography::Icons::ChevronDown, QStringLiteral("NumberBoxSpinDownButton"));
 
     connect(m_spinUpButton, &::fluent::basicinput::RepeatButton::clicked, this, [this]() {
         setFocus(Qt::MouseFocusReason);
@@ -684,11 +679,11 @@ void NumberBox::updateSpinButtonIcons()
 {
     if (m_spinUpButton) {
         m_spinUpButton->setIconGlyph(Typography::Icons::ChevronUp, m_spinButtonIconSize,
-                                     Typography::FontFamily::FluentIcons);
+            Typography::FontFamily::FluentIcons);
     }
     if (m_spinDownButton) {
         m_spinDownButton->setIconGlyph(Typography::Icons::ChevronDown, m_spinButtonIconSize,
-                                       Typography::FontFamily::FluentIcons);
+            Typography::FontFamily::FluentIcons);
     }
 }
 
@@ -725,10 +720,8 @@ void NumberBox::updateSpinnerState()
 
     const bool visible = hasSpinnerButtonsVisible();
     const bool enabled = visible && isEnabled() && !isReadOnly();
-    const bool atMinimum =
-        !isNan(m_value) && (m_value <= m_minimum || numbersEqual(m_value, m_minimum));
-    const bool atMaximum =
-        !isNan(m_value) && (m_value >= m_maximum || numbersEqual(m_value, m_maximum));
+    const bool atMinimum = !isNan(m_value) && (m_value <= m_minimum || numbersEqual(m_value, m_minimum));
+    const bool atMaximum = !isNan(m_value) && (m_value >= m_maximum || numbersEqual(m_value, m_maximum));
     if (m_spinUpButton) {
         m_spinUpButton->setVisible(visible);
         m_spinUpButton->setEnabled(enabled && !atMaximum);
@@ -746,8 +739,7 @@ void NumberBox::updateTextMarginsForChrome()
     if (m_spinButtonPlacementMode == SpinButtonPlacementMode::Inline) {
         rightMargin += m_spinButtonRightMargin + inlineSpinnerWidth() + m_spinButtonTextGap;
     } else if (m_spinButtonPlacementMode == SpinButtonPlacementMode::Compact) {
-        rightMargin +=
-            m_spinButtonRightMargin + compactExpandedSpinnerWidth() + m_spinButtonTextGap;
+        rightMargin += m_spinButtonRightMargin + compactExpandedSpinnerWidth() + m_spinButtonTextGap;
     }
 
     QMargins margins = contentMargins();
@@ -906,8 +898,7 @@ bool NumberBox::setValueInternal(double value, bool updateText, bool keepUserTex
         updateSpinnerState();
         if (!isCurrent())
             return changed;
-        accessibility::detail::notifyValueAccessibilityValue(
-            this, isNan(m_value) ? QVariant() : QVariant(m_value));
+        accessibility::detail::notifyValueAccessibilityValue(this, isNan(m_value) ? QVariant() : QVariant(m_value));
         if (!isCurrent())
             return changed;
         if (wasInvalid != isNan(m_value)) {
@@ -989,8 +980,7 @@ void NumberBox::paintHeader(QPainter& painter)
     const auto& colors = themeColorsRef();
     painter.setPen(isEnabled() ? colors.textPrimary : colors.textDisabled);
     const QRect headerRect(0, 0, width(), kHeaderHeight);
-    painter.drawText(
-        headerRect, Qt::AlignLeft | Qt::AlignVCenter,
+    painter.drawText(headerRect, Qt::AlignLeft | Qt::AlignVCenter,
         painter.fontMetrics().elidedText(m_header, Qt::ElideRight, headerRect.width()));
 }
 

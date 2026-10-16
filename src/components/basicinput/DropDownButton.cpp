@@ -185,12 +185,11 @@ void DropDownButton::mousePressEvent(QMouseEvent* event)
 
 void DropDownButton::keyPressEvent(QKeyEvent* event)
 {
-    const bool altDown =
-        event->key() == Qt::Key_Down && event->modifiers().testFlag(Qt::AltModifier);
+    const bool altDown = event->key() == Qt::Key_Down && event->modifiers().testFlag(Qt::AltModifier);
     const bool f4 = event->key() == Qt::Key_F4 && event->modifiers() == Qt::NoModifier;
-    const bool primaryOpen = (event->key() == Qt::Key_Space || event->key() == Qt::Key_Return ||
-                              event->key() == Qt::Key_Enter) &&
-                             event->modifiers() == Qt::NoModifier;
+    const bool primaryOpen =
+        (event->key() == Qt::Key_Space || event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
+        && event->modifiers() == Qt::NoModifier;
     if (m_menu && (altDown || f4 || primaryOpen)) {
         detail::showMenuButtonMenu(this);
         event->accept();
@@ -212,8 +211,7 @@ void DropDownButton::paintEvent(QPaintEvent*)
 
     // Icon font with the size unchanged. zh_CN: 设置图标字体（字号保持不变）。
     const bool usesFluentIcons = m_iconFontFamily == Typography::FontFamily::FluentIcons;
-    QFont iconFont =
-        usesFluentIcons ? Typography::Icons::font(m_chevronSize) : QFont(m_iconFontFamily);
+    QFont iconFont = usesFluentIcons ? Typography::Icons::font(m_chevronSize) : QFont(m_iconFontFamily);
     if (!usesFluentIcons)
         iconFont.setPixelSize(m_chevronSize);
     painter.setFont(iconFont);
@@ -256,14 +254,12 @@ void DropDownButton::paintEvent(QPaintEvent*)
     const qreal pressOffset = qRound(maxOffset * pressEffect);
     const QRectF bounds = QRectF(rect());
     const qreal chevronX = layoutDirection() == Qt::RightToLeft
-                               ? bounds.left() + m_chevronOffset.x()
-                               : bounds.right() - m_chevronOffset.x() - m_chevronSize;
-    QRectF chevronSlot(chevronX, bounds.center().y() - m_chevronSize * 0.5, m_chevronSize,
-                       m_chevronSize);
+        ? bounds.left() + m_chevronOffset.x()
+        : bounds.right() - m_chevronOffset.x() - m_chevronSize;
+    QRectF chevronSlot(chevronX, bounds.center().y() - m_chevronSize * 0.5, m_chevronSize, m_chevronSize);
     chevronSlot.translate(0, pressOffset + m_chevronOffset.y());
     if (usesFluentIcons) {
-        Typography::Icons::paintGlyph(painter, chevronSlot, m_chevronGlyph, m_chevronSize,
-                                      Qt::AlignCenter);
+        Typography::Icons::paintGlyph(painter, chevronSlot, m_chevronGlyph, m_chevronSize, Qt::AlignCenter);
     } else {
         painter.drawText(chevronSlot, Qt::AlignCenter, m_chevronGlyph);
     }

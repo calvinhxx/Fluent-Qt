@@ -53,22 +53,34 @@ class ScrollView : public QScrollArea, public FluentElement, public QMLPlus {
      * @brief Horizontal scrolling interaction mode.
      * zh_CN: 水平滚动交互模式。
      */
-    Q_PROPERTY(ScrollMode horizontalScrollMode READ horizontalScrollMode WRITE setHorizontalScrollMode NOTIFY horizontalScrollModeChanged)
+    Q_PROPERTY(ScrollMode horizontalScrollMode
+        READ horizontalScrollMode
+        WRITE setHorizontalScrollMode
+        NOTIFY horizontalScrollModeChanged)
     /**
      * @brief Vertical scrolling interaction mode.
      * zh_CN: 垂直滚动交互模式。
      */
-    Q_PROPERTY(ScrollMode verticalScrollMode READ verticalScrollMode WRITE setVerticalScrollMode NOTIFY verticalScrollModeChanged)
+    Q_PROPERTY(ScrollMode verticalScrollMode
+        READ verticalScrollMode
+        WRITE setVerticalScrollMode
+        NOTIFY verticalScrollModeChanged)
     /**
      * @brief Visibility policy for the horizontal scrollbar.
      * zh_CN: 水平滚动条可见性策略。
      */
-    Q_PROPERTY(ScrollBarVisibility horizontalScrollBarVisibility READ horizontalScrollBarVisibility WRITE setHorizontalScrollBarVisibility NOTIFY horizontalScrollBarVisibilityChanged)
+    Q_PROPERTY(ScrollBarVisibility horizontalScrollBarVisibility
+        READ horizontalScrollBarVisibility
+        WRITE setHorizontalScrollBarVisibility
+        NOTIFY horizontalScrollBarVisibilityChanged)
     /**
      * @brief Visibility policy for the vertical scrollbar.
      * zh_CN: 垂直滚动条可见性策略。
      */
-    Q_PROPERTY(ScrollBarVisibility verticalScrollBarVisibility READ verticalScrollBarVisibility WRITE setVerticalScrollBarVisibility NOTIFY verticalScrollBarVisibilityChanged)
+    Q_PROPERTY(ScrollBarVisibility verticalScrollBarVisibility
+        READ verticalScrollBarVisibility
+        WRITE setVerticalScrollBarVisibility
+        NOTIFY verticalScrollBarVisibilityChanged)
     /**
      * @brief Zoom interaction mode.
      * zh_CN: 缩放交互模式。
@@ -104,40 +116,29 @@ class ScrollView : public QScrollArea, public FluentElement, public QMLPlus {
      * scrollers.
      * zh_CN: 默认为关闭，因为 Gallery 页面中经常嵌套滚动视图。
      */
-    Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
+    Q_PROPERTY(bool scrollChainingEnabled
+        READ isScrollChainingEnabled
+        WRITE setScrollChainingEnabled
+        NOTIFY scrollChainingEnabledChanged)
     /**
      * @brief Widget displayed inside the scroll viewport.
      * zh_CN: 显示在滚动视口中的内容控件。
      */
-    Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget
-               NOTIFY contentWidgetChanged)
+    Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget NOTIFY contentWidgetChanged)
     /**
      * @brief Release policy for the current content widget.
      * zh_CN: 当前内容控件的释放策略。
      */
-    Q_PROPERTY(fluent::WidgetOwnership contentOwnership READ contentOwnership
-               NOTIFY contentOwnershipChanged)
+    Q_PROPERTY(fluent::WidgetOwnership contentOwnership READ contentOwnership NOTIFY contentOwnershipChanged)
 
 public:
-    enum class ScrollMode {
-        Disabled,
-        Enabled,
-        Auto
-    };
+    enum class ScrollMode { Disabled, Enabled, Auto };
     Q_ENUM(ScrollMode)
 
-    enum class ScrollBarVisibility {
-        Disabled,
-        Auto,
-        Visible,
-        Hidden
-    };
+    enum class ScrollBarVisibility { Disabled, Auto, Visible, Hidden };
     Q_ENUM(ScrollBarVisibility)
 
-    enum class ZoomMode {
-        Disabled,
-        Enabled
-    };
+    enum class ZoomMode { Disabled, Enabled };
     Q_ENUM(ZoomMode)
 
     explicit ScrollView(QWidget* parent = nullptr);
@@ -232,15 +233,11 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
-    enum class Axis {
-        Horizontal,
-        Vertical
-    };
+    enum class Axis { Horizontal, Vertical };
 
     void init();
     void synchronizeContentWidget(bool notify = true);
-    void observeContentWidget(QWidget* content, QWidget* originalParent,
-                              WidgetOwnership ownership, bool notify);
+    void observeContentWidget(QWidget* content, QWidget* originalParent, WidgetOwnership ownership, bool notify);
     QWidget* releaseContentWidget(bool deleteOwned, bool restoreParent);
     void applyScrollPolicies();
     void applyAxisPolicy(Axis axis);
@@ -250,8 +247,7 @@ private:
     void updateCornerWidget();
     void stopAnimations();
     void stopZoomAnimation();
-    void animateScrollBar(QScrollBar* scrollBar, QPropertyAnimation* animation,
-                          int targetValue, bool fast = false);
+    void animateScrollBar(QScrollBar* scrollBar, QPropertyAnimation* animation, int targetValue, bool fast = false);
     bool handleDiscreteWheel(QWheelEvent* event);
     int clampedTarget(QScrollBar* scrollBar, int value) const;
     bool isAxisEnabled(Axis axis) const;
@@ -284,7 +280,8 @@ private:
     QPropertyAnimation* m_verticalAnimation = nullptr;
     QPropertyAnimation* m_zoomAnimation = nullptr;
     QWidget* m_cornerWidget = nullptr;
-    ScrollBar* m_floatingVerticalBar = nullptr;  // Overlay bar for vertical "Visible" (no gutter). zh_CN: 垂直“常显”用的浮动覆盖条（不预留沟槽）。
+    ScrollBar* m_floatingVerticalBar =
+        nullptr; // Overlay bar for vertical "Visible" (no gutter). zh_CN: 垂直“常显”用的浮动覆盖条（不预留沟槽）。
     QPointer<QWidget> m_observedContentWidget;
     QPointer<QWidget> m_originalContentParent;
     WidgetOwnership m_contentOwnership = WidgetOwnership::Owned;

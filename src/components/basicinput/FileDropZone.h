@@ -47,8 +47,7 @@ class FileDropZone : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(QString description READ description WRITE setDescription NOTIFY descriptionChanged)
     Q_PROPERTY(QString hintText READ hintText WRITE setHintText NOTIFY hintTextChanged)
     Q_PROPERTY(QString browseText READ browseText WRITE setBrowseText NOTIFY browseTextChanged)
-    Q_PROPERTY(
-        QString errorMessage READ errorMessage WRITE setErrorMessage NOTIFY errorMessageChanged)
+    Q_PROPERTY(QString errorMessage READ errorMessage WRITE setErrorMessage NOTIFY errorMessageChanged)
     Q_PROPERTY(bool dragActive READ isDragActive NOTIFY dragActiveChanged)
 
 public:

@@ -46,8 +46,7 @@ QString timeValueText(const TimePicker* picker)
     QStringList fields;
     fields.append(picker->fieldDisplayText(TimePicker::TimeField::Hour));
     fields.append(picker->fieldDisplayText(TimePicker::TimeField::Minute));
-    if (picker->clockIdentifier()
-        == TimePicker::ClockIdentifier::TwelveHourClock) {
+    if (picker->clockIdentifier() == TimePicker::ClockIdentifier::TwelveHourClock) {
         fields.append(picker->fieldDisplayText(TimePicker::TimeField::Period));
     }
     return fields.join(QStringLiteral(" "));
@@ -55,10 +54,7 @@ QString timeValueText(const TimePicker* picker)
 
 class PickerRootAccessible final : public QAccessibleWidget {
 public:
-    explicit PickerRootAccessible(QWidget* picker)
-        : QAccessibleWidget(picker, QAccessible::ButtonMenu)
-    {
-    }
+    explicit PickerRootAccessible(QWidget* picker) : QAccessibleWidget(picker, QAccessible::ButtonMenu) {}
 
     QAccessible::State state() const override
     {
@@ -77,27 +73,23 @@ public:
         if (!inherited.isEmpty())
             return inherited;
         if (type == QAccessible::Name) {
-            return datePicker() ? pickerText("Date picker")
-                                : pickerText("Time picker");
+            return datePicker() ? pickerText("Date picker") : pickerText("Time picker");
         }
         if (type == QAccessible::Value)
             return valueText();
         return inherited;
     }
 
-    FluentAccessibleRelationList
-    relations(QAccessible::Relation match) const override
+    FluentAccessibleRelationList relations(QAccessible::Relation match) const override
     {
         auto result = QAccessibleWidget::relations(match);
         if (!(match & QAccessible::Controller) || !widget())
             return result;
 
-        const QString objectName = datePicker()
-            ? QStringLiteral("DatePickerFlyout")
-            : QStringLiteral("TimePickerFlyout");
+        const QString objectName =
+            datePicker() ? QStringLiteral("DatePickerFlyout") : QStringLiteral("TimePickerFlyout");
         QWidget* flyout = widget()->findChild<QWidget*>(objectName);
-        QAccessibleInterface* target = flyout
-            ? QAccessible::queryAccessibleInterface(flyout) : nullptr;
+        QAccessibleInterface* target = flyout ? QAccessible::queryAccessibleInterface(flyout) : nullptr;
         if (target)
             result.append({target, QAccessible::Controller});
         return result;
@@ -121,8 +113,7 @@ public:
     {
         if (widget() && widget()->isEnabled()
             && (actionName == QAccessibleActionInterface::pressAction()
-                || actionName
-                    == QAccessibleActionInterface::showMenuAction())) {
+                || actionName == QAccessibleActionInterface::showMenuAction())) {
             if (DatePicker* datePickerWidget = datePicker())
                 datePickerWidget->openPicker();
             else if (TimePicker* timePickerWidget = timePicker())
@@ -132,8 +123,7 @@ public:
         QAccessibleWidget::doAction(actionName);
     }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         if (actionName == QAccessibleActionInterface::pressAction())
             return {QStringLiteral("Space"), QStringLiteral("Enter")};
@@ -143,15 +133,9 @@ public:
     }
 
 private:
-    DatePicker* datePicker() const
-    {
-        return dynamic_cast<DatePicker*>(widget());
-    }
+    DatePicker* datePicker() const { return dynamic_cast<DatePicker*>(widget()); }
 
-    TimePicker* timePicker() const
-    {
-        return dynamic_cast<TimePicker*>(widget());
-    }
+    TimePicker* timePicker() const { return dynamic_cast<TimePicker*>(widget()); }
 
     bool isOpen() const
     {
@@ -173,11 +157,8 @@ private:
 class PickerColumnAccessible final : public ValueAccessibleAdapter {
 public:
     explicit PickerColumnAccessible(PickerColumnAccessibilityHost* host)
-        : ValueAccessibleAdapter(host->pickerColumnWidget(),
-                                 QAccessible::SpinBox)
-        , m_host(host)
-    {
-    }
+        : ValueAccessibleAdapter(host->pickerColumnWidget(), QAccessible::SpinBox), m_host(host)
+    {}
 
     QString text(QAccessible::Text type) const override
     {
@@ -187,10 +168,7 @@ public:
         return inherited;
     }
 
-    QVariant currentValue() const override
-    {
-        return m_host ? m_host->pickerColumnCurrentValue() : QVariant();
-    }
+    QVariant currentValue() const override { return m_host ? m_host->pickerColumnCurrentValue() : QVariant(); }
 
     void setCurrentValue(const QVariant& value) override
     {
@@ -198,23 +176,13 @@ public:
             m_host->pickerColumnSetValue(value);
     }
 
-    QVariant maximumValue() const override
-    {
-        return m_host ? m_host->pickerColumnMaximumValue() : QVariant();
-    }
+    QVariant maximumValue() const override { return m_host ? m_host->pickerColumnMaximumValue() : QVariant(); }
 
-    QVariant minimumValue() const override
-    {
-        return m_host ? m_host->pickerColumnMinimumValue() : QVariant();
-    }
+    QVariant minimumValue() const override { return m_host ? m_host->pickerColumnMinimumValue() : QVariant(); }
 
-    QVariant minimumStepSize() const override
-    {
-        return m_host ? m_host->pickerColumnStepSize() : QVariant();
-    }
+    QVariant minimumStepSize() const override { return m_host ? m_host->pickerColumnStepSize() : QVariant(); }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         if (actionName == QAccessibleActionInterface::increaseAction())
             return {QStringLiteral("Down")};
@@ -228,14 +196,12 @@ protected:
 
     bool canIncreaseAccessibleValue() const override
     {
-        return m_host && widget() && widget()->isEnabled()
-            && m_host->pickerColumnCanShift(1);
+        return m_host && widget() && widget()->isEnabled() && m_host->pickerColumnCanShift(1);
     }
 
     bool canDecreaseAccessibleValue() const override
     {
-        return m_host && widget() && widget()->isEnabled()
-            && m_host->pickerColumnCanShift(-1);
+        return m_host && widget() && widget()->isEnabled() && m_host->pickerColumnCanShift(-1);
     }
 
     void changeAccessibleValueByStep(int direction) override
@@ -244,17 +210,13 @@ protected:
             m_host->pickerColumnShift(direction);
     }
 
-    QString accessibleValueText() const override
-    {
-        return m_host ? m_host->pickerColumnValueText() : QString();
-    }
+    QString accessibleValueText() const override { return m_host ? m_host->pickerColumnValueText() : QString(); }
 
 private:
     PickerColumnAccessibilityHost* m_host = nullptr;
 };
 
-QAccessibleInterface* pickerAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* pickerAccessibilityFactory(const QString&, QObject* object)
 {
     if (auto* datePicker = dynamic_cast<DatePicker*>(object))
         return new PickerRootAccessible(datePicker);
@@ -320,8 +282,7 @@ void notifyPickerColumnValueChanged(QWidget* column)
     auto* host = dynamic_cast<PickerColumnAccessibilityHost*>(column);
     if (!host)
         return;
-    QAccessibleValueChangeEvent event(
-        column, host->pickerColumnCurrentValue());
+    QAccessibleValueChangeEvent event(column, host->pickerColumnCurrentValue());
     QAccessible::updateAccessibility(&event);
 #else
     Q_UNUSED(column)

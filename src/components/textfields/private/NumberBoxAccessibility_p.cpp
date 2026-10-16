@@ -21,18 +21,15 @@ using accessibility::detail::ValueAccessibleAdapter;
 
 QString numberText(const char* source)
 {
-    return QCoreApplication::translate(
-        "NumberBoxAccessibility", source);
+    return QCoreApplication::translate("NumberBoxAccessibility", source);
 }
 
-class NumberBoxAccessible final : public ValueAccessibleAdapter,
-                                  public QAccessibleTextInterface,
-                                  public QAccessibleEditableTextInterface {
+class NumberBoxAccessible final
+    : public ValueAccessibleAdapter,
+      public QAccessibleTextInterface,
+      public QAccessibleEditableTextInterface {
 public:
-    explicit NumberBoxAccessible(NumberBox* box)
-        : ValueAccessibleAdapter(box, QAccessible::SpinBox)
-    {
-    }
+    explicit NumberBoxAccessible(NumberBox* box) : ValueAccessibleAdapter(box, QAccessible::SpinBox) {}
 
     void* interface_cast(QAccessible::InterfaceType type) override
     {
@@ -62,8 +59,7 @@ public:
 
     QVariant currentValue() const override
     {
-        return view() && std::isfinite(view()->value())
-            ? QVariant(view()->value()) : QVariant();
+        return view() && std::isfinite(view()->value()) ? QVariant(view()->value()) : QVariant();
     }
 
     void setCurrentValue(const QVariant& value) override
@@ -78,23 +74,17 @@ public:
 
     QVariant maximumValue() const override
     {
-        return view() && std::isfinite(view()->maximum())
-            ? QVariant(view()->maximum()) : QVariant();
+        return view() && std::isfinite(view()->maximum()) ? QVariant(view()->maximum()) : QVariant();
     }
 
     QVariant minimumValue() const override
     {
-        return view() && std::isfinite(view()->minimum())
-            ? QVariant(view()->minimum()) : QVariant();
+        return view() && std::isfinite(view()->minimum()) ? QVariant(view()->minimum()) : QVariant();
     }
 
-    QVariant minimumStepSize() const override
-    {
-        return view() ? QVariant(view()->smallChange()) : QVariant();
-    }
+    QVariant minimumStepSize() const override { return view() ? QVariant(view()->smallChange()) : QVariant(); }
 
-    void selection(int selectionIndex, int* startOffset,
-                   int* endOffset) const override
+    void selection(int selectionIndex, int* startOffset, int* endOffset) const override
     {
         if (startOffset)
             *startOffset = -1;
@@ -109,15 +99,9 @@ public:
             *endOffset = start + view()->selectedText().size();
     }
 
-    int selectionCount() const override
-    {
-        return view() && view()->hasSelectedText() ? 1 : 0;
-    }
+    int selectionCount() const override { return view() && view()->hasSelectedText() ? 1 : 0; }
 
-    void addSelection(int startOffset, int endOffset) override
-    {
-        applySelection(startOffset, endOffset);
-    }
+    void addSelection(int startOffset, int endOffset) override { applySelection(startOffset, endOffset); }
 
     void removeSelection(int selectionIndex) override
     {
@@ -125,17 +109,13 @@ public:
             view()->deselect();
     }
 
-    void setSelection(int selectionIndex, int startOffset,
-                      int endOffset) override
+    void setSelection(int selectionIndex, int startOffset, int endOffset) override
     {
         if (selectionIndex == 0)
             applySelection(startOffset, endOffset);
     }
 
-    int cursorPosition() const override
-    {
-        return view() ? view()->cursorPosition() : 0;
-    }
+    int cursorPosition() const override { return view() ? view()->cursorPosition() : 0; }
 
     void setCursorPosition(int position) override
     {
@@ -149,15 +129,11 @@ public:
             return {};
         const QString content = view()->text();
         const int start = qBound(0, startOffset, content.size());
-        const int end = endOffset < 0
-            ? content.size() : qBound(start, endOffset, content.size());
+        const int end = endOffset < 0 ? content.size() : qBound(start, endOffset, content.size());
         return content.mid(start, end - start);
     }
 
-    int characterCount() const override
-    {
-        return view() ? view()->text().size() : 0;
-    }
+    int characterCount() const override { return view() ? view()->text().size() : 0; }
 
     QRect characterRect(int offset) const override
     {
@@ -187,24 +163,18 @@ public:
         if (first < 0)
             first = last = nearestX;
         const int textHeight = qMax(1, metrics.height());
-        const QRect local(first, qMax(0, y - textHeight / 2),
-                          qMax(1, last - first + 1), textHeight);
+        const QRect local(first, qMax(0, y - textHeight / 2), qMax(1, last - first + 1), textHeight);
         return QRect(box->mapToGlobal(local.topLeft()), local.size());
     }
 
     int offsetAtPoint(const QPoint& point) const override
     {
-        return view()
-            ? view()->cursorPositionAt(view()->mapFromGlobal(point)) : -1;
+        return view() ? view()->cursorPositionAt(view()->mapFromGlobal(point)) : -1;
     }
 
-    void scrollToSubstring(int, int endIndex) override
-    {
-        setCursorPosition(endIndex);
-    }
+    void scrollToSubstring(int, int endIndex) override { setCursorPosition(endIndex); }
 
-    QString attributes(int, int* startOffset,
-                       int* endOffset) const override
+    QString attributes(int, int* startOffset, int* endOffset) const override
     {
         if (startOffset)
             *startOffset = 0;
@@ -213,18 +183,11 @@ public:
         return {};
     }
 
-    void deleteText(int startOffset, int endOffset) override
-    {
-        replaceText(startOffset, endOffset, {});
-    }
+    void deleteText(int startOffset, int endOffset) override { replaceText(startOffset, endOffset, {}); }
 
-    void insertText(int offset, const QString& text) override
-    {
-        replaceText(offset, offset, text);
-    }
+    void insertText(int offset, const QString& text) override { replaceText(offset, offset, text); }
 
-    void replaceText(int startOffset, int endOffset,
-                     const QString& replacement) override
+    void replaceText(int startOffset, int endOffset, const QString& replacement) override
     {
         if (!canEditText())
             return;
@@ -237,22 +200,15 @@ public:
     }
 
 protected:
-    bool accessibleValueReadOnly() const override
-    {
-        return !view() || view()->isReadOnly();
-    }
+    bool accessibleValueReadOnly() const override { return !view() || view()->isReadOnly(); }
 
-    bool accessibleValueInvalid() const override
-    {
-        return !view() || !std::isfinite(view()->value());
-    }
+    bool accessibleValueInvalid() const override { return !view() || !std::isfinite(view()->value()); }
 
     bool canIncreaseAccessibleValue() const override
     {
         if (!canEditText())
             return false;
-        return !std::isfinite(view()->value())
-            || !std::isfinite(view()->maximum())
+        return !std::isfinite(view()->value()) || !std::isfinite(view()->maximum())
             || view()->value() < view()->maximum();
     }
 
@@ -260,8 +216,7 @@ protected:
     {
         if (!canEditText())
             return false;
-        return !std::isfinite(view()->value())
-            || !std::isfinite(view()->minimum())
+        return !std::isfinite(view()->value()) || !std::isfinite(view()->minimum())
             || view()->value() > view()->minimum();
     }
 
@@ -291,15 +246,9 @@ protected:
     }
 
 private:
-    NumberBox* view() const
-    {
-        return static_cast<NumberBox*>(widget());
-    }
+    NumberBox* view() const { return static_cast<NumberBox*>(widget()); }
 
-    bool canEditText() const
-    {
-        return view() && view()->isEnabled() && !view()->isReadOnly();
-    }
+    bool canEditText() const { return view() && view()->isEnabled() && !view()->isReadOnly(); }
 
     void applySelection(int startOffset, int endOffset)
     {
@@ -311,8 +260,7 @@ private:
     }
 };
 
-QAccessibleInterface* numberBoxAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* numberBoxAccessibilityFactory(const QString&, QObject* object)
 {
     auto* box = dynamic_cast<NumberBox*>(object);
     return box ? new NumberBoxAccessible(box) : nullptr;

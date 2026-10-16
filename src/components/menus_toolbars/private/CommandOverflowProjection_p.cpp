@@ -29,8 +29,7 @@ struct OverflowCandidate {
 
 } // namespace
 
-QList<QAction*> visiblePresentableActions(const CommandActionModel& model,
-                                          CommandActionModel::Section section)
+QList<QAction*> visiblePresentableActions(const CommandActionModel& model, CommandActionModel::Section section)
 {
     QList<QAction*> result;
     const QList<QAction*> registered = model.actions(section);
@@ -53,8 +52,7 @@ QSet<QAction*> nonSeparatorSet(const QList<QAction*>& actions)
     return result;
 }
 
-QList<QAction*> normalizedProjection(const QList<QAction*>& source,
-                                     const QSet<QAction*>& includedCommands)
+QList<QAction*> normalizedProjection(const QList<QAction*>& source, const QSet<QAction*>& includedCommands)
 {
     QList<QAction*> result;
     QAction* pendingSeparator = nullptr;
@@ -86,8 +84,11 @@ bool hasCommandRows(const QList<QAction*>& actions)
     return false;
 }
 
-int projectedCommandWidth(const QList<QAction*>& projection, bool includeMore, int moreButtonWidth,
-                          int itemSpacing, const CommandWidthResolver& widthResolver)
+int projectedCommandWidth(const QList<QAction*>& projection,
+    bool includeMore,
+    int moreButtonWidth,
+    int itemSpacing,
+    const CommandWidthResolver& widthResolver)
 {
     int width = 0;
     int itemCount = 0;
@@ -108,8 +109,8 @@ int projectedCommandWidth(const QList<QAction*>& projection, bool includeMore, i
 }
 
 CommandOverflowProjection projectCommandOverflow(const QList<QAction*>& source,
-                                                 const CommandOverflowProjectionOptions& options,
-                                                 const CommandWidthResolver& widthResolver)
+    const CommandOverflowProjectionOptions& options,
+    const CommandWidthResolver& widthResolver)
 {
     CommandOverflowProjection result;
     QSet<QAction*> inlineCommands = nonSeparatorSet(source);
@@ -117,9 +118,9 @@ CommandOverflowProjection projectCommandOverflow(const QList<QAction*>& source,
     if (!options.overflowEnabled)
         return result;
 
-    if (projectedCommandWidth(result.inlineActions, options.includeMoreBeforeOverflow,
-                              options.moreButtonWidth, options.itemSpacing,
-                              widthResolver) <= options.availableWidth) {
+    if (projectedCommandWidth(result.inlineActions, options.includeMoreBeforeOverflow, options.moreButtonWidth,
+            options.itemSpacing, widthResolver)
+        <= options.availableWidth) {
         return result;
     }
 
@@ -139,21 +140,21 @@ CommandOverflowProjection projectCommandOverflow(const QList<QAction*>& source,
     // logical tail first. The final projection is rebuilt from source so its
     // surviving and overflowed rows keep stable source order.
     std::stable_sort(candidates.begin(), candidates.end(),
-                     [](const OverflowCandidate& first, const OverflowCandidate& second) {
-                         if (first.priorityRank != second.priorityRank) {
-                             return first.priorityRank < second.priorityRank;
-                         }
-                         return first.logicalIndex > second.logicalIndex;
-                     });
+        [](const OverflowCandidate& first, const OverflowCandidate& second) {
+            if (first.priorityRank != second.priorityRank) {
+                return first.priorityRank < second.priorityRank;
+            }
+            return first.logicalIndex > second.logicalIndex;
+        });
 
     QSet<QAction*> overflowCommands;
     for (const OverflowCandidate& candidate : candidates) {
         inlineCommands.remove(candidate.action);
         overflowCommands.insert(candidate.action);
         result.inlineActions = normalizedProjection(source, inlineCommands);
-        if (projectedCommandWidth(result.inlineActions, options.includeMoreWhenOverflowing,
-                                  options.moreButtonWidth, options.itemSpacing,
-                                  widthResolver) <= options.availableWidth) {
+        if (projectedCommandWidth(result.inlineActions, options.includeMoreWhenOverflowing, options.moreButtonWidth,
+                options.itemSpacing, widthResolver)
+            <= options.availableWidth) {
             break;
         }
     }

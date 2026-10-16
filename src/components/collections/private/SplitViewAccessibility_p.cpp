@@ -33,11 +33,9 @@ QList<SplitViewHandle*> handlesFor(SplitView* splitView)
         if (auto* handle = dynamic_cast<SplitViewHandle*>(child))
             result.append(handle);
     }
-    std::sort(result.begin(), result.end(),
-              [](const SplitViewHandle* left,
-                 const SplitViewHandle* right) {
-                  return left->handleIndex() < right->handleIndex();
-              });
+    std::sort(result.begin(), result.end(), [](const SplitViewHandle* left, const SplitViewHandle* right) {
+        return left->handleIndex() < right->handleIndex();
+    });
     return result;
 }
 
@@ -57,25 +55,19 @@ QString paneName(SplitView* splitView, int paneIndex)
     QString result = pane ? pane->accessibleName() : QString();
 #if QT_CONFIG(accessibility)
     if (result.isEmpty() && pane) {
-        if (QAccessibleInterface* interface =
-                QAccessible::queryAccessibleInterface(pane)) {
+        if (QAccessibleInterface* interface = QAccessible::queryAccessibleInterface(pane)) {
             result = interface->text(QAccessible::Name);
         }
     }
 #endif
-    return result.isEmpty()
-        ? splitViewText("Pane %1").arg(paneIndex + 1)
-        : result;
+    return result.isEmpty() ? splitViewText("Pane %1").arg(paneIndex + 1) : result;
 }
 
 #if QT_CONFIG(accessibility)
 
 class SplitViewAccessible final : public QAccessibleWidget {
 public:
-    explicit SplitViewAccessible(SplitView* splitView)
-        : QAccessibleWidget(splitView, QAccessible::Splitter)
-    {
-    }
+    explicit SplitViewAccessible(SplitView* splitView) : QAccessibleWidget(splitView, QAccessible::Splitter) {}
 
     QAccessibleInterface* childAt(int x, int y) const override
     {
@@ -83,20 +75,16 @@ public:
         if (!owner)
             return nullptr;
         const QList<SplitViewHandle*> handles = handlesFor(owner);
-        for (auto iterator = handles.crbegin();
-             iterator != handles.crend(); ++iterator) {
-            if (QAccessibleInterface* interface =
-                    QAccessible::queryAccessibleInterface(*iterator)) {
-                if (!interface->state().invisible
-                    && interface->rect().contains(x, y)) {
+        for (auto iterator = handles.crbegin(); iterator != handles.crend(); ++iterator) {
+            if (QAccessibleInterface* interface = QAccessible::queryAccessibleInterface(*iterator)) {
+                if (!interface->state().invisible && interface->rect().contains(x, y)) {
                     return interface;
                 }
             }
         }
         for (int index = owner->paneCount() - 1; index >= 0; --index) {
             if (QAccessibleInterface* interface = child(index)) {
-                if (!interface->state().invisible
-                    && interface->rect().contains(x, y)) {
+                if (!interface->state().invisible && interface->rect().contains(x, y)) {
                     return interface;
                 }
             }
@@ -125,9 +113,7 @@ public:
     int childCount() const override
     {
         SplitView* owner = splitView();
-        return owner
-            ? owner->paneCount() + handlesFor(owner).size()
-            : 0;
+        return owner ? owner->paneCount() + handlesFor(owner).size() : 0;
     }
 
     int indexOfChild(const QAccessibleInterface* childInterface) const override
@@ -141,9 +127,7 @@ public:
                 return index;
         }
         if (auto* handle = dynamic_cast<SplitViewHandle*>(object)) {
-            return handle->splitView() == owner
-                ? owner->paneCount() + handle->handleIndex()
-                : -1;
+            return handle->splitView() == owner ? owner->paneCount() + handle->handleIndex() : -1;
         }
         return -1;
     }
@@ -155,31 +139,19 @@ public:
             return nullptr;
         if (index < owner->paneCount()) {
             QWidget* pane = owner->paneAt(index);
-            return pane
-                ? QAccessible::queryAccessibleInterface(pane)
-                : nullptr;
+            return pane ? QAccessible::queryAccessibleInterface(pane) : nullptr;
         }
-        SplitViewHandle* handle =
-            handleAt(owner, index - owner->paneCount());
-        return handle
-            ? QAccessible::queryAccessibleInterface(handle)
-            : nullptr;
+        SplitViewHandle* handle = handleAt(owner, index - owner->paneCount());
+        return handle ? QAccessible::queryAccessibleInterface(handle) : nullptr;
     }
 
 private:
-    SplitView* splitView() const
-    {
-        return static_cast<SplitView*>(widget());
-    }
+    SplitView* splitView() const { return static_cast<SplitView*>(widget()); }
 };
 
-class SplitViewHandleAccessible final : public QAccessibleWidget,
-                                        public QAccessibleValueInterface {
+class SplitViewHandleAccessible final : public QAccessibleWidget, public QAccessibleValueInterface {
 public:
-    explicit SplitViewHandleAccessible(SplitViewHandle* handle)
-        : QAccessibleWidget(handle, QAccessible::Grip)
-    {
-    }
+    explicit SplitViewHandleAccessible(SplitViewHandle* handle) : QAccessibleWidget(handle, QAccessible::Grip) {}
 
     QString text(QAccessible::Text type) const override
     {
@@ -191,9 +163,7 @@ public:
         if (type == QAccessible::Name) {
             const int leading = grip->leadingPaneIndex();
             const int trailing = grip->trailingPaneIndex();
-            return splitViewText("Resize %1 and %2")
-                .arg(paneName(owner, leading))
-                .arg(paneName(owner, trailing));
+            return splitViewText("Resize %1 and %2").arg(paneName(owner, leading)).arg(paneName(owner, trailing));
         }
         if (type == QAccessible::Value)
             return splitViewText("%1 pixels").arg(grip->currentValue());
@@ -205,8 +175,7 @@ public:
         QAccessible::State result = QAccessibleWidget::state();
         SplitViewHandle* grip = handle();
         result.sizeable = grip && grip->isEnabled();
-        result.focusable = grip && grip->isEnabled()
-            && grip->focusPolicy() != Qt::NoFocus;
+        result.focusable = grip && grip->isEnabled() && grip->focusPolicy() != Qt::NoFocus;
         result.focused = grip && grip->hasFocus();
         return result;
     }
@@ -242,24 +211,19 @@ public:
             grip->stepBy(kKeyboardResizeStep);
     }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         SplitViewHandle* grip = handle();
         SplitView* owner = grip ? grip->splitView() : nullptr;
         if (!owner)
             return {};
-        const bool increase =
-            actionName == QAccessibleActionInterface::increaseAction();
-        const bool decrease =
-            actionName == QAccessibleActionInterface::decreaseAction();
+        const bool increase = actionName == QAccessibleActionInterface::increaseAction();
+        const bool decrease = actionName == QAccessibleActionInterface::decreaseAction();
         if (!increase && !decrease)
             return {};
         const QString key = owner->orientation() == Qt::Horizontal
-            ? (increase ? QStringLiteral("Right")
-                        : QStringLiteral("Left"))
-            : (increase ? QStringLiteral("Down")
-                        : QStringLiteral("Up"));
+            ? (increase ? QStringLiteral("Right") : QStringLiteral("Left"))
+            : (increase ? QStringLiteral("Down") : QStringLiteral("Up"));
         return {key, QStringLiteral("Shift+") + key};
     }
 
@@ -272,8 +236,7 @@ public:
         return QAccessibleWidget::localizedActionName(actionName);
     }
 
-    QString localizedActionDescription(
-        const QString& actionName) const override
+    QString localizedActionDescription(const QString& actionName) const override
     {
         if (actionName == QAccessibleActionInterface::decreaseAction())
             return splitViewText("Makes the leading pane smaller");
@@ -282,10 +245,7 @@ public:
         return QAccessibleWidget::localizedActionDescription(actionName);
     }
 
-    QVariant currentValue() const override
-    {
-        return handle() ? QVariant(handle()->currentValue()) : QVariant();
-    }
+    QVariant currentValue() const override { return handle() ? QVariant(handle()->currentValue()) : QVariant(); }
 
     void setCurrentValue(const QVariant& value) override
     {
@@ -293,30 +253,17 @@ public:
             grip->setValue(value.toInt());
     }
 
-    QVariant maximumValue() const override
-    {
-        return handle() ? QVariant(handle()->maximumValue()) : QVariant();
-    }
+    QVariant maximumValue() const override { return handle() ? QVariant(handle()->maximumValue()) : QVariant(); }
 
-    QVariant minimumValue() const override
-    {
-        return handle() ? QVariant(handle()->minimumValue()) : QVariant();
-    }
+    QVariant minimumValue() const override { return handle() ? QVariant(handle()->minimumValue()) : QVariant(); }
 
-    QVariant minimumStepSize() const override
-    {
-        return handle() ? QVariant(1) : QVariant();
-    }
+    QVariant minimumStepSize() const override { return handle() ? QVariant(1) : QVariant(); }
 
 private:
-    SplitViewHandle* handle() const
-    {
-        return static_cast<SplitViewHandle*>(widget());
-    }
+    SplitViewHandle* handle() const { return static_cast<SplitViewHandle*>(widget()); }
 };
 
-QAccessibleInterface* splitViewAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* splitViewAccessibilityFactory(const QString&, QObject* object)
 {
     if (auto* splitView = dynamic_cast<SplitView*>(object))
         return new SplitViewAccessible(splitView);
@@ -337,11 +284,8 @@ void sendEvent(QObject* object, QAccessible::Event type)
 
 } // namespace
 
-SplitViewHandle::SplitViewHandle(
-    SplitView* splitView, int handleIndex)
-    : QWidget(splitView)
-    , m_splitView(splitView)
-    , m_handleIndex(handleIndex)
+SplitViewHandle::SplitViewHandle(SplitView* splitView, int handleIndex)
+    : QWidget(splitView), m_splitView(splitView), m_handleIndex(handleIndex)
 {
     setFocusPolicy(Qt::StrongFocus);
     setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -352,38 +296,32 @@ SplitViewHandle::SplitViewHandle(
 
 int SplitViewHandle::currentValue() const
 {
-    return m_splitView
-        ? m_splitView->handleAccessibleValue(m_handleIndex) : 0;
+    return m_splitView ? m_splitView->handleAccessibleValue(m_handleIndex) : 0;
 }
 
 int SplitViewHandle::minimumValue() const
 {
-    return m_splitView
-        ? m_splitView->handleAccessibleMinimum(m_handleIndex) : 0;
+    return m_splitView ? m_splitView->handleAccessibleMinimum(m_handleIndex) : 0;
 }
 
 int SplitViewHandle::maximumValue() const
 {
-    return m_splitView
-        ? m_splitView->handleAccessibleMaximum(m_handleIndex) : 0;
+    return m_splitView ? m_splitView->handleAccessibleMaximum(m_handleIndex) : 0;
 }
 
 int SplitViewHandle::leadingPaneIndex() const
 {
-    return m_splitView
-        ? m_splitView->handleLeadingPaneIndex(m_handleIndex) : -1;
+    return m_splitView ? m_splitView->handleLeadingPaneIndex(m_handleIndex) : -1;
 }
 
 int SplitViewHandle::trailingPaneIndex() const
 {
-    return m_splitView
-        ? m_splitView->handleTrailingPaneIndex(m_handleIndex) : -1;
+    return m_splitView ? m_splitView->handleTrailingPaneIndex(m_handleIndex) : -1;
 }
 
 bool SplitViewHandle::setValue(int value)
 {
-    return m_splitView
-        && m_splitView->setHandleAccessibleValue(m_handleIndex, value);
+    return m_splitView && m_splitView->setHandleAccessibleValue(m_handleIndex, value);
 }
 
 bool SplitViewHandle::stepBy(int delta)
@@ -401,11 +339,9 @@ bool SplitViewHandle::consumeSemanticChange(bool* actionsChanged)
     const bool newDecrease = current > minimum;
     const bool newIncrease = current < maximum;
     if (actionsChanged) {
-        *actionsChanged = oldDecrease != newDecrease
-            || oldIncrease != newIncrease;
+        *actionsChanged = oldDecrease != newDecrease || oldIncrease != newIncrease;
     }
-    const bool valueChanged = current != m_lastCurrentValue
-        || minimum != m_lastMinimumValue
+    const bool valueChanged = current != m_lastCurrentValue || minimum != m_lastMinimumValue
         || maximum != m_lastMaximumValue;
     m_lastCurrentValue = current;
     m_lastMinimumValue = minimum;
@@ -443,8 +379,7 @@ void SplitViewHandle::keyPressEvent(QKeyEvent* event)
         return;
     }
 
-    const int step = event->modifiers().testFlag(Qt::ShiftModifier)
-        ? 1 : kKeyboardResizeStep;
+    const int step = event->modifiers().testFlag(Qt::ShiftModifier) ? 1 : kKeyboardResizeStep;
     int delta = 0;
     if (m_splitView->orientation() == Qt::Horizontal) {
         if (event->key() == Qt::Key_Left)
@@ -484,8 +419,7 @@ void SplitViewHandle::paintEvent(QPaintEvent*)
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setPen(Qt::NoPen);
     painter.setBrush(m_splitView->themeColorsRef().accentDefault);
-    const QRect focusLine = centeredSplitHandleVisualRect(
-        rect(), m_splitView->orientation(), 2);
+    const QRect focusLine = centeredSplitHandleVisualRect(rect(), m_splitView->orientation(), 2);
     painter.drawRoundedRect(focusLine, 1.0, 1.0);
 }
 
@@ -521,8 +455,7 @@ void notifySplitViewAccessibilityOrientationChanged(SplitView* splitView)
 #endif
 }
 
-void notifySplitViewAccessibilityHandleValueChanged(
-    SplitView* splitView, int handleIndex)
+void notifySplitViewAccessibilityHandleValueChanged(SplitView* splitView, int handleIndex)
 {
 #if QT_CONFIG(accessibility)
     SplitViewHandle* handle = handleAt(splitView, handleIndex);
@@ -541,13 +474,11 @@ void notifySplitViewAccessibilityHandleValueChanged(
 #endif
 }
 
-void notifySplitViewAccessibilityAllHandleValuesChanged(
-    SplitView* splitView)
+void notifySplitViewAccessibilityAllHandleValuesChanged(SplitView* splitView)
 {
 #if QT_CONFIG(accessibility)
     for (SplitViewHandle* handle : handlesFor(splitView)) {
-        notifySplitViewAccessibilityHandleValueChanged(
-            splitView, handle->handleIndex());
+        notifySplitViewAccessibilityHandleValueChanged(splitView, handle->handleIndex());
     }
 #else
     Q_UNUSED(splitView)

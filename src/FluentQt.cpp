@@ -27,8 +27,7 @@ namespace {
 
 void configureSystemTextFallback()
 {
-    const QString systemFamily =
-        QFontDatabase::systemFont(QFontDatabase::GeneralFont).family();
+    const QString systemFamily = QFontDatabase::systemFont(QFontDatabase::GeneralFont).family();
     if (systemFamily.isEmpty())
         return;
 
@@ -106,8 +105,7 @@ bool loadBundledFace(const QString& path, const QString& expectedFamily)
 {
     const int id = QFontDatabase::addApplicationFont(path);
     if (id < 0) {
-        qCWarning(fluent::logging::typographyCategory)
-            << "Could not register bundled font" << path;
+        qCWarning(fluent::logging::typographyCategory) << "Could not register bundled font" << path;
         return false;
     }
 
@@ -118,8 +116,7 @@ bool loadBundledFace(const QString& path, const QString& expectedFamily)
     }
 
     qCWarning(fluent::logging::typographyCategory)
-        << "Bundled font" << path << "registered unexpected families" << families
-        << "instead of" << expectedFamily;
+        << "Bundled font" << path << "registered unexpected families" << families << "instead of" << expectedFamily;
     return false;
 }
 
@@ -127,39 +124,30 @@ bool loadBundledFonts()
 {
     configureSystemTextFallback();
 
-    const bool textRegularLoaded = loadBundledFace(
-        QStringLiteral(":/res/fonts/FluentQtUIText-Regular.ttf"),
+    const bool textRegularLoaded = loadBundledFace(QStringLiteral(":/res/fonts/FluentQtUIText-Regular.ttf"),
         fluent::fontcompat::UITextFamily);
-    const bool textSemiboldLoaded = loadBundledFace(
-        QStringLiteral(":/res/fonts/FluentQtUIText-Semibold.ttf"),
+    const bool textSemiboldLoaded = loadBundledFace(QStringLiteral(":/res/fonts/FluentQtUIText-Semibold.ttf"),
         fluent::fontcompat::UITextFamily);
-    const bool headingSemiboldLoaded = loadBundledFace(
-        QStringLiteral(":/res/fonts/FluentQtUIHeading-Semibold.ttf"),
+    const bool headingSemiboldLoaded = loadBundledFace(QStringLiteral(":/res/fonts/FluentQtUIHeading-Semibold.ttf"),
         fluent::fontcompat::UIHeadingFamily);
-    const bool displaySemiboldLoaded = loadBundledFace(
-        QStringLiteral(":/res/fonts/FluentQtUIDisplay-Semibold.ttf"),
+    const bool displaySemiboldLoaded = loadBundledFace(QStringLiteral(":/res/fonts/FluentQtUIDisplay-Semibold.ttf"),
         fluent::fontcompat::UIDisplayFamily);
-    const bool iconsLoaded = loadBundledFace(
-        QStringLiteral(":/res/icons/FluentQtIcons.ttf"),
+    const bool iconsLoaded = loadBundledFace(QStringLiteral(":/res/icons/FluentQtIcons.ttf"),
         fluent::fontcompat::IconFamily);
 
     bool optionalFallbackLoaded = true;
-    const QString simplifiedChinesePath = QStringLiteral(
-        ":/res/fonts/FluentQtUISimplifiedChinese-Regular.otf");
+    const QString simplifiedChinesePath = QStringLiteral(":/res/fonts/FluentQtUISimplifiedChinese-Regular.otf");
     if (QFile::exists(simplifiedChinesePath)) {
-        optionalFallbackLoaded = loadBundledFace(
-            simplifiedChinesePath,
-            fluent::fontcompat::UISimplifiedChineseFamily);
+        optionalFallbackLoaded = loadBundledFace(simplifiedChinesePath, fluent::fontcompat::UISimplifiedChineseFamily);
         if (optionalFallbackLoaded) {
-            configureSimplifiedChineseFallback(
-                fluent::fontcompat::UISimplifiedChineseFamily);
+            configureSimplifiedChineseFallback(fluent::fontcompat::UISimplifiedChineseFamily);
         }
     }
 
     configureLinuxEmojiFontFallback();
 
-    return textRegularLoaded && textSemiboldLoaded && headingSemiboldLoaded
-        && displaySemiboldLoaded && iconsLoaded && optionalFallbackLoaded;
+    return textRegularLoaded && textSemiboldLoaded && headingSemiboldLoaded && displaySemiboldLoaded && iconsLoaded
+        && optionalFallbackLoaded;
 }
 
 } // namespace
@@ -178,8 +166,7 @@ void ensureRegistered()
 void prepareHighDpiApplication()
 {
     if (QCoreApplication::instance()) {
-        qCWarning(logging::windowingCategory)
-            << "prepareHighDpiApplication must be called before QApplication";
+        qCWarning(logging::windowingCategory) << "prepareHighDpiApplication must be called before QApplication";
     } else {
         fluentPrepareHighDpiApplicationAttributes();
     }

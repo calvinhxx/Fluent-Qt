@@ -57,7 +57,10 @@ class InfoBadge : public QWidget, public FluentElement, public QMLPlus {
      * @brief Custom badge background color override.
      * zh_CN: 徽标背景色自定义覆盖值。
      */
-    Q_PROPERTY(QColor customBackgroundColor READ customBackgroundColor WRITE setCustomBackgroundColor NOTIFY customBackgroundColorChanged)
+    Q_PROPERTY(QColor customBackgroundColor
+        READ customBackgroundColor
+        WRITE setCustomBackgroundColor
+        NOTIFY customBackgroundColorChanged)
     /**
      * @brief Custom badge text color override.
      * zh_CN: 徽标文本颜色自定义覆盖值。
@@ -82,7 +85,10 @@ class InfoBadge : public QWidget, public FluentElement, public QMLPlus {
      * @brief Horizontal padding around badge value text.
      * zh_CN: 徽标数值文本的水平内边距。
      */
-    Q_PROPERTY(int valueHorizontalPadding READ valueHorizontalPadding WRITE setValueHorizontalPadding NOTIFY valueHorizontalPaddingChanged)
+    Q_PROPERTY(int valueHorizontalPadding
+        READ valueHorizontalPadding
+        WRITE setValueHorizontalPadding
+        NOTIFY valueHorizontalPaddingChanged)
     /**
      * @brief Icon glyph size in pixels.
      * zh_CN: 图标字符尺寸，单位为像素。
@@ -97,7 +103,10 @@ class InfoBadge : public QWidget, public FluentElement, public QMLPlus {
      * @brief Inset applied to badge background painting.
      * zh_CN: 徽标背景绘制时应用的内缩量。
      */
-    Q_PROPERTY(int badgeBackgroundInset READ badgeBackgroundInset WRITE setBadgeBackgroundInset NOTIFY badgeBackgroundInsetChanged)
+    Q_PROPERTY(int badgeBackgroundInset
+        READ badgeBackgroundInset
+        WRITE setBadgeBackgroundInset
+        NOTIFY badgeBackgroundInsetChanged)
     /**
      * @brief Pixel offset applied to badge content drawing.
      * zh_CN: 徽标内容绘制时应用的像素偏移。
@@ -195,7 +204,11 @@ private:
     QString valueText() const;
     QFont valueFont() const;
     QFont iconFont() const;
-    void drawCenteredTextPath(QPainter& painter, const QRectF& targetRect, const QFont& font, const QString& text, const QColor& color = QColor()) const;
+    void drawCenteredTextPath(QPainter& painter,
+        const QRectF& targetRect,
+        const QFont& font,
+        const QString& text,
+        const QColor& color = QColor()) const;
     QColor statusBackgroundColor() const;
     void updateThemeColors();
     void invalidateLayoutAndPaint();
@@ -216,7 +229,7 @@ private:
     int m_iconGlyphSize = 10;
     QString m_iconFontFamily = Typography::FontFamily::FluentIcons;
     int m_badgeBackgroundInset = 0;
-    QPoint m_contentOffset {0, 0};
+    QPoint m_contentOffset{0, 0};
 
     QColor m_backgroundColor;
     QColor m_foregroundColor;

@@ -9,56 +9,18 @@ namespace {
 using Colors = FluentElement::Colors;
 using ColorMember = QColor Colors::*;
 
-constexpr ColorMember kColorMembers[] = {&Colors::accentDefault,
-                                         &Colors::accentSecondary,
-                                         &Colors::accentTertiary,
-                                         &Colors::accentDisabled,
-                                         &Colors::controlDefault,
-                                         &Colors::controlSecondary,
-                                         &Colors::controlTertiary,
-                                         &Colors::controlDisabled,
-                                         &Colors::controlAltSecondary,
-                                         &Colors::controlAltTertiary,
-                                         &Colors::subtleTransparent,
-                                         &Colors::subtleSecondary,
-                                         &Colors::subtleTertiary,
-                                         &Colors::strokeDefault,
-                                         &Colors::strokeSecondary,
-                                         &Colors::strokeStrong,
-                                         &Colors::strokeCard,
-                                         &Colors::strokeDivider,
-                                         &Colors::strokeSurface,
-                                         &Colors::strokeFocusOuter,
-                                         &Colors::strokeFocusInner,
-                                         &Colors::textPrimary,
-                                         &Colors::textSecondary,
-                                         &Colors::textTertiary,
-                                         &Colors::textDisabled,
-                                         &Colors::textOnAccent,
-                                         &Colors::textAccentPrimary,
-                                         &Colors::bgCanvas,
-                                         &Colors::bgLayer,
-                                         &Colors::bgLayerAlt,
-                                         &Colors::bgSolid,
-                                         &Colors::grey10,
-                                         &Colors::grey20,
-                                         &Colors::grey30,
-                                         &Colors::grey40,
-                                         &Colors::grey50,
-                                         &Colors::grey60,
-                                         &Colors::grey90,
-                                         &Colors::grey130,
-                                         &Colors::grey160,
-                                         &Colors::grey190,
-                                         &Colors::systemCritical,
-                                         &Colors::systemCriticalBg,
-                                         &Colors::systemCaution,
-                                         &Colors::systemCautionBg,
-                                         &Colors::systemInfo,
-                                         &Colors::systemInfoBg,
-                                         &Colors::systemSuccess,
-                                         &Colors::systemSuccessBg,
-                                         &Colors::bgLayerOverlay};
+constexpr ColorMember kColorMembers[] = {&Colors::accentDefault, &Colors::accentSecondary, &Colors::accentTertiary,
+    &Colors::accentDisabled, &Colors::controlDefault, &Colors::controlSecondary, &Colors::controlTertiary,
+    &Colors::controlDisabled, &Colors::controlAltSecondary, &Colors::controlAltTertiary, &Colors::subtleTransparent,
+    &Colors::subtleSecondary, &Colors::subtleTertiary, &Colors::strokeDefault, &Colors::strokeSecondary,
+    &Colors::strokeStrong, &Colors::strokeCard, &Colors::strokeDivider, &Colors::strokeSurface,
+    &Colors::strokeFocusOuter, &Colors::strokeFocusInner, &Colors::textPrimary, &Colors::textSecondary,
+    &Colors::textTertiary, &Colors::textDisabled, &Colors::textOnAccent, &Colors::textAccentPrimary, &Colors::bgCanvas,
+    &Colors::bgLayer, &Colors::bgLayerAlt, &Colors::bgSolid, &Colors::grey10, &Colors::grey20, &Colors::grey30,
+    &Colors::grey40, &Colors::grey50, &Colors::grey60, &Colors::grey90, &Colors::grey130, &Colors::grey160,
+    &Colors::grey190, &Colors::systemCritical, &Colors::systemCriticalBg, &Colors::systemCaution,
+    &Colors::systemCautionBg, &Colors::systemInfo, &Colors::systemInfoBg, &Colors::systemSuccess,
+    &Colors::systemSuccessBg, &Colors::bgLayerOverlay};
 
 bool colorsEqual(const Colors& lhs, const Colors& rhs)
 {
@@ -71,25 +33,21 @@ bool colorsEqual(const Colors& lhs, const Colors& rhs)
 
 bool snapshotsEqual(const ThemeRegistry::Snapshot& lhs, const ThemeRegistry::Snapshot& rhs)
 {
-    return colorsEqual(lhs.lightColors, rhs.lightColors) &&
-           colorsEqual(lhs.darkColors, rhs.darkColors) && lhs.radius.none == rhs.radius.none &&
-           lhs.radius.control == rhs.radius.control && lhs.radius.overlay == rhs.radius.overlay &&
-           lhs.fontFamilyOverride == rhs.fontFamilyOverride &&
-           qFuzzyCompare(lhs.fontScale, rhs.fontScale);
+    return colorsEqual(lhs.lightColors, rhs.lightColors) && colorsEqual(lhs.darkColors, rhs.darkColors)
+        && lhs.radius.none == rhs.radius.none && lhs.radius.control == rhs.radius.control
+        && lhs.radius.overlay == rhs.radius.overlay && lhs.fontFamilyOverride == rhs.fontFamilyOverride
+        && qFuzzyCompare(lhs.fontScale, rhs.fontScale);
 }
 
-bool extendedSnapshotsEqual(const ThemeRegistry::ExtendedSnapshot& lhs,
-                            const ThemeRegistry::ExtendedSnapshot& rhs)
+bool extendedSnapshotsEqual(const ThemeRegistry::ExtendedSnapshot& lhs, const ThemeRegistry::ExtendedSnapshot& rhs)
 {
-    return snapshotsEqual(lhs.base, rhs.base) &&
-           colorsEqual(lhs.contrastColors, rhs.contrastColors);
+    return snapshotsEqual(lhs.base, rhs.base) && colorsEqual(lhs.contrastColors, rhs.contrastColors);
 }
 
 bool snapshotIsValid(const ThemeRegistry::Snapshot& snapshot)
 {
-    return snapshot.radius.none >= 0 && snapshot.radius.control >= 0 &&
-           snapshot.radius.overlay >= 0 && snapshot.fontScale > 0.0 &&
-           qIsFinite(snapshot.fontScale);
+    return snapshot.radius.none >= 0 && snapshot.radius.control >= 0 && snapshot.radius.overlay >= 0
+        && snapshot.fontScale > 0.0 && qIsFinite(snapshot.fontScale);
 }
 
 } // namespace
@@ -142,8 +100,7 @@ FluentElement::FontStyle ThemeRegistry::resolvedFontStyle(Typography::FontRole r
     const Typography::FontStyle& base = Typography::fontStyle(role);
     const QString family = m_fontFamily.isEmpty() ? base.family : m_fontFamily;
     const QString styleName = m_fontFamily.isEmpty() ? base.styleName : QString();
-    return {family, styleName, qRound(base.size * m_fontScale), base.weight,
-            qRound(base.lineHeight * m_fontScale)};
+    return {family, styleName, qRound(base.size * m_fontScale), base.weight, qRound(base.lineHeight * m_fontScale)};
 }
 
 const FluentElement::Colors& ThemeRegistry::colors(FluentElement::Theme theme) const

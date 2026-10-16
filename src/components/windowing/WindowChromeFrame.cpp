@@ -15,7 +15,8 @@
 
 namespace fluent::windowing {
 
-ClientSideFrameEdgeOverlay::ClientSideFrameEdgeOverlay(QWidget* parent) : QWidget(parent) {
+ClientSideFrameEdgeOverlay::ClientSideFrameEdgeOverlay(QWidget* parent) : QWidget(parent)
+{
     setAttribute(Qt::WA_NoSystemBackground, true);
     setAttribute(Qt::WA_TranslucentBackground, true);
     m_hitZonesAreSiblings = parent != nullptr;
@@ -51,7 +52,8 @@ ClientSideFrameEdgeOverlay::ClientSideFrameEdgeOverlay(QWidget* parent) : QWidge
     }
 }
 
-void ClientSideFrameEdgeOverlay::setFrameVisualRect(const QRect& rect) {
+void ClientSideFrameEdgeOverlay::setFrameVisualRect(const QRect& rect)
+{
     if (m_frameVisualRect == rect)
         return;
     m_frameVisualRect = rect;
@@ -59,29 +61,31 @@ void ClientSideFrameEdgeOverlay::setFrameVisualRect(const QRect& rect) {
     update();
 }
 
-void ClientSideFrameEdgeOverlay::setFrameRadius(qreal radius) {
+void ClientSideFrameEdgeOverlay::setFrameRadius(qreal radius)
+{
     if (qFuzzyCompare(m_frameRadius, radius))
         return;
     m_frameRadius = radius;
     update();
 }
 
-void ClientSideFrameEdgeOverlay::setFrameStroke(const QColor& stroke) {
+void ClientSideFrameEdgeOverlay::setFrameStroke(const QColor& stroke)
+{
     if (m_frameStroke == stroke)
         return;
     m_frameStroke = stroke;
     update();
 }
 
-void ClientSideFrameEdgeOverlay::setResizeInputEnabled(bool enabled, int hitWidth) {
+void ClientSideFrameEdgeOverlay::setResizeInputEnabled(bool enabled, int hitWidth)
+{
     const int clampedWidth = qMax(1, hitWidth);
     if (m_resizeInputEnabled == enabled && m_resizeHitWidth == clampedWidth)
         return;
 
     m_resizeInputEnabled = enabled;
     m_resizeHitWidth = clampedWidth;
-    setAttribute(Qt::WA_TransparentForMouseEvents,
-                 m_hitZonesAreSiblings ? true : !enabled);
+    setAttribute(Qt::WA_TransparentForMouseEvents, m_hitZonesAreSiblings ? true : !enabled);
     setMouseTracking(enabled);
     setAttribute(Qt::WA_Hover, enabled);
     if (!enabled)
@@ -89,24 +93,26 @@ void ClientSideFrameEdgeOverlay::setResizeInputEnabled(bool enabled, int hitWidt
     syncHitZones();
 }
 
-void ClientSideFrameEdgeOverlay::setMouseEventHandler(MouseEventHandler handler) {
+void ClientSideFrameEdgeOverlay::setMouseEventHandler(MouseEventHandler handler)
+{
     m_mouseEventHandler = std::move(handler);
 }
 
-bool ClientSideFrameEdgeOverlay::event(QEvent* event) {
+bool ClientSideFrameEdgeOverlay::event(QEvent* event)
+{
     if (event && (event->type() == QEvent::Show || event->type() == QEvent::Hide))
         syncHitZones();
     return QWidget::event(event);
 }
 
-bool ClientSideFrameEdgeOverlay::eventFilter(QObject* watched, QEvent* event) {
+bool ClientSideFrameEdgeOverlay::eventFilter(QObject* watched, QEvent* event)
+{
     auto* zone = qobject_cast<QWidget*>(watched);
     if (!zone || !event)
         return QWidget::eventFilter(watched, event);
 
     const QEvent::Type type = event->type();
-    if (type == QEvent::Enter || type == QEvent::HoverEnter
-        || type == QEvent::HoverMove) {
+    if (type == QEvent::Enter || type == QEvent::HoverEnter || type == QEvent::HoverMove) {
         // Alien/translucent child widgets do not reliably push their cursor to
         // the native WSLg/X11 surface. Mirror the active zone cursor on the
         // overlay, which owns that surface, whenever the pointer enters it.
@@ -124,8 +130,7 @@ bool ClientSideFrameEdgeOverlay::eventFilter(QObject* watched, QEvent* event) {
         return QWidget::eventFilter(watched, event);
     }
 
-    if (type != QEvent::MouseButtonPress && type != QEvent::MouseMove
-        && type != QEvent::MouseButtonRelease) {
+    if (type != QEvent::MouseButtonPress && type != QEvent::MouseMove && type != QEvent::MouseButtonRelease) {
         return QWidget::eventFilter(watched, event);
     }
 
@@ -145,7 +150,8 @@ bool ClientSideFrameEdgeOverlay::eventFilter(QObject* watched, QEvent* event) {
     return true;
 }
 
-void ClientSideFrameEdgeOverlay::paintEvent(QPaintEvent*) {
+void ClientSideFrameEdgeOverlay::paintEvent(QPaintEvent*)
+{
     if (m_frameRadius <= 0.0 || rect().isEmpty())
         return;
 
@@ -161,22 +167,22 @@ void ClientSideFrameEdgeOverlay::paintEvent(QPaintEvent*) {
     fluent::painting::paintRoundedSurface(painter, QRectF(visualRect), surface);
 }
 
-void ClientSideFrameEdgeOverlay::resizeEvent(QResizeEvent*) {
+void ClientSideFrameEdgeOverlay::resizeEvent(QResizeEvent*)
+{
     syncHitZones();
 }
 
-void ClientSideFrameEdgeOverlay::syncHitZones() {
+void ClientSideFrameEdgeOverlay::syncHitZones()
+{
     if (rect().isEmpty())
         return;
 
     const QRect r = rect();
-    const QRect visual = (m_frameVisualRect.isValid() ? m_frameVisualRect : r)
-                             .intersected(r);
+    const QRect visual = (m_frameVisualRect.isValid() ? m_frameVisualRect : r).intersected(r);
     if (visual.isEmpty())
         return;
 
-    const int width = qMin(m_resizeHitWidth,
-                           qMax(1, qMin(visual.width(), visual.height()) / 2));
+    const int width = qMin(m_resizeHitWidth, qMax(1, qMin(visual.width(), visual.height()) / 2));
     // Include the transparent shadow margin outside the frame plus `width`
     // logical pixels inside the visible edge. Previously the zones occupied
     // only the outermost window strip, ending one pixel before an inset Linux
@@ -194,27 +200,17 @@ void ClientSideFrameEdgeOverlay::syncHitZones() {
         right = qBound(r.left(), right, r.right());
         top = qBound(r.top(), top, r.bottom());
         bottom = qBound(r.top(), bottom, r.bottom());
-        return right >= left && bottom >= top
-            ? QRect(QPoint(left, top), QPoint(right, bottom))
-            : QRect();
+        return right >= left && bottom >= top ? QRect(QPoint(left, top), QPoint(right, bottom)) : QRect();
     };
 
-    m_hitZones[0]->setGeometry(boundedRect(leftCornerRight + 1, r.top(),
-                                           rightCornerLeft - 1, topCornerBottom));
-    m_hitZones[1]->setGeometry(boundedRect(leftCornerRight + 1, bottomCornerTop,
-                                           rightCornerLeft - 1, r.bottom()));
-    m_hitZones[2]->setGeometry(boundedRect(r.left(), topCornerBottom + 1,
-                                           leftCornerRight, bottomCornerTop - 1));
-    m_hitZones[3]->setGeometry(boundedRect(rightCornerLeft, topCornerBottom + 1,
-                                           r.right(), bottomCornerTop - 1));
-    m_hitZones[4]->setGeometry(boundedRect(r.left(), r.top(),
-                                           leftCornerRight, topCornerBottom));
-    m_hitZones[5]->setGeometry(boundedRect(rightCornerLeft, r.top(),
-                                           r.right(), topCornerBottom));
-    m_hitZones[6]->setGeometry(boundedRect(r.left(), bottomCornerTop,
-                                           leftCornerRight, r.bottom()));
-    m_hitZones[7]->setGeometry(boundedRect(rightCornerLeft, bottomCornerTop,
-                                           r.right(), r.bottom()));
+    m_hitZones[0]->setGeometry(boundedRect(leftCornerRight + 1, r.top(), rightCornerLeft - 1, topCornerBottom));
+    m_hitZones[1]->setGeometry(boundedRect(leftCornerRight + 1, bottomCornerTop, rightCornerLeft - 1, r.bottom()));
+    m_hitZones[2]->setGeometry(boundedRect(r.left(), topCornerBottom + 1, leftCornerRight, bottomCornerTop - 1));
+    m_hitZones[3]->setGeometry(boundedRect(rightCornerLeft, topCornerBottom + 1, r.right(), bottomCornerTop - 1));
+    m_hitZones[4]->setGeometry(boundedRect(r.left(), r.top(), leftCornerRight, topCornerBottom));
+    m_hitZones[5]->setGeometry(boundedRect(rightCornerLeft, r.top(), r.right(), topCornerBottom));
+    m_hitZones[6]->setGeometry(boundedRect(r.left(), bottomCornerTop, leftCornerRight, r.bottom()));
+    m_hitZones[7]->setGeometry(boundedRect(rightCornerLeft, bottomCornerTop, r.right(), r.bottom()));
 
     for (QWidget* zone : m_hitZones) {
         if (m_hitZonesAreSiblings)
@@ -225,21 +221,18 @@ void ClientSideFrameEdgeOverlay::syncHitZones() {
     }
 }
 
-void paintClientSideFrame(QPainter& painter, const ClientSideFramePaintOptions& options) {
+void paintClientSideFrame(QPainter& painter, const ClientSideFramePaintOptions& options)
+{
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setCompositionMode(QPainter::CompositionMode_Source);
     painter.fillRect(options.windowRect, Qt::transparent);
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
 
-    ::fluent::overlay::paintLayeredShadow(painter,
-                                          options.frameRect.adjusted(0, 0, -1, -1),
-                                          options.radius,
-                                          options.shadow,
-                                          options.dark ? 0.46 : 0.34);
+    ::fluent::overlay::paintLayeredShadow(painter, options.frameRect.adjusted(0, 0, -1, -1), options.radius,
+        options.shadow, options.dark ? 0.46 : 0.34);
 
     const fluent::painting::DeviceAlignedStroke frameStroke =
-        fluent::painting::DpiPaintMetrics(painter).alignedStroke(
-            QRectF(options.frameRect), 1.0);
+        fluent::painting::DpiPaintMetrics(painter).alignedStroke(QRectF(options.frameRect), 1.0);
     const QRectF body = frameStroke.rect;
     if (options.usePaintedMaterial) {
         QPainterPath clip;
@@ -257,8 +250,8 @@ void paintClientSideFrame(QPainter& painter, const ClientSideFramePaintOptions& 
     QColor fill = options.fill;
     if (options.useTranslucentMaterial) {
         const int alpha = options.effect == compatibility::BackdropEffect::Acrylic
-                              ? (options.dark ? 142 : 164)
-                              : (options.dark ? 188 : 214);
+            ? (options.dark ? 142 : 164)
+            : (options.dark ? 188 : 214);
         fill.setAlpha(alpha);
     }
 
@@ -269,7 +262,8 @@ void paintClientSideFrame(QPainter& painter, const ClientSideFramePaintOptions& 
     fluent::painting::paintRoundedSurface(painter, QRectF(options.frameRect), surface);
 }
 
-Qt::Edges resizeEdgesForHitTest(compatibility::WindowChromeCompat::HitTest hit) {
+Qt::Edges resizeEdgesForHitTest(compatibility::WindowChromeCompat::HitTest hit)
+{
     using HitTest = compatibility::WindowChromeCompat::HitTest;
     switch (hit) {
     case HitTest::Left:
@@ -295,7 +289,8 @@ Qt::Edges resizeEdgesForHitTest(compatibility::WindowChromeCompat::HitTest hit) 
     return Qt::Edges();
 }
 
-Qt::CursorShape cursorShapeForResizeEdges(Qt::Edges edges) {
+Qt::CursorShape cursorShapeForResizeEdges(Qt::Edges edges)
+{
     if ((edges.testFlag(Qt::TopEdge) && edges.testFlag(Qt::LeftEdge))
         || (edges.testFlag(Qt::BottomEdge) && edges.testFlag(Qt::RightEdge))) {
         return Qt::SizeFDiagCursor;
@@ -312,9 +307,10 @@ Qt::CursorShape cursorShapeForResizeEdges(Qt::Edges edges) {
 }
 
 QRect resizedGeometryForEdges(const QRect& startGeometry,
-                              Qt::Edges edges,
-                              const QPoint& delta,
-                              const QSize& minimumSize) {
+    Qt::Edges edges,
+    const QPoint& delta,
+    const QSize& minimumSize)
+{
     QRect next = startGeometry;
 
     if (edges.testFlag(Qt::LeftEdge)) {
@@ -337,20 +333,22 @@ QRect resizedGeometryForEdges(const QRect& startGeometry,
     return next;
 }
 
-void WindowResizeSession::start(Qt::Edges edges, const QPoint& globalPos, const QRect& geometry) {
+void WindowResizeSession::start(Qt::Edges edges, const QPoint& globalPos, const QRect& geometry)
+{
     m_edges = edges;
     m_startGlobal = globalPos;
     m_startGeometry = geometry;
 }
 
-void WindowResizeSession::finish() {
+void WindowResizeSession::finish()
+{
     m_edges = Qt::Edges();
     m_startGlobal = QPoint();
     m_startGeometry = QRect();
 }
 
-QRect WindowResizeSession::geometryForGlobalPoint(const QPoint& globalPos,
-                                                  const QSize& minimumSize) const {
+QRect WindowResizeSession::geometryForGlobalPoint(const QPoint& globalPos, const QSize& minimumSize) const
+{
     return resizedGeometryForEdges(m_startGeometry, m_edges, globalPos - m_startGlobal, minimumSize);
 }
 

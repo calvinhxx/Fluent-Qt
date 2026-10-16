@@ -19,16 +19,12 @@ namespace fluent::basicinput {
  */
 class CompoundButton : public Button {
     Q_OBJECT
-    Q_PROPERTY(QString secondaryText READ secondaryText
-                   WRITE setSecondaryText NOTIFY secondaryTextChanged)
+    Q_PROPERTY(QString secondaryText READ secondaryText WRITE setSecondaryText NOTIFY secondaryTextChanged)
 
 public:
     explicit CompoundButton(QWidget* parent = nullptr);
-    explicit CompoundButton(const QString& text,
-                            QWidget* parent = nullptr);
-    explicit CompoundButton(const QString& text,
-                            const QString& secondaryText,
-                            QWidget* parent = nullptr);
+    explicit CompoundButton(const QString& text, QWidget* parent = nullptr);
+    explicit CompoundButton(const QString& text, const QString& secondaryText, QWidget* parent = nullptr);
 
     QString secondaryText() const { return m_secondaryText; }
     void setSecondaryText(const QString& text);

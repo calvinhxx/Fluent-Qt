@@ -44,8 +44,8 @@ struct Layer {
 constexpr int kUniformBytes = 144;
 bool hardwareDevice(QRhi* rhi)
 {
-    return rhi && rhi->driverInfo().deviceType != QRhiDriverInfo::CpuDevice &&
-           SpatialRuntime::isHardwareRenderer(QString::fromUtf8(rhi->driverInfo().deviceName));
+    return rhi && rhi->driverInfo().deviceType != QRhiDriverInfo::CpuDevice
+        && SpatialRuntime::isHardwareRenderer(QString::fromUtf8(rhi->driverInfo().deviceName));
 }
 std::unique_ptr<QRhi> probeDevice()
 {
@@ -103,10 +103,7 @@ struct SpatialTextureHost::Private {
             // cannot enable RHI on an already exposed native parent.
             setParent(state->owner);
         }
-        ~Surface() override
-        {
-            releaseResources();
-        }
+        ~Surface() override { releaseResources(); }
         void clearCaches()
         {
             caches.clear();
@@ -137,16 +134,13 @@ struct SpatialTextureHost::Private {
             d->renderer = QString::fromUtf8(rhi()->driverInfo().deviceName);
             d->backend = QString::fromLatin1(rhi()->backendName());
             d->maxDimension = rhi()->resourceLimit(QRhi::TextureSizeMax);
-            vertices.reset(rhi()->newBuffer(QRhiBuffer::Immutable, QRhiBuffer::VertexBuffer,
-                                            8 * sizeof(float)));
-            sampler.reset(rhi()->newSampler(QRhiSampler::Linear, QRhiSampler::Linear,
-                                            QRhiSampler::None, QRhiSampler::ClampToEdge,
-                                            QRhiSampler::ClampToEdge));
-            referenceUniform.reset(
-                rhi()->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer, kUniformBytes));
+            vertices.reset(rhi()->newBuffer(QRhiBuffer::Immutable, QRhiBuffer::VertexBuffer, 8 * sizeof(float)));
+            sampler.reset(rhi()->newSampler(QRhiSampler::Linear, QRhiSampler::Linear, QRhiSampler::None,
+                QRhiSampler::ClampToEdge, QRhiSampler::ClampToEdge));
+            referenceUniform.reset(rhi()->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer, kUniformBytes));
             referenceTexture.reset(rhi()->newTexture(QRhiTexture::RGBA8, QSize(1, 1)));
-            if (!vertices->create() || !sampler->create() || !referenceUniform->create() ||
-                !referenceTexture->create()) {
+            if (!vertices->create() || !sampler->create() || !referenceUniform->create()
+                || !referenceTexture->create()) {
                 fail(false);
                 return;
             }
@@ -165,9 +159,8 @@ struct SpatialTextureHost::Private {
             pipeline->setTargetBlends({blend});
             pipeline->setFlags(QRhiGraphicsPipeline::UsesScissor);
             pipeline->setTopology(QRhiGraphicsPipeline::TriangleStrip);
-            pipeline->setShaderStages(
-                {{QRhiShaderStage::Vertex, shader(":/fluentqt/spatial/panel.vert.qsb")},
-                 {QRhiShaderStage::Fragment, shader(":/fluentqt/spatial/panel.frag.qsb")}});
+            pipeline->setShaderStages({{QRhiShaderStage::Vertex, shader(":/fluentqt/spatial/panel.vert.qsb")},
+                {QRhiShaderStage::Fragment, shader(":/fluentqt/spatial/panel.frag.qsb")}});
             QRhiVertexInputLayout input;
             input.setBindings({{2 * sizeof(float)}});
             input.setAttributes({{0, 0, QRhiVertexInputAttribute::Float2, 0}});
@@ -214,8 +207,7 @@ struct SpatialTextureHost::Private {
                     break;
                 }
                 const auto values = uniforms(layer, caches[i].texture->pixelSize());
-                updates->updateDynamicBuffer(caches[i].uniform.get(), 0, kUniformBytes,
-                                             values.data());
+                updates->updateDynamicBuffer(caches[i].uniform.get(), 0, kUniformBytes, values.data());
             }
             if (!valid) {
                 updates->release();
@@ -234,9 +226,8 @@ struct SpatialTextureHost::Private {
                 QRect clip(QPoint(), pixels);
                 if (i > 0 && !d->clip.isEmpty()) {
                     const qreal scale = devicePixelRatioF();
-                    clip &= QRect(qFloor(d->clip.x() * scale),
-                                  pixels.height() - qCeil(d->clip.bottom() * scale),
-                                  qCeil(d->clip.width() * scale), qCeil(d->clip.height() * scale));
+                    clip &= QRect(qFloor(d->clip.x() * scale), pixels.height() - qCeil(d->clip.bottom() * scale),
+                        qCeil(d->clip.width() * scale), qCeil(d->clip.height() * scale));
                 }
                 if (clip.isEmpty())
                     continue;
@@ -269,18 +260,14 @@ struct SpatialTextureHost::Private {
                     emit owner->renderingFailed();
             });
         }
-        std::unique_ptr<QRhiShaderResourceBindings> bindings(QRhiBuffer* uniform,
-                                                             QRhiTexture* texture)
+        std::unique_ptr<QRhiShaderResourceBindings> bindings(QRhiBuffer* uniform, QRhiTexture* texture)
         {
             std::unique_ptr<QRhiShaderResourceBindings> result(rhi()->newShaderResourceBindings());
             result->setBindings(
-                {QRhiShaderResourceBinding::uniformBuffer(
-                     0,
-                     QRhiShaderResourceBinding::VertexStage |
-                         QRhiShaderResourceBinding::FragmentStage,
-                     uniform),
-                 QRhiShaderResourceBinding::sampledTexture(
-                     1, QRhiShaderResourceBinding::FragmentStage, texture, sampler.get())});
+                {QRhiShaderResourceBinding::uniformBuffer(0,
+                     QRhiShaderResourceBinding::VertexStage | QRhiShaderResourceBinding::FragmentStage, uniform),
+                    QRhiShaderResourceBinding::sampledTexture(1, QRhiShaderResourceBinding::FragmentStage, texture,
+                        sampler.get())});
             if (!result->create())
                 result.reset();
             return result;
@@ -300,8 +287,7 @@ struct SpatialTextureHost::Private {
                         continue;
                     const qreal w = std::ceil(layer.source.width() * native * extra);
                     const qreal h = std::ceil(layer.source.height() * native * extra);
-                    if (!std::isfinite(w) || !std::isfinite(h) || w > d->maxDimension ||
-                        h > d->maxDimension) {
+                    if (!std::isfinite(w) || !std::isfinite(h) || w > d->maxDimension || h > d->maxDimension) {
                         fits = false;
                         break;
                     }
@@ -319,22 +305,19 @@ struct SpatialTextureHost::Private {
         {
             auto& cache = caches[size_t(index)];
             const auto& layer = d->layers[size_t(index)];
-            const QSize size(qCeil(layer.source.width() * d->dpr),
-                             qCeil(layer.source.height() * d->dpr));
+            const QSize size(qCeil(layer.source.width() * d->dpr), qCeil(layer.source.height() * d->dpr));
             const bool allocate = !cache.texture || cache.texture->pixelSize() != size;
             if (allocate) {
                 cache = {};
                 cache.texture.reset(rhi()->newTexture(QRhiTexture::RGBA8, size));
-                cache.uniform.reset(rhi()->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer,
-                                                     kUniformBytes));
+                cache.uniform.reset(rhi()->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer, kUniformBytes));
                 if (!cache.texture->create() || !cache.uniform->create())
                     return false;
                 cache.bindings = bindings(cache.uniform.get(), cache.texture.get());
                 if (!cache.bindings)
                     return false;
             }
-            if (!allocate && cache.source == layer.source && cache.revision == layer.revision &&
-                cache.dpr == d->dpr)
+            if (!allocate && cache.source == layer.source && cache.revision == layer.revision && cache.dpr == d->dpr)
                 return true;
             QImage image(size, QImage::Format_RGBA8888_Premultiplied);
             if (image.isNull())
@@ -342,8 +325,8 @@ struct SpatialTextureHost::Private {
             image.setDevicePixelRatio(d->dpr);
             image.fill(Qt::transparent);
             QPainter painter(&image);
-            painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing |
-                                   QPainter::SmoothPixmapTransform);
+            painter.setRenderHints(
+                QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
             painter.translate(-layer.source.topLeft());
             painter.setClipRect(layer.source);
             d->owner->paintLayer(&painter, index, QRegion(layer.source.toAlignedRect()));
@@ -356,8 +339,7 @@ struct SpatialTextureHost::Private {
             ++d->uploads;
             return true;
         }
-        std::array<float, kUniformBytes / sizeof(float)> uniforms(const Layer& layer,
-                                                                  const QSize& size)
+        std::array<float, kUniformBytes / sizeof(float)> uniforms(const Layer& layer, const QSize& size)
         {
             std::array<float, kUniformBytes / sizeof(float)> values{};
             const bool decorated = layer.radius > 0;
@@ -367,8 +349,7 @@ struct SpatialTextureHost::Private {
             QMatrix4x4 quad;
             quad.translate(layer.source.x() - padding, layer.source.y() - padding);
             quad.scale(layer.source.width() + 2 * padding, layer.source.height() + 2 * padding);
-            const auto matrix =
-                rhi()->clipSpaceCorrMatrix() * projection * QMatrix4x4(layer.transform) * quad;
+            const auto matrix = rhi()->clipSpaceCorrMatrix() * projection * QMatrix4x4(layer.transform) * quad;
             std::memcpy(values.data(), matrix.constData(), 64);
             values[16] = float(size.width());
             values[17] = float(size.height());
@@ -465,15 +446,9 @@ QString SpatialTextureHost::rendererName() const
 }
 QVariantMap SpatialTextureHost::statistics() const
 {
-    return {{"backend", d->backend},
-            {"renderer", d->renderer},
-            {"paints", d->frames},
-            {"captures", d->captures},
-            {"uploads", d->uploads},
-            {"cacheDpr", d->dpr},
-            {"cacheEstimatedBytes", d->estimatedBytes},
-            {"cacheBudgetBytes", kBudget},
-            {"maxCacheDimension", d->maxDimension}};
+    return {{"backend", d->backend}, {"renderer", d->renderer}, {"paints", d->frames}, {"captures", d->captures},
+        {"uploads", d->uploads}, {"cacheDpr", d->dpr}, {"cacheEstimatedBytes", d->estimatedBytes},
+        {"cacheBudgetBytes", kBudget}, {"maxCacheDimension", d->maxDimension}};
 }
 QImage SpatialTextureHost::grabFramebuffer() const
 {
@@ -499,14 +474,19 @@ void SpatialTextureHost::setLayerCount(int count)
 {
     d->layers.resize(size_t(qBound(0, count, 64)));
 }
-void SpatialTextureHost::setLayer(int index, const QRectF& source, const QTransform& transform,
-                                  quint64 revision, qreal radius, const QColor& material,
-                                  const QColor& reflection, qreal progress, qreal shadowOpacity)
+void SpatialTextureHost::setLayer(int index,
+    const QRectF& source,
+    const QTransform& transform,
+    quint64 revision,
+    qreal radius,
+    const QColor& material,
+    const QColor& reflection,
+    qreal progress,
+    qreal shadowOpacity)
 {
     if (index < 0 || size_t(index) >= d->layers.size())
         return;
-    d->layers[size_t(index)] = {source,   transform,     revision, radius,
-                                progress, shadowOpacity, material, reflection};
+    d->layers[size_t(index)] = {source, transform, revision, radius, progress, shadowOpacity, material, reflection};
 }
 void SpatialTextureHost::setSceneClip(const QRectF& clip)
 {

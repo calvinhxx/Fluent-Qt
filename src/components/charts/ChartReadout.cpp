@@ -54,8 +54,7 @@ ChartReadout::ChartReadout(QWidget* chart)
     m_more->hide();
 }
 
-void ChartReadout::present(const QString& heading, const QVector<ReadoutRow>& rows,
-                           const QPointF& anchor)
+void ChartReadout::present(const QString& heading, const QVector<ReadoutRow>& rows, const QPointF& anchor)
 {
     if (!m_chart || rows.isEmpty()) {
         close();
@@ -85,12 +84,11 @@ void ChartReadout::present(const QString& heading, const QVector<ReadoutRow>& ro
             row.color = data.color;
             row.dpr = dpr;
         }
-        const auto role =
-            data.selected ? Typography::FontRole::BodyStrong : Typography::FontRole::Caption;
+        const auto role = data.selected ? Typography::FontRole::BodyStrong : Typography::FontRole::Caption;
         row.name->setFluentTypography(role);
         row.value->setFluentTypography(role);
-        row.name->setTextColorRole(data.selected ? textfields::Label::TextColorRole::Primary
-                                                 : textfields::Label::TextColorRole::Secondary);
+        row.name->setTextColorRole(
+            data.selected ? textfields::Label::TextColorRole::Primary : textfields::Label::TextColorRole::Secondary);
         row.name->setText(data.name);
         row.value->setText(data.text);
         nameWidth = std::max(nameWidth, naturalWidth(row.name));
@@ -100,8 +98,7 @@ void ChartReadout::present(const QString& heading, const QVector<ReadoutRow>& ro
     // Detail text is never elided. Grow to the content, then wrap names;
     // use a stacked value when two readable columns no longer fit.
     const int availableWidth = std::max(96, m_chart->width() - 32);
-    const int preferredWidth =
-        std::max({224, naturalWidth(m_heading) + 32, nameWidth + valueWidth + 60});
+    const int preferredWidth = std::max({224, naturalWidth(m_heading) + 32, nameWidth + valueWidth + 60});
     const int width = std::min(preferredWidth, std::min(360, availableWidth));
     const bool stacked = width - 60 - valueWidth < std::min(nameWidth, 96);
     const int headingHeight = wrappedHeight(m_heading, width - 32, 24);
@@ -115,8 +112,7 @@ void ChartReadout::present(const QString& heading, const QVector<ReadoutRow>& ro
         const int textWidth = stacked ? width - 48 : width - 60 - valueWidth;
         const int nameHeight = wrappedHeight(row.name, textWidth);
         const int valueHeight = wrappedHeight(row.value, stacked ? width - 48 : valueWidth);
-        const int rowHeight =
-            stacked ? nameHeight + 4 + valueHeight : std::max(nameHeight, valueHeight);
+        const int rowHeight = stacked ? nameHeight + 4 + valueHeight : std::max(nameHeight, valueHeight);
         const int remainingHeight = i + 1 < rows.size() ? moreHeight + 8 : 0;
         if (i > 0 && y + rowHeight + remainingHeight + 16 > margin + m_chart->height() - 32)
             break;
@@ -163,8 +159,7 @@ void ChartReadout::present(const QString& heading, const QVector<ReadoutRow>& ro
 
 bool ChartReadout::eventFilter(QObject* watched, QEvent* event)
 {
-    if (m_chart && watched == overlay::presentedTopLevel(m_chart) &&
-        event->type() == QEvent::WindowDeactivate)
+    if (m_chart && watched == overlay::presentedTopLevel(m_chart) && event->type() == QEvent::WindowDeactivate)
         close();
     return Popup::eventFilter(watched, event);
 }

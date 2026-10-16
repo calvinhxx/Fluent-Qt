@@ -4,9 +4,7 @@
 
 namespace fluent::plugins {
 
-PluginContext::PluginContext(PluginManager* manager, QObject* host)
-    : m_manager(manager), m_host(host)
-{}
+PluginContext::PluginContext(PluginManager* manager, QObject* host) : m_manager(manager), m_host(host) {}
 
 QObject* PluginContext::host() const
 {

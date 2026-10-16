@@ -42,8 +42,8 @@ constexpr int VisibleFrameResizeBorderWidth = ResizeBorderWidth;
 
 bool requiresAlphaSurface(const BackdropCapabilities& capabilities, int frameMargin)
 {
-    return capabilities.supportsTransparentMaterial(BackdropEffect::Mica) ||
-           capabilities.supportsTransparentMaterial(BackdropEffect::Acrylic) || frameMargin > 0;
+    return capabilities.supportsTransparentMaterial(BackdropEffect::Mica)
+        || capabilities.supportsTransparentMaterial(BackdropEffect::Acrylic) || frameMargin > 0;
 }
 
 bool usesFluentCaptionButtons(const compatibility::WindowChromeCompat& chrome)
@@ -101,8 +101,7 @@ Window::Window(QWidget* parent)
     // 首次 surface format 推导原生不透明状态；句柄创建后再设置 WA_TranslucentBackground，可能
     // 留下“原生 backing store 声明不透明、绘制却写透明像素”的错误组合。
     refreshBackdropCapabilities();
-    m_windowTranslucent =
-        requiresAlphaSurface(m_backdropCapabilities, m_chrome.clientSideFrameMargin());
+    m_windowTranslucent = requiresAlphaSurface(m_backdropCapabilities, m_chrome.clientSideFrameMargin());
     if (m_windowTranslucent)
         setAttribute(Qt::WA_TranslucentBackground, true);
     prepareBackdropSurface();
@@ -114,10 +113,9 @@ Window::Window(QWidget* parent)
     // Keep top-level translucency as a platform-level decision. Runtime effect changes update paint
     // hints and requested backdrop type, not native flags.
     // zh_CN: 顶层半透明是平台级决策；运行时切换效果只更新绘制提示和请求的系统背景类型。
-    setEffectiveBackdropState(
-        paintedFallbackState(m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect)
-                                 ? QStringLiteral("platform-backdrop-pending")
-                                 : QStringLiteral("painted-fallback")));
+    setEffectiveBackdropState(paintedFallbackState(m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect)
+            ? QStringLiteral("platform-backdrop-pending")
+            : QStringLiteral("painted-fallback")));
 
     m_rootLayout = new QVBoxLayout(this);
     m_rootLayout->setContentsMargins(0, 0, 0, 0);
@@ -130,9 +128,9 @@ Window::Window(QWidget* parent)
     // 客户端窗框边距选择加入。Windows/macOS 继续使用原生直接绘制路径。
     QWidget* chromeParent = this;
     QVBoxLayout* chromeLayout = m_rootLayout;
-    const bool needsClientSideFrameHost = compatibility::WindowChromeCompat::currentPlatform() ==
-                                              compatibility::WindowChromeCompat::Platform::Linux ||
-                                          m_chrome.clientSideFrameMargin() > 0;
+    const bool needsClientSideFrameHost =
+        compatibility::WindowChromeCompat::currentPlatform() == compatibility::WindowChromeCompat::Platform::Linux
+        || m_chrome.clientSideFrameMargin() > 0;
     if (needsClientSideFrameHost) {
         m_frameHost = new QWidget(this);
         m_frameHost->setObjectName(QStringLiteral("fluentWindowFrameHost"));
@@ -147,8 +145,7 @@ Window::Window(QWidget* parent)
 
     m_titleBar = new TitleBar(chromeParent);
     m_titleBar->setSystemReservedLeadingWidth(m_chrome.nativeTitleBarLeadingInset());
-    m_titleBar->setVisible(m_chrome.usesCustomWindowChrome() ||
-                           m_chrome.prefersNativeMacControls());
+    m_titleBar->setVisible(m_chrome.usesCustomWindowChrome() || m_chrome.prefersNativeMacControls());
     chromeLayout->addWidget(m_titleBar);
     setupCaptionButtons();
 
@@ -174,8 +171,7 @@ Window::Window(QWidget* parent)
     connect(m_titleBar, &TitleBar::dragMoved, this, &Window::handleTitleBarDragMoved);
     connect(m_titleBar, &TitleBar::dragFinished, this, &Window::handleTitleBarDragFinished);
     connect(m_titleBar, &TitleBar::doubleClicked, this, &Window::handleTitleBarDoubleClicked);
-    connect(m_titleBar, &TitleBar::contextMenuRequested, this,
-            &Window::handleTitleBarContextMenuRequested);
+    connect(m_titleBar, &TitleBar::contextMenuRequested, this, &Window::handleTitleBarContextMenuRequested);
     connect(m_titleBar, &TitleBar::titleBarHeightChanged, this, &Window::syncCaptionButtons);
     connect(m_titleBar, &TitleBar::windowActiveChanged, this, &Window::syncCaptionButtonActivation);
 
@@ -228,8 +224,7 @@ void Window::setCustomWindowChromeEnabled(bool enabled)
     m_chrome.applyPlatformWindowFlags();
 
     refreshBackdropCapabilities();
-    const bool resolvedTranslucency =
-        requiresAlphaSurface(m_backdropCapabilities, m_chrome.clientSideFrameMargin());
+    const bool resolvedTranslucency = requiresAlphaSurface(m_backdropCapabilities, m_chrome.clientSideFrameMargin());
     // Once an alpha-capable native surface has been requested, keep it sticky.
     // Disabling it on a live QWidget can recreate the platform surface and
     // produce focus churn/black edges; opaque modes simply paint every pixel.
@@ -294,8 +289,7 @@ void Window::setEffectiveBackdropState(const BackdropState& state)
     setProperty("fluentWindowBackdropEffect", static_cast<int>(state.requestedEffect));
     if (!current())
         return;
-    setProperty("fluentMicaBackdrop",
-                state.surfaceMode == BackdropSurfaceMode::CompositedTransparent);
+    setProperty("fluentMicaBackdrop", state.surfaceMode == BackdropSurfaceMode::CompositedTransparent);
     if (!current())
         return;
     setProperty("fluentBackdropSurfaceMode", static_cast<int>(state.surfaceMode));
@@ -333,15 +327,15 @@ void Window::prepareBackdropSurface()
     // Preserve the old native material until its opaque replacement is submitted.
     // A cold native window instead starts with the same theme color as Qt's first paint.
     // zh_CN: 旧原生材质保留到不透明替代帧提交；冷启动底色与 Qt 首次绘制的主题色一致。
-    const auto mode = m_backdropDisablePending ? BackdropSurfaceMode::CompositedTransparent
-                                               : m_backdropState.surfaceMode;
+    const auto mode =
+        m_backdropDisablePending ? BackdropSurfaceMode::CompositedTransparent : m_backdropState.surfaceMode;
     const auto baseColor = [this](bool active) {
         return m_backdropEffect == BackdropEffect::Solid
-                   ? themeBackdrop(active)
-                   : WindowBackdropMaterial::opaqueBaseColor(paintedSurfaceMaterialOptions(active));
+            ? themeBackdrop(active)
+            : WindowBackdropMaterial::opaqueBaseColor(paintedSurfaceMaterialOptions(active));
     };
-    compatibility::detail::prepareWindowBackdropSurface(this, baseColor(true), baseColor(false),
-                                                        isEffectivelyActive(), mode);
+    compatibility::detail::prepareWindowBackdropSurface(this, baseColor(true), baseColor(false), isEffectivelyActive(),
+        mode);
 }
 
 void Window::scheduleBackdropResolution()
@@ -362,9 +356,9 @@ void Window::scheduleBackdropResolution()
 void Window::scheduleNativeChromeRepair()
 {
     const auto platform = compatibility::WindowChromeCompat::currentPlatform();
-    if ((platform != compatibility::WindowChromeCompat::Platform::Windows &&
-         platform != compatibility::WindowChromeCompat::Platform::MacOS) ||
-        m_nativeChromeRepairPending) {
+    if ((platform != compatibility::WindowChromeCompat::Platform::Windows
+            && platform != compatibility::WindowChromeCompat::Platform::MacOS)
+        || m_nativeChromeRepairPending) {
         return;
     }
 
@@ -395,33 +389,29 @@ void Window::scheduleNativeChromeRepair()
 void Window::resolveBackdropState(bool applyPlatform, bool forceRecomposite)
 {
     BackdropState next = paintedFallbackState(m_backdropEffect == BackdropEffect::Solid
-                                                  ? QStringLiteral("solid-requested")
-                                                  : QStringLiteral("painted-fallback"));
+            ? QStringLiteral("solid-requested")
+            : QStringLiteral("painted-fallback"));
 
-    const bool canUsePlatform =
-        m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect);
+    const bool canUsePlatform = m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect);
     // An opaque request or capability fallback must not tear down a still-transparent frame.
     // zh_CN: 不透明请求以及能力回退均须先覆盖旧透明帧，再拆除原生材质。
     if (!canUsePlatform)
         beginOpaqueBackdropCommit(next);
-    if (applyPlatform && !m_backdropDisablePending &&
-        (m_backdropEffect == BackdropEffect::Solid || canUsePlatform)) {
-        const BackdropApplyResult applied = m_chrome.applySystemBackdropDetailed(
-            m_backdropEffect, effectiveThemeUsesDarkAppearance(), forceRecomposite);
+    if (applyPlatform && !m_backdropDisablePending && (m_backdropEffect == BackdropEffect::Solid || canUsePlatform)) {
+        const BackdropApplyResult applied = m_chrome.applySystemBackdropDetailed(m_backdropEffect,
+            effectiveThemeUsesDarkAppearance(), forceRecomposite);
         if (applied.applied) {
             next.backend = applied.backend;
             next.fidelity = applied.fidelity;
             next.surfaceMode = applied.surfaceMode;
-            next.platformApplied =
-                applied.surfaceMode == BackdropSurfaceMode::CompositedTransparent;
+            next.platformApplied = applied.surfaceMode == BackdropSurfaceMode::CompositedTransparent;
             next.reason = applied.reason;
         } else if (!applied.reason.isEmpty()) {
             next.reason = applied.reason;
         }
     } else if (!applyPlatform && canUsePlatform) {
         next.reason = QStringLiteral("platform-backdrop-pending");
-    } else if (m_backdropEffect != BackdropEffect::Solid &&
-               !m_backdropCapabilities.provider.isEmpty()) {
+    } else if (m_backdropEffect != BackdropEffect::Solid && !m_backdropCapabilities.provider.isEmpty()) {
         next.reason = QStringLiteral("%1-fallback").arg(m_backdropCapabilities.provider);
     }
 
@@ -431,8 +421,8 @@ void Window::resolveBackdropState(bool applyPlatform, bool forceRecomposite)
 
 void Window::beginOpaqueBackdropCommit(const BackdropState& next)
 {
-    if (m_backdropDisablePending || !compatibility::detail::requiresOpaqueBackdropCommit(
-                                        this, m_backdropState, next.surfaceMode))
+    if (m_backdropDisablePending
+        || !compatibility::detail::requiresOpaqueBackdropCommit(this, m_backdropState, next.surfaceMode))
         return;
     m_backdropDisablePending = true;
     m_backdropOpaqueFramePainted = false;
@@ -511,8 +501,7 @@ void Window::requestForegroundActivation()
     // zh_CN: Qt 5.15/6.2 Wayland 不支持 requestActivate，每次调用都会输出警告。
     // 可见性由调用方的取消映射/重新映射保证；没有有效 XDG activation token 时，
     // 焦点仍由 compositor 决定。
-    if (QGuiApplication::platformName().startsWith(QStringLiteral("wayland"),
-                                                   Qt::CaseInsensitive)) {
+    if (QGuiApplication::platformName().startsWith(QStringLiteral("wayland"), Qt::CaseInsensitive)) {
         m_chrome.requestForegroundActivation();
         return;
     }
@@ -547,9 +536,8 @@ void Window::setBackdropEffect(BackdropEffect effect)
     // visibly flashes the surface even when the HWND and keyboard focus stay put.
     // zh_CN: Windows 强制重合成会发送首屏专用的非客户区失活/激活消息；
     // 运行时切材质重复它，即使 HWND 和键盘焦点不变也会闪烁。
-    const bool forceRecomposite =
-        isVisible() && compatibility::WindowChromeCompat::currentPlatform() !=
-                           compatibility::WindowChromeCompat::Platform::Windows;
+    const bool forceRecomposite = isVisible()
+        && compatibility::WindowChromeCompat::currentPlatform() != compatibility::WindowChromeCompat::Platform::Windows;
     resolveBackdropState(isVisible(), forceRecomposite);
     if (!guard || m_backdropEffect != effect)
         return;
@@ -558,9 +546,8 @@ void Window::setBackdropEffect(BackdropEffect effect)
 
 void Window::finishPendingBackdropChange()
 {
-    if (!m_backdropDisablePending || !m_backdropOpaqueFramePainted ||
-        m_backdropCommitWinId != internalWinId() ||
-        !compatibility::detail::flushWindowBackdropSurface(this))
+    if (!m_backdropDisablePending || !m_backdropOpaqueFramePainted || m_backdropCommitWinId != internalWinId()
+        || !compatibility::detail::flushWindowBackdropSurface(this))
         return;
 
     m_backdropDisablePending = false;
@@ -570,8 +557,7 @@ void Window::finishPendingBackdropChange()
     // zh_CN: 移除材质前先准备原生不透明底色；平台适配器负责内容图层以及原生提交边界。
     prepareBackdropSurface();
     if (m_backdropEffect != BackdropEffect::Solid)
-        m_chrome.applySystemBackdropDetailed(BackdropEffect::Solid,
-                                             effectiveThemeUsesDarkAppearance());
+        m_chrome.applySystemBackdropDetailed(BackdropEffect::Solid, effectiveThemeUsesDarkAppearance());
     resolveBackdropState(isVisible());
 }
 
@@ -598,10 +584,10 @@ void Window::toggleMaximizeRestore()
             QRect restore = m_hostedRestoreGeometry;
             if (!restore.isValid() && parentWidget()) {
                 const QSize size(qMax(minimumWidth(), parentWidget()->width() * 3 / 4),
-                                 qMax(minimumHeight(), parentWidget()->height() * 3 / 4));
+                    qMax(minimumHeight(), parentWidget()->height() * 3 / 4));
                 restore = QRect(QPoint((parentWidget()->width() - size.width()) / 2,
-                                       (parentWidget()->height() - size.height()) / 2),
-                                size);
+                                    (parentWidget()->height() - size.height()) / 2),
+                    size);
             }
             guard->setGeometry(restore);
         } else {
@@ -648,8 +634,7 @@ ClientSideFramePaintOptions Window::clientSideFramePaintOptions() const
     options.radius = qMax<qreal>(themeRadius().overlay, themeRadius().control);
     options.shadow = themeShadow(Elevation::VeryHigh);
     options.dark = effectiveThemeUsesDarkAppearance();
-    options.useTranslucentMaterial =
-        m_backdropState.surfaceMode == BackdropSurfaceMode::CompositedTransparent;
+    options.useTranslucentMaterial = m_backdropState.surfaceMode == BackdropSurfaceMode::CompositedTransparent;
     options.usePaintedMaterial = m_backdropState.surfaceMode == BackdropSurfaceMode::PaintedOpaque;
     options.effect = m_backdropEffect;
     options.material = paintedSurfaceMaterialOptions(active);
@@ -659,8 +644,8 @@ ClientSideFramePaintOptions Window::clientSideFramePaintOptions() const
 WindowBackdropMaterialOptions Window::paintedSurfaceMaterialOptions(bool active) const
 {
     const auto& colors = themeColorsRef();
-    auto options = WindowBackdropMaterialOptions::forTheme(effectiveThemeUsesDarkAppearance(),
-                                                           colors.bgCanvas, colors.accentDefault);
+    auto options = WindowBackdropMaterialOptions::forTheme(effectiveThemeUsesDarkAppearance(), colors.bgCanvas,
+        colors.accentDefault);
     options.effect = m_backdropEffect;
     options.active = active;
     options.devicePixelRatio = devicePixelRatioF();
@@ -685,8 +670,7 @@ void Window::paintPaintedSurface(QPainter& painter, bool includeClientFrame)
         WindowBackdropMaterial::paint(target, QRectF(rect()), options.material);
     };
 
-    const bool cacheSurface =
-        compatibility::detail::runtimePlatformCapabilities().cachePaintedWindowSurfaces;
+    const bool cacheSurface = compatibility::detail::runtimePlatformCapabilities().cachePaintedWindowSurfaces;
     if (!cacheSurface) {
         renderSurface(painter);
         return;
@@ -694,10 +678,8 @@ void Window::paintPaintedSurface(QPainter& painter, bool includeClientFrame)
 
     const qreal dpr = qMax<qreal>(0.5, devicePixelRatioF());
     const QSize pixelSize(qMax(1, qCeil(width() * dpr)), qMax(1, qCeil(height() * dpr)));
-    const bool cacheMatches = m_paintedSurfaceCache &&
-                              m_paintedSurfaceCachePixelSize == pixelSize &&
-                              qFuzzyCompare(m_paintedSurfaceCacheDpr, dpr) &&
-                              m_paintedSurfaceCacheIncludesFrame == includeClientFrame;
+    const bool cacheMatches = m_paintedSurfaceCache && m_paintedSurfaceCachePixelSize == pixelSize
+        && qFuzzyCompare(m_paintedSurfaceCacheDpr, dpr) && m_paintedSurfaceCacheIncludesFrame == includeClientFrame;
     if (!cacheMatches) {
         auto cache = std::make_unique<QPixmap>(pixelSize);
         cache->setDevicePixelRatio(dpr);
@@ -710,8 +692,7 @@ void Window::paintPaintedSurface(QPainter& painter, bool includeClientFrame)
         m_paintedSurfaceCachePixelSize = pixelSize;
         m_paintedSurfaceCacheDpr = dpr;
         m_paintedSurfaceCacheIncludesFrame = includeClientFrame;
-        setProperty("fluentPaintedSurfaceCacheGeneration",
-                    property("fluentPaintedSurfaceCacheGeneration").toInt() + 1);
+        setProperty("fluentPaintedSurfaceCacheGeneration", property("fluentPaintedSurfaceCacheGeneration").toInt() + 1);
     }
 
     painter.drawPixmap(QPointF(0.0, 0.0), *m_paintedSurfaceCache);
@@ -724,14 +705,13 @@ void Window::paintEvent(QPaintEvent*)
     // A native handle can exist before Qt allocates its backing-store image.
     // Cache rendering must neither query that empty device nor count as a native paint.
     // zh_CN: 原生句柄可能早于后备图像创建；缓存绘制不能读取空设备，也不能计为原生绘制。
-    const bool paintsNativeSurface = !QWidget::sharedPainter() && store &&
-                                     !store->size().isEmpty() && painter.paintEngine() &&
-                                     painter.paintEngine()->paintDevice() == store->paintDevice();
+    const bool paintsNativeSurface = !QWidget::sharedPainter() && store && !store->size().isEmpty()
+        && painter.paintEngine() && painter.paintEngine()->paintDevice() == store->paintDevice();
     if (paintsNativeSurface)
         compatibility::detail::markWindowBackdropSurfacePainted(this);
-    if (m_backdropDisablePending && !m_backdropOpaqueFramePainted &&
-        m_backdropState.surfaceMode != BackdropSurfaceMode::CompositedTransparent &&
-        m_backdropCommitWinId == internalWinId() && paintsNativeSurface) {
+    if (m_backdropDisablePending && !m_backdropOpaqueFramePainted
+        && m_backdropState.surfaceMode != BackdropSurfaceMode::CompositedTransparent
+        && m_backdropCommitWinId == internalWinId() && paintsNativeSurface) {
         // Cache captures via QWidget::render() are not presentation. Only an
         // opaque paint into the real backing store can release the old material.
         // Exposure can paint without an UpdateRequest, so also finish after this
@@ -864,9 +844,8 @@ void Window::changeEvent(QEvent* event)
         // macOS can replace the material host during a fullscreen transition. Keep this repair
         // platform-local: the shared scheduler also requests Windows' first-show activation nudge.
         // zh_CN: macOS 全屏切换可能替换材质宿主；此修复仅限 macOS，避免触发 Windows 首屏激活补偿。
-        if (compatibility::WindowChromeCompat::currentPlatform() ==
-                compatibility::WindowChromeCompat::Platform::MacOS &&
-            m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect))
+        if (compatibility::WindowChromeCompat::currentPlatform() == compatibility::WindowChromeCompat::Platform::MacOS
+            && m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect))
             scheduleBackdropResolution();
         scheduleNativeChromeRepair();
     }
@@ -883,13 +862,11 @@ bool Window::event(QEvent* event)
     const bool handled = QWidget::event(event);
     if (type == QEvent::UpdateRequest)
         finishPendingBackdropChange();
-    bool nativeSurfaceMayHaveChanged =
-        type == QEvent::WinIdChange || fluentIsDisplayScaleChangeEvent(event);
+    bool nativeSurfaceMayHaveChanged = type == QEvent::WinIdChange || fluentIsDisplayScaleChangeEvent(event);
     if (type == QEvent::WinIdChange)
         compatibility::detail::resetWindowBackdropSurfacePaint(this);
-    if (type == QEvent::WinIdChange &&
-        (m_backdropDisablePending ||
-         m_backdropState.surfaceMode == BackdropSurfaceMode::CompositedTransparent)) {
+    if (type == QEvent::WinIdChange
+        && (m_backdropDisablePending || m_backdropState.surfaceMode == BackdropSurfaceMode::CompositedTransparent)) {
         // The old material belonged to a destroyed surface. Never seed its replacement transparent
         // or reuse an opaque-paint observation from the old backing store.
         // zh_CN: 旧材质属于已销毁的 surface；新窗口不能继承透明底色或旧 backing store 的绘制证据。
@@ -908,15 +885,13 @@ bool Window::event(QEvent* event)
         scheduleBackdropResolution();
         scheduleNativeChromeRepair();
     }
-    if (type == QEvent::WindowActivate && isVisible() &&
-        compatibility::WindowChromeCompat::currentPlatform() ==
-            compatibility::WindowChromeCompat::Platform::MacOS)
+    if (type == QEvent::WindowActivate && isVisible()
+        && compatibility::WindowChromeCompat::currentPlatform() == compatibility::WindowChromeCompat::Platform::MacOS)
         scheduleNativeChromeRepair();
     return handled;
 }
 
-bool Window::nativeEvent(const QByteArray& eventType, void* message,
-                         compatibility::FluentNativeEventResult* result)
+bool Window::nativeEvent(const QByteArray& eventType, void* message, compatibility::FluentNativeEventResult* result)
 {
     return m_chrome.handleNativeEvent(eventType, message, result);
 }
@@ -935,8 +910,9 @@ void Window::setChromeInteractive(bool interactive)
 }
 
 void Window::setCaptionButtonToolTips(const QString& minimizeTooltip,
-                                      const QString& maximizeTooltip, const QString& closeTooltip,
-                                      const QString& restoreTooltip)
+    const QString& maximizeTooltip,
+    const QString& closeTooltip,
+    const QString& restoreTooltip)
 {
     m_minimizeTooltip = minimizeTooltip;
     m_maximizeTooltip = maximizeTooltip;
@@ -951,8 +927,9 @@ void Window::setCaptionButtonToolTips(const QString& minimizeTooltip,
 }
 
 void Window::setCaptionButtonAccessibleNames(const QString& minimizeName,
-                                             const QString& maximizeName, const QString& closeName,
-                                             const QString& restoreName)
+    const QString& maximizeName,
+    const QString& closeName,
+    const QString& restoreName)
 {
     m_minimizeAccessibleName = minimizeName;
     m_maximizeAccessibleName = maximizeName;
@@ -972,24 +949,22 @@ void Window::updateChromeOptions()
         return;
 
     compatibility::WindowChromeOptions options = m_chrome.options();
-    options.titleBarRect = m_titleBar->isVisible()
-                               ? QRect(m_titleBar->mapTo(this, QPoint(0, 0)), m_titleBar->size())
-                               : QRect();
+    options.titleBarRect =
+        m_titleBar->isVisible() ? QRect(m_titleBar->mapTo(this, QPoint(0, 0)), m_titleBar->size()) : QRect();
     options.dragExclusionRects.clear();
     if (m_titleBar->isVisible()) {
         for (const QRect& rect : m_titleBar->dragExclusionRects()) {
-            options.dragExclusionRects
-                << QRect(m_titleBar->mapTo(this, rect.topLeft()), rect.size());
+            options.dragExclusionRects << QRect(m_titleBar->mapTo(this, rect.topLeft()), rect.size());
         }
     }
     options.resizeBorderWidth = ResizeBorderWidth;
     options.chromeInteractive = m_chromeInteractive;
     m_chrome.configure(options);
 
-    const int reservedResizeBorder = m_chrome.usesCustomWindowChrome() && m_chromeInteractive &&
-                                             !isEffectivelyMaximized() && !isFullScreen()
-                                         ? ResizeBorderWidth
-                                         : 0;
+    const int reservedResizeBorder =
+        m_chrome.usesCustomWindowChrome() && m_chromeInteractive && !isEffectivelyMaximized() && !isFullScreen()
+        ? ResizeBorderWidth
+        : 0;
     const char* resizeBorderProperty = ::fluent::overlay::windowResizeBorderWidthPropertyName();
     if (property(resizeBorderProperty).toInt() != reservedResizeBorder)
         setProperty(resizeBorderProperty, reservedResizeBorder);
@@ -1003,8 +978,7 @@ void Window::syncTitleBarSystemInsets()
     m_titleBar->setSystemReservedLeadingWidth(m_chrome.nativeTitleBarLeadingInset());
     syncCaptionButtons();
     m_titleBar->setSystemReservedTrailingWidth(captionButtonReservedWidth());
-    m_titleBar->setVisible(m_chrome.usesCustomWindowChrome() ||
-                           m_chrome.prefersNativeMacControls());
+    m_titleBar->setVisible(m_chrome.usesCustomWindowChrome() || m_chrome.prefersNativeMacControls());
 }
 
 void Window::setupCaptionButtons()
@@ -1021,29 +995,26 @@ void Window::setupCaptionButtons()
     buttonLayout->setContentsMargins(0, 0, 0, 0);
     buttonLayout->setSpacing(0);
 
-    auto createCaptionButton = [this](const QString& objectName, const QString& glyph,
-                                      const QString& tooltip, const QString& accessibleName) {
-        auto* button = new fluent::basicinput::Button(m_captionButtonHost);
-        button->setObjectName(objectName);
-        fluent::status_info::ToolTip::attach(button, tooltip);
-        button->setAccessibleName(accessibleName);
-        button->setFluentStyle(fluent::basicinput::Button::Subtle);
-        button->setFluentLayout(fluent::basicinput::Button::IconOnly);
-        button->setFluentSize(fluent::basicinput::Button::Small);
-        button->setIconGlyph(glyph, CaptionButtonIconSize);
-        button->setFocusPolicy(Qt::NoFocus);
-        return button;
-    };
+    auto createCaptionButton =
+        [this](const QString& objectName, const QString& glyph, const QString& tooltip, const QString& accessibleName) {
+            auto* button = new fluent::basicinput::Button(m_captionButtonHost);
+            button->setObjectName(objectName);
+            fluent::status_info::ToolTip::attach(button, tooltip);
+            button->setAccessibleName(accessibleName);
+            button->setFluentStyle(fluent::basicinput::Button::Subtle);
+            button->setFluentLayout(fluent::basicinput::Button::IconOnly);
+            button->setFluentSize(fluent::basicinput::Button::Small);
+            button->setIconGlyph(glyph, CaptionButtonIconSize);
+            button->setFocusPolicy(Qt::NoFocus);
+            return button;
+        };
 
     m_minimizeButton = createCaptionButton(QStringLiteral("fluentWindowMinimizeButton"),
-                                           Typography::Icons::ChromeMinimize, m_minimizeTooltip,
-                                           m_minimizeAccessibleName);
+        Typography::Icons::ChromeMinimize, m_minimizeTooltip, m_minimizeAccessibleName);
     m_maximizeButton = createCaptionButton(QStringLiteral("fluentWindowMaximizeButton"),
-                                           Typography::Icons::ChromeMaximize, m_maximizeTooltip,
-                                           m_maximizeAccessibleName);
-    m_closeButton =
-        createCaptionButton(QStringLiteral("fluentWindowCloseButton"),
-                            Typography::Icons::ChromeClose, m_closeTooltip, m_closeAccessibleName);
+        Typography::Icons::ChromeMaximize, m_maximizeTooltip, m_maximizeAccessibleName);
+    m_closeButton = createCaptionButton(QStringLiteral("fluentWindowCloseButton"), Typography::Icons::ChromeClose,
+        m_closeTooltip, m_closeAccessibleName);
     m_closeButton->setCriticalOnHover(true);
 
     // Linux leaves the caption surface square and lets the top-level frame
@@ -1116,20 +1087,18 @@ void Window::updateMaximizeButtonIcon()
     if (!m_maximizeButton)
         return;
 
-    fluent::status_info::ToolTip::attach(
-        m_maximizeButton, isEffectivelyMaximized() ? m_restoreTooltip : m_maximizeTooltip);
-    m_maximizeButton->setAccessibleName(isEffectivelyMaximized() ? m_restoreAccessibleName
-                                                                 : m_maximizeAccessibleName);
-    m_maximizeButton->setIconGlyph(isEffectivelyMaximized() ? Typography::Icons::ChromeRestore
-                                                            : Typography::Icons::ChromeMaximize,
-                                   CaptionButtonIconSize);
+    fluent::status_info::ToolTip::attach(m_maximizeButton,
+        isEffectivelyMaximized() ? m_restoreTooltip : m_maximizeTooltip);
+    m_maximizeButton->setAccessibleName(isEffectivelyMaximized() ? m_restoreAccessibleName : m_maximizeAccessibleName);
+    m_maximizeButton->setIconGlyph(
+        isEffectivelyMaximized() ? Typography::Icons::ChromeRestore : Typography::Icons::ChromeMaximize,
+        CaptionButtonIconSize);
 }
 
 bool Window::usesHostedWindowSurface() const
 {
-    return compatibility::detail::runtimePlatformCapabilities()
-               .hostsApplicationWindowsInDesktopSurface &&
-           parentWidget() && !isWindow();
+    return compatibility::detail::runtimePlatformCapabilities().hostsApplicationWindowsInDesktopSurface
+        && parentWidget() && !isWindow();
 }
 
 bool Window::isEffectivelyActive() const
@@ -1139,15 +1108,13 @@ bool Window::isEffectivelyActive() const
 
 bool Window::isEffectivelyMaximized() const
 {
-    return isMaximized() ||
-           (usesHostedWindowSurface() && parentWidget() && geometry() == parentWidget()->rect());
+    return isMaximized() || (usesHostedWindowSurface() && parentWidget() && geometry() == parentWidget()->rect());
 }
 
 int Window::captionButtonReservedWidth() const
 {
     if (m_captionButtonHost && usesFluentCaptionButtons(m_chrome))
-        return m_captionButtonHost->width() > 0 ? m_captionButtonHost->width()
-                                                : CaptionButtonWidth * 3;
+        return m_captionButtonHost->width() > 0 ? m_captionButtonHost->width() : CaptionButtonWidth * 3;
 
     return m_chrome.nativeTitleBarTrailingInset();
 }
@@ -1211,16 +1178,15 @@ void Window::syncClientSideFrameShape()
     }
 
     const qreal radius = (frameMargin > 0 && !m_frameHost->rect().isEmpty())
-                             ? qMax<qreal>(themeRadius().overlay, themeRadius().control)
-                             : 0.0;
+        ? qMax<qreal>(themeRadius().overlay, themeRadius().control)
+        : 0.0;
     const char* radiusProperty = ::fluent::overlay::clientSideFrameRadiusPropertyName();
     if (!qFuzzyCompare(property(radiusProperty).toDouble() + 1.0, radius + 1.0))
         setProperty(radiusProperty, radius);
     if (!qFuzzyCompare(m_frameHost->property(radiusProperty).toDouble() + 1.0, radius + 1.0))
         m_frameHost->setProperty(radiusProperty, radius);
     if (radius > 0.0) {
-        const QRegion frameMask =
-            ::fluent::overlay::roundedRectRegion(m_frameHost->rect(), qCeil(radius));
+        const QRegion frameMask = ::fluent::overlay::roundedRectRegion(m_frameHost->rect(), qCeil(radius));
         if (m_frameHost->mask() != frameMask)
             m_frameHost->setMask(frameMask);
     } else if (!m_frameHost->mask().isEmpty()) {
@@ -1232,12 +1198,11 @@ void Window::syncClientSideFrameShape()
         m_frameEdgeOverlay->setFrameRadius(radius);
         m_frameEdgeOverlay->setFrameStroke(themeColorsRef().strokeDefault);
         m_frameEdgeOverlay->setVisible(radius > 0.0);
-        const bool acceptsResizeInput =
-            usesClientSideResizeInput() && m_chromeInteractive && radius > 0.0;
+        const bool acceptsResizeInput = usesClientSideResizeInput() && m_chromeInteractive && radius > 0.0;
         if (acceptsResizeInput) {
             const QRect edgeRect = m_frameEdgeOverlay->rect();
             const int border = qMin(VisibleFrameResizeBorderWidth,
-                                    qMax(1, qMin(edgeRect.width(), edgeRect.height()) / 2));
+                qMax(1, qMin(edgeRect.width(), edgeRect.height()) / 2));
             m_frameEdgeOverlay->setResizeInputEnabled(true, border);
         } else {
             m_frameEdgeOverlay->setResizeInputEnabled(false, 1);
@@ -1354,8 +1319,7 @@ Qt::Edges Window::resizeEdgesAtLocalPos(const QPoint& localPos) const
     if (!frame.contains(localPos))
         return Qt::Edges();
 
-    const int frameBorder =
-        qMin(VisibleFrameResizeBorderWidth, qMax(1, qMin(frame.width(), frame.height()) / 2));
+    const int frameBorder = qMin(VisibleFrameResizeBorderWidth, qMax(1, qMin(frame.width(), frame.height()) / 2));
     const bool left = localPos.x() < frame.left() + frameBorder;
     const bool right = localPos.x() >= frame.right() - frameBorder + 1;
     const bool top = localPos.y() < frame.top() + frameBorder;
@@ -1395,9 +1359,8 @@ bool Window::handleResizeBorderMouseEvent(QWidget* source, QMouseEvent* event)
         }
     }
 
-    const bool overCaptionButton =
-        m_captionButtonHost &&
-        (source == m_captionButtonHost || m_captionButtonHost->isAncestorOf(source));
+    const bool overCaptionButton = m_captionButtonHost
+        && (source == m_captionButtonHost || m_captionButtonHost->isAncestorOf(source));
     if (overCaptionButton) {
         return false;
     }

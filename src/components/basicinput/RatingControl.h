@@ -65,7 +65,10 @@ class RatingControl : public QWidget, public FluentElement, public QMLPlus {
      * @brief Fluent typography role used for the rating caption.
      * zh_CN: 评分说明文本使用的 Fluent 排版角色。
      */
-    Q_PROPERTY(Typography::FontRole captionFontRole READ captionFontRole WRITE setCaptionFontRole NOTIFY captionFontRoleChanged)
+    Q_PROPERTY(Typography::FontRole captionFontRole
+        READ captionFontRole
+        WRITE setCaptionFontRole
+        NOTIFY captionFontRoleChanged)
 
 public:
     explicit RatingControl(QWidget* parent = nullptr);
@@ -131,7 +134,7 @@ private:
     int starsAreaWidth() const;
     QSize iconCellSize() const;
 
-    double m_value = -1.0;            // -1 = 未设置
+    double m_value = -1.0; // -1 = 未设置
     double m_placeholderValue = 0.0;
     QString m_caption;
     bool m_isClearEnabled = true;
@@ -142,7 +145,7 @@ private:
     Typography::FontRole m_fontRole = Typography::FontRole::Body;
     Typography::FontRole m_captionFontRole = Typography::FontRole::Caption;
 
-    double m_hoverValue = -1.0;       // 悬停预览值
+    double m_hoverValue = -1.0; // 悬停预览值
     bool m_isHovered = false;
     bool m_isPressed = false;
     bool m_keyboardFocusVisible = false;

@@ -19,10 +19,7 @@ class AutoSuggestBoxAccessible final
       public QAccessibleTextInterface,
       public QAccessibleEditableTextInterface {
 public:
-    explicit AutoSuggestBoxAccessible(AutoSuggestBox* box)
-        : QAccessibleWidget(box, QAccessible::EditableText)
-    {
-    }
+    explicit AutoSuggestBoxAccessible(AutoSuggestBox* box) : QAccessibleWidget(box, QAccessible::EditableText) {}
 
     void* interface_cast(QAccessible::InterfaceType type) override
     {
@@ -73,16 +70,13 @@ public:
         QAccessibleWidget::setText(type, value);
     }
 
-    FluentAccessibleRelationList
-    relations(QAccessible::Relation match) const override
+    FluentAccessibleRelationList relations(QAccessible::Relation match) const override
     {
         auto result = QAccessibleWidget::relations(match);
         if (!(match & QAccessible::Controller) || !view())
             return result;
-        QWidget* list = view()->findChild<QWidget*>(
-            QStringLiteral("AutoSuggestBoxSuggestionList"));
-        QAccessibleInterface* target = list
-            ? QAccessible::queryAccessibleInterface(list) : nullptr;
+        QWidget* list = view()->findChild<QWidget*>(QStringLiteral("AutoSuggestBoxSuggestionList"));
+        QAccessibleInterface* target = list ? QAccessible::queryAccessibleInterface(list) : nullptr;
         if (target)
             result.append({target, QAccessible::Controller});
         return result;
@@ -91,10 +85,8 @@ public:
     QStringList actionNames() const override
     {
         QStringList result = QAccessibleWidget::actionNames();
-        if (view() && view()->isEnabled()
-            && !view()->suggestions().isEmpty()) {
-            const QString action =
-                QAccessibleActionInterface::showMenuAction();
+        if (view() && view()->isEnabled() && !view()->suggestions().isEmpty()) {
+            const QString action = QAccessibleActionInterface::showMenuAction();
             if (!result.contains(action))
                 result.append(action);
         }
@@ -103,8 +95,7 @@ public:
 
     void doAction(const QString& actionName) override
     {
-        if (view() && view()->isEnabled()
-            && !view()->suggestions().isEmpty()
+        if (view() && view()->isEnabled() && !view()->suggestions().isEmpty()
             && actionName == QAccessibleActionInterface::showMenuAction()) {
             view()->openSuggestionList();
             return;
@@ -112,16 +103,14 @@ public:
         QAccessibleWidget::doAction(actionName);
     }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         if (actionName == QAccessibleActionInterface::showMenuAction())
             return {QStringLiteral("Alt+Down"), QStringLiteral("F4")};
         return QAccessibleWidget::keyBindingsForAction(actionName);
     }
 
-    void selection(int selectionIndex, int* startOffset,
-                   int* endOffset) const override
+    void selection(int selectionIndex, int* startOffset, int* endOffset) const override
     {
         if (startOffset)
             *startOffset = -1;
@@ -136,15 +125,9 @@ public:
             *endOffset = start + view()->selectedText().size();
     }
 
-    int selectionCount() const override
-    {
-        return view() && view()->hasSelectedText() ? 1 : 0;
-    }
+    int selectionCount() const override { return view() && view()->hasSelectedText() ? 1 : 0; }
 
-    void addSelection(int startOffset, int endOffset) override
-    {
-        applySelection(startOffset, endOffset);
-    }
+    void addSelection(int startOffset, int endOffset) override { applySelection(startOffset, endOffset); }
 
     void removeSelection(int selectionIndex) override
     {
@@ -152,17 +135,13 @@ public:
             view()->deselect();
     }
 
-    void setSelection(int selectionIndex, int startOffset,
-                      int endOffset) override
+    void setSelection(int selectionIndex, int startOffset, int endOffset) override
     {
         if (selectionIndex == 0)
             applySelection(startOffset, endOffset);
     }
 
-    int cursorPosition() const override
-    {
-        return view() ? view()->cursorPosition() : 0;
-    }
+    int cursorPosition() const override { return view() ? view()->cursorPosition() : 0; }
 
     void setCursorPosition(int position) override
     {
@@ -176,15 +155,11 @@ public:
             return {};
         const QString content = view()->text();
         const int start = qBound(0, startOffset, content.size());
-        const int end = endOffset < 0
-            ? content.size() : qBound(start, endOffset, content.size());
+        const int end = endOffset < 0 ? content.size() : qBound(start, endOffset, content.size());
         return content.mid(start, end - start);
     }
 
-    int characterCount() const override
-    {
-        return view() ? view()->text().size() : 0;
-    }
+    int characterCount() const override { return view() ? view()->text().size() : 0; }
 
     QRect characterRect(int offset) const override
     {
@@ -213,24 +188,18 @@ public:
         if (first < 0)
             first = last = nearestX;
         const int textHeight = qMax(1, metrics.height());
-        const QRect local(first, qMax(0, y - textHeight / 2),
-                          qMax(1, last - first + 1), textHeight);
+        const QRect local(first, qMax(0, y - textHeight / 2), qMax(1, last - first + 1), textHeight);
         return QRect(box->mapToGlobal(local.topLeft()), local.size());
     }
 
     int offsetAtPoint(const QPoint& point) const override
     {
-        return view()
-            ? view()->cursorPositionAt(view()->mapFromGlobal(point)) : -1;
+        return view() ? view()->cursorPositionAt(view()->mapFromGlobal(point)) : -1;
     }
 
-    void scrollToSubstring(int, int endIndex) override
-    {
-        setCursorPosition(endIndex);
-    }
+    void scrollToSubstring(int, int endIndex) override { setCursorPosition(endIndex); }
 
-    QString attributes(int, int* startOffset,
-                       int* endOffset) const override
+    QString attributes(int, int* startOffset, int* endOffset) const override
     {
         if (startOffset)
             *startOffset = 0;
@@ -239,18 +208,11 @@ public:
         return {};
     }
 
-    void deleteText(int startOffset, int endOffset) override
-    {
-        replaceText(startOffset, endOffset, {});
-    }
+    void deleteText(int startOffset, int endOffset) override { replaceText(startOffset, endOffset, {}); }
 
-    void insertText(int offset, const QString& value) override
-    {
-        replaceText(offset, offset, value);
-    }
+    void insertText(int offset, const QString& value) override { replaceText(offset, offset, value); }
 
-    void replaceText(int startOffset, int endOffset,
-                     const QString& replacement) override
+    void replaceText(int startOffset, int endOffset, const QString& replacement) override
     {
         if (!canEditText())
             return;
@@ -263,15 +225,9 @@ public:
     }
 
 private:
-    AutoSuggestBox* view() const
-    {
-        return static_cast<AutoSuggestBox*>(widget());
-    }
+    AutoSuggestBox* view() const { return static_cast<AutoSuggestBox*>(widget()); }
 
-    bool canEditText() const
-    {
-        return view() && view()->isEnabled() && !view()->isReadOnly();
-    }
+    bool canEditText() const { return view() && view()->isEnabled() && !view()->isReadOnly(); }
 
     void applySelection(int startOffset, int endOffset)
     {
@@ -285,8 +241,7 @@ private:
 
 namespace {
 
-QAccessibleInterface* autoSuggestBoxAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* autoSuggestBoxAccessibilityFactory(const QString&, QObject* object)
 {
     auto* box = dynamic_cast<AutoSuggestBox*>(object);
     return box ? new AutoSuggestBoxAccessible(box) : nullptr;
@@ -320,8 +275,7 @@ void notifyAutoSuggestSuggestionsChanged(AutoSuggestBox* box)
     QAccessible::updateAccessibility(&stateEvent);
     QAccessibleEvent actionEvent(box, QAccessible::ActionChanged);
     QAccessible::updateAccessibility(&actionEvent);
-    if (QWidget* list = box->findChild<QWidget*>(
-            QStringLiteral("AutoSuggestBoxSuggestionList"))) {
+    if (QWidget* list = box->findChild<QWidget*>(QStringLiteral("AutoSuggestBoxSuggestionList"))) {
         QAccessibleEvent structureEvent(list, QAccessible::ObjectReorder);
         QAccessible::updateAccessibility(&structureEvent);
     }

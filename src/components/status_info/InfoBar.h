@@ -26,7 +26,9 @@ class Label;
 
 namespace fluent::status_info {
 
-namespace detail { class InfoBarAccessible; }
+namespace detail {
+class InfoBarAccessible;
+}
 
 /**
  * @brief Fluent inline notification bar with severity, actions, and close behavior.
@@ -87,12 +89,18 @@ class InfoBar : public QWidget, public FluentElement, public QMLPlus {
      * @brief Minimum height used by multi-line notification layout.
      * zh_CN: 多行通知布局使用的最小高度。
      */
-    Q_PROPERTY(int multiLineMinHeight READ multiLineMinHeight WRITE setMultiLineMinHeight NOTIFY multiLineMinHeightChanged)
+    Q_PROPERTY(int multiLineMinHeight
+        READ multiLineMinHeight
+        WRITE setMultiLineMinHeight
+        NOTIFY multiLineMinHeightChanged)
     /**
      * @brief Minimum height when multi-line layout includes actions.
      * zh_CN: 多行布局包含操作区时使用的最小高度。
      */
-    Q_PROPERTY(int multiLineActionMinHeight READ multiLineActionMinHeight WRITE setMultiLineActionMinHeight NOTIFY multiLineActionMinHeightChanged)
+    Q_PROPERTY(int multiLineActionMinHeight
+        READ multiLineActionMinHeight
+        WRITE setMultiLineActionMinHeight
+        NOTIFY multiLineActionMinHeightChanged)
     /**
      * @brief Optional action widget hosted by the notification.
      * zh_CN: 通知承载的可选操作控件。
@@ -112,7 +120,10 @@ class InfoBar : public QWidget, public FluentElement, public QMLPlus {
      * @brief Accessible name supplied by the application for the icon-only close button.
      * zh_CN: 由应用为纯图标关闭按钮提供的无障碍名称。
      */
-    Q_PROPERTY(QString closeButtonAccessibleName READ closeButtonAccessibleName WRITE setCloseButtonAccessibleName NOTIFY closeButtonAccessibleNameChanged)
+    Q_PROPERTY(QString closeButtonAccessibleName
+        READ closeButtonAccessibleName
+        WRITE setCloseButtonAccessibleName
+        NOTIFY closeButtonAccessibleNameChanged)
     /**
      * @brief Spacing between icon and text content.
      * zh_CN: 图标与文本内容之间的间距。
@@ -122,7 +133,10 @@ class InfoBar : public QWidget, public FluentElement, public QMLPlus {
      * @brief Spacing between title and message text.
      * zh_CN: 标题与消息文本之间的间距。
      */
-    Q_PROPERTY(int titleMessageSpacing READ titleMessageSpacing WRITE setTitleMessageSpacing NOTIFY titleMessageSpacingChanged)
+    Q_PROPERTY(int titleMessageSpacing
+        READ titleMessageSpacing
+        WRITE setTitleMessageSpacing
+        NOTIFY titleMessageSpacingChanged)
     /**
      * @brief Corner radius used by the component background.
      * zh_CN: 组件背景使用的圆角半径。
@@ -137,12 +151,18 @@ class InfoBar : public QWidget, public FluentElement, public QMLPlus {
      * @brief Glyph size used by the severity icon.
      * zh_CN: 严重级别图标字符尺寸。
      */
-    Q_PROPERTY(int severityIconGlyphSize READ severityIconGlyphSize WRITE setSeverityIconGlyphSize NOTIFY severityIconGlyphSizeChanged)
+    Q_PROPERTY(int severityIconGlyphSize
+        READ severityIconGlyphSize
+        WRITE setSeverityIconGlyphSize
+        NOTIFY severityIconGlyphSizeChanged)
     /**
      * @brief Inset applied to severity icon background painting.
      * zh_CN: 严重级别图标背景绘制内缩量。
      */
-    Q_PROPERTY(int severityIconBackgroundInset READ severityIconBackgroundInset WRITE setSeverityIconBackgroundInset NOTIFY severityIconBackgroundInsetChanged)
+    Q_PROPERTY(int severityIconBackgroundInset
+        READ severityIconBackgroundInset
+        WRITE setSeverityIconBackgroundInset
+        NOTIFY severityIconBackgroundInsetChanged)
     /**
      * @brief Typography role used by title text.
      * zh_CN: 标题文本使用的排版角色。
@@ -152,12 +172,18 @@ class InfoBar : public QWidget, public FluentElement, public QMLPlus {
      * @brief Typography role used by message text.
      * zh_CN: 消息文本使用的排版角色。
      */
-    Q_PROPERTY(Typography::FontRole messageFontRole READ messageFontRole WRITE setMessageFontRole NOTIFY messageFontRoleChanged)
+    Q_PROPERTY(Typography::FontRole messageFontRole
+        READ messageFontRole
+        WRITE setMessageFontRole
+        NOTIFY messageFontRoleChanged)
     /**
      * @brief Icon glyph used for informational severity.
      * zh_CN: 信息级别使用的图标字符。
      */
-    Q_PROPERTY(QString informationalIconGlyph READ informationalIconGlyph WRITE setInformationalIconGlyph NOTIFY informationalIconGlyphChanged)
+    Q_PROPERTY(QString informationalIconGlyph
+        READ informationalIconGlyph
+        WRITE setInformationalIconGlyph
+        NOTIFY informationalIconGlyphChanged)
     /**
      * @brief Icon glyph used for success severity.
      * zh_CN: 成功级别使用的图标字符。

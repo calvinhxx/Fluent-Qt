@@ -36,10 +36,7 @@ public:
         : QQuickRenderControlPrivate(control), m_view(view)
     {}
 
-    bool isRenderWindow(const QWindow* window) override
-    {
-        return m_view && window == m_view->window()->windowHandle();
-    }
+    bool isRenderWindow(const QWindow* window) override { return m_view && window == m_view->window()->windowHandle(); }
 
 private:
     QPointer<QmlView> m_view;
@@ -67,8 +64,7 @@ public:
         // A real renderWindow overrides QQuickRenderTarget's DPR. Supersampling
         // therefore uses the target metadata rather than the native window DPR.
         // zh_CN: 真实窗口会覆盖目标 DPR，超采样时改用目标元数据中的比例。
-        if (renderPhase && targetDpr > 0 &&
-            !qFuzzyCompare(targetDpr, m_view->devicePixelRatioF())) {
+        if (renderPhase && targetDpr > 0 && !qFuzzyCompare(targetDpr, m_view->devicePixelRatioF())) {
             if (offset)
                 *offset = QPoint();
             return nullptr;
@@ -149,14 +145,12 @@ void QmlTextureRenderer::createWindow()
     d->window->setObjectName(QStringLiteral("qmlTextureWindow"));
     connect(d->control.get(), &QQuickRenderControl::renderRequested, this, [this] { markDirty(); });
     connect(d->control.get(), &QQuickRenderControl::sceneChanged, this, [this] { markDirty(); });
-    connect(d->window.get(), &QQuickWindow::focusObjectChanged, d->view,
-            [view = d->view](QObject* focused) {
-                if (!view)
-                    return;
-                const auto* item = qobject_cast<QQuickItem*>(focused);
-                view->setAttribute(Qt::WA_InputMethodEnabled,
-                                   item && item->inputMethodQuery(Qt::ImEnabled).toBool());
-            });
+    connect(d->window.get(), &QQuickWindow::focusObjectChanged, d->view, [view = d->view](QObject* focused) {
+        if (!view)
+            return;
+        const auto* item = qobject_cast<QQuickItem*>(focused);
+        view->setAttribute(Qt::WA_InputMethodEnabled, item && item->inputMethodQuery(Qt::ImEnabled).toBool());
+    });
     if (d->root)
         d->root->setParentItem(d->window->contentItem());
 }
@@ -215,9 +209,8 @@ void QmlTextureRenderer::releaseNow(bool restore)
     disconnect(d->contextDestroyed);
     const QPointer<QOpenGLContext> previous(QOpenGLContext::currentContext());
     QSurface* previousSurface = previous ? previous->surface() : nullptr;
-    const QPointer<QObject> previousSurfaceOwner(
-        !previousSurface ? nullptr
-        : previousSurface->surfaceClass() == QSurface::Window
+    const QPointer<QObject> previousSurfaceOwner(!previousSurface ? nullptr
+            : previousSurface->surfaceClass() == QSurface::Window
             ? static_cast<QObject*>(static_cast<QWindow*>(previousSurface))
             : static_cast<QObject*>(static_cast<QOffscreenSurface*>(previousSurface)));
     const QPointer<QOpenGLContext> owner(d->context);
@@ -260,8 +253,7 @@ void QmlTextureRenderer::releaseNow(bool restore)
         current->doneCurrent();
 }
 
-bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSize, qreal dpr,
-                                quint64 budget)
+bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSize, qreal dpr, quint64 budget)
 {
     const auto fail = [this](const QString& error) {
         d->error = error;
@@ -271,8 +263,7 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
     if (d->rendering || d->releasing || d->detached || !d->root || !d->quick)
         return false;
     if (!context || !context->isValid() || QOpenGLContext::currentContext() != context)
-        return fail(
-            QStringLiteral("Texture rendering requires the caller's current OpenGL context."));
+        return fail(QStringLiteral("Texture rendering requires the caller's current OpenGL context."));
     if (logicalSize.isEmpty() || !std::isfinite(dpr) || dpr <= 0 || dpr > 4)
         return fail(QStringLiteral("Texture size and device pixel ratio must be valid."));
     createWindow();
@@ -282,8 +273,7 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
         return fail(QStringLiteral("Texture rendering requires Qt Quick's OpenGL backend."));
 #if !FLUENT_QUICK_HAS_RENDER_TARGET_DPR
     if (d->view && !qFuzzyCompare(dpr, d->view->devicePixelRatioF()))
-        return fail(
-            QStringLiteral("This Qt version requires the presenting window's device pixel ratio."));
+        return fail(QStringLiteral("This Qt version requires the presenting window's device pixel ratio."));
 #endif
     auto* gl = context->functions();
     // The context is borrowed from a compositor. Errors already pending here
@@ -296,8 +286,7 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
             break;
         qCWarning(lcQmlTexture) << "OpenGL error preceding QML rendering:" << error;
         if (count + 1 == maximumInheritedErrors)
-            return fail(QStringLiteral(
-                "The borrowed OpenGL context keeps reporting errors before QML rendering."));
+            return fail(QStringLiteral("The borrowed OpenGL context keeps reporting errors before QML rendering."));
     }
     TargetScope targetScope(context);
     GLint limit = 0;
@@ -326,9 +315,8 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
         d->cleanupSurface = std::make_unique<QOffscreenSurface>();
         d->cleanupSurface->setFormat(context->format());
         d->cleanupSurface->create();
-        d->contextDestroyed = connect(
-            context, &QOpenGLContext::aboutToBeDestroyed, this, [this] { release(); },
-            Qt::DirectConnection);
+        d->contextDestroyed =
+            connect(context, &QOpenGLContext::aboutToBeDestroyed, this, [this] { release(); }, Qt::DirectConnection);
 #if FLUENT_QUICK_USES_RHI
         d->window->setGraphicsDevice(QQuickGraphicsDevice::fromOpenGLContext(context));
         d->initialized = d->control->initialize();
@@ -347,8 +335,8 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
         d->window->contentItem()->setSize(logicalSize);
         if (!d->releasePending && !d->detached && d->root)
             d->root->setSize(logicalSize);
-        if (!d->releasePending && !d->detached && d->root &&
-            (!d->target || d->pixels != pixels || !qFuzzyCompare(d->dpr, dpr))) {
+        if (!d->releasePending && !d->detached && d->root
+            && (!d->target || d->pixels != pixels || !qFuzzyCompare(d->dpr, dpr))) {
 #if FLUENT_QUICK_USES_RHI
             d->window->setRenderTarget(QQuickRenderTarget());
 #else
@@ -440,14 +428,11 @@ QString QmlTextureRenderer::lastError() const
 }
 QVariantMap QmlTextureRenderer::statistics() const
 {
-    return {{QStringLiteral("active"), textureId() != 0},
-            {QStringLiteral("dirty"), d->dirty},
-            {QStringLiteral("allocatedBytes"), QVariant::fromValue(d->bytes)},
-            {QStringLiteral("renderedFrames"), QVariant::fromValue(d->frames)},
-            {QStringLiteral("pixelWidth"), textureSize().width()},
-            {QStringLiteral("pixelHeight"), textureSize().height()},
-            {QStringLiteral("devicePixelRatio"), d->dpr},
-            {QStringLiteral("lastError"), d->error},
-            {QStringLiteral("backend"), QStringLiteral("opengl")}};
+    return {{QStringLiteral("active"), textureId() != 0}, {QStringLiteral("dirty"), d->dirty},
+        {QStringLiteral("allocatedBytes"), QVariant::fromValue(d->bytes)},
+        {QStringLiteral("renderedFrames"), QVariant::fromValue(d->frames)},
+        {QStringLiteral("pixelWidth"), textureSize().width()}, {QStringLiteral("pixelHeight"), textureSize().height()},
+        {QStringLiteral("devicePixelRatio"), d->dpr}, {QStringLiteral("lastError"), d->error},
+        {QStringLiteral("backend"), QStringLiteral("opengl")}};
 }
 } // namespace fluent::qmlbridge

@@ -13,8 +13,7 @@ namespace fluent::accessibility::detail {
 #if QT_CONFIG(accessibility)
 
 /** Private base for custom controls that expose one bounded semantic value. */
-class ValueAccessibleAdapter : public QAccessibleWidget,
-                               public QAccessibleValueInterface {
+class ValueAccessibleAdapter : public QAccessibleWidget, public QAccessibleValueInterface {
 public:
     ValueAccessibleAdapter(QWidget* widget, QAccessible::Role role);
     ~ValueAccessibleAdapter() override = default;
@@ -25,32 +24,24 @@ public:
 
     QStringList actionNames() const override;
     void doAction(const QString& actionName) override;
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override;
+    QStringList keyBindingsForAction(const QString& actionName) const override;
 
 protected:
     virtual bool accessibleValueReadOnly() const = 0;
     virtual bool accessibleValueBusy() const { return false; }
     virtual bool accessibleValueAnimated() const { return false; }
     virtual bool accessibleValueInvalid() const { return false; }
-    virtual bool accessibleValueEditable() const
-    {
-        return !accessibleValueReadOnly();
-    }
+    virtual bool accessibleValueEditable() const { return !accessibleValueReadOnly(); }
     virtual bool canIncreaseAccessibleValue() const { return false; }
     virtual bool canDecreaseAccessibleValue() const { return false; }
-    virtual void changeAccessibleValueByStep(int direction)
-    {
-        Q_UNUSED(direction)
-    }
+    virtual void changeAccessibleValueByStep(int direction) { Q_UNUSED(direction) }
     virtual QString accessibleValueText() const;
 };
 
 #endif // QT_CONFIG(accessibility)
 
 void notifyValueAccessibilityValue(QWidget* widget, const QVariant& value);
-void notifyValueAccessibilityState(QWidget* widget,
-                                   const QAccessible::State& changed);
+void notifyValueAccessibilityState(QWidget* widget, const QAccessible::State& changed);
 void notifyValueAccessibilityText(QWidget* widget, QAccessible::Event event);
 
 } // namespace fluent::accessibility::detail

@@ -54,13 +54,11 @@ QImage readTexture(QOpenGLWidget& viewport, unsigned int texture, const QSize& s
     GLuint framebuffer = 0;
     functions->glGenFramebuffers(1, &framebuffer);
     functions->glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    functions->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture,
-                                      0);
+    functions->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
     QImage image;
     if (functions->glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
         image = QImage(size, QImage::Format_RGBA8888);
-        functions->glReadPixels(0, 0, image.width(), image.height(), GL_RGBA, GL_UNSIGNED_BYTE,
-                                image.bits());
+        functions->glReadPixels(0, 0, image.width(), image.height(), GL_RGBA, GL_UNSIGNED_BYTE, image.bits());
         image = image.mirrored();
     }
     functions->glBindFramebuffer(GL_FRAMEBUFFER, GLuint(previous));
@@ -101,8 +99,8 @@ TEST_F(QmlTextureTest, Contract_NativeTextureKeepsSceneAndReusesStaticFrames)
     ASSERT_NE(view, nullptr);
     view->setGeometry(0, 0, 320, 200);
     ASSERT_TRUE(view->setContextObject(QStringLiteral("bridgeModel"), &model));
-    ASSERT_TRUE(view->load(QUrl::fromLocalFile(QStringLiteral(FLUENT_QT_QML_TEST_SOURCE_DIR) +
-                                               QStringLiteral("/Texture.qml"))));
+    ASSERT_TRUE(view->load(
+        QUrl::fromLocalFile(QStringLiteral(FLUENT_QT_QML_TEST_SOURCE_DIR) + QStringLiteral("/Texture.qml"))));
     window.show();
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
     ASSERT_TRUE(QTest::qWaitFor([&] { return viewport.isValid(); }));
@@ -178,15 +176,13 @@ TEST_F(QmlTextureTest, Contract_NativeTextureKeepsSceneAndReusesStaticFrames)
     ASSERT_TRUE(render(viewport, *view, dpr));
     const auto revision = view->textureRevision();
     model.setProgress(75);
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return render(viewport, *view, dpr) && view->textureRevision() > revision; }));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return render(viewport, *view, dpr) && view->textureRevision() > revision; }));
     const auto updated = readTexture(viewport, *view);
     ASSERT_FALSE(updated.isNull());
     EXPECT_EQ(logicalPixel(updated, dpr, 180, 100), QColor(Qt::green));
     view->resize(360, 220);
     ASSERT_TRUE(QTest::qWaitFor([&] {
-        return render(viewport, *view, dpr) &&
-               view->textureSize() == texturePixels(QSize(360, 220), dpr);
+        return render(viewport, *view, dpr) && view->textureSize() == texturePixels(QSize(360, 220), dpr);
     }));
     const auto resized = readTexture(viewport, *view);
     ASSERT_FALSE(resized.isNull());
@@ -231,8 +227,8 @@ TEST_F(QmlTextureTest, Contract_NativeErrorsRespectTheBorrowedContextBoundary)
     ASSERT_NE(view, nullptr);
     view->setGeometry(0, 0, 320, 200);
     ASSERT_TRUE(view->setContextObject(QStringLiteral("bridgeModel"), &model));
-    ASSERT_TRUE(view->load(QUrl::fromLocalFile(QStringLiteral(FLUENT_QT_QML_TEST_SOURCE_DIR) +
-                                               QStringLiteral("/Texture.qml"))));
+    ASSERT_TRUE(view->load(
+        QUrl::fromLocalFile(QStringLiteral(FLUENT_QT_QML_TEST_SOURCE_DIR) + QStringLiteral("/Texture.qml"))));
     const QPointer<QObject> root(view->rootObject());
     ASSERT_FALSE(root.isNull());
     fluent::qmlbridge::QmlTextureLayer layer;
@@ -260,8 +256,7 @@ TEST_F(QmlTextureTest, Contract_NativeErrorsRespectTheBorrowedContextBoundary)
     gl->glEnable(GLenum(0xffffffffu));
     ASSERT_EQ(gl->glGetError(), GLenum(GL_INVALID_ENUM));
     gl->glEnable(GLenum(0xffffffffu)); // Leave a real caller error pending.
-    const bool inheritedErrorPrepared =
-        layer.prepareFrame(viewport.context(), source, dpr, 67108864);
+    const bool inheritedErrorPrepared = layer.prepareFrame(viewport.context(), source, dpr, 67108864);
     EXPECT_EQ(gl->glGetError(), GLenum(GL_NO_ERROR));
     viewport.doneCurrent();
     ASSERT_TRUE(inheritedErrorPrepared);
@@ -286,8 +281,7 @@ TEST_F(QmlTextureTest, Contract_NativeErrorsRespectTheBorrowedContextBoundary)
 #else
     const auto frameFinished = &QQuickWindow::afterRendering;
 #endif
-    const auto connection =
-        QObject::connect(item->window(), frameFinished, &layer, inject, Qt::DirectConnection);
+    const auto connection = QObject::connect(item->window(), frameFinished, &layer, inject, Qt::DirectConnection);
     model.setProgress(25);
     ASSERT_TRUE(QTest::qWaitFor([&] { return !prepare() && injected; }));
     QObject::disconnect(connection);
@@ -324,8 +318,8 @@ TEST_F(QmlTextureTest, Contract_NativeLayerClipsAndReusesBorrowedTextures)
     ASSERT_NE(view, nullptr);
     view->setGeometry(0, 0, 320, 200);
     ASSERT_TRUE(view->setContextObject(QStringLiteral("bridgeModel"), &model));
-    ASSERT_TRUE(view->load(QUrl::fromLocalFile(QStringLiteral(FLUENT_QT_QML_TEST_SOURCE_DIR) +
-                                               QStringLiteral("/Texture.qml"))));
+    ASSERT_TRUE(view->load(
+        QUrl::fromLocalFile(QStringLiteral(FLUENT_QT_QML_TEST_SOURCE_DIR) + QStringLiteral("/Texture.qml"))));
     const QPointer<QObject> root(view->rootObject());
     fluent::qmlbridge::QmlTextureLayer layer;
     layer.setRootWidget(&panel);
@@ -367,8 +361,7 @@ TEST_F(QmlTextureTest, Contract_NativeLayerClipsAndReusesBorrowedTextures)
     EXPECT_EQ(layer.statistics()[QStringLiteral("compositions")], compositions);
     EXPECT_EQ(view->textureStatistics()[QStringLiteral("renderedFrames")], frames);
     EXPECT_NE(layer.compose(base->texture(), base->size(), 8), 0u);
-    EXPECT_EQ(layer.statistics()[QStringLiteral("compositions")].toULongLong(),
-              compositions.toULongLong() + 1);
+    EXPECT_EQ(layer.statistics()[QStringLiteral("compositions")].toULongLong(), compositions.toULongLong() + 1);
     EXPECT_EQ(view->textureStatistics()[QStringLiteral("renderedFrames")], frames);
     viewport.doneCurrent();
     model.setProgress(75);
@@ -380,8 +373,7 @@ TEST_F(QmlTextureTest, Contract_NativeLayerClipsAndReusesBorrowedTextures)
         const QImage image = refreshed ? readTexture(viewport, refreshed, base->size()) : QImage();
         return !image.isNull() && logicalPixel(image, dpr, 200, 120) == QColor(Qt::green);
     })) << "A new QML texture revision must refresh the composed panel without a Widget repaint";
-    EXPECT_GT(view->textureStatistics()[QStringLiteral("renderedFrames")].toULongLong(),
-              frames.toULongLong());
+    EXPECT_GT(view->textureStatistics()[QStringLiteral("renderedFrames")].toULongLong(), frames.toULongLong());
 
     const int count = root->property("localCounter").toInt();
     QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier, QPoint(230, 30));
@@ -405,8 +397,7 @@ TEST_F(QmlTextureTest, Contract_NativeLayerClipsAndReusesBorrowedTextures)
     const auto rebuild = [&] {
         viewport.makeCurrent();
         const bool prepared = layer.prepareFrame(viewport.context(), source, dpr, 67108864);
-        const unsigned int composed =
-            prepared ? layer.compose(base->texture(), base->size(), 9) : 0u;
+        const unsigned int composed = prepared ? layer.compose(base->texture(), base->size(), 9) : 0u;
         const GLenum error = functions->glGetError();
         viewport.doneCurrent();
         EXPECT_EQ(error, GLenum(GL_NO_ERROR));
@@ -462,8 +453,8 @@ TEST_F(QmlTextureTest, Contract_NativeLayerDefersReentrantCleanup)
     ASSERT_NE(view, nullptr);
     view->setGeometry(0, 0, 320, 200);
     ASSERT_TRUE(view->setContextObject(QStringLiteral("bridgeModel"), &model));
-    ASSERT_TRUE(view->load(QUrl::fromLocalFile(QStringLiteral(FLUENT_QT_QML_TEST_SOURCE_DIR) +
-                                               QStringLiteral("/Texture.qml"))));
+    ASSERT_TRUE(view->load(
+        QUrl::fromLocalFile(QStringLiteral(FLUENT_QT_QML_TEST_SOURCE_DIR) + QStringLiteral("/Texture.qml"))));
     const QPointer<QObject> root(view->rootObject());
     ASSERT_FALSE(root.isNull());
     ASSERT_TRUE(root->setProperty("localCounter", 41));
@@ -582,8 +573,8 @@ TEST_F(QmlTextureTest, Contract_RoundedScenesPreserveAlpha)
     auto* view = session.createView(&host);
     ASSERT_NE(view, nullptr);
     view->setGeometry(host.rect());
-    ASSERT_TRUE(view->load(QUrl::fromLocalFile(QStringLiteral(FLUENT_QT_QML_TEST_SOURCE_DIR) +
-                                               QStringLiteral("/Rounded.qml"))));
+    ASSERT_TRUE(view->load(
+        QUrl::fromLocalFile(QStringLiteral(FLUENT_QT_QML_TEST_SOURCE_DIR) + QStringLiteral("/Rounded.qml"))));
     auto* quick = view->findChild<QQuickWidget*>();
     ASSERT_NE(quick, nullptr);
     const QPointer<QObject> root(view->rootObject());
@@ -625,9 +616,8 @@ TEST_F(QmlTextureTest, Contract_RoundedScenesPreserveAlpha)
     const auto transparentCorners = [](const QImage& image) {
         if (image.isNull())
             return false;
-        for (const QPoint& point :
-             {QPoint(1, 1), QPoint(image.width() - 2, 1), QPoint(1, image.height() - 2),
-              QPoint(image.width() - 2, image.height() - 2)})
+        for (const QPoint& point : {QPoint(1, 1), QPoint(image.width() - 2, 1), QPoint(1, image.height() - 2),
+                 QPoint(image.width() - 2, image.height() - 2)})
             if (image.pixelColor(point).alpha() != 0)
                 return false;
         return true;
@@ -641,16 +631,15 @@ TEST_F(QmlTextureTest, Contract_RoundedScenesPreserveAlpha)
             }
         return false;
     };
-    ASSERT_TRUE(QTest::qWaitFor([&] { return transparentCorners(quick->grabFramebuffer()); }))
-        << "Adopting a loaded preview must preserve alpha before any theme update";
+    ASSERT_TRUE(QTest::qWaitFor([&] {
+        return transparentCorners(quick->grabFramebuffer());
+    })) << "Adopting a loaded preview must preserve alpha before any theme update";
     quint64 baseRevision = 0;
-    for (auto mode : {fluent::FluentElement::Light, fluent::FluentElement::Dark,
-                      fluent::FluentElement::Light}) {
+    for (auto mode : {fluent::FluentElement::Light, fluent::FluentElement::Dark, fluent::FluentElement::Light}) {
         SCOPED_TRACE(int(mode));
         layer.release();
         fluent::FluentElement::setTheme(mode);
-        EXPECT_EQ(view->themeObject()->property("dark").toBool(),
-                  mode == fluent::FluentElement::Dark);
+        EXPECT_EQ(view->themeObject()->property("dark").toBool(), mode == fluent::FluentElement::Dark);
         const QColor surface = view->themeObject()->property("surface").value<QColor>();
         QImage native;
         ASSERT_TRUE(QTest::qWaitFor([&] {
@@ -659,8 +648,7 @@ TEST_F(QmlTextureTest, Contract_RoundedScenesPreserveAlpha)
             if (!quick->isVisible() || quick->geometry() != view->contentsRect())
                 return false;
             native = quick->grabFramebuffer();
-            return transparentCorners(native) &&
-                   native.pixelColor(native.rect().center()) == surface;
+            return transparentCorners(native) && native.pixelColor(native.rect().center()) == surface;
         })) << "Native Quick must clear rounded corners to alpha zero";
         EXPECT_TRUE(hasAntialiasing(native));
         const QImage painted = host.grab().toImage();
@@ -672,8 +660,7 @@ TEST_F(QmlTextureTest, Contract_RoundedScenesPreserveAlpha)
         ASSERT_TRUE(layer.synchronize());
         viewport.makeCurrent();
         const bool prepared = layer.prepareFrame(viewport.context(), host.rect(), dpr, 67108864);
-        const unsigned int composed =
-            prepared ? layer.compose(base->texture(), base->size(), ++baseRevision) : 0u;
+        const unsigned int composed = prepared ? layer.compose(base->texture(), base->size(), ++baseRevision) : 0u;
         viewport.doneCurrent();
         ASSERT_TRUE(prepared);
         ASSERT_NE(composed, 0u);

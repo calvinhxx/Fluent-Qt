@@ -25,16 +25,12 @@ class ChartView : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(QString subtitle READ subtitle WRITE setSubtitle NOTIFY subtitleChanged)
     Q_PROPERTY(QString valueSuffix READ valueSuffix WRITE setValueSuffix NOTIFY valueSuffixChanged)
     Q_PROPERTY(QString centerText READ centerText WRITE setCenterText NOTIFY centerTextChanged)
-    Q_PROPERTY(
-        QString centerCaption READ centerCaption WRITE setCenterCaption NOTIFY centerCaptionChanged)
+    Q_PROPERTY(QString centerCaption READ centerCaption WRITE setCenterCaption NOTIFY centerCaptionChanged)
     Q_PROPERTY(bool loading READ isLoading WRITE setLoading NOTIFY loadingChanged)
     Q_PROPERTY(bool autoYRange READ isAutoYRange NOTIFY yRangeChanged)
-    Q_PROPERTY(
-        bool legendVisible READ isLegendVisible WRITE setLegendVisible NOTIFY legendVisibleChanged)
-    Q_PROPERTY(int maximumPointCount READ maximumPointCount WRITE setMaximumPointCount NOTIFY
-                   maximumPointCountChanged)
-    Q_PROPERTY(int maximumFrameRate READ maximumFrameRate WRITE setMaximumFrameRate NOTIFY
-                   maximumFrameRateChanged)
+    Q_PROPERTY(bool legendVisible READ isLegendVisible WRITE setLegendVisible NOTIFY legendVisibleChanged)
+    Q_PROPERTY(int maximumPointCount READ maximumPointCount WRITE setMaximumPointCount NOTIFY maximumPointCountChanged)
+    Q_PROPERTY(int maximumFrameRate READ maximumFrameRate WRITE setMaximumFrameRate NOTIFY maximumFrameRateChanged)
     Q_PROPERTY(bool autoRange READ isAutoRange NOTIFY xRangeChanged)
 public:
     enum ChartType { Line, Area, Bar, HorizontalBar, Pie, Donut, Scatter, Sparkline };

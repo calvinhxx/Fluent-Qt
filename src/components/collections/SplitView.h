@@ -55,7 +55,10 @@ class SplitView : public QWidget, public FluentElement, public QMLPlus {
      * @brief Painted thickness of the split handle indicator.
      * zh_CN: 分隔手柄指示器的绘制厚度。
      */
-    Q_PROPERTY(int handleVisualThickness READ handleVisualThickness WRITE setHandleVisualThickness NOTIFY handleVisualThicknessChanged)
+    Q_PROPERTY(int handleVisualThickness
+        READ handleVisualThickness
+        WRITE setHandleVisualThickness
+        NOTIFY handleVisualThicknessChanged)
     /**
      * @brief Pane index that consumes remaining SplitView space.
      * zh_CN: 占用 SplitView 剩余空间的面板索引。
@@ -70,7 +73,10 @@ class SplitView : public QWidget, public FluentElement, public QMLPlus {
      * @brief Fallback pane minimum size hint.
      * zh_CN: 面板默认最小尺寸提示。
      */
-    Q_PROPERTY(QSize defaultMinimumSizeHint READ defaultMinimumSizeHint WRITE setDefaultMinimumSizeHint NOTIFY defaultMinimumSizeHintChanged)
+    Q_PROPERTY(QSize defaultMinimumSizeHint
+        READ defaultMinimumSizeHint
+        WRITE setDefaultMinimumSizeHint
+        NOTIFY defaultMinimumSizeHintChanged)
 
 public:
     explicit SplitView(QWidget* parent = nullptr);
@@ -83,18 +89,16 @@ public:
      * @brief Appends a pane with an explicit release policy.
      * zh_CN: 使用显式释放策略追加窗格。
      */
-    int addPane(QWidget* pane,
-                WidgetOwnership ownership,
-                const SplitViewPaneOptions& options = SplitViewPaneOptions());
+    int addPane(QWidget* pane, WidgetOwnership ownership, const SplitViewPaneOptions& options = SplitViewPaneOptions());
     int insertPane(int index, QWidget* pane, const SplitViewPaneOptions& options = SplitViewPaneOptions());
     /**
      * @brief Inserts a pane with an explicit release policy.
      * zh_CN: 使用显式释放策略插入窗格。
      */
     int insertPane(int index,
-                   QWidget* pane,
-                   WidgetOwnership ownership,
-                   const SplitViewPaneOptions& options = SplitViewPaneOptions());
+        QWidget* pane,
+        WidgetOwnership ownership,
+        const SplitViewPaneOptions& options = SplitViewPaneOptions());
     /**
      * @brief Legacy removal that transfers the pane to the caller.
      * zh_CN: 兼容旧行为，移除窗格并将其转交给调用方。

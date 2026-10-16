@@ -39,6 +39,13 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Install C++ formatter
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv .venv-format
+          .venv-format/bin/python -m pip install --disable-pip-version-check clang-format==22.1.8
+
       - name: Validate C++ CI catalogs
         shell: bash
         run: |
@@ -60,8 +67,7 @@ jobs:
             git diff --name-only --diff-filter=ACMR "$PR_BASE_SHA...HEAD" --
           )"
           if grep -Eiq '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$' <<< "$changed_files"; then
-            formatter="$(npm exec --yes --package=clang-format@1.8.0 -- which clang-format)"
-            python3 tools/quality/check_cpp_format.py --changed-from "$PR_BASE_SHA" --clang-format "$formatter"
+            python3 tools/quality/check_cpp_format.py --changed-from "$PR_BASE_SHA"
           else
             echo "No changed C++ files require formatting checks."
           fi

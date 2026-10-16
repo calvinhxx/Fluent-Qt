@@ -9,10 +9,7 @@ namespace {
 class SparklineRenderer final : public ChartRenderer {
 public:
     Layout layout() const override { return Layout::Compact; }
-    Projection project(const Context& c, const ChartModel& m) const override
-    {
-        return projectPolyline(c, m);
-    }
+    Projection project(const Context& c, const ChartModel& m) const override { return projectPolyline(c, m); }
     void paint(QPainter& p, const Context& c, const Projection& data) const override
     {
         paintPolyline(p, c, data);

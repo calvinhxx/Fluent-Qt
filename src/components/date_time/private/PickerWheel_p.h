@@ -35,9 +35,7 @@ Qt::Alignment normalizedPickerHorizontalAlignment(Qt::Alignment alignment, Qt::A
 int wrappedPickerValue(int value, int minimum, int maximum);
 
 /** Private shared interaction and rendering shell for DatePicker/TimePicker columns. */
-class PickerWheelColumn : public QWidget,
-                          public FluentElement,
-                          public PickerColumnAccessibilityHost {
+class PickerWheelColumn : public QWidget, public FluentElement, public PickerColumnAccessibilityHost {
 public:
     explicit PickerWheelColumn(int initialWidthHint, QWidget* parent = nullptr);
 
@@ -105,18 +103,17 @@ private:
 /** Private shared geometry and action surface for DatePicker/TimePicker flyouts. */
 class PickerWheelPanel : public QWidget, public FluentElement {
 public:
-    PickerWheelPanel(const QString& panelObjectName, int themeMinimumWidth,
-                     QWidget* parent = nullptr);
+    PickerWheelPanel(const QString& panelObjectName, int themeMinimumWidth, QWidget* parent = nullptr);
 
     QSize sizeHint() const override;
     PickerWheelColumn* firstVisibleColumn() const;
     int selectedRowCenterY() const;
     void setColumns(const QVector<PickerWheelColumn*>& columns);
     void initializeActions(const QString& confirmButtonObjectName,
-                           const QString& cancelButtonObjectName, std::function<void()> commit,
-                           std::function<void()> cancel);
-    void configureColumns(const QFont& pickerFont, const QVector<bool>& visible,
-                          const QVector<int>& preferredWidths);
+        const QString& cancelButtonObjectName,
+        std::function<void()> commit,
+        std::function<void()> cancel);
+    void configureColumns(const QFont& pickerFont, const QVector<bool>& visible, const QVector<int>& preferredWidths);
     void setActionAccessibleNames(const QString& confirmName, const QString& cancelName);
     void updateColumns();
     void refreshTheme();

@@ -23,8 +23,8 @@ using namespace fluent;
 namespace {
 QUrl source(const char* filename = "Bridge.qml")
 {
-    return QUrl::fromLocalFile(QStringLiteral(FLUENT_QT_QML_TEST_SOURCE_DIR) + QLatin1Char('/') +
-                               QString::fromLatin1(filename));
+    return QUrl::fromLocalFile(
+        QStringLiteral(FLUENT_QT_QML_TEST_SOURCE_DIR) + QLatin1Char('/') + QString::fromLatin1(filename));
 }
 } // namespace
 
@@ -91,8 +91,7 @@ TEST(QmlGraphicsApiTest, StartupSelectionProbe)
 
 TEST(QmlGraphicsApiTest, Contract_BackendSelectionUsesFreshProcesses)
 {
-    for (const QString& scenario :
-         {"legacy", "opengl", "native", "environment", "software", "software-alias"}) {
+    for (const QString& scenario : {"legacy", "opengl", "native", "environment", "software", "software-alias"}) {
         SCOPED_TRACE(scenario.toStdString());
         auto environment = QProcessEnvironment::systemEnvironment();
         environment.remove("QT_QUICK_BACKEND");
@@ -116,7 +115,7 @@ TEST(QmlGraphicsApiTest, Contract_BackendSelectionUsesFreshProcesses)
         process.setProcessEnvironment(environment);
         process.setProcessChannelMode(QProcess::MergedChannels);
         process.start(QCoreApplication::applicationFilePath(),
-                      {"--gtest_filter=QmlGraphicsApiTest.StartupSelectionProbe"});
+            {"--gtest_filter=QmlGraphicsApiTest.StartupSelectionProbe"});
         ASSERT_TRUE(process.waitForStarted(10000));
         ASSERT_TRUE(process.waitForFinished(30000));
         EXPECT_EQ(process.exitStatus(), QProcess::NormalExit);
@@ -326,8 +325,7 @@ TEST(QmlBridgeTest, Contract_ThemeAndMotionTokensFollowHostPolicy)
     view.onThemeUpdated();
     EXPECT_TRUE(theme->isDark());
     EXPECT_EQ(theme->background(), view.themeColorsRef().bgCanvas);
-    EXPECT_EQ(root->property("observedSurfaceAlt").value<QColor>(),
-              view.themeColorsRef().bgLayerAlt);
+    EXPECT_EQ(root->property("observedSurfaceAlt").value<QColor>(), view.themeColorsRef().bgLayerAlt);
     EXPECT_NE(root->property("observedSurfaceAlt").value<QColor>(), initialSurface);
     EXPECT_EQ(view.rootObject(), root);
     EXPECT_EQ(changed.count(), 1);
@@ -349,8 +347,7 @@ TEST(QmlBridgeTest, Contract_StopDuringQmlCompletionDefersSafeSceneDestruction)
     ASSERT_TRUE(session.activate());
     ASSERT_TRUE(session.attachView(&view));
     ASSERT_TRUE(view.setContextObject(QStringLiteral("bridgeModel"), &model));
-    QObject::connect(&model, &QmlBridgeTestModel::stopRequested, &session,
-                     [&] { EXPECT_TRUE(session.deactivate()); });
+    QObject::connect(&model, &QmlBridgeTestModel::stopRequested, &session, [&] { EXPECT_TRUE(session.deactivate()); });
     EXPECT_FALSE(view.load(source("Stop.qml")));
     EXPECT_FALSE(session.isActive());
     EXPECT_FALSE(view.isActive());
@@ -373,8 +370,7 @@ TEST(QmlBridgeTest, Contract_ItemModelsRemainSharedAndBorrowed)
     ASSERT_NE(view.rootObject(), nullptr);
     EXPECT_EQ(view.rootObject()->property("observedCount").toInt(), 1);
     model.appendRow(new QStandardItem(QStringLiteral("Second")));
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return view.rootObject()->property("observedCount").toInt() == 2; }));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return view.rootObject()->property("observedCount").toInt() == 2; }));
     ASSERT_TRUE(session.deactivate());
     EXPECT_EQ(model.rowCount(), 2);
     EXPECT_EQ(model.parent(), nullptr);
@@ -391,8 +387,7 @@ TEST(QmlBridgeTest, Contract_GraphicsErrorsPersistUntilExplicitReload)
     ASSERT_TRUE(view.load(source()));
     auto* quick = view.findChild<QQuickWidget*>();
     ASSERT_NE(quick, nullptr);
-    quick->sceneGraphError(QQuickWindow::ContextNotAvailable,
-                           QStringLiteral("Graphics unavailable"));
+    quick->sceneGraphError(QQuickWindow::ContextNotAvailable, QStringLiteral("Graphics unavailable"));
     quick->statusChanged(QQuickWidget::Ready);
     ASSERT_TRUE(QTest::qWaitFor([&] { return view.status() == qmlbridge::QmlView::Error; }));
     QCoreApplication::processEvents();
@@ -410,8 +405,9 @@ TEST(QmlBridgeTest, Contract_ReplacingAnErrorSceneDoesNotEmitItsStaleDiagnostic)
     ASSERT_TRUE(session.activate());
     ASSERT_TRUE(session.attachView(&view));
     QStringList received;
-    QObject::connect(&view, &qmlbridge::QmlView::errorOccurred, &view,
-                     [&](const QString& message) { received.append(message); });
+    QObject::connect(&view, &qmlbridge::QmlView::errorOccurred, &view, [&](const QString& message) {
+        received.append(message);
+    });
     bool replaced = false;
     QObject::connect(&view, &qmlbridge::QmlView::errorsChanged, &view, [&] {
         if (!replaced && view.status() == qmlbridge::QmlView::Error) {
@@ -439,8 +435,9 @@ TEST(QmlBridgeTest, Contract_GraphicsErrorCallbackCanRecoverWithoutAStaleErrorSt
     qRegisterMetaType<qmlbridge::QmlView::Status>("Status");
     QSignalSpy states(&view, &qmlbridge::QmlView::statusChanged);
     ASSERT_TRUE(states.isValid());
-    QObject::connect(&view, &qmlbridge::QmlView::errorOccurred, &view,
-                     [&](const QString&) { ASSERT_TRUE(view.load(source())); });
+    QObject::connect(&view, &qmlbridge::QmlView::errorOccurred, &view, [&](const QString&) {
+        ASSERT_TRUE(view.load(source()));
+    });
     auto* quick = view.findChild<QQuickWidget*>();
     ASSERT_NE(quick, nullptr);
     quick->sceneGraphError(QQuickWindow::ContextNotAvailable, QStringLiteral("Recover graphics"));

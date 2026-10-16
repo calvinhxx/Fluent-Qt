@@ -15,10 +15,7 @@ public:
     {
         return projectSectors(c, m, innerRadius());
     }
-    void paint(QPainter& p, const Context& c, const Projection& data) const override
-    {
-        paintShapes(p, c, data, true);
-    }
+    void paint(QPainter& p, const Context& c, const Projection& data) const override { paintShapes(p, c, data, true); }
 };
 } // namespace
 std::unique_ptr<ChartRenderer> makeDonutRenderer()

@@ -12,10 +12,7 @@ namespace fluent::status_info::detail {
 
 class ToolTipAccessible final : public QAccessibleWidget {
 public:
-    explicit ToolTipAccessible(ToolTip* toolTip)
-        : QAccessibleWidget(toolTip, QAccessible::ToolTip)
-    {
-    }
+    explicit ToolTipAccessible(ToolTip* toolTip) : QAccessibleWidget(toolTip, QAccessible::ToolTip) {}
 
     QString text(QAccessible::Text type) const override
     {
@@ -44,25 +41,20 @@ public:
         return result;
     }
 
-    FluentAccessibleRelationList
-    relations(QAccessible::Relation match) const override
+    FluentAccessibleRelationList relations(QAccessible::Relation match) const override
     {
         auto result = QAccessibleWidget::relations(match);
 #if FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION
         ToolTip* surface = toolTip();
-        if (!surface || !surface->m_target
-            || !(match & QAccessible::DescriptionFor)) {
+        if (!surface || !surface->m_target || !(match & QAccessible::DescriptionFor)) {
             return result;
         }
 
-        QAccessibleInterface* target =
-            QAccessible::queryAccessibleInterface(surface->m_target);
+        QAccessibleInterface* target = QAccessible::queryAccessibleInterface(surface->m_target);
         if (!target)
             return result;
         for (const auto& relation : result) {
-            if (relation.first == target
-                && relation.second.testFlag(
-                    QAccessible::DescriptionFor)) {
+            if (relation.first == target && relation.second.testFlag(QAccessible::DescriptionFor)) {
                 return result;
             }
         }
@@ -74,16 +66,12 @@ public:
     QStringList actionNames() const override { return {}; }
 
 private:
-    ToolTip* toolTip() const
-    {
-        return static_cast<ToolTip*>(widget());
-    }
+    ToolTip* toolTip() const { return static_cast<ToolTip*>(widget()); }
 };
 
 namespace {
 
-QAccessibleInterface* toolTipAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* toolTipAccessibilityFactory(const QString&, QObject* object)
 {
     auto* toolTip = qobject_cast<ToolTip*>(object);
     return toolTip ? new ToolTipAccessible(toolTip) : nullptr;

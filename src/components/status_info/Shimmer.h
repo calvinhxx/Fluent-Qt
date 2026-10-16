@@ -57,11 +57,8 @@ public:
 
         Element() = default;
         Element(Shape elementShape, const QRectF& elementRect, qreal elementRadius = -1.0)
-            : shape(elementShape)
-            , rect(elementRect)
-            , radius(elementRadius)
-        {
-        }
+            : shape(elementShape), rect(elementRect), radius(elementRadius)
+        {}
     };
 
     /**
@@ -75,10 +72,10 @@ public:
      * zh_CN: 使用归一化动画进度绘制 shimmer 元素。
      */
     static void paint(QPainter* painter,
-                      const QVector<Element>& elements,
-                      const Palette& palette,
-                      qreal progress,
-                      bool animated = true);
+        const QVector<Element>& elements,
+        const Palette& palette,
+        qreal progress,
+        bool animated = true);
 
     /**
      * @brief Skeleton template for a single image/card placeholder.
@@ -133,7 +130,10 @@ class Shimmer : public QWidget, public FluentElement, public QMLPlus {
      * @brief Built-in element template used when custom elements are not supplied.
      * zh_CN: 未提供自定义元素时使用的内置骨架模板。
      */
-    Q_PROPERTY(ShimmerTemplate shimmerTemplate READ shimmerTemplate WRITE setShimmerTemplate NOTIFY shimmerTemplateChanged)
+    Q_PROPERTY(ShimmerTemplate shimmerTemplate
+        READ shimmerTemplate
+        WRITE setShimmerTemplate
+        NOTIFY shimmerTemplateChanged)
 
 public:
     enum class ShimmerTemplate { Custom, ImageCard, AvatarTextRow, TextBlock };

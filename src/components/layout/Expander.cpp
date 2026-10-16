@@ -22,8 +22,7 @@ namespace {
 
 QScrollArea* enclosingScrollArea(QWidget* widget)
 {
-    for (QWidget* ancestor = widget ? widget->parentWidget() : nullptr; ancestor;
-         ancestor = ancestor->parentWidget()) {
+    for (QWidget* ancestor = widget ? widget->parentWidget() : nullptr; ancestor; ancestor = ancestor->parentWidget()) {
         if (auto* scrollArea = qobject_cast<QScrollArea*>(ancestor))
             return scrollArea;
     }
@@ -79,8 +78,9 @@ Expander::Expander(QWidget* parent) : Card(parent)
     connect(m_headerButton, &basicinput::Button::clicked, this, &Expander::toggleExpanded);
 
     m_animation = new QVariantAnimation(this);
-    connect(m_animation, &QVariantAnimation::valueChanged, this,
-            [this](const QVariant& value) { applyFraction(value.toReal()); });
+    connect(m_animation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        applyFraction(value.toReal());
+    });
     connect(m_animation, &QVariantAnimation::finished, this, [this]() {
         QPointer<Expander> guard(this);
         applyFraction(m_expanded ? 1.0 : 0.0);
@@ -92,8 +92,9 @@ Expander::Expander(QWidget* parent) : Card(parent)
     });
 
     MotionPolicy& motionPolicy = MotionPolicy::instance();
-    connect(&motionPolicy, &MotionPolicy::modeChanged, this,
-            [this](MotionPolicy::Mode) { handleMotionPolicyChanged(); });
+    connect(&motionPolicy, &MotionPolicy::modeChanged, this, [this](MotionPolicy::Mode) {
+        handleMotionPolicyChanged();
+    });
 
     updateChildGeometry();
 }
@@ -145,8 +146,9 @@ bool Expander::setContentWidget(QWidget* widget, WidgetOwnership ownership)
         widget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
         widget->installEventFilter(this);
         widget->show();
-        m_contentDestroyedConnection =
-            connect(widget, &QObject::destroyed, this, [this]() { handleContentDestroyed(); });
+        m_contentDestroyedConnection = connect(widget, &QObject::destroyed, this, [this]() {
+            handleContentDestroyed();
+        });
     }
 
     m_contentTargetHeight = m_expanded ? naturalContentHeight() : 0;
@@ -312,8 +314,8 @@ void Expander::onThemeUpdated()
 
 bool Expander::eventFilter(QObject* watched, QEvent* event)
 {
-    if (watched == m_contentWidget && event->type() == QEvent::LayoutRequest && m_expanded &&
-        !m_refreshingContentHeight) {
+    if (watched == m_contentWidget && event->type() == QEvent::LayoutRequest && m_expanded
+        && !m_refreshingContentHeight) {
         m_refreshingContentHeight = true;
         QPointer<Expander> guard(this);
         const int height = naturalContentHeight(false);
@@ -478,22 +480,21 @@ void Expander::beginViewportTransition()
     clearViewportAnchor();
 
     m_transitionScrollArea = enclosingScrollArea(this);
-    m_transitionScrollBar =
-        m_transitionScrollArea ? m_transitionScrollArea->verticalScrollBar() : nullptr;
-    if (!m_transitionScrollArea || !m_transitionScrollArea->viewport() || !m_transitionScrollBar ||
-        !m_headerButton) {
+    m_transitionScrollBar = m_transitionScrollArea ? m_transitionScrollArea->verticalScrollBar() : nullptr;
+    if (!m_transitionScrollArea || !m_transitionScrollArea->viewport() || !m_transitionScrollBar || !m_headerButton) {
         return;
     }
 
     m_viewportTransitionActive = true;
-    m_anchorViewportY = m_transitionScrollArea->viewport()
-                            ->mapFromGlobal(m_headerButton->mapToGlobal(QPoint(0, 0)))
-                            .y();
+    m_anchorViewportY =
+        m_transitionScrollArea->viewport()->mapFromGlobal(m_headerButton->mapToGlobal(QPoint(0, 0))).y();
 
-    m_scrollRangeConnection = connect(m_transitionScrollBar, &QScrollBar::rangeChanged, this,
-                                      [this]() { restoreViewportAnchor(); });
-    m_scrollValueConnection = connect(m_transitionScrollBar, &QScrollBar::valueChanged, this,
-                                      [this]() { restoreViewportAnchor(); });
+    m_scrollRangeConnection = connect(m_transitionScrollBar, &QScrollBar::rangeChanged, this, [this]() {
+        restoreViewportAnchor();
+    });
+    m_scrollValueConnection = connect(m_transitionScrollBar, &QScrollBar::valueChanged, this, [this]() {
+        restoreViewportAnchor();
+    });
 }
 
 void Expander::finishViewportTransition()
@@ -511,8 +512,7 @@ void Expander::finishViewportTransition()
 
 void Expander::synchronizeViewportLayout()
 {
-    if (!m_viewportTransitionActive || !m_transitionScrollArea ||
-        !m_transitionScrollArea->viewport()) {
+    if (!m_viewportTransitionActive || !m_transitionScrollArea || !m_transitionScrollArea->viewport()) {
         return;
     }
 
@@ -521,7 +521,7 @@ void Expander::synchronizeViewportLayout()
         return;
 
     for (QWidget* ancestor = parentWidget(); ancestor && ancestor != scrollContent;
-         ancestor = ancestor->parentWidget()) {
+        ancestor = ancestor->parentWidget()) {
         if (QLayout* ancestorLayout = ancestor->layout()) {
             ancestorLayout->invalidate();
             ancestorLayout->activate();
@@ -531,8 +531,8 @@ void Expander::synchronizeViewportLayout()
     QLayout* pageLayout = scrollContent->layout();
     if (pageLayout) {
         pageLayout->invalidate();
-        const int contentHeight =
-            qMax(m_transitionScrollArea->viewport()->height(), pageLayout->minimumSize().height());
+        const int contentHeight = qMax(m_transitionScrollArea->viewport()->height(),
+            pageLayout->minimumSize().height());
         if (scrollContent->height() != contentHeight)
             scrollContent->resize(scrollContent->width(), contentHeight);
         pageLayout->activate();
@@ -542,8 +542,8 @@ void Expander::synchronizeViewportLayout()
 
 void Expander::restoreViewportAnchor()
 {
-    if (!m_viewportTransitionActive || m_restoringViewportAnchor || !m_transitionScrollArea ||
-        !m_transitionScrollArea->viewport() || !m_transitionScrollBar || !m_headerButton) {
+    if (!m_viewportTransitionActive || m_restoringViewportAnchor || !m_transitionScrollArea
+        || !m_transitionScrollArea->viewport() || !m_transitionScrollBar || !m_headerButton) {
         return;
     }
 
@@ -552,9 +552,8 @@ void Expander::restoreViewportAnchor()
         return;
 
     const int anchorContentY = m_headerButton->mapTo(scrollContent, QPoint(0, 0)).y();
-    const int desiredValue =
-        qBound(m_transitionScrollBar->minimum(), anchorContentY - m_anchorViewportY,
-               m_transitionScrollBar->maximum());
+    const int desiredValue = qBound(m_transitionScrollBar->minimum(), anchorContentY - m_anchorViewportY,
+        m_transitionScrollBar->maximum());
     if (m_transitionScrollBar->value() == desiredValue)
         return;
 

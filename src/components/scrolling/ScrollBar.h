@@ -39,8 +39,8 @@ class ScrollBar : public QScrollBar, public FluentElement, public QMLPlus {
     Q_PROPERTY(qreal opacity READ opacity WRITE setOpacity)
 
 public:
-    explicit ScrollBar(Qt::Orientation orientation, QWidget *parent = nullptr);
-    explicit ScrollBar(QWidget *parent = nullptr);
+    explicit ScrollBar(Qt::Orientation orientation, QWidget* parent = nullptr);
+    explicit ScrollBar(QWidget* parent = nullptr);
     ~ScrollBar() override;
 
     int thickness() const { return m_thickness; }
@@ -58,13 +58,13 @@ protected:
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
-    void paintEvent(QPaintEvent *event) override;
+    void paintEvent(QPaintEvent* event) override;
 
-    void enterEvent(FluentEnterEvent *event) override;
-    void leaveEvent(QEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
-    void showEvent(QShowEvent *event) override;
+    void enterEvent(FluentEnterEvent* event) override;
+    void leaveEvent(QEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void showEvent(QShowEvent* event) override;
 
     void onThemeUpdated() override;
 
@@ -72,17 +72,19 @@ private:
     void init();
 
     // --- Size and visual metrics (no magic numbers in the cpp). zh_CN: 尺寸与视觉参数。---
-    int      m_thickness      = 7;                     ///< Widget thickness in px; always occupies this extent. zh_CN: 控件实际厚度，始终占位此宽/高。
-    int      m_minThumbLength = 16;                    ///< Minimum thumb length in px. zh_CN: Thumb 最小长度。
-    QMargins m_thumbPadding   = QMargins(1, 1, 1, 1);  ///< Thumb padding against the track. zh_CN: Thumb 与轨道的四向间距。
+    int m_thickness =
+        7; ///< Widget thickness in px; always occupies this extent. zh_CN: 控件实际厚度，始终占位此宽/高。
+    int m_minThumbLength = 16; ///< Minimum thumb length in px. zh_CN: Thumb 最小长度。
+    QMargins m_thumbPadding =
+        QMargins(1, 1, 1, 1); ///< Thumb padding against the track. zh_CN: Thumb 与轨道的四向间距。
 
     bool m_isHovered = false;
     bool m_isPressed = false;
 
     // Overlay fade in/out. zh_CN: Overlay 淡入/淡出。
-    qreal               m_opacity       = 0.0;
-    QPropertyAnimation* m_opacityAnim   = nullptr;
-    QTimer*             m_autoHideTimer = nullptr;
+    qreal m_opacity = 0.0;
+    QPropertyAnimation* m_opacityAnim = nullptr;
+    QTimer* m_autoHideTimer = nullptr;
 
     void ensureAnimation();
     void showWithAutoHide();

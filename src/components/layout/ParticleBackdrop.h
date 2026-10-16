@@ -27,30 +27,29 @@ class ParticleBackdropRenderAccess;
 class ParticleBackdrop : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     Q_PROPERTY(Effect effect READ effect WRITE setEffect NOTIFY effectChanged)
-    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY
-                   animationEnabledChanged)
+    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
     Q_PROPERTY(bool animating READ isAnimating NOTIFY animatingChanged)
-    Q_PROPERTY(bool gpuAccelerationEnabled READ isGpuAccelerationEnabled WRITE
-                   setGpuAccelerationEnabled NOTIFY gpuAccelerationEnabledChanged)
+    Q_PROPERTY(bool gpuAccelerationEnabled
+        READ isGpuAccelerationEnabled
+        WRITE setGpuAccelerationEnabled
+        NOTIFY gpuAccelerationEnabledChanged)
     Q_PROPERTY(qreal speed READ speed WRITE setSpeed NOTIFY speedChanged)
-    Q_PROPERTY(
-        int particleCount READ particleCount WRITE setParticleCount NOTIFY particleCountChanged)
-    Q_PROPERTY(int maximumFrameRate READ maximumFrameRate WRITE setMaximumFrameRate NOTIFY
-                   maximumFrameRateChanged)
+    Q_PROPERTY(int particleCount READ particleCount WRITE setParticleCount NOTIFY particleCountChanged)
+    Q_PROPERTY(int maximumFrameRate READ maximumFrameRate WRITE setMaximumFrameRate NOTIFY maximumFrameRateChanged)
     Q_PROPERTY(bool interactive READ isInteractive WRITE setInteractive NOTIFY interactiveChanged)
-    Q_PROPERTY(bool pauseWhenInactive READ isPauseWhenInactive WRITE setPauseWhenInactive NOTIFY
-                   pauseWhenInactiveChanged)
-    Q_PROPERTY(BackgroundMode backgroundMode READ backgroundMode WRITE setBackgroundMode NOTIFY
-                   backgroundModeChanged)
-    Q_PROPERTY(
-        QMarginsF fadeMargins READ fadeMargins WRITE setFadeMargins NOTIFY fadeMarginsChanged)
+    Q_PROPERTY(bool pauseWhenInactive
+        READ isPauseWhenInactive
+        WRITE setPauseWhenInactive
+        NOTIFY pauseWhenInactiveChanged)
+    Q_PROPERTY(BackgroundMode backgroundMode READ backgroundMode WRITE setBackgroundMode NOTIFY backgroundModeChanged)
+    Q_PROPERTY(QMarginsF fadeMargins READ fadeMargins WRITE setFadeMargins NOTIFY fadeMarginsChanged)
 
 public:
     /** @brief Built-in CPU particle effects. zh_CN: 内置的 CPU 粒子特效。 */
     enum Effect {
         FlowingRibbons, ///< Orbiting ribbons and sparks. zh_CN: 轨道光带与拖尾亮点。
-        FloatingDots, ///< Soft lights drifting upward. zh_CN: 缓慢向上漂浮的柔和光点。
-        Starfield ///< Stars moving toward the viewer. zh_CN: 向观察者迎面飞来的星空。
+        FloatingDots,   ///< Soft lights drifting upward. zh_CN: 缓慢向上漂浮的柔和光点。
+        Starfield       ///< Stars moving toward the viewer. zh_CN: 向观察者迎面飞来的星空。
     };
     Q_ENUM(Effect)
 

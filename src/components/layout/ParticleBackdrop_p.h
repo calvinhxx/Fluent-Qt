@@ -14,8 +14,7 @@ class ParticleBackdrop;
 // The base library still owns the only simulation and its visibility policy.
 class ParticleBackdropRenderAccess {
 public:
-    static bool claim(ParticleBackdrop* backdrop, QObject* owner,
-                      std::function<void()> requestFrame);
+    static bool claim(ParticleBackdrop* backdrop, QObject* owner, std::function<void()> requestFrame);
     static void release(ParticleBackdrop* backdrop, QObject* owner);
     static bool isClaimedBy(const ParticleBackdrop* backdrop, const QObject* owner);
     static quint64 revision(const ParticleBackdrop* backdrop);

@@ -55,8 +55,7 @@ bool windowHasMaterialBackdrop(const QWidget* widget);
  * software fallback for the requested effect and activation state.
  * zh_CN: 无效颜色表示应透明擦除以露出真实合成背景；否则返回请求效果和激活状态对应的不透明软件回退色。
  */
-QColor windowChromeBackdropFill(const FluentElement& themeHost, const QWidget* hostWindow,
-                                bool active);
+QColor windowChromeBackdropFill(const FluentElement& themeHost, const QWidget* hostWindow, bool active);
 
 } // namespace fluent::windowing
 

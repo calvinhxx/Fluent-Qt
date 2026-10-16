@@ -36,17 +36,13 @@ public:
     QWidget* topLevelWidget() const { return m_topLevel.data(); }
     OverlayScrim* scrim() const { return m_scrim.data(); }
     bool focusOnOpenEnabled() const { return m_focusOnOpenEnabled; }
-    void setFocusOnOpenEnabled(bool enabled)
-    {
-        m_focusOnOpenEnabled = enabled;
-    }
+    void setFocusOnOpenEnabled(bool enabled) { m_focusOnOpenEnabled = enabled; }
 
     void attachTo(QWidget* topLevel);
     void detach();
 
     OverlayScrim* ensureScrim(const QString& objectName);
-    void releaseScrim(
-        ScrimDeletion deletion = ScrimDeletion::Deferred);
+    void releaseScrim(ScrimDeletion deletion = ScrimDeletion::Deferred);
     void syncScrimGeometry();
     void raiseStack();
 

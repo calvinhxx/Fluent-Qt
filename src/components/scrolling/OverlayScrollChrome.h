@@ -32,10 +32,8 @@ namespace fluent::scrolling {
  * zh_CN: range/pageStep 镜像交由 mirrorNativeScrollBar()，便于宿主在自身
  * rangeChanged 槽中重复执行。
  */
-inline ScrollBar* createOverlayScrollBar(Qt::Orientation orientation,
-                                         QWidget* host,
-                                         QScrollBar* native,
-                                         const QString& objectName)
+inline ScrollBar*
+createOverlayScrollBar(Qt::Orientation orientation, QWidget* host, QScrollBar* native, const QString& objectName)
 {
     auto* bar = new ScrollBar(orientation, host);
     bar->setObjectName(objectName);
@@ -87,8 +85,7 @@ inline bool mirrorNativeScrollBar(ScrollBar* overlay, const QScrollBar* native)
  * @param top Top edge in host coordinates; hosts add their header offset here.
  *            zh_CN: 宿主坐标系中的上缘；header 偏移由宿主算入。
  */
-inline void placeVerticalScrollBar(ScrollBar* bar, const QRect& hostRect,
-                                   int top, int rightInset, int bottomInset)
+inline void placeVerticalScrollBar(ScrollBar* bar, const QRect& hostRect, int top, int rightInset, int bottomInset)
 {
     const int x = hostRect.right() - rightInset - bar->thickness() + 1;
     const int height = qMax(0, hostRect.bottom() - top - bottomInset);
@@ -100,8 +97,8 @@ inline void placeVerticalScrollBar(ScrollBar* bar, const QRect& hostRect,
  * @brief Anchors a horizontal overlay bar to the host's bottom edge.
  * zh_CN: 将水平覆盖条锚定到宿主底缘。
  */
-inline void placeHorizontalScrollBar(ScrollBar* bar, const QRect& hostRect,
-                                     int leftInset, int rightInset, int bottomInset)
+inline void
+placeHorizontalScrollBar(ScrollBar* bar, const QRect& hostRect, int leftInset, int rightInset, int bottomInset)
 {
     const int left = hostRect.left() + leftInset;
     const int width = qMax(0, hostRect.width() - leftInset - rightInset);

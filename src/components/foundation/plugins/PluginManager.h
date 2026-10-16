@@ -95,8 +95,8 @@ public:
      * plugin. Returns null and an optional error on an unsupported key or failure.
      * zh_CN: 需要 QApplication 及其 GUI 线程，不隐式激活插件；不支持的 key 或失败会返回空指针及可选错误。
      */
-    QWidget* createWidget(const QString& pluginId, const QString& key, QWidget* parent = nullptr,
-                          QString* error = nullptr);
+    QWidget*
+    createWidget(const QString& pluginId, const QString& key, QWidget* parent = nullptr, QString* error = nullptr);
 
 signals:
     void pluginRegistered(const QString& id);

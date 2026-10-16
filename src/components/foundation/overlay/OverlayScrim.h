@@ -86,7 +86,7 @@ private:
     bool m_modal = true;
     bool m_dim = true;
     qreal m_opacityProgress = 1.0;
-    QColor m_color;  // invalid → themeSmoke(). zh_CN: 无效则用 themeSmoke()。
+    QColor m_color; // invalid → themeSmoke(). zh_CN: 无效则用 themeSmoke()。
     int m_surfaceRadius = 0;
     bool m_spotEnabled = false;
     QRect m_spot;

@@ -14,12 +14,10 @@ namespace {
 
 bool hasPublishedSurfaceAncestor(const QWidget* widget)
 {
-    for (const QWidget* ancestor = widget ? widget->parentWidget() : nullptr;
-         ancestor && !ancestor->isWindow();
-         ancestor = ancestor->parentWidget()) {
+    for (const QWidget* ancestor = widget ? widget->parentWidget() : nullptr; ancestor && !ancestor->isWindow();
+        ancestor = ancestor->parentWidget()) {
         const QVariant surface = ancestor->property("fluentSurfaceColor");
-        if (surface.isValid() && surface.canConvert<QColor>()
-            && surface.value<QColor>().isValid()) {
+        if (surface.isValid() && surface.canConvert<QColor>() && surface.value<QColor>().isValid()) {
             return true;
         }
     }
@@ -29,28 +27,19 @@ bool hasPublishedSurfaceAncestor(const QWidget* widget)
 bool requiresBackdropReplacement(const QWidget* widget)
 {
     const QWidget* topLevel = widget ? widget->window() : nullptr;
-    return topLevel
-        && topLevel->testAttribute(Qt::WA_TranslucentBackground)
-        && windowing::windowBackdropRequiresTransparentClear(topLevel)
-        && !hasPublishedSurfaceAncestor(widget);
+    return topLevel && topLevel->testAttribute(Qt::WA_TranslucentBackground)
+        && windowing::windowBackdropRequiresTransparentClear(topLevel) && !hasPublishedSurfaceAncestor(widget);
 }
 
 } // namespace
 
-Divider::Divider(QWidget* parent)
-    : Divider(Qt::Horizontal, parent)
-{
-}
+Divider::Divider(QWidget* parent) : Divider(Qt::Horizontal, parent) {}
 
-Divider::Divider(Qt::Orientation orientation, QWidget* parent)
-    : QWidget(parent),
-      m_orientation(orientation)
+Divider::Divider(Qt::Orientation orientation, QWidget* parent) : QWidget(parent), m_orientation(orientation)
 {
     setAttribute(Qt::WA_TransparentForMouseEvents);
-    setSizePolicy(orientation == Qt::Horizontal ? QSizePolicy::Expanding
-                                                : QSizePolicy::Fixed,
-                  orientation == Qt::Horizontal ? QSizePolicy::Fixed
-                                                : QSizePolicy::Expanding);
+    setSizePolicy(orientation == Qt::Horizontal ? QSizePolicy::Expanding : QSizePolicy::Fixed,
+        orientation == Qt::Horizontal ? QSizePolicy::Fixed : QSizePolicy::Expanding);
 }
 
 void Divider::setOrientation(Qt::Orientation orientation)
@@ -59,10 +48,8 @@ void Divider::setOrientation(Qt::Orientation orientation)
         return;
 
     m_orientation = orientation;
-    setSizePolicy(orientation == Qt::Horizontal ? QSizePolicy::Expanding
-                                                : QSizePolicy::Fixed,
-                  orientation == Qt::Horizontal ? QSizePolicy::Fixed
-                                                : QSizePolicy::Expanding);
+    setSizePolicy(orientation == Qt::Horizontal ? QSizePolicy::Expanding : QSizePolicy::Fixed,
+        orientation == Qt::Horizontal ? QSizePolicy::Fixed : QSizePolicy::Expanding);
     updateGeometry();
     update();
     emit orientationChanged(m_orientation);
@@ -115,15 +102,13 @@ void Divider::setColor(const QColor& color)
 QSize Divider::sizeHint() const
 {
     const int extent = qMax(1, qCeil(m_thickness));
-    return m_orientation == Qt::Horizontal ? QSize(16, extent)
-                                           : QSize(extent, 16);
+    return m_orientation == Qt::Horizontal ? QSize(16, extent) : QSize(extent, 16);
 }
 
 QSize Divider::minimumSizeHint() const
 {
     const int extent = qMax(1, qCeil(m_thickness));
-    return m_orientation == Qt::Horizontal ? QSize(0, extent)
-                                           : QSize(extent, 0);
+    return m_orientation == Qt::Horizontal ? QSize(0, extent) : QSize(extent, 0);
 }
 
 void Divider::onThemeUpdated()
@@ -146,18 +131,12 @@ void Divider::paintEvent(QPaintEvent* event)
         const qreal available = width() - m_leadingInset - m_trailingInset;
         if (available <= 0.0)
             return;
-        lineRect = QRectF(m_leadingInset,
-                          (height() - m_thickness) / 2.0,
-                          available,
-                          m_thickness);
+        lineRect = QRectF(m_leadingInset, (height() - m_thickness) / 2.0, available, m_thickness);
     } else {
         const qreal available = height() - m_leadingInset - m_trailingInset;
         if (available <= 0.0)
             return;
-        lineRect = QRectF((width() - m_thickness) / 2.0,
-                          m_leadingInset,
-                          m_thickness,
-                          available);
+        lineRect = QRectF((width() - m_thickness) / 2.0, m_leadingInset, m_thickness, available);
     }
 
     // A translucent hairline painted directly onto a composited OS backdrop can

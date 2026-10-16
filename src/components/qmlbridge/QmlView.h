@@ -38,8 +38,10 @@ class QmlView : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(QStringList errors READ errors NOTIFY errorsChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY errorsChanged)
     Q_PROPERTY(QObject* theme READ themeObject CONSTANT)
-    Q_PROPERTY(bool textureRenderingEnabled READ isTextureRenderingEnabled WRITE
-                   setTextureRenderingEnabled NOTIFY textureRenderingEnabledChanged)
+    Q_PROPERTY(bool textureRenderingEnabled
+        READ isTextureRenderingEnabled
+        WRITE setTextureRenderingEnabled
+        NOTIFY textureRenderingEnabledChanged)
 public:
     enum Status { Unloaded, Loading, Ready, Error };
     Q_ENUM(Status)
@@ -111,8 +113,7 @@ public:
      * 限额包含颜色及深度目标，不含 QML 场景自身纹理。Qt 5 与 Qt 6.2 要求 DPR 匹配
      * 呈现窗口；失败后仍可显式返回原生控件呈现。
      */
-    bool renderTexture(QOpenGLContext* context, qreal devicePixelRatio,
-                       quint64 maximumBytes = 67108864);
+    bool renderTexture(QOpenGLContext* context, qreal devicePixelRatio, quint64 maximumBytes = 67108864);
     /** @brief Returns a borrowed premultiplied RGBA, bottom-up GL texture or zero.
      * Invalidated by release, unload, resize or context replacement.
      * zh_CN: 返回借用的预乘 RGBA、下原点 GL 纹理，未就绪时为零；释放、卸载、尺寸或上下文改变后失效。 */

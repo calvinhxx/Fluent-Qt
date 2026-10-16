@@ -75,8 +75,7 @@ void ProgressBar::setIsIndeterminate(bool indeterminate)
     changed.busy = true;
     changed.animated = true;
     accessibility::detail::notifyValueAccessibilityState(this, changed);
-    accessibility::detail::notifyValueAccessibilityValue(
-        this, m_isIndeterminate ? QVariant() : QVariant(m_value));
+    accessibility::detail::notifyValueAccessibilityValue(this, m_isIndeterminate ? QVariant() : QVariant(m_value));
     accessibility::detail::notifyValueAccessibilityText(this, QAccessible::DescriptionChanged);
     emit isIndeterminateChanged(m_isIndeterminate);
 }
@@ -239,8 +238,7 @@ void ProgressBar::paintEvent(QPaintEvent*)
     painter.setRenderHint(QPainter::Antialiasing);
 
     if (m_railVisible) {
-        const QRectF railRect(bounds.left(), centerY - kRailThickness / 2.0, bounds.width(),
-                              kRailThickness);
+        const QRectF railRect(bounds.left(), centerY - kRailThickness / 2.0, bounds.width(), kRailThickness);
         painter.setPen(Qt::NoPen);
         painter.setBrush(m_railColor);
         painter.drawRoundedRect(railRect, kRailThickness / 2.0, kRailThickness / 2.0);
@@ -248,25 +246,22 @@ void ProgressBar::paintEvent(QPaintEvent*)
 
     const QColor color = indicatorColor();
     const qreal radius = effectiveTrackThickness / 2.0;
-    const QRectF trackBounds(bounds.left(), centerY - radius, bounds.width(),
-                             effectiveTrackThickness);
+    const QRectF trackBounds(bounds.left(), centerY - radius, bounds.width(), effectiveTrackThickness);
 
     painter.setPen(Qt::NoPen);
     painter.setBrush(color);
 
     if (m_isIndeterminate) {
-        const qreal segmentWidth = qBound(
-            effectiveTrackThickness, bounds.width() * kIndeterminateSegmentRatio, bounds.width());
+        const qreal segmentWidth = qBound(effectiveTrackThickness, bounds.width() * kIndeterminateSegmentRatio,
+            bounds.width());
         qreal segmentLeft = bounds.left() + (bounds.width() - segmentWidth) / 2.0;
         if (isRunningState()) {
-            segmentLeft =
-                bounds.left() - segmentWidth + (bounds.width() + segmentWidth) * m_animationPhase;
+            segmentLeft = bounds.left() - segmentWidth + (bounds.width() + segmentWidth) * m_animationPhase;
         }
 
         painter.save();
         painter.setClipRect(trackBounds.adjusted(0.0, -1.0, 0.0, 1.0));
-        painter.drawRoundedRect(
-            QRectF(segmentLeft, trackBounds.top(), segmentWidth, trackBounds.height()), radius,
+        painter.drawRoundedRect(QRectF(segmentLeft, trackBounds.top(), segmentWidth, trackBounds.height()), radius,
             radius);
         painter.restore();
         return;
@@ -276,10 +271,8 @@ void ProgressBar::paintEvent(QPaintEvent*)
     if (ratio <= 0.0)
         return;
 
-    const qreal filledWidth =
-        qMin(bounds.width(), qMax(effectiveTrackThickness, bounds.width() * ratio));
-    painter.drawRoundedRect(
-        QRectF(trackBounds.left(), trackBounds.top(), filledWidth, trackBounds.height()), radius,
+    const qreal filledWidth = qMin(bounds.width(), qMax(effectiveTrackThickness, bounds.width() * ratio));
+    painter.drawRoundedRect(QRectF(trackBounds.left(), trackBounds.top(), filledWidth, trackBounds.height()), radius,
         radius);
 }
 
@@ -295,8 +288,7 @@ void ProgressBar::timerEvent(QTimerEvent* event)
         return;
     }
 
-    m_animationPhase = std::fmod(
-        m_animationPhase + static_cast<qreal>(kAnimationIntervalMs) / m_animationCycleMs, 1.0);
+    m_animationPhase = std::fmod(m_animationPhase + static_cast<qreal>(kAnimationIntervalMs) / m_animationCycleMs, 1.0);
     update();
 }
 
@@ -376,8 +368,8 @@ void ProgressBar::updateAnimationState()
 
 bool ProgressBar::shouldAnimate() const
 {
-    return MotionPolicy::instance().shouldAnimate(true, MotionPolicy::Kind::Continuous) &&
-           m_isIndeterminate && !m_showPaused && !m_showError && isEnabled() && isVisible();
+    return MotionPolicy::instance().shouldAnimate(true, MotionPolicy::Kind::Continuous) && m_isIndeterminate
+        && !m_showPaused && !m_showError && isEnabled() && isVisible();
 }
 
 bool ProgressBar::isRunningState() const

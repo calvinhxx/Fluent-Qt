@@ -44,9 +44,9 @@ public:
      * zh_CN: 浮层轻关闭标志，位值与 Popup::CloseFlag 相同。
      */
     enum CloseFlag {
-        NoAutoClose         = 0,
+        NoAutoClose = 0,
         CloseOnPressOutside = 1 << 0,
-        CloseOnEscape       = 1 << 1,
+        CloseOnEscape = 1 << 1,
     };
     Q_DECLARE_FLAGS(ClosePolicy, CloseFlag)
     Q_FLAG(ClosePolicy)

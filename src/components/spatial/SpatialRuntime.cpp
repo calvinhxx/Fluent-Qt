@@ -23,8 +23,8 @@ bool SpatialRuntime::prepareWindow(windowing::Window* window)
 
 bool SpatialRuntime::prepareWindow(windowing::Window* window, QSurface::SurfaceType surfaceType)
 {
-    if (!window || !window->isWindow() || window->isVisible() ||
-        !compatibility::spatialRenderCapabilities().prepareNativeSurface)
+    if (!window || !window->isWindow() || window->isVisible()
+        || !compatibility::spatialRenderCapabilities().prepareNativeSurface)
         return false;
     if (window->windowHandle() && window->windowHandle()->surfaceType() == surfaceType)
         return true;
@@ -46,12 +46,10 @@ bool SpatialRuntime::supportsOpenGLDisplay()
 bool SpatialRuntime::isHardwareRenderer(const QString& renderer)
 {
     const auto name = renderer.toLower();
-    return !name.isEmpty() && !name.contains(QStringLiteral("llvmpipe")) &&
-           !name.contains(QStringLiteral("softpipe")) &&
-           !name.contains(QStringLiteral("swiftshader")) &&
-           !name.contains(QStringLiteral("software")) &&
-           !name.contains(QStringLiteral("basic render driver")) &&
-           !name.contains(QStringLiteral("warp")) && !name.contains(QStringLiteral("gdi generic"));
+    return !name.isEmpty() && !name.contains(QStringLiteral("llvmpipe")) && !name.contains(QStringLiteral("softpipe"))
+        && !name.contains(QStringLiteral("swiftshader")) && !name.contains(QStringLiteral("software"))
+        && !name.contains(QStringLiteral("basic render driver")) && !name.contains(QStringLiteral("warp"))
+        && !name.contains(QStringLiteral("gdi generic"));
 }
 
 QString SpatialRuntime::currentRendererName()

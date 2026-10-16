@@ -33,8 +33,8 @@ bool sameDateTime(const QDateTime& left, const QDateTime& right)
 {
     if (!left.isValid() || !right.isValid())
         return left.isValid() == right.isValid();
-    if (left != right || left.date() != right.date() || left.time() != right.time() ||
-        left.timeSpec() != right.timeSpec())
+    if (left != right || left.date() != right.date() || left.time() != right.time()
+        || left.timeSpec() != right.timeSpec())
         return false;
 #if QT_CONFIG(timezone)
     return left.timeZone() == right.timeZone();
@@ -49,19 +49,13 @@ namespace {
 
 QStringList presetLabels(const QLocale& locale)
 {
-    return {
-        detail::dateTimeRangeText(
-            locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Today")),
-        detail::dateTimeRangeText(
-            locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Yesterday")),
-        detail::dateTimeRangeText(
-            locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Past week")),
-        detail::dateTimeRangeText(
-            locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Past month")),
-        detail::dateTimeRangeText(
-            locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Past six months")),
-        detail::dateTimeRangeText(
-            locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Past year"))};
+    return {detail::dateTimeRangeText(locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Today")),
+        detail::dateTimeRangeText(locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Yesterday")),
+        detail::dateTimeRangeText(locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Past week")),
+        detail::dateTimeRangeText(locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Past month")),
+        detail::dateTimeRangeText(locale,
+            QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Past six months")),
+        detail::dateTimeRangeText(locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Past year"))};
 }
 
 // Reserve a trailing action inside the existing Fluent button surface.
@@ -98,8 +92,9 @@ protected:
         content.moveTop(rect().top());
         if (m_clear->isHidden())
             return content;
-        return layoutDirection() == Qt::RightToLeft ? content.adjusted(actionWidth(), 0, 0, 0)
-                                                    : content.adjusted(0, 0, -actionWidth(), 0);
+        return layoutDirection() == Qt::RightToLeft
+            ? content.adjusted(actionWidth(), 0, 0, 0)
+            : content.adjusted(0, 0, -actionWidth(), 0);
     }
     void resizeEvent(QResizeEvent* event) override
     {
@@ -118,9 +113,8 @@ private:
     void positionClearButton()
     {
         const int inset = 2;
-        m_clear->move(layoutDirection() == Qt::RightToLeft ? inset
-                                                           : width() - m_clear->width() - inset,
-                      (height() - m_clear->height() + 1) / 2);
+        m_clear->move(layoutDirection() == Qt::RightToLeft ? inset : width() - m_clear->width() - inset,
+            (height() - m_clear->height() + 1) / 2);
     }
     basicinput::Button* m_clear = nullptr;
 };
@@ -141,8 +135,7 @@ public:
         setFocusProxy(m_edit);
         ensureRangeTimeAccessibility();
         disconnect(this, &basicinput::Button::clicked, this, &TimePicker::openPicker);
-        connect(this, &basicinput::Button::clicked, m_edit,
-                [this] { m_edit->setFocus(Qt::OtherFocusReason); });
+        connect(this, &basicinput::Button::clicked, m_edit, [this] { m_edit->setFocus(Qt::OtherFocusReason); });
         connect(m_edit, &QLineEdit::editingFinished, this, [this] { commit(); });
         connect(this, &TimePicker::selectedTimeChanged, this, [this] { refresh(); });
         connect(this, &TimePicker::clockIdentifierChanged, this, [this] { refresh(); });
@@ -153,15 +146,14 @@ public:
     {
         m_edit->setObjectName(objectName() + QStringLiteral("Edit"));
         m_edit->setAccessibleName(accessibleName());
-        m_edit->setPlaceholderText(placeholderText(TimeField::Hour) + QStringLiteral(":") +
-                                   placeholderText(TimeField::Minute));
+        m_edit->setPlaceholderText(
+            placeholderText(TimeField::Hour) + QStringLiteral(":") + placeholderText(TimeField::Minute));
     }
 
     void refresh()
     {
         refreshLabels();
-        const QString text =
-            selectedTime().isValid() ? locale().toString(selectedTime(), format()) : QString();
+        const QString text = selectedTime().isValid() ? locale().toString(selectedTime(), format()) : QString();
         if (m_edit->text() != text)
             m_edit->setText(text);
     }
@@ -188,8 +180,8 @@ protected:
     void paintEvent(QPaintEvent*) override {}
     void keyPressEvent(QKeyEvent* event) override
     {
-        if (event->key() == Qt::Key_F4 || event->key() == Qt::Key_Down ||
-            event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+        if (event->key() == Qt::Key_F4 || event->key() == Qt::Key_Down || event->key() == Qt::Key_Return
+            || event->key() == Qt::Key_Enter) {
             m_edit->setFocus(Qt::OtherFocusReason);
             event->accept();
             return;
@@ -215,12 +207,9 @@ protected:
                 commit();
                 return true;
             }
-            if ((key->key() == Qt::Key_Up || key->key() == Qt::Key_Down) &&
-                selectedTime().isValid()) {
+            if ((key->key() == Qt::Key_Up || key->key() == Qt::Key_Down) && selectedTime().isValid()) {
                 const int position = m_edit->cursorPosition();
-                const int step = position <= m_edit->text().indexOf(QLatin1Char(':'))
-                                     ? 3600
-                                     : minuteIncrement() * 60;
+                const int step = position <= m_edit->text().indexOf(QLatin1Char(':')) ? 3600 : minuteIncrement() * 60;
                 const QPointer<RangeTimeInput> guard(this);
                 setSelectedTime(selectedTime().addSecs(key->key() == Qt::Key_Up ? step : -step));
                 if (guard)
@@ -235,8 +224,8 @@ private:
     QString format() const
     {
         return clockIdentifier() == ClockIdentifier::TwentyFourHourClock
-                   ? QStringLiteral("HH:mm")
-                   : QStringLiteral("h:mm AP");
+            ? QStringLiteral("HH:mm")
+            : QStringLiteral("h:mm AP");
     }
     textfields::LineEdit* m_edit = nullptr;
 };
@@ -276,8 +265,7 @@ void refreshLayoutHints(QLayout* layout)
 
 class DateTimeRangePickerPopup final : public dialogs_flyouts::Flyout {
 public:
-    explicit DateTimeRangePickerPopup(DateTimeRangePicker* picker)
-        : Flyout(picker), m_picker(picker)
+    explicit DateTimeRangePickerPopup(DateTimeRangePicker* picker) : Flyout(picker), m_picker(picker)
     {
         setObjectName(QStringLiteral("DateTimeRangePickerPopup"));
         setAnimationEnabled(false);
@@ -294,8 +282,7 @@ public:
         m_scroll->setObjectName(QStringLiteral("rangePopupScroll"));
         m_scroll->setWidgetResizable(true);
         m_scroll->setFrameShape(QFrame::NoFrame);
-        m_scroll->setHorizontalScrollBarVisibility(
-            scrolling::ScrollView::ScrollBarVisibility::Disabled);
+        m_scroll->setHorizontalScrollBarVisibility(scrolling::ScrollView::ScrollBarVisibility::Disabled);
         m_body = new QWidget;
         m_bodyLayout = new QVBoxLayout(m_body);
         m_bodyLayout->setContentsMargins(0, 0, 0, 0);
@@ -340,8 +327,8 @@ public:
         m_calendar = new CalendarView(m_main);
         m_calendar->setObjectName(QStringLiteral("rangeCalendar"));
         m_calendar->setAccessibleName(DateTimeRangePicker::tr("Date range calendar"));
-        m_calendar->setAccessibleDescription(DateTimeRangePicker::tr(
-            "Choose a start date, then an end date. Either endpoint can be cleared."));
+        m_calendar->setAccessibleDescription(
+            DateTimeRangePicker::tr("Choose a start date, then an end date. Either endpoint can be cleared."));
         m_calendar->setFrameVisible(false);
         m_calendar->setMinimumWidth(0);
         m_calendar->setMaximumWidth(QWIDGETSIZE_MAX);
@@ -367,10 +354,8 @@ public:
         addLocalizedText(m_calendar, "accessibleName", "Date range calendar");
         outer->addLayout(footer);
         QObject::connect(clear, &basicinput::Button::clicked, picker, &DateTimeRangePicker::clear);
-        QObject::connect(done, &basicinput::Button::clicked, picker,
-                         &DateTimeRangePicker::closePicker);
-        QObject::connect(m_calendar, &CalendarView::dateActivated, picker,
-                         &DateTimeRangePicker::selectCalendarDate);
+        QObject::connect(done, &basicinput::Button::clicked, picker, &DateTimeRangePicker::closePicker);
+        QObject::connect(m_calendar, &CalendarView::dateActivated, picker, &DateTimeRangePicker::selectCalendarDate);
     }
 
     QWidget* inputHost() const { return m_inputs; }
@@ -394,9 +379,8 @@ public:
                 continue;
             // Refresh defaults without replacing application-authored text.
             // zh_CN: 刷新默认文案，保留应用自行设置的文字。
-            const bool usesDefault =
-                text.followsLocale &&
-                text.object->property(text.property).toString() == text.previous;
+            const bool usesDefault = text.followsLocale
+                && text.object->property(text.property).toString() == text.previous;
             text.followsLocale = usesDefault;
             const QString next = detail::dateTimeRangeText(m_picker->locale(), text.source);
             text.previous = next;
@@ -409,9 +393,8 @@ public:
     }
     void setValidationMessage(const QString& message)
     {
-        m_endpointField->setValidationState(message.isEmpty()
-                                                ? layout::Field::ValidationState::None
-                                                : layout::Field::ValidationState::Error);
+        m_endpointField->setValidationState(
+            message.isEmpty() ? layout::Field::ValidationState::None : layout::Field::ValidationState::Error);
         m_endpointField->setValidationMessage(message);
     }
 
@@ -435,14 +418,12 @@ public:
                 m_presetsLayout->addWidget(buttons.at(index), index / columns, index % columns);
             m_presetColumns = columns;
         }
-        const int inputMinimum = m_picker->m_startField->minimumSizeHint().width() +
-                                 m_picker->m_endField->minimumSizeHint().width() + 12;
-        m_inputLayout->setDirection(mainWidth >= inputMinimum ? QBoxLayout::LeftToRight
-                                                              : QBoxLayout::TopToBottom);
-        const int controlHeight = qMax(qMax(m_picker->m_startDatePicker->sizeHint().height(),
-                                            m_picker->m_endDatePicker->sizeHint().height()),
-                                       qMax(m_picker->m_startTimePicker->sizeHint().height(),
-                                            m_picker->m_endTimePicker->sizeHint().height()));
+        const int inputMinimum = m_picker->m_startField->minimumSizeHint().width()
+            + m_picker->m_endField->minimumSizeHint().width() + 12;
+        m_inputLayout->setDirection(mainWidth >= inputMinimum ? QBoxLayout::LeftToRight : QBoxLayout::TopToBottom);
+        const int controlHeight =
+            qMax(qMax(m_picker->m_startDatePicker->sizeHint().height(), m_picker->m_endDatePicker->sizeHint().height()),
+                qMax(m_picker->m_startTimePicker->sizeHint().height(), m_picker->m_endTimePicker->sizeHint().height()));
         m_picker->m_startDatePicker->setFixedHeight(controlHeight);
         m_picker->m_endDatePicker->setFixedHeight(controlHeight);
         m_picker->m_startTimePicker->setFixedHeight(controlHeight);
@@ -451,16 +432,14 @@ public:
         // zh_CN: 校验提示与时间行隐藏后，立即刷新父布局的尺寸缓存。
         refreshLayoutHints(m_bodyLayout);
         const int bodyHeight = m_bodyLayout->hasHeightForWidth()
-                                   ? m_bodyLayout->heightForWidth(mainWidth)
-                                   : m_bodyLayout->sizeHint().height();
+            ? m_bodyLayout->heightForWidth(mainWidth)
+            : m_bodyLayout->sizeHint().height();
         m_body->resize(mainWidth, bodyHeight);
         m_bodyLayout->activate();
         const QMargins margins = layout()->contentsMargins();
         const QMargins shadow = contentsMargins();
-        const int chrome = margins.top() + margins.bottom() + shadow.top() + shadow.bottom() +
-                           layout()->spacing() +
-                           layout()->itemAt(1)->layout()->sizeHint().height() +
-                           2 * m_scroll->frameWidth();
+        const int chrome = margins.top() + margins.bottom() + shadow.top() + shadow.bottom() + layout()->spacing()
+            + layout()->itemAt(1)->layout()->sizeHint().height() + 2 * m_scroll->frameWidth();
         const int height = bodyHeight + chrome;
         setFixedSize(popupWidth, qMin(height, availableHeight));
         layout()->activate();
@@ -508,13 +487,11 @@ protected:
             }
             if (event->type() == QEvent::MouseButtonPress) {
                 const QPoint global = fluentMouseGlobalPos(static_cast<QMouseEvent*>(event));
-                if (watched != this && anchor() &&
-                    anchor()->rect().contains(
-                        overlay::localPointFromPresentedGlobal(anchor(), global)))
+                if (watched != this && anchor()
+                    && anchor()->rect().contains(overlay::localPointFromPresentedGlobal(anchor(), global)))
                     return false;
                 for (const auto& flyout : childFlyouts()) {
-                    if (flyout &&
-                        overlay::visibleCardContains(flyout->rect(), flyout->mapFromGlobal(global)))
+                    if (flyout && overlay::visibleCardContains(flyout->rect(), flyout->mapFromGlobal(global)))
                         return false;
                 }
             }
@@ -531,8 +508,7 @@ private:
             return children;
         const auto flyouts = host->findChildren<dialogs_flyouts::Flyout*>();
         for (auto* flyout : flyouts) {
-            if (flyout != this && flyout->isOpen() && flyout->anchor() &&
-                isAncestorOf(flyout->anchor()))
+            if (flyout != this && flyout->isOpen() && flyout->anchor() && isAncestorOf(flyout->anchor()))
                 children.append(flyout);
         }
         return children;
@@ -562,8 +538,7 @@ private:
     QBoxLayout* m_inputLayout = nullptr;
 };
 
-DateTimeRangePicker::DateTimeRangePicker(QWidget* parent)
-    : QWidget(parent), m_observedLocale(QWidget::locale())
+DateTimeRangePicker::DateTimeRangePicker(QWidget* parent) : QWidget(parent), m_observedLocale(QWidget::locale())
 {
     detail::ensureDateTimeRangePickerAccessibilityFactory();
     setObjectName(QStringLiteral("DateTimeRangePicker"));
@@ -631,11 +606,10 @@ DateTimeRangePicker::DateTimeRangePicker(QWidget* parent)
         m_popup->addLocalizedText(timePicker, "accessibleName", start ? "Start time" : "End time");
         m_popup->addLocalizedText(timePicker, "confirmButtonAccessibleName", "Accept time");
         m_popup->addLocalizedText(timePicker, "cancelButtonAccessibleName", "Cancel time");
-        m_popup->addLocalizedText(clearButton, "accessibleName",
-                                  start ? "Clear start" : "Clear end");
+        m_popup->addLocalizedText(clearButton, "accessibleName", start ? "Clear start" : "Clear end");
         m_popup->addLocalizedText(clearButton, "toolTip", start ? "Clear start" : "Clear end");
         m_popup->addLocalizedText(timePicker->findChild<QLineEdit*>(), "toolTip",
-                                  "Type a time, or use Up and Down to adjust it");
+            "Type a time, or use Up and Down to adjust it");
         stack->addWidget(datePicker);
         stack->addWidget(timePicker);
         field->setEditor(editor, WidgetOwnership::Owned);
@@ -651,17 +625,17 @@ DateTimeRangePicker::DateTimeRangePicker(QWidget* parent)
             m_endTimePicker = timePicker;
             m_endClearButton = clearButton;
         }
-        connect(datePicker, &CalendarDatePicker::dateChanged, this,
-                [this, start](const QDate& date) {
-                    const QPointer<DateTimeRangePicker> guard(this);
-                    updateDate(date, start);
-                    if (guard && isPickerOpen() && date.isValid()) {
-                        calendarView()->setSelectedDate(date);
-                        calendarView()->setVisibleMonth(QDate(date.year(), date.month(), 1));
-                    }
-                });
-        connect(timePicker, &TimePicker::selectedTimeChanged, this,
-                [this, start](const QTime& time) { updateTime(time, start); });
+        connect(datePicker, &CalendarDatePicker::dateChanged, this, [this, start](const QDate& date) {
+            const QPointer<DateTimeRangePicker> guard(this);
+            updateDate(date, start);
+            if (guard && isPickerOpen() && date.isValid()) {
+                calendarView()->setSelectedDate(date);
+                calendarView()->setVisibleMonth(QDate(date.year(), date.month(), 1));
+            }
+        });
+        connect(timePicker, &TimePicker::selectedTimeChanged, this, [this, start](const QTime& time) {
+            updateTime(time, start);
+        });
         connect(clearButton, &basicinput::Button::clicked, this, [this, start, datePicker] {
             const QPointer<DateTimeRangePicker> guard(this);
             datePicker->closeCalendar();
@@ -669,20 +643,19 @@ DateTimeRangePicker::DateTimeRangePicker(QWidget* parent)
                 start ? clearStart() : clearEnd();
         });
         connect(datePicker, &CalendarDatePicker::calendarOpenChanged, this,
-                [this, start, datePicker, prefix](bool open) {
-                    if (open) {
-                        const QPointer<DateTimeRangePicker> guard(this);
-                        closePickers(datePicker);
-                        if (!guard)
-                            return;
-                        activateEndpoint(start);
-                        if (guard && datePicker->calendarView())
-                            datePicker->calendarView()->setObjectName(prefix +
-                                                                      QStringLiteral("Calendar"));
-                    } else {
-                        synchronizeInputs();
-                    }
-                });
+            [this, start, datePicker, prefix](bool open) {
+                if (open) {
+                    const QPointer<DateTimeRangePicker> guard(this);
+                    closePickers(datePicker);
+                    if (!guard)
+                        return;
+                    activateEndpoint(start);
+                    if (guard && datePicker->calendarView())
+                        datePicker->calendarView()->setObjectName(prefix + QStringLiteral("Calendar"));
+                } else {
+                    synchronizeInputs();
+                }
+            });
         connect(timePicker, &TimePicker::dropDownOpenChanged, this, [this, timePicker](bool open) {
             if (open)
                 closePickers(timePicker);
@@ -691,13 +664,11 @@ DateTimeRangePicker::DateTimeRangePicker(QWidget* parent)
         connect(datePicker, &CalendarDatePicker::minDateChanged, this, boundsChanged);
         connect(datePicker, &CalendarDatePicker::maxDateChanged, this, boundsChanged);
         connect(timePicker, &TimePicker::minuteIncrementChanged, this, boundsChanged);
-        connect(datePicker, &CalendarDatePicker::displayFormatChanged, this,
-                [this] { refreshEntry(); });
+        connect(datePicker, &CalendarDatePicker::displayFormatChanged, this, [this] { refreshEntry(); });
         connect(timePicker, &TimePicker::clockIdentifierChanged, this, [this] { refreshEntry(); });
     }
     setFocusProxy(m_entryButton);
-    connect(m_entryButton, &basicinput::Button::clicked, this,
-            [this] { setPickerOpen(!isPickerOpen()); });
+    connect(m_entryButton, &basicinput::Button::clicked, this, [this] { setPickerOpen(!isPickerOpen()); });
     connect(m_popup, &dialogs_flyouts::Popup::isOpenChanged, this, [this](bool open) {
         const QPointer<DateTimeRangePicker> guard(this);
         if (!open)
@@ -729,8 +700,7 @@ DateTimeRangePicker::~DateTimeRangePicker()
 
 bool DateTimeRangePicker::isRangeValid() const
 {
-    return !m_startDateTime.isValid() || !m_endDateTime.isValid() ||
-           m_startDateTime <= m_endDateTime;
+    return !m_startDateTime.isValid() || !m_endDateTime.isValid() || m_startDateTime <= m_endDateTime;
 }
 
 QString DateTimeRangePicker::startLabelText() const
@@ -775,8 +745,7 @@ void DateTimeRangePicker::setRange(const QDateTime& start, const QDateTime& end)
     synchronizeInputs();
     const QPointer<DateTimeRangePicker> guard(this);
     const auto current = [&] {
-        return guard && sameDateTime(m_startDateTime, nextStart) &&
-               sameDateTime(m_endDateTime, nextEnd);
+        return guard && sameDateTime(m_startDateTime, nextStart) && sameDateTime(m_endDateTime, nextEnd);
     };
     if (startChanged) {
         emit startDateTimeChanged(nextStart);
@@ -880,12 +849,11 @@ void DateTimeRangePicker::refreshPresentationText()
 {
     static_cast<RangeTimeInput*>(m_startTimePicker)->refreshLabels();
     static_cast<RangeTimeInput*>(m_endTimePicker)->refreshLabels();
-    calendarView()->setAccessibleDescription(
-        detail::dateTimeRangeText(locale(), m_editingStart ? QT_TR_NOOP("Choose the start date")
-                                                           : QT_TR_NOOP("Choose the end date")));
+    calendarView()->setAccessibleDescription(detail::dateTimeRangeText(locale(),
+        m_editingStart ? QT_TR_NOOP("Choose the start date") : QT_TR_NOOP("Choose the end date")));
     m_popup->setValidationMessage(isRangeValid() ? QString() : m_invalidRangeText);
-    m_summaryField->setValidationState(isRangeValid() ? layout::Field::ValidationState::None
-                                                      : layout::Field::ValidationState::Error);
+    m_summaryField->setValidationState(
+        isRangeValid() ? layout::Field::ValidationState::None : layout::Field::ValidationState::Error);
     m_summaryField->setValidationMessage(isRangeValid() ? QString() : m_invalidRangeText);
 
     refreshEntry();
@@ -991,14 +959,12 @@ void DateTimeRangePicker::updateLayoutDirection()
 
 QString DateTimeRangePicker::displayText() const
 {
-    const auto text = [this](const QDateTime& value, CalendarDatePicker* datePicker,
-                             TimePicker* timePicker) {
+    const auto text = [this](const QDateTime& value, CalendarDatePicker* datePicker, TimePicker* timePicker) {
         QString result = datePicker->displayText();
         if (m_timeEnabled) {
-            const auto format =
-                timePicker->clockIdentifier() == TimePicker::ClockIdentifier::TwentyFourHourClock
-                    ? QStringLiteral("HH:mm")
-                    : QStringLiteral("h:mm AP");
+            const auto format = timePicker->clockIdentifier() == TimePicker::ClockIdentifier::TwentyFourHourClock
+                ? QStringLiteral("HH:mm")
+                : QStringLiteral("h:mm AP");
             result += QStringLiteral(" ") + locale().toString(value.time(), format);
         }
         return result;
@@ -1012,7 +978,7 @@ QString DateTimeRangePicker::displayText() const
         return detail::dateTimeRangeText(locale(), QT_TR_NOOP("From %1"))
             .arg(text(m_startDateTime, m_startDatePicker, m_startTimePicker));
     return tr("%1 – %2").arg(text(m_startDateTime, m_startDatePicker, m_startTimePicker),
-                             text(m_endDateTime, m_endDatePicker, m_endTimePicker));
+        text(m_endDateTime, m_endDatePicker, m_endTimePicker));
 }
 
 void DateTimeRangePicker::refreshEntry()
@@ -1048,8 +1014,9 @@ void DateTimeRangePicker::openPicker()
     m_completingRange = !m_endDateTime.isValid();
     synchronizeInputs();
     const QDate date = m_startDateTime.isValid() ? m_startDateTime.date()
-                       : m_endDateTime.isValid() ? m_endDateTime.date()
-                                                 : QDate::currentDate();
+        : m_endDateTime.isValid()
+        ? m_endDateTime.date()
+        : QDate::currentDate();
     calendarView()->setLocale(locale());
     calendarView()->resetScroll();
     calendarView()->setSelectedDate(date);
@@ -1171,8 +1138,7 @@ void DateTimeRangePicker::selectCalendarDate(const QDate& date)
     const bool advance = m_editingStart;
     const bool complete = !m_endDateTime.isValid();
     const QPointer<DateTimeRangePicker> guard(this);
-    if (!m_editingStart && m_completingRange && m_startDateTime.isValid() &&
-        date < m_startDateTime.date()) {
+    if (!m_editingStart && m_completingRange && m_startDateTime.isValid() && date < m_startDateTime.date()) {
         auto start = m_startDateTime;
         start.setDate(date);
         setRange(start, m_startDateTime);
@@ -1194,9 +1160,8 @@ bool DateTimeRangePicker::eventFilter(QObject* watched, QEvent* event)
 {
     if (watched == m_entryButton && event->type() == QEvent::KeyPress) {
         const auto* key = static_cast<QKeyEvent*>(event);
-        if (key->key() == Qt::Key_Return || key->key() == Qt::Key_Enter ||
-            key->key() == Qt::Key_F4 ||
-            (key->key() == Qt::Key_Down && key->modifiers().testFlag(Qt::AltModifier))) {
+        if (key->key() == Qt::Key_Return || key->key() == Qt::Key_Enter || key->key() == Qt::Key_F4
+            || (key->key() == Qt::Key_Down && key->modifiers().testFlag(Qt::AltModifier))) {
             openPicker();
             event->accept();
             return true;

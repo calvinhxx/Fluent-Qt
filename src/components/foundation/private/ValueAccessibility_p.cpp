@@ -6,14 +6,11 @@ namespace fluent::accessibility::detail {
 
 #if QT_CONFIG(accessibility)
 
-ValueAccessibleAdapter::ValueAccessibleAdapter(
-    QWidget* widget, QAccessible::Role role)
+ValueAccessibleAdapter::ValueAccessibleAdapter(QWidget* widget, QAccessible::Role role)
     : QAccessibleWidget(widget, role)
-{
-}
+{}
 
-void* ValueAccessibleAdapter::interface_cast(
-    QAccessible::InterfaceType type)
+void* ValueAccessibleAdapter::interface_cast(QAccessible::InterfaceType type)
 {
     if (type == QAccessible::ValueInterface)
         return static_cast<QAccessibleValueInterface*>(this);
@@ -27,8 +24,7 @@ QAccessible::State ValueAccessibleAdapter::state() const
     QAccessible::State result = QAccessibleWidget::state();
     const bool readOnly = accessibleValueReadOnly();
     result.readOnly = readOnly;
-    result.editable = accessibleValueEditable() && !readOnly
-        && !result.disabled;
+    result.editable = accessibleValueEditable() && !readOnly && !result.disabled;
     result.busy = result.busy || accessibleValueBusy();
     result.animated = result.animated || accessibleValueAnimated();
     result.invalid = result.invalid || accessibleValueInvalid();
@@ -60,21 +56,18 @@ QStringList ValueAccessibleAdapter::actionNames() const
 
 void ValueAccessibleAdapter::doAction(const QString& actionName)
 {
-    if (actionName == QAccessibleActionInterface::increaseAction()
-        && canIncreaseAccessibleValue()) {
+    if (actionName == QAccessibleActionInterface::increaseAction() && canIncreaseAccessibleValue()) {
         changeAccessibleValueByStep(1);
         return;
     }
-    if (actionName == QAccessibleActionInterface::decreaseAction()
-        && canDecreaseAccessibleValue()) {
+    if (actionName == QAccessibleActionInterface::decreaseAction() && canDecreaseAccessibleValue()) {
         changeAccessibleValueByStep(-1);
         return;
     }
     QAccessibleWidget::doAction(actionName);
 }
 
-QStringList ValueAccessibleAdapter::keyBindingsForAction(
-    const QString& actionName) const
+QStringList ValueAccessibleAdapter::keyBindingsForAction(const QString& actionName) const
 {
     if (actionName == QAccessibleActionInterface::increaseAction())
         return {QStringLiteral("Up")};
@@ -88,8 +81,7 @@ QString ValueAccessibleAdapter::accessibleValueText() const
     return currentValue().toString();
 }
 
-void notifyValueAccessibilityValue(
-    QWidget* widget, const QVariant& value)
+void notifyValueAccessibilityValue(QWidget* widget, const QVariant& value)
 {
     if (!widget)
         return;
@@ -97,8 +89,7 @@ void notifyValueAccessibilityValue(
     QAccessible::updateAccessibility(&event);
 }
 
-void notifyValueAccessibilityState(
-    QWidget* widget, const QAccessible::State& changed)
+void notifyValueAccessibilityState(QWidget* widget, const QAccessible::State& changed)
 {
     if (!widget)
         return;

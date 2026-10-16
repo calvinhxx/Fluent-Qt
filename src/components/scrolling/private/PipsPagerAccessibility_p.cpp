@@ -24,30 +24,22 @@ QString pagerText(const char* source)
 
 class PipsPagerAccessible final : public LogicalItemAccessibleAdapter {
 public:
-    explicit PipsPagerAccessible(PipsPager* pager)
-        : LogicalItemAccessibleAdapter(pager, QAccessible::PageTabList)
-    {
-    }
+    explicit PipsPagerAccessible(PipsPager* pager) : LogicalItemAccessibleAdapter(pager, QAccessible::PageTabList) {}
 
-    int logicalChildCount() const override
-    {
-        return view() ? view()->numberOfPages() + 2 : 0;
-    }
+    int logicalChildCount() const override { return view() ? view()->numberOfPages() + 2 : 0; }
 
     QAccessible::Role logicalChildRole(int index) const override
     {
         return isPage(index) ? QAccessible::PageTab : QAccessible::Button;
     }
 
-    QString logicalChildText(int index,
-                             QAccessible::Text type) const override
+    QString logicalChildText(int index, QAccessible::Text type) const override
     {
         PipsPager* pager = view();
         if (!pager || type != QAccessible::Name)
             return {};
         if (isPage(index)) {
-            return pagerText("Page %1 of %2")
-                .arg(index + 1).arg(pager->numberOfPages());
+            return pagerText("Page %1 of %2").arg(index + 1).arg(pager->numberOfPages());
         }
         if (isPrevious(index))
             return pagerText("Previous page");
@@ -63,8 +55,7 @@ public:
             return toGlobalRect(pager->pipHitRect(index));
         if (isPrevious(index))
             return toGlobalRect(pager->previousButtonRect());
-        return isNext(index)
-            ? toGlobalRect(pager->nextButtonRect()) : QRect();
+        return isNext(index) ? toGlobalRect(pager->nextButtonRect()) : QRect();
     }
 
     LogicalItemAccessibleState logicalChildState(int index) const override
@@ -88,18 +79,14 @@ public:
         result.selectable = false;
         if (isPrevious(index)) {
             result.enabled = pager->isEnabled() && pager->hasPreviousPage();
-            result.invisible = pager->previousButtonVisibility()
-                == PipsPager::PipsPagerButtonVisibility::Collapsed;
-            result.offscreen = !result.invisible
-                && pager->previousButtonRect().isEmpty();
+            result.invisible = pager->previousButtonVisibility() == PipsPager::PipsPagerButtonVisibility::Collapsed;
+            result.offscreen = !result.invisible && pager->previousButtonRect().isEmpty();
             return result;
         }
         if (isNext(index)) {
             result.enabled = pager->isEnabled() && pager->hasNextPage();
-            result.invisible = pager->nextButtonVisibility()
-                == PipsPager::PipsPagerButtonVisibility::Collapsed;
-            result.offscreen = !result.invisible
-                && pager->nextButtonRect().isEmpty();
+            result.invisible = pager->nextButtonVisibility() == PipsPager::PipsPagerButtonVisibility::Collapsed;
+            result.offscreen = !result.invisible && pager->nextButtonRect().isEmpty();
             return result;
         }
 
@@ -110,8 +97,7 @@ public:
 
     int logicalFocusChild() const override
     {
-        return view() && view()->hasFocus() && view()->numberOfPages() > 0
-            ? view()->selectedPageIndex() : -1;
+        return view() && view()->hasFocus() && view()->numberOfPages() > 0 ? view()->selectedPageIndex() : -1;
     }
 
     QStringList logicalChildActions(int index) const override
@@ -119,12 +105,10 @@ public:
         return LogicalItemAccessibleAdapter::logicalChildActions(index);
     }
 
-    void performLogicalChildAction(
-        int index, const QString& actionName) override
+    void performLogicalChildAction(int index, const QString& actionName) override
     {
         PipsPager* pager = view();
-        if (!pager
-            || actionName != QAccessibleActionInterface::pressAction()) {
+        if (!pager || actionName != QAccessibleActionInterface::pressAction()) {
             return;
         }
         if (isPage(index))
@@ -138,28 +122,15 @@ public:
     bool clearLogicalSelection() override { return false; }
 
 private:
-    PipsPager* view() const
-    {
-        return static_cast<PipsPager*>(ownerWidget());
-    }
-    bool isPage(int index) const
-    {
-        return view() && index >= 0 && index < view()->numberOfPages();
-    }
-    bool isPrevious(int index) const
-    {
-        return view() && index == view()->numberOfPages();
-    }
-    bool isNext(int index) const
-    {
-        return view() && index == view()->numberOfPages() + 1;
-    }
+    PipsPager* view() const { return static_cast<PipsPager*>(ownerWidget()); }
+    bool isPage(int index) const { return view() && index >= 0 && index < view()->numberOfPages(); }
+    bool isPrevious(int index) const { return view() && index == view()->numberOfPages(); }
+    bool isNext(int index) const { return view() && index == view()->numberOfPages() + 1; }
 };
 
 namespace {
 
-QAccessibleInterface* pipsPagerAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* pipsPagerAccessibilityFactory(const QString&, QObject* object)
 {
     auto* pager = dynamic_cast<PipsPager*>(object);
     return pager ? new PipsPagerAccessible(pager) : nullptr;

@@ -33,10 +33,7 @@ bool nearlyEqual(qreal left, qreal right)
 
 class InfoBadgeAccessible final : public QAccessibleWidget {
 public:
-    explicit InfoBadgeAccessible(InfoBadge* badge)
-        : QAccessibleWidget(badge, QAccessible::StaticText)
-    {
-    }
+    explicit InfoBadgeAccessible(InfoBadge* badge) : QAccessibleWidget(badge, QAccessible::StaticText) {}
 
     QString text(QAccessible::Text type) const override
     {
@@ -49,19 +46,15 @@ public:
             if (!explicitName.isEmpty())
                 return explicitName;
         }
-        if ((type == QAccessible::Name
-             || type == QAccessible::Value)
-            && badge->effectiveDisplayMode()
-                == InfoBadge::InfoBadgeDisplayMode::Value
-            && badge->value() >= 0) {
+        if ((type == QAccessible::Name || type == QAccessible::Value)
+            && badge->effectiveDisplayMode() == InfoBadge::InfoBadgeDisplayMode::Value && badge->value() >= 0) {
             return QString::number(badge->value());
         }
         return QAccessibleWidget::text(type);
     }
 };
 
-QAccessibleInterface* infoBadgeAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* infoBadgeAccessibilityFactory(const QString&, QObject* object)
 {
     auto* badge = qobject_cast<InfoBadge*>(object);
     return badge ? new InfoBadgeAccessible(badge) : nullptr;
@@ -70,8 +63,7 @@ QAccessibleInterface* infoBadgeAccessibilityFactory(
 void ensureInfoBadgeAccessibilityFactory()
 {
     static const bool installed = []() {
-        QAccessible::installFactory(
-            infoBadgeAccessibilityFactory);
+        QAccessible::installFactory(infoBadgeAccessibilityFactory);
         return true;
     }();
     Q_UNUSED(installed)
@@ -79,16 +71,12 @@ void ensureInfoBadgeAccessibilityFactory()
 
 #else
 
-void ensureInfoBadgeAccessibilityFactory()
-{
-}
+void ensureInfoBadgeAccessibilityFactory() {}
 
 #endif
 } // namespace
 
-InfoBadge::InfoBadge(QWidget* parent)
-    : QWidget(parent)
-    , m_valueFontRole(Typography::FontRole::Caption)
+InfoBadge::InfoBadge(QWidget* parent) : QWidget(parent), m_valueFontRole(Typography::FontRole::Caption)
 {
     ensureInfoBadgeAccessibilityFactory();
     setAttribute(Qt::WA_TranslucentBackground);
@@ -99,7 +87,8 @@ InfoBadge::InfoBadge(QWidget* parent)
 void InfoBadge::setValue(int value)
 {
     const int normalizedValue = std::max(-1, value);
-    if (m_value == normalizedValue) return;
+    if (m_value == normalizedValue)
+        return;
     m_value = normalizedValue;
     invalidateLayoutAndPaint();
     emit valueChanged(m_value);
@@ -108,7 +97,8 @@ void InfoBadge::setValue(int value)
 
 void InfoBadge::setIconGlyph(const QString& glyph)
 {
-    if (m_iconGlyph == glyph) return;
+    if (m_iconGlyph == glyph)
+        return;
     m_iconGlyph = glyph;
     invalidateLayoutAndPaint();
     emit iconGlyphChanged(m_iconGlyph);
@@ -116,7 +106,8 @@ void InfoBadge::setIconGlyph(const QString& glyph)
 
 void InfoBadge::setDisplayMode(InfoBadgeDisplayMode mode)
 {
-    if (m_displayMode == mode) return;
+    if (m_displayMode == mode)
+        return;
     m_displayMode = mode;
     invalidateLayoutAndPaint();
     emit displayModeChanged(m_displayMode);
@@ -125,7 +116,8 @@ void InfoBadge::setDisplayMode(InfoBadgeDisplayMode mode)
 
 void InfoBadge::setStatus(InfoBadgeStatus status)
 {
-    if (m_status == status) return;
+    if (m_status == status)
+        return;
     m_status = status;
     updateThemeColors();
     update();
@@ -135,7 +127,8 @@ void InfoBadge::setStatus(InfoBadgeStatus status)
 void InfoBadge::setBadgeOpacity(qreal opacity)
 {
     const qreal normalizedOpacity = qBound<qreal>(0.0, opacity, 1.0);
-    if (nearlyEqual(m_badgeOpacity, normalizedOpacity)) return;
+    if (nearlyEqual(m_badgeOpacity, normalizedOpacity))
+        return;
     m_badgeOpacity = normalizedOpacity;
     update();
     emit badgeOpacityChanged(m_badgeOpacity);
@@ -143,7 +136,8 @@ void InfoBadge::setBadgeOpacity(qreal opacity)
 
 void InfoBadge::setCustomBackgroundColor(const QColor& color)
 {
-    if (m_customBackgroundColor == color) return;
+    if (m_customBackgroundColor == color)
+        return;
     m_customBackgroundColor = color;
     updateThemeColors();
     update();
@@ -152,7 +146,8 @@ void InfoBadge::setCustomBackgroundColor(const QColor& color)
 
 void InfoBadge::setCustomTextColor(const QColor& color)
 {
-    if (m_customTextColor == color) return;
+    if (m_customTextColor == color)
+        return;
     m_customTextColor = color;
     updateThemeColors();
     update();
@@ -161,7 +156,8 @@ void InfoBadge::setCustomTextColor(const QColor& color)
 
 void InfoBadge::setValueFontRole(Typography::FontRole role)
 {
-    if (m_valueFontRole == role) return;
+    if (m_valueFontRole == role)
+        return;
     m_valueFontRole = role;
     invalidateLayoutAndPaint();
     emit valueFontRoleChanged(m_valueFontRole);
@@ -169,7 +165,8 @@ void InfoBadge::setValueFontRole(Typography::FontRole role)
 
 void InfoBadge::setBeaconDiameter(int diameter)
 {
-    if (diameter <= 0 || m_beaconDiameter == diameter) return;
+    if (diameter <= 0 || m_beaconDiameter == diameter)
+        return;
     m_beaconDiameter = diameter;
     invalidateLayoutAndPaint();
     emit beaconDiameterChanged(m_beaconDiameter);
@@ -177,7 +174,8 @@ void InfoBadge::setBeaconDiameter(int diameter)
 
 void InfoBadge::setBadgeHeight(int height)
 {
-    if (height <= 0 || m_badgeHeight == height) return;
+    if (height <= 0 || m_badgeHeight == height)
+        return;
     m_badgeHeight = height;
     invalidateLayoutAndPaint();
     emit badgeHeightChanged(m_badgeHeight);
@@ -186,7 +184,8 @@ void InfoBadge::setBadgeHeight(int height)
 void InfoBadge::setValueHorizontalPadding(int padding)
 {
     const int normalizedPadding = qMax(0, padding);
-    if (m_valueHorizontalPadding == normalizedPadding) return;
+    if (m_valueHorizontalPadding == normalizedPadding)
+        return;
     m_valueHorizontalPadding = normalizedPadding;
     invalidateLayoutAndPaint();
     emit valueHorizontalPaddingChanged(m_valueHorizontalPadding);
@@ -194,7 +193,8 @@ void InfoBadge::setValueHorizontalPadding(int padding)
 
 void InfoBadge::setIconGlyphSize(int size)
 {
-    if (size <= 0 || m_iconGlyphSize == size) return;
+    if (size <= 0 || m_iconGlyphSize == size)
+        return;
     m_iconGlyphSize = size;
     update();
     emit iconGlyphSizeChanged(m_iconGlyphSize);
@@ -202,7 +202,8 @@ void InfoBadge::setIconGlyphSize(int size)
 
 void InfoBadge::setIconFontFamily(const QString& family)
 {
-    if (family.isEmpty() || m_iconFontFamily == family) return;
+    if (family.isEmpty() || m_iconFontFamily == family)
+        return;
     m_iconFontFamily = family;
     update();
     emit iconFontFamilyChanged(m_iconFontFamily);
@@ -211,7 +212,8 @@ void InfoBadge::setIconFontFamily(const QString& family)
 void InfoBadge::setBadgeBackgroundInset(int inset)
 {
     const int normalizedInset = qMax(0, inset);
-    if (m_badgeBackgroundInset == normalizedInset) return;
+    if (m_badgeBackgroundInset == normalizedInset)
+        return;
     m_badgeBackgroundInset = normalizedInset;
     update();
     emit badgeBackgroundInsetChanged(m_badgeBackgroundInset);
@@ -219,7 +221,8 @@ void InfoBadge::setBadgeBackgroundInset(int inset)
 
 void InfoBadge::setContentOffset(const QPoint& offset)
 {
-    if (m_contentOffset == offset) return;
+    if (m_contentOffset == offset)
+        return;
     m_contentOffset = offset;
     update();
     emit contentOffsetChanged(m_contentOffset);
@@ -227,42 +230,48 @@ void InfoBadge::setContentOffset(const QPoint& offset)
 
 InfoBadge::InfoBadgeDisplayMode InfoBadge::effectiveDisplayMode() const
 {
-    if (m_displayMode != InfoBadgeDisplayMode::Auto) return m_displayMode;
-    if (m_value >= 0) return InfoBadgeDisplayMode::Value;
-    if (!m_iconGlyph.isEmpty()) return InfoBadgeDisplayMode::Icon;
+    if (m_displayMode != InfoBadgeDisplayMode::Auto)
+        return m_displayMode;
+    if (m_value >= 0)
+        return InfoBadgeDisplayMode::Value;
+    if (!m_iconGlyph.isEmpty())
+        return InfoBadgeDisplayMode::Icon;
     return InfoBadgeDisplayMode::Dot;
 }
 
 QSize InfoBadge::effectiveBadgeSize() const
 {
     switch (effectiveDisplayMode()) {
-        case InfoBadgeDisplayMode::Dot:
-            return QSize(m_beaconDiameter, m_beaconDiameter);
-        case InfoBadgeDisplayMode::Icon:
+    case InfoBadgeDisplayMode::Dot:
+        return QSize(m_beaconDiameter, m_beaconDiameter);
+    case InfoBadgeDisplayMode::Icon:
+        return QSize(m_badgeHeight, m_badgeHeight);
+    case InfoBadgeDisplayMode::Value: {
+        const QString text = valueText();
+        if (text.isEmpty())
             return QSize(m_badgeHeight, m_badgeHeight);
-        case InfoBadgeDisplayMode::Value: {
-            const QString text = valueText();
-            if (text.isEmpty()) return QSize(m_badgeHeight, m_badgeHeight);
-            const QFontMetrics metrics(valueFont());
-            const int textWidth = metrics.horizontalAdvance(text);
-            const int width = qMax(m_badgeHeight, textWidth + m_valueHorizontalPadding);
-            return QSize(width, m_badgeHeight);
-        }
-        case InfoBadgeDisplayMode::Auto:
-        default:
-            return QSize(m_beaconDiameter, m_beaconDiameter);
+        const QFontMetrics metrics(valueFont());
+        const int textWidth = metrics.horizontalAdvance(text);
+        const int width = qMax(m_badgeHeight, textWidth + m_valueHorizontalPadding);
+        return QSize(width, m_badgeHeight);
+    }
+    case InfoBadgeDisplayMode::Auto:
+    default:
+        return QSize(m_beaconDiameter, m_beaconDiameter);
     }
 }
 
 QColor InfoBadge::effectiveBackgroundColor() const
 {
-    if (!isEnabled()) return m_disabledBackgroundColor;
+    if (!isEnabled())
+        return m_disabledBackgroundColor;
     return m_backgroundColor;
 }
 
 QColor InfoBadge::effectiveForegroundColor() const
 {
-    if (!isEnabled()) return m_disabledForegroundColor;
+    if (!isEnabled())
+        return m_disabledForegroundColor;
     return m_foregroundColor;
 }
 
@@ -286,15 +295,14 @@ void InfoBadge::onThemeUpdated()
 void InfoBadge::paintEvent(QPaintEvent*)
 {
     const QSize badgeSize = effectiveBadgeSize();
-    if (badgeSize.isEmpty() || width() <= 0 || height() <= 0 || m_badgeOpacity <= 0.0) return;
+    if (badgeSize.isEmpty() || width() <= 0 || height() <= 0 || m_badgeOpacity <= 0.0)
+        return;
 
-    QRectF badgeRect(
-        (width() - badgeSize.width()) / 2.0,
-        (height() - badgeSize.height()) / 2.0,
-        badgeSize.width(),
+    QRectF badgeRect((width() - badgeSize.width()) / 2.0, (height() - badgeSize.height()) / 2.0, badgeSize.width(),
         badgeSize.height());
     badgeRect = badgeRect.intersected(QRectF(rect()));
-    if (!badgeRect.isValid() || badgeRect.isEmpty()) return;
+    if (!badgeRect.isValid() || badgeRect.isEmpty())
+        return;
     QColor fillColor = effectiveBackgroundColor();
     QColor textColor = effectiveForegroundColor();
 
@@ -306,10 +314,7 @@ void InfoBadge::paintEvent(QPaintEvent*)
 
     const qreal maxInset = qMax<qreal>(0.0, qMin(badgeRect.width(), badgeRect.height()) / 2.0 - 0.5);
     const qreal backgroundInset = qMin<qreal>(m_badgeBackgroundInset, maxInset);
-    const QRectF backgroundRect = badgeRect.adjusted(
-        backgroundInset,
-        backgroundInset,
-        -backgroundInset,
+    const QRectF backgroundRect = badgeRect.adjusted(backgroundInset, backgroundInset, -backgroundInset,
         -backgroundInset);
 
     if (qFuzzyCompare(backgroundRect.width(), backgroundRect.height())) {
@@ -320,7 +325,8 @@ void InfoBadge::paintEvent(QPaintEvent*)
     }
 
     const InfoBadgeDisplayMode mode = effectiveDisplayMode();
-    if (mode == InfoBadgeDisplayMode::Dot) return;
+    if (mode == InfoBadgeDisplayMode::Dot)
+        return;
 
     painter.setPen(textColor);
     painter.setBrush(Qt::NoBrush);
@@ -331,8 +337,7 @@ void InfoBadge::paintEvent(QPaintEvent*)
             painter.save();
             if (!m_contentOffset.isNull())
                 painter.translate(m_contentOffset);
-            Typography::Icons::paintGlyph(
-                painter, badgeRect, m_iconGlyph, m_iconGlyphSize, Qt::AlignCenter);
+            Typography::Icons::paintGlyph(painter, badgeRect, m_iconGlyph, m_iconGlyphSize, Qt::AlignCenter);
             painter.restore();
         } else {
             drawCenteredTextPath(painter, badgeRect, iconFont(), m_iconGlyph, textColor);
@@ -342,7 +347,8 @@ void InfoBadge::paintEvent(QPaintEvent*)
 
     if (mode == InfoBadgeDisplayMode::Value) {
         const QString text = valueText();
-        if (text.isEmpty()) return;
+        if (text.isEmpty())
+            return;
         drawCenteredTextPath(painter, badgeRect, valueFont(), text, textColor);
     }
 }
@@ -388,20 +394,25 @@ QFont InfoBadge::iconFont() const
     return font;
 }
 
-void InfoBadge::drawCenteredTextPath(QPainter& painter, const QRectF& targetRect, const QFont& font, const QString& text, const QColor& color) const
+void InfoBadge::drawCenteredTextPath(QPainter& painter,
+    const QRectF& targetRect,
+    const QFont& font,
+    const QString& text,
+    const QColor& color) const
 {
-    if (text.isEmpty() || targetRect.isEmpty()) return;
+    if (text.isEmpty() || targetRect.isEmpty())
+        return;
 
     QPainterPath textPath;
     textPath.addText(QPointF(0, 0), font, text);
     const QRectF textBounds = textPath.boundingRect();
-    if (textBounds.isEmpty()) return;
+    if (textBounds.isEmpty())
+        return;
 
     painter.save();
     painter.setPen(Qt::NoPen);
     painter.setBrush(color.isValid() ? color : effectiveForegroundColor());
-    painter.translate(
-        targetRect.center().x() - textBounds.center().x() + m_contentOffset.x(),
+    painter.translate(targetRect.center().x() - textBounds.center().x() + m_contentOffset.x(),
         targetRect.center().y() - textBounds.center().y() + m_contentOffset.y());
     painter.drawPath(textPath);
     painter.restore();
@@ -411,29 +422,25 @@ QColor InfoBadge::statusBackgroundColor() const
 {
     const auto& colors = themeColorsRef();
     switch (m_status) {
-        case InfoBadgeStatus::Informational:
-            return colors.systemInfo;
-        case InfoBadgeStatus::Caution:
-            return colors.systemCaution;
-        case InfoBadgeStatus::Success:
-            return colors.systemSuccess;
-        case InfoBadgeStatus::Critical:
-            return colors.systemCritical;
-        case InfoBadgeStatus::Attention:
-        default:
-            return colors.accentDefault;
+    case InfoBadgeStatus::Informational:
+        return colors.systemInfo;
+    case InfoBadgeStatus::Caution:
+        return colors.systemCaution;
+    case InfoBadgeStatus::Success:
+        return colors.systemSuccess;
+    case InfoBadgeStatus::Critical:
+        return colors.systemCritical;
+    case InfoBadgeStatus::Attention:
+    default:
+        return colors.accentDefault;
     }
 }
 
 void InfoBadge::updateThemeColors()
 {
     const auto& colors = themeColorsRef();
-    m_backgroundColor = m_customBackgroundColor.isValid()
-        ? m_customBackgroundColor
-        : statusBackgroundColor();
-    m_foregroundColor = m_customTextColor.isValid()
-        ? m_customTextColor
-        : colors.textOnAccent;
+    m_backgroundColor = m_customBackgroundColor.isValid() ? m_customBackgroundColor : statusBackgroundColor();
+    m_foregroundColor = m_customTextColor.isValid() ? m_customTextColor : colors.textOnAccent;
     m_disabledBackgroundColor = colors.accentDisabled;
     m_disabledForegroundColor = colors.textDisabled;
 }
@@ -448,10 +455,7 @@ void InfoBadge::notifyAccessibleValueChanged()
 {
 #if QT_CONFIG(accessibility)
     const QVariant value =
-        effectiveDisplayMode() == InfoBadgeDisplayMode::Value
-            && m_value >= 0
-        ? QVariant(m_value)
-        : QVariant();
+        effectiveDisplayMode() == InfoBadgeDisplayMode::Value && m_value >= 0 ? QVariant(m_value) : QVariant();
     QAccessibleValueChangeEvent valueEvent(this, value);
     QAccessible::updateAccessibility(&valueEvent);
 
@@ -459,8 +463,7 @@ void InfoBadge::notifyAccessibleValueChanged()
     QAccessible::updateAccessibility(&nameEvent);
 
     if (QWidget* parent = parentWidget()) {
-        QAccessibleEvent parentEvent(
-            parent, QAccessible::VisibleDataChanged);
+        QAccessibleEvent parentEvent(parent, QAccessible::VisibleDataChanged);
         QAccessible::updateAccessibility(&parentEvent);
     }
 #endif
@@ -470,8 +473,7 @@ void InfoBadge::notifyAccessibleParentReordered()
 {
 #if QT_CONFIG(accessibility)
     if (QWidget* parent = parentWidget()) {
-        QAccessibleEvent event(
-            parent, QAccessible::ObjectReorder);
+        QAccessibleEvent event(parent, QAccessible::ObjectReorder);
         QAccessible::updateAccessibility(&event);
     }
 #endif

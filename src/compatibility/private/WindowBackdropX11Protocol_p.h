@@ -7,8 +7,8 @@ namespace compatibility::detail {
 
 // A server error is still a reply to the ordered request. A broken transport
 // or a call that never sent a request provides no submission evidence.
-inline bool x11ClientRoundTripCompleted(bool requestSent, bool replyReceived,
-                                        bool protocolErrorReceived, bool connectionFailed)
+inline bool
+x11ClientRoundTripCompleted(bool requestSent, bool replyReceived, bool protocolErrorReceived, bool connectionFailed)
 {
     return requestSent && !connectionFailed && (replyReceived || protocolErrorReceived);
 }
@@ -23,8 +23,11 @@ public:
     }
 
     template <typename OrderCreation, typename ApplyBackground>
-    bool prepare(quint32 nativeId, quint32 opaqueRgb, bool transparent, OrderCreation orderCreation,
-                 ApplyBackground applyBackground)
+    bool prepare(quint32 nativeId,
+        quint32 opaqueRgb,
+        bool transparent,
+        OrderCreation orderCreation,
+        ApplyBackground applyBackground)
     {
         if (!nativeId)
             return false;

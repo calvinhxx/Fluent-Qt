@@ -93,8 +93,7 @@ QString standardEditingShortcutText(QKeySequence::StandardKey standardKey)
         return QString();
 
     const QList<QKeySequence> bindings = QKeySequence::keyBindings(standardKey);
-    const QKeySequence shortcut =
-        bindings.isEmpty() ? QKeySequence(standardKey) : bindings.constFirst();
+    const QKeySequence shortcut = bindings.isEmpty() ? QKeySequence(standardKey) : bindings.constFirst();
     return shortcut.toString(QKeySequence::NativeText);
 }
 
@@ -183,8 +182,7 @@ bool hasStandardEditingActionShape(const QList<QAction*>& actions)
 
 class TextEditingContextMenu final : public FluentMenu {
 public:
-    TextEditingContextMenu(QWidget* parent, const QString& objectName)
-        : FluentMenu(QString(), parent)
+    TextEditingContextMenu(QWidget* parent, const QString& objectName) : FluentMenu(QString(), parent)
     {
         setObjectName(objectName);
         setFontStyle(Typography::FontRole::Caption);
@@ -201,9 +199,7 @@ public:
         setFont(themeFont(Typography::FontRole::Caption).toQFont());
         const auto spacing = themeSpacing();
         const int shadow =
-            compatibility::detail::runtimePlatformCapabilities().translucentPopupSurfaces
-                ? ::Spacing::Standard
-                : 0;
+            compatibility::detail::runtimePlatformCapabilities().translucentPopupSurfaces ? ::Spacing::Standard : 0;
         const int verticalInset = qMax(1, spacing.gap.tight / 2);
         setContentsMargins(shadow, shadow + verticalInset, shadow, shadow + verticalInset);
         setItemLayoutMetrics(qMax(1, spacing.padding.listItemV / 2), spacing.gap.normal);
@@ -229,8 +225,7 @@ public:
             pixmap.fill(Qt::transparent);
             QPainter painter(&pixmap);
             painter.setPen(color);
-            Typography::Icons::paintGlyph(painter, QRectF(0, 0, iconSize, iconSize), glyph,
-                                          iconSize, Qt::AlignCenter);
+            Typography::Icons::paintGlyph(painter, QRectF(0, 0, iconSize, iconSize), glyph, iconSize, Qt::AlignCenter);
             return pixmap;
         };
 
@@ -244,8 +239,10 @@ public:
 
 } // namespace
 
-bool showTextEditingContextMenu(QWidget* parent, QMenu* standardMenu, const QPoint& globalPosition,
-                                const QString& objectName)
+bool showTextEditingContextMenu(QWidget* parent,
+    QMenu* standardMenu,
+    const QPoint& globalPosition,
+    const QString& objectName)
 {
     if (!standardMenu)
         return false;
@@ -299,8 +296,7 @@ bool showTextEditingContextMenu(QWidget* parent, QMenu* standardMenu, const QPoi
             }
         }
 
-        QObject::connect(action, &QAction::triggered, sourceAction,
-                         [sourceAction]() { sourceAction->trigger(); });
+        QObject::connect(action, &QAction::triggered, sourceAction, [sourceAction]() { sourceAction->trigger(); });
 
         QString iconGlyph = standardEditingActionGlyph(sourceAction);
         if (iconGlyph.isEmpty() && usePositionalFallback)

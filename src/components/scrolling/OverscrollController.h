@@ -60,8 +60,7 @@ public:
      * @param viewport       The view's viewport (parenting / lifetime only).
      * @param discreteStepPx Pixels scrolled per mouse-wheel notch (delta 120).
      */
-    OverscrollController(QWidget* viewport, qreal discreteStepPx, Hooks hooks,
-                         QObject* parent = nullptr);
+    OverscrollController(QWidget* viewport, qreal discreteStepPx, Hooks hooks, QObject* parent = nullptr);
 
     /// Current overscroll offset in pixels for the active axis (0 when settled).
     /// zh_CN: 当前轴的 overscroll 偏移像素（静止时为 0）。
@@ -85,7 +84,7 @@ public:
     void cancel();
 
 private:
-    void notifyChanged();   // Host repaint / chrome sync.
+    void notifyChanged(); // Host repaint / chrome sync.
     bool horizontal() const;
     void resetNoPhaseCluster();
     void resetNoPhaseBoundaryBounce();
@@ -104,10 +103,10 @@ private:
     // NoPhaseDiscrete (mouse wheel / RDP) cluster + boundary-bounce arming state.
     // zh_CN: NoPhaseDiscrete（鼠标滚轮 / RDP）成簇与边界回弹预备状态。
     qint64 m_lastNoPhaseTs = 0;
-    qreal  m_clusterAccum = 0.0;
-    int    m_clusterDir = 0;
-    int    m_noPhaseBoundaryDir = 0;
-    bool   m_noPhaseBounceArmed = false;
+    qreal m_clusterAccum = 0.0;
+    int m_clusterDir = 0;
+    int m_noPhaseBoundaryDir = 0;
+    bool m_noPhaseBounceArmed = false;
 };
 
 } // namespace fluent::scrolling

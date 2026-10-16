@@ -31,7 +31,10 @@ struct BreadcrumbItem {
 
     BreadcrumbItem() = default;
     explicit BreadcrumbItem(const QString& itemText);
-    BreadcrumbItem(const QString& itemText, const QVariant& itemData, bool itemEnabled = true, const QString& itemAccessibleName = QString());
+    BreadcrumbItem(const QString& itemText,
+        const QVariant& itemData,
+        bool itemEnabled = true,
+        const QString& itemAccessibleName = QString());
 };
 
 /**
@@ -63,12 +66,18 @@ class Breadcrumb : public QWidget, public FluentElement, public QMLPlus {
      * @brief Whether breadcrumb items collapse after item activation.
      * zh_CN: 条目激活后面包屑是否自动收缩。
      */
-    Q_PROPERTY(bool autoTruncateOnItemClick READ autoTruncateOnItemClick WRITE setAutoTruncateOnItemClick NOTIFY autoTruncateOnItemClickChanged)
+    Q_PROPERTY(bool autoTruncateOnItemClick
+        READ autoTruncateOnItemClick
+        WRITE setAutoTruncateOnItemClick
+        NOTIFY autoTruncateOnItemClickChanged)
     /**
      * @brief Typography role used by standard breadcrumb items.
      * zh_CN: 标准面包屑条目使用的排版角色。
      */
-    Q_PROPERTY(Typography::FontRole standardFontRole READ standardFontRole WRITE setStandardFontRole NOTIFY standardFontRoleChanged)
+    Q_PROPERTY(Typography::FontRole standardFontRole
+        READ standardFontRole
+        WRITE setStandardFontRole
+        NOTIFY standardFontRoleChanged)
     /**
      * @brief Typography role used by large breadcrumb items.
      * zh_CN: 大尺寸面包屑条目使用的排版角色。
@@ -76,17 +85,10 @@ class Breadcrumb : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(Typography::FontRole largeFontRole READ largeFontRole WRITE setLargeFontRole NOTIFY largeFontRoleChanged)
 
 public:
-    enum class BreadcrumbSize {
-        Standard,
-        Large
-    };
+    enum class BreadcrumbSize { Standard, Large };
     Q_ENUM(BreadcrumbSize)
 
-    enum class OverflowMode {
-        None,
-        Beginning,
-        Middle
-    };
+    enum class OverflowMode { None, Beginning, Middle };
     Q_ENUM(OverflowMode)
 
     explicit Breadcrumb(QWidget* parent = nullptr);
@@ -154,11 +156,7 @@ protected:
 private:
     friend class detail::BreadcrumbAccessible;
 
-    enum class RecordType {
-        Item,
-        Separator,
-        Overflow
-    };
+    enum class RecordType { Item, Separator, Overflow };
 
     struct Metrics {
         int rowHeight = 20;
@@ -205,7 +203,12 @@ private:
     void paintItem(QPainter& painter, const DisplayRecord& record, int recordIndex);
     void paintIconRecord(QPainter& painter, const DisplayRecord& record, int recordIndex);
     QColor textColorForRecord(const DisplayRecord& record, int recordIndex) const;
-    void paintIconGlyph(QPainter& painter, const QRect& rect, const QString& glyph, const QColor& color, int pixelSize, int lineHeight);
+    void paintIconGlyph(QPainter& painter,
+        const QRect& rect,
+        const QString& glyph,
+        const QColor& color,
+        int pixelSize,
+        int lineHeight);
 
     QVector<BreadcrumbItem> m_items;
     mutable QVector<DisplayRecord> m_records;

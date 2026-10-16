@@ -41,8 +41,7 @@ int MotionPolicy::resolvedDuration(int fullDurationMs, bool localAnimationEnable
         return 0;
 
     const int boundedDuration = qMax(0, fullDurationMs);
-    return m_mode == Mode::Reduced ? qMin(boundedDuration, ReducedTransitionDurationMs)
-                                   : boundedDuration;
+    return m_mode == Mode::Reduced ? qMin(boundedDuration, ReducedTransitionDurationMs) : boundedDuration;
 }
 
 } // namespace fluent

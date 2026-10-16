@@ -98,18 +98,7 @@ public:
      * @brief Logical hit-test result before mapping to native platform codes.
      * zh_CN: 映射到平台原生 code 前的逻辑命中测试结果。
      */
-    enum class HitTest {
-        Client,
-        Caption,
-        Left,
-        Right,
-        Top,
-        Bottom,
-        TopLeft,
-        TopRight,
-        BottomLeft,
-        BottomRight
-    };
+    enum class HitTest { Client, Caption, Left, Right, Top, Bottom, TopLeft, TopRight, BottomLeft, BottomRight };
 
     explicit WindowChromeCompat(QWidget* window);
 
@@ -151,15 +140,13 @@ public:
      * @brief Applies a backdrop and returns the structured actual result.
      * zh_CN: 施加背景并返回结构化的实际结果。
      */
-    BackdropApplyResult applySystemBackdropDetailed(BackdropEffect effect, bool dark,
-                                                    bool forceRecomposite = false);
+    BackdropApplyResult applySystemBackdropDetailed(BackdropEffect effect, bool dark, bool forceRecomposite = false);
 
     /**
      * @brief Handles forwarded native events and returns true when consumed.
      * zh_CN: 处理转发来的原生事件；事件被消费时返回 true。
      */
-    bool handleNativeEvent(const QByteArray& eventType, void* message,
-                           FluentNativeEventResult* result);
+    bool handleNativeEvent(const QByteArray& eventType, void* message, FluentNativeEventResult* result);
 
     /**
      * @brief Starts a platform system-move operation.
@@ -210,8 +197,7 @@ public:
     static bool expandedClientAreaHintsAvailable();
     static bool windowHasExpandedClientAreaHint(const QWidget* window);
     static bool windowHasNoTitleBarBackgroundHint(const QWidget* window);
-    static HitTest classifyHitTest(const WindowChromeOptions& options, const QSize& windowSize,
-                                   const QPoint& localPos);
+    static HitTest classifyHitTest(const WindowChromeOptions& options, const QSize& windowSize, const QPoint& localPos);
 
 private:
     QWidget* m_window = nullptr;

@@ -55,10 +55,8 @@ public:
 
         // Text Colors
         QColor textPrimary, textSecondary, textTertiary, textDisabled;
-        QColor
-            textOnAccent; // Text on accent backgrounds (white/black). zh_CN: 强调色背景上的文字。
-        QColor
-            textAccentPrimary; // Accent text on plain backgrounds (dark/light blue). zh_CN: 普通背景上的强调色文字。
+        QColor textOnAccent;      // Text on accent backgrounds (white/black). zh_CN: 强调色背景上的文字。
+        QColor textAccentPrimary; // Accent text on plain backgrounds (dark/light blue). zh_CN: 普通背景上的强调色文字。
 
         // Backgrounds & Neutrals
         QColor bgCanvas, bgLayer, bgLayerAlt, bgSolid;
@@ -74,8 +72,7 @@ public:
         QList<QColor> charts;
 
         // Overlay / Translucent Layers
-        QColor
-            bgLayerOverlay; // layered content mask for translucent windows. zh_CN: 半透明窗口下的分层内容遮罩。
+        QColor bgLayerOverlay; // layered content mask for translucent windows. zh_CN: 半透明窗口下的分层内容遮罩。
     };
 
     struct FontStyle {
@@ -272,8 +269,7 @@ protected:
     FluentElement();
     virtual ~FluentElement();
 
-    FluentElementPrivate*
-        d_ptr; // Reserved for 1.x source compatibility. zh_CN: 为 1.x 源码兼容保留。
+    FluentElementPrivate* d_ptr; // Reserved for 1.x source compatibility. zh_CN: 为 1.x 源码兼容保留。
 
 private:
     void resolveThemeOverrides() const;

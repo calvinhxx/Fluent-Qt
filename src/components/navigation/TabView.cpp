@@ -69,9 +69,8 @@ bool forwardMouseEvent(TabStrip* target, QMouseEvent* event)
         return false;
 
     const QPoint localPoint = fluentMousePos(event) - target->pos();
-    QMouseEvent forwarded(event->type(), QPointF(localPoint),
-                          QPointF(target->mapToGlobal(localPoint)), event->button(),
-                          event->buttons(), event->modifiers());
+    QMouseEvent forwarded(event->type(), QPointF(localPoint), QPointF(target->mapToGlobal(localPoint)), event->button(),
+        event->buttons(), event->modifiers());
     if (!target->handleForwardedMouseEvent(&forwarded))
         return false;
     event->accept();
@@ -80,8 +79,7 @@ bool forwardMouseEvent(TabStrip* target, QMouseEvent* event)
 
 bool usesTabShortcutModifier(QKeyEvent* event)
 {
-    return event && (event->modifiers().testFlag(Qt::ControlModifier) ||
-                     event->modifiers().testFlag(Qt::MetaModifier));
+    return event && (event->modifiers().testFlag(Qt::ControlModifier) || event->modifiers().testFlag(Qt::MetaModifier));
 }
 
 bool objectBelongsToWidget(QObject* object, QWidget* widget)
@@ -121,10 +119,8 @@ TabStrip::TabStrip(QWidget* parent)
     : QWidget(parent), m_overflowScrollBar(new QScrollBar(Qt::Horizontal, this)),
       m_indicatorAnimation(new QPropertyAnimation(this, "animatedIndicatorRect", this)),
       m_addButton(createIconButton(Typography::Icons::Add, metrics().iconPixelSize)),
-      m_overflowBackButton(
-          createIconButton(Typography::Icons::ChevronLeftMed, metrics().iconPixelSize)),
-      m_overflowForwardButton(
-          createIconButton(Typography::Icons::ChevronRightMed, metrics().iconPixelSize))
+      m_overflowBackButton(createIconButton(Typography::Icons::ChevronLeftMed, metrics().iconPixelSize)),
+      m_overflowForwardButton(createIconButton(Typography::Icons::ChevronRightMed, metrics().iconPixelSize))
 {
     setObjectName(QStringLiteral("TabViewTabStrip"));
     setAttribute(Qt::WA_Hover);
@@ -146,9 +142,7 @@ TabStrip::TabStrip(QWidget* parent)
             invalidateLayout();
     });
 
-    connect(m_addButton, &basicinput::Button::clicked, this, [this]() {
-        activateHit(HitRecord{HitKind::Add, -1});
-    });
+    connect(m_addButton, &basicinput::Button::clicked, this, [this]() { activateHit(HitRecord{HitKind::Add, -1}); });
     connect(m_overflowBackButton, &basicinput::Button::clicked, this, [this]() {
         activateHit(HitRecord{HitKind::OverflowBack, -1});
     });
@@ -176,8 +170,7 @@ void TabStrip::setItems(const QVector<TabViewItem>& items)
         m_tabRevealProgress.remove(it.key());
         it = m_tabRevealAnimations.erase(it);
     }
-    for (auto it = m_compactExpansionAnimations.begin();
-         it != m_compactExpansionAnimations.end();) {
+    for (auto it = m_compactExpansionAnimations.begin(); it != m_compactExpansionAnimations.end();) {
         if (isValidIndex(it.key())) {
             ++it;
             continue;
@@ -196,8 +189,7 @@ void TabStrip::setItems(const QVector<TabViewItem>& items)
     m_hoveredHit = HitRecord();
     m_pressedHit = HitRecord();
     if (!isInteractiveHit(m_focusedHit))
-        m_focusedHit =
-            HitRecord{m_selectedIndex >= 0 ? HitKind::Tab : HitKind::None, m_selectedIndex};
+        m_focusedHit = HitRecord{m_selectedIndex >= 0 ? HitKind::Tab : HitKind::None, m_selectedIndex};
     invalidateLayout();
 }
 
@@ -213,8 +205,9 @@ void TabStrip::revealTab(int index)
     animation->setEasingCurve(themeAnimation().decelerate);
     animation->setStartValue(0.0);
     animation->setEndValue(1.0);
-    connect(animation, &QVariantAnimation::valueChanged, this,
-            [this, index](const QVariant& value) { setTabRevealOpacity(index, value.toReal()); });
+    connect(animation, &QVariantAnimation::valueChanged, this, [this, index](const QVariant& value) {
+        setTabRevealOpacity(index, value.toReal());
+    });
     connect(animation, &QVariantAnimation::finished, this, [this, index, animation]() {
         if (m_tabRevealAnimations.value(index) == animation)
             m_tabRevealAnimations.remove(index);
@@ -434,8 +427,7 @@ void TabStrip::paintEvent(QPaintEvent*)
     paintRow(painter);
     paintTabSeparators(painter);
     for (const TabRecord& record : m_tabRecords) {
-        if (record.tabIndex != m_selectedIndex &&
-            !(m_dragActive && record.tabIndex == m_dragStartIndex))
+        if (record.tabIndex != m_selectedIndex && !(m_dragActive && record.tabIndex == m_dragStartIndex))
             paintTab(painter, record);
     }
     if (!(m_dragActive && m_selectedIndex == m_dragStartIndex)) {
@@ -504,8 +496,7 @@ void TabStrip::mouseMoveEvent(QMouseEvent* event)
 
     setHoveredHit(hitTest(event->pos()));
     if (m_tabReorderEnabled && m_dragStartIndex >= 0 && event->buttons().testFlag(Qt::LeftButton)) {
-        if (!m_dragActive && (event->pos() - m_pressPosition).manhattanLength() >=
-                                 QApplication::startDragDistance()) {
+        if (!m_dragActive && (event->pos() - m_pressPosition).manhattanLength() >= QApplication::startDragDistance()) {
             m_dragActive = true;
             m_dragAnimatedOffsets = dragOffsetMapForTarget(m_dragTargetIndex);
         }
@@ -532,16 +523,14 @@ void TabStrip::mouseReleaseEvent(QMouseEvent* event)
     const HitRecord hit = hitTest(event->pos());
     const HitRecord pressed = m_pressedHit;
     const int dragStart = m_dragStartIndex;
-    const int dragTarget = isValidIndex(m_dragTargetIndex)
-                               ? m_dragTargetIndex
-                               : dropTargetIndexForPosition(event->pos());
+    const int dragTarget =
+        isValidIndex(m_dragTargetIndex) ? m_dragTargetIndex : dropTargetIndexForPosition(event->pos());
     const bool wasDragging = m_dragActive;
     clearPressedHit();
 
     if (wasDragging) {
         QPointer<TabStrip> guard(this);
-        if (m_tabReorderEnabled && isValidIndex(dragStart) && isValidIndex(dragTarget) &&
-            dragStart != dragTarget) {
+        if (m_tabReorderEnabled && isValidIndex(dragStart) && isValidIndex(dragTarget) && dragStart != dragTarget) {
             emit tabMoveRequested(dragStart, dragTarget);
             if (!guard)
                 return;
@@ -567,8 +556,7 @@ void TabStrip::mouseReleaseEvent(QMouseEvent* event)
 
 void TabStrip::wheelEvent(QWheelEvent* event)
 {
-    if (!isEnabled() || !m_overflowScrollBar ||
-        m_overflowScrollBar->minimum() == m_overflowScrollBar->maximum()) {
+    if (!isEnabled() || !m_overflowScrollBar || m_overflowScrollBar->minimum() == m_overflowScrollBar->maximum()) {
         m_wheelScrollRemainder = 0;
         QWidget::wheelEvent(event);
         return;
@@ -594,8 +582,7 @@ void TabStrip::wheelEvent(QWheelEvent* event)
     }
 
     m_wheelScrollRemainder -= steps * threshold;
-    m_overflowScrollBar->setValue(m_overflowScrollBar->value() -
-                                  steps * m_overflowScrollBar->singleStep());
+    m_overflowScrollBar->setValue(m_overflowScrollBar->value() - steps * m_overflowScrollBar->singleStep());
     event->accept();
 }
 
@@ -641,20 +628,18 @@ void TabStrip::keyPressEvent(QKeyEvent* event)
     switch (event->key()) {
     case Qt::Key_Left:
         m_focusVisualVisible = true;
-        m_focusedHit = HitRecord{
-            HitKind::Tab,
+        m_focusedHit = HitRecord{HitKind::Tab,
             nextEnabledIndex(m_focusedHit.tabIndex >= 0 ? m_focusedHit.tabIndex : m_selectedIndex,
-                             layoutDirection() == Qt::RightToLeft ? 1 : -1)};
+                layoutDirection() == Qt::RightToLeft ? 1 : -1)};
         ensureSelectedTabVisible();
         invalidateLayout();
         event->accept();
         return;
     case Qt::Key_Right:
         m_focusVisualVisible = true;
-        m_focusedHit = HitRecord{
-            HitKind::Tab,
+        m_focusedHit = HitRecord{HitKind::Tab,
             nextEnabledIndex(m_focusedHit.tabIndex >= 0 ? m_focusedHit.tabIndex : m_selectedIndex,
-                             layoutDirection() == Qt::RightToLeft ? -1 : 1)};
+                layoutDirection() == Qt::RightToLeft ? -1 : 1)};
         ensureSelectedTabVisible();
         invalidateLayout();
         event->accept();
@@ -692,8 +677,7 @@ void TabStrip::focusInEvent(QFocusEvent* event)
     QWidget::focusInEvent(event);
     m_focusVisualVisible = event->reason() != Qt::MouseFocusReason;
     if (!isInteractiveHit(m_focusedHit))
-        m_focusedHit =
-            HitRecord{HitKind::Tab, m_selectedIndex >= 0 ? m_selectedIndex : firstEnabledIndex()};
+        m_focusedHit = HitRecord{HitKind::Tab, m_selectedIndex >= 0 ? m_selectedIndex : firstEnabledIndex()};
     update();
 }
 
@@ -754,8 +738,7 @@ bool TabStrip::isSelectableIndex(int index) const
 
 bool TabStrip::isCloseableIndex(int index) const
 {
-    return isValidIndex(index) && m_items.at(index).enabled && m_items.at(index).closable &&
-           m_tabsClosable;
+    return isValidIndex(index) && m_items.at(index).enabled && m_items.at(index).closable && m_tabsClosable;
 }
 
 TabStrip::Metrics TabStrip::metrics() const
@@ -800,8 +783,7 @@ void TabStrip::ensureLayout() const
 void TabStrip::updateLayout()
 {
     const Metrics currentMetrics = metrics();
-    const QRect rowRect(contentsRect().left(), contentsRect().top(), contentsRect().width(),
-                        currentMetrics.rowHeight);
+    const QRect rowRect(contentsRect().left(), contentsRect().top(), contentsRect().width(), currentMetrics.rowHeight);
     m_tabRecords.clear();
     m_visibleTabIndexes.clear();
     m_addButtonRect = QRect();
@@ -833,9 +815,8 @@ void TabStrip::updateLayout()
 
     int x = rowRect.left();
     if (overflow) {
-        m_overflowBackRect =
-            QRect(x, rowRect.top() + (rowRect.height() - currentMetrics.tabHeight) / 2,
-                  currentMetrics.buttonWidth, currentMetrics.tabHeight);
+        m_overflowBackRect = QRect(x, rowRect.top() + (rowRect.height() - currentMetrics.tabHeight) / 2,
+            currentMetrics.buttonWidth, currentMetrics.tabHeight);
         x += currentMetrics.buttonWidth;
     }
 
@@ -843,9 +824,8 @@ void TabStrip::updateLayout()
     QVector<int> assignedWidths;
     assignedWidths.reserve(m_visibleTabIndexes.size());
     if (m_widthMode == WidthMode::Equal && !m_visibleTabIndexes.isEmpty()) {
-        const int equalWidth =
-            qBound(currentMetrics.minTabWidth, availableForTabs / m_visibleTabIndexes.size(),
-                   currentMetrics.maxTabWidth);
+        const int equalWidth = qBound(currentMetrics.minTabWidth, availableForTabs / m_visibleTabIndexes.size(),
+            currentMetrics.maxTabWidth);
         for (int index : m_visibleTabIndexes) {
             Q_UNUSED(index)
             assignedWidths.append(equalWidth);
@@ -863,13 +843,13 @@ void TabStrip::updateLayout()
         for (int i = assignedWidths.size() - 1; i >= 0 && assignedTotal > availableForTabs; --i) {
             const int tabIndex = m_visibleTabIndexes.at(i);
             int minWidth = m_widthMode == WidthMode::Compact && tabIndex != m_selectedIndex
-                               ? currentMetrics.compactInactiveWidth
-                               : currentMetrics.minTabWidth;
-            if (m_widthMode == WidthMode::Compact && tabIndex != m_selectedIndex &&
-                compactExpansionProgress(tabIndex) > 0.0) {
-                minWidth =
-                    qMax(minWidth, currentMetrics.horizontalPadding * 2 + currentMetrics.iconSlot +
-                                       currentMetrics.textGap + currentMetrics.closeButtonSize);
+                ? currentMetrics.compactInactiveWidth
+                : currentMetrics.minTabWidth;
+            if (m_widthMode == WidthMode::Compact && tabIndex != m_selectedIndex
+                && compactExpansionProgress(tabIndex) > 0.0) {
+                minWidth = qMax(minWidth,
+                    currentMetrics.horizontalPadding * 2 + currentMetrics.iconSlot + currentMetrics.textGap
+                        + currentMetrics.closeButtonSize);
             }
             if (assignedWidths[i] > minWidth) {
                 --assignedWidths[i];
@@ -883,42 +863,35 @@ void TabStrip::updateLayout()
 
     for (int i = 0; i < m_visibleTabIndexes.size(); ++i) {
         const int tabIndex = m_visibleTabIndexes.at(i);
-        const int tabWidth =
-            qMax(currentMetrics.minTabWidth, assignedWidths.value(i, currentMetrics.minTabWidth));
+        const int tabWidth = qMax(currentMetrics.minTabWidth, assignedWidths.value(i, currentMetrics.minTabWidth));
         TabRecord record;
         record.tabIndex = tabIndex;
         record.tabRect = QRect(x, rowRect.top() + (rowRect.height() - currentMetrics.tabHeight) / 2,
-                               qMin(tabWidth, rowRect.right() + 1 - x - rightReserve -
-                                                  (overflow ? currentMetrics.buttonWidth : 0)),
-                               currentMetrics.tabHeight);
+            qMin(tabWidth, rowRect.right() + 1 - x - rightReserve - (overflow ? currentMetrics.buttonWidth : 0)),
+            currentMetrics.tabHeight);
         const bool hasIcon = !m_items.at(tabIndex).iconGlyph.isEmpty();
         int contentX = record.tabRect.left() + currentMetrics.horizontalPadding;
         if (hasIcon || m_widthMode == WidthMode::Compact) {
             record.iconRect = QRect(contentX,
-                                    record.tabRect.top() +
-                                        (record.tabRect.height() - currentMetrics.iconSlot) / 2,
-                                    currentMetrics.iconSlot, currentMetrics.iconSlot);
+                record.tabRect.top() + (record.tabRect.height() - currentMetrics.iconSlot) / 2, currentMetrics.iconSlot,
+                currentMetrics.iconSlot);
             contentX = record.iconRect.right() + 1 + currentMetrics.textGap;
         }
         const bool reserveClose = shouldReserveCloseSpace(tabIndex);
         if (reserveClose) {
-            record.closeRect =
-                QRect(record.tabRect.right() - currentMetrics.horizontalPadding -
-                          currentMetrics.closeButtonSize + 1,
-                      record.tabRect.top() +
-                          (record.tabRect.height() - currentMetrics.closeButtonSize) / 2,
-                      currentMetrics.closeButtonSize, currentMetrics.closeButtonSize);
-            const bool animatingCompactClose =
-                m_widthMode == WidthMode::Compact && tabIndex != m_selectedIndex;
-            record.closeVisible =
-                shouldShowCloseButton(tabIndex) &&
-                (!animatingCompactClose || compactExpansionProgress(tabIndex) >= 0.95);
+            record.closeRect = QRect(record.tabRect.right() - currentMetrics.horizontalPadding
+                    - currentMetrics.closeButtonSize + 1,
+                record.tabRect.top() + (record.tabRect.height() - currentMetrics.closeButtonSize) / 2,
+                currentMetrics.closeButtonSize, currentMetrics.closeButtonSize);
+            const bool animatingCompactClose = m_widthMode == WidthMode::Compact && tabIndex != m_selectedIndex;
+            record.closeVisible = shouldShowCloseButton(tabIndex)
+                && (!animatingCompactClose || compactExpansionProgress(tabIndex) >= 0.95);
         }
         const int textRight = reserveClose
-                                  ? record.closeRect.left() - currentMetrics.textGap
-                                  : record.tabRect.right() - currentMetrics.horizontalPadding;
+            ? record.closeRect.left() - currentMetrics.textGap
+            : record.tabRect.right() - currentMetrics.horizontalPadding;
         record.textRect = QRect(contentX, record.tabRect.top(), qMax(0, textRight - contentX + 1),
-                                record.tabRect.height());
+            record.tabRect.height());
         if (m_widthMode == WidthMode::Compact && tabIndex != m_selectedIndex)
             record.textRect = QRect();
         m_tabRecords.append(record);
@@ -926,14 +899,13 @@ void TabStrip::updateLayout()
     }
 
     if (overflow)
-        m_overflowForwardRect =
-            QRect(rowRect.right() - rightReserve - currentMetrics.buttonWidth + 1,
-                  rowRect.top() + (rowRect.height() - currentMetrics.tabHeight) / 2,
-                  currentMetrics.buttonWidth, currentMetrics.tabHeight);
+        m_overflowForwardRect = QRect(rowRect.right() - rightReserve - currentMetrics.buttonWidth + 1,
+            rowRect.top() + (rowRect.height() - currentMetrics.tabHeight) / 2, currentMetrics.buttonWidth,
+            currentMetrics.tabHeight);
     if (m_addButtonVisible)
         m_addButtonRect = QRect(rowRect.right() - currentMetrics.buttonWidth + 1,
-                                rowRect.top() + (rowRect.height() - currentMetrics.tabHeight) / 2,
-                                currentMetrics.buttonWidth, currentMetrics.tabHeight);
+            rowRect.top() + (rowRect.height() - currentMetrics.tabHeight) / 2, currentMetrics.buttonWidth,
+            currentMetrics.tabHeight);
 
     if (layoutDirection() == Qt::RightToLeft) {
         const auto mirrorRect = [&rowRect](QRect& target) {
@@ -970,11 +942,10 @@ int TabStrip::dropTargetIndexForPosition(const QPoint& position) const
             continue;
         lastCandidate = record.tabIndex;
         const bool beforeCenter = layoutDirection() == Qt::RightToLeft
-                                      ? position.x() > record.tabRect.center().x()
-                                      : position.x() < record.tabRect.center().x();
+            ? position.x() > record.tabRect.center().x()
+            : position.x() < record.tabRect.center().x();
         if (beforeCenter) {
-            const int target = dragStart >= 0 && dragStart < record.tabIndex ? record.tabIndex - 1
-                                                                             : record.tabIndex;
+            const int target = dragStart >= 0 && dragStart < record.tabIndex ? record.tabIndex - 1 : record.tabIndex;
             return qBound(0, target, qMax(0, m_items.size() - 1));
         }
     }
@@ -995,8 +966,7 @@ int TabStrip::dragOffsetForRecord(const TabRecord& record) const
             return 0;
         const QRect bounds = contentsRect();
         const int maximumLeft = qMax(bounds.left(), bounds.right() - dragged->tabRect.width() + 1);
-        const int desiredLeft =
-            qBound(bounds.left(), m_dragPosition.x() - m_dragMouseOffset, maximumLeft);
+        const int desiredLeft = qBound(bounds.left(), m_dragPosition.x() - m_dragMouseOffset, maximumLeft);
         return desiredLeft - dragged->tabRect.left();
     }
 
@@ -1008,8 +978,8 @@ int TabStrip::dragOffsetForRecord(const TabRecord& record) const
 
 int TabStrip::targetDragOffsetForRecord(const TabRecord& record, int targetIndex) const
 {
-    if (!m_dragActive || record.tabIndex == m_dragStartIndex || !isValidIndex(m_dragStartIndex) ||
-        !isValidIndex(targetIndex)) {
+    if (!m_dragActive || record.tabIndex == m_dragStartIndex || !isValidIndex(m_dragStartIndex)
+        || !isValidIndex(targetIndex)) {
         return 0;
     }
 
@@ -1020,17 +990,14 @@ int TabStrip::targetDragOffsetForRecord(const TabRecord& record, int targetIndex
     const int startPosition = m_visibleTabIndexes.indexOf(m_dragStartIndex);
     const int targetPosition = m_visibleTabIndexes.indexOf(targetIndex);
     const int recordPosition = m_visibleTabIndexes.indexOf(record.tabIndex);
-    if (startPosition < 0 || targetPosition < 0 || recordPosition < 0 ||
-        startPosition == targetPosition)
+    if (startPosition < 0 || targetPosition < 0 || recordPosition < 0 || startPosition == targetPosition)
         return 0;
 
     const int draggedWidth = dragged->tabRect.width();
     const int visualDirection = layoutDirection() == Qt::RightToLeft ? -1 : 1;
-    if (startPosition < targetPosition && recordPosition > startPosition &&
-        recordPosition <= targetPosition)
+    if (startPosition < targetPosition && recordPosition > startPosition && recordPosition <= targetPosition)
         return -draggedWidth * visualDirection;
-    if (targetPosition < startPosition && recordPosition >= targetPosition &&
-        recordPosition < startPosition)
+    if (targetPosition < startPosition && recordPosition >= targetPosition && recordPosition < startPosition)
         return draggedWidth * visualDirection;
     return 0;
 }
@@ -1060,8 +1027,7 @@ void TabStrip::setDragTargetIndex(int index)
         if (record.tabIndex == m_dragStartIndex)
             continue;
         if (!startOffsets.contains(record.tabIndex))
-            startOffsets.insert(record.tabIndex,
-                                targetDragOffsetForRecord(record, m_dragTargetIndex));
+            startOffsets.insert(record.tabIndex, targetDragOffsetForRecord(record, m_dragTargetIndex));
     }
 
     m_dragTargetIndex = normalized;
@@ -1073,8 +1039,7 @@ void TabStrip::setDragTargetIndex(int index)
     animateDragOffsets(startOffsets, dragOffsetMapForTarget(m_dragTargetIndex));
 }
 
-void TabStrip::animateDragOffsets(const QHash<int, qreal>& startOffsets,
-                                  const QHash<int, qreal>& endOffsets)
+void TabStrip::animateDragOffsets(const QHash<int, qreal>& startOffsets, const QHash<int, qreal>& endOffsets)
 {
     stopDragOffsetAnimation();
 
@@ -1098,23 +1063,22 @@ void TabStrip::animateDragOffsets(const QHash<int, qreal>& startOffsets,
     animation->setEasingCurve(themeAnimation().decelerate);
     animation->setStartValue(0.0);
     animation->setEndValue(1.0);
-    connect(animation, &QVariantAnimation::valueChanged, this,
-            [this, startOffsets, endOffsets](const QVariant& value) {
-                const qreal progress = qBound<qreal>(0.0, value.toReal(), 1.0);
-                QHash<int, qreal> offsets;
-                for (auto it = endOffsets.constBegin(); it != endOffsets.constEnd(); ++it) {
-                    const qreal start = startOffsets.value(it.key());
-                    offsets.insert(it.key(), start + (it.value() - start) * progress);
-                }
-                for (auto it = startOffsets.constBegin(); it != startOffsets.constEnd(); ++it) {
-                    if (offsets.contains(it.key()))
-                        continue;
-                    offsets.insert(it.key(), it.value() * (1.0 - progress));
-                }
-                m_dragAnimatedOffsets = offsets;
-                updateHeaderWidgets();
-                update();
-            });
+    connect(animation, &QVariantAnimation::valueChanged, this, [this, startOffsets, endOffsets](const QVariant& value) {
+        const qreal progress = qBound<qreal>(0.0, value.toReal(), 1.0);
+        QHash<int, qreal> offsets;
+        for (auto it = endOffsets.constBegin(); it != endOffsets.constEnd(); ++it) {
+            const qreal start = startOffsets.value(it.key());
+            offsets.insert(it.key(), start + (it.value() - start) * progress);
+        }
+        for (auto it = startOffsets.constBegin(); it != startOffsets.constEnd(); ++it) {
+            if (offsets.contains(it.key()))
+                continue;
+            offsets.insert(it.key(), it.value() * (1.0 - progress));
+        }
+        m_dragAnimatedOffsets = offsets;
+        updateHeaderWidgets();
+        update();
+    });
     connect(animation, &QVariantAnimation::finished, this, [this, animation, endOffsets]() {
         if (m_dragOffsetAnimation == animation)
             m_dragOffsetAnimation = nullptr;
@@ -1138,8 +1102,8 @@ void TabStrip::stopDragOffsetAnimation()
 
 QRect TabStrip::dragInsertionIndicatorRect() const
 {
-    if (!m_dragActive || !isValidIndex(m_dragStartIndex) || !isValidIndex(m_dragTargetIndex) ||
-        m_dragStartIndex == m_dragTargetIndex) {
+    if (!m_dragActive || !isValidIndex(m_dragStartIndex) || !isValidIndex(m_dragTargetIndex)
+        || m_dragStartIndex == m_dragTargetIndex) {
         return QRect();
     }
 
@@ -1155,10 +1119,9 @@ QRect TabStrip::dragInsertionIndicatorRect() const
     const Metrics currentMetrics = metrics();
     const TabRecord visualTarget = visualRecordForRecord(*targetRecord);
     const bool movingForward = startPosition < targetPosition;
-    const int x =
-        layoutDirection() == Qt::RightToLeft
-            ? (movingForward ? visualTarget.tabRect.left() : targetRecord->tabRect.right() + 1)
-            : (movingForward ? visualTarget.tabRect.right() + 1 : targetRecord->tabRect.left());
+    const int x = layoutDirection() == Qt::RightToLeft
+        ? (movingForward ? visualTarget.tabRect.left() : targetRecord->tabRect.right() + 1)
+        : (movingForward ? visualTarget.tabRect.right() + 1 : targetRecord->tabRect.left());
     const int height = qMax(12, currentMetrics.tabHeight - 10);
     const int y = targetRecord->tabRect.top() + (targetRecord->tabRect.height() - height) / 2;
     return QRect(x - kDragIndicatorWidth / 2, y, kDragIndicatorWidth, height);
@@ -1180,8 +1143,8 @@ TabStrip::TabRecord TabStrip::visualRecordForRecord(const TabRecord& record) con
 
 void TabStrip::clearDragState()
 {
-    const bool needsUpdate = m_dragActive || m_dragTargetIndex >= 0 || m_dragMouseOffset != 0 ||
-                             !m_dragPosition.isNull();
+    const bool needsUpdate = m_dragActive || m_dragTargetIndex >= 0 || m_dragMouseOffset != 0
+        || !m_dragPosition.isNull();
     stopDragOffsetAnimation();
     m_dragActive = false;
     m_dragTargetIndex = -1;
@@ -1196,8 +1159,8 @@ void TabStrip::clearDragState()
 
 bool TabStrip::compactExpansionTarget(int index) const
 {
-    return m_widthMode == WidthMode::Compact && isValidIndex(index) && index != m_selectedIndex &&
-           shouldShowCloseButton(index);
+    return m_widthMode == WidthMode::Compact && isValidIndex(index) && index != m_selectedIndex
+        && shouldShowCloseButton(index);
 }
 
 qreal TabStrip::compactExpansionProgress(int index) const
@@ -1230,11 +1193,10 @@ void TabStrip::animateCompactExpansion(int index, qreal start, qreal end)
     animation->setEasingCurve(themeAnimation().decelerate);
     animation->setStartValue(from);
     animation->setEndValue(to);
-    connect(animation, &QVariantAnimation::valueChanged, this,
-            [this, index](const QVariant& value) {
-                m_compactExpansionProgress[index] = qBound<qreal>(0.0, value.toReal(), 1.0);
-                invalidateLayout();
-            });
+    connect(animation, &QVariantAnimation::valueChanged, this, [this, index](const QVariant& value) {
+        m_compactExpansionProgress[index] = qBound<qreal>(0.0, value.toReal(), 1.0);
+        invalidateLayout();
+    });
     connect(animation, &QVariantAnimation::finished, this, [this, index, animation, to]() {
         if (m_compactExpansionAnimations.value(index) == animation)
             m_compactExpansionAnimations.remove(index);
@@ -1263,14 +1225,12 @@ int TabStrip::naturalTabWidth(int index, const QFontMetrics& fontMetrics, bool r
         return 0;
     const Metrics currentMetrics = metrics();
     if (m_widthMode == WidthMode::Compact && index != m_selectedIndex) {
-        const int expandedWidth =
-            qMax(currentMetrics.compactInactiveWidth,
-                 currentMetrics.horizontalPadding * 2 + currentMetrics.iconSlot +
-                     currentMetrics.textGap + currentMetrics.closeButtonSize);
+        const int expandedWidth = qMax(currentMetrics.compactInactiveWidth,
+            currentMetrics.horizontalPadding * 2 + currentMetrics.iconSlot + currentMetrics.textGap
+                + currentMetrics.closeButtonSize);
         const qreal progress = reserveClose ? compactExpansionProgress(index) : 0.0;
-        const int widthValue =
-            currentMetrics.compactInactiveWidth +
-            qRound((expandedWidth - currentMetrics.compactInactiveWidth) * progress);
+        const int widthValue = currentMetrics.compactInactiveWidth
+            + qRound((expandedWidth - currentMetrics.compactInactiveWidth) * progress);
         return widthValue;
     }
     int widthValue = currentMetrics.horizontalPadding * 2;
@@ -1282,9 +1242,8 @@ int TabStrip::naturalTabWidth(int index, const QFontMetrics& fontMetrics, bool r
     // is actually rendered, not merely that its rounded advance fits.
     const QString& text = m_items.at(index).text;
     if (!text.isEmpty()) {
-        widthValue +=
-            qMax(fontMetrics.horizontalAdvance(text), fontMetrics.boundingRect(text).width()) +
-            kTextElideSafetyMargin;
+        widthValue += qMax(fontMetrics.horizontalAdvance(text), fontMetrics.boundingRect(text).width())
+            + kTextElideSafetyMargin;
     }
     if (reserveClose)
         widthValue += currentMetrics.textGap + currentMetrics.closeButtonSize;
@@ -1300,10 +1259,9 @@ bool TabStrip::shouldShowCloseButton(int index) const
 {
     if (!isCloseableIndex(index))
         return false;
-    const bool hovered = m_hoveredHit.tabIndex == index &&
-                         (m_hoveredHit.kind == HitKind::Tab || m_hoveredHit.kind == HitKind::Close);
-    const bool focused =
-        hasFocus() && m_focusedHit.tabIndex == index && m_focusedHit.kind == HitKind::Tab;
+    const bool hovered = m_hoveredHit.tabIndex == index
+        && (m_hoveredHit.kind == HitKind::Tab || m_hoveredHit.kind == HitKind::Close);
+    const bool focused = hasFocus() && m_focusedHit.tabIndex == index && m_focusedHit.kind == HitKind::Tab;
     if (m_closeButtonOverlayMode == CloseButtonOverlayMode::Always)
         return true;
     if (m_closeButtonOverlayMode == CloseButtonOverlayMode::Auto)
@@ -1311,8 +1269,7 @@ bool TabStrip::shouldShowCloseButton(int index) const
     return hovered || focused;
 }
 
-QVector<int> TabStrip::computeVisibleIndexes(int stripWidth, const QVector<int>& widths,
-                                             bool overflow) const
+QVector<int> TabStrip::computeVisibleIndexes(int stripWidth, const QVector<int>& widths, bool overflow) const
 {
     QVector<int> result;
     if (m_items.isEmpty())
@@ -1346,8 +1303,8 @@ QVector<int> TabStrip::computeVisibleIndexes(int stripWidth, const QVector<int>&
 void TabStrip::ensureSelectedTabVisible()
 {
     const int target = m_focusedHit.kind == HitKind::Tab && isValidIndex(m_focusedHit.tabIndex)
-                           ? m_focusedHit.tabIndex
-                           : m_selectedIndex;
+        ? m_focusedHit.tabIndex
+        : m_selectedIndex;
     if (!isValidIndex(target))
         return;
     if (target < m_firstVisibleTab)
@@ -1418,9 +1375,8 @@ QRect TabStrip::indicatorRectForTab(int index) const
             continue;
         const Metrics currentMetrics = metrics();
         return QRect(record.tabRect.left() + currentMetrics.cornerRadius,
-                     record.tabRect.bottom() - currentMetrics.selectionIndicatorHeight + 1,
-                     qMax(0, record.tabRect.width() - currentMetrics.cornerRadius * 2),
-                     currentMetrics.selectionIndicatorHeight);
+            record.tabRect.bottom() - currentMetrics.selectionIndicatorHeight + 1,
+            qMax(0, record.tabRect.width() - currentMetrics.cornerRadius * 2), currentMetrics.selectionIndicatorHeight);
     }
     return QRect();
 }
@@ -1503,22 +1459,19 @@ void TabStrip::updateHeaderWidgets()
             created.labelOpacity = new QGraphicsOpacityEffect(created.label);
             created.label->setGraphicsEffect(created.labelOpacity);
 
-            created.closeButton =
-                createIconButton(Typography::Icons::Cancel, currentMetrics.closeIconPixelSize);
+            created.closeButton = createIconButton(Typography::Icons::Cancel, currentMetrics.closeIconPixelSize);
             created.closeButton->installEventFilter(this);
             created.closeOpacity = new QGraphicsOpacityEffect(created.closeButton);
             created.closeButton->setGraphicsEffect(created.closeOpacity);
-            connect(created.closeButton, &basicinput::Button::clicked, this,
-                    [this, button = created.closeButton]() {
-                        emitCloseRequested(button->property("tabIndex").toInt());
-                    });
+            connect(created.closeButton, &basicinput::Button::clicked, this, [this, button = created.closeButton]() {
+                emitCloseRequested(button->property("tabIndex").toInt());
+            });
 
             m_headerWidgets.append(created);
             widgets = &m_headerWidgets.last();
         }
 
-        widgets->label->setAlignment(
-            QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter));
+        widgets->label->setAlignment(QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter));
         widgets->label->setText(m_items.value(record.tabIndex).text);
         widgets->label->setFluentTypography(m_tabFontRole);
         widgets->label->setGeometry(visualRecord.textRect);
@@ -1531,15 +1484,14 @@ void TabStrip::updateHeaderWidgets()
         // stays cheap on relayout; the role mirrors textColorForTab. zh_CN: 用 Label 自身样式表（经文本颜色
         // 角色）上色而非 palette：祖先样式表会安装 QStyleSheetStyle 并忽略子 palette，导致标签在深色主题里变近黑；
         // setTextColorRole 在角色未变时直接返回，故重排时开销很小；角色与 textColorForTab 一致。
-        const bool tabUsable =
-            isEnabled() && isValidIndex(record.tabIndex) && m_items.at(record.tabIndex).enabled;
+        const bool tabUsable = isEnabled() && isValidIndex(record.tabIndex) && m_items.at(record.tabIndex).enabled;
         const bool tabSelected = record.tabIndex == m_selectedIndex;
         textfields::Label::TextColorRole role;
         if (!tabUsable) {
             role = textfields::Label::TextColorRole::Disabled;
         } else {
-            role = tabSelected ? textfields::Label::TextColorRole::Primary
-                               : textfields::Label::TextColorRole::Secondary;
+            role =
+                tabSelected ? textfields::Label::TextColorRole::Primary : textfields::Label::TextColorRole::Secondary;
         }
         widgets->label->setTextColorRole(role);
         widgets->label->raise();
@@ -1549,28 +1501,24 @@ void TabStrip::updateHeaderWidgets()
         const TabViewItem& item = m_items.at(record.tabIndex);
         const QString tabName = item.accessibleName.isEmpty() ? item.text : item.accessibleName;
         widgets->closeButton->setAccessibleName(tr("Close %1").arg(tabName));
-        updateIconButton(widgets->closeButton,
-                         record.closeVisible ? visualRecord.closeRect : QRect(),
-                         Typography::Icons::Cancel, currentMetrics.closeIconPixelSize,
-                         isCloseableIndex(record.tabIndex));
+        updateIconButton(widgets->closeButton, record.closeVisible ? visualRecord.closeRect : QRect(),
+            Typography::Icons::Cancel, currentMetrics.closeIconPixelSize, isCloseableIndex(record.tabIndex));
     }
 
-    const bool hasBack = !m_overflowBackRect.isEmpty() && m_overflowScrollBar &&
-                         m_overflowScrollBar->value() > m_overflowScrollBar->minimum();
-    const bool hasForward = !m_overflowForwardRect.isEmpty() && m_overflowScrollBar &&
-                            m_overflowScrollBar->value() < m_overflowScrollBar->maximum();
-    const QString backGlyph = layoutDirection() == Qt::RightToLeft
-                                  ? Typography::Icons::ChevronRightMed
-                                  : Typography::Icons::ChevronLeftMed;
-    const QString forwardGlyph = layoutDirection() == Qt::RightToLeft
-                                     ? Typography::Icons::ChevronLeftMed
-                                     : Typography::Icons::ChevronRightMed;
-    updateIconButton(m_overflowBackButton, m_overflowBackRect, backGlyph,
-                     currentMetrics.iconPixelSize, isEnabled() && hasBack);
-    updateIconButton(m_overflowForwardButton, m_overflowForwardRect, forwardGlyph,
-                     currentMetrics.iconPixelSize, isEnabled() && hasForward);
-    updateIconButton(m_addButton, m_addButtonRect, Typography::Icons::Add,
-                     currentMetrics.iconPixelSize, isEnabled() && m_addButtonVisible);
+    const bool hasBack = !m_overflowBackRect.isEmpty() && m_overflowScrollBar
+        && m_overflowScrollBar->value() > m_overflowScrollBar->minimum();
+    const bool hasForward = !m_overflowForwardRect.isEmpty() && m_overflowScrollBar
+        && m_overflowScrollBar->value() < m_overflowScrollBar->maximum();
+    const QString backGlyph =
+        layoutDirection() == Qt::RightToLeft ? Typography::Icons::ChevronRightMed : Typography::Icons::ChevronLeftMed;
+    const QString forwardGlyph =
+        layoutDirection() == Qt::RightToLeft ? Typography::Icons::ChevronLeftMed : Typography::Icons::ChevronRightMed;
+    updateIconButton(m_overflowBackButton, m_overflowBackRect, backGlyph, currentMetrics.iconPixelSize,
+        isEnabled() && hasBack);
+    updateIconButton(m_overflowForwardButton, m_overflowForwardRect, forwardGlyph, currentMetrics.iconPixelSize,
+        isEnabled() && hasForward);
+    updateIconButton(m_addButton, m_addButtonRect, Typography::Icons::Add, currentMetrics.iconPixelSize,
+        isEnabled() && m_addButtonVisible);
 }
 
 TabStrip::TabHeaderWidgets* TabStrip::widgetsForTabHeader(int index)
@@ -1631,8 +1579,8 @@ basicinput::Button* TabStrip::createIconButton(const QString& glyph, int pixelSi
     return button;
 }
 
-void TabStrip::updateIconButton(basicinput::Button* button, const QRect& rect, const QString& glyph,
-                                int pixelSize, bool enabled)
+void TabStrip::
+    updateIconButton(basicinput::Button* button, const QRect& rect, const QString& glyph, int pixelSize, bool enabled)
 {
     if (!button)
         return;
@@ -1673,10 +1621,9 @@ void TabStrip::setHoveredHit(const HitRecord& hit)
     const qreal nextProgress = compactExpansionProgress(normalized.tabIndex);
     m_hoveredHit = normalized;
     if (m_widthMode == WidthMode::Compact) {
-        animateCompactExpansion(previousIndex, previousProgress,
-                                compactExpansionTarget(previousIndex) ? 1.0 : 0.0);
+        animateCompactExpansion(previousIndex, previousProgress, compactExpansionTarget(previousIndex) ? 1.0 : 0.0);
         animateCompactExpansion(m_hoveredHit.tabIndex, nextProgress,
-                                compactExpansionTarget(m_hoveredHit.tabIndex) ? 1.0 : 0.0);
+            compactExpansionTarget(m_hoveredHit.tabIndex) ? 1.0 : 0.0);
     }
     invalidateLayout();
 }
@@ -1706,11 +1653,11 @@ bool TabStrip::isInteractiveHit(const HitRecord& hit) const
     case HitKind::Add:
         return m_addButtonVisible && !m_addButtonRect.isEmpty();
     case HitKind::OverflowBack:
-        return !m_overflowBackRect.isEmpty() && m_overflowScrollBar &&
-               m_overflowScrollBar->value() > m_overflowScrollBar->minimum();
+        return !m_overflowBackRect.isEmpty() && m_overflowScrollBar
+            && m_overflowScrollBar->value() > m_overflowScrollBar->minimum();
     case HitKind::OverflowForward:
-        return !m_overflowForwardRect.isEmpty() && m_overflowScrollBar &&
-               m_overflowScrollBar->value() < m_overflowScrollBar->maximum();
+        return !m_overflowForwardRect.isEmpty() && m_overflowScrollBar
+            && m_overflowScrollBar->value() < m_overflowScrollBar->maximum();
     case HitKind::None:
         break;
     }
@@ -1759,16 +1706,14 @@ void TabStrip::scrollOverflow(int direction)
 {
     if (!m_overflowScrollBar || direction == 0)
         return;
-    m_overflowScrollBar->setValue(
-        m_overflowScrollBar->value() +
-        (direction < 0 ? -m_overflowScrollBar->singleStep() : m_overflowScrollBar->singleStep()));
+    m_overflowScrollBar->setValue(m_overflowScrollBar->value()
+        + (direction < 0 ? -m_overflowScrollBar->singleStep() : m_overflowScrollBar->singleStep()));
 }
 
 void TabStrip::paintRow(QPainter& painter)
 {
     const Metrics currentMetrics = metrics();
-    const QRect row(contentsRect().left(), contentsRect().top(), contentsRect().width(),
-                    currentMetrics.rowHeight);
+    const QRect row(contentsRect().left(), contentsRect().top(), contentsRect().width(), currentMetrics.rowHeight);
     painter.save();
     painter.setPen(Qt::NoPen);
     painter.setBrush(themeColorsRef().bgCanvas);
@@ -1782,7 +1727,7 @@ QVector<QRect> TabStrip::tabSeparatorRects() const
     items.reserve(m_tabRecords.size());
     for (const TabRecord& record : m_tabRecords) {
         items.append({visualRecordForRecord(record).tabRect, record.tabIndex == m_selectedIndex,
-                      tabFillColor(record).alpha() > 0});
+            tabFillColor(record).alpha() > 0});
     }
     return detail::tabSeparatorRects(items, m_dragActive);
 }
@@ -1814,15 +1759,13 @@ void TabStrip::paintTab(QPainter& painter, const TabRecord& record)
     painter.setPen(Qt::NoPen);
     painter.setBrush(fill);
     if (selected) {
-        const QRect row(contentsRect().left(), contentsRect().top(), contentsRect().width(),
-                        currentMetrics.rowHeight);
+        const QRect row(contentsRect().left(), contentsRect().top(), contentsRect().width(), currentMetrics.rowHeight);
         QRect tabVisualRect = visualRecord.tabRect;
         tabVisualRect.setBottom(row.bottom());
         const QPainterPath path = detail::selectedTabPath(tabVisualRect);
         painter.drawPath(path);
     } else if (fill.alpha() > 0) {
-        const QRect row(contentsRect().left(), contentsRect().top(), contentsRect().width(),
-                        currentMetrics.rowHeight);
+        const QRect row(contentsRect().left(), contentsRect().top(), contentsRect().width(), currentMetrics.rowHeight);
         QRect tabVisualRect = visualRecord.tabRect;
         tabVisualRect.setBottom(row.bottom());
         painter.drawPath(topRoundedTabPath(tabVisualRect, currentMetrics.cornerRadius));
@@ -1831,20 +1774,19 @@ void TabStrip::paintTab(QPainter& painter, const TabRecord& record)
     const QColor textColor = textColorForTab(record.tabIndex);
     if (!visualRecord.iconRect.isEmpty()) {
         painter.setPen(textColor);
-        const QString glyph =
-            item.iconGlyph.isEmpty() ? Typography::Icons::Document : item.iconGlyph;
+        const QString glyph = item.iconGlyph.isEmpty() ? Typography::Icons::Document : item.iconGlyph;
         if (m_iconFontFamily == Typography::FontFamily::FluentIcons) {
-            Typography::Icons::paintGlyph(painter, QRectF(visualRecord.iconRect), glyph,
-                                          currentMetrics.iconPixelSize, Qt::AlignCenter);
+            Typography::Icons::paintGlyph(painter, QRectF(visualRecord.iconRect), glyph, currentMetrics.iconPixelSize,
+                Qt::AlignCenter);
         } else {
             painter.setFont(iconFont(currentMetrics.iconPixelSize));
             painter.drawText(visualRecord.iconRect, Qt::AlignCenter, glyph);
         }
     }
 
-    if (!selected && !m_dragActive && m_focusVisualVisible &&
-        !sameHit(m_pressedHit, HitRecord{HitKind::Tab, record.tabIndex}) && hasFocus() &&
-        sameHit(m_focusedHit, HitRecord{HitKind::Tab, record.tabIndex})) {
+    if (!selected && !m_dragActive && m_focusVisualVisible
+        && !sameHit(m_pressedHit, HitRecord{HitKind::Tab, record.tabIndex}) && hasFocus()
+        && sameHit(m_focusedHit, HitRecord{HitKind::Tab, record.tabIndex})) {
         paintFocus(painter, visualRecord.tabRect.adjusted(1, 1, -1, -1));
     }
     painter.restore();
@@ -1870,13 +1812,12 @@ void TabStrip::paintSelectedIndicator(QPainter& painter)
     painter.save();
     painter.setPen(Qt::NoPen);
     painter.setBrush(themeColorsRef().accentDefault);
-    painter.drawRoundedRect(m_animatedIndicatorRect, ::CornerRadius::Indicator,
-                            ::CornerRadius::Indicator);
+    painter.drawRoundedRect(m_animatedIndicatorRect, ::CornerRadius::Indicator, ::CornerRadius::Indicator);
     painter.restore();
 }
 
-void TabStrip::paintButton(QPainter& painter, const QRect& rect, const QString& glyph,
-                           const HitRecord& hit, bool enabled)
+void TabStrip::
+    paintButton(QPainter& painter, const QRect& rect, const QString& glyph, const HitRecord& hit, bool enabled)
 {
     if (rect.isEmpty())
         return;
@@ -1888,8 +1829,8 @@ void TabStrip::paintButton(QPainter& painter, const QRect& rect, const QString& 
         painter.setBrush(fill);
         painter.drawRoundedRect(rect, currentMetrics.cornerRadius, currentMetrics.cornerRadius);
     }
-    const int iconPixelSize = hit.kind == HitKind::Close ? currentMetrics.closeIconPixelSize
-                                                         : currentMetrics.iconPixelSize;
+    const int iconPixelSize =
+        hit.kind == HitKind::Close ? currentMetrics.closeIconPixelSize : currentMetrics.iconPixelSize;
     painter.setPen(enabled ? themeColorsRef().textSecondary : themeColorsRef().textDisabled);
     if (m_iconFontFamily == Typography::FontFamily::FluentIcons) {
         Typography::Icons::paintGlyph(painter, QRectF(rect), glyph, iconPixelSize, Qt::AlignCenter);
@@ -1913,7 +1854,7 @@ void TabStrip::paintFocus(QPainter& painter, const QRect& rect)
     painter.drawRoundedRect(rect, currentMetrics.cornerRadius, currentMetrics.cornerRadius);
     painter.setPen(QPen(themeColorsRef().strokeFocusInner, 1));
     painter.drawRoundedRect(rect.adjusted(1, 1, -1, -1), qMax(0, currentMetrics.cornerRadius - 1),
-                            qMax(0, currentMetrics.cornerRadius - 1));
+        qMax(0, currentMetrics.cornerRadius - 1));
     painter.restore();
 }
 
@@ -2025,8 +1966,7 @@ bool TabView::insertTab(int index, const TabViewItem& item)
     updateAccessibleText();
     fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (m_selectedIndex != previousIndex) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this,
-                                                                               m_selectedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this, m_selectedIndex);
         QPointer<TabView> guard(this);
         emit selectedIndexChanged(m_selectedIndex);
         if (!guard)
@@ -2061,8 +2001,7 @@ bool TabView::removeTab(int index)
     updateAccessibleText();
     fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (previousIndex == index || m_selectedIndex != previousIndex) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this,
-                                                                               m_selectedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this, m_selectedIndex);
         QPointer<TabView> guard(this);
         emit selectedIndexChanged(m_selectedIndex);
         if (!guard)
@@ -2128,8 +2067,7 @@ bool TabView::moveTab(int from, int to)
     updateAccessibleText();
     fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (m_selectedIndex != oldSelected) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this,
-                                                                               m_selectedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this, m_selectedIndex);
     }
     QPointer<TabView> guard(this);
     emit tabMoved(from, to);
@@ -2200,8 +2138,7 @@ bool TabView::setTabEnabled(int index, bool enabled)
     updateAccessibleText();
     fluent::accessibility::detail::notifyLogicalItemAccessibilityState(this, index);
     if (m_selectedIndex != previousIndex) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this,
-                                                                               m_selectedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this, m_selectedIndex);
         QPointer<TabView> guard(this);
         emit selectedIndexChanged(m_selectedIndex);
         if (!guard)
@@ -2452,8 +2389,7 @@ bool TabView::eventFilter(QObject* watched, QEvent* event)
         auto* keyEvent = static_cast<QKeyEvent*>(event);
         if (objectBelongsToWidget(watched, this))
             setActiveShortcutOwner();
-        if (s_activeShortcutOwner == this && window() && window()->isActiveWindow() &&
-            handleShortcutKey(keyEvent))
+        if (s_activeShortcutOwner == this && window() && window()->isActiveWindow() && handleShortcutKey(keyEvent))
             return true;
     }
 
@@ -2472,8 +2408,7 @@ bool TabView::isSelectableIndex(int index) const
 
 bool TabView::isCloseableIndex(int index) const
 {
-    return isValidIndex(index) && m_items.at(index).enabled && m_items.at(index).closable &&
-           m_tabsClosable;
+    return isValidIndex(index) && m_items.at(index).enabled && m_items.at(index).closable && m_tabsClosable;
 }
 
 QString TabView::normalizedString(const QString& value, const QString& fallback) const
@@ -2580,12 +2515,11 @@ QRect TabView::translateFromStrip(const QRect& rect) const
 void TabView::updateAccessibleText()
 {
     const QString selectedName = isValidIndex(m_selectedIndex)
-                                     ? (m_items.at(m_selectedIndex).accessibleName.isEmpty()
-                                            ? m_items.at(m_selectedIndex).text
-                                            : m_items.at(m_selectedIndex).accessibleName)
-                                     : QString();
-    if (accessibleDescription().isEmpty() ||
-        accessibleDescription() == m_autoAccessibleDescription) {
+        ? (m_items.at(m_selectedIndex).accessibleName.isEmpty()
+                  ? m_items.at(m_selectedIndex).text
+                  : m_items.at(m_selectedIndex).accessibleName)
+        : QString();
+    if (accessibleDescription().isEmpty() || accessibleDescription() == m_autoAccessibleDescription) {
         setAccessibleDescription(selectedName);
     }
     m_autoAccessibleDescription = selectedName;

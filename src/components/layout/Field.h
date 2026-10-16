@@ -35,18 +35,18 @@ namespace fluent::layout {
  */
 class Field : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
-    Q_PROPERTY(QString labelText READ labelText WRITE setLabelText
-                   NOTIFY labelTextChanged)
-    Q_PROPERTY(bool required READ isRequired WRITE setRequired
-                   NOTIFY requiredChanged)
-    Q_PROPERTY(QString helperText READ helperText WRITE setHelperText
-                   NOTIFY helperTextChanged)
-    Q_PROPERTY(QString validationMessage READ validationMessage
-                   WRITE setValidationMessage NOTIFY validationMessageChanged)
-    Q_PROPERTY(ValidationState validationState READ validationState
-                   WRITE setValidationState NOTIFY validationStateChanged)
-    Q_PROPERTY(QWidget* editor READ editor WRITE setEditor
-                   NOTIFY editorChanged)
+    Q_PROPERTY(QString labelText READ labelText WRITE setLabelText NOTIFY labelTextChanged)
+    Q_PROPERTY(bool required READ isRequired WRITE setRequired NOTIFY requiredChanged)
+    Q_PROPERTY(QString helperText READ helperText WRITE setHelperText NOTIFY helperTextChanged)
+    Q_PROPERTY(QString validationMessage
+        READ validationMessage
+        WRITE setValidationMessage
+        NOTIFY validationMessageChanged)
+    Q_PROPERTY(ValidationState validationState
+        READ validationState
+        WRITE setValidationState
+        NOTIFY validationStateChanged)
+    Q_PROPERTY(QWidget* editor READ editor WRITE setEditor NOTIFY editorChanged)
 
 public:
     /**
@@ -57,12 +57,7 @@ public:
      * values.
      * zh_CN: Field 只负责展示该状态，真正的校验与编辑器值仍由调用方拥有。
      */
-    enum class ValidationState {
-        None,
-        Error,
-        Warning,
-        Success
-    };
+    enum class ValidationState { None, Error, Warning, Success };
     Q_ENUM(ValidationState)
 
     explicit Field(QWidget* parent = nullptr);

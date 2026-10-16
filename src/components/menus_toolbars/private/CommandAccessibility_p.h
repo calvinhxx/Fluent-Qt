@@ -17,13 +17,10 @@ enum class CommandAccessibleRole {
 
 // Installs the private property-driven accessibility factory once per process.
 // None of the adapter types become installed or application-facing API.
-void markCommandAccessibleWidget(QWidget* widget,
-                                 CommandAccessibleRole role);
+void markCommandAccessibleWidget(QWidget* widget, CommandAccessibleRole role);
 
 // Updates the accessible expanded/collapsed state and emits a state event.
-void updateCommandExpandedAccessibility(QWidget* widget,
-                                        bool expanded,
-                                        bool expandable);
+void updateCommandExpandedAccessibility(QWidget* widget, bool expanded, bool expandable);
 
 } // namespace fluent::menus_toolbars::detail
 

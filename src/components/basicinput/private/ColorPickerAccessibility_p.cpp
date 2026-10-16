@@ -39,14 +39,14 @@ QString colorValueText(const ColorPicker* picker)
     if (!picker || !picker->color().isValid())
         return {};
     const QColor color = picker->color();
-    QString result = QStringLiteral("#%1%2%3")
-        .arg(color.red(), 2, 16, QLatin1Char('0'))
-        .arg(color.green(), 2, 16, QLatin1Char('0'))
-        .arg(color.blue(), 2, 16, QLatin1Char('0'))
-        .toUpper();
+    QString result =
+        QStringLiteral("#%1%2%3")
+            .arg(color.red(), 2, 16, QLatin1Char('0'))
+            .arg(color.green(), 2, 16, QLatin1Char('0'))
+            .arg(color.blue(), 2, 16, QLatin1Char('0'))
+            .toUpper();
     if (picker->alphaEnabled()) {
-        result += QStringLiteral("%1")
-            .arg(color.alpha(), 2, 16, QLatin1Char('0')).toUpper();
+        result += QStringLiteral("%1").arg(color.alpha(), 2, 16, QLatin1Char('0')).toUpper();
     }
     return result;
 }
@@ -62,10 +62,7 @@ QString spectrumValueText(const ColorPicker* picker)
 
 class ColorPickerAccessible final : public QAccessibleWidget {
 public:
-    explicit ColorPickerAccessible(ColorPicker* picker)
-        : QAccessibleWidget(picker, QAccessible::ColorChooser)
-    {
-    }
+    explicit ColorPickerAccessible(ColorPicker* picker) : QAccessibleWidget(picker, QAccessible::ColorChooser) {}
 
     QString text(QAccessible::Text type) const override
     {
@@ -80,18 +77,12 @@ public:
     }
 
 private:
-    ColorPicker* view() const
-    {
-        return static_cast<ColorPicker*>(widget());
-    }
+    ColorPicker* view() const { return static_cast<ColorPicker*>(widget()); }
 };
 
 class HueBarAccessible final : public ValueAccessibleAdapter {
 public:
-    explicit HueBarAccessible(QWidget* bar)
-        : ValueAccessibleAdapter(bar, QAccessible::Slider)
-    {
-    }
+    explicit HueBarAccessible(QWidget* bar) : ValueAccessibleAdapter(bar, QAccessible::Slider) {}
 
     QString text(QAccessible::Text type) const override
     {
@@ -101,11 +92,7 @@ public:
         return inherited;
     }
 
-    QVariant currentValue() const override
-    {
-        return owner() ? QVariant(qRound(owner()->hue() * 359.0))
-                       : QVariant();
-    }
+    QVariant currentValue() const override { return owner() ? QVariant(qRound(owner()->hue() * 359.0)) : QVariant(); }
 
     void setCurrentValue(const QVariant& value) override
     {
@@ -123,14 +110,8 @@ public:
 
 protected:
     bool accessibleValueReadOnly() const override { return false; }
-    bool canIncreaseAccessibleValue() const override
-    {
-        return owner() && widget()->isEnabled();
-    }
-    bool canDecreaseAccessibleValue() const override
-    {
-        return owner() && widget()->isEnabled();
-    }
+    bool canIncreaseAccessibleValue() const override { return owner() && widget()->isEnabled(); }
+    bool canDecreaseAccessibleValue() const override { return owner() && widget()->isEnabled(); }
     void changeAccessibleValueByStep(int direction) override
     {
         if (!owner())
@@ -142,10 +123,7 @@ protected:
             hue = 0;
         owner()->setHueFromBar(hue / 359.0);
     }
-    QString accessibleValueText() const override
-    {
-        return colorText("%1 degrees").arg(currentValue().toInt());
-    }
+    QString accessibleValueText() const override { return colorText("%1 degrees").arg(currentValue().toInt()); }
 
 private:
     ColorPicker* owner() const { return ownerFor(widget()); }
@@ -153,10 +131,7 @@ private:
 
 class SpectrumAccessible final : public QAccessibleWidget {
 public:
-    explicit SpectrumAccessible(QWidget* spectrum)
-        : QAccessibleWidget(spectrum, QAccessible::ColorChooser)
-    {
-    }
+    explicit SpectrumAccessible(QWidget* spectrum) : QAccessibleWidget(spectrum, QAccessible::ColorChooser) {}
 
     QString text(QAccessible::Text type) const override
     {
@@ -187,23 +162,18 @@ public:
     void doAction(const QString& actionName) override
     {
         ColorPicker* picker = owner();
-        if (picker && widget()->isEnabled()
-            && actionName == QAccessibleActionInterface::increaseAction()) {
-            picker->setSVFromSpectrum(
-                picker->saturation(), qMin(1.0, picker->value() + 0.01));
+        if (picker && widget()->isEnabled() && actionName == QAccessibleActionInterface::increaseAction()) {
+            picker->setSVFromSpectrum(picker->saturation(), qMin(1.0, picker->value() + 0.01));
             return;
         }
-        if (picker && widget()->isEnabled()
-            && actionName == QAccessibleActionInterface::decreaseAction()) {
-            picker->setSVFromSpectrum(
-                picker->saturation(), qMax(0.0, picker->value() - 0.01));
+        if (picker && widget()->isEnabled() && actionName == QAccessibleActionInterface::decreaseAction()) {
+            picker->setSVFromSpectrum(picker->saturation(), qMax(0.0, picker->value() - 0.01));
             return;
         }
         QAccessibleWidget::doAction(actionName);
     }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         if (actionName == QAccessibleActionInterface::increaseAction())
             return {QStringLiteral("Up")};
@@ -218,10 +188,7 @@ private:
 
 class PreviewAccessible final : public QAccessibleWidget {
 public:
-    explicit PreviewAccessible(QWidget* preview)
-        : QAccessibleWidget(preview, QAccessible::Graphic)
-    {
-    }
+    explicit PreviewAccessible(QWidget* preview) : QAccessibleWidget(preview, QAccessible::Graphic) {}
 
     QString text(QAccessible::Text type) const override
     {
@@ -236,8 +203,7 @@ public:
     }
 };
 
-QAccessibleInterface* colorPickerAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* colorPickerAccessibilityFactory(const QString&, QObject* object)
 {
     if (auto* picker = dynamic_cast<ColorPicker*>(object))
         return new ColorPickerAccessible(picker);
@@ -283,8 +249,7 @@ void notifyColorPickerValueChanged(ColorPicker* picker)
     if (!picker)
         return;
     notifyWidgetValue(picker, colorValueText(picker));
-    notifyWidgetValue(picker->findChild<QWidget*>(
-        QStringLiteral("ColorPicker.PreviewPane")), colorValueText(picker));
+    notifyWidgetValue(picker->findChild<QWidget*>(QStringLiteral("ColorPicker.PreviewPane")), colorValueText(picker));
 #else
     Q_UNUSED(picker)
 #endif
@@ -294,8 +259,7 @@ void notifyColorPickerHueChanged(QWidget* hueBar)
 {
 #if QT_CONFIG(accessibility)
     ColorPicker* picker = ownerFor(hueBar);
-    notifyWidgetValue(hueBar,
-        picker ? QVariant(qRound(picker->hue() * 359.0)) : QVariant());
+    notifyWidgetValue(hueBar, picker ? QVariant(qRound(picker->hue() * 359.0)) : QVariant());
 #else
     Q_UNUSED(hueBar)
 #endif

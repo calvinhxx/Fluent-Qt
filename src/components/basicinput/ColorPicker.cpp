@@ -20,16 +20,18 @@ namespace fluent::basicinput {
 
 class ColorSpectrumWidget : public QWidget {
 public:
-    explicit ColorSpectrumWidget(ColorPicker* picker, QWidget* parent = nullptr)
-        : QWidget(parent), m_picker(picker) {
+    explicit ColorSpectrumWidget(ColorPicker* picker, QWidget* parent = nullptr) : QWidget(parent), m_picker(picker)
+    {
         setMouseTracking(true);
         setCursor(Qt::CrossCursor);
         setFocusPolicy(Qt::StrongFocus);
     }
 
 protected:
-    void paintEvent(QPaintEvent*) override {
-        if (!m_picker) return;
+    void paintEvent(QPaintEvent*) override
+    {
+        if (!m_picker)
+            return;
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
         QRectF r = rect().adjusted(1, 1, -1, -1);
@@ -57,49 +59,58 @@ protected:
         // Paint the current selection handle. zh_CN: 绘制当前选择位置。
         qreal sx = m_picker->saturation();
         qreal sv = 1.0 - m_picker->value();
-        QPointF pos(r.left() + sx * r.width(),
-                    r.top() + sv * r.height());
+        QPointF pos(r.left() + sx * r.width(), r.top() + sv * r.height());
         p.setPen(QPen(Qt::white, 2));
         p.setBrush(Qt::NoBrush);
         p.drawEllipse(pos, 6, 6);
     }
 
-    void mousePressEvent(QMouseEvent* e) override {
+    void mousePressEvent(QMouseEvent* e) override
+    {
         setCursor(Qt::BlankCursor);
         handlePos(e->pos());
     }
-    void mouseMoveEvent(QMouseEvent* e) override {
-        if (e->buttons() & Qt::LeftButton) handlePos(e->pos());
+    void mouseMoveEvent(QMouseEvent* e) override
+    {
+        if (e->buttons() & Qt::LeftButton)
+            handlePos(e->pos());
     }
-    void mouseReleaseEvent(QMouseEvent*) override {
-        setCursor(Qt::CrossCursor);
-    }
-    void keyPressEvent(QKeyEvent* event) override {
+    void mouseReleaseEvent(QMouseEvent*) override { setCursor(Qt::CrossCursor); }
+    void keyPressEvent(QKeyEvent* event) override
+    {
         if (!m_picker) {
             QWidget::keyPressEvent(event);
             return;
         }
-        const qreal step = event->modifiers().testFlag(Qt::ShiftModifier)
-            ? 0.05 : 0.01;
+        const qreal step = event->modifiers().testFlag(Qt::ShiftModifier) ? 0.05 : 0.01;
         qreal saturation = m_picker->saturation();
         qreal value = m_picker->value();
         switch (event->key()) {
-        case Qt::Key_Left: saturation -= step; break;
-        case Qt::Key_Right: saturation += step; break;
-        case Qt::Key_Up: value += step; break;
-        case Qt::Key_Down: value -= step; break;
+        case Qt::Key_Left:
+            saturation -= step;
+            break;
+        case Qt::Key_Right:
+            saturation += step;
+            break;
+        case Qt::Key_Up:
+            value += step;
+            break;
+        case Qt::Key_Down:
+            value -= step;
+            break;
         default:
             QWidget::keyPressEvent(event);
             return;
         }
-        m_picker->setSVFromSpectrum(
-            qBound(0.0, saturation, 1.0), qBound(0.0, value, 1.0));
+        m_picker->setSVFromSpectrum(qBound(0.0, saturation, 1.0), qBound(0.0, value, 1.0));
         event->accept();
     }
 
 private:
-    void handlePos(const QPoint& pnt) {
-        if (!m_picker) return;
+    void handlePos(const QPoint& pnt)
+    {
+        if (!m_picker)
+            return;
         QRectF r = rect().adjusted(1, 1, -1, -1);
         qreal sx = (pnt.x() - r.left()) / r.width();
         qreal sv = (pnt.y() - r.top()) / r.height();
@@ -114,27 +125,28 @@ private:
 
 class HueBarWidget : public QWidget {
 public:
-    explicit HueBarWidget(ColorPicker* picker, QWidget* parent = nullptr)
-        : QWidget(parent), m_picker(picker) {
+    explicit HueBarWidget(ColorPicker* picker, QWidget* parent = nullptr) : QWidget(parent), m_picker(picker)
+    {
         setMouseTracking(true);
         setCursor(Qt::ArrowCursor);
         setFocusPolicy(Qt::StrongFocus);
     }
 
 protected:
-    void paintEvent(QPaintEvent*) override {
+    void paintEvent(QPaintEvent*) override
+    {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
         QRectF r = rect().adjusted(2, 2, -2, -2);
 
         QLinearGradient grad(r.topLeft(), r.bottomLeft());
-        grad.setColorAt(0.0, QColor::fromHsvF(0.0f, 1.0f, 1.0f)); // red
+        grad.setColorAt(0.0, QColor::fromHsvF(0.0f, 1.0f, 1.0f));              // red
         grad.setColorAt(1.0 / 6.0, QColor::fromHsvF(1.0f / 6.0f, 1.0f, 1.0f)); // yellow
         grad.setColorAt(2.0 / 6.0, QColor::fromHsvF(2.0f / 6.0f, 1.0f, 1.0f)); // green
         grad.setColorAt(3.0 / 6.0, QColor::fromHsvF(3.0f / 6.0f, 1.0f, 1.0f)); // cyan
         grad.setColorAt(4.0 / 6.0, QColor::fromHsvF(4.0f / 6.0f, 1.0f, 1.0f)); // blue
         grad.setColorAt(5.0 / 6.0, QColor::fromHsvF(5.0f / 6.0f, 1.0f, 1.0f)); // magenta
-        grad.setColorAt(1.0, QColor::fromHsvF(1.0f, 1.0f, 1.0f)); // back to red
+        grad.setColorAt(1.0, QColor::fromHsvF(1.0f, 1.0f, 1.0f));              // back to red
 
         p.fillRect(r, grad);
 
@@ -146,44 +158,57 @@ protected:
         }
     }
 
-    void mousePressEvent(QMouseEvent* e) override {
+    void mousePressEvent(QMouseEvent* e) override
+    {
         setCursor(Qt::BlankCursor);
         handlePos(e->pos());
     }
-    void mouseMoveEvent(QMouseEvent* e) override {
-        if (e->buttons() & Qt::LeftButton) handlePos(e->pos());
+    void mouseMoveEvent(QMouseEvent* e) override
+    {
+        if (e->buttons() & Qt::LeftButton)
+            handlePos(e->pos());
     }
-    void mouseReleaseEvent(QMouseEvent*) override {
-        setCursor(Qt::ArrowCursor);
-    }
-    void keyPressEvent(QKeyEvent* event) override {
+    void mouseReleaseEvent(QMouseEvent*) override { setCursor(Qt::ArrowCursor); }
+    void keyPressEvent(QKeyEvent* event) override
+    {
         if (!m_picker) {
             QWidget::keyPressEvent(event);
             return;
         }
-        const qreal step = event->modifiers().testFlag(Qt::ShiftModifier)
-            ? 10.0 / 359.0 : 1.0 / 359.0;
+        const qreal step = event->modifiers().testFlag(Qt::ShiftModifier) ? 10.0 / 359.0 : 1.0 / 359.0;
         qreal hue = m_picker->hue();
         switch (event->key()) {
         case Qt::Key_Left:
-        case Qt::Key_Up: hue -= step; break;
+        case Qt::Key_Up:
+            hue -= step;
+            break;
         case Qt::Key_Right:
-        case Qt::Key_Down: hue += step; break;
-        case Qt::Key_Home: hue = 0.0; break;
-        case Qt::Key_End: hue = 1.0; break;
+        case Qt::Key_Down:
+            hue += step;
+            break;
+        case Qt::Key_Home:
+            hue = 0.0;
+            break;
+        case Qt::Key_End:
+            hue = 1.0;
+            break;
         default:
             QWidget::keyPressEvent(event);
             return;
         }
-        while (hue < 0.0) hue += 1.0;
-        while (hue > 1.0) hue -= 1.0;
+        while (hue < 0.0)
+            hue += 1.0;
+        while (hue > 1.0)
+            hue -= 1.0;
         m_picker->setHueFromBar(hue);
         event->accept();
     }
 
 private:
-    void handlePos(const QPoint& pnt) {
-        if (!m_picker) return;
+    void handlePos(const QPoint& pnt)
+    {
+        if (!m_picker)
+            return;
         QRectF r = rect().adjusted(2, 2, -2, -2);
         qreal h = (pnt.y() - r.top()) / r.height();
         h = std::clamp(h, 0.0, 1.0);
@@ -198,15 +223,17 @@ private:
 // zh_CN: 右侧预览 pane——棋盘格 + 当前色（含 alpha），参考 WinUI 3。
 class ColorPreviewPaneWidget : public QWidget {
 public:
-    explicit ColorPreviewPaneWidget(ColorPicker* picker, QWidget* parent = nullptr)
-        : QWidget(parent), m_picker(picker) {
+    explicit ColorPreviewPaneWidget(ColorPicker* picker, QWidget* parent = nullptr) : QWidget(parent), m_picker(picker)
+    {
         setFixedWidth(28);
         setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
     }
 
 protected:
-    void paintEvent(QPaintEvent*) override {
-        if (!m_picker) return;
+    void paintEvent(QPaintEvent*) override
+    {
+        if (!m_picker)
+            return;
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
         QRectF r = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
@@ -227,14 +254,15 @@ private:
     ColorPicker* m_picker = nullptr;
 };
 
-ColorPicker::ColorPicker(QWidget* parent)
-    : QWidget(parent) {
+ColorPicker::ColorPicker(QWidget* parent) : QWidget(parent)
+{
     detail::ensureColorPickerAccessibilityFactory();
     initUi();
     setColor(QColor(255, 255, 255, 255));
 }
 
-void ColorPicker::initUi() {
+void ColorPicker::initUi()
+{
     using Edge = ::fluent::AnchorLayout::Edge;
     auto* anchorLayout = new ::fluent::AnchorLayout(this);
     const auto& spacing = themeSpacing();
@@ -245,8 +273,7 @@ void ColorPicker::initUi() {
         // example GallerySampleCard) cannot replace WindowText with black.
         // zh_CN: 通过标签自身样式表上色，避免带样式表的宿主（如
         // GallerySampleCard）把 WindowText 覆盖成黑色。
-        label->setTextColorRole(
-            fluent::textfields::Label::TextColorRole::Primary);
+        label->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
         label->setFixedWidth(48);
     };
 
@@ -257,22 +284,21 @@ void ColorPicker::initUi() {
     inputsLayout->setContentsMargins(0, 0, 0, 0);
     inputsLayout->setSpacing(spacing.gap.tight);
 
-    auto createTextRow = [&](const QString& labelText,
-                             fluent::textfields::LineEdit*& edit,
-                             void (ColorPicker::*slot)()) {
-        auto* row = new QHBoxLayout();
-        row->setContentsMargins(0, 0, 0, 0);
-        row->setSpacing(spacing.gap.tight);
-        auto* label = new fluent::textfields::Label(labelText, inputsPanel);
-        configureFieldLabel(label);
-        row->addWidget(label);
-        edit = new fluent::textfields::LineEdit(inputsPanel);
-        edit->setAccessibleName(labelText.left(labelText.size() - 1));
-        edit->setClearButtonEnabled(false);
-        row->addWidget(edit, 1);
-        connect(edit, &QLineEdit::returnPressed, this, slot);
-        inputsLayout->addLayout(row);
-    };
+    auto createTextRow =
+        [&](const QString& labelText, fluent::textfields::LineEdit*& edit, void (ColorPicker::*slot)()) {
+            auto* row = new QHBoxLayout();
+            row->setContentsMargins(0, 0, 0, 0);
+            row->setSpacing(spacing.gap.tight);
+            auto* label = new fluent::textfields::Label(labelText, inputsPanel);
+            configureFieldLabel(label);
+            row->addWidget(label);
+            edit = new fluent::textfields::LineEdit(inputsPanel);
+            edit->setAccessibleName(labelText.left(labelText.size() - 1));
+            edit->setClearButtonEnabled(false);
+            row->addWidget(edit, 1);
+            connect(edit, &QLineEdit::returnPressed, this, slot);
+            inputsLayout->addLayout(row);
+        };
     createTextRow(tr("Hex:"), m_hexEdit, &ColorPicker::handleHexEdited);
     createTextRow(tr("Red:"), m_rEdit, &ColorPicker::handleChannelEdited);
     createTextRow(tr("Green:"), m_gEdit, &ColorPicker::handleChannelEdited);
@@ -281,8 +307,7 @@ void ColorPicker::initUi() {
     auto* alphaInputRow = new QHBoxLayout(m_alphaInputRowWidget);
     alphaInputRow->setContentsMargins(0, 0, 0, 0);
     alphaInputRow->setSpacing(spacing.gap.tight);
-    auto* alphaInputLabel = new fluent::textfields::Label(
-        tr("Alpha:"), m_alphaInputRowWidget);
+    auto* alphaInputLabel = new fluent::textfields::Label(tr("Alpha:"), m_alphaInputRowWidget);
     configureFieldLabel(alphaInputLabel);
     m_aEdit = new fluent::textfields::LineEdit(m_alphaInputRowWidget);
     m_aEdit->setAccessibleName(tr("Alpha"));
@@ -292,8 +317,7 @@ void ColorPicker::initUi() {
     connect(m_aEdit, &QLineEdit::returnPressed, this, &ColorPicker::handleChannelEdited);
     inputsLayout->addWidget(m_alphaInputRowWidget);
 
-    m_hexEdit->setValidator(new QRegularExpressionValidator(
-        QRegularExpression("^#?[0-9A-Fa-f]{0,8}$"), m_hexEdit));
+    m_hexEdit->setValidator(new QRegularExpressionValidator(QRegularExpression("^#?[0-9A-Fa-f]{0,8}$"), m_hexEdit));
     m_rEdit->setValidator(new QIntValidator(0, 255, m_rEdit));
     m_gEdit->setValidator(new QIntValidator(0, 255, m_gEdit));
     m_bEdit->setValidator(new QIntValidator(0, 255, m_bEdit));
@@ -315,8 +339,7 @@ void ColorPicker::initUi() {
     auto* valueRow = new QHBoxLayout();
     valueRow->setContentsMargins(0, 0, 0, 0);
     valueRow->setSpacing(spacing.gap.tight);
-    auto* valueLabel = new fluent::textfields::Label(
-        tr("Value:"), slidersPanel);
+    auto* valueLabel = new fluent::textfields::Label(tr("Value:"), slidersPanel);
     configureFieldLabel(valueLabel);
     m_valueSlider = new Slider(Qt::Horizontal, slidersPanel);
     m_valueSlider->setAccessibleName(tr("Brightness"));
@@ -332,8 +355,7 @@ void ColorPicker::initUi() {
     auto* alphaRow = new QHBoxLayout(m_alphaRowWidget);
     alphaRow->setContentsMargins(0, 0, 0, 0);
     alphaRow->setSpacing(spacing.gap.tight);
-    auto* alphaLabel = new fluent::textfields::Label(
-        tr("Alpha:"), m_alphaRowWidget);
+    auto* alphaLabel = new fluent::textfields::Label(tr("Alpha:"), m_alphaRowWidget);
     configureFieldLabel(alphaLabel);
     m_alphaSlider = new Slider(Qt::Horizontal, m_alphaRowWidget);
     m_alphaSlider->setAccessibleName(tr("Alpha"));
@@ -385,7 +407,8 @@ void ColorPicker::initUi() {
     onThemeUpdated();
 }
 
-void ColorPicker::onThemeUpdated() {
+void ColorPicker::onThemeUpdated()
+{
     const auto& fs = themeFont(Typography::FontRole::Body);
     QFont f = fs.toQFont();
 
@@ -399,27 +422,38 @@ void ColorPicker::onThemeUpdated() {
     setFont(f);
 
     // 2. Sync the input fields' theme styles. zh_CN: 同步输入框主题样式。
-    if (m_hexEdit) m_hexEdit->onThemeUpdated();
-    if (m_rEdit)   m_rEdit->onThemeUpdated();
-    if (m_gEdit)   m_gEdit->onThemeUpdated();
-    if (m_bEdit)   m_bEdit->onThemeUpdated();
-    if (m_aEdit)   m_aEdit->onThemeUpdated();
-    if (m_valueSlider) m_valueSlider->onThemeUpdated();
-    if (m_alphaSlider) m_alphaSlider->onThemeUpdated();
+    if (m_hexEdit)
+        m_hexEdit->onThemeUpdated();
+    if (m_rEdit)
+        m_rEdit->onThemeUpdated();
+    if (m_gEdit)
+        m_gEdit->onThemeUpdated();
+    if (m_bEdit)
+        m_bEdit->onThemeUpdated();
+    if (m_aEdit)
+        m_aEdit->onThemeUpdated();
+    if (m_valueSlider)
+        m_valueSlider->onThemeUpdated();
+    if (m_alphaSlider)
+        m_alphaSlider->onThemeUpdated();
 
     // The spectrum, hue strip, and alpha preview are lightweight private
     // painters rather than FluentElement instances, so refresh them explicitly.
     // zh_CN: 色谱、色相条和透明度预览是轻量私有绘制控件，并非 FluentElement，
     // 因此主题切换时显式触发重绘。
-    if (m_spectrum) m_spectrum->update();
-    if (m_hueBar) m_hueBar->update();
-    if (m_previewPane) m_previewPane->update();
+    if (m_spectrum)
+        m_spectrum->update();
+    if (m_hueBar)
+        m_hueBar->update();
+    if (m_previewPane)
+        m_previewPane->update();
 
     updateFromColor();
     update();
 }
 
-void ColorPicker::setColor(const QColor& c) {
+void ColorPicker::setColor(const QColor& c)
+{
     if (c == m_color)
         return;
     const qreal oldHue = m_h;
@@ -452,26 +486,29 @@ void ColorPicker::setColor(const QColor& c) {
     detail::notifyColorPickerValueChanged(this);
     if (!qFuzzyCompare(oldHue + 1.0, m_h + 1.0))
         detail::notifyColorPickerHueChanged(m_hueBar);
-    if (!qFuzzyCompare(oldSaturation + 1.0, m_s + 1.0)
-        || !qFuzzyCompare(oldValue + 1.0, m_v + 1.0)) {
+    if (!qFuzzyCompare(oldSaturation + 1.0, m_s + 1.0) || !qFuzzyCompare(oldValue + 1.0, m_v + 1.0)) {
         detail::notifyColorPickerSpectrumChanged(m_spectrum);
     }
     emit colorChanged(m_color);
 }
 
-void ColorPicker::setAlphaEnabled(bool enabled) {
+void ColorPicker::setAlphaEnabled(bool enabled)
+{
     if (m_alphaEnabled == enabled)
         return;
     m_alphaEnabled = enabled;
-    if (m_alphaRowWidget) m_alphaRowWidget->setVisible(enabled);
-    if (m_alphaInputRowWidget) m_alphaInputRowWidget->setVisible(enabled);
+    if (m_alphaRowWidget)
+        m_alphaRowWidget->setVisible(enabled);
+    if (m_alphaInputRowWidget)
+        m_alphaInputRowWidget->setVisible(enabled);
     updateFromColor();
     detail::notifyColorPickerValueChanged(this);
     detail::notifyColorPickerStructureChanged(this);
     emit alphaEnabledChanged(enabled);
 }
 
-void ColorPicker::setHueFromBar(qreal h) {
+void ColorPicker::setHueFromBar(qreal h)
+{
     h = qBound(0.0, h, 1.0);
     const qreal oldHue = m_h;
     m_h = h;
@@ -480,10 +517,12 @@ void ColorPicker::setHueFromBar(qreal h) {
     setColor(c);
     if (!qFuzzyCompare(oldHue + 1.0, m_h + 1.0))
         detail::notifyColorPickerHueChanged(m_hueBar);
-    if (m_spectrum) m_spectrum->update();
+    if (m_spectrum)
+        m_spectrum->update();
 }
 
-void ColorPicker::setSVFromSpectrum(qreal s, qreal v) {
+void ColorPicker::setSVFromSpectrum(qreal s, qreal v)
+{
     s = qBound(0.0, s, 1.0);
     v = qBound(0.0, v, 1.0);
     const qreal oldSaturation = m_s;
@@ -492,14 +531,15 @@ void ColorPicker::setSVFromSpectrum(qreal s, qreal v) {
     m_v = v;
     QColor c = QColor::fromHsvF(m_h, m_s, m_v, m_color.alphaF());
     setColor(c);
-    if (!qFuzzyCompare(oldSaturation + 1.0, m_s + 1.0)
-        || !qFuzzyCompare(oldValue + 1.0, m_v + 1.0)) {
+    if (!qFuzzyCompare(oldSaturation + 1.0, m_s + 1.0) || !qFuzzyCompare(oldValue + 1.0, m_v + 1.0)) {
         detail::notifyColorPickerSpectrumChanged(m_spectrum);
     }
 }
 
-void ColorPicker::setValueFromSlider(int percent) {
-    if (m_isInternalUpdate) return;
+void ColorPicker::setValueFromSlider(int percent)
+{
+    if (m_isInternalUpdate)
+        return;
     const qreal oldValue = m_v;
     m_v = std::clamp(percent / 100.0, 0.0, 1.0);
     QColor c = QColor::fromHsvF(m_h, m_s, m_v, m_color.alphaF());
@@ -508,16 +548,20 @@ void ColorPicker::setValueFromSlider(int percent) {
         detail::notifyColorPickerSpectrumChanged(m_spectrum);
 }
 
-void ColorPicker::setAlphaFromSlider(int alpha) {
-    if (m_isInternalUpdate) return;
+void ColorPicker::setAlphaFromSlider(int alpha)
+{
+    if (m_isInternalUpdate)
+        return;
     alpha = std::clamp(alpha, 0, 255);
     QColor c = m_color;
     c.setAlpha(alpha);
     setColor(c);
 }
 
-void ColorPicker::handleChannelEdited() {
-    if (m_isInternalUpdate) return;
+void ColorPicker::handleChannelEdited()
+{
+    if (m_isInternalUpdate)
+        return;
 
     if (!m_rEdit || !m_gEdit || !m_bEdit || !m_aEdit)
         return;
@@ -539,8 +583,10 @@ void ColorPicker::handleChannelEdited() {
     setColor(c);
 }
 
-void ColorPicker::handleHexEdited() {
-    if (m_isInternalUpdate) return; // Ignore self-induced updates to stay consistent. zh_CN: 内部更新时忽略，保持状态一致。
+void ColorPicker::handleHexEdited()
+{
+    if (m_isInternalUpdate)
+        return; // Ignore self-induced updates to stay consistent. zh_CN: 内部更新时忽略，保持状态一致。
 
     bool ok = false;
     QColor c = hexToColor(m_hexEdit->text().trimmed(), &ok);
@@ -552,7 +598,8 @@ void ColorPicker::handleHexEdited() {
     }
 }
 
-void ColorPicker::updateFromColor() {
+void ColorPicker::updateFromColor()
+{
     m_isInternalUpdate = true;
     if (m_rEdit && m_gEdit && m_bEdit && m_aEdit) {
         m_rEdit->setText(QString::number(m_color.red()));
@@ -560,35 +607,45 @@ void ColorPicker::updateFromColor() {
         m_bEdit->setText(QString::number(m_color.blue()));
         m_aEdit->setText(QString::number(m_color.alpha()));
     }
-    if (m_hexEdit) m_hexEdit->setText(colorToHex(m_color, m_alphaEnabled));
-    if (m_valueSlider) m_valueSlider->setValue(qRound(m_v * 100));
-    if (m_alphaSlider) m_alphaSlider->setValue(m_color.alpha());
-    if (m_spectrum) m_spectrum->update();
-    if (m_hueBar) m_hueBar->update();
-    if (m_previewPane) m_previewPane->update();
+    if (m_hexEdit)
+        m_hexEdit->setText(colorToHex(m_color, m_alphaEnabled));
+    if (m_valueSlider)
+        m_valueSlider->setValue(qRound(m_v * 100));
+    if (m_alphaSlider)
+        m_alphaSlider->setValue(m_color.alpha());
+    if (m_spectrum)
+        m_spectrum->update();
+    if (m_hueBar)
+        m_hueBar->update();
+    if (m_previewPane)
+        m_previewPane->update();
     m_isInternalUpdate = false;
 }
 
-QString ColorPicker::colorToHex(const QColor& c, bool withAlpha) const {
-    QString hex = QString("#%1%2%3")
-                      .arg(c.red(), 2, 16, QLatin1Char('0'))
-                      .arg(c.green(), 2, 16, QLatin1Char('0'))
-                      .arg(c.blue(), 2, 16, QLatin1Char('0'))
-                      .toUpper();
+QString ColorPicker::colorToHex(const QColor& c, bool withAlpha) const
+{
+    QString hex =
+        QString("#%1%2%3")
+            .arg(c.red(), 2, 16, QLatin1Char('0'))
+            .arg(c.green(), 2, 16, QLatin1Char('0'))
+            .arg(c.blue(), 2, 16, QLatin1Char('0'))
+            .toUpper();
     if (withAlpha) {
         hex += QString("%1").arg(c.alpha(), 2, 16, QLatin1Char('0')).toUpper();
     }
     return hex;
 }
 
-QColor ColorPicker::hexToColor(const QString& text, bool* ok) const {
+QColor ColorPicker::hexToColor(const QString& text, bool* ok) const
+{
     QString t = text;
     if (t.startsWith('#'))
         t.remove(0, 1);
     bool localOk = false;
     int len = t.length();
     if (len != 6 && len != 8) {
-        if (ok) *ok = false;
+        if (ok)
+            *ok = false;
         return QColor();
     }
     bool okR, okG, okB, okA = true;
@@ -600,8 +657,10 @@ QColor ColorPicker::hexToColor(const QString& text, bool* ok) const {
         a = t.mid(6, 2).toInt(&okA, 16);
     }
     localOk = okR && okG && okB && okA;
-    if (ok) *ok = localOk;
-    if (!localOk) return QColor();
+    if (ok)
+        *ok = localOk;
+    if (!localOk)
+        return QColor();
     return QColor(r, g, b, a);
 }
 

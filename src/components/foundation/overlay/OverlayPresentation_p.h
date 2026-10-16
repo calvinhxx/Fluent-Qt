@@ -56,8 +56,7 @@ constexpr const char* presentedMenuPointPropertyName()
 // Map the invocation point before QMenu applies screen containment. The scoped
 // source also tells the compositor not to project this native popup twice.
 // zh_CN: 在 QMenu 做屏幕边界约束前映射调用点；临时源标记避免合成器再次投影。
-inline void popupMenuAt(QMenu* menu, QWidget* source, const QPoint& localPoint,
-                        const QPoint& popupOffset = QPoint())
+inline void popupMenuAt(QMenu* menu, QWidget* source, const QPoint& localPoint, const QPoint& popupOffset = QPoint())
 {
     if (!menu || !source)
         return;
@@ -71,8 +70,7 @@ inline void popupMenuAt(QMenu* menu, QWidget* source, const QPoint& localPoint,
         menu->popup(source->mapToGlobal(localPoint) + popupOffset);
         return;
     }
-    const QPointer<QWidget> previousSource =
-        menu->property(presentedMenuSourcePropertyName()).value<QWidget*>();
+    const QPointer<QWidget> previousSource = menu->property(presentedMenuSourcePropertyName()).value<QWidget*>();
     const QVariant previousPoint = menu->property(presentedMenuPointPropertyName());
     const auto destroyed = QObject::connect(source, &QObject::destroyed, menu, [menu] {
         menu->setProperty(presentedMenuSourcePropertyName(), QVariant());
@@ -88,7 +86,7 @@ inline void popupMenuAt(QMenu* menu, QWidget* source, const QPoint& localPoint,
     if (guard) {
         QObject::disconnect(destroyed);
         menu->setProperty(presentedMenuSourcePropertyName(),
-                          previousSource ? QVariant::fromValue(previousSource.data()) : QVariant());
+            previousSource ? QVariant::fromValue(previousSource.data()) : QVariant());
         menu->setProperty(presentedMenuPointPropertyName(), previousPoint);
     }
 }

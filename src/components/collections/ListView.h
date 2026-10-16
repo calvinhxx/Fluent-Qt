@@ -53,8 +53,7 @@ public:
      * @brief Selection mode used by the collection view.
      * zh_CN: 集合视图使用的选择模式。
      */
-    Q_PROPERTY(SelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY
-                   selectionModeChanged)
+    Q_PROPERTY(SelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY selectionModeChanged)
     /**
      * @brief Fluent typography role used for text rendering.
      * zh_CN: 文本绘制使用的 Fluent 排版角色。
@@ -74,40 +73,41 @@ public:
      * @brief Animated progress for the selected-item indicator.
      * zh_CN: 选中项指示器的动画进度。
      */
-    Q_PROPERTY(qreal selectedIndicatorProgress READ selectedIndicatorProgress NOTIFY
-                   selectedIndicatorProgressChanged)
+    Q_PROPERTY(qreal selectedIndicatorProgress READ selectedIndicatorProgress NOTIFY selectedIndicatorProgressChanged)
     /**
      * @brief Direction used by selected-indicator motion.
      * zh_CN: 选中指示器动效使用的方向。
      */
-    Q_PROPERTY(IndicatorMotionDirection selectedIndicatorMotionDirection READ
-                   selectedIndicatorMotionDirection NOTIFY selectedIndicatorMotionDirectionChanged)
+    Q_PROPERTY(IndicatorMotionDirection selectedIndicatorMotionDirection
+        READ selectedIndicatorMotionDirection
+        NOTIFY selectedIndicatorMotionDirectionChanged)
     /**
      * @brief Whether selected-indicator animation is enabled.
      * zh_CN: 是否启用选中指示器动画。
      */
-    Q_PROPERTY(
-        bool selectedIndicatorAnimationEnabled READ selectedIndicatorAnimationEnabled WRITE
-            setSelectedIndicatorAnimationEnabled NOTIFY selectedIndicatorAnimationEnabledChanged)
+    Q_PROPERTY(bool selectedIndicatorAnimationEnabled
+        READ selectedIndicatorAnimationEnabled
+        WRITE setSelectedIndicatorAnimationEnabled
+        NOTIFY selectedIndicatorAnimationEnabledChanged)
     /**
      * @brief Whether the selected-item indicator is painted.
      * zh_CN: 是否绘制选中项指示器。
      */
-    Q_PROPERTY(bool selectionIndicatorVisible READ selectionIndicatorVisible WRITE
-                   setSelectionIndicatorVisible NOTIFY selectionIndicatorVisibleChanged)
+    Q_PROPERTY(bool selectionIndicatorVisible
+        READ selectionIndicatorVisible
+        WRITE setSelectionIndicatorVisible
+        NOTIFY selectionIndicatorVisibleChanged)
 
     /**
      * @brief Whether the control frame border is painted.
      * zh_CN: 是否绘制控件外框边线。
      */
-    Q_PROPERTY(
-        bool borderVisible READ borderVisible WRITE setBorderVisible NOTIFY borderVisibleChanged)
+    Q_PROPERTY(bool borderVisible READ borderVisible WRITE setBorderVisible NOTIFY borderVisibleChanged)
     /**
      * @brief Whether the control background is painted.
      * zh_CN: 是否绘制控件背景。
      */
-    Q_PROPERTY(bool backgroundVisible READ backgroundVisible WRITE setBackgroundVisible NOTIFY
-                   backgroundVisibleChanged)
+    Q_PROPERTY(bool backgroundVisible READ backgroundVisible WRITE setBackgroundVisible NOTIFY backgroundVisibleChanged)
     /**
      * @brief Custom widget hosted in the ListView header area.
      * zh_CN: 承载在 ListView 头部区域的自定义控件。
@@ -132,26 +132,25 @@ public:
      * @brief Text shown when the model has no rows to present.
      * zh_CN: model 没有可展示行时显示的占位文本。
      */
-    Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY
-                   placeholderTextChanged)
+    Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY placeholderTextChanged)
     /**
      * @brief Whether drag reordering is enabled.
      * zh_CN: 是否启用拖拽重排。
      */
-    Q_PROPERTY(bool canReorderItems READ canReorderItems WRITE setCanReorderItems NOTIFY
-                   canReorderItemsChanged)
+    Q_PROPERTY(bool canReorderItems READ canReorderItems WRITE setCanReorderItems NOTIFY canReorderItemsChanged)
     /**
      * @brief Whether boundary wheel input may continue to an enclosing scroller.
      * zh_CN: 边界滚轮输入是否允许继续传递给外层滚动容器。
      */
-    Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE
-                   setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
+    Q_PROPERTY(bool scrollChainingEnabled
+        READ isScrollChainingEnabled
+        WRITE setScrollChainingEnabled
+        NOTIFY scrollChainingEnabledChanged)
     /**
      * @brief Whether section headers are enabled for grouped rows.
      * zh_CN: 是否为分组行启用 section header。
      */
-    Q_PROPERTY(bool sectionEnabled READ sectionEnabled WRITE setSectionEnabled NOTIFY
-                   sectionEnabledChanged)
+    Q_PROPERTY(bool sectionEnabled READ sectionEnabled WRITE setSectionEnabled NOTIFY sectionEnabledChanged)
 
     explicit ListView(QWidget* parent = nullptr);
     ~ListView() override;
@@ -222,10 +221,7 @@ public:
 
     // --- Selected indicator motion API ---
     qreal selectedIndicatorProgress() const { return m_selectedIndicatorProgress; }
-    IndicatorMotionDirection selectedIndicatorMotionDirection() const
-    {
-        return m_selectedIndicatorMotionDirection;
-    }
+    IndicatorMotionDirection selectedIndicatorMotionDirection() const { return m_selectedIndicatorMotionDirection; }
     /** 控制 selected indicator 过渡动画；关闭后选择变更直接落到目标几何，便于确定性测试。 */
     bool selectedIndicatorAnimationEnabled() const { return m_selectedIndicatorAnimationEnabled; }
     bool isSelectedIndicatorAnimationEnabled() const { return selectedIndicatorAnimationEnabled(); }
@@ -300,8 +296,7 @@ protected:
     void leaveEvent(QEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     void currentChanged(const QModelIndex& current, const QModelIndex& previous) override;
-    void selectionChanged(const QItemSelection& selected,
-                          const QItemSelection& deselected) override;
+    void selectionChanged(const QItemSelection& selected, const QItemSelection& deselected) override;
     void scrollContentsBy(int dx, int dy) override;
     int verticalOffset() const override;
     int horizontalOffset() const override;
@@ -342,21 +337,18 @@ private:
     bool usesRevealSelectedIndicators() const;
     QRectF selectedIndicatorBaseRect(const QModelIndex& index) const;
     QRectF revealedSelectedIndicatorRect(const QRectF& baseRect, qreal progress) const;
-    QRectF interpolatedSelectedIndicatorRect(const QRectF& previous, const QRectF& target,
-                                             qreal progress) const;
+    QRectF interpolatedSelectedIndicatorRect(const QRectF& previous, const QRectF& target, qreal progress) const;
     IndicatorMotionDirection classifySelectedIndicatorDirection(const QModelIndex& previous,
-                                                                const QModelIndex& current) const;
+        const QModelIndex& current) const;
     void startSelectedIndicatorAnimation(bool animated);
-    void syncMultiSelectedIndicators(const QItemSelection& selected,
-                                     const QItemSelection& deselected);
+    void syncMultiSelectedIndicators(const QItemSelection& selected, const QItemSelection& deselected);
     void startMultiSelectedIndicatorReveal(const QModelIndex& index);
     qreal multiSelectedIndicatorProgress(const QModelIndex& index) const;
     void setSelectedIndicatorProgress(qreal progress);
     void setSelectedIndicatorMotionDirection(IndicatorMotionDirection direction);
     void refreshSelectedIndicatorGeometry(bool snapToTarget);
     void paintSelectedIndicator(QPainter& painter) const;
-    void paintIndicatorRect(QPainter& painter, const QRectF& indicatorRect,
-                            qreal opacity = 1.0) const;
+    void paintIndicatorRect(QPainter& painter, const QRectF& indicatorRect, qreal opacity = 1.0) const;
 
     SelectionMode m_selectionMode = SelectionMode::Single;
     Typography::FontRole m_fontRole = Typography::FontRole::Body;
@@ -389,9 +381,8 @@ private:
     QPoint m_dragStartPos;
     QPoint m_dragCurrentPos;
     QPixmap m_dragPixmap;
-    QHash<int, qreal> m_dragOffsets; // row → current Y offset in px. zh_CN: row → 当前 Y 位移。
-    QHash<int, QVariantAnimation*>
-        m_dragAnims; // row → displacement animation. zh_CN: row → 位移动画。
+    QHash<int, qreal> m_dragOffsets;            // row → current Y offset in px. zh_CN: row → 当前 Y 位移。
+    QHash<int, QVariantAnimation*> m_dragAnims; // row → displacement animation. zh_CN: row → 位移动画。
     mutable bool m_paintingWithOffsets = false;
 
     // --- Section ---

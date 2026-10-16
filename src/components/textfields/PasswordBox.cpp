@@ -226,7 +226,7 @@ void PasswordBox::initializeRevealButton()
     m_revealButton->setFocusPolicy(Qt::NoFocus);
     m_revealButton->setFixedSize(kButtonWidth, kButtonHeight);
     m_revealButton->setIconGlyph(Typography::Icons::View, Typography::IconSize::Standard,
-                                 Typography::FontFamily::FluentIcons);
+        Typography::FontFamily::FluentIcons);
     m_revealButton->installEventFilter(this);
     m_buttonLayout->addWidget(m_revealButton);
 
@@ -270,8 +270,7 @@ void PasswordBox::updateRevealButtonState()
     m_revealButton->setVisible(visible);
     m_revealButton->setEnabled(visible);
     m_revealButton->setIconGlyph(m_peekActive ? Typography::Icons::Hide : Typography::Icons::View,
-                                 Typography::IconSize::Standard,
-                                 Typography::FontFamily::FluentIcons);
+        Typography::IconSize::Standard, Typography::FontFamily::FluentIcons);
     updateRevealButtonGeometry();
 }
 
@@ -297,9 +296,8 @@ void PasswordBox::updateHeaderTextMargins()
 
 void PasswordBox::updateEchoMode()
 {
-    const bool revealVisible =
-        m_revealMode == PasswordRevealMode::Visible ||
-        (m_revealMode == PasswordRevealMode::Peek && m_peekActive && canPeekReveal());
+    const bool revealVisible = m_revealMode == PasswordRevealMode::Visible
+        || (m_revealMode == PasswordRevealMode::Peek && m_peekActive && canPeekReveal());
     setEchoMode(revealVisible ? QLineEdit::Normal : QLineEdit::Password);
 }
 
@@ -389,8 +387,7 @@ void PasswordBox::paintHeader(QPainter& painter)
     const auto& colors = themeColorsRef();
     painter.setPen(isEnabled() ? colors.textPrimary : colors.textDisabled);
     const QRect headerRect(0, 0, width(), kHeaderHeight);
-    painter.drawText(
-        headerRect, Qt::AlignLeft | Qt::AlignVCenter,
+    painter.drawText(headerRect, Qt::AlignLeft | Qt::AlignVCenter,
         painter.fontMetrics().elidedText(m_header, Qt::ElideRight, headerRect.width()));
 }
 

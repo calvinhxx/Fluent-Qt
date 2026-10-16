@@ -53,8 +53,7 @@ public:
     quint64 requiredBytes(const QRectF& source, qreal devicePixelRatio) const;
     /** @brief Renders dirty visible scenes within the aggregate byte limit.
      * zh_CN: 在总显存限额内更新可见且变脏的场景。 */
-    bool prepareFrame(QOpenGLContext* context, const QRectF& source, qreal devicePixelRatio,
-                      quint64 maximumBytes);
+    bool prepareFrame(QOpenGLContext* context, const QRectF& source, qreal devicePixelRatio, quint64 maximumBytes);
     /** @brief Composes over a borrowed bottom-up RGBA texture; zero means failure.
      * The result is borrowed and expires on resize, context loss or cache release.
      * zh_CN: 在借用的下原点 RGBA 纹理上合成；失败返回零。结果仅被借用，尺寸改变、

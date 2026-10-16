@@ -152,16 +152,14 @@ void FluentMenuBar::paintEvent(QPaintEvent*)
         if (fill.isValid() && fill.alpha() > 0) {
             painter.setPen(Qt::NoPen);
             painter.setBrush(fill);
-            painter.drawRoundedRect(itemRect, currentMetrics.cornerRadius,
-                                    currentMetrics.cornerRadius);
+            painter.drawRoundedRect(itemRect, currentMetrics.cornerRadius, currentMetrics.cornerRadius);
         }
 
         const QColor textColor = isEnabled ? colors.textPrimary : colors.textDisabled;
         painter.setPen(textColor);
-        const QRect textRect = itemRect.adjusted(currentMetrics.horizontalPadding, 0,
-                                                 -currentMetrics.horizontalPadding, 0);
-        painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft | Qt::TextSingleLine,
-                         displayText(action));
+        const QRect textRect = itemRect.adjusted(currentMetrics.horizontalPadding, 0, -currentMetrics.horizontalPadding,
+            0);
+        painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft | Qt::TextSingleLine, displayText(action));
     }
 }
 
@@ -294,8 +292,9 @@ void FluentMenuBar::keyPressEvent(QKeyEvent* event)
 
     if (event->modifiers().testFlag(Qt::AltModifier)) {
         QString key = event->text().left(1).toUpper();
-        if (key.isEmpty() && ((event->key() >= Qt::Key_A && event->key() <= Qt::Key_Z) ||
-                              (event->key() >= Qt::Key_0 && event->key() <= Qt::Key_9))) {
+        if (key.isEmpty()
+            && ((event->key() >= Qt::Key_A && event->key() <= Qt::Key_Z)
+                || (event->key() >= Qt::Key_0 && event->key() <= Qt::Key_9))) {
             // Windows synthetic/system-key delivery can retain the Latin key
             // code while omitting text(). Keep mnemonic routing deterministic.
             // zh_CN: Windows 的合成/系统按键事件可能保留拉丁键码却省略
@@ -371,8 +370,8 @@ bool FluentMenuBar::eventFilter(QObject* watched, QEvent* event)
             break;
         }
     }
-    if ((event->type() == QEvent::Hide || event->type() == QEvent::Close) && m_openAction &&
-        watched == m_openAction->menu()) {
+    if ((event->type() == QEvent::Hide || event->type() == QEvent::Close) && m_openAction
+        && watched == m_openAction->menu()) {
         m_openAction = nullptr;
         m_hoveredAction = nullptr;
         m_pressedAction = nullptr;
@@ -422,16 +421,14 @@ void FluentMenuBar::ensureLayout() const
     const Metrics currentMetrics = metrics();
     const QFontMetrics fontMetrics(font());
     int x = contentsRect().left();
-    const int y = contentsRect().top() +
-                  (qMax(currentMetrics.rowHeight, height()) - currentMetrics.itemHeight) / 2;
+    const int y = contentsRect().top() + (qMax(currentMetrics.rowHeight, height()) - currentMetrics.itemHeight) / 2;
 
     for (QAction* action : actions()) {
         if (!action || !action->isVisible())
             continue;
 
         const int textWidth = fontMetrics.horizontalAdvance(displayText(action));
-        const int itemWidth =
-            qMax(currentMetrics.itemHeight, textWidth + currentMetrics.horizontalPadding * 2);
+        const int itemWidth = qMax(currentMetrics.itemHeight, textWidth + currentMetrics.horizontalPadding * 2);
         m_actionRects.insert(action, QRect(x, y, itemWidth, currentMetrics.itemHeight));
         x += itemWidth + currentMetrics.itemSpacing;
     }

@@ -13,14 +13,13 @@ namespace {
 
 QMargins normalizedRadii(const QMargins& radii)
 {
-    return QMargins(qMax(0, radii.left()), qMax(0, radii.top()), qMax(0, radii.right()),
-                    qMax(0, radii.bottom()));
+    return QMargins(qMax(0, radii.left()), qMax(0, radii.top()), qMax(0, radii.right()), qMax(0, radii.bottom()));
 }
 
 QMargins adjustedRadii(const QMargins& radii, int delta)
 {
-    return normalizedRadii(QMargins(radii.left() + delta, radii.top() + delta,
-                                    radii.right() + delta, radii.bottom() + delta));
+    return normalizedRadii(
+        QMargins(radii.left() + delta, radii.top() + delta, radii.right() + delta, radii.bottom() + delta));
 }
 
 QPainterPath roundedRectPath(const QRectF& rect, const QMargins& radii)
@@ -65,9 +64,14 @@ QPainterPath roundedRectPath(const QRectF& rect, const QMargins& radii)
     return path;
 }
 
-void drawCenteredIconGlyph(QPainter& painter, const QString& glyph, const QString& fontFamily,
-                           int pixelSize, const QRectF& targetRect, const QPoint& offset,
-                           qreal scale, qreal rotation)
+void drawCenteredIconGlyph(QPainter& painter,
+    const QString& glyph,
+    const QString& fontFamily,
+    int pixelSize,
+    const QRectF& targetRect,
+    const QPoint& offset,
+    qreal scale,
+    qreal rotation)
 {
     const bool usesFluentIcons = fontFamily == Typography::FontFamily::FluentIcons;
     const QRectF paintedRect = targetRect.translated(QPointF(offset.x(), offset.y()));
@@ -353,19 +357,15 @@ QSize Button::sizeHint() const
 
     // 1. Padding from spacing tokens. zh_CN: 基于 Token 计算内边距。
     // Horizontal padding: Small(8px), Standard(12px), Large(16px). zh_CN: 水平内边距。
-    int hPadding = (m_size == Small)
-                       ? spacing.small
-                       : (m_size == Large ? spacing.standard : spacing.padding.controlH);
+    int hPadding = (m_size == Small) ? spacing.small : (m_size == Large ? spacing.standard : spacing.padding.controlH);
     // Vertical padding: Small(4px), Standard(6px), Large(8px). zh_CN: 垂直内边距。
-    int vPadding = (m_size == Small) ? spacing.gap.tight
-                                     : (m_size == Large ? spacing.small : spacing.padding.controlV);
+    int vPadding = (m_size == Small) ? spacing.gap.tight : (m_size == Large ? spacing.small : spacing.padding.controlV);
     // Icon gap: Small(4px), Standard(8px). zh_CN: 图标间距。
     int iconGap = (m_size == Small) ? spacing.gap.tight : spacing.gap.normal;
 
     const QString txt = text();
-    const QSize textSize = txt.contains(QLatin1Char('\n'))
-                               ? fm.size(0, txt)
-                               : QSize(fm.horizontalAdvance(txt), fm.height());
+    const QSize textSize =
+        txt.contains(QLatin1Char('\n')) ? fm.size(0, txt) : QSize(fm.horizontalAdvance(txt), fm.height());
 
     // 2. Include every explicit text line in the preferred height.
     // zh_CN: 建议高度包含全部显式换行的文本。
@@ -438,8 +438,7 @@ void Button::paintButton(InteractionState state)
             bgColor = colors.accentSecondary;
         if (state == Pressed) {
             bgColor = colors.accentTertiary;
-            borderColor =
-                Qt::transparent; // Border flattens while pressed. zh_CN: 按下时边框扁平化。
+            borderColor = Qt::transparent; // Border flattens while pressed. zh_CN: 按下时边框扁平化。
         }
     } else if (m_style == Subtle) {
         bgColor = Qt::transparent;
@@ -450,9 +449,7 @@ void Button::paintButton(InteractionState state)
         if (state == Pressed)
             bgColor = colors.subtleTertiary;
         if (checked && state == Rest)
-            bgColor =
-                colors
-                    .subtleSecondary; // Checked rest keeps a subtle fill. zh_CN: 选中态默认带一点背景。
+            bgColor = colors.subtleSecondary; // Checked rest keeps a subtle fill. zh_CN: 选中态默认带一点背景。
     } else {
         bgColor = colors.controlDefault;
         textColor = colors.textPrimary;
@@ -461,10 +458,8 @@ void Button::paintButton(InteractionState state)
             bgColor = colors.controlSecondary;
         if (state == Pressed) {
             bgColor = colors.controlTertiary;
-            borderColor =
-                colors
-                    .strokeDivider; // Pressed border fades and flattens. zh_CN: 按下时边框颜色变淡且扁平。
-            textColor = colors.textSecondary; // Text dims slightly. zh_CN: 文字稍微变淡。
+            borderColor = colors.strokeDivider; // Pressed border fades and flattens. zh_CN: 按下时边框颜色变淡且扁平。
+            textColor = colors.textSecondary;   // Text dims slightly. zh_CN: 文字稍微变淡。
         }
     }
 
@@ -489,8 +484,7 @@ void Button::paintButton(InteractionState state)
     painter.drawPath(surfacePath);
 
     if (borderColor != Qt::transparent) {
-        const auto borderStroke =
-            fluent::painting::DpiPaintMetrics(painter).alignedStroke(surfaceRect, 1.0);
+        const auto borderStroke = fluent::painting::DpiPaintMetrics(painter).alignedStroke(surfaceRect, 1.0);
         painter.setBrush(Qt::NoBrush);
         painter.setPen(QPen(borderColor, borderStroke.width));
         painter.drawPath(roundedRectPath(borderStroke.rect, radii));
@@ -506,28 +500,25 @@ void Button::paintButton(InteractionState state)
         painter.setBrush(Qt::NoBrush);
 
         // Restore the 1.5px inset. zh_CN: 恢复为 1.5 像素内缩。
-        painter.drawPath(
-            roundedRectPath(surfaceRect.adjusted(1.5, 1.5, -1.5, -1.5), adjustedRadii(radii, -1)));
+        painter.drawPath(roundedRectPath(surfaceRect.adjusted(1.5, 1.5, -1.5, -1.5), adjustedRadii(radii, -1)));
     }
 
     // 4. Lay out and paint the icon and text using token gaps. zh_CN: 使用 Token 间距计算并绘制图标和文字。
     QString txt = (m_layout == IconOnly) ? "" : text();
     bool hasIconFont = !m_iconGlyph.isEmpty();
     const qreal targetDpr = painter.device()
-                                ? qMax<qreal>(1.0, painter.device()->devicePixelRatioF())
-                                : qMax<qreal>(1.0, devicePixelRatioF());
+        ? qMax<qreal>(1.0, painter.device()->devicePixelRatioF())
+        : qMax<qreal>(1.0, devicePixelRatioF());
     QWindow* targetWindow = window() ? window()->windowHandle() : nullptr;
-    QPixmap pix =
-        (m_layout == TextOnly || hasIconFont || icon().isNull())
-            ? QPixmap()
-            : fluentIconPixmapForLogicalExtent(icon(), iconSize(), targetDpr, targetWindow);
+    QPixmap pix = (m_layout == TextOnly || hasIconFont || icon().isNull())
+        ? QPixmap()
+        : fluentIconPixmapForLogicalExtent(icon(), iconSize(), targetDpr, targetWindow);
     int gap = (m_size == Small) ? spacing.gap.tight : spacing.gap.normal;
 
     QFontMetrics fm = painter.fontMetrics();
     // horizontalAdvance treats newlines as part of one line, displacing adjacent icons.
     // zh_CN: horizontalAdvance 将换行文本按一行测量，会把相邻图标挤出按钮。
-    int txtWidth =
-        txt.contains(QLatin1Char('\n')) ? fm.size(0, txt).width() : fm.horizontalAdvance(txt);
+    int txtWidth = txt.contains(QLatin1Char('\n')) ? fm.size(0, txt).width() : fm.horizontalAdvance(txt);
 
     // Icon width: prefer the icon font, else the regular icon. zh_CN: 优先使用 iconfont，否则使用普通图标。
     int iconWidth = 0;
@@ -538,8 +529,7 @@ void Button::paintButton(InteractionState state)
         iconWidth = pix.width() / dpr;
     }
 
-    int totalContentWidth =
-        txtWidth + iconWidth + ((!txt.isEmpty() && (hasIconFont || !pix.isNull())) ? gap : 0);
+    int totalContentWidth = txtWidth + iconWidth + ((!txt.isEmpty() && (hasIconFont || !pix.isNull())) ? gap : 0);
 
     QRectF contentRect = surfaceRect;
     // Fluent nudges only the icon/text content down while pressed; moving the
@@ -554,8 +544,7 @@ void Button::paintButton(InteractionState state)
 
     painter.setPen(textColor);
     painter.setRenderHint(
-        QPainter::
-            TextAntialiasing); // Keep icon-font glyphs antialiased. zh_CN: 确保 iconfont 文字抗锯齿。
+        QPainter::TextAntialiasing); // Keep icon-font glyphs antialiased. zh_CN: 确保 iconfont 文字抗锯齿。
 
     const auto drawIconPixmap = [&](qreal x, qreal y) {
         if (pix.isNull())
@@ -567,8 +556,7 @@ void Button::paintButton(InteractionState state)
             return;
         }
         painter.save();
-        painter.translate(QPointF(x, y) +
-                          QPointF(logicalSize.width() / 2.0, logicalSize.height() / 2.0));
+        painter.translate(QPointF(x, y) + QPointF(logicalSize.width() / 2.0, logicalSize.height() / 2.0));
         painter.rotate(m_iconRotation);
         painter.drawPixmap(QPointF(-logicalSize.width() / 2.0, -logicalSize.height() / 2.0), pix);
         painter.restore();
@@ -577,14 +565,13 @@ void Button::paintButton(InteractionState state)
     if (m_layout == IconAfter) {
         // Text first, icon after. zh_CN: 文本在前，图标在后。
         if (!txt.isEmpty()) {
-            painter.drawText(QRectF(startX, layoutRect.top(), txtWidth, layoutRect.height()),
-                             Qt::AlignCenter, txt);
+            painter.drawText(QRectF(startX, layoutRect.top(), txtWidth, layoutRect.height()), Qt::AlignCenter, txt);
             startX += txtWidth + gap;
         }
         if (hasIconFont) {
             QRectF iconRect(startX, layoutRect.top(), iconWidth, layoutRect.height());
-            drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily, m_iconPixelSize, iconRect,
-                                  m_iconOffset, m_iconScale, m_iconRotation);
+            drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily, m_iconPixelSize, iconRect, m_iconOffset,
+                m_iconScale, m_iconRotation);
             painter.setFont(font());
         } else if (!pix.isNull()) {
             double dpr = pix.devicePixelRatio();
@@ -595,8 +582,8 @@ void Button::paintButton(InteractionState state)
         // Icon first, text after (or icon only). zh_CN: 图标在前，文本在后（或仅图标）。
         if (hasIconFont) {
             QRectF iconRect(startX, layoutRect.top(), iconWidth, layoutRect.height());
-            drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily, m_iconPixelSize, iconRect,
-                                  m_iconOffset, m_iconScale, m_iconRotation);
+            drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily, m_iconPixelSize, iconRect, m_iconOffset,
+                m_iconScale, m_iconRotation);
             painter.setFont(font());
             startX += iconWidth + gap;
         } else if (!pix.isNull()) {
@@ -606,8 +593,7 @@ void Button::paintButton(InteractionState state)
             startX += iconWidth + gap;
         }
         if (!txt.isEmpty()) {
-            painter.drawText(QRectF(startX, layoutRect.top(), txtWidth, layoutRect.height()),
-                             Qt::AlignCenter, txt);
+            painter.drawText(QRectF(startX, layoutRect.top(), txtWidth, layoutRect.height()), Qt::AlignCenter, txt);
         }
     }
 }

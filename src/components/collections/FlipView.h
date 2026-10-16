@@ -38,7 +38,10 @@ class FlipView : public QWidget, public FluentElement, public QMLPlus {
      * @brief Whether previous and next navigation buttons are visible.
      * zh_CN: 上一项和下一项导航按钮是否可见。
      */
-    Q_PROPERTY(bool showNavigationButtons READ showNavigationButtons WRITE setShowNavigationButtons NOTIFY showNavigationButtonsChanged)
+    Q_PROPERTY(bool showNavigationButtons
+        READ showNavigationButtons
+        WRITE setShowNavigationButtons
+        NOTIFY showNavigationButtonsChanged)
     /**
      * @brief Whether the page indicator is visible.
      * zh_CN: 页码指示器是否可见。
@@ -186,10 +189,10 @@ private:
     // Wheel / trackpad input. zh_CN: 滚轮/触控板。
     QElapsedTimer m_wheelCooldown;
     int m_gestureAccum = 0;         // Phase-based accumulation. zh_CN: phase-based 累积。
-    bool m_gestureConsumed = false;  // Phase-based gesture consumed. zh_CN: phase-based 手势已消费。
-    int m_pendingFlipDir = 0;       // Flip queued during animation (-1=prev, 0=none, 1=next). zh_CN: 动画期间排队的翻页方向。
-    int m_npAccum = 0;              // NoScrollPhase cluster accumulation. zh_CN: NoScrollPhase cluster 累积。
-    bool m_npConsumed = false;      // Current NoScrollPhase cluster consumed. zh_CN: NoScrollPhase 当前 cluster 已消费。
+    bool m_gestureConsumed = false; // Phase-based gesture consumed. zh_CN: phase-based 手势已消费。
+    int m_pendingFlipDir = 0; // Flip queued during animation (-1=prev, 0=none, 1=next). zh_CN: 动画期间排队的翻页方向。
+    int m_npAccum = 0;        // NoScrollPhase cluster accumulation. zh_CN: NoScrollPhase cluster 累积。
+    bool m_npConsumed = false; // Current NoScrollPhase cluster consumed. zh_CN: NoScrollPhase 当前 cluster 已消费。
     bool m_destroying = false;
 };
 

@@ -12,20 +12,21 @@
 
 namespace fluent::dialogs_flyouts {
 
-using Edge    = AnchorLayout::Edge;
+using Edge = AnchorLayout::Edge;
 using Anchors = AnchorLayout::Anchors;
 
-static constexpr int kButtonMinWidth  = 96;
-static constexpr int kDialogPadding   = Spacing::Padding::Dialog; // 24
-static constexpr int kContentGap      = Spacing::Medium;          // 12
-static constexpr int kButtonGap       = Spacing::Gap::Normal;     // 8
-static constexpr int kMinDialogWidth  = 320;
+static constexpr int kButtonMinWidth = 96;
+static constexpr int kDialogPadding = Spacing::Padding::Dialog; // 24
+static constexpr int kContentGap = Spacing::Medium;             // 12
+static constexpr int kButtonGap = Spacing::Gap::Normal;         // 8
+static constexpr int kMinDialogWidth = 320;
 
 // ── Construction. zh_CN: 构造 ────────────────────────────────────────────────
 
-ContentDialog::ContentDialog(QWidget* parent) : Dialog(parent) {
-    setSmokeEnabled(true);   // Modal dialogs dim the background by default. zh_CN: 模态蒙层对话框默认开启蒙层。
-    setDragEnabled(false);   // Modal dialogs are not draggable by default. zh_CN: 模态蒙层对话框默认不可拖拽。
+ContentDialog::ContentDialog(QWidget* parent) : Dialog(parent)
+{
+    setSmokeEnabled(true); // Modal dialogs dim the background by default. zh_CN: 模态蒙层对话框默认开启蒙层。
+    setDragEnabled(false); // Modal dialogs are not draggable by default. zh_CN: 模态蒙层对话框默认不可拖拽。
     setupInternalLayout();
     setMinimumWidth(kMinDialogWidth + 2 * shadowSize());
     onThemeUpdated();
@@ -33,18 +34,18 @@ ContentDialog::ContentDialog(QWidget* parent) : Dialog(parent) {
 
 // ── Internal layout (AnchorLayout driven). zh_CN: 内部布局（AnchorLayout 驱动）──
 
-void ContentDialog::setupInternalLayout() {
+void ContentDialog::setupInternalLayout()
+{
     auto* anchorLayout = new AnchorLayout(this);
 
     // --- Title ---
     m_titleLabel = new fluent::textfields::Label(this);
     m_titleLabel->setFluentTypography(Typography::FontRole::Subtitle);
-    m_titleLabel->setTextColorRole(
-        fluent::textfields::Label::TextColorRole::Primary);
+    m_titleLabel->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
     m_titleLabel->setWordWrap(true);
     m_titleLabel->setVisible(false);
-    m_titleLabel->anchors()->top   = {this, Edge::Top,   kDialogPadding};
-    m_titleLabel->anchors()->left  = {this, Edge::Left,  kDialogPadding};
+    m_titleLabel->anchors()->top = {this, Edge::Top, kDialogPadding};
+    m_titleLabel->anchors()->left = {this, Edge::Left, kDialogPadding};
     m_titleLabel->anchors()->right = {this, Edge::Right, -kDialogPadding};
     anchorLayout->addWidget(m_titleLabel);
 
@@ -53,8 +54,8 @@ void ContentDialog::setupInternalLayout() {
     m_buttonBar->setFixedHeight(m_buttonBarHeight);
 
     Anchors barAnchors;
-    barAnchors.left   = {this, Edge::Left,   0};
-    barAnchors.right  = {this, Edge::Right,  0};
+    barAnchors.left = {this, Edge::Left, 0};
+    barAnchors.right = {this, Edge::Right, 0};
     barAnchors.bottom = {this, Edge::Bottom, 0};
     anchorLayout->addAnchoredWidget(m_buttonBar, barAnchors);
 
@@ -68,22 +69,22 @@ void ContentDialog::setupInternalLayout() {
     btnLayout->setContentsMargins(hPad, vPad, hPad, vPad);
     btnLayout->setSpacing(kButtonGap);
 
-    m_primaryBtn   = new fluent::basicinput::Button(m_buttonBar);
+    m_primaryBtn = new fluent::basicinput::Button(m_buttonBar);
     m_secondaryBtn = new fluent::basicinput::Button(m_buttonBar);
-    m_closeBtn     = new fluent::basicinput::Button(m_buttonBar);
+    m_closeBtn = new fluent::basicinput::Button(m_buttonBar);
 
-    m_primaryBtn  ->setMinimumWidth(kButtonMinWidth);
+    m_primaryBtn->setMinimumWidth(kButtonMinWidth);
     m_secondaryBtn->setMinimumWidth(kButtonMinWidth);
-    m_closeBtn    ->setMinimumWidth(kButtonMinWidth);
+    m_closeBtn->setMinimumWidth(kButtonMinWidth);
 
     // WinUI action rows divide the available width between the visible
     // actions. Hidden buttons are automatically excluded by QBoxLayout, so a
     // two-action confirmation remains balanced without special-case code.
     // zh_CN: WinUI 操作栏会在可见操作之间等分可用宽度；QBoxLayout 会自动排除隐藏
     // 按钮，因此双按钮确认框无需特判也能保持均衡。
-    btnLayout->addWidget(m_primaryBtn,   1);
+    btnLayout->addWidget(m_primaryBtn, 1);
     btnLayout->addWidget(m_secondaryBtn, 1);
-    btnLayout->addWidget(m_closeBtn,     1);
+    btnLayout->addWidget(m_closeBtn, 1);
 
     connect(m_primaryBtn, &fluent::basicinput::Button::clicked, this, [this]() {
         QPointer<ContentDialog> guard(this);
@@ -109,8 +110,12 @@ void ContentDialog::setupInternalLayout() {
 
 // ── Properties. zh_CN: 属性 ──────────────────────────────────────────────────
 
-QString ContentDialog::title() const { return m_titleLabel->text(); }
-void ContentDialog::setTitle(const QString& text) {
+QString ContentDialog::title() const
+{
+    return m_titleLabel->text();
+}
+void ContentDialog::setTitle(const QString& text)
+{
     if (m_titleLabel->text() == text)
         return;
     m_titleLabel->setText(text);
@@ -119,8 +124,12 @@ void ContentDialog::setTitle(const QString& text) {
     emit titleChanged(text);
 }
 
-QString ContentDialog::primaryButtonText() const { return m_primaryBtn->text(); }
-void ContentDialog::setPrimaryButtonText(const QString& text) {
+QString ContentDialog::primaryButtonText() const
+{
+    return m_primaryBtn->text();
+}
+void ContentDialog::setPrimaryButtonText(const QString& text)
+{
     if (m_primaryBtn->text() == text)
         return;
     m_primaryBtn->setText(text);
@@ -128,8 +137,12 @@ void ContentDialog::setPrimaryButtonText(const QString& text) {
     emit primaryButtonTextChanged(text);
 }
 
-QString ContentDialog::secondaryButtonText() const { return m_secondaryBtn->text(); }
-void ContentDialog::setSecondaryButtonText(const QString& text) {
+QString ContentDialog::secondaryButtonText() const
+{
+    return m_secondaryBtn->text();
+}
+void ContentDialog::setSecondaryButtonText(const QString& text)
+{
     if (m_secondaryBtn->text() == text)
         return;
     m_secondaryBtn->setText(text);
@@ -137,8 +150,12 @@ void ContentDialog::setSecondaryButtonText(const QString& text) {
     emit secondaryButtonTextChanged(text);
 }
 
-QString ContentDialog::closeButtonText() const { return m_closeBtn->text(); }
-void ContentDialog::setCloseButtonText(const QString& text) {
+QString ContentDialog::closeButtonText() const
+{
+    return m_closeBtn->text();
+}
+void ContentDialog::setCloseButtonText(const QString& text)
+{
     if (m_closeBtn->text() == text)
         return;
     m_closeBtn->setText(text);
@@ -146,8 +163,12 @@ void ContentDialog::setCloseButtonText(const QString& text) {
     emit closeButtonTextChanged(text);
 }
 
-int  ContentDialog::defaultButton() const { return m_defaultButton; }
-void ContentDialog::setDefaultButton(int btn) {
+int ContentDialog::defaultButton() const
+{
+    return m_defaultButton;
+}
+void ContentDialog::setDefaultButton(int btn)
+{
     if (m_defaultButton == btn)
         return;
     m_defaultButton = btn;
@@ -155,8 +176,12 @@ void ContentDialog::setDefaultButton(int btn) {
     emit defaultButtonChanged(btn);
 }
 
-QWidget* ContentDialog::content() const { return m_contentWidget.data(); }
-void ContentDialog::setContent(QWidget* widget) {
+QWidget* ContentDialog::content() const
+{
+    return m_contentWidget.data();
+}
+void ContentDialog::setContent(QWidget* widget)
+{
     if (widget == m_contentWidget)
         return;
 
@@ -173,7 +198,8 @@ void ContentDialog::setContent(QWidget* widget) {
     }
 }
 
-void ContentDialog::setButtonBarHeight(int px) {
+void ContentDialog::setButtonBarHeight(int px)
+{
     if (px <= 0 || px == m_buttonBarHeight)
         return;
     m_buttonBarHeight = px;
@@ -188,36 +214,46 @@ void ContentDialog::setButtonBarHeight(int px) {
 
 // ── Internal refresh. zh_CN: 内部刷新 ────────────────────────────────────────
 
-void ContentDialog::updateButtonBar() {
-    m_primaryBtn  ->setVisible(!m_primaryBtn->text().isEmpty());
+void ContentDialog::updateButtonBar()
+{
+    m_primaryBtn->setVisible(!m_primaryBtn->text().isEmpty());
     m_secondaryBtn->setVisible(!m_secondaryBtn->text().isEmpty());
-    m_closeBtn    ->setVisible(!m_closeBtn->text().isEmpty());
+    m_closeBtn->setVisible(!m_closeBtn->text().isEmpty());
 
     // Reset all styles, then give the default button the accent style.
     // zh_CN: 重置风格，再给 defaultButton 应用 Accent。
-    m_primaryBtn  ->setFluentStyle(fluent::basicinput::Button::Standard);
+    m_primaryBtn->setFluentStyle(fluent::basicinput::Button::Standard);
     m_secondaryBtn->setFluentStyle(fluent::basicinput::Button::Standard);
-    m_closeBtn    ->setFluentStyle(fluent::basicinput::Button::Standard);
+    m_closeBtn->setFluentStyle(fluent::basicinput::Button::Standard);
     switch (m_defaultButton) {
-        case Primary:   m_primaryBtn  ->setFluentStyle(fluent::basicinput::Button::Accent); break;
-        case Secondary: m_secondaryBtn->setFluentStyle(fluent::basicinput::Button::Accent); break;
-        case Close:     m_closeBtn    ->setFluentStyle(fluent::basicinput::Button::Accent); break;
-        default: break;
+    case Primary:
+        m_primaryBtn->setFluentStyle(fluent::basicinput::Button::Accent);
+        break;
+    case Secondary:
+        m_secondaryBtn->setFluentStyle(fluent::basicinput::Button::Accent);
+        break;
+    case Close:
+        m_closeBtn->setFluentStyle(fluent::basicinput::Button::Accent);
+        break;
+    default:
+        break;
     }
 
     // isVisible() is unusable here: before the dialog is shown every child
     // reports false. Test the text instead, which matches the setVisible call.
     // zh_CN: 不能用 isVisible() 判断——dialog 未 show() 前子控件恒为 false；
     // 改用文本空判断，与 setVisible 参数等价。
-    const bool anyVisible = !m_primaryBtn->text().isEmpty()
-                         || !m_secondaryBtn->text().isEmpty()
-                         || !m_closeBtn->text().isEmpty();
+    const bool anyVisible = !m_primaryBtn->text().isEmpty() || !m_secondaryBtn->text().isEmpty()
+        || !m_closeBtn->text().isEmpty();
     m_buttonBar->setVisible(anyVisible);
-    if (layout()) layout()->invalidate();
+    if (layout())
+        layout()->invalidate();
 }
 
-void ContentDialog::updateContentAnchors() {
-    if (!m_contentWidget) return;
+void ContentDialog::updateContentAnchors()
+{
+    if (!m_contentWidget)
+        return;
 
     Anchors a;
     // m_titleLabel->isVisible() is unusable before show(): it reports false and
@@ -229,8 +265,8 @@ void ContentDialog::updateContentAnchors() {
         a.top = {m_titleLabel, Edge::Bottom, kContentGap};
     else
         a.top = {this, Edge::Top, kDialogPadding};
-    a.left   = {this, Edge::Left,  kDialogPadding};
-    a.right  = {this, Edge::Right, -kDialogPadding};
+    a.left = {this, Edge::Left, kDialogPadding};
+    a.right = {this, Edge::Right, -kDialogPadding};
     a.bottom = {m_buttonBar, Edge::Top, -kDialogPadding};
 
     if (auto* qp = dynamic_cast<QMLPlus*>(m_contentWidget.data()))
@@ -242,7 +278,8 @@ void ContentDialog::updateContentAnchors() {
 
 // ── Theme. zh_CN: 主题 ───────────────────────────────────────────────────────
 
-void ContentDialog::ensureContentFits() {
+void ContentDialog::ensureContentFits()
+{
     if (!m_contentWidget)
         return;
 
@@ -254,11 +291,9 @@ void ContentDialog::ensureContentFits() {
     }
 
     const int contentWidth = m_contentWidget->width();
-    int requiredHeight = qMax(m_contentWidget->sizeHint().height(),
-                              m_contentWidget->minimumSizeHint().height());
+    int requiredHeight = qMax(m_contentWidget->sizeHint().height(), m_contentWidget->minimumSizeHint().height());
     if (contentWidth > 0 && m_contentWidget->hasHeightForWidth())
-        requiredHeight = qMax(requiredHeight,
-                              m_contentWidget->heightForWidth(contentWidth));
+        requiredHeight = qMax(requiredHeight, m_contentWidget->heightForWidth(contentWidth));
 
     const int missingHeight = requiredHeight - m_contentWidget->height();
     if (missingHeight <= 0)
@@ -278,17 +313,23 @@ void ContentDialog::ensureContentFits() {
     }
 }
 
-void ContentDialog::showEvent(QShowEvent* event) {
+void ContentDialog::showEvent(QShowEvent* event)
+{
     ensureContentFits();
     Dialog::showEvent(event);
 }
 
-void ContentDialog::onThemeUpdated() {
+void ContentDialog::onThemeUpdated()
+{
     Dialog::onThemeUpdated();
-    if (m_titleLabel)  m_titleLabel->onThemeUpdated();
-    if (m_primaryBtn)  m_primaryBtn->onThemeUpdated();
-    if (m_secondaryBtn) m_secondaryBtn->onThemeUpdated();
-    if (m_closeBtn)    m_closeBtn->onThemeUpdated();
+    if (m_titleLabel)
+        m_titleLabel->onThemeUpdated();
+    if (m_primaryBtn)
+        m_primaryBtn->onThemeUpdated();
+    if (m_secondaryBtn)
+        m_secondaryBtn->onThemeUpdated();
+    if (m_closeBtn)
+        m_closeBtn->onThemeUpdated();
     if (m_contentWidget) {
         if (auto* fe = dynamic_cast<FluentElement*>(m_contentWidget.data()))
             fe->onThemeUpdated();
@@ -297,7 +338,8 @@ void ContentDialog::onThemeUpdated() {
 
 // ── Painting: two regions, bgLayer + bgCanvas. zh_CN: 绘制（两区域）──────────
 
-void ContentDialog::paintEvent(QPaintEvent*) {
+void ContentDialog::paintEvent(QPaintEvent*)
+{
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
@@ -319,13 +361,12 @@ void ContentDialog::paintEvent(QPaintEvent*) {
         // Content area (bgLayer). zh_CN: 内容区。
         painter.setPen(Qt::NoPen);
         painter.setBrush(colors.bgLayer);
-        painter.drawRect(QRect(contentRect.left(), contentRect.top(),
-                               contentRect.width(), dividerY - contentRect.top()));
+        painter.drawRect(
+            QRect(contentRect.left(), contentRect.top(), contentRect.width(), dividerY - contentRect.top()));
 
         // Button area (bgCanvas). zh_CN: 按钮区。
         painter.setBrush(colors.bgCanvas);
-        painter.drawRect(QRect(contentRect.left(), dividerY,
-                               contentRect.width(), contentRect.bottom() - dividerY + 1));
+        painter.drawRect(QRect(contentRect.left(), dividerY, contentRect.width(), contentRect.bottom() - dividerY + 1));
 
         // 1px divider. zh_CN: 1px 分割线。
         painter.setPen(QPen(colors.strokeDivider, 1));
@@ -341,7 +382,7 @@ void ContentDialog::paintEvent(QPaintEvent*) {
 
     // Outer border. zh_CN: 外边框。
     painter.setBrush(Qt::NoBrush);
-        painter.setPen(colors.strokeDefault);
+    painter.setPen(colors.strokeDefault);
     painter.drawRoundedRect(contentRect, r, r);
 }
 

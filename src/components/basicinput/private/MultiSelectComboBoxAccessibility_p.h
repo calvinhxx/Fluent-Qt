@@ -7,9 +7,8 @@ class MultiSelectComboBox;
 namespace detail {
 
 void ensureMultiSelectComboBoxAccessibilityFactory();
-void notifyMultiSelectComboBoxOpenChanged(MultiSelectComboBox *box);
-void notifyMultiSelectComboBoxSelectionChanged(MultiSelectComboBox *box,
-                                               bool countChanged);
+void notifyMultiSelectComboBoxOpenChanged(MultiSelectComboBox* box);
+void notifyMultiSelectComboBoxSelectionChanged(MultiSelectComboBox* box, bool countChanged);
 
 } // namespace detail
 } // namespace fluent::basicinput

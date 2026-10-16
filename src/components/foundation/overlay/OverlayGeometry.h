@@ -78,12 +78,10 @@ inline QMargins uniformShadowMargins(int shadowMargin = defaultShadowMargin())
 
 inline QSize visibleCardSize(const QSize& outerSize, int shadowMargin = defaultShadowMargin())
 {
-    return QSize(qMax(0, outerSize.width() - shadowMargin * 2),
-                 qMax(0, outerSize.height() - shadowMargin * 2));
+    return QSize(qMax(0, outerSize.width() - shadowMargin * 2), qMax(0, outerSize.height() - shadowMargin * 2));
 }
 
-inline QSize outerSizeForVisibleCard(const QSize& visibleSize,
-                                     int shadowMargin = defaultShadowMargin())
+inline QSize outerSizeForVisibleCard(const QSize& visibleSize, int shadowMargin = defaultShadowMargin())
 {
     return QSize(visibleSize.width() + shadowMargin * 2, visibleSize.height() + shadowMargin * 2);
 }
@@ -93,27 +91,24 @@ inline QRect visibleCardRect(const QRect& outerRect, int shadowMargin = defaultS
     return outerRect.marginsRemoved(uniformShadowMargins(shadowMargin));
 }
 
-inline QRect visibleCardGeometry(const QRect& outerGeometry,
-                                 int shadowMargin = defaultShadowMargin())
+inline QRect visibleCardGeometry(const QRect& outerGeometry, int shadowMargin = defaultShadowMargin())
 {
     return outerGeometry.marginsRemoved(uniformShadowMargins(shadowMargin));
 }
 
-inline QPoint outerTopLeftForVisibleCard(const QPoint& cardTopLeft,
-                                         int shadowMargin = defaultShadowMargin())
+inline QPoint outerTopLeftForVisibleCard(const QPoint& cardTopLeft, int shadowMargin = defaultShadowMargin())
 {
     return cardTopLeft - QPoint(shadowMargin, shadowMargin);
 }
 
-inline QRect outerGeometryForVisibleCard(const QRect& cardGeometry,
-                                         int shadowMargin = defaultShadowMargin())
+inline QRect outerGeometryForVisibleCard(const QRect& cardGeometry, int shadowMargin = defaultShadowMargin())
 {
     return QRect(outerTopLeftForVisibleCard(cardGeometry.topLeft(), shadowMargin),
-                 outerSizeForVisibleCard(cardGeometry.size(), shadowMargin));
+        outerSizeForVisibleCard(cardGeometry.size(), shadowMargin));
 }
 
-inline bool visibleCardContains(const QRect& outerRect, const QPoint& localPoint,
-                                int shadowMargin = defaultShadowMargin())
+inline bool
+visibleCardContains(const QRect& outerRect, const QPoint& localPoint, int shadowMargin = defaultShadowMargin())
 {
     return visibleCardRect(outerRect, shadowMargin).contains(localPoint);
 }
@@ -160,8 +155,7 @@ inline bool syncInheritedThemeOverride(QWidget* target, const QWidget* source)
     return true;
 }
 
-inline QPoint clampCardTopLeft(const QPoint& cardTopLeft, const QSize& cardSize,
-                               const QRect& bounds, int windowMargin)
+inline QPoint clampCardTopLeft(const QPoint& cardTopLeft, const QSize& cardSize, const QRect& bounds, int windowMargin)
 {
     if (bounds.isEmpty())
         return cardTopLeft;
@@ -205,21 +199,22 @@ inline QRegion roundedRectRegion(const QRect& rect, int radius)
     QRegion region(rect.adjusted(effectiveRadius, 0, -effectiveRadius, 0));
     region += QRegion(rect.adjusted(0, effectiveRadius, 0, -effectiveRadius));
     region += QRegion(QRect(rect.topLeft(), QSize(diameter, diameter)), QRegion::Ellipse);
+    region += QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.top()), QSize(diameter, diameter)),
+        QRegion::Ellipse);
+    region += QRegion(QRect(QPoint(rect.left(), rect.bottom() - diameter + 1), QSize(diameter, diameter)),
+        QRegion::Ellipse);
     region +=
-        QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.top()), QSize(diameter, diameter)),
-                QRegion::Ellipse);
-    region +=
-        QRegion(QRect(QPoint(rect.left(), rect.bottom() - diameter + 1), QSize(diameter, diameter)),
-                QRegion::Ellipse);
-    region += QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.bottom() - diameter + 1),
-                            QSize(diameter, diameter)),
-                      QRegion::Ellipse);
+        QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.bottom() - diameter + 1), QSize(diameter, diameter)),
+            QRegion::Ellipse);
     return region;
 }
 
-inline QPainterPath roundedCornerRectPath(const QRectF& rect, qreal radius, bool roundTopLeft,
-                                          bool roundTopRight, bool roundBottomRight,
-                                          bool roundBottomLeft)
+inline QPainterPath roundedCornerRectPath(const QRectF& rect,
+    qreal radius,
+    bool roundTopLeft,
+    bool roundTopRight,
+    bool roundBottomRight,
+    bool roundBottomLeft)
 {
     QPainterPath path;
     if (rect.isEmpty())

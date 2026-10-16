@@ -153,10 +153,47 @@ automated state and pixel invariants.
 
 ## Local static gate
 
-Run the C++ format contract before committing or pushing, rather than using
-pull-request CI as the first formatter. The check uses clang-format 15.0.0 and
-formats incrementally by complete touched file, so a legacy file may produce a
-larger mechanical diff the first time it is changed.
+Run the C++ format contract before committing or pushing. The check uses
+clang-format 22.1.8 and formats incrementally by complete touched file, so a
+legacy file may produce a larger mechanical diff the first time it is changed.
+The component and compatibility directories follow this contract as of
+2026-10-16.
+
+The [shared rules](../../.clang-format) target 120 columns and use four-space
+continuations. Short declarations stay compact. Long function declarations
+place one parameter on each continuation line and prefer keeping the return
+type with the function name. Long conditions put their operators at the start
+of continuation lines. Existing comment layout and complete string literals
+are preserved, even when they exceed the target width.
+
+Qt properties use clang-format 22's
+[Qt property clause support](https://releases.llvm.org/22.1.0/tools/clang/docs/ClangFormatStyleOptions.html#allowbreakbeforeqtproperty).
+A property that fits stays on one line; a longer property breaks between
+complete clauses, keeping each keyword with its value:
+
+```cpp
+Q_PROPERTY(Typography::FontRole fontStyle READ fontStyle WRITE setFontStyle NOTIFY fontStyleChanged)
+Q_PROPERTY(QString accessibilityDescription
+    READ accessibilityDescription
+    WRITE setAccessibilityDescription
+    NOTIFY accessibilityDescriptionChanged)
+```
+
+Install the pinned formatter in a project-local environment:
+
+```bash
+python3 -m venv .venv-format
+.venv-format/bin/python -m pip install clang-format==22.1.8
+```
+
+On Windows, use `.venv-format\Scripts\python.exe` for the second command. The
+checker discovers this environment automatically. An explicit
+`--clang-format PATH` or `FLUENTQT_CLANG_FORMAT=/absolute/path/to/clang-format`
+overrides it; otherwise the checker falls back to `PATH`. Every selected
+formatter must report exactly version 22.1.8. CI installs the same package
+before running the formatter's contract tests and checking changed files.
+Editors with format-on-save must use this version and the repository's
+`.clang-format` as well.
 
 Check the current working tree before staging, the exact staged snapshots
 before committing, or the committed pull-request diff before pushing:
@@ -173,10 +210,6 @@ copies, then review and stage the result. Keep a large mechanical rewrite in a
 separate `style` commit. `--staged` checks the index blobs and `--changed-from`
 checks the selected committed blobs, so unrelated unstaged edits cannot make
 either check pass.
-
-The formatter must report exactly `clang-format 15.0.0`. Set
-`FLUENTQT_CLANG_FORMAT=/absolute/path/to/clang-format` or pass
-`--clang-format PATH` when that executable is not the default on `PATH`.
 
 Enable the repository hooks once per clone to run the same checker
 automatically:

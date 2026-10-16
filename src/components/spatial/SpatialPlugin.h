@@ -47,8 +47,7 @@ public:
     bool attachView(SpatialView* view);
     /** @brief Creates a caller-owned particle adapter only while active.
      * zh_CN: 仅在激活时创建调用方持有的粒子适配器；不接管源控件。 */
-    ParticleLayer* createParticleLayer(layout::ParticleBackdrop* backdrop,
-                                       QObject* parent = nullptr);
+    ParticleLayer* createParticleLayer(layout::ParticleBackdrop* backdrop, QObject* parent = nullptr);
     /** @brief Prepares a hidden Fluent window while active, without creating a GPU context.
      * zh_CN: 激活时准备隐藏的 Fluent 窗口，不创建 GPU 上下文。 */
     bool prepareWindow(windowing::Window* window);

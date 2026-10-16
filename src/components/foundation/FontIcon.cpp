@@ -6,14 +6,9 @@
 
 namespace fluent {
 
-FontIcon::FontIcon(QWidget* parent)
-    : FontIcon(QString(), parent)
-{
-}
+FontIcon::FontIcon(QWidget* parent) : FontIcon(QString(), parent) {}
 
-FontIcon::FontIcon(const QString& glyph, QWidget* parent)
-    : QWidget(parent),
-      m_glyph(glyph)
+FontIcon::FontIcon(const QString& glyph, QWidget* parent) : QWidget(parent), m_glyph(glyph)
 {
     setAttribute(Qt::WA_TransparentForMouseEvents);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
@@ -91,8 +86,7 @@ void FontIcon::paintEvent(QPaintEvent* event)
         painter.rotate(m_rotation);
         painter.translate(-center);
     }
-    Typography::Icons::paintGlyph(
-        painter, QRectF(rect()), m_glyph, m_iconSize, Qt::AlignCenter);
+    Typography::Icons::paintGlyph(painter, QRectF(rect()), m_glyph, m_iconSize, Qt::AlignCenter);
 }
 
 void FontIcon::changeEvent(QEvent* event)

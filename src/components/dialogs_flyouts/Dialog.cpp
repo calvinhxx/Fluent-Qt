@@ -40,24 +40,22 @@ void refreshFluentDescendants(QWidget* root)
 Dialog::Dialog(QWidget* parent) : QDialog(parent), m_originalParent(parent)
 {
     m_overlayCoordinator = new ::fluent::overlay::OverlayCoordinator(this, this);
-    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this,
-            [this]() {
-                if (!isVisible())
-                    return;
-                positionInOwner();
-                if (auto* smoke = m_overlayCoordinator->scrim()) {
-                    smoke->setSurfaceRadius(qRound(::fluent::overlay::overlaySurfaceRadius(
-                        m_overlayCoordinator->topLevelWidget())));
-                }
-                m_overlayCoordinator->raiseStack();
-            });
+    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this, [this]() {
+        if (!isVisible())
+            return;
+        positionInOwner();
+        if (auto* smoke = m_overlayCoordinator->scrim()) {
+            smoke->setSurfaceRadius(
+                qRound(::fluent::overlay::overlaySurfaceRadius(m_overlayCoordinator->topLevelWidget())));
+        }
+        m_overlayCoordinator->raiseStack();
+    });
 
     // Same-window overlay contract (WinUI ContentDialog / Popup / DrawerView): stay a Qt::Widget
     // child of the owning top-level. Never host Dialog as a native top-level window.
     // zh_CN: 同窗口浮层契约（WinUI ContentDialog / Popup / DrawerView）：保持为 owning top-level 的
     // Qt::Widget 子控件，绝不把 Dialog 做成原生顶层窗口。
-    setWindowFlags(Qt::Widget | Qt::FramelessWindowHint | Qt::CustomizeWindowHint |
-                   Qt::NoDropShadowWindowHint);
+    setWindowFlags(Qt::Widget | Qt::FramelessWindowHint | Qt::CustomizeWindowHint | Qt::NoDropShadowWindowHint);
     attachToOwner();
 
     setAttribute(Qt::WA_TranslucentBackground);
@@ -106,15 +104,13 @@ Dialog::~Dialog()
     }
     if (m_overlayCoordinator->scrim()) {
         m_overlayCoordinator->scrim()->removeEventFilter(this);
-        m_overlayCoordinator->releaseScrim(
-            ::fluent::overlay::OverlayCoordinator::ScrimDeletion::Immediate);
+        m_overlayCoordinator->releaseScrim(::fluent::overlay::OverlayCoordinator::ScrimDeletion::Immediate);
     }
 }
 
 QWidget* Dialog::ownerWidget() const
 {
-    if (QWidget* owner =
-            ::fluent::overlay::resolveOwningTopLevel(m_originalParent, parentWidget())) {
+    if (QWidget* owner = ::fluent::overlay::resolveOwningTopLevel(m_originalParent, parentWidget())) {
         return owner;
     }
     return m_overlayCoordinator->topLevelWidget();
@@ -458,7 +454,7 @@ void Dialog::positionInOwner()
     QPoint next = pos();
     if (m_dim || defaultPlacement || outsideSurface) {
         next = QPoint(surface.left() + (surface.width() - width()) / 2,
-                      surface.top() + (surface.height() - height()) / 2);
+            surface.top() + (surface.height() - height()) / 2);
     }
 
     if (width() <= surface.width())
@@ -640,8 +636,7 @@ void Dialog::hideSmokeOverlay()
 
     overlay->removeEventFilter(this);
     overlay->setModalAndDim(false, false);
-    m_overlayCoordinator->releaseScrim(
-        ::fluent::overlay::OverlayCoordinator::ScrimDeletion::Immediate);
+    m_overlayCoordinator->releaseScrim(::fluent::overlay::OverlayCoordinator::ScrimDeletion::Immediate);
 
     if (owner)
         owner->update(dirtyRect);
@@ -664,8 +659,7 @@ void Dialog::paintEvent(QPaintEvent*)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    const QRect contentRect =
-        rect().adjusted(m_shadowSize, m_shadowSize, -m_shadowSize, -m_shadowSize);
+    const QRect contentRect = rect().adjusted(m_shadowSize, m_shadowSize, -m_shadowSize, -m_shadowSize);
     drawShadow(painter, contentRect);
 
     const auto& colors = themeColorsRef();
@@ -681,8 +675,7 @@ void Dialog::drawShadow(QPainter& painter, const QRect& contentRect)
 {
     // Medium elevation: High stacked on smoke reads as a heavy halo.
     // zh_CN: 用 Medium；High 叠在烟雾上会形成过重暗晕。
-    ::fluent::overlay::paintLayeredShadow(painter, contentRect, themeRadius().overlay,
-                                          themeShadow(Elevation::Medium));
+    ::fluent::overlay::paintLayeredShadow(painter, contentRect, themeRadius().overlay, themeShadow(Elevation::Medium));
 }
 
 } // namespace fluent::dialogs_flyouts

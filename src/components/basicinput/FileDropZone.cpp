@@ -42,9 +42,8 @@ int labelHeight(const textfields::Label* label, int width)
 QColor blend(const QColor& from, const QColor& to, qreal progress)
 {
     return QColor::fromRgbF(from.redF() + (to.redF() - from.redF()) * progress,
-                            from.greenF() + (to.greenF() - from.greenF()) * progress,
-                            from.blueF() + (to.blueF() - from.blueF()) * progress,
-                            from.alphaF() + (to.alphaF() - from.alphaF()) * progress);
+        from.greenF() + (to.greenF() - from.greenF()) * progress, from.blueF() + (to.blueF() - from.blueF()) * progress,
+        from.alphaF() + (to.alphaF() - from.alphaF()) * progress);
 }
 
 textfields::Label* makeLabel(QWidget* parent, const QString& name, Typography::FontRole role)
@@ -62,8 +61,8 @@ textfields::Label* makeLabel(QWidget* parent, const QString& name, Typography::F
 } // namespace
 
 FileDropZone::FileDropZone(QWidget* parent)
-    : QWidget(parent), m_title(tr("Drop files here")),
-      m_description(tr("or choose files from your computer")), m_browseText(tr("Choose files"))
+    : QWidget(parent), m_title(tr("Drop files here")), m_description(tr("or choose files from your computer")),
+      m_browseText(tr("Choose files"))
 {
     setAcceptDrops(true);
     setAttribute(Qt::WA_Hover);
@@ -75,12 +74,9 @@ FileDropZone::FileDropZone(QWidget* parent)
     m_icon = new FontIcon(Typography::Icons::Upload, this);
     m_icon->setIconSize(kIconSize);
     m_icon->setFixedSize(kIconSize, kIconSize);
-    m_titleLabel =
-        makeLabel(this, QStringLiteral("FileDropZoneTitle"), Typography::FontRole::Subtitle);
-    m_descriptionLabel =
-        makeLabel(this, QStringLiteral("FileDropZoneDescription"), Typography::FontRole::Body);
-    m_hintLabel =
-        makeLabel(this, QStringLiteral("FileDropZoneHint"), Typography::FontRole::Caption);
+    m_titleLabel = makeLabel(this, QStringLiteral("FileDropZoneTitle"), Typography::FontRole::Subtitle);
+    m_descriptionLabel = makeLabel(this, QStringLiteral("FileDropZoneDescription"), Typography::FontRole::Body);
+    m_hintLabel = makeLabel(this, QStringLiteral("FileDropZoneHint"), Typography::FontRole::Caption);
     m_browseButton = new Button(m_browseText, this);
     m_browseButton->setObjectName(QStringLiteral("FileDropZoneBrowse"));
     m_browseButton->setFluentStyle(Button::Accent);
@@ -100,8 +96,7 @@ FileDropZone::FileDropZone(QWidget* parent)
     connect(m_transition, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
         const qreal progress = value.toReal();
         for (size_t i = 0; i < m_visual.size(); ++i)
-            m_visual[i] =
-                m_transitionStart[i] + (m_transitionEnd[i] - m_transitionStart[i]) * progress;
+            m_visual[i] = m_transitionStart[i] + (m_transitionEnd[i] - m_transitionStart[i]) * progress;
         applyVisualState();
     });
     updatePresentation();
@@ -152,8 +147,7 @@ void FileDropZone::setErrorMessage(const QString& message)
     transitionToState();
     const QPointer<FileDropZone> guard(this);
     if (isVisible() && !m_errorMessage.isEmpty()) {
-        fluentSendAccessibleAnnouncement(this, m_errorMessage,
-                                         FluentAccessibleAnnouncementPoliteness::Polite);
+        fluentSendAccessibleAnnouncement(this, m_errorMessage, FluentAccessibleAnnouncementPoliteness::Polite);
         if (!guard)
             return;
     }
@@ -219,8 +213,7 @@ void FileDropZone::layoutContent()
     y += kButtonHeight;
     if (!m_hintLabel->text().isEmpty()) {
         y += 12;
-        m_hintLabel->setGeometry(padding, y, availableWidth,
-                                 labelHeight(m_hintLabel, availableWidth));
+        m_hintLabel->setGeometry(padding, y, availableWidth, labelHeight(m_hintLabel, availableWidth));
     }
     applyVisualState();
 }
@@ -228,9 +221,8 @@ void FileDropZone::layoutContent()
 void FileDropZone::updatePresentation()
 {
     const bool error = !m_dragActive && !m_errorMessage.isEmpty();
-    const QString dragTitle = m_dragFileCount == 1
-                                  ? tr("Release to add 1 file")
-                                  : tr("Release to add %1 files").arg(m_dragFileCount);
+    const QString dragTitle =
+        m_dragFileCount == 1 ? tr("Release to add 1 file") : tr("Release to add %1 files").arg(m_dragFileCount);
     m_titleLabel->setText(m_dragActive ? dragTitle : m_title);
     m_descriptionLabel->setText(error ? m_errorMessage : m_description);
     m_descriptionLabel->setVisible(!m_descriptionLabel->text().isEmpty());
@@ -239,25 +231,21 @@ void FileDropZone::updatePresentation()
     m_browseButton->setText(m_browseText);
     m_browseButton->setEnabled(isEnabled() && !m_dragActive);
     const auto& colors = themeColorsRef();
-    m_titleLabel->setTextColorRole(isEnabled() ? textfields::Label::TextColorRole::Primary
-                                               : textfields::Label::TextColorRole::Disabled);
+    m_titleLabel->setTextColorRole(
+        isEnabled() ? textfields::Label::TextColorRole::Primary : textfields::Label::TextColorRole::Disabled);
     m_descriptionLabel->setTextColorRole(!isEnabled() ? textfields::Label::TextColorRole::Disabled
-                                         : error      ? textfields::Label::TextColorRole::Primary
-                                                 : textfields::Label::TextColorRole::Secondary);
-    m_hintLabel->setTextColorRole(isEnabled() ? textfields::Label::TextColorRole::Secondary
-                                              : textfields::Label::TextColorRole::Disabled);
+            : error                                   ? textfields::Label::TextColorRole::Primary
+                                                      : textfields::Label::TextColorRole::Secondary);
+    m_hintLabel->setTextColorRole(
+        isEnabled() ? textfields::Label::TextColorRole::Secondary : textfields::Label::TextColorRole::Disabled);
     const QColor critical = colors.systemCritical;
-    const QJsonObject criticalText{
-        {"textPrimary", QString::asprintf("#%02X%02X%02X%02X", critical.red(), critical.green(),
-                                          critical.blue(), critical.alpha())}};
-    m_descriptionLabel->setThemeOverrides(error ? QJsonObject{{"light", criticalText},
-                                                              {"dark", criticalText},
-                                                              {"contrast", criticalText}}
-                                                : QJsonObject{});
+    const QJsonObject criticalText{{"textPrimary",
+        QString::asprintf("#%02X%02X%02X%02X", critical.red(), critical.green(), critical.blue(), critical.alpha())}};
+    m_descriptionLabel->setThemeOverrides(
+        error ? QJsonObject{{"light", criticalText}, {"dark", criticalText}, {"contrast", criticalText}}
+              : QJsonObject{});
     m_icon->setGlyph(error ? Typography::Icons::ErrorIcon : Typography::Icons::Upload);
-    m_icon->setColor(!isEnabled() ? colors.textDisabled
-                     : error      ? colors.systemCritical
-                                  : colors.textAccentPrimary);
+    m_icon->setColor(!isEnabled() ? colors.textDisabled : error ? colors.systemCritical : colors.textAccentPrimary);
     updateAccessibleText();
     layoutContent();
     updateGeometry();
@@ -292,8 +280,7 @@ void FileDropZone::setDragActive(bool active, int fileCount)
     transitionToState();
     const QPointer<FileDropZone> guard(this);
     if (active) {
-        fluentSendAccessibleAnnouncement(this, m_titleLabel->text(),
-                                         FluentAccessibleAnnouncementPoliteness::Polite);
+        fluentSendAccessibleAnnouncement(this, m_titleLabel->text(), FluentAccessibleAnnouncementPoliteness::Polite);
         if (!guard)
             return;
     }
@@ -304,9 +291,8 @@ void FileDropZone::setDragActive(bool active, int fileCount)
 void FileDropZone::transitionToState(bool animated)
 {
     m_transition->stop();
-    m_transitionEnd = {isEnabled() && m_hovered ? 1.0 : 0.0,
-                       isEnabled() && m_dragActive ? 1.0 : 0.0,
-                       !m_dragActive && !m_errorMessage.isEmpty() ? 1.0 : 0.0};
+    m_transitionEnd = {isEnabled() && m_hovered ? 1.0 : 0.0, isEnabled() && m_dragActive ? 1.0 : 0.0,
+        !m_dragActive && !m_errorMessage.isEmpty() ? 1.0 : 0.0};
     if (!animated || !isVisible() || !isEnabled() || effectiveTheme() == HighContrast) {
         m_visual = m_transitionEnd;
         applyVisualState();
@@ -367,17 +353,15 @@ bool FileDropZone::eventFilter(QObject* watched, QEvent* event)
     if (watched == m_browseButton) {
         if (event->type() == QEvent::FocusIn) {
             const auto reason = static_cast<QFocusEvent*>(event)->reason();
-            m_keyboardFocusVisible = reason == Qt::TabFocusReason ||
-                                     reason == Qt::BacktabFocusReason ||
-                                     reason == Qt::ShortcutFocusReason;
+            m_keyboardFocusVisible = reason == Qt::TabFocusReason || reason == Qt::BacktabFocusReason
+                || reason == Qt::ShortcutFocusReason;
             update();
         } else if (event->type() == QEvent::FocusOut) {
             m_keyboardFocusVisible = false;
             update();
         } else if (event->type() == QEvent::KeyPress) {
             auto* key = static_cast<QKeyEvent*>(event);
-            if (isEnabled() && !m_dragActive &&
-                (key->key() == Qt::Key_Return || key->key() == Qt::Key_Enter)) {
+            if (isEnabled() && !m_dragActive && (key->key() == Qt::Key_Return || key->key() == Qt::Key_Enter)) {
                 if (!key->isAutoRepeat())
                     m_browseButton->click();
                 key->accept();
@@ -495,8 +479,7 @@ void FileDropZone::dragLeaveEvent(QDragLeaveEvent* event)
 void FileDropZone::dropEvent(QDropEvent* event)
 {
     const QList<QUrl> urls = localUrls(event->mimeData());
-    const bool accepted = isEnabled() && m_dragActive && !urls.isEmpty() &&
-                          (event->possibleActions() & Qt::CopyAction);
+    const bool accepted = isEnabled() && m_dragActive && !urls.isEmpty() && (event->possibleActions() & Qt::CopyAction);
     const QPointer<FileDropZone> guard(this);
     setDragActive(false);
     if (!guard || !accepted || !isEnabled() || !isVisible()) {
@@ -523,8 +506,7 @@ void FileDropZone::changeEvent(QEvent* event)
             return;
         updatePresentation();
         transitionToState(false);
-    } else if (event->type() == QEvent::FontChange ||
-               event->type() == QEvent::LayoutDirectionChange) {
+    } else if (event->type() == QEvent::FontChange || event->type() == QEvent::LayoutDirectionChange) {
         layoutContent();
         updateGeometry();
     }

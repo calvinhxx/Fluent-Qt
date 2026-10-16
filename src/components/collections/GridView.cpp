@@ -62,8 +62,7 @@ GridView::GridView(QWidget* parent) : QListView(parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setMouseTracking(true);
-    setDragEnabled(
-        false); // Disable QListView's built-in drag; reorder is custom. zh_CN: 禁用内置拖拽（自行实现）。
+    setDragEnabled(false); // Disable QListView's built-in drag; reorder is custom. zh_CN: 禁用内置拖拽（自行实现）。
     setDefaultDropAction(Qt::IgnoreAction);
 
     QListView::setSelectionMode(QAbstractItemView::SingleSelection);
@@ -74,8 +73,7 @@ GridView::GridView(QWidget* parent) : QListView(parent)
     //（与 ListView 一致），而非 ScrollPerItem 的整行跳动。
     setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
-    connect(this, &QAbstractItemView::clicked, this,
-            [this](const QModelIndex& idx) { emit itemClicked(idx.row()); });
+    connect(this, &QAbstractItemView::clicked, this, [this](const QModelIndex& idx) { emit itemClicked(idx.row()); });
 
     // --- Header label ---
     m_headerLabel = new QLabel(this);
@@ -83,8 +81,8 @@ GridView::GridView(QWidget* parent) : QListView(parent)
     m_headerLabel->setIndent(::Spacing::Padding::ListItemHorizontal);
 
     // --- Fluent scroll bar ---
-    m_vScrollBar = ::fluent::scrolling::createOverlayScrollBar(
-        Qt::Vertical, this, verticalScrollBar(), QStringLiteral("fluentGridViewScrollBar"));
+    m_vScrollBar = ::fluent::scrolling::createOverlayScrollBar(Qt::Vertical, this, verticalScrollBar(),
+        QStringLiteral("fluentGridViewScrollBar"));
     connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &GridView::syncFluentScrollBar);
 
     // --- Overscroll bounce (shared controller) ---
@@ -100,8 +98,8 @@ GridView::GridView(QWidget* parent) : QListView(parent)
     };
     hooks.onOverscrollChanged = [this] { viewport()->update(); };
     hooks.fallbackWheel = [this](QWheelEvent* e) { QListView::wheelEvent(e); };
-    m_overscroll = new fluent::scrolling::OverscrollController(viewport(), kDiscreteWheelStepPx,
-                                                               std::move(hooks), this);
+    m_overscroll = new fluent::scrolling::OverscrollController(viewport(), kDiscreteWheelStepPx, std::move(hooks),
+        this);
 
     updateGridSize();
     syncFluentScrollBar();
@@ -414,9 +412,9 @@ void GridView::paintEvent(QPaintEvent* event)
         QPainter fp(viewport());
         fp.setRenderHint(QPainter::Antialiasing);
         fp.setOpacity(0.85);
-        QPoint pixPos = m_dragCurrentPos -
-                        QPoint(m_dragPixmap.width() / (2 * m_dragPixmap.devicePixelRatio()),
-                               m_dragPixmap.height() / (2 * m_dragPixmap.devicePixelRatio()));
+        QPoint pixPos = m_dragCurrentPos
+            - QPoint(m_dragPixmap.width() / (2 * m_dragPixmap.devicePixelRatio()),
+                m_dragPixmap.height() / (2 * m_dragPixmap.devicePixelRatio()));
         fp.drawPixmap(pixPos, m_dragPixmap);
         fp.end();
     }
@@ -554,8 +552,7 @@ void GridView::applyThemeStyle()
         // and ignores child palettes) — e.g. the gallery sample card, where the header then renders
         // near-black in dark theme. A style-sheet color always wins. zh_CN: 用 label 自身样式表上色而非
         // palette：任何祖先设置样式表时会安装 QStyleSheetStyle 并忽略子 palette，header 在深色主题里变近黑；样式表颜色始终生效。
-        m_headerLabel->setStyleSheet(
-            QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
+        m_headerLabel->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
                 .arg(c.textPrimary.red())
                 .arg(c.textPrimary.green())
                 .arg(c.textPrimary.blue())
@@ -602,11 +599,10 @@ void GridView::syncFluentScrollBar()
         return;
 
     const QRect r = rect();
-    const int top = (m_headerLabel && m_headerLabel->isVisible())
-                        ? m_headerLabel->geometry().bottom() + 2
-                        : r.top() + 2;
+    const int top =
+        (m_headerLabel && m_headerLabel->isVisible()) ? m_headerLabel->geometry().bottom() + 2 : r.top() + 2;
     ::fluent::scrolling::placeVerticalScrollBar(m_vScrollBar, r, top,
-                                                /*rightInset=*/0, /*bottomInset=*/2);
+        /*rightInset=*/0, /*bottomInset=*/2);
 }
 
 void GridView::refreshFluentScrollChrome()
@@ -643,9 +639,8 @@ void GridView::mousePressEvent(QMouseEvent* event)
             // In Multiple/Extended mode, pressing on an already-selected item
             // should NOT change selection (to allow multi-drag).
             // We handle selection change on release if no drag occurred.
-            if ((m_selectionMode == SelectionMode::Multiple ||
-                 m_selectionMode == SelectionMode::Extended) &&
-                selectionModel() && selectionModel()->isSelected(idx)) {
+            if ((m_selectionMode == SelectionMode::Multiple || m_selectionMode == SelectionMode::Extended)
+                && selectionModel() && selectionModel()->isSelected(idx)) {
                 // Don't pass to QListView — preserve selection for drag
                 m_dragPressIntercepted = true;
                 setFocus(Qt::MouseFocusReason);
@@ -665,8 +660,7 @@ void GridView::mouseMoveEvent(QMouseEvent* event)
 {
     if (m_canReorderItems && m_dragSourceIndex >= 0 && (event->buttons() & Qt::LeftButton)) {
         if (!m_isDragging) {
-            if ((event->pos() - m_dragStartPos).manhattanLength() >=
-                QApplication::startDragDistance()) {
+            if ((event->pos() - m_dragStartPos).manhattanLength() >= QApplication::startDragDistance()) {
                 m_isDragging = true;
 
                 // Collect dragged indices: multi-drag only when pressed on
@@ -674,8 +668,7 @@ void GridView::mouseMoveEvent(QMouseEvent* event)
                 // Pressing on an unselected item drags only that item,
                 // same behavior as Extended mode.
                 m_dragSourceIndices.clear();
-                if (m_dragPressIntercepted && selectionModel() &&
-                    !selectionModel()->selectedIndexes().isEmpty()) {
+                if (m_dragPressIntercepted && selectionModel() && !selectionModel()->selectedIndexes().isEmpty()) {
                     for (const auto& idx : selectionModel()->selectedIndexes())
                         m_dragSourceIndices.append(idx.row());
                 }
@@ -683,8 +676,7 @@ void GridView::mouseMoveEvent(QMouseEvent* event)
                 if (!m_dragSourceIndices.contains(m_dragSourceIndex))
                     m_dragSourceIndices.append(m_dragSourceIndex);
                 std::sort(m_dragSourceIndices.begin(), m_dragSourceIndices.end());
-                m_dragSourceIndices.erase(
-                    std::unique(m_dragSourceIndices.begin(), m_dragSourceIndices.end()),
+                m_dragSourceIndices.erase(std::unique(m_dragSourceIndices.begin(), m_dragSourceIndices.end()),
                     m_dragSourceIndices.end());
 
                 m_dropTargetIndex = -1;
@@ -748,8 +740,7 @@ void GridView::mouseReleaseEvent(QMouseEvent* event)
                 int firstInserted = qMin(dst, sim->rowCount() - (int)srcs.size());
                 // Use NoUpdate to avoid setCurrentIndex clearing selection
                 // (Extended mode's selectionCommand returns ClearAndSelect)
-                selectionModel()->setCurrentIndex(sim->index(firstInserted, 0),
-                                                  QItemSelectionModel::NoUpdate);
+                selectionModel()->setCurrentIndex(sim->index(firstInserted, 0), QItemSelectionModel::NoUpdate);
 
                 QPointer<GridView> guard(this);
                 emit itemReordered(srcs.first(), firstInserted);
@@ -916,8 +907,7 @@ QPixmap GridView::renderDragPixmap() const
     badgeFont.setBold(true);
     p.setFont(badgeFont);
     p.setPen(Qt::white);
-    p.drawText(QRect(badgeX, badgeY, badgeSize, badgeSize), Qt::AlignCenter,
-               QString::number(count));
+    p.drawText(QRect(badgeX, badgeY, badgeSize, badgeSize), Qt::AlignCenter, QString::number(count));
 
     p.end();
     return composite;
@@ -978,8 +968,7 @@ int GridView::stabilizedDropIndicatorIndex(const QPoint& pos) const
     if (!std::isfinite(currentDistance) || !std::isfinite(candidateDistance))
         return candidate;
 
-    return (candidateDistance + dropTargetHysteresis() < currentDistance) ? candidate
-                                                                          : m_dropTargetIndex;
+    return (candidateDistance + dropTargetHysteresis() < currentDistance) ? candidate : m_dropTargetIndex;
 }
 
 qreal GridView::dropIndicatorDistance(const QPoint& pos, int slot) const
@@ -997,13 +986,11 @@ qreal GridView::dropIndicatorDistance(const QPoint& pos, int slot) const
         const QRect rect = QListView::visualRect(model()->index(row, 0));
 
         if (slot == currentSlot) {
-            bestDistance =
-                qMin(bestDistance, std::hypot(pos.x() - rect.left(), pos.y() - rect.center().y()));
+            bestDistance = qMin(bestDistance, std::hypot(pos.x() - rect.left(), pos.y() - rect.center().y()));
         }
 
         if (slot == currentSlot + 1) {
-            bestDistance =
-                qMin(bestDistance, std::hypot(pos.x() - rect.right(), pos.y() - rect.center().y()));
+            bestDistance = qMin(bestDistance, std::hypot(pos.x() - rect.right(), pos.y() - rect.center().y()));
         }
 
         ++currentSlot;
@@ -1083,8 +1070,7 @@ void GridView::updateDragDisplacement()
         if (oldAnim && oldAnim->currentValue().canConvert<QPointF>())
             current = oldAnim->currentValue().toPointF();
 
-        if (oldAnim && m_dragTargetOffsets.contains(i) &&
-            dragPointsEqual(m_dragTargetOffsets.value(i), target)) {
+        if (oldAnim && m_dragTargetOffsets.contains(i) && dragPointsEqual(m_dragTargetOffsets.value(i), target)) {
             continue;
         }
 

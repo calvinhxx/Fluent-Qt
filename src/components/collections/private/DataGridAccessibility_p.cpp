@@ -24,16 +24,12 @@ namespace {
 
 class DataGridAccessible;
 
-class DataGridAccessibleCell final : public QAccessibleInterface,
-                                     public QAccessibleTableCellInterface,
-                                     public QAccessibleActionInterface {
+class DataGridAccessibleCell final
+    : public QAccessibleInterface,
+      public QAccessibleTableCellInterface,
+      public QAccessibleActionInterface {
 public:
-    DataGridAccessibleCell(DataGrid* view,
-                           const QModelIndex& index)
-        : m_view(view)
-        , m_index(index)
-    {
-    }
+    DataGridAccessibleCell(DataGrid* view, const QModelIndex& index) : m_view(view), m_index(index) {}
 
     bool isValid() const override;
     QObject* object() const override { return nullptr; }
@@ -60,10 +56,7 @@ public:
 
     QStringList actionNames() const override;
     void doAction(const QString& actionName) override;
-    QStringList keyBindingsForAction(const QString&) const override
-    {
-        return {};
-    }
+    QStringList keyBindingsForAction(const QString&) const override { return {}; }
 
     const QPersistentModelIndex& modelIndex() const { return m_index; }
 
@@ -74,13 +67,9 @@ private:
 
 class DataGridAccessibleHeader final : public QAccessibleInterface {
 public:
-    DataGridAccessibleHeader(DataGrid* view, int section,
-                             Qt::Orientation orientation)
-        : m_view(view)
-        , m_section(section)
-        , m_orientation(orientation)
-    {
-    }
+    DataGridAccessibleHeader(DataGrid* view, int section, Qt::Orientation orientation)
+        : m_view(view), m_section(section), m_orientation(orientation)
+    {}
 
     bool isValid() const override;
     QObject* object() const override { return nullptr; }
@@ -94,9 +83,7 @@ public:
     QRect rect() const override;
     QAccessible::Role role() const override
     {
-        return m_orientation == Qt::Horizontal
-            ? QAccessible::ColumnHeader
-            : QAccessible::RowHeader;
+        return m_orientation == Qt::Horizontal ? QAccessible::ColumnHeader : QAccessible::RowHeader;
     }
     QAccessible::State state() const override;
 
@@ -113,10 +100,7 @@ private:
 
 class DataGridAccessibleCorner final : public QAccessibleInterface {
 public:
-    explicit DataGridAccessibleCorner(DataGrid* view)
-        : m_view(view)
-    {
-    }
+    explicit DataGridAccessibleCorner(DataGrid* view) : m_view(view) {}
 
     bool isValid() const override { return !m_view.isNull(); }
     QObject* object() const override { return nullptr; }
@@ -141,17 +125,16 @@ private:
     QPointer<DataGrid> m_view;
 };
 
-class DataGridAccessible final : public QAccessibleWidget,
-                                 public QAccessibleTableInterface
+class DataGridAccessible final
+    : public QAccessibleWidget,
+      public QAccessibleTableInterface
 #if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
-                               , public QAccessibleSelectionInterface
+    ,
+      public QAccessibleSelectionInterface
 #endif
 {
 public:
-    explicit DataGridAccessible(DataGrid* view)
-        : QAccessibleWidget(view, QAccessible::Table)
-    {
-    }
+    explicit DataGridAccessible(DataGrid* view) : QAccessibleWidget(view, QAccessible::Table) {}
 
     ~DataGridAccessible() override { clearChildCache(); }
 
@@ -186,10 +169,7 @@ public:
 
 #if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
     int selectedItemCount() const override { return selectedCellCount(); }
-    QList<QAccessibleInterface*> selectedItems() const override
-    {
-        return selectedCells();
-    }
+    QList<QAccessibleInterface*> selectedItems() const override { return selectedCells(); }
     bool isSelected(QAccessibleInterface* childItem) const override;
     bool select(QAccessibleInterface* childItem) override;
     bool unselect(QAccessibleInterface* childItem) override;
@@ -197,14 +177,10 @@ public:
     bool clear() override;
 #endif
 
-    QAccessibleInterface* headerCell(int section,
-                                     Qt::Orientation orientation) const;
+    QAccessibleInterface* headerCell(int section, Qt::Orientation orientation) const;
 
 private:
-    DataGrid* view() const
-    {
-        return static_cast<DataGrid*>(widget());
-    }
+    DataGrid* view() const { return static_cast<DataGrid*>(widget()); }
     int logicalIndex(const QModelIndex& index) const;
     QAccessibleInterface* interfaceForLogicalChild(int logicalChild) const;
     QVector<int> visibleLogicalChildren() const;
@@ -216,20 +192,15 @@ private:
 
 bool viewIsReadOnly(const DataGrid* view)
 {
-    return !view
-        || view->editTriggers() == QAbstractItemView::NoEditTriggers;
+    return !view || view->editTriggers() == QAbstractItemView::NoEditTriggers;
 }
 
-bool indexIsReadOnly(const DataGrid* view,
-                     const QModelIndex& index)
+bool indexIsReadOnly(const DataGrid* view, const QModelIndex& index)
 {
-    return viewIsReadOnly(view)
-        || !index.isValid()
-        || !(index.flags() & Qt::ItemIsEditable);
+    return viewIsReadOnly(view) || !index.isValid() || !(index.flags() & Qt::ItemIsEditable);
 }
 
-QItemSelectionModel::SelectionFlags behaviorFlag(
-    const DataGrid* view)
+QItemSelectionModel::SelectionFlags behaviorFlag(const DataGrid* view)
 {
     if (!view)
         return QItemSelectionModel::NoUpdate;
@@ -246,8 +217,7 @@ QItemSelectionModel::SelectionFlags behaviorFlag(
 
 bool DataGridAccessibleCell::isValid() const
 {
-    return m_view && m_view->model() && m_index.isValid()
-        && m_index.model() == m_view->model();
+    return m_view && m_view->model() && m_index.isValid() && m_index.model() == m_view->model();
 }
 
 QAccessibleInterface* DataGridAccessibleCell::parent() const
@@ -262,11 +232,8 @@ QString DataGridAccessibleCell::text(QAccessible::Text type) const
 
     switch (type) {
     case QAccessible::Name: {
-        const QString semantic =
-            m_index.data(Qt::AccessibleTextRole).toString();
-        return semantic.isEmpty()
-            ? m_index.data(Qt::DisplayRole).toString()
-            : semantic;
+        const QString semantic = m_index.data(Qt::AccessibleTextRole).toString();
+        return semantic.isEmpty() ? m_index.data(Qt::DisplayRole).toString() : semantic;
     }
     case QAccessible::Description:
         return m_index.data(Qt::AccessibleDescriptionRole).toString();
@@ -277,11 +244,9 @@ QString DataGridAccessibleCell::text(QAccessible::Text type) const
     }
 }
 
-void DataGridAccessibleCell::setText(QAccessible::Text type,
-                                     const QString& text)
+void DataGridAccessibleCell::setText(QAccessible::Text type, const QString& text)
 {
-    if (!isValid() || indexIsReadOnly(m_view, m_index)
-        || type != QAccessible::Value) {
+    if (!isValid() || indexIsReadOnly(m_view, m_index) || type != QAccessible::Value) {
         return;
     }
     m_view->model()->setData(m_index, text, Qt::EditRole);
@@ -289,8 +254,7 @@ void DataGridAccessibleCell::setText(QAccessible::Text type,
 
 QRect DataGridAccessibleCell::rect() const
 {
-    if (!isValid() || m_view->isRowHidden(m_index.row())
-        || m_view->isColumnHidden(m_index.column())) {
+    if (!isValid() || m_view->isRowHidden(m_index.row()) || m_view->isColumnHidden(m_index.column())) {
         return {};
     }
     QRect result = m_view->visualRect(m_index);
@@ -310,12 +274,10 @@ QAccessible::State DataGridAccessibleCell::state() const
     }
 
     const Qt::ItemFlags flags = m_index.flags();
-    result.disabled = !m_view->isEnabled()
-        || !(flags & Qt::ItemIsEnabled);
+    result.disabled = !m_view->isEnabled() || !(flags & Qt::ItemIsEnabled);
     result.readOnly = indexIsReadOnly(m_view, m_index);
     result.editable = !result.disabled && !result.readOnly;
-    result.selectable = !result.disabled
-        && (flags & Qt::ItemIsSelectable)
+    result.selectable = !result.disabled && (flags & Qt::ItemIsSelectable)
         && m_view->QAbstractItemView::selectionMode() != QAbstractItemView::NoSelection;
     result.focusable = result.selectable;
     result.multiSelectable = result.selectable
@@ -329,25 +291,17 @@ QAccessible::State DataGridAccessibleCell::state() const
     }
 
     const QVariant checkState = m_index.data(Qt::CheckStateRole);
-    result.checkable = (flags & Qt::ItemIsUserCheckable)
-        && checkState.isValid();
-    result.checked = result.checkable
-        && checkState.toInt() == Qt::Checked;
+    result.checkable = (flags & Qt::ItemIsUserCheckable) && checkState.isValid();
+    result.checked = result.checkable && checkState.toInt() == Qt::Checked;
 
     const QRect cellRect = rect();
-    const QRect viewportRect(
-        m_view->viewport()->mapToGlobal(QPoint(0, 0)),
-        m_view->viewport()->size());
-    result.invisible = cellRect.isEmpty()
-        || !m_view->isVisible()
-        || !viewportRect.intersects(cellRect);
-    result.offscreen = !cellRect.isEmpty()
-        && !viewportRect.intersects(cellRect);
+    const QRect viewportRect(m_view->viewport()->mapToGlobal(QPoint(0, 0)), m_view->viewport()->size());
+    result.invisible = cellRect.isEmpty() || !m_view->isVisible() || !viewportRect.intersects(cellRect);
+    result.offscreen = !cellRect.isEmpty() && !viewportRect.intersects(cellRect);
     return result;
 }
 
-void* DataGridAccessibleCell::interface_cast(
-    QAccessible::InterfaceType type)
+void* DataGridAccessibleCell::interface_cast(QAccessible::InterfaceType type)
 {
     if (type == QAccessible::TableCellInterface)
         return static_cast<QAccessibleTableCellInterface*>(this);
@@ -358,29 +312,21 @@ void* DataGridAccessibleCell::interface_cast(
 
 bool DataGridAccessibleCell::isSelected() const
 {
-    return isValid() && m_view->selectionModel()
-        && m_view->selectionModel()->isSelected(m_index);
+    return isValid() && m_view->selectionModel() && m_view->selectionModel()->isSelected(m_index);
 }
 
-QList<QAccessibleInterface*>
-DataGridAccessibleCell::columnHeaderCells() const
+QList<QAccessibleInterface*> DataGridAccessibleCell::columnHeaderCells() const
 {
     auto* root = dynamic_cast<DataGridAccessible*>(table());
-    QAccessibleInterface* header = root
-        ? root->headerCell(m_index.column(), Qt::Horizontal)
-        : nullptr;
-    return header ? QList<QAccessibleInterface*>{header}
-                  : QList<QAccessibleInterface*>{};
+    QAccessibleInterface* header = root ? root->headerCell(m_index.column(), Qt::Horizontal) : nullptr;
+    return header ? QList<QAccessibleInterface*>{header} : QList<QAccessibleInterface*>{};
 }
 
 QList<QAccessibleInterface*> DataGridAccessibleCell::rowHeaderCells() const
 {
     auto* root = dynamic_cast<DataGridAccessible*>(table());
-    QAccessibleInterface* header = root
-        ? root->headerCell(m_index.row(), Qt::Vertical)
-        : nullptr;
-    return header ? QList<QAccessibleInterface*>{header}
-                  : QList<QAccessibleInterface*>{};
+    QAccessibleInterface* header = root ? root->headerCell(m_index.row(), Qt::Vertical) : nullptr;
+    return header ? QList<QAccessibleInterface*>{header} : QList<QAccessibleInterface*>{};
 }
 
 QAccessibleInterface* DataGridAccessibleCell::table() const
@@ -391,15 +337,12 @@ QAccessibleInterface* DataGridAccessibleCell::table() const
 QStringList DataGridAccessibleCell::actionNames() const
 {
     const QAccessible::State currentState = state();
-    return currentState.selectable
-        ? QStringList{QAccessibleActionInterface::toggleAction()}
-        : QStringList{};
+    return currentState.selectable ? QStringList{QAccessibleActionInterface::toggleAction()} : QStringList{};
 }
 
 void DataGridAccessibleCell::doAction(const QString& actionName)
 {
-    if (actionName != QAccessibleActionInterface::toggleAction()
-        || !isValid() || !m_view->selectionModel()
+    if (actionName != QAccessibleActionInterface::toggleAction() || !isValid() || !m_view->selectionModel()
         || !state().selectable) {
         return;
     }
@@ -409,8 +352,7 @@ void DataGridAccessibleCell::doAction(const QString& actionName)
         command |= QItemSelectionModel::ClearAndSelect;
     else
         command |= QItemSelectionModel::Toggle;
-    m_view->selectionModel()->setCurrentIndex(
-        m_index, QItemSelectionModel::NoUpdate);
+    m_view->selectionModel()->setCurrentIndex(m_index, QItemSelectionModel::NoUpdate);
     m_view->selectionModel()->select(m_index, command);
 }
 
@@ -418,9 +360,7 @@ QHeaderView* DataGridAccessibleHeader::header() const
 {
     if (!m_view)
         return nullptr;
-    return m_orientation == Qt::Horizontal
-        ? m_view->horizontalHeader()
-        : m_view->verticalHeader();
+    return m_orientation == Qt::Horizontal ? m_view->horizontalHeader() : m_view->verticalHeader();
 }
 
 bool DataGridAccessibleHeader::isValid() const
@@ -441,26 +381,22 @@ QString DataGridAccessibleHeader::text(QAccessible::Text type) const
 {
     if (!isValid())
         return {};
-    const int role = type == QAccessible::Name
-        ? Qt::AccessibleTextRole
+    const int role = type == QAccessible::Name ? Qt::AccessibleTextRole
         : type == QAccessible::Description
-            ? Qt::AccessibleDescriptionRole
-            : -1;
+        ? Qt::AccessibleDescriptionRole
+        : -1;
     if (role < 0)
         return {};
-    const QString semantic = m_view->model()
-        ->headerData(m_section, m_orientation, role).toString();
+    const QString semantic = m_view->model()->headerData(m_section, m_orientation, role).toString();
     if (type != QAccessible::Name || !semantic.isEmpty())
         return semantic;
-    return m_view->model()
-        ->headerData(m_section, m_orientation, Qt::DisplayRole).toString();
+    return m_view->model()->headerData(m_section, m_orientation, Qt::DisplayRole).toString();
 }
 
 QRect DataGridAccessibleHeader::rect() const
 {
     QHeaderView* headerView = header();
-    if (!isValid() || !headerView || !headerView->isVisible()
-        || headerView->isSectionHidden(m_section)) {
+    if (!isValid() || !headerView || !headerView->isVisible() || headerView->isSectionHidden(m_section)) {
         return {};
     }
     const QPoint origin = headerView->mapToGlobal(QPoint(0, 0));
@@ -477,14 +413,10 @@ QAccessible::State DataGridAccessibleHeader::state() const
     QHeaderView* headerView = header();
     result.readOnly = true;
     result.disabled = !headerView || !headerView->isEnabled();
-    const QRect headerRect = headerView
-        ? QRect(headerView->mapToGlobal(QPoint(0, 0)), headerView->size())
-        : QRect();
+    const QRect headerRect = headerView ? QRect(headerView->mapToGlobal(QPoint(0, 0)), headerView->size()) : QRect();
     const QRect sectionRect = rect();
-    result.invisible = !isValid() || sectionRect.isEmpty()
-        || !headerRect.intersects(sectionRect);
-    result.offscreen = !sectionRect.isEmpty()
-        && !headerRect.intersects(sectionRect);
+    result.invisible = !isValid() || sectionRect.isEmpty() || !headerRect.intersects(sectionRect);
+    result.offscreen = !sectionRect.isEmpty() && !headerRect.intersects(sectionRect);
     return result;
 }
 
@@ -500,10 +432,8 @@ QAccessible::State DataGridAccessible::state() const
     result.readOnly = viewIsReadOnly(grid);
     result.editable = !result.disabled && !result.readOnly;
     if (grid) {
-        result.multiSelectable =
-            grid->QAbstractItemView::selectionMode() == QAbstractItemView::MultiSelection;
-        result.extSelectable =
-            grid->QAbstractItemView::selectionMode() == QAbstractItemView::ExtendedSelection;
+        result.multiSelectable = grid->QAbstractItemView::selectionMode() == QAbstractItemView::MultiSelection;
+        result.extSelectable = grid->QAbstractItemView::selectionMode() == QAbstractItemView::ExtendedSelection;
     }
     return result;
 }
@@ -517,24 +447,19 @@ QAccessibleInterface* DataGridAccessible::childAt(int x, int y) const
 
     QHeaderView* horizontal = grid->horizontalHeader();
     if (horizontal && horizontal->isVisible()
-        && QRect(horizontal->mapToGlobal(QPoint(0, 0)), horizontal->size())
-               .contains(globalPoint)) {
-        const int section = horizontal->logicalIndexAt(
-            horizontal->mapFromGlobal(globalPoint));
+        && QRect(horizontal->mapToGlobal(QPoint(0, 0)), horizontal->size()).contains(globalPoint)) {
+        const int section = horizontal->logicalIndexAt(horizontal->mapFromGlobal(globalPoint));
         return headerCell(section, Qt::Horizontal);
     }
 
     QHeaderView* vertical = grid->verticalHeader();
     if (vertical && vertical->isVisible()
-        && QRect(vertical->mapToGlobal(QPoint(0, 0)), vertical->size())
-               .contains(globalPoint)) {
-        const int section = vertical->logicalIndexAt(
-            vertical->mapFromGlobal(globalPoint));
+        && QRect(vertical->mapToGlobal(QPoint(0, 0)), vertical->size()).contains(globalPoint)) {
+        const int section = vertical->logicalIndexAt(vertical->mapFromGlobal(globalPoint));
         return headerCell(section, Qt::Vertical);
     }
 
-    const QModelIndex index = grid->indexAt(
-        grid->viewport()->mapFromGlobal(globalPoint));
+    const QModelIndex index = grid->indexAt(grid->viewport()->mapFromGlobal(globalPoint));
     return index.isValid() ? cellAt(index.row(), index.column()) : nullptr;
 }
 
@@ -542,9 +467,7 @@ QAccessibleInterface* DataGridAccessible::focusChild() const
 {
     const DataGrid* grid = view();
     const QModelIndex current = grid ? grid->currentIndex() : QModelIndex();
-    return current.isValid()
-        ? cellAt(current.row(), current.column())
-        : nullptr;
+    return current.isValid() ? cellAt(current.row(), current.column()) : nullptr;
 }
 
 int DataGridAccessible::childCount() const
@@ -557,24 +480,19 @@ int DataGridAccessible::logicalIndex(const QModelIndex& index) const
     const DataGrid* grid = view();
     if (!grid || !index.isValid() || index.model() != grid->model())
         return -1;
-    const qint64 value = static_cast<qint64>(index.row() + 1)
-            * static_cast<qint64>(columnCount() + 1)
-        + index.column() + 1;
-    return value <= std::numeric_limits<int>::max()
-        ? static_cast<int>(value)
-        : -1;
+    const qint64 value = static_cast<qint64>(index.row() + 1) * static_cast<qint64>(columnCount() + 1) + index.column()
+        + 1;
+    return value <= std::numeric_limits<int>::max() ? static_cast<int>(value) : -1;
 }
 
-int DataGridAccessible::indexOfChild(
-    const QAccessibleInterface* accessibleChild) const
+int DataGridAccessible::indexOfChild(const QAccessibleInterface* accessibleChild) const
 {
     if (!accessibleChild)
         return -1;
     int logicalChild = -1;
     if (auto* cell = dynamic_cast<const DataGridAccessibleCell*>(accessibleChild))
         logicalChild = logicalIndex(cell->modelIndex());
-    if (auto* header =
-            dynamic_cast<const DataGridAccessibleHeader*>(accessibleChild)) {
+    if (auto* header = dynamic_cast<const DataGridAccessibleHeader*>(accessibleChild)) {
         logicalChild = header->orientation() == Qt::Horizontal
             ? header->section() + 1
             : (header->section() + 1) * (columnCount() + 1);
@@ -598,19 +516,16 @@ QVector<int> DataGridAccessible::visibleLogicalChildren() const
 
     QVector<int> visibleColumns;
     QHeaderView* header = grid->horizontalHeader();
-    const int viewportWidth = grid->viewport()
-        ? grid->viewport()->width() : 0;
+    const int viewportWidth = grid->viewport() ? grid->viewport()->width() : 0;
     if (header) {
         for (int visual = 0; visual < header->count(); ++visual) {
             const int logical = header->logicalIndex(visual);
-            if (logical < 0 || logical >= columns
-                || grid->isColumnHidden(logical)) {
+            if (logical < 0 || logical >= columns || grid->isColumnHidden(logical)) {
                 continue;
             }
             const int position = header->sectionViewportPosition(logical);
             const int extent = header->sectionSize(logical);
-            if (viewportWidth <= 0
-                || (position < viewportWidth && position + extent > 0)) {
+            if (viewportWidth <= 0 || (position < viewportWidth && position + extent > 0)) {
                 visibleColumns.append(logical);
             }
         }
@@ -629,14 +544,10 @@ QVector<int> DataGridAccessible::visibleLogicalChildren() const
     int firstRow = rows > 0 ? grid->rowAt(0) : -1;
     if (firstRow < 0 && rows > 0)
         firstRow = 0;
-    int lastRow = rows > 0 && grid->viewport()
-        ? grid->rowAt(qMax(0, grid->viewport()->height() - 1))
-        : -1;
+    int lastRow = rows > 0 && grid->viewport() ? grid->rowAt(qMax(0, grid->viewport()->height() - 1)) : -1;
     if (lastRow < firstRow && firstRow >= 0) {
-        const int rowExtent = qMax(1, grid->verticalHeader()
-            ? grid->verticalHeader()->defaultSectionSize() : 1);
-        const int visibleEstimate = grid->viewport()
-            ? grid->viewport()->height() / rowExtent + 2 : 8;
+        const int rowExtent = qMax(1, grid->verticalHeader() ? grid->verticalHeader()->defaultSectionSize() : 1);
+        const int visibleEstimate = grid->viewport() ? grid->viewport()->height() / rowExtent + 2 : 8;
         lastRow = qMin(rows - 1, firstRow + qMax(1, visibleEstimate));
     }
 
@@ -659,8 +570,7 @@ QAccessibleInterface* DataGridAccessible::child(int childIndex) const
     return interfaceForLogicalChild(children.at(childIndex));
 }
 
-QAccessibleInterface* DataGridAccessible::interfaceForLogicalChild(
-    int logicalChild) const
+QAccessibleInterface* DataGridAccessible::interfaceForLogicalChild(int logicalChild) const
 {
     DataGrid* grid = view();
     if (!grid || !grid->model() || logicalChild < 0)
@@ -668,8 +578,7 @@ QAccessibleInterface* DataGridAccessible::interfaceForLogicalChild(
 
     auto cached = m_childToId.constFind(logicalChild);
     if (cached != m_childToId.constEnd()) {
-        if (QAccessibleInterface* interface =
-                QAccessible::accessibleInterface(cached.value())) {
+        if (QAccessibleInterface* interface = QAccessible::accessibleInterface(cached.value())) {
             return interface;
         }
         m_childToId.remove(logicalChild);
@@ -682,21 +591,17 @@ QAccessibleInterface* DataGridAccessible::interfaceForLogicalChild(
     if (row == 0 && column == 0) {
         interface = new DataGridAccessibleCorner(grid);
     } else if (row == 0) {
-        interface = new DataGridAccessibleHeader(
-            grid, column - 1, Qt::Horizontal);
+        interface = new DataGridAccessibleHeader(grid, column - 1, Qt::Horizontal);
     } else if (column == 0) {
-        interface = new DataGridAccessibleHeader(
-            grid, row - 1, Qt::Vertical);
+        interface = new DataGridAccessibleHeader(grid, row - 1, Qt::Vertical);
     } else {
-        const QModelIndex index = grid->model()->index(
-            row - 1, column - 1, grid->rootIndex());
+        const QModelIndex index = grid->model()->index(row - 1, column - 1, grid->rootIndex());
         if (!index.isValid())
             return nullptr;
         interface = new DataGridAccessibleCell(grid, index);
     }
 
-    const QAccessible::Id id =
-        QAccessible::registerAccessibleInterface(interface);
+    const QAccessible::Id id = QAccessible::registerAccessibleInterface(interface);
     m_childToId.insert(logicalChild, id);
     return interface;
 }
@@ -715,20 +620,16 @@ void* DataGridAccessible::interface_cast(QAccessible::InterfaceType type)
 QAccessibleInterface* DataGridAccessible::cellAt(int row, int column) const
 {
     DataGrid* grid = view();
-    if (!grid || !grid->model() || row < 0 || column < 0
-        || row >= rowCount() || column >= columnCount()) {
+    if (!grid || !grid->model() || row < 0 || column < 0 || row >= rowCount() || column >= columnCount()) {
         return nullptr;
     }
-    return interfaceForLogicalChild(logicalIndex(
-        grid->model()->index(row, column, grid->rootIndex())));
+    return interfaceForLogicalChild(logicalIndex(grid->model()->index(row, column, grid->rootIndex())));
 }
 
 int DataGridAccessible::selectedCellCount() const
 {
     const DataGrid* grid = view();
-    return grid && grid->selectionModel()
-        ? grid->selectionModel()->selectedIndexes().size()
-        : 0;
+    return grid && grid->selectionModel() ? grid->selectionModel()->selectedIndexes().size() : 0;
 }
 
 QList<QAccessibleInterface*> DataGridAccessible::selectedCells() const
@@ -737,8 +638,7 @@ QList<QAccessibleInterface*> DataGridAccessible::selectedCells() const
     const DataGrid* grid = view();
     if (!grid || !grid->selectionModel())
         return result;
-    const QModelIndexList indexes =
-        grid->selectionModel()->selectedIndexes();
+    const QModelIndexList indexes = grid->selectionModel()->selectedIndexes();
     result.reserve(indexes.size());
     for (const QModelIndex& index : indexes) {
         if (QAccessibleInterface* cell = cellAt(index.row(), index.column()))
@@ -751,8 +651,7 @@ QString DataGridAccessible::columnDescription(int column) const
 {
     const DataGrid* grid = view();
     return grid && grid->model() && column >= 0 && column < columnCount()
-        ? grid->model()->headerData(
-              column, Qt::Horizontal, Qt::DisplayRole).toString()
+        ? grid->model()->headerData(column, Qt::Horizontal, Qt::DisplayRole).toString()
         : QString();
 }
 
@@ -760,8 +659,7 @@ QString DataGridAccessible::rowDescription(int row) const
 {
     const DataGrid* grid = view();
     return grid && grid->model() && row >= 0 && row < rowCount()
-        ? grid->model()->headerData(
-              row, Qt::Vertical, Qt::DisplayRole).toString()
+        ? grid->model()->headerData(row, Qt::Vertical, Qt::DisplayRole).toString()
         : QString();
 }
 
@@ -778,17 +676,13 @@ int DataGridAccessible::selectedRowCount() const
 int DataGridAccessible::columnCount() const
 {
     const DataGrid* grid = view();
-    return grid && grid->model()
-        ? grid->model()->columnCount(grid->rootIndex())
-        : 0;
+    return grid && grid->model() ? grid->model()->columnCount(grid->rootIndex()) : 0;
 }
 
 int DataGridAccessible::rowCount() const
 {
     const DataGrid* grid = view();
-    return grid && grid->model()
-        ? grid->model()->rowCount(grid->rootIndex())
-        : 0;
+    return grid && grid->model() ? grid->model()->rowCount(grid->rootIndex()) : 0;
 }
 
 QList<int> DataGridAccessible::selectedColumns() const
@@ -797,8 +691,7 @@ QList<int> DataGridAccessible::selectedColumns() const
     const DataGrid* grid = view();
     if (!grid || !grid->selectionModel())
         return result;
-    const QModelIndexList indexes =
-        grid->selectionModel()->selectedColumns(0);
+    const QModelIndexList indexes = grid->selectionModel()->selectedColumns(0);
     result.reserve(indexes.size());
     for (const QModelIndex& index : indexes) {
         if (index.parent() == grid->rootIndex())
@@ -813,8 +706,7 @@ QList<int> DataGridAccessible::selectedRows() const
     const DataGrid* grid = view();
     if (!grid || !grid->selectionModel())
         return result;
-    const QModelIndexList indexes =
-        grid->selectionModel()->selectedRows(0);
+    const QModelIndexList indexes = grid->selectionModel()->selectedRows(0);
     result.reserve(indexes.size());
     for (const QModelIndex& index : indexes) {
         if (index.parent() == grid->rootIndex())
@@ -826,10 +718,8 @@ QList<int> DataGridAccessible::selectedRows() const
 bool DataGridAccessible::isColumnSelected(int column) const
 {
     const DataGrid* grid = view();
-    return grid && grid->selectionModel() && column >= 0
-        && column < columnCount()
-        && grid->selectionModel()->isColumnSelected(
-            column, grid->rootIndex());
+    return grid && grid->selectionModel() && column >= 0 && column < columnCount()
+        && grid->selectionModel()->isColumnSelected(column, grid->rootIndex());
 }
 
 bool DataGridAccessible::isRowSelected(int row) const
@@ -842,15 +732,12 @@ bool DataGridAccessible::isRowSelected(int row) const
 bool DataGridAccessible::selectRow(int row)
 {
     DataGrid* grid = view();
-    if (!grid || !grid->model() || !grid->selectionModel()
-        || row < 0 || row >= rowCount()
+    if (!grid || !grid->model() || !grid->selectionModel() || row < 0 || row >= rowCount()
         || grid->QAbstractItemView::selectionMode() == QAbstractItemView::NoSelection) {
         return false;
     }
-    const QModelIndex index = grid->model()->index(
-        row, 0, grid->rootIndex());
-    QItemSelectionModel::SelectionFlags command =
-        QItemSelectionModel::Select | QItemSelectionModel::Rows;
+    const QModelIndex index = grid->model()->index(row, 0, grid->rootIndex());
+    QItemSelectionModel::SelectionFlags command = QItemSelectionModel::Select | QItemSelectionModel::Rows;
     if (grid->QAbstractItemView::selectionMode() == QAbstractItemView::SingleSelection)
         command |= QItemSelectionModel::Clear;
     grid->selectionModel()->select(index, command);
@@ -860,15 +747,12 @@ bool DataGridAccessible::selectRow(int row)
 bool DataGridAccessible::selectColumn(int column)
 {
     DataGrid* grid = view();
-    if (!grid || !grid->model() || !grid->selectionModel()
-        || column < 0 || column >= columnCount()
+    if (!grid || !grid->model() || !grid->selectionModel() || column < 0 || column >= columnCount()
         || grid->QAbstractItemView::selectionMode() == QAbstractItemView::NoSelection) {
         return false;
     }
-    const QModelIndex index = grid->model()->index(
-        0, column, grid->rootIndex());
-    QItemSelectionModel::SelectionFlags command =
-        QItemSelectionModel::Select | QItemSelectionModel::Columns;
+    const QModelIndex index = grid->model()->index(0, column, grid->rootIndex());
+    QItemSelectionModel::SelectionFlags command = QItemSelectionModel::Select | QItemSelectionModel::Columns;
     if (grid->QAbstractItemView::selectionMode() == QAbstractItemView::SingleSelection)
         command |= QItemSelectionModel::Clear;
     grid->selectionModel()->select(index, command);
@@ -878,12 +762,10 @@ bool DataGridAccessible::selectColumn(int column)
 bool DataGridAccessible::unselectRow(int row)
 {
     DataGrid* grid = view();
-    if (!grid || !grid->model() || !grid->selectionModel()
-        || row < 0 || row >= rowCount()) {
+    if (!grid || !grid->model() || !grid->selectionModel() || row < 0 || row >= rowCount()) {
         return false;
     }
-    grid->selectionModel()->select(
-        grid->model()->index(row, 0, grid->rootIndex()),
+    grid->selectionModel()->select(grid->model()->index(row, 0, grid->rootIndex()),
         QItemSelectionModel::Deselect | QItemSelectionModel::Rows);
     return !isRowSelected(row);
 }
@@ -891,29 +773,23 @@ bool DataGridAccessible::unselectRow(int row)
 bool DataGridAccessible::unselectColumn(int column)
 {
     DataGrid* grid = view();
-    if (!grid || !grid->model() || !grid->selectionModel()
-        || column < 0 || column >= columnCount()) {
+    if (!grid || !grid->model() || !grid->selectionModel() || column < 0 || column >= columnCount()) {
         return false;
     }
-    grid->selectionModel()->select(
-        grid->model()->index(0, column, grid->rootIndex()),
+    grid->selectionModel()->select(grid->model()->index(0, column, grid->rootIndex()),
         QItemSelectionModel::Deselect | QItemSelectionModel::Columns);
     return !isColumnSelected(column);
 }
 
-void DataGridAccessible::modelChange(
-    QAccessibleTableModelChangeEvent* event)
+void DataGridAccessible::modelChange(QAccessibleTableModelChangeEvent* event)
 {
-    if (!event
-        || event->modelChangeType()
-            != QAccessibleTableModelChangeEvent::DataChanged) {
+    if (!event || event->modelChangeType() != QAccessibleTableModelChangeEvent::DataChanged) {
         clearChildCache();
     }
 }
 
 #if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
-bool DataGridAccessible::isSelected(
-    QAccessibleInterface* childItem) const
+bool DataGridAccessible::isSelected(QAccessibleInterface* childItem) const
 {
     auto* cell = dynamic_cast<DataGridAccessibleCell*>(childItem);
     return cell && cell->isSelected();
@@ -927,10 +803,8 @@ bool DataGridAccessible::selectIndex(const QModelIndex& index, bool selected)
         return false;
     }
     QItemSelectionModel::SelectionFlags command = behaviorFlag(grid);
-    command |= selected ? QItemSelectionModel::Select
-                        : QItemSelectionModel::Deselect;
-    if (selected
-        && grid->QAbstractItemView::selectionMode() == QAbstractItemView::SingleSelection) {
+    command |= selected ? QItemSelectionModel::Select : QItemSelectionModel::Deselect;
+    if (selected && grid->QAbstractItemView::selectionMode() == QAbstractItemView::SingleSelection) {
         command |= QItemSelectionModel::Clear;
     }
     grid->selectionModel()->select(index, command);
@@ -970,17 +844,13 @@ bool DataGridAccessible::clear()
 }
 #endif
 
-QAccessibleInterface* DataGridAccessible::headerCell(
-    int section, Qt::Orientation orientation) const
+QAccessibleInterface* DataGridAccessible::headerCell(int section, Qt::Orientation orientation) const
 {
-    if (section < 0
-        || (orientation == Qt::Horizontal && section >= columnCount())
+    if (section < 0 || (orientation == Qt::Horizontal && section >= columnCount())
         || (orientation == Qt::Vertical && section >= rowCount())) {
         return nullptr;
     }
-    const int logicalChild = orientation == Qt::Horizontal
-        ? section + 1
-        : (section + 1) * (columnCount() + 1);
+    const int logicalChild = orientation == Qt::Horizontal ? section + 1 : (section + 1) * (columnCount() + 1);
     return interfaceForLogicalChild(logicalChild);
 }
 
@@ -992,8 +862,7 @@ void DataGridAccessible::clearChildCache() const
         QAccessible::deleteAccessibleInterface(id);
 }
 
-QAccessibleInterface* dataGridAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* dataGridAccessibilityFactory(const QString&, QObject* object)
 {
     auto* view = dynamic_cast<DataGrid*>(object);
     return view ? new DataGridAccessible(view) : nullptr;

@@ -89,17 +89,14 @@ QRect rectIn(const QWidget* widget, QWidget* ancestor)
     return QRect(widget->mapTo(ancestor, QPoint()), widget->size());
 }
 
-const QStringList kSampleIds{
-    QStringLiteral("qml-view-load"),      QStringLiteral("qml-view-theme"),
-    QStringLiteral("qml-view-context"),   QStringLiteral("qml-view-action"),
-    QStringLiteral("qml-view-lifecycle"), QStringLiteral("qml-view-error")};
-const QStringList kViewNames{
-    QStringLiteral("qmlBridgeLoadView"),      QStringLiteral("qmlBridgeThemeView"),
-    QStringLiteral("qmlBridgeContextView"),   QStringLiteral("qmlBridgeActionView"),
+const QStringList kSampleIds{QStringLiteral("qml-view-load"), QStringLiteral("qml-view-theme"),
+    QStringLiteral("qml-view-context"), QStringLiteral("qml-view-action"), QStringLiteral("qml-view-lifecycle"),
+    QStringLiteral("qml-view-error")};
+const QStringList kViewNames{QStringLiteral("qmlBridgeLoadView"), QStringLiteral("qmlBridgeThemeView"),
+    QStringLiteral("qmlBridgeContextView"), QStringLiteral("qmlBridgeActionView"),
     QStringLiteral("qmlBridgeLifecycleView"), QStringLiteral("qmlBridgeErrorView")};
 
-GallerySampleCard* qmlCard(GalleryComponentPage* page,
-                           const QString& sampleId = QStringLiteral("qml-view-action"))
+GallerySampleCard* qmlCard(GalleryComponentPage* page, const QString& sampleId = QStringLiteral("qml-view-action"))
 {
     for (auto* card : page->sampleCards())
         if (card->sampleId() == sampleId)
@@ -112,25 +109,18 @@ testing::AssertionResult atomicSourceContract(const fluent::gallery::GallerySamp
     const int index = kSampleIds.indexOf(sample.id);
     if (index < 0)
         return testing::AssertionFailure() << "Unknown atomic sample";
-    const QStringList files{QStringLiteral("Basic.qml"),   QStringLiteral("Theme.qml"),
-                            QStringLiteral("Context.qml"), QStringLiteral("Action.qml"),
-                            QStringLiteral("Basic.qml"),   QStringLiteral("Basic.qml")};
-    const QStringList keyTokens[]{
-        QStringLiteral("activate|createView|load(source)").split(QLatin1Char('|')),
+    const QStringList files{QStringLiteral("Basic.qml"), QStringLiteral("Theme.qml"), QStringLiteral("Context.qml"),
+        QStringLiteral("Action.qml"), QStringLiteral("Basic.qml"), QStringLiteral("Basic.qml")};
+    const QStringList keyTokens[]{QStringLiteral("activate|createView|load(source)").split(QLatin1Char('|')),
         QStringLiteral("Theme.qml|load(source)").split(QLatin1Char('|')),
         QStringLiteral("setContextObject|widgetInput|A shared title").split(QLatin1Char('|')),
-        QStringLiteral("setContextObject|widgetProgress|setRange(0, 100)|setValue(40)")
-            .split(QLatin1Char('|')),
-        QStringLiteral("deactivate|activate|unload()|load(source)|statusChanged")
-            .split(QLatin1Char('|')),
-        QStringLiteral("QmlView::Error|lastError|Missing.qml|restore|load(source)")
-            .split(QLatin1Char('|'))};
+        QStringLiteral("setContextObject|widgetProgress|setRange(0, 100)|setValue(40)").split(QLatin1Char('|')),
+        QStringLiteral("deactivate|activate|unload()|load(source)|statusChanged").split(QLatin1Char('|')),
+        QStringLiteral("QmlView::Error|lastError|Missing.qml|restore|load(source)").split(QLatin1Char('|'))};
     const QString& key = sample.usageSnippet;
     const QString& full = sample.codeSnippet;
-    if (key.trimmed().isEmpty() || key.trimmed() == full.trimmed() ||
-        key.contains(QStringLiteral("int main(")) ||
-        key.contains(QStringLiteral("import QtQuick")) ||
-        key.contains(QStringLiteral("Rectangle {")))
+    if (key.trimmed().isEmpty() || key.trimmed() == full.trimmed() || key.contains(QStringLiteral("int main("))
+        || key.contains(QStringLiteral("import QtQuick")) || key.contains(QStringLiteral("Rectangle {")))
         return testing::AssertionFailure() << "Key usage must be a distinct feature excerpt";
     for (const auto& token : keyTokens[index]) {
         if (!key.contains(token))
@@ -139,32 +129,26 @@ testing::AssertionResult atomicSourceContract(const fluent::gallery::GallerySamp
     if (index == 1 && key.contains(QStringLiteral("createView")))
         return testing::AssertionFailure() << "Theme Key usage must focus on live QML tokens";
     for (const auto& token :
-         {QStringLiteral("#include <FluentQt/FluentQt.h>"),
-          QStringLiteral("#include <FluentQt/QmlBridge.h>"), QStringLiteral("QVBoxLayout"),
-          QStringLiteral("makePanel"), QStringLiteral("setContentWidget(makePanel("),
-          QStringLiteral("session->activate"), QStringLiteral("session->createView"),
-          QStringLiteral("new Label"), QStringLiteral("return panel;"),
-          QStringLiteral("application.exec()")}) {
+        {QStringLiteral("#include <FluentQt/FluentQt.h>"), QStringLiteral("#include <FluentQt/QmlBridge.h>"),
+            QStringLiteral("QVBoxLayout"), QStringLiteral("makePanel"), QStringLiteral("setContentWidget(makePanel("),
+            QStringLiteral("session->activate"), QStringLiteral("session->createView"), QStringLiteral("new Label"),
+            QStringLiteral("return panel;"), QStringLiteral("application.exec()")}) {
         if (!full.contains(token))
-            return testing::AssertionFailure()
-                   << "Standalone Full example omits " << token.toStdString();
+            return testing::AssertionFailure() << "Standalone Full example omits " << token.toStdString();
     }
     if (full.count(QStringLiteral("int main(")) != 1 || full.contains(QStringLiteral("qrc:/app/")))
-        return testing::AssertionFailure()
-               << "Full example must have one main and independent QML files";
+        return testing::AssertionFailure() << "Full example must have one main and independent QML files";
     const auto main = full.mid(full.indexOf(QStringLiteral("int main(")));
     const int prepared = main.indexOf(QStringLiteral("QmlSession::prepareApplication()"));
     const int application = main.indexOf(QStringLiteral("QApplication application"));
     if (prepared < 0 || application < prepared)
-        return testing::AssertionFailure()
-               << "Full example must prepare Quick before its application";
-    for (const auto& forbidden :
-         {QStringLiteral("import QtQuick"), QStringLiteral("Rectangle {"),
-          QStringLiteral("QTemporaryDir"), QStringLiteral("const QByteArray qml"),
-          QStringLiteral("QUrl::fromLocalFile"), QStringLiteral(".write(qml)")}) {
+        return testing::AssertionFailure() << "Full example must prepare Quick before its application";
+    for (const auto& forbidden : {QStringLiteral("import QtQuick"), QStringLiteral("Rectangle {"),
+             QStringLiteral("QTemporaryDir"), QStringLiteral("const QByteArray qml"),
+             QStringLiteral("QUrl::fromLocalFile"), QStringLiteral(".write(qml)")}) {
         if (full.contains(forbidden))
             return testing::AssertionFailure()
-                   << "C++ host source must load a separate QML file: " << forbidden.toStdString();
+                << "C++ host source must load a separate QML file: " << forbidden.toStdString();
     }
     if (sample.sourceFiles.size() != 4)
         return testing::AssertionFailure() << "Full example requires four independent source files";
@@ -172,12 +156,12 @@ testing::AssertionResult atomicSourceContract(const fluent::gallery::GallerySamp
     const auto& qml = sample.sourceFiles[1];
     const auto& resource = sample.sourceFiles[2];
     const auto& cmake = sample.sourceFiles[3];
-    if (host.name != QStringLiteral("main.cpp") || host.language != QStringLiteral("cpp") ||
-        host.code != full || host.usageSnippet != key || qml.name != files[index] ||
-        qml.language != QStringLiteral("qml") || !qml.usageSnippet.isEmpty() ||
-        resource.name != QStringLiteral("qml.qrc") || resource.language != QStringLiteral("xml") ||
-        !resource.usageSnippet.isEmpty() || cmake.name != QStringLiteral("CMakeLists.txt") ||
-        cmake.language != QStringLiteral("cmake") || !cmake.usageSnippet.isEmpty())
+    if (host.name != QStringLiteral("main.cpp") || host.language != QStringLiteral("cpp") || host.code != full
+        || host.usageSnippet != key || qml.name != files[index] || qml.language != QStringLiteral("qml")
+        || !qml.usageSnippet.isEmpty() || resource.name != QStringLiteral("qml.qrc")
+        || resource.language != QStringLiteral("xml") || !resource.usageSnippet.isEmpty()
+        || cmake.name != QStringLiteral("CMakeLists.txt") || cmake.language != QStringLiteral("cmake")
+        || !cmake.usageSnippet.isEmpty())
         return testing::AssertionFailure() << "Source file names, languages or excerpts differ";
     QFile asset(QStringLiteral(":/app/qml-bridge/") + files[index]);
     if (!asset.open(QIODevice::ReadOnly) || qml.code.toUtf8() != asset.readAll())
@@ -194,32 +178,27 @@ testing::AssertionResult atomicSourceContract(const fluent::gallery::GallerySamp
         if (xml.isStartElement() && xml.name() == QLatin1String("file"))
             registered.append(xml.readElementText());
     }
-    if (xml.hasError() || registered != QStringList{qml.name} ||
-        resourcePrefix != QStringLiteral("/"))
-        return testing::AssertionFailure()
-               << "qml.qrc must register this card's QML at its loaded path";
-    for (const auto& token : {QStringLiteral("CMAKE_AUTORCC ON"),
-                              QStringLiteral("COMPONENTS QmlBridge"), QStringLiteral("main.cpp"),
-                              QStringLiteral("qml.qrc"), QStringLiteral("FluentQt::QmlBridge")}) {
+    if (xml.hasError() || registered != QStringList{qml.name} || resourcePrefix != QStringLiteral("/"))
+        return testing::AssertionFailure() << "qml.qrc must register this card's QML at its loaded path";
+    for (const auto& token : {QStringLiteral("CMAKE_AUTORCC ON"), QStringLiteral("COMPONENTS QmlBridge"),
+             QStringLiteral("main.cpp"), QStringLiteral("qml.qrc"), QStringLiteral("FluentQt::QmlBridge")}) {
         if (!cmake.code.contains(token))
             return testing::AssertionFailure() << "CMake example omits " << token.toStdString();
     }
-    const QStringList qmlTokens[]{
-        QStringLiteral("Hello from QML").split(QLatin1Char('|')),
-        QStringLiteral(
-            "fluentTheme.accent|fluentTheme.dark|fluentTheme.text|fluentTheme.fontFamily")
+    const QStringList qmlTokens[]{QStringLiteral("Hello from QML").split(QLatin1Char('|')),
+        QStringLiteral("fluentTheme.accent|fluentTheme.dark|fluentTheme.text|fluentTheme.fontFamily")
             .split(QLatin1Char('|')),
         QStringLiteral("widgetInput.text|previewTitle").split(QLatin1Char('|')),
-        QStringLiteral("widgetProgress.value|Math.min(100|function advance()|onClicked")
-            .split(QLatin1Char('|')),
+        QStringLiteral("widgetProgress.value|Math.min(100|function advance()|onClicked").split(QLatin1Char('|')),
         QStringLiteral("Hello from QML").split(QLatin1Char('|')),
         QStringLiteral("Hello from QML").split(QLatin1Char('|'))};
     for (const auto& token : qmlTokens[index]) {
         if (!qml.code.contains(token))
             return testing::AssertionFailure() << "QML page omits " << token.toStdString();
     }
-    if (index == 4 && (!full.contains(QStringLiteral("view->unload()")) ||
-                       !full.contains(QStringLiteral("session->deactivate()"))))
+    if (index == 4
+        && (!full.contains(QStringLiteral("view->unload()"))
+            || !full.contains(QStringLiteral("session->deactivate()"))))
         return testing::AssertionFailure() << "Full lifecycle must force a fresh scene on Reload";
     return testing::AssertionSuccess();
 }
@@ -241,32 +220,28 @@ testing::AssertionResult sampleGeometry(GalleryComponentPage* page)
         auto* surface = card->findChild<QWidget*>(QStringLiteral("gallerySampleCardPreview"));
         if (!panel || !surface || !card->codeBlock())
             return testing::AssertionFailure() << "Missing preview or source host";
-        if (!surface->rect().adjusted(20, 20, -20, -20).contains(rectIn(panel, surface)) ||
-            surface->height() < panel->height() + 40)
+        if (!surface->rect().adjusted(20, 20, -20, -20).contains(rectIn(panel, surface))
+            || surface->height() < panel->height() + 40)
             return testing::AssertionFailure() << "Atomic preview exceeds its surface";
         auto* view = panel->findChild<QmlView*>(kViewNames[index]);
         if (!view || !view->parentWidget()->rect().contains(view->geometry()))
             return testing::AssertionFailure() << "QmlView exceeds its atomic card";
         for (auto* control : panel->findChildren<QWidget*>()) {
-            if (control->objectName().startsWith(QStringLiteral("qmlBridge")) &&
-                !panel->rect().contains(rectIn(control, panel)))
-                return testing::AssertionFailure()
-                       << "Atomic control clipped: " << control->objectName().toStdString();
+            if (control->objectName().startsWith(QStringLiteral("qmlBridge"))
+                && !panel->rect().contains(rectIn(control, panel)))
+                return testing::AssertionFailure() << "Atomic control clipped: " << control->objectName().toStdString();
         }
         auto* block = card->codeBlock();
-        if (block->y() < surface->geometry().bottom() + 12 ||
-            card->height() < block->geometry().bottom() + 18)
+        if (block->y() < surface->geometry().bottom() + 12 || card->height() < block->geometry().bottom() + 18)
             return testing::AssertionFailure() << "Source overlaps an atomic preview";
     }
     auto* scroll = page->findChild<ScrollView*>(QStringLiteral("galleryContentScrollArea"));
     if (!scroll || !scroll->widget() || !scroll->widget()->layout())
         return testing::AssertionFailure() << "Missing scroll content";
-    const int required =
-        qMax(scroll->viewport()->height(), scroll->widget()->layout()->minimumSize().height());
+    const int required = qMax(scroll->viewport()->height(), scroll->widget()->layout()->minimumSize().height());
     if (scroll->widget()->height() < required)
         return testing::AssertionFailure()
-               << "Scroll content truncates its layout: actual=" << scroll->widget()->height()
-               << " required=" << required;
+            << "Scroll content truncates its layout: actual=" << scroll->widget()->height() << " required=" << required;
     return testing::AssertionSuccess();
 }
 
@@ -284,9 +259,8 @@ bool waitForStableGeometry(GalleryComponentPage* page, QmlView* view, ScrollView
             const QSize viewport = scroll->viewport()->size();
             const QSize content = scroll->widget()->size();
             const int maximum = scroll->verticalScrollBar()->maximum();
-            if (!sampleGeometry(page) || currentView != previousView ||
-                viewport != previousViewport || content != previousContent ||
-                maximum != previousMaximum) {
+            if (!sampleGeometry(page) || currentView != previousView || viewport != previousViewport
+                || content != previousContent || maximum != previousMaximum) {
                 previousView = currentView;
                 previousViewport = viewport;
                 previousContent = content;
@@ -309,8 +283,8 @@ public:
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override
     {
-        if (event->type() != QEvent::DynamicPropertyChange ||
-            static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName() != kDirectComposition)
+        if (event->type() != QEvent::DynamicPropertyChange
+            || static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName() != kDirectComposition)
             return false;
         auto* view = qobject_cast<QmlView*>(watched);
         if (!view)
@@ -321,9 +295,9 @@ protected:
             declaredBeforeQuick = quickWidgets.isEmpty();
         } else {
             ++clearances;
-            clearedAfterQuickHidden =
-                std::all_of(quickWidgets.cbegin(), quickWidgets.cend(),
-                            [](QQuickWidget* quick) { return quick->isHidden(); });
+            clearedAfterQuickHidden = std::all_of(quickWidgets.cbegin(), quickWidgets.cend(), [](QQuickWidget* quick) {
+                return quick->isHidden();
+            });
         }
         return false;
     }
@@ -380,9 +354,8 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeSourceSwitchKeepsPaintGeometryConsis
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
-            return window.currentContentPage() &&
-                   window.currentContentPage()->routeId() == QStringLiteral("qml-view") &&
-                   !window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen"));
+            return window.currentContentPage() && window.currentContentPage()->routeId() == QStringLiteral("qml-view")
+                && !window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen"));
         },
         60000));
     auto* page = qobject_cast<GalleryComponentPage*>(window.currentContentPage());
@@ -417,9 +390,8 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeSourceSwitchKeepsPaintGeometryConsis
             ++paints;
             const int needed = label->heightForWidth(label->width());
             if (label->height() < needed)
-                failures.append(QStringLiteral("Code painted before height settled: %1 < %2")
-                                    .arg(label->height())
-                                    .arg(needed));
+                failures.append(
+                    QStringLiteral("Code painted before height settled: %1 < %2").arg(label->height()).arg(needed));
             if (!card->rect().contains(rectIn(code, card)))
                 failures.append(QStringLiteral("Code painted outside its sample card"));
             return false;
@@ -441,23 +413,17 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeSourceSwitchKeepsPaintGeometryConsis
         for (int width : {1160, 760}) {
             window.resize(width, 760);
             ASSERT_TRUE(waitForStableGeometry(page, view, scroll));
-            scroll->scrollTo(0,
-                             rectIn(selector, scroll->widget()).center().y() -
-                                 scroll->viewport()->height() / 2,
-                             false);
+            scroll->scrollTo(0, rectIn(selector, scroll->widget()).center().y() - scroll->viewport()->height() / 2,
+                false);
             ASSERT_TRUE(waitForStableGeometry(page, view, scroll));
             ASSERT_TRUE(scroll->viewport()->rect().contains(rectIn(selector, scroll->viewport())));
             const QRect previewRect = rectIn(view, scroll->viewport());
             const int offset = scroll->verticalScrollBar()->value();
             for (int pass = 0; pass < 12; ++pass) {
-                SCOPED_TRACE(QStringLiteral("theme=%1 width=%2 pass=%3")
-                                 .arg(int(theme))
-                                 .arg(width)
-                                 .arg(pass)
-                                 .toStdString());
+                SCOPED_TRACE(
+                    QStringLiteral("theme=%1 width=%2 pass=%3").arg(int(theme)).arg(width).arg(pass).toStdString());
                 const int index = (pass + 1) % 2;
-                QTest::mouseClick(selector, Qt::LeftButton, Qt::NoModifier,
-                                  selector->itemGeometry(index).center());
+                QTest::mouseClick(selector, Qt::LeftButton, Qt::NoModifier, selector->itemGeometry(index).center());
                 for (int tick = 0; tick < 4; ++tick) {
                     QTest::qWait(16);
                     EXPECT_EQ(rectIn(view, scroll->viewport()), previewRect);
@@ -468,15 +434,14 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeSourceSwitchKeepsPaintGeometryConsis
                         const QImage screen = window.screen()->grabWindow(window.winId()).toImage();
                         ASSERT_FALSE(screen.isNull());
                         ASSERT_TRUE(screen.save(
-                            evidence +
-                            QStringLiteral("/frame-%1.png").arg(frame++, 4, 10, QLatin1Char('0'))));
+                            evidence + QStringLiteral("/frame-%1.png").arg(frame++, 4, 10, QLatin1Char('0'))));
                     }
                 }
             }
             // Also cover clicks arriving faster than the display's frame cadence.
             for (int pass = 0; pass < 32; ++pass) {
                 QTest::mouseClick(selector, Qt::LeftButton, Qt::NoModifier,
-                                  selector->itemGeometry((pass + 1) % 2).center());
+                    selector->itemGeometry((pass + 1) % 2).center());
                 EXPECT_GE(label->height(), label->heightForWidth(label->width()));
                 EXPECT_EQ(rectIn(view, scroll->viewport()), previewRect);
                 EXPECT_EQ(scroll->verticalScrollBar()->value(), offset);
@@ -535,8 +500,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeQmlPageKeepsCppOnlyPresentation)
     window.show();
     ASSERT_TRUE(QTest::qWaitFor([&] {
         auto* current = qobject_cast<GalleryComponentPage*>(window.currentContentPage());
-        return current && current->routeId() == QStringLiteral("qml-view") &&
-               !current->hasPendingSamples();
+        return current && current->routeId() == QStringLiteral("qml-view") && !current->hasPendingSamples();
     }));
     auto* page = qobject_cast<GalleryComponentPage*>(window.currentContentPage());
     ASSERT_NE(page, nullptr);
@@ -576,13 +540,14 @@ TEST_F(GalleryQmlBridgeTest, Contract_AtomicSamplesKeepIndependentState)
     auto* missing = page.findChild<Button*>(QStringLiteral("qmlBridgeLoadMissing"));
     auto* restore = page.findChild<Button*>(QStringLiteral("qmlBridgeRestore"));
     auto* scroll = page.findChild<ScrollView*>(QStringLiteral("galleryContentScrollArea"));
-    ASSERT_TRUE(context && action && theme && lifecycle && error && title && progress &&
-                deactivate && reload && missing && restore && scroll);
+    ASSERT_TRUE(context && action && theme && lifecycle && error && title && progress && deactivate && reload && missing
+        && restore && scroll);
     const auto views = page.findChildren<QmlView*>();
     ASSERT_EQ(views.size(), 6);
     ASSERT_TRUE(QTest::qWaitFor([&] {
-        return std::all_of(views.cbegin(), views.cend(),
-                           [](QmlView* view) { return view->status() == QmlView::Ready; });
+        return std::all_of(views.cbegin(), views.cend(), [](QmlView* view) {
+            return view->status() == QmlView::Ready;
+        });
     }));
     EXPECT_EQ(title->text(), QStringLiteral("A shared title"));
     EXPECT_DOUBLE_EQ(progress->value(), 40);
@@ -598,26 +563,21 @@ TEST_F(GalleryQmlBridgeTest, Contract_AtomicSamplesKeepIndependentState)
         QTest::keyClicks(title, "Edited in Widgets");
         EXPECT_EQ(context->rootObject()->property("previewTitle").toString(), title->text());
         const double beforeAdvance = progress->value();
-        ASSERT_TRUE(
-            QMetaObject::invokeMethod(action->rootObject(), "advance", Qt::DirectConnection));
+        ASSERT_TRUE(QMetaObject::invokeMethod(action->rootObject(), "advance", Qt::DirectConnection));
         EXPECT_DOUBLE_EQ(progress->value(), qMin(100., beforeAdvance + 10));
-        EXPECT_EQ(action->rootObject()->property("previewProgress").toInt(),
-                  int(progress->value()));
+        EXPECT_EQ(action->rootObject()->property("previewProgress").toInt(), int(progress->value()));
         EXPECT_EQ(title->text(), QStringLiteral("Edited in Widgets"));
         for (auto mode : {fluent::FluentElement::Dark, fluent::FluentElement::Light}) {
             auto* card = qmlCard(&page, QStringLiteral("qml-view-theme"));
             card->setPreviewThemeOverride(mode);
-            EXPECT_EQ(theme->themeObject()->property("dark").toBool(),
-                      mode == fluent::FluentElement::Dark);
+            EXPECT_EQ(theme->themeObject()->property("dark").toBool(), mode == fluent::FluentElement::Dark);
             EXPECT_EQ(theme->rootObject()->property("color").value<QColor>(),
-                      theme->themeObject()->property("surface").value<QColor>());
+                theme->themeObject()->property("surface").value<QColor>());
             scroll->ensureWidgetVisible(theme);
             auto* themeRoot = qobject_cast<QQuickItem*>(theme->rootObject());
             ASSERT_NE(themeRoot, nullptr);
-            auto* swatch =
-                themeRoot->findChild<QQuickItem*>(QStringLiteral("qmlBridgeThemeSwatch"));
-            auto* caption =
-                themeRoot->findChild<QQuickItem*>(QStringLiteral("qmlBridgeThemeCaption"));
+            auto* swatch = themeRoot->findChild<QQuickItem*>(QStringLiteral("qmlBridgeThemeSwatch"));
+            auto* caption = themeRoot->findChild<QQuickItem*>(QStringLiteral("qmlBridgeThemeCaption"));
             ASSERT_TRUE(swatch && caption);
             const auto center = [](QQuickItem* item) {
                 return item->mapToScene(QPointF(item->width() / 2, item->height() / 2));
@@ -625,27 +585,23 @@ TEST_F(GalleryQmlBridgeTest, Contract_AtomicSamplesKeepIndependentState)
             const auto itemGeometry = [&](QQuickItem* item) {
                 const QPointF sceneCenter = center(item);
                 return QJsonObject{{QStringLiteral("class"), item->metaObject()->className()},
-                                   {QStringLiteral("name"), item->objectName()},
-                                   {QStringLiteral("width"), item->width()},
-                                   {QStringLiteral("height"), item->height()},
-                                   {QStringLiteral("x"), item->x()},
-                                   {QStringLiteral("y"), item->y()},
-                                   {QStringLiteral("sceneCenterX"), sceneCenter.x()},
-                                   {QStringLiteral("sceneCenterY"), sceneCenter.y()}};
+                    {QStringLiteral("name"), item->objectName()}, {QStringLiteral("width"), item->width()},
+                    {QStringLiteral("height"), item->height()}, {QStringLiteral("x"), item->x()},
+                    {QStringLiteral("y"), item->y()}, {QStringLiteral("sceneCenterX"), sceneCenter.x()},
+                    {QStringLiteral("sceneCenterY"), sceneCenter.y()}};
             };
             ASSERT_TRUE(QTest::qWaitFor([&] {
-                return caption->width() > 0 && caption->height() > 0 &&
-                       qAbs(center(swatch).y() - center(caption).y()) < .25;
-            })) << QJsonDocument(QJsonObject{
-                                     {QStringLiteral("mode"), int(mode)},
-                                     {QStringLiteral("swatch"), itemGeometry(swatch)},
-                                     {QStringLiteral("caption"), itemGeometry(caption)},
-                                     {QStringLiteral("row"), itemGeometry(swatch->parentItem())},
-                                     {QStringLiteral("root"), itemGeometry(themeRoot)},
-                                     {QStringLiteral("scrollValue"),
-                                      scroll->verticalScrollBar()->value()},
-                                     {QStringLiteral("viewVisibleRegionEmpty"),
-                                      theme->visibleRegion().isEmpty()}})
+                return caption->width() > 0 && caption->height() > 0
+                    && qAbs(center(swatch).y() - center(caption).y()) < .25;
+            }))
+                << QJsonDocument(
+                       QJsonObject{{QStringLiteral("mode"), int(mode)},
+                           {QStringLiteral("swatch"), itemGeometry(swatch)},
+                           {QStringLiteral("caption"), itemGeometry(caption)},
+                           {QStringLiteral("row"), itemGeometry(swatch->parentItem())},
+                           {QStringLiteral("root"), itemGeometry(themeRoot)},
+                           {QStringLiteral("scrollValue"), scroll->verticalScrollBar()->value()},
+                           {QStringLiteral("viewVisibleRegionEmpty"), theme->visibleRegion().isEmpty()}})
                        .toJson(QJsonDocument::Compact)
                        .toStdString();
             EXPECT_NEAR(center(swatch).y(), center(caption).y(), .25);
@@ -657,8 +613,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_AtomicSamplesKeepIndependentState)
 #if !FLUENT_QUICK_USES_RHI
                 // Qt 5's software widget paints its own cached image; read
                 // that presentation instead of reentering render-control grab.
-                if (nativeQuick->quickWindow()->rendererInterface()->graphicsApi() ==
-                    QSGRendererInterface::Software)
+                if (nativeQuick->quickWindow()->rendererInterface()->graphicsApi() == QSGRendererInterface::Software)
                     return nativeQuick->grab().toImage();
 #endif
                 return nativeQuick->grabFramebuffer();
@@ -667,18 +622,14 @@ TEST_F(GalleryQmlBridgeTest, Contract_AtomicSamplesKeepIndependentState)
             const bool backdropRendered = QTest::qWaitFor([&] {
                 themeFrame = grabFrame();
                 const auto& frame = themeFrame;
-                return !frame.isNull() && frame.pixelColor(0, 0) == backdrop &&
-                       frame.pixelColor(frame.width() - 1, frame.height() - 1) == backdrop &&
-                       backdrop.alpha() == 255;
+                return !frame.isNull() && frame.pixelColor(0, 0) == backdrop
+                    && frame.pixelColor(frame.width() - 1, frame.height() - 1) == backdrop && backdrop.alpha() == 255;
             });
-            if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
-                !dir.isEmpty()) {
+            if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE"); !dir.isEmpty()) {
                 QDir().mkpath(dir);
-                themeFrame.save(dir +
-                                QStringLiteral("/qml-theme-%1-%2.png").arg(width).arg(int(mode)));
+                themeFrame.save(dir + QStringLiteral("/qml-theme-%1-%2.png").arg(width).arg(int(mode)));
             }
-            ASSERT_TRUE(backdropRendered)
-                << "The Gallery Theme preview must render its explicit LayerAlt backdrop";
+            ASSERT_TRUE(backdropRendered) << "The Gallery Theme preview must render its explicit LayerAlt backdrop";
         }
         qmlCard(&page, QStringLiteral("qml-view-theme"))->clearPreviewThemeOverride();
         const auto samples = fluent::gallery::gallerySamplesForRoute(QStringLiteral("qml-view"));
@@ -703,14 +654,12 @@ TEST_F(GalleryQmlBridgeTest, Contract_AtomicSamplesKeepIndependentState)
             EXPECT_EQ(code->code(), sample.usageSnippet);
             QApplication::clipboard()->clear();
             code->copyButton()->click();
-            ASSERT_TRUE(QTest::qWaitFor(
-                [&] { return QApplication::clipboard()->text() == sample.usageSnippet; }));
+            ASSERT_TRUE(QTest::qWaitFor([&] { return QApplication::clipboard()->text() == sample.usageSnippet; }));
             selector->setSelectedIndex(1);
             EXPECT_EQ(code->code(), sample.codeSnippet);
             QApplication::clipboard()->clear();
             code->copyButton()->click();
-            ASSERT_TRUE(QTest::qWaitFor(
-                [&] { return QApplication::clipboard()->text() == sample.codeSnippet; }));
+            ASSERT_TRUE(QTest::qWaitFor([&] { return QApplication::clipboard()->text() == sample.codeSnippet; }));
             for (int fileIndex = 1; fileIndex < sample.sourceFiles.size(); ++fileIndex) {
                 const auto& source = sample.sourceFiles[fileIndex];
                 EXPECT_EQ(fileSelector->itemText(fileIndex), source.name);
@@ -720,8 +669,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_AtomicSamplesKeepIndependentState)
                 EXPECT_EQ(code->code(), source.code);
                 QApplication::clipboard()->clear();
                 code->copyButton()->click();
-                ASSERT_TRUE(QTest::qWaitFor(
-                    [&] { return QApplication::clipboard()->text() == source.code; }));
+                ASSERT_TRUE(QTest::qWaitFor([&] { return QApplication::clipboard()->text() == source.code; }));
             }
             fileSelector->setCurrentIndex(0);
             EXPECT_FALSE(selector->isHidden());
@@ -743,8 +691,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_AtomicSamplesKeepIndependentState)
                 selector->setSelectedIndex(1);
                 QApplication::clipboard()->clear();
                 code->copyButton()->click();
-                ASSERT_TRUE(QTest::qWaitFor(
-                    [&] { return QApplication::clipboard()->text() == pythonFiles[0].code; }));
+                ASSERT_TRUE(QTest::qWaitFor([&] { return QApplication::clipboard()->text() == pythonFiles[0].code; }));
                 EXPECT_FALSE(code->code().contains(QStringLiteral("import QtQuick")));
                 EXPECT_FALSE(selector->isHidden());
                 fileSelector->setCurrentIndex(1);
@@ -780,8 +727,8 @@ TEST_F(GalleryQmlBridgeTest, Contract_AtomicSamplesKeepIndependentState)
         ASSERT_TRUE(QTest::qWaitFor(
             [&] {
                 QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-                return retiredQuick.isNull() && retiredRoot.isNull() && retiredEngine.isNull() &&
-                       page.findChildren<QQuickWidget*>().size() == 5;
+                return retiredQuick.isNull() && retiredRoot.isNull() && retiredEngine.isNull()
+                    && page.findChildren<QQuickWidget*>().size() == 5;
             },
             1000));
         EXPECT_EQ(page.findChildren<QQuickWidget*>().size(), 5);
@@ -847,18 +794,16 @@ TEST_F(GalleryQmlBridgeTest, Contract_AtomicSourcesStayDistinct)
         EXPECT_EQ(sample.id, kSampleIds[index]);
         EXPECT_TRUE(atomicSourceContract(sample));
         ::testing::Test::RecordProperty((sample.id + QStringLiteral("-full")).toStdString(),
-                                        sample.codeSnippet.toStdString());
+            sample.codeSnippet.toStdString());
         ::testing::Test::RecordProperty((sample.id + QStringLiteral("-key")).toStdString(),
-                                        sample.usageSnippet.toStdString());
+            sample.usageSnippet.toStdString());
         QJsonArray files;
         for (const auto& source : sample.sourceFiles) {
             files.append(QJsonObject{{QStringLiteral("name"), source.name},
-                                     {QStringLiteral("language"), source.language},
-                                     {QStringLiteral("code"), source.code},
-                                     {QStringLiteral("usage_snippet"), source.usageSnippet}});
+                {QStringLiteral("language"), source.language}, {QStringLiteral("code"), source.code},
+                {QStringLiteral("usage_snippet"), source.usageSnippet}});
         }
-        ::testing::Test::RecordProperty(
-            (sample.id + QStringLiteral("-files")).toStdString(),
+        ::testing::Test::RecordProperty((sample.id + QStringLiteral("-files")).toStdString(),
             QJsonDocument(files).toJson(QJsonDocument::Compact).toStdString());
     }
 }
@@ -876,14 +821,15 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeCornersFollowPreviewTheme)
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
             auto* current = window.currentContentPage();
-            return current && current->routeId() == QStringLiteral("qml-view") &&
-                   !window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen"));
+            return current && current->routeId() == QStringLiteral("qml-view")
+                && !window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen"));
         },
         60000));
     auto* page = qobject_cast<GalleryComponentPage*>(window.currentContentPage());
     ASSERT_NE(page, nullptr);
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return page->findChildren<QmlView*>().size() == 6 && !page->hasPendingSamples(); }));
+    ASSERT_TRUE(QTest::qWaitFor([&] {
+        return page->findChildren<QmlView*>().size() == 6 && !page->hasPendingSamples();
+    }));
     auto* load = page->findChild<QmlView*>(QStringLiteral("qmlBridgeLoadView"));
     auto* theme = page->findChild<QmlView*>(QStringLiteral("qmlBridgeThemeView"));
     auto* scroll = page->findChild<ScrollView*>(QStringLiteral("galleryContentScrollArea"));
@@ -891,19 +837,17 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeCornersFollowPreviewTheme)
     auto* themeCard = qmlCard(page, QStringLiteral("qml-view-theme"));
     auto* themeButton = page->findChild<Button*>(QStringLiteral("galleryComponentPageThemeButton"));
     ASSERT_TRUE(load && theme && scroll && loadCard && themeCard && themeButton);
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return load->status() == QmlView::Ready && theme->status() == QmlView::Ready; }));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return load->status() == QmlView::Ready && theme->status() == QmlView::Ready; }));
     const QPointer<QObject> loadRoot(load->rootObject());
     const QPointer<QObject> themeRoot(theme->rootObject());
     const QString evidence =
         QDir(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath())
-            .absoluteFilePath(QStringLiteral("../../build/qmlview-corner-validation/")) +
-        QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyyMMdd-HHmmss-zzz"));
+            .absoluteFilePath(QStringLiteral("../../build/qmlview-corner-validation/"))
+        + QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyyMMdd-HHmmss-zzz"));
     ASSERT_TRUE(QDir().mkpath(evidence));
     SCOPED_TRACE(evidence.toStdString());
     const auto rgbDifference = [](const QColor& a, const QColor& b) {
-        return qMax(qAbs(a.red() - b.red()),
-                    qMax(qAbs(a.green() - b.green()), qAbs(a.blue() - b.blue())));
+        return qMax(qAbs(a.red() - b.red()), qMax(qAbs(a.green() - b.green()), qAbs(a.blue() - b.blue())));
     };
     const auto colorName = [](const QColor& color) { return color.name(QColor::HexArgb); };
     const auto capture = [&](GallerySampleCard* card, QmlView* view, const QString& stem) {
@@ -913,8 +857,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeCornersFollowPreviewTheme)
         ASSERT_TRUE(waitForStableGeometry(page, view, scroll));
         const QRect target = rectIn(view, scroll->widget());
         const int targetY = qBound(scroll->verticalScrollBar()->minimum(),
-                                   target.center().y() - scroll->viewport()->height() / 2,
-                                   scroll->verticalScrollBar()->maximum());
+            target.center().y() - scroll->viewport()->height() / 2, scroll->verticalScrollBar()->maximum());
         scroll->scrollTo(0, targetY, false);
         QRect previousVisible;
         int previousOffset = -1;
@@ -929,8 +872,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeCornersFollowPreviewTheme)
                     previousOffset = offset;
                     revealed.restart();
                 }
-                return offset == targetY && scroll->viewport()->rect().contains(visible) &&
-                       revealed.elapsed() >= 60;
+                return offset == targetY && scroll->viewport()->rect().contains(visible) && revealed.elapsed() >= 60;
             },
             3000))
             << "The entire preview and all four corners must remain revealed at the requested "
@@ -938,8 +880,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeCornersFollowPreviewTheme)
         auto* quick = view->findChild<QQuickWidget*>();
         ASSERT_NE(quick, nullptr);
         ASSERT_FALSE(quick->isHidden());
-        ASSERT_EQ(quick->quickWindow()->rendererInterface()->graphicsApi(),
-                  QSGRendererInterface::OpenGL);
+        ASSERT_EQ(quick->quickWindow()->rendererInterface()->graphicsApi(), QSGRendererInterface::OpenGL);
         ASSERT_FALSE(view->isTextureRenderingEnabled());
         ASSERT_FALSE(settings.spatialModeEnabled());
         const QImage native = quick->grabFramebuffer();
@@ -961,71 +902,57 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeCornersFollowPreviewTheme)
         QPoint screenLandmark;
         const bool pagePresented = QTest::qWaitFor(
             [&] {
-                if (scroll->verticalScrollBar()->value() != targetY ||
-                    rectIn(view, scroll->viewport()) != previousVisible)
+                if (scroll->verticalScrollBar()->value() != targetY
+                    || rectIn(view, scroll->viewport()) != previousVisible)
                     return false;
                 screen = window.screen()->grabWindow(window.winId()).toImage();
                 if (screen.isNull())
                     return false;
                 screenLandmark = (origin + landmark) * (qreal(screen.width()) / window.width());
-                return screen.rect().contains(screenLandmark) &&
-                       rgbDifference(screen.pixelColor(screenLandmark), landmarkColor) <= 3;
+                return screen.rect().contains(screenLandmark)
+                    && rgbDifference(screen.pixelColor(screenLandmark), landmarkColor) <= 3;
             },
             3000);
         const QImage painted = window.grab().toImage();
         ASSERT_FALSE(painted.isNull());
         ASSERT_TRUE(native.save(evidence + QLatin1Char('/') + stem + QStringLiteral("-quick.png")));
-        ASSERT_TRUE(
-            painted.save(evidence + QLatin1Char('/') + stem + QStringLiteral("-widget.png")));
+        ASSERT_TRUE(painted.save(evidence + QLatin1Char('/') + stem + QStringLiteral("-widget.png")));
         if (!screen.isNull())
-            ASSERT_TRUE(
-                screen.save(evidence + QLatin1Char('/') + stem + QStringLiteral("-screen.png")));
+            ASSERT_TRUE(screen.save(evidence + QLatin1Char('/') + stem + QStringLiteral("-screen.png")));
         auto* surface = card->findChild<QWidget*>(QStringLiteral("gallerySampleCardPreview"));
         auto* element = dynamic_cast<fluent::FluentElement*>(surface);
         ASSERT_NE(element, nullptr);
         const QColor hostColor = element->themeColorsRef().bgLayerAlt;
         QJsonArray ancestors;
-        for (auto* ancestor = static_cast<QWidget*>(quick); ancestor;
-             ancestor = ancestor->parentWidget()) {
-            ancestors.append(QJsonObject{
-                {QStringLiteral("class"), ancestor->metaObject()->className()},
+        for (auto* ancestor = static_cast<QWidget*>(quick); ancestor; ancestor = ancestor->parentWidget()) {
+            ancestors.append(QJsonObject{{QStringLiteral("class"), ancestor->metaObject()->className()},
                 {QStringLiteral("name"), ancestor->objectName()},
-                {QStringLiteral("windowColor"),
-                 colorName(ancestor->palette().color(QPalette::Window))},
+                {QStringLiteral("windowColor"), colorName(ancestor->palette().color(QPalette::Window))},
                 {QStringLiteral("baseColor"), colorName(ancestor->palette().color(QPalette::Base))},
-                {QStringLiteral("surfaceColor"),
-                 colorName(ancestor->property("fluentSurfaceColor").value<QColor>())},
+                {QStringLiteral("surfaceColor"), colorName(ancestor->property("fluentSurfaceColor").value<QColor>())},
                 {QStringLiteral("autoFillBackground"), ancestor->autoFillBackground()},
-                {QStringLiteral("opaquePaintEvent"),
-                 ancestor->testAttribute(Qt::WA_OpaquePaintEvent)},
-                {QStringLiteral("noSystemBackground"),
-                 ancestor->testAttribute(Qt::WA_NoSystemBackground)},
-                {QStringLiteral("translucentBackground"),
-                 ancestor->testAttribute(Qt::WA_TranslucentBackground)},
+                {QStringLiteral("opaquePaintEvent"), ancestor->testAttribute(Qt::WA_OpaquePaintEvent)},
+                {QStringLiteral("noSystemBackground"), ancestor->testAttribute(Qt::WA_NoSystemBackground)},
+                {QStringLiteral("translucentBackground"), ancestor->testAttribute(Qt::WA_TranslucentBackground)},
                 {QStringLiteral("nativeWindow"), ancestor->testAttribute(Qt::WA_NativeWindow)},
-                {QStringLiteral("alwaysStackOnTop"),
-                 ancestor->testAttribute(Qt::WA_AlwaysStackOnTop)}});
+                {QStringLiteral("alwaysStackOnTop"), ancestor->testAttribute(Qt::WA_AlwaysStackOnTop)}});
         }
-        QJsonObject state{
-            {QStringLiteral("globalTheme"), QStringLiteral("Dark")},
+        QJsonObject state{{QStringLiteral("globalTheme"), QStringLiteral("Dark")},
             {QStringLiteral("localThemeDark"), view->themeObject()->property("dark").toBool()},
-            {QStringLiteral("qmlRootColor"),
-             colorName(view->rootObject()->property("color").value<QColor>())},
-            {QStringLiteral("hostLayerAlt"), colorName(hostColor)},
-            {QStringLiteral("ancestors"), ancestors},
+            {QStringLiteral("qmlRootColor"), colorName(view->rootObject()->property("color").value<QColor>())},
+            {QStringLiteral("hostLayerAlt"), colorName(hostColor)}, {QStringLiteral("ancestors"), ancestors},
             {QStringLiteral("sourceExpanded"), loadCard->codeBlock()->isExpanded()},
-            {QStringLiteral("sourceFull"),
-             loadCard->codeBlock()->code().contains(QStringLiteral("int main("))},
+            {QStringLiteral("sourceFull"), loadCard->codeBlock()->code().contains(QStringLiteral("int main("))},
             {QStringLiteral("screenCaptureAvailable"), !screen.isNull()},
             {QStringLiteral("pagePresented"), pagePresented},
             {QStringLiteral("landmarkExpected"), colorName(landmarkColor)},
             {QStringLiteral("landmarkActual"),
-             !screen.isNull() && screen.rect().contains(screenLandmark)
-                 ? colorName(screen.pixelColor(screenLandmark))
-                 : QStringLiteral("unavailable")},
+                !screen.isNull() && screen.rect().contains(screenLandmark)
+                    ? colorName(screen.pixelColor(screenLandmark))
+                    : QStringLiteral("unavailable")},
             {QStringLiteral("captureScope"),
-             QStringLiteral("own native window compositor; widget and Quick images are separate "
-                            "diagnostics")}};
+                QStringLiteral("own native window compositor; widget and Quick images are separate "
+                               "diagnostics")}};
         state[QStringLiteral("windowWidth")] = window.width();
         state[QStringLiteral("windowHeight")] = window.height();
         state[QStringLiteral("quickWindowX")] = origin.x();
@@ -1042,11 +969,11 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeCornersFollowPreviewTheme)
                 for (bool right : {false, true}) {
                     for (bool bottom : {false, true}) {
                         const QPoint corner(right ? native.width() - inset - 1 : inset,
-                                            bottom ? native.height() - inset - 1 : inset);
+                            bottom ? native.height() - inset - 1 : inset);
                         const QPoint point = origin * scale + corner * (scale / quickScale);
-                        const QPoint outside =
-                            origin * scale + QPoint(right ? qRound(quick->width() * scale) + 1 : -2,
-                                                    qRound(corner.y() * scale / quickScale));
+                        const QPoint outside = origin * scale
+                            + QPoint(right ? qRound(quick->width() * scale) + 1 : -2,
+                                qRound(corner.y() * scale / quickScale));
                         EXPECT_TRUE(image.rect().contains(point));
                         EXPECT_TRUE(image.rect().contains(outside));
                         if (!image.rect().contains(point) || !image.rect().contains(outside))
@@ -1055,21 +982,16 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeCornersFollowPreviewTheme)
                         const QColor host = image.pixelColor(outside);
                         const QColor actual = image.pixelColor(point);
                         const qreal alpha = rgba.alphaF();
-                        const QColor expected(
-                            qRound(rgba.red() * alpha + host.red() * (1 - alpha)),
+                        const QColor expected(qRound(rgba.red() * alpha + host.red() * (1 - alpha)),
                             qRound(rgba.green() * alpha + host.green() * (1 - alpha)),
                             qRound(rgba.blue() * alpha + host.blue() * (1 - alpha)));
-                        samples.append(
-                            QJsonObject{{QStringLiteral("nativeX"), corner.x()},
-                                        {QStringLiteral("nativeY"), corner.y()},
-                                        {QStringLiteral("windowX"), point.x()},
-                                        {QStringLiteral("windowY"), point.y()},
-                                        {QStringLiteral("neighborX"), outside.x()},
-                                        {QStringLiteral("neighborY"), outside.y()},
-                                        {QStringLiteral("quickRgba"), colorName(rgba)},
-                                        {QStringLiteral("neighborRgb"), colorName(host)},
-                                        {QStringLiteral("actualRgb"), colorName(actual)},
-                                        {QStringLiteral("expectedRgb"), colorName(expected)}});
+                        samples.append(QJsonObject{{QStringLiteral("nativeX"), corner.x()},
+                            {QStringLiteral("nativeY"), corner.y()}, {QStringLiteral("windowX"), point.x()},
+                            {QStringLiteral("windowY"), point.y()}, {QStringLiteral("neighborX"), outside.x()},
+                            {QStringLiteral("neighborY"), outside.y()}, {QStringLiteral("quickRgba"), colorName(rgba)},
+                            {QStringLiteral("neighborRgb"), colorName(host)},
+                            {QStringLiteral("actualRgb"), colorName(actual)},
+                            {QStringLiteral("expectedRgb"), colorName(expected)}});
                         EXPECT_EQ(rgba.alpha(), 255);
                         if (inset == 0)
                             EXPECT_LE(rgbDifference(rgba, hostColor), 1)
@@ -1085,13 +1007,11 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeCornersFollowPreviewTheme)
             return samples;
         };
         state[QStringLiteral("screenPixels")] = pixels(screen, QStringLiteral("native compositor"));
-        state[QStringLiteral("widgetPixels")] =
-            pixels(painted, QStringLiteral("QWidget diagnostic"));
+        state[QStringLiteral("widgetPixels")] = pixels(painted, QStringLiteral("QWidget diagnostic"));
         QFile json(evidence + QLatin1Char('/') + stem + QStringLiteral(".json"));
         ASSERT_TRUE(json.open(QIODevice::WriteOnly));
         ASSERT_GT(json.write(QJsonDocument(state).toJson()), 0);
-        ASSERT_TRUE(pagePresented)
-            << "The native compositor must present the current page before sampling corners";
+        ASSERT_TRUE(pagePresented) << "The native compositor must present the current page before sampling corners";
         ASSERT_FALSE(screen.isNull())
             << "Cannot capture the native window compositor; diagnostic grabs cannot replace it";
     };
@@ -1111,12 +1031,10 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeCornersFollowPreviewTheme)
         scroll->scrollTo(0, scroll->verticalScrollBar()->minimum(), false);
         if (!QTest::qWaitFor(
                 [&] {
-                    return scroll->verticalScrollBar()->value() ==
-                               scroll->verticalScrollBar()->minimum() &&
-                           themeButton->isVisible() &&
-                           scroll->viewport()->rect().contains(
-                               rectIn(themeButton, scroll->viewport())) &&
-                           window.rect().contains(rectIn(themeButton, &window));
+                    return scroll->verticalScrollBar()->value() == scroll->verticalScrollBar()->minimum()
+                        && themeButton->isVisible()
+                        && scroll->viewport()->rect().contains(rectIn(themeButton, scroll->viewport()))
+                        && window.rect().contains(rectIn(themeButton, &window));
                 },
                 1000))
             return false;
@@ -1130,16 +1048,12 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeCornersFollowPreviewTheme)
             ASSERT_TRUE(clickTheme());
         ASSERT_EQ(themeButton->property("gallerySampleTheme").toString(), QStringLiteral("Dark"));
         int pass = 0;
-        for (auto mode : {fluent::FluentElement::Light, fluent::FluentElement::Dark,
-                          fluent::FluentElement::Light}) {
+        for (auto mode : {fluent::FluentElement::Light, fluent::FluentElement::Dark, fluent::FluentElement::Light}) {
             ASSERT_TRUE(clickTheme());
             ASSERT_EQ(themeButton->property("gallerySampleTheme").toString(),
-                      mode == fluent::FluentElement::Dark ? QStringLiteral("Dark")
-                                                          : QStringLiteral("Light"));
-            ASSERT_EQ(load->themeObject()->property("dark").toBool(),
-                      mode == fluent::FluentElement::Dark);
-            ASSERT_EQ(theme->themeObject()->property("dark").toBool(),
-                      mode == fluent::FluentElement::Dark);
+                mode == fluent::FluentElement::Dark ? QStringLiteral("Dark") : QStringLiteral("Light"));
+            ASSERT_EQ(load->themeObject()->property("dark").toBool(), mode == fluent::FluentElement::Dark);
+            ASSERT_EQ(theme->themeObject()->property("dark").toBool(), mode == fluent::FluentElement::Dark);
             const QString prefix = QStringLiteral("%1-%2-%3").arg(width).arg(pass++).arg(int(mode));
             capture(themeCard, theme, prefix + QStringLiteral("-theme"));
             capture(loadCard, load, prefix + QStringLiteral("-load-return"));
@@ -1164,9 +1078,8 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeQmlFailureKeepsTheCompletedFrameUnti
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
             auto* page = qobject_cast<GalleryComponentPage*>(window.currentContentPage());
-            return page && page->routeId() == QStringLiteral("qml-view") &&
-                   !page->hasPendingSamples() &&
-                   !window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen"));
+            return page && page->routeId() == QStringLiteral("qml-view") && !page->hasPendingSamples()
+                && !window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen"));
         },
         60000));
     auto* page = qobject_cast<GalleryComponentPage*>(window.currentContentPage());
@@ -1189,8 +1102,8 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeQmlFailureKeepsTheCompletedFrameUnti
         ASSERT_TRUE(QTest::qWaitFor(
             [&] {
                 surface = window.findChild<QOpenGLWidget*>(QStringLiteral("gallerySpatialSurface"));
-                return surface && surface->property("presenting").toBool() &&
-                       !controller->transitionRunning() && view->textureId();
+                return surface && surface->property("presenting").toBool() && !controller->transitionRunning()
+                    && view->textureId();
             },
             5000));
         auto* layer = surface->findChild<fluent::qmlbridge::QmlTextureLayer*>();
@@ -1198,8 +1111,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeQmlFailureKeepsTheCompletedFrameUnti
         model->setValue(40);
         view->setFocus();
         action->forceActiveFocus();
-        const QPoint actionPoint =
-            action->mapToScene(QPointF(action->width() / 2, action->height() / 2)).toPoint();
+        const QPoint actionPoint = action->mapToScene(QPointF(action->width() / 2, action->height() / 2)).toPoint();
         const QPoint projected = controller->projectedPosition(view, actionPoint);
         QSignalSpy failures(layer, &fluent::qmlbridge::QmlTextureLayer::renderingFailed);
         const QImage before = surface->grabFramebuffer();
@@ -1233,17 +1145,16 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeQmlFailureKeepsTheCompletedFrameUnti
         QObject::disconnect(injection);
         EXPECT_TRUE(composeFailure || injected);
         ASSERT_EQ(failures.count(), 1);
-        EXPECT_EQ(failedFrame, before)
-            << "The failed auxiliary frame must not clear the completed Gallery scene";
+        EXPECT_EQ(failedFrame, before) << "The failed auxiliary frame must not clear the completed Gallery scene";
         EXPECT_TRUE(surface->property("presenting").toBool());
         EXPECT_TRUE(view->isTextureRenderingEnabled());
         EXPECT_EQ(requested.count(), requestsBeforeFailure);
         EXPECT_TRUE(surface->property("galleryQmlFailurePending").toBool());
         // Send synchronously: QTest's input delay would process the queued fallback.
-        QMouseEvent press(QEvent::MouseButtonPress, projected, window.mapToGlobal(projected),
-                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-        QMouseEvent release(QEvent::MouseButtonRelease, projected, window.mapToGlobal(projected),
-                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QMouseEvent press(QEvent::MouseButtonPress, projected, window.mapToGlobal(projected), Qt::LeftButton,
+            Qt::LeftButton, Qt::NoModifier);
+        QMouseEvent release(QEvent::MouseButtonRelease, projected, window.mapToGlobal(projected), Qt::LeftButton,
+            Qt::NoButton, Qt::NoModifier);
         QCoreApplication::sendEvent(&window, &press);
         QCoreApplication::sendEvent(&window, &release);
         action->forceActiveFocus();
@@ -1251,8 +1162,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeQmlFailureKeepsTheCompletedFrameUnti
         QKeyEvent keyRelease(QEvent::KeyRelease, Qt::Key_Return, Qt::NoModifier);
         QCoreApplication::sendEvent(view, &keyPress);
         QCoreApplication::sendEvent(view, &keyRelease);
-        EXPECT_EQ(model->value(), 40)
-            << "Input cannot act on a scene that differs from the retained frame";
+        EXPECT_EQ(model->value(), 40) << "Input cannot act on a scene that differs from the retained frame";
 
         // A recreated FBO cannot retain old pixels. It must still contain the
         // ordinary panels, rather than a fully transparent intermediate frame.
@@ -1267,8 +1177,8 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeQmlFailureKeepsTheCompletedFrameUnti
         EXPECT_GT(visible, resized.width() * resized.height() / (16 * 16 * 4));
         ASSERT_TRUE(QTest::qWaitFor([&] {
             auto* native = view->findChild<QQuickWidget*>();
-            return surface->isHidden() && !view->isTextureRenderingEnabled() && native &&
-                   native->isVisible() && native->geometry() == view->contentsRect();
+            return surface->isHidden() && !view->isTextureRenderingEnabled() && native && native->isVisible()
+                && native->geometry() == view->contentsRect();
         }));
         EXPECT_EQ(view->rootObject(), root);
         EXPECT_TRUE(view->findChild<QQuickWidget*>()->isVisible());
@@ -1297,8 +1207,8 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
             auto* page = window.currentContentPage();
-            return page && page->routeId() == QStringLiteral("button") &&
-                   !window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen"));
+            return page && page->routeId() == QStringLiteral("button")
+                && !window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen"));
         },
         60000));
     auto* controller = window.findChild<fluent::gallery::GallerySpatialController*>();
@@ -1308,14 +1218,12 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
     const auto presenting = [&] {
         if (!surface)
             surface = window.findChild<QOpenGLWidget*>(QStringLiteral("gallerySpatialSurface"));
-        return surface && surface->property("presenting").toBool() &&
-               !controller->transitionRunning();
+        return surface && surface->property("presenting").toBool() && !controller->transitionRunning();
     };
     ASSERT_TRUE(QTest::qWaitFor(presenting, 5000));
     auto* textureLayer = surface->findChild<fluent::qmlbridge::QmlTextureLayer*>();
     ASSERT_NE(textureLayer, nullptr);
-    QSignalSpy renderingFailures(textureLayer,
-                                 &fluent::qmlbridge::QmlTextureLayer::renderingFailed);
+    QSignalSpy renderingFailures(textureLayer, &fluent::qmlbridge::QmlTextureLayer::renderingFailed);
     QSignalSpy requested(&settings, &GallerySettings::spatialModeEnabledChanged);
     ASSERT_TRUE(window.selectRoute(QStringLiteral("qml-view")));
     ASSERT_TRUE(QTest::qWaitFor(
@@ -1326,8 +1234,9 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
         60000));
     auto* page = qobject_cast<GalleryComponentPage*>(window.currentContentPage());
     ASSERT_NE(page, nullptr);
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return page->findChildren<QmlView*>().size() == 6 && !page->hasPendingSamples(); }));
+    ASSERT_TRUE(QTest::qWaitFor([&] {
+        return page->findChildren<QmlView*>().size() == 6 && !page->hasPendingSamples();
+    }));
     auto* view = page->findChild<QmlView*>(QStringLiteral("qmlBridgeActionView"));
     auto* scroll = page->findChild<ScrollView*>(QStringLiteral("galleryContentScrollArea"));
     auto* title = page->findChild<LineEdit*>(QStringLiteral("qmlBridgeTitleEdit"));
@@ -1338,8 +1247,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
     ASSERT_EQ(page->findChildren<QmlView*>().size(), 6);
     const auto diagnostics = [&] {
         QJsonObject state = QJsonObject::fromVariantMap(controller->renderingStatistics());
-        state[QStringLiteral("qmlTexture")] =
-            QJsonObject::fromVariantMap(view->textureStatistics());
+        state[QStringLiteral("qmlTexture")] = QJsonObject::fromVariantMap(view->textureStatistics());
         QStringList errors;
         for (const auto& arguments : renderingFailures)
             errors.append(arguments.front().toString());
@@ -1347,14 +1255,12 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
         return QJsonDocument(state).toJson(QJsonDocument::Compact).toStdString();
     };
     ASSERT_TRUE(QTest::qWaitFor([&] {
-        return presenting() && view->status() == QmlView::Ready &&
-               view->isTextureRenderingEnabled();
+        return presenting() && view->status() == QmlView::Ready && view->isTextureRenderingEnabled();
     })) << diagnostics();
     QTest::qWait(400); // Allow the page's existing first-show scroll resets to finish.
     scroll->ensureWidgetVisible(view);
     ASSERT_TRUE(waitForStableGeometry(page, view, scroll));
-    ASSERT_TRUE(QTest::qWaitFor([&] { return presenting() && view->textureId() != 0; }))
-        << diagnostics();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return presenting() && view->textureId() != 0; })) << diagnostics();
     const QPointer<QObject> root(view->rootObject());
     auto* quick = view->findChild<QQuickWidget*>(QStringLiteral("qmlQuickWidget"));
     ASSERT_NE(quick, nullptr);
@@ -1374,38 +1280,32 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
         EXPECT_FALSE(view->textureSize().isEmpty());
         EXPECT_EQ(view->rootObject(), root);
         EXPECT_EQ(quick->engine(), engine);
-        EXPECT_EQ(surface,
-                  window.findChild<QOpenGLWidget*>(QStringLiteral("gallerySpatialSurface")));
+        EXPECT_EQ(surface, window.findChild<QOpenGLWidget*>(QStringLiteral("gallerySpatialSurface")));
     };
     assertProjected();
-    const auto scenePoint = [&](const QPointF& point) {
-        return action->mapToScene(point).toPoint();
-    };
+    const auto scenePoint = [&](const QPointF& point) { return action->mapToScene(point).toPoint(); };
     const auto projected = [&](QWidget* widget, const QPoint& point) {
         return controller->projectedPosition(widget, point);
     };
     const auto colorAt = [&](const QPoint& local) {
         const QImage frame = surface->grabFramebuffer();
-        const QPoint pixel =
-            surface->mapFrom(&window, projected(view, local)) * surface->devicePixelRatioF();
+        const QPoint pixel = surface->mapFrom(&window, projected(view, local)) * surface->devicePixelRatioF();
         return frame.rect().contains(pixel) ? frame.pixelColor(pixel) : QColor();
     };
     const auto nearColor = [](const QColor& actual, const QColor& expected) {
-        return actual.isValid() && qAbs(actual.red() - expected.red()) <= 12 &&
-               qAbs(actual.green() - expected.green()) <= 12 &&
-               qAbs(actual.blue() - expected.blue()) <= 12;
+        return actual.isValid() && qAbs(actual.red() - expected.red()) <= 12
+            && qAbs(actual.green() - expected.green()) <= 12 && qAbs(actual.blue() - expected.blue()) <= 12;
     };
     const QColor accent = view->themeObject()->property("accent").value<QColor>();
     const QColor background = view->themeObject()->property("surface").value<QColor>();
     ASSERT_TRUE(QTest::qWaitFor([&] {
-        return nearColor(colorAt(scenePoint(QPointF(8, action->height() / 2))), accent) &&
-               nearColor(colorAt(QPoint(view->width() - 24, view->height() - 24)), background);
+        return nearColor(colorAt(scenePoint(QPointF(8, action->height() / 2))), accent)
+            && nearColor(colorAt(QPoint(view->width() - 24, view->height() - 24)), background);
     })) << "The final Spatial framebuffer must contain the actual QML scene";
 
     scroll->ensureWidgetVisible(title);
     ASSERT_TRUE(waitForStableGeometry(page, view, scroll));
-    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
-                      projected(title, title->rect().center()));
+    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, projected(title, title->rect().center()));
     title->selectAll();
     QTest::keyClicks(title, "Projected context input");
     ASSERT_TRUE(QTest::qWaitFor([&] {
@@ -1414,8 +1314,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
     scroll->ensureWidgetVisible(view);
     ASSERT_TRUE(waitForStableGeometry(page, view, scroll));
     const int progress = int(model->value());
-    QTest::mouseClick(
-        &window, Qt::LeftButton, Qt::NoModifier,
+    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
         projected(view, scenePoint(QPointF(action->width() / 2, action->height() / 2))));
     ASSERT_TRUE(QTest::qWaitFor([&] { return int(model->value()) == progress + 10; }));
     EXPECT_EQ(title->text(), QStringLiteral("Projected context input"));
@@ -1445,8 +1344,8 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
     for (int pass = 0; pass < 2; ++pass) {
         settings.setSpatialModeEnabled(false);
         ASSERT_TRUE(QTest::qWaitFor([&] {
-            return !surface->property("presenting").toBool() &&
-                   !view->isTextureRenderingEnabled() && !quick->isHidden();
+            return !surface->property("presenting").toBool() && !view->isTextureRenderingEnabled()
+                && !quick->isHidden();
         }));
         EXPECT_EQ(view->rootObject(), root);
         EXPECT_EQ(quick->engine(), engine);
@@ -1477,8 +1376,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
     const QPointer<QQmlEngine> lifecycleEngine(lifecycleQuick->engine());
     scroll->ensureWidgetVisible(deactivate);
     ASSERT_TRUE(waitForStableGeometry(page, view, scroll));
-    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
-                      projected(deactivate, deactivate->rect().center()));
+    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, projected(deactivate, deactivate->rect().center()));
     ASSERT_EQ(lifecycle->status(), QmlView::Unloaded);
     EXPECT_EQ(lifecycle->rootObject(), nullptr);
     EXPECT_EQ(lifecycle->textureId(), 0u);
@@ -1486,8 +1384,8 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
             QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-            return lifecycleQuick.isNull() && lifecycleRoot.isNull() && lifecycleEngine.isNull() &&
-                   page->findChildren<QQuickWidget*>().size() == 5;
+            return lifecycleQuick.isNull() && lifecycleRoot.isNull() && lifecycleEngine.isNull()
+                && page->findChildren<QQuickWidget*>().size() == 5;
         },
         1000));
     EXPECT_EQ(page->findChildren<QQuickWidget*>().size(), 5);
@@ -1499,11 +1397,9 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
     EXPECT_TRUE(lifecycleRoot.isNull());
     EXPECT_TRUE(lifecycleEngine.isNull());
     title->setText(QStringLiteral("Other cards stay editable"));
-    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
-                      projected(reload, reload->rect().center()));
+    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, projected(reload, reload->rect().center()));
     ASSERT_TRUE(QTest::qWaitFor([&] {
-        return presenting() && lifecycle->status() == QmlView::Ready &&
-               lifecycle->isTextureRenderingEnabled();
+        return presenting() && lifecycle->status() == QmlView::Ready && lifecycle->isTextureRenderingEnabled();
     })) << diagnostics();
     EXPECT_EQ(page->findChildren<QQuickWidget*>().size(), 6);
     EXPECT_EQ(view->rootObject(), root);
@@ -1521,8 +1417,7 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeRequestedSpatialModeRoundtrip)
     EXPECT_EQ(view->textureStatistics()[QStringLiteral("renderedFrames")], cachedFrames);
     ASSERT_TRUE(window.selectRoute(QStringLiteral("qml-view")));
     ASSERT_TRUE(QTest::qWaitFor([&] {
-        return presenting() && view->status() == QmlView::Ready &&
-               view->isTextureRenderingEnabled();
+        return presenting() && view->status() == QmlView::Ready && view->isTextureRenderingEnabled();
     })) << diagnostics();
     QTest::qWait(400);
     scroll->ensureWidgetVisible(view);

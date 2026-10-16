@@ -77,8 +77,7 @@ public:
         m_calendarView->setObjectName(QStringLiteral("CalendarDatePickerCalendarView"));
         m_calendarView->setFrameVisible(false);
         m_calendarView->setCompact(picker->m_compactPopup);
-        connect(m_calendarView, &CalendarView::dateActivated, m_picker,
-                &CalendarDatePicker::selectDateFromCalendar);
+        connect(m_calendarView, &CalendarView::dateActivated, m_picker, &CalendarDatePicker::selectDateFromCalendar);
 
         layoutCalendarView();
     }
@@ -111,8 +110,7 @@ public:
         if (!m_picker)
             return;
 
-        const QDate month =
-            resetMonth ? m_picker->defaultVisibleMonth() : m_calendarView->visibleMonth();
+        const QDate month = resetMonth ? m_picker->defaultVisibleMonth() : m_calendarView->visibleMonth();
         if (resetMonth)
             m_calendarView->resetScroll();
         m_calendarView->setLocale(m_picker->locale());
@@ -136,11 +134,9 @@ public:
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override
     {
-        if (watched != this && isOpen() && m_picker && event &&
-            event->type() == QEvent::MouseButtonPress) {
+        if (watched != this && isOpen() && m_picker && event && event->type() == QEvent::MouseButtonPress) {
             const QPoint global = fluentMouseGlobalPos(static_cast<QMouseEvent*>(event));
-            if (m_picker->rect().contains(
-                    ::fluent::overlay::localPointFromPresentedGlobal(m_picker, global)))
+            if (m_picker->rect().contains(::fluent::overlay::localPointFromPresentedGlobal(m_picker, global)))
                 return false;
         }
         return Flyout::eventFilter(watched, event);
@@ -175,8 +171,7 @@ private:
     {
         const QSize calendarSize = m_calendarView->sizeHint();
         const int chromeInset = kCalendarShadowMargin + kCalendarContentInset;
-        setFixedSize(calendarSize.width() + chromeInset * 2,
-                     calendarSize.height() + chromeInset * 2);
+        setFixedSize(calendarSize.width() + chromeInset * 2, calendarSize.height() + chromeInset * 2);
         m_calendarView->setGeometry(QRect(QPoint(chromeInset, chromeInset), calendarSize));
     }
 
@@ -479,10 +474,8 @@ void CalendarDatePicker::ensurePopup()
         m_popup = nullptr;
         handlePopupOpenChanged(false);
     });
-    connect(m_popup, &fluent::dialogs_flyouts::Popup::isOpenChanged, this,
-            &CalendarDatePicker::handlePopupOpenChanged);
-    connect(m_popup, &fluent::dialogs_flyouts::Popup::closed, this,
-            [this]() { handlePopupOpenChanged(false); });
+    connect(m_popup, &fluent::dialogs_flyouts::Popup::isOpenChanged, this, &CalendarDatePicker::handlePopupOpenChanged);
+    connect(m_popup, &fluent::dialogs_flyouts::Popup::closed, this, [this]() { handlePopupOpenChanged(false); });
 }
 
 void CalendarDatePicker::handlePopupOpenChanged(bool open)

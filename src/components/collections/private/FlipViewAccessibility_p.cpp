@@ -31,9 +31,7 @@ bool canNext(int index, int count)
 
 QVariant accessibleCurrentValue(const FlipView* view)
 {
-    return view && view->currentIndex() >= 0
-        ? QVariant(view->currentIndex() + 1)
-        : QVariant();
+    return view && view->currentIndex() >= 0 ? QVariant(view->currentIndex() + 1) : QVariant();
 }
 
 void sendEvent(QObject* object, QAccessible::Event type)
@@ -52,13 +50,9 @@ void sendValueChanged(FlipView* view)
     QAccessible::updateAccessibility(&event);
 }
 
-class FlipViewAccessible final : public QAccessibleWidget,
-                                 public QAccessibleValueInterface {
+class FlipViewAccessible final : public QAccessibleWidget, public QAccessibleValueInterface {
 public:
-    explicit FlipViewAccessible(FlipView* view)
-        : QAccessibleWidget(view, QAccessible::LayeredPane)
-    {
-    }
+    explicit FlipViewAccessible(FlipView* view) : QAccessibleWidget(view, QAccessible::LayeredPane) {}
 
     QAccessibleInterface* childAt(int x, int y) const override
     {
@@ -67,8 +61,7 @@ public:
             return nullptr;
         for (int index = owner->pageCount() - 1; index >= 0; --index) {
             QAccessibleInterface* page = child(index);
-            if (page && !page->state().invisible
-                && page->rect().contains(x, y)) {
+            if (page && !page->state().invisible && page->rect().contains(x, y)) {
                 return page;
             }
         }
@@ -89,10 +82,7 @@ public:
         return nullptr;
     }
 
-    int childCount() const override
-    {
-        return view() ? view()->pageCount() : 0;
-    }
+    int childCount() const override { return view() ? view()->pageCount() : 0; }
 
     int indexOfChild(const QAccessibleInterface* childInterface) const override
     {
@@ -118,26 +108,19 @@ public:
     {
         const QString authored = QAccessibleWidget::text(type);
         FlipView* owner = view();
-        if (!authored.isEmpty() || type != QAccessible::Value
-            || !owner || owner->currentIndex() < 0) {
+        if (!authored.isEmpty() || type != QAccessible::Value || !owner || owner->currentIndex() < 0) {
             return authored;
         }
 
         QString pageName;
         if (QWidget* page = owner->pageAt(owner->currentIndex())) {
-            if (QAccessibleInterface* pageInterface =
-                    QAccessible::queryAccessibleInterface(page)) {
+            if (QAccessibleInterface* pageInterface = QAccessible::queryAccessibleInterface(page)) {
                 pageName = pageInterface->text(QAccessible::Name);
             }
         }
         return pageName.isEmpty()
-            ? flipViewText("Page %1 of %2")
-                  .arg(owner->currentIndex() + 1)
-                  .arg(owner->pageCount())
-            : flipViewText("Page %1 of %2: %3")
-                  .arg(owner->currentIndex() + 1)
-                  .arg(owner->pageCount())
-                  .arg(pageName);
+            ? flipViewText("Page %1 of %2").arg(owner->currentIndex() + 1).arg(owner->pageCount())
+            : flipViewText("Page %1 of %2: %3").arg(owner->currentIndex() + 1).arg(owner->pageCount()).arg(pageName);
     }
 
     void* interface_cast(QAccessible::InterfaceType type) override
@@ -171,21 +154,16 @@ public:
             owner->goNext();
     }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         FlipView* owner = view();
         if (!owner)
             return {};
         if (actionName == QAccessibleActionInterface::decreaseAction()) {
-            return {owner->orientation() == Qt::Horizontal
-                        ? QStringLiteral("Left")
-                        : QStringLiteral("Up")};
+            return {owner->orientation() == Qt::Horizontal ? QStringLiteral("Left") : QStringLiteral("Up")};
         }
         if (actionName == QAccessibleActionInterface::increaseAction()) {
-            return {owner->orientation() == Qt::Horizontal
-                        ? QStringLiteral("Right")
-                        : QStringLiteral("Down")};
+            return {owner->orientation() == Qt::Horizontal ? QStringLiteral("Right") : QStringLiteral("Down")};
         }
         return {};
     }
@@ -199,8 +177,7 @@ public:
         return QAccessibleWidget::localizedActionName(actionName);
     }
 
-    QString localizedActionDescription(
-        const QString& actionName) const override
+    QString localizedActionDescription(const QString& actionName) const override
     {
         if (actionName == QAccessibleActionInterface::decreaseAction())
             return flipViewText("Shows the previous page");
@@ -209,10 +186,7 @@ public:
         return QAccessibleWidget::localizedActionDescription(actionName);
     }
 
-    QVariant currentValue() const override
-    {
-        return accessibleCurrentValue(view());
-    }
+    QVariant currentValue() const override { return accessibleCurrentValue(view()); }
 
     void setCurrentValue(const QVariant& value) override
     {
@@ -223,31 +197,18 @@ public:
 
     QVariant maximumValue() const override
     {
-        return view() && view()->pageCount() > 0
-            ? QVariant(view()->pageCount()) : QVariant();
+        return view() && view()->pageCount() > 0 ? QVariant(view()->pageCount()) : QVariant();
     }
 
-    QVariant minimumValue() const override
-    {
-        return view() && view()->pageCount() > 0
-            ? QVariant(1) : QVariant();
-    }
+    QVariant minimumValue() const override { return view() && view()->pageCount() > 0 ? QVariant(1) : QVariant(); }
 
-    QVariant minimumStepSize() const override
-    {
-        return view() && view()->pageCount() > 0
-            ? QVariant(1) : QVariant();
-    }
+    QVariant minimumStepSize() const override { return view() && view()->pageCount() > 0 ? QVariant(1) : QVariant(); }
 
 private:
-    FlipView* view() const
-    {
-        return static_cast<FlipView*>(widget());
-    }
+    FlipView* view() const { return static_cast<FlipView*>(widget()); }
 };
 
-QAccessibleInterface* flipViewAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* flipViewAccessibilityFactory(const QString&, QObject* object)
 {
     auto* view = dynamic_cast<FlipView*>(object);
     return view ? new FlipViewAccessible(view) : nullptr;
@@ -268,21 +229,18 @@ void ensureFlipViewAccessibilityFactory()
 #endif
 }
 
-void notifyFlipViewAccessibilityStructureChanged(
-    FlipView* view, int oldCount, int oldIndex)
+void notifyFlipViewAccessibilityStructureChanged(FlipView* view, int oldCount, int oldIndex)
 {
 #if QT_CONFIG(accessibility)
     if (!view)
         return;
     sendEvent(view, QAccessible::ObjectReorder);
-    if (oldCount != view->pageCount()
-        || oldIndex != view->currentIndex()) {
+    if (oldCount != view->pageCount() || oldIndex != view->currentIndex()) {
         sendValueChanged(view);
     }
     if (view->isEnabled()
         && (canPrevious(oldIndex) != canPrevious(view->currentIndex())
-            || canNext(oldIndex, oldCount)
-                != canNext(view->currentIndex(), view->pageCount()))) {
+            || canNext(oldIndex, oldCount) != canNext(view->currentIndex(), view->pageCount()))) {
         sendEvent(view, QAccessible::ActionChanged);
     }
 #else
@@ -292,8 +250,7 @@ void notifyFlipViewAccessibilityStructureChanged(
 #endif
 }
 
-void notifyFlipViewAccessibilityCurrentChanged(
-    FlipView* view, int oldIndex)
+void notifyFlipViewAccessibilityCurrentChanged(FlipView* view, int oldIndex)
 {
 #if QT_CONFIG(accessibility)
     if (!view || oldIndex == view->currentIndex())
@@ -301,8 +258,7 @@ void notifyFlipViewAccessibilityCurrentChanged(
     sendValueChanged(view);
     if (view->isEnabled()
         && (canPrevious(oldIndex) != canPrevious(view->currentIndex())
-            || canNext(oldIndex, view->pageCount())
-                != canNext(view->currentIndex(), view->pageCount()))) {
+            || canNext(oldIndex, view->pageCount()) != canNext(view->currentIndex(), view->pageCount()))) {
         sendEvent(view, QAccessible::ActionChanged);
     }
 #else
@@ -315,8 +271,7 @@ void notifyFlipViewAccessibilityOrientationChanged(FlipView* view)
 {
 #if QT_CONFIG(accessibility)
     if (view && view->isEnabled()
-        && (canPrevious(view->currentIndex())
-            || canNext(view->currentIndex(), view->pageCount()))) {
+        && (canPrevious(view->currentIndex()) || canNext(view->currentIndex(), view->pageCount()))) {
         sendEvent(view, QAccessible::ActionChanged);
     }
 #else

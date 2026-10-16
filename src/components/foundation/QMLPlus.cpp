@@ -150,8 +150,7 @@ AnchorLayout::Anchors AnchorLayout::currentAnchors(const Item& item) const
     return item.anchors;
 }
 
-QVector<QRect> AnchorLayout::resolveGeometries(const QRect& parentRect, bool minimum,
-                                               bool reportCycles) const
+QVector<QRect> AnchorLayout::resolveGeometries(const QRect& parentRect, bool minimum, bool reportCycles) const
 {
     const int itemCount = m_items.size();
     QVector<QRect> geometries(itemCount);
@@ -159,7 +158,7 @@ QVector<QRect> AnchorLayout::resolveGeometries(const QRect& parentRect, bool min
     QVector<Anchors> anchors(itemCount);
     QVector<QVector<int>> dependencies(itemCount);
 
-    Anchor Anchors::*const anchorMembers[] = {
+    Anchor Anchors::* const anchorMembers[] = {
         &Anchors::left,
         &Anchors::right,
         &Anchors::top,
@@ -175,7 +174,7 @@ QVector<QRect> AnchorLayout::resolveGeometries(const QRect& parentRect, bool min
         if (anchors[i].fill)
             continue;
 
-        for (Anchor Anchors::*member : anchorMembers) {
+        for (Anchor Anchors::* member : anchorMembers) {
             const Anchor& anchor = anchors[i].*member;
             if (anchor.edge == Edge::None || anchor.target.isNull())
                 continue;
@@ -239,17 +238,15 @@ QVector<QRect> AnchorLayout::resolveGeometries(const QRect& parentRect, bool min
         for (int itemIndex : component)
             componentForItem[itemIndex] = componentIndex;
 
-        const bool selfCycle =
-            component.size() == 1 &&
-            dependencies[component.constFirst()].contains(component.constFirst());
+        const bool selfCycle = component.size() == 1
+            && dependencies[component.constFirst()].contains(component.constFirst());
         cyclicComponent[componentIndex] = component.size() > 1 || selfCycle;
         if (cyclicComponent[componentIndex])
             cycleGroups.append(component);
     }
-    std::sort(cycleGroups.begin(), cycleGroups.end(),
-              [](const QVector<int>& lhs, const QVector<int>& rhs) {
-                  return lhs.constFirst() < rhs.constFirst();
-              });
+    std::sort(cycleGroups.begin(), cycleGroups.end(), [](const QVector<int>& lhs, const QVector<int>& rhs) {
+        return lhs.constFirst() < rhs.constFirst();
+    });
 
     QStringList diagnosticGroups;
     for (const QVector<int>& group : cycleGroups) {
@@ -278,8 +275,7 @@ QVector<QRect> AnchorLayout::resolveGeometries(const QRect& parentRect, bool min
             if (parentName.isEmpty())
                 parentName = QStringLiteral("no-parent");
             qCWarning(logging::layoutCategory).noquote()
-                << "AnchorLayout on" << parentName
-                << "ignored cyclic sibling anchors:" << cycleDiagnostic;
+                << "AnchorLayout on" << parentName << "ignored cyclic sibling anchors:" << cycleDiagnostic;
         }
     }
 
@@ -287,8 +283,8 @@ QVector<QRect> AnchorLayout::resolveGeometries(const QRect& parentRect, bool min
         if (targetIndex < 0)
             return false;
         const int componentIndex = componentForItem[itemIndex];
-        return componentIndex >= 0 && componentIndex == componentForItem[targetIndex] &&
-               cyclicComponent[componentIndex];
+        return componentIndex >= 0 && componentIndex == componentForItem[targetIndex]
+            && cyclicComponent[componentIndex];
     };
 
     QVector<QVector<int>> dependents(itemCount);
@@ -394,16 +390,15 @@ QVector<QRect> AnchorLayout::resolveGeometries(const QRect& parentRect, bool min
         if (itemAnchors.fill) {
             const QMargins margins = itemAnchors.fillMargins;
             geometry = QRect(parentRect.x() + margins.left(), parentRect.y() + margins.top(),
-                             qMax(0, parentRect.width() - margins.left() - margins.right()),
-                             qMax(0, parentRect.height() - margins.top() - margins.bottom()));
+                qMax(0, parentRect.width() - margins.left() - margins.right()),
+                qMax(0, parentRect.height() - margins.top() - margins.bottom()));
             geometries[itemIndex] = geometry;
             continue;
         }
 
         int center = 0;
         if (edgeValue(itemIndex, itemAnchors.horizontalCenter, &center)) {
-            geometry.moveLeft(center + itemAnchors.horizontalCenter.offset -
-                              naturalSize.width() / 2);
+            geometry.moveLeft(center + itemAnchors.horizontalCenter.offset - naturalSize.width() / 2);
         } else {
             int left = 0;
             int right = 0;
@@ -532,8 +527,7 @@ QSize AnchorLayout::measuredSize(bool minimum) const
                 growWidth = qMax(growWidth, geometry.x() + geometry.width() - candidate.width());
             }
             if (bounds.bottom) {
-                growHeight =
-                    qMax(growHeight, geometry.y() + geometry.height() - candidate.height());
+                growHeight = qMax(growHeight, geometry.y() + geometry.height() - candidate.height());
             }
         }
 
@@ -543,8 +537,7 @@ QSize AnchorLayout::measuredSize(bool minimum) const
         candidate.rheight() += qMax(0, growHeight);
     }
 
-    return QSize(candidate.width() + leftMargin + rightMargin,
-                 candidate.height() + topMargin + bottomMargin);
+    return QSize(candidate.width() + leftMargin + rightMargin, candidate.height() + topMargin + bottomMargin);
 }
 
 void AnchorLayout::setGeometry(const QRect& rect)
@@ -614,8 +607,7 @@ bool validDependencies(const QVector<BindingDependency>& dependencies, bool requ
 {
     for (const BindingDependency& dependency : dependencies) {
         const QMetaProperty property = metaProperty(dependency.object, dependency.propertyName);
-        if (!validThread(dependency.object) || !property.isReadable() ||
-            (requireNotify && !property.hasNotifySignal()))
+        if (!validThread(dependency.object) || !property.isReadable() || (requireNotify && !property.hasNotifySignal()))
             return false;
     }
     return true;
@@ -700,14 +692,8 @@ public:
         return create ? new QMLPlusPropertyHub(target) : nullptr;
     }
 
-    bool isBlocked(const QByteArray& property) const
-    {
-        return !m_entries.value(property).blockers.isEmpty();
-    }
-    bool isWriting(const QByteArray& property) const
-    {
-        return m_entries.value(property).writing > 0;
-    }
+    bool isBlocked(const QByteArray& property) const { return !m_entries.value(property).blockers.isEmpty(); }
+    bool isWriting(const QByteArray& property) const { return m_entries.value(property).writing > 0; }
     bool canAcquire(const QByteArray& property, QObject* owner) const
     {
         const auto blockers = m_entries.value(property).blockers;
@@ -719,8 +705,11 @@ public:
     void install(QByteArray property, detail::QMLBinding* binding);
     void remove(QByteArray property, detail::QMLBinding* binding);
     void cancelAnimation(QByteArray property);
-    bool write(QByteArray property, QVariant value, const PropertyAnimation* animation = nullptr,
-               QMLPlusRuntime* observer = nullptr, bool useBehavior = true);
+    bool write(QByteArray property,
+        QVariant value,
+        const PropertyAnimation* animation = nullptr,
+        QMLPlusRuntime* observer = nullptr,
+        bool useBehavior = true);
     bool writeRaw(QByteArray property, QVariant value);
     void setBehavior(const QByteArray& property, const PropertyAnimation* behavior)
     {
@@ -741,8 +730,7 @@ namespace detail {
 class QMLDependencyWatcher : public QObject {
     Q_OBJECT
 public:
-    QMLDependencyWatcher(const QVector<BindingDependency>& dependencies,
-                         std::function<void()> notify, QObject* parent)
+    QMLDependencyWatcher(const QVector<BindingDependency>& dependencies, std::function<void()> notify, QObject* parent)
         : QObject(parent), m_notify(std::move(notify))
     {
         const QMetaMethod slot = metaObject()->method(metaObject()->indexOfSlot("changed()"));
@@ -775,24 +763,25 @@ private:
 class QMLBinding : public QObject {
     Q_OBJECT
 public:
-    QMLBinding(QObject* target, QByteArray property, QVector<BindingDependency> dependencies,
-               std::function<QVariant()> evaluate, BindingOptions options,
-               bool requireNotify = true)
-        : QObject(target), m_target(target), m_property(std::move(property)),
-          m_dependencies(std::move(dependencies)), m_evaluate(std::move(evaluate)),
-          m_options(options), m_hub(QMLPlusPropertyHub::get(target)), m_requireNotify(requireNotify)
+    QMLBinding(QObject* target,
+        QByteArray property,
+        QVector<BindingDependency> dependencies,
+        std::function<QVariant()> evaluate,
+        BindingOptions options,
+        bool requireNotify = true)
+        : QObject(target), m_target(target), m_property(std::move(property)), m_dependencies(std::move(dependencies)),
+          m_evaluate(std::move(evaluate)), m_options(options), m_hub(QMLPlusPropertyHub::get(target)),
+          m_requireNotify(requireNotify)
     {}
 
     void connectInputs()
     {
-        const QMetaMethod slot =
-            metaObject()->method(metaObject()->indexOfSlot("dependencyChanged()"));
+        const QMetaMethod slot = metaObject()->method(metaObject()->indexOfSlot("dependencyChanged()"));
         for (const BindingDependency& dependency : std::as_const(m_dependencies)) {
             const QMetaProperty property = metaProperty(dependency.object, dependency.propertyName);
             if (property.hasNotifySignal())
                 QObject::connect(dependency.object, property.notifySignal(), this, slot);
-            QObject::connect(dependency.object, &QObject::destroyed, this,
-                             [this] { invalidate(); });
+            QObject::connect(dependency.object, &QObject::destroyed, this, [this] { invalidate(); });
         }
     }
 
@@ -801,8 +790,7 @@ public:
         m_reverseTarget = source;
         m_reverseProperty = property;
         const QMetaProperty targetProperty = metaProperty(m_target, m_property);
-        const QMetaMethod slot =
-            metaObject()->method(metaObject()->indexOfSlot("reverseChanged()"));
+        const QMetaMethod slot = metaObject()->method(metaObject()->indexOfSlot("reverseChanged()"));
         if (targetProperty.hasNotifySignal())
             QObject::connect(m_target, targetProperty.notifySignal(), this, slot);
     }
@@ -851,8 +839,8 @@ public:
         if (guard)
             deleteLater();
     }
-    void refresh(const PropertyAnimation* animation = nullptr, QMLPlusRuntime* observer = nullptr,
-                 bool immediate = false)
+    void
+    refresh(const PropertyAnimation* animation = nullptr, QMLPlusRuntime* observer = nullptr, bool immediate = false)
     {
         if (!isActive())
             return;
@@ -876,8 +864,7 @@ public:
             } catch (...) {
                 if (guard)
                     m_evaluating = false;
-                qCWarning(logging::layoutCategory)
-                    << "QMLPlus binding evaluator threw an exception";
+                qCWarning(logging::layoutCategory) << "QMLPlus binding evaluator threw an exception";
                 return;
             }
             if (!guard)
@@ -887,8 +874,7 @@ public:
             const bool initial = !m_synchronized || immediate;
             m_synchronized = true;
             if (value.isValid())
-                m_hub->write(m_property, value, initial ? nullptr : animation,
-                             initial ? nullptr : observer, !initial);
+                m_hub->write(m_property, value, initial ? nullptr : animation, initial ? nullptr : observer, !initial);
             if (!guard)
                 return;
             if (++iterations >= 32) {
@@ -961,21 +947,20 @@ void QMLPlusPropertyHub::acquire(QByteArray property, QObject* owner)
 {
     m_entries[property].blockers.insert(owner);
     if (!m_ownerConnections.contains(owner)) {
-        m_ownerConnections.insert(
-            owner, QObject::connect(owner, &QObject::destroyed, this, [this, owner] {
-                QPointer<QMLPlusPropertyHub> guard(this);
-                const auto properties = m_entries.keys();
-                m_ownerConnections.remove(owner);
-                for (const QByteArray& property : properties) {
-                    const bool removed = m_entries[property].blockers.remove(owner);
-                    if (removed && !isBlocked(property)) {
-                        if (auto* link = binding(property))
-                            link->refresh();
-                    }
-                    if (!guard)
-                        return;
+        m_ownerConnections.insert(owner, QObject::connect(owner, &QObject::destroyed, this, [this, owner] {
+            QPointer<QMLPlusPropertyHub> guard(this);
+            const auto properties = m_entries.keys();
+            m_ownerConnections.remove(owner);
+            for (const QByteArray& property : properties) {
+                const bool removed = m_entries[property].blockers.remove(owner);
+                if (removed && !isBlocked(property)) {
+                    if (auto* link = binding(property))
+                        link->refresh();
                 }
-            }));
+                if (!guard)
+                    return;
+            }
+        }));
     }
     cancelAnimation(property);
 }
@@ -1042,9 +1027,11 @@ bool QMLPlusPropertyHub::writeRaw(QByteArray property, QVariant value)
     return success || dynamic;
 }
 
-bool QMLPlusPropertyHub::write(QByteArray property, QVariant value,
-                               const PropertyAnimation* animation, QMLPlusRuntime* observer,
-                               bool useBehavior)
+bool QMLPlusPropertyHub::write(QByteArray property,
+    QVariant value,
+    const PropertyAnimation* animation,
+    QMLPlusRuntime* observer,
+    bool useBehavior)
 {
     if (!m_target)
         return false;
@@ -1070,8 +1057,7 @@ bool QMLPlusPropertyHub::write(QByteArray property, QVariant value,
     }
     if (current == value)
         return true;
-    if (!animate || !current.isValid() || current.userType() != value.userType() ||
-        !interpolates(current.userType()))
+    if (!animate || !current.isValid() || current.userType() != value.userType() || !interpolates(current.userType()))
         return writeRaw(property, value);
 
     auto* movement = new QVariantAnimation(this);
@@ -1081,10 +1067,10 @@ bool QMLPlusPropertyHub::write(QByteArray property, QVariant value,
     m_entries[property].animation = movement;
     m_entries[property].observer = observerGuard;
     QObject::connect(movement, &QVariantAnimation::valueChanged, this,
-                     [this, property, movement](const QVariant& frame) {
-                         if (m_entries[property].animation == movement)
-                             writeRaw(property, frame);
-                     });
+        [this, property, movement](const QVariant& frame) {
+            if (m_entries[property].animation == movement)
+                writeRaw(property, frame);
+        });
     QObject::connect(movement, &QVariantAnimation::finished, this, [this, property, movement] {
         if (m_entries[property].animation == movement) {
             m_entries[property].animation.clear();
@@ -1143,8 +1129,11 @@ void BindingHandle::unbind() const
 
 // Kept as a standalone compatibility helper. Managed bind() uses QMLBinding.
 // zh_CN: 保留为独立兼容工具；受管理的 bind() 使用 QMLBinding。
-PropertyLink::PropertyLink(QObject* from, const QMetaProperty& fromProp, QObject* to,
-                           const QMetaProperty& toProp, QObject* parent)
+PropertyLink::PropertyLink(QObject* from,
+    const QMetaProperty& fromProp,
+    QObject* to,
+    const QMetaProperty& toProp,
+    QObject* parent)
     : QObject(parent), m_from(from), m_fromProp(fromProp), m_to(to), m_toProp(toProp)
 {}
 
@@ -1165,20 +1154,22 @@ void PropertyLink::syncToTarget()
 
 namespace {
 
-detail::QMLBinding* installDirectBinding(QObject* source, const char* sourceProp, QObject* target,
-                                         const char* targetProp,
-                                         PropertyBinder::Direction direction,
-                                         BindingOptions options, bool requireNotify)
+detail::QMLBinding* installDirectBinding(QObject* source,
+    const char* sourceProp,
+    QObject* target,
+    const char* targetProp,
+    PropertyBinder::Direction direction,
+    BindingOptions options,
+    bool requireNotify)
 {
     if (!sourceProp || !targetProp)
         return {};
     const QMetaProperty input = metaProperty(source, sourceProp);
     const QMetaProperty output = metaProperty(target, targetProp);
-    if (!validThread(source) || !validThread(target) || !input.isReadable() ||
-        !output.isReadable() || !output.isWritable() ||
-        (requireNotify && !input.hasNotifySignal()) ||
-        (direction == PropertyBinder::TwoWay &&
-         (!input.isWritable() || (requireNotify && !output.hasNotifySignal())))) {
+    if (!validThread(source) || !validThread(target) || !input.isReadable() || !output.isReadable()
+        || !output.isWritable() || (requireNotify && !input.hasNotifySignal())
+        || (direction == PropertyBinder::TwoWay
+            && (!input.isWritable() || (requireNotify && !output.hasNotifySignal())))) {
         qCWarning(logging::layoutCategory) << "QMLPlus rejected an invalid direct binding";
         return {};
     }
@@ -1186,9 +1177,7 @@ detail::QMLBinding* installDirectBinding(QObject* source, const char* sourceProp
     const QByteArray property(sourceProp);
     auto* binding = new detail::QMLBinding(
         target, targetProp, {{source, sourceProp}},
-        [sourceGuard, property] {
-            return sourceGuard ? sourceGuard->property(property.constData()) : QVariant();
-        },
+        [sourceGuard, property] { return sourceGuard ? sourceGuard->property(property.constData()) : QVariant(); },
         options, requireNotify);
     QPointer<detail::QMLBinding> guard(binding);
     QMLPlusPropertyHub::get(target)->install(targetProp, binding);
@@ -1206,35 +1195,37 @@ detail::QMLBinding* installDirectBinding(QObject* source, const char* sourceProp
 
 } // namespace
 
-void PropertyBinder::bind(QObject* source, const char* sourceProp, QObject* target,
-                          const char* targetProp, Direction direction)
+void PropertyBinder::
+    bind(QObject* source, const char* sourceProp, QObject* target, const char* targetProp, Direction direction)
 {
     installDirectBinding(source, sourceProp, target, targetProp, direction, {}, false);
 }
 
-BindingHandle PropertyBinder::bindManaged(QObject* source, const char* sourceProp, QObject* target,
-                                          const char* targetProp, Direction direction,
-                                          BindingOptions options)
+BindingHandle PropertyBinder::bindManaged(QObject* source,
+    const char* sourceProp,
+    QObject* target,
+    const char* targetProp,
+    Direction direction,
+    BindingOptions options)
 {
-    return BindingHandle(
-        installDirectBinding(source, sourceProp, target, targetProp, direction, options, true));
+    return BindingHandle(installDirectBinding(source, sourceProp, target, targetProp, direction, options, true));
 }
 
-BindingHandle PropertyBinder::bindComputed(QObject* target, const char* targetProp,
-                                           const QVector<BindingDependency>& dependencies,
-                                           std::function<QVariant()> evaluate,
-                                           BindingOptions options)
+BindingHandle PropertyBinder::bindComputed(QObject* target,
+    const char* targetProp,
+    const QVector<BindingDependency>& dependencies,
+    std::function<QVariant()> evaluate,
+    BindingOptions options)
 {
     if (!targetProp)
         return {};
     const QMetaProperty output = metaProperty(target, targetProp);
-    if (!validThread(target) || !output.isReadable() || !output.isWritable() || !evaluate ||
-        !validDependencies(dependencies)) {
+    if (!validThread(target) || !output.isReadable() || !output.isWritable() || !evaluate
+        || !validDependencies(dependencies)) {
         qCWarning(logging::layoutCategory) << "QMLPlus rejected an invalid computed binding";
         return {};
     }
-    auto* binding =
-        new detail::QMLBinding(target, targetProp, dependencies, std::move(evaluate), options);
+    auto* binding = new detail::QMLBinding(target, targetProp, dependencies, std::move(evaluate), options);
     QPointer<detail::QMLBinding> guard(binding);
     QMLPlusPropertyHub::get(target)->install(targetProp, binding);
     if (!guard || !guard->isValid()) {
@@ -1296,8 +1287,8 @@ struct QMLPlusRuntime::Data {
         for (const QMLState& state : chain) {
             for (const PropertyChange& change : state.changes) {
                 for (int index = result.changes.size() - 1; index >= 0; --index) {
-                    if (result.changes[index].target == change.target &&
-                        result.changes[index].propertyName == change.propertyName)
+                    if (result.changes[index].target == change.target
+                        && result.changes[index].propertyName == change.propertyName)
                         result.changes.removeAt(index);
                 }
                 result.changes.append(change);
@@ -1313,18 +1304,16 @@ struct QMLPlusRuntime::Data {
         return true;
     }
 
-    const PropertyAnimation* animation(const QString& from, const QString& to,
-                                       const QByteArray& property) const
+    const PropertyAnimation* animation(const QString& from, const QString& to, const QByteArray& property) const
     {
         const PropertyAnimation* selected = nullptr;
         int best = -1;
         for (const StateTransition& transition : transitions) {
-            if ((transition.from != QStringLiteral("*") && transition.from != from) ||
-                (transition.to != QStringLiteral("*") && transition.to != to) ||
-                (!transition.properties.isEmpty() && !transition.properties.contains(property)))
+            if ((transition.from != QStringLiteral("*") && transition.from != from)
+                || (transition.to != QStringLiteral("*") && transition.to != to)
+                || (!transition.properties.isEmpty() && !transition.properties.contains(property)))
                 continue;
-            const int score = int(transition.from != QStringLiteral("*")) +
-                              int(transition.to != QStringLiteral("*"));
+            const int score = int(transition.from != QStringLiteral("*")) + int(transition.to != QStringLiteral("*"));
             if (score > best) {
                 selected = &transition.animation;
                 best = score;
@@ -1396,10 +1385,10 @@ void QMLPlusRuntime::watchAnimation(QVariantAnimation* animation)
     if (d->tearingDown)
         return;
     d->animations.insert(animation);
-    QObject::connect(animation, &QVariantAnimation::finished, this,
-                     [this, animation] { animationEnded(animation, true); });
-    QObject::connect(animation, &QObject::destroyed, this,
-                     [this, animation] { animationEnded(animation, false); });
+    QObject::connect(animation, &QVariantAnimation::finished, this, [this, animation] {
+        animationEnded(animation, true);
+    });
+    QObject::connect(animation, &QObject::destroyed, this, [this, animation] { animationEnded(animation, false); });
     if (!d->running) {
         d->running = true;
         emit transitionRunningChanged(true);
@@ -1492,21 +1481,19 @@ void QMLPlusRuntime::requestState(const QString& name, bool force)
         force = false;
         QMLState destination;
         if (!d->flatten(requested, destination)) {
-            qCWarning(logging::layoutCategory)
-                << "QMLPlus rejected missing or cyclic state inheritance";
+            qCWarning(logging::layoutCategory) << "QMLPlus rejected missing or cyclic state inheritance";
             break;
         }
         bool available = true;
         for (const auto& change : std::as_const(destination.changes)) {
-            if (change.target && !change.propertyName.isEmpty() &&
-                !QMLPlusPropertyHub::get(change.target)->canAcquire(change.propertyName, this)) {
+            if (change.target && !change.propertyName.isEmpty()
+                && !QMLPlusPropertyHub::get(change.target)->canAcquire(change.propertyName, this)) {
                 available = false;
                 break;
             }
         }
         if (!available) {
-            qCWarning(logging::layoutCategory)
-                << "QMLPlus property is already owned by another state controller";
+            qCWarning(logging::layoutCategory) << "QMLPlus property is already owned by another state controller";
             break;
         }
         const QString previous = d->current;
@@ -1575,30 +1562,27 @@ void QMLPlusRuntime::requestState(const QString& name, bool force)
             if (retained)
                 continue;
             for (int index = d->properties.size() - 1; index >= 0; --index) {
-                if (d->properties[index].target == snapshot.target &&
-                    d->properties[index].property == snapshot.property)
+                if (d->properties[index].target == snapshot.target
+                    && d->properties[index].property == snapshot.property)
                     d->properties.removeAt(index);
             }
             if (!snapshot.target)
                 continue;
             QPointer<QMLPlusPropertyHub> hub(QMLPlusPropertyHub::get(snapshot.target));
             hub->release(snapshot.property, this);
-            const PropertyAnimation* selected =
-                d->animation(previous, requested, snapshot.property);
+            const PropertyAnimation* selected = d->animation(previous, requested, snapshot.property);
             const PropertyAnimation animation = selected ? *selected : PropertyAnimation();
             if (auto* binding = hub->binding(snapshot.property); binding && binding->isActive())
                 binding->refresh(selected ? &animation : nullptr, this);
             else
-                hub->write(snapshot.property, snapshot.value, selected ? &animation : nullptr,
-                           this);
+                hub->write(snapshot.property, snapshot.value, selected ? &animation : nullptr, this);
             if (!guard)
                 return;
         }
         for (const auto& change : std::as_const(destination.changes)) {
             if (!change.target || change.propertyName.isEmpty())
                 continue;
-            const PropertyAnimation* selected =
-                d->animation(previous, requested, change.propertyName);
+            const PropertyAnimation* selected = d->animation(previous, requested, change.propertyName);
             const PropertyAnimation animation = selected ? *selected : PropertyAnimation();
             QMLPlusPropertyHub::get(change.target)
                 ->write(change.propertyName, change.value, selected ? &animation : nullptr, this);
@@ -1732,8 +1716,8 @@ void QMLPlus::applyState(const QString& name)
 void QMLPlus::addState(const QMLState& definition)
 {
     auto* observer = runtime();
-    if (!observer || definition.name.isEmpty() ||
-        (!definition.dependencies.isEmpty() && !validDependencies(definition.dependencies)))
+    if (!observer || definition.name.isEmpty()
+        || (!definition.dependencies.isEmpty() && !validDependencies(definition.dependencies)))
         return;
     QPointer<QMLPlusRuntime> guard(observer);
     auto* data = observer->d;
@@ -1746,8 +1730,7 @@ void QMLPlus::addState(const QMLState& definition)
         QMLState flattened;
         if (!data->flatten(definition.name, flattened)) {
             data->states[definition.name] = previousDefinition;
-            qCWarning(logging::layoutCategory)
-                << "QMLPlus rejected invalid inheritance in an active state replacement";
+            qCWarning(logging::layoutCategory) << "QMLPlus rejected invalid inheritance in an active state replacement";
             return;
         }
     }
@@ -1785,25 +1768,28 @@ void QMLPlus::evaluateStates()
         observer->evaluateConditions();
 }
 
-void QMLPlus::bind(const char* targetProp, QObject* source, const char* sourceProp,
-                   PropertyBinder::Direction direction)
+void QMLPlus::bind(const char* targetProp, QObject* source, const char* sourceProp, PropertyBinder::Direction direction)
 {
     PropertyBinder::bind(source, sourceProp, dynamic_cast<QWidget*>(this), targetProp, direction);
 }
 
-BindingHandle QMLPlus::bindManaged(const char* targetProp, QObject* source, const char* sourceProp,
-                                   PropertyBinder::Direction direction, BindingOptions options)
+BindingHandle QMLPlus::bindManaged(const char* targetProp,
+    QObject* source,
+    const char* sourceProp,
+    PropertyBinder::Direction direction,
+    BindingOptions options)
 {
-    return PropertyBinder::bindManaged(source, sourceProp, dynamic_cast<QWidget*>(this), targetProp,
-                                       direction, options);
+    return PropertyBinder::bindManaged(source, sourceProp, dynamic_cast<QWidget*>(this), targetProp, direction,
+        options);
 }
 
 BindingHandle QMLPlus::bindComputed(const char* targetProp,
-                                    const QVector<BindingDependency>& dependencies,
-                                    std::function<QVariant()> evaluate, BindingOptions options)
+    const QVector<BindingDependency>& dependencies,
+    std::function<QVariant()> evaluate,
+    BindingOptions options)
 {
-    return PropertyBinder::bindComputed(dynamic_cast<QWidget*>(this), targetProp, dependencies,
-                                        std::move(evaluate), options);
+    return PropertyBinder::bindComputed(dynamic_cast<QWidget*>(this), targetProp, dependencies, std::move(evaluate),
+        options);
 }
 
 void QMLPlus::addTransition(const StateTransition& transition)
@@ -1815,8 +1801,7 @@ void QMLPlus::addTransition(const StateTransition& transition)
 void QMLPlus::setBehavior(const char* propertyName, const PropertyAnimation& animation)
 {
     auto* host = dynamic_cast<QWidget*>(this);
-    const QMetaProperty property =
-        propertyName ? metaProperty(host, propertyName) : QMetaProperty();
+    const QMetaProperty property = propertyName ? metaProperty(host, propertyName) : QMetaProperty();
     if (host && property.isReadable() && property.isWritable())
         QMLPlusPropertyHub::get(host)->setBehavior(propertyName, &animation);
 }
@@ -1832,8 +1817,7 @@ void QMLPlus::clearBehavior(const char* propertyName)
 bool QMLPlus::writeProperty(const char* propertyName, const QVariant& value)
 {
     auto* host = dynamic_cast<QWidget*>(this);
-    const QMetaProperty property =
-        propertyName ? metaProperty(host, propertyName) : QMetaProperty();
+    const QMetaProperty property = propertyName ? metaProperty(host, propertyName) : QMetaProperty();
     if (!host || !property.isReadable() || !property.isWritable())
         return false;
     return QMLPlusPropertyHub::get(host)->write(propertyName, value);

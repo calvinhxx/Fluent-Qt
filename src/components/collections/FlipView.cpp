@@ -15,18 +15,17 @@ namespace fluent::collections {
 
 // ── WinUI 3 FlipView metrics. zh_CN: WinUI 3 FlipView 尺寸常量 ──────────────
 namespace {
-constexpr int kNavBtnW_H = 16; // Nav button width, horizontal mode. zh_CN: 水平模式导航按钮宽度。
-constexpr int kNavBtnH_H = 28; // Nav button height, horizontal mode. zh_CN: 水平模式导航按钮高度。
-constexpr int kNavBtnW_V = 28; // Nav button width, vertical mode. zh_CN: 垂直模式导航按钮宽度。
-constexpr int kNavBtnH_V = 16; // Nav button height, vertical mode. zh_CN: 垂直模式导航按钮高度。
+constexpr int kNavBtnW_H = 16;   // Nav button width, horizontal mode. zh_CN: 水平模式导航按钮宽度。
+constexpr int kNavBtnH_H = 28;   // Nav button height, horizontal mode. zh_CN: 水平模式导航按钮高度。
+constexpr int kNavBtnW_V = 28;   // Nav button width, vertical mode. zh_CN: 垂直模式导航按钮宽度。
+constexpr int kNavBtnH_V = 16;   // Nav button height, vertical mode. zh_CN: 垂直模式导航按钮高度。
 constexpr int kNavBtnMargin = 2; // Nav button distance from the edge. zh_CN: 导航按钮到边缘距离。
 constexpr int kNavBtnRadius = 3; // Button corner radius. zh_CN: 按钮圆角。
 constexpr int kIndicatorDotSize = 6;
 constexpr int kIndicatorSpacing = 8;
 constexpr int kIndicatorMargin = 12;
-constexpr int kArrowFontSize = 10; // Chevron icon size
-constexpr int kGestureThreshold =
-    50; // Accumulated trackpad pixel/angle threshold. zh_CN: trackpad 累积像素/角度阈值。
+constexpr int kArrowFontSize = 10;    // Chevron icon size
+constexpr int kGestureThreshold = 50; // Accumulated trackpad pixel/angle threshold. zh_CN: trackpad 累积像素/角度阈值。
 // NoScrollPhase cluster detection: gaps above this start a new gesture cluster.
 // Windows precision trackpads emit every ~8-16ms with >100ms between gestures;
 // RDP forwards at ~20-30ms and can spike to 60-100ms under network jitter.
@@ -92,11 +91,9 @@ protected:
         // Navigation buttons. zh_CN: 导航按钮。
         if (m_fv->m_showNavButtons && m_fv->m_isHovered && m_fv->m_pages.size() > 1) {
             if (m_fv->m_currentIndex > 0)
-                m_fv->drawNavButton(p, m_fv->prevButtonRect(), false, m_fv->m_prevBtnHovered,
-                                    m_fv->m_prevBtnPressed);
+                m_fv->drawNavButton(p, m_fv->prevButtonRect(), false, m_fv->m_prevBtnHovered, m_fv->m_prevBtnPressed);
             if (m_fv->m_currentIndex < m_fv->m_pages.size() - 1)
-                m_fv->drawNavButton(p, m_fv->nextButtonRect(), true, m_fv->m_nextBtnHovered,
-                                    m_fv->m_nextBtnPressed);
+                m_fv->drawNavButton(p, m_fv->nextButtonRect(), true, m_fv->m_nextBtnHovered, m_fv->m_nextBtnPressed);
         }
 
         // Page indicator. zh_CN: 页面指示器。
@@ -193,8 +190,9 @@ bool FlipView::insertPage(int index, QWidget* page, WidgetOwnership ownership)
     record.page = page;
     record.originalParent = page->parentWidget();
     record.ownership = ownership;
-    record.destroyedConnection =
-        connect(page, &QObject::destroyed, this, [this, page]() { handlePageDestroyed(page); });
+    record.destroyedConnection = connect(page, &QObject::destroyed, this, [this, page]() {
+        handlePageDestroyed(page);
+    });
 
     page->setParent(this);
     m_pages.insert(index, record);
@@ -528,8 +526,7 @@ void FlipView::paintEvent(QPaintEvent*)
     // zh_CN: 导航按钮和指示器由 FlipViewOverlay 在子页面之上绘制。
 }
 
-void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext, bool hovered,
-                             bool pressed)
+void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext, bool hovered, bool pressed)
 {
     const auto& c = themeColorsRef();
 
@@ -569,10 +566,9 @@ void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext, boo
     const int arrowSize = pressed ? static_cast<int>(kArrowFontSize * 0.875) : kArrowFontSize;
     p.setPen(arrowColor);
 
-    const QString glyph =
-        (m_orientation == Qt::Horizontal)
-            ? (isNext ? Typography::Icons::ChevronRight : Typography::Icons::ChevronLeft)
-            : (isNext ? Typography::Icons::ChevronDown : Typography::Icons::ChevronUp);
+    const QString glyph = (m_orientation == Qt::Horizontal)
+        ? (isNext ? Typography::Icons::ChevronRight : Typography::Icons::ChevronLeft)
+        : (isNext ? Typography::Icons::ChevronDown : Typography::Icons::ChevronUp);
     Typography::Icons::paintGlyph(p, QRectF(btnRect), glyph, arrowSize, Qt::AlignCenter);
 }
 
@@ -767,11 +763,10 @@ void FlipView::wheelEvent(QWheelEvent* event)
         // m_pendingFlipDir，动画结束后自动执行；修复 Windows 快速连续滑动时
         // ScrollUpdate 全部落在上一次动画期间而被守卫丢弃的问题。
         int delta = !event->pixelDelta().isNull()
-                        ? (m_orientation == Qt::Horizontal ? event->pixelDelta().x()
-                                                           : event->pixelDelta().y())
-                        : (m_orientation == Qt::Horizontal
-                               ? event->angleDelta().x() + event->angleDelta().y()
-                               : event->angleDelta().y());
+            ? (m_orientation == Qt::Horizontal ? event->pixelDelta().x() : event->pixelDelta().y())
+            : (m_orientation == Qt::Horizontal
+                      ? event->angleDelta().x() + event->angleDelta().y()
+                      : event->angleDelta().y());
         m_gestureAccum += delta;
         if (qAbs(m_gestureAccum) >= kGestureThreshold) {
             m_gestureConsumed = true;
@@ -801,9 +796,8 @@ void FlipView::wheelEvent(QWheelEvent* event)
     // consumed 拦截，避免 RDP 高频事件链式翻页到底。
     const bool animating = m_slideAnimation->state() == QAbstractAnimation::Running;
 
-    int delta = (m_orientation == Qt::Horizontal)
-                    ? event->angleDelta().x() + event->angleDelta().y()
-                    : event->angleDelta().y();
+    int delta =
+        (m_orientation == Qt::Horizontal) ? event->angleDelta().x() + event->angleDelta().y() : event->angleDelta().y();
 
     // ── Cluster accumulation ──
     // Event gaps mark cluster boundaries (gap > kClusterGapMs = new gesture).

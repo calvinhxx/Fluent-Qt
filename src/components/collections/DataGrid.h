@@ -43,17 +43,17 @@ class DataGridCellDelegate;
  */
 class DataGrid : public QTableView, public FluentElement, public QMLPlus {
     Q_OBJECT
-    Q_PROPERTY(SelectionMode selectionMode READ selectionMode
-                   WRITE setSelectionMode NOTIFY selectionModeChanged)
-    Q_PROPERTY(QString placeholderText READ placeholderText
-                   WRITE setPlaceholderText NOTIFY placeholderTextChanged)
-    Q_PROPERTY(bool borderVisible READ isBorderVisible
-                   WRITE setBorderVisible NOTIFY borderVisibleChanged)
-    Q_PROPERTY(bool backgroundVisible READ isBackgroundVisible
-                   WRITE setBackgroundVisible NOTIFY backgroundVisibleChanged)
-    Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled
-                   WRITE setScrollChainingEnabled
-                   NOTIFY scrollChainingEnabledChanged)
+    Q_PROPERTY(SelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY selectionModeChanged)
+    Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY placeholderTextChanged)
+    Q_PROPERTY(bool borderVisible READ isBorderVisible WRITE setBorderVisible NOTIFY borderVisibleChanged)
+    Q_PROPERTY(bool backgroundVisible
+        READ isBackgroundVisible
+        WRITE setBackgroundVisible
+        NOTIFY backgroundVisibleChanged)
+    Q_PROPERTY(bool scrollChainingEnabled
+        READ isScrollChainingEnabled
+        WRITE setScrollChainingEnabled
+        NOTIFY scrollChainingEnabledChanged)
 
 public:
     using SelectionMode = ::fluent::collections::SelectionMode;
@@ -93,19 +93,13 @@ public:
      * @brief Returns the Fluent overlay scrollbar mirroring the native range.
      * zh_CN: 返回镜像原生范围的 Fluent 覆盖式滚动条。
      */
-    fluent::scrolling::ScrollBar* verticalFluentScrollBar() const
-    {
-        return m_verticalFluentScrollBar;
-    }
+    fluent::scrolling::ScrollBar* verticalFluentScrollBar() const { return m_verticalFluentScrollBar; }
 
     /**
      * @brief Returns the Fluent horizontal overlay scrollbar.
      * zh_CN: 返回 Fluent 水平覆盖式滚动条。
      */
-    fluent::scrolling::ScrollBar* horizontalFluentScrollBar() const
-    {
-        return m_horizontalFluentScrollBar;
-    }
+    fluent::scrolling::ScrollBar* horizontalFluentScrollBar() const { return m_horizontalFluentScrollBar; }
 
     void onThemeUpdated() override;
 

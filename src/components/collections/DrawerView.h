@@ -102,23 +102,13 @@ class DrawerView : public QWidget, public FluentElement, public QMLPlus {
      * @brief Release policy for the current content widget.
      * zh_CN: 当前内容控件的释放策略。
      */
-    Q_PROPERTY(fluent::WidgetOwnership contentOwnership READ contentOwnership
-               NOTIFY contentOwnershipChanged)
+    Q_PROPERTY(fluent::WidgetOwnership contentOwnership READ contentOwnership NOTIFY contentOwnershipChanged)
 
 public:
-    enum class DrawerEdge {
-        Left,
-        Right,
-        Top,
-        Bottom
-    };
+    enum class DrawerEdge { Left, Right, Top, Bottom };
     Q_ENUM(DrawerEdge)
 
-    enum CloseFlag {
-        NoAutoClose = 0,
-        CloseOnPressOutside = 1 << 0,
-        CloseOnEscape = 1 << 1
-    };
+    enum CloseFlag { NoAutoClose = 0, CloseOnPressOutside = 1 << 0, CloseOnEscape = 1 << 1 };
     Q_DECLARE_FLAGS(ClosePolicy, CloseFlag)
     Q_FLAG(ClosePolicy)
 
@@ -226,11 +216,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
 
 private:
-    enum class TransitionTarget {
-        None,
-        Open,
-        Closed
-    };
+    enum class TransitionTarget { None, Open, Closed };
 
     struct DragState {
         bool active = false;
@@ -270,9 +256,7 @@ private:
     void destroyScrim();
     void raiseOverlayStack();
     QWidget* releaseContentWidget(bool deleteOwned, bool restoreParent);
-    void observeContentWidget(QWidget* widget,
-                              QWidget* originalParent,
-                              WidgetOwnership ownership);
+    void observeContentWidget(QWidget* widget, QWidget* originalParent, WidgetOwnership ownership);
 
     bool isPointInsidePanel(const QPoint& globalPos) const;
     bool isPointInEdgeDragArea(const QPoint& globalPos) const;
