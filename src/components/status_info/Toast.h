@@ -1,6 +1,7 @@
 #ifndef FLUENTQT_COMPONENTS_STATUS_INFO_TOAST_H
 #define FLUENTQT_COMPONENTS_STATUS_INFO_TOAST_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QAction>
 #include <QMargins>
 #include <QMetaObject>
@@ -11,7 +12,6 @@
 #include <QVector>
 #include <QWidget>
 
-#include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 

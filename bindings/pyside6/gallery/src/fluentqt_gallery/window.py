@@ -8,6 +8,7 @@ import sys
 from typing import Callable, Iterable
 
 import fluentqt
+from fluentqt._qt_events import is_display_scale_change_event
 from shiboken6 import isValid
 import fluentqt._fluentqt as _native
 from PySide6.QtCore import (
@@ -26,7 +27,6 @@ from PySide6.QtCore import (
     QTimer,
     QUrl,
     QVariantAnimation,
-    qVersion,
 )
 from PySide6.QtGui import (
     QColor,
@@ -2630,15 +2630,7 @@ class GalleryWindow(fluentqt.Window):
             else:
                 self._schedule_prewarm_step()
                 self._schedule_startup_finish()
-        display_scale_events = tuple(
-            event_type
-            for event_type in (
-                getattr(QEvent.Type, "ScreenChangeInternal", None),
-                getattr(QEvent.Type, "DevicePixelRatioChange", None),
-            )
-            if event_type is not None
-        )
-        if event.type() in display_scale_events:
+        if is_display_scale_change_event(event):
             # QWidget's DPR changes after the native event has propagated. Match
             # the C++ Gallery by rebuilding DPR-tagged pixmaps on the next turn.
             _single_shot(0, self, self._refresh_display_scale_assets)

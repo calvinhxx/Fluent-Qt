@@ -1,6 +1,7 @@
 #ifndef FLUENTQT_COMPONENTS_DATE_TIME_PRIVATE_PICKERWHEEL_P_H
 #define FLUENTQT_COMPONENTS_DATE_TIME_PRIVATE_PICKERWHEEL_P_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QFont>
 #include <QString>
 #include <QVector>
@@ -9,7 +10,6 @@
 
 #include <functional>
 
-#include "compatibility/QtCompat.h"
 #include "components/date_time/private/PickerAccessibility_p.h"
 #include "components/foundation/FluentElement.h"
 

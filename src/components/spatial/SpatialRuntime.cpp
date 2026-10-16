@@ -1,6 +1,6 @@
 #include "SpatialRuntime.h"
-#include "compatibility/SpatialNativeStyle_p.h"
-#include "compatibility/SpatialRenderCompat.h"
+#include "compatibility/private/spatial/SpatialNativeStyle_p.h"
+#include "compatibility/private/spatial/SpatialRenderCompat_p.h"
 #include "components/windowing/Window.h"
 
 #include <QOffscreenSurface>
@@ -24,7 +24,7 @@ bool SpatialRuntime::prepareWindow(windowing::Window* window)
 bool SpatialRuntime::prepareWindow(windowing::Window* window, QSurface::SurfaceType surfaceType)
 {
     if (!window || !window->isWindow() || window->isVisible()
-        || !compatibility::spatialRenderCapabilities().prepareNativeSurface)
+        || !compatibility::detail::spatialRenderCapabilities().prepareNativeSurface)
         return false;
     if (window->windowHandle() && window->windowHandle()->surfaceType() == surfaceType)
         return true;
@@ -40,7 +40,7 @@ bool SpatialRuntime::prepareWindow(windowing::Window* window, QSurface::SurfaceT
 
 bool SpatialRuntime::supportsOpenGLDisplay()
 {
-    return compatibility::spatialRenderCapabilities().openGLDisplay;
+    return compatibility::detail::spatialRenderCapabilities().openGLDisplay;
 }
 
 bool SpatialRuntime::isHardwareRenderer(const QString& renderer)
@@ -63,7 +63,7 @@ QString SpatialRuntime::currentRendererName()
 
 QString SpatialRuntime::preflightFailure()
 {
-    if (!compatibility::spatialRenderCapabilities().probeBeforeExposure)
+    if (!compatibility::detail::spatialRenderCapabilities().probeBeforeExposure)
         return {};
     const QPointer<QOpenGLContext> previous = QOpenGLContext::currentContext();
     QSurface* previousSurface = previous ? previous->surface() : nullptr;
@@ -99,6 +99,6 @@ int SpatialRuntime::maximumTextureDimension()
 
 bool SpatialRuntime::needsNativeGlyphCoverage(qreal nativeDpr)
 {
-    return compatibility::spatialRenderCapabilities(nativeDpr).nativeGlyphCoverage;
+    return compatibility::detail::spatialRenderCapabilities(nativeDpr).nativeGlyphCoverage;
 }
 } // namespace fluent::spatial

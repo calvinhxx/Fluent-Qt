@@ -1,6 +1,7 @@
 #ifndef BREADCRUMB_H
 #define BREADCRUMB_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QRect>
 #include <QString>
 #include <QStringList>

@@ -1,3 +1,5 @@
+#include "compatibility/AccessibilityCompat.h"
+#include "compatibility/InputEventCompat.h"
 #include "components/status_info/Toast.h"
 
 #include <QAbstractAnimation>

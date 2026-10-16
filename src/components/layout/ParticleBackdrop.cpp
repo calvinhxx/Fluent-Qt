@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "ParticleBackdrop.h"
 #include "ParticleBackdrop_p.h"
 
@@ -17,7 +18,6 @@
 #include <cmath>
 #include <vector>
 
-#include "compatibility/QtCompat.h"
 #include "components/foundation/MotionPolicy.h"
 
 namespace fluent::layout {

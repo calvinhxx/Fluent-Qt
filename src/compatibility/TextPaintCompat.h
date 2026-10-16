@@ -18,8 +18,18 @@ inline int devicePixelRatioMetric(QPaintDevice::PaintDeviceMetric metric, qreal 
     switch (metric) {
     case QPaintDevice::PdmDevicePixelRatio:
         return qRound(dpr);
-    case QPaintDevice::PdmDevicePixelRatioScaled:
-        return qRound(dpr * QPaintDevice::devicePixelRatioFScale());
+    case QPaintDevice::PdmDevicePixelRatioScaled: {
+        const qreal scale = QPaintDevice::devicePixelRatioFScale();
+        const int scaled = qRound(dpr * scale);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+        // Qt bypasses encoded metrics when the scaled value denotes exactly 1 or 2.
+        // Keep nearby fractional ratios on the encoded path instead of snapping them.
+        // zh_CN: Qt 对 1/2 倍跳过浮点度量；邻近的小数比例仍须读取完整精度。
+        if ((scaled == scale || scaled == 2 * scale) && dpr != scaled / scale)
+            return scaled + (dpr < scaled / scale ? -1 : 1);
+#endif
+        return scaled;
+    }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
     case QPaintDevice::PdmDevicePixelRatioF_EncodedA:
     case QPaintDevice::PdmDevicePixelRatioF_EncodedB:
@@ -36,10 +46,15 @@ inline int devicePixelRatioMetric(QPaintDevice::PaintDeviceMetric metric, qreal 
  */
 inline qreal imageRasterDpr(qreal dpr)
 {
-#if QT_VERSION < QT_VERSION_CHECK(6, 8, 0)
     const qreal scale = QPaintDevice::devicePixelRatioFScale();
-    return qFloor(dpr * scale) / scale;
+    const int scaled = qFloor(dpr * scale);
+#if QT_VERSION < QT_VERSION_CHECK(6, 8, 0)
+    return scaled / scale;
 #else
+    // QImage truncates the scaled metric; QPaintDevice checks its 1x/2x shortcuts first.
+    // zh_CN: QImage 截断缩放度量，QPaintDevice 优先检查其 1/2 倍快捷路径。
+    if (scaled == scale || scaled == 2 * scale)
+        return scaled / scale;
     return dpr;
 #endif
 }

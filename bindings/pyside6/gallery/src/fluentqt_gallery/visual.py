@@ -18,6 +18,8 @@ from typing import Callable, Iterable
 
 import fluentqt
 import shiboken6
+from fluentqt._qt_compat import single_shot as _single_shot
+from fluentqt._qt_painting import font_style_strategy as _font_style_strategy
 from PySide6.QtCore import (
     QCoreApplication,
     QEasingCurve,
@@ -121,32 +123,6 @@ def css_color(color: QColor) -> str:
     return "rgba({0}, {1}, {2}, {3})".format(
         color.red(), color.green(), color.blue(), color.alpha()
     )
-
-
-def _single_shot(
-    delay_ms: int,
-    context: QObject,
-    callback: Callable[[], None],
-) -> QTimer:
-    """Schedule a context-owned callback on every supported PySide6."""
-
-    timer = QTimer(context)
-    timer.setSingleShot(True)
-    timer.timeout.connect(callback)
-    timer.timeout.connect(timer.deleteLater)
-    timer.start(max(0, int(delay_ms)))
-    return timer
-
-
-def _font_style_strategy(
-    *strategies: QFont.StyleStrategy,
-) -> QFont.StyleStrategy:
-    """Combine QFont flags without leaking an ``int`` on PySide6 6.2."""
-
-    combined = 0
-    for strategy in strategies:
-        combined |= int(getattr(strategy, "value", strategy))
-    return QFont.StyleStrategy(combined)
 
 
 def _qround(value: float) -> int:

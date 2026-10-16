@@ -287,10 +287,11 @@ the first pixel through the final frame.**
 | Opaque fallback material renderer | `src/components/windowing/WindowBackdropMaterial.h/.cpp` |
 | Resolution, publication, and root painting | `src/components/windowing/Window.h/.cpp` |
 | Platform-neutral chrome facade | `src/compatibility/WindowChromeCompat.h/.cpp` |
-| DWM backend | `src/compatibility/WindowChromeCompat_win.cpp` |
-| Cocoa vibrancy backend | `src/compatibility/WindowChromeCompat_mac.cpp` |
-| X11/KWin blur and Linux chrome behavior | `src/compatibility/WindowChromeCompat_linux.cpp` |
-| Unsupported-platform adapter | `src/compatibility/WindowChromeCompat_fallback.cpp` |
+| Internal backend declarations shared by all platforms | `src/compatibility/private/WindowChromeBackend_p.h` |
+| DWM backend | `src/compatibility/platform/WindowChromeCompat_win.cpp` |
+| Cocoa vibrancy backend | `src/compatibility/platform/WindowChromeCompat_mac.cpp` |
+| X11/KWin blur and Linux chrome behavior | `src/compatibility/platform/WindowChromeCompat_linux.cpp` |
+| Unsupported-platform adapter | `src/compatibility/platform/WindowChromeCompat_fallback.cpp` |
 | Shared title/navigation/content paint consumers | `src/components/windowing/TitleBar.cpp`, `src/components/navigation/NavigationView.cpp`, `src/components/navigation/StackContentHost.cpp` |
 
 ## Review checklist

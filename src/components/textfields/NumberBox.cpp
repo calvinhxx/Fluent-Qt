@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "NumberBox.h"
 
 #include <QEvent>

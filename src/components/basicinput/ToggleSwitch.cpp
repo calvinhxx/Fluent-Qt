@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "ToggleSwitch.h"
 #include "components/basicinput/private/BasicValueAccessibility_p.h"
 #include "components/foundation/private/MotionPolicy_p.h"

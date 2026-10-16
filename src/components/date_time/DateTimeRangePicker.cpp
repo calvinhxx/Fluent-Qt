@@ -1,3 +1,5 @@
+#include "compatibility/InputEventCompat.h"
+#include "compatibility/private/DateTimeCompat_p.h"
 #include "DateTimeRangePicker.h"
 
 #include <QBoxLayout>
@@ -11,7 +13,6 @@
 #include <QResizeEvent>
 #include <QSignalBlocker>
 #include <QStringList>
-#include <QTimeZone>
 
 #include "CalendarDatePicker.h"
 #include "TimePicker.h"
@@ -22,7 +23,6 @@
 #include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/basicinput/Button.h"
 #include "components/layout/Field.h"
-#include "compatibility/QtCompat.h"
 #include "private/DateTimeRangePickerAccessibility_p.h"
 #include "private/DateTimeRangePickerText_p.h"
 
@@ -36,11 +36,7 @@ bool sameDateTime(const QDateTime& left, const QDateTime& right)
     if (left != right || left.date() != right.date() || left.time() != right.time()
         || left.timeSpec() != right.timeSpec())
         return false;
-#if QT_CONFIG(timezone)
-    return left.timeZone() == right.timeZone();
-#else
-    return left.offsetFromUtc() == right.offsetFromUtc();
-#endif
+    return ::compatibility::detail::dateTimeZonesEqual(left, right);
 }
 
 } // namespace

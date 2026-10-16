@@ -1,6 +1,7 @@
 #ifndef SLIDER_H
 #define SLIDER_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QSlider>
 #include <QPropertyAnimation>
 #include "components/foundation/FluentElement.h"

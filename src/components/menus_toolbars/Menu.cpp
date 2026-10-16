@@ -1,4 +1,6 @@
+#include "compatibility/InputEventCompat.h"
 #include "Menu.h"
+#include "compatibility/private/WidgetPlatformCompat_p.h"
 
 #include <QActionEvent>
 #include <QApplication>
@@ -16,7 +18,6 @@
 #include <QShowEvent>
 #include <QTimer>
 #include <QVariantAnimation>
-#include "compatibility/QtCompat.h"
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
@@ -92,15 +93,6 @@ bool hasLeadingAction(const FluentMenu* menu)
             return true;
     }
     return false;
-}
-
-bool supportsPopupRaise()
-{
-    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST"))
-        return false;
-
-    const QString platformName = QGuiApplication::platformName();
-    return platformName != QStringLiteral("offscreen") && platformName != QStringLiteral("minimal");
 }
 
 bool hasMenuParent(const QWidget* widget)
@@ -726,7 +718,7 @@ void FluentMenu::showEvent(QShowEvent* event)
 
 void FluentMenu::normalizePopupLayering()
 {
-    if (!isVisible() || !supportsPopupRaise())
+    if (!isVisible() || !compatibility::detail::popupWindowStackingSupported())
         return;
 
     QVector<FluentMenu*> menus;

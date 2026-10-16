@@ -1,3 +1,4 @@
+#include "compatibility/PaintCompat.h"
 #include "components/status_info/Avatar.h"
 
 #include <QEvent>
@@ -9,7 +10,6 @@
 #include <QTextBoundaryFinder>
 #include <QVariant>
 
-#include "compatibility/QtCompat.h"
 #include "components/status_info/InfoBadge.h"
 #include "design/Typography.h"
 

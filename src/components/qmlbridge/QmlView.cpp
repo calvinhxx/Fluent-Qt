@@ -1,5 +1,7 @@
-#include "compatibility/private/QuickCompat_p.h"
-#include "compatibility/private/CoreCompat_p.h"
+#include "compatibility/private/WidgetPlatformCompat_p.h"
+#include "compatibility/private/quick/QuickCompat_p.h"
+#include "compatibility/private/quick/QuickWidgetCompat_p.h"
+#include "compatibility/private/PointerEventCompat_p.h"
 #include "QmlView.h"
 
 #include <QApplication>
@@ -22,43 +24,10 @@
 #include <QThread>
 #include <QVBoxLayout>
 #include "QmlTheme.h"
-#include "QmlGraphicsApi_p.h"
 #include "QmlTextureRenderer_p.h"
 
 namespace fluent::qmlbridge {
 namespace {
-class QmlQuickWidget final : public QQuickWidget {
-public:
-    explicit QmlQuickWidget(QWidget* parent) : QQuickWidget(parent) {}
-
-protected:
-    bool event(QEvent* event) override
-    {
-        const auto type = event->type();
-#if FLUENT_QUICK_NEEDS_UNSHOWN_REPARENT_GUARD
-        // Qt 6.2 reloads the component when an unshown preview is adopted by a
-        // window. Before scene-graph initialization there are no GPU resources
-        // to rebind, and first show will create them for the final host.
-        // zh_CN: Qt 6.2 会在预览首次重父时重载组件；首次场景图初始化前保留已加载的场景。
-        if (type == QEvent::WindowChangeInternal && !m_hasBeenShown && !quickWindow()->isSceneGraphInitialized())
-            return QWidget::event(event);
-        if (type == QEvent::Show)
-            m_hasBeenShown = true;
-#endif
-        const QPointer<QmlQuickWidget> lifetime(this);
-        const bool handled = QQuickWidget::event(event);
-        // Qt recreates the Quick window on adoption into another top-level host.
-        // zh_CN: Qt 在接入另一顶层宿主时重建 Quick 窗口，须恢复透明底色。
-        if (lifetime && type == QEvent::WindowChangeInternal)
-            setClearColor(Qt::transparent);
-        return handled;
-    }
-
-private:
-#if FLUENT_QUICK_NEEDS_UNSHOWN_REPARENT_GUARD
-    bool m_hasBeenShown = false;
-#endif
-};
 
 constexpr char kDirectCompositionRequiredProperty[] = "fluentqtDirectCompositionRequired";
 
@@ -100,9 +69,7 @@ QmlView::QmlView(QWidget* parent) : QWidget(parent), d(std::make_shared<Private>
     setAccessibleName(QStringLiteral("QML content"));
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
-#ifndef Q_OS_MACOS
-    setAttribute(Qt::WA_AcceptTouchEvents);
-#endif
+    ::compatibility::detail::enableEmbeddedSceneTouch(this);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 }
 QmlView::~QmlView()
@@ -236,7 +203,7 @@ bool QmlView::load(const QUrl& url, QString* error)
         state->busy = false;
         return false;
     }
-    auto* quick = new QmlQuickWidget(this);
+    auto* quick = new ::compatibility::detail::QuickWidget(this);
     state->quick = quick;
     quick->hide();
     quick->setObjectName(QStringLiteral("qmlQuickWidget"));
@@ -450,12 +417,8 @@ bool QmlView::setTextureRenderingEnabled(bool enabled)
     // Software Quick has no shareable GPU target; retain its direct-widget path.
     // zh_CN: 软件 Quick 没有可共享的 GPU 目标，保留直接控件路径。
     if (enabled) {
-        if (detail::usesSoftwareQuick())
+        if (!::compatibility::detail::quickUsesOpenGL())
             return false;
-#if FLUENT_QUICK_USES_RHI
-        if (QQuickWindow::graphicsApi() != QSGRendererInterface::OpenGL)
-            return false;
-#endif
         if (d->quick && d->quick->quickWindow()->rendererInterface()->graphicsApi() != QSGRendererInterface::OpenGL)
             return false;
     }
@@ -612,8 +575,7 @@ bool QmlView::event(QEvent* event)
             }
             if (!lifetime || !scene)
                 return true;
-            QMouseEvent mapped = ::compatibility::mouseEventForLocalScene(mouse);
-            mapped.setTimestamp(mouse->timestamp());
+            auto mapped = ::compatibility::detail::mouseEventForLocalScene(mouse);
             const bool handled = QCoreApplication::sendEvent(scene, &mapped);
             event->setAccepted(mapped.isAccepted());
             return handled;

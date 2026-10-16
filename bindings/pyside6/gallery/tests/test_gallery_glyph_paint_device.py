@@ -56,6 +56,16 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
             painter.end()
         return image, device
 
+    def test_adapter_keeps_native_dpr_precision_and_integer_rounding(self):
+        target = QImage(20, 20, QImage.Format_ARGB32_Premultiplied)
+        for dpr in (1.25, 1.5, 2.5, 3.5):
+            with self.subTest(dpr=dpr):
+                target.setDevicePixelRatio(dpr)
+                adapter = GlyphPaintDevice(target, dpr)
+                self.assertEqual(adapter.devicePixelRatioF(), target.devicePixelRatioF())
+                self.assertEqual(adapter.metric(QPaintDevice.PdmDevicePixelRatio),
+                                 QPointF(dpr, 0).toPoint().x())
+
     def test_adapter_does_not_advertise_unsupported_backend_operations(self):
         class Engine(QPaintEngine):
             def __init__(self):

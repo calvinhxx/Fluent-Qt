@@ -1,3 +1,5 @@
+#include "compatibility/InputEventCompat.h"
+#include "compatibility/private/WidgetPlatformCompat_p.h"
 #include "RatingControl.h"
 #include "components/basicinput/private/BasicValueAccessibility_p.h"
 #include "components/foundation/private/ValueAccessibility_p.h"
@@ -56,9 +58,7 @@ RatingControl::RatingControl(QWidget* parent) : QWidget(parent)
 {
     detail::ensureBasicValueAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
-#ifdef Q_OS_MAC
-    setAttribute(Qt::WA_MacShowFocusRect, false);
-#endif
+    ::compatibility::detail::disableNativeFocusRing(this);
     setMouseTracking(true);
     setCursor(Qt::PointingHandCursor);
     setFocusPolicy(Qt::StrongFocus);

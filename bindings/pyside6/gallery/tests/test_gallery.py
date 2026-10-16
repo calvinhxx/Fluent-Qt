@@ -773,19 +773,11 @@ class PythonGalleryTest(unittest.TestCase):
         allow_foreground.assert_called_once_with(4242)
 
     def test_windows_system_theme_falls_back_to_registry(self):
-        class UnknownStyleHints:
-            pass
-
-        class UnknownSchemeApplication:
-            @staticmethod
-            def styleHints():
-                return UnknownStyleHints()
-
         with (
             patch.object(
                 gallery_settings_module,
-                "QGuiApplication",
-                UnknownSchemeApplication,
+                "system_color_scheme",
+                return_value=None,
             ),
             patch.object(
                 gallery_settings_module,

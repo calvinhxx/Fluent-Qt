@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import math
 
+from fluentqt._qt_events import is_display_scale_change_event
+
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QScreen
 from PySide6.QtWidgets import QApplication, QWidget
@@ -292,14 +294,7 @@ class GalleryWindowPlacement(QObject):
             QEvent.Type.WindowStateChange,
         ):
             self._schedule_save()
-        elif event_type in tuple(
-            value
-            for value in (
-                getattr(QEvent.Type, "ScreenChangeInternal", None),
-                getattr(QEvent.Type, "DevicePixelRatioChange", None),
-            )
-            if value is not None
-        ):
+        elif is_display_scale_change_event(event):
             _single_shot(
                 0,
                 self,

@@ -8,7 +8,12 @@ and multisampling still use the target device.
 import math
 import weakref
 
-from PySide6.QtCore import QPoint, QPointF, QRectF, QSize, QSizeF, Qt, qVersion
+from fluentqt._qt_painting import (
+    device_pixel_ratio_metric, forward_paint_array, forward_paint_polygon, forwarding_paint_engine_features,
+    image_device_pixel_ratio, region_rects,
+)
+
+from PySide6.QtCore import QPoint, QPointF, QRectF, QSize, QSizeF, Qt
 from PySide6.QtGui import (
     QFont, QFontMetricsF, QImage, QPaintDevice, QPaintEngine, QPainter,
     QPainterPath, QRegion, QTransform,
@@ -24,9 +29,6 @@ def glyph_raster_dpr(font, native_dpr, cache_dpr):
     # Hinting fits strokes to physical pixels; oversampling would fit a
     # different grid. Unhinted outlines can retain their real cache detail.
     return cache_dpr if font.hintingPreference() == QFont.PreferNoHinting else native_dpr
-
-
-_EXACT_DPR_METRICS = tuple(int(part) for part in qVersion().split(".")[:2]) >= (6, 8)
 
 
 class GlyphPaintDevice(QPaintDevice):
@@ -58,14 +60,7 @@ class GlyphPaintDevice(QPaintDevice):
         }
         if metric in methods:
             return methods[metric]()
-        if metric == QPaintDevice.PdmDevicePixelRatio:
-            return round(self.target.devicePixelRatioF())
-        if metric == QPaintDevice.PdmDevicePixelRatioScaled:
-            return round(self.target.devicePixelRatioF() * 65536)
-        if _EXACT_DPR_METRICS and metric in (QPaintDevice.PdmDevicePixelRatioF_EncodedA,
-                                           QPaintDevice.PdmDevicePixelRatioF_EncodedB):
-            return QPaintDevice.encodeMetricF(metric, self.target.devicePixelRatioF())
-        return 0
+        return device_pixel_ratio_metric(metric, self.target.devicePixelRatioF())
 
 
 class _GlyphPaintEngine(QPaintEngine):
@@ -73,15 +68,7 @@ class _GlyphPaintEngine(QPaintEngine):
         # Match the delegate: advertising RasterOpModes makes native editors
         # select XOR caret painting, which the OpenGL engine cannot execute.
         engine = device.target.paintEngine()
-        features = QPaintEngine.PaintEngineFeatures(0)
-        if engine is not None:
-            # Bit 31 is not a Qt paint feature and overflows the signed enum
-            # converter in PySide6 6.2 on Windows.
-            for bit in range(31):
-                feature = QPaintEngine.PaintEngineFeature(1 << bit)
-                if engine.hasFeature(feature):
-                    features |= feature
-        super().__init__(features)
+        super().__init__(forwarding_paint_engine_features(engine))
         # The paint device owns this engine; do not retain a cycle per dirty strip.
         self.device = weakref.proxy(device)
         self.painter = None
@@ -176,7 +163,7 @@ class _GlyphPaintEngine(QPaintEngine):
             self.last_system_clip = clip
             self.system_clip_path = QPainterPath()
             dpr = self.device.target.devicePixelRatioF()
-            for rect in clip.rects() if hasattr(clip, "rects") else clip:
+            for rect in region_rects(clip):
                 self.system_clip_path.addRect(QRectF(rect.x() / dpr, rect.y() / dpr,
                                                      rect.width() / dpr, rect.height() / dpr))
         if not self.system_clip_applied and not clip.isEmpty():
@@ -193,14 +180,7 @@ class _GlyphPaintEngine(QPaintEngine):
         draw()
 
     def _array(self, method, values, count, *arguments):
-        if count:
-            # Qt 6.2 exposes (first-element wrapper, count) only on QPaintEngine,
-            # while QPainter accepts sequences. Keep the original C++ array intact.
-            engine = self.painter.paintEngine()
-            engine.syncState()
-            getattr(engine, method)(values, *count, *arguments)
-        else:
-            getattr(self.painter, method)(values, *arguments)
+        forward_paint_array(self.painter, method, values, count, *arguments)
 
     def drawRects(self, rects, *count):
         self._forward(lambda: self._array("drawRects", rects, count))
@@ -227,18 +207,7 @@ class _GlyphPaintEngine(QPaintEngine):
         self._forward(lambda: self.painter.drawTiledPixmap(rect, pixmap, offset))
 
     def drawPolygon(self, points, *arguments):
-        count, mode = arguments[:-1], arguments[-1]
-        def draw():
-            if count:
-                self._array("drawPolygon", points, count, mode)
-            elif mode == QPaintEngine.PolylineMode:
-                self.painter.drawPolyline(points, *count)
-            elif mode == QPaintEngine.ConvexMode:
-                self.painter.drawConvexPolygon(points, *count)
-            else:
-                self.painter.drawPolygon(points, *count, Qt.WindingFill if mode == QPaintEngine.WindingMode
-                                         else Qt.OddEvenFill)
-        self._forward(draw)
+        self._forward(lambda: forward_paint_polygon(self.painter, points, *arguments))
 
     def drawTextItem(self, position, item):
         def draw():
@@ -253,9 +222,7 @@ class _GlyphPaintEngine(QPaintEngine):
                 painter.paintEngine().syncState()
                 painter.paintEngine().drawTextItem(position, item)
                 return
-            dpr = self.device.raster_dpr(item.font())
-            if not _EXACT_DPR_METRICS:
-                dpr = math.floor(dpr * 65536) / 65536
+            dpr = image_device_pixel_ratio(self.device.raster_dpr(item.font()))
             origin = QPointF(painter.worldTransform().dx(), painter.worldTransform().dy())
             origin += self.device.raster_origin
             baseline = position + origin

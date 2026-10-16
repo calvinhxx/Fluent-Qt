@@ -1,6 +1,7 @@
 #ifndef NUMBERBOX_H
 #define NUMBERBOX_H
 
+#include "compatibility/InputEventCompat.h"
 #include "LineEdit.h"
 
 #include <QSize>

@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "Pivot.h"
 
 #include <algorithm>
@@ -13,7 +14,6 @@
 #include <QResizeEvent>
 #include <QStyle>
 
-#include "compatibility/QtCompat.h"
 #include "components/foundation/private/LogicalItemAccessibility_p.h"
 #include "components/navigation/private/NavigationSelectionAccessibility_p.h"
 #include "design/CornerRadius.h"

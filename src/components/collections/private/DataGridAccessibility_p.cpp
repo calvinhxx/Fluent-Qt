@@ -14,7 +14,7 @@
 #include <limits>
 
 #include "components/collections/DataGrid.h"
-#include "compatibility/QtCompat.h"
+#include "compatibility/private/AccessibleInterfaces_p.h"
 
 namespace fluent::collections::detail {
 
@@ -127,12 +127,8 @@ private:
 
 class DataGridAccessible final
     : public QAccessibleWidget,
-      public QAccessibleTableInterface
-#if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
-    ,
-      public QAccessibleSelectionInterface
-#endif
-{
+      public QAccessibleTableInterface,
+      public ::compatibility::detail::AccessibleSelectionInterface {
 public:
     explicit DataGridAccessible(DataGrid* view) : QAccessibleWidget(view, QAccessible::Table) {}
 
@@ -167,7 +163,6 @@ public:
     bool unselectColumn(int column) override;
     void modelChange(QAccessibleTableModelChangeEvent* event) override;
 
-#if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
     int selectedItemCount() const override { return selectedCellCount(); }
     QList<QAccessibleInterface*> selectedItems() const override { return selectedCells(); }
     bool isSelected(QAccessibleInterface* childItem) const override;
@@ -175,7 +170,6 @@ public:
     bool unselect(QAccessibleInterface* childItem) override;
     bool selectAll() override;
     bool clear() override;
-#endif
 
     QAccessibleInterface* headerCell(int section, Qt::Orientation orientation) const;
 
@@ -610,10 +604,9 @@ void* DataGridAccessible::interface_cast(QAccessible::InterfaceType type)
 {
     if (type == QAccessible::TableInterface)
         return static_cast<QAccessibleTableInterface*>(this);
-#if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
-    if (type == QAccessible::SelectionInterface)
-        return static_cast<QAccessibleSelectionInterface*>(this);
-#endif
+    if (void* selection = castSelectionInterface(type))
+        return selection;
+
     return QAccessibleWidget::interface_cast(type);
 }
 
@@ -788,7 +781,6 @@ void DataGridAccessible::modelChange(QAccessibleTableModelChangeEvent* event)
     }
 }
 
-#if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
 bool DataGridAccessible::isSelected(QAccessibleInterface* childItem) const
 {
     auto* cell = dynamic_cast<DataGridAccessibleCell*>(childItem);
@@ -842,7 +834,6 @@ bool DataGridAccessible::clear()
     grid->selectionModel()->clearSelection();
     return selectedCellCount() == 0;
 }
-#endif
 
 QAccessibleInterface* DataGridAccessible::headerCell(int section, Qt::Orientation orientation) const
 {

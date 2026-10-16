@@ -54,7 +54,7 @@ ToolTip::ToolTip(QWidget* parent) : QWidget(parent)
 {
     detail::ensureToolTipAccessibilityFactory();
     setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
-    ::fluent::compat::prepareNativeWidgetPopup(this);
+    ::compatibility::detail::prepareNativeWidgetPopup(this);
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
 

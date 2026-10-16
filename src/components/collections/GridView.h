@@ -1,6 +1,7 @@
 #ifndef GRIDVIEW_H
 #define GRIDVIEW_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QListView>
 
 #include "components/foundation/FluentElement.h"

@@ -1,6 +1,7 @@
 #ifndef TABVIEW_H
 #define TABVIEW_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QString>
 #include <QHash>
 #include <QPoint>

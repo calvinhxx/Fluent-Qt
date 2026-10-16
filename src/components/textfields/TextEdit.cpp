@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "TextEdit.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "components/menus_toolbars/private/TextEditingMenu_p.h"

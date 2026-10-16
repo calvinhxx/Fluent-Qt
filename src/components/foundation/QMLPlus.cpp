@@ -1,8 +1,8 @@
+#include "compatibility/WidgetCompat.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/private/MotionPolicy_p.h"
-#include "compatibility/QtCompat.h"
-#include "compatibility/private/CoreCompat_p.h"
+#include "compatibility/private/VariantCompat_p.h"
 #include "utils/private/FluentQtLogging_p.h"
 
 #include <QSet>
@@ -1053,7 +1053,7 @@ bool QMLPlusPropertyHub::write(QByteArray property,
         return false;
     const QMetaProperty targetProperty = metaProperty(m_target, property);
     if (targetProperty.isValid() && value.userType() != targetProperty.userType()) {
-        ::compatibility::convertVariantToType(value, targetProperty.userType());
+        ::compatibility::detail::convertVariantToType(value, targetProperty.userType());
     }
     if (current == value)
         return true;

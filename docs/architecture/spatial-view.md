@@ -315,7 +315,7 @@ and its presentation/controller; UILib does not read or rewrite those settings.
 The C++, Python, and WebAssembly Galleries and minimal examples use the same
 session entry while retaining their renderer and fallback policies.
 
-OS/Qt differences live in `src/compatibility/SpatialRenderCompat.h` and the
+OS/Qt differences live in `src/compatibility/private/spatial/SpatialRenderCompat_p.h` and the
 private native-style adapter. Cocoa still needs CGContext primitive adaptation.
 Windows, Cocoa, X11 and Wayland probe hardware OpenGL before exposing a Gallery
 or standalone SpatialView GPU child, so an unavailable driver cannot break the
@@ -693,7 +693,13 @@ qsb --qt6 --qsbversion 64 -o panel.frag.qsb panel.frag
 ```
 
 The application renderer uses Qt's private GUI headers for QRhi and is rebuilt
-with its Qt kit. It is not part of the installed SDK; the public Spatial target
+with its Qt kit. `support/spatial/SpatialTextureHost` retains the shared C++ and
+Python host interface, scene callbacks and renderer policy. Its private backend
+in `src/compatibility/private/spatial/renderer/` owns Qt RHI availability,
+platform selection and the unavailable-backend implementation. Both are built
+only by `FluentQtSpatialRenderer`.
+
+The renderer is not part of the installed SDK; the public Spatial target
 keeps its existing dependencies. The base Widgets target and the minimum Qt
 version are unchanged. No Qt Quick, Qt3D, or separate rendering
 library is required. Windows 11 supplies the native Direct3D shader compiler.

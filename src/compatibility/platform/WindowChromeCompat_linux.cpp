@@ -1,4 +1,4 @@
-#include "WindowChromeCompat.h"
+#include "compatibility/private/WindowChromeBackend_p.h"
 
 #ifdef Q_OS_LINUX
 
@@ -43,8 +43,7 @@ bool isXcbPlatform()
 
 bool isWaylandPlatform()
 {
-    return QGuiApplication::platformName().startsWith(QStringLiteral("wayland"),
-                                                      Qt::CaseInsensitive);
+    return QGuiApplication::platformName().startsWith(QStringLiteral("wayland"), Qt::CaseInsensitive);
 }
 
 class XcbClient final : public QObject {
@@ -97,19 +96,18 @@ public:
     {
         if (!native || name.isEmpty() || name.size() > std::numeric_limits<quint16>::max())
             return XcbNone;
-        const auto cookie = api.internAtom(native, onlyIfExists ? 1 : 0,
-                                           static_cast<quint16>(name.size()), name.constData());
+        const auto cookie = api.internAtom(native, onlyIfExists ? 1 : 0, static_cast<quint16>(name.size()),
+            name.constData());
         const auto reply = api.reply(native, cookie, api.internAtomReply);
         return reply ? reply->id : XcbNone;
     }
 
-    bool visualForWindow(xcb::Connection* native, quint32 nativeId, xcb::Visual* visual,
-                         quint8* depth)
+    bool visualForWindow(xcb::Connection* native, quint32 nativeId, xcb::Visual* visual, quint8* depth)
     {
         if (!native || !nativeId || !visual || !depth)
             return false;
         const auto attributes = api.reply(native, api.getWindowAttributes(native, nativeId),
-                                          api.getWindowAttributesReply);
+            api.getWindowAttributesReply);
         const xcb::Setup* setup = api.getSetup(native);
         if (!attributes || !setup)
             return false;
@@ -197,20 +195,19 @@ bool x11ColorComponentPixel(int component, quint32 mask, quint32* pixel)
     return true;
 }
 
-bool x11OpaqueBackgroundPixel(const xcb::Visual& visual, quint8 depth, const QColor& color,
-                              quint32* pixel)
+bool x11OpaqueBackgroundPixel(const xcb::Visual& visual, quint8 depth, const QColor& color, quint32* pixel)
 {
     if (!pixel || visual.visualClass != XcbTrueColor || depth == 0 || depth > 32)
         return false;
     const quint32 colorMask = visual.redMask | visual.greenMask | visual.blueMask;
     const quint32 depthMask = static_cast<quint32>((quint64{1} << depth) - 1);
-    if ((colorMask & ~depthMask) != 0 || (visual.redMask & visual.greenMask) != 0 ||
-        (visual.redMask & visual.blueMask) != 0 || (visual.greenMask & visual.blueMask) != 0)
+    if ((colorMask & ~depthMask) != 0 || (visual.redMask & visual.greenMask) != 0
+        || (visual.redMask & visual.blueMask) != 0 || (visual.greenMask & visual.blueMask) != 0)
         return false;
     *pixel = depthMask & ~colorMask;
-    return x11ColorComponentPixel(color.red(), visual.redMask, pixel) &&
-           x11ColorComponentPixel(color.green(), visual.greenMask, pixel) &&
-           x11ColorComponentPixel(color.blue(), visual.blueMask, pixel);
+    return x11ColorComponentPixel(color.red(), visual.redMask, pixel)
+        && x11ColorComponentPixel(color.green(), visual.greenMask, pixel)
+        && x11ColorComponentPixel(color.blue(), visual.blueMask, pixel);
 }
 
 class X11BackdropSurfacePreparation final : public QObject {
@@ -236,20 +233,18 @@ public:
                 if (!connection)
                     return false;
                 if (!m_visualAvailable) {
-                    m_visualAvailable =
-                        client->visualForWindow(connection, nativeId, &m_visual, &m_depth);
+                    m_visualAvailable = client->visualForWindow(connection, nativeId, &m_visual, &m_depth);
                     if (!m_visualAvailable)
                         return false;
                 }
                 quint32 pixel = 0;
-                if (!clear &&
-                    !x11OpaqueBackgroundPixel(m_visual, m_depth, QColor::fromRgb(rgb), &pixel))
+                if (!clear && !x11OpaqueBackgroundPixel(m_visual, m_depth, QColor::fromRgb(rgb), &pixel))
                     return false;
                 // Change only future map/expose pixels, never clear a painted
                 // backing store. A checked request completes before Qt maps it.
                 constexpr quint32 BackgroundPixelMask = 2;
-                const auto cookie = client->api.changeAttributesChecked(
-                    connection, nativeId, BackgroundPixelMask, &pixel);
+                const auto cookie = client->api.changeAttributesChecked(connection, nativeId, BackgroundPixelMask,
+                    &pixel);
                 return client->api.check(connection, cookie);
             });
     }
@@ -301,8 +296,8 @@ struct LinuxBackdropCapabilities {
 
     bool nativeBlurAvailable() const
     {
-        return xcbPlatform && x11LibraryAvailable && compositorActive &&
-               alphaCompositionAvailable && blurProtocolAdvertised;
+        return xcbPlatform && x11LibraryAvailable && compositorActive && alphaCompositionAvailable
+            && blurProtocolAdvertised;
     }
 };
 
@@ -320,21 +315,18 @@ LinuxBackdropCapabilities queryLinuxBackdropCapabilities()
     xcb::Screen* screen = client->screen(connection);
     if (!screen)
         return capabilities;
-    const QByteArray selectionName =
-        QByteArrayLiteral("_NET_WM_CM_S") + QByteArray::number(client->screenNumber());
+    const QByteArray selectionName = QByteArrayLiteral("_NET_WM_CM_S") + QByteArray::number(client->screenNumber());
     const quint32 compositorSelection = client->internAtom(connection, selectionName, true);
     const quint32 blurAtom = client->internAtom(connection, QByteArray(KWinBlurAtomName), true);
     if (compositorSelection) {
-        const auto owner = client->api.reply(
-            connection, client->api.getSelectionOwner(connection, compositorSelection),
+        const auto owner = client->api.reply(connection, client->api.getSelectionOwner(connection, compositorSelection),
             client->api.getSelectionOwnerReply);
         capabilities.compositorActive = owner && owner->id != XcbNone;
     }
     capabilities.alphaCompositionAvailable = capabilities.compositorActive;
     if (capabilities.compositorActive && screen->root && blurAtom) {
-        const auto properties =
-            client->api.reply(connection, client->api.listProperties(connection, screen->root),
-                              client->api.listPropertiesReply);
+        const auto properties = client->api.reply(connection, client->api.listProperties(connection, screen->root),
+            client->api.listPropertiesReply);
         if (properties) {
             const quint32* atoms = client->api.listPropertyAtoms(properties.get());
             for (quint16 i = 0; atoms && i < properties->atomsLength; ++i) {
@@ -357,10 +349,9 @@ bool x11WindowHasAlphaSurface(QWidget* window)
     xcb::Connection* connection = client ? client->connection() : nullptr;
     if (!nativeId || !connection)
         return false;
-    const auto geometry = client->api.reply(
-        connection, client->api.getGeometry(connection, nativeId), client->api.getGeometryReply);
-    return geometry && geometry->root && geometry->width > 0 && geometry->height > 0 &&
-           geometry->depth == 32;
+    const auto geometry = client->api.reply(connection, client->api.getGeometry(connection, nativeId),
+        client->api.getGeometryReply);
+    return geometry && geometry->root && geometry->width > 0 && geometry->height > 0 && geometry->depth == 32;
 }
 
 QRect backdropSurfaceRect(QWidget* window)
@@ -380,8 +371,8 @@ QRect backdropSurfaceRect(QWidget* window)
     // Preserve a safe fallback for direct WindowChromeCompat users that have
     // not published the richer surface-geometry property yet.
     if (window->windowFlags().testFlag(Qt::FramelessWindowHint)) {
-        const QRect inset = windowRect.adjusted(LinuxClientFrameMargin, LinuxClientFrameMargin,
-                                                -LinuxClientFrameMargin, -LinuxClientFrameMargin);
+        const QRect inset = windowRect.adjusted(LinuxClientFrameMargin, LinuxClientFrameMargin, -LinuxClientFrameMargin,
+            -LinuxClientFrameMargin);
         if (!inset.isEmpty())
             return inset;
     }
@@ -411,15 +402,13 @@ QRegion roundedRectRegion(const QRect& rect, int radius)
     QRegion region(rect.adjusted(radius, 0, -radius, 0));
     region += QRegion(rect.adjusted(0, radius, 0, -radius));
     region += QRegion(QRect(rect.topLeft(), QSize(diameter, diameter)), QRegion::Ellipse);
+    region += QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.top()), QSize(diameter, diameter)),
+        QRegion::Ellipse);
+    region += QRegion(QRect(QPoint(rect.left(), rect.bottom() - diameter + 1), QSize(diameter, diameter)),
+        QRegion::Ellipse);
     region +=
-        QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.top()), QSize(diameter, diameter)),
-                QRegion::Ellipse);
-    region +=
-        QRegion(QRect(QPoint(rect.left(), rect.bottom() - diameter + 1), QSize(diameter, diameter)),
-                QRegion::Ellipse);
-    region += QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.bottom() - diameter + 1),
-                            QSize(diameter, diameter)),
-                      QRegion::Ellipse);
+        QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.bottom() - diameter + 1), QSize(diameter, diameter)),
+            QRegion::Ellipse);
     return region;
 }
 
@@ -445,25 +434,26 @@ QVector<quint32> kwinBlurRegionValues(QWidget* window)
     return values;
 }
 
-bool verifyKWinBlurProperty(XcbClient* client, xcb::Connection* connection, quint32 nativeId,
-                            quint32 blurAtom, const QVector<quint32>* expectedValues)
+bool verifyKWinBlurProperty(XcbClient* client,
+    xcb::Connection* connection,
+    quint32 nativeId,
+    quint32 blurAtom,
+    const QVector<quint32>* expectedValues)
 {
     if (!client || !connection || !nativeId || !blurAtom)
         return false;
     const quint32 expectedCount = expectedValues ? static_cast<quint32>(expectedValues->size()) : 0;
     const quint32 requestedLength = qMax<quint32>(1, expectedCount);
-    const auto property = client->api.reply(
-        connection,
-        client->api.getProperty(connection, 0, nativeId, blurAtom,
-                                expectedValues ? XcbCardinalAtom : XcbNone, 0, requestedLength),
+    const auto property = client->api.reply(connection,
+        client->api.getProperty(connection, 0, nativeId, blurAtom, expectedValues ? XcbCardinalAtom : XcbNone, 0,
+            requestedLength),
         client->api.getPropertyReply);
     if (!property || property->bytesAfter != 0)
         return false;
     if (!expectedValues)
         return property->type == XcbNone && property->format == 0 && property->valueLength == 0;
-    if (property->type != XcbCardinalAtom || property->format != 32 ||
-        property->valueLength != expectedCount ||
-        client->api.propertyValueLength(property.get()) != expectedValues->size() * 4)
+    if (property->type != XcbCardinalAtom || property->format != 32 || property->valueLength != expectedCount
+        || client->api.propertyValueLength(property.get()) != expectedValues->size() * 4)
         return false;
     const auto* values = static_cast<const quint32*>(client->api.propertyValue(property.get()));
     if (!values)
@@ -479,9 +469,8 @@ bool applyKWinBlurBehindNow(QWidget* window, bool enabled, bool validateEnvironm
 {
     if (!window || !isXcbPlatform())
         return false;
-    if (enabled && validateEnvironment &&
-        (!queryLinuxBackdropCapabilities().nativeBlurAvailable() ||
-         !x11WindowHasAlphaSurface(window)))
+    if (enabled && validateEnvironment
+        && (!queryLinuxBackdropCapabilities().nativeBlurAvailable() || !x11WindowHasAlphaSurface(window)))
         return false;
     const quint32 nativeId = static_cast<quint32>(window->internalWinId());
     XcbClient* client = xcbClient();
@@ -498,17 +487,15 @@ bool applyKWinBlurBehindNow(QWidget* window, bool enabled, bool validateEnvironm
         const QVector<quint32> values = kwinBlurRegionValues(window);
         if (values.isEmpty())
             return false;
-        const auto cookie = client->api.changePropertyChecked(
-            connection, 0, nativeId, blurAtom, XcbCardinalAtom, 32,
+        const auto cookie = client->api.changePropertyChecked(connection, 0, nativeId, blurAtom, XcbCardinalAtom, 32,
             static_cast<quint32>(values.size()), values.constData());
         if (!client->api.check(connection, cookie))
             return false;
-        return !validateEnvironment ||
-               verifyKWinBlurProperty(client, connection, nativeId, blurAtom, &values);
+        return !validateEnvironment || verifyKWinBlurProperty(client, connection, nativeId, blurAtom, &values);
     }
     const auto cookie = client->api.deletePropertyChecked(connection, nativeId, blurAtom);
-    return client->api.check(connection, cookie) &&
-           verifyKWinBlurProperty(client, connection, nativeId, blurAtom, nullptr);
+    return client->api.check(connection, cookie)
+        && verifyKWinBlurProperty(client, connection, nativeId, blurAtom, nullptr);
 }
 
 class KWinBlurRegionUpdater final : public QObject {
@@ -522,8 +509,7 @@ public:
         QObject::connect(&m_capabilityProbe, &QTimer::timeout, this, [this] {
             if (!m_blurEnabled || !m_window || !m_window->isVisible())
                 return;
-            if (!queryLinuxBackdropCapabilities().nativeBlurAvailable() ||
-                !x11WindowHasAlphaSurface(m_window)) {
+            if (!queryLinuxBackdropCapabilities().nativeBlurAvailable() || !x11WindowHasAlphaSurface(m_window)) {
                 disableBlurAndRequestReevaluation();
             }
         });
@@ -547,23 +533,19 @@ protected:
             return QObject::eventFilter(watched, event);
 
         const QEvent::Type eventType = event->type();
-        bool geometryMayHaveChanged = eventType == QEvent::Resize || eventType == QEvent::Show ||
-                                      eventType == QEvent::WindowStateChange ||
-                                      eventType == QEvent::WinIdChange ||
-                                      eventType == QEvent::ScreenChangeInternal;
-        bool fullValidate = eventType == QEvent::Show || eventType == QEvent::WindowStateChange ||
-                            eventType == QEvent::WinIdChange ||
-                            eventType == QEvent::ScreenChangeInternal;
+        bool geometryMayHaveChanged = eventType == QEvent::Resize || eventType == QEvent::Show
+            || eventType == QEvent::WindowStateChange || eventType == QEvent::WinIdChange
+            || eventType == QEvent::ScreenChangeInternal;
+        bool fullValidate = eventType == QEvent::Show || eventType == QEvent::WindowStateChange
+            || eventType == QEvent::WinIdChange || eventType == QEvent::ScreenChangeInternal;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
-        geometryMayHaveChanged =
-            geometryMayHaveChanged || eventType == QEvent::DevicePixelRatioChange;
+        geometryMayHaveChanged = geometryMayHaveChanged || eventType == QEvent::DevicePixelRatioChange;
         fullValidate = fullValidate || eventType == QEvent::DevicePixelRatioChange;
 #endif
         if (eventType == QEvent::DynamicPropertyChange) {
             const auto* propertyEvent = static_cast<QDynamicPropertyChangeEvent*>(event);
-            geometryMayHaveChanged =
-                propertyEvent->propertyName() == BackdropSurfaceRectPropertyName ||
-                propertyEvent->propertyName() == BackdropSurfaceRadiusPropertyName;
+            geometryMayHaveChanged = propertyEvent->propertyName() == BackdropSurfaceRectPropertyName
+                || propertyEvent->propertyName() == BackdropSurfaceRadiusPropertyName;
         }
         if (geometryMayHaveChanged)
             scheduleRefresh(fullValidate);
@@ -654,8 +636,9 @@ bool setKWinBlurBehind(QWidget* window, bool enabled)
 
 namespace detail {
 
-void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
-                                          fluent::windowing::BackdropSurfaceMode mode)
+void preparePlatformWindowBackdropSurface(QWidget* window,
+    const QColor& opaqueColor,
+    fluent::windowing::BackdropSurfaceMode mode)
 {
     // Wayland maps only after Qt submits its first buffer. Its lifecycle does
     // not need an X11 background write or a separate native connection.
@@ -667,7 +650,7 @@ void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueC
     X11BackdropSurfacePreparation* preparation = ensureX11BackdropSurfacePreparation(window);
     if (preparation)
         preparation->prepare(client, opaqueColor,
-                             mode == fluent::windowing::BackdropSurfaceMode::CompositedTransparent);
+            mode == fluent::windowing::BackdropSurfaceMode::CompositedTransparent);
 }
 
 bool flushPlatformWindowBackdropSurface(QWidget* window)
@@ -689,9 +672,11 @@ void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& option
         window->setAttribute(Qt::WA_ContentsMarginsRespectsSafeArea, false);
 }
 
-bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& options,
-                               const QByteArray& eventType, void* message,
-                               FluentNativeEventResult* result)
+bool handlePlatformNativeEvent(QWidget* window,
+    const WindowChromeOptions& options,
+    const QByteArray& eventType,
+    void* message,
+    FluentNativeEventResult* result)
 {
     Q_UNUSED(window);
     Q_UNUSED(options);
@@ -789,12 +774,10 @@ bool requestPlatformForegroundActivation(QWidget* window)
     const auto mapped = client->api.mapWindowChecked(connection, nativeId);
     constexpr quint16 StackModeMask = 64;
     constexpr quint32 Above = 0;
-    const auto raised =
-        client->api.configureWindowChecked(connection, nativeId, StackModeMask, &Above);
+    const auto raised = client->api.configureWindowChecked(connection, nativeId, StackModeMask, &Above);
     constexpr quint8 RevertToParent = 2;
     constexpr quint32 CurrentTime = 0;
-    const auto focused =
-        client->api.setInputFocusChecked(connection, RevertToParent, nativeId, CurrentTime);
+    const auto focused = client->api.setInputFocusChecked(connection, RevertToParent, nativeId, CurrentTime);
     const bool mappedSuccessfully = client->api.check(connection, mapped);
     const bool raisedSuccessfully = client->api.check(connection, raised);
     const bool focusedSuccessfully = client->api.check(connection, focused);
@@ -806,8 +789,8 @@ bool platformSupportsSystemBackdrop()
     return platformBackdropCapabilities().compositorBlur;
 }
 
-BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
-                                                bool forceRecomposite)
+BackdropApplyResult
+applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark, bool forceRecomposite)
 {
     Q_UNUSED(dark);
     Q_UNUSED(forceRecomposite);
@@ -831,8 +814,9 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect 
         return result;
     }
     if (!isXcbPlatform()) {
-        result.reason = isWaylandPlatform() ? QStringLiteral("wayland-compositor-blur-unavailable")
-                                            : QStringLiteral("linux-compositor-blur-unavailable");
+        result.reason = isWaylandPlatform()
+            ? QStringLiteral("wayland-compositor-blur-unavailable")
+            : QStringLiteral("linux-compositor-blur-unavailable");
         return result;
     }
     if (effect == BackdropEffect::Mica) {

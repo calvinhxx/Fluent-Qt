@@ -12,8 +12,13 @@
 #include <QStandardItemModel>
 #include <QStyledItemDelegate>
 #include <QStringList>
+#include <QRegularExpression>
+#include <QSet>
+#include <QThread>
+#include <QScopeGuard>
 #include <QtGlobal>
 #include <QWidget>
+#include <functional>
 #include <type_traits>
 
 #ifndef interface
@@ -22,7 +27,9 @@
 #endif
 #include "compatibility/QtCompat.h"
 #include "compatibility/TextPaintCompat.h"
-#include "compatibility/private/CoreCompat_p.h"
+#include "compatibility/private/AccessibleInterfaces_p.h"
+#include "compatibility/private/VariantCompat_p.h"
+#include "compatibility/private/PointerEventCompat_p.h"
 #ifdef FLUENT_QT_TEST_DEFINED_INTERFACE_MACRO
 #undef interface
 #undef FLUENT_QT_TEST_DEFINED_INTERFACE_MACRO
@@ -47,17 +54,47 @@ QString relativeToRepository(const QString& absolutePath)
     return QDir(repositoryRootPath()).relativeFilePath(absolutePath);
 }
 
-bool fileContainsQtVersionGuard(const QString& path)
+QString sourceContents(const QString& path)
 {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         ADD_FAILURE() << "Could not read " << path.toStdString();
-        return false;
+        return {};
     }
 
-    const QString content = QString::fromUtf8(file.readAll());
-    return content.contains(QStringLiteral("QT_VERSION_CHECK")) || content.contains(QStringLiteral("QT_VERSION >="))
-        || content.contains(QStringLiteral("QT_VERSION <"));
+    return QString::fromUtf8(file.readAll());
+}
+
+bool containsCompatibilityGuard(QString content, bool component)
+{
+    content.remove(QRegularExpression(QStringLiteral("\\\\\r?\n")));
+    // Ignore prose and code samples, including raw strings. Keep digit separators
+    // such as 1'000 from being mistaken for a character literal.
+    const QRegularExpression literals(QStringLiteral(
+        R"re(R"([^\s()\\]{0,16})\([\s\S]*?\)\1"|"(?:\\[\s\S]|[^"\\])*"|(?<![\w'])(?:u8|u|U|L)?'(?:\\.|[^'\\\r\n])*'|/\*[\s\S]*?\*/|//[^\n]*)re"));
+    content.replace(literals, QStringLiteral(" "));
+    const QRegularExpression version(
+        QStringLiteral(R"(\b(?:QT_VERSION(?:_(?:CHECK|MAJOR|MINOR|PATCH))?|QT_DEPRECATED_SINCE)\b)"));
+    const QRegularExpression platformOrCapability(QStringLiteral(
+        R"(\b(?:Q_OS_\w+|_WIN32|_WIN64|__APPLE__|__linux__|__EMSCRIPTEN__|FLUENT_QUICK_\w+|FLUENT_HAS_ACCESSIBLE_\w+|FLUENT_OPENGL_WIDGET_\w+|FLUENT_QT_HAS_RHI)\b)"));
+    const QRegularExpression runtimePlatform(QStringLiteral(
+        R"(\b(?:(?:QGuiApplication|QApplication)\s*::\s*platformName|WindowChromeCompat\s*::\s*currentPlatform)\s*\()"));
+    const QRegularExpression runtimeVersion(QStringLiteral(R"(\b(?:qVersion|QLibraryInfo\s*::\s*version)\s*\()"));
+    const QRegularExpression pointerConstruction(QStringLiteral(R"(\b(?:QMouseEvent|QEnterEvent)\s*(?:\w+\s*)?[({])"));
+    return version.match(content).hasMatch()
+        || (component
+            && (platformOrCapability.match(content).hasMatch() || runtimePlatform.match(content).hasMatch()
+                || runtimeVersion.match(content).hasMatch() || pointerConstruction.match(content).hasMatch()));
+}
+
+template <typename Sender, typename Signal, typename Context, typename Functor>
+QMetaObject::Connection
+singleShotForTest(bool fallback, Sender* sender, Signal signal, Context* context, Functor&& functor)
+{
+    if (fallback)
+        return compatibility::detail::connectSingleShotFallback(sender, signal, context,
+            std::forward<Functor>(functor));
+    return fluentConnectSingleShot(sender, signal, context, std::forward<Functor>(functor));
 }
 
 bool isAllowedQtVersionGuardFile(const QString& relativePath)
@@ -84,6 +121,23 @@ public:
 
 private:
     int m_height;
+};
+
+class PointerEventFilter final : public QObject {
+public:
+    explicit PointerEventFilter(std::function<void(QEvent*)> observe) : m_observe(std::move(observe)) {}
+
+protected:
+    bool eventFilter(QObject*, QEvent* event) override
+    {
+        if (event->type() != QEvent::Enter && event->type() != QEvent::MouseMove)
+            return false;
+        m_observe(event);
+        return true;
+    }
+
+private:
+    std::function<void(QEvent*)> m_observe;
 };
 
 } // namespace
@@ -129,6 +183,130 @@ TEST(QtCompat, EnterConstructionPreservesCoordinateSpaces)
 #endif
 }
 
+TEST(QtCompat, EnterCoordinatesComeFromEventAndRejectCoordinateLessEvents)
+{
+    const QPointF global(102.25, 203.75);
+    QEnterEvent enter(QPointF(2.25, 3.75), QPointF(12.25, 23.75), global);
+    const auto position = compatibility::detail::enterEventGlobalPosition(&enter);
+    ASSERT_TRUE(position.has_value());
+    EXPECT_EQ(*position, global);
+    EXPECT_EQ(fluentEnterPos(&enter), QPoint(2, 4));
+
+    QEvent plainEnter(QEvent::Enter);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    EXPECT_EQ(fluentEnterPos(&plainEnter), QPoint());
+#endif
+    EXPECT_FALSE(compatibility::detail::enterEventGlobalPosition(&plainEnter).has_value());
+    EXPECT_FALSE(compatibility::detail::enterEventGlobalPosition(nullptr).has_value());
+    QWidget target;
+    int received = 0;
+    PointerEventFilter observer([&](QEvent*) { ++received; });
+    target.installEventFilter(&observer);
+    EXPECT_FALSE(compatibility::detail::sendEnterEvent(&target, &plainEnter));
+    EXPECT_FALSE(compatibility::detail::sendEnterEvent(nullptr, &enter));
+    EXPECT_EQ(received, 0);
+}
+
+TEST(QtCompat, RedirectedPointerEventsPreserveCoordinatesAndInputMetadata)
+{
+    QWidget host;
+    host.move(40, 60);
+    QWidget target(&host);
+    target.move(12, 18);
+    const QPointF global = target.mapToGlobal(QPoint(7, 9)) + QPointF(0.25, 0.75);
+    const QPointF local(7.25, 9.75);
+    const QPointF window(19.25, 27.75);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QPointingDevice device(QStringLiteral("Compatibility test mouse"), 123, QInputDevice::DeviceType::Mouse,
+        QPointingDevice::PointerType::Generic, QInputDevice::Capability::Position, 1, 3);
+    QEnterEvent enter(QPointF(-1, -2), QPointF(-3, -4), global, &device);
+    enter.setTimestamp(1234);
+    const auto makeMouse = [&] {
+        return QMouseEvent(QEvent::MouseMove, QPointF(-1, -2), QPointF(-3, -4), global, Qt::NoButton, Qt::LeftButton,
+            Qt::ControlModifier, Qt::MouseEventSynthesizedByApplication, &device);
+    };
+#else
+    QEnterEvent enter(QPointF(-1, -2), QPointF(-3, -4), global);
+    const auto makeMouse = [&] {
+        return QMouseEvent(QEvent::MouseMove, QPointF(-1, -2), QPointF(-3, -4), global, Qt::NoButton, Qt::LeftButton,
+            Qt::ControlModifier, Qt::MouseEventSynthesizedByApplication);
+    };
+#endif
+    QEvent::Type expectedType = QEvent::Enter;
+    QPointF expectedGlobal = global;
+    bool observeNativeMouse = false;
+    int received = 0;
+    PointerEventFilter observer([&](QEvent* event) {
+        if (observeNativeMouse) {
+            // Qt may round globals during widget notification. Compare with
+            // direct delivery on this runtime rather than guessing by version.
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            expectedGlobal = static_cast<const QMouseEvent*>(event)->globalPosition();
+#else
+            expectedGlobal = static_cast<const QMouseEvent*>(event)->screenPos();
+#endif
+            return;
+        }
+        ++received;
+        EXPECT_EQ(event->type(), expectedType);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        const auto* point = dynamic_cast<const QSinglePointEvent*>(event);
+        ASSERT_NE(point, nullptr);
+        EXPECT_EQ(point->position(), local);
+        EXPECT_EQ(point->scenePosition(), window);
+        EXPECT_EQ(point->globalPosition(), expectedGlobal);
+        EXPECT_EQ(point->pointingDevice(), &device);
+        EXPECT_EQ(point->timestamp(), 1234u);
+#else
+        if (event->type() == QEvent::Enter) {
+            const auto* point = dynamic_cast<const QEnterEvent*>(event);
+            ASSERT_NE(point, nullptr);
+            EXPECT_EQ(point->localPos(), local);
+            EXPECT_EQ(point->windowPos(), window);
+            EXPECT_EQ(point->screenPos(), expectedGlobal);
+        } else {
+            const auto* point = static_cast<const QMouseEvent*>(event);
+            EXPECT_EQ(point->localPos(), local);
+            EXPECT_EQ(point->windowPos(), window);
+            EXPECT_EQ(point->screenPos(), expectedGlobal);
+        }
+#endif
+        if (event->type() == QEvent::MouseMove) {
+            const auto* moved = static_cast<const QMouseEvent*>(event);
+            EXPECT_EQ(moved->button(), Qt::NoButton);
+            EXPECT_EQ(moved->buttons(), Qt::LeftButton);
+            EXPECT_EQ(moved->modifiers(), Qt::ControlModifier);
+            EXPECT_EQ(moved->source(), Qt::MouseEventSynthesizedByApplication);
+            EXPECT_EQ(moved->timestamp(), 1234u);
+        }
+    });
+    target.installEventFilter(&observer);
+    EXPECT_TRUE(compatibility::detail::sendEnterEvent(&target, &enter));
+    EXPECT_EQ(received, 1);
+    observeNativeMouse = true;
+    auto nativeMouse = makeMouse();
+    QCoreApplication::sendEvent(&target, &nativeMouse);
+    observeNativeMouse = false;
+    expectedType = QEvent::MouseMove;
+    auto mouse = makeMouse();
+    mouse.setTimestamp(1234);
+    const auto translated = compatibility::detail::mouseEventForWidget(&mouse, &target);
+    EXPECT_EQ(compatibility::detail::mouseLocalPosition(&translated), local);
+    EXPECT_EQ(compatibility::detail::mouseGlobalPosition(&translated), global);
+    EXPECT_EQ(translated.source(), mouse.source());
+    EXPECT_EQ(translated.timestamp(), mouse.timestamp());
+    EXPECT_EQ(translated.buttons(), mouse.buttons());
+    EXPECT_EQ(translated.modifiers(), mouse.modifiers());
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    EXPECT_EQ(translated.scenePosition(), window);
+    EXPECT_EQ(translated.pointingDevice(), &device);
+#else
+    EXPECT_EQ(translated.windowPos(), window);
+#endif
+    EXPECT_TRUE(compatibility::detail::sendMouseEvent(&target, &mouse));
+    EXPECT_EQ(received, 2);
+}
+
 TEST(QtCompat, OpenGLWidgetWindowReplacementMatchesQtRuntimeLine)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
@@ -158,6 +336,50 @@ TEST(QtCompat, AccessibleInterfaceCapabilitiesMatchQtVersion)
 #else
     EXPECT_EQ(FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION, 0);
     EXPECT_EQ(FLUENT_HAS_UNCONDITIONAL_ACCESSIBLE_UPDATE_HANDLER, 0);
+#endif
+}
+
+TEST(QtCompat, AccessibleRelationsPreserveCombinedFlagsWithoutDuplicates)
+{
+#if QT_CONFIG(accessibility)
+    QWidget target;
+    QWidget other;
+    auto* targetInterface = QAccessible::queryAccessibleInterface(&target);
+    auto* otherInterface = QAccessible::queryAccessibleInterface(&other);
+    ASSERT_NE(targetInterface, nullptr);
+    ASSERT_NE(otherInterface, nullptr);
+
+    QList<QAccessible::Relation> relations = {QAccessible::Label, QAccessible::Controlled};
+    const auto description = compatibility::detail::accessibleDescriptionRelation();
+    if (description)
+        relations.append(description);
+    for (const auto relation : relations) {
+        SCOPED_TRACE(static_cast<int>(relation));
+        const auto combined = relation | QAccessible::Controller;
+        const FluentAccessibleRelationList inherited = {{otherInterface, relation}, {targetInterface, combined}};
+        EXPECT_EQ(
+            compatibility::detail::appendAccessibleRelation(inherited, &target, relation, QAccessible::AllRelations),
+            inherited);
+        EXPECT_EQ(
+            compatibility::detail::appendAccessibleRelation(inherited, &target, relation, QAccessible::Controller),
+            inherited);
+        EXPECT_EQ(
+            compatibility::detail::appendAccessibleRelation(inherited, nullptr, relation, QAccessible::AllRelations),
+            inherited);
+
+        const FluentAccessibleRelationList unrelated = {{otherInterface, combined},
+            {targetInterface, QAccessible::Controller}};
+        const auto appended = compatibility::detail::appendAccessibleRelation(unrelated, &target, relation,
+            QAccessible::AllRelations);
+        ASSERT_EQ(appended.size(), 3);
+        EXPECT_EQ(appended.at(0), unrelated.at(0));
+        EXPECT_EQ(appended.at(1), unrelated.at(1));
+        EXPECT_EQ(appended.last().first, targetInterface);
+        EXPECT_EQ(appended.last().second, relation);
+    }
+    EXPECT_TRUE(compatibility::detail::appendAccessibleRelation({}, &target, {}, QAccessible::AllRelations).isEmpty());
+#else
+    GTEST_SKIP() << "Qt accessibility is disabled.";
 #endif
 }
 
@@ -224,14 +446,86 @@ TEST(QtCompat, WheelHelpersClassifyAndNormalizeNoPhaseDiscreteInput)
 
 TEST(QtCompat, WheelHelpersClassifyPhaseBasedInput)
 {
-    if (!fluentWheelEventSupportsPhase())
-        GTEST_SKIP() << fluentWheelEventPhaseSkipReason();
+    ASSERT_TRUE(fluentWheelEventSupportsPhase());
 
     FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(event, QPoint(8, 9), QPoint(8, 9), QPoint(0, -30), QPoint(), Qt::NoButton,
         Qt::NoModifier, Qt::ScrollUpdate, false);
 
     EXPECT_EQ(fluentWheelInputKind(&event), FluentWheelInputKind::PhaseBased);
     EXPECT_EQ(fluentWheelDeltaY(&event), -30.0);
+}
+
+TEST(QtCompat, SingleShotConnectionsKeepArgumentsReentrancyAndContextLifetime)
+{
+    for (bool fallback : {false, true}) {
+        SCOPED_TRACE(fallback);
+        QObject sender;
+        QObject receiver;
+        QStringList observed;
+        singleShotForTest(fallback, &sender, &QObject::objectNameChanged, &receiver, [&](const QString& name) {
+            observed.append(name);
+            sender.setObjectName(QStringLiteral("recursive"));
+        });
+        sender.setObjectName(QStringLiteral("first"));
+        sender.setObjectName(QStringLiteral("later"));
+        EXPECT_EQ(observed, QStringList{QStringLiteral("first")});
+
+        int ignoredArgumentCalls = 0;
+        singleShotForTest(fallback, &sender, &QObject::objectNameChanged, &receiver, [&] { ++ignoredArgumentCalls; });
+        sender.setObjectName(QStringLiteral("ignored"));
+        sender.setObjectName(QStringLiteral("ignored again"));
+        EXPECT_EQ(ignoredArgumentCalls, 1);
+
+        singleShotForTest(fallback, &sender, &QObject::objectNameChanged, &receiver,
+            static_cast<void (QObject::*)(const QString&)>(&QObject::setObjectName));
+        sender.setObjectName(QStringLiteral("member slot"));
+        sender.setObjectName(QStringLiteral("member slot again"));
+        EXPECT_EQ(receiver.objectName(), QStringLiteral("member slot"));
+
+        auto context = std::make_unique<QObject>();
+        auto capture = std::make_shared<int>(42);
+        std::weak_ptr<int> lifetime = capture;
+        int cancelledCalls = 0;
+        singleShotForTest(fallback, &sender, &QObject::objectNameChanged, context.get(),
+            [capture, &cancelledCalls](const QString&) { ++cancelledCalls; });
+        capture.reset();
+        EXPECT_FALSE(lifetime.expired());
+        context.reset();
+        EXPECT_TRUE(lifetime.expired());
+        sender.setObjectName(QStringLiteral("after context destruction"));
+        EXPECT_EQ(cancelledCalls, 0);
+    }
+}
+
+TEST(QtCompat, SingleShotQueuedDeliveriesInvokeOnlyTheFirstSignal)
+{
+    for (bool fallback : {false, true}) {
+        SCOPED_TRACE(fallback);
+        QThread worker;
+        auto* sender = new QObject;
+        sender->moveToThread(&worker);
+        QObject::connect(&worker, &QThread::finished, sender, &QObject::deleteLater);
+        const auto cleanup = qScopeGuard([&] {
+            worker.quit();
+            worker.wait();
+        });
+        QObject receiver;
+        QStringList observed;
+        singleShotForTest(fallback, sender, &QObject::objectNameChanged, &receiver, [&](const QString& name) {
+            observed.append(name);
+        });
+        worker.start();
+        ASSERT_TRUE(QMetaObject::invokeMethod(
+            sender,
+            [sender] {
+                sender->setObjectName(QStringLiteral("first"));
+                sender->setObjectName(QStringLiteral("second"));
+            },
+            Qt::BlockingQueuedConnection));
+        EXPECT_TRUE(observed.isEmpty());
+        QCoreApplication::sendPostedEvents(&receiver, QEvent::MetaCall);
+        EXPECT_EQ(observed, QStringList{QStringLiteral("first")});
+    }
 }
 
 TEST(QtCompat, ItemViewRowHeightPrefersVisualRectHeight)
@@ -277,18 +571,19 @@ TEST(QtCompat, DisplayScaleChangeHelperCoversSupportedScreenEvents)
 TEST(QtCompat, VariantConversionUsesTheRequestedPropertyType)
 {
     QVariant value(QStringLiteral("2.5"));
-    EXPECT_TRUE(::compatibility::convertVariantToType(value, QMetaType::Double));
+    EXPECT_TRUE(::compatibility::detail::convertVariantToType(value, QMetaType::Double));
     EXPECT_EQ(value.userType(), QMetaType::Double);
     EXPECT_DOUBLE_EQ(value.toDouble(), 2.5);
     QVariant invalid(QStringLiteral("not a date"));
-    EXPECT_FALSE(::compatibility::convertVariantToType(invalid, QMetaType::QDate));
+    EXPECT_FALSE(::compatibility::detail::convertVariantToType(invalid, QMetaType::QDate));
 }
 
 TEST(QtCompat, LocalSceneMouseMappingPreservesInputIdentity)
 {
-    const QMouseEvent original(QEvent::MouseButtonPress, QPointF(12, 18), QPointF(40, 60), QPointF(120, 180),
-        Qt::LeftButton, Qt::LeftButton, Qt::ShiftModifier, Qt::MouseEventSynthesizedByApplication);
-    const QMouseEvent mapped = ::compatibility::mouseEventForLocalScene(&original);
+    QMouseEvent original(QEvent::MouseButtonPress, QPointF(12, 18), QPointF(40, 60), QPointF(120, 180), Qt::LeftButton,
+        Qt::LeftButton, Qt::ShiftModifier, Qt::MouseEventSynthesizedByApplication);
+    original.setTimestamp(5678);
+    const auto mapped = ::compatibility::detail::mouseEventForLocalScene(&original);
     EXPECT_EQ(fluentMousePos(&mapped), QPoint(12, 18));
     EXPECT_EQ(fluentMouseGlobalPos(&mapped), QPoint(120, 180));
     EXPECT_EQ(mapped.type(), original.type());
@@ -296,6 +591,7 @@ TEST(QtCompat, LocalSceneMouseMappingPreservesInputIdentity)
     EXPECT_EQ(mapped.buttons(), original.buttons());
     EXPECT_EQ(mapped.modifiers(), original.modifiers());
     EXPECT_EQ(mapped.source(), original.source());
+    EXPECT_EQ(mapped.timestamp(), original.timestamp());
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     EXPECT_EQ(mapped.scenePosition(), original.position());
     EXPECT_EQ(mapped.pointingDevice(), original.pointingDevice());
@@ -326,8 +622,10 @@ TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards)
 {
     const QString root = repositoryRootPath();
     const QStringList scanRoots = {root + QStringLiteral("/app"), root + QStringLiteral("/src"),
-        root + QStringLiteral("/tests/components"), root + QStringLiteral("/tests/gallery")};
-    const QStringList nameFilters = {QStringLiteral("*.h"), QStringLiteral("*.cpp")};
+        root + QStringLiteral("/include"), root + QStringLiteral("/examples"), root + QStringLiteral("/tests"),
+        root + QStringLiteral("/support"), root + QStringLiteral("/bindings/pyside6/native")};
+    const QStringList nameFilters = {QStringLiteral("*.h"), QStringLiteral("*.hpp"), QStringLiteral("*.cpp"),
+        QStringLiteral("*.mm")};
 
     QStringList offenders;
     for (const QString& scanRoot : scanRoots) {
@@ -337,13 +635,99 @@ TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards)
             const QString relativePath = relativeToRepository(path);
             if (isAllowedQtVersionGuardFile(relativePath))
                 continue;
-            if (fileContainsQtVersionGuard(path))
+            if (containsCompatibilityGuard(sourceContents(path),
+                    relativePath.startsWith(QStringLiteral("src/components/"))
+                        || relativePath.startsWith(QStringLiteral("support/spatial/"))))
                 offenders.push_back(relativePath);
         }
     }
 
     EXPECT_TRUE(offenders.isEmpty())
-        << "Scattered Qt version guard in: " << offenders.join(QStringLiteral(", ")).toStdString();
+        << "Compatibility guard outside its owner: " << offenders.join(QStringLiteral(", ")).toStdString();
+}
+
+TEST(QtCompat, BoundaryDetectsCompactAndIndirectVersionBranches)
+{
+    for (const QString& source :
+        {QStringLiteral("#if QT_VERSION<0x060000\n#endif"), QStringLiteral("#if QT_VERSION_MAJOR == 5\n#endif"),
+            QStringLiteral("#if defined(QT_VERSION_MINOR)\n#endif"),
+            QStringLiteral("#if QT_DEPRECATED_SINCE(5, 15)\n#endif"),
+            QStringLiteral("#if \\\nQT_VERSION >= QT_VERSION_CHECK(6, 0, 0)\n#endif")}) {
+        EXPECT_TRUE(containsCompatibilityGuard(source, false)) << source.toStdString();
+    }
+    EXPECT_TRUE(containsCompatibilityGuard("#if FLUENT_QUICK_USES_RHI", true));
+    EXPECT_TRUE(containsCompatibilityGuard("#if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE", true));
+    EXPECT_TRUE(containsCompatibilityGuard("#ifdef FLUENT_QT_HAS_RHI", true));
+    EXPECT_TRUE(containsCompatibilityGuard("#ifdef Q_OS_MACOS", true));
+    EXPECT_TRUE(containsCompatibilityGuard("#ifdef __APPLE__", true));
+    EXPECT_TRUE(containsCompatibilityGuard("#if defined(_WIN32)", true));
+    EXPECT_TRUE(containsCompatibilityGuard("return QT_VERSION >= 0x060000;", false));
+    EXPECT_TRUE(containsCompatibilityGuard("constexpr bool legacy = QT_VERSION < 0x060000;", false));
+    EXPECT_TRUE(containsCompatibilityGuard("#define OLD_QT (QT_VERSION_MAJOR == 5)", false));
+    EXPECT_TRUE(containsCompatibilityGuard("const int width = 1'000; auto old = QT_VERSION < 0x060000;", false));
+    EXPECT_TRUE(containsCompatibilityGuard("QGuiApplication::platformName()", true));
+    EXPECT_TRUE(containsCompatibilityGuard("WindowChromeCompat::currentPlatform()", true));
+    EXPECT_TRUE(containsCompatibilityGuard("const auto runtime = qVersion();", true));
+    EXPECT_TRUE(containsCompatibilityGuard("auto legacy = QLibraryInfo::version().majorVersion() == 5;", true));
+    EXPECT_TRUE(containsCompatibilityGuard("QMouseEvent forwarded(event->type(), local, global);", true));
+    EXPECT_TRUE(containsCompatibilityGuard("auto enter = new QEnterEvent(local, scene, global);", true));
+    EXPECT_FALSE(containsCompatibilityGuard("void mouseMoveEvent(QMouseEvent* event) override;", true));
+    EXPECT_FALSE(containsCompatibilityGuard("info.insert(name, QString::fromLatin1(qVersion()));", false));
+    EXPECT_FALSE(containsCompatibilityGuard("#if QT_CONFIG(accessibility)", true));
+    EXPECT_FALSE(containsCompatibilityGuard("// QT_VERSION_CHECK belongs in compatibility", true));
+    EXPECT_FALSE(containsCompatibilityGuard(
+        R"code(auto example = R"cmake(find_package(Qt${QT_VERSION_MAJOR}))cmake";)code", true));
+    EXPECT_FALSE(containsCompatibilityGuard(R"code(const char* example = "#if QT_VERSION < 0x060000";)code", true));
+    EXPECT_FALSE(containsCompatibilityGuard(R"code(auto example = R"cpp(
+#if QT_VERSION_MAJOR == 5
+QGuiApplication::platformName();
+#endif
+)cpp";)code",
+        true));
+    EXPECT_FALSE(containsCompatibilityGuard("auto diagnostic = QT_VERSION_STR;", false));
+}
+
+TEST(QtCompat, InstalledHeadersDoNotDependOnUninstalledImplementationHeaders)
+{
+    const QString root = repositoryRootPath();
+    const QString allowlist = sourceContents(root + "/cmake/FluentQtInstallHeaders.cmake");
+    const QRegularExpression headerPath(QStringLiteral(R"(^\s*((?:src|include)/[^\s]+\.h)\s*$)"),
+        QRegularExpression::MultilineOption);
+    QSet<QString> installed;
+    auto paths = headerPath.globalMatch(allowlist);
+    while (paths.hasNext())
+        installed.insert(paths.next().captured(1));
+    ASSERT_FALSE(installed.isEmpty());
+    const QRegularExpression include(QStringLiteral(R"re(#\s*include\s*["<]([^">]+)[">])re"));
+    for (const QString& header : installed) {
+        EXPECT_FALSE(header.contains("/private/")) << header.toStdString();
+        auto includes = include.globalMatch(sourceContents(root + '/' + header));
+        while (includes.hasNext()) {
+            const QString name = includes.next().captured(1);
+            const QStringList candidates = {QFileInfo(root + '/' + header).dir().filePath(name), root + "/src/" + name,
+                root + "/include/" + name};
+            for (const QString& candidate : candidates) {
+                if (!QFileInfo::exists(candidate))
+                    continue;
+                const QString dependency = relativeToRepository(QDir::cleanPath(candidate));
+                EXPECT_TRUE(installed.contains(dependency))
+                    << header.toStdString() << " includes uninstalled " << dependency.toStdString();
+                break;
+            }
+        }
+    }
+}
+
+TEST(QtCompat, PrivateAdaptersDoNotIncludeComponentImplementations)
+{
+    const QRegularExpression componentInclude(QStringLiteral(R"re(#\s*include\s*["<]components/)re"));
+    QDirIterator files(repositoryRootPath() + QStringLiteral("/src/compatibility/private"),
+        {QStringLiteral("*.h"), QStringLiteral("*.cpp")}, QDir::Files, QDirIterator::Subdirectories);
+    while (files.hasNext()) {
+        const QString path = files.next();
+        EXPECT_FALSE(componentInclude.match(sourceContents(path)).hasMatch())
+            << relativeToRepository(path).toStdString();
+    }
 }
 
 TEST(QtCompat, PaintDeviceDprMetricsPreserveImagePrecision)
@@ -362,7 +746,9 @@ TEST(QtCompat, PaintDeviceDprMetricsPreserveImagePrecision)
     private:
         qreal m_dpr;
     };
-    for (qreal dpr : {1.0, 1.1, 1.25, 1.5, 2.1875, 2.625, 3.0}) {
+    const qreal scale = QPaintDevice::devicePixelRatioFScale();
+    for (qreal dpr : {1.0, 1.1, 1.25, 1.5, 2.1875, 2.625, 3.0, 1.0 - .5 / scale, 1.0 + .5 / scale, 1.0 + 1.5 / scale,
+             2.0 - .5 / scale, 2.0 + .5 / scale, 2.0 + 1.5 / scale}) {
         SCOPED_TRACE(dpr);
         QImage image(1, 1, QImage::Format_ARGB32_Premultiplied);
         image.setDevicePixelRatio(dpr);

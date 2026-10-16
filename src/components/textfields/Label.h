@@ -1,6 +1,7 @@
 #ifndef LABEL_H
 #define LABEL_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QLabel>
 #include <Qt>
 #include "components/foundation/FluentElement.h"

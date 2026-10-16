@@ -1,3 +1,5 @@
+#include "compatibility/InputEventCompat.h"
+#include "compatibility/WidgetCompat.h"
 #include "MultiSelectComboBox.h"
 
 #include <algorithm>
@@ -26,7 +28,6 @@
 #include <QTimer>
 #include <QtMath>
 
-#include "compatibility/QtCompat.h"
 #include "compatibility/TextPaintCompat.h"
 #include "components/basicinput/CheckBox.h"
 #include "components/basicinput/DropDownButton.h"

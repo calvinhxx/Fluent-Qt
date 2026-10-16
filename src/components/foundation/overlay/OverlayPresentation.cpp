@@ -27,7 +27,7 @@ QTransform presentedTransform(const QWidget* source)
         } else {
             result *= translation(source->mapTo(top, QPoint()));
         }
-        const auto bridge = compat::widgetPresentationBridge(source);
+        const auto bridge = ::compatibility::detail::widgetPresentationBridge(source);
         if (!bridge.viewport)
             break;
         result *= bridge.rootToViewport;
@@ -69,7 +69,7 @@ QPoint localPointFromPresentedGlobal(const QWidget* source, const QPoint& global
 
 bool hasPresentedTransform(const QWidget* source)
 {
-    return source && (presentationRoot(source) || compat::widgetPresentationBridge(source).viewport);
+    return source && (presentationRoot(source) || ::compatibility::detail::widgetPresentationBridge(source).viewport);
 }
 
 bool anchorGeometryMayChange(QObject* watched, QEvent* event, QWidget* anchor)
@@ -99,7 +99,7 @@ bool anchorGeometryMayChange(QObject* watched, QEvent* event, QWidget* anchor)
     for (int depth = 0; anchor && depth < 32; ++depth) {
         if (changed == anchor || changed->isAncestorOf(anchor))
             return true;
-        anchor = const_cast<QWidget*>(compat::widgetPresentationBridge(anchor).viewport);
+        anchor = const_cast<QWidget*>(::compatibility::detail::widgetPresentationBridge(anchor).viewport);
     }
     return false;
 }
@@ -120,7 +120,7 @@ bool isAnchorVisibleInTopLevel(QWidget* anchor)
             if (node == top)
                 break;
         }
-        const auto bridge = compat::widgetPresentationBridge(anchor);
+        const auto bridge = ::compatibility::detail::widgetPresentationBridge(anchor);
         if (!bridge.viewport)
             return top->isVisible();
         if (!bridge.visible)

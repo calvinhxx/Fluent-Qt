@@ -37,6 +37,7 @@ function(fluent_qt_add_spatial_library)
     # deliberately not exported by the SDK or linked into the public Spatial target.
     if(FLUENT_QT_BUILD_GALLERY OR FLUENT_QT_BUILD_PYSIDE6_BINDINGS OR FLUENT_QT_BUILD_TESTS)
         add_library(FluentQtSpatialRenderer STATIC
+            ${FLUENT_QT_SPATIAL_RENDERER_SOURCES}
             "${PROJECT_SOURCE_DIR}/support/spatial/SpatialTextureHost.cpp"
             "${PROJECT_SOURCE_DIR}/support/spatial/SpatialTextureHost.h")
         fluent_qt_configure_cpp_target(FluentQtSpatialRenderer)

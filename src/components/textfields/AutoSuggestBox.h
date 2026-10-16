@@ -1,6 +1,7 @@
 #ifndef AUTOSUGGESTBOX_H
 #define AUTOSUGGESTBOX_H
 
+#include "compatibility/InputEventCompat.h"
 #include "LineEdit.h"
 
 #include <QMargins>

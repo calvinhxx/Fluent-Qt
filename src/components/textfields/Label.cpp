@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "Label.h"
 
 #include <QAction>

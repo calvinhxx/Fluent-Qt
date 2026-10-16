@@ -1,13 +1,13 @@
 #ifndef FLUENTELEMENT_H
 #define FLUENTELEMENT_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QColor>
 #include <QFont>
 #include <QJsonObject>
 #include <QString>
 #include <QEasingCurve>
 #include "compatibility/FontCompat.h"
-#include "compatibility/QtCompat.h"
 #include "design/Elevation.h"
 #include "design/Animation.h"
 #include "design/Breakpoints.h"

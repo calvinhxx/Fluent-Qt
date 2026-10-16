@@ -60,8 +60,12 @@ Read the owning code and the guide sections relevant to the task below.
   discovery. Use `QmlSession` for activation and unloading; application context
   models remain borrowed. Select the Quick backend explicitly before the first
   Quick surface, and keep QWidget-only QMLPlus independent of this module.
-- Use `compatibility/QtCompat.h` and `FluentEnterEvent` in new `enterEvent`
-  overrides. Inside `namespace fluent::<category>`, inherit shared mixins as
+- Use `FluentEnterEvent` from `compatibility/InputEventCompat.h` in new `enterEvent`
+  overrides; `QtCompat.h` remains the compatible umbrella. Include compatibility
+  helpers by domain, keep private adapters in `compatibility/private/`, and put
+  native window backends in `compatibility/platform/`. Qt/OS branches, including
+  indirect version capability guards, belong in those adapters rather than
+  component implementations. Inside `namespace fluent::<category>`, inherit shared mixins as
   `public FluentElement, public QMLPlus`; qualify them with `fluent::` outside.
 - [FluentQtInstallHeaders.cmake](cmake/FluentQtInstallHeaders.cmake) is the
   installed-header allowlist. Update it with public headers; keep private

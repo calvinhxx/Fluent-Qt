@@ -1,3 +1,5 @@
+#include "compatibility/InputEventCompat.h"
+#include "compatibility/private/WidgetPlatformCompat_p.h"
 #include "ScrollView.h"
 
 #include "ScrollBar.h"
@@ -15,7 +17,6 @@
 #include <QWheelEvent>
 #include <QWidget>
 
-#include "compatibility/QtCompat.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 
 namespace fluent::scrolling {
@@ -81,13 +82,9 @@ void ScrollView::init()
         if (verticalScrollBar()->value() != v)
             verticalScrollBar()->setValue(v);
     });
-#ifndef Q_OS_MACOS
-    grabGesture(Qt::PinchGesture);
-#endif
+    ::compatibility::detail::registerPinchGesture(this);
     installEventFilter(this);
-#ifndef Q_OS_MACOS
-    viewport()->grabGesture(Qt::PinchGesture);
-#endif
+    ::compatibility::detail::registerPinchGesture(viewport());
     viewport()->installEventFilter(this);
 
     m_horizontalAnimation = new QPropertyAnimation(horizontalScrollBar(), "value", this);
@@ -207,9 +204,7 @@ void ScrollView::observeContentWidget(QWidget* content, QWidget* originalParent,
     m_zoomAwareContent = dynamic_cast<ScrollViewZoomAware*>(content);
     if (content) {
         content->installEventFilter(this);
-#ifndef Q_OS_MACOS
-        content->grabGesture(Qt::PinchGesture);
-#endif
+        ::compatibility::detail::registerPinchGesture(content);
         content->setAttribute(Qt::WA_AcceptTouchEvents);
     }
     captureContentBaseSize();
@@ -949,10 +944,10 @@ bool ScrollView::handlePinchGesture(QEvent* event, QObject* source)
     if (!pinch)
         return false;
 
-#ifdef Q_OS_MACOS
-    gestureEvent->accept(pinch);
-    return true;
-#endif
+    if (::compatibility::detail::usesNativePinchGestures()) {
+        gestureEvent->accept(pinch);
+        return true;
+    }
 
     if (shouldSuppressScrollWheel()) {
         gestureEvent->accept(pinch);

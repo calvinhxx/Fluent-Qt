@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "NavigationView.h"
 
 #include <QApplication>
@@ -18,7 +19,6 @@
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/windowing/WindowBackdrop.h"
-#include "compatibility/QtCompat.h"
 #include "design/Elevation.h"
 
 namespace fluent::navigation {

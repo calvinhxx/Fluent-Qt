@@ -1,9 +1,21 @@
 """Private Qt lifetime adapters shared by bindings and Gallery."""
 
-from PySide6.QtCore import QCoreApplication, QEvent, QObject
+from typing import Callable
+
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, QTimer
 from shiboken6 import isValid
 
-__all__ = ["delete_qobject"]
+__all__ = ["delete_qobject", "single_shot"]
+
+
+def single_shot(delay_ms: int, context: QObject, callback: Callable[[], None]) -> QTimer:
+    """Schedule a context-owned callback on every supported PySide6."""
+    timer = QTimer(context)
+    timer.setSingleShot(True)
+    timer.timeout.connect(callback)
+    timer.timeout.connect(timer.deleteLater)
+    timer.start(max(0, int(delay_ms)))
+    return timer
 
 
 def delete_qobject(obj: QObject | None) -> None:

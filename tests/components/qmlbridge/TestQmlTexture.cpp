@@ -1,4 +1,4 @@
-#include "compatibility/private/QuickCompat_p.h"
+#include "compatibility/private/quick/QuickFeatures_p.h"
 #include <gtest/gtest.h>
 #include <QImage>
 #include <QOffscreenSurface>

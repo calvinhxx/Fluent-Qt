@@ -1,6 +1,7 @@
 #ifndef TOGGLESWITCH_H
 #define TOGGLESWITCH_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QFont>
 #include <QWidget>
 #include "components/foundation/FluentElement.h"

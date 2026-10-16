@@ -1,6 +1,8 @@
 #ifndef FLOWVIEW_H
 #define FLOWVIEW_H
 
+#include "compatibility/InputEventCompat.h"
+#include "compatibility/WidgetCompat.h"
 #include <QAbstractItemView>
 #include <QHash>
 #include <QMargins>

@@ -24,7 +24,7 @@
   ],
   "summary": {
     "components": 89,
-    "public_headers": 155,
+    "public_headers": 163,
     "categories": 15
   },
   "categories": [
@@ -3552,21 +3552,81 @@
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/WebAssembly.h"
     },
     {
+      "include": "<FluentQt/compatibility/AccessibilityCompat.h>",
+      "source": "src/compatibility/AccessibilityCompat.h",
+      "summary": "Returns the accessibility event type used for live announcements.",
+      "declarations": [
+        "FluentAccessibleAnnouncementPoliteness"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/AccessibilityCompat.h"
+    },
+    {
+      "include": "<FluentQt/compatibility/ApplicationCompat.h>",
+      "source": "src/compatibility/ApplicationCompat.h",
+      "summary": "Applies the supported Qt-version-specific High-DPI startup settings.",
+      "declarations": [
+        "FluentSystemColorScheme"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/ApplicationCompat.h"
+    },
+    {
+      "include": "<FluentQt/compatibility/EventConstructionCompat.h>",
+      "source": "src/compatibility/EventConstructionCompat.h",
+      "summary": "Constructs an enter event with distinct local, scene and global positions.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/EventConstructionCompat.h"
+    },
+    {
       "include": "<FluentQt/compatibility/FontCompat.h>",
       "source": "src/compatibility/FontCompat.h",
-      "summary": "Public declarations provided by FontCompat.",
+      "summary": "Registers an application font as a script-specific fallback when the",
       "declarations": [],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/FontCompat.h"
     },
     {
+      "include": "<FluentQt/compatibility/InputEventCompat.h>",
+      "source": "src/compatibility/InputEventCompat.h",
+      "summary": "Reads the first touch point's global position, returning false for an empty event.",
+      "declarations": [
+        "FluentWheelInputKind"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/InputEventCompat.h"
+    },
+    {
+      "include": "<FluentQt/compatibility/ObjectCompat.h>",
+      "source": "src/compatibility/ObjectCompat.h",
+      "summary": "Returns whether a metatype name is registered on the active Qt version.",
+      "declarations": [
+        "SingleShotState"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/ObjectCompat.h"
+    },
+    {
+      "include": "<FluentQt/compatibility/PaintCompat.h>",
+      "source": "src/compatibility/PaintCompat.h",
+      "summary": "Effective device pixel ratio for the painter's current paint device.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/PaintCompat.h"
+    },
+    {
+      "include": "<FluentQt/compatibility/QtFeatures.h>",
+      "source": "src/compatibility/QtFeatures.h",
+      "summary": "Public declarations provided by QtFeatures.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/QtFeatures.h"
+    },
+    {
+      "include": "<FluentQt/compatibility/WidgetCompat.h>",
+      "source": "src/compatibility/WidgetCompat.h",
+      "summary": "Connects a checkbox state signal with one Qt 5/Qt 6 spelling.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/WidgetCompat.h"
+    },
+    {
       "include": "<FluentQt/compatibility/QtCompat.h>",
       "source": "src/compatibility/QtCompat.h",
-      "summary": "Qt 5/Qt 6 compatibility layer for shared component code.",
-      "declarations": [
-        "FluentSystemColorScheme",
-        "FluentWheelInputKind",
-        "FluentAccessibleAnnouncementPoliteness"
-      ],
+      "summary": "Source-compatible umbrella for Qt and platform adaptation helpers.",
+      "declarations": [],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/QtCompat.h"
     },
     {

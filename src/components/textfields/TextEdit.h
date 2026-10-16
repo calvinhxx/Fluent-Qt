@@ -1,6 +1,7 @@
 #ifndef TEXTEDIT_H
 #define TEXTEDIT_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QMargins>
 #include <QWidget>
 #include <QString>

@@ -1,3 +1,4 @@
+#include "compatibility/AccessibilityCompat.h"
 #include "MultiSelectComboBoxAccessibility_p.h"
 
 #include <QAbstractItemView>
@@ -8,7 +9,6 @@
 #include <QListView>
 #include <QWidget>
 
-#include "compatibility/QtCompat.h"
 #include "components/basicinput/MultiSelectComboBox.h"
 #include "components/collections/ListView.h"
 #include "components/foundation/private/LogicalItemAccessibility_p.h"

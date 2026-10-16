@@ -1,6 +1,7 @@
 #ifndef LISTVIEW_H
 #define LISTVIEW_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QListView>
 #include <QHash>
 #include <QMetaObject>

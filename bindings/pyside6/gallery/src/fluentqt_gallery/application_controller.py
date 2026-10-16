@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 
 import fluentqt
+from fluentqt._qt_widgets import application_is_saving_session as _application_is_saving_session
 from PySide6.QtCore import QEvent, QObject, QRectF, Qt
 from PySide6.QtGui import QColor, QCloseEvent, QFont, QMouseEvent, QPainter
 from PySide6.QtWidgets import (
@@ -38,13 +39,6 @@ def minimize_description() -> str:
 
 def keep_running_description() -> str:
     return "Reopen it from the {0} icon.".format(status_area_name())
-
-
-def _application_is_saving_session(app: QApplication | None) -> bool:
-    if app is None:
-        return False
-    is_saving_session = getattr(app, "isSavingSession", None)
-    return bool(is_saving_session()) if callable(is_saving_session) else False
 
 
 def _is_wayland_platform() -> bool:

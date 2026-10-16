@@ -1,4 +1,7 @@
+#include "compatibility/ApplicationCompat.h"
+#include "compatibility/InputEventCompat.h"
 #include "Window.h"
+#include "compatibility/private/WindowPlatformCompat_p.h"
 
 #include <QApplication>
 #include <QBackingStore>
@@ -23,7 +26,6 @@
 #include "compatibility/private/WindowBackdropTransition_p.h"
 #include "design/Breakpoints.h"
 #include "design/Typography.h"
-#include "compatibility/QtCompat.h"
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -121,15 +123,9 @@ Window::Window(QWidget* parent)
     m_rootLayout->setContentsMargins(0, 0, 0, 0);
     m_rootLayout->setSpacing(0);
 
-    // Linux keeps the frame host available for runtime chrome changes. Other
-    // adapters opt in by publishing a positive client-side frame margin.
-    // Windows/macOS retain their direct native paint paths.
-    // zh_CN: Linux 保留窗框容器以支持运行时切换 chrome；其它适配器通过正数
-    // 客户端窗框边距选择加入。Windows/macOS 继续使用原生直接绘制路径。
     QWidget* chromeParent = this;
     QVBoxLayout* chromeLayout = m_rootLayout;
-    const bool needsClientSideFrameHost =
-        compatibility::WindowChromeCompat::currentPlatform() == compatibility::WindowChromeCompat::Platform::Linux
+    const bool needsClientSideFrameHost = compatibility::detail::windowPlatformCapabilities().keepClientSideFrameHost
         || m_chrome.clientSideFrameMargin() > 0;
     if (needsClientSideFrameHost) {
         m_frameHost = new QWidget(this);
@@ -355,33 +351,21 @@ void Window::scheduleBackdropResolution()
 
 void Window::scheduleNativeChromeRepair()
 {
-    const auto platform = compatibility::WindowChromeCompat::currentPlatform();
-    if ((platform != compatibility::WindowChromeCompat::Platform::Windows
-            && platform != compatibility::WindowChromeCompat::Platform::MacOS)
-        || m_nativeChromeRepairPending) {
+    const auto repair = compatibility::detail::windowPlatformCapabilities().chromeRepair;
+    if (repair == compatibility::detail::NativeChromeRepair::None || m_nativeChromeRepairPending) {
         return;
     }
 
     m_nativeChromeRepairPending = true;
-    QTimer::singleShot(0, this, [this, platform] {
+    QTimer::singleShot(0, this, [this, repair] {
         m_nativeChromeRepairPending = false;
         if (!isVisible())
             return;
 
-        // Qt 5/6.2 can rewrite the Win32 style after a native handle, DPI, or
-        // window-state transition. Re-assert custom chrome after that event has
-        // fully unwound so WS_THICKFRAME and the client-area hit test remain paired.
-        // zh_CN: Qt 5/6.2 可能在原生句柄、DPI 或窗口状态切换后重写 Win32 style；
-        // 待事件结束后重新施加自定义 chrome，确保 WS_THICKFRAME 与客户区命中测试保持配对。
-        if (platform == compatibility::WindowChromeCompat::Platform::Windows) {
+        if (repair == compatibility::detail::NativeChromeRepair::WindowFlags)
             m_chrome.applyPlatformWindowFlags();
-        } else {
-            // The platform may lay out native buttons after QWidget show/activation or
-            // OpenGL surface recreation. Align them once that native pass finishes.
-            // zh_CN: 平台可能在显示、激活或 OpenGL 重建窗口后重新布局原生按钮；
-            // 等该轮原生布局结束，再与 Fluent 标题栏对齐。
+        else
             syncTitleBarSystemInsets();
-        }
         updateChromeOptions();
     });
 }
@@ -494,22 +478,7 @@ void Window::requestForegroundActivation()
     if (!isVisible())
         show();
 
-    // Qt 5.15/6.2 Wayland has no supported requestActivate implementation and
-    // emits a warning for every call. Visibility is restored by the caller's
-    // unmap/remap sequence; focus remains compositor policy unless a valid XDG
-    // activation token is available.
-    // zh_CN: Qt 5.15/6.2 Wayland 不支持 requestActivate，每次调用都会输出警告。
-    // 可见性由调用方的取消映射/重新映射保证；没有有效 XDG activation token 时，
-    // 焦点仍由 compositor 决定。
-    if (QGuiApplication::platformName().startsWith(QStringLiteral("wayland"), Qt::CaseInsensitive)) {
-        m_chrome.requestForegroundActivation();
-        return;
-    }
-
-    raise();
-    activateWindow();
-    if (QWindow* handle = windowHandle())
-        handle->requestActivate();
+    compatibility::detail::requestQtForegroundActivation(this);
     m_chrome.requestForegroundActivation();
 }
 
@@ -525,19 +494,10 @@ void Window::setBackdropEffect(BackdropEffect effect)
         m_backdropCommitWinId = 0;
     }
 
-    // Switching effects updates paint hints and the requested OS backdrop type.
-    // Avoid toggling native window flags at runtime to prevent flicker/focus churn.
-    // zh_CN: 切换效果只更新绘制提示和请求的系统背景类型，避免运行时重置原生窗口 flag。
-    // Deliberate effect switches resolve the actual backend before descendants
-    // are allowed to clear the top-level backing store.
-    // zh_CN: 用户主动切换效果时先解析实际后端，再允许后代控件清除顶层后备缓冲。
-    // Windows' forced recomposition sends a non-client deactivate/activate pair
-    // reserved for first-show priming. Repeating it for a runtime material change
-    // visibly flashes the surface even when the HWND and keyboard focus stay put.
-    // zh_CN: Windows 强制重合成会发送首屏专用的非客户区失活/激活消息；
-    // 运行时切材质重复它，即使 HWND 和键盘焦点不变也会闪烁。
+    // Refresh the effective material using the backend's recomposition policy.
+    // zh_CN: 按后端重组策略刷新实际材质。
     const bool forceRecomposite = isVisible()
-        && compatibility::WindowChromeCompat::currentPlatform() != compatibility::WindowChromeCompat::Platform::Windows;
+        && compatibility::detail::windowPlatformCapabilities().recomposeOnEffectChange;
     resolveBackdropState(isVisible(), forceRecomposite);
     if (!guard || m_backdropEffect != effect)
         return;
@@ -841,10 +801,7 @@ void Window::changeEvent(QEvent* event)
         syncClientSideFrameShape();
         syncTitleBarSystemInsets();
         updateChromeOptions();
-        // macOS can replace the material host during a fullscreen transition. Keep this repair
-        // platform-local: the shared scheduler also requests Windows' first-show activation nudge.
-        // zh_CN: macOS 全屏切换可能替换材质宿主；此修复仅限 macOS，避免触发 Windows 首屏激活补偿。
-        if (compatibility::WindowChromeCompat::currentPlatform() == compatibility::WindowChromeCompat::Platform::MacOS
+        if (compatibility::detail::windowPlatformCapabilities().materialHostChangesWithWindowState
             && m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect))
             scheduleBackdropResolution();
         scheduleNativeChromeRepair();
@@ -886,7 +843,7 @@ bool Window::event(QEvent* event)
         scheduleNativeChromeRepair();
     }
     if (type == QEvent::WindowActivate && isVisible()
-        && compatibility::WindowChromeCompat::currentPlatform() == compatibility::WindowChromeCompat::Platform::MacOS)
+        && compatibility::detail::windowPlatformCapabilities().titleBarLayoutChangesOnActivation)
         scheduleNativeChromeRepair();
     return handled;
 }

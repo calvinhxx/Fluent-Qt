@@ -1,12 +1,12 @@
 #ifndef FLUENTQT_COMPONENTS_BASICINPUT_FILEDROPZONE_H
 #define FLUENTQT_COMPONENTS_BASICINPUT_FILEDROPZONE_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QList>
 #include <QUrl>
 #include <QWidget>
 #include <array>
 
-#include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 

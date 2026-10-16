@@ -181,15 +181,14 @@ QAccessibleInterface* LogicalItemAccessibleAdapter::child(int logicalIndex) cons
 
 void* LogicalItemAccessibleAdapter::interface_cast(QAccessible::InterfaceType type)
 {
-#if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
-    if (type == QAccessible::SelectionInterface && logicalSelectionSupported()) {
-        return static_cast<QAccessibleSelectionInterface*>(this);
+    if (logicalSelectionSupported()) {
+        if (void* selection = castSelectionInterface(type))
+            return selection;
     }
-#endif
+
     return QAccessibleWidget::interface_cast(type);
 }
 
-#if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
 int LogicalItemAccessibleAdapter::selectedItemCount() const
 {
     int count = 0;
@@ -234,7 +233,6 @@ bool LogicalItemAccessibleAdapter::clear()
 {
     return clearLogicalSelection();
 }
-#endif
 
 QStringList LogicalItemAccessibleAdapter::logicalChildActions(int logicalIndex) const
 {

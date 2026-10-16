@@ -1,3 +1,4 @@
+#include "compatibility/AccessibilityCompat.h"
 #include "AutoSuggestBoxAccessibility_p.h"
 
 #include <QAccessible>
@@ -8,7 +9,6 @@
 #include <limits>
 
 #include "components/textfields/AutoSuggestBox.h"
-#include "compatibility/QtCompat.h"
 
 namespace fluent::textfields::detail {
 

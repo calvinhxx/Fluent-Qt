@@ -1,3 +1,5 @@
+#include "compatibility/InputEventCompat.h"
+#include "compatibility/WidgetCompat.h"
 #include "FlowView.h"
 
 #include <algorithm>
@@ -25,7 +27,6 @@
 #include <QVariantAnimation>
 #include <QWheelEvent>
 
-#include "compatibility/QtCompat.h"
 #include "components/collections/private/CollectionItemState_p.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "design/CornerRadius.h"

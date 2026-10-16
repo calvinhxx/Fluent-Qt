@@ -1,6 +1,7 @@
 #ifndef FLUENT_MENU_H
 #define FLUENT_MENU_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QMenu>
 #include <QWidgetAction>
 #include "components/foundation/FluentElement.h"

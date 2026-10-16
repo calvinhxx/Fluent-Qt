@@ -1,3 +1,4 @@
+#include "compatibility/PaintCompat.h"
 #include "ColorPicker.h"
 
 #include "components/textfields/Label.h"

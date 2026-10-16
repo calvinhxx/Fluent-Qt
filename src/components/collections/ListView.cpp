@@ -1,3 +1,6 @@
+#include "compatibility/InputEventCompat.h"
+#include "compatibility/PaintCompat.h"
+#include "compatibility/WidgetCompat.h"
 #include "ListView.h"
 
 #include <algorithm>
@@ -25,7 +28,6 @@
 #include <QVariantAnimation>
 #include <QWheelEvent>
 
-#include "compatibility/QtCompat.h"
 #include "compatibility/TextPaintCompat.h"
 #include "components/collections/CollectionViewBackdrop_p.h"
 #include "components/collections/private/CollectionItemState_p.h"

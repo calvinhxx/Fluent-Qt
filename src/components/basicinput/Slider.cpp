@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "Slider.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "components/status_info/ToolTip.h"

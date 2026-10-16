@@ -22,8 +22,10 @@ public:
         setProperty("galleryGpuCompatibleStyle", true);
     }
 
-    void drawPrimitive(PrimitiveElement element, const QStyleOption* option, QPainter* painter,
-                       const QWidget* widget = nullptr) const override
+    void drawPrimitive(PrimitiveElement element,
+        const QStyleOption* option,
+        QPainter* painter,
+        const QWidget* widget = nullptr) const override
     {
         // QMacStyle delegates PE_Widget to QCommonStyle, where it paints nothing.
         if (isGpu(painter) && element == PE_Widget)
@@ -33,8 +35,10 @@ public:
         });
     }
 
-    void drawControl(ControlElement element, const QStyleOption* option, QPainter* painter,
-                     const QWidget* widget = nullptr) const override
+    void drawControl(ControlElement element,
+        const QStyleOption* option,
+        QPainter* painter,
+        const QWidget* widget = nullptr) const override
     {
         if (isGpu(painter) && element == CE_ShapedFrame) {
             const auto* frame = qstyleoption_cast<const QStyleOptionFrame*>(option);
@@ -46,23 +50,20 @@ public:
         });
     }
 
-    void drawComplexControl(ComplexControl control, const QStyleOptionComplex* option,
-                            QPainter* painter, const QWidget* widget = nullptr) const override
+    void drawComplexControl(ComplexControl control,
+        const QStyleOptionComplex* option,
+        QPainter* painter,
+        const QWidget* widget = nullptr) const override
     {
         paintNative(option, painter, [=](const QStyleOption* local, QPainter* target) {
-            QProxyStyle::drawComplexControl(control, static_cast<const QStyleOptionComplex*>(local),
-                                            target, widget);
+            QProxyStyle::drawComplexControl(control, static_cast<const QStyleOptionComplex*>(local), target, widget);
         });
     }
 
 private:
-    static bool isGpu(QPainter* painter)
-    {
-        return painter && painter->paintEngine()->type() == QPaintEngine::OpenGL2;
-    }
+    static bool isGpu(QPainter* painter) { return painter && painter->paintEngine()->type() == QPaintEngine::OpenGL2; }
 
-    template <typename Paint>
-    static void paintNative(const QStyleOption* option, QPainter* painter, Paint paint)
+    template <typename Paint> static void paintNative(const QStyleOption* option, QPainter* painter, Paint paint)
     {
         if (!isGpu(painter)) {
             paint(option, painter);
@@ -78,14 +79,11 @@ private:
         else if (option->type == QStyleOption::SO_Default)
             paintLocal(*option, painter, paint);
         else
-            paintImage(
-                option, painter,
-                QRect(0, 0, qMax(1, option->rect.right() + 5), qMax(1, option->rect.bottom() + 5)),
-                paint);
+            paintImage(option, painter,
+                QRect(0, 0, qMax(1, option->rect.right() + 5), qMax(1, option->rect.bottom() + 5)), paint);
     }
 
-    template <typename Option, typename Paint>
-    static void paintLocal(Option option, QPainter* painter, Paint paint)
+    template <typename Option, typename Paint> static void paintLocal(Option option, QPainter* painter, Paint paint)
     {
         const QRect bounds = option.rect.adjusted(-4, -4, 4, 4);
         option.rect.translate(-bounds.topLeft());
@@ -93,19 +91,17 @@ private:
     }
 
     template <typename Paint>
-    static void paintImage(const QStyleOption* option, QPainter* painter, const QRect& bounds,
-                           Paint paint)
+    static void paintImage(const QStyleOption* option, QPainter* painter, const QRect& bounds, Paint paint)
     {
         const qreal dpr = painter->device()->devicePixelRatioF();
         QImage image(QSize(qCeil(bounds.width() * dpr), qCeil(bounds.height() * dpr)),
-                     QImage::Format_ARGB32_Premultiplied);
+            QImage::Format_ARGB32_Premultiplied);
         if (image.isNull())
             return;
         image.setDevicePixelRatio(dpr);
         image.fill(Qt::transparent);
         if (qEnvironmentVariableIntValue("FLUENT_QT_SPATIAL_BENCHMARK"))
-            qApp->style()->setProperty("galleryLastNativeRasterPixels",
-                                       qint64(image.width()) * image.height());
+            qApp->style()->setProperty("galleryLastNativeRasterPixels", qint64(image.width()) * image.height());
         QPainter native(&image);
         native.setFont(painter->font());
         native.setPen(painter->pen());
@@ -119,9 +115,9 @@ private:
 inline void prepareNativeStyle()
 {
     auto* style = qApp->style();
-    if (QGuiApplication::platformName() == QLatin1String("cocoa") &&
-        style->objectName().contains(QLatin1String("mac"), Qt::CaseInsensitive) &&
-        !style->property("galleryGpuCompatibleStyle").toBool())
+    if (QGuiApplication::platformName() == QLatin1String("cocoa")
+        && style->objectName().contains(QLatin1String("mac"), Qt::CaseInsensitive)
+        && !style->property("galleryGpuCompatibleStyle").toBool())
         qApp->setStyle(new GpuCompatibleNativeStyle(style));
 }
 

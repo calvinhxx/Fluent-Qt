@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "DrawerView.h"
 
 #include <algorithm>
@@ -15,7 +16,6 @@
 #include <QResizeEvent>
 #include <QWheelEvent>
 
-#include "compatibility/QtCompat.h"
 #include "design/Spacing.h"
 #include "components/foundation/overlay/OverlayCoordinator.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
