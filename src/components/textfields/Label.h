@@ -6,7 +6,9 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 
-namespace fluent::status_info { class ToolTip; }
+namespace fluent::status_info {
+class ToolTip;
+}
 class QContextMenuEvent;
 
 namespace fluent::textfields {
@@ -30,7 +32,10 @@ class Label : public QLabel, public FluentElement, public QMLPlus {
      * @brief Fluent typography role applied to label text.
      * zh_CN: 应用到标签文本的 Fluent 排版角色。
      */
-    Q_PROPERTY(Typography::FontRole fluentTypography READ fluentTypography WRITE setFluentTypography NOTIFY typographyChanged)
+    Q_PROPERTY(Typography::FontRole fluentTypography
+        READ fluentTypography
+        WRITE setFluentTypography
+        NOTIFY typographyChanged)
     /**
      * @brief Elide mode used when label text overflows.
      * zh_CN: 标签文本溢出时使用的省略模式。

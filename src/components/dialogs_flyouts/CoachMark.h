@@ -45,22 +45,21 @@ public:
      * zh_CN: 历史 surface 模式；两种取值都把提示承载在宿主顶层窗口内。
      */
     enum SurfaceMode {
-        TopLevelSurface,   ///< Deprecated alias of SameWindowSurface. zh_CN: SameWindowSurface 的废弃别名。
-        SameWindowSurface  ///< Child widget inside the owner top-level. zh_CN: 宿主顶层窗口内的子控件。
+        TopLevelSurface,  ///< Deprecated alias of SameWindowSurface. zh_CN: SameWindowSurface 的废弃别名。
+        SameWindowSurface ///< Child widget inside the owner top-level. zh_CN: 宿主顶层窗口内的子控件。
     };
     Q_ENUM(SurfaceMode)
 
     enum Placement {
-        Auto,    ///< Resolves to Bottom. zh_CN: 解析为 Bottom。
-        Top,     ///< Card above the target, tail down.
-        Bottom,  ///< Card below the target, tail up.
-        Left,    ///< Card left of the target, tail right.
-        Right,   ///< Card right of the target, tail left.
+        Auto,   ///< Resolves to Bottom. zh_CN: 解析为 Bottom。
+        Top,    ///< Card above the target, tail down.
+        Bottom, ///< Card below the target, tail up.
+        Left,   ///< Card left of the target, tail right.
+        Right,  ///< Card right of the target, tail left.
     };
     Q_ENUM(Placement)
 
-    explicit CoachMark(QWidget* owner = nullptr,
-                       SurfaceMode surfaceMode = SameWindowSurface);
+    explicit CoachMark(QWidget* owner = nullptr, SurfaceMode surfaceMode = SameWindowSurface);
     ~CoachMark() override;
 
     QWidget* contentHost() const { return m_contentHost; }

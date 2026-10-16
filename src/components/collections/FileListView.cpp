@@ -41,9 +41,10 @@ enum class FileAction { None, Remove, Retry };
 FileListView::Status fileStatus(const QModelIndex& index)
 {
     const int value = index.data(FileListView::StatusRole).toInt();
-    return value == int(FileListView::Status::Uploading)  ? FileListView::Status::Uploading
-           : value == int(FileListView::Status::Rejected) ? FileListView::Status::Rejected
-                                                          : FileListView::Status::Ready;
+    return value == int(FileListView::Status::Uploading) ? FileListView::Status::Uploading
+        : value == int(FileListView::Status::Rejected)
+        ? FileListView::Status::Rejected
+        : FileListView::Status::Ready;
 }
 
 qreal fileProgress(const QModelIndex& index)
@@ -60,14 +61,13 @@ bool removable(const QModelIndex& index)
 
 bool retryable(const QModelIndex& index)
 {
-    return fileStatus(index) == FileListView::Status::Rejected &&
-           index.data(FileListView::RetryableRole).toBool();
+    return fileStatus(index) == FileListView::Status::Rejected && index.data(FileListView::RetryableRole).toBool();
 }
 
 bool commandEnabled(const FileListView* view, const QModelIndex& index)
 {
-    return view && view->isEnabled() && index.isValid() && index.model() == view->model() &&
-           index.parent() == view->rootIndex() && (index.flags() & Qt::ItemIsEnabled);
+    return view && view->isEnabled() && index.isValid() && index.model() == view->model()
+        && index.parent() == view->rootIndex() && (index.flags() & Qt::ItemIsEnabled);
 }
 
 QString statusText(const QModelIndex& index)
@@ -148,9 +148,8 @@ RowGeometry rowGeometry(const QRectF& rect, const QModelIndex& index, Qt::Layout
         result.retry = QRectF(right - kActionSize, contentY + 4.0, kActionSize, kActionSize);
         right -= kActionSize + 8.0;
     }
-    result.text = QRectF(result.icon.right() + 12.0, contentY,
-                         qMax<qreal>(1.0, right - result.icon.right() - 12.0),
-                         qMax<qreal>(0.0, rect.height() - 2 * kPadding));
+    result.text = QRectF(result.icon.right() + 12.0, contentY, qMax<qreal>(1.0, right - result.icon.right() - 12.0),
+        qMax<qreal>(0.0, rect.height() - 2 * kPadding));
     if (direction == Qt::RightToLeft) {
         auto mirror = [&rect](QRectF& part) {
             if (!part.isEmpty())
@@ -228,8 +227,7 @@ public:
 
         qreal value(qint64 now) const
         {
-            const qreal t =
-                duration > 0 ? qBound<qreal>(0.0, qreal(now - start) / duration, 1.0) : 1.0;
+            const qreal t = duration > 0 ? qBound<qreal>(0.0, qreal(now - start) / duration, 1.0) : 1.0;
             const qreal eased = 1.0 - std::pow(1.0 - t, 3.0);
             return from + (to - from) * eased;
         }
@@ -238,15 +236,14 @@ public:
 
     bool canAnimate() const
     {
-        return animationEnabled && q->isVisible() && q->isEnabled() && q->isActiveWindow() &&
-               MotionPolicy::instance().shouldAnimate();
+        return animationEnabled && q->isVisible() && q->isEnabled() && q->isActiveWindow()
+            && MotionPolicy::instance().shouldAnimate();
     }
 
     QRect rowRect(const QModelIndex& index) const { return q->visualRect(index); }
     bool visible(const QModelIndex& index) const
     {
-        return index.isValid() && index.model() == q->model() &&
-               rowRect(index).intersects(q->viewport()->rect());
+        return index.isValid() && index.model() == q->model() && rowRect(index).intersects(q->viewport()->rect());
     }
 
     FileAction actionAt(const QModelIndex& index, const QPoint& point) const
@@ -274,16 +271,12 @@ public:
         }
         const qint64 now = clock.elapsed();
         if (hovered.isValid()) {
-            const qreal value = hoverTransitions.contains(hovered)
-                                    ? hoverTransitions.value(hovered).value(now)
-                                    : 1.0;
+            const qreal value = hoverTransitions.contains(hovered) ? hoverTransitions.value(hovered).value(now) : 1.0;
             hoverTransitions.insert(hovered, {value, 0.0, now, duration()});
         }
         hovered = index;
         if (hovered.isValid()) {
-            const qreal value = hoverTransitions.contains(hovered)
-                                    ? hoverTransitions.value(hovered).value(now)
-                                    : 0.0;
+            const qreal value = hoverTransitions.contains(hovered) ? hoverTransitions.value(hovered).value(now) : 0.0;
             hoverTransitions.insert(hovered, {value, 1.0, now, duration()});
         }
         tick();
@@ -291,24 +284,18 @@ public:
             timer.start();
     }
 
-    int duration() const
-    {
-        return canAnimate() ? MotionPolicy::instance().resolvedDuration(kTransitionMs) : 0;
-    }
+    int duration() const { return canAnimate() ? MotionPolicy::instance().resolvedDuration(kTransitionMs) : 0; }
 
     qreal hoverOpacity(const QModelIndex& index) const
     {
         const auto found = hoverTransitions.constFind(index);
-        return found != hoverTransitions.constEnd() ? found->value(clock.elapsed())
-               : hovered == index                   ? 1.0
-                                                    : 0.0;
+        return found != hoverTransitions.constEnd() ? found->value(clock.elapsed()) : hovered == index ? 1.0 : 0.0;
     }
 
     qreal paintedProgress(const QModelIndex& index, qreal target)
     {
         const auto animated = progressTransitions.constFind(index);
-        const qreal result =
-            animated == progressTransitions.constEnd() ? target : animated->value(clock.elapsed());
+        const qreal result = animated == progressTransitions.constEnd() ? target : animated->value(clock.elapsed());
         lastProgress.insert(index, result);
         return result;
     }
@@ -326,11 +313,9 @@ public:
                 it = lastProgress.erase(it);
                 continue;
             }
-            if (index.parent() == first.parent() && index.row() >= first.row() &&
-                index.row() <= last.row()) {
-                const qreal previous = progressTransitions.contains(index)
-                                           ? progressTransitions.value(index).value(now)
-                                           : it.value();
+            if (index.parent() == first.parent() && index.row() >= first.row() && index.row() <= last.row()) {
+                const qreal previous =
+                    progressTransitions.contains(index) ? progressTransitions.value(index).value(now) : it.value();
                 const qreal target = fileProgress(index);
                 if (!qFuzzyCompare(previous + 1.0, target + 1.0) && duration() > 0)
                     progressTransitions.insert(index, {previous, target, now, duration()});
@@ -419,8 +404,7 @@ public:
         return QSize(qMax(1, m_view->viewport()->width()), height);
     }
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         if (!index.isValid())
             return;
@@ -439,20 +423,18 @@ public:
         QTextLayout nameLayout(name, body.toQFont());
         QTextLayout metadataLayout(metadata, caption.toQFont());
         const qreal nameHeight = layoutText(nameLayout, geometry.text.width(), body.lineHeight,
-                                            m_view->layoutDirection());
+            m_view->layoutDirection());
         const qreal metadataWidth = qMax<qreal>(1.0, geometry.text.width() - kStatusSpacing);
         const qreal metadataHeight = layoutText(metadataLayout, metadataWidth, caption.lineHeight,
-                                                m_view->layoutDirection());
+            m_view->layoutDirection());
         const qreal gap = metadataHeight > 0.0 && nameHeight > 0.0 ? 2.0 : 0.0;
         const bool rtl = m_view->layoutDirection() == Qt::RightToLeft;
         const qreal metadataY = geometry.text.top() + nameHeight + gap;
         const QPointF metadataOrigin(geometry.text.left() + (rtl ? 0 : kStatusSpacing), metadataY);
         const QRectF statusRect(rtl ? geometry.text.right() - kStatusSize : geometry.text.left(),
-                                metadataY + (caption.lineHeight - kStatusSize) / 2.0, kStatusSize,
-                                kStatusSize);
+            metadataY + (caption.lineHeight - kStatusSize) / 2.0, kStatusSize, kStatusSize);
         const bool uploading = status == FileListView::Status::Uploading;
-        const qreal contentHeight =
-            2 * kPadding + nameHeight + gap + metadataHeight + (uploading ? 7.0 : 0.0);
+        const qreal contentHeight = 2 * kPadding + nameHeight + gap + metadataHeight + (uploading ? 7.0 : 0.0);
         const int height = qMax(kRowHeight, 4 * qCeil(contentHeight / 4.0));
         state->rememberHeight(index, height);
 
@@ -463,8 +445,8 @@ public:
         QStyle::State rowState = option.state;
         rowState.setFlag(QStyle::State_Enabled, enabled);
         const auto interaction = detail::collectionItemInteractionState(rowState);
-        const bool animateHover = interaction == detail::CollectionItemInteractionState::Normal ||
-                                  interaction == detail::CollectionItemInteractionState::Hovered;
+        const bool animateHover = interaction == detail::CollectionItemInteractionState::Normal
+            || interaction == detail::CollectionItemInteractionState::Hovered;
         // Resolve shared collection colors, retaining a fading hover's endpoint
         // after Qt clears MouseOver. Disabled/selected/pressed states use the
         // same appearance as ListView and never inherit stale hover opacity.
@@ -482,21 +464,21 @@ public:
         }
 
         painter->setPen(enabled ? colors.textSecondary : colors.textDisabled);
-        Typography::Icons::paintGlyph(*painter, geometry.icon,
-                                      QStringLiteral("ic_fluent_document_20_regular"), kIconSize);
+        Typography::Icons::paintGlyph(*painter, geometry.icon, QStringLiteral("ic_fluent_document_20_regular"),
+            kIconSize);
         painter->setPen(enabled ? colors.textPrimary : colors.textDisabled);
         if (nameHeight > 0.0)
             nameLayout.draw(painter, geometry.text.topLeft());
-        painter->setPen(!enabled                                   ? colors.textDisabled
-                        : status == FileListView::Status::Rejected ? colors.systemCritical
-                                                                   : colors.textSecondary);
+        painter->setPen(!enabled ? colors.textDisabled
+                : status == FileListView::Status::Rejected
+                ? colors.systemCritical
+                : colors.textSecondary);
         if (metadataHeight > 0.0)
             metadataLayout.draw(painter, metadataOrigin);
 
         if (uploading) {
-            const QRectF track(geometry.text.left(),
-                               geometry.text.top() + nameHeight + gap + metadataHeight + 4.0,
-                               geometry.text.width(), 3.0);
+            const QRectF track(geometry.text.left(), geometry.text.top() + nameHeight + gap + metadataHeight + 4.0,
+                geometry.text.width(), 3.0);
             painter->setPen(Qt::NoPen);
             painter->setBrush(colors.controlAltSecondary);
             painter->drawRoundedRect(track, 1.5, 1.5);
@@ -509,16 +491,12 @@ public:
             if (progress.width() > 0.0)
                 painter->drawRoundedRect(progress, 1.5, 1.5);
             painter->setPen(enabled ? colors.textSecondary : colors.textDisabled);
-            Typography::Icons::paintGlyph(*painter, statusRect,
-                                          QStringLiteral("ic_fluent_arrow_upload_16_regular"),
-                                          kStatusSize);
+            Typography::Icons::paintGlyph(*painter, statusRect, QStringLiteral("ic_fluent_arrow_upload_16_regular"),
+                kStatusSize);
         } else {
             const bool rejected = status == FileListView::Status::Rejected;
-            painter->setPen(!enabled   ? colors.textDisabled
-                            : rejected ? colors.systemCritical
-                                       : colors.systemSuccess);
-            Typography::Icons::paintGlyph(
-                *painter, statusRect,
+            painter->setPen(!enabled ? colors.textDisabled : rejected ? colors.systemCritical : colors.systemSuccess);
+            Typography::Icons::paintGlyph(*painter, statusRect,
                 rejected ? QStringLiteral("ic_fluent_error_circle_12_regular")
                          : QStringLiteral("ic_fluent_checkmark_circle_12_regular"),
                 kStatusSize);
@@ -537,17 +515,13 @@ public:
             painter->setPen(enabled ? colors.textSecondary : colors.textDisabled);
             Typography::Icons::paintGlyph(*painter, rect, glyph, 16);
         };
-        paintAction(geometry.remove, FileAction::Remove,
-                    QStringLiteral("ic_fluent_dismiss_16_regular"));
-        paintAction(geometry.retry, FileAction::Retry,
-                    QStringLiteral("ic_fluent_arrow_clockwise_16_regular"));
+        paintAction(geometry.remove, FileAction::Remove, QStringLiteral("ic_fluent_dismiss_16_regular"));
+        paintAction(geometry.retry, FileAction::Retry, QStringLiteral("ic_fluent_arrow_clockwise_16_regular"));
 
-        if ((option.state & QStyle::State_HasFocus) &&
-            m_view->testAttribute(Qt::WA_KeyboardFocusChange)) {
+        if ((option.state & QStyle::State_HasFocus) && m_view->testAttribute(Qt::WA_KeyboardFocusChange)) {
             painter->setBrush(Qt::NoBrush);
             painter->setPen(QPen(colors.strokeFocusOuter, 2.0));
-            painter->drawRoundedRect(background.adjusted(1.0, 1.0, -1.0, -1.0), radius.control,
-                                     radius.control);
+            painter->drawRoundedRect(background.adjusted(1.0, 1.0, -1.0, -1.0), radius.control, radius.control);
         }
         painter->restore();
     }
@@ -591,14 +565,12 @@ namespace {
 
 class FileListRowAccessible final : public QAccessibleInterface, public QAccessibleActionInterface {
 public:
-    FileListRowAccessible(FileListView* view, const QModelIndex& index)
-        : m_view(view), m_index(index)
-    {}
+    FileListRowAccessible(FileListView* view, const QModelIndex& index) : m_view(view), m_index(index) {}
 
     bool isValid() const override
     {
-        return m_view && m_index.isValid() && m_index.model() == m_view->model() &&
-               m_index.parent() == m_view->rootIndex();
+        return m_view && m_index.isValid() && m_index.model() == m_view->model()
+            && m_index.parent() == m_view->rootIndex();
     }
     QObject* object() const override { return nullptr; }
     QAccessibleInterface* parent() const override
@@ -624,8 +596,7 @@ public:
             if (!description.isEmpty())
                 return description;
             const QString metadata = m_index.data(FileListView::MetadataRole).toString();
-            return metadata.isEmpty() ? statusText(m_index)
-                                      : metadata + QStringLiteral(". ") + statusText(m_index);
+            return metadata.isEmpty() ? statusText(m_index) : metadata + QStringLiteral(". ") + statusText(m_index);
         }
         return {};
     }
@@ -655,8 +626,7 @@ public:
     }
     void* interface_cast(QAccessible::InterfaceType type) override
     {
-        return type == QAccessible::ActionInterface ? static_cast<QAccessibleActionInterface*>(this)
-                                                    : nullptr;
+        return type == QAccessible::ActionInterface ? static_cast<QAccessibleActionInterface*>(this) : nullptr;
     }
     QStringList actionNames() const override
     {
@@ -764,8 +734,8 @@ public:
     QAccessibleInterface* focusChild() const override
     {
         return view() && view()->hasFocus() && view()->currentIndex().isValid()
-                   ? child(view()->currentIndex().row())
-                   : nullptr;
+            ? child(view()->currentIndex().row())
+            : nullptr;
     }
 
 private:
@@ -794,19 +764,19 @@ private:
         m_root = view()->rootIndex();
         if (!m_model)
             return;
-        m_connections.append(QObject::connect(m_model, &QAbstractItemModel::modelReset, view(),
-                                              [this] { clearChildren(); }));
-        m_connections.append(
-            QObject::connect(m_model, &QAbstractItemModel::rowsRemoved, view(), [this] {
-                for (auto it = m_children.begin(); it != m_children.end();) {
-                    if (!it.key().isValid()) {
-                        QAccessible::deleteAccessibleInterface(it.value());
-                        it = m_children.erase(it);
-                    } else {
-                        ++it;
-                    }
+        m_connections.append(QObject::connect(m_model, &QAbstractItemModel::modelReset, view(), [this] {
+            clearChildren();
+        }));
+        m_connections.append(QObject::connect(m_model, &QAbstractItemModel::rowsRemoved, view(), [this] {
+            for (auto it = m_children.begin(); it != m_children.end();) {
+                if (!it.key().isValid()) {
+                    QAccessible::deleteAccessibleInterface(it.value());
+                    it = m_children.erase(it);
+                } else {
+                    ++it;
                 }
-            }));
+            }
+        }));
     }
 
     mutable QPointer<QAbstractItemModel> m_model;
@@ -853,10 +823,8 @@ FileListView::FileListView(QWidget* parent) : ListView(parent), d(std::make_uniq
     setEditTriggers(QAbstractItemView::NoEditTriggers);
     setMouseTracking(true);
     setAccessibleName(tr("Files"));
-    setAccessibleDescription(
-        tr("Use arrow keys to select a file. Delete removes it; Control+R retries it."));
-    connect(&MotionPolicy::instance(), &MotionPolicy::modeChanged, this,
-            [this] { d->stopMotion(); });
+    setAccessibleDescription(tr("Use arrow keys to select a file. Delete removes it; Control+R retries it."));
+    connect(&MotionPolicy::instance(), &MotionPolicy::modeChanged, this, [this] { d->stopMotion(); });
     connect(qApp, &QApplication::applicationStateChanged, this, [this](Qt::ApplicationState state) {
         if (state != Qt::ApplicationActive)
             d->stopMotion();
@@ -874,8 +842,7 @@ void FileListView::setModel(QAbstractItemModel* model)
     ListView::setModel(model);
     if (!model)
         return;
-    d->modelConnections.append(
-        connect(model, &QAbstractItemModel::modelAboutToBeReset, this, [this] { d->clear(); }));
+    d->modelConnections.append(connect(model, &QAbstractItemModel::modelAboutToBeReset, this, [this] { d->clear(); }));
     d->modelConnections.append(connect(model, &QObject::destroyed, this, [this] { d->clear(); }));
     d->modelConnections.append(connect(model, &QAbstractItemModel::rowsRemoved, this, [this] {
         for (auto it = d->heights.begin(); it != d->heights.end();) {
@@ -886,8 +853,7 @@ void FileListView::setModel(QAbstractItemModel* model)
         }
         d->tick();
     }));
-    d->modelConnections.append(
-        connect(model, &QAbstractItemModel::layoutChanged, this, [this] { d->tick(); }));
+    d->modelConnections.append(connect(model, &QAbstractItemModel::layoutChanged, this, [this] { d->tick(); }));
 }
 
 bool FileListView::isAnimationEnabled() const
@@ -905,8 +871,7 @@ void FileListView::setAnimationEnabled(bool enabled)
     emit animationEnabledChanged(enabled);
 }
 
-void FileListView::dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight,
-                               const QVector<int>& roles)
+void FileListView::dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles)
 {
     if (!d) {
         ListView::dataChanged(topLeft, bottomRight, roles);
@@ -954,9 +919,8 @@ void FileListView::mouseMoveEvent(QMouseEvent* event)
 {
     const QModelIndex index = indexAt(event->pos());
     d->setHovered(index, event->pos());
-    viewport()->setCursor(d->actionAt(index, event->pos()) == FileAction::None
-                              ? Qt::ArrowCursor
-                              : Qt::PointingHandCursor);
+    viewport()->setCursor(
+        d->actionAt(index, event->pos()) == FileAction::None ? Qt::ArrowCursor : Qt::PointingHandCursor);
     if (d->pressedAction != FileAction::None) {
         event->accept();
         return;
@@ -972,8 +936,7 @@ void FileListView::mouseReleaseEvent(QMouseEvent* event)
         d->pressed = QPersistentModelIndex();
         d->pressedAction = FileAction::None;
         viewport()->update();
-        if (pressed.isValid() && indexAt(event->pos()) == pressed &&
-            d->actionAt(pressed, event->pos()) == action)
+        if (pressed.isValid() && indexAt(event->pos()) == pressed && d->actionAt(pressed, event->pos()) == action)
             invokeCommand(this, pressed, action);
         event->accept();
         return;
@@ -983,14 +946,13 @@ void FileListView::mouseReleaseEvent(QMouseEvent* event)
 
 void FileListView::keyPressEvent(QKeyEvent* event)
 {
-    if (!event->isAutoRepeat() && event->modifiers() == Qt::NoModifier &&
-        (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)) {
+    if (!event->isAutoRepeat() && event->modifiers() == Qt::NoModifier
+        && (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)) {
         invokeCommand(this, currentIndex(), FileAction::Remove);
         event->accept();
         return;
     }
-    if (!event->isAutoRepeat() && event->key() == Qt::Key_R &&
-        event->modifiers() == Qt::ControlModifier) {
+    if (!event->isAutoRepeat() && event->key() == Qt::Key_R && event->modifiers() == Qt::ControlModifier) {
         invokeCommand(this, currentIndex(), FileAction::Retry);
         event->accept();
         return;

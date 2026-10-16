@@ -45,13 +45,14 @@ struct QmlSession::Private {
     QmlPlugin plugin;
     plugins::PluginManager manager;
 };
-QmlSession::QmlSession(QObject* host, QObject* parent)
-    : QObject(parent), d(std::make_shared<Private>(host))
+QmlSession::QmlSession(QObject* host, QObject* parent) : QObject(parent), d(std::make_shared<Private>(host))
 {
-    connect(&d->manager, &plugins::PluginManager::pluginActivated, this,
-            [this](const QString&) { emit activeChanged(true); });
-    connect(&d->manager, &plugins::PluginManager::pluginDeactivated, this,
-            [this](const QString&) { emit activeChanged(false); });
+    connect(&d->manager, &plugins::PluginManager::pluginActivated, this, [this](const QString&) {
+        emit activeChanged(true);
+    });
+    connect(&d->manager, &plugins::PluginManager::pluginDeactivated, this, [this](const QString&) {
+        emit activeChanged(false);
+    });
 }
 QmlSession::~QmlSession()
 {

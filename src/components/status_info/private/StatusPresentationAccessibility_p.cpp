@@ -23,8 +23,7 @@ const QString& dismissAction()
 
 QString statusText(const char* source)
 {
-    return QCoreApplication::translate(
-        "StatusPresentationAccessibility", source);
+    return QCoreApplication::translate("StatusPresentationAccessibility", source);
 }
 
 QString severityText(InfoBar::InfoBarSeverity severity)
@@ -59,15 +58,12 @@ QString infoBarAnnouncementText(const InfoBar* bar)
         return {};
     const QString severity = severityText(bar->severity());
     const QString content = infoBarContentText(bar);
-    return content.isEmpty()
-        ? severity
-        : severity + QStringLiteral(": ") + content;
+    return content.isEmpty() ? severity : severity + QStringLiteral(": ") + content;
 }
 
 bool canDismiss(const InfoBar* bar)
 {
-    return bar && bar->isOpen() && bar->isEnabled()
-        && bar->isClosable();
+    return bar && bar->isOpen() && bar->isEnabled() && bar->isClosable();
 }
 
 void sendEvent(QObject* object, QAccessible::Event type)
@@ -82,9 +78,7 @@ void announceInfoBar(InfoBar* bar)
 {
     if (!bar || !bar->isOpen() || !bar->isVisible())
         return;
-    fluentSendAccessibleAnnouncement(
-        bar,
-        infoBarAnnouncementText(bar),
+    fluentSendAccessibleAnnouncement(bar, infoBarAnnouncementText(bar),
         bar->severity() == InfoBar::Error
             ? FluentAccessibleAnnouncementPoliteness::Assertive
             : FluentAccessibleAnnouncementPoliteness::Polite);
@@ -104,8 +98,7 @@ void sendInfoBarStateChanged(InfoBar* bar)
     QAccessible::updateAccessibility(&event);
 }
 
-void sendShimmerStateChanged(
-    Shimmer* shimmer, bool busy, bool animated, bool invisible)
+void sendShimmerStateChanged(Shimmer* shimmer, bool busy, bool animated, bool invisible)
 {
     if (!shimmer)
         return;
@@ -125,10 +118,7 @@ void sendShimmerStateChanged(
 
 class InfoBarAccessible final : public QAccessibleWidget {
 public:
-    explicit InfoBarAccessible(InfoBar* bar)
-        : QAccessibleWidget(bar, QAccessible::Notification)
-    {
-    }
+    explicit InfoBarAccessible(InfoBar* bar) : QAccessibleWidget(bar, QAccessible::Notification) {}
 
     QAccessibleInterface* childAt(int x, int y) const override
     {
@@ -146,37 +136,28 @@ public:
         if (!focused)
             return nullptr;
         for (QWidget* candidate : semanticChildren()) {
-            if (candidate == focused
-                || (candidate && candidate->isAncestorOf(focused))) {
+            if (candidate == focused || (candidate && candidate->isAncestorOf(focused))) {
                 return QAccessible::queryAccessibleInterface(candidate);
             }
         }
         return nullptr;
     }
 
-    int childCount() const override
-    {
-        return semanticChildren().size();
-    }
+    int childCount() const override { return semanticChildren().size(); }
 
-    int indexOfChild(
-        const QAccessibleInterface* childInterface) const override
+    int indexOfChild(const QAccessibleInterface* childInterface) const override
     {
         if (!childInterface)
             return -1;
         const QVector<QWidget*> children = semanticChildren();
-        return children.indexOf(
-            qobject_cast<QWidget*>(childInterface->object()));
+        return children.indexOf(qobject_cast<QWidget*>(childInterface->object()));
     }
 
     QAccessibleInterface* child(int index) const override
     {
         const QVector<QWidget*> children = semanticChildren();
-        QWidget* candidate = index >= 0 && index < children.size()
-            ? children.at(index) : nullptr;
-        return candidate
-            ? QAccessible::queryAccessibleInterface(candidate)
-            : nullptr;
+        QWidget* candidate = index >= 0 && index < children.size() ? children.at(index) : nullptr;
+        return candidate ? QAccessible::queryAccessibleInterface(candidate) : nullptr;
     }
 
     QString text(QAccessible::Text type) const override
@@ -208,33 +189,27 @@ public:
 
     QStringList actionNames() const override
     {
-        return canDismiss(bar())
-            ? QStringList{dismissAction()}
-            : QStringList{};
+        return canDismiss(bar()) ? QStringList{dismissAction()} : QStringList{};
     }
 
-    QString localizedActionName(
-        const QString& actionName) const override
+    QString localizedActionName(const QString& actionName) const override
     {
         return actionName == dismissAction()
             ? statusText("Dismiss")
             : QAccessibleWidget::localizedActionName(actionName);
     }
 
-    QString localizedActionDescription(
-        const QString& actionName) const override
+    QString localizedActionDescription(const QString& actionName) const override
     {
         return actionName == dismissAction()
             ? statusText("Dismisses the notification")
-            : QAccessibleWidget::localizedActionDescription(
-                  actionName);
+            : QAccessibleWidget::localizedActionDescription(actionName);
     }
 
     void doAction(const QString& actionName) override
     {
         InfoBar* current = bar();
-        if (actionName == dismissAction() && canDismiss(current)
-            && current->m_closeButton) {
+        if (actionName == dismissAction() && canDismiss(current) && current->m_closeButton) {
             current->m_closeButton->click();
         }
     }
@@ -246,29 +221,21 @@ private:
         InfoBar* current = bar();
         if (!current || !current->isOpen())
             return result;
-        if (current->m_actionWidget
-            && current->m_actionWidget->isVisible()) {
+        if (current->m_actionWidget && current->m_actionWidget->isVisible()) {
             result.append(current->m_actionWidget);
         }
-        if (current->m_closeButton
-            && current->m_closeButton->isVisible()) {
+        if (current->m_closeButton && current->m_closeButton->isVisible()) {
             result.append(current->m_closeButton);
         }
         return result;
     }
 
-    InfoBar* bar() const
-    {
-        return static_cast<InfoBar*>(widget());
-    }
+    InfoBar* bar() const { return static_cast<InfoBar*>(widget()); }
 };
 
 class ShimmerAccessible final : public QAccessibleWidget {
 public:
-    explicit ShimmerAccessible(Shimmer* shimmer)
-        : QAccessibleWidget(shimmer, QAccessible::Animation)
-    {
-    }
+    explicit ShimmerAccessible(Shimmer* shimmer) : QAccessibleWidget(shimmer, QAccessible::Animation) {}
 
     QString text(QAccessible::Text type) const override
     {
@@ -300,16 +267,12 @@ public:
     QStringList actionNames() const override { return {}; }
 
 private:
-    Shimmer* shimmer() const
-    {
-        return static_cast<Shimmer*>(widget());
-    }
+    Shimmer* shimmer() const { return static_cast<Shimmer*>(widget()); }
 };
 
 namespace {
 
-QAccessibleInterface* statusPresentationAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* statusPresentationAccessibilityFactory(const QString&, QObject* object)
 {
     if (auto* bar = qobject_cast<InfoBar*>(object))
         return new InfoBarAccessible(bar);
@@ -326,8 +289,7 @@ void ensureStatusPresentationAccessibilityFactory()
 {
 #if QT_CONFIG(accessibility)
     static const bool installed = [] {
-        QAccessible::installFactory(
-            statusPresentationAccessibilityFactory);
+        QAccessible::installFactory(statusPresentationAccessibilityFactory);
         return true;
     }();
     Q_UNUSED(installed)

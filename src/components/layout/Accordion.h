@@ -30,8 +30,7 @@ class Expander;
  */
 class Accordion : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
-    Q_PROPERTY(ExpansionMode expansionMode READ expansionMode
-                   WRITE setExpansionMode NOTIFY expansionModeChanged)
+    Q_PROPERTY(ExpansionMode expansionMode READ expansionMode WRITE setExpansionMode NOTIFY expansionModeChanged)
     Q_PROPERTY(int count READ count NOTIFY countChanged)
 
 public:
@@ -39,10 +38,7 @@ public:
      * @brief Controls whether one or several items may be expanded.
      * zh_CN: 控制同一时间允许展开一个还是多个条目。
      */
-    enum class ExpansionMode {
-        Single,
-        Multiple
-    };
+    enum class ExpansionMode { Single, Multiple };
     Q_ENUM(ExpansionMode)
 
     explicit Accordion(QWidget* parent = nullptr);
@@ -78,9 +74,7 @@ public:
      * @brief Inserts an Expander with explicit lifetime ownership.
      * zh_CN: 使用显式生命周期所有权在指定位置插入 Expander。
      */
-    bool insertItem(int index,
-                    Expander* item,
-                    WidgetOwnership ownership);
+    bool insertItem(int index, Expander* item, WidgetOwnership ownership);
 
     /**
      * @brief Removes an item and applies its configured ownership policy.
@@ -123,10 +117,7 @@ private:
     void enforceSingleExpansion(Expander* preferredItem);
     bool focusHeaderAt(int index);
     bool focusRelativeHeader(int currentIndex, int direction);
-    Expander* releaseItem(int index,
-                          bool deleteOwned,
-                          bool restoreParent,
-                          bool emitSignals);
+    Expander* releaseItem(int index, bool deleteOwned, bool restoreParent, bool emitSignals);
 
     QVBoxLayout* m_layout = nullptr;
     QVector<ItemRecord> m_items;

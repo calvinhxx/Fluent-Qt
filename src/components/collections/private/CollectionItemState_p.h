@@ -32,19 +32,15 @@ inline CollectionItemInteractionState collectionItemInteractionState(QStyle::Sta
     const bool pressed = hovered && (state & QStyle::State_Sunken);
 
     if (pressed) {
-        return selected ? CollectionItemInteractionState::SelectedPressed
-                        : CollectionItemInteractionState::Pressed;
+        return selected ? CollectionItemInteractionState::SelectedPressed : CollectionItemInteractionState::Pressed;
     }
     if (selected) {
-        return hovered ? CollectionItemInteractionState::SelectedHovered
-                       : CollectionItemInteractionState::Selected;
+        return hovered ? CollectionItemInteractionState::SelectedHovered : CollectionItemInteractionState::Selected;
     }
-    return hovered ? CollectionItemInteractionState::Hovered
-                   : CollectionItemInteractionState::Normal;
+    return hovered ? CollectionItemInteractionState::Hovered : CollectionItemInteractionState::Normal;
 }
 
-inline CollectionItemVisualStyle collectionItemVisualStyle(QStyle::State state,
-                                                           const FluentElement::Colors& colors)
+inline CollectionItemVisualStyle collectionItemVisualStyle(QStyle::State state, const FluentElement::Colors& colors)
 {
     CollectionItemVisualStyle visual;
     visual.foreground = colors.textPrimary;
@@ -73,8 +69,12 @@ inline CollectionItemVisualStyle collectionItemVisualStyle(QStyle::State state,
 // both migrated call sites already set or clear it explicitly.
 // zh_CN: 保留 Qt 提供的状态位，只补集合视图拥有的条目状态；Enabled 是唯一
 // 会被规范化的状态位，因为两个迁移点原本就显式设置或清除它。
-inline void applyCollectionItemState(QStyle::State& state, bool enabled, bool selected,
-                                     bool hovered, bool pressed, bool active) noexcept
+inline void applyCollectionItemState(QStyle::State& state,
+    bool enabled,
+    bool selected,
+    bool hovered,
+    bool pressed,
+    bool active) noexcept
 {
     state.setFlag(QStyle::State_Enabled, enabled);
     if (selected)

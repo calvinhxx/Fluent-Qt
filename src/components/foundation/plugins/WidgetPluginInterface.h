@@ -34,7 +34,6 @@ public:
 
 } // namespace fluent::plugins
 
-Q_DECLARE_INTERFACE(fluent::plugins::WidgetPluginInterface,
-                    "org.fluentqt.WidgetPluginInterface/1.0")
+Q_DECLARE_INTERFACE(fluent::plugins::WidgetPluginInterface, "org.fluentqt.WidgetPluginInterface/1.0")
 
 #endif // FLUENTQT_PLUGINS_WIDGETPLUGININTERFACE_H

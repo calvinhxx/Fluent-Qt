@@ -36,8 +36,7 @@ QPainterPath ratingStarPath(const QRectF& cell, int requestedSize)
     return path;
 }
 
-void drawRatingStar(QPainter& painter, const QPainterPath& path, const QColor& color, bool filled,
-                    qreal outlineWidth)
+void drawRatingStar(QPainter& painter, const QPainterPath& path, const QColor& color, bool filled, qreal outlineWidth)
 {
     painter.save();
     painter.setBrush(filled ? QBrush(color) : Qt::NoBrush);
@@ -185,8 +184,7 @@ QSize RatingControl::iconCellSize() const
 {
     const QFont iconFont = Typography::Icons::font(m_starSize);
     QFontMetrics fm(iconFont);
-    const QString starGlyph =
-        Typography::Icons::glyphForSize(Typography::Icons::FavoriteStar, m_starSize);
+    const QString starGlyph = Typography::Icons::glyphForSize(Typography::Icons::FavoriteStar, m_starSize);
     int w = fm.horizontalAdvance(starGlyph);
     int h = fm.height();
     return QSize(qMax(w, m_starSize), qMax(h, m_starSize));
@@ -239,8 +237,8 @@ double RatingControl::ratingFromPosition(int x) const
         }
     }
     const QRectF maximumStar = starRect(m_maxRating - 1);
-    if ((layoutDirection() == Qt::LeftToRight && x > maximumStar.right()) ||
-        (layoutDirection() == Qt::RightToLeft && x < maximumStar.left())) {
+    if ((layoutDirection() == Qt::LeftToRight && x > maximumStar.right())
+        || (layoutDirection() == Qt::RightToLeft && x < maximumStar.left())) {
         return m_maxRating;
     }
     return 0;
@@ -266,8 +264,7 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
 
     // Resolve the displayed value. zh_CN: 确定要显示的值。
     bool isHoverPreview = m_isHovered && !m_isReadOnly && m_hoverValue > 0;
-    double displayValue =
-        isHoverPreview ? m_hoverValue : (m_value >= 0 ? m_value : m_placeholderValue);
+    double displayValue = isHoverPreview ? m_hoverValue : (m_value >= 0 ? m_value : m_placeholderValue);
     bool isPlaceholder = (m_value < 0 && !isHoverPreview);
     bool isDisabled = !isEnabled();
 
@@ -304,8 +301,7 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
             drawRatingStar(p, star, emptyColor, false, outlineWidth);
             p.save();
             const qreal fillWidth = rect.width() * fillFraction;
-            const qreal fillX =
-                layoutDirection() == Qt::RightToLeft ? rect.right() - fillWidth : rect.left();
+            const qreal fillX = layoutDirection() == Qt::RightToLeft ? rect.right() - fillWidth : rect.left();
             p.setClipRect(QRectF(fillX, rect.top(), fillWidth, rect.height()));
             drawRatingStar(p, star, filledColor, true, outlineWidth);
             p.restore();
@@ -320,17 +316,15 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
         const int captionX = starsAreaWidth() + m_itemSpacing * 2;
         const QRect logicalCaptionRect(captionX, 0, width() - captionX, height());
         const QRect captionRect = QStyle::visualRect(layoutDirection(), rect(), logicalCaptionRect);
-        p.drawText(captionRect,
-                   QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
-                   m_caption);
+        p.drawText(captionRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
+            m_caption);
     }
 
     if (!isDisabled && hasFocus() && m_keyboardFocusVisible) {
         QColor focusColor = c.textSecondary;
         focusColor.setAlpha(120);
         const QRect logicalFocusRect(0, 0, starsAreaWidth(), height());
-        const QRect focusRect =
-            QStyle::visualRect(layoutDirection(), rect(), logicalFocusRect).adjusted(1, 1, -1, -1);
+        const QRect focusRect = QStyle::visualRect(layoutDirection(), rect(), logicalFocusRect).adjusted(1, 1, -1, -1);
         p.setPen(QPen(focusColor, 1.0));
         p.setBrush(Qt::NoBrush);
         p.drawRoundedRect(focusRect, themeRadius().control, themeRadius().control);
@@ -443,8 +437,8 @@ void RatingControl::focusInEvent(QFocusEvent* event)
     QWidget::focusInEvent(event);
     if (event->reason() == Qt::MouseFocusReason)
         m_keyboardFocusVisible = false;
-    else if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason ||
-             event->reason() == Qt::ShortcutFocusReason)
+    else if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason
+        || event->reason() == Qt::ShortcutFocusReason)
         m_keyboardFocusVisible = true;
     update();
 }

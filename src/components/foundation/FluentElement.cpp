@@ -35,8 +35,8 @@ bool themeFromProperty(const QVariant& value, FluentElement::Theme& theme)
     bool ok = false;
     const int rawTheme = value.toInt(&ok);
     if (ok) {
-        if (rawTheme == FluentElement::Light || rawTheme == FluentElement::Dark ||
-            rawTheme == FluentElement::HighContrast) {
+        if (rawTheme == FluentElement::Light || rawTheme == FluentElement::Dark
+            || rawTheme == FluentElement::HighContrast) {
             theme = static_cast<FluentElement::Theme>(rawTheme);
             return true;
         }
@@ -203,9 +203,8 @@ FluentElement::FontStyle FluentElement::themeFont(Typography::FontRole role) con
     const auto& snapshot = d_ptr->resolved.base;
     const auto& base = Typography::fontStyle(role);
     const bool defaultFamily = snapshot.fontFamilyOverride.isEmpty();
-    return {defaultFamily ? base.family : snapshot.fontFamilyOverride,
-            defaultFamily ? base.styleName : QString(), qRound(base.size * snapshot.fontScale),
-            base.weight, qRound(base.lineHeight * snapshot.fontScale)};
+    return {defaultFamily ? base.family : snapshot.fontFamilyOverride, defaultFamily ? base.styleName : QString(),
+        qRound(base.size * snapshot.fontScale), base.weight, qRound(base.lineHeight * snapshot.fontScale)};
 }
 
 FluentElement::Radius FluentElement::themeRadius() const
@@ -219,18 +218,12 @@ FluentElement::Radius FluentElement::themeRadius() const
 FluentElement::Spacing FluentElement::themeSpacing() const
 {
     Spacing s;
-    s.padding = {::Spacing::Padding::ControlHorizontal,
-                 ::Spacing::Padding::ControlVertical,
-                 ::Spacing::Padding::Card,
-                 ::Spacing::Padding::Dialog,
-                 ::Spacing::Padding::TextFieldHorizontal,
-                 ::Spacing::Padding::TextFieldVertical,
-                 ::Spacing::Padding::ListItemHorizontal,
-                 ::Spacing::Padding::ListItemVertical};
-    s.gap = {::Spacing::Gap::Tight, ::Spacing::Gap::Normal, ::Spacing::Gap::Loose,
-             ::Spacing::Gap::Section};
+    s.padding = {::Spacing::Padding::ControlHorizontal, ::Spacing::Padding::ControlVertical, ::Spacing::Padding::Card,
+        ::Spacing::Padding::Dialog, ::Spacing::Padding::TextFieldHorizontal, ::Spacing::Padding::TextFieldVertical,
+        ::Spacing::Padding::ListItemHorizontal, ::Spacing::Padding::ListItemVertical};
+    s.gap = {::Spacing::Gap::Tight, ::Spacing::Gap::Normal, ::Spacing::Gap::Loose, ::Spacing::Gap::Section};
     s.controlHeight = {::Spacing::ControlHeight::Small, ::Spacing::ControlHeight::Standard,
-                       ::Spacing::ControlHeight::Large};
+        ::Spacing::ControlHeight::Large};
     s.xSmall = ::Spacing::XSmall;
     s.small = ::Spacing::Small;
     s.medium = ::Spacing::Medium;
@@ -244,15 +237,9 @@ FluentElement::Spacing FluentElement::themeSpacing() const
 FluentElement::Animation FluentElement::themeAnimation() const
 {
     using namespace ::Animation;
-    return {Duration::Fast,
-            Duration::Normal,
-            Duration::Slow,
-            Duration::VerySlow,
-            getEasing(EasingType::Standard),
-            getEasing(EasingType::Accelerate),
-            getEasing(EasingType::Decelerate),
-            getEasing(EasingType::Entrance),
-            getEasing(EasingType::Exit)};
+    return {Duration::Fast, Duration::Normal, Duration::Slow, Duration::VerySlow, getEasing(EasingType::Standard),
+        getEasing(EasingType::Accelerate), getEasing(EasingType::Decelerate), getEasing(EasingType::Entrance),
+        getEasing(EasingType::Exit)};
 }
 
 Material::AcrylicToken FluentElement::themeAcrylic() const
@@ -292,8 +279,8 @@ QColor FluentElement::themeBackdrop(bool active) const
     //（跨平台替代 Mica 非激活回退——没有壁纸着色，但有清晰的激活/非激活区分）。
     constexpr qreal t = 0.7;
     return QColor::fromRgbF(c.bgCanvas.redF() + (c.bgLayer.redF() - c.bgCanvas.redF()) * t,
-                            c.bgCanvas.greenF() + (c.bgLayer.greenF() - c.bgCanvas.greenF()) * t,
-                            c.bgCanvas.blueF() + (c.bgLayer.blueF() - c.bgCanvas.blueF()) * t);
+        c.bgCanvas.greenF() + (c.bgLayer.greenF() - c.bgCanvas.greenF()) * t,
+        c.bgCanvas.blueF() + (c.bgLayer.blueF() - c.bgCanvas.blueF()) * t);
 }
 
 } // namespace fluent

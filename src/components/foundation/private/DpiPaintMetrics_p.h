@@ -20,16 +20,12 @@ struct DeviceAlignedStroke {
 class DpiPaintMetrics final {
 public:
     explicit DpiPaintMetrics(const QPainter& painter)
-        : m_deviceTransform(painter.deviceTransform())
-        , m_axisAligned(qAbs(m_deviceTransform.m12()) < 0.000001
-                        && qAbs(m_deviceTransform.m21()) < 0.000001
-                        && qAbs(m_deviceTransform.m11()) > 0.000001
-                        && qAbs(m_deviceTransform.m22()) > 0.000001
-                        && m_deviceTransform.isInvertible())
-        , m_scaleX(qAbs(m_deviceTransform.m11()))
-        , m_scaleY(qAbs(m_deviceTransform.m22()))
-    {
-    }
+        : m_deviceTransform(painter.deviceTransform()),
+          m_axisAligned(qAbs(m_deviceTransform.m12()) < 0.000001 && qAbs(m_deviceTransform.m21()) < 0.000001
+              && qAbs(m_deviceTransform.m11()) > 0.000001 && qAbs(m_deviceTransform.m22()) > 0.000001
+              && m_deviceTransform.isInvertible()),
+          m_scaleX(qAbs(m_deviceTransform.m11())), m_scaleY(qAbs(m_deviceTransform.m22()))
+    {}
 
     QRectF alignedOuterRect(const QRectF& logicalRect) const
     {
@@ -48,12 +44,10 @@ public:
         return invertible ? inverse.mapRect(deviceRect).normalized() : logicalRect;
     }
 
-    DeviceAlignedStroke alignedStroke(const QRectF& outerLogicalRect,
-                                      qreal logicalWidth) const
+    DeviceAlignedStroke alignedStroke(const QRectF& outerLogicalRect, qreal logicalWidth) const
     {
         DeviceAlignedStroke result;
-        if (logicalWidth <= 0.0 || !outerLogicalRect.isValid()
-            || outerLogicalRect.isEmpty()) {
+        if (logicalWidth <= 0.0 || !outerLogicalRect.isValid() || outerLogicalRect.isEmpty()) {
             return result;
         }
 
@@ -64,19 +58,17 @@ public:
             return result;
         }
 
-        QRectF deviceRect = m_deviceTransform.mapRect(
-            alignedOuterRect(outerLogicalRect)).normalized();
+        QRectF deviceRect = m_deviceTransform.mapRect(alignedOuterRect(outerLogicalRect)).normalized();
         const int physicalWidth = qMax(1, qRound(logicalWidth * m_scaleX));
         const qreal inset = physicalWidth / 2.0;
         deviceRect.adjust(inset, inset, -inset, -inset);
 
         bool invertible = false;
         const QTransform inverse = m_deviceTransform.inverted(&invertible);
-        result.rect = invertible ? inverse.mapRect(deviceRect).normalized()
-                                 : outerLogicalRect.adjusted(logicalWidth / 2.0,
-                                                             logicalWidth / 2.0,
-                                                             -logicalWidth / 2.0,
-                                                             -logicalWidth / 2.0);
+        result.rect = invertible
+            ? inverse.mapRect(deviceRect).normalized()
+            : outerLogicalRect.adjusted(logicalWidth / 2.0, logicalWidth / 2.0, -logicalWidth / 2.0,
+                  -logicalWidth / 2.0);
         result.width = physicalWidth / m_scaleX;
         return result;
     }

@@ -50,8 +50,10 @@ constexpr qreal kDiscreteWheelStepPx = ::Spacing::ControlHeight::Large;
 // 层级缩进后的内容边缘自绘圆角状态面；保留原生面板会在缩进槽中残留一块分离背景。
 class DelegateOwnedRowStyle final : public QProxyStyle {
 public:
-    void drawControl(ControlElement element, const QStyleOption* option, QPainter* painter,
-                     const QWidget* widget = nullptr) const override
+    void drawControl(ControlElement element,
+        const QStyleOption* option,
+        QPainter* painter,
+        const QWidget* widget = nullptr) const override
     {
         // NoFrame needs no native decoration. Cocoa's frame painter requires a raster
         // CGContext even for this no-op, which is unavailable during GPU composition.
@@ -62,8 +64,10 @@ public:
         QProxyStyle::drawControl(element, option, painter, widget);
     }
 
-    void drawPrimitive(PrimitiveElement element, const QStyleOption* option, QPainter* painter,
-                       const QWidget* widget = nullptr) const override
+    void drawPrimitive(PrimitiveElement element,
+        const QStyleOption* option,
+        QPainter* painter,
+        const QWidget* widget = nullptr) const override
     {
         if (element == PE_PanelItemViewRow)
             return;
@@ -86,15 +90,13 @@ TreeView::SelectionIndicatorStyle normalizedIndicatorStyle(TreeView::SelectionIn
     return style;
 }
 
-bool indicatorStylesEqual(const TreeView::SelectionIndicatorStyle& lhs,
-                          const TreeView::SelectionIndicatorStyle& rhs)
+bool indicatorStylesEqual(const TreeView::SelectionIndicatorStyle& lhs, const TreeView::SelectionIndicatorStyle& rhs)
 {
-    return qrealFuzzyEquals(lhs.inset, rhs.inset) && qrealFuzzyEquals(lhs.width, rhs.width) &&
-           qrealFuzzyEquals(lhs.height, rhs.height) && lhs.insetRole == rhs.insetRole;
+    return qrealFuzzyEquals(lhs.inset, rhs.inset) && qrealFuzzyEquals(lhs.width, rhs.width)
+        && qrealFuzzyEquals(lhs.height, rhs.height) && lhs.insetRole == rhs.insetRole;
 }
 
-qreal indicatorInsetForIndex(const QModelIndex& index,
-                             const TreeView::SelectionIndicatorStyle& style)
+qreal indicatorInsetForIndex(const QModelIndex& index, const TreeView::SelectionIndicatorStyle& style)
 {
     if (style.insetRole >= 0) {
         bool ok = false;
@@ -144,9 +146,8 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
         false); // The delegate paints the chevron; native arrows off. zh_CN: 由 delegate 绘制 chevron，禁用原生展开箭头。
     setAnimated(
         false); // Custom reveal painting; Qt's animation delays child exposure. zh_CN: 自绘 reveal，避免 Qt 内置动画延迟暴露子项。
-    setExpandsOnDoubleClick(
-        false); // Single-click expands; double-click off. zh_CN: 单击展开，禁用双击。
-    setHeaderHidden(true); // Hide column headers. zh_CN: 隐藏列标题。
+    setExpandsOnDoubleClick(false); // Single-click expands; double-click off. zh_CN: 单击展开，禁用双击。
+    setHeaderHidden(true);          // Hide column headers. zh_CN: 隐藏列标题。
 
     QTreeView::setSelectionMode(QAbstractItemView::SingleSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -158,10 +159,8 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
 
     // WinUI-style navigation can react on press, while itemClicked keeps the
     // usual release-based activation contract.
-    connect(this, &QAbstractItemView::pressed, this,
-            [this](const QModelIndex& idx) { emit itemPressed(idx); });
-    connect(this, &QAbstractItemView::clicked, this,
-            [this](const QModelIndex& idx) { emit itemClicked(idx); });
+    connect(this, &QAbstractItemView::pressed, this, [this](const QModelIndex& idx) { emit itemPressed(idx); });
+    connect(this, &QAbstractItemView::clicked, this, [this](const QModelIndex& idx) { emit itemClicked(idx); });
 
     // Header label
     m_headerLabel = new QLabel(this);
@@ -170,14 +169,13 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
     m_headerLabel->hide();
 
     // --- Fluent scroll bars ---
-    m_vScrollBar = ::fluent::scrolling::createOverlayScrollBar(
-        Qt::Vertical, this, verticalScrollBar(), QStringLiteral("fluentTreeViewVScrollBar"));
+    m_vScrollBar = ::fluent::scrolling::createOverlayScrollBar(Qt::Vertical, this, verticalScrollBar(),
+        QStringLiteral("fluentTreeViewVScrollBar"));
     connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &TreeView::syncFluentScrollBar);
 
-    m_hScrollBar = ::fluent::scrolling::createOverlayScrollBar(
-        Qt::Horizontal, this, horizontalScrollBar(), QStringLiteral("fluentTreeViewHScrollBar"));
-    connect(horizontalScrollBar(), &QScrollBar::rangeChanged, this,
-            &TreeView::syncFluentHScrollBar);
+    m_hScrollBar = ::fluent::scrolling::createOverlayScrollBar(Qt::Horizontal, this, horizontalScrollBar(),
+        QStringLiteral("fluentTreeViewHScrollBar"));
+    connect(horizontalScrollBar(), &QScrollBar::rangeChanged, this, &TreeView::syncFluentHScrollBar);
 
     // --- Overscroll bounce (shared controller) ---
     fluent::scrolling::OverscrollController::Hooks hooks;
@@ -190,8 +188,8 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
     };
     hooks.onOverscrollChanged = [this] { viewport()->update(); };
     hooks.fallbackWheel = [this](QWheelEvent* e) { QTreeView::wheelEvent(e); };
-    m_overscroll = new fluent::scrolling::OverscrollController(viewport(), kDiscreteWheelStepPx,
-                                                               std::move(hooks), this);
+    m_overscroll = new fluent::scrolling::OverscrollController(viewport(), kDiscreteWheelStepPx, std::move(hooks),
+        this);
 
     // --- Selected indicator motion ---
     m_indicatorMotionAnim = new QVariantAnimation(this);
@@ -199,16 +197,15 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
     m_indicatorMotionAnim->setEasingCurve(themeAnimation().decelerate);
     m_indicatorMotionAnim->setStartValue(0.0);
     m_indicatorMotionAnim->setEndValue(1.0);
-    connect(m_indicatorMotionAnim, &QVariantAnimation::valueChanged, this,
-            [this](const QVariant& value) {
-                setIndicatorMotionProgress(value.toReal());
-                if (viewport())
-                    // The viewport may intentionally preserve a transparent parent surface.
-                    // A partial repaint then cannot reliably erase the previous overlay frame
-                    // on every backing-store implementation, leaving accent-colored trails.
-                    // The transition is brief, so recompose the full viewport while it runs.
-                    viewport()->update(indicatorMotionDirtyRect());
-            });
+    connect(m_indicatorMotionAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        setIndicatorMotionProgress(value.toReal());
+        if (viewport())
+            // The viewport may intentionally preserve a transparent parent surface.
+            // A partial repaint then cannot reliably erase the previous overlay frame
+            // on every backing-store implementation, leaving accent-colored trails.
+            // The transition is brief, so recompose the full viewport while it runs.
+            viewport()->update(indicatorMotionDirtyRect());
+    });
     connect(m_indicatorMotionAnim, &QVariantAnimation::finished, this, [this]() {
         setIndicatorMotionProgress(1.0);
         if (viewport())
@@ -247,16 +244,14 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
     connect(this, &QTreeView::collapsed, this, [this](const QModelIndex& idx) {
         // Programmatic / instant collapse: just clean up indicator + reveal state.
         // Deferred animated collapse is handled in toggleExpanded().
-        if (m_animParent.isValid() &&
-            (m_animParent == idx || isDescendantOf(QModelIndex(m_animParent), idx)) &&
-            !m_pendingCollapseFinalize) {
+        if (m_animParent.isValid() && (m_animParent == idx || isDescendantOf(QModelIndex(m_animParent), idx))
+            && !m_pendingCollapseFinalize) {
             clearExpandRevealState();
         }
-        if ((m_currentIndicatorIndex.isValid() && isDescendantOf(m_currentIndicatorIndex, idx)) ||
-            (m_activeIndicatorIndex.isValid() && isDescendantOf(m_activeIndicatorIndex, idx))) {
+        if ((m_currentIndicatorIndex.isValid() && isDescendantOf(m_currentIndicatorIndex, idx))
+            || (m_activeIndicatorIndex.isValid() && isDescendantOf(m_activeIndicatorIndex, idx))) {
             clearIndicatorMotionState();
-        } else if (m_previousIndicatorIndex.isValid() &&
-                   isDescendantOf(m_previousIndicatorIndex, idx)) {
+        } else if (m_previousIndicatorIndex.isValid() && isDescendantOf(m_previousIndicatorIndex, idx)) {
             if (m_indicatorMotionAnim)
                 m_indicatorMotionAnim->stop();
             m_previousIndicatorIndex = QPersistentModelIndex();
@@ -296,8 +291,8 @@ TreeView::~TreeView()
 
 QModelIndex TreeView::indexAt(const QPoint& point) const
 {
-    if (m_animParent.isValid() && m_expandRevealAnim &&
-        m_expandRevealAnim->state() == QAbstractAnimation::Running && m_animSubtreeHeight > 0.0) {
+    if (m_animParent.isValid() && m_expandRevealAnim && m_expandRevealAnim->state() == QAbstractAnimation::Running
+        && m_animSubtreeHeight > 0.0) {
         const QModelIndex parent = QModelIndex(m_animParent);
         const QRect parentRect = QTreeView::visualRect(parent);
         if (!parentRect.isEmpty()) {
@@ -468,8 +463,8 @@ void TreeView::toggleExpanded(const QModelIndex& index)
 
     // Reverse an in-flight reveal on the same subtree for a continuous feel
     // when the user clicks quickly. zh_CN: 同一子树动画进行中反向播放，保证快速点击连贯。
-    if (m_animParent.isValid() && QModelIndex(m_animParent) == index && m_expandRevealAnim &&
-        m_expandRevealAnim->state() == QAbstractAnimation::Running) {
+    if (m_animParent.isValid() && QModelIndex(m_animParent) == index && m_expandRevealAnim
+        && m_expandRevealAnim->state() == QAbstractAnimation::Running) {
         if (m_animExpanding) {
             startCollapseReveal(index); // was expanding → reverse to collapse
         } else {
@@ -478,8 +473,7 @@ void TreeView::toggleExpanded(const QModelIndex& index)
         }
         return;
     }
-    if (m_animParent.isValid() && m_expandRevealAnim &&
-        m_expandRevealAnim->state() == QAbstractAnimation::Running) {
+    if (m_animParent.isValid() && m_expandRevealAnim && m_expandRevealAnim->state() == QAbstractAnimation::Running) {
         completeActiveExpandReveal();
     }
 
@@ -518,9 +512,8 @@ void TreeView::setSelectedItem(const QModelIndex& index)
     if (isVisible()) {
         setCurrentIndex(index);
     } else {
-        selectionModel()->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect |
-                                                     QItemSelectionModel::Current |
-                                                     QItemSelectionModel::Rows);
+        selectionModel()->setCurrentIndex(index,
+            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Current | QItemSelectionModel::Rows);
     }
 }
 
@@ -615,9 +608,8 @@ QRectF TreeView::selectedIndicatorRect(qreal progress) const
         return {};
 
     const qreal clampedProgress = qBound(0.0, progress, 1.0);
-    if (!m_previousIndicatorIndex.isValid() ||
-        m_indicatorMotionDirection == IndicatorVerticalDirection::None ||
-        qFuzzyCompare(clampedProgress + 1.0, 2.0)) {
+    if (!m_previousIndicatorIndex.isValid() || m_indicatorMotionDirection == IndicatorVerticalDirection::None
+        || qFuzzyCompare(clampedProgress + 1.0, 2.0)) {
         return target;
     }
 
@@ -627,9 +619,8 @@ QRectF TreeView::selectedIndicatorRect(qreal progress) const
     if (qFuzzyCompare(clampedProgress + 1.0, 1.0))
         return previous;
 
-    const bool hierarchyTransition =
-        m_indicatorHierarchyTransition == IndicatorHierarchyTransition::Inward ||
-        m_indicatorHierarchyTransition == IndicatorHierarchyTransition::Outward;
+    const bool hierarchyTransition = m_indicatorHierarchyTransition == IndicatorHierarchyTransition::Inward
+        || m_indicatorHierarchyTransition == IndicatorHierarchyTransition::Outward;
     if (hierarchyTransition) {
         const qreal horizontalProgress = qBound(0.0, clampedProgress / 0.18, 1.0);
         const qreal x = lerp(previous.left(), target.left(), horizontalProgress);
@@ -758,13 +749,12 @@ void TreeView::paintEvent(QPaintEvent* event)
 
         dp.setPen(QPen(c.accentDefault, 2.0));
         dp.drawLine(::Spacing::Padding::ListItemHorizontal, y,
-                    viewport()->width() - ::Spacing::Padding::ListItemHorizontal, y);
+            viewport()->width() - ::Spacing::Padding::ListItemHorizontal, y);
         const int circleR = 3;
         dp.setBrush(c.accentDefault);
         dp.setPen(Qt::NoPen);
         dp.drawEllipse(QPoint(::Spacing::Padding::ListItemHorizontal, y), circleR, circleR);
-        dp.drawEllipse(QPoint(viewport()->width() - ::Spacing::Padding::ListItemHorizontal, y),
-                       circleR, circleR);
+        dp.drawEllipse(QPoint(viewport()->width() - ::Spacing::Padding::ListItemHorizontal, y), circleR, circleR);
         dp.end();
     }
 
@@ -816,8 +806,7 @@ void TreeView::paintEvent(QPaintEvent* event)
         QPainter bp(viewport());
         bp.setRenderHint(QPainter::Antialiasing);
 
-        const auto stroke =
-            fluent::painting::DpiPaintMetrics(bp).alignedStroke(QRectF(viewport()->rect()), 1.0);
+        const auto stroke = fluent::painting::DpiPaintMetrics(bp).alignedStroke(QRectF(viewport()->rect()), 1.0);
         QPainterPath borderPath;
         borderPath.addRoundedRect(stroke.rect, r, r);
         bp.setPen(QPen(c.strokeDefault, stroke.width));
@@ -893,25 +882,21 @@ void TreeView::selectionChanged(const QItemSelection& selected, const QItemSelec
 {
     QTreeView::selectionChanged(selected, deselected);
     syncCheckStatesWithSelection(selected, deselected);
-    if (selected.indexes().isEmpty() &&
-        (!selectionModel() || selectionModel()->selectedIndexes().isEmpty()))
+    if (selected.indexes().isEmpty() && (!selectionModel() || selectionModel()->selectedIndexes().isEmpty()))
         clearIndicatorMotionState();
     // Selecting the same current row again has no currentChanged signal.
     // zh_CN: 重新选中仍为 current 的行时，不会再次发出 currentChanged。
-    else if (!m_currentIndicatorIndex.isValid() && selectionModel() &&
-             selectionModel()->isSelected(currentIndex()))
+    else if (!m_currentIndicatorIndex.isValid() && selectionModel() && selectionModel()->isSelected(currentIndex()))
         updateIndicatorMotionForIndex(currentIndex(), QModelIndex());
 }
 
-void TreeView::drawBranches(QPainter* /*painter*/, const QRect& /*rect*/,
-                            const QModelIndex& /*index*/) const
+void TreeView::drawBranches(QPainter* /*painter*/, const QRect& /*rect*/, const QModelIndex& /*index*/) const
 {
     // Skip native branch indicators; the delegate paints Fluent chevrons.
     // zh_CN: 不绘制原生 branch 指示器 — delegate 自行绘制 Fluent 风格 chevron。
 }
 
-void TreeView::drawRow(QPainter* painter, const QStyleOptionViewItem& options,
-                       const QModelIndex& index) const
+void TreeView::drawRow(QPainter* painter, const QStyleOptionViewItem& options, const QModelIndex& index) const
 {
     // --- Overscroll bounce ---
     // QTreeView positions items from the scrollbar value, not verticalOffset(), so the elastic
@@ -932,8 +917,7 @@ void TreeView::drawRow(QPainter* painter, const QStyleOptionViewItem& options,
     // parent; rows below the subtree translate to follow the window edge so the
     // surrounding content slides smoothly instead of snapping.
     // zh_CN: 通过紧贴父项下方逐渐展开的裁剪窗口实现高度展开；子树下方的行随窗口边缘平移，平滑滑动。
-    if (m_animParent.isValid() && m_expandRevealAnim &&
-        m_expandRevealAnim->state() == QAbstractAnimation::Running) {
+    if (m_animParent.isValid() && m_expandRevealAnim && m_expandRevealAnim->state() == QAbstractAnimation::Running) {
         const QModelIndex parent = QModelIndex(m_animParent);
         const QRect parentRect = visualRect(parent);
         const qreal progress = qBound(0.0, m_expandRevealAnim->currentValue().toReal(), 1.0);
@@ -978,8 +962,8 @@ qreal TreeView::chevronRotation(const QModelIndex& index) const
     // The chevron of the animating parent tracks the reveal progress so the
     // arrow rotates in lock-step with the expand/collapse motion.
     // zh_CN: 动画父项的箭头跟随展开进度旋转，与展开/收起动作同步。
-    if (m_animParent.isValid() && QModelIndex(m_animParent) == index && m_expandRevealAnim &&
-        m_expandRevealAnim->state() == QAbstractAnimation::Running) {
+    if (m_animParent.isValid() && QModelIndex(m_animParent) == index && m_expandRevealAnim
+        && m_expandRevealAnim->state() == QAbstractAnimation::Running) {
         return qBound(0.0, m_expandRevealAnim->currentValue().toReal(), 1.0);
     }
     return isExpanded(index) ? 1.0 : 0.0;
@@ -1003,8 +987,7 @@ void TreeView::mouseMoveEvent(QMouseEvent* event)
 {
     if (m_canReorderItems && m_dragSourceIndex.isValid() && (event->buttons() & Qt::LeftButton)) {
         if (!m_isDragging) {
-            if ((event->pos() - m_dragStartPos).manhattanLength() >=
-                QApplication::startDragDistance()) {
+            if ((event->pos() - m_dragStartPos).manhattanLength() >= QApplication::startDragDistance()) {
                 m_dragPixmap = renderRowPixmap(m_dragSourceIndex);
                 m_dragCurrentPos = event->pos();
                 m_isDragging = true;
@@ -1031,9 +1014,8 @@ void TreeView::mouseReleaseEvent(QMouseEvent* event)
                 QModelIndex srcParentIdx = m_dragSourceIndex.parent();
                 int srcRow = m_dragSourceIndex.row();
 
-                QStandardItem* srcParentItem = srcParentIdx.isValid()
-                                                   ? sim->itemFromIndex(srcParentIdx)
-                                                   : sim->invisibleRootItem();
+                QStandardItem* srcParentItem =
+                    srcParentIdx.isValid() ? sim->itemFromIndex(srcParentIdx) : sim->invisibleRootItem();
 
                 if (m_dropMode == DropMode::OnItem && m_dropOnIndex.isValid()) {
                     QStandardItem* targetItem = sim->itemFromIndex(QModelIndex(m_dropOnIndex));
@@ -1045,16 +1027,14 @@ void TreeView::mouseReleaseEvent(QMouseEvent* event)
                         QModelIndex newIdx = sim->indexFromItem(row.first());
                         setCurrentIndex(newIdx);
                         QPointer<TreeView> guard(this);
-                        emit itemReordered(srcParentIdx, srcRow, dropParent,
-                                           targetItem->rowCount() - 1);
+                        emit itemReordered(srcParentIdx, srcRow, dropParent, targetItem->rowCount() - 1);
                         if (!guard)
                             return;
                     }
                 } else if (m_dropMode == DropMode::Between) {
-                    QStandardItem* dstParentItem =
-                        m_dropTargetParent.isValid()
-                            ? sim->itemFromIndex(QModelIndex(m_dropTargetParent))
-                            : sim->invisibleRootItem();
+                    QStandardItem* dstParentItem = m_dropTargetParent.isValid()
+                        ? sim->itemFromIndex(QModelIndex(m_dropTargetParent))
+                        : sim->invisibleRootItem();
                     if (srcParentItem && dstParentItem) {
                         bool sameParent = (srcParentItem == dstParentItem);
                         int dstRow = m_dropTargetRow;
@@ -1066,8 +1046,7 @@ void TreeView::mouseReleaseEvent(QMouseEvent* event)
                         QModelIndex newIdx = sim->indexFromItem(row.first());
                         setCurrentIndex(newIdx);
                         QPointer<TreeView> guard(this);
-                        emit itemReordered(srcParentIdx, srcRow, QModelIndex(m_dropTargetParent),
-                                           dstRow);
+                        emit itemReordered(srcParentIdx, srcRow, QModelIndex(m_dropTargetParent), dstRow);
                         if (!guard)
                             return;
                     }
@@ -1128,8 +1107,7 @@ QPixmap TreeView::renderRowPixmap(const QModelIndex& index) const
     constexpr qreal kScale = 0.75;
     const int sw = qRound(contentW * kScale);
     const int sh = qRound(h * kScale);
-    QPixmap scaled =
-        pix.scaled(QSize(sw, sh) * dpr, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    QPixmap scaled = pix.scaled(QSize(sw, sh) * dpr, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     scaled.setDevicePixelRatio(dpr);
     return scaled;
 }
@@ -1215,14 +1193,12 @@ void TreeView::connectIndicatorMotionModel(QAbstractItemModel* model)
     if (!model)
         return;
 
-    m_indicatorModelAboutToResetConnection =
-        connect(model, &QAbstractItemModel::modelAboutToBeReset, this,
-                &TreeView::clearIndicatorMotionState);
-    m_indicatorModelResetConnection =
-        connect(model, &QAbstractItemModel::modelReset, this, &TreeView::clearIndicatorMotionState);
-    m_indicatorRowsAboutToBeRemovedConnection =
-        connect(model, &QAbstractItemModel::rowsAboutToBeRemoved, this,
-                [this](const QModelIndex&, int, int) { clearIndicatorMotionState(); });
+    m_indicatorModelAboutToResetConnection = connect(model, &QAbstractItemModel::modelAboutToBeReset, this,
+        &TreeView::clearIndicatorMotionState);
+    m_indicatorModelResetConnection = connect(model, &QAbstractItemModel::modelReset, this,
+        &TreeView::clearIndicatorMotionState);
+    m_indicatorRowsAboutToBeRemovedConnection = connect(model, &QAbstractItemModel::rowsAboutToBeRemoved, this,
+        [this](const QModelIndex&, int, int) { clearIndicatorMotionState(); });
 }
 
 void TreeView::disconnectIndicatorMotionModel()
@@ -1249,8 +1225,7 @@ void TreeView::clearIndicatorMotionState()
         viewport()->update();
 }
 
-void TreeView::updateIndicatorMotionForIndex(const QModelIndex& current,
-                                             const QModelIndex& previous)
+void TreeView::updateIndicatorMotionForIndex(const QModelIndex& current, const QModelIndex& previous)
 {
     if (!current.isValid() || !isIndicatorEndpointUsable(current)) {
         clearIndicatorMotionState();
@@ -1264,14 +1239,13 @@ void TreeView::updateIndicatorMotionForIndex(const QModelIndex& current,
     if (!previousIndex.isValid() && previous.isValid())
         previousIndex = QPersistentModelIndex(previous);
 
-    const bool hasUsablePrevious =
-        previousIndex.isValid() && isIndicatorEndpointUsable(previousIndex);
+    const bool hasUsablePrevious = previousIndex.isValid() && isIndicatorEndpointUsable(previousIndex);
     const auto direction = hasUsablePrevious
-                               ? classifyIndicatorVerticalDirection(previousIndex, current)
-                               : IndicatorVerticalDirection::None;
-    const auto hierarchyTransition =
-        hasUsablePrevious ? classifyIndicatorHierarchyTransition(previousIndex, current)
-                          : IndicatorHierarchyTransition::None;
+        ? classifyIndicatorVerticalDirection(previousIndex, current)
+        : IndicatorVerticalDirection::None;
+    const auto hierarchyTransition = hasUsablePrevious
+        ? classifyIndicatorHierarchyTransition(previousIndex, current)
+        : IndicatorHierarchyTransition::None;
 
     m_previousIndicatorIndex = hasUsablePrevious ? previousIndex : QPersistentModelIndex();
     m_currentIndicatorIndex = QPersistentModelIndex(current);
@@ -1298,7 +1272,7 @@ void TreeView::startIndicatorMotionAnimation(bool animated)
     m_indicatorMotionAnim->setStartValue(0.0);
     m_indicatorMotionAnim->setEndValue(1.0);
     ::fluent::detail::startMotionTransition(m_indicatorMotionAnim, themeAnimation().normal,
-                                            m_indicatorMotionAnimationEnabled);
+        m_indicatorMotionAnimationEnabled);
 }
 
 bool TreeView::isIndicatorEndpointUsable(const QModelIndex& index) const
@@ -1329,20 +1303,18 @@ int TreeView::indicatorHierarchyDepth(const QModelIndex& index) const
     return depth;
 }
 
-TreeView::IndicatorVerticalDirection
-TreeView::classifyIndicatorVerticalDirection(const QModelIndex& previous,
-                                             const QModelIndex& current) const
+TreeView::IndicatorVerticalDirection TreeView::classifyIndicatorVerticalDirection(const QModelIndex& previous,
+    const QModelIndex& current) const
 {
     if (!previous.isValid() || !current.isValid() || previous == current)
         return IndicatorVerticalDirection::None;
 
     const QRect previousRect = visualRect(previous);
     const QRect currentRect = visualRect(current);
-    if (!previousRect.isEmpty() && !currentRect.isEmpty() &&
-        previousRect.center().y() != currentRect.center().y())
+    if (!previousRect.isEmpty() && !currentRect.isEmpty() && previousRect.center().y() != currentRect.center().y())
         return currentRect.center().y() > previousRect.center().y()
-                   ? IndicatorVerticalDirection::Down
-                   : IndicatorVerticalDirection::Up;
+            ? IndicatorVerticalDirection::Down
+            : IndicatorVerticalDirection::Up;
 
     constexpr int kMaxVisibleWalk = 10000;
     QModelIndex walk = indexBelow(previous);
@@ -1362,9 +1334,8 @@ TreeView::classifyIndicatorVerticalDirection(const QModelIndex& previous,
     return IndicatorVerticalDirection::None;
 }
 
-TreeView::IndicatorHierarchyTransition
-TreeView::classifyIndicatorHierarchyTransition(const QModelIndex& previous,
-                                               const QModelIndex& current) const
+TreeView::IndicatorHierarchyTransition TreeView::classifyIndicatorHierarchyTransition(const QModelIndex& previous,
+    const QModelIndex& current) const
 {
     if (!previous.isValid() || !current.isValid() || previous == current)
         return IndicatorHierarchyTransition::None;
@@ -1403,8 +1374,7 @@ void TreeView::setIndicatorHierarchyTransition(IndicatorHierarchyTransition tran
     emit indicatorHierarchyTransitionChanged();
 }
 
-void TreeView::syncCheckStatesWithSelection(const QItemSelection& selected,
-                                            const QItemSelection& deselected)
+void TreeView::syncCheckStatesWithSelection(const QItemSelection& selected, const QItemSelection& deselected)
 {
     if (m_syncingCheckStateWithSelection)
         return;
@@ -1499,9 +1469,9 @@ void TreeView::setCheckStateAndSelection(const QModelIndex& index, Qt::CheckStat
     if (static_cast<Qt::CheckState>(index.data(Qt::CheckStateRole).toInt()) != state)
         model()->setData(index, state, Qt::CheckStateRole);
 
-    const QItemSelectionModel::SelectionFlags flags =
-        (state == Qt::Checked) ? (QItemSelectionModel::Select | QItemSelectionModel::Rows)
-                               : (QItemSelectionModel::Deselect | QItemSelectionModel::Rows);
+    const QItemSelectionModel::SelectionFlags flags = (state == Qt::Checked)
+        ? (QItemSelectionModel::Select | QItemSelectionModel::Rows)
+        : (QItemSelectionModel::Deselect | QItemSelectionModel::Rows);
     selectionModel()->select(index, flags);
     if (state == Qt::Checked)
         selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
@@ -1530,10 +1500,11 @@ void TreeView::startExpandReveal(const QModelIndex& parent)
         return;
     }
 
-    const qreal resume = (m_animParent.isValid() && QModelIndex(m_animParent) == parent &&
-                          m_expandRevealAnim->state() == QAbstractAnimation::Running)
-                             ? qBound(0.0, m_expandRevealAnim->currentValue().toReal(), 1.0)
-                             : 0.0;
+    const qreal resume =
+        (m_animParent.isValid() && QModelIndex(m_animParent) == parent
+            && m_expandRevealAnim->state() == QAbstractAnimation::Running)
+        ? qBound(0.0, m_expandRevealAnim->currentValue().toReal(), 1.0)
+        : 0.0;
 
     m_expandRevealAnim->stop();
     m_animExpanding = true;
@@ -1560,10 +1531,9 @@ void TreeView::startCollapseReveal(const QModelIndex& parent)
         return;
     }
 
-    const bool resuming = m_animParent.isValid() && QModelIndex(m_animParent) == parent &&
-                          m_expandRevealAnim->state() == QAbstractAnimation::Running;
-    const qreal resume =
-        resuming ? qBound(0.0, m_expandRevealAnim->currentValue().toReal(), 1.0) : 1.0;
+    const bool resuming = m_animParent.isValid() && QModelIndex(m_animParent) == parent
+        && m_expandRevealAnim->state() == QAbstractAnimation::Running;
+    const qreal resume = resuming ? qBound(0.0, m_expandRevealAnim->currentValue().toReal(), 1.0) : 1.0;
 
     m_expandRevealAnim->stop();
     m_animExpanding = false;
@@ -1612,8 +1582,7 @@ void TreeView::clearExpandRevealState()
 
 void TreeView::completeActiveExpandReveal()
 {
-    if (!m_expandRevealAnim || m_expandRevealAnim->state() != QAbstractAnimation::Running ||
-        !m_animParent.isValid())
+    if (!m_expandRevealAnim || m_expandRevealAnim->state() != QAbstractAnimation::Running || !m_animParent.isValid())
         return;
 
     const QModelIndex parent = QModelIndex(m_animParent);
@@ -1641,8 +1610,7 @@ QRectF TreeView::selectedIndicatorBaseRect(const QModelIndex& index) const
 
     const QRectF itemRectF(itemRect);
     const qreal x = itemRect.left() + indicatorInsetForIndex(index, m_selectionIndicatorStyle);
-    const qreal y =
-        itemRectF.top() + itemRectF.height() / 2.0 - m_selectionIndicatorStyle.height / 2.0;
+    const qreal y = itemRectF.top() + itemRectF.height() / 2.0 - m_selectionIndicatorStyle.height / 2.0;
     return QRectF(x, y, m_selectionIndicatorStyle.width, m_selectionIndicatorStyle.height);
 }
 
@@ -1739,8 +1707,7 @@ void TreeView::applyThemeStyle()
         // and ignores child palettes) — e.g. the gallery sample card, where the header then renders
         // near-black in dark theme. A style-sheet color always wins. zh_CN: 用 label 自身样式表上色而非
         // palette：任何祖先设置样式表时会安装 QStyleSheetStyle 并忽略子 palette，header 在深色主题里变近黑；样式表颜色始终生效。
-        m_headerLabel->setStyleSheet(
-            QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
+        m_headerLabel->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
                 .arg(c.textPrimary.red())
                 .arg(c.textPrimary.green())
                 .arg(c.textPrimary.blue())
@@ -1786,10 +1753,10 @@ void TreeView::syncFluentScrollBar()
     constexpr int kScrollBarVerticalInset = 4;
     const QRect r = rect();
     const int top = (m_headerLabel && m_headerLabel->isVisible())
-                        ? m_headerLabel->geometry().bottom() + 1 + kScrollBarVerticalInset
-                        : r.top() + kScrollBarVerticalInset;
+        ? m_headerLabel->geometry().bottom() + 1 + kScrollBarVerticalInset
+        : r.top() + kScrollBarVerticalInset;
     ::fluent::scrolling::placeVerticalScrollBar(m_vScrollBar, r, top, kScrollBarRightInset,
-                                                kScrollBarVerticalInset - 1);
+        kScrollBarVerticalInset - 1);
 }
 
 void TreeView::syncFluentHScrollBar()
@@ -1809,7 +1776,7 @@ void TreeView::syncFluentHScrollBar()
     constexpr int kScrollBarHorizontalInset = 4;
     constexpr int kScrollBarBottomInset = 4;
     ::fluent::scrolling::placeHorizontalScrollBar(m_hScrollBar, rect(), kScrollBarHorizontalInset,
-                                                  kScrollBarHorizontalInset, kScrollBarBottomInset);
+        kScrollBarHorizontalInset, kScrollBarBottomInset);
 }
 
 void TreeView::refreshFluentScrollChrome()

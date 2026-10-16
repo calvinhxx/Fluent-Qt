@@ -8,14 +8,8 @@ namespace detail {
 namespace {
 class LineRenderer final : public ChartRenderer {
 public:
-    Projection project(const Context& c, const ChartModel& m) const override
-    {
-        return projectPolyline(c, m);
-    }
-    void paint(QPainter& p, const Context& c, const Projection& data) const override
-    {
-        paintPolyline(p, c, data);
-    }
+    Projection project(const Context& c, const ChartModel& m) const override { return projectPolyline(c, m); }
+    void paint(QPainter& p, const Context& c, const Projection& data) const override { paintPolyline(p, c, data); }
 };
 } // namespace
 std::unique_ptr<ChartRenderer> makeLineRenderer()

@@ -34,7 +34,10 @@ class TeachingTip : public Popup {
      * @brief Preferred teaching-tip placement around the target.
      * zh_CN: 教学提示围绕目标的首选位置。
      */
-    Q_PROPERTY(PreferredPlacement preferredPlacement READ preferredPlacement WRITE setPreferredPlacement NOTIFY preferredPlacementChanged)
+    Q_PROPERTY(PreferredPlacement preferredPlacement
+        READ preferredPlacement
+        WRITE setPreferredPlacement
+        NOTIFY preferredPlacementChanged)
     /**
      * @brief Margin kept between teaching tip and target.
      * zh_CN: 教学提示与目标之间保留的间距。
@@ -44,7 +47,10 @@ class TeachingTip : public Popup {
      * @brief Whether outside interaction dismisses the teaching tip.
      * zh_CN: 外部交互是否关闭教学提示。
      */
-    Q_PROPERTY(bool lightDismissEnabled READ isLightDismissEnabled WRITE setLightDismissEnabled NOTIFY lightDismissEnabledChanged)
+    Q_PROPERTY(bool lightDismissEnabled
+        READ isLightDismissEnabled
+        WRITE setLightDismissEnabled
+        NOTIFY lightDismissEnabledChanged)
     /**
      * @brief Whether the teaching-tip tail is painted.
      * zh_CN: 是否绘制教学提示尾巴。
@@ -135,11 +141,9 @@ private:
     QRect targetRectInTopLevel() const;
     PreferredPlacement resolvedPlacement() const;
     PreferredPlacement resolveAutoPlacement(const QSize& cardSize) const;
-    QPoint cardTopLeftForPlacement(PreferredPlacement placement, const QRect& targetRect,
-                                   const QSize& cardSize) const;
+    QPoint cardTopLeftForPlacement(PreferredPlacement placement, const QRect& targetRect, const QSize& cardSize) const;
     QPoint clampCardTopLeft(const QPoint& cardTopLeft, const QSize& cardSize) const;
-    QPoint widgetTopLeftForCardTopLeft(const QPoint& cardTopLeft,
-                                       PreferredPlacement placement) const;
+    QPoint widgetTopLeftForCardTopLeft(const QPoint& cardTopLeft, PreferredPlacement placement) const;
     QMargins tailInsets(PreferredPlacement placement) const;
 
     void markPendingCloseReason(CloseReason reason);

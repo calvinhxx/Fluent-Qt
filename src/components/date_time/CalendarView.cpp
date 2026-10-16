@@ -114,12 +114,11 @@ CalendarView::CalendarView(QWidget* parent) : QWidget(parent)
     m_monthTransitionAnimation = new QVariantAnimation(this);
     m_monthTransitionAnimation->setDuration(themeAnimation().normal);
     m_monthTransitionAnimation->setEasingCurve(themeAnimation().decelerate);
-    connect(m_monthTransitionAnimation, &QVariantAnimation::valueChanged, this,
-            [this](const QVariant& value) {
-                m_monthTransitionProgress = value.toReal();
-                refreshProperties();
-                update();
-            });
+    connect(m_monthTransitionAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        m_monthTransitionProgress = value.toReal();
+        refreshProperties();
+        update();
+    });
     connect(m_monthTransitionAnimation, &QVariantAnimation::finished, this, [this]() {
         finishMonthTransition();
         refreshProperties();
@@ -129,8 +128,9 @@ CalendarView::CalendarView(QWidget* parent) : QWidget(parent)
     m_scrollAnimation = new QVariantAnimation(this);
     m_scrollAnimation->setObjectName(QStringLiteral("calendarScrollAnimation"));
     m_scrollAnimation->setEasingCurve(themeAnimation().decelerate);
-    connect(m_scrollAnimation, &QVariantAnimation::valueChanged, this,
-            [this](const QVariant& value) { setScrollPosition(value.toReal()); });
+    connect(m_scrollAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        setScrollPosition(value.toReal());
+    });
     m_scrollSettleTimer = new QTimer(this);
     m_scrollSettleTimer->setSingleShot(true);
     m_scrollSettleTimer->setInterval(themeAnimation().fast);
@@ -142,12 +142,11 @@ CalendarView::CalendarView(QWidget* parent) : QWidget(parent)
     m_contentTransitionAnimation = new QVariantAnimation(this);
     m_contentTransitionAnimation->setDuration(themeAnimation().normal);
     m_contentTransitionAnimation->setEasingCurve(themeAnimation().decelerate);
-    connect(m_contentTransitionAnimation, &QVariantAnimation::valueChanged, this,
-            [this](const QVariant& value) {
-                m_contentTransitionProgress = value.toReal();
-                refreshProperties();
-                update();
-            });
+    connect(m_contentTransitionAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        m_contentTransitionProgress = value.toReal();
+        refreshProperties();
+        update();
+    });
     connect(m_contentTransitionAnimation, &QVariantAnimation::finished, this, [this]() {
         m_contentTransitionProgress = 1.0;
         m_contentTransitionDirection = 0;
@@ -170,14 +169,12 @@ CalendarView::~CalendarView()
 
 QRect CalendarView::previousButtonRect() const
 {
-    return m_compact ? QRect(width() - 64, 6, 28, 28)
-                     : QRect(width() - 82, 10, kNavButtonSize, kNavButtonSize);
+    return m_compact ? QRect(width() - 64, 6, 28, 28) : QRect(width() - 82, 10, kNavButtonSize, kNavButtonSize);
 }
 
 QRect CalendarView::nextButtonRect() const
 {
-    return m_compact ? QRect(width() - 32, 6, 28, 28)
-                     : QRect(width() - 44, 10, kNavButtonSize, kNavButtonSize);
+    return m_compact ? QRect(width() - 32, 6, 28, 28) : QRect(width() - 44, 10, kNavButtonSize, kNavButtonSize);
 }
 
 QRect CalendarView::titleButtonRect() const
@@ -230,8 +227,7 @@ QRect CalendarView::dateCellRect(const QDate& date) const
 
     const QDate start = gridStartDate();
     const int offset = start.daysTo(date);
-    if (offset < 0 ||
-        offset >= (m_contentLevel == CalendarContentLevel::Day ? visibleRowCount() * 7 : 42))
+    if (offset < 0 || offset >= (m_contentLevel == CalendarContentLevel::Day ? visibleRowCount() * 7 : 42))
         return QRect();
     return cellRect(offset / 7, offset % 7).intersected(gridRect());
 }
@@ -366,8 +362,8 @@ bool CalendarView::isHighlightedDate(const QDate& date) const
         return date == m_selectedDate;
     if (date == m_highlightedStartDate || date == m_highlightedEndDate)
         return date.isValid();
-    return m_highlightedStartDate.isValid() && m_highlightedEndDate.isValid() &&
-           date > m_highlightedStartDate && date < m_highlightedEndDate;
+    return m_highlightedStartDate.isValid() && m_highlightedEndDate.isValid() && date > m_highlightedStartDate
+        && date < m_highlightedEndDate;
 }
 
 void CalendarView::setVisibleMonth(const QDate& month)
@@ -698,9 +694,8 @@ void CalendarView::wheelEvent(QWheelEvent* event)
         m_scrollTarget = m_scrollPosition;
     }
     const qreal pixels = !event->pixelDelta().isNull()
-                             ? event->pixelDelta().y()
-                             : event->angleDelta().y() / 120.0 *
-                                   qMin(3, QApplication::wheelScrollLines()) * scrollRowHeight();
+        ? event->pixelDelta().y()
+        : event->angleDelta().y() / 120.0 * qMin(3, QApplication::wheelScrollLines()) * scrollRowHeight();
     if (qFuzzyIsNull(pixels)) {
         if (event->phase() == Qt::ScrollEnd)
             finishScrollUpdates();
@@ -714,9 +709,9 @@ void CalendarView::wheelEvent(QWheelEvent* event)
         m_contentTransitionDirection = 0;
         m_previousContentVisibleMonth = QDate();
         m_scrollOrigin = m_contentLevel == CalendarContentLevel::Day ? gridStartDate()
-                         : m_contentLevel == CalendarContentLevel::Month
-                             ? QDate(m_visibleMonth.year(), 1, 1)
-                             : QDate(decadeStartYear(m_visibleMonth), 1, 1);
+            : m_contentLevel == CalendarContentLevel::Month
+            ? QDate(m_visibleMonth.year(), 1, 1)
+            : QDate(decadeStartYear(m_visibleMonth), 1, 1);
     }
     clearContentInteractionState();
     m_focusIndicatorVisible = false;
@@ -724,9 +719,7 @@ void CalendarView::wheelEvent(QWheelEvent* event)
     const qreal delta = -pixels / scrollRowHeight();
     // Reversing direction starts at the current presentation, not at a queued target.
     // zh_CN: 反向输入从当前画面位置开始，不先走完尚未到达的目标。
-    const qreal base = direct || (m_scrollTarget - m_scrollPosition) * delta < 0.0
-                           ? m_scrollPosition
-                           : m_scrollTarget;
+    const qreal base = direct || (m_scrollTarget - m_scrollPosition) * delta < 0.0 ? m_scrollPosition : m_scrollTarget;
     m_scrollTarget = boundedScrollPosition(base + delta);
     if (direct || !isVisible()) {
         setScrollPosition(m_scrollTarget);
@@ -840,10 +833,8 @@ void CalendarView::paintHeader(QPainter& painter)
         paintTitleForLevel(painter, m_contentLevel, transitionTargetVisibleMonth(), 0.0, 1.0);
     }
 
-    paintNavButton(painter, previousButtonRect(),
-                   m_compact ? Typography::Icons::ChevronLeft : Typography::Icons::Up);
-    paintNavButton(painter, nextButtonRect(),
-                   m_compact ? Typography::Icons::ChevronRight : Typography::Icons::Down);
+    paintNavButton(painter, previousButtonRect(), m_compact ? Typography::Icons::ChevronLeft : Typography::Icons::Up);
+    paintNavButton(painter, nextButtonRect(), m_compact ? Typography::Icons::ChevronRight : Typography::Icons::Down);
 
     painter.setPen(colors.strokeDivider);
     painter.drawLine(QPoint(0, headerHeight() - 1), QPoint(width(), headerHeight() - 1));
@@ -866,8 +857,11 @@ void CalendarView::paintTitleButtonBackground(QPainter& painter)
     painter.drawRoundedRect(titleButtonRect(), themeRadius().control, themeRadius().control);
 }
 
-void CalendarView::paintTitleForLevel(QPainter& painter, CalendarContentLevel level,
-                                      const QDate& visibleMonth, qreal yOffset, qreal opacity)
+void CalendarView::paintTitleForLevel(QPainter& painter,
+    CalendarContentLevel level,
+    const QDate& visibleMonth,
+    qreal yOffset,
+    qreal opacity)
 {
     if (!visibleMonth.isValid())
         return;
@@ -877,8 +871,7 @@ void CalendarView::paintTitleForLevel(QPainter& painter, CalendarContentLevel le
     const QRectF titleRect = QRectF(titleButtonRect()).adjusted(inset, yOffset, -inset, yOffset);
     painter.setFont(themeFont(Typography::FontRole::BodyStrong).toQFont());
     painter.setPen(withOpacity(colors.textPrimary, opacity));
-    painter.drawText(titleRect, Qt::AlignVCenter | Qt::AlignLeft,
-                     titleTextForLevel(level, visibleMonth));
+    painter.drawText(titleRect, Qt::AlignVCenter | Qt::AlignLeft, titleTextForLevel(level, visibleMonth));
 }
 
 void CalendarView::paintNavButton(QPainter& painter, const QRect& buttonRect, const QString& glyph)
@@ -893,8 +886,7 @@ void CalendarView::paintNavButton(QPainter& painter, const QRect& buttonRect, co
     if (bg.alpha() > 0) {
         painter.setPen(Qt::NoPen);
         painter.setBrush(bg);
-        painter.drawRoundedRect(buttonRect.adjusted(4, 4, -4, -4), themeRadius().control,
-                                themeRadius().control);
+        painter.drawRoundedRect(buttonRect.adjusted(4, 4, -4, -4), themeRadius().control, themeRadius().control);
     }
 
     painter.setPen(colors.textPrimary);
@@ -913,8 +905,7 @@ void CalendarView::paintWeekdays(QPainter& painter)
         rect.moveTop(y);
         if (m_compact)
             rect.setHeight(weekHeaderHeight());
-        painter.drawText(rect, Qt::AlignCenter,
-                         weekdayLabel(locale(), static_cast<Qt::DayOfWeek>(day)));
+        painter.drawText(rect, Qt::AlignCenter, weekdayLabel(locale(), static_cast<Qt::DayOfWeek>(day)));
     }
 }
 
@@ -928,8 +919,7 @@ void CalendarView::paintContent(QPainter& painter)
         const qreal currentOpacity = 0.92 + 0.08 * progress;
         painter.save();
         painter.setClipRect(area);
-        paintContentLevelZoom(painter, m_contentLevel, m_visibleMonth, currentScale,
-                              currentOpacity);
+        paintContentLevelZoom(painter, m_contentLevel, m_visibleMonth, currentScale, currentOpacity);
         painter.restore();
         return;
     }
@@ -945,10 +935,9 @@ void CalendarView::paintContent(QPainter& painter)
         painter.save();
         painter.setClipRect(area);
         paintContentLevel(painter, m_contentLevel, m_previousVisibleMonth,
-                          -m_monthTransitionDirection * m_monthTransitionProgress * travel, 1.0);
+            -m_monthTransitionDirection * m_monthTransitionProgress * travel, 1.0);
         paintContentLevel(painter, m_contentLevel, transitionTargetVisibleMonth(),
-                          m_monthTransitionDirection * (1.0 - m_monthTransitionProgress) * travel,
-                          1.0);
+            m_monthTransitionDirection * (1.0 - m_monthTransitionProgress) * travel, 1.0);
         painter.restore();
         return;
     }
@@ -959,8 +948,11 @@ void CalendarView::paintContent(QPainter& painter)
     painter.restore();
 }
 
-void CalendarView::paintContentLevel(QPainter& painter, CalendarContentLevel level,
-                                     const QDate& visibleMonth, qreal yOffset, qreal opacity)
+void CalendarView::paintContentLevel(QPainter& painter,
+    CalendarContentLevel level,
+    const QDate& visibleMonth,
+    qreal yOffset,
+    qreal opacity)
 {
     switch (level) {
     case CalendarContentLevel::Day:
@@ -975,8 +967,11 @@ void CalendarView::paintContentLevel(QPainter& painter, CalendarContentLevel lev
     }
 }
 
-void CalendarView::paintContentLevelZoom(QPainter& painter, CalendarContentLevel level,
-                                         const QDate& visibleMonth, qreal scale, qreal opacity)
+void CalendarView::paintContentLevelZoom(QPainter& painter,
+    CalendarContentLevel level,
+    const QDate& visibleMonth,
+    qreal scale,
+    qreal opacity)
 {
     const QRectF area = contentRect();
     const QPointF center = area.center();
@@ -989,8 +984,7 @@ void CalendarView::paintContentLevelZoom(QPainter& painter, CalendarContentLevel
     painter.restore();
 }
 
-void CalendarView::paintDayContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset,
-                                   qreal opacity)
+void CalendarView::paintDayContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset, qreal opacity)
 {
     if (monthTransitionActive()) {
         const QRect grid = gridRect();
@@ -1001,10 +995,9 @@ void CalendarView::paintDayContent(QPainter& painter, const QDate& visibleMonth,
         paintWeekdays(painter);
         painter.setClipRect(grid);
         paintMonthDays(painter, m_previousVisibleMonth,
-                       -m_monthTransitionDirection * m_monthTransitionProgress * travel, 1.0);
+            -m_monthTransitionDirection * m_monthTransitionProgress * travel, 1.0);
         paintMonthDays(painter, transitionTargetVisibleMonth(),
-                       m_monthTransitionDirection * (1.0 - m_monthTransitionProgress) * travel,
-                       1.0);
+            m_monthTransitionDirection * (1.0 - m_monthTransitionProgress) * travel, 1.0);
         painter.restore();
         return;
     }
@@ -1018,40 +1011,34 @@ void CalendarView::paintDayContent(QPainter& painter, const QDate& visibleMonth,
     painter.restore();
 }
 
-void CalendarView::paintMonthDays(QPainter& painter, const QDate& month, qreal yOffset,
-                                  qreal opacity)
+void CalendarView::paintMonthDays(QPainter& painter, const QDate& month, qreal yOffset, qreal opacity)
 {
     const auto& colors = themeColorsRef();
     const QDate today = QDate::currentDate();
-    const QDate start =
-        m_scrollOrigin.isValid() ? gridStartDate() : gridStartForMonth(month, m_firstDayOfWeek);
+    const QDate start = m_scrollOrigin.isValid() ? gridStartDate() : gridStartForMonth(month, m_firstDayOfWeek);
 
     painter.save();
     painter.setOpacity(opacity);
     painter.setFont(themeFont(Typography::FontRole::Body).toQFont());
 
-    for (int i = 0; i < (m_contentLevel == CalendarContentLevel::Day ? visibleRowCount() * 7 : 42);
-         ++i) {
+    for (int i = 0; i < (m_contentLevel == CalendarContentLevel::Day ? visibleRowCount() * 7 : 42); ++i) {
         const int row = i / 7;
         const int column = i % 7;
         const QDate date = start.addDays(i);
-        const QRectF cell =
-            QRectF(cellRect(row, column)).translated(0.0, yOffset).adjusted(2.0, 2.0, -2.0, -2.0);
+        const QRectF cell = QRectF(cellRect(row, column)).translated(0.0, yOffset).adjusted(2.0, 2.0, -2.0, -2.0);
         const QRectF indicatorRect = dateIndicatorRectForCell(cell);
         const bool inMonth = date.month() == month.month() && date.year() == month.year();
         const bool selectable = isDateSelectable(date);
-        const bool selected =
-            date.isValid() && (m_rangeHighlightEnabled
-                                   ? date == m_highlightedStartDate || date == m_highlightedEndDate
-                                   : date == m_selectedDate);
-        const bool inRange = m_rangeHighlightEnabled && m_highlightedStartDate.isValid() &&
-                             m_highlightedEndDate.isValid() && date >= m_highlightedStartDate &&
-                             date <= m_highlightedEndDate;
+        const bool selected = date.isValid()
+            && (m_rangeHighlightEnabled
+                    ? date == m_highlightedStartDate || date == m_highlightedEndDate
+                    : date == m_selectedDate);
+        const bool inRange = m_rangeHighlightEnabled && m_highlightedStartDate.isValid()
+            && m_highlightedEndDate.isValid() && date >= m_highlightedStartDate && date <= m_highlightedEndDate;
         const bool isToday = date == today;
         const bool hovered = date == m_hoveredDate && selectable;
         const bool pressed = date == m_pressedDate && selectable;
-        const bool focused =
-            m_focusIndicatorVisible && hasFocus() && date == m_focusedDate && selectable;
+        const bool focused = m_focusIndicatorVisible && hasFocus() && date == m_focusedDate && selectable;
         const bool current = isToday && selectable;
 
         QColor textColor = colors.textPrimary;
@@ -1062,8 +1049,7 @@ void CalendarView::paintMonthDays(QPainter& painter, const QDate& month, qreal y
 
         if (inRange && selectable && m_highlightedStartDate != m_highlightedEndDate) {
             const QRectF fullCell = QRectF(cellRect(row, column)).translated(0.0, yOffset);
-            QRectF band(fullCell.left(), indicatorRect.top(), fullCell.width(),
-                        indicatorRect.height());
+            QRectF band(fullCell.left(), indicatorRect.top(), fullCell.width(), indicatorRect.height());
             if (date == m_highlightedStartDate)
                 band.setLeft(indicatorRect.center().x());
             if (date == m_highlightedEndDate)
@@ -1110,8 +1096,7 @@ void CalendarView::paintMonthDays(QPainter& painter, const QDate& month, qreal y
     painter.restore();
 }
 
-void CalendarView::paintMonthContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset,
-                                     qreal opacity)
+void CalendarView::paintMonthContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset, qreal opacity)
 {
     const QDate today = QDate::currentDate();
     painter.save();
@@ -1119,39 +1104,31 @@ void CalendarView::paintMonthContent(QPainter& painter, const QDate& visibleMont
     painter.translate(0.0, yOffset);
     painter.setFont(themeFont(Typography::FontRole::BodyStrong).toQFont());
 
-    for (int i = 0;
-         i <
-         (m_contentLevel == CalendarContentLevel::Day ? 12 : visibleRowCount() * kContentColumns);
-         ++i) {
+    for (int i = 0; i < (m_contentLevel == CalendarContentLevel::Day ? 12 : visibleRowCount() * kContentColumns); ++i) {
         const int row = i / kContentColumns;
         const int column = i % kContentColumns;
         const QRectF cell = QRectF(contentCellRect(row, column)).adjusted(8.0, 8.0, -8.0, -8.0);
         const QRectF indicator = contentIndicatorRectForCell(cell);
-        const QDate monthDate =
-            m_scrollOrigin.isValid() ? contentDateForCell(i) : QDate(visibleMonth.year(), i + 1, 1);
+        const QDate monthDate = m_scrollOrigin.isValid() ? contentDateForCell(i) : QDate(visibleMonth.year(), i + 1, 1);
         const int month = monthDate.month();
         const bool selectable = isMonthSelectable(monthDate.year(), month);
         const bool hovered = selectable && m_hoveredMonth == monthDate;
         const bool pressed = selectable && m_pressedMonth == monthDate;
-        const bool selected = selectable && m_selectedDate.isValid() &&
-                              m_selectedDate.year() == monthDate.year() &&
-                              m_selectedDate.month() == month;
-        const bool current =
-            selectable && today.year() == monthDate.year() && today.month() == month;
+        const bool selected = selectable && m_selectedDate.isValid() && m_selectedDate.year() == monthDate.year()
+            && m_selectedDate.month() == month;
+        const bool current = selectable && today.year() == monthDate.year() && today.month() == month;
 
         paintContentCellChrome(painter, indicator, current, selected, hovered, pressed);
         painter.setPen(!selectable ? themeColorsRef().textDisabled
-                       : !current && !selected && monthDate.year() != visibleMonth.year()
-                           ? themeColorsRef().textTertiary
-                           : contentCellTextColor(current, selected));
-        painter.drawText(indicator, Qt::AlignCenter,
-                         locale().standaloneMonthName(month, QLocale::ShortFormat));
+                : !current && !selected && monthDate.year() != visibleMonth.year()
+                ? themeColorsRef().textTertiary
+                : contentCellTextColor(current, selected));
+        painter.drawText(indicator, Qt::AlignCenter, locale().standaloneMonthName(month, QLocale::ShortFormat));
     }
     painter.restore();
 }
 
-void CalendarView::paintYearContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset,
-                                    qreal opacity)
+void CalendarView::paintYearContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset, qreal opacity)
 {
     const QDate today = QDate::currentDate();
     const int startYear = decadeStartYear(visibleMonth);
@@ -1160,10 +1137,7 @@ void CalendarView::paintYearContent(QPainter& painter, const QDate& visibleMonth
     painter.translate(0.0, yOffset);
     painter.setFont(themeFont(Typography::FontRole::BodyStrong).toQFont());
 
-    for (int i = 0;
-         i <
-         (m_contentLevel == CalendarContentLevel::Day ? 12 : visibleRowCount() * kContentColumns);
-         ++i) {
+    for (int i = 0; i < (m_contentLevel == CalendarContentLevel::Day ? 12 : visibleRowCount() * kContentColumns); ++i) {
         const int row = i / kContentColumns;
         const int column = i % kContentColumns;
         const QRectF cell = QRectF(contentCellRect(row, column)).adjusted(8.0, 8.0, -8.0, -8.0);
@@ -1172,22 +1146,25 @@ void CalendarView::paintYearContent(QPainter& painter, const QDate& visibleMonth
         const bool selectable = isYearSelectable(year);
         const bool hovered = selectable && m_hoveredYear == year;
         const bool pressed = selectable && m_pressedYear == year;
-        const bool selected =
-            selectable && m_selectedDate.isValid() && m_selectedDate.year() == year;
+        const bool selected = selectable && m_selectedDate.isValid() && m_selectedDate.year() == year;
         const bool current = selectable && today.year() == year;
 
         paintContentCellChrome(painter, indicator, current, selected, hovered, pressed);
         painter.setPen(!selectable ? themeColorsRef().textDisabled
-                       : !current && !selected && (year < startYear || year >= startYear + 12)
-                           ? themeColorsRef().textTertiary
-                           : contentCellTextColor(current, selected));
+                : !current && !selected && (year < startYear || year >= startYear + 12)
+                ? themeColorsRef().textTertiary
+                : contentCellTextColor(current, selected));
         painter.drawText(indicator, Qt::AlignCenter, QString::number(year));
     }
     painter.restore();
 }
 
-void CalendarView::paintContentCellChrome(QPainter& painter, const QRectF& indicator, bool current,
-                                          bool selected, bool hovered, bool pressed)
+void CalendarView::paintContentCellChrome(QPainter& painter,
+    const QRectF& indicator,
+    bool current,
+    bool selected,
+    bool hovered,
+    bool pressed)
 {
     const auto& colors = themeColorsRef();
 
@@ -1218,16 +1195,14 @@ QColor CalendarView::contentCellTextColor(bool current, bool selected) const
 
 QRectF CalendarView::dateIndicatorRectForCell(const QRectF& cell) const
 {
-    const qreal diameter =
-        qMin(kDateIndicatorDiameter, qMin(cell.width(), cell.height()) - (m_compact ? 4.0 : 10.0));
+    const qreal diameter = qMin(kDateIndicatorDiameter, qMin(cell.width(), cell.height()) - (m_compact ? 4.0 : 10.0));
     const QPointF center = cell.center();
     return QRectF(center.x() - diameter / 2.0, center.y() - diameter / 2.0, diameter, diameter);
 }
 
 QRectF CalendarView::contentIndicatorRectForCell(const QRectF& cell) const
 {
-    const qreal diameter =
-        qMax<qreal>(0.0, qMin(kContentIndicatorDiameter, qMin(cell.width(), cell.height())));
+    const qreal diameter = qMax<qreal>(0.0, qMin(kContentIndicatorDiameter, qMin(cell.width(), cell.height())));
     const QPointF center = cell.center();
     return QRectF(center.x() - diameter / 2.0, center.y() - diameter / 2.0, diameter, diameter);
 }
@@ -1237,8 +1212,7 @@ bool CalendarView::dateInGrid(const QDate& date) const
     if (!date.isValid())
         return false;
     const QDate start = gridStartDate();
-    const QDate end = start.addDays(
-        (m_contentLevel == CalendarContentLevel::Day ? visibleRowCount() * 7 : 42) - 1);
+    const QDate end = start.addDays((m_contentLevel == CalendarContentLevel::Day ? visibleRowCount() * 7 : 42) - 1);
     return date >= start && date <= end;
 }
 
@@ -1247,8 +1221,7 @@ QString CalendarView::titleTextForLevel(CalendarContentLevel level, const QDate&
     switch (level) {
     case CalendarContentLevel::Day: {
         const DayPageKey key = dayPageKey(visibleMonth);
-        return locale().standaloneMonthName(key.month, QLocale::LongFormat) +
-               QStringLiteral(" %1").arg(key.year);
+        return locale().standaloneMonthName(key.month, QLocale::LongFormat) + QStringLiteral(" %1").arg(key.year);
     }
     case CalendarContentLevel::Month: {
         const MonthPageKey key = monthPageKey(visibleMonth);
@@ -1299,8 +1272,7 @@ QRect CalendarView::navigationButtonAt(const QPoint& pos) const
     return QRect();
 }
 
-bool CalendarView::adjustedTransitionHitPosition(const QPoint& pos, const QRect& bounds,
-                                                 QPoint* adjustedPos) const
+bool CalendarView::adjustedTransitionHitPosition(const QPoint& pos, const QRect& bounds, QPoint* adjustedPos) const
 {
     if (!bounds.contains(pos))
         return false;
@@ -1320,10 +1292,7 @@ int CalendarView::contentCellIndexAt(const QPoint& pos) const
     if (!adjustedTransitionHitPosition(pos, contentRect(), &hitPos))
         return -1;
 
-    for (int i = 0;
-         i <
-         (m_contentLevel == CalendarContentLevel::Day ? 12 : visibleRowCount() * kContentColumns);
-         ++i) {
+    for (int i = 0; i < (m_contentLevel == CalendarContentLevel::Day ? 12 : visibleRowCount() * kContentColumns); ++i) {
         if (contentCellRect(i / kContentColumns, i % kContentColumns).contains(hitPos))
             return i;
     }
@@ -1357,14 +1326,12 @@ QDate CalendarView::focusFallbackDate(bool includeFirstSelectable) const
         return QDate();
 
     const QDate start = gridStartDate();
-    for (int i = 0; i < (m_contentLevel == CalendarContentLevel::Day ? visibleRowCount() * 7 : 42);
-         ++i) {
+    for (int i = 0; i < (m_contentLevel == CalendarContentLevel::Day ? visibleRowCount() * 7 : 42); ++i) {
         const QDate candidate = start.addDays(i);
         if (isDateSelectable(candidate) && candidate.month() == m_visibleMonth.month())
             return candidate;
     }
-    for (int i = 0; i < (m_contentLevel == CalendarContentLevel::Day ? visibleRowCount() * 7 : 42);
-         ++i) {
+    for (int i = 0; i < (m_contentLevel == CalendarContentLevel::Day ? visibleRowCount() * 7 : 42); ++i) {
         const QDate candidate = start.addDays(i);
         if (isDateSelectable(candidate))
             return candidate;
@@ -1425,7 +1392,7 @@ void CalendarView::moveMonth(int months, bool showFocusIndicator)
     setVisibleMonth(m_visibleMonth.addMonths(months));
     if (previousFocus.isValid())
         m_focusedDate = QDate(m_visibleMonth.year(), m_visibleMonth.month(),
-                              qMin(previousFocus.day(), m_visibleMonth.daysInMonth()));
+            qMin(previousFocus.day(), m_visibleMonth.daysInMonth()));
     if (!isDateSelectable(m_focusedDate))
         m_focusedDate = focusFallbackDate(false);
     m_focusIndicatorVisible = showFocusIndicator && m_focusedDate.isValid();
@@ -1475,9 +1442,7 @@ void CalendarView::resetScroll()
 
 qreal CalendarView::scrollRowHeight() const
 {
-    return m_contentLevel == CalendarContentLevel::Day
-               ? dayCellHeight()
-               : qreal(contentRect().height()) / kContentRows;
+    return m_contentLevel == CalendarContentLevel::Day ? dayCellHeight() : qreal(contentRect().height()) / kContentRows;
 }
 
 qreal CalendarView::scrollRowOffset() const
@@ -1504,13 +1469,11 @@ QDate CalendarView::contentDateForCell(int index) const
 {
     if (index < 0 || index >= visibleRowCount() * kContentColumns)
         return QDate();
-    const QDate start = m_scrollOrigin.isValid()
-                            ? scrollDateAtRow(qint64(std::floor(m_scrollPosition)))
-                        : m_contentLevel == CalendarContentLevel::Month
-                            ? QDate(m_visibleMonth.year(), 1, 1)
-                            : QDate(decadeStartYear(m_visibleMonth), 1, 1);
-    return m_contentLevel == CalendarContentLevel::Month ? start.addMonths(index)
-                                                         : start.addYears(index);
+    const QDate start = m_scrollOrigin.isValid() ? scrollDateAtRow(qint64(std::floor(m_scrollPosition)))
+        : m_contentLevel == CalendarContentLevel::Month
+        ? QDate(m_visibleMonth.year(), 1, 1)
+        : QDate(decadeStartYear(m_visibleMonth), 1, 1);
+    return m_contentLevel == CalendarContentLevel::Month ? start.addMonths(index) : start.addYears(index);
 }
 
 qreal CalendarView::boundedScrollPosition(qreal position) const
@@ -1519,32 +1482,30 @@ qreal CalendarView::boundedScrollPosition(qreal position) const
         if (m_contentLevel == CalendarContentLevel::Day)
             return m_scrollOrigin.daysTo(gridStartForMonth(date, m_firstDayOfWeek)) / 7.0;
         if (m_contentLevel == CalendarContentLevel::Month)
-            return ((qint64(date.year()) - m_scrollOrigin.year()) * 12 + 1 -
-                    m_scrollOrigin.month()) /
-                   qreal(kContentColumns);
+            return ((qint64(date.year()) - m_scrollOrigin.year()) * 12 + 1 - m_scrollOrigin.month())
+                / qreal(kContentColumns);
         return (qint64(decadeStartYear(date)) - m_scrollOrigin.year()) / qreal(kContentColumns);
     };
     // The unbounded public range remains unbounded for selection; scrolling has
     // a finite representable viewport so large wheel packets cannot overflow.
     // zh_CN: 未设置范围时不限制日期选择；滚动限制在可表示的视口，防止大输入溢出。
     const QDate minimum = m_minDate.isValid() ? m_minDate : qMin(QDate(1, 1, 1), m_scrollOrigin);
-    const QDate maximum =
-        m_maxDate.isValid() ? m_maxDate : qMax(QDate(9999, 12, 31), m_scrollOrigin);
+    const QDate maximum = m_maxDate.isValid() ? m_maxDate : qMax(QDate(9999, 12, 31), m_scrollOrigin);
     return qBound(rowForBoundary(minimum), position, rowForBoundary(maximum));
 }
 
 void CalendarView::setScrollPosition(qreal position)
 {
-    const QDate previousFirst =
-        m_contentLevel == CalendarContentLevel::Day ? gridStartDate() : contentDateForCell(0);
+    const QDate previousFirst = m_contentLevel == CalendarContentLevel::Day ? gridStartDate() : contentDateForCell(0);
     const int previousRows = visibleRowCount();
     // Quantize presentation once so drawing and hit testing agree at row edges.
     // zh_CN: 统一取整画面位置，使整行边界上的绘制与命中测试保持一致。
     m_scrollPosition = qRound64(position * scrollRowHeight()) / scrollRowHeight();
     const QDate first = scrollDateAtRow(qint64(std::floor(m_scrollPosition)));
-    const QDate middle = m_contentLevel == CalendarContentLevel::Day     ? first.addDays(20)
-                         : m_contentLevel == CalendarContentLevel::Month ? first.addMonths(5)
-                                                                         : first.addYears(5);
+    const QDate middle = m_contentLevel == CalendarContentLevel::Day ? first.addDays(20)
+        : m_contentLevel == CalendarContentLevel::Month
+        ? first.addMonths(5)
+        : first.addYears(5);
     const QDate month = boundedMonthForRange(middle);
     const bool monthChanged = month != m_visibleMonth;
     m_visibleMonth = month;
@@ -1589,8 +1550,7 @@ QDate CalendarView::shiftedVisibleMonthFrom(const QDate& originMonth, int pages)
 
     const YearPageKey key = yearPageKey(originMonth);
     const int yearOffset = originMonth.year() - key.startYear;
-    return boundedMonthForRange(
-        QDate(key.startYear + pages * 12 + yearOffset, originMonth.month(), 1));
+    return boundedMonthForRange(QDate(key.startYear + pages * 12 + yearOffset, originMonth.month(), 1));
 }
 
 QDate CalendarView::transitionTargetVisibleMonth() const
@@ -1623,9 +1583,8 @@ bool CalendarView::updateHoverStateAt(const QPoint& pos)
     const QDate hoverMonth = m_contentLevel == CalendarContentLevel::Month ? monthAt(pos) : QDate();
     const int hoverYear = m_contentLevel == CalendarContentLevel::Year ? yearAt(pos) : 0;
 
-    if (m_hoveredDate == hoverDate && m_hoveredButton == hoverButton &&
-        m_titleHovered == titleHovered && m_hoveredMonth == hoverMonth &&
-        m_hoveredYear == hoverYear) {
+    if (m_hoveredDate == hoverDate && m_hoveredButton == hoverButton && m_titleHovered == titleHovered
+        && m_hoveredMonth == hoverMonth && m_hoveredYear == hoverYear) {
         return false;
     }
 
@@ -1656,8 +1615,10 @@ void CalendarView::clearContentInteractionState()
     m_pressedYear = 0;
 }
 
-void CalendarView::startMonthTransition(const QDate& previousMonth, const QDate& currentMonth,
-                                        qreal startProgress, bool animate)
+void CalendarView::startMonthTransition(const QDate& previousMonth,
+    const QDate& currentMonth,
+    qreal startProgress,
+    bool animate)
 {
     // Animate only when this view itself is on screen. Checking the top-level
     // window is not enough: inside a same-window overlay (the date picker
@@ -1667,8 +1628,7 @@ void CalendarView::startMonthTransition(const QDate& previousMonth, const QDate&
     // zh_CN: 仅当视图自身在屏幕上时才播放动画。只查顶层窗口不够：在同窗口
     // overlay（日期选择器 flyout）里，宿主窗口可见而 flyout 尚未显示，打开时
     // 跳到选中月份会触发入场动画——动画期间日期单元格的点击会被拒绝。
-    if (!previousMonth.isValid() || !currentMonth.isValid() || previousMonth == currentMonth ||
-        !isVisible()) {
+    if (!previousMonth.isValid() || !currentMonth.isValid() || previousMonth == currentMonth || !isVisible()) {
         finishMonthTransition();
         return;
     }
@@ -1690,12 +1650,11 @@ void CalendarView::startMonthTransition(const QDate& previousMonth, const QDate&
 
 bool CalendarView::monthTransitionActive() const
 {
-    return m_previousVisibleMonth.isValid() && m_transitionVisibleMonth.isValid() &&
-           m_monthTransitionDirection != 0 && m_monthTransitionProgress < 1.0;
+    return m_previousVisibleMonth.isValid() && m_transitionVisibleMonth.isValid() && m_monthTransitionDirection != 0
+        && m_monthTransitionProgress < 1.0;
 }
 
-void CalendarView::startContentTransition(CalendarContentLevel previousLevel,
-                                          CalendarContentLevel currentLevel)
+void CalendarView::startContentTransition(CalendarContentLevel previousLevel, CalendarContentLevel currentLevel)
 {
     resetScroll();
     finishMonthTransition();
@@ -1712,8 +1671,7 @@ void CalendarView::startContentTransition(CalendarContentLevel previousLevel,
 
     m_previousContentLevel = previousLevel;
     m_previousContentVisibleMonth = m_visibleMonth;
-    m_contentTransitionDirection =
-        contentLevelDepth(currentLevel) > contentLevelDepth(previousLevel) ? 1 : -1;
+    m_contentTransitionDirection = contentLevelDepth(currentLevel) > contentLevelDepth(previousLevel) ? 1 : -1;
     m_contentTransitionProgress = 0.0;
     if (!m_contentTransitionAnimation)
         return;
@@ -1725,8 +1683,8 @@ void CalendarView::startContentTransition(CalendarContentLevel previousLevel,
 
 bool CalendarView::contentTransitionActive() const
 {
-    return m_previousContentVisibleMonth.isValid() && m_contentTransitionDirection != 0 &&
-           m_contentTransitionProgress < 1.0;
+    return m_previousContentVisibleMonth.isValid() && m_contentTransitionDirection != 0
+        && m_contentTransitionProgress < 1.0;
 }
 
 void CalendarView::switchToParentContentLevel()
@@ -1744,9 +1702,8 @@ void CalendarView::moveFocusByDays(int days)
     m_scrollAnimation->stop();
     m_scrollTarget = m_scrollPosition;
     const bool continuous = m_scrollOrigin.isValid() && m_contentLevel == CalendarContentLevel::Day;
-    QDate base = m_focusedDate.isValid() && (!continuous || dateInGrid(m_focusedDate))
-                     ? m_focusedDate
-                     : focusFallbackDate();
+    QDate base =
+        m_focusedDate.isValid() && (!continuous || dateInGrid(m_focusedDate)) ? m_focusedDate : focusFallbackDate();
     if (!base.isValid())
         return;
 
@@ -1790,9 +1747,8 @@ void CalendarView::refreshProperties(bool includeCells)
 {
     setProperty("scrollPosition", m_scrollPosition);
     setProperty("scrollOffset", scrollRowOffset());
-    setProperty("firstVisibleDate", m_contentLevel == CalendarContentLevel::Day
-                                        ? gridStartDate()
-                                        : contentDateForCell(0));
+    setProperty("firstVisibleDate",
+        m_contentLevel == CalendarContentLevel::Day ? gridStartDate() : contentDateForCell(0));
     setProperty("rangeHighlightEnabled", m_rangeHighlightEnabled);
     setProperty("focusedDate", m_focusedDate);
     setProperty("focusIndicatorVisible", m_focusIndicatorVisible);
@@ -1825,21 +1781,20 @@ void CalendarView::refreshProperties(bool includeCells)
     QVariantMap contentIndicatorRects;
     const QDate start = gridStartDate();
     const QDate today = QDate::currentDate();
-    for (int i = 0; i < (m_contentLevel == CalendarContentLevel::Day ? visibleRowCount() * 7 : 42);
-         ++i) {
+    for (int i = 0; i < (m_contentLevel == CalendarContentLevel::Day ? visibleRowCount() * 7 : 42); ++i) {
         const QDate date = start.addDays(i);
         const QRect cell = cellRect(i / 7, i % 7);
         cellRects.insert(date.toString(Qt::ISODate), cell);
-        indicatorRects.insert(
-            date.toString(Qt::ISODate),
+        indicatorRects.insert(date.toString(Qt::ISODate),
             dateIndicatorRectForCell(QRectF(cell).adjusted(2.0, 2.0, -2.0, -2.0)));
         QString state = QStringLiteral("default");
         if (!isDateSelectable(date))
             state = QStringLiteral("disabled");
         else if (m_rangeHighlightEnabled && isHighlightedDate(date))
             state = date == m_highlightedStartDate ? QStringLiteral("range-start")
-                    : date == m_highlightedEndDate ? QStringLiteral("range-end")
-                                                   : QStringLiteral("range-interior");
+                : date == m_highlightedEndDate
+                ? QStringLiteral("range-end")
+                : QStringLiteral("range-interior");
         else if (date == today)
             state = QStringLiteral("current");
         else if (date == m_selectedDate)
@@ -1848,15 +1803,11 @@ void CalendarView::refreshProperties(bool includeCells)
             state = QStringLiteral("focused");
         dateVisualStates.insert(date.toString(Qt::ISODate), state);
     }
-    for (int i = 0;
-         i <
-         (m_contentLevel == CalendarContentLevel::Day ? 12 : visibleRowCount() * kContentColumns);
-         ++i) {
+    for (int i = 0; i < (m_contentLevel == CalendarContentLevel::Day ? 12 : visibleRowCount() * kContentColumns); ++i) {
         const QString key = QString::number(i + 1);
         const QRect cell = contentCellRect(i / kContentColumns, i % kContentColumns);
         contentCellRects.insert(key, cell);
-        contentIndicatorRects.insert(
-            key, contentIndicatorRectForCell(QRectF(cell).adjusted(8.0, 8.0, -8.0, -8.0)));
+        contentIndicatorRects.insert(key, contentIndicatorRectForCell(QRectF(cell).adjusted(8.0, 8.0, -8.0, -8.0)));
     }
     setProperty("dateCellRects", cellRects);
     setProperty("dateIndicatorRects", indicatorRects);

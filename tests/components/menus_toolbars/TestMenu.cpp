@@ -21,17 +21,13 @@ namespace {
 
 class RuntimeCapabilitiesScope final {
 public:
-    explicit RuntimeCapabilitiesScope(
-        const compatibility::detail::RuntimePlatformCapabilities& capabilities)
+    explicit RuntimeCapabilitiesScope(const compatibility::detail::RuntimePlatformCapabilities& capabilities)
         : m_previous(compatibility::detail::runtimePlatformCapabilities())
     {
         compatibility::detail::setRuntimePlatformCapabilities(capabilities);
     }
 
-    ~RuntimeCapabilitiesScope()
-    {
-        compatibility::detail::setRuntimePlatformCapabilities(m_previous);
-    }
+    ~RuntimeCapabilitiesScope() { compatibility::detail::setRuntimePlatformCapabilities(m_previous); }
 
 private:
     compatibility::detail::RuntimePlatformCapabilities m_previous;
@@ -70,11 +66,9 @@ TEST_F(MenuTest, FontStylePropertiesNotifyOnlyOnChange)
     EXPECT_EQ(menuSpy.count(), 1);
     EXPECT_EQ(itemSpy.count(), 1);
     EXPECT_EQ(tests::support::normalizedFontFamilies(menu.font()),
-              tests::support::normalizedFontFamilies(
-                  menu.themeFont(Typography::FontRole::BodyStrong).toQFont()));
+        tests::support::normalizedFontFamilies(menu.themeFont(Typography::FontRole::BodyStrong).toQFont()));
     EXPECT_EQ(tests::support::normalizedFontFamilies(item.font()),
-              tests::support::normalizedFontFamilies(
-                  item.themeFont(Typography::FontRole::Caption).toQFont()));
+        tests::support::normalizedFontFamilies(item.themeFont(Typography::FontRole::Caption).toQFont()));
 }
 
 TEST_F(MenuTest, MenuItemRetainsQActionTriggerSemantics)
@@ -102,8 +96,8 @@ TEST_F(MenuTest, MotionPolicyDisabledSettlesEntranceTransition)
     menu.addAction(QStringLiteral("Open"));
     menu.popup(QPoint(100, 100));
 
-    auto* animation = menu.findChild<QVariantAnimation*>(
-        QStringLiteral("fluentMenuEntranceAnimation"), Qt::FindDirectChildrenOnly);
+    auto* animation = menu.findChild<QVariantAnimation*>(QStringLiteral("fluentMenuEntranceAnimation"),
+        Qt::FindDirectChildrenOnly);
     ASSERT_NE(animation, nullptr);
     EXPECT_EQ(animation->duration(), 0);
     EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
@@ -118,8 +112,7 @@ TEST_F(MenuTest, MultipleVisibleActionsContributeIndependentRowsToSizeHint)
     menu.addAction(QStringLiteral("Third action"));
 
     const QMargins margins = menu.contentsMargins();
-    const int minimumRowsHeight =
-        3 * Spacing::ControlHeight::Small + margins.top() + margins.bottom();
+    const int minimumRowsHeight = 3 * Spacing::ControlHeight::Small + margins.top() + margins.bottom();
     EXPECT_GE(menu.sizeHint().height(), minimumRowsHeight)
         << "A multi-action popup must never collapse to a single WASM row";
 }
@@ -173,12 +166,9 @@ TEST_F(MenuTest, RepeatedPopupKeepsStableHeight)
     const int secondRowHeight = menu.actionGeometry(secondActions.constFirst()).height();
     menu.hide();
 
-    EXPECT_EQ(firstHeight, firstHintHeight)
-        << "The first popup must discard any transient platform-window excess";
-    EXPECT_EQ(secondHeight, secondHintHeight)
-        << "Later popups must continue to follow the settled size hint";
-    EXPECT_EQ(firstRowHeight, secondRowHeight)
-        << "Repeated popup must not change the action layout";
+    EXPECT_EQ(firstHeight, firstHintHeight) << "The first popup must discard any transient platform-window excess";
+    EXPECT_EQ(secondHeight, secondHintHeight) << "Later popups must continue to follow the settled size hint";
+    EXPECT_EQ(firstRowHeight, secondRowHeight) << "Repeated popup must not change the action layout";
     EXPECT_EQ(firstHeight, secondHeight)
         << "The first popup must use the same settled geometry as later opens"
         << "; first hint=" << firstHintHeight << ", second hint=" << secondHintHeight

@@ -38,10 +38,7 @@ public:
     bool isPresentable(const QAction* action) const;
 
     void handleActionEvent(QActionEvent* event);
-    bool isChangingAssociation() const
-    {
-        return m_associationChangeDepth > 0;
-    }
+    bool isChangingAssociation() const { return m_associationChangeDepth > 0; }
 
 signals:
     void structureChanged();
@@ -65,10 +62,8 @@ private:
     const QList<QAction*>& sectionActions(Section section) const;
     QList<QAction*>& otherSectionActions(Section section);
 
-    bool validateForRegistration(const QAction* action,
-                                 QString* reason = nullptr) const;
-    bool validateForPresentation(const QAction* action,
-                                 QString* reason = nullptr) const;
+    bool validateForRegistration(const QAction* action, QString* reason = nullptr) const;
+    bool validateForPresentation(const QAction* action, QString* reason = nullptr) const;
     void ensureAssociated(QAction* action);
     void removeAssociation(QAction* action);
     void connectAction(QAction* action);

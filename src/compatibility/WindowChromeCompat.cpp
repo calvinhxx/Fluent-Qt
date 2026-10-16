@@ -13,9 +13,11 @@ namespace compatibility {
 
 namespace detail {
 void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options);
-bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& options,
-                               const QByteArray& eventType, void* message,
-                               FluentNativeEventResult* result);
+bool handlePlatformNativeEvent(QWidget* window,
+    const WindowChromeOptions& options,
+    const QByteArray& eventType,
+    void* message,
+    FluentNativeEventResult* result);
 bool beginPlatformSystemMove(QWidget* window, const QPoint& globalPos);
 bool beginPlatformSystemResize(QWidget* window, Qt::Edges edges, const QPoint& globalPos);
 bool performPlatformTitleBarDoubleClick(QWidget* window, const WindowChromeOptions& options);
@@ -26,11 +28,12 @@ int nativeTitleBarLeadingInset(QWidget* window);
 int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options);
 bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions& options);
 BackdropCapabilities platformBackdropCapabilities();
-BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
-                                                bool forceRecomposite);
+BackdropApplyResult
+applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark, bool forceRecomposite);
 bool flushPlatformWindowBackdropSurface(QWidget* window);
-void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
-                                          fluent::windowing::BackdropSurfaceMode mode);
+void preparePlatformWindowBackdropSurface(QWidget* window,
+    const QColor& opaqueColor,
+    fluent::windowing::BackdropSurfaceMode mode);
 
 namespace {
 constexpr char kPaintedNativeSurfaceProperty[] = "_fluentBackdropPaintedNativeId";
@@ -40,16 +43,16 @@ constexpr char kPreparationRevisionProperty[] = "_fluentBackdropPreparationRevis
 
 bool windowBackdropSurfaceWasPainted(const QWidget* window)
 {
-    return window && window->internalWinId() &&
-           window->property(kPaintedNativeSurfaceProperty).toULongLong() ==
-               static_cast<qulonglong>(window->internalWinId());
+    return window && window->internalWinId()
+        && window->property(kPaintedNativeSurfaceProperty).toULongLong()
+        == static_cast<qulonglong>(window->internalWinId());
 }
 
 void markWindowBackdropSurfacePainted(QWidget* window)
 {
     if (window && window->internalWinId() && !windowBackdropSurfaceWasPainted(window))
         window->setProperty(kPaintedNativeSurfaceProperty,
-                            QVariant::fromValue(static_cast<qulonglong>(window->internalWinId())));
+            QVariant::fromValue(static_cast<qulonglong>(window->internalWinId())));
 }
 
 void resetWindowBackdropSurfacePaint(QWidget* window)
@@ -66,9 +69,11 @@ QColor windowBackdropSurfaceColor(const QWidget* window)
     return prepared.isValid() ? prepared : window->palette().color(QPalette::Window);
 }
 
-void prepareWindowBackdropSurface(QWidget* window, const QColor& activeColor,
-                                  const QColor& inactiveColor, bool active,
-                                  fluent::windowing::BackdropSurfaceMode mode)
+void prepareWindowBackdropSurface(QWidget* window,
+    const QColor& activeColor,
+    const QColor& inactiveColor,
+    bool active,
+    fluent::windowing::BackdropSurfaceMode mode)
 {
     if (!window || !activeColor.isValid() || !inactiveColor.isValid())
         return;
@@ -93,8 +98,7 @@ void prepareWindowBackdropSurface(QWidget* window, const QColor& activeColor,
     // Keep this separate from Disabled's palette policy and hosted windows' Qt activation state.
     // zh_CN: 激活仅选择已准备的底色，不向子级广播新 palette；原生底色独立于 Disabled
     // 调色板策略以及 hosted 窗口的 Qt 激活状态。
-    if (windowBackdropSurfaceColor(window) != color ||
-        !window->property(kOpaqueNativeColorProperty).isValid())
+    if (windowBackdropSurfaceColor(window) != color || !window->property(kOpaqueNativeColorProperty).isValid())
         window->setProperty(kOpaqueNativeColorProperty, color);
     if (!current())
         return;
@@ -111,18 +115,17 @@ void prepareWindowBackdropSurface(QWidget* window, const QColor& activeColor,
 }
 
 bool requiresOpaqueBackdropCommit(const QWidget* window,
-                                  const fluent::windowing::BackdropState& previous,
-                                  fluent::windowing::BackdropSurfaceMode next)
+    const fluent::windowing::BackdropState& previous,
+    fluent::windowing::BackdropSurfaceMode next)
 {
-    return window &&
-           previous.surfaceMode == fluent::windowing::BackdropSurfaceMode::CompositedTransparent &&
-           next != fluent::windowing::BackdropSurfaceMode::CompositedTransparent;
+    return window && previous.surfaceMode == fluent::windowing::BackdropSurfaceMode::CompositedTransparent
+        && next != fluent::windowing::BackdropSurfaceMode::CompositedTransparent;
 }
 
 bool flushWindowBackdropSurface(QWidget* window)
 {
-    if (!window || !window->isVisible() || window->isMinimized() || !window->updatesEnabled() ||
-        !window->windowHandle() || !window->windowHandle()->isExposed())
+    if (!window || !window->isVisible() || window->isMinimized() || !window->updatesEnabled() || !window->windowHandle()
+        || !window->windowHandle()->isExposed())
         return false;
     return flushPlatformWindowBackdropSurface(window);
 }
@@ -133,8 +136,10 @@ namespace {
 // Guard system move/resize entry points so widgets do not start platform
 // operations before the native window handle and chrome policy are ready.
 // zh_CN: 在原生窗口句柄和 chrome 策略就绪前，避免 widget 启动平台系统移动/缩放。
-bool canBeginSystemOperation(QWidget* window, const WindowChromeOptions& options, bool resize,
-                             Qt::Edges edges = Qt::Edges())
+bool canBeginSystemOperation(QWidget* window,
+    const WindowChromeOptions& options,
+    bool resize,
+    Qt::Edges edges = Qt::Edges())
 {
     if (!window || !window->isWindow() || !window->isVisible())
         return false;
@@ -148,8 +153,8 @@ bool canBeginSystemOperation(QWidget* window, const WindowChromeOptions& options
     if (WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::Windows) {
         if (!options.useCustomWindowChrome)
             return false;
-        if (WindowChromeCompat::expandedClientAreaHintsAvailable() &&
-            !WindowChromeCompat::windowHasExpandedClientAreaHint(window)) {
+        if (WindowChromeCompat::expandedClientAreaHintsAvailable()
+            && !WindowChromeCompat::windowHasExpandedClientAreaHint(window)) {
             return false;
         }
     }
@@ -187,21 +192,18 @@ BackdropCapabilities WindowChromeCompat::backdropCapabilities() const
     return detail::platformBackdropCapabilities();
 }
 
-bool WindowChromeCompat::applySystemBackdrop(BackdropEffect effect, bool dark,
-                                             bool forceRecomposite)
+bool WindowChromeCompat::applySystemBackdrop(BackdropEffect effect, bool dark, bool forceRecomposite)
 {
     return applySystemBackdropDetailed(effect, dark, forceRecomposite).applied;
 }
 
-BackdropApplyResult WindowChromeCompat::applySystemBackdropDetailed(BackdropEffect effect,
-                                                                    bool dark,
-                                                                    bool forceRecomposite)
+BackdropApplyResult
+WindowChromeCompat::applySystemBackdropDetailed(BackdropEffect effect, bool dark, bool forceRecomposite)
 {
     return detail::applyPlatformSystemBackdrop(m_window, effect, dark, forceRecomposite);
 }
 
-bool WindowChromeCompat::handleNativeEvent(const QByteArray& eventType, void* message,
-                                           FluentNativeEventResult* result)
+bool WindowChromeCompat::handleNativeEvent(const QByteArray& eventType, void* message, FluentNativeEventResult* result)
 {
     return detail::handlePlatformNativeEvent(m_window, m_options, eventType, message, result);
 }
@@ -246,9 +248,8 @@ bool WindowChromeCompat::requestForegroundActivation()
 bool WindowChromeCompat::usesCustomWindowChrome() const
 {
     const Platform platform = currentPlatform();
-    return m_options.useCustomWindowChrome &&
-           (platform == Platform::Windows || platform == Platform::Linux ||
-            platform == Platform::Other);
+    return m_options.useCustomWindowChrome
+        && (platform == Platform::Windows || platform == Platform::Linux || platform == Platform::Other);
 }
 
 bool WindowChromeCompat::prefersNativeMacControls() const
@@ -297,8 +298,7 @@ WindowChromeCompat::Platform WindowChromeCompat::currentPlatform()
 
 bool WindowChromeCompat::platformPrefersCustomWindowChrome()
 {
-    return currentPlatform() == Platform::Windows ||
-           detail::runtimePlatformCapabilities().customWindowChromePreferred;
+    return currentPlatform() == Platform::Windows || detail::runtimePlatformCapabilities().customWindowChromePreferred;
 }
 
 bool WindowChromeCompat::expandedClientAreaHintsAvailable()
@@ -326,9 +326,8 @@ bool WindowChromeCompat::windowHasNoTitleBarBackgroundHint(const QWidget* window
 #endif
 }
 
-WindowChromeCompat::HitTest WindowChromeCompat::classifyHitTest(const WindowChromeOptions& options,
-                                                                const QSize& windowSize,
-                                                                const QPoint& localPos)
+WindowChromeCompat::HitTest
+WindowChromeCompat::classifyHitTest(const WindowChromeOptions& options, const QSize& windowSize, const QPoint& localPos)
 {
     if (!QRect(QPoint(0, 0), windowSize).contains(localPos))
         return HitTest::Client;

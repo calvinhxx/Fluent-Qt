@@ -24,8 +24,7 @@ QColor blendRgb(const QColor& from, const QColor& to, qreal amount)
 {
     amount = std::max<qreal>(0.0, std::min<qreal>(1.0, amount));
     return QColor::fromRgbF(from.redF() + (to.redF() - from.redF()) * amount,
-                            from.greenF() + (to.greenF() - from.greenF()) * amount,
-                            from.blueF() + (to.blueF() - from.blueF()) * amount);
+        from.greenF() + (to.greenF() - from.greenF()) * amount, from.blueF() + (to.blueF() - from.blueF()) * amount);
 }
 
 int backdropEffectFromProperty(const QVariant& value)
@@ -84,8 +83,7 @@ bool windowHasMaterialBackdrop(const QWidget* widget)
     return windowBackdropState(widget).effectiveEffect != BackdropEffect::Solid;
 }
 
-QColor windowChromeBackdropFill(const FluentElement& themeHost, const QWidget* hostWindow,
-                                bool active)
+QColor windowChromeBackdropFill(const FluentElement& themeHost, const QWidget* hostWindow, bool active)
 {
     BackdropState typedState;
     const bool hasTypedState = tryWindowBackdropState(hostWindow, &typedState);
@@ -96,12 +94,10 @@ QColor windowChromeBackdropFill(const FluentElement& themeHost, const QWidget* h
         return QColor();
     }
 
-    const int requestedEffect =
-        hasTypedState
-            ? static_cast<int>(typedState.requestedEffect)
-            : (hostWindow
-                   ? backdropEffectFromProperty(hostWindow->property(kWindowBackdropEffectProperty))
-                   : kBackdropEffectSolid);
+    const int requestedEffect = hasTypedState
+        ? static_cast<int>(typedState.requestedEffect)
+        : (hostWindow ? backdropEffectFromProperty(hostWindow->property(kWindowBackdropEffectProperty))
+                      : kBackdropEffectSolid);
     const bool dark = themeHost.effectiveThemeUsesDarkAppearance();
     const auto& colors = themeHost.themeColorsRef();
 

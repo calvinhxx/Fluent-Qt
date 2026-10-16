@@ -37,10 +37,10 @@ struct PivotItem {
     PivotItem() = default;
     explicit PivotItem(const QString& itemHeader);
     PivotItem(const QString& itemHeader,
-              const QString& itemIconGlyph,
-              bool itemEnabled = true,
-              const QVariant& itemData = QVariant(),
-              const QString& itemAccessibleName = QString());
+        const QString& itemIconGlyph,
+        bool itemEnabled = true,
+        const QVariant& itemData = QVariant(),
+        const QString& itemAccessibleName = QString());
 };
 
 /**
@@ -68,7 +68,10 @@ class Pivot : public QWidget, public FluentElement, public QMLPlus {
      * @brief How the control handles items that exceed available width.
      * zh_CN: 控件如何处理超出可用宽度的条目。
      */
-    Q_PROPERTY(OverflowBehavior overflowBehavior READ overflowBehavior WRITE setOverflowBehavior NOTIFY overflowBehaviorChanged)
+    Q_PROPERTY(OverflowBehavior overflowBehavior
+        READ overflowBehavior
+        WRITE setOverflowBehavior
+        NOTIFY overflowBehaviorChanged)
     /**
      * @brief Typography role used by selector items.
      * zh_CN: 选择器条目使用的排版角色。
@@ -81,10 +84,7 @@ class Pivot : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(QString iconFontFamily READ iconFontFamily WRITE setIconFontFamily NOTIFY iconFontFamilyChanged)
 
 public:
-    enum class OverflowBehavior {
-        ScrollButtons,
-        MoreButton
-    };
+    enum class OverflowBehavior { ScrollButtons, MoreButton };
     Q_ENUM(OverflowBehavior)
 
     explicit Pivot(QWidget* parent = nullptr);
@@ -159,13 +159,7 @@ protected:
 private:
     friend class detail::PivotAccessible;
 
-    enum class HitKind {
-        None,
-        Header,
-        OverflowBack,
-        OverflowForward,
-        OverflowMore
-    };
+    enum class HitKind { None, Header, OverflowBack, OverflowForward, OverflowMore };
 
     struct HeaderRecord {
         int itemIndex = -1;
@@ -226,7 +220,9 @@ private:
 
     void paintBackground(QPainter& painter) const;
     void paintHeader(QPainter& painter, const HeaderRecord& record) const;
-    void paintOverflowButton(QPainter& painter, const QRect& rect, const QString& glyph, const HitRecord& hit, bool enabled) const;
+    void
+    paintOverflowButton(QPainter& painter, const QRect& rect, const QString& glyph, const HitRecord& hit, bool enabled)
+        const;
     QColor headerTextColor(int index) const;
 
     QVector<PivotItem> m_items;

@@ -39,14 +39,12 @@ class CalendarView : public QWidget, public FluentElement, public QMLPlus {
      * @brief Selected date; an invalid date represents no selection.
      * zh_CN: 选中日期；无效日期表示未选择。
      */
-    Q_PROPERTY(
-        QDate selectedDate READ selectedDate WRITE setSelectedDate NOTIFY selectedDateChanged)
+    Q_PROPERTY(QDate selectedDate READ selectedDate WRITE setSelectedDate NOTIFY selectedDateChanged)
     /**
      * @brief Month currently displayed by CalendarView.
      * zh_CN: CalendarView 当前显示的月份。
      */
-    Q_PROPERTY(
-        QDate visibleMonth READ visibleMonth WRITE setVisibleMonth NOTIFY visibleMonthChanged)
+    Q_PROPERTY(QDate visibleMonth READ visibleMonth WRITE setVisibleMonth NOTIFY visibleMonthChanged)
     /**
      * @brief Minimum date accepted by the calendar surface.
      * zh_CN: 日历表面接受的最小日期。
@@ -66,20 +64,21 @@ class CalendarView : public QWidget, public FluentElement, public QMLPlus {
      * @brief First day used when laying out calendar weeks.
      * zh_CN: 日历周布局使用的一周起始日。
      */
-    Q_PROPERTY(Qt::DayOfWeek firstDayOfWeek READ firstDayOfWeek WRITE setFirstDayOfWeek RESET
-                   resetFirstDayOfWeek NOTIFY firstDayOfWeekChanged)
+    Q_PROPERTY(Qt::DayOfWeek firstDayOfWeek
+        READ firstDayOfWeek
+        WRITE setFirstDayOfWeek
+        RESET resetFirstDayOfWeek
+        NOTIFY firstDayOfWeekChanged)
     /**
      * @brief Calendar content level currently displayed.
      * zh_CN: 当前显示的日历内容层级。
      */
-    Q_PROPERTY(CalendarContentLevel contentLevel READ contentLevel WRITE setContentLevel NOTIFY
-                   contentLevelChanged)
+    Q_PROPERTY(CalendarContentLevel contentLevel READ contentLevel WRITE setContentLevel NOTIFY contentLevelChanged)
     /**
      * @brief Whether CalendarView paints its outer frame.
      * zh_CN: CalendarView 是否绘制自身外框。
      */
-    Q_PROPERTY(
-        bool frameVisible READ isFrameVisible WRITE setFrameVisible NOTIFY frameVisibleChanged)
+    Q_PROPERTY(bool frameVisible READ isFrameVisible WRITE setFrameVisible NOTIFY frameVisibleChanged)
 
 public:
     enum class CalendarContentLevel { Day, Month, Year };
@@ -186,24 +185,34 @@ private:
 
     void paintHeader(QPainter& painter);
     void paintTitleButtonBackground(QPainter& painter);
-    void paintTitleForLevel(QPainter& painter, CalendarContentLevel level,
-                            const QDate& visibleMonth, qreal yOffset, qreal opacity);
+    void paintTitleForLevel(QPainter& painter,
+        CalendarContentLevel level,
+        const QDate& visibleMonth,
+        qreal yOffset,
+        qreal opacity);
     void paintNavButton(QPainter& painter, const QRect& buttonRect, const QString& glyph);
     void paintWeekdays(QPainter& painter);
     void paintContent(QPainter& painter);
-    void paintContentLevel(QPainter& painter, CalendarContentLevel level, const QDate& visibleMonth,
-                           qreal yOffset, qreal opacity);
-    void paintContentLevelZoom(QPainter& painter, CalendarContentLevel level,
-                               const QDate& visibleMonth, qreal scale, qreal opacity);
-    void paintDayContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset,
-                         qreal opacity);
+    void paintContentLevel(QPainter& painter,
+        CalendarContentLevel level,
+        const QDate& visibleMonth,
+        qreal yOffset,
+        qreal opacity);
+    void paintContentLevelZoom(QPainter& painter,
+        CalendarContentLevel level,
+        const QDate& visibleMonth,
+        qreal scale,
+        qreal opacity);
+    void paintDayContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset, qreal opacity);
     void paintMonthDays(QPainter& painter, const QDate& month, qreal yOffset, qreal opacity);
-    void paintMonthContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset,
-                           qreal opacity);
-    void paintYearContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset,
-                          qreal opacity);
-    void paintContentCellChrome(QPainter& painter, const QRectF& cell, bool current, bool selected,
-                                bool hovered, bool pressed);
+    void paintMonthContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset, qreal opacity);
+    void paintYearContent(QPainter& painter, const QDate& visibleMonth, qreal yOffset, qreal opacity);
+    void paintContentCellChrome(QPainter& painter,
+        const QRectF& cell,
+        bool current,
+        bool selected,
+        bool hovered,
+        bool pressed);
     QColor contentCellTextColor(bool current, bool selected) const;
     QRectF dateIndicatorRectForCell(const QRectF& cell) const;
     QRectF contentIndicatorRectForCell(const QRectF& cell) const;
@@ -214,8 +223,7 @@ private:
     YearPageKey yearPageKey(const QDate& visibleMonth) const;
     QDate monthForDayPage(const DayPageKey& key) const;
     QRect navigationButtonAt(const QPoint& pos) const;
-    bool adjustedTransitionHitPosition(const QPoint& pos, const QRect& bounds,
-                                       QPoint* adjustedPos) const;
+    bool adjustedTransitionHitPosition(const QPoint& pos, const QRect& bounds, QPoint* adjustedPos) const;
     int contentCellIndexAt(const QPoint& pos) const;
     QDate monthAt(const QPoint& pos) const;
     int yearAt(const QPoint& pos) const;
@@ -245,11 +253,12 @@ private:
     bool updateHoverStateAt(const QPoint& pos);
     void clearHoverState();
     void clearContentInteractionState();
-    void startMonthTransition(const QDate& previousMonth, const QDate& currentMonth,
-                              qreal startProgress = 0.0, bool animate = true);
+    void startMonthTransition(const QDate& previousMonth,
+        const QDate& currentMonth,
+        qreal startProgress = 0.0,
+        bool animate = true);
     bool monthTransitionActive() const;
-    void startContentTransition(CalendarContentLevel previousLevel,
-                                CalendarContentLevel currentLevel);
+    void startContentTransition(CalendarContentLevel previousLevel, CalendarContentLevel currentLevel);
     bool contentTransitionActive() const;
     void switchToParentContentLevel();
     void moveFocusByDays(int days);

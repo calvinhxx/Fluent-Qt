@@ -30,8 +30,7 @@ class SpatialItem final : public QObject {
     Q_PROPERTY(qreal scale READ scale WRITE setScale NOTIFY scaleChanged)
     Q_PROPERTY(QPointF pivot READ pivot WRITE setPivot NOTIFY pivotChanged)
     Q_PROPERTY(bool visible READ isVisible WRITE setVisible NOTIFY visibleChanged)
-    Q_PROPERTY(qreal surfaceIntensity READ surfaceIntensity WRITE setSurfaceIntensity NOTIFY
-                   surfaceIntensityChanged)
+    Q_PROPERTY(qreal surfaceIntensity READ surfaceIntensity WRITE setSurfaceIntensity NOTIFY surfaceIntensityChanged)
     Q_PROPERTY(qreal hoverLift READ hoverLift WRITE setHoverLift NOTIFY hoverLiftChanged)
 
 public:

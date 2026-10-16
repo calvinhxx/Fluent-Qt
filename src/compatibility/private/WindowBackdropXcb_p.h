@@ -149,14 +149,13 @@ struct PropertyReply {
     quint8 padding[12];
 };
 
-static_assert(sizeof(Cookie) == 4 && sizeof(Visual) == 24 && sizeof(Depth) == 8 &&
-                  sizeof(Screen) == 40 && offsetof(Screen, rootVisual) == 32,
-              "The dynamic XCB adapter must retain the core setup ABI");
-static_assert(sizeof(AttributesReply) == 44 && offsetof(AttributesReply, visual) == 8 &&
-                  sizeof(GeometryReply) == 24 && offsetof(GeometryReply, root) == 8 &&
-                  sizeof(IdReply) == 32 && sizeof(ListPropertiesReply) == 32 &&
-                  sizeof(PropertyReply) == 32,
-              "The dynamic XCB adapter must retain the core reply ABI");
+static_assert(sizeof(Cookie) == 4 && sizeof(Visual) == 24 && sizeof(Depth) == 8 && sizeof(Screen) == 40
+        && offsetof(Screen, rootVisual) == 32,
+    "The dynamic XCB adapter must retain the core setup ABI");
+static_assert(sizeof(AttributesReply) == 44 && offsetof(AttributesReply, visual) == 8 && sizeof(GeometryReply) == 24
+        && offsetof(GeometryReply, root) == 8 && sizeof(IdReply) == 32 && sizeof(ListPropertiesReply) == 32
+        && sizeof(PropertyReply) == 32,
+    "The dynamic XCB adapter must retain the core reply ABI");
 
 struct FreeReply {
     void operator()(void* value) const { std::free(value); }
@@ -180,12 +179,10 @@ struct Api {
     template <typename T> using ReplyFunction = T* (*)(Connection*, Cookie, Error**);
     using InternAtom = Cookie (*)(Connection*, quint8, quint16, const char*);
     using ListPropertyAtoms = quint32* (*)(const ListPropertiesReply*);
-    using GetProperty = Cookie (*)(Connection*, quint8, quint32, quint32, quint32, quint32,
-                                   quint32);
+    using GetProperty = Cookie (*)(Connection*, quint8, quint32, quint32, quint32, quint32, quint32);
     using PropertyValue = void* (*)(const PropertyReply*);
     using PropertyValueLength = int (*)(const PropertyReply*);
-    using ChangeProperty = Cookie (*)(Connection*, quint8, quint32, quint32, quint32, quint8,
-                                      quint32, const void*);
+    using ChangeProperty = Cookie (*)(Connection*, quint8, quint32, quint32, quint32, quint8, quint32, const void*);
     using DeleteProperty = Cookie (*)(Connection*, quint32, quint32);
     using ChangeAttributes = Cookie (*)(Connection*, quint32, quint32, const void*);
     using ConfigureWindow = Cookie (*)(Connection*, quint32, quint16, const void*);
@@ -234,39 +231,30 @@ struct Api {
         m_attempted = true;
         if (!m_library.load())
             return false;
-        m_loaded = resolve(connect, "xcb_connect") && resolve(disconnect, "xcb_disconnect") &&
-                   resolve(connectionHasError, "xcb_connection_has_error") &&
-                   resolve(getSetup, "xcb_get_setup") &&
-                   resolve(rootsIterator, "xcb_setup_roots_iterator") &&
-                   resolve(screenNext, "xcb_screen_next") &&
-                   resolve(depthsIterator, "xcb_screen_allowed_depths_iterator") &&
-                   resolve(depthNext, "xcb_depth_next") &&
-                   resolve(visualsIterator, "xcb_depth_visuals_iterator") &&
-                   resolve(visualNext, "xcb_visualtype_next") &&
-                   resolve(getWindowAttributes, "xcb_get_window_attributes") &&
-                   resolve(getWindowAttributesReply, "xcb_get_window_attributes_reply") &&
-                   resolve(getGeometry, "xcb_get_geometry") &&
-                   resolve(getGeometryReply, "xcb_get_geometry_reply") &&
-                   resolve(internAtom, "xcb_intern_atom") &&
-                   resolve(internAtomReply, "xcb_intern_atom_reply") &&
-                   resolve(getSelectionOwner, "xcb_get_selection_owner") &&
-                   resolve(getSelectionOwnerReply, "xcb_get_selection_owner_reply") &&
-                   resolve(listProperties, "xcb_list_properties") &&
-                   resolve(listPropertiesReply, "xcb_list_properties_reply") &&
-                   resolve(listPropertyAtoms, "xcb_list_properties_atoms") &&
-                   resolve(getProperty, "xcb_get_property") &&
-                   resolve(getPropertyReply, "xcb_get_property_reply") &&
-                   resolve(propertyValue, "xcb_get_property_value") &&
-                   resolve(propertyValueLength, "xcb_get_property_value_length") &&
-                   resolve(changePropertyChecked, "xcb_change_property_checked") &&
-                   resolve(deletePropertyChecked, "xcb_delete_property_checked") &&
-                   resolve(changeAttributesChecked, "xcb_change_window_attributes_checked") &&
-                   resolve(mapWindowChecked, "xcb_map_window_checked") &&
-                   resolve(configureWindowChecked, "xcb_configure_window_checked") &&
-                   resolve(setInputFocusChecked, "xcb_set_input_focus_checked") &&
-                   resolve(getInputFocus, "xcb_get_input_focus") &&
-                   resolve(getInputFocusReply, "xcb_get_input_focus_reply") &&
-                   resolve(requestCheck, "xcb_request_check");
+        m_loaded = resolve(connect, "xcb_connect") && resolve(disconnect, "xcb_disconnect")
+            && resolve(connectionHasError, "xcb_connection_has_error") && resolve(getSetup, "xcb_get_setup")
+            && resolve(rootsIterator, "xcb_setup_roots_iterator") && resolve(screenNext, "xcb_screen_next")
+            && resolve(depthsIterator, "xcb_screen_allowed_depths_iterator") && resolve(depthNext, "xcb_depth_next")
+            && resolve(visualsIterator, "xcb_depth_visuals_iterator") && resolve(visualNext, "xcb_visualtype_next")
+            && resolve(getWindowAttributes, "xcb_get_window_attributes")
+            && resolve(getWindowAttributesReply, "xcb_get_window_attributes_reply")
+            && resolve(getGeometry, "xcb_get_geometry") && resolve(getGeometryReply, "xcb_get_geometry_reply")
+            && resolve(internAtom, "xcb_intern_atom") && resolve(internAtomReply, "xcb_intern_atom_reply")
+            && resolve(getSelectionOwner, "xcb_get_selection_owner")
+            && resolve(getSelectionOwnerReply, "xcb_get_selection_owner_reply")
+            && resolve(listProperties, "xcb_list_properties")
+            && resolve(listPropertiesReply, "xcb_list_properties_reply")
+            && resolve(listPropertyAtoms, "xcb_list_properties_atoms") && resolve(getProperty, "xcb_get_property")
+            && resolve(getPropertyReply, "xcb_get_property_reply") && resolve(propertyValue, "xcb_get_property_value")
+            && resolve(propertyValueLength, "xcb_get_property_value_length")
+            && resolve(changePropertyChecked, "xcb_change_property_checked")
+            && resolve(deletePropertyChecked, "xcb_delete_property_checked")
+            && resolve(changeAttributesChecked, "xcb_change_window_attributes_checked")
+            && resolve(mapWindowChecked, "xcb_map_window_checked")
+            && resolve(configureWindowChecked, "xcb_configure_window_checked")
+            && resolve(setInputFocusChecked, "xcb_set_input_focus_checked")
+            && resolve(getInputFocus, "xcb_get_input_focus") && resolve(getInputFocusReply, "xcb_get_input_focus_reply")
+            && resolve(requestCheck, "xcb_request_check");
         return m_loaded;
     }
 
@@ -275,8 +263,7 @@ struct Api {
         return connection && connectionHasError && connectionHasError(connection) == 0;
     }
 
-    template <typename T>
-    Reply<T> reply(Connection* connection, Cookie cookie, ReplyFunction<T> readReply) const
+    template <typename T> Reply<T> reply(Connection* connection, Cookie cookie, ReplyFunction<T> readReply) const
     {
         if (!healthy(connection) || !cookie.sequence || !readReply)
             return {};
@@ -306,8 +293,7 @@ struct Api {
         Error* error = nullptr;
         Reply<IdReply> result(getInputFocusReply(connection, cookie, &error));
         Reply<Error> ownedError(error);
-        return x11ClientRoundTripCompleted(true, result != nullptr, ownedError != nullptr,
-                                           !healthy(connection));
+        return x11ClientRoundTripCompleted(true, result != nullptr, ownedError != nullptr, !healthy(connection));
     }
 
 private:

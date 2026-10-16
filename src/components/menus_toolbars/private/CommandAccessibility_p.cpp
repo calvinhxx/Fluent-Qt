@@ -9,12 +9,9 @@
 namespace fluent::menus_toolbars::detail {
 namespace {
 
-constexpr const char* kAccessibleRoleProperty =
-    "_fluentqt_commandAccessibleRole";
-constexpr const char* kExpandedProperty =
-    "_fluentqt_commandExpanded";
-constexpr const char* kExpandableProperty =
-    "_fluentqt_commandExpandable";
+constexpr const char* kAccessibleRoleProperty = "_fluentqt_commandAccessibleRole";
+constexpr const char* kExpandedProperty = "_fluentqt_commandExpanded";
+constexpr const char* kExpandableProperty = "_fluentqt_commandExpandable";
 
 #if QT_CONFIG(accessibility)
 
@@ -38,12 +35,9 @@ QAccessible::Role qtRole(CommandAccessibleRole role)
 
 class CommandButtonAccessible final : public QAccessibleWidget {
 public:
-    CommandButtonAccessible(QWidget* widget,
-                            CommandAccessibleRole commandRole)
-        : QAccessibleWidget(widget, qtRole(commandRole)),
-          m_commandRole(commandRole)
-    {
-    }
+    CommandButtonAccessible(QWidget* widget, CommandAccessibleRole commandRole)
+        : QAccessibleWidget(widget, qtRole(commandRole)), m_commandRole(commandRole)
+    {}
 
     QString text(QAccessible::Text type) const override
     {
@@ -51,14 +45,12 @@ public:
         if (!commandWidget)
             return {};
         if (type == QAccessible::Name) {
-            const QString name =
-                commandWidget->property("commandText").toString();
+            const QString name = commandWidget->property("commandText").toString();
             if (!name.isEmpty())
                 return name;
         }
         if (type == QAccessible::Accelerator) {
-            const QString shortcut =
-                commandWidget->property("commandShortcut").toString();
+            const QString shortcut = commandWidget->property("commandShortcut").toString();
             if (!shortcut.isEmpty())
                 return shortcut;
         }
@@ -69,24 +61,17 @@ public:
     {
         QAccessible::State result = QAccessibleWidget::state();
         QWidget* commandWidget = widget();
-        auto* button =
-            qobject_cast<QAbstractButton*>(commandWidget);
+        auto* button = qobject_cast<QAbstractButton*>(commandWidget);
         if (button) {
             result.focusable = button->isEnabled();
             result.focused = button->hasFocus();
             result.pressed = button->isDown();
             result.checkable = button->isCheckable();
-            result.checked =
-                button->isCheckable() && button->isChecked();
+            result.checked = button->isCheckable() && button->isChecked();
         }
-        if (m_commandRole == CommandAccessibleRole::MoreButton
-            && commandWidget) {
-            const bool expandable =
-                commandWidget->property(
-                    kExpandableProperty).toBool();
-            const bool expanded =
-                commandWidget->property(
-                    kExpandedProperty).toBool();
+        if (m_commandRole == CommandAccessibleRole::MoreButton && commandWidget) {
+            const bool expandable = commandWidget->property(kExpandableProperty).toBool();
+            const bool expanded = commandWidget->property(kExpandedProperty).toBool();
             result.expandable = expandable;
             result.expanded = expandable && expanded;
             result.collapsed = expandable && !expanded;
@@ -105,8 +90,7 @@ public:
 
     void doAction(const QString& actionName) override
     {
-        if (actionName
-            != QAccessibleActionInterface::pressAction()) {
+        if (actionName != QAccessibleActionInterface::pressAction()) {
             return;
         }
         auto* button = qobject_cast<QAbstractButton*>(widget());
@@ -114,40 +98,29 @@ public:
             button->click();
     }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
-        if (actionName
-            != QAccessibleActionInterface::pressAction()) {
+        if (actionName != QAccessibleActionInterface::pressAction()) {
             return {};
         }
-        const QString shortcut =
-            widget()
-            ? widget()->property("commandShortcut").toString()
-            : QString();
-        return shortcut.isEmpty()
-            ? QStringList()
-            : QStringList{shortcut};
+        const QString shortcut = widget() ? widget()->property("commandShortcut").toString() : QString();
+        return shortcut.isEmpty() ? QStringList() : QStringList{shortcut};
     }
 
 private:
     CommandAccessibleRole m_commandRole;
 };
 
-QAccessibleInterface* commandAccessibilityFactory(
-    const QString&,
-    QObject* object)
+QAccessibleInterface* commandAccessibilityFactory(const QString&, QObject* object)
 {
     auto* widget = qobject_cast<QWidget*>(object);
     if (!widget)
         return nullptr;
-    const QVariant value =
-        widget->property(kAccessibleRoleProperty);
+    const QVariant value = widget->property(kAccessibleRoleProperty);
     if (!value.isValid())
         return nullptr;
 
-    const auto role =
-        static_cast<CommandAccessibleRole>(value.toInt());
+    const auto role = static_cast<CommandAccessibleRole>(value.toInt());
     switch (role) {
     case CommandAccessibleRole::PrimaryCommand:
     case CommandAccessibleRole::MenuCommand:
@@ -165,8 +138,7 @@ QAccessibleInterface* commandAccessibilityFactory(
 void ensureFactoryInstalled()
 {
     static const bool installed = []() {
-        QAccessible::installFactory(
-            commandAccessibilityFactory);
+        QAccessible::installFactory(commandAccessibilityFactory);
         return true;
     }();
     Q_UNUSED(installed)
@@ -174,39 +146,27 @@ void ensureFactoryInstalled()
 
 #else
 
-void ensureFactoryInstalled()
-{
-}
+void ensureFactoryInstalled() {}
 
 #endif
 
 } // namespace
 
-void markCommandAccessibleWidget(
-    QWidget* widget,
-    CommandAccessibleRole role)
+void markCommandAccessibleWidget(QWidget* widget, CommandAccessibleRole role)
 {
     if (!widget)
         return;
     ensureFactoryInstalled();
-    widget->setProperty(
-        kAccessibleRoleProperty,
-        static_cast<int>(role));
+    widget->setProperty(kAccessibleRoleProperty, static_cast<int>(role));
 }
 
-void updateCommandExpandedAccessibility(
-    QWidget* widget,
-    bool expanded,
-    bool expandable)
+void updateCommandExpandedAccessibility(QWidget* widget, bool expanded, bool expandable)
 {
     if (!widget)
         return;
     ensureFactoryInstalled();
-    const bool changed =
-        widget->property(kExpandedProperty).toBool()
-            != expanded
-        || widget->property(kExpandableProperty).toBool()
-            != expandable;
+    const bool changed = widget->property(kExpandedProperty).toBool() != expanded
+        || widget->property(kExpandableProperty).toBool() != expandable;
     widget->setProperty(kExpandedProperty, expanded);
     widget->setProperty(kExpandableProperty, expandable);
     if (!changed)

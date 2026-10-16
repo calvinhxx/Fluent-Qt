@@ -9,28 +9,20 @@ namespace fluent::accessibility::detail {
 
 namespace {
 
-class LogicalItemAccessibleChild final : public QAccessibleInterface,
-                                         public QAccessibleActionInterface {
+class LogicalItemAccessibleChild final : public QAccessibleInterface, public QAccessibleActionInterface {
 public:
-    LogicalItemAccessibleChild(QWidget* owner, int logicalIndex)
-        : m_owner(owner)
-        , m_logicalIndex(logicalIndex)
-    {
-    }
+    LogicalItemAccessibleChild(QWidget* owner, int logicalIndex) : m_owner(owner), m_logicalIndex(logicalIndex) {}
 
     bool isValid() const override
     {
         LogicalItemAccessibleAdapter* root = accessibleRoot();
-        return root && m_logicalIndex >= 0
-            && m_logicalIndex < root->logicalChildCount();
+        return root && m_logicalIndex >= 0 && m_logicalIndex < root->logicalChildCount();
     }
     QObject* object() const override { return nullptr; }
     QAccessibleInterface* childAt(int, int) const override { return nullptr; }
     QAccessibleInterface* parent() const override
     {
-        return m_owner
-            ? QAccessible::queryAccessibleInterface(m_owner)
-            : nullptr;
+        return m_owner ? QAccessible::queryAccessibleInterface(m_owner) : nullptr;
     }
     QAccessibleInterface* child(int) const override { return nullptr; }
     int childCount() const override { return 0; }
@@ -38,8 +30,7 @@ public:
     QString text(QAccessible::Text type) const override
     {
         LogicalItemAccessibleAdapter* root = accessibleRoot();
-        return root ? root->logicalChildText(m_logicalIndex, type)
-                    : QString();
+        return root ? root->logicalChildText(m_logicalIndex, type) : QString();
     }
     void setText(QAccessible::Text, const QString&) override {}
     QRect rect() const override
@@ -50,8 +41,7 @@ public:
     QAccessible::Role role() const override
     {
         LogicalItemAccessibleAdapter* root = accessibleRoot();
-        return root ? root->logicalChildRole(m_logicalIndex)
-                    : QAccessible::NoRole;
+        return root ? root->logicalChildRole(m_logicalIndex) : QAccessible::NoRole;
     }
     QAccessible::State state() const override
     {
@@ -63,8 +53,7 @@ public:
             return result;
         }
 
-        const LogicalItemAccessibleState item =
-            root->logicalChildState(m_logicalIndex);
+        const LogicalItemAccessibleState item = root->logicalChildState(m_logicalIndex);
         result.invalid = !item.valid;
         result.disabled = !item.enabled;
         result.focusable = item.focusable && item.enabled;
@@ -74,11 +63,8 @@ public:
         result.readOnly = item.readOnly;
         result.hasPopup = item.hasPopup;
         result.linked = item.linked;
-        result.invisible = item.invisible
-            || !root->ownerWidget()
-            || !root->ownerWidget()->isVisible();
-        result.offscreen = item.offscreen
-            || (!result.invisible && rect().isEmpty());
+        result.invisible = item.invisible || !root->ownerWidget() || !root->ownerWidget()->isVisible();
+        result.offscreen = item.offscreen || (!result.invisible && rect().isEmpty());
         return result;
     }
     void* interface_cast(QAccessible::InterfaceType type) override
@@ -91,8 +77,7 @@ public:
     QStringList actionNames() const override
     {
         LogicalItemAccessibleAdapter* root = accessibleRoot();
-        return root ? root->logicalChildActions(m_logicalIndex)
-                    : QStringList();
+        return root ? root->logicalChildActions(m_logicalIndex) : QStringList();
     }
     void doAction(const QString& actionName) override
     {
@@ -100,13 +85,10 @@ public:
         if (root)
             root->performLogicalChildAction(m_logicalIndex, actionName);
     }
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         LogicalItemAccessibleAdapter* root = accessibleRoot();
-        return root
-            ? root->logicalChildKeyBindings(m_logicalIndex, actionName)
-            : QStringList();
+        return root ? root->logicalChildKeyBindings(m_logicalIndex, actionName) : QStringList();
     }
 
     QWidget* owner() const { return m_owner; }
@@ -116,8 +98,7 @@ private:
     LogicalItemAccessibleAdapter* accessibleRoot() const
     {
         return m_owner
-            ? dynamic_cast<LogicalItemAccessibleAdapter*>(
-                  QAccessible::queryAccessibleInterface(m_owner))
+            ? dynamic_cast<LogicalItemAccessibleAdapter*>(QAccessible::queryAccessibleInterface(m_owner))
             : nullptr;
     }
 
@@ -128,8 +109,7 @@ private:
 LogicalItemAccessibleAdapter* adapterFor(QWidget* widget)
 {
     return widget
-        ? dynamic_cast<LogicalItemAccessibleAdapter*>(
-              QAccessible::queryAccessibleInterface(widget))
+        ? dynamic_cast<LogicalItemAccessibleAdapter*>(QAccessible::queryAccessibleInterface(widget))
         : nullptr;
 }
 
@@ -144,24 +124,20 @@ QAccessibleInterface* eventTarget(QWidget* widget, int logicalIndex)
 
 } // namespace
 
-LogicalItemAccessibleAdapter::LogicalItemAccessibleAdapter(
-    QWidget* widget, QAccessible::Role role)
+LogicalItemAccessibleAdapter::LogicalItemAccessibleAdapter(QWidget* widget, QAccessible::Role role)
     : QAccessibleWidget(widget, role)
-{
-}
+{}
 
 LogicalItemAccessibleAdapter::~LogicalItemAccessibleAdapter()
 {
     resetChildCache();
 }
 
-QAccessibleInterface* LogicalItemAccessibleAdapter::childAt(
-    int x, int y) const
+QAccessibleInterface* LogicalItemAccessibleAdapter::childAt(int x, int y) const
 {
     for (int index = childCount() - 1; index >= 0; --index) {
         QAccessibleInterface* item = child(index);
-        if (item && !item->state().invisible
-            && item->rect().contains(x, y)) {
+        if (item && !item->state().invisible && item->rect().contains(x, y)) {
             return item;
         }
     }
@@ -178,44 +154,35 @@ int LogicalItemAccessibleAdapter::childCount() const
     return qMax(0, logicalChildCount());
 }
 
-int LogicalItemAccessibleAdapter::indexOfChild(
-    const QAccessibleInterface* childInterface) const
+int LogicalItemAccessibleAdapter::indexOfChild(const QAccessibleInterface* childInterface) const
 {
-    const auto* item =
-        dynamic_cast<const LogicalItemAccessibleChild*>(childInterface);
-    return item && item->owner() == widget()
-        ? item->logicalIndex()
-        : -1;
+    const auto* item = dynamic_cast<const LogicalItemAccessibleChild*>(childInterface);
+    return item && item->owner() == widget() ? item->logicalIndex() : -1;
 }
 
-QAccessibleInterface* LogicalItemAccessibleAdapter::child(
-    int logicalIndex) const
+QAccessibleInterface* LogicalItemAccessibleAdapter::child(int logicalIndex) const
 {
     if (!widget() || logicalIndex < 0 || logicalIndex >= childCount())
         return nullptr;
 
     auto cached = m_childToId.constFind(logicalIndex);
     if (cached != m_childToId.constEnd()) {
-        if (QAccessibleInterface* item =
-                QAccessible::accessibleInterface(cached.value())) {
+        if (QAccessibleInterface* item = QAccessible::accessibleInterface(cached.value())) {
             return item;
         }
         m_childToId.remove(logicalIndex);
     }
 
     auto* item = new LogicalItemAccessibleChild(widget(), logicalIndex);
-    const QAccessible::Id id =
-        QAccessible::registerAccessibleInterface(item);
+    const QAccessible::Id id = QAccessible::registerAccessibleInterface(item);
     m_childToId.insert(logicalIndex, id);
     return item;
 }
 
-void* LogicalItemAccessibleAdapter::interface_cast(
-    QAccessible::InterfaceType type)
+void* LogicalItemAccessibleAdapter::interface_cast(QAccessible::InterfaceType type)
 {
 #if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
-    if (type == QAccessible::SelectionInterface
-        && logicalSelectionSupported()) {
+    if (type == QAccessible::SelectionInterface && logicalSelectionSupported()) {
         return static_cast<QAccessibleSelectionInterface*>(this);
     }
 #endif
@@ -233,8 +200,7 @@ int LogicalItemAccessibleAdapter::selectedItemCount() const
     return count;
 }
 
-QList<QAccessibleInterface*>
-LogicalItemAccessibleAdapter::selectedItems() const
+QList<QAccessibleInterface*> LogicalItemAccessibleAdapter::selectedItems() const
 {
     QList<QAccessibleInterface*> result;
     for (int index = 0; index < childCount(); ++index) {
@@ -246,22 +212,19 @@ LogicalItemAccessibleAdapter::selectedItems() const
     return result;
 }
 
-bool LogicalItemAccessibleAdapter::isSelected(
-    QAccessibleInterface* childItem) const
+bool LogicalItemAccessibleAdapter::isSelected(QAccessibleInterface* childItem) const
 {
     const int index = indexOfChild(childItem);
     return index >= 0 && logicalChildState(index).selected;
 }
 
-bool LogicalItemAccessibleAdapter::select(
-    QAccessibleInterface* childItem)
+bool LogicalItemAccessibleAdapter::select(QAccessibleInterface* childItem)
 {
     const int index = indexOfChild(childItem);
     return index >= 0 && setLogicalChildSelected(index, true);
 }
 
-bool LogicalItemAccessibleAdapter::unselect(
-    QAccessibleInterface* childItem)
+bool LogicalItemAccessibleAdapter::unselect(QAccessibleInterface* childItem)
 {
     const int index = indexOfChild(childItem);
     return index >= 0 && setLogicalChildSelected(index, false);
@@ -273,38 +236,31 @@ bool LogicalItemAccessibleAdapter::clear()
 }
 #endif
 
-QStringList LogicalItemAccessibleAdapter::logicalChildActions(
-    int logicalIndex) const
+QStringList LogicalItemAccessibleAdapter::logicalChildActions(int logicalIndex) const
 {
-    const LogicalItemAccessibleState item =
-        logicalChildState(logicalIndex);
+    const LogicalItemAccessibleState item = logicalChildState(logicalIndex);
     return item.valid && item.enabled && item.focusable
         ? QStringList{QAccessibleActionInterface::pressAction()}
         : QStringList();
 }
 
-QStringList LogicalItemAccessibleAdapter::logicalChildKeyBindings(
-    int, const QString&) const
+QStringList LogicalItemAccessibleAdapter::logicalChildKeyBindings(int, const QString&) const
 {
     return {};
 }
 
-bool LogicalItemAccessibleAdapter::setLogicalChildSelected(
-    int logicalIndex, bool selected)
+bool LogicalItemAccessibleAdapter::setLogicalChildSelected(int logicalIndex, bool selected)
 {
     if (!selected)
         return false;
-    const LogicalItemAccessibleState before =
-        logicalChildState(logicalIndex);
+    const LogicalItemAccessibleState before = logicalChildState(logicalIndex);
     if (!before.valid || !before.enabled || !before.selectable)
         return false;
-    performLogicalChildAction(
-        logicalIndex, QAccessibleActionInterface::pressAction());
+    performLogicalChildAction(logicalIndex, QAccessibleActionInterface::pressAction());
     return logicalChildState(logicalIndex).selected;
 }
 
-QRect LogicalItemAccessibleAdapter::toGlobalRect(
-    const QRect& localRect) const
+QRect LogicalItemAccessibleAdapter::toGlobalRect(const QRect& localRect) const
 {
     return widget() && !localRect.isEmpty()
         ? QRect(widget()->mapToGlobal(localRect.topLeft()), localRect.size())
@@ -330,8 +286,7 @@ void notifyLogicalItemAccessibilityStructure(QWidget* widget)
     QAccessible::updateAccessibility(&event);
 }
 
-void notifyLogicalItemAccessibilitySelection(QWidget* widget,
-                                             int logicalIndex)
+void notifyLogicalItemAccessibilitySelection(QWidget* widget, int logicalIndex)
 {
     if (QAccessibleInterface* target = eventTarget(widget, logicalIndex)) {
         QAccessibleEvent event(target, QAccessible::Selection);
@@ -339,8 +294,7 @@ void notifyLogicalItemAccessibilitySelection(QWidget* widget,
     }
 }
 
-void notifyLogicalItemAccessibilityFocus(QWidget* widget,
-                                         int logicalIndex)
+void notifyLogicalItemAccessibilityFocus(QWidget* widget, int logicalIndex)
 {
     if (QAccessibleInterface* target = eventTarget(widget, logicalIndex)) {
         QAccessibleEvent event(target, QAccessible::Focus);
@@ -348,8 +302,7 @@ void notifyLogicalItemAccessibilityFocus(QWidget* widget,
     }
 }
 
-void notifyLogicalItemAccessibilityName(QWidget* widget,
-                                        int logicalIndex)
+void notifyLogicalItemAccessibilityName(QWidget* widget, int logicalIndex)
 {
     if (QAccessibleInterface* target = eventTarget(widget, logicalIndex)) {
         QAccessibleEvent event(target, QAccessible::NameChanged);
@@ -357,8 +310,7 @@ void notifyLogicalItemAccessibilityName(QWidget* widget,
     }
 }
 
-void notifyLogicalItemAccessibilityState(QWidget* widget,
-                                         int logicalIndex)
+void notifyLogicalItemAccessibilityState(QWidget* widget, int logicalIndex)
 {
     if (QAccessibleInterface* target = eventTarget(widget, logicalIndex)) {
         QAccessible::State changed;

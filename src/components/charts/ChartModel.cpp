@@ -25,8 +25,9 @@ struct Summary {
     double positive = 0;
 };
 
-QString validate(const QVector<QPointF>& points, const QStringList& labels,
-                 double previous = -std::numeric_limits<double>::infinity())
+QString validate(const QVector<QPointF>& points,
+    const QStringList& labels,
+    double previous = -std::numeric_limits<double>::infinity())
 {
     if (points.size() > std::numeric_limits<int>::max())
         return QStringLiteral("Point count exceeds the Qt model row limit.");
@@ -98,8 +99,7 @@ public:
         levels[0].resize(blocks);
         int start = first / BlockSize;
         for (int block = start; block < blocks; ++block)
-            levels[0][block] =
-                scan(block * BlockSize, std::min((block + 1) * BlockSize, int(points.size())));
+            levels[0][block] = scan(block * BlockSize, std::min((block + 1) * BlockSize, int(points.size())));
         int level = 1;
         while (levels[level - 1].size() > 1) {
             if (levels.size() <= level)
@@ -110,8 +110,8 @@ public:
             start = std::min(start / 2, oldCount);
             for (int i = start; i < count; ++i) {
                 const auto& children = levels[level - 1];
-                levels[level][i] = merge(
-                    children[i * 2], i * 2 + 1 < children.size() ? children[i * 2 + 1] : Summary());
+                levels[level][i] = merge(children[i * 2],
+                    i * 2 + 1 < children.size() ? children[i * 2 + 1] : Summary());
             }
             ++level;
         }
@@ -129,8 +129,7 @@ public:
         while (last - first >= BlockSize) {
             int level = 0;
             qint64 span = BlockSize;
-            while (level + 1 < levels.size() && first % (span * 2) == 0 &&
-                   span * 2 <= last - first) {
+            while (level + 1 < levels.size() && first % (span * 2) == 0 && span * 2 <= last - first) {
                 ++level;
                 span *= 2;
             }
@@ -199,15 +198,15 @@ double ChartData::maximumY() const
 }
 int ChartData::lowerBound(double x) const
 {
-    return int(std::lower_bound(d->points.cbegin(), d->points.cend(), x,
-                                [](const QPointF& p, double value) { return p.x() < value; }) -
-               d->points.cbegin());
+    return int(std::lower_bound(d->points.cbegin(), d->points.cend(), x, [](const QPointF& p, double value) {
+        return p.x() < value;
+    }) - d->points.cbegin());
 }
 int ChartData::upperBound(double x) const
 {
-    return int(std::upper_bound(d->points.cbegin(), d->points.cend(), x,
-                                [](double value, const QPointF& p) { return value < p.x(); }) -
-               d->points.cbegin());
+    return int(std::upper_bound(d->points.cbegin(), d->points.cend(), x, [](double value, const QPointF& p) {
+        return value < p.x();
+    }) - d->points.cbegin());
 }
 
 QVector<int> ChartData::sampledRows(int first, int last, int budget) const
@@ -274,8 +273,8 @@ int ChartModel::columnCount(const QModelIndex& parent) const
 }
 QVariant ChartModel::data(const QModelIndex& index, int role) const
 {
-    if (!index.isValid() || index.model() != this || index.row() >= rowCount() ||
-        index.column() >= 2 || (role != Qt::DisplayRole && role != Qt::EditRole))
+    if (!index.isValid() || index.model() != this || index.row() >= rowCount() || index.column() >= 2
+        || (role != Qt::DisplayRole && role != Qt::EditRole))
         return {};
     const auto point = pointAt(index.row());
     return index.column() == 0 ? point.x() : point.y();
@@ -336,10 +335,8 @@ bool ChartModel::appendPoints(const QVector<QPointF>& points, const QStringList&
         return false;
     if (points.isEmpty())
         return labels.isEmpty();
-    if (qint64(rowCount()) + points.size() > std::numeric_limits<int>::max() ||
-        !validate(points, labels,
-                  rowCount() ? maximumX() : -std::numeric_limits<double>::infinity())
-             .isEmpty())
+    if (qint64(rowCount()) + points.size() > std::numeric_limits<int>::max()
+        || !validate(points, labels, rowCount() ? maximumX() : -std::numeric_limits<double>::infinity()).isEmpty())
         return false;
     const int first = rowCount();
     m_mutating = true;

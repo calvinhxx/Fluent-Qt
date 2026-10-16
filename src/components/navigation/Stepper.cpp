@@ -45,9 +45,8 @@ private:
 QColor blend(const QColor& from, const QColor& to, qreal t)
 {
     return QColor::fromRgbF(from.redF() + (to.redF() - from.redF()) * t,
-                            from.greenF() + (to.greenF() - from.greenF()) * t,
-                            from.blueF() + (to.blueF() - from.blueF()) * t,
-                            from.alphaF() + (to.alphaF() - from.alphaF()) * t);
+        from.greenF() + (to.greenF() - from.greenF()) * t, from.blueF() + (to.blueF() - from.blueF()) * t,
+        from.alphaF() + (to.alphaF() - from.alphaF()) * t);
 }
 
 class StepButton final : public Button {
@@ -109,12 +108,9 @@ public:
         title->setText(item.text);
         description->setText(item.description);
         description->setVisible(!item.description.isEmpty());
-        title->setFluentTypography(isChecked() ? Typography::FontRole::BodyStrong
-                                               : Typography::FontRole::Body);
-        title->setTextColorRole(isEnabled() ? Label::TextColorRole::Primary
-                                            : Label::TextColorRole::Disabled);
-        description->setTextColorRole(isEnabled() ? Label::TextColorRole::Secondary
-                                                  : Label::TextColorRole::Disabled);
+        title->setFluentTypography(isChecked() ? Typography::FontRole::BodyStrong : Typography::FontRole::Body);
+        title->setTextColorRole(isEnabled() ? Label::TextColorRole::Primary : Label::TextColorRole::Disabled);
+        description->setTextColorRole(isEnabled() ? Label::TextColorRole::Secondary : Label::TextColorRole::Disabled);
         setAccessibleName(item.accessibleName.isEmpty() ? item.text : item.accessibleName);
         setAccessibleDescription(item.description);
         const auto& c = themeColorsRef();
@@ -145,8 +141,7 @@ public:
         motion.setStartValue(0.0);
         motion.setEndValue(1.0);
         motion.setEasingCurve(themeAnimation().decelerate);
-        fluent::detail::startMotionTransition(&motion, themeAnimation().normal,
-                                              animate && animations && isVisible());
+        fluent::detail::startMotionTransition(&motion, themeAnimation().normal, animate && animations && isVisible());
         layoutLabels();
     }
     void onThemeUpdated() override
@@ -211,8 +206,7 @@ private:
             const bool rtl = layoutDirection() == Qt::RightToLeft;
             const int x = rtl ? 8 : 56;
             const int textWidth = qMax(0, width() - 64);
-            const Qt::Alignment alignment =
-                (rtl ? Qt::AlignRight : Qt::AlignLeft) | Qt::AlignAbsolute;
+            const Qt::Alignment alignment = (rtl ? Qt::AlignRight : Qt::AlignLeft) | Qt::AlignAbsolute;
             title->setAlignment(alignment);
             description->setAlignment(alignment);
             title->setGeometry(x, item.description.isEmpty() ? 20 : 10, textWidth, 24);
@@ -316,8 +310,7 @@ public:
             button->setChecked(i == current);
             button->refresh(animate);
         }
-        StepButton* entry =
-            current >= 0 && items.at(current).enabled ? track->buttons.at(current) : nullptr;
+        StepButton* entry = current >= 0 && items.at(current).enabled ? track->buttons.at(current) : nullptr;
         if (!entry) {
             for (int i = 0; i < items.size(); ++i) {
                 if (items.at(i).enabled) {
@@ -335,15 +328,13 @@ public:
 #if QT_CONFIG(accessibility)
 class StepperAccessible final : public accessibility::detail::LogicalItemAccessibleAdapter {
 public:
-    explicit StepperAccessible(Stepper* view)
-        : LogicalItemAccessibleAdapter(view, QAccessible::PageTabList)
-    {}
+    explicit StepperAccessible(Stepper* view) : LogicalItemAccessibleAdapter(view, QAccessible::PageTabList) {}
     Stepper* view() const { return qobject_cast<Stepper*>(widget()); }
     QAccessibleInterface* child(int i) const override
     {
         return i >= 0 && i < view()->itemCount()
-                   ? QAccessible::queryAccessibleInterface(view()->d->track->buttons.at(i))
-                   : nullptr;
+            ? QAccessible::queryAccessibleInterface(view()->d->track->buttons.at(i))
+            : nullptr;
     }
     int indexOfChild(const QAccessibleInterface* child) const override
     {
@@ -364,14 +355,14 @@ public:
         if (type != QAccessible::Description)
             return {};
         QString state = item.state == Stepper::Completed ? Stepper::tr("Completed")
-                        : item.state == Stepper::Error   ? Stepper::tr("Error")
-                                                         : Stepper::tr("Pending");
+            : item.state == Stepper::Error
+            ? Stepper::tr("Error")
+            : Stepper::tr("Pending");
         if (i == view()->currentIndex())
             state += QStringLiteral(", ") + Stepper::tr("Current step");
         if (!item.enabled)
             state += QStringLiteral(", ") + Stepper::tr("Unavailable");
-        return QStringList{item.description, state,
-                           Stepper::tr("Step %1 of %2").arg(i + 1).arg(view()->itemCount())}
+        return QStringList{item.description, state, Stepper::tr("Step %1 of %2").arg(i + 1).arg(view()->itemCount())}
             .join(QStringLiteral("; "));
     }
     QRect logicalChildRect(int i) const override { return toGlobalRect(view()->itemGeometry(i)); }
@@ -387,7 +378,7 @@ public:
         s.focused = view()->d->track->buttons.at(i)->hasFocus();
         s.invisible = !view()->isVisible();
         const QRect globalClip(view()->d->scroll->viewport()->mapToGlobal(QPoint()),
-                               view()->d->scroll->viewport()->size());
+            view()->d->scroll->viewport()->size());
         s.offscreen = !logicalChildRect(i).intersects(globalClip);
         return s;
     }
@@ -402,9 +393,8 @@ public:
     {
         const auto state = logicalChildState(i);
         return state.valid && state.enabled
-                   ? QStringList{QAccessibleActionInterface::pressAction(),
-                                 QAccessibleActionInterface::setFocusAction()}
-                   : QStringList();
+            ? QStringList{QAccessibleActionInterface::pressAction(), QAccessibleActionInterface::setFocusAction()}
+            : QStringList();
     }
     void performLogicalChildAction(int i, const QString& action) override
     {
@@ -430,9 +420,7 @@ public:
 // zh_CN: 实际焦点控件与逻辑树共同暴露同一个步骤无障碍对象。
 class StepButtonAccessible final : public QAccessibleWidget {
 public:
-    explicit StepButtonAccessible(StepButton* button)
-        : QAccessibleWidget(button, QAccessible::PageTab)
-    {}
+    explicit StepButtonAccessible(StepButton* button) : QAccessibleWidget(button, QAccessible::PageTab) {}
     QAccessibleInterface* parent() const override { return root(); }
     QAccessibleInterface* child(int) const override { return nullptr; }
     QAccessibleInterface* childAt(int, int) const override { return nullptr; }
@@ -480,29 +468,25 @@ public:
     QStringList keyBindingsForAction(const QString& action) const override
     {
         auto* adapter = root();
-        return adapter ? adapter->logicalChildKeyBindings(adapter->indexOfChild(this), action)
-                       : QStringList();
+        return adapter ? adapter->logicalChildKeyBindings(adapter->indexOfChild(this), action) : QStringList();
     }
 
 private:
     StepperAccessible* root() const
     {
         auto* button = static_cast<StepButton*>(widget());
-        return button && button->owner ? dynamic_cast<StepperAccessible*>(
-                                             QAccessible::queryAccessibleInterface(button->owner))
-                                       : nullptr;
+        return button && button->owner
+            ? dynamic_cast<StepperAccessible*>(QAccessible::queryAccessibleInterface(button->owner))
+            : nullptr;
     }
 };
 #endif
 
-StepperItem::StepperItem(const QString& value, const QString& detail)
-    : text(value), description(detail)
-{}
+StepperItem::StepperItem(const QString& value, const QString& detail) : text(value), description(detail) {}
 bool StepperItem::operator==(const StepperItem& o) const
 {
-    return text == o.text && description == o.description && iconGlyph == o.iconGlyph &&
-           state == o.state && enabled == o.enabled && data == o.data &&
-           accessibleName == o.accessibleName;
+    return text == o.text && description == o.description && iconGlyph == o.iconGlyph && state == o.state
+        && enabled == o.enabled && data == o.data && accessibleName == o.accessibleName;
 }
 
 Stepper::Stepper(QWidget* parent) : QWidget(parent), d(new Private(this))
@@ -520,8 +504,7 @@ Stepper::Stepper(QWidget* parent) : QWidget(parent), d(new Private(this))
     }();
     Q_UNUSED(installed)
 #endif
-    connect(&MotionPolicy::instance(), &MotionPolicy::modeChanged, this,
-            [this] { d->refresh(false); });
+    connect(&MotionPolicy::instance(), &MotionPolicy::modeChanged, this, [this] { d->refresh(false); });
 }
 Stepper::~Stepper()
 {
@@ -624,8 +607,7 @@ void Stepper::clearItems()
 }
 bool Stepper::setItem(int i, const StepperItem& item)
 {
-    if (i < 0 || i >= itemCount() || item.state < Pending || item.state > Error ||
-        d->items.at(i) == item)
+    if (i < 0 || i >= itemCount() || item.state < Pending || item.state > Error || d->items.at(i) == item)
         return false;
     d->items[i] = item;
     d->refresh(true);
@@ -694,8 +676,9 @@ QRect Stepper::itemGeometry(int i) const
 }
 QSize Stepper::sizeHint() const
 {
-    return orientation() == Qt::Horizontal ? QSize(qMax(112, itemCount() * 112), 104)
-                                           : QSize(320, qMin(360, qMax(64, itemCount() * 64)));
+    return orientation() == Qt::Horizontal
+        ? QSize(qMax(112, itemCount() * 112), 104)
+        : QSize(320, qMin(360, qMax(64, itemCount() * 64)));
 }
 QSize Stepper::minimumSizeHint() const
 {
@@ -718,10 +701,8 @@ bool Stepper::eventFilter(QObject* watched, QEvent* event)
         return true;
     }
     int direction = 0;
-    if (orientation() == Qt::Horizontal &&
-        (key->key() == Qt::Key_Left || key->key() == Qt::Key_Right))
-        direction = (key->key() == Qt::Key_Right ? 1 : -1) *
-                    (layoutDirection() == Qt::RightToLeft ? -1 : 1);
+    if (orientation() == Qt::Horizontal && (key->key() == Qt::Key_Left || key->key() == Qt::Key_Right))
+        direction = (key->key() == Qt::Key_Right ? 1 : -1) * (layoutDirection() == Qt::RightToLeft ? -1 : 1);
     if (orientation() == Qt::Vertical && (key->key() == Qt::Key_Up || key->key() == Qt::Key_Down))
         direction = key->key() == Qt::Key_Down ? 1 : -1;
     int target = current + direction;

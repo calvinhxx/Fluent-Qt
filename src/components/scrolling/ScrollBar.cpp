@@ -72,8 +72,7 @@ void ScrollBar::ensureAnimation()
     if (!m_opacityAnim) {
         m_opacityAnim = new QPropertyAnimation(this, "opacity", this);
         const auto anim = themeAnimation();
-        m_opacityAnim->setDuration(
-            anim.fast); // Fluent fast-feedback duration. zh_CN: 使用 Fluent 快速反馈时长。
+        m_opacityAnim->setDuration(anim.fast); // Fluent fast-feedback duration. zh_CN: 使用 Fluent 快速反馈时长。
         m_opacityAnim->setEasingCurve(
             anim.decelerate); // Decelerate both ways, matching WinUI. zh_CN: 进入/退出都用减速曲线。
         m_opacityAnim->setStartValue(0.0);
@@ -147,8 +146,8 @@ void ScrollBar::paintEvent(QPaintEvent* event)
     // zh_CN: 轨道——轻量 Subtle 填充，圆角为厚度一半；与外框只留极小间距
     // （可按需再引入独立 trackPadding）。
     const int trackInset = 0;
-    const QRectF trackRect = QRectF(rect()).adjusted(trackInset + 0.5, trackInset + 0.5,
-                                                     -trackInset - 0.5, -trackInset - 0.5);
+    const QRectF trackRect = QRectF(rect()).adjusted(trackInset + 0.5, trackInset + 0.5, -trackInset - 0.5,
+        -trackInset - 0.5);
     QColor trackColor = colors.subtleSecondary;
     const qreal trackMaxAlpha = isDark ? 0.18 : 0.20;
     if (trackColor.alphaF() > trackMaxAlpha)
@@ -157,8 +156,7 @@ void ScrollBar::paintEvent(QPaintEvent* event)
     if ((m_isHovered || m_isPressed) && trackColor.isValid() && trackColor.alpha() > 0) {
         p.setPen(Qt::NoPen);
         p.setBrush(trackColor);
-        const qreal r =
-            (orientation() == Qt::Vertical ? trackRect.width() / 2.0 : trackRect.height() / 2.0);
+        const qreal r = (orientation() == Qt::Vertical ? trackRect.width() / 2.0 : trackRect.height() / 2.0);
         p.drawRoundedRect(trackRect, r, r);
     }
 
@@ -167,8 +165,8 @@ void ScrollBar::paintEvent(QPaintEvent* event)
     // of being clipped by the widget bounds.
     // zh_CN: 自行计算 Thumb 绘制几何，交互仍由 QScrollBar 处理；极值位置端部
     // 保留完整抗锯齿空间，避免圆角被 widget 边界裁掉。
-    const QRectF thumbTrack = trackRect.adjusted(m_thumbPadding.left(), m_thumbPadding.top(),
-                                                 -m_thumbPadding.right(), -m_thumbPadding.bottom());
+    const QRectF thumbTrack = trackRect.adjusted(m_thumbPadding.left(), m_thumbPadding.top(), -m_thumbPadding.right(),
+        -m_thumbPadding.bottom());
     const bool vertical = orientation() == Qt::Vertical;
     const qreal trackLength = vertical ? thumbTrack.height() : thumbTrack.width();
     if (trackLength <= 0.0)
@@ -179,15 +177,12 @@ void ScrollBar::paintEvent(QPaintEvent* event)
     const qreal scrollRange = static_cast<qreal>(opt.maximum) - opt.minimum;
     const qreal page = qMax<qreal>(1.0, pageStep());
     const qreal minThumbLength = qMin<qreal>(m_minThumbLength, trackLength);
-    const qreal proportionalLength =
-        scrollRange > 0.0 ? trackLength * page / (scrollRange + page) : trackLength;
+    const qreal proportionalLength = scrollRange > 0.0 ? trackLength * page / (scrollRange + page) : trackLength;
     const qreal thumbLength = qBound(minThumbLength, proportionalLength, trackLength);
     const qreal travel = qMax<qreal>(0.0, trackLength - thumbLength);
-    qreal ratio =
-        scrollRange > 0.0
-            ? qBound<qreal>(
-                  0.0, (static_cast<qreal>(opt.sliderPosition) - opt.minimum) / scrollRange, 1.0)
-            : 0.0;
+    qreal ratio = scrollRange > 0.0
+        ? qBound<qreal>(0.0, (static_cast<qreal>(opt.sliderPosition) - opt.minimum) / scrollRange, 1.0)
+        : 0.0;
     // QScrollBar leaves horizontal RTL mirroring to QStyle's geometry.
     // zh_CN: QScrollBar 将水平 RTL 镜像交给 QStyle 的几何计算，自绘时需保持一致。
     if (opt.upsideDown != (!vertical && opt.direction == Qt::RightToLeft))
@@ -196,11 +191,9 @@ void ScrollBar::paintEvent(QPaintEvent* event)
 
     QRectF drawRect;
     if (vertical) {
-        drawRect = QRectF(thumbTrack.left(), thumbTrack.top() + thumbOffset, thumbTrack.width(),
-                          thumbLength);
+        drawRect = QRectF(thumbTrack.left(), thumbTrack.top() + thumbOffset, thumbTrack.width(), thumbLength);
     } else {
-        drawRect = QRectF(thumbTrack.left() + thumbOffset, thumbTrack.top(), thumbLength,
-                          thumbTrack.height());
+        drawRect = QRectF(thumbTrack.left() + thumbOffset, thumbTrack.top(), thumbLength, thumbTrack.height());
     }
 
     QColor thumbRest = colors.textTertiary;

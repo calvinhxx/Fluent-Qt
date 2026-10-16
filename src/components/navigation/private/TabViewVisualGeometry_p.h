@@ -35,22 +35,19 @@ inline QPainterPath selectedTabPath(const QRect& rect)
 
     path.moveTo(left - shoulderWidth, bottom);
     path.cubicTo(left - shoulderWidth * (1.0 - quarterCurveControl), bottom, left,
-                 bottom - shoulderHeight * (1.0 - quarterCurveControl), left,
-                 bottom - shoulderHeight);
+        bottom - shoulderHeight * (1.0 - quarterCurveControl), left, bottom - shoulderHeight);
     path.lineTo(left, top + topRadius);
     path.quadTo(left, top, left + topRadius, top);
     path.lineTo(right - topRadius, top);
     path.quadTo(right, top, right, top + topRadius);
     path.lineTo(right, bottom - shoulderHeight);
     path.cubicTo(right, bottom - shoulderHeight * (1.0 - quarterCurveControl),
-                 right + shoulderWidth * (1.0 - quarterCurveControl), bottom, right + shoulderWidth,
-                 bottom);
+        right + shoulderWidth * (1.0 - quarterCurveControl), bottom, right + shoulderWidth, bottom);
     path.closeSubpath();
     return path;
 }
 
-inline QVector<QRect> tabSeparatorRects(const QVector<TabSeparatorGeometryItem>& items,
-                                        bool dragActive)
+inline QVector<QRect> tabSeparatorRects(const QVector<TabSeparatorGeometryItem>& items, bool dragActive)
 {
     QVector<QRect> separators;
     if (dragActive)
@@ -68,8 +65,7 @@ inline QVector<QRect> tabSeparatorRects(const QVector<TabSeparatorGeometryItem>&
         const QRect& left = first.rect.left() < second.rect.left() ? first.rect : second.rect;
         const QRect& right = first.rect.left() < second.rect.left() ? second.rect : first.rect;
         const int height = qMin(separatorHeight, qMin(left.height(), right.height()));
-        const int top =
-            qMax(left.top(), right.top()) + (qMin(left.height(), right.height()) - height) / 2;
+        const int top = qMax(left.top(), right.top()) + (qMin(left.height(), right.height()) - height) / 2;
         separators.append(QRect(right.left(), top, 1, height));
     }
     return separators;

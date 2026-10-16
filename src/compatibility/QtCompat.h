@@ -100,12 +100,11 @@ using FluentEnterEvent = QEvent;
 #define FLUENT_HAS_UNCONDITIONAL_ACCESSIBLE_UPDATE_HANDLER 0
 #endif
 
-using FluentAccessibleRelationList =
-    decltype(std::declval<const QAccessibleInterface&>().relations(QAccessible::AllRelations));
+using FluentAccessibleRelationList = decltype(std::declval<const QAccessibleInterface&>().relations(
+    QAccessible::AllRelations));
 
 #include <type_traits>
-static_assert(std::is_base_of<QEvent, FluentEnterEvent>::value,
-              "FluentEnterEvent must derive from QEvent");
+static_assert(std::is_base_of<QEvent, FluentEnterEvent>::value, "FluentEnterEvent must derive from QEvent");
 
 enum class FluentSystemColorScheme { Unknown, Light, Dark };
 
@@ -170,16 +169,15 @@ inline QString fluentAccessibleAnnouncementMessage(const QAccessibleEvent* event
  * @brief Extracts announcement politeness when the active Qt API provides it.
  * zh_CN: 当当前 Qt API 支持时提取无障碍播报礼貌级别。
  */
-inline FluentAccessibleAnnouncementPoliteness
-fluentAccessibleAnnouncementPoliteness(const QAccessibleEvent* event)
+inline FluentAccessibleAnnouncementPoliteness fluentAccessibleAnnouncementPoliteness(const QAccessibleEvent* event)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
     if (!event || event->type() != QAccessible::Announcement)
         return FluentAccessibleAnnouncementPoliteness::Unspecified;
     const auto politeness = static_cast<const QAccessibleAnnouncementEvent*>(event)->politeness();
     return politeness == QAccessible::AnnouncementPoliteness::Assertive
-               ? FluentAccessibleAnnouncementPoliteness::Assertive
-               : FluentAccessibleAnnouncementPoliteness::Polite;
+        ? FluentAccessibleAnnouncementPoliteness::Assertive
+        : FluentAccessibleAnnouncementPoliteness::Polite;
 #else
     Q_UNUSED(event);
     return FluentAccessibleAnnouncementPoliteness::Unspecified;
@@ -190,8 +188,9 @@ fluentAccessibleAnnouncementPoliteness(const QAccessibleEvent* event)
  * @brief Sends an accessibility announcement through the best available Qt API.
  * zh_CN: 通过当前 Qt 版本可用的最佳 API 发送无障碍播报。
  */
-inline void fluentSendAccessibleAnnouncement(QObject* object, const QString& message,
-                                             FluentAccessibleAnnouncementPoliteness politeness)
+inline void fluentSendAccessibleAnnouncement(QObject* object,
+    const QString& message,
+    FluentAccessibleAnnouncementPoliteness politeness)
 {
 #if QT_CONFIG(accessibility)
     if (!object || message.isEmpty())
@@ -199,8 +198,8 @@ inline void fluentSendAccessibleAnnouncement(QObject* object, const QString& mes
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
     QAccessibleAnnouncementEvent event(object, message);
     event.setPoliteness(politeness == FluentAccessibleAnnouncementPoliteness::Assertive
-                            ? QAccessible::AnnouncementPoliteness::Assertive
-                            : QAccessible::AnnouncementPoliteness::Polite);
+            ? QAccessible::AnnouncementPoliteness::Assertive
+            : QAccessible::AnnouncementPoliteness::Polite);
 #else
     Q_UNUSED(politeness);
     QAccessibleEvent event(object, QAccessible::Alert);
@@ -218,8 +217,7 @@ inline void fluentSendAccessibleAnnouncement(QObject* object, const QString& mes
  * constructing when it does not expose the expected role.
  * zh_CN: 当控件构造完成前缓存的无障碍接口角色不正确时，重新创建该接口。
  */
-inline void fluentRefreshAccessibleInterfaceAfterConstruction(QObject* object,
-                                                              QAccessible::Role expectedRole)
+inline void fluentRefreshAccessibleInterfaceAfterConstruction(QObject* object, QAccessible::Role expectedRole)
 {
 #if QT_CONFIG(accessibility)
     if (!object)
@@ -248,8 +246,7 @@ inline void fluentPrepareHighDpiApplicationAttributes()
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
-    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
-        Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 }
 
 /**
@@ -259,8 +256,8 @@ inline void fluentPrepareHighDpiApplicationAttributes()
 inline bool fluentHighDpiScalingIsEnabled()
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    return QCoreApplication::testAttribute(Qt::AA_EnableHighDpiScaling) &&
-           QCoreApplication::testAttribute(Qt::AA_UseHighDpiPixmaps);
+    return QCoreApplication::testAttribute(Qt::AA_EnableHighDpiScaling)
+        && QCoreApplication::testAttribute(Qt::AA_UseHighDpiPixmaps);
 #else
     return true;
 #endif
@@ -286,8 +283,7 @@ QMetaObject::Connection fluentConnectSystemColorSchemeChanged(Context* context, 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     if (!QGuiApplication::styleHints())
         return {};
-    return QObject::connect(
-        QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, context,
+    return QObject::connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, context,
         [slot = std::forward<Functor>(functor)](Qt::ColorScheme) mutable { slot(); });
 #else
     Q_UNUSED(context);
@@ -301,18 +297,14 @@ QMetaObject::Connection fluentConnectSystemColorSchemeChanged(Context* context, 
  * zh_CN: 使用统一的 Qt 5/Qt 6 写法连接复选框状态信号。
  */
 template <typename Context, typename Functor>
-QMetaObject::Connection fluentConnectCheckStateChanged(QCheckBox* checkBox, Context* context,
-                                                       Functor&& functor)
+QMetaObject::Connection fluentConnectCheckStateChanged(QCheckBox* checkBox, Context* context, Functor&& functor)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    return QObject::connect(
-        checkBox, &QCheckBox::checkStateChanged, context,
+    return QObject::connect(checkBox, &QCheckBox::checkStateChanged, context,
         [slot = std::forward<Functor>(functor)](Qt::CheckState state) mutable { slot(state); });
 #else
     return QObject::connect(checkBox, &QCheckBox::stateChanged, context,
-                            [slot = std::forward<Functor>(functor)](int state) mutable {
-                                slot(static_cast<Qt::CheckState>(state));
-                            });
+        [slot = std::forward<Functor>(functor)](int state) mutable { slot(static_cast<Qt::CheckState>(state)); });
 #endif
 }
 
@@ -401,19 +393,17 @@ inline int fluentAdjacentButtonRowSpacing(int requestedSpacing)
 }
 
 template <typename Sender, typename Signal, typename Context, typename Functor>
-QMetaObject::Connection fluentConnectSingleShot(Sender* sender, Signal signal, Context* context,
-                                                Functor&& functor)
+QMetaObject::Connection fluentConnectSingleShot(Sender* sender, Signal signal, Context* context, Functor&& functor)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    return QObject::connect(sender, signal, context, std::forward<Functor>(functor),
-                            Qt::SingleShotConnection);
+    return QObject::connect(sender, signal, context, std::forward<Functor>(functor), Qt::SingleShotConnection);
 #else
     auto connection = std::make_shared<QMetaObject::Connection>();
     *connection = QObject::connect(sender, signal, context,
-                                   [connection, slot = std::forward<Functor>(functor)]() mutable {
-                                       QObject::disconnect(*connection);
-                                       slot();
-                                   });
+        [connection, slot = std::forward<Functor>(functor)]() mutable {
+            QObject::disconnect(*connection);
+            slot();
+        });
     return *connection;
 #endif
 }
@@ -424,8 +414,7 @@ template <typename T> void fluentRegisterMetaTypeNames(const char* name)
 }
 
 template <typename T, typename... Names>
-void fluentRegisterMetaTypeNames(const char* firstName, const char* secondName,
-                                 Names... remainingNames)
+void fluentRegisterMetaTypeNames(const char* firstName, const char* secondName, Names... remainingNames)
 {
     qRegisterMetaType<T>(firstName);
     fluentRegisterMetaTypeNames<T>(secondName, remainingNames...);
@@ -445,17 +434,13 @@ inline bool fluentMetaTypeNameIsRegistered(const char* name)
 }
 
 template <typename CheckBoxType, typename Context, typename Functor>
-QMetaObject::Connection fluentConnectCheckStateChanged(CheckBoxType* checkBox, Context* context,
-                                                       Functor&& functor)
+QMetaObject::Connection fluentConnectCheckStateChanged(CheckBoxType* checkBox, Context* context, Functor&& functor)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-    return QObject::connect(checkBox, &CheckBoxType::checkStateChanged, context,
-                            std::forward<Functor>(functor));
+    return QObject::connect(checkBox, &CheckBoxType::checkStateChanged, context, std::forward<Functor>(functor));
 #else
     return QObject::connect(checkBox, &CheckBoxType::stateChanged, context,
-                            [slot = std::forward<Functor>(functor)](int state) mutable {
-                                slot(static_cast<Qt::CheckState>(state));
-                            });
+        [slot = std::forward<Functor>(functor)](int state) mutable { slot(static_cast<Qt::CheckState>(state)); });
 #endif
 }
 
@@ -472,7 +457,7 @@ inline QSize fluentPixmapLogicalSize(const QPixmap& pixmap)
     return pixmap.deviceIndependentSize().toSize();
 #else
     return QSize(qRound(pixmap.width() / pixmap.devicePixelRatioF()),
-                 qRound(pixmap.height() / pixmap.devicePixelRatioF()));
+        qRound(pixmap.height() / pixmap.devicePixelRatioF()));
 #endif
 }
 
@@ -483,22 +468,22 @@ inline QRectF fluentPixmapSourceRectForDraw(const QRectF& logicalSource, const Q
     // zh_CN: Qt 5/6 的 drawPixmap 源矩形都使用 pixmap 像素坐标，即使
     // devicePixelRatio != 1 也如此。
     const qreal dpr = qMax<qreal>(1.0, pixmap.devicePixelRatioF());
-    return QRectF(logicalSource.left() * dpr, logicalSource.top() * dpr,
-                  logicalSource.width() * dpr, logicalSource.height() * dpr);
+    return QRectF(logicalSource.left() * dpr, logicalSource.top() * dpr, logicalSource.width() * dpr,
+        logicalSource.height() * dpr);
 }
 
-inline QPixmap fluentIconPixmapForLogicalExtent(const QIcon& icon, const QSize& logicalExtent,
-                                                qreal devicePixelRatio = 1.0,
-                                                QWindow* targetWindow = nullptr)
+inline QPixmap fluentIconPixmapForLogicalExtent(const QIcon& icon,
+    const QSize& logicalExtent,
+    qreal devicePixelRatio = 1.0,
+    QWindow* targetWindow = nullptr)
 {
     const qreal dpr = qMax<qreal>(1.0, devicePixelRatio);
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     // Qt 5 applies the application's High-DPI factor inside QIcon::pixmap().
     // Passing a physical extent here would therefore scale the icon twice.
-    QPixmap pixmap =
-        targetWindow ? icon.pixmap(targetWindow, logicalExtent) : icon.pixmap(logicalExtent);
+    QPixmap pixmap = targetWindow ? icon.pixmap(targetWindow, logicalExtent) : icon.pixmap(logicalExtent);
     const QSize physicalExtent(qMax(1, qRound(logicalExtent.width() * dpr)),
-                               qMax(1, qRound(logicalExtent.height() * dpr)));
+        qMax(1, qRound(logicalExtent.height() * dpr)));
     if (!pixmap.isNull() && pixmap.size() != physicalExtent) {
         pixmap = pixmap.scaled(physicalExtent, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     }
@@ -533,15 +518,13 @@ inline qreal fluentPainterDevicePixelRatio(const QPainter& painter)
  * zh_CN: 将源图缩放到 `logicalRect` 的物理像素范围、设置 pixmap DPR 并居中绘制。
  * 在 HiDPI / 分数缩放下绘制缩略图或其他 1x 素材时，优先于 `drawPixmap(rect, source)`。
  */
-inline void fluentDrawPixmapInLogicalRect(QPainter& painter, const QRectF& logicalRect,
-                                          const QPixmap& source)
+inline void fluentDrawPixmapInLogicalRect(QPainter& painter, const QRectF& logicalRect, const QPixmap& source)
 {
     if (logicalRect.isEmpty() || source.isNull())
         return;
 
     const qreal dpr = qMax<qreal>(1.0, fluentPainterDevicePixelRatio(painter));
-    const QSize target(qMax(1, qRound(logicalRect.width() * dpr)),
-                       qMax(1, qRound(logicalRect.height() * dpr)));
+    const QSize target(qMax(1, qRound(logicalRect.width() * dpr)), qMax(1, qRound(logicalRect.height() * dpr)));
     QPixmap scaled = source;
     if (scaled.size() != target) {
         scaled = source.scaled(target, Qt::KeepAspectRatio, Qt::SmoothTransformation);
@@ -550,12 +533,11 @@ inline void fluentDrawPixmapInLogicalRect(QPainter& painter, const QRectF& logic
 
     const QSizeF logicalSize = QSizeF(scaled.size()) / dpr;
     const QPointF topLeft(logicalRect.x() + (logicalRect.width() - logicalSize.width()) * 0.5,
-                          logicalRect.y() + (logicalRect.height() - logicalSize.height()) * 0.5);
+        logicalRect.y() + (logicalRect.height() - logicalSize.height()) * 0.5);
     painter.drawPixmap(topLeft, scaled);
 }
 
-inline void fluentDrawPixmapInLogicalRect(QPainter& painter, const QRect& logicalRect,
-                                          const QPixmap& source)
+inline void fluentDrawPixmapInLogicalRect(QPainter& painter, const QRect& logicalRect, const QPixmap& source)
 {
     fluentDrawPixmapInLogicalRect(painter, QRectF(logicalRect), source);
 }
@@ -568,8 +550,7 @@ inline void fluentDrawPixmapInLogicalRect(QPainter& painter, const QRect& logica
  * photo cards and similar media tiles.
  * zh_CN: 等比放大至铺满矩形后居中裁切；用于照片卡等媒体瓦片。
  */
-inline void fluentDrawCoverPixmapInLogicalRect(QPainter& painter, const QRectF& logicalRect,
-                                               const QPixmap& source)
+inline void fluentDrawCoverPixmapInLogicalRect(QPainter& painter, const QRectF& logicalRect, const QPixmap& source)
 {
     if (logicalRect.isEmpty() || source.isNull())
         return;
@@ -579,12 +560,10 @@ inline void fluentDrawCoverPixmapInLogicalRect(QPainter& painter, const QRectF& 
     if (sourceSize.isEmpty())
         return;
 
-    const qreal scale =
-        qMax(logicalRect.width() / sourceSize.width(), logicalRect.height() / sourceSize.height());
+    const qreal scale = qMax(logicalRect.width() / sourceSize.width(), logicalRect.height() / sourceSize.height());
     const QSizeF visible(logicalRect.width() / scale, logicalRect.height() / scale);
-    const QRectF crop((sourceSize.width() - visible.width()) * 0.5,
-                      (sourceSize.height() - visible.height()) * 0.5, visible.width(),
-                      visible.height());
+    const QRectF crop((sourceSize.width() - visible.width()) * 0.5, (sourceSize.height() - visible.height()) * 0.5,
+        visible.width(), visible.height());
     painter.drawPixmap(logicalRect, source, fluentPixmapSourceRectForDraw(crop, source));
 }
 
@@ -603,8 +582,7 @@ inline FluentWheelInputKind fluentWheelInputKind(const QWheelEvent* e)
 {
     if (e->phase() != Qt::NoScrollPhase)
         return FluentWheelInputKind::PhaseBased;
-    return e->pixelDelta().isNull() ? FluentWheelInputKind::NoPhaseDiscrete
-                                    : FluentWheelInputKind::NoPhasePixel;
+    return e->pixelDelta().isNull() ? FluentWheelInputKind::NoPhaseDiscrete : FluentWheelInputKind::NoPhasePixel;
 }
 
 inline qreal fluentWheelDeltaY(const QWheelEvent* e)
@@ -655,9 +633,9 @@ using FluentItemDataRoles = QVector<int>;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #define FLUENT_INIT_VIEW_ITEM_OPTION(optPtr) initViewItemOption(optPtr)
 #else
-#define FLUENT_INIT_VIEW_ITEM_OPTION(optPtr)                                                       \
-    do {                                                                                           \
-        *(optPtr) = viewOptions();                                                                 \
+#define FLUENT_INIT_VIEW_ITEM_OPTION(optPtr)                                                                           \
+    do {                                                                                                               \
+        *(optPtr) = viewOptions();                                                                                     \
     } while (0)
 #endif
 
@@ -672,8 +650,7 @@ using FluentItemDataRoles = QVector<int>;
  * zh_CN: 某些 Qt/平台/offscreen 组合会先暴露有效索引，但 visualRect(index).height()
  * zh_CN: 仍为 0；这里统一回退到 view/delegate 的 size hint，避免组件代码散落 Qt 版本判断。
  */
-inline int fluentItemViewRowHeight(const QAbstractItemView* view, const QModelIndex& index,
-                                   const QRect& visualRect)
+inline int fluentItemViewRowHeight(const QAbstractItemView* view, const QModelIndex& index, const QRect& visualRect)
 {
     if (visualRect.height() > 0)
         return visualRect.height();
@@ -713,18 +690,17 @@ using FluentColorComponent = qreal;
  * zh_CN: 使用独立的本地、场景及全局位置构造 enter 事件；Qt 5 保持普通 Enter 事件。
  */
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-#define FLUENT_MAKE_ENTER_EVENT_AT(name, local, scene, global)                                     \
-    QEnterEvent name                                                                               \
-    {                                                                                              \
-        QPointF(local), QPointF(scene), QPointF(global)                                            \
+#define FLUENT_MAKE_ENTER_EVENT_AT(name, local, scene, global)                                                         \
+    QEnterEvent name                                                                                                   \
+    {                                                                                                                  \
+        QPointF(local), QPointF(scene), QPointF(global)                                                                \
     }
 #else
 #define FLUENT_MAKE_ENTER_EVENT_AT(name, local, scene, global) QEvent name(QEvent::Enter)
 #endif
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-#define FLUENT_MAKE_ENTER_EVENT(name, x, y)                                                        \
-    QEnterEvent name(QPointF((x), (y)), QPointF((x), (y)), QPointF((x), (y)))
+#define FLUENT_MAKE_ENTER_EVENT(name, x, y) QEnterEvent name(QPointF((x), (y)), QPointF((x), (y)), QPointF((x), (y)))
 #else
 #define FLUENT_MAKE_ENTER_EVENT(name, x, y) QEvent name(QEvent::Enter)
 #endif
@@ -732,34 +708,29 @@ using FluentColorComponent = qreal;
 // Test helper for constructing wheel events.
 // zh_CN: 构造 wheel 事件的测试辅助宏。
 // Qt 5.15 and Qt 6 share the modern pixel/angle delta constructor.
-#define FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(name, localPos, globalPos, pixelDeltaValue,             \
-                                           angleDeltaValue, buttonsValue, modifiersValue,          \
-                                           phaseValue, invertedValue)                              \
-    QWheelEvent name(QPointF{(localPos)}, QPointF{(globalPos)}, (pixelDeltaValue),                 \
-                     (angleDeltaValue), (buttonsValue), (modifiersValue), (phaseValue),            \
-                     (invertedValue))
+#define FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(name, localPos, globalPos, pixelDeltaValue, angleDeltaValue, buttonsValue,  \
+    modifiersValue, phaseValue, invertedValue)                                                                         \
+    QWheelEvent name(QPointF{(localPos)}, QPointF{(globalPos)}, (pixelDeltaValue), (angleDeltaValue), (buttonsValue),  \
+        (modifiersValue), (phaseValue), (invertedValue))
 
 // Common no-phase wheel constructor used by focused unit tests.
 // zh_CN: 单元测试常用的无 phase wheel 事件构造宏。
-#define FLUENT_MAKE_WHEEL_EVENT(name, localX, localY, angleDeltaY, modifiers)                      \
-    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(                                                            \
-        name, QPoint((localX), (localY)), QPoint((localX), (localY)), QPoint(),                    \
+#define FLUENT_MAKE_WHEEL_EVENT(name, localX, localY, angleDeltaY, modifiers)                                          \
+    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(name, QPoint((localX), (localY)), QPoint((localX), (localY)), QPoint(),         \
         QPoint(0, (angleDeltaY)), Qt::NoButton, (modifiers), Qt::NoScrollPhase, false)
 
 // Test helper for constructing mouse events.
 // zh_CN: 构造 mouse 事件的测试辅助宏。
 // Qt 6 takes floating-point local/global positions; Qt 5 keeps QPoint overloads.
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-#define FLUENT_MAKE_MOUSE_EVENT(name, typeValue, target, localPosValue, buttonValue, buttonsValue, \
-                                modifiersValue)                                                    \
-    const QPoint name##GlobalPos = (target)->mapToGlobal(localPosValue);                           \
-    QMouseEvent name((typeValue), QPointF(localPosValue), QPointF(name##GlobalPos), (buttonValue), \
-                     (buttonsValue), (modifiersValue))
+#define FLUENT_MAKE_MOUSE_EVENT(name, typeValue, target, localPosValue, buttonValue, buttonsValue, modifiersValue)     \
+    const QPoint name##GlobalPos = (target)->mapToGlobal(localPosValue);                                               \
+    QMouseEvent name((typeValue), QPointF(localPosValue), QPointF(name##GlobalPos), (buttonValue), (buttonsValue),     \
+        (modifiersValue))
 #else
-#define FLUENT_MAKE_MOUSE_EVENT(name, typeValue, target, localPosValue, buttonValue, buttonsValue, \
-                                modifiersValue)                                                    \
-    QMouseEvent name((typeValue), (localPosValue), (target)->mapToGlobal(localPosValue),           \
-                     (buttonValue), (buttonsValue), (modifiersValue))
+#define FLUENT_MAKE_MOUSE_EVENT(name, typeValue, target, localPosValue, buttonValue, buttonsValue, modifiersValue)     \
+    QMouseEvent name((typeValue), (localPosValue), (target)->mapToGlobal(localPosValue), (buttonValue),                \
+        (buttonsValue), (modifiersValue))
 #endif
 
 // Test helper for constructing native gesture events.
@@ -768,15 +739,14 @@ using FluentColorComponent = qreal;
 // keep a no-op construction macro so test files do not need version branches.
 #if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
 #define FLUENT_HAS_NATIVE_GESTURE_EVENT_CONSTRUCTOR 1
-#define FLUENT_MAKE_NATIVE_GESTURE_EVENT(name, target, gestureType, localX, localY, gestureValue)  \
-    const QPointF name##LocalPos(QPointF((localX), (localY)));                                     \
-    const QPointF name##GlobalPos((target)->mapToGlobal(name##LocalPos.toPoint()));                \
-    QNativeGestureEvent name((gestureType), QPointingDevice::primaryPointingDevice(), 2,           \
-                             name##LocalPos, name##LocalPos, name##GlobalPos, (gestureValue),      \
-                             QPointF(), 1)
+#define FLUENT_MAKE_NATIVE_GESTURE_EVENT(name, target, gestureType, localX, localY, gestureValue)                      \
+    const QPointF name##LocalPos(QPointF((localX), (localY)));                                                         \
+    const QPointF name##GlobalPos((target)->mapToGlobal(name##LocalPos.toPoint()));                                    \
+    QNativeGestureEvent name((gestureType), QPointingDevice::primaryPointingDevice(), 2, name##LocalPos,               \
+        name##LocalPos, name##GlobalPos, (gestureValue), QPointF(), 1)
 #else
 #define FLUENT_HAS_NATIVE_GESTURE_EVENT_CONSTRUCTOR 0
-#define FLUENT_MAKE_NATIVE_GESTURE_EVENT(name, target, gestureType, localX, localY, gestureValue)  \
+#define FLUENT_MAKE_NATIVE_GESTURE_EVENT(name, target, gestureType, localX, localY, gestureValue)                      \
     QEvent name(QEvent::None)
 #endif
 
@@ -835,6 +805,5 @@ inline bool fluentIsDevicePixelRatioChangeEvent(const QEvent* event)
  */
 inline bool fluentIsDisplayScaleChangeEvent(const QEvent* event)
 {
-    return event && (event->type() == QEvent::ScreenChangeInternal ||
-                     fluentIsDevicePixelRatioChangeEvent(event));
+    return event && (event->type() == QEvent::ScreenChangeInternal || fluentIsDevicePixelRatioChangeEvent(event));
 }

@@ -95,8 +95,8 @@ private:
             m_rebuildAncestors = true;
         if (type == QEvent::Hide)
             m_exposed = {};
-        if (type != QEvent::Move && type != QEvent::Resize && type != QEvent::Show &&
-            type != QEvent::Hide && type != QEvent::ParentChange)
+        if (type != QEvent::Move && type != QEvent::Resize && type != QEvent::Show && type != QEvent::Hide
+            && type != QEvent::ParentChange)
             return;
         if (m_exposurePending)
             return;
@@ -108,8 +108,7 @@ private:
                     if (ancestor)
                         ancestor->removeEventFilter(this);
                 m_ancestors.clear();
-                for (auto* ancestor = parentWidget(); ancestor;
-                     ancestor = ancestor->parentWidget()) {
+                for (auto* ancestor = parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
                     m_ancestors.append(ancestor);
                     ancestor->installEventFilter(this);
                 }
@@ -162,7 +161,7 @@ protected:
     {
         if (e->buttons() == Qt::NoButton && pointer)
             pointer({2.0 * fluentMousePos(e).x() / std::max(1, viewport()->width()) - 1,
-                     2.0 * fluentMousePos(e).y() / std::max(1, viewport()->height()) - 1});
+                2.0 * fluentMousePos(e).y() / std::max(1, viewport()->height()) - 1});
         QGraphicsView::mouseMoveEvent(e);
     }
     void leaveEvent(QEvent* e) override
@@ -185,12 +184,12 @@ protected:
 };
 bool supported(QWidget* widget)
 {
-    if (widget->testAttribute(Qt::WA_NativeWindow) || widget->testAttribute(Qt::WA_PaintOnScreen) ||
-        qobject_cast<QOpenGLWidget*>(widget))
+    if (widget->testAttribute(Qt::WA_NativeWindow) || widget->testAttribute(Qt::WA_PaintOnScreen)
+        || qobject_cast<QOpenGLWidget*>(widget))
         return false;
     for (auto* child : widget->findChildren<QWidget*>())
-        if (child->testAttribute(Qt::WA_NativeWindow) ||
-            child->testAttribute(Qt::WA_PaintOnScreen) || qobject_cast<QOpenGLWidget*>(child))
+        if (child->testAttribute(Qt::WA_NativeWindow) || child->testAttribute(Qt::WA_PaintOnScreen)
+            || qobject_cast<QOpenGLWidget*>(child))
             return false;
     return true;
 }
@@ -244,9 +243,8 @@ struct SpatialView::Private {
             return;
         if (type == QEvent::ParentChange)
             ancestorsDirty = true;
-        if (type != QEvent::Show && type != QEvent::Hide && type != QEvent::Move &&
-            type != QEvent::Resize && type != QEvent::ParentChange &&
-            type != QEvent::UpdateRequest && type != QEvent::LayoutRequest)
+        if (type != QEvent::Show && type != QEvent::Hide && type != QEvent::Move && type != QEvent::Resize
+            && type != QEvent::ParentChange && type != QEvent::UpdateRequest && type != QEvent::LayoutRequest)
             return;
         if (ancestorsDirty) {
             for (const auto& connection : ancestorDestructionConnections)
@@ -256,8 +254,7 @@ struct SpatialView::Private {
                 if (ancestor)
                     ancestor->removeEventFilter(q);
             ancestors.clear();
-            for (auto* ancestor = q->parentWidget(); ancestor;
-                 ancestor = ancestor->parentWidget()) {
+            for (auto* ancestor = q->parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
                 ancestors.append(ancestor);
                 ancestor->installEventFilter(q);
                 ancestorDestructionConnections.append(
@@ -314,8 +311,8 @@ struct SpatialView::Private {
 
     bool allowsSpatial() const
     {
-        return q->effectiveTheme() != FluentElement::HighContrast &&
-               MotionPolicy::instance().shouldAnimate(true, MotionPolicy::Kind::Continuous);
+        return q->effectiveTheme() != FluentElement::HighContrast
+            && MotionPolicy::instance().shouldAnimate(true, MotionPolicy::Kind::Continuous);
     }
     void settle()
     {
@@ -328,8 +325,8 @@ struct SpatialView::Private {
     }
     void pointAt(QPointF point)
     {
-        if (!spatial || !tracking || !allowsSpatial() || !q->isVisible() ||
-            !q->window()->isActiveWindow() || scene->mouseGrabberItem())
+        if (!spatial || !tracking || !allowsSpatial() || !q->isVisible() || !q->window()->isActiveWindow()
+            || scene->mouseGrabberItem())
             return;
         target = {std::clamp(point.x(), -1.0, 1.0), std::clamp(point.y(), -1.0, 1.0)};
         if (!response) {
@@ -343,8 +340,7 @@ struct SpatialView::Private {
     }
     void advance()
     {
-        if (!spatial || !tracking || !q->isVisible() || !q->window()->isActiveWindow() ||
-            !allowsSpatial()) {
+        if (!spatial || !tracking || !q->isVisible() || !q->window()->isActiveWindow() || !allowsSpatial()) {
             settle();
             return;
         }
@@ -374,8 +370,7 @@ struct SpatialView::Private {
         item->d->proxy->setWidget(widget);
         item->d->proxy->moved = [this] { q->updateProjection(); };
         item->d->proxy->setPos(0, 0);
-        item->d->proxy->setCacheMode(cache ? QGraphicsItem::ItemCoordinateCache
-                                           : QGraphicsItem::NoCache);
+        item->d->proxy->setCacheMode(cache ? QGraphicsItem::ItemCoordinateCache : QGraphicsItem::NoCache);
         widget->setVisible(item->d->visible);
         syncContentTheme(item);
     }
@@ -470,10 +465,11 @@ struct SpatialView::Private {
             return;
         }
         inspectEnvironment(QEvent::LayoutRequest);
-        if (!spatial || environmentRaster || mode == RenderMode::Raster ||
-            (mode == RenderMode::Auto &&
-             qEnvironmentVariable("FLUENT_QT_SPATIAL_RENDERER")
-                     .compare(QStringLiteral("raster"), Qt::CaseInsensitive) == 0)) {
+        if (!spatial || environmentRaster || mode == RenderMode::Raster
+            || (mode == RenderMode::Auto
+                && qEnvironmentVariable("FLUENT_QT_SPATIAL_RENDERER")
+                        .compare(QStringLiteral("raster"), Qt::CaseInsensitive)
+                    == 0)) {
             useRaster();
             return;
         }
@@ -555,7 +551,7 @@ void SpatialItem::setRotation(const QVector3D& value)
     if (!finite(value))
         return;
     const QVector3D angle(std::remainder(value.x(), 360.f), std::remainder(value.y(), 360.f),
-                          std::remainder(value.z(), 360.f));
+        std::remainder(value.z(), 360.f));
     if (angle == d->rotation)
         return;
     d->rotation = angle;
@@ -694,8 +690,7 @@ SpatialView::SpatialView(QWidget* parent) : QWidget(parent), d(new Private)
     d->modeChange = new QTimer(this);
     d->modeChange->setObjectName(QStringLiteral("spatialModeChangeTimer"));
     d->modeChange->setSingleShot(true);
-    connect(d->modeChange, &QTimer::timeout, this,
-            [this] { setSpatialEnabled(d->requestedSpatial); });
+    connect(d->modeChange, &QTimer::timeout, this, [this] { setSpatialEnabled(d->requestedSpatial); });
     d->canvas->pointer = [this](QPointF p) { d->pointAt(p); };
     d->canvas->resized = [this] {
         updateProjection();
@@ -709,8 +704,7 @@ SpatialView::SpatialView(QWidget* parent) : QWidget(parent), d(new Private)
             auto children = item->widget()->findChildren<QWidget*>();
             children.prepend(item->widget());
             for (auto* child : children)
-                if (child->isEnabled() && child->focusPolicy() != Qt::NoFocus &&
-                    child->isVisible()) {
+                if (child->isEnabled() && child->focusPolicy() != Qt::NoFocus && child->isVisible()) {
                     child->setFocus(Qt::TabFocusReason);
                     return;
                 }
@@ -751,9 +745,9 @@ SpatialItem* SpatialView::addWidget(QWidget* widget, WidgetOwnership ownership)
             return item;
     if (widget == this || widget->isAncestorOf(this) || isAncestorOf(widget))
         return nullptr;
-    if (widget->graphicsProxyWidget() || !supported(widget) ||
-        (ownership != WidgetOwnership::Borrowed && ownership != WidgetOwnership::Reparented &&
-         ownership != WidgetOwnership::Owned))
+    if (widget->graphicsProxyWidget() || !supported(widget)
+        || (ownership != WidgetOwnership::Borrowed && ownership != WidgetOwnership::Reparented
+            && ownership != WidgetOwnership::Owned))
         return nullptr;
     auto* item = new SpatialItem(this);
     item->d->widget = widget;
@@ -764,31 +758,30 @@ SpatialItem* SpatialView::addWidget(QWidget* widget, WidgetOwnership ownership)
         widget->resize(widget->sizeHint());
     d->items.append(item);
     widget->installEventFilter(this);
-    item->d->destroyedConnection =
-        connect(widget, &QObject::destroyed, this, [this, item](QObject* object) {
-            if (!d->destroying && d->items.removeOne(item)) {
-                disconnect(item->d->destroyedConnection);
-                object->removeEventFilter(this);
-                item->d->owner = nullptr;
-                item->d->widget.clear();
-                // Qt 5/6.2 already dismantled the focus chain here: reparenting the
-                // dying widget is unsafe. Let Qt release its parent/proxy first,
-                // then notify handlers that may synchronously destroy this host.
-                // zh_CN: 旧版 Qt 此时已拆除焦点链，不能重设父对象；待 Qt 完成解绑后再通知外部。
-                if (auto* proxy = item->d->proxy.data())
-                    proxy->moved = {};
-                item->deleteLater();
-                if (!d->countNotificationQueued) {
-                    d->countNotificationQueued = true;
-                    QTimer::singleShot(0, this, [this] {
-                        if (!d->countNotificationQueued)
-                            return;
-                        d->countNotificationQueued = false;
-                        emit itemCountChanged(itemCount());
-                    });
-                }
+    item->d->destroyedConnection = connect(widget, &QObject::destroyed, this, [this, item](QObject* object) {
+        if (!d->destroying && d->items.removeOne(item)) {
+            disconnect(item->d->destroyedConnection);
+            object->removeEventFilter(this);
+            item->d->owner = nullptr;
+            item->d->widget.clear();
+            // Qt 5/6.2 already dismantled the focus chain here: reparenting the
+            // dying widget is unsafe. Let Qt release its parent/proxy first,
+            // then notify handlers that may synchronously destroy this host.
+            // zh_CN: 旧版 Qt 此时已拆除焦点链，不能重设父对象；待 Qt 完成解绑后再通知外部。
+            if (auto* proxy = item->d->proxy.data())
+                proxy->moved = {};
+            item->deleteLater();
+            if (!d->countNotificationQueued) {
+                d->countNotificationQueued = true;
+                QTimer::singleShot(0, this, [this] {
+                    if (!d->countNotificationQueued)
+                        return;
+                    d->countNotificationQueued = false;
+                    emit itemCountChanged(itemCount());
+                });
             }
-        });
+        }
+    });
     if (d->spatial)
         d->embed(item);
     else {
@@ -899,8 +892,7 @@ void SpatialView::setSpatialEnabled(bool enabled)
         else {
             d->unembed(item);
             if (item->widget()) {
-                d->flatLayout->insertWidget(d->flatLayout->count() - 1, item->widget(), 0,
-                                            Qt::AlignHCenter);
+                d->flatLayout->insertWidget(d->flatLayout->count() - 1, item->widget(), 0, Qt::AlignHCenter);
                 item->widget()->setVisible(item->d->visible);
             }
         }
@@ -1005,8 +997,7 @@ void SpatialView::setCacheEnabled(bool enabled)
     d->cache = enabled;
     for (auto* item : d->items)
         if (item->d->proxy)
-            item->d->proxy->setCacheMode(enabled ? QGraphicsItem::ItemCoordinateCache
-                                                 : QGraphicsItem::NoCache);
+            item->d->proxy->setCacheMode(enabled ? QGraphicsItem::ItemCoordinateCache : QGraphicsItem::NoCache);
     emit cacheEnabledChanged(enabled);
 }
 SpatialView::RenderMode SpatialView::renderMode() const
@@ -1015,9 +1006,8 @@ SpatialView::RenderMode SpatialView::renderMode() const
 }
 void SpatialView::setRenderMode(RenderMode mode)
 {
-    if (isHostTearingDown() ||
-        (mode != RenderMode::Auto && mode != RenderMode::Raster && mode != RenderMode::OpenGL) ||
-        mode == d->mode)
+    if (isHostTearingDown() || (mode != RenderMode::Auto && mode != RenderMode::Raster && mode != RenderMode::OpenGL)
+        || mode == d->mode)
         return;
     d->mode = mode;
     d->gpuFailure.clear();
@@ -1052,8 +1042,7 @@ void SpatialView::updateProjection()
             continue;
         const QRectF rect(QPointF(), item->widget()->size());
         const auto* theme = dynamic_cast<const FluentElement*>(item->widget());
-        item->d->proxy->configure(item->d->surfaceIntensity, item->d->hoverLift,
-                                  theme ? *theme : *this);
+        item->d->proxy->configure(item->d->surfaceIntensity, item->d->hoverLift, theme ? *theme : *this);
         const QPointF pivot(rect.width() * item->d->pivot.x(), rect.height() * item->d->pivot.y());
         QMatrix4x4 model = observer;
         model.translate(item->d->position);
@@ -1067,8 +1056,7 @@ void SpatialView::updateProjection()
         QPolygonF projected;
         bool valid = !rect.isEmpty();
         for (const QPointF& corner : source) {
-            const QVector3D p = model.map(
-                QVector3D(float(corner.x() - pivot.x()), float(corner.y() - pivot.y()), 0));
+            const QVector3D p = model.map(QVector3D(float(corner.x() - pivot.x()), float(corner.y() - pivot.y()), 0));
             const qreal distance = d->camera - p.z();
             if (!finite(p) || distance <= 1) {
                 valid = false;
@@ -1078,15 +1066,13 @@ void SpatialView::updateProjection()
             projected.append(QPointF(p.x() * factor, p.y() * factor));
         }
         QTransform transform;
-        valid = valid && QTransform::quadToQuad(source, projected, transform) &&
-                transform.isInvertible();
+        valid = valid && QTransform::quadToQuad(source, projected, transform) && transform.isInvertible();
         item->d->proxy->setVisible(valid && item->d->visible);
         if (valid) {
             item->d->proxy->setTransform(transform);
-            item->d->proxy->setZValue(model
-                                          .map(QVector3D(float(rect.center().x() - pivot.x()),
-                                                         float(rect.center().y() - pivot.y()), 0))
-                                          .z());
+            item->d->proxy->setZValue(
+                model.map(QVector3D(float(rect.center().x() - pivot.x()), float(rect.center().y() - pivot.y()), 0))
+                    .z());
         }
     }
     d->projecting = false;
@@ -1094,8 +1080,8 @@ void SpatialView::updateProjection()
 bool SpatialView::eventFilter(QObject* watched, QEvent* event)
 {
     d->inspectEnvironment(event->type());
-    if (!d->destroying && !d->updatingTheme && event->type() == QEvent::DynamicPropertyChange &&
-        static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName() == kThemeOverride) {
+    if (!d->destroying && !d->updatingTheme && event->type() == QEvent::DynamicPropertyChange
+        && static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName() == kThemeOverride) {
         for (auto* item : d->items)
             if (item->widget() == watched) {
                 item->d->inheritsHostTheme = !watched->property(kThemeOverride).isValid();

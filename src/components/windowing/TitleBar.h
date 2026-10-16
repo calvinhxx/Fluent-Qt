@@ -28,12 +28,18 @@ class TitleBar : public QWidget, public FluentElement, public QMLPlus {
      * @brief Leading width reserved for platform window controls.
      * zh_CN: 为平台窗口控件保留的前置宽度。
      */
-    Q_PROPERTY(int systemReservedLeadingWidth READ systemReservedLeadingWidth WRITE setSystemReservedLeadingWidth NOTIFY systemReservedLeadingWidthChanged)
+    Q_PROPERTY(int systemReservedLeadingWidth
+        READ systemReservedLeadingWidth
+        WRITE setSystemReservedLeadingWidth
+        NOTIFY systemReservedLeadingWidthChanged)
     /**
      * @brief Trailing width reserved for platform window controls.
      * zh_CN: 为平台窗口控件保留的尾部宽度。
      */
-    Q_PROPERTY(int systemReservedTrailingWidth READ systemReservedTrailingWidth WRITE setSystemReservedTrailingWidth NOTIFY systemReservedTrailingWidthChanged)
+    Q_PROPERTY(int systemReservedTrailingWidth
+        READ systemReservedTrailingWidth
+        WRITE setSystemReservedTrailingWidth
+        NOTIFY systemReservedTrailingWidthChanged)
     /**
      * @brief Title bar height in pixels.
      * zh_CN: 标题栏高度，单位为像素。

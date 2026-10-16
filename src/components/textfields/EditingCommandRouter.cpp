@@ -41,12 +41,9 @@ constexpr std::array<Command, 7> kCommands = {
     Command::SelectAll,
 };
 
-constexpr const char* kScopeRouterProperty =
-    "_fluentqt_editingCommandRouter";
-constexpr const char* kCommandScopeProperty =
-    "_fluentqt_editingCommandScope";
-constexpr const char* kCommandPresentationProperty =
-    "_fluentqt_commandActionPresentation";
+constexpr const char* kScopeRouterProperty = "_fluentqt_editingCommandRouter";
+constexpr const char* kCommandScopeProperty = "_fluentqt_editingCommandScope";
+constexpr const char* kCommandPresentationProperty = "_fluentqt_commandActionPresentation";
 
 int commandIndex(Command command)
 {
@@ -116,8 +113,7 @@ QString fallbackText(Command command)
         source = "Select &All";
         break;
     }
-    return QCoreApplication::translate(
-        "fluent::textfields::EditingCommandRouter", source);
+    return QCoreApplication::translate("fluent::textfields::EditingCommandRouter", source);
 }
 
 QString actionObjectName(Command command)
@@ -141,8 +137,7 @@ QString actionObjectName(Command command)
     return QStringLiteral("FluentEditing.Unknown");
 }
 
-bool matchesStandardShortcut(const QAction* action,
-                             QKeySequence::StandardKey key)
+bool matchesStandardShortcut(const QAction* action, QKeySequence::StandardKey key)
 {
     if (!action)
         return false;
@@ -151,9 +146,7 @@ bool matchesStandardShortcut(const QAction* action,
     if (shortcuts.isEmpty()) {
         const int tabIndex = action->text().indexOf(QLatin1Char('\t'));
         if (tabIndex >= 0) {
-            const QKeySequence embedded(
-                action->text().mid(tabIndex + 1).trimmed(),
-                QKeySequence::NativeText);
+            const QKeySequence embedded(action->text().mid(tabIndex + 1).trimmed(), QKeySequence::NativeText);
             if (!embedded.isEmpty())
                 shortcuts.append(embedded);
         }
@@ -199,30 +192,23 @@ QWidget* resolveScopeWindow(QWidget* scopeWidget)
 
 TextEdit* owningTextEdit(QWidget* widget)
 {
-    for (QWidget* current = widget; current;
-         current = current->parentWidget()) {
+    for (QWidget* current = widget; current; current = current->parentWidget()) {
         if (auto* owner = qobject_cast<TextEdit*>(current))
             return owner;
     }
     return nullptr;
 }
 
-bool fullySelected(const QLineEdit* edit,
-                   int selectionStart,
-                   int selectionLength)
+bool fullySelected(const QLineEdit* edit, int selectionStart, int selectionLength)
 {
-    return edit && !edit->text().isEmpty()
-        && selectionStart == 0
-        && selectionLength == edit->text().size();
+    return edit && !edit->text().isEmpty() && selectionStart == 0 && selectionLength == edit->text().size();
 }
 
-bool fullySelected(const QTextEdit* edit,
-                   const QTextCursor& cursor)
+bool fullySelected(const QTextEdit* edit, const QTextCursor& cursor)
 {
     if (!edit || edit->document()->isEmpty())
         return false;
-    return cursor.hasSelection()
-        && cursor.selectionStart() == 0
+    return cursor.hasSelection() && cursor.selectionStart() == 0
         && cursor.selectionEnd() >= edit->document()->characterCount() - 1;
 }
 
@@ -230,18 +216,10 @@ bool fullySelected(const QTextEdit* edit,
 
 class EditingCommandRouterPrivate final : public QObject {
 public:
-    enum class TargetKind {
-        None,
-        LineEdit,
-        TextEdit
-    };
+    enum class TargetKind { None, LineEdit, TextEdit };
 
-    EditingCommandRouterPrivate(
-        EditingCommandRouter* owner,
-        QWidget* resolvedScope)
-        : QObject(owner),
-          q(owner),
-          scope(resolvedScope)
+    EditingCommandRouterPrivate(EditingCommandRouter* owner, QWidget* resolvedScope)
+        : QObject(owner), q(owner), scope(resolvedScope)
     {
         createActions();
         scopeRegistered = registerScope();
@@ -252,19 +230,14 @@ public:
         if (!scopeRegistered)
             return;
         connectApplicationState();
-        handleFocusChanged(
-            nullptr,
-            QApplication::instance()
-                ? QApplication::focusWidget()
-                : nullptr);
+        handleFocusChanged(nullptr, QApplication::instance() ? QApplication::focusWidget() : nullptr);
     }
 
     ~EditingCommandRouterPrivate() override
     {
         disconnectTarget();
         if (scope) {
-            QObject* registered =
-                scope->property(kScopeRouterProperty).value<QObject*>();
+            QObject* registered = scope->property(kScopeRouterProperty).value<QObject*>();
             if (registered == q)
                 scope->setProperty(kScopeRouterProperty, QVariant());
         }
@@ -282,13 +255,10 @@ public:
         }
 
         if (watched == target.data()) {
-            if (passwordTarget
-                && passwordTarget->passwordRevealMode()
-                    != PasswordBox::PasswordRevealMode::Visible
+            if (passwordTarget && passwordTarget->passwordRevealMode() != PasswordBox::PasswordRevealMode::Visible
                 && event->type() == QEvent::KeyPress) {
                 auto* keyEvent = static_cast<QKeyEvent*>(event);
-                if (keyEvent->matches(QKeySequence::Cut)
-                    || keyEvent->matches(QKeySequence::Copy)) {
+                if (keyEvent->matches(QKeySequence::Cut) || keyEvent->matches(QKeySequence::Copy)) {
                     event->accept();
                     return true;
                 }
@@ -320,17 +290,11 @@ public:
         return result;
     }
 
-    bool hasTarget() const
-    {
-        return scopeRegistered
-            && kind != TargetKind::None
-            && !target.isNull();
-    }
+    bool hasTarget() const { return scopeRegistered && kind != TargetKind::None && !target.isNull(); }
 
     bool execute(Command command)
     {
-        const bool restorePresentationFocus =
-            isRouterPresentationActive();
+        const bool restorePresentationFocus = isRouterPresentationActive();
         if (restorePresentationFocus)
             restoreEditingState();
         refreshCapabilities();
@@ -402,42 +366,28 @@ public:
 
         qCDebug(logging::editingCategory)
             << "EditingCommandRouter execute"
-            << "command=" << commandIndex(command)
-            << "target=" << target->metaObject()->className();
+            << "command=" << commandIndex(command) << "target=" << target->metaObject()->className();
         captureEditingState();
         refreshCapabilities();
         if (restorePresentationFocus) {
-            QTimer::singleShot(
-                0,
-                this,
-                [this, executionTarget]() {
-                    if (!executionTarget
-                        || !scope
-                        || executionTarget->window() != scope.data()
-                        || !executionTarget->isEnabled()) {
+            QTimer::singleShot(0, this, [this, executionTarget]() {
+                if (!executionTarget || !scope || executionTarget->window() != scope.data()
+                    || !executionTarget->isEnabled()) {
+                    return;
+                }
+                QWidget* focus = QApplication::focusWidget();
+                if (!focus || isRouterPresentationActive(focus)) {
+                    TargetKind restoredKind = TargetKind::None;
+                    QWidget* restoredTarget = nullptr;
+                    PasswordBox* restoredPassword = nullptr;
+                    if (!resolveTarget(executionTarget.data(), &restoredKind, &restoredTarget, &restoredPassword)) {
                         return;
                     }
-                    QWidget* focus = QApplication::focusWidget();
-                    if (!focus || isRouterPresentationActive(focus)) {
-                        TargetKind restoredKind = TargetKind::None;
-                        QWidget* restoredTarget = nullptr;
-                        PasswordBox* restoredPassword = nullptr;
-                        if (!resolveTarget(
-                                executionTarget.data(),
-                                &restoredKind,
-                                &restoredTarget,
-                                &restoredPassword)) {
-                            return;
-                        }
-                        ++focusRevision;
-                        executionTarget->setFocus(
-                            Qt::ShortcutFocusReason);
-                        setTarget(
-                            restoredKind,
-                            restoredTarget,
-                            restoredPassword);
-                    }
-                });
+                    ++focusRevision;
+                    executionTarget->setFocus(Qt::ShortcutFocusReason);
+                    setTarget(restoredKind, restoredTarget, restoredPassword);
+                }
+            });
         }
         return true;
     }
@@ -446,72 +396,43 @@ public:
     {
         std::array<bool, 7> enabled = {};
         if (hasTarget() && target->isEnabled()) {
-            const bool presentationActive =
-                isRouterPresentationActive();
+            const bool presentationActive = isRouterPresentationActive();
             if (kind == TargetKind::LineEdit) {
-                const auto* edit =
-                    qobject_cast<const QLineEdit*>(target.data());
+                const auto* edit = qobject_cast<const QLineEdit*>(target.data());
                 if (edit) {
                     const bool writable = !edit->isReadOnly();
-                    const int selectionStart =
-                        presentationActive
-                        ? lineSelectionStart
-                        : edit->selectionStart();
-                    const int selectionLength =
-                        presentationActive
+                    const int selectionStart = presentationActive ? lineSelectionStart : edit->selectionStart();
+                    const int selectionLength = presentationActive
                         ? lineSelectionLength
-                        : (selectionStart >= 0
-                               ? edit->selectedText().size()
-                               : 0);
-                    const bool selected =
-                        selectionStart >= 0
-                        && selectionLength > 0;
-                    const bool exportAllowed =
-                        !passwordTarget
-                        || passwordTarget->passwordRevealMode()
-                            == PasswordBox::PasswordRevealMode::Visible;
+                        : (selectionStart >= 0 ? edit->selectedText().size() : 0);
+                    const bool selected = selectionStart >= 0 && selectionLength > 0;
+                    const bool exportAllowed = !passwordTarget
+                        || passwordTarget->passwordRevealMode() == PasswordBox::PasswordRevealMode::Visible;
                     const QMimeData* mimeData =
-                        QApplication::clipboard()
-                        ? QApplication::clipboard()->mimeData()
-                        : nullptr;
+                        QApplication::clipboard() ? QApplication::clipboard()->mimeData() : nullptr;
 
                     enabled[0] = writable && edit->isUndoAvailable();
                     enabled[1] = writable && edit->isRedoAvailable();
-                    enabled[2] =
-                        writable && selected && exportAllowed;
+                    enabled[2] = writable && selected && exportAllowed;
                     enabled[3] = selected && exportAllowed;
-                    enabled[4] =
-                        writable && mimeData && mimeData->hasText();
+                    enabled[4] = writable && mimeData && mimeData->hasText();
                     enabled[5] = writable && selected;
-                    enabled[6] =
-                        !edit->text().isEmpty()
-                        && !fullySelected(
-                            edit,
-                            selectionStart,
-                            selectionLength);
+                    enabled[6] = !edit->text().isEmpty() && !fullySelected(edit, selectionStart, selectionLength);
                 }
             } else if (kind == TargetKind::TextEdit) {
-                const auto* edit =
-                    qobject_cast<const QTextEdit*>(target.data());
+                const auto* edit = qobject_cast<const QTextEdit*>(target.data());
                 if (edit) {
                     const bool writable = !edit->isReadOnly();
                     const QTextCursor cursor =
-                        presentationActive
-                        && !textCursorSnapshot.isNull()
-                        ? textCursorSnapshot
-                        : edit->textCursor();
+                        presentationActive && !textCursorSnapshot.isNull() ? textCursorSnapshot : edit->textCursor();
                     const bool selected = cursor.hasSelection();
-                    enabled[0] =
-                        writable && edit->document()->isUndoAvailable();
-                    enabled[1] =
-                        writable && edit->document()->isRedoAvailable();
+                    enabled[0] = writable && edit->document()->isUndoAvailable();
+                    enabled[1] = writable && edit->document()->isRedoAvailable();
                     enabled[2] = writable && selected;
                     enabled[3] = selected;
                     enabled[4] = writable && edit->canPaste();
                     enabled[5] = writable && selected;
-                    enabled[6] =
-                        !edit->document()->isEmpty()
-                        && !fullySelected(edit, cursor);
+                    enabled[6] = !edit->document()->isEmpty() && !fullySelected(edit, cursor);
                 }
             }
         }
@@ -521,8 +442,7 @@ public:
             if (action->isEnabled() == enabled[index])
                 continue;
             action->setEnabled(enabled[index]);
-            emit q->commandCapabilityChanged(
-                kCommands[index], enabled[index]);
+            emit q->commandCapabilityChanged(kCommands[index], enabled[index]);
         }
     }
 
@@ -536,15 +456,8 @@ private:
             auto* action = new QAction(q);
             action->setObjectName(actionObjectName(command));
             action->setEnabled(false);
-            action->setProperty(
-                kCommandScopeProperty,
-                QVariant::fromValue(
-                    static_cast<QObject*>(scope.data())));
-            QObject::connect(
-                action,
-                &QAction::triggered,
-                q,
-                [this, command]() { execute(command); });
+            action->setProperty(kCommandScopeProperty, QVariant::fromValue(static_cast<QObject*>(scope.data())));
+            QObject::connect(action, &QAction::triggered, q, [this, command]() { execute(command); });
             commandActions[index] = action;
         }
     }
@@ -556,9 +469,7 @@ private:
         for (size_t index = 0; index < kCommands.size(); ++index) {
             QAction* action = commandActions[index];
             action->setShortcutContext(Qt::WindowShortcut);
-            action->setShortcuts(
-                QKeySequence::keyBindings(
-                    standardKey(kCommands[index])));
+            action->setShortcuts(QKeySequence::keyBindings(standardKey(kCommands[index])));
             scope->addAction(action);
         }
     }
@@ -566,23 +477,18 @@ private:
     bool registerScope()
     {
         if (!scope) {
-            qCWarning(logging::editingCategory)
-                << "EditingCommandRouter requires a scope window";
+            qCWarning(logging::editingCategory) << "EditingCommandRouter requires a scope window";
             return false;
         }
 
-        QObject* existing =
-            scope->property(kScopeRouterProperty).value<QObject*>();
+        QObject* existing = scope->property(kScopeRouterProperty).value<QObject*>();
         if (existing && existing != q) {
             qCWarning(logging::editingCategory)
-                << "Rejecting duplicate EditingCommandRouter for window"
-                << scope.data();
+                << "Rejecting duplicate EditingCommandRouter for window" << scope.data();
             return false;
         }
 
-        scope->setProperty(
-            kScopeRouterProperty,
-            QVariant::fromValue(static_cast<QObject*>(q)));
+        scope->setProperty(kScopeRouterProperty, QVariant::fromValue(static_cast<QObject*>(q)));
         scope->installEventFilter(this);
         return true;
     }
@@ -591,41 +497,28 @@ private:
     {
         if (!scope)
             return;
-        QObject::connect(
-            scope.data(),
-            &QObject::destroyed,
-            this,
-            [this]() {
-                for (QAction* action : commandActions) {
-                    if (action)
-                        action->setProperty(
-                            kCommandScopeProperty, QVariant());
-                }
-                scopeRegistered = false;
-                scope = nullptr;
-                setTarget(TargetKind::None, nullptr, nullptr);
-            });
+        QObject::connect(scope.data(), &QObject::destroyed, this, [this]() {
+            for (QAction* action : commandActions) {
+                if (action)
+                    action->setProperty(kCommandScopeProperty, QVariant());
+            }
+            scopeRegistered = false;
+            scope = nullptr;
+            setTarget(TargetKind::None, nullptr, nullptr);
+        });
     }
 
     void connectApplicationState()
     {
-        auto* application =
-            qobject_cast<QApplication*>(QCoreApplication::instance());
+        auto* application = qobject_cast<QApplication*>(QCoreApplication::instance());
         if (application) {
-            QObject::connect(
-                application,
-                &QApplication::focusChanged,
-                this,
-                [this](QWidget* oldFocus, QWidget* newFocus) {
-                    handleFocusChanged(oldFocus, newFocus);
-                });
+            QObject::connect(application, &QApplication::focusChanged, this,
+                [this](QWidget* oldFocus, QWidget* newFocus) { handleFocusChanged(oldFocus, newFocus); });
         }
         if (QApplication::clipboard()) {
-            QObject::connect(
-                QApplication::clipboard(),
-                &QClipboard::dataChanged,
-                this,
-                [this]() { refreshCapabilities(); });
+            QObject::connect(QApplication::clipboard(), &QClipboard::dataChanged, this, [this]() {
+                refreshCapabilities();
+            });
         }
     }
 
@@ -636,8 +529,7 @@ private:
             resolvedTexts[index] = fallbackText(kCommands[index]);
 
         QLineEdit probe;
-        QScopedPointer<QMenu> standardMenu(
-            probe.createStandardContextMenu());
+        QScopedPointer<QMenu> standardMenu(probe.createStandardContextMenu());
         bool pasteSeen = false;
         if (standardMenu) {
             for (QAction* sourceAction : standardMenu->actions()) {
@@ -668,9 +560,7 @@ private:
 
         for (size_t index = 0; index < commandActions.size(); ++index) {
             QAction* action = commandActions[index];
-            const bool usesDefault =
-                action->text().isEmpty()
-                || action->text() == defaultTexts[index];
+            const bool usesDefault = action->text().isEmpty() || action->text() == defaultTexts[index];
             if (usesDefault)
                 action->setText(resolvedTexts[index]);
             defaultTexts[index] = resolvedTexts[index];
@@ -682,16 +572,9 @@ private:
         TargetKind resolvedKind = TargetKind::None;
         QWidget* resolvedTarget = nullptr;
         PasswordBox* resolvedPassword = nullptr;
-        if (resolveTarget(
-                newFocus,
-                &resolvedKind,
-                &resolvedTarget,
-                &resolvedPassword)) {
+        if (resolveTarget(newFocus, &resolvedKind, &resolvedTarget, &resolvedPassword)) {
             ++focusRevision;
-            setTarget(
-                resolvedKind,
-                resolvedTarget,
-                resolvedPassword);
+            setTarget(resolvedKind, resolvedTarget, resolvedPassword);
             return;
         }
 
@@ -707,15 +590,8 @@ private:
                 TargetKind delayedKind = TargetKind::None;
                 QWidget* delayedTarget = nullptr;
                 PasswordBox* delayedPassword = nullptr;
-                if (resolveTarget(
-                        current,
-                        &delayedKind,
-                        &delayedTarget,
-                        &delayedPassword)) {
-                    setTarget(
-                        delayedKind,
-                        delayedTarget,
-                        delayedPassword);
+                if (resolveTarget(current, &delayedKind, &delayedTarget, &delayedPassword)) {
+                    setTarget(delayedKind, delayedTarget, delayedPassword);
                 } else if (!isRouterPresentationActive(current)) {
                     setTarget(TargetKind::None, nullptr, nullptr);
                 }
@@ -726,8 +602,7 @@ private:
         setTarget(TargetKind::None, nullptr, nullptr);
     }
 
-    bool resolveTarget(
-        QWidget* focus,
+    bool resolveTarget(QWidget* focus,
         TargetKind* resolvedKind,
         QWidget** resolvedTarget,
         PasswordBox** resolvedPassword) const
@@ -758,22 +633,18 @@ private:
         if (!focus)
             return false;
 
-        const auto containsRouterAction =
-            [this](const QWidget* container) {
-                if (!container)
-                    return false;
-                const QList<QAction*> associated =
-                    container->actions();
-                for (QAction* action : commandActions) {
-                    if (associated.contains(action))
-                        return true;
-                }
+        const auto containsRouterAction = [this](const QWidget* container) {
+            if (!container)
                 return false;
-            };
+            const QList<QAction*> associated = container->actions();
+            for (QAction* action : commandActions) {
+                if (associated.contains(action))
+                    return true;
+            }
+            return false;
+        };
 
-        for (QWidget* current = focus;
-             current && current != scope.data();
-             current = current->parentWidget()) {
+        for (QWidget* current = focus; current && current != scope.data(); current = current->parentWidget()) {
             if (containsRouterAction(current))
                 return true;
         }
@@ -782,37 +653,28 @@ private:
         // popup window rather than on the action-owning menu itself.
         // zh_CN: 原生 QMenu 可能把焦点放到弹层子控件或弹层窗口，而非持有 action
         // 的菜单本身，因此保留顶层弹层兜底检查。
-        return containsRouterAction(
-            qobject_cast<QMenu*>(focus->window()));
+        return containsRouterAction(qobject_cast<QMenu*>(focus->window()));
     }
 
-    bool isRouterPresentationActive(
-        QWidget* focus = nullptr) const
+    bool isRouterPresentationActive(QWidget* focus = nullptr) const
     {
-        QWidget* current =
-            focus ? focus : QApplication::focusWidget();
+        QWidget* current = focus ? focus : QApplication::focusWidget();
         if (isRouterPresentation(current))
             return true;
-        if (isRouterPresentation(
-                QApplication::activePopupWidget())) {
+        if (isRouterPresentation(QApplication::activePopupWidget())) {
             return true;
         }
         for (QWidget* topLevel : QApplication::topLevelWidgets()) {
-            if (topLevel
-                && topLevel->isVisible()
-                && topLevel->windowType() == Qt::Popup
+            if (topLevel && topLevel->isVisible() && topLevel->windowType() == Qt::Popup
                 && isRouterPresentation(topLevel)) {
                 return true;
             }
         }
         if (scope) {
-            const QList<QWidget*> containers =
-                scope->findChildren<QWidget*>();
+            const QList<QWidget*> containers = scope->findChildren<QWidget*>();
             for (QWidget* container : containers) {
                 if (!container || !container->isVisible()
-                    || !container->property(
-                            kCommandPresentationProperty)
-                            .toBool()) {
+                    || !container->property(kCommandPresentationProperty).toBool()) {
                     continue;
                 }
                 for (QAction* action : commandActions) {
@@ -824,14 +686,9 @@ private:
         return false;
     }
 
-    void setTarget(
-        TargetKind newKind,
-        QWidget* newTarget,
-        PasswordBox* newPasswordTarget)
+    void setTarget(TargetKind newKind, QWidget* newTarget, PasswordBox* newPasswordTarget)
     {
-        if (kind == newKind
-            && target == newTarget
-            && passwordTarget == newPasswordTarget) {
+        if (kind == newKind && target == newTarget && passwordTarget == newPasswordTarget) {
             if (!isRouterPresentationActive())
                 captureEditingState();
             refreshCapabilities();
@@ -847,9 +704,7 @@ private:
 
         qCDebug(logging::editingCategory)
             << "EditingCommandRouter targetChanged"
-            << "active=" << hasTarget()
-            << "target="
-            << (target ? target->metaObject()->className() : "none");
+            << "active=" << hasTarget() << "target=" << (target ? target->metaObject()->className() : "none");
         QPointer<EditingCommandRouter> guard(q);
         emit q->activeTargetChanged(hasTarget());
         if (!guard)
@@ -863,94 +718,57 @@ private:
             return;
 
         target->installEventFilter(this);
-        targetConnections.append(QObject::connect(
-            target.data(),
-            &QObject::destroyed,
-            this,
-            [this]() {
-                kind = TargetKind::None;
-                target = nullptr;
-                passwordTarget = nullptr;
-                disconnectTarget();
-                QPointer<EditingCommandRouter> guard(q);
-                emit q->activeTargetChanged(false);
-                if (!guard)
-                    return;
-                refreshCapabilities();
-            }));
+        targetConnections.append(QObject::connect(target.data(), &QObject::destroyed, this, [this]() {
+            kind = TargetKind::None;
+            target = nullptr;
+            passwordTarget = nullptr;
+            disconnectTarget();
+            QPointer<EditingCommandRouter> guard(q);
+            emit q->activeTargetChanged(false);
+            if (!guard)
+                return;
+            refreshCapabilities();
+        }));
 
         if (kind == TargetKind::LineEdit) {
             auto* edit = qobject_cast<QLineEdit*>(target.data());
-            targetConnections.append(QObject::connect(
-                edit,
-                &QLineEdit::textChanged,
-                this,
-                [this]() {
-                    captureEditingStateUnlessPresented();
-                    refreshCapabilities();
-                }));
-            targetConnections.append(QObject::connect(
-                edit,
-                &QLineEdit::selectionChanged,
-                this,
-                [this]() {
-                    captureEditingStateUnlessPresented();
-                    refreshCapabilities();
-                }));
-            targetConnections.append(QObject::connect(
-                edit,
-                &QLineEdit::cursorPositionChanged,
-                this,
-                [this](int, int) {
-                    captureEditingStateUnlessPresented();
-                }));
+            targetConnections.append(QObject::connect(edit, &QLineEdit::textChanged, this, [this]() {
+                captureEditingStateUnlessPresented();
+                refreshCapabilities();
+            }));
+            targetConnections.append(QObject::connect(edit, &QLineEdit::selectionChanged, this, [this]() {
+                captureEditingStateUnlessPresented();
+                refreshCapabilities();
+            }));
+            targetConnections.append(QObject::connect(edit, &QLineEdit::cursorPositionChanged, this, [this](int, int) {
+                captureEditingStateUnlessPresented();
+            }));
             if (passwordTarget) {
-                targetConnections.append(QObject::connect(
-                    passwordTarget.data(),
-                    &PasswordBox::passwordRevealModeChanged,
-                    this,
-                    [this]() { refreshCapabilities(); }));
+                targetConnections.append(QObject::connect(passwordTarget.data(),
+                    &PasswordBox::passwordRevealModeChanged, this, [this]() { refreshCapabilities(); }));
             }
         } else if (kind == TargetKind::TextEdit) {
             auto* edit = qobject_cast<QTextEdit*>(target.data());
-            targetConnections.append(QObject::connect(
-                edit,
-                &QTextEdit::textChanged,
-                this,
-                [this]() {
-                    captureEditingStateUnlessPresented();
-                    refreshCapabilities();
-                }));
-            targetConnections.append(QObject::connect(
-                edit,
-                &QTextEdit::selectionChanged,
-                this,
-                [this]() {
-                    captureEditingStateUnlessPresented();
-                    refreshCapabilities();
-                }));
-            targetConnections.append(QObject::connect(
-                edit,
-                &QTextEdit::cursorPositionChanged,
-                this,
-                [this]() {
-                    captureEditingStateUnlessPresented();
-                }));
-            targetConnections.append(QObject::connect(
-                edit,
-                &QTextEdit::undoAvailable,
-                this,
-                [this](bool) { refreshCapabilities(); }));
-            targetConnections.append(QObject::connect(
-                edit,
-                &QTextEdit::redoAvailable,
-                this,
-                [this](bool) { refreshCapabilities(); }));
-            targetConnections.append(QObject::connect(
-                edit,
-                &QTextEdit::copyAvailable,
-                this,
-                [this](bool) { refreshCapabilities(); }));
+            targetConnections.append(QObject::connect(edit, &QTextEdit::textChanged, this, [this]() {
+                captureEditingStateUnlessPresented();
+                refreshCapabilities();
+            }));
+            targetConnections.append(QObject::connect(edit, &QTextEdit::selectionChanged, this, [this]() {
+                captureEditingStateUnlessPresented();
+                refreshCapabilities();
+            }));
+            targetConnections.append(QObject::connect(edit, &QTextEdit::cursorPositionChanged, this, [this]() {
+                captureEditingStateUnlessPresented();
+            }));
+            targetConnections.append(QObject::connect(edit, &QTextEdit::undoAvailable, this, [this](bool) {
+                refreshCapabilities();
+            }));
+            targetConnections.append(QObject::connect(edit, &QTextEdit::redoAvailable, this, [this](bool) {
+                refreshCapabilities();
+            }));
+            targetConnections.append(QObject::connect(edit, &QTextEdit::copyAvailable, this, [this](bool) {
+                refreshCapabilities();
+            }));
         }
     }
 
@@ -980,10 +798,7 @@ private:
             if (!edit)
                 return;
             lineSelectionStart = edit->selectionStart();
-            lineSelectionLength =
-                lineSelectionStart >= 0
-                ? edit->selectedText().size()
-                : 0;
+            lineSelectionLength = lineSelectionStart >= 0 ? edit->selectedText().size() : 0;
             lineCursorPosition = edit->cursorPosition();
         } else if (kind == TargetKind::TextEdit) {
             auto* edit = qobject_cast<QTextEdit*>(target.data());
@@ -998,16 +813,10 @@ private:
             auto* edit = qobject_cast<QLineEdit*>(target.data());
             if (!edit)
                 return;
-            if (lineSelectionStart >= 0
-                && lineSelectionLength > 0) {
-                edit->setSelection(
-                    lineSelectionStart, lineSelectionLength);
+            if (lineSelectionStart >= 0 && lineSelectionLength > 0) {
+                edit->setSelection(lineSelectionStart, lineSelectionLength);
             } else {
-                edit->setCursorPosition(
-                    qBound(
-                        0,
-                        lineCursorPosition,
-                        edit->text().size()));
+                edit->setCursorPosition(qBound(0, lineCursorPosition, edit->text().size()));
             }
         } else if (kind == TargetKind::TextEdit) {
             auto* edit = qobject_cast<QTextEdit*>(target.data());
@@ -1032,18 +841,10 @@ private:
     bool scopeRegistered = false;
 };
 
-EditingCommandRouter::EditingCommandRouter(
-    QWidget* scopeWindow,
-    QObject* parent)
-    : QObject(
-          parent
-              ? parent
-              : static_cast<QObject*>(resolveScopeWindow(scopeWindow))),
-      d(new EditingCommandRouterPrivate(
-          this,
-          resolveScopeWindow(scopeWindow)))
-{
-}
+EditingCommandRouter::EditingCommandRouter(QWidget* scopeWindow, QObject* parent)
+    : QObject(parent ? parent : static_cast<QObject*>(resolveScopeWindow(scopeWindow))),
+      d(new EditingCommandRouterPrivate(this, resolveScopeWindow(scopeWindow)))
+{}
 
 EditingCommandRouter::~EditingCommandRouter()
 {

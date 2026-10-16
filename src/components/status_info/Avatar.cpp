@@ -18,10 +18,7 @@ namespace {
 
 QColor contrastingTextColor(const QColor& background)
 {
-    const qreal luminance =
-        0.2126 * background.redF()
-        + 0.7152 * background.greenF()
-        + 0.0722 * background.blueF();
+    const qreal luminance = 0.2126 * background.redF() + 0.7152 * background.greenF() + 0.0722 * background.blueF();
     return luminance > 0.56 ? QColor(20, 20, 20) : QColor(Qt::white);
 }
 
@@ -46,17 +43,14 @@ QString leftGraphemes(const QString& text, int count)
 
 } // namespace
 
-Avatar::Avatar(QWidget* parent)
-    : QWidget(parent)
-    , m_presenceBadge(new InfoBadge(this))
+Avatar::Avatar(QWidget* parent) : QWidget(parent), m_presenceBadge(new InfoBadge(this))
 {
     setObjectName(QStringLiteral("fluentAvatar"));
     setAttribute(Qt::WA_TranslucentBackground);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     m_presenceBadge->setObjectName(QStringLiteral("fluentAvatarPresenceBadge"));
-    m_presenceBadge->setDisplayMode(
-        InfoBadge::InfoBadgeDisplayMode::Dot);
+    m_presenceBadge->setDisplayMode(InfoBadge::InfoBadgeDisplayMode::Dot);
     m_presenceBadge->setAttribute(Qt::WA_TransparentForMouseEvents);
     m_presenceBadge->hide();
 
@@ -64,8 +58,7 @@ Avatar::Avatar(QWidget* parent)
     updatePresenceBadge();
 }
 
-Avatar::Avatar(const QString& name, QWidget* parent)
-    : Avatar(parent)
+Avatar::Avatar(const QString& name, QWidget* parent) : Avatar(parent)
 {
     setName(name);
 }
@@ -76,8 +69,7 @@ void Avatar::setName(const QString& name)
         return;
 
     const QString previousName = m_name;
-    const bool tracksName = accessibleName().isEmpty()
-        || accessibleName() == previousName;
+    const bool tracksName = accessibleName().isEmpty() || accessibleName() == previousName;
     m_name = name;
     if (tracksName)
         setAccessibleName(m_name);
@@ -99,8 +91,7 @@ void Avatar::setInitials(const QString& initials)
 void Avatar::setImage(const QPixmap& image)
 {
     if (m_image.cacheKey() == image.cacheKey()
-        && qFuzzyCompare(m_image.devicePixelRatioF(),
-                         image.devicePixelRatioF())) {
+        && qFuzzyCompare(m_image.devicePixelRatioF(), image.devicePixelRatioF())) {
         return;
     }
 
@@ -172,9 +163,7 @@ QString Avatar::effectiveInitials() const
     if (normalizedName.isEmpty())
         return QString();
 
-    const QStringList words =
-        normalizedName.split(QRegularExpression(QStringLiteral("\\s+")),
-                             Qt::SkipEmptyParts);
+    const QStringList words = normalizedName.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
     if (words.isEmpty())
         return QString();
     if (words.size() == 1)
@@ -182,10 +171,7 @@ QString Avatar::effectiveInitials() const
 
     const QString first = leftGraphemes(words.first(), 1);
     const QString last = leftGraphemes(words.last(), 1);
-    return (layoutDirection() == Qt::RightToLeft
-                ? last + first
-                : first + last)
-        .toUpper();
+    return (layoutDirection() == Qt::RightToLeft ? last + first : first + last).toUpper();
 }
 
 QSize Avatar::sizeHint() const
@@ -251,11 +237,7 @@ void Avatar::paintEvent(QPaintEvent*)
             painter.drawText(avatarRect, Qt::AlignCenter, initialsText);
         } else {
             painter.setPen(effectiveForegroundColor(background));
-            Typography::Icons::paintGlyph(
-                painter,
-                avatarRect,
-                Typography::Icons::Contact,
-                qMax(12, avatarExtent() / 2),
+            Typography::Icons::paintGlyph(painter, avatarRect, Typography::Icons::Contact, qMax(12, avatarExtent() / 2),
                 Qt::AlignCenter);
         }
     }
@@ -268,8 +250,7 @@ void Avatar::paintEvent(QPaintEvent*)
         const QRect badgeGeometry = m_presenceBadge->geometry();
         painter.setPen(Qt::NoPen);
         painter.setBrush(surroundingSurfaceColor());
-        painter.drawEllipse(QRectF(badgeGeometry).adjusted(
-            0.5, 0.5, -0.5, -0.5));
+        painter.drawEllipse(QRectF(badgeGeometry).adjusted(0.5, 0.5, -0.5, -0.5));
     }
 }
 
@@ -282,8 +263,7 @@ void Avatar::resizeEvent(QResizeEvent* event)
 void Avatar::changeEvent(QEvent* event)
 {
     QWidget::changeEvent(event);
-    if (event->type() == QEvent::EnabledChange
-        || event->type() == QEvent::LayoutDirectionChange) {
+    if (event->type() == QEvent::EnabledChange || event->type() == QEvent::LayoutDirectionChange) {
         updatePresenceBadge();
         update();
     }
@@ -301,8 +281,7 @@ QColor Avatar::effectiveBackgroundColor() const
     if (!color.isValid()) {
         color = colors.accentDefault;
         if (!m_name.isEmpty() && !colors.charts.isEmpty())
-            color = colors.charts.at(
-                qHash(m_name, 0u) % colors.charts.size());
+            color = colors.charts.at(qHash(m_name, 0u) % colors.charts.size());
     }
     if (!color.isValid())
         color = colors.controlSecondary;
@@ -322,9 +301,7 @@ QColor Avatar::effectiveForegroundColor(const QColor& background) const
 
 QColor Avatar::surroundingSurfaceColor() const
 {
-    for (QWidget* ancestor = parentWidget();
-         ancestor;
-         ancestor = ancestor->parentWidget()) {
+    for (QWidget* ancestor = parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
         const QVariant surface = ancestor->property("fluentSurfaceColor");
         if (surface.canConvert<QColor>()) {
             const QColor color = surface.value<QColor>();
@@ -345,9 +322,7 @@ void Avatar::updatePresenceBadge()
     if (!visible)
         return;
 
-    const int dotDiameter = avatarExtent() <= 24
-        ? 6
-        : (avatarExtent() <= 40 ? 8 : 10);
+    const int dotDiameter = avatarExtent() <= 24 ? 6 : (avatarExtent() <= 40 ? 8 : 10);
     const int hostExtent = dotDiameter + 4;
     m_presenceBadge->setFixedSize(hostExtent, hostExtent);
     m_presenceBadge->setBeaconDiameter(dotDiameter);
@@ -366,16 +341,13 @@ void Avatar::updatePresenceBadge()
         break;
     case PresenceStatus::Offline:
         m_presenceBadge->setStatus(InfoBadge::InfoBadgeStatus::Attention);
-        m_presenceBadge->setCustomBackgroundColor(
-            themeColorsRef().textDisabled);
+        m_presenceBadge->setCustomBackgroundColor(themeColorsRef().textDisabled);
         break;
     case PresenceStatus::None:
         break;
     }
 
-    m_presenceBadge->move(
-        qMax(0, width() - hostExtent),
-        qMax(0, height() - hostExtent));
+    m_presenceBadge->move(qMax(0, width() - hostExtent), qMax(0, height() - hostExtent));
     m_presenceBadge->raise();
 }
 

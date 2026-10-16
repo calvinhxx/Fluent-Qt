@@ -13,8 +13,7 @@
 namespace fluent::menus_toolbars::detail {
 namespace {
 
-constexpr const char* kEditingCommandScopeProperty =
-    "_fluentqt_editingCommandScope";
+constexpr const char* kEditingCommandScopeProperty = "_fluentqt_editingCommandScope";
 
 QString stripAccessMarkers(QString text)
 {
@@ -29,8 +28,7 @@ QString stripAccessMarkers(QString text)
             result.append(text.at(index));
             continue;
         }
-        if (index + 1 < text.size()
-            && text.at(index + 1) == QLatin1Char('&')) {
+        if (index + 1 < text.size() && text.at(index + 1) == QLatin1Char('&')) {
             result.append(QLatin1Char('&'));
             ++index;
         }
@@ -41,17 +39,12 @@ QString stripAccessMarkers(QString text)
 bool hasSemanticCaption(const QAction* action)
 {
     return action
-        && (!stripAccessMarkers(action->text()).isEmpty()
-            || !stripAccessMarkers(action->iconText()).isEmpty());
+        && (!stripAccessMarkers(action->text()).isEmpty() || !stripAccessMarkers(action->iconText()).isEmpty());
 }
 
 } // namespace
 
-CommandActionModel::CommandActionModel(QWidget* owner)
-    : QObject(nullptr),
-      m_owner(owner)
-{
-}
+CommandActionModel::CommandActionModel(QWidget* owner) : QObject(nullptr), m_owner(owner) {}
 
 CommandActionModel::~CommandActionModel()
 {
@@ -68,9 +61,7 @@ bool CommandActionModel::add(Section section, QAction* action)
     return insert(section, nullptr, action);
 }
 
-bool CommandActionModel::insert(Section section,
-                                QAction* before,
-                                QAction* action)
+bool CommandActionModel::insert(Section section, QAction* before, QAction* action)
 {
     QString reason;
     if (!validateForRegistration(action, &reason)) {
@@ -82,19 +73,15 @@ bool CommandActionModel::insert(Section section,
     if (before && !destination.contains(before)) {
         qCWarning(logging::commandBarCategory)
             << "Command action insertion rejected: before action is not in"
-            << (section == Section::Primary ? "primary" : "secondary")
-            << "section"
-            << "action=" << action
-            << "before=" << before;
+            << (section == Section::Primary ? "primary" : "secondary") << "section"
+            << "action=" << action << "before=" << before;
         return false;
     }
 
     const int existingIndex = destination.indexOf(action);
-    int insertionIndex = before ? destination.indexOf(before)
-                                : destination.size();
+    int insertionIndex = before ? destination.indexOf(before) : destination.size();
     if (existingIndex >= 0) {
-        if (before == action
-            || (!before && existingIndex == destination.size() - 1)) {
+        if (before == action || (!before && existingIndex == destination.size() - 1)) {
             return true;
         }
         destination.removeAt(existingIndex);
@@ -126,9 +113,7 @@ bool CommandActionModel::remove(QAction* action)
     if (!action)
         return false;
 
-    const bool removed =
-        m_primaryActions.removeOne(action)
-        || m_secondaryActions.removeOne(action);
+    const bool removed = m_primaryActions.removeOne(action) || m_secondaryActions.removeOne(action);
     if (!removed)
         return false;
 
@@ -170,17 +155,14 @@ QList<QAction*> CommandActionModel::presentableActions(Section section) const
     return result;
 }
 
-bool CommandActionModel::contains(Section section,
-                                  const QAction* action) const
+bool CommandActionModel::contains(Section section, const QAction* action) const
 {
-    return sectionActions(section).contains(
-        const_cast<QAction*>(action));
+    return sectionActions(section).contains(const_cast<QAction*>(action));
 }
 
 bool CommandActionModel::isPresentable(const QAction* action) const
 {
-    return action && m_presentationState.value(
-        const_cast<QAction*>(action), false);
+    return action && m_presentationState.value(const_cast<QAction*>(action), false);
 }
 
 void CommandActionModel::handleActionEvent(QActionEvent* event)
@@ -193,28 +175,22 @@ void CommandActionModel::handleActionEvent(QActionEvent* event)
         return;
 
     if (event->type() == QEvent::ActionAdded) {
-        if (m_primaryActions.contains(action)
-            || m_secondaryActions.contains(action)) {
+        if (m_primaryActions.contains(action) || m_secondaryActions.contains(action)) {
             return;
         }
 
         auto pendingIt = m_pendingRemovals.find(action);
-        if (pendingIt != m_pendingRemovals.end()
-            && pendingIt.value().actionGuard.data() != action) {
+        if (pendingIt != m_pendingRemovals.end() && pendingIt.value().actionGuard.data() != action) {
             m_pendingRemovals.erase(pendingIt);
             pendingIt = m_pendingRemovals.end();
         }
         if (pendingIt != m_pendingRemovals.end()) {
             const PendingRemoval pending = pendingIt.value();
             m_pendingRemovals.erase(pendingIt);
-            QList<QAction*>& destination =
-                sectionActions(pending.section);
-            destination.insert(
-                qBound(0, pending.index, destination.size()),
-                action);
+            QList<QAction*>& destination = sectionActions(pending.section);
+            destination.insert(qBound(0, pending.index, destination.size()), action);
             connectAction(action);
-            m_presentationState.insert(
-                action, pending.presentable);
+            m_presentationState.insert(action, pending.presentable);
             if (pending.suppressionWarningIssued)
                 m_warnedSuppressedActions.append(action);
             emit structureChanged();
@@ -242,23 +218,16 @@ void CommandActionModel::handleActionEvent(QActionEvent* event)
 
     if (event->type() == QEvent::ActionRemoved) {
         const int primaryIndex = m_primaryActions.indexOf(action);
-        const int secondaryIndex =
-            m_secondaryActions.indexOf(action);
+        const int secondaryIndex = m_secondaryActions.indexOf(action);
         if (primaryIndex < 0 && secondaryIndex < 0)
             return;
 
         PendingRemoval pending;
         pending.actionGuard = action;
-        pending.section = primaryIndex >= 0
-            ? Section::Primary
-            : Section::Secondary;
-        pending.index = primaryIndex >= 0
-            ? primaryIndex
-            : secondaryIndex;
-        pending.presentable =
-            m_presentationState.value(action, false);
-        pending.suppressionWarningIssued =
-            m_warnedSuppressedActions.contains(action);
+        pending.section = primaryIndex >= 0 ? Section::Primary : Section::Secondary;
+        pending.index = primaryIndex >= 0 ? primaryIndex : secondaryIndex;
+        pending.presentable = m_presentationState.value(action, false);
+        pending.suppressionWarningIssued = m_warnedSuppressedActions.contains(action);
         pending.revision = ++m_pendingRemovalRevision;
         m_pendingRemovals.insert(action, pending);
 
@@ -268,44 +237,31 @@ void CommandActionModel::handleActionEvent(QActionEvent* event)
         queueStructureChanged();
         if (!guard)
             return;
-        QTimer::singleShot(
-            0,
-            this,
-            [this, action, revision = pending.revision]() {
-                const auto it = m_pendingRemovals.find(action);
-                if (it != m_pendingRemovals.end()
-                    && it.value().revision == revision) {
-                    m_pendingRemovals.erase(it);
-                }
-            });
+        QTimer::singleShot(0, this, [this, action, revision = pending.revision]() {
+            const auto it = m_pendingRemovals.find(action);
+            if (it != m_pendingRemovals.end() && it.value().revision == revision) {
+                m_pendingRemovals.erase(it);
+            }
+        });
     }
 }
 
 QList<QAction*>& CommandActionModel::sectionActions(Section section)
 {
-    return section == Section::Primary
-        ? m_primaryActions
-        : m_secondaryActions;
+    return section == Section::Primary ? m_primaryActions : m_secondaryActions;
 }
 
-const QList<QAction*>& CommandActionModel::sectionActions(
-    Section section) const
+const QList<QAction*>& CommandActionModel::sectionActions(Section section) const
 {
-    return section == Section::Primary
-        ? m_primaryActions
-        : m_secondaryActions;
+    return section == Section::Primary ? m_primaryActions : m_secondaryActions;
 }
 
 QList<QAction*>& CommandActionModel::otherSectionActions(Section section)
 {
-    return section == Section::Primary
-        ? m_secondaryActions
-        : m_primaryActions;
+    return section == Section::Primary ? m_secondaryActions : m_primaryActions;
 }
 
-bool CommandActionModel::validateForRegistration(
-    const QAction* action,
-    QString* reason) const
+bool CommandActionModel::validateForRegistration(const QAction* action, QString* reason) const
 {
     if (!action) {
         if (reason)
@@ -317,24 +273,18 @@ bool CommandActionModel::validateForRegistration(
             *reason = QStringLiteral("QWidgetAction is not supported");
         return false;
     }
-    QObject* scopeObject =
-        action->property(kEditingCommandScopeProperty)
-            .value<QObject*>();
+    QObject* scopeObject = action->property(kEditingCommandScopeProperty).value<QObject*>();
     auto* scopeWindow = qobject_cast<QWidget*>(scopeObject);
-    if (scopeWindow && m_owner
-        && scopeWindow->window() != m_owner->window()) {
+    if (scopeWindow && m_owner && scopeWindow->window() != m_owner->window()) {
         if (reason) {
-            *reason = QStringLiteral(
-                "window-scoped action belongs to another top-level window");
+            *reason = QStringLiteral("window-scoped action belongs to another top-level window");
         }
         return false;
     }
     return validateForPresentation(action, reason);
 }
 
-bool CommandActionModel::validateForPresentation(
-    const QAction* action,
-    QString* reason) const
+bool CommandActionModel::validateForPresentation(const QAction* action, QString* reason) const
 {
     if (!action) {
         if (reason)
@@ -348,8 +298,7 @@ bool CommandActionModel::validateForPresentation(
     }
     if (!action->isSeparator() && !hasSemanticCaption(action)) {
         if (reason)
-            *reason = QStringLiteral(
-                "non-separator action has no semantic caption");
+            *reason = QStringLiteral("non-separator action has no semantic caption");
         return false;
     }
     return true;
@@ -379,16 +328,12 @@ void CommandActionModel::connectAction(QAction* action)
         return;
 
     Connections connections;
-    connections.changed = QObject::connect(
-        action,
-        &QAction::changed,
-        this,
-        [this, action]() { handleActionChanged(action); });
-    connections.destroyed = QObject::connect(
-        action,
-        &QObject::destroyed,
-        this,
-        [this, action]() { handleActionDestroyed(action); });
+    connections.changed = QObject::connect(action, &QAction::changed, this, [this, action]() {
+        handleActionChanged(action);
+    });
+    connections.destroyed = QObject::connect(action, &QObject::destroyed, this, [this, action]() {
+        handleActionDestroyed(action);
+    });
     m_connections.insert(action, connections);
 }
 
@@ -437,27 +382,20 @@ void CommandActionModel::handleActionChanged(QAction* action)
 void CommandActionModel::handleActionDestroyed(QAction* action)
 {
     m_pendingRemovals.remove(action);
-    const bool removed =
-        m_primaryActions.removeOne(action)
-        || m_secondaryActions.removeOne(action);
+    const bool removed = m_primaryActions.removeOne(action) || m_secondaryActions.removeOne(action);
     disconnectAction(action);
     if (removed)
         emit structureChanged();
 }
 
-void CommandActionModel::warnRejected(
-    const QAction* action,
-    const QString& reason) const
+void CommandActionModel::warnRejected(const QAction* action, const QString& reason) const
 {
     qCWarning(logging::commandBarCategory)
         << "Command action registration rejected"
-        << "reason=" << reason
-        << "action=" << action;
+        << "reason=" << reason << "action=" << action;
 }
 
-void CommandActionModel::warnSuppressed(
-    const QAction* action,
-    const QString& reason)
+void CommandActionModel::warnSuppressed(const QAction* action, const QString& reason)
 {
     QAction* mutableAction = const_cast<QAction*>(action);
     if (m_warnedSuppressedActions.contains(mutableAction))
@@ -465,8 +403,7 @@ void CommandActionModel::warnSuppressed(
     m_warnedSuppressedActions.append(mutableAction);
     qCWarning(logging::commandBarCategory)
         << "Registered command action suppressed from presentation"
-        << "reason=" << reason
-        << "action=" << action;
+        << "reason=" << reason << "action=" << action;
 }
 
 } // namespace fluent::menus_toolbars::detail

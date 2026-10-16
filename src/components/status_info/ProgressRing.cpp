@@ -98,8 +98,7 @@ void ProgressRing::setIsIndeterminate(bool indeterminate)
     changed.busy = true;
     changed.animated = true;
     accessibility::detail::notifyValueAccessibilityState(this, changed);
-    accessibility::detail::notifyValueAccessibilityValue(
-        this, m_isIndeterminate ? QVariant() : QVariant(m_value));
+    accessibility::detail::notifyValueAccessibilityValue(this, m_isIndeterminate ? QVariant() : QVariant(m_value));
     accessibility::detail::notifyValueAccessibilityText(this, QAccessible::DescriptionChanged);
     emit isIndeterminateChanged(m_isIndeterminate);
 }
@@ -284,10 +283,9 @@ void ProgressRing::timerEvent(QTimerEvent* event)
         return;
     }
 
-    m_animationPhase =
-        std::fmod(m_animationPhase +
-                      kFullCircleDegrees * static_cast<qreal>(kAnimationIntervalMs) / m_spinCycleMs,
-                  kFullCircleDegrees);
+    m_animationPhase = std::fmod(m_animationPhase
+            + kFullCircleDegrees * static_cast<qreal>(kAnimationIntervalMs) / m_spinCycleMs,
+        kFullCircleDegrees);
     update();
 }
 
@@ -361,8 +359,7 @@ void ProgressRing::updateThemeColors()
     m_pausedColor = colors.systemCaution;
     m_errorColor = colors.systemCritical;
     m_disabledColor = colors.accentDisabled;
-    m_trackColor =
-        effectiveThemeUsesDarkAppearance() ? colors.strokeSurface : colors.strokeSecondary;
+    m_trackColor = effectiveThemeUsesDarkAppearance() ? colors.strokeSurface : colors.strokeSecondary;
     if (m_trackColor.alpha() < 64) {
         m_trackColor.setAlpha(64);
     }
@@ -384,11 +381,8 @@ void ProgressRing::updateAnimationState()
 
 bool ProgressRing::shouldAnimate() const
 {
-    return m_isActive &&
-           MotionPolicy::instance().shouldAnimate(m_animationEnabled,
-                                                  MotionPolicy::Kind::Continuous) &&
-           m_isIndeterminate && m_status == ProgressRingStatus::Running && isEnabled() &&
-           isVisible();
+    return m_isActive && MotionPolicy::instance().shouldAnimate(m_animationEnabled, MotionPolicy::Kind::Continuous)
+        && m_isIndeterminate && m_status == ProgressRingStatus::Running && isEnabled() && isVisible();
 }
 
 } // namespace fluent::status_info

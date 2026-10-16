@@ -48,7 +48,7 @@ inline QString dateTimeRangeText(const QLocale& locale, const char* source)
         {"Choose the start date", u8"选择开始日期", u8"選擇開始日期"},
         {"Choose the end date", u8"选择结束日期", u8"選擇結束日期"},
         {"Type a time, or use Up and Down to adjust it", u8"输入时间，或使用上、下方向键调整",
-         u8"輸入時間，或使用上、下方向鍵調整"},
+            u8"輸入時間，或使用上、下方向鍵調整"},
         {"Until %1", u8"截至 %1", u8"截至 %1"},
         {"From %1", u8"从 %1 起", u8"從 %1 起"},
         {"Unbounded", u8"不限", u8"不限"},

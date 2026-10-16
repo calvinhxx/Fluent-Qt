@@ -44,11 +44,9 @@ namespace fluent::layout {
 class Expander : public Card {
     Q_OBJECT
     Q_PROPERTY(QString headerText READ headerText WRITE setHeaderText NOTIFY headerTextChanged)
-    Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget NOTIFY
-                   contentWidgetChanged)
+    Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget NOTIFY contentWidgetChanged)
     Q_PROPERTY(bool expanded READ isExpanded WRITE setExpanded NOTIFY expandedChanged)
-    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY
-                   animationEnabledChanged)
+    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
 
 public:
     explicit Expander(QWidget* parent = nullptr);

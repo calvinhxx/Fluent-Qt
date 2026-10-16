@@ -23,8 +23,7 @@ QString colorCss(const QColor& color)
 
 } // namespace
 
-Field::Field(QWidget* parent)
-    : QWidget(parent)
+Field::Field(QWidget* parent) : QWidget(parent)
 {
     qRegisterMetaType<ValidationState>("fluent::layout::Field::ValidationState");
 
@@ -85,9 +84,7 @@ Field::Field(QWidget* parent)
     m_statusIcon = new FontIcon(m_statusRow);
     m_statusIcon->setObjectName(QStringLiteral("fluentFieldStatusIcon"));
     m_statusIcon->setIconSize(Typography::IconSize::Compact);
-    m_statusIcon->setFixedSize(
-        Typography::LineHeight::Caption,
-        Typography::LineHeight::Caption);
+    m_statusIcon->setFixedSize(Typography::LineHeight::Caption, Typography::LineHeight::Caption);
     m_statusIcon->hide();
 
     m_status = new textfields::Label(m_statusRow);
@@ -190,8 +187,7 @@ bool Field::setEditor(QWidget* widget, WidgetOwnership ownership)
     m_editorOriginalParent = widget ? widget->parentWidget() : nullptr;
     m_editorOriginalAccessibleName = widget ? widget->accessibleName() : QString();
     m_editorManagedAccessibleName = m_editorOriginalAccessibleName;
-    m_editorAccessibleNameManaged =
-        widget && m_editorOriginalAccessibleName.isEmpty();
+    m_editorAccessibleNameManaged = widget && m_editorOriginalAccessibleName.isEmpty();
     const WidgetOwnership previousOwnership = m_editorOwnership;
     m_editorOwnership = widget ? ownership : WidgetOwnership::Borrowed;
 
@@ -200,10 +196,7 @@ bool Field::setEditor(QWidget* widget, WidgetOwnership ownership)
         if (auto* hostLayout = m_editorHost->layout())
             hostLayout->addWidget(widget);
         widget->show();
-        m_editorDestroyedConnection = connect(
-            widget, &QObject::destroyed, this, [this]() {
-                handleEditorDestroyed();
-            });
+        m_editorDestroyedConnection = connect(widget, &QObject::destroyed, this, [this]() { handleEditorDestroyed(); });
         setFocusProxy(widget);
         m_caption->setBuddy(widget);
     } else {
@@ -343,8 +336,7 @@ void Field::updateHelperAndStatus()
 void Field::applyStatusColor()
 {
     m_requiredMark->setStyleSheet(colorCss(themeColors().systemCritical));
-    const bool showIcon = !m_validationMessage.isEmpty()
-        && m_validationState != ValidationState::None;
+    const bool showIcon = !m_validationMessage.isEmpty() && m_validationState != ValidationState::None;
     m_statusIcon->setGlyph(showIcon ? statusGlyph() : QString());
     m_statusIcon->setColor(statusColor());
     m_statusIcon->setVisible(showIcon);
@@ -380,8 +372,7 @@ void Field::updateAccessible()
 
 void Field::restoreEditorAccessibleName(QWidget* editor)
 {
-    if (editor && m_editorAccessibleNameManaged
-        && editor->accessibleName() == m_editorManagedAccessibleName) {
+    if (editor && m_editorAccessibleNameManaged && editor->accessibleName() == m_editorManagedAccessibleName) {
         editor->setAccessibleName(m_editorOriginalAccessibleName);
     }
     m_editorOriginalAccessibleName.clear();

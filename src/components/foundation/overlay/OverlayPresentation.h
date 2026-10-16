@@ -69,8 +69,7 @@ MenuAnchor menuAnchor(const QMenu* menu);
  * zh_CN: 无变换且未嵌入时等同原生 mapToGlobal 后 popup；嵌入锚点使用原生弹窗，
  * 不自动嵌入子代理；菜单所有权、子菜单坐标和输入仍由 Qt 管理。
  */
-void popupMenu(QMenu* menu, QWidget* source, const QPoint& localPoint,
-               const QPoint& offset = QPoint());
+void popupMenu(QMenu* menu, QWidget* source, const QPoint& localPoint, const QPoint& offset = QPoint());
 
 } // namespace fluent::overlay::presentation
 

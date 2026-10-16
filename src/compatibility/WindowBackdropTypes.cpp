@@ -21,16 +21,15 @@ bool BackdropCapabilities::supportsCompositor(BackdropEffect effect) const
 
 bool BackdropCapabilities::supportsTransparentMaterial(BackdropEffect effect) const
 {
-    return effect != BackdropEffect::Solid && alphaSurfaceSupported &&
-           (supportsNative(effect) || supportsCompositor(effect));
+    return effect != BackdropEffect::Solid && alphaSurfaceSupported
+        && (supportsNative(effect) || supportsCompositor(effect));
 }
 
 bool BackdropState::operator==(const BackdropState& other) const
 {
-    return requestedEffect == other.requestedEffect && effectiveEffect == other.effectiveEffect &&
-           backend == other.backend && fidelity == other.fidelity &&
-           surfaceMode == other.surfaceMode && platformApplied == other.platformApplied &&
-           reason == other.reason;
+    return requestedEffect == other.requestedEffect && effectiveEffect == other.effectiveEffect
+        && backend == other.backend && fidelity == other.fidelity && surfaceMode == other.surfaceMode
+        && platformApplied == other.platformApplied && reason == other.reason;
 }
 
 } // namespace fluent::windowing

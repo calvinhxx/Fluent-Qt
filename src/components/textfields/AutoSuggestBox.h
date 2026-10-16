@@ -12,12 +12,16 @@ class QKeyEvent;
 class QMoveEvent;
 class QPainter;
 
-namespace fluent::basicinput { class Button; }
+namespace fluent::basicinput {
+class Button;
+}
 
 namespace fluent::textfields {
 
 class SuggestionListPopup;
-namespace detail { class AutoSuggestBoxAccessible; }
+namespace detail {
+class AutoSuggestBoxAccessible;
+}
 
 /**
  * @brief LineEdit-based input box with query affordance and suggestion flyout.
@@ -55,7 +59,10 @@ class AutoSuggestBox : public LineEdit {
      * @brief Placement of the query action button.
      * zh_CN: 查询操作按钮的位置。
      */
-    Q_PROPERTY(QueryButtonPlacement queryButtonPlacement READ queryButtonPlacement WRITE setQueryButtonPlacement NOTIFY queryButtonPlacementChanged)
+    Q_PROPERTY(QueryButtonPlacement queryButtonPlacement
+        READ queryButtonPlacement
+        WRITE setQueryButtonPlacement
+        NOTIFY queryButtonPlacementChanged)
     /**
      * @brief Preferred height of the input surface.
      * zh_CN: 输入表面的首选高度。
@@ -75,12 +82,18 @@ class AutoSuggestBox : public LineEdit {
      * @brief Typography role used by suggestion rows.
      * zh_CN: 建议项行文本使用的排版角色。
      */
-    Q_PROPERTY(Typography::FontRole suggestionFontRole READ suggestionFontRole WRITE setSuggestionFontRole NOTIFY suggestionFontRoleChanged)
+    Q_PROPERTY(Typography::FontRole suggestionFontRole
+        READ suggestionFontRole
+        WRITE setSuggestionFontRole
+        NOTIFY suggestionFontRoleChanged)
     /**
      * @brief Height of each suggestion row.
      * zh_CN: 每个建议项行的高度。
      */
-    Q_PROPERTY(int suggestionItemHeight READ suggestionItemHeight WRITE setSuggestionItemHeight NOTIFY suggestionItemHeightChanged)
+    Q_PROPERTY(int suggestionItemHeight
+        READ suggestionItemHeight
+        WRITE setSuggestionItemHeight
+        NOTIFY suggestionItemHeightChanged)
     /**
      * @brief Whether the suggestion popup is open.
      * zh_CN: 建议列表弹层是否打开。
@@ -88,17 +101,10 @@ class AutoSuggestBox : public LineEdit {
     Q_PROPERTY(bool isSuggestionListOpen READ isSuggestionListOpen NOTIFY suggestionListOpenChanged)
 
 public:
-    enum class TextChangeReason {
-        UserInput,
-        ProgrammaticChange,
-        SuggestionChosen
-    };
+    enum class TextChangeReason { UserInput, ProgrammaticChange, SuggestionChosen };
     Q_ENUM(TextChangeReason)
 
-    enum class QueryButtonPlacement {
-        Right,
-        Left
-    };
+    enum class QueryButtonPlacement { Right, Left };
     Q_ENUM(QueryButtonPlacement)
 
     explicit AutoSuggestBox(QWidget* parent = nullptr);

@@ -18,11 +18,7 @@ Q_NAMESPACE
  * zh_CN: QWidget 容器在显示内容期间必须重设其父对象。Borrowed 内容释放后变为
  * 无父控件，Reparented 内容恢复到接入时的 QWidget 父控件，Owned 内容由宿主销毁。
  */
-enum class WidgetOwnership {
-    Borrowed,
-    Reparented,
-    Owned
-};
+enum class WidgetOwnership { Borrowed, Reparented, Owned };
 Q_ENUM_NS(WidgetOwnership)
 
 } // namespace fluent

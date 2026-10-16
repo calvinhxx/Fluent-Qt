@@ -14,10 +14,8 @@ void initializeMenuButtonAccessibility(SplitButton* button);
 void showMenuButtonMenu(DropDownButton* button);
 void showMenuButtonMenu(SplitButton* button);
 
-void notifyMenuButtonMenuAccessibility(
-    DropDownButton* button, bool availabilityChanged);
-void notifyMenuButtonMenuAccessibility(
-    SplitButton* button, bool availabilityChanged);
+void notifyMenuButtonMenuAccessibility(DropDownButton* button, bool availabilityChanged);
+void notifyMenuButtonMenuAccessibility(SplitButton* button, bool availabilityChanged);
 
 void notifyMenuButtonOpenAccessibility(DropDownButton* button);
 void notifyMenuButtonOpenAccessibility(SplitButton* button);

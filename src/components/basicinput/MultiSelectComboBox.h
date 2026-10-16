@@ -51,8 +51,10 @@ class MultiSelectComboBox : public QWidget, public FluentElement, public QMLPlus
      * @brief Selection model used as the component value.
      * zh_CN: 作为控件值使用的 selection model。
      */
-    Q_PROPERTY(QItemSelectionModel* selectionModel READ selectionModel WRITE setSelectionModel
-                   NOTIFY selectionModelChanged)
+    Q_PROPERTY(QItemSelectionModel* selectionModel
+        READ selectionModel
+        WRITE setSelectionModel
+        NOTIFY selectionModelChanged)
     /**
      * @brief Source-model column used for labels and filtering.
      * zh_CN: 用于标签展示与筛选的源 model 列。
@@ -62,38 +64,38 @@ class MultiSelectComboBox : public QWidget, public FluentElement, public QMLPlus
      * @brief Source-model root whose direct children form the option list.
      * zh_CN: 其直属子项构成选项列表的源 model 根索引。
      */
-    Q_PROPERTY(QModelIndex rootModelIndex READ rootModelIndex WRITE setRootModelIndex NOTIFY
-                   rootModelIndexChanged)
+    Q_PROPERTY(QModelIndex rootModelIndex READ rootModelIndex WRITE setRootModelIndex NOTIFY rootModelIndexChanged)
     /**
      * @brief Text shown while no selectable row is selected.
      * zh_CN: 未选择任何可选行时显示的文本。
      */
-    Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY
-                   placeholderTextChanged)
+    Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY placeholderTextChanged)
     /**
      * @brief Whether a local substring-search field is shown in the popup.
      * zh_CN: 弹层中是否显示本地子串搜索输入框。
      */
-    Q_PROPERTY(
-        bool searchEnabled READ isSearchEnabled WRITE setSearchEnabled NOTIFY searchEnabledChanged)
+    Q_PROPERTY(bool searchEnabled READ isSearchEnabled WRITE setSearchEnabled NOTIFY searchEnabledChanged)
     /**
      * @brief Placeholder text used by the popup search field.
      * zh_CN: 弹层搜索输入框使用的占位文本。
      */
-    Q_PROPERTY(QString searchPlaceholderText READ searchPlaceholderText WRITE
-                   setSearchPlaceholderText NOTIFY searchPlaceholderTextChanged)
+    Q_PROPERTY(QString searchPlaceholderText
+        READ searchPlaceholderText
+        WRITE setSearchPlaceholderText
+        NOTIFY searchPlaceholderTextChanged)
     /**
      * @brief Whether the popup shows a tri-state select-all action.
      * zh_CN: 弹层是否显示三态全选操作。
      */
-    Q_PROPERTY(bool selectAllVisible READ isSelectAllVisible WRITE setSelectAllVisible NOTIFY
-                   selectAllVisibleChanged)
+    Q_PROPERTY(bool selectAllVisible READ isSelectAllVisible WRITE setSelectAllVisible NOTIFY selectAllVisibleChanged)
     /**
      * @brief Maximum number of option rows visible before scrolling.
      * zh_CN: 开始滚动前最多显示的选项行数。
      */
-    Q_PROPERTY(int maximumVisibleItems READ maximumVisibleItems WRITE setMaximumVisibleItems NOTIFY
-                   maximumVisibleItemsChanged)
+    Q_PROPERTY(int maximumVisibleItems
+        READ maximumVisibleItems
+        WRITE setMaximumVisibleItems
+        NOTIFY maximumVisibleItemsChanged)
     /**
      * @brief Logical popup open state.
      * zh_CN: 弹层的逻辑打开状态。

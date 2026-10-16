@@ -30,19 +30,17 @@ namespace fluent::spatial {
  */
 class SpatialView : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
-    Q_PROPERTY(bool spatialEnabled READ isSpatialEnabled WRITE setSpatialEnabled NOTIFY
-                   spatialEnabledChanged)
-    Q_PROPERTY(qreal cameraDistance READ cameraDistance WRITE setCameraDistance NOTIFY
-                   cameraDistanceChanged)
+    Q_PROPERTY(bool spatialEnabled READ isSpatialEnabled WRITE setSpatialEnabled NOTIFY spatialEnabledChanged)
+    Q_PROPERTY(qreal cameraDistance READ cameraDistance WRITE setCameraDistance NOTIFY cameraDistanceChanged)
     Q_PROPERTY(qreal zoom READ zoom WRITE setZoom NOTIFY zoomChanged)
-    Q_PROPERTY(bool pointerTrackingEnabled READ isPointerTrackingEnabled WRITE
-                   setPointerTrackingEnabled NOTIFY pointerTrackingEnabledChanged)
+    Q_PROPERTY(bool pointerTrackingEnabled
+        READ isPointerTrackingEnabled
+        WRITE setPointerTrackingEnabled
+        NOTIFY pointerTrackingEnabledChanged)
     Q_PROPERTY(QPointF maximumTilt READ maximumTilt WRITE setMaximumTilt NOTIFY maximumTiltChanged)
     Q_PROPERTY(int responseTime READ responseTime WRITE setResponseTime NOTIFY responseTimeChanged)
-    Q_PROPERTY(int maximumFrameRate READ maximumFrameRate WRITE setMaximumFrameRate NOTIFY
-                   maximumFrameRateChanged)
-    Q_PROPERTY(
-        bool cacheEnabled READ isCacheEnabled WRITE setCacheEnabled NOTIFY cacheEnabledChanged)
+    Q_PROPERTY(int maximumFrameRate READ maximumFrameRate WRITE setMaximumFrameRate NOTIFY maximumFrameRateChanged)
+    Q_PROPERTY(bool cacheEnabled READ isCacheEnabled WRITE setCacheEnabled NOTIFY cacheEnabledChanged)
     Q_PROPERTY(RenderMode renderMode READ renderMode WRITE setRenderMode NOTIFY renderModeChanged)
     Q_PROPERTY(Backend activeBackend READ activeBackend NOTIFY rendererChanged)
     Q_PROPERTY(QString rendererName READ rendererName NOTIFY rendererChanged)

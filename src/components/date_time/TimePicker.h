@@ -33,20 +33,24 @@ class TimePicker : public fluent::basicinput::Button {
      * @brief Selected time; an invalid time represents no selection.
      * zh_CN: 选中时间；无效时间表示未选择。
      */
-    Q_PROPERTY(QTime selectedTime READ selectedTime WRITE setSelectedTime RESET clearSelectedTime
-                   NOTIFY selectedTimeChanged)
+    Q_PROPERTY(QTime selectedTime
+        READ selectedTime
+        WRITE setSelectedTime
+        RESET clearSelectedTime
+        NOTIFY selectedTimeChanged)
     /**
      * @brief Minute step used by the time picker.
      * zh_CN: 时间选择器使用的分钟步长。
      */
-    Q_PROPERTY(int minuteIncrement READ minuteIncrement WRITE setMinuteIncrement NOTIFY
-                   minuteIncrementChanged)
+    Q_PROPERTY(int minuteIncrement READ minuteIncrement WRITE setMinuteIncrement NOTIFY minuteIncrementChanged)
     /**
      * @brief Clock mode used for time display and editing.
      * zh_CN: 时间显示和编辑使用的时钟模式。
      */
-    Q_PROPERTY(ClockIdentifier clockIdentifier READ clockIdentifier WRITE setClockIdentifier NOTIFY
-                   clockIdentifierChanged)
+    Q_PROPERTY(ClockIdentifier clockIdentifier
+        READ clockIdentifier
+        WRITE setClockIdentifier
+        NOTIFY clockIdentifierChanged)
     /**
      * @brief Whether the picker dropdown is open.
      * zh_CN: picker 下拉面板是否打开。
@@ -61,14 +65,18 @@ class TimePicker : public fluent::basicinput::Button {
      * @brief Accessible name supplied by the application for the confirm button.
      * zh_CN: 由应用为确认按钮提供的无障碍名称。
      */
-    Q_PROPERTY(QString confirmButtonAccessibleName READ confirmButtonAccessibleName WRITE
-                   setConfirmButtonAccessibleName NOTIFY confirmButtonAccessibleNameChanged)
+    Q_PROPERTY(QString confirmButtonAccessibleName
+        READ confirmButtonAccessibleName
+        WRITE setConfirmButtonAccessibleName
+        NOTIFY confirmButtonAccessibleNameChanged)
     /**
      * @brief Accessible name supplied by the application for the cancel button.
      * zh_CN: 由应用为取消按钮提供的无障碍名称。
      */
-    Q_PROPERTY(QString cancelButtonAccessibleName READ cancelButtonAccessibleName WRITE
-                   setCancelButtonAccessibleName NOTIFY cancelButtonAccessibleNameChanged)
+    Q_PROPERTY(QString cancelButtonAccessibleName
+        READ cancelButtonAccessibleName
+        WRITE setCancelButtonAccessibleName
+        NOTIFY cancelButtonAccessibleNameChanged)
 
 public:
     enum class TimeField { Hour, Minute, Period };

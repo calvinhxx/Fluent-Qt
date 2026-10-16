@@ -52,12 +52,10 @@ public:
             const double delta = std::min(clock.nsecsElapsed() / 1e9, .1);
             clock.restart();
             elapsed += delta * speed;
-            pointerStrength +=
-                ((pointerActive ? 1.0 : 0.0) - pointerStrength) * std::min(1.0, delta * 6);
-            pulses.erase(std::remove_if(
-                             pulses.begin(), pulses.end(),
+            pointerStrength += ((pointerActive ? 1.0 : 0.0) - pointerStrength) * std::min(1.0, delta * 6);
+            pulses.erase(std::remove_if(pulses.begin(), pulses.end(),
                              [this](const Pulse& pulse) { return elapsed - pulse.started > 1.6; }),
-                         pulses.end());
+                pulses.end());
             ++frameRevision;
             if (frameOwner && requestFrame) {
                 // Copy before dispatch: the consumer may destroy either owner.
@@ -67,10 +65,8 @@ public:
                 q->update();
             }
         });
-        QObject::connect(&MotionPolicy::instance(), &MotionPolicy::modeChanged, q,
-                         [this] { syncTimer(); });
-        QObject::connect(qApp, &QGuiApplication::applicationStateChanged, q,
-                         [this] { syncTimer(); });
+        QObject::connect(&MotionPolicy::instance(), &MotionPolicy::modeChanged, q, [this] { syncTimer(); });
+        QObject::connect(qApp, &QGuiApplication::applicationStateChanged, q, [this] { syncTimer(); });
     }
     struct Particle {
         double phase, spread, radius, opacity;
@@ -126,8 +122,7 @@ public:
                 lane.clear();
             fieldParticles.resize(particleCount);
             for (int i = 0; i < particleCount; ++i)
-                fieldParticles[i] = {seed(i + 3000), seed(i + 4000), seed(i + 5000),
-                                     seed(i + 6000)};
+                fieldParticles[i] = {seed(i + 3000), seed(i + 4000), seed(i + 5000), seed(i + 6000)};
             return;
         }
         fieldParticles.clear();
@@ -136,15 +131,14 @@ public:
             const int count = particleCount / 3 + (lane < particleCount % 3 ? 1 : 0);
             values.resize(count);
             for (int i = 0; i < count; ++i)
-                values[i] = {seed(i + lane * 160) * Tau, (seed(i + 91) - .5) * 2,
-                             .6 + seed(i + 11) * 1.4, .3 + seed(i + 16) * .65};
+                values[i] = {seed(i + lane * 160) * Tau, (seed(i + 91) - .5) * 2, .6 + seed(i + 11) * 1.4,
+                    .3 + seed(i + 16) * .65};
         }
     }
     bool motionAllowed() const
     {
-        return speed > 0 && q->isEnabled() && q->effectiveTheme() != FluentElement::HighContrast &&
-               MotionPolicy::instance().shouldAnimate(animationEnabled,
-                                                      MotionPolicy::Kind::Continuous);
+        return speed > 0 && q->isEnabled() && q->effectiveTheme() != FluentElement::HighContrast
+            && MotionPolicy::instance().shouldAnimate(animationEnabled, MotionPolicy::Kind::Continuous);
     }
     bool inViewport() const
     {
@@ -163,8 +157,8 @@ public:
     }
     void syncTimer()
     {
-        const bool run = motionAllowed() && inViewport() &&
-                         (!pauseWhenInactive || qApp->applicationState() == Qt::ApplicationActive);
+        const bool run = motionAllowed() && inViewport()
+            && (!pauseWhenInactive || qApp->applicationState() == Qt::ApplicationActive);
         if (run == timer.isActive())
             return;
         if (run) {
@@ -223,8 +217,7 @@ public:
         }
         }
     }
-    void ensureCache(const QColor& background, const std::array<QColor, 3>& hues, bool dark,
-                     bool isolated)
+    void ensureCache(const QColor& background, const std::array<QColor, 3>& hues, bool dark, bool isolated)
     {
         const qreal dpr = q->devicePixelRatioF();
         const QSize pixels(qCeil(width() * dpr), qCeil(height() * dpr));
@@ -269,14 +262,13 @@ public:
                 continue;
             const bool horizontal = edge % 2 == 0;
             const QSize tilePixels(horizontal ? qCeil(bounds.width() * dpr) : qCeil(dpr),
-                                   horizontal ? qCeil(dpr) : qCeil(bounds.height() * dpr));
+                horizontal ? qCeil(dpr) : qCeil(bounds.height() * dpr));
             fades[edge] = QPixmap(tilePixels);
             fades[edge].setDevicePixelRatio(dpr);
             fades[edge].fill(Qt::transparent);
             QPainter painter(&fades[edge]);
             const qreal length = horizontal ? bounds.width() : bounds.height();
-            QLinearGradient fade(QPointF(0, 0),
-                                 horizontal ? QPointF(length, 0) : QPointF(0, length));
+            QLinearGradient fade(QPointF(0, 0), horizontal ? QPointF(length, 0) : QPointF(0, length));
             const bool reverse = edge >= 2;
             const bool solid = backgroundMode == ParticleBackdrop::Solid;
             const QColor color = solid ? background : QColor(Qt::black);
@@ -284,8 +276,7 @@ public:
             if (edge == 0)
                 fade.setColorAt(.48, alpha(color, solid ? .94 : .06));
             fade.setColorAt(1, alpha(color, reverse == solid ? 1 : 0));
-            painter.fillRect(QRectF(0, 0, tilePixels.width() / dpr, tilePixels.height() / dpr),
-                             fade);
+            painter.fillRect(QRectF(0, 0, tilePixels.width() / dpr, tilePixels.height() / dpr), fade);
         }
     }
     void paint(QPainter& painter, bool isolated = false)
@@ -302,8 +293,7 @@ public:
         std::array<QColor, 3> hues;
         const double offsets[] = {-.10, .06, -.03};
         for (int i = 0; i < 3; ++i)
-            hues[i] = QColor::fromHsvF(std::fmod(hue + offsets[i] + 1, 1.0), dark ? .60 : .78,
-                                       dark ? .95 : .66);
+            hues[i] = QColor::fromHsvF(std::fmod(hue + offsets[i] + 1, 1.0), dark ? .60 : .78, dark ? .95 : .66);
         ensureCache(colors.bgSolid, hues, dark, isolated);
         if (backgroundMode == ParticleBackdrop::Solid) {
             painter.drawPixmap(0, 0, backdrop);
@@ -368,15 +358,14 @@ public:
             const double depth = particle.depth;
             const double x = particle.x + std::sin(elapsed * .18 + particle.phase * Tau) * .025;
             const double y = particle.y - elapsed * (.008 + depth * .014);
-            const QPointF at =
-                displace(QPointF((x - std::floor(x)) * width(), (y - std::floor(y)) * height()));
+            const QPointF at = displace(QPointF((x - std::floor(x)) * width(), (y - std::floor(y)) * height()));
             const double radius = 4 + depth * 10;
             // Fade at the wrap boundaries; a dot never jumps visibly to the other edge.
             const double edge = std::min({at.x(), width() - at.x(), at.y(), height() - at.y()});
             p.setOpacity(std::clamp(edge / (radius * 2), 0.0, 1.0) * (.45 + depth * .55));
             const auto& sprite = dotSprites[i % 3];
             p.drawPixmap(QRectF(at.x() - radius, at.y() - radius, radius * 2, radius * 2), sprite,
-                         QRectF(0, 0, sprite.width(), sprite.height()));
+                QRectF(0, 0, sprite.width(), sprite.height()));
         }
         p.setOpacity(1);
     }
@@ -388,8 +377,7 @@ public:
             const double cycle = particle.phase + elapsed * (.055 + particle.depth * .035);
             const double phase = cycle - std::floor(cycle);
             const double z = 1 - phase * .88;
-            const QPointF ray((particle.x - .5) * width() * 1.5,
-                              (particle.y - .5) * height() * 1.5);
+            const QPointF ray((particle.x - .5) * width() * 1.5, (particle.y - .5) * height() * 1.5);
             const QPointF at = displace(center + ray * (.32 / z));
             if (!q->rect().adjusted(-8, -8, 8, 8).contains(at.toPoint()))
                 continue;
@@ -397,8 +385,7 @@ public:
             const QPointF tail = displace(center + ray * (.32 / std::min(1.0, z + .025)));
             const double fade = std::min({1.0, phase / .08, (1 - phase) / .12});
             const double opacity = fade * (.25 + phase * .65);
-            p.setPen(
-                QPen(alpha(hues[i % 3], opacity * .45), .7 + phase, Qt::SolidLine, Qt::RoundCap));
+            p.setPen(QPen(alpha(hues[i % 3], opacity * .45), .7 + phase, Qt::SolidLine, Qt::RoundCap));
             p.drawLine(tail, at);
             p.setPen(Qt::NoPen);
             p.setBrush(alpha(hues[i % 3], opacity));
@@ -431,8 +418,7 @@ public:
             for (int layer = 0; layer < 3; ++layer) {
                 // Very faint wide strokes hide pixel edges; only the bright core needs AA.
                 p.setRenderHint(QPainter::Antialiasing, layer == 2);
-                p.setPen(QPen(alpha(hues[lane], opacities[layer]), widths[layer], Qt::SolidLine,
-                              Qt::FlatCap));
+                p.setPen(QPen(alpha(hues[lane], opacities[layer]), widths[layer], Qt::SolidLine, Qt::FlatCap));
                 // Batch thin segments instead of rasterizing a large stroked AA path.
                 if (layer == 2)
                     p.drawLines(ribbonSegments.data(), int(ribbonSegments.size()));
@@ -465,8 +451,7 @@ public:
                     p.setPen(QPen(alpha(hues[lane], .07), 8 - tail, Qt::SolidLine, Qt::RoundCap));
                     p.drawPath(trail);
                     p.setRenderHint(QPainter::Antialiasing);
-                    p.setPen(QPen(alpha(hues[lane], .95 - tail * .22), 2.6 - tail * .5,
-                                  Qt::SolidLine, Qt::RoundCap));
+                    p.setPen(QPen(alpha(hues[lane], .95 - tail * .22), 2.6 - tail * .5, Qt::SolidLine, Qt::RoundCap));
                     p.drawPath(trail);
                 }
             }
@@ -478,12 +463,11 @@ public:
         p.setBrush(Qt::NoBrush);
         for (const auto& pulse : pulses) {
             const double age = elapsed - pulse.started;
-            p.setPen(
-                QPen(alpha(hue, .35 * std::pow(1 - age / 1.6, 2)), 1, Qt::SolidLine, Qt::FlatCap));
+            p.setPen(QPen(alpha(hue, .35 * std::pow(1 - age / 1.6, 2)), 1, Qt::SolidLine, Qt::FlatCap));
             std::array<QLineF, 192> ring;
             for (int i = 0; i < 192; ++i)
                 ring[i] = QLineF(pulse.center + unitCircle[i] * (age * 280),
-                                 pulse.center + unitCircle[i + 1] * (age * 280));
+                    pulse.center + unitCircle[i + 1] * (age * 280));
             p.drawLines(ring.data(), int(ring.size()));
         }
     }
@@ -491,19 +475,17 @@ public:
     {
         const double tilt = -.36 + lane * .16;
         const double x = std::cos(angle) * (width() * .38 + spread * 19);
-        const double y = std::sin(angle) * (height() * .23 + spread * 14) +
-                         std::sin(angle * 2 + elapsed * .22 + lane * 1.8) * height() * .045;
+        const double y = std::sin(angle) * (height() * .23 + spread * 14)
+            + std::sin(angle * 2 + elapsed * .22 + lane * 1.8) * height() * .045;
         QPointF point(width() * .76 + x * std::cos(tilt) - y * std::sin(tilt),
-                      height() * .40 + x * std::sin(tilt) + y * std::cos(tilt));
+            height() * .40 + x * std::sin(tilt) + y * std::cos(tilt));
         return displace(point);
     }
     QPointF displace(QPointF point) const
     {
         QPointF d = point - pointer;
         const double influence =
-            pointerStrength > .001
-                ? std::exp(-(d.x() * d.x() + d.y() * d.y()) / 26000) * pointerStrength
-                : 0;
+            pointerStrength > .001 ? std::exp(-(d.x() * d.x() + d.y() * d.y()) / 26000) * pointerStrength : 0;
         point += QPointF(d.x() * .24 - d.y() * .32, d.y() * .24 + d.x() * .32) * influence;
         for (const auto& pulse : pulses) {
             d = point - pulse.center;
@@ -538,8 +520,7 @@ ParticleBackdrop::Effect ParticleBackdrop::effect() const
 }
 void ParticleBackdrop::setEffect(Effect effect)
 {
-    if ((effect != FlowingRibbons && effect != FloatingDots && effect != Starfield) ||
-        d->effect == effect)
+    if ((effect != FlowingRibbons && effect != FloatingDots && effect != Starfield) || d->effect == effect)
         return;
     d->effect = effect;
     d->elapsed = 0;
@@ -676,11 +657,11 @@ void ParticleBackdrop::setBackgroundMode(BackgroundMode mode)
 }
 void ParticleBackdrop::setFadeMargins(const QMarginsF& margins)
 {
-    if (!std::isfinite(margins.left()) || !std::isfinite(margins.top()) ||
-        !std::isfinite(margins.right()) || !std::isfinite(margins.bottom()))
+    if (!std::isfinite(margins.left()) || !std::isfinite(margins.top()) || !std::isfinite(margins.right())
+        || !std::isfinite(margins.bottom()))
         return;
     const QMarginsF normalized(std::max(0.0, margins.left()), std::max(0.0, margins.top()),
-                               std::max(0.0, margins.right()), std::max(0.0, margins.bottom()));
+        std::max(0.0, margins.right()), std::max(0.0, margins.bottom()));
     if (d->margins == normalized)
         return;
     d->margins = normalized;
@@ -772,8 +753,7 @@ void ParticleBackdrop::leaveEvent(QEvent* event)
     QWidget::leaveEvent(event);
 }
 
-bool ParticleBackdropRenderAccess::claim(ParticleBackdrop* backdrop, QObject* owner,
-                                         std::function<void()> requestFrame)
+bool ParticleBackdropRenderAccess::claim(ParticleBackdrop* backdrop, QObject* owner, std::function<void()> requestFrame)
 {
     if (!backdrop || !owner || !requestFrame)
         return false;
@@ -807,8 +787,7 @@ void ParticleBackdropRenderAccess::release(ParticleBackdrop* backdrop, QObject* 
     backdrop->update();
 }
 
-bool ParticleBackdropRenderAccess::isClaimedBy(const ParticleBackdrop* backdrop,
-                                               const QObject* owner)
+bool ParticleBackdropRenderAccess::isClaimedBy(const ParticleBackdrop* backdrop, const QObject* owner)
 {
     return backdrop && owner && backdrop->d->frameOwner == owner;
 }

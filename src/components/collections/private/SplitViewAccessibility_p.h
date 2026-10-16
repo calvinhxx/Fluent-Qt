@@ -14,8 +14,7 @@ class SplitView;
 
 namespace detail {
 
-inline QRect centeredSplitHandleVisualRect(
-    const QRect& handleRect,
+inline QRect centeredSplitHandleVisualRect(const QRect& handleRect,
     Qt::Orientation orientation,
     int thickness,
     int crossAxisInset = 4)
@@ -26,19 +25,13 @@ inline QRect centeredSplitHandleVisualRect(
     const int inset = qMax(0, crossAxisInset);
     if (orientation == Qt::Horizontal) {
         const int visualWidth = qBound(1, thickness, handleRect.width());
-        return QRect(
-            handleRect.left() + (handleRect.width() - visualWidth) / 2,
-            handleRect.top() + inset,
-            visualWidth,
+        return QRect(handleRect.left() + (handleRect.width() - visualWidth) / 2, handleRect.top() + inset, visualWidth,
             qMax(0, handleRect.height() - inset * 2));
     }
 
     const int visualHeight = qBound(1, thickness, handleRect.height());
-    return QRect(
-        handleRect.left() + inset,
-        handleRect.top() + (handleRect.height() - visualHeight) / 2,
-        qMax(0, handleRect.width() - inset * 2),
-        visualHeight);
+    return QRect(handleRect.left() + inset, handleRect.top() + (handleRect.height() - visualHeight) / 2,
+        qMax(0, handleRect.width() - inset * 2), visualHeight);
 }
 
 class SplitViewHandle final : public QWidget {
@@ -76,10 +69,8 @@ private:
 void ensureSplitViewAccessibilityFactory();
 void notifySplitViewAccessibilityStructureChanged(SplitView* splitView);
 void notifySplitViewAccessibilityOrientationChanged(SplitView* splitView);
-void notifySplitViewAccessibilityHandleValueChanged(
-    SplitView* splitView, int handleIndex);
-void notifySplitViewAccessibilityAllHandleValuesChanged(
-    SplitView* splitView);
+void notifySplitViewAccessibilityHandleValueChanged(SplitView* splitView, int handleIndex);
+void notifySplitViewAccessibilityAllHandleValuesChanged(SplitView* splitView);
 
 } // namespace detail
 } // namespace fluent::collections

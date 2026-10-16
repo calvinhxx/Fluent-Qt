@@ -30,8 +30,7 @@ class ProgressRing : public QWidget, public FluentElement, public QMLPlus {
      * @brief Whether indeterminate progress motion is enabled.
      * zh_CN: 是否启用不确定进度动画。
      */
-    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled
-                   NOTIFY animationEnabledChanged)
+    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
     /**
      * @brief Whether the progress indicator uses indeterminate motion.
      * zh_CN: 进度指示器是否使用不确定动画。

@@ -47,13 +47,12 @@ Popup::Popup(QWidget* parent) : QWidget(parent)
     detail::ensureTransientSurfaceAccessibilityFactory();
     m_originalParent = parent;
     m_overlayCoordinator = new ::fluent::overlay::OverlayCoordinator(this, this);
-    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this,
-            [this]() {
-                if ((!m_isOpen && !isVisible()) || m_isClosing)
-                    return;
-                move(resolvedPosition());
-                m_overlayCoordinator->raiseStack();
-            });
+    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this, [this]() {
+        if ((!m_isOpen && !isVisible()) || m_isClosing)
+            return;
+        move(resolvedPosition());
+        m_overlayCoordinator->raiseStack();
+    });
     setAttribute(Qt::WA_NoSystemBackground);
     setAttribute(Qt::WA_TranslucentBackground);
     setFocusPolicy(Qt::StrongFocus);
@@ -239,8 +238,7 @@ QPoint Popup::computePosition() const
         return pos();
     // Default: center inside the topLevelWidget. zh_CN: 默认在 topLevelWidget 中居中。
     const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
-    return QPoint(surface.left() + (surface.width() - width()) / 2,
-                  surface.top() + (surface.height() - height()) / 2);
+    return QPoint(surface.left() + (surface.width() - width()) / 2, surface.top() + (surface.height() - height()) / 2);
 }
 
 QPoint Popup::resolvedPosition() const
@@ -250,11 +248,9 @@ QPoint Popup::resolvedPosition() const
 
     QPoint cardTopLeft = m_targetPos;
     if (m_positionRelativeTo && m_positionRelativeTo->window()) {
-        cardTopLeft =
-            ::fluent::overlay::presentedPointInTopLevel(m_positionRelativeTo, m_positionLocalPos);
+        cardTopLeft = ::fluent::overlay::presentedPointInTopLevel(m_positionRelativeTo, m_positionLocalPos);
         if (::fluent::overlay::hasPresentedTransform(m_positionRelativeTo)) {
-            cardTopLeft = ::fluent::overlay::clampCardTopLeft(
-                cardTopLeft, ::fluent::overlay::visibleCardSize(size()),
+            cardTopLeft = ::fluent::overlay::clampCardTopLeft(cardTopLeft, ::fluent::overlay::visibleCardSize(size()),
                 ::fluent::overlay::overlaySurfaceRect(originalParentTopLevel()), 0);
         }
     }
@@ -281,13 +277,11 @@ QWidget* Popup::themeOverrideSource() const
 
 bool Popup::syncThemeOverrideFromSource()
 {
-    const bool popupChanged =
-        ::fluent::overlay::syncInheritedThemeOverride(this, themeOverrideSource());
+    const bool popupChanged = ::fluent::overlay::syncInheritedThemeOverride(this, themeOverrideSource());
 
     bool scrimChanged = false;
     if (m_overlayCoordinator->scrim()) {
-        scrimChanged =
-            ::fluent::overlay::syncInheritedThemeOverride(m_overlayCoordinator->scrim(), this);
+        scrimChanged = ::fluent::overlay::syncInheritedThemeOverride(m_overlayCoordinator->scrim(), this);
     }
     return popupChanged || scrimChanged;
 }
@@ -531,8 +525,8 @@ void Popup::finalizeClosed()
     m_focusRestoreTarget = nullptr;
     hide();
     destroyScrim();
-    if (shouldRestoreFocus && focusRestoreTarget && focusRestoreTarget->isVisible() &&
-        focusRestoreTarget->isEnabled() && focusRestoreTarget->focusPolicy() != Qt::NoFocus) {
+    if (shouldRestoreFocus && focusRestoreTarget && focusRestoreTarget->isVisible() && focusRestoreTarget->isEnabled()
+        && focusRestoreTarget->focusPolicy() != Qt::NoFocus) {
         focusRestoreTarget->setFocus(Qt::PopupFocusReason);
     }
     QPointer<Popup> guard(this);
@@ -599,8 +593,8 @@ bool Popup::eventFilter(QObject* watched, QEvent* event)
         queuePositionSync();
 
     const bool noAutoClose = m_closePolicy == ClosePolicy(NoAutoClose);
-    if (::fluent::overlay::isEscapeKeyPress(event) &&
-        ::fluent::overlay::allowsImplicitClose(noAutoClose, m_closePolicy & CloseOnEscape)) {
+    if (::fluent::overlay::isEscapeKeyPress(event)
+        && ::fluent::overlay::allowsImplicitClose(noAutoClose, m_closePolicy & CloseOnEscape)) {
         if (!m_closeReasonExplicit)
             setPendingCloseReason(Escape);
         close();
@@ -640,11 +634,9 @@ bool Popup::eventFilter(QObject* watched, QEvent* event)
             if (!passthrough)
                 continue;
             const bool projected = ::fluent::overlay::presentationRoot(passthrough) != nullptr;
-            const bool byHierarchy =
-                !projected && hit && (hit == passthrough.data() || passthrough->isAncestorOf(hit));
-            const bool byGeometry =
-                passthrough->isVisible() &&
-                passthrough->rect().contains(
+            const bool byHierarchy = !projected && hit && (hit == passthrough.data() || passthrough->isAncestorOf(hit));
+            const bool byGeometry = passthrough->isVisible()
+                && passthrough->rect().contains(
                     ::fluent::overlay::localPointFromPresentedGlobal(passthrough, globalPos));
             if (byHierarchy || byGeometry)
                 return false;

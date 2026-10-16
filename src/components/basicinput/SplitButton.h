@@ -41,7 +41,7 @@ public:
 
     explicit SplitButton(const QString& text = "", QWidget* parent = nullptr);
     ~SplitButton() override;
-    
+
     QMenu* menu() const { return m_menu.data(); }
     void setMenu(QMenu* menu);
 
@@ -74,7 +74,7 @@ protected:
     QPointer<QMenu> m_menu;
     SplitPart m_hoverPart = None;
     SplitPart m_pressPart = None;
-    
+
     int m_secondaryWidth = 32;
 
 private:

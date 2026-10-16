@@ -2,17 +2,34 @@
 #
 # The repository adopts this contract incrementally: format and check only
 # files changed by the current work. tools/quality/check_cpp_format.py pins the
-# formatter to clang-format 15.0.0 so local and CI output stays deterministic.
+# formatter to clang-format 22.1.8 so local and CI output stays deterministic.
 ---
 Language: Cpp
 BasedOnStyle: LLVM
 
 Standard: c++17
-ColumnLimit: 100
+ColumnLimit: 120
 IndentWidth: 4
 ContinuationIndentWidth: 4
 TabWidth: 4
 UseTab: Never
+
+# Qt properties are declarations, not ordinary comma-separated macro arguments.
+# Keep short properties compact; wrap long ones at complete READ/WRITE/NOTIFY clauses.
+AllowBreakBeforeQtProperty: true
+BinPackParameters: OnePerLine
+BinPackArguments: true
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllArgumentsOnNextLine: false
+
+# Continuations follow the block indentation instead of the length of a callee/type.
+AlignAfterOpenBracket: false
+AlignOperands: DontAlign
+BreakBeforeBinaryOperators: NonAssignment
+PenaltyIndentedWhitespace: 30
+PenaltyBreakBeforeFirstCallParameter: 200
+PenaltyReturnTypeOnItsOwnLine: 300
+PenaltyBreakAssignment: 100
 
 AccessModifierOffset: -4
 NamespaceIndentation: None
@@ -51,4 +68,5 @@ SortIncludes: Never
 IncludeBlocks: Preserve
 SortUsingDeclarations: false
 ReflowComments: false
+BreakStringLiterals: false
 ...

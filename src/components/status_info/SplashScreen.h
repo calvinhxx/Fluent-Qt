@@ -34,18 +34,15 @@ class ProgressBar;
  */
 class SplashScreen : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
-    Q_PROPERTY(Presentation presentation READ presentation WRITE setPresentation NOTIFY
-                   presentationChanged)
+    Q_PROPERTY(Presentation presentation READ presentation WRITE setPresentation NOTIFY presentationChanged)
     Q_PROPERTY(QIcon icon READ icon WRITE setIcon NOTIFY iconChanged)
     Q_PROPERTY(QSize iconSize READ iconSize WRITE setIconSize NOTIFY iconSizeChanged)
     Q_PROPERTY(QString text READ text WRITE setText NOTIFY textChanged)
     Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
     Q_PROPERTY(QString subtitle READ subtitle WRITE setSubtitle NOTIFY subtitleChanged)
-    Q_PROPERTY(QWidget* transitionTarget READ transitionTarget WRITE setTransitionTarget NOTIFY
-                   transitionTargetChanged)
+    Q_PROPERTY(QWidget* transitionTarget READ transitionTarget WRITE setTransitionTarget NOTIFY transitionTargetChanged)
     Q_PROPERTY(int progress READ progress NOTIFY progressChanged)
-    Q_PROPERTY(
-        bool indeterminate READ isIndeterminate WRITE setIndeterminate NOTIFY indeterminateChanged)
+    Q_PROPERTY(bool indeterminate READ isIndeterminate WRITE setIndeterminate NOTIFY indeterminateChanged)
 
 public:
     /** @brief Branded is the default light reveal; Simple retains the centered loading ring.

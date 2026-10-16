@@ -53,28 +53,22 @@ QString number(const QWidget* widget, double value)
 
 double luminance(const QColor& color)
 {
-    const auto linear = [](double c) {
-        return c <= 0.04045 ? c / 12.92 : std::pow((c + 0.055) / 1.055, 2.4);
-    };
-    return 0.2126 * linear(color.redF()) + 0.7152 * linear(color.greenF()) +
-           0.0722 * linear(color.blueF());
+    const auto linear = [](double c) { return c <= 0.04045 ? c / 12.92 : std::pow((c + 0.055) / 1.055, 2.4); };
+    return 0.2126 * linear(color.redF()) + 0.7152 * linear(color.greenF()) + 0.0722 * linear(color.blueF());
 }
 
 QColor dataColor(QColor source, const FluentElement::Colors& colors)
 {
     // Keep the token hue, but make data strokes legible on Fluent neutral surfaces.
-    const QColor target =
-        luminance(colors.bgLayerAlt) > 0.18 ? QColor(Qt::black) : QColor(Qt::white);
+    const QColor target = luminance(colors.bgLayerAlt) > 0.18 ? QColor(Qt::black) : QColor(Qt::white);
     source.setAlpha(255);
     for (int step = 0; step <= 32; ++step) {
         const double t = step / 32.0;
         const auto candidate = QColor::fromRgbF(mix(source.redF(), target.redF(), t),
-                                                mix(source.greenF(), target.greenF(), t),
-                                                mix(source.blueF(), target.blueF(), t));
+            mix(source.greenF(), target.greenF(), t), mix(source.blueF(), target.blueF(), t));
         const double foreground = luminance(candidate) + 0.05;
         bool readable = true;
-        for (const QColor& background :
-             {colors.bgCanvas, colors.bgLayer, colors.bgLayerAlt, colors.bgSolid}) {
+        for (const QColor& background : {colors.bgCanvas, colors.bgLayer, colors.bgLayerAlt, colors.bgSolid}) {
             const double surface = luminance(background) + 0.05;
             readable &= std::max(foreground, surface) / std::min(foreground, surface) >= 3.1;
         }
@@ -100,8 +94,9 @@ public:
             qint64 count = 0;
             for (int i = 0; i < view->seriesCount(); ++i)
                 count += view->seriesModel(i)->rowCount();
-            return ChartView::tr("%1 series, %2 data points. Left/Right: point; Up/Down: series; "
-                                 "Enter: activate.")
+            return ChartView::tr(
+                "%1 series, %2 data points. Left/Right: point; Up/Down: series; "
+                "Enter: activate.")
                 .arg(view->seriesCount())
                 .arg(count);
         }
@@ -123,9 +118,8 @@ public:
             const int series = std::max(0, view->currentSeries());
             auto* model = view->seriesModel(series);
             if (model && model->rowCount())
-                view->setCurrentPoint(
-                    series, std::clamp(view->currentRow() + (action == nextPageAction() ? 1 : -1),
-                                       0, model->rowCount() - 1));
+                view->setCurrentPoint(series,
+                    std::clamp(view->currentRow() + (action == nextPageAction() ? 1 : -1), 0, model->rowCount() - 1));
         } else
             QAccessibleWidget::doAction(action);
     }
@@ -245,13 +239,12 @@ public:
     }
     QColor color(int i) const
     {
-        return dataColors.isEmpty() ? q->themeColorsRef().accentDefault
-                                    : dataColors[i % dataColors.size()];
+        return dataColors.isEmpty() ? q->themeColorsRef().accentDefault : dataColors[i % dataColors.size()];
     }
     QPointF map(double x, double y) const
     {
         return {plot.left() + normalized(x, xMin, xMax) * plot.width(),
-                plot.bottom() - normalized(y, yMin, yMax) * plot.height()};
+            plot.bottom() - normalized(y, yMin, yMax) * plot.height()};
     }
     QPair<double, double> xBounds() const
     {
@@ -310,13 +303,8 @@ public:
                 const double magnitude = std::pow(10.0, std::floor(std::log10(span / 4)));
                 if (magnitude > 0 && std::isfinite(magnitude)) {
                     const double raw = span / (4 * magnitude);
-                    const double step = (raw <= 1   ? 1
-                                         : raw <= 2 ? 2
-                                         : raw <= 5 ? 5
-                                                    : 10) *
-                                        magnitude;
-                    const double lo = std::floor(yMin / step) * step,
-                                 hi = std::ceil(yMax / step) * step;
+                    const double step = (raw <= 1 ? 1 : raw <= 2 ? 2 : raw <= 5 ? 5 : 10) * magnitude;
+                    const double lo = std::floor(yMin / step) * step, hi = std::ceil(yMax / step) * step;
                     if (std::isfinite(lo) && std::isfinite(hi) && hi > lo) {
                         yMin = lo;
                         yMax = hi;
@@ -354,14 +342,11 @@ public:
             if (legend && count && width >= 520) {
                 const qreal side = std::max(32.0, std::min({236.0, contentHeight, width * .43}));
                 plot = QRectF(40, top + (contentHeight - side) / 2, side, side);
-                legendBox = QRectF(plot.right() + 36,
-                                   top + std::max(0.0, (contentHeight - (32 + count * 36)) / 2),
-                                   std::max(32.0, width - plot.right() - 60),
-                                   std::min(contentHeight, 32.0 + count * 36));
+                legendBox = QRectF(plot.right() + 36, top + std::max(0.0, (contentHeight - (32 + count * 36)) / 2),
+                    std::max(32.0, width - plot.right() - 60), std::min(contentHeight, 32.0 + count * 36));
             } else if (legend && count) {
                 const qreal legendHeight = std::min(32.0 + count * 32, contentHeight * .48);
-                const qreal side = std::max(
-                    24.0, std::min({236.0, width - 48, contentHeight - legendHeight - 20}));
+                const qreal side = std::max(24.0, std::min({236.0, width - 48, contentHeight - legendHeight - 20}));
                 plot = QRectF((width - side) / 2, top, side, side);
                 legendBox = QRectF(24, top + side + 20, width - 48, legendHeight);
             } else {
@@ -378,10 +363,9 @@ public:
                 legendBox = QRectF(24, top, width - 48, visibleRows * 24 - 4);
                 top = legendBox.bottom() + 16;
             }
-            plot = horizontal() ? QRectF(120, top, std::max(24.0, width - 200),
-                                         std::max(24.0, height - top - 24))
-                                : QRectF(64, top + 18, std::max(24.0, width - 88),
-                                         std::max(24.0, height - top - 60));
+            plot = horizontal()
+                ? QRectF(120, top, std::max(24.0, width - 200), std::max(24.0, height - top - 24))
+                : QRectF(64, top + 18, std::max(24.0, width - 88), std::max(24.0, height - top - 60));
         }
         plot = plot.intersected(QRectF(q->rect()).adjusted(4, 4, -4, -4));
     }
@@ -390,21 +374,10 @@ public:
         const auto& colors = q->themeColorsRef();
         const bool high = q->effectiveTheme() == FluentElement::HighContrast;
         const bool dark = q->effectiveTheme() == FluentElement::Dark;
-        const int budget = std::max(16, std::min(maximumPoints / std::max(1, int(series.size())),
-                                                 int(plot.width() * dpr * 2)));
-        return {plot,
-                xMin,
-                xMax,
-                yMin,
-                yMax,
-                dpr,
-                budget,
-                s,
-                std::max(1, int(series.size())),
-                dataColors,
-                colors.bgLayer,
-                high ? colors.strokeDivider : tokens::grid(dark),
-                high};
+        const int budget = std::max(16,
+            std::min(maximumPoints / std::max(1, int(series.size())), int(plot.width() * dpr * 2)));
+        return {plot, xMin, xMax, yMin, yMax, dpr, budget, s, std::max(1, int(series.size())), dataColors,
+            colors.bgLayer, high ? colors.strokeDivider : tokens::grid(dark), high};
     }
     void project()
     {
@@ -413,8 +386,7 @@ public:
         dpr = q->devicePixelRatioF();
         const auto& colors = q->themeColorsRef();
         dataColors.clear();
-        auto palette =
-            tokens::series(q->effectiveTheme() == FluentElement::Dark, colors.accentDefault);
+        auto palette = tokens::series(q->effectiveTheme() == FluentElement::Dark, colors.accentDefault);
         if (q->effectiveTheme() == FluentElement::HighContrast)
             palette = colors.charts.toVector();
         for (const auto& color : palette)
@@ -447,18 +419,17 @@ public:
         if (!m || first < 0 || first >= m->rowCount())
             return {};
         if (last - first > 1)
-            return circular() ? ChartView::tr("Other (%1 points): %2%")
-                                    .arg(last - first)
-                                    .arg(number(q, m->positiveFraction(first, last) * 100))
-                              : ChartView::tr("%1–%2: mean %3%4")
-                                    .arg(number(q, m->pointAt(first).x()),
-                                         number(q, m->pointAt(last - 1).x()),
-                                         number(q, m->mean(first, last)), suffix);
+            return circular()
+                ? ChartView::tr("Other (%1 points): %2%")
+                      .arg(last - first)
+                      .arg(number(q, m->positiveFraction(first, last) * 100))
+                : ChartView::tr("%1–%2: mean %3%4")
+                      .arg(number(q, m->pointAt(first).x()), number(q, m->pointAt(last - 1).x()),
+                          number(q, m->mean(first, last)), suffix);
         const auto point = m->pointAt(first);
         const QString label = m->labelAt(first);
-        return (m->name().isEmpty() ? QString() : m->name() + QStringLiteral(" · ")) +
-               (label.isEmpty() ? number(q, point.x()) : label) + QStringLiteral(": ") +
-               number(q, point.y()) + suffix;
+        return (m->name().isEmpty() ? QString() : m->name() + QStringLiteral(" · "))
+            + (label.isEmpty() ? number(q, point.x()) : label) + QStringLiteral(": ") + number(q, point.y()) + suffix;
     }
     bool hit(const QPointF& position, int& s, int& first, int& last) const
     {
@@ -486,8 +457,7 @@ public:
         if (!model)
             return {};
         if (shape.last - shape.first > 1)
-            return bars() ? ChartView::tr("Rows %1–%2").arg(shape.first + 1).arg(shape.last)
-                          : ChartView::tr("Other");
+            return bars() ? ChartView::tr("Rows %1–%2").arg(shape.first + 1).arg(shape.last) : ChartView::tr("Other");
         const auto label = model->labelAt(shape.first);
         return label.isEmpty() ? number(q, model->pointAt(shape.first).x()) : label;
     }
@@ -564,25 +534,25 @@ bool ChartView::addSeries(ChartModel* model)
     ChartViewPrivate::Series entry;
     entry.model = model;
     auto changed = [this] { d->invalidate(); };
-    entry.connections << connect(model, &QAbstractItemModel::rowsInserted, this, changed)
-                      << connect(model, &QAbstractItemModel::modelReset, this,
-                                 [this] {
-                                     d->invalidate();
-                                     setCurrentPoint(-1, -1);
-                                 })
-                      << connect(model, &QAbstractItemModel::dataChanged, this, changed)
-                      << connect(model, &ChartModel::nameChanged, this, changed)
-                      << connect(model, &QObject::destroyed, this, [this] {
-                             for (int i = d->series.size() - 1; i >= 0; --i)
-                                 if (d->series[i].model.isNull())
-                                     d->series.removeAt(i);
-                             d->projections.clear();
-                             d->invalidate(true);
-                             QPointer<ChartView> guard(this);
-                             setCurrentPoint(-1, -1);
-                             if (guard)
-                                 emit modelChanged();
-                         });
+    entry.connections
+        << connect(model, &QAbstractItemModel::rowsInserted, this, changed)
+        << connect(model, &QAbstractItemModel::modelReset, this,
+               [this] {
+                   d->invalidate();
+                   setCurrentPoint(-1, -1);
+               })
+        << connect(model, &QAbstractItemModel::dataChanged, this, changed)
+        << connect(model, &ChartModel::nameChanged, this, changed) << connect(model, &QObject::destroyed, this, [this] {
+               for (int i = d->series.size() - 1; i >= 0; --i)
+                   if (d->series[i].model.isNull())
+                       d->series.removeAt(i);
+               d->projections.clear();
+               d->invalidate(true);
+               QPointer<ChartView> guard(this);
+               setCurrentPoint(-1, -1);
+               if (guard)
+                   emit modelChanged();
+           });
     d->series.append(entry);
     d->invalidate(true);
     emit modelChanged();
@@ -699,8 +669,8 @@ double ChartView::maximumX() const
 }
 void ChartView::setXRange(double minimum, double maximum)
 {
-    if (!std::isfinite(minimum) || !std::isfinite(maximum) || minimum >= maximum ||
-        (!d->automatic && d->requestedMin == minimum && d->requestedMax == maximum))
+    if (!std::isfinite(minimum) || !std::isfinite(maximum) || minimum >= maximum
+        || (!d->automatic && d->requestedMin == minimum && d->requestedMax == maximum))
         return;
     d->requestedMin = minimum;
     d->requestedMax = maximum;
@@ -774,9 +744,9 @@ int ChartView::heightForWidth(int width) const
     if (!hasHeightForWidth() || width >= 520)
         return sizeHint().height();
     const int count = model() ? std::min(12, model()->rowCount()) : 0;
-    return std::max(420, 24 + (d->title.isEmpty() ? 0 : 28) + (d->subtitle.isEmpty() ? 0 : 20) +
-                             16 + std::min(236, std::max(24, width - 48)) + 20 + 32 + count * 36 +
-                             24);
+    return std::max(420,
+        24 + (d->title.isEmpty() ? 0 : 28) + (d->subtitle.isEmpty() ? 0 : 20) + 16
+            + std::min(236, std::max(24, width - 48)) + 20 + 32 + count * 36 + 24);
 }
 QSize ChartView::minimumSizeHint() const
 {
@@ -866,8 +836,8 @@ double ChartView::maximumY() const
 }
 void ChartView::setYRange(double lo, double hi)
 {
-    if (!std::isfinite(lo) || !std::isfinite(hi) || lo >= hi ||
-        (!d->autoY && lo == d->requestedYMin && hi == d->requestedYMax))
+    if (!std::isfinite(lo) || !std::isfinite(hi) || lo >= hi
+        || (!d->autoY && lo == d->requestedYMin && hi == d->requestedYMax))
         return;
     d->autoY = false;
     d->requestedYMin = lo;
@@ -900,26 +870,23 @@ void ChartViewPrivate::paintAxes(QPainter& p) const
             if (shape.last - shape.first > 1)
                 label = ChartView::tr("%1–%2").arg(shape.first + 1).arg(shape.last);
             p.drawText(QRectF(24, y - 10, 80, 20), Qt::AlignLeading | Qt::AlignVCenter,
-                       p.fontMetrics().elidedText(label, Qt::ElideRight, 80));
+                p.fontMetrics().elidedText(label, Qt::ElideRight, 80));
         }
         for (const auto& projection : projections)
             for (const auto& shape : projection.shapes)
                 p.drawText(QRectF(plot.right() + 12, shape.track.center().y() - 10, 56, 20),
-                           Qt::AlignRight | Qt::AlignVCenter,
-                           p.fontMetrics().elidedText(number(q, shape.value) + suffix,
-                                                      Qt::ElideRight, 56));
+                    Qt::AlignRight | Qt::AlignVCenter,
+                    p.fontMetrics().elidedText(number(q, shape.value) + suffix, Qt::ElideRight, 56));
         return;
     }
     const bool dark = q->effectiveTheme() == FluentElement::Dark;
     const bool high = q->effectiveTheme() == FluentElement::HighContrast;
     for (int i = 0; i <= 4; ++i) {
         const double t = i / 4.0, y = plot.bottom() - t * plot.height();
-        p.setPen(QPen(
-            high ? colors.strokeDivider : (i ? tokens::grid(dark) : tokens::baseline(dark)), 1));
+        p.setPen(QPen(high ? colors.strokeDivider : (i ? tokens::grid(dark) : tokens::baseline(dark)), 1));
         p.drawLine(QPointF(plot.left(), y), QPointF(plot.right(), y));
         p.setPen(colors.textSecondary);
-        p.drawText(QRectF(8, y - 10, 44, 20), Qt::AlignRight | Qt::AlignVCenter,
-                   number(q, mix(yMin, yMax, t)));
+        p.drawText(QRectF(8, y - 10, 44, 20), Qt::AlignRight | Qt::AlignVCenter, number(q, mix(yMin, yMax, t)));
     }
     if (bars() && !projections.isEmpty()) {
         const auto& shapes = projections.first().shapes;
@@ -932,7 +899,7 @@ void ChartViewPrivate::paintAxes(QPainter& p) const
             if (projections.size() > 1 && i < projections.last().shapes.size())
                 x = (x + projections.last().shapes[i].path.boundingRect().center().x()) / 2;
             p.drawText(QRectF(x - 30, plot.bottom() + 10, 60, 20), Qt::AlignCenter,
-                       p.fontMetrics().elidedText(category(shape), Qt::ElideRight, 60));
+                p.fontMetrics().elidedText(category(shape), Qt::ElideRight, 60));
         }
         return;
     }
@@ -946,8 +913,8 @@ void ChartViewPrivate::paintAxes(QPainter& p) const
             if (!label.isEmpty())
                 text = label;
         }
-        p.drawText(QRectF(plot.left() + t * plot.width() - 32, plot.bottom() + 10, 64, 20),
-                   Qt::AlignCenter, p.fontMetrics().elidedText(text, Qt::ElideRight, 64));
+        p.drawText(QRectF(plot.left() + t * plot.width() - 32, plot.bottom() + 10, 64, 20), Qt::AlignCenter,
+            p.fontMetrics().elidedText(text, Qt::ElideRight, 64));
     }
 }
 
@@ -962,12 +929,11 @@ void ChartViewPrivate::paintLegend(QPainter& p) const
             return;
         const auto& shapes = projections.first().shapes;
         p.setPen(colors.textSecondary);
-        p.drawText(legendBox.adjusted(0, 0, 0, -legendBox.height() + 20),
-                   Qt::AlignLeading | Qt::AlignVCenter, ChartView::tr("Source"));
-        p.drawText(legendBox.adjusted(0, 0, 0, -legendBox.height() + 20),
-                   Qt::AlignRight | Qt::AlignVCenter, ChartView::tr("Share"));
-        const qreal cell = std::min(
-            36.0, std::max(16.0, (legendBox.height() - 28) / std::max(1, int(shapes.size()))));
+        p.drawText(legendBox.adjusted(0, 0, 0, -legendBox.height() + 20), Qt::AlignLeading | Qt::AlignVCenter,
+            ChartView::tr("Source"));
+        p.drawText(legendBox.adjusted(0, 0, 0, -legendBox.height() + 20), Qt::AlignRight | Qt::AlignVCenter,
+            ChartView::tr("Share"));
+        const qreal cell = std::min(36.0, std::max(16.0, (legendBox.height() - 28) / std::max(1, int(shapes.size()))));
         for (int i = 0; i < shapes.size(); ++i) {
             const auto& shape = shapes[i];
             const qreal y = legendBox.top() + 28 + i * cell;
@@ -976,12 +942,11 @@ void ChartViewPrivate::paintLegend(QPainter& p) const
             p.drawRoundedRect(QRectF(legendBox.left(), y + 6, 8, 8), 2, 2);
             p.setPen(colors.textPrimary);
             const int nameWidth = std::max(0, int(legendBox.width() - 80));
-            p.drawText(QRectF(legendBox.left() + 20, y, nameWidth, 20),
-                       Qt::AlignLeading | Qt::AlignVCenter,
-                       p.fontMetrics().elidedText(category(shape), Qt::ElideRight, nameWidth));
+            p.drawText(QRectF(legendBox.left() + 20, y, nameWidth, 20), Qt::AlignLeading | Qt::AlignVCenter,
+                p.fontMetrics().elidedText(category(shape), Qt::ElideRight, nameWidth));
             p.setFont(q->themeFont(Typography::FontRole::BodyStrong).toQFont());
             p.drawText(QRectF(legendBox.right() - 60, y, 60, 20), Qt::AlignRight | Qt::AlignVCenter,
-                       q->locale().toString(shape.value * 100, 'f', 1) + QLatin1Char('%'));
+                q->locale().toString(shape.value * 100, 'f', 1) + QLatin1Char('%'));
             p.setFont(q->themeFont(Typography::FontRole::Caption).toQFont());
         }
         return;
@@ -990,8 +955,7 @@ void ChartViewPrivate::paintLegend(QPainter& p) const
     const int slotCount = columns * (legendBox.height() > 24 ? 2 : 1);
     for (int i = 0; i < std::min(slotCount, int(series.size())); ++i) {
         const bool overflow = i == slotCount - 1 && series.size() > slotCount;
-        const int column =
-            q->layoutDirection() == Qt::RightToLeft ? columns - 1 - i % columns : i % columns;
+        const int column = q->layoutDirection() == Qt::RightToLeft ? columns - 1 - i % columns : i % columns;
         const qreal x = legendBox.left() + column * 130, y = legendBox.top() + (i / columns) * 24;
         if (!overflow) {
             p.setPen(Qt::NoPen);
@@ -1016,10 +980,9 @@ void ChartViewPrivate::paintLegend(QPainter& p) const
             }
         }
         p.setPen(colors.textSecondary);
-        const QString label = overflow ? ChartView::tr("+%1 series").arg(series.size() - i)
-                                       : q->seriesModel(i)->name();
+        const QString label = overflow ? ChartView::tr("+%1 series").arg(series.size() - i) : q->seriesModel(i)->name();
         p.drawText(QRectF(x + 24, y, 98, 20), Qt::AlignLeading | Qt::AlignVCenter,
-                   p.fontMetrics().elidedText(label, Qt::ElideRight, 98));
+            p.fontMetrics().elidedText(label, Qt::ElideRight, 98));
     }
 }
 
@@ -1037,29 +1000,27 @@ ChartViewPrivate::Cursor ChartViewPrivate::cursor() const
     auto& heading = result.heading;
     if (circular() || bars()) {
         const auto& shapes = projections[s].shapes;
-        const auto it =
-            std::find_if(shapes.begin(), shapes.end(), [row](const detail::Shape& shape) {
-                return shape.first <= row && row < shape.last;
-            });
+        const auto it = std::find_if(shapes.begin(), shapes.end(), [row](const detail::Shape& shape) {
+            return shape.first <= row && row < shape.last;
+        });
         if (it == shapes.end())
             return result;
         anchor = hoverSeries >= 0 ? hoverPosition : it->path.boundingRect().center();
         heading = category(*it);
         if (circular() && it->last - it->first > 1)
             heading = ChartView::tr("Other (%1 points)").arg(it->last - it->first);
-        readouts.append(
-            {circular()
-                 ? ChartView::tr("Share")
-                 : (it->last - it->first > 1 ? ChartView::tr("Mean") : q->seriesModel(s)->name()),
-             circular() ? q->locale().toString(it->value * 100, 'f', 1) + QLatin1Char('%')
-                        : number(q, it->value) + suffix,
-             color(it->color), true});
+        readouts.append({circular()
+                ? ChartView::tr("Share")
+                : (it->last - it->first > 1 ? ChartView::tr("Mean") : q->seriesModel(s)->name()),
+            circular() ? q->locale().toString(it->value * 100, 'f', 1) + QLatin1Char('%')
+                       : number(q, it->value) + suffix,
+            color(it->color), true});
         result.shape = it->path;
     } else {
         const auto& points = projections[s].points;
-        const auto it =
-            std::find_if(points.begin(), points.end(),
-                         [row](const detail::Vertex& point) { return point.row == row; });
+        const auto it = std::find_if(points.begin(), points.end(), [row](const detail::Vertex& point) {
+            return point.row == row;
+        });
         QPointF value;
         if (it != points.end()) {
             value = it->value;
@@ -1081,10 +1042,9 @@ ChartViewPrivate::Cursor ChartViewPrivate::cursor() const
             if (!renderer->sharedCursor() && i != s)
                 continue;
             const auto& samples = projections[i].points;
-            const auto aligned =
-                std::find_if(samples.begin(), samples.end(), [&](const detail::Vertex& point) {
-                    return point.value.x() == value.x();
-                });
+            const auto aligned = std::find_if(samples.begin(), samples.end(), [&](const detail::Vertex& point) {
+                return point.value.x() == value.x();
+            });
             // A shared heading must never imply that a nearby sample has the
             // same timestamp. Compare only exact X matches in the bounded cache.
             if (i != s && aligned == samples.end())
@@ -1114,8 +1074,7 @@ void ChartViewPrivate::paintCursor(QPainter& p) const
     } else {
         if (renderer->sharedCursor() && !compact()) {
             p.setPen(QPen(colors.textTertiary, 1, Qt::DashLine));
-            p.drawLine(QPointF(selected.anchor.x(), plot.top()),
-                       QPointF(selected.anchor.x(), plot.bottom()));
+            p.drawLine(QPointF(selected.anchor.x(), plot.top()), QPointF(selected.anchor.x(), plot.bottom()));
         }
         for (int i = 0; i < selected.positions.size(); ++i) {
             p.setPen(QPen(colors.bgLayer, 2));
@@ -1129,8 +1088,7 @@ void ChartViewPrivate::paintCursor(QPainter& p) const
 void ChartViewPrivate::syncReadout()
 {
     const auto selected =
-        q->isVisible() && !compact() && (hoverSeries >= 0 || currentReadoutVisible) ? cursor()
-                                                                                    : Cursor{};
+        q->isVisible() && !compact() && (hoverSeries >= 0 || currentReadoutVisible) ? cursor() : Cursor{};
     if (selected.rows.isEmpty()) {
         if (readout)
             readout->close();
@@ -1159,7 +1117,7 @@ void ChartView::paintEvent(QPaintEvent*)
         painter.setBrush(colors.bgLayer);
         painter.setPen(QPen(high ? colors.strokeCard : tokens::border(dark), 1));
         painter.drawRoundedRect(QRectF(rect()).adjusted(.5, .5, -.5, -.5), themeRadius().overlay,
-                                themeRadius().overlay);
+            themeRadius().overlay);
     }
     if (!isEnabled())
         painter.setOpacity(.45);
@@ -1169,16 +1127,14 @@ void ChartView::paintEvent(QPaintEvent*)
             painter.setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
             painter.setPen(colors.textPrimary);
             painter.drawText(QRectF(24, y, width() - 48, 28), Qt::AlignLeading | Qt::AlignVCenter,
-                             painter.fontMetrics().elidedText(d->title, Qt::ElideRight,
-                                                              std::max(0, width() - 48)));
+                painter.fontMetrics().elidedText(d->title, Qt::ElideRight, std::max(0, width() - 48)));
             y += 32;
         }
         if (!d->subtitle.isEmpty()) {
             painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
             painter.setPen(colors.textSecondary);
             painter.drawText(QRectF(24, y, width() - 48, 16), Qt::AlignLeading | Qt::AlignVCenter,
-                             painter.fontMetrics().elidedText(d->subtitle, Qt::ElideRight,
-                                                              std::max(0, width() - 48)));
+                painter.fontMetrics().elidedText(d->subtitle, Qt::ElideRight, std::max(0, width() - 48)));
         }
         d->paintAxes(painter);
         d->paintLegend(painter);
@@ -1194,32 +1150,28 @@ void ChartView::paintEvent(QPaintEvent*)
         painter.setFont(themeFont(Typography::FontRole::Title).toQFont());
         painter.setPen(colors.textPrimary);
         painter.drawText(QRectF(x, d->plot.center().y() - 30, width, 36), Qt::AlignCenter,
-                         painter.fontMetrics().elidedText(d->centerText, Qt::ElideRight,
-                                                          std::max(0, int(width))));
+            painter.fontMetrics().elidedText(d->centerText, Qt::ElideRight, std::max(0, int(width))));
         painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
         painter.setPen(colors.textSecondary);
         painter.drawText(QRectF(x, d->plot.center().y() + 8, width, 20), Qt::AlignCenter,
-                         painter.fontMetrics().elidedText(d->centerCaption, Qt::ElideRight,
-                                                          std::max(0, int(width))));
+            painter.fontMetrics().elidedText(d->centerCaption, Qt::ElideRight, std::max(0, int(width))));
     }
     if ((!d->projectedPoints || d->loading) && !d->compact()) {
         painter.setFont(themeFont(Typography::FontRole::BodyStrong).toQFont());
         painter.setPen(colors.textPrimary);
         painter.drawText(d->plot.adjusted(0, -14, 0, -14), Qt::AlignCenter,
-                         d->loading ? tr("Preparing data") : tr("No data yet"));
+            d->loading ? tr("Preparing data") : tr("No data yet"));
         painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
         painter.setPen(colors.textSecondary);
         painter.drawText(d->plot.adjusted(0, 14, 0, 14), Qt::AlignCenter,
-                         d->loading ? tr("The chart will appear when ready.")
-                                    : tr("Add a series to see it here."));
+            d->loading ? tr("The chart will appear when ready.") : tr("Add a series to see it here."));
     }
     d->paintCursor(painter);
     if (hasFocus() && isEnabled() && d->keyboardFocusVisible) {
         painter.setOpacity(1);
         painter.setBrush(Qt::NoBrush);
         painter.setPen(QPen(colors.accentDefault, 2));
-        painter.drawRoundedRect(QRectF(rect()).adjusted(2, 2, -2, -2), themeRadius().overlay,
-                                themeRadius().overlay);
+        painter.drawRoundedRect(QRectF(rect()).adjusted(2, 2, -2, -2), themeRadius().overlay, themeRadius().overlay);
     }
 }
 void ChartView::resizeEvent(QResizeEvent* event)
@@ -1243,8 +1195,8 @@ void ChartView::focusInEvent(QFocusEvent* event)
     QWidget::focusInEvent(event);
     if (event->reason() == Qt::MouseFocusReason)
         d->keyboardFocusVisible = false;
-    else if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason ||
-             event->reason() == Qt::ShortcutFocusReason)
+    else if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason
+        || event->reason() == Qt::ShortcutFocusReason)
         d->keyboardFocusVisible = true;
     update();
 }
@@ -1354,8 +1306,8 @@ void ChartView::changeEvent(QEvent* event)
     QWidget::changeEvent(event);
     if (event->type() == QEvent::EnabledChange && !isEnabled())
         d->dismissReadout();
-    if (event->type() == QEvent::LocaleChange || event->type() == QEvent::FontChange ||
-        event->type() == QEvent::LayoutDirectionChange)
+    if (event->type() == QEvent::LocaleChange || event->type() == QEvent::FontChange
+        || event->type() == QEvent::LayoutDirectionChange)
         d->invalidate(true);
 }
 

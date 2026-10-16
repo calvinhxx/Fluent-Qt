@@ -40,8 +40,7 @@ int scrollSign(qreal value)
 }
 } // namespace
 
-OverscrollController::OverscrollController(QWidget* viewport, qreal discreteStepPx, Hooks hooks,
-                                           QObject* parent)
+OverscrollController::OverscrollController(QWidget* viewport, qreal discreteStepPx, Hooks hooks, QObject* parent)
     : QObject(parent), m_viewport(viewport), m_step(discreteStepPx), m_hooks(std::move(hooks))
 {
     m_bounceAnim = new QVariantAnimation(this);
@@ -138,24 +137,23 @@ void OverscrollController::handleWheel(QWheelEvent* event)
     enum class WheelKind { PhaseBased, NoPhasePixel, NoPhaseDiscrete };
     const auto phase = event->phase();
     const bool hasPixelDelta = !event->pixelDelta().isNull();
-    const WheelKind kind =
-        (phase != Qt::NoScrollPhase)
-            ? WheelKind::PhaseBased
-            : (hasPixelDelta ? WheelKind::NoPhasePixel : WheelKind::NoPhaseDiscrete);
+    const WheelKind kind = (phase != Qt::NoScrollPhase)
+        ? WheelKind::PhaseBased
+        : (hasPixelDelta ? WheelKind::NoPhasePixel : WheelKind::NoPhaseDiscrete);
 
     const bool h = horizontal();
 
     // For horizontal flow, pick the dominant axis (trackpad users often swipe vertically even
     // on a horizontal list). zh_CN: 横向流动时取主轴（即便横向列表，触控板也常纵向滑）。
-    const int delta = h ? (qAbs(event->angleDelta().y()) >= qAbs(event->angleDelta().x())
-                               ? event->angleDelta().y()
-                               : event->angleDelta().x())
-                        : event->angleDelta().y();
+    const int delta = h
+        ? (qAbs(event->angleDelta().y()) >= qAbs(event->angleDelta().x())
+                  ? event->angleDelta().y()
+                  : event->angleDelta().x())
+        : event->angleDelta().y();
 
     // Zero-delta (e.g. ScrollEnd on a Windows touchpad with no residual).
     if (delta == 0 && !hasPixelDelta) {
-        if (!qFuzzyIsNull(m_overscroll) &&
-            (phase == Qt::ScrollEnd || phase == Qt::ScrollMomentum)) {
+        if (!qFuzzyIsNull(m_overscroll) && (phase == Qt::ScrollEnd || phase == Qt::ScrollMomentum)) {
             startBounceBack();
             event->accept();
             return;
@@ -167,24 +165,24 @@ void OverscrollController::handleWheel(QWheelEvent* event)
         return;
     }
 
-    const qreal scrollPx =
-        hasPixelDelta
-            ? static_cast<qreal>(h ? (qAbs(event->pixelDelta().y()) >= qAbs(event->pixelDelta().x())
-                                          ? event->pixelDelta().y()
-                                          : event->pixelDelta().x())
-                                   : event->pixelDelta().y())
-            : delta / 120.0 * m_step;
+    const qreal scrollPx = hasPixelDelta
+        ? static_cast<qreal>(
+              h ? (qAbs(event->pixelDelta().y()) >= qAbs(event->pixelDelta().x())
+                          ? event->pixelDelta().y()
+                          : event->pixelDelta().x())
+                : event->pixelDelta().y())
+        : delta / 120.0 * m_step;
 
     auto startNoPhaseBoundaryBounce = [&]() {
         const int boundaryDir = scrollSign(scrollPx);
         if (boundaryDir == 0)
             return;
-        if (m_noPhaseBoundaryDir == boundaryDir &&
-            (m_noPhaseBounceArmed || m_bounceAnim->state() == QAbstractAnimation::Running)) {
+        if (m_noPhaseBoundaryDir == boundaryDir
+            && (m_noPhaseBounceArmed || m_bounceAnim->state() == QAbstractAnimation::Running)) {
             return;
         }
         const qreal amount = qBound(kDiscreteBoundaryOverscrollMinPx, qAbs(scrollPx) * 0.5,
-                                    kDiscreteBoundaryOverscrollMaxPx);
+            kDiscreteBoundaryOverscrollMaxPx);
         m_overscroll = (scrollPx > 0.0) ? amount : -amount;
         m_noPhaseBoundaryDir = boundaryDir;
         m_noPhaseBounceArmed = true;
@@ -212,8 +210,8 @@ void OverscrollController::handleWheel(QWheelEvent* event)
         m_clusterAccum += scrollPx;
 
         if (!qFuzzyIsNull(m_overscroll)) {
-            const bool sameBoundaryDirection =
-                (m_overscroll > 0.0 && scrollPx > 0.0) || (m_overscroll < 0.0 && scrollPx < 0.0);
+            const bool sameBoundaryDirection = (m_overscroll > 0.0 && scrollPx > 0.0)
+                || (m_overscroll < 0.0 && scrollPx < 0.0);
             if (sameBoundaryDirection) {
                 notifyChanged();
                 event->accept();

@@ -57,47 +57,43 @@ class StackView : public QStackedWidget, public FluentElement, public QMLPlus {
      * @brief Whether stack transition animation is enabled.
      * zh_CN: 是否启用堆栈转场动画。
      */
-    Q_PROPERTY(bool transitionAnimationEnabled READ transitionAnimationEnabled WRITE setTransitionAnimationEnabled NOTIFY transitionAnimationEnabledChanged)
+    Q_PROPERTY(bool transitionAnimationEnabled
+        READ transitionAnimationEnabled
+        WRITE setTransitionAnimationEnabled
+        NOTIFY transitionAnimationEnabledChanged)
     /**
      * @brief Stack transition duration in milliseconds.
      * zh_CN: 堆栈转场时长，单位为毫秒。
      */
-    Q_PROPERTY(int transitionDuration READ transitionDuration WRITE setTransitionDuration NOTIFY transitionDurationChanged)
+    Q_PROPERTY(int transitionDuration
+        READ transitionDuration
+        WRITE setTransitionDuration
+        NOTIFY transitionDurationChanged)
     /**
      * @brief Transition effect used for stack navigation.
      * zh_CN: 堆栈导航使用的转场效果。
      */
-    Q_PROPERTY(StackViewTransitionType transitionType READ transitionType WRITE setTransitionType NOTIFY transitionTypeChanged)
+    Q_PROPERTY(StackViewTransitionType transitionType
+        READ transitionType
+        WRITE setTransitionType
+        NOTIFY transitionTypeChanged)
     /**
      * @brief Default release policy for pages added through StackView APIs.
      * zh_CN: 通过 StackView API 添加页面时使用的默认释放策略。
      */
-    Q_PROPERTY(fluent::WidgetOwnership defaultItemOwnership READ defaultItemOwnership
-               WRITE setDefaultItemOwnership NOTIFY defaultItemOwnershipChanged)
+    Q_PROPERTY(fluent::WidgetOwnership defaultItemOwnership
+        READ defaultItemOwnership
+        WRITE setDefaultItemOwnership
+        NOTIFY defaultItemOwnershipChanged)
 
 public:
-    enum class StackViewItemStatus {
-        Inactive,
-        Activating,
-        Active,
-        Deactivating
-    };
+    enum class StackViewItemStatus { Inactive, Activating, Active, Deactivating };
     Q_ENUM(StackViewItemStatus)
 
-    enum class StackViewTransitionOperation {
-        Push,
-        Pop,
-        Replace,
-        Clear,
-        None
-    };
+    enum class StackViewTransitionOperation { Push, Pop, Replace, Clear, None };
     Q_ENUM(StackViewTransitionOperation)
 
-    enum class StackViewTransitionType {
-        SlideFade,
-        ScaleFade,
-        Immediate
-    };
+    enum class StackViewTransitionType { SlideFade, ScaleFade, Immediate };
     Q_ENUM(StackViewTransitionType)
 
     explicit StackView(QWidget* parent = nullptr);
@@ -129,13 +125,11 @@ public:
 
     bool push(QWidget* item);
     bool push(QWidget* item, WidgetOwnership ownership);
-    bool push(const QVector<QWidget*>& items,
-              WidgetOwnership ownership = WidgetOwnership::Owned);
+    bool push(const QVector<QWidget*>& items, WidgetOwnership ownership = WidgetOwnership::Owned);
 
     bool replace(QWidget* item);
     bool replace(QWidget* item, WidgetOwnership ownership);
-    bool replace(int index, QWidget* item,
-                 WidgetOwnership ownership = WidgetOwnership::Owned);
+    bool replace(int index, QWidget* item, WidgetOwnership ownership = WidgetOwnership::Owned);
 
     bool pop();
     bool pop(QWidget* item);
@@ -149,8 +143,7 @@ public:
      * ownership by default.
      * zh_CN: 将页面加入 StackView 导航跟踪，默认不接管其所有权。
      */
-    bool adoptWidget(QWidget* item,
-                     WidgetOwnership ownership = WidgetOwnership::Borrowed);
+    bool adoptWidget(QWidget* item, WidgetOwnership ownership = WidgetOwnership::Borrowed);
 
     QWidget* itemAt(int index) const;
     int indexOf(QWidget* item) const;
@@ -221,8 +214,7 @@ private:
 
     bool canStartOperation() const;
     int stackIndexOf(QWidget* item) const;
-    StackEntry makeEntry(QWidget* item, QWidget* originalParent,
-                         WidgetOwnership ownership, StackViewItemStatus status);
+    StackEntry makeEntry(QWidget* item, QWidget* originalParent, WidgetOwnership ownership, StackViewItemStatus status);
     void prepareItem(QWidget* item);
     void setItemStatus(QWidget* item, StackViewItemStatus status);
     void emitItemStatus(QWidget* item, StackViewItemStatus status);
@@ -231,9 +223,9 @@ private:
     void emitInitialIfChanged(QWidget* oldInitial);
     void setBusy(bool busy);
     void startTransition(StackViewTransitionOperation operation,
-                         QWidget* fromItem,
-                         QWidget* toItem,
-                         const QVector<PendingRemoval>& removals);
+        QWidget* fromItem,
+        QWidget* toItem,
+        const QVector<PendingRemoval>& removals);
     void completeTransition();
     void cleanupPendingRemoval(const PendingRemoval& removal, bool immediateDelete = false);
     void cleanupAll(bool immediateDelete);

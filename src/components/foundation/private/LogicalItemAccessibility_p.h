@@ -33,9 +33,11 @@ struct LogicalItemAccessibleState {
  * Component adapters provide only item text, geometry, state, and actions;
  * child caching, selection lookup, and Qt interface plumbing stay centralized.
  */
-class LogicalItemAccessibleAdapter : public QAccessibleWidget
+class LogicalItemAccessibleAdapter
+    : public QAccessibleWidget
 #if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
-                                   , public QAccessibleSelectionInterface
+    ,
+      public QAccessibleSelectionInterface
 #endif
 {
 public:
@@ -61,17 +63,13 @@ public:
 
     virtual int logicalChildCount() const = 0;
     virtual QAccessible::Role logicalChildRole(int logicalIndex) const = 0;
-    virtual QString logicalChildText(int logicalIndex,
-                                     QAccessible::Text type) const = 0;
+    virtual QString logicalChildText(int logicalIndex, QAccessible::Text type) const = 0;
     virtual QRect logicalChildRect(int logicalIndex) const = 0;
-    virtual LogicalItemAccessibleState logicalChildState(
-        int logicalIndex) const = 0;
+    virtual LogicalItemAccessibleState logicalChildState(int logicalIndex) const = 0;
     virtual int logicalFocusChild() const { return -1; }
     virtual QStringList logicalChildActions(int logicalIndex) const;
-    virtual QStringList logicalChildKeyBindings(
-        int logicalIndex, const QString& actionName) const;
-    virtual void performLogicalChildAction(
-        int logicalIndex, const QString& actionName) = 0;
+    virtual QStringList logicalChildKeyBindings(int logicalIndex, const QString& actionName) const;
+    virtual void performLogicalChildAction(int logicalIndex, const QString& actionName) = 0;
     virtual bool setLogicalChildSelected(int logicalIndex, bool selected);
     virtual bool clearLogicalSelection() { return false; }
     virtual bool logicalSelectionSupported() const { return true; }
@@ -87,14 +85,10 @@ private:
 #endif // QT_CONFIG(accessibility)
 
 void notifyLogicalItemAccessibilityStructure(QWidget* widget);
-void notifyLogicalItemAccessibilitySelection(QWidget* widget,
-                                             int logicalIndex);
-void notifyLogicalItemAccessibilityFocus(QWidget* widget,
-                                         int logicalIndex);
-void notifyLogicalItemAccessibilityName(QWidget* widget,
-                                        int logicalIndex);
-void notifyLogicalItemAccessibilityState(QWidget* widget,
-                                         int logicalIndex);
+void notifyLogicalItemAccessibilitySelection(QWidget* widget, int logicalIndex);
+void notifyLogicalItemAccessibilityFocus(QWidget* widget, int logicalIndex);
+void notifyLogicalItemAccessibilityName(QWidget* widget, int logicalIndex);
+void notifyLogicalItemAccessibilityState(QWidget* widget, int logicalIndex);
 
 } // namespace fluent::accessibility::detail
 

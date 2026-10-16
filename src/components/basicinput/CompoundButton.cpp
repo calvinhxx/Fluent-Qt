@@ -8,23 +8,19 @@
 
 namespace fluent::basicinput {
 
-CompoundButton::CompoundButton(QWidget* parent)
-    : Button(parent)
+CompoundButton::CompoundButton(QWidget* parent) : Button(parent)
 {
     setObjectName(QStringLiteral("fluentCompoundButton"));
     setFluentSize(Button::Large);
 }
 
-CompoundButton::CompoundButton(const QString& text, QWidget* parent)
-    : Button(text, parent)
+CompoundButton::CompoundButton(const QString& text, QWidget* parent) : Button(text, parent)
 {
     setObjectName(QStringLiteral("fluentCompoundButton"));
     setFluentSize(Button::Large);
 }
 
-CompoundButton::CompoundButton(const QString& text,
-                               const QString& secondaryText,
-                               QWidget* parent)
+CompoundButton::CompoundButton(const QString& text, const QString& secondaryText, QWidget* parent)
     : CompoundButton(text, parent)
 {
     setSecondaryText(secondaryText);
@@ -36,8 +32,7 @@ void CompoundButton::setSecondaryText(const QString& text)
         return;
 
     const QString previousText = m_secondaryText;
-    const bool tracksSecondary = accessibleDescription().isEmpty()
-        || accessibleDescription() == previousText;
+    const bool tracksSecondary = accessibleDescription().isEmpty() || accessibleDescription() == previousText;
     m_secondaryText = text;
     if (tracksSecondary)
         setAccessibleDescription(m_secondaryText);
@@ -55,16 +50,10 @@ QSize CompoundButton::sizeHint() const
     const auto& spacing = themeSpacing();
     const QFontMetrics secondaryMetrics(secondaryFont());
     const int horizontalPadding = spacing.standard;
-    const int contentWidth =
-        secondaryMetrics.horizontalAdvance(m_secondaryText)
-        + horizontalPadding * 2;
-    const int contentHeight =
-        QFontMetrics(font()).height()
-        + secondaryMetrics.height()
-        + spacing.gap.tight
+    const int contentWidth = secondaryMetrics.horizontalAdvance(m_secondaryText) + horizontalPadding * 2;
+    const int contentHeight = QFontMetrics(font()).height() + secondaryMetrics.height() + spacing.gap.tight
         + spacing.small * 2;
-    return QSize(qMax(baseSize.width(), contentWidth),
-                 qMax(48, contentHeight));
+    return QSize(qMax(baseSize.width(), contentWidth), qMax(48, contentHeight));
 }
 
 QSize CompoundButton::minimumSizeHint() const
@@ -85,16 +74,9 @@ QRectF CompoundButton::contentPaintRect(const QRectF& surfaceRect) const
 
     const QFontMetrics primaryMetrics(font());
     const QFontMetrics secondaryMetrics(secondaryFont());
-    const qreal contentHeight =
-        primaryMetrics.height()
-        + themeSpacing().gap.tight
-        + secondaryMetrics.height();
-    const qreal top =
-        surfaceRect.top() + (surfaceRect.height() - contentHeight) / 2.0;
-    return QRectF(surfaceRect.left(),
-                  top,
-                  surfaceRect.width(),
-                  primaryMetrics.height());
+    const qreal contentHeight = primaryMetrics.height() + themeSpacing().gap.tight + secondaryMetrics.height();
+    const qreal top = surfaceRect.top() + (surfaceRect.height() - contentHeight) / 2.0;
+    return QRectF(surfaceRect.left(), top, surfaceRect.width(), primaryMetrics.height());
 }
 
 void CompoundButton::paintEvent(QPaintEvent* event)
@@ -124,14 +106,9 @@ void CompoundButton::paintEvent(QPaintEvent* event)
     }
 
     const QRectF textRect = secondaryPaintRect(surfaceRect);
-    const QString elided = QFontMetrics(painter.font()).elidedText(
-        m_secondaryText,
-        Qt::ElideRight,
-        qMax(0, qRound(textRect.width())));
-    painter.drawText(textRect,
-                     Qt::AlignHCenter | Qt::AlignVCenter
-                         | Qt::TextSingleLine,
-                     elided);
+    const QString elided =
+        QFontMetrics(painter.font()).elidedText(m_secondaryText, Qt::ElideRight, qMax(0, qRound(textRect.width())));
+    painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextSingleLine, elided);
 }
 
 QFont CompoundButton::secondaryFont() const
@@ -142,14 +119,9 @@ QFont CompoundButton::secondaryFont() const
 QRectF CompoundButton::secondaryPaintRect(const QRectF& surfaceRect) const
 {
     const QRectF primaryRect = contentPaintRect(surfaceRect);
-    const qreal top =
-        primaryRect.bottom() + themeSpacing().gap.tight;
-    return QRectF(surfaceRect.left() + themeSpacing().standard,
-                  top,
-                  qMax<qreal>(0.0,
-                              surfaceRect.width()
-                                  - themeSpacing().standard * 2),
-                  QFontMetrics(secondaryFont()).height());
+    const qreal top = primaryRect.bottom() + themeSpacing().gap.tight;
+    return QRectF(surfaceRect.left() + themeSpacing().standard, top,
+        qMax<qreal>(0.0, surfaceRect.width() - themeSpacing().standard * 2), QFontMetrics(secondaryFont()).height());
 }
 
 QColor CompoundButton::secondaryTextColor() const
@@ -167,8 +139,7 @@ QColor CompoundButton::secondaryTextColor() const
         return colors.textDisabled;
     if (criticalOnHover() && (state == Hover || state == Pressed))
         return colors.textOnAccent;
-    if (fluentStyle() == Accent
-        || (isCheckable() && isChecked() && fluentStyle() == Standard)) {
+    if (fluentStyle() == Accent || (isCheckable() && isChecked() && fluentStyle() == Standard)) {
         QColor color = colors.textOnAccent;
         color.setAlpha(220);
         return color;

@@ -21,9 +21,9 @@ QTransform presentedTransform(const QWidget* source)
     for (int depth = 0; source && depth < 32; ++depth) {
         const QWidget* top = source->window();
         if (const QWidget* root = presentationRoot(source)) {
-            result *= translation(source->mapTo(root, QPoint())) *
-                      root->property(presentationTransformPropertyName()).value<QTransform>() *
-                      translation(root->mapTo(top, QPoint()));
+            result *= translation(source->mapTo(root, QPoint()))
+                * root->property(presentationTransformPropertyName()).value<QTransform>()
+                * translation(root->mapTo(top, QPoint()));
         } else {
             result *= translation(source->mapTo(top, QPoint()));
         }
@@ -48,10 +48,7 @@ QRect presentedRectInTopLevel(const QWidget* source)
     // QRectF uses size, not QRect's inclusive bottom/right. Identity and integer
     // translations therefore retain the exact ordinary 2D rectangle.
     // zh_CN: 使用 size 构造浮点矩形，保留普通 2D 路径精确的整数边界。
-    return source ? presentedTransform(source)
-                        .mapRect(QRectF(QPointF(), source->size()))
-                        .toAlignedRect()
-                  : QRect();
+    return source ? presentedTransform(source).mapRect(QRectF(QPointF(), source->size())).toAlignedRect() : QRect();
 }
 
 QPoint presentedPointToGlobal(const QWidget* source, const QPoint& localPoint)
@@ -72,8 +69,7 @@ QPoint localPointFromPresentedGlobal(const QWidget* source, const QPoint& global
 
 bool hasPresentedTransform(const QWidget* source)
 {
-    return source &&
-           (presentationRoot(source) || compat::widgetPresentationBridge(source).viewport);
+    return source && (presentationRoot(source) || compat::widgetPresentationBridge(source).viewport);
 }
 
 bool anchorGeometryMayChange(QObject* watched, QEvent* event, QWidget* anchor)
@@ -84,8 +80,7 @@ bool anchorGeometryMayChange(QObject* watched, QEvent* event, QWidget* anchor)
     case QEvent::Wheel:
         return true;
     case QEvent::DynamicPropertyChange:
-        if (static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName() !=
-            presentationTransformPropertyName())
+        if (static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName() != presentationTransformPropertyName())
             return false;
         break;
     case QEvent::Move:
@@ -143,13 +138,11 @@ void setTransform(QWidget* root, const QTransform& transform)
 {
     if (!root)
         return;
-    const bool finite =
-        qIsFinite(transform.m11()) && qIsFinite(transform.m12()) && qIsFinite(transform.m13()) &&
-        qIsFinite(transform.m21()) && qIsFinite(transform.m22()) && qIsFinite(transform.m23()) &&
-        qIsFinite(transform.m31()) && qIsFinite(transform.m32()) && qIsFinite(transform.m33());
-    root->setProperty(presentationTransformPropertyName(), finite && transform.isInvertible()
-                                                               ? QVariant::fromValue(transform)
-                                                               : QVariant());
+    const bool finite = qIsFinite(transform.m11()) && qIsFinite(transform.m12()) && qIsFinite(transform.m13())
+        && qIsFinite(transform.m21()) && qIsFinite(transform.m22()) && qIsFinite(transform.m23())
+        && qIsFinite(transform.m31()) && qIsFinite(transform.m32()) && qIsFinite(transform.m33());
+    root->setProperty(presentationTransformPropertyName(),
+        finite && transform.isInvertible() ? QVariant::fromValue(transform) : QVariant());
 }
 
 void clearTransform(QWidget* root)
@@ -173,7 +166,7 @@ MenuAnchor menuAnchor(const QMenu* menu)
     if (!menu)
         return {};
     return {menu->property(presentedMenuSourcePropertyName()).value<QWidget*>(),
-            menu->property(presentedMenuPointPropertyName()).toPoint()};
+        menu->property(presentedMenuPointPropertyName()).toPoint()};
 }
 
 void popupMenu(QMenu* menu, QWidget* source, const QPoint& localPoint, const QPoint& offset)

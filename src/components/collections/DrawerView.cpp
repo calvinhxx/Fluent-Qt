@@ -56,22 +56,21 @@ DrawerView::DrawerView(QWidget* parent) : QWidget(parent), m_originalParent(pare
 {
     detail::ensureDrawerViewAccessibilityFactory();
     m_overlayCoordinator = new ::fluent::overlay::OverlayCoordinator(this, this);
-    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this,
-            [this]() {
-                if (!isVisible() && !m_isOpen && !m_drag.active)
-                    return;
-                if (!isInteractionHostVisible()) {
-                    deactivateForHiddenHost();
-                    return;
-                }
-                updateOverlayGeometry();
-            });
+    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this, [this]() {
+        if (!isVisible() && !m_isOpen && !m_drag.active)
+            return;
+        if (!isInteractionHostVisible()) {
+            deactivateForHiddenHost();
+            return;
+        }
+        updateOverlayGeometry();
+    });
     connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::scrimPressed, this,
-            [this](const QPoint& globalPos) {
-                if (isVisible() && shouldCloseOnOutsidePress() && !isPointInsidePanel(globalPos)) {
-                    close();
-                }
-            });
+        [this](const QPoint& globalPos) {
+            if (isVisible() && shouldCloseOnOutsidePress() && !isPointInsidePanel(globalPos)) {
+                close();
+            }
+        });
 
     setAttribute(Qt::WA_NoSystemBackground);
     setAttribute(Qt::WA_TranslucentBackground);
@@ -164,8 +163,8 @@ void DrawerView::setDrawerLength(int length)
 
 void DrawerView::setAvailableMargins(const QMargins& margins)
 {
-    const QMargins normalized(qMax(0, margins.left()), qMax(0, margins.top()),
-                              qMax(0, margins.right()), qMax(0, margins.bottom()));
+    const QMargins normalized(qMax(0, margins.left()), qMax(0, margins.top()), qMax(0, margins.right()),
+        qMax(0, margins.bottom()));
     if (m_availableMargins == normalized)
         return;
 
@@ -250,8 +249,8 @@ void DrawerView::setAnimationEnabled(bool enabled)
 
     QPointer<DrawerView> guard(this);
     emit animationEnabledChanged(m_animationEnabled);
-    if (!guard || m_animationEnabled || !m_positionAnimation ||
-        m_positionAnimation->state() != QAbstractAnimation::Running) {
+    if (!guard || m_animationEnabled || !m_positionAnimation
+        || m_positionAnimation->state() != QAbstractAnimation::Running) {
         return;
     }
 
@@ -351,8 +350,7 @@ QWidget* DrawerView::releaseContentWidget(bool deleteOwned, bool restoreParent)
     return content;
 }
 
-void DrawerView::observeContentWidget(QWidget* widget, QWidget* originalParent,
-                                      WidgetOwnership ownership)
+void DrawerView::observeContentWidget(QWidget* widget, QWidget* originalParent, WidgetOwnership ownership)
 {
     m_contentWidget = widget;
     m_originalContentParent = originalParent;
@@ -378,20 +376,16 @@ QSize DrawerView::sizeHint() const
 {
     const QSize contentHint = m_contentWidget ? m_contentWidget->sizeHint() : QSize();
     if (m_edge == DrawerEdge::Top || m_edge == DrawerEdge::Bottom)
-        return QSize(std::max(kDefaultCrossAxis, contentHint.width()),
-                     std::max(m_drawerLength, contentHint.height()));
-    return QSize(std::max(m_drawerLength, contentHint.width()),
-                 std::max(kDefaultCrossAxis, contentHint.height()));
+        return QSize(std::max(kDefaultCrossAxis, contentHint.width()), std::max(m_drawerLength, contentHint.height()));
+    return QSize(std::max(m_drawerLength, contentHint.width()), std::max(kDefaultCrossAxis, contentHint.height()));
 }
 
 QSize DrawerView::minimumSizeHint() const
 {
     const QSize contentMinimum = m_contentWidget ? m_contentWidget->minimumSizeHint() : QSize();
     if (m_edge == DrawerEdge::Top || m_edge == DrawerEdge::Bottom)
-        return QSize(std::max(120, contentMinimum.width()),
-                     std::max(48, std::min(m_drawerLength, 120)));
-    return QSize(std::max(48, std::min(m_drawerLength, 120)),
-                 std::max(120, contentMinimum.height()));
+        return QSize(std::max(120, contentMinimum.width()), std::max(48, std::min(m_drawerLength, 120)));
+    return QSize(std::max(48, std::min(m_drawerLength, 120)), std::max(120, contentMinimum.height()));
 }
 
 void DrawerView::open()
@@ -494,8 +488,7 @@ bool DrawerView::eventFilter(QObject* watched, QEvent* event)
             return false;
         }
 
-        if (!isEnabled() || !m_interactive ||
-            m_positionAnimation->state() == QAbstractAnimation::Running)
+        if (!isEnabled() || !m_interactive || m_positionAnimation->state() == QAbstractAnimation::Running)
             return false;
 
         if (isVisible() && isPointInsidePanel(globalPos)) {
@@ -566,8 +559,8 @@ void DrawerView::resizeEvent(QResizeEvent* event)
 
 void DrawerView::mousePressEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton && isEnabled() && m_interactive &&
-        m_positionAnimation->state() != QAbstractAnimation::Running) {
+    if (event->button() == Qt::LeftButton && isEnabled() && m_interactive
+        && m_positionAnimation->state() != QAbstractAnimation::Running) {
         beginDrag(fluentMouseGlobalPos(event), false);
         event->accept();
         return;
@@ -632,8 +625,7 @@ bool DrawerView::eventHidesInteractionHost(QObject* watched, QEvent* event) cons
     if (!event || event->type() != QEvent::Hide || !m_originalParent)
         return false;
     auto* hiddenWidget = qobject_cast<QWidget*>(watched);
-    return hiddenWidget &&
-           (hiddenWidget == m_originalParent || hiddenWidget->isAncestorOf(m_originalParent));
+    return hiddenWidget && (hiddenWidget == m_originalParent || hiddenWidget->isAncestorOf(m_originalParent));
 }
 
 void DrawerView::deactivateForHiddenHost()
@@ -745,8 +737,8 @@ void DrawerView::finalizeClosed()
         if (!guard || m_isOpen || isVisible())
             return;
     }
-    if (shouldRestoreFocus && focusRestoreTarget && focusRestoreTarget->isVisible() &&
-        focusRestoreTarget->isEnabled() && focusRestoreTarget->focusPolicy() != Qt::NoFocus) {
+    if (shouldRestoreFocus && focusRestoreTarget && focusRestoreTarget->isVisible() && focusRestoreTarget->isEnabled()
+        && focusRestoreTarget->focusPolicy() != Qt::NoFocus) {
         focusRestoreTarget->setFocus(Qt::PopupFocusReason);
     }
     emit closed();
@@ -757,12 +749,10 @@ void DrawerView::startPositionAnimation(qreal endPosition, TransitionTarget targ
     const auto animation = themeAnimation();
     m_transitionTarget = target;
     m_positionAnimation->setDuration(animation.normal);
-    m_positionAnimation->setEasingCurve(target == TransitionTarget::Open ? animation.decelerate
-                                                                         : animation.accelerate);
+    m_positionAnimation->setEasingCurve(target == TransitionTarget::Open ? animation.decelerate : animation.accelerate);
     m_positionAnimation->setStartValue(m_position);
     m_positionAnimation->setEndValue(endPosition);
-    ::fluent::detail::startMotionTransition(m_positionAnimation, animation.normal,
-                                            m_animationEnabled);
+    ::fluent::detail::startMotionTransition(m_positionAnimation, animation.normal, m_animationEnabled);
 }
 
 void DrawerView::stopAnimation()
@@ -775,8 +765,7 @@ void DrawerView::stopAnimation()
 QRect DrawerView::availableRect() const
 {
     QWidget* top = resolveTopLevelWidget();
-    const QRect topRect =
-        top ? ::fluent::overlay::overlaySurfaceRect(top) : QRect(QPoint(0, 0), sizeHint());
+    const QRect topRect = top ? ::fluent::overlay::overlaySurfaceRect(top) : QRect(QPoint(0, 0), sizeHint());
     if (topRect.isEmpty())
         return topRect;
 
@@ -790,15 +779,13 @@ QRect DrawerView::availableRect() const
 int DrawerView::availableAxisLength() const
 {
     const QRect area = availableRect();
-    return (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? area.height()
-                                                                       : area.width();
+    return (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? area.height() : area.width();
 }
 
 int DrawerView::effectiveDrawerLength() const
 {
     const QRect area = availableRect();
-    const int axisLength =
-        (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? area.width() : area.height();
+    const int axisLength = (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? area.width() : area.height();
     return qBound(kMinimumDrawerLength, m_drawerLength, std::max(kMinimumDrawerLength, axisLength));
 }
 
@@ -823,9 +810,8 @@ QRect DrawerView::openPanelRect() const
 QRect DrawerView::panelRectForPosition(qreal position) const
 {
     const QRect openRect = openPanelRect();
-    const int length = (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right)
-                           ? openRect.width()
-                           : openRect.height();
+    const int length =
+        (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? openRect.width() : openRect.height();
     const int visibleLength = qRound(length * normalizedPosition(position));
 
     switch (m_edge) {
@@ -848,8 +834,8 @@ QPainterPath DrawerView::outerRoundedPanelPath(const QRectF& rect) const
     const bool roundTopRight = m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Bottom;
     const bool roundBottomRight = m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Top;
     const bool roundBottomLeft = m_edge == DrawerEdge::Right || m_edge == DrawerEdge::Top;
-    return ::fluent::overlay::roundedCornerRectPath(rect, radius, roundTopLeft, roundTopRight,
-                                                    roundBottomRight, roundBottomLeft);
+    return ::fluent::overlay::roundedCornerRectPath(rect, radius, roundTopLeft, roundTopRight, roundBottomRight,
+        roundBottomLeft);
 }
 
 void DrawerView::updateClipMask()
@@ -882,8 +868,7 @@ void DrawerView::updateOverlayGeometry()
 void DrawerView::updateContentGeometry()
 {
     QRect nextGeometry = rect();
-    if (m_contentGeometry == nextGeometry &&
-        (!m_contentWidget || m_contentWidget->geometry() == nextGeometry))
+    if (m_contentGeometry == nextGeometry && (!m_contentWidget || m_contentWidget->geometry() == nextGeometry))
         return;
 
     m_contentGeometry = nextGeometry;
@@ -980,8 +965,7 @@ bool DrawerView::isPointInEdgeDragArea(const QPoint& globalPos) const
     case DrawerEdge::Top:
         return local.y() >= area.top() + resizeBorder && local.y() < area.top() + m_dragMargin;
     case DrawerEdge::Bottom:
-        return local.y() <= area.bottom() - resizeBorder &&
-               local.y() > area.bottom() - m_dragMargin;
+        return local.y() <= area.bottom() - resizeBorder && local.y() > area.bottom() - m_dragMargin;
     }
     return false;
 }

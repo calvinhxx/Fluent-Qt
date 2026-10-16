@@ -10,8 +10,12 @@
 class QPainter;
 class QStyleOptionSlider;
 
-namespace fluent::textfields { class Label; }
-namespace fluent::status_info { class ToolTip; }
+namespace fluent::textfields {
+class Label;
+}
+namespace fluent::status_info {
+class ToolTip;
+}
 
 namespace fluent::basicinput {
 
@@ -58,16 +62,32 @@ public:
     void onThemeUpdated() override { update(); }
 
     int handleSize() const { return m_handleSize; }
-    void setHandleSize(int size) { m_handleSize = size; update(); }
+    void setHandleSize(int size)
+    {
+        m_handleSize = size;
+        update();
+    }
 
     int trackHeight() const { return m_trackHeight; }
-    void setTrackHeight(int height) { m_trackHeight = height; update(); }
+    void setTrackHeight(int height)
+    {
+        m_trackHeight = height;
+        update();
+    }
 
     qreal hoverRatio() const { return m_hoverRatio; }
-    void setHoverRatio(qreal ratio) { m_hoverRatio = ratio; update(); }
+    void setHoverRatio(qreal ratio)
+    {
+        m_hoverRatio = ratio;
+        update();
+    }
 
     qreal pressRatio() const { return m_pressRatio; }
-    void setPressRatio(qreal ratio) { m_pressRatio = ratio; update(); }
+    void setPressRatio(qreal ratio)
+    {
+        m_pressRatio = ratio;
+        update();
+    }
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -87,10 +107,10 @@ private:
     void updateToolTipPos();
     void hideToolTip();
 
-    int m_handleSize = 20; // WinUI 3 Standard Thumb (5 * BaseUnit)
+    int m_handleSize = 20;                 // WinUI 3 Standard Thumb (5 * BaseUnit)
     int m_trackHeight = ::Spacing::XSmall; // Defaults to 4px. zh_CN: 默认 4px。
-    int m_visualMargin = 2; // Margin so antialiasing is never clipped. zh_CN: 避免抗锯齿被裁切的边距。
-    int m_defaultLength = 160; // Default length. zh_CN: 默认长度。
+    int m_visualMargin = 2;                // Margin so antialiasing is never clipped. zh_CN: 避免抗锯齿被裁切的边距。
+    int m_defaultLength = 160;             // Default length. zh_CN: 默认长度。
     bool m_isPressed = false;
 
     // Animation state. zh_CN: 动画状态。
@@ -105,4 +125,3 @@ private:
 } // namespace fluent::basicinput
 
 #endif // SLIDER_H
-

@@ -25,8 +25,7 @@ namespace {
 
 constexpr int kAnimationIntervalMs = 16;
 constexpr int kMinimumCycleDurationMs = Animation::Duration::Normal;
-constexpr int kDefaultCycleDurationMs =
-    Animation::Duration::VerySlow + Animation::Duration::VerySlow;
+constexpr int kDefaultCycleDurationMs = Animation::Duration::VerySlow + Animation::Duration::VerySlow;
 constexpr qreal kLineHeight = 12.0;
 constexpr qreal kLineGap = 8.0;
 constexpr qreal kAvatarSize = 32.0;
@@ -48,9 +47,9 @@ QColor blendColor(const QColor& foreground, const QColor& background, qreal amou
 {
     const qreal t = qBound<qreal>(0.0, amount, 1.0);
     return QColor(qRound(foreground.red() * t + background.red() * (1.0 - t)),
-                  qRound(foreground.green() * t + background.green() * (1.0 - t)),
-                  qRound(foreground.blue() * t + background.blue() * (1.0 - t)),
-                  qRound(foreground.alpha() * t + background.alpha() * (1.0 - t)));
+        qRound(foreground.green() * t + background.green() * (1.0 - t)),
+        qRound(foreground.blue() * t + background.blue() * (1.0 - t)),
+        qRound(foreground.alpha() * t + background.alpha() * (1.0 - t)));
 }
 
 QPainterPath elementPath(const ShimmerPainter::Element& element)
@@ -87,25 +86,24 @@ QRectF boundedRect(const QRectF& bounds)
 
 } // namespace
 
-ShimmerPainter::Palette
-ShimmerPainter::paletteFromTheme(const fluent::FluentElement::Colors& colors, bool enabled)
+ShimmerPainter::Palette ShimmerPainter::paletteFromTheme(const fluent::FluentElement::Colors& colors, bool enabled)
 {
     Palette palette;
     const QColor canvas = effectiveColor(colors.bgCanvas, QColor(Qt::white));
     const bool darkSurface = canvas.lightness() < 96;
-    const QColor base = darkSurface ? blendColor(QColor(Qt::white), canvas, 0.12)
-                                    : blendColor(QColor(Qt::black), canvas, 0.075);
+    const QColor base =
+        darkSurface ? blendColor(QColor(Qt::white), canvas, 0.12) : blendColor(QColor(Qt::black), canvas, 0.075);
     const QColor fallbackBorder = effectiveColor(colors.strokeDefault, QColor(0, 0, 0, 18));
 
     palette.baseColor = enabled ? base : effectiveColor(colors.controlDisabled, QColor(0, 0, 0, 8));
-    palette.highlightColor = darkSurface ? QColor(255, 255, 255, enabled ? 68 : 18)
-                                         : QColor(255, 255, 255, enabled ? 218 : 50);
+    palette.highlightColor =
+        darkSurface ? QColor(255, 255, 255, enabled ? 68 : 18) : QColor(255, 255, 255, enabled ? 218 : 50);
     palette.borderColor = fallbackBorder;
     return palette;
 }
 
-void ShimmerPainter::paint(QPainter* painter, const QVector<Element>& elements,
-                           const Palette& palette, qreal progress, bool animated)
+void ShimmerPainter::
+    paint(QPainter* painter, const QVector<Element>& elements, const Palette& palette, qreal progress, bool animated)
 {
     if (!painter || elements.isEmpty())
         return;
@@ -130,11 +128,10 @@ void ShimmerPainter::paint(QPainter* painter, const QVector<Element>& elements,
     if (animated && palette.highlightColor.alpha() > 0) {
         const qreal phase = normalizedProgress(progress);
         const qreal sweepWidth = qMax<qreal>(56.0, bounds.width() * 0.42);
-        const qreal sweepX =
-            bounds.left() - sweepWidth + (bounds.width() + sweepWidth * 2.0) * phase;
+        const qreal sweepX = bounds.left() - sweepWidth + (bounds.width() + sweepWidth * 2.0) * phase;
 
         QLinearGradient gradient(QPointF(sweepX - sweepWidth, bounds.center().y()),
-                                 QPointF(sweepX + sweepWidth, bounds.center().y()));
+            QPointF(sweepX + sweepWidth, bounds.center().y()));
         QColor transparent = palette.highlightColor;
         transparent.setAlpha(0);
         gradient.setColorAt(0.00, transparent);
@@ -155,8 +152,7 @@ void ShimmerPainter::paint(QPainter* painter, const QVector<Element>& elements,
     painter->restore();
 }
 
-QVector<ShimmerPainter::Element> ShimmerPainter::imageCardElements(const QRectF& bounds,
-                                                                   qreal radius)
+QVector<ShimmerPainter::Element> ShimmerPainter::imageCardElements(const QRectF& bounds, qreal radius)
 {
     const QRectF surface = boundedRect(bounds);
     if (!surface.isValid() || surface.isEmpty())
@@ -178,12 +174,11 @@ QVector<ShimmerPainter::Element> ShimmerPainter::avatarTextRowElements(const QRe
     const qreal secondLineY = surface.center().y() + kLineGap / 2.0;
 
     return {Element(Shape::Circle, avatarRect),
-            Element(Shape::Line, QRectF(textLeft, firstLineY, textWidth * 0.78, kLineHeight)),
-            Element(Shape::Line, QRectF(textLeft, secondLineY, textWidth * 0.52, kLineHeight))};
+        Element(Shape::Line, QRectF(textLeft, firstLineY, textWidth * 0.78, kLineHeight)),
+        Element(Shape::Line, QRectF(textLeft, secondLineY, textWidth * 0.52, kLineHeight))};
 }
 
-QVector<ShimmerPainter::Element> ShimmerPainter::textBlockElements(const QRectF& bounds,
-                                                                   int lineCount)
+QVector<ShimmerPainter::Element> ShimmerPainter::textBlockElements(const QRectF& bounds, int lineCount)
 {
     const QRectF surface = boundedRect(bounds);
     if (!surface.isValid() || surface.isEmpty() || lineCount <= 0)
@@ -196,8 +191,7 @@ QVector<ShimmerPainter::Element> ShimmerPainter::textBlockElements(const QRectF&
     qreal y = surface.top() + qMax<qreal>(0.0, (surface.height() - totalHeight) / 2.0);
     for (int line = 0; line < lineCount; ++line) {
         const qreal widthRatio = line == lineCount - 1 ? 0.62 : (line % 2 == 0 ? 0.92 : 0.76);
-        elements.append(Element(
-            Shape::Line, QRectF(surface.left(), y, surface.width() * widthRatio, kLineHeight)));
+        elements.append(Element(Shape::Line, QRectF(surface.left(), y, surface.width() * widthRatio, kLineHeight)));
         y += lineStep;
     }
     return elements;
@@ -332,10 +326,8 @@ void Shimmer::paintEvent(QPaintEvent*)
 
     QPainter painter(this);
     ShimmerPainter::paint(&painter, effectiveElements(), m_palette, m_progress,
-                          m_active &&
-                              MotionPolicy::instance().shouldAnimate(
-                                  m_animationEnabled, MotionPolicy::Kind::Continuous) &&
-                              isEnabled());
+        m_active && MotionPolicy::instance().shouldAnimate(m_animationEnabled, MotionPolicy::Kind::Continuous)
+            && isEnabled());
 }
 
 void Shimmer::timerEvent(QTimerEvent* event)
@@ -345,8 +337,7 @@ void Shimmer::timerEvent(QTimerEvent* event)
         return;
     }
 
-    m_progress =
-        normalizedProgress(m_progress + static_cast<qreal>(kAnimationIntervalMs) / m_cycleDuration);
+    m_progress = normalizedProgress(m_progress + static_cast<qreal>(kAnimationIntervalMs) / m_cycleDuration);
     update();
     emit shimmerProgressChanged(m_progress);
 }
@@ -387,8 +378,8 @@ QVector<ShimmerPainter::Element> Shimmer::effectiveElements() const
 
 void Shimmer::updateTemplateElements()
 {
-    const QRectF bounds = QRectF(rect()).adjusted(::Spacing::Small, ::Spacing::Small,
-                                                  -::Spacing::Small, -::Spacing::Small);
+    const QRectF bounds = QRectF(rect()).adjusted(::Spacing::Small, ::Spacing::Small, -::Spacing::Small,
+        -::Spacing::Small);
     switch (m_template) {
     case ShimmerTemplate::ImageCard:
         m_templateElements = ShimmerPainter::imageCardElements(bounds, CornerRadius::Control);
@@ -411,10 +402,9 @@ void Shimmer::updateThemePalette()
 
 void Shimmer::updateAnimationState()
 {
-    const bool shouldRun = m_active &&
-                           MotionPolicy::instance().shouldAnimate(m_animationEnabled,
-                                                                  MotionPolicy::Kind::Continuous) &&
-                           isEnabled() && isVisible();
+    const bool shouldRun = m_active
+        && MotionPolicy::instance().shouldAnimate(m_animationEnabled, MotionPolicy::Kind::Continuous) && isEnabled()
+        && isVisible();
     if (shouldRun) {
         if (!m_animationTimer.isActive())
             m_animationTimer.start(kAnimationIntervalMs, this);

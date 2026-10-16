@@ -8,11 +8,15 @@
 
 class QPropertyAnimation;
 
-namespace fluent::textfields { class Label; }
+namespace fluent::textfields {
+class Label;
+}
 
 namespace fluent::status_info {
 
-namespace detail { class ToolTipAccessible; }
+namespace detail {
+class ToolTipAccessible;
+}
 
 /**
  * @brief Fluent tooltip bubble with margin and animation controls.
@@ -48,10 +52,8 @@ public:
      * @brief Attaches a Fluent tooltip to a widget and reuses an existing attachment.
      * zh_CN: 将 Fluent 工具提示附加到控件，并复用该控件已有的附加提示。
      */
-    static ToolTip* attach(QWidget* target,
-                           const QString& text,
-                           Placement placement = Above);
-    
+    static ToolTip* attach(QWidget* target, const QString& text, Placement placement = Above);
+
     void setText(const QString& text);
     QString text() const;
 

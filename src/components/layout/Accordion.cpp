@@ -10,9 +10,7 @@
 
 namespace fluent::layout {
 
-Accordion::Accordion(QWidget* parent)
-    : QWidget(parent)
-    , m_layout(new QVBoxLayout(this))
+Accordion::Accordion(QWidget* parent) : QWidget(parent), m_layout(new QVBoxLayout(this))
 {
     setObjectName(QStringLiteral("fluentAccordion"));
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -80,9 +78,7 @@ bool Accordion::insertItem(int index, Expander* item)
     return insertItem(index, item, WidgetOwnership::Borrowed);
 }
 
-bool Accordion::insertItem(int index,
-                           Expander* item,
-                           WidgetOwnership ownership)
+bool Accordion::insertItem(int index, Expander* item, WidgetOwnership ownership)
 {
     if (!item || item->isAncestorOf(this) || indexOf(item) >= 0) {
         return false;
@@ -99,16 +95,12 @@ bool Accordion::insertItem(int index,
     m_layout->insertWidget(normalizedIndex, item);
     item->headerButton()->installEventFilter(this);
 
-    record.expandedConnection = connect(
-        item, &Expander::expandedChanged, this,
-        [this, item](bool expanded) {
-            handleExpandedChanged(item, expanded);
-        });
-    record.destroyedConnection = connect(
-        item, &QObject::destroyed, this,
-        [this, item]() {
-            handleItemDestroyed(item);
-        });
+    record.expandedConnection = connect(item, &Expander::expandedChanged, this, [this, item](bool expanded) {
+        handleExpandedChanged(item, expanded);
+    });
+    record.destroyedConnection = connect(item, &QObject::destroyed, this, [this, item]() {
+        handleItemDestroyed(item);
+    });
 
     m_items.insert(normalizedIndex, record);
     item->show();
@@ -203,8 +195,7 @@ void Accordion::handleExpandedChanged(Expander* item, bool expanded)
     if (index < 0)
         return;
 
-    if (expanded && m_expansionMode == ExpansionMode::Single
-        && !m_enforcingExpansion) {
+    if (expanded && m_expansionMode == ExpansionMode::Single && !m_enforcingExpansion) {
         enforceSingleExpansion(item);
     }
     emit itemExpansionChanged(index, expanded);
@@ -240,8 +231,7 @@ void Accordion::enforceSingleExpansion(Expander* preferredItem)
 
     m_enforcingExpansion = true;
     for (const ItemRecord& record : m_items) {
-        if (record.item && record.item != keeper
-            && record.item->isExpanded()) {
+        if (record.item && record.item != keeper && record.item->isExpanded()) {
             record.item->setExpanded(false);
         }
     }
@@ -257,8 +247,7 @@ bool Accordion::focusHeaderAt(int index)
     int candidate = qBound(0, index, m_items.size() - 1);
     for (int visited = 0; visited < m_items.size(); ++visited) {
         Expander* item = m_items.at(candidate).item.data();
-        if (item && item->isVisible() && item->isEnabled()
-            && item->headerButton()->isEnabled()) {
+        if (item && item->isVisible() && item->isEnabled() && item->headerButton()->isEnabled()) {
             item->headerButton()->setFocus(Qt::ShortcutFocusReason);
             return true;
         }
@@ -278,8 +267,7 @@ bool Accordion::focusRelativeHeader(int currentIndex, int direction)
     for (int visited = 0; visited < m_items.size() - 1; ++visited) {
         candidate = (candidate + direction + m_items.size()) % m_items.size();
         Expander* item = m_items.at(candidate).item.data();
-        if (item && item->isVisible() && item->isEnabled()
-            && item->headerButton()->isEnabled()) {
+        if (item && item->isVisible() && item->isEnabled() && item->headerButton()->isEnabled()) {
             item->headerButton()->setFocus(Qt::ShortcutFocusReason);
             return true;
         }
@@ -287,10 +275,7 @@ bool Accordion::focusRelativeHeader(int currentIndex, int direction)
     return false;
 }
 
-Expander* Accordion::releaseItem(int index,
-                                 bool deleteOwned,
-                                 bool restoreParent,
-                                 bool emitSignals)
+Expander* Accordion::releaseItem(int index, bool deleteOwned, bool restoreParent, bool emitSignals)
 {
     ItemRecord record = m_items.takeAt(index);
     Expander* item = record.item.data();
@@ -315,8 +300,7 @@ Expander* Accordion::releaseItem(int index,
         if (record.ownership == WidgetOwnership::Owned) {
             if (deleteOwned)
                 delete item;
-        } else if (restoreParent
-                   && record.ownership == WidgetOwnership::Reparented) {
+        } else if (restoreParent && record.ownership == WidgetOwnership::Reparented) {
             item->setParent(record.originalParent.data());
         } else {
             item->setParent(nullptr);

@@ -87,8 +87,7 @@ QItemSelection selectionForIndexes(const QModelIndexList& indexes)
 
 class MultiSelectComboBoxTrigger final : public DropDownButton {
 public:
-    explicit MultiSelectComboBoxTrigger(MultiSelectComboBox* owner)
-        : DropDownButton(owner), m_owner(owner)
+    explicit MultiSelectComboBoxTrigger(MultiSelectComboBox* owner) : DropDownButton(owner), m_owner(owner)
     {
         setObjectName(QStringLiteral("MultiSelectComboBox.Trigger"));
         setAccessibleName(owner->tr("Open options"));
@@ -101,10 +100,7 @@ public:
         setFixedHeight(::Spacing::ControlHeight::Standard);
     }
 
-    QSize sizeHint() const override
-    {
-        return QSize(kDefaultWidth, ::Spacing::ControlHeight::Standard);
-    }
+    QSize sizeHint() const override { return QSize(kDefaultWidth, ::Spacing::ControlHeight::Standard); }
 
 protected:
     void paintEvent(QPaintEvent* event) override
@@ -118,51 +114,42 @@ protected:
         painter.setRenderHint(QPainter::TextAntialiasing);
         painter.setFont(m_owner->font());
 
-        const int trailingReserve =
-            qMax(0, chevronOffset().x()) + qMax(0, chevronSize()) + ::Spacing::Gap::Normal;
-        const QRect logicalTextRect =
-            rect().adjusted(::Spacing::Padding::ComboBoxHorizontal, 0, -trailingReserve, 0);
+        const int trailingReserve = qMax(0, chevronOffset().x()) + qMax(0, chevronSize()) + ::Spacing::Gap::Normal;
+        const QRect logicalTextRect = rect().adjusted(::Spacing::Padding::ComboBoxHorizontal, 0, -trailingReserve, 0);
         const QRect textSlot = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
 
         const bool hasSelection = m_owner->selectedCount() > 0;
-        QColor textColor = isEnabled() ? (hasSelection ? themeColorsRef().textPrimary
-                                                       : themeColorsRef().textTertiary)
-                                       : themeColorsRef().textDisabled;
+        QColor textColor = isEnabled()
+            ? (hasSelection ? themeColorsRef().textPrimary : themeColorsRef().textTertiary)
+            : themeColorsRef().textDisabled;
         const QString text = m_owner->displayTextForWidth(textSlot.width());
         const QFontMetricsF metrics(painter.font());
-        const bool usesCompactSummary =
-            hasSelection &&
-            metrics.horizontalAdvance(m_owner->accessibleValueText()) > textSlot.width();
+        const bool usesCompactSummary = hasSelection
+            && metrics.horizontalAdvance(m_owner->accessibleValueText()) > textSlot.width();
 
         if (usesCompactSummary) {
-            const int badgeWidth = qMin(textSlot.width(), qCeil(metrics.horizontalAdvance(text)) +
-                                                              kSummaryBadgeHorizontalPadding * 2);
+            const int badgeWidth = qMin(textSlot.width(),
+                qCeil(metrics.horizontalAdvance(text)) + kSummaryBadgeHorizontalPadding * 2);
             const int badgeHeight = qMin(kSummaryBadgeHeight, textSlot.height());
-            const QRect badgeRect =
-                QStyle::alignedRect(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter,
-                                    QSize(badgeWidth, badgeHeight), textSlot);
+            const QRect badgeRect = QStyle::alignedRect(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter,
+                QSize(badgeWidth, badgeHeight), textSlot);
             painter.setPen(QPen(themeColorsRef().strokeDivider, 1.0));
             painter.setBrush(themeColorsRef().controlSecondary);
-            painter.drawRoundedRect(QRectF(badgeRect).adjusted(0.5, 0.5, -0.5, -0.5),
-                                    badgeHeight / 2.0, badgeHeight / 2.0);
+            painter.drawRoundedRect(QRectF(badgeRect).adjusted(0.5, 0.5, -0.5, -0.5), badgeHeight / 2.0,
+                badgeHeight / 2.0);
 
             const QRect badgeTextRect = badgeRect.adjusted(kSummaryBadgeHorizontalPadding, 0,
-                                                           -kSummaryBadgeHorizontalPadding, 0);
-            const QString elided =
-                metrics.elidedText(text, Qt::ElideRight, qMax(0, badgeTextRect.width()));
+                -kSummaryBadgeHorizontalPadding, 0);
+            const QString elided = metrics.elidedText(text, Qt::ElideRight, qMax(0, badgeTextRect.width()));
             painter.setPen(textColor);
-            const QRectF inkRect = fluent::painting::verticallyCenteredTextInkRect(
-                QRectF(badgeTextRect), metrics, elided);
+            const QRectF inkRect = fluent::painting::verticallyCenteredTextInkRect(QRectF(badgeTextRect), metrics,
+                elided);
             painter.drawText(inkRect, Qt::AlignHCenter | Qt::AlignVCenter, elided);
         } else {
             painter.setPen(textColor);
-            const QString elided =
-                metrics.elidedText(text, Qt::ElideRight, qMax(0, textSlot.width()));
-            const QRectF inkRect =
-                fluent::painting::verticallyCenteredTextInkRect(QRectF(textSlot), metrics, elided);
-            painter.drawText(
-                inkRect,
-                QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter),
+            const QString elided = metrics.elidedText(text, Qt::ElideRight, qMax(0, textSlot.width()));
+            const QRectF inkRect = fluent::painting::verticallyCenteredTextInkRect(QRectF(textSlot), metrics, elided);
+            painter.drawText(inkRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter),
                 elided);
         }
 
@@ -189,10 +176,7 @@ public:
     }
 
 protected:
-    void nextCheckState() override
-    {
-        setCheckState(checkState() == Qt::Checked ? Qt::Unchecked : Qt::Checked);
-    }
+    void nextCheckState() override { setCheckState(checkState() == Qt::Checked ? Qt::Unchecked : Qt::Checked); }
 };
 
 class MultiSelectComboBoxListView final : public fluent::collections::ListView {
@@ -204,8 +188,7 @@ protected:
     {
         QPainter surfacePainter(viewport());
         surfacePainter.setCompositionMode(QPainter::CompositionMode_Source);
-        surfacePainter.fillRect(event ? event->rect() : viewport()->rect(),
-                                themeColorsRef().bgLayer);
+        surfacePainter.fillRect(event ? event->rect() : viewport()->rect(), themeColorsRef().bgLayer);
         surfacePainter.end();
         fluent::collections::ListView::paintEvent(event);
     }
@@ -213,18 +196,13 @@ protected:
 
 class MultiSelectComboBoxItemDelegate final : public QStyledItemDelegate {
 public:
-    MultiSelectComboBoxItemDelegate(MultiSelectComboBox* owner, QAbstractItemView* view,
-                                    QObject* parent)
+    MultiSelectComboBoxItemDelegate(MultiSelectComboBox* owner, QAbstractItemView* view, QObject* parent)
         : QStyledItemDelegate(parent), m_owner(owner), m_view(view)
     {}
 
-    QSize sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const override
-    {
-        return QSize(0, kPopupRowHeight);
-    }
+    QSize sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const override { return QSize(0, kPopupRowHeight); }
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         if (!painter || !index.isValid() || !m_owner)
             return;
@@ -237,16 +215,13 @@ public:
         const auto radius = m_owner->themeRadius();
         const bool selected = option.state.testFlag(QStyle::State_Selected);
         const bool hovered = option.state.testFlag(QStyle::State_MouseOver);
-        const bool focused = option.state.testFlag(QStyle::State_HasFocus) ||
-                             (m_view && m_view->hasFocus() && m_view->currentIndex() == index);
-        const bool keyboardFocused =
-            focused && m_view && m_view->property(kKeyboardFocusVisibleProperty).toBool();
+        const bool focused = option.state.testFlag(QStyle::State_HasFocus)
+            || (m_view && m_view->hasFocus() && m_view->currentIndex() == index);
+        const bool keyboardFocused = focused && m_view && m_view->property(kKeyboardFocusVisibleProperty).toBool();
         const bool enabled = indexIsSelectable(index);
 
-        const QRect logicalBackground =
-            option.rect.adjusted(kOptionOuterInset, 2, -kOptionOuterInset, -2);
-        const QRect background =
-            QStyle::visualRect(option.direction, option.rect, logicalBackground);
+        const QRect logicalBackground = option.rect.adjusted(kOptionOuterInset, 2, -kOptionOuterInset, -2);
+        const QRect background = QStyle::visualRect(option.direction, option.rect, logicalBackground);
         QColor backgroundColor = Qt::transparent;
         if (enabled && hovered)
             backgroundColor = colors.subtleSecondary;
@@ -257,8 +232,8 @@ public:
         }
 
         const int checkY = option.rect.top() + (option.rect.height() - kCheckBoxSize) / 2;
-        const QRect logicalCheck(option.rect.left() + kOptionOuterInset + kOptionContentInset,
-                                 checkY, kCheckBoxSize, kCheckBoxSize);
+        const QRect logicalCheck(option.rect.left() + kOptionOuterInset + kOptionContentInset, checkY, kCheckBoxSize,
+            kCheckBoxSize);
         const QRect checkRect = QStyle::visualRect(option.direction, option.rect, logicalCheck);
 
         QColor checkFill;
@@ -284,13 +259,12 @@ public:
         if (checkStroke != Qt::transparent) {
             painter->setPen(QPen(checkStroke, 1.0));
             painter->setBrush(Qt::NoBrush);
-            painter->drawRoundedRect(QRectF(checkRect).adjusted(0.5, 0.5, -0.5, -0.5),
-                                     radius.control, radius.control);
+            painter->drawRoundedRect(QRectF(checkRect).adjusted(0.5, 0.5, -0.5, -0.5), radius.control, radius.control);
         }
         if (selected) {
             painter->setPen(checkGlyph);
             Typography::Icons::paintGlyph(*painter, QRectF(checkRect), Typography::Icons::CheckMark,
-                                          Typography::IconSize::Compact, Qt::AlignCenter);
+                Typography::IconSize::Compact, Qt::AlignCenter);
         }
 
         int logicalTextLeft = logicalCheck.right() + 1 + kOptionTextGap;
@@ -298,39 +272,31 @@ public:
         QIcon icon = qvariant_cast<QIcon>(decoration);
         if (!icon.isNull()) {
             const int iconSize = Typography::IconSize::Standard;
-            const QRect logicalIcon(logicalTextLeft, option.rect.center().y() - iconSize / 2,
-                                    iconSize, iconSize);
+            const QRect logicalIcon(logicalTextLeft, option.rect.center().y() - iconSize / 2, iconSize, iconSize);
             const QRect iconRect = QStyle::visualRect(option.direction, option.rect, logicalIcon);
-            icon.paint(painter, iconRect, Qt::AlignCenter,
-                       enabled ? QIcon::Normal : QIcon::Disabled);
+            icon.paint(painter, iconRect, Qt::AlignCenter, enabled ? QIcon::Normal : QIcon::Disabled);
             logicalTextLeft = logicalIcon.right() + 1 + kOptionTextGap;
         }
 
-        const QRect logicalText(
-            logicalTextLeft, option.rect.top(),
-            qMax(0, option.rect.right() - kOptionContentInset - logicalTextLeft + 1),
-            option.rect.height());
+        const QRect logicalText(logicalTextLeft, option.rect.top(),
+            qMax(0, option.rect.right() - kOptionContentInset - logicalTextLeft + 1), option.rect.height());
         const QRect textSlot = QStyle::visualRect(option.direction, option.rect, logicalText);
         painter->setFont(option.font);
         painter->setPen(enabled ? colors.textPrimary : colors.textDisabled);
         const QString label = index.data(Qt::DisplayRole).toString();
         const QFontMetricsF metrics(painter->font());
         const QString elided = metrics.elidedText(label, Qt::ElideRight, qMax(0, textSlot.width()));
-        const QRectF textRect =
-            fluent::painting::verticallyCenteredTextInkRect(QRectF(textSlot), metrics, elided);
-        painter->drawText(
-            textRect, QStyle::visualAlignment(option.direction, Qt::AlignLeft | Qt::AlignVCenter),
+        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(QRectF(textSlot), metrics, elided);
+        painter->drawText(textRect, QStyle::visualAlignment(option.direction, Qt::AlignLeft | Qt::AlignVCenter),
             elided);
 
         if (keyboardFocused && enabled) {
             painter->setBrush(Qt::NoBrush);
             painter->setPen(QPen(colors.strokeFocusOuter, 1.0));
-            painter->drawRoundedRect(QRectF(background).adjusted(0.5, 0.5, -0.5, -0.5),
-                                     radius.control, radius.control);
+            painter->drawRoundedRect(QRectF(background).adjusted(0.5, 0.5, -0.5, -0.5), radius.control, radius.control);
             painter->setPen(QPen(colors.strokeFocusInner, 1.0));
             painter->drawRoundedRect(QRectF(background).adjusted(1.5, 1.5, -1.5, -1.5),
-                                     qMax<qreal>(0.0, radius.control - 1.0),
-                                     qMax<qreal>(0.0, radius.control - 1.0));
+                qMax<qreal>(0.0, radius.control - 1.0), qMax<qreal>(0.0, radius.control - 1.0));
         }
 
         painter->restore();
@@ -391,8 +357,7 @@ public:
         m_listView->setProperty(kKeyboardFocusVisibleProperty, false);
         m_listView->setSpacing(0);
         m_listView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        m_listView->setItemDelegate(
-            new MultiSelectComboBoxItemDelegate(owner, m_listView, m_listView));
+        m_listView->setItemDelegate(new MultiSelectComboBoxItemDelegate(owner, m_listView, m_listView));
         m_layout->addWidget(m_listView);
 
         m_proxyModel = new QSortFilterProxyModel(this);
@@ -500,11 +465,9 @@ public:
             QSignalBlocker blocker(m_proxySelection);
             m_proxySelection->clearSelection();
             const QItemSelection sourceSelection = m_owner->selectionModel()->selection();
-            const QItemSelection proxySelection =
-                m_proxyModel->mapSelectionFromSource(sourceSelection);
+            const QItemSelection proxySelection = m_proxyModel->mapSelectionFromSource(sourceSelection);
             if (!proxySelection.isEmpty()) {
-                m_proxySelection->select(proxySelection,
-                                         QItemSelectionModel::Select | QItemSelectionModel::Rows);
+                m_proxySelection->select(proxySelection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
             }
             const QModelIndex sourceCurrent = m_owner->selectionModel()->currentIndex();
             const QModelIndex proxyCurrent = m_proxyModel->mapFromSource(sourceCurrent);
@@ -518,8 +481,7 @@ public:
         updateSelectAllState();
     }
 
-    void notifySourceSelectionChanged(const QItemSelection& selected,
-                                      const QItemSelection& deselected)
+    void notifySourceSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
     {
         if (!m_listView || !m_listView->model())
             return;
@@ -530,8 +492,7 @@ public:
                 if (!source.isValid() || source.column() != m_owner->modelColumn()) {
                     continue;
                 }
-                const QModelIndex visible =
-                    m_owner->isSearchEnabled() ? m_proxyModel->mapFromSource(source) : source;
+                const QModelIndex visible = m_owner->isSearchEnabled() ? m_proxyModel->mapFromSource(source) : source;
                 if (visible.isValid() && visible.parent() == m_listView->rootIndex()) {
                     changedRows.insert(visible.row());
                 }
@@ -572,8 +533,7 @@ protected:
         const QRect card = ::fluent::overlay::visibleCardRect(rect(), kPopupShadowMargin);
         const int radius = themeRadius().overlay;
         ::fluent::overlay::paintLayeredShadow(painter, card, radius, themeShadow(Elevation::High),
-                                              kPopupShadowIntensity, kPopupShadowLayerCount,
-                                              kPopupShadowVerticalOffset);
+            kPopupShadowIntensity, kPopupShadowLayerCount, kPopupShadowVerticalOffset);
 
         fluent::painting::RoundedSurfacePaint surface;
         surface.fill = themeColorsRef().bgLayer;
@@ -585,10 +545,10 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override
     {
         const auto* watchedWidget = qobject_cast<QWidget*>(watched);
-        const bool wheelInsidePopup = event && event->type() == QEvent::Wheel && watchedWidget &&
-                                      (watchedWidget == this || isAncestorOf(watchedWidget));
-        if (!wheelInsidePopup && event && m_owner &&
-            ::fluent::overlay::anchorGeometryMayChange(watched, event, m_owner)) {
+        const bool wheelInsidePopup = event && event->type() == QEvent::Wheel && watchedWidget
+            && (watchedWidget == this || isAncestorOf(watchedWidget));
+        if (!wheelInsidePopup && event && m_owner
+            && ::fluent::overlay::anchorGeometryMayChange(watched, event, m_owner)) {
             queueGeometryUpdate();
         }
 
@@ -602,9 +562,9 @@ protected:
             if (watched == m_listView) {
                 setKeyboardFocusVisible(true);
                 const bool plainToggle =
-                    (keyEvent->key() == Qt::Key_Space || keyEvent->key() == Qt::Key_Return ||
-                     keyEvent->key() == Qt::Key_Enter) &&
-                    keyEvent->modifiers() == Qt::NoModifier;
+                    (keyEvent->key() == Qt::Key_Space || keyEvent->key() == Qt::Key_Return
+                        || keyEvent->key() == Qt::Key_Enter)
+                    && keyEvent->modifiers() == Qt::NoModifier;
                 if (plainToggle) {
                     toggleCurrentRow();
                     keyEvent->accept();
@@ -618,8 +578,8 @@ protected:
                 }
             }
             if (keyEvent->key() == Qt::Key_Tab || keyEvent->key() == Qt::Key_Backtab) {
-                const bool next = keyEvent->key() != Qt::Key_Backtab &&
-                                  !keyEvent->modifiers().testFlag(Qt::ShiftModifier);
+                const bool next = keyEvent->key() != Qt::Key_Backtab
+                    && !keyEvent->modifiers().testFlag(Qt::ShiftModifier);
                 close();
                 m_owner->advanceFocus(next);
                 keyEvent->accept();
@@ -637,8 +597,8 @@ protected:
             }
             const QPoint ownerLocal = m_owner->mapFromGlobal(global);
             const bool pressOnOwner = m_owner->rect().contains(ownerLocal);
-            const bool pressInsidePopup = ::fluent::overlay::visibleCardContains(
-                rect(), mapFromGlobal(global), kPopupShadowMargin);
+            const bool pressInsidePopup = ::fluent::overlay::visibleCardContains(rect(), mapFromGlobal(global),
+                kPopupShadowMargin);
             if (pressOnOwner && !pressInsidePopup)
                 m_owner->m_ignoreNextTriggerClick = true;
         }
@@ -671,11 +631,10 @@ private:
             m_listView->setSelectionModel(m_proxySelection);
             updateProxyRoot();
             m_listView->setModelColumn(m_owner->modelColumn());
-            m_proxySelectionConnection =
-                connect(m_proxySelection, &QItemSelectionModel::selectionChanged, this,
-                        [this](const QItemSelection& selected, const QItemSelection& deselected) {
-                            applyProxySelectionToSource(selected, deselected);
-                        });
+            m_proxySelectionConnection = connect(m_proxySelection, &QItemSelectionModel::selectionChanged, this,
+                [this](const QItemSelection& selected, const QItemSelection& deselected) {
+                    applyProxySelectionToSource(selected, deselected);
+                });
         } else {
             m_proxyModel->setSourceModel(nullptr);
             if (m_proxySelection) {
@@ -710,8 +669,7 @@ private:
         return m_proxyModel->mapFromSource(m_owner->rootModelIndex());
     }
 
-    void applyProxySelectionToSource(const QItemSelection& selected,
-                                     const QItemSelection& deselected)
+    void applyProxySelectionToSource(const QItemSelection& selected, const QItemSelection& deselected)
     {
         if (m_bridgeInProgress || !m_owner || !m_owner->selectionModel()) {
             return;
@@ -721,19 +679,16 @@ private:
         const QItemSelection sourceDeselected = m_proxyModel->mapSelectionToSource(deselected);
         const QItemSelection sourceSelected = m_proxyModel->mapSelectionToSource(selected);
         if (!sourceDeselected.isEmpty()) {
-            m_owner->selectionModel()->select(sourceDeselected, QItemSelectionModel::Deselect |
-                                                                    QItemSelectionModel::Rows);
+            m_owner->selectionModel()->select(sourceDeselected,
+                QItemSelectionModel::Deselect | QItemSelectionModel::Rows);
         }
         if (!sourceSelected.isEmpty()) {
-            m_owner->selectionModel()->select(sourceSelected, QItemSelectionModel::Select |
-                                                                  QItemSelectionModel::Rows);
+            m_owner->selectionModel()->select(sourceSelected, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
-        const QModelIndex proxyCurrent =
-            m_proxySelection ? m_proxySelection->currentIndex() : QModelIndex();
+        const QModelIndex proxyCurrent = m_proxySelection ? m_proxySelection->currentIndex() : QModelIndex();
         const QModelIndex sourceCurrent = m_proxyModel->mapToSource(proxyCurrent);
         if (sourceCurrent.isValid()) {
-            m_owner->selectionModel()->setCurrentIndex(sourceCurrent,
-                                                       QItemSelectionModel::NoUpdate);
+            m_owner->selectionModel()->setCurrentIndex(sourceCurrent, QItemSelectionModel::NoUpdate);
         }
         m_bridgeInProgress = false;
         updateSelectAllState();
@@ -748,10 +703,8 @@ private:
         const int rows = m_listView->model()->rowCount(root);
         result.reserve(rows);
         for (int row = 0; row < rows; ++row) {
-            const QModelIndex visible =
-                m_listView->model()->index(row, m_owner->modelColumn(), root);
-            const QModelIndex source =
-                m_owner->isSearchEnabled() ? m_proxyModel->mapToSource(visible) : visible;
+            const QModelIndex visible = m_listView->model()->index(row, m_owner->modelColumn(), root);
+            const QModelIndex source = m_owner->isSearchEnabled() ? m_proxyModel->mapToSource(visible) : visible;
             if (indexIsSelectable(source))
                 result.append(source);
         }
@@ -772,9 +725,9 @@ private:
             return;
         }
 
-        const bool mayHaveVisibleSelection =
-            m_owner->isSearchEnabled() ? m_proxySelection && m_proxySelection->hasSelection()
-                                       : m_owner->selectedCount() > 0;
+        const bool mayHaveVisibleSelection = m_owner->isSearchEnabled()
+            ? m_proxySelection && m_proxySelection->hasSelection()
+            : m_owner->selectedCount() > 0;
         bool hasSelectable = false;
         bool hasSelected = false;
         bool hasUnselected = false;
@@ -782,10 +735,8 @@ private:
             const QModelIndex root = m_listView->rootIndex();
             const int rows = m_listView->model()->rowCount(root);
             for (int row = 0; row < rows; ++row) {
-                const QModelIndex visible =
-                    m_listView->model()->index(row, m_owner->modelColumn(), root);
-                const QModelIndex source =
-                    m_owner->isSearchEnabled() ? m_proxyModel->mapToSource(visible) : visible;
+                const QModelIndex visible = m_listView->model()->index(row, m_owner->modelColumn(), root);
+                const QModelIndex source = m_owner->isSearchEnabled() ? m_proxyModel->mapToSource(visible) : visible;
                 if (!indexIsSelectable(source))
                     continue;
 
@@ -824,8 +775,7 @@ private:
         if (!m_owner)
             return;
         const bool searching = m_owner->isSearchEnabled() && !m_searchEdit->text().isEmpty();
-        m_listView->setPlaceholderText(searching ? m_owner->tr("No results")
-                                                 : m_owner->tr("No options"));
+        m_listView->setPlaceholderText(searching ? m_owner->tr("No results") : m_owner->tr("No options"));
     }
 
     void updatePopupGeometry()
@@ -838,8 +788,7 @@ private:
 
         int cardWidth = qMax(m_owner->width(), kPopupMinimumCardWidth);
         if (QWidget* top = ::fluent::overlay::presentedTopLevel(m_owner)) {
-            const int available =
-                ::fluent::overlay::overlaySurfaceRect(top).width() - kPopupWindowMargin * 2;
+            const int available = ::fluent::overlay::overlaySurfaceRect(top).width() - kPopupWindowMargin * 2;
             if (available > 0)
                 cardWidth = qMin(cardWidth, available);
         }
@@ -864,13 +813,11 @@ private:
             const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
             const QRect anchorRect = ::fluent::overlay::presentedRectInTopLevel(m_owner);
             const int desiredCardHeight =
-                ::fluent::overlay::visibleCardSize(m_layout->sizeHint(), kPopupShadowMargin)
-                    .height();
+                ::fluent::overlay::visibleCardSize(m_layout->sizeHint(), kPopupShadowMargin).height();
             const int chromeHeight = qMax(0, desiredCardHeight - desiredListHeight);
-            const int belowCapacity =
-                surface.bottom() - kPopupWindowMargin - (anchorRect.bottom() + anchorOffset()) + 1;
-            const int aboveCapacity =
-                anchorRect.top() - anchorOffset() - (surface.top() + kPopupWindowMargin);
+            const int belowCapacity = surface.bottom() - kPopupWindowMargin - (anchorRect.bottom() + anchorOffset())
+                + 1;
+            const int aboveCapacity = anchorRect.top() - anchorOffset() - (surface.top() + kPopupWindowMargin);
             int cardCapacity = belowCapacity;
             placement = Flyout::Bottom;
             // Keep the preferred bottom placement only when it can show the whole
@@ -940,8 +887,8 @@ private:
         QModelIndex target;
         const QModelIndex root = m_listView->rootIndex();
         if (m_listView->selectionModel()) {
-            const QModelIndexList selected =
-                m_listView->selectionModel()->selectedRows(m_owner ? m_owner->modelColumn() : 0);
+            const QModelIndexList selected = m_listView->selectionModel()->selectedRows(
+                m_owner ? m_owner->modelColumn() : 0);
             for (const QModelIndex& index : selected) {
                 if (index.parent() == root && indexIsSelectable(index)) {
                     target = index;
@@ -952,8 +899,8 @@ private:
         if (!target.isValid()) {
             const int rows = m_listView->model()->rowCount(root);
             for (int row = 0; row < rows; ++row) {
-                const QModelIndex candidate =
-                    m_listView->model()->index(row, m_owner ? m_owner->modelColumn() : 0, root);
+                const QModelIndex candidate = m_listView->model()->index(row, m_owner ? m_owner->modelColumn() : 0,
+                    root);
                 if (indexIsSelectable(candidate)) {
                     target = candidate;
                     break;
@@ -969,8 +916,7 @@ private:
 
     void setKeyboardFocusVisible(bool visible)
     {
-        if (!m_listView ||
-            m_listView->property(kKeyboardFocusVisibleProperty).toBool() == visible) {
+        if (!m_listView || m_listView->property(kKeyboardFocusVisibleProperty).toBool() == visible) {
             return;
         }
         m_listView->setProperty(kKeyboardFocusVisibleProperty, visible);
@@ -985,8 +931,7 @@ private:
         const QModelIndex current = m_listView->currentIndex();
         if (!indexIsSelectable(current))
             return;
-        m_listView->selectionModel()->select(current, QItemSelectionModel::Toggle |
-                                                          QItemSelectionModel::Rows);
+        m_listView->selectionModel()->select(current, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
         if (m_listView->viewport())
             m_listView->viewport()->update();
     }
@@ -1004,8 +949,7 @@ private:
     bool m_geometryUpdatePending = false;
 };
 
-MultiSelectComboBox::MultiSelectComboBox(QWidget* parent)
-    : QWidget(parent), m_searchPlaceholderText(tr("Search"))
+MultiSelectComboBox::MultiSelectComboBox(QWidget* parent) : QWidget(parent), m_searchPlaceholderText(tr("Search"))
 {
     detail::ensureMultiSelectComboBoxAccessibilityFactory();
     setObjectName(QStringLiteral("MultiSelectComboBox"));
@@ -1205,8 +1149,7 @@ QList<int> MultiSelectComboBox::selectedRows() const
 bool MultiSelectComboBox::isRowSelected(int row) const
 {
     const QModelIndex index = sourceIndexForRow(row);
-    return index.isValid() && m_selectionModel && m_selectionModel->isSelected(index) &&
-           isSelectable(index);
+    return index.isValid() && m_selectionModel && m_selectionModel->isSelected(index) && isSelectable(index);
 }
 
 void MultiSelectComboBox::setSelectedRows(const QList<int>& rows)
@@ -1232,7 +1175,7 @@ void MultiSelectComboBox::setSelectedRows(const QList<int>& rows)
     }
 
     m_selectionModel->select(selectionForIndexes(replacement),
-                             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
     if (!replacement.isEmpty()) {
         const QModelIndex first = sourceIndexForRow(rows.isEmpty() ? -1 : rows.first());
         if (first.isValid()) {
@@ -1252,7 +1195,7 @@ void MultiSelectComboBox::clearSelection()
             keep.append(index);
     }
     m_selectionModel->select(selectionForIndexes(keep),
-                             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 
 void MultiSelectComboBox::selectAll()
@@ -1319,12 +1262,11 @@ void MultiSelectComboBox::onThemeUpdated()
 
 void MultiSelectComboBox::keyPressEvent(QKeyEvent* event)
 {
-    const bool altDown =
-        event->key() == Qt::Key_Down && event->modifiers().testFlag(Qt::AltModifier);
+    const bool altDown = event->key() == Qt::Key_Down && event->modifiers().testFlag(Qt::AltModifier);
     const bool f4 = event->key() == Qt::Key_F4 && event->modifiers() == Qt::NoModifier;
-    const bool primary = (event->key() == Qt::Key_Space || event->key() == Qt::Key_Return ||
-                          event->key() == Qt::Key_Enter) &&
-                         event->modifiers() == Qt::NoModifier;
+    const bool primary =
+        (event->key() == Qt::Key_Space || event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
+        && event->modifiers() == Qt::NoModifier;
     if (isEnabled() && (altDown || f4 || primary)) {
         setProperty(kKeyboardFocusOnOpenProperty, true);
         togglePopupFromTrigger();
@@ -1404,8 +1346,8 @@ void MultiSelectComboBox::connectSelectionModelSignals()
 {
     if (!m_selectionModel)
         return;
-    m_selectionConnections.append(connect(m_selectionModel, &QItemSelectionModel::selectionChanged,
-                                          this, &MultiSelectComboBox::handleSelectionChanged));
+    m_selectionConnections.append(connect(m_selectionModel, &QItemSelectionModel::selectionChanged, this,
+        &MultiSelectComboBox::handleSelectionChanged));
     m_selectionConnections.append(connect(m_selectionModel, &QObject::destroyed, this, [this]() {
         m_selectionModel = nullptr;
         m_ownsSelectionModel = false;
@@ -1433,25 +1375,19 @@ void MultiSelectComboBox::connectModelSignals()
         refreshSelectionState();
         refreshPopup();
     };
-    m_modelConnections.append(
-        connect(m_model, &QAbstractItemModel::dataChanged, this, [refresh]() { refresh(); }));
-    m_modelConnections.append(
-        connect(m_model, &QAbstractItemModel::rowsInserted, this, [refresh]() { refresh(); }));
-    m_modelConnections.append(
-        connect(m_model, &QAbstractItemModel::rowsRemoved, this, [refresh]() { refresh(); }));
-    m_modelConnections.append(
-        connect(m_model, &QAbstractItemModel::rowsMoved, this, [refresh]() { refresh(); }));
-    m_modelConnections.append(
-        connect(m_model, &QAbstractItemModel::layoutChanged, this, [refresh]() { refresh(); }));
-    m_modelConnections.append(
-        connect(m_model, &QAbstractItemModel::modelReset, this, [this, refresh]() {
-            const bool rootWasValid = m_rootModelIndex.isValid();
-            if (rootWasValid)
-                m_rootModelIndex = QPersistentModelIndex();
-            refresh();
-            if (rootWasValid)
-                emit rootModelIndexChanged(QModelIndex());
-        }));
+    m_modelConnections.append(connect(m_model, &QAbstractItemModel::dataChanged, this, [refresh]() { refresh(); }));
+    m_modelConnections.append(connect(m_model, &QAbstractItemModel::rowsInserted, this, [refresh]() { refresh(); }));
+    m_modelConnections.append(connect(m_model, &QAbstractItemModel::rowsRemoved, this, [refresh]() { refresh(); }));
+    m_modelConnections.append(connect(m_model, &QAbstractItemModel::rowsMoved, this, [refresh]() { refresh(); }));
+    m_modelConnections.append(connect(m_model, &QAbstractItemModel::layoutChanged, this, [refresh]() { refresh(); }));
+    m_modelConnections.append(connect(m_model, &QAbstractItemModel::modelReset, this, [this, refresh]() {
+        const bool rootWasValid = m_rootModelIndex.isValid();
+        if (rootWasValid)
+            m_rootModelIndex = QPersistentModelIndex();
+        refresh();
+        if (rootWasValid)
+            emit rootModelIndexChanged(QModelIndex());
+    }));
     m_modelConnections.append(connect(m_model, &QObject::destroyed, this, [this]() {
         m_model = nullptr;
         const bool rootChanged = m_rootModelIndex.isValid();
@@ -1487,8 +1423,7 @@ void MultiSelectComboBox::disconnectModelSignals()
     m_modelConnections.clear();
 }
 
-void MultiSelectComboBox::handleSelectionChanged(const QItemSelection& selected,
-                                                 const QItemSelection& deselected)
+void MultiSelectComboBox::handleSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
 {
     emit selectionChanged(selected, deselected);
     refreshSelectionState();
@@ -1544,10 +1479,8 @@ void MultiSelectComboBox::setRowsSelected(const QModelIndexList& indexes, bool s
     }
     if (selectable.isEmpty())
         return;
-    m_selectionModel->select(
-        selectionForIndexes(selectable),
-        (selected ? QItemSelectionModel::Select : QItemSelectionModel::Deselect) |
-            QItemSelectionModel::Rows);
+    m_selectionModel->select(selectionForIndexes(selectable),
+        (selected ? QItemSelectionModel::Select : QItemSelectionModel::Deselect) | QItemSelectionModel::Rows);
 }
 
 QModelIndex MultiSelectComboBox::sourceIndexForRow(int row) const

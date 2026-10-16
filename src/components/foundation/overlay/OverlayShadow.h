@@ -42,12 +42,12 @@ constexpr int defaultShadowVerticalOffset = 2;
  *                       zh_CN: 每层阴影统一向下偏移的像素数。
  */
 inline void paintLayeredShadow(QPainter& painter,
-                               const QRect& cardRect,
-                               qreal cornerRadius,
-                               const Elevation::ShadowParams& params,
-                               qreal intensity = defaultShadowIntensity,
-                               int layerCount = defaultShadowLayerCount,
-                               int verticalOffset = defaultShadowVerticalOffset)
+    const QRect& cardRect,
+    qreal cornerRadius,
+    const Elevation::ShadowParams& params,
+    qreal intensity = defaultShadowIntensity,
+    int layerCount = defaultShadowLayerCount,
+    int verticalOffset = defaultShadowVerticalOffset)
 {
     const int layers = layerCount > 0 ? layerCount : 1;
 
@@ -57,9 +57,8 @@ inline void paintLayeredShadow(QPainter& painter,
         QColor layerColor = params.color;
         layerColor.setAlphaF(params.opacity * ratio * intensity);
         painter.setBrush(layerColor);
-        painter.drawRoundedRect(
-            cardRect.adjusted(-i, -i, i, i).translated(0, verticalOffset),
-            cornerRadius + i, cornerRadius + i);
+        painter.drawRoundedRect(cardRect.adjusted(-i, -i, i, i).translated(0, verticalOffset), cornerRadius + i,
+            cornerRadius + i);
     }
 }
 
@@ -75,11 +74,11 @@ inline void paintLayeredShadow(QPainter& painter,
  * 避免阴影退化成仅向下重复叠印的形状。
  */
 inline void paintLayeredShadow(QPainter& painter,
-                               const QPainterPath& outline,
-                               const Elevation::ShadowParams& params,
-                               qreal intensity = defaultShadowIntensity,
-                               int layerCount = defaultShadowLayerCount,
-                               int verticalOffset = defaultShadowVerticalOffset)
+    const QPainterPath& outline,
+    const Elevation::ShadowParams& params,
+    qreal intensity = defaultShadowIntensity,
+    int layerCount = defaultShadowLayerCount,
+    int verticalOffset = defaultShadowVerticalOffset)
 {
     if (outline.isEmpty())
         return;

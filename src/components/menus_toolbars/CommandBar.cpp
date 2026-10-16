@@ -60,12 +60,13 @@ public:
     using ClosedHandler = std::function<void(bool)>;
     using AnchorPressHandler = std::function<void()>;
 
-    CommandBarOverflowPopup(CommandBar* owner, CommandMoreButton* anchor,
-                            ActivationHandler activationHandler, ClosedHandler closedHandler,
-                            AnchorPressHandler anchorPressHandler)
+    CommandBarOverflowPopup(CommandBar* owner,
+        CommandMoreButton* anchor,
+        ActivationHandler activationHandler,
+        ClosedHandler closedHandler,
+        AnchorPressHandler anchorPressHandler)
         : dialogs_flyouts::Flyout(owner), m_owner(owner), m_anchorButton(anchor),
-          m_activationHandler(std::move(activationHandler)),
-          m_closedHandler(std::move(closedHandler)),
+          m_activationHandler(std::move(activationHandler)), m_closedHandler(std::move(closedHandler)),
           m_anchorPressHandler(std::move(anchorPressHandler))
     {
         setObjectName(QStringLiteral("FluentCommandBar.OverflowPopup"));
@@ -84,16 +85,14 @@ public:
         m_scrollView->setObjectName(QStringLiteral("FluentCommandBar.OverflowScrollView"));
         m_scrollView->setFrameShape(QFrame::NoFrame);
         m_scrollView->setHorizontalScrollMode(scrolling::ScrollView::ScrollMode::Disabled);
-        m_scrollView->setHorizontalScrollBarVisibility(
-            scrolling::ScrollView::ScrollBarVisibility::Disabled);
+        m_scrollView->setHorizontalScrollBarVisibility(scrolling::ScrollView::ScrollBarVisibility::Disabled);
         m_scrollView->setVerticalScrollMode(scrolling::ScrollView::ScrollMode::Auto);
-        m_scrollView->setVerticalScrollBarVisibility(
-            scrolling::ScrollView::ScrollBarVisibility::Auto);
+        m_scrollView->setVerticalScrollBarVisibility(scrolling::ScrollView::ScrollBarVisibility::Auto);
         m_scrollView->setWidgetResizable(false);
-        m_scrollView->setStyleSheet(
-            QStringLiteral("QScrollArea { background: transparent; border: none; }"
-                           "QScrollArea > QWidget > QWidget {"
-                           " background: transparent; }"));
+        m_scrollView->setStyleSheet(QStringLiteral(
+            "QScrollArea { background: transparent; border: none; }"
+            "QScrollArea > QWidget > QWidget {"
+            " background: transparent; }"));
         m_scrollView->viewport()->setAutoFillBackground(false);
 
         m_content = new QWidget();
@@ -168,8 +167,8 @@ public:
 
             auto* divider = new layout::Divider(Qt::Horizontal, m_content);
             divider->setObjectName(spec.kind == RowKind::GroupSeparator
-                                       ? QStringLiteral("FluentCommandBar.OverflowGroupSeparator")
-                                       : QStringLiteral("FluentCommandBar.OverflowSeparator"));
+                    ? QStringLiteral("FluentCommandBar.OverflowGroupSeparator")
+                    : QStringLiteral("FluentCommandBar.OverflowSeparator"));
             divider->setLeadingInset(::Spacing::Small);
             divider->setTrailingInset(::Spacing::Small);
             m_rows.append(divider);
@@ -253,9 +252,8 @@ protected:
             const QPoint globalPosition = fluentMouseGlobalPos(mouseEvent);
             const QPoint localPosition = mapFromGlobal(globalPosition);
             if (!overlay::visibleCardContains(rect(), localPosition)) {
-                const bool hitAnchor =
-                    m_anchorButton && m_anchorButton->isVisible() &&
-                    m_anchorButton->rect().contains(
+                const bool hitAnchor = m_anchorButton && m_anchorButton->isVisible()
+                    && m_anchorButton->rect().contains(
                         overlay::localPointFromPresentedGlobal(m_anchorButton, globalPosition));
                 m_restoreFocusOnClose = hitAnchor;
                 if (hitAnchor && m_anchorPressHandler)
@@ -276,9 +274,8 @@ protected:
         const QSize cardSize = overlay::visibleCardSize(size());
         const QRect surface = overlay::overlaySurfaceRect(topLevel);
 
-        int cardX = layoutDirection() == Qt::RightToLeft
-                        ? anchorRect.left()
-                        : anchorRect.right() + 1 - cardSize.width();
+        int cardX =
+            layoutDirection() == Qt::RightToLeft ? anchorRect.left() : anchorRect.right() + 1 - cardSize.width();
         int cardY = anchorRect.bottom() + 1 + anchorOffset();
         const int aboveY = anchorRect.top() - anchorOffset() - cardSize.height();
         const int spaceBelow = surface.bottom() - anchorRect.bottom();
@@ -287,8 +284,7 @@ protected:
             cardY = aboveY;
         }
 
-        const QPoint cardTopLeft =
-            overlay::clampCardTopLeft(QPoint(cardX, cardY), cardSize, surface, kPopupEdgeMargin);
+        const QPoint cardTopLeft = overlay::clampCardTopLeft(QPoint(cardX, cardY), cardSize, surface, kPopupEdgeMargin);
         return overlay::outerTopLeftForVisibleCard(cardTopLeft);
     }
 
@@ -304,8 +300,7 @@ private:
         RowKind kind = RowKind::Command;
     };
 
-    static QVector<RowSpec> rowSpecs(const QList<QAction*>& overflowedPrimary,
-                                     const QList<QAction*>& secondary)
+    static QVector<RowSpec> rowSpecs(const QList<QAction*>& overflowedPrimary, const QList<QAction*>& secondary)
     {
         QVector<RowSpec> result;
         result.reserve(overflowedPrimary.size() + secondary.size() + 1);
@@ -336,8 +331,8 @@ private:
         if (first.size() != second.size())
             return false;
         for (int index = 0; index < first.size(); ++index) {
-            if (first.at(index).kind != second.at(index).kind ||
-                first.at(index).action.data() != second.at(index).action.data()) {
+            if (first.at(index).kind != second.at(index).kind
+                || first.at(index).action.data() != second.at(index).action.data()) {
                 return false;
             }
         }
@@ -367,20 +362,16 @@ private:
         }
 
         QWidget* topLevel = overlay::presentedTopLevel(m_anchorButton);
-        const QRect surface = topLevel ? overlay::overlaySurfaceRect(topLevel)
-                                       : QRect(0, 0, desiredWidth + 16, contentHeight + 16);
-        const int maximumCardWidth =
-            qMax(kCommandTargetExtent, surface.width() - kPopupEdgeMargin * 2);
-        const int maximumCardHeight =
-            qMax(kCommandTargetExtent, surface.height() - kPopupEdgeMargin * 2);
+        const QRect surface =
+            topLevel ? overlay::overlaySurfaceRect(topLevel) : QRect(0, 0, desiredWidth + 16, contentHeight + 16);
+        const int maximumCardWidth = qMax(kCommandTargetExtent, surface.width() - kPopupEdgeMargin * 2);
+        const int maximumCardHeight = qMax(kCommandTargetExtent, surface.height() - kPopupEdgeMargin * 2);
         const int cardWidth = qMin(maximumCardWidth, desiredWidth + kPopupInset * 2);
         const int cardHeight = qMin(maximumCardHeight, contentHeight + kPopupInset * 2);
 
-        resize(overlay::outerSizeForVisibleCard(QSize(cardWidth, cardHeight),
-                                                overlay::defaultShadowMargin()));
+        resize(overlay::outerSizeForVisibleCard(QSize(cardWidth, cardHeight), overlay::defaultShadowMargin()));
         const QRect cardRect = overlay::visibleCardRect(rect());
-        const QRect scrollRect =
-            cardRect.adjusted(kPopupInset, kPopupInset, -kPopupInset, -kPopupInset);
+        const QRect scrollRect = cardRect.adjusted(kPopupInset, kPopupInset, -kPopupInset, -kPopupInset);
         m_scrollView->setGeometry(scrollRect);
 
         // Before the popup is exposed, QScrollArea can still report its
@@ -389,20 +380,16 @@ private:
         // zh_CN: 弹出层显示前 QScrollArea 可能仍报告默认 100 px 视口；
         // 仅接受与卡片宽度之差不超过合理垂直滚动条沟槽的测量值。
         const int measuredViewportWidth = qMax(0, m_scrollView->viewport()->width());
-        const int maximumGutter =
-            qMax(::Spacing::Large, m_scrollView->verticalScrollBar()->sizeHint().width());
-        const bool measuredWidthIsCurrent =
-            measuredViewportWidth > 0 && measuredViewportWidth <= scrollRect.width() &&
-            scrollRect.width() - measuredViewportWidth <= maximumGutter;
-        const int contentWidth =
-            measuredWidthIsCurrent ? measuredViewportWidth : scrollRect.width();
+        const int maximumGutter = qMax(::Spacing::Large, m_scrollView->verticalScrollBar()->sizeHint().width());
+        const bool measuredWidthIsCurrent = measuredViewportWidth > 0 && measuredViewportWidth <= scrollRect.width()
+            && scrollRect.width() - measuredViewportWidth <= maximumGutter;
+        const int contentWidth = measuredWidthIsCurrent ? measuredViewportWidth : scrollRect.width();
         m_content->setFixedSize(contentWidth, contentHeight);
         int y = 0;
         for (QWidget* widget : m_rows) {
             if (!widget)
                 continue;
-            const int rowHeight =
-                dynamic_cast<CommandPresenter*>(widget) ? kCommandTargetExtent : kSeparatorExtent;
+            const int rowHeight = dynamic_cast<CommandPresenter*>(widget) ? kCommandTargetExtent : kSeparatorExtent;
             widget->setGeometry(0, y, contentWidth, rowHeight);
             widget->show();
             widget->update();
@@ -593,10 +580,8 @@ public:
         });
         moreButton->setExpandedState(false, false);
 
-        QObject::connect(&actions, &CommandActionModel::structureChanged, this,
-                         [this]() { rebuildPresenters(); });
-        QObject::connect(&actions, &CommandActionModel::presentationChanged, this,
-                         [this]() { refreshPresenters(); });
+        QObject::connect(&actions, &CommandActionModel::structureChanged, this, [this]() { rebuildPresenters(); });
+        QObject::connect(&actions, &CommandActionModel::presentationChanged, this, [this]() { refreshPresenters(); });
 
         rebuildPresenters();
     }
@@ -618,38 +603,32 @@ public:
 
     QSize preferredSize() const
     {
-        const QList<QAction*> primarySource =
-            visiblePresentableActions(actions, CommandActionModel::Section::Primary);
-        const QList<QAction*> secondarySource =
-            visiblePresentableActions(actions, CommandActionModel::Section::Secondary);
-        const QList<QAction*> normalizedPrimary =
-            normalizedProjection(primarySource, nonSeparatorSet(primarySource));
-        const QList<QAction*> secondaryProjection =
-            normalizedProjection(secondarySource, nonSeparatorSet(secondarySource));
+        const QList<QAction*> primarySource = visiblePresentableActions(actions, CommandActionModel::Section::Primary);
+        const QList<QAction*> secondarySource = visiblePresentableActions(actions,
+            CommandActionModel::Section::Secondary);
+        const QList<QAction*> normalizedPrimary = normalizedProjection(primarySource, nonSeparatorSet(primarySource));
+        const QList<QAction*> secondaryProjection = normalizedProjection(secondarySource,
+            nonSeparatorSet(secondarySource));
         const bool showMore = hasCommandRows(secondaryProjection);
         const int contentWidth = projectedWidth(normalizedPrimary, showMore);
-        return QSize(contentWidth > 0 ? contentWidth + kBarInset * 2 : 0,
-                     kCommandTargetExtent + kBarInset * 2);
+        return QSize(contentWidth > 0 ? contentWidth + kBarInset * 2 : 0, kCommandTargetExtent + kBarInset * 2);
     }
 
     QSize minimumPreferredSize() const
     {
-        const QList<QAction*> primarySource =
-            visiblePresentableActions(actions, CommandActionModel::Section::Primary);
-        const QList<QAction*> secondarySource =
-            visiblePresentableActions(actions, CommandActionModel::Section::Secondary);
-        const QList<QAction*> normalizedPrimary =
-            normalizedProjection(primarySource, nonSeparatorSet(primarySource));
-        const QList<QAction*> secondaryProjection =
-            normalizedProjection(secondarySource, nonSeparatorSet(secondarySource));
+        const QList<QAction*> primarySource = visiblePresentableActions(actions, CommandActionModel::Section::Primary);
+        const QList<QAction*> secondarySource = visiblePresentableActions(actions,
+            CommandActionModel::Section::Secondary);
+        const QList<QAction*> normalizedPrimary = normalizedProjection(primarySource, nonSeparatorSet(primarySource));
+        const QList<QAction*> secondaryProjection = normalizedProjection(secondarySource,
+            nonSeparatorSet(secondarySource));
         const bool hasPrimary = hasCommandRows(normalizedPrimary);
         const bool hasSecondary = hasCommandRows(secondaryProjection);
         if (!hasPrimary && !hasSecondary) {
             return QSize(0, kCommandTargetExtent + kBarInset * 2);
         }
         if (dynamicOverflowEnabled) {
-            return QSize(kCommandTargetExtent + kBarInset * 2,
-                         kCommandTargetExtent + kBarInset * 2);
+            return QSize(kCommandTargetExtent + kBarInset * 2, kCommandTargetExtent + kBarInset * 2);
         }
 
         const int contentWidth = projectedWidth(normalizedPrimary, hasSecondary);
@@ -676,9 +655,8 @@ public:
     void openOverflow(bool focusFirstCommand = true)
     {
         recomputeLayout();
-        if (!moreButton || !moreButton->isVisible() ||
-            (!hasCommandRows(overflowedPrimary) && !hasCommandRows(normalizedSecondary)) ||
-            !q->isVisible()) {
+        if (!moreButton || !moreButton->isVisible()
+            || (!hasCommandRows(overflowedPrimary) && !hasCommandRows(normalizedSecondary)) || !q->isVisible()) {
             return;
         }
 
@@ -755,8 +733,8 @@ public:
             }
         }
 
-        if (event->type() != QEvent::FocusIn && event->type() != QEvent::MouseButtonPress &&
-            event->type() != QEvent::KeyPress) {
+        if (event->type() != QEvent::FocusIn && event->type() != QEvent::MouseButtonPress
+            && event->type() != QEvent::KeyPress) {
             return QObject::eventFilter(watched, event);
         }
 
@@ -788,11 +766,10 @@ private:
     QSet<QAction*> focusableCommands(const QList<QAction*>& projection) const
     {
         QSet<QAction*> result;
-        const QSet<QAction*> registered =
-            nonSeparatorSet(actions.actions(CommandActionModel::Section::Primary));
+        const QSet<QAction*> registered = nonSeparatorSet(actions.actions(CommandActionModel::Section::Primary));
         for (QAction* action : projection) {
-            if (action && registered.contains(action) && !action->isSeparator() &&
-                action->isVisible() && action->isEnabled() && actions.isPresentable(action)) {
+            if (action && registered.contains(action) && !action->isSeparator() && action->isVisible()
+                && action->isEnabled() && actions.isPresentable(action)) {
                 result.insert(action);
             }
         }
@@ -815,8 +792,7 @@ private:
             return;
         lastFocusedAction = action;
         lastFocusWasMore = more;
-        lastFocusedLogicalIndex =
-            action ? actions.actions(CommandActionModel::Section::Primary).indexOf(action) : -1;
+        lastFocusedLogicalIndex = action ? actions.actions(CommandActionModel::Section::Primary).indexOf(action) : -1;
         widget->setFocus(reason);
     }
 
@@ -861,8 +837,7 @@ private:
         const QSet<QAction*> allowed = focusableCommands(nextInline);
         if (QApplication::focusWidget() == moreButton) {
             if (!willShowMore) {
-                focusNearestAllowed(
-                    allowed, actions.actions(CommandActionModel::Section::Primary).size(), false);
+                focusNearestAllowed(allowed, actions.actions(CommandActionModel::Section::Primary).size(), false);
             }
             return;
         }
@@ -874,8 +849,7 @@ private:
         if (allowed.contains(focusedAction))
             return;
 
-        const int logicalCenter =
-            actions.actions(CommandActionModel::Section::Primary).indexOf(focusedAction);
+        const int logicalCenter = actions.actions(CommandActionModel::Section::Primary).indexOf(focusedAction);
         focusNearestAllowed(allowed, logicalCenter, willShowMore);
     }
 
@@ -912,8 +886,7 @@ private:
                     action, CommandPresenter::Mode::Primary,
                     [this](QAction* command) { activatePrimaryAction(command); }, q);
                 presenter->setObjectName(QStringLiteral("FluentCommandBar.PrimaryPresenter"));
-                presenter->setPrimaryLabelCollapsed(labelPosition ==
-                                                    CommandBar::LabelPosition::Collapsed);
+                presenter->setPrimaryLabelCollapsed(labelPosition == CommandBar::LabelPosition::Collapsed);
                 presenter->installEventFilter(this);
                 widget = presenter;
                 presenterIsSeparator.insert(action, false);
@@ -934,8 +907,8 @@ private:
         bool rebuild = primary.size() != primaryPresenters.size();
         if (!rebuild) {
             for (QAction* action : primary) {
-                if (!action || !primaryPresenters.contains(action) ||
-                    presenterIsSeparator.value(action, false) != action->isSeparator()) {
+                if (!action || !primaryPresenters.contains(action)
+                    || presenterIsSeparator.value(action, false) != action->isSeparator()) {
                     rebuild = true;
                     break;
                 }
@@ -953,8 +926,7 @@ private:
             auto* presenter = dynamic_cast<CommandPresenter*>(primaryPresenters.value(action));
             if (!presenter)
                 continue;
-            presenter->setPrimaryLabelCollapsed(labelPosition ==
-                                                CommandBar::LabelPosition::Collapsed);
+            presenter->setPrimaryLabelCollapsed(labelPosition == CommandBar::LabelPosition::Collapsed);
             presenter->synchronize();
         }
 
@@ -970,14 +942,13 @@ private:
         if (!widget)
             return 0;
         return action && action->isSeparator()
-                   ? kSeparatorExtent
-                   : qMax(kCommandTargetExtent, widget->sizeHint().width());
+            ? kSeparatorExtent
+            : qMax(kCommandTargetExtent, widget->sizeHint().width());
     }
 
     int projectedWidth(const QList<QAction*>& primaryProjection, bool includeMore) const
     {
-        return detail::projectedCommandWidth(
-            primaryProjection, includeMore, kCommandTargetExtent, kItemSpacing,
+        return detail::projectedCommandWidth(primaryProjection, includeMore, kCommandTargetExtent, kItemSpacing,
             [this](QAction* action) { return presenterWidth(action); });
     }
 
@@ -994,10 +965,9 @@ private:
         QWidget* focusedBefore = QApplication::focusWidget();
         const bool barHadFocus = focusedBefore == q || focusTargetIndex(focusedBefore) >= 0;
 
-        const QList<QAction*> primarySource =
-            visiblePresentableActions(actions, CommandActionModel::Section::Primary);
-        const QList<QAction*> secondarySource =
-            visiblePresentableActions(actions, CommandActionModel::Section::Secondary);
+        const QList<QAction*> primarySource = visiblePresentableActions(actions, CommandActionModel::Section::Primary);
+        const QList<QAction*> secondarySource = visiblePresentableActions(actions,
+            CommandActionModel::Section::Secondary);
         const QSet<QAction*> allSecondaryCommands = nonSeparatorSet(secondarySource);
 
         QList<QAction*> nextSecondary = normalizedProjection(secondarySource, allSecondaryCommands);
@@ -1009,8 +979,8 @@ private:
         options.overflowEnabled = dynamicOverflowEnabled;
         options.includeMoreBeforeOverflow = hasCommandRows(nextSecondary);
         options.includeMoreWhenOverflowing = true;
-        const detail::CommandOverflowProjection projection = detail::projectCommandOverflow(
-            primarySource, options, [this](QAction* action) { return presenterWidth(action); });
+        const detail::CommandOverflowProjection projection = detail::projectCommandOverflow(primarySource, options,
+            [this](QAction* action) { return presenterWidth(action); });
         const QList<QAction*>& nextInline = projection.inlineActions;
         const QList<QAction*>& nextOverflow = projection.overflowActions;
         const bool showMore = hasCommandRows(nextOverflow) || hasCommandRows(nextSecondary);
@@ -1113,13 +1083,12 @@ private:
                 }
             },
             [this]() { suppressNextMoreActivation = true; });
-        QObject::connect(overflowPopup, &dialogs_flyouts::Popup::isOpenChanged, q,
-                         [this](bool open) {
-                             if (moreButton) {
-                                 moreButton->setExpandedState(open, moreButton->isVisible());
-                             }
-                             emit q->overflowOpenChanged(open);
-                         });
+        QObject::connect(overflowPopup, &dialogs_flyouts::Popup::isOpenChanged, q, [this](bool open) {
+            if (moreButton) {
+                moreButton->setExpandedState(open, moreButton->isVisible());
+            }
+            emit q->overflowOpenChanged(open);
+        });
         overflowPopup->setSections(overflowedPrimary, normalizedSecondary);
     }
 
@@ -1149,8 +1118,8 @@ private:
             return;
 
         QWidget* focusedAfter = QApplication::focusWidget();
-        const bool focusRedirected =
-            focusedAfter && focusedAfter != popupGuard && !popupGuard->isAncestorOf(focusedAfter);
+        const bool focusRedirected = focusedAfter && focusedAfter != popupGuard
+            && !popupGuard->isAncestorOf(focusedAfter);
         popupGuard->closeWithFocusRestoration(!focusRedirected);
     }
 
@@ -1165,8 +1134,7 @@ private:
             // address, while its presenter has already been discarded.
             // Check the presenter first so focus repair never dereferences
             // a stale borrowed action.
-            if (!action || !widget || action->isSeparator() || !widget->isVisible() ||
-                !action->isEnabled()) {
+            if (!action || !widget || action->isSeparator() || !widget->isVisible() || !action->isEnabled()) {
                 return;
             }
             FocusTarget target;
@@ -1228,9 +1196,8 @@ private:
         lastFocusedAction = targets.at(index).action;
         lastFocusWasMore = targets.at(index).more;
         lastFocusedLogicalIndex = targets.at(index).action
-                                      ? actions.actions(CommandActionModel::Section::Primary)
-                                            .indexOf(targets.at(index).action.data())
-                                      : -1;
+            ? actions.actions(CommandActionModel::Section::Primary).indexOf(targets.at(index).action.data())
+            : -1;
     }
 
     void focusTarget(int index, Qt::FocusReason reason)
@@ -1259,17 +1226,16 @@ private:
 
         int selected = -1;
         for (int index = 0; index < targets.size(); ++index) {
-            if ((lastFocusWasMore && targets.at(index).more) ||
-                (!lastFocusWasMore && lastFocusedAction &&
-                 targets.at(index).action == lastFocusedAction)) {
+            if ((lastFocusWasMore && targets.at(index).more)
+                || (!lastFocusWasMore && lastFocusedAction && targets.at(index).action == lastFocusedAction)) {
                 selected = index;
                 break;
             }
         }
         if (selected < 0) {
             const QList<QAction*> primary = actions.actions(CommandActionModel::Section::Primary);
-            const int logicalCenter = lastFocusedAction ? primary.indexOf(lastFocusedAction.data())
-                                                        : lastFocusedLogicalIndex;
+            const int logicalCenter =
+                lastFocusedAction ? primary.indexOf(lastFocusedAction.data()) : lastFocusedLogicalIndex;
             if (!lastFocusWasMore && logicalCenter >= 0) {
                 for (int distance = 1; distance < primary.size(); ++distance) {
                     const int before = logicalCenter - distance;
@@ -1293,8 +1259,8 @@ private:
                 }
             }
         }
-        const bool hadRememberedTarget = lastFocusWasMore || !lastFocusedAction.isNull() ||
-                                         lastFocusedLogicalIndex >= 0 || previousIndex >= 0;
+        const bool hadRememberedTarget = lastFocusWasMore || !lastFocusedAction.isNull() || lastFocusedLogicalIndex >= 0
+            || previousIndex >= 0;
         if (selected < 0 && hadRememberedTarget) {
             for (int index = 0; index < targets.size(); ++index) {
                 if (targets.at(index).more) {
@@ -1310,9 +1276,8 @@ private:
             lastFocusedAction = targets.at(selected).action;
             lastFocusWasMore = targets.at(selected).more;
             lastFocusedLogicalIndex = targets.at(selected).action
-                                          ? actions.actions(CommandActionModel::Section::Primary)
-                                                .indexOf(targets.at(selected).action.data())
-                                          : -1;
+                ? actions.actions(CommandActionModel::Section::Primary).indexOf(targets.at(selected).action.data())
+                : -1;
         }
 
         if (hadFocus) {
@@ -1330,9 +1295,8 @@ private:
                 }
                 const QVector<FocusTarget> currentTargets = focusTargets();
                 for (int index = 0; index < currentTargets.size(); ++index) {
-                    if ((desiredMore && currentTargets.at(index).more) ||
-                        (!desiredMore && desiredAction &&
-                         currentTargets.at(index).action == desiredAction)) {
+                    if ((desiredMore && currentTargets.at(index).more)
+                        || (!desiredMore && desiredAction && currentTargets.at(index).action == desiredAction)) {
                         focusTarget(index, Qt::OtherFocusReason);
                         return;
                     }
@@ -1349,9 +1313,8 @@ private:
 
         int selected = 0;
         for (int index = 0; index < targets.size(); ++index) {
-            if ((lastFocusWasMore && targets.at(index).more) ||
-                (!lastFocusWasMore && lastFocusedAction &&
-                 targets.at(index).action == lastFocusedAction)) {
+            if ((lastFocusWasMore && targets.at(index).more)
+                || (!lastFocusWasMore && lastFocusedAction && targets.at(index).action == lastFocusedAction)) {
                 selected = index;
                 break;
             }
@@ -1434,8 +1397,7 @@ private:
         }
         case Qt::Key_Tab:
         case Qt::Key_Backtab:
-            if (moveFocusOutside(event->key() != Qt::Key_Backtab &&
-                                 !event->modifiers().testFlag(Qt::ShiftModifier))) {
+            if (moveFocusOutside(event->key() != Qt::Key_Backtab && !event->modifiers().testFlag(Qt::ShiftModifier))) {
                 event->accept();
                 return true;
             }
@@ -1476,8 +1438,8 @@ CommandBar::~CommandBar()
 
 void CommandBar::addAction(QAction* action)
 {
-    if (d->actions.contains(CommandActionModel::Section::Primary, action) ||
-        d->actions.contains(CommandActionModel::Section::Secondary, action)) {
+    if (d->actions.contains(CommandActionModel::Section::Primary, action)
+        || d->actions.contains(CommandActionModel::Section::Secondary, action)) {
         return;
     }
     d->actions.add(CommandActionModel::Section::Primary, action);
@@ -1485,8 +1447,8 @@ void CommandBar::addAction(QAction* action)
 
 void CommandBar::insertAction(QAction* before, QAction* action)
 {
-    if (d->actions.contains(CommandActionModel::Section::Primary, action) ||
-        d->actions.contains(CommandActionModel::Section::Secondary, action)) {
+    if (d->actions.contains(CommandActionModel::Section::Primary, action)
+        || d->actions.contains(CommandActionModel::Section::Secondary, action)) {
         return;
     }
     if (d->actions.contains(CommandActionModel::Section::Primary, before)) {

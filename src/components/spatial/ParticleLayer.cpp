@@ -82,11 +82,10 @@ ParticleLayer::ParticleLayer(layout::ParticleBackdrop* backdrop, QObject* parent
     d->backdrop = backdrop;
     if (backdrop) {
         backdrop->installEventFilter(this);
-        connect(backdrop, &layout::ParticleBackdrop::gpuAccelerationEnabledChanged, this,
-                [this](bool enabled) {
-                    if (!enabled)
-                        release();
-                });
+        connect(backdrop, &layout::ParticleBackdrop::gpuAccelerationEnabledChanged, this, [this](bool enabled) {
+            if (!enabled)
+                release();
+        });
         connect(backdrop, &QObject::destroyed, this, [this] {
             d->backdrop.clear();
             release();
@@ -115,19 +114,17 @@ bool ParticleLayer::isActive() const
 quint64 ParticleLayer::estimatedBytes(const QSize& logicalSize, qreal devicePixelRatio)
 {
     auto* context = QOpenGLContext::currentContext();
-    if (!context || !context->isValid() || logicalSize.isEmpty() ||
-        !std::isfinite(devicePixelRatio) || devicePixelRatio <= 0 || devicePixelRatio > 4)
+    if (!context || !context->isValid() || logicalSize.isEmpty() || !std::isfinite(devicePixelRatio)
+        || devicePixelRatio <= 0 || devicePixelRatio > 4)
         return 0;
     auto* gl = context->functions();
     GLint maxTexture = 0, maxRenderbuffer = 0;
     gl->glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexture);
     gl->glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &maxRenderbuffer);
     const int maxDimension = qMin(maxTexture, maxRenderbuffer);
-    if (logicalSize.width() * devicePixelRatio > maxDimension ||
-        logicalSize.height() * devicePixelRatio > maxDimension)
+    if (logicalSize.width() * devicePixelRatio > maxDimension || logicalSize.height() * devicePixelRatio > maxDimension)
         return 0;
-    const QSize pixels(qCeil(logicalSize.width() * devicePixelRatio),
-                       qCeil(logicalSize.height() * devicePixelRatio));
+    const QSize pixels(qCeil(logicalSize.width() * devicePixelRatio), qCeil(logicalSize.height() * devicePixelRatio));
     const int samples = actualPaintSamples(context);
     if (samples < 2)
         return 0;
@@ -140,8 +137,8 @@ bool ParticleLayer::render(qreal devicePixelRatio, quint64 maximumBytes)
 {
     auto* context = QOpenGLContext::currentContext();
     QPointer<layout::ParticleBackdrop> source(backdrop());
-    if (!context || !context->isValid() || !source || !source->isGpuAccelerationEnabled() ||
-        !Access::isInViewport(source)) {
+    if (!context || !context->isValid() || !source || !source->isGpuAccelerationEnabled()
+        || !Access::isInViewport(source)) {
         release();
         return false;
     }
@@ -152,15 +149,12 @@ bool ParticleLayer::render(qreal devicePixelRatio, quint64 maximumBytes)
         release();
         return false;
     }
-    const QSize pixels(qCeil(source->width() * devicePixelRatio),
-                       qCeil(source->height() * devicePixelRatio));
+    const QSize pixels(qCeil(source->width() * devicePixelRatio), qCeil(source->height() * devicePixelRatio));
 
-    if (d->context != context || !d->texture || d->texture->size() != pixels ||
-        d->dpr != devicePixelRatio) {
+    if (d->context != context || !d->texture || d->texture->size() != pixels || d->dpr != devicePixelRatio) {
         QPointer<ParticleLayer> guard(this);
         release();
-        if (!guard || !source || QOpenGLContext::currentContext() != context ||
-            !Access::isInViewport(source))
+        if (!guard || !source || QOpenGLContext::currentContext() != context || !Access::isInViewport(source))
             return false;
         QOpenGLFramebufferObjectFormat format;
         format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
@@ -172,8 +166,8 @@ bool ParticleLayer::render(qreal devicePixelRatio, quint64 maximumBytes)
         auto texture = std::make_unique<QOpenGLFramebufferObject>(pixels, textureFormat);
         if (!paintTarget->isValid() || !texture->isValid() || gl->glGetError() != GL_NO_ERROR)
             return false;
-        const quint64 allocated = quint64(pixels.width()) * quint64(pixels.height()) *
-                                  quint64(qMax(1, paintTarget->format().samples()) * 12 + 4);
+        const quint64 allocated = quint64(pixels.width()) * quint64(pixels.height())
+            * quint64(qMax(1, paintTarget->format().samples()) * 12 + 4);
         if (allocated > maximumBytes)
             return false;
         gl->glBindTexture(GL_TEXTURE_2D, texture->texture());
@@ -187,8 +181,7 @@ bool ParticleLayer::render(qreal devicePixelRatio, quint64 maximumBytes)
         d->context = context;
         d->dpr = devicePixelRatio;
         d->bytes = allocated;
-        d->contextDestroyed =
-            connect(context, &QOpenGLContext::aboutToBeDestroyed, this, [this] { release(); });
+        d->contextDestroyed = connect(context, &QOpenGLContext::aboutToBeDestroyed, this, [this] { release(); });
     }
 
     const quint64 revision = Access::revision(source);
@@ -269,8 +262,7 @@ void ParticleLayer::release()
 
 bool ParticleLayer::eventFilter(QObject* watched, QEvent* event)
 {
-    if (watched == d->backdrop &&
-        (event->type() == QEvent::Hide || event->type() == QEvent::ParentChange)) {
+    if (watched == d->backdrop && (event->type() == QEvent::Hide || event->type() == QEvent::ParentChange)) {
         const QPointer<ParticleLayer> guard(this);
         const QPointer<QObject> receiver(watched);
         release();

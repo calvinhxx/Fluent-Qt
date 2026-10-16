@@ -37,11 +37,9 @@ namespace fluent::basicinput {
 class ComboBoxItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    explicit ComboBoxItemDelegate(FluentElement* themeHost, QAbstractItemView* view,
-                                  QObject* parent = nullptr);
+    explicit ComboBoxItemDelegate(FluentElement* themeHost, QAbstractItemView* view, QObject* parent = nullptr);
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override;
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
 private:
@@ -69,14 +67,12 @@ class ComboBox : public QComboBox, public FluentElement, public QMLPlus {
      * @brief Horizontal content padding in pixels.
      * zh_CN: 内容区域水平内边距，单位为像素。
      */
-    Q_PROPERTY(
-        int contentPaddingH READ contentPaddingH WRITE setContentPaddingH NOTIFY layoutChanged)
+    Q_PROPERTY(int contentPaddingH READ contentPaddingH WRITE setContentPaddingH NOTIFY layoutChanged)
     /**
      * @brief Vertical content padding in pixels.
      * zh_CN: 内容区域垂直内边距，单位为像素。
      */
-    Q_PROPERTY(
-        int contentPaddingV READ contentPaddingV WRITE setContentPaddingV NOTIFY layoutChanged)
+    Q_PROPERTY(int contentPaddingV READ contentPaddingV WRITE setContentPaddingV NOTIFY layoutChanged)
     /**
      * @brief Iconfont glyph used for the chevron affordance.
      * zh_CN: 下拉箭头使用的 iconfont 字符。

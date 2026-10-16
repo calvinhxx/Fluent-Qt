@@ -31,22 +31,23 @@ struct CommandOverflowProjection {
     QList<QAction*> overflowActions;
 };
 
-QList<QAction*> visiblePresentableActions(const CommandActionModel& model,
-                                          CommandActionModel::Section section);
+QList<QAction*> visiblePresentableActions(const CommandActionModel& model, CommandActionModel::Section section);
 
 QSet<QAction*> nonSeparatorSet(const QList<QAction*>& actions);
 
-QList<QAction*> normalizedProjection(const QList<QAction*>& source,
-                                     const QSet<QAction*>& includedCommands);
+QList<QAction*> normalizedProjection(const QList<QAction*>& source, const QSet<QAction*>& includedCommands);
 
 bool hasCommandRows(const QList<QAction*>& actions);
 
-int projectedCommandWidth(const QList<QAction*>& projection, bool includeMore, int moreButtonWidth,
-                          int itemSpacing, const CommandWidthResolver& widthResolver);
+int projectedCommandWidth(const QList<QAction*>& projection,
+    bool includeMore,
+    int moreButtonWidth,
+    int itemSpacing,
+    const CommandWidthResolver& widthResolver);
 
 CommandOverflowProjection projectCommandOverflow(const QList<QAction*>& source,
-                                                 const CommandOverflowProjectionOptions& options,
-                                                 const CommandWidthResolver& widthResolver);
+    const CommandOverflowProjectionOptions& options,
+    const CommandWidthResolver& widthResolver);
 
 } // namespace fluent::menus_toolbars::detail
 

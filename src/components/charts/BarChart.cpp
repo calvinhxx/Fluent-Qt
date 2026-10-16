@@ -15,10 +15,8 @@ public:
     Projection project(const Context& c, const ChartModel& model) const override
     {
         Projection out;
-        const int first = model.lowerBound(c.xMin), last = model.upperBound(c.xMax),
-                  count = last - first;
-        const int buckets =
-            std::max(1, std::min(c.budget, int(c.plot.width() / (8 * c.seriesCount))));
+        const int first = model.lowerBound(c.xMin), last = model.upperBound(c.xMax), count = last - first;
+        const int buckets = std::max(1, std::min(c.budget, int(c.plot.width() / (8 * c.seriesCount))));
         const int stride = std::max(1, int((qint64(count) + buckets - 1) / buckets));
         const double cell = c.plot.width() / std::max(1, std::min(count, buckets));
         const double width = std::max(1.0, std::min(18.0, cell * .72 / c.seriesCount - 5));
@@ -31,21 +29,13 @@ public:
                 continue;
             const double x = mix(model.pointAt(row).x(), model.pointAt(end - 1).x(), .5);
             const auto position = c.map(x, value), zero = c.map(x, 0);
-            QRectF rect(position.x() - group / 2 + c.series * (width + gap),
-                        std::min(position.y(), zero.y()), width, std::abs(position.y() - zero.y()));
-            out.shapes.append({roundedBar(rect.intersected(c.plot), false, value >= 0),
-                               row,
-                               end,
-                               c.series,
-                               value,
-                               {}});
+            QRectF rect(position.x() - group / 2 + c.series * (width + gap), std::min(position.y(), zero.y()), width,
+                std::abs(position.y() - zero.y()));
+            out.shapes.append({roundedBar(rect.intersected(c.plot), false, value >= 0), row, end, c.series, value, {}});
         }
         return out;
     }
-    void paint(QPainter& p, const Context& c, const Projection& data) const override
-    {
-        paintShapes(p, c, data, false);
-    }
+    void paint(QPainter& p, const Context& c, const Projection& data) const override { paintShapes(p, c, data, false); }
 };
 } // namespace
 std::unique_ptr<ChartRenderer> makeBarRenderer()

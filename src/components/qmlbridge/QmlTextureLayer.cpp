@@ -24,12 +24,11 @@ constexpr quint64 kUnsupportedBytes = std::numeric_limits<quint64>::max();
 class CurrentContextScope {
 public:
     CurrentContextScope()
-        : context(QOpenGLContext::currentContext()),
-          surface(context ? context->surface() : nullptr),
+        : context(QOpenGLContext::currentContext()), surface(context ? context->surface() : nullptr),
           surfaceOwner(!surface ? nullptr
-                       : surface->surfaceClass() == QSurface::Window
-                           ? static_cast<QObject*>(static_cast<QWindow*>(surface))
-                           : static_cast<QObject*>(static_cast<QOffscreenSurface*>(surface)))
+                  : surface->surfaceClass() == QSurface::Window
+                  ? static_cast<QObject*>(static_cast<QWindow*>(surface))
+                  : static_cast<QObject*>(static_cast<QOffscreenSurface*>(surface)))
     {}
     ~CurrentContextScope()
     {
@@ -98,8 +97,8 @@ bool supportedHierarchy(QmlView* view, QWidget* root)
                 above = true;
                 continue;
             }
-            if (!above || !sibling || sibling->isWindow() || !view->isVisible() ||
-                !sibling->isVisible() || qobject_cast<QmlView*>(sibling))
+            if (!above || !sibling || sibling->isWindow() || !view->isVisible() || !sibling->isVisible()
+                || qobject_cast<QmlView*>(sibling))
                 continue;
             // Transparent native siblings also need correct blending. Keep them
             // on Qt's direct path rather than painting QML over their foreground.
@@ -113,17 +112,15 @@ bool supportedHierarchy(QmlView* view, QWidget* root)
 
 QSize targetSize(const QSizeF& logical, qreal dpr)
 {
-    if (logical.isEmpty() || !qIsFinite(dpr) || dpr <= 0 || dpr > 4 ||
-        !qIsFinite(logical.width()) || !qIsFinite(logical.height()) ||
-        logical.width() * dpr > std::numeric_limits<int>::max() ||
-        logical.height() * dpr > std::numeric_limits<int>::max())
+    if (logical.isEmpty() || !qIsFinite(dpr) || dpr <= 0 || dpr > 4 || !qIsFinite(logical.width())
+        || !qIsFinite(logical.height()) || logical.width() * dpr > std::numeric_limits<int>::max()
+        || logical.height() * dpr > std::numeric_limits<int>::max())
         return {};
     return QSize(qCeil(logical.width() * dpr), qCeil(logical.height() * dpr));
 }
 
 struct FramebufferState {
-    explicit FramebufferState(QOpenGLContext* context)
-        : context(context), gl(context->extraFunctions())
+    explicit FramebufferState(QOpenGLContext* context) : context(context), gl(context->extraFunctions())
     {
         separate = context->format().majorVersion() >= 3;
         gl->glGetIntegerv(GL_FRAMEBUFFER_BINDING, &draw);
@@ -157,8 +154,7 @@ struct FramebufferState {
         gl->glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
         gl->glScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
         gl->glColorMask(colorMask[0], colorMask[1], colorMask[2], colorMask[3]);
-        gl->glBlendFuncSeparate(blendSourceRgb, blendDestinationRgb, blendSourceAlpha,
-                                blendDestinationAlpha);
+        gl->glBlendFuncSeparate(blendSourceRgb, blendDestinationRgb, blendSourceAlpha, blendDestinationAlpha);
         gl->glBlendEquationSeparate(blendEquationRgb, blendEquationAlpha);
         const auto restore = [this](GLenum state, bool enabled) {
             if (enabled)
@@ -217,8 +213,7 @@ struct QmlTextureLayer::Private {
     quint64 generation = 0;
 
     struct Operation {
-        Operation(std::shared_ptr<Private> state, QmlTextureLayer* owner)
-            : state(std::move(state)), owner(owner)
+        Operation(std::shared_ptr<Private> state, QmlTextureLayer* owner) : state(std::move(state)), owner(owner)
         {
             this->state->busy = true;
         }
@@ -280,8 +275,8 @@ struct QmlTextureLayer::Private {
         auto* previous = QOpenGLContext::currentContext();
         auto* previousSurface = previous ? previous->surface() : nullptr;
         auto* owner = context.data();
-        const bool switched = owner && owner != previous && owner->isValid() && cleanupSurface &&
-                              owner->makeCurrent(cleanupSurface.get());
+        const bool switched = owner && owner != previous && owner->isValid() && cleanupSurface
+            && owner->makeCurrent(cleanupSurface.get());
         target.reset();
         blitter.reset();
         if (switched) {
@@ -297,8 +292,7 @@ struct QmlTextureLayer::Private {
     }
 };
 
-QmlTextureLayer::QmlTextureLayer(QObject* parent) : QObject(parent), d(std::make_shared<Private>())
-{}
+QmlTextureLayer::QmlTextureLayer(QObject* parent) : QObject(parent), d(std::make_shared<Private>()) {}
 QmlTextureLayer::~QmlTextureLayer()
 {
     const auto state = d;
@@ -351,20 +345,18 @@ bool QmlTextureLayer::synchronize()
         if (!managed) {
             state->managed.append(view);
             connect(view, &QmlView::textureUpdateRequested, this, [this, guarded = view] {
-                if (guarded && d->root && (guarded == d->root || d->root->isAncestorOf(guarded)) &&
-                    !visibleRegion(guarded, d->root).isEmpty())
+                if (guarded && d->root && (guarded == d->root || d->root->isAncestorOf(guarded))
+                    && !visibleRegion(guarded, d->root).isEmpty())
                     emit frameRequested();
             });
-            connect(view, &QmlView::textureRenderingFailed, this,
-                    [this](const QString& error) { fail(error); });
+            connect(view, &QmlView::textureRenderingFailed, this, [this](const QString& error) { fail(error); });
             connect(view, &QObject::destroyed, this, &QmlTextureLayer::frameRequested);
         }
         const bool enabled = view->setTextureRenderingEnabled(true);
         if (!lifetime || state->generation != generation || state->root != root)
             return false;
         const bool unloaded = view && view->status() == QmlView::Unloaded && !view->rootObject();
-        ready &= unloaded ||
-                 (enabled && view && !view->property("fluentqtDirectCompositionRequired").toBool());
+        ready &= unloaded || (enabled && view && !view->property("fluentqtDirectCompositionRequired").toBool());
     }
     return ready;
 }
@@ -409,12 +401,10 @@ bool QmlTextureLayer::fail(const QString& message)
     return false;
 }
 
-bool QmlTextureLayer::prepareFrame(QOpenGLContext* context, const QRectF& source, qreal dpr,
-                                   quint64 maximumBytes)
+bool QmlTextureLayer::prepareFrame(QOpenGLContext* context, const QRectF& source, qreal dpr, quint64 maximumBytes)
 {
     const auto state = d;
-    if (!onGuiThread(this) || state->busy || state->failed || !context ||
-        QOpenGLContext::currentContext() != context)
+    if (!onGuiThread(this) || state->busy || state->failed || !context || QOpenGLContext::currentContext() != context)
         return false;
     const QPointer<QmlTextureLayer> lifetime(this);
     const QPointer<QWidget> root(state->root);
@@ -422,8 +412,8 @@ bool QmlTextureLayer::prepareFrame(QOpenGLContext* context, const QRectF& source
     const quint64 generation = state->generation;
     Private::Operation operation(state, this);
     const auto current = [&] {
-        return lifetime && state->generation == generation && state->root == root &&
-               QOpenGLContext::currentContext() == context;
+        return lifetime && state->generation == generation && state->root == root
+            && QOpenGLContext::currentContext() == context;
     };
     const quint64 required = requiredBytes(source, dpr);
     if (required == kUnsupportedBytes || required > maximumBytes)
@@ -479,8 +469,7 @@ bool QmlTextureLayer::prepareFrame(QOpenGLContext* context, const QRectF& source
                 return false;
             continue;
         }
-        if (!view->isTextureRenderingEnabled() ||
-            !view->renderTexture(context, dpr, maximumBytes)) {
+        if (!view->isTextureRenderingEnabled() || !view->renderTexture(context, dpr, maximumBytes)) {
             if (!current())
                 return false;
             if (!view || view->status() != QmlView::Ready)
@@ -498,8 +487,7 @@ bool QmlTextureLayer::prepareFrame(QOpenGLContext* context, const QRectF& source
             return false;
         }
         state->frames.push_back({view, view->rootObject(), view->textureId(),
-                                 QRectF(view->mapTo(root, QPoint()), view->size()), clip,
-                                 view->textureRevision()});
+            QRectF(view->mapTo(root, QPoint()), view->size()), clip, view->textureRevision()});
     }
     state->bytes = required;
     if (state->frames.empty())
@@ -507,8 +495,7 @@ bool QmlTextureLayer::prepareFrame(QOpenGLContext* context, const QRectF& source
     return current() && !state->failed;
 }
 
-unsigned int QmlTextureLayer::compose(unsigned int baseTexture, const QSize& pixels,
-                                      quint64 baseRevision)
+unsigned int QmlTextureLayer::compose(unsigned int baseTexture, const QSize& pixels, quint64 baseRevision)
 {
     const auto state = d;
     auto* context = state->context.data();
@@ -524,22 +511,20 @@ unsigned int QmlTextureLayer::compose(unsigned int baseTexture, const QSize& pix
     const auto frames = state->frames;
     Private::Operation operation(state, this);
     const auto current = [&] {
-        return lifetime && state->generation == generation && state->root == root &&
-               QOpenGLContext::currentContext() == context;
+        return lifetime && state->generation == generation && state->root == root
+            && QOpenGLContext::currentContext() == context;
     };
     if (pixels != targetSize(state->source.size(), state->dpr)) {
         fail(QStringLiteral("The QML composition target does not match the panel pixel size."));
         return 0;
     }
-    bool unchanged = state->target && state->target->size() == pixels &&
-                     state->baseTexture == baseTexture && state->baseRevision == baseRevision &&
-                     state->composedFrames.size() == frames.size();
+    bool unchanged = state->target && state->target->size() == pixels && state->baseTexture == baseTexture
+        && state->baseRevision == baseRevision && state->composedFrames.size() == frames.size();
     for (size_t i = 0; unchanged && i < frames.size(); ++i) {
         const auto& before = state->composedFrames[i];
         const auto& after = frames[i];
-        unchanged = before.view == after.view && before.scene == after.scene &&
-                    before.texture == after.texture && before.bounds == after.bounds &&
-                    before.clip == after.clip && before.revision == after.revision;
+        unchanged = before.view == after.view && before.scene == after.scene && before.texture == after.texture
+            && before.bounds == after.bounds && before.clip == after.clip && before.revision == after.revision;
     }
     if (unchanged)
         return state->target->texture();
@@ -572,9 +557,8 @@ unsigned int QmlTextureLayer::compose(unsigned int baseTexture, const QSize& pix
     gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     state->blitter->bind();
     const QRect viewport(QPoint(), pixels);
-    state->blitter->blit(baseTexture,
-                         QOpenGLTextureBlitter::targetTransform(QRectF(viewport), viewport),
-                         QOpenGLTextureBlitter::OriginBottomLeft);
+    state->blitter->blit(baseTexture, QOpenGLTextureBlitter::targetTransform(QRectF(viewport), viewport),
+        QOpenGLTextureBlitter::OriginBottomLeft);
     gl->glEnable(GL_BLEND);
     gl->glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     gl->glBlendEquation(GL_FUNC_ADD);
@@ -584,26 +568,22 @@ unsigned int QmlTextureLayer::compose(unsigned int baseTexture, const QSize& pix
         if (!frame.view || !frame.view->textureId())
             continue;
         const QRectF target((frame.bounds.x() - state->source.x()) * state->dpr,
-                            (frame.bounds.y() - state->source.y()) * state->dpr,
-                            frame.bounds.width() * state->dpr, frame.bounds.height() * state->dpr);
+            (frame.bounds.y() - state->source.y()) * state->dpr, frame.bounds.width() * state->dpr,
+            frame.bounds.height() * state->dpr);
         QRegion pixelClip;
         for (const QRect& clip : frame.clip) {
             const int left = qMax(0, qFloor((clip.x() - state->source.x()) * state->dpr));
             const int top = qMax(0, qFloor((clip.y() - state->source.y()) * state->dpr));
-            const int right = qMin(
-                pixels.width(), qCeil((clip.x() + clip.width() - state->source.x()) * state->dpr));
-            const int bottom =
-                qMin(pixels.height(),
-                     qCeil((clip.y() + clip.height() - state->source.y()) * state->dpr));
+            const int right = qMin(pixels.width(), qCeil((clip.x() + clip.width() - state->source.x()) * state->dpr));
+            const int bottom = qMin(pixels.height(),
+                qCeil((clip.y() + clip.height() - state->source.y()) * state->dpr));
             pixelClip |= QRect(left, top, right - left, bottom - top);
         }
         gl->glEnable(GL_SCISSOR_TEST);
         const auto transform = QOpenGLTextureBlitter::targetTransform(target, viewport);
         for (const QRect& clip : pixelClip) {
-            gl->glScissor(clip.x(), pixels.height() - clip.y() - clip.height(), clip.width(),
-                          clip.height());
-            state->blitter->blit(frame.view->textureId(), transform,
-                                 QOpenGLTextureBlitter::OriginBottomLeft);
+            gl->glScissor(clip.x(), pixels.height() - clip.y() - clip.height(), clip.width(), clip.height());
+            state->blitter->blit(frame.view->textureId(), transform, QOpenGLTextureBlitter::OriginBottomLeft);
         }
     }
     state->blitter->release();
@@ -631,15 +611,13 @@ QVariantMap QmlTextureLayer::statistics() const
     for (const auto& view : d->managed) {
         if (view) {
             ++views;
-            frames +=
-                view->textureStatistics().value(QStringLiteral("renderedFrames")).toULongLong();
+            frames += view->textureStatistics().value(QStringLiteral("renderedFrames")).toULongLong();
         }
     }
-    return {{QStringLiteral("views"), views},
-            {QStringLiteral("visibleViews"), int(d->frames.size())},
-            {QStringLiteral("renderedFrames"), frames},
-            {QStringLiteral("compositions"), QVariant::fromValue(d->compositions)},
-            {QStringLiteral("allocatedBytes"), QVariant::fromValue(d->bytes)}};
+    return {{QStringLiteral("views"), views}, {QStringLiteral("visibleViews"), int(d->frames.size())},
+        {QStringLiteral("renderedFrames"), frames},
+        {QStringLiteral("compositions"), QVariant::fromValue(d->compositions)},
+        {QStringLiteral("allocatedBytes"), QVariant::fromValue(d->bytes)}};
 }
 void QmlTextureLayer::clearFrameCaches()
 {

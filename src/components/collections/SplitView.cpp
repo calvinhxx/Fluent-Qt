@@ -18,10 +18,9 @@ namespace fluent::collections {
 namespace {
 constexpr quint32 kStateMagic = 0x53505631;
 constexpr quint16 kStateVersion = 1;
-}
+} // namespace
 
-SplitView::SplitView(QWidget* parent)
-    : QWidget(parent)
+SplitView::SplitView(QWidget* parent) : QWidget(parent)
 {
     detail::ensureSplitViewAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
@@ -56,9 +55,7 @@ int SplitView::addPane(QWidget* pane, const SplitViewPaneOptions& options)
     return addPane(pane, WidgetOwnership::Owned, options);
 }
 
-int SplitView::addPane(QWidget* pane,
-                       WidgetOwnership ownership,
-                       const SplitViewPaneOptions& options)
+int SplitView::addPane(QWidget* pane, WidgetOwnership ownership, const SplitViewPaneOptions& options)
 {
     return insertPane(m_panes.size(), pane, ownership, options);
 }
@@ -68,13 +65,9 @@ int SplitView::insertPane(int index, QWidget* pane, const SplitViewPaneOptions& 
     return insertPane(index, pane, WidgetOwnership::Owned, options);
 }
 
-int SplitView::insertPane(int index,
-                          QWidget* pane,
-                          WidgetOwnership ownership,
-                          const SplitViewPaneOptions& options)
+int SplitView::insertPane(int index, QWidget* pane, WidgetOwnership ownership, const SplitViewPaneOptions& options)
 {
-    if (!pane || pane == this || pane->isAncestorOf(this)
-        || indexOf(pane) >= 0) {
+    if (!pane || pane == this || pane->isAncestorOf(this) || indexOf(pane) >= 0) {
         return -1;
     }
 
@@ -180,9 +173,7 @@ int SplitView::indexOf(QWidget* pane) const
 
 WidgetOwnership SplitView::paneOwnershipAt(int index) const
 {
-    return isValidPaneIndex(index)
-        ? m_panes.at(index).ownership
-        : WidgetOwnership::Borrowed;
+    return isValidPaneIndex(index) ? m_panes.at(index).ownership : WidgetOwnership::Borrowed;
 }
 
 void SplitView::setOrientation(Qt::Orientation orientation)
@@ -537,8 +528,8 @@ void SplitView::paintEvent(QPaintEvent*)
             color = colors.strokeStrong;
         }
 
-        const QRect visualRect = detail::centeredSplitHandleVisualRect(
-            handleRect, m_orientation, m_handleVisualThickness);
+        const QRect visualRect = detail::centeredSplitHandleVisualRect(handleRect, m_orientation,
+            m_handleVisualThickness);
         painter.setPen(Qt::NoPen);
         painter.setBrush(color);
         painter.drawRoundedRect(visualRect, m_handleVisualThickness / 2.0, m_handleVisualThickness / 2.0);
@@ -624,14 +615,13 @@ void SplitView::mouseMoveEvent(QMouseEvent* event)
     trailingPane.preferredSize = trailingSize;
     normalizePane(leadingPane);
     normalizePane(trailingPane);
-    m_drag.changed = m_drag.changed || oldLeading != leadingPane.preferredSize || oldTrailing != trailingPane.preferredSize;
+    m_drag.changed = m_drag.changed || oldLeading != leadingPane.preferredSize
+        || oldTrailing != trailingPane.preferredSize;
     updateLayout();
     emitPaneSizeIfChanged(m_drag.leadingPane, oldLeading);
     emitPaneSizeIfChanged(m_drag.trailingPane, oldTrailing);
-    if (oldLeading != leadingPane.preferredSize
-        || oldTrailing != trailingPane.preferredSize) {
-        detail::notifySplitViewAccessibilityHandleValueChanged(
-            this, m_drag.handleIndex);
+    if (oldLeading != leadingPane.preferredSize || oldTrailing != trailingPane.preferredSize) {
+        detail::notifySplitViewAccessibilityHandleValueChanged(this, m_drag.handleIndex);
     }
     event->accept();
 }
@@ -675,9 +665,7 @@ int SplitView::crossLength(const QSize& size) const
 
 QRect SplitView::makePaneRect(int origin, int length) const
 {
-    return m_orientation == Qt::Horizontal
-        ? QRect(origin, 0, length, height())
-        : QRect(0, origin, width(), length);
+    return m_orientation == Qt::Horizontal ? QRect(origin, 0, length, height()) : QRect(0, origin, width(), length);
 }
 
 QRect SplitView::makeHandleRect(int origin) const
@@ -788,7 +776,8 @@ void SplitView::updateLayout()
             overflow -= shrink;
         }
     } else if (totalLength < availableLength && fillIndex >= 0) {
-        const int grow = std::min(availableLength - totalLength, m_panes.at(fillIndex).maximumSize - lengths[fillIndex]);
+        const int grow = std::min(availableLength - totalLength,
+            m_panes.at(fillIndex).maximumSize - lengths[fillIndex]);
         lengths[fillIndex] += grow;
     }
 
@@ -853,12 +842,10 @@ void SplitView::syncAccessibilityHandles()
     }
     while (m_accessibilityHandles.size() < targetCount) {
         const int index = m_accessibilityHandles.size();
-        m_accessibilityHandles.append(
-            new detail::SplitViewHandle(this, index));
+        m_accessibilityHandles.append(new detail::SplitViewHandle(this, index));
     }
     for (int index = 0; index < m_accessibilityHandles.size(); ++index) {
-        auto* handle = dynamic_cast<detail::SplitViewHandle*>(
-            m_accessibilityHandles.at(index).data());
+        auto* handle = dynamic_cast<detail::SplitViewHandle*>(m_accessibilityHandles.at(index).data());
         if (!handle)
             continue;
         handle->setHandleIndex(index);
@@ -870,21 +857,18 @@ void SplitView::syncAccessibilityHandles()
 
 int SplitView::handleLeadingPaneIndex(int handleIndex) const
 {
-    return handleIndex >= 0 && handleIndex < m_handlePairs.size()
-        ? m_handlePairs.at(handleIndex).leadingPane : -1;
+    return handleIndex >= 0 && handleIndex < m_handlePairs.size() ? m_handlePairs.at(handleIndex).leadingPane : -1;
 }
 
 int SplitView::handleTrailingPaneIndex(int handleIndex) const
 {
-    return handleIndex >= 0 && handleIndex < m_handlePairs.size()
-        ? m_handlePairs.at(handleIndex).trailingPane : -1;
+    return handleIndex >= 0 && handleIndex < m_handlePairs.size() ? m_handlePairs.at(handleIndex).trailingPane : -1;
 }
 
 int SplitView::handleAccessibleValue(int handleIndex) const
 {
     const int leading = handleLeadingPaneIndex(handleIndex);
-    return isValidPaneIndex(leading)
-        ? dragStartLength(leading) : 0;
+    return isValidPaneIndex(leading) ? dragStartLength(leading) : 0;
 }
 
 int SplitView::handleAccessibleMinimum(int handleIndex) const
@@ -894,8 +878,7 @@ int SplitView::handleAccessibleMinimum(int handleIndex) const
     if (!isValidPaneIndex(leading) || !isValidPaneIndex(trailing))
         return 0;
     const int sum = dragStartLength(leading) + dragStartLength(trailing);
-    return std::max(m_panes.at(leading).minimumSize,
-                    sum - m_panes.at(trailing).maximumSize);
+    return std::max(m_panes.at(leading).minimumSize, sum - m_panes.at(trailing).maximumSize);
 }
 
 int SplitView::handleAccessibleMaximum(int handleIndex) const
@@ -905,23 +888,19 @@ int SplitView::handleAccessibleMaximum(int handleIndex) const
     if (!isValidPaneIndex(leading) || !isValidPaneIndex(trailing))
         return 0;
     const int sum = dragStartLength(leading) + dragStartLength(trailing);
-    return std::min(m_panes.at(leading).maximumSize,
-                    sum - m_panes.at(trailing).minimumSize);
+    return std::min(m_panes.at(leading).maximumSize, sum - m_panes.at(trailing).minimumSize);
 }
 
 bool SplitView::setHandleAccessibleValue(int handleIndex, int value)
 {
     const int leading = handleLeadingPaneIndex(handleIndex);
     const int trailing = handleTrailingPaneIndex(handleIndex);
-    if (!isEnabled() || !isValidPaneIndex(leading)
-        || !isValidPaneIndex(trailing)) {
+    if (!isEnabled() || !isValidPaneIndex(leading) || !isValidPaneIndex(trailing)) {
         return false;
     }
 
     const int oldValue = handleAccessibleValue(handleIndex);
-    const int bounded = qBound(handleAccessibleMinimum(handleIndex),
-                               value,
-                               handleAccessibleMaximum(handleIndex));
+    const int bounded = qBound(handleAccessibleMinimum(handleIndex), value, handleAccessibleMaximum(handleIndex));
     if (oldValue == bounded)
         return false;
 
@@ -937,8 +916,7 @@ bool SplitView::setHandleAccessibleValue(int handleIndex, int value)
     updateLayout();
     emitPaneSizeIfChanged(leading, oldLeading);
     emitPaneSizeIfChanged(trailing, oldTrailing);
-    detail::notifySplitViewAccessibilityHandleValueChanged(
-        this, handleIndex);
+    detail::notifySplitViewAccessibilityHandleValueChanged(this, handleIndex);
     return true;
 }
 

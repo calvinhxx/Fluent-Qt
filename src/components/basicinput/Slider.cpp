@@ -109,8 +109,8 @@ void Slider::mousePressEvent(QMouseEvent* event)
     // Show ToolTip
     showToolTip();
 
-    int val = pixelPosToRangeValue(orientation() == Qt::Horizontal ? fluentMousePos(event).x()
-                                                                   : fluentMousePos(event).y());
+    int val = pixelPosToRangeValue(
+        orientation() == Qt::Horizontal ? fluentMousePos(event).x() : fluentMousePos(event).y());
     setSliderPosition(val);
     updateToolTipPos(); // update after value change
 
@@ -125,8 +125,8 @@ void Slider::mouseMoveEvent(QMouseEvent* event)
         return;
     }
     event->accept();
-    int val = pixelPosToRangeValue(orientation() == Qt::Horizontal ? fluentMousePos(event).x()
-                                                                   : fluentMousePos(event).y());
+    int val = pixelPosToRangeValue(
+        orientation() == Qt::Horizontal ? fluentMousePos(event).x() : fluentMousePos(event).y());
     setSliderPosition(val);
     updateToolTipPos();
 
@@ -209,8 +209,7 @@ void Slider::updateToolTipPos()
 
     QPoint tipPos;
     if (orientation() == Qt::Horizontal) {
-        tipPos = QPoint(globalHandle.x() - tipW / 2,
-                        globalHandle.y() - tipH - spacing - m_handleSize / 2);
+        tipPos = QPoint(globalHandle.x() - tipW / 2, globalHandle.y() - tipH - spacing - m_handleSize / 2);
     } else {
         // Vertical: Right side preferred, fallback to left if no space?
         // WinUI usually puts it to the side.
@@ -234,8 +233,8 @@ int Slider::valueToPixelPos(int val) const
     // Widen before subtraction and multiplication, including tracks wider than 4096 px.
     // zh_CN: 减法和乘法前提升位宽，兼容完整 int 范围和超过 4096 像素的轨道。
     const int boundedValue = qBound(minimum(), val, maximum());
-    const qint64 offset = opt.upsideDown ? static_cast<qint64>(maximum()) - boundedValue
-                                         : static_cast<qint64>(boundedValue) - minimum();
+    const qint64 offset =
+        opt.upsideDown ? static_cast<qint64>(maximum()) - boundedValue : static_cast<qint64>(boundedValue) - minimum();
     return padding + static_cast<int>((offset * available + range / 2) / range);
 }
 
@@ -248,8 +247,7 @@ int Slider::pixelPosToRangeValue(int pos) const
     const int available = qMax(0, length - 2 * padding);
     if (available <= 0)
         return minimum();
-    return QStyle::sliderValueFromPosition(minimum(), maximum(), pos - padding, available,
-                                           opt.upsideDown);
+    return QStyle::sliderValueFromPosition(minimum(), maximum(), pos - padding, available, opt.upsideDown);
 }
 
 void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
@@ -268,8 +266,7 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
     QPointF center(handleX, cy);
 
     const int minimumX = valueToPixelPos(opt.minimum);
-    QRectF filledRect(qMin(minimumX, handleX), cy - trackThickness / 2, qAbs(handleX - minimumX),
-                      trackThickness);
+    QRectF filledRect(qMin(minimumX, handleX), cy - trackThickness / 2, qAbs(handleX - minimumX), trackThickness);
 
     // 2. State colors. zh_CN: 确定状态颜色。
     QColor trackBg = isEnabled() ? colors.controlAltSecondary : colors.controlDisabled;
@@ -303,7 +300,7 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
     // zh_CN: 外圈用 bgSolid 填充（亮色主题为白色）以遮住轨道；先画填充外圆、再画
     // 蓝色实心内圆，视觉上即“边框”。
 
-    QColor outerFillColor = colors.bgSolid; // White in the light theme. zh_CN: 亮色主题下为白色。
+    QColor outerFillColor = colors.bgSolid;        // White in the light theme. zh_CN: 亮色主题下为白色。
     QColor outerBorderColor = colors.strokeStrong; // Thin light-grey ring. zh_CN: 浅灰色细环。
     QColor innerColor = trackFg;                   // Accent color. zh_CN: Accent 颜色。
 
@@ -347,8 +344,7 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
             for (int i = 0; i <= steps; ++i) {
                 const int val = static_cast<int>(static_cast<qint64>(opt.minimum) + i * interval);
                 int x = valueToPixelPos(val);
-                int ty = (opt.tickPosition == QSlider::TicksAbove) ? (trackRect.top() - 4)
-                                                                   : (trackRect.bottom() + 4);
+                int ty = (opt.tickPosition == QSlider::TicksAbove) ? (trackRect.top() - 4) : (trackRect.bottom() + 4);
                 p.drawLine(x, ty, x, ty + 2);
             }
         }
@@ -371,8 +367,7 @@ void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt)
     QPointF center(cx, handleY);
 
     const int minimumY = valueToPixelPos(opt.minimum);
-    QRectF filledRect(cx - trackThickness / 2, qMin(minimumY, handleY), trackThickness,
-                      qAbs(handleY - minimumY));
+    QRectF filledRect(cx - trackThickness / 2, qMin(minimumY, handleY), trackThickness, qAbs(handleY - minimumY));
 
     // 2. State colors. zh_CN: 确定状态颜色。
     QColor trackBg = isEnabled() ? colors.controlAltSecondary : colors.controlDisabled;

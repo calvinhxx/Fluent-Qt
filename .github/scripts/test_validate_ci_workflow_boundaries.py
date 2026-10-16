@@ -673,8 +673,8 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             if name != "ci-cpp.yml":
                 return contents
             return contents.replace(
-                "          python3 tools/quality/check_cpp_format.py --changed-from \"$PR_BASE_SHA\" --clang-format \"$formatter\"\n",
-                "          true || python3 tools/quality/check_cpp_format.py --changed-from \"$PR_BASE_SHA\" --clang-format \"$formatter\"\n",
+                "            python3 tools/quality/check_cpp_format.py --changed-from \"$PR_BASE_SHA\"\n",
+                "            true || python3 tools/quality/check_cpp_format.py --changed-from \"$PR_BASE_SHA\"\n",
                 1,
             )
 
@@ -686,6 +686,13 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             any("changed-file format check" in error for error in errors),
             "workflow validator accepted a disabled C++ format check",
         )
+
+    def test_cpp_formatter_installation_keeps_the_version_pin(self):
+        for replacement in ("clang-format", "clang-format==15.0.0"):
+            with self.subTest(replacement=replacement):
+                errors = self.workflow_errors_with_replacement(
+                    "ci-cpp.yml", "clang-format==22.1.8", replacement)
+                self.assertTrue(any("pinned C++ formatter" in error for error in errors))
 
     def test_cpp_selected_matrix_must_build_selected_targets(self):
         original_read = MODULE.read_workflow

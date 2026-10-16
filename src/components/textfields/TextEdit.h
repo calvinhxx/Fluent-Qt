@@ -13,7 +13,9 @@ class QTextEdit;
 class QPainter;
 class QPaintEvent;
 
-namespace fluent::scrolling { class ScrollBar; }
+namespace fluent::scrolling {
+class ScrollBar;
+}
 
 namespace fluent::textfields {
 
@@ -43,12 +45,18 @@ class TextEdit : public QWidget, public FluentElement, public QMLPlus {
      * @brief Bottom border width while focused.
      * zh_CN: 聚焦时底部边框宽度。
      */
-    Q_PROPERTY(int focusedBorderWidth READ focusedBorderWidth WRITE setFocusedBorderWidth NOTIFY focusedBorderWidthChanged)
+    Q_PROPERTY(int focusedBorderWidth
+        READ focusedBorderWidth
+        WRITE setFocusedBorderWidth
+        NOTIFY focusedBorderWidthChanged)
     /**
      * @brief Bottom border width while not focused.
      * zh_CN: 未聚焦时底部边框宽度。
      */
-    Q_PROPERTY(int unfocusedBorderWidth READ unfocusedBorderWidth WRITE setUnfocusedBorderWidth NOTIFY unfocusedBorderWidthChanged)
+    Q_PROPERTY(int unfocusedBorderWidth
+        READ unfocusedBorderWidth
+        WRITE setUnfocusedBorderWidth
+        NOTIFY unfocusedBorderWidthChanged)
     /**
      * @brief Visual line slot height used by the text editor.
      * zh_CN: 文本编辑器使用的视觉行槽高度。
@@ -73,7 +81,10 @@ class TextEdit : public QWidget, public FluentElement, public QMLPlus {
      * @brief Whether boundary wheel input may continue to an enclosing scroller.
      * zh_CN: 边界滚轮输入是否允许继续传递给外层滚动容器。
      */
-    Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
+    Q_PROPERTY(bool scrollChainingEnabled
+        READ isScrollChainingEnabled
+        WRITE setScrollChainingEnabled
+        NOTIFY scrollChainingEnabledChanged)
 
 public:
     explicit TextEdit(QWidget* parent = nullptr);
@@ -158,28 +169,28 @@ private:
      */
     void applyBlockCenterFormat();
 
-    QTextEdit*                    m_editor      = nullptr;
-    ::fluent::scrolling::ScrollBar* m_vScrollBar  = nullptr;
+    QTextEdit* m_editor = nullptr;
+    ::fluent::scrolling::ScrollBar* m_vScrollBar = nullptr;
     bool m_updatingFormat = false;
     bool m_updatingHeight = false;
     bool m_heightUpdateScheduled = false;
-    bool m_scrollEnabled  = false;
+    bool m_scrollEnabled = false;
 
-    QMargins m_contentMargins   = QMargins(::Spacing::Padding::TextFieldHorizontal,
-                                           ::Spacing::Padding::TextFieldVertical,
-                                           ::Spacing::Padding::TextFieldHorizontal,
-                                           ::Spacing::Padding::TextFieldVertical);
+    QMargins m_contentMargins = QMargins(::Spacing::Padding::TextFieldHorizontal,
+        ::Spacing::Padding::TextFieldVertical,
+        ::Spacing::Padding::TextFieldHorizontal,
+        ::Spacing::Padding::TextFieldVertical);
     Typography::FontRole m_fontRole = Typography::FontRole::Body;
-    bool     m_isHovered        = false;
-    bool     m_isFocused        = false;
-    int      m_focusedBorderWidth   = ::Spacing::Border::Focused;
-    int      m_unfocusedBorderWidth = ::Spacing::Border::Normal;
-    int      m_lineHeight           = ::Spacing::ControlHeight::Standard;
-    int      m_minVisibleLines      = 1;
-    int      m_maxVisibleLines      = 4;
-    bool     m_tabChangesFocus      = false;
-    bool     m_scrollChainingEnabled = false;
-    QString  m_placeholderText;
+    bool m_isHovered = false;
+    bool m_isFocused = false;
+    int m_focusedBorderWidth = ::Spacing::Border::Focused;
+    int m_unfocusedBorderWidth = ::Spacing::Border::Normal;
+    int m_lineHeight = ::Spacing::ControlHeight::Standard;
+    int m_minVisibleLines = 1;
+    int m_maxVisibleLines = 4;
+    bool m_tabChangesFocus = false;
+    bool m_scrollChainingEnabled = false;
+    QString m_placeholderText;
 };
 
 } // namespace fluent::textfields

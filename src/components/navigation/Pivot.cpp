@@ -25,26 +25,18 @@ namespace {
 constexpr int kDefaultWidth = 640;
 } // namespace
 
-PivotItem::PivotItem(const QString& itemHeader)
-    : header(itemHeader)
-{
-}
+PivotItem::PivotItem(const QString& itemHeader) : header(itemHeader) {}
 
 PivotItem::PivotItem(const QString& itemHeader,
-                     const QString& itemIconGlyph,
-                     bool itemEnabled,
-                     const QVariant& itemData,
-                     const QString& itemAccessibleName)
-    : header(itemHeader)
-    , iconGlyph(itemIconGlyph)
-    , enabled(itemEnabled)
-    , data(itemData)
-    , accessibleName(itemAccessibleName)
-{
-}
+    const QString& itemIconGlyph,
+    bool itemEnabled,
+    const QVariant& itemData,
+    const QString& itemAccessibleName)
+    : header(itemHeader), iconGlyph(itemIconGlyph), enabled(itemEnabled), data(itemData),
+      accessibleName(itemAccessibleName)
+{}
 
-Pivot::Pivot(QWidget* parent)
-    : QWidget(parent)
+Pivot::Pivot(QWidget* parent) : QWidget(parent)
 {
     detail::ensureNavigationSelectionAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
@@ -101,8 +93,7 @@ bool Pivot::insertItem(int index, const PivotItem& item)
     updateAccessibleText();
     fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (m_selectedIndex != previousIndex) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
-            this, m_selectedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this, m_selectedIndex);
         emit this->selectedIndexChanged(m_selectedIndex);
         emit this->currentChanged(m_selectedIndex);
     }
@@ -128,8 +119,7 @@ bool Pivot::removeItem(int index)
     updateAccessibleText();
     fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (m_selectedIndex != previousIndex) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
-            this, m_selectedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this, m_selectedIndex);
         emit this->selectedIndexChanged(m_selectedIndex);
         emit this->currentChanged(m_selectedIndex);
     }
@@ -154,8 +144,7 @@ void Pivot::clearItems()
     updateAccessibleText();
     fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (selectionChanged) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
-            this, -1);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this, -1);
         emit this->selectedIndexChanged(-1);
         emit this->currentChanged(-1);
     }
@@ -170,8 +159,7 @@ bool Pivot::setItemHeader(int index, const QString& header)
     m_items[index].header = header;
     invalidateLayout();
     updateAccessibleText();
-    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(
-        this, index);
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(this, index);
     emit this->itemsChanged();
     return true;
 }
@@ -202,11 +190,9 @@ bool Pivot::setItemEnabled(int index, bool enabled)
 
     invalidateLayout();
     updateAccessibleText();
-    fluent::accessibility::detail::notifyLogicalItemAccessibilityState(
-        this, index);
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityState(this, index);
     if (m_selectedIndex != previousIndex) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
-            this, m_selectedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this, m_selectedIndex);
         emit this->selectedIndexChanged(m_selectedIndex);
         emit this->currentChanged(m_selectedIndex);
     }
@@ -229,8 +215,7 @@ bool Pivot::setItemAccessibleName(int index, const QString& accessibleName)
         return false;
     m_items[index].accessibleName = accessibleName;
     updateAccessibleText();
-    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(
-        this, index);
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(this, index);
     emit this->itemsChanged();
     return true;
 }
@@ -356,14 +341,13 @@ void Pivot::paintEvent(QPaintEvent*)
     const bool canForward = !m_visibleIndexes.isEmpty() && m_visibleIndexes.last() < m_items.size() - 1;
     const bool rightToLeft = layoutDirection() == Qt::RightToLeft;
     paintOverflowButton(painter, m_overflowBackRect,
-                        rightToLeft ? Typography::Icons::ChevronRightMed
-                                    : Typography::Icons::ChevronLeftMed,
-                        HitRecord{HitKind::OverflowBack, -1}, canBack);
+        rightToLeft ? Typography::Icons::ChevronRightMed : Typography::Icons::ChevronLeftMed,
+        HitRecord{HitKind::OverflowBack, -1}, canBack);
     paintOverflowButton(painter, m_overflowForwardRect,
-                        rightToLeft ? Typography::Icons::ChevronLeftMed
-                                    : Typography::Icons::ChevronRightMed,
-                        HitRecord{HitKind::OverflowForward, -1}, canForward);
-    paintOverflowButton(painter, m_overflowMoreRect, Typography::Icons::More, HitRecord{HitKind::OverflowMore, -1}, !m_hiddenIndexes.isEmpty());
+        rightToLeft ? Typography::Icons::ChevronLeftMed : Typography::Icons::ChevronRightMed,
+        HitRecord{HitKind::OverflowForward, -1}, canForward);
+    paintOverflowButton(painter, m_overflowMoreRect, Typography::Icons::More, HitRecord{HitKind::OverflowMore, -1},
+        !m_hiddenIndexes.isEmpty());
 }
 
 void Pivot::changeEvent(QEvent* event)
@@ -459,14 +443,12 @@ void Pivot::keyPressEvent(QKeyEvent* event)
 
     switch (event->key()) {
     case Qt::Key_Left:
-        focusItem(nextEnabledIndex(
-            m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex,
+        focusItem(nextEnabledIndex(m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex,
             layoutDirection() == Qt::RightToLeft ? 1 : -1));
         event->accept();
         return;
     case Qt::Key_Right:
-        focusItem(nextEnabledIndex(
-            m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex,
+        focusItem(nextEnabledIndex(m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex,
             layoutDirection() == Qt::RightToLeft ? -1 : 1));
         event->accept();
         return;
@@ -500,8 +482,7 @@ void Pivot::focusInEvent(QFocusEvent* event)
     if (!isSelectableIndex(m_focusedIndex)) {
         focusItem(m_selectedIndex >= 0 ? m_selectedIndex : firstEnabledIndex());
     } else {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-            this, m_focusedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, m_focusedIndex);
     }
     update();
 }
@@ -604,43 +585,51 @@ void Pivot::updateLayout()
 
     int x = m_headerRowRect.left();
     if (overflow && m_overflowBehavior == OverflowBehavior::ScrollButtons) {
-        m_overflowBackRect = QRect(x, m_headerRowRect.top() + (m_headerRowRect.height() - currentMetrics.headerVisualHeight) / 2, currentMetrics.overflowButtonWidth, currentMetrics.headerVisualHeight);
+        m_overflowBackRect = QRect(x,
+            m_headerRowRect.top() + (m_headerRowRect.height() - currentMetrics.headerVisualHeight) / 2,
+            currentMetrics.overflowButtonWidth, currentMetrics.headerVisualHeight);
         x += currentMetrics.overflowButtonWidth;
     }
 
-    const int rightLimit = m_headerRowRect.right() + 1 - ((overflow && m_overflowBehavior != OverflowBehavior::ScrollButtons) ? currentMetrics.overflowButtonWidth : 0) - ((overflow && m_overflowBehavior == OverflowBehavior::ScrollButtons) ? currentMetrics.overflowButtonWidth : 0);
+    const int rightLimit = m_headerRowRect.right() + 1
+        - ((overflow && m_overflowBehavior != OverflowBehavior::ScrollButtons) ? currentMetrics.overflowButtonWidth : 0)
+        - ((overflow && m_overflowBehavior == OverflowBehavior::ScrollButtons)
+                ? currentMetrics.overflowButtonWidth
+                : 0);
     for (int index : std::as_const(m_visibleIndexes)) {
         const int preferredWidth = widths.value(index, currentMetrics.minHeaderWidth);
         const int recordWidth = qMax(0, qMin(preferredWidth, rightLimit - x));
         HeaderRecord record;
         record.itemIndex = index;
-        record.rect = QRect(x, m_headerRowRect.top() + (m_headerRowRect.height() - currentMetrics.headerVisualHeight) / 2, recordWidth, currentMetrics.headerVisualHeight);
+        record.rect = QRect(x,
+            m_headerRowRect.top() + (m_headerRowRect.height() - currentMetrics.headerVisualHeight) / 2, recordWidth,
+            currentMetrics.headerVisualHeight);
         record.enabled = m_items.at(index).enabled;
 
         int contentX = record.rect.left() + currentMetrics.horizontalPadding;
         if (!m_items.at(index).iconGlyph.isEmpty()) {
-            record.iconRect = QRect(contentX, record.rect.top() + (record.rect.height() - currentMetrics.iconSize) / 2, currentMetrics.iconSize, currentMetrics.iconSize);
+            record.iconRect = QRect(contentX, record.rect.top() + (record.rect.height() - currentMetrics.iconSize) / 2,
+                currentMetrics.iconSize, currentMetrics.iconSize);
             contentX = record.iconRect.right() + 1 + currentMetrics.iconGap;
         }
-        record.textRect = QRect(contentX, record.rect.top(), qMax(0, record.rect.right() - currentMetrics.horizontalPadding - contentX + 1), record.rect.height());
+        record.textRect = QRect(contentX, record.rect.top(),
+            qMax(0, record.rect.right() - currentMetrics.horizontalPadding - contentX + 1), record.rect.height());
         record.indicatorRect = QRect(record.rect.left() + currentMetrics.horizontalPadding,
-                                     record.rect.bottom() - currentMetrics.selectedIndicatorHeight + 1,
-                                     qMax(0, record.rect.width() - currentMetrics.horizontalPadding * 2),
-                                     currentMetrics.selectedIndicatorHeight);
+            record.rect.bottom() - currentMetrics.selectedIndicatorHeight + 1,
+            qMax(0, record.rect.width() - currentMetrics.horizontalPadding * 2),
+            currentMetrics.selectedIndicatorHeight);
         m_headerRecords.append(record);
         x += recordWidth;
     }
 
     if (overflow && m_overflowBehavior == OverflowBehavior::ScrollButtons) {
         m_overflowForwardRect = QRect(m_headerRowRect.right() + 1 - currentMetrics.overflowButtonWidth,
-                                      m_headerRowRect.top() + (m_headerRowRect.height() - currentMetrics.headerVisualHeight) / 2,
-                                      currentMetrics.overflowButtonWidth,
-                                      currentMetrics.headerVisualHeight);
+            m_headerRowRect.top() + (m_headerRowRect.height() - currentMetrics.headerVisualHeight) / 2,
+            currentMetrics.overflowButtonWidth, currentMetrics.headerVisualHeight);
     } else if (overflow) {
         m_overflowMoreRect = QRect(m_headerRowRect.right() + 1 - currentMetrics.overflowButtonWidth,
-                                   m_headerRowRect.top() + (m_headerRowRect.height() - currentMetrics.headerVisualHeight) / 2,
-                                   currentMetrics.overflowButtonWidth,
-                                   currentMetrics.headerVisualHeight);
+            m_headerRowRect.top() + (m_headerRowRect.height() - currentMetrics.headerVisualHeight) / 2,
+            currentMetrics.overflowButtonWidth, currentMetrics.headerVisualHeight);
     }
 
     if (layoutDirection() == Qt::RightToLeft) {
@@ -778,11 +767,9 @@ void Pivot::setSelectedIndexInternal(int index, bool emitSignals, bool animated)
     invalidateLayout(false);
     Q_UNUSED(animated)
     updateAccessibleText();
-    fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
-        this, m_selectedIndex);
+    fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(this, m_selectedIndex);
     if (hasFocus() && m_focusedIndex != previousIndex) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-            this, m_focusedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, m_focusedIndex);
     }
     if (emitSignals) {
         emit this->selectedIndexChanged(m_selectedIndex);
@@ -793,10 +780,11 @@ void Pivot::setSelectedIndexInternal(int index, bool emitSignals, bool animated)
 void Pivot::updateAccessibleText()
 {
     const QString selectedText = isValidIndex(m_selectedIndex)
-        ? (m_items.at(m_selectedIndex).accessibleName.isEmpty() ? m_items.at(m_selectedIndex).header : m_items.at(m_selectedIndex).accessibleName)
+        ? (m_items.at(m_selectedIndex).accessibleName.isEmpty()
+                  ? m_items.at(m_selectedIndex).header
+                  : m_items.at(m_selectedIndex).accessibleName)
         : QString();
-    if (accessibleDescription().isEmpty()
-        || accessibleDescription() == m_autoAccessibleDescription) {
+    if (accessibleDescription().isEmpty() || accessibleDescription() == m_autoAccessibleDescription) {
         setAccessibleDescription(selectedText);
     }
     m_autoAccessibleDescription = selectedText;
@@ -843,7 +831,8 @@ bool Pivot::isInteractiveHit(const HitRecord& hit) const
     case HitKind::OverflowBack:
         return !m_overflowBackRect.isEmpty() && m_firstVisibleIndex > 0;
     case HitKind::OverflowForward:
-        return !m_overflowForwardRect.isEmpty() && !m_visibleIndexes.isEmpty() && m_visibleIndexes.last() < m_items.size() - 1;
+        return !m_overflowForwardRect.isEmpty() && !m_visibleIndexes.isEmpty()
+            && m_visibleIndexes.last() < m_items.size() - 1;
     case HitKind::OverflowMore:
         return !m_overflowMoreRect.isEmpty() && !m_hiddenIndexes.isEmpty();
     case HitKind::None:
@@ -881,8 +870,7 @@ void Pivot::focusItem(int index)
         invalidateLayout(false);
     }
     if (hasFocus()) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-            this, m_focusedIndex);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, m_focusedIndex);
     }
     update();
 }
@@ -941,15 +929,13 @@ void Pivot::paintHeader(QPainter& painter, const HeaderRecord& record) const
         return;
     const Metrics currentMetrics = metrics();
     const auto& colors = themeColorsRef();
-    const QColor
-        textColorValue = headerTextColor(record.itemIndex);
+    const QColor textColorValue = headerTextColor(record.itemIndex);
 
     painter.save();
     if (!record.iconRect.isEmpty()) {
         painter.setPen(textColorValue);
         if (m_iconFontFamily == Typography::FontFamily::FluentIcons) {
-            Typography::Icons::paintGlyph(
-                painter, QRectF(record.iconRect), m_items.at(record.itemIndex).iconGlyph,
+            Typography::Icons::paintGlyph(painter, QRectF(record.iconRect), m_items.at(record.itemIndex).iconGlyph,
                 currentMetrics.iconSize, Qt::AlignCenter);
         } else {
             painter.setFont(iconFont(currentMetrics.iconSize));
@@ -958,31 +944,30 @@ void Pivot::paintHeader(QPainter& painter, const HeaderRecord& record) const
     }
     painter.setFont(itemFont());
     painter.setPen(textColorValue);
-    painter.drawText(record.textRect,
-                     QStyle::visualAlignment(layoutDirection(),
-                                             Qt::AlignVCenter | Qt::AlignLeft),
-                     m_items.at(record.itemIndex).header);
+    painter.drawText(record.textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
+        m_items.at(record.itemIndex).header);
     if (record.itemIndex == m_selectedIndex && record.enabled && record.indicatorRect.isValid()) {
         painter.setPen(Qt::NoPen);
         painter.setBrush(colors.accentDefault);
-        painter.drawRoundedRect(record.indicatorRect, ::CornerRadius::Indicator,
-                                ::CornerRadius::Indicator);
+        painter.drawRoundedRect(record.indicatorRect, ::CornerRadius::Indicator, ::CornerRadius::Indicator);
     }
     painter.restore();
 }
 
-void Pivot::paintOverflowButton(QPainter& painter, const QRect& rect, const QString& glyph, const HitRecord& hit, bool enabled) const
+void Pivot::paintOverflowButton(QPainter& painter,
+    const QRect& rect,
+    const QString& glyph,
+    const HitRecord& hit,
+    bool enabled) const
 {
     if (rect.isEmpty())
         return;
     painter.save();
     const bool highlighted = sameHit(m_pressedHit, hit) || sameHit(m_hoveredHit, hit);
     const auto& colors = themeColorsRef();
-    painter.setPen(enabled ? (highlighted ? colors.textPrimary : colors.textSecondary)
-                           : colors.textDisabled);
+    painter.setPen(enabled ? (highlighted ? colors.textPrimary : colors.textSecondary) : colors.textDisabled);
     if (m_iconFontFamily == Typography::FontFamily::FluentIcons) {
-        Typography::Icons::paintGlyph(
-            painter, QRectF(rect), glyph, metrics().iconSize, Qt::AlignCenter);
+        Typography::Icons::paintGlyph(painter, QRectF(rect), glyph, metrics().iconSize, Qt::AlignCenter);
     } else {
         painter.setFont(iconFont(metrics().iconSize));
         painter.drawText(rect, Qt::AlignCenter, glyph);

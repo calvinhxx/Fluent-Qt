@@ -41,9 +41,8 @@ struct WindowBackdropMaterialOptions {
      * @brief Creates options populated with the built-in Mica and Acrylic tokens.
      * zh_CN: 创建已填充内置 Mica 与 Acrylic token 的参数。
      */
-    static WindowBackdropMaterialOptions forTheme(bool dark,
-                                                   const QColor& normalColor,
-                                                   const QColor& accentColor = QColor());
+    static WindowBackdropMaterialOptions
+    forTheme(bool dark, const QColor& normalColor, const QColor& accentColor = QColor());
 };
 
 /**
@@ -62,33 +61,25 @@ public:
      * @brief Paints the selected Normal, Mica, or Acrylic fallback into rect.
      * zh_CN: 在 rect 内绘制所选的 Normal、Mica 或 Acrylic 回退材质。
      */
-    static void paint(QPainter& painter,
-                      const QRectF& rect,
-                      const WindowBackdropMaterialOptions& options);
+    static void paint(QPainter& painter, const QRectF& rect, const WindowBackdropMaterialOptions& options);
 
     /**
      * @brief Paints the opaque Normal/Solid window surface.
      * zh_CN: 绘制不透明的 Normal/Solid 窗口表面。
      */
-    static void paintNormal(QPainter& painter,
-                            const QRectF& rect,
-                            const WindowBackdropMaterialOptions& options);
+    static void paintNormal(QPainter& painter, const QRectF& rect, const WindowBackdropMaterialOptions& options);
 
     /**
      * @brief Paints the opaque, softly personalized Mica fallback.
      * zh_CN: 绘制不透明、带轻微个性化色场的 Mica 回退材质。
      */
-    static void paintMica(QPainter& painter,
-                          const QRectF& rect,
-                          const WindowBackdropMaterialOptions& options);
+    static void paintMica(QPainter& painter, const QRectF& rect, const WindowBackdropMaterialOptions& options);
 
     /**
      * @brief Paints the opaque Acrylic fallback with luminosity, tint, and grain.
      * zh_CN: 绘制带明度、tint 与颗粒层的不透明 Acrylic 回退材质。
      */
-    static void paintAcrylic(QPainter& painter,
-                             const QRectF& rect,
-                             const WindowBackdropMaterialOptions& options);
+    static void paintAcrylic(QPainter& painter, const QRectF& rect, const WindowBackdropMaterialOptions& options);
 
     /**
      * @brief Returns the guaranteed-opaque base color for the selected material.

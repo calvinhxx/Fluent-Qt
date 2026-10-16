@@ -51,12 +51,18 @@ class NavigationView : public QWidget, public FluentElement, public QMLPlus {
      * @brief Width threshold for compact navigation mode.
      * zh_CN: 进入紧凑导航模式的宽度阈值。
      */
-    Q_PROPERTY(int compactModeThresholdWidth READ compactModeThresholdWidth WRITE setCompactModeThresholdWidth NOTIFY compactModeThresholdWidthChanged)
+    Q_PROPERTY(int compactModeThresholdWidth
+        READ compactModeThresholdWidth
+        WRITE setCompactModeThresholdWidth
+        NOTIFY compactModeThresholdWidthChanged)
     /**
      * @brief Width threshold for expanded navigation mode.
      * zh_CN: 进入展开导航模式的宽度阈值。
      */
-    Q_PROPERTY(int expandedModeThresholdWidth READ expandedModeThresholdWidth WRITE setExpandedModeThresholdWidth NOTIFY expandedModeThresholdWidthChanged)
+    Q_PROPERTY(int expandedModeThresholdWidth
+        READ expandedModeThresholdWidth
+        WRITE setExpandedModeThresholdWidth
+        NOTIFY expandedModeThresholdWidthChanged)
     /**
      * @brief Navigation pane width in expanded mode.
      * zh_CN: 展开模式下的导航窗格宽度。
@@ -84,13 +90,7 @@ class NavigationView : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(qreal layoutTransitionProgress READ layoutTransitionProgress WRITE setLayoutTransitionProgress)
 
 public:
-    enum class DisplayMode {
-        Auto,
-        Left,
-        LeftCompact,
-        LeftMinimal,
-        Top
-    };
+    enum class DisplayMode { Auto, Left, LeftCompact, LeftMinimal, Top };
     Q_ENUM(DisplayMode)
 
     explicit NavigationView(QWidget* parent = nullptr);
@@ -213,11 +213,7 @@ protected:
     void showEvent(QShowEvent* event) override;
 
 private:
-    enum class ChromeSlot {
-        Header,
-        Main,
-        Footer
-    };
+    enum class ChromeSlot { Header, Main, Footer };
 
     struct ChromeRecord {
         QPointer<QWidget> widget;
@@ -237,11 +233,7 @@ private:
         DisplayMode effectiveMode = DisplayMode::Left;
     };
 
-    enum class LayoutTransitionKind {
-        None,
-        TopSide,
-        Side
-    };
+    enum class LayoutTransitionKind { None, TopSide, Side };
 
     qreal layoutTransitionProgress() const { return m_layoutTransitionProgress; }
     void setLayoutTransitionProgress(qreal progress);
@@ -255,7 +247,8 @@ private:
     void finishLayoutTransition();
     void stopLayoutTransition();
     LayoutState currentVisualLayout() const;
-    LayoutState interpolatedLayout(const LayoutState& from, const LayoutState& to, qreal progress, LayoutTransitionKind kind) const;
+    LayoutState
+    interpolatedLayout(const LayoutState& from, const LayoutState& to, qreal progress, LayoutTransitionKind kind) const;
     void invalidateLayout(bool updateGeometryHint = true);
     void ensureLayout() const;
     void updateLayout();
@@ -278,10 +271,7 @@ private:
     // 单张抬升卡片无缝透出（通用、与窗格类型无关的动态属性提示）。
     void setChromeWidgetsFloating(bool floating);
     bool canHostChromeWidget(ChromeSlot slot, QWidget* widget) const;
-    bool assignChromeWidget(ChromeSlot slot,
-                            QWidget* widget,
-                            WidgetOwnership ownership,
-                            bool applyPreviousOwnership);
+    bool assignChromeWidget(ChromeSlot slot, QWidget* widget, WidgetOwnership ownership, bool applyPreviousOwnership);
     QWidget* takeChromeWidget(ChromeSlot slot);
     bool releaseChromeWidget(ChromeSlot slot);
     void releaseChromeRecord(const ChromeRecord& record);

@@ -195,8 +195,7 @@ QRectF ToggleSwitch::knobRect() const
     // knob X travel: from left to right inside track
     qreal offX = track.left() + (track.height() - knobW) / 2.0;
     qreal onX = track.right() - (track.height() - knobW) / 2.0 - knobW;
-    const qreal visualPosition =
-        layoutDirection() == Qt::RightToLeft ? 1.0 - m_knobPosition : m_knobPosition;
+    const qreal visualPosition = layoutDirection() == Qt::RightToLeft ? 1.0 - m_knobPosition : m_knobPosition;
     qreal x = offX + (onX - offX) * visualPosition;
 
     return QRectF(x, cy - knobH / 2.0, knobW, knobH);
@@ -214,8 +213,7 @@ QSize ToggleSwitch::sizeHint() const
 
 QSize ToggleSwitch::minimumSizeHint() const
 {
-    return QSize(qCeil(kTrackW * m_visualScale),
-                 qMax(::Spacing::ControlHeight::Small, qCeil(kTrackH * m_visualScale)));
+    return QSize(qCeil(kTrackW * m_visualScale), qMax(::Spacing::ControlHeight::Small, qCeil(kTrackH * m_visualScale)));
 }
 
 // ── Animation. zh_CN: 动画 ───────────────────────────────────────────────────
@@ -238,8 +236,7 @@ void ToggleSwitch::toggle()
 void ToggleSwitch::updateAccessibleText()
 {
     const QString description = m_isOn ? m_onContent : m_offContent;
-    if (accessibleDescription().isEmpty() ||
-        accessibleDescription() == m_autoAccessibleDescription) {
+    if (accessibleDescription().isEmpty() || accessibleDescription() == m_autoAccessibleDescription) {
         setAccessibleDescription(description);
     }
     m_autoAccessibleDescription = description;
@@ -301,8 +298,7 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
     // Paint the track fill. zh_CN: 绘制 track 背景。
     QPainterPath trackPath;
     const qreal inset = strokeWidth / 2.0;
-    trackPath.addRoundedRect(track.adjusted(inset, inset, -inset, -inset), trackRadius,
-                             trackRadius);
+    trackPath.addRoundedRect(track.adjusted(inset, inset, -inset, -inset), trackRadius, trackRadius);
     p.setPen(Qt::NoPen);
     p.setBrush(trackFill);
     p.drawPath(trackPath);
@@ -335,9 +331,7 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
         int textY = (height() - textH) / 2;
         const QRect logicalTextRect(textX, textY, width() - textX, textH);
         const QRect textRect = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
-        p.drawText(textRect,
-                   QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
-                   contentText);
+        p.drawText(textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft), contentText);
     }
 
     if (enabled && hasFocus() && m_keyboardFocusVisible) {
@@ -347,8 +341,7 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
         p.setBrush(Qt::NoBrush);
         const qreal focusInset = 1.5 * m_visualScale;
         const qreal focusRadius = trackRadius - m_visualScale;
-        p.drawRoundedRect(track.adjusted(focusInset, focusInset, -focusInset, -focusInset),
-                          focusRadius, focusRadius);
+        p.drawRoundedRect(track.adjusted(focusInset, focusInset, -focusInset, -focusInset), focusRadius, focusRadius);
     }
 }
 
@@ -422,8 +415,8 @@ void ToggleSwitch::focusInEvent(QFocusEvent* event)
     QWidget::focusInEvent(event);
     if (event->reason() == Qt::MouseFocusReason)
         m_keyboardFocusVisible = false;
-    else if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason ||
-             event->reason() == Qt::ShortcutFocusReason)
+    else if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason
+        || event->reason() == Qt::ShortcutFocusReason)
         m_keyboardFocusVisible = true;
     update();
 }

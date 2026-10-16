@@ -49,11 +49,10 @@ CoachMark::CoachMark(QWidget* owner, SurfaceMode /*surfaceMode*/) : QWidget(owne
 {
     detail::ensureTransientSurfaceAccessibilityFactory();
     m_overlayCoordinator = new ::fluent::overlay::OverlayCoordinator(this, this);
-    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this,
-            [this]() {
-                if (m_open)
-                    reposition(/*animated*/ false);
-            });
+    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this, [this]() {
+        if (m_open)
+            reposition(/*animated*/ false);
+    });
     setObjectName(QStringLiteral("CoachMark"));
     attachToOwnerTopLevel();
     setWindowFlags(Qt::Widget);
@@ -201,10 +200,8 @@ bool CoachMark::eventFilter(QObject* watched, QEvent* event)
         return false;
     }
 
-    if (event->type() == QEvent::KeyPress &&
-        static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
-        QWidget* ownerTopLevel =
-            m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : nullptr;
+    if (event->type() == QEvent::KeyPress && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
+        QWidget* ownerTopLevel = m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : nullptr;
         if (!ownerTopLevel)
             ownerTopLevel = m_owner ? ::fluent::overlay::presentedTopLevel(m_owner) : window();
         if (!ownerTopLevel || ::fluent::overlay::eventTopLevel(watched) != ownerTopLevel) {
@@ -223,8 +220,7 @@ bool CoachMark::eventFilter(QObject* watched, QEvent* event)
         return true;
     }
 
-    QWidget* trackingAnchor =
-        m_target ? m_target.data() : (m_owner ? m_owner.data() : parentWidget());
+    QWidget* trackingAnchor = m_target ? m_target.data() : (m_owner ? m_owner.data() : parentWidget());
     if (::fluent::overlay::anchorGeometryMayChange(watched, event, trackingAnchor))
         queueTargetSync();
     return QWidget::eventFilter(watched, event);
@@ -302,10 +298,8 @@ void CoachMark::reposition(bool animated)
 
     if (!m_target) {
         m_tailVisible = false;
-        const QRect ref = ownerWindow ? ::fluent::overlay::overlaySurfaceRect(ownerWindow)
-                                      : QRect(QPoint(0, 0), win);
-        const QPoint centered(ref.center().x() - win.width() / 2,
-                              ref.center().y() - win.height() / 2);
+        const QRect ref = ownerWindow ? ::fluent::overlay::overlaySurfaceRect(ownerWindow) : QRect(QPoint(0, 0), win);
+        const QPoint centered(ref.center().x() - win.width() / 2, ref.center().y() - win.height() / 2);
         if (animated && isVisible()) {
             m_moveAnim->stop();
             m_moveAnim->setDuration(themeAnimation().normal);
@@ -320,12 +314,10 @@ void CoachMark::reposition(bool animated)
         return;
     }
 
-    const QRect targetRef =
-        ::fluent::overlay::presentedTopLevel(m_target) == ownerWindow
-            ? ::fluent::overlay::presentedRectInTopLevel(m_target)
-            : QRect(ownerWindow->mapFromGlobal(
-                        ::fluent::overlay::presentedPointToGlobal(m_target, QPoint())),
-                    ::fluent::overlay::presentedRectInTopLevel(m_target).size());
+    const QRect targetRef = ::fluent::overlay::presentedTopLevel(m_target) == ownerWindow
+        ? ::fluent::overlay::presentedRectInTopLevel(m_target)
+        : QRect(ownerWindow->mapFromGlobal(::fluent::overlay::presentedPointToGlobal(m_target, QPoint())),
+              ::fluent::overlay::presentedRectInTopLevel(m_target).size());
     const Placement p = (m_placement == Auto) ? Bottom : m_placement;
 
     QPoint topLeft;
@@ -334,22 +326,22 @@ void CoachMark::reposition(bool animated)
     case Right:
         m_tailEdge = 3;
         topLeft = QPoint(targetRef.right() + kTargetGap + kTailSize - margin,
-                         targetRef.center().y() - win.height() / 2);
+            targetRef.center().y() - win.height() / 2);
         break;
     case Left:
         m_tailEdge = 4;
         topLeft = QPoint(targetRef.left() - kTargetGap - kTailSize - (win.width() - margin),
-                         targetRef.center().y() - win.height() / 2);
+            targetRef.center().y() - win.height() / 2);
         break;
     case Top:
         m_tailEdge = 2;
         topLeft = QPoint(targetRef.center().x() - win.width() / 2,
-                         targetRef.top() - kTargetGap - kTailSize - (win.height() - margin));
+            targetRef.top() - kTargetGap - kTailSize - (win.height() - margin));
         break;
     default:
         m_tailEdge = 1;
         topLeft = QPoint(targetRef.center().x() - win.width() / 2,
-                         targetRef.bottom() + kTargetGap + kTailSize - margin);
+            targetRef.bottom() + kTargetGap + kTailSize - margin);
         break;
     }
 
@@ -397,23 +389,19 @@ void CoachMark::paintEvent(QPaintEvent*)
         QPolygon tail;
         switch (m_tailEdge) {
         case 1:
-            tail << QPoint(m_tailCenter - kTailSize, card.top())
-                 << QPoint(m_tailCenter + kTailSize, card.top())
+            tail << QPoint(m_tailCenter - kTailSize, card.top()) << QPoint(m_tailCenter + kTailSize, card.top())
                  << QPoint(m_tailCenter, card.top() - kTailSize);
             break;
         case 2:
-            tail << QPoint(m_tailCenter - kTailSize, card.bottom())
-                 << QPoint(m_tailCenter + kTailSize, card.bottom())
+            tail << QPoint(m_tailCenter - kTailSize, card.bottom()) << QPoint(m_tailCenter + kTailSize, card.bottom())
                  << QPoint(m_tailCenter, card.bottom() + kTailSize);
             break;
         case 3:
-            tail << QPoint(card.left(), m_tailCenter - kTailSize)
-                 << QPoint(card.left(), m_tailCenter + kTailSize)
+            tail << QPoint(card.left(), m_tailCenter - kTailSize) << QPoint(card.left(), m_tailCenter + kTailSize)
                  << QPoint(card.left() - kTailSize, m_tailCenter);
             break;
         default:
-            tail << QPoint(card.right(), m_tailCenter - kTailSize)
-                 << QPoint(card.right(), m_tailCenter + kTailSize)
+            tail << QPoint(card.right(), m_tailCenter - kTailSize) << QPoint(card.right(), m_tailCenter + kTailSize)
                  << QPoint(card.right() + kTailSize, m_tailCenter);
             break;
         }

@@ -137,13 +137,11 @@ void RadioButton::paintEvent(QPaintEvent*)
     } else if (checked) {
         // WinUI 3: the checked ring fills with accent and has no outline.
         // zh_CN: 选中态外圈用 Accent 填充，无独立描边。
-        outerBg = isPressed ? colors.accentTertiary
-                            : (isHover ? colors.accentSecondary : colors.accentDefault);
+        outerBg = isPressed ? colors.accentTertiary : (isHover ? colors.accentSecondary : colors.accentDefault);
         outerBorder = Qt::transparent;
     } else {
         // Unchecked: standard control fill plus outline. zh_CN: 未选中——普通控件底色 + 描边。
-        outerBg = isPressed ? colors.controlTertiary
-                            : (isHover ? colors.controlSecondary : colors.controlDefault);
+        outerBg = isPressed ? colors.controlTertiary : (isHover ? colors.controlSecondary : colors.controlDefault);
         outerBorder = isHover ? colors.strokeStrong : colors.strokeDefault;
     }
 
@@ -186,8 +184,7 @@ void RadioButton::paintEvent(QPaintEvent*)
         painter.setPen(enabled ? colors.textPrimary : colors.textDisabled);
         const QRect logicalTextRect = rect().adjusted(m_circleSize + m_textGap, 0, 0, 0);
         const QRect textRect = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
-        painter.drawText(
-            textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
+        painter.drawText(textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
             text());
     }
 
@@ -196,8 +193,7 @@ void RadioButton::paintEvent(QPaintEvent*)
         focusColor.setAlpha(120);
         painter.setPen(QPen(focusColor, 1.0));
         painter.setBrush(Qt::NoBrush);
-        painter.drawRoundedRect(rect().adjusted(1, 1, -1, -1), themeRadius().control,
-                                themeRadius().control);
+        painter.drawRoundedRect(rect().adjusted(1, 1, -1, -1), themeRadius().control, themeRadius().control);
     }
 }
 
@@ -207,8 +203,7 @@ void RadioButton::enterEvent(FluentEnterEvent* event)
     if (isChecked() && isEnabled()) {
         m_dotScaleAnimation->stop();
         m_dotScaleAnimation->setStartValue(m_dotScale);
-        m_dotScaleAnimation->setEndValue(
-            1.2); // The dot grows 20% on hover. zh_CN: hover 时内圆点放大 20%。
+        m_dotScaleAnimation->setEndValue(1.2); // The dot grows 20% on hover. zh_CN: hover 时内圆点放大 20%。
         ::fluent::detail::startMotionTransition(m_dotScaleAnimation, themeAnimation().fast);
     }
 }
@@ -229,8 +224,8 @@ void RadioButton::focusInEvent(QFocusEvent* event)
     QRadioButton::focusInEvent(event);
     if (event->reason() == Qt::MouseFocusReason)
         m_keyboardFocusVisible = false;
-    else if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason ||
-             event->reason() == Qt::ShortcutFocusReason)
+    else if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason
+        || event->reason() == Qt::ShortcutFocusReason)
         m_keyboardFocusVisible = true;
     update();
 }

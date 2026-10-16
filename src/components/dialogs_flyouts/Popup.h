@@ -31,9 +31,9 @@ class Popup : public QWidget, public FluentElement, public QMLPlus {
 
 public:
     enum CloseFlag {
-        NoAutoClose         = 0,
+        NoAutoClose = 0,
         CloseOnPressOutside = 1 << 0,
-        CloseOnEscape       = 1 << 1,
+        CloseOnEscape = 1 << 1,
     };
     Q_DECLARE_FLAGS(ClosePolicy, CloseFlag)
     Q_FLAG(ClosePolicy)
@@ -114,8 +114,10 @@ public:
     // popup closes. Only meaningful together with lightDismissConsumesPress. zh_CN: 上面「吞掉」的豁免区域:
     // 落在这些控件内的关闭点击仍会穿透给它们，使同级工具栏/导航栏在弹窗关闭的同时仍可「一次点击」直达。
     // 仅在 lightDismissConsumesPress 为真时有意义。
-    void addLightDismissPassthrough(QWidget* widget) {
-        if (widget) m_lightDismissPassthrough.append(widget);
+    void addLightDismissPassthrough(QWidget* widget)
+    {
+        if (widget)
+            m_lightDismissPassthrough.append(widget);
     }
     void clearLightDismissPassthrough() { m_lightDismissPassthrough.clear(); }
 
@@ -140,7 +142,7 @@ public:
     void setThemeSource(QWidget* source);
 
     double popupProgress() const { return m_popupProgress; }
-    void   setPopupProgress(double p);
+    void setPopupProgress(double p);
 
     /// Positions the popup's top-left in the given widget's local coordinates;
     /// with relativeTo == topLevelWidget this is window-relative. Coordinates
@@ -222,15 +224,15 @@ private:
     void queuePositionSync();
     void syncPositionToAnchor();
 
-    void  startEnterAnimation();
-    void  startExitAnimation();
-    void  finalizeOpened();
-    void  finalizeClosed();
+    void startEnterAnimation();
+    void startExitAnimation();
+    void finalizeOpened();
+    void finalizeClosed();
 
-    void  updateScrimState();
-    void  destroyScrim();
-    void  beginClose(CloseReason reason);
-    void  resetPendingCloseReason();
+    void updateScrimState();
+    void destroyScrim();
+    void beginClose(CloseReason reason);
+    void resetPendingCloseReason();
 
     QWidget* originalParentTopLevel() const;
 
@@ -247,7 +249,7 @@ private:
     bool m_lightDismissConsumesPress = false;
     QList<QPointer<QWidget>> m_lightDismissPassthrough;
     bool m_modal = false;
-    bool m_dim   = false;
+    bool m_dim = false;
     bool m_animationEnabled = true;
     bool m_exitAnimationEnabled = true;
     bool m_positionSet = false;

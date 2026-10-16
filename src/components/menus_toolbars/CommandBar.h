@@ -28,22 +28,13 @@ class CommandBarPrivate;
 class CommandBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
 
-    Q_PROPERTY(LabelPosition labelPosition
-               READ labelPosition
-               WRITE setLabelPosition
-               NOTIFY labelPositionChanged)
+    Q_PROPERTY(LabelPosition labelPosition READ labelPosition WRITE setLabelPosition NOTIFY labelPositionChanged)
     Q_PROPERTY(bool dynamicOverflowEnabled
-               READ isDynamicOverflowEnabled
-               WRITE setDynamicOverflowEnabled
-               NOTIFY dynamicOverflowEnabledChanged)
-    Q_PROPERTY(bool overflowOpen
-               READ isOverflowOpen
-               WRITE setOverflowOpen
-               NOTIFY overflowOpenChanged)
-    Q_PROPERTY(bool backgroundVisible
-               READ backgroundVisible
-               WRITE setBackgroundVisible
-               NOTIFY backgroundVisibleChanged)
+        READ isDynamicOverflowEnabled
+        WRITE setDynamicOverflowEnabled
+        NOTIFY dynamicOverflowEnabledChanged)
+    Q_PROPERTY(bool overflowOpen READ isOverflowOpen WRITE setOverflowOpen NOTIFY overflowOpenChanged)
+    Q_PROPERTY(bool backgroundVisible READ backgroundVisible WRITE setBackgroundVisible NOTIFY backgroundVisibleChanged)
 
 public:
     /**

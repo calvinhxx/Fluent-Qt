@@ -18,9 +18,7 @@ constexpr int TitleBarDefaultLeadingMargin = 8;
 
 bool effectiveWindowActivation(bool nativeActive)
 {
-    return nativeActive
-        || compatibility::detail::runtimePlatformCapabilities()
-               .hostsApplicationWindowsInDesktopSurface;
+    return nativeActive || compatibility::detail::runtimePlatformCapabilities().hostsApplicationWindowsInDesktopSurface;
 }
 
 void refreshFluentDescendants(QWidget* root)
@@ -38,14 +36,12 @@ void refreshFluentDescendants(QWidget* root)
 
 } // namespace
 
-TitleBar::TitleBar(QWidget* parent)
-    : QWidget(parent) {
+TitleBar::TitleBar(QWidget* parent) : QWidget(parent)
+{
     m_windowActive = effectiveWindowActivation(isActiveWindow());
     setAttribute(Qt::WA_Hover);
-    setAttribute(
-        Qt::WA_OpaquePaintEvent,
-        compatibility::detail::runtimePlatformCapabilities()
-            .opaqueClientTitleBarSurface);
+    setAttribute(Qt::WA_OpaquePaintEvent,
+        compatibility::detail::runtimePlatformCapabilities().opaqueClientTitleBarSurface);
     setAutoFillBackground(false);
     setFixedHeight(m_titleBarHeight);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -54,7 +50,8 @@ TitleBar::TitleBar(QWidget* parent)
     onThemeUpdated();
 }
 
-void TitleBar::setContentWidget(QWidget* widget) {
+void TitleBar::setContentWidget(QWidget* widget)
+{
     if (m_contentWidget == widget)
         return;
 
@@ -82,7 +79,8 @@ void TitleBar::setContentWidget(QWidget* widget) {
     emit chromeGeometryChanged();
 }
 
-void TitleBar::setSystemReservedLeadingWidth(int width) {
+void TitleBar::setSystemReservedLeadingWidth(int width)
+{
     const int normalized = qMax(0, width);
     if (m_systemReservedLeadingWidth == normalized)
         return;
@@ -93,7 +91,8 @@ void TitleBar::setSystemReservedLeadingWidth(int width) {
     emit chromeGeometryChanged();
 }
 
-void TitleBar::setSystemReservedTrailingWidth(int width) {
+void TitleBar::setSystemReservedTrailingWidth(int width)
+{
     const int normalized = qMax(0, width);
     if (m_systemReservedTrailingWidth == normalized)
         return;
@@ -104,7 +103,8 @@ void TitleBar::setSystemReservedTrailingWidth(int width) {
     emit chromeGeometryChanged();
 }
 
-void TitleBar::setTitleBarHeight(int height) {
+void TitleBar::setTitleBarHeight(int height)
+{
     const int normalized = qMax(1, height);
     if (m_titleBarHeight == normalized)
         return;
@@ -119,7 +119,8 @@ void TitleBar::setTitleBarHeight(int height) {
     emit chromeGeometryChanged();
 }
 
-QVector<QRect> TitleBar::dragExclusionRects() const {
+QVector<QRect> TitleBar::dragExclusionRects() const
+{
     QVector<QRect> rects;
     if (m_systemReservedLeadingWidth > 0)
         rects << QRect(0, 0, qMin(m_systemReservedLeadingWidth, width()), height());
@@ -141,30 +142,34 @@ QVector<QRect> TitleBar::dragExclusionRects() const {
     return rects;
 }
 
-void TitleBar::refreshChromeExclusions() {
+void TitleBar::refreshChromeExclusions()
+{
     emit chromeGeometryChanged();
 }
 
-QSize TitleBar::sizeHint() const {
+QSize TitleBar::sizeHint() const
+{
     return QSize(320, m_titleBarHeight);
 }
 
-QSize TitleBar::minimumSizeHint() const {
+QSize TitleBar::minimumSizeHint() const
+{
     return QSize(0, m_titleBarHeight);
 }
 
-void TitleBar::onThemeUpdated() {
+void TitleBar::onThemeUpdated()
+{
     refreshFluentDescendants(this);
     update();
 }
 
-bool TitleBar::event(QEvent* event) {
+bool TitleBar::event(QEvent* event)
+{
     // Publish the activation state as part of the title-bar contract. The Window caption buttons
     // and caller-owned chrome can then dim in lockstep while layout and hit testing stay intact.
     // zh_CN: 将激活状态作为标题栏契约发布，使窗口按钮和调用方 chrome 同步变暗，且不影响布局与命中区域。
     if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate) {
-        const bool active = effectiveWindowActivation(
-            event->type() == QEvent::WindowActivate);
+        const bool active = effectiveWindowActivation(event->type() == QEvent::WindowActivate);
         if (m_windowActive != active) {
             m_windowActive = active;
             emit windowActiveChanged(active);
@@ -174,7 +179,8 @@ bool TitleBar::event(QEvent* event) {
     return QWidget::event(event);
 }
 
-void TitleBar::paintEvent(QPaintEvent*) {
+void TitleBar::paintEvent(QPaintEvent*)
+{
     // windowChromeBackdropFill() owns the backdrop decision (shared with the nav pane). An invalid color
     // means a real OS-composited backdrop is in play and we must erase to transparent so it shows
     // through. We must clear (not paint nothing): under a translucent top-level the backing store is
@@ -184,9 +190,7 @@ void TitleBar::paintEvent(QPaintEvent*) {
     // 必须清除（而非不绘制）：半透明顶层下 macOS 后备缓冲不会自动清除，否则动画/重排的 chrome（返回按钮展开、
     // 标题重排）会叠在残影上重影。有效色则是纯色回退背景。
     QPainter painter(this);
-    const bool opaqueClientSurface =
-        compatibility::detail::runtimePlatformCapabilities()
-            .opaqueClientTitleBarSurface;
+    const bool opaqueClientSurface = compatibility::detail::runtimePlatformCapabilities().opaqueClientTitleBarSurface;
     // The top-level Window already painted the software material. Leaving this
     // child surface untouched preserves one continuous gradient/noise field.
     if (windowBackdropUsesPaintedMaterial(window()) && !opaqueClientSurface)
@@ -220,12 +224,14 @@ void TitleBar::paintEvent(QPaintEvent*) {
     painter.fillRect(rect(), fill);
 }
 
-void TitleBar::resizeEvent(QResizeEvent* event) {
+void TitleBar::resizeEvent(QResizeEvent* event)
+{
     QWidget::resizeEvent(event);
     emit chromeGeometryChanged();
 }
 
-void TitleBar::mousePressEvent(QMouseEvent* event) {
+void TitleBar::mousePressEvent(QMouseEvent* event)
+{
     if (event->button() == Qt::LeftButton) {
         for (const QRect& exclusion : dragExclusionRects()) {
             if (exclusion.contains(event->pos())) {
@@ -256,7 +262,8 @@ void TitleBar::mousePressEvent(QMouseEvent* event) {
     QWidget::mousePressEvent(event);
 }
 
-void TitleBar::mouseDoubleClickEvent(QMouseEvent* event) {
+void TitleBar::mouseDoubleClickEvent(QMouseEvent* event)
+{
     if (event->button() == Qt::LeftButton) {
         for (const QRect& exclusion : dragExclusionRects()) {
             if (exclusion.contains(event->pos())) {
@@ -274,7 +281,8 @@ void TitleBar::mouseDoubleClickEvent(QMouseEvent* event) {
     QWidget::mouseDoubleClickEvent(event);
 }
 
-void TitleBar::mouseMoveEvent(QMouseEvent* event) {
+void TitleBar::mouseMoveEvent(QMouseEvent* event)
+{
     if (m_dragging) {
         emit dragMoved(fluentMouseGlobalPos(event));
         event->accept();
@@ -283,7 +291,8 @@ void TitleBar::mouseMoveEvent(QMouseEvent* event) {
     QWidget::mouseMoveEvent(event);
 }
 
-void TitleBar::mouseReleaseEvent(QMouseEvent* event) {
+void TitleBar::mouseReleaseEvent(QMouseEvent* event)
+{
     if (m_dragging && event->button() == Qt::LeftButton) {
         m_dragging = false;
         emit dragFinished();
@@ -293,7 +302,8 @@ void TitleBar::mouseReleaseEvent(QMouseEvent* event) {
     QWidget::mouseReleaseEvent(event);
 }
 
-bool TitleBar::isDragExcludedWidget(const QWidget* widget) const {
+bool TitleBar::isDragExcludedWidget(const QWidget* widget) const
+{
     if (!widget || widget == this)
         return false;
     // A disabled control is still client area (not a caption drag region) — matching WinUI,
@@ -306,26 +316,20 @@ bool TitleBar::isDragExcludedWidget(const QWidget* widget) const {
     if (widget->testAttribute(Qt::WA_TransparentForMouseEvents))
         return false;
 
-    return widget->focusPolicy() != Qt::NoFocus
-           || widget->inherits("QAbstractButton")
-           || widget->inherits("QAbstractSpinBox")
-           || widget->inherits("QComboBox")
-           || widget->inherits("QLineEdit")
-           || widget->inherits("QPlainTextEdit")
-           || widget->inherits("QSlider")
-           || widget->inherits("QTextEdit");
+    return widget->focusPolicy() != Qt::NoFocus || widget->inherits("QAbstractButton")
+        || widget->inherits("QAbstractSpinBox") || widget->inherits("QComboBox") || widget->inherits("QLineEdit")
+        || widget->inherits("QPlainTextEdit") || widget->inherits("QSlider") || widget->inherits("QTextEdit");
 }
 
-void TitleBar::updateContentWidgetAnchor() {
+void TitleBar::updateContentWidgetAnchor()
+{
     if (!m_anchorLayout || !m_contentWidget)
         return;
 
     fluent::AnchorLayout::Anchors anchors;
     anchors.fill = true;
-    anchors.fillMargins = QMargins(qMax(TitleBarDefaultLeadingMargin, m_systemReservedLeadingWidth),
-                                   0,
-                                   m_systemReservedTrailingWidth,
-                                   0);
+    anchors.fillMargins = QMargins(qMax(TitleBarDefaultLeadingMargin, m_systemReservedLeadingWidth), 0,
+        m_systemReservedTrailingWidth, 0);
     m_anchorLayout->addAnchoredWidget(m_contentWidget, anchors);
 }
 

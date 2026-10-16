@@ -21,8 +21,8 @@ Timeline::Status nodeStatus(const QModelIndex& index)
 {
     const int state = index.data(Timeline::StatusRole).toInt();
     return state >= Timeline::Neutral && state <= Timeline::Error
-               ? static_cast<Timeline::Status>(state)
-               : Timeline::Neutral;
+        ? static_cast<Timeline::Status>(state)
+        : Timeline::Neutral;
 }
 QColor targetColor(const Timeline* view, const QModelIndex& index)
 {
@@ -59,21 +59,18 @@ RowGeometry rowGeometry(const Timeline* view, const QRectF& rect, const QModelIn
     if (view->nodeAlignment() == Timeline::Alternate) {
         rail = rect.center().x();
         trailing = index.row() % 2 != 0;
-        result.text = trailing ? QRectF(rect.left() + 12, rect.top() + 12,
-                                        qMax(1.0, rail - rect.left() - 32), rect.height() - 24)
-                               : QRectF(rail + 20, rect.top() + 12,
-                                        qMax(1.0, rect.right() - rail - 32), rect.height() - 24);
+        result.text = trailing
+            ? QRectF(rect.left() + 12, rect.top() + 12, qMax(1.0, rail - rect.left() - 32), rect.height() - 24)
+            : QRectF(rail + 20, rect.top() + 12, qMax(1.0, rect.right() - rail - 32), rect.height() - 24);
     } else {
         if (trailing)
             rail = rect.right() - 20;
-        result.text = QRectF(rect.left() + (trailing ? 12 : 40), rect.top() + 12,
-                             qMax(1.0, rect.width() - 52), rect.height() - 24);
+        result.text = QRectF(rect.left() + (trailing ? 12 : 40), rect.top() + 12, qMax(1.0, rect.width() - 52),
+            rect.height() - 24);
     }
-    result.node = QPointF(
-        rail, rect.top() + 12 +
-                  qMax(20, QFontMetrics(view->themeFont(Typography::FontRole::BodyStrong).toQFont())
-                               .height()) /
-                      2.0);
+    result.node = QPointF(rail,
+        rect.top() + 12
+            + qMax(20, QFontMetrics(view->themeFont(Typography::FontRole::BodyStrong).toQFont()).height()) / 2.0);
     result.alignment = trailing ? Qt::AlignRight : Qt::AlignLeft;
     if (view->layoutDirection() == Qt::RightToLeft) {
         result.node.setX(rect.left() + rect.right() - result.node.x());
@@ -85,16 +82,13 @@ RowGeometry rowGeometry(const Timeline* view, const QRectF& rect, const QModelIn
 }
 int wrappedTextFlags(const QString& text)
 {
-    return Qt::TextWordWrap |
-           (text.isRightToLeft() ? Qt::TextForceRightToLeft : Qt::TextForceLeftToRight);
+    return Qt::TextWordWrap | (text.isRightToLeft() ? Qt::TextForceRightToLeft : Qt::TextForceLeftToRight);
 }
 int textHeight(const QString& text, const QFont& font, int width)
 {
     if (text.isEmpty())
         return 0;
-    return QFontMetrics(font)
-        .boundingRect(QRect(0, 0, qMax(1, width), 100000), wrappedTextFlags(text), text)
-        .height();
+    return QFontMetrics(font).boundingRect(QRect(0, 0, qMax(1, width), 100000), wrappedTextFlags(text), text).height();
 }
 QString rowDescription(const QModelIndex& index)
 {
@@ -175,13 +169,12 @@ public:
         animation->setEndValue(target);
         animation->setEasingCurve(q->themeAnimation().decelerate);
         motion.insert(key, animation);
-        QObject::connect(animation, &QVariantAnimation::valueChanged, q,
-                         [this, key](const QVariant& value) {
-                             if (!key.isValid())
-                                 return;
-                             colors.insert(key, value.value<QColor>());
-                             q->viewport()->update(q->visualRect(key));
-                         });
+        QObject::connect(animation, &QVariantAnimation::valueChanged, q, [this, key](const QVariant& value) {
+            if (!key.isValid())
+                return;
+            colors.insert(key, value.value<QColor>());
+            q->viewport()->update(q->visualRect(key));
+        });
         QObject::connect(animation, &QVariantAnimation::finished, q, [this, key, animation] {
             motion.remove(key);
             animation->deleteLater();
@@ -207,8 +200,7 @@ public:
 class TimelineDelegate final : public QStyledItemDelegate {
 public:
     explicit TimelineDelegate(Timeline* view) : QStyledItemDelegate(view), q(view) {}
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         if (!q || !index.isValid())
             return;
@@ -220,20 +212,18 @@ public:
         const auto visual = detail::collectionItemVisualStyle(option.state, c);
         painter->setPen(Qt::NoPen);
         painter->setBrush(visual.background);
-        painter->drawRoundedRect(QRectF(option.rect).adjusted(2, 1, -2, -1),
-                                 q->themeRadius().control, q->themeRadius().control);
+        painter->drawRoundedRect(QRectF(option.rect).adjusted(2, 1, -2, -1), q->themeRadius().control,
+            q->themeRadius().control);
         const QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
         const qreal radius = icon.isNull() ? 6.0 : 12.0;
         painter->setPen(QPen(c.strokeDivider, 2));
         if (index.row() > 0)
-            painter->drawLine(QPointF(geometry.node.x(), option.rect.top()),
-                              geometry.node - QPointF(0, radius + 4));
+            painter->drawLine(QPointF(geometry.node.x(), option.rect.top()), geometry.node - QPointF(0, radius + 4));
         if (index.row() + 1 < index.model()->rowCount(index.parent()))
             painter->drawLine(geometry.node + QPointF(0, radius + 4),
-                              QPointF(geometry.node.x(), option.rect.bottom() + 1));
+                QPointF(geometry.node.x(), option.rect.bottom() + 1));
         const QColor fill = q->d->color(index);
-        const QRectF marker(geometry.node - QPointF(radius, radius),
-                            QSizeF(2 * radius, 2 * radius));
+        const QRectF marker(geometry.node - QPointF(radius, radius), QSizeF(2 * radius, 2 * radius));
         // Fade the accent over the neutral stroke, retaining alpha throughout.
         // zh_CN: 将强调色叠加到中性描边上，全程保留 alpha，避免首帧闪黑。
         painter->setPen(QPen(c.strokeStrong, 2));
@@ -244,7 +234,7 @@ public:
         painter->drawEllipse(marker);
         if (!icon.isNull())
             icon.paint(painter, marker.adjusted(3, 3, -3, -3).toRect(), Qt::AlignCenter,
-                       enabled ? QIcon::Normal : QIcon::Disabled);
+                enabled ? QIcon::Normal : QIcon::Disabled);
         qreal y = geometry.text.top();
         const int width = qMax(1, int(geometry.text.width()));
         const auto titleFont = q->themeFont(Typography::FontRole::BodyStrong).toQFont();
@@ -256,7 +246,7 @@ public:
             painter->setFont(font);
             painter->setPen(enabled ? color : c.textDisabled);
             painter->drawText(QRectF(geometry.text.left(), y, width, height),
-                              geometry.alignment | wrappedTextFlags(text), text);
+                geometry.alignment | wrappedTextFlags(text), text);
             y += height + 4;
         };
         draw(index.data(Qt::DisplayRole).toString(), titleFont, c.textPrimary);
@@ -267,23 +257,20 @@ public:
     QSize sizeHint(const QStyleOptionViewItem&, const QModelIndex& index) const override
     {
         const int width = qMax(96, q->viewport()->width());
-        const int textWidth =
-            qMax(1, int(rowGeometry(q, QRectF(0, 0, width, 64), index).text.width()));
+        const int textWidth = qMax(1, int(rowGeometry(q, QRectF(0, 0, width, 64), index).text.width()));
         int height = 24;
-        for (int role :
-             {int(Qt::DisplayRole), int(Timeline::TimestampRole), int(Timeline::DescriptionRole)}) {
+        for (int role : {int(Qt::DisplayRole), int(Timeline::TimestampRole), int(Timeline::DescriptionRole)}) {
             const auto text = index.data(role).toString();
             if (!text.isEmpty())
-                height += textHeight(text,
-                                     q->themeFont(role == Qt::DisplayRole
-                                                      ? Typography::FontRole::BodyStrong
-                                                      : Typography::FontRole::Caption)
-                                         .toQFont(),
-                                     textWidth) +
-                          4;
+                height +=
+                    textHeight(text,
+                        q->themeFont(
+                             role == Qt::DisplayRole ? Typography::FontRole::BodyStrong : Typography::FontRole::Caption)
+                            .toQFont(),
+                        textWidth)
+                    + 4;
         }
-        return QSize(width,
-                     qMax(qMax(48, height - 4), index.data(Qt::SizeHintRole).toSize().height()));
+        return QSize(width, qMax(qMax(48, height - 4), index.data(Qt::SizeHintRole).toSize().height()));
     }
 
 private:
@@ -293,15 +280,11 @@ private:
 #if QT_CONFIG(accessibility)
 class TimelineAccessible final : public accessibility::detail::LogicalItemAccessibleAdapter {
 public:
-    explicit TimelineAccessible(Timeline* view)
-        : LogicalItemAccessibleAdapter(view, QAccessible::List)
-    {}
+    explicit TimelineAccessible(Timeline* view) : LogicalItemAccessibleAdapter(view, QAccessible::List) {}
     Timeline* view() const { return qobject_cast<Timeline*>(widget()); }
     QModelIndex indexAt(int i) const
     {
-        return view()->model()
-                   ? view()->model()->index(i, view()->modelColumn(), view()->rootIndex())
-                   : QModelIndex();
+        return view()->model() ? view()->model()->index(i, view()->modelColumn(), view()->rootIndex()) : QModelIndex();
     }
     int logicalChildCount() const override
     {
@@ -313,8 +296,8 @@ public:
         const auto index = indexAt(i);
         if (type == QAccessible::Name)
             return index.data(Qt::AccessibleTextRole).isValid()
-                       ? index.data(Qt::AccessibleTextRole).toString()
-                       : index.data(Qt::DisplayRole).toString();
+                ? index.data(Qt::AccessibleTextRole).toString()
+                : index.data(Qt::DisplayRole).toString();
         return type == QAccessible::Description ? rowDescription(index) : QString();
     }
     QRect logicalChildRect(int i) const override
@@ -339,19 +322,15 @@ public:
     bool logicalSelectionSupported() const override { return false; }
     int logicalFocusChild() const override
     {
-        return view()->hasFocus() && view()->currentIndex().isValid() ? view()->currentIndex().row()
-                                                                      : -1;
+        return view()->hasFocus() && view()->currentIndex().isValid() ? view()->currentIndex().row() : -1;
     }
     QStringList logicalChildActions(int i) const override
     {
-        return logicalChildState(i).enabled
-                   ? QStringList{QAccessibleActionInterface::setFocusAction()}
-                   : QStringList();
+        return logicalChildState(i).enabled ? QStringList{QAccessibleActionInterface::setFocusAction()} : QStringList();
     }
     void performLogicalChildAction(int i, const QString& action) override
     {
-        if (logicalChildState(i).enabled &&
-            action == QAccessibleActionInterface::setFocusAction()) {
+        if (logicalChildState(i).enabled && action == QAccessibleActionInterface::setFocusAction()) {
             view()->scrollTo(indexAt(i));
             view()->setCurrentIndex(indexAt(i));
             view()->setFocus();
@@ -408,8 +387,7 @@ void Timeline::setModel(QAbstractItemModel* model)
     d->modelConnections.append(connect(model, &QAbstractItemModel::rowsRemoved, this, structural));
     d->modelConnections.append(connect(model, &QAbstractItemModel::rowsMoved, this, structural));
     d->modelConnections.append(connect(model, &QAbstractItemModel::modelReset, this, structural));
-    d->modelConnections.append(
-        connect(model, &QAbstractItemModel::layoutChanged, this, structural));
+    d->modelConnections.append(connect(model, &QAbstractItemModel::layoutChanged, this, structural));
     d->modelConnections.append(connect(model, &QObject::destroyed, this, structural));
     accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
 }
@@ -439,15 +417,13 @@ void Timeline::setAnimationEnabled(bool enabled)
     d->settle();
     emit animationEnabledChanged(enabled);
 }
-void Timeline::dataChanged(const QModelIndex& first, const QModelIndex& last,
-                           const QVector<int>& roles)
+void Timeline::dataChanged(const QModelIndex& first, const QModelIndex& last, const QVector<int>& roles)
 {
-    const bool presentationOnly =
-        dynamic_cast<TimelineDelegate*>(itemDelegate()) && !roles.isEmpty() &&
-        std::all_of(roles.cbegin(), roles.cend(), [](int role) {
-            return role == StatusRole || role == Qt::DecorationRole ||
-                   role == Qt::AccessibleTextRole || role == Qt::AccessibleDescriptionRole;
-        });
+    const bool presentationOnly = dynamic_cast<TimelineDelegate*>(itemDelegate()) && !roles.isEmpty()
+        && std::all_of(roles.cbegin(), roles.cend(), [](int role) {
+               return role == StatusRole || role == Qt::DecorationRole || role == Qt::AccessibleTextRole
+                   || role == Qt::AccessibleDescriptionRole;
+           });
     // The built-in marker and semantic roles do not change row geometry.
     // zh_CN: 内置节点和语义角色不改变行几何；自定义 delegate 保留常规重排路径。
     if (presentationOnly)
@@ -458,8 +434,7 @@ void Timeline::dataChanged(const QModelIndex& first, const QModelIndex& last,
         return;
     const auto keys = d->colors.keys();
     for (const auto& key : keys)
-        if (key.isValid() && key.parent() == first.parent() && key.row() >= first.row() &&
-            key.row() <= last.row())
+        if (key.isValid() && key.parent() == first.parent() && key.row() >= first.row() && key.row() <= last.row())
             d->transition(key);
 #if QT_CONFIG(accessibility)
     // One range refresh avoids materializing an accessible child for every row.

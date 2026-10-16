@@ -15,14 +15,10 @@ namespace fluent::layout {
  */
 class Divider : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
-    Q_PROPERTY(Qt::Orientation orientation READ orientation WRITE setOrientation
-                   NOTIFY orientationChanged)
-    Q_PROPERTY(int leadingInset READ leadingInset WRITE setLeadingInset
-                   NOTIFY leadingInsetChanged)
-    Q_PROPERTY(int trailingInset READ trailingInset WRITE setTrailingInset
-                   NOTIFY trailingInsetChanged)
-    Q_PROPERTY(qreal thickness READ thickness WRITE setThickness
-                   NOTIFY thicknessChanged)
+    Q_PROPERTY(Qt::Orientation orientation READ orientation WRITE setOrientation NOTIFY orientationChanged)
+    Q_PROPERTY(int leadingInset READ leadingInset WRITE setLeadingInset NOTIFY leadingInsetChanged)
+    Q_PROPERTY(int trailingInset READ trailingInset WRITE setTrailingInset NOTIFY trailingInsetChanged)
+    Q_PROPERTY(qreal thickness READ thickness WRITE setThickness NOTIFY thicknessChanged)
     Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
 
 public:

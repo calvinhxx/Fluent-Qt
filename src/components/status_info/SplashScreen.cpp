@@ -25,8 +25,7 @@ namespace fluent::status_info {
 namespace {
 class SplashAccessible final : public QAccessibleWidget {
 public:
-    explicit SplashAccessible(SplashScreen* splash) : QAccessibleWidget(splash, QAccessible::Pane)
-    {}
+    explicit SplashAccessible(SplashScreen* splash) : QAccessibleWidget(splash, QAccessible::Pane) {}
     QAccessible::State state() const override
     {
         auto result = QAccessibleWidget::state();
@@ -56,8 +55,7 @@ void paintGlow(QPainter& painter, const QPointF& center, qreal radius, QColor co
     glow.setColorAt(0.0, color);
     color.setAlpha(0);
     glow.setColorAt(1.0, color);
-    painter.fillRect(QRectF(center.x() - radius, center.y() - radius, radius * 2, radius * 2),
-                     glow);
+    painter.fillRect(QRectF(center.x() - radius, center.y() - radius, radius * 2, radius * 2), glow);
 }
 } // namespace
 
@@ -79,8 +77,8 @@ protected:
     {
         QPainter painter(this);
         painter.setOpacity(m_opacity);
-        painter.setPen(textColorRole() == TextColorRole::Primary ? themeColors().textPrimary
-                                                                 : themeColors().textSecondary);
+        painter.setPen(
+            textColorRole() == TextColorRole::Primary ? themeColors().textPrimary : themeColors().textSecondary);
         painter.drawText(contentsRect(), alignment() | Qt::TextSingleLine, QLabel::text());
     }
 
@@ -108,19 +106,16 @@ public:
             hide();
             return;
         }
-        const QRectF source(m_owner->mapTo(parentWidget(), m_owner->m_iconRect.topLeft()),
-                            m_owner->m_iconRect.size());
+        const QRectF source(m_owner->mapTo(parentWidget(), m_owner->m_iconRect.topLeft()), m_owner->m_iconRect.size());
         if (m_owner->hasTransitionTarget()) {
             const auto* target = m_owner->transitionTarget();
             QRectF destination(target->mapTo(parentWidget(), target->contentsRect().topLeft()),
-                               target->contentsRect().size());
+                target->contentsRect().size());
             QSizeF size = source.size();
             size.scale(destination.size(), Qt::KeepAspectRatio);
-            destination =
-                QRectF(destination.center() - QPointF(size.width(), size.height()) / 2, size);
-            m_rect =
-                QRectF(source.topLeft() + (destination.topLeft() - source.topLeft()) * progress,
-                       source.size() + (destination.size() - source.size()) * progress);
+            destination = QRectF(destination.center() - QPointF(size.width(), size.height()) / 2, size);
+            m_rect = QRectF(source.topLeft() + (destination.topLeft() - source.topLeft()) * progress,
+                source.size() + (destination.size() - source.size()) * progress);
             const qreal entranceOpacity = 0.12 + smoothStep(m_owner->m_reveal) * 0.88;
             m_opacity = entranceOpacity + (1.0 - entranceOpacity) * progress;
         } else {
@@ -177,8 +172,8 @@ SplashScreen::SplashScreen(QWidget* parent) : QWidget(parent)
     m_text->setObjectName(QStringLiteral("splashStatusText"));
     m_percentage = new textfields::Label(this);
     m_percentage->setObjectName(QStringLiteral("splashPercentage"));
-    for (auto* label : {m_text, m_percentage, static_cast<textfields::Label*>(m_title),
-                        static_cast<textfields::Label*>(m_subtitle)}) {
+    for (auto* label :
+        {m_text, m_percentage, static_cast<textfields::Label*>(m_title), static_cast<textfields::Label*>(m_subtitle)}) {
         label->setTextFormat(Qt::PlainText);
         label->setAlignment(Qt::AlignCenter);
         label->setTextElideMode(Qt::ElideRight);
@@ -221,17 +216,16 @@ SplashScreen::SplashScreen(QWidget* parent) : QWidget(parent)
         if (guard)
             emit dismissed();
     });
-    connect(&MotionPolicy::instance(), &MotionPolicy::modeChanged, this,
-            [this](MotionPolicy::Mode mode) {
-                if (mode != MotionPolicy::Mode::Full) {
-                    if (m_logoTransition)
-                        m_logoTransition->hide();
-                    m_intro->stop();
-                    m_reveal = 1.0;
-                    refreshBrandOpacity();
-                    update();
-                }
-            });
+    connect(&MotionPolicy::instance(), &MotionPolicy::modeChanged, this, [this](MotionPolicy::Mode mode) {
+        if (mode != MotionPolicy::Mode::Full) {
+            if (m_logoTransition)
+                m_logoTransition->hide();
+            m_intro->stop();
+            m_reveal = 1.0;
+            refreshBrandOpacity();
+            update();
+        }
+    });
     if (parent)
         setGeometry(parent->rect());
     refreshProgress();
@@ -246,8 +240,8 @@ SplashScreen::~SplashScreen()
 
 void SplashScreen::setPresentation(Presentation presentation)
 {
-    if ((presentation != Presentation::Branded && presentation != Presentation::Simple) ||
-        m_presentation == presentation)
+    if ((presentation != Presentation::Branded && presentation != Presentation::Simple)
+        || m_presentation == presentation)
         return;
     m_presentation = presentation;
     m_backgroundCache = QPixmap();
@@ -304,8 +298,8 @@ void SplashScreen::setTransitionTarget(QWidget* target)
 bool SplashScreen::hasTransitionTarget() const
 {
     const auto* target = m_transitionTarget.data();
-    return target && target != this && !isAncestorOf(target) && target->window() == window() &&
-           target->isVisible() && !target->contentsRect().isEmpty();
+    return target && target != this && !isAncestorOf(target) && target->window() == window() && target->isVisible()
+        && !target->contentsRect().isEmpty();
 }
 
 void SplashScreen::clearLogoTransition()
@@ -327,8 +321,8 @@ void SplashScreen::startReveal()
     m_intro->stop();
     m_reveal = 1.0;
     refreshBrandOpacity();
-    if (m_presentation != Presentation::Branded || effectiveTheme() == HighContrast ||
-        MotionPolicy::instance().mode() != MotionPolicy::Mode::Full)
+    if (m_presentation != Presentation::Branded || effectiveTheme() == HighContrast
+        || MotionPolicy::instance().mode() != MotionPolicy::Mode::Full)
         return;
     m_reveal = 0.0;
     refreshBrandOpacity();
@@ -379,8 +373,7 @@ void SplashScreen::refreshProgress(bool relayout)
     m_ring->setValue(m_progress);
     m_bar->setIsIndeterminate(m_indeterminate);
     m_bar->setValue(m_progress);
-    m_percentage->setText(m_indeterminate ? QString()
-                                          : QString::number(m_progress) + QLatin1Char('%'));
+    m_percentage->setText(m_indeterminate ? QString() : QString::number(m_progress) + QLatin1Char('%'));
     if (relayout)
         layoutContent();
 }
@@ -426,8 +419,8 @@ void SplashScreen::dismiss()
     m_intro->stop();
     m_ring->setIsActive(false);
     m_bar->setIsIndeterminate(false);
-    if (m_presentation == Presentation::Branded && !m_icon.isNull() && !m_iconRect.isEmpty() &&
-        hasTransitionTarget() && MotionPolicy::instance().mode() == MotionPolicy::Mode::Full) {
+    if (m_presentation == Presentation::Branded && !m_icon.isNull() && !m_iconRect.isEmpty() && hasTransitionTarget()
+        && MotionPolicy::instance().mode() == MotionPolicy::Mode::Full) {
         m_logoTransition = new LogoTransition(this);
         m_logoTransition->show();
         m_logoTransition->raise();
@@ -438,8 +431,7 @@ void SplashScreen::dismiss()
     // A connected logo travels across the window: give it a gentle departure and arrival.
     // zh_CN: 图标跨窗口移动时使用平滑起落，避免减速曲线把大部分路程挤在最初几帧。
     m_fade->setEasingCurve(m_logoTransition ? animation.standard : animation.decelerate);
-    ::fluent::detail::startMotionTransition(m_fade, m_logoTransition ? animation.verySlow
-                                                                     : animation.normal);
+    ::fluent::detail::startMotionTransition(m_fade, m_logoTransition ? animation.verySlow : animation.normal);
 }
 
 QSize SplashScreen::sizeHint() const
@@ -457,8 +449,7 @@ void SplashScreen::onThemeUpdated()
     setAttribute(Qt::WA_OpaquePaintEvent, !m_dismissing && themeColors().bgCanvas.alpha() == 255);
     const QFont caption = themeFont(Typography::FontRole::Caption).toQFont();
     const QColor color = themeColors().textSecondary;
-    const QString rgba = color.name(QColor::HexRgb) +
-                         QStringLiteral("%1").arg(color.alpha(), 2, 16, QLatin1Char('0'));
+    const QString rgba = color.name(QColor::HexRgb) + QStringLiteral("%1").arg(color.alpha(), 2, 16, QLatin1Char('0'));
     const QJsonObject colors{{"textSecondary", rgba}};
     for (auto* label : {m_text, m_percentage}) {
         label->setFont(caption);
@@ -481,11 +472,10 @@ void SplashScreen::onThemeUpdated()
 void SplashScreen::refreshBrandColors()
 {
     const auto colorValue = [](const QColor& color) {
-        return color.name(QColor::HexRgb) +
-               QStringLiteral("%1").arg(color.alpha(), 2, 16, QLatin1Char('0'));
+        return color.name(QColor::HexRgb) + QStringLiteral("%1").arg(color.alpha(), 2, 16, QLatin1Char('0'));
     };
     const QJsonObject colors{{"textPrimary", colorValue(themeColors().textPrimary)},
-                             {"textSecondary", colorValue(themeColors().textSecondary)}};
+        {"textSecondary", colorValue(themeColors().textSecondary)}};
     for (auto* label : {m_title, m_subtitle})
         label->setThemeOverrides({{"light", colors}, {"dark", colors}, {"contrast", colors}});
 }
@@ -511,9 +501,8 @@ void SplashScreen::releaseInput()
     }
     const QPointer<QWidget> previous = m_previousFocus;
     m_previousFocus.clear();
-    if (previous && covers(previous) && previous->window() == window() && previous->isVisible() &&
-        previous->isEnabled() && window()->isActiveWindow() &&
-        (!QApplication::focusWidget() || covers(QApplication::focusWidget())))
+    if (previous && covers(previous) && previous->window() == window() && previous->isVisible() && previous->isEnabled()
+        && window()->isActiveWindow() && (!QApplication::focusWidget() || covers(QApplication::focusWidget())))
         previous->setFocus(Qt::OtherFocusReason);
 }
 
@@ -528,9 +517,9 @@ void SplashScreen::showEvent(QShowEvent* event)
     QList<QPointer<SplashScreen>> previous;
     if (auto* host = parentWidget()) {
         for (auto* other : window()->findChildren<SplashScreen*>()) {
-            if (other != this && other->isVisible() && other->parentWidget() &&
-                (other->parentWidget() == host || host->isAncestorOf(other->parentWidget()) ||
-                 other->parentWidget()->isAncestorOf(host)))
+            if (other != this && other->isVisible() && other->parentWidget()
+                && (other->parentWidget() == host || host->isAncestorOf(other->parentWidget())
+                    || other->parentWidget()->isAncestorOf(host)))
                 previous.append(other);
         }
         QPointer<SplashScreen> guard(this);
@@ -600,8 +589,8 @@ bool SplashScreen::event(QEvent* event)
 {
     if (event->type() == QEvent::ParentAboutToChange)
         clearLogoTransition();
-    if (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease ||
-        event->type() == QEvent::ShortcutOverride) {
+    if (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease
+        || event->type() == QEvent::ShortcutOverride) {
         event->accept();
         return true;
     }
@@ -616,9 +605,8 @@ bool SplashScreen::eventFilter(QObject* watched, QEvent* event)
     }
     auto* widget = qobject_cast<QWidget*>(watched);
     if (isVisible() && covers(widget)) {
-        if (widget != this && widget != m_logoTransition &&
-            widget->parentWidget() == parentWidget() &&
-            (event->type() == QEvent::Show || event->type() == QEvent::ZOrderChange)) {
+        if (widget != this && widget != m_logoTransition && widget->parentWidget() == parentWidget()
+            && (event->type() == QEvent::Show || event->type() == QEvent::ZOrderChange)) {
             raise();
             if (m_logoTransition)
                 m_logoTransition->raise();
@@ -679,17 +667,16 @@ void SplashScreen::layoutContent()
     const bool hasText = !m_text->text().isEmpty();
     const bool hasPercentage = !m_indeterminate;
     const int lines = int(hasText) + int(hasPercentage);
-    const int captionHeight =
-        qMin(QFontMetrics(m_text->font()).height(), availableHeight / qMax(1, lines + 1));
+    const int captionHeight = qMin(QFontMetrics(m_text->font()).height(), availableHeight / qMax(1, lines + 1));
     const int captionGap = lines ? qMin(12, availableHeight / 12) : 0;
     const int captions = lines * captionHeight + captionGap;
     const int ringSize = qMin(32, qMax(0, availableHeight - captions));
     const int iconGap = qMin(16, availableHeight / 12);
     const int iconSpace = qMax(0, availableHeight - captions - ringSize - iconGap);
-    QSize logo = m_icon.isNull() ? QSize(0, 0)
-                                 : m_iconSize.scaled(QSize(qMin(availableWidth, m_iconSize.width()),
-                                                           qMin(iconSpace, m_iconSize.height())),
-                                                     Qt::KeepAspectRatio);
+    QSize logo = m_icon.isNull()
+        ? QSize(0, 0)
+        : m_iconSize.scaled(QSize(qMin(availableWidth, m_iconSize.width()), qMin(iconSpace, m_iconSize.height())),
+              Qt::KeepAspectRatio);
     if (logo.width() < 1 || logo.height() < 1)
         logo = QSize(0, 0);
     const int maxIconTop = height() - margin - captions - ringSize - iconGap - logo.height();
@@ -725,28 +712,23 @@ void SplashScreen::layoutBrandedContent()
     m_bar->setBarWidth(availableWidth);
     const int statusTop = barTop - gap - caption;
     const bool percentage = !m_indeterminate;
-    const int percentWidth =
-        percentage
-            ? qMin(availableWidth / 3,
-                   QFontMetrics(m_percentage->font()).horizontalAdvance(QStringLiteral("100%")) +
-                       gap)
-            : 0;
+    const int percentWidth = percentage
+        ? qMin(availableWidth / 3, QFontMetrics(m_percentage->font()).horizontalAdvance(QStringLiteral("100%")) + gap)
+        : 0;
     m_text->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     m_percentage->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     m_text->setVisible(!text().isEmpty());
     m_percentage->setVisible(percentage);
     m_text->setGeometry(margin, statusTop, qMax(0, availableWidth - percentWidth), caption);
     m_percentage->setGeometry(width() - margin - percentWidth, statusTop, percentWidth, caption);
-    const int titleHeight =
-        title().isEmpty() ? 0 : qMin(QFontMetrics(m_title->font()).height(), availableHeight / 5);
+    const int titleHeight = title().isEmpty() ? 0 : qMin(QFontMetrics(m_title->font()).height(), availableHeight / 5);
     const int subtitleHeight = subtitle().isEmpty() ? 0 : caption;
-    const int wordmarkHeight =
-        titleHeight + subtitleHeight + (titleHeight && subtitleHeight ? gap / 2 : 0);
+    const int wordmarkHeight = titleHeight + subtitleHeight + (titleHeight && subtitleHeight ? gap / 2 : 0);
     const int iconSpace = qMax(0, statusTop - margin - wordmarkHeight - gap * 2);
-    QSize logo = m_icon.isNull() ? QSize(0, 0)
-                                 : m_iconSize.scaled(QSize(qMin(availableWidth, m_iconSize.width()),
-                                                           qMin(iconSpace, m_iconSize.height())),
-                                                     Qt::KeepAspectRatio);
+    QSize logo = m_icon.isNull()
+        ? QSize(0, 0)
+        : m_iconSize.scaled(QSize(qMin(availableWidth, m_iconSize.width()), qMin(iconSpace, m_iconSize.height())),
+              Qt::KeepAspectRatio);
     if (logo.width() < 1 || logo.height() < 1)
         logo = QSize(0, 0);
     const int lastTop = statusTop - gap * 2 - wordmarkHeight - logo.height();
@@ -764,9 +746,8 @@ QRect SplashScreen::revealUpdateRect(qreal reveal) const
 {
     const qreal radius = qMax(m_iconRect.width() * 2, 1);
     const QPointF center = m_iconRect.center() + QPointF((reveal - 0.5) * 120, 0);
-    const QRect glow = QRectF(center - QPointF(radius, radius), QSizeF(radius * 2, radius * 2))
-                           .toAlignedRect()
-                           .adjusted(-1, -1, 1, 1);
+    const QRect glow =
+        QRectF(center - QPointF(radius, radius), QSizeF(radius * 2, radius * 2)).toAlignedRect().adjusted(-1, -1, 1, 1);
     return glow.united(m_iconRect).intersected(rect());
 }
 
@@ -785,8 +766,7 @@ void SplashScreen::refreshBackgroundCache()
     const auto colors = themeColors();
     painter.fillRect(rect(), colors.bgCanvas);
     const qreal radius = qMax(width(), height()) * 0.65;
-    paintGlow(painter, QPointF(width() * 0.08, -height() * 0.16), radius, colors.accentDefault,
-              0.16);
+    paintGlow(painter, QPointF(width() * 0.08, -height() * 0.16), radius, colors.accentDefault, 0.16);
     paintGlow(painter, QPointF(width() * 1.04, height() * 1.1), radius, colors.accentDefault, 0.1);
 }
 
@@ -801,20 +781,18 @@ void SplashScreen::paintEvent(QPaintEvent* event)
         refreshBackgroundCache();
         painter.drawPixmap(0, 0, m_backgroundCache);
         const qreal illumination = qSin(qBound<qreal>(0.0, m_reveal, 1.0) * M_PI);
-        paintGlow(painter, m_iconRect.center() + QPointF((m_reveal - 0.5) * 120, 0),
-                  qMax(m_iconRect.width() * 2, 1), colors.accentDefault, illumination * 0.12);
+        paintGlow(painter, m_iconRect.center() + QPointF((m_reveal - 0.5) * 120, 0), qMax(m_iconRect.width() * 2, 1),
+            colors.accentDefault, illumination * 0.12);
     } else {
         painter.fillRect(rect(), colors.bgCanvas);
     }
-    if (!m_icon.isNull() && !m_iconRect.isEmpty() && !m_logoTransition &&
-        event->region().intersects(m_iconRect)) {
+    if (!m_icon.isNull() && !m_iconRect.isEmpty() && !m_logoTransition && event->region().intersects(m_iconRect)) {
         const qreal reveal = lighting ? smoothStep(m_reveal) : 1.0;
         painter.setOpacity((branded ? 0.12 + reveal * 0.88 : 1.0));
         m_icon.paint(&painter, m_iconRect, Qt::AlignCenter, QIcon::Normal, QIcon::Off);
         if (lighting && m_reveal > 0.0 && m_reveal < 1.0) {
             const qreal dpr = devicePixelRatioF();
-            const QSize pixels(qMax(1, qCeil(m_iconRect.width() * dpr)),
-                               qMax(1, qCeil(m_iconRect.height() * dpr)));
+            const QSize pixels(qMax(1, qCeil(m_iconRect.width() * dpr)), qMax(1, qCeil(m_iconRect.height() * dpr)));
             if (m_reflection.size() != pixels)
                 m_reflection = QImage(pixels, QImage::Format_ARGB32_Premultiplied);
             m_reflection.fill(Qt::transparent);

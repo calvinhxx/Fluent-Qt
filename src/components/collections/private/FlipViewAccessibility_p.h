@@ -8,10 +8,8 @@ class FlipView;
 namespace detail {
 
 void ensureFlipViewAccessibilityFactory();
-void notifyFlipViewAccessibilityStructureChanged(
-    FlipView* view, int oldCount, int oldIndex);
-void notifyFlipViewAccessibilityCurrentChanged(
-    FlipView* view, int oldIndex);
+void notifyFlipViewAccessibilityStructureChanged(FlipView* view, int oldCount, int oldIndex);
+void notifyFlipViewAccessibilityCurrentChanged(FlipView* view, int oldIndex);
 void notifyFlipViewAccessibilityOrientationChanged(FlipView* view);
 
 } // namespace detail

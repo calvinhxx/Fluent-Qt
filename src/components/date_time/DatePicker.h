@@ -33,7 +33,11 @@ class DatePicker : public fluent::basicinput::Button {
      * @brief Selected date; an invalid date represents no selection.
      * zh_CN: 选中日期；无效日期表示未选择。
      */
-    Q_PROPERTY(QDate selectedDate READ selectedDate WRITE setSelectedDate RESET clearSelectedDate NOTIFY selectedDateChanged)
+    Q_PROPERTY(QDate selectedDate
+        READ selectedDate
+        WRITE setSelectedDate
+        RESET clearSelectedDate
+        NOTIFY selectedDateChanged)
     /**
      * @brief Minimum selectable date.
      * zh_CN: 可选择的最小日期。
@@ -88,40 +92,30 @@ class DatePicker : public fluent::basicinput::Button {
      * @brief Accessible name supplied by the application for the confirm button.
      * zh_CN: 由应用为确认按钮提供的无障碍名称。
      */
-    Q_PROPERTY(QString confirmButtonAccessibleName READ confirmButtonAccessibleName WRITE setConfirmButtonAccessibleName NOTIFY confirmButtonAccessibleNameChanged)
+    Q_PROPERTY(QString confirmButtonAccessibleName
+        READ confirmButtonAccessibleName
+        WRITE setConfirmButtonAccessibleName
+        NOTIFY confirmButtonAccessibleNameChanged)
     /**
      * @brief Accessible name supplied by the application for the cancel button.
      * zh_CN: 由应用为取消按钮提供的无障碍名称。
      */
-    Q_PROPERTY(QString cancelButtonAccessibleName READ cancelButtonAccessibleName WRITE setCancelButtonAccessibleName NOTIFY cancelButtonAccessibleNameChanged)
+    Q_PROPERTY(QString cancelButtonAccessibleName
+        READ cancelButtonAccessibleName
+        WRITE setCancelButtonAccessibleName
+        NOTIFY cancelButtonAccessibleNameChanged)
 
 public:
-    enum class DateField {
-        Month,
-        Day,
-        Year
-    };
+    enum class DateField { Month, Day, Year };
     Q_ENUM(DateField)
 
-    enum class MonthFormat {
-        FullMonthName,
-        AbbreviatedMonthName,
-        NumericMonth,
-        TwoDigitMonth
-    };
+    enum class MonthFormat { FullMonthName, AbbreviatedMonthName, NumericMonth, TwoDigitMonth };
     Q_ENUM(MonthFormat)
 
-    enum class DayFormat {
-        DayInteger,
-        TwoDigitDay,
-        DayIntegerWithAbbreviatedWeekday
-    };
+    enum class DayFormat { DayInteger, TwoDigitDay, DayIntegerWithAbbreviatedWeekday };
     Q_ENUM(DayFormat)
 
-    enum class YearFormat {
-        FullYear,
-        TwoDigitYear
-    };
+    enum class YearFormat { FullYear, TwoDigitYear };
     Q_ENUM(YearFormat)
 
     explicit DatePicker(QWidget* parent = nullptr);

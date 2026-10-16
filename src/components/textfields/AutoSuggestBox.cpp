@@ -59,10 +59,7 @@ public:
         : QStyledItemDelegate(parent), m_themeHost(themeHost)
     {}
 
-    QSize sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const override
-    {
-        return QSize(0, m_itemHeight);
-    }
+    QSize sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const override { return QSize(0, m_itemHeight); }
 
     void setFontRole(Typography::FontRole role)
     {
@@ -73,8 +70,7 @@ public:
 
     void setItemHeight(int height) { m_itemHeight = normalizedPositiveSize(height); }
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         if (!index.isValid())
             return;
@@ -98,8 +94,7 @@ public:
         if (bgColor.alpha() > 0) {
             painter->setPen(Qt::NoPen);
             painter->setBrush(bgColor);
-            painter->drawRoundedRect(bgRect, m_themeHost->themeRadius().control,
-                                     m_themeHost->themeRadius().control);
+            painter->drawRoundedRect(bgRect, m_themeHost->themeRadius().control, m_themeHost->themeRadius().control);
         }
 
         painter->setFont(m_themeHost->themeFont(m_fontRole).toQFont());
@@ -108,10 +103,8 @@ public:
         const QRectF textSlot = QRectF(option.rect).adjusted(12, 0, -8, 0);
         const QString display = index.data(Qt::DisplayRole).toString();
         const QFontMetricsF metrics(painter->font());
-        const QString elidedText =
-            metrics.elidedText(display, Qt::ElideRight, qRound(textSlot.width()));
-        const QRectF textRect =
-            fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
+        const QString elidedText = metrics.elidedText(display, Qt::ElideRight, qRound(textSlot.width()));
+        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
         painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elidedText);
 
         painter->restore();
@@ -220,8 +213,8 @@ public:
         const QModelIndex index = m_model->index(row, 0);
         m_listView->setCurrentIndex(index);
         if (m_listView->selectionModel()) {
-            m_listView->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect |
-                                                            QItemSelectionModel::Rows);
+            m_listView->selectionModel()->select(index,
+                QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
         }
         m_listView->scrollTo(index, QAbstractItemView::EnsureVisible);
     }
@@ -275,8 +268,7 @@ private:
 
         QRegion hitRegion(rect());
         const QRect presented = ::fluent::overlay::presentedRectInTopLevel(m_owner);
-        const QRect ownerRect(
-            mapFrom(::fluent::overlay::presentedTopLevel(m_owner), presented.topLeft()),
+        const QRect ownerRect(mapFrom(::fluent::overlay::presentedTopLevel(m_owner), presented.topLeft()),
             presented.size());
         hitRegion -= QRegion(ownerRect.adjusted(-1, -1, 1, 1));
         setMask(hitRegion);
@@ -347,7 +339,7 @@ void AutoSuggestBox::setQueryIconGlyph(const QString& glyph)
     m_queryIconGlyph = glyph;
     if (m_queryButton) {
         m_queryButton->setIconGlyph(m_queryIconGlyph, Typography::IconSize::Standard,
-                                    Typography::FontFamily::FluentIcons);
+            Typography::FontFamily::FluentIcons);
     }
     emit queryIconGlyphChanged();
 }
@@ -514,9 +506,9 @@ void AutoSuggestBox::keyPressEvent(QKeyEvent* event)
     if (!event)
         return;
 
-    if (isEnabled() && !m_suggestions.isEmpty() &&
-        (event->key() == Qt::Key_F4 ||
-         (event->key() == Qt::Key_Down && event->modifiers().testFlag(Qt::AltModifier)))) {
+    if (isEnabled() && !m_suggestions.isEmpty()
+        && (event->key() == Qt::Key_F4
+            || (event->key() == Qt::Key_Down && event->modifiers().testFlag(Qt::AltModifier)))) {
         openSuggestionList();
         event->accept();
         return;
@@ -527,8 +519,7 @@ void AutoSuggestBox::keyPressEvent(QKeyEvent* event)
         if (!m_suggestions.isEmpty()) {
             if (!isSuggestionListOpen())
                 openSuggestionList();
-            const int nextRow =
-                qMin(m_suggestionPopup->currentRow() + 1, m_suggestions.count() - 1);
+            const int nextRow = qMin(m_suggestionPopup->currentRow() + 1, m_suggestions.count() - 1);
             previewSuggestion(nextRow);
             event->accept();
             return;
@@ -658,8 +649,7 @@ void AutoSuggestBox::initializeButtons()
     m_queryButton->setFocusPolicy(Qt::NoFocus);
     m_queryButton->setAccessibleName(tr("Submit query"));
     m_queryButton->setFixedSize(m_queryButtonSize, m_queryButtonSize);
-    m_queryButton->setIconGlyph(m_queryIconGlyph, Typography::IconSize::Standard,
-                                Typography::FontFamily::FluentIcons);
+    m_queryButton->setIconGlyph(m_queryIconGlyph, Typography::IconSize::Standard, Typography::FontFamily::FluentIcons);
 
     connect(m_queryButton, &::fluent::basicinput::Button::clicked, this, [this]() {
         QPointer<AutoSuggestBox> guard(this);
@@ -677,7 +667,7 @@ void AutoSuggestBox::initializeButtons()
     m_clearButton->setAccessibleName(tr("Clear text"));
     m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
     m_clearButton->setIconGlyph(Typography::Icons::Cancel, Typography::IconSize::Standard,
-                                Typography::FontFamily::FluentIcons);
+        Typography::FontFamily::FluentIcons);
 
     connect(m_clearButton, &::fluent::basicinput::Button::clicked, this, [this]() {
         QPointer<AutoSuggestBox> guard(this);
@@ -700,8 +690,8 @@ void AutoSuggestBox::updateButtonGeometry()
         m_queryButton->setFixedSize(m_queryButtonSize, m_queryButtonSize);
         const int y = input.top() + (input.height() - m_queryButtonSize) / 2;
         const int x = m_queryButtonPlacement == QueryButtonPlacement::Left
-                          ? input.left() + kButtonEdgeMargin
-                          : input.right() + 1 - kButtonEdgeMargin - m_queryButtonSize;
+            ? input.left() + kButtonEdgeMargin
+            : input.right() + 1 - kButtonEdgeMargin - m_queryButtonSize;
         m_queryButton->setGeometry(x, y, m_queryButtonSize, m_queryButtonSize);
     }
 
@@ -709,10 +699,9 @@ void AutoSuggestBox::updateButtonGeometry()
         const bool queryVisible = m_queryIconVisible;
         m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
         const int y = input.top() + (input.height() - m_clearButtonSize) / 2;
-        const int right =
-            queryVisible && m_queryButtonPlacement == QueryButtonPlacement::Right && m_queryButton
-                ? m_queryButton->geometry().left() - 1
-                : input.right() + 1 - kButtonEdgeMargin;
+        const int right = queryVisible && m_queryButtonPlacement == QueryButtonPlacement::Right && m_queryButton
+            ? m_queryButton->geometry().left() - 1
+            : input.right() + 1 - kButtonEdgeMargin;
         const int x = right - m_clearButtonSize;
         m_clearButton->setGeometry(x, y, m_clearButtonSize, m_clearButtonSize);
     }
@@ -877,8 +866,7 @@ void AutoSuggestBox::setPopupCurrentRow(int row)
         detail::notifyAutoSuggestActiveDescendantChanged(this);
 }
 
-void AutoSuggestBox::setTextWithReason(const QString& value, TextChangeReason reason,
-                                       bool emitWhenUnchanged)
+void AutoSuggestBox::setTextWithReason(const QString& value, TextChangeReason reason, bool emitWhenUnchanged)
 {
     if (text() == value) {
         m_nextChangeReason = TextChangeReason::ProgrammaticChange;

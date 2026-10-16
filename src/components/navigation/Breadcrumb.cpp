@@ -27,21 +27,16 @@ constexpr int kLargeRowHeight = 40;
 
 } // namespace
 
-BreadcrumbItem::BreadcrumbItem(const QString& itemText)
-    : text(itemText)
-{
-}
+BreadcrumbItem::BreadcrumbItem(const QString& itemText) : text(itemText) {}
 
-BreadcrumbItem::BreadcrumbItem(const QString& itemText, const QVariant& itemData, bool itemEnabled, const QString& itemAccessibleName)
-    : text(itemText)
-    , data(itemData)
-    , enabled(itemEnabled)
-    , accessibleName(itemAccessibleName)
-{
-}
+BreadcrumbItem::BreadcrumbItem(const QString& itemText,
+    const QVariant& itemData,
+    bool itemEnabled,
+    const QString& itemAccessibleName)
+    : text(itemText), data(itemData), enabled(itemEnabled), accessibleName(itemAccessibleName)
+{}
 
-Breadcrumb::Breadcrumb(QWidget* parent)
-    : QWidget(parent)
+Breadcrumb::Breadcrumb(QWidget* parent) : QWidget(parent)
 {
     detail::ensureNavigationSelectionAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
@@ -313,8 +308,7 @@ void Breadcrumb::mousePressEvent(QMouseEvent* event)
         m_focusedRecord = hit;
         const int focusedItem = focusedItemIndex();
         if (focusedItem >= 0 && focusedItem != previousFocusedItem) {
-            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-                this, focusedItem);
+            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, focusedItem);
         }
         update();
         event->accept();
@@ -365,21 +359,17 @@ void Breadcrumb::keyPressEvent(QKeyEvent* event)
         m_focusedRecord = firstInteractiveRecord();
         const int focusedItem = focusedItemIndex();
         if (focusedItem >= 0) {
-            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-                this, focusedItem);
+            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, focusedItem);
         }
     }
 
     switch (event->key()) {
     case Qt::Key_Left: {
         const int previousFocusedItem = focusedItemIndex();
-        m_focusedRecord = nextInteractiveRecord(
-            m_focusedRecord,
-            layoutDirection() == Qt::RightToLeft ? 1 : -1);
+        m_focusedRecord = nextInteractiveRecord(m_focusedRecord, layoutDirection() == Qt::RightToLeft ? 1 : -1);
         const int focusedItem = focusedItemIndex();
         if (focusedItem >= 0 && focusedItem != previousFocusedItem) {
-            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-                this, focusedItem);
+            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, focusedItem);
         }
         update();
         event->accept();
@@ -387,13 +377,10 @@ void Breadcrumb::keyPressEvent(QKeyEvent* event)
     }
     case Qt::Key_Right: {
         const int previousFocusedItem = focusedItemIndex();
-        m_focusedRecord = nextInteractiveRecord(
-            m_focusedRecord,
-            layoutDirection() == Qt::RightToLeft ? -1 : 1);
+        m_focusedRecord = nextInteractiveRecord(m_focusedRecord, layoutDirection() == Qt::RightToLeft ? -1 : 1);
         const int focusedItem = focusedItemIndex();
         if (focusedItem >= 0 && focusedItem != previousFocusedItem) {
-            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-                this, focusedItem);
+            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, focusedItem);
         }
         update();
         event->accept();
@@ -404,8 +391,7 @@ void Breadcrumb::keyPressEvent(QKeyEvent* event)
         m_focusedRecord = firstInteractiveRecord();
         const int focusedItem = focusedItemIndex();
         if (focusedItem >= 0 && focusedItem != previousFocusedItem) {
-            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-                this, focusedItem);
+            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, focusedItem);
         }
         update();
         event->accept();
@@ -416,8 +402,7 @@ void Breadcrumb::keyPressEvent(QKeyEvent* event)
         m_focusedRecord = lastInteractiveRecord();
         const int focusedItem = focusedItemIndex();
         if (focusedItem >= 0 && focusedItem != previousFocusedItem) {
-            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-                this, focusedItem);
+            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, focusedItem);
         }
         update();
         event->accept();
@@ -447,8 +432,7 @@ void Breadcrumb::focusInEvent(QFocusEvent* event)
         m_focusedRecord = firstInteractiveRecord();
     const int focusedItem = focusedItemIndex();
     if (focusedItem >= 0) {
-        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
-            this, focusedItem);
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, focusedItem);
     }
     update();
 }
@@ -492,8 +476,7 @@ Breadcrumb::Metrics Breadcrumb::metrics() const
 
 QFont Breadcrumb::contentFont() const
 {
-    const Typography::FontRole role =
-        m_breadcrumbSize == BreadcrumbSize::Large ? m_largeFontRole : m_standardFontRole;
+    const Typography::FontRole role = m_breadcrumbSize == BreadcrumbSize::Large ? m_largeFontRole : m_standardFontRole;
     return themeFont(role).toQFont();
 }
 
@@ -706,7 +689,8 @@ void Breadcrumb::buildRecords(const QVector<int>& visibleItems, bool hasOverflow
     for (int index = 0; index < m_records.size(); ++index) {
         DisplayRecord& record = m_records[index];
         const int clampedWidth = qMax(0, qMin(assignedWidths.at(index), content.right() + 1 - x));
-        record.rect = QRect(x, content.top() + (content.height() - currentMetrics.rowHeight) / 2, clampedWidth, currentMetrics.rowHeight);
+        record.rect = QRect(x, content.top() + (content.height() - currentMetrics.rowHeight) / 2, clampedWidth,
+            currentMetrics.rowHeight);
         if (record.type == RecordType::Item) {
             const int textTop = record.rect.top() + (record.rect.height() - currentMetrics.textHeight) / 2;
             const int textLeft = record.rect.left() + currentMetrics.itemHorizontalPadding;
@@ -721,13 +705,10 @@ void Breadcrumb::buildRecords(const QVector<int>& visibleItems, bool hasOverflow
     if (layoutDirection() == Qt::RightToLeft) {
         for (DisplayRecord& record : m_records) {
             if (!record.rect.isEmpty()) {
-                record.rect = QStyle::visualRect(layoutDirection(), content,
-                                                 record.rect);
+                record.rect = QStyle::visualRect(layoutDirection(), content, record.rect);
             }
             if (!record.contentRect.isEmpty()) {
-                record.contentRect =
-                    QStyle::visualRect(layoutDirection(), content,
-                                       record.contentRect);
+                record.contentRect = QStyle::visualRect(layoutDirection(), content, record.contentRect);
             }
         }
     }
@@ -844,8 +825,7 @@ void Breadcrumb::activateRecord(int recordIndex)
 
 void Breadcrumb::activateItem(int itemIndex)
 {
-    if (!isValidIndex(itemIndex) || itemIndex >= m_items.size() - 1
-        || !m_items.at(itemIndex).enabled || !isEnabled())
+    if (!isValidIndex(itemIndex) || itemIndex >= m_items.size() - 1 || !m_items.at(itemIndex).enabled || !isEnabled())
         return;
 
     const BreadcrumbItem item = m_items.at(itemIndex);
@@ -901,10 +881,8 @@ void Breadcrumb::paintItem(QPainter& painter, const DisplayRecord& record, int r
     const QString displayedText = record.contentRect.width() >= textWidth
         ? text
         : fontMetrics.elidedText(text, Qt::ElideRight, qMax(0, record.contentRect.width()));
-    painter.drawText(record.contentRect,
-                     QStyle::visualAlignment(layoutDirection(),
-                                             Qt::AlignVCenter | Qt::AlignLeft),
-                     displayedText);
+    painter.drawText(record.contentRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
+        displayedText);
 
     painter.restore();
 }
@@ -915,17 +893,17 @@ void Breadcrumb::paintIconRecord(QPainter& painter, const DisplayRecord& record,
         return;
 
     const bool interactive = record.type == RecordType::Overflow;
-    QColor iconColor = isEnabled() ? themeColorsRef().textSecondary
-                                   : themeColorsRef().textDisabled;
+    QColor iconColor = isEnabled() ? themeColorsRef().textSecondary : themeColorsRef().textDisabled;
     if (interactive && (m_hoveredRecord == recordIndex || m_pressedRecord == recordIndex))
         iconColor = themeColorsRef().textPrimary;
     const QString glyph = record.type == RecordType::Overflow
         ? Typography::Icons::More
         : (layoutDirection() == Qt::RightToLeft
-               ? Typography::Icons::ChevronLeftMed
-               : Typography::Icons::ChevronRightMed);
+                  ? Typography::Icons::ChevronLeftMed
+                  : Typography::Icons::ChevronRightMed);
     const Metrics currentMetrics = metrics();
-    const int pixelSize = record.type == RecordType::Overflow ? currentMetrics.overflowPixelSize : currentMetrics.chevronPixelSize;
+    const int pixelSize =
+        record.type == RecordType::Overflow ? currentMetrics.overflowPixelSize : currentMetrics.chevronPixelSize;
 
     painter.save();
     paintIconGlyph(painter, record.contentRect, glyph, iconColor, pixelSize, currentMetrics.textHeight);
@@ -941,7 +919,12 @@ QColor Breadcrumb::textColorForRecord(const DisplayRecord& record, int recordInd
     return themeColorsRef().textPrimary;
 }
 
-void Breadcrumb::paintIconGlyph(QPainter& painter, const QRect& rect, const QString& glyph, const QColor& color, int pixelSize, int lineHeight)
+void Breadcrumb::paintIconGlyph(QPainter& painter,
+    const QRect& rect,
+    const QString& glyph,
+    const QColor& color,
+    int pixelSize,
+    int lineHeight)
 {
     if (rect.isEmpty() || glyph.isEmpty())
         return;

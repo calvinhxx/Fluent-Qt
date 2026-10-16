@@ -24,10 +24,7 @@ public:
 
     using ActivationHandler = std::function<void(QAction*)>;
 
-    CommandPresenter(QAction* action,
-                     Mode mode,
-                     ActivationHandler activationHandler,
-                     QWidget* parent = nullptr);
+    CommandPresenter(QAction* action, Mode mode, ActivationHandler activationHandler, QWidget* parent = nullptr);
 
     QAction* action() const { return m_action.data(); }
     Mode mode() const { return m_mode; }

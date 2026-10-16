@@ -9,10 +9,7 @@ namespace {
 class AreaRenderer final : public ChartRenderer {
 public:
     bool includesZero() const override { return true; }
-    Projection project(const Context& c, const ChartModel& m) const override
-    {
-        return projectPolyline(c, m);
-    }
+    Projection project(const Context& c, const ChartModel& m) const override { return projectPolyline(c, m); }
     void paint(QPainter& p, const Context& c, const Projection& data) const override
     {
         auto fill = c.color(c.series);
@@ -23,8 +20,7 @@ public:
         const qreal baseline = c.map(c.xMin, 0).y();
         // Disjoint constant-size trapezoids keep dense fill rasterization bounded.
         for (const auto& line : data.lines) {
-            const QPointF polygon[] = {
-                line.p1(), line.p2(), {line.x2(), baseline}, {line.x1(), baseline}};
+            const QPointF polygon[] = {line.p1(), line.p2(), {line.x2(), baseline}, {line.x1(), baseline}};
             p.drawPolygon(polygon, 4);
         }
         paintPolyline(p, c, data);

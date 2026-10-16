@@ -40,8 +40,7 @@ protected:
         // window. Before scene-graph initialization there are no GPU resources
         // to rebind, and first show will create them for the final host.
         // zh_CN: Qt 6.2 会在预览首次重父时重载组件；首次场景图初始化前保留已加载的场景。
-        if (type == QEvent::WindowChangeInternal && !m_hasBeenShown &&
-            !quickWindow()->isSceneGraphInitialized())
+        if (type == QEvent::WindowChangeInternal && !m_hasBeenShown && !quickWindow()->isSceneGraphInitialized())
             return QWidget::event(event);
         if (type == QEvent::Show)
             m_hasBeenShown = true;
@@ -180,8 +179,7 @@ bool QmlView::setContextObject(const QString& name, QObject* object)
         return reportError(QStringLiteral("Unload the QML page before changing context objects."));
     static const QRegularExpression identifier(QStringLiteral("^[A-Za-z_][A-Za-z0-9_]*$"));
     if (!identifier.match(name).hasMatch() || name == QStringLiteral("fluentTheme"))
-        return reportError(
-            QStringLiteral("Context names must be QML identifiers other than fluentTheme."));
+        return reportError(QStringLiteral("Context names must be QML identifiers other than fluentTheme."));
     if (object && object->thread() != thread())
         return reportError(QStringLiteral("Context objects must belong to the GUI thread."));
     auto previous = d->bindings.find(name);
@@ -234,8 +232,7 @@ bool QmlView::load(const QUrl& url, QString* error)
     setProperty(kDirectCompositionRequiredProperty, !state->textureEnabled);
     if (!lifetime)
         return false;
-    if (!state->active ||
-        (!state->textureEnabled && !property(kDirectCompositionRequiredProperty).toBool())) {
+    if (!state->active || (!state->textureEnabled && !property(kDirectCompositionRequiredProperty).toBool())) {
         state->busy = false;
         return false;
     }
@@ -273,8 +270,8 @@ bool QmlView::load(const QUrl& url, QString* error)
             d->status = Error;
             QPointer<QmlView> lifetime(this);
             reportError(message);
-            if (lifetime && state->quick == scene && state->status == Error &&
-                state->sceneGraphError == message && changed)
+            if (lifetime && state->quick == scene && state->status == Error && state->sceneGraphError == message
+                && changed)
                 emit statusChanged(Error);
         },
         Qt::QueuedConnection);
@@ -357,8 +354,8 @@ void QmlView::updateStatus()
         emit statusChanged(next);
     if (lifetime && state->quick == scene && state->status == Ready)
         scheduleNativePresentation();
-    if (lifetime && state->quick == scene && state->status == Error && state->errors == messages &&
-        !messages.isEmpty() && errorsChangedValue)
+    if (lifetime && state->quick == scene && state->status == Error && state->errors == messages && !messages.isEmpty()
+        && errorsChangedValue)
         emit errorOccurred(messages.join(QLatin1Char('\n')));
 }
 
@@ -366,8 +363,8 @@ void QmlView::scheduleNativePresentation()
 {
     const auto state = d;
     const QPointer<QQuickWidget> scene(state->quick);
-    if (!scene || state->textureEnabled || state->status != Ready || !isVisible() ||
-        state->pendingNativePresentation == scene)
+    if (!scene || state->textureEnabled || state->status != Ready || !isVisible()
+        || state->pendingNativePresentation == scene)
         return;
     state->pendingNativePresentation = scene;
     // Let the host finish its layout before revealing this particular scene.
@@ -375,8 +372,8 @@ void QmlView::scheduleNativePresentation()
     QTimer::singleShot(0, this, [this, state, scene] {
         if (state->pendingNativePresentation == scene)
             state->pendingNativePresentation = nullptr;
-        if (!scene || state->quick != scene || !state->active || state->textureEnabled ||
-            state->status != Ready || !isVisible())
+        if (!scene || state->quick != scene || !state->active || state->textureEnabled || state->status != Ready
+            || !isVisible())
             return;
         QPointer<QmlView> guard(this);
         if (layout())
@@ -459,8 +456,7 @@ bool QmlView::setTextureRenderingEnabled(bool enabled)
         if (QQuickWindow::graphicsApi() != QSGRendererInterface::OpenGL)
             return false;
 #endif
-        if (d->quick && d->quick->quickWindow()->rendererInterface()->graphicsApi() !=
-                            QSGRendererInterface::OpenGL)
+        if (d->quick && d->quick->quickWindow()->rendererInterface()->graphicsApi() != QSGRendererInterface::OpenGL)
             return false;
     }
     const auto state = d;
@@ -519,8 +515,7 @@ bool QmlView::ensureTextureRenderer()
     const auto renderer = std::make_shared<QmlTextureRenderer>(this);
     state->textureRenderer = renderer;
     const bool attached = renderer->attach(scene);
-    if (!lifetime || !state->textureEnabled || state->quick != scene ||
-        state->textureRenderer != renderer)
+    if (!lifetime || !state->textureEnabled || state->quick != scene || state->textureRenderer != renderer)
         return false;
     if (!attached) {
         state->textureRenderer.reset();
@@ -538,8 +533,7 @@ bool QmlView::ensureTextureRenderer()
 
 bool QmlView::renderTexture(QOpenGLContext* context, qreal devicePixelRatio, quint64 maximumBytes)
 {
-    if (!onGuiThread(this) || !d->active || !d->textureEnabled || d->busy ||
-        !ensureTextureRenderer())
+    if (!onGuiThread(this) || !d->active || !d->textureEnabled || d->busy || !ensureTextureRenderer())
         return false;
     const auto state = d;
     const auto renderer = state->textureRenderer;
@@ -665,12 +659,11 @@ QVariant QmlView::inputMethodQuery(Qt::InputMethodQuery query) const
         const auto* item = qobject_cast<QQuickItem*>(renderer->window()->focusObject());
         if (item) {
             QVariant value = item->inputMethodQuery(query);
-            if (value.canConvert<QRectF>() &&
-                (query == Qt::ImCursorRectangle || query == Qt::ImAnchorRectangle ||
-                 query == Qt::ImInputItemClipRectangle))
+            if (value.canConvert<QRectF>()
+                && (query == Qt::ImCursorRectangle || query == Qt::ImAnchorRectangle
+                    || query == Qt::ImInputItemClipRectangle))
                 return item->mapRectToScene(value.toRectF());
-            if (value.canConvert<QPointF>() &&
-                (query == Qt::ImCursorPosition || query == Qt::ImAnchorPosition))
+            if (value.canConvert<QPointF>() && (query == Qt::ImCursorPosition || query == Qt::ImAnchorPosition))
                 return item->mapToScene(value.toPointF());
             return value;
         }

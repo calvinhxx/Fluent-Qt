@@ -26,10 +26,8 @@ class Stepper : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     Q_PROPERTY(int itemCount READ itemCount NOTIFY itemCountChanged)
     Q_PROPERTY(int currentIndex READ currentIndex WRITE setCurrentIndex NOTIFY currentIndexChanged)
-    Q_PROPERTY(
-        Qt::Orientation orientation READ orientation WRITE setOrientation NOTIFY orientationChanged)
-    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY
-                   animationEnabledChanged)
+    Q_PROPERTY(Qt::Orientation orientation READ orientation WRITE setOrientation NOTIFY orientationChanged)
+    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
 public:
     /**
      * @brief Application-owned state of a step.

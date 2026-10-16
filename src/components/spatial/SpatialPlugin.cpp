@@ -30,9 +30,7 @@ struct SpatialPlugin::Private {
     bool active = false;
 };
 
-SpatialPlugin::SpatialPlugin(QObject* parent)
-    : plugins::WidgetPlugin(parent), d(std::make_unique<Private>())
-{}
+SpatialPlugin::SpatialPlugin(QObject* parent) : plugins::WidgetPlugin(parent), d(std::make_unique<Private>()) {}
 SpatialPlugin::~SpatialPlugin()
 {
     onDeactivate();
@@ -154,11 +152,10 @@ QWidget* SpatialPlugin::createWidget(const QString& key, QWidget* parent, QStrin
     return view.data();
 }
 
-ParticleLayer* SpatialPlugin::createParticleLayer(layout::ParticleBackdrop* backdrop,
-                                                  QObject* parent)
+ParticleLayer* SpatialPlugin::createParticleLayer(layout::ParticleBackdrop* backdrop, QObject* parent)
 {
-    if (!d->active || !onGuiThread(this) || !backdrop || backdrop->thread() != thread() ||
-        (parent && parent->thread() != thread()))
+    if (!d->active || !onGuiThread(this) || !backdrop || backdrop->thread() != thread()
+        || (parent && parent->thread() != thread()))
         return nullptr;
     QPointer<SpatialPlugin> lifetime(this);
     QPointer<ParticleLayer> layer = new ParticleLayer(backdrop, parent);

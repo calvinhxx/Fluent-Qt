@@ -45,8 +45,7 @@ constexpr int kStackGap = 8;
 
 QString colorSpec(const QColor& color)
 {
-    return QString::asprintf("#%02X%02X%02X%02X", color.red(), color.green(), color.blue(),
-                             color.alpha());
+    return QString::asprintf("#%02X%02X%02X%02X", color.red(), color.green(), color.blue(), color.alpha());
 }
 
 int g_maximumVisible = 3;
@@ -55,7 +54,7 @@ quint64 g_stackOrder = 0;
 QMargins normalizedMargins(const QMargins& margins)
 {
     return QMargins(qMax(0, margins.left()), qMax(0, margins.top()), qMax(0, margins.right()),
-                    qMax(0, margins.bottom()));
+        qMax(0, margins.bottom()));
 }
 
 QString actionCaption(const QAction* action)
@@ -94,8 +93,7 @@ QVector<Toast*> Toast::openToastsFor(QWidget* host, Placement placement)
             open.append(toast);
     }
     std::sort(open.begin(), open.end(), [](Toast* left, Toast* right) {
-        return left->property(kStackOrderProperty).toULongLong() <
-               right->property(kStackOrderProperty).toULongLong();
+        return left->property(kStackOrderProperty).toULongLong() < right->property(kStackOrderProperty).toULongLong();
     });
     return open;
 }
@@ -134,8 +132,9 @@ Toast::Toast(QWidget* parent) : QWidget(parent)
     setAttribute(Qt::WA_TranslucentBackground);
 
     m_overlayCoordinator = new overlay::OverlayCoordinator(this, this);
-    connect(m_overlayCoordinator, &overlay::OverlayCoordinator::hostGeometryChanged, this,
-            [this]() { syncGeometry(); });
+    connect(m_overlayCoordinator, &overlay::OverlayCoordinator::hostGeometryChanged, this, [this]() {
+        syncGeometry();
+    });
     connect(m_overlayCoordinator, &overlay::OverlayCoordinator::hostDestroyed, this, [this]() {
         m_animation->stop();
         m_positionAnimation->stop();
@@ -239,8 +238,7 @@ Toast::Toast(QWidget* parent) : QWidget(parent)
     m_closeButton->setFocusVisual(true);
     m_closeButton->setAccessibleName(tr("Dismiss notification"));
     m_closeButton->hide();
-    connect(m_closeButton, &basicinput::Button::clicked, this,
-            [this]() { requestDismiss(CloseButton); });
+    connect(m_closeButton, &basicinput::Button::clicked, this, [this]() { requestDismiss(CloseButton); });
     outer->addWidget(m_card);
 
     m_opacityEffect = new QGraphicsOpacityEffect(this);
@@ -252,11 +250,10 @@ Toast::Toast(QWidget* parent) : QWidget(parent)
     m_animation->setObjectName(QStringLiteral("fluentToastPresentationAnimation"));
     m_positionAnimation = new QVariantAnimation(this);
     m_positionAnimation->setObjectName(QStringLiteral("fluentToastPositionAnimation"));
-    connect(m_positionAnimation, &QVariantAnimation::valueChanged, this,
-            [this](const QVariant& value) {
-                m_basePosition = value.toPointF();
-                updatePresentationPosition();
-            });
+    connect(m_positionAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        m_basePosition = value.toPointF();
+        updatePresentationPosition();
+    });
     m_timer = new QTimer(this);
     m_timer->setSingleShot(true);
     connect(m_timer, &QTimer::timeout, this, [this]() { requestDismiss(TimedOut); });
@@ -272,8 +269,7 @@ Toast::~Toast()
 {
     QObject::disconnect(m_animationFinishedConnection);
     if (m_isOpen) {
-        QWidget* host =
-            m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : parentWidget();
+        QWidget* host = m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : parentWidget();
         const Placement placement = m_placement;
         m_isOpen = false;
         if (host)
@@ -394,8 +390,7 @@ void Toast::setAction(QAction* action)
     m_action = action;
 
     if (m_action) {
-        m_actionChangedConnection =
-            connect(m_action.data(), &QAction::changed, this, &Toast::syncActionButton);
+        m_actionChangedConnection = connect(m_action.data(), &QAction::changed, this, &Toast::syncActionButton);
         m_actionDestroyedConnection = connect(m_action.data(), &QObject::destroyed, this, [this]() {
             m_action = nullptr;
             m_actionChangedConnection = QMetaObject::Connection();
@@ -525,8 +520,12 @@ void Toast::dismiss()
     requestDismiss(m_actionInvocationInProgress ? ActionInvoked : Programmatic);
 }
 
-Toast* Toast::showToast(QWidget* anchor, const QString& message, Severity severity, int durationMs,
-                        Placement placement, const QMargins& margins)
+Toast* Toast::showToast(QWidget* anchor,
+    const QString& message,
+    Severity severity,
+    int durationMs,
+    Placement placement,
+    const QMargins& margins)
 {
     QWidget* host = anchor ? anchor->window() : nullptr;
     if (!host)
@@ -565,9 +564,13 @@ Toast* Toast::showToast(QWidget* anchor, const QString& message, Severity severi
     return toastGuard.data();
 }
 
-Toast* Toast::showOrUpdateToast(QWidget* anchor, const QString& updateKey, const QString& message,
-                                Severity severity, int durationMs, Placement placement,
-                                const QMargins& margins)
+Toast* Toast::showOrUpdateToast(QWidget* anchor,
+    const QString& updateKey,
+    const QString& message,
+    Severity severity,
+    int durationMs,
+    Placement placement,
+    const QMargins& margins)
 {
     QWidget* host = anchor ? anchor->window() : nullptr;
     if (!host)
@@ -683,18 +686,15 @@ void Toast::paintEvent(QPaintEvent* event)
         surface.setPen(Qt::NoPen);
         const QRect cardRect = overlay::visibleCardRect(rect(), kShadowMargin);
         if (effectiveTheme() != HighContrast) {
-            for (const auto& shadow :
-                 {toast_tokens::ambientShadow(), toast_tokens::contactShadow()}) {
+            for (const auto& shadow : {toast_tokens::ambientShadow(), toast_tokens::contactShadow()}) {
                 const int spread = shadow.spreadRadius;
                 const int layers = shadow.blurRadius / 2;
-                overlay::paintLayeredShadow(surface,
-                                            cardRect.adjusted(-spread, -spread, spread, spread),
-                                            toast_tokens::cornerRadius + spread, shadow,
-                                            2.0 / (layers + 1), layers, shadow.offsetY);
+                overlay::paintLayeredShadow(surface, cardRect.adjusted(-spread, -spread, spread, spread),
+                    toast_tokens::cornerRadius + spread, shadow, 2.0 / (layers + 1), layers, shadow.offsetY);
             }
         }
-        painting::paintRoundedSurface(
-            surface, cardRect, {m_surfaceColor, m_borderColor, 1.0, toast_tokens::cornerRadius});
+        painting::paintRoundedSurface(surface, cardRect,
+            {m_surfaceColor, m_borderColor, 1.0, toast_tokens::cornerRadius});
     }
     QPainter painter(this);
     painter.drawPixmap(QPoint(0, 0), m_surfaceCache);
@@ -722,31 +722,28 @@ void Toast::updateMessageWrapping()
     const bool hasAction = m_actionButton && !m_actionButton->isHidden();
     const bool hasTitle = !m_title.isEmpty();
     const bool detailed = hasTitle || hasAction;
-    const int verticalPadding =
-        detailed ? toast_tokens::detailPadding : toast_tokens::compactPadding;
-    const int trailingPadding =
-        m_closable ? toast_tokens::closeInset + toast_tokens::closeSize + toast_tokens::closeGap
-                   : toast_tokens::horizontalPadding;
+    const int verticalPadding = detailed ? toast_tokens::detailPadding : toast_tokens::compactPadding;
+    const int trailingPadding = m_closable
+        ? toast_tokens::closeInset + toast_tokens::closeSize + toast_tokens::closeGap
+        : toast_tokens::horizontalPadding;
     const bool rtl = layoutDirection() == Qt::RightToLeft;
-    m_cardLayout->setContentsMargins(
-        rtl ? trailingPadding : toast_tokens::horizontalPadding, verticalPadding,
+    m_cardLayout->setContentsMargins(rtl ? trailingPadding : toast_tokens::horizontalPadding, verticalPadding,
         rtl ? toast_tokens::horizontalPadding : trailingPadding, verticalPadding);
     const Qt::Alignment alignment = detailed ? Qt::AlignTop : Qt::AlignVCenter;
     m_cardLayout->setAlignment(m_statusBadge, alignment);
     m_cardLayout->setAlignment(m_textLayout, alignment);
     m_titleLabel->setVisible(hasTitle);
     m_messageLabel->setVisible(!m_message.isEmpty());
-    m_messageLabel->setFluentTypography(hasTitle ? Typography::FontRole::Body
-                                                 : Typography::FontRole::BodyStrong);
-    m_messageLabel->setTextColorRole(hasTitle ? textfields::Label::TextColorRole::Secondary
-                                              : textfields::Label::TextColorRole::Primary);
+    m_messageLabel->setFluentTypography(hasTitle ? Typography::FontRole::Body : Typography::FontRole::BodyStrong);
+    m_messageLabel->setTextColorRole(
+        hasTitle ? textfields::Label::TextColorRole::Secondary : textfields::Label::TextColorRole::Primary);
     m_actionArea->setVisible(hasAction);
 
     int maximumWidth = toast_tokens::maximumWidth;
     QWidget* host = m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : nullptr;
     if (host) {
-        const int available = overlay::overlaySurfaceRect(host).width() -
-                              m_placementMargins.left() - m_placementMargins.right();
+        const int available = overlay::overlaySurfaceRect(host).width() - m_placementMargins.left()
+            - m_placementMargins.right();
         maximumWidth = qMin(maximumWidth, qMax(1, available));
     }
     const QMargins padding = m_cardLayout->contentsMargins();
@@ -757,21 +754,18 @@ void Toast::updateMessageWrapping()
     for (auto* label : {m_titleLabel, m_messageLabel}) {
         label->ensurePolished();
         if (!label->isHidden())
-            naturalTextWidth =
-                qMax(naturalTextWidth, QFontMetrics(label->font()).size(0, label->text()).width());
+            naturalTextWidth = qMax(naturalTextWidth, QFontMetrics(label->font()).size(0, label->text()).width());
     }
     const int cardWidth =
-        detailed
-            ? maximumWidth
-            : qMin(maximumWidth, qMax(toast_tokens::minimumWidth, fixedWidth + naturalTextWidth));
+        detailed ? maximumWidth : qMin(maximumWidth, qMax(toast_tokens::minimumWidth, fixedWidth + naturalTextWidth));
     const int textWidth = qMax(1, cardWidth - fixedWidth);
     int textHeight = 0;
     int visibleLabels = 0;
     for (auto* label : {m_titleLabel, m_messageLabel}) {
         label->ensurePolished();
         const QFontMetrics metrics(label->font());
-        const bool wrap = metrics.horizontalAdvance(label->text()) > textWidth ||
-                          label->text().contains(QLatin1Char('\n'));
+        const bool wrap = metrics.horizontalAdvance(label->text()) > textWidth
+            || label->text().contains(QLatin1Char('\n'));
         label->setWordWrap(wrap);
         label->setFixedWidth(textWidth);
         // Old fixed heights must not feed back into QLabel's next measurement.
@@ -779,7 +773,7 @@ void Toast::updateMessageWrapping()
         label->setMinimumHeight(0);
         label->setMaximumHeight(QWIDGETSIZE_MAX);
         const int height = qMax(label->themeFont(Typography::FontRole::Body).lineHeight,
-                                wrap ? label->heightForWidth(textWidth) : metrics.height());
+            wrap ? label->heightForWidth(textWidth) : metrics.height());
         label->setFixedHeight(height);
         if (!label->isHidden()) {
             textHeight += height;
@@ -790,9 +784,8 @@ void Toast::updateMessageWrapping()
         textHeight += m_textLayout->spacing();
     if (hasAction) {
         m_actionButton->ensurePolished();
-        const int iconWidth = m_actionButton->icon().isNull()
-                                  ? 0
-                                  : m_actionButton->iconSize().width() + ::Spacing::Small;
+        const int iconWidth =
+            m_actionButton->icon().isNull() ? 0 : m_actionButton->iconSize().width() + ::Spacing::Small;
         const int actionPadding = ::Spacing::Padding::ControlHorizontal * 2 + iconWidth;
         const int captionWidth = qMax(1, textWidth - actionPadding);
         QStringList lines;
@@ -818,14 +811,11 @@ void Toast::updateMessageWrapping()
             captionLayout.endLayout();
         }
         m_actionButton->setText(lines.join(QLatin1Char('\n')));
-        const int lineHeight =
-            qMax(m_actionButton->fontMetrics().height(),
-                 m_actionButton->themeFont(Typography::FontRole::Body).lineHeight);
-        const int actionHeight =
-            qMax(toast_tokens::controlHeight, int(lines.size()) * lineHeight + ::Spacing::Small);
+        const int lineHeight = qMax(m_actionButton->fontMetrics().height(),
+            m_actionButton->themeFont(Typography::FontRole::Body).lineHeight);
+        const int actionHeight = qMax(toast_tokens::controlHeight, int(lines.size()) * lineHeight + ::Spacing::Small);
         m_actionButton->setFixedSize(
-            qMin(textWidth, qMax(toast_tokens::controlHeight, qCeil(longestLine) + actionPadding)),
-            actionHeight);
+            qMin(textWidth, qMax(toast_tokens::controlHeight, qCeil(longestLine) + actionPadding)), actionHeight);
         const int actionSpacing = visibleLabels > 0 ? toast_tokens::actionGap : 0;
         const int areaPadding = qMax(0, actionSpacing - m_textLayout->spacing());
         m_actionArea->layout()->setContentsMargins(0, areaPadding, 0, 0);
@@ -837,18 +827,16 @@ void Toast::updateMessageWrapping()
     m_card->setFixedSize(m_cardSize);
     // Dismiss stays at the top trailing corner, independent of body height.
     // zh_CN: 关闭按钮固定在顶部尾侧角落，不随正文高度移动。
-    const QRect closeRect(cardWidth - toast_tokens::closeInset - toast_tokens::closeSize,
-                          toast_tokens::closeInset, toast_tokens::closeSize,
-                          toast_tokens::closeSize);
+    const QRect closeRect(cardWidth - toast_tokens::closeInset - toast_tokens::closeSize, toast_tokens::closeInset,
+        toast_tokens::closeSize, toast_tokens::closeSize);
     m_closeButton->setGeometry(QStyle::visualRect(layoutDirection(), m_card->rect(), closeRect));
 }
 
 QSize Toast::visibleCardSizeHint() const
 {
     return m_cardSize.isValid()
-               ? m_cardSize
-               : QSize(toast_tokens::minimumWidth,
-                       toast_tokens::statusSize + toast_tokens::compactPadding * 2);
+        ? m_cardSize
+        : QSize(toast_tokens::minimumWidth, toast_tokens::statusSize + toast_tokens::compactPadding * 2);
 }
 
 int Toast::stackOffset() const
@@ -879,11 +867,13 @@ QPoint Toast::resolvedEndPosition() const
 
     int cardX = surface.center().x() - cardSize.width() / 2;
     if (isStartPlacement()) {
-        cardX = rtl ? surface.right() - m_placementMargins.right() - cardSize.width() + 1
-                    : surface.left() + m_placementMargins.left();
+        cardX = rtl
+            ? surface.right() - m_placementMargins.right() - cardSize.width() + 1
+            : surface.left() + m_placementMargins.left();
     } else if (isEndPlacement()) {
-        cardX = rtl ? surface.left() + m_placementMargins.left()
-                    : surface.right() - m_placementMargins.right() - cardSize.width() + 1;
+        cardX = rtl
+            ? surface.left() + m_placementMargins.left()
+            : surface.right() - m_placementMargins.right() - cardSize.width() + 1;
     } else {
         const int minX = surface.left() + m_placementMargins.left();
         const int maxX = surface.right() - m_placementMargins.right() - cardSize.width() + 1;
@@ -926,9 +916,8 @@ void Toast::syncGeometry(bool animatePosition)
     const QPoint target = resolvedEndPosition();
     // Content resizes immediately, so its anchored edge must move with it.
     // zh_CN: 内容尺寸立即变化时同步更新锚点，避免位置动画把卡片留在窗口外。
-    const bool animate = animatePosition && !sizeChanged && m_geometryInitialized && isVisible() &&
-                         m_animationEnabled &&
-                         MotionPolicy::instance().mode() == MotionPolicy::Mode::Full;
+    const bool animate = animatePosition && !sizeChanged && m_geometryInitialized && isVisible() && m_animationEnabled
+        && MotionPolicy::instance().mode() == MotionPolicy::Mode::Full;
     m_geometryInitialized = true;
     if (!animate) {
         m_positionAnimation->stop();
@@ -941,8 +930,7 @@ void Toast::syncGeometry(bool animatePosition)
         m_positionAnimation->setStartValue(m_basePosition);
         m_positionAnimation->setEndValue(QPointF(target));
         m_positionAnimation->setEasingCurve(themeAnimation().decelerate);
-        ::fluent::detail::startMotionTransition(m_positionAnimation, toast_tokens::stackDuration,
-                                                m_animationEnabled);
+        ::fluent::detail::startMotionTransition(m_positionAnimation, toast_tokens::stackDuration, m_animationEnabled);
     }
     if (m_isOpen)
         m_overlayCoordinator->raiseStack();
@@ -952,8 +940,7 @@ void Toast::updatePresentationPosition()
 {
     if (!m_geometryInitialized)
         return;
-    const bool translate =
-        m_animationEnabled && MotionPolicy::instance().mode() == MotionPolicy::Mode::Full;
+    const bool translate = m_animationEnabled && MotionPolicy::instance().mode() == MotionPolicy::Mode::Full;
     const qreal offset = translate ? m_presentationOffset : 0.0;
     move((m_basePosition + QPointF(0.0, offset)).toPoint());
 }
@@ -977,17 +964,15 @@ void Toast::startAnimation(qreal endValue)
     m_enterStartOffset = m_presentationOffset;
     m_animation->setStartValue(m_progress);
     m_animation->setEndValue(endValue);
-    const int duration =
-        qMax(1, qRound((m_entering ? toast_tokens::enterDuration : toast_tokens::exitDuration) *
-                       qAbs(endValue - m_progress)));
+    const int duration = qMax(1,
+        qRound((m_entering ? toast_tokens::enterDuration : toast_tokens::exitDuration) * qAbs(endValue - m_progress)));
     m_animation->setDuration(duration);
     m_animation->setEasingCurve(endValue > m_progress ? motion.decelerate : motion.exit);
     if (qFuzzyIsNull(endValue)) {
-        m_animationFinishedConnection =
-            connect(m_animation, &QPropertyAnimation::finished, this, &Toast::finalizeDismiss);
+        m_animationFinishedConnection = connect(m_animation, &QPropertyAnimation::finished, this,
+            &Toast::finalizeDismiss);
     }
-    ::fluent::detail::startMotionTransition(m_animation, duration,
-                                            m_animationEnabled && isVisible());
+    ::fluent::detail::startMotionTransition(m_animation, duration, m_animationEnabled && isVisible());
 }
 
 void Toast::requestDismiss(DismissReason reason, bool immediate)
@@ -1030,8 +1015,7 @@ void Toast::finalizeDismiss()
     m_hoverPaused = false;
     m_remainingDuration = 0;
     hide();
-    QPointer<QWidget> host =
-        m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : parentWidget();
+    QPointer<QWidget> host = m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : parentWidget();
     const Placement placement = m_placement;
     m_overlayCoordinator->detach();
     const bool wasOpen = m_isOpen;
@@ -1100,8 +1084,7 @@ void Toast::resumeDurationTimer()
 void Toast::updatePointerInteraction()
 {
     const bool hasVisibleAction = m_action && m_actionButton && !m_actionButton->isHidden();
-    setAttribute(Qt::WA_TransparentForMouseEvents,
-                 !m_pauseOnHoverEnabled && !hasVisibleAction && !m_closable);
+    setAttribute(Qt::WA_TransparentForMouseEvents, !m_pauseOnHoverEnabled && !hasVisibleAction && !m_closable);
 }
 
 void Toast::syncActionButton()
@@ -1125,10 +1108,10 @@ void Toast::syncActionButton()
     m_actionButton->setText(caption);
     m_actionButton->setIcon(icon);
     m_actionButton->setEnabled(action->isEnabled());
-    m_actionButton->setFluentLayout(
-        !caption.isEmpty() && !icon.isNull()  ? basicinput::Button::IconBefore
-        : caption.isEmpty() && !icon.isNull() ? basicinput::Button::IconOnly
-                                              : basicinput::Button::TextOnly);
+    m_actionButton->setFluentLayout(!caption.isEmpty() && !icon.isNull() ? basicinput::Button::IconBefore
+            : caption.isEmpty() && !icon.isNull()
+            ? basicinput::Button::IconOnly
+            : basicinput::Button::TextOnly);
     m_actionButton->setAccessibleName(caption);
     m_actionButton->setVisible(presentable);
     updatePointerInteraction();
@@ -1147,8 +1130,7 @@ QString Toast::accessibleAnnouncementText() const
 void Toast::syncAccessibleName()
 {
     const QString nextName = accessibleAnnouncementText();
-    const bool tracksAutomaticName =
-        accessibleName().isEmpty() || accessibleName() == m_autoAccessibleName;
+    const bool tracksAutomaticName = accessibleName().isEmpty() || accessibleName() == m_autoAccessibleName;
     m_autoAccessibleName = nextName;
     if (tracksAutomaticName)
         setAccessibleName(m_autoAccessibleName);
@@ -1160,9 +1142,9 @@ void Toast::announceAccessibility()
     if (announcement.isEmpty())
         return;
     fluentSendAccessibleAnnouncement(this, announcement,
-                                     m_severity == Error
-                                         ? FluentAccessibleAnnouncementPoliteness::Assertive
-                                         : FluentAccessibleAnnouncementPoliteness::Polite);
+        m_severity == Error
+            ? FluentAccessibleAnnouncementPoliteness::Assertive
+            : FluentAccessibleAnnouncementPoliteness::Polite);
 }
 
 void Toast::applyPalette()
@@ -1176,28 +1158,20 @@ void Toast::applyPalette()
     m_surfaceCache = QPixmap();
     if (m_statusBadge) {
         const QJsonObject tint{{"bgLayer", colorSpec(severityBackground())}};
-        m_statusBadge->setThemeOverrides(
-            {{"light", tint},
-             {"dark", tint},
-             {"contrast", tint},
-             {"radius", QJsonObject{{"control", toast_tokens::statusRadius}}}});
+        m_statusBadge->setThemeOverrides({{"light", tint}, {"dark", tint}, {"contrast", tint},
+            {"radius", QJsonObject{{"control", toast_tokens::statusRadius}}}});
     }
     if (m_actionButton) {
         const QColor actionFill = dark ? colors.bgLayerAlt : colors.bgCanvas;
-        const QJsonObject actionColors{
-            {"controlDefault", colorSpec(actionFill)},
+        const QJsonObject actionColors{{"controlDefault", colorSpec(actionFill)},
             {"controlSecondary", colorSpec(toast_tokens::actionHover(dark))},
-            {"controlTertiary", colorSpec(actionFill)},
-            {"strokeDefault", "#00000000"},
-            {"strokeDivider", "#00000000"}};
+            {"controlTertiary", colorSpec(actionFill)}, {"strokeDefault", "#00000000"}, {"strokeDivider", "#00000000"}};
         m_actionButton->setThemeOverrides(
-            contrast ? QJsonObject{}
-                     : QJsonObject{{"light", actionColors}, {"dark", actionColors}});
+            contrast ? QJsonObject{} : QJsonObject{{"light", actionColors}, {"dark", actionColors}});
     }
     if (m_closeButton) {
         const QJsonObject closeColors{{"textPrimary", colorSpec(colors.textSecondary)}};
-        m_closeButton->setThemeOverrides(
-            {{"light", closeColors}, {"dark", closeColors}, {"contrast", closeColors}});
+        m_closeButton->setThemeOverrides({{"light", closeColors}, {"dark", closeColors}, {"contrast", closeColors}});
     }
     if (m_icon) {
         m_icon->setGlyph(severityGlyph());
@@ -1250,8 +1224,8 @@ QColor Toast::severityBackground() const
     case Informational:
     default:
         return effectiveTheme() == HighContrast
-                   ? colors.systemInfoBg
-                   : toast_tokens::informationalTint(effectiveThemeUsesDarkAppearance());
+            ? colors.systemInfoBg
+            : toast_tokens::informationalTint(effectiveThemeUsesDarkAppearance());
     }
 }
 

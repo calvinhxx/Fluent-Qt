@@ -31,8 +31,12 @@ constexpr int kDividerWidth = 1;
 constexpr qreal kColumnWheelThreshold = 120.0;
 constexpr int kColumnWheelClusterGapMs = 120;
 
-void drawSelectionSegment(QPainter& painter, const QRect& rect, const QColor& fill, qreal radius,
-                          bool roundLeft, bool roundRight)
+void drawSelectionSegment(QPainter& painter,
+    const QRect& rect,
+    const QColor& fill,
+    qreal radius,
+    bool roundLeft,
+    bool roundRight)
 {
     const QRectF bounds(rect);
     const qreal leftRadius = roundLeft ? radius : 0.0;
@@ -128,10 +132,9 @@ QVector<int> distributedPickerWidths(const QVector<int>& preferredWidths, int av
     int remainingWeight = totalWeight;
     for (int i = 0; i < preferredWidths.size(); ++i) {
         const int weight = qMax(1, preferredWidths.at(i));
-        const int width =
-            i == preferredWidths.size() - 1
-                ? remainingWidth
-                : qRound(static_cast<qreal>(remainingWidth) * weight / remainingWeight);
+        const int width = i == preferredWidths.size() - 1
+            ? remainingWidth
+            : qRound(static_cast<qreal>(remainingWidth) * weight / remainingWeight);
         result.append(qMax(0, width));
         remainingWidth -= width;
         remainingWeight -= weight;
@@ -175,12 +178,11 @@ PickerWheelColumn::PickerWheelColumn(int initialWidthHint, QWidget* parent)
     m_navButtonAnimation = new QVariantAnimation(this);
     m_navButtonAnimation->setDuration(themeAnimation().fast);
     m_navButtonAnimation->setEasingCurve(themeAnimation().decelerate);
-    connect(m_navButtonAnimation, &QVariantAnimation::valueChanged, this,
-            [this](const QVariant& value) {
-                m_navButtonOpacity = value.toReal();
-                refreshProperties();
-                update();
-            });
+    connect(m_navButtonAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        m_navButtonOpacity = value.toReal();
+        refreshProperties();
+        update();
+    });
 }
 
 QSize PickerWheelColumn::sizeHint() const
@@ -254,28 +256,24 @@ void PickerWheelColumn::paintEvent(QPaintEvent*)
     const bool canPrevious = canShiftBy(-1);
     const bool canNext = canShiftBy(1);
     if (m_navButtonOpacity > 0.01) {
-        auto paintNavButton = [&](const QRect& bounds, const QString& glyph, bool enabled,
-                                  bool hovered) {
+        auto paintNavButton = [&](const QRect& bounds, const QString& glyph, bool enabled, bool hovered) {
             painter.save();
             painter.setOpacity(m_navButtonOpacity);
             if (hovered && enabled) {
                 painter.setPen(Qt::NoPen);
                 painter.setBrush(colors.subtleSecondary);
-                painter.drawRoundedRect(bounds.adjusted(5, 2, -5, -2), radius.control,
-                                        radius.control);
+                painter.drawRoundedRect(bounds.adjusted(5, 2, -5, -2), radius.control, radius.control);
             }
-            const QColor iconColor = enabled ? (hovered ? colors.textPrimary : colors.textSecondary)
-                                             : colors.textDisabled;
+            const QColor iconColor =
+                enabled ? (hovered ? colors.textPrimary : colors.textSecondary) : colors.textDisabled;
             painter.setPen(iconColor);
-            Typography::Icons::paintGlyph(painter, QRectF(bounds), glyph,
-                                          Typography::IconSize::Compact, Qt::AlignCenter);
+            Typography::Icons::paintGlyph(painter, QRectF(bounds), glyph, Typography::IconSize::Compact,
+                Qt::AlignCenter);
             painter.restore();
         };
 
-        paintNavButton(previousButtonRect(), pickerChevronUpGlyph(), canPrevious,
-                       m_hoverHit.kind == HitKind::Previous);
-        paintNavButton(nextButtonRect(), pickerChevronDownGlyph(), canNext,
-                       m_hoverHit.kind == HitKind::Next);
+        paintNavButton(previousButtonRect(), pickerChevronUpGlyph(), canPrevious, m_hoverHit.kind == HitKind::Previous);
+        paintNavButton(nextButtonRect(), pickerChevronDownGlyph(), canNext, m_hoverHit.kind == HitKind::Next);
     }
 
     painter.setFont(font());
@@ -288,9 +286,9 @@ void PickerWheelColumn::paintEvent(QPaintEvent*)
         const bool selectable = isRowSelectable(offset);
         const bool selected = offset == 0;
         const bool hovered = m_hoverHit.kind == HitKind::Row && m_hoverHit.offset == offset;
-        const QRect rowBounds =
-            selected ? rowRect(row).adjusted(firstVisible ? 4 : 0, 0, lastVisible ? -4 : 0, 0)
-                     : rowRect(row).adjusted(4, 2, -4, -2);
+        const QRect rowBounds = selected
+            ? rowRect(row).adjusted(firstVisible ? 4 : 0, 0, lastVisible ? -4 : 0, 0)
+            : rowRect(row).adjusted(4, 2, -4, -2);
 
         QColor highlightFill = Qt::transparent;
         if (selected)
@@ -300,8 +298,7 @@ void PickerWheelColumn::paintEvent(QPaintEvent*)
 
         if (highlightFill.isValid() && highlightFill.alpha() > 0) {
             if (selected) {
-                drawSelectionSegment(painter, rowBounds, highlightFill, radius.control,
-                                     firstVisible, lastVisible);
+                drawSelectionSegment(painter, rowBounds, highlightFill, radius.control, firstVisible, lastVisible);
             } else {
                 painter.setPen(Qt::NoPen);
                 painter.setBrush(highlightFill);
@@ -315,8 +312,7 @@ void PickerWheelColumn::paintEvent(QPaintEvent*)
         painter.setPen(textColor);
         const QString text = displayTextForOffset(offset);
         painter.drawText(rowBounds.adjusted(8, 0, -8, 0), Qt::AlignVCenter | textAlignment,
-                         painter.fontMetrics().elidedText(text, Qt::ElideRight,
-                                                          qMax(0, rowBounds.width() - 16)));
+            painter.fontMetrics().elidedText(text, Qt::ElideRight, qMax(0, rowBounds.width() - 16)));
     }
 }
 
@@ -375,8 +371,7 @@ void PickerWheelColumn::wheelEvent(QWheelEvent* event)
     }
 
     const qint64 now = QDateTime::currentMSecsSinceEpoch();
-    const bool clusterExpired =
-        m_lastWheelTs != 0 && now - m_lastWheelTs > kColumnWheelClusterGapMs;
+    const bool clusterExpired = m_lastWheelTs != 0 && now - m_lastWheelTs > kColumnWheelClusterGapMs;
     const bool directionChanged = m_wheelDir != 0 && m_wheelDir != step;
     if (m_lastWheelTs == 0 || clusterExpired || directionChanged)
         resetWheelState();
@@ -495,8 +490,7 @@ void PickerWheelColumn::refreshProperties()
     setProperty("selectedRowHeight", pickerRowHeight(font()));
 }
 
-PickerWheelPanel::PickerWheelPanel(const QString& panelObjectName, int themeMinimumWidth,
-                                   QWidget* parent)
+PickerWheelPanel::PickerWheelPanel(const QString& panelObjectName, int themeMinimumWidth, QWidget* parent)
     : QWidget(parent), m_themeMinimumWidth(themeMinimumWidth)
 {
     setObjectName(panelObjectName);
@@ -504,8 +498,9 @@ PickerWheelPanel::PickerWheelPanel(const QString& panelObjectName, int themeMini
 }
 
 void PickerWheelPanel::initializeActions(const QString& confirmButtonObjectName,
-                                         const QString& cancelButtonObjectName,
-                                         std::function<void()> commit, std::function<void()> cancel)
+    const QString& cancelButtonObjectName,
+    std::function<void()> commit,
+    std::function<void()> cancel)
 {
     Q_ASSERT(!m_confirmButton);
     Q_ASSERT(!m_cancelButton);
@@ -524,16 +519,14 @@ void PickerWheelPanel::initializeActions(const QString& confirmButtonObjectName,
     m_cancelButton->setIconGlyph(Typography::Icons::Cancel, Typography::IconSize::Standard);
     m_cancelButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    connect(m_confirmButton, &fluent::basicinput::Button::clicked, this,
-            [commit = std::move(commit)] {
-                if (commit)
-                    commit();
-            });
-    connect(m_cancelButton, &fluent::basicinput::Button::clicked, this,
-            [cancel = std::move(cancel)] {
-                if (cancel)
-                    cancel();
-            });
+    connect(m_confirmButton, &fluent::basicinput::Button::clicked, this, [commit = std::move(commit)] {
+        if (commit)
+            commit();
+    });
+    connect(m_cancelButton, &fluent::basicinput::Button::clicked, this, [cancel = std::move(cancel)] {
+        if (cancel)
+            cancel();
+    });
 }
 
 QSize PickerWheelPanel::sizeHint() const
@@ -575,8 +568,9 @@ void PickerWheelPanel::setColumns(const QVector<PickerWheelColumn*>& columns)
     }
 }
 
-void PickerWheelPanel::configureColumns(const QFont& pickerFont, const QVector<bool>& visible,
-                                        const QVector<int>& preferredWidths)
+void PickerWheelPanel::configureColumns(const QFont& pickerFont,
+    const QVector<bool>& visible,
+    const QVector<int>& preferredWidths)
 {
     setFont(pickerFont);
     for (int i = 0; i < m_columns.size(); ++i) {
@@ -596,8 +590,7 @@ void PickerWheelPanel::configureColumns(const QFont& pickerFont, const QVector<b
     updateColumns();
 }
 
-void PickerWheelPanel::setActionAccessibleNames(const QString& confirmName,
-                                                const QString& cancelName)
+void PickerWheelPanel::setActionAccessibleNames(const QString& confirmName, const QString& cancelName)
 {
     if (m_confirmButton)
         m_confirmButton->setAccessibleName(confirmName);
@@ -695,8 +688,7 @@ void PickerWheelPanel::layoutContent()
     if (m_confirmButton)
         m_confirmButton->setGeometry(4, buttonY, qMax(0, halfWidth - 6), buttonHeight);
     if (m_cancelButton) {
-        m_cancelButton->setGeometry(halfWidth + 2, buttonY, qMax(0, width() - halfWidth - 6),
-                                    buttonHeight);
+        m_cancelButton->setGeometry(halfWidth + 2, buttonY, qMax(0, width() - halfWidth - 6), buttonHeight);
     }
 }
 

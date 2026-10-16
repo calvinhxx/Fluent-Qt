@@ -27,7 +27,9 @@ class ToolTip;
 namespace fluent::scrolling {
 
 class ScrollView;
-namespace detail { class AnnotatedScrollBarAccessible; }
+namespace detail {
+class AnnotatedScrollBarAccessible;
+}
 
 /**
  * @brief Label metadata rendered beside an AnnotatedScrollBar offset.
@@ -43,18 +45,14 @@ struct AnnotatedScrollBarLabel {
     QString detailText;
 
     AnnotatedScrollBarLabel() = default;
-    AnnotatedScrollBarLabel(const QString& labelText, int scrollOffset,
-                            const QString& detail = QString())
-        : text(labelText),
-          offset(scrollOffset),
-          detailText(detail) {}
+    AnnotatedScrollBarLabel(const QString& labelText, int scrollOffset, const QString& detail = QString())
+        : text(labelText), offset(scrollOffset), detailText(detail)
+    {}
 };
 
 inline bool operator==(const AnnotatedScrollBarLabel& lhs, const AnnotatedScrollBarLabel& rhs)
 {
-    return lhs.text == rhs.text &&
-           lhs.offset == rhs.offset &&
-           lhs.detailText == rhs.detailText;
+    return lhs.text == rhs.text && lhs.offset == rhs.offset && lhs.detailText == rhs.detailText;
 }
 
 inline bool operator!=(const AnnotatedScrollBarLabel& lhs, const AnnotatedScrollBarLabel& rhs)
@@ -127,7 +125,10 @@ class AnnotatedScrollBar : public QWidget, public FluentElement, public QMLPlus 
      * @brief Minimum spacing kept between visible labels.
      * zh_CN: 可见标签之间保留的最小间距。
      */
-    Q_PROPERTY(int minimumLabelSpacing READ minimumLabelSpacing WRITE setMinimumLabelSpacing NOTIFY layoutMetricsChanged)
+    Q_PROPERTY(int minimumLabelSpacing
+        READ minimumLabelSpacing
+        WRITE setMinimumLabelSpacing
+        NOTIFY layoutMetricsChanged)
     /**
      * @brief Width of the scroll position indicator area.
      * zh_CN: 滚动位置指示器区域宽度。

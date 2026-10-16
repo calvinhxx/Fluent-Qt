@@ -96,8 +96,7 @@ private:
 
     int getWidgetIndex(QWidget* widget) const;
     Anchors currentAnchors(const Item& item) const;
-    QVector<QRect> resolveGeometries(const QRect& parentRect, bool minimum,
-                                     bool reportCycles) const;
+    QVector<QRect> resolveGeometries(const QRect& parentRect, bool minimum, bool reportCycles) const;
     QSize measuredSize(bool minimum) const;
 };
 
@@ -108,8 +107,11 @@ private:
 class PropertyLink : public QObject {
     Q_OBJECT
 public:
-    PropertyLink(QObject* from, const QMetaProperty& fromProp, QObject* to,
-                 const QMetaProperty& toProp, QObject* parent);
+    PropertyLink(QObject* from,
+        const QMetaProperty& fromProp,
+        QObject* to,
+        const QMetaProperty& toProp,
+        QObject* parent);
 public slots:
     void syncToTarget();
 
@@ -239,8 +241,8 @@ public:
      * 该方向的后续变化；TwoWay 仅监听带通知的方向。有效注册替换同一目标属性
      * 的已有绑定；无效注册保留原绑定。状态覆盖期间暂停绑定，退出时读取最新源值。
      */
-    static void bind(QObject* source, const char* sPropName, QObject* target, const char* tPropName,
-                     Direction dir = OneWay);
+    static void
+    bind(QObject* source, const char* sPropName, QObject* target, const char* tPropName, Direction dir = OneWay);
 
     /**
      * @brief Installs a managed direct binding, synchronizing immediately.
@@ -255,9 +257,12 @@ public:
      * NOTIFY 信号。状态赋值和动画帧不会反向写入源。
      * 两端属性须可读且属于调用线程；目标还须可写，源须具有 NOTIFY 信号。
      */
-    static BindingHandle bindManaged(QObject* source, const char* sourceProp, QObject* target,
-                                     const char* targetProp, Direction direction = OneWay,
-                                     BindingOptions options = {});
+    static BindingHandle bindManaged(QObject* source,
+        const char* sourceProp,
+        QObject* target,
+        const char* targetProp,
+        Direction direction = OneWay,
+        BindingOptions options = {});
     /**
      * @brief Installs a C++ expression binding with explicitly observed inputs.
      * zh_CN: 安装使用显式可观察输入的 C++ 表达式绑定。
@@ -268,10 +273,11 @@ public:
      * zh_CN: 空依赖允许常量表达式。依赖销毁会使绑定永久失效，且不再调用回调。
      * 目标属性须可读且可写。
      */
-    static BindingHandle bindComputed(QObject* target, const char* targetProp,
-                                      const QVector<BindingDependency>& dependencies,
-                                      std::function<QVariant()> evaluate,
-                                      BindingOptions options = {});
+    static BindingHandle bindComputed(QObject* target,
+        const char* targetProp,
+        const QVector<BindingDependency>& dependencies,
+        std::function<QVariant()> evaluate,
+        BindingOptions options = {});
 };
 
 /**
@@ -460,23 +466,28 @@ public:
      * zh_CN: 使用 PropertyBinder::bind()，保留无 NOTIFY 的初值同步，要求同线程，
      * 并替换已有绑定。
      */
-    void bind(const char* targetProp, QObject* source, const char* sourceProp,
-              PropertyBinder::Direction dir = PropertyBinder::OneWay);
+    void bind(const char* targetProp,
+        QObject* source,
+        const char* sourceProp,
+        PropertyBinder::Direction dir = PropertyBinder::OneWay);
 
     /**
      * @brief Installs a managed direct binding on this QWidget host.
      * zh_CN: 在当前 QWidget 宿主上安装可管理的直接绑定。
      */
-    BindingHandle bindManaged(const char* targetProp, QObject* source, const char* sourceProp,
-                              PropertyBinder::Direction direction = PropertyBinder::OneWay,
-                              BindingOptions options = {});
+    BindingHandle bindManaged(const char* targetProp,
+        QObject* source,
+        const char* sourceProp,
+        PropertyBinder::Direction direction = PropertyBinder::OneWay,
+        BindingOptions options = {});
     /**
      * @brief Installs an explicit-dependency C++ expression on this QWidget host.
      * zh_CN: 在当前 QWidget 宿主上安装使用显式依赖的 C++ 表达式绑定。
      */
     BindingHandle bindComputed(const char* targetProp,
-                               const QVector<BindingDependency>& dependencies,
-                               std::function<QVariant()> evaluate, BindingOptions options = {});
+        const QVector<BindingDependency>& dependencies,
+        std::function<QVariant()> evaluate,
+        BindingOptions options = {});
     /**
      * @brief Registers a state transition in precedence order.
      * zh_CN: 按优先顺序注册状态过渡。

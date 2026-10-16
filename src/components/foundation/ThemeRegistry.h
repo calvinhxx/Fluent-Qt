@@ -110,10 +110,7 @@ public:
     const FluentElement::Colors& colors(bool dark) const { return dark ? m_dark : m_light; }
 
     const FluentElement::Colors& colors(FluentElement::Theme theme) const;
-    FluentElement::Radius radius() const
-    {
-        return {m_radiusNone, m_radiusControl, m_radiusOverlay};
-    }
+    FluentElement::Radius radius() const { return {m_radiusNone, m_radiusControl, m_radiusOverlay}; }
 
     /**
      * @brief Resolves a typography role with the active family override and scale.
@@ -163,10 +160,8 @@ private:
     int m_radiusNone = 0;
     int m_radiusControl = 4;
     int m_radiusOverlay = 8;
-    QString
-        m_fontFamily; // empty => keep each role's default family. zh_CN: 空 => 保留各角色默认字族。
-    qreal m_fontScale =
-        1.0; // multiplies every role's size and line height. zh_CN: 缩放各角色字号与行高。
+    QString m_fontFamily;    // empty => keep each role's default family. zh_CN: 空 => 保留各角色默认字族。
+    qreal m_fontScale = 1.0; // multiplies every role's size and line height. zh_CN: 缩放各角色字号与行高。
     int m_revision = 0;
 };
 

@@ -10,10 +10,8 @@ namespace detail {
 class HyperlinkButtonAccessible;
 
 void initializeHyperlinkButtonAccessibility(HyperlinkButton* button);
-void notifyHyperlinkButtonAccessibilityUrlChanged(
-    HyperlinkButton* button, bool visitedChanged);
-void notifyHyperlinkButtonAccessibilityVisited(
-    HyperlinkButton* button);
+void notifyHyperlinkButtonAccessibilityUrlChanged(HyperlinkButton* button, bool visitedChanged);
+void notifyHyperlinkButtonAccessibilityVisited(HyperlinkButton* button);
 
 } // namespace detail
 } // namespace fluent::basicinput

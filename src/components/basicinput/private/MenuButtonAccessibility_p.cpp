@@ -56,9 +56,7 @@ template <typename ButtonType> void showAttachedMenu(ButtonType* button)
 
 class MenuButtonAccessibleBase : public QAccessibleWidget {
 public:
-    explicit MenuButtonAccessibleBase(QAbstractButton* button)
-        : QAccessibleWidget(button, QAccessible::ButtonMenu)
-    {}
+    explicit MenuButtonAccessibleBase(QAbstractButton* button) : QAccessibleWidget(button, QAccessible::ButtonMenu) {}
 
     QString text(QAccessible::Text type) const override
     {
@@ -113,8 +111,9 @@ public:
             return {};
         if (current->menu())
             return {QAccessibleActionInterface::showMenuAction()};
-        return {current->isCheckable() ? QAccessibleActionInterface::toggleAction()
-                                       : QAccessibleActionInterface::pressAction()};
+        return {current->isCheckable()
+                ? QAccessibleActionInterface::toggleAction()
+                : QAccessibleActionInterface::pressAction()};
     }
 
     void doAction(const QString& actionName) override
@@ -127,8 +126,8 @@ public:
             return;
         }
         const QString primaryAction = current->isCheckable()
-                                          ? QAccessibleActionInterface::toggleAction()
-                                          : QAccessibleActionInterface::pressAction();
+            ? QAccessibleActionInterface::toggleAction()
+            : QAccessibleActionInterface::pressAction();
         if (!current->menu() && actionName == primaryAction)
             current->click();
     }
@@ -139,12 +138,11 @@ public:
         if (!current)
             return {};
         if (actionName == QAccessibleActionInterface::showMenuAction() && current->menu()) {
-            return {QStringLiteral("Space"), QStringLiteral("Enter"), QStringLiteral("Alt+Down"),
-                    QStringLiteral("F4")};
+            return {QStringLiteral("Space"), QStringLiteral("Enter"), QStringLiteral("Alt+Down"), QStringLiteral("F4")};
         }
         const QString primaryAction = current->isCheckable()
-                                          ? QAccessibleActionInterface::toggleAction()
-                                          : QAccessibleActionInterface::pressAction();
+            ? QAccessibleActionInterface::toggleAction()
+            : QAccessibleActionInterface::pressAction();
         if (!current->menu() && actionName == primaryAction)
             return {QStringLiteral("Space")};
         return {};
@@ -169,8 +167,9 @@ public:
         if (!current || !current->isEnabled())
             return {};
 
-        QStringList result{current->isCheckable() ? QAccessibleActionInterface::toggleAction()
-                                                  : QAccessibleActionInterface::pressAction()};
+        QStringList result{current->isCheckable()
+                ? QAccessibleActionInterface::toggleAction()
+                : QAccessibleActionInterface::pressAction()};
         if (current->menu())
             result.append(QAccessibleActionInterface::showMenuAction());
         return result;
@@ -183,8 +182,8 @@ public:
             return;
 
         const QString primaryAction = current->isCheckable()
-                                          ? QAccessibleActionInterface::toggleAction()
-                                          : QAccessibleActionInterface::pressAction();
+            ? QAccessibleActionInterface::toggleAction()
+            : QAccessibleActionInterface::pressAction();
         if (actionName == primaryAction) {
             current->click();
             return;
@@ -200,8 +199,8 @@ public:
         if (!current)
             return {};
         const QString primaryAction = current->isCheckable()
-                                          ? QAccessibleActionInterface::toggleAction()
-                                          : QAccessibleActionInterface::pressAction();
+            ? QAccessibleActionInterface::toggleAction()
+            : QAccessibleActionInterface::pressAction();
         if (actionName == primaryAction)
             return {QStringLiteral("Space")};
         if (actionName == QAccessibleActionInterface::showMenuAction() && current->menu()) {
@@ -228,8 +227,7 @@ QAccessibleInterface* menuButtonAccessibilityFactory(const QString&, QObject* ob
     return nullptr;
 }
 
-template <typename ButtonType>
-void notifyMenuAvailability(ButtonType* button, bool availabilityChanged)
+template <typename ButtonType> void notifyMenuAvailability(ButtonType* button, bool availabilityChanged)
 {
     if (!button)
         return;

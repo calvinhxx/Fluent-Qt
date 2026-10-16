@@ -64,8 +64,7 @@ class TimePickerFlyout;
 
 class TimePickerColumn : public detail::PickerWheelColumn {
 public:
-    TimePickerColumn(TimePickerFlyout* flyout, TimePicker::TimeField field,
-                     QWidget* parent = nullptr);
+    TimePickerColumn(TimePickerFlyout* flyout, TimePicker::TimeField field, QWidget* parent = nullptr);
 
     TimePicker::TimeField field() const { return m_field; }
 
@@ -137,8 +136,7 @@ private:
     TimePickerColumn* m_periodColumn = nullptr;
 };
 
-TimePickerColumn::TimePickerColumn(TimePickerFlyout* flyout, TimePicker::TimeField field,
-                                   QWidget* parent)
+TimePickerColumn::TimePickerColumn(TimePickerFlyout* flyout, TimePicker::TimeField field, QWidget* parent)
     : detail::PickerWheelColumn(82, parent), m_flyout(flyout), m_field(field)
 {
     refreshColumnProperties();
@@ -169,8 +167,7 @@ QVariant TimePickerColumn::pickerColumnCurrentValue() const
         return {};
     switch (m_field) {
     case TimePicker::TimeField::Hour:
-        if (m_flyout->owner()->clockIdentifier() ==
-            TimePicker::ClockIdentifier::TwentyFourHourClock) {
+        if (m_flyout->owner()->clockIdentifier() == TimePicker::ClockIdentifier::TwentyFourHourClock) {
             return value.hour();
         }
         return displayHour12(value.hour());
@@ -184,8 +181,8 @@ QVariant TimePickerColumn::pickerColumnCurrentValue() const
 
 QVariant TimePickerColumn::pickerColumnMinimumValue() const
 {
-    if (m_field == TimePicker::TimeField::Hour && m_flyout &&
-        m_flyout->owner()->clockIdentifier() == TimePicker::ClockIdentifier::TwentyFourHourClock) {
+    if (m_field == TimePicker::TimeField::Hour && m_flyout
+        && m_flyout->owner()->clockIdentifier() == TimePicker::ClockIdentifier::TwentyFourHourClock) {
         return 0;
     }
     if (m_field == TimePicker::TimeField::Period)
@@ -197,8 +194,8 @@ QVariant TimePickerColumn::pickerColumnMaximumValue() const
 {
     if (m_field == TimePicker::TimeField::Period)
         return 1;
-    if (m_field == TimePicker::TimeField::Hour && m_flyout &&
-        m_flyout->owner()->clockIdentifier() == TimePicker::ClockIdentifier::TwentyFourHourClock) {
+    if (m_field == TimePicker::TimeField::Hour && m_flyout
+        && m_flyout->owner()->clockIdentifier() == TimePicker::ClockIdentifier::TwentyFourHourClock) {
         return 23;
     }
     if (m_field == TimePicker::TimeField::Minute && m_flyout) {
@@ -211,8 +208,8 @@ QVariant TimePickerColumn::pickerColumnMaximumValue() const
 QVariant TimePickerColumn::pickerColumnStepSize() const
 {
     return m_field == TimePicker::TimeField::Minute && m_flyout
-               ? QVariant(m_flyout->owner()->minuteIncrement())
-               : QVariant(1);
+        ? QVariant(m_flyout->owner()->minuteIncrement())
+        : QVariant(1);
 }
 
 void TimePickerColumn::pickerColumnSetValue(const QVariant& value)
@@ -223,8 +220,7 @@ void TimePickerColumn::pickerColumnSetValue(const QVariant& value)
     int requested = value.toInt(&ok);
     const int current = pickerColumnCurrentValue().toInt();
     if (ok) {
-        requested = qBound(pickerColumnMinimumValue().toInt(), requested,
-                           pickerColumnMaximumValue().toInt());
+        requested = qBound(pickerColumnMinimumValue().toInt(), requested, pickerColumnMaximumValue().toInt());
     }
     if (!ok || requested == current)
         return;
@@ -233,7 +229,7 @@ void TimePickerColumn::pickerColumnSetValue(const QVariant& value)
     if (m_field == TimePicker::TimeField::Minute) {
         const int increment = m_flyout->owner()->minuteIncrement();
         requested = qBound(0, qRound(static_cast<qreal>(requested) / increment) * increment,
-                           pickerColumnMaximumValue().toInt());
+            pickerColumnMaximumValue().toInt());
         offset = requested / increment - current / increment;
     }
     m_flyout->shiftField(m_field, offset);
@@ -299,8 +295,7 @@ int TimePickerColumn::visibleItemCountProperty() const
     return m_field == TimePicker::TimeField::Period ? 2 : 7;
 }
 
-TimePickerFlyout::TimePickerFlyout(TimePicker* owner)
-    : fluent::dialogs_flyouts::Flyout(owner), m_owner(owner)
+TimePickerFlyout::TimePickerFlyout(TimePicker* owner) : fluent::dialogs_flyouts::Flyout(owner), m_owner(owner)
 {
     setObjectName(QStringLiteral("TimePickerFlyout"));
     setAnimationEnabled(false);
@@ -310,8 +305,7 @@ TimePickerFlyout::TimePickerFlyout(TimePicker* owner)
     setDim(false);
     setClosePolicy(ClosePolicy(CloseOnPressOutside | CloseOnEscape));
 
-    m_panel = new detail::PickerWheelPanel(QStringLiteral("TimePickerFlyoutPanel"),
-                                           kTimePickerThemeMinWidth, this);
+    m_panel = new detail::PickerWheelPanel(QStringLiteral("TimePickerFlyoutPanel"), kTimePickerThemeMinWidth, this);
     m_hourColumn = new TimePickerColumn(this, TimePicker::TimeField::Hour, m_panel);
     m_hourColumn->setObjectName(QStringLiteral("TimePickerHourColumn"));
     m_minuteColumn = new TimePickerColumn(this, TimePicker::TimeField::Minute, m_panel);
@@ -320,8 +314,8 @@ TimePickerFlyout::TimePickerFlyout(TimePicker* owner)
     m_periodColumn->setObjectName(QStringLiteral("TimePickerPeriodColumn"));
     m_panel->setColumns({m_hourColumn, m_minuteColumn, m_periodColumn});
     m_panel->initializeActions(
-        QStringLiteral("TimePickerConfirmButton"), QStringLiteral("TimePickerCancelButton"),
-        [this] { commit(); }, [this] { cancel(); });
+        QStringLiteral("TimePickerConfirmButton"), QStringLiteral("TimePickerCancelButton"), [this] { commit(); },
+        [this] { cancel(); });
     refreshActionAccessibility();
     connect(this, &TimePickerFlyout::closed, this, [this] {
         if (m_owner)
@@ -334,8 +328,8 @@ QPoint TimePickerFlyout::computePosition() const
     if (!m_owner || !m_panel || !m_owner->window())
         return fluent::dialogs_flyouts::Flyout::computePosition();
 
-    return detail::alignedWheelFlyoutPosition(m_owner, size(), kPopupShadowMargin,
-                                              m_panel->selectedRowCenterY(), clampToWindow());
+    return detail::alignedWheelFlyoutPosition(m_owner, size(), kPopupShadowMargin, m_panel->selectedRowCenterY(),
+        clampToWindow());
 }
 
 QVector<TimePicker::TimeField> TimePickerFlyout::visibleFields() const
@@ -389,12 +383,10 @@ void TimePickerFlyout::refreshLayout()
 
     const auto fields = visibleFields();
     m_panel->configureColumns(m_owner->font(),
-                              {fields.contains(TimePicker::TimeField::Hour),
-                               fields.contains(TimePicker::TimeField::Minute),
-                               fields.contains(TimePicker::TimeField::Period)},
-                              {preferredColumnWidth(TimePicker::TimeField::Hour),
-                               preferredColumnWidth(TimePicker::TimeField::Minute),
-                               preferredColumnWidth(TimePicker::TimeField::Period)});
+        {fields.contains(TimePicker::TimeField::Hour), fields.contains(TimePicker::TimeField::Minute),
+            fields.contains(TimePicker::TimeField::Period)},
+        {preferredColumnWidth(TimePicker::TimeField::Hour), preferredColumnWidth(TimePicker::TimeField::Minute),
+            preferredColumnWidth(TimePicker::TimeField::Period)});
 
     const QSize cardSize = m_panel->sizeHint();
     const int cardW = cardSize.width();
@@ -474,12 +466,10 @@ void TimePickerFlyout::refreshActionAccessibility()
         return;
     const QString confirmOverride = m_owner ? m_owner->confirmButtonAccessibleName() : QString();
     const QString cancelOverride = m_owner ? m_owner->cancelButtonAccessibleName() : QString();
-    m_panel->setActionAccessibleNames(
-        confirmOverride.isEmpty()
+    m_panel->setActionAccessibleNames(confirmOverride.isEmpty()
             ? QCoreApplication::translate("PickerAccessibility", "Confirm time")
             : confirmOverride,
-        cancelOverride.isEmpty() ? QCoreApplication::translate("PickerAccessibility", "Cancel")
-                                 : cancelOverride);
+        cancelOverride.isEmpty() ? QCoreApplication::translate("PickerAccessibility", "Cancel") : cancelOverride);
 }
 
 void TimePickerFlyout::onThemeUpdated()
@@ -794,8 +784,7 @@ void TimePicker::setFieldTextAlignment(TimeField field, Qt::Alignment alignment)
     if (!target)
         return;
 
-    const Qt::Alignment normalized =
-        detail::normalizedPickerHorizontalAlignment(alignment, *target);
+    const Qt::Alignment normalized = detail::normalizedPickerHorizontalAlignment(alignment, *target);
     if (*target == normalized)
         return;
 
@@ -855,17 +844,15 @@ void TimePicker::paintEvent(QPaintEvent*)
 
         if (i > 0) {
             painter.setPen(colors.strokeDivider);
-            painter.drawLine(segment.rect.left(), surface.top() + 1, segment.rect.left(),
-                             surface.bottom() - 1);
+            painter.drawLine(segment.rect.left(), surface.top() + 1, segment.rect.left(), surface.bottom() - 1);
         }
 
-        QColor textColor = isEnabled() ? (active ? colors.textPrimary : colors.textSecondary)
-                                       : colors.textDisabled;
+        QColor textColor = isEnabled() ? (active ? colors.textPrimary : colors.textSecondary) : colors.textDisabled;
         painter.setPen(textColor);
         const QString text = fieldDisplayText(segment.field);
         QRect textRect = segment.rect.adjusted(kSegmentHPadding, 0, -kSegmentHPadding, 0);
         painter.drawText(textRect, Qt::AlignVCenter | fieldTextAlignment(segment.field),
-                         painter.fontMetrics().elidedText(text, Qt::ElideRight, textRect.width()));
+            painter.fontMetrics().elidedText(text, Qt::ElideRight, textRect.width()));
     }
 }
 
@@ -876,10 +863,10 @@ void TimePicker::resizeEvent(QResizeEvent* event)
 
 void TimePicker::keyPressEvent(QKeyEvent* event)
 {
-    if (!m_dropDownOpen && isEnabled() &&
-        (event->key() == Qt::Key_Space || event->key() == Qt::Key_Return ||
-         event->key() == Qt::Key_Enter || event->key() == Qt::Key_F4 ||
-         (event->key() == Qt::Key_Down && event->modifiers().testFlag(Qt::AltModifier)))) {
+    if (!m_dropDownOpen && isEnabled()
+        && (event->key() == Qt::Key_Space || event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter
+            || event->key() == Qt::Key_F4
+            || (event->key() == Qt::Key_Down && event->modifiers().testFlag(Qt::AltModifier)))) {
         openPicker();
         event->accept();
         return;
@@ -951,10 +938,9 @@ QVector<TimePicker::FieldSegment> TimePicker::fieldSegments() const
     int remainingW = surface.width();
     for (int i = 0; i < fields.size(); ++i) {
         const int weight = preferredFieldWidth(fields.at(i));
-        int w =
-            i == fields.size() - 1
-                ? remainingW
-                : qMax(32, qRound(double(surface.width()) * double(weight) / double(totalWeight)));
+        int w = i == fields.size() - 1
+            ? remainingW
+            : qMax(32, qRound(double(surface.width()) * double(weight) / double(totalWeight)));
         w = qMin(w, remainingW);
         result.append({fields.at(i), QRect(x, surface.top(), w, surface.height())});
         x += w;
@@ -1002,8 +988,7 @@ QTime TimePicker::shiftedTime(const QTime& time, TimeField field, int offset) co
     case TimeField::Hour: {
         if (m_clockIdentifier == ClockIdentifier::TwentyFourHourClock)
             return QTime(detail::wrappedPickerValue(base.hour() + offset, 0, 23), base.minute());
-        const int nextDisplayHour =
-            detail::wrappedPickerValue(displayHour12(base.hour()) + offset, 1, 12);
+        const int nextDisplayHour = detail::wrappedPickerValue(displayHour12(base.hour()) + offset, 1, 12);
         return QTime(hourFromDisplay12(nextDisplayHour, isPm(base)), base.minute());
     }
     case TimeField::Minute: {
@@ -1033,9 +1018,10 @@ QVector<int> TimePicker::minuteValues(const QTime& reference) const
         values.append(minute);
     if (values.isEmpty())
         values.append(0);
-    const QTime current = reference.isValid()              ? reference
-                          : m_flyout && m_flyout->isOpen() ? m_flyout->pendingTime()
-                                                           : time();
+    const QTime current = reference.isValid() ? reference
+        : m_flyout && m_flyout->isOpen()
+        ? m_flyout->pendingTime()
+        : time();
     if (m_allowDayEnd && current.hour() == 23 && values.last() != 59)
         values.append(59);
     return values;

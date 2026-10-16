@@ -44,10 +44,10 @@ public:
 
 static TextEditHeightAnimation* heightAnimationFor(TextEdit* edit)
 {
-    auto* animation =
-        edit ? edit->findChild<QVariantAnimation*>(QString::fromLatin1(kHeightAnimationObjectName),
-                                                   Qt::FindDirectChildrenOnly)
-             : nullptr;
+    auto* animation = edit
+        ? edit->findChild<QVariantAnimation*>(QString::fromLatin1(kHeightAnimationObjectName),
+              Qt::FindDirectChildrenOnly)
+        : nullptr;
     return static_cast<TextEditHeightAnimation*>(animation);
 }
 
@@ -63,8 +63,8 @@ static void applyTextEditHeight(TextEdit* edit, int height)
         return;
 
     const int boundedHeight = qMax(1, height);
-    if (edit->height() == boundedHeight && edit->minimumHeight() == boundedHeight &&
-        edit->maximumHeight() == boundedHeight) {
+    if (edit->height() == boundedHeight && edit->minimumHeight() == boundedHeight
+        && edit->maximumHeight() == boundedHeight) {
         return;
     }
 
@@ -118,8 +118,7 @@ static int verticalMarginOverflow(const QFont& font, int lineHeight, const QMarg
     return qMax(0, margins.top() + margins.bottom() - slotSlack);
 }
 
-static QMargins calcContentViewportMargins(const QFont& font, int lineHeight,
-                                           const QMargins& margins)
+static QMargins calcContentViewportMargins(const QFont& font, int lineHeight, const QMargins& margins)
 {
     const int fontLh = metricLineHeight(font);
     const int slotSlack = effectiveLineHeight(font, lineHeight) - fontLh;
@@ -164,8 +163,7 @@ static bool formatMetricEquals(qreal lhs, qreal rhs)
 
 class InnerTextEdit : public QTextEdit {
 public:
-    explicit InnerTextEdit(TextEdit* owner, QWidget* parent = nullptr)
-        : QTextEdit(parent), m_owner(owner)
+    explicit InnerTextEdit(TextEdit* owner, QWidget* parent = nullptr) : QTextEdit(parent), m_owner(owner)
     {
         setAcceptRichText(false);
     }
@@ -191,8 +189,7 @@ protected:
         // 承载，避免原生 QMenu 继承编辑器透明的 Base/Window 调色板；Win10
         // 与 Win11 对该透明调色板的回退绘制并不一致。
         auto* standardMenu = createStandardContextMenu(event->pos());
-        if (!::fluent::menus_toolbars::detail::showTextEditingContextMenu(
-                this, standardMenu, event->globalPos(),
+        if (!::fluent::menus_toolbars::detail::showTextEditingContextMenu(this, standardMenu, event->globalPos(),
                 QStringLiteral("FluentTextEdit.ContextMenu"))) {
             event->ignore();
             return;
@@ -264,8 +261,8 @@ private:
         }
 
         const qreal scrollPx = !event->pixelDelta().isNull()
-                                   ? static_cast<qreal>(event->pixelDelta().y())
-                                   : static_cast<qreal>(event->angleDelta().y());
+            ? static_cast<qreal>(event->pixelDelta().y())
+            : static_cast<qreal>(event->angleDelta().y());
         if (qFuzzyIsNull(scrollPx))
             return false;
 
@@ -308,8 +305,9 @@ TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
 
     auto* heightAnimation = new TextEditHeightAnimation(this);
     heightAnimation->setObjectName(QString::fromLatin1(kHeightAnimationObjectName));
-    connect(heightAnimation, &QVariantAnimation::valueChanged, this,
-            [this](const QVariant& value) { applyTextEditHeight(this, value.toInt()); });
+    connect(heightAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        applyTextEditHeight(this, value.toInt());
+    });
     connect(heightAnimation, &QVariantAnimation::finished, this, [this, heightAnimation]() {
         if (heightAnimation->targetHeight > 0)
             applyTextEditHeight(this, heightAnimation->targetHeight);
@@ -335,13 +333,11 @@ TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
     connect(m_editor, &QTextEdit::textChanged, this, [this]() {
         if (m_updatingFormat)
             return;
-        const bool hasActivePreedit =
-            static_cast<const InnerTextEdit*>(m_editor)->hasActivePreedit();
+        const bool hasActivePreedit = static_cast<const InnerTextEdit*>(m_editor)->hasActivePreedit();
         auto* heightAnimation = heightAnimationFor(this);
         if (heightAnimation) {
-            heightAnimation->animateNextUpdate = isVisible() && m_editor->hasFocus() &&
-                                                 !heightAnimation->programmaticTextChange &&
-                                                 !hasActivePreedit;
+            heightAnimation->animateNextUpdate = isVisible() && m_editor->hasFocus()
+                && !heightAnimation->programmaticTextChange && !hasActivePreedit;
         }
         applyBlockCenterFormat();
         if (!hasActivePreedit)
@@ -350,9 +346,8 @@ TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
     });
     connect(m_editor, &QTextEdit::cursorPositionChanged, this, &TextEdit::cursorPositionChanged);
     connect(m_editor, &QTextEdit::selectionChanged, this, &TextEdit::selectionChanged);
-    connect(m_editor->document()->documentLayout(),
-            &QAbstractTextDocumentLayout::documentSizeChanged, this,
-            [this](const QSizeF&) { scheduleHeightForContentUpdate(); });
+    connect(m_editor->document()->documentLayout(), &QAbstractTextDocumentLayout::documentSizeChanged, this,
+        [this](const QSizeF&) { scheduleHeightForContentUpdate(); });
     m_editor->installEventFilter(this);
 
     // Custom fluent scroll bar. zh_CN: 自定义 Fluent 滚动条。
@@ -364,15 +359,14 @@ TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
     m_vScrollBar->setPageStep(innerVBar->pageStep());
     m_vScrollBar->setValue(innerVBar->value());
 
-    connect(innerVBar, &QScrollBar::rangeChanged, this,
-            [this, innerVBar](int /*min*/, int /*max*/) {
-                if (!m_vScrollBar)
-                    return;
-                m_vScrollBar->setRange(innerVBar->minimum(), innerVBar->maximum());
-                m_vScrollBar->setPageStep(innerVBar->pageStep());
-                // Scroll bar visibility is owned by updateHeightForContent.
-                // zh_CN: 滚动条可见性由 updateHeightForContent 统一管理。
-            });
+    connect(innerVBar, &QScrollBar::rangeChanged, this, [this, innerVBar](int /*min*/, int /*max*/) {
+        if (!m_vScrollBar)
+            return;
+        m_vScrollBar->setRange(innerVBar->minimum(), innerVBar->maximum());
+        m_vScrollBar->setPageStep(innerVBar->pageStep());
+        // Scroll bar visibility is owned by updateHeightForContent.
+        // zh_CN: 滚动条可见性由 updateHeightForContent 统一管理。
+    });
     connect(innerVBar, &QScrollBar::valueChanged, this, [this](int v) {
         if (m_vScrollBar && m_vScrollBar->value() != v)
             m_vScrollBar->setValue(v);
@@ -482,8 +476,8 @@ void TextEdit::resizeEvent(QResizeEvent* event)
     if (m_editor) {
         const QRect previousCaret = m_editor->cursorRect();
         const QRect previousViewport = m_editor->viewport()->rect();
-        const bool hadOversizedVisibleCaret = previousCaret.height() > previousViewport.height() &&
-                                              previousCaret.intersects(previousViewport);
+        const bool hadOversizedVisibleCaret = previousCaret.height() > previousViewport.height()
+            && previousCaret.intersects(previousViewport);
         QRect r = rect();
         int sbw = (m_vScrollBar && m_vScrollBar->isVisible()) ? m_vScrollBar->thickness() : 0;
         m_editor->setGeometry(r.adjusted(0, 0, -sbw, 0));
@@ -493,8 +487,7 @@ void TextEdit::resizeEvent(QResizeEvent* event)
         // user-scrolled caret during later resizes.
         // zh_CN: 回退字形可能让光标高于旧视口，Qt 会在异步高度收敛前滚动到
         // 光标底部。视口增高后恢复完整光标，但不改变普通手动滚动的偏移。
-        if (hadOversizedVisibleCaret &&
-            m_editor->cursorRect().height() <= m_editor->viewport()->height()) {
+        if (hadOversizedVisibleCaret && m_editor->cursorRect().height() <= m_editor->viewport()->height()) {
             m_editor->ensureCursorVisible();
         }
         if (m_vScrollBar) {
@@ -556,8 +549,7 @@ void TextEdit::paintFrame(QPainter& painter)
         QPen pen(bottomBorderColor, bottomBorderWidth);
         pen.setCapStyle(Qt::RoundCap);
         painter.setPen(pen);
-        qreal bottomY =
-            bgRect.bottom() - (bottomBorderWidth > 1 ? (bottomBorderWidth - 1) / 2.0 : 0);
+        qreal bottomY = bgRect.bottom() - (bottomBorderWidth > 1 ? (bottomBorderWidth - 1) / 2.0 : 0);
         QPainterPath bottomPath;
         bottomPath.moveTo(bgRect.left() + r, bottomY);
         bottomPath.lineTo(bgRect.right() - r, bottomY);
@@ -715,8 +707,7 @@ void TextEdit::setScrollChainingEnabled(bool enabled)
 void TextEdit::onThemeUpdated()
 {
     QScrollBar* innerScrollBar = m_editor ? m_editor->verticalScrollBar() : nullptr;
-    const bool hadScrollableRange =
-        innerScrollBar && innerScrollBar->maximum() > innerScrollBar->minimum();
+    const bool hadScrollableRange = innerScrollBar && innerScrollBar->maximum() > innerScrollBar->minimum();
     const int previousValue = innerScrollBar ? innerScrollBar->value() : 0;
     const bool wasAtTop = hadScrollableRange && previousValue <= innerScrollBar->minimum();
     const bool wasAtBottom = hadScrollableRange && previousValue >= innerScrollBar->maximum();
@@ -799,8 +790,7 @@ void TextEdit::applyThemeStyle()
     // QTextDocument to rebuild otherwise unchanged line geometry.
     // zh_CN: 影响几何的 QSS 与主题无关；文本和选区颜色完全由 QPalette
     // 提供，避免 Light/Dark 切换重建未变化的 QTextDocument 行布局。
-    const QString editorQss =
-        QStringLiteral("QTextEdit { background: transparent; border: none; }");
+    const QString editorQss = QStringLiteral("QTextEdit { background: transparent; border: none; }");
     if (m_editor->styleSheet() != editorQss)
         m_editor->setStyleSheet(editorQss);
 
@@ -840,10 +830,9 @@ void TextEdit::applyBlockCenterFormat()
     QTextFrame* rootFrame = m_editor->document()->rootFrame();
     QTextFrameFormat rff = rootFrame->frameFormat();
     const qreal trailingLineDistance = -static_cast<qreal>(botPad);
-    const bool frameFormatChanged = !formatMetricEquals(rff.topMargin(), 0) ||
-                                    !formatMetricEquals(rff.bottomMargin(), trailingLineDistance) ||
-                                    !formatMetricEquals(rff.leftMargin(), 0) ||
-                                    !formatMetricEquals(rff.rightMargin(), 0);
+    const bool frameFormatChanged = !formatMetricEquals(rff.topMargin(), 0)
+        || !formatMetricEquals(rff.bottomMargin(), trailingLineDistance) || !formatMetricEquals(rff.leftMargin(), 0)
+        || !formatMetricEquals(rff.rightMargin(), 0);
     if (frameFormatChanged) {
         rff.setTopMargin(0);
         rff.setBottomMargin(trailingLineDistance);
@@ -869,9 +858,9 @@ void TextEdit::applyBlockCenterFormat()
     bool blockFormatChanged = false;
     for (QTextBlock block = m_editor->document()->begin(); block.isValid(); block = block.next()) {
         const QTextBlockFormat current = block.blockFormat();
-        if (current.lineHeightType() != fmt.lineHeightType() ||
-            !formatMetricEquals(current.lineHeight(), fmt.lineHeight()) ||
-            !formatMetricEquals(current.bottomMargin(), fmt.bottomMargin())) {
+        if (current.lineHeightType() != fmt.lineHeightType()
+            || !formatMetricEquals(current.lineHeight(), fmt.lineHeight())
+            || !formatMetricEquals(current.bottomMargin(), fmt.bottomMargin())) {
             blockFormatChanged = true;
             break;
         }
@@ -890,9 +879,8 @@ void TextEdit::applyBlockCenterFormat()
     // zh_CN: viewport margin 承担外部 inset，并分配满足 inset 后剩余的行槽
     // 余量，因此滚动顶部和尾部都只显示完整视觉行。
     const QMargins viewportMargins = calcContentViewportMargins(f, m_lineHeight, m_contentMargins);
-    static_cast<InnerTextEdit*>(m_editor)->setContentViewportMargins(
-        viewportMargins.left(), viewportMargins.top(), viewportMargins.right(),
-        viewportMargins.bottom());
+    static_cast<InnerTextEdit*>(m_editor)->setContentViewportMargins(viewportMargins.left(), viewportMargins.top(),
+        viewportMargins.right(), viewportMargins.bottom());
 
     m_updatingFormat = false;
 }
@@ -942,8 +930,7 @@ void TextEdit::updateHeightForContent()
     // vertical insets add only the overflow required to keep both edges real.
     // zh_CN: 默认 Fluent 内边距包含在行槽中，因此单行编辑器仍与 32px 控件等高；
     // 调用方设置更大的上下内边距时，仅补足超出行槽余量的高度。
-    const int marginOverflow =
-        verticalMarginOverflow(m_editor->font(), m_lineHeight, m_contentMargins);
+    const int marginOverflow = verticalMarginOverflow(m_editor->font(), m_lineHeight, m_contentMargins);
     const int targetHeight = clamped * renderedLinePitch(m_editor, m_lineHeight) + marginOverflow;
 
     // The scroll bar only appears once content exceeds maxVisibleLines.
@@ -958,8 +945,7 @@ void TextEdit::updateHeightForContent()
 
     TextEditHeightAnimation* heightAnimation = heightAnimationFor(this);
     const bool animateHeight = heightAnimation && heightAnimation->animateNextUpdate;
-    const bool settleSynchronously =
-        heightAnimation && heightAnimation->settleSynchronouslyNextUpdate;
+    const bool settleSynchronously = heightAnimation && heightAnimation->settleSynchronouslyNextUpdate;
     if (heightAnimation) {
         heightAnimation->animateNextUpdate = false;
         heightAnimation->settleSynchronouslyNextUpdate = false;
@@ -970,9 +956,8 @@ void TextEdit::updateHeightForContent()
     // synchronously, even when their target matches the transition.
     // zh_CN: 动画自身触发同目标文档重排时继续当前用户过渡；显式文本与度量
     // setter 即使目标相同，仍会停止动画并同步收敛。
-    if (!settleSynchronously && heightAnimation &&
-        heightAnimation->state() == QAbstractAnimation::Running &&
-        heightAnimation->targetHeight == targetHeight) {
+    if (!settleSynchronously && heightAnimation && heightAnimation->state() == QAbstractAnimation::Running
+        && heightAnimation->targetHeight == targetHeight) {
         m_updatingHeight = false;
         return;
     }

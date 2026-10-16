@@ -23,8 +23,7 @@ QString stripMnemonic(const QString& source)
             result.append(source.at(index));
             continue;
         }
-        if (index + 1 < source.size()
-            && source.at(index + 1) == QLatin1Char('&')) {
+        if (index + 1 < source.size() && source.at(index + 1) == QLatin1Char('&')) {
             result.append(QLatin1Char('&'));
             ++index;
         }
@@ -34,15 +33,12 @@ QString stripMnemonic(const QString& source)
 
 QString encodedUrl(const HyperlinkButton* button)
 {
-    return button
-        ? button->url().toString(QUrl::FullyEncoded)
-        : QString{};
+    return button ? button->url().toString(QUrl::FullyEncoded) : QString{};
 }
 
 QString hyperlinkText(const char* source)
 {
-    return QCoreApplication::translate(
-        "HyperlinkButtonAccessibility", source);
+    return QCoreApplication::translate("HyperlinkButtonAccessibility", source);
 }
 
 void sendUrlChanged(HyperlinkButton* button)
@@ -68,14 +64,12 @@ void sendTraversedChanged(HyperlinkButton* button)
 class HyperlinkButtonAccessible final
     : public QAccessibleWidget
 #if FLUENT_HAS_ACCESSIBLE_HYPERLINK_INTERFACE
-    , public QAccessibleHyperlinkInterface
+    ,
+      public QAccessibleHyperlinkInterface
 #endif
 {
 public:
-    explicit HyperlinkButtonAccessible(HyperlinkButton* button)
-        : QAccessibleWidget(button, QAccessible::Link)
-    {
-    }
+    explicit HyperlinkButtonAccessible(HyperlinkButton* button) : QAccessibleWidget(button, QAccessible::Link) {}
 
     QString text(QAccessible::Text type) const override
     {
@@ -88,8 +82,7 @@ public:
         if (type == QAccessible::Value)
             return encodedUrl(current);
         if (type == QAccessible::Accelerator)
-            return current->shortcut().toString(
-                QKeySequence::NativeText);
+            return current->shortcut().toString(QKeySequence::NativeText);
         return authored;
     }
 
@@ -101,8 +94,7 @@ public:
             return result;
         result.linked = true;
         result.traversed = current->m_accessibilityVisited;
-        result.focusable = current->isEnabled()
-            && current->focusPolicy() != Qt::NoFocus;
+        result.focusable = current->isEnabled() && current->focusPolicy() != Qt::NoFocus;
         result.focused = current->hasFocus();
         result.pressed = current->isDown();
         return result;
@@ -120,84 +112,61 @@ public:
     QStringList actionNames() const override
     {
         return button() && button()->isEnabled()
-            ? QStringList{
-                  QAccessibleActionInterface::pressAction()}
+            ? QStringList{QAccessibleActionInterface::pressAction()}
             : QStringList{};
     }
 
     void doAction(const QString& actionName) override
     {
         HyperlinkButton* current = button();
-        if (current && current->isEnabled()
-            && actionName
-                == QAccessibleActionInterface::pressAction()) {
+        if (current && current->isEnabled() && actionName == QAccessibleActionInterface::pressAction()) {
             current->click();
         }
     }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         if (actionName == QAccessibleActionInterface::pressAction()) {
-            return {QStringLiteral("Space"),
-                    QStringLiteral("Enter")};
+            return {QStringLiteral("Space"), QStringLiteral("Enter")};
         }
         return {};
     }
 
-    QString localizedActionName(
-        const QString& actionName) const override
+    QString localizedActionName(const QString& actionName) const override
     {
         return actionName == QAccessibleActionInterface::pressAction()
             ? hyperlinkText("Open link")
             : QAccessibleWidget::localizedActionName(actionName);
     }
 
-    QString localizedActionDescription(
-        const QString& actionName) const override
+    QString localizedActionDescription(const QString& actionName) const override
     {
         return actionName == QAccessibleActionInterface::pressAction()
             ? hyperlinkText("Opens the link target")
-            : QAccessibleWidget::localizedActionDescription(
-                  actionName);
+            : QAccessibleWidget::localizedActionDescription(actionName);
     }
 
 #if FLUENT_HAS_ACCESSIBLE_HYPERLINK_INTERFACE
-    QString anchor() const override
-    {
-        return button() ? stripMnemonic(button()->text()) : QString{};
-    }
+    QString anchor() const override { return button() ? stripMnemonic(button()->text()) : QString{}; }
 
-    QString anchorTarget() const override
-    {
-        return encodedUrl(button());
-    }
+    QString anchorTarget() const override { return encodedUrl(button()); }
 
     int startIndex() const override { return 0; }
     int endIndex() const override { return anchor().size(); }
 #endif
 
-    bool isValid() const override
-    {
-        return button() && button()->url().isValid();
-    }
+    bool isValid() const override { return button() && button()->url().isValid(); }
 
 private:
-    HyperlinkButton* button() const
-    {
-        return static_cast<HyperlinkButton*>(widget());
-    }
+    HyperlinkButton* button() const { return static_cast<HyperlinkButton*>(widget()); }
 };
 
 namespace {
 
-QAccessibleInterface* hyperlinkButtonAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* hyperlinkButtonAccessibilityFactory(const QString&, QObject* object)
 {
     auto* button = qobject_cast<HyperlinkButton*>(object);
-    return button
-        ? new HyperlinkButtonAccessible(button)
-        : nullptr;
+    return button ? new HyperlinkButtonAccessible(button) : nullptr;
 }
 
 } // namespace
@@ -210,8 +179,7 @@ void ensureHyperlinkButtonAccessibilityFactory()
 {
 #if QT_CONFIG(accessibility)
     static const bool installed = [] {
-        QAccessible::installFactory(
-            hyperlinkButtonAccessibilityFactory);
+        QAccessible::installFactory(hyperlinkButtonAccessibilityFactory);
         return true;
     }();
     Q_UNUSED(installed)
@@ -223,12 +191,10 @@ void ensureHyperlinkButtonAccessibilityFactory()
 void initializeHyperlinkButtonAccessibility(HyperlinkButton* button)
 {
     ensureHyperlinkButtonAccessibilityFactory();
-    fluentRefreshAccessibleInterfaceAfterConstruction(
-        button, QAccessible::Link);
+    fluentRefreshAccessibleInterfaceAfterConstruction(button, QAccessible::Link);
 }
 
-void notifyHyperlinkButtonAccessibilityUrlChanged(
-    HyperlinkButton* button, bool visitedChanged)
+void notifyHyperlinkButtonAccessibilityUrlChanged(HyperlinkButton* button, bool visitedChanged)
 {
 #if QT_CONFIG(accessibility)
     sendUrlChanged(button);
@@ -240,8 +206,7 @@ void notifyHyperlinkButtonAccessibilityUrlChanged(
 #endif
 }
 
-void notifyHyperlinkButtonAccessibilityVisited(
-    HyperlinkButton* button)
+void notifyHyperlinkButtonAccessibilityVisited(HyperlinkButton* button)
 {
 #if QT_CONFIG(accessibility)
     sendTraversedChanged(button);

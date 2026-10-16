@@ -35,8 +35,7 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      * @brief Visual treatment: Standard, Accent, or Subtle.
      * zh_CN: 按钮视觉风格：Standard(标准)、Accent(强调色)、Subtle(透明)。
      */
-    Q_PROPERTY(
-        ButtonStyle fluentStyle READ fluentStyle WRITE setFluentStyle NOTIFY fluentStyleChanged)
+    Q_PROPERTY(ButtonStyle fluentStyle READ fluentStyle WRITE setFluentStyle NOTIFY fluentStyleChanged)
     /**
      * @brief Density token that controls height and padding, not typography.
      * zh_CN: 按钮密度 token，仅控制高度与内边距；字体由 fontRole 或 setFont() 管理。
@@ -51,8 +50,7 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      * @brief Content layout for text and icon placement.
      * zh_CN: 文本与图标的内容排列方式。
      */
-    Q_PROPERTY(ButtonLayout fluentLayout READ fluentLayout WRITE setFluentLayout NOTIFY
-                   fluentLayoutChanged)
+    Q_PROPERTY(ButtonLayout fluentLayout READ fluentLayout WRITE setFluentLayout NOTIFY fluentLayoutChanged)
     /**
      * @brief Controls whether the focus visual frame is painted.
      * zh_CN: 控制是否绘制焦点视觉框。
@@ -62,20 +60,24 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      * @brief Overrides the interaction state for guided demos or visual checks.
      * zh_CN: 强制交互状态，主要用于引导、演示或 VisualCheck。
      */
-    Q_PROPERTY(InteractionState interactionState READ interactionState WRITE setInteractionState
-                   NOTIFY interactionStateChanged)
+    Q_PROPERTY(InteractionState interactionState
+        READ interactionState
+        WRITE setInteractionState
+        NOTIFY interactionStateChanged)
     /**
      * @brief Uses the critical semantic color while hovered or pressed.
      * zh_CN: Hover/Pressed 状态使用 Critical 语义色，适合关闭、删除等危险操作。
      */
-    Q_PROPERTY(bool criticalOnHover READ criticalOnHover WRITE setCriticalOnHover NOTIFY
-                   criticalOnHoverChanged)
+    Q_PROPERTY(bool criticalOnHover READ criticalOnHover WRITE setCriticalOnHover NOTIFY criticalOnHoverChanged)
     /**
      * @brief Per-corner radii; left/top/right/bottom map to top-left/top-right/bottom-right/bottom-left.
      * zh_CN: 四角圆角；left/top/right/bottom 分别对应左上、右上、右下、左下。
      */
-    Q_PROPERTY(QMargins cornerRadii READ cornerRadii WRITE setCornerRadii RESET resetCornerRadii
-                   NOTIFY cornerRadiiChanged)
+    Q_PROPERTY(QMargins cornerRadii
+        READ cornerRadii
+        WRITE setCornerRadii
+        RESET resetCornerRadii
+        NOTIFY cornerRadiiChanged)
     /**
      * @brief Pixel offset applied to iconfont drawing; positive values move right/down.
      * zh_CN: iconfont 绘制偏移量，正值表示向右/向下移动，用于精细视觉对齐。
@@ -194,11 +196,13 @@ public:
      * WinUI's standard 16 px control icon.
      * @param family Icon font family; defaults to FluentQt Icons.
      */
-    void setIconGlyph(const QString& glyph, int pixelSize = Typography::IconSize::Standard,
-                      const QString& family = Typography::FontFamily::FluentIcons);
+    void setIconGlyph(const QString& glyph,
+        int pixelSize = Typography::IconSize::Standard,
+        const QString& family = Typography::FontFamily::FluentIcons);
 
-    void setIconGlyph(QChar glyph, int pixelSize = Typography::IconSize::Standard,
-                      const QString& family = Typography::FontFamily::FluentIcons)
+    void setIconGlyph(QChar glyph,
+        int pixelSize = Typography::IconSize::Standard,
+        const QString& family = Typography::FontFamily::FluentIcons)
     {
         setIconGlyph(QString(glyph), pixelSize, family);
     }

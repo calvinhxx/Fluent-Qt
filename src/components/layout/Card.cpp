@@ -9,8 +9,7 @@
 
 namespace fluent::layout {
 
-Card::Card(QWidget* parent)
-    : QFrame(parent)
+Card::Card(QWidget* parent) : QFrame(parent)
 {
     setFrameShape(QFrame::NoFrame);
     setAutoFillBackground(false);

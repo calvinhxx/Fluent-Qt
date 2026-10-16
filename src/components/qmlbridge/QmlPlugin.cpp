@@ -18,9 +18,7 @@ struct QmlPlugin::Private {
     QVector<QPointer<QmlView>> views;
     bool active = false;
 };
-QmlPlugin::QmlPlugin(QObject* parent)
-    : plugins::WidgetPlugin(parent), d(std::make_shared<Private>())
-{}
+QmlPlugin::QmlPlugin(QObject* parent) : plugins::WidgetPlugin(parent), d(std::make_shared<Private>()) {}
 QmlPlugin::~QmlPlugin()
 {
     onDeactivate();

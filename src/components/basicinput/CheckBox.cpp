@@ -98,9 +98,7 @@ QSize CheckBox::sizeHint() const
     QFontMetrics fm(font());
 
     // Configurable metrics. zh_CN: 使用可配置的属性。
-    int w =
-        m_boxSize +
-        m_boxMargin * 2; // Left margin + box + right margin. zh_CN: 左 margin + 方框 + 右 margin。
+    int w = m_boxSize + m_boxMargin * 2; // Left margin + box + right margin. zh_CN: 左 margin + 方框 + 右 margin。
     if (!text().isEmpty()) {
         w += m_textGap + fm.horizontalAdvance(text());
     }
@@ -150,15 +148,13 @@ void CheckBox::paintEvent(QPaintEvent*)
         boxBorder = colors.strokeDivider;
         iconColor = colors.textDisabled;
     } else if (state == Qt::Unchecked) {
-        boxBg = isPressed ? colors.controlTertiary
-                          : (isHover ? colors.controlSecondary : colors.controlDefault);
+        boxBg = isPressed ? colors.controlTertiary : (isHover ? colors.controlSecondary : colors.controlDefault);
         boxBorder = isHover ? colors.strokeStrong : colors.strokeDefault;
         iconColor = Qt::transparent;
     } else {
         // Checked or indeterminate: accent fill without a separate border.
         // zh_CN: Checked 或 Indeterminate——使用 Accent 颜色且无独立边框。
-        boxBg = isPressed ? colors.accentTertiary
-                          : (isHover ? colors.accentSecondary : colors.accentDefault);
+        boxBg = isPressed ? colors.accentTertiary : (isHover ? colors.accentSecondary : colors.accentDefault);
         boxBorder = Qt::transparent;
         iconColor = colors.textOnAccent;
     }
@@ -175,8 +171,7 @@ void CheckBox::paintEvent(QPaintEvent*)
         const qreal inset = borderWidth / 2.0;
         painter.setBrush(Qt::NoBrush);
         painter.setPen(QPen(boxBorder, borderWidth));
-        painter.drawRoundedRect(boxDrawRect.adjusted(inset, inset, -inset, -inset), boxRadius,
-                                boxRadius);
+        painter.drawRoundedRect(boxDrawRect.adjusted(inset, inset, -inset, -inset), boxRadius, boxRadius);
     }
 
     // 3. Paint the inner glyph (icon font). zh_CN: 绘制内部图标。
@@ -196,8 +191,7 @@ void CheckBox::paintEvent(QPaintEvent*)
             painter.translate(-boxRect.center());
         }
 
-        const QString glyph =
-            state == Qt::Checked ? Typography::Icons::CheckMark : Typography::Icons::Hyphen;
+        const QString glyph = state == Qt::Checked ? Typography::Icons::CheckMark : Typography::Icons::Hyphen;
         Typography::Icons::paintGlyph(painter, QRectF(boxRect), glyph, fontSize, Qt::AlignCenter);
 
         painter.restore();
@@ -210,11 +204,9 @@ void CheckBox::paintEvent(QPaintEvent*)
 
         // Text starts after the left margin, box, and text gap.
         // zh_CN: 文本起始位置 = 左侧边距 + 方框 + 文字间距。
-        const QRect logicalTextRect =
-            rect().adjusted(m_boxMargin + m_boxSize + m_textGap, 0, -m_boxMargin, 0);
+        const QRect logicalTextRect = rect().adjusted(m_boxMargin + m_boxSize + m_textGap, 0, -m_boxMargin, 0);
         const QRect textRect = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
-        painter.drawText(
-            textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
+        painter.drawText(textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
             text());
     }
 
@@ -232,8 +224,8 @@ void CheckBox::focusInEvent(QFocusEvent* event)
     QCheckBox::focusInEvent(event);
     if (event->reason() == Qt::MouseFocusReason)
         m_keyboardFocusVisible = false;
-    else if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason ||
-             event->reason() == Qt::ShortcutFocusReason)
+    else if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason
+        || event->reason() == Qt::ShortcutFocusReason)
         m_keyboardFocusVisible = true;
     update();
 }

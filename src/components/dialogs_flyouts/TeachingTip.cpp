@@ -25,26 +25,24 @@ namespace {
 
 bool isTopPlacement(TeachingTip::PreferredPlacement placement)
 {
-    return placement == TeachingTip::Top || placement == TeachingTip::TopLeft ||
-           placement == TeachingTip::TopRight;
+    return placement == TeachingTip::Top || placement == TeachingTip::TopLeft || placement == TeachingTip::TopRight;
 }
 
 bool isBottomPlacement(TeachingTip::PreferredPlacement placement)
 {
-    return placement == TeachingTip::Bottom || placement == TeachingTip::BottomLeft ||
-           placement == TeachingTip::BottomRight;
+    return placement == TeachingTip::Bottom || placement == TeachingTip::BottomLeft
+        || placement == TeachingTip::BottomRight;
 }
 
 bool isLeftPlacement(TeachingTip::PreferredPlacement placement)
 {
-    return placement == TeachingTip::Left || placement == TeachingTip::LeftTop ||
-           placement == TeachingTip::LeftBottom;
+    return placement == TeachingTip::Left || placement == TeachingTip::LeftTop || placement == TeachingTip::LeftBottom;
 }
 
 bool isRightPlacement(TeachingTip::PreferredPlacement placement)
 {
-    return placement == TeachingTip::Right || placement == TeachingTip::RightTop ||
-           placement == TeachingTip::RightBottom;
+    return placement == TeachingTip::Right || placement == TeachingTip::RightTop
+        || placement == TeachingTip::RightBottom;
 }
 
 } // namespace
@@ -120,8 +118,7 @@ void TeachingTip::setLightDismissEnabled(bool enabled)
     if (m_lightDismissEnabled == enabled)
         return;
     m_lightDismissEnabled = enabled;
-    setClosePolicy(enabled ? ClosePolicy(CloseOnPressOutside | CloseOnEscape)
-                           : ClosePolicy(NoAutoClose));
+    setClosePolicy(enabled ? ClosePolicy(CloseOnPressOutside | CloseOnEscape) : ClosePolicy(NoAutoClose));
     emit lightDismissEnabledChanged(m_lightDismissEnabled);
 }
 
@@ -193,8 +190,8 @@ bool TeachingTip::eventFilter(QObject* watched, QEvent* event)
         }
     }
 
-    if ((isVisible() || isOpen()) && isLightDismissEnabled() && event->type() == QEvent::KeyPress &&
-        static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
+    if ((isVisible() || isOpen()) && isLightDismissEnabled() && event->type() == QEvent::KeyPress
+        && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
         // Popup installs this object as an application event filter, so an
         // Escape sent to the owning window reaches here before keyPressEvent().
         // Keep TeachingTip's legacy close-reason surface at LightDismiss.
@@ -203,8 +200,7 @@ bool TeachingTip::eventFilter(QObject* watched, QEvent* event)
         markPendingCloseReason(LightDismiss);
     }
 
-    if ((isVisible() || isOpen()) && isLightDismissEnabled() &&
-        event->type() == QEvent::MouseButtonPress) {
+    if ((isVisible() || isOpen()) && isLightDismissEnabled() && event->type() == QEvent::MouseButtonPress) {
         auto* mouseEvent = static_cast<QMouseEvent*>(event);
         const QPoint globalPos = fluentMouseGlobalPos(mouseEvent);
         if (!rect().contains(mapFromGlobal(globalPos))) {
@@ -237,8 +233,7 @@ void TeachingTip::paintEvent(QPaintEvent*)
     if (m_tailVisible && !targetRectInTopLevel().isEmpty()) {
         QPolygon tail;
         const QRect targetRect = targetRectInTopLevel();
-        const QRect localTargetRect(
-            mapFrom(::fluent::overlay::presentedTopLevel(m_target), targetRect.topLeft()),
+        const QRect localTargetRect(mapFrom(::fluent::overlay::presentedTopLevel(m_target), targetRect.topLeft()),
             targetRect.size());
 
         if (isBottomPlacement(placement)) {
@@ -248,7 +243,7 @@ void TeachingTip::paintEvent(QPaintEvent*)
             if (placement == BottomRight)
                 centerX = localTargetRect.right() - qMin(24, localTargetRect.width() / 2);
             centerX = qBound(visualCardRect.left() + radius + kTailHalfWidth, centerX,
-                             visualCardRect.right() - radius - kTailHalfWidth);
+                visualCardRect.right() - radius - kTailHalfWidth);
             // The base points push 2px into the card so united() overlaps with
             // area, removing the seam line.
             // zh_CN: 底边两点向 card 内 +2px，确保 united() 有面积重叠，消除接缝线。
@@ -262,7 +257,7 @@ void TeachingTip::paintEvent(QPaintEvent*)
             if (placement == TopRight)
                 centerX = localTargetRect.right() - qMin(24, localTargetRect.width() / 2);
             centerX = qBound(visualCardRect.left() + radius + kTailHalfWidth, centerX,
-                             visualCardRect.right() - radius - kTailHalfWidth);
+                visualCardRect.right() - radius - kTailHalfWidth);
             tail << QPoint(centerX - kTailHalfWidth, visualCardRect.bottom() - 2)
                  << QPoint(centerX + kTailHalfWidth, visualCardRect.bottom() - 2)
                  << QPoint(centerX, visualCardRect.bottom() + kTailSize);
@@ -273,7 +268,7 @@ void TeachingTip::paintEvent(QPaintEvent*)
             if (placement == RightBottom)
                 centerY = localTargetRect.bottom() - qMin(24, localTargetRect.height() / 2);
             centerY = qBound(visualCardRect.top() + radius + kTailHalfWidth, centerY,
-                             visualCardRect.bottom() - radius - kTailHalfWidth);
+                visualCardRect.bottom() - radius - kTailHalfWidth);
             tail << QPoint(visualCardRect.left() + 2, centerY - kTailHalfWidth)
                  << QPoint(visualCardRect.left() + 2, centerY + kTailHalfWidth)
                  << QPoint(visualCardRect.left() - kTailSize, centerY);
@@ -284,7 +279,7 @@ void TeachingTip::paintEvent(QPaintEvent*)
             if (placement == LeftBottom)
                 centerY = localTargetRect.bottom() - qMin(24, localTargetRect.height() / 2);
             centerY = qBound(visualCardRect.top() + radius + kTailHalfWidth, centerY,
-                             visualCardRect.bottom() - radius - kTailHalfWidth);
+                visualCardRect.bottom() - radius - kTailHalfWidth);
             tail << QPoint(visualCardRect.right() - 2, centerY - kTailHalfWidth)
                  << QPoint(visualCardRect.right() - 2, centerY + kTailHalfWidth)
                  << QPoint(visualCardRect.right() + kTailSize, centerY);
@@ -329,19 +324,17 @@ void TeachingTip::syncContentHostGeometry()
 
 void TeachingTip::updateWidgetSize()
 {
-    const PreferredPlacement placement = (m_preferredPlacement == Auto)
-                                             ? resolveAutoPlacement(m_cardSizeHint)
-                                             : m_preferredPlacement;
+    const PreferredPlacement placement =
+        (m_preferredPlacement == Auto) ? resolveAutoPlacement(m_cardSizeHint) : m_preferredPlacement;
     const QMargins tail = tailInsets(placement);
     resize(m_cardSizeHint.width() + 2 * kShadowMargin + tail.left() + tail.right(),
-           m_cardSizeHint.height() + 2 * kShadowMargin + tail.top() + tail.bottom());
+        m_cardSizeHint.height() + 2 * kShadowMargin + tail.top() + tail.bottom());
     syncContentHostGeometry();
 }
 
 QRect TeachingTip::cardRect() const
 {
-    QRect visualRect =
-        rect().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    QRect visualRect = rect().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
     const QMargins insets = tailInsets(resolvedPlacement());
     return visualRect.adjusted(insets.left(), insets.top(), -insets.right(), -insets.bottom());
 }
@@ -355,8 +348,7 @@ QRect TeachingTip::targetRectInTopLevel() const
 
 TeachingTip::PreferredPlacement TeachingTip::resolvedPlacement() const
 {
-    return m_preferredPlacement == Auto ? resolveAutoPlacement(m_cardSizeHint)
-                                        : m_preferredPlacement;
+    return m_preferredPlacement == Auto ? resolveAutoPlacement(m_cardSizeHint) : m_preferredPlacement;
 }
 
 TeachingTip::PreferredPlacement TeachingTip::resolveAutoPlacement(const QSize& cardSize) const
@@ -396,11 +388,10 @@ TeachingTip::PreferredPlacement TeachingTip::resolveAutoPlacement(const QSize& c
     return Bottom;
 }
 
-QPoint TeachingTip::cardTopLeftForPlacement(PreferredPlacement placement, const QRect& targetRect,
-                                            const QSize& cardSize) const
+QPoint
+TeachingTip::cardTopLeftForPlacement(PreferredPlacement placement, const QRect& targetRect, const QSize& cardSize) const
 {
-    QPoint cardTopLeft(targetRect.center().x() - (cardSize.width() / 2),
-                       targetRect.bottom() + m_placementMargin);
+    QPoint cardTopLeft(targetRect.center().x() - (cardSize.width() / 2), targetRect.bottom() + m_placementMargin);
 
     // placementMargin = gap between tail TIP and the target edge.
     // The card body sits further away by kTailSize (the tail length).
@@ -455,12 +446,11 @@ QPoint TeachingTip::clampCardTopLeft(const QPoint& cardTopLeft, const QSize& car
     if (!top)
         return cardTopLeft;
 
-    return ::fluent::overlay::clampCardTopLeft(
-        cardTopLeft, cardSize, ::fluent::overlay::overlaySurfaceRect(top), kWindowClampMargin);
+    return ::fluent::overlay::clampCardTopLeft(cardTopLeft, cardSize, ::fluent::overlay::overlaySurfaceRect(top),
+        kWindowClampMargin);
 }
 
-QPoint TeachingTip::widgetTopLeftForCardTopLeft(const QPoint& cardTopLeft,
-                                                PreferredPlacement placement) const
+QPoint TeachingTip::widgetTopLeftForCardTopLeft(const QPoint& cardTopLeft, PreferredPlacement placement) const
 {
     const QMargins insets = tailInsets(placement);
     return cardTopLeft - QPoint(kShadowMargin + insets.left(), kShadowMargin + insets.top());

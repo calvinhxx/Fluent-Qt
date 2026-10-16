@@ -20,8 +20,7 @@ const QString& dismissAction()
 
 QString drawerText(const char* source)
 {
-    return QCoreApplication::translate(
-        "DrawerViewAccessibility", source);
+    return QCoreApplication::translate("DrawerViewAccessibility", source);
 }
 
 bool canDismiss(const DrawerView* drawer)
@@ -32,10 +31,7 @@ bool canDismiss(const DrawerView* drawer)
 
 class DrawerViewAccessible final : public QAccessibleWidget {
 public:
-    explicit DrawerViewAccessible(DrawerView* drawer)
-        : QAccessibleWidget(drawer, QAccessible::Pane)
-    {
-    }
+    explicit DrawerViewAccessible(DrawerView* drawer) : QAccessibleWidget(drawer, QAccessible::Pane) {}
 
     QAccessible::State state() const override
     {
@@ -52,17 +48,14 @@ public:
         result.expandable = true;
         result.expanded = open;
         result.collapsed = !open;
-        result.focusable = open && surface->isEnabled()
-            && surface->focusPolicy() != Qt::NoFocus;
+        result.focusable = open && surface->isEnabled() && surface->focusPolicy() != Qt::NoFocus;
         result.focused = open && surface->hasFocus();
         return result;
     }
 
     QStringList actionNames() const override
     {
-        return canDismiss(drawer())
-            ? QStringList{dismissAction()}
-            : QStringList{};
+        return canDismiss(drawer()) ? QStringList{dismissAction()} : QStringList{};
     }
 
     QString localizedActionName(const QString& actionName) const override
@@ -72,8 +65,7 @@ public:
             : QAccessibleWidget::localizedActionName(actionName);
     }
 
-    QString localizedActionDescription(
-        const QString& actionName) const override
+    QString localizedActionDescription(const QString& actionName) const override
     {
         return actionName == dismissAction()
             ? drawerText("Closes the drawer")
@@ -90,8 +82,7 @@ public:
         QAccessibleWidget::doAction(actionName);
     }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         if (actionName == dismissAction() && canDismiss(drawer()))
             return {QStringLiteral("Escape")};
@@ -99,14 +90,10 @@ public:
     }
 
 private:
-    DrawerView* drawer() const
-    {
-        return static_cast<DrawerView*>(widget());
-    }
+    DrawerView* drawer() const { return static_cast<DrawerView*>(widget()); }
 };
 
-QAccessibleInterface* drawerViewAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* drawerViewAccessibilityFactory(const QString&, QObject* object)
 {
     auto* drawer = qobject_cast<DrawerView*>(object);
     return drawer ? new DrawerViewAccessible(drawer) : nullptr;

@@ -19,8 +19,8 @@ QColor opaqueTextColor(const QColor& foreground, const QColor& background)
 {
     const qreal alpha = foreground.alphaF();
     return QColor::fromRgbF(foreground.redF() * alpha + background.redF() * (1.0 - alpha),
-                            foreground.greenF() * alpha + background.greenF() * (1.0 - alpha),
-                            foreground.blueF() * alpha + background.blueF() * (1.0 - alpha), 1.0);
+        foreground.greenF() * alpha + background.greenF() * (1.0 - alpha),
+        foreground.blueF() * alpha + background.blueF() * (1.0 - alpha), 1.0);
 }
 
 } // namespace
@@ -39,7 +39,7 @@ LineEdit::LineEdit(QWidget* parent) : QLineEdit(parent)
     m_clearButton->setFluentSize(::fluent::basicinput::Button::Small);
     m_clearButton->setFocusPolicy(Qt::NoFocus);
     m_clearButton->setIconGlyph(::Typography::Icons::Dismiss, ::Typography::IconSize::Standard,
-                                ::Typography::FontFamily::FluentIcons);
+        ::Typography::FontFamily::FluentIcons);
     m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
     m_clearButton->hide();
 
@@ -87,8 +87,8 @@ void LineEdit::contextMenuEvent(QContextMenuEvent* event)
         return;
 
     auto* standardMenu = createStandardContextMenu();
-    if (!::fluent::menus_toolbars::detail::showTextEditingContextMenu(
-            this, standardMenu, event->globalPos(), QStringLiteral("FluentLineEdit.ContextMenu"))) {
+    if (!::fluent::menus_toolbars::detail::showTextEditingContextMenu(this, standardMenu, event->globalPos(),
+            QStringLiteral("FluentLineEdit.ContextMenu"))) {
         event->ignore();
         return;
     }
@@ -299,8 +299,7 @@ void LineEdit::applyThemePalette()
     pal.setColor(QPalette::Inactive, QPalette::Highlight, c.accentDefault);
     pal.setColor(QPalette::Inactive, QPalette::HighlightedText, c.textOnAccent);
     pal.setColor(QPalette::Disabled, QPalette::Text, c.textDisabled);
-    pal.setColor(QPalette::Disabled, QPalette::PlaceholderText,
-                 opaqueTextColor(c.textDisabled, c.bgLayerAlt));
+    pal.setColor(QPalette::Disabled, QPalette::PlaceholderText, opaqueTextColor(c.textDisabled, c.bgLayerAlt));
     if (pal != palette())
         setPalette(pal);
 }
@@ -319,18 +318,20 @@ void LineEdit::applyThemeStyle()
     // supported Qt version. (`placeholder-text-color` only exists since 6.5.)
     // zh_CN: 不设置通用 QSS `color`；Qt 5/6.2 的 QStyleSheetStyle 会把它也用于
     // placeholder 并绕过 PlaceholderText。前景色统一交给 QPalette，兼容全部 Qt 版本。
-    QString qss = QString("QLineEdit { background: transparent; "
-                          "selection-background-color: %5; "
-                          "selection-color: %6; "
-                          "padding-left: %1px; padding-right: %2px; "
-                          "padding-top: %3px; padding-bottom: %4px; "
-                          "border: none; }")
-                      .arg(m_contentMargins.left())
-                      .arg(rightPadding)
-                      .arg(m_contentMargins.top())
-                      .arg(m_contentMargins.bottom())
-                      .arg(c.accentDefault.name(QColor::HexArgb))
-                      .arg(c.textOnAccent.name(QColor::HexArgb));
+    QString qss =
+        QString(
+            "QLineEdit { background: transparent; "
+            "selection-background-color: %5; "
+            "selection-color: %6; "
+            "padding-left: %1px; padding-right: %2px; "
+            "padding-top: %3px; padding-bottom: %4px; "
+            "border: none; }")
+            .arg(m_contentMargins.left())
+            .arg(rightPadding)
+            .arg(m_contentMargins.top())
+            .arg(m_contentMargins.bottom())
+            .arg(c.accentDefault.name(QColor::HexArgb))
+            .arg(c.textOnAccent.name(QColor::HexArgb));
     // Applying a style sheet repolishes the widget and QStyleSheetStyle may
     // replace palette roles with its default (black) foreground.  Install the
     // geometry-only sheet first, then restore the semantic palette.  This is

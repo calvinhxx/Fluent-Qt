@@ -28,8 +28,7 @@ class CalendarDatePicker : public fluent::basicinput::Button {
      * @brief Text shown on the button when no date has been selected.
      * zh_CN: 尚未选择日期时显示在按钮上的占位文本。
      */
-    Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY
-                   placeholderTextChanged)
+    Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY placeholderTextChanged)
     /**
      * @brief Current date value displayed by the picker.
      * zh_CN: picker 当前显示的日期值。
@@ -54,20 +53,21 @@ class CalendarDatePicker : public fluent::basicinput::Button {
      * @brief Date display format used by the picker button.
      * zh_CN: picker 按钮使用的日期显示格式。
      */
-    Q_PROPERTY(
-        QString displayFormat READ displayFormat WRITE setDisplayFormat NOTIFY displayFormatChanged)
+    Q_PROPERTY(QString displayFormat READ displayFormat WRITE setDisplayFormat NOTIFY displayFormatChanged)
     /**
      * @brief First day used when laying out calendar weeks.
      * zh_CN: 日历周布局使用的一周起始日。
      */
-    Q_PROPERTY(Qt::DayOfWeek firstDayOfWeek READ firstDayOfWeek WRITE setFirstDayOfWeek RESET
-                   resetFirstDayOfWeek NOTIFY firstDayOfWeekChanged)
+    Q_PROPERTY(Qt::DayOfWeek firstDayOfWeek
+        READ firstDayOfWeek
+        WRITE setFirstDayOfWeek
+        RESET resetFirstDayOfWeek
+        NOTIFY firstDayOfWeekChanged)
     /**
      * @brief Whether the calendar flyout is open.
      * zh_CN: 日历浮层是否打开。
      */
-    Q_PROPERTY(
-        bool calendarOpen READ isCalendarOpen WRITE setCalendarOpen NOTIFY calendarOpenChanged)
+    Q_PROPERTY(bool calendarOpen READ isCalendarOpen WRITE setCalendarOpen NOTIFY calendarOpenChanged)
 
 public:
     explicit CalendarDatePicker(QWidget* parent = nullptr);

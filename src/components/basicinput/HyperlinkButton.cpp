@@ -7,21 +7,19 @@
 
 namespace fluent::basicinput {
 
-HyperlinkButton::HyperlinkButton(const QString& text, QWidget* parent)
-    : Button(text, parent) {
+HyperlinkButton::HyperlinkButton(const QString& text, QWidget* parent) : Button(text, parent)
+{
     detail::initializeHyperlinkButtonAccessibility(this);
     setFluentStyle(Subtle);
     setCursor(Qt::PointingHandCursor);
-    
+
     // On click, open the URL automatically when one is set.
     // zh_CN: 连接点击信号，设置了 URL 则自动打开。
     connect(this, &QPushButton::clicked, this, [this]() {
         if (m_url.isValid()) {
-            if (QDesktopServices::openUrl(m_url)
-                && !m_accessibilityVisited) {
+            if (QDesktopServices::openUrl(m_url) && !m_accessibilityVisited) {
                 m_accessibilityVisited = true;
-                detail::notifyHyperlinkButtonAccessibilityVisited(
-                    this);
+                detail::notifyHyperlinkButtonAccessibilityVisited(this);
             }
         }
     });
@@ -29,23 +27,24 @@ HyperlinkButton::HyperlinkButton(const QString& text, QWidget* parent)
     onThemeUpdated();
 }
 
-HyperlinkButton::HyperlinkButton(const QString& text, const QUrl& url, QWidget* parent)
-    : HyperlinkButton(text, parent) {
+HyperlinkButton::HyperlinkButton(const QString& text, const QUrl& url, QWidget* parent) : HyperlinkButton(text, parent)
+{
     setUrl(url);
 }
 
-void HyperlinkButton::setUrl(const QUrl& url) {
+void HyperlinkButton::setUrl(const QUrl& url)
+{
     if (m_url != url) {
         const bool visitedChanged = m_accessibilityVisited;
         m_url = url;
         m_accessibilityVisited = false;
-        detail::notifyHyperlinkButtonAccessibilityUrlChanged(
-            this, visitedChanged);
+        detail::notifyHyperlinkButtonAccessibilityUrlChanged(this, visitedChanged);
         emit urlChanged();
     }
 }
 
-void HyperlinkButton::setShowUnderline(bool show) {
+void HyperlinkButton::setShowUnderline(bool show)
+{
     if (m_showUnderline != show) {
         m_showUnderline = show;
         update();
@@ -53,7 +52,8 @@ void HyperlinkButton::setShowUnderline(bool show) {
     }
 }
 
-void HyperlinkButton::onThemeUpdated() {
+void HyperlinkButton::onThemeUpdated()
+{
     // Force accent text: Button::paintEvent derives colors from m_style, but a
     // HyperlinkButton wants accent text even in the Subtle style.
     // zh_CN: 强制使用 Accent 文本色——Button::paintEvent 按 m_style 取色，而
@@ -61,7 +61,8 @@ void HyperlinkButton::onThemeUpdated() {
     Button::onThemeUpdated();
 }
 
-void HyperlinkButton::paintEvent(QPaintEvent* event) {
+void HyperlinkButton::paintEvent(QPaintEvent* event)
+{
     // A hyperlink is an accent-colored text link with minimal fill.
     // zh_CN: 超链接是使用强调色文字和轻量填充的文本链接。
 
@@ -79,27 +80,29 @@ void HyperlinkButton::paintEvent(QPaintEvent* event) {
     if (!isEnabled()) {
         state = Disabled;
     } else if (state == Rest) {
-        if (isDown()) state = Pressed;
-        else if (underMouse()) state = Hover;
+        if (isDown())
+            state = Pressed;
+        else if (underMouse())
+            state = Hover;
     }
 
     // 2. Resolve colors. Default-init the fill to transparent so the invalid-QColor trap
     // (alpha()==255 on an unassigned QColor → solid black) can never fire. zh_CN: 填充默认透明,
     // 杜绝「未赋值 QColor 的 alpha()==255 → 涂黑」陷阱。
-    QColor bgColor = Qt::transparent;   // resting/pressed surface fill (Fluent path). zh_CN: 静息/按下表面填充(Fluent)。
+    QColor bgColor = Qt::transparent; // resting/pressed surface fill (Fluent path). zh_CN: 静息/按下表面填充(Fluent)。
     QColor textColor = colors.accentDefault;
 
     // Fluent text-link treatment. zh_CN: Fluent 文本链接样式。
-        if (state == Hover) {
-            bgColor = colors.subtleSecondary;
-            textColor = colors.accentSecondary;
-        } else if (state == Pressed) {
-            bgColor = colors.subtleTertiary;
-            textColor = colors.accentTertiary;
-        } else if (state == Disabled) {
-            bgColor = Qt::transparent;
-            textColor = colors.textDisabled;
-        }
+    if (state == Hover) {
+        bgColor = colors.subtleSecondary;
+        textColor = colors.accentSecondary;
+    } else if (state == Pressed) {
+        bgColor = colors.subtleTertiary;
+        textColor = colors.accentTertiary;
+    } else if (state == Disabled) {
+        bgColor = Qt::transparent;
+        textColor = colors.textDisabled;
+    }
 
     // 3. Paint the subtle Fluent surface.
     // zh_CN: 绘制轻量 Fluent 表面。

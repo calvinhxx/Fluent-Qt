@@ -11,8 +11,7 @@
 
 namespace fluent::overlay {
 
-OverlayScrim::OverlayScrim(QWidget* parent, const QString& objectName)
-    : QWidget(parent)
+OverlayScrim::OverlayScrim(QWidget* parent, const QString& objectName) : QWidget(parent)
 {
     if (!objectName.isEmpty())
         setObjectName(objectName);
@@ -131,9 +130,18 @@ void OverlayScrim::mousePressEvent(QMouseEvent* event)
     }
     handlePointerEvent(event);
 }
-void OverlayScrim::mouseReleaseEvent(QMouseEvent* event) { handlePointerEvent(event); }
-void OverlayScrim::mouseMoveEvent(QMouseEvent* event) { handlePointerEvent(event); }
-void OverlayScrim::wheelEvent(QWheelEvent* event) { handlePointerEvent(event); }
+void OverlayScrim::mouseReleaseEvent(QMouseEvent* event)
+{
+    handlePointerEvent(event);
+}
+void OverlayScrim::mouseMoveEvent(QMouseEvent* event)
+{
+    handlePointerEvent(event);
+}
+void OverlayScrim::wheelEvent(QWheelEvent* event)
+{
+    handlePointerEvent(event);
+}
 
 void OverlayScrim::handlePointerEvent(QEvent* event)
 {

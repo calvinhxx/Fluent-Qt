@@ -21,10 +21,8 @@ class TimelineAccessible;
  */
 class Timeline : public ListView {
     Q_OBJECT
-    Q_PROPERTY(NodeAlignment nodeAlignment READ nodeAlignment WRITE setNodeAlignment NOTIFY
-                   nodeAlignmentChanged)
-    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY
-                   animationEnabledChanged)
+    Q_PROPERTY(NodeAlignment nodeAlignment READ nodeAlignment WRITE setNodeAlignment NOTIFY nodeAlignmentChanged)
+    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
 public:
     /**
      * @brief Logical placement of the timeline rail.
@@ -64,8 +62,9 @@ signals:
     void animationEnabledChanged(bool enabled);
 
 protected:
-    void dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight,
-                     const QVector<int>& roles = QVector<int>()) override;
+    void dataChanged(const QModelIndex& topLeft,
+        const QModelIndex& bottomRight,
+        const QVector<int>& roles = QVector<int>()) override;
     void resizeEvent(QResizeEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void scrollContentsBy(int dx, int dy) override;

@@ -24,18 +24,15 @@ const QString& dismissAction()
 
 QString transientText(const char* source)
 {
-    return QCoreApplication::translate(
-        "TransientSurfaceAccessibility", source);
+    return QCoreApplication::translate("TransientSurfaceAccessibility", source);
 }
 
 bool popupCanDismiss(const Popup* popup)
 {
-    return popup && popup->isOpen() && popup->isEnabled()
-        && popup->closePolicy().testFlag(Popup::CloseOnEscape);
+    return popup && popup->isOpen() && popup->isEnabled() && popup->closePolicy().testFlag(Popup::CloseOnEscape);
 }
 
-QWidget* relationTargetFor(QWidget* surface,
-                           QAccessible::Relation* relation)
+QWidget* relationTargetFor(QWidget* surface, QAccessible::Relation* relation)
 {
 #if FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION
     if (auto* teachingTip = qobject_cast<TeachingTip*>(surface)) {
@@ -57,18 +54,14 @@ QWidget* relationTargetFor(QWidget* surface,
 }
 
 FluentAccessibleRelationList
-surfaceRelations(
-    QWidget* surface,
-    FluentAccessibleRelationList inherited,
-    QAccessible::Relation match)
+surfaceRelations(QWidget* surface, FluentAccessibleRelationList inherited, QAccessible::Relation match)
 {
     QAccessible::Relation relation = QAccessible::AllRelations;
     QWidget* target = relationTargetFor(surface, &relation);
     if (!target || !(match & relation))
         return inherited;
 
-    QAccessibleInterface* targetInterface =
-        QAccessible::queryAccessibleInterface(target);
+    QAccessibleInterface* targetInterface = QAccessible::queryAccessibleInterface(target);
     if (!targetInterface)
         return inherited;
 
@@ -82,16 +75,11 @@ surfaceRelations(
 
 class PopupAccessible final : public QAccessibleWidget {
 public:
-    explicit PopupAccessible(Popup* popup)
-        : QAccessibleWidget(popup, QAccessible::Pane)
-    {
-    }
+    explicit PopupAccessible(Popup* popup) : QAccessibleWidget(popup, QAccessible::Pane) {}
 
     QAccessible::Role role() const override
     {
-        return qobject_cast<TeachingTip*>(popup())
-            ? QAccessible::HelpBalloon
-            : QAccessible::Pane;
+        return qobject_cast<TeachingTip*>(popup()) ? QAccessible::HelpBalloon : QAccessible::Pane;
     }
 
     QAccessible::State state() const override
@@ -106,17 +94,14 @@ public:
         result.invisible = !open;
         result.offscreen = !open || result.offscreen;
         result.modal = open && surface->isModal();
-        result.focusable = open && surface->isEnabled()
-            && surface->focusPolicy() != Qt::NoFocus;
+        result.focusable = open && surface->isEnabled() && surface->focusPolicy() != Qt::NoFocus;
         result.focused = open && surface->hasFocus();
         return result;
     }
 
-    FluentAccessibleRelationList
-    relations(QAccessible::Relation match) const override
+    FluentAccessibleRelationList relations(QAccessible::Relation match) const override
     {
-        return surfaceRelations(
-            popup(), QAccessibleWidget::relations(match), match);
+        return surfaceRelations(popup(), QAccessibleWidget::relations(match), match);
     }
 
     QStringList actionNames() const override
@@ -137,8 +122,7 @@ public:
             : QAccessibleWidget::localizedActionName(actionName);
     }
 
-    QString localizedActionDescription(
-        const QString& actionName) const override
+    QString localizedActionDescription(const QString& actionName) const override
     {
         return actionName == dismissAction()
             ? transientText("Closes the transient surface")
@@ -162,8 +146,7 @@ public:
         surface->closeWithReason(Popup::Escape);
     }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         if (actionName == dismissAction() && popupCanDismiss(popup()))
             return {QStringLiteral("Escape")};
@@ -171,18 +154,12 @@ public:
     }
 
 private:
-    Popup* popup() const
-    {
-        return static_cast<Popup*>(widget());
-    }
+    Popup* popup() const { return static_cast<Popup*>(widget()); }
 };
 
 class CoachMarkAccessible final : public QAccessibleWidget {
 public:
-    explicit CoachMarkAccessible(CoachMark* coachMark)
-        : QAccessibleWidget(coachMark, QAccessible::HelpBalloon)
-    {
-    }
+    explicit CoachMarkAccessible(CoachMark* coachMark) : QAccessibleWidget(coachMark, QAccessible::HelpBalloon) {}
 
     QAccessible::State state() const override
     {
@@ -200,11 +177,9 @@ public:
         return result;
     }
 
-    FluentAccessibleRelationList
-    relations(QAccessible::Relation match) const override
+    FluentAccessibleRelationList relations(QAccessible::Relation match) const override
     {
-        return surfaceRelations(
-            coachMark(), QAccessibleWidget::relations(match), match);
+        return surfaceRelations(coachMark(), QAccessibleWidget::relations(match), match);
     }
 
     QStringList actionNames() const override
@@ -225,8 +200,7 @@ public:
             : QAccessibleWidget::localizedActionName(actionName);
     }
 
-    QString localizedActionDescription(
-        const QString& actionName) const override
+    QString localizedActionDescription(const QString& actionName) const override
     {
         return actionName == dismissAction()
             ? transientText("Closes the help surface")
@@ -236,34 +210,27 @@ public:
     void doAction(const QString& actionName) override
     {
         CoachMark* surface = coachMark();
-        if (actionName == dismissAction() && surface
-            && surface->isOpen() && surface->isEnabled()) {
+        if (actionName == dismissAction() && surface && surface->isOpen() && surface->isEnabled()) {
             surface->close();
             return;
         }
         QAccessibleWidget::doAction(actionName);
     }
 
-    QStringList keyBindingsForAction(
-        const QString& actionName) const override
+    QStringList keyBindingsForAction(const QString& actionName) const override
     {
         CoachMark* surface = coachMark();
-        if (actionName == dismissAction() && surface
-            && surface->isOpen() && surface->isEnabled()) {
+        if (actionName == dismissAction() && surface && surface->isOpen() && surface->isEnabled()) {
             return {QStringLiteral("Escape")};
         }
         return QAccessibleWidget::keyBindingsForAction(actionName);
     }
 
 private:
-    CoachMark* coachMark() const
-    {
-        return static_cast<CoachMark*>(widget());
-    }
+    CoachMark* coachMark() const { return static_cast<CoachMark*>(widget()); }
 };
 
-QAccessibleInterface* transientSurfaceAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* transientSurfaceAccessibilityFactory(const QString&, QObject* object)
 {
     if (auto* coachMark = qobject_cast<CoachMark*>(object))
         return new CoachMarkAccessible(coachMark);
@@ -315,8 +282,7 @@ void notifyPopupAccessibilityOpenChanged(Popup* popup, bool open)
     sendOpenStateEvent(popup, popup->isModal());
     sendEvent(popup, QAccessible::ActionChanged);
     if (qobject_cast<TeachingTip*>(popup)) {
-        sendEvent(popup, open ? QAccessible::ContextHelpStart
-                              : QAccessible::ContextHelpEnd);
+        sendEvent(popup, open ? QAccessible::ContextHelpStart : QAccessible::ContextHelpEnd);
     }
 #else
     Q_UNUSED(popup)
@@ -357,16 +323,14 @@ void notifyTransientSurfaceAccessibilityRelationChanged(QWidget* surface)
 #endif
 }
 
-void notifyCoachMarkAccessibilityOpenChanged(
-    CoachMark* coachMark, bool open)
+void notifyCoachMarkAccessibilityOpenChanged(CoachMark* coachMark, bool open)
 {
 #if QT_CONFIG(accessibility)
     if (!coachMark)
         return;
     sendOpenStateEvent(coachMark, false);
     sendEvent(coachMark, QAccessible::ActionChanged);
-    sendEvent(coachMark, open ? QAccessible::ContextHelpStart
-                              : QAccessible::ContextHelpEnd);
+    sendEvent(coachMark, open ? QAccessible::ContextHelpStart : QAccessible::ContextHelpEnd);
     if (open)
         sendEvent(coachMark, QAccessible::Alert);
 #else

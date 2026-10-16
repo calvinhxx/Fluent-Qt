@@ -39,11 +39,11 @@ struct SelectorBarItem {
     SelectorBarItem() = default;
     explicit SelectorBarItem(const QString& itemText);
     SelectorBarItem(const QString& itemText,
-                    const QString& itemIconGlyph,
-                    bool itemEnabled = true,
-                    bool itemVisible = true,
-                    const QVariant& itemData = QVariant(),
-                    const QString& itemAccessibleName = QString());
+        const QString& itemIconGlyph,
+        bool itemEnabled = true,
+        bool itemVisible = true,
+        const QVariant& itemData = QVariant(),
+        const QString& itemAccessibleName = QString());
 };
 
 /**
@@ -71,7 +71,10 @@ class SelectorBar : public QWidget, public FluentElement, public QMLPlus {
      * @brief How the control handles items that exceed available width.
      * zh_CN: 控件如何处理超出可用宽度的条目。
      */
-    Q_PROPERTY(OverflowBehavior overflowBehavior READ overflowBehavior WRITE setOverflowBehavior NOTIFY overflowBehaviorChanged)
+    Q_PROPERTY(OverflowBehavior overflowBehavior
+        READ overflowBehavior
+        WRITE setOverflowBehavior
+        NOTIFY overflowBehaviorChanged)
     /**
      * @brief Typography role used by selector items.
      * zh_CN: 选择器条目使用的排版角色。
@@ -84,10 +87,7 @@ class SelectorBar : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(QString iconFontFamily READ iconFontFamily WRITE setIconFontFamily NOTIFY iconFontFamilyChanged)
 
 public:
-    enum class OverflowBehavior {
-        ScrollButtons,
-        MoreButton
-    };
+    enum class OverflowBehavior { ScrollButtons, MoreButton };
     Q_ENUM(OverflowBehavior)
 
     explicit SelectorBar(QWidget* parent = nullptr);
@@ -166,13 +166,7 @@ protected:
 private:
     friend class detail::SelectorBarAccessible;
 
-    enum class HitKind {
-        None,
-        Item,
-        OverflowBack,
-        OverflowForward,
-        OverflowMore
-    };
+    enum class HitKind { None, Item, OverflowBack, OverflowForward, OverflowMore };
 
     struct ItemRecord {
         int itemIndex = -1;
@@ -213,7 +207,10 @@ private:
     void ensureLayout() const;
     void updateLayout();
     int naturalItemWidth(int index, const QFontMetrics& fontMetrics) const;
-    QVector<int> computeVisibleIndexes(const QVector<int>& candidates, int availableWidth, const QVector<int>& widths, bool overflow) const;
+    QVector<int> computeVisibleIndexes(const QVector<int>& candidates,
+        int availableWidth,
+        const QVector<int>& widths,
+        bool overflow) const;
     void ensureIndexVisible(int index);
     int nearestSelectableIndex(int preferredIndex) const;
     int firstSelectableIndex() const;
@@ -241,7 +238,9 @@ private:
     void paintBackground(QPainter& painter) const;
     void paintItem(QPainter& painter, const ItemRecord& record) const;
     void paintSelectedIndicator(QPainter& painter) const;
-    void paintOverflowButton(QPainter& painter, const QRect& rect, const QString& glyph, const HitRecord& hit, bool enabled) const;
+    void
+    paintOverflowButton(QPainter& painter, const QRect& rect, const QString& glyph, const HitRecord& hit, bool enabled)
+        const;
     QColor itemTextColor(int index) const;
 
     QVector<SelectorBarItem> m_items;

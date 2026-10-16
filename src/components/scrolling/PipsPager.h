@@ -57,12 +57,18 @@ class PipsPager : public QWidget, public FluentElement, public QMLPlus {
      * @brief Visibility mode for the previous-page button.
      * zh_CN: 上一页按钮的可见性模式。
      */
-    Q_PROPERTY(PipsPagerButtonVisibility previousButtonVisibility READ previousButtonVisibility WRITE setPreviousButtonVisibility NOTIFY previousButtonVisibilityChanged)
+    Q_PROPERTY(PipsPagerButtonVisibility previousButtonVisibility
+        READ previousButtonVisibility
+        WRITE setPreviousButtonVisibility
+        NOTIFY previousButtonVisibilityChanged)
     /**
      * @brief Visibility mode for the next-page button.
      * zh_CN: 下一页按钮的可见性模式。
      */
-    Q_PROPERTY(PipsPagerButtonVisibility nextButtonVisibility READ nextButtonVisibility WRITE setNextButtonVisibility NOTIFY nextButtonVisibilityChanged)
+    Q_PROPERTY(PipsPagerButtonVisibility nextButtonVisibility
+        READ nextButtonVisibility
+        WRITE setNextButtonVisibility
+        NOTIFY nextButtonVisibilityChanged)
     /**
      * @brief Layout cell size reserved for each pip.
      * zh_CN: 每个页码圆点保留的布局单元尺寸。
@@ -72,32 +78,50 @@ class PipsPager : public QWidget, public FluentElement, public QMLPlus {
      * @brief Diameter used by inactive pips.
      * zh_CN: 未选中页码圆点直径。
      */
-    Q_PROPERTY(int inactivePipDiameter READ inactivePipDiameter WRITE setInactivePipDiameter NOTIFY inactivePipDiameterChanged)
+    Q_PROPERTY(int inactivePipDiameter
+        READ inactivePipDiameter
+        WRITE setInactivePipDiameter
+        NOTIFY inactivePipDiameterChanged)
     /**
      * @brief Diameter used by the selected pip.
      * zh_CN: 选中页码圆点直径。
      */
-    Q_PROPERTY(int selectedPipDiameter READ selectedPipDiameter WRITE setSelectedPipDiameter NOTIFY selectedPipDiameterChanged)
+    Q_PROPERTY(int selectedPipDiameter
+        READ selectedPipDiameter
+        WRITE setSelectedPipDiameter
+        NOTIFY selectedPipDiameterChanged)
     /**
      * @brief Size of pager navigation buttons.
      * zh_CN: 分页导航按钮尺寸。
      */
-    Q_PROPERTY(int navigationButtonSize READ navigationButtonSize WRITE setNavigationButtonSize NOTIFY navigationButtonSizeChanged)
+    Q_PROPERTY(int navigationButtonSize
+        READ navigationButtonSize
+        WRITE setNavigationButtonSize
+        NOTIFY navigationButtonSizeChanged)
     /**
      * @brief Icon size used by pager navigation buttons.
      * zh_CN: 分页导航按钮图标尺寸。
      */
-    Q_PROPERTY(int navigationIconSize READ navigationIconSize WRITE setNavigationIconSize NOTIFY navigationIconSizeChanged)
+    Q_PROPERTY(int navigationIconSize
+        READ navigationIconSize
+        WRITE setNavigationIconSize
+        NOTIFY navigationIconSizeChanged)
     /**
      * @brief Whether pip selection animation is enabled.
      * zh_CN: 是否启用页码圆点选中动画。
      */
-    Q_PROPERTY(bool selectionAnimationEnabled READ selectionAnimationEnabled WRITE setSelectionAnimationEnabled NOTIFY selectionAnimationEnabledChanged)
+    Q_PROPERTY(bool selectionAnimationEnabled
+        READ selectionAnimationEnabled
+        WRITE setSelectionAnimationEnabled
+        NOTIFY selectionAnimationEnabledChanged)
     /**
      * @brief Duration of pip selection animation in milliseconds.
      * zh_CN: 页码圆点选中动画时长，单位为毫秒。
      */
-    Q_PROPERTY(int selectionAnimationDuration READ selectionAnimationDuration WRITE setSelectionAnimationDuration NOTIFY selectionAnimationDurationChanged)
+    Q_PROPERTY(int selectionAnimationDuration
+        READ selectionAnimationDuration
+        WRITE setSelectionAnimationDuration
+        NOTIFY selectionAnimationDurationChanged)
     // Shiboken maps every Q_PROPERTY to a Python constructor keyword. These
     // two properties remain in the real Qt meta-object for C++ compatibility,
     // but are implementation-only in the Python API.
@@ -114,11 +138,7 @@ class PipsPager : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(qreal visibleWindowOffset READ visibleWindowOffset WRITE setVisibleWindowOffset)
 #endif
 public:
-    enum class PipsPagerButtonVisibility {
-        Collapsed,
-        Visible,
-        VisibleOnPointerOver
-    };
+    enum class PipsPagerButtonVisibility { Collapsed, Visible, VisibleOnPointerOver };
     Q_ENUM(PipsPagerButtonVisibility)
 
     explicit PipsPager(QWidget* parent = nullptr);
@@ -210,24 +230,15 @@ protected:
 private:
     friend class detail::PipsPagerAccessible;
 
-    enum class HitKind {
-        None,
-        PreviousButton,
-        NextButton,
-        Pip
-    };
+    enum class HitKind { None, PreviousButton, NextButton, Pip };
 
     struct HitTarget {
         HitKind kind = HitKind::None;
         int pageIndex = -1;
 
-        bool operator==(const HitTarget& other) const {
-            return kind == other.kind && pageIndex == other.pageIndex;
-        }
+        bool operator==(const HitTarget& other) const { return kind == other.kind && pageIndex == other.pageIndex; }
 
-        bool operator!=(const HitTarget& other) const {
-            return !(*this == other);
-        }
+        bool operator!=(const HitTarget& other) const { return !(*this == other); }
     };
 
     int clampedPageIndex(int index) const;

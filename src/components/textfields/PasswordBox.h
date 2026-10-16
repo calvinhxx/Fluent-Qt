@@ -10,7 +10,9 @@ class QPaintEvent;
 class QPainter;
 class QResizeEvent;
 
-namespace fluent::basicinput { class Button; }
+namespace fluent::basicinput {
+class Button;
+}
 
 namespace fluent::textfields {
 
@@ -39,14 +41,13 @@ class PasswordBox : public LineEdit {
      * @brief Mode controlling whether password text can be revealed.
      * zh_CN: 控制密码文本是否可显示的模式。
      */
-    Q_PROPERTY(PasswordRevealMode passwordRevealMode READ passwordRevealMode WRITE setPasswordRevealMode NOTIFY passwordRevealModeChanged)
+    Q_PROPERTY(PasswordRevealMode passwordRevealMode
+        READ passwordRevealMode
+        WRITE setPasswordRevealMode
+        NOTIFY passwordRevealModeChanged)
 
 public:
-    enum class PasswordRevealMode {
-        Peek,
-        Hidden,
-        Visible
-    };
+    enum class PasswordRevealMode { Peek, Hidden, Visible };
     Q_ENUM(PasswordRevealMode)
 
     explicit PasswordBox(QWidget* parent = nullptr);

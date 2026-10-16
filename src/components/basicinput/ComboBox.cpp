@@ -48,15 +48,14 @@ static constexpr int kPopupShadowVerticalOffset = 1;
 
 int popupRowHeight(const QFont& font)
 {
-    return qMax(::Spacing::ControlHeight::Large,
-                QFontMetrics(font).height() + 2 * kPopupItemVerticalPadding);
+    return qMax(::Spacing::ControlHeight::Large, QFontMetrics(font).height() + 2 * kPopupItemVerticalPadding);
 }
 
 // Suppress QStyle's PE_PanelLineEdit native panel — ComboBox paints its own bg
 class TransparentLineEditStyle : public QProxyStyle {
 public:
-    void drawPrimitive(PrimitiveElement pe, const QStyleOption* opt, QPainter* p,
-                       const QWidget* w = nullptr) const override
+    void drawPrimitive(PrimitiveElement pe, const QStyleOption* opt, QPainter* p, const QWidget* w = nullptr)
+        const override
     {
         if (pe == PE_PanelLineEdit)
             return;
@@ -92,13 +91,11 @@ private:
 
 // ─── ComboBoxItemDelegate implementation. zh_CN: ComboBoxItemDelegate 实现 ──
 
-ComboBoxItemDelegate::ComboBoxItemDelegate(FluentElement* themeHost, QAbstractItemView* view,
-                                           QObject* parent)
+ComboBoxItemDelegate::ComboBoxItemDelegate(FluentElement* themeHost, QAbstractItemView* view, QObject* parent)
     : QStyledItemDelegate(parent), m_themeHost(themeHost), m_view(view)
 {}
 
-void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
-                                 const QModelIndex& index) const
+void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     if (!index.isValid())
         return;
@@ -113,8 +110,8 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     }
 
     int itemRightInset = kPopupItemOuterInset;
-    if (m_view && m_view->verticalScrollBar() &&
-        m_view->verticalScrollBar()->maximum() > m_view->verticalScrollBar()->minimum()) {
+    if (m_view && m_view->verticalScrollBar()
+        && m_view->verticalScrollBar()->maximum() > m_view->verticalScrollBar()->minimum()) {
         if (auto* listView = qobject_cast<fluent::collections::ListView*>(m_view)) {
             if (auto* scrollBar = listView->verticalFluentScrollBar()) {
                 itemRightInset += scrollBar->thickness();
@@ -158,19 +155,16 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     // ListView owns the selected indicator overlay. The delegate only paints the
     // row background and text; drawing another indicator here creates a double
     // blue pill in ComboBox flyouts.
-    const QRect logicalTextRect =
-        logicalBgRect.adjusted(kPopupItemTextLeftInset, 0, -kPopupItemTextRightInset, 0);
+    const QRect logicalTextRect = logicalBgRect.adjusted(kPopupItemTextLeftInset, 0, -kPopupItemTextRightInset, 0);
     const QRectF textSlot = QStyle::visualRect(option.direction, option.rect, logicalTextRect);
     painter->setPen(textColor);
     painter->setFont(option.font);
     const QString text = index.data(Qt::DisplayRole).toString();
     const QFontMetricsF metrics(painter->font());
     const QString elidedText = metrics.elidedText(text, Qt::ElideRight, qRound(textSlot.width()));
-    const QRectF textRect =
-        fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
-    painter->drawText(textRect,
-                      QStyle::visualAlignment(option.direction, Qt::AlignLeft | Qt::AlignVCenter),
-                      elidedText);
+    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
+    painter->drawText(textRect, QStyle::visualAlignment(option.direction, Qt::AlignLeft | Qt::AlignVCenter),
+        elidedText);
 
     painter->restore();
 }
@@ -241,10 +235,10 @@ void ComboBox::ComboBoxPopup::showForComboBox()
     m_listView->setModelColumn(m_comboBox->modelColumn());
     m_listView->setFont(m_comboBox->font());
 
-    const QModelIndex current = m_comboBox->model()->index(
-        m_comboBox->currentIndex(), m_comboBox->modelColumn(), m_comboBox->rootModelIndex());
-    m_listView->selectionModel()->setCurrentIndex(current, QItemSelectionModel::ClearAndSelect |
-                                                               QItemSelectionModel::Rows);
+    const QModelIndex current = m_comboBox->model()->index(m_comboBox->currentIndex(), m_comboBox->modelColumn(),
+        m_comboBox->rootModelIndex());
+    m_listView->selectionModel()->setCurrentIndex(current,
+        QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 
     updateLayout();
     if (isOpen() || isVisible()) {
@@ -264,10 +258,10 @@ void ComboBox::ComboBoxPopup::showForComboBox()
         return;
 
     if (m_comboBox->currentIndex() >= 0) {
-        m_listView->scrollTo(m_listView->model()->index(m_comboBox->currentIndex(),
-                                                        m_comboBox->modelColumn(),
-                                                        m_comboBox->rootModelIndex()),
-                             QAbstractItemView::PositionAtCenter);
+        m_listView->scrollTo(
+            m_listView->model()->index(m_comboBox->currentIndex(), m_comboBox->modelColumn(),
+                m_comboBox->rootModelIndex()),
+            QAbstractItemView::PositionAtCenter);
     } else {
         // Focus entry must not revive a previously selected row for a placeholder.
         // zh_CN: 占位状态取得焦点时，不得恢复上一次弹层遗留的选中行。
@@ -277,11 +271,10 @@ void ComboBox::ComboBoxPopup::showForComboBox()
 
 void ComboBox::ComboBoxPopup::commitIndex(const QModelIndex& index)
 {
-    if (!isOpen() || !m_comboBox || !m_comboBox->m_popupVisible || !m_comboBox->isEnabled() ||
-        !index.isValid() || index.model() != m_comboBox->model() ||
-        index.parent() != m_comboBox->rootModelIndex() ||
-        index.column() != m_comboBox->modelColumn() || !index.flags().testFlag(Qt::ItemIsEnabled) ||
-        !index.flags().testFlag(Qt::ItemIsSelectable)) {
+    if (!isOpen() || !m_comboBox || !m_comboBox->m_popupVisible || !m_comboBox->isEnabled() || !index.isValid()
+        || index.model() != m_comboBox->model() || index.parent() != m_comboBox->rootModelIndex()
+        || index.column() != m_comboBox->modelColumn() || !index.flags().testFlag(Qt::ItemIsEnabled)
+        || !index.flags().testFlag(Qt::ItemIsSelectable)) {
         return;
     }
 
@@ -292,11 +285,9 @@ void ComboBox::ComboBoxPopup::commitIndex(const QModelIndex& index)
     // zh_CN: hidePopup 先清除所属控件的展开标记，再由 Flyout 发出 closing；
     // 此时 isOpen() 仍为 true，入口检查可阻止重入提交。
     comboBox->hidePopup();
-    if (!comboBox || !comboBox->isEnabled() || !selected.isValid() ||
-        selected.model() != comboBox->model() || selected.parent() != comboBox->rootModelIndex() ||
-        selected.column() != comboBox->modelColumn() ||
-        !selected.flags().testFlag(Qt::ItemIsEnabled) ||
-        !selected.flags().testFlag(Qt::ItemIsSelectable)) {
+    if (!comboBox || !comboBox->isEnabled() || !selected.isValid() || selected.model() != comboBox->model()
+        || selected.parent() != comboBox->rootModelIndex() || selected.column() != comboBox->modelColumn()
+        || !selected.flags().testFlag(Qt::ItemIsEnabled) || !selected.flags().testFlag(Qt::ItemIsSelectable)) {
         return;
     }
 
@@ -331,10 +322,8 @@ void ComboBox::ComboBoxPopup::updateLayout()
     QWidget* top = ::fluent::overlay::presentedTopLevel(m_comboBox);
     const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
     const QRect anchor = ::fluent::overlay::presentedRectInTopLevel(m_comboBox);
-    const int availableHeight =
-        qMax(surface.bottom() - anchor.bottom(), anchor.top() - surface.top());
-    rowsH = qMin(rowsH, qMax(1, availableHeight - m_comboBox->popupOffset() - kPopupWindowMargin -
-                                    2 * cardInset));
+    const int availableHeight = qMax(surface.bottom() - anchor.bottom(), anchor.top() - surface.top());
+    rowsH = qMin(rowsH, qMax(1, availableHeight - m_comboBox->popupOffset() - kPopupWindowMargin - 2 * cardInset));
     int widestText = 0;
     const QFontMetrics popupMetrics(m_listView->font());
     for (int index = 0; index < itemCount; ++index)
@@ -346,8 +335,8 @@ void ComboBox::ComboBoxPopup::updateLayout()
         if (auto* scrollBar = m_listView->verticalFluentScrollBar())
             scrollClearance = qMax(scrollClearance, scrollBar->thickness());
     }
-    const int textChrome = cardInset * 2 + kPopupItemOuterInset * 2 + kPopupItemTextLeftInset +
-                           kPopupItemTextRightInset + scrollClearance + ::Spacing::Standard;
+    const int textChrome = cardInset * 2 + kPopupItemOuterInset * 2 + kPopupItemTextLeftInset + kPopupItemTextRightInset
+        + scrollClearance + ::Spacing::Standard;
     const int cardW = qMax(qMax(m_comboBox->width(), 120), widestText + textChrome);
     const int cardH = rowsH + cardInset * 2;
     const QSize totalSize = ::fluent::overlay::outerSizeForVisibleCard(QSize(cardW, cardH), sSize);
@@ -392,9 +381,8 @@ void ComboBox::ComboBoxPopup::paintEvent(QPaintEvent*)
     // 的高强度浮层阴影；配合默认 8px 间距，向上或向下弹出时都不会反压输入框。
     const QRect contentRect = ::fluent::overlay::visibleCardRect(rect(), kPopupShadowMargin);
     const int radius = themeRadius().overlay;
-    ::fluent::overlay::paintLayeredShadow(painter, contentRect, radius,
-                                          themeShadow(Elevation::High), kPopupShadowIntensity,
-                                          kPopupShadowLayerCount, kPopupShadowVerticalOffset);
+    ::fluent::overlay::paintLayeredShadow(painter, contentRect, radius, themeShadow(Elevation::High),
+        kPopupShadowIntensity, kPopupShadowLayerCount, kPopupShadowVerticalOffset);
 
     const auto& colors = themeColorsRef();
     fluent::painting::RoundedSurfacePaint surface;
@@ -428,12 +416,11 @@ QPoint ComboBox::ComboBoxPopup::computePosition() const
     const bool fitsAbove = spaceAbove >= requiredSpace;
     const bool placeAbove = !fitsBelow && (fitsAbove || spaceAbove > spaceBelow);
 
-    QPoint cardTopLeft(anchor.left(), placeAbove ? anchor.top() - anchorOffset() - cardH
-                                                 : anchor.bottom() + 1 + anchorOffset());
+    QPoint cardTopLeft(anchor.left(),
+        placeAbove ? anchor.top() - anchorOffset() - cardH : anchor.bottom() + 1 + anchorOffset());
 
     if (clampToWindow()) {
-        cardTopLeft =
-            ::fluent::overlay::clampCardTopLeft(cardTopLeft, cardSize, surface, kPopupWindowMargin);
+        cardTopLeft = ::fluent::overlay::clampCardTopLeft(cardTopLeft, cardSize, surface, kPopupWindowMargin);
     }
 
     return ::fluent::overlay::outerTopLeftForVisibleCard(cardTopLeft, shadow);
@@ -452,17 +439,16 @@ bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event)
     // ListView is independently registered for theme updates. Keep the owner's
     // effective font regardless of the theme broadcast order.
     // zh_CN: ListView 独立接收主题更新；无论广播顺序如何都保持所属 ComboBox 的字体。
-    if (watched == m_listView && event->type() == QEvent::FontChange &&
-        m_listView->font() != m_comboBox->font()) {
+    if (watched == m_listView && event->type() == QEvent::FontChange && m_listView->font() != m_comboBox->font()) {
         m_listView->setFont(m_comboBox->font());
     }
     if (event && event->type() == QEvent::MouseButtonPress && m_comboBox) {
         auto* mouseEvent = static_cast<QMouseEvent*>(event);
-        const QPoint comboLocal = ::fluent::overlay::localPointFromPresentedGlobal(
-            m_comboBox, fluentMouseGlobalPos(mouseEvent));
+        const QPoint comboLocal = ::fluent::overlay::localPointFromPresentedGlobal(m_comboBox,
+            fluentMouseGlobalPos(mouseEvent));
         const bool pressOnOwner = m_comboBox->rect().contains(comboLocal);
-        const bool pressInsidePopup = ::fluent::overlay::visibleCardContains(
-            rect(), mapFromGlobal(fluentMouseGlobalPos(mouseEvent)), kPopupShadowMargin);
+        const bool pressInsidePopup = ::fluent::overlay::visibleCardContains(rect(),
+            mapFromGlobal(fluentMouseGlobalPos(mouseEvent)), kPopupShadowMargin);
         if (pressOnOwner && !pressInsidePopup) {
             m_comboBox->m_ignoreNextPopupPress = true;
         }
@@ -679,8 +665,7 @@ void ComboBox::setEditable(bool editable)
         applyLineEditStyle();
         layoutLineEdit();
         editor->show();
-        connect(editor, &fluent::textfields::LineEdit::returnPressed, this,
-                [this]() { hidePopup(); });
+        connect(editor, &fluent::textfields::LineEdit::returnPressed, this, [this]() { hidePopup(); });
     } else {
         QPointer<QLineEdit> previousEditor = m_observedLineEdit;
         if (m_observedLineEdit)
@@ -750,8 +735,8 @@ void ComboBox::layoutLineEdit()
         return;
     const int chevronAreaW = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
     const int gap = ::Spacing::Gap::Tight;
-    const QRect logicalTextRect = rect().adjusted(m_contentPaddingH, m_contentPaddingV,
-                                                  -(chevronAreaW + gap), -m_contentPaddingV);
+    const QRect logicalTextRect = rect().adjusted(m_contentPaddingH, m_contentPaddingV, -(chevronAreaW + gap),
+        -m_contentPaddingV);
     const QRect textRect = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
     editor->setGeometry(textRect);
 }
@@ -939,13 +924,12 @@ bool ComboBox::eventFilter(QObject* watched, QEvent* event)
             update();
         } else if (event->type() == QEvent::FocusOut) {
             update();
-        } else if (event->type() == QEvent::ContextMenu &&
-                   !qobject_cast<fluent::textfields::LineEdit*>(m_observedLineEdit.data()) &&
-                   m_observedLineEdit->contextMenuPolicy() == Qt::DefaultContextMenu) {
+        } else if (event->type() == QEvent::ContextMenu
+            && !qobject_cast<fluent::textfields::LineEdit*>(m_observedLineEdit.data())
+            && m_observedLineEdit->contextMenuPolicy() == Qt::DefaultContextMenu) {
             auto* contextEvent = static_cast<QContextMenuEvent*>(event);
-            if (fluent::menus_toolbars::detail::showTextEditingContextMenu(
-                    m_observedLineEdit.data(), m_observedLineEdit->createStandardContextMenu(),
-                    contextEvent->globalPos(),
+            if (fluent::menus_toolbars::detail::showTextEditingContextMenu(m_observedLineEdit.data(),
+                    m_observedLineEdit->createStandardContextMenu(), contextEvent->globalPos(),
                     QStringLiteral("FluentComboBox.LineEdit.ContextMenu"))) {
                 contextEvent->accept();
                 return true;
@@ -1051,8 +1035,8 @@ void ComboBox::paintEvent(QPaintEvent*)
 
     // Chevron area calculation
     const int chevronAreaW = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
-    const QRect logicalTextRect =
-        rect().adjusted(m_contentPaddingH, m_contentPaddingV, -chevronAreaW, -m_contentPaddingV);
+    const QRect logicalTextRect = rect().adjusted(m_contentPaddingH, m_contentPaddingV, -chevronAreaW,
+        -m_contentPaddingV);
     const QRectF textSlot = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
 
     // In editable mode, QLineEdit handles text display
@@ -1061,12 +1045,9 @@ void ComboBox::paintEvent(QPaintEvent*)
         painter.setFont(font());
         const QString text = currentText();
         const QFontMetricsF metrics(painter.font());
-        const QString elidedText =
-            metrics.elidedText(text, Qt::ElideRight, qRound(textSlot.width()));
-        const QRectF textRect =
-            fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
-        painter.drawText(
-            textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter),
+        const QString elidedText = metrics.elidedText(text, Qt::ElideRight, qRound(textSlot.width()));
+        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
+        painter.drawText(textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter),
             elidedText);
     }
 
@@ -1092,7 +1073,7 @@ void ComboBox::paintEvent(QPaintEvent*)
     const qreal btnW = m_chevronSize + pad * 2;
     const qreal btnH = m_chevronSize + pad * 2;
     const QRect logicalChevronSlot(qRound(r.right() - m_chevronOffset.x() - m_chevronSize - pad),
-                                   qRound(r.center().y() - btnH / 2.0), qRound(btnW), qRound(btnH));
+        qRound(r.center().y() - btnH / 2.0), qRound(btnW), qRound(btnH));
     QRectF chevronSlot = QStyle::visualRect(layoutDirection(), rect(), logicalChevronSlot);
     chevronSlot.translate(0, pressOffset + m_chevronOffset.y());
 
@@ -1115,8 +1096,7 @@ void ComboBox::paintEvent(QPaintEvent*)
     }
 
     painter.setPen(chevronColor);
-    Typography::Icons::paintGlyph(painter, chevronSlot, m_chevronGlyph, m_chevronSize,
-                                  Qt::AlignCenter);
+    Typography::Icons::paintGlyph(painter, chevronSlot, m_chevronGlyph, m_chevronSize, Qt::AlignCenter);
 }
 
 } // namespace fluent::basicinput

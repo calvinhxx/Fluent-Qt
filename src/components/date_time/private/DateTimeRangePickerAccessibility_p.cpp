@@ -13,9 +13,7 @@ namespace {
 
 class DateTimeRangeAccessible final : public QAccessibleWidget {
 public:
-    explicit DateTimeRangeAccessible(DateTimeRangePicker* picker)
-        : QAccessibleWidget(picker, QAccessible::ComboBox)
-    {}
+    explicit DateTimeRangeAccessible(DateTimeRangePicker* picker) : QAccessibleWidget(picker, QAccessible::ComboBox) {}
 
     QAccessible::State state() const override
     {
@@ -39,8 +37,8 @@ public:
 
     void doAction(const QString& action) override
     {
-        if (action == QAccessibleActionInterface::pressAction() ||
-            action == QAccessibleActionInterface::showMenuAction()) {
+        if (action == QAccessibleActionInterface::pressAction()
+            || action == QAccessibleActionInterface::showMenuAction()) {
             picker()->openPicker();
             return;
         }
@@ -51,35 +49,30 @@ public:
     {
         if (type == QAccessible::Description) {
             const QString authored = QAccessibleWidget::text(type);
-            return authored.isEmpty() && !picker()->isRangeValid() ? picker()->invalidRangeText()
-                                                                   : authored;
+            return authored.isEmpty() && !picker()->isRangeValid() ? picker()->invalidRangeText() : authored;
         }
         if (type != QAccessible::Value)
             return QAccessibleWidget::text(type);
         const auto valueText = [this](const QDateTime& value) {
             if (!value.isValid())
-                return dateTimeRangeText(
-                    picker()->locale(),
+                return dateTimeRangeText(picker()->locale(),
                     QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Unbounded"));
             return picker()->isTimeEnabled()
-                       ? picker()->locale().toString(value, QLocale::ShortFormat)
-                       : picker()->locale().toString(value.date(), QLocale::ShortFormat);
+                ? picker()->locale().toString(value, QLocale::ShortFormat)
+                : picker()->locale().toString(value.date(), QLocale::ShortFormat);
         };
-        return dateTimeRangeText(
-                   picker()->locale(),
-                   QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "%1: %2; %3: %4"))
+        return dateTimeRangeText(picker()->locale(),
+            QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "%1: %2; %3: %4"))
             .arg(picker()->startLabelText().isEmpty()
-                     ? dateTimeRangeText(
-                           picker()->locale(),
-                           QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Start"))
-                     : picker()->startLabelText(),
-                 valueText(picker()->startDateTime()),
-                 picker()->endLabelText().isEmpty()
-                     ? dateTimeRangeText(
-                           picker()->locale(),
-                           QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "End"))
-                     : picker()->endLabelText(),
-                 valueText(picker()->endDateTime()));
+                    ? dateTimeRangeText(picker()->locale(),
+                          QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Start"))
+                    : picker()->startLabelText(),
+                valueText(picker()->startDateTime()),
+                picker()->endLabelText().isEmpty()
+                    ? dateTimeRangeText(picker()->locale(),
+                          QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "End"))
+                    : picker()->endLabelText(),
+                valueText(picker()->endDateTime()));
     }
 
 private:

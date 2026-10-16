@@ -22,32 +22,21 @@ QString progressText(const char* source)
 
 class ProgressBarAccessible final : public ValueAccessibleAdapter {
 public:
-    explicit ProgressBarAccessible(ProgressBar* bar)
-        : ValueAccessibleAdapter(bar, QAccessible::ProgressBar)
-    {
-    }
+    explicit ProgressBarAccessible(ProgressBar* bar) : ValueAccessibleAdapter(bar, QAccessible::ProgressBar) {}
 
     QVariant currentValue() const override
     {
-        return view() && !view()->isIndeterminate()
-            ? QVariant(view()->value()) : QVariant();
+        return view() && !view()->isIndeterminate() ? QVariant(view()->value()) : QVariant();
     }
     void setCurrentValue(const QVariant&) override {}
-    QVariant maximumValue() const override
-    {
-        return view() ? QVariant(view()->maximum()) : QVariant();
-    }
-    QVariant minimumValue() const override
-    {
-        return view() ? QVariant(view()->minimum()) : QVariant();
-    }
+    QVariant maximumValue() const override { return view() ? QVariant(view()->maximum()) : QVariant(); }
+    QVariant minimumValue() const override { return view() ? QVariant(view()->minimum()) : QVariant(); }
     QVariant minimumStepSize() const override { return QVariant(); }
 
     QString text(QAccessible::Text type) const override
     {
         const QString inherited = ValueAccessibleAdapter::text(type);
-        if (type != QAccessible::Description || !inherited.isEmpty()
-            || !view()) {
+        if (type != QAccessible::Description || !inherited.isEmpty() || !view()) {
             return inherited;
         }
         if (view()->showError())
@@ -63,56 +52,38 @@ protected:
     bool accessibleValueReadOnly() const override { return true; }
     bool accessibleValueBusy() const override
     {
-        return view() && view()->isEnabled() && view()->isIndeterminate()
-            && !view()->showPaused() && !view()->showError();
+        return view() && view()->isEnabled() && view()->isIndeterminate() && !view()->showPaused()
+            && !view()->showError();
     }
-    bool accessibleValueAnimated() const override
-    {
-        return view() && view()->isAnimationRunning();
-    }
+    bool accessibleValueAnimated() const override { return view() && view()->isAnimationRunning(); }
     QString accessibleValueText() const override
     {
         if (!view())
             return {};
-        return view()->isIndeterminate()
-            ? progressText("In progress") : view()->progressText();
+        return view()->isIndeterminate() ? progressText("In progress") : view()->progressText();
     }
 
 private:
-    ProgressBar* view() const
-    {
-        return static_cast<ProgressBar*>(widget());
-    }
+    ProgressBar* view() const { return static_cast<ProgressBar*>(widget()); }
 };
 
 class ProgressRingAccessible final : public ValueAccessibleAdapter {
 public:
-    explicit ProgressRingAccessible(ProgressRing* ring)
-        : ValueAccessibleAdapter(ring, QAccessible::ProgressBar)
-    {
-    }
+    explicit ProgressRingAccessible(ProgressRing* ring) : ValueAccessibleAdapter(ring, QAccessible::ProgressBar) {}
 
     QVariant currentValue() const override
     {
-        return view() && !view()->isIndeterminate()
-            ? QVariant(view()->value()) : QVariant();
+        return view() && !view()->isIndeterminate() ? QVariant(view()->value()) : QVariant();
     }
     void setCurrentValue(const QVariant&) override {}
-    QVariant maximumValue() const override
-    {
-        return view() ? QVariant(view()->maximum()) : QVariant();
-    }
-    QVariant minimumValue() const override
-    {
-        return view() ? QVariant(view()->minimum()) : QVariant();
-    }
+    QVariant maximumValue() const override { return view() ? QVariant(view()->maximum()) : QVariant(); }
+    QVariant minimumValue() const override { return view() ? QVariant(view()->minimum()) : QVariant(); }
     QVariant minimumStepSize() const override { return QVariant(); }
 
     QString text(QAccessible::Text type) const override
     {
         const QString inherited = ValueAccessibleAdapter::text(type);
-        if (type != QAccessible::Description || !inherited.isEmpty()
-            || !view()) {
+        if (type != QAccessible::Description || !inherited.isEmpty() || !view()) {
             return inherited;
         }
         if (view()->status() == ProgressRing::ProgressRingStatus::Error)
@@ -130,33 +101,22 @@ protected:
     bool accessibleValueReadOnly() const override { return true; }
     bool accessibleValueBusy() const override
     {
-        return view() && view()->isEnabled() && view()->isActive()
-            && view()->isIndeterminate()
-            && view()->status()
-                == ProgressRing::ProgressRingStatus::Running;
+        return view() && view()->isEnabled() && view()->isActive() && view()->isIndeterminate()
+            && view()->status() == ProgressRing::ProgressRingStatus::Running;
     }
-    bool accessibleValueAnimated() const override
-    {
-        return view() && view()->isAnimationRunning();
-    }
+    bool accessibleValueAnimated() const override { return view() && view()->isAnimationRunning(); }
     QString accessibleValueText() const override
     {
         if (!view())
             return {};
-        return view()->isIndeterminate()
-            ? progressText("In progress")
-            : QString::number(view()->value());
+        return view()->isIndeterminate() ? progressText("In progress") : QString::number(view()->value());
     }
 
 private:
-    ProgressRing* view() const
-    {
-        return static_cast<ProgressRing*>(widget());
-    }
+    ProgressRing* view() const { return static_cast<ProgressRing*>(widget()); }
 };
 
-QAccessibleInterface* progressAccessibilityFactory(
-    const QString&, QObject* object)
+QAccessibleInterface* progressAccessibilityFactory(const QString&, QObject* object)
 {
     if (auto* bar = dynamic_cast<ProgressBar*>(object))
         return new ProgressBarAccessible(bar);

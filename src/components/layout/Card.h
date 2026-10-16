@@ -20,21 +20,15 @@ namespace fluent::layout {
  */
 class Card : public QFrame, public FluentElement, public QMLPlus {
     Q_OBJECT
-    Q_PROPERTY(Appearance appearance READ appearance WRITE setAppearance
-                   NOTIFY appearanceChanged)
-    Q_PROPERTY(bool borderVisible READ isBorderVisible WRITE setBorderVisible
-                   NOTIFY borderVisibleChanged)
+    Q_PROPERTY(Appearance appearance READ appearance WRITE setAppearance NOTIFY appearanceChanged)
+    Q_PROPERTY(bool borderVisible READ isBorderVisible WRITE setBorderVisible NOTIFY borderVisibleChanged)
 
 public:
     /**
      * @brief Token surface used to fill the card.
      * zh_CN: Card 填充所使用的 token 表面。
      */
-    enum Appearance {
-        Layer,
-        LayerAlt,
-        Canvas
-    };
+    enum Appearance { Layer, LayerAlt, Canvas };
     Q_ENUM(Appearance)
 
     explicit Card(QWidget* parent = nullptr);
