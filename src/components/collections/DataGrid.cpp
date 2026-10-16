@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "DataGrid.h"
 
 #include "private/DataGridAccessibility_p.h"
@@ -27,7 +28,6 @@
 #include "components/collections/CollectionViewBackdrop_p.h"
 #include "components/scrolling/OverlayScrollChrome.h"
 #include "components/scrolling/ScrollBar.h"
-#include "compatibility/QtCompat.h"
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
 

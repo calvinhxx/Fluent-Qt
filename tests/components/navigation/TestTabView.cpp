@@ -5,6 +5,7 @@
 #include <utility>
 
 #include <QApplication>
+#include <QCursor>
 #include <QGraphicsOpacityEffect>
 #include <QImage>
 #include <QPainter>
@@ -12,6 +13,7 @@
 #include <QPixmap>
 #include <QPointer>
 #include <QSignalSpy>
+#include <QScopeGuard>
 #include <QTest>
 
 #include "QtTestEnvironment.h"
@@ -808,6 +810,8 @@ TEST_F(TabViewTest, DarkHoverAndSelectedFillsKeepOrderedContrast)
 
 TEST_F(TabViewTest, PointerAddCloseSelectDisabledAndReorderBehavior)
 {
+    const QPoint previousCursor = QCursor::pos();
+    const auto restoreCursor = qScopeGuard([previousCursor] { QCursor::setPos(previousCursor); });
     if (tests::support::isHeadlessPlatform()) {
         GTEST_SKIP()
             << "Requires a real windowing platform; offscreen cannot deliver "

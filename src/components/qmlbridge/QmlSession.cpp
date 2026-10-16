@@ -1,9 +1,6 @@
-#include "compatibility/private/QuickCompat_p.h"
+#include "compatibility/private/quick/QuickCompat_p.h"
 #include "QmlSession.h"
 
-#include <QQuickWindow>
-#include <QSGRendererInterface>
-#include "QmlGraphicsApi_p.h"
 #include "QmlPlugin.h"
 #include "QmlView.h"
 #include "components/foundation/plugins/PluginManager.h"
@@ -22,22 +19,20 @@ bool isKnownGraphicsApi(QmlSession::GraphicsApi api)
     return false;
 }
 
-#if FLUENT_QUICK_USES_RHI
-QSGRendererInterface::GraphicsApi quickGraphicsApi(QmlSession::GraphicsApi api)
+::compatibility::detail::QuickGraphicsApi quickGraphicsApi(QmlSession::GraphicsApi api)
 {
     switch (api) {
     case QmlSession::GraphicsApi::Automatic:
-        return QSGRendererInterface::Unknown;
+        return ::compatibility::detail::QuickGraphicsApi::Automatic;
     case QmlSession::GraphicsApi::OpenGL:
-        return QSGRendererInterface::OpenGL;
+        return ::compatibility::detail::QuickGraphicsApi::OpenGL;
     case QmlSession::GraphicsApi::Direct3D11:
-        return QSGRendererInterface::Direct3D11;
+        return ::compatibility::detail::QuickGraphicsApi::Direct3D11;
     case QmlSession::GraphicsApi::Metal:
-        return QSGRendererInterface::Metal;
+        return ::compatibility::detail::QuickGraphicsApi::Metal;
     }
-    return QSGRendererInterface::Unknown;
+    return ::compatibility::detail::QuickGraphicsApi::Automatic;
 }
-#endif
 } // namespace
 
 struct QmlSession::Private {
@@ -67,24 +62,13 @@ void QmlSession::prepareApplication(GraphicsApi api)
 {
     if (!isKnownGraphicsApi(api))
         return;
-#if FLUENT_QUICK_USES_RHI
-    QQuickWindow::setGraphicsApi(quickGraphicsApi(api));
-#else
-    Q_UNUSED(api)
-#endif
+    ::compatibility::detail::prepareQuickGraphicsApi(quickGraphicsApi(api));
 }
 bool QmlSession::isGraphicsApiCompatible(GraphicsApi api)
 {
     if (!isKnownGraphicsApi(api))
         return false;
-    if (api == GraphicsApi::Automatic || detail::usesSoftwareQuick())
-        return true;
-#if FLUENT_QUICK_USES_RHI
-    const auto selected = QQuickWindow::graphicsApi();
-    return selected == QSGRendererInterface::Software || selected == quickGraphicsApi(api);
-#else
-    return api == GraphicsApi::OpenGL;
-#endif
+    return ::compatibility::detail::quickGraphicsApiCompatible(quickGraphicsApi(api));
 }
 bool QmlSession::activate(QString* error)
 {

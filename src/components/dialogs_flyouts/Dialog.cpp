@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "Dialog.h"
 
 #include <QAbstractAnimation>
@@ -9,7 +10,6 @@
 #include <QPainter>
 #include <QShowEvent>
 
-#include "compatibility/QtCompat.h"
 #include "components/foundation/overlay/OverlayCoordinator.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"

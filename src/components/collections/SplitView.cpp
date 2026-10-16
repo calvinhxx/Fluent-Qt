@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "SplitView.h"
 #include "private/SplitViewAccessibility_p.h"
 

@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "CalendarView.h"
 
 #include "private/CalendarViewAccessibility_p.h"
@@ -18,7 +19,6 @@
 #include <QVariantMap>
 #include <QWheelEvent>
 
-#include "compatibility/QtCompat.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "design/Typography.h"
 

@@ -4,7 +4,7 @@
 
 class QWidget;
 
-namespace fluent::compat {
+namespace compatibility::detail {
 
 // QGraphicsProxyWidget roots are QWidget windows, but not native overlay hosts.
 // Keep that Qt-specific boundary out of component placement and Gallery code.
@@ -19,4 +19,4 @@ WidgetPresentationBridge widgetPresentationBridge(const QWidget* source);
 QWidget* widgetPresentationWindow(const QWidget* source);
 void prepareNativeWidgetPopup(QWidget* popup);
 
-} // namespace fluent::compat
+} // namespace compatibility::detail

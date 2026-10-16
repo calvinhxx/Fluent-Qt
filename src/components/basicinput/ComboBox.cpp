@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "ComboBox.h"
 #include <QApplication>
 #include <QContextMenuEvent>
@@ -17,7 +18,6 @@
 #include <QStyle>
 #include <QWheelEvent>
 #include <QtMath>
-#include "compatibility/QtCompat.h"
 #include "compatibility/TextPaintCompat.h"
 #include "compatibility/private/ComboBoxCompat_p.h"
 #include "components/collections/ListView.h"
@@ -299,7 +299,7 @@ void ComboBox::ComboBoxPopup::commitIndex(const QModelIndex& index)
     emit comboBox->activated(row);
     if (!comboBox)
         return;
-    fluent::compatibility::emitComboBoxTextActivated(comboBox.data(), text);
+    ::compatibility::detail::emitComboBoxTextActivated(comboBox.data(), text);
 }
 
 void ComboBox::ComboBoxPopup::refreshFont()

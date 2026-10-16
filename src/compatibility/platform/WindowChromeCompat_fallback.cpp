@@ -1,4 +1,4 @@
-#include "WindowChromeCompat.h"
+#include "compatibility/private/WindowChromeBackend_p.h"
 
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
 
@@ -7,8 +7,9 @@
 namespace compatibility {
 namespace detail {
 
-void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
-                                          fluent::windowing::BackdropSurfaceMode mode)
+void preparePlatformWindowBackdropSurface(QWidget* window,
+    const QColor& opaqueColor,
+    fluent::windowing::BackdropSurfaceMode mode)
 {
     Q_UNUSED(window);
     Q_UNUSED(opaqueColor);
@@ -39,9 +40,11 @@ void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& option
     window->setWindowFlag(Qt::FramelessWindowHint, options.useCustomWindowChrome);
 }
 
-bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& options,
-                               const QByteArray& eventType, void* message,
-                               FluentNativeEventResult* result)
+bool handlePlatformNativeEvent(QWidget* window,
+    const WindowChromeOptions& options,
+    const QByteArray& eventType,
+    void* message,
+    FluentNativeEventResult* result)
 {
     Q_UNUSED(window);
     Q_UNUSED(options);
@@ -110,8 +113,8 @@ bool platformSupportsSystemBackdrop()
     return false;
 }
 
-BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
-                                                bool forceRecomposite)
+BackdropApplyResult
+applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark, bool forceRecomposite)
 {
     Q_UNUSED(window);
     Q_UNUSED(dark);
@@ -132,16 +135,14 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect 
 int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options)
 {
     Q_UNUSED(window);
-    return options.useCustomWindowChrome
-               ? qMax(0, runtimePlatformCapabilities().clientSideFrameMargin)
-               : 0;
+    return options.useCustomWindowChrome ? qMax(0, runtimePlatformCapabilities().clientSideFrameMargin) : 0;
 }
 
 bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions& options)
 {
     Q_UNUSED(window);
-    return options.useCustomWindowChrome && options.chromeInteractive &&
-           runtimePlatformCapabilities().manualMoveResizeFallback;
+    return options.useCustomWindowChrome && options.chromeInteractive
+        && runtimePlatformCapabilities().manualMoveResizeFallback;
 }
 
 } // namespace detail

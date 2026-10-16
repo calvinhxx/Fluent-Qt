@@ -6,7 +6,7 @@
 #include <QPointer>
 #include <QWidget>
 
-namespace fluent::compat {
+namespace compatibility::detail {
 
 WidgetPresentationBridge widgetPresentationBridge(const QWidget* source)
 {
@@ -25,8 +25,7 @@ WidgetPresentationBridge widgetPresentationBridge(const QWidget* source)
     }
     if (!host)
         return {};
-    return {host->viewport(), proxy->deviceTransform(host->viewportTransform()),
-            proxy->isVisible()};
+    return {host->viewport(), proxy->deviceTransform(host->viewportTransform()), proxy->isVisible()};
 }
 
 QWidget* widgetPresentationWindow(const QWidget* source)
@@ -65,4 +64,4 @@ void prepareNativeWidgetPopup(QWidget* popup)
     }
 }
 
-} // namespace fluent::compat
+} // namespace compatibility::detail

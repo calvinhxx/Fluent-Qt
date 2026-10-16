@@ -1,4 +1,4 @@
-#include "compatibility/private/QuickCompat_p.h"
+#include "compatibility/private/quick/QuickCompat_p.h"
 #include "QmlTextureLayer.h"
 #include "QmlView.h"
 
@@ -374,10 +374,9 @@ quint64 QmlTextureLayer::requiredBytes(const QRectF& source, qreal dpr) const
         const QSize pixels = targetSize(view->size(), dpr);
         if (pixels.isEmpty() || !supportedHierarchy(view, d->root))
             return kUnsupportedBytes;
-#if !FLUENT_QUICK_HAS_RENDER_TARGET_DPR
-        if (qAbs(dpr - view->devicePixelRatioF()) > .001)
+        if (!::compatibility::detail::quickSupportsIndependentTargetDpr()
+            && qAbs(dpr - view->devicePixelRatioF()) > .001)
             return kUnsupportedBytes;
-#endif
         const quint64 allocation = quint64(pixels.width()) * quint64(pixels.height()) * 12;
         if (allocation > kUnsupportedBytes - bytes)
             return kUnsupportedBytes;

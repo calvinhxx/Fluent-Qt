@@ -1,3 +1,5 @@
+#include "compatibility/InputEventCompat.h"
+#include "compatibility/private/WidgetPlatformCompat_p.h"
 #include "PickerWheel_p.h"
 
 #include <QDateTime>
@@ -169,9 +171,7 @@ PickerWheelColumn::PickerWheelColumn(int initialWidthHint, QWidget* parent)
     : QWidget(parent), m_widthHint(initialWidthHint)
 {
     setAttribute(Qt::WA_Hover);
-#ifdef Q_OS_MAC
-    setAttribute(Qt::WA_MacShowFocusRect, false);
-#endif
+    ::compatibility::detail::disableNativeFocusRing(this);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
 

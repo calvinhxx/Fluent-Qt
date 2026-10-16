@@ -1,3 +1,5 @@
+#include "compatibility/InputEventCompat.h"
+#include "compatibility/WidgetCompat.h"
 #include "GridView.h"
 
 #include <algorithm>

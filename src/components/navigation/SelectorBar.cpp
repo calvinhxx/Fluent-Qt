@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "SelectorBar.h"
 
 #include <algorithm>
@@ -14,7 +15,6 @@
 #include <QStyle>
 #include <QVariantAnimation>
 
-#include "compatibility/QtCompat.h"
 #include "components/foundation/private/LogicalItemAccessibility_p.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "components/navigation/private/NavigationSelectionAccessibility_p.h"

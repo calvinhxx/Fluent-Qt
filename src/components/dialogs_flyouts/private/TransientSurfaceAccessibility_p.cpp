@@ -1,10 +1,11 @@
+#include "compatibility/AccessibilityCompat.h"
 #include "TransientSurfaceAccessibility_p.h"
 
 #include <QAccessible>
 #include <QAccessibleWidget>
 #include <QCoreApplication>
 
-#include "compatibility/QtCompat.h"
+#include "compatibility/private/AccessibleInterfaces_p.h"
 #include "components/dialogs_flyouts/CoachMark.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/dialogs_flyouts/Popup.h"
@@ -34,22 +35,20 @@ bool popupCanDismiss(const Popup* popup)
 
 QWidget* relationTargetFor(QWidget* surface, QAccessible::Relation* relation)
 {
-#if FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION
     if (auto* teachingTip = qobject_cast<TeachingTip*>(surface)) {
-        *relation = QAccessible::DescriptionFor;
+        *relation = ::compatibility::detail::accessibleDescriptionRelation();
         return teachingTip->target();
     }
-#endif
+
     if (auto* flyout = qobject_cast<Flyout*>(surface)) {
         *relation = QAccessible::Controlled;
         return flyout->anchor();
     }
-#if FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION
     if (auto* coachMark = qobject_cast<CoachMark*>(surface)) {
-        *relation = QAccessible::DescriptionFor;
+        *relation = ::compatibility::detail::accessibleDescriptionRelation();
         return coachMark->target();
     }
-#endif
+
     return nullptr;
 }
 
@@ -58,19 +57,7 @@ surfaceRelations(QWidget* surface, FluentAccessibleRelationList inherited, QAcce
 {
     QAccessible::Relation relation = QAccessible::AllRelations;
     QWidget* target = relationTargetFor(surface, &relation);
-    if (!target || !(match & relation))
-        return inherited;
-
-    QAccessibleInterface* targetInterface = QAccessible::queryAccessibleInterface(target);
-    if (!targetInterface)
-        return inherited;
-
-    for (const auto& existing : inherited) {
-        if (existing.first == targetInterface && existing.second == relation)
-            return inherited;
-    }
-    inherited.append({targetInterface, relation});
-    return inherited;
+    return ::compatibility::detail::appendAccessibleRelation(std::move(inherited), target, relation, match);
 }
 
 class PopupAccessible final : public QAccessibleWidget {

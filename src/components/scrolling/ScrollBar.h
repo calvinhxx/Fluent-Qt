@@ -1,6 +1,7 @@
 #ifndef SCROLLBAR_H
 #define SCROLLBAR_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QScrollBar>
 #include <QEvent>
 #include <QMouseEvent>

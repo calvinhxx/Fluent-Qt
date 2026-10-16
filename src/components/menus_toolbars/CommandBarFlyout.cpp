@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "CommandBarFlyout.h"
 
 #include <QAbstractButton>
@@ -18,7 +19,6 @@
 #include <QVector>
 #include <QWidget>
 
-#include "compatibility/QtCompat.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/foundation/overlay/OverlayLightDismiss.h"
 #include "components/foundation/overlay/OverlayShadow.h"

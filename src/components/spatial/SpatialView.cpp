@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "SpatialView.h"
 #include "SpatialRuntime.h"
 #include "SpatialSurface_p.h"

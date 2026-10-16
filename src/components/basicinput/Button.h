@@ -1,6 +1,7 @@
 #ifndef BUTTON_H
 #define BUTTON_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QPushButton>
 #include <QIcon>
 #include <QEvent>

@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "RadioButton.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "design/Typography.h"

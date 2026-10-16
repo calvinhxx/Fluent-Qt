@@ -6,7 +6,7 @@
 #include <QHash>
 #include <QStringList>
 
-#include "compatibility/QtCompat.h"
+#include "compatibility/private/AccessibleInterfaces_p.h"
 
 class QWidget;
 
@@ -34,12 +34,8 @@ struct LogicalItemAccessibleState {
  * child caching, selection lookup, and Qt interface plumbing stay centralized.
  */
 class LogicalItemAccessibleAdapter
-    : public QAccessibleWidget
-#if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
-    ,
-      public QAccessibleSelectionInterface
-#endif
-{
+    : public QAccessibleWidget,
+      public ::compatibility::detail::AccessibleSelectionInterface {
 public:
     LogicalItemAccessibleAdapter(QWidget* widget, QAccessible::Role role);
     ~LogicalItemAccessibleAdapter() override;
@@ -51,7 +47,6 @@ public:
     QAccessibleInterface* child(int logicalIndex) const override;
     void* interface_cast(QAccessible::InterfaceType type) override;
 
-#if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
     int selectedItemCount() const override;
     QList<QAccessibleInterface*> selectedItems() const override;
     bool isSelected(QAccessibleInterface* childItem) const override;
@@ -59,7 +54,6 @@ public:
     bool unselect(QAccessibleInterface* childItem) override;
     bool selectAll() override { return false; }
     bool clear() override;
-#endif
 
     virtual int logicalChildCount() const = 0;
     virtual QAccessible::Role logicalChildRole(int logicalIndex) const = 0;

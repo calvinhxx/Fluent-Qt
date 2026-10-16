@@ -44,6 +44,6 @@ flowchart TD
 | [Typography resolution](typography-resolution.md) | Fonts, inherited application typography, role resolution, or text scaling |
 | [Inspector report](inspector-report.md) · [schema](inspector-report.schema.json) | Diagnostic rules, findings, generated workbenches, or report consumers |
 
-Public compatibility rules are in the
+Public compatibility rules and the source-layer ownership map are in the
 [compatibility policy](../development/compatibility-policy.md). Visual choices
 are governed by the [Fluent design contract](../design-languages/README.md).

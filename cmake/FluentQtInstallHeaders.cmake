@@ -25,7 +25,15 @@ set(FLUENT_QT_INSTALL_HEADERS
     include/FluentQt/Windowing.h
     include/FluentQt/WebAssembly.h
 
+    src/compatibility/AccessibilityCompat.h
+    src/compatibility/ApplicationCompat.h
+    src/compatibility/EventConstructionCompat.h
     src/compatibility/FontCompat.h
+    src/compatibility/InputEventCompat.h
+    src/compatibility/ObjectCompat.h
+    src/compatibility/PaintCompat.h
+    src/compatibility/QtFeatures.h
+    src/compatibility/WidgetCompat.h
     src/compatibility/QtCompat.h
     src/compatibility/TextPaintCompat.h
     src/compatibility/WindowBackdropTypes.h

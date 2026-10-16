@@ -1,6 +1,7 @@
 #ifndef LINEEDIT_H
 #define LINEEDIT_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QLineEdit>
 #include <QMargins>
 #include <QPoint>

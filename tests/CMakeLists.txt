@@ -10,7 +10,7 @@ set(FLUENT_QT_CI_FAST_TARGETS
     test_visual_comparison
 )
 if(TARGET FluentQtSpatial)
-    list(APPEND FLUENT_QT_CI_FAST_TARGETS test_spatial_view)
+    list(APPEND FLUENT_QT_CI_FAST_TARGETS test_spatial_view test_spatial_texture_backend_fallback)
 endif()
 if(FLUENT_QT_BUILD_GALLERY)
     list(APPEND FLUENT_QT_CI_FAST_TARGETS test_gallery_single_instance)

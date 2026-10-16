@@ -1,3 +1,4 @@
+#include "compatibility/AccessibilityCompat.h"
 #include "StatusPresentationAccessibility_p.h"
 
 #include <QAccessible>
@@ -6,7 +7,6 @@
 #include <QCoreApplication>
 #include <QVector>
 
-#include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/status_info/InfoBar.h"
 #include "components/status_info/Shimmer.h"

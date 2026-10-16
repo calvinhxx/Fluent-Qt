@@ -1,6 +1,7 @@
 #ifndef SELECTORBAR_H
 #define SELECTORBAR_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QRect>
 #include <QString>
 #include <QVariant>

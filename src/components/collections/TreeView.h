@@ -1,6 +1,7 @@
 #ifndef TREEVIEW_H
 #define TREEVIEW_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QTreeView>
 #include <QPersistentModelIndex>
 #include <QHash>

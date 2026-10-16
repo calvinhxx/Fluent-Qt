@@ -1,3 +1,5 @@
+#include "compatibility/InputEventCompat.h"
+#include "compatibility/WidgetCompat.h"
 #include "TreeView.h"
 #include <QAbstractItemModel>
 #include <QApplication>
@@ -19,7 +21,6 @@
 
 #include <QtMath>
 
-#include "compatibility/QtCompat.h"
 #include "components/collections/CollectionViewBackdrop_p.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/foundation/private/MotionPolicy_p.h"

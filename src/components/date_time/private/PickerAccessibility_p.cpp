@@ -1,3 +1,4 @@
+#include "compatibility/AccessibilityCompat.h"
 #include "PickerAccessibility_p.h"
 
 #include <QAccessible>
@@ -8,7 +9,6 @@
 #include "components/date_time/DatePicker.h"
 #include "components/date_time/TimePicker.h"
 #include "components/foundation/private/ValueAccessibility_p.h"
-#include "compatibility/QtCompat.h"
 
 namespace fluent::date_time::detail {
 

@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "LineEdit.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"

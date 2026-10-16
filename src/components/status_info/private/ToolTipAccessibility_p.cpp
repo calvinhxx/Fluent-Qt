@@ -1,9 +1,10 @@
+#include "compatibility/AccessibilityCompat.h"
 #include "ToolTipAccessibility_p.h"
 
 #include <QAccessible>
 #include <QAccessibleWidget>
 
-#include "compatibility/QtCompat.h"
+#include "compatibility/private/AccessibleInterfaces_p.h"
 #include "components/status_info/ToolTip.h"
 
 namespace fluent::status_info::detail {
@@ -43,24 +44,10 @@ public:
 
     FluentAccessibleRelationList relations(QAccessible::Relation match) const override
     {
-        auto result = QAccessibleWidget::relations(match);
-#if FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION
         ToolTip* surface = toolTip();
-        if (!surface || !surface->m_target || !(match & QAccessible::DescriptionFor)) {
-            return result;
-        }
-
-        QAccessibleInterface* target = QAccessible::queryAccessibleInterface(surface->m_target);
-        if (!target)
-            return result;
-        for (const auto& relation : result) {
-            if (relation.first == target && relation.second.testFlag(QAccessible::DescriptionFor)) {
-                return result;
-            }
-        }
-        result.append({target, QAccessible::DescriptionFor});
-#endif
-        return result;
+        return ::compatibility::detail::appendAccessibleRelation(QAccessibleWidget::relations(match),
+            surface ? surface->m_target.data() : nullptr, ::compatibility::detail::accessibleDescriptionRelation(),
+            match);
     }
 
     QStringList actionNames() const override { return {}; }

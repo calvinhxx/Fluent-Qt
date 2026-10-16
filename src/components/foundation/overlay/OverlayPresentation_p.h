@@ -5,7 +5,7 @@
 #include <QPointer>
 #include <QTransform>
 
-#include "compatibility/WidgetPresentationCompat_p.h"
+#include "compatibility/private/WidgetPresentationCompat_p.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 
 namespace fluent::overlay {
@@ -40,7 +40,7 @@ bool hasPresentedTransform(const QWidget* source);
 
 inline QWidget* presentedTopLevel(const QWidget* source)
 {
-    return compat::widgetPresentationWindow(source);
+    return ::compatibility::detail::widgetPresentationWindow(source);
 }
 
 constexpr const char* presentedMenuSourcePropertyName()
@@ -62,8 +62,8 @@ inline void popupMenuAt(QMenu* menu, QWidget* source, const QPoint& localPoint, 
         return;
     const QPointer<QMenu> guard(menu);
     const QPointer<QWidget> sourceGuard(source);
-    if (compat::widgetPresentationBridge(source).viewport)
-        compat::prepareNativeWidgetPopup(menu);
+    if (::compatibility::detail::widgetPresentationBridge(source).viewport)
+        ::compatibility::detail::prepareNativeWidgetPopup(menu);
     if (!guard || !sourceGuard)
         return;
     if (!hasPresentedTransform(source)) {

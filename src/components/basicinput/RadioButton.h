@@ -1,6 +1,7 @@
 #ifndef RADIOBUTTON_H
 #define RADIOBUTTON_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QRadioButton>
 #include <QFont>
 #include "components/foundation/FluentElement.h"

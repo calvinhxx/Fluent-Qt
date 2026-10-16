@@ -1,6 +1,7 @@
 #ifndef FLIPVIEW_H
 #define FLIPVIEW_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QElapsedTimer>
 #include <QMetaObject>
 #include <QPointer>

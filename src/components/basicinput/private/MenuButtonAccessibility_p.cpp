@@ -1,3 +1,4 @@
+#include "compatibility/AccessibilityCompat.h"
 #include "MenuButtonAccessibility_p.h"
 
 #include <QAbstractButton>
@@ -10,7 +11,6 @@
 #include "components/basicinput/DropDownButton.h"
 #include "components/basicinput/SplitButton.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
-#include "compatibility/QtCompat.h"
 
 namespace fluent::basicinput::detail {
 

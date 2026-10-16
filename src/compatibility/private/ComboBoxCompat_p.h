@@ -3,7 +3,7 @@
 #include <QComboBox>
 #include <QPointer>
 
-namespace fluent::compatibility {
+namespace compatibility::detail {
 
 /**
  * @brief Emits current and legacy text activation signals while guarding sender lifetime.
@@ -25,4 +25,4 @@ inline void emitComboBoxTextActivated(QComboBox* comboBox, const QString& text)
 #endif
 }
 
-} // namespace fluent::compatibility
+} // namespace compatibility::detail

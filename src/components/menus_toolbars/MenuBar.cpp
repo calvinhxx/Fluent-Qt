@@ -1,3 +1,4 @@
+#include "compatibility/private/WidgetPlatformCompat_p.h"
 #include "MenuBar.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
 
@@ -70,14 +71,10 @@ QString accessKeyText(QAction* action)
 FluentMenuBar::FluentMenuBar(QWidget* parent) : QMenuBar(parent)
 {
     setAttribute(Qt::WA_Hover);
-#ifdef Q_OS_MAC
-    setAttribute(Qt::WA_MacShowFocusRect, false);
-#endif
+    ::compatibility::detail::disableNativeFocusRing(this);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
-#ifdef Q_OS_MAC
-    setNativeMenuBar(false);
-#endif
+    ::compatibility::detail::useWidgetMenuBar(this);
     onThemeUpdated();
 }
 

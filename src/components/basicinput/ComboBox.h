@@ -1,11 +1,12 @@
 #ifndef COMBOBOX_H
 #define COMBOBOX_H
 
+#include "compatibility/InputEventCompat.h"
+#include "compatibility/QtFeatures.h"
 #include <QComboBox>
 #include <QPoint>
 #include <QPointer>
 #include <QStyledItemDelegate>
-#include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "design/Typography.h"

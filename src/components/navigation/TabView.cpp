@@ -1,3 +1,5 @@
+#include "compatibility/InputEventCompat.h"
+#include "compatibility/private/PointerEventCompat_p.h"
 #include "TabView.h"
 
 #include <algorithm>
@@ -20,7 +22,6 @@
 #include <QVariantAnimation>
 #include <QWheelEvent>
 
-#include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/private/LogicalItemAccessibility_p.h"
 #include "components/foundation/private/MotionPolicy_p.h"
@@ -68,9 +69,7 @@ bool forwardMouseEvent(TabStrip* target, QMouseEvent* event)
     if (!target || !target->geometry().contains(fluentMousePos(event)))
         return false;
 
-    const QPoint localPoint = fluentMousePos(event) - target->pos();
-    QMouseEvent forwarded(event->type(), QPointF(localPoint), QPointF(target->mapToGlobal(localPoint)), event->button(),
-        event->buttons(), event->modifiers());
+    auto forwarded = ::compatibility::detail::mouseEventForWidget(event, target);
     if (!target->handleForwardedMouseEvent(&forwarded))
         return false;
     event->accept();

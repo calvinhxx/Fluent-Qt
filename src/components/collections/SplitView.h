@@ -1,6 +1,7 @@
 #ifndef SPLITVIEW_H
 #define SPLITVIEW_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QPointer>
 #include <QWidget>
 #include <QVector>

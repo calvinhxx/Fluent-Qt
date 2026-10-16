@@ -1,3 +1,4 @@
+#include "compatibility/AccessibilityCompat.h"
 #include "HyperlinkButtonAccessibility_p.h"
 
 #include <QAccessible>
@@ -6,7 +7,7 @@
 #include <QKeySequence>
 
 #include "components/basicinput/HyperlinkButton.h"
-#include "compatibility/QtCompat.h"
+#include "compatibility/private/AccessibleInterfaces_p.h"
 
 namespace fluent::basicinput::detail {
 
@@ -62,12 +63,8 @@ void sendTraversedChanged(HyperlinkButton* button)
 } // namespace
 
 class HyperlinkButtonAccessible final
-    : public QAccessibleWidget
-#if FLUENT_HAS_ACCESSIBLE_HYPERLINK_INTERFACE
-    ,
-      public QAccessibleHyperlinkInterface
-#endif
-{
+    : public QAccessibleWidget,
+      public ::compatibility::detail::AccessibleHyperlinkInterface {
 public:
     explicit HyperlinkButtonAccessible(HyperlinkButton* button) : QAccessibleWidget(button, QAccessible::Link) {}
 
@@ -102,10 +99,9 @@ public:
 
     void* interface_cast(QAccessible::InterfaceType type) override
     {
-#if FLUENT_HAS_ACCESSIBLE_HYPERLINK_INTERFACE
-        if (type == QAccessible::HyperlinkInterface)
-            return static_cast<QAccessibleHyperlinkInterface*>(this);
-#endif
+        if (void* hyperlink = castHyperlinkInterface(type))
+            return hyperlink;
+
         return QAccessibleWidget::interface_cast(type);
     }
 
@@ -146,14 +142,12 @@ public:
             : QAccessibleWidget::localizedActionDescription(actionName);
     }
 
-#if FLUENT_HAS_ACCESSIBLE_HYPERLINK_INTERFACE
     QString anchor() const override { return button() ? stripMnemonic(button()->text()) : QString{}; }
 
     QString anchorTarget() const override { return encodedUrl(button()); }
 
     int startIndex() const override { return 0; }
     int endIndex() const override { return anchor().size(); }
-#endif
 
     bool isValid() const override { return button() && button()->url().isValid(); }
 

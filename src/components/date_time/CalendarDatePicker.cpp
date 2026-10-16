@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "CalendarDatePicker.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
 
@@ -10,7 +11,6 @@
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "components/dialogs_flyouts/Flyout.h"
-#include "compatibility/QtCompat.h"
 
 namespace fluent::date_time {
 

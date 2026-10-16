@@ -1,3 +1,4 @@
+#include "compatibility/InputEventCompat.h"
 #include "components/foundation/overlay/OverlayScrim.h"
 
 #include <QMouseEvent>
@@ -6,8 +7,6 @@
 #include <QPointer>
 #include <QWheelEvent>
 #include <cmath>
-
-#include "compatibility/QtCompat.h"
 
 namespace fluent::overlay {
 

@@ -1,3 +1,4 @@
+#include "compatibility/PaintCompat.h"
 #include "CommandPresenter_p.h"
 
 #include <QAction>
@@ -11,7 +12,6 @@
 
 #include <utility>
 
-#include "compatibility/QtCompat.h"
 #include "components/menus_toolbars/private/CommandAccessibility_p.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"

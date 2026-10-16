@@ -1,6 +1,7 @@
 #ifndef RATINGCONTROL_H
 #define RATINGCONTROL_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QWidget>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"

@@ -1,4 +1,4 @@
-#include "WindowChromeCompat.h"
+#include "compatibility/private/WindowChromeBackend_p.h"
 #include "compatibility/private/WindowBackdropTransition_p.h"
 
 #ifdef Q_OS_WIN
@@ -53,8 +53,7 @@ WindowsVersionInfo currentWindowsVersion()
 {
     using RtlGetVersionFn = LONG(WINAPI*)(OSVERSIONINFOW*);
     HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
-    auto* rtlGetVersion =
-        ntdll ? reinterpret_cast<RtlGetVersionFn>(GetProcAddress(ntdll, "RtlGetVersion")) : nullptr;
+    auto* rtlGetVersion = ntdll ? reinterpret_cast<RtlGetVersionFn>(GetProcAddress(ntdll, "RtlGetVersion")) : nullptr;
     if (!rtlGetVersion)
         return {};
 
@@ -93,8 +92,7 @@ void storeChromeTopMargin(HWND hwnd, int topMargin)
     if (!hwnd)
         return;
 
-    SetPropW(hwnd, ChromeTopMarginProperty,
-             reinterpret_cast<HANDLE>(static_cast<INT_PTR>(qMax(0, topMargin) + 1)));
+    SetPropW(hwnd, ChromeTopMarginProperty, reinterpret_cast<HANDLE>(static_cast<INT_PTR>(qMax(0, topMargin) + 1)));
 }
 
 void clearChromeTopMargin(HWND hwnd)
@@ -136,8 +134,7 @@ void ensureDwmChromeStyle(QWidget* window)
         return;
 
     SetWindowLongPtrW(hwnd, GWL_STYLE, desiredStyle);
-    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
-                 SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
 }
 
 bool monitorInfoForWindow(HWND hwnd, MONITORINFO* monitorInfo)
@@ -153,8 +150,7 @@ bool monitorInfoForWindow(HWND hwnd, MONITORINFO* monitorInfo)
 void extendFrameIntoClientArea(HWND hwnd, int topMargin)
 {
     using DwmExtendFrameIntoClientAreaFn = HRESULT(WINAPI*)(HWND, const MARGINS*);
-    auto* extendFrame =
-        resolveDwmProc<DwmExtendFrameIntoClientAreaFn>("DwmExtendFrameIntoClientArea");
+    auto* extendFrame = resolveDwmProc<DwmExtendFrameIntoClientAreaFn>("DwmExtendFrameIntoClientArea");
     if (!hwnd || !extendFrame)
         return;
 
@@ -207,8 +203,7 @@ int toNativeHitTest(WindowChromeCompat::HitTest hitTest)
     }
 }
 
-QPoint logicalClientPointForNativeScreenPoint(QWidget* window, HWND hwnd,
-                                              const QPoint& nativeScreenPoint)
+QPoint logicalClientPointForNativeScreenPoint(QWidget* window, HWND hwnd, const QPoint& nativeScreenPoint)
 {
     if (!window || !hwnd)
         return {};
@@ -232,8 +227,7 @@ QPoint logicalClientPointForNativeScreenPoint(QWidget* window, HWND hwnd,
     // zh_CN: WM_NCHITTEST 使用物理屏幕像素，而 QWidget 几何使用 Qt 逻辑像素；
     // QT_SCALE_FACTOR 即使在系统 100% 缩放下也会让两者不同。应通过当前原生客户区
     // 尺寸换算，不能把物理坐标直接交给 mapFromGlobal()。
-    return QPoint(
-        qFloor(static_cast<qreal>(nativeClientPoint.x) * logicalSize.width() / nativeWidth),
+    return QPoint(qFloor(static_cast<qreal>(nativeClientPoint.x) * logicalSize.width() / nativeWidth),
         qFloor(static_cast<qreal>(nativeClientPoint.y) * logicalSize.height() / nativeHeight));
 }
 
@@ -322,8 +316,7 @@ BackdropCapabilities platformBackdropCapabilities()
     capabilities.alphaSurfaceSupported = supported;
     capabilities.nativeMica = supported;
     capabilities.nativeAcrylic = supported;
-    capabilities.provider =
-        supported ? QStringLiteral("dwm-system-backdrop") : QStringLiteral("painted-material");
+    capabilities.provider = supported ? QStringLiteral("dwm-system-backdrop") : QStringLiteral("painted-material");
     return capabilities;
 }
 
@@ -335,8 +328,8 @@ bool platformSupportsSystemBackdrop()
 
 bool flushPlatformWindowBackdropSurface(QWidget* window)
 {
-    if (!hwndForWindow(window) || !window->isVisible() || window->isMinimized() ||
-        !window->updatesEnabled() || !window->windowHandle()->isExposed())
+    if (!hwndForWindow(window) || !window->isVisible() || window->isMinimized() || !window->updatesEnabled()
+        || !window->windowHandle()->isExposed())
         return false;
 
     // QWidget must submit its replacement frame before this presentation fence.
@@ -349,8 +342,9 @@ bool flushPlatformWindowBackdropSurface(QWidget* window)
     return flush && SUCCEEDED(flush());
 }
 
-void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueColor,
-                                          fluent::windowing::BackdropSurfaceMode mode)
+void preparePlatformWindowBackdropSurface(QWidget* window,
+    const QColor& opaqueColor,
+    fluent::windowing::BackdropSurfaceMode mode)
 {
     Q_UNUSED(window);
     Q_UNUSED(opaqueColor);
@@ -358,8 +352,8 @@ void preparePlatformWindowBackdropSurface(QWidget* window, const QColor& opaqueC
     // WM_ERASEBKGND consumes the shared theme palette; no shared class brush is changed.
 }
 
-BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
-                                                bool forceRecomposite)
+BackdropApplyResult
+applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark, bool forceRecomposite)
 {
     BackdropApplyResult result;
     HWND hwnd = hwndForWindow(window);
@@ -414,11 +408,10 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect 
         backdropType = DWMSBT_MAINWINDOW;
         break;
     }
-    const HRESULT hr =
-        setAttr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdropType, sizeof(backdropType));
+    const HRESULT hr = setAttr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdropType, sizeof(backdropType));
     if (!SUCCEEDED(hr)) {
-        result.reason = QStringLiteral("dwm-set-window-attribute-failed-%1")
-                            .arg(static_cast<quint32>(hr), 8, 16, QLatin1Char('0'));
+        result.reason =
+            QStringLiteral("dwm-set-window-attribute-failed-%1").arg(static_cast<quint32>(hr), 8, 16, QLatin1Char('0'));
         return result;
     }
 
@@ -427,7 +420,7 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window, BackdropEffect 
     // zh_CN: 仅首屏或显式原生修复需要重算窗框；单纯切换材质不改变客户区几何。
     if (forceRecomposite) {
         SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
-                     SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
     }
 
     // On first show DWM intermittently leaves a flat default glass instead of the real,
@@ -469,18 +462,19 @@ void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& option
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
         desiredFlags |= Qt::ExpandedClientAreaHint | Qt::NoTitleBarBackgroundHint;
 #endif
-        desiredFlags &= ~(Qt::FramelessWindowHint | Qt::WindowMinimizeButtonHint |
-                          Qt::WindowMaximizeButtonHint | Qt::WindowCloseButtonHint |
-                          Qt::WindowTitleHint | Qt::WindowSystemMenuHint);
+        desiredFlags &= ~(Qt::FramelessWindowHint | Qt::WindowMinimizeButtonHint | Qt::WindowMaximizeButtonHint
+            | Qt::WindowCloseButtonHint | Qt::WindowTitleHint | Qt::WindowSystemMenuHint);
         if (!window->isVisible() && window->windowFlags() != desiredFlags)
             window->setWindowFlags(desiredFlags);
         ensureDwmChromeStyle(window);
     }
 }
 
-bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& options,
-                               const QByteArray& eventType, void* message,
-                               FluentNativeEventResult* result)
+bool handlePlatformNativeEvent(QWidget* window,
+    const WindowChromeOptions& options,
+    const QByteArray& eventType,
+    void* message,
+    FluentNativeEventResult* result)
 {
     if (!window || !message || !result)
         return false;
@@ -496,9 +490,9 @@ bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& optio
         // Qt preserves an existing backing store instead of erasing it. Only a new native surface
         // needs a theme seed before its first real paint; never wipe a warm UI between paint events.
         // zh_CN: Qt 会保留现有后备缓冲；仅新 surface 首次绘制前补主题底色，不能擦除已显示的界面。
-        if (!windowBackdropSurfaceWasPainted(window) &&
-            window->property("fluentBackdropSurfaceMode").toInt() !=
-                static_cast<int>(fluent::windowing::BackdropSurfaceMode::CompositedTransparent)) {
+        if (!windowBackdropSurfaceWasPainted(window)
+            && window->property("fluentBackdropSurfaceMode").toInt()
+                != static_cast<int>(fluent::windowing::BackdropSurfaceMode::CompositedTransparent)) {
             const QColor color = windowBackdropSurfaceColor(window);
             RECT rect;
             if (!msg->wParam || !GetClientRect(msg->hwnd, &rect))
@@ -538,8 +532,7 @@ bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& optio
     // zh_CN: 上的行为一致）。由于 DwmDefWindowProc 可能先消费该消息，需在此显式处理。
     if (msg->message == WM_NCRBUTTONUP) {
         const QPoint globalPos(GET_X_LPARAM(msg->lParam), GET_Y_LPARAM(msg->lParam));
-        const QPoint localPos =
-            logicalClientPointForNativeScreenPoint(window, msg->hwnd, globalPos);
+        const QPoint localPos = logicalClientPointForNativeScreenPoint(window, msg->hwnd, globalPos);
         const auto hit = WindowChromeCompat::classifyHitTest(options, window->size(), localPos);
         if (hit == WindowChromeCompat::HitTest::Caption) {
             showPlatformSystemMenu(window, globalPos);
@@ -568,8 +561,7 @@ bool handlePlatformNativeEvent(QWidget* window, const WindowChromeOptions& optio
     // 上面 DwmDefWindowProc 已处理过该消息以重新合成背景；此处以 lParam == -1 调用 DefWindowProc——Windows 文档为
     //「不重绘非客户区以反映状态变化」——同时仍返回正确的激活/失活值，使 shell 与任务栏继续跟踪激活状态。
     if (msg->message == WM_NCACTIVATE) {
-        *result = static_cast<FluentNativeEventResult>(
-            DefWindowProcW(msg->hwnd, WM_NCACTIVATE, msg->wParam, -1));
+        *result = static_cast<FluentNativeEventResult>(DefWindowProcW(msg->hwnd, WM_NCACTIVATE, msg->wParam, -1));
         return true;
     }
 
@@ -671,18 +663,16 @@ bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos)
     const bool isMinimized = IsIconic(hwnd) != FALSE;
     const bool canResize = (GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_THICKFRAME) != 0;
 
-    EnableMenuItem(systemMenu, SC_RESTORE,
-                   MF_BYCOMMAND | ((isMaximized || isMinimized) ? MF_ENABLED : MF_GRAYED));
+    EnableMenuItem(systemMenu, SC_RESTORE, MF_BYCOMMAND | ((isMaximized || isMinimized) ? MF_ENABLED : MF_GRAYED));
     EnableMenuItem(systemMenu, SC_MOVE, MF_BYCOMMAND | (isMaximized ? MF_GRAYED : MF_ENABLED));
-    EnableMenuItem(systemMenu, SC_SIZE,
-                   MF_BYCOMMAND | (!isMaximized && canResize ? MF_ENABLED : MF_GRAYED));
+    EnableMenuItem(systemMenu, SC_SIZE, MF_BYCOMMAND | (!isMaximized && canResize ? MF_ENABLED : MF_GRAYED));
     EnableMenuItem(systemMenu, SC_MINIMIZE, MF_BYCOMMAND | MF_ENABLED);
     EnableMenuItem(systemMenu, SC_MAXIMIZE, MF_BYCOMMAND | (isMaximized ? MF_GRAYED : MF_ENABLED));
     EnableMenuItem(systemMenu, SC_CLOSE, MF_BYCOMMAND | MF_ENABLED);
 
     SetForegroundWindow(hwnd);
-    const UINT cmd = TrackPopupMenu(systemMenu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD,
-                                    globalPos.x(), globalPos.y(), 0, hwnd, nullptr);
+    const UINT cmd = TrackPopupMenu(systemMenu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, globalPos.x(),
+        globalPos.y(), 0, hwnd, nullptr);
     if (cmd != 0)
         PostMessageW(hwnd, WM_SYSCOMMAND, static_cast<WPARAM>(cmd), 0);
 
@@ -725,8 +715,7 @@ void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& op
         return;
 
     storeChromeTopMargin(hwnd, topMargin);
-    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
-                 SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
 }
 
 int nativeTitleBarLeadingInset(QWidget* window)

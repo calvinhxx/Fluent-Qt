@@ -1,4 +1,6 @@
+#include "compatibility/InputEventCompat.h"
 #include "AnnotatedScrollBar.h"
+#include "compatibility/private/WidgetPlatformCompat_p.h"
 
 #include <algorithm>
 #include <cmath>
@@ -18,7 +20,6 @@
 #include <QWheelEvent>
 
 #include "ScrollView.h"
-#include "compatibility/QtCompat.h"
 #include "design/Typography.h"
 #include "components/status_info/ToolTip.h"
 #include "components/scrolling/private/AnnotatedScrollBarAccessibility_p.h"
@@ -735,7 +736,7 @@ void AnnotatedScrollBar::showDetail(const QString& text, const QPoint& localAnch
         m_detailPopup->resize(popupSize);
         m_detailPopup->move(x, y);
         m_detailPopup->setVisible(true);
-        if (QGuiApplication::platformName() != QLatin1String("offscreen"))
+        if (compatibility::detail::widgetWindowRaiseSupported())
             m_detailPopup->raise();
     }
 }

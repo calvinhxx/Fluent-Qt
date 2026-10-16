@@ -1,11 +1,11 @@
 #ifndef PIPSPAGER_H
 #define PIPSPAGER_H
 
+#include "compatibility/InputEventCompat.h"
 #include <QRect>
 #include <QSize>
 #include <QWidget>
 
-#include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 

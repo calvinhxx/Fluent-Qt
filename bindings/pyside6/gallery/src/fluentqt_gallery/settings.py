@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 
 import fluentqt
+from fluentqt._qt_widgets import system_color_scheme
 from PySide6.QtCore import (
     QCoreApplication,
     QEvent,
@@ -14,11 +15,10 @@ from PySide6.QtCore import (
     QSettings,
     QStandardPaths,
     QTimer,
-    Qt,
     Signal,
     Slot,
 )
-from PySide6.QtGui import QColor, QGuiApplication
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication
 
 from .identity import APPLICATION_NAME, ORGANIZATION_NAME
@@ -120,14 +120,11 @@ def _windows_apps_use_light_theme() -> bool | None:
 def _system_theme() -> fluentqt.Theme:
     app = QApplication.instance()
     if app is not None:
-        try:
-            scheme = QGuiApplication.styleHints().colorScheme()
-            if scheme == Qt.ColorScheme.Dark:
-                return fluentqt.Theme.Dark
-            if scheme == Qt.ColorScheme.Light:
-                return fluentqt.Theme.Light
-        except AttributeError:
-            pass
+        scheme = system_color_scheme()
+        if scheme == "dark":
+            return fluentqt.Theme.Dark
+        if scheme == "light":
+            return fluentqt.Theme.Light
         use_light_theme = _windows_apps_use_light_theme()
         if use_light_theme is not None:
             return (

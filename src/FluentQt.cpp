@@ -1,3 +1,4 @@
+#include "compatibility/ApplicationCompat.h"
 #include <FluentQt/FluentQt.h>
 
 #include <QFont>
@@ -10,7 +11,6 @@
 #include <QStringList>
 
 #include "compatibility/FontCompat.h"
-#include "compatibility/QtCompat.h"
 #include "utils/private/FluentQtLogging_p.h"
 #include "utils/private/FluentQtResources_p.h"
 
