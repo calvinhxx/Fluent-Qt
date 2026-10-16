@@ -1,6 +1,12 @@
 #include <gtest/gtest.h>
 
 #include <QRegion>
+#include <QApplication>
+#include <QCursor>
+#include <QEnterEvent>
+#include <QStyle>
+#include <QProxyStyle>
+#include <QScopeGuard>
 #include <QVariantAnimation>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
@@ -12,12 +18,53 @@
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "QtFontComparison.h"
+#include "QtTestEnvironment.h"
+#include "compatibility/QtCompat.h"
 
 using fluent::ThemeRegistry;
 using fluent::menus_toolbars::FluentMenu;
 using fluent::menus_toolbars::FluentMenuItem;
 
 namespace {
+
+class ResetSubmenuOnEnterStyle final : public QProxyStyle {
+public:
+    explicit ResetSubmenuOnEnterStyle(bool resetOnEnter = true, int closeTimeout = 1000)
+        : QProxyStyle(QStringLiteral("Fusion")), m_resetOnEnter(resetOnEnter), m_closeTimeout(closeTimeout)
+    {}
+
+    int styleHint(StyleHint hint,
+        const QStyleOption* option = nullptr,
+        const QWidget* widget = nullptr,
+        QStyleHintReturn* data = nullptr) const override
+    {
+        if (hint == SH_Menu_SubMenuResetWhenReenteringParent)
+            return m_resetOnEnter;
+        if (hint == SH_Menu_SubMenuSloppyCloseTimeout)
+            return m_closeTimeout;
+        return QProxyStyle::styleHint(hint, option, widget, data);
+    }
+
+private:
+    bool m_resetOnEnter;
+    int m_closeTimeout;
+};
+
+class MenuStyleScope final {
+public:
+    explicit MenuStyleScope(bool resetOnEnter, int closeTimeout = 1000) : m_previous(QApplication::style())
+    {
+        // QMenu caches these style hints in its constructor. Keep the original
+        // style alive and restore the exact object, including unnamed styles.
+        m_previous->setParent(nullptr);
+        QApplication::setStyle(new ResetSubmenuOnEnterStyle(resetOnEnter, closeTimeout));
+    }
+
+    ~MenuStyleScope() { QApplication::setStyle(m_previous); }
+
+private:
+    QStyle* m_previous;
+};
 
 class RuntimeCapabilitiesScope final {
 public:
@@ -173,4 +220,143 @@ TEST_F(MenuTest, RepeatedPopupKeepsStableHeight)
         << "The first popup must use the same settled geometry as later opens"
         << "; first hint=" << firstHintHeight << ", second hint=" << secondHintHeight
         << ", first row=" << firstRowHeight << ", second row=" << secondRowHeight;
+}
+
+TEST_F(MenuTest, PointerCanCrossIntoSubmenuAndActivateLeaf)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires native popup mouse routing.";
+
+    const QPoint previousCursor = QCursor::pos();
+    const auto restoreCursor = qScopeGuard([previousCursor] { QCursor::setPos(previousCursor); });
+    MenuStyleScope styleScope(true);
+
+    QWidget host;
+    host.resize(800, 600);
+    host.show();
+    host.raise();
+    host.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&host));
+
+    FluentMenu menu(QStringLiteral("View options"), &host);
+    auto* submenu = new FluentMenu(QStringLiteral("Sort by"), &menu);
+    QAction* first = submenu->addAction(QStringLiteral("Name"));
+    QAction* second = submenu->addAction(QStringLiteral("Date modified"));
+    QAction* third = submenu->addAction(QStringLiteral("Type"));
+    QAction* branch = menu.addMenu(submenu);
+    menu.addSeparator();
+    menu.addAction(QStringLiteral("Compact list"));
+    menu.addAction(QStringLiteral("Comfortable list"));
+    menu.addAction(QStringLiteral("Large icons"));
+    menu.addAction(QStringLiteral("Show hidden files"));
+
+    for (QAction* leaf : {first, second, third}) {
+        SCOPED_TRACE(leaf->text().toStdString());
+        QTest::mouseMove(&host, QPoint(5, 5));
+        menu.popup(host.mapToGlobal(QPoint(40, 80)));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return menu.isVisible(); }));
+        QTest::qWait(100);
+        const QPoint source = menu.actionGeometry(branch).center();
+        QTest::mouseMove(&menu, source - QPoint(24, 0));
+        QTest::qWait(20);
+        QTest::mouseMove(&menu, source);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return submenu->isVisible(); }, 2000));
+        const QPoint start = menu.mapToGlobal(source);
+        const QPoint finish = submenu->mapToGlobal(submenu->actionGeometry(leaf).center());
+        for (int step = 1; step <= 60; ++step) {
+            const QPoint point = start + (finish - start) * step / 60;
+            QMenu* target = submenu->geometry().contains(point) ? submenu : &menu;
+            QTest::mouseMove(target, target->mapFromGlobal(point), 0);
+            QTest::qWait(10);
+            ASSERT_TRUE(submenu->isVisible()) << "Pointer at " << point.x() << ',' << point.y();
+        }
+        QTest::qWait(1200);
+        ASSERT_TRUE(submenu->isVisible());
+        QSignalSpy activated(leaf, &QAction::triggered);
+        QTest::mouseClick(submenu, Qt::LeftButton, Qt::NoModifier, submenu->actionGeometry(leaf).center());
+        EXPECT_EQ(activated.count(), 1);
+        EXPECT_FALSE(submenu->isVisible());
+        EXPECT_FALSE(menu.isVisible());
+    }
+}
+
+TEST_F(MenuTest, ParentEnterAtSubmenuOverlapPreservesCascade)
+{
+    for (bool resetOnEnter : {false, true}) {
+        SCOPED_TRACE(resetOnEnter);
+        MenuStyleScope styleScope(resetOnEnter, 80);
+        auto capabilities = compatibility::detail::runtimePlatformCapabilities();
+        capabilities.translucentPopupSurfaces = true;
+        RuntimeCapabilitiesScope capabilityScope(capabilities);
+        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+
+        QWidget host;
+        host.resize(800, 600);
+        host.show();
+        if (!tests::support::isHeadlessPlatform()) {
+            host.raise();
+            host.activateWindow();
+            ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+            ASSERT_TRUE(QTest::qWaitForWindowActive(&host));
+        }
+        FluentMenu menu(QStringLiteral("View"), &host);
+        FluentMenu submenu(QStringLiteral("Sort by"), &menu);
+        submenu.addAction(QStringLiteral("Name"));
+        QAction* leaf = submenu.addAction(QStringLiteral("Date modified"));
+        QAction* branch = menu.addMenu(&submenu);
+        QAction* sibling = menu.addAction(QStringLiteral("Compact list"));
+        menu.popup(host.mapToGlobal(QPoint(40, 80)));
+        menu.setActiveAction(branch);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return submenu.isVisible(); }));
+        QSignalSpy hidden(&submenu, &QMenu::aboutToHide);
+
+        const QPoint crossing = submenu.mapToGlobal(QPoint(1, submenu.actionGeometry(leaf).center().y()));
+        ASSERT_TRUE(menu.frameGeometry().contains(crossing));
+        const QPoint childLocal = submenu.mapFromGlobal(crossing);
+        QEnterEvent childEnter(childLocal, childLocal, crossing);
+        QApplication::sendEvent(&submenu, &childEnter);
+        QEvent childLeave(QEvent::Leave);
+        QApplication::sendEvent(&submenu, &childLeave);
+        const QPoint parentLocal = menu.mapFromGlobal(crossing);
+        QEnterEvent parentEnter(parentLocal, parentLocal, crossing);
+        QApplication::sendEvent(&menu, &parentEnter);
+        EXPECT_TRUE(submenu.isVisible()) << "Crossing overlapping popup shadows must not close the child";
+        EXPECT_EQ(menu.activeAction(), branch);
+
+        for (int step = 0; step < 3; ++step) {
+            const QPoint local = menu.mapFromGlobal(crossing + QPoint(0, step));
+            FLUENT_MAKE_MOUSE_EVENT(move, QEvent::MouseMove, &menu, local, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(&menu, &move);
+        }
+        QTest::qWait(160);
+        EXPECT_TRUE(submenu.isVisible()) << "Follow-up mouse moves and the close timer must keep the child open";
+        EXPECT_EQ(menu.activeAction(), branch);
+        EXPECT_EQ(hidden.count(), 0);
+
+        const QPoint leafPosition = submenu.actionGeometry(leaf).center();
+        for (int step = 0; step < 8; ++step) {
+            const QPoint local = menu.mapFromGlobal(submenu.mapToGlobal(leafPosition));
+            FLUENT_MAKE_MOUSE_EVENT(move, QEvent::MouseMove, &menu, local, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(&menu, &move);
+        }
+        EXPECT_EQ(submenu.activeAction(), leaf);
+
+        const QPoint back = menu.mapToGlobal(menu.actionGeometry(sibling).center());
+        ASSERT_FALSE(submenu.frameGeometry().contains(back));
+        const QPoint backLocal = menu.mapFromGlobal(back);
+        QEnterEvent backEnter(backLocal, backLocal, back);
+        QApplication::sendEvent(&menu, &backEnter);
+        EXPECT_EQ(submenu.isVisible(), !resetOnEnter) << "Real parent reentry must retain the native style policy";
+        for (int step = 0; step < 8; ++step) {
+            FLUENT_MAKE_MOUSE_EVENT(move, QEvent::MouseMove, &menu, backLocal, Qt::NoButton, Qt::NoButton,
+                Qt::NoModifier);
+            QApplication::sendEvent(&menu, &move);
+        }
+        QTest::qWait(160);
+        EXPECT_FALSE(submenu.isVisible());
+        EXPECT_EQ(menu.activeAction(), sibling);
+        EXPECT_TRUE(menu.isVisible());
+        menu.hide();
+    }
 }

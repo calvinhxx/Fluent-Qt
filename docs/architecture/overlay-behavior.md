@@ -149,6 +149,16 @@ internal presentation mapping stops at native-window boundaries and is removed
 when the shell returns to 2D. Dialogs, ContentDialog, and DrawerView remain
 centered or edge-aligned in their actual owning window, not in a projected page.
 
+Native menu shadows may overlap between a parent and its submenu. A transient
+parent-enter event while the pointer is inside an open submenu window must not
+dismiss that submenu. Route that enter and any following misdirected mouse moves
+to the submenu, so Qt retains its enter bookkeeping and ancestor close timers.
+Use the event's coordinates, including Qt 5's native `QEnterEvent`; a plain Qt 5
+synthetic enter without coordinates keeps the default Qt path.
+Returning to the parent's own area keeps Qt's normal
+selection and dismissal behavior. This applies at each level of a cascade;
+keyboard navigation and leaf-action activation retain their Qt semantics.
+
 An embedded `QGraphicsProxyWidget` root is a logical QWidget window, not an
 overlay boundary. The private `WidgetPresentationCompat` adapter resolves its
 scene viewport; foundation composes that mapping with any outer host transform.

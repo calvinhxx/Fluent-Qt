@@ -90,6 +90,8 @@ protected:
     void setItemLayoutMetrics(int verticalPadding, int separatorHeight);
     void actionEvent(QActionEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
+    void enterEvent(FluentEnterEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void paintEvent(QPaintEvent* event) override;

@@ -135,6 +135,13 @@ Menu-button expanded state follows a real menu. An empty `QMenu` can emit
 collapsed state in that case, while still allowing actions to be populated
 inside `aboutToShow`.
 
+FluentMenu preserves an open submenu while the pointer crosses overlapping
+popup shadows. Actual parent reentry, keyboard navigation, and action activation
+retain Qt behavior; `TestMenu.cpp` covers the boundary event sequence and native
+pointer traversal. The boundary test includes follow-up mouse moves and the
+close timeout under both parent-reentry policies. These checks do not establish
+native screen-reader acceptance.
+
 `QmlView` is the optional QWidget host under **Plugins → QmlBridge**. It delegates
 input to its Quick scene; the application QML page supplies its own
 Accessible names, roles, actions, and keyboard order through Qt Quick semantics.
