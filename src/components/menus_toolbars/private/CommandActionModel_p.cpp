@@ -291,11 +291,6 @@ bool CommandActionModel::validateForPresentation(const QAction* action, QString*
             *reason = QStringLiteral("action no longer exists");
         return false;
     }
-    if (action->menu()) {
-        if (reason)
-            *reason = QStringLiteral("nested menus are not supported");
-        return false;
-    }
     if (!action->isSeparator() && !hasSemanticCaption(action)) {
         if (reason)
             *reason = QStringLiteral("non-separator action has no semantic caption");

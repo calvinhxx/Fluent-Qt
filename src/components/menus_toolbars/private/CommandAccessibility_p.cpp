@@ -39,6 +39,14 @@ public:
         : QAccessibleWidget(widget, qtRole(commandRole)), m_commandRole(commandRole)
     {}
 
+    QAccessible::Role role() const override
+    {
+        if (m_commandRole == CommandAccessibleRole::PrimaryCommand && widget()
+            && widget()->property(kExpandableProperty).toBool())
+            return QAccessible::ButtonMenu;
+        return qtRole(m_commandRole);
+    }
+
     QString text(QAccessible::Text type) const override
     {
         QWidget* commandWidget = widget();
@@ -69,7 +77,7 @@ public:
             result.checkable = button->isCheckable();
             result.checked = button->isCheckable() && button->isChecked();
         }
-        if (m_commandRole == CommandAccessibleRole::MoreButton && commandWidget) {
+        if (commandWidget) {
             const bool expandable = commandWidget->property(kExpandableProperty).toBool();
             const bool expanded = commandWidget->property(kExpandedProperty).toBool();
             result.expandable = expandable;
@@ -85,12 +93,14 @@ public:
         auto* button = qobject_cast<QAbstractButton*>(widget());
         if (!button || !button->isEnabled())
             return {};
+        if (m_commandRole != CommandAccessibleRole::MoreButton && button->property(kExpandableProperty).toBool())
+            return {QAccessibleActionInterface::showMenuAction()};
         return {QAccessibleActionInterface::pressAction()};
     }
 
     void doAction(const QString& actionName) override
     {
-        if (actionName != QAccessibleActionInterface::pressAction()) {
+        if (!actionNames().contains(actionName)) {
             return;
         }
         auto* button = qobject_cast<QAbstractButton*>(widget());
@@ -100,7 +110,7 @@ public:
 
     QStringList keyBindingsForAction(const QString& actionName) const override
     {
-        if (actionName != QAccessibleActionInterface::pressAction()) {
+        if (!actionNames().contains(actionName)) {
             return {};
         }
         const QString shortcut = widget() ? widget()->property("commandShortcut").toString() : QString();

@@ -1287,6 +1287,8 @@ Shiboken::Object::keepReference(
                 </modify-function>
                 <!-- The final C++ class has no Shiboken shell; do not copy
                      protected QWidget/Flyout virtual glue into its wrapper. -->
+                <modify-function signature="paintEvent(QPaintEvent*)"
+                                 remove="all"/>
                 <modify-function signature="actionEvent(QActionEvent*)"
                                  remove="all"/>
                 <modify-function signature="eventFilter(QObject*,QEvent*)"

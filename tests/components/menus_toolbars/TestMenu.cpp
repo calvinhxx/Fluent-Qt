@@ -7,6 +7,7 @@
 #include <QStyle>
 #include <QProxyStyle>
 #include <QScopeGuard>
+#include <QScreen>
 #include <QVariantAnimation>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
@@ -162,6 +163,83 @@ TEST_F(MenuTest, MultipleVisibleActionsContributeIndependentRowsToSizeHint)
     const int minimumRowsHeight = 3 * Spacing::ControlHeight::Small + margins.top() + margins.bottom();
     EXPECT_GE(menu.sizeHint().height(), minimumRowsHeight)
         << "A multi-action popup must never collapse to a single WASM row";
+}
+
+TEST_F(MenuTest, Contract_CascadeRowsAlignWithoutAccumulatingShadowOffsets)
+{
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    const QRect screen = QApplication::primaryScreen()->availableGeometry();
+    for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        QWidget host;
+        FluentMenu root(QStringLiteral("View"), &host);
+        FluentMenu second(QStringLiteral("Sort by"), &host);
+        FluentMenu third(QStringLiteral("Order"), &host);
+        root.setLayoutDirection(direction);
+        root.addAction(QStringLiteral("First"));
+        root.addMenu(&second);
+        second.addMenu(&third);
+        QAction* leaf = third.addAction(QStringLiteral("Ascending"));
+        third.addAction(QStringLiteral("Descending"));
+        const int forward = direction == Qt::RightToLeft ? Qt::Key_Left : Qt::Key_Right;
+        const int x = direction == Qt::RightToLeft ? screen.right() - root.sizeHint().width() - 40 : screen.left() + 40;
+        root.popup(QPoint(x, screen.top() + 100));
+        root.setActiveAction(second.menuAction());
+        QTest::keyClick(&root, static_cast<Qt::Key>(forward));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return second.isVisible(); }));
+        second.setActiveAction(third.menuAction());
+        QTest::keyClick(&second, static_cast<Qt::Key>(forward));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return third.isVisible(); }));
+        QTest::qWait(20);
+        const int rootCenter = root.mapToGlobal(root.actionGeometry(second.menuAction()).center()).y();
+        const int secondCenter = second.mapToGlobal(second.actionGeometry(third.menuAction()).center()).y();
+        const int thirdCenter = third.mapToGlobal(third.actionGeometry(leaf).center()).y();
+        EXPECT_NEAR(rootCenter, secondCenter, 1);
+        EXPECT_NEAR(secondCenter, thirdCenter, 1);
+        EXPECT_EQ(second.layoutDirection(), direction);
+        EXPECT_EQ(third.layoutDirection(), direction);
+        EXPECT_GE(second.width() - second.contentsMargins().left() * 2, 160);
+        EXPECT_GE(third.width() - third.contentsMargins().left() * 2, 160);
+        root.hide();
+        second.hide();
+        third.hide();
+
+        root.popup(screen.bottomRight() - QPoint(8, 8));
+        root.setActiveAction(second.menuAction());
+        QTest::keyClick(&root, static_cast<Qt::Key>(forward));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return second.isVisible(); }));
+        QTest::qWait(20);
+        const int shadow = second.contentsMargins().left();
+        EXPECT_TRUE(screen.contains(second.geometry().adjusted(shadow, shadow, -shadow, -shadow)));
+        root.hide();
+        second.hide();
+    }
+}
+
+TEST_F(MenuTest, Contract_CheckedItemKeepsSurfaceColorUntilHighlighted)
+{
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        fluent::FluentElement::setTheme(theme);
+        FluentMenu menu(QStringLiteral("Order"));
+        QAction* checked = menu.addAction(QStringLiteral("Ascending"));
+        checked->setCheckable(true);
+        checked->setChecked(true);
+        menu.addAction(QStringLiteral("Descending"));
+        menu.popup(QPoint(100, 100));
+        menu.setActiveAction(nullptr);
+        QApplication::processEvents();
+        const QPoint point(menu.width() - menu.contentsMargins().left() - 12,
+            menu.actionGeometry(checked).center().y());
+        const auto pixel = [&] {
+            const QPixmap image = menu.grab();
+            return image.toImage().pixelColor(point * image.devicePixelRatioF());
+        };
+        EXPECT_EQ(pixel(), menu.themeColorsRef().bgLayer);
+        menu.setActiveAction(checked);
+        EXPECT_NE(pixel(), menu.themeColorsRef().bgLayer);
+        EXPECT_TRUE(checked->isChecked());
+        menu.hide();
+    }
 }
 
 TEST_F(MenuTest, OpaquePopupSurfaceUsesRoundedWindowMask)

@@ -48,6 +48,7 @@ set(FLUENT_QT_CI_FULL_CONTRACT_TARGETS
     test_editing_command_router
     test_command_bar
     test_command_bar_flyout
+    test_command_submenus
     test_label
     test_line_edit
     test_password_box

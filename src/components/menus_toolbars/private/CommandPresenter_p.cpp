@@ -3,8 +3,10 @@
 
 #include <QAction>
 #include <QCoreApplication>
+#include <QFocusEvent>
 #include <QFontMetrics>
 #include <QKeySequence>
+#include <QMenu>
 #include <QPainter>
 #include <QStyle>
 #include <QVariant>
@@ -77,11 +79,30 @@ QRect visualRect(Qt::LayoutDirection direction, const QRect& bounds, const QRect
 
 } // namespace
 
+void updateCommandFocusVisual(basicinput::Button* button, const QEvent* event)
+{
+    if (!button || !event)
+        return;
+    if (event->type() == QEvent::MouseButtonPress) {
+        button->setFocusVisual(false);
+    } else if (event->type() == QEvent::KeyPress) {
+        button->setFocusVisual(true);
+    } else if (event->type() == QEvent::FocusIn) {
+        const auto reason = static_cast<const QFocusEvent*>(event)->reason();
+        if (reason == Qt::MouseFocusReason)
+            button->setFocusVisual(false);
+        else if (reason == Qt::TabFocusReason || reason == Qt::BacktabFocusReason || reason == Qt::ShortcutFocusReason
+            || reason == Qt::OtherFocusReason)
+            button->setFocusVisual(true);
+        // Popup and window activation restore the existing input modality.
+    }
+}
+
 CommandPresenter::CommandPresenter(QAction* action, Mode mode, ActivationHandler activationHandler, QWidget* parent)
     : basicinput::Button(parent), m_action(action), m_mode(mode), m_activationHandler(std::move(activationHandler))
 {
     setFluentStyle(basicinput::Button::Subtle);
-    setFocusVisual(true);
+    setFocusVisual(false);
     // Private presenters stay out of the Tab chain, but must accept explicit
     // composite-navigation and pointer focus. Qt::NoFocus can redirect an
     // explicit setFocus() back to the editor on some platform plugins.
@@ -106,7 +127,7 @@ CommandPresenter::CommandPresenter(QAction* action, Mode mode, ActivationHandler
         const QPointer<QAction> actionGuard = m_action;
         const ActivationHandler handler = m_activationHandler;
         if (actionGuard && handler)
-            handler(actionGuard.data());
+            handler(this, actionGuard.data());
     });
 
     synchronize();
@@ -125,6 +146,20 @@ void CommandPresenter::synchronize()
     QAction* command = m_action.data();
     if (!command)
         return;
+
+    if (m_menu != command->menu()) {
+        disconnect(m_menuDestroyed);
+        m_menu = command->menu();
+        m_menuOpen = false;
+        if (m_menu) {
+            m_menuDestroyed = connect(m_menu, &QObject::destroyed, this, [this] {
+                m_menu.clear();
+                m_menuOpen = false;
+                synchronize();
+            });
+        }
+    }
+    updateCommandExpandedAccessibility(this, m_menuOpen, hasMenu());
 
     m_displayText = m_mode == Mode::Primary ? primaryCaption(command) : overflowCaption(command);
     m_shortcutText = shortcutText(command);
@@ -173,7 +208,8 @@ QSize CommandPresenter::sizeHint() const
 {
     if (m_mode == Mode::Primary) {
         const QSize base = basicinput::Button::sizeHint();
-        return QSize(qMax(::Spacing::ControlHeight::Large, base.width()), ::Spacing::ControlHeight::Large);
+        const int menuWidth = hasMenu() ? 16 + ::Spacing::Gap::Tight : 0;
+        return QSize(qMax(::Spacing::ControlHeight::Large, base.width()) + menuWidth, ::Spacing::ControlHeight::Large);
     }
 
     const QFontMetrics metrics(font());
@@ -182,7 +218,8 @@ QSize CommandPresenter::sizeHint() const
     const int shortcutWidth =
         m_shortcutText.isEmpty() ? 0 : metrics.horizontalAdvance(m_shortcutText) + ::Spacing::Gap::Normal;
     const int contentWidth = ::Spacing::Medium * 2 + checkSlot + ::Spacing::Gap::Tight + iconSlot
-        + ::Spacing::Gap::Normal + metrics.horizontalAdvance(m_displayText) + shortcutWidth;
+        + ::Spacing::Gap::Normal + metrics.horizontalAdvance(m_displayText) + shortcutWidth
+        + (hasMenu() ? 16 + ::Spacing::Gap::Normal : 0);
     return QSize(qMax(180, contentWidth), ::Spacing::ControlHeight::Large);
 }
 
@@ -200,11 +237,64 @@ void CommandPresenter::onThemeUpdated()
     updateGeometry();
 }
 
+bool CommandPresenter::event(QEvent* event)
+{
+    updateCommandFocusVisual(this, event);
+    return basicinput::Button::event(event);
+}
+
 void CommandPresenter::paintEvent(QPaintEvent* event)
 {
-    basicinput::Button::paintEvent(event);
+    if (m_menuOpen && isEnabled())
+        paintButton(Pressed);
+    else
+        basicinput::Button::paintEvent(event);
     if (m_mode == Mode::Overflow)
         paintOverflowContent();
+    if (hasMenu()) {
+        QPainter painter(this);
+        painter.setPen(isEnabled() ? themeColorsRef().textPrimary : themeColorsRef().textDisabled);
+        const int inset = m_mode == Mode::Overflow ? ::Spacing::Medium : ::Spacing::Small;
+        const QRect logical(width() - inset - 16, (height() - 16) / 2, 16, 16);
+        const auto glyph = m_mode == Mode::Primary
+            ? Typography::Icons::ChevronDown
+            : (layoutDirection() == Qt::RightToLeft
+                      ? Typography::Icons::ChevronLeftMed
+                      : Typography::Icons::ChevronRightMed);
+        Typography::Icons::paintGlyph(painter, visualRect(layoutDirection(), rect(), logical), glyph, 12,
+            Qt::AlignCenter);
+    }
+}
+
+bool CommandPresenter::hasMenu() const
+{
+    return m_action && m_action->menu();
+}
+
+void CommandPresenter::setMenuOpen(bool open)
+{
+    if (m_menuOpen == open)
+        return;
+    m_menuOpen = open;
+    updateCommandExpandedAccessibility(this, open, hasMenu());
+    update();
+}
+
+QRectF CommandPresenter::contentPaintRect(const QRectF& surfaceRect) const
+{
+    const QRectF content = basicinput::Button::contentPaintRect(surfaceRect);
+    if (m_mode != Mode::Primary || !hasMenu())
+        return content;
+    const qreal reserve = 16 + ::Spacing::Gap::Tight;
+    return layoutDirection() == Qt::RightToLeft
+        ? content.adjusted(reserve, 0, 0, 0)
+        : content.adjusted(0, 0, -reserve, 0);
+}
+
+void CommandPresenter::nextCheckState()
+{
+    if (!hasMenu())
+        basicinput::Button::nextCheckState();
 }
 
 void CommandPresenter::paintOverflowContent()
@@ -226,6 +316,8 @@ void CommandPresenter::paintOverflowContent()
     const QRect content = bounds.adjusted(::Spacing::Medium, 0, -::Spacing::Medium, 0);
     int logicalLeading = content.left();
     int logicalTrailing = content.right() + 1;
+    if (hasMenu())
+        logicalTrailing -= 16 + ::Spacing::Gap::Normal;
 
     const QRect checkLogical(logicalLeading, content.center().y() - 8, 16, 16);
     logicalLeading += 16 + ::Spacing::Gap::Tight;
@@ -282,7 +374,7 @@ CommandMoreButton::CommandMoreButton(QWidget* parent) : basicinput::Button(paren
     setFluentStyle(basicinput::Button::Subtle);
     setFluentLayout(basicinput::Button::IconOnly);
     setIconGlyph(Typography::Icons::More, 20);
-    setFocusVisual(true);
+    setFocusVisual(false);
     setFocusPolicy(Qt::ClickFocus);
     setMinimumSize(::Spacing::ControlHeight::Large, ::Spacing::ControlHeight::Large);
     const QString moreCommands = QCoreApplication::translate("fluent::menus_toolbars::CommandBar", "More commands");
@@ -295,6 +387,12 @@ CommandMoreButton::CommandMoreButton(QWidget* parent) : basicinput::Button(paren
 void CommandMoreButton::setExpandedState(bool expanded, bool expandable)
 {
     updateCommandExpandedAccessibility(this, expanded, expandable);
+}
+
+bool CommandMoreButton::event(QEvent* event)
+{
+    updateCommandFocusVisual(this, event);
+    return basicinput::Button::event(event);
 }
 
 } // namespace fluent::menus_toolbars::detail

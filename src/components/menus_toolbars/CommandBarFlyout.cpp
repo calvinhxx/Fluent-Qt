@@ -25,8 +25,11 @@
 #include "components/layout/Divider.h"
 #include "components/menus_toolbars/private/CommandAccessibility_p.h"
 #include "components/menus_toolbars/private/CommandActionModel_p.h"
+#include "components/menus_toolbars/private/CommandMenuController_p.h"
 #include "components/menus_toolbars/private/CommandOverflowProjection_p.h"
 #include "components/menus_toolbars/private/CommandPresenter_p.h"
+#include "components/menus_toolbars/private/CommandScrollView_p.h"
+#include "components/menus_toolbars/private/MenuSurface_p.h"
 #include "components/scrolling/ScrollView.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
@@ -82,27 +85,6 @@ bool isValidInvocationTarget(const CommandBarFlyout* flyout, QWidget* target, co
     return true;
 }
 
-class CommandBarFlyoutScrollView final : public scrolling::ScrollView {
-public:
-    explicit CommandBarFlyoutScrollView(QWidget* parent) : scrolling::ScrollView(parent) { keepViewportTransparent(); }
-
-protected:
-    void onThemeUpdated() override
-    {
-        scrolling::ScrollView::onThemeUpdated();
-        keepViewportTransparent();
-    }
-
-private:
-    void keepViewportTransparent()
-    {
-        if (!viewport())
-            return;
-        viewport()->setAutoFillBackground(false);
-        viewport()->setAttribute(Qt::WA_OpaquePaintEvent, false);
-    }
-};
-
 } // namespace
 
 class CommandBarFlyoutPrivate final : public QObject {
@@ -152,7 +134,7 @@ public:
         bool inside = false;
     };
 
-    explicit CommandBarFlyoutPrivate(CommandBarFlyout* owner) : QObject(nullptr), q(owner), actions(owner)
+    explicit CommandBarFlyoutPrivate(CommandBarFlyout* owner) : QObject(nullptr), q(owner), actions(owner), menus(owner)
     {
         q->setObjectName(QStringLiteral("FluentCommandBarFlyout"));
         q->setProperty(kCommandPresentationProperty, true);
@@ -199,7 +181,7 @@ public:
             }
         });
 
-        scrollView = new CommandBarFlyoutScrollView(q);
+        scrollView = new detail::CommandScrollView(q);
         scrollView->setObjectName(QStringLiteral("FluentCommandBarFlyout.ScrollView"));
         scrollView->setFrameShape(QFrame::NoFrame);
         scrollView->setHorizontalScrollMode(scrolling::ScrollView::ScrollMode::Disabled);
@@ -218,7 +200,7 @@ public:
         menuContent->setObjectName(QStringLiteral("FluentCommandBarFlyout.MenuContent"));
         menuContent->setAutoFillBackground(false);
         detail::markCommandAccessibleWidget(menuContent, CommandAccessibleRole::MenuList);
-        scrollView->setWidget(menuContent);
+        scrollView->setMenuContent(menuContent);
 
         QObject::connect(&actions, &CommandActionModel::structureChanged, this, [this]() {
             const FocusSnapshot snapshot = captureFocus();
@@ -485,6 +467,7 @@ public:
 
     void beforeClose()
     {
+        menus.close();
         if (closeFocusDisposition == CloseFocusDisposition::Default) {
             closeFocusDisposition = keyboardInteractive && focusIsInside()
                 ? CloseFocusDisposition::Restore
@@ -513,6 +496,7 @@ public:
 
     CommandBarFlyout* q = nullptr;
     CommandActionModel actions;
+    detail::CommandMenuController menus;
     CommandBarFlyout::ShowMode showMode = CommandBarFlyout::ShowMode::Standard;
     bool expanded = false;
     bool alwaysExpanded = false;
@@ -642,7 +626,8 @@ private:
                 primarySeparatorState.insert(action, true);
             } else {
                 auto* presenter = new CommandPresenter(
-                    action, CommandPresenter::Mode::Primary, [this](QAction* command) { activateAction(command); },
+                    action, CommandPresenter::Mode::Primary,
+                    [this](CommandPresenter* presenter, QAction* command) { activateAction(presenter, command); },
                     primaryRow);
                 presenter->setObjectName(QStringLiteral("FluentCommandBarFlyout.PrimaryPresenter"));
                 presenter->setPrimaryLabelCollapsed(false);
@@ -780,7 +765,8 @@ private:
             if (spec.kind == RowKind::Command) {
                 auto* presenter = new CommandPresenter(
                     spec.action.data(), CommandPresenter::Mode::Overflow,
-                    [this](QAction* command) { activateAction(command); }, menuContent);
+                    [this](CommandPresenter* presenter, QAction* command) { activateAction(presenter, command); },
+                    menuContent);
                 presenter->setObjectName(spec.secondary
                         ? QStringLiteral("FluentCommandBarFlyout.SecondaryRow")
                         : QStringLiteral("FluentCommandBarFlyout.OverflowRow"));
@@ -1257,6 +1243,7 @@ private:
         }
 
         const FocusTarget target = allTargets.at(current);
+        detail::updateCommandFocusVisual(qobject_cast<basicinput::Button*>(target.widget.data()), event);
         if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter || event->key() == Qt::Key_Space) {
             auto* button = qobject_cast<QAbstractButton*>(target.widget.data());
             if (!button)
@@ -1267,6 +1254,12 @@ private:
         }
 
         if (target.area == FocusArea::Menu) {
+            const int forward = q->layoutDirection() == Qt::RightToLeft ? Qt::Key_Left : Qt::Key_Right;
+            if (event->key() == forward && target.action && target.action->menu()) {
+                event->accept();
+                activateAction(dynamic_cast<CommandPresenter*>(target.widget.data()), target.action);
+                return true;
+            }
             const QVector<FocusTarget> menu = menuFocusTargets();
             int menuIndex = -1;
             for (int index = 0; index < menu.size(); ++index) {
@@ -1327,6 +1320,11 @@ private:
             destination = primary.size() - 1;
             break;
         case Qt::Key_Down:
+            if (target.action && target.action->menu()) {
+                event->accept();
+                activateAction(dynamic_cast<CommandPresenter*>(target.widget.data()), target.action);
+                return true;
+            }
             if (target.area == FocusArea::More && !expanded) {
                 if (!setExpandedRequested(true))
                     return false;
@@ -1345,9 +1343,14 @@ private:
         return true;
     }
 
-    void activateAction(QAction* action)
+    void activateAction(CommandPresenter* presenter, QAction* action)
     {
         if (!q || !action || !action->isEnabled() || !action->isVisible()) {
+            return;
+        }
+        if (action->menu()) {
+            enterKeyboardMode();
+            menus.open(presenter, [this] { finishActivation(); });
             return;
         }
         const QPointer<CommandBarFlyout> ownerGuard = q;
@@ -1356,6 +1359,14 @@ private:
         if (!ownerGuard)
             return;
 
+        finishActivation();
+    }
+
+    void finishActivation()
+    {
+        const QPointer<CommandBarFlyout> ownerGuard = q;
+        if (!ownerGuard)
+            return;
         QWidget* focusedAfter = QApplication::focusWidget();
         const bool focusStillInside = focusedAfter
             && (focusedAfter == ownerGuard || ownerGuard->isAncestorOf(focusedAfter));
@@ -1380,7 +1391,7 @@ private:
     QWidget* primaryRow = nullptr;
     layout::Divider* primaryMenuDivider = nullptr;
     CommandMoreButton* moreButton = nullptr;
-    scrolling::ScrollView* scrollView = nullptr;
+    detail::CommandScrollView* scrollView = nullptr;
     QWidget* menuContent = nullptr;
     QHash<QAction*, QWidget*> primaryPresenters;
     QHash<QAction*, bool> primarySeparatorState;
@@ -1531,6 +1542,13 @@ void CommandBarFlyout::onThemeUpdated()
     d->applyTheme();
 }
 
+void CommandBarFlyout::paintEvent(QPaintEvent*)
+{
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    detail::paintMenuSurface(painter, overlay::visibleCardRect(rect()), *this);
+}
+
 QSize CommandBarFlyout::sizeHint() const
 {
     return d->preferredSize();
@@ -1621,6 +1639,8 @@ void CommandBarFlyout::actionEvent(QActionEvent* event)
 
 bool CommandBarFlyout::eventFilter(QObject* watched, QEvent* event)
 {
+    if (d && d->menus.ownsEvent(watched, event))
+        return false;
     if (d && d->handleApplicationEvent(watched, event))
         return true;
     return dialogs_flyouts::Flyout::eventFilter(watched, event);

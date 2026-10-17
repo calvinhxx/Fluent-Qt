@@ -38,9 +38,8 @@ using fluent::menus_toolbars::CommandBarFlyout;
 
 static_assert(std::is_base_of<QWidget, CommandBar>::value, "CommandBar must remain a QWidget");
 static_assert(std::is_base_of<fluent::FluentElement, CommandBar>::value,
-              "CommandBar must participate in Fluent themes");
-static_assert(std::is_base_of<fluent::QMLPlus, CommandBar>::value,
-              "CommandBar must expose QMLPlus composition");
+    "CommandBar must participate in Fluent themes");
+static_assert(std::is_base_of<fluent::QMLPlus, CommandBar>::value, "CommandBar must expose QMLPlus composition");
 
 namespace {
 
@@ -51,8 +50,7 @@ void processDeferredUiWork()
     QApplication::processEvents();
 }
 
-QAbstractButton* commandButton(QWidget* root, const QString& objectName,
-                               const QString& accessibleName = QString())
+QAbstractButton* commandButton(QWidget* root, const QString& objectName, const QString& accessibleName = QString())
 {
     if (!root)
         return nullptr;
@@ -67,8 +65,7 @@ QAbstractButton* commandButton(QWidget* root, const QString& objectName,
 
 QList<QAbstractButton*> overflowRowsInVisualOrder(QWidget* root)
 {
-    QList<QAbstractButton*> rows =
-        root->findChildren<QAbstractButton*>(QStringLiteral("FluentCommandBar.OverflowRow"));
+    QList<QAbstractButton*> rows = root->findChildren<QAbstractButton*>(QStringLiteral("FluentCommandBar.OverflowRow"));
     std::sort(rows.begin(), rows.end(), [](QAbstractButton* first, QAbstractButton* second) {
         return first->mapToGlobal(QPoint()).y() < second->mapToGlobal(QPoint()).y();
     });
@@ -98,8 +95,7 @@ TEST(CommandBarTest, Contract_EmbeddedOverflowUsesPresentedHostForPlacementAndSi
     auto* bar = new CommandBar(card);
     bar->setGeometry(10, 10, 240, 48);
     for (int index = 0; index < 5; ++index)
-        ASSERT_TRUE(
-            bar->addSecondaryAction(new QAction(QStringLiteral("Command %1").arg(index), bar)));
+        ASSERT_TRUE(bar->addSecondaryAction(new QAction(QStringLiteral("Command %1").arg(index), bar)));
     auto* proxy = scene.addWidget(card);
     proxy->setPos(470, 180);
     proxy->setTransform(QTransform().rotate(5));
@@ -118,14 +114,13 @@ TEST(CommandBarTest, Contract_EmbeddedOverflowUsesPresentedHostForPlacementAndSi
             QStringLiteral("FluentCommandBar.OverflowPopup"));
         ASSERT_NE(popup, nullptr);
         EXPECT_EQ(popup->parentWidget(), &window);
-        const QRect shown =
-            fluent::overlay::visibleCardRect(popup->rect()).translated(popup->pos());
+        const QRect shown = fluent::overlay::visibleCardRect(popup->rect()).translated(popup->pos());
         const QRect anchor = fluent::overlay::presentedRectInTopLevel(more);
         EXPECT_GT(shown.height(), card->height());
         EXPECT_TRUE(window.rect().contains(shown));
         EXPECT_EQ(shown.top(), anchor.bottom() + 1 + popup->anchorOffset());
         EXPECT_EQ(direction == Qt::RightToLeft ? shown.left() : shown.right(),
-                  direction == Qt::RightToLeft ? anchor.left() : anchor.right());
+            direction == Qt::RightToLeft ? anchor.left() : anchor.right());
         bar->setOverflowOpen(false);
         processDeferredUiWork();
     }
@@ -150,8 +145,8 @@ TEST(CommandBarTest, Contract_PresentedAnchorPressClosesWithoutReopeningOverflow
     processDeferredUiWork();
     ASSERT_TRUE(bar.isOverflowOpen());
     const QPoint global = fluent::overlay::presentedPointToGlobal(more, more->rect().center());
-    QMouseEvent press(QEvent::MouseButtonPress, QPointF(window.mapFromGlobal(global)),
-                      QPointF(global), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent press(QEvent::MouseButtonPress, QPointF(window.mapFromGlobal(global)), QPointF(global), Qt::LeftButton,
+        Qt::LeftButton, Qt::NoModifier);
     // The native host sees the press before the compositor forwards activation.
     QApplication::sendEvent(&window, &press);
     EXPECT_FALSE(bar.isOverflowOpen());
@@ -299,10 +294,10 @@ TEST(CommandBarTest, SupportsQtActionSemanticsAndRejectsUnsupportedKinds)
     EXPECT_FALSE(bar.addPrimaryAction(nullptr));
     EXPECT_FALSE(bar.addPrimaryAction(&empty));
     EXPECT_FALSE(bar.addPrimaryAction(&widgetAction));
-    EXPECT_FALSE(bar.addPrimaryAction(&nested));
+    EXPECT_TRUE(bar.addPrimaryAction(&nested));
     EXPECT_FALSE(bar.actions().contains(&empty));
     EXPECT_FALSE(bar.actions().contains(&widgetAction));
-    EXPECT_FALSE(bar.actions().contains(&nested));
+    EXPECT_TRUE(bar.actions().contains(&nested));
 
     QAction mutableAction(QStringLiteral("Initially valid"));
     ASSERT_TRUE(bar.addSecondaryAction(&mutableAction));
@@ -466,8 +461,7 @@ TEST(CommandBarTest, Contract_OverflowProjectionNormalizesSeparatorsAndSections)
 
     const QList<QAbstractButton*> rows = overflowRowsInVisualOrder(popup);
     ASSERT_EQ(rows.size(), 3);
-    auto* scrollView =
-        popup->findChild<QScrollArea*>(QStringLiteral("FluentCommandBar.OverflowScrollView"));
+    auto* scrollView = popup->findChild<QScrollArea*>(QStringLiteral("FluentCommandBar.OverflowScrollView"));
     ASSERT_NE(scrollView, nullptr);
     for (QAbstractButton* row : rows) {
         ASSERT_NE(row, nullptr);
@@ -477,8 +471,7 @@ TEST(CommandBarTest, Contract_OverflowProjectionNormalizesSeparatorsAndSections)
     EXPECT_EQ(rows.at(0)->accessibleName(), QStringLiteral("Overflow"));
     EXPECT_EQ(rows.at(1)->accessibleName(), QStringLiteral("Secondary one"));
     EXPECT_EQ(rows.at(2)->accessibleName(), QStringLiteral("Secondary two"));
-    EXPECT_NE(popup->findChild<QWidget*>(QStringLiteral("FluentCommandBar.OverflowGroupSeparator")),
-              nullptr);
+    EXPECT_NE(popup->findChild<QWidget*>(QStringLiteral("FluentCommandBar.OverflowGroupSeparator")), nullptr);
 
     bar.setOverflowOpen(true);
     processDeferredUiWork();
@@ -513,10 +506,8 @@ TEST(CommandBarTest, Contract_DisablingDynamicOverflowKeepsPrimaryCommandsInline
 
     EXPECT_TRUE(bar.overflowedPrimaryActions().isEmpty());
     for (const QString& caption :
-         {QStringLiteral("First command"), QStringLiteral("Second command"),
-          QStringLiteral("Third command")}) {
-        QAbstractButton* presenter =
-            commandButton(&bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"), caption);
+        {QStringLiteral("First command"), QStringLiteral("Second command"), QStringLiteral("Third command")}) {
+        QAbstractButton* presenter = commandButton(&bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"), caption);
         ASSERT_NE(presenter, nullptr);
         EXPECT_TRUE(presenter->isVisible());
     }
@@ -542,10 +533,10 @@ TEST(CommandBarTest, Contract_PresentersTrackActionStateAndCollapsedLabels)
     window.show();
     processDeferredUiWork();
 
-    QAbstractButton* iconPresenter = commandButton(
-        &bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"), QStringLiteral("Open"));
-    QAbstractButton* textPresenter = commandButton(
-        &bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"), QStringLiteral("Text only"));
+    QAbstractButton* iconPresenter = commandButton(&bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"),
+        QStringLiteral("Open"));
+    QAbstractButton* textPresenter = commandButton(&bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"),
+        QStringLiteral("Text only"));
     ASSERT_NE(iconPresenter, nullptr);
     ASSERT_NE(textPresenter, nullptr);
     EXPECT_FALSE(iconPresenter->text().isEmpty());
@@ -586,10 +577,10 @@ TEST(CommandBarTest, Contract_RtlMirrorsVisualOrderWithoutChangingOverflowChoice
     processDeferredUiWork();
     ASSERT_EQ(bar.overflowedPrimaryActions(), (QList<QAction*>{&third}));
 
-    QAbstractButton* firstPresenter = commandButton(
-        &bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"), QStringLiteral("First"));
-    QAbstractButton* secondPresenter = commandButton(
-        &bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"), QStringLiteral("Second"));
+    QAbstractButton* firstPresenter = commandButton(&bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"),
+        QStringLiteral("First"));
+    QAbstractButton* secondPresenter = commandButton(&bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"),
+        QStringLiteral("Second"));
     QAbstractButton* more = commandButton(&bar, QStringLiteral("FluentCommandBar.MoreButton"));
     ASSERT_NE(firstPresenter, nullptr);
     ASSERT_NE(secondPresenter, nullptr);
@@ -639,10 +630,10 @@ TEST(CommandBarTest, Contract_CompositeKeyboardFocusAndOverflowNavigation)
 
     QTest::keyClick(&before, Qt::Key_Tab);
     processDeferredUiWork();
-    QAbstractButton* secondPresenter = commandButton(
-        &bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"), QStringLiteral("Second"));
-    QAbstractButton* thirdPresenter = commandButton(
-        &bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"), QStringLiteral("Third"));
+    QAbstractButton* secondPresenter = commandButton(&bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"),
+        QStringLiteral("Second"));
+    QAbstractButton* thirdPresenter = commandButton(&bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"),
+        QStringLiteral("Third"));
     QAbstractButton* more = commandButton(&bar, QStringLiteral("FluentCommandBar.MoreButton"));
     ASSERT_NE(secondPresenter, nullptr);
     ASSERT_NE(thirdPresenter, nullptr);
@@ -659,8 +650,8 @@ TEST(CommandBarTest, Contract_CompositeKeyboardFocusAndOverflowNavigation)
     ASSERT_TRUE(bar.isOverflowOpen());
     QWidget* popup = window.findChild<QWidget*>(QStringLiteral("FluentCommandBar.OverflowPopup"));
     ASSERT_NE(popup, nullptr);
-    QAbstractButton* enabledRow = commandButton(
-        popup, QStringLiteral("FluentCommandBar.OverflowRow"), QStringLiteral("Overflow enabled"));
+    QAbstractButton* enabledRow = commandButton(popup, QStringLiteral("FluentCommandBar.OverflowRow"),
+        QStringLiteral("Overflow enabled"));
     ASSERT_NE(enabledRow, nullptr);
     EXPECT_EQ(QApplication::focusWidget(), enabledRow);
 
@@ -699,11 +690,12 @@ TEST(CommandBarTest, Contract_PointerOverflowOpenKeepsFocusOnMoreUntilKeyboardNa
     processDeferredUiWork();
     ASSERT_TRUE(bar.isOverflowOpen());
     EXPECT_EQ(QApplication::focusWidget(), more);
+    EXPECT_FALSE(more->property("focusVisual").toBool());
 
     QWidget* popup = window.findChild<QWidget*>(QStringLiteral("FluentCommandBar.OverflowPopup"));
     ASSERT_NE(popup, nullptr);
     QAbstractButton* row = commandButton(popup, QStringLiteral("FluentCommandBar.OverflowRow"),
-                                         QStringLiteral("Secondary command"));
+        QStringLiteral("Secondary command"));
     ASSERT_NE(row, nullptr);
     EXPECT_FALSE(row->hasFocus());
 
@@ -713,6 +705,7 @@ TEST(CommandBarTest, Contract_PointerOverflowOpenKeepsFocusOnMoreUntilKeyboardNa
     processDeferredUiWork();
     ASSERT_TRUE(bar.isOverflowOpen());
     EXPECT_EQ(QApplication::focusWidget(), row);
+    EXPECT_TRUE(row->property("focusVisual").toBool());
 }
 
 TEST(CommandBarTest, Contract_FocusRepairsToNearestCommandBeforeMore)
@@ -737,12 +730,12 @@ TEST(CommandBarTest, Contract_FocusRepairsToNearestCommandBeforeMore)
     bar.setFocus(Qt::OtherFocusReason);
     processDeferredUiWork();
 
-    QAbstractButton* firstPresenter = commandButton(
-        &bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"), QStringLiteral("First"));
-    QAbstractButton* secondPresenter = commandButton(
-        &bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"), QStringLiteral("Second"));
-    QAbstractButton* thirdPresenter = commandButton(
-        &bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"), QStringLiteral("Third"));
+    QAbstractButton* firstPresenter = commandButton(&bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"),
+        QStringLiteral("First"));
+    QAbstractButton* secondPresenter = commandButton(&bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"),
+        QStringLiteral("Second"));
+    QAbstractButton* thirdPresenter = commandButton(&bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"),
+        QStringLiteral("Third"));
     QAbstractButton* more = commandButton(&bar, QStringLiteral("FluentCommandBar.MoreButton"));
     ASSERT_NE(firstPresenter, nullptr);
     ASSERT_NE(secondPresenter, nullptr);
@@ -767,9 +760,8 @@ TEST(CommandBarTest, Contract_FocusRepairsToNearestCommandBeforeMore)
     processDeferredUiWork();
     ASSERT_NE(QApplication::focusWidget(), nullptr);
     EXPECT_EQ(QApplication::focusWidget(), more)
-        << "actual focus object=" << QApplication::focusWidget()->objectName().toStdString()
-        << " moreVisible=" << more->isVisible() << " moreEnabled=" << more->isEnabled()
-        << " moreFocusPolicy=" << int(more->focusPolicy());
+        << "actual focus object=" << QApplication::focusWidget()->objectName().toStdString() << " moreVisible="
+        << more->isVisible() << " moreEnabled=" << more->isEnabled() << " moreFocusPolicy=" << int(more->focusPolicy());
 }
 
 TEST(CommandBarTest, Contract_OverflowDismissAndActivationRespectFocusDestination)
@@ -820,7 +812,7 @@ TEST(CommandBarTest, Contract_OverflowDismissAndActivationRespectFocusDestinatio
     QWidget* popup = window.findChild<QWidget*>(QStringLiteral("FluentCommandBar.OverflowPopup"));
     ASSERT_NE(popup, nullptr);
     QAbstractButton* row = commandButton(popup, QStringLiteral("FluentCommandBar.OverflowRow"),
-                                         QStringLiteral("Secondary command"));
+        QStringLiteral("Secondary command"));
     ASSERT_NE(row, nullptr);
     ASSERT_EQ(QApplication::focusWidget(), row);
     row->click();
@@ -829,13 +821,11 @@ TEST(CommandBarTest, Contract_OverflowDismissAndActivationRespectFocusDestinatio
     EXPECT_FALSE(bar.isOverflowOpen());
     EXPECT_EQ(QApplication::focusWidget(), more);
 
-    QObject::connect(&command, &QAction::triggered, &editor,
-                     [&editor]() { editor.setFocus(Qt::OtherFocusReason); });
+    QObject::connect(&command, &QAction::triggered, &editor, [&editor]() { editor.setFocus(Qt::OtherFocusReason); });
     bar.setOverflowOpen(true);
     processDeferredUiWork();
     ASSERT_TRUE(bar.isOverflowOpen());
-    row = commandButton(popup, QStringLiteral("FluentCommandBar.OverflowRow"),
-                        QStringLiteral("Secondary command"));
+    row = commandButton(popup, QStringLiteral("FluentCommandBar.OverflowRow"), QStringLiteral("Secondary command"));
     ASSERT_NE(row, nullptr);
     row->click();
     processDeferredUiWork();
@@ -857,8 +847,8 @@ TEST(CommandBarTest, Contract_PresenterActivationIsExactAndDeletionSafe)
     window.show();
     processDeferredUiWork();
 
-    QAbstractButton* presenter = commandButton(
-        bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"), QStringLiteral("Delete surface"));
+    QAbstractButton* presenter = commandButton(bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"),
+        QStringLiteral("Delete surface"));
     ASSERT_NE(presenter, nullptr);
     QObject::connect(action, &QAction::triggered, &window, [bar]() { delete bar; });
     presenter->click();
@@ -883,8 +873,8 @@ TEST(CommandBarTest, Contract_AccessibleToolbarCommandsAndMoreExpansion)
     window.show();
     processDeferredUiWork();
 
-    QAbstractButton* presenter = commandButton(
-        &bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"), QStringLiteral("Save"));
+    QAbstractButton* presenter = commandButton(&bar, QStringLiteral("FluentCommandBar.PrimaryPresenter"),
+        QStringLiteral("Save"));
     QAbstractButton* more = commandButton(&bar, QStringLiteral("FluentCommandBar.MoreButton"));
     ASSERT_NE(presenter, nullptr);
     ASSERT_NE(more, nullptr);
@@ -899,8 +889,7 @@ TEST(CommandBarTest, Contract_AccessibleToolbarCommandsAndMoreExpansion)
     EXPECT_EQ(rootInterface->text(QAccessible::Name), QStringLiteral("Document commands"));
     EXPECT_EQ(commandInterface->role(), QAccessible::Button);
     EXPECT_EQ(commandInterface->text(QAccessible::Name), QStringLiteral("Save"));
-    EXPECT_EQ(commandInterface->text(QAccessible::Accelerator),
-              primary.shortcut().toString(QKeySequence::NativeText));
+    EXPECT_EQ(commandInterface->text(QAccessible::Accelerator), primary.shortcut().toString(QKeySequence::NativeText));
     EXPECT_TRUE(moreInterface->state().collapsed);
 
     bar.setOverflowOpen(true);

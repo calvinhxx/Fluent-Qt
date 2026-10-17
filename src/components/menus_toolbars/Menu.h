@@ -3,6 +3,7 @@
 
 #include "compatibility/InputEventCompat.h"
 #include <QMenu>
+#include <QPointer>
 #include <QWidgetAction>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
@@ -101,7 +102,9 @@ protected:
 private:
     void updateSurfaceMask();
     void normalizePopupLayering();
-    void drawShadow(QPainter& painter, const QRect& contentRect);
+    void positionCascade();
+
+    QPointer<QMenu> m_cascadeParent;
 
     // Alpha-capable popup surfaces reserve a painted shadow; opaque runtime
     // fallbacks use the complete popup rect. zh_CN: 支持 alpha 的 popup 预留
