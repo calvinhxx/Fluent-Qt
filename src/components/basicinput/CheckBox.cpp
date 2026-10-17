@@ -149,7 +149,9 @@ void CheckBox::paintEvent(QPaintEvent*)
         iconColor = colors.textDisabled;
     } else if (state == Qt::Unchecked) {
         boxBg = isPressed ? colors.controlTertiary : (isHover ? colors.controlSecondary : colors.controlDefault);
-        boxBorder = isHover ? colors.strokeStrong : colors.strokeDefault;
+        boxBorder = colors.strokeStrong;
+        if (!isHover && effectiveTheme() != FluentElement::HighContrast)
+            boxBorder.setAlphaF(boxBorder.alphaF() * 0.65);
         iconColor = Qt::transparent;
     } else {
         // Checked or indeterminate: accent fill without a separate border.

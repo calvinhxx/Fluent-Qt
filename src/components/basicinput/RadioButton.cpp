@@ -143,7 +143,9 @@ void RadioButton::paintEvent(QPaintEvent*)
     } else {
         // Unchecked: standard control fill plus outline. zh_CN: 未选中——普通控件底色 + 描边。
         outerBg = isPressed ? colors.controlTertiary : (isHover ? colors.controlSecondary : colors.controlDefault);
-        outerBorder = isHover ? colors.strokeStrong : colors.strokeDefault;
+        outerBorder = colors.strokeStrong;
+        if (!isHover && effectiveTheme() != FluentElement::HighContrast)
+            outerBorder.setAlphaF(outerBorder.alphaF() * 0.65);
     }
 
     // Paint the ring fill (circle). zh_CN: 绘制外圈底色（圆形）。

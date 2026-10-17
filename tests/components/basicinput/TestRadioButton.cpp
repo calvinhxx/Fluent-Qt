@@ -2,6 +2,7 @@
 #include "components/basicinput/RadioButton.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
+#include "SelectionIndicatorTestUtils.h"
 #include <QApplication>
 #include <QButtonGroup>
 #include <QHBoxLayout>
@@ -20,7 +21,8 @@ class RadioButtonTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
 
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -30,23 +32,23 @@ public:
 
 class RadioButtonTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new RadioButtonTestWindow();
         window->setFixedSize(600, 600);
         window->setWindowTitle("Fluent RadioButton Test");
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     RadioButtonTestWindow* window = nullptr;
 };
 
 // ── Helper: RadioButton + QLabel row ─────────────────────────────────────────
 
-static QHBoxLayout* makeRadioRow(RadioButton* rb, const QString& label, QWidget* parent) {
+static QHBoxLayout* makeRadioRow(RadioButton* rb, const QString& label, QWidget* parent)
+{
     auto* row = new QHBoxLayout();
     row->setSpacing(8);
     row->addWidget(rb);
@@ -57,7 +59,8 @@ static QHBoxLayout* makeRadioRow(RadioButton* rb, const QString& label, QWidget*
 
 // ── Unit Tests ───────────────────────────────────────────────────────────────
 
-TEST_F(RadioButtonTest, DefaultProperties) {
+TEST_F(RadioButtonTest, DefaultProperties)
+{
     RadioButton rb(window);
     EXPECT_EQ(rb.circleSize(), 20);
     EXPECT_EQ(rb.textGap(), 8);
@@ -66,7 +69,8 @@ TEST_F(RadioButtonTest, DefaultProperties) {
     EXPECT_TRUE(rb.isEnabled());
 }
 
-TEST_F(RadioButtonTest, DefaultPropertiesWithText) {
+TEST_F(RadioButtonTest, DefaultPropertiesWithText)
+{
     RadioButton rb("Option", window);
     EXPECT_EQ(rb.text(), "Option");
     EXPECT_EQ(rb.circleSize(), 20);
@@ -74,7 +78,8 @@ TEST_F(RadioButtonTest, DefaultPropertiesWithText) {
     EXPECT_FALSE(rb.isChecked());
 }
 
-TEST_F(RadioButtonTest, EmptyText) {
+TEST_F(RadioButtonTest, EmptyText)
+{
     RadioButton rb("", window);
     EXPECT_TRUE(rb.text().isEmpty());
     // sizeHint with empty text = circle only
@@ -82,7 +87,8 @@ TEST_F(RadioButtonTest, EmptyText) {
     EXPECT_EQ(hint.width(), 20);
 }
 
-TEST_F(RadioButtonTest, SetCircleSize) {
+TEST_F(RadioButtonTest, SetCircleSize)
+{
     RadioButton rb(window);
     QSignalSpy spy(&rb, &RadioButton::circleSizeChanged);
     rb.setCircleSize(24);
@@ -94,7 +100,8 @@ TEST_F(RadioButtonTest, SetCircleSize) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(RadioButtonTest, SetTextGap) {
+TEST_F(RadioButtonTest, SetTextGap)
+{
     RadioButton rb("Test", window);
     QSignalSpy spy(&rb, &RadioButton::textGapChanged);
     rb.setTextGap(12);
@@ -106,7 +113,8 @@ TEST_F(RadioButtonTest, SetTextGap) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(RadioButtonTest, SetTextFont) {
+TEST_F(RadioButtonTest, SetTextFont)
+{
     RadioButton rb("Test", window);
     QSignalSpy spy(&rb, &RadioButton::textFontChanged);
     QFont customFont("Arial", 16);
@@ -120,7 +128,8 @@ TEST_F(RadioButtonTest, SetTextFont) {
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(RadioButtonTest, SizeHintWithText) {
+TEST_F(RadioButtonTest, SizeHintWithText)
+{
     RadioButton rb("Hello World", window);
     QSize hint = rb.sizeHint();
     // With text: width > circleSize, height >= circleSize
@@ -128,14 +137,16 @@ TEST_F(RadioButtonTest, SizeHintWithText) {
     EXPECT_GE(hint.height(), 20);
 }
 
-TEST_F(RadioButtonTest, SizeHintNoText) {
+TEST_F(RadioButtonTest, SizeHintNoText)
+{
     RadioButton rb(window);
     QSize hint = rb.sizeHint();
     // No text: width == circleSize
     EXPECT_EQ(hint.width(), 20);
 }
 
-TEST_F(RadioButtonTest, CheckedState) {
+TEST_F(RadioButtonTest, CheckedState)
+{
     RadioButton rb1("A", window);
     RadioButton rb2("B", window);
     QButtonGroup group;
@@ -151,7 +162,8 @@ TEST_F(RadioButtonTest, CheckedState) {
     EXPECT_TRUE(rb2.isChecked());
 }
 
-TEST_F(RadioButtonTest, DisabledState) {
+TEST_F(RadioButtonTest, DisabledState)
+{
     RadioButton rb("Disabled", window);
     rb.setEnabled(false);
     EXPECT_FALSE(rb.isEnabled());
@@ -159,7 +171,8 @@ TEST_F(RadioButtonTest, DisabledState) {
     EXPECT_TRUE(rb.isChecked());
 }
 
-TEST_F(RadioButtonTest, PaintDoesNotCrash) {
+TEST_F(RadioButtonTest, PaintDoesNotCrash)
+{
     RadioButton rb("Paint test", window);
     window->show();
     rb.show();
@@ -172,7 +185,8 @@ TEST_F(RadioButtonTest, PaintDoesNotCrash) {
     rb.repaint();
 }
 
-TEST_F(RadioButtonTest, PaintEmptyTextDoesNotCrash) {
+TEST_F(RadioButtonTest, PaintEmptyTextDoesNotCrash)
+{
     RadioButton rb(window);
     window->show();
     rb.show();
@@ -181,7 +195,8 @@ TEST_F(RadioButtonTest, PaintEmptyTextDoesNotCrash) {
     rb.repaint();
 }
 
-TEST_F(RadioButtonTest, ThemeUpdateDoesNotCrash) {
+TEST_F(RadioButtonTest, ThemeUpdateDoesNotCrash)
+{
     RadioButton rb("Theme", window);
     rb.onThemeUpdated();
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
@@ -191,8 +206,7 @@ TEST_F(RadioButtonTest, ThemeUpdateDoesNotCrash) {
 
 TEST_F(RadioButtonTest, Contract_LightAndDarkCheckedStatePaintsDistinctly)
 {
-    const FluentElement::Theme themes[]{FluentElement::Light,
-                                        FluentElement::Dark};
+    const FluentElement::Theme themes[]{FluentElement::Light, FluentElement::Dark};
     for (const auto theme : themes) {
         FluentElement::setTheme(theme);
 
@@ -214,12 +228,25 @@ TEST_F(RadioButtonTest, Contract_LightAndDarkCheckedStatePaintsDistinctly)
     FluentElement::setTheme(FluentElement::Light);
 }
 
-TEST_F(RadioButtonTest, VisualCheck) {
+TEST_F(RadioButtonTest, Contract_UncheckedOutlineRemainsVisibleWithoutHover)
+{
+    for (const auto theme : {FluentElement::Light, FluentElement::Dark, FluentElement::HighContrast}) {
+        SCOPED_TRACE(::testing::Message() << "theme=" << theme);
+        RadioButton radio(QStringLiteral(""));
+        radio.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        radio.resize(48, 32);
+        const QRect indicator(0, (radio.height() - radio.circleSize()) / 2, radio.circleSize(), radio.circleSize());
+        testutils::expectVisibleUncheckedOutline(radio, indicator, radio.themeColors().bgLayer,
+            theme == FluentElement::HighContrast);
+    }
+}
+
+TEST_F(RadioButtonTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
-        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP() << "Skipping visual test in offscreen mode";
     }
 
@@ -245,19 +272,17 @@ TEST_F(RadioButtonTest, VisualCheck) {
     layout->addWidget(rb3);
     layout->addWidget(outputLabel);
 
-    QObject::connect(group1,
-                     qOverload<QAbstractButton*>(&QButtonGroup::buttonClicked),
-                     [outputLabel](QAbstractButton* btn) {
-        outputLabel->setText(QString("Output: You selected %1").arg(btn->text()));
-    });
+    QObject::connect(group1, qOverload<QAbstractButton*>(&QButtonGroup::buttonClicked),
+        [outputLabel](QAbstractButton* btn) {
+            outputLabel->setText(QString("Output: You selected %1").arg(btn->text()));
+        });
 
     layout->addSpacing(10);
 
     // ── Section 2: Two groups controlling a colored box ──
     layout->addWidget(new QLabel("2. Two RadioButton groups with color selection:", window));
 
-    auto makeColorGroup = [&](const QString& header,
-                              const QStringList& items) -> QButtonGroup* {
+    auto makeColorGroup = [&](const QString& header, const QStringList& items) -> QButtonGroup* {
         layout->addWidget(new QLabel(header, window));
         auto* grp = new QButtonGroup(window);
         auto* row = new QHBoxLayout();
@@ -266,7 +291,8 @@ TEST_F(RadioButtonTest, VisualCheck) {
             grp->addButton(rb, i);
             row->addWidget(rb);
             row->addSpacing(12);
-            if (i == 0) rb->setChecked(true);
+            if (i == 0)
+                rb->setChecked(true);
         }
         row->addStretch();
         layout->addLayout(row);
@@ -284,13 +310,15 @@ TEST_F(RadioButtonTest, VisualCheck) {
     auto syncColors = [colorBox, bgGroup, bdGroup]() {
         auto colorFor = [](int idx) -> QString {
             switch (idx) {
-            case 0: return "green";
-            case 1: return "yellow";
-            default: return "white";
+            case 0:
+                return "green";
+            case 1:
+                return "yellow";
+            default:
+                return "white";
             }
         };
-        colorBox->setStyleSheet(
-            QString("background-color: %1; border: 4px solid %2;")
+        colorBox->setStyleSheet(QString("background-color: %1; border: 4px solid %2;")
                 .arg(colorFor(bgGroup->checkedId()), colorFor(bdGroup->checkedId())));
     };
     QObject::connect(bgGroup, qOverload<QAbstractButton*>(&QButtonGroup::buttonClicked), syncColors);
@@ -319,11 +347,12 @@ TEST_F(RadioButtonTest, VisualCheck) {
     auto* emptyGroup = new QButtonGroup(window);
     auto* emptyRow = new QHBoxLayout();
     for (int i = 0; i < 3; ++i) {
-        auto* rb = new RadioButton(window);  // no text
+        auto* rb = new RadioButton(window); // no text
         emptyGroup->addButton(rb, i);
         emptyRow->addWidget(rb);
         emptyRow->addSpacing(8);
-        if (i == 0) rb->setChecked(true);
+        if (i == 0)
+            rb->setChecked(true);
     }
     emptyRow->addStretch();
     layout->addLayout(emptyRow);
@@ -335,8 +364,7 @@ TEST_F(RadioButtonTest, VisualCheck) {
     themeBtn->setFixedSize(120, 32);
     layout->addWidget(themeBtn, 0, Qt::AlignRight);
     QObject::connect(themeBtn, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(
-            fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
                 ? fluent::FluentElement::Dark
                 : fluent::FluentElement::Light);
     });

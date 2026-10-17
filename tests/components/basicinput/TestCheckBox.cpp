@@ -4,6 +4,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "design/Typography.h"
+#include "SelectionIndicatorTestUtils.h"
 #include <QApplication>
 #include <QHBoxLayout>
 #include <QImage>
@@ -19,7 +20,8 @@ class CheckBoxTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
 
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -27,7 +29,8 @@ public:
 
 class CheckBoxTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new CheckBoxTestWindow();
         window->setFixedSize(600, 750);
         window->setWindowTitle("Fluent CheckBox Visual Test");
@@ -53,8 +56,10 @@ protected:
         auto* label2 = new QLabel("Output: Unchecked", window);
         fluentConnectCheckStateChanged(cb2, label2, [label2](Qt::CheckState state) {
             QString s = "Unchecked";
-            if (state == Qt::Checked) s = "Checked";
-            else if (state == Qt::PartiallyChecked) s = "Indeterminate";
+            if (state == Qt::Checked)
+                s = "Checked";
+            else if (state == Qt::PartiallyChecked)
+                s = "Indeterminate";
             label2->setText(QString("Output: %1").arg(s));
         });
         layout->addWidget(cb2);
@@ -65,7 +70,7 @@ protected:
         auto* selectAll = new CheckBox("Select all", window);
         selectAll->setTristate(true);
         layout->addWidget(selectAll); // 关键修复：添加到布局中
-        
+
         auto* subLayout = new QVBoxLayout();
         subLayout->setContentsMargins(40, 0, 0, 0); // 增加缩进，使其看起来是子项
         auto* opt1 = new CheckBox("Option 1", window);
@@ -78,13 +83,19 @@ protected:
 
         auto updateSelectAll = [selectAll, opt1, opt2, opt3]() {
             int checkedCount = 0;
-            if (opt1->isChecked()) checkedCount++;
-            if (opt2->isChecked()) checkedCount++;
-            if (opt3->isChecked()) checkedCount++;
+            if (opt1->isChecked())
+                checkedCount++;
+            if (opt2->isChecked())
+                checkedCount++;
+            if (opt3->isChecked())
+                checkedCount++;
 
-            if (checkedCount == 0) selectAll->setCheckState(Qt::Unchecked);
-            else if (checkedCount == 3) selectAll->setCheckState(Qt::Checked);
-            else selectAll->setCheckState(Qt::PartiallyChecked);
+            if (checkedCount == 0)
+                selectAll->setCheckState(Qt::Unchecked);
+            else if (checkedCount == 3)
+                selectAll->setCheckState(Qt::Checked);
+            else
+                selectAll->setCheckState(Qt::PartiallyChecked);
         };
 
         QObject::connect(selectAll, &CheckBox::clicked, [selectAll, opt1, opt2, opt3]() {
@@ -113,19 +124,19 @@ protected:
 
         // 5. Customizable properties
         layout->addWidget(new QLabel("5. Customizable properties:", window));
-        
+
         // 5.1 Larger box size
         auto* largeBox = new CheckBox("Larger box (24px)", window);
         largeBox->setBoxSize(24);
         largeBox->setFixedSize(200, 32);
         layout->addWidget(largeBox);
-        
+
         // 5.2 Custom margins and gaps
         auto* customSpacing = new CheckBox("Custom spacing (margin: 12px, gap: 10px)", window);
         customSpacing->setBoxMargin(12);
         customSpacing->setTextGap(10);
         layout->addWidget(customSpacing);
-        
+
         // 5.3 Compact style (smaller box, tighter spacing)
         auto* compact = new CheckBox("Compact style (box: 16px, margin: 4px, gap: 6px)", window);
         compact->setBoxSize(16);
@@ -140,17 +151,15 @@ protected:
         themeBtn->setFixedSize(120, 32);
         layout->addWidget(themeBtn);
         QObject::connect(themeBtn, &Button::clicked, []() {
-            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light 
-                                    ? fluent::FluentElement::Dark 
-                                    : fluent::FluentElement::Light);
+            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                    ? fluent::FluentElement::Dark
+                    : fluent::FluentElement::Light);
         });
 
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     CheckBoxTestWindow* window = nullptr;
 };
@@ -194,12 +203,10 @@ TEST_F(CheckBoxTest, Contract_ProgrammaticTriStateIsPreserved)
 
     int changeCount = 0;
     Qt::CheckState lastState = Qt::Unchecked;
-    fluentConnectCheckStateChanged(
-        &checkBox, &checkBox,
-        [&changeCount, &lastState](Qt::CheckState state) {
-            ++changeCount;
-            lastState = state;
-        });
+    fluentConnectCheckStateChanged(&checkBox, &checkBox, [&changeCount, &lastState](Qt::CheckState state) {
+        ++changeCount;
+        lastState = state;
+    });
 
     checkBox.setCheckState(Qt::PartiallyChecked);
 
@@ -210,8 +217,7 @@ TEST_F(CheckBoxTest, Contract_ProgrammaticTriStateIsPreserved)
 
 TEST_F(CheckBoxTest, Contract_LightAndDarkCheckStatesPaintDistinctly)
 {
-    const FluentElement::Theme themes[]{FluentElement::Light,
-                                        FluentElement::Dark};
+    const FluentElement::Theme themes[]{FluentElement::Light, FluentElement::Dark};
     for (const auto theme : themes) {
         FluentElement::setTheme(theme);
 
@@ -237,7 +243,22 @@ TEST_F(CheckBoxTest, Contract_LightAndDarkCheckStatesPaintDistinctly)
     FluentElement::setTheme(FluentElement::Light);
 }
 
-TEST_F(CheckBoxTest, VisualCheck) {
+TEST_F(CheckBoxTest, Contract_UncheckedOutlineRemainsVisibleWithoutHover)
+{
+    for (const auto theme : {FluentElement::Light, FluentElement::Dark, FluentElement::HighContrast}) {
+        SCOPED_TRACE(::testing::Message() << "theme=" << theme);
+        CheckBox checkBox(QStringLiteral(""));
+        checkBox.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        checkBox.resize(48, 32);
+        const QRect indicator(checkBox.boxMargin(), (checkBox.height() - checkBox.boxSize()) / 2, checkBox.boxSize(),
+            checkBox.boxSize());
+        testutils::expectVisibleUncheckedOutline(checkBox, indicator, checkBox.themeColors().bgLayer,
+            theme == FluentElement::HighContrast);
+    }
+}
+
+TEST_F(CheckBoxTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
