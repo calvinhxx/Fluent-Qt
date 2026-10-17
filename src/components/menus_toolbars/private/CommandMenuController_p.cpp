@@ -35,7 +35,7 @@ bool CommandMenuController::open(CommandPresenter* presenter, std::function<void
     const QPointer<QMenu> menu = action ? action->menu() : nullptr;
     if (!anchor || !anchor->isVisible() || !anchor->isEnabled() || !menu)
         return false;
-    if (m_presenter == anchor && m_menu == menu && menu->isVisible()) {
+    if (m_presenter == anchor && m_menu.data() == menu.data() && menu->isVisible()) {
         close(true);
         return true;
     }
@@ -47,7 +47,7 @@ bool CommandMenuController::open(CommandPresenter* presenter, std::function<void
 
     m_presenter = anchor;
     m_action = action;
-    m_menu = menu;
+    m_menu = menu.data();
     m_leafActivated = std::move(leafActivated);
     m_triggered = false;
     m_restoreFocus = false;
@@ -55,14 +55,20 @@ bool CommandMenuController::open(CommandPresenter* presenter, std::function<void
     menu->installEventFilter(this);
     m_connections.append(connect(menu, &QMenu::aboutToHide, this, [this] { finishLater(); }));
     observeMenus();
-    m_connections.append(connect(menu, &QObject::destroyed, this, [this] { finishLater(); }));
+    m_connections.append(connect(menu, &QObject::destroyed, this, [this] {
+        m_menu.clear();
+        finishLater();
+    }));
     m_connections.append(connect(action, &QObject::destroyed, this, [this] { close(); }));
     m_connections.append(connect(action, &QAction::changed, this, [this] {
-        if (!m_action || m_action->menu() != m_menu || !m_action->isEnabled() || !m_action->isVisible()
+        if (!m_action || m_action->menu() != m_menu.data() || !m_action->isEnabled() || !m_action->isVisible()
             || m_action->isSeparator())
             close();
     }));
-    m_connections.append(connect(anchor, &QObject::destroyed, this, [this] { close(); }));
+    m_connections.append(connect(anchor, &QObject::destroyed, this, [this] {
+        m_presenter.clear();
+        close();
+    }));
 
     menu->setLayoutDirection(anchor->layoutDirection());
     const bool rtl = anchor->layoutDirection() == Qt::RightToLeft;
@@ -70,14 +76,14 @@ bool CommandMenuController::open(CommandPresenter* presenter, std::function<void
     const QPoint local(side ? (rtl ? 0 : anchor->width()) : (rtl ? anchor->width() : 0), side ? 0 : anchor->height());
     const QPoint offset(rtl ? -menu->sizeHint().width() : 0, 0);
     overlay::popupMenuAt(menu, anchor, local, offset);
-    if (!lifetime || !anchor || !menu || m_menu != menu)
+    if (!lifetime || !anchor || !menu || m_menu.data() != menu.data())
         return true;
     if (!menu->isVisible()) {
         finish();
         return true;
     }
     anchor->setMenuOpen(true);
-    if (!lifetime || !menu || m_menu != menu)
+    if (!lifetime || !menu || m_menu.data() != menu.data())
         return true;
     for (QAction* candidate : menu->actions()) {
         if (candidate && candidate->isVisible() && candidate->isEnabled() && !candidate->isSeparator()) {
@@ -91,10 +97,11 @@ bool CommandMenuController::open(CommandPresenter* presenter, std::function<void
 QList<QPointer<QMenu>> CommandMenuController::cascade() const
 {
     QList<QPointer<QMenu>> result;
-    if (!m_menu)
+    auto* root = qobject_cast<QMenu*>(m_menu.data());
+    if (!root)
         return result;
-    result.append(m_menu);
-    QSet<QMenu*> seen{m_menu.data()};
+    result.append(root);
+    QSet<QMenu*> seen{root};
     for (int index = 0; index < result.size(); ++index) {
         if (!result.at(index))
             continue;
@@ -155,12 +162,19 @@ bool CommandMenuController::eventFilter(QObject* watched, QEvent* event)
 {
     if (!event)
         return false;
-    if ((watched == m_owner || watched == m_presenter) && event->type() == QEvent::Hide) {
-        close();
-    } else if (watched == m_menu && event->type() == QEvent::KeyPress) {
+    // QWidget still delivers events after its derived destructors have run.
+    // Only inspect a typed guard while the watched object retains that type.
+    if (event->type() == QEvent::Hide) {
+        auto* presenter = dynamic_cast<CommandPresenter*>(watched);
+        if (watched == m_owner || (presenter && presenter == m_presenter))
+            close();
+    } else if (event->type() == QEvent::KeyPress) {
+        auto* menu = qobject_cast<QMenu*>(watched);
+        if (!menu || menu != m_menu.data())
+            return false;
         updateCommandFocusVisual(m_presenter, event);
         auto* key = static_cast<QKeyEvent*>(event);
-        const int back = m_menu->layoutDirection() == Qt::RightToLeft ? Qt::Key_Right : Qt::Key_Left;
+        const int back = menu->layoutDirection() == Qt::RightToLeft ? Qt::Key_Right : Qt::Key_Left;
         if (key->key() == back) {
             close(true);
             key->accept();
@@ -178,7 +192,8 @@ void CommandMenuController::finishLater()
     // QMenu may hide before emitting triggered(). Defer until all QAction
     // handlers have run, including handlers that move focus or delete the host.
     QTimer::singleShot(0, this, [this, revision] {
-        if (revision == m_revision && (!m_menu || !m_menu->isVisible()))
+        const auto* menu = qobject_cast<QMenu*>(m_menu.data());
+        if (revision == m_revision && (!menu || !menu->isVisible()))
             finish();
     });
 }

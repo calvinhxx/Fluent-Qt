@@ -17,6 +17,8 @@
 #include "components/menus_toolbars/CommandBar.h"
 #include "components/menus_toolbars/CommandBarFlyout.h"
 #include "components/menus_toolbars/Menu.h"
+#include "components/menus_toolbars/private/CommandMenuController_p.h"
+#include "components/menus_toolbars/private/CommandPresenter_p.h"
 #include "components/scrolling/ScrollView.h"
 
 using fluent::menus_toolbars::CommandBar;
@@ -26,6 +28,35 @@ using fluent::menus_toolbars::FluentMenu;
 namespace {
 
 enum class Surface { Inline, Overflow, Secondary, FlyoutPrimary, FlyoutSecondary };
+
+TEST(CommandMenuSurfaceTest, Contract_HidingOrDestroyingPresenterClosesBorrowedMenu)
+{
+    using fluent::menus_toolbars::detail::CommandMenuController;
+    using fluent::menus_toolbars::detail::CommandPresenter;
+    QWidget window;
+    window.resize(400, 300);
+    FluentMenu menu(QStringLiteral("Borrowed"));
+    menu.addAction(QStringLiteral("Choice"));
+    QAction action(QStringLiteral("Open"));
+    action.setMenu(&menu);
+    CommandMenuController controller(&window);
+    auto* presenter = new CommandPresenter(&action, CommandPresenter::Mode::Primary, {}, &window);
+    presenter->setGeometry(20, 20, 120, 40);
+    window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+    ASSERT_TRUE(controller.open(presenter));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return menu.isVisible(); }));
+    presenter->hide();
+    EXPECT_FALSE(menu.isVisible());
+    presenter->show();
+    ASSERT_TRUE(controller.open(presenter));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return menu.isVisible(); }));
+    delete presenter;
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !menu.isVisible(); }));
+    EXPECT_EQ(action.menu(), &menu);
+    EXPECT_EQ(menu.parent(), nullptr);
+}
 
 TEST(CommandMenuSurfaceTest, Contract_RestingRowsKeepTheMenuSurfaceAcrossThemeChangesAndReopen)
 {
