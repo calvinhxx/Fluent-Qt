@@ -76,6 +76,14 @@ growth restores the whole caret instead of retaining Qt's temporary scroll
 offset. Later resizing preserves an ordinary user scroll position. These
 contracts are covered in `tests/components/textfields/TestTextEdit.cpp`.
 
+`TextEdit::appendPlainText()` allows programmatic updates in read-only mode
+while preserving the native editor's cursor and selection. Appending follows
+the tail only when the reader was already at the bottom; browsing earlier
+records retains the scroll offset. C++ and PySide6 contract tests cover these
+behaviors, and Gallery's `text-edit-log-append` sample provides named log,
+append, and clear controls. This does not establish native screen-reader
+announcement behavior.
+
 `FluentElement::HighContrast` resolves a complete third semantic palette, so
 controls continue to expose the same roles, state, actions, and logical child
 trees while using opaque high-contrast foreground, background, focus, disabled,
@@ -91,6 +99,13 @@ Custom global and per-element theme token overrides preserve the existing access
 roles and actions. Typography and per-mode color resolution are covered by
 `tests/components/TestThemeOverrides.cpp`; caller-defined colors still require
 contrast review. See [custom themes](../design-languages/custom-themes.md).
+
+`CheckBox` and `RadioButton` keep enabled, unchecked indicators visible with a softer
+resting outline in Light/Dark and a stronger outline on hover. High Contrast retains
+full outline opacity. Their focused tests check rendered visibility and the hover
+contrast increase at 1x and 2x scale. Disabled and selected states retain their
+existing treatment. These pixel checks supplement native Gallery review; they do
+not certify contrast on every application background or custom palette.
 
 The [WebAssembly runtime](../../platforms/webassembly/Runtime.cpp) keeps Qt's HTML
 accessibility proxies readable and focusable without painting a second control
@@ -130,6 +145,15 @@ behavior; the focused command-bar tests cover these paths and ordinary 2D
 behavior. These tests do not certify native screen-reader geometry for
 transformed content.
 
+Menu-bearing CommandBar and CommandBarFlyout presenters expose popup availability,
+expanded/collapsed state, and Show Menu. Inline branches use the menu-button role;
+overflow branches retain the menu-item role. The same QAction owns the caption,
+check state, and enablement. `TestCommandSubmenus.cpp` covers these semantics,
+three-level navigation, focus return, and borrowed-menu lifetime across all five
+presentation locations. Pointer activation retains logical focus without a focus
+outline. Tab, arrow-key navigation, and Escape focus return show the outline;
+popup restoration preserves the input mode.
+
 Menu-button expanded state follows a real menu. An empty `QMenu` can emit
 `aboutToShow` without opening; DropDownButton and SplitButton restore their
 collapsed state in that case, while still allowing actions to be populated
@@ -141,6 +165,12 @@ retain Qt behavior; `TestMenu.cpp` covers the boundary event sequence and native
 pointer traversal. The boundary test includes follow-up mouse moves and the
 close timeout under both parent-reentry policies. These checks do not establish
 native screen-reader acceptance.
+
+Resting checked FluentMenu items show their check glyph without a selection fill;
+hover and keyboard selection retain the Fluent highlight. Command menu rows
+keep their existing target sizes and keyboard focus outline. The menu surface
+tests cover Light/Dark theme refresh and reopening, and cascade geometry tests
+cover LTR, RTL, and screen-edge containment.
 
 `QmlView` is the optional QWidget host under **Plugins → QmlBridge**. It delegates
 input to its Quick scene; the application QML page supplies its own

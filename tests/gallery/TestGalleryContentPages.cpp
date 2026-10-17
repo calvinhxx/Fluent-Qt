@@ -3008,6 +3008,30 @@ TEST_F(GalleryContentPagesTest, SampleCardRefreshesWhenPreviewSizeHintChanges)
     EXPECT_GT(card.height(), initialCardHeight);
 }
 
+TEST_F(GalleryContentPagesTest, TextEditLogSampleAppendsPlainTextAndClears)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("text-edit"), QStringLiteral("text-edit-log-append"), &sample));
+    ASSERT_TRUE(sample.codeSnippet.contains(QStringLiteral("appendPlainText")));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* log = preview->findChild<TextEdit*>(QStringLiteral("appendLog"));
+    auto* append = preview->findChild<Button*>(QStringLiteral("appendLogEntry"));
+    auto* clear = preview->findChild<Button*>(QStringLiteral("clearLog"));
+    ASSERT_NE(log, nullptr);
+    ASSERT_NE(append, nullptr);
+    ASSERT_NE(clear, nullptr);
+    EXPECT_TRUE(log->isReadOnly());
+    EXPECT_EQ(log->accessibleName(), QStringLiteral("Activity log"));
+    const QString initial = log->toPlainText();
+    append->click();
+    append->click();
+    EXPECT_EQ(log->toPlainText(), initial + QStringLiteral("\nINFO Received: <ready>\nINFO Received: <ready>"));
+    clear->click();
+    EXPECT_TRUE(log->toPlainText().isEmpty());
+    append->click();
+    EXPECT_EQ(log->toPlainText(), QStringLiteral("INFO Received: <ready>"));
+}
+
 TEST_F(GalleryContentPagesTest, TextEditSampleReflowsAfterVisibleLineGrowth)
 {
     GalleryWindow window;

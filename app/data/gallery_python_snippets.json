@@ -4,7 +4,7 @@
   "summary": {
     "component_count": 89,
     "foundation_topic_count": 1,
-    "sample_count": 264
+    "sample_count": 267
   },
   "samples": [
     {
@@ -887,6 +887,11 @@
       "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QAction, QIcon\n\neditor = fluentqt.LineEdit()\neditor.setText(\"Review the release notes before Friday\")\nrouter = fluentqt.EditingCommandRouter(window)\nbar = fluentqt.CommandBar()\nbar.setAccessibleName(\"Editing commands\")\nbar.setLabelPosition(fluentqt.CommandBar.LabelPosition.Right)\nbar.setBackgroundVisible(False)\nCommand = fluentqt.EditingCommandRouter.Command\n\ndef command_action(command, icon_path):\n    action = router.action(command)\n    action.setIcon(QIcon(icon_path))\n    return action\n\nbar.addPrimaryAction(\n    command_action(Command.Undo, \":/icons/undo.svg\")\n)\nbar.addPrimaryAction(\n    command_action(Command.Redo, \":/icons/redo.svg\")\n)\nseparator = QAction(bar)\nseparator.setSeparator(True)\nbar.addPrimaryAction(separator)\nbar.addPrimaryAction(\n    command_action(Command.Cut, \":/icons/cut.svg\")\n)\nbar.addPrimaryAction(\n    command_action(Command.Copy, \":/icons/copy.svg\")\n)\nbar.addPrimaryAction(\n    command_action(Command.Paste, \":/icons/paste.svg\")\n)\nbar.addSecondaryAction(\n    command_action(Command.Delete, \":/icons/delete.svg\")\n)\nbar.addSecondaryAction(\n    command_action(Command.SelectAll, \":/icons/select-all.svg\")\n)\n\nselect_text = fluentqt.Button(\"Select text\")\nclear_selection = fluentqt.Button(\"Clear selection\")\nread_only = fluentqt.Button(\"Read-only: Off\")\nread_only.setCheckable(True)\n\ndef select_all():\n    editor.setFocus(Qt.FocusReason.OtherFocusReason)\n    editor.selectAll()\n    router.refresh()\n\ndef deselect():\n    editor.setFocus(Qt.FocusReason.OtherFocusReason)\n    editor.deselect()\n    router.refresh()\n\ndef set_read_only(value):\n    editor.setFocus(Qt.FocusReason.OtherFocusReason)\n    editor.setReadOnly(value)\n    editor.selectAll()\n    router.refresh()\n\nselect_text.clicked.connect(select_all)\nclear_selection.clicked.connect(deselect)\nread_only.toggled.connect(set_read_only)\n"
     },
     {
+      "route_id": "command-bar",
+      "sample_id": "command-bar-submenus",
+      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QActionGroup\nfrom PySide6.QtWidgets import QVBoxLayout\n\nstatus = fluentqt.Label(\"Order: Ascending\", window)\nview = fluentqt.FluentMenu(\"View\", window)\nsort = fluentqt.FluentMenu(\"Sort by\", view)\norder = fluentqt.FluentMenu(\"Order\", sort)\nview.addMenu(sort)\nsort.addMenu(order)\ngroup = QActionGroup(view)\nascending = order.addAction(\"Ascending\")\ndescending = order.addAction(\"Descending\")\nascending.setCheckable(True)\ndescending.setCheckable(True)\ngroup.addAction(ascending)\ngroup.addAction(descending)\nascending.setChecked(True)\ngroup.triggered.connect(lambda action: status.setText(\"Order: \" + action.text()))\n\nbar = fluentqt.CommandBar(window)\nbar.setLabelPosition(fluentqt.CommandBar.LabelPosition.Right)\nbar.setFixedWidth(480)\nbar.addPrimaryAction(view.menuAction())\nbar.addSecondaryAction(sort.menuAction())\ncompact = fluentqt.Button(\"Compact width\", window)\ncompact.setCheckable(True)\ncompact.toggled.connect(lambda checked: bar.setFixedWidth(80 if checked else 480))\nlayout = QVBoxLayout(window)\nlayout.addWidget(bar, 0, Qt.AlignLeft)\nlayout.addWidget(compact, 0, Qt.AlignLeft)\nlayout.addWidget(status)\n"
+    },
+    {
       "route_id": "command-bar-flyout",
       "sample_id": "command-bar-flyout-show-modes",
       "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QAction\n\nflyout = fluentqt.CommandBarFlyout()\nshare_action = QAction(\"Share\")\nsave_action = QAction(\"Save\")\ndelete_action = QAction(\"Delete\")\nresize_action = QAction(\"Resize\")\nmove_action = QAction(\"Move\")\nflyout.addPrimaryAction(share_action)\nflyout.addPrimaryAction(save_action)\nflyout.addPrimaryAction(delete_action)\nflyout.addSecondaryAction(resize_action)\nflyout.addSecondaryAction(move_action)\n\nphoto.clicked.connect(\n    lambda: flyout.showAt(photo, fluentqt.CommandBarFlyout.ShowMode.Transient)\n)\nphoto.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)\nphoto.customContextMenuRequested.connect(\n    lambda point: flyout.showAtPoint(\n        photo,\n        point,\n        fluentqt.CommandBarFlyout.ShowMode.Standard\n    )\n)\n"
@@ -895,6 +900,11 @@
       "route_id": "command-bar-flyout",
       "sample_id": "command-bar-flyout-always-expanded",
       "source": "from PySide6.QtGui import QAction, QIcon\n\nflyout = fluentqt.CommandBarFlyout()\nflyout.setAlwaysExpanded(True)\ncopy_link = QAction(QIcon(\":/icons/link.svg\"), \"Copy link\", flyout)\nfavorite = QAction(\n    QIcon(\":/icons/favorite.svg\"),\n    \"Favorite\",\n    flyout\n)\nfavorite.setCheckable(True)\nrename = QAction(QIcon(\":/icons/edit.svg\"), \"Rename\", flyout)\nproperties = QAction(\n    QIcon(\":/icons/info.svg\"),\n    \"Properties\",\n    flyout\n)\nflyout.addPrimaryAction(copy_link)\nflyout.addPrimaryAction(favorite)\nflyout.addSecondaryAction(rename)\nflyout.addSecondaryAction(properties)\n\nopen_button = fluentqt.Button(\"Open actions\")\nalways_expanded = fluentqt.Button(\"Always expanded: On\")\nopen_button.clicked.connect(\n    lambda: flyout.showAt(open_button, fluentqt.CommandBarFlyout.ShowMode.Transient)\n)\nalways_expanded.setCheckable(True)\nalways_expanded.setChecked(True)\nalways_expanded.toggled.connect(flyout.setAlwaysExpanded)\n"
+    },
+    {
+      "route_id": "command-bar-flyout",
+      "sample_id": "command-bar-flyout-submenus",
+      "source": "from PySide6.QtGui import QActionGroup\n\nstatus = fluentqt.Label(\"Order: Ascending\", window)\nview = fluentqt.FluentMenu(\"View\", window)\nsort = fluentqt.FluentMenu(\"Sort by\", view)\norder = fluentqt.FluentMenu(\"Order\", sort)\nview.addMenu(sort)\nsort.addMenu(order)\ngroup = QActionGroup(view)\nascending = order.addAction(\"Ascending\")\ndescending = order.addAction(\"Descending\")\nascending.setCheckable(True)\ndescending.setCheckable(True)\ngroup.addAction(ascending)\ngroup.addAction(descending)\nascending.setChecked(True)\ngroup.triggered.connect(lambda action: status.setText(\"Order: \" + action.text()))\n\nflyout = fluentqt.CommandBarFlyout(window)\nflyout.setAlwaysExpanded(True)\nflyout.addPrimaryAction(view.menuAction())\nflyout.addSecondaryAction(sort.menuAction())\nopen_button = fluentqt.Button(\"Open view commands\", window)\nopen_button.clicked.connect(lambda: flyout.showAt(open_button))\n"
     },
     {
       "route_id": "breadcrumb",
@@ -1315,6 +1325,11 @@
       "route_id": "text-edit",
       "sample_id": "text-edit-scrollable-content",
       "source": "text_edit = fluentqt.TextEdit()\ntext_edit.setAccessibleName(\"Scrollable notes\")\ntext_edit.setMinVisibleLines(3)\ntext_edit.setMaxVisibleLines(3)\ntext_edit.setLineHeight(28)\ntext_edit.setPlainText(\"Alpha\\nBeta\\nGamma\\nDelta\\nEpsilon\\nZeta\")\ntext_edit.setFixedWidth(360)\n"
+    },
+    {
+      "route_id": "text-edit",
+      "sample_id": "text-edit-log-append",
+      "source": "log = fluentqt.TextEdit()\nlog.setAccessibleName('Activity log')\nlog.setReadOnly(True)\nlog.setMinVisibleLines(3)\nlog.setMaxVisibleLines(3)\nlog.setPlaceholderText('No log entries')\nlog.appendPlainText('INFO Connection opened\\nINFO Waiting for records')\nappend_button = fluentqt.Button('Append entry')\nclear_button = fluentqt.Button('Clear')\nappend_button.clicked.connect(lambda: log.appendPlainText('INFO Received: <ready>'))\nclear_button.clicked.connect(log.clear)\n"
     },
     {
       "route_id": "text-edit",

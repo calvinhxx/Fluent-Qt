@@ -2813,6 +2813,66 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
                 "from PySide6.QtGui import QAction, QKeySequence"
             ),
         )
+    if key in {
+        ("command-bar", "command-bar-submenus"),
+        ("command-bar-flyout", "command-bar-flyout-submenus"),
+    }:
+        hierarchy = dedent(
+            """
+            status = fluentqt.Label("Order: Ascending", window)
+            view = fluentqt.FluentMenu("View", window)
+            sort = fluentqt.FluentMenu("Sort by", view)
+            order = fluentqt.FluentMenu("Order", sort)
+            view.addMenu(sort)
+            sort.addMenu(order)
+            group = QActionGroup(view)
+            ascending = order.addAction("Ascending")
+            descending = order.addAction("Descending")
+            ascending.setCheckable(True)
+            descending.setCheckable(True)
+            group.addAction(ascending)
+            group.addAction(descending)
+            ascending.setChecked(True)
+            group.triggered.connect(
+                lambda action: status.setText("Order: " + action.text())
+            )
+            """
+        )
+        surface = (
+            """
+            bar = fluentqt.CommandBar(window)
+            bar.setLabelPosition(fluentqt.CommandBar.LabelPosition.Right)
+            bar.setFixedWidth(480)
+            bar.addPrimaryAction(view.menuAction())
+            bar.addSecondaryAction(sort.menuAction())
+            compact = fluentqt.Button("Compact width", window)
+            compact.setCheckable(True)
+            compact.toggled.connect(
+                lambda checked: bar.setFixedWidth(80 if checked else 480)
+            )
+            layout = QVBoxLayout(window)
+            layout.addWidget(bar, 0, Qt.AlignLeft)
+            layout.addWidget(compact, 0, Qt.AlignLeft)
+            layout.addWidget(status)
+            """
+            if route_id == "command-bar"
+            else """
+            flyout = fluentqt.CommandBarFlyout(window)
+            flyout.setAlwaysExpanded(True)
+            flyout.addPrimaryAction(view.menuAction())
+            flyout.addSecondaryAction(sort.menuAction())
+            open_button = fluentqt.Button("Open view commands", window)
+            open_button.clicked.connect(lambda: flyout.showAt(open_button))
+            """
+        )
+        return focused(
+            hierarchy + dedent(surface),
+            imports=(
+                "from PySide6.QtCore import Qt\n"
+                "from PySide6.QtGui import QActionGroup\n"
+                "from PySide6.QtWidgets import QVBoxLayout"
+            ),
+        )
     if key == ("command-bar", "command-bar-responsive-overflow"):
         return focused(
             """

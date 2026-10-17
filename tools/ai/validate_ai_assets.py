@@ -2218,7 +2218,7 @@ def validate(project_root: Path) -> dict[str, int]:
     expected_counts = {
         "route_count": 114,
         "component_count": 89,
-        "sample_count": 252,
+        "sample_count": 255,
         "guided_component_count": 89,
     }
     for key, expected in expected_counts.items():

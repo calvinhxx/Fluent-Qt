@@ -16,6 +16,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 from wasm_plugin_contract import run_plugin_extension_contract
+from wasm_command_submenus import run_command_submenus_contract
 
 
 DEFAULT_RENDER_PIXEL_BUDGET = 1_600_000
@@ -1113,6 +1114,9 @@ def run_smoke(
                     "Local asset request failure(s): "
                     + " | ".join(local_request_failures)
                 )
+
+            if mode == "full":
+                run_command_submenus_contract(browser, base_url, root / "command-menu-validation")
 
             run_hello_world_spatial_contract(browser, base_url, root / "hello-world-validation")
             run_embedded_theme_contract(browser, base_url)

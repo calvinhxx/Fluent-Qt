@@ -151,6 +151,15 @@ hover and pressed states in both themes. It does not derive those states through
 - Focus uses two inset rings: near-opaque `Stroke::FocusOuter` over
   `Stroke::FocusInner` in the opposite polarity.
 
+FluentMenu rows follow the transparent resting state in the
+[WinUI MenuFlyout template](https://github.com/microsoft/microsoft-ui-xaml/blob/main/controls/dev/CommonStyles/MenuFlyout_themeresources.xaml).
+Its checked choices retain a check glyph; only hover or active keyboard selection adds
+a row fill. FluentMenu and command menus share one `bgLayer` surface, a subtle
+stroke, and a restrained shadow. The Qt adaptation gives short menus a 160 px
+minimum card width and aligns the first submenu row with its invoking row.
+Gallery introduces ordinary commands first, with cascades in a separate example,
+following the [WinUI Gallery menu samples](https://github.com/microsoft/WinUI-Gallery/blob/main/WinUIGallery/Samples/MenuFlyout/MenuFlyoutPage.xaml).
+
 Application-wide motion is resolved through `MotionPolicy`. `Full` preserves component timing,
 `Reduced` caps transitions at 50 ms and stops continuous motion, and `Disabled` resolves all
 motion directly to its final state. A component's local `animationEnabled=false` remains the
@@ -234,8 +243,9 @@ both C++ and Python usage.
 - The box uses an approximately 4 px radius (`radius.control`). Its FluentQt Icons
   glyph is CheckMark when checked or Hyphen when indeterminate, with an animated
   scale-in (`checkProgress`).
-- **Unchecked**: `controlDefault` fill + `strokeDefault` border (hover → `controlSecondary` +
-  `strokeStrong`, pressed → `controlTertiary`).
+- **Unchecked**: `controlDefault` fill + `strokeStrong` border at 65% of its token
+  opacity in Light/Dark. Hover restores full outline opacity and changes the fill to
+  `controlSecondary`; pressed uses `controlTertiary`. High Contrast keeps full outline opacity.
 - **Checked / Indeterminate**: `accentDefault` fill (hover `accentSecondary`, pressed
   `accentTertiary`), no border, `textOnAccent` glyph.
 - Optional whole-row `subtleSecondary` hover background (4 px rounded).
@@ -245,8 +255,9 @@ both C++ and Python usage.
 - **Selected**: ring fills with `accentDefault` (hover `accentSecondary`, pressed
   `accentTertiary`), no outline; inner dot = `textOnAccent`. The dot grows **20 %** on hover
   (`dotScale → 1.2`).
-- **Unselected**: `controlDefault` fill + outline (`strokeDefault`, `strokeStrong` on hover), no
-  dot.
+- **Unselected**: `controlDefault` fill + `strokeStrong` outline at 65% of its token
+  opacity in Light/Dark, no dot. Hover restores full outline opacity and changes the
+  fill to `controlSecondary`; pressed uses `controlTertiary`. High Contrast keeps full outline opacity.
 
 #### Slider (`Slider.cpp`, default branch)
 - The fully rounded track uses `m_trackHeight = 4 px`; inactive = `controlAltSecondary`,

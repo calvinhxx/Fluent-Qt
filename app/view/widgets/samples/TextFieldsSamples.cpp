@@ -9,6 +9,7 @@
 #include <QSizePolicy>
 #include <QVBoxLayout>
 
+#include "components/basicinput/Button.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/menus_toolbars/MenuBar.h"
 #include "components/textfields/AutoSuggestBox.h"
@@ -25,6 +26,7 @@
 namespace fluent::gallery {
 namespace {
 
+using fluent::basicinput::Button;
 using fluent::menus_toolbars::FluentMenu;
 using fluent::menus_toolbars::FluentMenuBar;
 using fluent::textfields::AutoSuggestBox;
@@ -786,6 +788,52 @@ QVector<GallerySample> textEditSamples()
                 textEdit->setPlainText(QStringLiteral("Alpha\nBeta\nGamma\nDelta\nEpsilon\nZeta"));
                 textEdit->setFixedWidth(360);
                 return textEdit;
+            }),
+        makeSample(QStringLiteral("text-edit-log-append"), QStringLiteral("Append plain-text logs"),
+            QStringLiteral(
+                "Append records to a read-only log. New records follow the bottom while earlier records stay in view when you scroll up."),
+            QStringLiteral(
+                "auto* log = new TextEdit(this);\n"
+                "log->setAccessibleName(\"Activity log\");\n"
+                "log->setReadOnly(true);\n"
+                "log->setMinVisibleLines(3);\n"
+                "log->setMaxVisibleLines(3);\n"
+                "log->setPlaceholderText(\"No log entries\");\n"
+                "log->appendPlainText(\"INFO Connection opened\\nINFO Waiting for records\");\n"
+                "auto* appendButton = new Button(\"Append entry\", this);\n"
+                "auto* clearButton = new Button(\"Clear\", this);\n"
+                "connect(appendButton, &Button::clicked, log, [log] {\n"
+                "    log->appendPlainText(\"INFO Received: <ready>\");\n"
+                "});\n"
+                "connect(clearButton, &Button::clicked, log, &TextEdit::clear);"),
+            [](QWidget* parent) {
+                auto* surface = textFieldSurface(parent);
+                auto* layout = static_cast<QVBoxLayout*>(surface->layout());
+                auto* log = new TextEdit(surface);
+                log->setObjectName(QStringLiteral("appendLog"));
+                log->setAccessibleName(QStringLiteral("Activity log"));
+                log->setReadOnly(true);
+                log->setMinVisibleLines(3);
+                log->setMaxVisibleLines(3);
+                log->setPlaceholderText(QStringLiteral("No log entries"));
+                log->setFixedWidth(360);
+                log->appendPlainText(QStringLiteral("INFO Connection opened\nINFO Waiting for records"));
+                layout->addWidget(log);
+                auto* actions = new QHBoxLayout();
+                actions->setSpacing(8);
+                auto* appendButton = new Button(QStringLiteral("Append entry"), surface);
+                appendButton->setObjectName(QStringLiteral("appendLogEntry"));
+                auto* clearButton = new Button(QStringLiteral("Clear"), surface);
+                clearButton->setObjectName(QStringLiteral("clearLog"));
+                QObject::connect(appendButton, &Button::clicked, log, [log] {
+                    log->appendPlainText(QStringLiteral("INFO Received: <ready>"));
+                });
+                QObject::connect(clearButton, &Button::clicked, log, &TextEdit::clear);
+                actions->addWidget(appendButton);
+                actions->addWidget(clearButton);
+                actions->addStretch();
+                layout->addLayout(actions);
+                return surface;
             }),
         makeSample(QStringLiteral("text-edit-read-only"), QStringLiteral("Read-only text surface"),
             QStringLiteral("Read-only text keeps the Fluent frame and typography while blocking edits."),
