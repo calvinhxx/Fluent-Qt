@@ -854,8 +854,29 @@ TEST_F(GallerySpatialTest, SupportBadgesReceiveHoverAtTheirProjectedPositions)
             tooltip->setAnimationEnabled(false);
             window.raise();
             window.activateWindow();
-            QTest::mouseMove(&window, QPoint(window.width() / 2, 25));
-            QTest::mouseMove(&window, controller->projectedPosition(badge, badge->rect().center()));
+            ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+            ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+            QGuiApplication::sync();
+            // Native placement can finish after exposure; hover needs a settled global target.
+            QRect settledGeometry = window.geometry();
+            QElapsedTimer geometryUnchanged;
+            geometryUnchanged.start();
+            ASSERT_TRUE(QTest::qWaitFor(
+                [&] {
+                    const QRect current = window.geometry();
+                    if (current != settledGeometry) {
+                        settledGeometry = current;
+                        geometryUnchanged.restart();
+                    }
+                    return geometryUnchanged.elapsed() >= 100;
+                },
+                2000));
+            // Deliver both moves through QWindow; cursor-only relocations can coalesce before dispatch.
+            auto* handle = window.windowHandle();
+            QTest::mouseMove(handle, handle->mapFromGlobal(window.mapToGlobal(QPoint(window.width() / 2, 25))));
+            QTest::mouseMove(handle,
+                handle->mapFromGlobal(
+                    window.mapToGlobal(controller->projectedPosition(badge, badge->rect().center()))));
             ASSERT_TRUE(QTest::qWaitFor([&] { return bool(tooltip->isVisible()); }, 3000));
             const auto point = controller->projectedPosition(badge, badge->rect().center());
             QHelpEvent help(QEvent::ToolTip, point, window.mapToGlobal(point));
@@ -2441,8 +2462,21 @@ TEST_F(GallerySpatialTest, NativeStackTransitionsRemainVisibleAcrossPaintStrips)
     auto* scroll = window.currentContentPage()->findChild<scrolling::ScrollView*>();
     ASSERT_NE(stack, nullptr);
     ASSERT_NE(scroll, nullptr);
-    scroll->verticalScrollBar()->setValue(0);
-    QTest::qWait(100);
+    const auto revealStack = [&] {
+        QRect previous;
+        return QTest::qWaitFor(
+            [&] {
+                scroll->ensureWidgetVisible(stack, 0, 0);
+                const QRect current(stack->mapTo(scroll->viewport(), QPoint()), stack->size());
+                const bool settled = current == previous;
+                previous = current;
+                return settled && scroll->viewport()->rect().contains(current);
+            },
+            3000);
+    };
+    // Native window managers can clamp the requested size at high DPI. Keep the
+    // transition surface inside the actual viewport before sampling either path.
+    ASSERT_TRUE(revealStack());
     basicinput::Button* push = nullptr;
     for (auto* b : stack->parentWidget()->findChildren<basicinput::Button*>())
         if (b->text() == "Push page")
@@ -2465,6 +2499,7 @@ TEST_F(GallerySpatialTest, NativeStackTransitionsRemainVisibleAcrossPaintStrips)
         for (bool spatial : {true, false}) {
             settings.setSpatialModeEnabled(spatial);
             controller->cancelTransition();
+            ASSERT_TRUE(revealStack());
             QTest::qWait(30);
             for (int time : {0, 250, 500, 750, 999}) {
                 animation->setCurrentTime(time);

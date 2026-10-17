@@ -1408,6 +1408,23 @@ def validate_pr_change_classification_contract(orchestrator: str) -> list[str]:
     return errors
 
 
+def validate_ci_source_contracts_contract(orchestrator: str) -> list[str]:
+    """Keep isolated font checks and the existing source preflight unconditional."""
+    active = "\n".join(uncommented_workflow_lines(orchestrator)) + "\n"
+    step = named_step_section(job_section(active, "plan"), "Validate CI orchestration contracts")
+    lines = uncommented_workflow_lines(step)
+    expected_prefix = [
+        "      - name: Validate CI orchestration contracts",
+        "        shell: bash",
+        "        run: |",
+        "          python3 .github/scripts/check-ci-source-contracts.py",
+    ]
+    step_keys = [line.strip() for line in lines if leading_space_count(line) == 8]
+    if lines[:len(expected_prefix)] != expected_prefix or step_keys != ["shell: bash", "run: |"]:
+        return ["ci.yml source contracts must unconditionally execute the isolated typography and preflight entry point"]
+    return []
+
+
 def validate_ci_gate_execution_contract(orchestrator: str) -> list[str]:
     """Keep orchestration failures and missing classification outputs closed."""
     active = "\n".join(uncommented_workflow_lines(orchestrator)) + "\n"
@@ -1555,6 +1572,7 @@ def validate_boundaries() -> list[str]:
     active_orchestrator_lines = uncommented_workflow_lines(orchestrator)
     active_orchestrator = "\n".join(active_orchestrator_lines) + "\n"
     errors.extend(validate_pr_change_classification_contract(orchestrator))
+    errors.extend(validate_ci_source_contracts_contract(orchestrator))
     errors.extend(validate_ci_gate_execution_contract(orchestrator))
     for name in sorted(EXPECTED_JOBS.keys() - {"ci.yml", "ci-cpp.yml"}):
         errors.extend(validate_job_level_contracts(name, contents[name]))

@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import fluentqt
 from fluentqt._qt_compat import delete_qobject as delete
-from PySide6.QtCore import QMarginsF, QPoint, QRect, QSize, QSizeF, Qt
+from PySide6.QtCore import QEventLoop, QMarginsF, QPoint, QRect, QSize, QSizeF, Qt, QTimer
 from PySide6.QtGui import QColor, QOpenGLContext, QPainter, QPalette, QRegion
 from PySide6.QtOpenGL import QOpenGLFramebufferObject, QOpenGLFramebufferObjectFormat, QOpenGLPaintDevice
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
@@ -29,6 +29,12 @@ class _Foreground(QWidget):
         painter.setPen(QColor(255, 255, 255, 176))
         painter.drawText(self.rect().adjusted(12, 8, -12, -8), Qt.AlignCenter, "Foreground Aa 123")
         painter.end()
+
+
+def _qwait(delay_ms):
+    loop = QEventLoop()
+    QTimer.singleShot(delay_ms, loop.quit)
+    loop.exec()
 
 
 def _format():
@@ -171,7 +177,7 @@ class GalleryParticleCompositorTest(unittest.TestCase):
         for _ in range(40):
             if surface.isValid():
                 break
-            QTest.qWait(25)
+            _qwait(25)
         self.assertTrue(surface.isValid())
         surface.makeCurrent()
         return surface
@@ -299,7 +305,7 @@ class GalleryParticleCompositorTest(unittest.TestCase):
             for _ in range(60):
                 if requested.count() >= 2:
                     break
-                QTest.qWait(25)
+                _qwait(25)
             self.assertGreaterEqual(requested.count(), 2)
             surface.makeCurrent()
             self.assertGreater(compositor.requiredBytes(root, 2, QSize(3360, 2450), 2, 3.5, True), 0)

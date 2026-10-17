@@ -31,7 +31,7 @@ FLUENT_ICONS_DIR = ROOT / "third_party" / "icons" / "fluentui-system-icons"
 ICON_SOURCE = FLUENT_ICONS_DIR / "FluentSystemIcons-Regular.ttf"
 ICON_CATALOG_SOURCE = FLUENT_ICONS_DIR / "FluentSystemIcons-Regular.json"
 ICON_ALIASES_SOURCE = ROOT / "tools" / "fonts" / "fluent_icon_aliases.json"
-TYPOGRAPHY_HEADER = ROOT / "src" / "design" / "Typography.h"
+TYPOGRAPHY_SOURCE = ROOT / "src" / "design" / "Typography.cpp"
 
 FONTTOOLS_VERSION = "4.59.1"
 SOURCE_SHA256 = {
@@ -277,13 +277,13 @@ def check_web_fallback_output() -> None:
 
 
 def typography_icon_codepoints() -> dict[str, int]:
-    source = TYPOGRAPHY_HEADER.read_text(encoding="utf-8")
+    source = TYPOGRAPHY_SOURCE.read_text(encoding="utf-8")
     matches = re.findall(
         r'const QString\s+(\w+)\s*=\s*QString::fromUtf16\(u"\\u([0-9A-Fa-f]{4})"\);',
         source,
     )
     if not matches:
-        raise RuntimeError(f"No icon codepoints found in {TYPOGRAPHY_HEADER}")
+        raise RuntimeError(f"No icon codepoints found in {TYPOGRAPHY_SOURCE}")
     return {name: int(value, 16) for name, value in matches}
 
 

@@ -4952,8 +4952,8 @@ class FluentQtBindingTest(unittest.TestCase):
                 second.addMenu(third)
                 leaf = third.addAction("Descending")
                 leaf.setCheckable(True)
-                action = QAction("View", host)
-                action.setMenu(menu)
+                # QAction.setMenu is not exposed by PySide6 6.2.
+                action = menu.menuAction()
                 if location.startswith("flyout"):
                     surface = fluentqt.CommandBarFlyout(host)
                     surface.setAnimationEnabled(False)
@@ -4982,7 +4982,7 @@ class FluentQtBindingTest(unittest.TestCase):
                 self.assertFalse(presenter.hasFocusVisual())
                 QTest.keyClick(menu, Qt.Key_Escape)
                 self.app.processEvents()
-                QTest.qWait(1)
+                wait_for_events(1)
                 self.assertFalse(menu.isVisible())
                 # The offscreen backend can deactivate the host when a popup closes.
                 host.activateWindow()
@@ -5009,7 +5009,7 @@ class FluentQtBindingTest(unittest.TestCase):
                 self.assertTrue(leaf.isChecked())
                 self.assertFalse(menu.isVisible())
                 self.assertIs(menu.parent(), host)
-                self.assertIs(action.parent(), host)
+                self.assertIs(action.parent(), menu)
                 if location.startswith("flyout"):
                     self.assertFalse(surface.isOpen())
                 elif location != "inline":
@@ -5118,7 +5118,7 @@ class FluentQtBindingTest(unittest.TestCase):
                         Qt.NoButton, Qt.NoButton, Qt.NoModifier,
                     ),
                 )
-            QTest.qWait(160)
+            wait_for_events(160)
             self.assertTrue(submenu.isVisible())
             self.assertIs(menu.activeAction(), branch)
             self.assertEqual(hidden, [])

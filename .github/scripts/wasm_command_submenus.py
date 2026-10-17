@@ -76,6 +76,11 @@ def run_command_submenus_contract(
             entry = (page.get_by_role("button", name="Open view commands", exact=True)
                      if route == "command-bar-flyout" else item("View"))
             expect(entry).to_be_visible()
+            # Loader completion and AX discovery can precede splash dismissal.
+            # Its QWidget still intercepts wheel input until the cover is hidden.
+            expect(page.locator(
+                '[id$=".gallerySplashScreen"][aria-hidden="false"]'
+            )).to_have_count(0, timeout=15_000)
             before = entry.bounding_box()
             scrollbar = page.locator(
                 '[role="scrollbar"][aria-hidden="false"][id*=".galleryContentScrollArea."]'
@@ -86,7 +91,25 @@ def run_command_submenus_contract(
             # final card. Scroll the real Qt page instead of moving AX proxies.
             page.mouse.move(1300, 750)
             page.mouse.wheel(0, 10000)
-            page.wait_for_timeout(500)
+            # Wait for real movement and its animated position to settle, rather
+            # than continuing with an offscreen target when no wheel was handled.
+            page.wait_for_function(
+                """([bar, initial]) => new Promise(resolve => {
+                    let previous = initial;
+                    let unchanged = 0;
+                    const observe = () => {
+                        const current = Number(bar.getAttribute('aria-valuenow'));
+                        unchanged = current > initial && current === previous
+                            ? unchanged + 1 : 0;
+                        previous = current;
+                        if (unchanged >= 2) resolve(current);
+                        else requestAnimationFrame(observe);
+                    };
+                    requestAnimationFrame(observe);
+                })""",
+                arg=[scrollbar.element_handle(), scroll_before],
+                timeout=5_000,
+            )
             after = entry.bounding_box()
             if before is None or after is None:
                 raise RuntimeError(f"{route}: missing sample entry geometry")
@@ -165,6 +188,7 @@ def run_command_submenus_contract(
                 "location": location,
                 "status": "pass",
                 "input": "browser mouse and keyboard",
+                "page_scroll_delta": scroll_delta,
                 "cascade_row_centers": centers,
             })
         except Exception:

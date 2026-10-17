@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import ast
 import importlib.util
 import re
 import subprocess
@@ -328,6 +329,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
             ".github/scripts/run-wasm-browser-smoke.py",
             ".github/scripts/run-wasm-plugin-smoke.py",
             ".github/scripts/run-wasm-qml-bridge-smoke.py",
+            ".github/scripts/run-wasm-qmlplus-smoke.py",
             ".github/scripts/run-wasm-spatial-smoke.py",
             ".github/scripts/test_wasm_browser_smoke.py",
             ".github/scripts/test_wasm_spatial_smoke.py",
@@ -345,6 +347,40 @@ class ClassifyCiChangesTest(unittest.TestCase):
             pyside=False,
             wasm=True,
         )
+
+    def test_command_submenu_smoke_helper_alone_runs_wasm(self):
+        self.assert_classification(
+            [".github/scripts/wasm_command_submenus.py"],
+            native=True,
+            pyside=False,
+            wasm=True,
+        )
+
+    def test_browser_smoke_local_dependencies_run_wasm(self):
+        directory = SCRIPT.parent
+        pending = [directory / "run-wasm-browser-smoke.py"]
+        visited = set()
+        while pending:
+            script = pending.pop()
+            if script in visited:
+                continue
+            visited.add(script)
+            tree = ast.parse(script.read_text(encoding="utf-8"), filename=str(script))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    modules = [alias.name for alias in node.names]
+                elif isinstance(node, ast.ImportFrom) and node.module:
+                    modules = [node.module]
+                else:
+                    continue
+                for module in modules:
+                    dependency = directory / (module.split(".", 1)[0] + ".py")
+                    if dependency.is_file():
+                        pending.append(dependency)
+        for script in visited:
+            path = script.relative_to(PROJECT_ROOT).as_posix()
+            with self.subTest(path=path):
+                self.assert_classification([path], native=True, pyside=False, wasm=True)
 
     def test_shared_plugin_example_change_runs_native_and_wasm(self):
         for path in (

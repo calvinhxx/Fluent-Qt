@@ -120,17 +120,13 @@ struct WindowVisualLauncher {
 
 class RuntimeCapabilitiesScope final {
 public:
-    explicit RuntimeCapabilitiesScope(
-        const compatibility::detail::RuntimePlatformCapabilities& capabilities)
+    explicit RuntimeCapabilitiesScope(const compatibility::detail::RuntimePlatformCapabilities& capabilities)
         : m_previous(compatibility::detail::runtimePlatformCapabilities())
     {
         compatibility::detail::setRuntimePlatformCapabilities(capabilities);
     }
 
-    ~RuntimeCapabilitiesScope()
-    {
-        compatibility::detail::setRuntimePlatformCapabilities(m_previous);
-    }
+    ~RuntimeCapabilitiesScope() { compatibility::detail::setRuntimePlatformCapabilities(m_previous); }
 
 private:
     compatibility::detail::RuntimePlatformCapabilities m_previous;
@@ -142,8 +138,8 @@ QImage renderBackdropMaterial(BackdropEffect effect, bool dark = false)
     QImage image(size, QImage::Format_ARGB32_Premultiplied);
     image.fill(Qt::transparent);
 
-    WindowBackdropMaterialOptions options = WindowBackdropMaterialOptions::forTheme(
-        dark, dark ? QColor(32, 32, 32) : QColor(243, 243, 243), QColor(0, 120, 212));
+    WindowBackdropMaterialOptions options = WindowBackdropMaterialOptions::forTheme(dark,
+        dark ? QColor(32, 32, 32) : QColor(243, 243, 243), QColor(0, 120, 212));
     options.effect = effect;
     options.active = true;
     options.devicePixelRatio = 1.0;
@@ -203,8 +199,7 @@ Button* createTitleBarIconButton(const QString& glyph, QWidget* parent)
 
 QIcon createWindowAppIcon()
 {
-    const qreal dpr =
-        qApp && qApp->primaryScreen() ? qApp->primaryScreen()->devicePixelRatio() : qreal(1);
+    const qreal dpr = qApp && qApp->primaryScreen() ? qApp->primaryScreen()->devicePixelRatio() : qreal(1);
 
     QPixmap pixmap(QSize(qRound(TitleBarAppIconSize * dpr), qRound(TitleBarAppIconSize * dpr)));
     pixmap.setDevicePixelRatio(dpr);
@@ -214,21 +209,19 @@ QIcon createWindowAppIcon()
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setPen(Qt::NoPen);
     painter.setBrush(QColor("#0078D4"));
-    painter.drawRoundedRect(
-        QRectF(0.75, 0.75, TitleBarAppIconSize - 1.5, TitleBarAppIconSize - 1.5), 2.5, 2.5);
+    painter.drawRoundedRect(QRectF(0.75, 0.75, TitleBarAppIconSize - 1.5, TitleBarAppIconSize - 1.5), 2.5, 2.5);
 
     QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(8);
     painter.setFont(iconFont);
     painter.setPen(Qt::white);
     painter.drawText(QRectF(0, 0, TitleBarAppIconSize, TitleBarAppIconSize), Qt::AlignCenter,
-                     Typography::Icons::AppIconDefault);
+        Typography::Icons::AppIconDefault);
 
     return QIcon(pixmap);
 }
 
-void anchorFromLeft(AnchorLayout* layout, QWidget* widget, TitleBar* titleBar, QWidget* target,
-                    Edge edge, int offset)
+void anchorFromLeft(AnchorLayout* layout, QWidget* widget, TitleBar* titleBar, QWidget* target, Edge edge, int offset)
 {
     AnchorLayout::Anchors anchors;
     anchors.left = {target, edge, offset};
@@ -236,8 +229,7 @@ void anchorFromLeft(AnchorLayout* layout, QWidget* widget, TitleBar* titleBar, Q
     layout->addAnchoredWidget(widget, anchors);
 }
 
-void anchorFromRight(AnchorLayout* layout, QWidget* widget, TitleBar* titleBar, QWidget* target,
-                     Edge edge, int offset)
+void anchorFromRight(AnchorLayout* layout, QWidget* widget, TitleBar* titleBar, QWidget* target, Edge edge, int offset)
 {
     AnchorLayout::Anchors anchors;
     anchors.right = {target, edge, offset};
@@ -259,9 +251,8 @@ AutoSuggestBox* createTitleBarSearch(TitleBar* titleBar)
 {
     auto* search = new AutoSuggestBox(titleBar);
     search->setPlaceholderText("Search...");
-    search->setSuggestions(QStringList{QStringLiteral("TitleBar"),
-                                       QStringLiteral("WindowChromeCompat"),
-                                       QStringLiteral("AutoSuggestBox")});
+    search->setSuggestions(QStringList{QStringLiteral("TitleBar"), QStringLiteral("WindowChromeCompat"),
+        QStringLiteral("AutoSuggestBox")});
     search->setQueryIconVisible(false);
     search->setFontRole(Typography::FontRole::Caption);
     search->setSuggestionFontRole(Typography::FontRole::Caption);
@@ -279,8 +270,9 @@ Label* createTitleBarAvatar(TitleBar* titleBar)
     avatar->setObjectName(QStringLiteral("titleBarAvatar"));
     avatar->setAlignment(Qt::AlignCenter);
     avatar->setFixedSize(TitleBarAvatarSize, TitleBarAvatarSize);
-    avatar->setStyleSheet("#titleBarAvatar { background: #E1DFDD; color: #323130; border-radius: "
-                          "12px; font-weight: 600; font-size: 11px; }");
+    avatar->setStyleSheet(
+        "#titleBarAvatar { background: #E1DFDD; color: #323130; border-radius: "
+        "12px; font-weight: 600; font-size: 11px; }");
     return avatar;
 }
 
@@ -294,10 +286,8 @@ void createTitleBarContent(Window* window)
 
     auto* appIcon = new Label(titleBar);
     appIcon->setFixedSize(TitleBarAppIconSize, TitleBarAppIconSize);
-    appIcon->setPixmap(
-        createWindowAppIcon().pixmap(QSize(TitleBarAppIconSize, TitleBarAppIconSize)));
-    anchorFromLeft(layout, appIcon, titleBar, titleBar, Edge::Left,
-                   titleBar->systemReservedLeadingWidth() + 8);
+    appIcon->setPixmap(createWindowAppIcon().pixmap(QSize(TitleBarAppIconSize, TitleBarAppIconSize)));
+    anchorFromLeft(layout, appIcon, titleBar, titleBar, Edge::Left, titleBar->systemReservedLeadingWidth() + 8);
 
     auto* pane = createTitleBarIconButton(Typography::Icons::GlobalNav, titleBar);
     anchorFromLeft(layout, pane, titleBar, appIcon, Edge::Right, 10);
@@ -312,8 +302,7 @@ void createTitleBarContent(Window* window)
     anchorFromLeft(layout, search, titleBar, title, Edge::Right, 12);
 
     auto* avatar = createTitleBarAvatar(titleBar);
-    anchorFromRight(layout, avatar, titleBar, titleBar, Edge::Right,
-                    -(titleBar->systemReservedTrailingWidth() + 8));
+    anchorFromRight(layout, avatar, titleBar, titleBar, Edge::Right, -(titleBar->systemReservedTrailingWidth() + 8));
 
     auto* favorite = createTitleBarIconButton(Typography::Icons::FavoriteStar, titleBar);
     anchorFromRight(layout, favorite, titleBar, avatar, Edge::Left, -6);
@@ -336,12 +325,12 @@ QWidget* createWindowContent()
     heading->setFluentTypography(Typography::FontRole::Title);
     contentLayout->addWidget(heading);
 
-    auto* body =
-        new Label("On macOS, native traffic lights stay on the left; repeatedly drag the empty "
-                  "title-bar area with the built-in trackpad to verify native system movement. "
-                  "On Windows, the caption buttons are drawn by Qt while DWM still provides "
-                  "resize, Snap, shadow, and maximize geometry.",
-                  content);
+    auto* body = new Label(
+        "On macOS, native traffic lights stay on the left; repeatedly drag the empty "
+        "title-bar area with the built-in trackpad to verify native system movement. "
+        "On Windows, the caption buttons are drawn by Qt while DWM still provides "
+        "resize, Snap, shadow, and maximize geometry.",
+        content);
     body->setFluentTypography(Typography::FontRole::Body);
     body->setWordWrap(true);
     contentLayout->addWidget(body);
@@ -432,12 +421,9 @@ TEST_F(WindowTest, DefaultConstructionCreatesChromeAndContentHost)
     EXPECT_EQ(window.titleBar()->sizeHint().height(), window.titleBar()->titleBarHeight());
     EXPECT_EQ(window.graphicsEffect(), nullptr);
 
-    const bool linuxPlatform =
-        WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::Linux;
-    EXPECT_EQ(window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameHost")) != nullptr,
-              linuxPlatform);
-    EXPECT_EQ(window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameEdgeOverlay")) != nullptr,
-              linuxPlatform);
+    const bool linuxPlatform = WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::Linux;
+    EXPECT_EQ(window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameHost")) != nullptr, linuxPlatform);
+    EXPECT_EQ(window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameEdgeOverlay")) != nullptr, linuxPlatform);
 }
 
 TEST_F(WindowTest, RuntimeCanUseOpaqueTitleBarAndCachedPaintedSurface)
@@ -507,8 +493,8 @@ TEST_F(WindowTest, PaintedSurfaceCacheTracksEffectChangesFromTheFirstFrame)
         return frame;
     };
     QImage previousMaterial;
-    for (BackdropEffect effect : {BackdropEffect::Acrylic, BackdropEffect::Mica,
-                                  BackdropEffect::Solid, BackdropEffect::Acrylic}) {
+    for (BackdropEffect effect :
+        {BackdropEffect::Acrylic, BackdropEffect::Mica, BackdropEffect::Solid, BackdropEffect::Acrylic}) {
         SCOPED_TRACE(static_cast<int>(effect));
         const int generation = window.property("fluentPaintedSurfaceCacheGeneration").toInt();
         window.setBackdropEffect(effect);
@@ -518,14 +504,12 @@ TEST_F(WindowTest, PaintedSurfaceCacheTracksEffectChangesFromTheFirstFrame)
         if (!previousMaterial.isNull())
             EXPECT_FALSE(material == previousMaterial);
         previousMaterial = material;
-        const int updatedGeneration =
-            window.property("fluentPaintedSurfaceCacheGeneration").toInt();
+        const int updatedGeneration = window.property("fluentPaintedSurfaceCacheGeneration").toInt();
         EXPECT_EQ(updatedGeneration, generation + (effect == BackdropEffect::Solid ? 0 : 1));
 
         window.setBackdropEffect(effect); // A no-op must keep the already rendered material.
         EXPECT_EQ(renderFrame(), firstFrame);
-        EXPECT_EQ(window.property("fluentPaintedSurfaceCacheGeneration").toInt(),
-                  updatedGeneration);
+        EXPECT_EQ(window.property("fluentPaintedSurfaceCacheGeneration").toInt(), updatedGeneration);
     }
 }
 
@@ -543,8 +527,7 @@ TEST_F(WindowTest, ApplicationSuppliesCaptionButtonAccessibleNames)
     EXPECT_TRUE(maximizeButton->accessibleName().isEmpty());
     EXPECT_TRUE(closeButton->accessibleName().isEmpty());
 
-    window.setCaptionButtonAccessibleNames(
-        QStringLiteral("Minimize window"), QStringLiteral("Maximize window"),
+    window.setCaptionButtonAccessibleNames(QStringLiteral("Minimize window"), QStringLiteral("Maximize window"),
         QStringLiteral("Close window"), QStringLiteral("Restore window"));
     EXPECT_EQ(minimizeButton->accessibleName(), QStringLiteral("Minimize window"));
     EXPECT_EQ(maximizeButton->accessibleName(), QStringLiteral("Maximize window"));
@@ -582,8 +565,7 @@ TEST_F(WindowTest, NativeMacModeUsesUnifiedTitleBar)
 {
     Window window;
     const bool customChrome = WindowChromeCompat::platformPrefersCustomWindowChrome();
-    const bool macPlatform =
-        (WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::MacOS);
+    const bool macPlatform = (WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::MacOS);
     const bool cocoaRuntime = QGuiApplication::platformName() == QStringLiteral("cocoa");
 
     if (macPlatform) {
@@ -599,12 +581,9 @@ TEST_F(WindowTest, NativeMacModeUsesUnifiedTitleBar)
     EXPECT_EQ(window.titleBar()->systemReservedTrailingWidth() > 0, selfDrawnCaptionButtons);
 
     if (macPlatform) {
-        const bool expandedClientAreaHintsAvailable =
-            WindowChromeCompat::expandedClientAreaHintsAvailable();
-        EXPECT_EQ(WindowChromeCompat::windowHasExpandedClientAreaHint(&window),
-                  expandedClientAreaHintsAvailable);
-        EXPECT_EQ(WindowChromeCompat::windowHasNoTitleBarBackgroundHint(&window),
-                  expandedClientAreaHintsAvailable);
+        const bool expandedClientAreaHintsAvailable = WindowChromeCompat::expandedClientAreaHintsAvailable();
+        EXPECT_EQ(WindowChromeCompat::windowHasExpandedClientAreaHint(&window), expandedClientAreaHintsAvailable);
+        EXPECT_EQ(WindowChromeCompat::windowHasNoTitleBarBackgroundHint(&window), expandedClientAreaHintsAvailable);
         if (expandedClientAreaHintsAvailable)
             EXPECT_FALSE(window.testAttribute(Qt::WA_ContentsMarginsRespectsSafeArea));
     }
@@ -677,12 +656,12 @@ TEST_F(WindowTest, BackdropBackingStoreMatchesResolvedSurface)
 
     const int clientFrameMargin = window.chromeFrameRect().left();
     const BackdropState state = window.backdropState();
-    const bool hasBackdropSurface =
-        state.surfaceMode == BackdropSurfaceMode::CompositedTransparent || clientFrameMargin > 0;
+    const bool hasBackdropSurface = state.surfaceMode == BackdropSurfaceMode::CompositedTransparent
+        || clientFrameMargin > 0;
     if (!window.testAttribute(Qt::WA_TranslucentBackground) || !hasBackdropSurface) {
         SCOPED_TRACE(QStringLiteral("provider=%1 reason=%2")
-                         .arg(window.backdropCapabilities().provider, state.reason)
-                         .toStdString());
+                .arg(window.backdropCapabilities().provider, state.reason)
+                .toStdString());
         QImage fallback(window.size(), QImage::Format_ARGB32_Premultiplied);
         fallback.fill(Qt::transparent);
         QPainter fallbackPainter(&fallback);
@@ -704,8 +683,7 @@ TEST_F(WindowTest, BackdropBackingStoreMatchesResolvedSurface)
     painter.end();
 
     if (clientFrameMargin > 0) {
-        EXPECT_LT(image.pixelColor(QPoint(clientFrameMargin / 2, clientFrameMargin / 2)).alpha(),
-                  255)
+        EXPECT_LT(image.pixelColor(QPoint(clientFrameMargin / 2, clientFrameMargin / 2)).alpha(), 255)
             << "A Linux client-side frame must clear stale opaque pixels outside the rounded body";
         if (state.surfaceMode == BackdropSurfaceMode::CompositedTransparent) {
             EXPECT_LT(image.pixelColor(window.rect().center()).alpha(), 255)
@@ -730,8 +708,7 @@ TEST_F(WindowTest, BackdropBackingStoreMatchesResolvedSurface)
         EXPECT_EQ(applied.requestedEffect, effect);
         EXPECT_EQ(applied.effectiveEffect, effect);
         if (capabilities.supportsTransparentMaterial(effect)) {
-            EXPECT_EQ(applied.surfaceMode, BackdropSurfaceMode::CompositedTransparent)
-                << applied.reason.toStdString();
+            EXPECT_EQ(applied.surfaceMode, BackdropSurfaceMode::CompositedTransparent) << applied.reason.toStdString();
             EXPECT_TRUE(applied.platformApplied) << applied.reason.toStdString();
         } else {
             EXPECT_EQ(applied.backend, BackdropBackend::PaintedMaterial);
@@ -764,12 +741,10 @@ TEST_F(WindowTest, BackdropEffectSwitchesModes)
         EXPECT_EQ(state.effectiveEffect, effect);
         EXPECT_EQ(state.surfaceMode, expectedSurfaceMode);
         EXPECT_EQ(fluent::windowing::windowBackdropState(&window), state);
-        EXPECT_EQ(window.property("fluentWindowBackdropEffect").toInt(),
-                  static_cast<int>(state.requestedEffect));
+        EXPECT_EQ(window.property("fluentWindowBackdropEffect").toInt(), static_cast<int>(state.requestedEffect));
         EXPECT_EQ(window.property("fluentMicaBackdrop").toBool(),
-                  state.surfaceMode == BackdropSurfaceMode::CompositedTransparent);
-        EXPECT_EQ(window.property("fluentBackdropSurfaceMode").toInt(),
-                  static_cast<int>(state.surfaceMode));
+            state.surfaceMode == BackdropSurfaceMode::CompositedTransparent);
+        EXPECT_EQ(window.property("fluentBackdropSurfaceMode").toInt(), static_cast<int>(state.surfaceMode));
         EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
     };
 
@@ -784,28 +759,28 @@ TEST_F(WindowTest, BackdropEffectSwitchesModes)
 TEST_F(WindowTest, OpaqueBackdropCommitAppliesToEveryNativeBackend)
 {
     Window window;
-    for (const auto backend : {BackdropBackend::DwmSystemBackdrop, BackdropBackend::MacVibrancy,
-                               BackdropBackend::LinuxCompositor}) {
+    for (const auto backend :
+        {BackdropBackend::DwmSystemBackdrop, BackdropBackend::MacVibrancy, BackdropBackend::LinuxCompositor}) {
         SCOPED_TRACE(static_cast<int>(backend));
         BackdropState previous;
         previous.backend = backend;
         previous.surfaceMode = BackdropSurfaceMode::CompositedTransparent;
-        EXPECT_TRUE(compatibility::detail::requiresOpaqueBackdropCommit(
-            &window, previous, BackdropSurfaceMode::SolidOpaque));
-        EXPECT_TRUE(compatibility::detail::requiresOpaqueBackdropCommit(
-            &window, previous, BackdropSurfaceMode::PaintedOpaque));
-        EXPECT_FALSE(compatibility::detail::requiresOpaqueBackdropCommit(
-            &window, previous, BackdropSurfaceMode::CompositedTransparent));
+        EXPECT_TRUE(
+            compatibility::detail::requiresOpaqueBackdropCommit(&window, previous, BackdropSurfaceMode::SolidOpaque));
+        EXPECT_TRUE(
+            compatibility::detail::requiresOpaqueBackdropCommit(&window, previous, BackdropSurfaceMode::PaintedOpaque));
+        EXPECT_FALSE(compatibility::detail::requiresOpaqueBackdropCommit(&window, previous,
+            BackdropSurfaceMode::CompositedTransparent));
         previous.surfaceMode = BackdropSurfaceMode::PaintedOpaque;
-        EXPECT_FALSE(compatibility::detail::requiresOpaqueBackdropCommit(
-            &window, previous, BackdropSurfaceMode::SolidOpaque));
+        EXPECT_FALSE(
+            compatibility::detail::requiresOpaqueBackdropCommit(&window, previous, BackdropSurfaceMode::SolidOpaque));
     }
 }
 
 TEST_F(WindowTest, FirstShowPreparesThemeBackgroundBeforePainting)
 {
-    for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark,
-                             fluent::FluentElement::HighContrast}) {
+    for (const auto theme :
+        {fluent::FluentElement::Light, fluent::FluentElement::Dark, fluent::FluentElement::HighContrast}) {
         SCOPED_TRACE(static_cast<int>(theme));
         Window window;
         window.setProperty("fluentThemeOverride", static_cast<int>(theme));
@@ -813,8 +788,7 @@ TEST_F(WindowTest, FirstShowPreparesThemeBackgroundBeforePainting)
         window.onThemeUpdated();
         window.resize(520, 360);
         const bool translucent = window.testAttribute(Qt::WA_TranslucentBackground);
-        EXPECT_EQ(window.palette().color(QPalette::Active, QPalette::Window),
-                  window.themeBackdrop(true));
+        EXPECT_EQ(window.palette().color(QPalette::Active, QPalette::Window), window.themeBackdrop(true));
         for (const auto group : {QPalette::Inactive, QPalette::Disabled})
             EXPECT_EQ(window.palette().color(group, QPalette::Window), window.themeBackdrop(false));
         // Native frame realization may change the client rectangle. Backdrop preparation
@@ -825,16 +799,15 @@ TEST_F(WindowTest, FirstShowPreparesThemeBackgroundBeforePainting)
         EXPECT_EQ(window.winId(), nativeId);
         EXPECT_EQ(window.size(), expectedSize);
         EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), translucent);
-        EXPECT_EQ(window.palette().color(QPalette::Window),
-                  window.themeBackdrop(window.isActiveWindow()));
+        EXPECT_EQ(window.palette().color(QPalette::Window), window.themeBackdrop(window.isActiveWindow()));
         window.close();
     }
 }
 
 TEST_F(WindowTest, PaintedFallbackPreparesMaterialBaseColors)
 {
-    for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark,
-                             fluent::FluentElement::HighContrast}) {
+    for (const auto theme :
+        {fluent::FluentElement::Light, fluent::FluentElement::Dark, fluent::FluentElement::HighContrast}) {
         for (const auto effect : {BackdropEffect::Mica, BackdropEffect::Acrylic}) {
             SCOPED_TRACE(::testing::Message() << "theme=" << theme << ", effect=" << int(effect));
             Window window;
@@ -844,19 +817,17 @@ TEST_F(WindowTest, PaintedFallbackPreparesMaterialBaseColors)
             window.setBackdropEffect(effect);
             ASSERT_EQ(window.backdropState().surfaceMode, BackdropSurfaceMode::PaintedOpaque);
             const auto& colors = window.themeColors();
-            auto material = WindowBackdropMaterialOptions::forTheme(
-                window.effectiveThemeUsesDarkAppearance(), colors.bgCanvas, colors.accentDefault);
+            auto material = WindowBackdropMaterialOptions::forTheme(window.effectiveThemeUsesDarkAppearance(),
+                colors.bgCanvas, colors.accentDefault);
             material.effect = effect;
             for (const auto group : {QPalette::Active, QPalette::Inactive, QPalette::Disabled}) {
                 material.active = group == QPalette::Active;
                 EXPECT_EQ(window.palette().color(group, QPalette::Window),
-                          WindowBackdropMaterial::opaqueBaseColor(material));
+                    WindowBackdropMaterial::opaqueBaseColor(material));
             }
             window.setBackdropEffect(BackdropEffect::Solid);
-            EXPECT_EQ(window.palette().color(QPalette::Active, QPalette::Window),
-                      window.themeBackdrop(true));
-            EXPECT_EQ(window.palette().color(QPalette::Inactive, QPalette::Window),
-                      window.themeBackdrop(false));
+            EXPECT_EQ(window.palette().color(QPalette::Active, QPalette::Window), window.themeBackdrop(true));
+            EXPECT_EQ(window.palette().color(QPalette::Inactive, QPalette::Window), window.themeBackdrop(false));
         }
     }
 }
@@ -866,8 +837,7 @@ QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 TEST_F(WindowTest, ActivationSelectsPreparedColorsWithoutPaletteBroadcast)
 {
-    for (const auto effect :
-         {BackdropEffect::Solid, BackdropEffect::Mica, BackdropEffect::Acrylic}) {
+    for (const auto effect : {BackdropEffect::Solid, BackdropEffect::Mica, BackdropEffect::Acrylic}) {
         SCOPED_TRACE(static_cast<int>(effect));
         Window window;
         window.setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
@@ -887,19 +857,18 @@ TEST_F(WindowTest, ActivationSelectsPreparedColorsWithoutPaletteBroadcast)
             QApplication::setActiveWindow(&window);
             ASSERT_TRUE(window.isActiveWindow());
             EXPECT_EQ(compatibility::detail::windowBackdropSurfaceColor(&window),
-                      prepared.color(QPalette::Active, QPalette::Window));
+                prepared.color(QPalette::Active, QPalette::Window));
             QApplication::setActiveWindow(nullptr);
             ASSERT_FALSE(window.isActiveWindow());
             EXPECT_EQ(compatibility::detail::windowBackdropSurfaceColor(&window),
-                      prepared.color(QPalette::Inactive, QPalette::Window));
+                prepared.color(QPalette::Inactive, QPalette::Window));
         }
         EXPECT_EQ(window.palette(), prepared);
         EXPECT_EQ(rootCounter.changes, 0);
         EXPECT_EQ(childCounter.changes, 0);
-        EXPECT_EQ(window.palette().color(QPalette::Active, QPalette::WindowText),
-                  QColor(37, 73, 113));
+        EXPECT_EQ(window.palette().color(QPalette::Active, QPalette::WindowText), QColor(37, 73, 113));
         EXPECT_EQ(compatibility::detail::windowBackdropSurfaceColor(&window),
-                  prepared.color(QPalette::Inactive, QPalette::Window));
+            prepared.color(QPalette::Inactive, QPalette::Window));
     }
 }
 QT_WARNING_POP
@@ -924,12 +893,12 @@ TEST_F(WindowTest, PaletteCallbackCannotPublishASupersededBackdrop)
     EXPECT_EQ(effectSpy.count(), 1);
     EXPECT_EQ(stateSpy.count(), 1);
     const auto& colors = window.themeColors();
-    auto material = WindowBackdropMaterialOptions::forTheme(
-        window.effectiveThemeUsesDarkAppearance(), colors.bgCanvas, colors.accentDefault);
+    auto material = WindowBackdropMaterialOptions::forTheme(window.effectiveThemeUsesDarkAppearance(), colors.bgCanvas,
+        colors.accentDefault);
     material.effect = BackdropEffect::Acrylic;
     material.active = false;
     EXPECT_EQ(compatibility::detail::windowBackdropSurfaceColor(&window),
-              WindowBackdropMaterial::opaqueBaseColor(material));
+        WindowBackdropMaterial::opaqueBaseColor(material));
 }
 
 TEST_F(WindowTest, DisabledHostedSurfaceKeepsThePainterActivationBase)
@@ -942,8 +911,7 @@ TEST_F(WindowTest, DisabledHostedSurfaceKeepsThePainterActivationBase)
     window.setWindowFlags(Qt::Widget);
     window.setEnabled(false);
     window.setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
-    for (const auto effect :
-         {BackdropEffect::Solid, BackdropEffect::Mica, BackdropEffect::Acrylic}) {
+    for (const auto effect : {BackdropEffect::Solid, BackdropEffect::Mica, BackdropEffect::Acrylic}) {
         SCOPED_TRACE(static_cast<int>(effect));
         window.setBackdropEffect(effect);
         window.onThemeUpdated();
@@ -951,17 +919,17 @@ TEST_F(WindowTest, DisabledHostedSurfaceKeepsThePainterActivationBase)
         ASSERT_FALSE(window.isActiveWindow());
         ASSERT_FALSE(window.isEnabled());
         const auto& colors = window.themeColors();
-        auto material = WindowBackdropMaterialOptions::forTheme(
-            window.effectiveThemeUsesDarkAppearance(), colors.bgCanvas, colors.accentDefault);
+        auto material = WindowBackdropMaterialOptions::forTheme(window.effectiveThemeUsesDarkAppearance(),
+            colors.bgCanvas, colors.accentDefault);
         material.effect = effect;
         material.active = true;
         const QColor activeBase = effect == BackdropEffect::Solid
-                                      ? window.themeBackdrop(true)
-                                      : WindowBackdropMaterial::opaqueBaseColor(material);
+            ? window.themeBackdrop(true)
+            : WindowBackdropMaterial::opaqueBaseColor(material);
         material.active = false;
         const QColor inactiveBase = effect == BackdropEffect::Solid
-                                        ? window.themeBackdrop(false)
-                                        : WindowBackdropMaterial::opaqueBaseColor(material);
+            ? window.themeBackdrop(false)
+            : WindowBackdropMaterial::opaqueBaseColor(material);
         EXPECT_EQ(compatibility::detail::windowBackdropSurfaceColor(&window), activeBase);
         EXPECT_EQ(window.palette().color(QPalette::Disabled, QPalette::Window), inactiveBase);
     }
@@ -1001,15 +969,15 @@ TEST_F(WindowTest, CacheRenderDoesNotMarkNativeSurfacePainted)
         renderCaches();
         window.setUpdatesEnabled(true);
         window.show();
-        ASSERT_TRUE(QTest::qWaitFor(
-            [&] { return compatibility::detail::windowBackdropSurfaceWasPainted(&window); }, 2000));
+        ASSERT_TRUE(
+            QTest::qWaitFor([&] { return compatibility::detail::windowBackdropSurfaceWasPainted(&window); }, 2000));
         // An allocated, previously painted backing store must not make a redirected
         // cache capture look like a new native submission either.
         compatibility::detail::resetWindowBackdropSurfacePaint(&window);
         renderCaches();
         window.update();
-        ASSERT_TRUE(QTest::qWaitFor(
-            [&] { return compatibility::detail::windowBackdropSurfaceWasPainted(&window); }, 2000));
+        ASSERT_TRUE(
+            QTest::qWaitFor([&] { return compatibility::detail::windowBackdropSurfaceWasPainted(&window); }, 2000));
         window.setBackdropEffect(BackdropEffect::Acrylic);
         window.onThemeUpdated();
         EXPECT_TRUE(compatibility::detail::windowBackdropSurfaceWasPainted(&window))
@@ -1128,9 +1096,9 @@ TEST_F(WindowTest, WindowsCustomChromeSuppressesNativeCaption)
     QApplication::processEvents();
 
     EXPECT_EQ(WindowChromeCompat::windowHasExpandedClientAreaHint(&window),
-              WindowChromeCompat::expandedClientAreaHintsAvailable());
+        WindowChromeCompat::expandedClientAreaHintsAvailable());
     EXPECT_EQ(WindowChromeCompat::windowHasNoTitleBarBackgroundHint(&window),
-              WindowChromeCompat::expandedClientAreaHintsAvailable());
+        WindowChromeCompat::expandedClientAreaHintsAvailable());
     EXPECT_FALSE(window.windowFlags().testFlag(Qt::FramelessWindowHint));
     EXPECT_FALSE(window.windowFlags().testFlag(Qt::WindowMinimizeButtonHint));
     EXPECT_FALSE(window.windowFlags().testFlag(Qt::WindowMaximizeButtonHint));
@@ -1143,8 +1111,7 @@ TEST_F(WindowTest, WindowsCustomChromeSuppressesNativeCaption)
     ASSERT_NE(window.windowHandle(), nullptr);
 
     const QString platformName = QGuiApplication::platformName().toLower();
-    if (platformName.contains(QStringLiteral("offscreen")) ||
-        platformName.contains(QStringLiteral("minimal"))) {
+    if (platformName.contains(QStringLiteral("offscreen")) || platformName.contains(QStringLiteral("minimal"))) {
         window.close();
         return;
     }
@@ -1174,8 +1141,7 @@ TEST_F(WindowTest, WindowsNativeHitTestRepairsLostResizeStyle)
     QApplication::processEvents();
 
     const QString platformName = QGuiApplication::platformName().toLower();
-    if (platformName.contains(QStringLiteral("offscreen")) ||
-        platformName.contains(QStringLiteral("minimal"))) {
+    if (platformName.contains(QStringLiteral("offscreen")) || platformName.contains(QStringLiteral("minimal"))) {
         window.close();
         GTEST_SKIP() << "Native Win32 hit testing requires the Windows platform plugin";
     }
@@ -1209,8 +1175,7 @@ TEST_F(WindowTest, WindowsNativeHitTestRepairsLostResizeStyle)
     message.lParam = MAKELPARAM(nativeEdge.x, nativeEdge.y);
     result = HTCLIENT;
     EXPECT_TRUE(window.dispatchNativeMessage(&message, &result));
-    EXPECT_EQ(result, HTRIGHT)
-        << "Physical WM_NCHITTEST coordinates must map back to Qt logical pixels";
+    EXPECT_EQ(result, HTRIGHT) << "Physical WM_NCHITTEST coordinates must map back to Qt logical pixels";
 
     window.close();
 #else
@@ -1227,8 +1192,7 @@ TEST_F(WindowTest, WindowsStateTransitionRepairsLostResizeStyle)
     QApplication::processEvents();
 
     const QString platformName = QGuiApplication::platformName().toLower();
-    if (platformName.contains(QStringLiteral("offscreen")) ||
-        platformName.contains(QStringLiteral("minimal"))) {
+    if (platformName.contains(QStringLiteral("offscreen")) || platformName.contains(QStringLiteral("minimal"))) {
         window.close();
         GTEST_SKIP() << "Native Win32 style recovery requires the Windows platform plugin";
     }
@@ -1259,8 +1223,7 @@ TEST_F(WindowTest, WindowsCustomTitleBarSharesNativeCaptionRow)
 {
 #ifdef Q_OS_WIN
     const QString platformName = QGuiApplication::platformName().toLower();
-    if (platformName.contains(QStringLiteral("offscreen")) ||
-        platformName.contains(QStringLiteral("minimal"))) {
+    if (platformName.contains(QStringLiteral("offscreen")) || platformName.contains(QStringLiteral("minimal"))) {
         GTEST_SKIP() << "Native titlebar geometry is not meaningful on this Qt platform";
     }
 
@@ -1318,7 +1281,7 @@ TEST_F(WindowTest, WindowsWinUiLayoutUsesSelfDrawnCaptionButtons)
     EXPECT_EQ(maximizeButton->cornerRadii(), QMargins(0, 0, 0, 0));
     EXPECT_EQ(closeButton->cornerRadii(), QMargins(0, closeButton->themeRadius().control, 0, 0));
     EXPECT_EQ(window.titleBar()->systemReservedTrailingWidth(),
-              minimizeButton->width() + maximizeButton->width() + closeButton->width());
+        minimizeButton->width() + maximizeButton->width() + closeButton->width());
 
     window.close();
 #else
@@ -1428,8 +1391,7 @@ TEST_F(WindowTest, WindowsSelfDrawnCaptionButtonsAreHitTestExclusions)
     auto* closeButton = window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
     ASSERT_NE(closeButton, nullptr);
 
-    const QRect closeButtonRect(closeButton->mapTo(window.titleBar(), QPoint(0, 0)),
-                                closeButton->size());
+    const QRect closeButtonRect(closeButton->mapTo(window.titleBar(), QPoint(0, 0)), closeButton->size());
     compatibility::WindowChromeOptions options;
     options.useCustomWindowChrome = true;
     options.titleBarRect = window.titleBar()->geometry();
@@ -1437,10 +1399,10 @@ TEST_F(WindowTest, WindowsSelfDrawnCaptionButtonsAreHitTestExclusions)
     options.dragExclusionRects = window.titleBar()->dragExclusionRects();
 
     EXPECT_EQ(WindowChromeCompat::classifyHitTest(options, window.size(), closeButtonRect.center()),
-              WindowChromeCompat::HitTest::Client);
-    EXPECT_EQ(WindowChromeCompat::classifyHitTest(
-                  options, window.size(), QPoint(120, window.titleBar()->titleBarHeight() / 2)),
-              WindowChromeCompat::HitTest::Caption);
+        WindowChromeCompat::HitTest::Client);
+    EXPECT_EQ(WindowChromeCompat::classifyHitTest(options, window.size(),
+                  QPoint(120, window.titleBar()->titleBarHeight() / 2)),
+        WindowChromeCompat::HitTest::Caption);
 
     window.close();
 #else
@@ -1527,12 +1489,16 @@ TEST_F(WindowTest, TitleBarAutoSuggestClearButtonWorksWhilePopupOpen)
     createTitleBarContent(&window);
     window.setContentWidget(createWindowContent());
     window.show();
-    QApplication::processEvents();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    window.raise();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+    ASSERT_TRUE(window.isActiveWindow());
 
     auto* search = window.titleBar()->findChild<AutoSuggestBox*>();
     ASSERT_NE(search, nullptr);
     search->setFocus(Qt::OtherFocusReason);
-    QApplication::processEvents();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return search->hasFocus(); }, 1000));
 
     QTest::keyClicks(search, "asdasd");
     QApplication::processEvents();
@@ -1545,8 +1511,7 @@ TEST_F(WindowTest, TitleBarAutoSuggestClearButtonWorksWhilePopupOpen)
     const QPoint clearCenterGlobal = clearButton->mapToGlobal(clearButton->rect().center());
     QWidget* hitWidget = QApplication::widgetAt(clearCenterGlobal);
 #if !defined(Q_OS_WIN) && !defined(Q_OS_MAC)
-    if (!hitWidget &&
-        QGuiApplication::platformName().compare(QStringLiteral("xcb"), Qt::CaseInsensitive) == 0) {
+    if (!hitWidget && QGuiApplication::platformName().compare(QStringLiteral("xcb"), Qt::CaseInsensitive) == 0) {
         hitWidget = clearButton;
     }
 #endif
@@ -1556,8 +1521,7 @@ TEST_F(WindowTest, TitleBarAutoSuggestClearButtonWorksWhilePopupOpen)
 
     EXPECT_TRUE(search->isSuggestionListOpen());
 
-    QTest::mouseClick(hitWidget, Qt::LeftButton, Qt::NoModifier,
-                      hitWidget->mapFromGlobal(clearCenterGlobal));
+    QTest::mouseClick(hitWidget, Qt::LeftButton, Qt::NoModifier, hitWidget->mapFromGlobal(clearCenterGlobal));
     QApplication::processEvents();
 
     EXPECT_TRUE(search->text().isEmpty());
@@ -1575,8 +1539,7 @@ TEST_F(WindowTest, TitleBarDoubleClickEmitsFromNonInteractiveArea)
     QApplication::processEvents();
 
     QSignalSpy doubleClickSpy(&titleBar, &TitleBar::doubleClicked);
-    QTest::mouseDClick(&titleBar, Qt::LeftButton, Qt::NoModifier,
-                       QPoint(320, titleBar.titleBarHeight() / 2));
+    QTest::mouseDClick(&titleBar, Qt::LeftButton, Qt::NoModifier, QPoint(320, titleBar.titleBarHeight() / 2));
 
     EXPECT_EQ(doubleClickSpy.count(), 1);
 }
@@ -1589,7 +1552,7 @@ TEST_F(WindowTest, WindowTitleBarDoubleClickDoesNotCrash)
     QApplication::processEvents();
 
     QTest::mouseDClick(window.titleBar(), Qt::LeftButton, Qt::NoModifier,
-                       QPoint(320, window.titleBar()->titleBarHeight() / 2));
+        QPoint(320, window.titleBar()->titleBarHeight() / 2));
     QApplication::processEvents();
 
     SUCCEED();
@@ -1599,8 +1562,7 @@ TEST_F(WindowTest, WindowsTitleBarDoubleClickTogglesNativeMaximizeRestore)
 {
 #ifdef Q_OS_WIN
     const QString platformName = QGuiApplication::platformName().toLower();
-    if (platformName.contains(QStringLiteral("offscreen")) ||
-        platformName.contains(QStringLiteral("minimal"))) {
+    if (platformName.contains(QStringLiteral("offscreen")) || platformName.contains(QStringLiteral("minimal"))) {
         GTEST_SKIP() << "Native titlebar double-click is not meaningful on this Qt platform";
     }
 
@@ -1610,11 +1572,11 @@ TEST_F(WindowTest, WindowsTitleBarDoubleClickTogglesNativeMaximizeRestore)
     QApplication::processEvents();
 
     QTest::mouseDClick(window.titleBar(), Qt::LeftButton, Qt::NoModifier,
-                       QPoint(320, window.titleBar()->titleBarHeight() / 2));
+        QPoint(320, window.titleBar()->titleBarHeight() / 2));
     ASSERT_TRUE(QTest::qWaitFor([&] { return window.isMaximized(); }, 3000));
 
     QTest::mouseDClick(window.titleBar(), Qt::LeftButton, Qt::NoModifier,
-                       QPoint(320, window.titleBar()->titleBarHeight() / 2));
+        QPoint(320, window.titleBar()->titleBarHeight() / 2));
     ASSERT_TRUE(QTest::qWaitFor([&] { return !window.isMaximized(); }, 3000));
 
     window.close();
@@ -1685,8 +1647,7 @@ TEST_F(WindowTest, ExternalTitleBarActionsCanDriveWindowSlots)
     QSignalSpy closeSpy(&window, &Window::closeRequested);
 
     QObject::connect(minimizeButton, &QPushButton::clicked, &window, &Window::minimizeWindow);
-    QObject::connect(maximizeButton, &QPushButton::clicked, &window,
-                     &Window::toggleMaximizeRestore);
+    QObject::connect(maximizeButton, &QPushButton::clicked, &window, &Window::toggleMaximizeRestore);
     QObject::connect(closeButton, &QPushButton::clicked, &window, &Window::closeWindow);
 
     minimizeButton->click();
@@ -1726,25 +1687,17 @@ TEST_F(WindowTest, WindowingSourcesDoNotContainPlatformMacrosOrNativeHeaders)
 #endif
 
     const QString sourceDir = QString::fromUtf8(PROJECT_SOURCE_DIR) + "/src/components/windowing";
-    const QStringList forbidden = {"Q_OS_WIN",
-                                   "Q_OS_MAC",
-                                   "_WIN32",
-                                   "__APPLE__",
-                                   QStringLiteral("QT") + QStringLiteral("_VERSION") +
-                                       QStringLiteral("_CHECK"),
-                                   "windows.h",
-                                   "dwmapi.h",
-                                   "Cocoa",
-                                   "AppKit"};
+    const QStringList forbidden = {"Q_OS_WIN", "Q_OS_MAC", "_WIN32", "__APPLE__",
+        QStringLiteral("QT") + QStringLiteral("_VERSION") + QStringLiteral("_CHECK"), "windows.h", "dwmapi.h", "Cocoa",
+        "AppKit"};
 
     QDirIterator it(sourceDir,
-                    QStringList() << "*.h"
-                                  << "*.cpp",
-                    QDir::Files, QDirIterator::Subdirectories);
+        QStringList() << "*.h"
+                      << "*.cpp",
+        QDir::Files, QDirIterator::Subdirectories);
     while (it.hasNext()) {
         QFile file(it.next());
-        ASSERT_TRUE(file.open(QIODevice::ReadOnly | QIODevice::Text))
-            << file.fileName().toStdString();
+        ASSERT_TRUE(file.open(QIODevice::ReadOnly | QIODevice::Text)) << file.fileName().toStdString();
         const QString text = QString::fromUtf8(file.readAll());
         for (const QString& pattern : forbidden) {
             EXPECT_FALSE(text.contains(pattern))
@@ -1761,13 +1714,13 @@ TEST_F(WindowTest, WindowChromeCompatClassifiesHitTestAreas)
     options.dragExclusionRects << QRect(360, 0, 140, 32);
 
     EXPECT_EQ(WindowChromeCompat::classifyHitTest(options, QSize(500, 400), QPoint(2, 2)),
-              WindowChromeCompat::HitTest::TopLeft);
+        WindowChromeCompat::HitTest::TopLeft);
     EXPECT_EQ(WindowChromeCompat::classifyHitTest(options, QSize(500, 400), QPoint(20, 20)),
-              WindowChromeCompat::HitTest::Caption);
+        WindowChromeCompat::HitTest::Caption);
     EXPECT_EQ(WindowChromeCompat::classifyHitTest(options, QSize(500, 400), QPoint(380, 16)),
-              WindowChromeCompat::HitTest::Client);
+        WindowChromeCompat::HitTest::Client);
     EXPECT_EQ(WindowChromeCompat::classifyHitTest(options, QSize(500, 400), QPoint(498, 200)),
-              WindowChromeCompat::HitTest::Right);
+        WindowChromeCompat::HitTest::Right);
 }
 
 TEST_F(WindowTest, WindowChromeCompatFallbackIsSafe)
@@ -1810,20 +1763,18 @@ TEST_F(WindowTest, LinuxClientSideResizeInputCoversX11AndWayland)
     window.show();
     QApplication::processEvents();
 
-    auto* frameEdgeOverlay =
-        window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameEdgeOverlay"));
+    auto* frameEdgeOverlay = window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameEdgeOverlay"));
     ASSERT_NE(frameEdgeOverlay, nullptr);
     ASSERT_TRUE(frameEdgeOverlay->isVisible());
     EXPECT_TRUE(frameEdgeOverlay->testAttribute(Qt::WA_TransparentForMouseEvents));
     EXPECT_TRUE(frameEdgeOverlay->mask().isEmpty());
 
-    auto* bottomRightHitZone =
-        window.findChild<QWidget*>(QStringLiteral("fluentWindowResizeHitZone7"));
+    auto* bottomRightHitZone = window.findChild<QWidget*>(QStringLiteral("fluentWindowResizeHitZone7"));
     ASSERT_NE(bottomRightHitZone, nullptr);
     ASSERT_TRUE(bottomRightHitZone->isVisible());
     EXPECT_EQ(bottomRightHitZone->cursor().shape(), Qt::SizeFDiagCursor);
-    EXPECT_TRUE(bottomRightHitZone->geometry().contains(
-        QPoint(frameEdgeOverlay->width() - 2, frameEdgeOverlay->height() - 2)));
+    EXPECT_TRUE(
+        bottomRightHitZone->geometry().contains(QPoint(frameEdgeOverlay->width() - 2, frameEdgeOverlay->height() - 2)));
 
     auto* closeButton = window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
     ASSERT_NE(closeButton, nullptr);
@@ -1858,8 +1809,7 @@ TEST_F(WindowTest, LinuxCloseCaptionHoverReachesRoundedOuterCorner)
     painter.end();
 
     const QRect frame = window.chromeFrameRect();
-    const int radius =
-        qRound(qMax<qreal>(window.themeRadius().overlay, window.themeRadius().control));
+    const int radius = qRound(qMax<qreal>(window.themeRadius().overlay, window.themeRadius().control));
     const QColor cornerHover = image.pixelColor(frame.right() - 1, frame.top() + radius);
     EXPECT_GT(cornerHover.red(), cornerHover.green() * 2);
     EXPECT_GT(cornerHover.red(), cornerHover.blue() * 2);
@@ -1908,8 +1858,7 @@ TEST_F(WindowTest, ClientSideFrameRoutesMouseInputThroughEdgeZones)
 
     const QRect visualRect(16, 16, 288, 208);
     EXPECT_TRUE(topEdge->geometry().contains(QPoint(visualRect.center().x(), visualRect.top())));
-    EXPECT_TRUE(
-        rightEdge->geometry().contains(QPoint(visualRect.right(), visualRect.center().y())));
+    EXPECT_TRUE(rightEdge->geometry().contains(QPoint(visualRect.right(), visualRect.center().y())));
     EXPECT_TRUE(overlay.testAttribute(Qt::WA_TransparentForMouseEvents));
     EXPECT_TRUE(overlay.mask().isEmpty());
 
@@ -1957,12 +1906,10 @@ TEST_F(WindowTest, ClientSideFrameCompositeKeepsPartialAlphaAtEveryCorner)
 
     const int cornerSize = static_cast<int>(options.radius) + 2;
     const QRect topLeft(frameRect.topLeft(), QSize(cornerSize, cornerSize));
-    const QRect topRight(QPoint(frameRect.right() - cornerSize + 1, frameRect.top()),
-                         QSize(cornerSize, cornerSize));
+    const QRect topRight(QPoint(frameRect.right() - cornerSize + 1, frameRect.top()), QSize(cornerSize, cornerSize));
     const QRect bottomLeft(QPoint(frameRect.left(), frameRect.bottom() - cornerSize + 1),
-                           QSize(cornerSize, cornerSize));
-    const QRect bottomRight(
-        QPoint(frameRect.right() - cornerSize + 1, frameRect.bottom() - cornerSize + 1),
+        QSize(cornerSize, cornerSize));
+    const QRect bottomRight(QPoint(frameRect.right() - cornerSize + 1, frameRect.bottom() - cornerSize + 1),
         QSize(cornerSize, cornerSize));
 
     EXPECT_TRUE(hasPartialAlpha(topLeft));
@@ -2012,8 +1959,7 @@ TEST_F(WindowTest, ClientSideFrameOverlayDoesNotClearHostBackingPixels)
     EXPECT_EQ(image.pixelColor(frameRect.bottomLeft()).alpha(), 255);
     EXPECT_EQ(image.pixelColor(frameRect.bottomRight()).alpha(), 255);
 
-    const QColor topRightFill =
-        image.pixelColor(frameRect.right() - 1, frameRect.top() + qRound(options.radius));
+    const QColor topRightFill = image.pixelColor(frameRect.right() - 1, frameRect.top() + qRound(options.radius));
     EXPECT_GT(topRightFill.red(), topRightFill.green() * 2);
     EXPECT_GT(topRightFill.red(), topRightFill.blue() * 2);
 
@@ -2049,9 +1995,9 @@ TEST_F(WindowTest, WindowsHitTestClassificationSkippedOffWindows)
     options.dragExclusionRects << QRect(502, 0, 138, 32);
 
     EXPECT_EQ(WindowChromeCompat::classifyHitTest(options, QSize(640, 480), QPoint(100, 20)),
-              WindowChromeCompat::HitTest::Caption);
+        WindowChromeCompat::HitTest::Caption);
     EXPECT_EQ(WindowChromeCompat::classifyHitTest(options, QSize(640, 480), QPoint(620, 16)),
-              WindowChromeCompat::HitTest::Client);
+        WindowChromeCompat::HitTest::Client);
 #else
     GTEST_SKIP() << "Windows hit-test native classification is only required on Windows";
 #endif
@@ -2064,8 +2010,7 @@ TEST_F(WindowTest, WindowsMaximizedCustomChromeFillsAvailableGeometry)
         GTEST_SKIP() << "Windows custom chrome is disabled";
 
     const QString platformName = QGuiApplication::platformName().toLower();
-    if (platformName.contains(QStringLiteral("offscreen")) ||
-        platformName.contains(QStringLiteral("minimal"))) {
+    if (platformName.contains(QStringLiteral("offscreen")) || platformName.contains(QStringLiteral("minimal"))) {
         GTEST_SKIP() << "Native maximize geometry is not meaningful on this Qt platform";
     }
 
@@ -2116,8 +2061,9 @@ TEST_F(WindowTest, VisualCheck)
     const WindowVisualLauncher launcher = createWindowVisualLauncher();
     QPointer<Window> appWindow;
 
-    QObject::connect(launcher.showButton, &QPushButton::clicked, launcher.window,
-                     [&]() { showOrActivateVisualWindow(appWindow, launcher.window); });
+    QObject::connect(launcher.showButton, &QPushButton::clicked, launcher.window, [&]() {
+        showOrActivateVisualWindow(appWindow, launcher.window);
+    });
 
     QObject::connect(launcher.window, &QObject::destroyed, qApp, [&]() {
         if (appWindow)

@@ -387,11 +387,16 @@ TEST_F(MenuTest, ParentEnterAtSubmenuOverlapPreservesCascade)
         menu.popup(host.mapToGlobal(QPoint(40, 80)));
         menu.setActiveAction(branch);
         ASSERT_TRUE(QTest::qWaitFor([&] { return submenu.isVisible(); }));
-        QSignalSpy hidden(&submenu, &QMenu::aboutToHide);
-
+        if (!tests::support::isHeadlessPlatform()) {
+            // Drain native popup exposure events before injecting the overlap sequence.
+            ASSERT_TRUE(QTest::qWaitForWindowExposed(&menu));
+            ASSERT_TRUE(QTest::qWaitForWindowExposed(&submenu));
+            QGuiApplication::sync();
+        }
         const QPoint crossing = submenu.mapToGlobal(QPoint(1, submenu.actionGeometry(leaf).center().y()));
         ASSERT_TRUE(menu.frameGeometry().contains(crossing));
         const QPoint childLocal = submenu.mapFromGlobal(crossing);
+        QSignalSpy hidden(&submenu, &QMenu::aboutToHide);
         QEnterEvent childEnter(childLocal, childLocal, crossing);
         QApplication::sendEvent(&submenu, &childEnter);
         QEvent childLeave(QEvent::Leave);

@@ -67,6 +67,19 @@ def run_variant(browser, base_url, output, name, theme, width, cpp, python):
         for sample_id, sources in initial["sources"].items():
             assert sources["cpp"] == fingerprint(cpp[sample_id]), sample_id
             assert sources["python"] == fingerprint(python[sample_id]), sample_id
+        # Stable control geometry can still be covered by the splash's cached
+        # dismissal frame. Discover that QWidget through Qt accessibility before
+        # issuing source/input operations; language selection remains mouse input.
+        activation = page.locator(
+            "#qt-shadow-container .qt-window-a11y-container:visible "
+            "> button.hidden-visually-read-by-screen-reader"
+        ).first
+        activation.wait_for(state="attached")
+        activation.evaluate("button => button.click()")
+        page.locator('[id$=".galleryWindow"]').wait_for(state="attached")
+        page.locator(
+            '[id$=".gallerySplashScreen"][aria-hidden="false"]'
+        ).wait_for(state="hidden", timeout=15_000)
         command("show-source", "qmlplus-binding-one-way")
         wait("s.positions?.Python && s.positions?.Cpp && s.geometryStable && !s.transitioning")
         stage = page.locator("#qt-container").bounding_box()
@@ -157,7 +170,7 @@ def main():
     generator = runpy.run_path(str(project / "bindings/pyside6/gallery/tools/generate_gallery_contract.py"))
     contract = generator["generate_contract"](project)
     cpp = {s["id"]: s["cpp_snippet"] for s in contract["foundation_samples"]["foundation-qmlplus"]}
-    catalog = json.loads((project / "app/data/gallery_python_snippets.json").read_text())
+    catalog = json.loads((project / "app/data/gallery_python_snippets.json").read_text(encoding="utf-8"))
     python = {s["sample_id"]: s["source"] for s in catalog["samples"]
               if s["route_id"] == "foundation-qmlplus"}
     args.output.mkdir(parents=True, exist_ok=True)

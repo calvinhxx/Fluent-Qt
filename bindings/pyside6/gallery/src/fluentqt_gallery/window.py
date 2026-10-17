@@ -46,6 +46,7 @@ from PySide6.QtWidgets import (
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
+    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -905,7 +906,7 @@ class _GallerySampleCard(QFrame):
             self._calculated_height(self._MINIMUM_WIDTH),
         )
 
-    def _update_anchored_layout(self) -> None:
+    def _update_anchored_layout(self, *, synchronize_ancestors: bool = False) -> None:
         self._layout_update_queued = False
         if self._updating_layout:
             return
@@ -919,15 +920,57 @@ class _GallerySampleCard(QFrame):
                 self._gallery_preview_surface,
             ):
                 if widget is not None:
-                    widget.setFixedHeight(
-                        self._preferred_height(widget, content_width)
-                    )
-            self.setFixedHeight(self._calculated_height(card_width))
+                    height = self._preferred_height(widget, content_width)
+                    if widget.minimumHeight() != height or widget.maximumHeight() != height:
+                        widget.setFixedHeight(height)
+            height = self._calculated_height(card_width)
+            height_changed = self.minimumHeight() != height or self.maximumHeight() != height
+            if height_changed:
+                self.setFixedHeight(height)
             if self.layout() is not None:
                 self.layout().activate()
             self.updateGeometry()
+            if (height_changed or synchronize_ancestors) and self.isVisible():
+                self._synchronize_viewport_layout()
         finally:
             self._updating_layout = False
+
+    def _synchronize_viewport_layout(self) -> None:
+        scroll = self.parentWidget()
+        while scroll is not None and not isinstance(scroll, QScrollArea):
+            scroll = scroll.parentWidget()
+        content = scroll.widget() if scroll is not None else None
+        if content is None or content.layout() is None:
+            return
+
+        # Match the native card: settle sibling positions before same-frame capture.
+        ancestor = self.parentWidget()
+        while ancestor is not None and ancestor is not content:
+            outer = ancestor.layout()
+            if outer is not None:
+                outer.invalidate()
+                outer.activate()
+            ancestor = ancestor.parentWidget()
+        outer = content.layout()
+        outer.invalidate()
+        height = max(scroll.viewport().height(), outer.minimumSize().height())
+        if content.height() != height:
+            content.resize(content.width(), height)
+        outer.activate()
+
+    def _update_code_block_transition_layout(self) -> None:
+        updating = self._updating_layout
+        self._updating_layout = True
+        try:
+            self.setFixedHeight(self._calculated_height(max(self.width(), self._MINIMUM_WIDTH)))
+            self.updateGeometry()
+            # Expander settles the scroll page after all layoutHeightChanged slots.
+            # Suppress the intermediate resize path so its scroll anchor is kept.
+            if self.layout() is not None:
+                self.layout().invalidate()
+                self.layout().activate()
+        finally:
+            self._updating_layout = updating
 
     def _queue_layout_update(self, *_unused: object) -> None:
         if self._layout_update_queued:
@@ -947,6 +990,10 @@ class _GallerySampleCard(QFrame):
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self._update_anchored_layout()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self._update_anchored_layout(synchronize_ancestors=True)
 
     def refresh_theme(self) -> None:
         colors = gallery_colors()
@@ -1046,7 +1093,7 @@ def _build_sample_card(
     preview_surface.installEventFilter(card)
     result.widget.installEventFilter(card)
     source_expander.installEventFilter(card)
-    source_expander.layoutHeightChanged.connect(card._update_anchored_layout)
+    source_expander.layoutHeightChanged.connect(card._update_code_block_transition_layout)
     card._update_anchored_layout()
     card.refresh_theme()
 

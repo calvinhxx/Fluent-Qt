@@ -20,7 +20,7 @@ from fluentqt.foundation import (
 )
 from fluentqt.plugins import Plugin, PluginManager, PluginMetadata
 from fluentqt.qmlbridge import QmlPlugin, QmlSession, QmlTheme, QmlView
-from PySide6.QtCore import QCoreApplication, QEvent, QMetaObject, QObject, Property, QUrl, Signal, Slot, Qt
+from PySide6.QtCore import QCoreApplication, QEvent, QEventLoop, QMetaObject, QObject, Property, QTimer, QUrl, Signal, Slot, Qt
 from PySide6.QtGui import QColor
 from PySide6.QtQml import QQmlEngine
 from PySide6.QtQuick import QQuickItem, QSGRendererInterface
@@ -39,6 +39,12 @@ def _flush_deletions():
     QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
     QApplication.processEvents()
     QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+
+
+def _qwait(delay_ms):
+    loop = QEventLoop()
+    QTimer.singleShot(delay_ms, loop.quit)
+    loop.exec()
 
 
 class PreviewModel(QObject):
@@ -202,7 +208,7 @@ Rectangle {
         self.assertTrue(view.load(self.source), view.lastError())
         deadline = time.monotonic() + 5
         while view.status() == QmlView.Status.Loading and time.monotonic() < deadline:
-            QTest.qWait(10)
+            _qwait(10)
         self.assertEqual(view.status(), QmlView.Status.Ready, view.errors())
         self.assertIsInstance(view.rootObject(), QQuickItem)
         return view.rootObject()

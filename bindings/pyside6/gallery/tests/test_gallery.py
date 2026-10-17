@@ -163,6 +163,7 @@ from fluentqt_gallery.window import (
     GalleryWindow,
     _build_sample_card,
     _refresh_fluent_subtree,
+    build_component_page,
     build_settings_page,
     gallery_window_editing_command_router,
 )
@@ -1087,10 +1088,17 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     )
                     presenter.click()
                     self.assertTrue(view.isVisible())
-                    sort = view.actions()[0].menu()
+                    # QAction.menu is not exposed by PySide6 6.2.
+                    sort = next(
+                        child for child in view.findChildren(fluentqt.FluentMenu)
+                        if child.menuAction() is view.actions()[0]
+                    )
                     view.setActiveAction(sort.menuAction())
                     QTest.keyClick(view, Qt.Key_Right)
-                    order = sort.actions()[0].menu()
+                    order = next(
+                        child for child in sort.findChildren(fluentqt.FluentMenu)
+                        if child.menuAction() is sort.actions()[0]
+                    )
                     sort.setActiveAction(order.menuAction())
                     QTest.keyClick(sort, Qt.Key_Right)
                     self.assertTrue(order.isVisible())
@@ -2285,6 +2293,61 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     finally:
                         card.close()
                         card.deleteLater()
+
+    def test_sample_card_preview_growth_settles_scroll_layout(self):
+        for width in (720, 420):
+            with self.subTest(width=width):
+                page = build_component_page(ENTRY_BY_ROUTE_ID["button"], lambda _route: None)
+                page.resize(width, 280)
+                first, second = page._gallery_sample_cards[:2]
+                content = page._gallery_content
+                spacing = first.parentWidget().layout().spacing()
+                try:
+                    page.show()
+                    self.assertGreaterEqual(second.y(), first.geometry().bottom() + 1 + spacing)
+                    QApplication.processEvents()
+                    before_height = first.height()
+                    before_second_top = second.y()
+                    before_content_height = content.height()
+
+                    preview = first._gallery_preview_widget
+                    preview.setMinimumHeight(preview.height() + 240)
+                    first.resize(first.width() + 1, first.height())
+                    # Check before posted layout requests can repair stale siblings.
+                    self.assertGreater(first.height(), before_height)
+                    self.assertGreater(second.y(), before_second_top)
+                    self.assertGreaterEqual(second.y(), first.geometry().bottom() + 1 + spacing)
+                    self.assertGreater(content.height(), before_content_height)
+                    self.assertGreaterEqual(content.height(), content.layout().minimumSize().height())
+                finally:
+                    page.close()
+                    page.deleteLater()
+                    QApplication.processEvents()
+
+    def test_sample_card_source_transition_settles_scroll_layout(self):
+        page = build_component_page(ENTRY_BY_ROUTE_ID["button"], lambda _route: None)
+        page.resize(420, 320)
+        first, second = page._gallery_sample_cards[:2]
+        spacing = first.parentWidget().layout().spacing()
+        try:
+            page.show()
+            QApplication.processEvents()
+            collapsed_height = first.height()
+            collapsed_second_top = second.y()
+            code = first._gallery_source_expander
+            code.setExpandedAnimated(True, False)
+            self.assertGreater(first.height(), collapsed_height)
+            self.assertGreaterEqual(second.y(), first.geometry().bottom() + 1 + spacing)
+            self.assertGreaterEqual(page._gallery_content.height(), page._gallery_content.layout().minimumSize().height())
+
+            code.setExpandedAnimated(False, False)
+            self.assertEqual(first.height(), collapsed_height)
+            self.assertEqual(second.y(), collapsed_second_top)
+            self.assertGreaterEqual(second.y(), first.geometry().bottom() + 1 + spacing)
+        finally:
+            page.close()
+            page.deleteLater()
+            QApplication.processEvents()
 
     def test_sample_card_and_code_block_match_native_shell_behavior(self):
         window = GalleryWindow()
