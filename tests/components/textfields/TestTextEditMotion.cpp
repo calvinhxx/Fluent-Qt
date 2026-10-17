@@ -36,9 +36,10 @@ QTextEdit* innerTextEdit(TextEdit* edit)
 
 QVariantAnimation* heightAnimation(TextEdit* edit)
 {
-    return edit ? edit->findChild<QVariantAnimation*>(
-                      QStringLiteral("fluentTextEditHeightAnimation"), Qt::FindDirectChildrenOnly)
-                : nullptr;
+    return edit
+        ? edit->findChild<QVariantAnimation*>(QStringLiteral("fluentTextEditHeightAnimation"),
+              Qt::FindDirectChildrenOnly)
+        : nullptr;
 }
 
 void showFocusedEditor(QWidget& window, TextEdit& edit)
@@ -119,8 +120,7 @@ TEST(TextEditMotionTest, Contract_FocusedEditsAnimateRetargetAndCollapseVisibleL
     EXPECT_EQ(animation->endValue().toInt(), twoLineHeight);
     EXPECT_GT(edit.height(), twoLineHeight);
     ASSERT_TRUE(QTest::qWaitFor([&] { return (edit.height()) == (twoLineHeight); }, 1000));
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return (animation->state()) == (QAbstractAnimation::Stopped); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (animation->state()) == (QAbstractAnimation::Stopped); }, 1000));
 }
 
 TEST(TextEditMotionTest, Contract_ReducedAndDisabledMotionResolveEditedHeight)
@@ -279,8 +279,7 @@ TEST(TextEditMotionTest, Contract_InputMethodPreeditKeepsHeightStableUntilCommit
     EXPECT_GT(committedHeight, oneLineHeight);
     EXPECT_LT(edit.height(), committedHeight);
     ASSERT_TRUE(QTest::qWaitFor([&] { return (edit.height()) == (committedHeight); }, 1000));
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return (animation->state()) == (QAbstractAnimation::Stopped); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (animation->state()) == (QAbstractAnimation::Stopped); }, 1000));
 }
 
 TEST(TextEditMotionTest, Contract_CrossingVisibleLineLimitKeepsHeightTransitionRunning)
@@ -320,6 +319,5 @@ TEST(TextEditMotionTest, Contract_CrossingVisibleLineLimitKeepsHeightTransitionR
     EXPECT_LT(edit.height(), fourLineHeight);
     EXPECT_LT(inner->width(), edit.width());
     ASSERT_TRUE(QTest::qWaitFor([&] { return (edit.height()) == (fourLineHeight); }, 1000));
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return (animation->state()) == (QAbstractAnimation::Stopped); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (animation->state()) == (QAbstractAnimation::Stopped); }, 1000));
 }
