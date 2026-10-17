@@ -36,10 +36,11 @@ private:
     void finishLater();
     void finish();
 
-    QPointer<QWidget> m_owner;
+    QPointer<QObject> m_owner;
     QPointer<CommandPresenter> m_presenter;
     QPointer<QAction> m_action;
-    QPointer<QMenu> m_menu;
+    // Application filters can run after QMenu has become its QWidget base.
+    QPointer<QObject> m_menu;
     QList<QPointer<QMenu>> m_observedMenus;
     QList<QMetaObject::Connection> m_connections;
     std::function<void()> m_leafActivated;
