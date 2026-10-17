@@ -162,6 +162,31 @@ TEST(TextEditMotionTest, Contract_ReducedAndDisabledMotionResolveEditedHeight)
     EXPECT_EQ(edit.height(), twoLineHeight);
 }
 
+TEST(TextEditMotionTest, Contract_AppendPlainTextSettlesHeightWithoutAnimation)
+{
+    MotionModeRestorer restoreMotionMode;
+    QWidget window;
+    TextEdit edit(&window);
+    edit.setMaxVisibleLines(2);
+    showFocusedEditor(window, edit);
+    auto* animation = heightAnimation(&edit);
+    ASSERT_NE(animation, nullptr);
+    const int oneLineHeight = edit.height();
+
+    edit.appendPlainText(QStringLiteral("First\nSecond"));
+    EXPECT_GT(edit.height(), oneLineHeight);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+    const int twoLineHeight = edit.height();
+    QApplication::processEvents();
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+    edit.appendPlainText(QStringLiteral("Third"));
+    QApplication::processEvents();
+    EXPECT_EQ(edit.height(), twoLineHeight);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
+    EXPECT_TRUE(edit.verticalScrollBar()->isVisible());
+    EXPECT_EQ(edit.verticalScrollBar()->value(), edit.verticalScrollBar()->maximum());
+}
+
 TEST(TextEditMotionTest, Contract_ProgrammaticHeightChangesRemainSynchronous)
 {
     MotionModeRestorer restoreMotionMode;

@@ -1207,6 +1207,7 @@
       "verticalFluentScrollBar"
     ],
     "TextEdit": [
+      "appendPlainText",
       "verticalScrollBar"
     ],
     "ScrollView": [
