@@ -262,7 +262,7 @@ def main() -> int:
     if summary != {
         "route_count": 114,
         "component_count": 89,
-        "sample_count": 252,
+        "sample_count": 255,
     }:
         raise AssertionError("unexpected Gallery contract summary: {0!r}".format(summary))
     routes = {route["id"]: route for route in generated["routes"]}

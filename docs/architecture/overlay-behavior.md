@@ -159,6 +159,14 @@ Returning to the parent's own area keeps Qt's normal
 selection and dismissal behavior. This applies at each level of a cascade;
 keyboard navigation and leaf-action activation retain their Qt semantics.
 
+FluentMenu aligns the first submenu row with the invoking parent row, using
+the actual open parent rather than QObject ownership. Visible cards have a
+small gap; shadow margins do not accumulate into diagonal cascade offsets.
+Placement respects RTL and flips or clamps at the available screen edge.
+FluentMenu, CommandBar overflow, and CommandBarFlyout share the menu surface
+and shadow tokens. Command scroll viewports and content remain transparent
+after content attachment, theme refresh, and reopening.
+
 An embedded `QGraphicsProxyWidget` root is a logical QWidget window, not an
 overlay boundary. The private `WidgetPresentationCompat` adapter resolves its
 scene viewport; foundation composes that mapping with any outer host transform.
@@ -179,6 +187,14 @@ presentation mapping so one press closes the menu without reopening it.
 Calling `showAt()` or `showAtPoint()` during the exit animation reopens the
 flyout through the base Popup transition. Visibility alone does not mean a
 flyout is open; an in-flight close must not swallow the next invocation.
+
+Commands with `QAction::menu()` reuse the attached FluentMenu cascade. Their
+shared command-menu controller exempts events inside that cascade from the
+parent surface's Escape and light-dismiss filters. Escape returns one level;
+activating a leaf closes the owning overflow or command flyout after QAction
+handlers finish. Closing or hiding the parent also dismisses the cascade.
+Menus stay caller-owned and use the same native/projected popup anchor mapping
+as other menu buttons; no second cascade implementation is introduced.
 
 Custom C++ compositor hosts use the Widget-only
 `fluent::overlay::presentation` adapter from the directly included

@@ -2390,7 +2390,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/menus_toolbars/TestCommandBar.cpp"
         }
       ],
-      "sample_count": 2
+      "sample_count": 3
     },
     {
       "id": "command-bar-flyout",
@@ -2425,7 +2425,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/menus_toolbars/TestCommandBarFlyout.cpp"
         }
       ],
-      "sample_count": 2
+      "sample_count": 3
     },
     {
       "id": "breadcrumb",
@@ -3300,7 +3300,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestTextEdit.cpp"
         }
       ],
-      "sample_count": 3
+      "sample_count": 4
     },
     {
       "id": "title-bar",

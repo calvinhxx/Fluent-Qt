@@ -2963,3 +2963,96 @@ register_source_samples(
         ),
     },
 )
+
+register_source_samples(
+    "command-bar",
+    ("CommandBar", "FluentMenu"),
+    {
+        "command-bar-submenus": (
+            "root",
+            _script(_MENUS_HELPER + """
+                root = SampleSurface(globals().get("gallery_parent"))
+                status = make_status_label(root, "Order: Ascending")
+                status.setObjectName("Gallery.CommandSubmenus.Status")
+                view = fluentqt.FluentMenu("View", root)
+                view.setObjectName("Gallery.CommandSubmenus.View")
+                sort = fluentqt.FluentMenu("Sort by", view)
+                order = fluentqt.FluentMenu("Order", sort)
+                view.addMenu(sort)
+                sort.addMenu(order)
+                group = QActionGroup(root)
+                ascending = order.addAction("Ascending")
+                descending = order.addAction("Descending")
+                ascending.setCheckable(True)
+                descending.setCheckable(True)
+                group.addAction(ascending)
+                group.addAction(descending)
+                ascending.setChecked(True)
+                group.triggered.connect(
+                    lambda action: status.setText("Order: " + action.text())
+                )
+                root.setMinimumWidth(512)
+                root.content_layout.setAlignment(Qt.AlignTop)
+                bar = fluentqt.CommandBar(root)
+                bar.setObjectName("Gallery.CommandSubmenus.Bar")
+                bar.setLabelPosition(fluentqt.CommandBar.LabelPosition.Right)
+                bar.setFixedWidth(480)
+                bar.addPrimaryAction(view.menuAction())
+                bar.addSecondaryAction(sort.menuAction())
+                compact = fluentqt.Button("Compact width", root)
+                compact.setObjectName("Gallery.CommandSubmenus.Compact")
+                compact.setFluentSize(fluentqt.Button.ButtonSize.Small)
+                compact.setMinimumWidth(76)
+                compact.setCheckable(True)
+                compact.toggled.connect(
+                    lambda checked: bar.setFixedWidth(80 if checked else 480)
+                )
+                root.content_layout.addWidget(bar, 0, Qt.AlignLeft)
+                root.content_layout.addWidget(compact, 0, Qt.AlignLeft)
+                root.content_layout.addWidget(status)
+                """, _MENUS_IMPORTS),
+        ),
+    },
+)
+
+register_source_samples(
+    "command-bar-flyout",
+    ("CommandBarFlyout", "FluentMenu"),
+    {
+        "command-bar-flyout-submenus": (
+            "root",
+            _script(_MENUS_HELPER + """
+                root = SampleSurface(globals().get("gallery_parent"))
+                status = make_status_label(root, "Order: Ascending")
+                status.setObjectName("Gallery.CommandSubmenus.Status")
+                view = fluentqt.FluentMenu("View", root)
+                view.setObjectName("Gallery.CommandSubmenus.View")
+                sort = fluentqt.FluentMenu("Sort by", view)
+                order = fluentqt.FluentMenu("Order", sort)
+                view.addMenu(sort)
+                sort.addMenu(order)
+                group = QActionGroup(root)
+                ascending = order.addAction("Ascending")
+                descending = order.addAction("Descending")
+                ascending.setCheckable(True)
+                descending.setCheckable(True)
+                group.addAction(ascending)
+                group.addAction(descending)
+                ascending.setChecked(True)
+                group.triggered.connect(
+                    lambda action: status.setText("Order: " + action.text())
+                )
+                flyout = fluentqt.CommandBarFlyout(root)
+                flyout.setObjectName("Gallery.CommandSubmenus.Flyout")
+                flyout.setAlwaysExpanded(True)
+                flyout.addPrimaryAction(view.menuAction())
+                flyout.addSecondaryAction(sort.menuAction())
+                open_button = fluentqt.Button("Open view commands", root)
+                open_button.setObjectName("Gallery.CommandSubmenus.Open")
+                open_button.clicked.connect(lambda: flyout.showAt(open_button))
+                root.content_layout.addWidget(open_button)
+                root.content_layout.addWidget(status)
+                """, _MENUS_IMPORTS),
+        ),
+    },
+)

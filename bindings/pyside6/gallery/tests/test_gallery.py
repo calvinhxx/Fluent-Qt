@@ -1013,6 +1013,33 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 window.deleteLater()
                 QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
+    def test_text_edit_log_sample_appends_plain_text_and_clears(self):
+        result = build_sample("text-edit", "text-edit-log-append")
+        try:
+            log = result.widget.findChild(fluentqt.TextEdit, "appendLog")
+            append = result.widget.findChild(fluentqt.Button, "appendLogEntry")
+            clear = result.widget.findChild(fluentqt.Button, "clearLog")
+            self.assertIsNotNone(log)
+            self.assertIsNotNone(append)
+            self.assertIsNotNone(clear)
+            self.assertTrue(log.isReadOnly())
+            self.assertEqual(log.accessibleName(), "Activity log")
+            self.assertIn("log.appendPlainText", result.source)
+            initial = log.toPlainText()
+            append.click()
+            append.click()
+            self.assertEqual(
+                log.toPlainText(),
+                initial + "\nINFO Received: <ready>\nINFO Received: <ready>",
+            )
+            clear.click()
+            self.assertEqual(log.toPlainText(), "")
+            append.click()
+            self.assertEqual(log.toPlainText(), "INFO Received: <ready>")
+        finally:
+            result.widget.deleteLater()
+            QApplication.processEvents()
+
     def test_toggle_switch_state_sample_has_an_accessible_name(self):
         result = build_sample("toggle-switch", "toggle-switch-state")
         try:
@@ -1025,6 +1052,88 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         finally:
             result.widget.deleteLater()
             QApplication.processEvents()
+
+    def test_command_submenu_samples_execute_shared_choices(self):
+        from PySide6.QtWidgets import QAbstractButton
+
+        for route in ("command-bar", "command-bar-flyout"):
+            with self.subTest(route=route):
+                samples = ENTRY_BY_ROUTE_ID[route].samples
+                self.assertEqual(
+                    samples[0].id,
+                    "command-bar-responsive-overflow" if route == "command-bar"
+                    else "command-bar-flyout-show-modes",
+                )
+                self.assertEqual(samples[-1].id, route + "-submenus")
+                result = build_sample(route, route + "-submenus")
+                root = result.widget
+                try:
+                    root.resize(800, 400)
+                    root.show()
+                    QApplication.processEvents()
+                    flyout = root.findChild(fluentqt.CommandBarFlyout)
+                    if flyout is not None:
+                        flyout.setAnimationEnabled(False)
+                        root.findChild(
+                            QAbstractButton, "Gallery.CommandSubmenus.Open"
+                        ).click()
+                    view = root.findChild(
+                        fluentqt.FluentMenu, "Gallery.CommandSubmenus.View"
+                    )
+                    presenter = next(
+                        button for button in root.findChildren(QAbstractButton)
+                        if button.property("commandAction") is view.menuAction()
+                        and button.isVisible()
+                    )
+                    presenter.click()
+                    self.assertTrue(view.isVisible())
+                    sort = view.actions()[0].menu()
+                    view.setActiveAction(sort.menuAction())
+                    QTest.keyClick(view, Qt.Key_Right)
+                    order = sort.actions()[0].menu()
+                    sort.setActiveAction(order.menuAction())
+                    QTest.keyClick(sort, Qt.Key_Right)
+                    self.assertTrue(order.isVisible())
+                    descending = order.actions()[-1]
+                    order.setActiveAction(descending)
+                    QTest.keyClick(order, Qt.Key_Return)
+                    QApplication.processEvents()
+                    self.assertTrue(descending.isChecked())
+                    self.assertEqual(
+                        root.findChild(
+                            fluentqt.Label, "Gallery.CommandSubmenus.Status"
+                        ).text(),
+                        "Order: Descending",
+                    )
+                    self.assertFalse(view.isVisible())
+                    if flyout is not None:
+                        self.assertFalse(flyout.isOpen())
+                    else:
+                        bar = root.findChild(fluentqt.CommandBar)
+                        compact = root.findChild(
+                            QAbstractButton, "Gallery.CommandSubmenus.Compact"
+                        )
+                        status = root.findChild(
+                            fluentqt.Label, "Gallery.CommandSubmenus.Status"
+                        )
+                        button_size, status_size = compact.size(), status.size()
+                        for checked, width in ((True, 80), (False, 480)):
+                            compact.setChecked(checked)
+                            QApplication.processEvents()
+                            self.assertEqual(bar.width(), width)
+                            self.assertEqual(compact.size(), button_size)
+                            self.assertGreaterEqual(
+                                compact.width(), compact.sizeHint().width()
+                            )
+                            self.assertEqual(status.size(), status_size)
+                            self.assertGreaterEqual(
+                                status.width(),
+                                status.fontMetrics().horizontalAdvance(status.text()),
+                            )
+                finally:
+                    root.close()
+                    root.deleteLater()
+                    QApplication.processEvents()
 
     def test_command_bar_action_icons_match_native_size_variants(self):
         result = build_sample(

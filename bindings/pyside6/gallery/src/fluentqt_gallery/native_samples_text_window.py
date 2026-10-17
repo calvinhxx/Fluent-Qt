@@ -793,6 +793,38 @@ register_source_samples(
                 """
             ),
         ),
+        "text-edit-log-append": (
+            "root",
+            _text_script(
+                """
+                root, layout = make_text_surface()
+                log = fluentqt.TextEdit(root)
+                log.setObjectName("appendLog")
+                log.setAccessibleName("Activity log")
+                log.setReadOnly(True)
+                log.setMinVisibleLines(3)
+                log.setMaxVisibleLines(3)
+                log.setPlaceholderText("No log entries")
+                log.setFixedWidth(360)
+                log.appendPlainText("INFO Connection opened\\nINFO Waiting for records")
+                layout.addWidget(log)
+                actions = QHBoxLayout()
+                actions.setSpacing(8)
+                append_button = fluentqt.Button("Append entry", root)
+                append_button.setObjectName("appendLogEntry")
+                clear_button = fluentqt.Button("Clear", root)
+                clear_button.setObjectName("clearLog")
+                append_button.clicked.connect(
+                    lambda: log.appendPlainText("INFO Received: <ready>")
+                )
+                clear_button.clicked.connect(log.clear)
+                actions.addWidget(append_button)
+                actions.addWidget(clear_button)
+                actions.addStretch()
+                layout.addLayout(actions)
+                """
+            ),
+        ),
         "text-edit-read-only": (
             "text_edit",
             _script(

@@ -1,6 +1,6 @@
 # Command Bar API and Behavior Contract
 
-> **Status:** Accepted contract, shipped in FluentQt 1.5.2
+> **Status:** Current contract; the initial command surfaces shipped in FluentQt 1.5.2
 
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Development](README.md) › Accepted component contracts
@@ -39,21 +39,77 @@ methods are authoritative when section choice matters.
 ## Action model and lifetime
 
 - Supported actions are ordinary commands, checkable commands, exclusive action
-  groups, and separators.
-- The surfaces borrow actions. They do not reparent, copy, or delete them.
+  groups, separators, and actions with an attached `FluentMenu` hierarchy.
+- The surfaces borrow actions and attached menus. They do not reparent, copy,
+  or delete them. Python callers keep menus alive with a Qt parent or a strong
+  Python reference, just as with `QAction.setMenu()`.
 - One action can belong to only one semantic section of a surface. Duplicate
   insertion is a no-op; adding it to the other section moves it deterministically.
 - Removing or clearing membership does not destroy the action or change its
   pre-existing QObject parent.
 - Text, icon, tooltip, shortcut, enabled, visible, checked, and destroyed
   changes update every presenter.
-- Triggering a presenter invokes the borrowed action exactly once, including
-  when the action or surface is deleted during the trigger.
-- `QWidgetAction`, nested `QAction::menu()`, and actions without a semantic
-  caption are rejected in the first public contract.
+- Activating a leaf invokes the borrowed action exactly once, including when
+  the action or surface is deleted during the trigger. Opening a branch does
+  not trigger its action or toggle its checked state.
+- `QWidgetAction` and actions without a semantic caption remain unsupported.
 
 `EditingCommandRouter` actions can be inserted directly. Command surfaces do
 not add another editing preset or command registry.
+
+## Nested menus
+
+Attach a `FluentMenu` with the existing `QAction::setMenu()` API, or register
+its `menuAction()` directly. Build subsequent levels with `FluentMenu::addMenu()`.
+Both primary and secondary commands support the same hierarchy, including
+primary commands moved into overflow. No separate command-tree API is needed.
+
+```cpp
+auto* view = new FluentMenu("View", window);
+auto* sort = new FluentMenu("Sort by", view);
+auto* order = new FluentMenu("Order", sort);
+view->addMenu(sort);
+sort->addMenu(order);
+order->addAction("Ascending");
+order->addAction("Descending");
+bar->addPrimaryAction(view->menuAction());
+flyout->addSecondaryAction(view->menuAction());
+```
+
+The Python equivalent uses the same native objects:
+
+```python
+view = fluentqt.FluentMenu("View", window)
+sort = fluentqt.FluentMenu("Sort by", view)
+order = fluentqt.FluentMenu("Order", sort)
+view.addMenu(sort)
+sort.addMenu(order)
+order.addAction("Ascending")
+order.addAction("Descending")
+bar.addPrimaryAction(view.menuAction())
+flyout.addSecondaryAction(view.menuAction())
+```
+
+- Click, Enter, or Space opens a branch. Down opens an inline branch; the
+  forward arrow (Right in LTR, Left in RTL) opens an overflow/secondary branch.
+- Primary menus open below their command; overflow menus open beside their row.
+  FluentMenu retains its normal screen-edge placement and nested hover behavior.
+- Escape closes one menu level. From the root menu, Escape or the back arrow
+  returns focus to the originating command, leaving its parent surface open.
+- Activating a leaf closes the menu cascade and any owning overflow or flyout.
+  An inline bar stays visible. An application-directed focus change is preserved.
+- Existing QAction state, exclusive groups, and lazy `aboutToShow` population
+  remain native Qt behavior. Replacing/removing the originating command or
+  hiding its presenter dismisses the borrowed menu. Destroying a menu removes
+  the disclosure affordance without destroying the command.
+- Opening is asynchronous through the shared popup placement adapter. C++,
+  PySide6, and WebAssembly use the same native implementation; WebAssembly
+  does not require a blocking menu event loop.
+
+The Gallery cards `command-bar-submenus` and `command-bar-flyout-submenus`
+demonstrate View → Sort by → Order with shared exclusive choices. They follow
+the ordinary command examples as separate cards; the default examples use
+plain actions. A command exposes a submenu only when its QAction has a menu.
 
 ## Inline CommandBar
 
@@ -114,9 +170,12 @@ same top-level window as the flyout.
 
 - The inline bar is one Tab stop. Arrow keys move through visible commands and
   the More target; Home/End move to the first/last eligible item.
-- Enter and Space trigger the focused command. Down opens available overflow.
+- Enter and Space activate the focused command or open its attached menu. Down
+  opens a primary command menu before considering available overflow.
 - Overflow and flyout rows use visual arrow order in LTR and RTL.
-- Escape closes the active transient surface.
+- Pointer activation keeps logical focus without a focus outline. Keyboard
+  navigation shows the outline, including when the focused command stays the same.
+- Escape closes the innermost active menu or transient surface.
 - Focus repairs to the nearest eligible command after hide, disable,
   destruction, or responsive overflow.
 - Standard flyouts trap and restore focus according to the overlay contract.
@@ -130,8 +189,10 @@ same top-level window as the flyout.
 ## Overlay behavior
 
 Inline overflow and command flyouts are `Qt::Widget` children of the owning
-top-level window. They do not create `Qt::Popup`, `Qt::Tool`, or another
-native window.
+top-level window. Attached FluentMenu cascades use the existing Qt popup path
+and shared anchor mapping. Their events do not dismiss the parent while the
+pointer or keyboard is inside the cascade. Closing the parent dismisses its
+menus without changing their ownership.
 
 - Visible-card geometry drives placement and hit testing.
 - Anchor move, resize, host resize, clipping, destruction, stacking, animation,
@@ -148,6 +209,8 @@ native window.
 - Pointer and touch activation occurs on eligible release; drag-out cancels.
   Right-button and disabled input do not trigger commands.
 - Light/Dark changes use Fluent semantic tokens without changing action state.
+- Menu-bearing commands expose `hasPopup`, expanded/collapsed state, and the
+  accessible Show Menu action; inline branches have the menu-button role.
 - Toolbar, popup, command, separator, checked, disabled, expanded, accelerator,
   and focus semantics are exposed through Qt accessibility.
 - A command's accessible name comes from its semantic caption, not an
@@ -170,7 +233,8 @@ Ordinary resize, hover, measurement, and action-state updates remain quiet.
 
 ## Verification
 
-The maintained `test_command_bar` and `test_command_bar_flyout` targets
+The maintained `test_command_bar`, `test_command_bar_flyout`, and
+`test_command_submenus` targets
 cover:
 
 - public defaults, installed headers, Qt 5/Qt 6 compatibility, and private
@@ -184,14 +248,19 @@ cover:
   teardown; and
 - accessibility plus source-aligned Gallery integration.
 
+C++ and Python Gallery tests execute the two nested-menu cards and verify the
+selected leaf. The full WebAssembly browser smoke also drives primary,
+overflow, and flyout secondary branches with real mouse and keyboard input,
+including delayed hover closing and returning one level with Escape.
+
 Interactive VisualCheck review remains responsible for Light/Dark, normal and
 narrow widths, RTL, focus, pointer, and open flyout presentation.
 
 ## Deferred behavior
 
-The first public contract intentionally excludes:
+This contract excludes:
 
-- arbitrary hosted `QWidgetAction` content and nested action menus;
+- arbitrary hosted `QWidgetAction` content;
 - docking, dragging, reordering, and vertical command bars;
 - a public command-element hierarchy separate from `QAction`;
 - automatic replacement of editing context menus;
@@ -199,8 +268,8 @@ The first public contract intentionally excludes:
 - WinUI AppBar display modes or label-reveal behavior that would require a
   separate inline open-state contract.
 
-Any addition must preserve borrowed action identity, same-window overlays, and
-the existing public defaults.
+Any addition must preserve borrowed action identity, the shared overlay
+placement paths, and the existing public defaults.
 
 <!-- docs-nav:bottom:start -->
 ---

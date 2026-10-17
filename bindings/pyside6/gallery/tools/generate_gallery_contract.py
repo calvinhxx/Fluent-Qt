@@ -858,7 +858,7 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
             .format(", ".join(missing_bindings))
         )
     support_types = sorted(manifest_classes - routed_types)
-    expected_counts = (89, 252, 114) if include_cpp_only else (86, 235, 108)
+    expected_counts = (89, 255, 114) if include_cpp_only else (86, 238, 108)
     for name, actual, expected in zip(
         ("component", "sample", "route"),
         (component_count, sample_count, len(routes)),
