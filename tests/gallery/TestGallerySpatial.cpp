@@ -89,8 +89,7 @@ void dragWithLeftButton(QWidget* target, const QPoint& from, const QPoint& to)
     QTest::mousePress(target, Qt::LeftButton, Qt::NoModifier, from);
     // Qt 5.15/6.2 mouseMove only relocates the system cursor; its synthetic press
     // does not hold an OS button. Deliver the same held-button event on every Qt line.
-    QMouseEvent move(QEvent::MouseMove, to, target->mapToGlobal(to), Qt::NoButton, Qt::LeftButton,
-                     Qt::NoModifier);
+    QMouseEvent move(QEvent::MouseMove, to, target->mapToGlobal(to), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(target, &move);
     QTest::mouseRelease(target, Qt::LeftButton, Qt::NoModifier, to);
 }
@@ -254,14 +253,12 @@ TEST_F(GallerySpatialTest, Contract_NativeCompositionObserverStopsBeforePageTear
         auto* page = new QWidget;
         ASSERT_TRUE(host->insertPage(0, page));
         host->setCurrentIndex(0);
-        QPointer<GallerySpatialController> controller =
-            new GallerySpatialController(window.get(), navigation);
+        QPointer<GallerySpatialController> controller = new GallerySpatialController(window.get(), navigation);
         QObject receiver;
         bool boundaryDestroyed = false;
         bool pageUnloaded = false;
         QObject* boundaries[] = {window.get(), navigation, host};
-        QObject::connect(boundaries[boundary], &QObject::destroyed, &receiver,
-                         [&] { boundaryDestroyed = true; });
+        QObject::connect(boundaries[boundary], &QObject::destroyed, &receiver, [&] { boundaryDestroyed = true; });
 
         // A page-owned session can change this property while QWidget deletes
         // its children, after StackContentHost's page records are gone.
@@ -316,12 +313,12 @@ TEST_F(GallerySpatialTest, Contract_PreviewSessionsKeepViewsAndGalleryPreference
             EXPECT_TRUE(view->isSpatialEnabled());
             EXPECT_TRUE(sample.codeSnippet.contains("spatial::SpatialSession(panel, panel)"));
             EXPECT_TRUE(sample.codeSnippet.contains("session->activate()"));
-            EXPECT_TRUE(sample.codeSnippet.contains("session->createView(panel)") ||
-                        sample.codeSnippet.contains("session->attachView(view)"));
-            EXPECT_TRUE(sample.codeSnippet.contains("if (session->activate())") ||
-                        sample.codeSnippet.contains("const bool active = session->activate()"));
-            EXPECT_TRUE(sample.codeSnippet.contains("if (!view)") ||
-                        sample.codeSnippet.contains("if (!active || !session->attachView(view))"));
+            EXPECT_TRUE(sample.codeSnippet.contains("session->createView(panel)")
+                || sample.codeSnippet.contains("session->attachView(view)"));
+            EXPECT_TRUE(sample.codeSnippet.contains("if (session->activate())")
+                || sample.codeSnippet.contains("const bool active = session->activate()"));
+            EXPECT_TRUE(sample.codeSnippet.contains("if (!view)")
+                || sample.codeSnippet.contains("if (!active || !session->attachView(view))"));
             EXPECT_TRUE(sample.codeSnippet.contains("SpatialView::RenderMode::Raster"));
             QPointer<spatial::SpatialView> viewLifetime(view);
 
@@ -349,8 +346,7 @@ TEST_F(GallerySpatialTest, Contract_PopulatedPreviewTeardownStopsSessionsAndKeep
     auto& settings = GallerySettings::instance();
     settings.setSpatialModeEnabled(true);
     for (bool nested : {false, true}) {
-        for (const QString& route :
-             {QStringLiteral("spatial-view"), QStringLiteral("spatial-item")}) {
+        for (const QString& route : {QStringLiteral("spatial-view"), QStringLiteral("spatial-item")}) {
             SCOPED_TRACE(::testing::Message() << route.toStdString() << " nested=" << nested);
             auto* owner = new scrolling::ScrollView;
             auto* panel = gallerySamplesForRoute(route).first().createPreview(nullptr);
@@ -359,8 +355,7 @@ TEST_F(GallerySpatialTest, Contract_PopulatedPreviewTeardownStopsSessionsAndKeep
                 owner->setWidget(panel);
             }
             auto* session = panel->findChild<spatial::SpatialSession*>();
-            QPointer<spatial::SpatialView> view =
-                panel->findChild<spatial::SpatialView*>("spatialPreviewView");
+            QPointer<spatial::SpatialView> view = panel->findChild<spatial::SpatialView*>("spatialPreviewView");
             ASSERT_NE(session, nullptr);
             ASSERT_FALSE(view.isNull());
             ASSERT_GT(view->itemCount(), 0);
@@ -369,8 +364,9 @@ TEST_F(GallerySpatialTest, Contract_PopulatedPreviewTeardownStopsSessionsAndKeep
             view->setRenderMode(spatial::SpatialView::RenderMode::Raster);
             bool stopped = false;
             QObject receiver;
-            QObject::connect(session, &spatial::SpatialSession::activeChanged, &receiver,
-                             [&](bool active) { stopped |= !active; });
+            QObject::connect(session, &spatial::SpatialSession::activeChanged, &receiver, [&](bool active) {
+                stopped |= !active;
+            });
             QWidget* visibleRoot = nested ? static_cast<QWidget*>(owner) : panel;
             visibleRoot->resize(800, 600);
             visibleRoot->show();
@@ -494,9 +490,8 @@ TEST_F(GallerySpatialTest, Contract_SessionStopsAndResumesNativePresentation)
 {
     if (tests::support::isHeadlessPlatform())
         GTEST_SKIP() << "Requires native graphics presentation";
-    if (!tests::support::nativeOpenGLUnavailableReason().isEmpty() &&
-        !(spatial::SpatialTextureHost::isPreferred() &&
-          spatial::SpatialTextureHost::preflightFailure().isEmpty()))
+    if (!tests::support::nativeOpenGLUnavailableReason().isEmpty()
+        && !(spatial::SpatialTextureHost::isPreferred() && spatial::SpatialTextureHost::preflightFailure().isEmpty()))
         GTEST_SKIP() << "Requires a hardware graphics device";
     auto& settings = GallerySettings::instance();
     QWidget window;
@@ -554,8 +549,7 @@ TEST_F(GallerySpatialTest, Explicit2DDoesNotCreateOpenGLSurfaces)
         presenter->prewarmFinished();
         window.resize(1100, 800);
         window.show();
-        ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!window.findChild<GallerySplashScreen*>()); },
-                                    60000));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!window.findChild<GallerySplashScreen*>()); }, 60000));
         ASSERT_TRUE(window.selectRoute("settings"));
         ASSERT_TRUE(QTest::qWaitFor([&] { return bool(window.currentSettingsPage()); }, 2000));
         settings.setThemeMode(GallerySettings::ThemeMode::Dark);
@@ -573,8 +567,7 @@ TEST_F(GallerySpatialTest, Explicit2DDoesNotCreateOpenGLSurfaces)
         EXPECT_EQ(navigation->contentHost()->graphicsEffect(), nullptr);
         if (!tests::support::isHeadlessPlatform()) {
             EXPECT_TRUE(settings.spatialAvailabilityPending());
-            auto* toggle =
-                window.findChild<basicinput::ToggleSwitch*>("gallerySettingsSpatialModeToggle");
+            auto* toggle = window.findChild<basicinput::ToggleSwitch*>("gallerySettingsSpatialModeToggle");
             ASSERT_NE(toggle, nullptr);
             EXPECT_TRUE(toggle->isEnabled());
             window.raise();
@@ -606,20 +599,16 @@ TEST_F(GallerySpatialTest, Explicit2DDoesNotCreateOpenGLSurfaces)
             const auto firstWindowState = window.windowState();
             const auto firstBackdrop = windowing::windowBackdropState(&window);
             QPointer<QWidget> firstFocus = QApplication::focusWidget();
-            QTest::mouseClick(toggle, Qt::LeftButton, Qt::NoModifier,
-                              QPoint(20, toggle->height() / 2));
+            QTest::mouseClick(toggle, Qt::LeftButton, Qt::NoModifier, QPoint(20, toggle->height() / 2));
             ASSERT_TRUE(QTest::qWaitFor([&] { return bool(settings.spatialAvailable()); }, 3000));
             auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
             ASSERT_NE(surface, nullptr);
-            ASSERT_TRUE(QTest::qWaitFor(
-                [&] { return bool(surface->property("presenting").toBool()); }, 5000));
+            ASSERT_TRUE(QTest::qWaitFor([&] { return bool(surface->property("presenting").toBool()); }, 5000));
             auto* controller = window.findChild<GallerySpatialController*>();
-            ASSERT_TRUE(
-                QTest::qWaitFor([&] { return bool(!controller->transitionRunning()); }, 1500));
+            ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!controller->transitionRunning()); }, 1500));
             const QString windowPlatform = QGuiApplication::platformName();
-            if (windowPlatform == QLatin1String("cocoa") || nativeWindows ||
-                windowPlatform == QLatin1String("xcb") ||
-                windowPlatform.startsWith(QLatin1String("wayland"))) {
+            if (windowPlatform == QLatin1String("cocoa") || nativeWindows || windowPlatform == QLatin1String("xcb")
+                || windowPlatform.startsWith(QLatin1String("wayland"))) {
                 EXPECT_EQ(window.winId(), firstNativeId);
                 EXPECT_EQ(window.windowHandle(), firstHandle);
                 EXPECT_TRUE(visibilityChanges.isEmpty())
@@ -638,8 +627,7 @@ TEST_F(GallerySpatialTest, Explicit2DDoesNotCreateOpenGLSurfaces)
             }
             const auto nativeId = window.winId();
             settings.setSpatialModeEnabled(false);
-            ASSERT_TRUE(
-                QTest::qWaitFor([&] { return bool(!controller->transitionRunning()); }, 1500));
+            ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!controller->transitionRunning()); }, 1500));
             EXPECT_TRUE(surface->isHidden());
             ASSERT_NE(navigation->graphicsEffect(), nullptr);
             EXPECT_FALSE(navigation->graphicsEffect()->isEnabled());
@@ -647,15 +635,13 @@ TEST_F(GallerySpatialTest, Explicit2DDoesNotCreateOpenGLSurfaces)
             if (maximized) {
                 window.showNormal();
                 ASSERT_TRUE(QTest::qWaitFor(
-                    [&] { return !window.isMaximized() && window.geometry() == restoreGeometry; },
-                    1500));
+                    [&] { return !window.isMaximized() && window.geometry() == restoreGeometry; }, 1500));
                 EXPECT_EQ(window.winId(), firstNativeId);
             }
             window.resize(1000, 780);
             settings.setThemeMode(GallerySettings::ThemeMode::Light);
             settings.setSpatialModeEnabled(true);
-            ASSERT_TRUE(
-                QTest::qWaitFor([&] { return bool(!controller->transitionRunning()); }, 1500));
+            ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!controller->transitionRunning()); }, 1500));
             EXPECT_EQ(window.winId(), nativeId);
             EXPECT_EQ(window.findChild<QOpenGLWidget*>("gallerySpatialSurface"), surface);
             EXPECT_TRUE(surface->isVisible());
@@ -668,8 +654,8 @@ TEST_F(GallerySpatialTest, WindowsUnavailableDriverKeepsNative2DUsable)
     if (tests::support::isHeadlessPlatform())
         GTEST_SKIP() << "Requires a native desktop without hardware OpenGL";
     const QString unavailable = tests::support::nativeOpenGLUnavailableReason();
-    if (unavailable.isEmpty() || (spatial::SpatialTextureHost::isPreferred() &&
-                                  spatial::SpatialTextureHost::preflightFailure().isEmpty()))
+    if (unavailable.isEmpty()
+        || (spatial::SpatialTextureHost::isPreferred() && spatial::SpatialTextureHost::preflightFailure().isEmpty()))
         GTEST_SKIP() << "This host has hardware graphics; exercise fallback on a software runner";
 
     auto& settings = GallerySettings::instance();
@@ -750,8 +736,7 @@ TEST_F(GallerySpatialTest, DeferredSurfaceInitializationWaitsForLayoutAndCanBeCa
         }
         ASSERT_TRUE(QTest::qWaitFor([&] { return bool(settings.spatialAvailable()); }, 3000));
         ASSERT_NE(surface, nullptr);
-        ASSERT_TRUE(
-            QTest::qWaitFor([&] { return bool(surface->property("presenting").toBool()); }, 1500));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return bool(surface->property("presenting").toBool()); }, 1500));
         EXPECT_TRUE(surface->isValid());
         settings.setSpatialModeEnabled(false);
         ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!controller.transitionRunning()); }, 1500));
@@ -774,8 +759,7 @@ TEST_F(GallerySpatialTest, HiddenSurfaceRevalidatesAfterReparenting)
     settings.setSpatialModeEnabled(true);
     auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
     ASSERT_NE(surface, nullptr);
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return bool(surface->property("presenting").toBool()); }, 3000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(surface->property("presenting").toBool()); }, 3000));
     settings.setSpatialModeEnabled(false);
     ASSERT_TRUE(QTest::qWaitFor([&] { return bool(surface->isHidden()); }, 1500));
     window.setParent(&desktop, Qt::Widget);
@@ -784,8 +768,7 @@ TEST_F(GallerySpatialTest, HiddenSurfaceRevalidatesAfterReparenting)
     window.show();
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&desktop));
     settings.setSpatialModeEnabled(true);
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return bool(surface->property("presenting").toBool()); }, 3000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(surface->property("presenting").toBool()); }, 3000));
     EXPECT_TRUE(surface->isValid());
     EXPECT_TRUE(settings.spatialAvailable());
     EXPECT_EQ(window.findChild<QOpenGLWidget*>("gallerySpatialSurface"), surface);
@@ -799,9 +782,8 @@ TEST_F(GallerySpatialTest, MissingInitializationCallbackFallsBackAfterWaiting)
     class BlockSurfaceInitialization final : public QObject {
         bool eventFilter(QObject* object, QEvent* event) override
         {
-            return object->objectName() == QStringLiteral("gallerySpatialSurface") &&
-                   (event->type() == QEvent::Show || event->type() == QEvent::Resize ||
-                    event->type() == QEvent::Paint);
+            return object->objectName() == QStringLiteral("gallerySpatialSurface")
+                && (event->type() == QEvent::Show || event->type() == QEvent::Resize || event->type() == QEvent::Paint);
         }
     } blocker;
     auto& settings = GallerySettings::instance();
@@ -820,8 +802,7 @@ TEST_F(GallerySpatialTest, MissingInitializationCallbackFallsBackAfterWaiting)
     QTest::qWait(100);
     EXPECT_TRUE(settings.spatialAvailabilityPending());
     EXPECT_EQ(navigation->graphicsEffect(), nullptr);
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return bool(!settings.spatialAvailabilityPending()); }, 6500));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!settings.spatialAvailabilityPending()); }, 6500));
     EXPECT_FALSE(settings.spatialAvailable());
     EXPECT_FALSE(depth::enabled(&window));
     ASSERT_TRUE(QTest::qWaitFor([&] { return bool(surface.isNull()); }, 5000));
@@ -842,13 +823,11 @@ TEST_F(GallerySpatialTest, SupportBadgesReceiveHoverAtTheirProjectedPositions)
     presenter->setPrewarmPaused(true);
     presenter->prewarmFinished();
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(!window.findChild<QWidget*>("gallerySplashScreen")); }, 60000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!window.findChild<QWidget*>("gallerySplashScreen")); }, 60000));
     ASSERT_TRUE(settings.spatialAvailable());
     ASSERT_TRUE(window.selectRoute("settings"));
     ASSERT_TRUE(QTest::qWaitFor([&] { return bool(window.currentSettingsPage()); }, 2000));
-    auto* navigationTree =
-        window.findChild<collections::TreeView*>("galleryMainNavigationTreeView");
+    auto* navigationTree = window.findChild<collections::TreeView*>("galleryMainNavigationTreeView");
     ASSERT_NE(navigationTree, nullptr);
     auto* navigation = qobject_cast<GalleryNavigationPane*>(navigationTree->parentWidget());
     ASSERT_NE(navigation, nullptr);
@@ -865,8 +844,7 @@ TEST_F(GallerySpatialTest, SupportBadgesReceiveHoverAtTheirProjectedPositions)
     for (auto theme : {GallerySettings::ThemeMode::Light, GallerySettings::ThemeMode::Dark}) {
         settings.setThemeMode(theme);
         ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!controller->transitionRunning()); }, 1500));
-        for (const auto* name :
-             {"gallerySettingsSpatialSupportBadge", "galleryNavigationSpatialSupportBadge"}) {
+        for (const auto* name : {"gallerySettingsSpatialSupportBadge", "galleryNavigationSpatialSupportBadge"}) {
             SCOPED_TRACE(::testing::Message() << "theme=" << int(theme) << " badge=" << name);
             auto* badge = window.findChild<status_info::InfoBadge*>(name);
             ASSERT_NE(badge, nullptr);
@@ -1023,9 +1001,8 @@ TEST_F(GallerySpatialTest, EntryGridDepthPreservesClickTargetsAndStopsWhenIdle)
     QWidget host;
     auto* column = new QVBoxLayout(&host);
     auto* grid = new GalleryEntryGrid(&host);
-    grid->setEntries(
-        {{"button", "Button", "Open the button examples", {}, Typography::Icons::Add},
-         {"slider", "Slider", "Open the slider examples", {}, Typography::Icons::Settings}});
+    grid->setEntries({{"button", "Button", "Open the button examples", {}, Typography::Icons::Add},
+        {"slider", "Slider", "Open the slider examples", {}, Typography::Icons::Settings}});
     column->addWidget(grid);
     host.resize(700, 180);
     host.show();
@@ -1040,8 +1017,7 @@ TEST_F(GallerySpatialTest, EntryGridDepthPreservesClickTargetsAndStopsWhenIdle)
     ASSERT_NE(motion, nullptr);
     QSignalSpy activated(grid, &GalleryEntryGrid::activated);
     QTest::mouseMove(grid, QPoint(130, 35));
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return (motion->state()) == (QAbstractAnimation::Stopped); }, 500));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (motion->state()) == (QAbstractAnimation::Stopped); }, 500));
     QTest::mouseClick(grid, Qt::LeftButton, Qt::NoModifier, QPoint(130, 35));
     ASSERT_EQ(activated.count(), 1);
     EXPECT_EQ(activated.at(0).at(0).toString(), "button");
@@ -1080,8 +1056,8 @@ TEST_F(GallerySpatialTest, GalleryAssemblyCancelsOnInputResizeAndAccessibilityCh
     GalleryWindow window;
     window.resize(1100, 800);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
     auto* controller = window.findChild<GallerySpatialController*>();
     ASSERT_NE(controller, nullptr);
     auto& settings = GallerySettings::instance();
@@ -1090,8 +1066,7 @@ TEST_F(GallerySpatialTest, GalleryAssemblyCancelsOnInputResizeAndAccessibilityCh
     auto* overlay = window.findChild<QWidget*>("gallerySpatialSurface");
     ASSERT_NE(overlay, nullptr);
     // Splash destruction queues the compositor attachment for the next event turn.
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return bool(overlay->property("presenting").isValid()); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(overlay->property("presenting").isValid()); }, 1000));
     QWidget* home = window.currentContentPage();
     const auto nativeId = window.winId();
     settings.setSpatialModeEnabled(true);
@@ -1129,8 +1104,8 @@ TEST_F(GallerySpatialTest, GalleryAssemblyPreservesMaterialAndNativeSurface)
     GalleryWindow window;
     window.resize(1100, 860);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
     ASSERT_TRUE(window.selectRoute("settings"));
     auto* controller = window.findChild<GallerySpatialController*>();
     ASSERT_NE(controller, nullptr);
@@ -1145,16 +1120,14 @@ TEST_F(GallerySpatialTest, GalleryAssemblyPreservesMaterialAndNativeSurface)
     controller->cancelTransition();
     const auto nativeId = window.winId();
     const auto frame = [](QWidget* widget) {
-        QImage image(widget->size() * widget->devicePixelRatioF(),
-                     QImage::Format_ARGB32_Premultiplied);
+        QImage image(widget->size() * widget->devicePixelRatioF(), QImage::Format_ARGB32_Premultiplied);
         image.setDevicePixelRatio(widget->devicePixelRatioF());
         image.fill(Qt::transparent);
         widget->render(&image, QPoint(), QRegion(), QWidget::DrawChildren);
         if (auto* gl = widget->findChild<QOpenGLWidget*>("gallerySpatialSurface")) {
             if (gl->property("presenting").toBool()) {
                 QPainter painter(&image);
-                painter.drawImage(QRect(gl->mapTo(widget, QPoint()), gl->size()),
-                                  gl->grabFramebuffer());
+                painter.drawImage(QRect(gl->mapTo(widget, QPoint()), gl->size()), gl->grabFramebuffer());
             }
         }
         return image;
@@ -1174,17 +1147,17 @@ TEST_F(GallerySpatialTest, GalleryAssemblyPreservesMaterialAndNativeSurface)
         Navigation navigation;
         Effect effect;
     };
-    for (const MaterialCase scenario :
-         {MaterialCase{Theme::Light, Navigation::Left, Effect::Solid},
-          MaterialCase{Theme::Light, Navigation::Left, Effect::Mica},
-          MaterialCase{Theme::Light, Navigation::Left, Effect::Acrylic},
-          MaterialCase{Theme::Dark, Navigation::Left, Effect::Mica},
-          MaterialCase{Theme::Light, Navigation::Top, Effect::Mica},
-          MaterialCase{Theme::Dark, Navigation::Top, Effect::Acrylic}}) {
-        const QString name = QStringLiteral("gallery-material-%1-%2-%3")
-                                 .arg(int(scenario.theme))
-                                 .arg(int(scenario.navigation))
-                                 .arg(int(scenario.effect));
+    for (const MaterialCase scenario : {MaterialCase{Theme::Light, Navigation::Left, Effect::Solid},
+             MaterialCase{Theme::Light, Navigation::Left, Effect::Mica},
+             MaterialCase{Theme::Light, Navigation::Left, Effect::Acrylic},
+             MaterialCase{Theme::Dark, Navigation::Left, Effect::Mica},
+             MaterialCase{Theme::Light, Navigation::Top, Effect::Mica},
+             MaterialCase{Theme::Dark, Navigation::Top, Effect::Acrylic}}) {
+        const QString name =
+            QStringLiteral("gallery-material-%1-%2-%3")
+                .arg(int(scenario.theme))
+                .arg(int(scenario.navigation))
+                .arg(int(scenario.effect));
         SCOPED_TRACE(name.toStdString());
         settings.setSpatialModeEnabled(false);
         controller->cancelTransition();
@@ -1196,8 +1169,7 @@ TEST_F(GallerySpatialTest, GalleryAssemblyPreservesMaterialAndNativeSurface)
         const auto state = windowing::windowBackdropState(&window);
         const QImage before = frame(&window);
         save(before, name + "-before");
-        QImage backdrop(window.size() * window.devicePixelRatioF(),
-                        QImage::Format_ARGB32_Premultiplied);
+        QImage backdrop(window.size() * window.devicePixelRatioF(), QImage::Format_ARGB32_Premultiplied);
         backdrop.setDevicePixelRatio(window.devicePixelRatioF());
         backdrop.fill(Qt::transparent);
         window.render(&backdrop, QPoint(), QRegion(), QWidget::RenderFlags());
@@ -1244,7 +1216,7 @@ TEST_F(GallerySpatialTest, GalleryAssemblyPreservesMaterialAndNativeSurface)
         EXPECT_EQ(surface->grabFramebuffer().pixelColor(surfacePixel), expectedBackdrop);
         EXPECT_GT(overlay->property("galleryNavigationRotation").toReal(), 0);
         EXPECT_EQ(overlay->property("galleryNavigationRotation").toReal(),
-                  -overlay->property("galleryContentRotation").toReal());
+            -overlay->property("galleryContentRotation").toReal());
         const auto afterState = windowing::windowBackdropState(&window);
         EXPECT_EQ(afterState.effectiveEffect, state.effectiveEffect);
         EXPECT_EQ(afterState.surfaceMode, state.surfaceMode);
@@ -1261,8 +1233,8 @@ TEST_F(GallerySpatialTest, NavigationDepthRetainsRouteTargets)
     GalleryWindow window;
     window.resize(1100, 860);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
     auto* pane = window.findChild<GalleryNavigationPane*>("galleryMainNavigationPane");
     ASSERT_NE(pane, nullptr);
     auto* tree = pane->findChild<collections::TreeView*>();
@@ -1281,8 +1253,7 @@ TEST_F(GallerySpatialTest, NavigationDepthRetainsRouteTargets)
         tree->scrollTo(index);
         QApplication::processEvents();
         QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
-                          controller->projectedPosition(
-                              tree->viewport(), QPoint(26, tree->visualRect(index).center().y())));
+            controller->projectedPosition(tree->viewport(), QPoint(26, tree->visualRect(index).center().y())));
         EXPECT_EQ(window.currentRouteId(), compact ? "home" : "charts");
     }
 }
@@ -1296,8 +1267,8 @@ TEST_F(GallerySpatialTest, FloatingNavigationKeepsIconsAndLabelsOnOneSurface)
     GalleryWindow window;
     window.resize(800, 850);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
     auto* navigation = window.findChild<navigation::NavigationView*>();
     auto* pane = window.findChild<GalleryNavigationPane*>("galleryMainNavigationPane");
     auto* controller = window.findChild<GallerySpatialController*>();
@@ -1309,12 +1280,10 @@ TEST_F(GallerySpatialTest, FloatingNavigationKeepsIconsAndLabelsOnOneSurface)
     QApplication::processEvents();
     auto* tree = pane->findChild<collections::TreeView*>();
     ASSERT_NE(tree, nullptr);
-    ASSERT_EQ(navigation->effectiveDisplayMode(),
-              navigation::NavigationView::DisplayMode::LeftCompact);
+    ASSERT_EQ(navigation->effectiveDisplayMode(), navigation::NavigationView::DisplayMode::LeftCompact);
     settings.setSpatialModeEnabled(true);
     ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return navigation->graphicsEffect() && navigation->graphicsEffect()->isEnabled(); },
-        2000));
+        [&] { return navigation->graphicsEffect() && navigation->graphicsEffect()->isEnabled(); }, 2000));
     controller->cancelTransition();
     ASSERT_NE(navigation->graphicsEffect(), nullptr);
     ASSERT_TRUE(navigation->graphicsEffect()->isEnabled());
@@ -1329,13 +1298,10 @@ TEST_F(GallerySpatialTest, FloatingNavigationKeepsIconsAndLabelsOnOneSurface)
         tree->scrollTo(home);
         QApplication::processEvents();
         const int y = tree->visualRect(home).center().y();
-        const auto point = [&](int x) {
-            return controller->projectedPosition(tree->viewport(), QPoint(x, y));
-        };
+        const auto point = [&](int x) { return controller->projectedPosition(tree->viewport(), QPoint(x, y)); };
         const QPoint a = point(26), b = point(90), c = point(180);
-        const qreal distance =
-            qAbs(qreal((b.x() - a.x()) * (c.y() - a.y()) - (b.y() - a.y()) * (c.x() - a.x()))) /
-            QLineF(a, c).length();
+        const qreal distance = qAbs(qreal((b.x() - a.x()) * (c.y() - a.y()) - (b.y() - a.y()) * (c.x() - a.x())))
+            / QLineF(a, c).length();
         EXPECT_LT(distance, 2.0) << "One navigation row must stay on one projected line";
         EXPECT_LT(QLineF(a, c).length(), 180.0) << "No split between the icon rail and labels";
         QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, point(clickX));
@@ -1344,8 +1310,8 @@ TEST_F(GallerySpatialTest, FloatingNavigationKeepsIconsAndLabelsOnOneSurface)
 
     navigation->setPaneOpen(true);
     QApplication::processEvents();
-    const QPoint outside = controller->projectedPosition(
-        navigation->contentHost(), QPoint(navigation->contentHost()->width() - 30, 100));
+    const QPoint outside = controller->projectedPosition(navigation->contentHost(),
+        QPoint(navigation->contentHost()->width() - 30, 100));
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, outside);
     EXPECT_FALSE(navigation->isPaneOpen());
     EXPECT_EQ(window.currentRouteId(), "home");
@@ -1353,8 +1319,7 @@ TEST_F(GallerySpatialTest, FloatingNavigationKeepsIconsAndLabelsOnOneSurface)
     QTest::keyClick(&window, Qt::Key_Escape);
     EXPECT_FALSE(navigation->isPaneOpen());
     settings.setSpatialModeEnabled(false);
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(!navigation->contentHost()->graphicsEffect()->isEnabled()); }, 1500));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!navigation->contentHost()->graphicsEffect()->isEnabled()); }, 1500));
 }
 
 TEST_F(GallerySpatialTest, ComposedControlsReceiveProjectedInputAndKeepStateIn2D)
@@ -1384,7 +1349,7 @@ TEST_F(GallerySpatialTest, ComposedControlsReceiveProjectedInputAndKeepStateIn2D
     const auto clickToggle = [&](const QPoint& local) {
         const QPointF point = toggle->mapTo(card, local);
         QTest::mouseClick(canvas->viewport(), Qt::LeftButton, Qt::NoModifier,
-                          canvas->mapFromScene(proxy->mapToScene(point)));
+            canvas->mapFromScene(proxy->mapToScene(point)));
     };
     clickToggle(QPoint(20, toggle->height() / 2));
     EXPECT_FALSE(toggle->isOn());
@@ -1454,8 +1419,7 @@ TEST_F(GallerySpatialTest, ViewWorkbenchChangesProjectionAndPreservesSceneSettin
     const auto backPose = back->position();
     const auto frontPose = front->position();
     const auto relativeWidth = [&] {
-        return front->projectedPolygon().boundingRect().width() /
-               back->projectedPolygon().boundingRect().width();
+        return front->projectedPolygon().boundingRect().width() / back->projectedPolygon().boundingRect().width();
     };
     distance->setValue(2400);
     const qreal farRatio = relativeWidth();
@@ -1488,8 +1452,8 @@ TEST_F(GallerySpatialTest, ViewWorkbenchChangesProjectionAndPreservesSceneSettin
     EXPECT_EQ(view->maximumFrameRate(), 60);
     EXPECT_FALSE(view->isPointerTrackingEnabled());
     EXPECT_TRUE(view->isCacheEnabled());
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return (view->renderMode()) == (spatial::SpatialView::RenderMode::Auto); }, 1000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return (view->renderMode()) == (spatial::SpatialView::RenderMode::Auto); }, 1000));
     follow->setIsOn(false);
     distance->setValue(650);
     zoom->setValue(110);
@@ -1507,14 +1471,14 @@ TEST_F(GallerySpatialTest, ViewWorkbenchChangesProjectionAndPreservesSceneSettin
 TEST_F(GallerySpatialTest, ComponentCompositionsHandleProjectedPointerInput)
 {
     const auto samples = gallerySamplesForRoute("spatial-view");
-    for (const QString& id :
-         {QStringLiteral("spatial-view-inputs"), QStringLiteral("spatial-view-list"),
-          QStringLiteral("spatial-view-calendar"), QStringLiteral("spatial-view-navigation"),
-          QStringLiteral("spatial-view-rating"), QStringLiteral("spatial-view-tree"),
-          QStringLiteral("spatial-view-donut"), QStringLiteral("spatial-view-hybrid")}) {
+    for (const QString& id : {QStringLiteral("spatial-view-inputs"), QStringLiteral("spatial-view-list"),
+             QStringLiteral("spatial-view-calendar"), QStringLiteral("spatial-view-navigation"),
+             QStringLiteral("spatial-view-rating"), QStringLiteral("spatial-view-tree"),
+             QStringLiteral("spatial-view-donut"), QStringLiteral("spatial-view-hybrid")}) {
         SCOPED_TRACE(id.toStdString());
-        const auto sample = std::find_if(samples.cbegin(), samples.cend(),
-                                         [&id](const auto& value) { return value.id == id; });
+        const auto sample = std::find_if(samples.cbegin(), samples.cend(), [&id](const auto& value) {
+            return value.id == id;
+        });
         ASSERT_NE(sample, samples.cend());
         std::unique_ptr<QWidget> panel(sample->createPreview(nullptr));
         panel->resize(680, 560);
@@ -1528,8 +1492,7 @@ TEST_F(GallerySpatialTest, ComponentCompositionsHandleProjectedPointerInput)
         auto* canvas = view->findChild<QGraphicsView*>();
         ASSERT_NE(card->graphicsProxyWidget(), nullptr);
         const auto projected = [&](QWidget* widget, QPoint local) {
-            return canvas->mapFromScene(
-                card->graphicsProxyWidget()->mapToScene(widget->mapTo(card, local)));
+            return canvas->mapFromScene(card->graphicsProxyWidget()->mapToScene(widget->mapTo(card, local)));
         };
         const auto click = [&](QWidget* widget, QPoint local) {
             const QPoint point = projected(widget, local);
@@ -1558,8 +1521,7 @@ TEST_F(GallerySpatialTest, ComponentCompositionsHandleProjectedPointerInput)
             auto* count = card->findChild<status_info::InfoBadge*>("spatialTaskCount");
             const auto* model = list->model();
             QSignalSpy clicked(list, &QListView::clicked);
-            click(list->viewport(),
-                  static_cast<QListView*>(list)->visualRect(model->index(1, 0)).center());
+            click(list->viewport(), static_cast<QListView*>(list)->visualRect(model->index(1, 0)).center());
             EXPECT_EQ(list->selectedIndex(), 1);
             EXPECT_EQ(clicked.count(), 1);
             click(done, done->rect().center());
@@ -1670,18 +1632,15 @@ TEST_F(GallerySpatialTest, ScrolledOutPreviewsReleaseGpuViewports)
     for (auto* view : views)
         view->setSpatialEnabled(true);
     using RenderMode = spatial::SpatialView::RenderMode;
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return (views.first()->renderMode()) == (RenderMode::Auto); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (views.first()->renderMode()) == (RenderMode::Auto); }, 1000));
     EXPECT_EQ(views.last()->renderMode(), RenderMode::Auto);
     EXPECT_EQ(views.last()->activeBackend(), spatial::SpatialView::Backend::Raster);
     EXPECT_EQ(views.last()->findChild<QOpenGLWidget*>(), nullptr);
     scroll.verticalScrollBar()->setValue(scroll.verticalScrollBar()->maximum());
     ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return (views.first()->activeBackend()) == (spatial::SpatialView::Backend::Raster); },
-        1000));
+        [&] { return (views.first()->activeBackend()) == (spatial::SpatialView::Backend::Raster); }, 1000));
     EXPECT_EQ(views.first()->findChild<QOpenGLWidget*>(), nullptr);
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return (views.last()->renderMode()) == (RenderMode::Auto); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (views.last()->renderMode()) == (RenderMode::Auto); }, 1000));
 }
 
 TEST_F(GallerySpatialTest, NativeOpenGLPreviewsRevealWithoutHover)
@@ -1689,15 +1648,15 @@ TEST_F(GallerySpatialTest, NativeOpenGLPreviewsRevealWithoutHover)
     if (QGuiApplication::platformName() == QStringLiteral("offscreen"))
         GTEST_SKIP() << "Requires a native OpenGL viewport";
     const auto samples = gallerySamplesForRoute("spatial-view");
-    for (const QString& id :
-         {QStringLiteral("spatial-view-cards"), QStringLiteral("spatial-view-navigation")}) {
+    for (const QString& id : {QStringLiteral("spatial-view-cards"), QStringLiteral("spatial-view-navigation")}) {
         SCOPED_TRACE(id.toStdString());
         scrolling::ScrollView scroll;
         auto* content = new QWidget;
         auto* column = new QVBoxLayout(content);
         column->addSpacing(600);
-        const auto sample = std::find_if(samples.cbegin(), samples.cend(),
-                                         [&id](const auto& value) { return value.id == id; });
+        const auto sample = std::find_if(samples.cbegin(), samples.cend(), [&id](const auto& value) {
+            return value.id == id;
+        });
         ASSERT_NE(sample, samples.cend());
         auto* panel = sample->createPreview(content);
         column->addWidget(panel);
@@ -1721,8 +1680,8 @@ TEST_F(GallerySpatialTest, NativeOpenGLPreviewsRevealWithoutHover)
                 return QImage();
             QImage image(gl->size() * gl->devicePixelRatioF(), QImage::Format_RGBA8888);
             gl->makeCurrent();
-            gl->context()->functions()->glReadPixels(0, 0, image.width(), image.height(), GL_RGBA,
-                                                     GL_UNSIGNED_BYTE, image.bits());
+            gl->context()->functions()->glReadPixels(0, 0, image.width(), image.height(), GL_RGBA, GL_UNSIGNED_BYTE,
+                image.bits());
             gl->doneCurrent();
             return image.mirrored();
         };
@@ -1735,22 +1694,19 @@ TEST_F(GallerySpatialTest, NativeOpenGLPreviewsRevealWithoutHover)
             return pixels;
         };
         const auto save = [&id](const QImage& image, const QString& suffix) {
-            if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
-                !dir.isEmpty()) {
+            if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE"); !dir.isEmpty()) {
                 QDir().mkpath(dir);
                 image.save(dir + QStringLiteral("/%1-%2.png").arg(id, suffix));
             }
         };
         scroll.verticalScrollBar()->setValue(top - 40);
-        ASSERT_TRUE(QTest::qWaitFor(
-            [&] { return (view->activeBackend()) == (spatial::SpatialView::Backend::OpenGL); },
-            2000));
+        ASSERT_TRUE(
+            QTest::qWaitFor([&] { return (view->activeBackend()) == (spatial::SpatialView::Backend::OpenGL); }, 2000));
         QTest::qWait(100);
         const QImage reference = frame();
         ASSERT_FALSE(reference.isNull());
         save(reference, QStringLiteral("reference"));
-        const QVector<QPoint> referenceForeground[] = {foreground(reference, 0),
-                                                       foreground(reference, 1)};
+        const QVector<QPoint> referenceForeground[] = {foreground(reference, 0), foreground(reference, 1)};
         // Both real samples contain text/control detail in each half. Compare those
         // same pixels, not a font/DPR-dependent absolute number on a sparse 2 px grid.
         ASSERT_FALSE(referenceForeground[0].isEmpty());
@@ -1760,14 +1716,12 @@ TEST_F(GallerySpatialTest, NativeOpenGLPreviewsRevealWithoutHover)
             const bool fromAbove = pass % 2 == 0;
             scroll.verticalScrollBar()->setValue(fromAbove ? top + view->height() + 20 : 0);
             ASSERT_TRUE(QTest::qWaitFor(
-                [&] { return (view->activeBackend()) == (spatial::SpatialView::Backend::Raster); },
-                1000));
+                [&] { return (view->activeBackend()) == (spatial::SpatialView::Backend::Raster); }, 1000));
             QTest::qWait(40);
             scroll.verticalScrollBar()->setValue(
                 fromAbove ? top + view->height() - 30 : top - scroll.viewport()->height() + 30);
             ASSERT_TRUE(QTest::qWaitFor(
-                [&] { return (view->activeBackend()) == (spatial::SpatialView::Backend::OpenGL); },
-                2000));
+                [&] { return (view->activeBackend()) == (spatial::SpatialView::Backend::OpenGL); }, 2000));
             QTest::qWait(60);
             scroll.verticalScrollBar()->setValue(top - 40);
             QTest::qWait(100);
@@ -1788,8 +1742,7 @@ TEST_F(GallerySpatialTest, NativeOpenGLPreviewsRevealWithoutHover)
             for (int half = 0; half < 2; ++half) {
                 int retained = 0;
                 for (const QPoint& pixel : referenceForeground[half])
-                    retained +=
-                        qAlpha(actual.pixel(pixel)) == 255 && qGray(actual.pixel(pixel)) < 120;
+                    retained += qAlpha(actual.pixel(pixel)) == 255 && qGray(actual.pixel(pixel)) < 120;
                 EXPECT_GE(retained, referenceForeground[half].size() * .95)
                     << "Newly exposed detail must remain at its original position; half=" << half;
             }
@@ -1828,9 +1781,8 @@ TEST_F(GallerySpatialTest, NativeOpenGLPreviewsSurviveClippingAndExternalUpdates
         QTest::qWait(40);
         // First expose only a strip, then reveal the whole viewport without pointer input.
         scroll.verticalScrollBar()->setValue(top - scroll.viewport()->height() + 30);
-        ASSERT_TRUE(QTest::qWaitFor(
-            [&] { return (view->activeBackend()) == (spatial::SpatialView::Backend::OpenGL); },
-            2000));
+        ASSERT_TRUE(
+            QTest::qWaitFor([&] { return (view->activeBackend()) == (spatial::SpatialView::Backend::OpenGL); }, 2000));
         auto* canvas = view->findChild<QGraphicsView*>();
         auto* gl = qobject_cast<QOpenGLWidget*>(canvas->viewport());
         ASSERT_NE(gl, nullptr);
@@ -1842,8 +1794,8 @@ TEST_F(GallerySpatialTest, NativeOpenGLPreviewsSurviveClippingAndExternalUpdates
         // QGraphicsView owns the paint event for this viewport.
         QImage frame(gl->size() * gl->devicePixelRatioF(), QImage::Format_RGBA8888);
         gl->makeCurrent();
-        gl->context()->functions()->glReadPixels(0, 0, frame.width(), frame.height(), GL_RGBA,
-                                                 GL_UNSIGNED_BYTE, frame.bits());
+        gl->context()->functions()->glReadPixels(0, 0, frame.width(), frame.height(), GL_RGBA, GL_UNSIGNED_BYTE,
+            frame.bits());
         gl->doneCurrent();
         frame = frame.mirrored();
         ASSERT_FALSE(frame.isNull());
@@ -1910,8 +1862,7 @@ TEST_F(GallerySpatialTest, ItemParametersWorkInsideSceneAndPreserveTheirDragTarg
     finish->setValue(100);
     EXPECT_DOUBLE_EQ(item->surfaceIntensity(), 1);
     const auto point = [canvas, settings](QWidget* widget, const QPoint& local) {
-        return canvas->mapFromScene(
-            settings->graphicsProxyWidget()->mapToScene(widget->mapTo(settings, local)));
+        return canvas->mapFromScene(settings->graphicsProxyWidget()->mapToScene(widget->mapTo(settings, local)));
     };
     const QPoint from = point(rotation, QPoint(rotation->width() / 4, rotation->height() / 2));
     const QPoint to = point(rotation, QPoint(rotation->width() * 3 / 4, rotation->height() / 2));
@@ -1930,8 +1881,7 @@ TEST_F(GallerySpatialTest, ItemParametersWorkInsideSceneAndPreserveTheirDragTarg
         for (const int z : {-120, 120}) {
             depth->setValue(z);
             for (auto* surface : view->items())
-                EXPECT_TRUE(
-                    QRectF(view->rect()).contains(surface->projectedPolygon().boundingRect()));
+                EXPECT_TRUE(QRectF(view->rect()).contains(surface->projectedPolygon().boundingRect()));
         }
     }
     view->setSpatialEnabled(false);
@@ -1974,17 +1924,16 @@ TEST_F(GallerySpatialTest, SpatialCategoryNavigationPreservesOriginalHomeHero)
     GalleryWindow window;
     window.resize(1280, 900);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
     auto* home = window.currentContentPage();
     EXPECT_TRUE(home->findChildren<spatial::SpatialView*>().isEmpty());
     EXPECT_NE(home->findChild<QWidget*>("galleryHomeHeroTitle"), nullptr);
     EXPECT_NE(home->findChild<QWidget*>("galleryHomeHeroIcon"), nullptr);
     EXPECT_NE(home->findChild<QWidget*>("galleryHomeParticles"), nullptr);
     ASSERT_TRUE(window.selectRoute("spatial"));
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(qobject_cast<GalleryCategoryPage*>(window.currentContentPage())); },
-        2000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(qobject_cast<GalleryCategoryPage*>(window.currentContentPage())); }, 2000));
     auto* category = qobject_cast<GalleryCategoryPage*>(window.currentContentPage());
     EXPECT_EQ(category->componentRouteIds(), QStringList({"spatial-view", "spatial-item"}));
 }
@@ -2005,9 +1954,9 @@ TEST_F(GallerySpatialTest, MacStartupPrewarmKeepsNativeWindowSurface)
         int hidden = 0;
         bool eventFilter(QObject* watched, QEvent* event) override
         {
-            if (event->type() == QEvent::PlatformSurface &&
-                static_cast<QPlatformSurfaceEvent*>(event)->surfaceEventType() ==
-                    QPlatformSurfaceEvent::SurfaceAboutToBeDestroyed)
+            if (event->type() == QEvent::PlatformSurface
+                && static_cast<QPlatformSurfaceEvent*>(event)->surfaceEventType()
+                    == QPlatformSurfaceEvent::SurfaceAboutToBeDestroyed)
                 ++destroyed;
             if (event->type() == QEvent::Hide)
                 ++hidden;
@@ -2026,11 +1975,11 @@ TEST_F(GallerySpatialTest, MacStartupPrewarmKeepsNativeWindowSurface)
     GalleryPageFactory factory(navigation);
     ASSERT_NE(factory.createPage(QStringLiteral("spatial-view"), &prewarmHost), nullptr);
     ASSERT_NE(factory.createPage(QStringLiteral("spatial-item"), &prewarmHost), nullptr);
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
     const auto views = prewarmHost.findChildren<spatial::SpatialView*>();
-    ASSERT_EQ(views.size(), gallerySamplesForRoute("spatial-view").size() +
-                                gallerySamplesForRoute("spatial-item").size());
+    ASSERT_EQ(views.size(),
+        gallerySamplesForRoute("spatial-view").size() + gallerySamplesForRoute("spatial-item").size());
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("home"));
     for (auto* view : views)
         EXPECT_FALSE(view->isVisible());
@@ -2049,8 +1998,8 @@ TEST_F(GallerySpatialTest, MacTrafficLightsRemainCenteredAcrossSpatialNavigation
     window.raise();
     window.activateWindow();
     ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
     const auto get = [](id object, const char* name) {
         using Send = id (*)(id, SEL);
         return reinterpret_cast<Send>(objc_msgSend)(object, sel_registerName(name));
@@ -2068,37 +2017,32 @@ TEST_F(GallerySpatialTest, MacTrafficLightsRemainCenteredAcrossSpatialNavigation
     };
     for (const auto* route : {"spatial-view", "home", "spatial-item", "home"}) {
         ASSERT_TRUE(window.selectRoute(route));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return bool(window.currentContentPage() != nullptr); }, 2000));
         ASSERT_TRUE(
-            QTest::qWaitFor([&] { return bool(window.currentContentPage() != nullptr); }, 2000));
-        ASSERT_TRUE(QTest::qWaitFor(
-            [&] { return (window.currentContentPage()->routeId()) == (QString(route)); }, 2000));
+            QTest::qWaitFor([&] { return (window.currentContentPage()->routeId()) == (QString(route)); }, 2000));
         QTest::qWait(200);
         id native = get(reinterpret_cast<id>(window.winId()), "window");
         ASSERT_NE(native, nil);
         for (unsigned long type : {0UL, 1UL, 2UL}) {
             using Button = id (*)(id, SEL, unsigned long);
-            id button = reinterpret_cast<Button>(objc_msgSend)(
-                native, sel_registerName("standardWindowButton:"), type);
+            id button = reinterpret_cast<Button>(objc_msgSend)(native, sel_registerName("standardWindowButton:"), type);
             ASSERT_NE(button, nil);
             id host = get(button, "superview");
             id content = get(native, "contentView");
             CGRect converted{};
 #if defined(__x86_64__)
             using Convert = void (*)(CGRect*, id, SEL, CGRect, id);
-            reinterpret_cast<Convert>(objc_msgSend_stret)(&converted, host,
-                                                          sel_registerName("convertRect:toView:"),
-                                                          rect(button, "frame"), content);
+            reinterpret_cast<Convert>(objc_msgSend_stret)(&converted, host, sel_registerName("convertRect:toView:"),
+                rect(button, "frame"), content);
 #else
             using Convert = CGRect (*)(id, SEL, CGRect, id);
-            converted = reinterpret_cast<Convert>(objc_msgSend)(
-                host, sel_registerName("convertRect:toView:"), rect(button, "frame"), content);
+            converted = reinterpret_cast<Convert>(
+                objc_msgSend)(host, sel_registerName("convertRect:toView:"), rect(button, "frame"), content);
 #endif
             using Bool = BOOL (*)(id, SEL);
-            const bool flipped =
-                reinterpret_cast<Bool>(objc_msgSend)(content, sel_registerName("isFlipped"));
+            const bool flipped = reinterpret_cast<Bool>(objc_msgSend)(content, sel_registerName("isFlipped"));
             const qreal actual =
-                flipped ? CGRectGetMidY(converted)
-                        : rect(content, "bounds").size.height - CGRectGetMidY(converted);
+                flipped ? CGRectGetMidY(converted) : rect(content, "bounds").size.height - CGRectGetMidY(converted);
             auto* bar = window.titleBar();
             const qreal expected = bar->mapTo(&window, QPoint()).y() + bar->height() / 2.0;
             EXPECT_NEAR(actual, expected, 1.0) << route << " button=" << type;
@@ -2138,18 +2082,15 @@ TEST_F(GallerySpatialTest, CacheBudgetPreservesDensityAndRespectsGpuLimits)
     // Animated targets share the budget with panel pixels and the temporary
     // paint strip. Reserving them must shorten the strip before lowering density.
     constexpr qint64 particles = 90LL * 1024 * 1024;
-    const auto joint = planCaches({QSizeF(240, 700), QSizeF(960, 700)}, 2, 16384, 2,
-                                  kCacheBudgetBytes, kPaintSamples, 0, 0, particles);
+    const auto joint = planCaches({QSizeF(240, 700), QSizeF(960, 700)}, 2, 16384, 2, kCacheBudgetBytes, kPaintSamples,
+        0, 0, particles);
     ASSERT_TRUE(joint.valid());
     EXPECT_EQ(joint.dpr, normal.dpr);
     EXPECT_EQ(joint.sizes, normal.sizes);
     EXPECT_LT(joint.paintSize.height(), normal.paintSize.height());
     EXPECT_LE(joint.estimatedBytes + particles, kCacheBudgetBytes);
-    EXPECT_FALSE(
-        planCaches(panels, 2, 16384, 2, kCacheBudgetBytes, kPaintSamples, 0, 0, kCacheBudgetBytes)
-            .valid());
-    EXPECT_FALSE(
-        planCaches(panels, 2, 16384, 2, kCacheBudgetBytes, kPaintSamples, 0, 0, -1).valid());
+    EXPECT_FALSE(planCaches(panels, 2, 16384, 2, kCacheBudgetBytes, kPaintSamples, 0, 0, kCacheBudgetBytes).valid());
+    EXPECT_FALSE(planCaches(panels, 2, 16384, 2, kCacheBudgetBytes, kPaintSamples, 0, 0, -1).valid());
 }
 
 TEST_F(GallerySpatialTest, CacheResourceFailureAllowsRetry)
@@ -2189,8 +2130,8 @@ TEST_F(GallerySpatialTest, GpuCachePaintsWidgetsDirectlyAndReusesStaticContent)
         void paintEvent(QPaintEvent*) override
         {
             QPainter painter(this);
-            gpuPaints += painter.paintEngine()->type() == QPaintEngine::OpenGL2 ||
-                         spatial_render::GalleryGlyphPaintDevice::delegatesToOpenGL(painter);
+            gpuPaints += painter.paintEngine()->type() == QPaintEngine::OpenGL2
+                || spatial_render::GalleryGlyphPaintDevice::delegatesToOpenGL(painter);
             painter.fillRect(rect(), color);
         }
     };
@@ -2282,12 +2223,8 @@ TEST_F(GallerySpatialTest, NativeDonutSampleReadoutEscapesCardInBothGalleryModes
         slider->setValue(spatial ? 42 : 65);
         chart->setCurrentPoint(0, 0);
         ASSERT_TRUE(QTest::qWaitFor(
-            [&] {
-                return window.findChild<dialogs_flyouts::Popup*>("FluentChartReadout") != nullptr;
-            },
-            1000))
-            << "visible=" << chart->isVisible() << " size=" << chart->width() << "x"
-            << chart->height();
+            [&] { return window.findChild<dialogs_flyouts::Popup*>("FluentChartReadout") != nullptr; }, 1000))
+            << "visible=" << chart->isVisible() << " size=" << chart->width() << "x" << chart->height();
         auto* readout = window.findChild<dialogs_flyouts::Popup*>("FluentChartReadout");
         ASSERT_NE(readout, nullptr);
         ASSERT_TRUE(QTest::qWaitFor([&] { return readout->isVisible(); }, 1000));
@@ -2320,9 +2257,8 @@ TEST_F(GallerySpatialTest, NativeAutoSuggestPageTypingKeepsPopupAndGpuAlive)
     ASSERT_TRUE(window.selectRoute("auto-suggest-box"));
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
-            return window.currentContentPage() && !window.currentContentPage()
-                                                       ->findChildren<textfields::AutoSuggestBox*>()
-                                                       .isEmpty();
+            return window.currentContentPage()
+                && !window.currentContentPage()->findChildren<textfields::AutoSuggestBox*>().isEmpty();
         },
         10000));
     auto* controller = window.findChild<GallerySpatialController*>();
@@ -2350,10 +2286,8 @@ TEST_F(GallerySpatialTest, NativeAutoSuggestPageTypingKeepsPopupAndGpuAlive)
         const qreal dpr = surface->devicePixelRatioF();
         QPolygon polygon;
         const QRect input(12, box->height() - box->inputHeight() + 4, 170, box->inputHeight() - 8);
-        for (const QPoint& corner :
-             {input.topLeft(), input.topRight(), input.bottomRight(), input.bottomLeft()}) {
-            const QPoint projected =
-                surface->mapFrom(&window, controller->projectedPosition(box, corner));
+        for (const QPoint& corner : {input.topLeft(), input.topRight(), input.bottomRight(), input.bottomLeft()}) {
+            const QPoint projected = surface->mapFrom(&window, controller->projectedPosition(box, corner));
             polygon << QPoint(qRound(projected.x() * dpr), qRound(projected.y() * dpr));
         }
         const QRect bounds = polygon.boundingRect().intersected(image.rect());
@@ -2440,8 +2374,7 @@ TEST_F(GallerySpatialTest, NativeNestedOpacityKeepsColorAndUnrelatedPixels)
                 for (int x = 0; x < baseline.width(); ++x)
                     if (qGray(baseline.pixel(x, y)) < 100)
                         ++inkPixels;
-            return pointerMotion->state() == QAbstractAnimation::Stopped && stable &&
-                   inkPixels > 40 * dpr * dpr;
+            return pointerMotion->state() == QAbstractAnimation::Stopped && stable && inkPixels > 40 * dpr * dpr;
         },
         5000))
         << "The label must be painted and stationary before capturing unrelated pixels";
@@ -2463,8 +2396,7 @@ TEST_F(GallerySpatialTest, NativeNestedOpacityKeepsColorAndUnrelatedPixels)
             EXPECT_NEAR(actual.green(), 240 * (1 - alpha) + 40 * alpha, 6);
             EXPECT_NEAR(actual.blue(), 240 * (1 - alpha) + 70 * alpha, 6);
             EXPECT_EQ(image.copy(labelRect), baseline);
-            if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
-                !dir.isEmpty()) {
+            if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE"); !dir.isEmpty()) {
                 QDir().mkpath(dir);
                 image.save(dir + QStringLiteral("/nested-opacity-%1-%2.png").arg(y).arg(alpha));
             }
@@ -2487,8 +2419,7 @@ TEST_F(GallerySpatialTest, NativeStackTransitionsRemainVisibleAcrossPaintStrips)
     ASSERT_TRUE(window.selectRoute("stack-view"));
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
-            return window.currentContentPage() &&
-                   window.currentContentPage()->findChild<collections::StackView*>();
+            return window.currentContentPage() && window.currentContentPage()->findChild<collections::StackView*>();
         },
         10000));
     auto* controller = window.findChild<GallerySpatialController*>();
@@ -2512,7 +2443,7 @@ TEST_F(GallerySpatialTest, NativeStackTransitionsRemainVisibleAcrossPaintStrips)
     if (!dir.isEmpty())
         QDir().mkpath(dir);
     for (auto type : {collections::StackView::StackViewTransitionType::SlideFade,
-                      collections::StackView::StackViewTransitionType::ScaleFade}) {
+             collections::StackView::StackViewTransitionType::ScaleFade}) {
         stack->setTransitionType(type);
         stack->setTransitionDuration(1000);
         push->click();
@@ -2535,23 +2466,21 @@ TEST_F(GallerySpatialTest, NativeStackTransitionsRemainVisibleAcrossPaintStrips)
                 int colored = 0, sampled = 0;
                 for (int y = 10; y < stack->height() - 10; y += 8) {
                     for (int x = 10; x < stack->width() - 10; x += 8) {
-                        QPoint target =
-                            spatial ? surface->mapFrom(&window, controller->projectedPosition(
-                                                                    stack, QPoint(x, y)))
-                                    : stack->mapTo(&window, QPoint(x, y));
+                        QPoint target = spatial
+                            ? surface->mapFrom(&window, controller->projectedPosition(stack, QPoint(x, y)))
+                            : stack->mapTo(&window, QPoint(x, y));
                         target = QPoint(qRound(target.x() * dpr), qRound(target.y() * dpr));
                         if (!image.rect().contains(target))
                             continue;
                         const auto color = image.pixelColor(target);
-                        colored += std::max({color.red(), color.green(), color.blue()}) -
-                                       std::min({color.red(), color.green(), color.blue()}) >
-                                   20;
+                        colored += std::max({color.red(), color.green(), color.blue()})
+                                - std::min({color.red(), color.green(), color.blue()})
+                            > 20;
                         ++sampled;
                     }
                 }
                 EXPECT_GT(sampled, 100);
-                EXPECT_GT(colored, sampled / 4)
-                    << "mode=" << spatial << " type=" << int(type) << " time=" << time;
+                EXPECT_GT(colored, sampled / 4) << "mode=" << spatial << " type=" << int(type) << " time=" << time;
                 if (!dir.isEmpty())
                     image.save(dir + name + (spatial ? "-gpu.png" : "-2d.png"));
             }
@@ -2601,8 +2530,7 @@ TEST_F(GallerySpatialTest, GlyphCoveragePreservesOpacityAndOpaqueBackground)
             painter.setBackground(QColor(20, 100, 80, backgroundAlpha));
             painter.setBackgroundMode(Qt::OpaqueMode);
         }
-        painter.drawText(QPointF(13, 90),
-                         QStringLiteral("abcdefghijklmnopqrstuvwxyz 0123456789 ").repeated(3));
+        painter.drawText(QPointF(13, 90), QStringLiteral("abcdefghijklmnopqrstuvwxyz 0123456789 ").repeated(3));
     };
     for (int alpha : {96, 210, 255}) {
         for (qreal opacity : {.1, .65, 1.}) {
@@ -2641,12 +2569,11 @@ TEST_F(GallerySpatialTest, GlyphRasterDensityPreservesPerFontHinting)
         {QFont::PreferFullHinting, 1.5, 1.5, 1.5},
     };
     for (const auto& row : rows) {
-        SCOPED_TRACE(::testing::Message() << "hint=" << row.hinting << " native=" << row.nativeDpr
-                                          << " cache=" << row.cacheDpr);
+        SCOPED_TRACE(
+            ::testing::Message() << "hint=" << row.hinting << " native=" << row.nativeDpr << " cache=" << row.cacheDpr);
         QFont font = Typography::Styles::Body.toQFont();
         font.setHintingPreference(row.hinting);
-        EXPECT_EQ(spatial_render::glyphRasterDpr(font, row.nativeDpr, row.cacheDpr),
-                  row.expectedDpr);
+        EXPECT_EQ(spatial_render::glyphRasterDpr(font, row.nativeDpr, row.cacheDpr), row.expectedDpr);
         QImage target(32, 32, QImage::Format_ARGB32_Premultiplied);
         target.setDevicePixelRatio(row.cacheDpr);
         spatial_render::GalleryGlyphPaintDevice device(target, row.nativeDpr);
@@ -2664,8 +2591,7 @@ TEST_F(GallerySpatialTest, GlyphTilesAreBoundedByVisibleClip)
         painter.setFont(font);
         painter.translate(13, 7);
         painter.setClipRect(QRect(0, 0, 64, 50));
-        painter.drawText(QPointF(-1000, 35),
-                         QStringLiteral("abcdefghijklmnopqrstuvwxyz ").repeated(200));
+        painter.drawText(QPointF(-1000, 35), QStringLiteral("abcdefghijklmnopqrstuvwxyz ").repeated(200));
     };
     QImage expected(240, 100, QImage::Format_ARGB32_Premultiplied);
     expected.fill(Qt::transparent);
@@ -2692,24 +2618,19 @@ TEST_F(GallerySpatialTest, GlyphTilesPreserveShapingAcrossFractionalCacheStrips)
         painter.setFont(Typography::Styles::Caption.toQFont());
         // Keep one long shaped item so its visible ink crosses bounded tile
         // seams, rather than testing many individually short fallback runs.
-        painter.drawText(QPointF(7.25, 31.5),
-                         QStringLiteral("Gallery Popup settings 0123456789 ").repeated(12));
+        painter.drawText(QPointF(7.25, 31.5), QStringLiteral("Gallery Popup settings 0123456789 ").repeated(12));
         QFont font = Typography::Styles::BodyStrong.toQFont();
         font.setUnderline(true);
         font.setStrikeOut(true);
         painter.setFont(font);
-        painter.drawText(QPointF(7.25, 76.5),
-                         QString::fromUtf8("Gallery 设置 · العربية · Popup 0123456789"));
+        painter.drawText(QPointF(7.25, 76.5), QString::fromUtf8("Gallery 设置 · العربية · Popup 0123456789"));
     };
     for (qreal dpr : {1.0, 1.25, 1.5, 1.75, 2.1875, 2.625, 3.0}) {
         // Paint strips begin on physical pixels, including when the logical
         // origin is fractional. The raster phase must be unchanged at a seam.
-        for (const QPointF origin :
-             {QPointF(), QPointF(0, 197 / dpr), QPointF(113 / dpr, 197 / dpr)}) {
-            SCOPED_TRACE(::testing::Message()
-                         << "dpr=" << dpr << " origin=" << origin.x() << "," << origin.y());
-            QImage expected(qCeil(960 * dpr), qCeil(100 * dpr),
-                            QImage::Format_ARGB32_Premultiplied);
+        for (const QPointF origin : {QPointF(), QPointF(0, 197 / dpr), QPointF(113 / dpr, 197 / dpr)}) {
+            SCOPED_TRACE(::testing::Message() << "dpr=" << dpr << " origin=" << origin.x() << "," << origin.y());
+            QImage expected(qCeil(960 * dpr), qCeil(100 * dpr), QImage::Format_ARGB32_Premultiplied);
             expected.setDevicePixelRatio(dpr);
             expected.fill(Qt::transparent);
             QImage actual = expected.copy();
@@ -2720,15 +2641,12 @@ TEST_F(GallerySpatialTest, GlyphTilesPreserveShapingAcrossFractionalCacheStrips)
             const QString directory = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
             if (actual != expected && !directory.isEmpty()) {
                 QDir().mkpath(directory);
-                const QString prefix = directory + QStringLiteral("/glyph-strip-%1-%2-%3-")
-                                                       .arg(dpr)
-                                                       .arg(origin.x())
-                                                       .arg(origin.y());
+                const QString prefix = directory
+                    + QStringLiteral("/glyph-strip-%1-%2-%3-").arg(dpr).arg(origin.x()).arg(origin.y());
                 expected.save(prefix + "reference.png");
                 actual.save(prefix + "actual.png");
             }
-            EXPECT_EQ(actual, expected)
-                << "Bounded glyph tiles must preserve shaping, decorations and painter opacity";
+            EXPECT_EQ(actual, expected) << "Bounded glyph tiles must preserve shaping, decorations and painter opacity";
         }
     }
 }
@@ -2752,8 +2670,7 @@ TEST_F(GallerySpatialTest, GlyphTilesPreserveOversizedFontCoverage)
     spatial_render::GalleryGlyphPaintDevice device(actual, 1.25);
     paint(&device);
     EXPECT_EQ(actual, expected);
-    EXPECT_EQ(device.glyphTiles(), 0)
-        << "A guard too large for the bounded tile must keep Qt's direct path";
+    EXPECT_EQ(device.glyphTiles(), 0) << "A guard too large for the bounded tile must keep Qt's direct path";
 }
 
 TEST_F(GallerySpatialTest, GlyphTilesUseImageDprPrecision)
@@ -2761,8 +2678,7 @@ TEST_F(GallerySpatialTest, GlyphTilesUseImageDprPrecision)
     const auto paint = [](QPaintDevice* target) {
         QPainter painter(target);
         painter.setFont(Typography::Styles::Caption.toQFont());
-        painter.drawText(QPointF(7.25, 31.5),
-                         QStringLiteral("Gallery Popup settings 0123456789 ").repeated(12));
+        painter.drawText(QPointF(7.25, 31.5), QStringLiteral("Gallery Popup settings 0123456789 ").repeated(12));
     };
     QImage expected(1060, 60, QImage::Format_ARGB32_Premultiplied);
     expected.setDevicePixelRatio(1.1);
@@ -2810,8 +2726,7 @@ TEST_F(GallerySpatialTest, GlyphTilesPreserveVerticalSeamsAndBoundOversizedFonts
     }
 }
 
-class GallerySpatialEditorTest : public GallerySpatialTest,
-                                 public ::testing::WithParamInterface<const char*> {};
+class GallerySpatialEditorTest : public GallerySpatialTest, public ::testing::WithParamInterface<const char*> {};
 
 TEST_P(GallerySpatialEditorTest, NativeFocusTypingSelectionAndImePreserveGpuAndValues)
 {
@@ -2862,8 +2777,7 @@ TEST_P(GallerySpatialEditorTest, NativeFocusTypingSelectionAndImePreserveGpuAndV
             itemView = new collections::TreeView(page);
         ASSERT_NE(itemView, nullptr);
         itemView->setModel(&model);
-        itemView->setEditTriggers(QAbstractItemView::DoubleClicked |
-                                  QAbstractItemView::EditKeyPressed);
+        itemView->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
         control = itemView;
     }
     ASSERT_NE(control, nullptr);
@@ -2896,9 +2810,7 @@ TEST_P(GallerySpatialEditorTest, NativeFocusTypingSelectionAndImePreserveGpuAndV
     QTest::mouseMove(window.windowHandle(), point);
     QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier, point);
     ASSERT_TRUE(QTest::qWaitFor([&] { return editor && editor->hasFocus(); }, 1000));
-    const auto value = [&]() -> QString {
-        return line ? line->text() : text ? text->toPlainText() : QString();
-    };
+    const auto value = [&]() -> QString { return line ? line->text() : text ? text->toPlainText() : QString(); };
     QTest::keyClick(editor, Qt::Key_A, Qt::ControlModifier);
     QTest::keyClicks(editor, kind == "NumberBox" ? "42" : "Audit42", Qt::NoModifier, 10);
     ASSERT_TRUE(QTest::qWaitFor([&] { return value().contains("42"); }, 1000));
@@ -2925,8 +2837,7 @@ TEST_P(GallerySpatialEditorTest, NativeFocusTypingSelectionAndImePreserveGpuAndV
     if (itemView && line) {
         QTest::keyClick(line, Qt::Key_Return);
         // QStyledItemDelegate queues Return's commit/close until the key event unwinds.
-        ASSERT_TRUE(QTest::qWaitFor(
-            [&] { return model.data(model.index(0, 0)).toString() == edited; }, 1000));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return model.data(model.index(0, 0)).toString() == edited; }, 1000));
     }
     GallerySettings::instance().setSpatialModeEnabled(false);
     controller.cancelTransition();
@@ -2936,13 +2847,19 @@ TEST_P(GallerySpatialEditorTest, NativeFocusTypingSelectionAndImePreserveGpuAndV
         EXPECT_EQ(model.data(model.index(0, 0)).toString(), edited);
 }
 
-INSTANTIATE_TEST_SUITE_P(EditableControls, GallerySpatialEditorTest,
-                         ::testing::Values("LineEdit", "AutoSuggestBox", "PasswordBox", "NumberBox",
-                                           "EditableComboBox", "TextEdit", "DataGrid", "ListView",
-                                           "GridView", "TreeView"),
-                         [](const ::testing::TestParamInfo<const char*>& info) {
-                             return info.param;
-                         });
+INSTANTIATE_TEST_SUITE_P(EditableControls,
+    GallerySpatialEditorTest,
+    ::testing::Values("LineEdit",
+        "AutoSuggestBox",
+        "PasswordBox",
+        "NumberBox",
+        "EditableComboBox",
+        "TextEdit",
+        "DataGrid",
+        "ListView",
+        "GridView",
+        "TreeView"),
+    [](const ::testing::TestParamInfo<const char*>& info) { return info.param; });
 
 TEST_F(GallerySpatialTest, ProjectedOverlayAnchorsTrackGeometryAndRestore2D)
 {
@@ -2982,16 +2899,13 @@ TEST_F(GallerySpatialTest, ProjectedOverlayAnchorsTrackGeometryAndRestore2D)
     controller.cancelTransition();
 
     const auto validatePublishedMapping = [&] {
-        for (const QPoint point :
-             {QPoint(), anchor->rect().center(), anchor->rect().bottomRight()}) {
+        for (const QPoint point : {QPoint(), anchor->rect().center(), anchor->rect().bottomRight()}) {
             const QPoint expected = controller.projectedPosition(anchor, point) + host.pos();
-            EXPECT_LE(
-                (overlay::presentedPointInTopLevel(anchor, point) - expected).manhattanLength(), 1);
+            EXPECT_LE((overlay::presentedPointInTopLevel(anchor, point) - expected).manhattanLength(), 1);
         }
     };
     validatePublishedMapping();
-    EXPECT_NE(overlay::presentedRectInTopLevel(anchor),
-              QRect(anchor->mapTo(&top, QPoint()), anchor->size()));
+    EXPECT_NE(overlay::presentedRectInTopLevel(anchor), QRect(anchor->mapTo(&top, QPoint()), anchor->size()));
 
     dialogs_flyouts::Popup popup(anchor);
     popup.setModal(false);
@@ -3023,13 +2937,13 @@ TEST_F(GallerySpatialTest, ProjectedOverlayAnchorsTrackGeometryAndRestore2D)
     coach.open();
     const auto positionsMatch = [&] {
         const QRect bounds = overlay::presentedRectInTopLevel(anchor);
-        return overlay::visibleCardGeometry(popup.geometry()).topLeft() ==
-                   overlay::presentedPointInTopLevel(anchor, point) &&
-               overlay::visibleCardGeometry(flyout.geometry()).topLeft() ==
-                   QPoint(bounds.center().x() - 84, bounds.bottom() + flyout.anchorOffset()) &&
-               overlay::visibleCardGeometry(tip.geometry()).topLeft() ==
-                   QPoint(bounds.left(), bounds.bottom() + tip.placementMargin()) &&
-               coach.x() == bounds.center().x() - coach.width() / 2;
+        return overlay::visibleCardGeometry(popup.geometry()).topLeft()
+            == overlay::presentedPointInTopLevel(anchor, point)
+            && overlay::visibleCardGeometry(flyout.geometry()).topLeft()
+            == QPoint(bounds.center().x() - 84, bounds.bottom() + flyout.anchorOffset())
+            && overlay::visibleCardGeometry(tip.geometry()).topLeft()
+            == QPoint(bounds.left(), bounds.bottom() + tip.placementMargin())
+            && coach.x() == bounds.center().x() - coach.width() / 2;
     };
     ASSERT_TRUE(QTest::qWaitFor(positionsMatch, 1000));
     for (QWidget* surface : QList<QWidget*>{&popup, &flyout, &tip, &coach}) {
@@ -3053,8 +2967,7 @@ TEST_F(GallerySpatialTest, ProjectedOverlayAnchorsTrackGeometryAndRestore2D)
     controller.cancelTransition();
     ASSERT_TRUE(QTest::qWaitFor(positionsMatch, 1000));
     EXPECT_EQ(overlay::presentationRoot(anchor), nullptr);
-    EXPECT_EQ(overlay::presentedRectInTopLevel(anchor),
-              QRect(anchor->mapTo(&top, QPoint()), anchor->size()));
+    EXPECT_EQ(overlay::presentedRectInTopLevel(anchor), QRect(anchor->mapTo(&top, QPoint()), anchor->size()));
     coach.close();
     tip.close();
     flyout.close();
@@ -3095,7 +3008,7 @@ TEST_F(GallerySpatialTest, NativeMenusMapOnceAndKeepSubmenusInNativeCoordinates)
     const QPoint sourcePoint = button->rect().bottomLeft();
     const QPoint expected = overlay::presentedPointToGlobal(button, sourcePoint);
     QTest::mousePress(&window, Qt::LeftButton, Qt::NoModifier,
-                      controller.projectedPosition(button, button->rect().center()));
+        controller.projectedPosition(button, button->rect().center()));
     ASSERT_TRUE(QTest::qWaitFor([&] { return menu.isVisible(); }));
     QTest::mouseRelease(&menu, Qt::LeftButton, Qt::NoModifier, QPoint(-2, -2));
     EXPECT_LE((menu.pos() - expected).manhattanLength(), 1);
@@ -3108,8 +3021,7 @@ TEST_F(GallerySpatialTest, NativeMenusMapOnceAndKeepSubmenusInNativeCoordinates)
     submenu->hide();
     GallerySettings::instance().setSpatialModeEnabled(false);
     controller.cancelTransition();
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return menu.pos() == button->mapToGlobal(sourcePoint); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return menu.pos() == button->mapToGlobal(sourcePoint); }, 1000));
     menu.hide();
     GallerySettings::instance().setSpatialModeEnabled(true);
     controller.cancelTransition();
@@ -3130,8 +3042,7 @@ TEST_F(GallerySpatialTest, NativeMenusMapOnceAndKeepSubmenusInNativeCoordinates)
     transientSource->setGeometry(100, 100, 80, 32);
     transientSource->show();
     QPointer<QWidget> sourceGuard(transientSource);
-    QObject::connect(&retainedMenu, &QMenu::aboutToShow, &retainedMenu,
-                     [transientSource] { delete transientSource; });
+    QObject::connect(&retainedMenu, &QMenu::aboutToShow, &retainedMenu, [transientSource] { delete transientSource; });
     overlay::popupMenuAt(&retainedMenu, transientSource, QPoint(0, 32));
     EXPECT_TRUE(sourceGuard.isNull());
     EXPECT_FALSE(retainedMenu.property(overlay::presentedMenuSourcePropertyName()).isValid());
@@ -3171,8 +3082,7 @@ TEST_F(GallerySpatialTest, GlyphAdapterReusesWidgetClipAndPreservesPainterState)
         const auto draw = [&](QPaintDevice* target) {
             QPainter painter(target);
             painter.translate(13, 7);
-            parent.render(&painter, QPoint(), QRegion(QRect(0, 0, 120, 110)),
-                          QWidget::DrawChildren);
+            parent.render(&painter, QPoint(), QRegion(QRect(0, 0, 120, 110)), QWidget::DrawChildren);
         };
         QImage expected(480, 280, QImage::Format_ARGB32_Premultiplied);
         expected.setDevicePixelRatio(dpr);
@@ -3181,8 +3091,7 @@ TEST_F(GallerySpatialTest, GlyphAdapterReusesWidgetClipAndPreservesPainterState)
         draw(&expected);
         spatial_render::GalleryGlyphPaintDevice device(actual, 1);
         draw(&device);
-        EXPECT_EQ(actual, expected)
-            << "Device-space clips must survive user-clip and state changes";
+        EXPECT_EQ(actual, expected) << "Device-space clips must survive user-clip and state changes";
         EXPECT_LT(device.systemClipApplications(), 20)
             << "Hundreds of primitives must not rebuild the same widget clip";
     }
@@ -3211,8 +3120,7 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
             for (int row = 0; row < 3; ++row) {
                 font.setPixelSize(std::array<int, 3>{14, 18, 28}[row]);
                 painter.setFont(font);
-                painter.drawText(QPoint(30, 55 + row * 75),
-                                 QString::fromUtf8("Gallery 设置 · Popup 0123456789"));
+                painter.drawText(QPoint(30, 55 + row * 75), QString::fromUtf8("Gallery 设置 · Popup 0123456789"));
             }
             for (int x = 30; x < 450; x += 4)
                 painter.fillRect(QRect(x, 260, 1, 50), QColor(32, 32, 32));
@@ -3252,8 +3160,8 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
                 for (int x = region.left(); x <= region.right(); ++x) {
                     const int value = qGray(image.pixel(x, y));
                     ink += 224 - value;
-                    energy += qPow(value - qGray(image.pixel(x - 1, y)), 2) +
-                              qPow(value - qGray(image.pixel(x, y - 1)), 2);
+                    energy += qPow(value - qGray(image.pixel(x - 1, y)), 2)
+                        + qPow(value - qGray(image.pixel(x, y - 1)), 2);
                 }
             return std::array<double, 2>{ink, ink > 0 ? energy / ink : 0};
         };
@@ -3261,8 +3169,7 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
         double improvement = 0;
         for (int phase = 0; phase < 8; ++phase) {
             SCOPED_TRACE(::testing::Message() << "phase=" << phase);
-            const QTransform tilt(.96, .006, .00006, -.012, .97, .00003, 20. + phase / 8.,
-                                  16. + phase / 20., 1.);
+            const QTransform tilt(.96, .006, .00006, -.012, .97, .00003, 20. + phase / 8., 16. + phase / 20., 1.);
             const QImage before = draw(linear, tilt), after = draw(monotone, tilt);
             for (int y = 0; y < after.height(); ++y)
                 for (int x = 0; x < after.width(); ++x) {
@@ -3272,13 +3179,11 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
                 }
             for (int row = 0; row < 3; ++row) {
                 SCOPED_TRACE(::testing::Message() << "text row=" << row);
-                const QRect region =
-                    tilt.mapRect(QRectF(24, 20 + row * 75, 500, 43)).toAlignedRect();
+                const QRect region = tilt.mapRect(QRectF(24, 20 + row * 75, 500, 43)).toAlignedRect();
                 const auto old = measure(before, region), current = measure(after, region);
                 ASSERT_GT(old[1], 10);
                 EXPECT_GE(current[1], old[1] * .99);
-                EXPECT_NEAR(current[0] / old[0], 1., .025)
-                    << "Clarity must not be achieved by changing text weight";
+                EXPECT_NEAR(current[0] / old[0], 1., .025) << "Clarity must not be achieved by changing text weight";
                 improvement += current[1] / old[1];
                 minimumInk[row] = qMin(minimumInk[row], current[0]);
                 maximumInk[row] = qMax(maximumInk[row], current[0]);
@@ -3333,23 +3238,19 @@ TEST_F(GallerySpatialTest, PanelDensityGlyphsRetainSmallTextDetailDuringProjecti
         // Home uses these bundled faces, including Caption descriptions and
         // BodyStrong card labels. Isolate its unhinted Windows strategy here;
         // hinted fonts keep native density and the separate flat-detail contract.
-        std::array<QFont, 3> fonts{Typography::Styles::Caption.toQFont(),
-                                   Typography::Styles::Body.toQFont(),
-                                   Typography::Styles::BodyStrong.toQFont()};
+        std::array<QFont, 3> fonts{Typography::Styles::Caption.toQFont(), Typography::Styles::Body.toQFont(),
+            Typography::Styles::BodyStrong.toQFont()};
         for (auto& font : fonts)
             font.setHintingPreference(QFont::PreferNoHinting);
         for (const bool dark : {false, true}) {
             SCOPED_TRACE(::testing::Message() << "dark=" << dark);
-            const QColor background =
-                dark ? ThemeColors::Dark::BackgroundLayer : ThemeColors::Light::BackgroundLayer;
+            const QColor background = dark ? ThemeColors::Dark::BackgroundLayer : ThemeColors::Light::BackgroundLayer;
             const std::array<QColor, 3> colors{
                 dark ? ThemeColors::Dark::Text::Secondary : ThemeColors::Light::Text::Secondary,
-                dark ? ThemeColors::Dark::Text::AccentPrimary
-                     : ThemeColors::Light::Text::AccentPrimary,
+                dark ? ThemeColors::Dark::Text::AccentPrimary : ThemeColors::Light::Text::AccentPrimary,
                 dark ? ThemeColors::Dark::Text::Primary : ThemeColors::Light::Text::Primary};
             const auto cacheAt = [&](qreal cacheDpr) {
-                QImage image(qRound(600 * cacheDpr), qRound(360 * cacheDpr),
-                             QImage::Format_ARGB32_Premultiplied);
+                QImage image(qRound(600 * cacheDpr), qRound(360 * cacheDpr), QImage::Format_ARGB32_Premultiplied);
                 image.setDevicePixelRatio(cacheDpr);
                 image.fill(background);
                 spatial_render::GalleryGlyphPaintDevice device(image, 1);
@@ -3360,12 +3261,11 @@ TEST_F(GallerySpatialTest, PanelDensityGlyphsRetainSmallTextDetailDuringProjecti
                         painter.setFont(fonts[row]);
                         painter.setPen(colors[row]);
                         painter.drawText(QPoint(30, 55 + row * 75),
-                                         QString::fromUtf8("Gallery 设置 · Popup 0123456789"));
+                            QString::fromUtf8("Gallery 设置 · Popup 0123456789"));
                     }
                 }
                 if (cacheDpr == 1) {
-                    image = image.scaled(QSize(1200, 720), Qt::IgnoreAspectRatio,
-                                         Qt::FastTransformation);
+                    image = image.scaled(QSize(1200, 720), Qt::IgnoreAspectRatio, Qt::FastTransformation);
                     image.setDevicePixelRatio(2);
                 } else {
                     EXPECT_GT(device.glyphItems(), 0);
@@ -3388,8 +3288,7 @@ TEST_F(GallerySpatialTest, PanelDensityGlyphsRetainSmallTextDetailDuringProjecti
                 gl->glDisable(GL_SCISSOR_TEST);
                 gl->glClearColor(background.redF(), background.greenF(), background.blueF(), 1);
                 gl->glClear(GL_COLOR_BUFFER_BIT);
-                sampler.blit(texture.textureId(), QSize(1200, 720),
-                             projection * QMatrix4x4(tilt) * quad);
+                sampler.blit(texture.textureId(), QSize(1200, 720), projection * QMatrix4x4(tilt) * quad);
                 return target.toImage();
             };
             const auto measure = [&](const QImage& image, const QRect& region) {
@@ -3399,26 +3298,23 @@ TEST_F(GallerySpatialTest, PanelDensityGlyphsRetainSmallTextDetailDuringProjecti
                     for (int x = region.left(); x <= region.right(); ++x) {
                         const int value = qGray(image.pixel(x, y));
                         ink += qAbs(backgroundGray - value);
-                        energy += qPow(value - qGray(image.pixel(x - 1, y)), 2) +
-                                  qPow(value - qGray(image.pixel(x, y - 1)), 2);
+                        energy += qPow(value - qGray(image.pixel(x - 1, y)), 2)
+                            + qPow(value - qGray(image.pixel(x, y - 1)), 2);
                     }
                 return std::array<double, 2>{ink, ink > 0 ? energy / ink : 0};
             };
             std::array<double, 3> minimumInk{1e20, 1e20, 1e20}, maximumInk{}, gain{};
             for (int phase = 0; phase < 8; ++phase) {
                 SCOPED_TRACE(::testing::Message() << "phase=" << phase);
-                const QTransform tilt(.96, .006, .00006, -.012, .97, .00003, 20. + phase / 8.,
-                                      16. + phase / 20., 1.);
+                const QTransform tilt(.96, .006, .00006, -.012, .97, .00003, 20. + phase / 8., 16. + phase / 20., 1.);
                 const QImage before = draw(nativeGlyphs, tilt), after = draw(panelGlyphs, tilt);
                 for (int row = 0; row < 3; ++row) {
                     SCOPED_TRACE(::testing::Message() << "text row=" << row);
-                    const QRect region =
-                        tilt.mapRect(QRectF(24, 20 + row * 75, 500, 43)).toAlignedRect();
+                    const QRect region = tilt.mapRect(QRectF(24, 20 + row * 75, 500, 43)).toAlignedRect();
                     ASSERT_TRUE(after.rect().adjusted(1, 1, -1, -1).contains(region));
                     const auto old = measure(before, region), current = measure(after, region);
                     ASSERT_GT(old[1], 10);
-                    EXPECT_GE(current[1], old[1])
-                        << "A fractional phase must not trade away small-text contrast";
+                    EXPECT_GE(current[1], old[1]) << "A fractional phase must not trade away small-text contrast";
                     EXPECT_NEAR(current[0] / old[0], 1., .025)
                         << "Clarity must come from detail, not a heavier text color";
                     gain[row] += current[1] / old[1];
@@ -3428,14 +3324,12 @@ TEST_F(GallerySpatialTest, PanelDensityGlyphsRetainSmallTextDetailDuringProjecti
                     for (int y = region.top(); y <= region.bottom(); ++y)
                         for (int x = region.left(); x <= region.right(); ++x) {
                             const QColor pixel = after.pixelColor(x, y);
-                            const std::array<int, 3> actual{pixel.red(), pixel.green(),
-                                                            pixel.blue()};
-                            const std::array<int, 3> bg{background.red(), background.green(),
-                                                        background.blue()};
+                            const std::array<int, 3> actual{pixel.red(), pixel.green(), pixel.blue()};
+                            const std::array<int, 3> bg{background.red(), background.green(), background.blue()};
                             const std::array<int, 3> fg{pen.red(), pen.green(), pen.blue()};
                             for (int channel = 0; channel < 3; ++channel) {
-                                const int opaqueInk = qRound(fg[channel] * pen.alphaF() +
-                                                             bg[channel] * (1 - pen.alphaF()));
+                                const int opaqueInk = qRound(
+                                    fg[channel] * pen.alphaF() + bg[channel] * (1 - pen.alphaF()));
                                 ASSERT_GE(actual[channel], qMin(bg[channel], opaqueInk) - 1)
                                     << "Glyph reconstruction must not add a dark/color halo";
                                 ASSERT_LE(actual[channel], qMax(bg[channel], opaqueInk) + 1)
@@ -3478,8 +3372,7 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
             void paintEvent(QPaintEvent*) override
             {
                 QPainter painter(this);
-                if (const auto* device =
-                        spatial_render::GalleryGlyphPaintDevice::fromPainter(painter)) {
+                if (const auto* device = spatial_render::GalleryGlyphPaintDevice::fromPainter(painter)) {
                     glyphFont = painter.font();
                     glyphDpr = device->rasterDpr(glyphFont);
                 }
@@ -3494,8 +3387,7 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
                 painter.drawText(QPoint(40, 290), QString::fromUtf8("Gallery 标题 · 清晰度"));
                 text.setPixelSize(18);
                 painter.setFont(text);
-                painter.drawText(QPoint(40, 330),
-                                 QString::fromUtf8("正文：设置与组件，0123456789"));
+                painter.drawText(QPoint(40, 330), QString::fromUtf8("正文：设置与组件，0123456789"));
                 for (int x = 40; x < 180; x += 4)
                     painter.fillRect(QRectF(x, 180, 1, 40), Qt::black);
             }
@@ -3524,8 +3416,7 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
         GallerySettings::instance().setSpatialModeEnabled(true);
         auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
         ASSERT_NE(surface, nullptr);
-        ASSERT_TRUE(
-            QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 3000));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 3000));
         controller.cancelTransition();
         // Keep the GPU compositor active at the flat endpoint so this checks sampling
         // fidelity without conflating the expected perspective resampling with a regression.
@@ -3544,18 +3435,17 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
             << "Control curves need MSAA in the paint target, not just the window";
         if (spatial_render::needsNativeGlyphCoverage(window.devicePixelRatioF()))
             EXPECT_EQ(content->glyphDpr,
-                      spatial_render::glyphRasterDpr(content->glyphFont, window.devicePixelRatioF(),
-                                                     stats["cacheDpr"].toDouble()))
+                spatial_render::glyphRasterDpr(content->glyphFont, window.devicePixelRatioF(),
+                    stats["cacheDpr"].toDouble()))
                 << "The production cache must preserve each font's hinting policy";
         else
-            EXPECT_EQ(content->glyphDpr, 0)
-                << "Preserve Cocoa, WebAssembly and high-DPI glyph paths";
+            EXPECT_EQ(content->glyphDpr, 0) << "Preserve Cocoa, WebAssembly and high-DPI glyph paths";
         if (windowSize.width() == 1500 && window.devicePixelRatioF() == 2) {
             EXPECT_EQ(stats["cacheDpr"].toDouble(), 4);
             EXPECT_LT(stats["paintTargetHeight"].toInt(), content->height() * 4);
         }
-        const QString evidence = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE") +
-                                 (windowSize.width() == 1500 ? "/large" : "");
+        const QString evidence = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE")
+            + (windowSize.width() == 1500 ? "/large" : "");
         const qreal dpr = surface->devicePixelRatioF();
         const QPoint origin = surface->mapFrom(&window, controller.projectedPosition(content, {}));
         const QImage actual = frame.copy(QRect(origin * dpr, reference.size()));
@@ -3580,9 +3470,7 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
         for (int y = pixels.top(); y < pixels.bottom(); ++y)
             for (int x = pixels.left(); x < pixels.right(); ++x) {
                 const QColor a = actual.pixelColor(x, y), b = reference.pixelColor(x, y);
-                different += qAbs(a.red() - b.red()) + qAbs(a.green() - b.green()) +
-                                 qAbs(a.blue() - b.blue()) >
-                             60;
+                different += qAbs(a.red() - b.red()) + qAbs(a.green() - b.green()) + qAbs(a.blue() - b.blue()) > 60;
             }
         // Fractional-DPR MSAA edges differ from the native aliased fillRect even
         // without the glyph adapter. Keep this exact-pixel oracle on integer grids.
@@ -3591,8 +3479,7 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
                 << "The flat GPU endpoint must retain native control detail";
         // Large glyphs can use Qt's outline path instead of its raster glyph cache.
         // Compare stroke edge contrast; exact ink weight differs between those engines.
-        for (const QRect region :
-             {QRect(35, 20, 370, 35), QRect(35, 260, 370, 35), QRect(35, 306, 370, 30)}) {
+        for (const QRect region : {QRect(35, 20, 370, 35), QRect(35, 260, 370, 35), QRect(35, 306, 370, 30)}) {
             SCOPED_TRACE(::testing::Message() << "dpr=" << dpr << " text row=" << region.y());
             const QRect area(region.topLeft() * dpr, region.size() * dpr);
             const auto contrast = [&](const QImage& image) {
@@ -3601,8 +3488,8 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
                     for (int x = area.left() + 1; x < area.right(); ++x) {
                         const int value = qGray(image.pixel(x, y));
                         ink += 255 - value;
-                        energy += qPow(value - qGray(image.pixel(x - 1, y)), 2) +
-                                  qPow(value - qGray(image.pixel(x, y - 1)), 2);
+                        energy += qPow(value - qGray(image.pixel(x - 1, y)), 2)
+                            + qPow(value - qGray(image.pixel(x, y - 1)), 2);
                     }
                 return ink > 0 ? energy / ink : 0;
             };
@@ -3616,10 +3503,8 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
         controller.cancelTransition();
         QTest::qWait(100);
         const QImage projected = surface->grabFramebuffer();
-        const QPoint a =
-            surface->mapFrom(&window, controller.projectedPosition(content, {50, 190}));
-        const QPoint b =
-            surface->mapFrom(&window, controller.projectedPosition(content, {168, 208}));
+        const QPoint a = surface->mapFrom(&window, controller.projectedPosition(content, {50, 190}));
+        const QPoint b = surface->mapFrom(&window, controller.projectedPosition(content, {168, 208}));
         const QRect linePixels(a * dpr, b * dpr);
         int filtered = 0;
         for (int y = linePixels.top(); y < linePixels.bottom(); ++y)
@@ -3697,7 +3582,7 @@ TEST_F(GallerySpatialTest, PopupControlsRetainDetailIn3D)
     }
     QSignalSpy clicked(button, &QAbstractButton::clicked);
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
-                      controller->projectedPosition(button, button->rect().center()));
+        controller->projectedPosition(button, button->rect().center()));
     ASSERT_TRUE(QTest::qWaitFor([&] { return clicked.count() == 1; }));
 }
 
@@ -3782,8 +3667,7 @@ TEST_F(GallerySpatialTest, MacNativeStyleControlsKeepTheirPixelsInGpuCache)
             for (int x = region.left(); x < region.right(); ++x) {
                 nativeInk += contentReference.pixelColor(QPoint(x, y) * dpr).lightness() < 245;
                 const auto target = controller.projectedPosition(content, QPoint(x, y));
-                gpuInk +=
-                    flat.pixelColor(surface->mapFrom(&window, target) * dpr).lightness() < 245;
+                gpuInk += flat.pixelColor(surface->mapFrom(&window, target) * dpr).lightness() < 245;
             }
         EXPECT_GT(nativeInk, 40);
         EXPECT_GT(gpuInk, nativeInk * .7);
@@ -3810,10 +3694,9 @@ TEST_F(GallerySpatialTest, MacNativeStyleControlsKeepTheirPixelsInGpuCache)
             const auto point = controller.projectedPosition(check, QPoint(x / dpr, y / dpr));
             const auto actual = frame.pixelColor(surface->mapFrom(&window, point) * dpr);
             ++samples;
-            matches += qAbs(actual.red() - expected.red()) +
-                           qAbs(actual.green() - expected.green()) +
-                           qAbs(actual.blue() - expected.blue()) <
-                       90;
+            matches += qAbs(actual.red() - expected.red()) + qAbs(actual.green() - expected.green())
+                    + qAbs(actual.blue() - expected.blue())
+                < 90;
         }
     }
     EXPECT_GT(samples, 30);
@@ -3823,8 +3706,7 @@ TEST_F(GallerySpatialTest, MacNativeStyleControlsKeepTheirPixelsInGpuCache)
 // Opt-in, native frame pacing probe. No machine-dependent timing assertion in CI.
 TEST_F(GallerySpatialTest, NativeColdActivationProbe)
 {
-    if (qEnvironmentVariableIsEmpty("FLUENT_QT_SPATIAL_BENCHMARK") ||
-        tests::support::isHeadlessPlatform())
+    if (qEnvironmentVariableIsEmpty("FLUENT_QT_SPATIAL_BENCHMARK") || tests::support::isHeadlessPlatform())
         GTEST_SKIP() << "Requires opt-in native cold activation measurement";
     if (QGuiApplication::platformName() == QLatin1String("cocoa")) {
         for (const auto& name : QStyleFactory::keys())
@@ -3836,8 +3718,7 @@ TEST_F(GallerySpatialTest, NativeColdActivationProbe)
     GalleryWindow window;
     window.resize(1209, 811);
     window.show();
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return bool(!window.findChild<GallerySplashScreen*>()); }, 60000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!window.findChild<GallerySplashScreen*>()); }, 60000));
     ASSERT_TRUE(window.selectRoute("settings"));
     QTest::qWait(300);
     auto* toggle = window.findChild<basicinput::ToggleSwitch*>("gallerySettingsSpatialModeToggle");
@@ -3849,8 +3730,7 @@ TEST_F(GallerySpatialTest, NativeColdActivationProbe)
     qint64 longestGap = 0;
     QTimer pulse;
     pulse.setInterval(8);
-    QObject::connect(&pulse, &QTimer::timeout, &window,
-                     [&] { longestGap = qMax(longestGap, heartbeat.restart()); });
+    QObject::connect(&pulse, &QTimer::timeout, &window, [&] { longestGap = qMax(longestGap, heartbeat.restart()); });
     pulse.start();
     auto* preparedStyle = qApp->style();
     activation.start();
@@ -3869,25 +3749,23 @@ TEST_F(GallerySpatialTest, NativeColdActivationProbe)
         window.grab().save(directory + "/cold-settings-3d.png");
         auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
         const auto position = [&](const QPoint& point) {
-            return surface->mapFrom(&window,
-                                    controller->projectedPosition(toggle->parentWidget(), point));
+            return surface->mapFrom(&window, controller->projectedPosition(toggle->parentWidget(), point));
         };
         const auto rect = toggle->parentWidget()->rect();
         QPolygon corners;
-        corners << position(rect.topLeft()) << position(rect.topRight())
-                << position(rect.bottomLeft()) << position(rect.bottomRight());
+        corners << position(rect.topLeft()) << position(rect.topRight()) << position(rect.bottomLeft())
+                << position(rect.bottomRight());
         const QRect bounds = corners.boundingRect().adjusted(-4, -4, 4, 4);
         const qreal dpr = surface->devicePixelRatioF();
         surface->grabFramebuffer()
             .copy(QRect(bounds.topLeft() * dpr, bounds.size() * dpr))
             .save(directory + "/cold-toggle-3d.png");
     }
-    std::cout << "SPATIAL_COLD click=" << clickMs << "ms start=" << startMs
-              << "ms longestEventGap=" << longestGap << "ms stats="
-              << QJsonDocument::fromVariant(controller->renderingStatistics())
-                     .toJson(QJsonDocument::Compact)
-                     .constData()
-              << std::endl;
+    std::cout
+        << "SPATIAL_COLD click=" << clickMs << "ms start=" << startMs << "ms longestEventGap=" << longestGap
+        << "ms stats="
+        << QJsonDocument::fromVariant(controller->renderingStatistics()).toJson(QJsonDocument::Compact).constData()
+        << std::endl;
 }
 
 TEST_F(GallerySpatialTest, AssemblyFramePacingProbe)
@@ -3899,20 +3777,18 @@ TEST_F(GallerySpatialTest, AssemblyFramePacingProbe)
     GalleryWindow window;
     window.resize(1200, 850);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
     ASSERT_TRUE(window.selectRoute("settings"));
     QTest::qWait(300);
-    QPointer<QVariantAnimation> motion =
-        window.findChild<QVariantAnimation*>("galleryAssemblyAnimation");
+    QPointer<QVariantAnimation> motion = window.findChild<QVariantAnimation*>("galleryAssemblyAnimation");
     ASSERT_NE(motion, nullptr);
     QElapsedTimer start;
     qint64 preparation = -1;
-    QObject::connect(motion, &QVariantAnimation::stateChanged, &window,
-                     [&](QAbstractAnimation::State state) {
-                         if (state == QAbstractAnimation::Running)
-                             preparation = start.elapsed();
-                     });
+    QObject::connect(motion, &QVariantAnimation::stateChanged, &window, [&](QAbstractAnimation::State state) {
+        if (state == QAbstractAnimation::Running)
+            preparation = start.elapsed();
+    });
     QVector<qint64> intervals;
     QElapsedTimer frame;
     int swaps = 0;
@@ -3933,20 +3809,19 @@ TEST_F(GallerySpatialTest, AssemblyFramePacingProbe)
     // Measure submitted GL frames, rather than QVariantAnimation timer ticks.
     // zh_CN: 异步初始化前的 Stopped 不代表结束；统计实际 GL 提交帧，而非动画计时器回调。
     ASSERT_TRUE(QTest::qWaitFor([&] { return bool(preparation >= 0); }, 3000));
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(!motion || motion->state() == QAbstractAnimation::Stopped); }, 2500));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!motion || motion->state() == QAbstractAnimation::Stopped); }, 2500));
     std::sort(intervals.begin(), intervals.end());
     ASSERT_FALSE(intervals.isEmpty());
-    std::cout << "SPATIAL_BENCH preparation=" << preparation << "ms swaps=" << swaps
-              << " median=" << intervals[intervals.size() / 2] << "ms p95="
-              << intervals[qMin(int(intervals.size()) - 1, int(intervals.size() * .95))]
-              << "ms max=" << intervals.last() << "ms" << std::endl;
+    std::cout
+        << "SPATIAL_BENCH preparation=" << preparation << "ms swaps=" << swaps
+        << " median=" << intervals[intervals.size() / 2]
+        << "ms p95=" << intervals[qMin(int(intervals.size()) - 1, int(intervals.size() * .95))]
+        << "ms max=" << intervals.last() << "ms" << std::endl;
 }
 
 TEST_F(GallerySpatialTest, PointerFramePacingProbe)
 {
-    if (qEnvironmentVariableIsEmpty("FLUENT_QT_SPATIAL_BENCHMARK") ||
-        tests::support::isHeadlessPlatform())
+    if (qEnvironmentVariableIsEmpty("FLUENT_QT_SPATIAL_BENCHMARK") || tests::support::isHeadlessPlatform())
         GTEST_SKIP() << "Set FLUENT_QT_SPATIAL_BENCHMARK=1 on a native GPU desktop.";
     const bool nativeStyle = qEnvironmentVariableIsSet("FLUENT_QT_SPATIAL_NATIVE_STYLE");
     if (nativeStyle) {
@@ -3975,15 +3850,14 @@ TEST_F(GallerySpatialTest, PointerFramePacingProbe)
     ASSERT_NE(surface, nullptr);
     ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 3000));
     ASSERT_TRUE(QTest::qWaitFor([&] { return !controller->transitionRunning(); }, 2000));
-    for (const QString& route :
-         {QStringLiteral("settings"), QStringLiteral("home"), QStringLiteral("spatial-view")}) {
+    for (const QString& route : {QStringLiteral("settings"), QStringLiteral("home"), QStringLiteral("spatial-view")}) {
         settings.setHomeParticlesEnabled(route == "home");
         ASSERT_TRUE(window.selectRoute(route));
         ASSERT_TRUE(QTest::qWaitFor(
             [&] {
-                return route == "settings" ? window.currentSettingsPage() != nullptr
-                                           : window.currentContentPage() &&
-                                                 window.currentContentPage()->routeId() == route;
+                return route == "settings"
+                    ? window.currentSettingsPage() != nullptr
+                    : window.currentContentPage() && window.currentContentPage()->routeId() == route;
             },
             2000));
         if (auto* particles = window.findChild<layout::ParticleBackdrop*>("galleryHomeParticles"))
@@ -4017,10 +3891,9 @@ TEST_F(GallerySpatialTest, PointerFramePacingProbe)
         pointer.setInterval(16);
         QObject::connect(&pointer, &QTimer::timeout, &loop, [&] {
             const qreal angle = elapsed.elapsed() * .003;
-            const QPointF point(window.width() * (.5 + .32 * qSin(angle)),
-                                window.height() * (.55 + .25 * qCos(angle)));
-            QMouseEvent move(QEvent::MouseMove, point, window.mapToGlobal(point.toPoint()),
-                             Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            const QPointF point(window.width() * (.5 + .32 * qSin(angle)), window.height() * (.55 + .25 * qCos(angle)));
+            QMouseEvent move(QEvent::MouseMove, point, window.mapToGlobal(point.toPoint()), Qt::NoButton, Qt::NoButton,
+                Qt::NoModifier);
             QApplication::sendEvent(&window, &move);
             if (elapsed.elapsed() >= 4000)
                 loop.quit();
@@ -4032,8 +3905,8 @@ TEST_F(GallerySpatialTest, PointerFramePacingProbe)
         QObject::disconnect(connection);
         auto result = controller->renderingStatistics();
         for (auto it = result.begin(); it != result.end(); ++it) {
-            if (it.key().endsWith("Captures") || it.key().endsWith("CaptureMs") ||
-                it.key() == "paints" || it.key() == "paintMs")
+            if (it.key().endsWith("Captures") || it.key().endsWith("CaptureMs") || it.key() == "paints"
+                || it.key() == "paintMs")
                 it.value() = it.value().toDouble() - before.value(it.key()).toDouble();
         }
         std::sort(intervals.begin(), intervals.end());
@@ -4043,16 +3916,14 @@ TEST_F(GallerySpatialTest, PointerFramePacingProbe)
         result["p50Ms"] = intervals[intervals.size() / 2];
         result["p95Ms"] = intervals[qMin(int(intervals.size()) - 1, int(intervals.size() * .95))];
         result["dpr"] = window.devicePixelRatioF();
-        std::cout << "SPATIAL_POINTER "
-                  << QJsonDocument::fromVariant(result).toJson(QJsonDocument::Compact).constData()
+        std::cout << "SPATIAL_POINTER " << QJsonDocument::fromVariant(result).toJson(QJsonDocument::Compact).constData()
                   << std::endl;
     }
 }
 
 TEST_F(GallerySpatialTest, StationaryParticleFramePacingProbe)
 {
-    if (qEnvironmentVariableIsEmpty("FLUENT_QT_SPATIAL_BENCHMARK") ||
-        tests::support::isHeadlessPlatform())
+    if (qEnvironmentVariableIsEmpty("FLUENT_QT_SPATIAL_BENCHMARK") || tests::support::isHeadlessPlatform())
         GTEST_SKIP() << "Set FLUENT_QT_SPATIAL_BENCHMARK=1 on a native GPU desktop.";
     auto& settings = GallerySettings::instance();
     settings.setNavigationStyle(GallerySettings::NavigationStyle::Left);
@@ -4099,9 +3970,8 @@ TEST_F(GallerySpatialTest, StationaryParticleFramePacingProbe)
         QObject::disconnect(connection);
         auto result = controller->renderingStatistics();
         for (auto it = result.begin(); it != result.end(); ++it) {
-            if (it.key().endsWith("Captures") || it.key().endsWith("CaptureMs") ||
-                it.key() == "paints" || it.key() == "paintMs" || it.key() == "particleFrames" ||
-                it.key() == "particleCompositions")
+            if (it.key().endsWith("Captures") || it.key().endsWith("CaptureMs") || it.key() == "paints"
+                || it.key() == "paintMs" || it.key() == "particleFrames" || it.key() == "particleCompositions")
                 it.value() = it.value().toDouble() - before.value(it.key()).toDouble();
         }
         std::sort(intervals.begin(), intervals.end());
@@ -4118,8 +3988,7 @@ TEST_F(GallerySpatialTest, StationaryParticleFramePacingProbe)
             EXPECT_GT(result["particleLayers"].toInt(), 0);
             EXPECT_GT(result["particleFrames"].toLongLong(), 0);
             EXPECT_GE(result["cacheDpr"].toDouble(), window.devicePixelRatioF());
-            EXPECT_LE(result["cacheEstimatedBytes"].toLongLong(),
-                      result["cacheBudgetBytes"].toLongLong());
+            EXPECT_LE(result["cacheEstimatedBytes"].toLongLong(), result["cacheBudgetBytes"].toLongLong());
             EXPECT_EQ(result["particleBytes"], before["particleBytes"]);
             EXPECT_EQ(result["contentTextureId"], before["contentTextureId"]);
             EXPECT_EQ(result["allocationMs"], before["allocationMs"]);
@@ -4131,27 +4000,24 @@ TEST_F(GallerySpatialTest, StationaryParticleFramePacingProbe)
             QDir().mkpath(dir);
             const QString mode = accelerated ? "joint" : "reference";
             const auto frame = surface->grabFramebuffer();
-            EXPECT_EQ(frame.size(), QSize(qRound(surface->width() * window.devicePixelRatioF()),
-                                          qRound(surface->height() * window.devicePixelRatioF())));
+            EXPECT_EQ(frame.size(),
+                QSize(qRound(surface->width() * window.devicePixelRatioF()),
+                    qRound(surface->height() * window.devicePixelRatioF())));
             frame.save(dir + "/home-particles-" + mode + ".png");
             for (const auto& name : {"galleryHomeHeroTitle", "galleryHomeHeroTagline"}) {
                 auto* label = window.findChild<QWidget*>(QLatin1String(name));
                 ASSERT_NE(label, nullptr);
                 QPolygon outline;
                 for (const auto& point : {label->rect().topLeft(), label->rect().topRight(),
-                                          label->rect().bottomRight(), label->rect().bottomLeft()})
-                    outline << surface->mapFrom(&window,
-                                                controller->projectedPosition(label, point));
+                         label->rect().bottomRight(), label->rect().bottomLeft()})
+                    outline << surface->mapFrom(&window, controller->projectedPosition(label, point));
                 const auto crop = outline.boundingRect().adjusted(-2, -2, 2, 2);
-                frame
-                    .copy(QRect(crop.topLeft() * window.devicePixelRatioF(),
-                                crop.size() * window.devicePixelRatioF()))
+                frame.copy(QRect(crop.topLeft() * window.devicePixelRatioF(), crop.size() * window.devicePixelRatioF()))
                     .save(dir + "/home-particles-" + mode + "-" + QLatin1String(name) + ".png");
             }
         }
         std::cout << "SPATIAL_PARTICLES "
-                  << QJsonDocument::fromVariant(result).toJson(QJsonDocument::Compact).constData()
-                  << std::endl;
+                  << QJsonDocument::fromVariant(result).toJson(QJsonDocument::Compact).constData() << std::endl;
     }
 }
 
@@ -4163,8 +4029,8 @@ TEST_F(GallerySpatialTest, EmbeddedWindowRevalidatesContextAndRoutesProjectedInp
     GalleryWindow window;
     window.resize(960, 720);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
     auto& settings = GallerySettings::instance();
     settings.setSpatialModeEnabled(true);
     ASSERT_TRUE(QTest::qWaitFor([&] { return bool(settings.spatialAvailable()); }, 3000));
@@ -4183,8 +4049,7 @@ TEST_F(GallerySpatialTest, EmbeddedWindowRevalidatesContextAndRoutesProjectedInp
     ASSERT_TRUE(window.selectRoute("settings"));
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
-            return bool(window.findChild<basicinput::ToggleSwitch*>(
-                            "gallerySettingsSpatialModeToggle") != nullptr);
+            return bool(window.findChild<basicinput::ToggleSwitch*>("gallerySettingsSpatialModeToggle") != nullptr);
         },
         2000));
     auto* mode = window.findChild<basicinput::ToggleSwitch*>("gallerySettingsSpatialModeToggle");
@@ -4216,15 +4081,15 @@ TEST_F(GallerySpatialTest, EmbeddedWindowRevalidatesContextAndRoutesProjectedInp
     mode->installEventFilter(&hover);
     const QPoint point = controller->projectedPosition(mode, QPoint(20, mode->height() / 2));
     for (int index = 0; index < 4; ++index) {
-        QMouseEvent move(QEvent::MouseMove, point, window.mapToGlobal(point), Qt::NoButton,
-                         Qt::NoButton, Qt::NoModifier);
+        QMouseEvent move(QEvent::MouseMove, point, window.mapToGlobal(point), Qt::NoButton, Qt::NoButton,
+            Qt::NoModifier);
         QApplication::sendEvent(&window, &move);
     }
     EXPECT_EQ(hover.enters, 1);
     EXPECT_EQ(hover.leaves, 0);
     mode->removeEventFilter(&hover);
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
-                      controller->projectedPosition(mode, QPoint(20, mode->height() / 2)));
+        controller->projectedPosition(mode, QPoint(20, mode->height() / 2)));
     EXPECT_FALSE(settings.spatialModeEnabled());
 }
 
@@ -4235,19 +4100,17 @@ TEST_F(GallerySpatialTest, OpposedPanelsKeepLiveInputInBothNavigationLayouts)
     GalleryWindow window;
     window.resize(1200, 850);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
     ASSERT_TRUE(window.selectRoute("settings"));
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
-            return bool(window.findChild<basicinput::ToggleSwitch*>(
-                            "gallerySettingsSpatialModeToggle") != nullptr);
+            return bool(window.findChild<basicinput::ToggleSwitch*>("gallerySettingsSpatialModeToggle") != nullptr);
         },
         2000));
     auto* controller = window.findChild<GallerySpatialController*>();
     GallerySettings::instance().setSpatialModeEnabled(true);
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(GallerySettings::instance().spatialAvailable()); }, 3000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(GallerySettings::instance().spatialAvailable()); }, 3000));
     auto* surface = window.findChild<QWidget*>("gallerySpatialSurface");
     auto* navigation = window.findChild<navigation::NavigationView*>();
     auto* mode = window.findChild<basicinput::ToggleSwitch*>("gallerySettingsSpatialModeToggle");
@@ -4257,18 +4120,16 @@ TEST_F(GallerySpatialTest, OpposedPanelsKeepLiveInputInBothNavigationLayouts)
     auto& settings = GallerySettings::instance();
     const auto oldStyle = settings.navigationStyle();
     const auto click = [&](QWidget* widget, QPoint point) {
-        QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
-                          controller->projectedPosition(widget, point));
+        QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, controller->projectedPosition(widget, point));
     };
-    for (const auto style :
-         {GallerySettings::NavigationStyle::Left, GallerySettings::NavigationStyle::Top}) {
+    for (const auto style : {GallerySettings::NavigationStyle::Left, GallerySettings::NavigationStyle::Top}) {
         settings.setNavigationStyle(style);
         QTest::qWait(400);
         settings.setSpatialModeEnabled(true);
         controller->cancelTransition();
         QApplication::processEvents();
         EXPECT_EQ(surface->property("galleryRotationAxis").toString(),
-                  style == GallerySettings::NavigationStyle::Top ? "X" : "Y");
+            style == GallerySettings::NavigationStyle::Top ? "X" : "Y");
         const qreal navigationAngle = surface->property("galleryNavigationRotation").toReal();
         const qreal contentAngle = surface->property("galleryContentRotation").toReal();
         EXPECT_GT(navigationAngle, 0);
@@ -4292,14 +4153,13 @@ TEST_F(GallerySpatialTest, OpposedPanelsKeepLiveInputInBothNavigationLayouts)
         auto* gl = qobject_cast<QOpenGLWidget*>(surface);
         const QImage pixels = gl ? gl->grabFramebuffer() : surface->grab().toImage();
         const QPoint onTrack(mode->width() / 5, mode->height() / 2);
-        const QPoint track = (controller->projectedPosition(mode, onTrack) - surface->pos()) *
-                             (qreal(pixels.width()) / surface->width());
+        const QPoint track = (controller->projectedPosition(mode, onTrack) - surface->pos())
+            * (qreal(pixels.width()) / surface->width());
         ASSERT_TRUE(pixels.rect().contains(track));
         const QColor color = pixels.pixelColor(track);
         EXPECT_GT(color.blue(), color.red() + 40)
-            << "Painted switch must match its hit rectangle; style=" << int(style)
-            << " track=" << track.x() << ',' << track.y() << " size=" << mode->width() << ','
-            << mode->height();
+            << "Painted switch must match its hit rectangle; style=" << int(style) << " track=" << track.x() << ','
+            << track.y() << " size=" << mode->width() << ',' << mode->height();
         const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
         if (!dir.isEmpty()) {
             QDir().mkpath(dir);
@@ -4383,16 +4243,14 @@ TEST_F(GallerySpatialTest, PersistedDepthWaitsForSplashAndConnectedLogoHandoff)
         QDir().mkpath(dir);
         window.grab().save(dir + "/startup-splash.png");
     }
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("splashLogoTransition")); }, 2500));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("splashLogoTransition")); }, 2500));
     if (!dir.isEmpty())
         window.grab().save(dir + "/startup-logo-handoff.png");
     EXPECT_FALSE(surface->property("presenting").toBool());
     ASSERT_NE(navigation->graphicsEffect(), nullptr);
     EXPECT_EQ(navigation->graphicsEffect()->objectName(), "galleryStartupContentEffect");
     ASSERT_TRUE(QTest::qWaitFor([&] { return (dismissed.count()) == (1); }, 1500));
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(!splash && surface->property("presenting").toBool()); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!splash && surface->property("presenting").toBool()); }, 1000));
     ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!controller->transitionRunning()); }, 1500));
     ASSERT_NE(navigation->graphicsEffect(), nullptr);
     EXPECT_TRUE(navigation->graphicsEffect()->isEnabled());
@@ -4409,12 +4267,11 @@ TEST_F(GallerySpatialTest, SettingsUpdateTextRemainsCompleteAfterSpatialResize)
     GalleryWindow window;
     window.resize(1000, 800);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
     ASSERT_TRUE(window.selectRoute("settings"));
     ASSERT_TRUE(QTest::qWaitFor([&] { return bool(window.currentSettingsPage()); }, 2000));
-    auto* status =
-        window.currentSettingsPage()->findChild<textfields::Label*>("gallerySettingsUpdateStatus");
+    auto* status = window.currentSettingsPage()->findChild<textfields::Label*>("gallerySettingsUpdateStatus");
     auto* scroll = window.currentSettingsPage()->findChild<QScrollArea*>();
     ASSERT_NE(status, nullptr);
     ASSERT_NE(scroll, nullptr);
@@ -4423,10 +4280,10 @@ TEST_F(GallerySpatialTest, SettingsUpdateTextRemainsCompleteAfterSpatialResize)
     QApplication::processEvents();
     scroll->ensureWidgetVisible(status);
     QApplication::processEvents();
-    const int textHeight = status->fontMetrics()
-                               .boundingRect(QRect(0, 0, status->width(), 1000),
-                                             Qt::TextWordWrap | Qt::AlignRight, status->text())
-                               .height();
+    const int textHeight =
+        status->fontMetrics()
+            .boundingRect(QRect(0, 0, status->width(), 1000), Qt::TextWordWrap | Qt::AlignRight, status->text())
+            .height();
     EXPECT_TRUE(status->hasHeightForWidth());
     EXPECT_GE(status->height(), textHeight);
     EXPECT_TRUE(status->parentWidget()->rect().contains(status->geometry()));
@@ -4454,15 +4311,13 @@ TEST_F(GallerySpatialTest, NativeOverlaysBlockProjectedHomeLinks)
         presenter->prewarmFinished();
         window.resize(1200, 850);
         window.show();
-        ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!window.findChild<GallerySplashScreen*>()); },
-                                    60000));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return bool(!window.findChild<GallerySplashScreen*>()); }, 60000));
         auto* controller = window.findChild<GallerySpatialController*>();
         ASSERT_NE(controller, nullptr);
         if (spatial) {
             auto* surface = window.findChild<QWidget*>("gallerySpatialSurface");
             ASSERT_NE(surface, nullptr);
-            ASSERT_TRUE(QTest::qWaitFor(
-                [&] { return bool(surface->property("presenting").toBool()); }, 3000));
+            ASSERT_TRUE(QTest::qWaitFor([&] { return bool(surface->property("presenting").toBool()); }, 3000));
             controller->cancelTransition();
         }
         auto snapshot = [&](const QString& name) {
@@ -4473,18 +4328,16 @@ TEST_F(GallerySpatialTest, NativeOverlaysBlockProjectedHomeLinks)
             window.raise();
             window.activateWindow();
             QTest::qWait(120);
-            EXPECT_TRUE(window.screen()
-                            ->grabWindow(window.winId())
-                            .save(dir + (spatial ? "/3d-" : "/2d-") + name + ".png"));
+            EXPECT_TRUE(
+                window.screen()->grabWindow(window.winId()).save(dir + (spatial ? "/3d-" : "/2d-") + name + ".png"));
         };
         auto* links = window.findChild<collections::ListView*>("galleryHomeHeroLinksView");
         ASSERT_NE(links, nullptr);
         // Observe the real activation without launching an external browser.
         QObject::disconnect(links, &collections::ListView::itemClicked, nullptr, nullptr);
         QSignalSpy activated(links, &collections::ListView::itemClicked);
-        const QPoint source =
-            static_cast<QListView*>(links)->visualRect(links->model()->index(0, 0)).topLeft() +
-            QPoint(24, 36);
+        const QPoint source = static_cast<QListView*>(links)->visualRect(links->model()->index(0, 0)).topLeft()
+            + QPoint(24, 36);
         const QPoint point = controller->projectedPosition(links->viewport(), source);
         QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier, point);
         ASSERT_EQ(activated.count(), 1);
@@ -4517,11 +4370,7 @@ TEST_F(GallerySpatialTest, NativeOverlaysBlockProjectedHomeLinks)
         auto* target = window.findChild<QWidget*>("galleryMainNavigationPane");
         ASSERT_NE(target, nullptr);
         GalleryIntroTour tour(&window);
-        tour.setSteps({{target,
-                        {},
-                        "Browse by category",
-                        "Explore the controls.",
-                        dialogs_flyouts::CoachMark::Right}});
+        tour.setSteps({{target, {}, "Browse by category", "Explore the controls.", dialogs_flyouts::CoachMark::Right}});
         tour.start();
         auto* card = window.findChild<dialogs_flyouts::CoachMark*>();
         ASSERT_NE(card, nullptr);
@@ -4535,15 +4384,14 @@ TEST_F(GallerySpatialTest, NativeOverlaysBlockProjectedHomeLinks)
         card->move(card->pos() + point - title->mapTo(&window, title->rect().center()));
         snapshot("intro-card");
         QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier, point);
-        EXPECT_EQ(activated.count(), 0)
-            << "Ignored card/label events must not reach projected links";
+        EXPECT_EQ(activated.count(), 0) << "Ignored card/label events must not reach projected links";
         QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, point);
         EXPECT_EQ(activated.count(), 0);
         auto* next = window.findChild<basicinput::Button*>("GalleryIntroTour.NextButton");
         ASSERT_NE(next, nullptr);
         QSignalSpy finished(&tour, &GalleryIntroTour::finished);
         QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier,
-                          next->mapTo(&window, next->rect().center()));
+            next->mapTo(&window, next->rect().center()));
         ASSERT_TRUE(QTest::qWaitFor([&] { return (finished.count()) == (1); }, 1000));
         QTest::qWait(350);
         activated.clear();
@@ -4562,20 +4410,18 @@ TEST_F(GallerySpatialTest, IntroStaysAboveSpatialPanelsAndUsesPresentedTargets)
     GalleryWindow window;
     window.resize(1200, 800);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
     auto* controller = window.findChild<GallerySpatialController*>();
     auto* surface = window.findChild<QWidget*>("gallerySpatialSurface");
     auto* target = window.findChild<QWidget*>("galleryFooterNavigationPane");
     ASSERT_NE(controller, nullptr);
     ASSERT_NE(target, nullptr);
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return bool(surface->property("presenting").toBool()); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(surface->property("presenting").toBool()); }, 1000));
     controller->cancelTransition();
 
     GalleryIntroTour tour(&window);
-    tour.setSteps(
-        {{target, {}, "Settings", "Choose your preferences.", dialogs_flyouts::CoachMark::Right}});
+    tour.setSteps({{target, {}, "Settings", "Choose your preferences.", dialogs_flyouts::CoachMark::Right}});
     tour.start();
     auto* scrim = window.findChild<overlay::OverlayScrim*>("GalleryIntroTour.Scrim");
     auto* card = window.findChild<dialogs_flyouts::CoachMark*>();
@@ -4588,13 +4434,13 @@ TEST_F(GallerySpatialTest, IntroStaysAboveSpatialPanelsAndUsesPresentedTargets)
     EXPECT_LT(siblings.indexOf(surface), siblings.indexOf(scrim));
     EXPECT_LT(siblings.indexOf(scrim), siblings.indexOf(card));
     QPolygon corners;
-    corners << controller->projectedPosition(target, target->rect().topLeft())
-            << controller->projectedPosition(target, target->rect().topRight())
-            << controller->projectedPosition(target, target->rect().bottomLeft())
-            << controller->projectedPosition(target, target->rect().bottomRight());
+    corners
+        << controller->projectedPosition(target, target->rect().topLeft())
+        << controller->projectedPosition(target, target->rect().topRight())
+        << controller->projectedPosition(target, target->rect().bottomLeft())
+        << controller->projectedPosition(target, target->rect().bottomRight());
     const QRect projected = corners.boundingRect();
-    EXPECT_EQ(
-        scrim->spotlightRect(),
+    EXPECT_EQ(scrim->spotlightRect(),
         projected.translated(-scrim->pos()).adjusted(-1, -1, 1, 1).intersected(scrim->rect()));
     ASSERT_NE(card->target(), nullptr);
     EXPECT_EQ(QRect(card->target()->mapTo(&window, QPoint()), card->target()->size()), projected);
@@ -4614,13 +4460,12 @@ TEST_F(GallerySpatialTest, StartupIntroTargetsTheActiveNavigationLayout)
     for (bool top : {false, true}) {
         settings.setIntroCompleted(false);
         settings.setSpatialModeEnabled(true);
-        settings.setNavigationStyle(top ? GallerySettings::NavigationStyle::Top
-                                        : GallerySettings::NavigationStyle::Auto);
+        settings.setNavigationStyle(
+            top ? GallerySettings::NavigationStyle::Top : GallerySettings::NavigationStyle::Auto);
         GalleryWindow window;
         window.resize(1200, 800);
         window.show();
-        ASSERT_TRUE(
-            QTest::qWaitFor([&] { return bool(window.findChild<GalleryIntroTour*>()); }, 60000));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return bool(window.findChild<GalleryIntroTour*>()); }, 60000));
         auto* scrim = window.findChild<overlay::OverlayScrim*>("GalleryIntroTour.Scrim");
         auto* card = window.findChild<dialogs_flyouts::CoachMark*>();
         auto* next = window.findChild<basicinput::Button*>("GalleryIntroTour.NextButton");
@@ -4636,24 +4481,16 @@ TEST_F(GallerySpatialTest, StartupIntroTargetsTheActiveNavigationLayout)
             if (step >= 2) {
                 auto* target = step == 2 ? nav->mainChromeWidget() : nav->footerChromeWidget();
                 ASSERT_TRUE(target->isVisible());
-                const QPoint center =
-                    controller->projectedPosition(target, target->rect().center());
+                const QPoint center = controller->projectedPosition(target, target->rect().center());
                 ASSERT_TRUE(QTest::qWaitFor(
-                    [&] {
-                        return bool(
-                            scrim->spotlightRect().translated(scrim->pos()).contains(center));
-                    },
-                    700));
-                EXPECT_EQ(card->placement(), top ? dialogs_flyouts::CoachMark::Bottom
-                                                 : dialogs_flyouts::CoachMark::Right);
-                const QRect anchor(card->target()->mapTo(&window, QPoint()),
-                                   card->target()->size());
+                    [&] { return bool(scrim->spotlightRect().translated(scrim->pos()).contains(center)); }, 700));
+                EXPECT_EQ(card->placement(),
+                    top ? dialogs_flyouts::CoachMark::Bottom : dialogs_flyouts::CoachMark::Right);
+                const QRect anchor(card->target()->mapTo(&window, QPoint()), card->target()->size());
                 if (top)
-                    ASSERT_TRUE(QTest::qWaitFor(
-                        [&] { return bool(qAbs(card->y() - anchor.bottom()) < 40); }, 700));
+                    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(qAbs(card->y() - anchor.bottom()) < 40); }, 700));
                 else
-                    ASSERT_TRUE(QTest::qWaitFor(
-                        [&] { return bool(qAbs(card->x() - anchor.right()) < 40); }, 700));
+                    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(qAbs(card->x() - anchor.right()) < 40); }, 700));
             }
             QTest::mouseClick(next, Qt::LeftButton);
         }
@@ -4673,13 +4510,12 @@ TEST_F(GallerySpatialTest, IntroVisualCheck)
     settings.setSpatialModeEnabled(true);
     settings.setWindowEffect(windowing::BackdropEffect::Mica);
     settings.setNavigationStyle(qEnvironmentVariableIsSet("FLUENT_QT_VISUAL_TOP")
-                                    ? GallerySettings::NavigationStyle::Top
-                                    : GallerySettings::NavigationStyle::Auto);
+            ? GallerySettings::NavigationStyle::Top
+            : GallerySettings::NavigationStyle::Auto);
     GalleryWindow window;
     window.resize(1200, 800);
     window.show();
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return bool(window.findChild<GalleryIntroTour*>()); }, 60000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(window.findChild<GalleryIntroTour*>()); }, 60000));
     if (tests::support::shouldCaptureVisualSnapshot()) {
         auto* next = window.findChild<basicinput::Button*>("GalleryIntroTour.NextButton");
         for (int step = 0; step != 4; ++step) {
@@ -4703,11 +4539,10 @@ TEST_F(GallerySpatialTest, TopRailUsesWindowWidthAndPointerMotionFreezesDuringIn
     GalleryWindow window;
     window.resize(1200, 800);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
-    ASSERT_TRUE(window.selectRoute("settings"));
     ASSERT_TRUE(
-        QTest::qWaitFor([&] { return bool(window.currentSettingsPage() != nullptr); }, 2000));
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(window.selectRoute("settings"));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(window.currentSettingsPage() != nullptr); }, 2000));
     auto* controller = window.findChild<GallerySpatialController*>();
     auto* navigation = window.findChild<navigation::NavigationView*>();
     settings.setSpatialModeEnabled(true);
@@ -4729,41 +4564,36 @@ TEST_F(GallerySpatialTest, TopRailUsesWindowWidthAndPointerMotionFreezesDuringIn
     const QPoint sample(host->width() / 3, 70);
     const QPoint before = controller->projectedPosition(host, sample);
     const QPoint pointer = navigation->mapTo(&window, QPoint(30, navigation->height() - 30));
-    QMouseEvent move(QEvent::MouseMove, pointer, window.mapToGlobal(pointer), Qt::NoButton,
-                     Qt::NoButton, Qt::NoModifier);
+    QMouseEvent move(QEvent::MouseMove, pointer, window.mapToGlobal(pointer), Qt::NoButton, Qt::NoButton,
+        Qt::NoModifier);
     QApplication::sendEvent(&window, &move);
     ASSERT_TRUE(QTest::qWaitFor(
-        [&] {
-            return bool(
-                QLineF(QPointF(), surface->property("galleryPointerTilt").toPointF()).length() >
-                .1);
-        },
+        [&] { return bool(QLineF(QPointF(), surface->property("galleryPointerTilt").toPointF()).length() > .1); },
         700));
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return bool(follow->state() == QAbstractAnimation::Stopped); }, 700));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(follow->state() == QAbstractAnimation::Stopped); }, 700));
     const QPointF tilt = surface->property("galleryPointerTilt").toPointF();
     EXPECT_GT(QLineF(QPointF(), tilt).length(), .1);
     EXPECT_LE(qAbs(tilt.x()), .65);
     EXPECT_LE(qAbs(tilt.y()), .45);
     EXPECT_NE(controller->projectedPosition(host, sample), before);
     const QPoint press = controller->projectedPosition(host, sample);
-    QMouseEvent down(QEvent::MouseButtonPress, press, window.mapToGlobal(press), Qt::LeftButton,
-                     Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent down(QEvent::MouseButtonPress, press, window.mapToGlobal(press), Qt::LeftButton, Qt::LeftButton,
+        Qt::NoModifier);
     QApplication::sendEvent(&window, &down);
     const QPoint frozen = controller->projectedPosition(host, sample);
-    QMouseEvent drag(QEvent::MouseMove, press + QPoint(30, 20), window.mapToGlobal(press),
-                     Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent drag(QEvent::MouseMove, press + QPoint(30, 20), window.mapToGlobal(press), Qt::NoButton, Qt::LeftButton,
+        Qt::NoModifier);
     QApplication::sendEvent(&window, &drag);
     QTest::qWait(220);
     EXPECT_EQ(controller->projectedPosition(host, sample), frozen);
     EXPECT_EQ(follow->state(), QAbstractAnimation::Stopped);
-    QMouseEvent up(QEvent::MouseButtonRelease, press, window.mapToGlobal(press), Qt::LeftButton,
-                   Qt::NoButton, Qt::NoModifier);
+    QMouseEvent up(QEvent::MouseButtonRelease, press, window.mapToGlobal(press), Qt::LeftButton, Qt::NoButton,
+        Qt::NoModifier);
     QApplication::sendEvent(&window, &up);
     QEvent leave(QEvent::Leave);
     QApplication::sendEvent(&window, &leave);
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return (surface->property("galleryPointerTilt").toPointF()) == (QPointF()); }, 700));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return (surface->property("galleryPointerTilt").toPointF()) == (QPointF()); }, 700));
     EXPECT_EQ(follow->state(), QAbstractAnimation::Stopped);
     settings.setMotionMode(GallerySettings::MotionMode::Reduced);
     QTest::mouseMove(&window, pointer);
@@ -4800,14 +4630,13 @@ TEST_F(GallerySpatialTest, ShellAndPreviewsShareModeAndKeepSliderDrag)
     GalleryWindow window;
     window.resize(1200, 900);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
     ASSERT_TRUE(window.selectRoute("spatial-view"));
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
-            return bool(window.currentContentPage() &&
-                        window.currentContentPage()->findChild<spatial::SpatialView*>(
-                            "spatialPreviewView"));
+            return bool(window.currentContentPage()
+                && window.currentContentPage()->findChild<spatial::SpatialView*>("spatialPreviewView"));
         },
         3000));
     auto* page = window.currentContentPage();
@@ -4820,14 +4649,14 @@ TEST_F(GallerySpatialTest, ShellAndPreviewsShareModeAndKeepSliderDrag)
     GallerySettings::instance().setSpatialModeEnabled(true);
     ASSERT_TRUE(QTest::qWaitFor([&] { return bool(depth::enabled(&window)); }, 2000));
     controller->cancelTransition();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return (view->activeBackend()) == (spatial::SpatialView::Backend::Raster); }, 2000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return (view->activeBackend()) == (spatial::SpatialView::Backend::Raster); }, 2000));
     EXPECT_TRUE(view->isSpatialEnabled());
     EXPECT_EQ(view->renderMode(), spatial::SpatialView::RenderMode::Auto);
     GallerySettings::instance().setSpatialModeEnabled(false);
     controller->cancelTransition();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return (view->renderMode()) == (spatial::SpatialView::RenderMode::Auto); }, 2000));
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return (view->renderMode()) == (spatial::SpatialView::RenderMode::Auto); }, 2000));
     EXPECT_FALSE(view->isSpatialEnabled());
 
     // A page first opened in 3D must lay out its canvas before projecting its cards.
@@ -4837,10 +4666,7 @@ TEST_F(GallerySpatialTest, ShellAndPreviewsShareModeAndKeepSliderDrag)
     controller->cancelTransition();
     ASSERT_TRUE(window.selectRoute("spatial-item"));
     ASSERT_TRUE(QTest::qWaitFor(
-        [&] {
-            return bool(window.currentContentPage() &&
-                        window.currentContentPage()->routeId() == "spatial-item");
-        },
+        [&] { return bool(window.currentContentPage() && window.currentContentPage()->routeId() == "spatial-item"); },
         3000));
     page = window.currentContentPage();
     view = page->findChild<spatial::SpatialView*>("spatialPreviewView");
@@ -4859,9 +4685,8 @@ TEST_F(GallerySpatialTest, ShellAndPreviewsShareModeAndKeepSliderDrag)
     ASSERT_TRUE(window.selectRoute("slider"));
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
-            return bool(window.currentContentPage() &&
-                        window.currentContentPage()->routeId() == "slider" &&
-                        window.currentContentPage()->findChild<basicinput::Slider*>());
+            return bool(window.currentContentPage() && window.currentContentPage()->routeId() == "slider"
+                && window.currentContentPage()->findChild<basicinput::Slider*>());
         },
         3000));
     page = window.currentContentPage();
@@ -4874,11 +4699,9 @@ TEST_F(GallerySpatialTest, ShellAndPreviewsShareModeAndKeepSliderDrag)
     QApplication::processEvents();
     slider->setValue(slider->minimum());
     const QPoint start = controller->projectedPosition(slider, QPoint(14, slider->height() / 2));
-    const QPoint end =
-        controller->projectedPosition(slider, QPoint(slider->width() - 15, slider->height() / 2));
+    const QPoint end = controller->projectedPosition(slider, QPoint(slider->width() - 15, slider->height() / 2));
     QTest::mousePress(&window, Qt::LeftButton, Qt::NoModifier, start);
-    QMouseEvent move(QEvent::MouseMove, end, window.mapToGlobal(end), Qt::NoButton, Qt::LeftButton,
-                     Qt::NoModifier);
+    QMouseEvent move(QEvent::MouseMove, end, window.mapToGlobal(end), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(&window, &move);
     QTest::mouseRelease(&window, Qt::LeftButton, Qt::NoModifier, end);
     EXPECT_GT(slider->value(), slider->minimum() + (slider->maximum() - slider->minimum()) * .8);
@@ -4892,14 +4715,12 @@ TEST_F(GallerySpatialTest, ProjectedWheelWorksAfterAnOverlayReceivesMouseRelease
     GalleryWindow window;
     window.resize(1100, 800);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
-    ASSERT_TRUE(window.selectRoute("settings"));
     ASSERT_TRUE(
-        QTest::qWaitFor([&] { return bool(window.currentSettingsPage() != nullptr); }, 2000));
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(window.selectRoute("settings"));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(window.currentSettingsPage() != nullptr); }, 2000));
     auto* controller = window.findChild<GallerySpatialController*>();
-    auto* combo = window.currentSettingsPage()->findChild<basicinput::ComboBox*>(
-        "gallerySettingsThemeChoice");
+    auto* combo = window.currentSettingsPage()->findChild<basicinput::ComboBox*>("gallerySettingsThemeChoice");
     auto* scroll = window.currentSettingsPage()->findChild<QScrollArea*>();
     ASSERT_NE(combo, nullptr);
     ASSERT_NE(scroll, nullptr);
@@ -4908,26 +4729,23 @@ TEST_F(GallerySpatialTest, ProjectedWheelWorksAfterAnOverlayReceivesMouseRelease
     controller->cancelTransition();
     QApplication::processEvents();
     QTest::mousePress(&window, Qt::LeftButton, Qt::NoModifier,
-                      controller->projectedPosition(combo, combo->rect().center()));
+        controller->projectedPosition(combo, combo->rect().center()));
     auto* popup = window.findChild<QWidget*>("ComboBoxPopup");
     ASSERT_NE(popup, nullptr);
     ASSERT_TRUE(QTest::qWaitFor([&] { return bool(popup->isVisible()); }, 1000));
     QTest::mouseRelease(popup, Qt::LeftButton, Qt::NoModifier, QPoint(1, 1));
     QTest::keyClick(popup, Qt::Key_Escape);
     const auto wheel = [&](int delta) {
-        const QPoint position =
-            controller->projectedPosition(scroll->viewport(), scroll->viewport()->rect().center());
-        QWheelEvent event(position, window.mapToGlobal(position), QPoint(), QPoint(0, delta),
-                          Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        const QPoint position = controller->projectedPosition(scroll->viewport(), scroll->viewport()->rect().center());
+        QWheelEvent event(position, window.mapToGlobal(position), QPoint(), QPoint(0, delta), Qt::NoButton,
+            Qt::NoModifier, Qt::NoScrollPhase, false);
         QApplication::sendEvent(&window, &event);
     };
     EXPECT_EQ(scroll->verticalScrollBar()->value(), 0);
     wheel(-480);
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return bool(scroll->verticalScrollBar()->value() > 0); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(scroll->verticalScrollBar()->value() > 0); }, 1000));
     wheel(480);
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return (scroll->verticalScrollBar()->value()) == (0); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (scroll->verticalScrollBar()->value()) == (0); }, 1000));
 }
 
 TEST_F(GallerySpatialTest, ProjectedWheelBubblesFromLabelsInBothLayouts)
@@ -4937,11 +4755,10 @@ TEST_F(GallerySpatialTest, ProjectedWheelBubblesFromLabelsInBothLayouts)
     GalleryWindow window;
     window.resize(1100, 800);
     window.show();
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
-    ASSERT_TRUE(window.selectRoute("settings"));
     ASSERT_TRUE(
-        QTest::qWaitFor([&] { return bool(window.currentSettingsPage() != nullptr); }, 2000));
+        QTest::qWaitFor([&] { return bool(window.findChild<QWidget*>("gallerySplashScreen") == nullptr); }, 60000));
+    ASSERT_TRUE(window.selectRoute("settings"));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return bool(window.currentSettingsPage() != nullptr); }, 2000));
     auto* controller = window.findChild<GallerySpatialController*>();
     auto* page = window.currentSettingsPage();
     auto* scroll = page->findChild<QScrollArea*>();
@@ -4974,8 +4791,7 @@ TEST_F(GallerySpatialTest, ProjectedWheelBubblesFromLabelsInBothLayouts)
     settings.setSpatialModeEnabled(true);
     ASSERT_TRUE(QTest::qWaitFor([&] { return bool(depth::enabled(&window)); }, 2000));
     controller->cancelTransition();
-    for (const auto style :
-         {GallerySettings::NavigationStyle::Left, GallerySettings::NavigationStyle::Top}) {
+    for (const auto style : {GallerySettings::NavigationStyle::Left, GallerySettings::NavigationStyle::Top}) {
         settings.setNavigationStyle(style);
         QApplication::processEvents();
         for (const bool pixelInput : {false, true}) {
@@ -4984,17 +4800,15 @@ TEST_F(GallerySpatialTest, ProjectedWheelBubblesFromLabelsInBothLayouts)
             const QPoint position = controller->projectedPosition(label, label->rect().center());
             const QPoint viewportPoint = label->mapTo(scroll->viewport(), label->rect().center());
             SCOPED_TRACE(::testing::Message()
-                         << "style=" << int(style) << " pixelInput=" << pixelInput << " viewport="
-                         << scroll->viewport()->width() << 'x' << scroll->viewport()->height()
-                         << " labelCenter=" << viewportPoint.x() << ',' << viewportPoint.y()
-                         << " projected=" << position.x() << ',' << position.y());
+                << "style=" << int(style) << " pixelInput=" << pixelInput << " viewport=" << scroll->viewport()->width()
+                << 'x' << scroll->viewport()->height() << " labelCenter=" << viewportPoint.x() << ','
+                << viewportPoint.y() << " projected=" << position.x() << ',' << position.y());
             const auto wheel = [&](int delta) {
                 // Native wheel packets retain angleDelta even with pixel data.
                 // Qt's native scrollbars can ignore pixel-only mouse packets.
-                QWheelEvent event(position, window.mapToGlobal(position),
-                                  pixelInput ? QPoint(0, delta) : QPoint(), QPoint(0, delta),
-                                  Qt::NoButton, Qt::NoModifier,
-                                  pixelInput ? Qt::ScrollUpdate : Qt::NoScrollPhase, false);
+                QWheelEvent event(position, window.mapToGlobal(position), pixelInput ? QPoint(0, delta) : QPoint(),
+                    QPoint(0, delta), Qt::NoButton, Qt::NoModifier, pixelInput ? Qt::ScrollUpdate : Qt::NoScrollPhase,
+                    false);
                 QApplication::sendEvent(&window, &event);
             };
             const int previousWheelCount = observed.count;
@@ -5003,11 +4817,9 @@ TEST_F(GallerySpatialTest, ProjectedWheelBubblesFromLabelsInBothLayouts)
             EXPECT_EQ(observed.pixels, pixelInput ? QPoint(0, -120) : QPoint());
             EXPECT_EQ(observed.angles, QPoint(0, -120));
             EXPECT_EQ(observed.phase, pixelInput ? Qt::ScrollUpdate : Qt::NoScrollPhase);
-            ASSERT_TRUE(QTest::qWaitFor(
-                [&] { return bool(scroll->verticalScrollBar()->value() > 0); }, 1000));
+            ASSERT_TRUE(QTest::qWaitFor([&] { return bool(scroll->verticalScrollBar()->value() > 0); }, 1000));
             wheel(120);
-            ASSERT_TRUE(QTest::qWaitFor(
-                [&] { return (scroll->verticalScrollBar()->value()) == (0); }, 1000));
+            ASSERT_TRUE(QTest::qWaitFor([&] { return (scroll->verticalScrollBar()->value()) == (0); }, 1000));
         }
     }
 }
