@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <QColor>
+#include <QElapsedTimer>
 #include <QEvent>
 #include <QGuiApplication>
 #include <QImage>
@@ -70,9 +71,9 @@ struct X11ImageSetup {
     quint8 padding1[4];
 };
 
-static_assert(sizeof(X11ImageReply) == 32 && offsetof(X11ImageReply, visual) == 8 &&
-                  sizeof(X11ImageSetup) == 40 && offsetof(X11ImageSetup, imageByteOrder) == 30,
-              "The native image probe must retain the core XCB wire ABI");
+static_assert(sizeof(X11ImageReply) == 32 && offsetof(X11ImageReply, visual) == 8 && sizeof(X11ImageSetup) == 40
+        && offsetof(X11ImageSetup, imageByteOrder) == 30,
+    "The native image probe must retain the core XCB wire ABI");
 
 int x11ImageColorComponent(quint32 pixel, quint32 mask)
 {
@@ -104,11 +105,9 @@ public:
         }
         if (m_imageLibrary.load()) {
             m_getImage = reinterpret_cast<GetImage>(m_imageLibrary.resolve("xcb_get_image"));
-            m_getImageReply =
-                reinterpret_cast<GetImageReply>(m_imageLibrary.resolve("xcb_get_image_reply"));
+            m_getImageReply = reinterpret_cast<GetImageReply>(m_imageLibrary.resolve("xcb_get_image_reply"));
             m_imageData = reinterpret_cast<ImageData>(m_imageLibrary.resolve("xcb_get_image_data"));
-            m_imageDataLength = reinterpret_cast<ImageDataLength>(
-                m_imageLibrary.resolve("xcb_get_image_data_length"));
+            m_imageDataLength = reinterpret_cast<ImageDataLength>(m_imageLibrary.resolve("xcb_get_image_data_length"));
         }
     }
 
@@ -122,8 +121,7 @@ public:
 
     bool canCaptureSamples() const
     {
-        return m_api.healthy(m_connection) && m_getImage && m_getImageReply && m_imageData &&
-               m_imageDataLength;
+        return m_api.healthy(m_connection) && m_getImage && m_getImageReply && m_imageData && m_imageDataLength;
     }
 
     QImage captureSample(WId nativeId, const QPoint& position) const
@@ -132,11 +130,10 @@ public:
             return {};
         constexpr int Extent = 4;
         constexpr quint8 ZPixmap = 2;
-        const auto reply =
-            m_api.reply(m_connection,
-                        m_getImage(m_connection, ZPixmap, static_cast<quint32>(nativeId),
-                                   position.x(), position.y(), Extent, Extent, ~quint32{0}),
-                        m_getImageReply);
+        const auto reply = m_api.reply(m_connection,
+            m_getImage(m_connection, ZPixmap, static_cast<quint32>(nativeId), position.x(), position.y(), Extent,
+                Extent, ~quint32{0}),
+            m_getImageReply);
         if (!reply || reply->depth == 0 || reply->depth > 32)
             return {};
         const int length = m_imageDataLength(reply.get());
@@ -153,8 +150,8 @@ public:
             return {};
         const quint32 colorMask = visual.redMask | visual.greenMask | visual.blueMask;
         const quint32 depthMask = static_cast<quint32>((quint64{1} << reply->depth) - 1);
-        if ((colorMask & ~depthMask) != 0 || (visual.redMask & visual.greenMask) != 0 ||
-            (visual.redMask & visual.blueMask) != 0 || (visual.greenMask & visual.blueMask) != 0)
+        if ((colorMask & ~depthMask) != 0 || (visual.redMask & visual.greenMask) != 0
+            || (visual.redMask & visual.blueMask) != 0 || (visual.greenMask & visual.blueMask) != 0)
             return {};
         const quint32 alphaMask = depthMask & ~colorMask;
         const xcb::Setup* setup = m_api.getSetup(m_connection);
@@ -170,8 +167,7 @@ public:
                 const int offset = (y * Extent + x) * bytesPerPixel;
                 quint32 pixel = 0;
                 for (int byte = 0; byte < bytesPerPixel; ++byte) {
-                    const int shift =
-                        imageSetup.imageByteOrder == 0 ? byte * 8 : (bytesPerPixel - byte - 1) * 8;
+                    const int shift = imageSetup.imageByteOrder == 0 ? byte * 8 : (bytesPerPixel - byte - 1) * 8;
                     pixel |= quint32(data[offset + byte]) << shift;
                 }
                 const int red = x11ImageColorComponent(pixel, visual.redMask);
@@ -191,23 +187,20 @@ public:
         if (!m_connection || !nativeId)
             return {};
         constexpr const char* AtomName = "_KDE_NET_WM_BLUR_BEHIND_REGION";
-        const auto atom = m_api.reply(
-            m_connection,
+        const auto atom = m_api.reply(m_connection,
             m_api.internAtom(m_connection, 1, static_cast<quint16>(qstrlen(AtomName)), AtomName),
             m_api.internAtomReply);
         if (!atom)
             return {};
         if (!atom->id)
             return {true, false};
-        const auto property = m_api.reply(
-            m_connection,
+        const auto property = m_api.reply(m_connection,
             m_api.getProperty(m_connection, 0, static_cast<quint32>(nativeId), atom->id, 0, 0, 0),
             m_api.getPropertyReply);
         if (!property)
             return {};
         const bool present = property->type != 0;
-        const bool valid =
-            present ? property->type == 6 && property->format == 32 : property->format == 0;
+        const bool valid = present ? property->type == 6 && property->format == 32 : property->format == 0;
         return {valid, present};
     }
 
@@ -217,12 +210,9 @@ private:
         const xcb::Setup* setup = m_api.getSetup(m_connection);
         if (!setup)
             return false;
-        for (auto screen = m_api.rootsIterator(setup); screen.remaining;
-             m_api.screenNext(&screen)) {
-            for (auto depth = m_api.depthsIterator(screen.data); depth.remaining;
-                 m_api.depthNext(&depth)) {
-                for (auto visual = m_api.visualsIterator(depth.data); visual.remaining;
-                     m_api.visualNext(&visual)) {
+        for (auto screen = m_api.rootsIterator(setup); screen.remaining; m_api.screenNext(&screen)) {
+            for (auto depth = m_api.depthsIterator(screen.data); depth.remaining; m_api.depthNext(&depth)) {
+                for (auto visual = m_api.visualsIterator(depth.data); visual.remaining; m_api.visualNext(&visual)) {
                     if (visual.data->id == id) {
                         *result = *visual.data;
                         return true;
@@ -233,8 +223,7 @@ private:
         return false;
     }
 
-    using GetImage = xcb::Cookie (*)(xcb::Connection*, quint8, quint32, qint16, qint16, quint16,
-                                     quint16, quint32);
+    using GetImage = xcb::Cookie (*)(xcb::Connection*, quint8, quint32, qint16, qint16, quint16, quint16, quint32);
     using GetImageReply = xcb::Api::ReplyFunction<X11ImageReply>;
     using ImageData = quint8* (*)(const X11ImageReply*);
     using ImageDataLength = int (*)(const X11ImageReply*);
@@ -288,9 +277,8 @@ bool sampleMatchesThemeSeed(const QImage& sample, const QColor& expected)
             const QColor pixel = sample.pixelColor(x, y);
             // Allow the quantization of a real RGB565 display, while still
             // distinguishing the Light theme seed from an unthemed white frame.
-            if (qAbs(pixel.red() - expected.red()) > 4 ||
-                qAbs(pixel.green() - expected.green()) > 4 ||
-                qAbs(pixel.blue() - expected.blue()) > 4 || pixel.alpha() != 255)
+            if (qAbs(pixel.red() - expected.red()) > 4 || qAbs(pixel.green() - expected.green()) > 4
+                || qAbs(pixel.blue() - expected.blue()) > 4 || pixel.alpha() != 255)
                 return false;
         }
     }
@@ -302,8 +290,7 @@ void expectThemeSeed(const QImage& sample, const QColor& prepared, const QColor&
     ASSERT_FALSE(sample.isNull());
     EXPECT_TRUE(sampleMatchesThemeSeed(sample, prepared) || sampleMatchesThemeSeed(sample, current))
         << "Native pixels must match the complete prepared or active theme seed; prepared="
-        << prepared.name(QColor::HexArgb).toStdString()
-        << " current=" << current.name(QColor::HexArgb).toStdString()
+        << prepared.name(QColor::HexArgb).toStdString() << " current=" << current.name(QColor::HexArgb).toStdString()
         << " first pixel=" << sample.pixelColor(0, 0).name(QColor::HexArgb).toStdString();
 }
 
@@ -369,9 +356,8 @@ void runKWinOpaqueCommit(BackdropEffect target)
     EXPECT_TRUE(blurHintsAtOpaquePaint.first())
         << "The first opaque client paint must still be covered by the previous blur hint";
     EXPECT_EQ(window.backdropEffect(), target);
-    EXPECT_EQ(window.backdropState().surfaceMode, target == BackdropEffect::Solid
-                                                      ? BackdropSurfaceMode::SolidOpaque
-                                                      : BackdropSurfaceMode::PaintedOpaque);
+    EXPECT_EQ(window.backdropState().surfaceMode,
+        target == BackdropEffect::Solid ? BackdropSurfaceMode::SolidOpaque : BackdropSurfaceMode::PaintedOpaque);
     EXPECT_EQ(window.winId(), nativeId);
     EXPECT_EQ(window.geometry(), geometry);
     EXPECT_EQ(window.nativeIdChanges, nativeIdChanges);
@@ -414,8 +400,8 @@ TEST(XcbWindowBackdropTest, SolidFirstExposureUsesNativeThemeBackground)
         // QWidget::grab() would repaint and hide a bad pre-paint background.
         const QPoint center = window.rect().center();
         const qreal scale = window.devicePixelRatioF();
-        const QImage sample = reader.captureSample(
-            nativeId, QPoint(qRound(center.x() * scale) - 2, qRound(center.y() * scale) - 2));
+        const QImage sample = reader.captureSample(nativeId,
+            QPoint(qRound(center.x() * scale) - 2, qRound(center.y() * scale) - 2));
         const QColor expected = window.themeBackdrop(window.isActiveWindow());
         const auto group = window.isActiveWindow() ? QPalette::Active : QPalette::Inactive;
         EXPECT_EQ(window.palette().color(group, QPalette::Window), expected);
@@ -427,6 +413,28 @@ TEST(XcbWindowBackdropTest, SolidFirstExposureUsesNativeThemeBackground)
         EXPECT_EQ(window.paints, 0);
         EXPECT_EQ(window.winId(), nativeId);
         EXPECT_EQ(window.size(), expectedSize);
+        // The window manager can place an exposed, active window in multiple stages.
+        // Keep paints disabled until its geometry is stable before recording the baseline.
+        window.raise();
+        window.activateWindow();
+        ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+        ASSERT_TRUE(window.isActiveWindow());
+        QGuiApplication::sync();
+        QRect lastGeometry = window.geometry();
+        QElapsedTimer unchangedGeometry;
+        unchangedGeometry.start();
+        ASSERT_TRUE(QTest::qWaitFor(
+            [&] {
+                const QRect current = window.geometry();
+                if (current != lastGeometry) {
+                    lastGeometry = current;
+                    unchangedGeometry.restart();
+                }
+                return unchangedGeometry.elapsed() >= 100;
+            },
+            2000));
+        ASSERT_EQ(window.paints, 0);
+        ASSERT_EQ(window.size(), expectedSize);
         const QRect geometry = window.geometry();
         const int nativeIdChanges = window.nativeIdChanges;
         window.setUpdatesEnabled(true);
@@ -463,8 +471,7 @@ TEST(XcbWindowBackdropTest, DestroyedSurfaceRequestsReturnErrorsAndKeepConnectio
     xcb::Connection* connection = api.connect(nullptr, nullptr);
     ASSERT_TRUE(api.healthy(connection));
     const auto closeConnection = [&api](xcb::Connection* value) { api.disconnect(value); };
-    std::unique_ptr<xcb::Connection, decltype(closeConnection)> ownedConnection(connection,
-                                                                                closeConnection);
+    std::unique_ptr<xcb::Connection, decltype(closeConnection)> ownedConnection(connection, closeConnection);
     QWindow nativeWindow;
     nativeWindow.create();
     const quint32 destroyedId = static_cast<quint32>(nativeWindow.winId());
@@ -480,22 +487,16 @@ TEST(XcbWindowBackdropTest, DestroyedSurfaceRequestsReturnErrorsAndKeepConnectio
         // lookup of this intentionally destroyed client returns BadWindow.
         screen->grabWindow(destroyedId, 0, 0, 2, 2);
     }
-    EXPECT_FALSE(api.reply(connection, api.getWindowAttributes(connection, destroyedId),
-                           api.getWindowAttributesReply));
-    EXPECT_FALSE(
-        api.reply(connection, api.getGeometry(connection, destroyedId), api.getGeometryReply));
-    EXPECT_FALSE(api.reply(connection, api.getProperty(connection, 0, destroyedId, 6, 0, 0, 0),
-                           api.getPropertyReply));
+    EXPECT_FALSE(api.reply(connection, api.getWindowAttributes(connection, destroyedId), api.getWindowAttributesReply));
+    EXPECT_FALSE(api.reply(connection, api.getGeometry(connection, destroyedId), api.getGeometryReply));
+    EXPECT_FALSE(api.reply(connection, api.getProperty(connection, 0, destroyedId, 6, 0, 0, 0), api.getPropertyReply));
     constexpr quint32 pixel = 0xff202020;
-    EXPECT_FALSE(
-        api.check(connection, api.changeAttributesChecked(connection, destroyedId, 2, &pixel)));
-    EXPECT_FALSE(api.check(
-        connection, api.changePropertyChecked(connection, 0, destroyedId, 6, 6, 32, 1, &pixel)));
+    EXPECT_FALSE(api.check(connection, api.changeAttributesChecked(connection, destroyedId, 2, &pixel)));
+    EXPECT_FALSE(api.check(connection, api.changePropertyChecked(connection, 0, destroyedId, 6, 6, 32, 1, &pixel)));
     EXPECT_FALSE(api.check(connection, api.deletePropertyChecked(connection, destroyedId, 6)));
     EXPECT_FALSE(api.check(connection, api.mapWindowChecked(connection, destroyedId)));
     constexpr quint32 above = 0;
-    EXPECT_FALSE(
-        api.check(connection, api.configureWindowChecked(connection, destroyedId, 64, &above)));
+    EXPECT_FALSE(api.check(connection, api.configureWindowChecked(connection, destroyedId, 64, &above)));
     EXPECT_FALSE(api.check(connection, api.setInputFocusChecked(connection, 2, destroyedId, 0)));
     EXPECT_TRUE(api.roundTrip(connection)) << "BadWindow must not terminate or poison the client";
 }
@@ -504,8 +505,7 @@ TEST(WaylandWindowBackdropTest, FirstPaintUsesOpaqueFallback)
 {
     if (!QGuiApplication::platformName().startsWith(QStringLiteral("wayland")))
         GTEST_SKIP() << "Requires a real Wayland compositor";
-    for (const auto effect :
-         {BackdropEffect::Solid, BackdropEffect::Mica, BackdropEffect::Acrylic}) {
+    for (const auto effect : {BackdropEffect::Solid, BackdropEffect::Mica, BackdropEffect::Acrylic}) {
         SCOPED_TRACE(static_cast<int>(effect));
         NativeBackdropProbeWindow window;
         window.setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
@@ -517,9 +517,8 @@ TEST(WaylandWindowBackdropTest, FirstPaintUsesOpaqueFallback)
         ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
         ASSERT_TRUE(QTest::qWaitFor([&] { return !window.paintedModes.isEmpty(); }, 2000));
         EXPECT_NE(window.paintedModes.first(), BackdropSurfaceMode::CompositedTransparent);
-        EXPECT_EQ(window.backdropState().surfaceMode, effect == BackdropEffect::Solid
-                                                          ? BackdropSurfaceMode::SolidOpaque
-                                                          : BackdropSurfaceMode::PaintedOpaque);
+        EXPECT_EQ(window.backdropState().surfaceMode,
+            effect == BackdropEffect::Solid ? BackdropSurfaceMode::SolidOpaque : BackdropSurfaceMode::PaintedOpaque);
         EXPECT_FALSE(fluent::windowing::windowBackdropRequiresTransparentClear(&window));
         EXPECT_EQ(window.palette().color(QPalette::Window).alpha(), 255);
         EXPECT_EQ(window.size(), expectedSize);

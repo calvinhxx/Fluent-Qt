@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import os
 from pathlib import Path
+import re
+import subprocess
 import sys
 import unittest
 from unittest import mock
@@ -1354,6 +1357,100 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                         1,
                     )
                 )
+
+
+class CiSourceContractsTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location(
+            "check_ci_source_contracts", Path(__file__).with_name("check-ci-source-contracts.py")
+        )
+        cls.source = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.source)
+
+    def test_repository_source_checks_are_unconditional(self):
+        self.assertEqual(MODULE.validate_ci_source_contracts_contract(MODULE.read_workflow("ci.yml")), [])
+
+    def test_legacy_preflight_alone_cannot_omit_font_checks(self):
+        workflow = MODULE.read_workflow("ci.yml").replace(
+            "python3 .github/scripts/check-ci-source-contracts.py",
+            "python3 tools/dev/fluent_qt_preflight.py --checks-only",
+            1,
+        )
+        self.assertTrue(MODULE.validate_ci_source_contracts_contract(workflow))
+
+    def test_source_checks_cannot_be_commented_disabled_or_fail_open(self):
+        workflow = MODULE.read_workflow("ci.yml")
+        command = "python3 .github/scripts/check-ci-source-contracts.py"
+        for replacement in ("", "# " + command, "echo " + command,
+                            "true || " + command, command + " || true", "exit 0\n          " + command):
+            with self.subTest(replacement=replacement):
+                self.assertTrue(MODULE.validate_ci_source_contracts_contract(workflow.replace(command, replacement, 1)))
+        step = MODULE.named_step_section(MODULE.job_section(workflow, "plan"), "Validate CI orchestration contracts")
+        for control in ("if: ${{ false }}", "continue-on-error: true"):
+            for position in ("        shell: bash\n", "          node --test"):
+                with self.subTest(control=control, position=position):
+                    mutated = step.replace(position, "        " + control + "\n" + position, 1)
+                    self.assertTrue(MODULE.validate_ci_source_contracts_contract(workflow.replace(step, mutated, 1)))
+
+    def test_font_checks_use_an_isolated_interpreter_and_execute_all_contracts(self):
+        directory = MODULE.ROOT / "build/font-check-unit-fixture"
+        python = directory / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        with mock.patch.dict(os.environ, {"PYTHONPATH": "external", "PYTHONHOME": "external"}), \
+                mock.patch.object(self.source.subprocess, "run") as run:
+            self.source.run_font_contracts(directory)
+        self.assertEqual([call.args[0] for call in run.call_args_list], [
+            [sys.executable, "-m", "venv", str(directory)],
+            [str(python), "-m", "pip", "install", "--disable-pip-version-check", "-r", "tools/fonts/requirements.txt"],
+            [str(python), "tools/fonts/test_generate_typography_assets.py"],
+            [str(python), "tools/fonts/generate_typography_assets.py", "--check"],
+            [str(python), "tools/fonts/generate_typography_assets.py", "--check-web-fallback"],
+        ])
+        for call in run.call_args_list:
+            self.assertTrue(call.kwargs["check"])
+            self.assertEqual(call.kwargs["cwd"], MODULE.ROOT)
+            self.assertNotIn("PYTHONPATH", call.kwargs["env"])
+            self.assertNotIn("PYTHONHOME", call.kwargs["env"])
+
+    def test_each_font_failure_stops_before_later_checks(self):
+        for index in range(5):
+            with self.subTest(failed_command=index), mock.patch.object(
+                self.source.subprocess, "run",
+                side_effect=[mock.Mock(returncode=0)] * index + [subprocess.CalledProcessError(7, "font check")],
+            ) as run:
+                with self.assertRaises(subprocess.CalledProcessError):
+                    self.source.run_font_contracts(MODULE.ROOT / "build/font-check-unit-fixture")
+                self.assertEqual(run.call_count, index + 1)
+
+    def test_original_preflight_still_runs_after_font_checks(self):
+        calls = mock.Mock()
+        with mock.patch.object(self.source, "run_font_contracts") as fonts, \
+                mock.patch.object(self.source.subprocess, "run") as preflight:
+            calls.attach_mock(fonts, "fonts")
+            calls.attach_mock(preflight, "preflight")
+            self.assertEqual(self.source.main(), 0)
+        self.assertEqual(calls.mock_calls, [
+            mock.call.fonts(MODULE.ROOT / "build/ci-fonts-venv"),
+            mock.call.preflight([sys.executable, "tools/dev/fluent_qt_preflight.py", "--checks-only"],
+                                cwd=MODULE.ROOT, check=True),
+        ])
+
+    def test_font_and_existing_preflight_failures_propagate(self):
+        with mock.patch.object(self.source, "run_font_contracts", side_effect=subprocess.CalledProcessError(17, "fonts")), \
+                mock.patch.object(self.source.subprocess, "run") as preflight:
+            self.assertEqual(self.source.main(), 17)
+            preflight.assert_not_called()
+        with mock.patch.object(self.source, "run_font_contracts"), mock.patch.object(
+            self.source.subprocess, "run", side_effect=subprocess.CalledProcessError(23, "preflight")
+        ):
+            self.assertEqual(self.source.main(), 23)
+
+    def test_font_dependency_is_exactly_pinned_to_the_generator_version(self):
+        generator = (MODULE.ROOT / "tools/fonts/generate_typography_assets.py").read_text(encoding="utf-8")
+        version = re.search(r'^FONTTOOLS_VERSION = "([^"]+)"$', generator, re.MULTILINE).group(1)
+        requirements = (MODULE.ROOT / "tools/fonts/requirements.txt").read_text(encoding="utf-8")
+        entries = [line.strip() for line in requirements.splitlines() if line.strip() and not line.startswith("#")]
+        self.assertEqual(entries, [f"fonttools=={version}"])
 
 
 if __name__ == "__main__":

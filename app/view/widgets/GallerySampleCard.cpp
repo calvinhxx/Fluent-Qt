@@ -6,6 +6,8 @@
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QResizeEvent>
+#include <QScopedValueRollback>
+#include <QScrollArea>
 #include <QSizePolicy>
 #include <QTimer>
 #include <QVariant>
@@ -62,8 +64,7 @@ GallerySampleCard::GallerySampleCard(const GallerySample& sample, QWidget* paren
     : GallerySampleCard(QString(), sample, parent)
 {}
 
-GallerySampleCard::GallerySampleCard(const QString& routeId, const GallerySample& sample,
-                                     QWidget* parent)
+GallerySampleCard::GallerySampleCard(const QString& routeId, const GallerySample& sample, QWidget* parent)
     : QFrame(parent), m_sampleId(sample.id)
 {
     setObjectName(QStringLiteral("gallerySampleCard"));
@@ -112,15 +113,14 @@ GallerySampleCard::GallerySampleCard(const QString& routeId, const GallerySample
     }
 
     if (!sample.codeSnippet.isEmpty()) {
-        const QString pythonCode =
-            routeId.isEmpty() ? QString() : galleryPythonSnippet(routeId, sample.id);
+        const QString pythonCode = routeId.isEmpty() ? QString() : galleryPythonSnippet(routeId, sample.id);
         m_codeBlock = new GalleryCodeBlock(sample.codeSnippet, pythonCode, this);
         m_codeBlock->setCppExcerpt(sample.usageSnippet);
         if (!sample.sourceFiles.isEmpty())
-            m_codeBlock->setSourceFiles(sample.sourceFiles,
-                                        galleryPythonSourceFiles(routeId, sample.id));
-        connect(m_codeBlock, &GalleryCodeBlock::layoutHeightChanged, this,
-                [this]() { updateCodeBlockTransitionLayout(); });
+            m_codeBlock->setSourceFiles(sample.sourceFiles, galleryPythonSourceFiles(routeId, sample.id));
+        connect(m_codeBlock, &GalleryCodeBlock::layoutHeightChanged, this, [this]() {
+            updateCodeBlockTransitionLayout();
+        });
     }
 
     using Edge = AnchorLayout::Edge;
@@ -207,8 +207,8 @@ QSize GallerySampleCard::minimumSizeHint() const
 
 bool GallerySampleCard::eventFilter(QObject* watched, QEvent* event)
 {
-    if ((watched == m_previewSurface || watched == m_preview || watched == m_options) &&
-        event->type() == QEvent::LayoutRequest) {
+    if ((watched == m_previewSurface || watched == m_preview || watched == m_options)
+        && event->type() == QEvent::LayoutRequest) {
         queueAnchoredLayoutUpdate();
     }
     return QFrame::eventFilter(watched, event);
@@ -216,9 +216,11 @@ bool GallerySampleCard::eventFilter(QObject* watched, QEvent* event)
 
 bool GallerySampleCard::event(QEvent* event)
 {
-    if (event->type() == depth::changeEvent() || event->type() == QEvent::Show ||
-        event->type() == QEvent::ParentChange) {
+    if (event->type() == depth::changeEvent() || event->type() == QEvent::Show
+        || event->type() == QEvent::ParentChange) {
         applyPalette();
+        if (event->type() == QEvent::Show)
+            updateAnchoredLayout(true);
         update();
     }
     return QFrame::event(event);
@@ -252,8 +254,11 @@ void GallerySampleCard::queueAnchoredLayoutUpdate()
     });
 }
 
-void GallerySampleCard::updateAnchoredLayout()
+void GallerySampleCard::updateAnchoredLayout(bool synchronizeAncestors)
 {
+    if (m_updatingLayout)
+        return;
+    QScopedValueRollback<bool> updating(m_updatingLayout, true);
     const int cardWidth = qMax(width(), kMinimumCardWidth);
     const int contentWidth = contentWidthForCardWidth(cardWidth);
 
@@ -269,11 +274,41 @@ void GallerySampleCard::updateAnchoredLayout()
     setStableHeight(m_descriptionLabel);
     setStableHeight(m_previewSurface);
 
-    updateCardHeight();
+    const bool heightChanged = updateCardHeight();
 
     if (layout())
         layout()->activate();
     updateGeometry();
+    if ((heightChanged || synchronizeAncestors) && isVisible())
+        synchronizeViewportLayout();
+}
+
+void GallerySampleCard::synchronizeViewportLayout()
+{
+    QScrollArea* scroll = nullptr;
+    for (auto* ancestor = parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
+        if ((scroll = qobject_cast<QScrollArea*>(ancestor)))
+            break;
+    }
+    auto* content = scroll ? scroll->widget() : nullptr;
+    if (!content || !content->layout())
+        return;
+
+    // A card can change height inside a resize event. Settle the outer column
+    // before capture sees its new bounds at the previous sibling positions.
+    // zh_CN: 卡片可在 resize 中改变高度；捕获前同步外层列，避免新尺寸与旧位置短暂重叠。
+    for (auto* ancestor = parentWidget(); ancestor && ancestor != content; ancestor = ancestor->parentWidget()) {
+        if (auto* outer = ancestor->layout()) {
+            outer->invalidate();
+            outer->activate();
+        }
+    }
+    auto* outer = content->layout();
+    outer->invalidate();
+    const int height = qMax(scroll->viewport()->height(), outer->minimumSize().height());
+    if (content->height() != height)
+        content->resize(content->width(), height);
+    outer->activate();
 }
 
 bool GallerySampleCard::updateCardHeight()
@@ -346,13 +381,12 @@ int GallerySampleCard::contentWidthForCardWidth(int width) const
 void GallerySampleCard::applyPalette()
 {
     const Colors colors = themeColors();
-    const QString cardStyle =
-        depth::enabled(this)
-            ? QStringLiteral("#gallerySampleCard { background: transparent; border: none; }")
-            : QStringLiteral("#gallerySampleCard { background: %1; border: 1px solid %2; "
-                             "border-radius: %3px; }")
-                  .arg(cssColor(colors.bgLayer), cssColor(colors.strokeCard))
-                  .arg(::CornerRadius::Overlay);
+    const QString cardStyle = depth::enabled(this)
+        ? QStringLiteral("#gallerySampleCard { background: transparent; border: none; }")
+        : QStringLiteral("#gallerySampleCard { background: %1; border: 1px solid %2; "
+                         "border-radius: %3px; }")
+              .arg(cssColor(colors.bgLayer), cssColor(colors.strokeCard))
+              .arg(::CornerRadius::Overlay);
     if (styleSheet() != cardStyle)
         setStyleSheet(cardStyle);
     // Color the text via each label's OWN style sheet, not the palette: this card sets a style sheet
@@ -370,8 +404,8 @@ void GallerySampleCard::applyPalette()
             m_titleLabel->setStyleSheet(titleStyle);
     }
     if (m_descriptionLabel) {
-        const QString descriptionStyle = QStringLiteral("color: %1; background: transparent;")
-                                             .arg(cssColor(colors.textSecondary));
+        const QString descriptionStyle =
+            QStringLiteral("color: %1; background: transparent;").arg(cssColor(colors.textSecondary));
         if (m_descriptionLabel->styleSheet() != descriptionStyle)
             m_descriptionLabel->setStyleSheet(descriptionStyle);
     }

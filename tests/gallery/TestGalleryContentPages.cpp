@@ -3008,6 +3008,83 @@ TEST_F(GalleryContentPagesTest, SampleCardRefreshesWhenPreviewSizeHintChanges)
     EXPECT_GT(card.height(), initialCardHeight);
 }
 
+TEST_F(GalleryContentPagesTest, SampleCardHeightChangeSynchronizesEnclosingScrollLayout)
+{
+    ResizablePreview* preview = nullptr;
+    fluent::gallery::GallerySample sample;
+    sample.id = QStringLiteral("dynamic-scroll-preview");
+    sample.title = QStringLiteral("Dynamic preview");
+    sample.description = QStringLiteral("Preview growth must move the following sample.");
+    sample.createPreview = [&preview](QWidget* parent) {
+        preview = new ResizablePreview(parent);
+        return preview;
+    };
+
+    fluent::scrolling::ScrollView scroll;
+    scroll.setWidgetResizable(true);
+    auto* content = new QWidget;
+    auto* contentLayout = new QVBoxLayout(content);
+    contentLayout->setContentsMargins(12, 12, 12, 12);
+    contentLayout->setSpacing(12);
+    auto* samples = new QWidget(content);
+    auto* samplesLayout = new QVBoxLayout(samples);
+    samplesLayout->setContentsMargins(0, 0, 0, 0);
+    samplesLayout->setSpacing(16);
+    auto* first = new GallerySampleCard(sample, samples);
+    samplesLayout->addWidget(first);
+
+    fluent::gallery::GallerySample followingSample;
+    followingSample.id = QStringLiteral("following-preview");
+    followingSample.title = QStringLiteral("Following sample");
+    followingSample.createPreview = [](QWidget* parent) {
+        return new fluent::textfields::Label(QStringLiteral("Following preview"), parent);
+    };
+    auto* second = new GallerySampleCard(followingSample, samples);
+    samplesLayout->addWidget(second);
+    contentLayout->addWidget(samples);
+    auto* tail = new fluent::textfields::Label(QStringLiteral("After the samples"), content);
+    contentLayout->addWidget(tail);
+    contentLayout->addStretch(1);
+    scroll.setWidget(content);
+    scroll.resize(720, 280);
+    scroll.show();
+    ASSERT_NE(preview, nullptr);
+    // Show must settle the column even when the cards already have their final heights.
+    // zh_CN: 即使卡片高度未变，show 返回时也须排好外列，不能等下一轮布局事件。
+    EXPECT_TRUE(first->isVisible());
+    EXPECT_TRUE(second->isVisible());
+    EXPECT_GE(second->y(), first->geometry().bottom() + 1 + samplesLayout->spacing());
+    EXPECT_GE(samples->height(), second->geometry().bottom() + 1);
+    EXPECT_GE(content->height(), contentLayout->minimumSize().height());
+    EXPECT_GE(content->height(), tail->geometry().bottom() + 1 + contentLayout->contentsMargins().bottom());
+
+    QApplication::processEvents();
+    ASSERT_TRUE(QTest::qWaitFor([&] {
+        return first->isVisible() && second->y() > first->geometry().bottom()
+            && content->height() >= contentLayout->minimumSize().height();
+    }));
+    const int initialCardHeight = first->height();
+    const int initialSecondTop = second->y();
+    const int initialContentHeight = content->height();
+
+    preview->setPreferredHeight(240);
+    // Resize updates the card synchronously. Do not let posted ancestor layout requests
+    // repair stale sibling positions before checking this same-frame contract.
+    // zh_CN: resize 同步更新卡片；断言前不处理父级布局请求，避免事件循环掩盖同帧重叠。
+    first->resize(first->width() + 1, first->height());
+
+    ASSERT_GT(first->height(), initialCardHeight);
+    EXPECT_EQ(first->minimumHeight(), first->height());
+    EXPECT_EQ(first->maximumHeight(), first->height());
+    EXPECT_GT(second->y(), initialSecondTop);
+    EXPECT_GE(second->y(), first->geometry().bottom() + 1 + samplesLayout->spacing());
+    EXPECT_GE(samples->height(), second->geometry().bottom() + 1);
+    EXPECT_GE(tail->y(), samples->geometry().bottom() + 1 + contentLayout->spacing());
+    EXPECT_GT(content->height(), initialContentHeight);
+    EXPECT_GE(content->height(), contentLayout->minimumSize().height());
+    EXPECT_GE(content->height(), tail->geometry().bottom() + 1 + contentLayout->contentsMargins().bottom());
+}
+
 TEST_F(GalleryContentPagesTest, TextEditLogSampleAppendsPlainTextAndClears)
 {
     fluent::gallery::GallerySample sample;

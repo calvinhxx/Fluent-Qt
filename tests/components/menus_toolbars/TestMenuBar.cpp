@@ -2,6 +2,7 @@
 
 #include <QActionGroup>
 #include <QApplication>
+#include <QElapsedTimer>
 #include <QFontMetrics>
 #include <QImage>
 #include <QKeyEvent>
@@ -59,8 +60,7 @@ void addAnchored(AnchorLayout* layout, QWidget* widget)
     layout->addWidget(widget);
 }
 
-FluentMenuItem* addMenuItem(FluentMenu* menu, const QString& text,
-                            const QKeySequence& shortcut = QKeySequence())
+FluentMenuItem* addMenuItem(FluentMenu* menu, const QString& text, const QKeySequence& shortcut = QKeySequence())
 {
     auto* item = new FluentMenuItem(text, menu);
     if (!shortcut.isEmpty())
@@ -108,22 +108,17 @@ MenuBarSample createSimpleMenuBar(QWidget* parent, bool includePlainAction = fal
     sample.fileMenu->menuAction()->setProperty("accessKey", QStringLiteral("F"));
     addMenuItem(sample.fileMenu, QStringLiteral("New"));
     addMenuItem(sample.fileMenu, QStringLiteral("Open"));
-    sample.saveAction =
-        addMenuItem(sample.fileMenu, QStringLiteral("Save"), QKeySequence(Qt::CTRL | Qt::Key_S));
+    sample.saveAction = addMenuItem(sample.fileMenu, QStringLiteral("Save"), QKeySequence(Qt::CTRL | Qt::Key_S));
     addMenuItem(sample.fileMenu, QStringLiteral("Exit"));
     sample.bar->addMenu(sample.fileMenu);
     sample.fileAction = sample.fileMenu->menuAction();
 
     sample.editMenu = new FluentMenu(QStringLiteral("&Edit"), sample.bar);
     sample.editMenu->menuAction()->setProperty("accessKey", QStringLiteral("E"));
-    sample.undoAction =
-        addMenuItem(sample.editMenu, QStringLiteral("Undo"), QKeySequence(Qt::CTRL | Qt::Key_Z));
-    sample.cutAction =
-        addMenuItem(sample.editMenu, QStringLiteral("Cut"), QKeySequence(Qt::CTRL | Qt::Key_X));
-    sample.copyAction =
-        addMenuItem(sample.editMenu, QStringLiteral("Copy"), QKeySequence(Qt::CTRL | Qt::Key_C));
-    sample.pasteAction =
-        addMenuItem(sample.editMenu, QStringLiteral("Paste"), QKeySequence(Qt::CTRL | Qt::Key_V));
+    sample.undoAction = addMenuItem(sample.editMenu, QStringLiteral("Undo"), QKeySequence(Qt::CTRL | Qt::Key_Z));
+    sample.cutAction = addMenuItem(sample.editMenu, QStringLiteral("Cut"), QKeySequence(Qt::CTRL | Qt::Key_X));
+    sample.copyAction = addMenuItem(sample.editMenu, QStringLiteral("Copy"), QKeySequence(Qt::CTRL | Qt::Key_C));
+    sample.pasteAction = addMenuItem(sample.editMenu, QStringLiteral("Paste"), QKeySequence(Qt::CTRL | Qt::Key_V));
     sample.bar->addMenu(sample.editMenu);
     sample.editAction = sample.editMenu->menuAction();
 
@@ -147,15 +142,12 @@ MenuBarSample createComplexMenuBar(QWidget* parent)
 
     sample.sendToMenu = new FluentMenu(QStringLiteral("Send to"), sample.fileMenu);
     sample.bluetoothAction = addMenuItem(sample.sendToMenu, QStringLiteral("Bluetooth"));
-    sample.desktopShortcutAction =
-        addMenuItem(sample.sendToMenu, QStringLiteral("Desktop (shortcut)"));
+    sample.desktopShortcutAction = addMenuItem(sample.sendToMenu, QStringLiteral("Desktop (shortcut)"));
 
     sample.compressedMenu = new FluentMenu(QStringLiteral("Compressed file"), sample.sendToMenu);
-    sample.compressEmailAction =
-        addMenuItem(sample.compressedMenu, QStringLiteral("Compress and email"));
+    sample.compressEmailAction = addMenuItem(sample.compressedMenu, QStringLiteral("Compress and email"));
     sample.compress7zAction = addMenuItem(sample.compressedMenu, QStringLiteral("Compress to .7z"));
-    sample.compressZipAction =
-        addMenuItem(sample.compressedMenu, QStringLiteral("Compress to .zip"));
+    sample.compressZipAction = addMenuItem(sample.compressedMenu, QStringLiteral("Compress to .zip"));
     sample.compressedAction = sample.sendToMenu->addMenu(sample.compressedMenu);
     sample.sendToAction = sample.fileMenu->insertMenu(sample.saveAction, sample.sendToMenu);
 
@@ -178,8 +170,8 @@ MenuBarSample createComplexMenuBar(QWidget* parent)
 
     auto* sizeGroup = new QActionGroup(sample.viewMenu);
     sizeGroup->setExclusive(true);
-    for (const QString& text : {QStringLiteral("Small icons"), QStringLiteral("Medium icons"),
-                                QStringLiteral("Large icons")}) {
+    for (const QString& text :
+        {QStringLiteral("Small icons"), QStringLiteral("Medium icons"), QStringLiteral("Large icons")}) {
         auto* item = new FluentMenuItem(text, sample.viewMenu);
         item->setCheckable(true);
         item->setChecked(text.startsWith(QStringLiteral("Medium")));
@@ -194,8 +186,8 @@ MenuBarSample createComplexMenuBar(QWidget* parent)
 
 void closeMenus(MenuBarSample& sample)
 {
-    for (FluentMenu* menu : {sample.fileMenu, sample.editMenu, sample.viewMenu, sample.helpMenu,
-                             sample.sendToMenu, sample.compressedMenu}) {
+    for (FluentMenu* menu : {sample.fileMenu, sample.editMenu, sample.viewMenu, sample.helpMenu, sample.sendToMenu,
+             sample.compressedMenu}) {
         if (menu)
             menu->hide();
     }
@@ -264,8 +256,8 @@ void bindMenuActions(QWidget* host, const MenuBarSample& sample, Label* status =
 
 int colorDistance(const QColor& lhs, const QColor& rhs)
 {
-    return qAbs(lhs.red() - rhs.red()) + qAbs(lhs.green() - rhs.green()) +
-           qAbs(lhs.blue() - rhs.blue()) + qAbs(lhs.alpha() - rhs.alpha());
+    return qAbs(lhs.red() - rhs.red()) + qAbs(lhs.green() - rhs.green()) + qAbs(lhs.blue() - rhs.blue())
+        + qAbs(lhs.alpha() - rhs.alpha());
 }
 
 QColor renderedPixel(QWidget* widget, const QPoint& point)
@@ -314,8 +306,7 @@ TEST_F(MenuBarTest, TopLevelGeometryVisibilityAndThemeAreDeterministic)
 
     sample.bar->setFocus(Qt::TabFocusReason);
     QApplication::processEvents();
-    const QColor focusEdge =
-        renderedPixel(sample.bar, QPoint(fileRect.left() + 1, fileRect.center().y()));
+    const QColor focusEdge = renderedPixel(sample.bar, QPoint(fileRect.left() + 1, fileRect.center().y()));
     EXPECT_GT(qMin(focusEdge.red(), qMin(focusEdge.green(), focusEdge.blue())), 160);
 
     sample.disabledTopAction = new QAction(QStringLiteral("Disabled"), sample.bar);
@@ -332,7 +323,7 @@ TEST_F(MenuBarTest, TopLevelGeometryVisibilityAndThemeAreDeterministic)
     sample.bar->insertMenu(sample.helpAction, toolsMenu);
     QApplication::processEvents();
     EXPECT_LT(sample.bar->fluentActionGeometry(toolsMenu->menuAction()).left(),
-              sample.bar->fluentActionGeometry(sample.helpAction).left());
+        sample.bar->fluentActionGeometry(sample.helpAction).left());
 
     const QRect beforeTheme = sample.bar->fluentActionGeometry(sample.fileAction);
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
@@ -383,8 +374,7 @@ TEST_F(MenuBarTest, CommandIconsPaintInsideStandardWinUiSlot)
     for (int y = 0; y < rendered.height(); ++y) {
         for (int x = 0; x < rendered.width(); ++x) {
             const QColor pixel = rendered.pixelColor(x, y);
-            if (pixel.red() < 250 || pixel.green() > 5 || pixel.blue() < 250 ||
-                pixel.alpha() < 250) {
+            if (pixel.red() < 250 || pixel.green() > 5 || pixel.blue() < 250 || pixel.alpha() < 250) {
                 continue;
             }
             const QRect pixelRect(x, y, 1, 1);
@@ -394,8 +384,7 @@ TEST_F(MenuBarTest, CommandIconsPaintInsideStandardWinUiSlot)
     }
 
     ASSERT_TRUE(foundMarker);
-    EXPECT_EQ(markerBounds.size(),
-              QSize(Typography::IconSize::Standard, Typography::IconSize::Standard));
+    EXPECT_EQ(markerBounds.size(), QSize(Typography::IconSize::Standard, Typography::IconSize::Standard));
     EXPECT_TRUE(menu.actionGeometry(action).contains(markerBounds.center()));
 }
 
@@ -421,7 +410,8 @@ TEST_F(MenuBarTest, EntranceAnimationUsesPaintOpacityInsteadOfNativeWindowOpacit
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
             return menu.findChild<QVariantAnimation*>(QStringLiteral("fluentMenuEntranceAnimation"),
-                                                      Qt::FindDirectChildrenOnly) == nullptr;
+                       Qt::FindDirectChildrenOnly)
+                == nullptr;
         },
         1000));
     EXPECT_EQ(menu.graphicsEffect(), nullptr);
@@ -463,30 +453,50 @@ TEST_F(MenuBarTest, PointerAndKeyboardInteractionsUseQtActions)
     sample.bar->move(0, 0);
     showAndProcess(*sample.bar);
 
+    if (!tests::support::isHeadlessPlatform()) {
+        // Native placement must settle before opening a popup at the host's global anchor.
+        window->raise();
+        window->activateWindow();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
+        ASSERT_TRUE(QTest::qWaitForWindowActive(window));
+        QGuiApplication::sync();
+        QRect settledGeometry = window->geometry();
+        QElapsedTimer geometryUnchanged;
+        geometryUnchanged.start();
+        ASSERT_TRUE(QTest::qWaitFor(
+            [&] {
+                const QRect current = window->geometry();
+                if (current != settledGeometry) {
+                    settledGeometry = current;
+                    geometryUnchanged.restart();
+                }
+                return geometryUnchanged.elapsed() >= 100;
+            },
+            2000));
+    }
+
     QSignalSpy plainSpy(sample.plainTopAction, &QAction::triggered);
     QTest::mouseClick(sample.bar, Qt::LeftButton, Qt::NoModifier,
-                      sample.bar->fluentActionGeometry(sample.plainTopAction).center());
+        sample.bar->fluentActionGeometry(sample.plainTopAction).center());
     EXPECT_EQ(plainSpy.count(), 1);
 
     QTest::mouseClick(sample.bar, Qt::LeftButton, Qt::NoModifier,
-                      sample.bar->fluentActionGeometry(sample.fileAction).center());
+        sample.bar->fluentActionGeometry(sample.fileAction).center());
     QApplication::processEvents();
     EXPECT_EQ(sample.bar->openAction(), sample.fileAction);
     EXPECT_TRUE(sample.fileMenu->isVisible());
 
     const QFontMetrics fileMetrics(sample.fileMenu->font());
-    const int fileShortcutWidth =
-        fileMetrics.horizontalAdvance(sample.fileMenu->shortcutTextForAction(sample.saveAction));
-    const int fileShortcutColumn =
-        fileShortcutWidth > 0 ? fileShortcutWidth + ::Spacing::Gap::Section : 0;
-    const int fileLabelBudget =
-        sample.fileMenu->width() - 2 * ::Spacing::Standard - 2 * ::Spacing::Gap::Tight -
-        2 * ::Spacing::Padding::ControlHorizontal - ::Spacing::Small - fileShortcutColumn;
+    const int fileShortcutWidth = fileMetrics.horizontalAdvance(
+        sample.fileMenu->shortcutTextForAction(sample.saveAction));
+    const int fileShortcutColumn = fileShortcutWidth > 0 ? fileShortcutWidth + ::Spacing::Gap::Section : 0;
+    const int fileLabelBudget = sample.fileMenu->width() - 2 * ::Spacing::Standard - 2 * ::Spacing::Gap::Tight
+        - 2 * ::Spacing::Padding::ControlHorizontal - ::Spacing::Small - fileShortcutColumn;
     EXPECT_GE(fileLabelBudget, fileMetrics.horizontalAdvance(QStringLiteral("Open")));
 
     const QPoint expectedPopupAnchor = sample.bar->mapToGlobal(
         QPoint(sample.bar->fluentActionGeometry(sample.fileAction).left(),
-               sample.bar->fluentActionGeometry(sample.fileAction).bottom() + 1));
+            sample.bar->fluentActionGeometry(sample.fileAction).bottom() + 1));
     EXPECT_LE(sample.fileMenu->pos().x(), expectedPopupAnchor.x());
     EXPECT_GE(sample.fileMenu->pos().x(), expectedPopupAnchor.x() - 32);
     EXPECT_LE(sample.fileMenu->pos().y(), expectedPopupAnchor.y());
@@ -517,8 +527,9 @@ TEST_F(MenuBarTest, PointerAndKeyboardInteractionsUseQtActions)
 TEST_F(MenuBarTest, AccessKeysAndShortcutsRemainInvokable)
 {
     if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
+        GTEST_SKIP()
+            << "Requires a real windowing platform; offscreen cannot deliver "
+               "synthetic pointer/keyboard input or show native popups.";
     }
     MenuBarSample sample = createSimpleMenuBar(window);
     sample.bar->setParent(window);
@@ -546,7 +557,7 @@ TEST_F(MenuBarTest, AccessKeysAndShortcutsRemainInvokable)
     QSignalSpy saveSpy(sample.saveAction, &QAction::triggered);
     QSignalSpy undoSpy(sample.undoAction, &QAction::triggered);
     QTest::mouseClick(sample.bar, Qt::LeftButton, Qt::NoModifier,
-                      sample.bar->fluentActionGeometry(sample.fileAction).center());
+        sample.bar->fluentActionGeometry(sample.fileAction).center());
     QApplication::processEvents();
     EXPECT_TRUE(sample.fileMenu->isVisible());
     QTest::keyClick(sample.fileMenu, Qt::Key_S, Qt::ControlModifier);
@@ -555,7 +566,7 @@ TEST_F(MenuBarTest, AccessKeysAndShortcutsRemainInvokable)
     EXPECT_FALSE(sample.fileMenu->isVisible());
 
     QTest::mouseClick(sample.bar, Qt::LeftButton, Qt::NoModifier,
-                      sample.bar->fluentActionGeometry(sample.fileAction).center());
+        sample.bar->fluentActionGeometry(sample.fileAction).center());
     QApplication::processEvents();
     EXPECT_TRUE(sample.fileMenu->isVisible());
     QTest::keyClick(sample.fileMenu, Qt::Key_S, Qt::ControlModifier);
@@ -564,7 +575,7 @@ TEST_F(MenuBarTest, AccessKeysAndShortcutsRemainInvokable)
     EXPECT_FALSE(sample.fileMenu->isVisible());
 
     QTest::mouseClick(sample.bar, Qt::LeftButton, Qt::NoModifier,
-                      sample.bar->fluentActionGeometry(sample.editAction).center());
+        sample.bar->fluentActionGeometry(sample.editAction).center());
     QApplication::processEvents();
     EXPECT_TRUE(sample.editMenu->isVisible());
     QTest::keyClick(sample.editMenu, Qt::Key_Z, Qt::ControlModifier);
@@ -576,8 +587,9 @@ TEST_F(MenuBarTest, AccessKeysAndShortcutsRemainInvokable)
 TEST_F(MenuBarTest, FluentMenuContentPatternsExposeDeterministicGeometry)
 {
     if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
+        GTEST_SKIP()
+            << "Requires a real windowing platform; offscreen cannot deliver "
+               "synthetic pointer/keyboard input or show native popups.";
     }
     auto* menu = new FluentMenu(QStringLiteral("View"), window);
     auto* output = addMenuItem(menu, QStringLiteral("Output"));
@@ -625,26 +637,22 @@ TEST_F(MenuBarTest, FluentMenuContentPatternsExposeDeterministicGeometry)
     EXPECT_TRUE(portrait->isChecked());
     EXPECT_FALSE(landscape->isChecked());
     EXPECT_FALSE(disabled->isEnabled());
-    EXPECT_GE(menu->sizeHint().width(),
-              menu->itemSubmenuIndicatorGeometry(submenuAction).right() + 1);
+    EXPECT_GE(menu->sizeHint().width(), menu->itemSubmenuIndicatorGeometry(submenuAction).right() + 1);
 
     const QFontMetrics menuMetrics(menu->font());
     const int menuShortcutWidth = menuMetrics.horizontalAdvance(menu->shortcutTextForAction(save));
-    const int menuShortcutColumn =
-        menuShortcutWidth > 0 ? menuShortcutWidth + ::Spacing::Gap::Section : 0;
-    const int menuLabelBudget =
-        menu->width() - 2 * ::Spacing::Standard - 2 * ::Spacing::Gap::Tight -
-        2 * ::Spacing::Padding::ControlHorizontal - ::Spacing::ControlHeight::Small -
-        ::Spacing::ControlHeight::Small - menuShortcutColumn;
+    const int menuShortcutColumn = menuShortcutWidth > 0 ? menuShortcutWidth + ::Spacing::Gap::Section : 0;
+    const int menuLabelBudget = menu->width() - 2 * ::Spacing::Standard - 2 * ::Spacing::Gap::Tight
+        - 2 * ::Spacing::Padding::ControlHorizontal - ::Spacing::ControlHeight::Small - ::Spacing::ControlHeight::Small
+        - menuShortcutColumn;
     EXPECT_GE(menuLabelBudget, menuMetrics.horizontalAdvance(QStringLiteral("Landscape")));
 
     menu->setActiveAction(output);
     QApplication::processEvents();
     const int hoverY = menu->actionGeometry(output).center().y();
-    const QColor hoverLeft =
-        renderedPixel(menu, QPoint(::Spacing::Standard + ::Spacing::Gap::Tight + 2, hoverY));
-    const QColor hoverRight = renderedPixel(
-        menu, QPoint(menu->width() - ::Spacing::Standard - ::Spacing::Gap::Tight - 2, hoverY));
+    const QColor hoverLeft = renderedPixel(menu, QPoint(::Spacing::Standard + ::Spacing::Gap::Tight + 2, hoverY));
+    const QColor hoverRight = renderedPixel(menu,
+        QPoint(menu->width() - ::Spacing::Standard - ::Spacing::Gap::Tight - 2, hoverY));
     EXPECT_LT(colorDistance(hoverLeft, hoverRight), 12);
 
     const int selectedY = menu->actionGeometry(portrait).center().y();
@@ -721,8 +729,7 @@ TEST_F(MenuBarTest, VisualCheck)
     addAnchored(layout, simple.bar);
     bindMenuActions(window, simple, status);
 
-    auto* acceleratorLabel =
-        new Label(QStringLiteral("MenuBar with keyboard accelerators"), window);
+    auto* acceleratorLabel = new Label(QStringLiteral("MenuBar with keyboard accelerators"), window);
     acceleratorLabel->setFluentTypography(Typography::FontRole::BodyStrong);
     acceleratorLabel->anchors()->top = {simple.bar, Edge::Bottom, 42};
     acceleratorLabel->anchors()->left = {title, Edge::Left, 0};
@@ -734,8 +741,8 @@ TEST_F(MenuBarTest, VisualCheck)
     addAnchored(layout, accelerator.bar);
     bindMenuActions(window, accelerator, status);
 
-    auto* complexLabel = new Label(
-        QStringLiteral("MenuBar with cascading submenus, separators, and radio items"), window);
+    auto* complexLabel = new Label(QStringLiteral("MenuBar with cascading submenus, separators, and radio items"),
+        window);
     complexLabel->setFluentTypography(Typography::FontRole::BodyStrong);
     complexLabel->anchors()->top = {accelerator.bar, Edge::Bottom, 42};
     complexLabel->anchors()->left = {title, Edge::Left, 0};
@@ -748,10 +755,9 @@ TEST_F(MenuBarTest, VisualCheck)
     bindMenuActions(window, complex, status);
 
     QObject::connect(themeButton, &Button::clicked, window, [this]() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                fluent::FluentElement::Light
-                                            ? fluent::FluentElement::Dark
-                                            : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light);
         window->onThemeUpdated();
     });
 
