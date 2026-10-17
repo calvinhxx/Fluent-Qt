@@ -16,6 +16,13 @@ constexpr int kPaintSamples = 2;
 // One bounded glyph tile and its upload, only for the low-DPI native adapter.
 constexpr qint64 kGlyphScratchBytes = 512LL * 1024;
 
+// Dense displays already resolve small glyphs. Keep perspective headroom without
+// spending the shared paint budget on a second full doubling of both dimensions.
+inline qreal preferredExtraSampling(qreal nativeDpr)
+{
+    return nativeDpr >= 2 ? 1.5 : 2;
+}
+
 struct CachePlan {
     std::array<QSize, 2> sizes{};
     qreal dpr = 0;

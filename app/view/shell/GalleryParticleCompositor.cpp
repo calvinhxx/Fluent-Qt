@@ -574,7 +574,8 @@ unsigned int GalleryParticleCompositor::compose(unsigned int base,
             gl->glDisable(GL_SCISSOR_TEST);
             // Resolve identical MSAA rectangles first, then copy the guarded
             // strip. These are the canvas's existing targets, not new caches.
-            QOpenGLFramebufferObject::blitFramebuffer(resolveTarget, paintTarget);
+            const QRect painted(0, 0, pixels.width(), paintHeight);
+            QOpenGLFramebufferObject::blitFramebuffer(resolveTarget, painted, paintTarget, painted);
             QOpenGLFramebufferObject::blitFramebuffer(layer.foreground.get(),
                 QRect(0, pixels.height() - top - height, pixels.width(), height), resolveTarget,
                 QRect(0, paintBottom - top - height, pixels.width(), height));
