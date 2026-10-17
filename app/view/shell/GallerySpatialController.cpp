@@ -491,7 +491,9 @@ protected:
             m_paintSamples = sampleProbe.isValid() ? sampleProbe.format().samples() : 0;
         }
         m_blitter = std::make_unique<PanelSampler>();
-        m_blitter->create();
+        const bool reference = measuring && qgetenv("FLUENT_QT_SPATIAL_SAMPLER") == "monotone";
+        m_blitter->create(
+            reference ? PanelSampler::Reconstruction::Monotone : PanelSampler::Reconstruction::BoundedCubic);
         connect(context(), &QOpenGLContext::aboutToBeDestroyed, this, [this] {
             makeCurrent();
             releaseTextures();
@@ -714,9 +716,17 @@ private:
         const auto backdrop = qint64(m_scene->backdrop.width()) * m_scene->backdrop.height() * 4;
         const auto glyphScratch =
             spatial_render::needsNativeGlyphCoverage(devicePixelRatioF()) ? spatial_render::kGlyphScratchBytes : 0;
+        qreal extraSampling = spatial_render::preferredExtraSampling(devicePixelRatioF());
+        if (measuring) {
+            bool ok = false;
+            const qreal requested = qEnvironmentVariable("FLUENT_QT_SPATIAL_EXTRA_SAMPLING").toDouble(&ok);
+            if (ok && requested >= 1 && requested <= 2)
+                extraSampling = requested;
+        }
         while (true) {
-            auto plan = spatial_render::planCaches(panels, devicePixelRatioF(), m_maxDimension, m_maxExtraSampling,
-                spatial_render::kCacheBudgetBytes, m_paintSamples, backdrop, glyphScratch);
+            auto plan = spatial_render::planCaches(panels, devicePixelRatioF(), m_maxDimension,
+                qMin(m_maxExtraSampling, extraSampling), spatial_render::kCacheBudgetBytes, m_paintSamples, backdrop,
+                glyphScratch);
             if (!plan.valid())
                 return false;
             for (qreal extra : {2., 1.75, 1.5, 1.25, 1.}) {
@@ -916,7 +926,8 @@ private:
             gl->glDisable(GL_SCISSOR_TEST);
             // WebGL/GLES requires identical rectangles and formats for MSAA resolve.
             // Resolve first, then move the guarded strip into the panel texture.
-            QOpenGLFramebufferObject::blitFramebuffer(m_resolveTarget.get(), m_paintTarget.get());
+            const QRect painted(0, 0, pixels.width(), paintHeight);
+            QOpenGLFramebufferObject::blitFramebuffer(m_resolveTarget.get(), painted, m_paintTarget.get(), painted);
             // GL framebuffer coordinates run upwards; widget coordinates run downwards.
             QOpenGLFramebufferObject::blitFramebuffer(cache.texture.get(),
                 QRect(0, pixels.height() - top - height, pixels.width(), height), m_resolveTarget.get(),

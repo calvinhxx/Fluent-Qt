@@ -16,16 +16,52 @@ vec4 samplePanel(vec2 coordinate) {
     phase = phase * phase * (3.0 - 2.0 * phase);
     return texture(source, (floor(texel) + phase + 0.5) / u.dimensions.xy);
 }
+
+vec4 cubicWeights(float t) {
+    float t2 = t * t, t3 = t2 * t;
+    return vec4(-0.5*t + t2 - 0.5*t3, 1.0 - 2.5*t2 + 1.5*t3,
+                0.5*t + 2.0*t2 - 1.5*t3, -0.5*t2 + 0.5*t3);
+}
+vec4 sampleBoundedCubic(vec2 coordinate) {
+    vec2 texel = coordinate * u.dimensions.xy - 0.5;
+    vec2 cell = floor(texel), phase = fract(texel);
+    vec4 wx = cubicWeights(phase.x), wy = cubicWeights(phase.y);
+    vec4 value = vec4(0.0), low = vec4(1.0), high = vec4(0.0);
+    for (int y = 0; y < 4; ++y) {
+        for (int x = 0; x < 4; ++x) {
+            vec4 pixel = texture(source, (cell + vec2(float(x)-0.5, float(y)-0.5)) / u.dimensions.xy);
+            value += pixel * wx[x] * wy[y];
+            if (x > 0 && x < 3 && y > 0 && y < 3) {
+                low = min(low, pixel); high = max(high, pixel);
+            }
+        }
+    }
+    value = clamp(value, low, high);
+    value.rgb = min(value.rgb, value.aaa);
+    return value;
+}
+vec4 sampleFootprint(vec2 coordinate, vec2 dx, vec2 dy) {
+    return 0.25 * (samplePanel(coordinate - dx - dy) + samplePanel(coordinate + dx - dy)
+                 + samplePanel(coordinate - dx + dy) + samplePanel(coordinate + dx + dy));
+}
 float roundedDistance(vec2 point, vec2 halfSize, float radius) {
     vec2 q = abs(point - u.dimensions.zw * 0.5) - halfSize + radius;
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
 }
 void main() {
     vec2 dx = dFdx(uv), dy = dFdy(uv);
-    vec2 span = clamp(vec2(length(dx * u.dimensions.xy), length(dy * u.dimensions.xy)) - 1.0, 0.0, 1.0);
+    vec2 footprint = vec2(length(dx * u.dimensions.xy), length(dy * u.dimensions.xy));
+    vec2 span = clamp(footprint - 1.0, 0.0, 1.0);
     dx *= 0.25 * span.x; dy *= 0.25 * span.y;
-    vec4 pixel = 0.25 * (samplePanel(uv - dx - dy) + samplePanel(uv + dx - dy)
-                       + samplePanel(uv - dx + dy) + samplePanel(uv + dx + dy));
+
+    float filtering = smoothstep(1.75, 2.5, max(footprint.x, footprint.y));
+    vec4 pixel;
+    if (filtering < 1.0)
+        pixel = sampleBoundedCubic(uv);
+    if (filtering > 0.0) {
+        vec4 filtered = sampleFootprint(uv, dx, dy);
+        pixel = filtering >= 1.0 ? filtered : mix(pixel, filtered, filtering);
+    }
     if (u.shape.w > 0.0) {
         vec2 point = uv * u.dimensions.zw;
         vec2 halfSize = max(vec2(0.0), (u.dimensions.zw - 1.0) * 0.5);

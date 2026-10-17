@@ -767,97 +767,126 @@ class GallerySpatialTest(unittest.TestCase):
         surface.show()
         self.assertTrue(QTest.qWaitForWindowExposed(surface))
         surface.makeCurrent()
-        linear, monotone = _PanelSampler(), _PanelSampler()
+        linear, monotone, bounded = _PanelSampler(), _PanelSampler(), _PanelSampler()
         texture = target = None
         try:
             self.assertTrue(linear.create(linear_reference=True))
-            self.assertTrue(monotone.create())
-            source = QImage(600, 360, QImage.Format_RGBA8888)
-            source.fill(QColor(224, 224, 224))
-            painter = QPainter(source)
-            painter.setPen(QColor(32, 32, 32))
-            font = QFont(self.app.font())
-            for row, size in enumerate((14, 18, 28)):
-                font.setPixelSize(size)
-                painter.setFont(font)
-                painter.drawText(QPoint(30, 55 + row * 75), "Gallery 设置 · Popup 0123456789")
-            for x in range(30, 450, 4):
-                painter.fillRect(QRect(x, 260, 1, 50), QColor(32, 32, 32))
-            painter.end()
-            source = source.scaled(source.size() * 2, Qt.IgnoreAspectRatio, Qt.FastTransformation)
-            texture = QOpenGLTexture(source)
-            texture.setMinMagFilters(QOpenGLTexture.Linear, QOpenGLTexture.Linear)
-            texture.setWrapMode(QOpenGLTexture.ClampToEdge)
-            self.assertTrue(texture.isCreated())
-            target = QOpenGLFramebufferObject(QSize(640, 400))
-            self.assertTrue(target.isValid())
-            gl = surface.context().functions()
-            projection, quad = QMatrix4x4(), QMatrix4x4()
-            projection.ortho(0., 640., 400., 0., -1., 1.)
-            quad.translate(300., 180.)
-            quad.scale(300., 180.)
+            self.assertTrue(monotone.create(monotone_reference=True))
+            self.assertTrue(bounded.create())
+            # DPR 1 blends cubic and footprint filtering; DPR 2 exercises
+            # pure cubic reconstruction and retains the fixed gain thresholds.
+            for output_dpr in (1, 2):
+                raster_dpr = 1 if output_dpr == 1 else 3
+                pure_cubic = output_dpr == 2
+                source = QImage(600 * raster_dpr, 360 * raster_dpr, QImage.Format_RGBA8888)
+                source.setDevicePixelRatio(raster_dpr)
+                source.fill(QColor(224, 224, 224))
+                painter = QPainter(source)
+                painter.setPen(QColor(32, 32, 32))
+                font = QFont(self.app.font())
+                for row, size in enumerate((14, 18, 28)):
+                    font.setPixelSize(size)
+                    painter.setFont(font)
+                    painter.drawText(QPoint(30, 55 + row * 75), "Gallery 设置 · Popup 0123456789")
+                for x in range(30, 450, 4):
+                    painter.fillRect(QRect(x, 260, 1, 50), QColor(32, 32, 32))
+                painter.end()
+                if output_dpr == 1:
+                    source = source.scaled(source.size() * 2, Qt.IgnoreAspectRatio, Qt.FastTransformation)
+                texture = QOpenGLTexture(source)
+                texture.setMinMagFilters(QOpenGLTexture.Linear, QOpenGLTexture.Linear)
+                texture.setWrapMode(QOpenGLTexture.ClampToEdge)
+                self.assertTrue(texture.isCreated())
+                target = QOpenGLFramebufferObject(QSize(640 * output_dpr, 400 * output_dpr))
+                self.assertTrue(target.isValid())
+                gl = surface.context().functions()
+                projection, quad = QMatrix4x4(), QMatrix4x4()
+                projection.ortho(0., 640., 400., 0., -1., 1.)
+                quad.translate(300., 180.)
+                quad.scale(300., 180.)
 
-            def draw(sampler, tilt):
-                target.bind()
-                gl.glViewport(0, 0, 640, 400)
-                for state in (0x0BE2, 0x0B71, 0x0C11):
-                    gl.glDisable(state)
-                gl.glClearColor(224. / 255, 224. / 255, 224. / 255, 1.)
-                gl.glClear(0x4000)
-                sampler.blit(texture.textureId(), source.size(), projection * QMatrix4x4(tilt) * quad)
-                return target.toImage()
+                def draw(sampler, tilt):
+                    target.bind()
+                    gl.glViewport(0, 0, target.width(), target.height())
+                    for state in (0x0BE2, 0x0B71, 0x0C11):
+                        gl.glDisable(state)
+                    gl.glClearColor(224. / 255, 224. / 255, 224. / 255, 1.)
+                    gl.glClear(0x4000)
+                    sampler.blit(texture.textureId(), source.size(), projection * QMatrix4x4(tilt) * quad)
+                    return target.toImage()
 
-            def measure(image, region):
-                ink = energy = 0
-                region = region.intersected(image.rect().adjusted(1, 1, -1, -1))
-                for y in range(region.top(), region.bottom() + 1):
-                    for x in range(region.left(), region.right() + 1):
-                        value = qGray(image.pixel(x, y))
-                        ink += 224 - value
-                        energy += ((value - qGray(image.pixel(x - 1, y))) ** 2
-                                   + (value - qGray(image.pixel(x, y - 1))) ** 2)
-                return ink, energy / ink if ink else 0
+                def measure(image, region):
+                    ink = energy = 0
+                    region = region.intersected(image.rect().adjusted(1, 1, -1, -1))
+                    for y in range(region.top(), region.bottom() + 1):
+                        for x in range(region.left(), region.right() + 1):
+                            value = qGray(image.pixel(x, y))
+                            ink += 224 - value
+                            energy += ((value - qGray(image.pixel(x - 1, y))) ** 2
+                                       + (value - qGray(image.pixel(x, y - 1))) ** 2)
+                    return ink, energy / ink if ink else 0
 
-            evidence, improvements = [], []
-            ink_ranges = [[] for _ in range(3)]
-            for phase in range(8):
-                tilt = QTransform(.96, .006, .00006, -.012, .97, .00003,
-                                  20. + phase / 8., 16. + phase / 20., 1.)
-                before, after = draw(linear, tilt), draw(monotone, tilt)
-                # Convex reconstruction must retain bounded colors, including images.
-                values = [qGray(after.pixel(x, y)) for y in range(after.height())
-                          for x in range(after.width())]
-                self.assertGreaterEqual(min(values), 31)
-                self.assertLessEqual(max(values), 225)
-                ratios = []
-                for row in range(3):
-                    region = tilt.mapRect(QRectF(24, 20 + row * 75, 500, 43)).toAlignedRect()
-                    old, current = measure(before, region), measure(after, region)
-                    self.assertGreater(old[1], 10)
-                    self.assertGreaterEqual(current[1], old[1] * .99)
-                    self.assertLessEqual(abs(current[0] / old[0] - 1), .025)
-                    ratios.append(current[1] / old[1])
-                    ink_ranges[row].append(current[0])
-                improvements.extend(ratios)
-                evidence.append({"phase": phase / 8., "contrast_ratios": ratios})
-                lines = tilt.mapRect(QRectF(35, 264, 400, 40)).toAlignedRect()
-                filtered = sum(48 < qGray(after.pixel(x, y)) < 208
-                               for y in range(lines.top(), lines.bottom() + 1)
-                               for x in range(lines.left(), lines.right() + 1))
-                self.assertGreater(filtered, lines.width() * lines.height() * .08)
-                if phase == 0 and os.environ.get("FLUENTQT_SPATIAL_EVIDENCE_DIR"):
-                    directory = Path(os.environ["FLUENTQT_SPATIAL_EVIDENCE_DIR"])
-                    directory.mkdir(parents=True, exist_ok=True)
-                    before.save(str(directory / "tilted-linear-reference.png"))
-                    after.save(str(directory / "tilted-monotone.png"))
-            self.assertGreater(sum(improvements) / len(improvements), 1.01)
-            for values in ink_ranges:
-                self.assertLess(max(values) / min(values), 1.03)
-            print(json.dumps({"tilted_font_quality": evidence}), flush=True)
-            self.assertEqual(gl.glGetError(), 0)
+                evidence, improvements, cubic_improvements = [], [], []
+                ink_ranges = [[] for _ in range(3)]
+                for phase in range(8):
+                    tilt = QTransform(.96, .006, .00006, -.012, .97, .00003,
+                                      20. + phase / 8., 16. + phase / 20., 1.)
+                    before, previous, after = (draw(linear, tilt), draw(monotone, tilt),
+                                               draw(bounded, tilt))
+                    # Bounded reconstruction must retain source colors, including images.
+                    values = [qGray(after.pixel(x, y)) for y in range(after.height())
+                              for x in range(after.width())]
+                    self.assertGreaterEqual(min(values), 31)
+                    self.assertLessEqual(max(values), 225)
+                    ratios = []
+                    for row in range(3):
+                        logical = tilt.mapRect(QRectF(24, 20 + row * 75, 500, 43)).toAlignedRect()
+                        region = QRect(logical.topLeft() * output_dpr, logical.size() * output_dpr)
+                        old, current, cubic = (measure(before, region), measure(after, region),
+                                                measure(previous, region))
+                        self.assertGreaterEqual(current[1], cubic[1] * (1.04 if pure_cubic else .99))
+                        self.assertLessEqual(abs(current[0] / cubic[0] - 1), .025)
+                        cubic_improvements.append(current[1] / cubic[1])
+                        self.assertGreater(old[1], 10)
+                        self.assertGreaterEqual(current[1], old[1] * .99)
+                        self.assertLessEqual(abs(current[0] / old[0] - 1), .025)
+                        ratios.append(current[1] / old[1])
+                        ink_ranges[row].append(current[0])
+                    improvements.extend(ratios)
+                    evidence.append({"phase": phase / 8., "contrast_ratios": ratios})
+                    logical = tilt.mapRect(QRectF(35, 264, 400, 40)).toAlignedRect()
+                    lines = QRect(logical.topLeft() * output_dpr, logical.size() * output_dpr)
+                    filtered = sum(48 < qGray(after.pixel(x, y)) < 208
+                                   for y in range(lines.top(), lines.bottom() + 1)
+                                   for x in range(lines.left(), lines.right() + 1))
+                    self.assertGreater(filtered, lines.width() * lines.height() * .08)
+                    if phase == 0 and os.environ.get("FLUENTQT_SPATIAL_EVIDENCE_DIR"):
+                        directory = Path(os.environ["FLUENTQT_SPATIAL_EVIDENCE_DIR"])
+                        directory.mkdir(parents=True, exist_ok=True)
+                        before.save(str(directory / f"tilted-dpr{output_dpr}-linear-reference.png"))
+                        previous.save(str(directory / f"tilted-dpr{output_dpr}-monotone.png"))
+                        after.save(str(directory / f"tilted-dpr{output_dpr}-bounded-cubic.png"))
+                self.assertGreater(sum(improvements) / len(improvements), 1.01)
+                if pure_cubic:
+                    self.assertGreater(sum(cubic_improvements) / len(cubic_improvements), 1.08)
+                minified = QTransform(.45, .003, .00006, -.006, .45, .00003, 20.3, 16.2, 1.)
+                current = draw(bounded, minified).convertToFormat(QImage.Format_RGBA8888)
+                previous = draw(monotone, minified).convertToFormat(QImage.Format_RGBA8888)
+                self.assertEqual(current.size(), previous.size())
+                # Both shaders use the same footprint path here. Allow one 8-bit
+                # step per RGBA channel for driver rounding, but no larger changes.
+                maximum_error = max(abs(a - b) for a, b in zip(current.constBits(), previous.constBits()))
+                self.assertLessEqual(maximum_error, 1)
+                for values in ink_ranges:
+                    self.assertLess(max(values) / min(values), 1.03)
+                print(json.dumps({"dpr": output_dpr, "tilted_font_quality": evidence}), flush=True)
+                self.assertEqual(gl.glGetError(), 0)
+                texture.destroy()
+                texture = target = None
         finally:
             linear.destroy()
             monotone.destroy()
+            bounded.destroy()
             if texture is not None:
                 texture.destroy()
             # FBOs are not QObjects; drop the wrapper while its context is current.
@@ -1150,7 +1179,17 @@ class GallerySpatialTest(unittest.TestCase):
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_cache_budget_preserves_native_density(self):
-        from fluentqt_gallery.spatial_controller import _cache_plan, _CACHE_BUDGET_BYTES, _PAINT_SAMPLES
+        from fluentqt_gallery.spatial_controller import (
+            _cache_plan, _preferred_extra_sampling, _CACHE_BUDGET_BYTES, _PAINT_SAMPLES,
+        )
+        for dpr in (1., 1.25, 1.5, 1.75):
+            self.assertEqual(_preferred_extra_sampling(dpr), 2)
+        for dpr in (2., 2.5, 3.):
+            preferred = _cache_plan([QSizeF(240, 808), QSizeF(960, 808)], dpr, 16384,
+                                    max_extra=_preferred_extra_sampling(dpr))
+            self.assertIsNotNone(preferred)
+            self.assertGreaterEqual(preferred[0], dpr)
+            self.assertLessEqual(preferred[0], dpr * 1.5)
         normal = _cache_plan([QSizeF(240, 700), QSizeF(960, 700)], 2, 16384)
         self.assertEqual(normal[0], 4)
         panels = [QSizeF(240, 900), QSizeF(1360, 900)]

@@ -2054,6 +2054,15 @@ TEST_F(GallerySpatialTest, MacTrafficLightsRemainCenteredAcrossSpatialNavigation
 TEST_F(GallerySpatialTest, CacheBudgetPreservesDensityAndRespectsGpuLimits)
 {
     using namespace spatial_render;
+    for (qreal dpr : {1., 1.25, 1.5, 1.75})
+        EXPECT_EQ(preferredExtraSampling(dpr), 2);
+    for (qreal dpr : {2., 2.5, 3.}) {
+        const auto preferred = planCaches({QSizeF(240, 808), QSizeF(960, 808)}, dpr, 16384,
+            preferredExtraSampling(dpr));
+        ASSERT_TRUE(preferred.valid());
+        EXPECT_GE(preferred.dpr, dpr);
+        EXPECT_LE(preferred.dpr, dpr * 1.5);
+    }
     const std::array<QSizeF, 2> panels = {QSizeF(240, 900), QSizeF(1360, 900)};
     const auto normal = planCaches({QSizeF(240, 700), QSizeF(960, 700)}, 2, 16384);
     ASSERT_TRUE(normal.valid());
@@ -3108,10 +3117,16 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
     surface.makeCurrent();
     ASSERT_NE(surface.context(), nullptr);
     auto* gl = surface.context()->functions();
-    {
-        // Match the low-DPI adapter's native glyphs in a 2x cached panel. This
-        // exercises real tilted sampling, rather than the flat endpoint oracle.
-        QImage source(600, 360, QImage::Format_RGBA8888);
+    for (const int outputDpr : {1, 2}) {
+        SCOPED_TRACE(::testing::Message() << "output DPR=" << outputDpr);
+        // Match native low-DPI glyphs in a 2x cache and high-DPI glyphs in a 3x
+        // cache. Exercise tilted sampling at both output densities.
+        // DPR 1 exercises the blend with footprint filtering; DPR 2 stays in
+        // the pure cubic range. Only the latter has a fixed contrast-gain floor.
+        const bool pureCubic = outputDpr == 2;
+        const int rasterDpr = outputDpr == 1 ? 1 : 3;
+        QImage source(600 * rasterDpr, 360 * rasterDpr, QImage::Format_RGBA8888);
+        source.setDevicePixelRatio(rasterDpr);
         source.fill(QColor(224, 224, 224));
         {
             QPainter painter(&source);
@@ -3125,23 +3140,25 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
             for (int x = 30; x < 450; x += 4)
                 painter.fillRect(QRect(x, 260, 1, 50), QColor(32, 32, 32));
         }
-        source = source.scaled(source.size() * 2, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+        if (outputDpr == 1)
+            source = source.scaled(source.size() * 2, Qt::IgnoreAspectRatio, Qt::FastTransformation);
         QOpenGLTexture texture(source);
         texture.setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
         texture.setWrapMode(QOpenGLTexture::ClampToEdge);
         ASSERT_TRUE(texture.isCreated());
-        QOpenGLFramebufferObject target(QSize(640, 400));
+        QOpenGLFramebufferObject target(QSize(640 * outputDpr, 400 * outputDpr));
         ASSERT_TRUE(target.isValid());
-        spatial_render::PanelSampler linear, monotone;
+        spatial_render::PanelSampler linear, monotone, bounded;
         ASSERT_TRUE(linear.create(spatial_render::PanelSampler::Reconstruction::LinearFootprint));
-        ASSERT_TRUE(monotone.create());
+        ASSERT_TRUE(monotone.create(spatial_render::PanelSampler::Reconstruction::Monotone));
+        ASSERT_TRUE(bounded.create());
         QMatrix4x4 projection, quad;
         projection.ortho(0.f, 640.f, 400.f, 0.f, -1.f, 1.f);
         quad.translate(300, 180);
         quad.scale(300, 180);
         const auto render = [&](spatial_render::PanelSampler& sampler, const QTransform& tilt) {
             target.bind();
-            gl->glViewport(0, 0, 640, 400);
+            gl->glViewport(0, 0, target.width(), target.height());
             gl->glDisable(GL_BLEND);
             gl->glDisable(GL_DEPTH_TEST);
             gl->glDisable(GL_SCISSOR_TEST);
@@ -3166,11 +3183,11 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
             return std::array<double, 2>{ink, ink > 0 ? energy / ink : 0};
         };
         std::array<double, 3> minimumInk{1e20, 1e20, 1e20}, maximumInk{};
-        double improvement = 0;
+        double improvement = 0, cubicImprovement = 0;
         for (int phase = 0; phase < 8; ++phase) {
             SCOPED_TRACE(::testing::Message() << "phase=" << phase);
             const QTransform tilt(.96, .006, .00006, -.012, .97, .00003, 20. + phase / 8., 16. + phase / 20., 1.);
-            const QImage before = draw(linear, tilt), after = draw(monotone, tilt);
+            const QImage before = draw(linear, tilt), previous = draw(monotone, tilt), after = draw(bounded, tilt);
             for (int y = 0; y < after.height(); ++y)
                 for (int x = 0; x < after.width(); ++x) {
                     const int value = qGray(after.pixel(x, y));
@@ -3179,8 +3196,13 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
                 }
             for (int row = 0; row < 3; ++row) {
                 SCOPED_TRACE(::testing::Message() << "text row=" << row);
-                const QRect region = tilt.mapRect(QRectF(24, 20 + row * 75, 500, 43)).toAlignedRect();
-                const auto old = measure(before, region), current = measure(after, region);
+                const QRect logical = tilt.mapRect(QRectF(24, 20 + row * 75, 500, 43)).toAlignedRect();
+                const QRect region(logical.topLeft() * outputDpr, logical.size() * outputDpr);
+                const auto old = measure(before, region), current = measure(after, region),
+                           cubic = measure(previous, region);
+                EXPECT_GE(current[1], cubic[1] * (pureCubic ? 1.04 : .99));
+                EXPECT_NEAR(current[0] / cubic[0], 1., .025);
+                cubicImprovement += current[1] / cubic[1];
                 ASSERT_GT(old[1], 10);
                 EXPECT_GE(current[1], old[1] * .99);
                 EXPECT_NEAR(current[0] / old[0], 1., .025) << "Clarity must not be achieved by changing text weight";
@@ -3188,7 +3210,8 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
                 minimumInk[row] = qMin(minimumInk[row], current[0]);
                 maximumInk[row] = qMax(maximumInk[row], current[0]);
             }
-            const QRect lines = tilt.mapRect(QRectF(35, 264, 400, 40)).toAlignedRect();
+            const QRect logicalLines = tilt.mapRect(QRectF(35, 264, 400, 40)).toAlignedRect();
+            const QRect lines(logicalLines.topLeft() * outputDpr, logicalLines.size() * outputDpr);
             int filtered = 0;
             for (int y = lines.top(); y <= lines.bottom(); ++y)
                 for (int x = lines.left(); x <= lines.right(); ++x) {
@@ -3200,14 +3223,95 @@ TEST_F(GallerySpatialTest, TiltedPanelReconstructionRetainsContrastWithoutCovera
             const QString directory = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
             if (!directory.isEmpty() && phase == 0) {
                 QDir().mkpath(directory);
-                before.save(directory + "/tilted-linear-reference.png");
-                after.save(directory + "/tilted-monotone.png");
+                const auto prefix = directory + QStringLiteral("/tilted-dpr%1-").arg(outputDpr);
+                before.save(prefix + "linear.png");
+                previous.save(prefix + "monotone.png");
+                after.save(prefix + "bounded-cubic.png");
             }
         }
         EXPECT_GT(improvement / 24., 1.01);
+        if (pureCubic)
+            EXPECT_GT(cubicImprovement / 24., 1.08);
+        const QTransform minified(.45, .003, .00006, -.006, .45, .00003, 20.3, 16.2, 1.);
+        const QImage minifiedCubic = draw(bounded, minified).convertToFormat(QImage::Format_RGBA8888);
+        const QImage minifiedMonotone = draw(monotone, minified).convertToFormat(QImage::Format_RGBA8888);
+        ASSERT_EQ(minifiedCubic.size(), minifiedMonotone.size());
+        int maximumChannelError = 0;
+        for (int y = 0; y < minifiedCubic.height(); ++y) {
+            const auto* current = minifiedCubic.constScanLine(y);
+            const auto* previous = minifiedMonotone.constScanLine(y);
+            for (int x = 0; x < minifiedCubic.width() * 4; ++x)
+                maximumChannelError = qMax(maximumChannelError, qAbs(int(current[x]) - int(previous[x])));
+        }
+        // Both shaders use the same footprint path here; allow one 8-bit step
+        // for driver rounding, including alpha, without masking larger changes.
+        EXPECT_LE(maximumChannelError, 1) << "Strong minification must retain the existing footprint filtering";
+        std::cout << "SPATIAL_TEXT dpr=" << outputDpr << " contrastGain=" << cubicImprovement / 24. << std::endl;
         for (int row = 0; row < 3; ++row)
             EXPECT_LT(maximumInk[row] / minimumInk[row], 1.03)
                 << "Subpixel movement must not cause text coverage to flicker";
+        EXPECT_EQ(gl->glGetError(), GLenum(GL_NO_ERROR));
+    }
+    surface.doneCurrent();
+}
+
+TEST_F(GallerySpatialTest, BoundedPanelReconstructionPreservesPremultipliedEdges)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires a native OpenGL sampler";
+    QOpenGLWidget surface;
+    surface.resize(160, 120);
+    surface.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&surface));
+    surface.makeCurrent();
+    auto* gl = surface.context()->functions();
+    {
+        QImage source(64, 64, QImage::Format_RGBA8888_Premultiplied);
+        source.fill(Qt::transparent);
+        {
+            QPainter painter(&source);
+            painter.fillRect(QRect(8, 8, 24, 48), QColor(255, 0, 0, 128));
+            painter.fillRect(QRect(32, 8, 24, 48), QColor(0, 255, 0, 192));
+        }
+        QOpenGLTexture texture(QOpenGLTexture::Target2D);
+        texture.setFormat(QOpenGLTexture::RGBA8_UNorm);
+        texture.setSize(source.width(), source.height());
+        texture.setMipLevels(1);
+        texture.setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
+        texture.setWrapMode(QOpenGLTexture::ClampToEdge);
+        texture.allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
+        texture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, source.constBits());
+        QOpenGLFramebufferObject target(QSize(160, 120));
+        ASSERT_TRUE(target.isValid());
+        spatial_render::PanelSampler sampler;
+        ASSERT_TRUE(sampler.create());
+        QMatrix4x4 projection, quad;
+        projection.ortho(0.f, 160.f, 120.f, 0.f, -1.f, 1.f);
+        quad.translate(80.3f, 60.2f);
+        quad.rotate(5.f, 0.f, 0.f, 1.f);
+        quad.scale(48.f, 48.f);
+        target.bind();
+        gl->glViewport(0, 0, target.width(), target.height());
+        gl->glDisable(GL_BLEND);
+        gl->glDisable(GL_DEPTH_TEST);
+        gl->glDisable(GL_SCISSOR_TEST);
+        gl->glClearColor(0, 0, 0, 0);
+        gl->glClear(GL_COLOR_BUFFER_BIT);
+        sampler.blit(texture.textureId(), source.size(), projection * quad);
+        const QImage image = target.toImage().convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+        int translucent = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            const auto* row = image.constScanLine(y);
+            for (int x = 0; x < image.width(); ++x) {
+                const auto* pixel = row + 4 * x;
+                EXPECT_LE(pixel[0], pixel[3]);
+                EXPECT_LE(pixel[1], pixel[3]);
+                EXPECT_EQ(pixel[2], 0);
+                EXPECT_LE(pixel[3], 192);
+                translucent += pixel[3] > 0 && pixel[3] < 128;
+            }
+        }
+        EXPECT_GT(translucent, 50);
         EXPECT_EQ(gl->glGetError(), GLenum(GL_NO_ERROR));
     }
     surface.doneCurrent();
@@ -3441,8 +3545,8 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
         else
             EXPECT_EQ(content->glyphDpr, 0) << "Preserve Cocoa, WebAssembly and high-DPI glyph paths";
         if (windowSize.width() == 1500 && window.devicePixelRatioF() == 2) {
-            EXPECT_EQ(stats["cacheDpr"].toDouble(), 4);
-            EXPECT_LT(stats["paintTargetHeight"].toInt(), content->height() * 4);
+            EXPECT_EQ(stats["cacheDpr"].toDouble(), 3);
+            EXPECT_LT(stats["paintTargetHeight"].toInt(), content->height() * 3);
         }
         const QString evidence = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE")
             + (windowSize.width() == 1500 ? "/large" : "");
@@ -3503,6 +3607,33 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
         controller.cancelTransition();
         QTest::qWait(100);
         const QImage projected = surface->grabFramebuffer();
+        if (dpr >= 2) {
+            // Check the actual perspective endpoint too: a flat texture can
+            // pass while insufficient sampling softens its projected glyphs.
+            const auto contrast = [](const QImage& image, const QRect& area) {
+                double ink = 0, energy = 0;
+                for (int y = area.top() + 1; y < area.bottom(); ++y)
+                    for (int x = area.left() + 1; x < area.right(); ++x) {
+                        const int value = qGray(image.pixel(x, y));
+                        ink += 255 - value;
+                        energy += qPow(value - qGray(image.pixel(x - 1, y)), 2)
+                            + qPow(value - qGray(image.pixel(x, y - 1)), 2);
+                    }
+                return ink > 0 ? energy / ink : 0;
+            };
+            for (const QRect region : {QRect(35, 20, 370, 35), QRect(35, 260, 370, 35), QRect(35, 306, 370, 30)}) {
+                SCOPED_TRACE(::testing::Message() << "projected text row=" << region.y());
+                QPolygon corners;
+                for (const auto& point :
+                    {region.topLeft(), region.topRight(), region.bottomRight(), region.bottomLeft()})
+                    corners << surface->mapFrom(&window, controller.projectedPosition(content, point));
+                const QRect bounds = corners.boundingRect();
+                const QRect actualArea(bounds.topLeft() * dpr, bounds.size() * dpr);
+                ASSERT_TRUE(projected.rect().contains(actualArea));
+                EXPECT_GE(contrast(projected, actualArea),
+                    contrast(reference, QRect(region.topLeft() * dpr, region.size() * dpr)) * .9);
+            }
+        }
         const QPoint a = surface->mapFrom(&window, controller.projectedPosition(content, {50, 190}));
         const QPoint b = surface->mapFrom(&window, controller.projectedPosition(content, {168, 208}));
         const QRect linePixels(a * dpr, b * dpr);
@@ -3860,8 +3991,10 @@ TEST_F(GallerySpatialTest, PointerFramePacingProbe)
                     : window.currentContentPage() && window.currentContentPage()->routeId() == route;
             },
             2000));
-        if (auto* particles = window.findChild<layout::ParticleBackdrop*>("galleryHomeParticles"))
+        if (auto* particles = window.findChild<layout::ParticleBackdrop*>("galleryHomeParticles")) {
             particles->setEffect(layout::ParticleBackdrop::Starfield);
+            particles->setPauseWhenInactive(false);
+        }
         if (route == "spatial-view") {
             auto* page = window.currentContentPage();
             auto* view = page->findChild<spatial::SpatialView*>("spatialPreviewView");
@@ -3873,7 +4006,7 @@ TEST_F(GallerySpatialTest, PointerFramePacingProbe)
         QTest::qWait(800);
         if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE"); !dir.isEmpty()) {
             QDir().mkpath(dir);
-            window.screen()->grabWindow(window.winId()).save(dir + "/pointer-" + route + ".png");
+            surface->grabFramebuffer().save(dir + "/pointer-" + route + ".png");
         }
         const auto before = controller->renderingStatistics();
         QVector<double> intervals;

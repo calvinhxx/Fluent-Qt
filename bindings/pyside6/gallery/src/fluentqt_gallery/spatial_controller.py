@@ -125,6 +125,12 @@ _PAINT_SAMPLES = 2
 _GLYPH_SCRATCH_BYTES = 512 * 1024
 
 
+def _preferred_extra_sampling(native_dpr):
+    # Match the native Gallery: retain perspective headroom on dense displays
+    # without forcing dirty widgets through many narrow paint strips.
+    return 1.5 if native_dpr >= 2 else 2.
+
+
 def _cache_plan(panels, native_dpr, max_dimension, max_extra=2., budget=_CACHE_BUDGET_BYTES,
                 paint_samples=_PAINT_SAMPLES, backdrop_bytes=0, glyph_scratch_bytes=0,
                 reserved_bytes=0):
@@ -309,7 +315,9 @@ class _Surface(QOpenGLWidget):
         # versions that otherwise recreate it for each functions() query.
         self._functions = context.functions()
         self.blitter = _PanelSampler()
-        self.blitter.create()
+        reference = (os.environ.get("FLUENT_QT_SPATIAL_BENCHMARK", "0") != "0"
+                     and os.environ.get("FLUENT_QT_SPATIAL_SAMPLER") == "monotone")
+        self.blitter.create(monotone_reference=reference)
         self.caches = [{}, {}]
         self.paint_target = None
         self.resolve_target = None
@@ -406,9 +414,17 @@ class _Surface(QOpenGLWidget):
         backdrop_bytes = backdrop.width() * backdrop.height() * 4
         glyph_scratch = (_GLYPH_SCRATCH_BYTES
                         if needs_native_glyph_coverage(self.devicePixelRatioF()) else 0)
+        extra_sampling = _preferred_extra_sampling(self.devicePixelRatioF())
+        if os.environ.get("FLUENT_QT_SPATIAL_BENCHMARK", "0") != "0":
+            try:
+                requested = float(os.environ.get("FLUENT_QT_SPATIAL_EXTRA_SAMPLING", ""))
+                if 1 <= requested <= 2:
+                    extra_sampling = requested
+            except ValueError:
+                pass
         while True:
             plan = _cache_plan(panels, self.devicePixelRatioF(), self.max_dimension,
-                               self.max_extra, paint_samples=self.paint_samples,
+                               min(self.max_extra, extra_sampling), paint_samples=self.paint_samples,
                                backdrop_bytes=backdrop_bytes,
                                glyph_scratch_bytes=glyph_scratch)
             if plan is None:
@@ -542,7 +558,9 @@ class _Surface(QOpenGLWidget):
             painter.end()
             gl.glDisable(0x0C11)
             # GLES requires matching rectangles/formats when resolving multisampling.
-            QOpenGLFramebufferObject.blitFramebuffer(self.resolve_target, self.paint_target)
+            painted = QRect(0, 0, pixels.width(), paint_height)
+            QOpenGLFramebufferObject.blitFramebuffer(
+                self.resolve_target, painted, self.paint_target, painted)
             QOpenGLFramebufferObject.blitFramebuffer(
                 cache["texture"], QRect(0, pixels.height() - top - height, pixels.width(), height),
                 self.resolve_target, QRect(0, paint_bottom - top - height, pixels.width(), height))

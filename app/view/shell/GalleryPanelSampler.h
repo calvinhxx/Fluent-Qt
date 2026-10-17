@@ -15,11 +15,9 @@
 
 namespace fluent::gallery::spatial_render {
 
-// Four footprint taps retain coverage during minification. Monotone reconstruction
-// avoids blurring already-antialiased texels again with a linear fractional weight.
-// All weights remain in [0, 1]: no negative-lobe sharpening, overshoot or extra taps.
-// zh_CN: 四点像素足迹采样保持缩小后的覆盖率；单调重建减少重复线性插值的软化，
-// 不使用负权重锐化，不产生过冲，也不增加纹理读取次数。
+// Reconstruct nearby texels with bounded cubic interpolation. Clamp to the four
+// central texels to prevent ringing, and retain footprint filtering when shrinking.
+// zh_CN: 三次插值重建邻近像素，并限制到中心四个像素的范围以避免光晕；缩小时保留足迹滤波。
 class PanelSampler {
 public:
     struct Appearance {
@@ -30,9 +28,9 @@ public:
         qreal opacity = 0;
         qreal reflectionOpacity = 0;
     };
-    // LinearFootprint is retained only as the same-context regression reference.
-    enum class Reconstruction { Monotone, LinearFootprint };
-    bool create(Reconstruction reconstruction = Reconstruction::Monotone)
+    // Previous filters remain available only for same-context regression comparisons.
+    enum class Reconstruction { BoundedCubic, Monotone, LinearFootprint };
+    bool create(Reconstruction reconstruction = Reconstruction::BoundedCubic)
     {
         auto* context = QOpenGLContext::currentContext();
         const bool es = context->isOpenGLES();
@@ -52,12 +50,51 @@ public:
                 "uniform mat4 target; void main() {\n"
                 "uv = (position + 1.0) * 0.5;\n"
                 "gl_Position = target * vec4(position, 0.0, 1.0); }\n");
-        const QByteArray reconstructionCode = reconstruction == Reconstruction::Monotone
+        const QByteArray reconstructionCode = reconstruction != Reconstruction::LinearFootprint
             ? "vec2 texel = coordinate * sourceSize - 0.5;\n"
               "vec2 phase = fract(texel);\n"
               "phase = phase * phase * (3.0 - 2.0 * phase);\n"
               "coordinate = (floor(texel) + phase + 0.5) / sourceSize;\n"
             : "";
+        const QByteArray boundedCubic = reconstruction == Reconstruction::BoundedCubic
+            ? R"(
+vec4 cubicWeights(float t) {
+    float t2 = t * t, t3 = t2 * t;
+    return vec4(-0.5*t + t2 - 0.5*t3, 1.0 - 2.5*t2 + 1.5*t3,
+                0.5*t + 2.0*t2 - 1.5*t3, -0.5*t2 + 0.5*t3);
+}
+vec4 sampleBoundedCubic(vec2 coordinate) {
+    vec2 texel = coordinate * sourceSize - 0.5;
+    vec2 cell = floor(texel), phase = fract(texel);
+    vec4 wx = cubicWeights(phase.x), wy = cubicWeights(phase.y);
+    vec4 value = vec4(0.0), low = vec4(1.0), high = vec4(0.0);
+    for (int y = 0; y < 4; ++y) {
+        for (int x = 0; x < 4; ++x) {
+            vec4 pixel = SAMPLE(source, (cell + vec2(float(x)-0.5, float(y)-0.5)) / sourceSize);
+            value += pixel * wx[x] * wy[y];
+            if (x > 0 && x < 3 && y > 0 && y < 3) {
+                low = min(low, pixel); high = max(high, pixel);
+            }
+        }
+    }
+    value = clamp(value, low, high);
+    value.rgb = min(value.rgb, value.aaa);
+    return value;
+}
+)"
+            : "";
+        const QByteArray pixelSampling = reconstruction == Reconstruction::BoundedCubic
+            ? R"(
+    float filtering = smoothstep(1.75, 2.5, max(footprint.x, footprint.y));
+    vec4 pixel;
+    if (filtering < 1.0)
+        pixel = sampleBoundedCubic(uv);
+    if (filtering > 0.0) {
+        vec4 filtered = sampleFootprint(uv, dx, dy);
+        pixel = filtering >= 1.0 ? filtered : mix(pixel, filtered, filtering);
+    }
+)"
+            : "vec4 pixel = sampleFootprint(uv, dx, dy);\n";
         const QByteArray fragment =
             (modern ? "in vec2 uv; out vec4 color;\n#define SAMPLE texture\n#define OUTPUT color\n"
                     : "varying highp vec2 uv;\n#define SAMPLE texture2D\n#define OUTPUT "
@@ -67,16 +104,19 @@ public:
                 "uniform vec2 panelSize; uniform vec4 panelShape;\n"
                 "uniform vec4 materialColor; uniform vec4 reflectionColor;\n"
                 "vec4 samplePanel(vec2 coordinate) {\n")
-            + reconstructionCode
+            + reconstructionCode + QByteArray("return SAMPLE(source, coordinate); }\n") + boundedCubic
             + QByteArray(
-                "return SAMPLE(source, coordinate); }\n"
+                "vec4 sampleFootprint(vec2 coordinate, vec2 dx, vec2 dy) {\n"
+                "return 0.25 * (samplePanel(coordinate - dx - dy) + samplePanel(coordinate + dx - "
+                "dy)\n"
+                " + samplePanel(coordinate - dx + dy) + samplePanel(coordinate + dx + dy)); }\n"
                 "void main() {\n"
                 "vec2 dx = dFdx(uv), dy = dFdy(uv);\n"
-                "vec2 span = clamp(vec2(length(dx * sourceSize), length(dy * sourceSize)) - 1.0, "
-                "0.0, 1.0);\n"
-                "dx *= 0.25 * span.x; dy *= 0.25 * span.y;\n"
-                "vec4 pixel = 0.25 * (samplePanel(uv - dx - dy) + samplePanel(uv + dx - dy)\n"
-                " + samplePanel(uv - dx + dy) + samplePanel(uv + dx + dy));\n"
+                "vec2 footprint = vec2(length(dx * sourceSize), length(dy * sourceSize));\n"
+                "vec2 span = clamp(footprint - 1.0, 0.0, 1.0);\n"
+                "dx *= 0.25 * span.x; dy *= 0.25 * span.y;\n")
+            + pixelSampling
+            + QByteArray(
                 "if (panelSize.x > 0.0) {\n"
                 "vec2 point = vec2(uv.x, 1.0 - uv.y) * panelSize;\n"
                 "vec2 halfSize = max(vec2(0.0), (panelSize - 1.0) * 0.5);\n"

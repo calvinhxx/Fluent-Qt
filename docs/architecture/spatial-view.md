@@ -346,18 +346,27 @@ TabView label reveals and embedded SplashScreen dismissal continuous across stri
 boundaries. StackView and SplashScreen bypass their opacity effect at full opacity,
 as TabView already does, to keep the uncached first frame in place.
 
-The caches use up to twice the output density to preserve detail through
-perspective filtering. A four-tap shader samples each output pixel's projected
-footprint; a single bilinear lookup undersamples small curves when the cache is
-reduced and tilted. Each tap uses a monotone cubic fractional-texel weight to
-reduce the softening of already-antialiased source pixels. This reconstruction
-has no negative weights, preserves premultiplied alpha, and retains the source
-value at texel centers. It keeps the same four texture reads and cache budget;
-it adds arithmetic, not another image pass or widget repaint. The app-private
-sampler has a linear reference mode only for same-context tilted-text and
-subpixel-motion regression tests, not a user setting. No full-screen blur or
-sharpening pass is applied. Perspective still moves strokes off the pixel grid,
-so projected text cannot be pixel-identical to axis-aligned 2D text.
+The OpenGL shell caches use up to twice the output density below DPR 2 and
+1.5 times the output density on denser displays. High-DPI text retains sampling
+headroom without exhausting the shared paint budget on oversized textures and
+many narrow paint strips. The final window always uses native output density.
+The composition shader reconstructs nearby texels with a bounded Catmull-Rom
+cubic filter to reduce the softening of already-antialiased text. It reads a
+4-by-4 neighborhood and clamps the result to the four central texels' color
+range, then preserves the premultiplied-alpha constraint. This retains detail
+without introducing bright halos or invalid transparent edges. When one output
+pixel spans 1.75 to 2.5 source texels, it smoothly blends back to the existing
+four-tap footprint filter; stronger minification uses that filter alone to
+retain continuous coverage of thin strokes. The C++/Python OpenGL compositors
+and the QRhi panel shader share this reconstruction policy.
+
+The filter keeps the same cache budget and adds no image pass or widget repaint.
+It uses 16 texture reads for detail reconstruction, four for strong minification,
+and both in the transition range. The app-private sampler retains its previous
+monotone and linear footprint filters only for same-context regression and
+performance comparisons, not as user settings. No full-screen blur or sharpening
+pass is applied. Perspective still moves strokes off the pixel grid, so projected
+text cannot be pixel-identical to axis-aligned 2D text.
 Large glyphs that Qt paints as outlines receive the same multisample coverage
 as curved controls.
 
@@ -394,14 +403,17 @@ The two panel textures, native-density backdrop texture, and shared paint and re
 targets have a combined 192 MiB estimated budget: four bytes per resolved pixel and twelve bytes per paint sample,
 allowing for separate color, depth and stencil storage. The actual sample count is queried
 before allocating large targets. Large panels paint in horizontal strips into a
-shorter shared target; only children intersecting each strip are rendered. This
-keeps the antialiasing buffer within budget without reducing text density. The
+shorter shared target; only children intersecting each strip are rendered. Only
+the used width and height of each strip are resolved, including narrow navigation
+panels and the last partial strip. This keeps the antialiasing buffer within
+budget without reducing the selected text density. The
 low-DPI native glyph adapter also reserves 512 KiB for one bounded CPU tile and
 its upload. Native-density backgrounds are uploaded only when their content,
 size, DPR or OpenGL context changes, not on each pointer-motion frame.
 The planner also checks texture, renderbuffer and viewport limits. It selects
-the highest extra-sampling level in quarter steps that fits the panel textures,
-paint strip and eligible particle targets together. It never renders below the
+the highest extra-sampling level within the display's sampling policy, in quarter
+steps, that fits the panel textures, paint strip and eligible particle targets
+together. It never renders below the
 window's native pixel density, and the final canvas keeps its native DPR.
 Allocation failures retry smaller caches. If even native density cannot fit,
 Gallery returns to 2D; the GPU remains available for another attempt after resizing
@@ -413,6 +425,14 @@ The paint and resolve targets, both panel caches, and backdrop texture are relea
 on return to 2D. The C++, Python and WebAssembly shells
 use the same policy. Web keeps native output resolution by default; a lower
 resolution remains an explicit choice.
+
+For a native comparison, `FLUENT_QT_SPATIAL_BENCHMARK=1` enables frame and capture
+counters. With that flag, `FLUENT_QT_SPATIAL_EXTRA_SAMPLING` can temporarily cap
+extra sampling from 1 to 2. `FLUENT_QT_SPATIAL_SAMPLER=monotone` selects the
+previous sampler for a same-binary comparison. Both overrides are ignored during
+ordinary use. Frame-swap counts measure renderer submissions, not frames shown
+by the monitor. Keep particle animation active during the comparison and compare
+frame intervals and widget capture work alongside the text-detail regressions.
 
 ### Gallery particle layers
 

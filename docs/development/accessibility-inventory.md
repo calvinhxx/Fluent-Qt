@@ -245,13 +245,20 @@ pages keep their continuous animations stopped. The first 2D-to-3D opt-in on
 Qt 6.4+ desktop hosts prepares the native surface before display, preserving
 the visible window, focus and restore geometry. Reduced/Disabled motion and
 High Contrast restore native 2D.
-Projected text uses continuous, non-negative reconstruction weights to reduce
-texture-sampling softness without changing glyph weight, focus, or hit geometry.
+Projected text uses bounded cubic reconstruction to reduce texture-sampling
+softness, with color-range and premultiplied-alpha limits to avoid halos.
+Stronger minification smoothly returns to footprint filtering to preserve thin
+strokes. Native regressions check contrast, text coverage during subpixel motion,
+and translucent edges; focus and hit geometry retain the original projection.
 The low-DPI glyph adapter rasterizes unhinted text at the existing panel-cache density,
 including Home's particle foreground. Hinted text retains its native pixel grid so
 small-text contrast is preserved; the policy follows each shaped item's font.
-Perspective still differs from native 2D text. Material-to-Solid changes publish
-the opaque state and refresh the 3D caches before the platform removes the old
+Perspective still differs from native 2D text. At DPR 2 and above, the OpenGL
+Gallery uses up to 1.5 times native sampling density and native window output, reducing
+paint-strip repetition while retaining detail through projection. Native GPU
+regressions compare both flat and projected text with the original 2D rendering.
+Material-to-Solid changes publish the opaque state and refresh the 3D caches
+before the platform removes the old
 material, preserving window identity and avoiding a transparent handoff. Window
 startup prepares the effective theme background before native exposure; palette
 and native background updates retain the window, geometry, alpha format and focus.
