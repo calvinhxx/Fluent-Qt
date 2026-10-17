@@ -21,6 +21,10 @@ class CommandBarFlyoutPrivate;
  * The flyout borrows QAction objects and supports repeatable widget-anchor or
  * local-point invocation inside its owning top-level window.
  * zh_CN: 该浮层借用 QAction，并支持在所属顶层窗口内按控件锚点或局部点重复调用。
+ * QAction::setMenu() attaches a borrowed FluentMenu cascade. Branches keep the
+ * flyout open; activating a leaf closes the cascade and the flyout.
+ * zh_CN: QAction::setMenu() 可挂接借用的 FluentMenu 多级菜单；打开分支保留浮层，
+ * 执行叶子命令后关闭菜单和浮层。
  */
 class CommandBarFlyout final : public dialogs_flyouts::Flyout {
     Q_OBJECT
@@ -151,6 +155,7 @@ signals:
     void alwaysExpandedChanged(bool expanded);
 
 protected:
+    void paintEvent(QPaintEvent* event) override;
     void actionEvent(QActionEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
     QPoint computePosition() const override;

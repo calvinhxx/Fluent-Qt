@@ -4931,6 +4931,93 @@ class FluentQtBindingTest(unittest.TestCase):
         gc.collect()
         self.assertIsNone(deleted_ref())
 
+    def test_command_surface_three_level_fluent_menu(self):
+        from PySide6.QtGui import QCursor
+        from PySide6.QtWidgets import QAbstractButton
+
+        self.addCleanup(QCursor.setPos, QCursor.pos())
+        for location in ("inline", "overflow", "secondary", "flyout-primary", "flyout-secondary"):
+            with self.subTest(location=location):
+                host = QWidget()
+                host.resize(900, 650)
+                anchor = fluentqt.Button("Open", host)
+                anchor.setGeometry(30, 50, 120, 40)
+                host.show()
+                host.activateWindow()
+                self.assertTrue(QTest.qWaitForWindowActive(host))
+                menu = fluentqt.FluentMenu("View", host)
+                second = fluentqt.FluentMenu("Sort", menu)
+                third = fluentqt.FluentMenu("Order", second)
+                menu.addMenu(second)
+                second.addMenu(third)
+                leaf = third.addAction("Descending")
+                leaf.setCheckable(True)
+                action = QAction("View", host)
+                action.setMenu(menu)
+                if location.startswith("flyout"):
+                    surface = fluentqt.CommandBarFlyout(host)
+                    surface.setAnimationEnabled(False)
+                else:
+                    surface = fluentqt.CommandBar(host)
+                    surface.setGeometry(30, 130, 48 if location == "overflow" else 650, 48)
+                    surface.show()
+                if location in ("secondary", "flyout-secondary"):
+                    surface.addSecondaryAction(action)
+                else:
+                    surface.addPrimaryAction(action)
+                if location.startswith("flyout"):
+                    surface.showAt(anchor)
+                elif location != "inline":
+                    surface.setOverflowOpen(True)
+                self.app.processEvents()
+                presenter = next(
+                    button for button in host.findChildren(QAbstractButton)
+                    if button.property("commandAction") is action and button.isVisible()
+                )
+                leaf_triggered = QSignalSpy(leaf.triggered)
+                branch_triggered = QSignalSpy(action.triggered)
+                QTest.mouseClick(presenter, Qt.LeftButton)
+                self.app.processEvents()
+                self.assertTrue(menu.isVisible())
+                self.assertFalse(presenter.hasFocusVisual())
+                QTest.keyClick(menu, Qt.Key_Escape)
+                self.app.processEvents()
+                QTest.qWait(1)
+                self.assertFalse(menu.isVisible())
+                # The offscreen backend can deactivate the host when a popup closes.
+                host.activateWindow()
+                self.assertTrue(QTest.qWaitForWindowActive(host))
+                self.assertTrue(presenter.hasFocus())
+                self.assertTrue(presenter.hasFocusVisual())
+                QTest.keyClick(presenter, Qt.Key_Return)
+                self.app.processEvents()
+                self.assertTrue(menu.isVisible())
+                menu.setActiveAction(second.menuAction())
+                QTest.keyClick(menu, Qt.Key_Right)
+                second.setActiveAction(third.menuAction())
+                QTest.keyClick(second, Qt.Key_Right)
+                self.assertTrue(third.isVisible())
+                QTest.keyClick(third, Qt.Key_Escape)
+                self.assertFalse(third.isVisible())
+                self.assertTrue(second.isVisible())
+                QTest.keyClick(second, Qt.Key_Right)
+                third.setActiveAction(leaf)
+                QTest.keyClick(third, Qt.Key_Return)
+                self.app.processEvents()
+                self.assertEqual(leaf_triggered.count(), 1)
+                self.assertEqual(branch_triggered.count(), 0)
+                self.assertTrue(leaf.isChecked())
+                self.assertFalse(menu.isVisible())
+                self.assertIs(menu.parent(), host)
+                self.assertIs(action.parent(), host)
+                if location.startswith("flyout"):
+                    self.assertFalse(surface.isOpen())
+                elif location != "inline":
+                    self.assertFalse(surface.isOverflowOpen())
+                host.close()
+                host.deleteLater()
+                QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+
     def test_command_surface_dependency_gc_stress(self):
         for _ in range(25):
             command_bar = fluentqt.CommandBar()

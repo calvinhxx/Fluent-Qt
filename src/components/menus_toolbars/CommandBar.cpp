@@ -26,8 +26,11 @@
 #include "components/layout/Divider.h"
 #include "components/menus_toolbars/private/CommandAccessibility_p.h"
 #include "components/menus_toolbars/private/CommandActionModel_p.h"
+#include "components/menus_toolbars/private/CommandMenuController_p.h"
 #include "components/menus_toolbars/private/CommandOverflowProjection_p.h"
 #include "components/menus_toolbars/private/CommandPresenter_p.h"
+#include "components/menus_toolbars/private/CommandScrollView_p.h"
+#include "components/menus_toolbars/private/MenuSurface_p.h"
 #include "components/scrolling/ScrollView.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
@@ -56,16 +59,17 @@ constexpr int kPopupEdgeMargin = ::Spacing::XSmall;
 
 class CommandBarOverflowPopup final : public dialogs_flyouts::Flyout {
 public:
-    using ActivationHandler = std::function<void(QAction*)>;
+    using ActivationHandler = CommandPresenter::ActivationHandler;
     using ClosedHandler = std::function<void(bool)>;
     using AnchorPressHandler = std::function<void()>;
 
     CommandBarOverflowPopup(CommandBar* owner,
         CommandMoreButton* anchor,
+        detail::CommandMenuController* menus,
         ActivationHandler activationHandler,
         ClosedHandler closedHandler,
         AnchorPressHandler anchorPressHandler)
-        : dialogs_flyouts::Flyout(owner), m_owner(owner), m_anchorButton(anchor),
+        : dialogs_flyouts::Flyout(owner), m_owner(owner), m_anchorButton(anchor), m_menus(menus),
           m_activationHandler(std::move(activationHandler)), m_closedHandler(std::move(closedHandler)),
           m_anchorPressHandler(std::move(anchorPressHandler))
     {
@@ -81,7 +85,7 @@ public:
         setAnchorOffset(kItemSpacing);
         dialogs_flyouts::Flyout::setAnchor(anchor);
 
-        m_scrollView = new scrolling::ScrollView(this);
+        m_scrollView = new detail::CommandScrollView(this);
         m_scrollView->setObjectName(QStringLiteral("FluentCommandBar.OverflowScrollView"));
         m_scrollView->setFrameShape(QFrame::NoFrame);
         m_scrollView->setHorizontalScrollMode(scrolling::ScrollView::ScrollMode::Disabled);
@@ -99,7 +103,7 @@ public:
         m_content->setObjectName(QStringLiteral("FluentCommandBar.OverflowContent"));
         detail::markCommandAccessibleWidget(m_content, CommandAccessibleRole::MenuList);
         m_content->setAutoFillBackground(false);
-        m_scrollView->setWidget(m_content);
+        m_scrollView->setMenuContent(m_content);
 
         connect(this, &dialogs_flyouts::Popup::opened, this, [this]() {
             layoutRows();
@@ -120,6 +124,7 @@ public:
             if (handler)
                 handler(restoreFocus);
         });
+        connect(this, &dialogs_flyouts::Popup::aboutToHide, this, [this] { m_menus->close(); });
     }
 
     void setSections(const QList<QAction*>& overflowedPrimary, const QList<QAction*>& secondary)
@@ -154,10 +159,10 @@ public:
             if (spec.kind == RowKind::Command) {
                 auto* presenter = new CommandPresenter(
                     spec.action.data(), CommandPresenter::Mode::Overflow,
-                    [this](QAction* action) {
+                    [this](CommandPresenter* presenter, QAction* action) {
                         const ActivationHandler handler = m_activationHandler;
                         if (handler)
-                            handler(action);
+                            handler(presenter, action);
                     },
                     m_content);
                 presenter->setObjectName(QStringLiteral("FluentCommandBar.OverflowRow"));
@@ -208,10 +213,26 @@ public:
     }
 
 protected:
+    void paintEvent(QPaintEvent*) override
+    {
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        detail::paintMenuSurface(painter, overlay::visibleCardRect(rect()), *this);
+    }
+
     bool eventFilter(QObject* watched, QEvent* event) override
     {
+        if (m_menus->ownsEvent(watched, event))
+            return false;
         if (event && event->type() == QEvent::KeyPress && focusIsInside()) {
+            detail::updateCommandFocusVisual(focusedRow(), event);
             auto* keyEvent = static_cast<QKeyEvent*>(event);
+            const int forward = layoutDirection() == Qt::RightToLeft ? Qt::Key_Left : Qt::Key_Right;
+            if (keyEvent->key() == forward && focusedRow() && focusedRow()->hasMenu()) {
+                keyEvent->accept();
+                focusedRow()->click();
+                return true;
+            }
             switch (keyEvent->key()) {
             case Qt::Key_Up:
                 moveRowFocus(-1);
@@ -451,6 +472,7 @@ private:
             setFocus(Qt::PopupFocusReason);
             return;
         }
+        rows.first()->setFocusVisual(true);
         rows.first()->setFocus(Qt::PopupFocusReason);
         if (m_scrollView)
             m_scrollView->ensureWidgetVisible(rows.first());
@@ -530,7 +552,8 @@ private:
 
     QPointer<CommandBar> m_owner;
     QPointer<CommandMoreButton> m_anchorButton;
-    scrolling::ScrollView* m_scrollView = nullptr;
+    detail::CommandMenuController* m_menus;
+    detail::CommandScrollView* m_scrollView = nullptr;
     QWidget* m_content = nullptr;
     QVector<RowSpec> m_specs;
     QVector<QWidget*> m_rows;
@@ -550,7 +573,7 @@ struct FocusTarget {
 
 class CommandBarPrivate final : public QObject {
 public:
-    explicit CommandBarPrivate(CommandBar* owner) : QObject(nullptr), q(owner), actions(owner)
+    explicit CommandBarPrivate(CommandBar* owner) : QObject(nullptr), q(owner), actions(owner), menus(owner)
     {
         q->setObjectName(QStringLiteral("FluentCommandBar"));
         detail::markCommandAccessibleWidget(q, CommandAccessibleRole::ToolbarRoot);
@@ -758,6 +781,7 @@ public:
 
     CommandBar* q = nullptr;
     CommandActionModel actions;
+    detail::CommandMenuController menus;
     CommandBar::LabelPosition labelPosition = CommandBar::LabelPosition::Right;
     bool dynamicOverflowEnabled = true;
     bool backgroundVisible = true;
@@ -884,7 +908,10 @@ private:
             } else {
                 auto* presenter = new CommandPresenter(
                     action, CommandPresenter::Mode::Primary,
-                    [this](QAction* command) { activatePrimaryAction(command); }, q);
+                    [this](CommandPresenter* presenter, QAction* command) {
+                        activatePrimaryAction(presenter, command);
+                    },
+                    q);
                 presenter->setObjectName(QStringLiteral("FluentCommandBar.PrimaryPresenter"));
                 presenter->setPrimaryLabelCollapsed(labelPosition == CommandBar::LabelPosition::Collapsed);
                 presenter->installEventFilter(this);
@@ -1074,7 +1101,8 @@ private:
             return;
 
         overflowPopup = new CommandBarOverflowPopup(
-            q, moreButton, [this](QAction* action) { activateOverflowAction(action); },
+            q, moreButton, &menus,
+            [this](CommandPresenter* presenter, QAction* action) { activateOverflowAction(presenter, action); },
             [this](bool restoreFocus) {
                 if (restoreFocus && moreButton && moreButton->isVisible()) {
                     const int index = focusTargetIndex(moreButton);
@@ -1092,9 +1120,13 @@ private:
         overflowPopup->setSections(overflowedPrimary, normalizedSecondary);
     }
 
-    void activatePrimaryAction(QAction* action)
+    void activatePrimaryAction(CommandPresenter* presenter, QAction* action)
     {
         if (!action || !action->isEnabled() || !action->isVisible()) {
+            return;
+        }
+        if (action->menu()) {
+            menus.open(presenter);
             return;
         }
         const QPointer<CommandBar> ownerGuard = q;
@@ -1104,9 +1136,14 @@ private:
             return;
     }
 
-    void activateOverflowAction(QAction* action)
+    void activateOverflowAction(CommandPresenter* presenter, QAction* action)
     {
         if (!action || !action->isEnabled() || !action->isVisible()) {
+            return;
+        }
+
+        if (action->menu()) {
+            menus.open(presenter, [this] { finishOverflowActivation(); });
             return;
         }
 
@@ -1117,6 +1154,14 @@ private:
         if (!ownerGuard || !popupGuard)
             return;
 
+        finishOverflowActivation();
+    }
+
+    void finishOverflowActivation()
+    {
+        const auto popupGuard = overflowPopup;
+        if (!popupGuard)
+            return;
         QWidget* focusedAfter = QApplication::focusWidget();
         const bool focusRedirected = focusedAfter && focusedAfter != popupGuard
             && !popupGuard->isAncestorOf(focusedAfter);
@@ -1363,6 +1408,8 @@ private:
         const QVector<FocusTarget> targets = focusTargets();
         if (currentIndex < 0 || currentIndex >= targets.size())
             return false;
+        detail::updateCommandFocusVisual(qobject_cast<basicinput::Button*>(targets.at(currentIndex).widget.data()),
+            event);
 
         int destination = currentIndex;
         switch (event->key()) {
@@ -1382,6 +1429,12 @@ private:
             if (targets.at(currentIndex).more) {
                 openOverflow();
                 event->accept();
+                return true;
+            }
+            if (targets.at(currentIndex).action && targets.at(currentIndex).action->menu()) {
+                event->accept();
+                activatePrimaryAction(dynamic_cast<CommandPresenter*>(targets.at(currentIndex).widget.data()),
+                    targets.at(currentIndex).action);
                 return true;
             }
             return false;

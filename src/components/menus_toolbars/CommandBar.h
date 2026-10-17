@@ -24,6 +24,10 @@ class CommandBarPrivate;
  * QAction ownership.
  * zh_CN: CommandBar 借用调用方持有的 QAction；内联和溢出呈现由语义分区派生，
  * 不改变 QAction 的所有权。
+ * Attach a FluentMenu with QAction::setMenu() for nested commands. Menus are
+ * borrowed; opening a branch does not trigger or toggle its action.
+ * zh_CN: 通过 QAction::setMenu() 挂接 FluentMenu 以支持多级命令；菜单为借用对象，
+ * 打开分支不会触发动作或切换其选中状态。
  */
 class CommandBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT

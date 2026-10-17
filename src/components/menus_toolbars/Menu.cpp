@@ -15,15 +15,16 @@
 #include <QPointer>
 #include <QRegion>
 #include <QResizeEvent>
+#include <QScreen>
 #include <QShowEvent>
 #include <QTimer>
 #include <QVariantAnimation>
 #include "compatibility/private/PointerEventCompat_p.h"
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
-#include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/MotionPolicy_p.h"
-#include "components/foundation/private/SurfacePainter_p.h"
+#include "components/menus_toolbars/private/MenuSurface_p.h"
+#include "design/MenuTokens_p.h"
 #include "design/Typography.h"
 
 namespace fluent::menus_toolbars {
@@ -94,11 +95,6 @@ bool hasLeadingAction(const FluentMenu* menu)
             return true;
     }
     return false;
-}
-
-bool hasMenuParent(const QWidget* widget)
-{
-    return widget && qobject_cast<const QMenu*>(widget->parentWidget());
 }
 
 QMenu* visibleSubmenuAt(const QMenu* menu, const QPoint& globalPosition)
@@ -179,6 +175,13 @@ FluentMenu::FluentMenu(const QString& title, QWidget* parent) : QMenu(title, par
     setContentsMargins(m_shadowSize, m_shadowSize, m_shadowSize, m_shadowSize);
 
     connect(this, &QMenu::aboutToShow, this, [this]() {
+        // The invoking menu can differ from QObject ownership when menus are shared.
+        auto* parent = qobject_cast<QMenu*>(QApplication::activePopupWidget());
+        m_cascadeParent = parent && parent != this && parent->activeAction() && parent->activeAction()->menu() == this
+            ? parent
+            : nullptr;
+        if (m_cascadeParent)
+            setLayoutDirection(m_cascadeParent->layoutDirection());
         if (!QApplication::isEffectEnabled(Qt::UI_AnimateMenu))
             return;
 
@@ -449,21 +452,13 @@ void FluentMenu::paintEvent(QPaintEvent* event)
     if (m_translucentSurface && m_revealProgress < 1.0)
         p.setClipRect(QRectF(0, 0, width(), height() * m_revealProgress));
 
-    // 3. Paint the layered soft shadow. zh_CN: 绘制多层软阴影。
-    if (m_translucentSurface)
-        drawShadow(p, contentRect);
-
-    // 4. Paint the rounded background and border. zh_CN: 绘制圆角背景与边框。
+    // Share the same restrained surface with command overflow and flyout menus.
+    detail::paintMenuSurface(p, contentRect, *this, m_translucentSurface);
     int r = radius.overlay;
     p.save();
     QPainterPath clipPath;
     clipPath.addRoundedRect(contentRect, r, r);
     p.setClipPath(clipPath);
-    fluent::painting::RoundedSurfacePaint surface;
-    surface.fill = colors.bgLayer;
-    surface.radius = r;
-    surface.border = colors.strokeCard;
-    fluent::painting::paintRoundedSurface(p, QRectF(contentRect), surface);
 
     // 5. Paint the menu items.
     // itemInset: shared horizontal inset for highlights and separators
@@ -509,7 +504,7 @@ void FluentMenu::paintEvent(QPaintEvent* event)
 
         bool isEnabled = action->isEnabled();
         bool isActive = (action == activeAction());
-        const bool highlighted = isEnabled && (action->isChecked() || isActive);
+        const bool highlighted = isEnabled && isActive;
         const QColor bg = highlighted ? colors.subtleSecondary : QColor(Qt::transparent);
 
         // §2 invalid-QColor guard: only paint a valid, non-transparent fill. zh_CN: §2 无效 QColor 防护:
@@ -645,7 +640,8 @@ QSize FluentMenu::sizeHint() const
             continue;
         contentHeight += action->isSeparator() ? m_separatorHeight : itemHeight;
     }
-    return QSize(qMax(base.width(), contentWidth + 2 * m_shadowSize), qMax(base.height(), contentHeight));
+    return QSize(qMax(base.width(), qMax(menu_tokens::minimumWidth, contentWidth) + 2 * m_shadowSize),
+        qMax(base.height(), contentHeight));
 }
 
 void FluentMenu::showEvent(QShowEvent* event)
@@ -680,16 +676,11 @@ void FluentMenu::showEvent(QShowEvent* event)
     // 自己的原生圆角约定）；基类显示几何稳定后重新应用 Fluent 表面遮罩。
     updateSurfaceMask();
 
-    // Compensate the shadow margin: top-level menus cancel it fully, cascaded
-    // submenus keep a small gap so the parent's shadow never covers their content.
-    // zh_CN: 修正阴影 margin 偏移——顶层菜单完整抵消阴影；级联子菜单保留小间距，
-    // 避免父菜单阴影压到子菜单内容。
-    const auto& spacing = themeSpacing();
-    QPoint targetPos = pos();
-    const int horizontalOffset = hasMenuParent(this) ? m_shadowSize - spacing.gap.tight : m_shadowSize;
-    targetPos.rx() -= horizontalOffset;
-    targetPos.ry() -= (m_shadowSize - spacing.gap.tight);
-    move(targetPos);
+    if (m_cascadeParent) {
+        positionCascade();
+    } else {
+        move(pos() - QPoint(m_shadowSize, m_shadowSize - themeSpacing().gap.tight));
+    }
     normalizePopupLayering();
     QTimer::singleShot(0, this, [this]() {
         const QSize targetSize = sizeHint();
@@ -714,6 +705,7 @@ void FluentMenu::showEvent(QShowEvent* event)
             resize(targetSize);
         }
         updateSurfaceMask();
+        positionCascade();
         normalizePopupLayering();
         update();
     });
@@ -769,13 +761,42 @@ void FluentMenu::normalizePopupLayering()
         menu->raise();
 }
 
-void FluentMenu::drawShadow(QPainter& painter, const QRect& contentRect)
+void FluentMenu::positionCascade()
 {
-    // Menus float close to their anchor, so they carry a lighter shadow than
-    // modal surfaces.
-    // zh_CN: 菜单紧贴锚点浮动，阴影强度低于模态表面。
-    ::fluent::overlay::paintLayeredShadow(painter, contentRect, themeRadius().overlay, themeShadow(Elevation::High),
-        /*intensity=*/0.18);
+    QMenu* parent = m_cascadeParent.data();
+    QAction* branch = parent ? parent->activeAction() : nullptr;
+    if (!parent || !parent->isVisible() || !branch || branch->menu() != this)
+        return;
+    const QRect row = parent->actionGeometry(branch);
+    if (row.isEmpty())
+        return;
+
+    int firstRowCenter = contentsMargins().top();
+    for (QAction* action : actions()) {
+        if (action->isVisible() && !action->isSeparator() && !actionGeometry(action).isEmpty()) {
+            firstRowCenter = actionGeometry(action).center().y();
+            break;
+        }
+    }
+    QRect parentCard = parent->geometry();
+    if (auto* fluentParent = qobject_cast<FluentMenu*>(parent)) {
+        const int shadow = fluentParent->m_shadowSize;
+        parentCard.adjust(shadow, shadow, -shadow, -shadow);
+    }
+    const QSize cardSize = size() - QSize(m_shadowSize * 2, m_shadowSize * 2);
+    const int right = parentCard.right() + 1 + menu_tokens::cascadeGap;
+    const int left = parentCard.left() - menu_tokens::cascadeGap - cardSize.width();
+    const bool rtl = layoutDirection() == Qt::RightToLeft;
+    int x = rtl ? left : right;
+    int y = parent->mapToGlobal(row.center()).y() - firstRowCenter + m_shadowSize;
+    if (QScreen* screen = parent->screen()) {
+        const QRect available = screen->availableGeometry();
+        if (x < available.left() || x + cardSize.width() > available.right() + 1)
+            x = rtl ? right : left;
+        x = qBound(available.left(), x, qMax(available.left(), available.right() + 1 - cardSize.width()));
+        y = qBound(available.top(), y, qMax(available.top(), available.bottom() + 1 - cardSize.height()));
+    }
+    move(x - m_shadowSize, y - m_shadowSize);
 }
 
 } // namespace fluent::menus_toolbars
