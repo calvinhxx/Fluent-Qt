@@ -4,6 +4,7 @@
 #include "components/foundation/ThemeRegistry.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/menus_toolbars/private/TextEditingMenu_p.h"
+#include "components/scrolling/ScrollBar.h"
 #include "components/textfields/Label.h"
 #include "components/textfields/TextEdit.h"
 #include "design/Spacing.h"
@@ -16,6 +17,7 @@
 #include <QMenu>
 #include <QMetaProperty>
 #include <QPainter>
+#include <QPlainTextEdit>
 #include <QScrollBar>
 #include <QTextBlock>
 #include <QTextCursor>
@@ -165,6 +167,105 @@ TEST_F(TextEditTest, TextAndPlaceholder)
 
     edit->setPlainText("line1\nline2");
     EXPECT_EQ(edit->toPlainText(), "line1\nline2");
+}
+
+TEST_F(TextEditTest, Contract_AppendPlainTextMatchesQtParagraphSemantics)
+{
+    struct AppendCase {
+        QString initial;
+        QString addition;
+    };
+    const QVector<AppendCase> cases{
+        {QString(), QStringLiteral("First")},
+        {QStringLiteral("First"), QStringLiteral("Second")},
+        {QStringLiteral("First"), QString()},
+        {QString(), QString()},
+        {QStringLiteral("First\n"), QStringLiteral("Second")},
+        {QStringLiteral("First"), QStringLiteral("Second\nThird\n")},
+        {QStringLiteral("First"), QStringLiteral("<b>WARN</b> & <tag>")},
+        {QStringLiteral("First"), QStringLiteral("中文日志\n完成 ✓")},
+        {QStringLiteral("First"), QStringLiteral("Second\r\nThird")},
+        {QStringLiteral("First"), QStringLiteral("First")},
+    };
+    for (const AppendCase& item : cases) {
+        SCOPED_TRACE((item.initial + QStringLiteral(" + ") + item.addition).toStdString());
+        TextEdit edit;
+        QPlainTextEdit reference;
+        edit.setPlainText(item.initial);
+        reference.setPlainText(item.initial);
+        edit.setReadOnly(true);
+        reference.setReadOnly(true);
+        QSignalSpy changed(&edit, &TextEdit::textChanged);
+        QSignalSpy referenceChanged(&reference, &QPlainTextEdit::textChanged);
+
+        edit.appendPlainText(item.addition);
+        reference.appendPlainText(item.addition);
+
+        EXPECT_EQ(edit.toPlainText(), reference.toPlainText());
+        EXPECT_EQ(changed.count(), referenceChanged.count());
+        EXPECT_TRUE(edit.isReadOnly());
+    }
+}
+
+TEST_F(TextEditTest, Contract_AppendPlainTextPreservesSelectionAndUndoHistory)
+{
+    TextEdit edit;
+    edit.setPlainText(QStringLiteral("Alpha"));
+    QTextEdit* inner = innerTextEdit(&edit);
+    ASSERT_NE(inner, nullptr);
+    inner->moveCursor(QTextCursor::End);
+    inner->insertPlainText(QStringLiteral(" Beta"));
+    QTextCursor selection = inner->textCursor();
+    selection.setPosition(0);
+    selection.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+    inner->setTextCursor(selection);
+    QSignalSpy changed(&edit, &TextEdit::textChanged);
+
+    edit.appendPlainText(QStringLiteral("Gamma\nDelta"));
+
+    EXPECT_EQ(edit.toPlainText(), QStringLiteral("Alpha Beta\nGamma\nDelta"));
+    EXPECT_EQ(inner->textCursor().position(), 10);
+    EXPECT_EQ(inner->textCursor().anchor(), 0);
+    EXPECT_EQ(inner->textCursor().selectedText(), QStringLiteral("Alpha Beta"));
+    EXPECT_EQ(changed.count(), 1);
+    inner->undo();
+    EXPECT_EQ(edit.toPlainText(), QStringLiteral("Alpha Beta"));
+    inner->undo();
+    EXPECT_EQ(edit.toPlainText(), QStringLiteral("Alpha"));
+}
+
+TEST_F(TextEditTest, Contract_AppendPlainTextFollowsTailAndPreservesReadingPosition)
+{
+    for (const bool readOnly : {false, true}) {
+        SCOPED_TRACE(readOnly);
+        TextEdit edit(window);
+        edit.setReadOnly(readOnly);
+        edit.setMinVisibleLines(2);
+        edit.setMaxVisibleLines(2);
+        edit.setGeometry(0, 0, 460, edit.height());
+        window->show();
+        edit.show();
+        QApplication::processEvents();
+
+        edit.appendPlainText(QStringLiteral("Alpha\nBeta\nGamma\nDelta\nEpsilon\nZeta"));
+        QApplication::processEvents();
+        auto* bar = edit.verticalScrollBar();
+        ASSERT_GT(bar->maximum(), 0);
+        EXPECT_EQ(bar->value(), bar->maximum());
+        const int oldMaximum = bar->maximum();
+        edit.appendPlainText(QStringLiteral("Eta\n") + QString(600, QLatin1Char('x')));
+        QApplication::processEvents();
+        EXPECT_GT(bar->maximum(), oldMaximum);
+        EXPECT_EQ(bar->value(), bar->maximum());
+
+        const int readingPosition = bar->maximum() / 3;
+        bar->setValue(readingPosition);
+        edit.appendPlainText(QStringLiteral("Iota\nKappa"));
+        QApplication::processEvents();
+        EXPECT_EQ(bar->value(), readingPosition);
+        EXPECT_EQ(innerTextEdit(&edit)->verticalScrollBar()->value(), readingPosition);
+        EXPECT_EQ(innerTextEdit(&edit)->textCursor().position(), 0);
+    }
 }
 
 TEST_F(TextEditTest, PlaceholderIsHiddenDuringInputMethodPreedit)

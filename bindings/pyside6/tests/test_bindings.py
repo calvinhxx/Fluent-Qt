@@ -63,6 +63,7 @@ from PySide6.QtGui import (
     QPalette,
     QStandardItem,
     QStandardItemModel,
+    QTextCursor,
 )
 from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import (
@@ -77,6 +78,7 @@ from PySide6.QtWidgets import (
     QListView,
     QMenu,
     QMenuBar,
+    QPlainTextEdit,
     QPushButton,
     QRadioButton,
     QScrollArea,
@@ -85,6 +87,7 @@ from PySide6.QtWidgets import (
     QStackedWidget,
     QStyledItemDelegate,
     QTableView,
+    QTextEdit,
     QToolButton,
     QTreeView,
     QWidget,
@@ -2365,6 +2368,75 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(inset_changes, [12])
         self.assertEqual(thickness_changes, [2.0])
         self.assertEqual(color_changes, [color])
+
+    def test_text_edit_append_plain_text_paragraphs_and_read_only(self):
+        for initial, addition, expected in (
+            ("", "First", "First"),
+            ("First", "Second", "First\nSecond"),
+            ("First", "", "First\n"),
+            ("", "", ""),
+            ("First\n", "Second", "First\n\nSecond"),
+            ("First", "Second\nThird\n", "First\nSecond\nThird\n"),
+            ("First", "<b>WARN</b> & text", "First\n<b>WARN</b> & text"),
+            ("First", "中文日志\n完成 ✓", "First\n中文日志\n完成 ✓"),
+            ("First", "First", "First\nFirst"),
+        ):
+            with self.subTest(initial=initial, addition=addition):
+                edit = fluentqt.TextEdit()
+                reference = QPlainTextEdit()
+                edit.setPlainText(initial)
+                reference.setPlainText(initial)
+                edit.setReadOnly(True)
+                reference.setReadOnly(True)
+                changes = QSignalSpy(edit.textChanged)
+                reference_changes = QSignalSpy(reference.textChanged)
+                edit.appendPlainText(addition)
+                reference.appendPlainText(addition)
+                self.assertEqual(edit.toPlainText(), expected)
+                self.assertEqual(edit.toPlainText(), reference.toPlainText())
+                self.assertEqual(changes.count(), reference_changes.count())
+                self.assertTrue(edit.isReadOnly())
+
+    def test_text_edit_append_preserves_selection_undo_and_scroll(self):
+        edit = fluentqt.TextEdit()
+        edit.setMinVisibleLines(2)
+        edit.setMaxVisibleLines(2)
+        edit.resize(460, edit.height())
+        edit.show()
+        try:
+            edit.setPlainText("Alpha")
+            inner = edit.findChild(QTextEdit)
+            self.assertIsNotNone(inner)
+            inner.moveCursor(QTextCursor.MoveOperation.End)
+            inner.insertPlainText(" Beta")
+            selection = inner.textCursor()
+            selection.setPosition(0)
+            selection.movePosition(
+                QTextCursor.MoveOperation.End, QTextCursor.MoveMode.KeepAnchor
+            )
+            inner.setTextCursor(selection)
+            edit.appendPlainText("Gamma\nDelta\nEpsilon\nZeta")
+            QApplication.processEvents()
+            self.assertEqual(inner.textCursor().selectedText(), "Alpha Beta")
+            self.assertEqual(inner.textCursor().position(), 10)
+            bar = edit.verticalScrollBar()
+            self.assertGreater(bar.maximum(), 0)
+            self.assertEqual(bar.value(), bar.maximum())
+            reading_position = bar.maximum() // 3
+            bar.setValue(reading_position)
+            edit.appendPlainText("Eta\nTheta")
+            QApplication.processEvents()
+            self.assertEqual(bar.value(), reading_position)
+            self.assertEqual(inner.textCursor().selectedText(), "Alpha Beta")
+            inner.undo()
+            self.assertEqual(edit.toPlainText(), "Alpha Beta\nGamma\nDelta\nEpsilon\nZeta")
+            inner.undo()
+            self.assertEqual(edit.toPlainText(), "Alpha Beta")
+            inner.undo()
+            self.assertEqual(edit.toPlainText(), "Alpha")
+        finally:
+            edit.close()
+            edit.deleteLater()
 
     def test_text_edit_properties_signals_and_multiline_contract(self):
         edit = fluentqt.TextEdit()

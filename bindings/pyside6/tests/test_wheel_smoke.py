@@ -1777,6 +1777,10 @@ def main():
     text_edit.setScrollChainingEnabled(True)
     if text_edit.toPlainText() != "First line\nSecond line":
         raise AssertionError("TextEdit did not preserve its plain text")
+    text_edit.setReadOnly(True)
+    text_edit.appendPlainText("<b>Log entry</b>")
+    if text_edit.toPlainText() != "First line\nSecond line\n<b>Log entry</b>":
+        raise AssertionError("TextEdit did not append literal plain text while read-only")
     if text_edit.minVisibleLines() != 2 or text_edit.maxVisibleLines() != 3:
         raise AssertionError("TextEdit did not preserve visible-line bounds")
     if not text_edit.isScrollChainingEnabled():

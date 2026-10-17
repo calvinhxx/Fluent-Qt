@@ -92,6 +92,17 @@ public:
 
     // Text APIs. zh_CN: 文本相关 API。
     void setPlainText(const QString& text);
+    /**
+     * @brief Appends a plain-text paragraph, including when the editor is read-only.
+     * zh_CN: 在文档末尾追加纯文本段落，只读模式下也允许程序追加。
+     *
+     * Existing text is followed by a new paragraph, even for an empty string.
+     * Preserves the cursor and selection; follows new text only when already at
+     * the bottom. Visible-line bounds still control height, not history length.
+     * zh_CN: 已有内容后先换段，空字符串也可追加空段落；保留光标和选区，
+     * 仅在原本位于底部时跟随新内容。可见行数限制高度，不限制历史长度。
+     */
+    void appendPlainText(const QString& text);
     QString toPlainText() const;
     void clear();
 

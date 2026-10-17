@@ -400,6 +400,46 @@ void TextEdit::setPlainText(const QString& text)
     }
 }
 
+void TextEdit::appendPlainText(const QString& text)
+{
+    if (!m_editor)
+        return;
+
+    auto* scrollBar = m_editor->verticalScrollBar();
+    const int previousScroll = scrollBar->value();
+    const bool followTail = previousScroll >= scrollBar->maximum();
+    QTextCursor previousCursor = m_editor->textCursor();
+    const int previousPosition = previousCursor.position();
+    const int previousAnchor = previousCursor.anchor();
+    auto* heightAnimation = heightAnimationFor(this);
+    const bool previousProgrammaticState = heightAnimation->programmaticTextChange;
+    heightAnimation->programmaticTextChange = true;
+
+    // An independent cursor inserts at the tail without replacing a selection.
+    // Group the paragraph break and text into one change and one undo command.
+    // zh_CN: 独立光标在末尾插入，避免替换选区；换段和文本合并为一次变更及撤销。
+    QTextCursor cursor(m_editor->document());
+    cursor.beginEditBlock();
+    cursor.movePosition(QTextCursor::End);
+    if (!m_editor->document()->isEmpty())
+        cursor.insertBlock(cursor.blockFormat(), previousCursor.charFormat());
+    else
+        cursor.setCharFormat(previousCursor.charFormat());
+    cursor.insertText(text);
+    cursor.endEditBlock();
+    heightAnimation->programmaticTextChange = previousProgrammaticState;
+
+    // Document insertion can move an existing selection endpoint at the tail.
+    // zh_CN: 文档插入可能移动恰好位于末尾的选区端点，显式保留原位置。
+    previousCursor.setPosition(previousAnchor);
+    previousCursor.setPosition(previousPosition, QTextCursor::KeepAnchor);
+    m_editor->setTextCursor(previousCursor);
+    applyBlockCenterFormat();
+    requestSynchronousHeightSettlement(this);
+    updateHeightForContent();
+    scrollBar->setValue(followTail ? scrollBar->maximum() : previousScroll);
+}
+
 QString TextEdit::toPlainText() const
 {
     return m_editor ? m_editor->toPlainText() : QString();
