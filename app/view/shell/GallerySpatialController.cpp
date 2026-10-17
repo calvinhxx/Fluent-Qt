@@ -82,10 +82,7 @@ bool requiresDirectComposition(const QWidget* root)
 
 class DirectCompositionObserver final : public QObject {
 public:
-    explicit DirectCompositionObserver(QObject* parent) : QObject(parent)
-    {
-        qApp->installEventFilter(this);
-    }
+    explicit DirectCompositionObserver(QObject* parent) : QObject(parent) { qApp->installEventFilter(this); }
     std::function<void(QWidget*, bool)> changed;
 #ifdef Q_OS_WASM
     std::function<void(QObject*)> windowReady;
@@ -98,15 +95,12 @@ protected:
         if (windowReady && (event->type() == QEvent::Show || event->type() == QEvent::Expose))
             windowReady(object);
 #endif
-        const bool propertyChanged =
-            event->type() == QEvent::DynamicPropertyChange &&
-            static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName() ==
-                kDirectCompositionRequiredProperty;
+        const bool propertyChanged = event->type() == QEvent::DynamicPropertyChange
+            && static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName() == kDirectCompositionRequiredProperty;
         if (!propertyChanged && event->type() != QEvent::ParentChange)
             return false;
         auto* widget = qobject_cast<QWidget*>(object);
-        if (widget && changed &&
-            (propertyChanged || widget->property(kDirectCompositionRequiredProperty).toBool()))
+        if (widget && changed && (propertyChanged || widget->property(kDirectCompositionRequiredProperty).toBool()))
             changed(widget, propertyChanged);
         return false;
     }
@@ -126,8 +120,7 @@ QString sessionUnavailableReason()
 {
     if (qEnvironmentVariableIntValue("FLUENT_QT_GALLERY_DISABLE_3D") != 0)
         return QObject::tr("3D is disabled for this session.");
-    const QString graphicsFailure =
-        qApp->property("fluentqtGalleryGraphicsBackendFailure").toString();
+    const QString graphicsFailure = qApp->property("fluentqtGalleryGraphicsBackendFailure").toString();
     if (!graphicsFailure.isEmpty())
         return graphicsFailure;
     if (!spatial::SpatialRuntime::supportsOpenGLDisplay())
@@ -189,8 +182,8 @@ struct ShellScene : FluentElement {
             themeChanged();
     }
 
-    static QTransform project(const QRectF& rect, qreal angle, bool top, qreal progress,
-                              const QPointF& pointerTilt, bool navigation)
+    static QTransform
+    project(const QRectF& rect, qreal angle, bool top, qreal progress, const QPointF& pointerTilt, bool navigation)
     {
         if (rect.isEmpty() || progress == 0)
             return {};
@@ -205,26 +198,22 @@ struct ShellScene : FluentElement {
         original << rect.topLeft() << rect.topRight() << rect.bottomRight() << rect.bottomLeft();
         QPolygonF projected;
         for (const auto& corner : original) {
-            const auto p =
-                rotation.map(QVector3D(corner.x() - center.x(), corner.y() - center.y(), 0));
+            const auto p = rotation.map(QVector3D(corner.x() - center.x(), corner.y() - center.y(), 0));
             const qreal scale = camera / (camera - p.z());
             projected << QPointF(p.x() * scale, p.y() * scale);
         }
         // Fit inside each existing layout region. This leaves a material-filled gutter and
         // keeps the outer edges, scrollbars and navigation footer inside the window.
         // zh_CN: 在原布局区域内留出材质间隙，外缘、滚动条与底部导航均不会越出窗口。
-        const qreal horizontalMargin =
-            (navigation ? (top ? 5.0 : qMin(3.0, rect.width() * 6.0 / rect.height())) : 6.0) *
-            progress;
+        const qreal horizontalMargin = (navigation ? (top ? 5.0 : qMin(3.0, rect.width() * 6.0 / rect.height())) : 6.0)
+            * progress;
         // A thin rail must not shrink in both axes just to create a vertical gutter.
         // zh_CN: 顶部窄导航不能为了竖向留白而等比缩小整条导航及文字。
-        const qreal verticalMargin =
-            (navigation && top ? qMin(.5, rect.height() * 5.0 / rect.width()) : 6.0) * progress;
-        const QRectF available =
-            rect.adjusted(horizontalMargin, verticalMargin, -horizontalMargin, -verticalMargin);
+        const qreal verticalMargin = (navigation && top ? qMin(.5, rect.height() * 5.0 / rect.width()) : 6.0)
+            * progress;
+        const QRectF available = rect.adjusted(horizontalMargin, verticalMargin, -horizontalMargin, -verticalMargin);
         const QRectF bounds = projected.boundingRect();
-        const qreal fit =
-            qMin(available.width() / bounds.width(), available.height() / bounds.height());
+        const qreal fit = qMin(available.width() / bounds.width(), available.height() / bounds.height());
         for (auto& point : projected)
             point = available.center() + (point - bounds.center()) * fit;
         QTransform result;
@@ -240,13 +229,12 @@ struct ShellScene : FluentElement {
         // not content.left(), which remains at the collapsed rail width.
         // zh_CN: 紧凑导航展开时覆盖正文，按正在动画中的窗格宽度投影，不能按正文左边界切分。
         qreal paneWidth = 0;
-        for (auto* chrome :
-             {view->headerChromeWidget(), view->mainChromeWidget(), view->footerChromeWidget()}) {
+        for (auto* chrome : {view->headerChromeWidget(), view->mainChromeWidget(), view->footerChromeWidget()}) {
             if (chrome && !chrome->isHidden())
                 paneWidth = qMax(paneWidth, qreal(chrome->geometry().right() + 1));
         }
-        navigation.source = top ? QRectF(0, 0, view->width(), content.source.top())
-                                : QRectF(0, 0, paneWidth, view->height());
+        navigation.source =
+            top ? QRectF(0, 0, view->width(), content.source.top()) : QRectF(0, 0, paneWidth, view->height());
         const qreal angle = top ? kTopRotation : kSideRotation;
         navigation.transform = project(navigation.source, angle, top, progress, pointerTilt, true);
         content.transform = project(content.source, -angle, top, progress, pointerTilt, false);
@@ -267,8 +255,7 @@ struct ShellScene : FluentElement {
         }
         return nullptr;
     }
-    void paint(QPainter& painter,
-               const std::function<void(QPainter&, const Panel&, bool)>& texture) const
+    void paint(QPainter& painter, const std::function<void(QPainter&, const Panel&, bool)>& texture) const
     {
         if (!navigationRevision)
             return;
@@ -286,8 +273,7 @@ struct ShellScene : FluentElement {
             // Leave the outer window edge clear for the native Mica/Acrylic compositor.
             // zh_CN: 保持窗口最外缘透明，让原生 Mica/Acrylic 合成器接管背景。
             if (progress > 0)
-                painter.setClipRect(navigation.source.united(content.source).adjusted(1, 1, -1, -1),
-                                    Qt::IntersectClip);
+                painter.setClipRect(navigation.source.united(content.source).adjusted(1, 1, -1, -1), Qt::IntersectClip);
             painter.setTransform(panel.transform);
             // Keep the shadow outside the translucent pane so its interior does not turn muddy.
             // zh_CN: 柔影仅落在面板外侧，不叠入半透明材质内部，避免玻璃发灰。
@@ -297,9 +283,8 @@ struct ShellScene : FluentElement {
             shadowArea.setFillRule(Qt::OddEvenFill);
             painter.save();
             painter.setClipPath(shadowArea, Qt::IntersectClip);
-            overlay::paintLayeredShadow(painter, body.toAlignedRect(), radius,
-                                        themeShadow(Elevation::High),
-                                        (isNavigation ? .045 : .065) * progress, 10, 3);
+            overlay::paintLayeredShadow(painter, body.toAlignedRect(), radius, themeShadow(Elevation::High),
+                (isNavigation ? .045 : .065) * progress, 10, 3);
             painter.restore();
             // Material, widget coverage and the thin reflection share one
             // projected edge in the sampler. Separate QPainter paths acquire
@@ -320,11 +305,9 @@ protected:
         const bool presenting = property("presenting").toBool() && m_scene->navigationRevision;
         setLayerCount(presenting ? 3 : 1);
         const auto& backdrop = m_scene->backdrop;
-        const QSizeF size =
-            backdrop.isNull() ? QSizeF() : QSizeF(backdrop.size()) / backdrop.devicePixelRatioF();
+        const QSizeF size = backdrop.isNull() ? QSizeF() : QSizeF(backdrop.size()) / backdrop.devicePixelRatioF();
         setLayer(0, QRectF(QPointF(), size), {}, quint64(backdrop.cacheKey()));
-        setSceneClip(
-            presenting && m_scene->progress > 0
+        setSceneClip(presenting && m_scene->progress > 0
                 ? m_scene->navigation.source.united(m_scene->content.source).adjusted(1, 1, -1, -1)
                 : QRectF());
         if (!presenting)
@@ -338,10 +321,8 @@ protected:
             material.setAlphaF(nav ? (dark ? .32 : .34) : (dark ? .62 : .56));
             QColor reflection = colors.grey10;
             reflection.setAlphaF(dark ? .18 : .72);
-            setLayer(i, panel.source, panel.transform,
-                     nav ? m_scene->navigationRevision : m_scene->contentRevision,
-                     m_scene->themeRadius().overlay * 1.5, material, reflection, m_scene->progress,
-                     nav ? .06 : .085);
+            setLayer(i, panel.source, panel.transform, nav ? m_scene->navigationRevision : m_scene->contentRevision,
+                m_scene->themeRadius().overlay * 1.5, material, reflection, m_scene->progress, nav ? .06 : .085);
         }
     }
     void paintLayer(QPainter* painter, int index, const QRegion& region) override
@@ -387,13 +368,11 @@ public:
                 qmlCompositionFailed(m_qml->rootWidget());
         });
 #endif
-        connect(&m_particles, &spatial_render::GalleryParticleCompositor::frameRequested, this,
-                [this] { update(); });
-        connect(&m_particles, &spatial_render::GalleryParticleCompositor::staticContentInvalidated,
-                this, [this] {
-                    ++m_scene->contentRevision;
-                    update();
-                });
+        connect(&m_particles, &spatial_render::GalleryParticleCompositor::frameRequested, this, [this] { update(); });
+        connect(&m_particles, &spatial_render::GalleryParticleCompositor::staticContentInvalidated, this, [this] {
+            ++m_scene->contentRevision;
+            update();
+        });
         setAttribute(Qt::WA_TransparentForMouseEvents);
         setAttribute(Qt::WA_NoSystemBackground);
         setFocusPolicy(Qt::NoFocus);
@@ -429,62 +408,36 @@ public:
     std::function<void()> cacheUnavailable;
     std::function<void(QWidget*)> qmlCompositionFailed;
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
-    qmlbridge::QmlTextureLayer* qmlLayer() const
-    {
-        return m_qml;
-    }
+    qmlbridge::QmlTextureLayer* qmlLayer() const { return m_qml; }
     QRectF qmlSource() const
     {
         auto* root = m_qml->rootWidget();
-        return root && m_scene->contentRoot ? QRectF(root->mapFrom(m_scene->contentRoot, QPoint()),
-                                                     m_scene->content.source.size())
-                                            : QRectF();
+        return root && m_scene->contentRoot
+            ? QRectF(root->mapFrom(m_scene->contentRoot, QPoint()), m_scene->content.source.size())
+            : QRectF();
     }
 #endif
-    qreal cacheDpr() const
-    {
-        return m_plan.dpr;
-    }
-    quint32 contentTextureId() const
-    {
-        return m_content.texture ? m_content.texture->texture() : 0;
-    }
-    int maxCacheDimension() const
-    {
-        return m_maxDimension;
-    }
+    qreal cacheDpr() const { return m_plan.dpr; }
+    quint32 contentTextureId() const { return m_content.texture ? m_content.texture->texture() : 0; }
+    int maxCacheDimension() const { return m_maxDimension; }
     int allocationRetries = 0;
     int surfaceSamples = 0;
-    int paintSamples() const
-    {
-        return m_paintTarget ? m_paintTarget->format().samples() : 0;
-    }
+    int paintSamples() const { return m_paintTarget ? m_paintTarget->format().samples() : 0; }
     qint64 estimatedCacheBytes() const
     {
-        qint64 bytes =
-            qMax(m_plan.estimatedBytes, backdropBytes()) + qint64(m_particles.allocatedBytes());
+        qint64 bytes = qMax(m_plan.estimatedBytes, backdropBytes()) + qint64(m_particles.allocatedBytes());
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
         bytes += m_qml->statistics().value("allocatedBytes").toLongLong();
 #endif
         return bytes;
     }
-    const spatial_render::GalleryParticleCompositor& particles() const
-    {
-        return m_particles;
-    }
+    const spatial_render::GalleryParticleCompositor& particles() const { return m_particles; }
     qint64 backdropBytes() const
     {
-        return m_backdrop.texture ? qint64(m_backdrop.size.width()) * m_backdrop.size.height() * 4
-                                  : 0;
+        return m_backdrop.texture ? qint64(m_backdrop.size.width()) * m_backdrop.size.height() * 4 : 0;
     }
-    int paintTargetHeight() const
-    {
-        return m_plan.paintSize.height();
-    }
-    bool ready() const
-    {
-        return m_blitter && m_blitter->isCreated();
-    }
+    int paintTargetHeight() const { return m_plan.paintSize.height(); }
+    bool ready() const { return m_blitter && m_blitter->isCreated(); }
     qint64 cachedPixels() const
     {
         qint64 pixels = 0;
@@ -519,10 +472,7 @@ public:
     qint64 backdropUploads = 0;
 
 protected:
-    void resizeGL(int, int) override
-    {
-        m_hasPresentedFrame = false;
-    }
+    void resizeGL(int, int) override { m_hasPresentedFrame = false; }
 
     void initializeGL() override
     {
@@ -570,8 +520,8 @@ protected:
         // otherwise rescale/reupload this unchanged image on every motion frame.
         // zh_CN: 独立保留原始密度背景纹理，避免 ES 共享上下文反复缩放和上传同一背景。
         const auto& backdrop = m_scene->backdrop;
-        if (m_backdrop.key != backdrop.cacheKey() || m_backdrop.size != backdrop.size() ||
-            m_backdrop.dpr != backdrop.devicePixelRatioF() || m_backdrop.context != context())
+        if (m_backdrop.key != backdrop.cacheKey() || m_backdrop.size != backdrop.size()
+            || m_backdrop.dpr != backdrop.devicePixelRatioF() || m_backdrop.context != context())
             m_backdrop = {};
         if (property("presenting").toBool()) {
             if (!prepareCaches()) {
@@ -581,22 +531,19 @@ protected:
                 }
                 return;
             }
-            const auto remaining =
-                qMax<qint64>(0, spatial_render::kCacheBudgetBytes - m_plan.estimatedBytes);
+            const auto remaining = qMax<qint64>(0, spatial_render::kCacheBudgetBytes - m_plan.estimatedBytes);
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
             const auto qmlBytes = m_qml->requiredBytes(qmlSource(), m_plan.dpr);
 #else
             const quint64 qmlBytes = 0;
 #endif
-            const bool acceleratedParticles = m_particles.prepare(
-                m_scene->contentRoot, m_scene->contentRevision, m_plan.sizes[1],
-                devicePixelRatioF(), m_plan.dpr,
+            const bool acceleratedParticles = m_particles.prepare(m_scene->contentRoot, m_scene->contentRevision,
+                m_plan.sizes[1], devicePixelRatioF(), m_plan.dpr,
                 quint64(qMax<qint64>(0, remaining - qint64(qmlBytes))),
                 !measuring || !qEnvironmentVariableIsSet("FLUENT_QT_SPATIAL_PARTICLES_CPU"));
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
             const QPointer<GpuSurface> lifetime(this);
-            const bool qmlReady = m_qml->prepareFrame(
-                context(), qmlSource(), m_plan.dpr,
+            const bool qmlReady = m_qml->prepareFrame(context(), qmlSource(), m_plan.dpr,
                 quint64(qMax<qint64>(0, remaining - qint64(m_particles.allocatedBytes()))));
             if (!lifetime)
                 return;
@@ -612,11 +559,9 @@ protected:
             // particle panels while native QML restoration waits for the event loop.
             // zh_CN: 首帧或缩放后无旧画面，先完成普通控件与粒子面板，回调退出后恢复原生 QML。
 #endif
-            const bool valid = ready() &&
-                               updateTexture(m_content, m_scene->contentRevision,
-                                             m_scene->content.source, false) &&
-                               updateTexture(m_navigation, m_scene->navigationRevision,
-                                             m_scene->navigation.source, true);
+            const bool valid = ready()
+                && updateTexture(m_content, m_scene->contentRevision, m_scene->content.source, false)
+                && updateTexture(m_navigation, m_scene->navigationRevision, m_scene->navigation.source, true);
             if (!valid) {
                 if (failed)
                     failed();
@@ -625,28 +570,24 @@ protected:
             m_presentedContentTexture = m_content.texture ? m_content.texture->texture() : 0;
             if (acceleratedParticles) {
                 const auto revision = m_scene->contentRevision;
-                m_presentedContentTexture =
-                    m_particles.compose(m_presentedContentTexture, revision, m_paintTarget.get(),
-                                        m_resolveTarget.get(), m_scene->renderForeground);
+                m_presentedContentTexture = m_particles.compose(m_presentedContentTexture, revision,
+                    m_paintTarget.get(), m_resolveTarget.get(), m_scene->renderForeground);
                 // A composition failure restores CPU painting synchronously. Do
                 // not display the particle-free static cache for that frame.
                 // zh_CN: 合成失败同步恢复 CPU 绘制，本帧不能显示省略粒子的静态缓存。
                 if (revision != m_scene->contentRevision && !m_particles.activeLayerCount()) {
-                    if (!updateTexture(m_content, m_scene->contentRevision, m_scene->content.source,
-                                       false)) {
+                    if (!updateTexture(m_content, m_scene->contentRevision, m_scene->content.source, false)) {
                         if (failed)
                             failed();
                         return;
                     }
-                    m_presentedContentTexture =
-                        m_content.texture ? m_content.texture->texture() : 0;
+                    m_presentedContentTexture = m_content.texture ? m_content.texture->texture() : 0;
                 }
             }
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
             if (qmlReady) {
                 const auto qmlRevision = m_scene->contentRevision + m_particles.compositionCount();
-                const auto texture =
-                    m_qml->compose(m_presentedContentTexture, m_plan.sizes[1], qmlRevision);
+                const auto texture = m_qml->compose(m_presentedContentTexture, m_plan.sizes[1], qmlRevision);
                 if (!lifetime)
                     return;
                 if (!property("presenting").toBool()) {
@@ -693,8 +634,7 @@ protected:
         if (property("presenting").toBool()) {
             const auto colors = m_scene->themeColors();
             const bool dark = m_scene->effectiveThemeUsesDarkAppearance();
-            m_scene->paint(painter, [this, &colors,
-                                     dark](QPainter& p, const ShellScene::Panel& panel, bool nav) {
+            m_scene->paint(painter, [this, &colors, dark](QPainter& p, const ShellScene::Panel& panel, bool nav) {
                 auto& cache = nav ? m_navigation : m_content;
                 if (!cache.texture)
                     return;
@@ -707,15 +647,12 @@ protected:
                 QMatrix4x4 quad;
                 quad.translate(panel.source.center().x(), panel.source.center().y());
                 quad.scale(panel.source.width() / 2, -panel.source.height() / 2);
-                const PanelSampler::Appearance appearance = {
-                    panel.source.size(), m_scene->themeRadius().overlay * 1.5,
-                    m_scene->progress,   colors.bgLayerAlt,
-                    colors.grey10,       nav ? (dark ? .32 : .34) : (dark ? .62 : .56),
+                const PanelSampler::Appearance appearance = {panel.source.size(), m_scene->themeRadius().overlay * 1.5,
+                    m_scene->progress, colors.bgLayerAlt, colors.grey10, nav ? (dark ? .32 : .34) : (dark ? .62 : .56),
                     dark ? .18 : .72};
-                m_blitter->blit(!nav && m_presentedContentTexture ? m_presentedContentTexture
-                                                                  : cache.texture->texture(),
-                                cache.texture->size(),
-                                projection * QMatrix4x4(panel.transform) * quad, &appearance);
+                m_blitter->blit(
+                    !nav && m_presentedContentTexture ? m_presentedContentTexture : cache.texture->texture(),
+                    cache.texture->size(), projection * QMatrix4x4(panel.transform) * quad, &appearance);
                 p.endNativePainting();
             });
         }
@@ -766,37 +703,31 @@ private:
     {
         auto* gl = context()->functions();
         gl->glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
-        gl->glViewport(0, 0, qRound(width() * devicePixelRatioF()),
-                       qRound(height() * devicePixelRatioF()));
+        gl->glViewport(0, 0, qRound(width() * devicePixelRatioF()), qRound(height() * devicePixelRatioF()));
     }
 
     bool prepareCaches()
     {
         if (m_paintSamples <= 1)
             return false;
-        const std::array<QSizeF, 2> panels = {m_scene->navigation.source.size(),
-                                              m_scene->content.source.size()};
+        const std::array<QSizeF, 2> panels = {m_scene->navigation.source.size(), m_scene->content.source.size()};
         const auto backdrop = qint64(m_scene->backdrop.width()) * m_scene->backdrop.height() * 4;
-        const auto glyphScratch = spatial_render::needsNativeGlyphCoverage(devicePixelRatioF())
-                                      ? spatial_render::kGlyphScratchBytes
-                                      : 0;
+        const auto glyphScratch =
+            spatial_render::needsNativeGlyphCoverage(devicePixelRatioF()) ? spatial_render::kGlyphScratchBytes : 0;
         while (true) {
-            auto plan = spatial_render::planCaches(
-                panels, devicePixelRatioF(), m_maxDimension, m_maxExtraSampling,
+            auto plan = spatial_render::planCaches(panels, devicePixelRatioF(), m_maxDimension, m_maxExtraSampling,
                 spatial_render::kCacheBudgetBytes, m_paintSamples, backdrop, glyphScratch);
             if (!plan.valid())
                 return false;
             for (qreal extra : {2., 1.75, 1.5, 1.25, 1.}) {
                 if (devicePixelRatioF() * extra > plan.dpr)
                     continue;
-                const auto candidate = spatial_render::planCaches(
-                    panels, devicePixelRatioF(), m_maxDimension, extra,
+                const auto candidate = spatial_render::planCaches(panels, devicePixelRatioF(), m_maxDimension, extra,
                     spatial_render::kCacheBudgetBytes, m_paintSamples, backdrop, glyphScratch);
                 if (!candidate.valid() || candidate.dpr != devicePixelRatioF() * extra)
                     continue;
-                const quint64 particleBytes = m_particles.requiredBytes(
-                    m_scene->contentRoot, m_scene->contentRevision, candidate.sizes[1],
-                    devicePixelRatioF(), candidate.dpr,
+                const quint64 particleBytes = m_particles.requiredBytes(m_scene->contentRoot, m_scene->contentRevision,
+                    candidate.sizes[1], devicePixelRatioF(), candidate.dpr,
                     !measuring || !qEnvironmentVariableIsSet("FLUENT_QT_SPATIAL_PARTICLES_CPU"));
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
                 const quint64 qmlBytes = m_qml->requiredBytes(qmlSource(), candidate.dpr);
@@ -810,10 +741,8 @@ private:
                     break;
                 if (auxiliaryBytes >= quint64(spatial_render::kCacheBudgetBytes))
                     continue;
-                const auto joint =
-                    spatial_render::planCaches(panels, devicePixelRatioF(), m_maxDimension, extra,
-                                               spatial_render::kCacheBudgetBytes, m_paintSamples,
-                                               backdrop, glyphScratch, qint64(auxiliaryBytes));
+                const auto joint = spatial_render::planCaches(panels, devicePixelRatioF(), m_maxDimension, extra,
+                    spatial_render::kCacheBudgetBytes, m_paintSamples, backdrop, glyphScratch, qint64(auxiliaryBytes));
                 // Choose the highest joint level, always at least native density.
                 // Re-estimate auxiliary textures at each sampling candidate.
                 if (joint.valid() && joint.dpr == candidate.dpr) {
@@ -821,9 +750,8 @@ private:
                     break;
                 }
             }
-            if (plan.sizes == m_plan.sizes && plan.dpr == m_plan.dpr &&
-                plan.paintSize == m_plan.paintSize && plan.backdropBytes == m_plan.backdropBytes &&
-                plan.glyphScratchBytes == m_plan.glyphScratchBytes)
+            if (plan.sizes == m_plan.sizes && plan.dpr == m_plan.dpr && plan.paintSize == m_plan.paintSize
+                && plan.backdropBytes == m_plan.backdropBytes && plan.glyphScratchBytes == m_plan.glyphScratchBytes)
                 return true;
             // Release both old targets before allocating replacements: window resizing
             // must not transiently retain two complete sets of high-DPI caches.
@@ -849,8 +777,7 @@ private:
             QOpenGLFramebufferObjectFormat textureFormat;
             textureFormat.setAttachment(QOpenGLFramebufferObject::NoAttachment);
             textureFormat.setInternalTextureFormat(GL_RGBA8);
-            m_resolveTarget =
-                std::make_unique<QOpenGLFramebufferObject>(plan.paintSize, textureFormat);
+            m_resolveTarget = std::make_unique<QOpenGLFramebufferObject>(plan.paintSize, textureFormat);
             allocated = m_paintTarget->isValid() && m_resolveTarget->isValid();
             const std::array<TextureCache*, 2> caches = {&m_navigation, &m_content};
             for (size_t i = 0; i < caches.size(); ++i) {
@@ -909,11 +836,10 @@ private:
             return true;
         const QSize size = pixmap.size();
         const qint64 bytes = qint64(size.width()) * size.height() * 4;
-        if (!ready() || size.width() > m_maxDimension || size.height() > m_maxDimension ||
-            bytes > spatial_render::kCacheBudgetBytes)
+        if (!ready() || size.width() > m_maxDimension || size.height() > m_maxDimension
+            || bytes > spatial_render::kCacheBudgetBytes)
             return false;
-        const QImage image =
-            pixmap.toImage().convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+        const QImage image = pixmap.toImage().convertToFormat(QImage::Format_RGBA8888_Premultiplied);
         if (image.isNull())
             return false;
         auto texture = std::make_unique<QOpenGLTexture>(QOpenGLTexture::Target2D);
@@ -951,8 +877,8 @@ private:
         const QSize pixels = cache.texture->size();
         const int guard = qMax(1, qCeil(dpr));
         const int stride = pixels.height() <= m_plan.paintSize.height()
-                               ? pixels.height()
-                               : qMax(1, m_plan.paintSize.height() - 2 * guard);
+            ? pixels.height()
+            : qMax(1, m_plan.paintSize.height() - 2 * guard);
         for (int top = 0; top < pixels.height(); top += stride) {
             const int height = qMin(stride, pixels.height() - top);
             // QWidget clips in logical pixels. Guard a full logical pixel so
@@ -970,10 +896,10 @@ private:
             QOpenGLPaintDevice device(QSize(pixels.width(), paintHeight));
             device.setDevicePixelRatio(dpr);
             spatial_render::GalleryGlyphPaintDevice glyphDevice(device, devicePixelRatioF(),
-                                                                QPointF(0, paintTop / dpr));
+                QPointF(0, paintTop / dpr));
             QPainter painter(spatial_render::needsNativeGlyphCoverage(devicePixelRatioF())
-                                 ? static_cast<QPaintDevice*>(&glyphDevice)
-                                 : &device);
+                    ? static_cast<QPaintDevice*>(&glyphDevice)
+                    : &device);
             painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
             const QRectF strip(0, paintTop / dpr, source.width(), paintHeight / dpr);
             painter.setClipRect(QRectF(0, 0, source.width(), paintHeight / dpr));
@@ -992,10 +918,8 @@ private:
             // Resolve first, then move the guarded strip into the panel texture.
             QOpenGLFramebufferObject::blitFramebuffer(m_resolveTarget.get(), m_paintTarget.get());
             // GL framebuffer coordinates run upwards; widget coordinates run downwards.
-            QOpenGLFramebufferObject::blitFramebuffer(
-                cache.texture.get(),
-                QRect(0, pixels.height() - top - height, pixels.width(), height),
-                m_resolveTarget.get(),
+            QOpenGLFramebufferObject::blitFramebuffer(cache.texture.get(),
+                QRect(0, pixels.height() - top - height, pixels.width(), height), m_resolveTarget.get(),
                 QRect(0, paintBottom - top - height, pixels.width(), height));
         }
         cache.revision = revision;
@@ -1043,25 +967,24 @@ struct GallerySpatialController::Private {
 
     bool canInitializeRenderer() const
     {
-        return !directCompositionRequired && session && session->isActive() &&
-               GallerySettings::instance().spatialModeEnabled() && canvas && canvas->isVisible() &&
-               !canvas->size().isEmpty() && window && window->window()->windowHandle() &&
-               window->window()->windowHandle()->isExposed();
+        return !directCompositionRequired && session && session->isActive()
+            && GallerySettings::instance().spatialModeEnabled() && canvas && canvas->isVisible()
+            && !canvas->size().isEmpty() && window && window->window()->windowHandle()
+            && window->window()->windowHandle()->isExposed();
     }
 
     bool blocksPendingQmlInput(QObject* watched, QEvent* event) const
     {
-        if (!canvas->property(kQmlFailurePendingProperty).toBool() ||
-            !canvas->property("presenting").toBool())
+        if (!canvas->property(kQmlFailurePendingProperty).toBool() || !canvas->property("presenting").toBool())
             return false;
         auto* widget = qobject_cast<QWidget*>(watched);
         const auto inSource = [this](QWidget* candidate) {
-            return candidate && candidate->window() == window->window() &&
-                   (candidate == navigation || navigation->isAncestorOf(candidate));
+            return candidate && candidate->window() == window->window()
+                && (candidate == navigation || navigation->isAncestorOf(candidate));
         };
         const bool source = inSource(widget);
-        const bool top = watched == window || watched == window->window() ||
-                         watched == window->window()->windowHandle();
+        const bool top = watched == window || watched == window->window()
+            || watched == window->window()->windowHandle();
         if (!source && !top)
             return false;
         QPoint global;
@@ -1095,8 +1018,7 @@ struct GallerySpatialController::Private {
         default:
             return false;
         }
-        return (source || navigation->rect().contains(navigation->mapFromGlobal(global))) &&
-               !nativeOverlayAt(global);
+        return (source || navigation->rect().contains(navigation->mapFromGlobal(global))) && !nativeOverlayAt(global);
     }
 
     void setFiltering(bool active)
@@ -1117,9 +1039,9 @@ struct GallerySpatialController::Private {
         // zh_CN: 直接子级按层叠顺序排列；合成面保持在内容层，低于最底部的可见遮罩或浮层。
         for (QObject* child : window->window()->children()) {
             auto* widget = qobject_cast<QWidget*>(child);
-            if (widget && widget->isVisible() && !widget->isWindow() &&
-                (qobject_cast<overlay::OverlayScrim*>(widget) ||
-                 widget->property(overlay::kOverlaySurfaceProperty).toBool()))
+            if (widget && widget->isVisible() && !widget->isWindow()
+                && (qobject_cast<overlay::OverlayScrim*>(widget)
+                    || widget->property(overlay::kOverlaySurfaceProperty).toBool()))
                 return widget;
         }
         return nullptr;
@@ -1133,10 +1055,8 @@ struct GallerySpatialController::Private {
         // mouse transparency, so dim-only scrims still allow background input.
         // zh_CN: 先命中原生层叠；childAt 遵守遮罩与鼠标透明属性，纯调暗遮罩仍允许背景交互。
         auto* top = window->window();
-        for (auto* hit = top->childAt(top->mapFromGlobal(global)); hit && hit != top;
-             hit = hit->parentWidget()) {
-            if (qobject_cast<overlay::OverlayScrim*>(hit) ||
-                hit->property(overlay::kOverlaySurfaceProperty).toBool())
+        for (auto* hit = top->childAt(top->mapFromGlobal(global)); hit && hit != top; hit = hit->parentWidget()) {
+            if (qobject_cast<overlay::OverlayScrim*>(hit) || hit->property(overlay::kOverlaySurfaceProperty).toBool())
                 return true;
         }
         return false;
@@ -1184,13 +1104,11 @@ struct GallerySpatialController::Private {
             if (!nativePopupAnchors.contains(popup))
                 continue;
             const auto anchor = nativePopupAnchors.value(popup);
-            if (!anchor.source || !popup->isVisible() ||
-                anchor.source->window() != window->window()) {
+            if (!anchor.source || !popup->isVisible() || anchor.source->window() != window->window()) {
                 continue;
             }
             QScopedValueRollback<bool> forward(forwarding, true);
-            const QPoint presented =
-                overlay::presentation::mapToGlobal(anchor.source, anchor.point);
+            const QPoint presented = overlay::presentation::mapToGlobal(anchor.source, anchor.point);
             QPoint position = presented + anchor.offset;
             auto* screen = QGuiApplication::screenAt(presented);
             if (!screen)
@@ -1205,10 +1123,10 @@ struct GallerySpatialController::Private {
                 const QPoint framePosition = position + frameOffset;
                 position =
                     QPoint(qBound(available.left(), framePosition.x(),
-                                  qMax(available.left(), available.right() - frame.width() + 1)),
-                           qBound(available.top(), framePosition.y(),
-                                  qMax(available.top(), available.bottom() - frame.height() + 1))) -
-                    frameOffset;
+                               qMax(available.left(), available.right() - frame.width() + 1)),
+                        qBound(available.top(), framePosition.y(),
+                            qMax(available.top(), available.bottom() - frame.height() + 1)))
+                    - frameOffset;
             }
             popup->move(position);
         }
@@ -1221,9 +1139,8 @@ struct GallerySpatialController::Private {
         auto* host = navigation->contentHost();
         if (enabled) {
             const QPoint origin = host->mapTo(navigation, QPoint());
-            const QTransform contentTransform = QTransform::fromTranslate(origin.x(), origin.y()) *
-                                                scene.content.transform *
-                                                QTransform::fromTranslate(-origin.x(), -origin.y());
+            const QTransform contentTransform = QTransform::fromTranslate(origin.x(), origin.y())
+                * scene.content.transform * QTransform::fromTranslate(-origin.x(), -origin.y());
             overlay::presentation::setTransform(navigation, scene.navigation.transform);
             overlay::presentation::setTransform(host, contentTransform);
         } else {
@@ -1239,8 +1156,7 @@ struct GallerySpatialController::Private {
             return;
         const QRect bounds(navigation->mapTo(window, QPoint()), navigation->size());
         backdropDirty |= canvas->geometry() != bounds;
-        backdropDirty |= !scene.backdrop.isNull() &&
-                         scene.backdrop.devicePixelRatioF() != window->devicePixelRatioF();
+        backdropDirty |= !scene.backdrop.isNull() && scene.backdrop.devicePixelRatioF() != window->devicePixelRatioF();
         canvas->setGeometry(bounds);
         // A visible GL surface replaces the raster backdrop even while the splash
         // owns the foreground. Keep that backdrop through the splash's fade-out.
@@ -1320,8 +1236,7 @@ struct GallerySpatialController::Private {
         hovered = target;
         if (target) {
             const QPoint local = target->mapFrom(navigation, source);
-            FLUENT_MAKE_ENTER_EVENT_AT(enter, local, target->mapTo(window, local),
-                                       target->mapToGlobal(local));
+            FLUENT_MAKE_ENTER_EVENT_AT(enter, local, target->mapTo(window, local), target->mapToGlobal(local));
             QApplication::sendEvent(target, &enter);
         }
     }
@@ -1333,8 +1248,7 @@ void GallerySpatialController::prepareApplicationStyle()
     session.activate();
 }
 
-GallerySpatialController::GallerySpatialController(QWidget* window,
-                                                   navigation::NavigationView* navigation)
+GallerySpatialController::GallerySpatialController(QWidget* window, navigation::NavigationView* navigation)
     : QObject(window), d(new Private)
 {
     setObjectName(QStringLiteral("gallerySpatialController"));
@@ -1368,11 +1282,10 @@ GallerySpatialController::GallerySpatialController(QWidget* window,
     d->pointerMotion->setObjectName(QStringLiteral("galleryPointerAnimation"));
     d->pointerMotion->setDuration(180);
     d->pointerMotion->setEasingCurve(QEasingCurve::OutCubic);
-    connect(d->pointerMotion, &QVariantAnimation::valueChanged, this,
-            [this](const QVariant& value) {
-                d->scene.pointerTilt = value.toPointF();
-                d->sync();
-            });
+    connect(d->pointerMotion, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        d->scene.pointerTilt = value.toPointF();
+        d->sync();
+    });
     const auto stopObserving = [this] {
         // QWidget emits destroyed before deleting its children, while Qt 5 may
         // still keep its QPointer alive. Child sessions must not refresh a host
@@ -1405,8 +1318,7 @@ GallerySpatialController::GallerySpatialController(QWidget* window,
     connect(navigation, &QObject::destroyed, this, stopObserving);
     connect(navigation->contentHost(), &QObject::destroyed, this, stopObserving);
     auto& settings = GallerySettings::instance();
-    connect(&settings, &GallerySettings::spatialModeEnabledChanged, this,
-            &GallerySpatialController::applyMode);
+    connect(&settings, &GallerySettings::spatialModeEnabledChanged, this, &GallerySpatialController::applyMode);
     const auto refresh = [this] {
         d->backdropDirty = true;
         applyMode(GallerySettings::instance().spatialModeEnabled());
@@ -1449,16 +1361,13 @@ GallerySpatialController::GallerySpatialController(QWidget* window,
         disableSpatial(unavailableReason);
         return;
     }
-    const auto refreshComposition = [this] {
-        applyMode(GallerySettings::instance().spatialModeEnabled());
-    };
-    connect(navigation->contentHost(), &navigation::StackContentHost::currentIndexChanged, this,
-            refreshComposition);
+    const auto refreshComposition = [this] { applyMode(GallerySettings::instance().spatialModeEnabled()); };
+    connect(navigation->contentHost(), &navigation::StackContentHost::currentIndexChanged, this, refreshComposition);
     d->compositionObserver = new DirectCompositionObserver(this);
 #ifdef Q_OS_WASM
     d->compositionObserver->windowReady = [this, refreshComposition](QObject* object) {
-        if (d->canvas || d->rendererFailed || d->compositionRefreshQueued ||
-            !GallerySettings::instance().spatialModeEnabled())
+        if (d->canvas || d->rendererFailed || d->compositionRefreshQueued
+            || !GallerySettings::instance().spatialModeEnabled())
             return;
         auto* top = d->window->window();
         if (object != d->window && object != top && object != top->windowHandle())
@@ -1470,14 +1379,13 @@ GallerySpatialController::GallerySpatialController(QWidget* window,
         });
     };
 #endif
-    d->compositionObserver->changed = [this, refreshComposition](QWidget* widget,
-                                                                 bool propertyChanged) {
+    d->compositionObserver->changed = [this, refreshComposition](QWidget* widget, bool propertyChanged) {
         auto* host = d->navigation ? d->navigation->contentHost() : nullptr;
         auto* page = host ? host->pageWidget(host->currentIndex()) : nullptr;
         if (propertyChanged && (!page || (page != widget && !page->isAncestorOf(widget))))
             return;
-        if (!d->composingRequirements && propertyChanged &&
-            widget->property(kDirectCompositionRequiredProperty).toBool()) {
+        if (!d->composingRequirements && propertyChanged
+            && widget->property(kDirectCompositionRequiredProperty).toBool()) {
             // No fade-out: the ancestor effects must be gone before Quick is constructed.
             // zh_CN: 不做退出动画，须在创建 Quick 前移除祖先捕获特效。
             refreshComposition();
@@ -1521,8 +1429,7 @@ void GallerySpatialController::ensureRenderer()
         bool useRhi = spatial::SpatialTextureHost::isPreferred();
         QString reason = qApp->property("fluentqtGalleryGraphicsBackendFailure").toString();
         if (reason.isEmpty()) {
-            reason = useRhi ? spatial::SpatialTextureHost::preflightFailure()
-                            : accelerationUnavailableReason();
+            reason = useRhi ? spatial::SpatialTextureHost::preflightFailure() : accelerationUnavailableReason();
             if (useRhi && !reason.isEmpty()) {
                 bool allowOpenGL = true;
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
@@ -1705,10 +1612,9 @@ void GallerySpatialController::disableSpatial(const QString& reason)
 
 void GallerySpatialController::startPresentation()
 {
-    if (!d->session || !d->session->isActive() || !d->navigation || !d->canvas ||
-        d->rendererFailed || d->directCompositionRequired ||
-        !GallerySettings::instance().spatialModeEnabled() ||
-        d->window->findChild<GallerySplashScreen*>())
+    if (!d->session || !d->session->isActive() || !d->navigation || !d->canvas || d->rendererFailed
+        || d->directCompositionRequired || !GallerySettings::instance().spatialModeEnabled()
+        || d->window->findChild<GallerySplashScreen*>())
         return;
     if (d->capture && d->canvas->property("presenting").toBool())
         return;
@@ -1738,11 +1644,11 @@ void GallerySpatialController::startPresentation()
         QScopedValueRollback<bool> navComposing(d->capture->composing, true);
         QScopedValueRollback<bool> contentComposing(d->contentCapture->composing, true);
         auto* capture = navigation ? d->capture.data() : d->contentCapture.data();
-        auto* widget = navigation ? static_cast<QWidget*>(d->navigation.data())
-                                  : static_cast<QWidget*>(d->navigation->contentHost());
+        auto* widget = navigation
+            ? static_cast<QWidget*>(d->navigation.data())
+            : static_cast<QWidget*>(d->navigation->contentHost());
         QScopedValueRollback<bool> rendering(capture->rendering, true);
-        QScopedValueRollback<QPoint> renderOrigin(capture->renderOrigin,
-                                                  region.boundingRect().topLeft());
+        QScopedValueRollback<QPoint> renderOrigin(capture->renderOrigin, region.boundingRect().topLeft());
         QElapsedTimer clock;
         if (capture->measuring)
             clock.start();
@@ -1806,10 +1712,9 @@ QVariantMap GallerySpatialController::renderingStatistics() const
     result["pluginActive"] = d->session && d->session->isActive();
     result["directCompositionRequired"] = d->directCompositionRequired;
     for (const auto& entry : {qMakePair(QStringLiteral("navigation"), d->capture.data()),
-                              qMakePair(QStringLiteral("content"), d->contentCapture.data())}) {
+             qMakePair(QStringLiteral("content"), d->contentCapture.data())}) {
         result[entry.first + "Captures"] = entry.second ? entry.second->captures : 0;
-        result[entry.first + "CaptureMs"] =
-            entry.second ? entry.second->captureNanoseconds / 1e6 : 0;
+        result[entry.first + "CaptureMs"] = entry.second ? entry.second->captureNanoseconds / 1e6 : 0;
     }
     if (auto* rhi = dynamic_cast<RhiSurface*>(d->canvas.data())) {
         const auto stats = rhi->statistics();
@@ -1837,8 +1742,7 @@ QVariantMap GallerySpatialController::renderingStatistics() const
     result["particleLayers"] = surface ? surface->particles().activeLayerCount() : 0;
     result["particleFrames"] = surface ? surface->particles().particleFrameCount() : 0;
     result["particleBytes"] = surface ? surface->particles().allocatedBytes() : 0;
-    result["particleForegroundCaptures"] =
-        surface ? surface->particles().foregroundCaptureCount() : 0;
+    result["particleForegroundCaptures"] = surface ? surface->particles().foregroundCaptureCount() : 0;
     result["particleCompositions"] = surface ? surface->particles().compositionCount() : 0;
     result["particleSourceScans"] = surface ? surface->particles().sourceScanCount() : 0;
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
@@ -1853,14 +1757,12 @@ void GallerySpatialController::cancelTransition()
 }
 QPoint GallerySpatialController::projectedPosition(const QWidget* widget, const QPoint& point) const
 {
-    if (d->navigation && d->capture && d->capture->isEnabled() &&
-        (widget == d->navigation || d->navigation->isAncestorOf(widget))) {
+    if (d->navigation && d->capture && d->capture->isEnabled()
+        && (widget == d->navigation || d->navigation->isAncestorOf(widget))) {
         const QPoint local = widget->mapTo(d->navigation, point);
-        const QPointF presented =
-            widget == d->navigation
-                ? d->scene.projectPoint(local)
-                : (d->belongsToContent(widget) ? d->scene.content : d->scene.navigation)
-                      .transform.map(QPointF(local));
+        const QPointF presented = widget == d->navigation
+            ? d->scene.projectPoint(local)
+            : (d->belongsToContent(widget) ? d->scene.content : d->scene.navigation).transform.map(QPointF(local));
         return presented.toPoint() + d->navigation->mapTo(d->window, QPoint());
     }
     return widget->mapTo(d->window, point);
@@ -1900,18 +1802,17 @@ void GallerySpatialController::applyMode(bool enabled)
     const bool requested = enabled && d->session && d->session->isActive();
     if (!requested)
         d->qmlFailedPage = nullptr;
-    enabled = requested && MotionPolicy::instance().mode() == MotionPolicy::Mode::Full &&
-              FluentElement::currentTheme() != FluentElement::HighContrast;
+    enabled = requested && MotionPolicy::instance().mode() == MotionPolicy::Mode::Full
+        && FluentElement::currentTheme() != FluentElement::HighContrast;
     bool adapted = true;
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
     auto qmlViews = page ? page->findChildren<qmlbridge::QmlView*>() : QList<qmlbridge::QmlView*>();
     if (auto* view = qobject_cast<qmlbridge::QmlView*>(page))
         qmlViews.prepend(view);
-    const bool hasQml =
-        std::any_of(qmlViews.cbegin(), qmlViews.cend(), [](qmlbridge::QmlView* view) {
-            return view->status() == qmlbridge::QmlView::Loading || view->rootObject() ||
-                   view->property(kDirectCompositionRequiredProperty).toBool();
-        });
+    const bool hasQml = std::any_of(qmlViews.cbegin(), qmlViews.cend(), [](qmlbridge::QmlView* view) {
+        return view->status() == qmlbridge::QmlView::Loading || view->rootObject()
+            || view->property(kDirectCompositionRequiredProperty).toBool();
+    });
     if (enabled && hasQml && !d->canvas && !d->rendererFailed) {
         // Initialize the GL canvas without capture effects. The new QML views
         // must surrender native composition before startPresentation can capture.
@@ -1943,9 +1844,8 @@ void GallerySpatialController::applyMode(bool enabled)
         bool pending = false;
         if (page)
             for (auto* view : page->findChildren<qmlbridge::QmlView*>())
-                pending |= view->status() == qmlbridge::QmlView::Loading ||
-                           (view->isTextureRenderingEnabled() &&
-                            view->status() == qmlbridge::QmlView::Unloaded);
+                pending |= view->status() == qmlbridge::QmlView::Loading
+                    || (view->isTextureRenderingEnabled() && view->status() == qmlbridge::QmlView::Unloaded);
         if (surface && !pending)
             surface->qmlLayer()->release();
 #endif
@@ -1973,10 +1873,9 @@ void GallerySpatialController::applyMode(bool enabled)
     d->scene.pointerTilt = {};
     depth::setEnabled(d->window, enabled && d->rendererReady);
     d->target = depth::enabled(d->window);
-    const bool animate = d->window->isVisible() &&
-                         !d->window->findChild<QWidget*>("gallerySplashScreen") &&
-                         MotionPolicy::instance().mode() == MotionPolicy::Mode::Full &&
-                         FluentElement::currentTheme() != FluentElement::HighContrast;
+    const bool animate = d->window->isVisible() && !d->window->findChild<QWidget*>("gallerySplashScreen")
+        && MotionPolicy::instance().mode() == MotionPolicy::Mode::Full
+        && FluentElement::currentTheme() != FluentElement::HighContrast;
     if (!animate || qFuzzyCompare(d->scene.progress + 1, (d->target ? 1.0 : 0.0) + 1)) {
         d->settle();
         return;
@@ -1986,8 +1885,7 @@ void GallerySpatialController::applyMode(bool enabled)
     d->canvas->setProperty("presenting", true);
     d->raisePresentation();
     d->sync();
-    d->motion->setDuration(
-        qMax(1, qRound(420 * qAbs((d->target ? 1.0 : 0.0) - d->scene.progress))));
+    d->motion->setDuration(qMax(1, qRound(420 * qAbs((d->target ? 1.0 : 0.0) - d->scene.progress))));
     d->motion->setStartValue(d->scene.progress);
     d->motion->setEndValue(d->target ? 1.0 : 0.0);
     d->motion->start();
@@ -2004,18 +1902,17 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
     const bool nativeMenuShow = event->type() == QEvent::Show && qobject_cast<QMenu*>(watched);
     if (d->forwarding && !nativeMenuShow)
         return false;
-    if (event->type() == QEvent::MouseMove && d->hovered && d->capture && d->capture->isEnabled() &&
-        watched == d->window->window()->windowHandle()) {
+    if (event->type() == QEvent::MouseMove && d->hovered && d->capture && d->capture->isEnabled()
+        && watched == d->window->window()->windowHandle()) {
         const auto* mouse = static_cast<QMouseEvent*>(event);
         if (mouse->buttons() == Qt::NoButton) {
             const QPoint global = fluentMouseGlobalPos(mouse);
             const QPoint presented = d->navigation->mapFromGlobal(global);
             QPointF source;
             const auto* hit = d->scene.unproject(presented, &source);
-            auto* target =
-                hit && d->navigation->rect().contains(presented) && !d->nativeOverlayAt(global)
-                    ? d->navigation->childAt(source.toPoint())
-                    : nullptr;
+            auto* target = hit && d->navigation->rect().contains(presented) && !d->nativeOverlayAt(global)
+                ? d->navigation->childAt(source.toPoint())
+                : nullptr;
             if (target != d->hovered) {
                 // Clear the old projected hover before Qt dispatches the native
                 // QWidget move and arms its tooltip timer. A later synthetic Leave
@@ -2036,44 +1933,38 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
             }
         }
     }
-    if (watched == d->window && !d->rendererReady &&
-        (event->type() == QEvent::Show || event->type() == QEvent::UpdateRequest))
+    if (watched == d->window && !d->rendererReady
+        && (event->type() == QEvent::Show || event->type() == QEvent::UpdateRequest))
         QTimer::singleShot(0, this, &GallerySpatialController::checkRenderer);
     auto* widget = qobject_cast<QWidget*>(watched);
     if (!widget)
         return false;
-    const bool mouse =
-        event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress ||
-        event->type() == QEvent::MouseButtonRelease || event->type() == QEvent::MouseButtonDblClick;
+    const bool mouse = event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress
+        || event->type() == QEvent::MouseButtonRelease || event->type() == QEvent::MouseButtonDblClick;
     // Nested Qt hover events can overwrite a native mouse event's shared global
     // point. Its receiver-local position stays intact; snapshot it before routing.
     // zh_CN: Qt 嵌套悬停事件可能改写原生鼠标的共享全局点，先由未变的接收者局部坐标取快照。
-    const QPoint mouseGlobal =
-        mouse ? (event->spontaneous()
-                     ? widget->mapToGlobal(fluentMousePos(static_cast<QMouseEvent*>(event)))
-                     : fluentMouseGlobalPos(static_cast<QMouseEvent*>(event)))
-              : QPoint();
+    const QPoint mouseGlobal = mouse
+        ? (event->spontaneous() ? widget->mapToGlobal(fluentMousePos(static_cast<QMouseEvent*>(event)))
+                                : fluentMouseGlobalPos(static_cast<QMouseEvent*>(event)))
+        : QPoint();
     // A native popup can receive the release of the press that opened it. Do not
     // keep routing later clicks/wheels to that original opener.
     // zh_CN: 打开原生弹窗后，释放事件可能由弹窗接收；不能把后续输入一直发给打开按钮。
-    if ((event->type() == QEvent::MouseButtonRelease && widget->window() != d->window->window()) ||
-        (event->type() == QEvent::MouseMove &&
-         static_cast<QMouseEvent*>(event)->buttons() == Qt::NoButton) ||
-        (event->type() == QEvent::Wheel &&
-         static_cast<QWheelEvent*>(event)->buttons() == Qt::NoButton))
+    if ((event->type() == QEvent::MouseButtonRelease && widget->window() != d->window->window())
+        || (event->type() == QEvent::MouseMove && static_cast<QMouseEvent*>(event)->buttons() == Qt::NoButton)
+        || (event->type() == QEvent::Wheel && static_cast<QWheelEvent*>(event)->buttons() == Qt::NoButton))
         d->grabbed = nullptr;
     const bool inSource = widget == d->navigation || d->navigation->isAncestorOf(widget);
     if (!inSource && widget != d->window && event->type() == QEvent::MouseButtonRelease)
         d->grabbed = nullptr;
     if (widget == d->window && event->type() == QEvent::ActivationChange)
         d->backdropDirty = true;
-    if ((widget == d->window || widget == d->navigation || widget == d->navigation->contentHost() ||
-         widget == d->navigation->mainChromeWidget() ||
-         widget == d->navigation->footerChromeWidget() ||
-         widget == d->navigation->headerChromeWidget()) &&
-        (event->type() == QEvent::Resize || event->type() == QEvent::Move ||
-         event->type() == QEvent::Show || event->type() == QEvent::LayoutRequest ||
-         event->type() == QEvent::ActivationChange)) {
+    if ((widget == d->window || widget == d->navigation || widget == d->navigation->contentHost()
+            || widget == d->navigation->mainChromeWidget() || widget == d->navigation->footerChromeWidget()
+            || widget == d->navigation->headerChromeWidget())
+        && (event->type() == QEvent::Resize || event->type() == QEvent::Move || event->type() == QEvent::Show
+            || event->type() == QEvent::LayoutRequest || event->type() == QEvent::ActivationChange)) {
         if (event->type() == QEvent::Resize && transitionRunning())
             cancelTransition();
         if (event->type() == QEvent::Resize || event->type() == QEvent::Move) {
@@ -2090,22 +1981,19 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
     }
     if (!d->capture || !d->capture->isEnabled())
         return false;
-    if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::Wheel ||
-        (event->type() == QEvent::Show &&
-         (widget->isWindow() || qobject_cast<overlay::OverlayScrim*>(widget) ||
-          widget->property(overlay::kOverlaySurfaceProperty).toBool())))
+    if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::Wheel
+        || (event->type() == QEvent::Show
+            && (widget->isWindow() || qobject_cast<overlay::OverlayScrim*>(widget)
+                || widget->property(overlay::kOverlaySurfaceProperty).toBool())))
         d->pointerMotion->stop();
-    if (widget == d->window &&
-        (event->type() == QEvent::WindowDeactivate || event->type() == QEvent::Hide))
+    if (widget == d->window && (event->type() == QEvent::WindowDeactivate || event->type() == QEvent::Hide))
         d->followPointer({}, false);
     // A host-delivered move inside the scene is still over its projected control.
     // Clearing hover here would synthesize leave/enter and recapture it every frame.
     // zh_CN: 宿主转发的场景内移动仍命中投影控件，不能逐帧清空悬停并触发重绘。
-    const bool outsideSceneMove =
-        !inSource && widget != d->canvas && widget->window() == d->window->window() &&
-        event->type() == QEvent::MouseMove &&
-        (widget != d->window ||
-         !d->navigation->rect().contains(d->navigation->mapFromGlobal(mouseGlobal)));
+    const bool outsideSceneMove = !inSource && widget != d->canvas && widget->window() == d->window->window()
+        && event->type() == QEvent::MouseMove
+        && (widget != d->window || !d->navigation->rect().contains(d->navigation->mapFromGlobal(mouseGlobal)));
     if ((widget == d->window && event->type() == QEvent::Leave) || outsideSceneMove) {
         QScopedValueRollback<bool> forward(d->forwarding, true);
         d->hover(nullptr, {});
@@ -2114,9 +2002,8 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
     }
     if (widget == d->window && event->type() == QEvent::KeyPress && transitionRunning())
         cancelTransition();
-    if (widget == d->window &&
-        (event->type() == QEvent::WindowDeactivate || event->type() == QEvent::Hide) &&
-        transitionRunning())
+    if (widget == d->window && (event->type() == QEvent::WindowDeactivate || event->type() == QEvent::Hide)
+        && transitionRunning())
         cancelTransition();
     // Popups remain native surfaces. Position their anchor on the presented panel while
     // leaving popup input and keyboard/IME handling to Qt.
@@ -2129,35 +2016,31 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
         QWidget* source = declaredSource ? declaredSource : widget->parentWidget();
         // Child menus and foreign windows already live in native coordinates.
         // zh_CN: 子菜单和其他窗口已经使用原生坐标，不能再次投影。
-        if (source && source->window() == d->window->window() &&
-            overlay::presentation::hasTransform(source)) {
-            const QPoint point =
-                declaredSource ? declaration.point : source->mapFromGlobal(widget->pos());
+        if (source && source->window() == d->window->window() && overlay::presentation::hasTransform(source)) {
+            const QPoint point = declaredSource ? declaration.point : source->mapFromGlobal(widget->pos());
             const QPoint presented = overlay::presentation::mapToGlobal(source, point);
             if (!declaredSource) {
                 QScopedValueRollback<bool> forward(d->forwarding, true);
                 widget->move(presented);
             }
             if (!d->nativePopupAnchors.contains(widget))
-                connect(widget, &QObject::destroyed, this,
-                        [this, widget] { d->nativePopupAnchors.remove(widget); });
+                connect(widget, &QObject::destroyed, this, [this, widget] { d->nativePopupAnchors.remove(widget); });
             d->nativePopupAnchors.insert(widget, {source, point, widget->pos() - presented});
             const QPointer<QWidget> popup(widget);
             QTimer::singleShot(0, this, [this, popup] {
                 if (popup && popup->isVisible() && d->nativePopupAnchors.contains(popup)) {
                     auto& anchor = d->nativePopupAnchors[popup];
                     if (anchor.source)
-                        anchor.offset = popup->pos() - overlay::presentation::mapToGlobal(
-                                                           anchor.source, anchor.point);
+                        anchor.offset = popup->pos() - overlay::presentation::mapToGlobal(anchor.source, anchor.point);
                 }
             });
         }
     }
     if (widget->window() != d->window->window() || (!inSource && widget != d->window))
         return false;
-    if (inSource && (event->type() == QEvent::Enter || event->type() == QEvent::Leave ||
-                     event->type() == QEvent::HoverEnter || event->type() == QEvent::HoverLeave ||
-                     event->type() == QEvent::HoverMove))
+    if (inSource
+        && (event->type() == QEvent::Enter || event->type() == QEvent::Leave || event->type() == QEvent::HoverEnter
+            || event->type() == QEvent::HoverLeave || event->type() == QEvent::HoverMove))
         return true;
     const bool wheel = event->type() == QEvent::Wheel;
     const bool contextMenu = event->type() == QEvent::ContextMenu;
@@ -2166,10 +2049,11 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
         return false;
     // Qt's tooltip timer can retain that overwritten global point as well.
     // zh_CN: Qt 提示计时器也可能保留被覆盖的全局点，提示事件使用接收者局部坐标恢复。
-    const QPoint global = mouse         ? mouseGlobal
-                          : contextMenu ? static_cast<QContextMenuEvent*>(event)->globalPos()
-                          : toolTip ? widget->mapToGlobal(static_cast<QHelpEvent*>(event)->pos())
-                                    : static_cast<QWheelEvent*>(event)->globalPosition().toPoint();
+    const QPoint global = mouse ? mouseGlobal
+        : contextMenu           ? static_cast<QContextMenuEvent*>(event)->globalPos()
+        : toolTip
+        ? widget->mapToGlobal(static_cast<QHelpEvent*>(event)->pos())
+        : static_cast<QWheelEvent*>(event)->globalPosition().toPoint();
     if (d->nativeOverlayAt(global)) {
         // Ignored input from an overlay label can bubble to the window. It must
         // never be reinterpreted as an interaction with the projected background.
@@ -2182,9 +2066,8 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
     const QPoint presented = d->navigation->mapFromGlobal(global);
     if (!inSource && !d->navigation->rect().contains(presented))
         return false;
-    if (event->type() == QEvent::MouseMove &&
-        static_cast<QMouseEvent*>(event)->buttons() == Qt::NoButton && !transitionRunning() &&
-        !QApplication::activePopupWidget()) {
+    if (event->type() == QEvent::MouseMove && static_cast<QMouseEvent*>(event)->buttons() == Qt::NoButton
+        && !transitionRunning() && !QApplication::activePopupWidget()) {
         if (!d->firstOverlay()) {
             const qreal x = qBound(-1.0, 2.0 * presented.x() / d->navigation->width() - 1, 1.0);
             const qreal y = qBound(-1.0, 2.0 * presented.y() / d->navigation->height() - 1, 1.0);
@@ -2193,24 +2076,20 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
     }
     QPointF source;
     const auto* hit = d->scene.unproject(presented, &source);
-    const bool floatingPane =
-        !d->scene.top && d->scene.navigation.source.right() > d->scene.content.source.left();
-    if (!d->grabbed && floatingPane && hit != &d->scene.navigation && mouse &&
-        event->type() == QEvent::MouseButtonPress) {
+    const bool floatingPane = !d->scene.top && d->scene.navigation.source.right() > d->scene.content.source.left();
+    if (!d->grabbed && floatingPane && hit != &d->scene.navigation && mouse
+        && event->type() == QEvent::MouseButtonPress) {
         // Dismiss at the displayed drawer boundary, consuming the outside press as in 2D.
         // zh_CN: 在投影后的窗格边界外按下时轻关闭，并和 2D 一样吞掉本次按下。
         d->navigation->setPaneOpen(false);
         return true;
     }
     if (d->grabbed) {
-        const auto& panel =
-            d->belongsToContent(d->grabbed) ? d->scene.content : d->scene.navigation;
+        const auto& panel = d->belongsToContent(d->grabbed) ? d->scene.content : d->scene.navigation;
         source = panel.transform.inverted().map(presented);
     }
     QScopedValueRollback<bool> forward(d->forwarding, true);
-    QWidget* target = d->grabbed ? d->grabbed.data()
-                      : hit      ? d->navigation->childAt(source.toPoint())
-                                 : nullptr;
+    QWidget* target = d->grabbed ? d->grabbed.data() : hit ? d->navigation->childAt(source.toPoint()) : nullptr;
     if (!target) {
         d->hover(nullptr, {});
         return true;
@@ -2222,9 +2101,8 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
         d->hover(target, source.toPoint());
         if (event->type() == QEvent::MouseButtonPress)
             d->grabbed = target;
-        QMouseEvent forwarded(event->type(), local, target->mapTo(d->window, local), sourceGlobal,
-                              input->button(), input->buttons(), input->modifiers(),
-                              input->source());
+        QMouseEvent forwarded(event->type(), local, target->mapTo(d->window, local), sourceGlobal, input->button(),
+            input->buttons(), input->modifiers(), input->source());
         QApplication::sendEvent(target, &forwarded);
         if (event->type() == QEvent::MouseButtonRelease)
             d->grabbed = nullptr;
@@ -2235,14 +2113,13 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
         // zh_CN: Qt 不会冒泡合成滚轮事件，逐级转发让文字、卡片上的滚动也能到达滚动视口。
         for (QPointer<QWidget> receiver = target; receiver;) {
             const QPoint position = receiver->mapFromGlobal(sourceGlobal);
-            QWheelEvent forwarded(position, sourceGlobal, input->pixelDelta(), input->angleDelta(),
-                                  input->buttons(), input->modifiers(), input->phase(),
-                                  input->inverted(), input->source());
+            QWheelEvent forwarded(position, sourceGlobal, input->pixelDelta(), input->angleDelta(), input->buttons(),
+                input->modifiers(), input->phase(), input->inverted(), input->source());
             forwarded.setTimestamp(input->timestamp());
             forwarded.ignore();
             QApplication::sendEvent(receiver, &forwarded);
-            if (!receiver || forwarded.isAccepted() || receiver->isWindow() ||
-                receiver->testAttribute(Qt::WA_NoMousePropagation))
+            if (!receiver || forwarded.isAccepted() || receiver->isWindow()
+                || receiver->testAttribute(Qt::WA_NoMousePropagation))
                 break;
             receiver = receiver->parentWidget();
         }

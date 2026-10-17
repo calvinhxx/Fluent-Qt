@@ -38,38 +38,37 @@ public:
         const bool es = context->isOpenGLES();
         // A Qt WebAssembly sharing wrapper can still report the requested ES 2
         // format while its current browser context is already WebGL 2 / ES 3.
-        const QByteArray glVersion(
-            reinterpret_cast<const char*>(context->functions()->glGetString(GL_VERSION)));
-        const bool es3 = context->format().majorVersion() >= 3 ||
-                         glVersion.startsWith("OpenGL ES 3.") || glVersion.contains("WebGL 2.");
+        const QByteArray glVersion(reinterpret_cast<const char*>(context->functions()->glGetString(GL_VERSION)));
+        const bool es3 = context->format().majorVersion() >= 3 || glVersion.startsWith("OpenGL ES 3.")
+            || glVersion.contains("WebGL 2.");
         const bool modern = es ? es3 : context->format().profile() == QSurfaceFormat::CoreProfile;
-        const QByteArray version =
-            modern ? (es ? "#version 300 es\n" : "#version 150\n")
-                   : (es ? "#extension GL_OES_standard_derivatives : enable\n" : "");
+        const QByteArray version = modern
+            ? (es ? "#version 300 es\n" : "#version 150\n")
+            : (es ? "#extension GL_OES_standard_derivatives : enable\n" : "");
         const QByteArray precision = es ? "precision highp float;\n" : "";
         const QByteArray vertex =
-            (modern ? "in vec2 position; out vec2 uv;\n"
-                    : "attribute highp vec2 position; varying highp vec2 uv;\n") +
-            QByteArray("uniform mat4 target; void main() {\n"
-                       "uv = (position + 1.0) * 0.5;\n"
-                       "gl_Position = target * vec4(position, 0.0, 1.0); }\n");
-        const QByteArray reconstructionCode =
-            reconstruction == Reconstruction::Monotone
-                ? "vec2 texel = coordinate * sourceSize - 0.5;\n"
-                  "vec2 phase = fract(texel);\n"
-                  "phase = phase * phase * (3.0 - 2.0 * phase);\n"
-                  "coordinate = (floor(texel) + phase + 0.5) / sourceSize;\n"
-                : "";
+            (modern ? "in vec2 position; out vec2 uv;\n" : "attribute highp vec2 position; varying highp vec2 uv;\n")
+            + QByteArray(
+                "uniform mat4 target; void main() {\n"
+                "uv = (position + 1.0) * 0.5;\n"
+                "gl_Position = target * vec4(position, 0.0, 1.0); }\n");
+        const QByteArray reconstructionCode = reconstruction == Reconstruction::Monotone
+            ? "vec2 texel = coordinate * sourceSize - 0.5;\n"
+              "vec2 phase = fract(texel);\n"
+              "phase = phase * phase * (3.0 - 2.0 * phase);\n"
+              "coordinate = (floor(texel) + phase + 0.5) / sourceSize;\n"
+            : "";
         const QByteArray fragment =
             (modern ? "in vec2 uv; out vec4 color;\n#define SAMPLE texture\n#define OUTPUT color\n"
                     : "varying highp vec2 uv;\n#define SAMPLE texture2D\n#define OUTPUT "
-                      "gl_FragColor\n") +
-            QByteArray("uniform sampler2D source; uniform vec2 sourceSize;\n"
-                       "uniform vec2 panelSize; uniform vec4 panelShape;\n"
-                       "uniform vec4 materialColor; uniform vec4 reflectionColor;\n"
-                       "vec4 samplePanel(vec2 coordinate) {\n") +
-            reconstructionCode +
-            QByteArray(
+                      "gl_FragColor\n")
+            + QByteArray(
+                "uniform sampler2D source; uniform vec2 sourceSize;\n"
+                "uniform vec2 panelSize; uniform vec4 panelShape;\n"
+                "uniform vec4 materialColor; uniform vec4 reflectionColor;\n"
+                "vec4 samplePanel(vec2 coordinate) {\n")
+            + reconstructionCode
+            + QByteArray(
                 "return SAMPLE(source, coordinate); }\n"
                 "void main() {\n"
                 "vec2 dx = dFdx(uv), dy = dFdy(uv);\n"
@@ -97,10 +96,8 @@ public:
                 "pixel = vec4(reflectionColor.rgb * rimAlpha, rimAlpha) + pixel * (1.0 - "
                 "rimAlpha);\n"
                 "}\nOUTPUT = pixel; }\n");
-        if (!m_program.addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                               version + precision + vertex) ||
-            !m_program.addShaderFromSourceCode(QOpenGLShader::Fragment,
-                                               version + precision + fragment))
+        if (!m_program.addShaderFromSourceCode(QOpenGLShader::Vertex, version + precision + vertex)
+            || !m_program.addShaderFromSourceCode(QOpenGLShader::Fragment, version + precision + fragment))
             return false;
         m_program.bindAttributeLocation("position", 0);
         if (!m_program.link() || !m_vertices.create())
@@ -115,8 +112,7 @@ public:
     }
 
     bool isCreated() const { return m_program.isLinked() && m_vertices.isCreated(); }
-    void blit(GLuint texture, const QSize& size, const QMatrix4x4& target,
-              const Appearance* appearance = nullptr)
+    void blit(GLuint texture, const QSize& size, const QMatrix4x4& target, const Appearance* appearance = nullptr)
     {
         auto* gl = QOpenGLContext::currentContext()->functions();
         QOpenGLVertexArrayObject::Binder vao(&m_vao);
@@ -127,20 +123,16 @@ public:
         m_program.setUniformValue("target", target);
         m_program.setUniformValue("source", 0);
         m_program.setUniformValue("sourceSize", QVector2D(size.width(), size.height()));
-        m_program.setUniformValue(
-            "panelSize", appearance ? QVector2D(appearance->size.width(), appearance->size.height())
-                                    : QVector2D());
+        m_program.setUniformValue("panelSize",
+            appearance ? QVector2D(appearance->size.width(), appearance->size.height()) : QVector2D());
         if (appearance) {
-            m_program.setUniformValue("panelShape",
-                                      QVector4D(appearance->radius, appearance->progress, 0, 0));
+            m_program.setUniformValue("panelShape", QVector4D(appearance->radius, appearance->progress, 0, 0));
             const QColor material = appearance->material;
             const QColor reflection = appearance->reflection;
             m_program.setUniformValue("materialColor",
-                                      QVector4D(material.redF(), material.greenF(),
-                                                material.blueF(), appearance->opacity));
+                QVector4D(material.redF(), material.greenF(), material.blueF(), appearance->opacity));
             m_program.setUniformValue("reflectionColor",
-                                      QVector4D(reflection.redF(), reflection.greenF(),
-                                                reflection.blueF(), appearance->reflectionOpacity));
+                QVector4D(reflection.redF(), reflection.greenF(), reflection.blueF(), appearance->reflectionOpacity));
         }
         gl->glActiveTexture(GL_TEXTURE0);
         gl->glBindTexture(GL_TEXTURE_2D, texture);
