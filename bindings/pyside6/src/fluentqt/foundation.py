@@ -51,9 +51,9 @@ class FormController(_native.fluent.FormController):
         def release_fields(*_args):
             records = tuple(fields.values())
             fields.clear()
-            for field, forget in records:
-                if shiboken6.isValid(field):
-                    field.destroyed.disconnect(forget)
+            # Qt may already have disconnected a sender during owner teardown.
+            for _field, connection in records:
+                QObject.disconnect(connection)
 
         self.destroyed.connect(release_fields)
 
@@ -72,8 +72,7 @@ class FormController(_native.fluent.FormController):
         if previous is not None:
             if previous[0] is field:
                 return True
-            if shiboken6.isValid(previous[0]):
-                previous[0].destroyed.disconnect(previous[1])
+            QObject.disconnect(previous[1])
         owner = weakref.ref(self)
         borrowed = weakref.ref(field)
 
@@ -84,8 +83,8 @@ class FormController(_native.fluent.FormController):
                 if record is not None and record[0] is borrowed():
                     controller._form_fields.pop(key, None)
 
-        self._form_fields[key] = (field, forget)
-        field.destroyed.connect(forget)
+        connection = field.destroyed.connect(forget)
+        self._form_fields[key] = (field, connection)
         return True
 
     def removeField(self, key):
@@ -99,8 +98,7 @@ class FormController(_native.fluent.FormController):
                 return True
             if self._form_fields.get(key) is record:
                 self._form_fields.pop(key, None)
-                if shiboken6.isValid(record[0]):
-                    record[0].destroyed.disconnect(record[1])
+                QObject.disconnect(record[1])
         return True
 
 

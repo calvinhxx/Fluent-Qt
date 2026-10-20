@@ -2666,7 +2666,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             self.assertEqual(code_label.text(), "")
             self.assertTrue(code_label.wordWrap())
             self.assertIsInstance(code, fluentqt.CodeBlock)
-            self.assertEqual(code_label.parentWidget().objectName(), "fluentCodeViewport")
+            # Retain the viewport wrapper while inspecting its native child.
+            code_viewport = code_label.parentWidget()
+            self.assertEqual(code_viewport.objectName(), "fluentCodeViewport")
             source = card._gallery_result.source
             self.assertNotIn("for text, style in", source)
             self.assertRegex(
