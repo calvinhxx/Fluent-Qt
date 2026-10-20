@@ -67,7 +67,9 @@ and input review.
 Run the [local integration preflight](testing-workflow.md#local-integration-preflight)
 before pushing. Its Qt-free source/packaging gates are also the first checks in
 the CI planning job, so inventory mistakes fail before allocating native
-runners. For a runtime failure, reproduce the failing test with the same
+runners. The shared preflight starts with the Qt-free compatibility boundary
+checker and its regressions; do not move that gate behind a native/PySide build
+or a platform-specific module condition. For a runtime failure, reproduce the failing test with the same
 Qt/PySide line and rerun that job before requesting another full matrix. A
 same-commit retry can reuse the failed job; a code change needs new validation.
 Keep full validation on the final release commit.

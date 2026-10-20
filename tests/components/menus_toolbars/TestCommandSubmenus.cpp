@@ -58,6 +58,262 @@ TEST(CommandMenuSurfaceTest, Contract_HidingOrDestroyingPresenterClosesBorrowedM
     EXPECT_EQ(menu.parent(), nullptr);
 }
 
+TEST(CommandMenuSurfaceTest, Contract_ParentedMenuKeepsFirstNativeTransientParent)
+{
+    using fluent::menus_toolbars::detail::CommandMenuController;
+    using fluent::menus_toolbars::detail::CommandPresenter;
+    QWidget callerOwner;
+    callerOwner.winId();
+    QWidget invocationHost;
+    invocationHost.resize(400, 300);
+    FluentMenu menu(QStringLiteral("Borrowed"), &callerOwner);
+    menu.addAction(QStringLiteral("Choice"));
+    ASSERT_EQ(menu.windowHandle(), nullptr);
+    QAction action(QStringLiteral("Open"));
+    action.setMenu(&menu);
+    CommandMenuController controller(&invocationHost);
+    CommandPresenter presenter(&action, CommandPresenter::Mode::Primary, {}, &invocationHost);
+    presenter.setGeometry(20, 20, 120, 40);
+    invocationHost.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&invocationHost));
+    ASSERT_TRUE(controller.open(&presenter));
+    ASSERT_NE(menu.windowHandle(), nullptr);
+    EXPECT_EQ(menu.windowHandle()->transientParent(), invocationHost.windowHandle());
+    controller.close();
+    EXPECT_EQ(menu.windowHandle()->transientParent(), callerOwner.windowHandle());
+    EXPECT_EQ(menu.parentWidget(), &callerOwner);
+}
+
+TEST(CommandMenuSurfaceTest, Contract_BorrowedMenuRestoresNativeParentAcrossHosts)
+{
+    using fluent::menus_toolbars::detail::CommandMenuController;
+    using fluent::menus_toolbars::detail::CommandPresenter;
+    QWidget originalHost;
+    QWidget firstHost;
+    QWidget secondHost;
+    originalHost.winId();
+    firstHost.resize(400, 300);
+    secondHost.resize(400, 300);
+    firstHost.show();
+    secondHost.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&firstHost));
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&secondHost));
+    FluentMenu menu(QStringLiteral("Borrowed"));
+    menu.addAction(QStringLiteral("Choice"));
+    menu.winId();
+    menu.windowHandle()->setTransientParent(originalHost.windowHandle());
+    QAction action(QStringLiteral("Open"));
+    action.setMenu(&menu);
+    for (QWidget* host : {&firstHost, &secondHost}) {
+        CommandMenuController controller(host);
+        CommandPresenter presenter(&action, CommandPresenter::Mode::Primary, {}, host);
+        presenter.setGeometry(20, 20, 120, 40);
+        presenter.show();
+        ASSERT_TRUE(controller.open(&presenter));
+        ASSERT_TRUE(menu.isVisible());
+        EXPECT_EQ(menu.parent(), nullptr);
+        EXPECT_EQ(menu.windowHandle()->transientParent(), host->windowHandle());
+        controller.close();
+        EXPECT_FALSE(menu.isVisible());
+        EXPECT_EQ(menu.windowHandle()->transientParent(), originalHost.windowHandle());
+    }
+    {
+        CommandMenuController controller(&firstHost);
+        CommandPresenter presenter(&action, CommandPresenter::Mode::Primary, {}, &firstHost);
+        presenter.setGeometry(20, 20, 120, 40);
+        presenter.show();
+        ASSERT_TRUE(controller.open(&presenter));
+        // A caller's deliberate reassignment must survive cleanup.
+        menu.windowHandle()->setTransientParent(secondHost.windowHandle());
+        controller.close();
+        EXPECT_EQ(menu.windowHandle()->transientParent(), secondHost.windowHandle());
+    }
+    EXPECT_EQ(action.menu(), &menu);
+    EXPECT_EQ(menu.parent(), nullptr);
+}
+
+TEST(CommandMenuSurfaceTest, Contract_TransientParentCallbacksCanReopenOnAnotherPresenter)
+{
+    using fluent::menus_toolbars::detail::CommandMenuController;
+    using fluent::menus_toolbars::detail::CommandPresenter;
+    for (const int phase : {0, 1, 2}) {
+        SCOPED_TRACE(phase);
+        QWidget originalHost;
+        originalHost.winId();
+        QWidget host;
+        host.resize(400, 300);
+        FluentMenu menu(QStringLiteral("Borrowed"));
+        menu.addAction(QStringLiteral("Choice"));
+        menu.winId();
+        menu.windowHandle()->setTransientParent(originalHost.windowHandle());
+        QAction action(QStringLiteral("Open"));
+        action.setMenu(&menu);
+        CommandMenuController controller(&host);
+        CommandPresenter first(&action, CommandPresenter::Mode::Primary, {}, &host);
+        CommandPresenter second(&action, CommandPresenter::Mode::Primary, {}, &host);
+        CommandPresenter third(&action, CommandPresenter::Mode::Primary, {}, &host);
+        first.setGeometry(20, 20, 120, 40);
+        second.setGeometry(180, 20, 120, 40);
+        third.setGeometry(20, 100, 120, 40);
+        host.show();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+        bool reopened = false;
+        bool armed = phase == 0;
+        QObject::connect(menu.windowHandle(), &QWindow::transientParentChanged, &host, [&](QWindow* parent) {
+            const auto expected = phase > 0 ? originalHost.windowHandle() : host.windowHandle();
+            if (!armed || reopened || parent != expected)
+                return;
+            reopened = true;
+            if (phase == 0)
+                controller.close();
+            EXPECT_TRUE(controller.open(&second));
+        });
+        ASSERT_TRUE(controller.open(&first));
+        // QMenu::popup can emit for the existing transient parent as well.
+        // Arm the close/switch scenarios only after the initial open completes.
+        armed = true;
+        if (phase == 1)
+            controller.close();
+        else if (phase == 2)
+            controller.open(&third);
+        ASSERT_TRUE(reopened);
+        EXPECT_TRUE(menu.isVisible());
+        EXPECT_FALSE(QAccessible::queryAccessibleInterface(&first)->state().expanded);
+        EXPECT_TRUE(QAccessible::queryAccessibleInterface(&second)->state().expanded);
+        EXPECT_FALSE(QAccessible::queryAccessibleInterface(&third)->state().expanded);
+        EXPECT_EQ(menu.windowHandle()->transientParent(), host.windowHandle());
+        controller.close();
+        EXPECT_FALSE(menu.isVisible());
+        EXPECT_EQ(menu.windowHandle()->transientParent(), originalHost.windowHandle());
+        EXPECT_EQ(menu.parent(), nullptr);
+    }
+}
+
+TEST(CommandMenuSurfaceTest, Contract_ClosingDuringPopupRestoresBorrowedNativeParent)
+{
+    using fluent::menus_toolbars::detail::CommandMenuController;
+    using fluent::menus_toolbars::detail::CommandPresenter;
+    QWidget originalHost;
+    originalHost.winId();
+    QWidget callerOwner;
+    callerOwner.winId();
+    QWidget host;
+    host.resize(400, 300);
+    FluentMenu menu(QStringLiteral("Borrowed"), &callerOwner);
+    menu.addAction(QStringLiteral("Choice"));
+    menu.winId();
+    menu.windowHandle()->setTransientParent(originalHost.windowHandle());
+    QAction action(QStringLiteral("Open"));
+    action.setMenu(&menu);
+    CommandMenuController controller(&host);
+    CommandPresenter presenter(&action, CommandPresenter::Mode::Primary, {}, &host);
+    presenter.setGeometry(20, 20, 120, 40);
+    host.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+    bool closed = false;
+    const auto connection = QObject::connect(menu.windowHandle(), &QWindow::transientParentChanged, &host,
+        [&](QWindow* parent) {
+            if (closed || parent != callerOwner.windowHandle())
+                return;
+            closed = true;
+            controller.close();
+        });
+    const auto disconnect = qScopeGuard([&] { QObject::disconnect(connection); });
+    ASSERT_TRUE(controller.open(&presenter));
+    if (!closed) {
+        // Older Qt backends keep an existing parent during Show. The shared
+        // aboutToShow cancellation contract below still runs on those SDKs.
+        EXPECT_TRUE(menu.isVisible());
+        controller.close();
+        EXPECT_EQ(menu.windowHandle()->transientParent(), originalHost.windowHandle());
+        GTEST_SKIP() << "Qt kept the existing native parent during popup";
+    }
+    EXPECT_FALSE(menu.isVisible());
+    EXPECT_FALSE(QAccessible::queryAccessibleInterface(&presenter)->state().expanded);
+    EXPECT_EQ(menu.windowHandle()->transientParent(), originalHost.windowHandle());
+    EXPECT_EQ(action.menu(), &menu);
+    EXPECT_EQ(menu.parentWidget(), &callerOwner);
+}
+
+TEST(CommandMenuSurfaceTest, Contract_AboutToShowCancellationPreservesLaterInvocations)
+{
+    using fluent::menus_toolbars::detail::CommandMenuController;
+    using fluent::menus_toolbars::detail::CommandPresenter;
+    for (const int continuation : {0, 1, 2, 3, 4}) {
+        SCOPED_TRACE(continuation);
+        QWidget originalHost;
+        originalHost.winId();
+        QWidget callerOwner;
+        callerOwner.winId();
+        QWidget host;
+        host.resize(400, 300);
+        FluentMenu menu(QStringLiteral("Borrowed"), &callerOwner);
+        FluentMenu other(QStringLiteral("Other"), &callerOwner);
+        for (auto* item : {&menu, &other}) {
+            item->addAction(QStringLiteral("Choice"));
+            item->winId();
+            item->windowHandle()->setTransientParent(originalHost.windowHandle());
+        }
+        QAction action(QStringLiteral("Open"));
+        QAction otherAction(QStringLiteral("Other"));
+        action.setMenu(&menu);
+        otherAction.setMenu(&other);
+        QPointer<CommandMenuController> controller = new CommandMenuController(&host);
+        const auto cleanupController = qScopeGuard([&] { delete controller.data(); });
+        CommandPresenter first(&action, CommandPresenter::Mode::Primary, {}, &host);
+        CommandPresenter next(continuation == 2 ? &otherAction : &action, CommandPresenter::Mode::Primary, {}, &host);
+        first.setGeometry(20, 20, 120, 40);
+        next.setGeometry(180, 20, 120, 40);
+        host.show();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+        bool cancelled = false;
+        bool reopened = false;
+        const auto showConnection = QObject::connect(&menu, &QMenu::aboutToShow, &host, [&] {
+            if (cancelled)
+                return;
+            cancelled = true;
+            if (continuation == 4) {
+                delete controller.data();
+                return;
+            }
+            controller->close();
+            if (continuation == 1 || continuation == 2) {
+                reopened = true;
+                EXPECT_TRUE(controller->open(&next));
+            }
+        });
+        const auto hideConnection = QObject::connect(&menu, &QMenu::aboutToHide, &host, [&] {
+            if (continuation == 3 && cancelled && !reopened) {
+                reopened = true;
+                EXPECT_TRUE(controller->open(&next));
+            }
+        });
+        const auto disconnect = qScopeGuard([&] {
+            QObject::disconnect(showConnection);
+            QObject::disconnect(hideConnection);
+        });
+        ASSERT_TRUE(controller->open(&first));
+        ASSERT_TRUE(cancelled);
+        EXPECT_FALSE(QAccessible::queryAccessibleInterface(&first)->state().expanded);
+        if (continuation > 0 && continuation < 4) {
+            ASSERT_TRUE(reopened);
+            auto* current = continuation == 2 ? &other : &menu;
+            EXPECT_TRUE(current->isVisible());
+            EXPECT_TRUE(QAccessible::queryAccessibleInterface(&next)->state().expanded);
+            EXPECT_EQ(current->windowHandle()->transientParent(), host.windowHandle());
+            controller->close();
+            EXPECT_FALSE(current->isVisible());
+            EXPECT_EQ(current->windowHandle()->transientParent(), originalHost.windowHandle());
+        } else {
+            EXPECT_FALSE(reopened);
+        }
+        EXPECT_FALSE(menu.isVisible());
+        EXPECT_EQ(menu.windowHandle()->transientParent(), originalHost.windowHandle());
+        EXPECT_EQ(menu.parentWidget(), &callerOwner);
+        EXPECT_EQ(action.menu(), &menu);
+    }
+}
+
 TEST(CommandMenuSurfaceTest, Contract_RestingRowsKeepTheMenuSurfaceAcrossThemeChangesAndReopen)
 {
     const auto previousTheme = fluent::FluentElement::currentTheme();
@@ -87,6 +343,9 @@ TEST(CommandMenuSurfaceTest, Contract_RestingRowsKeepTheMenuSurfaceAcrossThemeCh
             bar.addSecondaryAction(&last);
         }
         window.show();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+        window.activateWindow();
+        ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
         QCursor::setPos(window.mapToGlobal(QPoint(780, 480)));
         const auto open = [&] {
             if (useFlyout)
@@ -94,6 +353,7 @@ TEST(CommandMenuSurfaceTest, Contract_RestingRowsKeepTheMenuSurfaceAcrossThemeCh
             else
                 bar.setOverflowOpen(true);
             QApplication::processEvents();
+            QCursor::setPos(window.mapToGlobal(QPoint(780, 480)));
         };
         const auto close = [&] {
             if (useFlyout)
@@ -117,8 +377,14 @@ TEST(CommandMenuSurfaceTest, Contract_RestingRowsKeepTheMenuSurfaceAcrossThemeCh
                 EXPECT_FALSE(scroll->viewport()->autoFillBackground());
                 EXPECT_FALSE(scroll->widget()->autoFillBackground());
                 // The unhighlighted last row must reveal the same layer as the popup.
-                const QPoint point = scroll->widget()->mapTo(surface,
-                    QPoint(scroll->widget()->width() - 8, scroll->widget()->height() - 8));
+                const QPoint localPoint(scroll->widget()->width() - 8, scroll->widget()->height() - 8);
+                auto* sampledRow = scroll->widget()->childAt(localPoint);
+                ASSERT_NE(sampledRow, nullptr);
+                ASSERT_TRUE(QTest::qWaitFor([&] {
+                    return !sampledRow->underMouse()
+                        && !QRect(sampledRow->mapToGlobal(QPoint()), sampledRow->size()).contains(QCursor::pos());
+                }));
+                const QPoint point = scroll->widget()->mapTo(surface, localPoint);
                 const QPixmap image = surface->grab();
                 EXPECT_EQ(image.toImage().pixelColor(point * image.devicePixelRatioF()), bar.themeColorsRef().bgLayer);
                 close();

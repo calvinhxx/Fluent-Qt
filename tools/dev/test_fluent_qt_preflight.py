@@ -79,6 +79,114 @@ class LocalPreflightTest(unittest.TestCase):
             checks = dict(MODULE.quick_checks(["tools/dev/unknown_tool.py"]))
             self.assertEqual(checks["fallback"], ["check"])
 
+    def test_quick_source_paths_always_check_compatibility_boundaries_first(self):
+        paths = (
+            "app/view/ContentPresenter.cpp",
+            "src/components/status_info/Toast.cpp",
+            "src/compatibility/private/PopupWindowCompat_p.h",
+            "include/FluentQt/Public.hpp",
+            "examples/window/Native.mm",
+            "tests/components/basicinput/TestButton.cpp",
+            "support/Window.h",
+            "bindings/pyside6/native/wrappers.h",
+            "bindings/pyside6/native/wrappers.cpp",
+            "bindings/pyside6/src/fluentqt/foundation.py",
+            "bindings/pyside6/gallery/src/fluentqt_gallery/window.py",
+        )
+        for path in paths:
+            with self.subTest(path=path):
+                checks = MODULE.quick_checks([path])
+                self.assertEqual(checks[0], (
+                    "compatibility boundaries",
+                    [sys.executable, "tools/quality/check_compatibility_boundaries.py",
+                     "--project-root", ".", "--self-test"],
+                ))
+                self.assertEqual(sum(label == "compatibility boundaries" for label, _ in checks), 1)
+
+    def test_quick_boundary_checker_runs_self_tests_without_packaging_or_qt(self):
+        path = "tools/quality/check_compatibility_boundaries.py"
+        self.assertEqual(MODULE.quick_checks([path]), [
+            ("compatibility boundaries",
+             [sys.executable, path, "--project-root", ".", "--self-test"]),
+        ])
+        cpp, _, pyside = MODULE.quick_selection([path])
+        self.assertEqual(cpp.scope, "none")
+        self.assertFalse(pyside)
+
+    def test_quick_mixed_paths_keep_other_gates_without_duplicate_boundary_checks(self):
+        checks = MODULE.quick_checks([
+            "tools/dev/fluent_qt_preflight.py",
+            "README.md",
+            "src/components/status_info/Toast.cpp",
+            "bindings/pyside6/gallery/src/fluentqt_gallery/window.py",
+            "tools/quality/check_compatibility_boundaries.py",
+            "src/components/status_info/Toast.h",
+        ])
+        self.assertEqual(checks[0][0], "compatibility boundaries")
+        self.assertEqual(sum(label == "compatibility boundaries" for label, _ in checks), 1)
+        self.assertTrue({"C++ format", "documentation"}.issubset(dict(checks)))
+        self.assertTrue(any(Path(command[-1]).name == "test_fluent_qt_preflight.py"
+                            for _, command in checks))
+
+    def test_quick_non_sources_and_similar_prefixes_do_not_trigger_boundary_checks(self):
+        for path in (
+            "app/README.md", "app/resources/catalog.json", "docs/sample.cpp",
+            "application/main.cpp", "src_backup/Widget.hpp", "supporting/Native.mm",
+            "bindings/pyside6/src/fluentqt/README.md",
+            "bindings/pyside6/src_backup/fluentqt/widget.py",
+            "bindings/pyside6/gallery/src_backup/fluentqt_gallery/window.py",
+        ):
+            with self.subTest(path=path):
+                self.assertNotIn("compatibility boundaries", dict(MODULE.quick_checks([path])))
+
+    def test_quick_boundary_failure_stops_before_the_selected_owner_build(self):
+        lane = {"kind": "cpp", "build_dir": "build/qt", "qt": "6.2.4", "status": "not_run"}
+        with tempfile.TemporaryDirectory() as temporary, \
+                mock.patch.object(MODULE, "read_build", return_value=lane), \
+                mock.patch.object(MODULE, "run_logged", return_value={
+                    "returncode": 17, "log": "boundary-failure.log",
+                }) as runner, redirect_stdout(io.StringIO()):
+            report = Path(temporary) / "report.json"
+            self.assertEqual(MODULE.main([
+                "--quick", "--paths", "tests/components/basicinput/TestButton.cpp",
+                "--build-dir", "build/qt", "--report", str(report),
+            ]), 1)
+            runner.assert_called_once()
+            self.assertEqual(runner.call_args.args[:2], (
+                "compatibility boundaries",
+                [sys.executable, "tools/quality/check_compatibility_boundaries.py",
+                 "--project-root", ".", "--self-test"],
+            ))
+            result = json.loads(report.read_text(encoding="utf-8"))
+            self.assertEqual(result["status"], "failed")
+            self.assertEqual(result["cpp_targets"], ["test_button"])
+            self.assertEqual(result["lanes"][0]["status"], "not_run")
+            self.assertEqual(result["checks"], [
+                {"returncode": 17, "log": "boundary-failure.log"},
+            ])
+
+    def test_checks_only_records_boundary_failure_without_a_qt_environment(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            checker = root / "tools/quality/check_compatibility_boundaries.py"
+            checker.parent.mkdir(parents=True)
+            checker.write_text(
+                "print('synthetic compatibility boundary violation')\nraise SystemExit(17)\n",
+                encoding="utf-8",
+            )
+            report = root / "report.json"
+            with mock.patch.object(MODULE, "ROOT", root), \
+                    redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                self.assertEqual(MODULE.main(["--checks-only", "--report", str(report)]), 1)
+            result = json.loads(report.read_text(encoding="utf-8"))
+            self.assertEqual(result["status"], "failed")
+            self.assertEqual(result["lanes"], [])
+            self.assertEqual(len(result["checks"]), 1)
+            self.assertEqual(result["checks"][0]["label"], "compatibility boundaries")
+            self.assertEqual(result["checks"][0]["returncode"], 17)
+            self.assertIn("synthetic compatibility boundary violation",
+                          Path(result["checks"][0]["log"]).read_text(encoding="utf-8"))
+
     def test_quick_plan_uses_head_and_does_not_execute_checks(self):
         with tempfile.TemporaryDirectory() as temporary, \
                 mock.patch.object(MODULE, "changed_paths", return_value=["tests/components/basicinput/TestButton.cpp"]) as changed, \

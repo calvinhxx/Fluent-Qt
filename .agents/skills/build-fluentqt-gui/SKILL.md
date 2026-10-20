@@ -19,6 +19,10 @@ decision. `<skill-root>` is the directory containing this file.
 | `improve` | Repair or redesign an existing FluentQt application | Existing interfaces below; use the design workflow for a major redesign |
 | `maintain-library` | Change FluentQt components, Gallery, bindings, or GUI verification | [Maintainer gates](references/fluentqt-maintainer-gates.md) and the owning repository contract |
 
+Before implementing library behavior or a Qt/platform fix, follow the
+[ownership check](references/fluentqt-maintainer-gates.md#establish-ownership-before-editing),
+including private changes that leave the public API unchanged.
+
 Library fixes use repository tests and GUI evidence. They do not require
 consumer design briefs, architecture manifests, or lite/full profiles.
 Documentation, catalog, and CI maintenance can use the maintainer dispatcher

@@ -14,6 +14,7 @@ from generate_navigation import generate as generate_navigation
 from validate_documentation import (
     cjk_hard_wrap_lines,
     english_document_cjk_lines,
+    markdown_files,
     relative_posix_path,
     validate,
 )
@@ -139,6 +140,23 @@ class DocumentationValidationTest(unittest.TestCase):
             "docs/section/guide.md",
             relative_posix_path(document, project_root),
         )
+
+    def test_fallback_exclusions_are_relative_to_the_source_root(self) -> None:
+        for ancestor in ("build", "build-check", "dist", "node_modules"):
+            with self.subTest(ancestor=ancestor):
+                source_root = self.project_root / ancestor / "source"
+                document = source_root / "docs/guide.md"
+                document.parent.mkdir(parents=True)
+                document.write_text("# Guide\n", encoding="utf-8")
+                for excluded in ("build", "build-local", ".venv", "node_modules"):
+                    artifact = source_root / excluded / "generated.md"
+                    artifact.parent.mkdir()
+                    artifact.write_text("# Generated\n", encoding="utf-8")
+                with mock.patch(
+                    "validate_documentation.subprocess.check_output",
+                    side_effect=FileNotFoundError,
+                ):
+                    self.assertEqual([document], markdown_files(source_root))
 
     def test_internal_reader_page_requires_status(self) -> None:
         self._remove_status("docs/section/guide.md")

@@ -80,7 +80,10 @@ def markdown_files(project_root: Path) -> list[Path]:
         return sorted(
             path
             for path in project_root.rglob("*.md")
-            if not any(part in excluded or part.startswith("build-") for part in path.parts)
+            if not any(
+                part in excluded or part.startswith("build-")
+                for part in path.relative_to(project_root).parts
+            )
         )
 
     # The index still lists unstaged deletions. Navigation and link checks

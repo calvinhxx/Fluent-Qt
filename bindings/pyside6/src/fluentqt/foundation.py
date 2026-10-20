@@ -46,27 +46,61 @@ class FormController(_native.fluent.FormController):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._form_fields = {}
+        fields = self._form_fields
+
+        def release_fields(*_args):
+            records = tuple(fields.values())
+            fields.clear()
+            for field, forget in records:
+                if shiboken6.isValid(field):
+                    field.destroyed.disconnect(forget)
+
+        self.destroyed.connect(release_fields)
 
     def addField(self, key, field):
         if not super().addField(key, field):
             return False
+        # stateChanged may remove or replace the registration, or delete either
+        # QObject, before the native call returns.
+        if (
+            not shiboken6.isValid(self)
+            or not shiboken6.isValid(field)
+            or self.field(key) is not field
+        ):
+            return True
+        previous = self._form_fields.get(key)
+        if previous is not None:
+            if previous[0] is field:
+                return True
+            if shiboken6.isValid(previous[0]):
+                previous[0].destroyed.disconnect(previous[1])
         owner = weakref.ref(self)
+        borrowed = weakref.ref(field)
 
         def forget(*_args):
             controller = owner()
             if controller is not None:
-                controller._form_fields.pop(key, None)
+                record = controller._form_fields.get(key)
+                if record is not None and record[0] is borrowed():
+                    controller._form_fields.pop(key, None)
 
         self._form_fields[key] = (field, forget)
         field.destroyed.connect(forget)
         return True
 
     def removeField(self, key):
+        record = self._form_fields.get(key)
         if not super().removeField(key):
             return False
-        record = self._form_fields.pop(key, None)
-        if record is not None and shiboken6.isValid(record[0]):
-            record[0].destroyed.disconnect(record[1])
+        if record is not None:
+            # A callback may register this same field again, or register a
+            # replacement whose retention must survive this outer removal.
+            if shiboken6.isValid(self) and self.field(key) is record[0]:
+                return True
+            if self._form_fields.get(key) is record:
+                self._form_fields.pop(key, None)
+                if shiboken6.isValid(record[0]):
+                    record[0].destroyed.disconnect(record[1])
         return True
 
 

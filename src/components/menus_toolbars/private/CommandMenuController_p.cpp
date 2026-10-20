@@ -4,14 +4,11 @@
 #include <QApplication>
 #include <QKeyEvent>
 #include <QMenu>
-#include <QMouseEvent>
 #include <QSet>
 #include <QTimer>
-#include <QWindow>
 
 #include <utility>
 
-#include "compatibility/InputEventCompat.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/menus_toolbars/private/CommandPresenter_p.h"
 
@@ -41,8 +38,9 @@ bool CommandMenuController::open(CommandPresenter* presenter, std::function<void
     }
 
     const QPointer<CommandMenuController> lifetime(this);
+    const quint64 closedRevision = m_revision + 1;
     close();
-    if (!lifetime || !anchor || !action || !menu || action->menu() != menu)
+    if (!lifetime || m_revision != closedRevision || !anchor || !action || !menu || action->menu() != menu)
         return true;
 
     m_presenter = anchor;
@@ -51,6 +49,7 @@ bool CommandMenuController::open(CommandPresenter* presenter, std::function<void
     m_leafActivated = std::move(leafActivated);
     m_triggered = false;
     m_restoreFocus = false;
+    const quint64 revision = m_revision;
     anchor->installEventFilter(this);
     menu->installEventFilter(this);
     m_connections.append(connect(menu, &QMenu::aboutToHide, this, [this] { finishLater(); }));
@@ -75,15 +74,33 @@ bool CommandMenuController::open(CommandPresenter* presenter, std::function<void
     const bool side = anchor->mode() == CommandPresenter::Mode::Overflow;
     const QPoint local(side ? (rtl ? 0 : anchor->width()) : (rtl ? anchor->width() : 0), side ? 0 : anchor->height());
     const QPoint offset(rtl ? -menu->sizeHint().width() : 0, 0);
+    m_popupHost = ::compatibility::detail::PopupWindowHost(menu);
+    auto popupHost = m_popupHost;
     overlay::popupMenuAt(menu, anchor, local, offset);
-    if (!lifetime || !anchor || !menu || m_menu.data() != menu.data())
+    if (!lifetime || !anchor || !menu || m_revision != revision || m_presenter != anchor
+        || m_menu.data() != menu.data()) {
+        // Qt can finish showing after a synchronous close. Restore before hide
+        // so an aboutToHide callback can reopen from the caller's original host.
+        // A new invocation of this same menu owns its state and must survive.
+        // zh_CN: 同步关闭后 Qt 仍可能继续显示；先还原再隐藏，让隐藏回调重开时保留原父级。
+        // 同一菜单的新调用已经接管状态时，不再执行旧调用的收尾。
+        if (menu && (!lifetime || m_menu.data() != menu.data())) {
+            popupHost.restore();
+            if (menu && (!lifetime || m_menu.data() != menu.data()))
+                menu->hide();
+        }
+        return true;
+    }
+    m_popupHost.attach(menu, overlay::presentedTopLevel(anchor));
+    if (!lifetime || !anchor || !menu || m_revision != revision || m_presenter != anchor
+        || m_menu.data() != menu.data())
         return true;
     if (!menu->isVisible()) {
         finish();
         return true;
     }
     anchor->setMenuOpen(true);
-    if (!lifetime || !menu || m_menu.data() != menu.data())
+    if (!lifetime || !menu || m_revision != revision || m_presenter != anchor || m_menu.data() != menu.data())
         return true;
     for (QAction* candidate : menu->actions()) {
         if (candidate && candidate->isVisible() && candidate->isEnabled() && !candidate->isSeparator()) {
@@ -142,18 +159,9 @@ bool CommandMenuController::ownsEvent(QObject* watched, QEvent* event) const
     if (!event || !m_menu)
         return false;
     const auto menus = cascade();
-    auto* widget = qobject_cast<QWidget*>(watched);
     for (const auto& menu : menus) {
-        if (!menu || !menu->isVisible())
-            continue;
-        // Popup mouse grabs can deliver an outside press to the menu itself.
-        // Only its actual footprint exempts that press from parent light-dismiss.
-        if (event->type() == QEvent::MouseButtonPress) {
-            if (menu->frameGeometry().contains(fluentMouseGlobalPos(static_cast<QMouseEvent*>(event))))
-                return true;
-        } else if ((widget && widget->window() == menu) || watched == menu->windowHandle()) {
+        if (menu && menu->isVisible() && ::compatibility::detail::popupContainsEvent(menu, watched, event))
             return true;
-        }
     }
     return false;
 }
@@ -204,7 +212,8 @@ void CommandMenuController::finish()
     const auto anchor = m_presenter;
     const bool restoreFocus = m_restoreFocus && !m_triggered;
     const auto handler = m_triggered ? std::move(m_leafActivated) : std::function<void()>();
-    ++m_revision;
+    const quint64 revision = ++m_revision;
+    auto popupHost = std::exchange(m_popupHost, {});
     for (const auto& connection : std::as_const(m_connections))
         disconnect(connection);
     m_connections.clear();
@@ -219,11 +228,15 @@ void CommandMenuController::finish()
     m_leafActivated = {};
     m_triggered = false;
     m_restoreFocus = false;
-    if (anchor) {
+    if (anchor)
         anchor->setMenuOpen(false);
-        if (restoreFocus && anchor && anchor->isVisible() && anchor->isEnabled())
-            anchor->setFocus(Qt::PopupFocusReason);
-    }
+    if (!lifetime || m_revision != revision)
+        return;
+    popupHost.restore();
+    if (!lifetime || m_revision != revision)
+        return;
+    if (restoreFocus && anchor && anchor->isVisible() && anchor->isEnabled())
+        anchor->setFocus(Qt::PopupFocusReason);
     if (lifetime && handler)
         handler();
 }
@@ -236,17 +249,21 @@ void CommandMenuController::close(bool restoreFocus)
     const auto activated = m_triggered ? std::move(m_leafActivated) : std::function<void()>();
     m_triggered = false;
     m_restoreFocus = false;
+    const quint64 revision = m_revision + 1;
     finish();
+    if (!lifetime || m_revision != revision)
+        return;
     for (auto it = menus.crbegin(); it != menus.crend(); ++it) {
         if (*it && (*it)->isVisible())
             (*it)->hide();
+        if (!lifetime || m_revision != revision)
+            return;
     }
     if (restoreFocus && anchor && anchor->isVisible() && anchor->isEnabled())
         anchor->setFocus(Qt::PopupFocusReason);
     if (lifetime && activated) {
         // A leaf handler can detach or remove its originating command. Keep
         // its completion, unless the handler opened a new menu in the meantime.
-        const quint64 revision = m_revision;
         QTimer::singleShot(0, this, [this, revision, activated] {
             if (revision == m_revision)
                 activated();

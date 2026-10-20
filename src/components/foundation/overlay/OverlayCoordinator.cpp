@@ -8,9 +8,9 @@
 #include <QMouseEvent>
 #include <QTimer>
 #include <QWheelEvent>
-#include <QWindow>
 #include <cmath>
 #include "compatibility/InputEventCompat.h"
+#include "compatibility/private/PopupWindowCompat_p.h"
 
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayWindow.h"
@@ -19,25 +19,6 @@
 namespace fluent::overlay {
 namespace {
 constexpr const char* inputActiveProperty = "_fluent_overlay_input_active";
-
-QWidget* owningWidget(QObject* object)
-{
-    for (auto* node = object; node; node = node->parent()) {
-        if (auto* widget = qobject_cast<QWidget*>(node))
-            return widget;
-    }
-    return nullptr;
-}
-
-bool belongsToWindow(QObject* object, QWidget* top)
-{
-    if (!top)
-        return false;
-    if (auto* native = qobject_cast<QWindow*>(object))
-        return native == top->window()->windowHandle();
-    auto* widget = owningWidget(object);
-    return widget && widget->window() == top->window();
-}
 
 // Keep the matching release out of the background even when dismissal deletes
 // the overlay synchronously. The next press/deactivation ends a lost gesture.
@@ -58,9 +39,10 @@ public:
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override
     {
-        if (!belongsToWindow(watched, m_top))
+        if (!::compatibility::detail::eventReceiverBelongsToWindow(watched, m_top))
             return false;
-        if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::WindowDeactivate) {
+        if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonDblClick
+            || event->type() == QEvent::WindowDeactivate) {
             qApp->removeEventFilter(this);
             deleteLater();
         } else if (event->type() == QEvent::MouseButtonRelease
@@ -93,7 +75,8 @@ public:
         QTimer::singleShot(0, this, [this] {
             auto* focus = QApplication::focusWidget();
             if (m_owner && m_owner->m_inputActive && m_owner->m_modal && m_owner->m_overlay
-                && !m_owner->hasInputOverlayAbove() && belongsToWindow(focus, m_owner->m_topLevel)
+                && !m_owner->hasInputOverlayAbove()
+                && ::compatibility::detail::eventReceiverBelongsToWindow(focus, m_owner->m_topLevel)
                 && focus != m_owner->m_overlay && !m_owner->m_overlay->isAncestorOf(focus))
                 m_owner->focusInside(false);
         });
@@ -324,10 +307,12 @@ void OverlayCoordinator::focusInside(bool backwards)
 
 bool OverlayCoordinator::filterInput(QObject* watched, QEvent* event)
 {
-    if (!m_overlay || !m_overlay->isVisible() || !belongsToWindow(watched, m_topLevel) || hasInputOverlayAbove())
+    if (!m_overlay || !m_overlay->isVisible() || hasInputOverlayAbove()
+        || (!::compatibility::detail::eventReceiverBelongsToWindow(watched, m_topLevel)
+            && !::compatibility::detail::popupGrabPressBelongsToWindow(watched, event, m_topLevel)))
         return false;
     if (event->type() == QEvent::FocusIn || event->type() == QEvent::Shortcut) {
-        auto* widget = owningWidget(watched);
+        auto* widget = ::compatibility::detail::widgetForEventReceiver(watched);
         if (m_modal && widget && widget != m_overlay && !m_overlay->isAncestorOf(widget)) {
             if (event->type() == QEvent::FocusIn)
                 focusInside(static_cast<QFocusEvent*>(event)->reason() == Qt::BacktabFocusReason);
@@ -348,9 +333,9 @@ bool OverlayCoordinator::filterInput(QObject* watched, QEvent* event)
     bool press = false;
     switch (event->type()) {
     case QEvent::MouseButtonPress:
+    case QEvent::MouseButtonDblClick:
         press = true;
         Q_FALLTHROUGH();
-    case QEvent::MouseButtonDblClick:
     case QEvent::MouseButtonRelease:
     case QEvent::MouseMove:
         global = fluentMouseGlobalPos(static_cast<QMouseEvent*>(event));

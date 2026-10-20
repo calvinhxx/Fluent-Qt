@@ -46,10 +46,10 @@ class GalleryQmlPlusTest(unittest.TestCase):
         self.assertEqual([card.property("gallerySampleId") for card in cards], list(sample_ids()))
         for card in cards:
             sample_id = card.property("gallerySampleId")
-            code = card.findChild(fluentqt.Expander, "galleryCodeBlock")
+            code = card.findChild(fluentqt.CodeBlock, "galleryCodeBlock")
             self.assertIsNotNone(code)
             self.assertIsNone(code.findChild(QWidget, "galleryCodeBlockLanguageSelector"))
-            code._copy_source()
+            code.copy()
             source = QApplication.clipboard().text()
             self.assertEqual(source, python_source(sample_id))
             self.assertLessEqual(len(source.strip().splitlines()), 20)
