@@ -23,8 +23,8 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 89,
-    "public_headers": 163,
+    "components": 91,
+    "public_headers": 166,
     "categories": 15
   },
   "categories": [
@@ -71,7 +71,7 @@
     {
       "id": "menus-toolbars",
       "title": "Menus & toolbars",
-      "component_count": 4
+      "component_count": 5
     },
     {
       "id": "navigation",
@@ -91,7 +91,7 @@
     {
       "id": "text-fields",
       "title": "Text fields",
-      "component_count": 6
+      "component_count": 7
     },
     {
       "id": "windowing",
@@ -1083,7 +1083,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestDrawerView.cpp"
         }
       ],
-      "sample_count": 4
+      "sample_count": 5
     },
     {
       "id": "file-list-view",
@@ -1643,7 +1643,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/dialogs_flyouts/TestDialog.cpp"
         }
       ],
-      "sample_count": 2
+      "sample_count": 3
     },
     {
       "id": "flyout",
@@ -1713,7 +1713,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/dialogs_flyouts/TestPopup.cpp"
         }
       ],
-      "sample_count": 2
+      "sample_count": 3
     },
     {
       "id": "teaching-tip",
@@ -1958,7 +1958,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/layout/TestField.cpp"
         }
       ],
-      "sample_count": 3
+      "sample_count": 4
     },
     {
       "id": "particle-backdrop",
@@ -2388,6 +2388,41 @@
           "target": "test_command_bar",
           "ctest_label": "test_command_bar",
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/menus_toolbars/TestCommandBar.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "command-palette",
+      "title": "CommandPalette",
+      "category_id": "menus-toolbars",
+      "description": "Find and run an action by typing its name. Use the keyboard to choose a result and press Enter to execute it.",
+      "capabilities": [
+        "command-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/MenusToolbars.h>",
+        "installed_declaration_header": "<FluentQt/components/menus_toolbars/CommandPalette.h>",
+        "qualified_type": "fluent::menus_toolbars::CommandPalette",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/menus_toolbars/CommandPalette.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.menus_toolbars",
+        "type": "CommandPalette",
+        "import_statement": "from fluentqt.menus_toolbars import CommandPalette"
+      },
+      "gallery": {
+        "route_id": "command-palette",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=command-palette",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/MenusToolbarsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_command_palette",
+          "ctest_label": "test_command_palette",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/menus_toolbars/TestCommandPalette.cpp"
         }
       ],
       "sample_count": 3
@@ -3123,6 +3158,41 @@
           "target": "test_auto_suggest_box",
           "ctest_label": "test_auto_suggest_box",
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestAutoSuggestBox.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "code-block",
+      "title": "CodeBlock",
+      "category_id": "text-fields",
+      "description": "Read-only code with syntax colors, exact copying, folding and bounded scrolling.",
+      "capabilities": [
+        "text-and-numeric-input"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/TextFields.h>",
+        "installed_declaration_header": "<FluentQt/components/textfields/CodeBlock.h>",
+        "qualified_type": "fluent::textfields::CodeBlock",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/CodeBlock.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.textfields",
+        "type": "CodeBlock",
+        "import_statement": "from fluentqt.textfields import CodeBlock"
+      },
+      "gallery": {
+        "route_id": "code-block",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=code-block",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/TextFieldsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_code_block",
+          "ctest_label": "test_code_block",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestCodeBlock.cpp"
         }
       ],
       "sample_count": 2
@@ -4259,6 +4329,17 @@
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/WidgetOwnership.h"
     },
     {
+      "include": "<FluentQt/components/foundation/FormController.h>",
+      "source": "src/components/foundation/FormController.h",
+      "summary": "Coordinates borrowed Fields without owning values, validators, or requests.",
+      "declarations": [
+        "FormController",
+        "Entry",
+        "Status"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/FormController.h"
+    },
+    {
       "include": "<FluentQt/components/foundation/plugins/Plugin.h>",
       "source": "src/components/foundation/plugins/Plugin.h",
       "summary": "Describes an extension and the plugin IDs it requires before activation.",
@@ -4429,6 +4510,15 @@
         "ShowMode"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/menus_toolbars/CommandBarFlyout.h"
+    },
+    {
+      "include": "<FluentQt/components/menus_toolbars/CommandPalette.h>",
+      "source": "src/components/menus_toolbars/CommandPalette.h",
+      "summary": "Searchable same-window presentation of borrowed application actions.",
+      "declarations": [
+        "CommandPalette"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/menus_toolbars/CommandPalette.h"
     },
     {
       "include": "<FluentQt/components/menus_toolbars/Menu.h>",
@@ -4808,6 +4898,15 @@
         "QueryButtonPlacement"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/AutoSuggestBox.h"
+    },
+    {
+      "include": "<FluentQt/components/textfields/CodeBlock.h>",
+      "source": "src/components/textfields/CodeBlock.h",
+      "summary": "Read-only, selectable code with syntax colors, folding and bounded scrolling.",
+      "declarations": [
+        "CodeBlock"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/CodeBlock.h"
     },
     {
       "include": "<FluentQt/components/textfields/EditingCommandRouter.h>",

@@ -86,6 +86,7 @@ from .foundation import (
     BindingHandle,
     FluentWidget,
     FontIcon,
+    FormController,
     FontRole,
     MotionKind,
     MotionMode,
@@ -133,6 +134,7 @@ from .layout import Accordion, Card, Divider, Expander, Field, ParticleBackdrop
 from .menus_toolbars import (
     CommandBar,
     CommandBarFlyout,
+    CommandPalette,
     FluentMenu,
     FluentMenuBar,
     FluentMenuItem,
@@ -173,6 +175,7 @@ from .status_info import (
 )
 from .textfields import (
     AutoSuggestBox,
+    CodeBlock,
     EditingCommandRouter,
     Label,
     LineEdit,
@@ -294,6 +297,7 @@ __all__ = [
     "AnnotatedScrollBar",
     "AnnotatedScrollBarLabel",
     "AutoSuggestBox",
+    "CodeBlock",
     "Avatar",
     "Breadcrumb",
     "BreadcrumbItem",
@@ -319,6 +323,7 @@ __all__ = [
     "ComboBox",
     "CommandBar",
     "CommandBarFlyout",
+    "CommandPalette",
     "CoachMark",
     "CompoundButton",
     "ContentDialog",
@@ -338,6 +343,7 @@ __all__ = [
     "Expander",
     "Field",
     "FontIcon",
+    "FormController",
     "FontRole",
     "MotionKind",
     "MotionMode",

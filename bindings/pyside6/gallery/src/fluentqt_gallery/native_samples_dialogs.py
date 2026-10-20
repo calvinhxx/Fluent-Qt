@@ -5,6 +5,7 @@ from __future__ import annotations
 from textwrap import dedent
 
 from .native_samples import register_source_samples
+from .native_samples_overlays import overlay_effects_source
 
 
 def _script(body: str, imports: str = "") -> str:
@@ -215,140 +216,92 @@ register_source_samples(
     "dialog",
     ("Dialog",),
     {
+        "dialog-backdrop-effects": (
+            "root", overlay_effects_source("Dialog", "Gallery.Dialog", "Preview background effects"),
+        ),
         "dialog-owned-content": (
             "root",
-            _script(
-                _DIALOGS_HELPER
-                + dedent("""
-                root = SampleSurface(globals().get("gallery_parent"))
-                row = horizontal_group(root, 12)
-                show = sample_button(row, "Open dialog")
-                show.setMinimumWidth(118)
-                status = make_status_label(
-                    row, "Project name: Northwind Analytics"
-                )
-                row.layout().addWidget(show)
-                row.layout().addWidget(status)
-                root.content_layout.addWidget(row)
-
-                def open_dialog():
-                    dialog = fluentqt.Dialog(show.window())
-                    if hasattr(dialog, "setThemeSource"):
-                        dialog.setThemeSource(show)
+            _script("""
+                root = QWidget(globals().get("gallery_parent"))
+                layout = QVBoxLayout(root)
+                open_button = fluentqt.Button("Rename project", root)
+                open_button.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
+                status = fluentqt.Label("Project name: Northwind Analytics", root)
+                layout.addWidget(open_button, 0, Qt.AlignmentFlag.AlignLeft)
+                layout.addWidget(status)
+                def rename_project():
+                    dialog = fluentqt.Dialog(open_button.window())
+                    dialog.setThemeSource(open_button)
                     dialog.setMinimumSize(480, 280)
-                    dialog_layout = QVBoxLayout(dialog)
-                    dialog_layout.setContentsMargins(32, 28, 32, 28)
-                    dialog_layout.setSpacing(14)
-                    dialog_layout.addWidget(
-                        make_title_label(dialog, "Rename project")
+                    content = QVBoxLayout(dialog)
+                    content.setContentsMargins(32, 28, 32, 28)
+                    content.setSpacing(14)
+                    title = fluentqt.Label("Rename project", dialog)
+                    title.setFluentTypography(fluentqt.FontRole.Subtitle)
+                    content.addWidget(title)
+                    name = fluentqt.LineEdit(dialog)
+                    name.setAccessibleName("Project name")
+                    name.setText(status.text().replace("Project name: ", ""))
+                    content.addWidget(name)
+                    content.addStretch()
+                    commands = QHBoxLayout()
+                    cancel = fluentqt.Button("Cancel", dialog)
+                    apply = fluentqt.Button("Apply", dialog)
+                    apply.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
+                    commands.addStretch()
+                    commands.addWidget(cancel)
+                    commands.addWidget(apply)
+                    content.addLayout(commands)
+                    cancel.clicked.connect(dialog.reject)
+                    apply.clicked.connect(dialog.accept)
+                    dialog.accepted.connect(
+                        lambda: status.setText(f"Project name: {name.text()}")
                     )
-                    dialog_layout.addWidget(
-                        make_body_label(
-                            dialog,
-                            "Choose a display name that appears in navigation "
-                            "and recent projects.",
-                        )
-                    )
-                    name_edit = fluentqt.LineEdit(dialog)
-                    name_edit.setText("Northwind Analytics")
-                    dialog_layout.addWidget(name_edit)
-                    dialog_layout.addStretch(1)
-
-                    button_row = QHBoxLayout()
-                    button_row.setSpacing(8)
-                    button_row.addStretch(1)
-                    apply_button = fluentqt.Button("Apply", dialog)
-                    apply_button.setFluentStyle(
-                        fluentqt.Button.ButtonStyle.Accent
-                    )
-                    cancel_button = fluentqt.Button("Cancel", dialog)
-                    apply_button.clicked.connect(lambda: dialog.done(1))
-                    cancel_button.clicked.connect(lambda: dialog.done(0))
-                    button_row.addWidget(apply_button)
-                    button_row.addWidget(cancel_button)
-                    dialog_layout.addLayout(button_row)
-
-                    def finish_dialog(result):
-                        if result == 1:
-                            status.setText(
-                                f"Project name: {name_edit.text()}"
-                            )
-                        dialog.deleteLater()
-
-                    dialog.finished.connect(finish_dialog)
+                    dialog.finished.connect(dialog.deleteLater)
                     dialog.open()
-
-                show.clicked.connect(open_dialog)
-                """),
-                _DIALOGS_IMPORTS,
-            ),
+                open_button.clicked.connect(rename_project)
+            """, _DIALOGS_IMPORTS),
         ),
         "dialog-animation-smoke": (
             "root",
-            _script(
-                _DIALOGS_HELPER
-                + dedent("""
-                root = SampleSurface(globals().get("gallery_parent"))
-                row = horizontal_group(root, 10)
-                animated = sample_button(row, "Animated smoke")
-                animated.setMinimumWidth(136)
-                instant = sample_button(row, "Instant")
-                status = make_status_label(root, "Last dialog: none")
-                row.layout().addWidget(animated)
-                row.layout().addWidget(instant)
-                root.content_layout.addWidget(row)
-                root.content_layout.addWidget(status)
-
-                def open_dialog(trigger, animation, smoke):
+            _script("""
+                root = QWidget(globals().get("gallery_parent"))
+                layout = QVBoxLayout(root)
+                animated = fluentqt.Button("Animated", root)
+                instant = fluentqt.Button("Instant", root)
+                buttons = QHBoxLayout()
+                buttons.addWidget(animated)
+                buttons.addWidget(instant)
+                buttons.addStretch()
+                layout.addLayout(buttons)
+                def show_dialog(trigger, animation):
                     dialog = fluentqt.Dialog(trigger.window())
-                    if hasattr(dialog, "setThemeSource"):
-                        dialog.setThemeSource(trigger)
-                    dialog.setSmokeEnabled(smoke)
+                    dialog.setThemeSource(trigger)
+                    dialog.setModal(True)
+                    dialog.setDim(True)
                     dialog.setAnimationEnabled(animation)
                     dialog.setMinimumSize(420, 220)
-                    dialog_layout = QVBoxLayout(dialog)
-                    dialog_layout.setContentsMargins(30, 28, 30, 28)
-                    dialog_layout.setSpacing(12)
-                    dialog_layout.addWidget(
-                        make_title_label(
-                            dialog,
-                            "Animated dialog" if animation else "Instant dialog",
-                        )
+                    content = QVBoxLayout(dialog)
+                    content.setContentsMargins(30, 28, 30, 28)
+                    title = fluentqt.Label(
+                        "Animated dialog" if animation else "Instant dialog", dialog
                     )
-                    dialog_layout.addWidget(
-                        make_body_label(
-                            dialog,
-                            "Smoke focuses attention by dimming the owning window."
-                            if smoke
-                            else "No smoke keeps the surrounding window visually available.",
-                        )
+                    title.setFluentTypography(fluentqt.FontRole.Subtitle)
+                    content.addWidget(title)
+                    text = fluentqt.Label(
+                        "Only the opening animation changes; the background remains blocked.",
+                        dialog,
                     )
-                    dialog_layout.addStretch(1)
-                    close_button = sample_button(dialog, "Close")
-                    close_button.clicked.connect(lambda: dialog.done(0))
-                    dialog_layout.addWidget(
-                        close_button, 0, Qt.AlignmentFlag.AlignRight
-                    )
-                    def finish_dialog(_result):
-                        status.setText(
-                            "Last dialog: animated with smoke"
-                            if animation
-                            else "Last dialog: instant without smoke"
-                        )
-                        dialog.deleteLater()
-
-                    dialog.finished.connect(finish_dialog)
+                    text.setWordWrap(True)
+                    content.addWidget(text)
+                    close = fluentqt.Button("Close", dialog)
+                    content.addWidget(close, 0, Qt.AlignmentFlag.AlignRight)
+                    close.clicked.connect(dialog.reject)
+                    dialog.finished.connect(dialog.deleteLater)
                     dialog.open()
-
-                animated.clicked.connect(
-                    lambda: open_dialog(animated, True, True)
-                )
-                instant.clicked.connect(
-                    lambda: open_dialog(instant, False, False)
-                )
-                """),
-                _DIALOGS_IMPORTS,
-            ),
+                animated.clicked.connect(lambda: show_dialog(animated, True))
+                instant.clicked.connect(lambda: show_dialog(instant, False))
+            """, _DIALOGS_IMPORTS),
         ),
     },
 )
@@ -500,6 +453,34 @@ register_source_samples(
     "popup",
     ("Popup",),
     {
+        "popup-basic": (
+            "root",
+            _script("""
+                root = QWidget(globals().get("gallery_parent"))
+                layout = QVBoxLayout(root)
+                open_button = fluentqt.Button("Show quick note", root)
+                open_button.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
+                layout.addWidget(open_button, 0, Qt.AlignmentFlag.AlignLeft)
+
+                def show_note():
+                    popup = fluentqt.Popup(open_button.window())
+                    popup.setThemeSource(open_button)
+                    content = QVBoxLayout(popup)
+                    content.setContentsMargins(24, 22, 24, 22)
+                    title = fluentqt.Label("Quick note", popup)
+                    title.setFluentTypography(fluentqt.FontRole.BodyStrong)
+                    content.addWidget(title)
+                    text = fluentqt.Label(
+                        "Click outside or press Escape to close.", popup
+                    )
+                    content.addWidget(text)
+                    popup.setPosition(open_button, QPoint(0, open_button.height() + 8))
+                    popup.closed.connect(popup.deleteLater)
+                    popup.open()
+
+                open_button.clicked.connect(show_note)
+            """, _DIALOGS_IMPORTS),
+        ),
         "popup-position-light-dismiss": (
             "root",
             _script(
@@ -570,70 +551,7 @@ register_source_samples(
             ),
         ),
         "popup-modal-dim": (
-            "root",
-            _script(
-                _DIALOGS_HELPER
-                + dedent("""
-                root = SampleSurface(globals().get("gallery_parent"))
-                row = horizontal_group(root, 12)
-                show = sample_button(row, "Review access")
-                show.setMinimumWidth(128)
-                status = make_status_label(row, "Access review: pending")
-                row.layout().addWidget(show)
-                row.layout().addWidget(status)
-                root.content_layout.addWidget(row)
-
-                def open_popup():
-                    popup = fluentqt.Popup(show.window())
-                    if hasattr(popup, "setThemeSource"):
-                        popup.setThemeSource(show)
-                    popup.setModal(True)
-                    popup.setDim(True)
-                    popup.setClosePolicy(fluentqt.Popup.CloseOnEscape)
-                    popup.setMinimumSize(400, 220)
-                    popup_layout = QVBoxLayout(popup)
-                    popup_layout.setContentsMargins(28, 26, 28, 26)
-                    popup_layout.setSpacing(12)
-                    popup_layout.addWidget(
-                        make_title_label(popup, "Grant editor access?")
-                    )
-                    popup_layout.addWidget(
-                        make_body_label(
-                            popup,
-                            "The recipient will be able to update shared "
-                            "project files immediately.",
-                        )
-                    )
-                    popup_layout.addStretch(1)
-                    commands = horizontal_group(popup, 8)
-                    grant = sample_button(commands, "Grant")
-                    grant.setFluentStyle(
-                        fluentqt.Button.ButtonStyle.Accent
-                    )
-                    cancel = sample_button(commands, "Cancel")
-
-                    def finish(message):
-                        status.setText(message)
-                        popup.close()
-
-                    grant.clicked.connect(
-                        lambda: finish("Access review: granted")
-                    )
-                    cancel.clicked.connect(
-                        lambda: finish("Access review: canceled")
-                    )
-                    commands.layout().addWidget(grant)
-                    commands.layout().addWidget(cancel)
-                    popup_layout.addWidget(
-                        commands, 0, Qt.AlignmentFlag.AlignRight
-                    )
-                    popup.closed.connect(popup.deleteLater)
-                    popup.open()
-
-                show.clicked.connect(open_popup)
-                """),
-                _DIALOGS_IMPORTS,
-            ),
+            "root", overlay_effects_source("Popup", "Gallery.Popup", "Preview background effects"),
         ),
     },
 )

@@ -56,6 +56,12 @@ DrawerView::DrawerView(QWidget* parent) : QWidget(parent), m_originalParent(pare
 {
     detail::ensureDrawerViewAccessibilityFactory();
     m_overlayCoordinator = new ::fluent::overlay::OverlayCoordinator(this, this);
+    m_overlayCoordinator->setClosePolicy(int(m_closePolicy));
+    m_overlayCoordinator->setModal(true);
+    m_overlayCoordinator->setDim(true);
+    m_overlayCoordinator->setHitTest([this](const QPoint& global) { return isPointInsidePanel(global); });
+    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::dismissRequested, this, [this] { close(); });
+
     connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this, [this]() {
         if (!isVisible() && !m_isOpen && !m_drag.active)
             return;
@@ -65,12 +71,6 @@ DrawerView::DrawerView(QWidget* parent) : QWidget(parent), m_originalParent(pare
         }
         updateOverlayGeometry();
     });
-    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::scrimPressed, this,
-        [this](const QPoint& globalPos) {
-            if (isVisible() && shouldCloseOnOutsidePress() && !isPointInsidePanel(globalPos)) {
-                close();
-            }
-        });
 
     setAttribute(Qt::WA_NoSystemBackground);
     setAttribute(Qt::WA_TranslucentBackground);
@@ -113,6 +113,7 @@ DrawerView::~DrawerView()
 void DrawerView::onThemeUpdated()
 {
     update();
+    ::fluent::overlay::refreshFluentDescendants(this);
     if (auto* scrimElement = dynamic_cast<FluentElement*>(m_overlayCoordinator->scrim()))
         scrimElement->onThemeUpdated();
 }
@@ -175,25 +176,74 @@ void DrawerView::setAvailableMargins(const QMargins& margins)
     emit availableMarginsChanged(m_availableMargins);
 }
 
+bool DrawerView::isModal() const
+{
+    return m_overlayCoordinator->isModal();
+}
+
 void DrawerView::setModal(bool modal)
 {
-    if (m_modal == modal)
+    const double previousBlur = backdropBlurRadius();
+    if (!m_overlayCoordinator->setModal(modal))
         return;
-
-    m_modal = modal;
+    const double currentBlur = backdropBlurRadius();
+    const auto blurRevision = m_overlayCoordinator->backdropBlurRevision();
+    QPointer<DrawerView> guard(this);
     updateScrimState();
-    detail::notifyDrawerViewAccessibilityModalChanged(this);
-    emit modalChanged(m_modal);
+    if (!guard)
+        return;
+    emit modalChanged(isModal());
+    // A reentrant handler may replace the automatic value and notify it itself.
+    // zh_CN: 重入处理可能覆盖自动值并自行发送通知，避免再发送过期通知。
+    if (guard && previousBlur != currentBlur && blurRevision == m_overlayCoordinator->backdropBlurRevision())
+        emit backdropBlurRadiusChanged(currentBlur);
+    if (guard)
+        detail::notifyDrawerViewAccessibilityModalChanged(guard.data());
+}
+
+bool DrawerView::isDim() const
+{
+    return m_overlayCoordinator->isDim();
 }
 
 void DrawerView::setDim(bool dim)
 {
-    if (m_dim == dim)
+    if (!m_overlayCoordinator->setDim(dim))
         return;
-
-    m_dim = dim;
     updateScrimState();
-    emit dimChanged(m_dim);
+    QPointer<DrawerView> guard(this);
+    emit dimChanged(isDim());
+}
+
+double DrawerView::dimOpacity() const
+{
+    return m_overlayCoordinator->dimOpacity();
+}
+
+void DrawerView::setDimOpacity(double opacity)
+{
+    if (!m_overlayCoordinator->setDimOpacity(opacity))
+        return;
+    updateScrimState();
+    emit dimOpacityChanged(dimOpacity());
+}
+
+double DrawerView::backdropBlurRadius() const
+{
+    return m_overlayCoordinator->backdropBlurRadius();
+}
+
+void DrawerView::setBackdropBlurRadius(double radius)
+{
+    if (!m_overlayCoordinator->setBackdropBlurRadius(radius))
+        return;
+    updateScrimState();
+    emit backdropBlurRadiusChanged(backdropBlurRadius());
+}
+
+void DrawerView::refreshBackdrop()
+{
+    m_overlayCoordinator->refreshBackdrop();
 }
 
 void DrawerView::setClosePolicy(ClosePolicy policy)
@@ -202,6 +252,7 @@ void DrawerView::setClosePolicy(ClosePolicy policy)
         return;
 
     m_closePolicy = policy;
+    m_overlayCoordinator->setClosePolicy(int(m_closePolicy));
     detail::notifyDrawerViewAccessibilityActionsChanged(this);
     emit closePolicyChanged(m_closePolicy);
 }
@@ -464,15 +515,8 @@ bool DrawerView::eventFilter(QObject* watched, QEvent* event)
         return false;
     }
 
-    if (event->type() == QEvent::KeyPress) {
-        auto* keyEvent = static_cast<QKeyEvent*>(event);
-        if (isVisible() && keyEvent->key() == Qt::Key_Escape && shouldCloseOnEscape()) {
-            close();
-            keyEvent->accept();
-            return true;
-        }
+    if (m_overlayCoordinator->hasInputOverlayAbove())
         return false;
-    }
 
     switch (event->type()) {
     case QEvent::MouseButtonPress: {
@@ -483,10 +527,6 @@ bool DrawerView::eventFilter(QObject* watched, QEvent* event)
             return false;
 
         const QPoint globalPos = fluentMouseGlobalPos(mouseEvent);
-        if (isVisible() && shouldCloseOnOutsidePress() && !isPointInsidePanel(globalPos)) {
-            close();
-            return false;
-        }
 
         if (!isEnabled() || !m_interactive || m_positionAnimation->state() == QAbstractAnimation::Running)
             return false;
@@ -668,6 +708,8 @@ void DrawerView::ensureAttachedToTopLevel()
     if (!top)
         return;
 
+    if (::fluent::overlay::syncInheritedThemeOverride(this, m_originalParent))
+        onThemeUpdated();
     m_overlayCoordinator->attachTo(top);
 }
 
@@ -690,6 +732,7 @@ void DrawerView::beginVisibleTransition()
     }
 
     show();
+    m_overlayCoordinator->setInputActive(true);
     updateScrimState();
     raiseOverlayStack();
     if (m_contentWidget)
@@ -749,7 +792,7 @@ void DrawerView::startPositionAnimation(qreal endPosition, TransitionTarget targ
     const auto animation = themeAnimation();
     m_transitionTarget = target;
     m_positionAnimation->setDuration(animation.normal);
-    m_positionAnimation->setEasingCurve(target == TransitionTarget::Open ? animation.decelerate : animation.accelerate);
+    m_positionAnimation->setEasingCurve(target == TransitionTarget::Open ? animation.decelerate : animation.standard);
     m_positionAnimation->setStartValue(m_position);
     m_positionAnimation->setEndValue(endPosition);
     ::fluent::detail::startMotionTransition(m_positionAnimation, animation.normal, m_animationEnabled);
@@ -899,16 +942,15 @@ void DrawerView::updateScrimState()
     if (!top)
         return;
 
-    if (!m_modal && !m_dim) {
+    if (!m_overlayCoordinator->needsScrim()) {
         destroyScrim();
         return;
     }
 
     m_overlayCoordinator->attachTo(top);
-    auto* scrim = m_overlayCoordinator->ensureScrim(QStringLiteral("DrawerViewScrim"));
+    auto* scrim = m_overlayCoordinator->updateScrim(QStringLiteral("DrawerViewScrim"));
     if (!scrim)
         return;
-    scrim->setModalAndDim(m_modal, m_dim);
     updateScrimOpacity();
     scrim->show();
     raiseOverlayStack();

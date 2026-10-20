@@ -1,9 +1,7 @@
-#include "compatibility/InputEventCompat.h"
 #include "TeachingTip.h"
 
 #include <QEvent>
 #include <QKeyEvent>
-#include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QResizeEvent>
@@ -55,6 +53,16 @@ TeachingTip::TeachingTip(QWidget* parent) : Popup(parent)
 
     m_contentHost = new QWidget(this);
 
+    connect(this, &Popup::closing, this, [this](Popup::CloseReason reason) {
+        // Shared dismissal runs before component event filters. Preserve the
+        // TeachingTip close-reason contract for both outside presses and Escape.
+        // zh_CN: 共享关闭先于组件事件过滤器；外部按下和 Esc 保留 TeachingTip 的兼容关闭原因。
+        if (!m_closeReasonExplicit && isLightDismissEnabled()
+            && (reason == Popup::LightDismiss || reason == Popup::Escape)) {
+            m_pendingCloseReason = LightDismiss;
+            m_closeReasonExplicit = true;
+        }
+    });
     connect(this, &Popup::aboutToHide, this, &TeachingTip::emitClosingReason);
     updateWidgetSize();
     onThemeUpdated();
@@ -190,32 +198,11 @@ bool TeachingTip::eventFilter(QObject* watched, QEvent* event)
         }
     }
 
-    if ((isVisible() || isOpen()) && isLightDismissEnabled() && event->type() == QEvent::KeyPress
-        && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
-        // Popup installs this object as an application event filter, so an
-        // Escape sent to the owning window reaches here before keyPressEvent().
-        // Keep TeachingTip's legacy close-reason surface at LightDismiss.
-        // zh_CN: Popup 会把本对象安装为应用事件过滤器；宿主窗口收到 Esc 时会先到这里，
-        // 早于 keyPressEvent()。TeachingTip 的兼容关闭原因仍保持 LightDismiss。
-        markPendingCloseReason(LightDismiss);
-    }
-
-    if ((isVisible() || isOpen()) && isLightDismissEnabled() && event->type() == QEvent::MouseButtonPress) {
-        auto* mouseEvent = static_cast<QMouseEvent*>(event);
-        const QPoint globalPos = fluentMouseGlobalPos(mouseEvent);
-        if (!rect().contains(mapFromGlobal(globalPos))) {
-            markPendingCloseReason(LightDismiss);
-        }
-    }
-
     return Popup::eventFilter(watched, event);
 }
 
 void TeachingTip::keyPressEvent(QKeyEvent* event)
 {
-    if (event->key() == Qt::Key_Escape && isLightDismissEnabled()) {
-        markPendingCloseReason(LightDismiss);
-    }
     Popup::keyPressEvent(event);
 }
 

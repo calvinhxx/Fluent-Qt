@@ -230,7 +230,9 @@
       "status": "covered",
       "evidence": [
         "src/components/collections/private/DrawerViewAccessibility_p.cpp",
-        "tests/components/TestAuxiliarySurfaceAccessibility.cpp"
+        "tests/components/TestAuxiliarySurfaceAccessibility.cpp",
+        "tests/components/dialogs_flyouts/TestOverlayContract.cpp",
+        "tests/gallery/TestGalleryOverlaySamples.cpp"
       ],
       "gap": ""
     },
@@ -388,7 +390,9 @@
       "risk": "medium",
       "status": "covered",
       "evidence": [
-        "src/components/dialogs_flyouts/Dialog.h"
+        "src/components/dialogs_flyouts/Dialog.h",
+        "tests/components/dialogs_flyouts/TestOverlayContract.cpp",
+        "tests/gallery/TestGalleryOverlaySamples.cpp"
       ],
       "gap": ""
     },
@@ -410,7 +414,11 @@
       "status": "covered",
       "evidence": [
         "src/components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.cpp",
-        "tests/components/dialogs_flyouts/TestTransientAccessibility.cpp"
+        "tests/components/dialogs_flyouts/TestTransientAccessibility.cpp",
+        "tests/components/dialogs_flyouts/TestPopup.cpp",
+        "tests/gallery/TestCommandPaletteSamples.cpp",
+        "tests/components/dialogs_flyouts/TestOverlayContract.cpp",
+        "tests/gallery/TestGalleryOverlaySamples.cpp"
       ],
       "gap": ""
     },
@@ -497,7 +505,9 @@
       "risk": "medium",
       "status": "covered",
       "evidence": [
-        "tests/components/layout/TestField.cpp"
+        "tests/components/layout/TestField.cpp",
+        "tests/components/TestFormController.cpp",
+        "src/components/foundation/FormController.h"
       ],
       "gap": ""
     },
@@ -750,6 +760,18 @@
       "gap": ""
     },
     {
+      "id": "code-block",
+      "classification": "native",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/textfields/CodeBlock.h",
+        "tests/components/textfields/TestCodeBlock.cpp",
+        "src/components/layout/Expander.h"
+      ],
+      "gap": ""
+    },
+    {
       "id": "label",
       "classification": "native",
       "risk": "low",
@@ -963,6 +985,18 @@
       "evidence": [
         "src/components/navigation/Stepper.cpp",
         "tests/components/navigation/TestStepper.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "command-palette",
+      "classification": "augmented",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/menus_toolbars/CommandPalette.cpp",
+        "tests/components/menus_toolbars/TestCommandPalette.cpp",
+        "tests/gallery/TestCommandPaletteSamples.cpp"
       ],
       "gap": ""
     }

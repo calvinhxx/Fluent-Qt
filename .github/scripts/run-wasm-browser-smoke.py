@@ -17,6 +17,8 @@ from urllib.parse import urlencode
 
 from wasm_plugin_contract import run_plugin_extension_contract
 from wasm_command_submenus import run_command_submenus_contract
+from wasm_command_palette import run_command_palette_contract
+from wasm_form import run_form_contract
 
 
 DEFAULT_RENDER_PIXEL_BUDGET = 1_600_000
@@ -1117,6 +1119,8 @@ def run_smoke(
 
             if mode == "full":
                 run_command_submenus_contract(browser, base_url, root / "command-menu-validation")
+                run_command_palette_contract(browser, base_url, root / "command-palette-validation")
+                run_form_contract(browser, base_url, root / "form-validation")
 
             run_hello_world_spatial_contract(browser, base_url, root / "hello-world-validation")
             run_embedded_theme_contract(browser, base_url)

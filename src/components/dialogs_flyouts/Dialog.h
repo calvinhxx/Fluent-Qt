@@ -66,6 +66,23 @@ public:
     Q_PROPERTY(bool smokeEnabled READ isSmokeEnabled WRITE setSmokeEnabled NOTIFY smokeEnabledChanged)
     Q_PROPERTY(bool modal READ isModal WRITE setModal NOTIFY modalChanged)
     Q_PROPERTY(bool dim READ isDim WRITE setDim NOTIFY dimChanged)
+    /**
+     * @brief Scrim opacity in [0, 1]; -1 uses the theme smoke token when dim is enabled.
+     * zh_CN: 遮罩透明度范围 [0, 1]，-1 使用主题烟雾值，仅在 dim 开启时生效。
+     */
+    Q_PROPERTY(double dimOpacity READ dimOpacity WRITE setDimOpacity NOTIFY dimOpacityChanged)
+    /**
+     * @brief Cached owning-window blur radius in logical pixels [0, 32]; 0 disables blur.
+     * zh_CN: 所属窗口背景快照的模糊半径，范围 [0, 32] 逻辑像素；0 关闭模糊。
+     * Defaults to 4 for modal surfaces and 0 otherwise until explicitly set.
+     * Explicit values, including 0, persist across modality changes.
+     * zh_CN: 未显式设置时，模态默认 4，非模态默认 0；显式值（包括 0）不随模态变化。
+     */
+    Q_PROPERTY(double backdropBlurRadius
+        READ backdropBlurRadius
+        WRITE setBackdropBlurRadius
+        NOTIFY backdropBlurRadiusChanged)
+
     Q_PROPERTY(ClosePolicy closePolicy READ closePolicy WRITE setClosePolicy NOTIFY closePolicyChanged)
 
     explicit Dialog(QWidget* parent = nullptr);
@@ -81,13 +98,23 @@ public:
     bool isDragEnabled() const { return m_dragEnabled; }
 
     void setSmokeEnabled(bool enabled);
-    bool isSmokeEnabled() const { return m_modal && m_dim; }
+    bool isSmokeEnabled() const { return isModal() && isDim(); }
 
-    bool isModal() const { return m_modal; }
+    bool isModal() const;
     void setModal(bool modal);
 
-    bool isDim() const { return m_dim; }
+    bool isDim() const;
     void setDim(bool dim);
+
+    double dimOpacity() const;
+    void setDimOpacity(double opacity);
+    double backdropBlurRadius() const;
+    void setBackdropBlurRadius(double radius);
+    /**
+     * @brief Recaptures the owning-window content after background changes.
+     * zh_CN: 背景内容变化后重新采集所属窗口快照。
+     */
+    Q_SLOT void refreshBackdrop();
 
     ClosePolicy closePolicy() const { return m_closePolicy; }
     void setClosePolicy(ClosePolicy policy);
@@ -130,6 +157,8 @@ signals:
     void smokeEnabledChanged(bool enabled);
     void modalChanged(bool modal);
     void dimChanged(bool dim);
+    void dimOpacityChanged(double opacity);
+    void backdropBlurRadiusChanged(double radius);
     void closePolicyChanged(ClosePolicy policy);
 
 protected:
@@ -166,8 +195,6 @@ private:
 
     const int m_shadowSize = ::Spacing::Standard;
 
-    bool m_modal = false;
-    bool m_dim = false;
     ClosePolicy m_closePolicy = ClosePolicy(CloseOnEscape);
     bool m_dragEnabled = true;
     QPoint m_dragOffset;
@@ -186,7 +213,6 @@ private:
 
     QPropertyAnimation* m_animation = nullptr;
     QGraphicsOpacityEffect* m_opacityEffect = nullptr;
-    QPropertyAnimation* m_smokeAnim = nullptr;
     QSize m_targetSize;
     QSize m_savedMinSize;
     QSize m_savedMaxSize;

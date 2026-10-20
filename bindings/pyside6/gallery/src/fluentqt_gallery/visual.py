@@ -4,16 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
-import html
-import io
 import json
-import keyword
 import math
 from pathlib import Path
 import re
 import sys
-import token
-import tokenize
 from typing import Callable, Iterable
 
 import fluentqt
@@ -1964,8 +1959,8 @@ class GalleryReferenceCard(QFrame):
             )
 
 
-class GalleryCodeBlock(fluentqt.Expander):
-    """Source-code expander matching the native GalleryCodeBlock structure."""
+class GalleryCodeBlock(fluentqt.CodeBlock):
+    """Gallery source selection around the shared native CodeBlock."""
 
     def __init__(self, code: str, parent: QWidget | None = None,
                  *, full_code: str | None = None,
@@ -1973,101 +1968,45 @@ class GalleryCodeBlock(fluentqt.Expander):
         super().__init__(parent)
         self._source_files = tuple(dict(source) for source in source_files or ())
         self._file_index = 0
-        self._code_language = "python"
-        if self._source_files:
-            source = self._source_files[0]
-            full_code = source["code"]
-            code = source.get("usage_snippet") or full_code
-            self._code_language = source["language"]
         self._key_code = code
         self._full_code = full_code or code
         self._code = code
-        # Source extraction keeps a terminal line break for stable formatting,
-        # but a rich-text QLabel renders it as an additional empty code line.
-        # Keep the original text for copying and omit serialization-only line
-        # endings from the visual block, matching the native C++ Gallery.
-        self._display_code = code.rstrip("\r\n")
-        self._highlighted = False
         self.setObjectName("galleryCodeBlock")
-        self.setAppearance(fluentqt.Card.Appearance.LayerAlt)
-        self.setHeaderText("Source code")
-        header = self.findChild(QWidget, "fluentExpanderHeader")
-        if header is not None:
-            header.setObjectName("galleryCodeBlockHeader")
-        caption = self.findChild(
-            fluentqt.Label, "fluentExpanderHeaderText"
-        )
-        if caption is not None:
-            caption.setObjectName("galleryCodeBlockCaption")
-        clip = self.findChild(QWidget, "fluentExpanderClip")
-        if clip is not None:
-            clip.setObjectName("galleryCodeBlockContent")
-
-        content = QWidget()
+        self.setMaxVisibleLines(0)
+        self.setExpandedAnimated(False, False)
+        for old, new in (
+            ("fluentExpanderHeader", "galleryCodeBlockHeader"),
+            ("fluentExpanderHeaderText", "galleryCodeBlockCaption"),
+            ("fluentExpanderClip", "galleryCodeBlockContent"),
+            ("fluentCodeBlockText", "galleryCodeBlockText"),
+            ("fluentCodeBlockCopyButton", "galleryCodeBlockCopyButton"),
+        ):
+            child = self.findChild(QWidget, old)
+            if child is not None:
+                child.setObjectName(new)
+        content = self.contentWidget()
         content.setObjectName("galleryCodeBlockContentInner")
-        content.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        content.setMinimumWidth(0)
-        layout = QVBoxLayout(content)
-        layout.setContentsMargins(16, 12, 14, 16)
-        layout.setSpacing(10)
+        layout = content.layout()
         top = QHBoxLayout()
         top.setContentsMargins(0, 0, 0, 0)
         top.setSpacing(8)
-        language_column = QVBoxLayout()
-        language_column.setContentsMargins(0, 0, 0, 0)
-        language_column.setSpacing(4)
-        language = fluentqt.Label(self._language_name(self._code_language), content)
-        language.setObjectName("galleryCodeBlockLang")
-        language.setFluentTypography(fluentqt.FontRole.Caption)
-        language.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
-        underline = QWidget(content)
-        underline.setObjectName("galleryCodeBlockLangUnderline")
-        underline.setFixedSize(38, 3)
-        language_column.addWidget(language, 0, Qt.AlignLeft)
-        language_column.addWidget(underline, 0, Qt.AlignLeft)
-        copy = fluentqt.Button("", content)
-        copy.setObjectName("galleryCodeBlockCopyButton")
-        copy.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
-        copy.setFluentSize(fluentqt.Button.ButtonSize.Small)
-        copy.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
-        copy.setIconGlyph("\ue8c8", 16)
-        copy.setFixedSize(28, 28)
-        copy.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        fluentqt.ToolTip.attach(copy, "Copy")
-        copy.clicked.connect(self._copy_source)
-        top.addLayout(language_column)
-        self._source_selector = None
-        if (full_code and full_code != code) or any(
-            source.get("usage_snippet") and source["usage_snippet"] != source["code"]
-            for source in self._source_files
-        ):
-            selector = fluentqt.SelectorBar(content)
-            selector.setObjectName("galleryCodeBlockSourceSelector")
-            selector.setAccessibleName("Source detail")
-            selector.setItemFontRole(fluentqt.FontRole.Caption)
-            selector.addItem("Key usage")
-            selector.addItem("Full example")
-            selector.setSelectedIndex(0)
-            selector.selectedIndexChanged.connect(self._update_selected_source)
-            selector.setVisible(bool(full_code and full_code != code))
-            top.addWidget(selector)
-            self._source_selector = selector
+        self._language = fluentqt.Label("Python", content)
+        self._language.setObjectName("galleryCodeBlockLang")
+        self._language.setFluentTypography(fluentqt.FontRole.Caption)
+        self._language.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+        top.addWidget(self._language, 0, Qt.AlignVCenter)
+        self._source_selector = fluentqt.SelectorBar(content)
+        self._source_selector.setObjectName("galleryCodeBlockSourceSelector")
+        self._source_selector.setAccessibleName("Source detail")
+        self._source_selector.setItemFontRole(fluentqt.FontRole.Caption)
+        self._source_selector.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        self._source_selector.addItem("Key usage")
+        self._source_selector.addItem("Full example")
+        self._source_selector.setSelectedIndex(0)
+        self._source_selector.selectedIndexChanged.connect(self._update_selected_source)
+        top.addWidget(self._source_selector, 0, Qt.AlignVCenter)
         top.addStretch()
-        top.addWidget(copy, 0, Qt.AlignTop)
-
-        code_label = fluentqt.Label("", content)
-        code_label.setObjectName("galleryCodeBlockText")
-        code_label.setTextFormat(Qt.TextFormat.RichText)
-        code_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        code_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-        code_label.setTextColorRole(fluentqt.Label.TextColorRole.Primary)
-        code_label.setWordWrap(True)
-        code_label.setMinimumWidth(0)
-        code_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        fixed = QFontDatabase.systemFont(QFontDatabase.FixedFont)
-        fixed.setPixelSize(14)
-        code_label.setFont(fixed)
-        layout.addLayout(top)
+        layout.insertLayout(0, top)
         self._file_selector = None
         if len(self._source_files) > 1:
             files = QHBoxLayout()
@@ -2084,7 +2023,7 @@ class GalleryCodeBlock(fluentqt.Expander):
             file_selector.setContentPaddingV(5)
             file_selector.setFixedHeight(32)
             file_selector.setMinimumWidth(0)
-            file_selector.setMaximumWidth(280)
+            file_selector.setMaximumWidth(240)
             file_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             file_selector.addItems([source["name"] for source in self._source_files])
             file_selector.setCurrentIndex(0)
@@ -2093,22 +2032,17 @@ class GalleryCodeBlock(fluentqt.Expander):
             files.addWidget(file_caption)
             files.addWidget(file_selector, 1)
             files.addStretch()
-            layout.addLayout(files)
+            layout.insertLayout(1, files)
             self._file_selector = file_selector
-        layout.addWidget(code_label)
-        self.setOwnedContentWidget(content)
-        self._language = language
-        self._underline = underline
-        self._copy_button = copy
-        self._code_label = code_label
-        self.expansionTransitionStarted.connect(
-            self._on_expansion_transition_started
-        )
-        self.refresh_theme()
+        self._copy_button = self.findChild(fluentqt.Button, "galleryCodeBlockCopyButton")
+        self._copy_button.setAccessibleName("Copy displayed code")
+        self._code_label = self.findChild(fluentqt.Label, "galleryCodeBlockText")
+        self.copyFinished.connect(self._on_copy_finished)
+        self._update_selected_source()
 
     @staticmethod
     def _language_name(language: str) -> str:
-        return {"python": "Python", "qml": "QML"}.get(language, language)
+        return {"cpp": "C++", "python": "Python", "qml": "QML"}.get(language, language)
 
     def _select_file(self, index: int) -> None:
         if 0 <= index < len(self._source_files):
@@ -2122,287 +2056,33 @@ class GalleryCodeBlock(fluentqt.Expander):
         }
         usage = source.get("usage_snippet", "")
         has_excerpt = bool(usage and usage != source["code"])
-        full_selected = self._source_selector is not None and (
-            self._source_selector.selectedIndex() == 1
-        )
-        if self._source_selector is not None:
-            self._source_selector.setVisible(has_excerpt)
+        self._source_selector.setVisible(has_excerpt)
         self._code_language = source["language"]
         self._language.setText(self._language_name(self._code_language))
-        self._set_code(source["code"] if full_selected or not has_excerpt else usage)
+        self._code = source["code"] if self._source_selector.selectedIndex() == 1 or not has_excerpt else usage
+        self.setLanguage(self._code_language)
+        self.setCode(self._code)
+        self.setHeaderText("Source code")
 
-    @staticmethod
-    def _escape_code(text: str, line_state: list[bool] | None = None) -> str:
-        """Preserve indentation while leaving inter-token spaces wrappable."""
-
-        state = line_state if line_state is not None else [True]
-        escaped: list[str] = []
-        index = 0
-        while index < len(text):
-            current = text[index]
-            if current in "\r\n":
-                if (
-                    current == "\r"
-                    and index + 1 < len(text)
-                    and text[index + 1] == "\n"
-                ):
-                    index += 1
-                escaped.append("<br/>")
-                state[0] = True
-                index += 1
-                continue
-            if current in " \t":
-                width = 0
-                while index < len(text) and text[index] in " \t":
-                    width += 4 if text[index] == "\t" else 1
-                    index += 1
-                if state[0]:
-                    escaped.append("&nbsp;" * width)
-                else:
-                    escaped.append("&nbsp;" * max(0, width - 1) + " ")
-                continue
-            escaped.append(html.escape(current, quote=True))
-            state[0] = False
-            index += 1
-        return "".join(escaped)
-
-    @staticmethod
-    def _token_span(color: str, escaped_text: str) -> str:
-        return '<span style="color:{0};">{1}</span>'.format(
-            color, escaped_text
-        )
-
-    @staticmethod
-    def _syntax_palette(dark: bool) -> dict[str, str]:
-        return (
-            {
-                "text": "#D4D4D4",
-                "keyword": "#569CD6",
-                "type": "#4EC9B0",
-                "function": "#DCDCAA",
-                "string": "#CE9178",
-                "comment": "#6A9955",
-                "number": "#B5CEA8",
-            }
-            if dark
-            else {
-                "text": "#1F1F1F",
-                "keyword": "#0000FF",
-                "type": "#267F99",
-                "function": "#795E26",
-                "string": "#A31515",
-                "comment": "#008000",
-                "number": "#098658",
-            }
-        )
-
-    @classmethod
-    def _highlight_python_to_html(cls, code: str, dark: bool) -> str:
-        palette = cls._syntax_palette(dark)
-        lines = code.splitlines(keepends=True)
-        if not lines or not lines[-1].endswith(("\n", "\r")):
-            lines.append("")
-        offsets = [0]
-        for line in lines:
-            offsets.append(offsets[-1] + len(line))
-
-        def absolute(position: tuple[int, int]) -> int:
-            row, column = position
-            return offsets[min(max(row - 1, 0), len(offsets) - 1)] + column
-
-        try:
-            tokens = list(tokenize.generate_tokens(io.StringIO(code).readline))
-        except (IndentationError, tokenize.TokenError):
-            body = cls._escape_code(code)
-            return cls._token_span(palette["text"], body) if body else ""
-
-        ignored = {
-            token.INDENT,
-            token.DEDENT,
-            token.NL,
-            token.NEWLINE,
-            token.ENDMARKER,
-        }
-        result: list[str] = []
-        cursor = 0
-        line_state = [True]
-        for index, current in enumerate(tokens):
-            start = absolute(current.start)
-            end = absolute(current.end)
-            if start > cursor:
-                result.append(
-                    cls._escape_code(code[cursor:start], line_state)
-                )
-            text = code[start:end]
-            color: str | None = None
-            if current.type == token.NAME:
-                if keyword.iskeyword(current.string):
-                    color = palette["keyword"]
-                else:
-                    following = None
-                    for candidate in tokens[index + 1 :]:
-                        if candidate.type not in ignored:
-                            following = candidate
-                            break
-                    if following is not None and following.string == "(":
-                        color = palette["function"]
-                    elif current.string[:1].isupper():
-                        color = palette["type"]
-            elif current.type == token.STRING:
-                color = palette["string"]
-            elif current.type == token.COMMENT:
-                color = palette["comment"]
-            elif current.type == token.NUMBER:
-                color = palette["number"]
-            escaped_text = cls._escape_code(text, line_state)
-            # Commas are semantic argument boundaries. For qualified names,
-            # keep ``fluentqt.Type`` together and expose a fallback break only
-            # after the second (or later) dot. This prevents fragments such as
-            # a bare ``fluentqt.`` while still allowing a very narrow window to
-            # wrap ``fluentqt.Type.NestedEnum.Value`` without horizontal spill.
-            dotted_depth = 0
-            if current.type == token.OP and current.string == ".":
-                candidate_index = index
-                while candidate_index >= 0:
-                    candidate = tokens[candidate_index]
-                    if candidate.type == token.NAME:
-                        candidate_index -= 1
-                        continue
-                    if candidate.type == token.OP and candidate.string == ".":
-                        dotted_depth += 1
-                        candidate_index -= 1
-                        continue
-                    break
-            if (
-                current.type == token.OP
-                and (
-                    current.string == ","
-                    or (current.string == "." and dotted_depth >= 2)
-                )
-            ):
-                escaped_text += "&#8203;"
-            result.append(
-                cls._token_span(color, escaped_text)
-                if color is not None
-                else escaped_text
-            )
-            cursor = max(cursor, end)
-        if cursor < len(code):
-            result.append(cls._escape_code(code[cursor:], line_state))
-        return '<span style="color:{0};">{1}</span>'.format(
-            palette["text"], "".join(result)
-        )
-
-    @classmethod
-    def _highlight_source_to_html(cls, code: str, dark: bool, language: str) -> str:
-        if language == "python":
-            return cls._highlight_python_to_html(code, dark)
-        palette = cls._syntax_palette(dark)
-        comments = (r"<!--.*?-->" if language == "xml" else
-                    r"\#[^\r\n]*" if language == "cmake" else
-                    r"//[^\r\n]*|/\*.*?\*/")
-        tokens = re.compile(
-            r"(?P<comment>" + comments + r")"
-            r"|(?P<string>\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)"
-            r"|(?P<number>\b(?:0[xX][\da-fA-F]+|\d+(?:\.\d+)?)\b)"
-            r"|(?P<name>\b[A-Za-z_]\w*\b)",
-            re.DOTALL,
-        )
-        keywords = set((
-            "as bool break case catch color const continue default delete do double "
-            "else enum false finally float for function if import in inline int "
-            "let new null on pragma property readonly real return signal static "
-            "string struct switch this throw true try typeof var void while"
-        ).split())
-        result: list[str] = []
-        cursor = 0
-        line_state = [True]
-        for current in tokens.finditer(code):
-            result.append(cls._escape_code(code[cursor:current.start()], line_state))
-            kind = current.lastgroup
-            color = palette.get(kind)
-            if kind == "name":
-                name = current.group()
-                following = code[current.end():].lstrip()
-                if name in keywords:
-                    color = palette["keyword"]
-                elif following.startswith("("):
-                    color = palette["function"]
-                elif name[:1].isupper():
-                    color = palette["type"]
-            text = cls._escape_code(current.group(), line_state)
-            result.append(cls._token_span(color, text) if color else text)
-            cursor = current.end()
-        result.append(cls._escape_code(code[cursor:], line_state))
-        return cls._token_span(palette["text"], "".join(result))
-
-    def _apply_highlighted_code(self) -> None:
-        self._code_label.setText(
-            self._highlight_source_to_html(
-                self._display_code,
-                fluentqt.theme_uses_dark_appearance(
-                    fluentqt.current_theme()
-                ),
-                self._code_language,
-            )
-        )
-        self._highlighted = True
-
-    def _set_code(self, code: str) -> None:
-        self._code = code
-        self._display_code = code.rstrip("\r\n")
-        self._apply_highlighted_code()
-        self._code_label.updateGeometry()
-        self.contentWidget().updateGeometry()
-        QCoreApplication.sendPostedEvents(self.contentWidget(), QEvent.Type.LayoutRequest)
-
-    def _on_expansion_transition_started(self, expanding: bool) -> None:
-        if expanding and not self._highlighted:
-            self._apply_highlighted_code()
-
-    def _copy_source(self) -> None:
-        QApplication.clipboard().setText(self._code)
+    def _on_copy_finished(self, success: bool) -> None:
         toast = fluentqt.Toast.showToast(
             self,
-            "Copied to clipboard",
-            fluentqt.Toast.Severity.Success,
+            "Copied to clipboard" if success else "Could not copy to clipboard. Try again.",
+            fluentqt.Toast.Severity.Success if success else fluentqt.Toast.Severity.Error,
             1700,
             fluentqt.Toast.Placement.Top,
             QMargins(16, 50, 16, 16),
         )
         if toast is not None:
             toast.setObjectName("galleryToast")
-            card = toast.findChild(QWidget, "fluentToastCard")
-            if card is not None:
-                card.setObjectName("galleryToastCard")
-            icon = toast.findChild(QWidget, "fluentToastIcon")
-            if icon is not None:
-                icon.setObjectName("galleryToastIcon")
-        self._copy_button.setIconGlyph("\ue73e", 16)
-        _single_shot(1300, self, self._restore_copy_icon)
-
-    def _restore_copy_icon(self) -> None:
-        self._copy_button.setIconGlyph("\ue8c8", 16)
+            for name in ("Card", "Icon"):
+                child = toast.findChild(QWidget, "fluentToast" + name)
+                if child is not None:
+                    child.setObjectName("galleryToast" + name)
 
     def refresh_theme(self) -> None:
-        colors = gallery_colors()
-        self._underline.setStyleSheet(
-            "background: {0}; border-radius: 1px;".format(
-                css_color(colors.accent)
-            )
-        )
-        self._language.setStyleSheet(
-            "color: {0}; background: transparent;".format(
-                css_color(colors.text_secondary)
-            )
-        )
-        self._code_label.setStyleSheet(
-            "color: {0}; background: transparent; selection-background-color: {1};".format(
-                css_color(colors.text_primary), css_color(colors.accent)
-            )
-        )
-        if self._highlighted:
-            self._apply_highlighted_code()
+        # Native CodeBlock follows the Fluent theme registry itself.
+        self.update()
 
 
 _ROUTE_ID_ROLE = int(Qt.UserRole) + 1

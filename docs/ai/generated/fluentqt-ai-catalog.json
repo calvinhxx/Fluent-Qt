@@ -716,7 +716,7 @@
         },
         {
           "component_id": "field",
-          "choose_when": "An existing editor needs a shared label, required mark, helper text, or validation presentation while retaining its own value API.",
+          "choose_when": "An existing editor needs a shared label and validation feedback. Add FormController to coordinate dirty/touched state, asynchronous validation and submission while the application retains values and requests.",
           "avoid_when": "The editor already provides the complete labeling and validation presentation, or the content is not an editable field."
         },
         {
@@ -769,6 +769,11 @@
           "component_id": "command-bar-flyout",
           "choose_when": "A contextual surface combines primary and secondary command groups.",
           "avoid_when": "A simple menu or persistent command bar is sufficient."
+        },
+        {
+          "component_id": "command-palette",
+          "choose_when": "Users need keyboard search across grouped application commands with shared QAction state.",
+          "avoid_when": "A short fixed menu already exposes every relevant command."
         }
       ]
     },
@@ -893,6 +898,11 @@
           "component_id": "label",
           "choose_when": "Static text needs Fluent typography, wrapping, or elision.",
           "avoid_when": "The text must be edited."
+        },
+        {
+          "component_id": "code-block",
+          "choose_when": "Read-only source needs syntax colors, exact copying, folding or bounded scrolling.",
+          "avoid_when": "Users need to edit code or inspect a full file/project workspace."
         },
         {
           "component_id": "line-edit",
@@ -1159,6 +1169,7 @@
         "menu",
         "menu-bar",
         "command-bar",
+        "command-palette",
         "command-bar-flyout"
       ],
       "cpp_header": "<FluentQt/MenusToolbars.h>",
@@ -1216,6 +1227,7 @@
       "plugin": false,
       "components": [
         "auto-suggest-box",
+        "code-block",
         "label",
         "line-edit",
         "number-box",
@@ -3803,38 +3815,44 @@
         "adjusted",
         "along",
         "any",
-        "behavior",
+        "available",
+        "backdrop",
+        "background",
+        "blocked",
+        "blur",
+        "button.",
         "can",
         "click.",
         "close",
-        "closepolicy",
         "collections",
-        "commands.",
+        "compare",
         "configured",
         "content",
         "content.",
         "controls",
         "dim",
+        "direction",
         "dismisses",
         "drag",
         "dragging",
         "drawer",
         "drawer-view",
+        "drawer-view-backdrop-effects",
         "drawer-view-basic",
         "drawer-view-close-policy",
         "drawer-view-edges",
         "drawer-view-interactive-drag",
-        "draweredge",
         "drawerlength",
         "drawers",
         "drawerview",
         "edge",
         "edge.",
-        "explicit",
+        "effects",
         "hosting",
+        "interaction.",
         "interactive",
+        "keep",
         "layout-surfaces",
-        "light-dismiss",
         "margin",
         "margin.",
         "modal",
@@ -3842,14 +3860,18 @@
         "opened",
         "outside",
         "over",
+        "own",
+        "page.",
         "panel",
-        "policy",
+        "persistent",
         "right-edge",
         "same",
-        "separates",
         "size",
         "slides",
         "surface",
+        "then",
+        "using",
+        "while",
         "window"
       ],
       "cpp": {
@@ -3885,14 +3907,14 @@
         },
         {
           "id": "drawer-view-edges",
-          "title": "DrawerEdge and drawerLength",
+          "title": "Direction and size",
           "description": "The same content can open from any window edge; drawerLength controls the panel size along that edge.",
           "cpp_snippet": "auto* drawer = new DrawerView(host);\ndrawer->setDrawerLength(170);\ndrawer->setModal(false);\ndrawer->setDim(false);\n\nauto openFrom = [drawer](DrawerView::DrawerEdge edge) {\n    drawer->setEdge(edge);\n    drawer->open();\n};"
         },
         {
           "id": "drawer-view-close-policy",
-          "title": "Modal, dim, and close policy",
-          "description": "ClosePolicy separates light-dismiss behavior from explicit close commands.",
+          "title": "Persistent drawer",
+          "description": "Keep the drawer open while using the page. Close it with its own Close button.",
           "cpp_snippet": "auto* drawer = new DrawerView(host);\ndrawer->setAvailableMargins(drawerTitleBarAvoidanceMargins());\ndrawer->setModal(false);\ndrawer->setDim(false);\ndrawer->setClosePolicy(\n    DrawerView::ClosePolicy(DrawerView::NoAutoClose));\nauto* panel = new QWidget;\nauto* panelLayout = new QVBoxLayout(panel);\npanelLayout->setContentsMargins(16, 18, 16, 18);\ndrawer->setContentWidget(panel, WidgetOwnership::Owned);\n\nQObject::connect(closeButton, &Button::clicked,\n                 drawer, &DrawerView::close);"
         },
         {
@@ -3900,6 +3922,12 @@
           "title": "Interactive drag margin",
           "description": "Interactive drawers can be opened or adjusted by dragging from the configured edge margin.",
           "cpp_snippet": "auto* drawer = new DrawerView(host);\ndrawer->setInteractive(true);\ndrawer->setDragMargin(36);\ndrawer->setAnimationEnabled(true);\ndrawer->setEdge(DrawerView::DrawerEdge::Left);"
+        },
+        {
+          "id": "drawer-view-backdrop-effects",
+          "title": "Modal and backdrop effects",
+          "description": "Blur or dim the background, then compare blocked and available background interaction.",
+          "cpp_snippet": "using basicinput::Button;\nusing basicinput::CheckBox;\nusing basicinput::Slider;\nusing textfields::Label;\nauto* root = new QWidget(this);\nauto* layout = new QVBoxLayout(root);\nlayout->setSpacing(12);\nauto* open = new Button(QStringLiteral(\"Preview background effects\"), root);\nopen->setFluentStyle(Button::Accent);\nlayout->addWidget(open, 0, Qt::AlignLeft);\nauto* hint = new Label(QStringLiteral(\"Open the overlay to try this action.\"), root);\nhint->setWordWrap(true);\nhint->setTextColorRole(Label::TextColorRole::Secondary);\nlayout->addWidget(hint);\nauto* row = new QWidget(root);\nauto* rowLayout = new QHBoxLayout(row);\nrowLayout->setContentsMargins(0, 0, 0, 0);\nrowLayout->setSpacing(12);\nauto* counter = new Button(QStringLiteral(\"Background action\"), row);\nrow->layout()->addWidget(counter);\nauto* status = new Label(QStringLiteral(\"Background clicks: 0\"), row);\nstatus->setTextColorRole(Label::TextColorRole::Secondary);\nrow->layout()->addWidget(status);\nlayout->addWidget(row);\nQObject::connect(counter, &Button::clicked, status, [status, count = 0]() mutable {\n    status->setText(QStringLiteral(\"Background clicks: %1\").arg(++count));\n});\nQObject::connect(open, &Button::clicked, root, [root, open, counter, hint] {\n    auto* overlay = new DrawerView(root);\n    overlay->setModal(true);\n    overlay->setDim(true);\n    overlay->setDimOpacity(0.12);\n    overlay->setBackdropBlurRadius(8);\n    overlay->setClosePolicy(DrawerView::CloseOnEscape);\n    QWidget* body = overlay;\n    overlay->setEdge(DrawerView::DrawerEdge::Right);\n    overlay->setDrawerLength(320);\n    overlay->setInteractive(false);\n    body = new QWidget;\n    overlay->setContentWidget(body, WidgetOwnership::Owned);\n    auto* content = new QVBoxLayout(body);\n    content->setContentsMargins(28, 26, 28, 26);\n    content->setSpacing(10);\n    auto* title = new Label(QStringLiteral(\"Modal and backdrop effects\"), body);\n    title->setFluentTypography(Typography::FontRole::BodyStrong);\n    title->setWordWrap(true);\n    content->addWidget(title);\n    auto* modal = new CheckBox(QStringLiteral(\"Modal\"), body);\n    modal->setChecked(true);\n    QObject::connect(modal, &QCheckBox::toggled, overlay, &DrawerView::setModal);\n    const auto explainModal = [hint](bool enabled) {\n        hint->setText(enabled\n            ? QStringLiteral(\"Modal on: background blocked.\")\n            : QStringLiteral(\"Modal off: background available.\"));\n    };\n    QObject::connect(modal, &QCheckBox::toggled, hint, explainModal);\n    explainModal(true);\n    content->addWidget(modal);\n    auto* dimEnabled = new CheckBox(QStringLiteral(\"Dim background\"), body);\n    dimEnabled->setChecked(true);\n    QObject::connect(dimEnabled, &QCheckBox::toggled, overlay, &DrawerView::setDim);\n    content->addWidget(dimEnabled);\n    auto* outside = new CheckBox(QStringLiteral(\"Close on outside click\"), body);\n    QObject::connect(outside, &QCheckBox::toggled, overlay, [overlay](bool enabled) {\n        DrawerView::ClosePolicy policy(DrawerView::CloseOnEscape);\n        if (enabled)\n            policy |= DrawerView::CloseOnPressOutside;\n        overlay->setClosePolicy(policy);\n    });\n    content->addWidget(outside);\n    auto* blurLabel = new Label(QStringLiteral(\"Blur: 8 px\"), body);\n    auto* blur = new Slider(Qt::Horizontal, body);\n    blur->setAccessibleName(QStringLiteral(\"Background blur radius\"));\n    blur->setRange(0, 24);\n    blur->setValue(8);\n    QObject::connect(blur, &QSlider::valueChanged, overlay, [overlay, blurLabel](int value) {\n        overlay->setBackdropBlurRadius(value);\n        blurLabel->setText(QStringLiteral(\"Blur: %1 px\").arg(value));\n    });\n    content->addWidget(blurLabel);\n    content->addWidget(blur);\n    auto* dimLabel = new Label(QStringLiteral(\"Dim: 12%\"), body);\n    auto* dim = new Slider(Qt::Horizontal, body);\n    dim->setAccessibleName(QStringLiteral(\"Background dim opacity\"));\n    dim->setRange(0, 60);\n    dim->setValue(12);\n    QObject::connect(dim, &QSlider::valueChanged, overlay, [overlay, dimLabel](int value) {\n        overlay->setDimOpacity(value / 100.0);\n        dimLabel->setText(QStringLiteral(\"Dim: %1%\").arg(value));\n    });\n    content->addWidget(dimLabel);\n    content->addWidget(dim);\n    auto* close = new Button(QStringLiteral(\"Close\"), body);\n    QObject::connect(close, &Button::clicked, overlay, [overlay] { overlay->setIsOpen(false); });\n    content->addWidget(close, 0, Qt::AlignRight);\n    content->addStretch();\n    QObject::connect(counter, &Button::clicked, overlay, &DrawerView::refreshBackdrop);\n    QObject::connect(overlay, &DrawerView::closed, hint, [hint] {\n        hint->setText(QStringLiteral(\"Open the overlay to try this action.\"));\n    });\n    QObject::connect(overlay, &DrawerView::closed, overlay, &QObject::deleteLater);\n    overlay->open();\n});"
         }
       ]
     },
@@ -5395,39 +5423,45 @@
       ],
       "search_terms": [
         "above",
+        "animated",
         "animation",
-        "app",
         "app.",
+        "apply",
         "arbitrary",
-        "base",
-        "caller-owned",
-        "can",
-        "chrome",
+        "available",
+        "backdrop",
+        "backdrop.",
+        "background",
+        "blocked",
+        "blur",
+        "cancel",
+        "change",
+        "compare",
         "content",
-        "depending",
         "dialog",
         "dialog-animation-smoke",
+        "dialog-backdrop-effects",
         "dialog-owned-content",
         "dialogs",
-        "entrance",
-        "fields",
+        "dim",
+        "edit",
+        "effects",
         "flyouts",
-        "handling.",
         "hosts",
-        "layer",
-        "layout",
+        "instant",
+        "interaction.",
+        "keep",
         "modal",
-        "opt",
-        "options",
-        "out",
-        "owns",
-        "result",
-        "smoke",
-        "supplies",
+        "name",
+        "opening",
+        "original.",
+        "project",
+        "rename",
+        "same",
         "surface",
+        "then",
         "transient-surfaces",
-        "window",
-        "workflow."
+        "window"
       ],
       "cpp": {
         "public_header": "<FluentQt/DialogsFlyouts.h>",
@@ -5456,15 +5490,21 @@
       "samples": [
         {
           "id": "dialog-owned-content",
-          "title": "Caller-owned modal content",
-          "description": "Dialog supplies the modal chrome and smoke layer; the app owns layout, fields, and result handling.",
-          "cpp_snippet": "auto* dialog = new Dialog(window());\ndialog->setMinimumSize(480, 280);\nauto* layout = new QVBoxLayout(dialog);\nlayout->addWidget(titleLabel);\nlayout->addWidget(nameEdit);\nlayout->addStretch(1);\nlayout->addLayout(commandRow);\nconnect(applyButton, &Button::clicked, dialog,\n        [dialog] { dialog->done(1); });\nconnect(dialog, &QDialog::finished, dialog,\n        &QObject::deleteLater);\ndialog->open();"
+          "title": "Rename a project",
+          "description": "Edit a project name, then apply the change or cancel to keep the original.",
+          "cpp_snippet": "auto* root = new QWidget(this);\nauto* layout = new QVBoxLayout(root);\nauto* open = new Button(QStringLiteral(\"Rename project\"), root);\nopen->setFluentStyle(Button::Accent);\nauto* status = new Label(QStringLiteral(\"Project name: Northwind Analytics\"), root);\nlayout->addWidget(open, 0, Qt::AlignLeft);\nlayout->addWidget(status);\nQObject::connect(open, &Button::clicked, root, [open, status] {\n    auto* dialog = new Dialog(open->window());\n    dialog->setThemeSource(open);\n    dialog->setMinimumSize(480, 280);\n    auto* content = new QVBoxLayout(dialog);\n    content->setContentsMargins(32, 28, 32, 28);\n    content->setSpacing(14);\n    auto* title = new Label(QStringLiteral(\"Rename project\"), dialog);\n    title->setFluentTypography(Typography::FontRole::Subtitle);\n    content->addWidget(title);\n    auto* name = new LineEdit(dialog);\n    name->setAccessibleName(QStringLiteral(\"Project name\"));\n    name->setText(status->text().replace(QStringLiteral(\"Project name: \"), QString()));\n    content->addWidget(name);\n    content->addStretch();\n    auto* commands = new QHBoxLayout;\n    auto* cancel = new Button(QStringLiteral(\"Cancel\"), dialog);\n    auto* apply = new Button(QStringLiteral(\"Apply\"), dialog);\n    apply->setFluentStyle(Button::Accent);\n    commands->addStretch();\n    commands->addWidget(cancel);\n    commands->addWidget(apply);\n    content->addLayout(commands);\n    QObject::connect(cancel, &Button::clicked, dialog, &QDialog::reject);\n    QObject::connect(apply, &Button::clicked, dialog, &QDialog::accept);\n    QObject::connect(dialog, &QDialog::accepted, status, [status, name] {\n        status->setText(QStringLiteral(\"Project name: %1\").arg(name->text()));\n    });\n    QObject::connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);\n    dialog->open();\n});\nreturn root;"
+        },
+        {
+          "id": "dialog-backdrop-effects",
+          "title": "Modal and backdrop effects",
+          "description": "Blur or dim the background, then compare blocked and available background interaction.",
+          "cpp_snippet": "using basicinput::Button;\nusing basicinput::CheckBox;\nusing basicinput::Slider;\nusing textfields::Label;\nauto* root = new QWidget(this);\nauto* layout = new QVBoxLayout(root);\nlayout->setSpacing(12);\nauto* open = new Button(QStringLiteral(\"Preview background effects\"), root);\nopen->setFluentStyle(Button::Accent);\nlayout->addWidget(open, 0, Qt::AlignLeft);\nauto* hint = new Label(QStringLiteral(\"Open the overlay to try this action.\"), root);\nhint->setWordWrap(true);\nhint->setTextColorRole(Label::TextColorRole::Secondary);\nlayout->addWidget(hint);\nauto* row = new QWidget(root);\nauto* rowLayout = new QHBoxLayout(row);\nrowLayout->setContentsMargins(0, 0, 0, 0);\nrowLayout->setSpacing(12);\nauto* counter = new Button(QStringLiteral(\"Background action\"), row);\nrow->layout()->addWidget(counter);\nauto* status = new Label(QStringLiteral(\"Background clicks: 0\"), row);\nstatus->setTextColorRole(Label::TextColorRole::Secondary);\nrow->layout()->addWidget(status);\nlayout->addWidget(row);\nQObject::connect(counter, &Button::clicked, status, [status, count = 0]() mutable {\n    status->setText(QStringLiteral(\"Background clicks: %1\").arg(++count));\n});\nQObject::connect(open, &Button::clicked, root, [root, open, counter, hint] {\n    auto* overlay = new Dialog(root);\n    overlay->setModal(true);\n    overlay->setDim(true);\n    overlay->setDimOpacity(0.12);\n    overlay->setBackdropBlurRadius(8);\n    overlay->setClosePolicy(Dialog::CloseOnEscape);\n    QWidget* body = overlay;\n    overlay->setThemeSource(open);\n    overlay->setFixedWidth(400);\n    auto* content = new QVBoxLayout(body);\n    content->setContentsMargins(28, 26, 28, 26);\n    content->setSpacing(10);\n    auto* title = new Label(QStringLiteral(\"Modal and backdrop effects\"), body);\n    title->setFluentTypography(Typography::FontRole::BodyStrong);\n    title->setWordWrap(true);\n    content->addWidget(title);\n    auto* modal = new CheckBox(QStringLiteral(\"Modal\"), body);\n    modal->setChecked(true);\n    QObject::connect(modal, &QCheckBox::toggled, overlay, &Dialog::setModal);\n    const auto explainModal = [hint](bool enabled) {\n        hint->setText(enabled\n            ? QStringLiteral(\"Modal on: background blocked.\")\n            : QStringLiteral(\"Modal off: background available.\"));\n    };\n    QObject::connect(modal, &QCheckBox::toggled, hint, explainModal);\n    explainModal(true);\n    content->addWidget(modal);\n    auto* dimEnabled = new CheckBox(QStringLiteral(\"Dim background\"), body);\n    dimEnabled->setChecked(true);\n    QObject::connect(dimEnabled, &QCheckBox::toggled, overlay, &Dialog::setDim);\n    content->addWidget(dimEnabled);\n    auto* outside = new CheckBox(QStringLiteral(\"Close on outside click\"), body);\n    QObject::connect(outside, &QCheckBox::toggled, overlay, [overlay](bool enabled) {\n        Dialog::ClosePolicy policy(Dialog::CloseOnEscape);\n        if (enabled)\n            policy |= Dialog::CloseOnPressOutside;\n        overlay->setClosePolicy(policy);\n    });\n    content->addWidget(outside);\n    auto* blurLabel = new Label(QStringLiteral(\"Blur: 8 px\"), body);\n    auto* blur = new Slider(Qt::Horizontal, body);\n    blur->setAccessibleName(QStringLiteral(\"Background blur radius\"));\n    blur->setRange(0, 24);\n    blur->setValue(8);\n    QObject::connect(blur, &QSlider::valueChanged, overlay, [overlay, blurLabel](int value) {\n        overlay->setBackdropBlurRadius(value);\n        blurLabel->setText(QStringLiteral(\"Blur: %1 px\").arg(value));\n    });\n    content->addWidget(blurLabel);\n    content->addWidget(blur);\n    auto* dimLabel = new Label(QStringLiteral(\"Dim: 12%\"), body);\n    auto* dim = new Slider(Qt::Horizontal, body);\n    dim->setAccessibleName(QStringLiteral(\"Background dim opacity\"));\n    dim->setRange(0, 60);\n    dim->setValue(12);\n    QObject::connect(dim, &QSlider::valueChanged, overlay, [overlay, dimLabel](int value) {\n        overlay->setDimOpacity(value / 100.0);\n        dimLabel->setText(QStringLiteral(\"Dim: %1%\").arg(value));\n    });\n    content->addWidget(dimLabel);\n    content->addWidget(dim);\n    auto* close = new Button(QStringLiteral(\"Close\"), body);\n    QObject::connect(close, &Button::clicked, overlay, [overlay] { overlay->setIsOpen(false); });\n    content->addWidget(close, 0, Qt::AlignRight);\n\n    QObject::connect(counter, &Button::clicked, overlay, &Dialog::refreshBackdrop);\n    QObject::connect(overlay, &Dialog::closed, hint, [hint] {\n        hint->setText(QStringLiteral(\"Open the overlay to try this action.\"));\n    });\n    QObject::connect(overlay, &Dialog::closed, overlay, &QObject::deleteLater);\n    overlay->open();\n});"
         },
         {
           "id": "dialog-animation-smoke",
-          "title": "Smoke and animation options",
-          "description": "Base Dialog can opt in or out of entrance animation and window smoke depending on the workflow.",
-          "cpp_snippet": "auto* dialog = new Dialog(window());\ndialog->setSmokeEnabled(useSmoke);\ndialog->setAnimationEnabled(useAnimation);\ndialog->setMinimumSize(420, 220);\nconnect(dialog, &QDialog::finished, dialog,\n        &QObject::deleteLater);\ndialog->open();"
+          "title": "Opening animation",
+          "description": "Compare animated and instant opening with the same modal backdrop.",
+          "cpp_snippet": "auto* root = new QWidget(this);\nauto* layout = new QVBoxLayout(root);\nauto* animated = new Button(QStringLiteral(\"Animated\"), root);\nauto* instant = new Button(QStringLiteral(\"Instant\"), root);\nauto* buttons = new QHBoxLayout;\nbuttons->addWidget(animated);\nbuttons->addWidget(instant);\nbuttons->addStretch();\nlayout->addLayout(buttons);\nconst auto showDialog = [](Button* trigger, bool animation) {\n    auto* dialog = new Dialog(trigger->window());\n    dialog->setThemeSource(trigger);\n    dialog->setModal(true);\n    dialog->setDim(true);\n    dialog->setAnimationEnabled(animation);\n    dialog->setMinimumSize(420, 220);\n    auto* content = new QVBoxLayout(dialog);\n    content->setContentsMargins(30, 28, 30, 28);\n    auto* title = new Label(animation ? QStringLiteral(\"Animated dialog\")\n                                    : QStringLiteral(\"Instant dialog\"), dialog);\n    title->setFluentTypography(Typography::FontRole::Subtitle);\n    content->addWidget(title);\n    auto* text = new Label(QStringLiteral(\"Only the opening animation changes; the background remains blocked.\"), dialog);\n    text->setWordWrap(true);\n    content->addWidget(text);\n    auto* close = new Button(QStringLiteral(\"Close\"), dialog);\n    content->addWidget(close, 0, Qt::AlignRight);\n    QObject::connect(close, &Button::clicked, dialog, &QDialog::reject);\n    QObject::connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);\n    dialog->open();\n};\nQObject::connect(animated, &Button::clicked, root, [animated, showDialog] { showDialog(animated, true); });\nQObject::connect(instant, &Button::clicked, root, [instant, showDialog] { showDialog(instant, false); });\nreturn root;"
         }
       ]
     },
@@ -5558,39 +5598,49 @@
         "transient-surfaces"
       ],
       "search_terms": [
-        "adds",
         "app",
+        "available",
+        "backdrop",
         "background",
-        "blocks",
+        "beside",
+        "blocked",
+        "blur",
+        "button",
         "can",
+        "choose",
         "clicks",
         "close",
+        "closes",
+        "compare",
         "content.",
         "controls",
-        "critical",
-        "decisions.",
         "dialogs",
-        "dimmed",
+        "dim",
         "dismiss",
+        "effects",
         "floating",
         "flyouts",
-        "input",
+        "how",
+        "interaction.",
         "it.",
         "modal",
-        "offset",
+        "next",
+        "note",
+        "opens",
         "outside",
         "over",
         "placed",
         "policy",
         "popup",
+        "popup-basic",
         "popup-modal-dim",
         "popup-position-light-dismiss",
         "positioned",
-        "positioning",
         "relative",
-        "scrim",
+        "short",
+        "show",
         "surface",
-        "transient",
+        "then",
         "transient-surfaces",
         "whether",
         "widget"
@@ -5621,16 +5671,22 @@
       },
       "samples": [
         {
+          "id": "popup-basic",
+          "title": "A popup beside a button",
+          "description": "Show a short note next to the button that opens it.",
+          "cpp_snippet": "auto* root = new QWidget(this);\nauto* layout = new QVBoxLayout(root);\nauto* open = new Button(QStringLiteral(\"Show quick note\"), root);\nopen->setFluentStyle(Button::Accent);\nlayout->addWidget(open, 0, Qt::AlignLeft);\nQObject::connect(open, &Button::clicked, root, [open] {\n    auto* popup = new Popup(open->window());\n    popup->setThemeSource(open);\n    auto* content = new QVBoxLayout(popup);\n    content->setContentsMargins(24, 22, 24, 22);\n    auto* title = new Label(QStringLiteral(\"Quick note\"), popup);\n    title->setFluentTypography(Typography::FontRole::BodyStrong);\n    content->addWidget(title);\n    auto* text = new Label(QStringLiteral(\"Click outside or press Escape to close.\"), popup);\n    content->addWidget(text);\n    popup->setPosition(open, QPoint(0, open->height() + 8));\n    QObject::connect(popup, &Popup::closed, popup, &QObject::deleteLater);\n    popup->open();\n});\nreturn root;"
+        },
+        {
           "id": "popup-position-light-dismiss",
-          "title": "Offset positioning and close policy",
+          "title": "Choose how a popup closes",
           "description": "Popup can be placed relative to a widget; close policy controls whether outside clicks dismiss it.",
           "cpp_snippet": "auto* popup = new Popup(window());\npopup->setClosePolicy(lightDismiss\n    ? Popup::ClosePolicy(Popup::CloseOnPressOutside | Popup::CloseOnEscape)\n    : Popup::ClosePolicy(Popup::NoAutoClose));\npopup->setPosition(anchorButton, QPoint(0, anchorButton->height() + 8));\npopup->open();"
         },
         {
           "id": "popup-modal-dim",
-          "title": "Modal dimmed popup",
-          "description": "A modal Popup adds a scrim and blocks background input for critical transient decisions.",
-          "cpp_snippet": "auto* popup = new Popup(window());\npopup->setModal(true);\npopup->setDim(true);\npopup->setClosePolicy(Popup::CloseOnEscape);\npopup->open();"
+          "title": "Modal and backdrop effects",
+          "description": "Blur or dim the background, then compare blocked and available background interaction.",
+          "cpp_snippet": "using basicinput::Button;\nusing basicinput::CheckBox;\nusing basicinput::Slider;\nusing textfields::Label;\nauto* root = new QWidget(this);\nauto* layout = new QVBoxLayout(root);\nlayout->setSpacing(12);\nauto* open = new Button(QStringLiteral(\"Preview background effects\"), root);\nopen->setFluentStyle(Button::Accent);\nlayout->addWidget(open, 0, Qt::AlignLeft);\nauto* hint = new Label(QStringLiteral(\"Open the overlay to try this action.\"), root);\nhint->setWordWrap(true);\nhint->setTextColorRole(Label::TextColorRole::Secondary);\nlayout->addWidget(hint);\nauto* row = new QWidget(root);\nauto* rowLayout = new QHBoxLayout(row);\nrowLayout->setContentsMargins(0, 0, 0, 0);\nrowLayout->setSpacing(12);\nauto* counter = new Button(QStringLiteral(\"Background action\"), row);\nrow->layout()->addWidget(counter);\nauto* status = new Label(QStringLiteral(\"Background clicks: 0\"), row);\nstatus->setTextColorRole(Label::TextColorRole::Secondary);\nrow->layout()->addWidget(status);\nlayout->addWidget(row);\nQObject::connect(counter, &Button::clicked, status, [status, count = 0]() mutable {\n    status->setText(QStringLiteral(\"Background clicks: %1\").arg(++count));\n});\nQObject::connect(open, &Button::clicked, root, [root, open, counter, hint] {\n    auto* overlay = new Popup(root);\n    overlay->setModal(true);\n    overlay->setDim(true);\n    overlay->setDimOpacity(0.12);\n    overlay->setBackdropBlurRadius(8);\n    overlay->setClosePolicy(Popup::CloseOnEscape);\n    QWidget* body = overlay;\n    overlay->setThemeSource(open);\n    overlay->setFixedWidth(400);\n    auto* content = new QVBoxLayout(body);\n    content->setContentsMargins(28, 26, 28, 26);\n    content->setSpacing(10);\n    auto* title = new Label(QStringLiteral(\"Modal and backdrop effects\"), body);\n    title->setFluentTypography(Typography::FontRole::BodyStrong);\n    title->setWordWrap(true);\n    content->addWidget(title);\n    auto* modal = new CheckBox(QStringLiteral(\"Modal\"), body);\n    modal->setChecked(true);\n    QObject::connect(modal, &QCheckBox::toggled, overlay, &Popup::setModal);\n    const auto explainModal = [hint](bool enabled) {\n        hint->setText(enabled\n            ? QStringLiteral(\"Modal on: background blocked.\")\n            : QStringLiteral(\"Modal off: background available.\"));\n    };\n    QObject::connect(modal, &QCheckBox::toggled, hint, explainModal);\n    explainModal(true);\n    content->addWidget(modal);\n    auto* dimEnabled = new CheckBox(QStringLiteral(\"Dim background\"), body);\n    dimEnabled->setChecked(true);\n    QObject::connect(dimEnabled, &QCheckBox::toggled, overlay, &Popup::setDim);\n    content->addWidget(dimEnabled);\n    auto* outside = new CheckBox(QStringLiteral(\"Close on outside click\"), body);\n    QObject::connect(outside, &QCheckBox::toggled, overlay, [overlay](bool enabled) {\n        Popup::ClosePolicy policy(Popup::CloseOnEscape);\n        if (enabled)\n            policy |= Popup::CloseOnPressOutside;\n        overlay->setClosePolicy(policy);\n    });\n    content->addWidget(outside);\n    auto* blurLabel = new Label(QStringLiteral(\"Blur: 8 px\"), body);\n    auto* blur = new Slider(Qt::Horizontal, body);\n    blur->setAccessibleName(QStringLiteral(\"Background blur radius\"));\n    blur->setRange(0, 24);\n    blur->setValue(8);\n    QObject::connect(blur, &QSlider::valueChanged, overlay, [overlay, blurLabel](int value) {\n        overlay->setBackdropBlurRadius(value);\n        blurLabel->setText(QStringLiteral(\"Blur: %1 px\").arg(value));\n    });\n    content->addWidget(blurLabel);\n    content->addWidget(blur);\n    auto* dimLabel = new Label(QStringLiteral(\"Dim: 12%\"), body);\n    auto* dim = new Slider(Qt::Horizontal, body);\n    dim->setAccessibleName(QStringLiteral(\"Background dim opacity\"));\n    dim->setRange(0, 60);\n    dim->setValue(12);\n    QObject::connect(dim, &QSlider::valueChanged, overlay, [overlay, dimLabel](int value) {\n        overlay->setDimOpacity(value / 100.0);\n        dimLabel->setText(QStringLiteral(\"Dim: %1%\").arg(value));\n    });\n    content->addWidget(dimLabel);\n    content->addWidget(dim);\n    auto* close = new Button(QStringLiteral(\"Close\"), body);\n    QObject::connect(close, &Button::clicked, overlay, [overlay] { overlay->setIsOpen(false); });\n    content->addWidget(close, 0, Qt::AlignRight);\n\n    QObject::connect(counter, &Button::clicked, overlay, &Popup::refreshBackdrop);\n    QObject::connect(overlay, &Popup::closed, hint, [hint] {\n        hint->setText(QStringLiteral(\"Open the overlay to try this action.\"));\n    });\n    QObject::connect(overlay, &Popup::closed, overlay, &QObject::deleteLater);\n    overlay->open();\n});"
         }
       ]
     },
@@ -6150,24 +6206,32 @@
         "adds",
         "any",
         "around",
+        "asynchronous",
         "changing",
         "choice",
         "color",
         "compact",
+        "connection",
         "control",
         "control.",
+        "coordinate",
+        "credentials",
         "date",
+        "demo",
         "editor",
         "editor.",
         "editors.",
+        "edits",
         "error",
         "existing",
         "feedback",
         "field",
+        "field-connection-form",
         "field-helper-text",
         "field-required-error",
         "field-warning-success",
         "fields",
+        "formcontroller.",
         "helper",
         "icon",
         "indicator.",
@@ -6175,15 +6239,21 @@
         "label",
         "layout",
         "layout-surfaces",
+        "leave",
+        "local",
         "marker",
         "never",
         "other",
+        "page.",
         "pair",
         "presentation",
         "required",
         "same",
+        "saving",
         "semantic",
+        "settings",
         "show",
+        "simulation",
         "slotted",
         "status",
         "success",
@@ -6191,6 +6261,7 @@
         "text.",
         "treatment",
         "use",
+        "uses",
         "validation",
         "warning",
         "without",
@@ -6222,6 +6293,13 @@
         "control_image": "app/assets/control_images/layout/Field.png"
       },
       "samples": [
+        {
+          "id": "field-connection-form",
+          "title": "Connection settings",
+          "description": "Coordinate edits, asynchronous validation, and saving with FormController. The demo uses a local simulation; no credentials leave this page.",
+          "cpp_snippet": "#ifndef GALLERY_CONNECTIONFORM_H\n#define GALLERY_CONNECTIONFORM_H\n\n#include <FluentQt/FluentQt.h>\n\n#include <QBoxLayout>\n#include <QMap>\n#include <QResizeEvent>\n#include <QTimer>\n#include <QUrl>\n\nnamespace fluent::gallery {\n\n// A deterministic connection demo: the application owns values and async work.\n// zh_CN: 可重复的连接演示；应用负责字段值与异步操作。\nclass ConnectionForm final : public layout::Card {\npublic:\n    explicit ConnectionForm(QWidget* parent = nullptr) : Card(parent)\n    {\n        setObjectName(QStringLiteral(\"connectionForm\"));\n        setMaximumWidth(560);\n        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);\n        m_layout = new QVBoxLayout(this);\n        m_layout->setContentsMargins(32, 32, 32, 32);\n        m_layout->setSpacing(24);\n        m_layout->setAlignment(Qt::AlignTop);\n\n        auto* heading = new QWidget(this);\n        auto* headerLayout = new QVBoxLayout(heading);\n        headerLayout->setContentsMargins(0, 0, 0, 0);\n        headerLayout->setSpacing(8);\n        headerLayout->addWidget(label(QStringLiteral(\"Connection settings\"), Typography::FontRole::Subtitle));\n        headerLayout->addWidget(\n            label(QStringLiteral(\"Configure the endpoint used by this workspace.\"), Typography::FontRole::Body, true));\n        m_layout->addWidget(heading);\n\n        m_form = new FormController(this);\n        m_form->setObjectName(QStringLiteral(\"connectionFormController\"));\n        addField(QStringLiteral(\"name\"), QStringLiteral(\"Connection name\"),\n            QStringLiteral(\"A name to identify this connection.\"), QStringLiteral(\"Production API\"));\n        addField(QStringLiteral(\"address\"), QStringLiteral(\"Server address\"),\n            QStringLiteral(\"Use HTTPS. Try offline.example to see a connection error.\"),\n            QStringLiteral(\"https://api.example.com/v1\"));\n        addField(QStringLiteral(\"token\"), QStringLiteral(\"API token\"),\n            QStringLiteral(\"Use any 8 characters in this demo.\"), QString(), true);\n\n        m_status = label(QStringLiteral(\"No unsaved changes\"), Typography::FontRole::Caption, true);\n        m_status->setObjectName(QStringLiteral(\"connectionStatus\"));\n        m_status->setMinimumHeight(Typography::LineHeight::Caption);\n        m_layout->addWidget(m_status);\n\n        auto* actions = new QWidget(this);\n        m_actions = new QBoxLayout(QBoxLayout::LeftToRight, actions);\n        m_actions->setContentsMargins(0, 0, 0, 0);\n        m_actions->setSpacing(8);\n        m_test = new basicinput::Button(QStringLiteral(\"Test connection\"), actions);\n        m_test->setObjectName(QStringLiteral(\"connectionTest\"));\n        m_save = new basicinput::Button(QStringLiteral(\"Save connection\"), actions);\n        m_save->setObjectName(QStringLiteral(\"connectionSave\"));\n        m_save->setFluentStyle(basicinput::Button::Accent);\n        m_actions->addWidget(m_test);\n        m_actions->addWidget(m_save);\n        m_layout->addWidget(actions);\n        m_layout->addWidget(label(QStringLiteral(\"Local demo · no credentials are sent or stored.\"),\n            Typography::FontRole::Caption, true));\n\n        connect(m_form, &FormController::validationRequested, this, [this](const QString& key, quint64 token) {\n            validate(key, token);\n        });\n        connect(m_form, &FormController::submitRequested, this, [this](quint64 token) {\n            QTimer::singleShot(450, m_form, [form = m_form, token]() { form->completeSubmit(token, true); });\n        });\n        connect(m_form, &FormController::stateChanged, this, [this]() { updateStatus(); });\n        connect(m_form, &FormController::submissionFinished, this, [this](bool success) {\n            if (success)\n                m_status->setText(QStringLiteral(\"Connection saved for this demo.\"));\n        });\n        connect(m_test, &basicinput::Button::clicked, m_form, &FormController::validate);\n        connect(m_save, &basicinput::Button::clicked, m_form, &FormController::submit);\n    }\n\nprotected:\n    void resizeEvent(QResizeEvent* event) override\n    {\n        Card::resizeEvent(event);\n        const bool narrow = width() < 400;\n        const int padding = narrow ? 16 : 32;\n        m_layout->setContentsMargins(padding, padding, padding, padding);\n        m_actions->setDirection(narrow ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);\n    }\n\nprivate:\n    textfields::Label* label(const QString& text, Typography::FontRole role, bool secondary = false)\n    {\n        auto* result = new textfields::Label(text, this);\n        result->setFluentTypography(role);\n        result->setTextColorRole(\n            secondary ? textfields::Label::TextColorRole::Secondary : textfields::Label::TextColorRole::Primary);\n        result->setWordWrap(true);\n        return result;\n    }\n\n    void\n    addField(const QString& key, const QString& title, const QString& helper, const QString& value, bool secret = false)\n    {\n        auto* field = new layout::Field(this);\n        field->setObjectName(QStringLiteral(\"connectionField_\") + key);\n        field->setLabelText(title);\n        field->setHelperText(helper);\n        textfields::LineEdit* editor = secret ? new textfields::PasswordBox : new textfields::LineEdit;\n        editor->setObjectName(QStringLiteral(\"connectionInput_\") + key);\n        editor->setText(value);\n        editor->setMinimumHeight(::Spacing::ControlHeight::Standard);\n        if (secret)\n            editor->setPlaceholderText(QStringLiteral(\"Enter a demo token\"));\n        field->setEditor(editor, WidgetOwnership::Owned);\n        m_layout->addWidget(field);\n        m_editors.insert(key, editor);\n        m_form->addField(key, field);\n        connect(editor, &textfields::LineEdit::textChanged, m_form, [form = m_form, key]() {\n            form->markFieldChanged(key);\n        });\n        connect(editor, &textfields::LineEdit::editingFinished, m_form, [form = m_form, key]() {\n            form->setFieldTouched(key);\n        });\n    }\n\n    void validate(const QString& key, quint64 token)\n    {\n        const QString value = m_editors.value(key)->text().trimmed();\n        if (key == QStringLiteral(\"name\")) {\n            m_form->completeValidation(key, token, !value.isEmpty(),\n                value.isEmpty() ? QStringLiteral(\"Enter a connection name.\") : QString());\n        } else if (key == QStringLiteral(\"token\")) {\n            m_form->completeValidation(key, token, value.size() >= 8,\n                value.size() < 8 ? QStringLiteral(\"Enter at least 8 characters.\") : QString());\n        } else {\n            const QUrl url(value, QUrl::StrictMode);\n            if (!url.isValid() || url.scheme() != QStringLiteral(\"https\") || url.host().isEmpty()) {\n                m_form->completeValidation(key, token, false, QStringLiteral(\"Enter a valid HTTPS address.\"));\n                return;\n            }\n            // Context-owned timer is cancelled on teardown; the token rejects stale results.\n            // zh_CN: 上下文计时器随对象销毁取消，token 拒绝过期结果。\n            QTimer::singleShot(650, m_form, [form = m_form, key, token, value]() {\n                const bool reachable = !value.contains(QStringLiteral(\"offline\"), Qt::CaseInsensitive);\n                form->completeValidation(key, token, reachable,\n                    reachable ? QStringLiteral(\"Connection verified.\")\n                              : QStringLiteral(\"Server unavailable. Try another address.\"));\n            });\n        }\n    }\n\n    void updateStatus()\n    {\n        const bool busy = m_form->isValidating() || m_form->isSubmitting();\n        m_test->setEnabled(!busy);\n        m_save->setEnabled(!busy);\n        m_save->setText(m_form->isSubmitting() ? QStringLiteral(\"Saving…\") : QStringLiteral(\"Save connection\"));\n        if (m_form->isValidating())\n            m_status->setText(QStringLiteral(\"Checking connection…\"));\n        else if (m_form->isSubmitting())\n            m_status->setText(QStringLiteral(\"Saving connection…\"));\n        else if (!m_form->errorMessages().isEmpty())\n            m_status->setText(m_form->errorMessages().join(QLatin1Char('\\n')));\n        else if (!m_form->submissionError().isEmpty())\n            m_status->setText(m_form->submissionError());\n        else if (m_form->isValid())\n            m_status->setText(m_form->isDirty()\n                    ? QStringLiteral(\"Ready to save · unsaved changes\")\n                    : QStringLiteral(\"Connection verified.\"));\n        else\n            m_status->setText(\n                m_form->isDirty() ? QStringLiteral(\"Unsaved changes\") : QStringLiteral(\"No unsaved changes\"));\n    }\n\n    FormController* m_form = nullptr;\n    QMap<QString, textfields::LineEdit*> m_editors;\n    QVBoxLayout* m_layout = nullptr;\n    QBoxLayout* m_actions = nullptr;\n    textfields::Label* m_status = nullptr;\n    basicinput::Button* m_test = nullptr;\n    basicinput::Button* m_save = nullptr;\n};\n\n} // namespace fluent::gallery\n\n#endif // GALLERY_CONNECTIONFORM_H\n",
+          "fill_available_width": true
+        },
         {
           "id": "field-helper-text",
           "title": "Wrap any input control",
@@ -7208,6 +7286,124 @@
           "title": "Three levels of view commands",
           "description": "Open View, Sort by, then Order. Checked choices stay shared between the primary command and the secondary Sort by entry.",
           "cpp_snippet": "auto* status = new Label(\"Order: Ascending\", this);\nauto* view = new FluentMenu(\"View\", this);\nauto* sort = new FluentMenu(\"Sort by\", view);\nauto* order = new FluentMenu(\"Order\", sort);\nview->addMenu(sort);\nsort->addMenu(order);\nauto* group = new QActionGroup(this);\nauto* ascending = order->addAction(\"Ascending\");\nauto* descending = order->addAction(\"Descending\");\nascending->setCheckable(true);\ndescending->setCheckable(true);\ngroup->addAction(ascending);\ngroup->addAction(descending);\nascending->setChecked(true);\nconnect(group, &QActionGroup::triggered, status,\n    [status](QAction* action) {\n        status->setText(\"Order: \" + action->text());\n    });\nauto* bar = new CommandBar(this);\nbar->setLabelPosition(CommandBar::LabelPosition::Right);\nbar->setFixedWidth(480);\nbar->addPrimaryAction(view->menuAction());\nbar->addSecondaryAction(sort->menuAction());\nauto* compact = new Button(\"Compact width\", this);\ncompact->setCheckable(true);\nconnect(compact, &Button::toggled, bar, [bar](bool checked) {\n    bar->setFixedWidth(checked ? 80 : 480);\n});\nauto* layout = new QVBoxLayout(this);\nlayout->addWidget(bar, 0, Qt::AlignLeft);\nlayout->addWidget(compact, 0, Qt::AlignLeft);\nlayout->addWidget(status);\n"
+        }
+      ]
+    },
+    {
+      "id": "command-palette",
+      "title": "CommandPalette",
+      "category_id": "menus-toolbars",
+      "description": "Find and run an action by typing its name. Use the keyboard to choose a result and press Enter to execute it.",
+      "capabilities": [
+        "command-surfaces"
+      ],
+      "search_terms": [
+        "action",
+        "actions.",
+        "add",
+        "again.",
+        "arrow",
+        "between",
+        "choose",
+        "clear",
+        "closes",
+        "command",
+        "command-palette",
+        "command-palette-basic",
+        "command-palette-editing-context",
+        "command-palette-shared-actions",
+        "command-surfaces",
+        "commandpalette",
+        "commands",
+        "copy",
+        "cut",
+        "documents",
+        "enter",
+        "enter.",
+        "escape",
+        "execute",
+        "field.",
+        "find",
+        "folders",
+        "home",
+        "inbox",
+        "it.",
+        "jump",
+        "keyboard",
+        "keys",
+        "lets",
+        "menu",
+        "menus",
+        "name",
+        "name.",
+        "notes.",
+        "page",
+        "palette.",
+        "press",
+        "remove",
+        "reset",
+        "result",
+        "run",
+        "same",
+        "search",
+        "selected",
+        "share",
+        "shared",
+        "sort",
+        "text",
+        "through",
+        "toolbar",
+        "toolbars",
+        "try",
+        "typing",
+        "use",
+        "word",
+        "you"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/MenusToolbars.h>",
+        "declaration": "src/components/menus_toolbars/CommandPalette.h",
+        "qualified_type": "fluent::menus_toolbars::CommandPalette",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.menus_toolbars",
+        "type": "CommandPalette",
+        "import_statement": "from fluentqt.menus_toolbars import CommandPalette"
+      },
+      "tests": [
+        {
+          "target": "test_command_palette",
+          "source": "tests/components/menus_toolbars/TestCommandPalette.cpp",
+          "ctest_label": "test_command_palette"
+        }
+      ],
+      "gallery": {
+        "route_id": "command-palette",
+        "sample_source": "app/view/widgets/samples/MenusToolbarsSamples.cpp",
+        "control_image": "app/assets/control_images/menus-toolbars/CommandPalette.png"
+      },
+      "samples": [
+        {
+          "id": "command-palette-basic",
+          "title": "Find and run a command",
+          "description": "Search a page name, choose with the arrow keys, and press Enter. Escape closes the palette.",
+          "cpp_snippet": "auto* root = new QWidget(this);\nauto* layout = new QVBoxLayout(root);\nauto* location = new Label(QStringLiteral(\"Current page: Home\"), root);\nlocation->setObjectName(QStringLiteral(\"Gallery.CommandPalette.BasicLocation\"));\nauto* palette = new fluent::menus_toolbars::CommandPalette(root);\npalette->setObjectName(QStringLiteral(\"Gallery.CommandPalette.Basic\"));\npalette->setPlaceholderText(QStringLiteral(\"Search pages...\"));\nconst QStringList pages{QStringLiteral(\"Home\"), QStringLiteral(\"Inbox\"),\n    QStringLiteral(\"Documents\"), QStringLiteral(\"Folders\")};\nfor (const QString& page : pages) {\n    auto* action = new QAction(page, root);\n    palette->addCommand(action, QStringLiteral(\"Navigation\"));\n    QObject::connect(action, &QAction::triggered, location, [location, page] {\n        location->setText(QStringLiteral(\"Current page: %1\").arg(page));\n    });\n}\nauto* open = new Button(QStringLiteral(\"Search pages\"), root);\nopen->setObjectName(QStringLiteral(\"Gallery.CommandPalette.OpenBasic\"));\nopen->setFluentStyle(Button::Accent);\nQObject::connect(open, &Button::clicked, palette, &fluent::menus_toolbars::CommandPalette::open);\nlayout->addWidget(open, 0, Qt::AlignLeft);\nlayout->addWidget(location);\nreturn root;"
+        },
+        {
+          "id": "command-palette-shared-actions",
+          "title": "Shared menu and toolbar commands",
+          "description": "Jump between Home, Inbox, Documents and Folders, or add, clear and sort notes. The menu and toolbar share the same actions.",
+          "cpp_snippet": "auto setActionGlyph = [this](QAction* action, const QString& glyph) {\n    QPixmap pixmap(20, 20);\n    pixmap.fill(Qt::transparent);\n    QPainter painter(&pixmap);\n    painter.setPen(this->palette().color(QPalette::WindowText));\n    Typography::Icons::paintGlyph(painter, pixmap.rect(), glyph, 16, Qt::AlignCenter);\n    painter.end();\n    action->setIcon(QIcon(pixmap));\n};\nauto* layout = new QVBoxLayout(this);\nauto* notes = new QStringListModel(this);\nauto* list = new fluent::collections::ListView(this);\nlist->setAccessibleName(QStringLiteral(\"Notes\"));\nlist->setModel(notes);\nlist->setFixedHeight(104);\nlist->setPlaceholderText(QStringLiteral(\"No notes yet. Run Add note to create one.\"));\nlist->setBorderVisible(false);\nlist->setBackgroundVisible(false);\nlist->setProperty(\"fluentPreserveParentSurface\", true);\nauto* status = new Label(QStringLiteral(\"0 notes\"), this);\nstatus->setTextColorRole(Label::TextColorRole::Secondary);\nstatus->hide();\nauto* palette = new fluent::menus_toolbars::CommandPalette(this);\npalette->setPlaceholderText(QStringLiteral(\"Type a command or search…\"));\npalette->setDim(true);\npalette->setDimOpacity(0.12);\npalette->setBackdropBlurRadius(8);\nauto* location = new Label(QStringLiteral(\"Home\"), this);\nauto* menu = new FluentMenu(QStringLiteral(\"Workspace commands\"), this);\nauto* add = new QAction(QStringLiteral(\"Add note\"), this);\nadd->setShortcut(QKeySequence(QStringLiteral(\"Ctrl+N\")));\nauto* clear = new QAction(QStringLiteral(\"Clear notes\"), this);\nclear->setEnabled(false);\nauto* details = new QAction(QStringLiteral(\"Show details\"), this);\ndetails->setCheckable(true);\nconst auto updateCount = [list, clear, status]() {\n    const int count = list->model()->rowCount();\n    clear->setEnabled(count > 0);\n    status->setText(count == 1 ? QStringLiteral(\"1 note\") : QStringLiteral(\"%1 notes\").arg(count));\n};\nconst QStringList locations{QStringLiteral(\"Home\"), QStringLiteral(\"Inbox\"), QStringLiteral(\"Documents\"), QStringLiteral(\"Folders\")};\nconst QStringList glyphs{Typography::Icons::Home, Typography::Icons::Mail, Typography::Icons::Document, Typography::Icons::Folder};\nconst QStringList keys{QStringLiteral(\"Ctrl+H\"), QStringLiteral(\"Ctrl+I\"), QStringLiteral(\"Ctrl+D\"), QStringLiteral(\"Ctrl+F\")};\nfor (int i = 0; i < locations.size(); ++i) {\n    auto* model = i == 0 ? notes : new QStringListModel(QStringList{locations.at(i) + QStringLiteral(\" note\")}, this);\n    auto* navigate = new QAction(locations.at(i), this);\n    navigate->setShortcut(QKeySequence(keys.at(i)));\n    setActionGlyph(navigate, glyphs.at(i));\n    palette->addCommand(navigate, QStringLiteral(\"Navigation\"));\n    menu->addAction(navigate);\n    QObject::connect(model, &QAbstractItemModel::modelReset, this, updateCount);\n    QObject::connect(navigate, &QAction::triggered, this, [list, location, model, navigate, updateCount]() {\n        list->setModel(model);\n        location->setText(navigate->text());\n        updateCount();\n    });\n}\nmenu->addSeparator();\npalette->addCommand(add, QStringLiteral(\"Notes\"), {QStringLiteral(\"new\"), QStringLiteral(\"添加\")});\npalette->addCommand(clear, QStringLiteral(\"Notes\"),\n    {QStringLiteral(\"delete\"), QStringLiteral(\"remove\")});\npalette->addCommand(details, QStringLiteral(\"View\"),\n    {QStringLiteral(\"count\"), QStringLiteral(\"properties\")});\nsetActionGlyph(add, Typography::Icons::Add);\nsetActionGlyph(clear, Typography::Icons::Delete);\nsetActionGlyph(details, Typography::Icons::Info);\nQObject::connect(add, &QAction::triggered, list, [list]() {\n    auto* notes = qobject_cast<QStringListModel*>(list->model());\n    QStringList items = notes->stringList();\n    items.append(QStringLiteral(\"Note %1\").arg(items.size() + 1));\n    notes->setStringList(items);\n});\nQObject::connect(clear, &QAction::triggered, list, [list]() {\n    qobject_cast<QStringListModel*>(list->model())->setStringList({});\n});\nauto* sort = new QAction(QStringLiteral(\"Sort notes by name\"), this);\nsetActionGlyph(sort, Typography::Icons::Up);\npalette->addCommand(sort, QStringLiteral(\"View\"), {QStringLiteral(\"order\")});\nQObject::connect(sort, &QAction::triggered, list, [list]() { list->model()->sort(0); });\nQObject::connect(details, &QAction::toggled, status, &QWidget::setVisible);\nauto* bar = new CommandBar(this);\nbar->setAccessibleName(QStringLiteral(\"Notes commands\"));\nbar->setLabelPosition(CommandBar::LabelPosition::Right);\nbar->setBackgroundVisible(false);\nbar->addPrimaryAction(add);\nbar->addPrimaryAction(details);\nbar->addSecondaryAction(clear);\nmenu->addAction(add);\nmenu->addAction(details);\nmenu->addAction(clear);\nmenu->addAction(sort);\nauto* menuButton = new DropDownButton(QStringLiteral(\"Workspace commands\"), this);\nmenuButton->setMenu(menu);\nauto* open = new Button(QStringLiteral(\"Open command palette\"), this);\nopen->setFluentStyle(Button::Accent);\nopen->setIconGlyph(Typography::Icons::Search);\nQObject::connect(open, &Button::clicked, palette, &fluent::menus_toolbars::CommandPalette::open);\nauto* modal = new fluent::basicinput::CheckBox(QStringLiteral(\"Modal\"), this);\nmodal->setChecked(true);\nQObject::connect(modal, &QCheckBox::toggled, palette, &fluent::menus_toolbars::CommandPalette::setModal);\nauto* openRow = new QHBoxLayout;\nopenRow->addWidget(open);\nopenRow->addWidget(modal);\nopenRow->addStretch();\nlayout->addLayout(openRow);\nauto* commandRow = new QHBoxLayout;\ncommandRow->addWidget(bar, 1);\ncommandRow->addWidget(menuButton);\nlayout->addLayout(commandRow);\nlayout->addWidget(location);\nlayout->addWidget(list);\nlayout->addWidget(status);\n",
+          "fill_available_width": true
+        },
+        {
+          "id": "command-palette-editing-context",
+          "title": "Copy or cut text through search",
+          "description": "Search Copy to copy the selected word, or Cut to remove it from the field. Reset text lets you try again.",
+          "cpp_snippet": "auto* layout = new QVBoxLayout(this);\nauto* editor = new LineEdit(this);\neditor->setText(\"Review the release notes\");\neditor->setPlaceholderText(\"Type text or reset the sample\");\neditor->setAccessibleName(\"Text to edit\");\nauto* router = new EditingCommandRouter(window());\nauto* palette = new CommandPalette(this);\npalette->setPlaceholderText(\"Search Copy, Cut, or Select All\");\npalette->addCommand(router->action(EditingCommandRouter::Command::Copy), \"Edit\", {\"copy\"});\npalette->addCommand(router->action(EditingCommandRouter::Command::Cut), \"Edit\", {\"cut\"});\npalette->addCommand(router->action(EditingCommandRouter::Command::SelectAll), \"Edit\", {\"select all\"});\nauto* open = new Button(\"Search editing commands\", this);\nopen->setFocusPolicy(Qt::NoFocus);\nQObject::connect(open, &Button::clicked, palette, [editor, palette]() {\n    editor->setFocus();\n    if (!editor->hasSelectedText())\n        editor->setSelection(0, qMin(6, editor->text().size()));\n    palette->setQuery(QString());\n    palette->setCurrentAction(palette->commands().first());\n    palette->open();\n});\nQObject::connect(editor, &QLineEdit::textChanged, open, [open](const QString& text) { open->setEnabled(!text.isEmpty()); });\nauto* reset = new Button(\"Reset text\", this);\nQObject::connect(reset, &Button::clicked, editor, [editor]() {\n    editor->setText(\"Review the release notes\");\n    editor->setFocus();\n});\nlayout->addWidget(editor);\nauto* buttons = new QHBoxLayout;\nbuttons->addWidget(open);\nbuttons->addWidget(reset);\nbuttons->addStretch();\nlayout->addLayout(buttons);",
+          "fill_available_width": true
         }
       ]
     },
@@ -9538,6 +9734,96 @@
       ]
     },
     {
+      "id": "code-block",
+      "title": "CodeBlock",
+      "category_id": "text-fields",
+      "description": "Read-only code with syntax colors, exact copying, folding and bounded scrolling.",
+      "capabilities": [
+        "text-and-numeric-input"
+      ],
+      "search_terms": [
+        "block.",
+        "bounded",
+        "code",
+        "code-block",
+        "code-block-basic",
+        "code-block-scrolling",
+        "codeblock",
+        "colors",
+        "compact.",
+        "copy",
+        "copying",
+        "everything",
+        "exact",
+        "fields",
+        "fold",
+        "folding",
+        "header",
+        "horizontally.",
+        "keep",
+        "lines",
+        "long",
+        "off",
+        "page",
+        "passage",
+        "read",
+        "read-only",
+        "scroll",
+        "scrolling.",
+        "select",
+        "six",
+        "small",
+        "space",
+        "syntax",
+        "text",
+        "text-and-numeric-input",
+        "turn",
+        "use",
+        "visible",
+        "wrapping"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/TextFields.h>",
+        "declaration": "src/components/textfields/CodeBlock.h",
+        "qualified_type": "fluent::textfields::CodeBlock",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.textfields",
+        "type": "CodeBlock",
+        "import_statement": "from fluentqt.textfields import CodeBlock"
+      },
+      "tests": [
+        {
+          "target": "test_code_block",
+          "source": "tests/components/textfields/TestCodeBlock.cpp",
+          "ctest_label": "test_code_block"
+        }
+      ],
+      "gallery": {
+        "route_id": "code-block",
+        "sample_source": "app/view/widgets/samples/TextFieldsSamples.cpp",
+        "control_image": "app/assets/control_images/text-fields/CodeBlock.png"
+      },
+      "samples": [
+        {
+          "id": "code-block-basic",
+          "title": "Read and copy code",
+          "description": "Select a passage to copy, or use the header to copy everything and fold the block.",
+          "cpp_snippet": "auto* code = new CodeBlock(this);\ncode->setLanguage(\"cpp\");\ncode->setCode(\"// A small FluentQt window\\n\"\n              \"auto* button = new Button(\\\"Continue\\\");\\n\"\n              \"button->setFluentStyle(Button::Accent);\");",
+          "fill_available_width": true
+        },
+        {
+          "id": "code-block-scrolling",
+          "title": "Long code in a small space",
+          "description": "Six visible lines keep the page compact. Turn wrapping off to scroll long lines horizontally.",
+          "cpp_snippet": "auto* code = new CodeBlock(this);\ncode->setLanguage(\"python\");\nQString source = \"# Project destinations\\nprojects = [\\n\";\nfor (int i = 1; i <= 16; ++i)\n    source += QString(\"    {\\\"name\\\": \\\"Project %1\\\", \\\"path\\\": \\\"workspace/design/components/project-%1\\\"},\\n\").arg(i);\ncode->setCode(source + \"]\");\ncode->setMaxVisibleLines(6);\nauto* wrap = new ToggleSwitch(this);\nwrap->setOnContent(\"Wrap long lines\");\nwrap->setOffContent(\"Wrap long lines\");\nwrap->setAccessibleName(\"Wrap long lines\");\nwrap->setIsOn(true);\nconnect(wrap, &ToggleSwitch::toggled, code, &CodeBlock::setWordWrap);",
+          "fill_available_width": true
+        }
+      ]
+    },
+    {
       "id": "label",
       "title": "Label",
       "category_id": "text-fields",
@@ -11031,6 +11317,15 @@
       "description": "A responsive command strip with primary and overflow actions."
     },
     {
+      "id": "command-palette",
+      "title": "CommandPalette",
+      "kind": "component",
+      "parent_id": "menus-toolbars",
+      "group": "Menus & toolbars",
+      "depth": 1,
+      "description": "Find and run an action by typing its name. Use the keyboard to choose a result and press Enter to execute it."
+    },
+    {
       "id": "command-bar-flyout",
       "title": "CommandBarFlyout",
       "kind": "component",
@@ -11256,6 +11551,15 @@
       "description": "A text box that suggests matching items while people type."
     },
     {
+      "id": "code-block",
+      "title": "CodeBlock",
+      "kind": "component",
+      "parent_id": "text-fields",
+      "group": "Text fields",
+      "depth": 1,
+      "description": "Read-only code with syntax colors, exact copying, folding and bounded scrolling."
+    },
+    {
       "id": "label",
       "title": "Label",
       "kind": "component",
@@ -11349,6 +11653,7 @@
     "EditingCommandRouter",
     "FluentMenuItem",
     "FluentWidget",
+    "FormController",
     "IconSize",
     "Icons",
     "MotionPolicy",
@@ -11365,12 +11670,12 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 114,
-    "component_count": 89,
-    "sample_count": 255,
+    "route_count": 116,
+    "component_count": 91,
+    "sample_count": 264,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 15,
-    "guided_component_count": 89
+    "guided_component_count": 91
   }
 }

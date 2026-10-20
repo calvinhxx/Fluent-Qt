@@ -111,7 +111,6 @@
 #include "view/widgets/samples/SampleBuilders.h"
 #include "view/shell/GalleryWindow.h"
 #include "view/support/GalleryToast.h"
-#include "view/support/GalleryCodeHighlighter.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "viewmodel/GallerySettings.h"
 #include "QtTestEnvironment.h"
@@ -2862,6 +2861,11 @@ TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSourc
                     EXPECT_EQ(toast->message(), QStringLiteral("Changes saved"));
                 }
                 const QByteArray qualifiedType = reference.qualifiedType.toUtf8();
+                if (sample.id == QStringLiteral("drawer-view-backdrop-effects")) {
+                    auto* trigger = preview->findChild<Button*>(QStringLiteral("Gallery.Drawer.OpenEffects"));
+                    ASSERT_NE(trigger, nullptr);
+                    trigger->click();
+                }
                 bool previewContainsType = preview->inherits(qualifiedType.constData());
                 if (!previewContainsType) {
                     const auto descendants = preview->findChildren<QObject*>();
@@ -3083,6 +3087,27 @@ TEST_F(GalleryContentPagesTest, SampleCardHeightChangeSynchronizesEnclosingScrol
     EXPECT_GT(content->height(), initialContentHeight);
     EXPECT_GE(content->height(), contentLayout->minimumSize().height());
     EXPECT_GE(content->height(), tail->geometry().bottom() + 1 + contentLayout->contentsMargins().bottom());
+}
+
+TEST_F(GalleryContentPagesTest, CodeBlockSampleUsesPublicComponentAndWrapControl)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("code-block"), QStringLiteral("code-block-scrolling"), &sample));
+    ASSERT_TRUE(sample.fillAvailableWidth);
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* code = preview->findChild<fluent::textfields::CodeBlock*>(QStringLiteral("sampleCodeBlock"));
+    auto* wrap = preview->findChild<fluent::basicinput::ToggleSwitch*>(QStringLiteral("codeBlockWrap"));
+    ASSERT_NE(code, nullptr);
+    ASSERT_NE(wrap, nullptr);
+    EXPECT_EQ(code->maxVisibleLines(), 6);
+    EXPECT_EQ(code->language(), QStringLiteral("python"));
+    EXPECT_TRUE(code->isWordWrapEnabled());
+    const QString source = code->code();
+    wrap->setIsOn(false);
+    EXPECT_FALSE(code->isWordWrapEnabled());
+    EXPECT_EQ(code->code(), source);
+    wrap->setIsOn(true);
+    EXPECT_TRUE(code->isWordWrapEnabled());
 }
 
 TEST_F(GalleryContentPagesTest, TextEditLogSampleAppendsPlainTextAndClears)
@@ -3388,10 +3413,8 @@ TEST_F(GalleryContentPagesTest, CodeBlockCollapsesAndExpands)
     ASSERT_NE(content, nullptr);
     ASSERT_NE(divider, nullptr);
     ASSERT_NE(copyButton, nullptr);
-    // Copy now lives inside the collapsible content (top-right of the code area), so it is
-    // revealed/clipped together with the code rather than fading independently.
-    // zh_CN: Copy 现在位于可折叠内容里（代码区右上角），随代码一起被揭示/裁剪，而非独立淡入淡出。
-    EXPECT_EQ(copyButton->parentWidget()->objectName(), QStringLiteral("galleryCodeBlockContentInner"));
+    // Copy remains available while folded and does not toggle the header.
+    EXPECT_EQ(copyButton->parentWidget(), header);
 
     // Collapsed by default: the code area remains in the layout but is clipped to zero height.
     // zh_CN: 默认折叠时内容区保留在布局中，但被裁剪到 0 高，避免 show/hide 带来的布局抖动。
@@ -3489,66 +3512,6 @@ TEST_F(GalleryContentPagesTest, CodeBlockUsesBodySizedNativeMonospaceFont)
     EXPECT_EQ(code->font().pixelSize(), Typography::FontSize::Body);
 }
 
-TEST_F(GalleryContentPagesTest, Contract_ClipboardCompletionFollowsTheHostWrite)
-{
-    QObject context;
-    const QString source = QStringLiteral("// 中文\nvalue = 1;\n");
-    int completions = 0;
-    fluent::gallery::platform::copyText(&context, source, [&](bool copied) {
-        ++completions;
-        EXPECT_TRUE(copied);
-        EXPECT_EQ(QApplication::clipboard()->text(), source);
-    });
-    EXPECT_EQ(completions, 1);
-}
-
-TEST_F(GalleryContentPagesTest, Contract_ClipboardCompletionDoesNotOutliveItsContext)
-{
-    QApplication::clipboard()->setText(QStringLiteral("before context cancellation"));
-    QPointer<QObject> context = new QObject;
-    bool completed = false;
-    QObject::connect(QApplication::clipboard(), &QClipboard::dataChanged, context, [context] {
-        delete context.data();
-    });
-    fluent::gallery::platform::copyText(context, QStringLiteral("context cancellation payload"), [&](bool) {
-        completed = true;
-    });
-    EXPECT_TRUE(context.isNull());
-    EXPECT_FALSE(completed);
-}
-
-TEST_F(GalleryContentPagesTest, Contract_CodeHighlightingPreservesWhitespaceWhileWrapping)
-{
-    const QString source = QStringLiteral(
-        "    value = Type::Nested::Value;\r\n"
-        "\t// keep  two spaces & < >\r\n"
-        "next();");
-    const QString expected = QStringLiteral(
-        "    value = Type::Nested::Value;\n"
-        "    // keep  two spaces & < >\n"
-        "next();");
-    for (bool dark : {false, true}) {
-        const QString cpp = fluent::gallery::highlightCppToHtml(source, dark);
-        const QString python = fluent::gallery::highlightPythonToHtml(source, dark);
-        for (const QString& html : {cpp, python}) {
-            QTextDocument document;
-            document.setHtml(html);
-            QString plain = document.toPlainText();
-            plain.remove(QChar(0x200b));
-            EXPECT_EQ(plain, expected);
-            EXPECT_TRUE(html.contains(QStringLiteral("&nbsp;&nbsp;&nbsp;&nbsp;")));
-            EXPECT_TRUE(html.contains(QStringLiteral("keep&nbsp; two spaces")));
-            EXPECT_FALSE(html.contains(QStringLiteral("keep&nbsp;&nbsp;two&nbsp;spaces")));
-        }
-        EXPECT_TRUE(cpp.contains(QStringLiteral("::&#8203;")));
-        const QString dotted =
-            fluent::gallery::highlightPythonToHtml(QStringLiteral("fluentqt.Button.ButtonStyle.Accent, value"), dark);
-        EXPECT_TRUE(dotted.contains(QStringLiteral(".&#8203;")));
-        EXPECT_TRUE(dotted.contains(QStringLiteral(",&#8203;")));
-        EXPECT_FALSE(dotted.contains(QStringLiteral("fluentqt.&#8203;")));
-    }
-}
-
 TEST_F(GalleryContentPagesTest, Contract_CodeBlockWrapsBothLanguagesAndRemeasuresOnResize)
 {
     namespace vg = fluent::testutils::visual_geometry;
@@ -3591,50 +3554,6 @@ TEST_F(GalleryContentPagesTest, Contract_CodeBlockWrapsBothLanguagesAndRemeasure
                 if (width == 760)
                     EXPECT_EQ(block.height(), wideHeight);
             }
-        }
-    }
-}
-
-TEST_F(GalleryContentPagesTest, Contract_CodeHighlightingMapsRenderedCharactersToExactSource)
-{
-    const QString source = QStringLiteral(
-        "\tType::Nested::Value, fluentqt.Button.Style.Accent;  \r\n"
-        "    // keep  spaces\r\n\t\"real\u200bvalue\"\r\n");
-    for (bool dark : {false, true}) {
-        for (const auto language : {GalleryCodeLanguage::Cpp, GalleryCodeLanguage::Python}) {
-            fluent::gallery::CodeSourceMap map;
-            const QString html = language == GalleryCodeLanguage::Cpp
-                ? fluent::gallery::highlightCppToHtml(source, dark, &map)
-                : fluent::gallery::highlightPythonToHtml(source, dark, &map);
-            QTextDocument document;
-            document.setHtml(html);
-            const QString rendered = document.toPlainText();
-            ASSERT_EQ(map.size(), rendered.size());
-            QString reconstructed;
-            int sourceEnd = 0;
-            int syntheticBreaks = 0;
-            int originalBreaks = 0;
-            for (int i = 0; i < map.size(); ++i) {
-                const auto& span = map.at(i);
-                ASSERT_GE(span.start, 0);
-                ASSERT_GE(span.end, span.start);
-                ASSERT_LE(span.end, source.size());
-                if (span.start == span.end) {
-                    EXPECT_EQ(rendered.at(i), QChar(0x200b));
-                    ++syntheticBreaks;
-                    continue;
-                }
-                if (source.at(span.start) == QChar(0x200b))
-                    ++originalBreaks;
-                if (span.end > sourceEnd) {
-                    EXPECT_EQ(span.start, sourceEnd);
-                    reconstructed += source.mid(span.start, span.end - span.start);
-                    sourceEnd = span.end;
-                }
-            }
-            EXPECT_GT(syntheticBreaks, 0);
-            EXPECT_EQ(originalBreaks, 1);
-            EXPECT_EQ(reconstructed, source);
         }
     }
 }

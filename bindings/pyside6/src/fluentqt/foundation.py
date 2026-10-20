@@ -40,6 +40,36 @@ _NativeFluentWidget = _native.fluent.FluentWidget
 _NativeStateGroup = _native.fluent.StateGroup
 
 
+class FormController(_native.fluent.FormController):
+    """Shared native form state; retain borrowed Field wrappers while registered."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._form_fields = {}
+
+    def addField(self, key, field):
+        if not super().addField(key, field):
+            return False
+        owner = weakref.ref(self)
+
+        def forget(*_args):
+            controller = owner()
+            if controller is not None:
+                controller._form_fields.pop(key, None)
+
+        self._form_fields[key] = (field, forget)
+        field.destroyed.connect(forget)
+        return True
+
+    def removeField(self, key):
+        if not super().removeField(key):
+            return False
+        record = self._form_fields.pop(key, None)
+        if record is not None and shiboken6.isValid(record[0]):
+            record[0].destroyed.disconnect(record[1])
+        return True
+
+
 class MotionPolicy(QObject):
     """Observable Python facade over FluentQt's process-wide motion policy."""
 
@@ -752,6 +782,7 @@ __all__ = [
     "BindingMode",
     "FluentWidget",
     "FontIcon",
+    "FormController",
     "FontRole",
     "MotionKind",
     "MotionMode",

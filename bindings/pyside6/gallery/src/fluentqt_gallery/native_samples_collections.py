@@ -5,6 +5,7 @@ from __future__ import annotations
 from textwrap import dedent
 
 from .native_samples import register_source_samples
+from .native_samples_overlays import overlay_effects_source
 
 
 def _script(body: str, imports: str = "") -> str:
@@ -1186,6 +1187,9 @@ register_source_samples(
     "drawer-view",
     ("DrawerView",),
     {
+        "drawer-view-backdrop-effects": (
+            "root", overlay_effects_source("DrawerView", "Gallery.Drawer", "Preview background effects"),
+        ),
         "drawer-view-basic": (
             "host",
             _script(

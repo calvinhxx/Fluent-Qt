@@ -14,6 +14,30 @@ def _script(body: str, imports: str = "") -> str:
     return prefix + "\n" + dedent(body).strip() + "\n"
 
 
+def command_palette_source_files(result):
+    """Copyable workspace source, using only public FluentQt and PySide6 APIs."""
+    helper = dedent("""
+        def font_icon_pixmap(glyph, size, color):
+            icon = fluentqt.FontIcon(glyph)
+            icon.setIconSize(size)
+            icon.setColor(color)
+            icon.resize(size, size)
+            return icon.grab()
+    """).strip()
+    full = result.preview_source.replace(
+        "from fluentqt_gallery.visual import gallery_font_icon_pixmap", helper)
+    full = full.replace(
+        "from fluentqt_gallery.window import gallery_window_editing_command_router\n", "")
+    full = full.replace("gallery_font_icon_pixmap", "font_icon_pixmap")
+    full = full.replace("import fluentqt\n", "import fluentqt\n"
+                        "from PySide6.QtWidgets import QApplication\n"
+                        "fluentqt.prepare_high_dpi_application()\n"
+                        "application = QApplication.instance() or QApplication([])\n", 1)
+    full += '\nif __name__ == "__main__":\n    root.show()\n    application.exec()\n'
+    return [{"name": "workspace.py", "language": "python", "code": full,
+             "usage_snippet": result.source}]
+
+
 class _SourceHelper(str):
     """Dedent a sample body appended to a reusable source helper."""
 
@@ -3053,6 +3077,195 @@ register_source_samples(
                 root.content_layout.addWidget(open_button)
                 root.content_layout.addWidget(status)
                 """, _MENUS_IMPORTS),
+        ),
+    },
+)
+
+
+register_source_samples(
+    "command-palette",
+    ("CommandPalette",),
+    {
+        "command-palette-basic": (
+            "root",
+            _script("""
+                root = QWidget(globals().get("gallery_parent"))
+                layout = QVBoxLayout(root)
+                location = fluentqt.Label("Current page: Home", root)
+                location.setObjectName("Gallery.CommandPalette.BasicLocation")
+                palette = fluentqt.CommandPalette(root)
+                palette.setObjectName("Gallery.CommandPalette.Basic")
+                palette.setPlaceholderText("Search pages...")
+                pages = ["Home", "Inbox", "Documents", "Folders"]
+                for page in pages:
+                    action = QAction(page, root)
+                    palette.addCommand(action, "Navigation")
+                    action.triggered.connect(
+                        lambda checked=False, page=page:
+                        location.setText(f"Current page: {page}")
+                    )
+                open_button = fluentqt.Button("Search pages", root)
+                open_button.setObjectName("Gallery.CommandPalette.OpenBasic")
+                open_button.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
+                open_button.clicked.connect(palette.open)
+                layout.addWidget(open_button, 0, Qt.AlignmentFlag.AlignLeft)
+                layout.addWidget(location)
+            """, _MENUS_IMPORTS),
+        ),
+        "command-palette-shared-actions": (
+            "root",
+            _script(_COMMAND_FLYOUT_HELPER + """
+                root = SampleSurface(globals().get("gallery_parent"))
+                notes = QStringListModel(root)
+                note_list = fluentqt.ListView(root)
+                note_list.setObjectName("Gallery.CommandPalette.Notes")
+                note_list.setAccessibleName("Notes")
+                note_list.setModel(notes)
+                note_list.setFixedHeight(104)
+                note_list.setPlaceholderText("No notes yet. Run Add note to create one.")
+                note_list.setBorderVisible(False)
+                note_list.setBackgroundVisible(False)
+                note_list.setProperty("fluentPreserveParentSurface", True)
+                status = fluentqt.Label("0 notes", root)
+                status.setObjectName("Gallery.CommandPalette.Status")
+                status.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+                status.hide()
+                palette = fluentqt.CommandPalette(root)
+                palette.setObjectName("Gallery.CommandPalette.Shared")
+                palette.setPlaceholderText("Type a command or search…")
+                palette.setDim(True)
+                palette.setDimOpacity(0.12)
+                palette.setBackdropBlurRadius(8)
+                location = fluentqt.Label("Home", root)
+                location.setObjectName("Gallery.CommandPalette.Location")
+                menu = fluentqt.FluentMenu("Workspace commands", root)
+                add = QAction("Add note", root)
+                add.setShortcut(QKeySequence("Ctrl+N"))
+                clear = QAction("Clear notes", root)
+                clear.setEnabled(False)
+                details = QAction("Show details", root)
+                details.setCheckable(True)
+                def update_count():
+                    count = note_list.model().rowCount()
+                    clear.setEnabled(count > 0)
+                    status.setText("1 note" if count == 1 else f"{count} notes")
+                locations = ["Home", "Inbox", "Documents", "Folders"]
+                glyphs = [fluentqt.Typography.Icons.Home, fluentqt.Typography.Icons.Mail,
+                          fluentqt.Typography.Icons.Document, fluentqt.Typography.Icons.Folder]
+                keys = ["Ctrl+H", "Ctrl+I", "Ctrl+D", "Ctrl+F"]
+                def navigate_to(model, name):
+                    note_list.setModel(model)
+                    location.setText(name)
+                    update_count()
+                for i, name in enumerate(locations):
+                    model = notes if i == 0 else QStringListModel([name + " note"], root)
+                    navigate = QAction(name, root)
+                    navigate.setShortcut(QKeySequence(keys[i]))
+                    root.set_action_glyph(navigate, glyphs[i])
+                    palette.addCommand(navigate, "Navigation")
+                    menu.addAction(navigate)
+                    model.modelReset.connect(update_count)
+                    navigate.triggered.connect(lambda checked=False, model=model, name=name: navigate_to(model, name))
+                menu.addSeparator()
+                palette.addCommand(add, "Notes", ["new", "添加"])
+                palette.addCommand(clear, "Notes", ["delete", "remove"])
+                palette.addCommand(details, "View", ["count", "properties"])
+                root.set_action_glyph(add, fluentqt.Typography.Icons.Add)
+                root.set_action_glyph(clear, fluentqt.Typography.Icons.Delete)
+                root.set_action_glyph(details, fluentqt.Typography.Icons.Info)
+                def add_note():
+                    items = note_list.model().stringList()
+                    items.append(f"Note {len(items) + 1}")
+                    note_list.model().setStringList(items)
+                add.triggered.connect(add_note)
+                clear.triggered.connect(lambda: note_list.model().setStringList([]))
+                sort = QAction("Sort notes by name", root)
+                root.set_action_glyph(sort, fluentqt.Typography.Icons.Up)
+                palette.addCommand(sort, "View", ["order"])
+                sort.triggered.connect(lambda: note_list.model().sort(0))
+                details.toggled.connect(status.setVisible)
+                bar = fluentqt.CommandBar(root)
+                bar.setAccessibleName("Notes commands")
+                bar.setLabelPosition(fluentqt.CommandBar.LabelPosition.Right)
+                bar.setBackgroundVisible(False)
+                bar.addPrimaryAction(add)
+                bar.addPrimaryAction(details)
+                bar.addSecondaryAction(clear)
+                menu.addAction(add)
+                menu.addAction(details)
+                menu.addAction(clear)
+                menu.addAction(sort)
+                menu_button = fluentqt.DropDownButton("Workspace commands", root)
+                menu_button.setMenu(menu)
+                open_button = fluentqt.Button("Open command palette", root)
+                open_button.setObjectName("Gallery.CommandPalette.Open")
+                open_button.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
+                open_button.setIconGlyph(fluentqt.Typography.Icons.Search)
+                open_button.clicked.connect(palette.open)
+                modal = fluentqt.CheckBox("Modal", root)
+                modal.setChecked(True)
+                modal.toggled.connect(lambda checked: palette.setModal(checked))
+                open_row = QHBoxLayout()
+                open_row.addWidget(open_button)
+                open_row.addWidget(modal)
+                open_row.addStretch()
+                root.content_layout.addLayout(open_row)
+                command_row = QHBoxLayout()
+                command_row.addWidget(bar, 1)
+                command_row.addWidget(menu_button)
+                root.content_layout.addLayout(command_row)
+                root.content_layout.addWidget(location)
+                root.content_layout.addWidget(note_list)
+                root.content_layout.addWidget(status)
+            """, _COMMAND_FLYOUT_IMPORTS + "\nfrom PySide6.QtGui import QKeySequence\nfrom PySide6.QtCore import QStringListModel"),
+        ),
+        "command-palette-editing-context": (
+            "root",
+            _script(_COMMAND_FLYOUT_HELPER + """
+                root = SampleSurface(globals().get("gallery_parent"))
+                editor = fluentqt.LineEdit(root)
+                editor.setObjectName("Gallery.CommandPalette.Editor")
+                editor.setText("Review the release notes")
+                editor.setPlaceholderText("Type text or reset the sample")
+                editor.setAccessibleName("Text to edit")
+                router = gallery_window_editing_command_router(root)
+                palette = fluentqt.CommandPalette(root)
+                palette.setObjectName("Gallery.CommandPalette.Editing")
+                palette.setPlaceholderText("Search Copy, Cut, or Select All")
+                palette.addCommand(
+                    router.action(fluentqt.EditingCommandRouter.Command.Copy), "Edit", ["copy"]
+                )
+                palette.addCommand(
+                    router.action(fluentqt.EditingCommandRouter.Command.Cut), "Edit", ["cut"]
+                )
+                palette.addCommand(
+                    router.action(fluentqt.EditingCommandRouter.Command.SelectAll), "Edit", ["select all"]
+                )
+                open_button = fluentqt.Button("Search editing commands", root)
+                open_button.setObjectName("Gallery.CommandPalette.OpenEditing")
+                open_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+                def open_commands():
+                    editor.setFocus()
+                    if not editor.hasSelectedText():
+                        editor.setSelection(0, min(6, len(editor.text())))
+                    palette.setQuery("")
+                    palette.setCurrentAction(palette.commands()[0])
+                    palette.open()
+                open_button.clicked.connect(open_commands)
+                editor.textChanged.connect(lambda text: open_button.setEnabled(bool(text)))
+                reset = fluentqt.Button("Reset text", root)
+                reset.setObjectName("Gallery.CommandPalette.ResetEditing")
+                def reset_text():
+                    editor.setText("Review the release notes")
+                    editor.setFocus()
+                reset.clicked.connect(reset_text)
+                root.content_layout.addWidget(editor)
+                buttons = QHBoxLayout()
+                buttons.addWidget(open_button)
+                buttons.addWidget(reset)
+                buttons.addStretch()
+                root.content_layout.addLayout(buttons)
+            """, _COMMAND_FLYOUT_IMPORTS),
         ),
     },
 )

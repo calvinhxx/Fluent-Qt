@@ -478,7 +478,6 @@ void Expander::beginViewportTransition()
 {
     ++m_viewportTransitionGeneration;
     clearViewportAnchor();
-
     m_transitionScrollArea = enclosingScrollArea(this);
     m_transitionScrollBar = m_transitionScrollArea ? m_transitionScrollArea->verticalScrollBar() : nullptr;
     if (!m_transitionScrollArea || !m_transitionScrollArea->viewport() || !m_transitionScrollBar || !m_headerButton) {
@@ -486,6 +485,11 @@ void Expander::beginViewportTransition()
     }
 
     m_viewportTransitionActive = true;
+    // Hidden siblings still synchronize page geometry, but have no reading
+    // position to preserve. Capturing competing anchors during initialization
+    // can recursively move their shared scrollbar when the page is shown.
+    if (!isVisible())
+        return;
     m_anchorViewportY =
         m_transitionScrollArea->viewport()->mapFromGlobal(m_headerButton->mapToGlobal(QPoint(0, 0))).y();
 
@@ -542,7 +546,7 @@ void Expander::synchronizeViewportLayout()
 
 void Expander::restoreViewportAnchor()
 {
-    if (!m_viewportTransitionActive || m_restoringViewportAnchor || !m_transitionScrollArea
+    if (!m_viewportTransitionActive || !m_scrollValueConnection || m_restoringViewportAnchor || !m_transitionScrollArea
         || !m_transitionScrollArea->viewport() || !m_transitionScrollBar || !m_headerButton) {
         return;
     }

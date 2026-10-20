@@ -20,6 +20,8 @@
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/textfields/Label.h"
 #include <QImage>
+#include <QPainter>
+#include <limits>
 
 using namespace fluent::dialogs_flyouts;
 using fluent::AnchorLayout;
@@ -802,6 +804,56 @@ TEST_F(PopupTest, NonModalOutsidePressClosesAndContinuesToBackgroundTarget)
     EXPECT_FALSE(p.isOpen());
 }
 
+TEST_F(PopupTest, Contract_ModalNativeOutsidePressNeverActivatesBackground)
+{
+    Button background(QStringLiteral("Background navigation"), window);
+    background.setGeometry(0, 0, 240, 60);
+    background.show();
+    QSignalSpy clicks(&background, &Button::clicked);
+    Popup popup(window);
+    popup.setModal(true);
+    // Non-modal passthrough must never weaken modal input blocking.
+    popup.setLightDismissConsumesPress(true);
+    popup.addLightDismissPassthrough(&background);
+    for (const bool animated : {false, true}) {
+        SCOPED_TRACE(animated);
+        popup.setAnimationEnabled(animated);
+        popup.open();
+        ASSERT_TRUE(QTest::qWaitFor([&] { return popup.popupProgress() == 1.0; }));
+        QTest::mouseClick(window->windowHandle(), Qt::LeftButton, Qt::NoModifier, QPoint(30, 30));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return !popup.isVisible(); }));
+        EXPECT_EQ(clicks.count(), 0);
+    }
+    popup.setAnimationEnabled(false);
+    popup.setClosePolicy(Popup::NoAutoClose);
+    popup.open();
+    QTest::mouseClick(window->windowHandle(), Qt::LeftButton, Qt::NoModifier, QPoint(30, 30));
+    EXPECT_TRUE(popup.isOpen());
+    EXPECT_EQ(clicks.count(), 0);
+    popup.close();
+    QTest::mouseClick(window->windowHandle(), Qt::LeftButton, Qt::NoModifier, QPoint(30, 30));
+    EXPECT_EQ(clicks.count(), 1);
+}
+
+TEST_F(PopupTest, Contract_ModalInputIsScopedToOwningWindow)
+{
+    Button other(QStringLiteral("Another window"));
+    other.resize(240, 60);
+    other.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&other));
+    QSignalSpy clicks(&other, &Button::clicked);
+    Popup popup(window);
+    popup.setAnimationEnabled(false);
+    popup.setModal(true);
+    popup.open();
+    QTest::mouseClick(other.windowHandle(), Qt::LeftButton, Qt::NoModifier, QPoint(30, 30));
+    EXPECT_EQ(clicks.count(), 1);
+    EXPECT_TRUE(popup.isOpen());
+    QTest::keyClick(other.windowHandle(), Qt::Key_Escape);
+    EXPECT_TRUE(popup.isOpen());
+    popup.close();
+}
+
 TEST_F(PopupTest, EscapeClosesPopupWhenPolicySet)
 {
     Popup p(window);
@@ -1363,4 +1415,90 @@ TEST_F(PopupTest, VisualCheck)
     visual->show();
     qApp->exec();
     delete visual;
+}
+
+TEST_F(PopupTest, Contract_ConfigurableBackdropPropertiesAndSignals)
+{
+    Popup popup(window);
+    EXPECT_EQ(popup.backdropBlurRadius(), 0.0);
+    EXPECT_EQ(popup.dimOpacity(), -1.0);
+    QSignalSpy blur(&popup, &Popup::backdropBlurRadiusChanged);
+    QSignalSpy dim(&popup, &Popup::dimOpacityChanged);
+    popup.setBackdropBlurRadius(8);
+    popup.setBackdropBlurRadius(8);
+    EXPECT_EQ(blur.count(), 1);
+    popup.setBackdropBlurRadius(100);
+    EXPECT_EQ(popup.backdropBlurRadius(), 32.0);
+    popup.setBackdropBlurRadius(-2);
+    EXPECT_EQ(popup.backdropBlurRadius(), 0.0);
+    popup.setBackdropBlurRadius(std::numeric_limits<double>::quiet_NaN());
+    EXPECT_EQ(blur.count(), 3);
+    popup.setDimOpacity(0.12);
+    popup.setDimOpacity(0.12);
+    EXPECT_EQ(dim.count(), 1);
+    popup.setDimOpacity(5);
+    EXPECT_EQ(popup.dimOpacity(), 1.0);
+    popup.setDimOpacity(-5);
+    EXPECT_EQ(popup.dimOpacity(), -1.0);
+    popup.setDimOpacity(std::numeric_limits<double>::infinity());
+    EXPECT_EQ(dim.count(), 3);
+}
+
+TEST_F(PopupTest, Contract_BlurredBackdropExcludesPopupAndRefreshesWithoutFocusChanges)
+{
+    class Content : public QWidget {
+    public:
+        using QWidget::QWidget;
+        QColor color = Qt::red;
+        void paintEvent(QPaintEvent*) override
+        {
+            QPainter painter(this);
+            painter.fillRect(rect(), color);
+            for (int x = 0; x < width(); x += 16)
+                painter.fillRect(QRect(x, 0, 16, 100), x % 32 ? Qt::white : Qt::black);
+        }
+    } content(window);
+    content.setGeometry(window->rect());
+    content.show();
+    Popup popup(window);
+    popup.setAnimationEnabled(false);
+    popup.setModal(true);
+    popup.setDim(true);
+    popup.setDimOpacity(0.0);
+    popup.setBackdropBlurRadius(8);
+    popup.open();
+    auto* scrim = window->findChild<fluent::overlay::OverlayScrim*>();
+    ASSERT_NE(scrim, nullptr);
+    const auto sample = [&scrim](QPoint point) {
+        const auto pixmap = scrim->grab();
+        return pixmap.toImage().pixelColor(point * pixmap.devicePixelRatio());
+    };
+    EXPECT_EQ(sample(QPoint(400, 300)), QColor(Qt::red));
+    const QColor edge = sample(QPoint(32, 50));
+    EXPECT_GT(edge.red(), 20);
+    EXPECT_LT(edge.red(), 235);
+    QWidget* focused = QApplication::focusWidget();
+    content.color = Qt::green;
+    content.update();
+    popup.refreshBackdrop();
+    EXPECT_EQ(QApplication::focusWidget(), focused);
+    EXPECT_EQ(sample(QPoint(400, 300)), QColor(Qt::green));
+    popup.setDimOpacity(0.5);
+    EXPECT_LT(sample(QPoint(400, 300)).green(), 250);
+    popup.setModal(false);
+    EXPECT_TRUE(scrim->testAttribute(Qt::WA_TransparentForMouseEvents));
+    popup.close();
+    processEvents();
+    EXPECT_EQ(window->findChild<fluent::overlay::OverlayScrim*>(), nullptr);
+    popup.open();
+    scrim = window->findChild<fluent::overlay::OverlayScrim*>();
+    ASSERT_NE(scrim, nullptr);
+    popup.setDimOpacity(0.0);
+    EXPECT_EQ(sample(QPoint(400, 300)), QColor(Qt::green));
+    scrim->setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::HighContrast));
+    scrim->onThemeUpdated();
+    processEvents();
+    // No cached image is painted in High Contrast; the underlying stripe stays sharp.
+    EXPECT_LE(sample(QPoint(32, 50)).red(), 5);
+    popup.close();
 }

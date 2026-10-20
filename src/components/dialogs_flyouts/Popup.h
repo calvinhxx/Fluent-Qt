@@ -76,6 +76,25 @@ public:
      */
     Q_PROPERTY(bool dim READ isDim WRITE setDim NOTIFY dimChanged)
     /**
+     * @brief Scrim opacity in [0, 1]; -1 uses the theme smoke token. Only applies when dim is enabled.
+     * zh_CN: 遮罩不透明度 [0, 1]；-1 使用主题烟雾 token，仅在 dim 开启时生效。
+     */
+    Q_PROPERTY(double dimOpacity READ dimOpacity WRITE setDimOpacity NOTIFY dimOpacityChanged)
+    /**
+     * @brief Cached content-backdrop blur radius in logical pixels [0, 32]; 0 disables blur.
+     * Defaults to 4 for modal surfaces and 0 otherwise until explicitly set.
+     * Explicit values, including 0, persist across modality changes.
+     * zh_CN: 未显式设置时，模态默认 4，非模态默认 0；显式值（包括 0）不随模态变化。
+     * zh_CN: 内容背景快照的模糊半径，范围 [0, 32] 逻辑像素；0 关闭模糊。
+     *
+     * Refreshed on opening, host resize, theme change, or refreshBackdrop(). High Contrast disables blur.
+     * zh_CN: 打开、宿主缩放、主题变化或 refreshBackdrop() 时刷新；高对比度主题关闭模糊。
+     */
+    Q_PROPERTY(double backdropBlurRadius
+        READ backdropBlurRadius
+        WRITE setBackdropBlurRadius
+        NOTIFY backdropBlurRadiusChanged)
+    /**
      * @brief Whether popup open/close transitions are animated.
      * zh_CN: 弹层打开/关闭过程是否播放过渡动画。
      */
@@ -97,7 +116,7 @@ public:
     ClosePolicy closePolicy() const { return m_closePolicy; }
     void setClosePolicy(ClosePolicy p);
 
-    bool isModal() const { return m_modal; }
+    bool isModal() const;
     void setModal(bool m);
 
     // When true, a CloseOnPressOutside light-dismiss SWALLOWS the dismissing press instead of letting
@@ -121,8 +140,14 @@ public:
     }
     void clearLightDismissPassthrough() { m_lightDismissPassthrough.clear(); }
 
-    bool isDim() const { return m_dim; }
+    bool isDim() const;
     void setDim(bool d);
+
+    double dimOpacity() const;
+    void setDimOpacity(double opacity);
+
+    double backdropBlurRadius() const;
+    void setBackdropBlurRadius(double radius);
 
     bool isAnimationEnabled() const { return m_animationEnabled; }
     void setAnimationEnabled(bool e);
@@ -160,6 +185,12 @@ public slots:
     void setIsOpen(bool open);
 
     /**
+     * @brief Refreshes the cached backdrop after application content changes behind an open popup.
+     * zh_CN: 弹层打开期间，应用背景内容变化后刷新缓存背景。
+     */
+    void refreshBackdrop();
+
+    /**
      * @brief Closes with an explicit reason; close() uses Programmatic unless a reason is pending.
      * zh_CN: 带关闭原因关闭；无参 close() 在未挂起原因时视为 Programmatic。
      */
@@ -185,6 +216,8 @@ signals:
     void closePolicyChanged(ClosePolicy policy);
     void modalChanged(bool modal);
     void dimChanged(bool dim);
+    void dimOpacityChanged(double opacity);
+    void backdropBlurRadiusChanged(double radius);
     void animationEnabledChanged(bool enabled);
 
 protected:
@@ -248,8 +281,6 @@ private:
     ClosePolicy m_closePolicy = ClosePolicy(CloseOnPressOutside | CloseOnEscape);
     bool m_lightDismissConsumesPress = false;
     QList<QPointer<QWidget>> m_lightDismissPassthrough;
-    bool m_modal = false;
-    bool m_dim = false;
     bool m_animationEnabled = true;
     bool m_exitAnimationEnabled = true;
     bool m_positionSet = false;

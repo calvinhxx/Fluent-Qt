@@ -114,6 +114,16 @@ def generate_catalog() -> dict[str, object]:
                         "source": source,
                     }
                 )
+                if sample.id == "command-palette-shared-actions":
+                    from fluentqt_gallery.native_samples_navigation import command_palette_source_files
+                    samples[-1]["source_files"] = command_palette_source_files(result)
+                elif sample.id == "field-connection-form":
+                    from fluentqt_gallery.native_samples_layout import connection_form_source_files
+                    samples[-1]["source_files"] = connection_form_source_files(result)
+                elif sample.id in {"popup-modal-dim", "dialog-backdrop-effects",
+                                   "drawer-view-backdrop-effects"}:
+                    from fluentqt_gallery.native_samples_overlays import overlay_source_files
+                    samples[-1]["source_files"] = overlay_source_files(result)
             finally:
                 result.widget.close()
                 # Several parity previews own queued native callbacks.  Keep

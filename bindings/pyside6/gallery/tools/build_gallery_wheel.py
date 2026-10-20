@@ -63,6 +63,7 @@ REQUIRED_PACKAGE_FILES = {
     "native_samples_basic.py",
     "native_samples_collections.py",
     "native_samples_dialogs.py",
+    "native_samples_overlays.py",
     "native_samples_navigation.py",
     "native_samples_scrolling.py",
     "native_samples_status.py",

@@ -71,17 +71,6 @@ struct Capabilities {
  */
 void chooseFiles(QWidget* context, const QString& filter, std::function<void(const QString&, qint64)> selected);
 
-/**
- * @brief Copies text and reports the host clipboard result while context lives.
- * zh_CN: 复制文本，并在 context 存活时报告宿主剪贴板结果。
- *
- * Call from the input handler to preserve browser user activation. Desktop
- * completion is synchronous; browser completion follows its clipboard promise.
- * zh_CN: 从输入处理函数直接调用以保留浏览器用户激活；桌面同步完成，浏览器等待
- * 剪贴板 Promise 后完成。
- */
-void copyText(QObject* context, const QString& text, std::function<void(bool)> completed);
-
 const Capabilities& capabilities();
 bool persistenceAvailable();
 QSettings createSettings();

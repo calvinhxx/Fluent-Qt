@@ -1937,6 +1937,66 @@ print("2D-only Gallery: no OpenGL imports")
             delete(window)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_native_cached_drawer_backdrop_preserves_3d_content(self):
+        if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
+            self.skipTest("requires native GPU composition")
+        from PySide6.QtWidgets import QAbstractButton
+
+        self.settings.set_spatial_mode_enabled(False)
+        window = GalleryWindow(startup_visuals=False)
+        window.resize(1200, 850)
+        try:
+            window.show()
+            window.navigate("drawer-view", animated=False)
+            _qwait(300)
+            opener = next(button for button in window.findChildren(QAbstractButton)
+                          if button.text() == "Open drawer")
+            # The actual sample is cached before the compositor is created.
+            self.settings.set_spatial_mode_enabled(True)
+            controller = window._spatial_controller
+            for _ in range(60):
+                if controller.canvas and controller.canvas.property("presenting"):
+                    break
+                _qwait(50)
+            self.assertTrue(controller.canvas.property("presenting"))
+
+            def visible_scrims():
+                return [item for item in window.findChildren(QWidget, "DrawerViewScrim")
+                        if item.isVisible()]
+
+            for theme in (ThemeMode.Light, ThemeMode.Dark):
+                self.settings.set_theme_mode(theme)
+                for opening in range(2):
+                    with self.subTest(theme=theme, opening=opening):
+                        controller.settle()
+                        _qwait(100)
+                        opener.click()
+                        _qwait(400)
+                        scrims = visible_scrims()
+                        self.assertEqual(len(scrims), 1)
+                        self.assertAlmostEqual(scrims[0].property("progress"), 1., delta=1e-4)
+                        image = scrims[0].grab().toImage()
+                        self.assertFalse(image.isNull())
+                        dpr = image.devicePixelRatio()
+                        values = [qGray(image.pixel(round(x * dpr), round(y * dpr)))
+                                  for y in range(100, 650, 8)
+                                  for x in range(40, 800, 8)]
+                        mean = sum(values) / len(values)
+                        variance = sum(value * value for value in values) / len(values) - mean * mean
+                        self.assertGreater(variance, 4., "3D content became a flat backdrop")
+                        directory = os.environ.get("FLUENTQT_SPATIAL_EVIDENCE_DIR")
+                        if directory:
+                            output = Path(directory)
+                            output.mkdir(parents=True, exist_ok=True)
+                            window.grab().save(str(output / f"cached-drawer-{theme.name}-{opening}.png"))
+                        QTest.keyClick(window.windowHandle(), Qt.Key_Escape)
+                        _qwait(400)
+                        self.assertEqual(visible_scrims(), [])
+                        self.assertTrue(controller.canvas.property("presenting"))
+        finally:
+            delete(window)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_native_overlays_block_projected_home_links(self):
         if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
             self.skipTest("requires native window hit testing and GPU composition")

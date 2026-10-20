@@ -1,6 +1,7 @@
 #include "LayoutSamples.h"
 
 #include <QBoxLayout>
+#include <QFile>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
@@ -18,6 +19,7 @@
 #include "components/textfields/LineEdit.h"
 #include "design/Typography.h"
 #include "SampleBuilders.h"
+#include "ConnectionForm.h"
 
 namespace fluent::gallery {
 namespace {
@@ -621,7 +623,26 @@ QVector<GallerySample> particleBackdropSamples()
 
 QVector<GallerySample> fieldSamples()
 {
-    return {
+    QFile formSource(QStringLiteral(":/app/samples/ConnectionForm.h"));
+    formSource.open(QIODevice::ReadOnly);
+    auto connection = makeSample(
+        QStringLiteral("field-connection-form"), QStringLiteral("Connection settings"),
+        QStringLiteral(
+            "Coordinate edits, asynchronous validation, and saving with FormController. "
+            "The demo uses a local simulation; no credentials leave this page."),
+        QString::fromUtf8(formSource.readAll()), [](QWidget* parent) { return new ConnectionForm(parent); }, true);
+    connection.usageSnippet = QStringLiteral(
+        "auto* form = new fluent::FormController(this);\n"
+        "form->addField(\"address\", addressField);\n"
+        "connect(addressEditor, &LineEdit::textChanged, form, [form] {\n"
+        "    form->markFieldChanged(\"address\");\n"
+        "});\n"
+        "// Complete validationRequested(key, token) with completeValidation().\n"
+        "// Complete submitRequested(token) with completeSubmit().\n"
+        "form->submit();");
+    connection.sourceFiles = {
+        {QStringLiteral("ConnectionForm.h"), QStringLiteral("cpp"), connection.codeSnippet, connection.usageSnippet}};
+    return {connection,
         makeSample(QStringLiteral("field-helper-text"), QStringLiteral("Wrap any input control"),
             QStringLiteral("Use the same label and helper treatment around text, choice, date, or "
                            "other existing editors."),

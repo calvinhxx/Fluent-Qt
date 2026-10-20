@@ -205,6 +205,9 @@ const QHash<QString, QString>& routeDescriptions()
             QStringLiteral("Adds a label, required marker, helper text, and "
                            "validation feedback to any input control.")},
         // Menus & toolbars
+        {QStringLiteral("command-palette"),
+            QStringLiteral(
+                "Find and run an action by typing its name. Use the keyboard to choose a result and press Enter to execute it.")},
         {QStringLiteral("menu"), QStringLiteral("A list of commands shown in a transient surface.")},
         {QStringLiteral("menu-bar"), QStringLiteral("A horizontal bar of top-level menus, each hosting commands.")},
         {QStringLiteral("command-bar"),
@@ -256,6 +259,8 @@ const QHash<QString, QString>& routeDescriptions()
             QStringLiteral("A popup label that shows extra information about a "
                            "control on hover.")},
         // Text fields
+        {QStringLiteral("code-block"),
+            QStringLiteral("Read-only code with syntax colors, exact copying, folding and bounded scrolling.")},
         {QStringLiteral("auto-suggest-box"),
             QStringLiteral("A text box that suggests matching items while people type.")},
         {QStringLiteral("label"), QStringLiteral("Static text rendered with Fluent typography roles and elision.")},

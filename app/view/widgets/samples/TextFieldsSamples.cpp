@@ -10,9 +10,11 @@
 #include <QVBoxLayout>
 
 #include "components/basicinput/Button.h"
+#include "components/basicinput/ToggleSwitch.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/menus_toolbars/MenuBar.h"
 #include "components/textfields/AutoSuggestBox.h"
+#include "components/textfields/CodeBlock.h"
 #include "components/textfields/EditingCommandRouter.h"
 #include "components/textfields/Label.h"
 #include "components/textfields/LineEdit.h"
@@ -30,6 +32,7 @@ using fluent::basicinput::Button;
 using fluent::menus_toolbars::FluentMenu;
 using fluent::menus_toolbars::FluentMenuBar;
 using fluent::textfields::AutoSuggestBox;
+using fluent::textfields::CodeBlock;
 using fluent::textfields::EditingCommandRouter;
 using fluent::textfields::Label;
 using fluent::textfields::LineEdit;
@@ -856,10 +859,83 @@ QVector<GallerySample> textEditSamples()
             })};
 }
 
+QVector<GallerySample> codeBlockSamples()
+{
+    return {
+        makeSample(
+            QStringLiteral("code-block-basic"), QStringLiteral("Read and copy code"),
+            QStringLiteral("Select a passage to copy, or use the header to copy everything and fold the block."),
+            QStringLiteral(
+                "auto* code = new CodeBlock(this);\n"
+                "code->setLanguage(\"cpp\");\n"
+                "code->setCode(\"// A small FluentQt window\\n\"\n"
+                "              \"auto* button = new Button(\\\"Continue\\\");\\n\"\n"
+                "              \"button->setFluentStyle(Button::Accent);\");"),
+            [](QWidget* parent) -> QWidget* {
+                auto* code = new CodeBlock(parent);
+                code->setObjectName(QStringLiteral("sampleCodeBlock"));
+                code->setLanguage(QStringLiteral("cpp"));
+                code->setCode(QStringLiteral(
+                    "// A small FluentQt window\n"
+                    "auto* button = new Button(\"Continue\");\n"
+                    "button->setFluentStyle(Button::Accent);"));
+                return code;
+            },
+            true),
+        makeSample(
+            QStringLiteral("code-block-scrolling"), QStringLiteral("Long code in a small space"),
+            QStringLiteral(
+                "Six visible lines keep the page compact. Turn wrapping off to scroll long lines horizontally."),
+            QStringLiteral(
+                "auto* code = new CodeBlock(this);\n"
+                "code->setLanguage(\"python\");\n"
+                "QString source = \"# Project destinations\\nprojects = [\\n\";\n"
+                "for (int i = 1; i <= 16; ++i)\n"
+                "    source += QString(\"    {\\\"name\\\": \\\"Project %1\\\", \\\"path\\\": \\\"workspace/design/components/project-%1\\\"},\\n\").arg(i);\n"
+                "code->setCode(source + \"]\");\n"
+                "code->setMaxVisibleLines(6);\n"
+                "auto* wrap = new ToggleSwitch(this);\n"
+                "wrap->setOnContent(\"Wrap long lines\");\n"
+                "wrap->setOffContent(\"Wrap long lines\");\n"
+                "wrap->setAccessibleName(\"Wrap long lines\");\n"
+                "wrap->setIsOn(true);\n"
+                "connect(wrap, &ToggleSwitch::toggled, code, &CodeBlock::setWordWrap);"),
+            [](QWidget* parent) -> QWidget* {
+                auto* root = new QWidget(parent);
+                auto* layout = new QVBoxLayout(root);
+                layout->setContentsMargins(0, 0, 0, 0);
+                layout->setSpacing(12);
+                layout->setAlignment(Qt::AlignTop);
+                auto* code = new CodeBlock(root);
+                code->setObjectName(QStringLiteral("sampleCodeBlock"));
+                code->setLanguage(QStringLiteral("python"));
+                QString source = QStringLiteral("# Project destinations\nprojects = [\n");
+                for (int i = 1; i <= 16; ++i)
+                    source += QStringLiteral(
+                        "    {\"name\": \"Project %1\", \"path\": \"workspace/design/components/project-%1\"},\n")
+                                  .arg(i);
+                code->setCode(source + QStringLiteral("]"));
+                code->setMaxVisibleLines(6);
+                auto* wrap = new basicinput::ToggleSwitch(root);
+                wrap->setOnContent(QStringLiteral("Wrap long lines"));
+                wrap->setOffContent(QStringLiteral("Wrap long lines"));
+                wrap->setAccessibleName(QStringLiteral("Wrap long lines"));
+                wrap->setObjectName(QStringLiteral("codeBlockWrap"));
+                wrap->setIsOn(true);
+                QObject::connect(wrap, &basicinput::ToggleSwitch::toggled, code, &CodeBlock::setWordWrap);
+                layout->addWidget(wrap);
+                layout->addWidget(code);
+                return root;
+            },
+            true)};
+}
+
 } // namespace
 
 QVector<GallerySample> textFieldsSamples(const QString& routeId)
 {
+    if (routeId == QStringLiteral("code-block"))
+        return codeBlockSamples();
     if (routeId == QStringLiteral("auto-suggest-box"))
         return autoSuggestBoxSamples();
     if (routeId == QStringLiteral("label"))
