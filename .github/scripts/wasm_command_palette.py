@@ -15,6 +15,14 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
     current_route = "command-palette"
     page.on("pageerror", lambda error: errors.append(str(error)))
 
+    # Native transitions and their accessibility proxies settle on separate
+    # frames. Observe completion even on slow software-rendered runners.
+    def expect_visible(target: object) -> None:
+        expect(target).to_be_visible(timeout=30_000)
+
+    def expect_absent(target: object) -> None:
+        expect(target).to_have_count(0, timeout=30_000)
+
     def text_is(value: str, timeout: int = 30_000) -> None:
         # Qt exposes focused editor text through its input-method element.
         # The separate accessibility input can remain empty, so inspect both
@@ -28,7 +36,7 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
         )
 
     def click(button: object) -> None:
-        expect(button).to_be_visible()
+        expect_visible(button)
         bounds = button.evaluate("""element => {
             const rect = element.getBoundingClientRect();
             const dialog = [...element.getRootNode().querySelectorAll('dialog[id]')]
@@ -85,24 +93,24 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
         # The introductory palette has no explicit backdrop configuration.
         # Exercise its default modal appearance before the configurable sample.
         click(page.get_by_role("button", name="Search pages", exact=True))
-        expect(search).to_be_visible()
+        expect_visible(search)
         page.screenshot(path=str(artifact_dir / "default-modal-blur.png"))
         page.keyboard.type("inbox")
         page.keyboard.press("Enter")
         text_is("Current page: Inbox")
-        expect(search).to_have_count(0)
+        expect_absent(search)
         page.set_viewport_size({"width": 1440, "height": 2800})
         open_route("command-palette")
         click(open_button)
-        expect(search).to_be_visible()
+        expect_visible(search)
         page.wait_for_timeout(300)
         page.screenshot(path=str(artifact_dir / "blurred-open.png"))
         page.keyboard.type("clear")
         page.keyboard.press("Enter")
         # An empty notebook has nothing to clear, so the palette stays open.
-        expect(search).to_be_visible()
+        expect_visible(search)
         page.keyboard.press("Escape")
-        expect(search).to_have_count(0)
+        expect_absent(search)
         click(open_button)
         page.keyboard.type("properties")
         page.keyboard.press("Enter")
@@ -113,42 +121,42 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
         page.screenshot(path=str(artifact_dir / "search.png"))
         page.keyboard.press("Enter")
         text_is("1 note")
-        expect(search).to_have_count(0)
+        expect_absent(search)
         page.screenshot(path=str(artifact_dir / "executed.png"))
         click(open_button)
         page.keyboard.type("clear")
         page.keyboard.press("Enter")
         text_is("0 notes")
-        expect(search).to_have_count(0)
+        expect_absent(search)
         # Toggle the same checked action from the toolbar and restore the
         # sample's initial geometry before using cached Qt AX child bounds.
         click(page.get_by_role("button", name="Show details", exact=True))
-        expect(page.locator('[id$=".Gallery.CommandPalette.Status"][aria-hidden="false"]')).to_have_count(0)
+        expect_absent(page.locator('[id$=".Gallery.CommandPalette.Status"][aria-hidden="false"]'))
         for destination in ("Inbox", "Home"):
             click(open_button)
             page.keyboard.type(destination.lower())
             page.keyboard.press("Enter")
             text_is(destination)
-            expect(search).to_have_count(0)
+            expect_absent(search)
         # Both samples fit in this viewport; keep the real page stationary so
         # Qt's cached AX child coordinates remain valid throughout focus changes.
         edit_button = page.get_by_role("button", name="Search editing commands", exact=True)
         click(edit_button)
-        expect(search).to_be_visible()
+        expect_visible(search)
         page.keyboard.type("cut")
         page.keyboard.press("Enter")
         text_is(" the release notes")
         click(page.get_by_role("button", name="Reset text", exact=True))
         click(edit_button)
-        expect(search).to_be_visible()
+        expect_visible(search)
         page.screenshot(path=str(artifact_dir / "editing.png"))
         page.keyboard.press("Escape")
-        expect(search).to_have_count(0)
+        expect_absent(search)
         # Programmatic setText does not immediately update Qt's HTML input-
         # method value. A second physical edit proves both Reset and Escape:
         # cutting the first word must again leave the original suffix.
         click(edit_button)
-        expect(search).to_be_visible()
+        expect_visible(search)
         page.keyboard.type("cut")
         page.keyboard.press("Enter")
         text_is(" the release notes")
@@ -158,13 +166,13 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
             '[id$=".galleryFooterNavigationTreeView"][aria-hidden="false"]'
         )
         click(open_button)
-        expect(search).to_be_visible()
+        expect_visible(search)
         click(sidebar)
-        expect(search).to_have_count(0)
-        expect(open_button).to_be_visible()
+        expect_absent(search)
+        expect_visible(open_button)
         page.screenshot(path=str(artifact_dir / "modal-dismissal.png"))
         click(sidebar)
-        expect(open_button).to_have_count(0)
+        expect_absent(open_button)
 
         # Keep counters outside centered cards and the right-hand drawer so
         # modal and modeless states exercise the same physical pointer target.
@@ -183,7 +191,7 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
             # Observe an actual interactive control; Qt's synthetic HTML
             # <dialog> container is closed even while the canvas card is open.
             effects = control("Modal")
-            expect(effects).to_be_visible()
+            expect_visible(effects)
             if route == "drawer-view":
                 page.wait_for_timeout(350)
             def adjust_slider(suffix: str, expected: str) -> None:
@@ -194,41 +202,44 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
                     click(control(suffix))
                     page.keyboard.press("End")
                     try:
-                        text_is(expected, timeout=1_000)
+                        text_is(expected, timeout=5_000)
                         return
-                    except PlaywrightTimeoutError:
+                    except PlaywrightTimeoutError as error:
                         if attempt == 4:
-                            raise
+                            raise RuntimeError(
+                                f"{route} {suffix} did not reach {expected!r} "
+                                "after physical click and End"
+                            ) from error
 
             adjust_slider("Blur", "Blur: 24 px")
             adjust_slider("Dim", "Dim: 60%")
             background = page.get_by_role("button", name="Background action", exact=True)
             click(background)
             text_is("Background clicks: 0")
-            expect(effects).to_be_visible()
+            expect_visible(effects)
             page.screenshot(path=str(artifact_dir / f"{route}-effects.png"))
             click(control("DimEnabled"))
             click(background)
             text_is("Background clicks: 0")
-            expect(effects).to_be_visible()
+            expect_visible(effects)
             click(control("Modal"))
             click(background)
             text_is("Background clicks: 1")
-            expect(effects).to_be_visible()
+            expect_visible(effects)
             click(control("Modal"))
             click(sidebar)
-            expect(effects).to_be_visible()
-            expect(opener_button).to_be_visible()
+            expect_visible(effects)
+            expect_visible(opener_button)
             click(control("CloseOutside"))
             click(sidebar)
-            expect(effects).to_have_count(0)
-            expect(opener_button).to_be_visible()
+            expect_absent(effects)
+            expect_visible(opener_button)
             click(opener_button)
-            expect(effects).to_be_visible()
+            expect_visible(effects)
             page.keyboard.press("Escape")
-            expect(effects).to_have_count(0)
+            expect_absent(effects)
             click(sidebar)
-            expect(opener_button).to_have_count(0)
+            expect_absent(opener_button)
         if errors:
             raise RuntimeError(f"Command palette browser errors: {errors}")
         (artifact_dir / "result.json").write_text(json.dumps({

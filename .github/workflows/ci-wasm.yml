@@ -179,6 +179,18 @@ jobs:
             --viewport-width 1920 \
             --viewport-height 1080
 
+      - name: Upload browser smoke diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fluentqt-wasm-browser-diagnostics-${{ github.run_attempt }}
+          path: |
+            build/wasm/command-palette-validation
+            build/wasm/command-menu-validation
+            build/wasm/form-validation
+          if-no-files-found: ignore
+          retention-days: 7
+
       # Hosted runners have no audited hardware GPU. This proves a usable 2D
       # fallback, not hardware 3D performance or projected-text quality.
       - name: Run Spatial software fallback smoke

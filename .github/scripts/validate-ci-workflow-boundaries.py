@@ -492,6 +492,7 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "      - name: Cache Chromium",
         "      - name: Install Chromium runtime",
         "      - name: Run browser smoke",
+        "      - name: Upload browser smoke diagnostics",
         "      - name: Run Spatial software fallback smoke",
         "      - name: Upload Spatial fallback evidence",
         "      - name: Stage GitHub Pages payload",
@@ -584,6 +585,23 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         errors.append(
             "ci-wasm.yml installed-consumer step must exactly consume the audited SDK"
         )
+
+    browser_evidence = named_step_section(build, "Upload browser smoke diagnostics")
+    expected_browser_evidence = [
+        "      - name: Upload browser smoke diagnostics",
+        "        if: ${{ always() }}",
+        "        uses: actions/upload-artifact@<commit>",
+        "        with:",
+        "          name: fluentqt-wasm-browser-diagnostics-${{ github.run_attempt }}",
+        "          path: |",
+        "            build/wasm/command-palette-validation",
+        "            build/wasm/command-menu-validation",
+        "            build/wasm/form-validation",
+        "          if-no-files-found: ignore",
+        "          retention-days: 7",
+    ]
+    if uncommented_workflow_lines(browser_evidence) != expected_browser_evidence:
+        errors.append("ci-wasm.yml must retain bounded browser failure diagnostics")
 
     fallback_step = named_step_section(build, "Run Spatial software fallback smoke")
     expected_fallback_step = [
