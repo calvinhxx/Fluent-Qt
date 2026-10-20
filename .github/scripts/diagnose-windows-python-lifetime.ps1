@@ -128,6 +128,9 @@ try {
     $start = [Diagnostics.ProcessStartInfo]::new()
     $start.FileName = $cdb
     $start.UseShellExecute = $false
+    if ($Bindings) {
+        $start.WorkingDirectory = Join-Path $build 'bindings/pyside6'
+    }
     foreach ($argument in @(
         '-G', '-logo', $stackLog,
         '-y', $symbols, '-c', $commands,

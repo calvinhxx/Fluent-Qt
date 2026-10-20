@@ -707,9 +707,13 @@ jobs:
 
       - name: Diagnose failed Python binding suite
         if: ${{ !cancelled() && steps.windows_binding_tests.outcome == 'failure' }}
-        timeout-minutes: 6
+        timeout-minutes: 12
         shell: pwsh
         run: |
+          .github/scripts/diagnose-windows-python-lifetime.ps1 `
+            -BuildDirectory build/pyside6-qt62-windows `
+            -ReportDirectory "$env:RUNNER_TEMP/fluentqt-lifetime-diagnostics" `
+            -Bindings
           .github/scripts/diagnose-windows-python-lifetime.ps1 `
             -BuildDirectory build/pyside6-qt62-windows `
             -ReportDirectory "$env:RUNNER_TEMP/fluentqt-lifetime-diagnostics" `
