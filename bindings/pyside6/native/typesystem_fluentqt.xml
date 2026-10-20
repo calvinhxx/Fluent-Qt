@@ -5,6 +5,7 @@
 
     <template name="command_palette_references_before">
 // Keep existing borrowed wrappers alive while application callbacks run.
+const QPointer&lt;::fluent::menus_toolbars::CommandPalette&gt; paletteGuard(%CPPSELF);
 const auto priorCommands = %CPPSELF->commands();
 Shiboken::AutoDecRef priorReferences(%CONVERTTOPYTHON[QList&lt;QAction*&gt;](priorCommands));
 if (priorReferences.isNull())
@@ -13,7 +14,11 @@ if (priorReferences.isNull())
     <template name="command_palette_references_after">
 // removeReference removes the whole key, so retain the final registry as one
 // snapshot instead of removing an individual action from a shared key.
-if (Shiboken::Object::isValid(%PYSELF, false)) {
+// Final classes have no shell destructor to invalidate the Python wrapper.
+// Check native lifetime before accessing a registry after a callback.
+if (!paletteGuard) {
+    Shiboken::Object::invalidate(%PYSELF);
+} else if (Shiboken::Object::isValid(%PYSELF, false)) {
     const auto currentCommands = %CPPSELF->commands();
     Shiboken::AutoDecRef currentReferences(%CONVERTTOPYTHON[QList&lt;QAction*&gt;](currentCommands));
     if (currentReferences.isNull())
@@ -954,6 +959,9 @@ if (Shiboken::Object::isValid(%PYSELF, false)) {
 
         <namespace-type name="menus_toolbars" visible="no">
             <object-type name="CommandPalette">
+                <extra-includes>
+                    <include file-name="QPointer" location="global"/>
+                </extra-includes>
                 <!-- Final components have no Python virtual shell. -->
                 <modify-function signature="actionEvent(QActionEvent*)" remove="all"/>
                 <modify-function signature="eventFilter(QObject*,QEvent*)" remove="all"/>
