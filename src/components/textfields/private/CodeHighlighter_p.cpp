@@ -1,94 +1,50 @@
-#include "GalleryCodeHighlighter.h"
+#include "CodeHighlighter_p.h"
+#include "design/CodeTokens_p.h"
 
 #include <QChar>
 #include <QSet>
 
-namespace fluent::gallery {
+namespace fluent::textfields::detail {
 namespace {
 
-// VSCode-style token palettes (light = "Light+", dark = "Dark+").
-// zh_CN: VSCode 风格的 token 配色（light = "Light+"，dark = "Dark+"）。
-struct Palette {
-    QString text;
-    QString keyword;
-    QString type;
-    QString function;
-    QString string;
-    QString comment;
-    QString number;
-    QString preprocessor;
-};
-
-const Palette& paletteFor(bool dark)
-{
-    static const Palette light{QStringLiteral("#1F1F1F"), QStringLiteral("#0000FF"),
-                               QStringLiteral("#267F99"), QStringLiteral("#795E26"),
-                               QStringLiteral("#A31515"), QStringLiteral("#008000"),
-                               QStringLiteral("#098658"), QStringLiteral("#800000")};
-    static const Palette darkPalette{QStringLiteral("#D4D4D4"), QStringLiteral("#569CD6"),
-                                     QStringLiteral("#4EC9B0"), QStringLiteral("#DCDCAA"),
-                                     QStringLiteral("#CE9178"), QStringLiteral("#6A9955"),
-                                     QStringLiteral("#B5CEA8"), QStringLiteral("#C586C0")};
-    return dark ? darkPalette : light;
-}
+using code_tokens::paletteFor;
+using code_tokens::Palette;
 
 const QSet<QString>& cppKeywords()
 {
-    static const QSet<QString> keywords{
-        QStringLiteral("alignas"),      QStringLiteral("alignof"),
-        QStringLiteral("auto"),         QStringLiteral("bool"),
-        QStringLiteral("break"),        QStringLiteral("case"),
-        QStringLiteral("catch"),        QStringLiteral("char"),
-        QStringLiteral("class"),        QStringLiteral("const"),
-        QStringLiteral("constexpr"),    QStringLiteral("const_cast"),
-        QStringLiteral("continue"),     QStringLiteral("decltype"),
-        QStringLiteral("default"),      QStringLiteral("delete"),
-        QStringLiteral("do"),           QStringLiteral("double"),
-        QStringLiteral("dynamic_cast"), QStringLiteral("else"),
-        QStringLiteral("enum"),         QStringLiteral("explicit"),
-        QStringLiteral("export"),       QStringLiteral("extern"),
-        QStringLiteral("false"),        QStringLiteral("final"),
-        QStringLiteral("float"),        QStringLiteral("for"),
-        QStringLiteral("friend"),       QStringLiteral("goto"),
-        QStringLiteral("if"),           QStringLiteral("inline"),
-        QStringLiteral("int"),          QStringLiteral("long"),
-        QStringLiteral("mutable"),      QStringLiteral("namespace"),
-        QStringLiteral("new"),          QStringLiteral("noexcept"),
-        QStringLiteral("nullptr"),      QStringLiteral("operator"),
-        QStringLiteral("override"),     QStringLiteral("private"),
-        QStringLiteral("protected"),    QStringLiteral("public"),
-        QStringLiteral("register"),     QStringLiteral("reinterpret_cast"),
-        QStringLiteral("return"),       QStringLiteral("short"),
-        QStringLiteral("signed"),       QStringLiteral("sizeof"),
-        QStringLiteral("static"),       QStringLiteral("static_assert"),
-        QStringLiteral("static_cast"),  QStringLiteral("struct"),
-        QStringLiteral("switch"),       QStringLiteral("template"),
-        QStringLiteral("this"),         QStringLiteral("throw"),
-        QStringLiteral("true"),         QStringLiteral("try"),
-        QStringLiteral("typedef"),      QStringLiteral("typeid"),
-        QStringLiteral("typename"),     QStringLiteral("union"),
-        QStringLiteral("unsigned"),     QStringLiteral("using"),
-        QStringLiteral("virtual"),      QStringLiteral("void"),
-        QStringLiteral("volatile"),     QStringLiteral("wchar_t"),
-        QStringLiteral("while")};
+    static const QSet<QString> keywords{QStringLiteral("alignas"), QStringLiteral("alignof"), QStringLiteral("auto"),
+        QStringLiteral("bool"), QStringLiteral("break"), QStringLiteral("case"), QStringLiteral("catch"),
+        QStringLiteral("char"), QStringLiteral("class"), QStringLiteral("const"), QStringLiteral("constexpr"),
+        QStringLiteral("const_cast"), QStringLiteral("continue"), QStringLiteral("decltype"), QStringLiteral("default"),
+        QStringLiteral("delete"), QStringLiteral("do"), QStringLiteral("double"), QStringLiteral("dynamic_cast"),
+        QStringLiteral("else"), QStringLiteral("enum"), QStringLiteral("explicit"), QStringLiteral("export"),
+        QStringLiteral("extern"), QStringLiteral("false"), QStringLiteral("final"), QStringLiteral("float"),
+        QStringLiteral("for"), QStringLiteral("friend"), QStringLiteral("goto"), QStringLiteral("if"),
+        QStringLiteral("inline"), QStringLiteral("int"), QStringLiteral("long"), QStringLiteral("mutable"),
+        QStringLiteral("namespace"), QStringLiteral("new"), QStringLiteral("noexcept"), QStringLiteral("nullptr"),
+        QStringLiteral("operator"), QStringLiteral("override"), QStringLiteral("private"), QStringLiteral("protected"),
+        QStringLiteral("public"), QStringLiteral("register"), QStringLiteral("reinterpret_cast"),
+        QStringLiteral("return"), QStringLiteral("short"), QStringLiteral("signed"), QStringLiteral("sizeof"),
+        QStringLiteral("static"), QStringLiteral("static_assert"), QStringLiteral("static_cast"),
+        QStringLiteral("struct"), QStringLiteral("switch"), QStringLiteral("template"), QStringLiteral("this"),
+        QStringLiteral("throw"), QStringLiteral("true"), QStringLiteral("try"), QStringLiteral("typedef"),
+        QStringLiteral("typeid"), QStringLiteral("typename"), QStringLiteral("union"), QStringLiteral("unsigned"),
+        QStringLiteral("using"), QStringLiteral("virtual"), QStringLiteral("void"), QStringLiteral("volatile"),
+        QStringLiteral("wchar_t"), QStringLiteral("while")};
     return keywords;
 }
 
 const QSet<QString>& pythonKeywords()
 {
-    static const QSet<QString> keywords{
-        QStringLiteral("and"),      QStringLiteral("as"),       QStringLiteral("assert"),
-        QStringLiteral("async"),    QStringLiteral("await"),    QStringLiteral("break"),
-        QStringLiteral("class"),    QStringLiteral("continue"), QStringLiteral("def"),
-        QStringLiteral("del"),      QStringLiteral("elif"),     QStringLiteral("else"),
-        QStringLiteral("except"),   QStringLiteral("False"),    QStringLiteral("finally"),
-        QStringLiteral("for"),      QStringLiteral("from"),     QStringLiteral("global"),
-        QStringLiteral("if"),       QStringLiteral("import"),   QStringLiteral("in"),
-        QStringLiteral("is"),       QStringLiteral("lambda"),   QStringLiteral("None"),
-        QStringLiteral("nonlocal"), QStringLiteral("not"),      QStringLiteral("or"),
-        QStringLiteral("pass"),     QStringLiteral("raise"),    QStringLiteral("return"),
-        QStringLiteral("True"),     QStringLiteral("try"),      QStringLiteral("while"),
-        QStringLiteral("with"),     QStringLiteral("yield")};
+    static const QSet<QString> keywords{QStringLiteral("and"), QStringLiteral("as"), QStringLiteral("assert"),
+        QStringLiteral("async"), QStringLiteral("await"), QStringLiteral("break"), QStringLiteral("class"),
+        QStringLiteral("continue"), QStringLiteral("def"), QStringLiteral("del"), QStringLiteral("elif"),
+        QStringLiteral("else"), QStringLiteral("except"), QStringLiteral("False"), QStringLiteral("finally"),
+        QStringLiteral("for"), QStringLiteral("from"), QStringLiteral("global"), QStringLiteral("if"),
+        QStringLiteral("import"), QStringLiteral("in"), QStringLiteral("is"), QStringLiteral("lambda"),
+        QStringLiteral("None"), QStringLiteral("nonlocal"), QStringLiteral("not"), QStringLiteral("or"),
+        QStringLiteral("pass"), QStringLiteral("raise"), QStringLiteral("return"), QStringLiteral("True"),
+        QStringLiteral("try"), QStringLiteral("while"), QStringLiteral("with"), QStringLiteral("yield")};
     return keywords;
 }
 
@@ -139,8 +95,8 @@ public:
             } else if (c == QLatin1Char(' ') || c == QLatin1Char('\t')) {
                 int width = c == QLatin1Char('\t') ? 4 : 1;
                 recordSourceCharacter(width);
-                while (i + 1 < text.size() && (text.at(i + 1) == QLatin1Char(' ') ||
-                                               text.at(i + 1) == QLatin1Char('\t'))) {
+                while (i + 1 < text.size()
+                    && (text.at(i + 1) == QLatin1Char(' ') || text.at(i + 1) == QLatin1Char('\t'))) {
                     const int nextWidth = text.at(++i) == QLatin1Char('\t') ? 4 : 1;
                     recordSourceCharacter(nextWidth);
                     width += nextWidth;
@@ -185,8 +141,7 @@ private:
     bool m_previousWasCarriageReturn = false;
 };
 
-int appendSeparator(const QString& code, int offset, bool cpp, CodeEscaper& escaper, QString& html,
-                    int& qualifiedDepth)
+int appendSeparator(const QString& code, int offset, bool cpp, CodeEscaper& escaper, QString& html, int& qualifiedDepth)
 {
     const QChar c = code.at(offset);
     if (c.isSpace()) {
@@ -198,9 +153,9 @@ int appendSeparator(const QString& code, int offset, bool cpp, CodeEscaper& esca
         return end;
     }
 
-    const bool qualifier = cpp ? c == QLatin1Char(':') && offset + 1 < code.size() &&
-                                     code.at(offset + 1) == QLatin1Char(':')
-                               : c == QLatin1Char('.');
+    const bool qualifier = cpp
+        ? c == QLatin1Char(':') && offset + 1 < code.size() && code.at(offset + 1) == QLatin1Char(':')
+        : c == QLatin1Char('.');
     const int length = qualifier && cpp ? 2 : 1;
     html += escaper.escape(code.mid(offset, length));
     // Keep the root/type pair together, but allow nested names and argument
@@ -227,8 +182,8 @@ bool isIdentPart(QChar c)
 
 } // namespace
 
-static QString highlightCLike(const QString& code, bool darkTheme, CodeSourceMap* sourceMap,
-                              const QSet<QString>& keywords)
+static QString
+highlightCLike(const QString& code, bool darkTheme, CodeSourceMap* sourceMap, const QSet<QString>& keywords)
 {
     const Palette& pal = paletteFor(darkTheme);
 
@@ -254,8 +209,7 @@ static QString highlightCLike(const QString& code, bool darkTheme, CodeSourceMap
         // Block comment.
         if (c == QLatin1Char('/') && i + 1 < n && code.at(i + 1) == QLatin1Char('*')) {
             int j = i + 2;
-            while (j + 1 < n &&
-                   !(code.at(j) == QLatin1Char('*') && code.at(j + 1) == QLatin1Char('/')))
+            while (j + 1 < n && !(code.at(j) == QLatin1Char('*') && code.at(j + 1) == QLatin1Char('/')))
                 ++j;
             j = qMin(n, j + 2);
             html += escaper.span(pal.comment, code.mid(i, j - i));
@@ -340,14 +294,12 @@ QString highlightCppToHtml(const QString& code, bool darkTheme, CodeSourceMap* s
 
 QString highlightQmlToHtml(const QString& code, bool darkTheme, CodeSourceMap* sourceMap)
 {
-    static const QSet<QString> keywords{
-        QStringLiteral("import"),   QStringLiteral("property"), QStringLiteral("readonly"),
-        QStringLiteral("required"), QStringLiteral("signal"),   QStringLiteral("function"),
-        QStringLiteral("var"),      QStringLiteral("let"),      QStringLiteral("const"),
-        QStringLiteral("if"),       QStringLiteral("else"),     QStringLiteral("return"),
-        QStringLiteral("true"),     QStringLiteral("false"),    QStringLiteral("null"),
-        QStringLiteral("int"),      QStringLiteral("real"),     QStringLiteral("bool"),
-        QStringLiteral("string"),   QStringLiteral("color"),    QStringLiteral("id")};
+    static const QSet<QString> keywords{QStringLiteral("import"), QStringLiteral("property"),
+        QStringLiteral("readonly"), QStringLiteral("required"), QStringLiteral("signal"), QStringLiteral("function"),
+        QStringLiteral("var"), QStringLiteral("let"), QStringLiteral("const"), QStringLiteral("if"),
+        QStringLiteral("else"), QStringLiteral("return"), QStringLiteral("true"), QStringLiteral("false"),
+        QStringLiteral("null"), QStringLiteral("int"), QStringLiteral("real"), QStringLiteral("bool"),
+        QStringLiteral("string"), QStringLiteral("color"), QStringLiteral("id")};
     return highlightCLike(code, darkTheme, sourceMap, keywords);
 }
 
@@ -385,8 +337,7 @@ QString highlightPythonToHtml(const QString& code, bool darkTheme, CodeSourceMap
                     continue;
                 }
                 if (triple) {
-                    if (j + 2 < n && code.at(j) == quote && code.at(j + 1) == quote &&
-                        code.at(j + 2) == quote) {
+                    if (j + 2 < n && code.at(j) == quote && code.at(j + 1) == quote && code.at(j + 2) == quote) {
                         j += 3;
                         break;
                     }
@@ -448,4 +399,21 @@ QString highlightPythonToHtml(const QString& code, bool darkTheme, CodeSourceMap
     return QStringLiteral("<span style=\"color:%1;\">%2</span>").arg(pal.text, html);
 }
 
-} // namespace fluent::gallery
+QString highlightPlainToHtml(const QString& code, const QString& color, CodeSourceMap* sourceMap)
+{
+    CodeEscaper escaper(sourceMap);
+    return escaper.span(color, code);
+}
+
+QString highlightCodeToHtml(const QString& code, const QString& language, bool dark, CodeSourceMap* sourceMap)
+{
+    if (language == QStringLiteral("cpp"))
+        return highlightCppToHtml(code, dark, sourceMap);
+    if (language == QStringLiteral("python"))
+        return highlightPythonToHtml(code, dark, sourceMap);
+    if (language == QStringLiteral("qml"))
+        return highlightQmlToHtml(code, dark, sourceMap);
+    return highlightPlainToHtml(code, paletteFor(dark).text, sourceMap);
+}
+
+} // namespace fluent::textfields::detail

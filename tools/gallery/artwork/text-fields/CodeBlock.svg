@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>CodeBlock</title>
+  <defs><linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse"><stop stop-color="#2db5e7"/><stop offset="1" stop-color="#0d4688"/></linearGradient></defs>
+  <g id="artwork">
+    <rect x="3" y="3" width="66" height="66" rx="6" fill="url(#tile)"/>
+    <rect x="11.5" y="16" width="52" height="43" rx="4" fill="#12343f" opacity=".22"/>
+    <rect x="10" y="14" width="52" height="43" rx="4" fill="#fff"/>
+    <path d="M10 25h52" stroke="#dce7f2"/>
+    <rect x="16" y="19" width="13" height="2" rx="1" fill="#5485ae"/>
+    <path d="m53 19 2 2 2-2" fill="none" stroke="#5485ae" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="m25 33-6 6 6 6m22-12 6 6-6 6m-8-14-6 16" fill="none" stroke="#286da7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

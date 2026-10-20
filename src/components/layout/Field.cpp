@@ -28,7 +28,7 @@ Field::Field(QWidget* parent) : QWidget(parent)
     qRegisterMetaType<ValidationState>("fluent::layout::Field::ValidationState");
 
     setObjectName(QStringLiteral("fluentField"));
-    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
     // Field is presentation chrome, not an input target. The hosted editor
     // remains the only Tab stop and receives explicit focus through the proxy.
     // zh_CN: Field 只是展示外壳，不是输入目标；Tab 焦点由 editor 自己拥有，
@@ -37,7 +37,8 @@ Field::Field(QWidget* parent) : QWidget(parent)
 
     auto* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
-    root->setSpacing(themeSpacing().gap.tight);
+    root->setSpacing(themeSpacing().gap.normal);
+    root->setAlignment(Qt::AlignTop);
 
     m_captionRow = new QWidget(this);
     m_captionRow->setObjectName(QStringLiteral("fluentFieldCaptionRow"));
@@ -47,14 +48,14 @@ Field::Field(QWidget* parent) : QWidget(parent)
 
     m_caption = new textfields::Label(m_captionRow);
     m_caption->setObjectName(QStringLiteral("fluentFieldCaption"));
-    m_caption->setFluentTypography(Typography::FontRole::Body);
+    m_caption->setFluentTypography(Typography::FontRole::BodyStrong);
     m_caption->setTextColorRole(textfields::Label::TextColorRole::Primary);
     m_caption->setWordWrap(true);
     m_caption->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
 
     m_requiredMark = new textfields::Label(QStringLiteral("*"), m_captionRow);
     m_requiredMark->setObjectName(QStringLiteral("fluentFieldRequired"));
-    m_requiredMark->setFluentTypography(Typography::FontRole::Body);
+    m_requiredMark->setFluentTypography(Typography::FontRole::Caption);
     m_requiredMark->hide();
 
     captionLayout->addWidget(m_caption, 0, Qt::AlignBaseline);
@@ -250,7 +251,7 @@ void Field::releaseEditor()
 void Field::onThemeUpdated()
 {
     if (auto* root = layout())
-        root->setSpacing(themeSpacing().gap.tight);
+        root->setSpacing(themeSpacing().gap.normal);
     if (m_captionRow) {
         if (auto* captionLayout = m_captionRow->layout())
             captionLayout->setSpacing(themeSpacing().gap.tight);
@@ -325,7 +326,7 @@ void Field::updateCaption()
 void Field::updateHelperAndStatus()
 {
     m_helper->setText(m_helperText);
-    m_helper->setVisible(!m_helperText.isEmpty());
+    m_helper->setVisible(!m_helperText.isEmpty() && m_validationMessage.isEmpty());
     m_status->setText(m_validationMessage);
     const bool hasStatus = !m_validationMessage.isEmpty();
     m_status->setVisible(hasStatus);
@@ -336,7 +337,8 @@ void Field::updateHelperAndStatus()
 void Field::applyStatusColor()
 {
     m_requiredMark->setStyleSheet(colorCss(themeColors().systemCritical));
-    const bool showIcon = !m_validationMessage.isEmpty() && m_validationState != ValidationState::None;
+    const bool showIcon = !m_validationMessage.isEmpty() && m_validationState != ValidationState::None
+        && m_validationState != ValidationState::Validating;
     m_statusIcon->setGlyph(showIcon ? statusGlyph() : QString());
     m_statusIcon->setColor(statusColor());
     m_statusIcon->setVisible(showIcon);
@@ -390,6 +392,8 @@ QColor Field::statusColor() const
         return colors.systemCaution;
     case ValidationState::Success:
         return colors.systemSuccess;
+    case ValidationState::Validating:
+        return colors.systemInfo;
     case ValidationState::None:
         break;
     }
@@ -406,6 +410,7 @@ QString Field::statusGlyph() const
     case ValidationState::Success:
         return Typography::Icons::CheckmarkBadge12;
     case ValidationState::None:
+    case ValidationState::Validating:
         break;
     }
     return QString();

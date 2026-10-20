@@ -57,7 +57,7 @@ public:
      * values.
      * zh_CN: Field 只负责展示该状态，真正的校验与编辑器值仍由调用方拥有。
      */
-    enum class ValidationState { None, Error, Warning, Success };
+    enum class ValidationState { None, Error, Warning, Success, Validating };
     Q_ENUM(ValidationState)
 
     explicit Field(QWidget* parent = nullptr);

@@ -2,6 +2,7 @@
 #define FLUENTQT_TEXTFIELDS_H
 
 #include <components/textfields/AutoSuggestBox.h>
+#include <components/textfields/CodeBlock.h>
 #include <components/textfields/EditingCommandRouter.h>
 #include <components/textfields/Label.h>
 #include <components/textfields/LineEdit.h>

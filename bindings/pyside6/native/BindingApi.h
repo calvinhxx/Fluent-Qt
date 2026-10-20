@@ -71,8 +71,10 @@
 #include <components/layout/Divider.h>
 #include <components/layout/Expander.h>
 #include <components/layout/Field.h>
+#include <components/foundation/FormController.h>
 #include <components/menus_toolbars/CommandBar.h>
 #include <components/menus_toolbars/CommandBarFlyout.h>
+#include <components/menus_toolbars/CommandPalette.h>
 #include <components/menus_toolbars/Menu.h>
 #include <components/menus_toolbars/MenuBar.h>
 #include <components/navigation/Breadcrumb.h>
@@ -96,6 +98,7 @@
 #include <components/status_info/Toast.h>
 #include <components/status_info/ToolTip.h>
 #include <components/textfields/AutoSuggestBox.h>
+#include <components/textfields/CodeBlock.h>
 #include <components/textfields/EditingCommandRouter.h>
 #include <components/textfields/Label.h>
 #include <components/textfields/LineEdit.h>

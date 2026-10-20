@@ -10,8 +10,10 @@
 #include <memory>
 
 #include "SampleBuilders.h"
+#include "OverlayEffectsSample.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/CheckBox.h"
+#include "components/basicinput/Slider.h"
 #include "components/basicinput/ToggleSwitch.h"
 #include "components/dialogs_flyouts/CoachMark.h"
 #include "components/dialogs_flyouts/ContentDialog.h"
@@ -390,123 +392,275 @@ QVector<GallerySample> contentDialogSamples()
 
 QVector<GallerySample> dialogSamples()
 {
-    return {
-        makeSample(QStringLiteral("dialog-owned-content"), QStringLiteral("Caller-owned modal content"),
-            QStringLiteral("Dialog supplies the modal chrome and smoke layer; "
-                           "the app owns layout, fields, and result handling."),
-            QStringLiteral(
-                "auto* dialog = new Dialog(window());\n"
-                "dialog->setMinimumSize(480, 280);\n"
-                "auto* layout = new QVBoxLayout(dialog);\n"
-                "layout->addWidget(titleLabel);\n"
-                "layout->addWidget(nameEdit);\n"
-                "layout->addStretch(1);\n"
-                "layout->addLayout(commandRow);\n"
-                "connect(applyButton, &Button::clicked, dialog,\n"
-                "        [dialog] { dialog->done(1); });\n"
-                "connect(dialog, &QDialog::finished, dialog,\n"
-                "        &QObject::deleteLater);\n"
-                "dialog->open();"),
+    QVector<GallerySample> samples{
+        makeSample(QStringLiteral("dialog-owned-content"), QStringLiteral("Rename a project"),
+            QStringLiteral("Edit a project name, then apply the change or cancel to keep the original."),
+            QStringLiteral(R"sample(auto* root = new QWidget(this);
+auto* layout = new QVBoxLayout(root);
+auto* open = new Button(QStringLiteral("Rename project"), root);
+open->setFluentStyle(Button::Accent);
+auto* status = new Label(QStringLiteral("Project name: Northwind Analytics"), root);
+layout->addWidget(open, 0, Qt::AlignLeft);
+layout->addWidget(status);
+QObject::connect(open, &Button::clicked, root, [open, status] {
+    auto* dialog = new Dialog(open->window());
+    dialog->setThemeSource(open);
+    dialog->setMinimumSize(480, 280);
+    auto* content = new QVBoxLayout(dialog);
+    content->setContentsMargins(32, 28, 32, 28);
+    content->setSpacing(14);
+    auto* title = new Label(QStringLiteral("Rename project"), dialog);
+    title->setFluentTypography(Typography::FontRole::Subtitle);
+    content->addWidget(title);
+    auto* name = new LineEdit(dialog);
+    name->setAccessibleName(QStringLiteral("Project name"));
+    name->setText(status->text().replace(QStringLiteral("Project name: "), QString()));
+    content->addWidget(name);
+    content->addStretch();
+    auto* commands = new QHBoxLayout;
+    auto* cancel = new Button(QStringLiteral("Cancel"), dialog);
+    auto* apply = new Button(QStringLiteral("Apply"), dialog);
+    apply->setFluentStyle(Button::Accent);
+    commands->addStretch();
+    commands->addWidget(cancel);
+    commands->addWidget(apply);
+    content->addLayout(commands);
+    QObject::connect(cancel, &Button::clicked, dialog, &QDialog::reject);
+    QObject::connect(apply, &Button::clicked, dialog, &QDialog::accept);
+    QObject::connect(dialog, &QDialog::accepted, status, [status, name] {
+        status->setText(QStringLiteral("Project name: %1").arg(name->text()));
+    });
+    QObject::connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);
+    dialog->open();
+});
+return root;)sample"),
             [](QWidget* parent) {
-                auto* surface = sampleSurface(parent);
-                auto* row = horizontalGroup(surface, 12);
-                auto* button = sampleButton(row, QStringLiteral("Open dialog"));
-                button->setMinimumWidth(118);
-                auto* status = makeStatusLabel(row, QStringLiteral("Project name: Northwind Analytics"));
-
-                QObject::connect(button, &Button::clicked, button, [button, status]() {
-                    auto* dialog = themedDialog(new Dialog(button->window()), button);
+                auto* root = new QWidget(parent);
+                auto* layout = new QVBoxLayout(root);
+                auto* open = new Button(QStringLiteral("Rename project"), root);
+                open->setFluentStyle(Button::Accent);
+                auto* status = new Label(QStringLiteral("Project name: Northwind Analytics"), root);
+                layout->addWidget(open, 0, Qt::AlignLeft);
+                layout->addWidget(status);
+                QObject::connect(open, &Button::clicked, root, [open, status] {
+                    auto* dialog = new Dialog(open->window());
+                    dialog->setThemeSource(open);
                     dialog->setMinimumSize(480, 280);
-                    auto* layout = new QVBoxLayout(dialog);
-                    layout->setContentsMargins(32, 28, 32, 28);
-                    layout->setSpacing(14);
-
-                    layout->addWidget(makeTitleLabel(dialog, QStringLiteral("Rename project")));
-                    layout->addWidget(makeBodyLabel(dialog,
-                        QStringLiteral(
-                            "Choose a display name that appears in "
-                            "navigation and recent projects.")));
-
-                    auto* nameEdit = new LineEdit(dialog);
-                    nameEdit->setText(QStringLiteral("Northwind Analytics"));
-                    layout->addWidget(nameEdit);
-                    layout->addStretch(1);
-                    addDialogButtons(layout, dialog, status);
-
-                    QObject::connect(dialog, &QDialog::finished, status, [status, nameEdit](int result) {
-                        if (result == 1) {
-                            status->setText(QStringLiteral("Project name: %1").arg(nameEdit->text()));
-                        }
+                    auto* content = new QVBoxLayout(dialog);
+                    content->setContentsMargins(32, 28, 32, 28);
+                    content->setSpacing(14);
+                    auto* title = new Label(QStringLiteral("Rename project"), dialog);
+                    title->setFluentTypography(Typography::FontRole::Subtitle);
+                    content->addWidget(title);
+                    auto* name = new LineEdit(dialog);
+                    name->setAccessibleName(QStringLiteral("Project name"));
+                    name->setText(status->text().replace(QStringLiteral("Project name: "), QString()));
+                    content->addWidget(name);
+                    content->addStretch();
+                    auto* commands = new QHBoxLayout;
+                    auto* cancel = new Button(QStringLiteral("Cancel"), dialog);
+                    auto* apply = new Button(QStringLiteral("Apply"), dialog);
+                    apply->setFluentStyle(Button::Accent);
+                    commands->addStretch();
+                    commands->addWidget(cancel);
+                    commands->addWidget(apply);
+                    content->addLayout(commands);
+                    QObject::connect(cancel, &Button::clicked, dialog, &QDialog::reject);
+                    QObject::connect(apply, &Button::clicked, dialog, &QDialog::accept);
+                    QObject::connect(dialog, &QDialog::accepted, status, [status, name] {
+                        status->setText(QStringLiteral("Project name: %1").arg(name->text()));
                     });
                     QObject::connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);
                     dialog->open();
                 });
-
-                boxLayout(row)->addWidget(button);
-                boxLayout(row)->addWidget(status);
-                boxLayout(surface)->addWidget(row);
-                return surface;
+                return root;
             }),
-        makeSample(QStringLiteral("dialog-animation-smoke"), QStringLiteral("Smoke and animation options"),
-            QStringLiteral("Base Dialog can opt in or out of entrance animation "
-                           "and window smoke depending on the workflow."),
-            QStringLiteral(
-                "auto* dialog = new Dialog(window());\n"
-                "dialog->setSmokeEnabled(useSmoke);\n"
-                "dialog->setAnimationEnabled(useAnimation);\n"
-                "dialog->setMinimumSize(420, 220);\n"
-                "connect(dialog, &QDialog::finished, dialog,\n"
-                "        &QObject::deleteLater);\n"
-                "dialog->open();"),
-            [](QWidget* parent) {
-                auto* surface = sampleSurface(parent);
-                auto* row = horizontalGroup(surface, 10);
-                auto* animated = sampleButton(row, QStringLiteral("Animated smoke"));
-                animated->setMinimumWidth(136);
-                auto* instant = sampleButton(row, QStringLiteral("Instant"));
-                auto* status = makeStatusLabel(surface, QStringLiteral("Last dialog: none"));
+        makeSample(QStringLiteral("dialog-backdrop-effects"), QStringLiteral("Modal and backdrop effects"),
+            QStringLiteral("Blur or dim the background, then compare blocked and available background interaction."),
+            QStringLiteral(R"sample(using basicinput::Button;
+using basicinput::CheckBox;
+using basicinput::Slider;
+using textfields::Label;
+auto* root = new QWidget(this);
+auto* layout = new QVBoxLayout(root);
+layout->setSpacing(12);
+auto* open = new Button(QStringLiteral("Preview background effects"), root);
+open->setFluentStyle(Button::Accent);
+layout->addWidget(open, 0, Qt::AlignLeft);
+auto* hint = new Label(QStringLiteral("Open the overlay to try this action."), root);
+hint->setWordWrap(true);
+hint->setTextColorRole(Label::TextColorRole::Secondary);
+layout->addWidget(hint);
+auto* row = new QWidget(root);
+auto* rowLayout = new QHBoxLayout(row);
+rowLayout->setContentsMargins(0, 0, 0, 0);
+rowLayout->setSpacing(12);
+auto* counter = new Button(QStringLiteral("Background action"), row);
+row->layout()->addWidget(counter);
+auto* status = new Label(QStringLiteral("Background clicks: 0"), row);
+status->setTextColorRole(Label::TextColorRole::Secondary);
+row->layout()->addWidget(status);
+layout->addWidget(row);
+QObject::connect(counter, &Button::clicked, status, [status, count = 0]() mutable {
+    status->setText(QStringLiteral("Background clicks: %1").arg(++count));
+});
+QObject::connect(open, &Button::clicked, root, [root, open, counter, hint] {
+    auto* overlay = new Dialog(root);
+    overlay->setModal(true);
+    overlay->setDim(true);
+    overlay->setDimOpacity(0.12);
+    overlay->setBackdropBlurRadius(8);
+    overlay->setClosePolicy(Dialog::CloseOnEscape);
+    QWidget* body = overlay;
+    overlay->setThemeSource(open);
+    overlay->setFixedWidth(400);
+    auto* content = new QVBoxLayout(body);
+    content->setContentsMargins(28, 26, 28, 26);
+    content->setSpacing(10);
+    auto* title = new Label(QStringLiteral("Modal and backdrop effects"), body);
+    title->setFluentTypography(Typography::FontRole::BodyStrong);
+    title->setWordWrap(true);
+    content->addWidget(title);
+    auto* modal = new CheckBox(QStringLiteral("Modal"), body);
+    modal->setChecked(true);
+    QObject::connect(modal, &QCheckBox::toggled, overlay, &Dialog::setModal);
+    const auto explainModal = [hint](bool enabled) {
+        hint->setText(enabled
+            ? QStringLiteral("Modal on: background blocked.")
+            : QStringLiteral("Modal off: background available."));
+    };
+    QObject::connect(modal, &QCheckBox::toggled, hint, explainModal);
+    explainModal(true);
+    content->addWidget(modal);
+    auto* dimEnabled = new CheckBox(QStringLiteral("Dim background"), body);
+    dimEnabled->setChecked(true);
+    QObject::connect(dimEnabled, &QCheckBox::toggled, overlay, &Dialog::setDim);
+    content->addWidget(dimEnabled);
+    auto* outside = new CheckBox(QStringLiteral("Close on outside click"), body);
+    QObject::connect(outside, &QCheckBox::toggled, overlay, [overlay](bool enabled) {
+        Dialog::ClosePolicy policy(Dialog::CloseOnEscape);
+        if (enabled)
+            policy |= Dialog::CloseOnPressOutside;
+        overlay->setClosePolicy(policy);
+    });
+    content->addWidget(outside);
+    auto* blurLabel = new Label(QStringLiteral("Blur: 8 px"), body);
+    auto* blur = new Slider(Qt::Horizontal, body);
+    blur->setAccessibleName(QStringLiteral("Background blur radius"));
+    blur->setRange(0, 24);
+    blur->setValue(8);
+    QObject::connect(blur, &QSlider::valueChanged, overlay, [overlay, blurLabel](int value) {
+        overlay->setBackdropBlurRadius(value);
+        blurLabel->setText(QStringLiteral("Blur: %1 px").arg(value));
+    });
+    content->addWidget(blurLabel);
+    content->addWidget(blur);
+    auto* dimLabel = new Label(QStringLiteral("Dim: 12%"), body);
+    auto* dim = new Slider(Qt::Horizontal, body);
+    dim->setAccessibleName(QStringLiteral("Background dim opacity"));
+    dim->setRange(0, 60);
+    dim->setValue(12);
+    QObject::connect(dim, &QSlider::valueChanged, overlay, [overlay, dimLabel](int value) {
+        overlay->setDimOpacity(value / 100.0);
+        dimLabel->setText(QStringLiteral("Dim: %1%").arg(value));
+    });
+    content->addWidget(dimLabel);
+    content->addWidget(dim);
+    auto* close = new Button(QStringLiteral("Close"), body);
+    QObject::connect(close, &Button::clicked, overlay, [overlay] { overlay->setIsOpen(false); });
+    content->addWidget(close, 0, Qt::AlignRight);
 
-                auto openDialog = [status](Button* trigger, bool animation, bool smoke) {
-                    auto* dialog = themedDialog(new Dialog(trigger->window()), trigger);
-                    dialog->setSmokeEnabled(smoke);
+    QObject::connect(counter, &Button::clicked, overlay, &Dialog::refreshBackdrop);
+    QObject::connect(overlay, &Dialog::closed, hint, [hint] {
+        hint->setText(QStringLiteral("Open the overlay to try this action."));
+    });
+    QObject::connect(overlay, &Dialog::closed, overlay, &QObject::deleteLater);
+    overlay->open();
+});)sample"),
+            [](QWidget* parent) {
+                return samples::overlayEffectsSample<Dialog>(parent, QStringLiteral("Gallery.Dialog"),
+                    QStringLiteral("Preview background effects"));
+            }),
+
+        makeSample(QStringLiteral("dialog-animation-smoke"), QStringLiteral("Opening animation"),
+            QStringLiteral("Compare animated and instant opening with the same modal backdrop."),
+            QStringLiteral(R"sample(auto* root = new QWidget(this);
+auto* layout = new QVBoxLayout(root);
+auto* animated = new Button(QStringLiteral("Animated"), root);
+auto* instant = new Button(QStringLiteral("Instant"), root);
+auto* buttons = new QHBoxLayout;
+buttons->addWidget(animated);
+buttons->addWidget(instant);
+buttons->addStretch();
+layout->addLayout(buttons);
+const auto showDialog = [](Button* trigger, bool animation) {
+    auto* dialog = new Dialog(trigger->window());
+    dialog->setThemeSource(trigger);
+    dialog->setModal(true);
+    dialog->setDim(true);
+    dialog->setAnimationEnabled(animation);
+    dialog->setMinimumSize(420, 220);
+    auto* content = new QVBoxLayout(dialog);
+    content->setContentsMargins(30, 28, 30, 28);
+    auto* title = new Label(animation ? QStringLiteral("Animated dialog")
+                                    : QStringLiteral("Instant dialog"), dialog);
+    title->setFluentTypography(Typography::FontRole::Subtitle);
+    content->addWidget(title);
+    auto* text = new Label(QStringLiteral("Only the opening animation changes; the background remains blocked."), dialog);
+    text->setWordWrap(true);
+    content->addWidget(text);
+    auto* close = new Button(QStringLiteral("Close"), dialog);
+    content->addWidget(close, 0, Qt::AlignRight);
+    QObject::connect(close, &Button::clicked, dialog, &QDialog::reject);
+    QObject::connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);
+    dialog->open();
+};
+QObject::connect(animated, &Button::clicked, root, [animated, showDialog] { showDialog(animated, true); });
+QObject::connect(instant, &Button::clicked, root, [instant, showDialog] { showDialog(instant, false); });
+return root;)sample"),
+            [](QWidget* parent) {
+                auto* root = new QWidget(parent);
+                auto* layout = new QVBoxLayout(root);
+                auto* animated = new Button(QStringLiteral("Animated"), root);
+                auto* instant = new Button(QStringLiteral("Instant"), root);
+                auto* buttons = new QHBoxLayout;
+                buttons->addWidget(animated);
+                buttons->addWidget(instant);
+                buttons->addStretch();
+                layout->addLayout(buttons);
+                const auto showDialog = [](Button* trigger, bool animation) {
+                    auto* dialog = new Dialog(trigger->window());
+                    dialog->setThemeSource(trigger);
+                    dialog->setModal(true);
+                    dialog->setDim(true);
                     dialog->setAnimationEnabled(animation);
                     dialog->setMinimumSize(420, 220);
-                    auto* layout = new QVBoxLayout(dialog);
-                    layout->setContentsMargins(30, 28, 30, 28);
-                    layout->setSpacing(12);
-                    layout->addWidget(makeTitleLabel(dialog,
-                        animation ? QStringLiteral("Animated dialog") : QStringLiteral("Instant dialog")));
-                    layout->addWidget(makeBodyLabel(dialog,
-                        smoke ? QStringLiteral("Smoke focuses attention by "
-                                               "dimming the owning window.")
-                              : QStringLiteral("No smoke keeps the surrounding "
-                                               "window visually available.")));
-                    layout->addStretch(1);
-                    auto* closeButton = sampleButton(dialog, QStringLiteral("Close"));
-                    QObject::connect(closeButton, &Button::clicked, dialog, [dialog]() { dialog->done(0); });
-                    layout->addWidget(closeButton, 0, Qt::AlignRight);
-                    QObject::connect(dialog, &QDialog::finished, status, [status, animation](int) {
-                        status->setText(animation
-                                ? QStringLiteral("Last dialog: animated with smoke")
-                                : QStringLiteral("Last dialog: instant without smoke"));
-                    });
+                    auto* content = new QVBoxLayout(dialog);
+                    content->setContentsMargins(30, 28, 30, 28);
+                    auto* title = new Label(
+                        animation ? QStringLiteral("Animated dialog") : QStringLiteral("Instant dialog"), dialog);
+                    title->setFluentTypography(Typography::FontRole::Subtitle);
+                    content->addWidget(title);
+                    auto* text = new Label(
+                        QStringLiteral("Only the opening animation changes; the background remains blocked."), dialog);
+                    text->setWordWrap(true);
+                    content->addWidget(text);
+                    auto* close = new Button(QStringLiteral("Close"), dialog);
+                    content->addWidget(close, 0, Qt::AlignRight);
+                    QObject::connect(close, &Button::clicked, dialog, &QDialog::reject);
                     QObject::connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);
                     dialog->open();
                 };
-
-                QObject::connect(animated, &Button::clicked, animated, [animated, openDialog]() {
-                    openDialog(animated, true, true);
+                QObject::connect(animated, &Button::clicked, root, [animated, showDialog] {
+                    showDialog(animated, true);
                 });
-                QObject::connect(instant, &Button::clicked, instant, [instant, openDialog]() {
-                    openDialog(instant, false, false);
+                QObject::connect(instant, &Button::clicked, root, [instant, showDialog] {
+                    showDialog(instant, false);
                 });
-
-                boxLayout(row)->addWidget(animated);
-                boxLayout(row)->addWidget(instant);
-                boxLayout(surface)->addWidget(row);
-                boxLayout(surface)->addWidget(status);
-                return surface;
+                return root;
             })};
+    samples::overlayEffectsSourceFiles(samples[1], QStringLiteral("Dialog"));
+    return samples;
 }
 
 QVector<GallerySample> flyoutSamples()
@@ -616,9 +770,52 @@ QVector<GallerySample> flyoutSamples()
 
 QVector<GallerySample> popupSamples()
 {
-    return {
-        makeSample(QStringLiteral("popup-position-light-dismiss"),
-            QStringLiteral("Offset positioning and close policy"),
+    QVector<GallerySample> samples{
+        makeSample(QStringLiteral("popup-basic"), QStringLiteral("A popup beside a button"),
+            QStringLiteral("Show a short note next to the button that opens it."),
+            QStringLiteral(R"sample(auto* root = new QWidget(this);
+auto* layout = new QVBoxLayout(root);
+auto* open = new Button(QStringLiteral("Show quick note"), root);
+open->setFluentStyle(Button::Accent);
+layout->addWidget(open, 0, Qt::AlignLeft);
+QObject::connect(open, &Button::clicked, root, [open] {
+    auto* popup = new Popup(open->window());
+    popup->setThemeSource(open);
+    auto* content = new QVBoxLayout(popup);
+    content->setContentsMargins(24, 22, 24, 22);
+    auto* title = new Label(QStringLiteral("Quick note"), popup);
+    title->setFluentTypography(Typography::FontRole::BodyStrong);
+    content->addWidget(title);
+    auto* text = new Label(QStringLiteral("Click outside or press Escape to close."), popup);
+    content->addWidget(text);
+    popup->setPosition(open, QPoint(0, open->height() + 8));
+    QObject::connect(popup, &Popup::closed, popup, &QObject::deleteLater);
+    popup->open();
+});
+return root;)sample"),
+            [](QWidget* parent) {
+                auto* root = new QWidget(parent);
+                auto* layout = new QVBoxLayout(root);
+                auto* open = new Button(QStringLiteral("Show quick note"), root);
+                open->setFluentStyle(Button::Accent);
+                layout->addWidget(open, 0, Qt::AlignLeft);
+                QObject::connect(open, &Button::clicked, root, [open] {
+                    auto* popup = new Popup(open->window());
+                    popup->setThemeSource(open);
+                    auto* content = new QVBoxLayout(popup);
+                    content->setContentsMargins(24, 22, 24, 22);
+                    auto* title = new Label(QStringLiteral("Quick note"), popup);
+                    title->setFluentTypography(Typography::FontRole::BodyStrong);
+                    content->addWidget(title);
+                    auto* text = new Label(QStringLiteral("Click outside or press Escape to close."), popup);
+                    content->addWidget(text);
+                    popup->setPosition(open, QPoint(0, open->height() + 8));
+                    QObject::connect(popup, &Popup::closed, popup, &QObject::deleteLater);
+                    popup->open();
+                });
+                return root;
+            }),
+        makeSample(QStringLiteral("popup-position-light-dismiss"), QStringLiteral("Choose how a popup closes"),
             QStringLiteral("Popup can be placed relative to a widget; close "
                            "policy controls whether outside clicks dismiss it."),
             QStringLiteral(
@@ -681,62 +878,115 @@ QVector<GallerySample> popupSamples()
                 boxLayout(surface)->addWidget(status);
                 return surface;
             }),
-        makeSample(QStringLiteral("popup-modal-dim"), QStringLiteral("Modal dimmed popup"),
-            QStringLiteral("A modal Popup adds a scrim and blocks background "
-                           "input for critical transient decisions."),
-            QStringLiteral(
-                "auto* popup = new Popup(window());\n"
-                "popup->setModal(true);\n"
-                "popup->setDim(true);\n"
-                "popup->setClosePolicy(Popup::CloseOnEscape);\n"
-                "popup->open();"),
+        makeSample(QStringLiteral("popup-modal-dim"), QStringLiteral("Modal and backdrop effects"),
+            QStringLiteral("Blur or dim the background, then compare blocked and available background interaction."),
+            QStringLiteral(R"sample(using basicinput::Button;
+using basicinput::CheckBox;
+using basicinput::Slider;
+using textfields::Label;
+auto* root = new QWidget(this);
+auto* layout = new QVBoxLayout(root);
+layout->setSpacing(12);
+auto* open = new Button(QStringLiteral("Preview background effects"), root);
+open->setFluentStyle(Button::Accent);
+layout->addWidget(open, 0, Qt::AlignLeft);
+auto* hint = new Label(QStringLiteral("Open the overlay to try this action."), root);
+hint->setWordWrap(true);
+hint->setTextColorRole(Label::TextColorRole::Secondary);
+layout->addWidget(hint);
+auto* row = new QWidget(root);
+auto* rowLayout = new QHBoxLayout(row);
+rowLayout->setContentsMargins(0, 0, 0, 0);
+rowLayout->setSpacing(12);
+auto* counter = new Button(QStringLiteral("Background action"), row);
+row->layout()->addWidget(counter);
+auto* status = new Label(QStringLiteral("Background clicks: 0"), row);
+status->setTextColorRole(Label::TextColorRole::Secondary);
+row->layout()->addWidget(status);
+layout->addWidget(row);
+QObject::connect(counter, &Button::clicked, status, [status, count = 0]() mutable {
+    status->setText(QStringLiteral("Background clicks: %1").arg(++count));
+});
+QObject::connect(open, &Button::clicked, root, [root, open, counter, hint] {
+    auto* overlay = new Popup(root);
+    overlay->setModal(true);
+    overlay->setDim(true);
+    overlay->setDimOpacity(0.12);
+    overlay->setBackdropBlurRadius(8);
+    overlay->setClosePolicy(Popup::CloseOnEscape);
+    QWidget* body = overlay;
+    overlay->setThemeSource(open);
+    overlay->setFixedWidth(400);
+    auto* content = new QVBoxLayout(body);
+    content->setContentsMargins(28, 26, 28, 26);
+    content->setSpacing(10);
+    auto* title = new Label(QStringLiteral("Modal and backdrop effects"), body);
+    title->setFluentTypography(Typography::FontRole::BodyStrong);
+    title->setWordWrap(true);
+    content->addWidget(title);
+    auto* modal = new CheckBox(QStringLiteral("Modal"), body);
+    modal->setChecked(true);
+    QObject::connect(modal, &QCheckBox::toggled, overlay, &Popup::setModal);
+    const auto explainModal = [hint](bool enabled) {
+        hint->setText(enabled
+            ? QStringLiteral("Modal on: background blocked.")
+            : QStringLiteral("Modal off: background available."));
+    };
+    QObject::connect(modal, &QCheckBox::toggled, hint, explainModal);
+    explainModal(true);
+    content->addWidget(modal);
+    auto* dimEnabled = new CheckBox(QStringLiteral("Dim background"), body);
+    dimEnabled->setChecked(true);
+    QObject::connect(dimEnabled, &QCheckBox::toggled, overlay, &Popup::setDim);
+    content->addWidget(dimEnabled);
+    auto* outside = new CheckBox(QStringLiteral("Close on outside click"), body);
+    QObject::connect(outside, &QCheckBox::toggled, overlay, [overlay](bool enabled) {
+        Popup::ClosePolicy policy(Popup::CloseOnEscape);
+        if (enabled)
+            policy |= Popup::CloseOnPressOutside;
+        overlay->setClosePolicy(policy);
+    });
+    content->addWidget(outside);
+    auto* blurLabel = new Label(QStringLiteral("Blur: 8 px"), body);
+    auto* blur = new Slider(Qt::Horizontal, body);
+    blur->setAccessibleName(QStringLiteral("Background blur radius"));
+    blur->setRange(0, 24);
+    blur->setValue(8);
+    QObject::connect(blur, &QSlider::valueChanged, overlay, [overlay, blurLabel](int value) {
+        overlay->setBackdropBlurRadius(value);
+        blurLabel->setText(QStringLiteral("Blur: %1 px").arg(value));
+    });
+    content->addWidget(blurLabel);
+    content->addWidget(blur);
+    auto* dimLabel = new Label(QStringLiteral("Dim: 12%"), body);
+    auto* dim = new Slider(Qt::Horizontal, body);
+    dim->setAccessibleName(QStringLiteral("Background dim opacity"));
+    dim->setRange(0, 60);
+    dim->setValue(12);
+    QObject::connect(dim, &QSlider::valueChanged, overlay, [overlay, dimLabel](int value) {
+        overlay->setDimOpacity(value / 100.0);
+        dimLabel->setText(QStringLiteral("Dim: %1%").arg(value));
+    });
+    content->addWidget(dimLabel);
+    content->addWidget(dim);
+    auto* close = new Button(QStringLiteral("Close"), body);
+    QObject::connect(close, &Button::clicked, overlay, [overlay] { overlay->setIsOpen(false); });
+    content->addWidget(close, 0, Qt::AlignRight);
+
+    QObject::connect(counter, &Button::clicked, overlay, &Popup::refreshBackdrop);
+    QObject::connect(overlay, &Popup::closed, hint, [hint] {
+        hint->setText(QStringLiteral("Open the overlay to try this action."));
+    });
+    QObject::connect(overlay, &Popup::closed, overlay, &QObject::deleteLater);
+    overlay->open();
+});)sample"),
             [](QWidget* parent) {
-                auto* surface = sampleSurface(parent);
-                auto* row = horizontalGroup(surface, 12);
-                auto* button = sampleButton(row, QStringLiteral("Review access"));
-                button->setMinimumWidth(128);
-                auto* status = makeStatusLabel(row, QStringLiteral("Access review: pending"));
-
-                QObject::connect(button, &Button::clicked, button, [button, status]() {
-                    auto* popup = new Popup(button->window());
-                    popup->setThemeSource(button);
-                    popup->setModal(true);
-                    popup->setDim(true);
-                    popup->setClosePolicy(Popup::CloseOnEscape);
-                    popup->setMinimumSize(400, 220);
-                    auto* layout = new QVBoxLayout(popup);
-                    layout->setContentsMargins(28, 26, 28, 26);
-                    layout->setSpacing(12);
-                    layout->addWidget(makeTitleLabel(popup, QStringLiteral("Grant editor access?")));
-                    layout->addWidget(makeBodyLabel(popup,
-                        QStringLiteral(
-                            "The recipient will be able to update "
-                            "shared project files immediately.")));
-                    layout->addStretch(1);
-                    auto* commandRow = horizontalGroup(popup, 8);
-                    auto* grant = sampleButton(commandRow, QStringLiteral("Grant"));
-                    grant->setFluentStyle(Button::Accent);
-                    auto* cancel = sampleButton(commandRow, QStringLiteral("Cancel"));
-                    QObject::connect(grant, &Button::clicked, status, [status, popup]() {
-                        status->setText(QStringLiteral("Access review: granted"));
-                        popup->close();
-                    });
-                    QObject::connect(cancel, &Button::clicked, status, [status, popup]() {
-                        status->setText(QStringLiteral("Access review: canceled"));
-                        popup->close();
-                    });
-                    boxLayout(commandRow)->addWidget(grant);
-                    boxLayout(commandRow)->addWidget(cancel);
-                    layout->addWidget(commandRow, 0, Qt::AlignRight);
-                    QObject::connect(popup, &Popup::closed, popup, &QObject::deleteLater);
-                    popup->open();
-                });
-
-                boxLayout(row)->addWidget(button);
-                boxLayout(row)->addWidget(status);
-                boxLayout(surface)->addWidget(row);
-                return surface;
-            })};
+                return samples::overlayEffectsSample<Popup>(parent, QStringLiteral("Gallery.Popup"),
+                    QStringLiteral("Preview background effects"));
+            }),
+    };
+    samples::overlayEffectsSourceFiles(samples[2], QStringLiteral("Popup"));
+    return samples;
 }
 
 QVector<GallerySample> teachingTipSamples()

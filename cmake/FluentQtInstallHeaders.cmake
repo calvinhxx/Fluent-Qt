@@ -101,6 +101,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/foundation/ThemeRegistry.h
     src/components/foundation/UserTheme.h
     src/components/foundation/WidgetOwnership.h
+    src/components/foundation/FormController.h
     src/components/foundation/plugins/Plugin.h
     src/components/foundation/plugins/PluginContext.h
     src/components/foundation/plugins/PluginManager.h
@@ -122,6 +123,7 @@ set(FLUENT_QT_INSTALL_HEADERS
 
     src/components/menus_toolbars/CommandBar.h
     src/components/menus_toolbars/CommandBarFlyout.h
+    src/components/menus_toolbars/CommandPalette.h
     src/components/menus_toolbars/Menu.h
     src/components/menus_toolbars/MenuBar.h
 
@@ -161,6 +163,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/status_info/ToolTip.h
 
     src/components/textfields/AutoSuggestBox.h
+    src/components/textfields/CodeBlock.h
     src/components/textfields/EditingCommandRouter.h
     src/components/textfields/Label.h
     src/components/textfields/LineEdit.h

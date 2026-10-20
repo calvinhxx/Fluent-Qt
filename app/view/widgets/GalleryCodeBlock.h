@@ -3,7 +3,7 @@
 
 #include <QString>
 
-#include "components/layout/Expander.h"
+#include "components/textfields/CodeBlock.h"
 #include "model/GalleryContentCatalog.h"
 #include "view/support/GalleryCodeLanguage.h"
 
@@ -25,10 +25,10 @@ namespace fluent::gallery {
 class GalleryLanguageSelector;
 
 /**
- * @brief Gallery source-code presentation built on the reusable Expander.
- * zh_CN: 基于通用 Expander 组合的 Gallery 源码展示控件。
+ * @brief Gallery source-code presentation built on the public CodeBlock.
+ * zh_CN: 基于公共 CodeBlock 组合的 Gallery 源码展示控件。
  */
-class GalleryCodeBlock : public fluent::layout::Expander {
+class GalleryCodeBlock : public fluent::textfields::CodeBlock {
     Q_OBJECT
 
 public:
@@ -52,15 +52,10 @@ public:
     void setExpanded(bool expanded, bool animated = true);
     void toggleExpanded() { setExpanded(!isExpanded()); }
 
-    void onThemeUpdated() override;
-
 signals:
     void codeLanguageChanged(fluent::gallery::GalleryCodeLanguage language);
 
 private:
-    void applyPalette();
-    void applyHighlightedCode();
-    void ensureHighlighted();
     void refreshDisplayedCode();
     const QVector<GallerySourceFile>& sourceFiles() const;
     const GallerySourceFile* currentFile() const;
@@ -70,9 +65,6 @@ private:
     QString m_cppCode;
     QString m_pythonCode;
     QString m_cppExcerpt;
-    QString m_excerptHighlightedHtml;
-    QString m_cppHighlightedHtml;
-    QString m_pythonHighlightedHtml;
     QVector<GallerySourceFile> m_cppFiles;
     QVector<GallerySourceFile> m_pythonFiles;
     GalleryCodeLanguage m_codeLanguage = GalleryCodeLanguage::Cpp;
@@ -83,8 +75,6 @@ private:
     QWidget* m_fileRow = nullptr;
     fluent::textfields::Label* m_fileLanguage = nullptr;
     fluent::textfields::Label* m_langLabel = nullptr;
-    QWidget* m_langUnderline = nullptr;
-    fluent::textfields::Label* m_codeLabel = nullptr;
     fluent::basicinput::Button* m_copyButton = nullptr;
 };
 

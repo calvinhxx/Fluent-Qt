@@ -51,6 +51,10 @@ inline void raiseOverlayStack(QWidget* scrim, QWidget* overlay)
  * zh_CN: 解析事件接收者的原生宿主；非控件接收者使用焦点控件。 */
 QWidget* eventTopLevel(QObject* watched);
 
+/** @brief Refresh hosted Fluent widgets after an overlay inherits a local theme.
+ * zh_CN: 浮层继承局部主题后刷新托管的 Fluent 控件。 */
+void refreshFluentDescendants(QWidget* root);
+
 } // namespace fluent::overlay
 
 #endif // OVERLAYWINDOW_H

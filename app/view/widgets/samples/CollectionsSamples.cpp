@@ -51,6 +51,7 @@
 #include "CollectionsSampleSupport.h"
 #include "view/shell/GalleryWindowMetrics.h"
 #include "SampleBuilders.h"
+#include "OverlayEffectsSample.h"
 
 namespace fluent::gallery {
 namespace {
@@ -545,7 +546,7 @@ void loadFlowNetworkImages(QStandardItemModel* model,
 
 QVector<GallerySample> drawerViewSamples()
 {
-    return {
+    QVector<GallerySample> samples{
         makeSample(QStringLiteral("drawer-view-basic"), QStringLiteral("Right-edge drawer"),
             QStringLiteral("The drawer slides over the hosting surface and dismisses on outside click."),
             QStringLiteral(
@@ -600,7 +601,7 @@ QVector<GallerySample> drawerViewSamples()
                 QObject::connect(openButton, &Button::clicked, drawer, [drawer]() { drawer->open(); });
                 return host;
             }),
-        makeSample(QStringLiteral("drawer-view-edges"), QStringLiteral("DrawerEdge and drawerLength"),
+        makeSample(QStringLiteral("drawer-view-edges"), QStringLiteral("Direction and size"),
             QStringLiteral("The same content can open from any window edge; drawerLength controls "
                            "the panel size along that edge."),
             QStringLiteral(
@@ -662,8 +663,8 @@ QVector<GallerySample> drawerViewSamples()
                 });
                 return host;
             }),
-        makeSample(QStringLiteral("drawer-view-close-policy"), QStringLiteral("Modal, dim, and close policy"),
-            QStringLiteral("ClosePolicy separates light-dismiss behavior from explicit close commands."),
+        makeSample(QStringLiteral("drawer-view-close-policy"), QStringLiteral("Persistent drawer"),
+            QStringLiteral("Keep the drawer open while using the page. Close it with its own Close button."),
             QStringLiteral(
                 "auto* drawer = new DrawerView(host);\n"
                 "drawer->setAvailableMargins(drawerTitleBarAvoidanceMargins());\n"
@@ -764,7 +765,118 @@ QVector<GallerySample> drawerViewSamples()
                 QObject::connect(openButton, &Button::clicked, drawer, &DrawerView::open);
                 QObject::connect(closeButton, &Button::clicked, drawer, &DrawerView::close);
                 return host;
+            }),
+        makeSample(QStringLiteral("drawer-view-backdrop-effects"), QStringLiteral("Modal and backdrop effects"),
+            QStringLiteral("Blur or dim the background, then compare blocked and available background interaction."),
+            QStringLiteral(R"sample(using basicinput::Button;
+using basicinput::CheckBox;
+using basicinput::Slider;
+using textfields::Label;
+auto* root = new QWidget(this);
+auto* layout = new QVBoxLayout(root);
+layout->setSpacing(12);
+auto* open = new Button(QStringLiteral("Preview background effects"), root);
+open->setFluentStyle(Button::Accent);
+layout->addWidget(open, 0, Qt::AlignLeft);
+auto* hint = new Label(QStringLiteral("Open the overlay to try this action."), root);
+hint->setWordWrap(true);
+hint->setTextColorRole(Label::TextColorRole::Secondary);
+layout->addWidget(hint);
+auto* row = new QWidget(root);
+auto* rowLayout = new QHBoxLayout(row);
+rowLayout->setContentsMargins(0, 0, 0, 0);
+rowLayout->setSpacing(12);
+auto* counter = new Button(QStringLiteral("Background action"), row);
+row->layout()->addWidget(counter);
+auto* status = new Label(QStringLiteral("Background clicks: 0"), row);
+status->setTextColorRole(Label::TextColorRole::Secondary);
+row->layout()->addWidget(status);
+layout->addWidget(row);
+QObject::connect(counter, &Button::clicked, status, [status, count = 0]() mutable {
+    status->setText(QStringLiteral("Background clicks: %1").arg(++count));
+});
+QObject::connect(open, &Button::clicked, root, [root, open, counter, hint] {
+    auto* overlay = new DrawerView(root);
+    overlay->setModal(true);
+    overlay->setDim(true);
+    overlay->setDimOpacity(0.12);
+    overlay->setBackdropBlurRadius(8);
+    overlay->setClosePolicy(DrawerView::CloseOnEscape);
+    QWidget* body = overlay;
+    overlay->setEdge(DrawerView::DrawerEdge::Right);
+    overlay->setDrawerLength(320);
+    overlay->setInteractive(false);
+    body = new QWidget;
+    overlay->setContentWidget(body, WidgetOwnership::Owned);
+    auto* content = new QVBoxLayout(body);
+    content->setContentsMargins(28, 26, 28, 26);
+    content->setSpacing(10);
+    auto* title = new Label(QStringLiteral("Modal and backdrop effects"), body);
+    title->setFluentTypography(Typography::FontRole::BodyStrong);
+    title->setWordWrap(true);
+    content->addWidget(title);
+    auto* modal = new CheckBox(QStringLiteral("Modal"), body);
+    modal->setChecked(true);
+    QObject::connect(modal, &QCheckBox::toggled, overlay, &DrawerView::setModal);
+    const auto explainModal = [hint](bool enabled) {
+        hint->setText(enabled
+            ? QStringLiteral("Modal on: background blocked.")
+            : QStringLiteral("Modal off: background available."));
+    };
+    QObject::connect(modal, &QCheckBox::toggled, hint, explainModal);
+    explainModal(true);
+    content->addWidget(modal);
+    auto* dimEnabled = new CheckBox(QStringLiteral("Dim background"), body);
+    dimEnabled->setChecked(true);
+    QObject::connect(dimEnabled, &QCheckBox::toggled, overlay, &DrawerView::setDim);
+    content->addWidget(dimEnabled);
+    auto* outside = new CheckBox(QStringLiteral("Close on outside click"), body);
+    QObject::connect(outside, &QCheckBox::toggled, overlay, [overlay](bool enabled) {
+        DrawerView::ClosePolicy policy(DrawerView::CloseOnEscape);
+        if (enabled)
+            policy |= DrawerView::CloseOnPressOutside;
+        overlay->setClosePolicy(policy);
+    });
+    content->addWidget(outside);
+    auto* blurLabel = new Label(QStringLiteral("Blur: 8 px"), body);
+    auto* blur = new Slider(Qt::Horizontal, body);
+    blur->setAccessibleName(QStringLiteral("Background blur radius"));
+    blur->setRange(0, 24);
+    blur->setValue(8);
+    QObject::connect(blur, &QSlider::valueChanged, overlay, [overlay, blurLabel](int value) {
+        overlay->setBackdropBlurRadius(value);
+        blurLabel->setText(QStringLiteral("Blur: %1 px").arg(value));
+    });
+    content->addWidget(blurLabel);
+    content->addWidget(blur);
+    auto* dimLabel = new Label(QStringLiteral("Dim: 12%"), body);
+    auto* dim = new Slider(Qt::Horizontal, body);
+    dim->setAccessibleName(QStringLiteral("Background dim opacity"));
+    dim->setRange(0, 60);
+    dim->setValue(12);
+    QObject::connect(dim, &QSlider::valueChanged, overlay, [overlay, dimLabel](int value) {
+        overlay->setDimOpacity(value / 100.0);
+        dimLabel->setText(QStringLiteral("Dim: %1%").arg(value));
+    });
+    content->addWidget(dimLabel);
+    content->addWidget(dim);
+    auto* close = new Button(QStringLiteral("Close"), body);
+    QObject::connect(close, &Button::clicked, overlay, [overlay] { overlay->setIsOpen(false); });
+    content->addWidget(close, 0, Qt::AlignRight);
+    content->addStretch();
+    QObject::connect(counter, &Button::clicked, overlay, &DrawerView::refreshBackdrop);
+    QObject::connect(overlay, &DrawerView::closed, hint, [hint] {
+        hint->setText(QStringLiteral("Open the overlay to try this action."));
+    });
+    QObject::connect(overlay, &DrawerView::closed, overlay, &QObject::deleteLater);
+    overlay->open();
+});)sample"),
+            [](QWidget* parent) {
+                return samples::overlayEffectsSample<DrawerView>(parent, QStringLiteral("Gallery.Drawer"),
+                    QStringLiteral("Preview background effects"));
             })};
+    samples::overlayEffectsSourceFiles(samples[4], QStringLiteral("DrawerView"));
+    return samples;
 }
 
 QVector<GallerySample> flipViewSamples()
