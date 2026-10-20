@@ -20,7 +20,7 @@ PAGES_PIPELINE_ACTIONS = {
         "actions/checkout": 1,
         "actions/setup-python": 1,
         "actions/cache": 4,
-        "actions/upload-artifact": 2,
+        "actions/upload-artifact": 3,
     },
 }
 ACTION_USES = re.compile(

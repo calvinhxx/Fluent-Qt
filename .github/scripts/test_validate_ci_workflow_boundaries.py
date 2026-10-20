@@ -603,6 +603,18 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
         )
         self.assertTrue(any("retain Spatial fallback failure evidence" in error for error in errors))
 
+    def test_wasm_browser_diagnostics_retain_failures_with_bounded_paths(self):
+        for before, after in (
+            (
+                "      - name: Upload browser smoke diagnostics\n        if: ${{ always() }}\n",
+                "      - name: Upload browser smoke diagnostics\n        if: ${{ success() }}\n",
+            ),
+            ("            build/wasm/command-palette-validation\n", "            .git\n"),
+        ):
+            with self.subTest(replacement=after):
+                errors = self.workflow_errors_with_replacement("ci-wasm.yml", before, after)
+                self.assertTrue(any("bounded browser failure diagnostics" in error for error in errors))
+
     def test_wasm_emsdk_revision_cannot_drift(self):
         errors = self.workflow_errors_with_replacement(
             "ci-wasm.yml",
