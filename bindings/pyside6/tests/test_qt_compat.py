@@ -9,6 +9,7 @@ from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import QApplication, QMenu, QWidget
 from shiboken6 import isValid
 
+from fluentqt import CommandPalette
 from fluentqt._qt_compat import delete_qobject
 from fluentqt._qt_events import is_display_scale_change_event
 from fluentqt._qt_painting import (
@@ -60,6 +61,16 @@ class QtLifetimeCompatTest(unittest.TestCase):
         self.assertEqual(destroyed.count(), 1)
         self.assertEqual(menu.actions(), [])
         self.assertTrue(isValid(self.app))
+
+    def test_final_native_wrapper_is_invalidated_after_destruction(self):
+        target = CommandPalette()
+        destroyed = QSignalSpy(target.destroyed)
+        delete_qobject(target)
+        self.assertFalse(isValid(target))
+        self.assertEqual(destroyed.count(), 1)
+        self.assertTrue(isValid(self.app))
+        delete_qobject(target)
+        self.assertEqual(destroyed.count(), 1)
 
     def test_delivery_does_not_flush_other_deletions_or_timers(self):
         target, unrelated = QObject(), QObject()
