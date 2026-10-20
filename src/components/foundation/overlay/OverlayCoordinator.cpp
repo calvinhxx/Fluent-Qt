@@ -322,6 +322,12 @@ bool OverlayCoordinator::filterInput(QObject* watched, QEvent* event)
         return false;
     }
     if (event->type() == QEvent::KeyPress && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
+        auto* widget = ::compatibility::detail::widgetForKeyEventReceiver(watched);
+        // Inner controls can cancel editing or reset zoom before an ignored
+        // Escape propagates to the surface and applies its close policy.
+        // zh_CN: 内部控件先取消编辑或重置缩放，未处理的 Esc 再向浮层传播并应用关闭策略。
+        if (widget && widget != m_overlay && m_overlay->isAncestorOf(widget))
+            return false;
         if (!m_closeOnEscape && !m_modal)
             return false;
         event->accept();
