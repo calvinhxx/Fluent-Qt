@@ -2,7 +2,7 @@
 
 from typing import Callable
 
-from PySide6.QtCore import QCoreApplication, QEvent, QObject, QTimer
+from PySide6.QtCore import QCoreApplication, QEvent, QMetaObject, QObject, Qt, QTimer
 from shiboken6 import isValid
 
 __all__ = ["delete_qobject", "single_shot"]
@@ -39,5 +39,9 @@ def delete_qobject(obj: QObject | None) -> None:
     # Do not materialize Qt's process-lifetime main-thread wrapper merely to
     # validate this precondition: PySide 6.2 can finalize it after Shiboken's
     # wrapper registry. These internal callers already run on the owning thread.
-    obj.deleteLater()
+    # Calling the Python deleteLater wrapper invalidates native-created objects
+    # before their event is delivered. Invoke Qt's slot without that wrapper step
+    # so the targeted sendPostedEvents call can still use this receiver.
+    if not QMetaObject.invokeMethod(obj, "deleteLater", Qt.DirectConnection):
+        raise RuntimeError("Could not schedule QObject deletion")
     QCoreApplication.sendPostedEvents(obj, QEvent.DeferredDelete)
