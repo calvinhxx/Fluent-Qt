@@ -7,6 +7,7 @@ import weakref
 
 import fluentqt
 import fluentqt._fluentqt as native
+from fluentqt._qt_compat import delete_qobject
 import PySide6
 import shiboken6
 import shiboken6_generator
@@ -142,7 +143,7 @@ class FluentQtBindingTest(unittest.TestCase):
         code.setCode("latest")
         code.setExpandedAnimated(True, False)
         self.assertIn("latest", label.text())
-        shiboken6.delete(parent)
+        delete_qobject(parent)
         self.assertFalse(shiboken6.isValid(code))
         self.assertFalse(shiboken6.isValid(label))
 
@@ -275,10 +276,14 @@ class FluentQtBindingTest(unittest.TestCase):
             raise RuntimeError("FluentQt resources could not be initialized")
 
     def tearDown(self):
+        self.assertTrue(shiboken6.isValid(self.app), "Object teardown deleted QApplication")
+        self.assertIs(QApplication.instance(), self.app)
         QApplication.processEvents()
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         QApplication.processEvents()
         gc.collect()
+        self.assertTrue(shiboken6.isValid(self.app), "Deferred cleanup deleted QApplication")
+        self.assertIs(QApplication.instance(), self.app)
 
     def _assert_item_view_gc_stress(self, view_type, model_factory):
         class PythonLifetimeDelegate(QStyledItemDelegate):
@@ -1713,7 +1718,7 @@ class FluentQtBindingTest(unittest.TestCase):
                         self.assertTrue(owner.isPickerOpen())
                 finally:
                     host.close()
-                    shiboken6.delete(host)
+                    delete_qobject(host)
 
     def test_date_picker_properties_enums_signals_and_popup(self):
         class PythonDatePicker(fluentqt.DatePicker):
@@ -3783,7 +3788,7 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertIsNone(reference())
         field = fluentqt.Field()
         form.addField("name", field)
-        shiboken6.delete(field)
+        delete_qobject(field)
         self.assertEqual(form.fieldKeys(), [])
         self.assertEqual(form._form_fields, {})
 
@@ -3799,9 +3804,9 @@ class FluentQtBindingTest(unittest.TestCase):
                     if disposal == "remove":
                         form.removeField("name")
                     elif disposal == "destroy_field":
-                        shiboken6.delete(field)
+                        delete_qobject(field)
                     else:
-                        shiboken6.delete(form)
+                        delete_qobject(form)
 
                 form.stateChanged.connect(dispose)
                 form.addField("name", field)
@@ -3844,7 +3849,7 @@ class FluentQtBindingTest(unittest.TestCase):
         del field
         gc.collect()
         self.assertIsNotNone(reference())
-        shiboken6.delete(owner)
+        delete_qobject(owner)
         self.assertFalse(Shiboken.isValid(form))
         gc.collect()
         self.assertIsNone(reference())
@@ -4880,7 +4885,7 @@ class FluentQtBindingTest(unittest.TestCase):
         router = fluentqt.EditingCommandRouter(child)
         self.assertIs(router.parent(), host)
         self.assertFalse(shiboken6.ownedByPython(router))
-        shiboken6.delete(host)
+        delete_qobject(host)
         self.assertFalse(shiboken6.isValid(router))
 
     def test_overlay_backdrop_configuration_is_shared_and_inherited(self):
@@ -4953,7 +4958,7 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertIsNone(reference())
         action = QAction("Externally deleted", None)
         palette.addCommand(action)
-        shiboken6.delete(action)
+        delete_qobject(action)
         self.assertEqual(palette.commands(), [])
         self.assertIsNone(palette.currentAction())
         palette.clearCommands()
@@ -4999,7 +5004,7 @@ class FluentQtBindingTest(unittest.TestCase):
                 if operation != "add":
                     palette.addCommand(action)
                 palette.currentActionChanged.connect(
-                    lambda *_args: shiboken6.delete(palette)
+                    lambda *_args: delete_qobject(palette)
                 )
                 if operation == "add":
                     self.assertFalse(palette.addCommand(action))
@@ -5523,7 +5528,7 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertTrue(menu.isVisible())
         finally:
             host.close()
-            Shiboken.delete(host)
+            delete_qobject(host)
             self.app.setStyle(previous_style)
             self.assertIs(self.app.style(), previous_style)
 
