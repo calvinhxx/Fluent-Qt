@@ -98,8 +98,17 @@ index verification, and recovery.
 ## Validate CI changes
 
 External actions use full commit SHAs with readable version comments;
-container actions use image digests. Dependabot maintains revisions. The
-boundary validator checks both workflows and starter templates.
+container actions use image digests. Concrete revisions live in workflow YAML,
+where Dependabot can update them and their version comments. Do not duplicate
+Action SHAs in Python validators or test expectations.
+
+[ci_action_policy.py](../../.github/scripts/ci_action_policy.py) owns the shared
+pinning rules and the allowed Actions and invocation counts for the Pages
+pipeline. The boundary validator applies that policy to workflows and checks
+immutable references in starter templates. Step comparisons accept updated
+full SHAs while still checking the Action repository, inputs, permissions, and
+artifact provenance. Action upgrades remain subject to PR review and the
+owning CI lanes; a valid pin alone does not establish compatibility.
 
 ```bash
 python3 .github/scripts/test_classify_ci_changes.py
