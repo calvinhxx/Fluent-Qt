@@ -116,25 +116,24 @@ void copyText(QObject* context, const QString& text, std::function<void(bool)> c
     } while (nextClipboardRequest == 0 || clipboardRequests.contains(nextClipboardRequest));
     const quint32 request = nextClipboardRequest;
     ClipboardRequest pending{context, std::move(completed), {}};
-    pending.destroyedConnection = QObject::connect(
-        context, &QObject::destroyed, [request] { clipboardRequests.remove(request); });
+    pending.destroyedConnection = QObject::connect(context, &QObject::destroyed, [request] {
+        clipboardRequests.remove(request);
+    });
     clipboardRequests.insert(request, std::move(pending));
     // Qt's WASM clipboard cache is not proof of a successful browser write.
     // zh_CN: Qt 的 WASM 剪贴板缓存不能证明浏览器写入已成功。
     fluentQtGalleryCopyText(request, text.toUtf8().constData());
 }
 
-void chooseFiles(QWidget* context, const QString& filter,
-                 std::function<void(const QString&, qint64)> selected)
+void chooseFiles(QWidget* context, const QString& filter, std::function<void(const QString&, qint64)> selected)
 {
     if (!context || !selected)
         return;
     const QPointer<QWidget> guard(context);
-    QFileDialog::getOpenFileContent(
-        filter, [guard, selected](const QString& name, const QByteArray& content) {
-            if (guard && !name.isEmpty())
-                selected(QFileInfo(name).fileName(), content.size());
-        });
+    QFileDialog::getOpenFileContent(filter, [guard, selected](const QString& name, const QByteArray& content) {
+        if (guard && !name.isEmpty())
+            selected(QFileInfo(name).fileName(), content.size());
+    });
 }
 
 const Capabilities& capabilities()
@@ -155,12 +154,10 @@ const Capabilities& capabilities()
         result.windowTitle = result.applicationName;
         result.distributionSectionTitle = QStringLiteral("Web version");
         result.distributionTitle = QStringLiteral("C++ Web Gallery");
-        result.distributionDescription =
-            QStringLiteral("Runs the same C++ Qt Widgets catalog in the browser sandbox");
+        result.distributionDescription = QStringLiteral("Runs the same C++ Qt Widgets catalog in the browser sandbox");
         result.runtimeLabel = QStringLiteral("WebAssembly");
         result.distributionActionText = QStringLiteral("View source");
-        result.distributionActionUrl =
-            QUrl(QStringLiteral("https://github.com/calvinhxx/Fluent-Qt"));
+        result.distributionActionUrl = QUrl(QStringLiteral("https://github.com/calvinhxx/Fluent-Qt"));
         return result;
     }();
     return value;
@@ -168,14 +165,13 @@ const Capabilities& capabilities()
 
 bool persistenceAvailable()
 {
-    return !QCoreApplication::organizationName().isEmpty() &&
-           !QCoreApplication::applicationName().isEmpty();
+    return !QCoreApplication::organizationName().isEmpty() && !QCoreApplication::applicationName().isEmpty();
 }
 
 QSettings createSettings()
 {
-    return QSettings(QSettings::WebLocalStorageFormat, QSettings::UserScope,
-                     QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    return QSettings(QSettings::WebLocalStorageFormat, QSettings::UserScope, QCoreApplication::organizationName(),
+        QCoreApplication::applicationName());
 }
 
 HostTheme hostTheme()
@@ -206,8 +202,8 @@ extern "C" EMSCRIPTEN_KEEPALIVE void fluentQtGalleryApplyHostTheme(int value)
 void showTopLevelWindow(QWidget* window, const QRect& normalGeometry, bool maximized)
 {
     fluent::webassembly::showWindow(window, normalGeometry,
-                                    maximized ? fluent::webassembly::WindowPresentation::Maximized
-                                              : fluent::webassembly::WindowPresentation::Windowed);
+        maximized ? fluent::webassembly::WindowPresentation::Maximized
+                  : fluent::webassembly::WindowPresentation::Windowed);
 }
 
 } // namespace fluent::gallery::platform

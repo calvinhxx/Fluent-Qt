@@ -32,15 +32,9 @@ QWidget* makeBody(QWidget* parent = nullptr)
 
 class FullMotionScope {
 public:
-    FullMotionScope()
-    {
-        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
-    }
+    FullMotionScope() { fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full); }
 
-    ~FullMotionScope()
-    {
-        fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
-    }
+    ~FullMotionScope() { fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full); }
 };
 
 } // namespace
@@ -48,7 +42,7 @@ public:
 TEST(ExpanderTest, Contract_DefaultsAndHeaderText)
 {
     static_assert(std::is_base_of<fluent::layout::Card, Expander>::value,
-                  "Expander must reuse the public Card surface");
+        "Expander must reuse the public Card surface");
 
     Expander expander;
     EXPECT_TRUE(expander.headerText().isEmpty());
@@ -63,8 +57,7 @@ TEST(ExpanderTest, Contract_DefaultsAndHeaderText)
     expander.setHeaderText(QStringLiteral("Details"));
     EXPECT_EQ(headerSpy.count(), 1);
     EXPECT_EQ(expander.headerButton()->accessibleName(), QStringLiteral("Details"));
-    auto* headerText =
-        expander.findChild<fluent::textfields::Label*>(QStringLiteral("fluentExpanderHeaderText"));
+    auto* headerText = expander.findChild<fluent::textfields::Label*>(QStringLiteral("fluentExpanderHeaderText"));
     ASSERT_NE(headerText, nullptr);
     EXPECT_EQ(headerText->textColorRole(), fluent::textfields::Label::TextColorRole::Primary);
 }
@@ -99,8 +92,7 @@ TEST(ExpanderTest, Contract_ExpandedHandlerCanSynchronouslyDeleteExpander)
 {
     auto* expander = new Expander;
     QPointer<Expander> guard(expander);
-    QObject::connect(expander, &Expander::expandedChanged, qApp,
-                     [expander](bool) { delete expander; });
+    QObject::connect(expander, &Expander::expandedChanged, qApp, [expander](bool) { delete expander; });
 
     expander->setExpandedAnimated(true, false);
 
@@ -113,8 +105,7 @@ TEST(ExpanderTest, Contract_LayoutHeightHandlerCanSynchronouslyDeleteExpander)
     expander->resize(360, 44);
     expander->setContentWidget(makeBody(), WidgetOwnership::Owned);
     QPointer<Expander> guard(expander);
-    QObject::connect(expander, &Expander::layoutHeightChanged, qApp,
-                     [expander](int) { delete expander; });
+    QObject::connect(expander, &Expander::layoutHeightChanged, qApp, [expander](int) { delete expander; });
 
     expander->setExpandedAnimated(true, false);
 
@@ -135,8 +126,7 @@ TEST(ExpanderTest, Contract_ExpandedStateAndSignals)
     expander.setExpandedAnimated(true, true);
     EXPECT_TRUE(expander.isExpanded());
     EXPECT_GT(expander.height(), 44);
-    auto* divider =
-        expander.findChild<fluent::layout::Divider*>(QStringLiteral("fluentExpanderDivider"));
+    auto* divider = expander.findChild<fluent::layout::Divider*>(QStringLiteral("fluentExpanderDivider"));
     auto* clip = expander.findChild<QWidget*>(QStringLiteral("fluentExpanderClip"));
     ASSERT_NE(divider, nullptr);
     ASSERT_NE(clip, nullptr);

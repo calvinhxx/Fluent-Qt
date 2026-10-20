@@ -65,8 +65,7 @@ public:
             result.fill(Qt::transparent);
             QPainter painter(&result);
             painter.setPen(color);
-            Typography::Icons::paintGlyph(painter, QRectF(0, 0, size, size), glyph, size,
-                                          Qt::AlignCenter);
+            Typography::Icons::paintGlyph(painter, QRectF(0, 0, size, size), glyph, size, Qt::AlignCenter);
             return result;
         };
         const auto& colors = themeColorsRef();
@@ -117,12 +116,12 @@ protected:
     {
         auto* menu = new CodeContextMenu(this);
         auto* copy = menu->addAction(menu->glyphIcon(Typography::Icons::Copy),
-                                     QCoreApplication::translate("QLineEdit", "&Copy"));
+            QCoreApplication::translate("QLineEdit", "&Copy"));
         copy->setShortcuts(QKeySequence::keyBindings(QKeySequence::Copy));
         copy->setEnabled(hasSelectedText());
         connect(copy, &QAction::triggered, this, [this]() { copySourceSelection(); });
         auto* selectAll = menu->addAction(menu->glyphIcon(Typography::Icons::SelectAll),
-                                          QCoreApplication::translate("QLineEdit", "Select All"));
+            QCoreApplication::translate("QLineEdit", "Select All"));
         selectAll->setShortcuts(QKeySequence::keyBindings(QKeySequence::SelectAll));
         selectAll->setEnabled(!text().isEmpty());
         connect(selectAll, &QAction::triggered, this, [this]() { selectAllSource(); });
@@ -162,8 +161,7 @@ private:
             return;
         ensureSourceMap();
         const int start = selectionStart();
-        const int end = qMin(start + static_cast<int>(selectedText().size()),
-                             static_cast<int>(m_sourceMap.size()));
+        const int end = qMin(start + static_cast<int>(selectedText().size()), static_cast<int>(m_sourceMap.size()));
         if (start < 0 || start >= end)
             return;
         int sourceStart = -1;
@@ -177,8 +175,7 @@ private:
             sourceEnd = span.end;
         }
         if (QClipboard* clipboard = QApplication::clipboard()) {
-            clipboard->setText(
-                sourceStart < 0 ? QString() : m_source.mid(sourceStart, sourceEnd - sourceStart));
+            clipboard->setText(sourceStart < 0 ? QString() : m_source.mid(sourceStart, sourceEnd - sourceStart));
         }
     }
 
@@ -190,12 +187,9 @@ private:
 
 } // namespace
 
-GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
-    : GalleryCodeBlock(code, QString(), parent)
-{}
+GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent) : GalleryCodeBlock(code, QString(), parent) {}
 
-GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& pythonCode,
-                                   QWidget* parent)
+GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& pythonCode, QWidget* parent)
     : Expander(parent), m_cppCode(cppCode), m_pythonCode(pythonCode)
 {
     setObjectName(QStringLiteral("galleryCodeBlock"));
@@ -205,8 +199,7 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& python
     // Preserve Gallery-specific object names used by focused visual/geometry
     // tests while the reusable component stays free of source-code concepts.
     headerButton()->setObjectName(QStringLiteral("galleryCodeBlockHeader"));
-    if (auto* caption =
-            findChild<fluent::textfields::Label*>(QStringLiteral("fluentExpanderHeaderText"))) {
+    if (auto* caption = findChild<fluent::textfields::Label*>(QStringLiteral("fluentExpanderHeaderText"))) {
         caption->setObjectName(QStringLiteral("galleryCodeBlockCaption"));
     }
     if (auto* clip = findChild<QWidget*>(QStringLiteral("fluentExpanderClip"))) {
@@ -229,7 +222,7 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& python
         m_languageSelector = new GalleryLanguageSelector(m_contentInner);
         m_languageSelector->setObjectName(QStringLiteral("galleryCodeBlockLanguageSelector"));
         connect(m_languageSelector, &GalleryLanguageSelector::languageChanged, this,
-                &GalleryCodeBlock::setCodeLanguage);
+            &GalleryCodeBlock::setCodeLanguage);
         topRow->addWidget(m_languageSelector, 0, Qt::AlignVCenter);
     } else {
         auto* langColumn = new QVBoxLayout;
@@ -259,8 +252,7 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& python
     m_sourceSelector->setSelectedIndex(0);
     m_sourceSelector->hide();
     topRow->addWidget(m_sourceSelector, 0, Qt::AlignVCenter);
-    connect(m_sourceSelector, &navigation::SelectorBar::selectedIndexChanged, this,
-            [this] { refreshDisplayedCode(); });
+    connect(m_sourceSelector, &navigation::SelectorBar::selectedIndexChanged, this, [this] { refreshDisplayedCode(); });
 
     m_copyButton = new fluent::basicinput::Button(m_contentInner);
     m_copyButton->setObjectName(QStringLiteral("galleryCodeBlockCopyButton"));
@@ -279,13 +271,12 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& python
             m_copyButton->setEnabled(true);
             if (!copied) {
                 showGalleryToast(this, QStringLiteral("Could not copy to clipboard. Try again."),
-                                 status_info::Toast::Error);
+                    status_info::Toast::Error);
                 return;
             }
             LOG_DEBUG(QStringLiteral("GalleryCodeBlock copyCode chars=%1").arg(count));
             showGalleryToast(this, QStringLiteral("Copied to clipboard"));
-            m_copyButton->setIconGlyph(Typography::Icons::CheckMark,
-                                       Typography::IconSize::Standard);
+            m_copyButton->setIconGlyph(Typography::Icons::CheckMark, Typography::IconSize::Standard);
             QPointer<fluent::basicinput::Button> button = m_copyButton;
             QTimer::singleShot(kCopyCheckRevertMs, this, [button]() {
                 if (button) {
@@ -338,8 +329,9 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& python
     filesLayout->addStretch(1);
     m_fileRow->hide();
     innerLayout->addWidget(m_fileRow);
-    connect(m_fileSelector, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-            [this] { refreshDisplayedCode(); });
+    connect(m_fileSelector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] {
+        refreshDisplayedCode();
+    });
     innerLayout->addWidget(m_codeLabel);
     setContentWidget(m_contentInner, WidgetOwnership::Owned);
 
@@ -385,12 +377,11 @@ QString GalleryCodeBlock::sourceLanguage() const
 {
     if (const auto* file = currentFile())
         return file->language;
-    return m_codeLanguage == GalleryCodeLanguage::Python ? QStringLiteral("python")
-                                                         : QStringLiteral("cpp");
+    return m_codeLanguage == GalleryCodeLanguage::Python ? QStringLiteral("python") : QStringLiteral("cpp");
 }
 
 void GalleryCodeBlock::setSourceFiles(const QVector<GallerySourceFile>& cppFiles,
-                                      const QVector<GallerySourceFile>& pythonFiles)
+    const QVector<GallerySourceFile>& pythonFiles)
 {
     m_cppFiles = cppFiles;
     m_pythonFiles = pythonFiles;
@@ -417,18 +408,19 @@ void GalleryCodeBlock::rebuildFileSelector(const QString& preferredName)
 void GalleryCodeBlock::updateSourceControls()
 {
     const auto* file = currentFile();
-    const bool hasExcerpt =
-        file ? !file->usageSnippet.isEmpty() && file->usageSnippet != file->code
-             : !m_cppExcerpt.isEmpty() && m_codeLanguage == GalleryCodeLanguage::Cpp;
+    const bool hasExcerpt = file
+        ? !file->usageSnippet.isEmpty() && file->usageSnippet != file->code
+        : !m_cppExcerpt.isEmpty() && m_codeLanguage == GalleryCodeLanguage::Cpp;
     m_sourceSelector->setVisible(hasExcerpt);
     if (m_langUnderline)
         m_langUnderline->setVisible(!hasExcerpt);
     const auto language = sourceLanguage();
-    m_fileLanguage->setText(language == QStringLiteral("cpp")      ? QStringLiteral("C++")
-                            : language == QStringLiteral("python") ? QStringLiteral("Python")
-                            : language == QStringLiteral("qml")    ? QStringLiteral("QML")
-                            : language == QStringLiteral("xml")    ? QStringLiteral("XML")
-                                                                   : QStringLiteral("CMake"));
+    m_fileLanguage->setText(language == QStringLiteral("cpp") ? QStringLiteral("C++")
+            : language == QStringLiteral("python")            ? QStringLiteral("Python")
+            : language == QStringLiteral("qml")               ? QStringLiteral("QML")
+            : language == QStringLiteral("xml")
+            ? QStringLiteral("XML")
+            : QStringLiteral("CMake"));
 }
 
 void GalleryCodeBlock::setCppExcerpt(const QString& code)
@@ -483,9 +475,7 @@ void GalleryCodeBlock::refreshDisplayedCode()
 
 void GalleryCodeBlock::setExpanded(bool expanded, bool animated)
 {
-    LOG_DEBUG(QStringLiteral("GalleryCodeBlock setExpanded expanded=%1 animated=%2")
-                  .arg(expanded)
-                  .arg(animated));
+    LOG_DEBUG(QStringLiteral("GalleryCodeBlock setExpanded expanded=%1 animated=%2").arg(expanded).arg(animated));
     setExpandedAnimated(expanded, animated);
 }
 
@@ -510,10 +500,10 @@ void GalleryCodeBlock::applyHighlightedCode()
     const bool dark = effectiveThemeUsesDarkAppearance();
     if (currentFile()) {
         const auto language = sourceLanguage();
-        m_codeLabel->setText(
-            language == QStringLiteral("python") ? highlightPythonToHtml(code(), dark)
-            : language == QStringLiteral("qml")  ? highlightQmlToHtml(code(), dark)
-                                                 : highlightCppToHtml(code(), dark));
+        m_codeLabel->setText(language == QStringLiteral("python") ? highlightPythonToHtml(code(), dark)
+                : language == QStringLiteral("qml")
+                ? highlightQmlToHtml(code(), dark)
+                : highlightCppToHtml(code(), dark));
     } else if (m_codeLanguage == GalleryCodeLanguage::Python && hasPythonCode()) {
         if (m_pythonHighlightedHtml.isEmpty()) {
             m_pythonHighlightedHtml = highlightPythonToHtml(m_pythonCode, dark);
@@ -540,8 +530,8 @@ void GalleryCodeBlock::applyPalette()
 {
     const auto& colors = themeColorsRef();
     if (m_langUnderline) {
-        m_langUnderline->setStyleSheet(QStringLiteral("background: %1; border-radius: 1px;")
-                                           .arg(cssColor(colors.accentDefault)));
+        m_langUnderline->setStyleSheet(
+            QStringLiteral("background: %1; border-radius: 1px;").arg(cssColor(colors.accentDefault)));
     }
     if (m_langLabel)
         m_langLabel->onThemeUpdated();

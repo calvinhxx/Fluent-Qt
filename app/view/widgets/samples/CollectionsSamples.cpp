@@ -83,9 +83,8 @@ using detail::makeStatusLabel;
  */
 const QVector<QColor>& accentPalette()
 {
-    static const QVector<QColor> palette{QColor(0x00, 0x78, 0xD4), QColor(0x03, 0x83, 0x87),
-                                         QColor(0xCA, 0x50, 0x10), QColor(0x87, 0x64, 0xB8),
-                                         QColor(0xC2, 0x39, 0xB3), QColor(0x49, 0x82, 0x05)};
+    static const QVector<QColor> palette{QColor(0x00, 0x78, 0xD4), QColor(0x03, 0x83, 0x87), QColor(0xCA, 0x50, 0x10),
+        QColor(0x87, 0x64, 0xB8), QColor(0xC2, 0x39, 0xB3), QColor(0x49, 0x82, 0x05)};
     return palette;
 }
 
@@ -109,8 +108,7 @@ struct FlowPhotoInfo {
  */
 class GradientPane : public QWidget {
 public:
-    GradientPane(const QString& caption, const QColor& from, const QColor& to,
-                 QWidget* parent = nullptr)
+    GradientPane(const QString& caption, const QColor& from, const QColor& to, QWidget* parent = nullptr)
         : QWidget(parent), m_caption(caption), m_from(from), m_to(to)
     {
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -148,8 +146,11 @@ private:
 
 class DrawerGradientPane : public QWidget {
 public:
-    DrawerGradientPane(const QString& caption, const QColor& from, const QColor& to,
-                       DrawerView::DrawerEdge edge, QWidget* parent = nullptr)
+    DrawerGradientPane(const QString& caption,
+        const QColor& from,
+        const QColor& to,
+        DrawerView::DrawerEdge edge,
+        QWidget* parent = nullptr)
         : QWidget(parent), m_caption(caption), m_from(from), m_to(to), m_edge(edge)
     {
         setAutoFillBackground(false);
@@ -177,16 +178,12 @@ protected:
         gradient.setColorAt(0.0, m_from);
         gradient.setColorAt(1.0, m_to);
 
-        const bool roundTopLeft =
-            m_edge == DrawerView::DrawerEdge::Right || m_edge == DrawerView::DrawerEdge::Bottom;
-        const bool roundTopRight =
-            m_edge == DrawerView::DrawerEdge::Left || m_edge == DrawerView::DrawerEdge::Bottom;
-        const bool roundBottomRight =
-            m_edge == DrawerView::DrawerEdge::Left || m_edge == DrawerView::DrawerEdge::Top;
-        const bool roundBottomLeft =
-            m_edge == DrawerView::DrawerEdge::Right || m_edge == DrawerView::DrawerEdge::Top;
-        const QPainterPath path = ::fluent::overlay::roundedCornerRectPath(
-            surface, 8.0, roundTopLeft, roundTopRight, roundBottomRight, roundBottomLeft);
+        const bool roundTopLeft = m_edge == DrawerView::DrawerEdge::Right || m_edge == DrawerView::DrawerEdge::Bottom;
+        const bool roundTopRight = m_edge == DrawerView::DrawerEdge::Left || m_edge == DrawerView::DrawerEdge::Bottom;
+        const bool roundBottomRight = m_edge == DrawerView::DrawerEdge::Left || m_edge == DrawerView::DrawerEdge::Top;
+        const bool roundBottomLeft = m_edge == DrawerView::DrawerEdge::Right || m_edge == DrawerView::DrawerEdge::Top;
+        const QPainterPath path = ::fluent::overlay::roundedCornerRectPath(surface, 8.0, roundTopLeft, roundTopRight,
+            roundBottomRight, roundBottomLeft);
 
         painter.setPen(Qt::NoPen);
         painter.fillRect(rect(), gradient);
@@ -216,10 +213,7 @@ private:
 
 class SampleSurface : public QWidget, public fluent::FluentElement {
 public:
-    explicit SampleSurface(QWidget* parent = nullptr) : QWidget(parent)
-    {
-        setAutoFillBackground(false);
-    }
+    explicit SampleSurface(QWidget* parent = nullptr) : QWidget(parent) { setAutoFillBackground(false); }
 
     void onThemeUpdated() override { update(); }
 
@@ -239,8 +233,7 @@ protected:
     }
 };
 
-GradientPane* makeGradientPane(QWidget* parent, const QString& caption, const QColor& from,
-                               const QColor& to)
+GradientPane* makeGradientPane(QWidget* parent, const QString& caption, const QColor& from, const QColor& to)
 {
     return new GradientPane(caption, from, to, parent);
 }
@@ -262,18 +255,15 @@ QMargins drawerTitleBarAvoidanceMargins()
  * @brief List model whose rows pair text with a glyph tile icon.
  * zh_CN: 行内文本搭配字形图块图标的列表模型。
  */
-QStandardItemModel* makeGlyphListModel(QObject* parent,
-                                       const QVector<QPair<QString, QString>>& rows, int iconSize)
+QStandardItemModel* makeGlyphListModel(QObject* parent, const QVector<QPair<QString, QString>>& rows, int iconSize)
 {
     auto* model = new QStandardItemModel(parent);
     int colorIndex = 0;
     for (const auto& row : rows) {
         auto* item = new QStandardItem(row.first);
         item->setEditable(false);
-        item->setData(glyphPixmap(row.second,
-                                  accentPalette().at(colorIndex++ % accentPalette().size()),
-                                  iconSize),
-                      Qt::DecorationRole);
+        item->setData(glyphPixmap(row.second, accentPalette().at(colorIndex++ % accentPalette().size()), iconSize),
+            Qt::DecorationRole);
         model->appendRow(item);
     }
     return model;
@@ -281,10 +271,12 @@ QStandardItemModel* makeGlyphListModel(QObject* parent,
 
 class DrawerNavigationItem : public QWidget, public fluent::FluentElement {
 public:
-    DrawerNavigationItem(const QString& text, const QString& glyph, const QColor& iconColor,
-                         bool selected, QWidget* parent = nullptr)
-        : QWidget(parent), m_text(text), m_glyph(glyph), m_iconColor(iconColor),
-          m_selected(selected)
+    DrawerNavigationItem(const QString& text,
+        const QString& glyph,
+        const QColor& iconColor,
+        bool selected,
+        QWidget* parent = nullptr)
+        : QWidget(parent), m_text(text), m_glyph(glyph), m_iconColor(iconColor), m_selected(selected)
     {
         setCursor(Qt::PointingHandCursor);
         setMouseTracking(true);
@@ -333,8 +325,7 @@ protected:
 
     void mouseReleaseEvent(QMouseEvent* event) override
     {
-        const bool activate = m_pressed && event->button() == Qt::LeftButton &&
-                              rect().contains(fluentMousePos(event));
+        const bool activate = m_pressed && event->button() == Qt::LeftButton && rect().contains(fluentMousePos(event));
         m_pressed = false;
         update();
         if (activate && onActivated)
@@ -375,17 +366,14 @@ protected:
         painter.drawText(iconRect, Qt::AlignCenter, m_glyph);
 
         QFont textFont =
-            themeFont(m_selected ? Typography::FontRole::BodyStrong : Typography::FontRole::Body)
-                .toQFont();
+            themeFont(m_selected ? Typography::FontRole::BodyStrong : Typography::FontRole::Body).toQFont();
         painter.setFont(textFont);
         painter.setPen(isEnabled() ? colors.textPrimary : colors.textDisabled);
-        const QRectF textSlot(iconRect.right() + 14.0, rowRect.top(),
-                              rowRect.right() - iconRect.right() - 22.0, rowRect.height());
+        const QRectF textSlot(iconRect.right() + 14.0, rowRect.top(), rowRect.right() - iconRect.right() - 22.0,
+            rowRect.height());
         const QFontMetricsF metrics(painter.font());
-        const QString elidedText =
-            metrics.elidedText(m_text, Qt::ElideRight, qRound(textSlot.width()));
-        const QRectF textRect =
-            fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
+        const QString elidedText = metrics.elidedText(m_text, Qt::ElideRight, qRound(textSlot.width()));
+        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
         painter.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elidedText);
     }
 
@@ -411,8 +399,7 @@ public:
         return size.canConvert<QSize>() ? size.toSize() : QSize(160, 118);
     }
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         if (!index.isValid())
             return;
@@ -425,14 +412,10 @@ public:
         fluent::FluentElement::Colors colors{};
         if (m_themeHost)
             colors = m_themeHost->themeColors();
-        const QColor layer =
-            colors.bgLayerAlt.isValid() ? colors.bgLayerAlt : QColor(250, 250, 250);
-        const QColor stroke =
-            colors.strokeDefault.isValid() ? colors.strokeDefault : QColor(220, 220, 220);
-        const QColor accent =
-            colors.accentDefault.isValid() ? colors.accentDefault : QColor(0, 120, 212);
-        const QColor hover =
-            colors.subtleSecondary.isValid() ? colors.subtleSecondary : QColor(0, 0, 0, 18);
+        const QColor layer = colors.bgLayerAlt.isValid() ? colors.bgLayerAlt : QColor(250, 250, 250);
+        const QColor stroke = colors.strokeDefault.isValid() ? colors.strokeDefault : QColor(220, 220, 220);
+        const QColor accent = colors.accentDefault.isValid() ? colors.accentDefault : QColor(0, 120, 212);
+        const QColor hover = colors.subtleSecondary.isValid() ? colors.subtleSecondary : QColor(0, 0, 0, 18);
 
         const QRectF card = QRectF(option.rect).adjusted(2.0, 2.0, -2.0, -2.0);
         const int radius = CornerRadius::Control;
@@ -441,8 +424,7 @@ public:
         painter->fillPath(clip, layer);
 
         const QVariant imageData = index.data(PhotoImageRole);
-        const QPixmap pixmap =
-            imageData.canConvert<QPixmap>() ? imageData.value<QPixmap>() : QPixmap();
+        const QPixmap pixmap = imageData.canConvert<QPixmap>() ? imageData.value<QPixmap>() : QPixmap();
         if (!pixmap.isNull()) {
             painter->setClipPath(clip);
             drawCoverPixmap(painter, card, pixmap);
@@ -456,7 +438,7 @@ public:
         }
 
         painter->setPen(QPen(option.state & QStyle::State_Selected ? accent : stroke,
-                             option.state & QStyle::State_Selected ? 2.0 : 1.0));
+            option.state & QStyle::State_Selected ? 2.0 : 1.0));
         painter->setBrush(Qt::NoBrush);
         painter->drawPath(clip);
 
@@ -479,8 +461,7 @@ private:
     fluent::FluentElement* m_themeHost = nullptr;
 };
 
-void loadFlowNetworkImage(QStandardItemModel* model, int row, const QUrl& url,
-                          QNetworkAccessManager* manager)
+void loadFlowNetworkImage(QStandardItemModel* model, int row, const QUrl& url, QNetworkAccessManager* manager)
 {
     if (!model || !manager)
         return;
@@ -488,8 +469,7 @@ void loadFlowNetworkImage(QStandardItemModel* model, int row, const QUrl& url,
     QPointer<QStandardItemModel> modelGuard(model);
     const QPersistentModelIndex index(model->index(row, 0));
     QNetworkRequest request(url);
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
-                         QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(10000);
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Fluent-Qt Gallery/1.0"));
     QNetworkReply* reply = manager->get(request);
@@ -499,14 +479,13 @@ void loadFlowNetworkImage(QStandardItemModel* model, int row, const QUrl& url,
             return;
         if (reply->error() != QNetworkReply::NoError) {
             LOG_WARN(QStringLiteral("Gallery photo request failed url=%1 error=%2")
-                         .arg(url.toString(), reply->errorString()));
+                    .arg(url.toString(), reply->errorString()));
             return;
         }
 
         QPixmap pixmap;
         if (!pixmap.loadFromData(reply->readAll()) || pixmap.isNull()) {
-            LOG_WARN(QStringLiteral("Gallery photo response is not a supported image url=%1")
-                         .arg(url.toString()));
+            LOG_WARN(QStringLiteral("Gallery photo response is not a supported image url=%1").arg(url.toString()));
             return;
         }
         modelGuard->setData(index, pixmap, PhotoImageRole);
@@ -519,14 +498,10 @@ QUrl flowPhotoUrl(const FlowPhotoInfo& photo, int row)
     // which is unavailable on some macOS/network configurations.
     // zh_CN: 固定图片 id 保证示例稳定，同时避开部分 macOS/网络环境无法访问的 Picsum 端点。
     static const QStringList imageIds{QStringLiteral("photo-1500530855697-b586d89ba3ee"),
-                                      QStringLiteral("photo-1470770841072-f978cf4d019e"),
-                                      QStringLiteral("photo-1441974231531-c6227db76b6e"),
-                                      QStringLiteral("photo-1470252649378-9c29740c9fa8"),
-                                      QStringLiteral("photo-1506744038136-46273834b3fb"),
-                                      QStringLiteral("photo-1472214103451-9374bd1c798e"),
-                                      QStringLiteral("photo-1469474968028-56623f02e42e"),
-                                      QStringLiteral("photo-1511818966892-d7d671e672a2"),
-                                      QStringLiteral("photo-1497366754035-f200968a6e72")};
+        QStringLiteral("photo-1470770841072-f978cf4d019e"), QStringLiteral("photo-1441974231531-c6227db76b6e"),
+        QStringLiteral("photo-1470252649378-9c29740c9fa8"), QStringLiteral("photo-1506744038136-46273834b3fb"),
+        QStringLiteral("photo-1472214103451-9374bd1c798e"), QStringLiteral("photo-1469474968028-56623f02e42e"),
+        QStringLiteral("photo-1511818966892-d7d671e672a2"), QStringLiteral("photo-1497366754035-f200968a6e72")};
     const int imageIndex = row % static_cast<int>(imageIds.size());
     const QString imageId = imageIds.at(imageIndex);
     QUrl url(QStringLiteral("https://images.unsplash.com/%1").arg(imageId));
@@ -548,19 +523,19 @@ QStandardItemModel* makeFlowPhotoModel(QObject* parent, const QVector<FlowPhotoI
         item->setEditable(false);
         item->setData(photo.subtitle, PhotoSubtitleRole);
         item->setData(photo.size, Qt::SizeHintRole);
-        item->setData(gradientPixmap(QSize(photo.size.width() * 2, photo.size.height() * 2),
-                                     photo.from, photo.to, QString{}),
-                      PhotoImageRole);
+        item->setData(
+            gradientPixmap(QSize(photo.size.width() * 2, photo.size.height() * 2), photo.from, photo.to, QString{}),
+            PhotoImageRole);
         model->appendRow(item);
     }
     return model;
 }
 
-void loadFlowNetworkImages(QStandardItemModel* model, const QVector<FlowPhotoInfo>& photos,
-                           QNetworkAccessManager* manager)
+void loadFlowNetworkImages(QStandardItemModel* model,
+    const QVector<FlowPhotoInfo>& photos,
+    QNetworkAccessManager* manager)
 {
-    if (QCoreApplication::instance() &&
-        QCoreApplication::instance()->property("fluentqtGalleryAutomated").toBool()) {
+    if (QCoreApplication::instance() && QCoreApplication::instance()->property("fluentqtGalleryAutomated").toBool()) {
         return;
     }
     for (int row = 0; row < photos.size(); ++row) {
@@ -571,22 +546,20 @@ void loadFlowNetworkImages(QStandardItemModel* model, const QVector<FlowPhotoInf
 QVector<GallerySample> drawerViewSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("drawer-view-basic"), QStringLiteral("Right-edge drawer"),
+        makeSample(QStringLiteral("drawer-view-basic"), QStringLiteral("Right-edge drawer"),
+            QStringLiteral("The drawer slides over the hosting surface and dismisses on outside click."),
             QStringLiteral(
-                "The drawer slides over the hosting surface and dismisses on outside click."),
-            QStringLiteral("auto* drawer = new DrawerView(host);\n"
-                           "drawer->setEdge(DrawerView::DrawerEdge::Right);\n"
-                           "drawer->setDrawerLength(260);\n"
-                           "drawer->setContentWidget(settingsPanel, WidgetOwnership::Owned);\n"
-                           "auto* openButton = new Button(\"Open drawer\", host);\n"
-                           "QObject::connect(openButton, &Button::clicked,\n"
-                           "                 drawer, &DrawerView::open);"),
+                "auto* drawer = new DrawerView(host);\n"
+                "drawer->setEdge(DrawerView::DrawerEdge::Right);\n"
+                "drawer->setDrawerLength(260);\n"
+                "drawer->setContentWidget(settingsPanel, WidgetOwnership::Owned);\n"
+                "auto* openButton = new Button(\"Open drawer\", host);\n"
+                "QObject::connect(openButton, &Button::clicked,\n"
+                "                 drawer, &DrawerView::open);"),
             [](QWidget* parent) {
                 auto* host = new QWidget(parent);
                 host->setFixedSize(420, 240);
-                host->setStyleSheet(
-                    QStringLiteral("background: rgba(128, 128, 128, 18); border-radius: 8px;"));
+                host->setStyleSheet(QStringLiteral("background: rgba(128, 128, 128, 18); border-radius: 8px;"));
 
                 auto* drawer = new DrawerView(host);
                 drawer->setEdge(DrawerView::DrawerEdge::Right);
@@ -598,19 +571,16 @@ QVector<GallerySample> drawerViewSamples()
                 drawerLayout->setSpacing(6);
                 auto* title = new Label(QStringLiteral("Navigation"), drawerContent);
                 title->setFluentTypography(Typography::FontRole::BodyStrong);
-                title->setTextColorRole(
-                    Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
+                title->setTextColorRole(Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
                 drawerLayout->addWidget(title);
 
                 QVector<DrawerNavigationItem*> navItems;
-                const QVector<QPair<QString, QString>> rows{
-                    {QStringLiteral("Home"), Typography::Icons::Home},
+                const QVector<QPair<QString, QString>> rows{{QStringLiteral("Home"), Typography::Icons::Home},
                     {QStringLiteral("Music"), Typography::Icons::Music},
                     {QStringLiteral("Downloads"), Typography::Icons::Download},
                     {QStringLiteral("Settings"), Typography::Icons::Settings}};
                 for (int i = 0; i < rows.size(); ++i) {
-                    auto* item = new DrawerNavigationItem(
-                        rows.at(i).first, rows.at(i).second,
+                    auto* item = new DrawerNavigationItem(rows.at(i).first, rows.at(i).second,
                         accentPalette().at(i % accentPalette().size()), i == 0, drawerContent);
                     navItems.append(item);
                     drawerLayout->addWidget(item);
@@ -627,22 +597,21 @@ QVector<GallerySample> drawerViewSamples()
                 auto* openButton = new Button(QStringLiteral("Open drawer"), host);
                 openButton->setFluentStyle(Button::Accent);
                 openButton->move(18, 18);
-                QObject::connect(openButton, &Button::clicked, drawer,
-                                 [drawer]() { drawer->open(); });
+                QObject::connect(openButton, &Button::clicked, drawer, [drawer]() { drawer->open(); });
                 return host;
             }),
-        makeSample(
-            QStringLiteral("drawer-view-edges"), QStringLiteral("DrawerEdge and drawerLength"),
+        makeSample(QStringLiteral("drawer-view-edges"), QStringLiteral("DrawerEdge and drawerLength"),
             QStringLiteral("The same content can open from any window edge; drawerLength controls "
                            "the panel size along that edge."),
-            QStringLiteral("auto* drawer = new DrawerView(host);\n"
-                           "drawer->setDrawerLength(170);\n"
-                           "drawer->setModal(false);\n"
-                           "drawer->setDim(false);\n\n"
-                           "auto openFrom = [drawer](DrawerView::DrawerEdge edge) {\n"
-                           "    drawer->setEdge(edge);\n"
-                           "    drawer->open();\n"
-                           "};"),
+            QStringLiteral(
+                "auto* drawer = new DrawerView(host);\n"
+                "drawer->setDrawerLength(170);\n"
+                "drawer->setModal(false);\n"
+                "drawer->setDim(false);\n\n"
+                "auto openFrom = [drawer](DrawerView::DrawerEdge edge) {\n"
+                "    drawer->setEdge(edge);\n"
+                "    drawer->open();\n"
+                "};"),
             [](QWidget* parent) {
                 auto* host = makeSampleSurface(parent, QSize(460, 238));
                 auto* layout = new QVBoxLayout(host);
@@ -668,18 +637,17 @@ QVector<GallerySample> drawerViewSamples()
                 drawer->setDrawerLength(170);
                 drawer->setModal(false);
                 drawer->setDim(false);
-                auto* drawerContent = new DrawerGradientPane(
-                    QStringLiteral("Drawer content"), QColor(0x1E, 0x6F, 0xD9),
+                auto* drawerContent = new DrawerGradientPane(QStringLiteral("Drawer content"), QColor(0x1E, 0x6F, 0xD9),
                     QColor(0x6F, 0xD1, 0xF2), DrawerView::DrawerEdge::Left, drawer);
                 drawer->setContentWidget(drawerContent, WidgetOwnership::Owned);
 
-                const auto openFrom = [drawer, drawerContent, status](DrawerView::DrawerEdge edge,
-                                                                      const QString& text) {
-                    drawer->setEdge(edge);
-                    drawerContent->setEdge(edge);
-                    status->setText(QStringLiteral("Edge: %1, length: 170").arg(text));
-                    drawer->open();
-                };
+                const auto openFrom =
+                    [drawer, drawerContent, status](DrawerView::DrawerEdge edge, const QString& text) {
+                        drawer->setEdge(edge);
+                        drawerContent->setEdge(edge);
+                        status->setText(QStringLiteral("Edge: %1, length: 170").arg(text));
+                        drawer->open();
+                    };
                 QObject::connect(leftButton, &Button::clicked, drawer, [openFrom]() {
                     openFrom(DrawerView::DrawerEdge::Left, QStringLiteral("Left"));
                 });
@@ -694,23 +662,21 @@ QVector<GallerySample> drawerViewSamples()
                 });
                 return host;
             }),
-        makeSample(
-            QStringLiteral("drawer-view-close-policy"),
-            QStringLiteral("Modal, dim, and close policy"),
+        makeSample(QStringLiteral("drawer-view-close-policy"), QStringLiteral("Modal, dim, and close policy"),
+            QStringLiteral("ClosePolicy separates light-dismiss behavior from explicit close commands."),
             QStringLiteral(
-                "ClosePolicy separates light-dismiss behavior from explicit close commands."),
-            QStringLiteral("auto* drawer = new DrawerView(host);\n"
-                           "drawer->setAvailableMargins(drawerTitleBarAvoidanceMargins());\n"
-                           "drawer->setModal(false);\n"
-                           "drawer->setDim(false);\n"
-                           "drawer->setClosePolicy(\n"
-                           "    DrawerView::ClosePolicy(DrawerView::NoAutoClose));\n"
-                           "auto* panel = new QWidget;\n"
-                           "auto* panelLayout = new QVBoxLayout(panel);\n"
-                           "panelLayout->setContentsMargins(16, 18, 16, 18);\n"
-                           "drawer->setContentWidget(panel, WidgetOwnership::Owned);\n\n"
-                           "QObject::connect(closeButton, &Button::clicked,\n"
-                           "                 drawer, &DrawerView::close);"),
+                "auto* drawer = new DrawerView(host);\n"
+                "drawer->setAvailableMargins(drawerTitleBarAvoidanceMargins());\n"
+                "drawer->setModal(false);\n"
+                "drawer->setDim(false);\n"
+                "drawer->setClosePolicy(\n"
+                "    DrawerView::ClosePolicy(DrawerView::NoAutoClose));\n"
+                "auto* panel = new QWidget;\n"
+                "auto* panelLayout = new QVBoxLayout(panel);\n"
+                "panelLayout->setContentsMargins(16, 18, 16, 18);\n"
+                "drawer->setContentWidget(panel, WidgetOwnership::Owned);\n\n"
+                "QObject::connect(closeButton, &Button::clicked,\n"
+                "                 drawer, &DrawerView::close);"),
             [](QWidget* parent) {
                 auto* host = makeSampleSurface(parent, QSize(460, 238));
                 auto* layout = new QVBoxLayout(host);
@@ -740,8 +706,7 @@ QVector<GallerySample> drawerViewSamples()
                 panelLayout->setSpacing(10);
                 auto* title = new Label(QStringLiteral("Persistent panel"), panel);
                 title->setFluentTypography(Typography::FontRole::BodyStrong);
-                title->setTextColorRole(
-                    Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
+                title->setTextColorRole(Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
                 auto* closeButton = new Button(QStringLiteral("Close"), panel);
                 panelLayout->addWidget(title);
                 panelLayout->addStretch(1);
@@ -753,67 +718,66 @@ QVector<GallerySample> drawerViewSamples()
                 QObject::connect(drawer, &DrawerView::opened, status, [status]() {
                     status->setText(QStringLiteral("Open: outside click does not dismiss"));
                 });
-                QObject::connect(drawer, &DrawerView::closed, status,
-                                 [status]() { status->setText(QStringLiteral("Closed")); });
+                QObject::connect(drawer, &DrawerView::closed, status, [status]() {
+                    status->setText(QStringLiteral("Closed"));
+                });
                 return host;
             }),
-        makeSample(QStringLiteral("drawer-view-interactive-drag"),
-                   QStringLiteral("Interactive drag margin"),
-                   QStringLiteral("Interactive drawers can be opened or adjusted by dragging from "
-                                  "the configured edge margin."),
-                   QStringLiteral("auto* drawer = new DrawerView(host);\n"
-                                  "drawer->setInteractive(true);\n"
-                                  "drawer->setDragMargin(36);\n"
-                                  "drawer->setAnimationEnabled(true);\n"
-                                  "drawer->setEdge(DrawerView::DrawerEdge::Left);"),
-                   [](QWidget* parent) {
-                       auto* host = makeSampleSurface(parent, QSize(460, 238));
-                       auto* layout = new QVBoxLayout(host);
-                       layout->setContentsMargins(18, 18, 18, 18);
-                       layout->setSpacing(12);
+        makeSample(QStringLiteral("drawer-view-interactive-drag"), QStringLiteral("Interactive drag margin"),
+            QStringLiteral("Interactive drawers can be opened or adjusted by dragging from "
+                           "the configured edge margin."),
+            QStringLiteral(
+                "auto* drawer = new DrawerView(host);\n"
+                "drawer->setInteractive(true);\n"
+                "drawer->setDragMargin(36);\n"
+                "drawer->setAnimationEnabled(true);\n"
+                "drawer->setEdge(DrawerView::DrawerEdge::Left);"),
+            [](QWidget* parent) {
+                auto* host = makeSampleSurface(parent, QSize(460, 238));
+                auto* layout = new QVBoxLayout(host);
+                layout->setContentsMargins(18, 18, 18, 18);
+                layout->setSpacing(12);
 
-                       auto* controls = horizontalGroup(host, 8);
-                       auto* openButton = new Button(QStringLiteral("Open"), controls);
-                       openButton->setFluentStyle(Button::Accent);
-                       auto* closeButton = new Button(QStringLiteral("Close"), controls);
-                       controls->layout()->addWidget(openButton);
-                       controls->layout()->addWidget(closeButton);
-                       layout->addWidget(controls);
-                       layout->addWidget(makeStatusLabel(
-                           host, QStringLiteral("Interactive: true, dragMargin: 36")));
-                       layout->addStretch(1);
+                auto* controls = horizontalGroup(host, 8);
+                auto* openButton = new Button(QStringLiteral("Open"), controls);
+                openButton->setFluentStyle(Button::Accent);
+                auto* closeButton = new Button(QStringLiteral("Close"), controls);
+                controls->layout()->addWidget(openButton);
+                controls->layout()->addWidget(closeButton);
+                layout->addWidget(controls);
+                layout->addWidget(makeStatusLabel(host, QStringLiteral("Interactive: true, dragMargin: 36")));
+                layout->addStretch(1);
 
-                       auto* drawer = new DrawerView(host);
-                       drawer->setEdge(DrawerView::DrawerEdge::Left);
-                       drawer->setDrawerLength(210);
-                       drawer->setModal(false);
-                       drawer->setDim(false);
-                       drawer->setInteractive(true);
-                       drawer->setDragMargin(36);
-                       drawer->setAnimationEnabled(true);
-                       drawer->setContentWidget(
-                           new DrawerGradientPane(
-                               QStringLiteral("Drag surface"), QColor(0x2F, 0x9E, 0x44),
-                               QColor(0xA9, 0xE3, 0x4B), DrawerView::DrawerEdge::Left, drawer),
-                           WidgetOwnership::Owned);
+                auto* drawer = new DrawerView(host);
+                drawer->setEdge(DrawerView::DrawerEdge::Left);
+                drawer->setDrawerLength(210);
+                drawer->setModal(false);
+                drawer->setDim(false);
+                drawer->setInteractive(true);
+                drawer->setDragMargin(36);
+                drawer->setAnimationEnabled(true);
+                drawer->setContentWidget(
+                    new DrawerGradientPane(QStringLiteral("Drag surface"), QColor(0x2F, 0x9E, 0x44),
+                        QColor(0xA9, 0xE3, 0x4B), DrawerView::DrawerEdge::Left, drawer),
+                    WidgetOwnership::Owned);
 
-                       QObject::connect(openButton, &Button::clicked, drawer, &DrawerView::open);
-                       QObject::connect(closeButton, &Button::clicked, drawer, &DrawerView::close);
-                       return host;
-                   })};
+                QObject::connect(openButton, &Button::clicked, drawer, &DrawerView::open);
+                QObject::connect(closeButton, &Button::clicked, drawer, &DrawerView::close);
+                return host;
+            })};
 }
 
 QVector<GallerySample> flipViewSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("flip-view-basic"), QStringLiteral("FlipView photo gallery"),
+        makeSample(QStringLiteral("flip-view-basic"), QStringLiteral("FlipView photo gallery"),
             QStringLiteral("Use the arrows or swipe to flip between pictures."),
-            QStringLiteral("auto* flipView = new FlipView(this);\n"
-                           "flipView->addPage(sunrisePhoto);\n"
-                           "flipView->addPage(oceanPhoto);\n"
-                           "flipView->addPage(forestPhoto);\n"
-                           "flipView->setShowPageIndicator(true);"),
+            QStringLiteral(
+                "auto* flipView = new FlipView(this);\n"
+                "flipView->addPage(sunrisePhoto);\n"
+                "flipView->addPage(oceanPhoto);\n"
+                "flipView->addPage(forestPhoto);\n"
+                "flipView->setShowPageIndicator(true);"),
             [](QWidget* parent) {
                 auto* flipView = new FlipView(parent);
                 flipView->setFixedSize(420, 220);
@@ -837,46 +801,43 @@ QVector<GallerySample> flipViewSamples()
                 return flipView;
             }),
         makeSample(QStringLiteral("flip-view-vertical"), QStringLiteral("Vertical orientation"),
-                   QStringLiteral(
-                       "Orientation changes which axis wheel, swipe, and arrow navigation use."),
-                   QStringLiteral("auto* flipView = new FlipView(this);\n"
-                                  "flipView->setOrientation(Qt::Vertical);\n"
-                                  "flipView->setShowPageIndicator(true);\n"
-                                  "flipView->addPage(firstPage);\n"
-                                  "flipView->addPage(secondPage);\n"
-                                  "flipView->addPage(thirdPage);"),
-                   [](QWidget* parent) {
-                       auto* flipView = new FlipView(parent);
-                       flipView->setFixedSize(300, 240);
-                       flipView->setOrientation(Qt::Vertical);
-                       flipView->setShowPageIndicator(true);
+            QStringLiteral("Orientation changes which axis wheel, swipe, and arrow navigation use."),
+            QStringLiteral(
+                "auto* flipView = new FlipView(this);\n"
+                "flipView->setOrientation(Qt::Vertical);\n"
+                "flipView->setShowPageIndicator(true);\n"
+                "flipView->addPage(firstPage);\n"
+                "flipView->addPage(secondPage);\n"
+                "flipView->addPage(thirdPage);"),
+            [](QWidget* parent) {
+                auto* flipView = new FlipView(parent);
+                flipView->setFixedSize(300, 240);
+                flipView->setOrientation(Qt::Vertical);
+                flipView->setShowPageIndicator(true);
 
-                       const QVector<QPair<QColor, QColor>> colors{
-                           {QColor(0x87, 0x64, 0xB8), QColor(0xC2, 0x6F, 0xB8)},
-                           {QColor(0x03, 0x83, 0x87), QColor(0x6F, 0xD1, 0xF2)},
-                           {QColor(0xCA, 0x50, 0x10), QColor(0xF2, 0xC9, 0x4C)}};
-                       for (int i = 0; i < colors.size(); ++i) {
-                           auto* page =
-                               makeGradientPane(flipView, QStringLiteral("Vertical %1").arg(i + 1),
-                                                colors.at(i).first, colors.at(i).second);
-                           page->setFixedSize(300, 240);
-                           flipView->addPage(page);
-                       }
-                       return flipView;
-                   }),
-        makeSample(
-            QStringLiteral("flip-view-external-navigation"),
-            QStringLiteral("External navigation buttons"),
+                const QVector<QPair<QColor, QColor>> colors{{QColor(0x87, 0x64, 0xB8), QColor(0xC2, 0x6F, 0xB8)},
+                    {QColor(0x03, 0x83, 0x87), QColor(0x6F, 0xD1, 0xF2)},
+                    {QColor(0xCA, 0x50, 0x10), QColor(0xF2, 0xC9, 0x4C)}};
+                for (int i = 0; i < colors.size(); ++i) {
+                    auto* page = makeGradientPane(flipView, QStringLiteral("Vertical %1").arg(i + 1),
+                        colors.at(i).first, colors.at(i).second);
+                    page->setFixedSize(300, 240);
+                    flipView->addPage(page);
+                }
+                return flipView;
+            }),
+        makeSample(QStringLiteral("flip-view-external-navigation"), QStringLiteral("External navigation buttons"),
             QStringLiteral("Navigation chrome can be hidden while the app drives currentIndex with "
                            "its own commands."),
-            QStringLiteral("flipView->setShowNavigationButtons(false);\n"
-                           "flipView->setShowPageIndicator(false);\n"
-                           "QObject::connect(previous, &Button::clicked,\n"
-                           "                 flipView, &FlipView::goPrevious);\n"
-                           "QObject::connect(next, &Button::clicked,\n"
-                           "                 flipView, &FlipView::goNext);\n"
-                           "QObject::connect(flipView, &FlipView::currentIndexChanged,\n"
-                           "                 status, updateStatus);"),
+            QStringLiteral(
+                "flipView->setShowNavigationButtons(false);\n"
+                "flipView->setShowPageIndicator(false);\n"
+                "QObject::connect(previous, &Button::clicked,\n"
+                "                 flipView, &FlipView::goPrevious);\n"
+                "QObject::connect(next, &Button::clicked,\n"
+                "                 flipView, &FlipView::goNext);\n"
+                "QObject::connect(flipView, &FlipView::currentIndexChanged,\n"
+                "                 status, updateStatus);"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 10);
                 auto* flipView = new FlipView(group);
@@ -884,13 +845,12 @@ QVector<GallerySample> flipViewSamples()
                 flipView->setShowNavigationButtons(false);
                 flipView->setShowPageIndicator(false);
 
-                const QVector<QPair<QColor, QColor>> colors{
-                    {QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2)},
+                const QVector<QPair<QColor, QColor>> colors{{QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2)},
                     {QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B)},
                     {QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C)}};
                 for (int i = 0; i < colors.size(); ++i) {
-                    auto* page = makeGradientPane(flipView, QStringLiteral("Page %1").arg(i + 1),
-                                                  colors.at(i).first, colors.at(i).second);
+                    auto* page = makeGradientPane(flipView, QStringLiteral("Page %1").arg(i + 1), colors.at(i).first,
+                        colors.at(i).second);
                     page->setFixedSize(360, 168);
                     flipView->addPage(page);
                 }
@@ -921,154 +881,153 @@ QVector<GallerySample> flowViewSamples()
 {
     return {
         makeSample(QStringLiteral("flow-view-basic"), QStringLiteral("Network photo flow"),
-                   QStringLiteral(
-                       "Images load asynchronously while the flow layout wraps cards across rows."),
-                   QStringLiteral("auto* flowView = new FlowView(this);\n"
-                                  "flowView->setDefaultItemSize(QSize(160, 118));\n"
-                                  "flowView->setItemDelegate(photoDelegate);\n"
-                                  "flowView->setModel(model);\n"
-                                  "flowView->setSelectionMode(FlowView::SelectionMode::Single);"),
-                   [](QWidget* parent) {
-                       auto* flowView = new FlowView(parent);
-                       flowView->setFixedSize(540, 282);
-                       flowView->setSelectionMode(FlowView::SelectionMode::Single);
-                       flowView->setDefaultItemSize(QSize(160, 118));
-                       flowView->setMinimumItemSize(QSize(140, 100));
-                       flowView->setMaximumItemSize(QSize(180, 128));
-                       flowView->setHorizontalSpacing(10);
-                       flowView->setVerticalSpacing(10);
-                       flowView->setContentMargins(QMargins(8, 8, 8, 8));
-                       flowView->setItemDelegate(new FlowPhotoDelegate(
-                           static_cast<fluent::FluentElement*>(flowView), flowView));
+            QStringLiteral("Images load asynchronously while the flow layout wraps cards across rows."),
+            QStringLiteral(
+                "auto* flowView = new FlowView(this);\n"
+                "flowView->setDefaultItemSize(QSize(160, 118));\n"
+                "flowView->setItemDelegate(photoDelegate);\n"
+                "flowView->setModel(model);\n"
+                "flowView->setSelectionMode(FlowView::SelectionMode::Single);"),
+            [](QWidget* parent) {
+                auto* flowView = new FlowView(parent);
+                flowView->setFixedSize(540, 282);
+                flowView->setSelectionMode(FlowView::SelectionMode::Single);
+                flowView->setDefaultItemSize(QSize(160, 118));
+                flowView->setMinimumItemSize(QSize(140, 100));
+                flowView->setMaximumItemSize(QSize(180, 128));
+                flowView->setHorizontalSpacing(10);
+                flowView->setVerticalSpacing(10);
+                flowView->setContentMargins(QMargins(8, 8, 8, 8));
+                flowView->setItemDelegate(
+                    new FlowPhotoDelegate(static_cast<fluent::FluentElement*>(flowView), flowView));
 
-                       const QVector<FlowPhotoInfo> photos{
-                           {QStringLiteral("Atrium"), QStringLiteral("architecture"),
-                            QColor(0x37, 0x8B, 0xC4), QColor(0x9A, 0xD9, 0xEA), QSize(160, 118)},
-                           {QStringLiteral("Harbor"), QStringLiteral("travel"),
-                            QColor(0x1E, 0x6F, 0xD9), QColor(0x67, 0xD0, 0xD6), QSize(160, 118)},
-                           {QStringLiteral("Canyon"), QStringLiteral("landscape"),
-                            QColor(0xC2, 0x5B, 0x2B), QColor(0xF2, 0xB8, 0x4B), QSize(160, 118)},
-                           {QStringLiteral("Studio"), QStringLiteral("workspace"),
-                            QColor(0x7A, 0x5F, 0xC9), QColor(0xD7, 0x94, 0xE6), QSize(160, 118)},
-                           {QStringLiteral("Garden"), QStringLiteral("nature"),
-                            QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B), QSize(160, 118)},
-                           {QStringLiteral("Dawn"), QStringLiteral("morning"),
-                            QColor(0xD9, 0x6C, 0x75), QColor(0xF2, 0xC9, 0x6B), QSize(160, 118)},
-                           {QStringLiteral("Transit"), QStringLiteral("city"),
-                            QColor(0x37, 0x5B, 0xA8), QColor(0x58, 0xB7, 0xE8), QSize(160, 118)},
-                           {QStringLiteral("Market"), QStringLiteral("street"),
-                            QColor(0x91, 0x43, 0x4A), QColor(0xE0, 0x95, 0x52), QSize(160, 118)},
-                           {QStringLiteral("Cabin"), QStringLiteral("retreat"),
-                            QColor(0x5B, 0x75, 0x35), QColor(0xCE, 0xA8, 0x5B), QSize(160, 118)}};
+                const QVector<FlowPhotoInfo> photos{
+                    {QStringLiteral("Atrium"), QStringLiteral("architecture"), QColor(0x37, 0x8B, 0xC4),
+                        QColor(0x9A, 0xD9, 0xEA), QSize(160, 118)},
+                    {QStringLiteral("Harbor"), QStringLiteral("travel"), QColor(0x1E, 0x6F, 0xD9),
+                        QColor(0x67, 0xD0, 0xD6), QSize(160, 118)},
+                    {QStringLiteral("Canyon"), QStringLiteral("landscape"), QColor(0xC2, 0x5B, 0x2B),
+                        QColor(0xF2, 0xB8, 0x4B), QSize(160, 118)},
+                    {QStringLiteral("Studio"), QStringLiteral("workspace"), QColor(0x7A, 0x5F, 0xC9),
+                        QColor(0xD7, 0x94, 0xE6), QSize(160, 118)},
+                    {QStringLiteral("Garden"), QStringLiteral("nature"), QColor(0x2F, 0x9E, 0x44),
+                        QColor(0xA9, 0xE3, 0x4B), QSize(160, 118)},
+                    {QStringLiteral("Dawn"), QStringLiteral("morning"), QColor(0xD9, 0x6C, 0x75),
+                        QColor(0xF2, 0xC9, 0x6B), QSize(160, 118)},
+                    {QStringLiteral("Transit"), QStringLiteral("city"), QColor(0x37, 0x5B, 0xA8),
+                        QColor(0x58, 0xB7, 0xE8), QSize(160, 118)},
+                    {QStringLiteral("Market"), QStringLiteral("street"), QColor(0x91, 0x43, 0x4A),
+                        QColor(0xE0, 0x95, 0x52), QSize(160, 118)},
+                    {QStringLiteral("Cabin"), QStringLiteral("retreat"), QColor(0x5B, 0x75, 0x35),
+                        QColor(0xCE, 0xA8, 0x5B), QSize(160, 118)}};
 
-                       auto* model = makeFlowPhotoModel(flowView, photos);
-                       flowView->setModel(model);
-                       flowView->setSelectedIndex(0);
+                auto* model = makeFlowPhotoModel(flowView, photos);
+                flowView->setModel(model);
+                flowView->setSelectedIndex(0);
 
-                       auto* network = new QNetworkAccessManager(flowView);
-                       loadFlowNetworkImages(model, photos, network);
-                       return flowView;
-                   }),
+                auto* network = new QNetworkAccessManager(flowView);
+                loadFlowNetworkImages(model, photos, network);
+                return flowView;
+            }),
         makeSample(QStringLiteral("flow-view-reorder"), QStringLiteral("Drag photos to reorder"),
-                   QStringLiteral(
-                       "Irregular image cards wrap across rows; drag a card to reorder the model."),
-                   QStringLiteral("auto* flowView = new FlowView(this);\n"
-                                  "flowView->setItemDelegate(photoDelegate);\n"
-                                  "flowView->setModel(model);\n"
-                                  "flowView->setCanReorderItems(true);"),
-                   [](QWidget* parent) {
-                       auto* flowView = new FlowView(parent);
-                       flowView->setFixedSize(540, 318);
-                       flowView->setCanReorderItems(true);
-                       flowView->setDefaultItemSize(QSize(150, 110));
-                       flowView->setMinimumItemSize(QSize(112, 92));
-                       flowView->setHorizontalSpacing(10);
-                       flowView->setVerticalSpacing(10);
-                       flowView->setContentMargins(QMargins(8, 8, 8, 8));
-                       flowView->setItemDelegate(new FlowPhotoDelegate(
-                           static_cast<fluent::FluentElement*>(flowView), flowView));
+            QStringLiteral("Irregular image cards wrap across rows; drag a card to reorder the model."),
+            QStringLiteral(
+                "auto* flowView = new FlowView(this);\n"
+                "flowView->setItemDelegate(photoDelegate);\n"
+                "flowView->setModel(model);\n"
+                "flowView->setCanReorderItems(true);"),
+            [](QWidget* parent) {
+                auto* flowView = new FlowView(parent);
+                flowView->setFixedSize(540, 318);
+                flowView->setCanReorderItems(true);
+                flowView->setDefaultItemSize(QSize(150, 110));
+                flowView->setMinimumItemSize(QSize(112, 92));
+                flowView->setHorizontalSpacing(10);
+                flowView->setVerticalSpacing(10);
+                flowView->setContentMargins(QMargins(8, 8, 8, 8));
+                flowView->setItemDelegate(
+                    new FlowPhotoDelegate(static_cast<fluent::FluentElement*>(flowView), flowView));
 
-                       const QVector<FlowPhotoInfo> photos{
-                           {QStringLiteral("Loft"), QStringLiteral("interior"),
-                            QColor(0x5D, 0x7F, 0xB8), QColor(0xC9, 0xDB, 0xF2), QSize(148, 104)},
-                           {QStringLiteral("Ridge"), QStringLiteral("wide"),
-                            QColor(0x24, 0x74, 0x8F), QColor(0x8C, 0xCF, 0xA5), QSize(210, 118)},
-                           {QStringLiteral("Cafe"), QStringLiteral("street"),
-                            QColor(0xA9, 0x5B, 0x45), QColor(0xE9, 0xB8, 0x7A), QSize(132, 132)},
-                           {QStringLiteral("Mist"), QStringLiteral("forest"),
-                            QColor(0x3C, 0x75, 0x52), QColor(0xAF, 0xC9, 0x8E), QSize(172, 148)},
-                           {QStringLiteral("Gallery"), QStringLiteral("exhibit"),
-                            QColor(0x66, 0x6A, 0x86), QColor(0xD9, 0xD7, 0xEA), QSize(122, 104)},
-                           {QStringLiteral("Canal"), QStringLiteral("water"),
-                            QColor(0x2D, 0x73, 0xA3), QColor(0x9A, 0xD8, 0xE5), QSize(190, 126)},
-                           {QStringLiteral("Trail"), QStringLiteral("nature"),
-                            QColor(0x70, 0x83, 0x2F), QColor(0xE2, 0xC4, 0x58), QSize(156, 116)},
-                           {QStringLiteral("Arcade"), QStringLiteral("night"),
-                            QColor(0x57, 0x3A, 0x9B), QColor(0xDC, 0x72, 0xC8), QSize(198, 140)},
-                           {QStringLiteral("Pier"), QStringLiteral("coast"),
-                            QColor(0x2F, 0x80, 0x8F), QColor(0xE0, 0xC1, 0x7E), QSize(136, 106)}};
+                const QVector<FlowPhotoInfo> photos{
+                    {QStringLiteral("Loft"), QStringLiteral("interior"), QColor(0x5D, 0x7F, 0xB8),
+                        QColor(0xC9, 0xDB, 0xF2), QSize(148, 104)},
+                    {QStringLiteral("Ridge"), QStringLiteral("wide"), QColor(0x24, 0x74, 0x8F),
+                        QColor(0x8C, 0xCF, 0xA5), QSize(210, 118)},
+                    {QStringLiteral("Cafe"), QStringLiteral("street"), QColor(0xA9, 0x5B, 0x45),
+                        QColor(0xE9, 0xB8, 0x7A), QSize(132, 132)},
+                    {QStringLiteral("Mist"), QStringLiteral("forest"), QColor(0x3C, 0x75, 0x52),
+                        QColor(0xAF, 0xC9, 0x8E), QSize(172, 148)},
+                    {QStringLiteral("Gallery"), QStringLiteral("exhibit"), QColor(0x66, 0x6A, 0x86),
+                        QColor(0xD9, 0xD7, 0xEA), QSize(122, 104)},
+                    {QStringLiteral("Canal"), QStringLiteral("water"), QColor(0x2D, 0x73, 0xA3),
+                        QColor(0x9A, 0xD8, 0xE5), QSize(190, 126)},
+                    {QStringLiteral("Trail"), QStringLiteral("nature"), QColor(0x70, 0x83, 0x2F),
+                        QColor(0xE2, 0xC4, 0x58), QSize(156, 116)},
+                    {QStringLiteral("Arcade"), QStringLiteral("night"), QColor(0x57, 0x3A, 0x9B),
+                        QColor(0xDC, 0x72, 0xC8), QSize(198, 140)},
+                    {QStringLiteral("Pier"), QStringLiteral("coast"), QColor(0x2F, 0x80, 0x8F),
+                        QColor(0xE0, 0xC1, 0x7E), QSize(136, 106)}};
 
-                       auto* model = makeFlowPhotoModel(flowView, photos);
-                       flowView->setModel(model);
-                       flowView->setSelectedIndex(1);
+                auto* model = makeFlowPhotoModel(flowView, photos);
+                flowView->setModel(model);
+                flowView->setSelectedIndex(1);
 
-                       auto* network = new QNetworkAccessManager(flowView);
-                       loadFlowNetworkImages(model, photos, network);
-                       return flowView;
-                   }),
-        makeSample(QStringLiteral("flow-view-scroll-bounce"),
-                   QStringLiteral("Contained scrolling and bounce"),
-                   QStringLiteral("FlowView consumes boundary wheel input inside nested Gallery "
-                                  "scrollers while keeping the elastic edge feedback visible."),
-                   QStringLiteral("auto* flowView = new FlowView(this);\n"
-                                  "flowView->setScrollChainingEnabled(false);\n"
-                                  "flowView->setOverscrollEnabled(true);\n"
-                                  "flowView->setDefaultItemSize(QSize(126, 88));\n"
-                                  "flowView->setModel(model);"),
-                   [](QWidget* parent) {
-                       auto* flowView = new FlowView(parent);
-                       flowView->setFixedSize(420, 238);
-                       flowView->setHeaderText(QStringLiteral("Contained flow"));
-                       flowView->setDefaultItemSize(QSize(126, 88));
-                       flowView->setMinimumItemSize(QSize(112, 80));
-                       flowView->setMaximumItemSize(QSize(146, 102));
-                       flowView->setHorizontalSpacing(10);
-                       flowView->setVerticalSpacing(10);
-                       flowView->setContentMargins(QMargins(8, 8, 8, 8));
-                       flowView->setScrollChainingEnabled(false);
-                       flowView->setOverscrollEnabled(true);
-                       flowView->setItemDelegate(new FlowPhotoDelegate(
-                           static_cast<fluent::FluentElement*>(flowView), flowView));
+                auto* network = new QNetworkAccessManager(flowView);
+                loadFlowNetworkImages(model, photos, network);
+                return flowView;
+            }),
+        makeSample(QStringLiteral("flow-view-scroll-bounce"), QStringLiteral("Contained scrolling and bounce"),
+            QStringLiteral("FlowView consumes boundary wheel input inside nested Gallery "
+                           "scrollers while keeping the elastic edge feedback visible."),
+            QStringLiteral(
+                "auto* flowView = new FlowView(this);\n"
+                "flowView->setScrollChainingEnabled(false);\n"
+                "flowView->setOverscrollEnabled(true);\n"
+                "flowView->setDefaultItemSize(QSize(126, 88));\n"
+                "flowView->setModel(model);"),
+            [](QWidget* parent) {
+                auto* flowView = new FlowView(parent);
+                flowView->setFixedSize(420, 238);
+                flowView->setHeaderText(QStringLiteral("Contained flow"));
+                flowView->setDefaultItemSize(QSize(126, 88));
+                flowView->setMinimumItemSize(QSize(112, 80));
+                flowView->setMaximumItemSize(QSize(146, 102));
+                flowView->setHorizontalSpacing(10);
+                flowView->setVerticalSpacing(10);
+                flowView->setContentMargins(QMargins(8, 8, 8, 8));
+                flowView->setScrollChainingEnabled(false);
+                flowView->setOverscrollEnabled(true);
+                flowView->setItemDelegate(
+                    new FlowPhotoDelegate(static_cast<fluent::FluentElement*>(flowView), flowView));
 
-                       QVector<FlowPhotoInfo> photos;
-                       for (int i = 0; i < 18; ++i) {
-                           const QColor from = accentPalette().at(i % accentPalette().size());
-                           const QColor to =
-                               accentPalette().at((i + 2) % accentPalette().size()).lighter(135);
-                           photos.append({QStringLiteral("Tile %1").arg(i + 1), QString{}, from, to,
-                                          QSize(126 + (i % 3) * 12, 88 + (i % 2) * 12)});
-                       }
-                       auto* model = makeFlowPhotoModel(flowView, photos);
-                       flowView->setModel(model);
-                       flowView->setSelectedIndex(0);
-                       return flowView;
-                   }),
-        makeSample(QStringLiteral("flow-view-placeholder"),
-                   QStringLiteral("Header and placeholder"),
-                   QStringLiteral("When the model is empty, placeholderText occupies the flow "
-                                  "content area below the header."),
-                   QStringLiteral("auto* flowView = new FlowView(this);\n"
-                                  "flowView->setHeaderText(\"Uploads\");\n"
-                                  "flowView->setPlaceholderText(\"No queued uploads\");\n"
-                                  "flowView->setModel(new QStandardItemModel(flowView));"),
-                   [](QWidget* parent) {
-                       auto* flowView = new FlowView(parent);
-                       flowView->setFixedSize(420, 178);
-                       flowView->setHeaderText(QStringLiteral("Uploads"));
-                       flowView->setPlaceholderText(QStringLiteral("No queued uploads"));
-                       flowView->setModel(new QStandardItemModel(flowView));
-                       return flowView;
-                   })};
+                QVector<FlowPhotoInfo> photos;
+                for (int i = 0; i < 18; ++i) {
+                    const QColor from = accentPalette().at(i % accentPalette().size());
+                    const QColor to = accentPalette().at((i + 2) % accentPalette().size()).lighter(135);
+                    photos.append({QStringLiteral("Tile %1").arg(i + 1), QString{}, from, to,
+                        QSize(126 + (i % 3) * 12, 88 + (i % 2) * 12)});
+                }
+                auto* model = makeFlowPhotoModel(flowView, photos);
+                flowView->setModel(model);
+                flowView->setSelectedIndex(0);
+                return flowView;
+            }),
+        makeSample(QStringLiteral("flow-view-placeholder"), QStringLiteral("Header and placeholder"),
+            QStringLiteral("When the model is empty, placeholderText occupies the flow "
+                           "content area below the header."),
+            QStringLiteral(
+                "auto* flowView = new FlowView(this);\n"
+                "flowView->setHeaderText(\"Uploads\");\n"
+                "flowView->setPlaceholderText(\"No queued uploads\");\n"
+                "flowView->setModel(new QStandardItemModel(flowView));"),
+            [](QWidget* parent) {
+                auto* flowView = new FlowView(parent);
+                flowView->setFixedSize(420, 178);
+                flowView->setHeaderText(QStringLiteral("Uploads"));
+                flowView->setPlaceholderText(QStringLiteral("No queued uploads"));
+                flowView->setModel(new QStandardItemModel(flowView));
+                return flowView;
+            })};
 }
 
 // Uniform photo set shared by the GridView samples; each card is the same size so the cells
@@ -1077,22 +1036,15 @@ QVector<GallerySample> flowViewSamples()
 // FlowPhotoDelegate 负责绘制封面图。
 QStandardItemModel* makeGridPhotoModel(GridView* grid, const QSize& cell)
 {
-    const QVector<FlowPhotoInfo> photos{{QStringLiteral("Sunrise"), QStringLiteral("Warm"),
-                                         QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C), cell},
-                                        {QStringLiteral("Ocean"), QStringLiteral("Blue"),
-                                         QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2), cell},
-                                        {QStringLiteral("Forest"), QStringLiteral("Green"),
-                                         QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B), cell},
-                                        {QStringLiteral("Dusk"), QStringLiteral("Violet"),
-                                         QColor(0x6B, 0x4F, 0xA2), QColor(0xC2, 0x6F, 0xB8), cell},
-                                        {QStringLiteral("Desert"), QStringLiteral("Amber"),
-                                         QColor(0xC8, 0x6B, 0x2D), QColor(0xE8, 0xC0, 0x6E), cell},
-                                        {QStringLiteral("Glacier"), QStringLiteral("Ice"),
-                                         QColor(0x3D, 0x8B, 0xA3), QColor(0xB3, 0xE5, 0xE8), cell},
-                                        {QStringLiteral("Meadow"), QStringLiteral("Spring"),
-                                         QColor(0x6F, 0xA8, 0x2F), QColor(0xD4, 0xE6, 0x7A), cell},
-                                        {QStringLiteral("Harbor"), QStringLiteral("Teal"),
-                                         QColor(0x1C, 0x6E, 0x8C), QColor(0x73, 0xC8, 0xD0), cell}};
+    const QVector<FlowPhotoInfo> photos{
+        {QStringLiteral("Sunrise"), QStringLiteral("Warm"), QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C), cell},
+        {QStringLiteral("Ocean"), QStringLiteral("Blue"), QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2), cell},
+        {QStringLiteral("Forest"), QStringLiteral("Green"), QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B), cell},
+        {QStringLiteral("Dusk"), QStringLiteral("Violet"), QColor(0x6B, 0x4F, 0xA2), QColor(0xC2, 0x6F, 0xB8), cell},
+        {QStringLiteral("Desert"), QStringLiteral("Amber"), QColor(0xC8, 0x6B, 0x2D), QColor(0xE8, 0xC0, 0x6E), cell},
+        {QStringLiteral("Glacier"), QStringLiteral("Ice"), QColor(0x3D, 0x8B, 0xA3), QColor(0xB3, 0xE5, 0xE8), cell},
+        {QStringLiteral("Meadow"), QStringLiteral("Spring"), QColor(0x6F, 0xA8, 0x2F), QColor(0xD4, 0xE6, 0x7A), cell},
+        {QStringLiteral("Harbor"), QStringLiteral("Teal"), QColor(0x1C, 0x6E, 0x8C), QColor(0x73, 0xC8, 0xD0), cell}};
 
     auto* model = makeFlowPhotoModel(grid, photos);
     auto* network = new QNetworkAccessManager(grid);
@@ -1104,15 +1056,9 @@ class LargeDataGridModel final : public QAbstractTableModel {
 public:
     explicit LargeDataGridModel(QObject* parent = nullptr) : QAbstractTableModel(parent) {}
 
-    int rowCount(const QModelIndex& parent = QModelIndex()) const override
-    {
-        return parent.isValid() ? 0 : 100000;
-    }
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override { return parent.isValid() ? 0 : 100000; }
 
-    int columnCount(const QModelIndex& parent = QModelIndex()) const override
-    {
-        return parent.isValid() ? 0 : 5;
-    }
+    int columnCount(const QModelIndex& parent = QModelIndex()) const override { return parent.isValid() ? 0 : 5; }
 
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override
     {
@@ -1138,16 +1084,14 @@ public:
         return {};
     }
 
-    QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const override
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override
     {
         if (role != Qt::DisplayRole)
             return {};
         if (orientation == Qt::Vertical)
             return section + 1;
-        static const QStringList headers{QStringLiteral("Build"), QStringLiteral("Runner"),
-                                         QStringLiteral("Status"), QStringLiteral("Duration"),
-                                         QStringLiteral("Artifacts")};
+        static const QStringList headers{QStringLiteral("Build"), QStringLiteral("Runner"), QStringLiteral("Status"),
+            QStringLiteral("Duration"), QStringLiteral("Artifacts")};
         return section >= 0 && section < headers.size() ? headers.at(section) : QVariant();
     }
 
@@ -1160,17 +1104,16 @@ public:
 QStandardItemModel* makeProjectDataGridModel(QObject* parent, bool editable)
 {
     auto* model = new QStandardItemModel(parent);
-    model->setHorizontalHeaderLabels({QStringLiteral("Project"), QStringLiteral("Owner"),
-                                      QStringLiteral("Status"), QStringLiteral("Priority")});
-    const QStringList projects{QStringLiteral("Aurora"), QStringLiteral("Beacon"),
-                               QStringLiteral("Canvas"), QStringLiteral("Delta"),
-                               QStringLiteral("Ember"),  QStringLiteral("Fjord"),
-                               QStringLiteral("Grove"),  QStringLiteral("Harbor")};
-    const QStringList owners{QStringLiteral("Maya"), QStringLiteral("Noah"),
-                             QStringLiteral("Priya"), QStringLiteral("Riley")};
+    model->setHorizontalHeaderLabels(
+        {QStringLiteral("Project"), QStringLiteral("Owner"), QStringLiteral("Status"), QStringLiteral("Priority")});
+    const QStringList projects{QStringLiteral("Aurora"), QStringLiteral("Beacon"), QStringLiteral("Canvas"),
+        QStringLiteral("Delta"), QStringLiteral("Ember"), QStringLiteral("Fjord"), QStringLiteral("Grove"),
+        QStringLiteral("Harbor")};
+    const QStringList owners{QStringLiteral("Maya"), QStringLiteral("Noah"), QStringLiteral("Priya"),
+        QStringLiteral("Riley")};
     for (int row = 0; row < projects.size(); ++row) {
-        QList<QStandardItem*> items{
-            new QStandardItem(projects.at(row)), new QStandardItem(owners.at(row % owners.size())),
+        QList<QStandardItem*> items{new QStandardItem(projects.at(row)),
+            new QStandardItem(owners.at(row % owners.size())),
             new QStandardItem(row % 3 == 0 ? QStringLiteral("Review") : QStringLiteral("Active")),
             new QStandardItem(QString::number(row % 4 + 1))};
         for (QStandardItem* item : items)
@@ -1191,7 +1134,7 @@ public:
     {
         if (role == Qt::EditRole && value.toString().trimmed().size() < 3) {
             QStandardItemModel::setData(index, QStringLiteral("Use at least 3 characters"),
-                                        kDataGridValidationMessageRole);
+                kDataGridValidationMessageRole);
             return false;
         }
         if (role == Qt::EditRole) {
@@ -1204,12 +1147,10 @@ public:
 class DataGridValidationDelegate final : public QStyledItemDelegate {
 public:
     explicit DataGridValidationDelegate(DataGrid* grid)
-        : QStyledItemDelegate(grid), m_grid(grid),
-          m_baseDelegate(grid ? grid->itemDelegate() : nullptr)
+        : QStyledItemDelegate(grid), m_grid(grid), m_baseDelegate(grid ? grid->itemDelegate() : nullptr)
     {}
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         if (m_baseDelegate)
             m_baseDelegate->paint(painter, option, index);
@@ -1233,71 +1174,70 @@ private:
 QVector<GallerySample> dataGridSamples()
 {
     QVector<GallerySample> samples{
-        makeSample(QStringLiteral("data-grid-large-read-only"),
-                   QStringLiteral("Large read-only data"),
-                   QStringLiteral("A model with 100,000 rows remains virtualized: DataGrid asks "
-                                  "only for cells needed by the viewport."),
-                   QStringLiteral("auto* grid = new DataGrid(this);\n"
-                                  "grid->setAccessibleName(\"Large data\");\n"
-                                  "grid->setModel(new LargeDataGridModel(grid));\n"
-                                  "grid->setScrollChainingEnabled(true);\n"
-                                  "grid->setSelectionBehavior(QAbstractItemView::SelectRows);\n"
-                                  "grid->setEditTriggers(QAbstractItemView::NoEditTriggers);"),
-                   [](QWidget* parent) {
-                       auto* grid = new DataGrid(parent);
-                       grid->setAccessibleName(QStringLiteral("Large data"));
-                       grid->setFixedSize(680, 252);
-                       grid->setModel(new LargeDataGridModel(grid));
-                       grid->setScrollChainingEnabled(true);
-                       grid->setSelectionBehavior(QAbstractItemView::SelectRows);
-                       grid->setEditTriggers(QAbstractItemView::NoEditTriggers);
-                       grid->horizontalHeader()->setStretchLastSection(true);
-                       grid->setColumnWidth(0, 150);
-                       grid->setColumnWidth(1, 120);
-                       return grid;
-                   }),
-        makeSample(QStringLiteral("data-grid-column-selection"),
-                   QStringLiteral("Columns, sorting, and selection"),
-                   QStringLiteral("Resize or reorder headers, click a header to sort, and use Ctrl "
-                                  "or Shift to extend row selection."),
-                   QStringLiteral("auto* grid = new DataGrid(this);\n"
-                                  "grid->setAccessibleName(\"Projects\");\n"
-                                  "grid->setModel(projectModel);\n"
-                                  "grid->setScrollChainingEnabled(true);\n"
-                                  "grid->setSelectionMode(DataGrid::SelectionMode::Extended);\n"
-                                  "grid->setSelectionBehavior(QAbstractItemView::SelectRows);\n"
-                                  "grid->setSortingEnabled(true);\n"
-                                  "grid->horizontalHeader()->setSectionsMovable(true);"),
-                   [](QWidget* parent) {
-                       auto* grid = new DataGrid(parent);
-                       grid->setAccessibleName(QStringLiteral("Projects"));
-                       grid->setFixedSize(680, 252);
-                       auto* model = makeProjectDataGridModel(grid, false);
-                       grid->setModel(model);
-                       grid->setScrollChainingEnabled(true);
-                       grid->setSelectionMode(DataGrid::SelectionMode::Extended);
-                       grid->setSelectionBehavior(QAbstractItemView::SelectRows);
-                       grid->setSortingEnabled(true);
-                       grid->horizontalHeader()->setSectionsMovable(true);
-                       grid->horizontalHeader()->setStretchLastSection(true);
-                       grid->setColumnWidth(0, 170);
-                       grid->setColumnWidth(1, 130);
-                       return grid;
-                   }),
-        makeSample(
-            QStringLiteral("data-grid-edit-validation"),
-            QStringLiteral("Delegate editing and validation"),
+        makeSample(QStringLiteral("data-grid-large-read-only"), QStringLiteral("Large read-only data"),
+            QStringLiteral("A model with 100,000 rows remains virtualized: DataGrid asks "
+                           "only for cells needed by the viewport."),
+            QStringLiteral(
+                "auto* grid = new DataGrid(this);\n"
+                "grid->setAccessibleName(\"Large data\");\n"
+                "grid->setModel(new LargeDataGridModel(grid));\n"
+                "grid->setScrollChainingEnabled(true);\n"
+                "grid->setSelectionBehavior(QAbstractItemView::SelectRows);\n"
+                "grid->setEditTriggers(QAbstractItemView::NoEditTriggers);"),
+            [](QWidget* parent) {
+                auto* grid = new DataGrid(parent);
+                grid->setAccessibleName(QStringLiteral("Large data"));
+                grid->setFixedSize(680, 252);
+                grid->setModel(new LargeDataGridModel(grid));
+                grid->setScrollChainingEnabled(true);
+                grid->setSelectionBehavior(QAbstractItemView::SelectRows);
+                grid->setEditTriggers(QAbstractItemView::NoEditTriggers);
+                grid->horizontalHeader()->setStretchLastSection(true);
+                grid->setColumnWidth(0, 150);
+                grid->setColumnWidth(1, 120);
+                return grid;
+            }),
+        makeSample(QStringLiteral("data-grid-column-selection"), QStringLiteral("Columns, sorting, and selection"),
+            QStringLiteral("Resize or reorder headers, click a header to sort, and use Ctrl "
+                           "or Shift to extend row selection."),
+            QStringLiteral(
+                "auto* grid = new DataGrid(this);\n"
+                "grid->setAccessibleName(\"Projects\");\n"
+                "grid->setModel(projectModel);\n"
+                "grid->setScrollChainingEnabled(true);\n"
+                "grid->setSelectionMode(DataGrid::SelectionMode::Extended);\n"
+                "grid->setSelectionBehavior(QAbstractItemView::SelectRows);\n"
+                "grid->setSortingEnabled(true);\n"
+                "grid->horizontalHeader()->setSectionsMovable(true);"),
+            [](QWidget* parent) {
+                auto* grid = new DataGrid(parent);
+                grid->setAccessibleName(QStringLiteral("Projects"));
+                grid->setFixedSize(680, 252);
+                auto* model = makeProjectDataGridModel(grid, false);
+                grid->setModel(model);
+                grid->setScrollChainingEnabled(true);
+                grid->setSelectionMode(DataGrid::SelectionMode::Extended);
+                grid->setSelectionBehavior(QAbstractItemView::SelectRows);
+                grid->setSortingEnabled(true);
+                grid->horizontalHeader()->setSectionsMovable(true);
+                grid->horizontalHeader()->setStretchLastSection(true);
+                grid->setColumnWidth(0, 170);
+                grid->setColumnWidth(1, 130);
+                return grid;
+            }),
+        makeSample(QStringLiteral("data-grid-edit-validation"), QStringLiteral("Delegate editing and validation"),
             QStringLiteral("Double-click or press F2 to edit. The model rejects values shorter "
                            "than three characters while the delegate paints its validation role."),
-            QStringLiteral("auto* grid = new DataGrid(this);\n"
-                           "grid->setAccessibleName(\"Settings\");\n"
-                           "grid->setModel(validationModel);\n"
-                           "grid->setScrollChainingEnabled(true);\n"
-                           "grid->setItemDelegate(new ValidationDelegate(grid));\n"
-                           "grid->setEditTriggers(QAbstractItemView::DoubleClicked\n"
-                           "                      | QAbstractItemView::EditKeyPressed);\n"
-                           "// ValidationModel::setData(EditRole) returns false and\n"
-                           "// publishes an application-defined validation role."),
+            QStringLiteral(
+                "auto* grid = new DataGrid(this);\n"
+                "grid->setAccessibleName(\"Settings\");\n"
+                "grid->setModel(validationModel);\n"
+                "grid->setScrollChainingEnabled(true);\n"
+                "grid->setItemDelegate(new ValidationDelegate(grid));\n"
+                "grid->setEditTriggers(QAbstractItemView::DoubleClicked\n"
+                "                      | QAbstractItemView::EditKeyPressed);\n"
+                "// ValidationModel::setData(EditRole) returns false and\n"
+                "// publishes an application-defined validation role."),
             [](QWidget* parent) {
                 auto* grid = new DataGrid(parent);
                 grid->setAccessibleName(QStringLiteral("Settings"));
@@ -1306,10 +1246,8 @@ QVector<GallerySample> dataGridSamples()
                 model->setHorizontalHeaderLabels(
                     {QStringLiteral("Setting"), QStringLiteral("Value"), QStringLiteral("Scope")});
                 const QVector<QStringList> rows{
-                    {QStringLiteral("Channel"), QStringLiteral("stable"),
-                     QStringLiteral("Workspace")},
-                    {QStringLiteral("Region"), QStringLiteral("eu-west"),
-                     QStringLiteral("Account")},
+                    {QStringLiteral("Channel"), QStringLiteral("stable"), QStringLiteral("Workspace")},
+                    {QStringLiteral("Region"), QStringLiteral("eu-west"), QStringLiteral("Account")},
                     {QStringLiteral("Mode"), QStringLiteral("No"), QStringLiteral("Session")}};
                 for (const QStringList& row : rows) {
                     QList<QStandardItem*> items;
@@ -1317,14 +1255,12 @@ QVector<GallerySample> dataGridSamples()
                         items.append(new QStandardItem(value));
                     model->appendRow(items);
                 }
-                model->QStandardItemModel::setData(model->index(2, 1),
-                                                   QStringLiteral("Use at least 3 characters"),
-                                                   kDataGridValidationMessageRole);
+                model->QStandardItemModel::setData(model->index(2, 1), QStringLiteral("Use at least 3 characters"),
+                    kDataGridValidationMessageRole);
                 grid->setModel(model);
                 grid->setScrollChainingEnabled(true);
                 grid->setItemDelegate(new DataGridValidationDelegate(grid));
-                grid->setEditTriggers(QAbstractItemView::DoubleClicked |
-                                      QAbstractItemView::EditKeyPressed);
+                grid->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
                 grid->horizontalHeader()->setStretchLastSection(true);
                 grid->setColumnWidth(0, 180);
                 grid->setColumnWidth(1, 220);
@@ -1338,60 +1274,61 @@ QVector<GallerySample> gridViewSamples()
 {
     return {
         makeSample(QStringLiteral("grid-view-basic"), QStringLiteral("GridView photo grid"),
-                   QStringLiteral("Photo cards align to a uniform grid; a custom delegate paints "
-                                  "the cover image and caption."),
-                   QStringLiteral("auto* gridView = new GridView(this);\n"
-                                  "gridView->setCellSize(QSize(150, 112));\n"
-                                  "gridView->setItemDelegate(photoDelegate);\n"
-                                  "gridView->setModel(model);\n"
-                                  "gridView->setSelectedIndex(0);"),
-                   [](QWidget* parent) {
-                       auto* gridView = new GridView(parent);
-                       gridView->setFixedSize(508, 256);
-                       gridView->setCellSize(QSize(150, 112));
-                       gridView->setMaxColumns(3);
-                       gridView->setHorizontalSpacing(10);
-                       gridView->setVerticalSpacing(10);
-                       gridView->setItemDelegate(new GridPhotoDelegate(
-                           static_cast<fluent::FluentElement*>(gridView), gridView, gridView));
-                       gridView->setModel(makeGridPhotoModel(gridView, QSize(150, 112)));
-                       gridView->setSelectedIndex(0);
-                       return gridView;
-                   }),
-        makeSample(QStringLiteral("grid-view-multi-select"), QStringLiteral("Multiple selection"),
-                   QStringLiteral("In Multiple mode each click toggles a cell; selected cells keep "
-                                  "an accent border. Ctrl/Shift extend in Extended mode."),
-                   QStringLiteral("gridView->setSelectionMode(\n"
-                                  "    GridView::SelectionMode::Multiple);\n"
-                                  "// each click toggles that cell's selection"),
-                   [](QWidget* parent) {
-                       auto* gridView = new GridView(parent);
-                       gridView->setFixedSize(508, 256);
-                       gridView->setCellSize(QSize(150, 112));
-                       gridView->setMaxColumns(3);
-                       gridView->setHorizontalSpacing(10);
-                       gridView->setVerticalSpacing(10);
-                       gridView->setSelectionMode(GridView::SelectionMode::Multiple);
-                       gridView->setItemDelegate(new GridPhotoDelegate(
-                           static_cast<fluent::FluentElement*>(gridView), gridView, gridView));
-                       auto* model = makeGridPhotoModel(gridView, QSize(150, 112));
-                       gridView->setModel(model);
-                       if (auto* selection = gridView->selectionModel()) {
-                           for (int row : {0, 2, 5}) {
-                               selection->select(model->index(row, 0), QItemSelectionModel::Select);
-                           }
-                       }
-                       return gridView;
-                   }),
-        makeSample(
-            QStringLiteral("grid-view-reorder"), QStringLiteral("Multi-select & drag to reorder"),
+            QStringLiteral("Photo cards align to a uniform grid; a custom delegate paints "
+                           "the cover image and caption."),
             QStringLiteral(
-                "Multiple selection plus reordering: tick cells via the top-right check, then drag "
-                "any selected cell to move the whole group, just like the GridView UT."),
-            QStringLiteral("gridView->setSelectionMode(\n"
-                           "    GridView::SelectionMode::Multiple);\n"
-                           "gridView->setCanReorderItems(true);\n"
-                           "// drag a selected cell to move the selection as a group"),
+                "auto* gridView = new GridView(this);\n"
+                "gridView->setCellSize(QSize(150, 112));\n"
+                "gridView->setItemDelegate(photoDelegate);\n"
+                "gridView->setModel(model);\n"
+                "gridView->setSelectedIndex(0);"),
+            [](QWidget* parent) {
+                auto* gridView = new GridView(parent);
+                gridView->setFixedSize(508, 256);
+                gridView->setCellSize(QSize(150, 112));
+                gridView->setMaxColumns(3);
+                gridView->setHorizontalSpacing(10);
+                gridView->setVerticalSpacing(10);
+                gridView->setItemDelegate(
+                    new GridPhotoDelegate(static_cast<fluent::FluentElement*>(gridView), gridView, gridView));
+                gridView->setModel(makeGridPhotoModel(gridView, QSize(150, 112)));
+                gridView->setSelectedIndex(0);
+                return gridView;
+            }),
+        makeSample(QStringLiteral("grid-view-multi-select"), QStringLiteral("Multiple selection"),
+            QStringLiteral("In Multiple mode each click toggles a cell; selected cells keep "
+                           "an accent border. Ctrl/Shift extend in Extended mode."),
+            QStringLiteral(
+                "gridView->setSelectionMode(\n"
+                "    GridView::SelectionMode::Multiple);\n"
+                "// each click toggles that cell's selection"),
+            [](QWidget* parent) {
+                auto* gridView = new GridView(parent);
+                gridView->setFixedSize(508, 256);
+                gridView->setCellSize(QSize(150, 112));
+                gridView->setMaxColumns(3);
+                gridView->setHorizontalSpacing(10);
+                gridView->setVerticalSpacing(10);
+                gridView->setSelectionMode(GridView::SelectionMode::Multiple);
+                gridView->setItemDelegate(
+                    new GridPhotoDelegate(static_cast<fluent::FluentElement*>(gridView), gridView, gridView));
+                auto* model = makeGridPhotoModel(gridView, QSize(150, 112));
+                gridView->setModel(model);
+                if (auto* selection = gridView->selectionModel()) {
+                    for (int row : {0, 2, 5}) {
+                        selection->select(model->index(row, 0), QItemSelectionModel::Select);
+                    }
+                }
+                return gridView;
+            }),
+        makeSample(QStringLiteral("grid-view-reorder"), QStringLiteral("Multi-select & drag to reorder"),
+            QStringLiteral("Multiple selection plus reordering: tick cells via the top-right check, then drag "
+                           "any selected cell to move the whole group, just like the GridView UT."),
+            QStringLiteral(
+                "gridView->setSelectionMode(\n"
+                "    GridView::SelectionMode::Multiple);\n"
+                "gridView->setCanReorderItems(true);\n"
+                "// drag a selected cell to move the selection as a group"),
             [](QWidget* parent) {
                 auto* gridView = new GridView(parent);
                 gridView->setFixedSize(508, 256);
@@ -1401,8 +1338,8 @@ QVector<GallerySample> gridViewSamples()
                 gridView->setVerticalSpacing(10);
                 gridView->setSelectionMode(GridView::SelectionMode::Multiple);
                 gridView->setCanReorderItems(true);
-                gridView->setItemDelegate(new GridPhotoDelegate(
-                    static_cast<fluent::FluentElement*>(gridView), gridView, gridView));
+                gridView->setItemDelegate(
+                    new GridPhotoDelegate(static_cast<fluent::FluentElement*>(gridView), gridView, gridView));
                 auto* model = makeGridPhotoModel(gridView, QSize(150, 112));
                 gridView->setModel(model);
                 if (auto* selection = gridView->selectionModel()) {
@@ -1412,50 +1349,47 @@ QVector<GallerySample> gridViewSamples()
                 }
                 return gridView;
             }),
-        makeSample(QStringLiteral("grid-view-scroll-bounce"),
-                   QStringLiteral("Scroll chaining and overscroll"),
-                   QStringLiteral("A nested GridView keeps wheel input inside the control at "
-                                  "scroll boundaries and still shows elastic bounce feedback."),
-                   QStringLiteral("auto* gridView = new GridView(this);\n"
-                                  "gridView->setScrollChainingEnabled(false);\n"
-                                  "gridView->setOverscrollEnabled(true);\n"
-                                  "gridView->setCellSize(QSize(118, 88));\n"
-                                  "gridView->setMaxColumns(3);\n"
-                                  "gridView->setModel(model);"),
-                   [](QWidget* parent) {
-                       auto* gridView = new GridView(parent);
-                       gridView->setFixedSize(410, 238);
-                       gridView->setHeaderText(QStringLiteral("Contained grid"));
-                       gridView->setCellSize(QSize(118, 88));
-                       gridView->setMaxColumns(3);
-                       gridView->setHorizontalSpacing(10);
-                       gridView->setVerticalSpacing(10);
-                       gridView->setScrollChainingEnabled(false);
-                       gridView->setOverscrollEnabled(true);
-                       gridView->setItemDelegate(new GridPhotoDelegate(
-                           static_cast<fluent::FluentElement*>(gridView), gridView, gridView));
-
-                       QVector<FlowPhotoInfo> photos;
-                       for (int i = 0; i < 18; ++i) {
-                           photos.append(
-                               {QStringLiteral("Cell %1").arg(i + 1), QString{},
-                                accentPalette().at(i % accentPalette().size()),
-                                accentPalette().at((i + 3) % accentPalette().size()).lighter(135),
-                                QSize(118, 88)});
-                       }
-                       auto* model = makeFlowPhotoModel(gridView, photos);
-                       gridView->setModel(model);
-                       gridView->setSelectedIndex(0);
-                       return gridView;
-                   }),
-        makeSample(
-            QStringLiteral("grid-view-placeholder"), QStringLiteral("Header and placeholder"),
+        makeSample(QStringLiteral("grid-view-scroll-bounce"), QStringLiteral("Scroll chaining and overscroll"),
+            QStringLiteral("A nested GridView keeps wheel input inside the control at "
+                           "scroll boundaries and still shows elastic bounce feedback."),
             QStringLiteral(
-                "Header text and placeholder text stay visible even when the grid has no items."),
-            QStringLiteral("auto* gridView = new GridView(this);\n"
-                           "gridView->setHeaderText(\"Pinned photos\");\n"
-                           "gridView->setPlaceholderText(\"No pinned photos\");\n"
-                           "gridView->setModel(new QStandardItemModel(gridView));"),
+                "auto* gridView = new GridView(this);\n"
+                "gridView->setScrollChainingEnabled(false);\n"
+                "gridView->setOverscrollEnabled(true);\n"
+                "gridView->setCellSize(QSize(118, 88));\n"
+                "gridView->setMaxColumns(3);\n"
+                "gridView->setModel(model);"),
+            [](QWidget* parent) {
+                auto* gridView = new GridView(parent);
+                gridView->setFixedSize(410, 238);
+                gridView->setHeaderText(QStringLiteral("Contained grid"));
+                gridView->setCellSize(QSize(118, 88));
+                gridView->setMaxColumns(3);
+                gridView->setHorizontalSpacing(10);
+                gridView->setVerticalSpacing(10);
+                gridView->setScrollChainingEnabled(false);
+                gridView->setOverscrollEnabled(true);
+                gridView->setItemDelegate(
+                    new GridPhotoDelegate(static_cast<fluent::FluentElement*>(gridView), gridView, gridView));
+
+                QVector<FlowPhotoInfo> photos;
+                for (int i = 0; i < 18; ++i) {
+                    photos.append({QStringLiteral("Cell %1").arg(i + 1), QString{},
+                        accentPalette().at(i % accentPalette().size()),
+                        accentPalette().at((i + 3) % accentPalette().size()).lighter(135), QSize(118, 88)});
+                }
+                auto* model = makeFlowPhotoModel(gridView, photos);
+                gridView->setModel(model);
+                gridView->setSelectedIndex(0);
+                return gridView;
+            }),
+        makeSample(QStringLiteral("grid-view-placeholder"), QStringLiteral("Header and placeholder"),
+            QStringLiteral("Header text and placeholder text stay visible even when the grid has no items."),
+            QStringLiteral(
+                "auto* gridView = new GridView(this);\n"
+                "gridView->setHeaderText(\"Pinned photos\");\n"
+                "gridView->setPlaceholderText(\"No pinned photos\");\n"
+                "gridView->setModel(new QStandardItemModel(gridView));"),
             [](QWidget* parent) {
                 auto* gridView = new GridView(parent);
                 gridView->setFixedSize(410, 178);
@@ -1470,98 +1404,94 @@ QVector<GallerySample> listViewSamples()
 {
     return {
         makeSample(QStringLiteral("list-view-basic"), QStringLiteral("ListView with avatars"),
-                   QStringLiteral(
-                       "Rows pair an avatar with text; selection shows the animated indicator."),
-                   QStringLiteral("auto* listView = new ListView(this);\n"
-                                  "listView->setBackgroundVisible(false);\n"
-                                  "listView->setBorderVisible(false);\n"
-                                  "listView->setProperty(\"fluentPreserveParentSurface\", true);\n"
-                                  "listView->viewport()->setProperty(\n"
-                                  "    \"fluentPreserveParentSurface\", true);\n"
-                                  "listView->setFixedSize(320, 234);\n"
-                                  "listView->setHeaderText(\"Contacts\");\n"
-                                  "listView->setAccessibleName(\"Contacts\");\n"
-                                  "listView->setIconSize(QSize(28, 28));\n"
-                                  "auto* model = new QStandardItemModel(listView);\n"
-                                  "const QStringList contacts{\n"
-                                  "    \"Kendall Collins\", \"Henry Ross\", \"Nicole Wagner\",\n"
-                                  "    \"Adam Wolfe\", \"Stephanie Meyer\", \"Maya Patel\",\n"
-                                  "    \"Alex Chen\", \"Priya Shah\", \"Omar Rivera\",\n"
-                                  "    \"Elena Rossi\", \"Jordan Lee\", \"Riley Brooks\"};\n"
-                                  "int colorIndex = 0;\n"
-                                  "for (const QString& contact : contacts) {\n"
-                                  "    auto* item = new QStandardItem(contact);\n"
-                                  "    item->setEditable(false);\n"
-                                  "    item->setData(initialsAvatar(\n"
-                                  "        contact, accentPalette().at(\n"
-                                  "            colorIndex++ % accentPalette().size())),\n"
-                                  "                  Qt::DecorationRole);\n"
-                                  "    model->appendRow(item);\n"
-                                  "}\n"
-                                  "listView->setModel(model);\n"
-                                  "listView->setSelectedIndex(0);"),
-                   [](QWidget* parent) {
-                       auto* listView = flatPreviewSurface(new ListView(parent));
-                       listView->setFixedSize(320, 234);
-                       listView->setHeaderText(QStringLiteral("Contacts"));
-                       listView->setAccessibleName(QStringLiteral("Contacts"));
-                       listView->setIconSize(QSize(28, 28));
-                       const QStringList names{
-                           QStringLiteral("Kendall Collins"), QStringLiteral("Henry Ross"),
-                           QStringLiteral("Nicole Wagner"),   QStringLiteral("Adam Wolfe"),
-                           QStringLiteral("Stephanie Meyer"), QStringLiteral("Maya Patel"),
-                           QStringLiteral("Alex Chen"),       QStringLiteral("Priya Shah"),
-                           QStringLiteral("Omar Rivera"),     QStringLiteral("Elena Rossi"),
-                           QStringLiteral("Jordan Lee"),      QStringLiteral("Riley Brooks")};
-                       auto* model = new QStandardItemModel(listView);
-                       int colorIndex = 0;
-                       for (const QString& name : names) {
-                           auto* item = new QStandardItem(name);
-                           item->setEditable(false);
-                           item->setData(
-                               initialsAvatar(
-                                   name, accentPalette().at(colorIndex++ % accentPalette().size())),
-                               Qt::DecorationRole);
-                           model->appendRow(item);
-                       }
-                       listView->setModel(model);
-                       listView->setSelectedIndex(0);
-                       return listView;
-                   }),
-        makeSample(
-            QStringLiteral("list-view-multi-select"), QStringLiteral("Multiple selection"),
+            QStringLiteral("Rows pair an avatar with text; selection shows the animated indicator."),
+            QStringLiteral(
+                "auto* listView = new ListView(this);\n"
+                "listView->setBackgroundVisible(false);\n"
+                "listView->setBorderVisible(false);\n"
+                "listView->setProperty(\"fluentPreserveParentSurface\", true);\n"
+                "listView->viewport()->setProperty(\n"
+                "    \"fluentPreserveParentSurface\", true);\n"
+                "listView->setFixedSize(320, 234);\n"
+                "listView->setHeaderText(\"Contacts\");\n"
+                "listView->setAccessibleName(\"Contacts\");\n"
+                "listView->setIconSize(QSize(28, 28));\n"
+                "auto* model = new QStandardItemModel(listView);\n"
+                "const QStringList contacts{\n"
+                "    \"Kendall Collins\", \"Henry Ross\", \"Nicole Wagner\",\n"
+                "    \"Adam Wolfe\", \"Stephanie Meyer\", \"Maya Patel\",\n"
+                "    \"Alex Chen\", \"Priya Shah\", \"Omar Rivera\",\n"
+                "    \"Elena Rossi\", \"Jordan Lee\", \"Riley Brooks\"};\n"
+                "int colorIndex = 0;\n"
+                "for (const QString& contact : contacts) {\n"
+                "    auto* item = new QStandardItem(contact);\n"
+                "    item->setEditable(false);\n"
+                "    item->setData(initialsAvatar(\n"
+                "        contact, accentPalette().at(\n"
+                "            colorIndex++ % accentPalette().size())),\n"
+                "                  Qt::DecorationRole);\n"
+                "    model->appendRow(item);\n"
+                "}\n"
+                "listView->setModel(model);\n"
+                "listView->setSelectedIndex(0);"),
+            [](QWidget* parent) {
+                auto* listView = flatPreviewSurface(new ListView(parent));
+                listView->setFixedSize(320, 234);
+                listView->setHeaderText(QStringLiteral("Contacts"));
+                listView->setAccessibleName(QStringLiteral("Contacts"));
+                listView->setIconSize(QSize(28, 28));
+                const QStringList names{QStringLiteral("Kendall Collins"), QStringLiteral("Henry Ross"),
+                    QStringLiteral("Nicole Wagner"), QStringLiteral("Adam Wolfe"), QStringLiteral("Stephanie Meyer"),
+                    QStringLiteral("Maya Patel"), QStringLiteral("Alex Chen"), QStringLiteral("Priya Shah"),
+                    QStringLiteral("Omar Rivera"), QStringLiteral("Elena Rossi"), QStringLiteral("Jordan Lee"),
+                    QStringLiteral("Riley Brooks")};
+                auto* model = new QStandardItemModel(listView);
+                int colorIndex = 0;
+                for (const QString& name : names) {
+                    auto* item = new QStandardItem(name);
+                    item->setEditable(false);
+                    item->setData(initialsAvatar(name, accentPalette().at(colorIndex++ % accentPalette().size())),
+                        Qt::DecorationRole);
+                    model->appendRow(item);
+                }
+                listView->setModel(model);
+                listView->setSelectedIndex(0);
+                return listView;
+            }),
+        makeSample(QStringLiteral("list-view-multi-select"), QStringLiteral("Multiple selection"),
             QStringLiteral("In Multiple mode each click toggles a row; every selected row keeps "
                            "its fill and indicator."),
-            QStringLiteral("auto* listView = new ListView(this);\n"
-                           "listView->setBackgroundVisible(false);\n"
-                           "listView->setBorderVisible(false);\n"
-                           "listView->setProperty(\"fluentPreserveParentSurface\", true);\n"
-                           "listView->viewport()->setProperty(\n"
-                           "    \"fluentPreserveParentSurface\", true);\n"
-                           "listView->setFixedSize(320, 234);\n"
-                           "listView->setHeaderText(\"Filters\");\n"
-                           "listView->setAccessibleName(\"Message filters\");\n"
-                           "listView->setIconSize(QSize(24, 24));\n"
-                           "listView->setSelectionMode(\n"
-                           "    ListView::SelectionMode::Multiple);\n"
-                           "auto* filterModel = makeGlyphListModel(\n"
-                           "    listView,\n"
-                           "    {{\"Unread\", Typography::Icons::Mail},\n"
-                           "     {\"Flagged\", Typography::Icons::Flag},\n"
-                           "     {\"Has photos\", Typography::Icons::Camera},\n"
-                           "     {\"From contacts\", Typography::Icons::People},\n"
-                           "     {\"Favorites\", Typography::Icons::FavoriteStar},\n"
-                           "     {\"With documents\", Typography::Icons::Document},\n"
-                           "     {\"Pinned\", Typography::Icons::Pin},\n"
-                           "     {\"Scheduled\", Typography::Icons::Calendar},\n"
-                           "     {\"Archived\", Typography::Icons::Folder}},\n"
-                           "    24);\n"
-                           "listView->setModel(filterModel);\n"
-                           "for (int row : {0, 2}) {\n"
-                           "    listView->selectionModel()->select(\n"
-                           "        filterModel->index(row, 0),\n"
-                           "        QItemSelectionModel::Select | QItemSelectionModel::Rows);\n"
-                           "}"),
+            QStringLiteral(
+                "auto* listView = new ListView(this);\n"
+                "listView->setBackgroundVisible(false);\n"
+                "listView->setBorderVisible(false);\n"
+                "listView->setProperty(\"fluentPreserveParentSurface\", true);\n"
+                "listView->viewport()->setProperty(\n"
+                "    \"fluentPreserveParentSurface\", true);\n"
+                "listView->setFixedSize(320, 234);\n"
+                "listView->setHeaderText(\"Filters\");\n"
+                "listView->setAccessibleName(\"Message filters\");\n"
+                "listView->setIconSize(QSize(24, 24));\n"
+                "listView->setSelectionMode(\n"
+                "    ListView::SelectionMode::Multiple);\n"
+                "auto* filterModel = makeGlyphListModel(\n"
+                "    listView,\n"
+                "    {{\"Unread\", Typography::Icons::Mail},\n"
+                "     {\"Flagged\", Typography::Icons::Flag},\n"
+                "     {\"Has photos\", Typography::Icons::Camera},\n"
+                "     {\"From contacts\", Typography::Icons::People},\n"
+                "     {\"Favorites\", Typography::Icons::FavoriteStar},\n"
+                "     {\"With documents\", Typography::Icons::Document},\n"
+                "     {\"Pinned\", Typography::Icons::Pin},\n"
+                "     {\"Scheduled\", Typography::Icons::Calendar},\n"
+                "     {\"Archived\", Typography::Icons::Folder}},\n"
+                "    24);\n"
+                "listView->setModel(filterModel);\n"
+                "for (int row : {0, 2}) {\n"
+                "    listView->selectionModel()->select(\n"
+                "        filterModel->index(row, 0),\n"
+                "        QItemSelectionModel::Select | QItemSelectionModel::Rows);\n"
+                "}"),
             [](QWidget* parent) {
                 auto* listView = flatPreviewSurface(new ListView(parent));
                 listView->setFixedSize(320, 234);
@@ -1569,124 +1499,120 @@ QVector<GallerySample> listViewSamples()
                 listView->setAccessibleName(QStringLiteral("Message filters"));
                 listView->setIconSize(QSize(24, 24));
                 listView->setSelectionMode(ListView::SelectionMode::Multiple);
-                listView->setModel(makeGlyphListModel(
-                    listView,
+                listView->setModel(makeGlyphListModel(listView,
                     {{QStringLiteral("Unread"), Typography::Icons::Mail},
-                     {QStringLiteral("Flagged"), Typography::Icons::Flag},
-                     {QStringLiteral("Has photos"), Typography::Icons::Camera},
-                     {QStringLiteral("From contacts"), Typography::Icons::People},
-                     {QStringLiteral("Favorites"), Typography::Icons::FavoriteStar},
-                     {QStringLiteral("With documents"), Typography::Icons::Document},
-                     {QStringLiteral("Pinned"), Typography::Icons::Pin},
-                     {QStringLiteral("Scheduled"), Typography::Icons::Calendar},
-                     {QStringLiteral("Archived"), Typography::Icons::Folder}},
+                        {QStringLiteral("Flagged"), Typography::Icons::Flag},
+                        {QStringLiteral("Has photos"), Typography::Icons::Camera},
+                        {QStringLiteral("From contacts"), Typography::Icons::People},
+                        {QStringLiteral("Favorites"), Typography::Icons::FavoriteStar},
+                        {QStringLiteral("With documents"), Typography::Icons::Document},
+                        {QStringLiteral("Pinned"), Typography::Icons::Pin},
+                        {QStringLiteral("Scheduled"), Typography::Icons::Calendar},
+                        {QStringLiteral("Archived"), Typography::Icons::Folder}},
                     24));
                 if (auto* selection = listView->selectionModel()) {
                     for (int row : {0, 2}) {
                         selection->select(listView->model()->index(row, 0),
-                                          QItemSelectionModel::Select | QItemSelectionModel::Rows);
+                            QItemSelectionModel::Select | QItemSelectionModel::Rows);
                     }
                 }
                 return listView;
             }),
         makeSample(QStringLiteral("list-view-horizontal"), QStringLiteral("Horizontal list"),
-                   QStringLiteral("Set the flow to LeftToRight for a horizontally scrolling strip "
-                                  "of labelled items."),
-                   QStringLiteral("listView->setFlow(QListView::LeftToRight);\n"
-                                  "listView->setModel(model);"),
-                   [](QWidget* parent) {
-                       auto* listView = flatPreviewSurface(new ListView(parent));
-                       listView->setFixedSize(540, 132);
-                       listView->setHeaderText(QStringLiteral("Library"));
-                       listView->setFlow(QListView::LeftToRight);
-                       listView->setIconSize(QSize(26, 26));
-                       listView->setModel(makeGlyphListModel(
-                           listView,
-                           {{QStringLiteral("Home"), Typography::Icons::Home},
-                            {QStringLiteral("Music"), Typography::Icons::Music},
-                            {QStringLiteral("Videos"), Typography::Icons::Video},
-                            {QStringLiteral("Photos"), Typography::Icons::Camera},
-                            {QStringLiteral("Calendar"), Typography::Icons::Calendar},
-                            {QStringLiteral("Settings"), Typography::Icons::Settings}},
-                           26));
-                       listView->setSelectedIndex(0);
-                       return listView;
-                   }),
+            QStringLiteral("Set the flow to LeftToRight for a horizontally scrolling strip "
+                           "of labelled items."),
+            QStringLiteral("listView->setFlow(QListView::LeftToRight);\n"
+                           "listView->setModel(model);"),
+            [](QWidget* parent) {
+                auto* listView = flatPreviewSurface(new ListView(parent));
+                listView->setFixedSize(540, 132);
+                listView->setHeaderText(QStringLiteral("Library"));
+                listView->setFlow(QListView::LeftToRight);
+                listView->setIconSize(QSize(26, 26));
+                listView->setModel(makeGlyphListModel(listView,
+                    {{QStringLiteral("Home"), Typography::Icons::Home},
+                        {QStringLiteral("Music"), Typography::Icons::Music},
+                        {QStringLiteral("Videos"), Typography::Icons::Video},
+                        {QStringLiteral("Photos"), Typography::Icons::Camera},
+                        {QStringLiteral("Calendar"), Typography::Icons::Calendar},
+                        {QStringLiteral("Settings"), Typography::Icons::Settings}},
+                    26));
+                listView->setSelectedIndex(0);
+                return listView;
+            }),
         makeSample(QStringLiteral("list-view-reorder"), QStringLiteral("Drag rows to reorder"),
-                   QStringLiteral(
-                       "With reordering enabled, drag a row to a new position in the playlist."),
-                   QStringLiteral("auto* listView = new ListView(this);\n"
-                                  "listView->setHeaderText(\"Playlist\");\n"
-                                  "listView->setModel(model);\n"
-                                  "listView->setCanReorderItems(true);"),
-                   [](QWidget* parent) {
-                       auto* listView = flatPreviewSurface(new ListView(parent));
-                       listView->setFixedSize(320, 220);
-                       listView->setHeaderText(QStringLiteral("Playlist"));
-                       listView->setIconSize(QSize(24, 24));
-                       listView->setCanReorderItems(true);
-                       listView->setModel(makeGlyphListModel(
-                           listView,
-                           {{QStringLiteral("Bloom"), Typography::Icons::Music},
-                            {QStringLiteral("Northern Lights"), Typography::Icons::Music},
-                            {QStringLiteral("Driftwood"), Typography::Icons::Music},
-                            {QStringLiteral("Paper Boats"), Typography::Icons::Music},
-                            {QStringLiteral("Blue Hour"), Typography::Icons::Music},
-                            {QStringLiteral("Signal Fire"), Typography::Icons::Music},
-                            {QStringLiteral("Slow Orbit"), Typography::Icons::Music},
-                            {QStringLiteral("City Lights"), Typography::Icons::Music},
-                            {QStringLiteral("Afterglow"), Typography::Icons::Music},
-                            {QStringLiteral("Quiet Roads"), Typography::Icons::Music}},
-                           24));
-                       return listView;
-                   }),
+            QStringLiteral("With reordering enabled, drag a row to a new position in the playlist."),
+            QStringLiteral(
+                "auto* listView = new ListView(this);\n"
+                "listView->setHeaderText(\"Playlist\");\n"
+                "listView->setModel(model);\n"
+                "listView->setCanReorderItems(true);"),
+            [](QWidget* parent) {
+                auto* listView = flatPreviewSurface(new ListView(parent));
+                listView->setFixedSize(320, 220);
+                listView->setHeaderText(QStringLiteral("Playlist"));
+                listView->setIconSize(QSize(24, 24));
+                listView->setCanReorderItems(true);
+                listView->setModel(makeGlyphListModel(listView,
+                    {{QStringLiteral("Bloom"), Typography::Icons::Music},
+                        {QStringLiteral("Northern Lights"), Typography::Icons::Music},
+                        {QStringLiteral("Driftwood"), Typography::Icons::Music},
+                        {QStringLiteral("Paper Boats"), Typography::Icons::Music},
+                        {QStringLiteral("Blue Hour"), Typography::Icons::Music},
+                        {QStringLiteral("Signal Fire"), Typography::Icons::Music},
+                        {QStringLiteral("Slow Orbit"), Typography::Icons::Music},
+                        {QStringLiteral("City Lights"), Typography::Icons::Music},
+                        {QStringLiteral("Afterglow"), Typography::Icons::Music},
+                        {QStringLiteral("Quiet Roads"), Typography::Icons::Music}},
+                    24));
+                return listView;
+            }),
         makeSample(QStringLiteral("list-view-sections"), QStringLiteral("Section headers"),
-                   QStringLiteral("sectionEnabled groups adjacent rows by a caller-provided key "
-                                  "while keeping normal row selection."),
-                   QStringLiteral("auto* listView = new ListView(this);\n"
-                                  "listView->setSectionEnabled(true);\n"
-                                  "listView->setSectionKeyFunction([](int row) {\n"
-                                  "    if (row < 3) return QStringLiteral(\"Today\");\n"
-                                  "    if (row < 6) return QStringLiteral(\"Yesterday\");\n"
-                                  "    return QStringLiteral(\"Earlier\");\n"
-                                  "});\n"
-                                  "listView->setModel(model);"),
-                   [](QWidget* parent) {
-                       auto* listView = flatPreviewSurface(new ListView(parent));
-                       listView->setFixedSize(340, 252);
-                       listView->setHeaderText(QStringLiteral("Notifications"));
-                       listView->setIconSize(QSize(24, 24));
-                       listView->setSectionEnabled(true);
-                       listView->setSectionKeyFunction([](int row) {
-                           if (row < 3)
-                               return QStringLiteral("Today");
-                           if (row < 6)
-                               return QStringLiteral("Yesterday");
-                           return QStringLiteral("Earlier");
-                       });
-                       listView->setModel(makeGlyphListModel(
-                           listView,
-                           {{QStringLiteral("Build completed"), Typography::Icons::CheckMark},
-                            {QStringLiteral("New comment"), Typography::Icons::Message},
-                            {QStringLiteral("Meeting starts soon"), Typography::Icons::Calendar},
-                            {QStringLiteral("Pull request updated"), Typography::Icons::Document},
-                            {QStringLiteral("File synced"), Typography::Icons::Sync},
-                            {QStringLiteral("Download ready"), Typography::Icons::Download},
-                            {QStringLiteral("Reminder"), Typography::Icons::Clock},
-                            {QStringLiteral("Settings changed"), Typography::Icons::Settings}},
-                           24));
-                       listView->setSelectedIndex(1);
-                       return listView;
-                   }),
-        makeSample(
-            QStringLiteral("list-view-scroll-chaining"),
-            QStringLiteral("Contained vertical scrolling"),
+            QStringLiteral("sectionEnabled groups adjacent rows by a caller-provided key "
+                           "while keeping normal row selection."),
+            QStringLiteral(
+                "auto* listView = new ListView(this);\n"
+                "listView->setSectionEnabled(true);\n"
+                "listView->setSectionKeyFunction([](int row) {\n"
+                "    if (row < 3) return QStringLiteral(\"Today\");\n"
+                "    if (row < 6) return QStringLiteral(\"Yesterday\");\n"
+                "    return QStringLiteral(\"Earlier\");\n"
+                "});\n"
+                "listView->setModel(model);"),
+            [](QWidget* parent) {
+                auto* listView = flatPreviewSurface(new ListView(parent));
+                listView->setFixedSize(340, 252);
+                listView->setHeaderText(QStringLiteral("Notifications"));
+                listView->setIconSize(QSize(24, 24));
+                listView->setSectionEnabled(true);
+                listView->setSectionKeyFunction([](int row) {
+                    if (row < 3)
+                        return QStringLiteral("Today");
+                    if (row < 6)
+                        return QStringLiteral("Yesterday");
+                    return QStringLiteral("Earlier");
+                });
+                listView->setModel(makeGlyphListModel(listView,
+                    {{QStringLiteral("Build completed"), Typography::Icons::CheckMark},
+                        {QStringLiteral("New comment"), Typography::Icons::Message},
+                        {QStringLiteral("Meeting starts soon"), Typography::Icons::Calendar},
+                        {QStringLiteral("Pull request updated"), Typography::Icons::Document},
+                        {QStringLiteral("File synced"), Typography::Icons::Sync},
+                        {QStringLiteral("Download ready"), Typography::Icons::Download},
+                        {QStringLiteral("Reminder"), Typography::Icons::Clock},
+                        {QStringLiteral("Settings changed"), Typography::Icons::Settings}},
+                    24));
+                listView->setSelectedIndex(1);
+                return listView;
+            }),
+        makeSample(QStringLiteral("list-view-scroll-chaining"), QStringLiteral("Contained vertical scrolling"),
             QStringLiteral("scrollChainingEnabled keeps boundary wheel input from leaking to the "
                            "surrounding Gallery page while ListView handles its own bounce."),
-            QStringLiteral("auto* listView = new ListView(this);\n"
-                           "listView->setScrollChainingEnabled(false);\n"
-                           "listView->setHeaderText(\"Queue\");\n"
-                           "listView->setModel(model);"),
+            QStringLiteral(
+                "auto* listView = new ListView(this);\n"
+                "listView->setScrollChainingEnabled(false);\n"
+                "listView->setHeaderText(\"Queue\");\n"
+                "listView->setModel(model);"),
             [](QWidget* parent) {
                 auto* listView = flatPreviewSurface(new ListView(parent));
                 listView->setFixedSize(340, 238);
@@ -1697,120 +1623,114 @@ QVector<GallerySample> listViewSamples()
 
                 QVector<QPair<QString, QString>> rows;
                 for (int i = 0; i < 20; ++i)
-                    rows.append(
-                        {QStringLiteral("Queued item %1").arg(i + 1),
-                         i % 2 == 0 ? Typography::Icons::Document : Typography::Icons::Download});
+                    rows.append({QStringLiteral("Queued item %1").arg(i + 1),
+                        i % 2 == 0 ? Typography::Icons::Document : Typography::Icons::Download});
                 listView->setModel(makeGlyphListModel(listView, rows, 24));
                 listView->setSelectedIndex(0);
                 return listView;
             }),
-        makeSample(QStringLiteral("list-view-placeholder"),
-                   QStringLiteral("Header, footer, and placeholder"),
-                   QStringLiteral("The convenience text API covers the empty state without "
-                                  "requiring a custom model delegate."),
-                   QStringLiteral("auto* listView = new ListView(this);\n"
-                                  "listView->setHeaderText(\"Downloads\");\n"
-                                  "listView->setFooterText(\"0 items\");\n"
-                                  "listView->setPlaceholderText(\"No downloads yet\");\n"
-                                  "listView->setModel(new QStandardItemModel(listView));"),
-                   [](QWidget* parent) {
-                       auto* listView = flatPreviewSurface(new ListView(parent));
-                       listView->setFixedSize(340, 178);
-                       listView->setHeaderText(QStringLiteral("Downloads"));
-                       listView->setFooterText(QStringLiteral("0 items"));
-                       listView->setPlaceholderText(QStringLiteral("No downloads yet"));
-                       listView->setModel(new QStandardItemModel(listView));
-                       return listView;
-                   })};
+        makeSample(QStringLiteral("list-view-placeholder"), QStringLiteral("Header, footer, and placeholder"),
+            QStringLiteral("The convenience text API covers the empty state without "
+                           "requiring a custom model delegate."),
+            QStringLiteral(
+                "auto* listView = new ListView(this);\n"
+                "listView->setHeaderText(\"Downloads\");\n"
+                "listView->setFooterText(\"0 items\");\n"
+                "listView->setPlaceholderText(\"No downloads yet\");\n"
+                "listView->setModel(new QStandardItemModel(listView));"),
+            [](QWidget* parent) {
+                auto* listView = flatPreviewSurface(new ListView(parent));
+                listView->setFixedSize(340, 178);
+                listView->setHeaderText(QStringLiteral("Downloads"));
+                listView->setFooterText(QStringLiteral("0 items"));
+                listView->setPlaceholderText(QStringLiteral("No downloads yet"));
+                listView->setModel(new QStandardItemModel(listView));
+                return listView;
+            })};
 }
 
 QVector<GallerySample> splitViewSamples()
 {
     return {
         makeSample(QStringLiteral("split-view-basic"), QStringLiteral("Resizable panes"),
-                   QStringLiteral("Drag the handle between the panes to resize them."),
-                   QStringLiteral("auto* splitView = new SplitView(this);\n"
-                                  "splitView->addPane(firstPane);\n"
-                                  "splitView->addPane(secondPane);\n"
-                                  "splitView->addPane(thirdPane);\n"
-                                  "splitView->setPanePreferredSize(0, 150);\n"
-                                  "splitView->setPaneFill(2, true);"),
-                   [](QWidget* parent) {
-                       auto* splitView = new SplitView(parent);
-                       splitView->setFixedSize(460, 168);
-                       splitView->addPane(makeGradientPane(splitView, QStringLiteral("Pane 1"),
-                                                           QColor(0x1E, 0x6F, 0xD9),
-                                                           QColor(0x6F, 0xD1, 0xF2)));
-                       splitView->addPane(makeGradientPane(splitView, QStringLiteral("Pane 2"),
-                                                           QColor(0x2F, 0x9E, 0x44),
-                                                           QColor(0xA9, 0xE3, 0x4B)));
-                       splitView->addPane(makeGradientPane(splitView, QStringLiteral("Pane 3"),
-                                                           QColor(0xF7, 0x97, 0x5B),
-                                                           QColor(0xF2, 0xC9, 0x4C)));
-                       // Give every pane a real minimum so dragging a handle to the limit
-                       // leaves a tidy pane instead of a sliver, and never shrinks a pane
-                       // below the gradient widget's own minimum (which would overlap).
-                       // zh_CN: 每个窗格都设定最小尺寸，拖到极限时仍保留完整窗格而非细条，
-                       // 且不会缩到渐变控件自身最小尺寸以下（否则会重叠）。
-                       for (int i = 0; i < 3; ++i)
-                           splitView->setPaneMinimumSize(i, 96);
-                       splitView->setPanePreferredSize(0, 150);
-                       splitView->setPanePreferredSize(1, 150);
-                       splitView->setPaneFill(2, true);
-                       return splitView;
-                   }),
-        makeSample(QStringLiteral("split-view-vertical-constraints"),
-                   QStringLiteral("Vertical panes and constraints"),
-                   QStringLiteral("Orientation changes the resize axis; minimum, preferred, and "
-                                  "maximum sizes clamp pane geometry on that axis."),
-                   QStringLiteral("auto* splitView = new SplitView(this);\n"
-                                  "splitView->setOrientation(Qt::Vertical);\n"
-                                  "splitView->addPane(topPane, {80, 110, 150, false});\n"
-                                  "splitView->addPane(fillPane, {90, 160, 500, true});\n"
-                                  "splitView->addPane(bottomPane, {60, 120, 140, false});"),
-                   [](QWidget* parent) {
-                       auto* splitView = new SplitView(parent);
-                       splitView->setFixedSize(360, 320);
-                       splitView->setOrientation(Qt::Vertical);
-                       splitView->setHandleWidth(6);
-                       splitView->addPane(makeGradientPane(splitView, QStringLiteral("Top 110"),
-                                                           QColor(0x1E, 0x6F, 0xD9),
-                                                           QColor(0x6F, 0xD1, 0xF2)),
-                                          SplitViewPaneOptions{80, 110, 150, false});
-                       splitView->addPane(makeGradientPane(splitView, QStringLiteral("Fill pane"),
-                                                           QColor(0x2F, 0x9E, 0x44),
-                                                           QColor(0xA9, 0xE3, 0x4B)),
-                                          SplitViewPaneOptions{90, 160, 500, true});
-                       splitView->addPane(
-                           makeGradientPane(splitView, QStringLiteral("Bottom max 140"),
-                                            QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C)),
-                           SplitViewPaneOptions{60, 120, 140, false});
-                       return splitView;
-                   }),
-        makeSample(
-            QStringLiteral("split-view-hidden-pane"),
-            QStringLiteral("Hidden panes do not reserve space"),
+            QStringLiteral("Drag the handle between the panes to resize them."),
+            QStringLiteral(
+                "auto* splitView = new SplitView(this);\n"
+                "splitView->addPane(firstPane);\n"
+                "splitView->addPane(secondPane);\n"
+                "splitView->addPane(thirdPane);\n"
+                "splitView->setPanePreferredSize(0, 150);\n"
+                "splitView->setPaneFill(2, true);"),
+            [](QWidget* parent) {
+                auto* splitView = new SplitView(parent);
+                splitView->setFixedSize(460, 168);
+                splitView->addPane(makeGradientPane(splitView, QStringLiteral("Pane 1"), QColor(0x1E, 0x6F, 0xD9),
+                    QColor(0x6F, 0xD1, 0xF2)));
+                splitView->addPane(makeGradientPane(splitView, QStringLiteral("Pane 2"), QColor(0x2F, 0x9E, 0x44),
+                    QColor(0xA9, 0xE3, 0x4B)));
+                splitView->addPane(makeGradientPane(splitView, QStringLiteral("Pane 3"), QColor(0xF7, 0x97, 0x5B),
+                    QColor(0xF2, 0xC9, 0x4C)));
+                // Give every pane a real minimum so dragging a handle to the limit
+                // leaves a tidy pane instead of a sliver, and never shrinks a pane
+                // below the gradient widget's own minimum (which would overlap).
+                // zh_CN: 每个窗格都设定最小尺寸，拖到极限时仍保留完整窗格而非细条，
+                // 且不会缩到渐变控件自身最小尺寸以下（否则会重叠）。
+                for (int i = 0; i < 3; ++i)
+                    splitView->setPaneMinimumSize(i, 96);
+                splitView->setPanePreferredSize(0, 150);
+                splitView->setPanePreferredSize(1, 150);
+                splitView->setPaneFill(2, true);
+                return splitView;
+            }),
+        makeSample(QStringLiteral("split-view-vertical-constraints"), QStringLiteral("Vertical panes and constraints"),
+            QStringLiteral("Orientation changes the resize axis; minimum, preferred, and "
+                           "maximum sizes clamp pane geometry on that axis."),
+            QStringLiteral(
+                "auto* splitView = new SplitView(this);\n"
+                "splitView->setOrientation(Qt::Vertical);\n"
+                "splitView->addPane(topPane, {80, 110, 150, false});\n"
+                "splitView->addPane(fillPane, {90, 160, 500, true});\n"
+                "splitView->addPane(bottomPane, {60, 120, 140, false});"),
+            [](QWidget* parent) {
+                auto* splitView = new SplitView(parent);
+                splitView->setFixedSize(360, 320);
+                splitView->setOrientation(Qt::Vertical);
+                splitView->setHandleWidth(6);
+                splitView->addPane(
+                    makeGradientPane(splitView, QStringLiteral("Top 110"), QColor(0x1E, 0x6F, 0xD9),
+                        QColor(0x6F, 0xD1, 0xF2)),
+                    SplitViewPaneOptions{80, 110, 150, false});
+                splitView->addPane(
+                    makeGradientPane(splitView, QStringLiteral("Fill pane"), QColor(0x2F, 0x9E, 0x44),
+                        QColor(0xA9, 0xE3, 0x4B)),
+                    SplitViewPaneOptions{90, 160, 500, true});
+                splitView->addPane(
+                    makeGradientPane(splitView, QStringLiteral("Bottom max 140"), QColor(0xF7, 0x97, 0x5B),
+                        QColor(0xF2, 0xC9, 0x4C)),
+                    SplitViewPaneOptions{60, 120, 140, false});
+                return splitView;
+            }),
+        makeSample(QStringLiteral("split-view-hidden-pane"), QStringLiteral("Hidden panes do not reserve space"),
             QStringLiteral("When a pane is hidden, SplitView removes its geometry and handle until "
                            "the pane is shown again."),
-            QStringLiteral("auto* splitView = new SplitView(this);\n"
-                           "splitView->addPane(firstPane, {60, 120, 240, false});\n"
-                           "splitView->addPane(detailsPane, {60, 150, 260, false});\n"
-                           "splitView->addPane(fillPane, {60, 180, 500, true});\n\n"
-                           "QObject::connect(toggle, &Button::clicked, [detailsPane]() {\n"
-                           "    detailsPane->setVisible(!detailsPane->isVisible());\n"
-                           "});"),
+            QStringLiteral(
+                "auto* splitView = new SplitView(this);\n"
+                "splitView->addPane(firstPane, {60, 120, 240, false});\n"
+                "splitView->addPane(detailsPane, {60, 150, 260, false});\n"
+                "splitView->addPane(fillPane, {60, 180, 500, true});\n\n"
+                "QObject::connect(toggle, &Button::clicked, [detailsPane]() {\n"
+                "    detailsPane->setVisible(!detailsPane->isVisible());\n"
+                "});"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 10);
                 auto* splitView = new SplitView(group);
                 splitView->setFixedSize(460, 160);
-                auto* first = makeGradientPane(splitView, QStringLiteral("Nav"),
-                                               QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2));
-                auto* details =
-                    makeGradientPane(splitView, QStringLiteral("Details"), QColor(0x87, 0x64, 0xB8),
-                                     QColor(0xC2, 0x6F, 0xB8));
-                auto* content =
-                    makeGradientPane(splitView, QStringLiteral("Content"), QColor(0x2F, 0x9E, 0x44),
-                                     QColor(0xA9, 0xE3, 0x4B));
+                auto* first = makeGradientPane(splitView, QStringLiteral("Nav"), QColor(0x1E, 0x6F, 0xD9),
+                    QColor(0x6F, 0xD1, 0xF2));
+                auto* details = makeGradientPane(splitView, QStringLiteral("Details"), QColor(0x87, 0x64, 0xB8),
+                    QColor(0xC2, 0x6F, 0xB8));
+                auto* content = makeGradientPane(splitView, QStringLiteral("Content"), QColor(0x2F, 0x9E, 0x44),
+                    QColor(0xA9, 0xE3, 0x4B));
                 splitView->addPane(first, SplitViewPaneOptions{60, 120, 240, false});
                 splitView->addPane(details, SplitViewPaneOptions{60, 150, 260, false});
                 splitView->addPane(content, SplitViewPaneOptions{60, 180, 500, true});
@@ -1818,17 +1738,16 @@ QVector<GallerySample> splitViewSamples()
                 QWidget* controls = horizontalGroup(group, 8);
                 auto* toggle = new Button(QStringLiteral("Hide details"), controls);
                 toggle->setFluentStyle(Button::Accent);
-                auto* status =
-                    makeStatusLabel(controls, QStringLiteral("Pane count: 3, details visible"));
+                auto* status = makeStatusLabel(controls, QStringLiteral("Pane count: 3, details visible"));
                 controls->layout()->addWidget(toggle);
                 controls->layout()->addWidget(status);
                 QObject::connect(toggle, &Button::clicked, splitView, [details, toggle, status]() {
                     details->setVisible(!details->isVisible());
-                    toggle->setText(details->isVisible() ? QStringLiteral("Hide details")
-                                                         : QStringLiteral("Show details"));
+                    toggle->setText(
+                        details->isVisible() ? QStringLiteral("Hide details") : QStringLiteral("Show details"));
                     status->setText(details->isVisible()
-                                        ? QStringLiteral("Pane count: 3, details visible")
-                                        : QStringLiteral("Pane count: 3, details hidden"));
+                            ? QStringLiteral("Pane count: 3, details visible")
+                            : QStringLiteral("Pane count: 3, details hidden"));
                 });
 
                 group->layout()->addWidget(splitView);
@@ -1841,70 +1760,66 @@ QVector<GallerySample> stackViewSamples()
 {
     return {
         makeSample(QStringLiteral("stack-view-basic"), QStringLiteral("Push and pop pages"),
-                   QStringLiteral("StackView keeps a navigation stack of pages with transitions."),
-                   QStringLiteral("auto* stackView = new StackView(this);\n"
-                                  "stackView->setInitialItem(firstPage);\n"
-                                  "stackView->push(nextPage);\n"
-                                  "stackView->pop();\n"
-                                  "QObject::connect(stackView, &StackView::depthChanged,\n"
-                                  "                 status, updateStatus);"),
-                   [](QWidget* parent) {
-                       QWidget* group = verticalGroup(parent, 12);
+            QStringLiteral("StackView keeps a navigation stack of pages with transitions."),
+            QStringLiteral(
+                "auto* stackView = new StackView(this);\n"
+                "stackView->setInitialItem(firstPage);\n"
+                "stackView->push(nextPage);\n"
+                "stackView->pop();\n"
+                "QObject::connect(stackView, &StackView::depthChanged,\n"
+                "                 status, updateStatus);"),
+            [](QWidget* parent) {
+                QWidget* group = verticalGroup(parent, 12);
 
-                       auto* stackView = new StackView(group);
-                       stackView->setFixedSize(360, 150);
-                       stackView->setInitialItem(
-                           makeGradientPane(stackView, QStringLiteral("Page 1"),
-                                            QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2)));
+                auto* stackView = new StackView(group);
+                stackView->setFixedSize(360, 150);
+                stackView->setInitialItem(makeGradientPane(stackView, QStringLiteral("Page 1"),
+                    QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2)));
 
-                       QWidget* buttons = horizontalGroup(group, 8);
-                       auto* pushButton = new Button(QStringLiteral("Push page"), buttons);
-                       pushButton->setFluentStyle(Button::Accent);
-                       auto* popButton = new Button(QStringLiteral("Pop page"), buttons);
-                       auto* status = makeStatusLabel(buttons, QStringLiteral("Depth: 1"));
-                       QObject::connect(pushButton, &Button::clicked, stackView, [stackView]() {
-                           static const QVector<QPair<QColor, QColor>> palette{
-                               {QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B)},
-                               {QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C)},
-                               {QColor(0x87, 0x64, 0xB8), QColor(0xC2, 0x6F, 0xB8)}};
-                           const int depth = stackView->depth();
-                           const auto& pair = palette.at((depth - 1) % palette.size());
-                           stackView->push(
-                               makeGradientPane(stackView, QStringLiteral("Page %1").arg(depth + 1),
-                                                pair.first, pair.second));
-                       });
-                       QObject::connect(popButton, &Button::clicked, stackView,
-                                        [stackView]() { stackView->pop(); });
-                       QObject::connect(stackView, &StackView::depthChanged, status,
-                                        [status](int depth) {
-                                            status->setText(QStringLiteral("Depth: %1").arg(depth));
-                                        });
-                       buttons->layout()->addWidget(pushButton);
-                       buttons->layout()->addWidget(popButton);
-                       buttons->layout()->addWidget(status);
+                QWidget* buttons = horizontalGroup(group, 8);
+                auto* pushButton = new Button(QStringLiteral("Push page"), buttons);
+                pushButton->setFluentStyle(Button::Accent);
+                auto* popButton = new Button(QStringLiteral("Pop page"), buttons);
+                auto* status = makeStatusLabel(buttons, QStringLiteral("Depth: 1"));
+                QObject::connect(pushButton, &Button::clicked, stackView, [stackView]() {
+                    static const QVector<QPair<QColor, QColor>> palette{
+                        {QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B)},
+                        {QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C)},
+                        {QColor(0x87, 0x64, 0xB8), QColor(0xC2, 0x6F, 0xB8)}};
+                    const int depth = stackView->depth();
+                    const auto& pair = palette.at((depth - 1) % palette.size());
+                    stackView->push(
+                        makeGradientPane(stackView, QStringLiteral("Page %1").arg(depth + 1), pair.first, pair.second));
+                });
+                QObject::connect(popButton, &Button::clicked, stackView, [stackView]() { stackView->pop(); });
+                QObject::connect(stackView, &StackView::depthChanged, status, [status](int depth) {
+                    status->setText(QStringLiteral("Depth: %1").arg(depth));
+                });
+                buttons->layout()->addWidget(pushButton);
+                buttons->layout()->addWidget(popButton);
+                buttons->layout()->addWidget(status);
 
-                       group->layout()->addWidget(stackView);
-                       group->layout()->addWidget(buttons);
-                       return group;
-                   }),
-        makeSample(
-            QStringLiteral("stack-view-transition-type"), QStringLiteral("Transition type"),
+                group->layout()->addWidget(stackView);
+                group->layout()->addWidget(buttons);
+                return group;
+            }),
+        makeSample(QStringLiteral("stack-view-transition-type"), QStringLiteral("Transition type"),
             QStringLiteral("The transition type changes the visual effect used when pages enter "
                            "and leave the stack."),
-            QStringLiteral("stackView->setTransitionDuration(220);\n"
-                           "stackView->setTransitionType(\n"
-                           "    StackView::StackViewTransitionType::ScaleFade);\n"
-                           "stackView->push(nextPage);\n"
-                           "stackView->pop();"),
+            QStringLiteral(
+                "stackView->setTransitionDuration(220);\n"
+                "stackView->setTransitionType(\n"
+                "    StackView::StackViewTransitionType::ScaleFade);\n"
+                "stackView->push(nextPage);\n"
+                "stackView->pop();"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 10);
                 auto* stackView = new StackView(group);
                 stackView->setFixedSize(360, 150);
                 stackView->setTransitionDuration(220);
                 stackView->setTransitionType(StackView::StackViewTransitionType::ScaleFade);
-                stackView->setInitialItem(makeGradientPane(stackView, QStringLiteral("Root"),
-                                                           QColor(0x1E, 0x6F, 0xD9),
-                                                           QColor(0x6F, 0xD1, 0xF2)));
+                stackView->setInitialItem(makeGradientPane(stackView, QStringLiteral("Root"), QColor(0x1E, 0x6F, 0xD9),
+                    QColor(0x6F, 0xD1, 0xF2)));
 
                 QWidget* controls = horizontalGroup(group, 8);
                 auto* scale = new Button(QStringLiteral("ScaleFade"), controls);
@@ -1925,39 +1840,33 @@ QVector<GallerySample> stackViewSamples()
                 });
                 QObject::connect(push, &Button::clicked, stackView, [stackView]() {
                     const int depth = stackView->depth();
-                    stackView->push(
-                        makeGradientPane(stackView, QStringLiteral("Page %1").arg(depth + 1),
-                                         QColor(0x87, 0x64, 0xB8), QColor(0xC2, 0x6F, 0xB8)));
+                    stackView->push(makeGradientPane(stackView, QStringLiteral("Page %1").arg(depth + 1),
+                        QColor(0x87, 0x64, 0xB8), QColor(0xC2, 0x6F, 0xB8)));
                 });
-                QObject::connect(pop, &Button::clicked, stackView,
-                                 [stackView]() { stackView->pop(); });
+                QObject::connect(pop, &Button::clicked, stackView, [stackView]() { stackView->pop(); });
 
                 group->layout()->addWidget(stackView);
                 group->layout()->addWidget(controls);
                 return group;
             }),
-        makeSample(
-            QStringLiteral("stack-view-replace-pop-to-root"),
-            QStringLiteral("Replace and popToRoot"),
+        makeSample(QStringLiteral("stack-view-replace-pop-to-root"), QStringLiteral("Replace and popToRoot"),
+            QStringLiteral("StackView can replace the current page or unwind directly back to the root page."),
             QStringLiteral(
-                "StackView can replace the current page or unwind directly back to the root page."),
-            QStringLiteral("auto* stackView = new StackView(this);\n"
-                           "stackView->setTransitionAnimationEnabled(false);\n"
-                           "stackView->setInitialItem(rootPage);\n"
-                           "stackView->push(detailsPage);\n"
-                           "stackView->replace(replacementPage);\n"
-                           "stackView->popToRoot();"),
+                "auto* stackView = new StackView(this);\n"
+                "stackView->setTransitionAnimationEnabled(false);\n"
+                "stackView->setInitialItem(rootPage);\n"
+                "stackView->push(detailsPage);\n"
+                "stackView->replace(replacementPage);\n"
+                "stackView->popToRoot();"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 10);
                 auto* stackView = new StackView(group);
                 stackView->setFixedSize(360, 150);
                 stackView->setTransitionAnimationEnabled(false);
-                stackView->setInitialItem(makeGradientPane(stackView, QStringLiteral("Root"),
-                                                           QColor(0x1E, 0x6F, 0xD9),
-                                                           QColor(0x6F, 0xD1, 0xF2)));
-                stackView->push(makeGradientPane(stackView, QStringLiteral("Details"),
-                                                 QColor(0x2F, 0x9E, 0x44),
-                                                 QColor(0xA9, 0xE3, 0x4B)));
+                stackView->setInitialItem(makeGradientPane(stackView, QStringLiteral("Root"), QColor(0x1E, 0x6F, 0xD9),
+                    QColor(0x6F, 0xD1, 0xF2)));
+                stackView->push(makeGradientPane(stackView, QStringLiteral("Details"), QColor(0x2F, 0x9E, 0x44),
+                    QColor(0xA9, 0xE3, 0x4B)));
 
                 QWidget* controls = horizontalGroup(group, 8);
                 auto* replace = new Button(QStringLiteral("Replace current"), controls);
@@ -1970,11 +1879,9 @@ QVector<GallerySample> stackViewSamples()
 
                 QObject::connect(replace, &Button::clicked, stackView, [stackView]() {
                     stackView->replace(makeGradientPane(stackView, QStringLiteral("Replacement"),
-                                                        QColor(0xF7, 0x97, 0x5B),
-                                                        QColor(0xF2, 0xC9, 0x4C)));
+                        QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C)));
                 });
-                QObject::connect(popRoot, &Button::clicked, stackView,
-                                 [stackView]() { stackView->popToRoot(); });
+                QObject::connect(popRoot, &Button::clicked, stackView, [stackView]() { stackView->popToRoot(); });
                 QObject::connect(stackView, &StackView::depthChanged, status, [status](int depth) {
                     status->setText(QStringLiteral("Depth: %1").arg(depth));
                 });

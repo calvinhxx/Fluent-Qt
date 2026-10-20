@@ -25,8 +25,7 @@ public:
     void onThemeUpdated() override
     {
         const auto& colors = themeColors();
-        setStyleSheet(
-            QStringLiteral("background-color: %1;").arg(colors.bgCanvas.name()));
+        setStyleSheet(QStringLiteral("background-color: %1;").arg(colors.bgCanvas.name()));
     }
 };
 
@@ -36,20 +35,16 @@ class FieldTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite()
     {
-        qRegisterMetaType<Field::ValidationState>(
-            "fluent::layout::Field::ValidationState");
+        qRegisterMetaType<Field::ValidationState>("fluent::layout::Field::ValidationState");
         qRegisterMetaType<WidgetOwnership>("fluent::WidgetOwnership");
     }
 };
 
 TEST_F(FieldTest, Contract_DefaultsAndInheritance)
 {
-    static_assert(std::is_base_of<QWidget, Field>::value,
-                  "Field must be a QWidget composition shell");
-    static_assert(std::is_base_of<fluent::FluentElement, Field>::value,
-                  "Field must mix in FluentElement");
-    static_assert(std::is_base_of<fluent::QMLPlus, Field>::value,
-                  "Field must mix in QMLPlus");
+    static_assert(std::is_base_of<QWidget, Field>::value, "Field must be a QWidget composition shell");
+    static_assert(std::is_base_of<fluent::FluentElement, Field>::value, "Field must mix in FluentElement");
+    static_assert(std::is_base_of<fluent::QMLPlus, Field>::value, "Field must mix in QMLPlus");
 
     Field field;
     EXPECT_TRUE(field.labelText().isEmpty());
@@ -62,10 +57,8 @@ TEST_F(FieldTest, Contract_DefaultsAndInheritance)
     EXPECT_EQ(field.objectName(), QStringLiteral("fluentField"));
     EXPECT_EQ(field.focusPolicy(), Qt::NoFocus);
     EXPECT_EQ(field.focusProxy(), nullptr);
-    EXPECT_NE(field.findChild<Label*>(QStringLiteral("fluentFieldCaption")),
-              nullptr);
-    EXPECT_NE(field.findChild<QWidget*>(QStringLiteral("fluentFieldEditorHost")),
-              nullptr);
+    EXPECT_NE(field.findChild<Label*>(QStringLiteral("fluentFieldCaption")), nullptr);
+    EXPECT_NE(field.findChild<QWidget*>(QStringLiteral("fluentFieldEditorHost")), nullptr);
 }
 
 TEST_F(FieldTest, Contract_SettersAreNoOpsOnUnchangedValues)
@@ -101,9 +94,7 @@ TEST_F(FieldTest, Contract_BorrowedEditorIsDetached)
     {
         Field field;
         ASSERT_TRUE(field.setEditor(editor, WidgetOwnership::Borrowed));
-        EXPECT_EQ(editor->parentWidget(),
-                  field.findChild<QWidget*>(
-                      QStringLiteral("fluentFieldEditorHost")));
+        EXPECT_EQ(editor->parentWidget(), field.findChild<QWidget*>(QStringLiteral("fluentFieldEditorHost")));
     }
 
     ASSERT_FALSE(editor.isNull());
@@ -232,8 +223,7 @@ TEST_F(FieldTest, Contract_ValidationPresentationDoesNotMutateEditorValue)
     ASSERT_NE(status, nullptr);
     EXPECT_EQ(status->text(), QStringLiteral("Looks good"));
     EXPECT_FALSE(status->isHidden());
-    auto* icon = field.findChild<fluent::FontIcon*>(
-        QStringLiteral("fluentFieldStatusIcon"));
+    auto* icon = field.findChild<fluent::FontIcon*>(QStringLiteral("fluentFieldStatusIcon"));
     ASSERT_NE(icon, nullptr);
     EXPECT_FALSE(icon->isHidden());
     EXPECT_EQ(icon->glyph(), Typography::Icons::CheckmarkBadge12);
@@ -265,8 +255,7 @@ TEST_F(FieldTest, Contract_AccessibleNameAndDescription)
     field.setValidationMessage(QStringLiteral("Enter a valid address"));
 
     EXPECT_EQ(field.accessibleName(), QStringLiteral("Email"));
-    EXPECT_EQ(field.accessibleDescription(),
-              QStringLiteral("Used for recovery\nEnter a valid address"));
+    EXPECT_EQ(field.accessibleDescription(), QStringLiteral("Used for recovery\nEnter a valid address"));
 }
 
 TEST_F(FieldTest, Contract_ManagedEditorAccessibleNameFollowsAndRestores)
@@ -299,8 +288,7 @@ TEST_F(FieldTest, Contract_ManagedEditorAccessibleNameFollowsAndRestores)
     namedEditor->setAccessibleName(QStringLiteral("Preset editor name"));
     ASSERT_TRUE(field.setEditor(namedEditor, WidgetOwnership::Borrowed));
     field.setLabelText(QStringLiteral("Ignored generated name"));
-    EXPECT_EQ(
-        namedEditor->accessibleName(), QStringLiteral("Preset editor name"));
+    EXPECT_EQ(namedEditor->accessibleName(), QStringLiteral("Preset editor name"));
     delete field.takeEditor();
 }
 
@@ -333,8 +321,7 @@ TEST_F(FieldTest, Contract_RequiredIndicatorNeedsVisibleLabel)
 TEST_F(FieldTest, Contract_LongLabelsWrap)
 {
     Field field;
-    field.setLabelText(QStringLiteral(
-        "A long account label that must wrap instead of clipping"));
+    field.setLabelText(QStringLiteral("A long account label that must wrap instead of clipping"));
     auto* editor = new LineEdit;
     ASSERT_TRUE(field.setEditor(editor, WidgetOwnership::Owned));
 
@@ -382,8 +369,7 @@ TEST_F(FieldTest, VisualCheck_FieldComposition)
     helperField->setHelperText(QStringLiteral("We'll only use this for recovery."));
     auto* helperEditor = new LineEdit;
     helperEditor->setPlaceholderText(QStringLiteral("name@example.com"));
-    ASSERT_TRUE(
-        helperField->setEditor(helperEditor, WidgetOwnership::Owned));
+    ASSERT_TRUE(helperField->setEditor(helperEditor, WidgetOwnership::Owned));
     helperField->anchors()->top = {header, Edge::Bottom, 16};
     helperField->anchors()->left = {&window, Edge::Left, 32};
     helperField->anchors()->right = {&window, Edge::Right, -32};
@@ -393,8 +379,7 @@ TEST_F(FieldTest, VisualCheck_FieldComposition)
     errorField->setLabelText(QStringLiteral("Password"));
     errorField->setRequired(true);
     errorField->setValidationState(Field::ValidationState::Error);
-    errorField->setValidationMessage(
-        QStringLiteral("Password must be at least 8 characters."));
+    errorField->setValidationMessage(QStringLiteral("Password must be at least 8 characters."));
     auto* errorEditor = new LineEdit;
     errorEditor->setText(QStringLiteral("1234"));
     ASSERT_TRUE(errorField->setEditor(errorEditor, WidgetOwnership::Owned));
@@ -409,8 +394,7 @@ TEST_F(FieldTest, VisualCheck_FieldComposition)
     successField->setValidationMessage(QStringLiteral("Looks good"));
     auto* successEditor = new LineEdit;
     successEditor->setText(QStringLiteral("Alex"));
-    ASSERT_TRUE(
-        successField->setEditor(successEditor, WidgetOwnership::Owned));
+    ASSERT_TRUE(successField->setEditor(successEditor, WidgetOwnership::Owned));
     successField->anchors()->top = {errorField, Edge::Bottom, 16};
     successField->anchors()->left = {&window, Edge::Left, 32};
     successField->anchors()->right = {&window, Edge::Right, -32};
