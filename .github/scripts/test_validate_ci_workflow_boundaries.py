@@ -141,14 +141,14 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                     "ci.yml accepted a missing generated-site freshness check",
                 )
 
-    def test_audited_third_party_actions_require_immutable_revisions(self):
+    def test_third_party_actions_require_immutable_revisions(self):
         cases = (
             (
-                "pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1",
+                "pypa/gh-action-pypi-publish@" + "a" * 40 + " # release/v1",
                 "pypa/gh-action-pypi-publish@release/v1",
             ),
             (
-                "jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1",
+                "jurplel/install-qt-action@" + "b" * 40 + " # v999.0.0",
                 "jurplel/install-qt-action@v4",
             ),
         )
@@ -156,16 +156,16 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             with self.subTest(action=mutable):
                 prefix = "      - uses: "
                 self.assertEqual(
-                    MODULE.pinned_action_errors("fixture.yml", prefix + pinned), []
+                    MODULE.immutable_action_errors("fixture.yml", prefix + pinned), []
                 )
-                errors = MODULE.pinned_action_errors(
+                errors = MODULE.immutable_action_errors(
                     "fixture.yml", prefix + mutable
                 )
                 self.assertTrue(
                     any("must pin" in error for error in errors),
                     f"workflow validator accepted mutable action {mutable}",
                 )
-                quoted_errors = MODULE.pinned_action_errors(
+                quoted_errors = MODULE.immutable_action_errors(
                     "fixture.yml", prefix + f'"{mutable}"'
                 )
                 self.assertTrue(
@@ -173,15 +173,17 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                     f"workflow validator accepted quoted mutable action {mutable}",
                 )
 
-    def test_pages_pipeline_actions_require_audited_revisions(self):
-        for workflow_name, actions in MODULE.PAGES_PIPELINE_ACTION_REVISIONS.items():
+    def test_pages_pipeline_actions_require_immutable_revisions(self):
+        for workflow_name, actions in MODULE.PAGES_PIPELINE_ACTIONS.items():
             workflow = MODULE.read_workflow(workflow_name)
-            for action, (revision, _) in actions.items():
+            for action in actions:
                 with self.subTest(workflow=workflow_name, action=action):
-                    pinned = f"{action}@{revision}"
+                    pinned = re.search(
+                        rf"{re.escape(action)}@[0-9a-fA-F]{{40}}", workflow
+                    ).group(0)
                     mutable = f"{action}@v0"
                     self.assertIn(pinned, workflow)
-                    errors = MODULE.required_action_revision_errors(
+                    errors = MODULE.required_action_errors(
                         workflow_name, workflow.replace(pinned, mutable, 1)
                     )
                     self.assertTrue(
@@ -189,10 +191,96 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                         f"workflow validator accepted mutable action {action}",
                     )
 
+    @staticmethod
+    def updated_action_pins(contents: str) -> str:
+        # Model Dependabot changing only YAML references and version comments.
+        return re.sub(
+            r"(uses: [^\s@]+/[^\s@]+)@[0-9a-fA-F]{40}(?:[ \t]+#[^\n]*)?",
+            lambda match: match.group(1) + "@" + "f" * 40 + " # v999.0.0",
+            contents,
+        )
+
+    def test_dependabot_updates_do_not_require_python_version_changes(self):
+        original_read = Path.read_text
+        updated_paths: set[Path] = set()
+
+        def read_updated(path: Path, *args, **kwargs) -> str:
+            contents = original_read(path, *args, **kwargs)
+            if path.parent == MODULE.WORKFLOWS:
+                updated = self.updated_action_pins(contents)
+                if updated != contents:
+                    updated_paths.add(path)
+                return updated
+            return contents
+
+        with mock.patch.object(Path, "read_text", read_updated):
+            self.assertEqual(MODULE.validate_boundaries(), [])
+            self.assertEqual(
+                MODULE.validate_cpp_plan_contract(MODULE.read_workflow("ci-cpp.yml")), []
+            )
+        self.assertIn(MODULE.WORKFLOWS / "pages.yml", updated_paths)
+        self.assertIn(MODULE.WORKFLOWS / "ci-wasm.yml", updated_paths)
+        self.assertIn(MODULE.WORKFLOWS / "ci-python.yml", updated_paths)
+
+    def test_pages_pipeline_keeps_action_invocation_counts(self):
+        for workflow_name, actions in MODULE.PAGES_PIPELINE_ACTIONS.items():
+            workflow = MODULE.read_workflow(workflow_name)
+            for action in actions:
+                action_line = re.search(
+                    rf"^.*uses: {re.escape(action)}@[^\n]*\n", workflow, re.MULTILINE
+                ).group(0)
+                for replacement in ("", action_line + action_line):
+                    with self.subTest(workflow=workflow_name, action=action, replacement=replacement):
+                        errors = MODULE.required_action_errors(
+                            workflow_name, workflow.replace(action_line, replacement, 1)
+                        )
+                        self.assertTrue(any("exactly" in error for error in errors), errors)
+
+    def test_step_contracts_reject_mutable_or_missing_action_revisions(self):
+        cases = (
+            ("pages.yml", "actions/deploy-pages", MODULE.pages_deployment_boundary_errors),
+            ("ci-wasm.yml", "actions/cache", MODULE.wasm_supply_chain_errors),
+            ("ci-cpp.yml", "actions/checkout", MODULE.validate_cpp_plan_contract),
+        )
+        for workflow_name, action, validate in cases:
+            workflow = MODULE.read_workflow(workflow_name)
+            for revision in ("@v999", "@abcdef1", "@<commit>", ""):
+                with self.subTest(workflow=workflow_name, revision=revision):
+                    mutated = re.sub(
+                        rf"{re.escape(action)}@[0-9a-fA-F]{{40}}",
+                        action + revision, workflow, count=1,
+                    )
+                    errors = validate(mutated)
+                    self.assertTrue(any("must pin" in error for error in errors), errors)
+
+    def test_updated_pins_still_require_expected_actions_and_inputs(self):
+        cases = (
+            ("pages.yml", "actions/deploy-pages@", "example/deploy-pages@", "unaudited remote action"),
+            ("pages.yml", "persist-credentials: false", "persist-credentials: true", "deploy checkout"),
+            ("pages.yml", "run-id: ${{ github.run_id }}", "run-id: 123", "artifact download"),
+            ("ci-wasm.yml", "actions/cache@", "example/cache@", "unaudited remote action"),
+            ("ci-wasm.yml", "path: ${{ runner.temp }}/emsdk", "path: /tmp/other", "exactly cache emsdk"),
+            ("ci-cpp.yml", "actions/checkout@", "example/checkout@", "checkout step"),
+            ("ci-cpp.yml", "fetch-depth: 2", "fetch-depth: 1", "checkout step"),
+        )
+        original_read = MODULE.read_workflow
+        for workflow_name, original, replacement, expected_error in cases:
+            with self.subTest(workflow=workflow_name, replacement=replacement):
+                def with_change(name: str) -> str:
+                    contents = self.updated_action_pins(original_read(name))
+                    if name == workflow_name:
+                        self.assertIn(original, contents)
+                        contents = contents.replace(original, replacement, 1)
+                    return contents
+
+                with mock.patch.object(MODULE, "read_workflow", side_effect=with_change):
+                    errors = MODULE.validate_boundaries()
+                self.assertTrue(any(expected_error in error for error in errors), errors)
+
     def test_all_remote_actions_require_full_immutable_references(self):
         for ref in (
             "actions/checkout@v6", "example/action@main", "example/action@abcdef1",
-            "docker://alpine:latest", "example/action",
+            "docker://alpine:latest", "example/action", "example/action@<commit>", "",
         ):
             with self.subTest(ref=ref):
                 for value in (ref, f'"{ref}"', f"'{ref}'"):
@@ -213,11 +301,11 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
 
     def test_pages_pipeline_rejects_an_unaudited_remote_action(self):
         pages = MODULE.read_workflow("pages.yml")
-        errors = MODULE.required_action_revision_errors(
+        errors = MODULE.required_action_errors(
             "pages.yml",
             pages.replace(
                 "    steps:\n",
-                "    steps:\n      - uses: example/unreviewed-action@main\n",
+                "    steps:\n      - uses: example/unreviewed-action@" + "a" * 40 + "\n",
                 1,
             ),
         )
@@ -399,10 +487,9 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
         )
         self.assertTrue(provenance)
         mutated_pages = pages.replace(provenance, "", 1)
-        deploy_action = (
-            "        uses: actions/deploy-pages@"
-            "d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5\n"
-        )
+        deploy_action = re.search(
+            r"^        uses: actions/deploy-pages@[^\n]+\n", pages, re.MULTILINE
+        ).group(0)
         mutated_pages = mutated_pages.replace(
             deploy_action,
             deploy_action + "\n" + provenance,

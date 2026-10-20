@@ -324,6 +324,14 @@ class ClassifyCiChangesTest(unittest.TestCase):
             wasm=True,
         )
 
+    def test_shared_action_policy_change_runs_wasm_validation(self):
+        self.assert_classification(
+            [".github/scripts/ci_action_policy.py"],
+            native=True,
+            pyside=False,
+            wasm=True,
+        )
+
     def test_wasm_smoke_change_runs_wasm_only(self):
         for path in (
             ".github/scripts/run-wasm-browser-smoke.py",
@@ -333,6 +341,8 @@ class ClassifyCiChangesTest(unittest.TestCase):
             ".github/scripts/run-wasm-spatial-smoke.py",
             ".github/scripts/test_wasm_browser_smoke.py",
             ".github/scripts/test_wasm_spatial_smoke.py",
+            ".github/scripts/wasm_command_palette.py",
+            ".github/scripts/wasm_form.py",
             ".github/scripts/wasm_plugin_contract.py",
         ):
             with self.subTest(path=path):

@@ -8,60 +8,17 @@ import re
 import sys
 from pathlib import Path
 
+from ci_action_policy import (
+    PAGES_PIPELINE_ACTIONS,
+    immutable_action_errors,
+    normalize_action_references,
+    required_action_errors,
+)
+
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT / ".github" / "workflows"
 MAX_ORCHESTRATOR_ACTIVE_LINES = 300
-PINNED_ACTION_REVISIONS = {
-    "pypa/gh-action-pypi-publish": (
-        "dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1"
-    ),
-    "jurplel/install-qt-action": (
-        "48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1"
-    ),
-}
-PAGES_PIPELINE_ACTION_REVISIONS = {
-    "pages.yml": {
-        "actions/checkout": (
-            "d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0",
-            1,
-        ),
-        "actions/configure-pages": (
-            "983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0",
-            1,
-        ),
-        "actions/download-artifact": (
-            "d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0",
-            1,
-        ),
-        "actions/upload-pages-artifact": (
-            "7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0",
-            1,
-        ),
-        "actions/deploy-pages": (
-            "d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5",
-            1,
-        ),
-    },
-    "ci-wasm.yml": {
-        "actions/checkout": (
-            "d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0",
-            1,
-        ),
-        "actions/setup-python": (
-            "ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0",
-            1,
-        ),
-        "actions/cache": (
-            "0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0",
-            4,
-        ),
-        "actions/upload-artifact": (
-            "ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2",
-            2,
-        ),
-    },
-}
 EMSDK_REPOSITORY_REVISION = "2514ec738de72cebbba7f4fdba0cf2fabcb779a5"
 ACTION_TEMPLATE_PATHS = (
     ROOT / "tools/onboarding/starters/cpp-existing-qt/.github/workflows/ci.yml.in",
@@ -202,87 +159,10 @@ def workflow_step_headers(job: str) -> list[str]:
     ]
 
 
-def pinned_action_errors(name: str, contents: str) -> list[str]:
-    """Require audited third-party actions to use immutable revisions."""
-    errors: list[str] = []
-    for action, expected_revision in PINNED_ACTION_REVISIONS.items():
-        action_pattern = re.compile(
-            rf"^[ \t]+(?:-[ \t]+)?uses:[ \t]+(?P<value>[^\n]*"
-            rf"{re.escape(action)}@[^\n]*)$",
-            re.MULTILINE,
-        )
-        expected_value = f"{action}@{expected_revision}"
-        for value in action_pattern.findall(contents):
-            if value.rstrip() != expected_value:
-                errors.append(
-                    f"{name} must pin {action} to {expected_revision}"
-                )
-    return errors
-
-
-def immutable_action_errors(name: str, contents: str) -> list[str]:
-    """Reject mutable remote references, including actions outside the audited allowlists."""
-    errors: list[str] = []
-    for raw in re.findall(r"^\s*(?:-\s+)?uses:\s*([^\n]+)$", contents, re.MULTILINE):
-        value = raw.split(" #", 1)[0].strip().strip("\"'")
-        if value.startswith("./"):
-            continue
-        if value.startswith("docker://"):
-            valid = re.fullmatch(r"docker://[^\s@]+@sha256:[0-9a-f]{64}", value)
-        else:
-            valid = re.fullmatch(r"[^\s@]+/[^\s@]+@[0-9a-fA-F]{40}", value)
-        if not valid:
-            errors.append(
-                f"{name} must pin remote action to a full commit SHA or image digest: {value}"
-            )
-    return errors
-
-
-def required_action_revision_errors(name: str, contents: str) -> list[str]:
-    """Pin every action in the privileged Pages producer/deployer chain."""
-    errors: list[str] = []
-    expected_actions = PAGES_PIPELINE_ACTION_REVISIONS.get(name, {})
-    uses_pattern = re.compile(
-        r"^[ \t]+(?:-[ \t]+)?uses:[ \t]+(?P<value>[^\n]+)$",
-        re.MULTILINE,
-    )
-    for raw_value in uses_pattern.findall(contents):
-        value = raw_value.strip().strip('"\'')
-        action_ref = value.split(" #", 1)[0]
-        if action_ref.startswith("./"):
-            continue
-        action = action_ref.rsplit("@", 1)[0]
-        if action not in expected_actions:
-            errors.append(
-                f"{name} contains an unaudited remote action in the Pages chain: "
-                f"{action_ref}"
-            )
-
-    for action, (expected_revision, expected_count) in expected_actions.items():
-        action_pattern = re.compile(
-            rf"^[ \t]+(?:-[ \t]+)?uses:[ \t]+(?P<value>[^\n]*"
-            rf"{re.escape(action)}@[^\n]*)$",
-            re.MULTILINE,
-        )
-        values = action_pattern.findall(contents)
-        expected_value = f"{action}@{expected_revision}"
-        if len(values) != expected_count:
-            errors.append(
-                f"{name} must use {action}@{expected_revision} exactly "
-                f"{expected_count} time(s)"
-            )
-            continue
-        for value in values:
-            if value.rstrip() != expected_value:
-                errors.append(
-                    f"{name} must pin {action} to {expected_revision}"
-                )
-    return errors
-
-
 def pages_deployment_boundary_errors(contents: str) -> list[str]:
     """Restrict privileged Pages deployment to full artifacts from main."""
-    errors: list[str] = []
+    errors = immutable_action_errors("pages.yml", contents)
+    contents = normalize_action_references(contents)
     workflow_header = contents.split("\njobs:\n", 1)[0]
     expected_workflow_header = [
         "name: Pages",
@@ -444,7 +324,7 @@ def pages_deployment_boundary_errors(contents: str) -> list[str]:
     )
     expected_checkout = [
         "      - name: Checkout",
-        "        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+        "        uses: actions/checkout@<commit>",
         "        with:",
         "          ref: ${{ github.sha }}",
         "          persist-credentials: false",
@@ -460,7 +340,7 @@ def pages_deployment_boundary_errors(contents: str) -> list[str]:
     )
     expected_download = [
         "      - name: Download C++ Web Gallery",
-        "        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+        "        uses: actions/download-artifact@<commit>",
         "        with:",
         "          name: fluentqt-wasm-pages",
         "          path: build/wasm-pages",
@@ -492,7 +372,7 @@ def pages_deployment_boundary_errors(contents: str) -> list[str]:
     )
     expected_configure = [
         "      - name: Configure Pages",
-        "        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b",
+        "        uses: actions/configure-pages@<commit>",
     ]
     if configure_lines != expected_configure:
         errors.append("pages.yml Configure Pages step must remain exact")
@@ -503,7 +383,7 @@ def pages_deployment_boundary_errors(contents: str) -> list[str]:
     expected_deploy_step = [
         "      - name: Deploy",
         "        id: deployment",
-        "        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e",
+        "        uses: actions/deploy-pages@<commit>",
     ]
     if deploy_step_lines != expected_deploy_step:
         errors.append(
@@ -564,7 +444,7 @@ def pages_deployment_boundary_errors(contents: str) -> list[str]:
     )
     expected_upload = [
         "      - name: Upload static site and C++ Web Gallery",
-        "        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b",
+        "        uses: actions/upload-pages-artifact@<commit>",
         "        with:",
         "          path: build/pages",
     ]
@@ -575,7 +455,8 @@ def pages_deployment_boundary_errors(contents: str) -> list[str]:
 
 def wasm_supply_chain_errors(contents: str) -> list[str]:
     """Keep Emscripten installation on the audited emsdk repository revision."""
-    errors: list[str] = []
+    errors = immutable_action_errors("ci-wasm.yml", contents)
+    contents = normalize_action_references(contents)
     build = job_section(contents, "build")
     active_build = "\n".join(uncommented_workflow_lines(build)) + "\n"
     build_env_match = re.search(
@@ -723,7 +604,7 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
     expected_evidence_step = [
         "      - name: Upload Spatial fallback evidence",
         "        if: ${{ always() }}",
-        "        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+        "        uses: actions/upload-artifact@<commit>",
         "        with:",
         "          name: fluentqt-wasm-spatial-software-fallback",
         "          path: build/spatial-validation/ci-software-fallback",
@@ -756,7 +637,7 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
     cache_step = named_step_section(build, "Cache Emscripten SDK")
     expected_cache_step = [
         "      - name: Cache Emscripten SDK",
-        "        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830",
+        "        uses: actions/cache@<commit>",
         "        with:",
         "          path: ${{ runner.temp }}/emsdk",
         "          key: fluentqt-emsdk-${{ runner.os }}-${{ runner.arch }}-3.1.70-2514ec738de72cebbba7f4fdba0cf2fabcb779a5",
@@ -771,7 +652,7 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
     )
     expected_system_cache_step = [
         "      - name: Cache Emscripten system libraries",
-        "        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830",
+        "        uses: actions/cache@<commit>",
         "        with:",
         "          path: ${{ runner.temp }}/emscripten-cache",
         "          key: fluentqt-em-cache-${{ runner.os }}-${{ runner.arch }}-3.1.70-2514ec738de72cebbba7f4fdba0cf2fabcb779a5",
@@ -1028,9 +909,11 @@ def validate_cpp_execution_contract(cpp: str) -> list[str]:
 
 def validate_cpp_plan_contract(cpp: str) -> list[str]:
     """Keep C++ catalog and repository-quality validation fail closed."""
+    errors = immutable_action_errors("ci-cpp.yml", cpp)
+    cpp = normalize_action_references(cpp)
     active_cpp = "\n".join(uncommented_workflow_lines(cpp)) + "\n"
     plan = job_section(active_cpp, "plan")
-    errors = canonical_job_level_errors(plan, "ci-cpp.yml plan")
+    errors.extend(canonical_job_level_errors(plan, "ci-cpp.yml plan"))
     controls = job_level_controls(plan)
     if controls:
         errors.append(
@@ -1059,7 +942,7 @@ def validate_cpp_plan_contract(cpp: str) -> list[str]:
     checkout_lines = uncommented_workflow_lines(checkout)
     if checkout_lines != [
         "      - name: Checkout",
-        "        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+        "        uses: actions/checkout@<commit>",
         "        with:",
         "          fetch-depth: 2",
     ]:
@@ -1547,12 +1430,11 @@ def validate_boundaries() -> list[str]:
         except OSError as error:
             errors.append(f"unable to read {name}: {error}")
             continue
-        errors.extend(pinned_action_errors(name, action_contents))
         errors.extend(immutable_action_errors(name, action_contents))
 
-    for name in PAGES_PIPELINE_ACTION_REVISIONS:
+    for name in PAGES_PIPELINE_ACTIONS:
         if name in contents:
-            errors.extend(required_action_revision_errors(name, contents[name]))
+            errors.extend(required_action_errors(name, contents[name]))
 
     if errors:
         return errors
@@ -1561,7 +1443,7 @@ def validate_boundaries() -> list[str]:
     cpp = contents["ci-cpp.yml"]
     wasm = contents["ci-wasm.yml"]
     python = contents["ci-python.yml"]
-    python_release = contents["python-release.yml"]
+    python_release = normalize_action_references(contents["python-release.yml"])
     desktop_candidate = contents["desktop-release-candidate.yml"]
     release_candidate = contents["release-candidate.yml"]
     release = contents["release.yml"]
@@ -1896,7 +1778,7 @@ def validate_boundaries() -> list[str]:
         "name: Publish to TestPyPI",
         "name: Publish to PyPI",
         "environment:\n      name: ${{ matrix.environment_name }}",
-        "uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1",
+        "uses: pypa/gh-action-pypi-publish@<commit>",
         "name: fluentqt-python-release-bundle",
         "name: fluentqt-python-core-publish-candidate",
         "name: fluentqt-python-gallery-publish-candidate",

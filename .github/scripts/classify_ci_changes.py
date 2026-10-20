@@ -97,6 +97,7 @@ WASM_ROOT_FILES = {
 }
 
 WASM_CI_FILES = {
+    ".github/scripts/ci_action_policy.py",
     ".github/scripts/classify_ci_changes.py",
     ".github/scripts/run-wasm-browser-smoke.py",
     ".github/scripts/run-wasm-plugin-smoke.py",
@@ -105,7 +106,9 @@ WASM_CI_FILES = {
     ".github/scripts/run-wasm-spatial-smoke.py",
     ".github/scripts/test_wasm_browser_smoke.py",
     ".github/scripts/test_wasm_spatial_smoke.py",
+    ".github/scripts/wasm_command_palette.py",
     ".github/scripts/wasm_command_submenus.py",
+    ".github/scripts/wasm_form.py",
     ".github/scripts/wasm_plugin_contract.py",
     ".github/scripts/stage-wasm-pages.py",
     ".github/scripts/test_classify_ci_changes.py",
