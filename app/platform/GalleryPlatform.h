@@ -69,8 +69,7 @@ struct Capabilities {
  * zh_CN: 此 Gallery 适配器不执行传输；浏览器内容在报告元数据后释放，context
  * 销毁后不再发送回调。
  */
-void chooseFiles(QWidget* context, const QString& filter,
-                 std::function<void(const QString&, qint64)> selected);
+void chooseFiles(QWidget* context, const QString& filter, std::function<void(const QString&, qint64)> selected);
 
 /**
  * @brief Copies text and reports the host clipboard result while context lives.

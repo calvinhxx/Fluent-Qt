@@ -43,8 +43,7 @@ using samples::verticalGroup;
 
 class DialogsFlyoutsSampleSurface : public QWidget, public fluent::FluentElement {
 public:
-    explicit DialogsFlyoutsSampleSurface(QWidget* parent = nullptr, int spacing = 12)
-        : QWidget(parent)
+    explicit DialogsFlyoutsSampleSurface(QWidget* parent = nullptr, int spacing = 12) : QWidget(parent)
     {
         setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
         auto* layout = new QVBoxLayout(this);
@@ -60,8 +59,7 @@ protected:
         painter.setRenderHint(QPainter::Antialiasing);
         painter.setPen(themeColors().strokeCard);
         painter.setBrush(themeColors().bgCanvas);
-        painter.drawRoundedRect(rect().adjusted(0, 0, -1, -1), themeRadius().overlay,
-                                themeRadius().overlay);
+        painter.drawRoundedRect(rect().adjusted(0, 0, -1, -1), themeRadius().overlay, themeRadius().overlay);
     }
 };
 
@@ -97,8 +95,7 @@ Label* makeTitleLabel(QWidget* parent, const QString& text)
 {
     auto* label = new Label(text, parent);
     label->setFluentTypography(Typography::FontRole::BodyStrong);
-    label->setTextColorRole(
-        Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
+    label->setTextColorRole(Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
     return label;
 }
 
@@ -212,8 +209,7 @@ void addDialogButtons(QVBoxLayout* layout, Dialog* dialog, Label* status)
     layout->addLayout(buttonRow);
 
     QObject::connect(dialog, &QDialog::finished, status, [status](int result) {
-        status->setText(result == 1 ? QStringLiteral("Dialog result: Apply")
-                                    : QStringLiteral("Dialog result: Cancel"));
+        status->setText(result == 1 ? QStringLiteral("Dialog result: Apply") : QStringLiteral("Dialog result: Cancel"));
     });
 }
 
@@ -231,8 +227,7 @@ void populateFlyout(Flyout* flyout, const QString& title, const QString& body)
     layout->addWidget(closeButton, 0, Qt::AlignRight);
 }
 
-void populateTeachingTip(TeachingTip* tip, const QString& titleText, const QString& bodyText,
-                         Label* status)
+void populateTeachingTip(TeachingTip* tip, const QString& titleText, const QString& bodyText, Label* status)
 {
     auto* host = tip->contentHost();
     host->setObjectName(QStringLiteral("teachingTipContentHost"));
@@ -252,8 +247,7 @@ void populateTeachingTip(TeachingTip* tip, const QString& titleText, const QStri
     closeButton->setFluentStyle(Button::Subtle);
     closeButton->setIconGlyph(Typography::Icons::ChromeClose, Typography::IconSize::Standard);
     closeButton->setFixedSize(30, 30);
-    QObject::connect(closeButton, &Button::clicked, tip,
-                     [tip]() { tip->closeWithReason(TeachingTip::CloseButton); });
+    QObject::connect(closeButton, &Button::clicked, tip, [tip]() { tip->closeWithReason(TeachingTip::CloseButton); });
     titleRow->addWidget(closeButton);
     layout->addLayout(titleRow);
 
@@ -262,8 +256,7 @@ void populateTeachingTip(TeachingTip* tip, const QString& titleText, const QStri
 
     auto* actionButton = sampleButton(host, QStringLiteral("Got it"));
     actionButton->setFluentStyle(Button::Accent);
-    QObject::connect(actionButton, &Button::clicked, tip,
-                     [tip]() { tip->closeWithReason(TeachingTip::ActionButton); });
+    QObject::connect(actionButton, &Button::clicked, tip, [tip]() { tip->closeWithReason(TeachingTip::ActionButton); });
     layout->addWidget(actionButton, 0, Qt::AlignRight);
 
     QObject::connect(tip, &TeachingTip::closing, status, [status](TeachingTip::CloseReason reason) {
@@ -274,22 +267,22 @@ void populateTeachingTip(TeachingTip* tip, const QString& titleText, const QStri
 QVector<GallerySample> contentDialogSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("content-dialog-result-buttons"),
+        makeSample(QStringLiteral("content-dialog-result-buttons"),
             QStringLiteral("Result buttons and default command"),
             QStringLiteral("Primary, secondary, and close buttons update app state while "
                            "the primary command is the default action."),
-            QStringLiteral("auto* dialog = new ContentDialog(window());\n"
-                           "dialog->setTitle(\"Save your work?\");\n"
-                           "dialog->setPrimaryButtonText(\"Save\");\n"
-                           "dialog->setSecondaryButtonText(\"Don't save\");\n"
-                           "dialog->setCloseButtonText(\"Cancel\");\n"
-                           "dialog->setDefaultButton(ContentDialog::Primary);\n"
-                           "connect(dialog, &ContentDialog::primaryButtonClicked, status,\n"
-                           "        [status] { status->setText(\"Result: Save\"); });\n"
-                           "connect(dialog, &QDialog::finished, dialog,\n"
-                           "        &QObject::deleteLater);\n"
-                           "dialog->open();"),
+            QStringLiteral(
+                "auto* dialog = new ContentDialog(window());\n"
+                "dialog->setTitle(\"Save your work?\");\n"
+                "dialog->setPrimaryButtonText(\"Save\");\n"
+                "dialog->setSecondaryButtonText(\"Don't save\");\n"
+                "dialog->setCloseButtonText(\"Cancel\");\n"
+                "dialog->setDefaultButton(ContentDialog::Primary);\n"
+                "connect(dialog, &ContentDialog::primaryButtonClicked, status,\n"
+                "        [status] { status->setText(\"Result: Save\"); });\n"
+                "connect(dialog, &QDialog::finished, dialog,\n"
+                "        &QObject::deleteLater);\n"
+                "dialog->open();"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
                 auto* row = horizontalGroup(surface, 12);
@@ -300,28 +293,28 @@ QVector<GallerySample> contentDialogSamples()
                 QObject::connect(button, &Button::clicked, button, [button, status]() {
                     auto* dialog = themedDialog(new ContentDialog(button->window()), button);
                     dialog->setTitle(QStringLiteral("Save your work?"));
-                    dialog->setContent(makeBodyLabel(
-                        nullptr, QStringLiteral("Unsaved changes in \"Quarterly report\" "
-                                                "will be lost unless you save them.")));
+                    dialog->setContent(makeBodyLabel(nullptr,
+                        QStringLiteral(
+                            "Unsaved changes in \"Quarterly report\" "
+                            "will be lost unless you save them.")));
                     dialog->setPrimaryButtonText(QStringLiteral("Save"));
                     dialog->setSecondaryButtonText(QStringLiteral("Don't save"));
                     dialog->setCloseButtonText(QStringLiteral("Cancel"));
                     dialog->setDefaultButton(ContentDialog::Primary);
 
-                    QObject::connect(
-                        dialog, &ContentDialog::primaryButtonClicked, status,
-                        [status]() { status->setText(QStringLiteral("Result: Save")); });
-                    QObject::connect(
-                        dialog, &ContentDialog::secondaryButtonClicked, status,
-                        [status]() { status->setText(QStringLiteral("Result: Don't save")); });
-                    QObject::connect(
-                        dialog, &ContentDialog::closeButtonClicked, status,
-                        [status]() { status->setText(QStringLiteral("Result: Cancel")); });
+                    QObject::connect(dialog, &ContentDialog::primaryButtonClicked, status, [status]() {
+                        status->setText(QStringLiteral("Result: Save"));
+                    });
+                    QObject::connect(dialog, &ContentDialog::secondaryButtonClicked, status, [status]() {
+                        status->setText(QStringLiteral("Result: Don't save"));
+                    });
+                    QObject::connect(dialog, &ContentDialog::closeButtonClicked, status, [status]() {
+                        status->setText(QStringLiteral("Result: Cancel"));
+                    });
 
                     QObject::connect(dialog, &QDialog::finished, status, [status](int result) {
                         if (status->text() == QStringLiteral("Result: not shown")) {
-                            status->setText(
-                                QStringLiteral("Result: %1").arg(contentDialogResultText(result)));
+                            status->setText(QStringLiteral("Result: %1").arg(contentDialogResultText(result)));
                         }
                     });
                     QObject::connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);
@@ -333,22 +326,22 @@ QVector<GallerySample> contentDialogSamples()
                 boxLayout(surface)->addWidget(row);
                 return surface;
             }),
-        makeSample(
-            QStringLiteral("content-dialog-custom-content"),
+        makeSample(QStringLiteral("content-dialog-custom-content"),
             QStringLiteral("Custom content and command visibility"),
             QStringLiteral("Only non-empty command text is shown, so the same "
                            "dialog can host lightweight confirmation content."),
-            QStringLiteral("auto* dialog = new ContentDialog(window());\n"
-                           "dialog->setTitle(\"Share draft?\");\n"
-                           "dialog->setContent(customContent);\n"
-                           "dialog->setPrimaryButtonText(\"Share\");\n"
-                           "dialog->setCloseButtonText(\"Not now\");\n"
-                           "dialog->setDefaultButton(ContentDialog::None);\n"
-                           "connect(dialog, &ContentDialog::primaryButtonClicked, status,\n"
-                           "        [status] { status->setText(\"Draft shared\"); });\n"
-                           "connect(dialog, &QDialog::finished, dialog,\n"
-                           "        &QObject::deleteLater);\n"
-                           "dialog->open();"),
+            QStringLiteral(
+                "auto* dialog = new ContentDialog(window());\n"
+                "dialog->setTitle(\"Share draft?\");\n"
+                "dialog->setContent(customContent);\n"
+                "dialog->setPrimaryButtonText(\"Share\");\n"
+                "dialog->setCloseButtonText(\"Not now\");\n"
+                "dialog->setDefaultButton(ContentDialog::None);\n"
+                "connect(dialog, &ContentDialog::primaryButtonClicked, status,\n"
+                "        [status] { status->setText(\"Draft shared\"); });\n"
+                "connect(dialog, &QDialog::finished, dialog,\n"
+                "        &QObject::deleteLater);\n"
+                "dialog->open();"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
                 auto* row = horizontalGroup(surface, 12);
@@ -359,11 +352,11 @@ QVector<GallerySample> contentDialogSamples()
                 QObject::connect(button, &Button::clicked, button, [button, status]() {
                     auto* content = verticalGroup(nullptr, 8);
                     content->setMinimumWidth(360);
-                    auto* body = makeBodyLabel(
-                        content, QStringLiteral("Invite reviewers and include the latest "
-                                                "attachments with this draft."));
-                    auto* upload =
-                        new CheckBox(QStringLiteral("Upload attachments before sharing"), content);
+                    auto* body = makeBodyLabel(content,
+                        QStringLiteral(
+                            "Invite reviewers and include the latest "
+                            "attachments with this draft."));
+                    auto* upload = new CheckBox(QStringLiteral("Upload attachments before sharing"), content);
                     upload->setChecked(true);
                     boxLayout(content)->addWidget(body);
                     boxLayout(content)->addWidget(upload);
@@ -375,16 +368,14 @@ QVector<GallerySample> contentDialogSamples()
                     dialog->setCloseButtonText(QStringLiteral("Not now"));
                     dialog->setDefaultButton(ContentDialog::None);
 
-                    QObject::connect(
-                        dialog, &ContentDialog::primaryButtonClicked, status, [status, upload]() {
-                            status->setText(
-                                upload->isChecked()
-                                    ? QStringLiteral("Draft shared with attachments")
-                                    : QStringLiteral("Draft shared without attachments"));
-                        });
-                    QObject::connect(
-                        dialog, &ContentDialog::closeButtonClicked, status,
-                        [status]() { status->setText(QStringLiteral("Draft state: private")); });
+                    QObject::connect(dialog, &ContentDialog::primaryButtonClicked, status, [status, upload]() {
+                        status->setText(upload->isChecked()
+                                ? QStringLiteral("Draft shared with attachments")
+                                : QStringLiteral("Draft shared without attachments"));
+                    });
+                    QObject::connect(dialog, &ContentDialog::closeButtonClicked, status, [status]() {
+                        status->setText(QStringLiteral("Draft state: private"));
+                    });
 
                     QObject::connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);
                     dialog->open();
@@ -400,29 +391,28 @@ QVector<GallerySample> contentDialogSamples()
 QVector<GallerySample> dialogSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("dialog-owned-content"), QStringLiteral("Caller-owned modal content"),
+        makeSample(QStringLiteral("dialog-owned-content"), QStringLiteral("Caller-owned modal content"),
             QStringLiteral("Dialog supplies the modal chrome and smoke layer; "
                            "the app owns layout, fields, and result handling."),
-            QStringLiteral("auto* dialog = new Dialog(window());\n"
-                           "dialog->setMinimumSize(480, 280);\n"
-                           "auto* layout = new QVBoxLayout(dialog);\n"
-                           "layout->addWidget(titleLabel);\n"
-                           "layout->addWidget(nameEdit);\n"
-                           "layout->addStretch(1);\n"
-                           "layout->addLayout(commandRow);\n"
-                           "connect(applyButton, &Button::clicked, dialog,\n"
-                           "        [dialog] { dialog->done(1); });\n"
-                           "connect(dialog, &QDialog::finished, dialog,\n"
-                           "        &QObject::deleteLater);\n"
-                           "dialog->open();"),
+            QStringLiteral(
+                "auto* dialog = new Dialog(window());\n"
+                "dialog->setMinimumSize(480, 280);\n"
+                "auto* layout = new QVBoxLayout(dialog);\n"
+                "layout->addWidget(titleLabel);\n"
+                "layout->addWidget(nameEdit);\n"
+                "layout->addStretch(1);\n"
+                "layout->addLayout(commandRow);\n"
+                "connect(applyButton, &Button::clicked, dialog,\n"
+                "        [dialog] { dialog->done(1); });\n"
+                "connect(dialog, &QDialog::finished, dialog,\n"
+                "        &QObject::deleteLater);\n"
+                "dialog->open();"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
                 auto* row = horizontalGroup(surface, 12);
                 auto* button = sampleButton(row, QStringLiteral("Open dialog"));
                 button->setMinimumWidth(118);
-                auto* status =
-                    makeStatusLabel(row, QStringLiteral("Project name: Northwind Analytics"));
+                auto* status = makeStatusLabel(row, QStringLiteral("Project name: Northwind Analytics"));
 
                 QObject::connect(button, &Button::clicked, button, [button, status]() {
                     auto* dialog = themedDialog(new Dialog(button->window()), button);
@@ -432,9 +422,10 @@ QVector<GallerySample> dialogSamples()
                     layout->setSpacing(14);
 
                     layout->addWidget(makeTitleLabel(dialog, QStringLiteral("Rename project")));
-                    layout->addWidget(makeBodyLabel(
-                        dialog, QStringLiteral("Choose a display name that appears in "
-                                               "navigation and recent projects.")));
+                    layout->addWidget(makeBodyLabel(dialog,
+                        QStringLiteral(
+                            "Choose a display name that appears in "
+                            "navigation and recent projects.")));
 
                     auto* nameEdit = new LineEdit(dialog);
                     nameEdit->setText(QStringLiteral("Northwind Analytics"));
@@ -442,13 +433,11 @@ QVector<GallerySample> dialogSamples()
                     layout->addStretch(1);
                     addDialogButtons(layout, dialog, status);
 
-                    QObject::connect(
-                        dialog, &QDialog::finished, status, [status, nameEdit](int result) {
-                            if (result == 1) {
-                                status->setText(
-                                    QStringLiteral("Project name: %1").arg(nameEdit->text()));
-                            }
-                        });
+                    QObject::connect(dialog, &QDialog::finished, status, [status, nameEdit](int result) {
+                        if (result == 1) {
+                            status->setText(QStringLiteral("Project name: %1").arg(nameEdit->text()));
+                        }
+                    });
                     QObject::connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);
                     dialog->open();
                 });
@@ -458,17 +447,17 @@ QVector<GallerySample> dialogSamples()
                 boxLayout(surface)->addWidget(row);
                 return surface;
             }),
-        makeSample(
-            QStringLiteral("dialog-animation-smoke"), QStringLiteral("Smoke and animation options"),
+        makeSample(QStringLiteral("dialog-animation-smoke"), QStringLiteral("Smoke and animation options"),
             QStringLiteral("Base Dialog can opt in or out of entrance animation "
                            "and window smoke depending on the workflow."),
-            QStringLiteral("auto* dialog = new Dialog(window());\n"
-                           "dialog->setSmokeEnabled(useSmoke);\n"
-                           "dialog->setAnimationEnabled(useAnimation);\n"
-                           "dialog->setMinimumSize(420, 220);\n"
-                           "connect(dialog, &QDialog::finished, dialog,\n"
-                           "        &QObject::deleteLater);\n"
-                           "dialog->open();"),
+            QStringLiteral(
+                "auto* dialog = new Dialog(window());\n"
+                "dialog->setSmokeEnabled(useSmoke);\n"
+                "dialog->setAnimationEnabled(useAnimation);\n"
+                "dialog->setMinimumSize(420, 220);\n"
+                "connect(dialog, &QDialog::finished, dialog,\n"
+                "        &QObject::deleteLater);\n"
+                "dialog->open();"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
                 auto* row = horizontalGroup(surface, 10);
@@ -485,32 +474,32 @@ QVector<GallerySample> dialogSamples()
                     auto* layout = new QVBoxLayout(dialog);
                     layout->setContentsMargins(30, 28, 30, 28);
                     layout->setSpacing(12);
-                    layout->addWidget(
-                        makeTitleLabel(dialog, animation ? QStringLiteral("Animated dialog")
-                                                         : QStringLiteral("Instant dialog")));
-                    layout->addWidget(makeBodyLabel(
-                        dialog, smoke ? QStringLiteral("Smoke focuses attention by "
-                                                       "dimming the owning window.")
-                                      : QStringLiteral("No smoke keeps the surrounding "
-                                                       "window visually available.")));
+                    layout->addWidget(makeTitleLabel(dialog,
+                        animation ? QStringLiteral("Animated dialog") : QStringLiteral("Instant dialog")));
+                    layout->addWidget(makeBodyLabel(dialog,
+                        smoke ? QStringLiteral("Smoke focuses attention by "
+                                               "dimming the owning window.")
+                              : QStringLiteral("No smoke keeps the surrounding "
+                                               "window visually available.")));
                     layout->addStretch(1);
                     auto* closeButton = sampleButton(dialog, QStringLiteral("Close"));
-                    QObject::connect(closeButton, &Button::clicked, dialog,
-                                     [dialog]() { dialog->done(0); });
+                    QObject::connect(closeButton, &Button::clicked, dialog, [dialog]() { dialog->done(0); });
                     layout->addWidget(closeButton, 0, Qt::AlignRight);
                     QObject::connect(dialog, &QDialog::finished, status, [status, animation](int) {
                         status->setText(animation
-                                            ? QStringLiteral("Last dialog: animated with smoke")
-                                            : QStringLiteral("Last dialog: instant without smoke"));
+                                ? QStringLiteral("Last dialog: animated with smoke")
+                                : QStringLiteral("Last dialog: instant without smoke"));
                     });
                     QObject::connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);
                     dialog->open();
                 };
 
-                QObject::connect(animated, &Button::clicked, animated,
-                                 [animated, openDialog]() { openDialog(animated, true, true); });
-                QObject::connect(instant, &Button::clicked, instant,
-                                 [instant, openDialog]() { openDialog(instant, false, false); });
+                QObject::connect(animated, &Button::clicked, animated, [animated, openDialog]() {
+                    openDialog(animated, true, true);
+                });
+                QObject::connect(instant, &Button::clicked, instant, [instant, openDialog]() {
+                    openDialog(instant, false, false);
+                });
 
                 boxLayout(row)->addWidget(animated);
                 boxLayout(row)->addWidget(instant);
@@ -523,16 +512,16 @@ QVector<GallerySample> dialogSamples()
 QVector<GallerySample> flyoutSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("flyout-placement-anchors"), QStringLiteral("Anchored placement"),
+        makeSample(QStringLiteral("flyout-placement-anchors"), QStringLiteral("Anchored placement"),
             QStringLiteral("Flyout positions itself around an anchor and can "
                            "fall back automatically near edges."),
-            QStringLiteral("auto* flyout = new Flyout(window());\n"
-                           "flyout->setPlacement(Flyout::Right);\n"
-                           "populateFlyout(flyout);\n"
-                           "connect(flyout, &Popup::closed, flyout, "
-                           "&QObject::deleteLater);\n"
-                           "flyout->showAt(anchorButton);"),
+            QStringLiteral(
+                "auto* flyout = new Flyout(window());\n"
+                "flyout->setPlacement(Flyout::Right);\n"
+                "populateFlyout(flyout);\n"
+                "connect(flyout, &Popup::closed, flyout, "
+                "&QObject::deleteLater);\n"
+                "flyout->showAt(anchorButton);"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
                 auto* row = horizontalGroup(surface, 8);
@@ -544,14 +533,13 @@ QVector<GallerySample> flyoutSamples()
                 auto showPlacement = [status](Button* anchor, Flyout::Placement placement) {
                     auto* flyout = new Flyout(anchor->window());
                     flyout->setPlacement(placement);
-                    populateFlyout(flyout,
-                                   QStringLiteral("%1 flyout").arg(flyoutPlacementText(placement)),
-                                   QStringLiteral("Click outside, press Escape, or use Close to "
-                                                  "dismiss this anchored surface."));
+                    populateFlyout(flyout, QStringLiteral("%1 flyout").arg(flyoutPlacementText(placement)),
+                        QStringLiteral(
+                            "Click outside, press Escape, or use Close to "
+                            "dismiss this anchored surface."));
                     QObject::connect(flyout, &Popup::closed, flyout, &QObject::deleteLater);
                     QObject::connect(flyout, &Popup::opened, status, [status, placement]() {
-                        status->setText(QStringLiteral("Opened placement: %1")
-                                            .arg(flyoutPlacementText(placement)));
+                        status->setText(QStringLiteral("Opened placement: %1").arg(flyoutPlacementText(placement)));
                     });
                     flyout->showAt(anchor);
                 };
@@ -559,11 +547,12 @@ QVector<GallerySample> flyoutSamples()
                 QObject::connect(bottom, &Button::clicked, bottom, [bottom, showPlacement]() {
                     showPlacement(bottom, Flyout::Bottom);
                 });
-                QObject::connect(right, &Button::clicked, right,
-                                 [right, showPlacement]() { showPlacement(right, Flyout::Right); });
-                QObject::connect(
-                    automatic, &Button::clicked, automatic,
-                    [automatic, showPlacement]() { showPlacement(automatic, Flyout::Auto); });
+                QObject::connect(right, &Button::clicked, right, [right, showPlacement]() {
+                    showPlacement(right, Flyout::Right);
+                });
+                QObject::connect(automatic, &Button::clicked, automatic, [automatic, showPlacement]() {
+                    showPlacement(automatic, Flyout::Auto);
+                });
 
                 boxLayout(row)->addWidget(bottom);
                 boxLayout(row)->addWidget(right);
@@ -572,16 +561,16 @@ QVector<GallerySample> flyoutSamples()
                 boxLayout(surface)->addWidget(status);
                 return surface;
             }),
-        makeSample(
-            QStringLiteral("flyout-command-confirmation"), QStringLiteral("Command confirmation"),
+        makeSample(QStringLiteral("flyout-command-confirmation"), QStringLiteral("Command confirmation"),
             QStringLiteral("Use a Flyout for contextual confirmation that should "
                            "stay visually attached to its command source."),
-            QStringLiteral("auto* flyout = new Flyout(window());\n"
-                           "flyout->setPlacement(Flyout::Right);\n"
-                           "auto* confirm = new Button(\"Empty cart\", flyout);\n"
-                           "connect(confirm, &Button::clicked, flyout, [flyout] "
-                           "{ flyout->close(); });\n"
-                           "flyout->showAt(commandButton);"),
+            QStringLiteral(
+                "auto* flyout = new Flyout(window());\n"
+                "flyout->setPlacement(Flyout::Right);\n"
+                "auto* confirm = new Button(\"Empty cart\", flyout);\n"
+                "connect(confirm, &Button::clicked, flyout, [flyout] "
+                "{ flyout->close(); });\n"
+                "flyout->showAt(commandButton);"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
                 auto* row = horizontalGroup(surface, 12);
@@ -597,9 +586,10 @@ QVector<GallerySample> flyoutSamples()
                     layout->setContentsMargins(24, 22, 24, 22);
                     layout->setSpacing(10);
                     layout->addWidget(makeTitleLabel(flyout, QStringLiteral("Empty cart?")));
-                    layout->addWidget(makeBodyLabel(
-                        flyout, QStringLiteral("All selected items will be removed from the cart. "
-                                               "You can restore them from order history later.")));
+                    layout->addWidget(makeBodyLabel(flyout,
+                        QStringLiteral(
+                            "All selected items will be removed from the cart. "
+                            "You can restore them from order history later.")));
                     layout->addStretch(1);
                     auto* commandRow = horizontalGroup(flyout, 8);
                     auto* confirm = sampleButton(commandRow, QStringLiteral("Empty"));
@@ -609,8 +599,7 @@ QVector<GallerySample> flyoutSamples()
                         status->setText(QStringLiteral("Cart: emptied"));
                         flyout->close();
                     });
-                    QObject::connect(cancel, &Button::clicked, flyout,
-                                     [flyout]() { flyout->close(); });
+                    QObject::connect(cancel, &Button::clicked, flyout, [flyout]() { flyout->close(); });
                     boxLayout(commandRow)->addWidget(confirm);
                     boxLayout(commandRow)->addWidget(cancel);
                     layout->addWidget(commandRow, 0, Qt::AlignRight);
@@ -628,19 +617,19 @@ QVector<GallerySample> flyoutSamples()
 QVector<GallerySample> popupSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("popup-position-light-dismiss"),
+        makeSample(QStringLiteral("popup-position-light-dismiss"),
             QStringLiteral("Offset positioning and close policy"),
             QStringLiteral("Popup can be placed relative to a widget; close "
                            "policy controls whether outside clicks dismiss it."),
-            QStringLiteral("auto* popup = new Popup(window());\n"
-                           "popup->setClosePolicy(lightDismiss\n"
-                           "    ? Popup::ClosePolicy(Popup::CloseOnPressOutside "
-                           "| Popup::CloseOnEscape)\n"
-                           "    : Popup::ClosePolicy(Popup::NoAutoClose));\n"
-                           "popup->setPosition(anchorButton, QPoint(0, "
-                           "anchorButton->height() + 8));\n"
-                           "popup->open();"),
+            QStringLiteral(
+                "auto* popup = new Popup(window());\n"
+                "popup->setClosePolicy(lightDismiss\n"
+                "    ? Popup::ClosePolicy(Popup::CloseOnPressOutside "
+                "| Popup::CloseOnEscape)\n"
+                "    : Popup::ClosePolicy(Popup::NoAutoClose));\n"
+                "popup->setPosition(anchorButton, QPoint(0, "
+                "anchorButton->height() + 8));\n"
+                "popup->open();"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
                 auto* row = horizontalGroup(surface, 12);
@@ -652,43 +641,39 @@ QVector<GallerySample> popupSamples()
                 lightDismiss->setOffContent(QStringLiteral("Sticky"));
                 auto* status = makeStatusLabel(surface, QStringLiteral("Popup state: closed"));
 
-                QObject::connect(
-                    button, &Button::clicked, button, [button, lightDismiss, status]() {
-                        auto* popup = new Popup(button->window());
-                        popup->setThemeSource(button);
-                        popup->setMinimumSize(360, 186);
-                        popup->setClosePolicy(lightDismiss->isOn()
-                                                  ? Popup::ClosePolicy(Popup::CloseOnPressOutside |
-                                                                       Popup::CloseOnEscape)
-                                                  : Popup::ClosePolicy(Popup::NoAutoClose));
-                        auto* layout = new QVBoxLayout(popup);
-                        layout->setContentsMargins(24, 22, 24, 22);
-                        layout->setSpacing(10);
-                        layout->addWidget(makeTitleLabel(popup, QStringLiteral("Simple popup")));
-                        layout->addWidget(makeBodyLabel(
-                            popup, lightDismiss->isOn()
-                                       ? QStringLiteral("Click outside or press Escape to "
-                                                        "close this popup.")
-                                       : QStringLiteral("This sticky popup closes only from "
-                                                        "its own command.")));
-                        layout->addStretch(1);
-                        auto* closeButton = sampleButton(popup, QStringLiteral("Close"));
-                        QObject::connect(closeButton, &Button::clicked, popup,
-                                         [popup]() { popup->close(); });
-                        layout->addWidget(closeButton, 0, Qt::AlignRight);
-                        popup->setPosition(button, QPoint(0, button->height() + 8));
-                        QObject::connect(popup, &Popup::opened, status, [status, lightDismiss]() {
-                            status->setText(
-                                lightDismiss->isOn()
-                                    ? QStringLiteral("Popup state: open, light dismiss on")
-                                    : QStringLiteral("Popup state: open, sticky"));
-                        });
-                        QObject::connect(popup, &Popup::closed, status, [status]() {
-                            status->setText(QStringLiteral("Popup state: closed"));
-                        });
-                        QObject::connect(popup, &Popup::closed, popup, &QObject::deleteLater);
-                        popup->open();
+                QObject::connect(button, &Button::clicked, button, [button, lightDismiss, status]() {
+                    auto* popup = new Popup(button->window());
+                    popup->setThemeSource(button);
+                    popup->setMinimumSize(360, 186);
+                    popup->setClosePolicy(lightDismiss->isOn()
+                            ? Popup::ClosePolicy(Popup::CloseOnPressOutside | Popup::CloseOnEscape)
+                            : Popup::ClosePolicy(Popup::NoAutoClose));
+                    auto* layout = new QVBoxLayout(popup);
+                    layout->setContentsMargins(24, 22, 24, 22);
+                    layout->setSpacing(10);
+                    layout->addWidget(makeTitleLabel(popup, QStringLiteral("Simple popup")));
+                    layout->addWidget(makeBodyLabel(popup,
+                        lightDismiss->isOn()
+                            ? QStringLiteral("Click outside or press Escape to "
+                                             "close this popup.")
+                            : QStringLiteral("This sticky popup closes only from "
+                                             "its own command.")));
+                    layout->addStretch(1);
+                    auto* closeButton = sampleButton(popup, QStringLiteral("Close"));
+                    QObject::connect(closeButton, &Button::clicked, popup, [popup]() { popup->close(); });
+                    layout->addWidget(closeButton, 0, Qt::AlignRight);
+                    popup->setPosition(button, QPoint(0, button->height() + 8));
+                    QObject::connect(popup, &Popup::opened, status, [status, lightDismiss]() {
+                        status->setText(lightDismiss->isOn()
+                                ? QStringLiteral("Popup state: open, light dismiss on")
+                                : QStringLiteral("Popup state: open, sticky"));
                     });
+                    QObject::connect(popup, &Popup::closed, status, [status]() {
+                        status->setText(QStringLiteral("Popup state: closed"));
+                    });
+                    QObject::connect(popup, &Popup::closed, popup, &QObject::deleteLater);
+                    popup->open();
+                });
 
                 boxLayout(row)->addWidget(button);
                 boxLayout(row)->addWidget(lightDismiss);
@@ -697,108 +682,105 @@ QVector<GallerySample> popupSamples()
                 return surface;
             }),
         makeSample(QStringLiteral("popup-modal-dim"), QStringLiteral("Modal dimmed popup"),
-                   QStringLiteral("A modal Popup adds a scrim and blocks background "
-                                  "input for critical transient decisions."),
-                   QStringLiteral("auto* popup = new Popup(window());\n"
-                                  "popup->setModal(true);\n"
-                                  "popup->setDim(true);\n"
-                                  "popup->setClosePolicy(Popup::CloseOnEscape);\n"
-                                  "popup->open();"),
-                   [](QWidget* parent) {
-                       auto* surface = sampleSurface(parent);
-                       auto* row = horizontalGroup(surface, 12);
-                       auto* button = sampleButton(row, QStringLiteral("Review access"));
-                       button->setMinimumWidth(128);
-                       auto* status =
-                           makeStatusLabel(row, QStringLiteral("Access review: pending"));
+            QStringLiteral("A modal Popup adds a scrim and blocks background "
+                           "input for critical transient decisions."),
+            QStringLiteral(
+                "auto* popup = new Popup(window());\n"
+                "popup->setModal(true);\n"
+                "popup->setDim(true);\n"
+                "popup->setClosePolicy(Popup::CloseOnEscape);\n"
+                "popup->open();"),
+            [](QWidget* parent) {
+                auto* surface = sampleSurface(parent);
+                auto* row = horizontalGroup(surface, 12);
+                auto* button = sampleButton(row, QStringLiteral("Review access"));
+                button->setMinimumWidth(128);
+                auto* status = makeStatusLabel(row, QStringLiteral("Access review: pending"));
 
-                       QObject::connect(button, &Button::clicked, button, [button, status]() {
-                           auto* popup = new Popup(button->window());
-                           popup->setThemeSource(button);
-                           popup->setModal(true);
-                           popup->setDim(true);
-                           popup->setClosePolicy(Popup::CloseOnEscape);
-                           popup->setMinimumSize(400, 220);
-                           auto* layout = new QVBoxLayout(popup);
-                           layout->setContentsMargins(28, 26, 28, 26);
-                           layout->setSpacing(12);
-                           layout->addWidget(
-                               makeTitleLabel(popup, QStringLiteral("Grant editor access?")));
-                           layout->addWidget(makeBodyLabel(
-                               popup, QStringLiteral("The recipient will be able to update "
-                                                     "shared project files immediately.")));
-                           layout->addStretch(1);
-                           auto* commandRow = horizontalGroup(popup, 8);
-                           auto* grant = sampleButton(commandRow, QStringLiteral("Grant"));
-                           grant->setFluentStyle(Button::Accent);
-                           auto* cancel = sampleButton(commandRow, QStringLiteral("Cancel"));
-                           QObject::connect(grant, &Button::clicked, status, [status, popup]() {
-                               status->setText(QStringLiteral("Access review: granted"));
-                               popup->close();
-                           });
-                           QObject::connect(cancel, &Button::clicked, status, [status, popup]() {
-                               status->setText(QStringLiteral("Access review: canceled"));
-                               popup->close();
-                           });
-                           boxLayout(commandRow)->addWidget(grant);
-                           boxLayout(commandRow)->addWidget(cancel);
-                           layout->addWidget(commandRow, 0, Qt::AlignRight);
-                           QObject::connect(popup, &Popup::closed, popup, &QObject::deleteLater);
-                           popup->open();
-                       });
+                QObject::connect(button, &Button::clicked, button, [button, status]() {
+                    auto* popup = new Popup(button->window());
+                    popup->setThemeSource(button);
+                    popup->setModal(true);
+                    popup->setDim(true);
+                    popup->setClosePolicy(Popup::CloseOnEscape);
+                    popup->setMinimumSize(400, 220);
+                    auto* layout = new QVBoxLayout(popup);
+                    layout->setContentsMargins(28, 26, 28, 26);
+                    layout->setSpacing(12);
+                    layout->addWidget(makeTitleLabel(popup, QStringLiteral("Grant editor access?")));
+                    layout->addWidget(makeBodyLabel(popup,
+                        QStringLiteral(
+                            "The recipient will be able to update "
+                            "shared project files immediately.")));
+                    layout->addStretch(1);
+                    auto* commandRow = horizontalGroup(popup, 8);
+                    auto* grant = sampleButton(commandRow, QStringLiteral("Grant"));
+                    grant->setFluentStyle(Button::Accent);
+                    auto* cancel = sampleButton(commandRow, QStringLiteral("Cancel"));
+                    QObject::connect(grant, &Button::clicked, status, [status, popup]() {
+                        status->setText(QStringLiteral("Access review: granted"));
+                        popup->close();
+                    });
+                    QObject::connect(cancel, &Button::clicked, status, [status, popup]() {
+                        status->setText(QStringLiteral("Access review: canceled"));
+                        popup->close();
+                    });
+                    boxLayout(commandRow)->addWidget(grant);
+                    boxLayout(commandRow)->addWidget(cancel);
+                    layout->addWidget(commandRow, 0, Qt::AlignRight);
+                    QObject::connect(popup, &Popup::closed, popup, &QObject::deleteLater);
+                    popup->open();
+                });
 
-                       boxLayout(row)->addWidget(button);
-                       boxLayout(row)->addWidget(status);
-                       boxLayout(surface)->addWidget(row);
-                       return surface;
-                   })};
+                boxLayout(row)->addWidget(button);
+                boxLayout(row)->addWidget(status);
+                boxLayout(surface)->addWidget(row);
+                return surface;
+            })};
 }
 
 QVector<GallerySample> teachingTipSamples()
 {
     return {
-        makeSample(QStringLiteral("teaching-tip-targeted-action"),
-                   QStringLiteral("Targeted tip with close reasons"),
-                   QStringLiteral("TeachingTip points at a target, can light-dismiss, "
-                                  "and reports how it was closed."),
-                   QStringLiteral("auto* tip = new TeachingTip(window());\n"
-                                  "tip->setPreferredPlacement(TeachingTip::Right);\n"
-                                  "tip->setLightDismissEnabled(true);\n"
-                                  "tip->setCardSize(QSize(320, 154));\n"
-                                  "connect(tip, &TeachingTip::closing, status,\n"
-                                  "        [status](TeachingTip::CloseReason reason) { "
-                                  "updateStatus(reason); });\n"
-                                  "tip->showAt(targetButton);"),
-                   [](QWidget* parent) {
-                       auto* surface = sampleSurface(parent);
-                       auto* row = horizontalGroup(surface, 12);
-                       auto* button = sampleButton(row, QStringLiteral("Sync settings"));
-                       button->setMinimumWidth(128);
-                       auto* status = makeStatusLabel(row, QStringLiteral("Tip state: closed"));
+        makeSample(QStringLiteral("teaching-tip-targeted-action"), QStringLiteral("Targeted tip with close reasons"),
+            QStringLiteral("TeachingTip points at a target, can light-dismiss, "
+                           "and reports how it was closed."),
+            QStringLiteral(
+                "auto* tip = new TeachingTip(window());\n"
+                "tip->setPreferredPlacement(TeachingTip::Right);\n"
+                "tip->setLightDismissEnabled(true);\n"
+                "tip->setCardSize(QSize(320, 154));\n"
+                "connect(tip, &TeachingTip::closing, status,\n"
+                "        [status](TeachingTip::CloseReason reason) { "
+                "updateStatus(reason); });\n"
+                "tip->showAt(targetButton);"),
+            [](QWidget* parent) {
+                auto* surface = sampleSurface(parent);
+                auto* row = horizontalGroup(surface, 12);
+                auto* button = sampleButton(row, QStringLiteral("Sync settings"));
+                button->setMinimumWidth(128);
+                auto* status = makeStatusLabel(row, QStringLiteral("Tip state: closed"));
 
-                       QObject::connect(button, &Button::clicked, button, [button, status]() {
-                           auto* tip = new TeachingTip(button->window());
-                           tip->setPreferredPlacement(TeachingTip::Right);
-                           tip->setLightDismissEnabled(true);
-                           tip->setCardSize(QSize(320, 154));
-                           populateTeachingTip(
-                               tip, QStringLiteral("Sync is automatic"),
-                               QStringLiteral("Changes are saved to the workspace as you edit."),
-                               status);
-                           QObject::connect(tip, &Popup::opened, status, [status]() {
-                               status->setText(QStringLiteral("Tip state: open"));
-                           });
-                           QObject::connect(tip, &Popup::closed, tip, &QObject::deleteLater);
-                           tip->showAt(button);
-                       });
+                QObject::connect(button, &Button::clicked, button, [button, status]() {
+                    auto* tip = new TeachingTip(button->window());
+                    tip->setPreferredPlacement(TeachingTip::Right);
+                    tip->setLightDismissEnabled(true);
+                    tip->setCardSize(QSize(320, 154));
+                    populateTeachingTip(tip, QStringLiteral("Sync is automatic"),
+                        QStringLiteral("Changes are saved to the workspace as you edit."), status);
+                    QObject::connect(tip, &Popup::opened, status, [status]() {
+                        status->setText(QStringLiteral("Tip state: open"));
+                    });
+                    QObject::connect(tip, &Popup::closed, tip, &QObject::deleteLater);
+                    tip->showAt(button);
+                });
 
-                       boxLayout(row)->addWidget(button);
-                       boxLayout(row)->addWidget(status);
-                       boxLayout(surface)->addWidget(row);
-                       return surface;
-                   }),
-        makeSample(
-            QStringLiteral("teaching-tip-placement-tail"), QStringLiteral("Placement and tail"),
+                boxLayout(row)->addWidget(button);
+                boxLayout(row)->addWidget(status);
+                boxLayout(surface)->addWidget(row);
+                return surface;
+            }),
+        makeSample(QStringLiteral("teaching-tip-placement-tail"), QStringLiteral("Placement and tail"),
             QStringLiteral("Preferred placement, tail visibility, and card size "
                            "are independent so tips can fit the surrounding UI."),
             QStringLiteral(
@@ -860,41 +842,37 @@ QVector<GallerySample> teachingTipSamples()
                 tail->setOffContent(QStringLiteral("No tail"));
                 auto* status = makeStatusLabel(surface, QStringLiteral("Placement: none"));
 
-                auto showTip = [tail, status](Button* anchor,
-                                              TeachingTip::PreferredPlacement placement) {
+                auto showTip = [tail, status](Button* anchor, TeachingTip::PreferredPlacement placement) {
                     auto* tip = new TeachingTip(anchor->window());
                     tip->setObjectName(QStringLiteral("teachingTipPlacementPreview"));
-                    tip->setAccessibleName(QStringLiteral("%1 placement tip")
-                                               .arg(teachingTipPlacementText(placement)));
+                    tip->setAccessibleName(QStringLiteral("%1 placement tip").arg(teachingTipPlacementText(placement)));
                     tip->setPreferredPlacement(placement);
                     tip->setTailVisible(tail->isOn());
                     tip->setLightDismissEnabled(true);
                     tip->setCardSize(QSize(300, 136));
-                    populateTeachingTip(
-                        tip,
-                        QStringLiteral("%1 placement").arg(teachingTipPlacementText(placement)),
-                        tail->isOn() ? QStringLiteral("The tail points back to the control "
-                                                      "that opened the tip.")
-                                     : QStringLiteral("Hide the tail when the surrounding "
-                                                      "layout already makes context clear."),
+                    populateTeachingTip(tip, QStringLiteral("%1 placement").arg(teachingTipPlacementText(placement)),
+                        tail->isOn()
+                            ? QStringLiteral("The tail points back to the control "
+                                             "that opened the tip.")
+                            : QStringLiteral("Hide the tail when the surrounding "
+                                             "layout already makes context clear."),
                         status);
                     QObject::connect(tip, &Popup::opened, status, [status, placement, tail]() {
-                        status->setText(
-                            QStringLiteral("Placement: %1, tail %2")
+                        status->setText(QStringLiteral("Placement: %1, tail %2")
                                 .arg(teachingTipPlacementText(placement),
-                                     tail->isOn() ? QStringLiteral("on") : QStringLiteral("off")));
+                                    tail->isOn() ? QStringLiteral("on") : QStringLiteral("off")));
                     });
                     QObject::connect(tip, &Popup::closed, tip, &QObject::deleteLater);
                     tip->showAt(anchor);
                 };
 
-                QObject::connect(top, &Button::clicked, top,
-                                 [top, showTip]() { showTip(top, TeachingTip::Top); });
+                QObject::connect(top, &Button::clicked, top, [top, showTip]() { showTip(top, TeachingTip::Top); });
                 QObject::connect(rightTop, &Button::clicked, rightTop, [rightTop, showTip]() {
                     showTip(rightTop, TeachingTip::RightTop);
                 });
-                QObject::connect(automatic, &Button::clicked, automatic,
-                                 [automatic, showTip]() { showTip(automatic, TeachingTip::Auto); });
+                QObject::connect(automatic, &Button::clicked, automatic, [automatic, showTip]() {
+                    showTip(automatic, TeachingTip::Auto);
+                });
 
                 boxLayout(controls)->addWidget(top);
                 boxLayout(controls)->addWidget(rightTop);
@@ -908,21 +886,21 @@ QVector<GallerySample> teachingTipSamples()
 
 QVector<GallerySample> coachMarkSamples()
 {
-    return {makeSample(
-        QStringLiteral("coach-mark-targeted-glide"),
-        QStringLiteral("Targeted coach mark with glide"),
-        QStringLiteral("CoachMark overlays its owning window, points a tail "
-                       "at a target, and glides to a new target when "
-                       "retargeted while open."),
-        QStringLiteral("auto* coach = new CoachMark(window());\n"
-                       "connect(this, &QObject::destroyed, coach, &QObject::deleteLater);\n"
-                       "coach->setCardSize(QSize(320, 150));\n"
-                       "coach->setPlacement(CoachMark::Bottom);\n"
-                       "coach->setTarget(targetButton);  // glides if already open\n"
-                       "closeButton->setAccessibleName(\"Close\");\n"
-                       "connect(closeButton, &Button::clicked, coach, "
-                       "&CoachMark::close);\n"
-                       "coach->open();"),
+    return {makeSample(QStringLiteral("coach-mark-targeted-glide"), QStringLiteral("Targeted coach mark with glide"),
+        QStringLiteral(
+            "CoachMark overlays its owning window, points a tail "
+            "at a target, and glides to a new target when "
+            "retargeted while open."),
+        QStringLiteral(
+            "auto* coach = new CoachMark(window());\n"
+            "connect(this, &QObject::destroyed, coach, &QObject::deleteLater);\n"
+            "coach->setCardSize(QSize(320, 150));\n"
+            "coach->setPlacement(CoachMark::Bottom);\n"
+            "coach->setTarget(targetButton);  // glides if already open\n"
+            "closeButton->setAccessibleName(\"Close\");\n"
+            "connect(closeButton, &Button::clicked, coach, "
+            "&CoachMark::close);\n"
+            "coach->open();"),
         [](QWidget* parent) {
             auto* surface = sampleSurface(parent);
             auto* row = horizontalGroup(surface, 8);
@@ -941,8 +919,7 @@ QVector<GallerySample> coachMarkSamples()
             auto coachRef = std::make_shared<QPointer<CoachMark>>();
             auto titleRef = std::make_shared<QPointer<Label>>();
 
-            auto showCoach = [coachRef, titleRef, surface, status](Button* target,
-                                                                   CoachMark::Placement placement) {
+            auto showCoach = [coachRef, titleRef, surface, status](Button* target, CoachMark::Placement placement) {
                 if (!*coachRef) {
                     auto* coach = new CoachMark(target->window());
                     QObject::connect(surface, &QObject::destroyed, coach, &QObject::deleteLater);
@@ -963,18 +940,17 @@ QVector<GallerySample> coachMarkSamples()
                     closeButton->setAccessibleName(QStringLiteral("Close"));
                     closeButton->setFluentLayout(Button::IconOnly);
                     closeButton->setFluentStyle(Button::Subtle);
-                    closeButton->setIconGlyph(Typography::Icons::ChromeClose,
-                                              Typography::IconSize::Standard);
+                    closeButton->setIconGlyph(Typography::Icons::ChromeClose, Typography::IconSize::Standard);
                     closeButton->setFixedSize(30, 30);
-                    QObject::connect(closeButton, &Button::clicked, coach,
-                                     [coach]() { coach->close(); });
+                    QObject::connect(closeButton, &Button::clicked, coach, [coach]() { coach->close(); });
                     titleRow->addWidget(closeButton);
                     layout->addLayout(titleRow);
 
-                    layout->addWidget(makeBodyLabel(
-                        host, QStringLiteral("The tail points back at the control that opened "
-                                             "this coach mark. Pick another placement to watch "
-                                             "it glide.")));
+                    layout->addWidget(makeBodyLabel(host,
+                        QStringLiteral(
+                            "The tail points back at the control that opened "
+                            "this coach mark. Pick another placement to watch "
+                            "it glide.")));
                     layout->addStretch(1);
 
                     auto* gotIt = sampleButton(host, QStringLiteral("Got it"));
@@ -999,12 +975,13 @@ QVector<GallerySample> coachMarkSamples()
                 status->setText(QStringLiteral("Coach mark: %1").arg(placementText));
             };
 
-            QObject::connect(bottom, &Button::clicked, bottom,
-                             [bottom, showCoach]() { showCoach(bottom, CoachMark::Bottom); });
-            QObject::connect(right, &Button::clicked, right,
-                             [right, showCoach]() { showCoach(right, CoachMark::Right); });
-            QObject::connect(top, &Button::clicked, top,
-                             [top, showCoach]() { showCoach(top, CoachMark::Top); });
+            QObject::connect(bottom, &Button::clicked, bottom, [bottom, showCoach]() {
+                showCoach(bottom, CoachMark::Bottom);
+            });
+            QObject::connect(right, &Button::clicked, right, [right, showCoach]() {
+                showCoach(right, CoachMark::Right);
+            });
+            QObject::connect(top, &Button::clicked, top, [top, showCoach]() { showCoach(top, CoachMark::Top); });
 
             boxLayout(row)->addWidget(bottom);
             boxLayout(row)->addWidget(right);
