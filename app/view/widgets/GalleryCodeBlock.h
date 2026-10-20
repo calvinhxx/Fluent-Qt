@@ -38,8 +38,7 @@ public:
     QString code() const;
     void setCppCode(const QString& code);
     void setCppExcerpt(const QString& code);
-    void setSourceFiles(const QVector<GallerySourceFile>& cppFiles,
-                        const QVector<GallerySourceFile>& pythonFiles = {});
+    void setSourceFiles(const QVector<GallerySourceFile>& cppFiles, const QVector<GallerySourceFile>& pythonFiles = {});
     QString sourceLanguage() const;
     QVector<GallerySourceFile> sourceFileBundle() const { return sourceFiles(); }
     QString cppCode() const { return m_cppCode; }

@@ -165,18 +165,19 @@ public:
     explicit StateGroup(QObject* parent = nullptr);
     ~StateGroup() override;
 
-    bool addStateChange(const QString& name, QObject* target, const QString& propertyName,
-                        const QVariant& value);
+    bool addStateChange(const QString& name, QObject* target, const QString& propertyName, const QVariant& value);
     void clearStateDefinition(const QString& name);
     bool hasState(const QString& name) const;
     void setState(const QString& name);
     QString state() const;
 
-    bool configureState(const QString& name, const QString& base, QObject* condition,
-                        const QList<QObject*>& sources, const QStringList& properties);
+    bool configureState(const QString& name,
+        const QString& base,
+        QObject* condition,
+        const QList<QObject*>& sources,
+        const QStringList& properties);
     bool addStateAnchorChange(const QString& name, QWidget* target, const AnchorSpec& anchors);
-    void addStateTransition(const QString& from, const QString& to, const QStringList& properties,
-                            int duration);
+    void addStateTransition(const QString& from, const QString& to, const QStringList& properties, int duration);
     QObject* stateObserver();
     void evaluateStateConditions();
 
@@ -230,13 +231,22 @@ void setFontScale(qreal scale);
 qreal fontScale();
 QVariantMap themeTokensForWidgetForBinding(const QWidget* widget);
 void refreshWidgetThemeForBinding(QWidget* widget);
-QVariantMap inspectWidgetForBinding(QWidget* widget, int minimumHitWidth, int minimumHitHeight,
-                                    int spacingGrid, bool checkClippedText,
-                                    bool checkAccessibilityNames, bool checkHitAreas,
-                                    bool checkFocusOrder, bool checkDuplicateActions,
-                                    bool checkNestedScrolling, bool checkLayoutGrid);
-bool bindProperties(QObject* source, const QString& sourceProperty, QObject* target,
-                    const QString& targetProperty, fluent::binding::BindingMode mode);
+QVariantMap inspectWidgetForBinding(QWidget* widget,
+    int minimumHitWidth,
+    int minimumHitHeight,
+    int spacingGrid,
+    bool checkClippedText,
+    bool checkAccessibilityNames,
+    bool checkHitAreas,
+    bool checkFocusOrder,
+    bool checkDuplicateActions,
+    bool checkNestedScrolling,
+    bool checkLayoutGrid);
+bool bindProperties(QObject* source,
+    const QString& sourceProperty,
+    QObject* target,
+    const QString& targetProperty,
+    fluent::binding::BindingMode mode);
 
 /** @brief Checks affinity without exposing a process-lifetime QThread wrapper.
  * zh_CN: 检查线程亲和性，不暴露进程生命周期的 QThread 包装对象。
@@ -246,75 +256,73 @@ bool objectHasCurrentThreadAffinityForBinding(const QObject* object);
 /** @brief Returns a handle over the shared native property binding runtime.
  * zh_CN: 返回共享原生属性绑定运行时的句柄。
  */
-fluent::BindingHandle bindManagedProperties(QObject* source, const QString& sourceProperty,
-                                            QObject* target, const QString& targetProperty,
-                                            fluent::binding::BindingMode mode, bool deferred);
+fluent::BindingHandle bindManagedProperties(QObject* source,
+    const QString& sourceProperty,
+    QObject* target,
+    const QString& targetProperty,
+    fluent::binding::BindingMode mode,
+    bool deferred);
 /** @brief Observes explicit inputs and reads a borrowed QObject expression property.
  * zh_CN: 观察显式输入，并读取借用的 QObject 表达式属性。
  */
-fluent::BindingHandle bindComputedProperties(QObject* target, const QString& targetProperty,
-                                             QObject* expression, const QList<QObject*>& sources,
-                                             const QStringList& properties, bool deferred);
+fluent::BindingHandle bindComputedProperties(QObject* target,
+    const QString& targetProperty,
+    QObject* expression,
+    const QList<QObject*>& sources,
+    const QStringList& properties,
+    bool deferred);
 /** @brief Configures native QMLPlus Behavior on a Fluent widget.
  * zh_CN: 为 Fluent 控件配置原生 QMLPlus Behavior。
  */
 bool setPropertyBehavior(QObject* target, const QString& property, int duration);
 fluent::binding::SelectionMode flowViewSelectionMode(const fluent::collections::FlowView* view);
-void setFlowViewSelectionMode(fluent::collections::FlowView* view,
-                              fluent::binding::SelectionMode mode);
-fluent::scrolling::ScrollBar*
-flowViewVerticalFluentScrollBar(const fluent::collections::FlowView* view);
+void setFlowViewSelectionMode(fluent::collections::FlowView* view, fluent::binding::SelectionMode mode);
+fluent::scrolling::ScrollBar* flowViewVerticalFluentScrollBar(const fluent::collections::FlowView* view);
 fluent::binding::SelectionMode dataGridSelectionMode(const fluent::collections::DataGrid* view);
-void setDataGridSelectionMode(fluent::collections::DataGrid* view,
-                              fluent::binding::SelectionMode mode);
-fluent::scrolling::ScrollBar*
-dataGridVerticalFluentScrollBar(const fluent::collections::DataGrid* view);
-fluent::scrolling::ScrollBar*
-dataGridHorizontalFluentScrollBar(const fluent::collections::DataGrid* view);
+void setDataGridSelectionMode(fluent::collections::DataGrid* view, fluent::binding::SelectionMode mode);
+fluent::scrolling::ScrollBar* dataGridVerticalFluentScrollBar(const fluent::collections::DataGrid* view);
+fluent::scrolling::ScrollBar* dataGridHorizontalFluentScrollBar(const fluent::collections::DataGrid* view);
 fluent::binding::SelectionMode gridViewSelectionMode(const fluent::collections::GridView* view);
-void setGridViewSelectionMode(fluent::collections::GridView* view,
-                              fluent::binding::SelectionMode mode);
-fluent::scrolling::ScrollBar*
-gridViewVerticalFluentScrollBar(const fluent::collections::GridView* view);
+void setGridViewSelectionMode(fluent::collections::GridView* view, fluent::binding::SelectionMode mode);
+fluent::scrolling::ScrollBar* gridViewVerticalFluentScrollBar(const fluent::collections::GridView* view);
 fluent::binding::SelectionMode listViewSelectionMode(const fluent::collections::ListView* view);
-void setListViewSelectionMode(fluent::collections::ListView* view,
-                              fluent::binding::SelectionMode mode);
-fluent::scrolling::ScrollBar*
-listViewVerticalFluentScrollBar(const fluent::collections::ListView* view);
-fluent::scrolling::ScrollBar*
-listViewHorizontalFluentScrollBar(const fluent::collections::ListView* view);
+void setListViewSelectionMode(fluent::collections::ListView* view, fluent::binding::SelectionMode mode);
+fluent::scrolling::ScrollBar* listViewVerticalFluentScrollBar(const fluent::collections::ListView* view);
+fluent::scrolling::ScrollBar* listViewHorizontalFluentScrollBar(const fluent::collections::ListView* view);
 bool listViewSectionEnabled(const fluent::collections::ListView* view);
 void setListViewSectionEnabled(fluent::collections::ListView* view, bool enabled);
 void setListViewSectionKeys(fluent::collections::ListView* view, const QStringList& keys);
 void clearListViewSectionKeyFunction(fluent::collections::ListView* view);
 fluent::binding::SelectionMode treeViewSelectionMode(const fluent::collections::TreeView* view);
-void setTreeViewSelectionMode(fluent::collections::TreeView* view,
-                              fluent::binding::SelectionMode mode);
-fluent::scrolling::ScrollBar*
-treeViewVerticalFluentScrollBar(const fluent::collections::TreeView* view);
-fluent::scrolling::ScrollBar*
-treeViewHorizontalFluentScrollBar(const fluent::collections::TreeView* view);
+void setTreeViewSelectionMode(fluent::collections::TreeView* view, fluent::binding::SelectionMode mode);
+fluent::scrolling::ScrollBar* treeViewVerticalFluentScrollBar(const fluent::collections::TreeView* view);
+fluent::scrolling::ScrollBar* treeViewHorizontalFluentScrollBar(const fluent::collections::TreeView* view);
 void setBreadcrumbTextItems(fluent::navigation::Breadcrumb* breadcrumb, const QStringList& items);
 void setBreadcrumbMetadataItems(fluent::navigation::Breadcrumb* breadcrumb,
-                                const QVector<fluent::navigation::BreadcrumbItem>& items);
+    const QVector<fluent::navigation::BreadcrumbItem>& items);
 void setAnnotatedScrollBarDetailLabelText(fluent::scrolling::AnnotatedScrollBar* scrollBar,
-                                          int offset, const QString& text);
+    int offset,
+    const QString& text);
 void clearAnnotatedScrollBarDetailLabelProvider(fluent::scrolling::AnnotatedScrollBar* scrollBar);
-bool annotatedScrollBarHasDetailLabelProvider(
-    const fluent::scrolling::AnnotatedScrollBar* scrollBar);
+bool annotatedScrollBarHasDetailLabelProvider(const fluent::scrolling::AnnotatedScrollBar* scrollBar);
 QVariantList shimmerElementsForBinding(const fluent::status_info::Shimmer* shimmer);
-bool setShimmerElementsJsonForBinding(fluent::status_info::Shimmer* shimmer,
-                                      const QString& elementsJson);
+bool setShimmerElementsJsonForBinding(fluent::status_info::Shimmer* shimmer, const QString& elementsJson);
 void clearShimmerElementsForBinding(fluent::status_info::Shimmer* shimmer);
-fluent::status_info::Toast*
-showToastForBinding(QWidget* host, QWidget* anchor, const QString& message,
-                    fluent::status_info::Toast::Severity severity, int durationMs,
-                    fluent::status_info::Toast::Placement placement, const QMargins& margins);
-fluent::status_info::Toast*
-showOrUpdateToastForBinding(QWidget* host, QWidget* anchor, const QString& updateKey,
-                            const QString& message, fluent::status_info::Toast::Severity severity,
-                            int durationMs, fluent::status_info::Toast::Placement placement,
-                            const QMargins& margins);
+fluent::status_info::Toast* showToastForBinding(QWidget* host,
+    QWidget* anchor,
+    const QString& message,
+    fluent::status_info::Toast::Severity severity,
+    int durationMs,
+    fluent::status_info::Toast::Placement placement,
+    const QMargins& margins);
+fluent::status_info::Toast* showOrUpdateToastForBinding(QWidget* host,
+    QWidget* anchor,
+    const QString& updateKey,
+    const QString& message,
+    fluent::status_info::Toast::Severity severity,
+    int durationMs,
+    fluent::status_info::Toast::Placement placement,
+    const QMargins& margins);
 int themeRevision();
 QVariantMap bindingBuildInfo();
 
