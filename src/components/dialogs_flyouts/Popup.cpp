@@ -23,23 +23,6 @@
 
 namespace fluent::dialogs_flyouts {
 
-namespace {
-
-void refreshFluentDescendants(QWidget* root)
-{
-    if (!root)
-        return;
-
-    const auto children = root->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
-    for (QWidget* child : children) {
-        if (auto* fluentChild = dynamic_cast<FluentElement*>(child))
-            fluentChild->onThemeUpdated();
-        refreshFluentDescendants(child);
-    }
-}
-
-} // namespace
-
 // ── Construction / destruction. zh_CN: 构造 / 析构 ───────────────────────────
 
 Popup::Popup(QWidget* parent) : QWidget(parent)
@@ -47,6 +30,32 @@ Popup::Popup(QWidget* parent) : QWidget(parent)
     detail::ensureTransientSurfaceAccessibilityFactory();
     m_originalParent = parent;
     m_overlayCoordinator = new ::fluent::overlay::OverlayCoordinator(this, this);
+    m_overlayCoordinator->setClosePolicy(int(m_closePolicy));
+    connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::dismissRequested, this,
+        [this](::fluent::overlay::OverlayCoordinator::DismissReason reason) {
+            if (!m_closeReasonExplicit)
+                setPendingCloseReason(
+                    reason == ::fluent::overlay::OverlayCoordinator::DismissReason::Escape ? Escape : LightDismiss);
+            close();
+        });
+    m_overlayCoordinator->setOutsidePressConsumption([this](const QPoint& globalPos) {
+        if (!m_lightDismissConsumesPress)
+            return false;
+        QWidget* hit = QApplication::widgetAt(globalPos);
+        for (const QPointer<QWidget>& passthrough : m_lightDismissPassthrough) {
+            if (!passthrough)
+                continue;
+            const bool projected = ::fluent::overlay::presentationRoot(passthrough) != nullptr;
+            const bool byHierarchy = !projected && hit && (hit == passthrough || passthrough->isAncestorOf(hit));
+            const bool byGeometry = passthrough->isVisible()
+                && passthrough->rect().contains(
+                    ::fluent::overlay::localPointFromPresentedGlobal(passthrough, globalPos));
+            if (byHierarchy || byGeometry)
+                return false;
+        }
+        return true;
+    });
+
     connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this, [this]() {
         if ((!m_isOpen && !isVisible()) || m_isClosing)
             return;
@@ -96,7 +105,7 @@ void Popup::onThemeUpdated()
     if (property("fluentSurfaceColor").value<QColor>() != surfaceColor)
         setProperty("fluentSurfaceColor", surfaceColor);
     update();
-    refreshFluentDescendants(this);
+    ::fluent::overlay::refreshFluentDescendants(this);
     if (m_overlayCoordinator->scrim()) {
         if (auto* fe = dynamic_cast<FluentElement*>(m_overlayCoordinator->scrim()))
             fe->onThemeUpdated();
@@ -112,8 +121,41 @@ void Popup::setPopupProgress(double p)
     m_popupProgress = p;
     if (m_opacityEffect)
         m_opacityEffect->setOpacity(p);
+    if (auto* scrim = m_overlayCoordinator->scrim())
+        scrim->setOpacityProgress(p);
     update();
     emit popupProgressChanged(p);
+}
+
+double Popup::dimOpacity() const
+{
+    return m_overlayCoordinator->dimOpacity();
+}
+
+void Popup::setDimOpacity(double opacity)
+{
+    if (!m_overlayCoordinator->setDimOpacity(opacity))
+        return;
+    updateScrimState();
+    emit dimOpacityChanged(dimOpacity());
+}
+
+double Popup::backdropBlurRadius() const
+{
+    return m_overlayCoordinator->backdropBlurRadius();
+}
+
+void Popup::setBackdropBlurRadius(double radius)
+{
+    if (!m_overlayCoordinator->setBackdropBlurRadius(radius))
+        return;
+    updateScrimState();
+    emit backdropBlurRadiusChanged(backdropBlurRadius());
+}
+
+void Popup::refreshBackdrop()
+{
+    m_overlayCoordinator->refreshBackdrop();
 }
 
 void Popup::setClosePolicy(ClosePolicy p)
@@ -121,31 +163,50 @@ void Popup::setClosePolicy(ClosePolicy p)
     if (m_closePolicy == p)
         return;
     m_closePolicy = p;
+    m_overlayCoordinator->setClosePolicy(int(m_closePolicy));
     QPointer<Popup> guard(this);
     emit closePolicyChanged(m_closePolicy);
     if (guard)
         detail::notifyPopupAccessibilityActionsChanged(guard.data());
 }
 
-void Popup::setModal(bool m)
+bool Popup::isModal() const
 {
-    if (m_modal == m)
+    return m_overlayCoordinator->isModal();
+}
+
+void Popup::setModal(bool modal)
+{
+    const double previousBlur = backdropBlurRadius();
+    if (!m_overlayCoordinator->setModal(modal))
         return;
-    m_modal = m;
-    updateScrimState();
+    const double currentBlur = backdropBlurRadius();
+    const auto blurRevision = m_overlayCoordinator->backdropBlurRevision();
     QPointer<Popup> guard(this);
-    emit modalChanged(m_modal);
+    updateScrimState();
+    if (!guard)
+        return;
+    emit modalChanged(isModal());
+    // A reentrant handler may replace the automatic value and notify it itself.
+    // zh_CN: 重入处理可能覆盖自动值并自行发送通知，避免再发送过期通知。
+    if (guard && previousBlur != currentBlur && blurRevision == m_overlayCoordinator->backdropBlurRevision())
+        emit backdropBlurRadiusChanged(currentBlur);
     if (guard)
         detail::notifyPopupAccessibilityModalChanged(guard.data());
 }
 
-void Popup::setDim(bool d)
+bool Popup::isDim() const
 {
-    if (m_dim == d)
+    return m_overlayCoordinator->isDim();
+}
+
+void Popup::setDim(bool dim)
+{
+    if (!m_overlayCoordinator->setDim(dim))
         return;
-    m_dim = d;
     updateScrimState();
-    emit dimChanged(m_dim);
+    QPointer<Popup> guard(this);
+    emit dimChanged(isDim());
 }
 
 void Popup::setAnimationEnabled(bool e)
@@ -397,6 +458,7 @@ void Popup::open()
         qApp->installEventFilter(this);
 
     updateScrimState();
+    m_overlayCoordinator->setInputActive(true);
 
     if (!m_animationEnabled) {
         setPopupProgress(1.0);
@@ -484,7 +546,9 @@ void Popup::startEnterAnimation()
     m_anim->setDuration(a.normal); // Matches Dialog: 250ms. zh_CN: 与 Dialog 一致。
     m_anim->setStartValue(m_popupProgress);
     m_anim->setEndValue(1.0);
-    m_anim->setEasingCurve(a.entrance); // Matches Dialog. zh_CN: 与 Dialog 一致。
+    // Opacity has no overshoot: use the monotone Fluent deceleration token.
+    // zh_CN: 不透明度无需回弹，使用单调减速的 Fluent 曲线。
+    m_anim->setEasingCurve(a.decelerate);
     ::fluent::detail::startMotionTransition(m_anim, a.normal, m_animationEnabled);
 }
 
@@ -494,7 +558,7 @@ void Popup::startExitAnimation()
     m_anim->setDuration(a.normal); // Matches Dialog: 250ms. zh_CN: 与 Dialog 一致。
     m_anim->setStartValue(m_popupProgress);
     m_anim->setEndValue(0.0);
-    m_anim->setEasingCurve(a.exit); // Matches Dialog. zh_CN: 与 Dialog 一致。
+    m_anim->setEasingCurve(a.standard);
     ::fluent::detail::startMotionTransition(m_anim, a.normal, m_animationEnabled);
 }
 
@@ -543,7 +607,7 @@ void Popup::updateScrimState()
         destroyScrim();
         return;
     }
-    if (!m_modal && !m_dim) {
+    if (!m_overlayCoordinator->needsScrim()) {
         destroyScrim();
         return;
     }
@@ -555,11 +619,10 @@ void Popup::updateScrimState()
         return;
 
     m_overlayCoordinator->attachTo(top);
-    auto* scrim = m_overlayCoordinator->ensureScrim(QStringLiteral("PopupScrim"));
+    auto* scrim = m_overlayCoordinator->updateScrim(QStringLiteral("PopupScrim"));
     if (!scrim)
         return;
-    scrim->setModalAndDim(m_modal, m_dim);
-    ::fluent::overlay::syncInheritedThemeOverride(scrim, this);
+    scrim->setOpacityProgress(m_popupProgress);
     scrim->show();
     m_overlayCoordinator->raiseStack();
 }
@@ -592,58 +655,6 @@ bool Popup::eventFilter(QObject* watched, QEvent* event)
     if (::fluent::overlay::anchorGeometryMayChange(watched, event, positionAnchor))
         queuePositionSync();
 
-    const bool noAutoClose = m_closePolicy == ClosePolicy(NoAutoClose);
-    if (::fluent::overlay::isEscapeKeyPress(event)
-        && ::fluent::overlay::allowsImplicitClose(noAutoClose, m_closePolicy & CloseOnEscape)) {
-        if (!m_closeReasonExplicit)
-            setPendingCloseReason(Escape);
-        close();
-        event->accept();
-        return true;
-    }
-
-    if (!::fluent::overlay::allowsImplicitClose(noAutoClose, m_closePolicy & CloseOnPressOutside))
-        return false;
-    if (!event || event->type() != QEvent::MouseButtonPress)
-        return false;
-
-    auto* me = static_cast<QMouseEvent*>(event);
-    const QPoint globalPos = fluentMouseGlobalPos(me);
-    const QPoint local = mapFromGlobal(globalPos);
-    if (::fluent::overlay::visibleCardContains(rect(), local))
-        return false;
-
-    if (!m_closeReasonExplicit)
-        setPendingCloseReason(LightDismiss);
-    close();
-    // ComboBox-dropdown semantics when requested: swallow the dismissing press so it doesn't also
-    // activate the widget beneath — EXCEPT inside a registered passthrough region (e.g. the sibling nav
-    // bar), where the press still falls through so adjacent controls stay one-click reachable.
-    // zh_CN: 按需采用 ComboBox 下拉语义：吞掉这次关闭点击，避免顺带激活下方控件——但在已登记的「穿透区域」（如同级导航栏）
-    // 内除外，那里的点击仍会穿透，使相邻控件保持「一次点击」直达。
-    if (m_lightDismissConsumesPress) {
-        // Let the press through if it lands inside a passthrough region (the sibling nav bar) so that
-        // bar stays one-click reachable while the popup dismisses. Two complementary tests: widgetAt +
-        // isAncestorOf follows the real widget hierarchy (robust on a live top-level), and a geometry
-        // contains() as a fallback for platforms where widgetAt returns null (e.g. the offscreen test
-        // plugin). zh_CN: 若按下点落在穿透区域(同级导航栏)内则放行,使该栏在弹窗关闭时仍可「一次点击」直达。两种互补判定:
-        // widgetAt + isAncestorOf 顺真实控件层级判断(在真实顶层上稳健),几何 contains() 作为后备,用于 widgetAt 返回空的
-        // 平台(如 offscreen 测试插件)。
-        QWidget* hit = QApplication::widgetAt(globalPos);
-        for (const QPointer<QWidget>& passthrough : m_lightDismissPassthrough) {
-            if (!passthrough)
-                continue;
-            const bool projected = ::fluent::overlay::presentationRoot(passthrough) != nullptr;
-            const bool byHierarchy = !projected && hit && (hit == passthrough.data() || passthrough->isAncestorOf(hit));
-            const bool byGeometry = passthrough->isVisible()
-                && passthrough->rect().contains(
-                    ::fluent::overlay::localPointFromPresentedGlobal(passthrough, globalPos));
-            if (byHierarchy || byGeometry)
-                return false;
-        }
-        event->accept();
-        return true;
-    }
     return false;
 }
 

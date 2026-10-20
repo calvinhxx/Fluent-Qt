@@ -27,6 +27,26 @@ All inventoried gaps are closed. `covered` means
 there is deterministic repository evidence for the component boundary; it is
 not a claim of platform assistive-technology certification.
 
+## Read-only code
+
+`CodeBlock` exposes the existing Expander header, a named and focusable Copy
+button, and selectable native Label text. The header can fold the block without
+changing its code; copying does not toggle folding. Keyboard selection and copy
+retain source whitespace, including in high contrast. Focused tests are in
+`tests/components/textfields/TestCodeBlock.cpp`. Native screen-reader navigation
+through highlighted source still requires platform review.
+
+## Field and form coordination
+
+`Field` uses a stronger caption and a single helper/status position while keeping
+the hosted editor's native role, focus proxy and caller-owned value. Its
+Validating state has informational text and no error glyph. `FormController` aggregates
+errors in registration order and focuses the first visible, enabled invalid
+editor after a failed submit. The connection Gallery sample uses the same
+native controller through C++, PySide6 and WebAssembly. These contracts are
+covered by `TestField.cpp` and `TestFormController.cpp`; native screen-reader
+announcements remain a platform review boundary.
+
 ## Live Scene editing tools
 
 The opt-in Python preview editor composes existing Fluent buttons, sliders,
@@ -121,6 +141,33 @@ does not repair upstream accessibility geometry updates or replace native
 screen-reader and IME acceptance.
 
 ## Component contracts
+
+`CommandPalette` composes the native accessible search editor and model-backed
+`ListView` rows inside a same-window `Popup`. Row names include the command group
+and shortcut; enabled and checked states follow the borrowed `QAction`.
+Up/Down select available commands, Enter executes once, and Escape restores
+the invoking focus. Tab cycles between search and results; the search editor
+provides an accessible keyboard description. Search does not replace the
+`EditingCommandRouter` target. Optional backdrop blur is suppressed in High Contrast.
+`TestCommandPalette.cpp` covers these semantics and Light/Dark, narrow and RTL
+geometry. `TestCommandPaletteSamples.cpp` also covers the full Gallery surface,
+editor focus restoration, resetting an empty editing sample, and modal dismissal
+without activating Gallery navigation.
+
+`Popup`, `Dialog`, and `DrawerView` share modal pointer blocking, background
+shortcut suppression, focus containment, and topmost-overlay input routing.
+Their Gallery effect samples expose named blur/dim sliders and checkboxes for
+modality, dimming, and outside dismissal. A background counter verifies that
+visual effects and input blocking remain independent. `TestOverlayContract.cpp`
+runs the same interaction contract against all three components, and
+`TestGalleryOverlaySamples.cpp` checks their controls and full Gallery navigation.
+Modal surfaces default to a subtle 4 px content blur unless explicitly configured;
+non-modal surfaces remain clear by default. High Contrast suppresses blur without
+weakening modal input containment.
+Blur, dimming, and the surface share one transition and settle together when
+motion is reduced or disabled. CommandPalette cancellation fades out; command
+execution still restores focus before dispatch.
+Native screen-reader and IME acceptance remain platform review work.
 
 `Button` retains Qt's native role, keyboard actions, and accessible widget
 bounds. Layouts use its whole painted widget rectangle, so declared spacing

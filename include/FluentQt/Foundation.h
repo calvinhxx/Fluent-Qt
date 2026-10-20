@@ -2,6 +2,7 @@
 #define FLUENTQT_FOUNDATION_H
 
 #include <components/foundation/FontIcon.h>
+#include <components/foundation/FormController.h>
 #include <components/foundation/FluentElement.h>
 #include <components/foundation/MotionPolicy.h>
 #include <components/foundation/QMLPlus.h>

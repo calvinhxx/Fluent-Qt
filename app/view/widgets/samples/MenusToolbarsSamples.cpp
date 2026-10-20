@@ -14,6 +14,7 @@
 #include <QPainter>
 #include <QPointer>
 #include <QSizePolicy>
+#include <QStringListModel>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QtMath>
@@ -22,10 +23,14 @@
 #include <utility>
 
 #include "components/basicinput/Button.h"
+#include "components/basicinput/CheckBox.h"
+#include "components/basicinput/Slider.h"
 #include "components/basicinput/DropDownButton.h"
 #include "components/foundation/FontIcon.h"
+#include "components/collections/ListView.h"
 #include "components/menus_toolbars/CommandBar.h"
 #include "components/menus_toolbars/CommandBarFlyout.h"
+#include "components/menus_toolbars/CommandPalette.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/menus_toolbars/MenuBar.h"
 #include "components/textfields/EditingCommandRouter.h"
@@ -642,6 +647,403 @@ QWidget* commandSubmenusPreview(QWidget* parent, bool contextual)
     }
     boxLayout(surface)->addWidget(status);
     return surface;
+}
+
+QVector<GallerySample> commandPaletteSamples()
+{
+    QVector<GallerySample> samples{
+        makeSample(QStringLiteral("command-palette-basic"), QStringLiteral("Find and run a command"),
+            QStringLiteral(
+                "Search a page name, choose with the arrow keys, and press Enter. Escape closes the palette."),
+            QStringLiteral(R"sample(auto* root = new QWidget(this);
+auto* layout = new QVBoxLayout(root);
+auto* location = new Label(QStringLiteral("Current page: Home"), root);
+location->setObjectName(QStringLiteral("Gallery.CommandPalette.BasicLocation"));
+auto* palette = new fluent::menus_toolbars::CommandPalette(root);
+palette->setObjectName(QStringLiteral("Gallery.CommandPalette.Basic"));
+palette->setPlaceholderText(QStringLiteral("Search pages..."));
+const QStringList pages{QStringLiteral("Home"), QStringLiteral("Inbox"),
+    QStringLiteral("Documents"), QStringLiteral("Folders")};
+for (const QString& page : pages) {
+    auto* action = new QAction(page, root);
+    palette->addCommand(action, QStringLiteral("Navigation"));
+    QObject::connect(action, &QAction::triggered, location, [location, page] {
+        location->setText(QStringLiteral("Current page: %1").arg(page));
+    });
+}
+auto* open = new Button(QStringLiteral("Search pages"), root);
+open->setObjectName(QStringLiteral("Gallery.CommandPalette.OpenBasic"));
+open->setFluentStyle(Button::Accent);
+QObject::connect(open, &Button::clicked, palette, &fluent::menus_toolbars::CommandPalette::open);
+layout->addWidget(open, 0, Qt::AlignLeft);
+layout->addWidget(location);
+return root;)sample"),
+            [](QWidget* parent) {
+                auto* root = new QWidget(parent);
+                auto* layout = new QVBoxLayout(root);
+                auto* location = new Label(QStringLiteral("Current page: Home"), root);
+                location->setObjectName(QStringLiteral("Gallery.CommandPalette.BasicLocation"));
+                auto* palette = new fluent::menus_toolbars::CommandPalette(root);
+                palette->setObjectName(QStringLiteral("Gallery.CommandPalette.Basic"));
+                palette->setPlaceholderText(QStringLiteral("Search pages..."));
+                const QStringList pages{QStringLiteral("Home"), QStringLiteral("Inbox"), QStringLiteral("Documents"),
+                    QStringLiteral("Folders")};
+                for (const QString& page : pages) {
+                    auto* action = new QAction(page, root);
+                    palette->addCommand(action, QStringLiteral("Navigation"));
+                    QObject::connect(action, &QAction::triggered, location, [location, page] {
+                        location->setText(QStringLiteral("Current page: %1").arg(page));
+                    });
+                }
+                auto* open = new Button(QStringLiteral("Search pages"), root);
+                open->setObjectName(QStringLiteral("Gallery.CommandPalette.OpenBasic"));
+                open->setFluentStyle(Button::Accent);
+                QObject::connect(open, &Button::clicked, palette, &fluent::menus_toolbars::CommandPalette::open);
+                layout->addWidget(open, 0, Qt::AlignLeft);
+                layout->addWidget(location);
+                return root;
+            }),
+        makeSample(
+            QStringLiteral("command-palette-shared-actions"), QStringLiteral("Shared menu and toolbar commands"),
+            QStringLiteral(
+                "Jump between Home, Inbox, Documents and Folders, or add, clear and sort notes. The menu and toolbar share the same actions."),
+            QStringLiteral(
+                "auto setActionGlyph = [this](QAction* action, const QString& glyph) {\n"
+                "    QPixmap pixmap(20, 20);\n"
+                "    pixmap.fill(Qt::transparent);\n"
+                "    QPainter painter(&pixmap);\n"
+                "    painter.setPen(this->palette().color(QPalette::WindowText));\n"
+                "    Typography::Icons::paintGlyph(painter, pixmap.rect(), glyph, 16, Qt::AlignCenter);\n"
+                "    painter.end();\n"
+                "    action->setIcon(QIcon(pixmap));\n"
+                "};\n"
+                "auto* layout = new QVBoxLayout(this);\n"
+                "auto* notes = new QStringListModel(this);\n"
+                "auto* list = new fluent::collections::ListView(this);\n"
+                "list->setAccessibleName(QStringLiteral(\"Notes\"));\n"
+                "list->setModel(notes);\n"
+                "list->setFixedHeight(104);\n"
+                "list->setPlaceholderText(QStringLiteral(\"No notes yet. Run Add note to create one.\"));\n"
+                "list->setBorderVisible(false);\n"
+                "list->setBackgroundVisible(false);\n"
+                "list->setProperty(\"fluentPreserveParentSurface\", true);\n"
+                "auto* status = new Label(QStringLiteral(\"0 notes\"), this);\n"
+                "status->setTextColorRole(Label::TextColorRole::Secondary);\n"
+                "status->hide();\n"
+                "auto* palette = new fluent::menus_toolbars::CommandPalette(this);\n"
+                "palette->setPlaceholderText(QStringLiteral(\"Type a command or search…\"));\n"
+                "palette->setDim(true);\n"
+                "palette->setDimOpacity(0.12);\n"
+                "palette->setBackdropBlurRadius(8);\n"
+                "auto* location = new Label(QStringLiteral(\"Home\"), this);\n"
+                "auto* menu = new FluentMenu(QStringLiteral(\"Workspace commands\"), this);\n"
+                "auto* add = new QAction(QStringLiteral(\"Add note\"), this);\n"
+                "add->setShortcut(QKeySequence(QStringLiteral(\"Ctrl+N\")));\n"
+                "auto* clear = new QAction(QStringLiteral(\"Clear notes\"), this);\n"
+                "clear->setEnabled(false);\n"
+                "auto* details = new QAction(QStringLiteral(\"Show details\"), this);\n"
+                "details->setCheckable(true);\n"
+                "const auto updateCount = [list, clear, status]() {\n"
+                "    const int count = list->model()->rowCount();\n"
+                "    clear->setEnabled(count > 0);\n"
+                "    status->setText(count == 1 ? QStringLiteral(\"1 note\") : QStringLiteral(\"%1 notes\").arg(count));\n"
+                "};\n"
+                "const QStringList locations{QStringLiteral(\"Home\"), QStringLiteral(\"Inbox\"), QStringLiteral(\"Documents\"), QStringLiteral(\"Folders\")};\n"
+                "const QStringList glyphs{Typography::Icons::Home, Typography::Icons::Mail, Typography::Icons::Document, Typography::Icons::Folder};\n"
+                "const QStringList keys{QStringLiteral(\"Ctrl+H\"), QStringLiteral(\"Ctrl+I\"), QStringLiteral(\"Ctrl+D\"), QStringLiteral(\"Ctrl+F\")};\n"
+                "for (int i = 0; i < locations.size(); ++i) {\n"
+                "    auto* model = i == 0 ? notes : new QStringListModel(QStringList{locations.at(i) + QStringLiteral(\" note\")}, this);\n"
+                "    auto* navigate = new QAction(locations.at(i), this);\n"
+                "    navigate->setShortcut(QKeySequence(keys.at(i)));\n"
+                "    setActionGlyph(navigate, glyphs.at(i));\n"
+                "    palette->addCommand(navigate, QStringLiteral(\"Navigation\"));\n"
+                "    menu->addAction(navigate);\n"
+                "    QObject::connect(model, &QAbstractItemModel::modelReset, this, updateCount);\n"
+                "    QObject::connect(navigate, &QAction::triggered, this, [list, location, model, navigate, updateCount]() {\n"
+                "        list->setModel(model);\n"
+                "        location->setText(navigate->text());\n"
+                "        updateCount();\n"
+                "    });\n"
+                "}\n"
+                "menu->addSeparator();\n"
+                "palette->addCommand(add, QStringLiteral(\"Notes\"), {QStringLiteral(\"new\"), QStringLiteral(\"添加\")});\n"
+                "palette->addCommand(clear, QStringLiteral(\"Notes\"),\n"
+                "    {QStringLiteral(\"delete\"), QStringLiteral(\"remove\")});\n"
+                "palette->addCommand(details, QStringLiteral(\"View\"),\n"
+                "    {QStringLiteral(\"count\"), QStringLiteral(\"properties\")});\n"
+                "setActionGlyph(add, Typography::Icons::Add);\n"
+                "setActionGlyph(clear, Typography::Icons::Delete);\n"
+                "setActionGlyph(details, Typography::Icons::Info);\n"
+                "QObject::connect(add, &QAction::triggered, list, [list]() {\n"
+                "    auto* notes = qobject_cast<QStringListModel*>(list->model());\n"
+                "    QStringList items = notes->stringList();\n"
+                "    items.append(QStringLiteral(\"Note %1\").arg(items.size() + 1));\n"
+                "    notes->setStringList(items);\n"
+                "});\n"
+                "QObject::connect(clear, &QAction::triggered, list, [list]() {\n"
+                "    qobject_cast<QStringListModel*>(list->model())->setStringList({});\n"
+                "});\n"
+                "auto* sort = new QAction(QStringLiteral(\"Sort notes by name\"), this);\n"
+                "setActionGlyph(sort, Typography::Icons::Up);\n"
+                "palette->addCommand(sort, QStringLiteral(\"View\"), {QStringLiteral(\"order\")});\n"
+                "QObject::connect(sort, &QAction::triggered, list, [list]() { list->model()->sort(0); });\n"
+                "QObject::connect(details, &QAction::toggled, status, &QWidget::setVisible);\n"
+                "auto* bar = new CommandBar(this);\n"
+                "bar->setAccessibleName(QStringLiteral(\"Notes commands\"));\n"
+                "bar->setLabelPosition(CommandBar::LabelPosition::Right);\n"
+                "bar->setBackgroundVisible(false);\n"
+                "bar->addPrimaryAction(add);\n"
+                "bar->addPrimaryAction(details);\n"
+                "bar->addSecondaryAction(clear);\n"
+                "menu->addAction(add);\n"
+                "menu->addAction(details);\n"
+                "menu->addAction(clear);\n"
+                "menu->addAction(sort);\n"
+                "auto* menuButton = new DropDownButton(QStringLiteral(\"Workspace commands\"), this);\n"
+                "menuButton->setMenu(menu);\n"
+                "auto* open = new Button(QStringLiteral(\"Open command palette\"), this);\n"
+                "open->setFluentStyle(Button::Accent);\n"
+                "open->setIconGlyph(Typography::Icons::Search);\n"
+                "QObject::connect(open, &Button::clicked, palette, &fluent::menus_toolbars::CommandPalette::open);\n"
+                "auto* modal = new fluent::basicinput::CheckBox(QStringLiteral(\"Modal\"), this);\n"
+                "modal->setChecked(true);\n"
+                "QObject::connect(modal, &QCheckBox::toggled, palette, &fluent::menus_toolbars::CommandPalette::setModal);\n"
+                "auto* openRow = new QHBoxLayout;\n"
+                "openRow->addWidget(open);\n"
+                "openRow->addWidget(modal);\n"
+                "openRow->addStretch();\n"
+                "layout->addLayout(openRow);\n"
+                "auto* commandRow = new QHBoxLayout;\n"
+                "commandRow->addWidget(bar, 1);\n"
+                "commandRow->addWidget(menuButton);\n"
+                "layout->addLayout(commandRow);\n"
+                "layout->addWidget(location);\n"
+                "layout->addWidget(list);\n"
+                "layout->addWidget(status);\n"),
+            [](QWidget* parent) -> QWidget* {
+                auto* surface = new MenusToolbarsSampleSurface(parent);
+                auto* notes = new QStringListModel(surface);
+                auto* list = new fluent::collections::ListView(surface);
+                list->setObjectName(QStringLiteral("Gallery.CommandPalette.Notes"));
+                list->setAccessibleName(QStringLiteral("Notes"));
+                list->setModel(notes);
+                list->setFixedHeight(104);
+                list->setPlaceholderText(QStringLiteral("No notes yet. Run Add note to create one."));
+                list->setBorderVisible(false);
+                list->setBackgroundVisible(false);
+                list->setProperty("fluentPreserveParentSurface", true);
+                auto* status = new Label(QStringLiteral("0 notes"), surface);
+                status->setObjectName(QStringLiteral("Gallery.CommandPalette.Status"));
+                status->setTextColorRole(Label::TextColorRole::Secondary);
+                status->hide();
+                auto* palette = new fluent::menus_toolbars::CommandPalette(surface);
+                palette->setObjectName(QStringLiteral("Gallery.CommandPalette.Shared"));
+                palette->setPlaceholderText(QStringLiteral("Type a command or search…"));
+                palette->setDim(true);
+                palette->setDimOpacity(0.12);
+                palette->setBackdropBlurRadius(8);
+                auto* location = new Label(QStringLiteral("Home"), surface);
+                location->setObjectName(QStringLiteral("Gallery.CommandPalette.Location"));
+                auto* menu = new FluentMenu(QStringLiteral("Workspace commands"), surface);
+                auto* add = new QAction(QStringLiteral("Add note"), surface);
+                add->setShortcut(QKeySequence(QStringLiteral("Ctrl+N")));
+                auto* clear = new QAction(QStringLiteral("Clear notes"), surface);
+                clear->setEnabled(false);
+                auto* details = new QAction(QStringLiteral("Show details"), surface);
+                details->setCheckable(true);
+                const auto updateCount = [list, clear, status]() {
+                    const int count = list->model()->rowCount();
+                    clear->setEnabled(count > 0);
+                    status->setText(count == 1 ? QStringLiteral("1 note") : QStringLiteral("%1 notes").arg(count));
+                };
+                const QStringList locations{QStringLiteral("Home"), QStringLiteral("Inbox"),
+                    QStringLiteral("Documents"), QStringLiteral("Folders")};
+                const QStringList glyphs{Typography::Icons::Home, Typography::Icons::Mail, Typography::Icons::Document,
+                    Typography::Icons::Folder};
+                const QStringList keys{QStringLiteral("Ctrl+H"), QStringLiteral("Ctrl+I"), QStringLiteral("Ctrl+D"),
+                    QStringLiteral("Ctrl+F")};
+                for (int i = 0; i < locations.size(); ++i) {
+                    auto* model = i == 0
+                        ? notes
+                        : new QStringListModel(QStringList{locations.at(i) + QStringLiteral(" note")}, surface);
+                    auto* navigate = new QAction(locations.at(i), surface);
+                    navigate->setShortcut(QKeySequence(keys.at(i)));
+                    surface->setActionGlyph(navigate, glyphs.at(i));
+                    palette->addCommand(navigate, QStringLiteral("Navigation"));
+                    menu->addAction(navigate);
+                    QObject::connect(model, &QAbstractItemModel::modelReset, surface, updateCount);
+                    QObject::connect(navigate, &QAction::triggered, surface,
+                        [list, location, model, navigate, updateCount]() {
+                            list->setModel(model);
+                            location->setText(navigate->text());
+                            updateCount();
+                        });
+                }
+                menu->addSeparator();
+                palette->addCommand(add, QStringLiteral("Notes"), {QStringLiteral("new"), QStringLiteral("添加")});
+                palette->addCommand(clear, QStringLiteral("Notes"),
+                    {QStringLiteral("delete"), QStringLiteral("remove")});
+                palette->addCommand(details, QStringLiteral("View"),
+                    {QStringLiteral("count"), QStringLiteral("properties")});
+                surface->setActionGlyph(add, Typography::Icons::Add);
+                surface->setActionGlyph(clear, Typography::Icons::Delete);
+                surface->setActionGlyph(details, Typography::Icons::Info);
+                QObject::connect(add, &QAction::triggered, list, [list]() {
+                    auto* notes = qobject_cast<QStringListModel*>(list->model());
+                    QStringList items = notes->stringList();
+                    items.append(QStringLiteral("Note %1").arg(items.size() + 1));
+                    notes->setStringList(items);
+                });
+                QObject::connect(clear, &QAction::triggered, list, [list]() {
+                    qobject_cast<QStringListModel*>(list->model())->setStringList({});
+                });
+                auto* sort = new QAction(QStringLiteral("Sort notes by name"), surface);
+                surface->setActionGlyph(sort, Typography::Icons::Up);
+                palette->addCommand(sort, QStringLiteral("View"), {QStringLiteral("order")});
+                QObject::connect(sort, &QAction::triggered, list, [list]() { list->model()->sort(0); });
+                QObject::connect(details, &QAction::toggled, status, &QWidget::setVisible);
+                auto* bar = new CommandBar(surface);
+                bar->setAccessibleName(QStringLiteral("Notes commands"));
+                bar->setLabelPosition(CommandBar::LabelPosition::Right);
+                bar->setBackgroundVisible(false);
+                bar->addPrimaryAction(add);
+                bar->addPrimaryAction(details);
+                bar->addSecondaryAction(clear);
+                menu->addAction(add);
+                menu->addAction(details);
+                menu->addAction(clear);
+                menu->addAction(sort);
+                auto* menuButton = new DropDownButton(QStringLiteral("Workspace commands"), surface);
+                menuButton->setMenu(menu);
+                auto* open = new Button(QStringLiteral("Open command palette"), surface);
+                open->setObjectName(QStringLiteral("Gallery.CommandPalette.Open"));
+                open->setFluentStyle(Button::Accent);
+                open->setIconGlyph(Typography::Icons::Search);
+                QObject::connect(open, &Button::clicked, palette, &fluent::menus_toolbars::CommandPalette::open);
+                auto* modal = new fluent::basicinput::CheckBox(QStringLiteral("Modal"), surface);
+                modal->setChecked(true);
+                QObject::connect(modal, &QCheckBox::toggled, palette,
+                    &fluent::menus_toolbars::CommandPalette::setModal);
+                auto* openRow = new QHBoxLayout;
+                openRow->addWidget(open);
+                openRow->addWidget(modal);
+                openRow->addStretch();
+                boxLayout(surface)->addLayout(openRow);
+                auto* commandRow = new QHBoxLayout;
+                commandRow->addWidget(bar, 1);
+                commandRow->addWidget(menuButton);
+                boxLayout(surface)->addLayout(commandRow);
+                boxLayout(surface)->addWidget(location);
+                boxLayout(surface)->addWidget(list);
+                boxLayout(surface)->addWidget(status);
+                return surface;
+            },
+            true),
+        makeSample(
+            QStringLiteral("command-palette-editing-context"), QStringLiteral("Copy or cut text through search"),
+            QStringLiteral(
+                "Search Copy to copy the selected word, or Cut to remove it from the field. Reset text lets you try again."),
+            QStringLiteral(
+                "auto* layout = new QVBoxLayout(this);\n"
+                "auto* editor = new LineEdit(this);\n"
+                "editor->setText(\"Review the release notes\");\n"
+                "editor->setPlaceholderText(\"Type text or reset the sample\");\n"
+                "editor->setAccessibleName(\"Text to edit\");\n"
+                "auto* router = new EditingCommandRouter(window());\n"
+                "auto* palette = new CommandPalette(this);\n"
+                "palette->setPlaceholderText(\"Search Copy, Cut, or Select All\");\n"
+                "palette->addCommand(router->action(EditingCommandRouter::Command::Copy), \"Edit\", {\"copy\"});\n"
+                "palette->addCommand(router->action(EditingCommandRouter::Command::Cut), \"Edit\", {\"cut\"});\n"
+                "palette->addCommand(router->action(EditingCommandRouter::Command::SelectAll), \"Edit\", {\"select all\"});\n"
+                "auto* open = new Button(\"Search editing commands\", this);\n"
+                "open->setFocusPolicy(Qt::NoFocus);\n"
+                "QObject::connect(open, &Button::clicked, palette, [editor, palette]() {\n"
+                "    editor->setFocus();\n"
+                "    if (!editor->hasSelectedText())\n"
+                "        editor->setSelection(0, qMin(6, editor->text().size()));\n"
+                "    palette->setQuery(QString());\n"
+                "    palette->setCurrentAction(palette->commands().first());\n"
+                "    palette->open();\n"
+                "});\n"
+                "QObject::connect(editor, &QLineEdit::textChanged, open, [open](const QString& text) { open->setEnabled(!text.isEmpty()); });\n"
+                "auto* reset = new Button(\"Reset text\", this);\n"
+                "QObject::connect(reset, &Button::clicked, editor, [editor]() {\n"
+                "    editor->setText(\"Review the release notes\");\n"
+                "    editor->setFocus();\n"
+                "});\n"
+                "layout->addWidget(editor);\n"
+                "auto* buttons = new QHBoxLayout;\n"
+                "buttons->addWidget(open);\n"
+                "buttons->addWidget(reset);\n"
+                "buttons->addStretch();\n"
+                "layout->addLayout(buttons);"),
+            [](QWidget* parent) -> QWidget* {
+                auto* surface = new MenusToolbarsSampleSurface(parent);
+                auto* editor = new LineEdit(surface);
+                editor->setObjectName(QStringLiteral("Gallery.CommandPalette.Editor"));
+                editor->setText(QStringLiteral("Review the release notes"));
+                editor->setPlaceholderText(QStringLiteral("Type text or reset the sample"));
+                editor->setAccessibleName(QStringLiteral("Text to edit"));
+                auto* router = galleryWindowEditingCommandRouter(surface);
+                auto* palette = new fluent::menus_toolbars::CommandPalette(surface);
+                palette->setObjectName(QStringLiteral("Gallery.CommandPalette.Editing"));
+                palette->setPlaceholderText(QStringLiteral("Search Copy, Cut, or Select All"));
+                palette->addCommand(router->action(EditingCommandRouter::Command::Copy), QStringLiteral("Edit"),
+                    {QStringLiteral("copy")});
+                palette->addCommand(router->action(EditingCommandRouter::Command::Cut), QStringLiteral("Edit"),
+                    {QStringLiteral("cut")});
+                palette->addCommand(router->action(EditingCommandRouter::Command::SelectAll), QStringLiteral("Edit"),
+                    {QStringLiteral("select all")});
+                auto* open = new Button(QStringLiteral("Search editing commands"), surface);
+                open->setObjectName(QStringLiteral("Gallery.CommandPalette.OpenEditing"));
+                open->setFocusPolicy(Qt::NoFocus);
+                QObject::connect(open, &Button::clicked, palette, [editor, palette]() {
+                    editor->setFocus();
+                    if (!editor->hasSelectedText())
+                        editor->setSelection(0, qMin(6, editor->text().size()));
+                    palette->setQuery(QString());
+                    palette->setCurrentAction(palette->commands().first());
+                    palette->open();
+                });
+                QObject::connect(editor, &QLineEdit::textChanged, open, [open](const QString& text) {
+                    open->setEnabled(!text.isEmpty());
+                });
+                auto* reset = new Button(QStringLiteral("Reset text"), surface);
+                reset->setObjectName(QStringLiteral("Gallery.CommandPalette.ResetEditing"));
+                QObject::connect(reset, &Button::clicked, editor, [editor]() {
+                    editor->setText(QStringLiteral("Review the release notes"));
+                    editor->setFocus();
+                });
+                boxLayout(surface)->addWidget(editor);
+                auto* buttons = new QHBoxLayout;
+                buttons->addWidget(open);
+                buttons->addWidget(reset);
+                buttons->addStretch();
+                boxLayout(surface)->addLayout(buttons);
+                return surface;
+            },
+            true),
+    };
+    auto& workspace = samples[1];
+    workspace.usageSnippet = QStringLiteral(
+        "// The workspace actions, menu and toolbar are defined in Full example.\n"
+        "auto* palette = new fluent::menus_toolbars::CommandPalette(this);\n"
+        "palette->setModal(true);\n"
+        "palette->setPlaceholderText(\"Type a command or search…\");\n"
+        "for (QAction* action : menu->actions()) {\n"
+        "    if (!action->isSeparator())\n"
+        "        palette->addCommand(action, \"Navigation\");\n"
+        "}\n"
+        "// Register metadata for the same actions; execution stays QAction-owned.\n"
+        "palette->addCommand(add, \"Notes\", {\"new\", \"添加\"});\n"
+        "palette->addCommand(clear, \"Notes\", {\"delete\", \"remove\"});\n"
+        "palette->addCommand(details, \"View\", {\"count\", \"properties\"});\n"
+        "palette->addCommand(sort, \"View\", {\"order\"});\n"
+        "QObject::connect(open, &Button::clicked, palette,\n"
+        "    &fluent::menus_toolbars::CommandPalette::open);\n");
+    workspace.sourceFiles = {
+        {QStringLiteral("Workspace.cpp"), QStringLiteral("cpp"), workspace.codeSnippet, workspace.usageSnippet}};
+    return samples;
 }
 
 QVector<GallerySample> commandBarSamples()
@@ -1295,6 +1697,8 @@ QVector<GallerySample> menusToolbarsSamples(const QString& routeId)
         return menuSamples();
     if (routeId == QStringLiteral("menu-bar"))
         return menuBarSamples();
+    if (routeId == QStringLiteral("command-palette"))
+        return commandPaletteSamples();
     if (routeId == QStringLiteral("command-bar"))
         return commandBarSamples();
     if (routeId == QStringLiteral("command-bar-flyout"))

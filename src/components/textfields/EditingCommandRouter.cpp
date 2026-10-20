@@ -610,6 +610,14 @@ private:
         if (!focus || !scope || focus->window() != scope)
             return false;
 
+        // A command surface may contain its own search editor. Keep editing
+        // actions aimed at the invoking editor while that surface has focus.
+        // zh_CN: 命令表面可包含搜索框；其获得焦点时仍保留原编辑目标。
+        for (QWidget* ancestor = focus; ancestor && ancestor != scope; ancestor = ancestor->parentWidget()) {
+            if (ancestor->property(kCommandPresentationProperty).toBool() && isRouterPresentation(focus))
+                return false;
+        }
+
         if (auto* lineEdit = qobject_cast<LineEdit*>(focus)) {
             *resolvedKind = TargetKind::LineEdit;
             *resolvedTarget = lineEdit;

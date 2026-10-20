@@ -1,6 +1,7 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource prefix="/app">
+        <file alias="samples/ConnectionForm.h">view/widgets/samples/ConnectionForm.h</file>
         <file>assets/app-icon.png</file>
         <file>assets/home_header_tiles/GitHub-Mark.png</file>
         <file>assets/home_header_tiles/Header-Toolkit.png</file>
@@ -62,6 +63,7 @@
         <file alias="assets/control_images/menus-toolbars/MenuBar.svg">../tools/gallery/artwork/menus-toolbars/MenuBar.svg</file>
         <file alias="assets/control_images/menus-toolbars/CommandBar.svg">../tools/gallery/artwork/menus-toolbars/CommandBar.svg</file>
         <file alias="assets/control_images/menus-toolbars/CommandBarFlyout.svg">../tools/gallery/artwork/menus-toolbars/CommandBarFlyout.svg</file>
+        <file alias="assets/control_images/menus-toolbars/CommandPalette.svg">../tools/gallery/artwork/menus-toolbars/CommandPalette.svg</file>
         <file alias="assets/control_images/navigation/Breadcrumb.svg">../tools/gallery/artwork/navigation/Breadcrumb.svg</file>
         <file alias="assets/control_images/navigation/NavigationView.svg">../tools/gallery/artwork/navigation/NavigationView.svg</file>
         <file alias="assets/control_images/navigation/Pivot.svg">../tools/gallery/artwork/navigation/Pivot.svg</file>
@@ -86,6 +88,7 @@
         <file alias="assets/control_images/text-fields/LineEdit.svg">../tools/gallery/artwork/text-fields/LineEdit.svg</file>
         <file alias="assets/control_images/text-fields/NumberBox.svg">../tools/gallery/artwork/text-fields/NumberBox.svg</file>
         <file alias="assets/control_images/text-fields/PasswordBox.svg">../tools/gallery/artwork/text-fields/PasswordBox.svg</file>
+        <file alias="assets/control_images/text-fields/CodeBlock.svg">../tools/gallery/artwork/text-fields/CodeBlock.svg</file>
         <file alias="assets/control_images/text-fields/TextEdit.svg">../tools/gallery/artwork/text-fields/TextEdit.svg</file>
         <file alias="assets/control_images/windowing/TitleBar.svg">../tools/gallery/artwork/windowing/TitleBar.svg</file>
         <file alias="assets/control_images/windowing/Window.svg">../tools/gallery/artwork/windowing/Window.svg</file>

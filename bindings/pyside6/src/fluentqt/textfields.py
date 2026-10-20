@@ -4,6 +4,7 @@ from . import _fluentqt as _native
 from ._fluentqt import FontRole
 
 AutoSuggestBox = _native.fluent.AutoSuggestBox
+CodeBlock = _native.fluent.CodeBlock
 EditingCommandRouter = _native.fluent.EditingCommandRouter
 Label = _native.fluent.Label
 LineEdit = _native.fluent.LineEdit
@@ -27,6 +28,7 @@ TextEdit.verticalScrollBar = _text_edit_vertical_scroll_bar
 
 __all__ = [
     "AutoSuggestBox",
+    "CodeBlock",
     "EditingCommandRouter",
     "FontRole",
     "Label",

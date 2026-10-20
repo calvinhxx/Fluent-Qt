@@ -1075,6 +1075,16 @@ def _build_sample_card(
     elif entry.category_id == "qml-bridge":
         from .native_samples_qmlbridge import example_source_files
         source_files = example_source_files(sample.id)
+    if sample.id == "command-palette-shared-actions":
+        from .native_samples_navigation import command_palette_source_files
+        source_files = command_palette_source_files(result)
+    elif sample.id == "field-connection-form":
+        from .native_samples_layout import connection_form_source_files
+        source_files = connection_form_source_files(result)
+    elif sample.id in {"popup-modal-dim", "dialog-backdrop-effects",
+                       "drawer-view-backdrop-effects"}:
+        from .native_samples_overlays import overlay_source_files
+        source_files = overlay_source_files(result)
     source_expander = GalleryCodeBlock(
         result.source, card,
         full_code=full_code,

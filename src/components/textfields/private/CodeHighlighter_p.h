@@ -1,10 +1,10 @@
-#ifndef GALLERYCODEHIGHLIGHTER_H
-#define GALLERYCODEHIGHLIGHTER_H
+#ifndef FLUENTQT_CODEHIGHLIGHTER_P_H
+#define FLUENTQT_CODEHIGHLIGHTER_P_H
 
 #include <QString>
 #include <QVector>
 
-namespace fluent::gallery {
+namespace fluent::textfields::detail {
 
 // Half-open source range for one rendered UTF-16 character. Empty ranges mark
 // synthetic wrapping characters; expanded tabs share their original range.
@@ -34,9 +34,12 @@ QString highlightQmlToHtml(const QString& code, bool darkTheme, CodeSourceMap* s
  * @brief Renders a Python snippet with the same light/dark token palette.
  * zh_CN: 使用同一套明暗 token 配色渲染 Python 片段。
  */
-QString highlightPythonToHtml(const QString& code, bool darkTheme,
-                              CodeSourceMap* sourceMap = nullptr);
+QString highlightPythonToHtml(const QString& code, bool darkTheme, CodeSourceMap* sourceMap = nullptr);
 
-} // namespace fluent::gallery
+QString highlightPlainToHtml(const QString& code, const QString& color, CodeSourceMap* sourceMap = nullptr);
+QString
+highlightCodeToHtml(const QString& code, const QString& language, bool dark, CodeSourceMap* sourceMap = nullptr);
 
-#endif // GALLERYCODEHIGHLIGHTER_H
+} // namespace fluent::textfields::detail
+
+#endif // FLUENTQT_CODEHIGHLIGHTER_P_H

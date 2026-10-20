@@ -672,7 +672,7 @@
         },
         {
           "component_id": "field",
-          "choose_when": "An existing editor needs a shared label, required mark, helper text, or validation presentation while retaining its own value API.",
+          "choose_when": "An existing editor needs a shared label and validation feedback. Add FormController to coordinate dirty/touched state, asynchronous validation and submission while the application retains values and requests.",
           "avoid_when": "The editor already provides the complete labeling and validation presentation, or the content is not an editable field."
         },
         {
@@ -725,6 +725,11 @@
           "component_id": "command-bar-flyout",
           "choose_when": "A contextual surface combines primary and secondary command groups.",
           "avoid_when": "A simple menu or persistent command bar is sufficient."
+        },
+        {
+          "component_id": "command-palette",
+          "choose_when": "Users need keyboard search across grouped application commands with shared QAction state.",
+          "avoid_when": "A short fixed menu already exposes every relevant command."
         }
       ]
     },
@@ -849,6 +854,11 @@
           "component_id": "label",
           "choose_when": "Static text needs Fluent typography, wrapping, or elision.",
           "avoid_when": "The text must be edited."
+        },
+        {
+          "component_id": "code-block",
+          "choose_when": "Read-only source needs syntax colors, exact copying, folding or bounded scrolling.",
+          "avoid_when": "Users need to edit code or inspect a full file/project workspace."
         },
         {
           "component_id": "line-edit",

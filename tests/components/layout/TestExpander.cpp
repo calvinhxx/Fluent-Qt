@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QPointer>
 #include <QSignalSpy>
+#include <QScrollBar>
 #include <QTest>
 #include <QVariantAnimation>
 #include <QVBoxLayout>
@@ -11,6 +12,7 @@
 #include "components/foundation/MotionPolicy.h"
 #include "components/layout/Divider.h"
 #include "components/layout/Expander.h"
+#include "components/scrolling/ScrollView.h"
 #include "components/textfields/Label.h"
 #include "design/Animation.h"
 
@@ -245,4 +247,30 @@ TEST(ExpanderTest, Contract_TakeContentTransfersWithoutDeleting)
     EXPECT_EQ(expander.contentWidget(), nullptr);
     EXPECT_EQ(expander.height(), 44);
     delete taken;
+}
+
+TEST(ExpanderTest, Contract_HiddenSiblingsDoNotCaptureCompetingScrollAnchors)
+{
+    fluent::scrolling::ScrollView scroll;
+    scroll.resize(420, 180);
+    scroll.setWidgetResizable(true);
+    auto* page = new QWidget;
+    auto* layout = new QVBoxLayout(page);
+    scroll.setContentWidget(page, WidgetOwnership::Owned);
+    for (int index = 0; index < 4; ++index) {
+        auto* expander = new Expander(page);
+        expander->setHeaderText(QString::number(index));
+        expander->setContentWidget(makeBody(), WidgetOwnership::Owned);
+        layout->addWidget(expander);
+        expander->setExpandedAnimated(true, false);
+        expander->setExpandedAnimated(false, false);
+    }
+    auto* tail = new fluent::textfields::Label(QStringLiteral("Page tail"), page);
+    tail->setFixedHeight(400);
+    layout->addWidget(tail);
+    // Show before queued transition cleanup, as cached Gallery pages do.
+    scroll.show();
+    QApplication::processEvents();
+    EXPECT_GT(scroll.verticalScrollBar()->maximum(), 0);
+    EXPECT_EQ(scroll.verticalScrollBar()->value(), 0);
 }

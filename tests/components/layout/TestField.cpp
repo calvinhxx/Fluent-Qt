@@ -247,6 +247,34 @@ TEST_F(FieldTest, Contract_FocusProxyAndCaptionBuddyFollowEditor)
     delete taken;
 }
 
+TEST_F(FieldTest, Contract_FeedbackReplacesHelperAndValidatingHasNoErrorIcon)
+{
+    Field field;
+    field.setLabelText(QStringLiteral("Server address"));
+    field.setHelperText(QStringLiteral("Use HTTPS."));
+    auto* editor = new LineEdit;
+    field.setEditor(editor, WidgetOwnership::Owned);
+    field.resize(320, 160);
+    field.show();
+    QApplication::processEvents();
+    auto* helper = field.findChild<Label*>(QStringLiteral("fluentFieldHelper"));
+    auto* status = field.findChild<Label*>(QStringLiteral("fluentFieldStatus"));
+    ASSERT_NE(helper, nullptr);
+    ASSERT_NE(status, nullptr);
+    EXPECT_TRUE(helper->isVisible());
+    const int editorTop = editor->mapTo(&field, QPoint()).y();
+    field.setValidationState(Field::ValidationState::Validating);
+    field.setValidationMessage(QStringLiteral("Checking…"));
+    QApplication::processEvents();
+    EXPECT_FALSE(helper->isVisible());
+    EXPECT_TRUE(status->isVisible());
+    EXPECT_TRUE(field.findChild<fluent::FontIcon*>(QStringLiteral("fluentFieldStatusIcon"))->isHidden());
+    EXPECT_EQ(editor->mapTo(&field, QPoint()).y(), editorTop);
+    field.setValidationMessage(QString());
+    EXPECT_FALSE(helper->isHidden());
+    EXPECT_TRUE(status->isHidden());
+}
+
 TEST_F(FieldTest, Contract_AccessibleNameAndDescription)
 {
     Field field;

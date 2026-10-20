@@ -1143,3 +1143,58 @@ register_source_samples(
         ),
     },
 )
+
+
+register_source_samples(
+    "code-block",
+    ("CodeBlock", "ToggleSwitch"),
+    {
+        "code-block-basic": (
+            "code",
+            _script(
+                '''
+                code = fluentqt.CodeBlock(globals().get("gallery_parent"))
+                code.setObjectName("sampleCodeBlock")
+                code.setLanguage("cpp")
+                code.setCode(
+                    '// A small FluentQt window\\n'
+                    'auto* button = new Button("Continue");\\n'
+                    'button->setFluentStyle(Button::Accent);'
+                )
+                '''
+            ),
+        ),
+        "code-block-scrolling": (
+            "root",
+            _script(
+                '''
+                root = QWidget(globals().get("gallery_parent"))
+                layout = QVBoxLayout(root)
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(12)
+                layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+                code = fluentqt.CodeBlock(root)
+                code.setObjectName("sampleCodeBlock")
+                code.setLanguage("python")
+                source = "# Project destinations\\nprojects = [\\n"
+                for i in range(1, 17):
+                    entry = f'    {{"name": "Project {i}", '
+                    entry += f'"path": "workspace/design/components/project-{i}"}},\\n'
+                    source += entry
+                code.setCode(source + "]")
+                code.setMaxVisibleLines(6)
+                wrap = fluentqt.ToggleSwitch(root)
+                wrap.setOnContent("Wrap long lines")
+                wrap.setOffContent("Wrap long lines")
+                wrap.setAccessibleName("Wrap long lines")
+                wrap.setObjectName("codeBlockWrap")
+                wrap.setIsOn(True)
+                wrap.toggled.connect(code.setWordWrap)
+                layout.addWidget(wrap)
+                layout.addWidget(code)
+                ''',
+                _WIDGETS + "\nfrom PySide6.QtCore import Qt",
+            ),
+        ),
+    },
+)

@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
 
-[← Files and feedback](files-and-feedback.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Timeline and Stepper →](sequence-controls.md)
+[← CodeBlock](code-block.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Timeline and Stepper →](sequence-controls.md)
 <!-- docs-nav:top:end -->
 
 `Spatial` is an optional extension in `src/components/spatial`, using
@@ -825,5 +825,5 @@ consumer.
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Files and feedback](files-and-feedback.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Timeline and Stepper →](sequence-controls.md)
+[← CodeBlock](code-block.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Timeline and Stepper →](sequence-controls.md)
 <!-- docs-nav:bottom:end -->

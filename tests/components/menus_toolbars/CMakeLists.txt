@@ -2,6 +2,7 @@ add_qt_test_module(test_command_bar
     TestCommandBar.cpp
     TestCommandOverflowProjection.cpp)
 add_qt_test_module(test_command_bar_flyout TestCommandBarFlyout.cpp)
+add_qt_test_module(test_command_palette TestCommandPalette.cpp)
 add_qt_test_module(test_command_submenus TestCommandSubmenus.cpp)
 add_qt_test_module(test_menu TestMenu.cpp)
 add_qt_test_module(test_menu_bar TestMenuBar.cpp)

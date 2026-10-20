@@ -95,6 +95,7 @@
       "components": [
         "command-bar",
         "command-bar-flyout",
+        "command-palette",
         "menu",
         "menu-bar"
       ],
@@ -229,6 +230,7 @@
       "card",
       "chart-view",
       "checkbox",
+      "code-block",
       "compound-button",
       "divider",
       "donut-chart",
@@ -366,13 +368,18 @@
         {
           "kind": "interaction",
           "test_case": "CalendarViewTest.PixelScrollMovesContinuouslyAndKeepsHitTargetsAligned",
-          "states": ["normal-light", "selection"],
+          "states": [
+            "normal-light",
+            "selection"
+          ],
           "execution": "ci"
         },
         {
           "kind": "interaction",
           "test_case": "CalendarViewTest.Contract_AccessibilityTracksPartiallyVisibleScrollRows",
-          "states": ["keyboard-focus"],
+          "states": [
+            "keyboard-focus"
+          ],
           "execution": "ci"
         },
         {
@@ -542,6 +549,46 @@
       }
     },
     {
+      "id": "command-palette",
+      "family": "command-layering",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "CommandPaletteTest.Contract_LightDarkNarrowRtlAndHostResize",
+          "states": [
+            "normal-light",
+            "normal-dark",
+            "open-layering",
+            "narrow",
+            "rtl"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "CommandPaletteTest.Contract_KeyboardActivationSharesCheckStateAndRestoresFocus",
+          "states": [
+            "keyboard-focus"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "CommandPaletteTest.Contract_CompactFilteredHeightKeepsSearchPosition",
+          "states": [
+            "open-layering",
+            "narrow"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "gallery"
+      }
+    },
+    {
       "id": "content-dialog",
       "family": "transient-overlay",
       "automated_evidence": [
@@ -697,6 +744,15 @@
             "dismissed"
           ],
           "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "DialogTest.SmokeDialogBlocksScrimClicks",
+          "states": [
+            "open",
+            "dismissed"
+          ],
+          "execution": "registered-only"
         }
       ],
       "manual_evidence": {
@@ -716,6 +772,15 @@
           "states": [
             "open",
             "placement"
+          ],
+          "execution": "registered-only"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "DrawerViewTest.ModalDimAndClosePolicies",
+          "states": [
+            "open",
+            "dismissed"
           ],
           "execution": "registered-only"
         }
@@ -1056,6 +1121,25 @@
         {
           "kind": "interaction",
           "test_case": "PopupTest.Contract_CloseReasonsAndNotifyNoOps",
+          "states": [
+            "open",
+            "dismissed"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "PopupTest.Contract_BlurredBackdropExcludesPopupAndRefreshesWithoutFocusChanges",
+          "states": [
+            "open",
+            "keyboard-focus",
+            "dismissed"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "PopupTest.Contract_ModalNativeOutsidePressNeverActivatesBackground",
           "states": [
             "open",
             "dismissed"

@@ -1167,6 +1167,16 @@ class _PreviewParentStripper(ast.NodeTransformer):
             and function.attr[:1].isupper()
         ):
             return node
+        if function.attr == "CommandPalette":
+            # The owning window is part of a same-window palette's contract,
+            # even when the teaching outline omits the Gallery's container.
+            node.args = [
+                ast.Name(id="window", ctx=ast.Load())
+                if isinstance(argument, ast.Name) and argument.id in self._preview_parents
+                else argument
+                for argument in node.args
+            ]
+            return node
         node.args = [
             argument
             for argument in node.args
@@ -2175,6 +2185,20 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             imports=imports,
         )
 
+    if key == ("field", "field-connection-form"):
+        return focused(
+            """
+            # Fields and asynchronous handlers are in Full example.
+            form = fluentqt.FormController(self)
+            form.addField("address", address_field)
+            address_editor.textChanged.connect(
+                lambda _text: form.markFieldChanged("address")
+            )
+            # Complete validationRequested(key, token) with completeValidation().
+            # Complete submitRequested(token) with completeSubmit().
+            form.submit()
+            """
+        )
     if key == ("drawer-view", "drawer-view-basic"):
         return focused(
             """
@@ -2946,6 +2970,87 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
                 "from PySide6.QtWidgets import QHBoxLayout, QWidget"
             ),
         )
+    overlay_types = {
+        ("popup", "popup-modal-dim"): "Popup",
+        ("dialog", "dialog-backdrop-effects"): "Dialog",
+        ("drawer-view", "drawer-view-backdrop-effects"): "DrawerView",
+    }
+    if key in overlay_types:
+        kind = overlay_types[key]
+        return focused(
+            "# Full example includes the controls and background action.\n"
+            f"overlay = fluentqt.{kind}(window)\n"
+            "overlay.setModal(True)\n"
+            "overlay.setDim(True)\n"
+            "overlay.setDimOpacity(0.12)\n"
+            "overlay.setBackdropBlurRadius(8)\n"
+            f"overlay.setClosePolicy(fluentqt.{kind}.CloseOnEscape)\n"
+            "overlay.open()\n"
+        )
+    if key == ("command-palette", "command-palette-shared-actions"):
+        return focused(
+            """
+            # Actions, menu and toolbar are in Full example.
+            palette = fluentqt.CommandPalette(window)
+            palette.setModal(True)
+            palette.setPlaceholderText("Type a command or search…")
+            for action in menu.actions():
+                if not action.isSeparator():
+                    palette.addCommand(action, "Navigation")
+            # Update metadata without copying or taking ownership of actions.
+            palette.addCommand(add, "Notes", ["new", "添加"])
+            palette.addCommand(clear, "Notes", ["delete", "remove"])
+            palette.addCommand(details, "View", ["count", "properties"])
+            palette.addCommand(sort, "View", ["order"])
+            open_button.clicked.connect(palette.open)
+            """
+        )
+    if key == ("command-palette", "command-palette-editing-context"):
+        return focused(
+            """
+            editor = fluentqt.LineEdit(window)
+            editor.setText("Review the release notes")
+            editor.setAccessibleName("Text to edit")
+            editor.setPlaceholderText("Type text or reset the sample")
+            router = fluentqt.EditingCommandRouter(window)
+            palette = fluentqt.CommandPalette(window)
+            palette.setPlaceholderText("Search Copy, Cut, or Select All")
+            palette.setEmptyText("No matching commands")
+            palette.addCommand(
+                router.action(fluentqt.EditingCommandRouter.Command.Copy), "Edit", ["copy"]
+            )
+            palette.addCommand(
+                router.action(fluentqt.EditingCommandRouter.Command.Cut), "Edit", ["cut"]
+            )
+            palette.addCommand(
+                router.action(fluentqt.EditingCommandRouter.Command.SelectAll), "Edit", ["select all"]
+            )
+            open_button = fluentqt.Button("Search editing commands", window)
+            open_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            def open_commands():
+                editor.setFocus()
+                if not editor.hasSelectedText():
+                    editor.setSelection(0, min(6, len(editor.text())))
+                palette.setQuery("")
+                palette.setCurrentAction(palette.commands()[0])
+                palette.open()
+            open_button.clicked.connect(open_commands)
+            editor.textChanged.connect(lambda text: open_button.setEnabled(bool(text)))
+            reset = fluentqt.Button("Reset text", window)
+            def reset_text():
+                editor.setText("Review the release notes")
+                editor.setFocus()
+            reset.clicked.connect(reset_text)
+            layout = QVBoxLayout(window)
+            layout.addWidget(editor)
+            buttons = QHBoxLayout()
+            buttons.addWidget(open_button)
+            buttons.addWidget(reset)
+            buttons.addStretch()
+            layout.addLayout(buttons)
+            """,
+            imports="from PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QHBoxLayout, QVBoxLayout",
+        )
     if key == ("command-bar", "command-bar-editing-router"):
         return focused(
             """
@@ -3675,22 +3780,6 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             confirm.clicked.connect(flyout.close)
             flyout.showAt(command_button)
             """
-        )
-    if key == ("dialog", "dialog-owned-content"):
-        return focused(
-            """
-            dialog = fluentqt.Dialog(window)
-            dialog.setMinimumSize(480, 280)
-            layout = QVBoxLayout(dialog)
-            layout.addWidget(title_label)
-            layout.addWidget(name_edit)
-            layout.addStretch(1)
-            layout.addLayout(command_row)
-            apply_button.clicked.connect(lambda: dialog.done(1))
-            dialog.finished.connect(dialog.deleteLater)
-            dialog.open()
-            """,
-            imports="from PySide6.QtWidgets import QVBoxLayout",
         )
     if key == ("info-badge", "info-badge-custom-metrics"):
         return focused(

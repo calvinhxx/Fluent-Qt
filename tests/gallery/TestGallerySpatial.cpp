@@ -4463,6 +4463,103 @@ TEST_F(GallerySpatialTest, SettingsUpdateTextRemainsCompleteAfterSpatialResize)
     }
 }
 
+TEST_F(GallerySpatialTest, NativeCachedDrawerBackdropIncludesCompositor)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires native GPU composition";
+    auto& settings = GallerySettings::instance();
+    settings.setHomeParticlesEnabled(false);
+    settings.setNavigationStyle(GallerySettings::NavigationStyle::Left);
+    GalleryWindow window;
+    auto* presenter = window.findChild<GalleryContentPresenter*>();
+    presenter->setPrewarmPaused(true);
+    presenter->prewarmFinished();
+    window.resize(1200, 850);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 60000));
+    ASSERT_TRUE(window.selectRoute("drawer-view"));
+    QAbstractButton* opener = nullptr;
+    ASSERT_TRUE(QTest::qWaitFor([&] {
+        for (auto* button : window.findChildren<QAbstractButton*>()) {
+            if (button->text() == QStringLiteral("Open drawer") && button->isVisible()) {
+                opener = button;
+                return true;
+            }
+        }
+        return false;
+    }));
+    for (auto* parent = opener->parentWidget(); parent; parent = parent->parentWidget()) {
+        if (auto* scroll = qobject_cast<QScrollArea*>(parent))
+            scroll->ensureWidgetVisible(opener);
+    }
+    // Build the real cached sample before creating the 3D compositor.
+    settings.setSpatialModeEnabled(true);
+    auto* controller = window.findChild<GallerySpatialController*>();
+    ASSERT_NE(controller, nullptr);
+    QWidget* canvas = nullptr;
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            canvas = window.findChild<QWidget*>("gallerySpatialSurface");
+            return canvas && canvas->property("presenting").toBool();
+        },
+        5000));
+    for (auto theme : {GallerySettings::ThemeMode::Light, GallerySettings::ThemeMode::Dark}) {
+        settings.setThemeMode(theme);
+        for (int opening = 0; opening < 2; ++opening) {
+            SCOPED_TRACE(int(theme));
+            SCOPED_TRACE(opening);
+            controller->cancelTransition();
+            QTest::qWait(100);
+            // Exercise the sample's actual opening connection; projected pointer
+            // routing is covered independently by NativeOverlaysBlockProjectedHomeLinks.
+            opener->click();
+            overlay::OverlayScrim* scrim = nullptr;
+            ASSERT_TRUE(QTest::qWaitFor(
+                [&] {
+                    for (auto* candidate : window.findChildren<overlay::OverlayScrim*>("DrawerViewScrim")) {
+                        if (candidate->isVisible())
+                            scrim = candidate;
+                    }
+                    return scrim && scrim->progress() >= 0.999;
+                },
+                2000));
+            const auto backdrop = scrim->grab().toImage();
+            ASSERT_FALSE(backdrop.isNull());
+            // The content area must retain text/cards, not just the flat canvas token.
+            // Ignore the title bar and the right-hand drawer; support any native DPR.
+            const qreal dpr = backdrop.devicePixelRatio();
+            double sum = 0, squares = 0;
+            int pixels = 0;
+            for (int y = 100; y < 650; y += 8) {
+                for (int x = 40; x < 800; x += 8) {
+                    const double value = qGray(backdrop.pixel(qRound(x * dpr), qRound(y * dpr)));
+                    sum += value;
+                    squares += value * value;
+                    ++pixels;
+                }
+            }
+            const double variance = squares / pixels - qPow(sum / pixels, 2);
+            EXPECT_GT(variance, 4.0) << "The cached drawer lost the 3D content in its backdrop";
+            if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE"); !dir.isEmpty()) {
+                QDir().mkpath(dir);
+                window.grab().save(dir + QString("/cached-drawer-%1-%2.png").arg(int(theme)).arg(opening));
+            }
+            QTest::keyClick(window.windowHandle(), Qt::Key_Escape);
+            ASSERT_TRUE(QTest::qWaitFor(
+                [&] {
+                    for (auto* candidate : window.findChildren<overlay::OverlayScrim*>()) {
+                        if (candidate->isVisible())
+                            return false;
+                    }
+                    return true;
+                },
+                2000));
+            EXPECT_EQ(window.currentRouteId(), QStringLiteral("drawer-view"));
+            EXPECT_TRUE(canvas->property("presenting").toBool());
+        }
+    }
+}
+
 TEST_F(GallerySpatialTest, NativeOverlaysBlockProjectedHomeLinks)
 {
     if (tests::support::isHeadlessPlatform())

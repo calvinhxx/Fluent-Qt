@@ -2,6 +2,8 @@
 #define OVERLAYSCRIM_H
 
 #include <QColor>
+#include <QImage>
+#include <QPointer>
 #include <QRect>
 #include <QWidget>
 
@@ -26,8 +28,8 @@ namespace fluent::overlay {
 class OverlayScrim : public QWidget, public FluentElement {
     Q_OBJECT
     /**
-     * @brief Dim fade progress from 0 (clear) to 1 (full smoke opacity).
-     * zh_CN: 压暗淡入进度，从 0（透明）到 1（完整烟雾不透明度）。
+     * @brief Shared blur and dim fade progress from 0 (clear) to 1 (fully shown).
+     * zh_CN: 模糊和压暗共用的淡入进度，从 0（透明）到 1（完全显示）。
      */
     Q_PROPERTY(double progress READ progress WRITE setProgress)
     /**
@@ -56,6 +58,10 @@ public:
     void setColor(const QColor& color);
     QColor color() const { return m_color; }
 
+    void setDimOpacity(qreal opacity);
+    void setBackdrop(QWidget* overlay, qreal radius);
+    void refreshBackdrop();
+
     void setSurfaceRadius(int radius);
     int surfaceRadius() const { return m_surfaceRadius; }
 
@@ -79,14 +85,23 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private:
     void handlePointerEvent(QEvent* event);
+    void queueBackdropRefresh();
 
     bool m_modal = true;
     bool m_dim = true;
     qreal m_opacityProgress = 1.0;
     QColor m_color; // invalid → themeSmoke(). zh_CN: 无效则用 themeSmoke()。
+    qreal m_dimOpacity = -1.0;
+    qreal m_blurRadius = 0.0;
+    QPointer<QWidget> m_overlay;
+    QImage m_backdrop;
+    QSize m_backdropSize;
+    bool m_refreshPending = false;
+    bool m_capturing = false;
     int m_surfaceRadius = 0;
     bool m_spotEnabled = false;
     QRect m_spot;

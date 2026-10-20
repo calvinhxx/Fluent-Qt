@@ -23,6 +23,8 @@ standalone reading tasks.
     - [Inspector Report Contract](architecture/inspector-report.md)
     - [Charts](architecture/charts.md)
     - [Files and feedback](architecture/files-and-feedback.md)
+    - [Form state and validation](architecture/form-state.md)
+    - [CodeBlock](architecture/code-block.md)
     - [Spatial: compose existing widgets in depth](architecture/spatial-view.md)
     - [Timeline and Stepper](architecture/sequence-controls.md)
     - [Date and time range picker](architecture/date-time-range-picker.md)

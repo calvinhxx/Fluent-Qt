@@ -197,6 +197,7 @@ EXPECTED_SUPPORT_TYPES = frozenset(
         "EditingCommandRouter",
         "FluentMenuItem",
         "FluentWidget",
+        "FormController",
         "Icons",
         "IconSize",
         "MotionPolicy",
@@ -293,16 +294,26 @@ CPP_PYTHON_MEMBER_EQUIVALENTS = frozenset(
 def _python_language_member_equivalents(module: ast.AST) -> set[str]:
     """Recognize real Python operations corresponding to Qt value methods.
 
-    QString lowercasing uses str.lower(), while QString/QStringList membership
-    uses in/not in. Require the operation in the AST instead of exempting these
+    QString uses Python string operations, and QMap insertion uses dictionary
+    assignment. Require the operation in the AST instead of exempting these
     C++ methods from parity checks or matching words in comments and strings.
     """
     equivalents = set()
+    dictionaries = {
+        ast.unparse(target)
+        for node in ast.walk(module)
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Dict)
+        for target in node.targets
+    }
     for node in ast.walk(module):
         if (isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant)
                 and node.value.value == ""):
             equivalents.add("clear")
         if isinstance(node, ast.Subscript):
+            if (isinstance(node.ctx, ast.Store)
+                    and ast.unparse(node.value) in dictionaries
+                    and not isinstance(node.slice, ast.Slice)):
+                equivalents.add("insert")
             if isinstance(node.slice, ast.Constant) and node.slice.value == 0:
                 equivalents.add("first")
             if (isinstance(node.slice, ast.UnaryOp) and isinstance(node.slice.op, ast.USub)
@@ -311,11 +322,11 @@ def _python_language_member_equivalents(module: ast.AST) -> set[str]:
         if (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Attribute)
-            and node.func.attr == "lower"
+            and node.func.attr in {"lower", "strip"}
             and not node.args
             and not node.keywords
         ):
-            equivalents.add("toLower")
+            equivalents.add({"lower": "toLower", "strip": "trimmed"}[node.func.attr])
         elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
               and node.func.id == "bool" and len(node.args) == 1):
             equivalents.add("toBool")
@@ -1053,6 +1064,245 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         finally:
             result.widget.deleteLater()
             QApplication.processEvents()
+
+    def test_connection_form_shared_validation_and_save(self):
+        result = build_sample("field", "field-connection-form")
+        root = result.widget
+        try:
+            root.resize(560, root.sizeHint().height())
+            root.show()
+            QApplication.processEvents()
+            form = root.findChild(fluentqt.FormController, "connectionFormController")
+            self.assertIn("FormController", result.covered_types)
+            self.assertIsNotNone(form)
+            self.assertEqual(form.fieldKeys(), ["name", "address", "token"])
+            token = root.findChild(fluentqt.LineEdit, "connectionInput_token")
+            address = root.findChild(fluentqt.LineEdit, "connectionInput_address")
+            self.assertIn("completeValidation", result.preview_source)
+            token.setText("demo-token")
+            address.setText("https://offline.example")
+            form.validate()
+            self.assertTrue(form.isValidating())
+            address.setText("https://api.example.com/v1")
+            QTest.qWait(750)
+            self.assertEqual(form.errorMessages(), [])
+            self.assertTrue(form.submit())
+            self.assertFalse(form.submit())
+            elapsed = QElapsedTimer()
+            elapsed.start()
+            while form.isSubmitting() and elapsed.elapsed() < 3000:
+                QTest.qWait(20)
+            self.assertFalse(form.isSubmitting())
+            self.assertFalse(form.isDirty())
+            self.assertTrue(form.isValid())
+            root.resize(340, root.sizeHint().height())
+            QApplication.processEvents()
+            for field in root.findChildren(fluentqt.Field):
+                self.assertLessEqual(field.geometry().right(), root.width())
+        finally:
+            root.deleteLater()
+            QApplication.processEvents()
+
+    def test_connection_form_exposes_concise_usage_and_complete_source(self):
+        from fluentqt_gallery.native_samples_layout import connection_form_source_files
+
+        entry = ENTRY_BY_ROUTE_ID["field"]
+        sample = SAMPLE_BY_KEY[("field", "field-connection-form")]
+        card, result = _build_sample_card(entry, sample, None)
+        self.addCleanup(card.deleteLater)
+        self.assertLessEqual(len(result.source.splitlines()), 80)
+        self.assertLessEqual(max(map(len, result.source.splitlines())), 88)
+        self.assertIn("Full example", result.source)
+        self.assertNotIn("class ConnectionForm", result.source)
+        full = connection_form_source_files(result)[0]["code"]
+        self.assertIn(result.preview_source.split("class ConnectionForm", 1)[1], full)
+        self.assertNotIn("from fluentqt_gallery", full)
+
+        block = card._gallery_source_expander
+        self.assertEqual(block.code(), result.source)
+        block._source_selector.setSelectedIndex(1)
+        self.assertEqual(block.code(), full)
+        block._source_selector.setSelectedIndex(0)
+        self.assertEqual(block.code(), result.source)
+
+        namespace = {"__name__": "connection_form_source_check"}
+        exec(compile(full, "connection_form.py", "exec"), namespace)
+        copied = namespace["panel"]
+        self.addCleanup(copied.deleteLater)
+        form = copied.findChild(fluentqt.FormController, "connectionFormController")
+        self.assertEqual(form.fieldKeys(), ["name", "address", "token"])
+        copied.findChild(fluentqt.LineEdit, "connectionInput_token").setText("demo-token")
+        self.assertTrue(form.submit())
+        elapsed = QElapsedTimer()
+        elapsed.start()
+        while form.isSubmitting() and elapsed.elapsed() < 3000:
+            QTest.qWait(20)
+        self.assertFalse(form.isSubmitting())
+        self.assertTrue(form.isValid())
+        self.assertFalse(form.isDirty())
+
+    def test_command_palette_exposes_complete_workspace_source(self):
+        result = build_sample("command-palette", "command-palette-shared-actions")
+        try:
+            self.assertLessEqual(len(result.source.splitlines()), 80)
+            self.assertIn("Full example", result.source)
+            for token in ("setBackdropBlurRadius", "setDimOpacity", "update_count()",
+                          "fluentqt.Typography.Icons.Info", "navigate_to"):
+                self.assertIn(token, result.preview_source)
+            from fluentqt_gallery.native_samples_navigation import command_palette_source_files
+            full = command_palette_source_files(result)[0]["code"]
+            self.assertNotIn("from fluentqt_gallery", full)
+            namespace = {"__name__": "workspace_source_check"}
+            exec(compile(full, "workspace.py", "exec"), namespace)
+            copied = namespace["root"]
+            self.assertEqual(len(copied.findChild(fluentqt.CommandPalette).commands()), 8)
+            copied.close()
+            copied.deleteLater()
+        finally:
+            result.widget.deleteLater()
+
+    def test_overlay_samples_share_backdrop_controls_and_modal_input(self):
+        from PySide6.QtWidgets import QAbstractButton
+
+        cases = (
+            ("popup", "popup-modal-dim", fluentqt.Popup, "Gallery.Popup"),
+            ("dialog", "dialog-backdrop-effects", fluentqt.Dialog, "Gallery.Dialog"),
+            ("drawer-view", "drawer-view-backdrop-effects", fluentqt.DrawerView,
+             "Gallery.Drawer"),
+        )
+        for route, sample, widget_type, prefix in cases:
+            with self.subTest(route=route):
+                host = QWidget()
+                host.resize(900, 700)
+                result = build_sample(route, sample, host)
+                root = result.widget
+                try:
+                    root.setGeometry(20, 20, 700, 180)
+                    host.show()
+                    host.activateWindow()
+                    QApplication.processEvents()
+                    root.findChild(QAbstractButton, prefix + ".OpenEffects").click()
+                    popup = host.findChild(widget_type, prefix + ".Effects")
+                    self.assertTrue(popup.isModal())
+                    popup.setAnimationEnabled(False)
+                    popup.findChild(fluentqt.Slider, prefix + ".Blur").setValue(12)
+                    popup.findChild(fluentqt.Slider, prefix + ".Dim").setValue(25)
+                    self.assertEqual(popup.backdropBlurRadius(), 12.0)
+                    self.assertAlmostEqual(popup.dimOpacity(), 0.25)
+                    dim = popup.findChild(fluentqt.CheckBox, prefix + ".DimEnabled")
+                    dim.setChecked(False)
+                    self.assertFalse(popup.isDim())
+                    self.assertTrue(popup.isModal())
+                    self.assertEqual(popup.backdropBlurRadius(), 12.0)
+                    counter = root.findChild(QAbstractButton, prefix + ".Background")
+                    status = root.findChild(fluentqt.Label, prefix + ".Status")
+                    point = counter.mapTo(host, counter.rect().center())
+                    QTest.mouseClick(host.windowHandle(), Qt.MouseButton.LeftButton,
+                                     Qt.KeyboardModifier.NoModifier, point)
+                    self.assertEqual(status.text(), "Background clicks: 0")
+                    self.assertTrue(popup.isOpen())
+                    modal = popup.findChild(fluentqt.CheckBox, prefix + ".Modal")
+                    modal.setChecked(False)
+                    QTest.mouseClick(host.windowHandle(), Qt.MouseButton.LeftButton,
+                                     Qt.KeyboardModifier.NoModifier, point)
+                    self.assertEqual(status.text(), "Background clicks: 1")
+                    self.assertTrue(popup.isOpen())
+                    modal.setChecked(True)
+                    popup.findChild(fluentqt.CheckBox, prefix + ".CloseOutside").setChecked(True)
+                    closed = []
+                    popup.closed.connect(lambda: closed.append(True))
+                    QTest.mouseClick(host.windowHandle(), Qt.MouseButton.LeftButton,
+                                     Qt.KeyboardModifier.NoModifier, point)
+                    # The example deletes itself on closed; the native mouse
+                    # delivery may process that deferred deletion before returning.
+                    self.assertEqual(closed, [True])
+                    self.assertEqual(status.text(), "Background clicks: 1")
+                finally:
+                    host.close()
+                    host.deleteLater()
+
+    def test_command_palette_samples_share_actions_and_editing_context(self):
+        from PySide6.QtWidgets import QAbstractButton
+
+        for sample_id in ("command-palette-shared-actions", "command-palette-editing-context"):
+            with self.subTest(sample=sample_id):
+                host = QWidget()
+                host.resize(900, 700)
+                result = build_sample("command-palette", sample_id, host)
+                self.assertIn("fluentqt.CommandPalette(window)", result.source)
+                self.assertNotIn("gallery_window_editing_command_router", result.source)
+                root = result.widget
+                try:
+                    root.setGeometry(20, 20, 700, 400)
+                    host.show()
+                    host.activateWindow()
+                    QApplication.processEvents()
+                    palette = root.findChild(fluentqt.CommandPalette)
+                    self.assertIsNotNone(palette)
+                    palette.setAnimationEnabled(False)
+                    if sample_id.endswith("shared-actions"):
+                        modal = root.findChild(fluentqt.CheckBox)
+                        modal.setChecked(False)
+                        self.assertFalse(palette.isModal())
+                        modal.setChecked(True)
+                        self.assertTrue(palette.isModal())
+                        self.assertEqual(len(palette.commands()), 8)
+                        self.assertEqual(palette.backdropBlurRadius(), 8.0)
+                        self.assertAlmostEqual(palette.dimOpacity(), 0.12)
+                        self.assertIsNone(root.findChild(fluentqt.Slider))
+                        bar = root.findChild(fluentqt.CommandBar)
+                        menu = root.findChild(fluentqt.FluentMenu)
+                        details = bar.primaryActions()[-1]
+                        self.assertIn(details, menu.actions())
+                        self.assertIn(details, palette.commands())
+                        root.findChild(QAbstractButton, "Gallery.CommandPalette.Open").click()
+                        palette.setQuery("properties")
+                        self.assertIs(palette.currentAction(), details)
+                        self.assertTrue(palette.triggerCurrent())
+                        self.assertTrue(details.isChecked())
+                        status = root.findChild(fluentqt.Label, "Gallery.CommandPalette.Status")
+                        self.assertFalse(status.isHidden())
+                        notes = root.findChild(fluentqt.ListView, "Gallery.CommandPalette.Notes")
+                        self.assertEqual(notes.model().rowCount(), 0)
+                        palette.open()
+                        palette.setQuery("new")
+                        self.assertTrue(palette.triggerCurrent())
+                        self.assertEqual(notes.model().rowCount(), 1)
+                        self.assertEqual(status.text(), "1 note")
+                        palette.open()
+                        palette.setQuery("clear")
+                        self.assertTrue(palette.triggerCurrent())
+                        self.assertEqual(notes.model().rowCount(), 0)
+                        self.assertIsNone(palette.currentAction())
+                        palette.open()
+                        palette.setQuery("inbox")
+                        self.assertTrue(palette.triggerCurrent())
+                        self.assertEqual(root.findChild(fluentqt.Label, "Gallery.CommandPalette.Location").text(), "Inbox")
+                        self.assertEqual(notes.model().rowCount(), 1)
+                        palette.open()
+                        palette.setQuery("home")
+                        self.assertTrue(palette.triggerCurrent())
+                        self.assertEqual(notes.model().rowCount(), 0)
+                    else:
+                        root.findChild(QAbstractButton, "Gallery.CommandPalette.OpenEditing").click()
+                        editor = root.findChild(fluentqt.LineEdit, "Gallery.CommandPalette.Editor")
+                        search = palette.findChild(fluentqt.LineEdit, "FluentCommandPalette.Search")
+                        QTest.keyClicks(search, "copy")
+                        QTest.keyClick(search, Qt.Key.Key_Return)
+                        self.assertFalse(palette.isOpen())
+                        self.assertEqual(QApplication.clipboard().text(), "Review")
+                        self.assertEqual(editor.selectedText(), "Review")
+                        self.assertTrue(editor.hasFocus())
+                        editor.clear()
+                        open_button = root.findChild(QAbstractButton, "Gallery.CommandPalette.OpenEditing")
+                        self.assertFalse(open_button.isEnabled())
+                        root.findChild(QAbstractButton, "Gallery.CommandPalette.ResetEditing").click()
+                        self.assertEqual(editor.text(), "Review the release notes")
+                        self.assertTrue(open_button.isEnabled())
+                finally:
+                    host.close()
+                    host.deleteLater()
+                    QApplication.processEvents()
 
     def test_command_submenu_samples_execute_shared_choices(self):
         from PySide6.QtWidgets import QAbstractButton
@@ -2413,10 +2663,8 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             self.assertIsNotNone(code_label)
             self.assertEqual(code_label.text(), "")
             self.assertTrue(code_label.wordWrap())
-            self.assertEqual(
-                code_label.sizePolicy().horizontalPolicy(),
-                QSizePolicy.Policy.Ignored,
-            )
+            self.assertIsInstance(code, fluentqt.CodeBlock)
+            self.assertEqual(code_label.parentWidget().objectName(), "fluentCodeViewport")
             source = card._gallery_result.source
             self.assertNotIn("for text, style in", source)
             self.assertRegex(
@@ -2466,6 +2714,27 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.deleteLater()
             QApplication.processEvents()
 
+    def test_public_code_block_sample_wrap_control(self):
+        result = build_sample("code-block", "code-block-scrolling")
+        try:
+            code = result.widget.findChild(fluentqt.CodeBlock, "sampleCodeBlock")
+            wrap = result.widget.findChild(fluentqt.ToggleSwitch, "codeBlockWrap")
+            self.assertIsNotNone(code)
+            self.assertIsNotNone(wrap)
+            self.assertEqual(code.maxVisibleLines(), 6)
+            self.assertEqual(code.language(), "python")
+            self.assertTrue(code.isWordWrapEnabled())
+            source = code.code()
+            wrap.setIsOn(False)
+            self.assertFalse(code.isWordWrapEnabled())
+            self.assertEqual(code.code(), source)
+            wrap.setIsOn(True)
+            self.assertTrue(code.isWordWrapEnabled())
+        finally:
+            result.widget.close()
+            result.widget.deleteLater()
+            QApplication.processEvents()
+
     def test_code_block_wraps_long_python_at_narrow_width(self):
         block = GalleryCodeBlock(
             "result = fluentqt.Button.ButtonStyle.Accent "
@@ -2500,44 +2769,28 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             block.deleteLater()
             QApplication.processEvents()
 
-    def test_code_block_does_not_render_terminal_newline_as_empty_row(self):
-        source = (
-            "button = fluentqt.RepeatButton('Click and hold')\n"
-            "button.clicked.connect(increment)"
-        )
-        blocks = (
-            GalleryCodeBlock(source),
-            GalleryCodeBlock(source + "\n"),
-        )
+    def test_code_block_reuses_native_renderer_and_preserves_terminal_newline(self):
+        source = 'button = fluentqt.Button("Continue")\r\n'
+        block = GalleryCodeBlock(source)
+        self.assertIsInstance(block, fluentqt.CodeBlock)
         try:
-            heights = []
-            for block in blocks:
-                block.resize(760, block.height())
-                block.setExpandedAnimated(True, False)
-                block.show()
-                QApplication.processEvents()
-                label = block.findChild(
-                    fluentqt.Label,
-                    "galleryCodeBlockText",
-                )
-                content = block.findChild(
-                    QWidget,
-                    "galleryCodeBlockContentInner",
-                )
-                self.assertIsNotNone(label)
-                self.assertIsNotNone(content)
-                heights.append((block.height(), label.height()))
-                self.assertFalse(label.text().endswith("<br/></span>"))
-                margins = content.layout().contentsMargins()
-                self.assertEqual(
-                    content.height() - label.geometry().bottom() - 1,
-                    margins.bottom(),
-                )
-            self.assertEqual(heights[0], heights[1])
+            block.resize(760, block.height())
+            block.setExpandedAnimated(True, False)
+            block.show()
+            QApplication.processEvents()
+            label = block.findChild(fluentqt.Label, "galleryCodeBlockText")
+            self.assertIsNotNone(label)
+            self.assertEqual(block.code(), source)
+            self.assertEqual(block.language(), "python")
+            self.assertEqual(block.maxVisibleLines(), 0)
+            block.copy()
+            self.assertEqual(QApplication.clipboard().text(), source)
+            self.assertGreaterEqual(label.height(), label.heightForWidth(label.width()))
+            copy = block.findChild(fluentqt.Button, "galleryCodeBlockCopyButton")
+            self.assertEqual(copy.parentWidget().objectName(), "galleryCodeBlockHeader")
         finally:
-            for block in blocks:
-                block.close()
-                block.deleteLater()
+            block.close()
+            block.deleteLater()
             QApplication.processEvents()
 
     def test_drawer_close_policy_avoids_macos_title_bar(self):
@@ -3032,6 +3285,22 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 
     def test_value_member_parity_requires_python_operations(self):
         self.assertEqual(
+            _python_language_member_equivalents(ast.parse(
+                'self.editors = {}\nself.editors[key] = editor\n'
+                'value = editor.text().strip()\n'
+            )),
+            {"insert", "trimmed"},
+        )
+        self.assertEqual(
+            _python_language_member_equivalents(ast.parse(
+                'self.editors = {}\nvalue = self.editors[key]\n'
+                'items = []\nitems[key] = editor\n'
+                'operation = value.strip\nvalue = value.strip("x")\n'
+                'note = "insert() trimmed() strip()"\n'
+            )),
+            set(),
+        )
+        self.assertEqual(
             _python_language_member_equivalents(
                 ast.parse("accepted = suffix.lower() in extensions")
             ),
@@ -3074,6 +3343,14 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     # executes the complete file bundle and checks its QML bytes.
                     cpp_source = sample.cpp_snippet
                     cpp_api_source = cpp_source
+                    if entry.route_id == "code-block":
+                        # Code shown inside the block is data, not an executed
+                        # API call. Compare the outer CodeBlock setup only.
+                        cpp_api_source = re.sub(r'"(?:\\.|[^"\\])*"', '""', cpp_api_source)
+                    if sample.id == "command-palette-shared-actions":
+                        # Compare the workspace below the icon painter helper.
+                        # The copyable Python bundle renders icons with public FontIcon.
+                        cpp_api_source = cpp_source.split("auto* layout =", 1)[1]
                     if entry.route_id == "qml-view":
                         cpp_api_source = cpp_source.split("QWidget* makePanel(", 1)[1]
                         cpp_api_source = cpp_api_source.split("\nint main(", 1)[0]
@@ -3400,6 +3677,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         contract_source = (result.preview_source
                                            if entry.category_id in {"spatial", "qml-bridge"}
                                            else result.source)
+                        if sample.id in {"field-connection-form", "command-palette-shared-actions", "popup-modal-dim",
+                                         "dialog-backdrop-effects", "drawer-view-backdrop-effects"}:
+                            contract_source = result.preview_source
                         if entry.route_id == "qml-view":
                             from fluentqt.qmlbridge import QmlView
                             from fluentqt_gallery.native_samples_qmlbridge import (
@@ -3432,7 +3712,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         expected_design_tokens = {
                             "fluentqt.Typography.Icons.{0}".format(name)
                             for name in re.findall(
-                                r"Typography::Icons::([A-Za-z0-9_]+)",
+                                r"Typography::Icons::([A-Za-z0-9_]+)\b(?!\s*\()",
                                 cpp_source,
                             )
                         }
@@ -4907,9 +5187,9 @@ with (
             if not SPATIAL_AVAILABLE:
                 self.assertEqual("plugins" in pane._route_items, QML_BRIDGE_AVAILABLE)
                 self.assertEqual("plugins" in window._top_main_navigation_pane._buttons, QML_BRIDGE_AVAILABLE)
-                self.assertEqual(len(ROUTES), 108 + 2 * QML_BRIDGE_AVAILABLE)
+                self.assertEqual(len(ROUTES), 110 + 2 * QML_BRIDGE_AVAILABLE)
                 return
-            self.assertEqual(len(ROUTES), 112 + 2 * QML_BRIDGE_AVAILABLE)
+            self.assertEqual(len(ROUTES), 114 + 2 * QML_BRIDGE_AVAILABLE)
             self.assertTrue(CATEGORY_BY_ID["spatial"].plugin)
             plugins = pane._route_items["plugins"]
             spatial = pane._route_items["spatial"]

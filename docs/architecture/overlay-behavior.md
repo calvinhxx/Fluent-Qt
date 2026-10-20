@@ -18,8 +18,11 @@ ContentDialog / Flyout / TeachingTip model, which binds to the current window's
 
 Shared helpers live in `src/components/foundation/overlay/`, in the
 `fluent::overlay` namespace. The internal `OverlayCoordinator` manages top-level
-attachment, host resizing, scrim lifetime, and stacking. It is not an installed
-header or an application-facing API.
+attachment, host resizing, scrim lifetime, and stacking. `Popup`, `Dialog`, and
+`DrawerView` also delegate backdrop settings, parameter normalization, modal
+input containment, and outside/Escape dismissal to this coordinator. Each
+component retains its placement, animation, ownership, and close-result API.
+The coordinator is not an installed header or an application-facing API.
 
 ## Startup content cover
 
@@ -213,28 +216,108 @@ ownership. It is intentionally C++-only; see the
 
 ## Light Dismiss
 
+`CommandPalette` presents registered leaf `QAction` objects in a modal,
+same-window search surface. It reuses `Popup` placement, scrim and dismissal,
+with a Fluent search editor and model-backed results. The background stays
+undimmed by default. The default outer width is 464 logical pixels (432 for the visible card).
+Height follows the filtered commands up to a scrollable limit; the search row
+stays in place while the results shrink. Registration borrows the
+actions; updates to their labels, shortcuts, visibility, enabled and checked
+states are reflected in the palette. Register submenu leaves explicitly.
+The optional group and keywords belong to the palette's search metadata;
+applications retain command execution and shortcut registration.
+
+All whitespace-separated query words must match the label, group or keywords,
+ignoring case. Hidden actions are omitted, disabled results remain visible and
+cannot be selected, and registration order is retained within each group.
+Up/Down skip disabled commands, Enter executes the selected command once, and
+Escape closes. Query text is retained and selected when reopening; applications
+can call `setQuery(QString())` before opening to start fresh. The default search
+and empty-result messages can be replaced by the application. The search editor
+exposes keyboard instructions through its accessible description; Tab cycles
+between search and results. The compact card has no extra header or footer.
+
+The palette closes without an exit animation and restores focus before
+triggering the action. Close handlers may remove or disable the action, so
+dispatch validates it again. An `EditingCommandRouter` whose actions are
+registered in the palette retains the original editor and selection while
+the palette's search editor has focus. PySide6 exposes the same native class
+and retains wrappers for actions registered with `addCommand()` until removal.
+The WebAssembly Gallery compiles the same C++ implementation. See Gallery
+**Menus & toolbars → CommandPalette** for shared-menu/toolbar state and editing
+context examples.
+
 `CloseOnPressOutside` treats presses outside the visible card or panel as
 outside presses; shadow margins are not an interactive region.
 `CloseOnEscape` handles Escape in the overlay and its owning top-level window.
 `NoAutoClose` disables implicit dismissal from outside presses and Escape.
 
-After a non-modal overlay closes, the original outside press continues to the
-background target. `DrawerView` still consumes Escape when closing so that
-background shortcuts do not fire at the same time.
+Modal `Popup`, `Dialog`, and `DrawerView` consume outside pointer input before
+Qt selects the background receiver. A dismissing press and its matching release
+are consumed even with animations disabled or synchronous deletion on close.
+Focus stays inside the active modal surface, and background shortcuts in the
+owning window are blocked. The topmost active overlay handles input first.
+Input in another application window remains independent. Popup passthrough
+regions apply only to non-modal dismissal. After a non-modal overlay closes,
+the original outside press continues to the background target. Escape is
+consumed when closing; `NoAutoClose` keeps a modal surface open and consumes
+Escape without triggering background commands.
 
 ## Scrim And Stacking
 
-Modal or dimmed overlays use a same-window `OverlayScrim`. It sits above
+Modal, dimmed, or blurred overlays use a same-window `OverlayScrim`. It sits above
 background widgets and below the overlay card or drawer. A modal scrim blocks
 background pointer input. The `modal` and `dim` combinations below determine
-whether the scrim exists and whether it intercepts input. Explicitly maintain
+whether it intercepts input. A blur-only scrim is pointer-transparent when
+`modal` is false. Explicitly maintain
 the `scrim -> overlay` stacking order with `raiseOverlayStack` when opening an
 overlay, resizing the top-level window, or updating a drawer's position.
 
-Closing an overlay must synchronously hide or destroy its scrim so a stale
-scrim cannot keep blocking background widgets. `Dialog` smoke and
+When closing finishes, the overlay must synchronously hide or destroy its
+scrim so a stale scrim cannot keep blocking background widgets. `Dialog` smoke and
 `Popup` / `DrawerView` share the `OverlayScrim` implementation, including
 optional rounded surfaces and spotlight effects.
+
+`Popup`, `Dialog`, and `DrawerView` expose the same optional backdrop settings.
+Derived surfaces such as `Flyout`, `CommandPalette`, and `ContentDialog` inherit
+them:
+
+- `setDimOpacity(value)` uses an opacity from 0 to 1 when `dim` is enabled.
+  The default -1 uses the theme smoke token; any negative value restores it.
+- `setBackdropBlurRadius(radius)` blurs the owning window's content snapshot
+  with a radius from 0 to 32 logical pixels. Until explicitly configured,
+  modal surfaces use a subtle 4 px blur and non-modal surfaces use 0.
+  Changing `modal` updates this automatic radius and emits its change signal.
+  An explicit value, including 0 to disable blur, persists across modality
+  changes. Setting the radius does not change `modal`, `dim`, dismissal, or
+  keyboard focus behavior.
+
+Opening establishes the content → scrim → surface stacking order before capture,
+including when a cached surface predates a newly raised 3D compositor.
+The snapshot includes widgets below the current surface, including an underlying
+overlay when stacked. It excludes the active surface and its scrim without hiding
+widgets or disturbing focus. Capture and filtering happen on opening, resize,
+theme or radius changes, and an explicit `refreshBackdrop()` call. Content is
+frozen between those updates; applications with changing background content
+can refresh explicitly. This is content blur, not desktop/compositor blur.
+Native vibrancy's transparent areas use the Fluent canvas color; separately
+composited native or GPU surfaces depend on their QWidget rendering support.
+High Contrast suppresses blur and retains the configured scrim/input policy.
+
+Blur and dim follow the surface's opening and closing progress. The prepared
+snapshot is reused throughout the fade; showing the scrim at its already
+captured size does not trigger another capture. Reduced or disabled motion
+settles both layers together. CommandPalette cancellation uses this exit fade;
+executing a command still closes immediately and restores focus before dispatch.
+
+The Gallery Popup, Dialog, and DrawerView pages each include a modal and
+backdrop-effects demonstration. Controls inside each surface adjust blur, dim,
+modality, and outside-click dismissal immediately. A background counter shows
+whether modal input blocking is active; Gallery navigation is covered by the
+same barrier. Turning dim off retains blur and modal blocking. The CommandPalette workspace
+focuses on eight shared actions across three groups and a modal switch. Its
+fixed backdrop uses an 8 px blur and 12% dim; other popups keep their defaults.
+C++, PySide6 and WebAssembly use the same native backdrop implementation.
 
 ## Rendering And Theme
 
@@ -348,8 +431,9 @@ close across windows or consume Escape before a menu or overlay above it.
 
 These properties control separate behaviors:
 
-- `modal`: whether the scrim blocks background pointer input. When `true`, the
-  scrim's `WA_TransparentForMouseEvents` is false.
+- `modal`: whether the owning window's background pointer input and shortcuts
+  are blocked and keyboard focus is contained. When `true`, the scrim's
+  `WA_TransparentForMouseEvents` is false.
 - `dim`: whether to paint smoke. When `false`, the scrim remains unpainted but
   may still intercept input according to `modal`.
 - `closePolicy` / light-dismiss: `NoAutoClose`, `CloseOnPressOutside`, and
@@ -357,16 +441,20 @@ These properties control separate behaviors:
 
 Combinations:
 
-- Both false: no scrim.
-- `modal` only: an invisible input barrier.
+- Both false: no scrim unless blur is enabled; a blur-only scrim is transparent
+  to pointer input.
+- `modal` only: an input barrier with the default subtle blur; explicitly
+  set the blur radius to 0 for an invisible barrier.
 - `dim` only: visible smoke that does not intercept input. Outside presses may
   still dismiss the overlay according to `closePolicy` and reach the background.
 - Both true: visible smoke that blocks input.
 
 `Dialog::setSmokeEnabled(true)` is a legacy compatibility wrapper that enables
 both `modal` and `dim`. `setSmokeEnabled(false)` disables both;
-`isSmokeEnabled()` returns `true` only when both are `true`. Use `setModal` /
-`setDim` for independent combinations. `DrawerView` keeps its own `ClosePolicy`
+`isSmokeEnabled()` returns `true` only when both are `true`. This alias does not
+change an explicit blur radius or the configured dim opacity. The automatic
+blur follows the resulting modal state. Use `setModal` / `setDim` for
+independent combinations. `DrawerView` keeps its own `ClosePolicy`
 type, separate from `Popup::ClosePolicy`.
 
 ### NOTIFY and no-op writes
