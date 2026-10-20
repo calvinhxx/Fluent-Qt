@@ -39,8 +39,9 @@ TEST(GalleryCommandPaletteTest, Contract_SharedActionsAndEditingSamples)
         ASSERT_NE(palette, nullptr);
         palette->setAnimationEnabled(false);
         host.show();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
         host.activateWindow();
-        QApplication::processEvents();
+        ASSERT_TRUE(QTest::qWaitForWindowActive(&host));
         if (sample.id == QStringLiteral("command-palette-basic")) {
             EXPECT_EQ(palette->commands().size(), 4);
             root->findChild<QAbstractButton*>(QStringLiteral("Gallery.CommandPalette.OpenBasic"))->click();

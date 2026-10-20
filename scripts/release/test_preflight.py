@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
+from contextlib import redirect_stderr, redirect_stdout
 import importlib.util
+import io
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 SCRIPT = Path(__file__).with_name("preflight.py")
@@ -95,6 +98,39 @@ class ReleasePreflightTest(unittest.TestCase):
         self.assertEqual(checks[:len(shared)], shared)
         self.assertEqual(sum(label == "Gallery wheel builder" for label, _ in checks), 1)
         self.assertTrue({"Gallery artwork validator", "Gallery artwork source contracts", "Gallery artwork inventory"}.issubset(dict(shared)))
+
+    def test_integration_checks_start_with_compatibility_boundaries_and_self_tests(self):
+        checks = MODULE.integration_checks(Path("build/preflight-test"))
+        self.assertEqual(checks[0], (
+            "compatibility boundaries",
+            [sys.executable, "tools/quality/check_compatibility_boundaries.py",
+             "--project-root", ".", "--self-test"],
+        ))
+        self.assertEqual(sum(label == "compatibility boundaries" for label, _ in checks), 1)
+
+    def test_release_stops_and_preserves_a_boundary_checker_failure(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            checker = root / "tools/quality/check_compatibility_boundaries.py"
+            checker.parent.mkdir(parents=True)
+            checker.write_text("raise SystemExit(17)\n", encoding="utf-8")
+            context = MODULE.ReleaseContext(
+                "1.8.0", "release/1.8.x", "main", "a" * 40,
+                "v1.7.2", "v1.8.0", root / "notes.md",
+            )
+            errors = io.StringIO()
+            with mock.patch.object(MODULE, "ROOT", root), \
+                    mock.patch.object(MODULE, "parse_args", return_value=mock.Mock(refresh=False, base_ref="main")), \
+                    mock.patch.object(MODULE, "collect_release_context", return_value=context), \
+                    mock.patch.object(MODULE, "run", wraps=MODULE.run) as runner, \
+                    redirect_stdout(io.StringIO()), redirect_stderr(errors):
+                self.assertEqual(MODULE.main(), 17)
+            runner.assert_called_once_with(
+                [sys.executable, "tools/quality/check_compatibility_boundaries.py",
+                 "--project-root", ".", "--self-test"],
+                root=root,
+            )
+            self.assertIn("compatibility boundaries failed", errors.getvalue())
 
 
 if __name__ == "__main__":

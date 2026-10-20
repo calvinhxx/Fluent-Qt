@@ -897,6 +897,9 @@ if(BUILD_TESTING)
         test_pyside6_command_surface_dependency_gc_stress
         test_command_surface_dependency_gc_stress)
     fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_command_palette_callback_lifetime
+        test_command_palette_callbacks_can_destroy_the_palette)
+    fluentqt_add_pyside6_isolated_lifetime_test(
         test_pyside6_title_bar_content_gc_stress
         test_title_bar_content_gc_stress)
     fluentqt_add_pyside6_isolated_lifetime_test(

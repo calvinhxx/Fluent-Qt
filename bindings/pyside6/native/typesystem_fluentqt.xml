@@ -3,6 +3,26 @@
     <load-typesystem name="typesystem_widgets.xml" generate="no"/>
     <!-- Optional plugin global functions. -->
 
+    <template name="command_palette_references_before">
+// Keep existing borrowed wrappers alive while application callbacks run.
+const auto priorCommands = %CPPSELF->commands();
+Shiboken::AutoDecRef priorReferences(%CONVERTTOPYTHON[QList&lt;QAction*&gt;](priorCommands));
+if (priorReferences.isNull())
+    return nullptr;
+    </template>
+    <template name="command_palette_references_after">
+// removeReference removes the whole key, so retain the final registry as one
+// snapshot instead of removing an individual action from a shared key.
+if (Shiboken::Object::isValid(%PYSELF, false)) {
+    const auto currentCommands = %CPPSELF->commands();
+    Shiboken::AutoDecRef currentReferences(%CONVERTTOPYTHON[QList&lt;QAction*&gt;](currentCommands));
+    if (currentReferences.isNull())
+        return nullptr;
+    Shiboken::Object::keepReference(reinterpret_cast&lt;SbkObject *>(%PYSELF),
+        "CommandPalette.commands", currentReferences.object());
+}
+    </template>
+
     <!-- These C++ hooks are final in the binding adapters. Reject them before
          constructing shell override models; expose only the Python-safe
          _*ForBinding virtuals. -->
@@ -937,22 +957,27 @@
                 <modify-function signature="eventFilter(QObject*,QEvent*)" remove="all"/>
                 <modify-function signature="resizeEvent(QResizeEvent*)" remove="all"/>
                 <modify-function signature="addCommand(QAction*,const QString&amp;,const QStringList&amp;)">
+                    <inject-code class="target" position="beginning">
+                        <insert-template name="command_palette_references_before"/>
+                    </inject-code>
                     <inject-code class="target" position="end">
-if (%CPPSELF->commands().contains(%1))
-    Shiboken::Object::keepReference(reinterpret_cast&lt;SbkObject *>(%PYSELF),
-        "CommandPalette.commands", %PYARG_1, true);
+                        <insert-template name="command_palette_references_after"/>
                     </inject-code>
                 </modify-function>
                 <modify-function signature="removeCommand(QAction*)">
+                    <inject-code class="target" position="beginning">
+                        <insert-template name="command_palette_references_before"/>
+                    </inject-code>
                     <inject-code class="target" position="end">
-Shiboken::Object::removeReference(reinterpret_cast&lt;SbkObject *>(%PYSELF),
-    "CommandPalette.commands", %PYARG_1);
+                        <insert-template name="command_palette_references_after"/>
                     </inject-code>
                 </modify-function>
                 <modify-function signature="clearCommands()">
+                    <inject-code class="target" position="beginning">
+                        <insert-template name="command_palette_references_before"/>
+                    </inject-code>
                     <inject-code class="target" position="end">
-Shiboken::Object::keepReference(reinterpret_cast&lt;SbkObject *>(%PYSELF),
-    "CommandPalette.commands", Py_None);
+                        <insert-template name="command_palette_references_after"/>
                     </inject-code>
                 </modify-function>
                 <modify-function signature="onThemeUpdated()" remove="all"/>

@@ -2,11 +2,19 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QPointer>
+#include <QScopeGuard>
 #include <QScrollBar>
 #include <QSignalSpy>
 #include <QTest>
 #include <QTextDocument>
 #include <QVBoxLayout>
+#if defined(Q_OS_WIN)
+#include <qt_windows.h>
+#undef small
+#include <chrono>
+#include <future>
+#include <thread>
+#endif
 
 #include <FluentQt/TextFields.h>
 #include "components/textfields/private/CodeHighlighter_p.h"
@@ -206,12 +214,25 @@ TEST_F(CodeBlockTest, CollapsedUpdatesAreLazyAndExpansionUsesTheLatestCode)
 TEST_F(CodeBlockTest, ClipboardObserverMayDestroyTheBlockDuringCopy)
 {
     QPointer<CodeBlock> block = new CodeBlock(QStringLiteral("clipboard lifetime"));
-    bool completed = false;
-    QObject::connect(block, &CodeBlock::copyFinished, qApp, [&](bool) { completed = true; });
+    const auto cleanup = qScopeGuard([&] { delete block.data(); });
+    int completions = 0;
+    QObject::connect(block, &CodeBlock::copyFinished, qApp, [&](bool copied) {
+        EXPECT_TRUE(block);
+        EXPECT_TRUE(copied);
+        ++completions;
+    });
     QObject::connect(QApplication::clipboard(), &QClipboard::dataChanged, block, [block] { delete block.data(); });
     block->copy();
-    EXPECT_TRUE(block.isNull());
-    EXPECT_FALSE(completed);
+    // Some hosts notify after setText returns. Only synchronous destruction
+    // cancels this completion; neither path may complete after destruction.
+    if (block.isNull())
+        EXPECT_EQ(completions, 0);
+    else
+        EXPECT_EQ(completions, 1);
+    const int beforeNotification = completions;
+    EXPECT_TRUE(QTest::qWaitFor([&] { return block.isNull(); }));
+    QCoreApplication::processEvents();
+    EXPECT_EQ(completions, beforeNotification);
 }
 
 enum class TestLanguage { Cpp, Python };
@@ -233,15 +254,72 @@ TEST_F(CodeBlockTest, Contract_ClipboardCompletionDoesNotOutliveItsContext)
 {
     QApplication::clipboard()->setText(QStringLiteral("before context cancellation"));
     QPointer<QObject> context = new QObject;
-    bool completed = false;
+    const auto cleanup = qScopeGuard([&] { delete context.data(); });
+    int completions = 0;
     QObject::connect(QApplication::clipboard(), &QClipboard::dataChanged, context, [context] {
         delete context.data();
     });
-    ::compatibility::detail::copyText(context, QStringLiteral("context cancellation payload"), [&](bool) {
-        completed = true;
+    ::compatibility::detail::copyText(context, QStringLiteral("context cancellation payload"), [&](bool copied) {
+        EXPECT_TRUE(context);
+        EXPECT_TRUE(copied);
+        ++completions;
     });
-    EXPECT_TRUE(context.isNull());
-    EXPECT_FALSE(completed);
+    // Native clipboard notifications can be queued after the successful write.
+    // Preserve the immediate cancellation assertion on synchronous hosts.
+    if (context.isNull())
+        EXPECT_EQ(completions, 0);
+    else
+        EXPECT_EQ(completions, 1);
+    const int beforeNotification = completions;
+    EXPECT_TRUE(QTest::qWaitFor([&] { return context.isNull(); }));
+    QCoreApplication::processEvents();
+    EXPECT_EQ(completions, beforeNotification);
+}
+
+TEST_F(CodeBlockTest, Contract_WindowsClipboardLockReportsCopyFailure)
+{
+#if defined(Q_OS_WIN)
+    if (QGuiApplication::platformName() != QStringLiteral("windows"))
+        GTEST_SKIP() << "Requires the native Windows clipboard.";
+
+    std::promise<bool> locked;
+    std::promise<void> release;
+    auto ready = locked.get_future();
+    auto released = release.get_future();
+    std::thread holder([&] {
+        HWND window = CreateWindowExW(0, L"STATIC", L"FluentQt clipboard test", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr,
+            nullptr, nullptr);
+        bool acquired = false;
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (window && std::chrono::steady_clock::now() < deadline) {
+            if (OpenClipboard(window)) {
+                acquired = true;
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        locked.set_value(acquired);
+        released.wait();
+        if (acquired)
+            CloseClipboard();
+        if (window)
+            DestroyWindow(window);
+    });
+    const auto cleanup = qScopeGuard([&] {
+        release.set_value();
+        holder.join();
+    });
+    ASSERT_TRUE(ready.get()) << "The controlled clipboard lock could not be acquired.";
+
+    CodeBlock block(QStringLiteral("The clipboard is deliberately unavailable."));
+    QSignalSpy copied(&block, &CodeBlock::copyFinished);
+    block.copy();
+    ASSERT_EQ(copied.count(), 1);
+    EXPECT_FALSE(copied.first().at(0).toBool());
+    EXPECT_FALSE(QApplication::clipboard()->ownsClipboard());
+#else
+    GTEST_SKIP() << "Requires the native Windows clipboard.";
+#endif
 }
 
 TEST_F(CodeBlockTest, Contract_CodeHighlightingPreservesWhitespaceWhileWrapping)

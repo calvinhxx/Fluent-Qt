@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <QApplication>
 #include <QDir>
-#include <QDirIterator>
 #include <QEvent>
 #include <QFile>
 #include <QFileInfo>
@@ -65,28 +64,6 @@ QString sourceContents(const QString& path)
     return QString::fromUtf8(file.readAll());
 }
 
-bool containsCompatibilityGuard(QString content, bool component)
-{
-    content.remove(QRegularExpression(QStringLiteral("\\\\\r?\n")));
-    // Ignore prose and code samples, including raw strings. Keep digit separators
-    // such as 1'000 from being mistaken for a character literal.
-    const QRegularExpression literals(QStringLiteral(
-        R"re(R"([^\s()\\]{0,16})\([\s\S]*?\)\1"|"(?:\\[\s\S]|[^"\\])*"|(?<![\w'])(?:u8|u|U|L)?'(?:\\.|[^'\\\r\n])*'|/\*[\s\S]*?\*/|//[^\n]*)re"));
-    content.replace(literals, QStringLiteral(" "));
-    const QRegularExpression version(
-        QStringLiteral(R"(\b(?:QT_VERSION(?:_(?:CHECK|MAJOR|MINOR|PATCH))?|QT_DEPRECATED_SINCE)\b)"));
-    const QRegularExpression platformOrCapability(QStringLiteral(
-        R"(\b(?:Q_OS_\w+|_WIN32|_WIN64|__APPLE__|__linux__|__EMSCRIPTEN__|FLUENT_QUICK_\w+|FLUENT_HAS_ACCESSIBLE_\w+|FLUENT_OPENGL_WIDGET_\w+|FLUENT_QT_HAS_RHI)\b)"));
-    const QRegularExpression runtimePlatform(QStringLiteral(
-        R"(\b(?:(?:QGuiApplication|QApplication)\s*::\s*platformName|WindowChromeCompat\s*::\s*currentPlatform)\s*\()"));
-    const QRegularExpression runtimeVersion(QStringLiteral(R"(\b(?:qVersion|QLibraryInfo\s*::\s*version)\s*\()"));
-    const QRegularExpression pointerConstruction(QStringLiteral(R"(\b(?:QMouseEvent|QEnterEvent)\s*(?:\w+\s*)?[({])"));
-    return version.match(content).hasMatch()
-        || (component
-            && (platformOrCapability.match(content).hasMatch() || runtimePlatform.match(content).hasMatch()
-                || runtimeVersion.match(content).hasMatch() || pointerConstruction.match(content).hasMatch()));
-}
-
 template <typename Sender, typename Signal, typename Context, typename Functor>
 QMetaObject::Connection
 singleShotForTest(bool fallback, Sender* sender, Signal signal, Context* context, Functor&& functor)
@@ -95,17 +72,6 @@ singleShotForTest(bool fallback, Sender* sender, Signal signal, Context* context
         return compatibility::detail::connectSingleShotFallback(sender, signal, context,
             std::forward<Functor>(functor));
     return fluentConnectSingleShot(sender, signal, context, std::forward<Functor>(functor));
-}
-
-bool isAllowedQtVersionGuardFile(const QString& relativePath)
-{
-    // src/compatibility is the project boundary for Qt-version branches;
-    // TestQtCompat intentionally asserts that boundary.
-    if (relativePath.startsWith(QStringLiteral("src/compatibility/")))
-        return true;
-
-    static const QStringList allowed = {QStringLiteral("tests/components/TestQtCompat.cpp")};
-    return allowed.contains(relativePath);
 }
 
 class FixedHeightDelegate : public QStyledItemDelegate {
@@ -618,75 +584,6 @@ TEST(QtCompat, TouchGlobalPositionHandlesEmptyAndPopulatedEvents)
     EXPECT_EQ(position, QPoint(110, 120));
 }
 
-TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards)
-{
-    const QString root = repositoryRootPath();
-    const QStringList scanRoots = {root + QStringLiteral("/app"), root + QStringLiteral("/src"),
-        root + QStringLiteral("/include"), root + QStringLiteral("/examples"), root + QStringLiteral("/tests"),
-        root + QStringLiteral("/support"), root + QStringLiteral("/bindings/pyside6/native")};
-    const QStringList nameFilters = {QStringLiteral("*.h"), QStringLiteral("*.hpp"), QStringLiteral("*.cpp"),
-        QStringLiteral("*.mm")};
-
-    QStringList offenders;
-    for (const QString& scanRoot : scanRoots) {
-        QDirIterator it(scanRoot, nameFilters, QDir::Files, QDirIterator::Subdirectories);
-        while (it.hasNext()) {
-            const QString path = it.next();
-            const QString relativePath = relativeToRepository(path);
-            if (isAllowedQtVersionGuardFile(relativePath))
-                continue;
-            if (containsCompatibilityGuard(sourceContents(path),
-                    relativePath.startsWith(QStringLiteral("src/components/"))
-                        || relativePath.startsWith(QStringLiteral("support/spatial/"))))
-                offenders.push_back(relativePath);
-        }
-    }
-
-    EXPECT_TRUE(offenders.isEmpty())
-        << "Compatibility guard outside its owner: " << offenders.join(QStringLiteral(", ")).toStdString();
-}
-
-TEST(QtCompat, BoundaryDetectsCompactAndIndirectVersionBranches)
-{
-    for (const QString& source :
-        {QStringLiteral("#if QT_VERSION<0x060000\n#endif"), QStringLiteral("#if QT_VERSION_MAJOR == 5\n#endif"),
-            QStringLiteral("#if defined(QT_VERSION_MINOR)\n#endif"),
-            QStringLiteral("#if QT_DEPRECATED_SINCE(5, 15)\n#endif"),
-            QStringLiteral("#if \\\nQT_VERSION >= QT_VERSION_CHECK(6, 0, 0)\n#endif")}) {
-        EXPECT_TRUE(containsCompatibilityGuard(source, false)) << source.toStdString();
-    }
-    EXPECT_TRUE(containsCompatibilityGuard("#if FLUENT_QUICK_USES_RHI", true));
-    EXPECT_TRUE(containsCompatibilityGuard("#if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE", true));
-    EXPECT_TRUE(containsCompatibilityGuard("#ifdef FLUENT_QT_HAS_RHI", true));
-    EXPECT_TRUE(containsCompatibilityGuard("#ifdef Q_OS_MACOS", true));
-    EXPECT_TRUE(containsCompatibilityGuard("#ifdef __APPLE__", true));
-    EXPECT_TRUE(containsCompatibilityGuard("#if defined(_WIN32)", true));
-    EXPECT_TRUE(containsCompatibilityGuard("return QT_VERSION >= 0x060000;", false));
-    EXPECT_TRUE(containsCompatibilityGuard("constexpr bool legacy = QT_VERSION < 0x060000;", false));
-    EXPECT_TRUE(containsCompatibilityGuard("#define OLD_QT (QT_VERSION_MAJOR == 5)", false));
-    EXPECT_TRUE(containsCompatibilityGuard("const int width = 1'000; auto old = QT_VERSION < 0x060000;", false));
-    EXPECT_TRUE(containsCompatibilityGuard("QGuiApplication::platformName()", true));
-    EXPECT_TRUE(containsCompatibilityGuard("WindowChromeCompat::currentPlatform()", true));
-    EXPECT_TRUE(containsCompatibilityGuard("const auto runtime = qVersion();", true));
-    EXPECT_TRUE(containsCompatibilityGuard("auto legacy = QLibraryInfo::version().majorVersion() == 5;", true));
-    EXPECT_TRUE(containsCompatibilityGuard("QMouseEvent forwarded(event->type(), local, global);", true));
-    EXPECT_TRUE(containsCompatibilityGuard("auto enter = new QEnterEvent(local, scene, global);", true));
-    EXPECT_FALSE(containsCompatibilityGuard("void mouseMoveEvent(QMouseEvent* event) override;", true));
-    EXPECT_FALSE(containsCompatibilityGuard("info.insert(name, QString::fromLatin1(qVersion()));", false));
-    EXPECT_FALSE(containsCompatibilityGuard("#if QT_CONFIG(accessibility)", true));
-    EXPECT_FALSE(containsCompatibilityGuard("// QT_VERSION_CHECK belongs in compatibility", true));
-    EXPECT_FALSE(containsCompatibilityGuard(
-        R"code(auto example = R"cmake(find_package(Qt${QT_VERSION_MAJOR}))cmake";)code", true));
-    EXPECT_FALSE(containsCompatibilityGuard(R"code(const char* example = "#if QT_VERSION < 0x060000";)code", true));
-    EXPECT_FALSE(containsCompatibilityGuard(R"code(auto example = R"cpp(
-#if QT_VERSION_MAJOR == 5
-QGuiApplication::platformName();
-#endif
-)cpp";)code",
-        true));
-    EXPECT_FALSE(containsCompatibilityGuard("auto diagnostic = QT_VERSION_STR;", false));
-}
-
 TEST(QtCompat, InstalledHeadersDoNotDependOnUninstalledImplementationHeaders)
 {
     const QString root = repositoryRootPath();
@@ -715,18 +612,6 @@ TEST(QtCompat, InstalledHeadersDoNotDependOnUninstalledImplementationHeaders)
                 break;
             }
         }
-    }
-}
-
-TEST(QtCompat, PrivateAdaptersDoNotIncludeComponentImplementations)
-{
-    const QRegularExpression componentInclude(QStringLiteral(R"re(#\s*include\s*["<]components/)re"));
-    QDirIterator files(repositoryRootPath() + QStringLiteral("/src/compatibility/private"),
-        {QStringLiteral("*.h"), QStringLiteral("*.cpp")}, QDir::Files, QDirIterator::Subdirectories);
-    while (files.hasNext()) {
-        const QString path = files.next();
-        EXPECT_FALSE(componentInclude.match(sourceContents(path)).hasMatch())
-            << relativeToRepository(path).toStdString();
     }
 }
 

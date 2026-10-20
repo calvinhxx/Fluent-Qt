@@ -250,7 +250,15 @@ class CheckCppFormatTest(unittest.TestCase):
             with self.subTest(hook=name):
                 path = PROJECT_ROOT / ".githooks" / name
                 script = path.read_text(encoding="utf-8")
-                self.assertTrue(path.stat().st_mode & stat.S_IXUSR)
+                index_entry = subprocess.check_output(
+                    ["git", "ls-files", "--stage", "--", f".githooks/{name}"],
+                    cwd=PROJECT_ROOT,
+                    text=True,
+                )
+                self.assertTrue(index_entry.startswith("100755 "), index_entry)
+                # Windows does not expose a POSIX execute bit for shell scripts.
+                if os.name != "nt":
+                    self.assertTrue(path.stat().st_mode & stat.S_IXUSR)
                 self.assertIn("tools/quality/check_cpp_format.py", script)
                 self.assertIn(selection, script)
                 self.assertIn("git diff", script)

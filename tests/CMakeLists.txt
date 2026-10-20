@@ -131,6 +131,7 @@ set(FLUENT_QT_LOCAL_DESKTOP_TESTS
     WindowTest.WindowsTitleBarDoubleClickTogglesNativeMaximizeRestore
     WindowTest.WindowsMaximizedCustomChromeFillsAvailableGeometry
     WindowTest.TitleBarAutoSuggestClearButtonWorksWhilePopupOpen
+    CodeBlockTest.Contract_WindowsClipboardLockReportsCopyFailure
 )
 
 set(FLUENT_QT_PERFORMANCE_TESTS
@@ -383,6 +384,17 @@ add_dependencies(test_visual_comparison fluent_qt_visual_compare)
 add_qt_test_module(test_high_dpi TestHighDpi.cpp)
 
 if(Python3_Interpreter_FOUND)
+    add_test(
+        NAME CompatibilityBoundary.Contract_Stable
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tools/quality/check_compatibility_boundaries.py
+            --project-root ${CMAKE_SOURCE_DIR} --self-test
+    )
+    set_tests_properties(CompatibilityBoundary.Contract_Stable PROPERTIES
+        LABELS "qt;test_qt_compat;quality;contract;ci_fast;ci_full;local_full"
+        TIMEOUT 60
+    )
+
     add_test(
         NAME ComponentApi.Contract_Stable
         COMMAND ${Python3_EXECUTABLE}

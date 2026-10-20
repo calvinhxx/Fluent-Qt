@@ -1241,7 +1241,7 @@ assert {entry.route_id for entry in ENTRIES} == {
 assert {route.id for route in ROUTES} == {
     route["id"] for route in CONTRACT["routes"]
     if route["id"] not in ("plugins", "spatial", "qml-bridge") and route["parent_id"] not in ("spatial", "qml-bridge")}
-assert len(ROUTES) == 108
+assert len(ROUTES) == 110
 assert "plugins" not in window._main_navigation_pane._route_items
 assert "plugins" not in window._top_main_navigation_pane._buttons
 assert "PySide6.QtOpenGLWidgets" not in sys.modules

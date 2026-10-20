@@ -8,6 +8,8 @@
 
 #include <functional>
 
+#include "compatibility/private/PopupWindowCompat_p.h"
+
 class QAction;
 class QMenu;
 class QWidget;
@@ -41,6 +43,7 @@ private:
     QPointer<QAction> m_action;
     // Application filters can run after QMenu has become its QWidget base.
     QPointer<QObject> m_menu;
+    ::compatibility::detail::PopupWindowHost m_popupHost;
     QList<QPointer<QMenu>> m_observedMenus;
     QList<QMetaObject::Connection> m_connections;
     std::function<void()> m_leafActivated;

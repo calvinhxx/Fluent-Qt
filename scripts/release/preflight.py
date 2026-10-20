@@ -13,6 +13,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+COMPATIBILITY_BOUNDARY_CHECKER = "tools/quality/check_compatibility_boundaries.py"
 VERSION_RE = re.compile(
     r"project\s*\(\s*FluentQt\s+VERSION\s+([0-9]+\.[0-9]+\.[0-9]+)"
 )
@@ -136,11 +137,20 @@ def collect_release_context(root: Path, base_ref: str) -> ReleaseContext:
     )
 
 
+def compatibility_boundary_check() -> tuple[str, list[str]]:
+    return (
+        "compatibility boundaries",
+        [sys.executable, COMPATIBILITY_BOUNDARY_CHECKER,
+         "--project-root", ".", "--self-test"],
+    )
+
+
 def integration_checks(output_dir: Path) -> list[tuple[str, list[str]]]:
     """Run source/packaging contracts without a Qt SDK or an installed wheel."""
     python = sys.executable
     contract = str(output_dir / "gallery-contract.json")
     return [
+        compatibility_boundary_check(),
         ("CI component registration", [python, ".github/scripts/test_classify_ci_changes.py"]),
         ("Python API policy", [python, "bindings/pyside6/tools/verify_api_policy.py"]),
         ("core wheel inventory", [python, "bindings/pyside6/tests/test_wheel_builder.py"]),
