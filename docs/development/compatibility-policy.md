@@ -112,17 +112,72 @@ policies such as close behavior, platform labels and update-package selection
 remain with the application. Include new adapter modules and their generated
 stubs in both the CMake installation and wheel inventories.
 
-`test_qt_compat` compiles every installed compatibility header separately, checks
-installed-header dependencies, and rejects Qt version checks throughout project
-C++ sources, including checks assigned to constants or hidden in macros. It also
-rejects indirect capability guards and OS branches in components. C++
-shared renderer support is subject to the same rule: CMake-selected Qt
-capabilities such as RHI availability may only branch inside an adapter.
-Component runtime version queries and direct pointer-event reconstruction are
-also rejected. Python's `test_pyside6_qt_compat` checks the package and Gallery
-for version comparisons, Qt capability lookups and availability exception
-handlers outside private adapters. Diagnostic version strings and code samples
-remain allowed.
+### Design before implementation
+
+Before adding component behavior or fixing a Qt/platform issue, identify the
+owners in the working plan or review note. A short explanation is enough; a
+routine fix does not require a new design document or approval:
+
+1. Describe the interaction that must remain the same on every supported host.
+2. Identify Qt/version/native-system mechanisms and the existing adapter that
+   owns them. Extend that domain, or name a new private adapter when necessary.
+3. Keep application policy, component state, borrowed ownership, focus decisions,
+   and reentrancy guards with their existing owner. Give the adapter Qt types,
+   values, or callbacks instead of component classes.
+
+Classify by responsibility, not by the presence of an OS macro. For example,
+binding a borrowed menu to a native transient parent and interpreting a native
+popup grab are adaptations even if the same Qt calls compile on every host.
+The component decides when its menu opens or closes; the adapter performs the
+native binding and conditional restoration. Moving a platform test into a
+helper inside the component directory does not establish that boundary.
+
+Ordinary widget operations can remain in the common flow. Passing
+`windowHandle()` to an icon adapter, using screen geometry to place a popup,
+reading DPR, and forwarding a `nativeEvent` to the window facade do not by
+themselves create a platform-specific implementation.
+
+Review ownership separately from behavior tests before finishing. Inspect new
+low-level operations and fallback branches even when no automated rule flags
+them; verify that adapters do not import components and that component state
+was not moved into an adapter just to satisfy a check. When delegating a review,
+explicitly include this boundary in its scope. Passing the SDK/OS matrix is
+behavior evidence, not a substitute for this review.
+
+### Automated boundary gate
+
+Run the read-only, standard-library checker before building or committing:
+
+```bash
+python3 tools/quality/check_compatibility_boundaries.py --project-root . --self-test
+```
+
+The same command runs first in local integration/release preflight, and through
+the existing source-contract entry point in CI planning. Quick preflight also
+runs it for C++ sources/headers and Python library/Gallery sources. It scans
+new files as well as tracked files and requires neither Qt nor PySide6.
+
+The checker is the source of truth for mechanical ownership rules. It rejects
+scattered C++ Qt-version checks; component OS/capability branches, runtime
+platform/version queries, direct pointer-event construction, native window
+operations and backend headers; and adapter dependencies on components,
+including relative includes and public forwarding headers. Shared renderer
+support follows the component rules. Python checks cover Qt-version aliases,
+capability lookups, availability exception handlers, native window operations,
+and library-facade platform probes. Private Qt adapters cannot import component
+facades or Gallery.
+
+Diagnostic strings, comments, code samples, ordinary application attributes,
+Gallery OS policies and package DLL loading retain their established scope.
+The checker deliberately allows general Qt geometry, DPI and widget lifecycle
+operations. It detects known patterns, not every possible semantic mistake:
+extend it with a failing regression when a new class of leakage is found.
+Fix the owning layer instead of adding a file exemption for a component.
+
+`test_qt_compat` retains installed-header compilation and dependency checks;
+`test_pyside6_qt_compat` retains Python adapter runtime tests. When Python is
+available, CTest also exposes `CompatibilityBoundary.Contract_Stable` under the
+`test_qt_compat` label so focused compatibility runs retain the source gate.
 
 Runtime tests cover translated coordinates, input metadata, single-shot signal
 arguments and queued delivery, DPR metrics, and the owning component contracts.

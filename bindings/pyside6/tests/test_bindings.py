@@ -42,6 +42,7 @@ from PySide6.QtCore import (
     QMarginsF,
     QPointF,
     QModelIndex,
+    QObject,
     QPoint,
     QPersistentModelIndex,
     QSize,
@@ -3741,6 +3742,68 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(form.fieldKeys(), [])
         self.assertEqual(form._form_fields, {})
 
+    def test_form_controller_reentrant_add_does_not_retain_disposed_fields(self):
+        for disposal in ("remove", "destroy_field", "destroy_controller"):
+            with self.subTest(disposal=disposal):
+                form = fluentqt.FormController()
+                field = fluentqt.Field()
+                reference = weakref.ref(field)
+
+                def dispose():
+                    form.stateChanged.disconnect(dispose)
+                    if disposal == "remove":
+                        form.removeField("name")
+                    elif disposal == "destroy_field":
+                        shiboken6.delete(field)
+                    else:
+                        shiboken6.delete(form)
+
+                form.stateChanged.connect(dispose)
+                form.addField("name", field)
+                if Shiboken.isValid(form):
+                    self.assertEqual(form.fieldKeys(), [])
+                del field
+                gc.collect()
+                self.assertIsNone(reference())
+
+    def test_form_controller_reentrant_remove_retains_registered_replacement(self):
+        for reuse in (False, True):
+            with self.subTest(reuse=reuse):
+                form = fluentqt.FormController()
+                original = fluentqt.Field()
+                form.addField("name", original)
+                replacement = original if reuse else fluentqt.Field()
+                reference = weakref.ref(replacement)
+
+                def replace():
+                    form.stateChanged.disconnect(replace)
+                    form.addField("name", replacement)
+
+                form.stateChanged.connect(replace)
+                self.assertTrue(form.removeField("name"))
+                self.assertIs(form.field("name"), replacement)
+                del original, replacement
+                gc.collect()
+                self.assertIsNotNone(reference())
+                self.assertIs(form.field("name"), reference())
+                self.assertTrue(form.removeField("name"))
+                gc.collect()
+                self.assertIsNone(reference())
+
+    def test_form_controller_native_destruction_releases_borrowed_wrappers(self):
+        owner = QObject()
+        form = fluentqt.FormController(owner)
+        field = fluentqt.Field()
+        reference = weakref.ref(field)
+        form.addField("name", field)
+        del field
+        gc.collect()
+        self.assertIsNotNone(reference())
+        shiboken6.delete(owner)
+        self.assertFalse(Shiboken.isValid(form))
+        gc.collect()
+        self.assertIsNone(reference())
+
     def test_field_constructor_and_validation_preserve_editor_value(self):
         editor = fluentqt.LineEdit()
         editor.setText("keep-me")
@@ -4862,9 +4925,12 @@ class FluentQtBindingTest(unittest.TestCase):
         palette.setAnimationEnabled(False)
         palette.addCommand(copy, "Edit")
         host.show()
+        self.assertTrue(QTest.qWaitForWindowExposed(host))
         host.activateWindow()
+        self.assertTrue(QTest.qWaitForWindowActive(host))
         editor.setFocus()
         QApplication.processEvents()
+        self.assertIs(QApplication.focusWidget(), editor)
         editor.setSelection(0, 8)
         router.refresh()
         self.assertTrue(copy.isEnabled())
@@ -4879,6 +4945,74 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(editor.selectedText(), "Original")
         self.assertTrue(editor.hasFocus())
         host.close()
+
+    def test_command_palette_callbacks_can_destroy_the_palette(self):
+        for operation in ("add", "remove", "clear"):
+            with self.subTest(operation=operation):
+                palette = fluentqt.CommandPalette()
+                action = QAction("Search", None)
+                if operation != "add":
+                    palette.addCommand(action)
+                palette.currentActionChanged.connect(
+                    lambda *_args: shiboken6.delete(palette)
+                )
+                if operation == "add":
+                    self.assertFalse(palette.addCommand(action))
+                elif operation == "remove":
+                    self.assertTrue(palette.removeCommand(action))
+                else:
+                    palette.clearCommands()
+                self.assertFalse(Shiboken.isValid(palette))
+                self.assertTrue(Shiboken.isValid(action))
+
+    def test_command_palette_removing_one_command_retains_the_others(self):
+        palette = fluentqt.CommandPalette()
+        first = QAction("First", None)
+        second = QAction("Second", None)
+        reference = weakref.ref(second)
+        palette.addCommand(first)
+        palette.addCommand(second)
+        del second
+        gc.collect()
+        self.assertIsNotNone(reference())
+        self.assertTrue(palette.removeCommand(first))
+        gc.collect()
+        self.assertIsNotNone(reference())
+        self.assertEqual(palette.commands(), [reference()])
+        palette.clearCommands()
+        gc.collect()
+        self.assertIsNone(reference())
+
+    def test_command_palette_reentrant_removal_retains_live_commands(self):
+        for operation in ("remove", "clear", "clear_replacement"):
+            with self.subTest(operation=operation):
+                palette = fluentqt.CommandPalette()
+                original = QAction("Original", None)
+                palette.addCommand(original)
+                replacement = (
+                    QAction("Replacement", None)
+                    if operation == "clear_replacement"
+                    else original
+                )
+                reference = weakref.ref(replacement)
+
+                def register(*_args):
+                    palette.currentActionChanged.disconnect(register)
+                    palette.addCommand(replacement)
+
+                palette.currentActionChanged.connect(register)
+                if operation == "remove":
+                    self.assertTrue(palette.removeCommand(original))
+                else:
+                    palette.clearCommands()
+                self.assertEqual(palette.commands(), [replacement])
+                del original, replacement
+                gc.collect()
+                self.assertIsNotNone(reference())
+                self.assertEqual(palette.commands(), [reference()])
+                palette.clearCommands()
+                gc.collect()
+                self.assertIsNone(reference())
 
     def test_command_surfaces_properties_actions_and_subclassing(self):
         class PythonCommandBar(fluentqt.CommandBar):
@@ -5672,9 +5806,12 @@ class FluentQtBindingTest(unittest.TestCase):
         passthrough.setGeometry(440, 24, 120, 36)
         passthrough.show()
         host.show()
+        self.assertTrue(QTest.qWaitForWindowExposed(host))
         host.activateWindow()
+        self.assertTrue(QTest.qWaitForWindowActive(host))
         trigger.setFocus(Qt.OtherFocusReason)
         QCoreApplication.processEvents()
+        self.assertIs(QApplication.focusWidget(), trigger)
 
         popup = PythonPopup(host)
         popup.resize(320, 180)
@@ -5828,9 +5965,12 @@ class FluentQtBindingTest(unittest.TestCase):
         anchor.setGeometry(260, 180, 120, 36)
         anchor.show()
         host.show()
+        self.assertTrue(QTest.qWaitForWindowExposed(host))
         host.activateWindow()
+        self.assertTrue(QTest.qWaitForWindowActive(host))
         anchor.setFocus(Qt.OtherFocusReason)
         QCoreApplication.processEvents()
+        self.assertIs(QApplication.focusWidget(), anchor)
 
         flyout = PythonFlyout(host)
         flyout.setFixedSize(320, 180)

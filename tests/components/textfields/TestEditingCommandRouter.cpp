@@ -7,6 +7,7 @@
 #include <QEvent>
 #include <QLineEdit>
 #include <QMenu>
+#include <QMimeData>
 #include <QTextCursor>
 #include <QTextEdit>
 #include <QTimer>
@@ -39,13 +40,9 @@ namespace {
 
 using Command = EditingCommandRouter::Command;
 
-QAbstractButton* commandButton(
-    QWidget* root,
-    const QString& objectName,
-    const QString& accessibleName)
+QAbstractButton* commandButton(QWidget* root, const QString& objectName, const QString& accessibleName)
 {
-    const QList<QAbstractButton*> buttons =
-        root->findChildren<QAbstractButton*>(objectName);
+    const QList<QAbstractButton*> buttons = root->findChildren<QAbstractButton*>(objectName);
     for (QAbstractButton* button : buttons) {
         if (button->accessibleName() == accessibleName)
             return button;
@@ -55,19 +52,14 @@ QAbstractButton* commandButton(
 
 class EditingCommandRouterTest : public ::testing::Test {
 protected:
-    static void SetUpTestSuite()
-    {
-        qRegisterMetaType<Command>(
-            "fluent::textfields::EditingCommandRouter::Command");
-    }
+    static void SetUpTestSuite() { qRegisterMetaType<Command>("fluent::textfields::EditingCommandRouter::Command"); }
 
     void SetUp() override
     {
         QApplication::clipboard()->clear();
         window = new QWidget();
         window->setFixedSize(640, 420);
-        window->setWindowTitle(
-            QStringLiteral("EditingCommandRouter Test"));
+        window->setWindowTitle(QStringLiteral("EditingCommandRouter Test"));
     }
 
     void TearDown() override
@@ -80,19 +72,26 @@ protected:
         QApplication::processEvents();
     }
 
-    template<typename T>
-    T* addEditor(int y = 20)
+    template <typename T> T* addEditor(int y = 20)
     {
         auto* editor = new T(window);
         editor->setGeometry(20, y, 280, editor->sizeHint().height());
         return editor;
     }
 
+    void showAndActivate(QWidget* targetWindow)
+    {
+        targetWindow->show();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(targetWindow));
+        targetWindow->activateWindow();
+        ASSERT_TRUE(QTest::qWaitForWindowActive(targetWindow));
+    }
+
     void showAndFocus(QWidget* editor)
     {
-        window->show();
+        showAndActivate(window);
         editor->setFocus(Qt::OtherFocusReason);
-        QApplication::processEvents();
+        ASSERT_TRUE(QTest::qWaitFor([&] { return QApplication::focusWidget() == editor; }));
         ASSERT_EQ(QApplication::focusWidget(), editor);
     }
 
@@ -207,9 +206,7 @@ TEST_F(EditingCommandRouterTest, Contract_LineEditCommandsTrackAndMutateState)
     EXPECT_TRUE(router.canExecute(Command::SelectAll));
 
     EXPECT_TRUE(router.execute(Command::Copy));
-    EXPECT_EQ(
-        QApplication::clipboard()->text(),
-        QStringLiteral("Alpha"));
+    EXPECT_EQ(QApplication::clipboard()->text(), QStringLiteral("Alpha"));
     EXPECT_EQ(edit->text(), QStringLiteral("Alpha Beta"));
 
     EXPECT_TRUE(router.execute(Command::Delete));
@@ -268,8 +265,12 @@ TEST_F(EditingCommandRouterTest, Contract_ReadOnlyDisabledAndClipboardStateRefre
     edit->setEnabled(true);
     edit->setReadOnly(false);
     edit->setFocus();
-    QApplication::clipboard()->clear();
-    QApplication::processEvents();
+    // Keep selection ownership: a clipboard manager may restore the previous
+    // text when clear() relinquishes it.
+    QApplication::clipboard()->setMimeData(new QMimeData());
+    ASSERT_NE(QApplication::clipboard()->mimeData(), nullptr);
+    EXPECT_FALSE(QApplication::clipboard()->mimeData()->hasText());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !router.canExecute(Command::Paste); }));
     EXPECT_FALSE(router.canExecute(Command::Paste));
 }
 
@@ -279,8 +280,7 @@ TEST_F(EditingCommandRouterTest, Contract_UnsupportedAndOtherWindowFocusClearTar
     auto* rawEdit = new QLineEdit(window);
     rawEdit->setGeometry(20, 80, 280, 32);
     EditingCommandRouter router(window);
-    QSignalSpy targetSpy(
-        &router, &EditingCommandRouter::activeTargetChanged);
+    QSignalSpy targetSpy(&router, &EditingCommandRouter::activeTargetChanged);
 
     showAndFocus(fluentEdit);
     EXPECT_TRUE(router.hasActiveTarget());
@@ -301,14 +301,12 @@ TEST_F(EditingCommandRouterTest, Contract_UnsupportedAndOtherWindowFocusClearTar
     auto* otherEdit = new LineEdit(secondaryWindow);
     otherEdit->setGeometry(20, 20, 240, 32);
     EditingCommandRouter otherRouter(secondaryWindow);
-    secondaryWindow->show();
+    showAndActivate(secondaryWindow);
     otherEdit->setFocus(Qt::OtherFocusReason);
-    QApplication::processEvents();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return QApplication::focusWidget() == otherEdit; }));
     EXPECT_FALSE(router.hasActiveTarget());
     EXPECT_TRUE(otherRouter.hasActiveTarget());
-    EXPECT_NE(
-        router.action(Command::Copy),
-        otherRouter.action(Command::Copy));
+    EXPECT_NE(router.action(Command::Copy), otherRouter.action(Command::Copy));
     EXPECT_GE(targetSpy.count(), 2);
 }
 
@@ -317,10 +315,8 @@ TEST_F(EditingCommandRouterTest, Contract_SignalsEmitOnlyForRealStateChanges)
     auto* edit = addEditor<LineEdit>();
     edit->setText(QStringLiteral("Alpha"));
     EditingCommandRouter router(window);
-    QSignalSpy targetSpy(
-        &router, &EditingCommandRouter::activeTargetChanged);
-    QSignalSpy capabilitySpy(
-        &router, &EditingCommandRouter::commandCapabilityChanged);
+    QSignalSpy targetSpy(&router, &EditingCommandRouter::activeTargetChanged);
+    QSignalSpy capabilitySpy(&router, &EditingCommandRouter::commandCapabilityChanged);
 
     showAndFocus(edit);
     ASSERT_EQ(targetSpy.count(), 1);
@@ -332,8 +328,7 @@ TEST_F(EditingCommandRouterTest, Contract_SignalsEmitOnlyForRealStateChanges)
 
     bool sawCopyEnabled = false;
     for (const QList<QVariant>& emission : capabilitySpy) {
-        const auto command =
-            emission.at(0).value<Command>();
+        const auto command = emission.at(0).value<Command>();
         if (command == Command::Copy && emission.at(1).toBool())
             sawCopyEnabled = true;
     }
@@ -348,8 +343,7 @@ TEST_F(EditingCommandRouterTest, Contract_SignalsEmitOnlyForRealStateChanges)
     EXPECT_FALSE(router.canExecute(Command::Copy));
     bool sawCopyDisabled = false;
     for (const QList<QVariant>& emission : capabilitySpy) {
-        const auto command =
-            emission.at(0).value<Command>();
+        const auto command = emission.at(0).value<Command>();
         if (command == Command::Copy && !emission.at(1).toBool())
             sawCopyDisabled = true;
     }
@@ -363,8 +357,7 @@ TEST_F(EditingCommandRouterTest, Contract_SupportedTargetSwitchRoutesToNewEditor
     first->setText(QStringLiteral("First"));
     second->setText(QStringLiteral("Second"));
     EditingCommandRouter router(window);
-    QSignalSpy targetSpy(
-        &router, &EditingCommandRouter::activeTargetChanged);
+    QSignalSpy targetSpy(&router, &EditingCommandRouter::activeTargetChanged);
 
     showAndFocus(first);
     first->setSelection(0, first->text().size());
@@ -411,11 +404,10 @@ TEST_F(EditingCommandRouterTest, Contract_TextEditRoutesWithoutPublicInnerEditor
     edit->setPlainText(QStringLiteral("Alpha"));
     EditingCommandRouter router(window);
 
-    window->show();
+    showAndActivate(window);
     edit->setFocus(Qt::OtherFocusReason);
-    QApplication::processEvents();
-    auto* inner =
-        qobject_cast<QTextEdit*>(QApplication::focusWidget());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return qobject_cast<QTextEdit*>(QApplication::focusWidget()) != nullptr; }));
+    auto* inner = qobject_cast<QTextEdit*>(QApplication::focusWidget());
     ASSERT_NE(inner, nullptr);
     ASSERT_TRUE(router.hasActiveTarget());
 
@@ -453,12 +445,9 @@ TEST_F(EditingCommandRouterTest, Contract_PasswordPeekNeverExportsText)
     EXPECT_TRUE(router.canExecute(Command::Delete));
 
     QTest::keySequence(box, QKeySequence(QKeySequence::Copy));
-    EXPECT_EQ(
-        QApplication::clipboard()->text(),
-        QStringLiteral("sentinel"));
+    EXPECT_EQ(QApplication::clipboard()->text(), QStringLiteral("sentinel"));
 
-    auto* reveal =
-        box->findChild<Button*>(QStringLiteral("PasswordBoxRevealButton"));
+    auto* reveal = box->findChild<Button*>(QStringLiteral("PasswordBoxRevealButton"));
     ASSERT_NE(reveal, nullptr);
     QTest::mousePress(reveal, Qt::LeftButton);
     QApplication::processEvents();
@@ -466,15 +455,12 @@ TEST_F(EditingCommandRouterTest, Contract_PasswordPeekNeverExportsText)
 
     box->setSelection(0, 1);
     QTest::keySequence(box, QKeySequence(QKeySequence::Copy));
-    EXPECT_EQ(
-        QApplication::clipboard()->text(),
-        QStringLiteral("sentinel"));
+    EXPECT_EQ(QApplication::clipboard()->text(), QStringLiteral("sentinel"));
     QTest::keySequence(box, QKeySequence(QKeySequence::Cut));
     EXPECT_EQ(box->password(), QStringLiteral("secret"));
     QTest::mouseRelease(reveal, Qt::LeftButton);
 
-    box->setPasswordRevealMode(
-        PasswordBox::PasswordRevealMode::Visible);
+    box->setPasswordRevealMode(PasswordBox::PasswordRevealMode::Visible);
     box->setSelection(0, 1);
     EXPECT_TRUE(router.canExecute(Command::Cut));
     EXPECT_TRUE(router.canExecute(Command::Copy));
@@ -492,7 +478,7 @@ TEST_F(EditingCommandRouterTest, Contract_InheritedEditorsRouteThroughLineEdit)
     showAndFocus(number);
     number->selectAll();
     QApplication::clipboard()->setText(QStringLiteral("42"));
-    ASSERT_TRUE(router.canExecute(Command::Paste));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return router.canExecute(Command::Paste); }));
     EXPECT_TRUE(router.execute(Command::Paste));
     QTest::keyClick(number, Qt::Key_Return);
     QApplication::processEvents();
@@ -547,28 +533,22 @@ TEST_F(EditingCommandRouterTest, Contract_CommandSurfacesRetainAndRestoreEditorT
 
     auto* bar = new CommandBar(window);
     bar->setGeometry(20, 80, 420, 48);
-    ASSERT_TRUE(
-        bar->addSecondaryAction(router.action(Command::Cut)));
+    ASSERT_TRUE(bar->addSecondaryAction(router.action(Command::Cut)));
     auto* anchor = new Button(QStringLiteral("Flyout"), window);
     anchor->setGeometry(20, 150, 120, 40);
     auto* flyout = new CommandBarFlyout(window);
     flyout->setAnimationEnabled(false);
-    ASSERT_TRUE(
-        flyout->addPrimaryAction(
-            router.action(Command::SelectAll)));
+    ASSERT_TRUE(flyout->addPrimaryAction(router.action(Command::SelectAll)));
 
     showAndFocus(edit);
     edit->setSelection(0, 5);
     ASSERT_EQ(edit->selectedText(), QStringLiteral("Alpha"));
     ASSERT_TRUE(router.canExecute(Command::Cut));
-    QSignalSpy cutSpy(
-        router.action(Command::Cut), &QAction::triggered);
+    QSignalSpy cutSpy(router.action(Command::Cut), &QAction::triggered);
     bar->setOverflowOpen(true);
     QApplication::processEvents();
     ASSERT_TRUE(bar->isOverflowOpen());
-    QAbstractButton* cutRow = commandButton(
-        window,
-        QStringLiteral("FluentCommandBar.OverflowRow"),
+    QAbstractButton* cutRow = commandButton(window, QStringLiteral("FluentCommandBar.OverflowRow"),
         router.action(Command::Cut)->text().remove(QLatin1Char('&')));
     ASSERT_NE(cutRow, nullptr);
     EXPECT_TRUE(router.hasActiveTarget());
@@ -593,18 +573,12 @@ TEST_F(EditingCommandRouterTest, Contract_CommandSurfacesRetainAndRestoreEditorT
     edit->setSelection(0, 5);
     edit->setFocus(Qt::OtherFocusReason);
     QApplication::processEvents();
-    flyout->showAt(
-        anchor, CommandBarFlyout::ShowMode::Standard);
+    flyout->showAt(anchor, CommandBarFlyout::ShowMode::Standard);
     QApplication::processEvents();
     ASSERT_TRUE(flyout->isOpen());
     EXPECT_TRUE(router.hasActiveTarget());
-    QAbstractButton* selectAll = commandButton(
-        flyout,
-        QStringLiteral(
-            "FluentCommandBarFlyout.PrimaryPresenter"),
-        router.action(Command::SelectAll)
-            ->text()
-            .remove(QLatin1Char('&')));
+    QAbstractButton* selectAll = commandButton(flyout, QStringLiteral("FluentCommandBarFlyout.PrimaryPresenter"),
+        router.action(Command::SelectAll)->text().remove(QLatin1Char('&')));
     ASSERT_NE(selectAll, nullptr);
     EXPECT_EQ(QApplication::focusWidget(), selectAll);
     selectAll->click();

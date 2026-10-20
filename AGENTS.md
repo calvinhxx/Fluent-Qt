@@ -11,6 +11,7 @@ Read the owning code and the guide sections relevant to the task below.
 |---|---|
 | Local setup and builds | [Build workflow](docs/development/build-workflow.md); [Linux workflow](docs/development/linux-workflow.md) for Linux |
 | C++ or test changes | [Testing workflow](docs/development/testing-workflow.md), including the local static gate; [test conventions](docs/development/qt-component-test-conventions.md) when authoring tests |
+| New component behavior or Qt/platform fix, including private implementation | [Design before implementation](docs/development/compatibility-policy.md#design-before-implementation); establish ownership before editing and run the Qt-free boundary gate |
 | Public API change | [API conventions](docs/development/component-api-conventions.md), [compatibility policy](docs/development/compatibility-policy.md) |
 | Trace an earlier API decision or audit a baseline | [Historical API audit](docs/development/component-api-audit.md); its dated addenda are evidence, not current rules |
 | Runtime ownership or overlays | [Architecture](docs/architecture/README.md); [overlay behavior](docs/architecture/overlay-behavior.md) for popups, flyouts, dropdowns, and drawers |

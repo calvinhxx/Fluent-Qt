@@ -108,9 +108,28 @@ def quick_selection(paths: list[str], root: Path = ROOT):
     return cpp, "^(" + "|".join(sorted(python_tests)) + ")$" if python_tests and not full_python else "", full_python or bool(python_tests)
 
 
+def affects_compatibility_boundaries(path: str) -> bool:
+    suffix = Path(path).suffix.lower()
+    return (
+        path == RELEASE.COMPATIBILITY_BOUNDARY_CHECKER
+        or (suffix in {".cpp", ".cc", ".cxx", ".h", ".hh", ".hpp", ".hxx", ".m", ".mm", ".inc"}
+            and path.startswith(("app/", "src/", "include/", "examples/", "tests/", "support/",
+                                 "bindings/pyside6/native/")))
+        or (suffix == ".py" and path.startswith((
+            "bindings/pyside6/src/", "bindings/pyside6/gallery/src/",
+        )))
+    )
+
+
 def quick_checks(paths: list[str], output_dir: Path = ROOT / "build/local-preflight") -> list[tuple[str, list[str]]]:
     checks: dict[str, list[str]] = {}
+    if any(affects_compatibility_boundaries(path) for path in paths):
+        label, command = RELEASE.compatibility_boundary_check()
+        checks[label] = command
     for path in paths:
+        if path == RELEASE.COMPATIBILITY_BOUNDARY_CHECKER:
+            # Its self-tests are part of the boundary gate, not a separate test file.
+            continue
         file = ROOT / path
         if path.startswith(("tools/", "scripts/", ".github/")):
             test = file if file.name.startswith("test_") else file.with_name("test_" + file.name.replace("-", "_"))

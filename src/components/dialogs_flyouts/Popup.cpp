@@ -454,11 +454,13 @@ void Popup::open()
     if (m_overlayCoordinator->focusOnOpenEnabled())
         setFocus(Qt::PopupFocusReason);
 
-    if (qApp)
-        qApp->installEventFilter(this);
-
     updateScrimState();
     m_overlayCoordinator->setInputActive(true);
+    // Derived command surfaces observe anchor presses before shared dismissal
+    // clears their open state and restores focus.
+    // zh_CN: 命令浮层先处理锚点按下，再由共享逻辑关闭及恢复焦点。
+    if (qApp)
+        qApp->installEventFilter(this);
 
     if (!m_animationEnabled) {
         setPopupProgress(1.0);

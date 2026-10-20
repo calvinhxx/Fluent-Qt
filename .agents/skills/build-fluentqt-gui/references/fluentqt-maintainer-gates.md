@@ -16,10 +16,21 @@ A passing unrelated global suite never replaces the focused owner gate.
 Library fixes use these repository gates; they do not require a consumer
 design brief, application architecture manifest, or lite/full design profile.
 
+## Establish ownership before editing
+
+For new behavior and Qt/platform fixes, read the **Design before
+implementation** section in `docs/development/compatibility-policy.md`.
+State the common interaction and the owning adapter or application policy
+before editing, even when no public API changes. That guide owns the
+decision criteria and the final boundary review; keep this decision
+separate from passing runtime tests. Run its Qt-free boundary gate before
+building. A normal fix needs only a brief working note, not a new manifest.
+
 ## Select gates from the change
 
 | Change | Canonical repository guide | Required local gate or evidence |
 | --- | --- | --- |
+| Qt/platform adaptation or component implementation refactor | `docs/development/compatibility-policy.md` | `check_compatibility_boundaries.py --project-root . --self-test`; ownership review plus the affected adapter/component runtime tests |
 | C++ component or public API | `docs/development/component-api-conventions.md`, `docs/development/testing-workflow.md` | Focused component build/CTest; `validate_component_api.py --self-test` for installed headers, properties, accessors, signals, catalog mappings, or compatibility readers |
 | Visible component or C++ Gallery sample | `docs/development/app-sample-optimization.md`, `docs/development/gallery-preview-workflow.md` | Real Gallery build, `test_gallery_content_pages`, Gallery boundary validator, compiled preview |
 | Popup, collection, navigation, window, or other high-risk visual behavior | `docs/development/technical-debt-roadmap.md`, `docs/development/gui-verification-workflow.md` | Visual inventory self-test plus its named deterministic or human-review route |
@@ -40,6 +51,8 @@ ctest --preset <host-preset> \
 The repository-wide static selectors are:
 
 ```bash
+python3 tools/quality/check_compatibility_boundaries.py \
+  --project-root . --self-test
 python3 tools/quality/validate_component_api.py \
   --project-root . --self-test
 python3 tools/quality/validate_visual_evidence_inventory.py \
@@ -127,6 +140,7 @@ Python, or WebAssembly boundary explicitly.
 Before finishing, require:
 
 - a stated change scope and its selected repository gates;
+- an ownership decision and final boundary review for new behavior or Qt/platform adaptations;
 - a focused owner test for every changed public or visible surface;
 - semantic alignment between Gallery UI and displayed source;
 - deterministic or explicitly `human-required` evidence for high-risk visuals;

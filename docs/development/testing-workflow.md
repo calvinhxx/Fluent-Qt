@@ -153,6 +153,18 @@ automated state and pixel invariants.
 
 ## Local static gate
 
+Run the Qt-free [compatibility ownership check](compatibility-policy.md#automated-boundary-gate)
+before building or committing component and platform changes:
+
+```bash
+python3 tools/quality/check_compatibility_boundaries.py --project-root . --self-test
+```
+
+It checks C++ and Python source placement, including new files, without importing
+Qt. Its rules and regressions live together in `tools/quality/`; runtime
+compatibility tests remain responsible for behavior. A passing source check
+does not replace the [design ownership review](compatibility-policy.md#design-before-implementation).
+
 Run the C++ format contract before committing or pushing. The check uses
 clang-format 22.1.8 and formats incrementally by complete touched file, so a
 legacy file may produce a larger mechanical diff the first time it is changed.
@@ -260,8 +272,9 @@ retain the full Python selection. Supply the configured `--pyside-build-dir` for
 Python checks. Manual desktop checks remain separate. A missing required build
 directory fails; `--plan` can inspect the selection without one.
 
-Catch component-selection, wheel-file, generated-wrapper verifier, and Gallery
-contract omissions before compiling Qt or pushing a pull request:
+Catch compatibility-boundary, component-selection, wheel-file,
+generated-wrapper verifier, and Gallery contract omissions before compiling Qt
+or pushing a pull request:
 
 ```bash
 python3 tools/dev/fluent_qt_preflight.py --checks-only
@@ -278,6 +291,10 @@ The same source/packaging checks run in CI's planning job and the release
 preflight. They require no Qt installation. This command does not verify
 runtime ownership or compatibility; the generated-wrapper verifier's unit
 tests are distinct from checking an actual generated binding.
+
+The compatibility boundary gate runs first and stops preflight on a violation.
+Quick mode also includes it for C++ sources/headers and Python library/Gallery
+sources, even when runtime selection is limited to one owner.
 
 For runtime checks, use the CI path classifier with the branch diff plus staged,
 unstaged, and untracked changes. Renames include both paths. Preview the selected

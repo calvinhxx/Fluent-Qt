@@ -3,6 +3,7 @@
 #include "components/textfields/LineEdit.h"
 #include "components/textfields/Label.h"
 #include <QMouseEvent>
+#include <QMenu>
 #include "components/basicinput/Button.h"
 #include <QShortcut>
 #include <QSignalSpy>
@@ -80,9 +81,9 @@ protected:
         layout->addWidget(first);
         layout->addWidget(last);
         host.show();
-        host.activateWindow();
         ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
-        QApplication::processEvents();
+        host.activateWindow();
+        ASSERT_TRUE(QTest::qWaitForWindowActive(&host));
     }
     void TearDown() override { fluent::FluentElement::setTheme(previousTheme); }
     void close()
@@ -297,6 +298,122 @@ TYPED_TEST(OverlayContractTest, ModalDismissConsumesPressAndReleaseWhileModeless
         EXPECT_EQ(this->background.presses, modal ? 0 : 1);
         EXPECT_EQ(this->background.releases, modal ? 0 : 1);
     }
+}
+
+TYPED_TEST(OverlayContractTest, OutsideDoubleClickDismissesAndConsumesItsRelease)
+{
+    auto& surface = this->surface;
+    surface.setModal(true);
+    surface.setClosePolicy(TypeParam::CloseOnPressOutside);
+    surface.open();
+    const QPoint local = this->background.rect().center();
+    const QPoint global = this->background.mapToGlobal(local);
+    const QPoint inWindow = this->host.mapFromGlobal(global);
+    QMouseEvent press(QEvent::MouseButtonDblClick, QPointF(inWindow), QPointF(global), Qt::LeftButton, Qt::LeftButton,
+        Qt::NoModifier);
+    QApplication::sendEvent(this->host.windowHandle(), &press);
+    EXPECT_FALSE(surface.isOpen());
+    QMouseEvent release(QEvent::MouseButtonRelease, QPointF(inWindow), QPointF(global), Qt::LeftButton, Qt::NoButton,
+        Qt::NoModifier);
+    QApplication::sendEvent(this->host.windowHandle(), &release);
+    EXPECT_EQ(this->background.presses, 0);
+    EXPECT_EQ(this->background.releases, 0);
+}
+
+TYPED_TEST(OverlayContractTest, GrabbedMenuPressInAnotherWindowDoesNotDismissSurface)
+{
+    auto& surface = this->surface;
+    surface.setModal(true);
+    surface.setClosePolicy(TypeParam::CloseOnPressOutside);
+    surface.open();
+    QWidget other;
+    other.resize(240, 160);
+    other.move(this->host.frameGeometry().right() + 40, this->host.y());
+    other.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&other));
+    other.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&other));
+    // Let the window manager finish its initial placement before moving the target.
+    other.move(this->host.frameGeometry().right() + 40, this->host.y());
+    QPoint global;
+    ASSERT_TRUE(QTest::qWaitFor([&] {
+        global = other.mapToGlobal(other.rect().center());
+        return !this->host.rect().contains(this->host.mapFromGlobal(global));
+    }));
+    QMenu menu;
+    menu.addAction(QStringLiteral("Choice"));
+    menu.popup(this->host.mapToGlobal(QPoint(20, 20)));
+    ASSERT_NE(menu.windowHandle(), nullptr);
+    menu.windowHandle()->setTransientParent(this->host.windowHandle());
+    global = other.mapToGlobal(other.rect().center());
+    ASSERT_FALSE(this->host.rect().contains(this->host.mapFromGlobal(global)));
+    QMouseEvent press(QEvent::MouseButtonPress, QPointF(menu.mapFromGlobal(global)), QPointF(global), Qt::LeftButton,
+        Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(menu.windowHandle(), &press);
+    EXPECT_TRUE(surface.isOpen());
+    menu.close();
+    this->close();
+}
+
+TYPED_TEST(OverlayContractTest, GrabbedMenuPressInsideHostDismissesAndConsumesRelease)
+{
+    auto& surface = this->surface;
+    for (const auto type : {QEvent::MouseButtonPress, QEvent::MouseButtonDblClick}) {
+        SCOPED_TRACE(int(type));
+        surface.setModal(true);
+        surface.setClosePolicy(TypeParam::CloseOnPressOutside);
+        surface.open();
+        const QPoint global = this->background.mapToGlobal(this->background.rect().center());
+        ASSERT_TRUE(this->host.rect().contains(this->host.mapFromGlobal(global)));
+        ASSERT_FALSE(surface.rect().contains(surface.mapFromGlobal(global)));
+        QMenu menu;
+        menu.addAction(QStringLiteral("Choice"));
+        menu.popup(this->host.mapToGlobal(this->host.rect().center()));
+        ASSERT_NE(menu.windowHandle(), nullptr);
+        menu.windowHandle()->setTransientParent(this->host.windowHandle());
+        ASSERT_FALSE(menu.frameGeometry().contains(global));
+        QMouseEvent press(type, QPointF(menu.mapFromGlobal(global)), QPointF(global), Qt::LeftButton, Qt::LeftButton,
+            Qt::NoModifier);
+        QApplication::sendEvent(menu.windowHandle(), &press);
+        EXPECT_FALSE(surface.isOpen());
+        QMouseEvent release(QEvent::MouseButtonRelease, QPointF(this->host.mapFromGlobal(global)), QPointF(global),
+            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(this->host.windowHandle(), &release);
+        EXPECT_EQ(this->background.presses, 0);
+        EXPECT_EQ(this->background.releases, 0);
+        menu.close();
+    }
+}
+
+TYPED_TEST(OverlayContractTest, GrabbedChildMenuPressInsideParentDoesNotDismissSurface)
+{
+    auto& surface = this->surface;
+    surface.setModal(true);
+    surface.setClosePolicy(TypeParam::CloseOnPressOutside);
+    surface.open();
+    QMenu parent;
+    parent.addAction(QStringLiteral("Choice"));
+    parent.popup(this->host.mapToGlobal(QPoint(10, 10)));
+    ASSERT_NE(parent.windowHandle(), nullptr);
+    parent.windowHandle()->setTransientParent(this->host.windowHandle());
+    QMenu child(&parent);
+    child.addAction(QStringLiteral("Nested choice"));
+    child.popup(this->host.mapToGlobal(QPoint(300, 100)));
+    ASSERT_NE(child.windowHandle(), nullptr);
+    child.windowHandle()->setTransientParent(parent.windowHandle());
+    ASSERT_TRUE(parent.isVisible());
+    ASSERT_TRUE(child.isVisible());
+    const QPoint global = parent.frameGeometry().center();
+    ASSERT_TRUE(this->host.rect().contains(this->host.mapFromGlobal(global)));
+    ASSERT_FALSE(surface.rect().contains(surface.mapFromGlobal(global)));
+    ASSERT_FALSE(child.frameGeometry().contains(global));
+    QMouseEvent press(QEvent::MouseButtonPress, QPointF(child.mapFromGlobal(global)), QPointF(global), Qt::LeftButton,
+        Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(child.windowHandle(), &press);
+    EXPECT_TRUE(surface.isOpen());
+    child.close();
+    parent.close();
+    this->close();
 }
 
 TYPED_TEST(OverlayContractTest, StickyModalContainsFocusAndBlocksOnlyItsOwnWindow)

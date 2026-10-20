@@ -55,8 +55,10 @@ template <class Surface> void verifyControls(QWidget& host, QWidget* root, Surfa
     EXPECT_EQ(status->text(), QStringLiteral("Background clicks: 1"));
     modal->setChecked(true);
     overlay->template findChild<fluent::basicinput::CheckBox*>(prefix + ".CloseOutside")->setChecked(true);
+    EXPECT_TRUE(overlay->closePolicy().testFlag(Surface::CloseOnPressOutside));
+    const QPointer<Surface> guard(overlay);
     QTest::mouseClick(host.windowHandle(), Qt::LeftButton, Qt::NoModifier, target);
-    EXPECT_FALSE(overlay->isOpen());
+    EXPECT_TRUE(!guard || !guard->isOpen());
     EXPECT_EQ(status->text(), QStringLiteral("Background clicks: 1"));
 }
 } // namespace

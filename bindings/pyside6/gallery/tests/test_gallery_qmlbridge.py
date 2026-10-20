@@ -223,7 +223,7 @@ class GalleryQmlBridgeTest(unittest.TestCase):
                             self.assertGreaterEqual(block._code_label.height(),
                                                     block._code_label.heightForWidth(
                                                         block._code_label.width()))
-                            block._copy_source()
+                            block.copy()
                             self.assertEqual(QApplication.clipboard().text(), expected)
                         block._file_selector.setCurrentIndex(1)
                         QApplication.processEvents()
@@ -232,7 +232,7 @@ class GalleryQmlBridgeTest(unittest.TestCase):
                         self.assertGreaterEqual(block._code_label.height(),
                                                 block._code_label.heightForWidth(
                                                     block._code_label.width()))
-                        block._copy_source()
+                        block.copy()
                         self.assertEqual(QApplication.clipboard().text(), python[1]["code"])
                     self.assertTrue(block.isExpanded())
                     self.assertEqual(expanded.count(), 0)
@@ -370,11 +370,11 @@ class GalleryQmlBridgeTest(unittest.TestCase):
                                  [file["name"] for file in files])
                 code._source_selector.setSelectedIndex(0)
                 self.assertEqual(code._code, key)
-                code._copy_source()
+                code.copy()
                 self.assertEqual(QApplication.clipboard().text(), key)
                 code._source_selector.setSelectedIndex(1)
                 self.assertEqual(code._code, full)
-                code._copy_source()
+                code.copy()
                 copied = QApplication.clipboard().text()
                 self.assertEqual(copied, full)
                 self.assertIn("QmlSession", copied)
@@ -384,7 +384,7 @@ class GalleryQmlBridgeTest(unittest.TestCase):
                 code._file_selector.setCurrentIndex(1)
                 self.assertTrue(code._source_selector.isHidden())
                 self.assertEqual(code._code, files[1]["code"])
-                code._copy_source()
+                code.copy()
                 self.assertEqual(QApplication.clipboard().text(), files[1]["code"])
                 code._file_selector.setCurrentIndex(0)
                 self.assertFalse(code._source_selector.isHidden())
