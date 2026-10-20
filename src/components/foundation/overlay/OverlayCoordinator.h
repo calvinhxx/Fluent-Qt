@@ -65,8 +65,13 @@ public:
     void refreshBackdrop();
 
     enum class DismissReason { OutsidePress, Escape };
-    void setClosePolicy(int policy) { m_closePolicy = policy; }
+    void setClosePolicy(bool outsidePress, bool escape)
+    {
+        m_closeOnOutsidePress = outsidePress;
+        m_closeOnEscape = escape;
+    }
     void setHitTest(std::function<bool(const QPoint&)> contains) { m_contains = std::move(contains); }
+    void setOutsidePressDismissal(std::function<bool(const QPoint&)> dismiss) { m_dismiss = std::move(dismiss); }
     void setOutsidePressConsumption(std::function<bool(const QPoint&)> consumes) { m_consumes = std::move(consumes); }
     void setInputActive(bool active);
     bool hasInputOverlayAbove() const;
@@ -98,8 +103,10 @@ private:
     quint64 m_blurRevision = 0;
     bool m_inputActive = false;
     OverlayInputFilter* m_inputFilter = nullptr;
-    int m_closePolicy = 0;
+    bool m_closeOnOutsidePress = false;
+    bool m_closeOnEscape = false;
     std::function<bool(const QPoint&)> m_contains;
+    std::function<bool(const QPoint&)> m_dismiss;
     std::function<bool(const QPoint&)> m_consumes;
 };
 

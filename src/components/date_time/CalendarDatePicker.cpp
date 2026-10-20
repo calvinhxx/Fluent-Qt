@@ -1,10 +1,8 @@
-#include "compatibility/InputEventCompat.h"
 #include "CalendarDatePicker.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
 
 #include <QEvent>
 #include <QKeyEvent>
-#include <QMouseEvent>
 #include <QSizePolicy>
 
 #include "CalendarView.h"
@@ -132,14 +130,10 @@ public:
     }
 
 protected:
-    bool eventFilter(QObject* watched, QEvent* event) override
+    bool shouldDismissOnOutsidePress(const QPoint& global) const override
     {
-        if (watched != this && isOpen() && m_picker && event && event->type() == QEvent::MouseButtonPress) {
-            const QPoint global = fluentMouseGlobalPos(static_cast<QMouseEvent*>(event));
-            if (m_picker->rect().contains(::fluent::overlay::localPointFromPresentedGlobal(m_picker, global)))
-                return false;
-        }
-        return Flyout::eventFilter(watched, event);
+        return !m_picker
+            || !m_picker->rect().contains(::fluent::overlay::localPointFromPresentedGlobal(m_picker, global));
     }
 
     QPoint computePosition() const override

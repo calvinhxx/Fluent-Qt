@@ -156,6 +156,10 @@ without activating Gallery navigation.
 
 `Popup`, `Dialog`, and `DrawerView` share modal pointer blocking, background
 shortcut suppression, focus containment, and topmost-overlay input routing.
+Calendar triggers retain their normal press/release/click signals and toggle
+open state once per activation. Their outside-dismissal exclusions do not
+weaken modal background blocking or Escape handling; C++ and PySide6 regressions
+cover both standalone and date-range triggers.
 Their Gallery effect samples expose named blur/dim sliders and checkboxes for
 modality, dimming, and outside dismissal. A background counter verifies that
 visual effects and input blocking remain independent. `TestOverlayContract.cpp`

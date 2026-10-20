@@ -23,7 +23,8 @@ namespace fluent::dialogs_flyouts {
 Dialog::Dialog(QWidget* parent) : QDialog(parent), m_originalParent(parent)
 {
     m_overlayCoordinator = new ::fluent::overlay::OverlayCoordinator(this, this);
-    m_overlayCoordinator->setClosePolicy(int(m_closePolicy));
+    m_overlayCoordinator->setClosePolicy(m_closePolicy.testFlag(CloseOnPressOutside),
+        m_closePolicy.testFlag(CloseOnEscape));
     connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::dismissRequested, this, [this] {
         done(QDialog::Rejected);
     });
@@ -235,7 +236,8 @@ void Dialog::setClosePolicy(ClosePolicy policy)
     if (m_closePolicy == policy)
         return;
     m_closePolicy = policy;
-    m_overlayCoordinator->setClosePolicy(int(m_closePolicy));
+    m_overlayCoordinator->setClosePolicy(m_closePolicy.testFlag(CloseOnPressOutside),
+        m_closePolicy.testFlag(CloseOnEscape));
     emit closePolicyChanged(m_closePolicy);
 }
 

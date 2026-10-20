@@ -481,18 +481,19 @@ protected:
                 layoutForHost();
                 move(computePosition());
             }
-            if (event->type() == QEvent::MouseButtonPress) {
-                const QPoint global = fluentMouseGlobalPos(static_cast<QMouseEvent*>(event));
-                if (watched != this && anchor()
-                    && anchor()->rect().contains(overlay::localPointFromPresentedGlobal(anchor(), global)))
-                    return false;
-                for (const auto& flyout : childFlyouts()) {
-                    if (flyout && overlay::visibleCardContains(flyout->rect(), flyout->mapFromGlobal(global)))
-                        return false;
-                }
-            }
         }
         return Flyout::eventFilter(watched, event);
+    }
+
+    bool shouldDismissOnOutsidePress(const QPoint& global) const override
+    {
+        if (anchor() && anchor()->rect().contains(overlay::localPointFromPresentedGlobal(anchor(), global)))
+            return false;
+        for (const auto& flyout : childFlyouts()) {
+            if (flyout && overlay::visibleCardContains(flyout->rect(), flyout->mapFromGlobal(global)))
+                return false;
+        }
+        return true;
     }
 
 private:

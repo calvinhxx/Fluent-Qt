@@ -1670,6 +1670,51 @@ class FluentQtBindingTest(unittest.TestCase):
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         QCoreApplication.processEvents()
 
+    def test_calendar_triggers_toggle_once_and_preserve_button_signals(self):
+        for in_range in (False, True):
+            with self.subTest(in_range=in_range):
+                host = QWidget()
+                host.resize(1000, 740)
+                owner = (
+                    fluentqt.DateTimeRangePicker(host)
+                    if in_range
+                    else fluentqt.CalendarDatePicker(host)
+                )
+                owner.setGeometry(40, 40, 600 if in_range else 180, owner.sizeHint().height())
+                host.show()
+                try:
+                    self.assertTrue(QTest.qWaitForWindowExposed(host))
+                    if in_range:
+                        owner.openPicker()
+                        QApplication.processEvents()
+                        inputs = (owner.startDatePicker(), owner.endDatePicker())
+                    else:
+                        inputs = (owner,)
+                    for picker in inputs:
+                        pressed = QSignalSpy(picker.pressed)
+                        released = QSignalSpy(picker.released)
+                        clicked = QSignalSpy(picker.clicked)
+                        states = QSignalSpy(picker.calendarOpenChanged)
+                        for click in range(6):
+                            QTest.mouseClick(
+                                picker, Qt.MouseButton.LeftButton,
+                                Qt.KeyboardModifier.NoModifier, picker.rect().center(),
+                            )
+                            QApplication.processEvents()
+                            self.assertEqual(picker.isCalendarOpen(), click % 2 == 0)
+                            self.assertEqual(states.count(), click + 1)
+                            self.assertEqual(pressed.count(), click + 1)
+                            self.assertEqual(released.count(), click + 1)
+                            self.assertEqual(clicked.count(), click + 1)
+                        picker.openCalendar()
+                        QTest.keyClick(picker.calendarView(), Qt.Key.Key_Escape)
+                        self.assertFalse(picker.isCalendarOpen())
+                    if in_range:
+                        self.assertTrue(owner.isPickerOpen())
+                finally:
+                    host.close()
+                    shiboken6.delete(host)
+
     def test_date_picker_properties_enums_signals_and_popup(self):
         class PythonDatePicker(fluentqt.DatePicker):
             def __init__(self, parent=None):

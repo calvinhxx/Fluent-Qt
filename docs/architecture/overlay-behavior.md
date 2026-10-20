@@ -252,6 +252,14 @@ outside presses; shadow margins are not an interactive region.
 `CloseOnEscape` handles Escape in the overlay and its owning top-level window.
 `NoAutoClose` disables implicit dismissal from outside presses and Escape.
 
+Popup subclasses can override `shouldDismissOnOutsidePress(globalPos)` to
+exclude a trigger or related child surface from automatic dismissal. The
+coordinator applies this decision before consuming a non-modal press, so a
+calendar trigger keeps its normal press/release/click sequence and toggles once.
+Returning false does not bypass modal input blocking or change Escape handling.
+This C++ composition hook is not exposed as a Python customization point;
+PySide6 and WebAssembly use the same native component behavior.
+
 Modal `Popup`, `Dialog`, and `DrawerView` consume outside pointer input before
 Qt selects the background receiver. A dismissing press and its matching release
 are consumed even with animations disabled or synchronous deletion on close.
