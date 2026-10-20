@@ -289,6 +289,26 @@ TEST(CommandPaletteTest, Contract_ObserversCanDestroyPaletteDuringRegistrationAn
     EXPECT_TRUE(palette.isNull());
 }
 
+TEST(CommandPaletteTest, Contract_UnparentedPaletteCanBeDestroyedDuringCommandMutation)
+{
+    for (const QString operation : {QStringLiteral("add"), QStringLiteral("remove"), QStringLiteral("clear")}) {
+        SCOPED_TRACE(operation.toStdString());
+        QAction action(QStringLiteral("Search"), nullptr);
+        QPointer<CommandPalette> palette = new CommandPalette;
+        if (operation != QStringLiteral("add"))
+            ASSERT_TRUE(palette->addCommand(&action));
+        QObject::connect(palette, &CommandPalette::currentActionChanged, &action, [&] { delete palette.data(); });
+        if (operation == QStringLiteral("add"))
+            EXPECT_FALSE(palette->addCommand(&action));
+        else if (operation == QStringLiteral("remove"))
+            EXPECT_TRUE(palette->removeCommand(&action));
+        else
+            palette->clearCommands();
+        EXPECT_TRUE(palette.isNull());
+        EXPECT_EQ(action.text(), QStringLiteral("Search"));
+    }
+}
+
 TEST(CommandPaletteTest, Contract_AccessibilityUsesNativeSearchAndModelRows)
 {
     QWidget host;
