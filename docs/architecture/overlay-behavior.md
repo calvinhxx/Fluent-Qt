@@ -250,6 +250,8 @@ context examples.
 `CloseOnPressOutside` treats presses outside the visible card or panel as
 outside presses; shadow margins are not an interactive region.
 `CloseOnEscape` handles Escape in the overlay and its owning top-level window.
+Controls inside the overlay receive Escape first, so an editor or chart can
+cancel its own interaction before an unhandled key closes the surface.
 `NoAutoClose` disables implicit dismissal from outside presses and Escape.
 
 Popup subclasses can override `shouldDismissOnOutsidePress(globalPos)` to

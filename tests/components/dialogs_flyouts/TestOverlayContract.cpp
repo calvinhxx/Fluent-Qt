@@ -2,6 +2,7 @@
 #include <QApplication>
 #include "components/textfields/LineEdit.h"
 #include "components/textfields/Label.h"
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QMenu>
 #include "components/basicinput/Button.h"
@@ -45,6 +46,27 @@ protected:
     {
         ++releases;
         e->accept();
+    }
+};
+
+class EscapeProbe : public QWidget {
+public:
+    using QWidget::QWidget;
+    bool consumeNext = true;
+    int presses = 0;
+
+protected:
+    void keyPressEvent(QKeyEvent* event) override
+    {
+        if (event->key() == Qt::Key_Escape) {
+            ++presses;
+            if (consumeNext) {
+                consumeNext = false;
+                event->accept();
+                return;
+            }
+        }
+        QWidget::keyPressEvent(event);
     }
 };
 
@@ -453,6 +475,39 @@ TYPED_TEST(OverlayContractTest, StickyModalContainsFocusAndBlocksOnlyItsOwnWindo
     QTest::keyClick(other.windowHandle(), Qt::Key_Escape);
     EXPECT_TRUE(this->surface.isOpen());
     this->close();
+}
+
+TYPED_TEST(OverlayContractTest, InnerEscapeHandlingPrecedesSurfaceDismissal)
+{
+    auto& surface = this->surface;
+    auto* body = this->first->parentWidget();
+    auto* editor = new EscapeProbe(body);
+    editor->setFocusPolicy(Qt::StrongFocus);
+    body->layout()->addWidget(editor);
+    surface.setModal(true);
+    surface.setClosePolicy(TypeParam::CloseOnEscape);
+    for (const bool native : {false, true}) {
+        SCOPED_TRACE(native);
+        editor->consumeNext = true;
+        editor->presses = 0;
+        surface.open();
+        QApplication::processEvents();
+        editor->setFocus();
+        ASSERT_EQ(QApplication::focusWidget(), editor);
+        const auto escape = [&] {
+            if (native)
+                QTest::keyClick(this->host.windowHandle(), Qt::Key_Escape);
+            else
+                QTest::keyClick(editor, Qt::Key_Escape);
+            QApplication::processEvents();
+        };
+        escape();
+        EXPECT_EQ(editor->presses, 1);
+        EXPECT_TRUE(surface.isOpen());
+        escape();
+        EXPECT_EQ(editor->presses, 2);
+        EXPECT_FALSE(surface.isOpen());
+    }
 }
 
 TYPED_TEST(OverlayContractTest, BlurRefreshesAndHighContrastKeepsInputPolicy)

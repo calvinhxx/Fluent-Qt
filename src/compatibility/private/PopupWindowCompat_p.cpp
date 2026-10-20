@@ -1,5 +1,6 @@
 #include "PopupWindowCompat_p.h"
 
+#include <QApplication>
 #include <QEvent>
 #include <QMouseEvent>
 #include <QWidget>
@@ -61,6 +62,15 @@ QWidget* widgetForEventReceiver(QObject* receiver)
             return widget;
     }
     return nullptr;
+}
+
+QWidget* widgetForKeyEventReceiver(QObject* receiver)
+{
+    if (auto* window = qobject_cast<QWindow*>(receiver)) {
+        auto* focus = QApplication::focusWidget();
+        return focus && focus->window()->windowHandle() == window ? focus : nullptr;
+    }
+    return widgetForEventReceiver(receiver);
 }
 
 bool eventReceiverBelongsToWindow(QObject* receiver, QWidget* host)

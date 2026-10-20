@@ -30,6 +30,7 @@ private:
 };
 
 QWidget* widgetForEventReceiver(QObject* receiver);
+QWidget* widgetForKeyEventReceiver(QObject* receiver);
 bool eventReceiverBelongsToWindow(QObject* receiver, QWidget* host);
 
 // Normalize native popup grabs without changing the component's dismissal
