@@ -3,6 +3,8 @@
 #include <QApplication>
 #include <QPointer>
 #include <QSignalSpy>
+#include <QTest>
+#include <QVBoxLayout>
 #include <type_traits>
 
 #include "components/foundation/FluentElement.h"
@@ -203,6 +205,47 @@ TEST_F(FieldTest, Contract_HostingPreservesEditorSizePolicy)
     ASSERT_EQ(field.takeEditor(), editor);
     EXPECT_EQ(editor->sizePolicy(), policy);
     delete editor;
+}
+
+TEST_F(FieldTest, Contract_CompactRowsKeepTheirMetricsWhenTheHostGrows)
+{
+    QWidget host;
+    auto* layout = new QVBoxLayout(&host);
+    auto* field = new Field(&host);
+    field->setLabelText(QStringLiteral("Connection address"));
+    field->setHelperText(QStringLiteral("Use an HTTPS address for this connection."));
+    field->setRequired(true);
+    auto* editor = new LineEdit;
+    ASSERT_TRUE(field->setEditor(editor, WidgetOwnership::Owned));
+    layout->addWidget(field);
+    host.resize(440, field->sizeHint().height() + 30);
+    host.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+    QApplication::processEvents();
+    auto* caption = field->findChild<Label*>(QStringLiteral("fluentFieldCaption"));
+    auto* required = field->findChild<Label*>(QStringLiteral("fluentFieldRequired"));
+    auto* editorHost = field->findChild<QWidget*>(QStringLiteral("fluentFieldEditorHost"));
+    ASSERT_NE(caption, nullptr);
+    ASSERT_NE(required, nullptr);
+    ASSERT_NE(editorHost, nullptr);
+    EXPECT_EQ(caption->fluentTypography(), Typography::FontRole::BodyStrong);
+    EXPECT_EQ(required->fluentTypography(), Typography::FontRole::Caption);
+    const int height = field->height();
+    const int editorTop = editor->mapTo(field, QPoint()).y();
+    const int captionBottom = field->layout()->itemAt(0)->geometry().bottom();
+    EXPECT_EQ(editorHost->y() - captionBottom - 1, field->themeSpacing().gap.normal);
+
+    host.resize(host.width(), 700);
+    QApplication::processEvents();
+    EXPECT_EQ(field->height(), height);
+    EXPECT_EQ(editor->mapTo(field, QPoint()).y(), editorTop);
+
+    host.resize(210, 700);
+    QApplication::processEvents();
+    EXPECT_GE(field->height(), height);
+    EXPECT_GE(field->height(), field->heightForWidth(field->width()));
+    EXPECT_TRUE(field->rect().contains(editorHost->geometry()));
+    EXPECT_EQ(editorHost->y() - field->layout()->itemAt(0)->geometry().bottom() - 1, field->themeSpacing().gap.normal);
 }
 
 TEST_F(FieldTest, Contract_ValidationPresentationDoesNotMutateEditorValue)
