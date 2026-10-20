@@ -3,7 +3,7 @@
 from typing import Callable
 
 from PySide6.QtCore import QCoreApplication, QEvent, QMetaObject, QObject, Qt, QTimer
-from shiboken6 import isValid
+from shiboken6 import invalidate, isValid
 
 __all__ = ["delete_qobject", "single_shot"]
 
@@ -39,9 +39,23 @@ def delete_qobject(obj: QObject | None) -> None:
     # Do not materialize Qt's process-lifetime main-thread wrapper merely to
     # validate this precondition: PySide 6.2 can finalize it after Shiboken's
     # wrapper registry. These internal callers already run on the owning thread.
-    # Calling the Python deleteLater wrapper invalidates native-created objects
-    # before their event is delivered. Invoke Qt's slot without that wrapper step
-    # so the targeted sendPostedEvents call can still use this receiver.
-    if not QMetaObject.invokeMethod(obj, "deleteLater", Qt.DirectConnection):
-        raise RuntimeError("Could not schedule QObject deletion")
-    QCoreApplication.sendPostedEvents(obj, QEvent.DeferredDelete)
+    destroyed = False
+
+    def mark_destroyed():
+        nonlocal destroyed
+        destroyed = True
+
+    connection = obj.destroyed.connect(mark_destroyed)
+    try:
+        # The Python deleteLater wrapper invalidates native-created objects
+        # before delivery. Invoke Qt's slot so targeted delivery can use obj.
+        if not QMetaObject.invokeMethod(obj, "deleteLater", Qt.DirectConnection):
+            raise RuntimeError("Could not schedule QObject deletion")
+        QCoreApplication.sendPostedEvents(obj, QEvent.DeferredDelete)
+    finally:
+        if destroyed:
+            # Final native classes have no shell destructor to invalidate their
+            # wrapper. Invalidation never deletes C++ or invokes the app hook.
+            invalidate(obj)
+        else:
+            QObject.disconnect(connection)
