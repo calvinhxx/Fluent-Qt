@@ -51,6 +51,20 @@ protected:
     }
 };
 
+class TriggerAwarePopup : public Popup {
+public:
+    TriggerAwarePopup(QWidget* parent, QWidget* trigger) : Popup(parent), m_trigger(trigger) {}
+
+protected:
+    bool shouldDismissOnOutsidePress(const QPoint& globalPos) const override
+    {
+        return !m_trigger || !m_trigger->rect().contains(m_trigger->mapFromGlobal(globalPos));
+    }
+
+private:
+    QPointer<QWidget> m_trigger;
+};
+
 void processEvents()
 {
     QApplication::processEvents();
@@ -865,6 +879,44 @@ TEST_F(PopupTest, EscapeClosesPopupWhenPolicySet)
     QApplication::sendEvent(&p, &ev);
 
     EXPECT_FALSE(p.isOpen());
+}
+
+TEST_F(PopupTest, Contract_TriggerDismissalExclusionPreservesClicksAndModalBlocking)
+{
+    Button trigger(QStringLiteral("Toggle"), window);
+    trigger.setGeometry(20, 20, 100, 36);
+    trigger.show();
+    TriggerAwarePopup popup(window, &trigger);
+    popup.setAnimationEnabled(false);
+    popup.setLightDismissConsumesPress(true);
+    popup.setBackdropBlurRadius(0);
+    QObject::connect(&trigger, &Button::clicked, &popup, [&] { popup.setIsOpen(!popup.isOpen()); });
+    QSignalSpy presses(&trigger, &Button::pressed);
+    QSignalSpy releases(&trigger, &Button::released);
+    QSignalSpy clicks(&trigger, &Button::clicked);
+    QSignalSpy states(&popup, &Popup::isOpenChanged);
+    for (int click = 0; click < 4; ++click) {
+        QTest::mouseClick(&trigger, Qt::LeftButton);
+        EXPECT_EQ(popup.isOpen(), click % 2 == 0);
+        EXPECT_EQ(states.count(), click + 1);
+        EXPECT_EQ(presses.count(), click + 1);
+        EXPECT_EQ(releases.count(), click + 1);
+        EXPECT_EQ(clicks.count(), click + 1);
+    }
+
+    popup.open();
+    QTest::keyClick(&popup, Qt::Key_Escape);
+    EXPECT_FALSE(popup.isOpen());
+
+    popup.setModal(true);
+    popup.open();
+    QTest::mouseClick(&trigger, Qt::LeftButton);
+    EXPECT_TRUE(popup.isOpen());
+    EXPECT_EQ(clicks.count(), 4);
+    EXPECT_EQ(presses.count(), 4);
+    EXPECT_EQ(releases.count(), 4);
+    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, QPoint(10, 200));
+    EXPECT_FALSE(popup.isOpen());
 }
 
 TEST_F(PopupTest, EscapeIgnoredWhenPolicyOmitsCloseOnEscape)

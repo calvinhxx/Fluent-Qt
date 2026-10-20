@@ -322,10 +322,10 @@ bool OverlayCoordinator::filterInput(QObject* watched, QEvent* event)
         return false;
     }
     if (event->type() == QEvent::KeyPress && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
-        if (!(m_closePolicy & 2) && !m_modal)
+        if (!m_closeOnEscape && !m_modal)
             return false;
         event->accept();
-        if (m_closePolicy & 2)
+        if (m_closeOnEscape)
             emit dismissRequested(DismissReason::Escape);
         return true;
     }
@@ -351,11 +351,26 @@ bool OverlayCoordinator::filterInput(QObject* watched, QEvent* event)
     }
     if (containsGlobalPoint(global))
         return false;
-    const bool consume = m_modal || (press && (m_closePolicy & 1) && m_consumes && m_consumes(global));
-    if (consume)
-        event->accept();
     if (press && m_modal)
         new DismissedPressGuard(m_topLevel, static_cast<QMouseEvent*>(event)->button());
+    bool dismiss = press && m_closeOnOutsidePress;
+    if (dismiss && m_dismiss) {
+        const bool wasModal = m_modal;
+        const QPointer<OverlayCoordinator> guard(this);
+        const QPointer<QObject> receiver(watched);
+        const auto predicate = m_dismiss;
+        dismiss = predicate(global);
+        if (!guard || !receiver)
+            return wasModal || !receiver;
+        if (!m_inputActive || !m_overlay || !m_overlay->isVisible())
+            return wasModal;
+    }
+    // A trigger can handle its own toggle without dismissing on press. This
+    // exception never makes a modal background interactive.
+    // zh_CN: 触发控件可自行切换开合而不在按下时自动关闭；该例外不放行模态背景输入。
+    const bool consume = m_modal || (dismiss && m_consumes && m_consumes(global));
+    if (consume)
+        event->accept();
     if (press && m_scrim && (m_modal || watched == m_scrim)
         && static_cast<QMouseEvent*>(event)->button() == Qt::LeftButton) {
         const QPointer<OverlayCoordinator> guard(this);
@@ -366,7 +381,7 @@ bool OverlayCoordinator::filterInput(QObject* watched, QEvent* event)
         if (!m_inputActive || !m_overlay || !m_overlay->isVisible())
             return consume;
     }
-    if (press && m_overlay->isEnabled() && (m_closePolicy & 1)) {
+    if (dismiss && m_overlay->isEnabled()) {
         const QPointer<QObject> receiver(watched);
         emit dismissRequested(DismissReason::OutsidePress);
         // Closing observers may delete the receiver as well as the overlay.

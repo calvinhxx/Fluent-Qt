@@ -30,7 +30,11 @@ Popup::Popup(QWidget* parent) : QWidget(parent)
     detail::ensureTransientSurfaceAccessibilityFactory();
     m_originalParent = parent;
     m_overlayCoordinator = new ::fluent::overlay::OverlayCoordinator(this, this);
-    m_overlayCoordinator->setClosePolicy(int(m_closePolicy));
+    m_overlayCoordinator->setClosePolicy(m_closePolicy.testFlag(CloseOnPressOutside),
+        m_closePolicy.testFlag(CloseOnEscape));
+    m_overlayCoordinator->setOutsidePressDismissal([this](const QPoint& globalPos) {
+        return shouldDismissOnOutsidePress(globalPos);
+    });
     connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::dismissRequested, this,
         [this](::fluent::overlay::OverlayCoordinator::DismissReason reason) {
             if (!m_closeReasonExplicit)
@@ -163,7 +167,8 @@ void Popup::setClosePolicy(ClosePolicy p)
     if (m_closePolicy == p)
         return;
     m_closePolicy = p;
-    m_overlayCoordinator->setClosePolicy(int(m_closePolicy));
+    m_overlayCoordinator->setClosePolicy(m_closePolicy.testFlag(CloseOnPressOutside),
+        m_closePolicy.testFlag(CloseOnEscape));
     QPointer<Popup> guard(this);
     emit closePolicyChanged(m_closePolicy);
     if (guard)
@@ -635,6 +640,11 @@ void Popup::destroyScrim()
 }
 
 // ── Light-dismiss / Escape ──────────────────────────────────────────────────
+
+bool Popup::shouldDismissOnOutsidePress(const QPoint&) const
+{
+    return true;
+}
 
 bool Popup::eventFilter(QObject* watched, QEvent* event)
 {

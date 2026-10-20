@@ -56,7 +56,8 @@ DrawerView::DrawerView(QWidget* parent) : QWidget(parent), m_originalParent(pare
 {
     detail::ensureDrawerViewAccessibilityFactory();
     m_overlayCoordinator = new ::fluent::overlay::OverlayCoordinator(this, this);
-    m_overlayCoordinator->setClosePolicy(int(m_closePolicy));
+    m_overlayCoordinator->setClosePolicy(m_closePolicy.testFlag(CloseOnPressOutside),
+        m_closePolicy.testFlag(CloseOnEscape));
     m_overlayCoordinator->setModal(true);
     m_overlayCoordinator->setDim(true);
     m_overlayCoordinator->setHitTest([this](const QPoint& global) { return isPointInsidePanel(global); });
@@ -252,7 +253,8 @@ void DrawerView::setClosePolicy(ClosePolicy policy)
         return;
 
     m_closePolicy = policy;
-    m_overlayCoordinator->setClosePolicy(int(m_closePolicy));
+    m_overlayCoordinator->setClosePolicy(m_closePolicy.testFlag(CloseOnPressOutside),
+        m_closePolicy.testFlag(CloseOnEscape));
     detail::notifyDrawerViewAccessibilityActionsChanged(this);
     emit closePolicyChanged(m_closePolicy);
 }

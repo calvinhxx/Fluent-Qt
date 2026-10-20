@@ -523,6 +523,8 @@ if (Shiboken::Object::isValid(%PYSELF, false)) {
                                  remove="all"/>
                 <modify-function signature="automaticPositionAnchor()const"
                                  remove="all"/>
+                <modify-function signature="shouldDismissOnOutsidePress(const QPoint&amp;)const"
+                                 remove="all"/>
                 <modify-function signature="setFocusOnOpenEnabled(bool)"
                                  remove="all"/>
             </object-type>
