@@ -130,6 +130,8 @@ private:
     // Startup splash overlay; self-deletes after its fade-out once the initial route is shown.
     // zh_CN: 启动 splash 覆盖层；首个路由上屏后淡出并自销毁。
     QPointer<GallerySplashScreen> m_splashScreen;
+    // Event identity must remain valid during the splash's QWidget destruction.
+    QPointer<QObject> m_splashEventSource;
     QElapsedTimer m_startupVisibleTimer;
     QElapsedTimer m_startupReadyTimer;
     QTimer* m_startupFinishTimer = nullptr;
