@@ -234,6 +234,16 @@ protected:
     virtual QWidget* automaticPositionAnchor() const { return nullptr; }
 
     /**
+     * @brief Allows subclasses to exclude trigger regions from outside-press dismissal.
+     * zh_CN: 子类可将触发区域排除在外部按下自动关闭之外。
+     *
+     * Return false to leave a non-modal press to the target's normal input path.
+     * Modal input blocking and Escape remain independent of this decision.
+     * zh_CN: 返回 false 时非模态按下继续交给目标控件；不改变模态拦截或 Esc 行为。
+     */
+    virtual bool shouldDismissOnOutsidePress(const QPoint& globalPos) const;
+
+    /**
      * @brief Controls whether open() moves keyboard focus into the popup.
      * zh_CN: 控制 open() 是否将键盘焦点移入 Popup。
      *
