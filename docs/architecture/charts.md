@@ -182,6 +182,37 @@ Value, with next/previous actions and value-change events. No widget or
 accessible-object tree is allocated for every point. Applications needing a
 tabular alternative can attach a Qt table view to the same model.
 
+## Export and clipboard
+
+All eight dedicated chart components inherit the same export and clipboard
+operations from `ChartView`. Export is independent of the Gallery workbench.
+
+`exportImage(scale)` and `exportPng(scale)` render the current logical layout at
+the requested pixel scale. They omit the data cursor, hover readout and focus
+ring, refresh pending model changes, and preserve the live widget's geometry,
+selection and borrowed models. The background follows the current Fluent theme.
+Invalid scales, empty dimensions or outputs above 16 million pixels return an
+empty result. Rendering and encoding run on the GUI thread.
+
+`exportCsv(visibleRangeOnly)` returns UTF-8 CSV with CRLF rows and the columns
+`series,name,x,y,label,unit`. Series indexes disambiguate duplicate names;
+numeric values use locale-independent precision, text cells are quoted, and
+missing Y values are empty. Rows come from the original model rather than its
+sampled projection. An explicit visible X range includes both endpoints.
+Pie/Donut export the complete first series, matching their presentation.
+
+CSV work and result memory grow with the exported row count. Applications with
+large streaming histories should export bounded snapshots outside interactive
+updates; these convenience methods are synchronous. File selection and storage
+belong to the application. Gallery uses Qt's host-aware `saveFileContent` for
+desktop saves and browser downloads.
+
+`copyImage(scale)` and `copyData(visibleRangeOnly)` report completion through
+`imageCopied(bool)` and `dataCopied(bool)`. The clipboard compatibility adapter
+owns browser promises and suppresses completion after the requesting view is
+destroyed. Browser permissions can deny a copy; the Gallery offers Save PNG/CSV
+as an alternative and never reports a denied write as successful.
+
 ## Verification
 
 `test_chart_model` covers validation, batch signals, snapshot independence,

@@ -2,6 +2,7 @@
 #define FLUENTQT_CHARTVIEW_H
 
 #include <QWidget>
+#include <QImage>
 #include <memory>
 #include "ChartModel.h"
 #include "components/foundation/FluentElement.h"
@@ -111,6 +112,35 @@ public:
      * zh_CN: 最近一次绘制缓存的代表点数量。 */
     int renderedPointCount() const;
     quint64 projectionBuildCount() const;
+    /**
+     * @brief Renders the current logical layout at a pixel scale, without cursor or focus chrome.
+     * zh_CN: 按像素倍率导出当前逻辑布局，不包含数据游标和焦点装饰。
+     * Runs on the GUI thread; invalid sizes or outputs above 16 million pixels return an empty image.
+     * The widget geometry, model ownership and interactive selection remain unchanged.
+     * zh_CN: 在 GUI 线程调用；无效尺寸或超过 1600 万像素时返回空图，不改变控件几何、模型归属或选中状态。
+     */
+    QImage exportImage(double scale = 1.0);
+    /** @brief Encodes exportImage as PNG; an empty result means failure.
+     * zh_CN: 将 exportImage 编码为 PNG，失败时返回空数据。 */
+    QByteArray exportPng(double scale = 1.0);
+    /**
+     * @brief Exports original rows as UTF-8 CSV: series, name, x, y, label, unit.
+     * zh_CN: 导出原始数据为 UTF-8 CSV，列为序列索引、名称、X、Y、标签、单位。
+     * Includes the X endpoints when visibleRangeOnly is true; radial charts use their complete first series.
+     * Missing Y values are empty cells. No sampled or aggregated values replace original rows.
+     * Work and result memory are O(exported rows); call on the GUI thread for bounded data sets.
+     * zh_CN: 当前范围包含 X 两端；饼环图使用完整首序列，缺失 Y 留空，不使用采样值或聚合值。
+     * 计算与结果内存随导出行数增长；在 GUI 线程对有限数据集调用。
+     */
+    QByteArray exportCsv(bool visibleRangeOnly = false) const;
+    /** @brief Copies a PNG through the host clipboard, reporting actual completion.
+     * zh_CN: 通过宿主剪贴板复制 PNG，并报告实际完成结果。 */
+    Q_SLOT void copyImage(double scale = 1.0);
+    /** @brief Copies original CSV rows through the host clipboard.
+     * zh_CN: 通过宿主剪贴板复制原始 CSV 数据。
+     * Calls from another thread report dataCopied(false) without changing the clipboard.
+     * zh_CN: 非 GUI 线程调用会报告 dataCopied(false)，不改变剪贴板内容。 */
+    Q_SLOT void copyData(bool visibleRangeOnly = false);
     QSize sizeHint() const override;
     bool hasHeightForWidth() const override;
     int heightForWidth(int width) const override;
@@ -135,6 +165,8 @@ signals:
     /** @brief Activates the displayed half-open source range; aggregate bars/slices keep their range.
      * zh_CN: 激活显示的左闭右开源数据范围；聚合柱或扇区保留完整范围。 */
     void rangeActivated(int series, int first, int last);
+    void imageCopied(bool success);
+    void dataCopied(bool success);
 
 protected:
     /** @brief Constructs a fixed-presentation chart for a dedicated component.
@@ -154,6 +186,7 @@ protected:
     void changeEvent(QEvent* event) override;
 
 private:
+    void paintChart(QPainter& painter, bool interactive);
     std::unique_ptr<ChartViewPrivate> d;
 };
 } // namespace fluent::charts
