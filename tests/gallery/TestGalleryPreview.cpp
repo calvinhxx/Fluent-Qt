@@ -9,11 +9,13 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QTest>
+#include <QStandardItemModel>
 
 #include <gtest/gtest.h>
 
 #include "QtTestEnvironment.h"
 #include "components/foundation/FluentElement.h"
+#include "components/collections/DataGrid.h"
 #include "view/preview/GalleryPreviewActions.h"
 #include "view/preview/GalleryPreviewApplication.h"
 #include "view/widgets/GalleryCodeBlock.h"
@@ -61,6 +63,29 @@ TEST(GalleryPreviewTest, ParsesDeterministicSceneAndArtifactArguments)
     EXPECT_EQ(result.options.snapshotPath, QStringLiteral("preview.png"));
     EXPECT_EQ(result.options.reportPath, QStringLiteral("-"));
     EXPECT_EQ(result.options.settleMs, 40);
+}
+
+TEST(GalleryPreviewTest, FunctionKeyOpensTheRealDataGridEditor)
+{
+    fluent::collections::DataGrid grid;
+    grid.setObjectName(QStringLiteral("grid"));
+    QStandardItemModel model(1, 1);
+    model.setData(model.index(0, 0), QStringLiteral("Active"));
+    grid.setModel(&model);
+    grid.setEditTriggers(QAbstractItemView::EditKeyPressed);
+    grid.setCurrentIndex(model.index(0, 0));
+    grid.resize(320, 200);
+    grid.show();
+    QApplication::processEvents();
+    const QJsonObject script{{"schema_version", 1},
+        {"steps",
+            QJsonArray{QJsonObject{{"action", "focus"}, {"target", "grid"}},
+                QJsonObject{{"action", "key"}, {"target", "grid"}, {"key", "F2"}},
+                QJsonObject{{"action", "type_text"}, {"target", "grid"},
+                    {"descendant_class", "fluent::textfields::LineEdit"}, {"text", "Edited"},
+                    {"expect", QJsonObject{{"text", "Edited"}}}}}}};
+    const auto result = fluent::gallery::executeGalleryPreviewActions(&grid, script, QString());
+    EXPECT_TRUE(result.passed) << QJsonDocument(result.report).toJson().toStdString();
 }
 
 TEST(GalleryPreviewTest, ExecutesInputAndStateInteractionStepsWithAssertions)

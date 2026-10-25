@@ -1,3 +1,4 @@
+#include "view/support/GalleryToast.h"
 #include "MenusToolbarsSamples.h"
 
 #include <QAction>
@@ -360,13 +361,14 @@ QString displayActionText(QString text)
 }
 
 QAction*
-addStatusAction(FluentMenu* menu, Label* status, const QString& text, const QKeySequence& shortcut = QKeySequence())
+addFeedbackAction(FluentMenu* menu, QWidget* anchor, const QString& text, const QKeySequence& shortcut = QKeySequence())
 {
     QAction* action = menu->addAction(text);
     if (!shortcut.isEmpty())
         action->setShortcut(shortcut);
-    QObject::connect(action, &QAction::triggered, status, [status, text]() {
-        status->setText(QStringLiteral("Clicked: %1").arg(displayActionText(text)));
+    QObject::connect(action, &QAction::triggered, anchor, [anchor, text]() {
+        showGalleryToast(anchor, QStringLiteral("%1 selected").arg(displayActionText(text)),
+            status_info::Toast::Informational);
     });
     return action;
 }
@@ -382,39 +384,41 @@ QVector<GallerySample> menuSamples()
     return {
         makeSample(QStringLiteral("menu-command-shortcuts"), QStringLiteral("Commands and shortcuts"),
             QStringLiteral("Menu commands can expose native shortcuts and update app state when triggered."),
-            QStringLiteral(
-                "auto* button = new DropDownButton(\"File\", this);\n"
-                "auto* status = new Label(\"Clicked: (none)\", this);\n"
-                "auto* menu = new FluentMenu(QString(), button);\n"
-                "\n"
-                "auto* newAction = menu->addAction(\"New\");\n"
-                "newAction->setShortcut(QKeySequence::New);\n"
-                "connect(newAction, &QAction::triggered, status,\n"
-                "        [status] { status->setText(\"Clicked: New\"); });\n"
-                "\n"
-                "menu->addAction(\"Open...\")->setShortcut(QKeySequence::Open);\n"
-                "menu->addAction(\"Save\")->setShortcut(QKeySequence::Save);\n"
-                "menu->addSeparator();\n"
-                "auto* disabled = menu->addAction(\"Publish\");\n"
-                "disabled->setEnabled(false);\n"
-                "button->setMenu(menu);"),
+            QStringLiteral(R"(using fluent::status_info::Toast;
+auto addCommand = [this](FluentMenu* menu, const QString& text,
+                         const QKeySequence& shortcut = QKeySequence()) {
+    auto* action = menu->addAction(text);
+    if (!shortcut.isEmpty()) action->setShortcut(shortcut);
+    connect(action, &QAction::triggered, this, [this, text] {
+        Toast::showOrUpdateToast(this, "gallery.action-feedback", text + " selected",
+            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));
+    });
+    return action;
+};
+auto* button = new DropDownButton("File", this);
+auto* menu = new FluentMenu(QString(), button);
+addCommand(menu, "New", QKeySequence::New);
+addCommand(menu, "Open...", QKeySequence::Open);
+addCommand(menu, "Save", QKeySequence::Save);
+menu->addSeparator();
+menu->addAction("Publish")->setEnabled(false);
+addCommand(menu, "Close");
+button->setMenu(menu);)"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
-                auto* status = makeStatusLabel(surface, QStringLiteral("Clicked: (none)"));
                 auto* button = new DropDownButton(QStringLiteral("File"), surface);
                 button->setMinimumWidth(120);
 
                 auto* menu = new FluentMenu(QString(), button);
-                addStatusAction(menu, status, QStringLiteral("New"), QKeySequence::New);
-                addStatusAction(menu, status, QStringLiteral("Open..."), QKeySequence::Open);
-                addStatusAction(menu, status, QStringLiteral("Save"), QKeySequence::Save);
+                addFeedbackAction(menu, surface, QStringLiteral("New"), QKeySequence::New);
+                addFeedbackAction(menu, surface, QStringLiteral("Open..."), QKeySequence::Open);
+                addFeedbackAction(menu, surface, QStringLiteral("Save"), QKeySequence::Save);
                 menu->addSeparator();
                 auto* publish = menu->addAction(QStringLiteral("Publish"));
                 publish->setEnabled(false);
-                addStatusAction(menu, status, QStringLiteral("Close"));
+                addFeedbackAction(menu, surface, QStringLiteral("Close"));
                 button->setMenu(menu);
                 boxLayout(surface)->addWidget(button, 0, Qt::AlignLeft);
-                boxLayout(surface)->addWidget(status);
                 return surface;
             }),
         makeSample(QStringLiteral("menu-cascading-selection"), QStringLiteral("Submenus and checked items"),
@@ -424,6 +428,14 @@ QVector<GallerySample> menuSamples()
                 "auto* sortMenu = new FluentMenu(\"Sort by\", menu);\n"
                 "sortMenu->addAction(\"Name\");\n"
                 "sortMenu->addAction(\"Date modified\");\n"
+                "sortMenu->addAction(\"Type\");\n"
+                "for (QAction* action : sortMenu->actions()) {\n"
+                "    connect(action, &QAction::triggered, this, [this, action] {\n"
+                "        Toast::showOrUpdateToast(this, \"gallery.action-feedback\",\n"
+                "            action->text() + \" selected\", Toast::Informational, 2200,\n"
+                "            Toast::Top, QMargins(16, 50, 16, 16));\n"
+                "    });\n"
+                "}\n"
                 "menu->addMenu(sortMenu);\n"
                 "\n"
                 "auto* viewGroup = new QActionGroup(menu);\n"
@@ -447,9 +459,9 @@ QVector<GallerySample> menuSamples()
                 auto* menu = new FluentMenu(QString(), button);
 
                 auto* sortMenu = new FluentMenu(QStringLiteral("Sort by"), menu);
-                addStatusAction(sortMenu, status, QStringLiteral("Name"));
-                addStatusAction(sortMenu, status, QStringLiteral("Date modified"));
-                addStatusAction(sortMenu, status, QStringLiteral("Type"));
+                addFeedbackAction(sortMenu, surface, QStringLiteral("Name"));
+                addFeedbackAction(sortMenu, surface, QStringLiteral("Date modified"));
+                addFeedbackAction(sortMenu, surface, QStringLiteral("Type"));
                 menu->addMenu(sortMenu);
                 menu->addSeparator();
 
@@ -489,70 +501,98 @@ QVector<GallerySample> menuBarSamples()
     return {
         makeSample(QStringLiteral("menu-bar-hosted-surface"), QStringLiteral("Hosted menu bar"),
             QStringLiteral("A MenuBar can blend into a card or custom title bar by hiding its own canvas."),
-            QStringLiteral(
-                "auto* menuBar = new FluentMenuBar(this);\n"
-                "auto* status = new Label(\"Clicked: (none)\", this);\n"
-                "menuBar->setBackgroundVisible(false);\n"
-                "\n"
-                "auto* fileMenu = new FluentMenu(\"File\", menuBar);\n"
-                "auto* newAction = fileMenu->addAction(\"New\");\n"
-                "connect(newAction, &QAction::triggered, status,\n"
-                "        [status] { status->setText(\"Clicked: New\"); });\n"
-                "fileMenu->addAction(\"Open...\");\n"
-                "menuBar->addMenu(fileMenu);\n"
-                "\n"
-                "auto* editMenu = new FluentMenu(\"Edit\", menuBar);\n"
-                "editMenu->addAction(\"Undo\");\n"
-                "menuBar->addMenu(editMenu);"),
+            QStringLiteral(R"(using fluent::status_info::Toast;
+auto addCommand = [this](FluentMenu* menu, const QString& text,
+                         const QKeySequence& shortcut = QKeySequence()) {
+    auto* action = menu->addAction(text);
+    if (!shortcut.isEmpty()) action->setShortcut(shortcut);
+    connect(action, &QAction::triggered, this, [this, text] {
+        Toast::showOrUpdateToast(this, "gallery.action-feedback", text + " selected",
+            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));
+    });
+    return action;
+};
+auto* menuBar = new FluentMenuBar(this);
+menuBar->setBackgroundVisible(false);
+auto* fileMenu = new FluentMenu("File", menuBar);
+addCommand(fileMenu, "New");
+addCommand(fileMenu, "Open...");
+addCommand(fileMenu, "Save");
+menuBar->addMenu(fileMenu);
+auto* editMenu = new FluentMenu("Edit", menuBar);
+addCommand(editMenu, "Undo", QKeySequence::Undo);
+addCommand(editMenu, "Cut", QKeySequence::Cut);
+addCommand(editMenu, "Copy", QKeySequence::Copy);
+addCommand(editMenu, "Paste", QKeySequence::Paste);
+menuBar->addMenu(editMenu);
+auto* helpMenu = new FluentMenu("Help", menuBar);
+addCommand(helpMenu, "About");
+menuBar->addMenu(helpMenu);)"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
-                auto* status = makeStatusLabel(surface, QStringLiteral("Clicked: (none)"));
                 auto* menuBar = new FluentMenuBar(surface);
                 configureMenuBar(menuBar);
                 menuBar->setBackgroundVisible(false);
 
                 auto* fileMenu = new FluentMenu(QStringLiteral("File"), menuBar);
-                addStatusAction(fileMenu, status, QStringLiteral("New"));
-                addStatusAction(fileMenu, status, QStringLiteral("Open..."));
-                addStatusAction(fileMenu, status, QStringLiteral("Save"));
+                addFeedbackAction(fileMenu, surface, QStringLiteral("New"));
+                addFeedbackAction(fileMenu, surface, QStringLiteral("Open..."));
+                addFeedbackAction(fileMenu, surface, QStringLiteral("Save"));
                 menuBar->addMenu(fileMenu);
 
                 auto* editMenu = new FluentMenu(QStringLiteral("Edit"), menuBar);
-                addStatusAction(editMenu, status, QStringLiteral("Undo"), QKeySequence::Undo);
-                addStatusAction(editMenu, status, QStringLiteral("Cut"), QKeySequence::Cut);
-                addStatusAction(editMenu, status, QStringLiteral("Copy"), QKeySequence::Copy);
-                addStatusAction(editMenu, status, QStringLiteral("Paste"), QKeySequence::Paste);
+                addFeedbackAction(editMenu, surface, QStringLiteral("Undo"), QKeySequence::Undo);
+                addFeedbackAction(editMenu, surface, QStringLiteral("Cut"), QKeySequence::Cut);
+                addFeedbackAction(editMenu, surface, QStringLiteral("Copy"), QKeySequence::Copy);
+                addFeedbackAction(editMenu, surface, QStringLiteral("Paste"), QKeySequence::Paste);
                 menuBar->addMenu(editMenu);
 
                 auto* helpMenu = new FluentMenu(QStringLiteral("Help"), menuBar);
-                addStatusAction(helpMenu, status, QStringLiteral("About"));
+                addFeedbackAction(helpMenu, surface, QStringLiteral("About"));
                 menuBar->addMenu(helpMenu);
 
                 boxLayout(surface)->addWidget(menuBar);
-                boxLayout(surface)->addWidget(status);
                 return surface;
             }),
         makeSample(QStringLiteral("menu-bar-access-keys"), QStringLiteral("Access keys and actions"),
             QStringLiteral("Top-level menu items support access keys, keyboard focus, and regular QAction commands."),
-            QStringLiteral(
-                "auto* menuBar = new FluentMenuBar(this);\n"
-                "auto* focusButton = new Button(\"Focus\", this);\n"
-                "auto* status = new Label(\"Command: (none)\", this);\n"
-                "connect(focusButton, &Button::clicked, menuBar,\n"
-                "        [menuBar] { menuBar->setFocus(Qt::OtherFocusReason); });\n"
-                "\n"
-                "auto* fileMenu = new FluentMenu(\"&File\", menuBar);\n"
-                "fileMenu->menuAction()->setProperty(\"accessKey\", \"F\");\n"
-                "fileMenu->addAction(\"Save\")->setShortcut(QKeySequence::Save);\n"
-                "menuBar->addMenu(fileMenu);\n"
-                "\n"
-                "auto* runAction = new QAction(\"Run\", menuBar);\n"
-                "connect(runAction, &QAction::triggered, status,\n"
-                "        [status] { status->setText(\"Command: Run\"); });\n"
-                "menuBar->addAction(runAction);"),
+            QStringLiteral(R"(using fluent::status_info::Toast;
+auto addCommand = [this](FluentMenu* menu, const QString& text,
+                         const QKeySequence& shortcut = QKeySequence()) {
+    auto* action = menu->addAction(text);
+    if (!shortcut.isEmpty()) action->setShortcut(shortcut);
+    connect(action, &QAction::triggered, this, [this, text] {
+        Toast::showOrUpdateToast(this, "gallery.action-feedback", text + " selected",
+            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));
+    });
+    return action;
+};
+auto* menuBar = new FluentMenuBar(this);
+auto* focusButton = new Button("Focus", this);
+connect(focusButton, &Button::clicked, menuBar, [menuBar] {
+    menuBar->setFocus(Qt::OtherFocusReason);
+    Toast::showOrUpdateToast(menuBar, "gallery.action-feedback", "Menu bar focused",
+        Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));
+});
+auto* fileMenu = new FluentMenu("&File", menuBar);
+fileMenu->menuAction()->setProperty("accessKey", "F");
+addCommand(fileMenu, "New", QKeySequence::New);
+addCommand(fileMenu, "Save", QKeySequence::Save);
+menuBar->addMenu(fileMenu);
+auto* viewMenu = new FluentMenu("&View", menuBar);
+viewMenu->menuAction()->setProperty("accessKey", "V");
+addCommand(viewMenu, "Zoom in");
+addCommand(viewMenu, "Zoom out");
+menuBar->addMenu(viewMenu);
+auto* runAction = new QAction("Run", menuBar);
+connect(runAction, &QAction::triggered, menuBar, [menuBar] {
+    Toast::showOrUpdateToast(menuBar, "gallery.action-feedback", "Run selected",
+        Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));
+});
+menuBar->addAction(runAction);
+menuBar->addAction("Deploy")->setEnabled(false);)"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
-                auto* status = makeStatusLabel(surface, QStringLiteral("Command: (none)"));
                 auto* row = horizontalGroup(surface, 8);
 
                 auto* focusButton = sampleButton(row, QStringLiteral("Focus"));
@@ -562,19 +602,19 @@ QVector<GallerySample> menuBarSamples()
 
                 auto* fileMenu = new FluentMenu(QStringLiteral("&File"), menuBar);
                 fileMenu->menuAction()->setProperty("accessKey", QStringLiteral("F"));
-                addStatusAction(fileMenu, status, QStringLiteral("New"), QKeySequence::New);
-                addStatusAction(fileMenu, status, QStringLiteral("Save"), QKeySequence::Save);
+                addFeedbackAction(fileMenu, surface, QStringLiteral("New"), QKeySequence::New);
+                addFeedbackAction(fileMenu, surface, QStringLiteral("Save"), QKeySequence::Save);
                 menuBar->addMenu(fileMenu);
 
                 auto* viewMenu = new FluentMenu(QStringLiteral("&View"), menuBar);
                 viewMenu->menuAction()->setProperty("accessKey", QStringLiteral("V"));
-                addStatusAction(viewMenu, status, QStringLiteral("Zoom in"));
-                addStatusAction(viewMenu, status, QStringLiteral("Zoom out"));
+                addFeedbackAction(viewMenu, surface, QStringLiteral("Zoom in"));
+                addFeedbackAction(viewMenu, surface, QStringLiteral("Zoom out"));
                 menuBar->addMenu(viewMenu);
 
                 auto* runAction = new QAction(QStringLiteral("Run"), menuBar);
-                QObject::connect(runAction, &QAction::triggered, status, [status]() {
-                    status->setText(QStringLiteral("Command: Run"));
+                QObject::connect(runAction, &QAction::triggered, surface, [surface]() {
+                    showGalleryToast(surface, QStringLiteral("Run selected"), status_info::Toast::Informational);
                 });
                 menuBar->addAction(runAction);
 
@@ -582,15 +622,14 @@ QVector<GallerySample> menuBarSamples()
                 disabledAction->setEnabled(false);
                 menuBar->addAction(disabledAction);
 
-                QObject::connect(focusButton, &Button::clicked, menuBar, [menuBar, status]() {
+                QObject::connect(focusButton, &Button::clicked, menuBar, [menuBar]() {
                     menuBar->setFocus(Qt::OtherFocusReason);
-                    status->setText(QStringLiteral("Command: MenuBar focused"));
+                    showGalleryToast(menuBar, QStringLiteral("Menu bar focused"), status_info::Toast::Informational);
                 });
 
                 boxLayout(row)->addWidget(focusButton, 0, Qt::AlignVCenter);
                 boxLayout(row)->addWidget(menuBar, 0, Qt::AlignVCenter);
                 boxLayout(surface)->addWidget(row);
-                boxLayout(surface)->addWidget(status);
                 return surface;
             })};
 }
@@ -766,7 +805,7 @@ return root;)sample"),
                 "    });\n"
                 "}\n"
                 "menu->addSeparator();\n"
-                "palette->addCommand(add, QStringLiteral(\"Notes\"), {QStringLiteral(\"new\"), QStringLiteral(\"添加\")});\n"
+                "palette->addCommand(add, QStringLiteral(\"Notes\"), {QStringLiteral(\"new\"), QStringLiteral(\"create\")});\n"
                 "palette->addCommand(clear, QStringLiteral(\"Notes\"),\n"
                 "    {QStringLiteral(\"delete\"), QStringLiteral(\"remove\")});\n"
                 "palette->addCommand(details, QStringLiteral(\"View\"),\n"
@@ -880,7 +919,7 @@ return root;)sample"),
                         });
                 }
                 menu->addSeparator();
-                palette->addCommand(add, QStringLiteral("Notes"), {QStringLiteral("new"), QStringLiteral("添加")});
+                palette->addCommand(add, QStringLiteral("Notes"), {QStringLiteral("new"), QStringLiteral("create")});
                 palette->addCommand(clear, QStringLiteral("Notes"),
                     {QStringLiteral("delete"), QStringLiteral("remove")});
                 palette->addCommand(details, QStringLiteral("View"),
@@ -1035,7 +1074,7 @@ return root;)sample"),
         "        palette->addCommand(action, \"Navigation\");\n"
         "}\n"
         "// Register metadata for the same actions; execution stays QAction-owned.\n"
-        "palette->addCommand(add, \"Notes\", {\"new\", \"添加\"});\n"
+        "palette->addCommand(add, \"Notes\", {\"new\", \"create\"});\n"
         "palette->addCommand(clear, \"Notes\", {\"delete\", \"remove\"});\n"
         "palette->addCommand(details, \"View\", {\"count\", \"properties\"});\n"
         "palette->addCommand(sort, \"View\", {\"order\"});\n"
@@ -1115,7 +1154,17 @@ QVector<GallerySample> commandBarSamples()
                 "connect(backgroundButton, &Button::clicked, bar, [=] {\n"
                 "    bar->setBackgroundVisible(\n"
                 "        !bar->backgroundVisible());\n"
-                "});"),
+                "});")
+                + QStringLiteral(R"(
+using fluent::status_info::Toast;
+for (QAction* action : bar->primaryActions() + bar->secondaryActions()) {
+    if (action->isSeparator()) continue;
+    connect(action, &QAction::triggered, this, [this, action] {
+        QString text = action->text().section('\t', 0, 0).remove('&');
+        Toast::showOrUpdateToast(this, "gallery.action-feedback", text + " selected",
+            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));
+    });
+})"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
                 auto* status = makeHintLabel(surface, QStringLiteral("Full width · all primary commands are visible"));
@@ -1140,11 +1189,12 @@ QVector<GallerySample> commandBarSamples()
                 bar->setBackgroundVisible(false);
                 hostLayout->addWidget(bar);
 
-                const auto makeAction = [surface, status](const QString& text, const QString& glyph) {
+                const auto makeAction = [surface](const QString& text, const QString& glyph) {
                     auto* action = new QAction(text, surface);
                     surface->setActionGlyph(action, glyph);
-                    QObject::connect(action, &QAction::triggered, status, [status, text]() {
-                        status->setText(QStringLiteral("Command: %1").arg(text));
+                    QObject::connect(action, &QAction::triggered, surface, [surface, text]() {
+                        showGalleryToast(surface, QStringLiteral("%1 selected").arg(text),
+                            status_info::Toast::Informational);
                     });
                     return action;
                 };
@@ -1494,7 +1544,17 @@ QVector<GallerySample> commandBarFlyoutSamples()
                 "    flyout->showAtPoint(\n"
                 "        photo, localPosition,\n"
                 "        CommandBarFlyout::ShowMode::Standard);\n"
-                "});"),
+                "});")
+                + QStringLiteral(R"(
+using fluent::status_info::Toast;
+for (QAction* action : flyout->primaryActions() + flyout->secondaryActions()) {
+    if (action->isSeparator()) continue;
+    connect(action, &QAction::triggered, this, [this, action] {
+        QString text = action->text().section('\t', 0, 0).remove('&');
+        Toast::showOrUpdateToast(this, "gallery.action-feedback", text + " selected",
+            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));
+    });
+})"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
                 auto* status = makeHintLabel(surface,
@@ -1520,16 +1580,17 @@ QVector<GallerySample> commandBarFlyoutSamples()
                 surface->setActionGlyph(resizeAction, Typography::Icons::FullScreen);
                 surface->setActionGlyph(moveAction, Typography::Icons::Forward);
 
-                const auto connectStatus = [status](QAction* action) {
-                    QObject::connect(action, &QAction::triggered, status, [status, action]() {
-                        status->setText(QStringLiteral("Command: %1").arg(action->text()));
+                const auto connectFeedback = [surface](QAction* action) {
+                    QObject::connect(action, &QAction::triggered, surface, [surface, action]() {
+                        showGalleryToast(surface, QStringLiteral("%1 selected").arg(action->text()),
+                            status_info::Toast::Informational);
                     });
                 };
-                connectStatus(share);
-                connectStatus(save);
-                connectStatus(deleteAction);
-                connectStatus(resizeAction);
-                connectStatus(moveAction);
+                connectFeedback(share);
+                connectFeedback(save);
+                connectFeedback(deleteAction);
+                connectFeedback(resizeAction);
+                connectFeedback(moveAction);
 
                 tile->setInvokeHandler([flyout, tile, status](const QPoint& localPosition, bool standard) {
                     flyout->setAlwaysExpanded(false);
@@ -1580,7 +1641,17 @@ QVector<GallerySample> commandBarFlyoutSamples()
                 "alwaysExpandedButton->setChecked(true);\n"
                 "connect(alwaysExpandedButton,\n"
                 "        &QAbstractButton::toggled, flyout,\n"
-                "        &CommandBarFlyout::setAlwaysExpanded);"),
+                "        &CommandBarFlyout::setAlwaysExpanded);")
+                + QStringLiteral(R"(
+using fluent::status_info::Toast;
+for (QAction* action : flyout->primaryActions() + flyout->secondaryActions()) {
+    if (action->isSeparator()) continue;
+    connect(action, &QAction::triggered, this, [this, action] {
+        QString text = action->text().section('\t', 0, 0).remove('&');
+        Toast::showOrUpdateToast(this, "gallery.action-feedback", text + " selected",
+            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));
+    });
+})"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
                 auto* status = makeHintLabel(surface,
@@ -1646,8 +1717,9 @@ QVector<GallerySample> commandBarFlyoutSamples()
                                   "Transient · focus stays on Open actions; use More for secondary commands"));
                 });
                 for (QAction* action : flyout->primaryActions() + flyout->secondaryActions()) {
-                    QObject::connect(action, &QAction::triggered, status, [status, action]() {
-                        status->setText(QStringLiteral("Command: %1").arg(displayActionText(action->text())));
+                    QObject::connect(action, &QAction::triggered, surface, [surface, action]() {
+                        showGalleryToast(surface, QStringLiteral("%1 selected").arg(displayActionText(action->text())),
+                            status_info::Toast::Informational);
                     });
                 }
 

@@ -17,6 +17,139 @@ def _script(body: str, imports: str = "") -> str:
 _WIDGETS = "from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget"
 
 
+def team_selection_source_files(result):
+    from .native_source_files import complete_sample_source_files
+    return complete_sample_source_files(result, "project_teams.py", root_name="root")
+
+
+register_source_samples(
+    "tree-select",
+    ("TreeSelect", "Field", "Label", "CheckBox", "Button"),
+    {
+        "tree-select-basic": (
+            "select",
+            _script(
+                """
+                select = fluentqt.TreeSelect()
+                select.setAccessibleName("Team")
+                select.setObjectName("basicTreeSelect")
+                select.setPlaceholderText("Choose a team")
+                model = QStandardItemModel(select)
+                product = QStandardItem("Product")
+                product.setSelectable(False)
+                client = QStandardItem("Client")
+                client.setData("client", Qt.UserRole)
+                platform = QStandardItem("Platform")
+                platform.setData("platform", Qt.UserRole)
+                product.appendRow(client)
+                product.appendRow(platform)
+                model.appendRow(product)
+                select.setModel(model)
+                select.setSelectedKeys(["client"])
+                select.setMaximumWidth(360)
+                """,
+                "from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QStandardItem, QStandardItemModel",
+            ),
+        ),
+        "tree-select-project-teams": (
+            "root",
+            _script(
+                """
+                root = QWidget()
+                root.setObjectName("teamSelectionSample")
+                root.setMaximumWidth(392)
+                body = QVBoxLayout(root)
+                body.setContentsMargins(16, 16, 16, 16)
+                body.setSpacing(12)
+
+                model = QStandardItemModel(root)
+                def team(key, name):
+                    entry = QStandardItem(name)
+                    entry.setData(key, Qt.ItemDataRole.UserRole)
+                    return entry
+
+                product = team("product", "Product engineering")
+                product.setSelectable(False)
+                product.appendRow(team("client", "Client apps"))
+                product.appendRow(team("platform", "Platform services"))
+                product.appendRow(team("product-design", "Design"))
+                brand = team("brand", "Brand and marketing")
+                brand.setSelectable(False)
+                brand.appendRow(team("content", "Content"))
+                brand.appendRow(team("brand-design", "Design"))
+                archived = team("archived", "Archived team")
+                archived.setEnabled(False)
+                model.appendRow(product)
+                model.appendRow(brand)
+                model.appendRow(archived)
+
+                owner = fluentqt.TreeSelect(root)
+                owner.setObjectName("projectOwningTeam")
+                owner.setAccessibleName("Owning team")
+                owner.setModel(model)
+                owner.setPlaceholderText("Search teams…")
+                owner.setSelectedKeys(["client"])
+                owner_field = fluentqt.Field(root)
+                owner_field.setLabelText("Owning team")
+                owner_field.setEditor(owner)
+                body.addWidget(owner_field)
+
+                collaborators = fluentqt.TreeSelect(root)
+                collaborators.setObjectName("projectCollaboratingTeams")
+                collaborators.setAccessibleName("Collaborating teams")
+                collaborators.setModel(model)
+                collaborators.setSelectionMode(fluentqt.TreeSelect.SelectionMode.Multiple)
+                collaborators.setPlaceholderText("Add teams…")
+                collaborators.setSelectedKeys(["brand-design"])
+                collaborators_field = fluentqt.Field(root)
+                collaborators_field.setLabelText("Collaborating teams")
+                collaborators_field.setEditor(collaborators)
+                collaborators_field.setHelperText("Search by team or department. Select teams independently.")
+                body.addWidget(collaborators_field)
+
+                status = fluentqt.Label(root)
+                status.setObjectName("teamSelectionStatus")
+                status.setWordWrap(True)
+                status.setFluentTypography(fluentqt.FontRole.Caption)
+                status.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+                body.addWidget(status)
+                active = [True]
+                root.destroyed.connect(lambda _object=None, active=active: active.__setitem__(0, False))
+                def update_status(active=active, owner=owner, collaborators=collaborators, status=status):
+                    if not active[0]:
+                        return
+                    own = owner.selectedItems()
+                    paths = []
+                    for entry in collaborators.selectedItems():
+                        paths.append(entry["path"])
+                    primary = own[0]["path"] if own else "Not assigned"
+                    status.setText("Owner: " + primary + "\\nCollaborators: " + ("; ".join(paths) or "None"))
+
+                owner.selectionChanged.connect(update_status)
+                collaborators.selectionChanged.connect(update_status)
+                actions = QHBoxLayout()
+                read_only = fluentqt.CheckBox("Read only", root)
+                read_only.setObjectName("teamReadOnly")
+                read_only.toggled.connect(owner.setReadOnly)
+                read_only.toggled.connect(collaborators.setReadOnly)
+                actions.addWidget(read_only)
+                actions.addStretch()
+                clear = fluentqt.Button("Clear", root)
+                clear.setObjectName("teamClear")
+                clear.clicked.connect(owner.clearSelection)
+                clear.clicked.connect(collaborators.clearSelection)
+                read_only.toggled.connect(lambda checked, clear=clear: clear.setEnabled(not checked))
+                actions.addWidget(clear)
+                body.addLayout(actions)
+                update_status()
+                """,
+                _WIDGETS + "\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtGui import QStandardItem, QStandardItemModel",
+            ),
+        ),
+    },
+)
+
+
 register_source_samples(
     "button",
     ("Button",),
@@ -1030,21 +1163,17 @@ register_source_samples(
                 for text in ("Red", "Green", "Blue"):
                     menu.addAction(text)
                 button.setMenu(menu)
-                status = fluentqt.Label("Status: Ready", root)
-                status.setFluentTypography(fluentqt.FontRole.Body)
-                status.setTextColorRole(fluentqt.Label.TextColorRole.Primary)
-                status.setMinimumWidth(
-                    status.fontMetrics().horizontalAdvance(
-                        "Status: Primary clicked"
+                def feedback(message):
+                    fluentqt.Toast.showOrUpdateToast(
+                        button, "gallery.action-feedback", message,
+                        fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                        QMargins(16, 50, 16, 16),
                     )
-                )
-                button.clicked.connect(
-                    lambda: status.setText("Status: Primary clicked")
-                )
+                button.clicked.connect(lambda: feedback("Primary action selected"))
+                menu.triggered.connect(lambda action: feedback(action.text() + " selected"))
                 layout.addWidget(button)
-                layout.addWidget(status)
                 """,
-                _WIDGETS,
+                _WIDGETS + "\nfrom PySide6.QtCore import QMargins",
             ),
         ),
         "split-button-accent": (

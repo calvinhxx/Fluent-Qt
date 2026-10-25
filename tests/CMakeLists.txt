@@ -146,6 +146,8 @@ set(FLUENT_QT_PERFORMANCE_TESTS
     GallerySpatialTest.AssemblyFramePacingProbe
     GallerySpatialTest.PointerFramePacingProbe
     GallerySpatialTest.StationaryParticleFramePacingProbe
+    GalleryThemeAndCodeTest.NativeGalleryInteractionProbe
+    GalleryThemeAndCodeTest.NativeGlobalThemeAndSourceExpansionProbe
 )
 
 define_property(GLOBAL PROPERTY FLUENT_QT_TEST_TARGETS

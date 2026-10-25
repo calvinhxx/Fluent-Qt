@@ -7,6 +7,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QHeaderView>
 #include <QAbstractItemView>
 #include <QAbstractScrollArea>
 #include <QBoxLayout>
@@ -47,8 +48,17 @@
 #include <QtMath>
 
 #include "components/basicinput/Button.h"
+#include "components/basicinput/TreeSelect.h"
+#include "components/basicinput/CheckBox.h"
 #include "components/basicinput/FileDropZone.h"
 #include "components/collections/FileListView.h"
+#include "components/collections/DataGrid.h"
+#include "components/layout/DataGridToolBar.h"
+#include "components/layout/PropertyPanel.h"
+#include "components/basicinput/ColorPicker.h"
+#include "components/charts/ChartView.h"
+#include "components/textfields/NumberBox.h"
+#include "components/layout/ListDetailView.h"
 #include "components/basicinput/ComboBox.h"
 #include "components/basicinput/CompoundButton.h"
 #include "components/basicinput/MultiSelectComboBox.h"
@@ -87,6 +97,7 @@
 #include "components/textfields/EditingCommandRouter.h"
 #include "components/textfields/Label.h"
 #include "components/textfields/LineEdit.h"
+#include "components/textfields/TagInput.h"
 #include "components/textfields/TextEdit.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
@@ -431,6 +442,323 @@ TEST_F(GalleryContentPagesTest, QmlPlusExamplesStayShortAndOrderedByPrerequisite
     GalleryFoundationTopicPage page(*entry, navigationViewModel);
     EXPECT_EQ(page.findChildren<QWidget*>(QStringLiteral("gallerySampleCard")).size(), expectedIds.size());
     EXPECT_EQ(page.findChildren<GalleryCodeBlock*>().size(), expectedIds.size());
+}
+
+TEST_F(GalleryContentPagesTest, DataGridExamplesKeepTableBehaviorIndependentOfToolBar)
+{
+    const auto samples = fluent::gallery::gallerySamplesForRoute(QStringLiteral("data-grid"));
+    ASSERT_FALSE(samples.isEmpty());
+    EXPECT_EQ(samples.first().id, QStringLiteral("data-grid-pinned-columns"));
+    for (const auto& sample : samples) {
+        SCOPED_TRACE(sample.id.toStdString());
+        std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+        auto* grid = qobject_cast<fluent::collections::DataGrid*>(preview.get());
+        ASSERT_NE(grid, nullptr);
+        EXPECT_FALSE(grid->isScrollChainingEnabled());
+        EXPECT_TRUE(preview->findChildren<fluent::layout::DataGridToolBar*>().isEmpty());
+        EXPECT_FALSE(sample.codeSnippet.contains(QStringLiteral("DataGridToolBar")));
+        if (sample.id == QStringLiteral("data-grid-pinned-columns")) {
+            ASSERT_NE(grid->model(), nullptr);
+            EXPECT_TRUE(grid->isColumnPinned(0));
+            EXPECT_EQ(grid->model()->rowCount(), 2);
+            EXPECT_TRUE(grid->model()->setData(grid->model()->index(0, 0), QStringLiteral("Edited project")));
+            EXPECT_EQ(grid->model()->index(0, 0).data().toString(), QStringLiteral("Edited project"));
+        }
+    }
+    fluent::gallery::GallerySample toolbar;
+    ASSERT_TRUE(
+        findSampleById(QStringLiteral("data-grid-tool-bar"), QStringLiteral("data-grid-tool-bar-basic"), &toolbar));
+    std::unique_ptr<QWidget> workspace(toolbar.createPreview(nullptr));
+    ASSERT_NE(workspace->findChild<fluent::layout::DataGridToolBar*>(), nullptr);
+    ASSERT_NE(workspace->findChild<fluent::collections::DataGrid*>(), nullptr);
+}
+
+TEST_F(GalleryContentPagesTest, DataGridCappedPreviewAndValidationEditorStayConsistent)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("data-grid"), QStringLiteral("data-grid-pinned-columns"), &sample));
+    GallerySampleCard card(sample);
+    card.resize(1100, card.sizeHint().height());
+    card.show();
+    QApplication::processEvents();
+    auto* grid = card.findChild<fluent::collections::DataGrid*>();
+    auto* surface = card.findChild<QWidget*>(QStringLiteral("gallerySampleCardPreview"));
+    ASSERT_NE(grid, nullptr);
+    ASSERT_NE(surface, nullptr);
+    EXPECT_EQ(grid->mapTo(surface, QPoint()).x(), surface->layout()->contentsMargins().left());
+
+    ASSERT_TRUE(findSampleById(QStringLiteral("data-grid"), QStringLiteral("data-grid-edit-validation"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    grid = qobject_cast<fluent::collections::DataGrid*>(preview.get());
+    ASSERT_NE(grid, nullptr);
+    grid->show();
+    const auto index = grid->model()->index(2, 2);
+    grid->setCurrentIndex(index);
+    grid->edit(index);
+    QApplication::processEvents();
+    auto* editor = grid->findChild<fluent::textfields::LineEdit*>();
+    ASSERT_NE(editor, nullptr) << "Validation paint must retain the default Fluent editor";
+    EXPECT_FALSE(editor->isClearButtonEnabled());
+    EXPECT_FALSE(editor->isFrameVisible());
+    EXPECT_EQ(editor->geometry(), grid->visualRect(index).adjusted(4, 2, -4, -2));
+    editor->setText(QStringLiteral("Project scope"));
+    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
+    QApplication::processEvents();
+    EXPECT_EQ(editor->palette().color(QPalette::Text), editor->themeColorsRef().textPrimary);
+    QTest::keyClick(editor, Qt::Key_Return);
+    QApplication::processEvents();
+    EXPECT_EQ(index.data().toString(), QStringLiteral("Project scope"));
+}
+
+TEST_F(GalleryContentPagesTest, DataGridNumbersAlignAndSortExampleStartsAscending)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("data-grid"), QStringLiteral("data-grid-large-read-only"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* grid = qobject_cast<fluent::collections::DataGrid*>(preview.get());
+    ASSERT_NE(grid, nullptr);
+    const auto* model = grid->model();
+    const QFontMetricsF metrics(qvariant_cast<QFont>(model->index(77, 4).data(Qt::FontRole)));
+    const qreal width = metrics.horizontalAdvance(QStringLiteral("119 MB"));
+    for (int row = 77; row <= 79; ++row)
+        EXPECT_NEAR(metrics.horizontalAdvance(model->index(row, 4).data().toString()), width, 0.01);
+    EXPECT_FALSE(model->index(77, 0).data(Qt::FontRole).isValid());
+    EXPECT_EQ(model->headerData(4, Qt::Horizontal, Qt::TextAlignmentRole).toInt(),
+        static_cast<int>(Qt::AlignRight | Qt::AlignVCenter));
+
+    ASSERT_TRUE(findSampleById(QStringLiteral("data-grid"), QStringLiteral("data-grid-column-selection"), &sample));
+    preview.reset(sample.createPreview(nullptr));
+    grid = qobject_cast<fluent::collections::DataGrid*>(preview.get());
+    ASSERT_NE(grid, nullptr);
+    grid->show();
+    QApplication::processEvents();
+    EXPECT_EQ(grid->model()->index(0, 0).data().toString(), QStringLiteral("Aurora"));
+    EXPECT_EQ(grid->horizontalHeader()->sortIndicatorOrder(), Qt::AscendingOrder);
+    QTest::mouseClick(grid->horizontalHeader()->viewport(), Qt::LeftButton, Qt::NoModifier, QPoint(30, 18));
+    EXPECT_EQ(grid->model()->index(0, 0).data().toString(), QStringLiteral("Harbor"));
+    EXPECT_EQ(grid->horizontalHeader()->sortIndicatorOrder(), Qt::DescendingOrder);
+}
+
+TEST_F(GalleryContentPagesTest, ComplexControlsStartWithSmallIndependentExamples)
+{
+    const QList<QPair<QString, QString>> entries = {{QStringLiteral("tag-input"), QStringLiteral("tag-input-basic")},
+        {QStringLiteral("tree-select"), QStringLiteral("tree-select-basic")},
+        {QStringLiteral("list-detail-view"), QStringLiteral("list-detail-basic")},
+        {QStringLiteral("auto-suggest-box"), QStringLiteral("auto-suggest-box-suggestions")}};
+    for (const auto& entry : entries) {
+        const auto samples = fluent::gallery::gallerySamplesForRoute(entry.first);
+        ASSERT_FALSE(samples.isEmpty());
+        const auto& basic = samples.first();
+        SCOPED_TRACE(basic.id.toStdString());
+        EXPECT_EQ(basic.id, entry.second);
+        // The layout sample includes an explicit preview-width control.
+        const int lineBudget = entry.first == QStringLiteral("list-detail-view") ? 40 : 25;
+        EXPECT_LE(basic.codeSnippet.count(QLatin1Char('\n')) + 1, lineBudget);
+        EXPECT_TRUE(basic.sourceFiles.isEmpty());
+    }
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("tree-select"), QStringLiteral("tree-select-basic"), &sample));
+    std::unique_ptr<QWidget> treePreview(sample.createPreview(nullptr));
+    auto* tree = qobject_cast<fluent::basicinput::TreeSelect*>(treePreview.get());
+    ASSERT_NE(tree, nullptr);
+    EXPECT_EQ(tree->selectedKeys(), QStringList{QStringLiteral("client")});
+    tree->setSelectedKeys({QStringLiteral("platform")});
+    EXPECT_EQ(tree->selectedKeys(), QStringList{QStringLiteral("platform")});
+
+    ASSERT_TRUE(findSampleById(QStringLiteral("list-detail-view"), QStringLiteral("list-detail-basic"), &sample));
+    std::unique_ptr<QWidget> viewPreview(sample.createPreview(nullptr));
+    auto* view = viewPreview->findChild<fluent::layout::ListDetailView*>();
+    auto* width = viewPreview->findChild<fluent::basicinput::ComboBox*>();
+    ASSERT_NE(view, nullptr);
+    ASSERT_NE(width, nullptr);
+    auto* editor = view->findChild<fluent::textfields::LineEdit*>();
+    ASSERT_NE(editor, nullptr);
+    editor->setText(QStringLiteral("Retained draft"));
+    viewPreview->resize(700, 220);
+    viewPreview->show();
+    QApplication::processEvents();
+    ASSERT_FALSE(view->isCompact());
+    width->setCurrentIndex(1);
+    QApplication::processEvents();
+    ASSERT_TRUE(view->isCompact());
+    EXPECT_TRUE(view->listPane()->isVisible());
+    EXPECT_FALSE(view->detailPane()->isVisible());
+    buttonWithText(view, QStringLiteral("Open meeting note"))->click();
+    EXPECT_EQ(view->currentPane(), fluent::layout::ListDetailView::Detail);
+    auto* back = buttonWithText(view, QStringLiteral("Back to notes"));
+    EXPECT_TRUE(back->isVisible());
+    back->click();
+    EXPECT_EQ(view->currentPane(), fluent::layout::ListDetailView::List);
+    buttonWithText(view, QStringLiteral("Open meeting note"))->click();
+    EXPECT_EQ(editor->text(), QStringLiteral("Retained draft"));
+    width->setCurrentIndex(0);
+    QApplication::processEvents();
+    EXPECT_FALSE(view->isCompact());
+    EXPECT_TRUE(view->listPane()->isVisible());
+    EXPECT_TRUE(view->detailPane()->isVisible());
+    EXPECT_FALSE(back->isVisible());
+    EXPECT_EQ(editor->text(), QStringLiteral("Retained draft"));
+}
+
+TEST_F(GalleryContentPagesTest, MemberSelectionKeepsIdentityAndResolvesExactEmails)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("tag-input"), QStringLiteral("tag-input-project-members"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    preview->resize(440, 400);
+    preview->show();
+    preview->activateWindow();
+    auto* input = preview->findChild<fluent::textfields::TagInput*>(QStringLiteral("projectMemberInput"));
+    auto* fail = preview->findChild<fluent::basicinput::CheckBox*>(QStringLiteral("tagFailNext"));
+    ASSERT_TRUE(input && fail);
+    input->setFocus();
+    QApplication::processEvents();
+    EXPECT_EQ(input->selectedTexts(),
+        QStringList({QStringLiteral("Chen Chen · Design team"), QStringLiteral("Lin Xiao")}));
+    input->setText(QStringLiteral("Chen Chen"));
+    input->requestSuggestions();
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return input->loadState() == fluent::textfields::AutoSuggestBox::LoadState::Ready; }, 1500));
+    QTest::keyClick(input, Qt::Key_Down);
+    EXPECT_EQ(input->selectedCount(), 2);
+    QTest::keyClick(input, Qt::Key_Return);
+    EXPECT_EQ(input->selectedKeys(), QStringList({"chen-design", "lin", "chen-dev"}));
+    EXPECT_EQ(input->selectedTexts().last(), QStringLiteral("Chen Chen · Engineering team"));
+    input->removeItem(QStringLiteral("chen-dev"));
+    emit input->tokensSubmitted({"chen.dev@example.com", "chen.dev@example.com", "unknown@example.com"});
+    EXPECT_EQ(input->selectedCount(), 3);
+    EXPECT_EQ(input->selectedTexts().last(), QStringLiteral("Chen Chen · Engineering team"));
+    EXPECT_EQ(input->text(), QStringLiteral("unknown@example.com"));
+    fail->setChecked(true);
+    input->setText(QStringLiteral("wang"));
+    input->requestSuggestions();
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return input->loadState() == fluent::textfields::AutoSuggestBox::LoadState::Failed; }, 1500));
+    EXPECT_EQ(input->selectedCount(), 3);
+    input->retrySuggestions();
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return input->loadState() == fluent::textfields::AutoSuggestBox::LoadState::Ready; }, 1500));
+    EXPECT_EQ(input->suggestionCount(), 1);
+    EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("class MemberSelectionSample")));
+}
+
+TEST_F(GalleryContentPagesTest, TreeSelectProjectTeamsShareDirectoryAndPreservePaths)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("tree-select"), QStringLiteral("tree-select-project-teams"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* owner = preview->findChild<fluent::basicinput::TreeSelect*>(QStringLiteral("projectOwningTeam"));
+    auto* teams = preview->findChild<fluent::basicinput::TreeSelect*>(QStringLiteral("projectCollaboratingTeams"));
+    auto* readOnly = preview->findChild<fluent::basicinput::CheckBox*>(QStringLiteral("teamReadOnly"));
+    ASSERT_TRUE(owner && teams && readOnly);
+    EXPECT_EQ(owner->model(), teams->model());
+    EXPECT_EQ(owner->selectedKeys(), QStringList{"client"});
+    teams->setSelectedKeys({"product-design", "brand-design"});
+    EXPECT_EQ(teams->selectedCount(), 2);
+    EXPECT_NE(teams->selectedItems().first().toMap().value("path"),
+        teams->selectedItems().last().toMap().value("path"));
+    readOnly->setChecked(true);
+    EXPECT_TRUE(owner->isReadOnly());
+    EXPECT_TRUE(teams->isReadOnly());
+    EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("class TeamSelectionSample")));
+    EXPECT_TRUE(sample.usageSnippet.contains(QStringLiteral("setModel(teamModel)")));
+    EXPECT_LT(sample.usageSnippet.count(QLatin1Char('\n')), 25);
+    ASSERT_EQ(sample.sourceFiles.size(), 1);
+    EXPECT_EQ(sample.sourceFiles.first().code, sample.codeSnippet);
+}
+
+TEST_F(GalleryContentPagesTest, ListDetailFileBrowserRetainsSelectionScrollAndDraft)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(
+        findSampleById(QStringLiteral("list-detail-view"), QStringLiteral("list-detail-file-browser"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    preview->resize(840, 440);
+    preview->show();
+    preview->activateWindow();
+    QApplication::processEvents();
+    auto* view = preview->findChild<fluent::layout::ListDetailView*>(QStringLiteral("fileBrowserLayout"));
+    auto* list = preview->findChild<fluent::collections::ListView*>(QStringLiteral("fileBrowserList"));
+    auto* editor = preview->findChild<fluent::textfields::TextEdit*>(QStringLiteral("fileBrowserEditor"));
+    auto* narrow = preview->findChild<fluent::basicinput::Button*>(QStringLiteral("fileBrowserNarrow"));
+    auto* back = preview->findChild<fluent::basicinput::Button*>(QStringLiteral("fileBrowserBack"));
+    ASSERT_TRUE(view && list && editor && narrow && back);
+    EXPECT_EQ(list->mapTo(view->listPane(), QPoint()).x(), 0);
+    EXPECT_EQ(list->width(), view->listPane()->width());
+    auto* bar = list->findChild<QWidget*>(QStringLiteral("fluentListViewScrollBar"));
+    ASSERT_NE(bar, nullptr);
+    EXPECT_LE(view->listPane()->width() - bar->mapTo(view->listPane(), bar->rect().topRight()).x() - 1, 3);
+    list->setCurrentIndex(list->model()->index(20, 0));
+    list->verticalScrollBar()->setValue(300);
+    const int offset = list->verticalScrollBar()->value();
+    editor->setPlainText(QStringLiteral("A draft across layouts"));
+    narrow->click();
+    QApplication::processEvents();
+    EXPECT_TRUE(view->isCompact());
+    EXPECT_TRUE(back->isVisible());
+    back->click();
+    QApplication::processEvents();
+    EXPECT_EQ(list->currentIndex().row(), 20);
+    EXPECT_EQ(list->verticalScrollBar()->value(), offset);
+    list->setFocus();
+    QTest::keyClick(list, Qt::Key_Return);
+    QApplication::processEvents();
+    EXPECT_EQ(view->currentPane(), fluent::layout::ListDetailView::Detail);
+    narrow->click();
+    QApplication::processEvents();
+    EXPECT_FALSE(view->isCompact());
+    EXPECT_EQ(editor->toPlainText(), QStringLiteral("A draft across layouts"));
+    EXPECT_EQ(list->model()->index(20, 0).data(Qt::UserRole).toString(), editor->toPlainText());
+    EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("class FileBrowserSample")));
+}
+
+TEST_F(GalleryContentPagesTest, FileBrowserSearchCreateSaveAndDraftContinuity)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(
+        findSampleById(QStringLiteral("list-detail-view"), QStringLiteral("list-detail-file-browser"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    preview->resize(960, 644);
+    preview->show();
+    QApplication::processEvents();
+    auto* list = preview->findChild<fluent::collections::ListView*>(QStringLiteral("fileBrowserList"));
+    auto* editor = preview->findChild<fluent::textfields::TextEdit*>(QStringLiteral("fileBrowserEditor"));
+    auto* search = preview->findChild<QLineEdit*>(QStringLiteral("fileBrowserSearch"));
+    auto* create = preview->findChild<fluent::basicinput::Button*>(QStringLiteral("fileBrowserNew"));
+    auto* save = preview->findChild<fluent::basicinput::Button*>(QStringLiteral("fileBrowserSave"));
+    ASSERT_TRUE(list && editor && search && create && save);
+    EXPECT_EQ(list->currentIndex().data().toString(), QStringLiteral("layout-notes.md"));
+    EXPECT_EQ(list->trailingTextRole(), Qt::UserRole + 1);
+    EXPECT_FALSE(editor->isAutoResizeEnabled());
+    EXPECT_FALSE(editor->isFrameVisible());
+    editor->setPlainText(QStringLiteral("A searchable draft"));
+    QTextCursor cursor = editor->textCursor();
+    cursor.setPosition(2);
+    cursor.setPosition(12, QTextCursor::KeepAnchor);
+    editor->setTextCursor(cursor);
+    search->setText(QStringLiteral("LAYOUT"));
+    EXPECT_EQ(list->model()->rowCount(), 1);
+    EXPECT_EQ(editor->textCursor().selectedText(), QStringLiteral("searchable"));
+    search->setText(QStringLiteral("missing file"));
+    EXPECT_EQ(list->model()->rowCount(), 0);
+    EXPECT_EQ(editor->toPlainText(), QStringLiteral("A searchable draft"));
+    search->clear();
+    EXPECT_EQ(list->currentIndex().data().toString(), QStringLiteral("layout-notes.md"));
+    EXPECT_EQ(editor->textCursor().selectedText(), QStringLiteral("searchable"));
+    save->click();
+    EXPECT_FALSE(save->isEnabled());
+    EXPECT_EQ(list->currentIndex().data(Qt::UserRole + 1).toString(), QStringLiteral("Just now"));
+    EXPECT_EQ(editor->textCursor().selectedText(), QStringLiteral("searchable"));
+    const int count = list->model()->rowCount();
+    create->click();
+    EXPECT_EQ(list->model()->rowCount(), count + 1);
+    EXPECT_EQ(list->currentIndex().data().toString(), QStringLiteral("untitled-1.md"));
+    EXPECT_TRUE(save->isEnabled());
+    list->setCurrentIndex(list->model()->index(2, 0));
+    EXPECT_EQ(editor->toPlainText(), QStringLiteral("A searchable draft"));
+    list->setCurrentIndex(list->model()->index(0, 0));
+    EXPECT_TRUE(editor->isReadOnly());
+    EXPECT_FALSE(save->isEnabled());
 }
 
 TEST_F(GalleryContentPagesTest, QmlPlusOneWayExampleOnlyFollowsTheSource)
@@ -2788,6 +3116,153 @@ TEST_F(GalleryContentPagesTest, TreeViewIndicatorTargetsDoNotAutoScrollThePrevie
     }
 }
 
+TEST_F(GalleryContentPagesTest, PropertyTitlePreviewUpdatesClearsAndResets)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("property-panel"), QStringLiteral("property-panel-basic"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* properties = preview->findChild<fluent::layout::PropertyPanel*>("documentProperties");
+    auto* title = preview->findChild<fluent::textfields::Label*>("propertyDocumentTitle");
+    ASSERT_TRUE(properties);
+    ASSERT_TRUE(title);
+    auto* editor = qobject_cast<QLineEdit*>(properties->editor("title"));
+    ASSERT_TRUE(editor);
+    preview->resize(640, preview->sizeHint().height());
+    preview->show();
+    QApplication::processEvents();
+    EXPECT_EQ(title->text(), QStringLiteral("Quarterly report"));
+    EXPECT_LT(preview->sizeHint().height(), 160);
+    editor->setFocus();
+    editor->selectAll();
+    QTest::keyClicks(editor, "Planning brief <draft>");
+    EXPECT_EQ(title->text(), QStringLiteral("Planning brief <draft>"));
+    EXPECT_EQ(title->textFormat(), Qt::PlainText);
+    editor->selectAll();
+    QTest::keyClick(editor, Qt::Key_Backspace);
+    EXPECT_EQ(title->text(), QStringLiteral("Untitled document"));
+    EXPECT_TRUE(properties->value("title").toString().isEmpty());
+    ASSERT_TRUE(properties->resetProperty("title"));
+    EXPECT_EQ(editor->text(), QStringLiteral("Quarterly report"));
+    EXPECT_EQ(title->text(), editor->text());
+    QTest::keyClicks(editor, " - project planning and review notes for the next quarter");
+    preview->resize(320, preview->sizeHint().height());
+    QApplication::processEvents();
+    EXPECT_LE(preview->width(), 320);
+    EXPECT_TRUE(title->isTextElided());
+    const QRect editorRect(editor->mapTo(preview.get(), QPoint()), editor->size());
+    EXPECT_TRUE(preview->rect().contains(editorRect));
+    EXPECT_TRUE(sample.fillAvailableWidth);
+}
+
+TEST_F(GalleryContentPagesTest, PropertyWorkbenchEditsResetsAndExportsAcrossWidths)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(
+        findSampleById(QStringLiteral("property-panel"), QStringLiteral("property-panel-chart-workbench"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* properties = preview->findChild<fluent::layout::PropertyPanel*>();
+    auto* chart = preview->findChild<fluent::charts::ChartView*>();
+    auto* scope = preview->findChild<fluent::basicinput::ComboBox*>("chartExportScope");
+    ASSERT_TRUE(properties);
+    ASSERT_TRUE(chart);
+    ASSERT_TRUE(scope);
+    auto* number = qobject_cast<fluent::textfields::NumberBox*>(properties->editor("maximum"));
+    ASSERT_TRUE(number);
+    preview->resize(1000, 650);
+    preview->show();
+    QApplication::processEvents();
+    number->setValue(120);
+    EXPECT_DOUBLE_EQ(chart->maximumY(), 120);
+    properties->resetProperty("maximum");
+    EXPECT_DOUBLE_EQ(chart->maximumY(), 80);
+    auto* color = properties->findChild<fluent::basicinput::ColorPicker*>("propertyColor_accent");
+    ASSERT_TRUE(color);
+    color->setColor(QColor("#c24531"));
+    EXPECT_EQ(chart->themeColors().accentDefault, QColor("#c24531"));
+    properties->resetProperty("accent");
+    EXPECT_EQ(chart->themeColors().accentDefault, QColor("#0078d4"));
+    scope->setCurrentIndex(1);
+    auto* rangeSummary = preview->findChild<fluent::textfields::Label*>("chartWorkbenchStatus");
+    ASSERT_NE(rangeSummary, nullptr);
+    const QString rangeText = rangeSummary->text();
+    chart->dataCopied(true);
+    auto* feedback = preview->findChild<fluent::status_info::Toast*>();
+    ASSERT_NE(feedback, nullptr);
+    EXPECT_EQ(feedback->message(), QStringLiteral("Data copied"));
+    EXPECT_EQ(rangeSummary->text(), rangeText);
+    EXPECT_EQ(chart->exportCsv(true).count('\n'), 5);
+    EXPECT_EQ(chart->exportCsv().count('\n'), 8);
+    EXPECT_FALSE(chart->exportPng(2).isEmpty());
+    EXPECT_NE(chart->model()->parent(), chart);
+    for (const int width : {1000, 420, 1000}) {
+        preview->resize(width, width < 760 ? 1000 : 650);
+        QApplication::processEvents();
+        EXPECT_EQ(properties->editor("maximum"), number);
+        const QRect chartRect(chart->mapTo(preview.get(), QPoint()), chart->size());
+        const QRect propertiesRect(properties->mapTo(preview.get(), QPoint()), properties->size());
+        EXPECT_TRUE(preview->rect().contains(chartRect));
+        EXPECT_TRUE(preview->rect().contains(propertiesRect));
+        EXPECT_FALSE(chartRect.intersects(propertiesRect));
+        EXPECT_DOUBLE_EQ(chart->maximumY(), 80);
+    }
+    EXPECT_TRUE(sample.codeSnippet.contains("exportCsv"));
+    EXPECT_TRUE(sample.codeSnippet.contains("setProperties"));
+    EXPECT_EQ(sample.sourceFiles.size(), 1);
+}
+
+TEST_F(GalleryContentPagesTest, CopyFeedbackUsesOneToastWithoutAddingResultRows)
+{
+    using fluent::status_info::Toast;
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById("chart-view", "chart-view-export", &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    preview->resize(800, 420);
+    preview->show();
+    QApplication::processEvents();
+    auto* chart = preview->findChild<fluent::charts::ChartView*>("chartExportPreview");
+    ASSERT_NE(chart, nullptr);
+    const int rows = preview->layout()->count();
+    EXPECT_EQ(rows, 2);
+    chart->imageCopied(true);
+    auto* toast = preview->findChild<Toast*>();
+    ASSERT_NE(toast, nullptr);
+    EXPECT_EQ(toast->message(), QStringLiteral("Image copied"));
+    EXPECT_EQ(toast->severity(), Toast::Success);
+    EXPECT_EQ(toast->duration(), 2200);
+    QWidget* focus = QApplication::focusWidget();
+    chart->dataCopied(false);
+    EXPECT_EQ(preview->findChildren<Toast*>().size(), 1);
+    EXPECT_EQ(preview->findChild<Toast*>(), toast);
+    EXPECT_EQ(toast->severity(), Toast::Warning);
+    EXPECT_EQ(toast->duration(), 4500);
+    EXPECT_TRUE(toast->message().contains("Try again"));
+    EXPECT_EQ(QApplication::focusWidget(), focus);
+    EXPECT_EQ(preview->layout()->count(), rows);
+    EXPECT_TRUE(sample.codeSnippet.contains("showOrUpdateToast"));
+}
+
+TEST_F(GalleryContentPagesTest, SaveViewFeedbackPreservesTheSelectionSummary)
+{
+    using fluent::status_info::Toast;
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById("data-grid-tool-bar", "data-grid-tool-bar-basic", &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* summary = preview->findChild<fluent::textfields::Label*>("dataGridSummary");
+    auto* save = preview->findChild<fluent::basicinput::Button*>("dataGridSaveView");
+    auto* restore = preview->findChild<fluent::basicinput::Button*>("dataGridRestoreView");
+    ASSERT_TRUE(summary && save && restore);
+    const QString before = summary->text();
+    save->click();
+    auto* toast = preview->findChild<Toast*>();
+    ASSERT_NE(toast, nullptr);
+    EXPECT_EQ(toast->message(), QStringLiteral("View saved for this demo"));
+    EXPECT_EQ(summary->text(), before);
+    restore->click();
+    EXPECT_EQ(toast->message(), QStringLiteral("View restored"));
+    EXPECT_TRUE(summary->text().contains("projects"));
+    EXPECT_EQ(preview->findChildren<Toast*>().size(), 1);
+}
+
 TEST_F(GalleryContentPagesTest, FileSamplesKeepEntryAndModelIndependent)
 {
     fluent::gallery::GallerySample sample;
@@ -3259,9 +3734,7 @@ TEST_F(GalleryContentPagesTest, ComponentThemeButtonSwitchesOnlySamplePreviewThe
 {
     GalleryWindow window;
     ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
-    GalleryComponentPage* page = nullptr;
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return (page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage())) != nullptr; }, 1000));
+    auto* page = waitForCurrentPage<GalleryComponentPage>(window);
     ASSERT_NE(page, nullptr);
     ASSERT_GE(page->sampleCards().size(), 1);
 
@@ -3309,9 +3782,7 @@ TEST_F(GalleryContentPagesTest, ComponentThemeButtonUpdatesTreeViewPreviewTheme)
 {
     GalleryWindow window;
     ASSERT_TRUE(window.selectRoute(QStringLiteral("tree-view")));
-    GalleryComponentPage* page = nullptr;
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return (page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage())) != nullptr; }, 1000));
+    auto* page = waitForCurrentPage<GalleryComponentPage>(window);
     ASSERT_NE(page, nullptr);
 
     auto* themeButton = page->findChild<Button*>(QStringLiteral("galleryComponentPageThemeButton"));
@@ -4229,6 +4700,8 @@ TEST_F(GalleryContentPagesTest, GalleryToastUsesOverlayMarginAndSuccessBadge)
     ASSERT_NE(reusableToast, nullptr);
     EXPECT_EQ(reusableToast->severity(), fluent::status_info::Toast::Success);
     EXPECT_EQ(reusableToast->placementMargins(), QMargins(16, 36 + 14, 16, 16));
+    EXPECT_EQ(reusableToast->updateKey(), QStringLiteral("gallery.action-feedback"));
+    EXPECT_EQ(reusableToast->duration(), 2200);
 
     auto* opacity = qobject_cast<QGraphicsOpacityEffect*>(toast->graphicsEffect());
     ASSERT_NE(opacity, nullptr);

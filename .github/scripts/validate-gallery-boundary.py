@@ -10,6 +10,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tools" / "quality"))
+from check_gallery_language import validate as validate_language
 INCLUDE = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]')
 PRIVATE_HEADER = re.compile(r"(^|/)(private/|[^/]+_p\.h$)")
 UILIB_PREFIXES = ("compatibility/", "components/", "design/", "utils/")
@@ -70,7 +72,7 @@ def validate(root: Path) -> list[str]:
                     reason = "platform compatibility must not depend on component headers"
                 if reason:
                     violations.append(f"{relative}:{number}: {reason}: {include!r}")
-    return violations
+    return violations + validate_language(root)
 
 
 def main() -> int:
@@ -82,7 +84,7 @@ def main() -> int:
     if violations:
         print("\n".join(violations), file=sys.stderr)
         return 1
-    print("Gallery, UILib, and platform include boundaries are clean.")
+    print("Gallery language, UILib, and platform include boundaries are clean.")
     return 0
 
 

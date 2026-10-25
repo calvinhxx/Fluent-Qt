@@ -1325,6 +1325,7 @@ _PREVIEW_LAYOUT_METHODS = {
 # spellings as the same component operation when reducing executable preview
 # source to the user-facing teaching snippet.
 _CPP_DISPLAY_MEMBER_ALIASES = {
+    "indexOf": ("index",),
     "addItem": ("addOwnedItem",),
     "addPage": ("addOwnedPage",),
     "addPane": ("addOwnedPane",),
@@ -1336,6 +1337,7 @@ _CPP_DISPLAY_MEMBER_ALIASES = {
     "setContentWidget": ("setOwnedContentWidget",),
     "setEditor": ("setOwnedEditor",),
     "setInitialItem": ("setInitialOwnedItem",),
+    "setThemeOverrides": ("set_widget_theme_overrides",),
     "setWidget": ("setOwnedContentWidget",),
 }
 
@@ -2199,6 +2201,120 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             form.submit()
             """
         )
+    if key == ("tree-select", "tree-select-project-teams"):
+        return focused(
+            """
+            # The application owns the hierarchical team model.
+            # Column zero: DisplayRole labels and unique UserRole keys.
+            owner = fluentqt.TreeSelect(self)
+            owner.setModel(team_model)
+            owner.setPlaceholderText("Search teams…")
+            owner.setSelectedKeys(["client"])
+
+            collaborators = fluentqt.TreeSelect(self)
+            collaborators.setModel(team_model)
+            collaborators.setSelectionMode(fluentqt.TreeSelect.SelectionMode.Multiple)
+            collaborators.setPlaceholderText("Add teams…")
+            collaborators.setSelectedKeys(["brand-design"])
+            # Read selectedItems() for key, text and full path.
+            # The runnable model and form are in Full example.
+            """
+        )
+    if key == ("tag-input", "tag-input-project-members"):
+        return focused(
+            """
+            box = fluentqt.TagInput(self)
+            model = QStandardItemModel(self)
+            box.setSuggestionModel(model)
+            box.setAsyncSuggestionsEnabled(True)
+            box.addItem("chen-design", "Chen Chen · Design team")
+            box.addItem("lin", "Lin Xiao")
+            # Each suggestion carries a stable key and a display label.
+            item = QStandardItem("Chen Chen · Engineering team")
+            item.setData({"key": "chen-dev", "text": "Chen Chen · Engineering team"}, Qt.UserRole)
+            # Guard the request before updating the model; see Full example.
+            box.suggestionsRequested.connect(search_members)
+            box.tokensSubmitted.connect(resolve_member_emails)
+            """,
+            imports="from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QStandardItem, QStandardItemModel",
+        )
+    if key == ("auto-suggest-box", "auto-suggest-box-async"):
+        return focused(
+            """
+            box = fluentqt.AutoSuggestBox(self)
+            model = QStandardItemModel(self)
+            box.setSuggestionModel(model)
+            box.setAsyncSuggestionsEnabled(True)
+            box.setDebounceInterval(200)
+            box.setLoadingText("Searching projects…")
+            box.setEmptyText("No projects found")
+            # The application performs the search; the full example simulates it.
+            box.suggestionsRequested.connect(search_projects)
+
+            def deliver(token, names, append=False, has_more=False):
+                # Check before changing the application-owned model.
+                if not box.isSuggestionRequestCurrent(token):
+                    return
+                if not append:
+                    model.removeRows(0, model.rowCount())
+                for name in names:
+                    model.appendRow(QStandardItem(name))
+                box.completeSuggestionRequest(token, has_more)
+
+            def failed(token):
+                box.failSuggestionRequest(token, "Couldn’t load projects")
+
+            # Deliver callbacks on the GUI thread. Transport stays in the app.
+            """,
+            imports="from PySide6.QtGui import QStandardItem, QStandardItemModel",
+        )
+    if key == ("data-grid-tool-bar", "data-grid-tool-bar-basic"):
+        return focused(
+            """
+            grid = fluentqt.DataGrid(self)
+            grid.setModel(project_proxy)
+            toolbar = fluentqt.DataGridToolBar(self)
+            toolbar.setDataGrid(grid)
+            toolbar.searchField().setPlaceholderText("Search projects…")
+            toolbar.addFilter("status", "Status", ["Active", "Review"])
+            toolbar.addFilter("owner", "Owner", ["Maya", "Noah", "Priya", "Riley"])
+            # Apply searchText() and filters() in the application's proxy model.
+            toolbar.searchTextChanged.connect(apply_filters)
+            toolbar.filtersChanged.connect(apply_filters)
+            # Full example includes the proxy and Save view / Restore wiring.
+            """
+        )
+    if key == ("list-detail-view", "list-detail-file-browser"):
+        return focused(
+            """
+            view = fluentqt.ListDetailView(self)
+            # Add existing widgets to these persistent panes.
+            list_layout = QVBoxLayout(view.listPane())
+            detail_layout = QVBoxLayout(view.detailPane())
+            view.setCompactThreshold(640)
+            view.setListPaneWidth(320)
+            # On selection: view.showDetail()
+            # On back: view.showList()
+            """,
+            imports="from PySide6.QtWidgets import QVBoxLayout",
+        )
+    if key == ("property-panel", "property-panel-chart-workbench"):
+        return focused(
+            """
+            # The full example defines five properties and their defaults.
+            properties.setProperties([title, kind, legend, accent, maximum])
+
+            def edited(key, value):
+                apply_properties()
+                properties.formController().validateField(key)
+
+            properties.valueEdited.connect(edited)
+            # Number properties support dragging, typing and keyboard steps.
+            png = chart.exportPng(2)
+            csv = chart.exportCsv(True)
+            # The application chooses when and where to save these bytes.
+            """
+        )
     if key == ("drawer-view", "drawer-view-basic"):
         return focused(
             """
@@ -2743,34 +2859,46 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
     if key == ("menu", "menu-command-shortcuts"):
         return focused(
             """
+            def add_command(menu, anchor, text, shortcut=None):
+                action = menu.addAction(text)
+                if shortcut is not None:
+                    action.setShortcut(shortcut)
+                action.triggered.connect(lambda: fluentqt.Toast.showOrUpdateToast(
+                    anchor, "gallery.action-feedback", text + " selected",
+                    fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                    QMargins(16, 50, 16, 16),
+                ))
+                return action
+
             button = fluentqt.DropDownButton("File")
-            status = fluentqt.Label("Clicked: (none)")
             menu = fluentqt.FluentMenu("", button)
-
-            new_action = menu.addAction("New")
-            new_action.setShortcut(QKeySequence.StandardKey.New)
-            new_action.triggered.connect(
-                lambda: status.setText("Clicked: New")
-            )
-
-            open_action = menu.addAction("Open...")
-            open_action.setShortcut(QKeySequence.StandardKey.Open)
-            save_action = menu.addAction("Save")
-            save_action.setShortcut(QKeySequence.StandardKey.Save)
+            add_command(menu, button, "New", QKeySequence.New)
+            add_command(menu, button, "Open...", QKeySequence.Open)
+            add_command(menu, button, "Save", QKeySequence.Save)
             menu.addSeparator()
-            publish = menu.addAction("Publish")
-            publish.setEnabled(False)
+            menu.addAction("Publish").setEnabled(False)
+            add_command(menu, button, "Close")
             button.setMenu(menu)
             """,
-            imports="from PySide6.QtGui import QKeySequence",
+            imports="from PySide6.QtCore import QMargins, Qt\nfrom PySide6.QtGui import QAction, QKeySequence",
         )
     if key == ("menu", "menu-cascading-selection"):
         return focused(
             """
-            menu = fluentqt.FluentMenu("")
+            button = fluentqt.DropDownButton("View options")
+            menu = fluentqt.FluentMenu("", button)
+            button.setMenu(menu)
             sort_menu = fluentqt.FluentMenu("Sort by", menu)
             sort_menu.addAction("Name")
             sort_menu.addAction("Date modified")
+            sort_menu.addAction("Type")
+            for action in sort_menu.actions():
+                action.triggered.connect(lambda checked=False, item=action:
+                    fluentqt.Toast.showOrUpdateToast(
+                        button, "gallery.action-feedback", item.text() + " selected",
+                        fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                        QMargins(16, 50, 16, 16),
+                    ))
             menu.addMenu(sort_menu)
 
             view_group = QActionGroup(menu)
@@ -2786,56 +2914,117 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             hidden = menu.addAction("Show hidden files")
             hidden.setCheckable(True)
             """,
-            imports="from PySide6.QtGui import QActionGroup",
+            imports="from PySide6.QtCore import QMargins\nfrom PySide6.QtGui import QActionGroup",
+        )
+    if key == ("content-dialog", "content-dialog-result-buttons"):
+        return focused(
+            """
+            dialog = fluentqt.ContentDialog(window)
+            dialog.setTitle("Save your work?")
+            dialog.setContent(fluentqt.Label(
+                "Unsaved changes in Quarterly report will be lost unless you save them."
+            ))
+            dialog.setPrimaryButtonText("Save")
+            dialog.setSecondaryButtonText("Don't save")
+            dialog.setCloseButtonText("Cancel")
+            dialog.setDefaultButton(fluentqt.ContentDialog.Primary)
+
+            def finished(result):
+                if result == fluentqt.ContentDialog.Primary:
+                    message = "Save selected"
+                elif result == fluentqt.ContentDialog.Secondary:
+                    message = "Don't save selected"
+                else:
+                    message = "Cancelled"
+                fluentqt.Toast.showOrUpdateToast(
+                    window, "gallery.action-feedback", message,
+                    fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                    QMargins(16, 50, 16, 16),
+                )
+
+            dialog.finished.connect(finished)
+            dialog.finished.connect(dialog.deleteLater)
+            dialog.open()
+            """,
+            imports="from PySide6.QtCore import QMargins",
         )
     if key == ("menu-bar", "menu-bar-hosted-surface"):
         return focused(
             """
+            def add_command(menu, anchor, text, shortcut=None):
+                action = menu.addAction(text)
+                if shortcut is not None:
+                    action.setShortcut(shortcut)
+                action.triggered.connect(lambda: fluentqt.Toast.showOrUpdateToast(
+                    anchor, "gallery.action-feedback", text + " selected",
+                    fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                    QMargins(16, 50, 16, 16),
+                ))
+                return action
+
             menu_bar = fluentqt.FluentMenuBar()
-            status = fluentqt.Label("Clicked: (none)")
             menu_bar.setBackgroundVisible(False)
-
             file_menu = fluentqt.FluentMenu("File", menu_bar)
-            new_action = file_menu.addAction("New")
-            new_action.triggered.connect(
-                lambda: status.setText("Clicked: New")
-            )
-            file_menu.addAction("Open...")
+            add_command(file_menu, menu_bar, "New")
+            add_command(file_menu, menu_bar, "Open...")
+            add_command(file_menu, menu_bar, "Save")
             menu_bar.addMenu(file_menu)
-
             edit_menu = fluentqt.FluentMenu("Edit", menu_bar)
-            edit_menu.addAction("Undo")
+            add_command(edit_menu, menu_bar, "Undo", QKeySequence.Undo)
+            add_command(edit_menu, menu_bar, "Cut", QKeySequence.Cut)
+            add_command(edit_menu, menu_bar, "Copy", QKeySequence.Copy)
+            add_command(edit_menu, menu_bar, "Paste", QKeySequence.Paste)
             menu_bar.addMenu(edit_menu)
-            """
+            help_menu = fluentqt.FluentMenu("Help", menu_bar)
+            add_command(help_menu, menu_bar, "About")
+            menu_bar.addMenu(help_menu)
+            """,
+            imports="from PySide6.QtCore import QMargins, Qt\nfrom PySide6.QtGui import QAction, QKeySequence",
         )
     if key == ("menu-bar", "menu-bar-access-keys"):
         return focused(
             """
+            def add_command(menu, anchor, text, shortcut=None):
+                action = menu.addAction(text)
+                if shortcut is not None:
+                    action.setShortcut(shortcut)
+                action.triggered.connect(lambda: fluentqt.Toast.showOrUpdateToast(
+                    anchor, "gallery.action-feedback", text + " selected",
+                    fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                    QMargins(16, 50, 16, 16),
+                ))
+                return action
+
             menu_bar = fluentqt.FluentMenuBar()
             focus_button = fluentqt.Button("Focus")
-            status = fluentqt.Label("Command: (none)")
-            focus_button.clicked.connect(
-                lambda: menu_bar.setFocus(
-                    Qt.FocusReason.OtherFocusReason
+            def focus_menu():
+                menu_bar.setFocus(Qt.OtherFocusReason)
+                fluentqt.Toast.showOrUpdateToast(
+                    menu_bar, "gallery.action-feedback", "Menu bar focused",
+                    fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                    QMargins(16, 50, 16, 16),
                 )
-            )
-
+            focus_button.clicked.connect(focus_menu)
             file_menu = fluentqt.FluentMenu("&File", menu_bar)
             file_menu.menuAction().setProperty("accessKey", "F")
-            save_action = file_menu.addAction("Save")
-            save_action.setShortcut(QKeySequence.StandardKey.Save)
+            add_command(file_menu, menu_bar, "New", QKeySequence.New)
+            add_command(file_menu, menu_bar, "Save", QKeySequence.Save)
             menu_bar.addMenu(file_menu)
-
+            view_menu = fluentqt.FluentMenu("&View", menu_bar)
+            view_menu.menuAction().setProperty("accessKey", "V")
+            add_command(view_menu, menu_bar, "Zoom in")
+            add_command(view_menu, menu_bar, "Zoom out")
+            menu_bar.addMenu(view_menu)
             run_action = QAction("Run", menu_bar)
-            run_action.triggered.connect(
-                lambda: status.setText("Command: Run")
-            )
+            run_action.triggered.connect(lambda: fluentqt.Toast.showOrUpdateToast(
+                menu_bar, "gallery.action-feedback", "Run selected",
+                fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                QMargins(16, 50, 16, 16),
+            ))
             menu_bar.addAction(run_action)
+            menu_bar.addAction("Deploy").setEnabled(False)
             """,
-            imports=(
-                "from PySide6.QtCore import Qt\n"
-                "from PySide6.QtGui import QAction, QKeySequence"
-            ),
+            imports="from PySide6.QtCore import QMargins, Qt\nfrom PySide6.QtGui import QAction, QKeySequence",
         )
     if key in {
         ("command-bar", "command-bar-submenus"),
@@ -2964,11 +3153,18 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             compact_button.clicked.connect(toggle_compact)
             labels_button.clicked.connect(toggle_labels)
             background_button.clicked.connect(toggle_background)
+            for action in bar.primaryActions() + bar.secondaryActions():
+                if action.isSeparator():
+                    continue
+                action.triggered.connect(lambda checked=False, item=action:
+                    fluentqt.Toast.showOrUpdateToast(
+                        bar, "gallery.action-feedback",
+                        item.text().split(chr(9), 1)[0].replace("&", "") + " selected",
+                        fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                        QMargins(16, 50, 16, 16),
+                    ))
             """,
-            imports=(
-                "from PySide6.QtGui import QAction, QIcon\n"
-                "from PySide6.QtWidgets import QHBoxLayout, QWidget"
-            ),
+            imports="from PySide6.QtCore import QMargins\nfrom PySide6.QtGui import QAction, QIcon\nfrom PySide6.QtWidgets import QHBoxLayout, QWidget",
         )
     overlay_types = {
         ("popup", "popup-modal-dim"): "Popup",
@@ -2998,7 +3194,7 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
                 if not action.isSeparator():
                     palette.addCommand(action, "Navigation")
             # Update metadata without copying or taking ownership of actions.
-            palette.addCommand(add, "Notes", ["new", "添加"])
+            palette.addCommand(add, "Notes", ["new", "create"])
             palette.addCommand(clear, "Notes", ["delete", "remove"])
             palette.addCommand(details, "View", ["count", "properties"])
             palette.addCommand(sort, "View", ["order"])
@@ -3161,8 +3357,18 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             always_expanded.setCheckable(True)
             always_expanded.setChecked(True)
             always_expanded.toggled.connect(flyout.setAlwaysExpanded)
+            for action in flyout.primaryActions() + flyout.secondaryActions():
+                if action.isSeparator():
+                    continue
+                action.triggered.connect(lambda checked=False, item=action:
+                    fluentqt.Toast.showOrUpdateToast(
+                        open_button, "gallery.action-feedback",
+                        item.text().split(chr(9), 1)[0].replace("&", "") + " selected",
+                        fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                        QMargins(16, 50, 16, 16),
+                    ))
             """,
-            imports="from PySide6.QtGui import QAction, QIcon",
+            imports="from PySide6.QtCore import QMargins\nfrom PySide6.QtGui import QAction, QIcon",
         )
     if key == ("breadcrumb", "breadcrumb-size"):
         return focused(
@@ -3584,6 +3790,7 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
         return focused(
             """
             tabs = fluentqt.TabView()
+            tabs.setTabWidthMode(fluentqt.TabView.TabWidthMode.SizeToContent)
             tabs.setCloseButtonOverlayMode(
                 fluentqt.TabView.CloseButtonOverlayMode.Always
             )
@@ -3611,17 +3818,34 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
                 )
             )
 
+            status = fluentqt.Label("Home is pinned; Disabled is not selectable.")
+            tabs.currentChanged.connect(lambda index:
+                status.setText("Selected " + tabs.tabAt(index).text) if index >= 0 else None)
+            number = [0]
             def add_tab():
-                index = tabs.addTab(
-                    fluentqt.TabViewItem(
-                        "Document", fluentqt.Typography.Icons.Document
-                    )
+                number[0] += 1
+                title = f"Document {number[0]}"
+                tabs.setSelectedIndex(tabs.addTab(fluentqt.TabViewItem(
+                    title, fluentqt.Typography.Icons.Document)))
+                fluentqt.Toast.showOrUpdateToast(
+                    tabs, "gallery.action-feedback", "Added " + title,
+                    fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                    QMargins(16, 50, 16, 16),
                 )
-                tabs.setSelectedIndex(index)
-
+            def close_tab(index):
+                title = tabs.tabAt(index).text
+                closed = tabs.closeTab(index)
+                fluentqt.Toast.showOrUpdateToast(
+                    tabs, "gallery.action-feedback",
+                    "Closed " + title if closed else title + " cannot be closed",
+                    fluentqt.Toast.Informational if closed else fluentqt.Toast.Warning,
+                    2200 if closed else 4500, fluentqt.Toast.Top,
+                    QMargins(16, 50, 16, 16),
+                )
             tabs.addTabRequested.connect(add_tab)
-            tabs.tabCloseRequested.connect(tabs.closeTab)
-            """
+            tabs.tabCloseRequested.connect(close_tab)
+            """,
+            imports="from PySide6.QtCore import QMargins",
         )
     if key == ("tab-view", "tab-view-overflow-reorder"):
         return focused(
@@ -4703,33 +4927,45 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             "    drawer.open()",
         )
     if key == ("command-bar-flyout", "command-bar-flyout-show-modes"):
-        return _source(
-            "flyout = fluentqt.CommandBarFlyout()",
-            'share_action = QAction("Share")',
-            'save_action = QAction("Save")',
-            'delete_action = QAction("Delete")',
-            'resize_action = QAction("Resize")',
-            'move_action = QAction("Move")',
-            "flyout.addPrimaryAction(share_action)",
-            "flyout.addPrimaryAction(save_action)",
-            "flyout.addPrimaryAction(delete_action)",
-            "flyout.addSecondaryAction(resize_action)",
-            "flyout.addSecondaryAction(move_action)",
-            "",
-            "photo.clicked.connect(",
-            "    lambda: flyout.showAt(",
-            "        photo, fluentqt.CommandBarFlyout.ShowMode.Transient",
-            "    )",
-            ")",
-            "photo.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)",
-            "photo.customContextMenuRequested.connect(",
-            "    lambda point: flyout.showAtPoint(",
-            "        photo,",
-            "        point,",
-            "        fluentqt.CommandBarFlyout.ShowMode.Standard,",
-            "    )",
-            ")",
-            imports="from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QAction",
+        return focused(
+            """
+            flyout = fluentqt.CommandBarFlyout()
+            share_action = QAction("Share")
+            save_action = QAction("Save")
+            delete_action = QAction("Delete")
+            resize_action = QAction("Resize")
+            move_action = QAction("Move")
+            flyout.addPrimaryAction(share_action)
+            flyout.addPrimaryAction(save_action)
+            flyout.addPrimaryAction(delete_action)
+            flyout.addSecondaryAction(resize_action)
+            flyout.addSecondaryAction(move_action)
+
+            photo.clicked.connect(
+                lambda: flyout.showAt(
+                    photo, fluentqt.CommandBarFlyout.ShowMode.Transient
+                )
+            )
+            photo.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            photo.customContextMenuRequested.connect(
+                lambda point: flyout.showAtPoint(
+                    photo,
+                    point,
+                    fluentqt.CommandBarFlyout.ShowMode.Standard,
+                )
+            )
+            for action in flyout.primaryActions() + flyout.secondaryActions():
+                if action.isSeparator():
+                    continue
+                action.triggered.connect(lambda checked=False, item=action:
+                    fluentqt.Toast.showOrUpdateToast(
+                        photo, "gallery.action-feedback",
+                        item.text().split(chr(9), 1)[0].replace("&", "") + " selected",
+                        fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                        QMargins(16, 50, 16, 16),
+                    ))
+            """,
+            imports="from PySide6.QtCore import QMargins\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtGui import QAction",
         )
     if key == ("tab-view", "tab-view-close-button-modes"):
         return _source(
@@ -6644,6 +6880,7 @@ from . import native_samples_charts as _native_samples_charts  # noqa: E402,F401
 from . import native_samples_collections as _native_samples_collections  # noqa: E402,F401
 from . import native_samples_dialogs as _native_samples_dialogs  # noqa: E402,F401
 from . import native_samples_layout as _native_samples_layout  # noqa: E402,F401
+from . import native_samples_property_panel as _native_samples_property_panel  # noqa: E402,F401
 from . import native_samples_navigation as _native_samples_navigation  # noqa: E402,F401
 from . import native_samples_sequences as _native_samples_sequences  # noqa: E402,F401
 from . import native_samples_scrolling as _native_samples_scrolling  # noqa: E402,F401

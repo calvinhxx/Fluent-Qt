@@ -713,12 +713,6 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
         if set(route_functions) != set(metadata["components"]):
             raise ValueError("native Gallery category samples differ from its component catalog: " + category.id)
         source_expressions = {}
-        for variable, filename in re.findall(
-            r'QFile\s+(\w+)\(QStringLiteral\(":/app/samples/([\w.]+)"\)\)', source
-        ):
-            source_expressions[f"QString::fromUtf8({variable}.readAll())"] = (
-                samples_root / filename
-            ).read_text(encoding="utf-8")
         source_files = None
         if category_id == "qml-bridge":
             source_expressions.update(_qml_bridge_source_expressions(source, samples_root))
@@ -735,8 +729,17 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
                         route_id, function_name
                     )
                 )
+            # QFile locals belong to their sample function. Two functions may
+            # both call the variable "source" without sharing teaching code.
+            local_expressions = dict(source_expressions)
+            for variable, filename in re.findall(
+                r'QFile\s+(\w+)\(QStringLiteral\(":/app/samples/([\w.]+)"\)\)', bodies[function_name]
+            ):
+                local_expressions[f"QString::fromUtf8({variable}.readAll())"] = (
+                    samples_root / filename
+                ).read_text(encoding="utf-8")
             samples = _samples_in_body(
-                bodies[function_name], source_expressions=source_expressions, source_files=source_files,
+                bodies[function_name], source_expressions=local_expressions, source_files=source_files,
             )
             if not samples:
                 raise ValueError("native Gallery route has no samples: {0}".format(route_id))
@@ -864,7 +867,7 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
             .format(", ".join(missing_bindings))
         )
     support_types = sorted(manifest_classes - routed_types)
-    expected_counts = (91, 264, 116) if include_cpp_only else (88, 247, 110)
+    expected_counts = (96, 277, 121) if include_cpp_only else (93, 260, 115)
     for name, actual, expected in zip(
         ("component", "sample", "route"),
         (component_count, sample_count, len(routes)),

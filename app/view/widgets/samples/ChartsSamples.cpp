@@ -2,10 +2,13 @@
 #include "SampleBuilders.h"
 #include <FluentQt/FluentQt.h>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 
 namespace fluent::gallery {
 namespace {
 using namespace charts;
+using basicinput::Button;
+using status_info::Toast;
 using samples::makeSample;
 QVector<GallerySample> lineChartSamples()
 {
@@ -327,6 +330,78 @@ QVector<GallerySample> sparklineSamples()
 QVector<GallerySample> chartViewSamples()
 {
     return {
+        makeSample(
+            QStringLiteral("chart-view-export"), QStringLiteral("Copy the chart or its data"),
+            QStringLiteral("Images omit the cursor and focus ring. CSV contains original model rows, including gaps."),
+            QStringLiteral(R"(auto* panel = new QWidget(this);
+auto* layout = new QVBoxLayout(panel);
+auto* chart = new ChartView(panel);
+chart->setObjectName("chartExportPreview");
+chart->setMinimumHeight(320);
+chart->setTitle("Response time");
+auto* model = new ChartModel(panel);
+model->setName("Primary");
+model->setPoints({{0, 18}, {1, 32}, {2, 24}, {3, 48}});
+chart->setModel(model);
+auto* copy = new Button("Copy image", panel);
+copy->setObjectName("chartCopyImageButton");
+auto* data = new Button("Copy data", panel);
+data->setObjectName("chartCopyDataButton");
+const auto feedback = [panel](const QString& message, bool ok) {
+    Toast::showOrUpdateToast(panel, "gallery.action-feedback", message,
+        ok ? Toast::Success : Toast::Warning, ok ? 2200 : 4500,
+        Toast::Top, QMargins(16, 50, 16, 16));
+};
+QObject::connect(copy, &Button::clicked, chart, [chart] { chart->copyImage(2); });
+QObject::connect(data, &Button::clicked, chart, [chart] { chart->copyData(); });
+QObject::connect(chart, &ChartView::imageCopied, panel, [feedback](bool ok) {
+    feedback(ok ? "Image copied" : "Could not copy image. Try again.", ok);
+});
+QObject::connect(chart, &ChartView::dataCopied, panel, [feedback](bool ok) {
+    feedback(ok ? "Data copied" : "Could not copy data. Try again.", ok);
+});
+layout->addWidget(chart);
+auto* actions = new QHBoxLayout;
+actions->addWidget(copy);
+actions->addWidget(data);
+actions->addStretch();
+layout->addLayout(actions);)"),
+            [](QWidget* parent) {
+                auto* panel = new QWidget(parent);
+                auto* layout = new QVBoxLayout(panel);
+                auto* chart = new ChartView(panel);
+                chart->setObjectName("chartExportPreview");
+                chart->setMinimumHeight(320);
+                chart->setTitle("Response time");
+                auto* model = new ChartModel(panel);
+                model->setName("Primary");
+                model->setPoints({{0, 18}, {1, 32}, {2, 24}, {3, 48}});
+                chart->setModel(model);
+                auto* copy = new Button("Copy image", panel);
+                copy->setObjectName("chartCopyImageButton");
+                auto* data = new Button("Copy data", panel);
+                data->setObjectName("chartCopyDataButton");
+                const auto feedback = [panel](const QString& message, bool ok) {
+                    Toast::showOrUpdateToast(panel, "gallery.action-feedback", message,
+                        ok ? Toast::Success : Toast::Warning, ok ? 2200 : 4500, Toast::Top, QMargins(16, 50, 16, 16));
+                };
+                QObject::connect(copy, &Button::clicked, chart, [chart] { chart->copyImage(2); });
+                QObject::connect(data, &Button::clicked, chart, [chart] { chart->copyData(); });
+                QObject::connect(chart, &ChartView::imageCopied, panel, [feedback](bool ok) {
+                    feedback(ok ? "Image copied" : "Could not copy image. Try again.", ok);
+                });
+                QObject::connect(chart, &ChartView::dataCopied, panel, [feedback](bool ok) {
+                    feedback(ok ? "Data copied" : "Could not copy data. Try again.", ok);
+                });
+                layout->addWidget(chart);
+                auto* actions = new QHBoxLayout;
+                actions->addWidget(copy);
+                actions->addWidget(data);
+                actions->addStretch();
+                layout->addLayout(actions);
+                return panel;
+            },
+            true),
         makeSample(
             QStringLiteral("chart-view-basic"), QStringLiteral("Compare two series"),
             QStringLiteral("Illustrative values. Each caller-owned model is shared independently "

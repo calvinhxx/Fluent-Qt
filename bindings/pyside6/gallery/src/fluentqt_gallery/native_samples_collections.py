@@ -8,6 +8,11 @@ from .native_samples import register_source_samples
 from .native_samples_overlays import overlay_effects_source
 
 
+def data_grid_source_files(result):
+    from .native_source_files import complete_sample_source_files
+    return complete_sample_source_files(result, "data_grid_workspace.py", root_name="workspace")
+
+
 def _script(body: str, imports: str = "") -> str:
     prefix = "import fluentqt\n"
     if imports:
@@ -161,14 +166,21 @@ _FLAT_MODEL_HELPER = _SourceHelper(dedent(
 _DATA_GRID_IMPORTS = (
     "from PySide6.QtCore import (QAbstractTableModel, QItemSelectionModel, "
     "QModelIndex, QRectF, Qt)\n"
-    "from PySide6.QtGui import QPen, QStandardItem, QStandardItemModel\n"
+    "from PySide6.QtGui import QFont, QFontDatabase, QPainter, QPen, QStandardItem, QStandardItemModel\n"
     "from PySide6.QtWidgets import QAbstractItemView, QStyledItemDelegate\n"
-    "from fluentqt_gallery.foundation_pages import _theme_tokens"
+    "from fluentqt_gallery.foundation_pages import _theme_snapshot, _theme_tokens"
 )
 
 _DATA_GRID_MODEL_HELPER = _SourceHelper(dedent(
     """
     class LargeDataGridModel(QAbstractTableModel):
+        def __init__(self, parent):
+            super().__init__(parent)
+            self.number_font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
+            self.number_font.setPixelSize(parent.font().pixelSize())
+            self.number_font.setStyleHint(QFont.StyleHint.Monospace)
+            self.number_font.setFixedPitch(True)
+
         def rowCount(self, parent=QModelIndex()):
             return 0 if parent.isValid() else 100_000
 
@@ -183,19 +195,24 @@ _DATA_GRID_MODEL_HELPER = _SourceHelper(dedent(
                 and index.column() >= 3
             ):
                 return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            if role == Qt.ItemDataRole.FontRole and index.column() >= 3:
+                return self.number_font
             if role != Qt.ItemDataRole.DisplayRole:
                 return None
-            row = index.row() + 1
+            row = index.row()
             values = (
-                "Build #{0:06d}".format(row),
-                "macOS-{0:02d}".format(row % 24 + 1),
-                ("Passed", "Running", "Queued")[row % 3],
-                "{0}m {1:02d}s".format(row % 9 + 1, row % 60),
-                str(row % 12),
+                "Build {0:06d}".format(row + 1),
+                "Runner {0}".format(row % 24 + 1),
+                "Queued" if row % 7 == 0 else "Complete",
+                "{0} s".format(18 + row % 83),
+                "{0} MB".format(42 + row % 900),
             )
             return values[index.column()]
 
         def headerData(self, section, orientation, role):
+            if (role == Qt.ItemDataRole.TextAlignmentRole
+                    and orientation == Qt.Orientation.Horizontal and section >= 3):
+                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
             if role != Qt.ItemDataRole.DisplayRole:
                 return None
             if orientation == Qt.Orientation.Vertical:
@@ -214,6 +231,8 @@ _DATA_GRID_MODEL_HELPER = _SourceHelper(dedent(
         model.setHorizontalHeaderLabels(
             ("Project", "Owner", "Status", "Priority")
         )
+        model.setHeaderData(3, Qt.Orientation.Horizontal,
+            int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter), Qt.ItemDataRole.TextAlignmentRole)
         projects = (
             "Aurora", "Beacon", "Canvas", "Delta",
             "Ember", "Fjord", "Grove", "Harbor",
@@ -269,6 +288,18 @@ _DATA_GRID_VALIDATION_HELPER = _SourceHelper(dedent(
             super().__init__(grid)
             self._base_delegate = grid.itemDelegate()
 
+        def createEditor(self, parent, option, index):
+            return self._base_delegate.createEditor(parent, option, index)
+
+        def updateEditorGeometry(self, editor, option, index):
+            self._base_delegate.updateEditorGeometry(editor, option, index)
+
+        def setEditorData(self, editor, index):
+            self._base_delegate.setEditorData(editor, index)
+
+        def setModelData(self, editor, model, index):
+            self._base_delegate.setModelData(editor, model, index)
+
         def paint(self, painter, option, index):
             if self._base_delegate is not None:
                 self._base_delegate.paint(painter, option, index)
@@ -277,13 +308,12 @@ _DATA_GRID_VALIDATION_HELPER = _SourceHelper(dedent(
             if not index.data(DATA_GRID_VALIDATION_MESSAGE_ROLE):
                 return
             painter.save()
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.setPen(QPen(_theme_tokens(self)["systemCritical"], 1.5))
-            painter.drawRoundedRect(
-                QRectF(option.rect).adjusted(1.5, 1.5, -1.5, -1.5),
-                3.0,
-                3.0,
-            )
+            tokens = _theme_snapshot(self)
+            painter.setPen(QPen(tokens["colors"]["systemCritical"], 1.5))
+            line = QRectF(option.rect).adjusted(4.5, 2.5, -4.5, -2.5)
+            painter.drawLine(line.bottomLeft(), line.bottomRight())
             painter.restore()
     """
 ))
@@ -1509,10 +1539,172 @@ register_source_samples(
 )
 
 
+_DATA_GRID_WORKSPACE_SOURCE = _script(
+    _DATA_GRID_MODEL_HELPER + """
+    class ProjectFilterModel(QSortFilterProxyModel):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.search = ""
+            self.filters = {}
+
+        def setCriteria(self, search, filters):
+            self.search = search.strip().casefold()
+            self.filters = filters
+            self.invalidateFilter()
+
+        def filterAcceptsRow(self, row, parent):
+            model = self.sourceModel()
+            if self.search and not any(
+                self.search in str(model.index(row, c, parent).data()).casefold()
+                for c in range(model.columnCount(parent))
+            ):
+                return False
+            return all(
+                not self.filters.get(key)
+                or model.index(row, column, parent).data() in self.filters[key]
+                for key, column in (("owner", 1), ("status", 2))
+            )
+
+    class DataGridWorkspaceSample(fluentqt.Card):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.setObjectName("dataGridWorkspace")
+            self.setBorderVisible(False)
+            self.setMaximumWidth(864)
+            self.setMinimumWidth(300)
+            self.setMinimumHeight(480)
+            body = QVBoxLayout(self)
+            body.setContentsMargins(24, 24, 24, 24)
+            body.setSpacing(12)
+            title = fluentqt.Label("Projects", self)
+            title.setFluentTypography(fluentqt.FontRole.Subtitle)
+            body.addWidget(title)
+            description = fluentqt.Label("Search, combine filters, and arrange your columns.", self)
+            description.setFluentTypography(fluentqt.FontRole.Caption)
+            description.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+            description.setWordWrap(True)
+            body.addWidget(description)
+            self.toolbar = fluentqt.DataGridToolBar(self)
+            self.toolbar.searchField().setPlaceholderText("Search projects…")
+            self.toolbar.addFilter("status", "Status", ["Active", "Review"])
+            self.toolbar.addFilter("owner", "Owner", ["Maya", "Noah", "Priya", "Riley"])
+            body.addWidget(self.toolbar)
+            self.model = make_project_data_grid_model(self, True)
+            self.model.setHeaderData(3, Qt.Orientation.Horizontal,
+                int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter), Qt.ItemDataRole.TextAlignmentRole)
+            for row in range(self.model.rowCount()):
+                self.model.setData(self.model.index(row, 3), row % 4 + 1, Qt.ItemDataRole.EditRole)
+            self.proxy = ProjectFilterModel(self)
+            self.proxy.setSourceModel(self.model)
+            self.grid = fluentqt.DataGrid(self)
+            self.grid.setObjectName("workspaceDataGrid")
+            self.grid.setAccessibleName("Projects")
+            self.grid.setModel(self.proxy)
+            self.grid.setBorderVisible(False)
+            self.grid.setPlaceholderText("No projects match these filters.")
+            self.grid.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+            self.grid.setSelectionMode(fluentqt.SelectionMode.Extended)
+            self.grid.setSortingEnabled(True)
+            self.grid.sortByColumn(0, Qt.SortOrder.AscendingOrder)
+            self.grid.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked | QAbstractItemView.EditTrigger.EditKeyPressed)
+            for column, width in enumerate((300, 180, 160, 176)):
+                self.grid.setColumnWidth(column, width)
+            self.grid.setMinimumHeight(220)
+            self.toolbar.setDataGrid(self.grid)
+            body.addWidget(self.grid, 1)
+            footer = QHBoxLayout()
+            self.summary = fluentqt.Label(self)
+            self.summary.setObjectName("dataGridSummary")
+            self.summary.setFluentTypography(fluentqt.FontRole.Caption)
+            self.summary.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+            self.summary.setWordWrap(True)
+            footer.addWidget(self.summary, 1)
+            save = fluentqt.Button("Save view", self)
+            save.setObjectName("dataGridSaveView")
+            self.restore = fluentqt.Button("Restore", self)
+            self.restore.setObjectName("dataGridRestoreView")
+            self.restore.setEnabled(False)
+            footer.addWidget(save)
+            footer.addWidget(self.restore)
+            body.addLayout(footer)
+            save.clicked.connect(self.save_view)
+            self.restore.clicked.connect(self.restore_view)
+            self.toolbar.searchTextChanged.connect(self.apply_filters)
+            self.toolbar.filtersChanged.connect(self.apply_filters)
+            self.grid.selectionModel().selectionChanged.connect(self.update_summary)
+            self.grid.selectRow(2)
+            self.update_summary()
+
+        def apply_filters(self, *_):
+            self.proxy.setCriteria(self.toolbar.searchText(), self.toolbar.filters())
+            self.update_summary()
+
+        def update_summary(self, *_):
+            self.summary.setText(f"{self.proxy.rowCount()} of {self.model.rowCount()} projects · {len(self.grid.selectionModel().selectedRows())} selected")
+
+        def save_view(self):
+            self.saved = (self.grid.saveColumnState(), self.toolbar.searchText(), self.toolbar.filters())
+            self.restore.setEnabled(True)
+            fluentqt.Toast.showOrUpdateToast(
+                self, "gallery.action-feedback", "View saved for this demo",
+                fluentqt.Toast.Success, 2200, fluentqt.Toast.Top,
+                QMargins(16, 50, 16, 16),
+            )
+
+        def restore_view(self):
+            columns, search, filters = self.saved
+            self.grid.restoreColumnState(columns)
+            self.toolbar.clearFilters()
+            self.toolbar.setSearchText(search)
+            for key, values in filters.items():
+                self.toolbar.setFilterValues(key, values)
+            self.update_summary()
+            fluentqt.Toast.showOrUpdateToast(
+                self, "gallery.action-feedback", "View restored",
+                fluentqt.Toast.Success, 2200, fluentqt.Toast.Top,
+                QMargins(16, 50, 16, 16),
+            )
+
+    workspace = DataGridWorkspaceSample(globals().get("gallery_parent"))
+    """,
+    _DATA_GRID_IMPORTS + "\nfrom PySide6.QtCore import QMargins, QSortFilterProxyModel\nfrom PySide6.QtWidgets import QHBoxLayout, QVBoxLayout",
+)
+
+register_source_samples("data-grid-tool-bar", ("DataGridToolBar",), {
+    "data-grid-tool-bar-basic": ("workspace", _DATA_GRID_WORKSPACE_SOURCE),
+})
+
 register_source_samples(
     "data-grid",
     ("DataGrid",),
     {
+        "data-grid-pinned-columns": (
+            "grid",
+            _script(
+                """
+                grid = fluentqt.DataGrid(globals().get("gallery_parent"))
+                grid.setAccessibleName("Pinned projects")
+                grid.setObjectName("pinnedProjectsGrid")
+                model = QStandardItemModel(grid)
+                model.setHorizontalHeaderLabels(["Project", "Owner", "Status"])
+                model.appendRow([QStandardItem("Aurora"),
+                    QStandardItem("Maya"), QStandardItem("Active")])
+                model.appendRow([QStandardItem("Beacon"),
+                    QStandardItem("Noah"), QStandardItem("Review")])
+                grid.setModel(model)
+                grid.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+                grid.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked
+                    | QAbstractItemView.EditTrigger.EditKeyPressed)
+                grid.setColumnWidth(0, 240)
+                grid.setColumnWidth(1, 220)
+                grid.setColumnWidth(2, 240)
+                grid.setColumnPinned(0, True)
+                grid.setMaximumWidth(600)
+                grid.setFixedHeight(180)
+                """,
+                _DATA_GRID_IMPORTS,
+            ),
+        ),
         "data-grid-large-read-only": (
             "grid",
             _script(
@@ -1522,7 +1714,6 @@ register_source_samples(
                 grid.setAccessibleName("Large data")
                 grid.setFixedSize(680, 252)
                 grid.setModel(LargeDataGridModel(grid))
-                grid.setScrollChainingEnabled(True)
                 grid.setSelectionBehavior(
                     QAbstractItemView.SelectionBehavior.SelectRows
                 )
@@ -1544,16 +1735,17 @@ register_source_samples(
                 grid.setFixedSize(680, 252)
                 model = make_project_data_grid_model(grid, False)
                 grid.setModel(model)
-                grid.setScrollChainingEnabled(True)
                 grid.setSelectionMode(fluentqt.SelectionMode.Extended)
                 grid.setSelectionBehavior(
                     QAbstractItemView.SelectionBehavior.SelectRows
                 )
                 grid.setSortingEnabled(True)
+                grid.sortByColumn(0, Qt.SortOrder.AscendingOrder)
                 grid.horizontalHeader().setSectionsMovable(True)
-                grid.horizontalHeader().setStretchLastSection(True)
-                grid.setColumnWidth(0, 170)
-                grid.setColumnWidth(1, 130)
+                grid.setColumnWidth(0, 240)
+                grid.setColumnWidth(1, 180)
+                grid.setColumnWidth(2, 158)
+                grid.setColumnWidth(3, 100)
                 """,
                 _DATA_GRID_IMPORTS,
             ),
@@ -1571,17 +1763,10 @@ register_source_samples(
                 for row in (
                     ("Channel", "stable", "Workspace"),
                     ("Region", "eu-west", "Account"),
-                    ("Mode", "No", "Session"),
+                    ("Mode", "Auto", "Session"),
                 ):
                     model.appendRow([QStandardItem(value) for value in row])
-                QStandardItemModel.setData(
-                    model,
-                    model.index(2, 1),
-                    "Use at least 3 characters",
-                    DATA_GRID_VALIDATION_MESSAGE_ROLE,
-                )
                 grid.setModel(model)
-                grid.setScrollChainingEnabled(True)
                 grid.setItemDelegate(DataGridValidationDelegate(grid))
                 grid.setEditTriggers(
                     QAbstractItemView.EditTrigger.DoubleClicked
@@ -1590,7 +1775,6 @@ register_source_samples(
                 grid.horizontalHeader().setStretchLastSection(True)
                 grid.setColumnWidth(0, 180)
                 grid.setColumnWidth(1, 220)
-                grid.setCurrentIndex(model.index(2, 1))
                 """,
                 _DATA_GRID_IMPORTS,
             ),

@@ -1,7 +1,13 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource prefix="/app">
+        <file alias="samples/AsyncSearchSample.h">view/widgets/samples/AsyncSearchSample.h</file>
+        <file alias="samples/MemberSelectionSample.h">view/widgets/samples/MemberSelectionSample.h</file>
+        <file alias="samples/TeamSelectionSample.h">view/widgets/samples/TeamSelectionSample.h</file>
         <file alias="samples/ConnectionForm.h">view/widgets/samples/ConnectionForm.h</file>
+        <file alias="samples/DataGridWorkspaceSample.h">view/widgets/samples/DataGridWorkspaceSample.h</file>
+        <file alias="samples/ChartWorkbenchSample.h">view/widgets/samples/ChartWorkbenchSample.h</file>
+        <file alias="samples/FileBrowserSample.h">view/widgets/samples/FileBrowserSample.h</file>
         <file>assets/app-icon.png</file>
         <file>assets/home_header_tiles/GitHub-Mark.png</file>
         <file>assets/home_header_tiles/Header-Toolkit.png</file>
@@ -25,6 +31,7 @@
         <file alias="assets/control_images/basic-input/ToggleButton.svg">../tools/gallery/artwork/basic-input/ToggleButton.svg</file>
         <file alias="assets/control_images/basic-input/ToggleSplitButton.svg">../tools/gallery/artwork/basic-input/ToggleSplitButton.svg</file>
         <file alias="assets/control_images/basic-input/ToggleSwitch.svg">../tools/gallery/artwork/basic-input/ToggleSwitch.svg</file>
+        <file alias="assets/control_images/basic-input/TreeSelect.svg">../tools/gallery/artwork/basic-input/TreeSelect.svg</file>
         <file alias="assets/control_images/collections/DataGrid.svg">../tools/gallery/artwork/collections/DataGrid.svg</file>
         <file alias="assets/control_images/collections/DrawerView.svg">../tools/gallery/artwork/collections/DrawerView.svg</file>
         <file alias="assets/control_images/collections/FlipView.svg">../tools/gallery/artwork/collections/FlipView.svg</file>
@@ -58,6 +65,9 @@
         <file alias="assets/control_images/layout/Divider.svg">../tools/gallery/artwork/layout/Divider.svg</file>
         <file alias="assets/control_images/layout/Expander.svg">../tools/gallery/artwork/layout/Expander.svg</file>
         <file alias="assets/control_images/layout/Field.svg">../tools/gallery/artwork/layout/Field.svg</file>
+        <file alias="assets/control_images/layout/DataGridToolBar.svg">../tools/gallery/artwork/layout/DataGridToolBar.svg</file>
+        <file alias="assets/control_images/layout/PropertyPanel.svg">../tools/gallery/artwork/layout/PropertyPanel.svg</file>
+        <file alias="assets/control_images/layout/ListDetailView.svg">../tools/gallery/artwork/layout/ListDetailView.svg</file>
         <file alias="assets/control_images/layout/ParticleBackdrop.svg">../tools/gallery/artwork/layout/ParticleBackdrop.svg</file>
         <file alias="assets/control_images/menus-toolbars/Menu.svg">../tools/gallery/artwork/menus-toolbars/Menu.svg</file>
         <file alias="assets/control_images/menus-toolbars/MenuBar.svg">../tools/gallery/artwork/menus-toolbars/MenuBar.svg</file>
@@ -84,6 +94,7 @@
         <file alias="assets/control_images/status-info/Toast.svg">../tools/gallery/artwork/status-info/Toast.svg</file>
         <file alias="assets/control_images/status-info/ToolTip.svg">../tools/gallery/artwork/status-info/ToolTip.svg</file>
         <file alias="assets/control_images/text-fields/AutoSuggestBox.svg">../tools/gallery/artwork/text-fields/AutoSuggestBox.svg</file>
+        <file alias="assets/control_images/text-fields/TagInput.svg">../tools/gallery/artwork/text-fields/TagInput.svg</file>
         <file alias="assets/control_images/text-fields/Label.svg">../tools/gallery/artwork/text-fields/Label.svg</file>
         <file alias="assets/control_images/text-fields/LineEdit.svg">../tools/gallery/artwork/text-fields/LineEdit.svg</file>
         <file alias="assets/control_images/text-fields/NumberBox.svg">../tools/gallery/artwork/text-fields/NumberBox.svg</file>

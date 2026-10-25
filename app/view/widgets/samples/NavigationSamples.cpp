@@ -1,3 +1,4 @@
+#include "view/support/GalleryToast.h"
 #include "NavigationSamples.h"
 #include "SequenceSamples.h"
 
@@ -1657,23 +1658,34 @@ QVector<GallerySample> tabViewSamples()
         makeSample(QStringLiteral("tab-view-add-close"), QStringLiteral("Add, close, and tab state"),
             QStringLiteral("The add button raises addTabRequested; close buttons raise "
                            "tabCloseRequested; per-tab closable and enabled state still apply."),
-            QStringLiteral(
-                "auto* tabs = new TabView(this);\n"
-                "tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);\n"
-                "tabs->setAddTabButtonVisible(true);\n"
-                "tabs->setTabsClosable(true);\n"
-                "tabs->addTab(TabViewItem(\"Home\", Typography::Icons::Home, false));\n"
-                "tabs->addTab(TabViewItem(\"Draft\", Typography::Icons::Document));\n"
-                "tabs->addTab(TabViewItem(\"Review\", Typography::Icons::Edit));\n"
-                "tabs->addTab(TabViewItem(\"Disabled\", Typography::Icons::Lock, true, false));\n\n"
-                "connect(tabs, &TabView::addTabRequested,\n"
-                "        tabs, [tabs] {\n"
-                "            const int index = tabs->addTab(TabViewItem(\"Document\", "
-                "Typography::Icons::Document));\n"
-                "            tabs->setSelectedIndex(index);\n"
-                "        });\n"
-                "connect(tabs, &TabView::tabCloseRequested,\n"
-                "        tabs, [tabs](int index) { tabs->closeTab(index); });"),
+            QStringLiteral(R"(auto* tabs = new TabView(this);
+tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
+tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);
+tabs->setAddTabButtonVisible(true);
+tabs->setTabsClosable(true);
+tabs->addTab(TabViewItem("Home", Typography::Icons::Home, false));
+tabs->addTab(TabViewItem("Draft", Typography::Icons::Document));
+tabs->addTab(TabViewItem("Review", Typography::Icons::Edit));
+tabs->addTab(TabViewItem("Disabled", Typography::Icons::Lock, true, false));
+auto* status = new Label("Home is pinned; Disabled is not selectable.", this);
+connect(tabs, &TabView::currentChanged, status, [tabs, status](int index) {
+    if (index >= 0) status->setText("Selected " + tabs->tabAt(index).text);
+});
+connect(tabs, &TabView::addTabRequested, tabs, [tabs] {
+    static int number = 0;
+    const QString title = QString("Document %1").arg(++number);
+    tabs->setSelectedIndex(tabs->addTab(TabViewItem(title, Typography::Icons::Document)));
+    Toast::showOrUpdateToast(tabs, "gallery.action-feedback", "Added " + title,
+        Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));
+});
+connect(tabs, &TabView::tabCloseRequested, tabs, [tabs](int index) {
+    const QString title = tabs->tabAt(index).text;
+    const bool closed = tabs->closeTab(index);
+    Toast::showOrUpdateToast(tabs, "gallery.action-feedback",
+        closed ? "Closed " + title : title + " cannot be closed",
+        closed ? Toast::Informational : Toast::Warning, closed ? 2200 : 4500,
+        Toast::Top, QMargins(16, 50, 16, 16));
+});)"),
             [](QWidget* parent) {
                 auto* container = verticalGroup(parent, 8);
                 auto* tabView = new TabView(container);
@@ -1691,19 +1703,21 @@ QVector<GallerySample> tabViewSamples()
                 auto* status = makeStatusLabel(container,
                     QStringLiteral("Home is pinned; Disabled is not selectable."));
                 status->setFluentTypography(Typography::FontRole::Caption);
-                QObject::connect(tabView, &TabView::addTabRequested, tabView, [tabView, status]() {
+                QObject::connect(tabView, &TabView::addTabRequested, tabView, [tabView]() {
                     static int documentNumber = 0;
                     const QString title = QStringLiteral("Document %1").arg(++documentNumber);
                     const int index = tabView->addTab(TabViewItem(title, Typography::Icons::Document));
                     tabView->setSelectedIndex(index);
-                    status->setText(QStringLiteral("Added %1").arg(title));
+                    showGalleryToast(tabView, QStringLiteral("Added %1").arg(title), status_info::Toast::Informational);
                 });
-                QObject::connect(tabView, &TabView::tabCloseRequested, tabView, [tabView, status](int index) {
+                QObject::connect(tabView, &TabView::tabCloseRequested, tabView, [tabView](int index) {
                     const QString title = tabView->tabAt(index).text;
                     if (tabView->closeTab(index))
-                        status->setText(QStringLiteral("Closed %1").arg(title));
+                        showGalleryToast(tabView, QStringLiteral("Closed %1").arg(title),
+                            status_info::Toast::Informational);
                     else
-                        status->setText(QStringLiteral("%1 cannot be closed").arg(title));
+                        showGalleryToast(tabView, QStringLiteral("%1 cannot be closed").arg(title),
+                            status_info::Toast::Warning);
                 });
                 QObject::connect(tabView, &TabView::currentChanged, status, [status, tabView](int index) {
                     if (index >= 0)

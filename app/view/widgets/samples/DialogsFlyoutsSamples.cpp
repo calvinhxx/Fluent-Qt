@@ -1,3 +1,4 @@
+#include "view/support/GalleryToast.h"
 #include "DialogsFlyoutsSamples.h"
 
 #include <QBoxLayout>
@@ -273,26 +274,28 @@ QVector<GallerySample> contentDialogSamples()
             QStringLiteral("Result buttons and default command"),
             QStringLiteral("Primary, secondary, and close buttons update app state while "
                            "the primary command is the default action."),
-            QStringLiteral(
-                "auto* dialog = new ContentDialog(window());\n"
-                "dialog->setTitle(\"Save your work?\");\n"
-                "dialog->setPrimaryButtonText(\"Save\");\n"
-                "dialog->setSecondaryButtonText(\"Don't save\");\n"
-                "dialog->setCloseButtonText(\"Cancel\");\n"
-                "dialog->setDefaultButton(ContentDialog::Primary);\n"
-                "connect(dialog, &ContentDialog::primaryButtonClicked, status,\n"
-                "        [status] { status->setText(\"Result: Save\"); });\n"
-                "connect(dialog, &QDialog::finished, dialog,\n"
-                "        &QObject::deleteLater);\n"
-                "dialog->open();"),
+            QStringLiteral(R"(auto* dialog = new ContentDialog(window());
+dialog->setTitle("Save your work?");
+dialog->setContent(new Label("Unsaved changes in Quarterly report will be lost unless you save them."));
+dialog->setPrimaryButtonText("Save");
+dialog->setSecondaryButtonText("Don't save");
+dialog->setCloseButtonText("Cancel");
+dialog->setDefaultButton(ContentDialog::Primary);
+connect(dialog, &QDialog::finished, this, [this](int result) {
+    const QString message = result == ContentDialog::Primary ? "Save selected"
+        : result == ContentDialog::Secondary ? "Don't save selected" : "Cancelled";
+    Toast::showOrUpdateToast(this, "gallery.action-feedback", message,
+        Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));
+});
+connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);
+dialog->open();)"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
                 auto* row = horizontalGroup(surface, 12);
                 auto* button = sampleButton(row, QStringLiteral("Show dialog"));
                 button->setMinimumWidth(118);
-                auto* status = makeStatusLabel(row, QStringLiteral("Result: not shown"));
 
-                QObject::connect(button, &Button::clicked, button, [button, status]() {
+                QObject::connect(button, &Button::clicked, button, [button]() {
                     auto* dialog = themedDialog(new ContentDialog(button->window()), button);
                     dialog->setTitle(QStringLiteral("Save your work?"));
                     dialog->setContent(makeBodyLabel(nullptr,
@@ -304,27 +307,18 @@ QVector<GallerySample> contentDialogSamples()
                     dialog->setCloseButtonText(QStringLiteral("Cancel"));
                     dialog->setDefaultButton(ContentDialog::Primary);
 
-                    QObject::connect(dialog, &ContentDialog::primaryButtonClicked, status, [status]() {
-                        status->setText(QStringLiteral("Result: Save"));
-                    });
-                    QObject::connect(dialog, &ContentDialog::secondaryButtonClicked, status, [status]() {
-                        status->setText(QStringLiteral("Result: Don't save"));
-                    });
-                    QObject::connect(dialog, &ContentDialog::closeButtonClicked, status, [status]() {
-                        status->setText(QStringLiteral("Result: Cancel"));
-                    });
-
-                    QObject::connect(dialog, &QDialog::finished, status, [status](int result) {
-                        if (status->text() == QStringLiteral("Result: not shown")) {
-                            status->setText(QStringLiteral("Result: %1").arg(contentDialogResultText(result)));
-                        }
+                    QObject::connect(dialog, &QDialog::finished, button, [button](int result) {
+                        const QString message = result == ContentDialog::Primary ? QStringLiteral("Save selected")
+                            : result == ContentDialog::Secondary
+                            ? QStringLiteral("Don't save selected")
+                            : QStringLiteral("Cancelled");
+                        showGalleryToast(button, message, status_info::Toast::Informational);
                     });
                     QObject::connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);
                     dialog->open();
                 });
 
                 boxLayout(row)->addWidget(button);
-                boxLayout(row)->addWidget(status);
                 boxLayout(surface)->addWidget(row);
                 return surface;
             }),

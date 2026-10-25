@@ -7,8 +7,8 @@ from .native_samples import register_source_samples
 def _script(body: str) -> str:
     return (
         "import fluentqt\n"
-        "from PySide6.QtCore import QPointF, Qt\n"
-        "from PySide6.QtWidgets import QVBoxLayout, QWidget\n\n"
+        "from PySide6.QtCore import QMargins, QPointF, Qt\n"
+        "from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget\n\n"
         + dedent(body).strip() + "\n"
     )
 
@@ -17,6 +17,47 @@ register_source_samples(
     "chart-view",
     ("ChartModel", "ChartView", "AreaChart", "Sparkline", "ComboBox", "Button"),
     {
+        "chart-view-export": (
+            "panel",
+            _script('''
+                panel = QWidget()
+                layout = QVBoxLayout(panel)
+                chart = fluentqt.ChartView(panel)
+                chart.setMinimumHeight(320)
+                chart.setTitle("Response time")
+                model = fluentqt.ChartModel(panel)
+                model.setName("Primary")
+                model.setPoints([QPointF(0, 18), QPointF(1, 32),
+                                 QPointF(2, 24), QPointF(3, 48)])
+                chart.setModel(model)
+                copy = fluentqt.Button("Copy image", panel)
+                data = fluentqt.Button("Copy data", panel)
+                chart.setObjectName("chartExportPreview")
+                copy.setObjectName("chartCopyImageButton")
+                data.setObjectName("chartCopyDataButton")
+                def feedback(message, ok):
+                    fluentqt.Toast.showOrUpdateToast(
+                        panel, "gallery.action-feedback", message,
+                        fluentqt.Toast.Success if ok else fluentqt.Toast.Warning,
+                        2200 if ok else 4500, fluentqt.Toast.Top,
+                        QMargins(16, 50, 16, 16),
+                    )
+                copy.clicked.connect(lambda: chart.copyImage(2))
+                data.clicked.connect(lambda: chart.copyData())
+                chart.imageCopied.connect(lambda ok: feedback(
+                    "Image copied" if ok else "Could not copy image. Try again.", ok
+                ))
+                chart.dataCopied.connect(lambda ok: feedback(
+                    "Data copied" if ok else "Could not copy data. Try again.", ok
+                ))
+                layout.addWidget(chart)
+                actions = QHBoxLayout()
+                actions.addWidget(copy)
+                actions.addWidget(data)
+                actions.addStretch()
+                layout.addLayout(actions)
+            '''),
+        ),
         "chart-view-basic": (
             "chart",
             _script("""

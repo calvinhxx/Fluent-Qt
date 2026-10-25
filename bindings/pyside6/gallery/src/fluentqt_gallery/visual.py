@@ -2065,11 +2065,12 @@ class GalleryCodeBlock(fluentqt.CodeBlock):
         self.setHeaderText("Source code")
 
     def _on_copy_finished(self, success: bool) -> None:
-        toast = fluentqt.Toast.showToast(
+        toast = fluentqt.Toast.showOrUpdateToast(
             self,
+            "gallery.action-feedback",
             "Copied to clipboard" if success else "Could not copy to clipboard. Try again.",
             fluentqt.Toast.Severity.Success if success else fluentqt.Toast.Severity.Error,
-            1700,
+            2200 if success else 4500,
             fluentqt.Toast.Placement.Top,
             QMargins(16, 50, 16, 16),
         )

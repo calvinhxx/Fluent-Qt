@@ -48,11 +48,12 @@ _GLOBAL_THEME_TOKEN_CACHE: dict[str, QColor] = {}
 
 
 def _show_gallery_toast(anchor: QWidget, message: str) -> None:
-    toast = fluentqt.Toast.showToast(
+    toast = fluentqt.Toast.showOrUpdateToast(
         anchor,
+        "gallery.action-feedback",
         message,
         fluentqt.Toast.Severity.Success,
-        1700,
+        2200,
         fluentqt.Toast.Placement.Top,
         QMargins(16, 50, 16, 16),
     )

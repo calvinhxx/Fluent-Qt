@@ -43,6 +43,7 @@ from PySide6.QtCore import (
     QUrl,
 )
 from PySide6.QtGui import (
+    QAction,
     QColor,
     QCloseEvent,
     QFont,
@@ -202,6 +203,7 @@ EXPECTED_SUPPORT_TYPES = frozenset(
         "IconSize",
         "MotionPolicy",
         "PivotItem",
+        "PropertyDefinition",
         "ScrollViewZoomAwareWidget",
         "SelectorBarItem",
         "SplitViewPaneOptions",
@@ -281,8 +283,10 @@ CPP_PYTHON_MEMBER_EQUIVALENTS = frozenset(
         "titleBar",
         "titleBarHeight",
         "toInt",
+        "toMap",  # QVariantMap values arrive as native Python dictionaries.
         "toReal",  # QVariant qreal maps to a Python float.
         "toString",
+        "toStringList",  # QVariant QStringList values are native Python lists.
         "value",
         "valueToKey",
         "width",
@@ -306,10 +310,21 @@ def _python_language_member_equivalents(module: ast.AST) -> set[str]:
         for target in node.targets
     }
     for node in ast.walk(module):
+        if (isinstance(node, ast.Compare) and len(node.ops) == 1 and isinstance(node.ops[0], ast.Eq)
+                and all(isinstance(value, ast.Call) and isinstance(value.func, ast.Attribute)
+                        and value.func.attr == "casefold" and not value.args and not value.keywords
+                        for value in (node.left, node.comparators[0]))):
+            equivalents.add("compare")
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "items" and not node.args):
+            equivalents.update({"cbegin", "cend", "key"})
         if (isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant)
                 and node.value.value == ""):
             equivalents.add("clear")
         if isinstance(node, ast.Subscript):
+            if (isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute)
+                    and node.value.func.attr == "split" and node.value.args):
+                equivalents.add("section")
             if (isinstance(node.ctx, ast.Store)
                     and ast.unparse(node.value) in dictionaries
                     and not isinstance(node.slice, ast.Slice)):
@@ -328,8 +343,22 @@ def _python_language_member_equivalents(module: ast.AST) -> set[str]:
         ):
             equivalents.add({"lower": "toLower", "strip": "trimmed"}[node.func.attr])
         elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+              and node.func.id == "float" and len(node.args) == 1):
+            equivalents.add("toDouble")
+        elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
               and node.func.id == "bool" and len(node.args) == 1):
             equivalents.add("toBool")
+        elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+              and node.func.attr == "endswith" and node.args):
+            equivalents.add("endsWith")
+        elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+              and node.func.attr == "replace" and len(node.args) == 2
+              and isinstance(node.args[1], ast.Constant) and node.args[1].value == ""):
+            equivalents.add("remove")
+        elif (isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult)
+              and any(isinstance(value, ast.Constant) and isinstance(value.value, str)
+                      for value in (node.left, node.right))):
+            equivalents.add("repeated")
         elif isinstance(node, ast.Compare) and any(
             isinstance(operator, (ast.In, ast.NotIn)) for operator in node.ops
         ):
@@ -428,6 +457,474 @@ def _wait_until(
 
 
 class PythonGalleryTest(unittest.TestCase):
+    def _action_toasts(self, panel):
+        # Managed factories return the native base of the public Toast facade.
+        return [widget for widget in panel.window().findChildren(QWidget)
+                if isinstance(widget, fluentqt.Toast)
+                and widget.updateKey() == "gallery.action-feedback"]
+
+    def test_action_toasts_preserve_inline_state_and_do_not_stack(self):
+        for route, sample_id in (("chart-view", "chart-view-export"),
+                                 ("property-panel", "property-panel-chart-workbench")):
+            with self.subTest(sample=sample_id):
+                result = build_sample(route, sample_id)
+                panel = result.widget
+                panel.resize(1000, 650)
+                panel.show()
+                QApplication.processEvents()
+                chart = panel.findChild(fluentqt.ChartView)
+                summary = panel.findChild(fluentqt.Label, "chartWorkbenchStatus")
+                before = summary.text() if summary else None
+                rows = panel.layout().count()
+                chart.imageCopied.emit(True)
+                toast = next(iter(self._action_toasts(panel)), None)
+                self.assertIsNotNone(toast)
+                self.assertEqual(toast.message(), "Image copied")
+                self.assertEqual(toast.severity(), fluentqt.Toast.Success)
+                self.assertEqual(toast.duration(), 2200)
+                chart.dataCopied.emit(False)
+                self.assertIs(next(iter(self._action_toasts(panel)), None), toast)
+                self.assertEqual(len(self._action_toasts(panel)), 1)
+                self.assertEqual(toast.severity(), fluentqt.Toast.Warning)
+                self.assertEqual(toast.duration(), 4500)
+                self.assertEqual(panel.layout().count(), rows)
+                if summary:
+                    self.assertEqual(summary.text(), before)
+                self.assertIn("showOrUpdateToast", result.preview_source or result.source)
+                delete_qobject(panel)
+
+    def test_save_view_toast_preserves_project_counts(self):
+        panel = build_sample("data-grid-tool-bar", "data-grid-tool-bar-basic").widget
+        summary = panel.findChild(fluentqt.Label, "dataGridSummary")
+        before = summary.text()
+        panel.findChild(fluentqt.Button, "dataGridSaveView").click()
+        toast = next(iter(self._action_toasts(panel)), None)
+        self.assertIsNotNone(toast)
+        self.assertEqual(toast.message(), "View saved for this demo")
+        self.assertEqual(summary.text(), before)
+        panel.findChild(fluentqt.Button, "dataGridRestoreView").click()
+        self.assertEqual(toast.message(), "View restored")
+        self.assertIn("projects", summary.text())
+        self.assertEqual(len(self._action_toasts(panel)), 1)
+        delete_qobject(panel)
+
+    def test_command_results_use_toasts_and_keep_teaching_sources_aligned(self):
+        cases = (
+            ("menu", "menu-command-shortcuts", "New"),
+            ("menu", "menu-cascading-selection", "Name"),
+            ("menu-bar", "menu-bar-hosted-surface", "New"),
+            ("menu-bar", "menu-bar-access-keys", "Run"),
+            ("command-bar", "command-bar-responsive-overflow", "Add"),
+            ("command-bar-flyout", "command-bar-flyout-show-modes", "Share"),
+            ("command-bar-flyout", "command-bar-flyout-always-expanded", "Copy link"),
+        )
+        for route, sample_id, command in cases:
+            with self.subTest(sample=sample_id):
+                result = build_sample(route, sample_id)
+                panel = result.widget
+                panel.resize(800, 500)
+                panel.show()
+                QApplication.processEvents()
+                action = next(a for a in panel.findChildren(QAction) if a.text() == command)
+                action.trigger()
+                toast = next(iter(self._action_toasts(panel)), None)
+                self.assertIsNotNone(toast)
+                self.assertEqual(toast.message(), command + " selected")
+                self.assertEqual(toast.severity(), fluentqt.Toast.Informational)
+                self.assertIn("showOrUpdateToast", result.source)
+                delete_qobject(panel)
+
+    def test_property_title_preview_updates_clears_and_resets(self):
+        result = build_sample("property-panel", "property-panel-basic")
+        document = result.widget
+        properties = document.findChild(fluentqt.PropertyPanel, "documentProperties")
+        title = document.findChild(fluentqt.Label, "propertyDocumentTitle")
+        self.assertIsNotNone(properties)
+        self.assertIsNotNone(title)
+        editor = properties.editor("title")
+        document.resize(640, document.sizeHint().height())
+        document.show()
+        QApplication.processEvents()
+        self.assertLess(document.sizeHint().height(), 160)
+        editor.setFocus()
+        editor.selectAll()
+        QTest.keyClicks(editor, "Planning brief <draft>")
+        self.assertEqual(title.text(), "Planning brief <draft>")
+        self.assertEqual(title.textFormat(), Qt.PlainText)
+        editor.selectAll()
+        QTest.keyClick(editor, Qt.Key_Backspace)
+        self.assertEqual(title.text(), "Untitled document")
+        self.assertEqual(properties.value("title"), "")
+        self.assertTrue(properties.resetProperty("title"))
+        self.assertEqual(title.text(), "Quarterly report")
+        QTest.keyClicks(editor, " - project planning and review notes for the next quarter")
+        document.resize(320, document.sizeHint().height())
+        QApplication.processEvents()
+        self.assertLessEqual(document.width(), 320)
+        self.assertTrue(title.isTextElided())
+        self.assertTrue(document.rect().contains(QRect(editor.mapTo(document, QPoint()), editor.size())))
+        document.close()
+        delete_qobject(document)
+
+    def test_chart_workbench_edits_reset_and_raw_export(self):
+        result = build_sample("property-panel", "property-panel-chart-workbench")
+        panel = result.widget
+        properties = panel.findChild(fluentqt.PropertyPanel, "workbenchProperties")
+        chart = panel.findChild(fluentqt.ChartView, "workbenchChart")
+        scope = panel.findChild(fluentqt.ComboBox, "chartExportScope")
+        self.assertIsNotNone(properties)
+        self.assertIsNotNone(chart)
+        number = properties.editor("maximum")
+        panel.resize(1000, 650)
+        panel.show()
+        QApplication.processEvents()
+        number.setValue(120)
+        self.assertEqual(chart.maximumY(), 120)
+        properties.resetProperty("maximum")
+        self.assertEqual(chart.maximumY(), 80)
+        color = properties.findChild(fluentqt.ColorPicker, "propertyColor_accent")
+        color.setColor(QColor("#c24531"))
+        self.assertEqual(properties.value("accent"), QColor("#c24531"))
+        self.assertEqual(fluentqt.widget_theme_overrides(chart)["light"]["accentDefault"], "#c24531")
+        scope.setCurrentIndex(1)
+        self.assertEqual(bytes(chart.exportCsv(True)).count(b"\n"), 5)
+        self.assertEqual(bytes(chart.exportCsv()).count(b"\n"), 8)
+        self.assertFalse(chart.exportImage(2).isNull())
+        for width in (1000, 420, 1000):
+            panel.resize(width, 1000 if width < 760 else 650)
+            QApplication.processEvents()
+            self.assertIs(properties.editor("maximum"), number)
+            chart_rect = QRect(chart.mapTo(panel, QPoint()), chart.size())
+            properties_rect = QRect(properties.mapTo(panel, QPoint()), properties.size())
+            self.assertTrue(panel.rect().contains(chart_rect))
+            self.assertTrue(panel.rect().contains(properties_rect))
+            self.assertFalse(chart_rect.intersects(properties_rect))
+        self.assertIn("exportCsv", result.source)
+        panel.close()
+        delete_qobject(panel)
+
+    def test_atomic_examples_keep_table_and_basic_controls_independent(self):
+        from fluentqt_gallery.native_samples import build_native_sample
+
+        for sample_id in ("data-grid-pinned-columns", "data-grid-large-read-only",
+                          "data-grid-column-selection", "data-grid-edit-validation"):
+            result = build_native_sample("data-grid", sample_id, None)
+            try:
+                self.assertIsInstance(result.widget, fluentqt.DataGrid)
+                self.assertFalse(result.widget.isScrollChainingEnabled())
+                self.assertFalse(result.widget.findChildren(fluentqt.DataGridToolBar))
+                self.assertNotIn("DataGridToolBar", result.source)
+                if sample_id == "data-grid-pinned-columns":
+                    self.assertTrue(result.widget.isColumnPinned(0))
+                    self.assertEqual(result.widget.model().rowCount(), 2)
+                if sample_id == "data-grid-large-read-only":
+                    from PySide6.QtGui import QFontMetricsF
+                    model = result.widget.model()
+                    metrics = QFontMetricsF(model.index(77, 4).data(Qt.ItemDataRole.FontRole))
+                    values = [model.index(row, 4).data() for row in range(77, 80)]
+                    self.assertEqual(values, ["119 MB", "120 MB", "121 MB"])
+                    self.assertAlmostEqual(metrics.horizontalAdvance(values[0]), metrics.horizontalAdvance(values[1]))
+                    self.assertAlmostEqual(metrics.horizontalAdvance(values[1]), metrics.horizontalAdvance(values[2]))
+                if sample_id == "data-grid-column-selection":
+                    self.assertEqual(result.widget.model().index(0, 0).data(), "Aurora")
+                    self.assertEqual(result.widget.horizontalHeader().sortIndicatorOrder(), Qt.SortOrder.AscendingOrder)
+                if sample_id == "data-grid-edit-validation":
+                    grid = result.widget
+                    grid.show()
+                    index = grid.model().index(2, 2)
+                    grid.setCurrentIndex(index)
+                    grid.edit(index)
+                    self.app.processEvents()
+                    editor = grid.findChild(fluentqt.LineEdit)
+                    self.assertIsNotNone(editor)
+                    self.assertFalse(editor.isClearButtonEnabled())
+                    self.assertFalse(editor.isFrameVisible())
+                    self.assertEqual(editor.geometry(), grid.visualRect(index).adjusted(4, 2, -4, -2))
+                    editor.setText("Project scope")
+                    QTest.keyClick(editor, Qt.Key.Key_Return)
+                    self.app.processEvents()
+                    self.assertEqual(index.data(), "Project scope")
+            finally:
+                delete_qobject(result.widget)
+
+        result = build_native_sample("tree-select", "tree-select-basic", None)
+        try:
+            self.assertIsInstance(result.widget, fluentqt.TreeSelect)
+            self.assertEqual(result.widget.selectedKeys(), ["client"])
+            result.widget.setSelectedKeys(["platform"])
+            self.assertEqual(result.widget.selectedKeys(), ["platform"])
+            self.assertLessEqual(len(result.source.splitlines()), 25)
+        finally:
+            delete_qobject(result.widget)
+
+        result = build_native_sample("tag-input", "tag-input-basic", None)
+        try:
+            self.assertIsInstance(result.widget, fluentqt.TagInput)
+            self.assertEqual(result.widget.selectedTexts(), ["Qt"])
+            self.assertLessEqual(len(result.source.splitlines()), 10)
+        finally:
+            delete_qobject(result.widget)
+
+        result = build_native_sample("list-detail-view", "list-detail-basic", None)
+        try:
+            panel = result.widget
+            view = panel.findChild(fluentqt.ListDetailView)
+            width = panel.findChild(fluentqt.ComboBox)
+            editor = view.findChild(fluentqt.LineEdit)
+            editor.setText("Retained draft")
+            panel.resize(700, 220)
+            panel.show()
+            QApplication.processEvents()
+            self.assertFalse(view.isCompact())
+            width.setCurrentIndex(1)
+            QApplication.processEvents()
+            self.assertTrue(view.isCompact())
+            self.assertTrue(view.listPane().isVisible())
+            self.assertFalse(view.detailPane().isVisible())
+            buttons = {button.text(): button for button in view.findChildren(fluentqt.Button)}
+            buttons["Open meeting note"].click()
+            self.assertEqual(view.currentPane(), fluentqt.ListDetailView.Detail)
+            self.assertTrue(buttons["Back to notes"].isVisible())
+            buttons["Back to notes"].click()
+            self.assertEqual(view.currentPane(), fluentqt.ListDetailView.List)
+            buttons["Open meeting note"].click()
+            self.assertEqual(editor.text(), "Retained draft")
+            width.setCurrentIndex(0)
+            QApplication.processEvents()
+            self.assertFalse(view.isCompact())
+            self.assertTrue(view.listPane().isVisible())
+            self.assertTrue(view.detailPane().isVisible())
+            self.assertFalse(buttons["Back to notes"].isVisible())
+            self.assertEqual(editor.text(), "Retained draft")
+        finally:
+            result.widget.close()
+            delete_qobject(result.widget)
+
+    def test_tree_select_project_teams_share_directory_and_paths(self):
+        from fluentqt_gallery.native_samples import build_native_sample
+        from fluentqt_gallery.native_samples_basic import team_selection_source_files
+        result = build_native_sample("tree-select", "tree-select-project-teams", None)
+        panel = result.widget
+        owner = panel.findChild(fluentqt.TreeSelect, "projectOwningTeam")
+        teams = panel.findChild(fluentqt.TreeSelect, "projectCollaboratingTeams")
+        try:
+            self.assertIs(owner.model(), teams.model())
+            self.assertEqual(owner.selectedKeys(), ["client"])
+            teams.setSelectedKeys(["product-design", "brand-design"])
+            self.assertEqual(teams.selectedCount(), 2)
+            self.assertNotEqual(teams.selectedItems()[0]["path"], teams.selectedItems()[1]["path"])
+            panel.findChild(fluentqt.CheckBox, "teamReadOnly").setChecked(True)
+            self.assertTrue(owner.isReadOnly())
+            self.assertTrue(teams.isReadOnly())
+            files = team_selection_source_files(result)
+            self.assertEqual(len(files), 1)
+            self.assertEqual(files[0]["usage_snippet"], result.source)
+            self.assertLess(len(result.source.splitlines()), 25)
+            namespace = {"__name__": "tree_select_source_test"}
+            exec(compile(files[0]["code"], files[0]["name"], "exec"), namespace)
+            copied = namespace["root"]
+            try:
+                copied_owner = copied.findChild(fluentqt.TreeSelect, "projectOwningTeam")
+                self.assertEqual(copied_owner.selectedKeys(), ["client"])
+            finally:
+                with patch("sys.excepthook") as exception_hook:
+                    namespace.clear()
+                    delete_qobject(copied)
+                    QApplication.processEvents()
+                    exception_hook.assert_not_called()
+        finally:
+            panel.close()
+            delete_qobject(panel)
+
+    def test_tag_input_project_members_search_and_resolution(self):
+        from fluentqt_gallery.native_samples import build_native_sample
+        from PySide6.QtTest import QTest
+        result = build_native_sample("tag-input", "tag-input-project-members", None)
+        panel = result.widget
+        panel.resize(440, 400)
+        panel.show()
+        panel.activateWindow()
+        box = panel.findChild(fluentqt.TagInput, "projectMemberInput")
+        try:
+            box.setFocus()
+            QApplication.processEvents()
+            self.assertEqual(box.selectedKeys(), ["chen-design", "lin"])
+            self.assertEqual(box.selectedTexts(), ["Chen Chen · Design team", "Lin Xiao"])
+            box.setText("Chen Chen")
+            box.requestSuggestions()
+            self.assertTrue(_wait_until(lambda: box.loadState() == fluentqt.AutoSuggestBox.LoadState.Ready))
+            self.assertEqual(box.suggestionCount(), 2)
+            QTest.keyClick(box, Qt.Key_Down)
+            self.assertEqual(box.selectedCount(), 2)
+            QTest.keyClick(box, Qt.Key_Return)
+            self.assertEqual(box.selectedKeys(), ["chen-design", "lin", "chen-dev"])
+            self.assertEqual(box.selectedTexts(), ["Chen Chen · Design team", "Lin Xiao", "Chen Chen · Engineering team"])
+            self.assertEqual(box.text(), "")
+            box.tokensSubmitted.emit(["alex@example.com", "alex@example.com", "unknown@example.com"])
+            self.assertEqual(box.selectedCount(), 4)
+            self.assertEqual(box.text(), "unknown@example.com")
+            box.removeItem("chen-dev")
+            box.tokensSubmitted.emit(["chen.dev@example.com"])
+            self.assertEqual(box.selectedTexts()[-1], "Chen Chen · Engineering team")
+            box.cancelSuggestions()
+            panel.findChild(fluentqt.CheckBox, "tagFailNext").setChecked(True)
+            box.setText("wang")
+            box.requestSuggestions()
+            self.assertTrue(_wait_until(lambda: box.loadState() == fluentqt.AutoSuggestBox.LoadState.Failed))
+            self.assertEqual(box.selectedCount(), 4)
+            box.retrySuggestions()
+            self.assertTrue(_wait_until(lambda: box.loadState() == fluentqt.AutoSuggestBox.LoadState.Ready))
+            self.assertEqual(box.suggestionCount(), 1)
+            box.setMaximumWidth(280)
+            panel.resize(320, 400)
+            QApplication.processEvents()
+            self.assertEqual(box.selectedCount(), 4)
+            self.assertLessEqual(box.width(), 280)
+        finally:
+            panel.close()
+            delete_qobject(panel)
+
+    def test_async_search_pages_retry_and_stale_results(self):
+        from fluentqt_gallery.native_samples import build_native_sample
+        from PySide6.QtTest import QTest
+        result = build_native_sample("auto-suggest-box", "auto-suggest-box-async", None)
+        panel = result.widget
+        panel.resize(480, 420)
+        panel.show()
+        panel.activateWindow()
+        QTest.qWaitForWindowActive(panel)
+        box = panel.findChild(fluentqt.AutoSuggestBox, "asyncProjectSearch")
+        try:
+            box.setFocus()
+            box.setText("A")
+            box.requestSuggestions()
+            box.setText("Canvas")
+            box.requestSuggestions()
+            _qwait(1100)
+            self.assertEqual(panel.property("staleResponsesIgnored"), 1)
+            self.assertEqual(box.suggestionCount(), 2)
+            self.assertEqual(box.suggestionModel().index(0, 0).data(), "Canvas")
+            box.setText("Aurora")
+            box.requestSuggestions()
+            _qwait(400)
+            self.assertEqual(box.suggestionCount(), 4)
+            self.assertTrue(box.hasMoreSuggestions())
+            box.loadMoreSuggestions()
+            self.assertEqual(box.suggestionCount(), 4)
+            _qwait(400)
+            self.assertEqual(box.suggestionCount(), 8)
+            self.assertFalse(box.hasMoreSuggestions())
+            box.cancelSuggestions()
+            panel.findChild(fluentqt.CheckBox, "asyncFailNext").setChecked(True)
+            box.setText("Canvas")
+            box.requestSuggestions()
+            _qwait(400)
+            self.assertEqual(box.loadState(), fluentqt.AutoSuggestBox.LoadState.Failed)
+            box.retrySuggestions()
+            _qwait(400)
+            self.assertEqual(box.loadState(), fluentqt.AutoSuggestBox.LoadState.Ready)
+            self.assertEqual(box.suggestionCount(), 2)
+            box.setText("zzz")
+            box.requestSuggestions()
+            _qwait(400)
+            self.assertEqual(box.suggestionCount(), 0)
+            box.setText("A")
+            box.requestSuggestions()
+            box.cancelSuggestions()
+            _qwait(950)
+            self.assertFalse(box.isSuggestionListOpen())
+            self.assertEqual(box.suggestionCount(), 0)
+        finally:
+            panel.close()
+            delete_qobject(panel)
+
+    def test_list_detail_file_browser_preserves_live_state(self):
+        from fluentqt_gallery.native_samples import build_native_sample
+        from fluentqt_gallery.native_samples_layout import file_browser_source_files
+        result = build_native_sample("list-detail-view", "list-detail-file-browser", None)
+        panel = result.widget
+        panel.resize(840, 440)
+        panel.show()
+        panel.activateWindow()
+        QApplication.processEvents()
+        view = panel.findChild(fluentqt.ListDetailView, "fileBrowserLayout")
+        files = panel.findChild(fluentqt.ListView, "fileBrowserList")
+        editor = panel.findChild(fluentqt.TextEdit, "fileBrowserEditor")
+        narrow = panel.findChild(fluentqt.Button, "fileBrowserNarrow")
+        back = panel.findChild(fluentqt.Button, "fileBrowserBack")
+        files.setCurrentIndex(files.model().index(20, 0))
+        files.verticalScrollBar().setValue(300)
+        offset = files.verticalScrollBar().value()
+        editor.setPlainText("A draft across layouts")
+        narrow.click()
+        QApplication.processEvents()
+        self.assertTrue(view.isCompact())
+        self.assertTrue(back.isVisible())
+        back.click()
+        QApplication.processEvents()
+        self.assertEqual(files.currentIndex().row(), 20)
+        self.assertEqual(files.verticalScrollBar().value(), offset)
+        from PySide6.QtTest import QTest
+        files.setFocus()
+        QTest.keyClick(files, Qt.Key_Return)
+        QApplication.processEvents()
+        self.assertEqual(view.currentPane(), fluentqt.ListDetailView.Pane.Detail)
+        narrow.click()
+        QApplication.processEvents()
+        self.assertFalse(view.isCompact())
+        self.assertEqual(editor.toPlainText(), "A draft across layouts")
+        self.assertEqual(files.model().index(20, 0).data(Qt.UserRole), "A draft across layouts")
+        source = file_browser_source_files(result)[0]
+        self.assertIn("class FileBrowserSample", source["code"])
+        self.assertIn("setCompactThreshold(640)", source["usage_snippet"])
+        panel.close()
+        delete_qobject(panel)
+
+    def test_file_browser_search_create_and_save_keep_the_draft(self):
+        from fluentqt_gallery.native_samples import build_native_sample
+        from PySide6.QtGui import QTextCursor
+        result = build_native_sample("list-detail-view", "list-detail-file-browser", None)
+        panel = result.widget
+        panel.resize(960, 644)
+        panel.show()
+        QApplication.processEvents()
+        files = panel.findChild(fluentqt.ListView, "fileBrowserList")
+        editor = panel.findChild(fluentqt.TextEdit, "fileBrowserEditor")
+        search = panel.findChild(fluentqt.LineEdit, "fileBrowserSearch")
+        save = panel.findChild(fluentqt.Button, "fileBrowserSave")
+        create = panel.findChild(fluentqt.Button, "fileBrowserNew")
+        self.assertEqual(files.currentIndex().data(), "layout-notes.md")
+        self.assertFalse(editor.isAutoResizeEnabled())
+        self.assertFalse(editor.isFrameVisible())
+        editor.setPlainText("A searchable draft")
+        cursor = editor.textCursor()
+        cursor.setPosition(2)
+        cursor.setPosition(12, QTextCursor.KeepAnchor)
+        editor.setTextCursor(cursor)
+        search.setText("LAYOUT")
+        self.assertEqual(files.model().rowCount(), 1)
+        search.setText("missing file")
+        self.assertEqual(files.model().rowCount(), 0)
+        self.assertEqual(editor.toPlainText(), "A searchable draft")
+        search.clear()
+        self.assertEqual(files.currentIndex().data(), "layout-notes.md")
+        self.assertEqual(editor.textCursor().selectedText(), "searchable")
+        save.click()
+        self.assertFalse(save.isEnabled())
+        self.assertEqual(files.currentIndex().data(Qt.UserRole + 1), "Just now")
+        count = files.model().rowCount()
+        create.click()
+        self.assertEqual(files.model().rowCount(), count + 1)
+        self.assertEqual(files.currentIndex().data(), "untitled-1.md")
+        self.assertTrue(save.isEnabled())
+        files.setCurrentIndex(files.model().index(2, 0))
+        self.assertEqual(editor.toPlainText(), "A searchable draft")
+        files.setCurrentIndex(files.model().index(0, 0))
+        self.assertTrue(editor.isReadOnly())
+        self.assertFalse(save.isEnabled())
+        panel.close()
+        delete_qobject(panel)
+
     def test_runtime_package_matches_gallery_sources(self):
         stale_files = [
             source.name
@@ -1952,8 +2449,8 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             result = build_sample("data-grid", sample_id)
             try:
                 self.assertIsInstance(result.widget, fluentqt.DataGrid)
-                self.assertTrue(result.widget.isScrollChainingEnabled())
-                self.assertIn(
+                self.assertFalse(result.widget.isScrollChainingEnabled())
+                self.assertNotIn(
                     "grid.setScrollChainingEnabled(True)",
                     result.source,
                 )
@@ -3289,6 +3786,14 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 
     def test_value_member_parity_requires_python_operations(self):
         self.assertEqual(
+            _python_language_member_equivalents(ast.parse("match = token.casefold() == email.casefold()")),
+            {"compare"},
+        )
+        self.assertEqual(
+            _python_language_member_equivalents(ast.parse("operation = token.casefold\nnote = 'compare()'")),
+            set(),
+        )
+        self.assertEqual(
             _python_language_member_equivalents(ast.parse(
                 'self.editors = {}\nself.editors[key] = editor\n'
                 'value = editor.text().strip()\n'
@@ -3330,6 +3835,20 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 'self.error = ""\ndark = bool(theme.property("dark"))\n'
             )),
             {"clear", "toBool"},
+        )
+        self.assertEqual(
+            _python_language_member_equivalents(ast.parse(
+                'saved = text.split("Next:")[0]\n'
+                'markdown = name.endswith(".md")\nbody = "notes" * 40\n'
+            )),
+            {"section", "first", "endsWith", "repeated"},
+        )
+        self.assertEqual(
+            _python_language_member_equivalents(ast.parse(
+                'parts = text.split("Next:")\noperation = name.endswith\n'
+                'count = 3 * 40\nnote = "section endsWith repeated"\n'
+            )),
+            set(),
         )
 
     def test_preview_source_executes_and_displayed_source_stays_concise(self):
@@ -3681,8 +4200,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         contract_source = (result.preview_source
                                            if entry.category_id in {"spatial", "qml-bridge"}
                                            else result.source)
-                        if sample.id in {"field-connection-form", "command-palette-shared-actions", "popup-modal-dim",
-                                         "dialog-backdrop-effects", "drawer-view-backdrop-effects"}:
+                        if sample.id in {"tree-select-project-teams", "tag-input-project-members", "auto-suggest-box-async", "field-connection-form", "list-detail-file-browser", "data-grid-tool-bar-basic", "command-palette-shared-actions", "popup-modal-dim",
+                                         "dialog-backdrop-effects", "drawer-view-backdrop-effects",
+                                         "property-panel-chart-workbench"}:
                             contract_source = result.preview_source
                         if entry.route_id == "qml-view":
                             from fluentqt.qmlbridge import QmlView
@@ -5191,9 +5711,9 @@ with (
             if not SPATIAL_AVAILABLE:
                 self.assertEqual("plugins" in pane._route_items, QML_BRIDGE_AVAILABLE)
                 self.assertEqual("plugins" in window._top_main_navigation_pane._buttons, QML_BRIDGE_AVAILABLE)
-                self.assertEqual(len(ROUTES), 110 + 2 * QML_BRIDGE_AVAILABLE)
                 return
-            self.assertEqual(len(ROUTES), 114 + 2 * QML_BRIDGE_AVAILABLE)
+            # Complete route/count parity is covered against the generated
+            # contract; this test owns the plugin navigation hierarchy.
             self.assertTrue(CATEGORY_BY_ID["spatial"].plugin)
             plugins = pane._route_items["plugins"]
             spatial = pane._route_items["spatial"]
@@ -6335,6 +6855,43 @@ with (
         expected = QColor(210, 35, 45)
         self.assertEqual(image.pixelColor(0, 0), expected)
         self.assertEqual(image.pixelColor(79, 39), expected)
+
+
+    def test_review_file_browser_search_uses_the_effective_theme(self):
+        from fluentqt_gallery.native_samples import build_native_sample
+        from fluentqt import _fluentqt as native
+        from fluentqt.foundation import ThemeTokens
+        original = fluentqt.current_theme()
+        result = build_native_sample("list-detail-view", "list-detail-file-browser", None)
+        panel = result.widget
+        search = panel.findChild(fluentqt.LineEdit, "fileBrowserSearch")
+        try:
+            for theme in (fluentqt.Theme.Light, fluentqt.Theme.Dark, fluentqt.Theme.HighContrast):
+                fluentqt.set_theme(theme)
+                QApplication.processEvents()
+                expected = QColor(panel.theme_tokens().colors.textSecondary)
+                actual = QColor(ThemeTokens(native.themeTokensForWidgetForBinding(search)).colors.textTertiary)
+                self.assertEqual(actual, expected)
+        finally:
+            fluentqt.set_theme(original)
+            delete_qobject(panel)
+
+    def test_review_full_source_entry_point_does_not_rewrite_literals(self):
+        from fluentqt_gallery.samples import PreviewResult
+        from fluentqt_gallery.native_source_files import source_files_for_sample
+        widget = QWidget()
+        source = ("import fluentqt\nfrom PySide6.QtWidgets import QWidget\n"
+                  "root = QWidget()\ncaption = '    panel.show()'\n")
+        result = PreviewResult(widget, source, ())
+        files = source_files_for_sample("tag-input-project-members", result)
+        self.assertEqual(len(files), 1)
+        code = files[0]["code"]
+        self.assertIn("caption = '    panel.show()'", code)
+        self.assertIn('if __name__ == "__main__":\n    root.show()', code)
+        compile(code, files[0]["name"], "exec")
+        self.assertIsNone(source_files_for_sample("a-short-example", result))
+        delete_qobject(widget)
+
 
 
 class _GalleryTestResult(unittest.TextTestResult):
