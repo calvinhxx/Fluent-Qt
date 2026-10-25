@@ -1,3 +1,4 @@
+#include "components/foundation/private/ControlMetrics_p.h"
 #include "compatibility/PaintCompat.h"
 #include "compatibility/private/WidgetPlatformCompat_p.h"
 #include "Button.h"
@@ -368,6 +369,8 @@ QSize Button::sizeHint() const
     // 2. Include every explicit text line in the preferred height.
     // zh_CN: 建议高度包含全部显式换行的文本。
     int dynamicHeight = textSize.height() + vPadding * 2;
+    if (m_size == StandardSize && !txt.contains(QLatin1Char('\n')))
+        dynamicHeight = ::fluent::detail::standardControlHeight(fm);
 
     // 3. Total width required by the content. zh_CN: 计算内容所需的总宽度。
     // Prefer the icon font, falling back to the regular icon. zh_CN: 优先使用 iconfont，否则使用普通图标。
