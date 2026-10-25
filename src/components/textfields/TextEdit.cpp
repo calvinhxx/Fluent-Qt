@@ -1,3 +1,4 @@
+#include "components/foundation/private/TextInputFrame_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "TextEdit.h"
 #include "components/foundation/private/MotionPolicy_p.h"
@@ -11,7 +12,6 @@
 #include <QInputMethodEvent>
 #include <QPaintEvent>
 #include <QPainter>
-#include <QPainterPath>
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QTextBlock>
@@ -365,7 +365,12 @@ TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
             return;
         m_vScrollBar->setRange(innerVBar->minimum(), innerVBar->maximum());
         m_vScrollBar->setPageStep(innerVBar->pageStep());
-        // Scroll bar visibility is owned by updateHeightForContent.
+        if (!m_autoResizeEnabled) {
+            m_scrollEnabled = innerVBar->maximum() > innerVBar->minimum();
+            m_vScrollBar->setVisible(m_scrollEnabled);
+            updateEditorGeometry();
+        }
+        // Auto-resizing scroll bar visibility is owned by updateHeightForContent.
         // zh_CN: 滚动条可见性由 updateHeightForContent 统一管理。
     });
     connect(innerVBar, &QScrollBar::valueChanged, this, [this](int v) {
@@ -383,6 +388,54 @@ TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
 }
 
 // ── Text API. zh_CN: 文本 API ───────────────────────────────────────────────────
+
+void TextEdit::setAutoResizeEnabled(bool enabled)
+{
+    if (m_autoResizeEnabled == enabled)
+        return;
+    m_autoResizeEnabled = enabled;
+    requestSynchronousHeightSettlement(this);
+    if (!enabled) {
+        m_autoResizePolicy = sizePolicy();
+        heightAnimationFor(this)->stop();
+        heightAnimationFor(this)->targetHeight = 0;
+        setMinimumHeight(0);
+        setMaximumHeight(QWIDGETSIZE_MAX);
+        auto policy = m_autoResizePolicy;
+        policy.setHorizontalPolicy(QSizePolicy::Expanding);
+        policy.setVerticalPolicy(QSizePolicy::Expanding);
+        setSizePolicy(policy);
+    } else {
+        auto temporary = m_autoResizePolicy;
+        temporary.setHorizontalPolicy(QSizePolicy::Expanding);
+        temporary.setVerticalPolicy(QSizePolicy::Expanding);
+        if (sizePolicy() == temporary)
+            setSizePolicy(m_autoResizePolicy);
+    }
+    updateHeightForContent();
+    updateGeometry();
+    emit autoResizeEnabledChanged();
+}
+
+void TextEdit::setFrameVisible(bool visible)
+{
+    if (m_frameVisible == visible)
+        return;
+    m_frameVisible = visible;
+    update();
+    emit frameVisibleChanged();
+}
+
+QTextCursor TextEdit::textCursor() const
+{
+    return m_editor->textCursor();
+}
+
+void TextEdit::setTextCursor(const QTextCursor& cursor)
+{
+    if (cursor.document() == m_editor->document())
+        m_editor->setTextCursor(cursor);
+}
 
 void TextEdit::setPlainText(const QString& text)
 {
@@ -514,13 +567,20 @@ void TextEdit::paintEvent(QPaintEvent* event)
 void TextEdit::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
+    updateEditorGeometry();
+    if (event->oldSize().width() != event->size().width())
+        scheduleHeightForContentUpdate();
+}
+
+void TextEdit::updateEditorGeometry()
+{
     if (m_editor) {
         const QRect previousCaret = m_editor->cursorRect();
         const QRect previousViewport = m_editor->viewport()->rect();
         const bool hadOversizedVisibleCaret = previousCaret.height() > previousViewport.height()
             && previousCaret.intersects(previousViewport);
         QRect r = rect();
-        int sbw = (m_vScrollBar && m_vScrollBar->isVisible()) ? m_vScrollBar->thickness() : 0;
+        int sbw = (m_vScrollBar && m_scrollEnabled) ? m_vScrollBar->thickness() : 0;
         m_editor->setGeometry(r.adjusted(0, 0, -sbw, 0));
         // A fallback glyph can make the caret taller than the old viewport.
         // Qt scrolls its bottom into view before our queued height settles;
@@ -537,65 +597,23 @@ void TextEdit::resizeEvent(QResizeEvent* event)
             int h = r.height() - 4;
             m_vScrollBar->setGeometry(x, y, m_vScrollBar->thickness(), h);
         }
-        if (event->oldSize().width() != event->size().width())
-            scheduleHeightForContentUpdate();
     }
 }
 
 void TextEdit::paintFrame(QPainter& painter)
 {
-    const auto& colors = themeColorsRef();
-    const auto& radius = themeRadius();
-
-    // Fluent field treatment: fill + border + bottom accent underline
-    // on focus. zh_CN: Fluent 字段使用填充、边框及聚焦时的底部强调线。
-    QRectF bgRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
-
-    QColor bgColor, borderColor, bottomBorderColor;
-    int bottomBorderWidth = m_unfocusedBorderWidth;
-    if (!isEnabled()) {
-        bgColor = colors.controlDisabled;
-        borderColor = colors.strokeDivider;
-        bottomBorderColor = borderColor;
-    } else if (isReadOnly()) {
-        bgColor = colors.controlAltSecondary;
-        borderColor = colors.strokeDefault;
-        bottomBorderColor = colors.strokeDivider;
-    } else if (m_isFocused) {
-        bgColor = effectiveThemeUsesDarkAppearance() ? colors.bgSolid : colors.controlDefault;
-        borderColor = colors.strokeSecondary;
-        bottomBorderColor = colors.accentDefault;
-        bottomBorderWidth = m_focusedBorderWidth;
-    } else if (m_isHovered) {
-        bgColor = colors.controlSecondary;
-        borderColor = colors.strokeSecondary;
-        bottomBorderColor = colors.strokeSecondary;
-    } else {
-        bgColor = colors.controlDefault;
-        borderColor = colors.strokeDefault;
-        bottomBorderColor = colors.strokeDivider;
-    }
-
-    qreal r = radius.control;
-    QPainterPath framePath;
-    framePath.addRoundedRect(bgRect, r, r);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(bgColor);
-    painter.drawPath(framePath);
-    painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(borderColor, 1));
-    painter.drawPath(framePath);
-
-    if (isEnabled() && !isReadOnly()) {
-        QPen pen(bottomBorderColor, bottomBorderWidth);
-        pen.setCapStyle(Qt::RoundCap);
-        painter.setPen(pen);
-        qreal bottomY = bgRect.bottom() - (bottomBorderWidth > 1 ? (bottomBorderWidth - 1) / 2.0 : 0);
-        QPainterPath bottomPath;
-        bottomPath.moveTo(bgRect.left() + r, bottomY);
-        bottomPath.lineTo(bgRect.right() - r, bottomY);
-        painter.drawPath(bottomPath);
-    }
+    if (!m_frameVisible)
+        return;
+    ::fluent::detail::TextInputFrameState state;
+    state.enabled = isEnabled();
+    state.readOnly = isReadOnly();
+    state.focused = m_isFocused;
+    state.hovered = m_isHovered;
+    state.pressed = false;
+    state.dark = effectiveThemeUsesDarkAppearance();
+    state.normalWidth = m_unfocusedBorderWidth;
+    state.focusedWidth = m_focusedBorderWidth;
+    ::fluent::detail::paintTextInputFrame(painter, QRectF(rect()), themeColorsRef(), themeRadius().control, state);
 }
 
 void TextEdit::enterEvent(FluentEnterEvent* event)
@@ -943,6 +961,12 @@ void TextEdit::updateHeightForContent()
 {
     if (!m_editor || m_updatingHeight)
         return;
+    if (!m_autoResizeEnabled) {
+        m_scrollEnabled = m_editor->verticalScrollBar()->maximum() > 0;
+        m_vScrollBar->setVisible(m_scrollEnabled);
+        updateEditorGeometry();
+        return;
+    }
     m_updatingHeight = true;
 
     // Asking the document layout for its size flushes any pending width-driven

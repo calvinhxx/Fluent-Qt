@@ -1255,6 +1255,12 @@
     ],
     "TextEdit": [
       "appendPlainText",
+      "isAutoResizeEnabled",
+      "isFrameVisible",
+      "setAutoResizeEnabled",
+      "setFrameVisible",
+      "setTextCursor",
+      "textCursor",
       "verticalScrollBar"
     ],
     "ScrollView": [
