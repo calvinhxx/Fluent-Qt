@@ -23,6 +23,7 @@
 #include <QTextCursor>
 #include <QTextEdit>
 #include <QTimer>
+#include <QVBoxLayout>
 #include <QWheelEvent>
 #include <QtMath>
 #include <QtTest/QSignalSpy>
@@ -1252,4 +1253,110 @@ TEST_F(TextEditTest, VisualCheck)
     }
 
     qApp->exec();
+}
+
+TEST_F(TextEditTest, LayoutOwnedHeightPreservesSelectionUndoAndScroll)
+{
+    QWidget host;
+    auto* layout = new QVBoxLayout(&host);
+    layout->setContentsMargins(0, 0, 0, 0);
+    auto* edit = new TextEdit(&host);
+    edit->setAutoResizeEnabled(false);
+    edit->setFrameVisible(false);
+    edit->setContentMargins(QMargins(24, 24, 24, 24));
+    edit->setLineHeight(24);
+    layout->addWidget(edit);
+    host.resize(600, 400);
+    host.show();
+    edit->setPlainText(QStringLiteral("A persistent line\n").repeated(80));
+    QApplication::processEvents();
+    EXPECT_EQ(edit->size(), host.size());
+    QTextCursor cursor = edit->textCursor();
+    cursor.setPosition(2);
+    cursor.insertText(QStringLiteral("draft"));
+    edit->setTextCursor(cursor);
+    cursor.setPosition(2);
+    cursor.setPosition(7, QTextCursor::KeepAnchor);
+    edit->setTextCursor(cursor);
+    edit->verticalScrollBar()->setValue(120);
+    const QString text = edit->toPlainText();
+    host.resize(360, 320);
+    QApplication::processEvents();
+    EXPECT_EQ(edit->size(), host.size());
+    EXPECT_EQ(edit->toPlainText(), text);
+    EXPECT_EQ(edit->textCursor().selectedText(), QStringLiteral("draft"));
+    EXPECT_EQ(edit->verticalScrollBar()->value(), 120);
+    EXPECT_TRUE(edit->textCursor().document()->isUndoAvailable());
+    EXPECT_GT(edit->verticalScrollBar()->maximum(), 0);
+    EXPECT_EQ(edit->minimumHeight(), 0);
+    EXPECT_EQ(edit->maximumHeight(), QWIDGETSIZE_MAX);
+    edit->setAutoResizeEnabled(true);
+    QApplication::processEvents();
+    EXPECT_EQ(edit->minimumHeight(), edit->maximumHeight());
+}
+
+TEST_F(TextEditTest, EmbeddedEditorOptionsAreIdempotentAndCursorIsDocumentBound)
+{
+    TextEdit edit;
+    EXPECT_TRUE(edit.isAutoResizeEnabled());
+    EXPECT_TRUE(edit.isFrameVisible());
+    QSignalSpy frame(&edit, &TextEdit::frameVisibleChanged);
+    QSignalSpy height(&edit, &TextEdit::autoResizeEnabledChanged);
+    edit.setFrameVisible(false);
+    edit.setFrameVisible(false);
+    edit.setAutoResizeEnabled(false);
+    edit.setAutoResizeEnabled(false);
+    EXPECT_EQ(frame.count(), 1);
+    EXPECT_EQ(height.count(), 1);
+    edit.setPlainText(QStringLiteral("Own document"));
+    QTextCursor cursor = edit.textCursor();
+    cursor.setPosition(4);
+    edit.setTextCursor(cursor);
+    QTextDocument other;
+    other.setPlainText(QStringLiteral("Foreign document"));
+    edit.setTextCursor(QTextCursor(&other));
+    EXPECT_EQ(edit.textCursor().position(), 4);
+    EXPECT_EQ(edit.toPlainText(), QStringLiteral("Own document"));
+}
+
+TEST_F(TextEditTest, LayoutOwnedEditorReservesScrollbarWithoutOuterResize)
+{
+    TextEdit edit;
+    edit.setAutoResizeEnabled(false);
+    edit.resize(360, 200);
+    edit.show();
+    edit.setPlainText(QStringLiteral("Short note"));
+    QApplication::processEvents();
+    const QSize size = edit.size();
+    EXPECT_EQ(edit.focusProxy()->width(), edit.width());
+    edit.setPlainText(QStringLiteral("A line that makes the document overflow.\n").repeated(80));
+    QApplication::processEvents();
+    EXPECT_EQ(edit.size(), size);
+    EXPECT_LT(edit.focusProxy()->width(), edit.width());
+    EXPECT_EQ(edit.focusProxy()->width() + edit.verticalScrollBar()->thickness(), edit.width());
+    edit.setPlainText(QStringLiteral("Short again"));
+    QApplication::processEvents();
+    EXPECT_EQ(edit.size(), size);
+    EXPECT_EQ(edit.focusProxy()->width(), edit.width());
+}
+
+TEST_F(TextEditTest, Contract_AutoResizeRoundTripRestoresOnlyItsTemporarySizePolicy)
+{
+    TextEdit edit;
+    const QSizePolicy initial = edit.sizePolicy();
+    edit.setAutoResizeEnabled(false);
+    EXPECT_EQ(edit.sizePolicy().verticalPolicy(), QSizePolicy::Expanding);
+    edit.setAutoResizeEnabled(true);
+    EXPECT_EQ(edit.sizePolicy(), initial);
+    QSizePolicy custom(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
+    custom.setHorizontalStretch(3);
+    edit.setSizePolicy(custom);
+    edit.setAutoResizeEnabled(false);
+    edit.setAutoResizeEnabled(true);
+    EXPECT_EQ(edit.sizePolicy(), custom);
+    edit.setAutoResizeEnabled(false);
+    QSizePolicy during(QSizePolicy::Fixed, QSizePolicy::Minimum);
+    edit.setSizePolicy(during);
+    edit.setAutoResizeEnabled(true);
+    EXPECT_EQ(edit.sizePolicy(), during);
 }

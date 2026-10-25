@@ -5,6 +5,7 @@
 #include <QMargins>
 #include <QWidget>
 #include <QString>
+#include <QTextCursor>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "design/Spacing.h"
@@ -90,6 +91,26 @@ class TextEdit : public QWidget, public FluentElement, public QMLPlus {
 public:
     explicit TextEdit(QWidget* parent = nullptr);
 
+    /** @brief Whether content controls the height; disable to fill a parent layout.
+     * zh_CN: 是否由内容决定高度；关闭后填充父布局分配的空间。 */
+    Q_PROPERTY(bool autoResizeEnabled
+        READ isAutoResizeEnabled
+        WRITE setAutoResizeEnabled
+        NOTIFY autoResizeEnabledChanged)
+    bool isAutoResizeEnabled() const { return m_autoResizeEnabled; }
+    void setAutoResizeEnabled(bool enabled);
+    /** @brief Whether the editor paints an input frame and background.
+     * zh_CN: 是否绘制输入框边框和背景。 */
+    Q_PROPERTY(bool frameVisible READ isFrameVisible WRITE setFrameVisible NOTIFY frameVisibleChanged)
+    bool isFrameVisible() const { return m_frameVisible; }
+    void setFrameVisible(bool visible);
+    /** @brief Returns the current editing cursor, including its selection.
+     * zh_CN: 返回包含选区的当前编辑光标。 */
+    QTextCursor textCursor() const;
+    /** @brief Sets a cursor belonging to this editor's document.
+     * zh_CN: 设置属于本编辑器文档的光标。 */
+    void setTextCursor(const QTextCursor& cursor);
+
     // Text APIs. zh_CN: 文本相关 API。
     void setPlainText(const QString& text);
     /**
@@ -147,6 +168,8 @@ public:
     void setScrollChainingEnabled(bool enabled);
 
 signals:
+    void autoResizeEnabledChanged();
+    void frameVisibleChanged();
     void textChanged();
     void cursorPositionChanged();
     void selectionChanged();
@@ -169,6 +192,7 @@ protected:
 
 private:
     void applyEditorPalette();
+    void updateEditorGeometry();
     void applyThemeStyle();
     void paintFrame(QPainter& painter);
     void scheduleHeightForContentUpdate();
@@ -182,6 +206,9 @@ private:
     void applyBlockCenterFormat();
 
     QTextEdit* m_editor = nullptr;
+    bool m_autoResizeEnabled = true;
+    QSizePolicy m_autoResizePolicy;
+    bool m_frameVisible = true;
     ::fluent::scrolling::ScrollBar* m_vScrollBar = nullptr;
     bool m_updatingFormat = false;
     bool m_updatingHeight = false;
