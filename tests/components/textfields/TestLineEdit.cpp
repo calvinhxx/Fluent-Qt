@@ -1,5 +1,9 @@
 #include "QtTestEnvironment.h"
 #include "components/basicinput/Button.h"
+#include "components/basicinput/ComboBox.h"
+#include "components/basicinput/DropDownButton.h"
+#include "components/basicinput/MultiSelectComboBox.h"
+#include "components/textfields/NumberBox.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
@@ -13,6 +17,7 @@
 #include <QApplication>
 #include <QContextMenuEvent>
 #include <QIntValidator>
+#include <QHBoxLayout>
 #include <QMenu>
 #include <QTimer>
 #include <QtMath>
@@ -23,6 +28,35 @@
 using namespace fluent::textfields;
 using namespace fluent::basicinput;
 using namespace fluent;
+
+TEST(InputMetricsTest, StandardSingleLineControlsAlignWithoutPerSampleSizing)
+{
+    QWidget row;
+    auto* layout = new QHBoxLayout(&row);
+    QList<QWidget*> controls{new LineEdit(&row), new Button("Apply", &row), new DropDownButton("More", &row),
+        new ComboBox(&row), new MultiSelectComboBox(&row), new NumberBox(&row)};
+    for (auto* control : controls)
+        layout->addWidget(control);
+    row.resize(1000, 100);
+    row.show();
+    QApplication::processEvents();
+    for (auto* control : controls) {
+        SCOPED_TRACE(control->metaObject()->className());
+        EXPECT_EQ(control->height(), Spacing::ControlHeight::Standard);
+        EXPECT_EQ(control->y(), controls.first()->y());
+    }
+    QFont large = controls.first()->font();
+    large.setPixelSize(28);
+    for (auto* control : controls)
+        control->setFont(large);
+    QApplication::processEvents();
+    for (auto* control : controls) {
+        SCOPED_TRACE(control->metaObject()->className());
+        EXPECT_EQ(control->height(), controls.first()->height());
+        EXPECT_GE(control->height(), control->fontMetrics().height() + 8);
+        EXPECT_EQ(control->y(), controls.first()->y());
+    }
+}
 
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:

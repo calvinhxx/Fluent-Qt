@@ -89,6 +89,9 @@ class LineEdit : public QLineEdit, public FluentElement, public QMLPlus {
 public:
     explicit LineEdit(QWidget* parent = nullptr);
 
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
+
     void onThemeUpdated() override;
 
     QMargins contentMargins() const { return m_contentMargins; }
@@ -134,11 +137,13 @@ protected:
     void leaveEvent(QEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
+    /** @brief Paints the input surface when frameVisible is enabled.
+     * zh_CN: frameVisible 启用时绘制输入表面，派生输入框可复用同一开关。 */
+    virtual void paintFrame(QPainter& painter);
 
 private:
     void applyThemeStyle();
     void applyThemePalette();
-    void paintFrame(QPainter& painter);
     void updateClearButtonVisibility();
     void updateClearButtonGeometry();
 

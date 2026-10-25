@@ -1,14 +1,14 @@
+#include "components/foundation/private/TextInputFrame_p.h"
+#include "components/foundation/private/ControlMetrics_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "LineEdit.h"
 #include "components/basicinput/Button.h"
-#include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "design/Typography.h"
 #include <QContextMenuEvent>
 #include <QFocusEvent>
 #include <QPaintEvent>
 #include <QPainter>
-#include <QPainterPath>
 #include <QResizeEvent>
 #include <QValidator>
 
@@ -51,6 +51,20 @@ LineEdit::LineEdit(QWidget* parent) : QLineEdit(parent)
     connect(this, &QLineEdit::textChanged, this, [this]() { updateClearButtonVisibility(); });
 
     applyThemeStyle();
+}
+
+QSize LineEdit::sizeHint() const
+{
+    QSize hint = QLineEdit::sizeHint();
+    hint.setHeight(qMax(hint.height(), ::fluent::detail::standardControlHeight(fontMetrics())));
+    return hint;
+}
+
+QSize LineEdit::minimumSizeHint() const
+{
+    QSize hint = QLineEdit::minimumSizeHint();
+    hint.setHeight(qMax(hint.height(), ::fluent::detail::standardControlHeight(fontMetrics())));
+    return hint;
 }
 
 void LineEdit::changeEvent(QEvent* event)
@@ -108,61 +122,16 @@ void LineEdit::updateClearButtonGeometry()
 
 void LineEdit::paintFrame(QPainter& painter)
 {
-    const auto& colors = themeColorsRef();
-    const auto& radius = themeRadius();
-    const fluent::painting::DpiPaintMetrics paintMetrics(painter);
-
-    // Fluent field treatment: fill + border + bottom accent underline
-    // on focus. zh_CN: Fluent 字段使用填充、边框及聚焦时的底部强调线。
-    const auto borderStroke = paintMetrics.alignedStroke(QRectF(rect()), 1.0);
-    const QRectF bgRect = borderStroke.rect;
-
-    QColor bgColor, borderColor, bottomBorderColor;
-    int bottomBorderWidth = m_unfocusedBorderWidth;
-    if (!isEnabled()) {
-        bgColor = colors.controlDisabled;
-        borderColor = colors.strokeDivider;
-        bottomBorderColor = borderColor;
-    } else if (isReadOnly()) {
-        bgColor = colors.controlAltSecondary;
-        borderColor = colors.strokeDefault;
-        bottomBorderColor = colors.strokeDivider;
-    } else if (m_isFocused) {
-        bgColor = effectiveThemeUsesDarkAppearance() ? colors.bgSolid : colors.controlDefault;
-        borderColor = colors.strokeSecondary;
-        bottomBorderColor = colors.accentDefault;
-        bottomBorderWidth = m_focusedBorderWidth;
-    } else if (m_isHovered) {
-        bgColor = colors.controlSecondary;
-        borderColor = colors.strokeSecondary;
-        bottomBorderColor = colors.strokeSecondary;
-    } else {
-        bgColor = colors.controlDefault;
-        borderColor = colors.strokeDefault;
-        bottomBorderColor = colors.strokeDivider;
-    }
-
-    qreal r = radius.control;
-    QPainterPath framePath;
-    framePath.addRoundedRect(bgRect, r, r);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(bgColor);
-    painter.drawPath(framePath);
-    painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(borderColor, borderStroke.width));
-    painter.drawPath(framePath);
-
-    if (isEnabled() && !isReadOnly()) {
-        const auto bottomStroke = paintMetrics.alignedStroke(QRectF(rect()), bottomBorderWidth);
-        QPen pen(bottomBorderColor, bottomStroke.width);
-        pen.setCapStyle(Qt::RoundCap);
-        painter.setPen(pen);
-        const qreal bottomY = bottomStroke.rect.bottom();
-        QPainterPath bottomPath;
-        bottomPath.moveTo(bgRect.left() + r, bottomY);
-        bottomPath.lineTo(bgRect.right() - r, bottomY);
-        painter.drawPath(bottomPath);
-    }
+    ::fluent::detail::TextInputFrameState state;
+    state.enabled = isEnabled();
+    state.readOnly = isReadOnly();
+    state.focused = m_isFocused;
+    state.hovered = m_isHovered;
+    state.pressed = false;
+    state.dark = effectiveThemeUsesDarkAppearance();
+    state.normalWidth = m_unfocusedBorderWidth;
+    state.focusedWidth = m_focusedBorderWidth;
+    ::fluent::detail::paintTextInputFrame(painter, QRectF(rect()), themeColorsRef(), themeRadius().control, state);
 }
 
 void LineEdit::enterEvent(FluentEnterEvent* event)
