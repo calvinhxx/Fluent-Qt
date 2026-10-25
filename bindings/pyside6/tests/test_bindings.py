@@ -128,6 +128,64 @@ class FluentQtBindingTest(unittest.TestCase):
                 self.assertEqual(model.rowCount(), 3)
                 delete_qobject(chart)
 
+    def test_adaptive_property_panel(self):
+        definition = fluentqt.PropertyDefinition()
+        definition.key = "title"
+        definition.label = "Title"
+        definition.defaultValue = "Before"
+        panel = fluentqt.PropertyPanel()
+        panel.setProperties([definition])
+        panel.setLayoutMode(fluentqt.PropertyPanel.LayoutMode.Inline)
+        panel.setSearchVisibility(fluentqt.PropertyPanel.SearchVisibility.Hidden)
+        self.assertEqual(panel.field("title").labelPosition(), fluentqt.Field.LabelPosition.Leading)
+        panel.setValue("title", "Changed")
+        self.assertEqual(panel.modifiedPropertyKeys(), ["title"])
+        panel.resize(400, 260)
+        panel.show()
+        reset = panel.findChild(fluentqt.Button, "propertyReset_title")
+        self.assertIsNotNone(reset)
+        editor = panel.editor("title")
+        for direction in (Qt.LeftToRight, Qt.RightToLeft):
+            panel.setLayoutDirection(direction)
+            for mode in (fluentqt.PropertyPanel.LayoutMode.Stacked, fluentqt.PropertyPanel.LayoutMode.Inline):
+                panel.setLayoutMode(mode)
+                panel.field("title").setValidationMessage("Choose a title for this document.")
+                QApplication.processEvents()
+                self.assertIs(panel.field("title").editor(), editor)
+                reset_center = reset.mapTo(panel, reset.rect().center())
+                editor_center = editor.mapTo(panel, editor.rect().center())
+                self.assertLessEqual(abs(reset_center.y() - editor_center.y()), 1)
+        panel.resetAll()
+        self.assertEqual(panel.value("title"), "Before")
+        self.assertTrue(reset.isHidden())
+        delete_qobject(panel)
+
+    def test_property_panel_native_editors_and_replacement_lifetime(self):
+        definition = fluentqt.PropertyDefinition()
+        definition.key = "maximum"
+        definition.label = "Maximum"
+        definition.type = fluentqt.PropertyDefinition.Type.Number
+        definition.minimum = 10
+        definition.maximum = 200
+        definition.defaultValue = 80.0
+        panel = fluentqt.PropertyPanel()
+        self.assertTrue(panel.setProperties([definition]))
+        editor = panel.editor("maximum")
+        self.assertIsInstance(editor, fluentqt.NumberBox)
+        self.assertTrue(editor.isScrubbingEnabled())
+        edited = QSignalSpy(panel.valueEdited)
+        panel.setValue("maximum", 100.0)
+        self.assertEqual(edited.count(), 0)
+        editor.setValue(120.0)
+        self.assertEqual(edited.count(), 1)
+        self.assertTrue(panel.resetProperty("maximum"))
+        self.assertEqual(panel.value("maximum"), 80.0)
+        self.assertFalse(panel.setProperties([definition, definition]))
+        self.assertTrue(shiboken6.isValid(editor))
+        self.assertTrue(panel.setProperties([]))
+        self.assertFalse(shiboken6.isValid(editor))
+        delete_qobject(panel)
+
     def test_chart_export_and_numeric_scrub_binding(self):
         box = fluentqt.NumberBox()
         box.resize(260, 32)
@@ -10282,6 +10340,43 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertFalse(Shiboken.isValid(child))
             del child
 
+
+    def test_review_property_defaults_and_color_overlay_lifetime(self):
+        host = QWidget()
+        panel = fluentqt.PropertyPanel(host)
+        panel.setGeometry(20, 20, 360, 240)
+        color = fluentqt.PropertyDefinition()
+        color.key, color.label = "color", "Color"
+        color.type = fluentqt.PropertyDefinition.Type.Color
+        color.defaultValue = "#0078d4"
+        number = fluentqt.PropertyDefinition()
+        number.key, number.label = "number", "Number"
+        number.type = fluentqt.PropertyDefinition.Type.Number
+        number.defaultValue, number.step = 0.3, 0.1
+        self.assertTrue(panel.setProperties([color, number]))
+        panel.setValue("number", 0.1 + 0.2)
+        self.assertEqual(panel.modifiedPropertyKeys(), [])
+        number.defaultValue = 80.0
+        self.assertTrue(panel.setProperties([color, number]))
+        panel.setValue("number", 79.7 + 0.1 + 0.1 + 0.1)
+        self.assertEqual(panel.modifiedPropertyKeys(), [])
+        number.defaultValue, number.maximum, number.step = 1e18, 1e20, 128.0
+        self.assertTrue(panel.setProperties([color, number]))
+        panel.setValue("number", 1e18 + 128)
+        self.assertEqual(panel.modifiedPropertyKeys(), ["number"])
+        panel.resetAll()
+        self.assertEqual(panel.modifiedPropertyKeys(), [])
+        host.resize(500, 400)
+        host.show()
+        QApplication.processEvents()
+        flyout = next(w for w in panel.findChildren(QWidget) if w.metaObject().className().endswith("::Flyout"))
+        panel.editor("color").click()
+        QApplication.processEvents()
+        self.assertTrue(flyout.isVisible())
+        self.assertIs(flyout.parentWidget(), host)
+        delete_qobject(panel)
+        self.assertFalse(shiboken6.isValid(flyout))
+        delete_qobject(host)
 
     def test_review_number_changes_notify_at_tiny_and_large_scales(self):
         box = fluentqt.NumberBox()

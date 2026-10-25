@@ -881,6 +881,23 @@ if (!paletteGuard) {
         </namespace-type>
 
         <namespace-type name="layout" visible="no">
+            <value-type name="PropertyDefinition">
+                <enum-type name="Type"/>
+            </value-type>
+            <object-type name="PropertyPanel">
+                <enum-type name="LayoutMode"/>
+                <enum-type name="SearchVisibility"/>
+                <modify-function signature="editor(QString)const">
+                    <modify-argument index="return"><define-ownership class="target" owner="default"/></modify-argument>
+                </modify-function>
+                <modify-function signature="field(QString)const">
+                    <modify-argument index="return"><define-ownership class="target" owner="default"/></modify-argument>
+                </modify-function>
+                <modify-function signature="formController()const">
+                    <modify-argument index="return"><define-ownership class="target" owner="default"/></modify-argument>
+                </modify-function>
+                <modify-function signature="onThemeUpdated()" remove="all"/>
+            </object-type>
             <object-type name="Accordion">
                 <enum-type name="ExpansionMode"/>
                 <!-- Runtime-dependent item ownership is published by the

@@ -169,6 +169,8 @@ set(FLUENTQT_PYSIDE6_GENERATED_SOURCES
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_charts_donutchart_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_charts_scatterchart_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_charts_sparkline_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_propertydefinition_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_propertypanel_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_card_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_particlebackdrop_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_divider_wrapper.cpp"
