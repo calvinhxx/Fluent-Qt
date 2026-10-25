@@ -117,6 +117,7 @@ set(FLUENT_QT_INSTALL_HEADERS
 
     src/components/layout/Accordion.h
     src/components/layout/Card.h
+    src/components/layout/DataGridToolBar.h
     src/components/layout/Divider.h
     src/components/layout/Expander.h
     src/components/layout/Field.h

@@ -38,6 +38,7 @@
     "ContentDialog",
     "CornerRadius",
     "DataGrid",
+    "DataGridToolBar",
     "DatePicker",
     "DateTimeRangePicker",
     "Dialog",
@@ -1801,6 +1802,20 @@
       "setMaxVisibleLines",
       "copy",
       "copyFinished"
+    ],
+    "DataGridToolBar": [
+      "addFilter",
+      "clearButton",
+      "clearFilters",
+      "columnsButton",
+      "dataGrid",
+      "filters",
+      "removeFilter",
+      "searchField",
+      "searchText",
+      "setDataGrid",
+      "setFilterValues",
+      "setSearchText"
     ],
     "TagInput": [
       "addItem",
