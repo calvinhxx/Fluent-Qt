@@ -27,18 +27,184 @@ All inventoried gaps are closed. `covered` means
 there is deterministic repository evidence for the component boundary; it is
 not a claim of platform assistive-technology certification.
 
+## Hierarchical selection
+
+`TreeSelect` exposes a ComboBox role, selected full paths, expanded/read-only
+state and a show-menu action. Its input has one pointer target; the trailing
+chevron is decorative rather than a second button. It composes native text input, TagInput removal
+buttons and the existing TreeView, retaining hierarchy and check-state semantics.
+The source model stays caller-owned; its values are never edited by selection.
+The empty-result message is caller-configurable through `setEmptyText`; the same
+text is exposed by the visible empty-state label.
+Up/Down browse, Enter selects, Escape dismisses and Tab exits without selecting.
+IME preedit does not filter or activate rows. The `tree-select` project-team
+sample shares its behavior across C++, PySide6 and WebAssembly. Automated event
+checks do not certify physical input methods or native screen readers.
+
+On the pinned WebAssembly backend, the runtime reuses bounded visible-row
+proxies for lists and trees. Qt-owned DOM nodes retain listbox/option or tree/treeitem
+roles, selection, disabled and check states, row positions and the current item.
+Selection-model updates refresh these states; reset and dismissal clear stale
+active-descendant references. Popup relations follow the explicit accessible
+Controller relation or owning presentation model; unrelated navigation trees
+never attach themselves to the focused input. Browser tests inspect Chromium's
+accessibility tree for selected and disabled options, including late activation.
+Keyboard and composition events continue through Qt's native editor bridge.
+The active input is created independently of the tree popup, which is created
+on first opening. Mode changes retain selected values without exposing a hidden
+second editor. Model updates keep selection synchronous and batch tree refreshes.
+For large trees, rapid typed queries are coalesced; keyboard navigation and
+confirmation apply the latest query first. Programmatic search remains immediate.
+Custom input fonts determine the minimum control height.
+
+## Tagged member input
+
+`TagInput` extends the AutoSuggestBox editable-text interface and exposes each
+selected value as a label with a dedicated native removal Button. Pointer clicks
+on the label focus its tag without deleting it; only the 24-pixel close target
+removes the value. Its accessible bounds match that close target. Keys distinguish equal labels. Empty
+Backspace moves focus to the previous tag before deletion; Left/Right and Tab
+preserve the native focus path. Space and Enter activate the focused removal
+button without inserting query text. Read-only values expose labels without removal
+actions. Adding, reordering or renaming values retains existing tag widgets and
+accessible identities; read-only changes hide removal actions without rebuilding
+the tags. Batch token resolution updates the selection once. Qt owns IME preedit
+and replacement ranges; preedit does not submit a
+value, navigate suggestions, or remove a tag. A focused tag forwards composition
+to the native editor and preserves its cursor rectangle. A standalone Space text
+commit activates removal only outside composition. Focus returns after
+the native commit finishes, unless the application moved it elsewhere. The `tag-input` Gallery sample
+uses the same control in C++, PySide6 and WebAssembly. Injected IME event tests
+and browser semantic checks remain distinct from physical input-method and
+screen-reader acceptance.
+
+## Adaptive list and detail
+
+`ListDetailView` is a presentation container with native QWidget children. At
+widths below `compactThreshold` it exposes only the current pane; wide mode shows
+both, mirrored in RTL. Content widgets keep their identity, selection, document,
+and scroll state. If switching hides the focused control, focus returns to the
+last usable control in the destination, or its first tab stop. The application
+can observe that transfer without a transient focus visit outside the container.
+It supplies accessible names and a back control; the Gallery file browser includes
+the keyboard-focusable **Files** button. No transition animation is required.
+
+The file browser includes modified dates in accessible row names. Its search,
+new-file and save actions are named, and returning with **Files** restores list
+focus. Draft status is expressed in text as well as a status dot. The embedded
+`TextEdit` keeps its native editing surface when its frame is hidden and its
+height is assigned by the parent layout; selection and undo stay native.
+
+`TestListDetailView.cpp` covers threshold geometry, focus, child lifetime,
+selection, scrolling, text selection, and undo through repeated switches. The
+`list-detail-view` Gallery route exercises the same native component in C++,
+PySide6, and WebAssembly. Native screen-reader acceptance remains a manual check.
+
+## DataGrid filters and columns
+
+`DataGridToolBar` composes named native inputs, multi-selection controls and
+Fluent menus. Its column menu provides keyboard alternatives to header drag
+reordering, exposes checked visibility/pinning state, and prevents hiding the
+last visible column. The Columns trigger describes the visible column order and
+pinned columns to assistive technology. `TestDataGridToolBar.cpp` covers search
+semantics, repeated menu actions, borrowed-grid lifetime, filter notifications
+and narrow/RTL layout. Toolbar controls share a 32 px height, growing together
+for larger text, and keep their state when wrapping. Multi-select popups align
+their visible card to the trigger's leading edge with an 8 px gap; RTL, upward
+placement, and window-edge clamping are covered by geometry tests. DataGrid's
+default numeric cell editor reuses NumberBox for int, uint, float and double,
+preserves EditRole types and unchanged precision, and parses text before Tab or
+focus-out commits. Every default editor suppresses the old cell content while
+open; Escape leaves the model unchanged. NumberBox's inherited `frameVisible`
+switch controls its whole surface. Numeric text and editors leave clearance for
+the shared overlay scrollbar. The validation example starts with valid data and
+uses a single error underline after a rejected edit.
+Selected cells use the shared neutral collection surface; the leading accent
+indicator and keyboard focus outline continue to distinguish selection and focus.
+The browser regression also checks that committed numbers update Chromium's
+accessibility tree. The private table compatibility adapter refreshes changed
+visible cells when Qt's WASM backend omits the standard model-data notification;
+native backends retain their existing notification path.
+
+DataGrid's pinned surface shares the logical table selection and model. DataGrid rows and
+MultiSelectComboBox triggers retain logical mouse focus but show the extra focus
+outline only for keyboard navigation. Row outlines close at the visible column
+edge, including pinned, hidden and RTL columns. Default wheel containment
+covers both DataGrid surfaces, pixel/momentum scrolling and scrollbar boundaries;
+a table with no scrollable range still allows its parent to scroll. Focused
+tests cover these rules alongside hit testing and editing. The WebAssembly browser smoke
+discovers current menu items on every reopening, checks their presence in
+Chromium's accessibility tree, and verifies column changes through the live
+Columns description. It covers command execution, Escape and outside-click
+closures. Native screen-reader behavior still requires platform review.
+
+Pinned editors retain Tab and Shift+Tab navigation across the whole table. The
+main view owns row submission; the secondary surface forwards editor policy
+without owning application delegates. Accessible visible-cell enumeration uses
+the pinned surface after horizontal scrolling, and RTL scrollbar space remains
+outside pinned cells.
+
+Header dividers expose column boundaries for resizing; the sort arrow indicates
+the active direction when a title is clicked. The Gallery starts in ascending
+order and uses fixed-width numeric columns through the model's `FontRole`.
+Default text editing reuses a frameless `LineEdit`: the editor owns text, caret
+and selection, while the delegate paints a single focus underline without a
+second cell-selection background. Tests cover plain editing surfaces in both
+themes and pinned panes, alongside commit/cancel behavior.
+Sorting also invalidates cached logical cell positions and sends a table-model
+notification. The WebAssembly adapter hides retired virtual entries and
+republishes the bounded visible children because Qt's browser bridge does not
+handle that notification. Browser tests verify the exposed row order after
+clicking the same header in both directions.
+
+The pinned viewport also shares the main viewport's theme background painting,
+including empty space below rows and transparent composition. A styled-ancestor
+regression covers repeated global light/dark changes.
+Pinned-column synchronization is inert when state is unchanged; painting must
+settle without requesting more layout or frames. The fixed pane stays below
+the border and scroll targets. Regressions also preserve selection, both scroll
+positions and an unfinished edit through theme changes. Gallery's 3D theme
+change invalidates navigation and content textures together with the material
+so the next frame cannot combine old widget colors with a new background.
+The horizontal track and thumb page size exclude the fixed pane, including
+RTL and column resizing. The surface clips its header and frozen pane to the
+same rounded boundary. Text editors reuse an inset Fluent LineEdit without a
+clear action; the Gallery validation delegate retains that editor and geometry
+instead of falling back to an unthemed Qt editor.
+
 ## Read-only code
 
 `CodeBlock` exposes the existing Expander header, a named and focusable Copy
 button, and selectable native Label text. The header can fold the block without
 changing its code; copying does not toggle folding. Keyboard selection and copy
 retain source whitespace, including in high contrast. Focused tests are in
-`tests/components/textfields/TestCodeBlock.cpp`. Native screen-reader navigation
+`tests/components/textfields/TestCodeBlock.cpp`, including clipped rendering
+against native Label selection and wrapping in both light and dark themes.
+Focused and unfocused text use the same clipped rendering; native selection and
+clipboard behavior remain available.
+Its internal scroll viewport remains transparent through repeated theme changes,
+so the surrounding CodeBlock surface remains visible behind highlighted text.
+Native screen-reader navigation
 through highlighted source still requires platform review.
 
 ## Field and form coordination
 
-`Field` uses a stronger caption and a single helper/status position while keeping
+`PropertyPanel` generates the existing accessible Fluent editors and labels them
+through Field. Search preserves editor identity and values; reset actions have
+field-specific names and tooltips, and enter the tab order only while reset is
+available. Reset actions align with the editor's center in inline, stacked, and
+right-to-left layouts, including wrapped labels and validation messages. Their
+reserved space keeps editors from moving when reset becomes available. Adaptive
+layouts retain the same editors and label buddies. Numeric dragging retains keyboard stepping and precise
+text entry through NumberBox's existing value interface. Color properties open
+the shared ColorPicker in a Flyout; the swatch also has a readable color value.
+The panel closes its color flyout when destroyed, including after overlay
+reparenting. Modified-state comparisons respect color values and numeric roundoff.
+`TestPropertyPanel.cpp` covers editor names,
+keyboard edits, read-only behavior and replacement lifetime; native screen-reader
+and popup review remain platform-specific.
+
+`Field` places its caption above or beside the editor, with a single helper/status position, while keeping
 the hosted editor's native role, focus proxy and caller-owned value. Its
 Validating state has informational text and no error glyph. `FormController` aggregates
 errors in registration order and focuses the first visible, enabled invalid
@@ -217,6 +383,16 @@ pointer traversal. The boundary test includes follow-up mouse moves and the
 close timeout under both parent-reentry policies. These checks do not establish
 native screen-reader acceptance.
 
+The WebAssembly runtime republishes a menu's direct accessible children after
+each opening. Qt can recreate the popup window while retaining action proxies
+in the old browser container; standard Qt visibility events attach those same
+proxies to the current window and refresh their names and geometry. Unopened
+submenus are left alone. `wasm_command_submenus.py` and `wasm_data_grid.py` check
+reopened items in both the DOM and Chromium accessibility tree. The C++ menu
+and PySide6 binding tests cover repeated opening, action names, checked/disabled
+states, hidden items and keyboard activation. These automated checks do not
+replace VoiceOver or NVDA acceptance.
+
 Resting checked FluentMenu items show their check glyph without a selection fill;
 hover and keyboard selection retain the Fluent highlight. Command menu rows
 keep their existing target sizes and keyboard focus outline. The menu surface
@@ -317,6 +493,25 @@ The low-DPI text adapter reports only its actual backend's paint capabilities,
 so focused native editors do not request unsupported XOR caret drawing in 3D.
 Automated input checks cover text fields, editable ComboBox and collection-cell
 editors; injected IME commits do not replace a native IME candidate-window review.
+AutoSuggestBox exposes busy state while asynchronous suggestions load, keeps the
+editor linked to its suggestion list after overlay reparenting, and provides native
+keyboard-focusable Retry and Load more actions. Tab enters that action; Shift+Tab
+returns to the editor. Escape, outside press, hiding and disabling invalidate pending
+requests. Compact status rows grow with wrapped descriptions in narrow popups,
+keeping the Retry button separate from the text and reachable by keyboard.
+Applications can override initial/paged loading, more-results and action captions;
+visible labels and accessible button names use the same configured text. TagInput
+inherits those overrides without changing application-owned selected labels.
+Late results cannot reopen the dismissed popup. Component tests cover
+request races, pagination retention and borrowed-model lifetime; the browser check
+exercises loading, empty, retry, paging and repeated opening with Qt accessibility
+proxies. The WebAssembly runtime republishes visible list cells through Qt events
+after model changes and hides them on dismissal; it does not copy the whole model
+into browser nodes. Actual assistive-technology announcements remain a manual check.
+Unchanged hover repaints do not republish list semantics. Enabling accessibility
+after widgets are already open explicitly refreshes their current presentation.
+Synchronous suggestions also honor focus loss and Escape dismissal until new input.
+
 The AutoSuggestBox Gallery check also verifies visible unselected text in Light
 and Dark GPU frames. LineEdit finishes its frame painter before native text
 painting, preserving text contrast when widgets render into the projected cache.

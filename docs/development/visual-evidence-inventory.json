@@ -32,11 +32,13 @@
         "popup",
         "splash-screen",
         "split-button",
+        "tag-input",
         "teaching-tip",
         "time-picker",
         "toast",
         "toggle-split-button",
-        "tooltip"
+        "tooltip",
+        "tree-select"
       ],
       "required_states": [
         "normal-light",
@@ -232,6 +234,7 @@
       "checkbox",
       "code-block",
       "compound-button",
+      "data-grid-tool-bar",
       "divider",
       "donut-chart",
       "expander",
@@ -245,12 +248,14 @@
       "label",
       "line-chart",
       "line-edit",
+      "list-detail-view",
       "number-box",
       "particle-backdrop",
       "password-box",
       "pie-chart",
       "progress-bar",
       "progress-ring",
+      "property-panel",
       "qml-view",
       "radio-button",
       "rating-control",
@@ -309,7 +314,25 @@
             "keyboard-focus",
             "dismissed"
           ],
-          "execution": "registered-only"
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "AutoSuggestBoxTest.Contract_AsyncStatusFitsContentAndKeepsRetryReachable",
+          "states": [
+            "open",
+            "keyboard-focus",
+            "dismissed"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "AutoSuggestBoxTest.Contract_SynchronousPopupClosesAfterFocusLeavesOwner",
+          "states": [
+            "dismissed"
+          ],
+          "execution": "ci"
         }
       ],
       "manual_evidence": {
@@ -619,6 +642,30 @@
           "states": [
             "scroll-end",
             "narrow"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "DataGridTest.Contract_PinnedEditorsTabAcrossTheWholeTable",
+          "states": [
+            "selection"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "DataGridTest.Contract_RtlScrollBarLeavesPinnedEditorAndCellsClear",
+          "states": [
+            "rtl"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "DataGridTest.Contract_PinnedColumnsStayInAccessibleChildrenAfterScroll",
+          "states": [
+            "selection"
           ],
           "execution": "ci"
         }
@@ -965,6 +1012,15 @@
             "selection"
           ],
           "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "ListViewTest.Contract_DefaultDelegateTrailingMetadataIsOptInAndUpdates",
+          "states": [
+            "normal-light",
+            "selection"
+          ],
+          "execution": "ci"
         }
       ],
       "manual_evidence": {
@@ -1042,6 +1098,14 @@
             "open",
             "keyboard-focus",
             "dismissed"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "MultiSelectComboBoxTest.Contract_ModelDataUpdatesKeepSearchCursorAndSelectionIdentity",
+          "states": [
+            "keyboard-focus"
           ],
           "execution": "ci"
         }
@@ -1375,6 +1439,57 @@
       }
     },
     {
+      "id": "tag-input",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "interaction",
+          "test_case": "TagInputTest.InputMethodPreeditDoesNotSearchSelectOrDelete",
+          "states": [
+            "keyboard-focus"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "TagInputTest.WrapsWithoutLosingQuerySelectionOrTags",
+          "states": [
+            "narrow"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "TagInputTest.PointerRemovalIsConfinedToCloseButton",
+          "states": [
+            "keyboard-focus"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "TagInputTest.Contract_TagActivationDoesNotInsertQueryText",
+          "states": [
+            "keyboard-focus"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "TagInputTest.Contract_TextCommitSpaceActivatesTagOnlyOutsideComposition",
+          "states": [
+            "keyboard-focus"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "gallery"
+      }
+    },
+    {
       "id": "teaching-tip",
       "family": "transient-overlay",
       "automated_evidence": [
@@ -1527,6 +1642,66 @@
         "coverage": "all-required-states",
         "surface": "visual-check",
         "test_case": "ToolTipTest.VisualGallery"
+      }
+    },
+    {
+      "id": "tree-select",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "interaction",
+          "test_case": "TreeSelectTest.InputMethodPreeditDoesNotFilterChooseOrDismiss",
+          "states": [
+            "keyboard-focus"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "TreeSelectTest.SearchPreservesAncestorsAndKeyboardSelectsThenCloses",
+          "states": [
+            "open",
+            "dismissed"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "TreeSelectTest.CompactRowsFitWithoutPhantomScrollAndChevronIsDecorative",
+          "states": [
+            "open"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "TreeSelectTest.MultipleSelectionKeepsBranchExpansionAndCheckTargetsSeparate",
+          "states": [
+            "open"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "TreeSelectTest.Contract_SingleInputHintsAndExplicitFontStayConsistent",
+          "states": [
+            "narrow"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "TreeSelectTest.Contract_LargeTreeTypingCoalescesAndConfirmationFlushesTheQuery",
+          "states": [
+            "keyboard-focus"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "gallery"
       }
     },
     {

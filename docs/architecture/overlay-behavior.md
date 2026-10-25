@@ -144,6 +144,14 @@ Overlay implementations must distinguish three geometry regions:
 `setPosition()`, anchor placement, edge placement, and test assertions refer
 to the visible card or panel, excluding shadow margins.
 
+Input dropdowns use the private `FieldPopupGeometry_p.h` policy: an 8 logical-pixel
+visible gap, logical leading-edge alignment, the roomier side when the preferred
+bottom side cannot fit, and containment in the owning window. ComboBox preserves
+its explicit `popupOffset` override. ComboBox, MultiSelectComboBox, AutoSuggestBox
+(including TagInput) and TreeSelect reuse these calculations; their content
+layouts retain responsibility for fitting rows and status controls. Generic
+Flyout, dialogs and native command menus retain their separate placement roles.
+
 In the Gallery's 3D shell, anchored overlays use the target's presented bounds
 before choosing a side or applying containment. Popup points and attached
 tooltips use the same mapping; native menu invocation points are mapped before

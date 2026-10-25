@@ -44,6 +44,8 @@ RISK_FAMILY_RULES = {
         additions=frozenset(
             {
                 "auto-suggest-box",
+                "tag-input",
+                "tree-select",
                 "calendar-date-picker",
                 "color-picker",
                 "combobox",

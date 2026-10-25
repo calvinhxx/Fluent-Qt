@@ -35,6 +35,38 @@ with the live preview above it.
 This rule applies to new component samples and to later sample edits. Reviewers
 should reject cards where the code block and UI tell different stories.
 
+## Action feedback
+
+Use the existing `Toast` for one-time button and command results, such as copying,
+preparing an export, saving a demo view, or choosing a menu command. Keep counts,
+selection, progress, validation errors, and explicit lifecycle/event readouts
+inline. An operation result must not overwrite those persistent values.
+
+Gallery feedback uses `Toast::showOrUpdateToast` with the window-scoped key
+`gallery.action-feedback`, top placement, and `QMargins(16, 50, 16, 16)` to clear
+the title bar. Ordinary notices last 2200 ms; warnings and errors last 4500 ms.
+Repeated actions update one notification and preserve keyboard focus. The Gallery
+helper applies this policy; copyable examples show the equivalent public Toast API.
+
+Report asynchronous results from their completion signals. A save dialog opening
+means the export is ready, not that a file has been saved. C++ previews, displayed
+source, PySide6 examples, and browser checks must use the same feedback semantics.
+
+## Start with an atomic example
+
+Put a small, runnable example of the component itself first. Add application
+scenarios after it, with a short **Key usage** excerpt and a copyable **Full
+example** for model data, services and supporting controls.
+
+Keep composition on the page that owns it. For example, `DataGrid` demonstrates
+its own selection, editing, scrolling and columns without `DataGridToolBar`.
+`DataGridToolBar` may include a DataGrid because connecting to a table is its
+purpose. Do not duplicate the combined workspace on both pages.
+
+Preserve component defaults unless the card specifically teaches an override.
+Scrollable collection examples must not enable scroll chaining just to scroll
+the surrounding Gallery at the collection boundary.
+
 ## Entry Prompts
 
 Single component:
@@ -162,6 +194,17 @@ snippet only says `auto* control = new Component(this);`.
 
 ## UI Guidelines
 
+- Gallery-owned labels, helper text, sample names/model data, search keywords and
+  displayed snippets use English in C++, PySide6 and WebAssembly. Gallery startup
+  selects an English `QLocale` so sample dates do not mix with the host language.
+  This is application policy, not a UILib locale override.
+- Keep CJK/Unicode fixtures in component and browser input tests. Users may enter
+  arbitrary Unicode text into a live text-input example; never filter, translate or rewrite
+  their input to enforce the Gallery copy policy. Default demo models use English.
+- Run `python3 tools/quality/check_gallery_language.py --self-test`. The existing
+  Gallery boundary gate also checks C++/Python literals and generated snippets
+  for accidental CJK copy, excluding comments and library/test sources. This
+  mechanical check supplements the English copy review; it is not a language detector.
 - Prefer existing Fluent components over raw Qt widgets when an equivalent
   exists.
 - Reuse local sample helpers before adding new preview infrastructure.
