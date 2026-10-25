@@ -1,6 +1,7 @@
 #include "components/layout/Field.h"
 
 #include <QHBoxLayout>
+#include <QGridLayout>
 #include <QSizePolicy>
 #include <QStringList>
 #include <QVBoxLayout>
@@ -35,7 +36,7 @@ Field::Field(QWidget* parent) : QWidget(parent)
     // 显式聚焦 Field 时再通过 focusProxy 转交。
     setFocusPolicy(Qt::NoFocus);
 
-    auto* root = new QVBoxLayout(this);
+    auto* root = new QGridLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
     root->setSpacing(themeSpacing().gap.normal);
     root->setAlignment(Qt::AlignTop);
@@ -96,10 +97,7 @@ Field::Field(QWidget* parent) : QWidget(parent)
     statusLayout->addWidget(m_status, 1, Qt::AlignTop);
     m_statusRow->hide();
 
-    root->addWidget(m_captionRow);
-    root->addWidget(m_editorHost);
-    root->addWidget(m_helper);
-    root->addWidget(m_statusRow);
+    updateLayout();
 
     updateCaption();
     updateHelperAndStatus();
@@ -111,6 +109,42 @@ Field::~Field()
     releaseEditorInternal(false, true);
 }
 
+void Field::updateLayout()
+{
+    auto* grid = static_cast<QGridLayout*>(layout());
+    for (auto* widget : {m_captionRow, m_editorHost, static_cast<QWidget*>(m_helper), m_statusRow})
+        grid->removeWidget(widget);
+    const bool leading = m_labelPosition == LabelPosition::Leading && !m_labelText.isEmpty();
+    m_captionRow->setMinimumWidth(leading ? m_labelWidth : 0);
+    m_captionRow->setMaximumWidth(leading ? m_labelWidth : QWIDGETSIZE_MAX);
+    m_caption->setFluentTypography(leading ? Typography::FontRole::Body : Typography::FontRole::BodyStrong);
+    grid->setColumnStretch(0, leading ? 0 : 1);
+    grid->setColumnStretch(1, leading ? 1 : 0);
+    grid->addWidget(m_captionRow, 0, 0, leading ? Qt::AlignVCenter : Qt::Alignment());
+    grid->addWidget(m_editorHost, leading ? 0 : 1, leading ? 1 : 0);
+    grid->addWidget(m_helper, leading ? 1 : 2, leading ? 1 : 0);
+    grid->addWidget(m_statusRow, leading ? 2 : 3, leading ? 1 : 0);
+    updateGeometry();
+}
+
+void Field::setLabelPosition(LabelPosition position)
+{
+    if ((position != LabelPosition::Top && position != LabelPosition::Leading) || position == m_labelPosition)
+        return;
+    m_labelPosition = position;
+    updateLayout();
+    emit labelPositionChanged(position);
+}
+
+void Field::setLabelWidth(int width)
+{
+    if (width < 32 || width == m_labelWidth)
+        return;
+    m_labelWidth = width;
+    updateLayout();
+    emit labelWidthChanged(width);
+}
+
 void Field::setLabelText(const QString& text)
 {
     if (m_labelText == text)
@@ -118,6 +152,7 @@ void Field::setLabelText(const QString& text)
 
     m_labelText = text;
     updateCaption();
+    updateLayout();
     updateAccessible();
     emit labelTextChanged(m_labelText);
 }

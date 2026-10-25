@@ -19,6 +19,7 @@ endif()
 set(FLUENT_QT_CI_FULL_CONTRACT_TARGETS
     test_chart_model
     test_chart_view
+    test_field
     test_foundation_contracts
     test_motion_policy
     test_user_theme
