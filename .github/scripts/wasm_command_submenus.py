@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from wasm_gallery_ready import wait_for_gallery_ready
+
 
 def run_command_submenus_contract(
     browser: object,
@@ -65,6 +67,7 @@ def run_command_submenus_contract(
                 "document.documentElement.dataset.fluentQtLoaded === 'true'",
                 timeout=120_000,
             )
+            wait_for_gallery_ready(page)
             # Discover labels through Qt's accessibility tree. Activation is
             # setup; every command/menu operation below uses browser input.
             activation = page.locator(
@@ -76,11 +79,6 @@ def run_command_submenus_contract(
             entry = (page.get_by_role("button", name="Open view commands", exact=True)
                      if route == "command-bar-flyout" else item("View"))
             expect(entry).to_be_visible()
-            # Loader completion and AX discovery can precede splash dismissal.
-            # Its QWidget still intercepts wheel input until the cover is hidden.
-            expect(page.locator(
-                '[id$=".gallerySplashScreen"][aria-hidden="false"]'
-            )).to_have_count(0, timeout=15_000)
             before = entry.bounding_box()
             scrollbar = page.locator(
                 '[role="scrollbar"][aria-hidden="false"][id*=".galleryContentScrollArea."]'
@@ -173,7 +171,16 @@ def run_command_submenus_contract(
             expect(item("Order")).to_be_visible()
             page.keyboard.press("ArrowDown")
             page.keyboard.press("ArrowRight")
-            page.wait_for_timeout(300)
+            # The same submenu now has a new browser window. Its cached action
+            # proxies must be exposed again, not just its painted surface.
+            expect(item("Ascending")).to_be_visible()
+            expect(item("Descending")).to_be_visible()
+            expect(item("Descending")).to_have_attribute("aria-hidden", "false")
+            nodes = page.context.new_cdp_session(page).send("Accessibility.getFullAXTree")["nodes"]
+            names = {node.get("name", {}).get("value") for node in nodes
+                     if not node.get("ignored") and node.get("role", {}).get("value") == "menuitem"}
+            if not {"Ascending", "Descending"}.issubset(names):
+                raise RuntimeError(f"{case}: reopened submenu absent from Chromium AX tree")
             page.keyboard.press("ArrowDown")
             page.keyboard.press("Enter")
             # Prove execution through the application's observable result;

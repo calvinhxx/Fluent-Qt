@@ -2,6 +2,7 @@
 
 #include "components/status_info/Toast.h"
 #include "components/status_info/ProgressBar.h"
+#include "components/textfields/NumberBox.h"
 
 #include <FluentQt/WebAssembly.h>
 
@@ -71,12 +72,19 @@
 #include "components/dialogs_flyouts/Dialog.h"
 #include "components/dialogs_flyouts/TeachingTip.h"
 #include "components/layout/ParticleBackdrop.h"
+#include "components/layout/ListDetailView.h"
+#include "components/layout/DataGridToolBar.h"
+#include "components/layout/PropertyPanel.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/SelectorBar.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/navigation/TabView.h"
 #include "components/scrolling/ScrollView.h"
+#include "components/textfields/AutoSuggestBox.h"
+#include "components/textfields/TagInput.h"
+#include "components/textfields/TextEdit.h"
+#include <QStandardItemModel>
 #include "components/textfields/LineEdit.h"
 #include "components/textfields/Label.h"
 #include "components/textfields/PasswordBox.h"
@@ -102,6 +110,130 @@ QString smokeMode()
     if (search.startsWith(QLatin1Char('?')))
         search.remove(0, 1);
     return QUrlQuery(search).queryItemValue(QStringLiteral("wasm-smoke")).toLower();
+}
+
+void runComponentRegressions()
+{
+    QJsonArray failures;
+    const auto check = [&](bool condition, const char* name) {
+        if (!condition)
+            failures.append(QString::fromLatin1(name));
+    };
+    QPointer<layout::ListDetailView> view = new layout::ListDetailView;
+    view->resize(800, 400);
+    QObject::connect(view, &layout::ListDetailView::compactChanged, view, [view] { delete view.data(); });
+    view->setCompactThreshold(1000);
+    check(view.isNull(), "list-detail-callback-destruction");
+    layout::ListDetailView reentrant;
+    reentrant.resize(800, 400);
+    QList<int> thresholds;
+    QObject::connect(&reentrant, &layout::ListDetailView::compactThresholdChanged, &reentrant, [&](int value) {
+        thresholds.append(value);
+    });
+    QObject::connect(&reentrant, &layout::ListDetailView::compactChanged, &reentrant, [&](bool compact) {
+        if (compact)
+            reentrant.setCompactThreshold(600);
+    });
+    reentrant.setCompactThreshold(1000);
+    check(thresholds == QList<int>{600} && !reentrant.isCompact(), "list-detail-reentrant-notification");
+    for (bool withSearch : {false, true}) {
+        QPointer<layout::DataGridToolBar> bar = new layout::DataGridToolBar;
+        bar->addFilter("status", "Status", {"Active"});
+        bar->setFilterValues("status", {"Active"});
+        if (withSearch)
+            bar->setSearchText("query");
+        const auto destroy = [&, bar] {
+            check(bar->searchText().isEmpty() && bar->filters().isEmpty(), "toolbar-final-state");
+            delete bar.data();
+        };
+        if (withSearch)
+            QObject::connect(bar, &layout::DataGridToolBar::searchTextChanged, bar, destroy);
+        else
+            QObject::connect(bar, &layout::DataGridToolBar::filtersChanged, bar, destroy);
+        bar->clearFilters();
+        check(bar.isNull(), "toolbar-callback-destruction");
+    }
+    textfields::TagInput tags;
+    tags.addItem("first", "First");
+    auto* first = tags.findChild<QWidget*>("TagInputTag");
+    for (int i = 1; i < 100; ++i)
+        tags.addItem(QString::number(i), QStringLiteral("Member %1").arg(i));
+    check(tags.findChildren<QWidget*>("TagInputTag").size() == 100, "tag-input-linear-widget-count");
+    check(tags.findChild<QWidget*>("TagInputTag") == first, "tag-input-stable-identity");
+    {
+        layout::PropertyPanel panel;
+        layout::PropertyDefinition color;
+        color.key = "color";
+        color.type = layout::PropertyDefinition::Color;
+        color.defaultValue = QStringLiteral("#0078d4");
+        layout::PropertyDefinition number;
+        number.key = "number";
+        number.type = layout::PropertyDefinition::Number;
+        number.defaultValue = 0.3;
+        number.step = 0.1;
+        check(panel.setProperties({color, number}), "property-panel-typed-defaults-accepted");
+        panel.setValue("number", 0.1 + 0.2);
+        check(panel.modifiedPropertyKeys().isEmpty(), "property-panel-semantic-default-comparison");
+        number.defaultValue = 80.0;
+        check(panel.setProperties({number}), "property-panel-roundoff-default-accepted");
+        panel.setValue("number", 79.7 + 0.1 + 0.1 + 0.1);
+        check(panel.modifiedPropertyKeys().isEmpty(), "property-panel-large-roundoff-is-default");
+        number.defaultValue = 1e18;
+        number.maximum = 1e20;
+        number.step = 128;
+        check(panel.setProperties({number}), "property-panel-large-default-accepted");
+        panel.setValue("number", 1e18 + 128);
+        check(panel.modifiedPropertyKeys() == QStringList{"number"}, "property-panel-large-change-is-modified");
+        textfields::NumberBox numeric;
+        int changes = 0;
+        QObject::connect(&numeric, &textfields::NumberBox::valueChanged, &numeric, [&changes] { ++changes; });
+        numeric.setValue(1e18);
+        changes = 0;
+        numeric.setValue(1e18 + 128);
+        check(changes == 1, "number-box-large-adjacent-value-notifies");
+        numeric.setValue(1e-20);
+        changes = 0;
+        numeric.setValue(2e-20);
+        check(changes == 1, "number-box-tiny-value-notifies");
+        textfields::TextEdit editor;
+        const auto policy = editor.sizePolicy();
+        editor.setAutoResizeEnabled(false);
+        editor.setAutoResizeEnabled(true);
+        check(editor.sizePolicy() == policy, "text-edit-size-policy-round-trip");
+        class SubmitModel : public QStandardItemModel {
+        public:
+            SubmitModel() : QStandardItemModel(4, 3) {}
+            bool submit() override
+            {
+                ++count;
+                return true;
+            }
+            int count = 0;
+        } model;
+        collections::DataGrid grid;
+        grid.setModel(&model);
+        for (bool pinned : {false, true, false}) {
+            grid.setColumnPinned(0, pinned);
+            grid.setCurrentIndex(model.index(0, 0));
+            model.count = 0;
+            grid.setCurrentIndex(model.index(1, 0));
+            grid.setCurrentIndex(model.index(2, 0));
+            check(model.count == 2, "pinned-view-single-row-submit");
+        }
+        grid.setColumnWidth(1, 177);
+        grid.setColumnVisible(1, false);
+        model.insertColumn(0);
+        const auto state = grid.saveColumnState();
+        grid.setColumnVisible(2, true);
+        grid.setColumnWidth(2, 299);
+        check(grid.restoreColumnState(state), "grid-restores-changed-schema-state");
+        grid.setColumnVisible(2, true);
+        check(grid.columnWidth(2) == 177, "grid-hidden-width-survives-insertion");
+    }
+    const QByteArray result =
+        QJsonDocument(QJsonObject{{"status", failures.isEmpty() ? "pass" : "fail"}, {"failures", failures}})
+            .toJson(QJsonDocument::Compact);
+    EM_ASM({ document.documentElement.dataset.fluentQtComponentRegressions = UTF8ToString($0); }, result.constData());
 }
 
 void publishSmokeState(const char* state, const QString& detail = {})
@@ -343,9 +475,9 @@ private:
         if (!largeGrid || !selectionGrid || !editingGrid)
             return reject(
                 QStringLiteral("DataGrid Gallery scenarios did not expose scale, selection, and editing views"));
-        if (!largeGrid->isScrollChainingEnabled() || !selectionGrid->isScrollChainingEnabled()
-            || !editingGrid->isScrollChainingEnabled()) {
-            return reject(QStringLiteral("DataGrid Gallery samples do not share boundary scroll chaining"));
+        for (const auto* grid : grids) {
+            if (grid->isScrollChainingEnabled())
+                return reject(QStringLiteral("DataGrid Gallery samples must retain default wheel containment"));
         }
 
         QScrollBar* scrollBar = largeGrid->verticalScrollBar();
@@ -1180,6 +1312,85 @@ private:
     bool m_finished = false;
 };
 
+// URL-only, read-only observation before accessibility is activated. DOM focus
+// on Qt's hidden input is not proof that a real widget received the query.
+// zh_CN: 仅诊断 URL 启用的只读观测；隐藏 DOM 输入框焦点不代表真实控件已收到查询。
+class WasmInteractionReadinessProbe final : public QObject {
+public:
+    explicit WasmInteractionReadinessProbe(GalleryWindow* window) : QObject(window), m_window(window)
+    {
+        m_clock.start();
+        m_tick.setInterval(50);
+        connect(&m_tick, &QTimer::timeout, this, [this] {
+            const bool covered = m_window->findChild<QWidget*>(QStringLiteral("gallerySplashScreen"));
+            const bool ready = !covered && m_window->isVisible() && m_window->isEnabled();
+            const auto state =
+                QJsonDocument(QJsonObject{{"ready", ready}, {"splash", covered}}).toJson(QJsonDocument::Compact);
+            EM_ASM(
+                { document.documentElement.dataset.fluentQtInteractionState = UTF8ToString($0); }, state.constData());
+            if (ready || m_clock.elapsed() > 120000) {
+                m_tick.stop();
+                deleteLater();
+            }
+        });
+        m_tick.start();
+    }
+
+private:
+    GalleryWindow* m_window;
+    QTimer m_tick;
+    QElapsedTimer m_clock;
+};
+
+class WasmAutoSuggestInputProbe final : public QObject {
+public:
+    explicit WasmAutoSuggestInputProbe(GalleryWindow* window) : QObject(window), m_window(window)
+    {
+        m_clock.start();
+        m_tick.setInterval(50);
+        connect(&m_tick, &QTimer::timeout, this, [this] { tick(); });
+        m_tick.start();
+    }
+
+private:
+    void tick()
+    {
+        // clang-format off
+        const bool done = EM_ASM_INT({
+            return document.documentElement.dataset.fluentQtAutoSuggestInputDone === 'true';
+        });
+        // clang-format on
+        if (done || m_clock.elapsed() > 120000) {
+            deleteLater();
+            return;
+        }
+        auto* field = m_window->findChild<textfields::AutoSuggestBox*>(QStringLiteral("asyncProjectSearch"));
+        auto* focus = QApplication::focusWidget();
+        const bool covered = m_window->findChild<QWidget*>(QStringLiteral("gallerySplashScreen"));
+        QJsonObject frame{{"ready", !covered && field && field->isVisible() && field->isEnabled()}, {"splash", covered},
+            {"elapsedMs", double(m_clock.elapsed())}, {"focus", focus ? focus->objectName() : QString()}};
+        if (field) {
+            const QPoint point = field->mapToGlobal(field->rect().center());
+            frame["point"] = QJsonArray{point.x(), point.y()};
+            frame["focused"] = field == focus || field->isAncestorOf(focus);
+            frame["text"] = field->text();
+            frame["open"] = field->isSuggestionListOpen();
+            frame["loadState"] = int(field->loadState());
+            QJsonArray rows;
+            if (auto* model = field->suggestionModel()) {
+                for (int row = 0; row < qMin(128, model->rowCount()); ++row)
+                    rows.append(model->index(row, 0).data().toString());
+            }
+            frame["rows"] = rows;
+        }
+        const auto json = QJsonDocument(frame).toJson(QJsonDocument::Compact);
+        EM_ASM({ document.documentElement.dataset.fluentQtAutoSuggestInput = UTF8ToString($0); }, json.constData());
+    }
+    GalleryWindow* m_window;
+    QTimer m_tick;
+    QElapsedTimer m_clock;
+};
+
 class WasmSourceInputProbe final : public QObject {
 public:
     explicit WasmSourceInputProbe(GalleryWindow* window)
@@ -1250,16 +1461,20 @@ private:
             document.setHtml(label->text());
             document.setTextWidth(content.width());
             document.documentLayout()->documentSize();
-            const auto* layout = document.firstBlock().layout();
-            if (!layout || layout->lineCount() < 2)
-                return;
             QJsonArray lines;
-            for (int index = 0; index < 2; ++index) {
-                const auto line = layout->lineAt(index);
-                const int y = qRound(content.y() + layout->position().y() + line.y() + line.height() / 2);
-                lines.append(QJsonArray{position(label, QPoint(content.left() + 1, y)),
-                    position(label, QPoint(content.right() - 1, y))});
+            for (auto block = document.begin(); block.isValid() && lines.size() < 2; block = block.next()) {
+                const auto* layout = block.layout();
+                if (!layout)
+                    continue;
+                for (int index = 0; index < layout->lineCount() && lines.size() < 2; ++index) {
+                    const auto line = layout->lineAt(index);
+                    const int y = qRound(content.y() + layout->position().y() + line.y() + line.height() / 2);
+                    lines.append(QJsonArray{position(label, QPoint(content.left() + 1, y)),
+                        position(label, QPoint(content.right() - 1, y))});
+                }
             }
+            if (lines.size() < 2)
+                return;
             frame["state"] = QStringLiteral("expanded");
             frame["copy"] = position(m_block->copyButton(), m_block->copyButton()->rect().center());
             frame["lines"] = lines;
@@ -2211,6 +2426,15 @@ private:
 void startWasmSmokeIfRequested(GalleryWindow* window)
 {
     const QString mode = smokeMode();
+    // The cover can be hidden while its connected transition still owns input.
+    // Test-only readiness observes the native lifetime, not retained AX DOM nodes.
+    // zh_CN: 遮罩隐藏后退场仍可能持有输入；测试以原生对象销毁为准，不依赖残留语义节点。
+    if (window && !mode.isEmpty())
+        new WasmInteractionReadinessProbe(window);
+    if (window && mode == QStringLiteral("component-regressions")) {
+        QTimer::singleShot(0, window, [] { runComponentRegressions(); });
+        return;
+    }
     if (window && mode == QStringLiteral("qmlplus")) {
         new WasmQmlPlusProbe(window);
         return;
@@ -2221,6 +2445,10 @@ void startWasmSmokeIfRequested(GalleryWindow* window)
         return;
     }
 #endif
+    if (window && mode == QStringLiteral("auto-suggest-input")) {
+        new WasmAutoSuggestInputProbe(window);
+        return;
+    }
     if (window && mode == QStringLiteral("source-input")) {
         new WasmSourceInputProbe(window);
         return;
