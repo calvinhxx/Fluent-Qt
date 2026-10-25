@@ -912,6 +912,12 @@ if (!paletteGuard) {
                 </modify-function>
                 <modify-function signature="onThemeUpdated()" remove="all"/>
             </object-type>
+            <object-type name="DataGridToolBar">
+                <modify-function signature="setDataGrid(fluent::collections::DataGrid*)">
+                    <modify-argument index="1"><reference-count action="set"/></modify-argument>
+                </modify-function>
+                <modify-function signature="onThemeUpdated()" remove="all"/>
+            </object-type>
             <object-type name="Accordion">
                 <enum-type name="ExpansionMode"/>
                 <!-- Runtime-dependent item ownership is published by the
