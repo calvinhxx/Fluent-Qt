@@ -36,6 +36,8 @@ namespace fluent::layout {
 class Field : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     Q_PROPERTY(QString labelText READ labelText WRITE setLabelText NOTIFY labelTextChanged)
+    Q_PROPERTY(LabelPosition labelPosition READ labelPosition WRITE setLabelPosition NOTIFY labelPositionChanged)
+    Q_PROPERTY(int labelWidth READ labelWidth WRITE setLabelWidth NOTIFY labelWidthChanged)
     Q_PROPERTY(bool required READ isRequired WRITE setRequired NOTIFY requiredChanged)
     Q_PROPERTY(QString helperText READ helperText WRITE setHelperText NOTIFY helperTextChanged)
     Q_PROPERTY(QString validationMessage
@@ -49,6 +51,9 @@ class Field : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(QWidget* editor READ editor WRITE setEditor NOTIFY editorChanged)
 
 public:
+    /** @brief Places the caption above or beside its editor. zh_CN: 标签置于编辑器上方或前侧。 */
+    enum class LabelPosition { Top, Leading };
+    Q_ENUM(LabelPosition)
     /**
      * @brief Presentation of the current validation message.
      * zh_CN: 当前校验文案的展示状态。
@@ -65,6 +70,12 @@ public:
 
     QString labelText() const { return m_labelText; }
     void setLabelText(const QString& text);
+    LabelPosition labelPosition() const { return m_labelPosition; }
+    void setLabelPosition(LabelPosition position);
+    /** @brief Shared caption width in Leading mode; long labels wrap.
+     * zh_CN: 前侧标签的统一宽度，长标签自动换行。 */
+    int labelWidth() const { return m_labelWidth; }
+    void setLabelWidth(int width);
 
     bool isRequired() const { return m_required; }
     void setRequired(bool required);
@@ -89,6 +100,8 @@ public:
 
 signals:
     void labelTextChanged(const QString& text);
+    void labelPositionChanged(LabelPosition position);
+    void labelWidthChanged(int width);
     void requiredChanged(bool required);
     void helperTextChanged(const QString& text);
     void validationMessageChanged(const QString& text);
@@ -97,6 +110,7 @@ signals:
     void editorOwnershipChanged(WidgetOwnership ownership);
 
 private:
+    void updateLayout();
     void releaseEditorInternal(bool deleteOwned, bool restoreParent);
     void handleEditorDestroyed();
     void updateCaption();
@@ -108,6 +122,8 @@ private:
     QString statusGlyph() const;
 
     QString m_labelText;
+    LabelPosition m_labelPosition = LabelPosition::Top;
+    int m_labelWidth = 112;
     QString m_helperText;
     QString m_validationMessage;
     bool m_required = false;

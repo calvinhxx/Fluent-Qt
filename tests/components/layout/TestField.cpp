@@ -63,6 +63,34 @@ TEST_F(FieldTest, Contract_DefaultsAndInheritance)
     EXPECT_NE(field.findChild<QWidget*>(QStringLiteral("fluentFieldEditorHost")), nullptr);
 }
 
+TEST_F(FieldTest, Contract_LeadingLabelKeepsValidationBelowTheSameEditor)
+{
+    Field field;
+    field.setLabelText("Long property label");
+    auto* input = new LineEdit;
+    input->setText("Preserved");
+    field.setEditor(input, WidgetOwnership::Owned);
+    field.setLabelPosition(Field::LabelPosition::Leading);
+    field.setLabelWidth(110);
+    field.setValidationState(Field::ValidationState::Error);
+    field.setValidationMessage("Check this value.");
+    field.resize(420, 140);
+    field.show();
+    QApplication::processEvents();
+    auto* caption = field.findChild<Label*>("fluentFieldCaption");
+    auto* status = field.findChild<Label*>("fluentFieldStatus");
+    ASSERT_TRUE(caption);
+    ASSERT_TRUE(status);
+    EXPECT_LT(caption->mapTo(&field, QPoint()).x(), input->mapTo(&field, QPoint()).x());
+    EXPECT_GT(status->mapTo(&field, QPoint()).y(), input->mapTo(&field, QPoint()).y());
+    field.setLabelPosition(Field::LabelPosition::Top);
+    QApplication::processEvents();
+    EXPECT_LT(caption->mapTo(&field, QPoint()).y(), input->mapTo(&field, QPoint()).y());
+    EXPECT_EQ(field.editor(), input);
+    EXPECT_EQ(input->text(), "Preserved");
+    EXPECT_EQ(input->accessibleName(), "Long property label");
+}
+
 TEST_F(FieldTest, Contract_SettersAreNoOpsOnUnchangedValues)
 {
     Field field;

@@ -1035,7 +1035,11 @@
       "setValidationState",
       "takeEditor",
       "validationMessage",
-      "validationState"
+      "validationState",
+      "labelPosition",
+      "setLabelPosition",
+      "labelWidth",
+      "setLabelWidth"
     ],
     "InfoBar": [
       "actionWidget",
