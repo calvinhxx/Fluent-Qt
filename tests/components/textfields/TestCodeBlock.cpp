@@ -2,11 +2,14 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QPointer>
+#include <QPainter>
 #include <QScopeGuard>
 #include <QScrollBar>
 #include <QSignalSpy>
 #include <QTest>
 #include <QTextDocument>
+#include <QTextBlock>
+#include <QTextCursor>
 #include <QVBoxLayout>
 #if defined(Q_OS_WIN)
 #include <qt_windows.h>
@@ -396,4 +399,125 @@ TEST_F(CodeBlockTest, Contract_CodeHighlightingMapsRenderedCharactersToExactSour
             EXPECT_EQ(reconstructed, source);
         }
     }
+}
+
+TEST_F(CodeBlockTest, Contract_SourceLinesUseIndependentBlocksWithoutLosingBlankLinesOrTokenColors)
+{
+    for (const QString& language : {QStringLiteral("cpp"), QStringLiteral("python"), QStringLiteral("plain")}) {
+        const QString source = language == QStringLiteral("python")
+            ? QStringLiteral("\n\nvalue = \"\"\"first\r\nsecond\n\nlast\"\"\"\n\n")
+            : QStringLiteral("\n\n/* first\r\nsecond\n\nlast */\n\n");
+        QString expected = source;
+        expected.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
+        fluent::textfields::detail::CodeSourceMap map;
+        QTextDocument document;
+        document.setHtml(fluent::textfields::detail::highlightCodeToHtml(source, language, true, &map));
+        EXPECT_EQ(document.toPlainText(), expected);
+        EXPECT_EQ(map.size(), expected.size());
+        EXPECT_EQ(document.blockCount(), expected.count(QLatin1Char('\n')) + 1)
+            << "Clipped code painting must be able to skip offscreen source lines";
+        for (auto block = document.begin(); block.isValid(); block = block.next()) {
+            EXPECT_EQ(block.blockFormat().topMargin(), 0);
+            EXPECT_EQ(block.blockFormat().bottomMargin(), 0);
+        }
+        const auto colorAt = [&](const QString& text) {
+            QTextCursor cursor(&document);
+            cursor.setPosition(expected.indexOf(text));
+            cursor.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor);
+            return cursor.charFormat().foreground().color();
+        };
+        EXPECT_EQ(colorAt(QStringLiteral("first")), colorAt(QStringLiteral("second")));
+        EXPECT_EQ(colorAt(QStringLiteral("first")), colorAt(QStringLiteral("last")));
+    }
+}
+
+TEST_F(CodeBlockTest, Contract_InternalScrollSurfaceStaysTransparentAcrossThemes)
+{
+    CodeBlock block(QStringLiteral("int value = 1;\n\n// short source"));
+    block.setLanguage(QStringLiteral("cpp"));
+    block.resize(500, 240);
+    block.show();
+    auto* scroll = block.findChild<ScrollView*>(QStringLiteral("fluentCodeBlockScroll"));
+    ASSERT_NE(scroll, nullptr);
+    for (const auto theme : {fluent::FluentElement::Dark, fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        fluent::FluentElement::setTheme(theme);
+        QApplication::processEvents();
+        EXPECT_FALSE(scroll->viewport()->autoFillBackground());
+        const QImage frame = block.grab().toImage();
+        const qreal dpr = frame.devicePixelRatio();
+        const QPoint inside = scroll->viewport()->mapTo(&block, QPoint(scroll->viewport()->width() - 12, 5));
+        const QPoint outside = inside + QPoint(0, -10);
+        EXPECT_EQ(frame.pixelColor(inside * dpr), frame.pixelColor(outside * dpr))
+            << "The code viewport must share the surrounding CodeBlock surface";
+    }
+}
+
+TEST_F(CodeBlockTest, Contract_ClippedCodeRenderingMatchesLabelSelectionAndWrapping)
+{
+    CodeBlock block(QStringLiteral("    // 项目名称\nvalue = \"a long quoted value\";\n\n").repeated(20));
+    block.setLanguage(QStringLiteral("cpp"));
+    block.setMaxVisibleLines(0);
+    block.resize(380, block.sizeHint().height());
+    block.show();
+    QApplication::processEvents();
+    auto* text = block.findChild<Label*>(QStringLiteral("fluentCodeBlockText"));
+    ASSERT_NE(text, nullptr);
+    Label reference;
+    reference.setFont(text->font());
+    reference.setTextFormat(Qt::RichText);
+    reference.setTextInteractionFlags(text->textInteractionFlags());
+    reference.setAlignment(text->alignment());
+    reference.setWordWrap(true);
+    reference.setTextColorRole(Label::TextColorRole::Primary);
+    reference.setAutoFillBackground(false);
+    const auto render = [](Label* label) {
+        QImage frame(QSize(label->width(), 120), QImage::Format_ARGB32_Premultiplied);
+        frame.fill(Qt::transparent);
+        QPainter painter(&frame);
+        label->render(&painter, QPoint(), QRect(QPoint(), frame.size()), QWidget::DrawChildren);
+        return frame;
+    };
+    for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        fluent::FluentElement::setTheme(theme);
+        QApplication::processEvents();
+        reference.setText(text->text());
+        for (int width : {260, 340}) {
+            text->resize(width, text->heightForWidth(width));
+            reference.resize(width, reference.heightForWidth(width));
+            EXPECT_EQ(text->heightForWidth(width), reference.heightForWidth(width));
+            for (int selected : {0, 35}) {
+                text->setSelection(4, selected);
+                reference.setSelection(4, selected);
+                EXPECT_EQ(render(text), render(&reference))
+                    << "Clipped drawing must align with Label's native hit testing and selection";
+            }
+        }
+        text->setWordWrap(false);
+        reference.setWordWrap(false);
+        EXPECT_EQ(text->sizeHint(), reference.sizeHint());
+        text->setWordWrap(true);
+        reference.setWordWrap(true);
+    }
+}
+
+TEST_F(CodeBlockTest, Contract_LongLineRenderingIsStableAcrossFocusAndSelection)
+{
+    CodeBlock block;
+    block.setCode(QString(140, QLatin1Char('a')) + "\n// second line\n// third line");
+    block.setLanguage("cpp");
+    block.resize(360, 260);
+    block.show();
+    QApplication::processEvents();
+    auto* label = block.findChild<QLabel*>("fluentCodeBlockText");
+    ASSERT_TRUE(label);
+    block.headerButton()->setFocus();
+    QApplication::processEvents();
+    const auto before = label->grab().toImage();
+    label->setFocus();
+    QApplication::processEvents();
+    EXPECT_EQ(before, label->grab().toImage());
+    label->setSelection(0, 8);
+    EXPECT_NE(before, label->grab().toImage());
+    label->setSelection(0, 0);
+    EXPECT_EQ(before, label->grab().toImage());
 }

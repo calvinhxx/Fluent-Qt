@@ -10,6 +10,20 @@ namespace {
 using code_tokens::paletteFor;
 using code_tokens::Palette;
 
+const QString kParagraph = QStringLiteral("<p style=\"margin:0;\">");
+const QString kLineBreak = QStringLiteral("</p>") + kParagraph;
+
+QString codeDocument(const QString& html, const QString& color)
+{
+    // Separate source lines let Qt skip offscreen blocks instead of shaping a
+    // whole file for each clipped paint. Zero margins retain snippet spacing.
+    // zh_CN: 按源码行分段，让 Qt 跳过屏外文本块；零段距保持代码行间距。
+    QString document = QStringLiteral("<body style=\"color:%1;\">%2%3</p></body>").arg(color, kParagraph, html);
+    document.replace(kParagraph + QStringLiteral("</p>"),
+        QStringLiteral("<p style=\"margin:0; -qt-paragraph-type:empty;\"></p>"));
+    return document;
+}
+
 const QSet<QString>& cppKeywords()
 {
     static const QSet<QString> keywords{QStringLiteral("alignas"), QStringLiteral("alignof"), QStringLiteral("auto"),
@@ -90,7 +104,7 @@ public:
             m_previousWasCarriageReturn = c == QLatin1Char('\r');
             if (c == QLatin1Char('\r') || c == QLatin1Char('\n')) {
                 recordSourceCharacter();
-                out += QStringLiteral("<br/>");
+                out += kLineBreak;
                 m_lineStart = true;
             } else if (c == QLatin1Char(' ') || c == QLatin1Char('\t')) {
                 int width = c == QLatin1Char('\t') ? 4 : 1;
@@ -115,7 +129,13 @@ public:
 
     QString span(const QString& color, const QString& text)
     {
-        return QStringLiteral("<span style=\"color:%1;\">%2</span>").arg(color, escape(text));
+        const QString start = QStringLiteral("<span style=\"color:%1;\">").arg(color);
+        auto lines = escape(text).split(kLineBreak);
+        for (auto& line : lines) {
+            if (!line.isEmpty())
+                line = start + line + QStringLiteral("</span>");
+        }
+        return lines.join(kLineBreak);
     }
 
     QString wrapOpportunity()
@@ -284,7 +304,7 @@ highlightCLike(const QString& code, bool darkTheme, CodeSourceMap* sourceMap, co
     // independent of the hosting label's own color.
     // zh_CN: 用默认色整体包一层，让未上 span 的文本（普通标识符、运算符）也随主题着色，
     // 与宿主 label 自身的颜色无关。
-    return QStringLiteral("<span style=\"color:%1;\">%2</span>").arg(pal.text, html);
+    return codeDocument(html, pal.text);
 }
 
 QString highlightCppToHtml(const QString& code, bool darkTheme, CodeSourceMap* sourceMap)
@@ -396,13 +416,13 @@ QString highlightPythonToHtml(const QString& code, bool darkTheme, CodeSourceMap
         i = appendSeparator(code, i, false, escaper, html, qualifiedDepth);
     }
 
-    return QStringLiteral("<span style=\"color:%1;\">%2</span>").arg(pal.text, html);
+    return codeDocument(html, pal.text);
 }
 
 QString highlightPlainToHtml(const QString& code, const QString& color, CodeSourceMap* sourceMap)
 {
     CodeEscaper escaper(sourceMap);
-    return escaper.span(color, code);
+    return codeDocument(escaper.escape(code), color);
 }
 
 QString highlightCodeToHtml(const QString& code, const QString& language, bool dark, CodeSourceMap* sourceMap)

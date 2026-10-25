@@ -39,6 +39,12 @@ C++, Python and QML receive syntax colors. Language identifiers are normalized:
 High contrast uses the theme's primary text color. Highlighting is intended for
 reading snippets, not language analysis or diagnostics.
 
+Source lines use separate Qt text blocks with zero paragraph margins. The
+renderer caches a bounded set of width measurements and draws only the exposed
+text region during scrolling and expansion. Label still owns native selection,
+keyboard input and accessibility; the same measured rows determine wrapping and
+the visible-line limit. Theme, font and source changes invalidate the cache.
+
 The header copy button and `copy()` copy the original source. A selected passage
 can be copied with the standard keyboard shortcut or context menu. Tabs, CRLF,
 repeated spaces and real zero-width characters survive copying; synthetic wrap

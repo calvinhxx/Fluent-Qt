@@ -4,6 +4,7 @@
 #include <QFontDatabase>
 #include <QFontMetricsF>
 #include <QHBoxLayout>
+#include <QHash>
 #include <QKeyEvent>
 #include <QPainter>
 #include <QPointer>
@@ -11,7 +12,10 @@
 #include <QTimer>
 #include <QTextBlock>
 #include <QTextDocument>
+#include <QTextCursor>
 #include <QTextLayout>
+#include <QAbstractTextDocumentLayout>
+#include <QPaintEvent>
 #include <memory>
 #include <QVBoxLayout>
 #include <QtMath>
@@ -75,7 +79,91 @@ class CodeText final : public textfields::Label {
 public:
     CodeText(CodeBlock* block, QWidget* parent) : Label(parent), m_block(block) {}
 
+    QTextDocument& layoutForWidth(int width) const
+    {
+        refreshDocument();
+        const qreal textWidth = wordWrap() ? qMax(1, width) : -1;
+        if (m_document->textWidth() != textWidth)
+            m_document->setTextWidth(textWidth);
+        return *m_document;
+    }
+
+    int heightForWidth(int width) const override
+    {
+        refreshDocument();
+        const int key = wordWrap() ? qMax(1, width) : -1;
+        const auto found = m_heights.constFind(key);
+        if (found != m_heights.cend())
+            return *found;
+        const int height = qCeil(layoutForWidth(width).size().height());
+        // Layouts alternate between preferred and actual width. Bound this cache
+        // so interactive window resizing cannot retain a height for every pixel.
+        if (m_heights.size() >= 4)
+            m_heights.clear();
+        m_heights.insert(key, height);
+        return height;
+    }
+    QSize sizeHint() const override
+    {
+        if (wordWrap())
+            return QSize(420, heightForWidth(420));
+        const auto size = layoutForWidth(-1).size();
+        return QSize(qCeil(size.width()), qCeil(size.height()));
+    }
+    QSize minimumSizeHint() const override { return QSize(0, fontMetrics().lineSpacing()); }
+
+private:
+    void refreshDocument() const
+    {
+        if (!m_document)
+            m_document = std::make_unique<QTextDocument>();
+        if (m_html != text() || m_font != font() || m_wrap != wordWrap()) {
+            m_html = text();
+            m_font = font();
+            m_wrap = wordWrap();
+            m_heights.clear();
+            m_document->setUndoRedoEnabled(false);
+            m_document->setDefaultFont(m_font);
+            m_document->setDocumentMargin(0);
+            QTextOption option;
+            option.setAlignment(Qt::AlignLeft);
+            option.setWrapMode(m_wrap ? QTextOption::WordWrap : QTextOption::ManualWrap);
+            m_document->setDefaultTextOption(option);
+            m_document->setHtml(m_html);
+        }
+    }
+
 protected:
+    void paintEvent(QPaintEvent* event) override
+    {
+        // QLabel keeps native selection, keyboard and accessibility behavior.
+        // Reuse the measurement document for clipped drawing: QLabel's rich-text
+        // painter otherwise traverses the entire source, even outside the viewport.
+        // zh_CN: 保留 Label 的原生选择、键盘和无障碍；复用测量文档按可见区域绘制，
+        // 避免 QLabel 在滚动和展开时遍历屏外的整份源码。
+        auto& document = layoutForWidth(width());
+        QPainter painter(this);
+        QAbstractTextDocumentLayout::PaintContext context;
+        context.clip = event->rect();
+        context.palette = palette();
+        // Qt still owns hit testing, keyboard navigation and selection ranges.
+        // Paint that selection on the same clipped document in every focus state.
+        // zh_CN: Qt 继续负责命中、键盘导航和选区；所有焦点状态用同一文档裁剪绘制选区。
+        if (hasSelectedText()) {
+            QAbstractTextDocumentLayout::Selection selection;
+            selection.cursor = QTextCursor(&document);
+            const int first = qBound(0, selectionStart(), document.characterCount() - 1);
+            const int last = qMin(document.characterCount() - 1, first + selectedText().size());
+            selection.cursor.setPosition(first);
+            selection.cursor.setPosition(last, QTextCursor::KeepAnchor);
+            const auto group = !isEnabled() ? QPalette::Disabled : hasFocus() ? QPalette::Active : QPalette::Inactive;
+            selection.format.setBackground(palette().brush(group, QPalette::Highlight));
+            selection.format.setForeground(palette().brush(group, QPalette::HighlightedText));
+            context.selections.append(selection);
+        }
+        document.documentLayout()->draw(&painter, context);
+    }
+
     bool event(QEvent* event) override
     {
         if (event->type() == QEvent::ShortcutOverride) {
@@ -173,6 +261,11 @@ private:
     QString m_source;
     QString m_language;
     CodeSourceMap m_sourceMap;
+    mutable std::unique_ptr<QTextDocument> m_document;
+    mutable QString m_html;
+    mutable QFont m_font;
+    mutable bool m_wrap = true;
+    mutable QHash<int, int> m_heights;
 };
 
 class CodeScroll final : public scrolling::ScrollView {
@@ -185,11 +278,23 @@ public:
         setScrollChainingEnabled(true);
         setVerticalScrollBarVisibility(ScrollBarVisibility::Visible);
         viewport()->setObjectName(QStringLiteral("fluentCodeViewport"));
-        viewport()->setStyleSheet(QStringLiteral("QWidget#fluentCodeViewport { background: transparent; }"));
+        onThemeUpdated();
         setContentWidget(text, WidgetOwnership::Owned);
         text->setMinimumSize(0, 0);
         text->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
         text->setAutoFillBackground(false);
+    }
+    void onThemeUpdated() override
+    {
+        ScrollView::onThemeUpdated();
+        // This is an internal viewport on the CodeBlock surface, not a separate
+        // canvas. Restore transparency after every ScrollView theme update.
+        // zh_CN: 内部视口沿用代码块底色，每次主题更新后恢复透明，避免叠加矩形背景。
+        QPalette transparent = viewport()->palette();
+        transparent.setBrush(QPalette::Window, Qt::NoBrush);
+        transparent.setBrush(QPalette::Base, Qt::NoBrush);
+        viewport()->setPalette(transparent);
+        viewport()->setAutoFillBackground(false);
     }
     bool hasHeightForWidth() const override { return true; }
     int heightForWidth(int width) const override
@@ -226,25 +331,12 @@ private:
         if (maxLines <= 0 || natural <= estimated)
             return natural;
 
-        // Fallback glyphs (including wrapping points) can make rich-text rows
-        // taller than the monospace font metrics. Measure the actual first rows.
-        // Only bounded, overflowing blocks need this cached document; Gallery's
-        // unlimited source panels continue using the Label's own measurement.
-        if (!measurement)
-            measurement = std::make_unique<QTextDocument>();
-        if (measuredHtml != text->text() || measuredFont != text->font()) {
-            measuredHtml = text->text();
-            measuredFont = text->font();
-            measurement->setDocumentMargin(0);
-            measurement->setDefaultFont(measuredFont);
-            measurement->setHtml(measuredHtml);
-        }
-        const qreal textWidth = text->wordWrap() ? qMax(1, width) : -1;
-        if (measurement->textWidth() != textWidth)
-            measurement->setTextWidth(textWidth);
-        measurement->size(); // Complete Qt's lazy text layout before reading rows.
+        // Fallback glyphs may be taller than the monospace metrics. Use the
+        // same laid-out rows for painting and the visible-line limit.
+        auto& measurement = text->layoutForWidth(width);
+        measurement.size();
         int rows = 0;
-        for (auto block = measurement->begin(); block.isValid(); block = block.next()) {
+        for (auto block = measurement.begin(); block.isValid(); block = block.next()) {
             const auto* layout = block.layout();
             for (int index = 0; index < layout->lineCount(); ++index) {
                 const auto line = layout->lineAt(index);
@@ -254,9 +346,6 @@ private:
         }
         return natural;
     }
-    mutable std::unique_ptr<QTextDocument> measurement;
-    mutable QString measuredHtml;
-    mutable QFont measuredFont;
     int textHeight(int width) const
     {
         return qMax(text->fontMetrics().lineSpacing(),
