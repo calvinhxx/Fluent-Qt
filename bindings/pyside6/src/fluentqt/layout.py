@@ -6,6 +6,8 @@ from . import _fluentqt as _native
 
 
 Card = _native.fluent.Card
+PropertyDefinition = _native.fluent.PropertyDefinition
+PropertyPanel = _native.fluent.PropertyPanel
 ParticleBackdrop = _native.fluent.ParticleBackdrop
 Divider = _native.fluent.Divider
 WidgetOwnership = _native.fluent.WidgetOwnership
@@ -374,4 +376,4 @@ class Field(_NativeField):
         self._fluentqt_original_parent = None
 
 
-__all__ = ["Accordion", "Card", "Divider", "Expander", "Field", "ParticleBackdrop"]
+__all__ = ["Accordion", "Card", "Divider", "Expander", "Field", "ParticleBackdrop", "PropertyDefinition", "PropertyPanel"]

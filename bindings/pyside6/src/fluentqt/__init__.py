@@ -131,6 +131,7 @@ from .foundation import (
 )
 from .charts import ChartData, ChartModel, ChartView, LineChart, AreaChart, BarChart, HorizontalBarChart, PieChart, DonutChart, ScatterChart, Sparkline
 from .layout import Accordion, Card, Divider, Expander, Field, ParticleBackdrop
+from .layout import PropertyDefinition, PropertyPanel
 from .menus_toolbars import (
     CommandBar,
     CommandBarFlyout,
@@ -332,6 +333,8 @@ __all__ = [
     "DatePicker",
     "DateTimeRangePicker",
     "DataGrid",
+    "PropertyDefinition",
+    "PropertyPanel",
     "Dialog",
     "Divider",
     "DrawerView",

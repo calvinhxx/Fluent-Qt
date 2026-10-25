@@ -119,6 +119,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/layout/Divider.h
     src/components/layout/Expander.h
     src/components/layout/Field.h
+    src/components/layout/PropertyPanel.h
     src/components/layout/ParticleBackdrop.h
 
     src/components/menus_toolbars/CommandBar.h

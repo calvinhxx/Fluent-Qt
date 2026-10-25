@@ -4,3 +4,5 @@ add_qt_test_module(test_divider TestDivider.cpp)
 add_qt_test_module(test_expander TestExpander.cpp)
 add_qt_test_module(test_field TestField.cpp)
 add_qt_test_module(test_particle_backdrop TestParticleBackdrop.cpp)
+
+add_qt_test_module(test_property_panel TestPropertyPanel.cpp)

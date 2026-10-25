@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>PropertyPanel</title>
+  <rect x="3" y="3" width="66" height="66" rx="16" fill="#f25c3d"/>
+  <g fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 22h13M15 36h13M15 50h13"/>
+    <rect x="35" y="17" width="22" height="10" rx="3"/>
+    <path d="M35 36h22"/>
+    <circle cx="43" cy="36" r="3.5" fill="#f25c3d"/>
+    <rect x="35" y="45" width="22" height="10" rx="5"/>
+    <circle cx="51" cy="50" r="2" fill="white" stroke="none"/>
+  </g>
+</svg>

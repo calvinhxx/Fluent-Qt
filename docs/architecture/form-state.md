@@ -88,6 +88,58 @@ also call `focusFirstError()` from their error summary. Screen-reader behavior
 still needs native platform review; focused repository tests establish value,
 focus and lifecycle behavior only.
 
+## Generated property editors
+
+`layout::PropertyPanel` composes Field, NumberBox, LineEdit, ToggleSwitch,
+ComboBox and ColorPicker from explicit `PropertyDefinition` metadata. It accepts
+up to 128 uniquely keyed definitions for a bounded configuration form, with
+text, finite number, boolean, string choice and color types. It groups and
+filters fields without replacing their editors or losing entered values.
+
+`layoutMode` defaults to `Automatic`: labels share an aligned column beside
+editors when they fit, and move above them at narrow widths. `Inline` and
+`Stacked` let a host choose a fixed arrangement. Reflow keeps the same editor,
+focus, value and validation state. The underlying `Field` also exposes
+`labelPosition` (`Top` or `Leading`) and `labelWidth` for other composed forms.
+Search appears automatically at eight fields or while a query is active;
+`searchVisibility` can force it visible or hidden.
+
+The panel owns generated widgets. The application owns business values and
+persistence: `valueEdited(key, value)` requests an application update, while
+`setValue(key, value)` refreshes an editor without emitting that edit signal.
+Both paths invalidate stale validation through `formController()`. Register
+validation handlers on that controller as for ordinary Fields. Call
+`markClean()` after initial values have been supplied.
+
+An optional `defaultValue` enables the field's reset action. Reset uses the same
+edit notification as direct input. A small, named undo button appears only
+while an editable value differs from its default. `resetAll()` applies defaults
+to editable fields, including fields hidden by search; `modifiedPropertyKeys()`
+and `modifiedPropertiesChanged` let a host coordinate its own reset command.
+Read-only fields are not reset.
+Programmatic updates remain possible in read-only mode. Invalid or identical
+definitions leave the existing form intact. Changed definitions destroy old generated
+editors, invalidates their pointers and resets coordination state. `editor()`
+returns the swatch-and-value button for color fields; its Flyout hosts the existing ColorPicker.
+
+Number editors use NumberBox's optional drag handle. `setScrubbingEnabled(true)`
+preserves ordinary text selection; `scrubSensitivity` is value units per logical
+pixel. Shift applies a 0.1 multiplier and Control a 10 multiplier. Keyboard and
+spin-button input remain available on NumberBox. PropertyPanel uses its compact
+drag handle and keyboard input by default; a host can configure the borrowed
+NumberBox editor's spinner presentation. `scrubStarted`/`scrubFinished` delimit one
+application undo transaction, while `valueChanged` supplies live values. Escape,
+focus loss, hiding, deactivation, disabling or switching to read-only cancels
+the drag and restores its initial value and text. An external `setValue` cancels
+the drag before applying the new value. The library does not own an undo stack.
+
+Gallery **Layout → PropertyPanel → Chart configuration workbench** combines all
+five editor types with a shared ChartModel, live chart configuration, validation,
+per-property/global reset and one Export menu for saving or copying PNG/CSV.
+C++, PySide6 and WebAssembly use the same
+public C++ implementations. The plain property card precedes the workbench;
+NumberBox and ChartView retain their own focused examples.
+
 ## Gallery and design
 
 Open **Layout → Field → Connection settings**. The C++, Python and browser

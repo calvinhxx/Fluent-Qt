@@ -71,6 +71,7 @@
 #include <components/layout/Divider.h>
 #include <components/layout/Expander.h>
 #include <components/layout/Field.h>
+#include <components/layout/PropertyPanel.h>
 #include <components/foundation/FormController.h>
 #include <components/menus_toolbars/CommandBar.h>
 #include <components/menus_toolbars/CommandBarFlyout.h>
