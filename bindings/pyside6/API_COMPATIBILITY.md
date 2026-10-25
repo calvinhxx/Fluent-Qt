@@ -79,6 +79,33 @@ slice as C++. Timeline borrows the native Qt model and delegate; Stepper owns
 only its navigation metadata and emits requests without owning application
 pages or workflow rules. Their Gallery routes share the C++ sample contract.
 
+`ListDetailView` is supported in Python through the same native implementation.
+Its two permanent panes are owned by the view. Add child widgets and layouts
+to `listPane()` and `detailPane()`; do not delete or reparent those containers.
+Resizing changes visibility and geometry only. Models, selection, documents,
+and back controls belong to the application. The file-browser Gallery example
+uses the same threshold, navigation, and in-memory editing contract on all hosts.
+
+`DataGridToolBar` composes the same native search, multi-select facets, and column
+menu in Python. It retains a reference to its borrowed `DataGrid`; the application
+owns the filtering proxy, source model, and saved view storage. `DataGrid` column
+visibility, leading-edge pinning, and `saveColumnState()` / `restoreColumnState()`
+use the C++ implementation. Saved state is a `QByteArray` and requires matching
+column count and header labels when restored. The Gallery demonstrates combined
+filters and in-memory view restoration in C++, Python, and WebAssembly.
+
+`AutoSuggestBox` supports opt-in asynchronous suggestions through the shared native
+request-token and debounce implementation. Applications own transport and borrowed
+models. Check `isSuggestionRequestCurrent()` before changing an external model,
+then call `completeSuggestionRequest()` on the GUI thread. String-list consumers
+use `setSuggestionsForRequest()`, which rejects stale results before writing.
+Python retains the borrowed model while attached, without taking Qt ownership;
+replacing it or returning to string-list mode releases that reference.
+Its loading, empty and pagination messages and Retry/Load more captions have
+matching text setters in Python, including `setLoadingMoreText`,
+`setMoreResultsText`, `setRetryText` and `setLoadMoreText`. TagInput inherits
+these overrides. Changing copy does not start or cancel a request.
+
 Every new installed C++ component or non-trivial public API records one of
 these decisions before release:
 
@@ -103,7 +130,7 @@ widget per item to compensate for missing native API.
 retains Python wrappers for the caller-supplied model, selection model, and
 delegate while Qt remains the native object owner; replacement and garbage-
 collection tests guard that boundary. Its Python Gallery routes use the same
-three read-only, selection/column, and editing/validation scenarios as C++.
+read-only, selection/column, editing/validation, and filter-workspace scenarios as C++.
 
 ## Gates
 
@@ -180,6 +207,74 @@ native, metadata, and typing versions to agree.
 retains model wrappers for borrowed series. Snapshot, batch append, all eight
 presentations, viewport, cursor, and aggregation APIs match C++. See the
 [Charts contract](../../docs/architecture/charts.md) for costs and limits.
+
+`exportImage`, `exportPng`, `exportCsv`, `copyImage` and `copyData` use the same
+native implementation in C++, Python and WebAssembly. Python returns `QImage`
+or `QByteArray`; file saving remains application policy. Clipboard completion
+signals report success or failure, including browser permission failures.
+
+## Property editing
+
+`PropertyPanel.LayoutMode` and `PropertyPanel.SearchVisibility` expose the same
+adaptive/forced layout and automatic search policies as C++. `Field.LabelPosition`
+supports shared leading captions. `modifiedPropertyKeys()` and `resetAll()` retain
+native signal, validation and read-only semantics; color editors expose a swatch
+and readable value through their existing borrowed Button wrapper.
+
+`PropertyDefinition` and `PropertyPanel` are available from `fluentqt` and
+`fluentqt.layout`. Definitions are copied metadata with a nested `Type` enum.
+The panel owns its generated widgets; returned editor and Field wrappers become
+invalid when changed definitions replace them. `valueEdited` asks the application
+to update its data, and `setValue` refreshes the UI without repeating that signal.
+The returned FormController remains panel-owned and exposes the same token-based
+validation as C++. See the [form contract](../../docs/architecture/form-state.md).
+
+NumberBox exposes the same optional scrub handle, sensitivity, cancellation and
+transaction signals in all three runtimes. Ordinary text editing and keyboard
+stepping remain available.
+
+
+## TagInput value and editing contract
+
+`TagInput` inherits the shared `AutoSuggestBox` editor, asynchronous requests and
+borrowed-model reference retention. `selectedItems()` is a list of dictionaries
+with non-empty `key` and `text` strings; duplicate keys are ignored and equal
+labels remain distinct. Selection contains value snapshots, so replacing or
+filtering a suggestion model does not remove selected members. Programmatic
+setters may restore values while read-only; user input cannot mutate them.
+Clicking the tag body focuses it. Pointer removal is confined to its close
+button; Backspace/Delete and left/right tag navigation retain the shared native
+keyboard behavior. The removal button owns its accessible name and hit bounds.
+
+`tokensSubmitted` asks the application to resolve submitted or delimited text.
+The Gallery resolves unique member names, keys and email addresses, retaining
+unknown or ambiguous text. IME preedit stays native and is excluded from
+suggestion navigation, tag deletion and asynchronous searches. Input-method
+commit resumes normal querying.
+
+## TreeSelect hierarchy contract
+
+`TreeSelect` is supported by the C++ library and PySide6 in the same release
+slice; the WebAssembly Gallery compiles the shared C++ implementation.
+`setModel()` borrows the source model and retains the Python wrapper without
+changing its QObject parent. Column zero supplies DisplayRole labels and
+unique string keys in `keyRole` (UserRole by default). Missing or duplicate
+keys are not selectable. Model flags can make a branch browse-only or disabled.
+
+Single mode keeps the first valid selected key; Multiple mode keeps independent
+node selections, without checking descendants automatically. `selectedItems()`
+returns dictionaries containing `key`, `text` and the full `path`. Filtering
+retains ancestors and never writes source check states. Removed keys are pruned;
+sorting and moving nodes retain selection by identity. Model reset reconciles
+against the replacement rows. Setters remain usable while read-only.
+
+Both modes use the native editor for Chinese IME. Preedit does not filter or
+select; committed text resumes searching. Up/Down browse, Enter selects,
+Escape closes and Tab exits without selecting. Multiple selections reuse
+TagInput's keyboard-accessible removal buttons and wrapping layout.
+`setPlaceholderText` and `setEmptyText` customize prompts independently of the
+model's labels. Gallery uses English fixtures; callers and IME tests retain
+arbitrary Unicode values.
 
 <!-- docs-nav:bottom:start -->
 ---

@@ -111,6 +111,20 @@ APIs under `src/components/**`.
 
 ## Inherited Qt Interaction Contracts
 
+Standard single-line inputs and Standard buttons share the private
+`ControlMetrics_p.h` height calculation: a 32 logical-pixel baseline that grows
+for text metrics. A composition such as DataGridToolBar coordinates its child
+size policies; do not patch each Gallery sample with fixed heights. Small/Large
+buttons, multiline labels, headers, explicit AutoSuggestBox input heights and
+wrapping tags keep their documented size semantics.
+
+Derived text inputs must honor LineEdit's `frameVisible` surface contract.
+NumberBox exposes `commitInput()` for consumers that must read the numeric value
+before focus-out, including item delegates. Keep model commits in the delegate:
+Enter, Tab and focus-out commit current text; Escape cancels. Preserve the model's
+EditRole type, and do not route wide integers through a double-valued editor.
+Unchanged formatted text must not reduce the stored value's precision.
+
 - Public components derived from an interactive Qt control must preserve the
   base class's observable input signals with the same meaning and exact-once
   delivery. An event override may call the Qt base implementation or reproduce
@@ -182,6 +196,21 @@ APIs under `src/components/**`.
 - Visible business copy is owned by the application (`setText`, model roles,
   placeholders). Prefer empty library defaults over hard-coded English marketing
   strings (`InfoBar` title, `CalendarDatePicker` placeholder).
+- Do not use Gallery's English-only presentation policy to restrict UILib data
+  or force an English locale. Application models, item labels, placeholders,
+  `QAction` text and status/error setters must retain caller-provided Unicode.
+  Reuse those public interfaces instead of reaching into private child widgets.
+- Caller-provided copy follows one `QString` / Python `str` path for every
+  language. Do not detect its language, translate it, select a language-specific
+  implementation, or replace it on theme/locale changes. A text setter must not
+  require a translator or a separate language setting.
+- Qt translation is an optional application choice for built-in generic action
+  and accessibility defaults (`tr` / `QTranslator`), not a prerequisite for
+  setting text. Applications using it install their translator before constructing
+  controls; live retranslation is only guaranteed where explicitly supported.
+  Scenario-specific status text has a public override: AutoSuggestBox
+  exposes initial/paged loading, empty, more-results, retry and load-more text;
+  TreeSelect exposes its placeholder and empty-result message.
 - Culture-facing calendar/time labels (month names, weekday names, AM/PM) should
   follow `QLocale` / an explicit `setLocale` on the control, not a forced English
   locale inside the library.

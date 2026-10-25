@@ -535,6 +535,11 @@
           "component_id": "toggle-switch",
           "choose_when": "A persistent binary setting takes effect immediately.",
           "avoid_when": "Submitting a form is required before the value takes effect."
+        },
+        {
+          "component_id": "tree-select",
+          "choose_when": "Users search and select one or several nodes from a hierarchy. Compose TreeView, Popup and native inputs; retain caller-owned models and stable keys.",
+          "avoid_when": "Choices have no hierarchy; use ComboBox, MultiSelectComboBox or TagInput."
         }
       ]
     },
@@ -699,6 +704,21 @@
           "component_id": "particle-backdrop",
           "choose_when": "A bounded hero or panel needs CPU-painted ribbons, floating dots or a starfield behind normal child controls, with shared motion and density controls.",
           "avoid_when": "The animation communicates essential information or a large collection would create many continuously animating instances."
+        },
+        {
+          "component_id": "list-detail-view",
+          "choose_when": "A list and its detail should share the available width, collapsing to one persistent pane in a narrow space while keeping selection and editor state.",
+          "avoid_when": "More than two panes, draggable splitting, docking, or overlay behavior is required."
+        },
+        {
+          "component_id": "data-grid-tool-bar",
+          "choose_when": "A DataGrid needs a wrapping search field, multi-select facets and column visibility, pinning or ordering controls. Connect its signals to an application-owned proxy model.",
+          "avoid_when": "The view should own business filtering, loading or persistence, or no table is present."
+        },
+        {
+          "component_id": "property-panel",
+          "choose_when": "A bounded set of explicit typed properties needs generated Fluent editors, groups, search, reset and form validation. Applications own values and persistence.",
+          "avoid_when": "An unbounded object tree, multi-object editing or a virtualized data table is required."
         }
       ]
     },
@@ -867,7 +887,7 @@
         },
         {
           "component_id": "auto-suggest-box",
-          "choose_when": "One-line input benefits from dynamic matching suggestions.",
+          "choose_when": "One-line input benefits from local or asynchronous suggestions. AutoSuggestBox owns debounce, request tokens, loading, empty, retry and pagination presentation; the application owns transport and borrowed model data.",
           "avoid_when": "The choice set is small and fixed enough for ComboBox."
         },
         {
@@ -884,6 +904,11 @@
           "component_id": "text-edit",
           "choose_when": "Users enter or inspect multiple lines of text, logs, or documents.",
           "avoid_when": "Only a short single-line value is expected."
+        },
+        {
+          "component_id": "tag-input",
+          "choose_when": "Users choose several stable values as removable tags while searching. Reuses AutoSuggestBox; application-owned suggestion models and transport remain separate from selected value snapshots.",
+          "avoid_when": "A fixed checklist-style dropdown is sufficient; use MultiSelectComboBox then."
         }
       ]
     },

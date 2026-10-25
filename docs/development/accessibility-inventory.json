@@ -3,49 +3,81 @@
   "source_catalog": "docs/ai/generated/fluentqt-ai-catalog.json",
   "components": [
     {
-      "id": "qml-view",
-      "classification": "native",
-      "risk": "high",
+      "id": "accordion",
+      "classification": "augmented",
+      "risk": "medium",
       "status": "covered",
       "evidence": [
-        "docs/architecture/qml-bridge.md",
-        "src/components/qmlbridge/QmlView.h",
-        "tests/components/qmlbridge/TestQmlBridge.cpp"
+        "src/components/layout/Accordion.h",
+        "src/components/layout/Expander.cpp"
       ],
       "gap": ""
     },
     {
-      "id": "spatial-view",
-      "classification": "native",
+      "id": "annotated-scrollbar",
+      "classification": "adapter",
       "risk": "high",
       "status": "covered",
       "evidence": [
-        "docs/architecture/spatial-view.md",
-        "tests/components/spatial/TestSpatialView.cpp",
-        "tests/gallery/TestGallerySpatial.cpp",
-        "bindings/pyside6/gallery/tests/test_gallery_spatial.py"
+        "src/components/scrolling/private/AnnotatedScrollBarAccessibility_p.cpp",
+        "tests/components/TestComplexInputAccessibility.cpp"
       ],
       "gap": ""
     },
     {
-      "id": "spatial-item",
-      "classification": "not-applicable",
-      "risk": "low",
-      "status": "not-applicable",
-      "evidence": [
-        "src/components/spatial/SpatialItem.h",
-        "tests/components/spatial/TestSpatialView.cpp"
-      ],
-      "gap": "Non-widget pose and surface-finish handle. Decoration has no input or semantic target; native 2D retains the hosted controls."
-    },
-    {
-      "id": "chart-view",
+      "id": "area-chart",
       "classification": "adapter",
       "risk": "medium",
       "status": "covered",
       "evidence": [
         "src/components/charts/ChartView.cpp",
         "tests/components/charts/TestChartView.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "auto-suggest-box",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/textfields/private/AutoSuggestBoxAccessibility_p.cpp",
+        "tests/components/TestComplexInputAccessibility.cpp",
+        "tests/components/textfields/TestAutoSuggestBox.cpp",
+        ".github/scripts/wasm_auto_suggest.py",
+        "platforms/webassembly/Runtime.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "avatar",
+      "classification": "augmented",
+      "risk": "low",
+      "status": "covered",
+      "evidence": [
+        "tests/components/status_info/TestAvatar.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "bar-chart",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/charts/ChartView.cpp",
+        "tests/components/charts/TestChartView.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "breadcrumb",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/navigation/private/NavigationSelectionAccessibility_p.cpp",
+        "tests/components/navigation/TestNavigationAccessibility.cpp"
       ],
       "gap": ""
     },
@@ -62,12 +94,43 @@
       "gap": ""
     },
     {
-      "id": "compound-button",
+      "id": "calendar-date-picker",
       "classification": "augmented",
-      "risk": "low",
+      "risk": "medium",
       "status": "covered",
       "evidence": [
-        "tests/components/basicinput/TestCompoundButton.cpp"
+        "tests/components/date_time/TestCalendarDatePicker.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "calendar-view",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "tests/components/date_time/TestCalendarView.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "card",
+      "classification": "not-applicable",
+      "risk": "low",
+      "status": "not-applicable",
+      "evidence": [
+        "src/components/layout/Card.h"
+      ],
+      "gap": "Presentation surface; semantics belong to contained content."
+    },
+    {
+      "id": "chart-view",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/charts/ChartView.cpp",
+        "tests/components/charts/TestChartView.cpp"
       ],
       "gap": ""
     },
@@ -79,6 +142,30 @@
       "evidence": [
         "src/components/basicinput/CheckBox.h",
         "tests/components/basicinput/TestCheckBox.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "coach-mark",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.cpp",
+        "tests/components/dialogs_flyouts/TestTransientAccessibility.cpp",
+        "tests/gallery/TestGalleryShellFramework.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "code-block",
+      "classification": "native",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/textfields/CodeBlock.h",
+        "tests/components/textfields/TestCodeBlock.cpp",
+        "src/components/layout/Expander.h"
       ],
       "gap": ""
     },
@@ -105,6 +192,151 @@
       "gap": ""
     },
     {
+      "id": "command-bar",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/menus_toolbars/private/CommandAccessibility_p.cpp",
+        "tests/components/menus_toolbars/TestCommandSubmenus.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "command-bar-flyout",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/menus_toolbars/private/CommandAccessibility_p.cpp",
+        "tests/components/menus_toolbars/TestCommandSubmenus.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "command-palette",
+      "classification": "augmented",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/menus_toolbars/CommandPalette.cpp",
+        "tests/components/menus_toolbars/TestCommandPalette.cpp",
+        "tests/gallery/TestCommandPaletteSamples.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "compound-button",
+      "classification": "augmented",
+      "risk": "low",
+      "status": "covered",
+      "evidence": [
+        "tests/components/basicinput/TestCompoundButton.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "content-dialog",
+      "classification": "native",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/dialogs_flyouts/ContentDialog.h"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "data-grid",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "tests/components/collections/TestDataGrid.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "data-grid-tool-bar",
+      "classification": "native",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/layout/DataGridToolBar.h",
+        "tests/components/layout/TestDataGridToolBar.cpp",
+        "app/view/widgets/samples/DataGridWorkspaceSample.h"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "date-picker",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/date_time/private/PickerAccessibility_p.cpp",
+        "tests/components/TestComplexInputAccessibility.cpp",
+        "tests/components/date_time/TestDatePicker.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "date-time-range-picker",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/date_time/private/DateTimeRangePickerAccessibility_p.cpp",
+        "tests/components/date_time/TestDateTimeRangePicker.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "dialog",
+      "classification": "native",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/dialogs_flyouts/Dialog.h",
+        "tests/components/dialogs_flyouts/TestOverlayContract.cpp",
+        "tests/gallery/TestGalleryOverlaySamples.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "divider",
+      "classification": "not-applicable",
+      "risk": "low",
+      "status": "not-applicable",
+      "evidence": [
+        "src/components/layout/Divider.h"
+      ],
+      "gap": "Presentation separator; no interactive state."
+    },
+    {
+      "id": "donut-chart",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/charts/ChartView.cpp",
+        "tests/components/charts/TestChartView.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "drawer-view",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/collections/private/DrawerViewAccessibility_p.cpp",
+        "tests/components/TestAuxiliarySurfaceAccessibility.cpp",
+        "tests/components/dialogs_flyouts/TestOverlayContract.cpp",
+        "tests/gallery/TestGalleryOverlaySamples.cpp"
+      ],
+      "gap": ""
+    },
+    {
       "id": "dropdown-button",
       "classification": "adapter",
       "risk": "medium",
@@ -112,6 +344,114 @@
       "evidence": [
         "src/components/basicinput/private/MenuButtonAccessibility_p.cpp",
         "tests/components/TestAuxiliarySurfaceAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "expander",
+      "classification": "augmented",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/layout/Expander.cpp",
+        "tests/components/layout/TestExpander.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "field",
+      "classification": "augmented",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "tests/components/layout/TestField.cpp",
+        "tests/components/TestFormController.cpp",
+        "src/components/foundation/FormController.h"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "file-drop-zone",
+      "classification": "augmented",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/basicinput/FileDropZone.cpp",
+        "tests/components/basicinput/TestFileDropZone.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "file-list-view",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/collections/FileListView.cpp",
+        "tests/components/collections/TestFileListView.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "flip-view",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/collections/private/FlipViewAccessibility_p.cpp",
+        "tests/components/TestCollectionSurfaceAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "flow-view",
+      "classification": "augmented",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "tests/components/collections/TestFlowView.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "flyout",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.cpp",
+        "tests/components/dialogs_flyouts/TestTransientAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "font-icon",
+      "classification": "not-applicable",
+      "risk": "low",
+      "status": "not-applicable",
+      "evidence": [
+        "src/components/foundation/FontIcon.h"
+      ],
+      "gap": "Presentation glyph; semantic meaning belongs to its containing control."
+    },
+    {
+      "id": "grid-view",
+      "classification": "native",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/collections/GridView.h"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "horizontal-bar-chart",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/charts/ChartView.cpp",
+        "tests/components/charts/TestChartView.cpp"
       ],
       "gap": ""
     },
@@ -127,6 +467,108 @@
       "gap": ""
     },
     {
+      "id": "info-badge",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "tests/components/status_info/TestInfoBadge.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "info-bar",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/status_info/private/StatusPresentationAccessibility_p.cpp",
+        "tests/components/TestSemanticPresentationAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "label",
+      "classification": "native",
+      "risk": "low",
+      "status": "covered",
+      "evidence": [
+        "src/components/textfields/Label.h"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "line-chart",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/charts/ChartView.cpp",
+        "tests/components/charts/TestChartView.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "line-edit",
+      "classification": "native",
+      "risk": "low",
+      "status": "covered",
+      "evidence": [
+        "src/components/textfields/LineEdit.h",
+        "tests/components/textfields/TestLineEdit.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "list-detail-view",
+      "classification": "native",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/layout/ListDetailView.h",
+        "tests/components/layout/TestListDetailView.cpp",
+        "app/view/widgets/samples/FileBrowserSample.h",
+        "tests/gallery/TestGalleryContentPages.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "list-view",
+      "classification": "native",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/collections/ListView.h",
+        "tests/components/collections/TestListView.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "menu",
+      "classification": "native",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/menus_toolbars/Menu.h",
+        "platforms/webassembly/Runtime.cpp",
+        "tests/components/menus_toolbars/TestMenu.cpp",
+        "bindings/pyside6/tests/test_bindings.py",
+        ".github/scripts/wasm_command_submenus.py",
+        ".github/scripts/wasm_data_grid.py"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "menu-bar",
+      "classification": "native",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/menus_toolbars/MenuBar.h"
+      ],
+      "gap": ""
+    },
+    {
       "id": "multi-select-combobox",
       "classification": "adapter",
       "risk": "high",
@@ -134,6 +576,145 @@
       "evidence": [
         "src/components/basicinput/private/MultiSelectComboBoxAccessibility_p.cpp",
         "tests/components/basicinput/TestMultiSelectComboBox.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "navigation-view",
+      "classification": "native",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/navigation/NavigationView.h",
+        "tests/components/navigation/TestNavigationView.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "number-box",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/textfields/private/NumberBoxAccessibility_p.cpp",
+        "tests/components/TestValueAccessibility.cpp",
+        "tests/components/textfields/TestNumberBox.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "particle-backdrop",
+      "classification": "not-applicable",
+      "risk": "low",
+      "status": "not-applicable",
+      "evidence": [
+        "src/components/layout/ParticleBackdrop.h",
+        "tests/components/layout/TestParticleBackdrop.cpp",
+        "tests/gallery/TestGalleryParticleBackdrop.cpp"
+      ],
+      "gap": "All three CPU presets are decorative; contained controls own semantics and optional pointer effects convey no information. Effect switching preserves paused motion; MotionPolicy stops every preset and HighContrast suppresses decoration. Gallery uses a named keyboard-operable ComboBox for effect selection and a persisted, default-on ToggleSwitch to hide and stop home decoration."
+    },
+    {
+      "id": "password-box",
+      "classification": "native",
+      "risk": "low",
+      "status": "covered",
+      "evidence": [
+        "src/components/textfields/PasswordBox.h"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "pie-chart",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/charts/ChartView.cpp",
+        "tests/components/charts/TestChartView.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "pips-pager",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/scrolling/private/PipsPagerAccessibility_p.cpp",
+        "tests/components/navigation/TestNavigationAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "pivot",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/navigation/private/NavigationSelectionAccessibility_p.cpp",
+        "tests/components/navigation/TestNavigationAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "popup",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.cpp",
+        "tests/components/dialogs_flyouts/TestTransientAccessibility.cpp",
+        "tests/components/dialogs_flyouts/TestPopup.cpp",
+        "tests/gallery/TestCommandPaletteSamples.cpp",
+        "tests/components/dialogs_flyouts/TestOverlayContract.cpp",
+        "tests/gallery/TestGalleryOverlaySamples.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "progress-bar",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/status_info/private/ProgressAccessibility_p.cpp",
+        "tests/components/TestValueAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "progress-ring",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/status_info/private/ProgressAccessibility_p.cpp",
+        "tests/components/TestValueAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "property-panel",
+      "classification": "augmented",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/layout/PropertyPanel.h",
+        "tests/components/layout/TestPropertyPanel.cpp",
+        "tests/gallery/TestGalleryContentPages.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "qml-view",
+      "classification": "native",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "docs/architecture/qml-bridge.md",
+        "src/components/qmlbridge/QmlView.h",
+        "tests/components/qmlbridge/TestQmlBridge.cpp"
       ],
       "gap": ""
     },
@@ -170,12 +751,113 @@
       "gap": ""
     },
     {
+      "id": "scatter-chart",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/charts/ChartView.cpp",
+        "tests/components/charts/TestChartView.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "scroll-view",
+      "classification": "native",
+      "risk": "low",
+      "status": "covered",
+      "evidence": [
+        "src/components/scrolling/ScrollView.h"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "scrollbar",
+      "classification": "native",
+      "risk": "low",
+      "status": "covered",
+      "evidence": [
+        "src/components/scrolling/ScrollBar.h"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "selector-bar",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/navigation/private/NavigationSelectionAccessibility_p.cpp",
+        "tests/components/navigation/TestNavigationAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "shimmer",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/status_info/private/StatusPresentationAccessibility_p.cpp",
+        "tests/components/TestSemanticPresentationAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
       "id": "slider",
       "classification": "native",
       "risk": "low",
       "status": "covered",
       "evidence": [
         "src/components/basicinput/Slider.h"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "sparkline",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/charts/ChartView.cpp",
+        "tests/components/charts/TestChartView.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "spatial-item",
+      "classification": "not-applicable",
+      "risk": "low",
+      "status": "not-applicable",
+      "evidence": [
+        "src/components/spatial/SpatialItem.h",
+        "tests/components/spatial/TestSpatialView.cpp"
+      ],
+      "gap": "Non-widget pose and surface-finish handle. Decoration has no input or semantic target; native 2D retains the hosted controls."
+    },
+    {
+      "id": "spatial-view",
+      "classification": "native",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "docs/architecture/spatial-view.md",
+        "tests/components/spatial/TestSpatialView.cpp",
+        "tests/gallery/TestGallerySpatial.cpp",
+        "bindings/pyside6/gallery/tests/test_gallery_spatial.py"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "splash-screen",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/status_info/SplashScreen.cpp",
+        "src/components/status_info/private/ProgressAccessibility_p.cpp",
+        "tests/components/status_info/TestSplashScreen.cpp",
+        "tests/gallery/TestGalleryShellMotionPolicy.cpp"
       ],
       "gap": ""
     },
@@ -187,6 +869,129 @@
       "evidence": [
         "src/components/basicinput/private/MenuButtonAccessibility_p.cpp",
         "tests/components/basicinput/TestSplitButtonAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "split-view",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/collections/private/SplitViewAccessibility_p.cpp",
+        "tests/components/TestCollectionSurfaceAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "stack-view",
+      "classification": "native",
+      "risk": "low",
+      "status": "covered",
+      "evidence": [
+        "src/components/collections/StackView.h"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "stepper",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/navigation/Stepper.cpp",
+        "tests/components/navigation/TestStepper.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "tab-view",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/navigation/private/NavigationSelectionAccessibility_p.cpp",
+        "tests/components/navigation/TestNavigationAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "tag-input",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/textfields/TagInput.h",
+        "src/components/textfields/private/AutoSuggestBoxAccessibility_p.cpp",
+        "tests/components/textfields/TestTagInput.cpp",
+        "platforms/webassembly/Runtime.cpp",
+        ".github/scripts/wasm_tag_input.py"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "teaching-tip",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.cpp",
+        "tests/components/dialogs_flyouts/TestTransientAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "text-edit",
+      "classification": "native",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/textfields/TextEdit.h",
+        "tests/components/textfields/TestTextEdit.cpp",
+        "tests/components/textfields/TestTextEditMotion.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "time-picker",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/date_time/private/PickerAccessibility_p.cpp",
+        "tests/components/TestComplexInputAccessibility.cpp",
+        "tests/components/date_time/TestTimePicker.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "timeline",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/collections/Timeline.cpp",
+        "tests/components/collections/TestTimeline.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "title-bar",
+      "classification": "not-applicable",
+      "risk": "low",
+      "status": "not-applicable",
+      "evidence": [
+        "src/components/windowing/TitleBar.h"
+      ],
+      "gap": "Drag surface semantics are owned by Window and its caption controls."
+    },
+    {
+      "id": "toast",
+      "classification": "augmented",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "tests/components/status_info/TestToast.cpp"
       ],
       "gap": ""
     },
@@ -224,88 +1029,24 @@
       "gap": ""
     },
     {
-      "id": "drawer-view",
+      "id": "tooltip",
       "classification": "adapter",
       "risk": "medium",
       "status": "covered",
       "evidence": [
-        "src/components/collections/private/DrawerViewAccessibility_p.cpp",
-        "tests/components/TestAuxiliarySurfaceAccessibility.cpp",
-        "tests/components/dialogs_flyouts/TestOverlayContract.cpp",
-        "tests/gallery/TestGalleryOverlaySamples.cpp"
+        "src/components/status_info/private/ToolTipAccessibility_p.cpp",
+        "tests/components/TestAuxiliarySurfaceAccessibility.cpp"
       ],
       "gap": ""
     },
     {
-      "id": "data-grid",
+      "id": "tree-select",
       "classification": "adapter",
       "risk": "high",
       "status": "covered",
       "evidence": [
-        "tests/components/collections/TestDataGrid.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "flip-view",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/collections/private/FlipViewAccessibility_p.cpp",
-        "tests/components/TestCollectionSurfaceAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "flow-view",
-      "classification": "augmented",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "tests/components/collections/TestFlowView.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "grid-view",
-      "classification": "native",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/collections/GridView.h"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "list-view",
-      "classification": "native",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/collections/ListView.h",
-        "tests/components/collections/TestListView.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "split-view",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/collections/private/SplitViewAccessibility_p.cpp",
-        "tests/components/TestCollectionSurfaceAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "stack-view",
-      "classification": "native",
-      "risk": "low",
-      "status": "covered",
-      "evidence": [
-        "src/components/collections/StackView.h"
+        "src/components/basicinput/TreeSelect.cpp",
+        "tests/components/basicinput/TestTreeSelect.cpp"
       ],
       "gap": ""
     },
@@ -320,683 +1061,12 @@
       "gap": ""
     },
     {
-      "id": "calendar-date-picker",
-      "classification": "augmented",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "tests/components/date_time/TestCalendarDatePicker.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "calendar-view",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "tests/components/date_time/TestCalendarView.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "date-picker",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/date_time/private/PickerAccessibility_p.cpp",
-        "tests/components/TestComplexInputAccessibility.cpp",
-        "tests/components/date_time/TestDatePicker.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "date-time-range-picker",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/date_time/private/DateTimeRangePickerAccessibility_p.cpp",
-        "tests/components/date_time/TestDateTimeRangePicker.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "time-picker",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/date_time/private/PickerAccessibility_p.cpp",
-        "tests/components/TestComplexInputAccessibility.cpp",
-        "tests/components/date_time/TestTimePicker.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "content-dialog",
-      "classification": "native",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/dialogs_flyouts/ContentDialog.h"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "dialog",
-      "classification": "native",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/dialogs_flyouts/Dialog.h",
-        "tests/components/dialogs_flyouts/TestOverlayContract.cpp",
-        "tests/gallery/TestGalleryOverlaySamples.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "flyout",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.cpp",
-        "tests/components/dialogs_flyouts/TestTransientAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "popup",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.cpp",
-        "tests/components/dialogs_flyouts/TestTransientAccessibility.cpp",
-        "tests/components/dialogs_flyouts/TestPopup.cpp",
-        "tests/gallery/TestCommandPaletteSamples.cpp",
-        "tests/components/dialogs_flyouts/TestOverlayContract.cpp",
-        "tests/gallery/TestGalleryOverlaySamples.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "teaching-tip",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.cpp",
-        "tests/components/dialogs_flyouts/TestTransientAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "coach-mark",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.cpp",
-        "tests/components/dialogs_flyouts/TestTransientAccessibility.cpp",
-        "tests/gallery/TestGalleryShellFramework.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "accordion",
-      "classification": "augmented",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/layout/Accordion.h",
-        "src/components/layout/Expander.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "particle-backdrop",
-      "classification": "not-applicable",
-      "risk": "low",
-      "status": "not-applicable",
-      "evidence": [
-        "src/components/layout/ParticleBackdrop.h",
-        "tests/components/layout/TestParticleBackdrop.cpp",
-        "tests/gallery/TestGalleryParticleBackdrop.cpp"
-      ],
-      "gap": "All three CPU presets are decorative; contained controls own semantics and optional pointer effects convey no information. Effect switching preserves paused motion; MotionPolicy stops every preset and HighContrast suppresses decoration. Gallery uses a named keyboard-operable ComboBox for effect selection and a persisted, default-on ToggleSwitch to hide and stop home decoration."
-    },
-    {
-      "id": "card",
-      "classification": "not-applicable",
-      "risk": "low",
-      "status": "not-applicable",
-      "evidence": [
-        "src/components/layout/Card.h"
-      ],
-      "gap": "Presentation surface; semantics belong to contained content."
-    },
-    {
-      "id": "divider",
-      "classification": "not-applicable",
-      "risk": "low",
-      "status": "not-applicable",
-      "evidence": [
-        "src/components/layout/Divider.h"
-      ],
-      "gap": "Presentation separator; no interactive state."
-    },
-    {
-      "id": "expander",
-      "classification": "augmented",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/layout/Expander.cpp",
-        "tests/components/layout/TestExpander.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "field",
-      "classification": "augmented",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "tests/components/layout/TestField.cpp",
-        "tests/components/TestFormController.cpp",
-        "src/components/foundation/FormController.h"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "menu",
-      "classification": "native",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/menus_toolbars/Menu.h"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "menu-bar",
-      "classification": "native",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/menus_toolbars/MenuBar.h"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "command-bar",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/menus_toolbars/private/CommandAccessibility_p.cpp",
-        "tests/components/menus_toolbars/TestCommandSubmenus.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "command-bar-flyout",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/menus_toolbars/private/CommandAccessibility_p.cpp",
-        "tests/components/menus_toolbars/TestCommandSubmenus.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "breadcrumb",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/navigation/private/NavigationSelectionAccessibility_p.cpp",
-        "tests/components/navigation/TestNavigationAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "navigation-view",
-      "classification": "native",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/navigation/NavigationView.h",
-        "tests/components/navigation/TestNavigationView.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "pivot",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/navigation/private/NavigationSelectionAccessibility_p.cpp",
-        "tests/components/navigation/TestNavigationAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "selector-bar",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/navigation/private/NavigationSelectionAccessibility_p.cpp",
-        "tests/components/navigation/TestNavigationAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "tab-view",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/navigation/private/NavigationSelectionAccessibility_p.cpp",
-        "tests/components/navigation/TestNavigationAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "annotated-scrollbar",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/scrolling/private/AnnotatedScrollBarAccessibility_p.cpp",
-        "tests/components/TestComplexInputAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "pips-pager",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/scrolling/private/PipsPagerAccessibility_p.cpp",
-        "tests/components/navigation/TestNavigationAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "scrollbar",
-      "classification": "native",
-      "risk": "low",
-      "status": "covered",
-      "evidence": [
-        "src/components/scrolling/ScrollBar.h"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "scroll-view",
-      "classification": "native",
-      "risk": "low",
-      "status": "covered",
-      "evidence": [
-        "src/components/scrolling/ScrollView.h"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "avatar",
-      "classification": "augmented",
-      "risk": "low",
-      "status": "covered",
-      "evidence": [
-        "tests/components/status_info/TestAvatar.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "info-badge",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "tests/components/status_info/TestInfoBadge.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "info-bar",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/status_info/private/StatusPresentationAccessibility_p.cpp",
-        "tests/components/TestSemanticPresentationAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "progress-bar",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/status_info/private/ProgressAccessibility_p.cpp",
-        "tests/components/TestValueAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "progress-ring",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/status_info/private/ProgressAccessibility_p.cpp",
-        "tests/components/TestValueAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "splash-screen",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/status_info/SplashScreen.cpp",
-        "src/components/status_info/private/ProgressAccessibility_p.cpp",
-        "tests/components/status_info/TestSplashScreen.cpp",
-        "tests/gallery/TestGalleryShellMotionPolicy.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "shimmer",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/status_info/private/StatusPresentationAccessibility_p.cpp",
-        "tests/components/TestSemanticPresentationAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "toast",
-      "classification": "augmented",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "tests/components/status_info/TestToast.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "tooltip",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/status_info/private/ToolTipAccessibility_p.cpp",
-        "tests/components/TestAuxiliarySurfaceAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "auto-suggest-box",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/textfields/private/AutoSuggestBoxAccessibility_p.cpp",
-        "tests/components/TestComplexInputAccessibility.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "code-block",
-      "classification": "native",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/textfields/CodeBlock.h",
-        "tests/components/textfields/TestCodeBlock.cpp",
-        "src/components/layout/Expander.h"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "label",
-      "classification": "native",
-      "risk": "low",
-      "status": "covered",
-      "evidence": [
-        "src/components/textfields/Label.h"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "line-edit",
-      "classification": "native",
-      "risk": "low",
-      "status": "covered",
-      "evidence": [
-        "src/components/textfields/LineEdit.h",
-        "tests/components/textfields/TestLineEdit.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "number-box",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/textfields/private/NumberBoxAccessibility_p.cpp",
-        "tests/components/TestValueAccessibility.cpp",
-        "tests/components/textfields/TestNumberBox.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "password-box",
-      "classification": "native",
-      "risk": "low",
-      "status": "covered",
-      "evidence": [
-        "src/components/textfields/PasswordBox.h"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "text-edit",
-      "classification": "native",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/textfields/TextEdit.h",
-        "tests/components/textfields/TestTextEdit.cpp",
-        "tests/components/textfields/TestTextEditMotion.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "title-bar",
-      "classification": "not-applicable",
-      "risk": "low",
-      "status": "not-applicable",
-      "evidence": [
-        "src/components/windowing/TitleBar.h"
-      ],
-      "gap": "Drag surface semantics are owned by Window and its caption controls."
-    },
-    {
       "id": "window",
       "classification": "augmented",
       "risk": "medium",
       "status": "covered",
       "evidence": [
         "tests/components/windowing/TestWindow.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "file-drop-zone",
-      "classification": "augmented",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/basicinput/FileDropZone.cpp",
-        "tests/components/basicinput/TestFileDropZone.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "file-list-view",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/collections/FileListView.cpp",
-        "tests/components/collections/TestFileListView.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "font-icon",
-      "classification": "not-applicable",
-      "risk": "low",
-      "status": "not-applicable",
-      "evidence": [
-        "src/components/foundation/FontIcon.h"
-      ],
-      "gap": "Presentation glyph; semantic meaning belongs to its containing control."
-    },
-    {
-      "id": "line-chart",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/charts/ChartView.cpp",
-        "tests/components/charts/TestChartView.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "area-chart",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/charts/ChartView.cpp",
-        "tests/components/charts/TestChartView.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "bar-chart",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/charts/ChartView.cpp",
-        "tests/components/charts/TestChartView.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "horizontal-bar-chart",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/charts/ChartView.cpp",
-        "tests/components/charts/TestChartView.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "pie-chart",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/charts/ChartView.cpp",
-        "tests/components/charts/TestChartView.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "donut-chart",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/charts/ChartView.cpp",
-        "tests/components/charts/TestChartView.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "scatter-chart",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/charts/ChartView.cpp",
-        "tests/components/charts/TestChartView.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "sparkline",
-      "classification": "adapter",
-      "risk": "medium",
-      "status": "covered",
-      "evidence": [
-        "src/components/charts/ChartView.cpp",
-        "tests/components/charts/TestChartView.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "timeline",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/collections/Timeline.cpp",
-        "tests/components/collections/TestTimeline.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "stepper",
-      "classification": "adapter",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/navigation/Stepper.cpp",
-        "tests/components/navigation/TestStepper.cpp"
-      ],
-      "gap": ""
-    },
-    {
-      "id": "command-palette",
-      "classification": "augmented",
-      "risk": "high",
-      "status": "covered",
-      "evidence": [
-        "src/components/menus_toolbars/CommandPalette.cpp",
-        "tests/components/menus_toolbars/TestCommandPalette.cpp",
-        "tests/gallery/TestCommandPaletteSamples.cpp"
       ],
       "gap": ""
     }

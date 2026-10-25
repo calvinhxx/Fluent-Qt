@@ -579,6 +579,11 @@
           "component_id": "toggle-switch",
           "choose_when": "A persistent binary setting takes effect immediately.",
           "avoid_when": "Submitting a form is required before the value takes effect."
+        },
+        {
+          "component_id": "tree-select",
+          "choose_when": "Users search and select one or several nodes from a hierarchy. Compose TreeView, Popup and native inputs; retain caller-owned models and stable keys.",
+          "avoid_when": "Choices have no hierarchy; use ComboBox, MultiSelectComboBox or TagInput."
         }
       ]
     },
@@ -743,6 +748,21 @@
           "component_id": "particle-backdrop",
           "choose_when": "A bounded hero or panel needs CPU-painted ribbons, floating dots or a starfield behind normal child controls, with shared motion and density controls.",
           "avoid_when": "The animation communicates essential information or a large collection would create many continuously animating instances."
+        },
+        {
+          "component_id": "list-detail-view",
+          "choose_when": "A list and its detail should share the available width, collapsing to one persistent pane in a narrow space while keeping selection and editor state.",
+          "avoid_when": "More than two panes, draggable splitting, docking, or overlay behavior is required."
+        },
+        {
+          "component_id": "data-grid-tool-bar",
+          "choose_when": "A DataGrid needs a wrapping search field, multi-select facets and column visibility, pinning or ordering controls. Connect its signals to an application-owned proxy model.",
+          "avoid_when": "The view should own business filtering, loading or persistence, or no table is present."
+        },
+        {
+          "component_id": "property-panel",
+          "choose_when": "A bounded set of explicit typed properties needs generated Fluent editors, groups, search, reset and form validation. Applications own values and persistence.",
+          "avoid_when": "An unbounded object tree, multi-object editing or a virtualized data table is required."
         }
       ]
     },
@@ -911,7 +931,7 @@
         },
         {
           "component_id": "auto-suggest-box",
-          "choose_when": "One-line input benefits from dynamic matching suggestions.",
+          "choose_when": "One-line input benefits from local or asynchronous suggestions. AutoSuggestBox owns debounce, request tokens, loading, empty, retry and pagination presentation; the application owns transport and borrowed model data.",
           "avoid_when": "The choice set is small and fixed enough for ComboBox."
         },
         {
@@ -928,6 +948,11 @@
           "component_id": "text-edit",
           "choose_when": "Users enter or inspect multiple lines of text, logs, or documents.",
           "avoid_when": "Only a short single-line value is expected."
+        },
+        {
+          "component_id": "tag-input",
+          "choose_when": "Users choose several stable values as removable tags while searching. Reuses AutoSuggestBox; application-owned suggestion models and transport remain separate from selected value snapshots.",
+          "avoid_when": "A fixed checklist-style dropdown is sufficient; use MultiSelectComboBox then."
         }
       ]
     },
@@ -1047,6 +1072,7 @@
         "hyperlink-button",
         "multi-select-combobox",
         "radio-button",
+        "tree-select",
         "rating-control",
         "repeat-button",
         "slider",
@@ -1135,6 +1161,9 @@
         "divider",
         "expander",
         "field",
+        "data-grid-tool-bar",
+        "property-panel",
+        "list-detail-view",
         "particle-backdrop"
       ],
       "cpp_header": "<FluentQt/Layout.h>",
@@ -1227,6 +1256,7 @@
       "plugin": false,
       "components": [
         "auto-suggest-box",
+        "tag-input",
         "code-block",
         "label",
         "line-edit",
@@ -2348,6 +2378,95 @@
       ]
     },
     {
+      "id": "tree-select",
+      "title": "TreeSelect",
+      "category_id": "basic-input",
+      "description": "Search a hierarchy and select one or more items while retaining their parent paths.",
+      "capabilities": [
+        "choices"
+      ],
+      "search_terms": [
+        "basic",
+        "browse-only.",
+        "can",
+        "chinese",
+        "choices",
+        "choose",
+        "collaborating",
+        "editor.",
+        "group",
+        "hierarchy",
+        "input",
+        "item.",
+        "items",
+        "keyboard",
+        "more",
+        "native",
+        "navigation",
+        "one",
+        "owner",
+        "parent",
+        "paths.",
+        "project",
+        "remain",
+        "retaining",
+        "search",
+        "select",
+        "several",
+        "small",
+        "team",
+        "teams",
+        "teams.",
+        "their",
+        "tree",
+        "tree-select",
+        "tree-select-basic",
+        "tree-select-project-teams",
+        "treeselect",
+        "use",
+        "while"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "declaration": "src/components/basicinput/TreeSelect.h",
+        "qualified_type": "fluent::basicinput::TreeSelect",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "TreeSelect",
+        "import_statement": "from fluentqt.basicinput import TreeSelect"
+      },
+      "tests": [
+        {
+          "target": "test_tree_select",
+          "source": "tests/components/basicinput/TestTreeSelect.cpp",
+          "ctest_label": "test_tree_select"
+        }
+      ],
+      "gallery": {
+        "route_id": "tree-select",
+        "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
+        "control_image": "app/assets/control_images/basic-input/TreeSelect.png"
+      },
+      "samples": [
+        {
+          "id": "tree-select-basic",
+          "title": "Select from a hierarchy",
+          "description": "Search a small tree and choose one item. A group can remain browse-only.",
+          "cpp_snippet": "auto* select = new fluent::basicinput::TreeSelect(this);\nselect->setAccessibleName(\"Team\");\nselect->setPlaceholderText(\"Choose a team\");\nauto* model = new QStandardItemModel(select);\nauto* product = new QStandardItem(\"Product\");\nproduct->setSelectable(false);\nauto* client = new QStandardItem(\"Client\");\nclient->setData(\"client\", Qt::UserRole);\nauto* platform = new QStandardItem(\"Platform\");\nplatform->setData(\"platform\", Qt::UserRole);\nproduct->appendRow(client);\nproduct->appendRow(platform);\nmodel->appendRow(product);\nselect->setModel(model);\nselect->setSelectedKeys({\"client\"});\nselect->setMaximumWidth(360);"
+        },
+        {
+          "id": "tree-select-project-teams",
+          "title": "Select project teams",
+          "description": "Search a team hierarchy and choose one owner or several collaborating teams. Chinese input and keyboard navigation use the native editor.",
+          "cpp_snippet": "#ifndef GALLERY_TEAMSELECTIONSAMPLE_H\n#define GALLERY_TEAMSELECTIONSAMPLE_H\n\n#include <FluentQt/FluentQt.h>\n#include <QStandardItemModel>\n#include <QPointer>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nnamespace fluent::gallery {\n\n// The application owns the directory. Keys distinguish teams with equal names.\n// zh_CN: 应用持有团队目录，稳定身份用于区分同名团队。\nclass TeamSelectionSample final : public QWidget {\npublic:\n    explicit TeamSelectionSample(QWidget* parent = nullptr) : QWidget(parent)\n    {\n        setObjectName(QStringLiteral(\"teamSelectionSample\"));\n        setMaximumWidth(392);\n        auto* body = new QVBoxLayout(this);\n        body->setContentsMargins(16, 16, 16, 16);\n        body->setSpacing(12);\n        auto* model = new QStandardItemModel(this);\n        auto team = [](const QString& key, const QString& name) {\n            auto* item = new QStandardItem(name);\n            item->setData(key, Qt::UserRole);\n            return item;\n        };\n        auto* product = team(QStringLiteral(\"product\"), QStringLiteral(\"Product engineering\"));\n        product->setSelectable(false);\n        product->appendRow(team(QStringLiteral(\"client\"), QStringLiteral(\"Client apps\")));\n        product->appendRow(team(QStringLiteral(\"platform\"), QStringLiteral(\"Platform services\")));\n        product->appendRow(team(QStringLiteral(\"product-design\"), QStringLiteral(\"Design\")));\n        auto* brand = team(QStringLiteral(\"brand\"), QStringLiteral(\"Brand and marketing\"));\n        brand->setSelectable(false);\n        brand->appendRow(team(QStringLiteral(\"content\"), QStringLiteral(\"Content\")));\n        brand->appendRow(team(QStringLiteral(\"brand-design\"), QStringLiteral(\"Design\")));\n        auto* archived = team(QStringLiteral(\"archived\"), QStringLiteral(\"Archived team\"));\n        archived->setEnabled(false);\n        model->appendRow(product);\n        model->appendRow(brand);\n        model->appendRow(archived);\n\n        auto* owner = new basicinput::TreeSelect(this);\n        owner->setObjectName(QStringLiteral(\"projectOwningTeam\"));\n        owner->setAccessibleName(QStringLiteral(\"Owning team\"));\n        owner->setModel(model);\n        owner->setPlaceholderText(QStringLiteral(\"Search teams…\"));\n        owner->setSelectedKeys({QStringLiteral(\"client\")});\n        auto* ownerField = new layout::Field(this);\n        ownerField->setLabelText(QStringLiteral(\"Owning team\"));\n        ownerField->setEditor(owner);\n        body->addWidget(ownerField);\n\n        auto* collaborators = new basicinput::TreeSelect(this);\n        collaborators->setObjectName(QStringLiteral(\"projectCollaboratingTeams\"));\n        collaborators->setAccessibleName(QStringLiteral(\"Collaborating teams\"));\n        collaborators->setModel(model);\n        collaborators->setSelectionMode(basicinput::TreeSelect::SelectionMode::Multiple);\n        collaborators->setPlaceholderText(QStringLiteral(\"Add teams…\"));\n        collaborators->setSelectedKeys({QStringLiteral(\"brand-design\")});\n        auto* collaboratorsField = new layout::Field(this);\n        collaboratorsField->setLabelText(QStringLiteral(\"Collaborating teams\"));\n        collaboratorsField->setEditor(collaborators);\n        collaboratorsField->setHelperText(QStringLiteral(\"Search by team or department. Select teams independently.\"));\n        body->addWidget(collaboratorsField);\n\n        auto* status = new textfields::Label(this);\n        status->setObjectName(QStringLiteral(\"teamSelectionStatus\"));\n        status->setWordWrap(true);\n        status->setFluentTypography(Typography::FontRole::Caption);\n        status->setTextColorRole(textfields::Label::TextColorRole::Secondary);\n        body->addWidget(status);\n        auto updateStatus =\n            [owner = QPointer<basicinput::TreeSelect>(owner),\n                collaborators = QPointer<basicinput::TreeSelect>(collaborators),\n                status = QPointer<textfields::Label>(status)] {\n                if (!owner || !collaborators || !status)\n                    return;\n                QStringList paths;\n                for (const auto& item : collaborators->selectedItems())\n                    paths.append(item.toMap().value(QStringLiteral(\"path\")).toString());\n                const QString primary = owner->selectedItems().isEmpty()\n                    ? QStringLiteral(\"Not assigned\")\n                    : owner->selectedItems().first().toMap().value(QStringLiteral(\"path\")).toString();\n                status->setText(QStringLiteral(\"Owner: %1\\nCollaborators: %2\")\n                        .arg(primary, paths.isEmpty() ? QStringLiteral(\"None\") : paths.join(QStringLiteral(\"; \"))));\n            };\n        QObject::connect(owner, &basicinput::TreeSelect::selectionChanged, status, updateStatus);\n        QObject::connect(collaborators, &basicinput::TreeSelect::selectionChanged, status, updateStatus);\n        auto* actions = new QHBoxLayout;\n        auto* readOnly = new basicinput::CheckBox(QStringLiteral(\"Read only\"), this);\n        readOnly->setObjectName(QStringLiteral(\"teamReadOnly\"));\n        QObject::connect(readOnly, &QAbstractButton::toggled, owner, &basicinput::TreeSelect::setReadOnly);\n        QObject::connect(readOnly, &QAbstractButton::toggled, collaborators, &basicinput::TreeSelect::setReadOnly);\n        actions->addWidget(readOnly);\n        actions->addStretch();\n        auto* clear = new basicinput::Button(QStringLiteral(\"Clear\"), this);\n        clear->setObjectName(QStringLiteral(\"teamClear\"));\n        QObject::connect(clear, &QAbstractButton::clicked, owner, &basicinput::TreeSelect::clearSelection);\n        QObject::connect(clear, &QAbstractButton::clicked, collaborators, &basicinput::TreeSelect::clearSelection);\n        QObject::connect(readOnly, &QAbstractButton::toggled, clear, [clear](bool checked) {\n            clear->setEnabled(!checked);\n        });\n        actions->addWidget(clear);\n        body->addLayout(actions);\n        updateStatus();\n    }\n};\n} // namespace fluent::gallery\n#endif\n",
+          "fill_available_width": true
+        }
+      ]
+    },
+    {
       "id": "rating-control",
       "title": "RatingControl",
       "category_id": "basic-input",
@@ -2754,7 +2873,7 @@
           "id": "split-button-primary-menu",
           "title": "Primary action and menu",
           "description": "The primary region invokes the default action; the secondary region opens the menu.",
-          "cpp_snippet": "auto* button = new SplitButton(\"Choose color\", this);\nauto* menu = new FluentMenu(\"Colors\", button);\nmenu->addAction(\"Red\");\nmenu->addAction(\"Green\");\nmenu->addAction(\"Blue\");\nbutton->setMenu(menu);\nconnect(button, &SplitButton::clicked,\n        status, []() { /* primary clicked */ });",
+          "cpp_snippet": "auto* button = new SplitButton(\"Choose color\", this);\nauto* menu = new FluentMenu(\"Colors\", button);\nmenu->addAction(\"Red\");\nmenu->addAction(\"Green\");\nmenu->addAction(\"Blue\");\nbutton->setMenu(menu);\nconnect(button, &SplitButton::clicked, button, [button] {\n    Toast::showOrUpdateToast(button, \"gallery.action-feedback\",\n        \"Primary action selected\", Toast::Informational, 2200,\n        Toast::Top, QMargins(16, 50, 16, 16));\n});\nconnect(menu, &QMenu::triggered, button, [button](QAction* action) {\n    Toast::showOrUpdateToast(button, \"gallery.action-feedback\",\n        action->text() + \" selected\", Toast::Informational, 2200,\n        Toast::Top, QMargins(16, 50, 16, 16));\n});",
           "preview_layout": {
             "orientation": "horizontal",
             "spacing": 12
@@ -3101,19 +3220,29 @@
         "chart",
         "chart-view",
         "chart-view-basic",
+        "chart-view-export",
         "chart-view-shared-model",
         "chart-view-types",
         "charts",
         "chartview",
         "compact",
         "compare",
+        "contains",
+        "copy",
+        "csv",
+        "cursor",
+        "data",
         "data.",
         "detailed",
         "each",
         "explore",
         "extrema",
+        "focus",
+        "gaps.",
         "hover",
         "illustrative",
+        "images",
+        "including",
         "independently",
         "keep",
         "keys",
@@ -3121,14 +3250,18 @@
         "model.",
         "models",
         "native",
+        "omit",
         "once.",
         "one",
+        "original",
         "presentation",
         "presentations",
         "preserve",
         "projections",
         "raw",
         "replacing",
+        "ring.",
+        "rows",
         "same",
         "series",
         "share",
@@ -3170,6 +3303,13 @@
         "control_image": "app/assets/control_images/charts/ChartView.png"
       },
       "samples": [
+        {
+          "id": "chart-view-export",
+          "title": "Copy the chart or its data",
+          "description": "Images omit the cursor and focus ring. CSV contains original model rows, including gaps.",
+          "cpp_snippet": "auto* panel = new QWidget(this);\nauto* layout = new QVBoxLayout(panel);\nauto* chart = new ChartView(panel);\nchart->setObjectName(\"chartExportPreview\");\nchart->setMinimumHeight(320);\nchart->setTitle(\"Response time\");\nauto* model = new ChartModel(panel);\nmodel->setName(\"Primary\");\nmodel->setPoints({{0, 18}, {1, 32}, {2, 24}, {3, 48}});\nchart->setModel(model);\nauto* copy = new Button(\"Copy image\", panel);\ncopy->setObjectName(\"chartCopyImageButton\");\nauto* data = new Button(\"Copy data\", panel);\ndata->setObjectName(\"chartCopyDataButton\");\nconst auto feedback = [panel](const QString& message, bool ok) {\n    Toast::showOrUpdateToast(panel, \"gallery.action-feedback\", message,\n        ok ? Toast::Success : Toast::Warning, ok ? 2200 : 4500,\n        Toast::Top, QMargins(16, 50, 16, 16));\n};\nQObject::connect(copy, &Button::clicked, chart, [chart] { chart->copyImage(2); });\nQObject::connect(data, &Button::clicked, chart, [chart] { chart->copyData(); });\nQObject::connect(chart, &ChartView::imageCopied, panel, [feedback](bool ok) {\n    feedback(ok ? \"Image copied\" : \"Could not copy image. Try again.\", ok);\n});\nQObject::connect(chart, &ChartView::dataCopied, panel, [feedback](bool ok) {\n    feedback(ok ? \"Data copied\" : \"Could not copy data. Try again.\", ok);\n});\nlayout->addWidget(chart);\nauto* actions = new QHBoxLayout;\nactions->addWidget(copy);\nactions->addWidget(data);\nactions->addStretch();\nlayout->addLayout(actions);",
+          "fill_available_width": true
+        },
         {
           "id": "chart-view-basic",
           "title": "Compare two series",
@@ -3706,56 +3846,74 @@
       "search_terms": [
         "000",
         "100",
+        "again",
+        "arrange",
+        "arrow",
         "asks",
+        "cell",
         "cells",
         "characters",
         "click",
         "collections",
+        "column",
+        "column.",
         "columns",
         "ctrl",
+        "current",
         "data",
         "data-grid",
         "data-grid-column-selection",
         "data-grid-edit-validation",
         "data-grid-large-read-only",
+        "data-grid-pinned-columns",
         "datagrid",
         "delegate",
+        "divider",
         "double-click",
+        "drag",
         "edit.",
         "editing",
         "editing.",
-        "extend",
-        "header",
+        "extends",
         "headers",
+        "horizontally",
         "large",
         "model",
         "model-backed",
+        "move",
         "needed",
         "only",
+        "order.",
         "paints",
+        "pinned",
         "presents",
         "press",
+        "project",
         "read-only",
         "rejects",
         "remains",
-        "reorder",
         "resize",
+        "reverse.",
         "role.",
         "row",
         "rows",
+        "scroll",
         "selection",
         "selection.",
         "shift",
         "shorter",
+        "shows",
         "sort",
         "sorting",
+        "stays",
         "than",
         "three",
-        "use",
+        "title",
         "validation",
         "values",
         "viewport.",
         "virtualized",
+        "visible.",
         "while"
       ],
       "cpp": {
@@ -3784,22 +3942,29 @@
       },
       "samples": [
         {
+          "id": "data-grid-pinned-columns",
+          "title": "Pinned columns and editing",
+          "description": "Scroll horizontally while Project stays visible. Double-click a cell or press F2 to edit.",
+          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setAccessibleName(\"Pinned projects\");\nauto* model = new QStandardItemModel(grid);\nmodel->setHorizontalHeaderLabels({\"Project\", \"Owner\", \"Status\"});\nmodel->appendRow({new QStandardItem(\"Aurora\"),\n    new QStandardItem(\"Maya\"), new QStandardItem(\"Active\")});\nmodel->appendRow({new QStandardItem(\"Beacon\"),\n    new QStandardItem(\"Noah\"), new QStandardItem(\"Review\")});\ngrid->setModel(model);\ngrid->setSelectionBehavior(QAbstractItemView::SelectRows);\ngrid->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);\ngrid->setColumnWidth(0, 240);\ngrid->setColumnWidth(1, 220);\ngrid->setColumnWidth(2, 240);\ngrid->setColumnPinned(0, true);\ngrid->setMaximumWidth(600);\ngrid->setFixedHeight(180);",
+          "fill_available_width": true
+        },
+        {
           "id": "data-grid-large-read-only",
           "title": "Large read-only data",
           "description": "A model with 100,000 rows remains virtualized: DataGrid asks only for cells needed by the viewport.",
-          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setAccessibleName(\"Large data\");\ngrid->setModel(new LargeDataGridModel(grid));\ngrid->setScrollChainingEnabled(true);\ngrid->setSelectionBehavior(QAbstractItemView::SelectRows);\ngrid->setEditTriggers(QAbstractItemView::NoEditTriggers);"
+          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setAccessibleName(\"Large data\");\ngrid->setModel(new LargeDataGridModel(grid));\ngrid->setSelectionBehavior(QAbstractItemView::SelectRows);\ngrid->setEditTriggers(QAbstractItemView::NoEditTriggers);\n// LargeDataGridModel returns a fixed-pitch FontRole for numeric\n// columns and AlignRight for both their cells and headers."
         },
         {
           "id": "data-grid-column-selection",
-          "title": "Columns, sorting, and selection",
-          "description": "Resize or reorder headers, click a header to sort, and use Ctrl or Shift to extend row selection.",
-          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setAccessibleName(\"Projects\");\ngrid->setModel(projectModel);\ngrid->setScrollChainingEnabled(true);\ngrid->setSelectionMode(DataGrid::SelectionMode::Extended);\ngrid->setSelectionBehavior(QAbstractItemView::SelectRows);\ngrid->setSortingEnabled(true);\ngrid->horizontalHeader()->setSectionsMovable(true);"
+          "title": "Sort and arrange columns",
+          "description": "Click a column title to sort; click again to reverse. The arrow shows the current order. Drag a divider to resize, or a title to move the column. Ctrl/Shift extends row selection.",
+          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setAccessibleName(\"Projects\");\ngrid->setModel(projectModel);\ngrid->setSelectionMode(DataGrid::SelectionMode::Extended);\ngrid->setSelectionBehavior(QAbstractItemView::SelectRows);\ngrid->setSortingEnabled(true);\ngrid->sortByColumn(0, Qt::AscendingOrder);\ngrid->horizontalHeader()->setSectionsMovable(true);\n// Match numeric header and cell alignment in the model.\ngrid->setColumnWidth(0, 240);\ngrid->setColumnWidth(1, 180);\ngrid->setColumnWidth(2, 158);\ngrid->setColumnWidth(3, 100);"
         },
         {
           "id": "data-grid-edit-validation",
           "title": "Delegate editing and validation",
           "description": "Double-click or press F2 to edit. The model rejects values shorter than three characters while the delegate paints its validation role.",
-          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setAccessibleName(\"Settings\");\ngrid->setModel(validationModel);\ngrid->setScrollChainingEnabled(true);\ngrid->setItemDelegate(new ValidationDelegate(grid));\ngrid->setEditTriggers(QAbstractItemView::DoubleClicked\n                      | QAbstractItemView::EditKeyPressed);\n// ValidationModel::setData(EditRole) returns false and\n// publishes an application-defined validation role."
+          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setAccessibleName(\"Settings\");\ngrid->setModel(validationModel);\ngrid->setItemDelegate(new ValidationDelegate(grid));\ngrid->setEditTriggers(QAbstractItemView::DoubleClicked\n                      | QAbstractItemView::EditKeyPressed);\n// ValidationModel::setData(EditRole) returns false and\n// publishes an application-defined validation role."
         }
       ]
     },
@@ -5403,7 +5568,7 @@
           "id": "content-dialog-result-buttons",
           "title": "Result buttons and default command",
           "description": "Primary, secondary, and close buttons update app state while the primary command is the default action.",
-          "cpp_snippet": "auto* dialog = new ContentDialog(window());\ndialog->setTitle(\"Save your work?\");\ndialog->setPrimaryButtonText(\"Save\");\ndialog->setSecondaryButtonText(\"Don't save\");\ndialog->setCloseButtonText(\"Cancel\");\ndialog->setDefaultButton(ContentDialog::Primary);\nconnect(dialog, &ContentDialog::primaryButtonClicked, status,\n        [status] { status->setText(\"Result: Save\"); });\nconnect(dialog, &QDialog::finished, dialog,\n        &QObject::deleteLater);\ndialog->open();"
+          "cpp_snippet": "auto* dialog = new ContentDialog(window());\ndialog->setTitle(\"Save your work?\");\ndialog->setContent(new Label(\"Unsaved changes in Quarterly report will be lost unless you save them.\"));\ndialog->setPrimaryButtonText(\"Save\");\ndialog->setSecondaryButtonText(\"Don't save\");\ndialog->setCloseButtonText(\"Cancel\");\ndialog->setDefaultButton(ContentDialog::Primary);\nconnect(dialog, &QDialog::finished, this, [this](int result) {\n    const QString message = result == ContentDialog::Primary ? \"Save selected\"\n        : result == ContentDialog::Secondary ? \"Don't save selected\" : \"Cancelled\";\n    Toast::showOrUpdateToast(this, \"gallery.action-feedback\", message,\n        Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n});\nconnect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);\ndialog->open();"
         },
         {
           "id": "content-dialog-custom-content",
@@ -6297,7 +6462,7 @@
           "id": "field-connection-form",
           "title": "Connection settings",
           "description": "Coordinate edits, asynchronous validation, and saving with FormController. The demo uses a local simulation; no credentials leave this page.",
-          "cpp_snippet": "#ifndef GALLERY_CONNECTIONFORM_H\n#define GALLERY_CONNECTIONFORM_H\n\n#include <FluentQt/FluentQt.h>\n\n#include <QBoxLayout>\n#include <QMap>\n#include <QResizeEvent>\n#include <QTimer>\n#include <QUrl>\n\nnamespace fluent::gallery {\n\n// A deterministic connection demo: the application owns values and async work.\n// zh_CN: 可重复的连接演示；应用负责字段值与异步操作。\nclass ConnectionForm final : public layout::Card {\npublic:\n    explicit ConnectionForm(QWidget* parent = nullptr) : Card(parent)\n    {\n        setObjectName(QStringLiteral(\"connectionForm\"));\n        setMaximumWidth(560);\n        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);\n        m_layout = new QVBoxLayout(this);\n        m_layout->setContentsMargins(32, 32, 32, 32);\n        m_layout->setSpacing(24);\n        m_layout->setAlignment(Qt::AlignTop);\n\n        auto* heading = new QWidget(this);\n        auto* headerLayout = new QVBoxLayout(heading);\n        headerLayout->setContentsMargins(0, 0, 0, 0);\n        headerLayout->setSpacing(8);\n        headerLayout->addWidget(label(QStringLiteral(\"Connection settings\"), Typography::FontRole::Subtitle));\n        headerLayout->addWidget(\n            label(QStringLiteral(\"Configure the endpoint used by this workspace.\"), Typography::FontRole::Body, true));\n        m_layout->addWidget(heading);\n\n        m_form = new FormController(this);\n        m_form->setObjectName(QStringLiteral(\"connectionFormController\"));\n        addField(QStringLiteral(\"name\"), QStringLiteral(\"Connection name\"),\n            QStringLiteral(\"A name to identify this connection.\"), QStringLiteral(\"Production API\"));\n        addField(QStringLiteral(\"address\"), QStringLiteral(\"Server address\"),\n            QStringLiteral(\"Use HTTPS. Try offline.example to see a connection error.\"),\n            QStringLiteral(\"https://api.example.com/v1\"));\n        addField(QStringLiteral(\"token\"), QStringLiteral(\"API token\"),\n            QStringLiteral(\"Use any 8 characters in this demo.\"), QString(), true);\n\n        m_status = label(QStringLiteral(\"No unsaved changes\"), Typography::FontRole::Caption, true);\n        m_status->setObjectName(QStringLiteral(\"connectionStatus\"));\n        m_status->setMinimumHeight(Typography::LineHeight::Caption);\n        m_layout->addWidget(m_status);\n\n        auto* actions = new QWidget(this);\n        m_actions = new QBoxLayout(QBoxLayout::LeftToRight, actions);\n        m_actions->setContentsMargins(0, 0, 0, 0);\n        m_actions->setSpacing(8);\n        m_test = new basicinput::Button(QStringLiteral(\"Test connection\"), actions);\n        m_test->setObjectName(QStringLiteral(\"connectionTest\"));\n        m_save = new basicinput::Button(QStringLiteral(\"Save connection\"), actions);\n        m_save->setObjectName(QStringLiteral(\"connectionSave\"));\n        m_save->setFluentStyle(basicinput::Button::Accent);\n        m_actions->addWidget(m_test);\n        m_actions->addWidget(m_save);\n        m_layout->addWidget(actions);\n        m_layout->addWidget(label(QStringLiteral(\"Local demo · no credentials are sent or stored.\"),\n            Typography::FontRole::Caption, true));\n\n        connect(m_form, &FormController::validationRequested, this, [this](const QString& key, quint64 token) {\n            validate(key, token);\n        });\n        connect(m_form, &FormController::submitRequested, this, [this](quint64 token) {\n            QTimer::singleShot(450, m_form, [form = m_form, token]() { form->completeSubmit(token, true); });\n        });\n        connect(m_form, &FormController::stateChanged, this, [this]() { updateStatus(); });\n        connect(m_form, &FormController::submissionFinished, this, [this](bool success) {\n            if (success)\n                m_status->setText(QStringLiteral(\"Connection saved for this demo.\"));\n        });\n        connect(m_test, &basicinput::Button::clicked, m_form, &FormController::validate);\n        connect(m_save, &basicinput::Button::clicked, m_form, &FormController::submit);\n    }\n\nprotected:\n    void resizeEvent(QResizeEvent* event) override\n    {\n        Card::resizeEvent(event);\n        const bool narrow = width() < 400;\n        const int padding = narrow ? 16 : 32;\n        m_layout->setContentsMargins(padding, padding, padding, padding);\n        m_actions->setDirection(narrow ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);\n    }\n\nprivate:\n    textfields::Label* label(const QString& text, Typography::FontRole role, bool secondary = false)\n    {\n        auto* result = new textfields::Label(text, this);\n        result->setFluentTypography(role);\n        result->setTextColorRole(\n            secondary ? textfields::Label::TextColorRole::Secondary : textfields::Label::TextColorRole::Primary);\n        result->setWordWrap(true);\n        return result;\n    }\n\n    void\n    addField(const QString& key, const QString& title, const QString& helper, const QString& value, bool secret = false)\n    {\n        auto* field = new layout::Field(this);\n        field->setObjectName(QStringLiteral(\"connectionField_\") + key);\n        field->setLabelText(title);\n        field->setHelperText(helper);\n        textfields::LineEdit* editor = secret ? new textfields::PasswordBox : new textfields::LineEdit;\n        editor->setObjectName(QStringLiteral(\"connectionInput_\") + key);\n        editor->setText(value);\n        editor->setMinimumHeight(::Spacing::ControlHeight::Standard);\n        if (secret)\n            editor->setPlaceholderText(QStringLiteral(\"Enter a demo token\"));\n        field->setEditor(editor, WidgetOwnership::Owned);\n        m_layout->addWidget(field);\n        m_editors.insert(key, editor);\n        m_form->addField(key, field);\n        connect(editor, &textfields::LineEdit::textChanged, m_form, [form = m_form, key]() {\n            form->markFieldChanged(key);\n        });\n        connect(editor, &textfields::LineEdit::editingFinished, m_form, [form = m_form, key]() {\n            form->setFieldTouched(key);\n        });\n    }\n\n    void validate(const QString& key, quint64 token)\n    {\n        const QString value = m_editors.value(key)->text().trimmed();\n        if (key == QStringLiteral(\"name\")) {\n            m_form->completeValidation(key, token, !value.isEmpty(),\n                value.isEmpty() ? QStringLiteral(\"Enter a connection name.\") : QString());\n        } else if (key == QStringLiteral(\"token\")) {\n            m_form->completeValidation(key, token, value.size() >= 8,\n                value.size() < 8 ? QStringLiteral(\"Enter at least 8 characters.\") : QString());\n        } else {\n            const QUrl url(value, QUrl::StrictMode);\n            if (!url.isValid() || url.scheme() != QStringLiteral(\"https\") || url.host().isEmpty()) {\n                m_form->completeValidation(key, token, false, QStringLiteral(\"Enter a valid HTTPS address.\"));\n                return;\n            }\n            // Context-owned timer is cancelled on teardown; the token rejects stale results.\n            // zh_CN: 上下文计时器随对象销毁取消，token 拒绝过期结果。\n            QTimer::singleShot(650, m_form, [form = m_form, key, token, value]() {\n                const bool reachable = !value.contains(QStringLiteral(\"offline\"), Qt::CaseInsensitive);\n                form->completeValidation(key, token, reachable,\n                    reachable ? QStringLiteral(\"Connection verified.\")\n                              : QStringLiteral(\"Server unavailable. Try another address.\"));\n            });\n        }\n    }\n\n    void updateStatus()\n    {\n        const bool busy = m_form->isValidating() || m_form->isSubmitting();\n        m_test->setEnabled(!busy);\n        m_save->setEnabled(!busy);\n        m_save->setText(m_form->isSubmitting() ? QStringLiteral(\"Saving…\") : QStringLiteral(\"Save connection\"));\n        if (m_form->isValidating())\n            m_status->setText(QStringLiteral(\"Checking connection…\"));\n        else if (m_form->isSubmitting())\n            m_status->setText(QStringLiteral(\"Saving connection…\"));\n        else if (!m_form->errorMessages().isEmpty())\n            m_status->setText(m_form->errorMessages().join(QLatin1Char('\\n')));\n        else if (!m_form->submissionError().isEmpty())\n            m_status->setText(m_form->submissionError());\n        else if (m_form->isValid())\n            m_status->setText(m_form->isDirty()\n                    ? QStringLiteral(\"Ready to save · unsaved changes\")\n                    : QStringLiteral(\"Connection verified.\"));\n        else\n            m_status->setText(\n                m_form->isDirty() ? QStringLiteral(\"Unsaved changes\") : QStringLiteral(\"No unsaved changes\"));\n    }\n\n    FormController* m_form = nullptr;\n    QMap<QString, textfields::LineEdit*> m_editors;\n    QVBoxLayout* m_layout = nullptr;\n    QBoxLayout* m_actions = nullptr;\n    textfields::Label* m_status = nullptr;\n    basicinput::Button* m_test = nullptr;\n    basicinput::Button* m_save = nullptr;\n};\n\n} // namespace fluent::gallery\n\n#endif // GALLERY_CONNECTIONFORM_H\n",
+          "cpp_snippet": "#ifndef GALLERY_CONNECTIONFORM_H\n#define GALLERY_CONNECTIONFORM_H\n\n#include <FluentQt/FluentQt.h>\n\n#include <QBoxLayout>\n#include <QMap>\n#include <QResizeEvent>\n#include <QTimer>\n#include <QUrl>\n\nnamespace fluent::gallery {\n\n// A deterministic connection demo: the application owns values and async work.\n// zh_CN: 可重复的连接演示；应用负责字段值与异步操作。\nclass ConnectionForm final : public layout::Card {\npublic:\n    explicit ConnectionForm(QWidget* parent = nullptr) : Card(parent)\n    {\n        setObjectName(QStringLiteral(\"connectionForm\"));\n        setMaximumWidth(560);\n        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);\n        m_layout = new QVBoxLayout(this);\n        m_layout->setContentsMargins(32, 32, 32, 32);\n        m_layout->setSpacing(24);\n        m_layout->setAlignment(Qt::AlignTop);\n\n        auto* heading = new QWidget(this);\n        auto* headerLayout = new QVBoxLayout(heading);\n        headerLayout->setContentsMargins(0, 0, 0, 0);\n        headerLayout->setSpacing(8);\n        headerLayout->addWidget(label(QStringLiteral(\"Connection settings\"), Typography::FontRole::Subtitle));\n        headerLayout->addWidget(\n            label(QStringLiteral(\"Configure the endpoint used by this workspace.\"), Typography::FontRole::Body, true));\n        m_layout->addWidget(heading);\n\n        m_form = new FormController(this);\n        m_form->setObjectName(QStringLiteral(\"connectionFormController\"));\n        addField(QStringLiteral(\"name\"), QStringLiteral(\"Connection name\"),\n            QStringLiteral(\"A name to identify this connection.\"), QStringLiteral(\"Production API\"));\n        addField(QStringLiteral(\"address\"), QStringLiteral(\"Server address\"),\n            QStringLiteral(\"Use HTTPS. Try offline.example to see a connection error.\"),\n            QStringLiteral(\"https://api.example.com/v1\"));\n        addField(QStringLiteral(\"token\"), QStringLiteral(\"API token\"),\n            QStringLiteral(\"Use any 8 characters in this demo.\"), QString(), true);\n\n        m_status = label(QStringLiteral(\"No unsaved changes\"), Typography::FontRole::Caption, true);\n        m_status->setObjectName(QStringLiteral(\"connectionStatus\"));\n        m_status->setMinimumHeight(Typography::LineHeight::Caption);\n        m_layout->addWidget(m_status);\n\n        auto* actions = new QWidget(this);\n        m_actions = new QBoxLayout(QBoxLayout::LeftToRight, actions);\n        m_actions->setContentsMargins(0, 0, 0, 0);\n        m_actions->setSpacing(8);\n        m_test = new basicinput::Button(QStringLiteral(\"Test connection\"), actions);\n        m_test->setObjectName(QStringLiteral(\"connectionTest\"));\n        m_save = new basicinput::Button(QStringLiteral(\"Save connection\"), actions);\n        m_save->setObjectName(QStringLiteral(\"connectionSave\"));\n        m_save->setFluentStyle(basicinput::Button::Accent);\n        m_actions->addWidget(m_test);\n        m_actions->addWidget(m_save);\n        m_layout->addWidget(actions);\n        m_layout->addWidget(label(QStringLiteral(\"Local demo · no credentials are sent or stored.\"),\n            Typography::FontRole::Caption, true));\n\n        connect(m_form, &FormController::validationRequested, this, [this](const QString& key, quint64 token) {\n            validate(key, token);\n        });\n        connect(m_form, &FormController::submitRequested, this, [this](quint64 token) {\n            QTimer::singleShot(450, m_form, [form = m_form, token]() { form->completeSubmit(token, true); });\n        });\n        connect(m_form, &FormController::stateChanged, this, [this]() { updateStatus(); });\n        connect(m_form, &FormController::submissionFinished, this, [this](bool success) {\n            if (success)\n                status_info::Toast::showOrUpdateToast(this, QStringLiteral(\"gallery.action-feedback\"),\n                    QStringLiteral(\"Connection saved for this demo\"), status_info::Toast::Success, 2200,\n                    status_info::Toast::Top, QMargins(16, 50, 16, 16));\n        });\n        connect(m_test, &basicinput::Button::clicked, m_form, &FormController::validate);\n        connect(m_save, &basicinput::Button::clicked, m_form, &FormController::submit);\n    }\n\nprotected:\n    void resizeEvent(QResizeEvent* event) override\n    {\n        Card::resizeEvent(event);\n        const bool narrow = width() < 400;\n        const int padding = narrow ? 16 : 32;\n        m_layout->setContentsMargins(padding, padding, padding, padding);\n        m_actions->setDirection(narrow ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);\n    }\n\nprivate:\n    textfields::Label* label(const QString& text, Typography::FontRole role, bool secondary = false)\n    {\n        auto* result = new textfields::Label(text, this);\n        result->setFluentTypography(role);\n        result->setTextColorRole(\n            secondary ? textfields::Label::TextColorRole::Secondary : textfields::Label::TextColorRole::Primary);\n        result->setWordWrap(true);\n        return result;\n    }\n\n    void\n    addField(const QString& key, const QString& title, const QString& helper, const QString& value, bool secret = false)\n    {\n        auto* field = new layout::Field(this);\n        field->setObjectName(QStringLiteral(\"connectionField_\") + key);\n        field->setLabelText(title);\n        field->setHelperText(helper);\n        textfields::LineEdit* editor = secret ? new textfields::PasswordBox : new textfields::LineEdit;\n        editor->setObjectName(QStringLiteral(\"connectionInput_\") + key);\n        editor->setText(value);\n        editor->setMinimumHeight(::Spacing::ControlHeight::Standard);\n        if (secret)\n            editor->setPlaceholderText(QStringLiteral(\"Enter a demo token\"));\n        field->setEditor(editor, WidgetOwnership::Owned);\n        m_layout->addWidget(field);\n        m_editors.insert(key, editor);\n        m_form->addField(key, field);\n        connect(editor, &textfields::LineEdit::textChanged, m_form, [form = m_form, key]() {\n            form->markFieldChanged(key);\n        });\n        connect(editor, &textfields::LineEdit::editingFinished, m_form, [form = m_form, key]() {\n            form->setFieldTouched(key);\n        });\n    }\n\n    void validate(const QString& key, quint64 token)\n    {\n        const QString value = m_editors.value(key)->text().trimmed();\n        if (key == QStringLiteral(\"name\")) {\n            m_form->completeValidation(key, token, !value.isEmpty(),\n                value.isEmpty() ? QStringLiteral(\"Enter a connection name.\") : QString());\n        } else if (key == QStringLiteral(\"token\")) {\n            m_form->completeValidation(key, token, value.size() >= 8,\n                value.size() < 8 ? QStringLiteral(\"Enter at least 8 characters.\") : QString());\n        } else {\n            const QUrl url(value, QUrl::StrictMode);\n            if (!url.isValid() || url.scheme() != QStringLiteral(\"https\") || url.host().isEmpty()) {\n                m_form->completeValidation(key, token, false, QStringLiteral(\"Enter a valid HTTPS address.\"));\n                return;\n            }\n            // Context-owned timer is cancelled on teardown; the token rejects stale results.\n            // zh_CN: 上下文计时器随对象销毁取消，token 拒绝过期结果。\n            QTimer::singleShot(650, m_form, [form = m_form, key, token, value]() {\n                const bool reachable = !value.contains(QStringLiteral(\"offline\"), Qt::CaseInsensitive);\n                form->completeValidation(key, token, reachable,\n                    reachable ? QStringLiteral(\"Connection verified.\")\n                              : QStringLiteral(\"Server unavailable. Try another address.\"));\n            });\n        }\n    }\n\n    void updateStatus()\n    {\n        const bool busy = m_form->isValidating() || m_form->isSubmitting();\n        m_test->setEnabled(!busy);\n        m_save->setEnabled(!busy);\n        m_save->setText(m_form->isSubmitting() ? QStringLiteral(\"Saving…\") : QStringLiteral(\"Save connection\"));\n        if (m_form->isValidating())\n            m_status->setText(QStringLiteral(\"Checking connection…\"));\n        else if (m_form->isSubmitting())\n            m_status->setText(QStringLiteral(\"Saving connection…\"));\n        else if (!m_form->errorMessages().isEmpty())\n            m_status->setText(m_form->errorMessages().join(QLatin1Char('\\n')));\n        else if (!m_form->submissionError().isEmpty())\n            m_status->setText(m_form->submissionError());\n        else if (m_form->isValid())\n            m_status->setText(m_form->isDirty()\n                    ? QStringLiteral(\"Ready to save · unsaved changes\")\n                    : QStringLiteral(\"Connection verified.\"));\n        else\n            m_status->setText(\n                m_form->isDirty() ? QStringLiteral(\"Unsaved changes\") : QStringLiteral(\"No unsaved changes\"));\n    }\n\n    FormController* m_form = nullptr;\n    QMap<QString, textfields::LineEdit*> m_editors;\n    QVBoxLayout* m_layout = nullptr;\n    QBoxLayout* m_actions = nullptr;\n    textfields::Label* m_status = nullptr;\n    basicinput::Button* m_test = nullptr;\n    basicinput::Button* m_save = nullptr;\n};\n\n} // namespace fluent::gallery\n\n#endif // GALLERY_CONNECTIONFORM_H\n",
           "fill_available_width": true
         },
         {
@@ -6317,6 +6482,271 @@
           "title": "Warning and success",
           "description": "Warning and success pair a compact semantic icon with status color without changing the slotted editor.",
           "cpp_snippet": "auto* warning = new Field(this);\nwarning->setLabelText(\"Username\");\nwarning->setValidationState(Field::ValidationState::Warning);\nwarning->setValidationMessage(\"This name is already taken.\");\nauto* warningEditor = new LineEdit;\nwarningEditor->setText(\"alex\");\nwarning->setEditor(\n    warningEditor, WidgetOwnership::Owned);\n\nauto* success = new Field(this);\nsuccess->setLabelText(\"Display name\");\nsuccess->setValidationState(Field::ValidationState::Success);\nsuccess->setValidationMessage(\"Looks good\");\nauto* successEditor = new LineEdit;\nsuccessEditor->setText(\"Alex Chen\");\nsuccess->setEditor(\n    successEditor, WidgetOwnership::Owned);"
+        }
+      ]
+    },
+    {
+      "id": "data-grid-tool-bar",
+      "title": "DataGridToolBar",
+      "category_id": "layout",
+      "description": "Search and combine filters, then show, pin or reorder DataGrid columns.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "search_terms": [
+        "arrange",
+        "column.",
+        "columns",
+        "columns.",
+        "combine",
+        "data-grid-tool-bar",
+        "data-grid-tool-bar-basic",
+        "datagrid",
+        "datagridtoolbar",
+        "demo",
+        "filter",
+        "filters",
+        "filters.",
+        "keeps",
+        "layout",
+        "layout-surfaces",
+        "memory.",
+        "move",
+        "pin",
+        "projects",
+        "reorder",
+        "restore",
+        "save",
+        "search",
+        "show",
+        "then",
+        "use",
+        "view"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "declaration": "src/components/layout/DataGridToolBar.h",
+        "qualified_type": "fluent::layout::DataGridToolBar",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "DataGridToolBar",
+        "import_statement": "from fluentqt.layout import DataGridToolBar"
+      },
+      "tests": [
+        {
+          "target": "test_data_grid_tool_bar",
+          "source": "tests/components/layout/TestDataGridToolBar.cpp",
+          "ctest_label": "test_data_grid_tool_bar"
+        }
+      ],
+      "gallery": {
+        "route_id": "data-grid-tool-bar",
+        "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
+        "control_image": "app/assets/control_images/layout/DataGridToolBar.png"
+      },
+      "samples": [
+        {
+          "id": "data-grid-tool-bar-basic",
+          "title": "Filter and arrange projects",
+          "description": "Search and combine filters. Use Columns to show, move or pin a column. Save and restore keeps this demo view in memory.",
+          "cpp_snippet": "#ifndef GALLERY_DATAGRIDWORKSPACESAMPLE_H\n#define GALLERY_DATAGRIDWORKSPACESAMPLE_H\n\n#include <FluentQt/FluentQt.h>\n#include <QHeaderView>\n#include <QHBoxLayout>\n#include <QSortFilterProxyModel>\n#include <QStandardItemModel>\n#include <QVBoxLayout>\n\nnamespace fluent::gallery {\n\n// Filtering rules and saved views are application policy, outside DataGrid.\n// zh_CN: 筛选规则与保存视图属于应用策略，不放入 DataGrid。\nclass ProjectFilterModel final : public QSortFilterProxyModel {\npublic:\n    using QSortFilterProxyModel::QSortFilterProxyModel;\n    void setCriteria(const QString& search, const QVariantMap& filters)\n    {\n        m_search = search.trimmed();\n        m_filters = filters;\n        invalidateFilter();\n    }\n\nprotected:\n    bool filterAcceptsRow(int row, const QModelIndex& parent) const override\n    {\n        bool matchesText = m_search.isEmpty();\n        for (int c = 0; c < sourceModel()->columnCount(parent); ++c)\n            matchesText |=\n                sourceModel()->index(row, c, parent).data().toString().contains(m_search, Qt::CaseInsensitive);\n        if (!matchesText)\n            return false;\n        for (const auto& pair : {qMakePair(QStringLiteral(\"owner\"), 1), qMakePair(QStringLiteral(\"status\"), 2)}) {\n            const auto values = m_filters.value(pair.first).toStringList();\n            if (!values.isEmpty() && !values.contains(sourceModel()->index(row, pair.second, parent).data().toString()))\n                return false;\n        }\n        return true;\n    }\n\nprivate:\n    QString m_search;\n    QVariantMap m_filters;\n};\n\nclass DataGridWorkspaceSample final : public layout::Card {\npublic:\n    explicit DataGridWorkspaceSample(QWidget* parent = nullptr) : Card(parent)\n    {\n        setObjectName(QStringLiteral(\"dataGridWorkspace\"));\n        setBorderVisible(false);\n        setMaximumWidth(864);\n        setMinimumWidth(300);\n        setMinimumHeight(480);\n        auto* body = new QVBoxLayout(this);\n        body->setContentsMargins(24, 24, 24, 24);\n        body->setSpacing(12);\n        auto* title = new textfields::Label(QStringLiteral(\"Projects\"), this);\n        title->setFluentTypography(Typography::FontRole::Subtitle);\n        body->addWidget(title);\n        auto* description = new textfields::Label(QStringLiteral(\"Search, combine filters, and arrange your columns.\"),\n            this);\n        description->setFluentTypography(Typography::FontRole::Caption);\n        description->setTextColorRole(textfields::Label::TextColorRole::Secondary);\n        description->setWordWrap(true);\n        body->addWidget(description);\n\n        m_toolbar = new layout::DataGridToolBar(this);\n        m_toolbar->searchField()->setPlaceholderText(QStringLiteral(\"Search projects…\"));\n        m_toolbar->addFilter(QStringLiteral(\"status\"), QStringLiteral(\"Status\"),\n            {QStringLiteral(\"Active\"), QStringLiteral(\"Review\")});\n        m_toolbar->addFilter(QStringLiteral(\"owner\"), QStringLiteral(\"Owner\"),\n            {QStringLiteral(\"Maya\"), QStringLiteral(\"Noah\"), QStringLiteral(\"Priya\"), QStringLiteral(\"Riley\")});\n        body->addWidget(m_toolbar);\n\n        m_model = new QStandardItemModel(this);\n        m_model->setHorizontalHeaderLabels(\n            {QStringLiteral(\"Project\"), QStringLiteral(\"Owner\"), QStringLiteral(\"Status\"), QStringLiteral(\"Priority\")});\n        m_model->setHeaderData(3, Qt::Horizontal, int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);\n        const QStringList names{QStringLiteral(\"Aurora\"), QStringLiteral(\"Beacon\"), QStringLiteral(\"Canvas\"),\n            QStringLiteral(\"Delta\"), QStringLiteral(\"Ember\"), QStringLiteral(\"Fjord\"), QStringLiteral(\"Grove\"),\n            QStringLiteral(\"Harbor\")};\n        const QStringList owners{QStringLiteral(\"Maya\"), QStringLiteral(\"Noah\"), QStringLiteral(\"Priya\"),\n            QStringLiteral(\"Riley\")};\n        for (int r = 0; r < names.size(); ++r) {\n            auto* priority = new QStandardItem;\n            priority->setData(r % 4 + 1, Qt::EditRole);\n            priority->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);\n            m_model->appendRow({new QStandardItem(names.at(r)), new QStandardItem(owners.at(r % 4)),\n                new QStandardItem(r % 3 == 0 ? QStringLiteral(\"Review\") : QStringLiteral(\"Active\")), priority});\n        }\n        m_proxy = new ProjectFilterModel(this);\n        m_proxy->setSourceModel(m_model);\n        m_grid = new collections::DataGrid(this);\n        m_grid->setObjectName(QStringLiteral(\"workspaceDataGrid\"));\n        m_grid->setAccessibleName(QStringLiteral(\"Projects\"));\n        m_grid->setModel(m_proxy);\n        m_grid->setBorderVisible(false);\n        m_grid->setPlaceholderText(QStringLiteral(\"No projects match these filters.\"));\n        m_grid->setSelectionBehavior(QAbstractItemView::SelectRows);\n        m_grid->setSelectionMode(collections::SelectionMode::Extended);\n        m_grid->setSortingEnabled(true);\n        m_grid->sortByColumn(0, Qt::AscendingOrder);\n        m_grid->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);\n        m_grid->setColumnWidth(0, 300);\n        m_grid->setColumnWidth(1, 180);\n        m_grid->setColumnWidth(2, 160);\n        m_grid->setColumnWidth(3, 176);\n        m_grid->setMinimumHeight(220);\n        m_toolbar->setDataGrid(m_grid);\n        body->addWidget(m_grid, 1);\n\n        auto* footer = new QHBoxLayout;\n        m_summary = new textfields::Label(this);\n        m_summary->setObjectName(QStringLiteral(\"dataGridSummary\"));\n        m_summary->setFluentTypography(Typography::FontRole::Caption);\n        m_summary->setTextColorRole(textfields::Label::TextColorRole::Secondary);\n        m_summary->setWordWrap(true);\n        footer->addWidget(m_summary, 1);\n        auto* save = new basicinput::Button(QStringLiteral(\"Save view\"), this);\n        save->setObjectName(QStringLiteral(\"dataGridSaveView\"));\n        auto* restore = new basicinput::Button(QStringLiteral(\"Restore\"), this);\n        restore->setObjectName(QStringLiteral(\"dataGridRestoreView\"));\n        restore->setEnabled(false);\n        footer->addWidget(save);\n        footer->addWidget(restore);\n        body->addLayout(footer);\n        connect(save, &QAbstractButton::clicked, this, [this, restore] {\n            m_savedColumns = m_grid->saveColumnState();\n            m_savedSearch = m_toolbar->searchText();\n            m_savedFilters = m_toolbar->filters();\n            restore->setEnabled(true);\n            status_info::Toast::showOrUpdateToast(this, QStringLiteral(\"gallery.action-feedback\"),\n                QStringLiteral(\"View saved for this demo\"), status_info::Toast::Success, 2200, status_info::Toast::Top,\n                QMargins(16, 50, 16, 16));\n        });\n        connect(restore, &QAbstractButton::clicked, this, [this] {\n            m_grid->restoreColumnState(m_savedColumns);\n            m_toolbar->clearFilters();\n            m_toolbar->setSearchText(m_savedSearch);\n            for (auto it = m_savedFilters.cbegin(); it != m_savedFilters.cend(); ++it)\n                m_toolbar->setFilterValues(it.key(), it.value().toStringList());\n            updateSummary();\n            status_info::Toast::showOrUpdateToast(this, QStringLiteral(\"gallery.action-feedback\"),\n                QStringLiteral(\"View restored\"), status_info::Toast::Success, 2200, status_info::Toast::Top,\n                QMargins(16, 50, 16, 16));\n        });\n        const auto filter = [this] {\n            m_proxy->setCriteria(m_toolbar->searchText(), m_toolbar->filters());\n            updateSummary();\n        };\n        connect(m_toolbar, &layout::DataGridToolBar::searchTextChanged, this, filter);\n        connect(m_toolbar, &layout::DataGridToolBar::filtersChanged, this, filter);\n        connect(m_grid->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this] { updateSummary(); });\n        m_grid->selectRow(2);\n        updateSummary();\n    }\n\nprivate:\n    void updateSummary()\n    {\n        m_summary->setText(QStringLiteral(\"%1 of %2 projects · %3 selected\")\n                .arg(m_proxy->rowCount())\n                .arg(m_model->rowCount())\n                .arg(m_grid->selectionModel()->selectedRows().size()));\n    }\n    layout::DataGridToolBar* m_toolbar = nullptr;\n    collections::DataGrid* m_grid = nullptr;\n    QStandardItemModel* m_model = nullptr;\n    ProjectFilterModel* m_proxy = nullptr;\n    textfields::Label* m_summary = nullptr;\n    QByteArray m_savedColumns;\n    QString m_savedSearch;\n    QVariantMap m_savedFilters;\n};\n} // namespace fluent::gallery\n#endif\n",
+          "fill_available_width": true
+        }
+      ]
+    },
+    {
+      "id": "property-panel",
+      "title": "PropertyPanel",
+      "category_id": "layout",
+      "description": "Generate Fluent property editors from explicit definitions, with groups, search, reset and validation.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "search_terms": [
+        "axes",
+        "change",
+        "chart",
+        "clear",
+        "configuration",
+        "copy",
+        "data.",
+        "definitions",
+        "document",
+        "edit",
+        "editors",
+        "explicit",
+        "field.",
+        "fluent",
+        "generate",
+        "groups",
+        "layout",
+        "layout-surfaces",
+        "original",
+        "presentation",
+        "preview.",
+        "property",
+        "property-panel",
+        "property-panel-basic",
+        "property-panel-chart-workbench",
+        "propertypanel",
+        "reset",
+        "save",
+        "search",
+        "show",
+        "then",
+        "title",
+        "untitled",
+        "update",
+        "validation.",
+        "workbench"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "declaration": "src/components/layout/PropertyPanel.h",
+        "qualified_type": "fluent::layout::PropertyPanel",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "PropertyPanel",
+        "import_statement": "from fluentqt.layout import PropertyPanel"
+      },
+      "tests": [
+        {
+          "target": "test_property_panel",
+          "source": "tests/components/layout/TestPropertyPanel.cpp",
+          "ctest_label": "test_property_panel"
+        }
+      ],
+      "gallery": {
+        "route_id": "property-panel",
+        "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
+        "control_image": "app/assets/control_images/layout/PropertyPanel.png"
+      },
+      "samples": [
+        {
+          "id": "property-panel-basic",
+          "title": "Edit a document title",
+          "description": "Change the title to update the preview. Clear it to show an untitled document, or reset the field.",
+          "cpp_snippet": "auto* document = new Card(this);\ndocument->setMaximumWidth(480);\ndocument->setBorderVisible(false);\nauto* body = new QVBoxLayout(document);\nbody->setContentsMargins(16, 16, 16, 16);\nbody->setSpacing(12);\nauto* identity = new QHBoxLayout;\nidentity->setSpacing(8);\nauto* icon = new FontIcon(Typography::Icons::Document, document);\nicon->setIconSize(20);\nidentity->addWidget(icon);\nauto* preview = new Label(\"Quarterly report\", document);\npreview->setFluentTypography(Typography::FontRole::Body);\npreview->setTextColorRole(Label::TextColorRole::Primary);\npreview->setTextFormat(Qt::PlainText);\npreview->setTextElideMode(Qt::ElideRight);\npreview->setMinimumWidth(0);\npreview->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);\nidentity->addWidget(preview, 1);\nauto* panel = new fluent::layout::PropertyPanel(document);\npanel->setLayoutMode(fluent::layout::PropertyPanel::LayoutMode::Stacked);\nfluent::layout::PropertyDefinition title;\ntitle.key = \"title\";\ntitle.label = \"Title\";\ntitle.defaultValue = QStringLiteral(\"Quarterly report\");\npanel->setProperties({title});\npanel->setFixedHeight(64);\nbody->addWidget(panel);\nbody->addLayout(identity);\nconnect(panel, &fluent::layout::PropertyPanel::valueEdited, preview,\n    [preview](const QString&, const QVariant& value) {\n        const QString title = value.toString().trimmed();\n        preview->setText(title.isEmpty() ? QStringLiteral(\"Untitled document\") : title);\n    });",
+          "fill_available_width": true
+        },
+        {
+          "id": "property-panel-chart-workbench",
+          "title": "Chart configuration workbench",
+          "description": "Edit presentation and axes, reset a property, then save or copy the chart and its original data.",
+          "cpp_snippet": "#ifndef FLUENTQT_CHARTWORKBENCHSAMPLE_H\n#define FLUENTQT_CHARTWORKBENCHSAMPLE_H\n\n#include <FluentQt/FluentQt.h>\n#include <QBoxLayout>\n#include <QFileDialog>\n#include <QGridLayout>\n#include <QJsonObject>\n#include <QResizeEvent>\n\nnamespace fluent::gallery {\n\nclass ChartWorkbenchSample final : public layout::Card {\npublic:\n    explicit ChartWorkbenchSample(QWidget* parent = nullptr) : Card(parent)\n    {\n        setObjectName(QStringLiteral(\"chartWorkbench\"));\n        setBorderVisible(false);\n        setMaximumWidth(1080);\n        auto* body = new QVBoxLayout(this);\n        body->setContentsMargins(16, 16, 16, 16);\n        body->setSpacing(16);\n        m_columns = new QBoxLayout(QBoxLayout::LeftToRight);\n        m_columns->setSpacing(20);\n        m_chart = new charts::ChartView(this);\n        m_chart->setObjectName(QStringLiteral(\"workbenchChart\"));\n        m_chart->setAccessibleName(QStringLiteral(\"Response time preview\"));\n        m_chart->setMinimumSize(260, 320);\n        m_chart->setSubtitle(QStringLiteral(\"Milliseconds · last 7 days\"));\n        m_chart->setValueSuffix(QStringLiteral(\" ms\"));\n        auto* model = new charts::ChartModel(this);\n        model->setName(QStringLiteral(\"Primary\"));\n        model->setPoints({{0, 18}, {1, 32}, {2, 24}, {3, 48}, {4, 36}, {5, 54}, {6, 42}},\n            {\"Mon\", \"Tue\", \"Wed\", \"Thu\", \"Fri\", \"Sat\", \"Sun\"});\n        m_chart->setModel(model);\n        m_columns->addWidget(m_chart, 1);\n        m_editorPane = new QWidget(this);\n        auto* inspector = new QVBoxLayout(m_editorPane);\n        inspector->setContentsMargins(0, 0, 0, 0);\n        inspector->setSpacing(16);\n        auto* propertyHeader = new QHBoxLayout;\n        auto* heading = new textfields::Label(QStringLiteral(\"Properties\"), m_editorPane);\n        heading->setFluentTypography(Typography::FontRole::BodyStrong);\n        propertyHeader->addWidget(heading);\n        propertyHeader->addStretch();\n        auto* reset = new basicinput::Button(QStringLiteral(\"Reset all\"), m_editorPane);\n        reset->setObjectName(QStringLiteral(\"propertyResetAll\"));\n        reset->setFluentStyle(basicinput::Button::Subtle);\n        propertyHeader->addWidget(reset);\n        inspector->addLayout(propertyHeader);\n        m_properties = new layout::PropertyPanel(m_editorPane);\n        m_properties->setObjectName(QStringLiteral(\"workbenchProperties\"));\n        m_properties->setMinimumHeight(240);\n        inspector->addWidget(m_properties, 1);\n        m_columns->addWidget(m_editorPane);\n        body->addLayout(m_columns, 1);\n\n        layout::PropertyDefinition title;\n        title.key = \"title\";\n        title.label = \"Title\";\n        title.group = \"Presentation\";\n        title.defaultValue = QStringLiteral(\"Response time\");\n        layout::PropertyDefinition type;\n        type.key = \"type\";\n        type.label = \"Chart type\";\n        type.group = \"Presentation\";\n        type.type = layout::PropertyDefinition::Choice;\n        type.choices = {\"Line\", \"Area\", \"Bar\", \"Scatter\"};\n        type.defaultValue = QStringLiteral(\"Area\");\n        layout::PropertyDefinition legend;\n        legend.key = \"legend\";\n        legend.label = \"Show legend\";\n        legend.group = \"Presentation\";\n        legend.type = layout::PropertyDefinition::Boolean;\n        legend.defaultValue = true;\n        layout::PropertyDefinition maximum;\n        maximum.key = \"maximum\";\n        maximum.label = \"Y-axis maximum\";\n        maximum.group = \"Axes\";\n        maximum.type = layout::PropertyDefinition::Number;\n        maximum.minimum = 10;\n        maximum.maximum = 200;\n        maximum.step = 5;\n        maximum.defaultValue = 80.0;\n        layout::PropertyDefinition accent;\n        accent.key = \"accent\";\n        accent.label = \"Series accent\";\n        accent.group = \"Presentation\";\n        accent.type = layout::PropertyDefinition::Color;\n        accent.defaultValue = QColor(\"#0078d4\");\n        m_properties->setProperties({title, type, legend, accent, maximum});\n        reset->setEnabled(false);\n        connect(reset, &QAbstractButton::clicked, m_properties, &layout::PropertyPanel::resetAll);\n        connect(m_properties, &layout::PropertyPanel::modifiedPropertiesChanged, reset, [this, reset] {\n            reset->setEnabled(!m_properties->modifiedPropertyKeys().isEmpty());\n        });\n\n        auto* footer = new QHBoxLayout;\n        m_scope = new basicinput::ComboBox(this);\n        m_scope->setObjectName(QStringLiteral(\"chartExportScope\"));\n        m_scope->setAccessibleName(QStringLiteral(\"Export range\"));\n        m_scope->addItems({\"All data\", \"Tue–Fri\"});\n        footer->addWidget(m_scope);\n        m_status = new textfields::Label(QStringLiteral(\"7 original rows · all data\"), this);\n        m_status->setObjectName(QStringLiteral(\"chartWorkbenchStatus\"));\n        m_status->setWordWrap(true);\n        m_status->setTextColorRole(textfields::Label::TextColorRole::Secondary);\n        m_status->setFluentTypography(Typography::FontRole::Caption);\n        footer->addWidget(m_status, 1);\n        auto* exportButton = new basicinput::DropDownButton(QStringLiteral(\"Export\"), this);\n        exportButton->setObjectName(QStringLiteral(\"chartExportMenuButton\"));\n        auto* exportMenu = new menus_toolbars::FluentMenu(QStringLiteral(\"Export\"), this);\n        exportButton->setMenu(exportMenu);\n        auto* png = exportMenu->addAction(QStringLiteral(\"Save image as PNG…\"));\n        png->setObjectName(QStringLiteral(\"chartSavePng\"));\n        auto* csv = exportMenu->addAction(QStringLiteral(\"Save data as CSV…\"));\n        csv->setObjectName(QStringLiteral(\"chartSaveCsv\"));\n        exportMenu->addSeparator();\n        auto* copyImage = exportMenu->addAction(QStringLiteral(\"Copy image\"));\n        copyImage->setObjectName(QStringLiteral(\"chartCopyImage\"));\n        auto* copyData = exportMenu->addAction(QStringLiteral(\"Copy data\"));\n        copyData->setObjectName(QStringLiteral(\"chartCopyData\"));\n        footer->addWidget(exportButton);\n        body->addLayout(footer);\n        connect(m_properties, &layout::PropertyPanel::valueEdited, this, [this](const QString& key, const QVariant&) {\n            applyProperties();\n            m_properties->formController()->validateField(key);\n        });\n        auto* form = m_properties->formController();\n        connect(form, &FormController::validationRequested, this, [this, form](const QString& key, quint64 token) {\n            const bool valid = key != \"title\" || !m_properties->value(key).toString().trimmed().isEmpty();\n            form->completeValidation(key, token, valid, valid ? QString() : QStringLiteral(\"Enter a title.\"));\n        });\n        connect(m_scope, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int index) {\n            if (index == 0)\n                m_chart->resetXRange();\n            else\n                m_chart->setXRange(1, 4);\n            m_status->setText(index == 0\n                    ? QStringLiteral(\"7 original rows · all data\")\n                    : QStringLiteral(\"4 original rows · Tue–Fri\"));\n        });\n        connect(png, &QAction::triggered, this, [this] {\n            const QByteArray bytes = m_chart->exportPng(2);\n            if (bytes.isEmpty()) {\n                notify(QStringLiteral(\"Image export failed. Try again.\"), status_info::Toast::Error);\n                return;\n            }\n            QFileDialog::saveFileContent(bytes, QStringLiteral(\"response-time.png\"));\n            notify(QStringLiteral(\"PNG ready to save\"), status_info::Toast::Informational);\n        });\n        connect(csv, &QAction::triggered, this, [this] {\n            const QByteArray bytes = m_chart->exportCsv(m_scope->currentIndex() == 1);\n            QFileDialog::saveFileContent(bytes, QStringLiteral(\"response-time.csv\"));\n            notify(QStringLiteral(\"CSV ready to save\"), status_info::Toast::Informational);\n        });\n        connect(copyImage, &QAction::triggered, this, [this] { m_chart->copyImage(2); });\n        connect(copyData, &QAction::triggered, this, [this] { m_chart->copyData(m_scope->currentIndex() == 1); });\n        connect(m_chart, &charts::ChartView::imageCopied, this, [this](bool success) {\n            notify(success ? QStringLiteral(\"Image copied\") : QStringLiteral(\"Copy unavailable · use Save PNG\"),\n                success ? status_info::Toast::Success : status_info::Toast::Warning);\n        });\n        connect(m_chart, &charts::ChartView::dataCopied, this, [this](bool success) {\n            notify(success ? QStringLiteral(\"Data copied\") : QStringLiteral(\"Copy unavailable · use Save CSV\"),\n                success ? status_info::Toast::Success : status_info::Toast::Warning);\n        });\n        applyProperties();\n        m_properties->formController()->markClean();\n    }\n\nprotected:\n    void resizeEvent(QResizeEvent* event) override\n    {\n        Card::resizeEvent(event);\n        const bool narrow = width() < 760;\n        m_columns->setDirection(narrow ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);\n        m_editorPane->setMaximumWidth(narrow ? QWIDGETSIZE_MAX : 380);\n        m_editorPane->setMinimumWidth(narrow ? 0 : 360);\n        setMinimumHeight(narrow ? 720 : 440);\n    }\n\nprivate:\n    void notify(const QString& message, status_info::Toast::Severity severity)\n    {\n        const bool problem = severity == status_info::Toast::Warning || severity == status_info::Toast::Error;\n        status_info::Toast::showOrUpdateToast(this, QStringLiteral(\"gallery.action-feedback\"), message, severity,\n            problem ? 4500 : 2200, status_info::Toast::Top, QMargins(16, 50, 16, 16));\n    }\n\n    void applyProperties()\n    {\n        m_chart->setTitle(m_properties->value(\"title\").toString());\n        const QString type = m_properties->value(\"type\").toString();\n        m_chart->setChartType(type == \"Line\" ? charts::ChartView::Line\n                : type == \"Bar\"              ? charts::ChartView::Bar\n                : type == \"Scatter\"\n                ? charts::ChartView::Scatter\n                : charts::ChartView::Area);\n        m_chart->setYRange(0, m_properties->value(\"maximum\").toDouble());\n        m_chart->setLegendVisible(m_properties->value(\"legend\").toBool());\n        const QJsonObject colors{{\"accentDefault\", m_properties->value(\"accent\").value<QColor>().name()}};\n        m_chart->setThemeOverrides(QJsonObject{{\"light\", colors}, {\"dark\", colors}});\n    }\n    charts::ChartView* m_chart;\n    layout::PropertyPanel* m_properties;\n    basicinput::ComboBox* m_scope;\n    textfields::Label* m_status;\n    QBoxLayout* m_columns;\n    QWidget* m_editorPane;\n};\n} // namespace fluent::gallery\n#endif\n",
+          "fill_available_width": true
+        }
+      ]
+    },
+    {
+      "id": "list-detail-view",
+      "title": "ListDetailView",
+      "category_id": "layout",
+      "description": "Shows a list and detail side by side, or one pane at a time in a narrow space. The same content widgets stay alive across layout changes.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "search_terms": [
+        "across",
+        "alive",
+        "back",
+        "browser",
+        "changes.",
+        "choose",
+        "content",
+        "contents.",
+        "demo",
+        "detail",
+        "drafts",
+        "edit",
+        "file",
+        "files",
+        "files.",
+        "keeps",
+        "kept",
+        "layout",
+        "layout-surfaces",
+        "list",
+        "list-detail-basic",
+        "list-detail-file-browser",
+        "list-detail-view",
+        "listdetailview",
+        "meeting",
+        "memory.",
+        "narrow",
+        "note",
+        "notes",
+        "one",
+        "open",
+        "pane",
+        "place.",
+        "preview",
+        "resize",
+        "return",
+        "same",
+        "scrolling",
+        "select",
+        "selection",
+        "shows",
+        "side",
+        "space.",
+        "stay",
+        "switch",
+        "text.",
+        "then",
+        "these",
+        "time",
+        "two",
+        "use",
+        "wide",
+        "widgets",
+        "window",
+        "your"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "declaration": "src/components/layout/ListDetailView.h",
+        "qualified_type": "fluent::layout::ListDetailView",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "ListDetailView",
+        "import_statement": "from fluentqt.layout import ListDetailView"
+      },
+      "tests": [
+        {
+          "target": "test_list_detail_view",
+          "source": "tests/components/layout/TestListDetailView.cpp",
+          "ctest_label": "test_list_detail_view"
+        }
+      ],
+      "gallery": {
+        "route_id": "list-detail-view",
+        "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
+        "control_image": "app/assets/control_images/layout/ListDetailView.png"
+      },
+      "samples": [
+        {
+          "id": "list-detail-basic",
+          "title": "One pane or two",
+          "description": "Choose Narrow preview, open the meeting note and edit its text. Go back to the notes or switch to Wide preview: the same note keeps your changes.",
+          "cpp_snippet": "auto* panel = new QWidget(this);\nauto* body = new QVBoxLayout(panel);\nbody->setContentsMargins(0, 0, 0, 0);\nbody->setSpacing(12);\nauto* width = new ComboBox(panel);\nwidth->setAccessibleName(\"Preview width\");\nwidth->addItems({\"Wide preview\", \"Narrow preview\"});\nbody->addWidget(width, 0, Qt::AlignLeft);\nauto* view = new fluent::layout::ListDetailView(panel);\nview->setCompactThreshold(520);\nview->setMaximumWidth(640);\nview->setFixedHeight(156);\nbody->addWidget(view, 0, Qt::AlignLeft);\nauto* list = new QVBoxLayout(view->listPane());\nlist->addWidget(new Label(\"Notes\", view->listPane()));\nauto* open = new Button(\"Open meeting note\", view->listPane());\nlist->addWidget(open);\nlist->addStretch();\nauto* detail = new QVBoxLayout(view->detailPane());\nauto* back = new Button(\"Back to notes\", view->detailPane());\nback->setFluentStyle(Button::Subtle);\nback->setVisible(view->isCompact());\ndetail->addWidget(back, 0, Qt::AlignLeft);\ndetail->addWidget(new Label(\"Meeting note\", view->detailPane()));\nauto* editor = new LineEdit(view->detailPane());\neditor->setAccessibleName(\"Note draft\");\neditor->setText(\"Discuss the next release\");\ndetail->addWidget(editor);\ndetail->addStretch();\nconnect(open, &Button::clicked, view, &fluent::layout::ListDetailView::showDetail);\nconnect(back, &Button::clicked, view, &fluent::layout::ListDetailView::showList);\nconnect(view, &fluent::layout::ListDetailView::compactChanged, back, &QWidget::setVisible);\nconnect(width, qOverload<int>(&ComboBox::currentIndexChanged), view, [view](int index) {\n    view->setMaximumWidth(index == 0 ? 640 : 360);\n});",
+          "fill_available_width": true
+        },
+        {
+          "id": "list-detail-file-browser",
+          "title": "File browser",
+          "description": "Select a file and edit its contents. Resize the window or use Narrow preview, then return to Files. Selection, scrolling and drafts stay in place. These demo files are kept in memory.",
+          "cpp_snippet": "#ifndef GALLERY_FILEBROWSERSAMPLE_H\n#define GALLERY_FILEBROWSERSAMPLE_H\n\n#include <FluentQt/FluentQt.h>\n\n#include <QAction>\n#include <QHBoxLayout>\n#include <QIcon>\n#include <QJsonObject>\n#include <QKeySequence>\n#include <QPixmap>\n#include <QSignalBlocker>\n#include <QSortFilterProxyModel>\n#include <QStandardItemModel>\n#include <QTextBlock>\n#include <QVBoxLayout>\n\nnamespace fluent::gallery {\n\n// The model and drafts belong to the example; ListDetailView only arranges panes.\n// zh_CN: 模型和草稿由示例持有，ListDetailView 只负责排列内容区。\nclass FileBrowserSample final : public layout::Card {\n    using Button = basicinput::Button;\n    using Label = textfields::Label;\n    enum Role { Draft = Qt::UserRole, Modified, Saved, Folder };\n\npublic:\n    explicit FileBrowserSample(QWidget* parent = nullptr) : Card(parent)\n    {\n        setObjectName(QStringLiteral(\"fileBrowserSample\"));\n        setBorderVisible(false);\n        setMaximumWidth(960);\n        setMinimumHeight(644);\n        auto* body = column(this);\n        body->setSpacing(::Spacing::Medium);\n        body->setSizeConstraint(QLayout::SetNoConstraint);\n        m_surface = new layout::Card(this);\n        m_surface->setObjectName(QStringLiteral(\"fileBrowserSurface\"));\n        m_surface->setFixedHeight(600);\n        m_surface->setThemeOverrides({{QStringLiteral(\"radius\"), QJsonObject{{QStringLiteral(\"control\"), 8}}}});\n        auto* surface = column(m_surface, 1);\n        surface->setSizeConstraint(QLayout::SetNoConstraint);\n        body->addWidget(m_surface);\n\n        auto* toolbar = row(m_surface, 52, ::Spacing::Medium);\n        m_breadcrumb = new QWidget(m_surface);\n        auto* path = new QHBoxLayout(m_breadcrumb);\n        path->setContentsMargins(0, 0, 0, 0);\n        path->setSpacing(::Spacing::Medium);\n        path->addWidget(new FontIcon(QStringLiteral(\"ic_fluent_folder_20_regular\"), m_breadcrumb));\n        path->addWidget(label(QStringLiteral(\"Workspace\"), Typography::FontRole::Body, true));\n        auto* chevron = new FontIcon(QStringLiteral(\"ic_fluent_chevron_right_20_regular\"), m_breadcrumb);\n        chevron->setIconSize(Typography::IconSize::Compact);\n        path->addWidget(chevron);\n        toolbar->addWidget(m_breadcrumb);\n        m_folderTitle = label(QStringLiteral(\"Documents\"), Typography::FontRole::BodyStrong);\n        toolbar->addWidget(m_folderTitle);\n        m_back = button(QStringLiteral(\"Files\"), \"fileBrowserBack\", Button::Subtle);\n        m_back->setIconGlyph(Typography::Icons::Back);\n        m_back->setAccessibleName(QStringLiteral(\"Back to files\"));\n        toolbar->addWidget(m_back);\n        toolbar->addStretch();\n        m_wideSearch = search(\"fileBrowserSearch\");\n        m_wideSearch->setFixedWidth(204);\n        toolbar->addWidget(m_wideSearch);\n        m_new = button(QStringLiteral(\"New file\"), \"fileBrowserNew\");\n        m_new->setIconGlyph(Typography::Icons::Add);\n        m_new->setAccessibleName(QStringLiteral(\"New file\"));\n        toolbar->addWidget(m_new);\n        m_more = button(QString(), \"fileBrowserMore\", Button::Subtle);\n        m_more->setIconGlyph(Typography::Icons::More);\n        m_more->setAccessibleName(QStringLiteral(\"File options\"));\n        m_more->setToolTip(m_more->accessibleName());\n        toolbar->addWidget(m_more);\n        m_compactSave = button(QStringLiteral(\"Save\"), \"fileBrowserCompactSave\", Button::Accent);\n        toolbar->addWidget(m_compactSave);\n        surface->addWidget(toolbar->parentWidget());\n        surface->addWidget(new layout::Divider(m_surface));\n\n        m_view = new layout::ListDetailView(m_surface);\n        m_view->setObjectName(QStringLiteral(\"fileBrowserLayout\"));\n        m_view->setListPaneWidth(320);\n        surface->addWidget(m_view, 1);\n        auto* list = column(m_view->listPane());\n        m_searchRow = row(m_view->listPane(), 56, ::Spacing::Medium)->parentWidget();\n        m_narrowSearch = search(\"fileBrowserCompactSearch\");\n        m_searchRow->layout()->addWidget(m_narrowSearch);\n        list->addWidget(m_searchRow);\n        auto* headings = row(m_view->listPane(), 36, 0);\n        headings->setContentsMargins(48, 0, 12, 0);\n        headings->addWidget(label(QStringLiteral(\"Name\"), Typography::FontRole::Caption, true));\n        headings->addStretch();\n        headings->addWidget(label(QStringLiteral(\"Modified\"), Typography::FontRole::Caption, true));\n        list->addWidget(headings->parentWidget());\n        m_list = new collections::ListView(m_view->listPane());\n        m_list->setObjectName(QStringLiteral(\"fileBrowserList\"));\n        m_list->setAccessibleName(QStringLiteral(\"Documents\"));\n        m_list->setBorderVisible(false);\n        m_list->setScrollChainingEnabled(false);\n        m_list->setTrailingTextRole(Modified);\n        m_list->setIconSize(QSize(20, 20));\n        m_list->setSpacing(0);\n        m_list->setPlaceholderText(QStringLiteral(\"No matching files\"));\n        list->addWidget(m_list, 1);\n        list->addWidget(new layout::Divider(m_view->listPane()));\n        auto* listFooter = row(m_view->listPane(), 28, ::Spacing::Standard);\n        m_count = label(QString(), Typography::FontRole::Caption, true);\n        listFooter->addWidget(m_count);\n        list->addWidget(listFooter->parentWidget());\n\n        auto* detail = column(m_view->detailPane());\n        auto* heading = row(m_view->detailPane(), 64, ::Spacing::Large);\n        auto* identity = new QVBoxLayout;\n        identity->setSpacing(::Spacing::XSmall);\n        identity->setAlignment(Qt::AlignVCenter);\n        m_title = label(QString(), Typography::FontRole::BodyStrong);\n        m_title->setObjectName(QStringLiteral(\"fileBrowserTitle\"));\n        m_title->setMinimumWidth(0);\n        identity->addWidget(m_title);\n        auto* state = new QHBoxLayout;\n        state->setSpacing(::Spacing::XSmall);\n        m_dirty = new status_info::InfoBadge(this);\n        m_dirty->setDisplayMode(status_info::InfoBadge::InfoBadgeDisplayMode::Dot);\n        m_dirty->setStatus(status_info::InfoBadge::InfoBadgeStatus::Caution);\n        m_dirty->setBeaconDiameter(5);\n        m_dirty->setFixedSize(5, 5);\n        m_dirty->setAccessibleName(QStringLiteral(\"Unsaved changes\"));\n        state->addWidget(m_dirty);\n        m_status = label(QString(), Typography::FontRole::Caption, true);\n        m_status->setObjectName(QStringLiteral(\"fileBrowserStatus\"));\n        state->addWidget(m_status);\n        state->addStretch();\n        identity->addLayout(state);\n        heading->addLayout(identity, 1);\n        m_save = button(QStringLiteral(\"Save\"), \"fileBrowserSave\", Button::Accent);\n        heading->addWidget(m_save);\n        detail->addWidget(heading->parentWidget());\n        detail->addWidget(new layout::Divider(m_view->detailPane()));\n        m_editor = new textfields::TextEdit(m_view->detailPane());\n        m_editor->setObjectName(QStringLiteral(\"fileBrowserEditor\"));\n        m_editor->setAccessibleName(QStringLiteral(\"File contents\"));\n        m_editor->setAutoResizeEnabled(false);\n        m_editor->setFrameVisible(false);\n        m_editor->setContentMargins(QMargins(24, 24, 24, 24));\n        m_editor->setLineHeight(::Spacing::ControlHeight::Small);\n        m_editor->setScrollChainingEnabled(false);\n        detail->addWidget(m_editor, 1);\n        detail->addWidget(new layout::Divider(m_view->detailPane()));\n        auto* editorFooter = row(m_view->detailPane(), 28, ::Spacing::Standard);\n        m_type = label(QString(), Typography::FontRole::Caption, true);\n        m_position = label(QString(), Typography::FontRole::Caption, true);\n        editorFooter->addWidget(m_type);\n        editorFooter->addStretch();\n        editorFooter->addWidget(m_position);\n        detail->addWidget(editorFooter->parentWidget());\n\n        auto* narrow = button(QStringLiteral(\"Narrow preview\"), \"fileBrowserNarrow\", Button::Subtle);\n        narrow->setCheckable(true);\n        body->addWidget(narrow, 0, Qt::AlignLeft);\n        connect(narrow, &Button::toggled, this, [this](bool checked) {\n            if (checked)\n                m_previewWidth = width();\n            setMaximumWidth(checked ? 400 : 960);\n            resize(checked ? 400 : m_previewWidth, height());\n        });\n        m_documentIcon = glyphIcon(QStringLiteral(\"ic_fluent_document_text_20_regular\"), 20);\n        m_folderIcon = glyphIcon(QStringLiteral(\"ic_fluent_folder_20_regular\"), 20);\n        m_model = new QStandardItemModel(this);\n        const QStringList names{QStringLiteral(\"Design assets\"), QStringLiteral(\"getting-started.md\"),\n            QStringLiteral(\"layout-notes.md\"), QStringLiteral(\"architecture.md\"), QStringLiteral(\"keyboard.md\"),\n            QStringLiteral(\"roadmap.md\"), QStringLiteral(\"changelog.md\"), QStringLiteral(\"theme-tokens.json\"),\n            QStringLiteral(\"contributing.md\"), QStringLiteral(\"license.txt\"), QStringLiteral(\"release-notes.md\"),\n            QStringLiteral(\"readme.md\")};\n        const QStringList dates{QStringLiteral(\"Oct 18\"), QStringLiteral(\"11:20\"), QStringLiteral(\"10:42\"),\n            QStringLiteral(\"Yesterday\"), QStringLiteral(\"Oct 18\"), QStringLiteral(\"Oct 18\"), QStringLiteral(\"Oct 17\"),\n            QStringLiteral(\"Oct 17\"), QStringLiteral(\"Oct 16\"), QStringLiteral(\"Oct 15\"), QStringLiteral(\"Oct 15\"),\n            QStringLiteral(\"Oct 14\")};\n        for (int i = 0; i < names.size(); ++i)\n            addFile(names[i], dates[i],\n                i == 2 ? layoutNotes() : QStringLiteral(\"# %1\\n\\nNotes for this workspace.\\n\").arg(names[i]), i == 0);\n        m_model->item(0)->setData(\n            QStringLiteral(\"Design assets\\n\\nFolder contents\\n\\napp-icon.svg\\ncolor-tokens.json\\nREADME.md\"), Draft);\n        m_model->item(2)->setData(layoutNotes().section(QStringLiteral(\"Next:\"), 0, 0), Saved);\n        for (int i = 1; i <= 20; ++i)\n            addFile(QStringLiteral(\"meeting-notes-%1.md\").arg(i, 2, 10, QLatin1Char('0')), QStringLiteral(\"Oct 12\"),\n                QStringLiteral(\"# Meeting notes %1\\n\\nDecisions\\n\\n\").arg(i)\n                    + QStringLiteral(\"Keep the next step small and reviewable.\\n\").repeated(40));\n        m_filter = new QSortFilterProxyModel(this);\n        m_filter->setSourceModel(m_model);\n        m_filter->setFilterCaseSensitivity(Qt::CaseInsensitive);\n        m_filter->setFilterKeyColumn(0);\n        m_list->setModel(m_filter);\n        connect(m_list->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex& index) {\n            selectFile(index);\n        });\n        connect(m_list, &collections::ListView::clicked, this, [this] { openFile(); });\n        connect(m_list, &collections::ListView::activated, this, [this] { openFile(); });\n        auto* open = new QAction(m_list);\n        open->setShortcuts({QKeySequence(Qt::Key_Return), QKeySequence(Qt::Key_Enter)});\n        open->setShortcutContext(Qt::WidgetShortcut);\n        m_list->addAction(open);\n        connect(open, &QAction::triggered, this, [this] { openFile(); });\n        connect(m_back, &Button::clicked, this, [this] {\n            m_view->showList();\n            m_list->setFocus(Qt::OtherFocusReason);\n        });\n        connect(m_view, &layout::ListDetailView::compactChanged, this, [this] { updateChrome(); });\n        connect(m_view, &layout::ListDetailView::currentPaneChanged, this, [this] { updateChrome(); });\n        connect(m_wideSearch, &textfields::LineEdit::textChanged, this, [this](const QString& text) {\n            filterFiles(text);\n        });\n        connect(m_narrowSearch, &textfields::LineEdit::textChanged, this, [this](const QString& text) {\n            filterFiles(text);\n        });\n        connect(m_editor, &textfields::TextEdit::textChanged, this, [this] {\n            if (m_current.isValid()) {\n                m_model->setData(m_current, m_editor->toPlainText(), Draft);\n                updateState();\n                m_view->showDetail();\n            }\n        });\n        connect(m_editor, &textfields::TextEdit::cursorPositionChanged, this, [this] { updatePosition(); });\n        auto* save = new QAction(this);\n        save->setShortcut(QKeySequence::Save);\n        save->setShortcutContext(Qt::WidgetWithChildrenShortcut);\n        addAction(save);\n        connect(save, &QAction::triggered, this, [this] { saveFile(); });\n        connect(m_save, &Button::clicked, save, &QAction::trigger);\n        connect(m_compactSave, &Button::clicked, save, &QAction::trigger);\n        connect(m_new, &Button::clicked, this, [this] {\n            filterFiles(QString());\n            const int next = ++m_newCount;\n            addFile(QStringLiteral(\"untitled-%1.md\").arg(next), QStringLiteral(\"Just now\"),\n                QStringLiteral(\"# Untitled\\n\\n\"));\n            m_model->item(m_model->rowCount() - 1)->setData(QString(), Saved);\n            m_list->setCurrentIndex(m_filter->mapFromSource(m_model->index(m_model->rowCount() - 1, 0)));\n            openFile();\n        });\n        auto* menu = new menus_toolbars::FluentMenu(QStringLiteral(\"File options\"), this);\n        connect(menu->addAction(QStringLiteral(\"Show current file\")), &QAction::triggered, this, [this] {\n            filterFiles(QString());\n            m_list->scrollTo(m_list->currentIndex());\n        });\n        connect(menu->addAction(QStringLiteral(\"Clear search\")), &QAction::triggered, m_wideSearch, &QLineEdit::clear);\n        connect(m_more, &Button::clicked, menu, [this, menu] {\n            menu->popup(m_more->mapToGlobal(QPoint(0, m_more->height())));\n        });\n        m_list->setCurrentIndex(m_filter->index(2, 0));\n        m_view->showList();\n        onThemeUpdated();\n        updateChrome();\n    }\n\n    void onThemeUpdated() override\n    {\n        Card::onThemeUpdated();\n        if (!m_model)\n            return;\n        const auto colors = themeColors();\n        m_documentIcon = glyphIcon(QStringLiteral(\"ic_fluent_document_text_20_regular\"), 20);\n        m_folderIcon = glyphIcon(QStringLiteral(\"ic_fluent_folder_20_regular\"), 20);\n        for (int i = 0; i < m_model->rowCount(); ++i)\n            m_model->item(i)->setIcon(m_model->item(i)->data(Folder).toBool() ? m_folderIcon : m_documentIcon);\n        const QColor secondary = colors.textSecondary;\n        const QString searchText = QString::asprintf(\"#%02x%02x%02x%02x\", secondary.red(), secondary.green(),\n            secondary.blue(), secondary.alpha());\n        const QString mode = effectiveTheme() == Dark ? QStringLiteral(\"dark\")\n            : effectiveTheme() == HighContrast\n            ? QStringLiteral(\"contrast\")\n            : QStringLiteral(\"light\");\n        const QJsonObject searchTheme{{mode, QJsonObject{{QStringLiteral(\"textTertiary\"), searchText}}}};\n        m_wideSearch->setThemeOverrides(searchTheme);\n        m_narrowSearch->setThemeOverrides(searchTheme);\n    }\n\nprivate:\n    static QVBoxLayout* column(QWidget* parent, int margin = 0)\n    {\n        auto* layout = new QVBoxLayout(parent);\n        layout->setContentsMargins(margin, margin, margin, margin);\n        layout->setSpacing(0);\n        return layout;\n    }\n    static QHBoxLayout* row(QWidget* parent, int height, int inset)\n    {\n        auto* widget = new QWidget(parent);\n        widget->setFixedHeight(height);\n        auto* layout = new QHBoxLayout(widget);\n        layout->setContentsMargins(inset, 0, inset, 0);\n        layout->setSpacing(::Spacing::Small);\n        return layout;\n    }\n    Label* label(const QString& text, Typography::FontRole role, bool secondary = false)\n    {\n        auto* result = new Label(text, this);\n        result->setFluentTypography(role);\n        result->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);\n        if (secondary)\n            result->setTextColorRole(Label::TextColorRole::Secondary);\n        return result;\n    }\n    Button* button(const QString& text, const char* name, Button::ButtonStyle style = Button::Standard)\n    {\n        auto* result = new Button(text, this);\n        result->setObjectName(QString::fromLatin1(name));\n        result->setFluentStyle(style);\n        return result;\n    }\n    textfields::LineEdit* search(const char* name)\n    {\n        auto* result = new textfields::LineEdit(this);\n        result->setObjectName(QString::fromLatin1(name));\n        result->setPlaceholderText(QStringLiteral(\"Search files…\"));\n        result->setAccessibleName(QStringLiteral(\"Search files\"));\n        auto* icon = new FontIcon(QStringLiteral(\"ic_fluent_search_20_regular\"), result);\n        icon->setIconSize(16);\n        icon->setFixedSize(16, 16);\n        icon->setAttribute(Qt::WA_TransparentForMouseEvents);\n        auto* layout = new QHBoxLayout(result);\n        layout->setContentsMargins(::Spacing::Small, 0, ::Spacing::Small, 0);\n        layout->addWidget(icon, 0, Qt::AlignVCenter);\n        layout->addStretch();\n        auto margins = result->contentMargins();\n        margins.setLeft(32);\n        result->setContentMargins(margins);\n        return result;\n    }\n    QIcon glyphIcon(const QString& glyph, int size)\n    {\n        FontIcon icon(glyph, this);\n        icon.setIconSize(size);\n        icon.resize(size, size);\n        QPixmap pixmap(QSize(size, size) * devicePixelRatioF());\n        pixmap.setDevicePixelRatio(devicePixelRatioF());\n        pixmap.fill(Qt::transparent);\n        icon.render(&pixmap, QPoint(), QRegion(), QWidget::DrawChildren);\n        return QIcon(pixmap);\n    }\n    void addFile(const QString& name, const QString& modified, const QString& contents, bool folder = false)\n    {\n        auto* item = new QStandardItem(name);\n        item->setEditable(false);\n        item->setSizeHint(QSize(0, ::Spacing::ControlHeight::Large));\n        item->setData(contents, Draft);\n        item->setData(contents, Saved);\n        item->setData(modified, Modified);\n        item->setData(folder, Folder);\n        item->setData(QStringLiteral(\"%1, modified %2\").arg(name, modified), Qt::AccessibleTextRole);\n        item->setIcon(folder ? m_folderIcon : m_documentIcon);\n        m_model->appendRow(item);\n    }\n    void selectFile(const QModelIndex& proxy)\n    {\n        if (m_filtering || !proxy.isValid())\n            return;\n        const QModelIndex index = m_filter->mapToSource(proxy);\n        if (index == m_current)\n            return;\n        m_current = index;\n        m_title->setText(index.data().toString());\n        const QSignalBlocker blocker(m_editor);\n        m_editor->setPlainText(index.data(Draft).toString());\n        m_editor->setReadOnly(index.data(Folder).toBool());\n        updateState();\n        updatePosition();\n        if (!m_view->isCompact())\n            m_view->showDetail();\n    }\n    void openFile()\n    {\n        if (!m_list->currentIndex().isValid())\n            return;\n        m_view->showDetail();\n        m_editor->setFocus();\n    }\n    void filterFiles(const QString& text)\n    {\n        const QSignalBlocker wide(m_wideSearch), narrow(m_narrowSearch);\n        if (m_wideSearch->text() != text)\n            m_wideSearch->setText(text);\n        if (m_narrowSearch->text() != text)\n            m_narrowSearch->setText(text);\n        m_filtering = true;\n        m_filter->setFilterFixedString(text);\n        m_list->setCurrentIndex(m_filter->mapFromSource(m_current));\n        m_filtering = false;\n        updateState();\n    }\n    void saveFile()\n    {\n        if (!m_current.isValid() || m_current.data(Folder).toBool())\n            return;\n        m_model->setData(m_current, m_current.data(Draft), Saved);\n        m_model->setData(m_current, QStringLiteral(\"Just now\"), Modified);\n        m_model->setData(m_current, QStringLiteral(\"%1, modified Just now\").arg(m_current.data().toString()),\n            Qt::AccessibleTextRole);\n        updateState();\n    }\n    void updateState()\n    {\n        const bool folder = m_current.data(Folder).toBool();\n        const bool dirty = !folder && m_current.data(Draft) != m_current.data(Saved);\n        m_dirty->setVisible(dirty);\n        m_status->setText(folder ? QStringLiteral(\"Folder · 3 items\")\n                : dirty          ? QStringLiteral(\"Unsaved changes\")\n                                 : QStringLiteral(\"Saved in memory\"));\n        m_save->setEnabled(dirty);\n        m_compactSave->setEnabled(dirty);\n        m_type->setText(folder ? QStringLiteral(\"Folder\")\n                : m_current.data().toString().endsWith(QStringLiteral(\".md\"))\n                ? QStringLiteral(\"Markdown · UTF-8\")\n                : QStringLiteral(\"Plain text · UTF-8\"));\n        m_count->setText(QStringLiteral(\"%1 items%2\")\n                .arg(m_filter->rowCount())\n                .arg(m_list->currentIndex().isValid() ? QStringLiteral(\" · 1 selected\") : QString()));\n    }\n    void updatePosition()\n    {\n        const QTextCursor cursor = m_editor->textCursor();\n        m_position->setText(\n            QStringLiteral(\"Ln %1, Col %2\").arg(cursor.blockNumber() + 1).arg(cursor.positionInBlock() + 1));\n    }\n    void updateChrome()\n    {\n        const bool compact = m_view->isCompact();\n        const bool detail = compact && m_view->currentPane() == layout::ListDetailView::Detail;\n        m_breadcrumb->setVisible(!compact);\n        m_folderTitle->setVisible(!detail);\n        m_back->setVisible(detail);\n        m_wideSearch->setVisible(!compact);\n        m_new->setVisible(!detail);\n        m_new->setText(compact ? QString() : QStringLiteral(\"New file\"));\n        m_more->setVisible(compact && !detail);\n        m_compactSave->setVisible(detail);\n        m_searchRow->setVisible(compact);\n        m_save->setVisible(!compact);\n    }\n    static QString layoutNotes()\n    {\n        return QStringLiteral(\n            \"# Layout notes\\n\\nKeep the browser quiet. Let the document lead.\\n\\n\"\n            \"## Wide windows\\n- List on the left, content on the right.\\n- One divider. No cards inside cards.\\n\\n\"\n            \"## Small windows\\n- Open a file to focus on its contents.\\n- Return to the same place in the list.\\n\\n\"\n            \"Next: refine the empty state.\");\n    }\n\n    layout::Card* m_surface = nullptr;\n    layout::ListDetailView* m_view = nullptr;\n    collections::ListView* m_list = nullptr;\n    QStandardItemModel* m_model = nullptr;\n    QSortFilterProxyModel* m_filter = nullptr;\n    QPersistentModelIndex m_current;\n    textfields::TextEdit* m_editor = nullptr;\n    textfields::LineEdit *m_wideSearch = nullptr, *m_narrowSearch = nullptr;\n    QWidget *m_breadcrumb = nullptr, *m_searchRow = nullptr;\n    Label *m_folderTitle = nullptr, *m_title = nullptr, *m_status = nullptr, *m_count = nullptr, *m_type = nullptr,\n          *m_position = nullptr;\n    Button *m_back = nullptr, *m_new = nullptr, *m_more = nullptr, *m_save = nullptr, *m_compactSave = nullptr;\n    status_info::InfoBadge* m_dirty = nullptr;\n    QIcon m_documentIcon, m_folderIcon;\n    bool m_filtering = false;\n    int m_newCount = 0;\n    int m_previewWidth = 960;\n};\n\n} // namespace fluent::gallery\n#endif\n",
+          "fill_available_width": true
         }
       ]
     },
@@ -7084,13 +7514,13 @@
           "id": "menu-command-shortcuts",
           "title": "Commands and shortcuts",
           "description": "Menu commands can expose native shortcuts and update app state when triggered.",
-          "cpp_snippet": "auto* button = new DropDownButton(\"File\", this);\nauto* status = new Label(\"Clicked: (none)\", this);\nauto* menu = new FluentMenu(QString(), button);\n\nauto* newAction = menu->addAction(\"New\");\nnewAction->setShortcut(QKeySequence::New);\nconnect(newAction, &QAction::triggered, status,\n        [status] { status->setText(\"Clicked: New\"); });\n\nmenu->addAction(\"Open...\")->setShortcut(QKeySequence::Open);\nmenu->addAction(\"Save\")->setShortcut(QKeySequence::Save);\nmenu->addSeparator();\nauto* disabled = menu->addAction(\"Publish\");\ndisabled->setEnabled(false);\nbutton->setMenu(menu);"
+          "cpp_snippet": "using fluent::status_info::Toast;\nauto addCommand = [this](FluentMenu* menu, const QString& text,\n                         const QKeySequence& shortcut = QKeySequence()) {\n    auto* action = menu->addAction(text);\n    if (!shortcut.isEmpty()) action->setShortcut(shortcut);\n    connect(action, &QAction::triggered, this, [this, text] {\n        Toast::showOrUpdateToast(this, \"gallery.action-feedback\", text + \" selected\",\n            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n    });\n    return action;\n};\nauto* button = new DropDownButton(\"File\", this);\nauto* menu = new FluentMenu(QString(), button);\naddCommand(menu, \"New\", QKeySequence::New);\naddCommand(menu, \"Open...\", QKeySequence::Open);\naddCommand(menu, \"Save\", QKeySequence::Save);\nmenu->addSeparator();\nmenu->addAction(\"Publish\")->setEnabled(false);\naddCommand(menu, \"Close\");\nbutton->setMenu(menu);"
         },
         {
           "id": "menu-cascading-selection",
           "title": "Submenus and checked items",
           "description": "Nested menus and exclusive check items keep related choices in one command surface.",
-          "cpp_snippet": "auto* menu = new FluentMenu(QString(), this);\nauto* sortMenu = new FluentMenu(\"Sort by\", menu);\nsortMenu->addAction(\"Name\");\nsortMenu->addAction(\"Date modified\");\nmenu->addMenu(sortMenu);\n\nauto* viewGroup = new QActionGroup(menu);\nviewGroup->setExclusive(true);\nauto* compact = menu->addAction(\"Compact list\");\ncompact->setCheckable(true);\nviewGroup->addAction(compact);\nauto* comfortable = menu->addAction(\"Comfortable list\");\ncomfortable->setCheckable(true);\ncomfortable->setChecked(true);\nviewGroup->addAction(comfortable);\n\nauto* hidden = menu->addAction(\"Show hidden files\");\nhidden->setCheckable(true);"
+          "cpp_snippet": "auto* menu = new FluentMenu(QString(), this);\nauto* sortMenu = new FluentMenu(\"Sort by\", menu);\nsortMenu->addAction(\"Name\");\nsortMenu->addAction(\"Date modified\");\nsortMenu->addAction(\"Type\");\nfor (QAction* action : sortMenu->actions()) {\n    connect(action, &QAction::triggered, this, [this, action] {\n        Toast::showOrUpdateToast(this, \"gallery.action-feedback\",\n            action->text() + \" selected\", Toast::Informational, 2200,\n            Toast::Top, QMargins(16, 50, 16, 16));\n    });\n}\nmenu->addMenu(sortMenu);\n\nauto* viewGroup = new QActionGroup(menu);\nviewGroup->setExclusive(true);\nauto* compact = menu->addAction(\"Compact list\");\ncompact->setCheckable(true);\nviewGroup->addAction(compact);\nauto* comfortable = menu->addAction(\"Comfortable list\");\ncomfortable->setCheckable(true);\ncomfortable->setChecked(true);\nviewGroup->addAction(comfortable);\n\nauto* hidden = menu->addAction(\"Show hidden files\");\nhidden->setCheckable(true);"
         }
       ]
     },
@@ -7166,13 +7596,13 @@
           "id": "menu-bar-hosted-surface",
           "title": "Hosted menu bar",
           "description": "A MenuBar can blend into a card or custom title bar by hiding its own canvas.",
-          "cpp_snippet": "auto* menuBar = new FluentMenuBar(this);\nauto* status = new Label(\"Clicked: (none)\", this);\nmenuBar->setBackgroundVisible(false);\n\nauto* fileMenu = new FluentMenu(\"File\", menuBar);\nauto* newAction = fileMenu->addAction(\"New\");\nconnect(newAction, &QAction::triggered, status,\n        [status] { status->setText(\"Clicked: New\"); });\nfileMenu->addAction(\"Open...\");\nmenuBar->addMenu(fileMenu);\n\nauto* editMenu = new FluentMenu(\"Edit\", menuBar);\neditMenu->addAction(\"Undo\");\nmenuBar->addMenu(editMenu);"
+          "cpp_snippet": "using fluent::status_info::Toast;\nauto addCommand = [this](FluentMenu* menu, const QString& text,\n                         const QKeySequence& shortcut = QKeySequence()) {\n    auto* action = menu->addAction(text);\n    if (!shortcut.isEmpty()) action->setShortcut(shortcut);\n    connect(action, &QAction::triggered, this, [this, text] {\n        Toast::showOrUpdateToast(this, \"gallery.action-feedback\", text + \" selected\",\n            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n    });\n    return action;\n};\nauto* menuBar = new FluentMenuBar(this);\nmenuBar->setBackgroundVisible(false);\nauto* fileMenu = new FluentMenu(\"File\", menuBar);\naddCommand(fileMenu, \"New\");\naddCommand(fileMenu, \"Open...\");\naddCommand(fileMenu, \"Save\");\nmenuBar->addMenu(fileMenu);\nauto* editMenu = new FluentMenu(\"Edit\", menuBar);\naddCommand(editMenu, \"Undo\", QKeySequence::Undo);\naddCommand(editMenu, \"Cut\", QKeySequence::Cut);\naddCommand(editMenu, \"Copy\", QKeySequence::Copy);\naddCommand(editMenu, \"Paste\", QKeySequence::Paste);\nmenuBar->addMenu(editMenu);\nauto* helpMenu = new FluentMenu(\"Help\", menuBar);\naddCommand(helpMenu, \"About\");\nmenuBar->addMenu(helpMenu);"
         },
         {
           "id": "menu-bar-access-keys",
           "title": "Access keys and actions",
           "description": "Top-level menu items support access keys, keyboard focus, and regular QAction commands.",
-          "cpp_snippet": "auto* menuBar = new FluentMenuBar(this);\nauto* focusButton = new Button(\"Focus\", this);\nauto* status = new Label(\"Command: (none)\", this);\nconnect(focusButton, &Button::clicked, menuBar,\n        [menuBar] { menuBar->setFocus(Qt::OtherFocusReason); });\n\nauto* fileMenu = new FluentMenu(\"&File\", menuBar);\nfileMenu->menuAction()->setProperty(\"accessKey\", \"F\");\nfileMenu->addAction(\"Save\")->setShortcut(QKeySequence::Save);\nmenuBar->addMenu(fileMenu);\n\nauto* runAction = new QAction(\"Run\", menuBar);\nconnect(runAction, &QAction::triggered, status,\n        [status] { status->setText(\"Command: Run\"); });\nmenuBar->addAction(runAction);"
+          "cpp_snippet": "using fluent::status_info::Toast;\nauto addCommand = [this](FluentMenu* menu, const QString& text,\n                         const QKeySequence& shortcut = QKeySequence()) {\n    auto* action = menu->addAction(text);\n    if (!shortcut.isEmpty()) action->setShortcut(shortcut);\n    connect(action, &QAction::triggered, this, [this, text] {\n        Toast::showOrUpdateToast(this, \"gallery.action-feedback\", text + \" selected\",\n            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n    });\n    return action;\n};\nauto* menuBar = new FluentMenuBar(this);\nauto* focusButton = new Button(\"Focus\", this);\nconnect(focusButton, &Button::clicked, menuBar, [menuBar] {\n    menuBar->setFocus(Qt::OtherFocusReason);\n    Toast::showOrUpdateToast(menuBar, \"gallery.action-feedback\", \"Menu bar focused\",\n        Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n});\nauto* fileMenu = new FluentMenu(\"&File\", menuBar);\nfileMenu->menuAction()->setProperty(\"accessKey\", \"F\");\naddCommand(fileMenu, \"New\", QKeySequence::New);\naddCommand(fileMenu, \"Save\", QKeySequence::Save);\nmenuBar->addMenu(fileMenu);\nauto* viewMenu = new FluentMenu(\"&View\", menuBar);\nviewMenu->menuAction()->setProperty(\"accessKey\", \"V\");\naddCommand(viewMenu, \"Zoom in\");\naddCommand(viewMenu, \"Zoom out\");\nmenuBar->addMenu(viewMenu);\nauto* runAction = new QAction(\"Run\", menuBar);\nconnect(runAction, &QAction::triggered, menuBar, [menuBar] {\n    Toast::showOrUpdateToast(menuBar, \"gallery.action-feedback\", \"Run selected\",\n        Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n});\nmenuBar->addAction(runAction);\nmenuBar->addAction(\"Deploy\")->setEnabled(false);"
         }
       ]
     },
@@ -7273,7 +7703,7 @@
           "id": "command-bar-responsive-overflow",
           "title": "A responsive document command strip",
           "description": "Try priority-aware overflow, icon or right-side labels, primary and secondary sections, separators, and an optional command-bar background.",
-          "cpp_snippet": "auto* barHost = new QWidget(this);\nbarHost->setFixedWidth(536);\nauto* barLayout = new QHBoxLayout(barHost);\nbarLayout->setContentsMargins(0, 0, 0, 0);\nauto* bar = new CommandBar(barHost);\nbar->setAccessibleName(\"Document commands\");\nbar->setLabelPosition(\n    CommandBar::LabelPosition::Right);\nbar->setBackgroundVisible(false);\nbarLayout->addWidget(bar);\n\nauto* addAction = new QAction(\n    QIcon(\":/icons/add.svg\"), \"Add\", this);\nauto* editAction = new QAction(\n    QIcon(\":/icons/edit.svg\"), \"Edit\", this);\neditAction->setPriority(QAction::HighPriority);\nauto* shareAction = new QAction(\n    QIcon(\":/icons/share.svg\"), \"Share\", this);\nauto* separator = new QAction(this);\nseparator->setSeparator(true);\nauto* syncAction = new QAction(\n    QIcon(\":/icons/sync.svg\"), \"Sync\", this);\nsyncAction->setPriority(QAction::LowPriority);\nauto* pinAction = new QAction(\n    QIcon(\":/icons/pin.svg\"), \"Pin\", this);\npinAction->setCheckable(true);\n\nbar->addPrimaryAction(addAction);\nbar->addPrimaryAction(editAction);\nbar->addPrimaryAction(shareAction);\nbar->addPrimaryAction(separator);\nbar->addPrimaryAction(syncAction);\nbar->addPrimaryAction(pinAction);\nbar->addSecondaryAction(new QAction(\n    QIcon(\":/icons/settings.svg\"), \"Settings\", this));\nbar->addSecondaryAction(new QAction(\n    QIcon(\":/icons/help.svg\"), \"Help\", this));\n\nauto* compactButton =\n    new Button(\"Compact view\", this);\nauto* labelsButton =\n    new Button(\"Labels: Right\", this);\nauto* backgroundButton =\n    new Button(\"Show background\", this);\nconnect(compactButton, &Button::clicked, barHost,\n        [barHost] {\n            barHost->setFixedWidth(\n                barHost->width() > 300 ? 288 : 536);\n        });\nconnect(labelsButton, &Button::clicked, bar, [=] {\n    const bool showLabels =\n        bar->labelPosition()\n        == CommandBar::LabelPosition::Collapsed;\n    bar->setLabelPosition(\n        showLabels\n            ? CommandBar::LabelPosition::Right\n            : CommandBar::LabelPosition::Collapsed);\n});\nconnect(backgroundButton, &Button::clicked, bar, [=] {\n    bar->setBackgroundVisible(\n        !bar->backgroundVisible());\n});"
+          "cpp_snippet": "auto* barHost = new QWidget(this);\nbarHost->setFixedWidth(536);\nauto* barLayout = new QHBoxLayout(barHost);\nbarLayout->setContentsMargins(0, 0, 0, 0);\nauto* bar = new CommandBar(barHost);\nbar->setAccessibleName(\"Document commands\");\nbar->setLabelPosition(\n    CommandBar::LabelPosition::Right);\nbar->setBackgroundVisible(false);\nbarLayout->addWidget(bar);\n\nauto* addAction = new QAction(\n    QIcon(\":/icons/add.svg\"), \"Add\", this);\nauto* editAction = new QAction(\n    QIcon(\":/icons/edit.svg\"), \"Edit\", this);\neditAction->setPriority(QAction::HighPriority);\nauto* shareAction = new QAction(\n    QIcon(\":/icons/share.svg\"), \"Share\", this);\nauto* separator = new QAction(this);\nseparator->setSeparator(true);\nauto* syncAction = new QAction(\n    QIcon(\":/icons/sync.svg\"), \"Sync\", this);\nsyncAction->setPriority(QAction::LowPriority);\nauto* pinAction = new QAction(\n    QIcon(\":/icons/pin.svg\"), \"Pin\", this);\npinAction->setCheckable(true);\n\nbar->addPrimaryAction(addAction);\nbar->addPrimaryAction(editAction);\nbar->addPrimaryAction(shareAction);\nbar->addPrimaryAction(separator);\nbar->addPrimaryAction(syncAction);\nbar->addPrimaryAction(pinAction);\nbar->addSecondaryAction(new QAction(\n    QIcon(\":/icons/settings.svg\"), \"Settings\", this));\nbar->addSecondaryAction(new QAction(\n    QIcon(\":/icons/help.svg\"), \"Help\", this));\n\nauto* compactButton =\n    new Button(\"Compact view\", this);\nauto* labelsButton =\n    new Button(\"Labels: Right\", this);\nauto* backgroundButton =\n    new Button(\"Show background\", this);\nconnect(compactButton, &Button::clicked, barHost,\n        [barHost] {\n            barHost->setFixedWidth(\n                barHost->width() > 300 ? 288 : 536);\n        });\nconnect(labelsButton, &Button::clicked, bar, [=] {\n    const bool showLabels =\n        bar->labelPosition()\n        == CommandBar::LabelPosition::Collapsed;\n    bar->setLabelPosition(\n        showLabels\n            ? CommandBar::LabelPosition::Right\n            : CommandBar::LabelPosition::Collapsed);\n});\nconnect(backgroundButton, &Button::clicked, bar, [=] {\n    bar->setBackgroundVisible(\n        !bar->backgroundVisible());\n});\nusing fluent::status_info::Toast;\nfor (QAction* action : bar->primaryActions() + bar->secondaryActions()) {\n    if (action->isSeparator()) continue;\n    connect(action, &QAction::triggered, this, [this, action] {\n        QString text = action->text().section('\\t', 0, 0).remove('&');\n        Toast::showOrUpdateToast(this, \"gallery.action-feedback\", text + \" selected\",\n            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n    });\n}"
         },
         {
           "id": "command-bar-editing-router",
@@ -7395,7 +7825,7 @@
           "id": "command-palette-shared-actions",
           "title": "Shared menu and toolbar commands",
           "description": "Jump between Home, Inbox, Documents and Folders, or add, clear and sort notes. The menu and toolbar share the same actions.",
-          "cpp_snippet": "auto setActionGlyph = [this](QAction* action, const QString& glyph) {\n    QPixmap pixmap(20, 20);\n    pixmap.fill(Qt::transparent);\n    QPainter painter(&pixmap);\n    painter.setPen(this->palette().color(QPalette::WindowText));\n    Typography::Icons::paintGlyph(painter, pixmap.rect(), glyph, 16, Qt::AlignCenter);\n    painter.end();\n    action->setIcon(QIcon(pixmap));\n};\nauto* layout = new QVBoxLayout(this);\nauto* notes = new QStringListModel(this);\nauto* list = new fluent::collections::ListView(this);\nlist->setAccessibleName(QStringLiteral(\"Notes\"));\nlist->setModel(notes);\nlist->setFixedHeight(104);\nlist->setPlaceholderText(QStringLiteral(\"No notes yet. Run Add note to create one.\"));\nlist->setBorderVisible(false);\nlist->setBackgroundVisible(false);\nlist->setProperty(\"fluentPreserveParentSurface\", true);\nauto* status = new Label(QStringLiteral(\"0 notes\"), this);\nstatus->setTextColorRole(Label::TextColorRole::Secondary);\nstatus->hide();\nauto* palette = new fluent::menus_toolbars::CommandPalette(this);\npalette->setPlaceholderText(QStringLiteral(\"Type a command or search…\"));\npalette->setDim(true);\npalette->setDimOpacity(0.12);\npalette->setBackdropBlurRadius(8);\nauto* location = new Label(QStringLiteral(\"Home\"), this);\nauto* menu = new FluentMenu(QStringLiteral(\"Workspace commands\"), this);\nauto* add = new QAction(QStringLiteral(\"Add note\"), this);\nadd->setShortcut(QKeySequence(QStringLiteral(\"Ctrl+N\")));\nauto* clear = new QAction(QStringLiteral(\"Clear notes\"), this);\nclear->setEnabled(false);\nauto* details = new QAction(QStringLiteral(\"Show details\"), this);\ndetails->setCheckable(true);\nconst auto updateCount = [list, clear, status]() {\n    const int count = list->model()->rowCount();\n    clear->setEnabled(count > 0);\n    status->setText(count == 1 ? QStringLiteral(\"1 note\") : QStringLiteral(\"%1 notes\").arg(count));\n};\nconst QStringList locations{QStringLiteral(\"Home\"), QStringLiteral(\"Inbox\"), QStringLiteral(\"Documents\"), QStringLiteral(\"Folders\")};\nconst QStringList glyphs{Typography::Icons::Home, Typography::Icons::Mail, Typography::Icons::Document, Typography::Icons::Folder};\nconst QStringList keys{QStringLiteral(\"Ctrl+H\"), QStringLiteral(\"Ctrl+I\"), QStringLiteral(\"Ctrl+D\"), QStringLiteral(\"Ctrl+F\")};\nfor (int i = 0; i < locations.size(); ++i) {\n    auto* model = i == 0 ? notes : new QStringListModel(QStringList{locations.at(i) + QStringLiteral(\" note\")}, this);\n    auto* navigate = new QAction(locations.at(i), this);\n    navigate->setShortcut(QKeySequence(keys.at(i)));\n    setActionGlyph(navigate, glyphs.at(i));\n    palette->addCommand(navigate, QStringLiteral(\"Navigation\"));\n    menu->addAction(navigate);\n    QObject::connect(model, &QAbstractItemModel::modelReset, this, updateCount);\n    QObject::connect(navigate, &QAction::triggered, this, [list, location, model, navigate, updateCount]() {\n        list->setModel(model);\n        location->setText(navigate->text());\n        updateCount();\n    });\n}\nmenu->addSeparator();\npalette->addCommand(add, QStringLiteral(\"Notes\"), {QStringLiteral(\"new\"), QStringLiteral(\"添加\")});\npalette->addCommand(clear, QStringLiteral(\"Notes\"),\n    {QStringLiteral(\"delete\"), QStringLiteral(\"remove\")});\npalette->addCommand(details, QStringLiteral(\"View\"),\n    {QStringLiteral(\"count\"), QStringLiteral(\"properties\")});\nsetActionGlyph(add, Typography::Icons::Add);\nsetActionGlyph(clear, Typography::Icons::Delete);\nsetActionGlyph(details, Typography::Icons::Info);\nQObject::connect(add, &QAction::triggered, list, [list]() {\n    auto* notes = qobject_cast<QStringListModel*>(list->model());\n    QStringList items = notes->stringList();\n    items.append(QStringLiteral(\"Note %1\").arg(items.size() + 1));\n    notes->setStringList(items);\n});\nQObject::connect(clear, &QAction::triggered, list, [list]() {\n    qobject_cast<QStringListModel*>(list->model())->setStringList({});\n});\nauto* sort = new QAction(QStringLiteral(\"Sort notes by name\"), this);\nsetActionGlyph(sort, Typography::Icons::Up);\npalette->addCommand(sort, QStringLiteral(\"View\"), {QStringLiteral(\"order\")});\nQObject::connect(sort, &QAction::triggered, list, [list]() { list->model()->sort(0); });\nQObject::connect(details, &QAction::toggled, status, &QWidget::setVisible);\nauto* bar = new CommandBar(this);\nbar->setAccessibleName(QStringLiteral(\"Notes commands\"));\nbar->setLabelPosition(CommandBar::LabelPosition::Right);\nbar->setBackgroundVisible(false);\nbar->addPrimaryAction(add);\nbar->addPrimaryAction(details);\nbar->addSecondaryAction(clear);\nmenu->addAction(add);\nmenu->addAction(details);\nmenu->addAction(clear);\nmenu->addAction(sort);\nauto* menuButton = new DropDownButton(QStringLiteral(\"Workspace commands\"), this);\nmenuButton->setMenu(menu);\nauto* open = new Button(QStringLiteral(\"Open command palette\"), this);\nopen->setFluentStyle(Button::Accent);\nopen->setIconGlyph(Typography::Icons::Search);\nQObject::connect(open, &Button::clicked, palette, &fluent::menus_toolbars::CommandPalette::open);\nauto* modal = new fluent::basicinput::CheckBox(QStringLiteral(\"Modal\"), this);\nmodal->setChecked(true);\nQObject::connect(modal, &QCheckBox::toggled, palette, &fluent::menus_toolbars::CommandPalette::setModal);\nauto* openRow = new QHBoxLayout;\nopenRow->addWidget(open);\nopenRow->addWidget(modal);\nopenRow->addStretch();\nlayout->addLayout(openRow);\nauto* commandRow = new QHBoxLayout;\ncommandRow->addWidget(bar, 1);\ncommandRow->addWidget(menuButton);\nlayout->addLayout(commandRow);\nlayout->addWidget(location);\nlayout->addWidget(list);\nlayout->addWidget(status);\n",
+          "cpp_snippet": "auto setActionGlyph = [this](QAction* action, const QString& glyph) {\n    QPixmap pixmap(20, 20);\n    pixmap.fill(Qt::transparent);\n    QPainter painter(&pixmap);\n    painter.setPen(this->palette().color(QPalette::WindowText));\n    Typography::Icons::paintGlyph(painter, pixmap.rect(), glyph, 16, Qt::AlignCenter);\n    painter.end();\n    action->setIcon(QIcon(pixmap));\n};\nauto* layout = new QVBoxLayout(this);\nauto* notes = new QStringListModel(this);\nauto* list = new fluent::collections::ListView(this);\nlist->setAccessibleName(QStringLiteral(\"Notes\"));\nlist->setModel(notes);\nlist->setFixedHeight(104);\nlist->setPlaceholderText(QStringLiteral(\"No notes yet. Run Add note to create one.\"));\nlist->setBorderVisible(false);\nlist->setBackgroundVisible(false);\nlist->setProperty(\"fluentPreserveParentSurface\", true);\nauto* status = new Label(QStringLiteral(\"0 notes\"), this);\nstatus->setTextColorRole(Label::TextColorRole::Secondary);\nstatus->hide();\nauto* palette = new fluent::menus_toolbars::CommandPalette(this);\npalette->setPlaceholderText(QStringLiteral(\"Type a command or search…\"));\npalette->setDim(true);\npalette->setDimOpacity(0.12);\npalette->setBackdropBlurRadius(8);\nauto* location = new Label(QStringLiteral(\"Home\"), this);\nauto* menu = new FluentMenu(QStringLiteral(\"Workspace commands\"), this);\nauto* add = new QAction(QStringLiteral(\"Add note\"), this);\nadd->setShortcut(QKeySequence(QStringLiteral(\"Ctrl+N\")));\nauto* clear = new QAction(QStringLiteral(\"Clear notes\"), this);\nclear->setEnabled(false);\nauto* details = new QAction(QStringLiteral(\"Show details\"), this);\ndetails->setCheckable(true);\nconst auto updateCount = [list, clear, status]() {\n    const int count = list->model()->rowCount();\n    clear->setEnabled(count > 0);\n    status->setText(count == 1 ? QStringLiteral(\"1 note\") : QStringLiteral(\"%1 notes\").arg(count));\n};\nconst QStringList locations{QStringLiteral(\"Home\"), QStringLiteral(\"Inbox\"), QStringLiteral(\"Documents\"), QStringLiteral(\"Folders\")};\nconst QStringList glyphs{Typography::Icons::Home, Typography::Icons::Mail, Typography::Icons::Document, Typography::Icons::Folder};\nconst QStringList keys{QStringLiteral(\"Ctrl+H\"), QStringLiteral(\"Ctrl+I\"), QStringLiteral(\"Ctrl+D\"), QStringLiteral(\"Ctrl+F\")};\nfor (int i = 0; i < locations.size(); ++i) {\n    auto* model = i == 0 ? notes : new QStringListModel(QStringList{locations.at(i) + QStringLiteral(\" note\")}, this);\n    auto* navigate = new QAction(locations.at(i), this);\n    navigate->setShortcut(QKeySequence(keys.at(i)));\n    setActionGlyph(navigate, glyphs.at(i));\n    palette->addCommand(navigate, QStringLiteral(\"Navigation\"));\n    menu->addAction(navigate);\n    QObject::connect(model, &QAbstractItemModel::modelReset, this, updateCount);\n    QObject::connect(navigate, &QAction::triggered, this, [list, location, model, navigate, updateCount]() {\n        list->setModel(model);\n        location->setText(navigate->text());\n        updateCount();\n    });\n}\nmenu->addSeparator();\npalette->addCommand(add, QStringLiteral(\"Notes\"), {QStringLiteral(\"new\"), QStringLiteral(\"create\")});\npalette->addCommand(clear, QStringLiteral(\"Notes\"),\n    {QStringLiteral(\"delete\"), QStringLiteral(\"remove\")});\npalette->addCommand(details, QStringLiteral(\"View\"),\n    {QStringLiteral(\"count\"), QStringLiteral(\"properties\")});\nsetActionGlyph(add, Typography::Icons::Add);\nsetActionGlyph(clear, Typography::Icons::Delete);\nsetActionGlyph(details, Typography::Icons::Info);\nQObject::connect(add, &QAction::triggered, list, [list]() {\n    auto* notes = qobject_cast<QStringListModel*>(list->model());\n    QStringList items = notes->stringList();\n    items.append(QStringLiteral(\"Note %1\").arg(items.size() + 1));\n    notes->setStringList(items);\n});\nQObject::connect(clear, &QAction::triggered, list, [list]() {\n    qobject_cast<QStringListModel*>(list->model())->setStringList({});\n});\nauto* sort = new QAction(QStringLiteral(\"Sort notes by name\"), this);\nsetActionGlyph(sort, Typography::Icons::Up);\npalette->addCommand(sort, QStringLiteral(\"View\"), {QStringLiteral(\"order\")});\nQObject::connect(sort, &QAction::triggered, list, [list]() { list->model()->sort(0); });\nQObject::connect(details, &QAction::toggled, status, &QWidget::setVisible);\nauto* bar = new CommandBar(this);\nbar->setAccessibleName(QStringLiteral(\"Notes commands\"));\nbar->setLabelPosition(CommandBar::LabelPosition::Right);\nbar->setBackgroundVisible(false);\nbar->addPrimaryAction(add);\nbar->addPrimaryAction(details);\nbar->addSecondaryAction(clear);\nmenu->addAction(add);\nmenu->addAction(details);\nmenu->addAction(clear);\nmenu->addAction(sort);\nauto* menuButton = new DropDownButton(QStringLiteral(\"Workspace commands\"), this);\nmenuButton->setMenu(menu);\nauto* open = new Button(QStringLiteral(\"Open command palette\"), this);\nopen->setFluentStyle(Button::Accent);\nopen->setIconGlyph(Typography::Icons::Search);\nQObject::connect(open, &Button::clicked, palette, &fluent::menus_toolbars::CommandPalette::open);\nauto* modal = new fluent::basicinput::CheckBox(QStringLiteral(\"Modal\"), this);\nmodal->setChecked(true);\nQObject::connect(modal, &QCheckBox::toggled, palette, &fluent::menus_toolbars::CommandPalette::setModal);\nauto* openRow = new QHBoxLayout;\nopenRow->addWidget(open);\nopenRow->addWidget(modal);\nopenRow->addStretch();\nlayout->addLayout(openRow);\nauto* commandRow = new QHBoxLayout;\ncommandRow->addWidget(bar, 1);\ncommandRow->addWidget(menuButton);\nlayout->addLayout(commandRow);\nlayout->addWidget(location);\nlayout->addWidget(list);\nlayout->addWidget(status);\n",
           "fill_available_width": true
         },
         {
@@ -7502,13 +7932,13 @@
           "id": "command-bar-flyout-show-modes",
           "title": "Contextual actions for a photo",
           "description": "Click for a focus-preserving Transient toolbar; right-click or use the keyboard for an expanded, keyboard-focused Standard context menu.",
-          "cpp_snippet": "auto* flyout = new CommandBarFlyout(this);\nauto* shareAction = new QAction(\n    QIcon(\":/icons/share.svg\"), \"Share\", this);\nauto* saveAction = new QAction(\n    QIcon(\":/icons/save.svg\"), \"Save\", this);\nauto* deleteAction = new QAction(\n    QIcon(\":/icons/delete.svg\"), \"Delete\", this);\nauto* resizeAction = new QAction(\n    QIcon(\":/icons/resize.svg\"), \"Resize\", this);\nauto* moveAction = new QAction(\n    QIcon(\":/icons/move.svg\"), \"Move\", this);\nflyout->addPrimaryAction(shareAction);\nflyout->addPrimaryAction(saveAction);\nflyout->addPrimaryAction(deleteAction);\nflyout->addSecondaryAction(resizeAction);\nflyout->addSecondaryAction(moveAction);\n\n// Proactive click: keep focus on the invoking content.\nconnect(photo, &QAbstractButton::clicked, flyout, [=] {\n    flyout->showAt(\n        photo, CommandBarFlyout::ShowMode::Transient);\n});\n\n// Reactive context invocation: expand and enter the menu.\nphoto->setContextMenuPolicy(Qt::CustomContextMenu);\nconnect(photo, &QWidget::customContextMenuRequested,\n        flyout, [=](const QPoint& localPosition) {\n    flyout->showAtPoint(\n        photo, localPosition,\n        CommandBarFlyout::ShowMode::Standard);\n});"
+          "cpp_snippet": "auto* flyout = new CommandBarFlyout(this);\nauto* shareAction = new QAction(\n    QIcon(\":/icons/share.svg\"), \"Share\", this);\nauto* saveAction = new QAction(\n    QIcon(\":/icons/save.svg\"), \"Save\", this);\nauto* deleteAction = new QAction(\n    QIcon(\":/icons/delete.svg\"), \"Delete\", this);\nauto* resizeAction = new QAction(\n    QIcon(\":/icons/resize.svg\"), \"Resize\", this);\nauto* moveAction = new QAction(\n    QIcon(\":/icons/move.svg\"), \"Move\", this);\nflyout->addPrimaryAction(shareAction);\nflyout->addPrimaryAction(saveAction);\nflyout->addPrimaryAction(deleteAction);\nflyout->addSecondaryAction(resizeAction);\nflyout->addSecondaryAction(moveAction);\n\n// Proactive click: keep focus on the invoking content.\nconnect(photo, &QAbstractButton::clicked, flyout, [=] {\n    flyout->showAt(\n        photo, CommandBarFlyout::ShowMode::Transient);\n});\n\n// Reactive context invocation: expand and enter the menu.\nphoto->setContextMenuPolicy(Qt::CustomContextMenu);\nconnect(photo, &QWidget::customContextMenuRequested,\n        flyout, [=](const QPoint& localPosition) {\n    flyout->showAtPoint(\n        photo, localPosition,\n        CommandBarFlyout::ShowMode::Standard);\n});\nusing fluent::status_info::Toast;\nfor (QAction* action : flyout->primaryActions() + flyout->secondaryActions()) {\n    if (action->isSeparator()) continue;\n    connect(action, &QAction::triggered, this, [this, action] {\n        QString text = action->text().section('\\t', 0, 0).remove('&');\n        Toast::showOrUpdateToast(this, \"gallery.action-feedback\", text + \" selected\",\n            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n    });\n}"
         },
         {
           "id": "command-bar-flyout-always-expanded",
           "title": "Keep secondary commands visible",
           "description": "AlwaysExpanded removes the More step and keeps secondary commands visible even in Transient mode; turn it off to compare the collapsed presentation.",
-          "cpp_snippet": "auto* flyout = new CommandBarFlyout(this);\nflyout->setAlwaysExpanded(true);\nauto* copyLinkAction = new QAction(\n    QIcon(\":/icons/link.svg\"), \"Copy link\", this);\nauto* favoriteAction = new QAction(\n    QIcon(\":/icons/favorite.svg\"), \"Favorite\", this);\nfavoriteAction->setCheckable(true);\nauto* renameAction = new QAction(\n    QIcon(\":/icons/edit.svg\"), \"Rename\", this);\nauto* propertiesAction = new QAction(\n    QIcon(\":/icons/info.svg\"), \"Properties\", this);\nflyout->addPrimaryAction(copyLinkAction);\nflyout->addPrimaryAction(favoriteAction);\nflyout->addSecondaryAction(renameAction);\nflyout->addSecondaryAction(propertiesAction);\n\nauto* openButton =\n    new Button(\"Open actions\", this);\nauto* alwaysExpandedButton =\n    new Button(\"Always expanded: On\", this);\nconnect(openButton, &Button::clicked, flyout, [=] {\n    flyout->showAt(\n        openButton,\n        CommandBarFlyout::ShowMode::Transient);\n});\nalwaysExpandedButton->setCheckable(true);\nalwaysExpandedButton->setChecked(true);\nconnect(alwaysExpandedButton,\n        &QAbstractButton::toggled, flyout,\n        &CommandBarFlyout::setAlwaysExpanded);"
+          "cpp_snippet": "auto* flyout = new CommandBarFlyout(this);\nflyout->setAlwaysExpanded(true);\nauto* copyLinkAction = new QAction(\n    QIcon(\":/icons/link.svg\"), \"Copy link\", this);\nauto* favoriteAction = new QAction(\n    QIcon(\":/icons/favorite.svg\"), \"Favorite\", this);\nfavoriteAction->setCheckable(true);\nauto* renameAction = new QAction(\n    QIcon(\":/icons/edit.svg\"), \"Rename\", this);\nauto* propertiesAction = new QAction(\n    QIcon(\":/icons/info.svg\"), \"Properties\", this);\nflyout->addPrimaryAction(copyLinkAction);\nflyout->addPrimaryAction(favoriteAction);\nflyout->addSecondaryAction(renameAction);\nflyout->addSecondaryAction(propertiesAction);\n\nauto* openButton =\n    new Button(\"Open actions\", this);\nauto* alwaysExpandedButton =\n    new Button(\"Always expanded: On\", this);\nconnect(openButton, &Button::clicked, flyout, [=] {\n    flyout->showAt(\n        openButton,\n        CommandBarFlyout::ShowMode::Transient);\n});\nalwaysExpandedButton->setCheckable(true);\nalwaysExpandedButton->setChecked(true);\nconnect(alwaysExpandedButton,\n        &QAbstractButton::toggled, flyout,\n        &CommandBarFlyout::setAlwaysExpanded);\nusing fluent::status_info::Toast;\nfor (QAction* action : flyout->primaryActions() + flyout->secondaryActions()) {\n    if (action->isSeparator()) continue;\n    connect(action, &QAction::triggered, this, [this, action] {\n        QString text = action->text().section('\\t', 0, 0).remove('&');\n        Toast::showOrUpdateToast(this, \"gallery.action-feedback\", text + \" selected\",\n            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n    });\n}"
         },
         {
           "id": "command-bar-flyout-submenus",
@@ -8226,7 +8656,7 @@
           "id": "tab-view-add-close",
           "title": "Add, close, and tab state",
           "description": "The add button raises addTabRequested; close buttons raise tabCloseRequested; per-tab closable and enabled state still apply.",
-          "cpp_snippet": "auto* tabs = new TabView(this);\ntabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);\ntabs->setAddTabButtonVisible(true);\ntabs->setTabsClosable(true);\ntabs->addTab(TabViewItem(\"Home\", Typography::Icons::Home, false));\ntabs->addTab(TabViewItem(\"Draft\", Typography::Icons::Document));\ntabs->addTab(TabViewItem(\"Review\", Typography::Icons::Edit));\ntabs->addTab(TabViewItem(\"Disabled\", Typography::Icons::Lock, true, false));\n\nconnect(tabs, &TabView::addTabRequested,\n        tabs, [tabs] {\n            const int index = tabs->addTab(TabViewItem(\"Document\", Typography::Icons::Document));\n            tabs->setSelectedIndex(index);\n        });\nconnect(tabs, &TabView::tabCloseRequested,\n        tabs, [tabs](int index) { tabs->closeTab(index); });",
+          "cpp_snippet": "auto* tabs = new TabView(this);\ntabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);\ntabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);\ntabs->setAddTabButtonVisible(true);\ntabs->setTabsClosable(true);\ntabs->addTab(TabViewItem(\"Home\", Typography::Icons::Home, false));\ntabs->addTab(TabViewItem(\"Draft\", Typography::Icons::Document));\ntabs->addTab(TabViewItem(\"Review\", Typography::Icons::Edit));\ntabs->addTab(TabViewItem(\"Disabled\", Typography::Icons::Lock, true, false));\nauto* status = new Label(\"Home is pinned; Disabled is not selectable.\", this);\nconnect(tabs, &TabView::currentChanged, status, [tabs, status](int index) {\n    if (index >= 0) status->setText(\"Selected \" + tabs->tabAt(index).text);\n});\nconnect(tabs, &TabView::addTabRequested, tabs, [tabs] {\n    static int number = 0;\n    const QString title = QString(\"Document %1\").arg(++number);\n    tabs->setSelectedIndex(tabs->addTab(TabViewItem(title, Typography::Icons::Document)));\n    Toast::showOrUpdateToast(tabs, \"gallery.action-feedback\", \"Added \" + title,\n        Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n});\nconnect(tabs, &TabView::tabCloseRequested, tabs, [tabs](int index) {\n    const QString title = tabs->tabAt(index).text;\n    const bool closed = tabs->closeTab(index);\n    Toast::showOrUpdateToast(tabs, \"gallery.action-feedback\",\n        closed ? \"Closed \" + title : title + \" cannot be closed\",\n        closed ? Toast::Informational : Toast::Warning, closed ? 2200 : 4500,\n        Toast::Top, QMargins(16, 50, 16, 16));\n});",
           "preview_layout": {
             "orientation": "vertical",
             "spacing": 8
@@ -9656,43 +10086,57 @@
       "id": "auto-suggest-box",
       "title": "AutoSuggestBox",
       "category_id": "text-fields",
-      "description": "A text box that suggests matching items while people type.",
+      "description": "A search input with local or asynchronous suggestions, loading, pagination and retry.",
       "capabilities": [
         "text-and-numeric-input"
       ],
       "search_terms": [
         "affordance",
+        "asynchronous",
         "auto-suggest-box",
+        "auto-suggest-box-async",
         "auto-suggest-box-query-placement",
         "auto-suggest-box-suggestions",
         "autosuggestbox",
-        "box",
         "button",
         "can",
+        "changing",
         "compact",
+        "demonstrates",
+        "directory",
+        "discards",
+        "empty",
         "fields",
-        "items",
+        "input",
         "left",
-        "matching",
+        "loading",
+        "local",
         "move",
-        "people",
+        "older",
+        "paged",
+        "pagination",
+        "project",
         "query",
+        "quickly",
+        "replies.",
+        "results",
+        "retry.",
         "rows.",
+        "search",
         "search-style",
         "selection",
         "separate",
+        "service",
         "signals.",
+        "simulated",
         "submission",
         "submit",
         "suggestion",
         "suggestions",
-        "suggests",
         "surfaced",
         "text",
         "text-and-numeric-input",
-        "type.",
-        "use",
-        "while"
+        "use"
       ],
       "cpp": {
         "public_header": "<FluentQt/TextFields.h>",
@@ -9730,6 +10174,101 @@
           "title": "Search-style query button",
           "description": "The query affordance can move left and use compact suggestion rows.",
           "cpp_snippet": "auto* box = new AutoSuggestBox(this);\nbox->setPlaceholderText(\"Filter commands\");\nbox->setSuggestions({\"Open\", \"Open recent\", \"Save\", \"Save as\"});\nbox->setQueryButtonPlacement(AutoSuggestBox::QueryButtonPlacement::Left);\nbox->setQueryIconGlyph(Typography::Icons::Filter);\nbox->setInputHeight(28);\nbox->setQueryButtonSize(20);\nbox->setClearButtonSize(18);\nbox->setSuggestionFontRole(Typography::FontRole::Caption);\nbox->setSuggestionItemHeight(28);\n\nconnect(box, &AutoSuggestBox::querySubmitted,\n        statusLabel, [statusLabel](const QString& query, const QVariant&) {\n            statusLabel->setText(QStringLiteral(\"Filter: %1\").arg(query));\n        });"
+        },
+        {
+          "id": "auto-suggest-box-async",
+          "title": "Search a project directory",
+          "description": "A simulated service demonstrates loading, paged results, empty results and retry. Quickly changing the query discards older replies.",
+          "cpp_snippet": "#ifndef GALLERY_ASYNCSEARCHSAMPLE_H\n#define GALLERY_ASYNCSEARCHSAMPLE_H\n\n#include <FluentQt/FluentQt.h>\n#include <QStandardItemModel>\n#include <QTimer>\n#include <QVBoxLayout>\n\nnamespace fluent::gallery {\n\n// A simulated application service. The component owns neither requests nor data.\n// zh_CN: 模拟应用服务；控件不拥有网络请求或业务数据。\nclass AsyncSearchSample final : public QWidget {\npublic:\n    explicit AsyncSearchSample(QWidget* parent = nullptr) : QWidget(parent)\n    {\n        setObjectName(QStringLiteral(\"asyncSearchSample\"));\n        setProperty(\"staleResponsesIgnored\", 0);\n        auto* layout = new QVBoxLayout(this);\n        layout->setContentsMargins(16, 16, 16, 16);\n        layout->setSpacing(12);\n        auto* title = new textfields::Label(QStringLiteral(\"Project directory\"), this);\n        title->setFluentTypography(Typography::FontRole::BodyStrong);\n        m_search = new textfields::AutoSuggestBox(this);\n        m_search->setObjectName(QStringLiteral(\"asyncProjectSearch\"));\n        m_search->setAccessibleName(QStringLiteral(\"Search projects\"));\n        m_search->setPlaceholderText(QStringLiteral(\"Search projects\"));\n        m_search->setQueryButtonPlacement(textfields::AutoSuggestBox::QueryButtonPlacement::Left);\n        m_search->setSuggestionItemHeight(36);\n        m_search->setMaximumWidth(320);\n        m_search->setMinimumWidth(180);\n        m_search->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n        m_search->setLoadingText(QStringLiteral(\"Searching projects…\"));\n        m_search->setEmptyText(QStringLiteral(\"No projects found\"));\n        m_search->setEmptyDescription(QStringLiteral(\"Try a different name.\"));\n        m_model = new QStandardItemModel(this);\n        m_search->setSuggestionModel(m_model);\n        m_search->setAsyncSuggestionsEnabled(true);\n        m_failNext = new basicinput::CheckBox(QStringLiteral(\"Fail next search\"), this);\n        m_failNext->setObjectName(QStringLiteral(\"asyncFailNext\"));\n        m_failNext->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);\n        m_status = new textfields::Label(QStringLiteral(\"Try Aurora for paged results, or zzz for no results.\"), this);\n        m_status->setObjectName(QStringLiteral(\"asyncSearchResult\"));\n        m_status->setWordWrap(true);\n        m_status->setFluentTypography(Typography::FontRole::Caption);\n        m_status->setTextColorRole(textfields::Label::TextColorRole::Secondary);\n        layout->addWidget(title);\n        layout->addWidget(m_status);\n        layout->addWidget(m_search);\n        layout->addWidget(m_failNext);\n\n        connect(m_search, &textfields::AutoSuggestBox::suggestionsRequested, this,\n            [this](const QString& query, quint64 token, bool append) {\n                const bool fail = m_failNext->isChecked();\n                m_failNext->setChecked(false);\n                // Short queries deliberately finish later to demonstrate stale-result rejection.\n                const int delay = query.size() < 3 ? 850 : 350;\n                QTimer::singleShot(delay, this, [this, query, token, append, fail] {\n                    // Check before touching the caller-owned model, not only before changing UI state.\n                    if (!m_search->isSuggestionRequestCurrent(token)) {\n                        setProperty(\"staleResponsesIgnored\", ++m_ignoredResponses);\n                        return;\n                    }\n                    if (fail) {\n                        m_search->failSuggestionRequest(token, QStringLiteral(\"Couldn’t load projects\"),\n                            QStringLiteral(\"Try again in a moment.\"));\n                        return;\n                    }\n                    QStringList matches;\n                    for (const QString& name : projectNames()) {\n                        if (name.contains(query.trimmed(), Qt::CaseInsensitive))\n                            matches.append(name);\n                    }\n                    if (!append)\n                        m_model->removeRows(0, m_model->rowCount());\n                    const int end = qMin(m_model->rowCount() + 4, matches.size());\n                    for (int row = m_model->rowCount(); row < end; ++row) {\n                        auto* item = new QStandardItem(matches.at(row));\n                        item->setData(QStringLiteral(\"project-%1\").arg(projectNames().indexOf(matches.at(row)) + 1),\n                            Qt::UserRole);\n                        m_model->appendRow(item);\n                    }\n                    m_search->completeSuggestionRequest(token, end < matches.size());\n                });\n            });\n        connect(m_search, &textfields::AutoSuggestBox::querySubmitted, this,\n            [this](const QString& query, const QVariant& chosen) {\n                m_status->setText(!chosen.toString().isEmpty()\n                        ? QStringLiteral(\"Selected: %1\").arg(query)\n                        : QStringLiteral(\"Search: %1\").arg(query));\n            });\n    }\n\nprivate:\n    static const QStringList& projectNames()\n    {\n        static const QStringList names{QStringLiteral(\"Aurora Workspace\"), QStringLiteral(\"Aurora Mobile\"),\n            QStringLiteral(\"Aurora API\"), QStringLiteral(\"Aurora Docs\"), QStringLiteral(\"Aurora Design\"),\n            QStringLiteral(\"Aurora Analytics\"), QStringLiteral(\"Aurora Release\"), QStringLiteral(\"Aurora Support\"),\n            QStringLiteral(\"Canvas\"), QStringLiteral(\"Canvas Studio\"), QStringLiteral(\"Delta\"),\n            QStringLiteral(\"Harbor\")};\n        return names;\n    }\n    textfields::AutoSuggestBox* m_search = nullptr;\n    QStandardItemModel* m_model = nullptr;\n    basicinput::CheckBox* m_failNext = nullptr;\n    textfields::Label* m_status = nullptr;\n    int m_ignoredResponses = 0;\n};\n\n} // namespace fluent::gallery\n#endif\n",
+          "fill_available_width": true
+        }
+      ]
+    },
+    {
+      "id": "tag-input",
+      "title": "TagInput",
+      "category_id": "text-fields",
+      "description": "Choose several values as compact tags with asynchronous suggestions and native text input.",
+      "capabilities": [
+        "text-and-numeric-input"
+      ],
+      "search_terms": [
+        "asynchronous",
+        "chinese",
+        "choose",
+        "compact",
+        "composition",
+        "editor.",
+        "email.",
+        "failures",
+        "fields",
+        "input.",
+        "keyboard",
+        "keyboard.",
+        "members",
+        "mouse",
+        "name",
+        "native",
+        "navigation",
+        "project",
+        "remove",
+        "searches",
+        "select",
+        "selected",
+        "several",
+        "stay",
+        "suggestion",
+        "suggestions",
+        "survive",
+        "tag",
+        "tag-input",
+        "tag-input-basic",
+        "tag-input-project-members",
+        "taginput",
+        "tags",
+        "text",
+        "text-and-numeric-input",
+        "then",
+        "values"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/TextFields.h>",
+        "declaration": "src/components/textfields/TagInput.h",
+        "qualified_type": "fluent::textfields::TagInput",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.textfields",
+        "type": "TagInput",
+        "import_statement": "from fluentqt.textfields import TagInput"
+      },
+      "tests": [
+        {
+          "target": "test_tag_input",
+          "source": "tests/components/textfields/TestTagInput.cpp",
+          "ctest_label": "test_tag_input"
+        }
+      ],
+      "gallery": {
+        "route_id": "tag-input",
+        "sample_source": "app/view/widgets/samples/TextFieldsSamples.cpp",
+        "control_image": "app/assets/control_images/text-fields/TagInput.png"
+      },
+      "samples": [
+        {
+          "id": "tag-input-basic",
+          "title": "Select and remove tags",
+          "description": "Choose a suggestion, then remove its tag with the mouse or keyboard.",
+          "cpp_snippet": "auto* input = new fluent::textfields::TagInput(this);\ninput->setAccessibleName(\"Technologies\");\ninput->setPlaceholderText(\"Choose a technology\");\ninput->setSuggestions({\"Qt\", \"C++\", \"Python\"});\ninput->addItem(\"Qt\", \"Qt\");\ninput->setMaximumWidth(360);",
+          "fill_available_width": true
+        },
+        {
+          "id": "tag-input-project-members",
+          "title": "Select project members",
+          "description": "Choose members by name or email. Selected tags survive searches and failures; Chinese composition and keyboard navigation stay in the native editor.",
+          "cpp_snippet": "#ifndef GALLERY_MEMBERSELECTIONSAMPLE_H\n#define GALLERY_MEMBERSELECTIONSAMPLE_H\n\n#include <FluentQt/FluentQt.h>\n#include <QStandardItemModel>\n#include <QTimer>\n#include <QVBoxLayout>\n\nnamespace fluent::gallery {\n\nclass MemberSelectionSample final : public QWidget {\npublic:\n    explicit MemberSelectionSample(QWidget* parent = nullptr) : QWidget(parent)\n    {\n        setObjectName(QStringLiteral(\"tagMembersSample\"));\n        auto* layout = new QVBoxLayout(this);\n        layout->setContentsMargins(16, 16, 16, 16);\n        layout->setSpacing(12);\n        auto* title = new textfields::Label(QStringLiteral(\"Project members\"), this);\n        title->setFluentTypography(Typography::FontRole::BodyStrong);\n        layout->addWidget(title);\n        m_input = new textfields::TagInput(this);\n        m_input->setObjectName(QStringLiteral(\"projectMemberInput\"));\n        m_input->setAccessibleName(QStringLiteral(\"Project members\"));\n        m_input->setPlaceholderText(QStringLiteral(\"Search members\"));\n        m_input->setMinimumWidth(180);\n        m_input->setMaximumWidth(360);\n        m_input->setSuggestionItemHeight(36);\n        m_input->setAsyncSuggestionsEnabled(true);\n        m_input->setLoadingText(QStringLiteral(\"Searching members…\"));\n        m_input->setEmptyText(QStringLiteral(\"No members found\"));\n        m_input->setEmptyDescription(QStringLiteral(\"Try a name or email address.\"));\n        m_model = new QStandardItemModel(this);\n        m_input->setSuggestionModel(m_model);\n        layout->addWidget(m_input);\n        auto* help = new textfields::Label(\n            QStringLiteral(\"Search Chen Chen or an email. Paste several emails separated by commas or semicolons.\"),\n            this);\n        help->setWordWrap(true);\n        help->setFluentTypography(Typography::FontRole::Caption);\n        help->setTextColorRole(textfields::Label::TextColorRole::Secondary);\n        layout->addWidget(help);\n        m_status = new textfields::Label(this);\n        m_status->setObjectName(QStringLiteral(\"tagSelectionStatus\"));\n        m_status->setWordWrap(true);\n        m_status->setFluentTypography(Typography::FontRole::Caption);\n        layout->addWidget(m_status);\n        m_fail = new basicinput::CheckBox(QStringLiteral(\"Fail next search\"), this);\n        m_fail->setObjectName(QStringLiteral(\"tagFailNext\"));\n        m_fail->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);\n        layout->addWidget(m_fail);\n        auto* readonly = new basicinput::CheckBox(QStringLiteral(\"Read only\"), this);\n        readonly->setObjectName(QStringLiteral(\"tagReadOnly\"));\n        readonly->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);\n        layout->addWidget(readonly);\n        auto* reset = new basicinput::Button(QStringLiteral(\"Reset members\"), this);\n        reset->setObjectName(QStringLiteral(\"tagResetMembers\"));\n        layout->addWidget(reset, 0, Qt::AlignLeft);\n        connect(readonly, &basicinput::CheckBox::toggled, m_input, &QLineEdit::setReadOnly);\n        connect(reset, &basicinput::Button::clicked, this, [this] { resetMembers(); });\n        connect(m_input, &textfields::TagInput::selectionChanged, this, [this] { updateSelection(); });\n        connect(m_input, &textfields::TagInput::tokensSubmitted, this, [this](const QStringList& tokens) {\n            resolveTokens(tokens);\n        });\n        connect(m_input, &textfields::AutoSuggestBox::suggestionsRequested, this,\n            [this](const QString& query, quint64 requestId, bool) {\n                const bool fail = m_fail->isChecked();\n                m_fail->setChecked(false);\n                QTimer::singleShot(query.size() < 2 ? 650 : 250, this, [this, query, requestId, fail] {\n                    if (!m_input->isSuggestionRequestCurrent(requestId))\n                        return;\n                    if (fail) {\n                        m_input->failSuggestionRequest(requestId, QStringLiteral(\"Couldn’t load members\"),\n                            QStringLiteral(\"Your selection is kept.\"));\n                        return;\n                    }\n                    m_model->clear();\n                    for (const auto& member : directory()) {\n                        if (!(member.name + member.team + member.email).contains(query, Qt::CaseInsensitive))\n                            continue;\n                        auto* row = new QStandardItem(member.name + QStringLiteral(\" · \") + member.team);\n                        row->setData(selectionItem(member), Qt::UserRole);\n                        row->setData(member.name + QStringLiteral(\" · \") + member.team, Qt::UserRole + 1);\n                        m_model->appendRow(row);\n                    }\n                    updateSelection();\n                    m_input->completeSuggestionRequest(requestId);\n                });\n            });\n        resetMembers();\n    }\n\nprivate:\n    struct Member {\n        QString key, name, team, email;\n    };\n    static QVector<Member> directory()\n    {\n        return {{QStringLiteral(\"chen-design\"), QStringLiteral(\"Chen Chen\"), QStringLiteral(\"Design team\"),\n                    QStringLiteral(\"chen.design@example.com\")},\n            {QStringLiteral(\"chen-dev\"), QStringLiteral(\"Chen Chen\"), QStringLiteral(\"Engineering team\"),\n                QStringLiteral(\"chen.dev@example.com\")},\n            {QStringLiteral(\"lin\"), QStringLiteral(\"Lin Xiao\"), QStringLiteral(\"Product team\"),\n                QStringLiteral(\"lin@example.com\")},\n            {QStringLiteral(\"alex\"), QStringLiteral(\"Alex Chen\"), QStringLiteral(\"Platform team\"),\n                QStringLiteral(\"alex@example.com\")},\n            {QStringLiteral(\"wang\"), QStringLiteral(\"Ming Wang\"), QStringLiteral(\"Engineering team\"),\n                QStringLiteral(\"wang@example.com\")},\n            {QStringLiteral(\"li\"), QStringLiteral(\"An Li\"), QStringLiteral(\"Design team\"),\n                QStringLiteral(\"li@example.com\")},\n            {QStringLiteral(\"maria\"), QStringLiteral(\"María García\"), QStringLiteral(\"Product team\"),\n                QStringLiteral(\"maria@example.com\")}};\n    }\n    static QString selectionLabel(const Member& member)\n    {\n        int sameName = 0;\n        for (const auto& other : directory())\n            if (other.name == member.name)\n                ++sameName;\n        return sameName > 1 ? member.name + QStringLiteral(\" · \") + member.team : member.name;\n    }\n    static QVariantMap selectionItem(const Member& member)\n    {\n        return {{QStringLiteral(\"key\"), member.key}, {QStringLiteral(\"text\"), selectionLabel(member)}};\n    }\n    void resetMembers()\n    {\n        m_input->cancelSuggestions();\n        m_input->clear();\n        QVariantList initial;\n        for (const auto& member : directory())\n            if (member.key == QStringLiteral(\"chen-design\") || member.key == QStringLiteral(\"lin\"))\n                initial.append(selectionItem(member));\n        m_input->setSelectedItems(initial);\n        updateSelection();\n    }\n    void updateSelection()\n    {\n        m_status->setText(QStringLiteral(\"%1 selected: %2\")\n                .arg(m_input->selectedCount())\n                .arg(m_input->selectedTexts().join(QStringLiteral(\", \"))));\n        for (int i = 0; i < m_model->rowCount(); ++i) {\n            auto* row = m_model->item(i);\n            const bool selected = m_input->containsKey(\n                row->data(Qt::UserRole).toMap().value(QStringLiteral(\"key\")).toString());\n            row->setEnabled(!selected);\n            row->setSelectable(!selected);\n            row->setText(row->data(Qt::UserRole + 1).toString() + (selected ? QStringLiteral(\" · Added\") : QString()));\n        }\n    }\n    void resolveTokens(const QStringList& tokens)\n    {\n        QStringList unresolved;\n        auto selected = m_input->selectedItems();\n        for (const auto& token : tokens) {\n            QVector<Member> matches;\n            for (const auto& member : directory())\n                if (member.key == token || member.email.compare(token, Qt::CaseInsensitive) == 0\n                    || member.name == token)\n                    matches.append(member);\n            if (matches.size() == 1)\n                selected.append(QVariantMap{{QStringLiteral(\"key\"), matches[0].key},\n                    {QStringLiteral(\"text\"), selectionLabel(matches[0])}});\n            else\n                unresolved.append(token);\n        }\n        m_input->setSelectedItems(selected);\n        m_input->setText(unresolved.join(QStringLiteral(\"; \")));\n        updateSelection();\n        if (!unresolved.isEmpty())\n            m_status->setText(QStringLiteral(\"No unique match: %1. Choose a result or use an email.\")\n                    .arg(unresolved.join(QStringLiteral(\", \"))));\n    }\n    textfields::TagInput* m_input = nullptr;\n    QStandardItemModel* m_model = nullptr;\n    textfields::Label* m_status = nullptr;\n    basicinput::CheckBox* m_fail = nullptr;\n};\n} // namespace fluent::gallery\n#endif\n",
+          "fill_available_width": true
         }
       ]
     },
@@ -10031,10 +10570,12 @@
         "text-and-numeric-input"
       ],
       "search_terms": [
+        "adjust",
         "arithmetic",
         "button",
         "buttons",
         "can",
+        "changes",
         "chrome",
         "commit",
         "committed",
@@ -10042,29 +10583,40 @@
         "density.",
         "different",
         "display",
+        "drag",
         "enabled.",
+        "escape",
         "evaluated",
         "expose",
         "expression",
         "fields",
+        "fine",
         "fixed",
         "format",
         "formatting",
+        "handle",
         "inline",
         "input",
+        "live",
+        "makes",
         "model",
         "number-box",
         "number-box-expression",
         "number-box-formatting",
+        "number-box-scrubbing",
         "number-box-spin-placement",
         "numberbox",
         "numeric",
         "placement",
         "precision",
         "precision.",
+        "preview.",
+        "restores",
         "round",
         "same",
+        "shift",
         "spin",
+        "starting",
         "step",
         "support",
         "support.",
@@ -10072,6 +10624,7 @@
         "text-and-numeric-input",
         "typed",
         "value",
+        "value.",
         "values",
         "when"
       ],
@@ -10100,6 +10653,12 @@
         "control_image": "app/assets/control_images/text-fields/NumberBox.png"
       },
       "samples": [
+        {
+          "id": "number-box-scrubbing",
+          "title": "Drag to adjust a value",
+          "description": "Drag the handle for a live preview. Shift makes fine changes; Escape restores the starting value.",
+          "cpp_snippet": "auto* number = new NumberBox(this);\nnumber->setObjectName(\"scrubNumber\");\nnumber->setAccessibleName(\"Rotation angle\");\nnumber->setHeader(\"Rotation angle\");\nnumber->setRange(-180, 180);\nnumber->setValue(30);\nnumber->setScrubbingEnabled(true);\nnumber->setScrubSensitivity(0.5);\nnumber->setDisplayPrecision(1);\nnumber->setFixedWidth(260);"
+        },
         {
           "id": "number-box-expression",
           "title": "Expression input",
@@ -10840,6 +11399,15 @@
       "description": "Lets people select one option from a mutually exclusive group."
     },
     {
+      "id": "tree-select",
+      "title": "TreeSelect",
+      "kind": "component",
+      "parent_id": "basic-input",
+      "group": "Basic input",
+      "depth": 1,
+      "description": "Search a hierarchy and select one or more items while retaining their parent paths."
+    },
+    {
       "id": "rating-control",
       "title": "RatingControl",
       "kind": "component",
@@ -11272,6 +11840,33 @@
       "description": "Adds a label, required marker, helper text, and validation feedback to any input control."
     },
     {
+      "id": "data-grid-tool-bar",
+      "title": "DataGridToolBar",
+      "kind": "component",
+      "parent_id": "layout",
+      "group": "Layout",
+      "depth": 1,
+      "description": "Search and combine filters, then show, pin or reorder DataGrid columns."
+    },
+    {
+      "id": "property-panel",
+      "title": "PropertyPanel",
+      "kind": "component",
+      "parent_id": "layout",
+      "group": "Layout",
+      "depth": 1,
+      "description": "Generate Fluent property editors from explicit definitions, with groups, search, reset and validation."
+    },
+    {
+      "id": "list-detail-view",
+      "title": "ListDetailView",
+      "kind": "component",
+      "parent_id": "layout",
+      "group": "Layout",
+      "depth": 1,
+      "description": "Shows a list and detail side by side, or one pane at a time in a narrow space. The same content widgets stay alive across layout changes."
+    },
+    {
       "id": "particle-backdrop",
       "title": "ParticleBackdrop",
       "kind": "component",
@@ -11548,7 +12143,16 @@
       "parent_id": "text-fields",
       "group": "Text fields",
       "depth": 1,
-      "description": "A text box that suggests matching items while people type."
+      "description": "A search input with local or asynchronous suggestions, loading, pagination and retry."
+    },
+    {
+      "id": "tag-input",
+      "title": "TagInput",
+      "kind": "component",
+      "parent_id": "text-fields",
+      "group": "Text fields",
+      "depth": 1,
+      "description": "Choose several values as compact tags with asynchronous suggestions and native text input."
     },
     {
       "id": "code-block",
@@ -11658,6 +12262,7 @@
     "Icons",
     "MotionPolicy",
     "PivotItem",
+    "PropertyDefinition",
     "ScrollViewZoomAwareWidget",
     "SelectorBarItem",
     "Spacing",
@@ -11670,12 +12275,12 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 116,
-    "component_count": 91,
-    "sample_count": 264,
+    "route_count": 121,
+    "component_count": 96,
+    "sample_count": 277,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 15,
-    "guided_component_count": 91
+    "guided_component_count": 96
   }
 }

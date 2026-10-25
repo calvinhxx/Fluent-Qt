@@ -23,15 +23,15 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 91,
-    "public_headers": 166,
+    "components": 96,
+    "public_headers": 171,
     "categories": 15
   },
   "categories": [
     {
       "id": "basic-input",
       "title": "Basic input",
-      "component_count": 17
+      "component_count": 18
     },
     {
       "id": "charts",
@@ -56,7 +56,7 @@
     {
       "id": "layout",
       "title": "Layout",
-      "component_count": 6
+      "component_count": 9
     },
     {
       "id": "spatial",
@@ -91,7 +91,7 @@
     {
       "id": "text-fields",
       "title": "Text fields",
-      "component_count": 7
+      "component_count": 8
     },
     {
       "id": "windowing",
@@ -456,6 +456,41 @@
       "sample_count": 3
     },
     {
+      "id": "tree-select",
+      "title": "TreeSelect",
+      "category_id": "basic-input",
+      "description": "Search a hierarchy and select one or more items while retaining their parent paths.",
+      "capabilities": [
+        "choices"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/TreeSelect.h>",
+        "qualified_type": "fluent::basicinput::TreeSelect",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/TreeSelect.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "TreeSelect",
+        "import_statement": "from fluentqt.basicinput import TreeSelect"
+      },
+      "gallery": {
+        "route_id": "tree-select",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=tree-select",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_tree_select",
+          "ctest_label": "test_tree_select",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestTreeSelect.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
       "id": "rating-control",
       "title": "RatingControl",
       "category_id": "basic-input",
@@ -733,7 +768,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/charts/TestChartView.cpp"
         }
       ],
-      "sample_count": 3
+      "sample_count": 4
     },
     {
       "id": "line-chart",
@@ -1048,7 +1083,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestDataGrid.cpp"
         }
       ],
-      "sample_count": 3
+      "sample_count": 4
     },
     {
       "id": "drawer-view",
@@ -1959,6 +1994,111 @@
         }
       ],
       "sample_count": 4
+    },
+    {
+      "id": "data-grid-tool-bar",
+      "title": "DataGridToolBar",
+      "category_id": "layout",
+      "description": "Search and combine filters, then show, pin or reorder DataGrid columns.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "installed_declaration_header": "<FluentQt/components/layout/DataGridToolBar.h>",
+        "qualified_type": "fluent::layout::DataGridToolBar",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/DataGridToolBar.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "DataGridToolBar",
+        "import_statement": "from fluentqt.layout import DataGridToolBar"
+      },
+      "gallery": {
+        "route_id": "data-grid-tool-bar",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=data-grid-tool-bar",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/LayoutSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_data_grid_tool_bar",
+          "ctest_label": "test_data_grid_tool_bar",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/layout/TestDataGridToolBar.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
+      "id": "property-panel",
+      "title": "PropertyPanel",
+      "category_id": "layout",
+      "description": "Generate Fluent property editors from explicit definitions, with groups, search, reset and validation.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "installed_declaration_header": "<FluentQt/components/layout/PropertyPanel.h>",
+        "qualified_type": "fluent::layout::PropertyPanel",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/PropertyPanel.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "PropertyPanel",
+        "import_statement": "from fluentqt.layout import PropertyPanel"
+      },
+      "gallery": {
+        "route_id": "property-panel",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=property-panel",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/LayoutSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_property_panel",
+          "ctest_label": "test_property_panel",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/layout/TestPropertyPanel.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "list-detail-view",
+      "title": "ListDetailView",
+      "category_id": "layout",
+      "description": "Shows a list and detail side by side, or one pane at a time in a narrow space. The same content widgets stay alive across layout changes.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "installed_declaration_header": "<FluentQt/components/layout/ListDetailView.h>",
+        "qualified_type": "fluent::layout::ListDetailView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/ListDetailView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "ListDetailView",
+        "import_statement": "from fluentqt.layout import ListDetailView"
+      },
+      "gallery": {
+        "route_id": "list-detail-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=list-detail-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/LayoutSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_list_detail_view",
+          "ctest_label": "test_list_detail_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/layout/TestListDetailView.cpp"
+        }
+      ],
+      "sample_count": 2
     },
     {
       "id": "particle-backdrop",
@@ -3131,7 +3271,7 @@
       "id": "auto-suggest-box",
       "title": "AutoSuggestBox",
       "category_id": "text-fields",
-      "description": "A text box that suggests matching items while people type.",
+      "description": "A search input with local or asynchronous suggestions, loading, pagination and retry.",
       "capabilities": [
         "text-and-numeric-input"
       ],
@@ -3158,6 +3298,41 @@
           "target": "test_auto_suggest_box",
           "ctest_label": "test_auto_suggest_box",
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestAutoSuggestBox.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "tag-input",
+      "title": "TagInput",
+      "category_id": "text-fields",
+      "description": "Choose several values as compact tags with asynchronous suggestions and native text input.",
+      "capabilities": [
+        "text-and-numeric-input"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/TextFields.h>",
+        "installed_declaration_header": "<FluentQt/components/textfields/TagInput.h>",
+        "qualified_type": "fluent::textfields::TagInput",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/TagInput.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.textfields",
+        "type": "TagInput",
+        "import_statement": "from fluentqt.textfields import TagInput"
+      },
+      "gallery": {
+        "route_id": "tag-input",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=tag-input",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/TextFieldsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_tag_input",
+          "ctest_label": "test_tag_input",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestTagInput.cpp"
         }
       ],
       "sample_count": 2
@@ -3300,7 +3475,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestNumberBox.cpp"
         }
       ],
-      "sample_count": 3
+      "sample_count": 4
     },
     {
       "id": "password-box",
@@ -3818,6 +3993,16 @@
         "MultiSelectComboBox"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/MultiSelectComboBox.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/TreeSelect.h>",
+      "source": "src/components/basicinput/TreeSelect.h",
+      "summary": "Searchable single or multiple selection from a borrowed hierarchical model.",
+      "declarations": [
+        "TreeSelect",
+        "SelectionMode"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/TreeSelect.h"
     },
     {
       "include": "<FluentQt/components/basicinput/RadioButton.h>",
@@ -4453,6 +4638,15 @@
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Card.h"
     },
     {
+      "include": "<FluentQt/components/layout/DataGridToolBar.h>",
+      "source": "src/components/layout/DataGridToolBar.h",
+      "summary": "Compact search, facet and column controls for a borrowed DataGrid.",
+      "declarations": [
+        "DataGridToolBar"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/DataGridToolBar.h"
+    },
+    {
       "include": "<FluentQt/components/layout/Divider.h>",
       "source": "src/components/layout/Divider.h",
       "summary": "DPI-aligned horizontal or vertical Fluent separator.",
@@ -4476,9 +4670,33 @@
       "summary": "Composition shell that labels an existing editor and presents helper",
       "declarations": [
         "Field",
+        "LabelPosition",
         "ValidationState"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Field.h"
+    },
+    {
+      "include": "<FluentQt/components/layout/PropertyPanel.h>",
+      "source": "src/components/layout/PropertyPanel.h",
+      "summary": "Explicit metadata for one generated editor; business values remain application-owned.",
+      "declarations": [
+        "PropertyDefinition",
+        "PropertyPanel",
+        "Type",
+        "LayoutMode",
+        "SearchVisibility"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/PropertyPanel.h"
+    },
+    {
+      "include": "<FluentQt/components/layout/ListDetailView.h>",
+      "source": "src/components/layout/ListDetailView.h",
+      "summary": "Two persistent content panes that collapse to one at a width threshold.",
+      "declarations": [
+        "ListDetailView",
+        "Pane"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/ListDetailView.h"
     },
     {
       "include": "<FluentQt/components/layout/ParticleBackdrop.h>",
@@ -4895,9 +5113,19 @@
       "declarations": [
         "AutoSuggestBox",
         "TextChangeReason",
-        "QueryButtonPlacement"
+        "QueryButtonPlacement",
+        "LoadState"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/AutoSuggestBox.h"
+    },
+    {
+      "include": "<FluentQt/components/textfields/TagInput.h>",
+      "source": "src/components/textfields/TagInput.h",
+      "summary": "Compact selected tags around AutoSuggestBox's native text editor.",
+      "declarations": [
+        "TagInput"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/TagInput.h"
     },
     {
       "include": "<FluentQt/components/textfields/CodeBlock.h>",
